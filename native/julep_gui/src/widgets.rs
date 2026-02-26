@@ -1,6 +1,9 @@
 use crate::protocol::TreeNode;
-use iced::widget::{button, checkbox, column, container, progress_bar, row, rule, scrollable, text, text_input, Space};
-use iced::{alignment, Element, Fill, Length, Padding};
+use iced::widget::{
+    button, checkbox, column, container, pick_list, progress_bar, row, rule, scrollable, slider,
+    text, text_input, toggler, tooltip, vertical_slider, Image, Space, Stack, Svg,
+};
+use iced::{alignment, ContentFit, Element, Fill, Length, Padding};
 use serde_json::Value;
 
 use crate::Message;
@@ -20,6 +23,27 @@ pub fn render<'a>(node: &'a TreeNode) -> Element<'a, Message> {
         "progress_bar" => render_progress_bar(node),
         "scrollable" => render_scrollable(node),
         "window" => render_window(node),
+        // New native widgets
+        "toggler" => render_toggler(node),
+        "radio" => render_radio(node),
+        "slider" => render_slider(node),
+        "vertical_slider" => render_vertical_slider(node),
+        "pick_list" => render_pick_list(node),
+        "combo_box" => render_pick_list(node), // delegate to pick_list for now
+        "text_editor" => render_text_editor(node),
+        "tooltip" => render_tooltip(node),
+        "image" => render_image(node),
+        "svg" => render_svg(node),
+        "markdown" => render_markdown(node),
+        "stack" => render_stack(node),
+        // Composite widgets
+        "tabs" => render_tabs(node),
+        "nav" => render_nav(node),
+        "modal" => render_modal(node),
+        "card" => render_card(node),
+        "panel" => render_panel(node),
+        "form" => render_form(node),
+        "split_pane" => render_split_pane(node),
         unknown => {
             eprintln!("julep_gui: unknown node type `{unknown}`, rendering as empty container");
             container(Space::new()).into()
@@ -260,15 +284,7 @@ fn render_rule<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 
 fn render_progress_bar<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let props = node.props.as_object();
-    let range = props
-        .and_then(|p| p.get("range"))
-        .and_then(|v| v.as_array())
-        .and_then(|arr| {
-            let min = arr.first()?.as_f64()? as f32;
-            let max = arr.get(1)?.as_f64()? as f32;
-            Some(min..=max)
-        })
-        .unwrap_or(0.0..=100.0);
+    let range = prop_range_f32(props);
     let value = prop_f32(props, "value").unwrap_or(0.0);
     let width = prop_length(props, "width", Length::Fill);
     let height = prop_length(props, "height", Length::Shrink);
@@ -277,6 +293,472 @@ fn render_progress_bar<'a>(node: &'a TreeNode) -> Element<'a, Message> {
         .length(width)
         .girth(height)
         .into()
+}
+
+// ---------------------------------------------------------------------------
+// Toggler
+// ---------------------------------------------------------------------------
+
+fn render_toggler<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let is_toggled = prop_bool(props, "is_toggled").unwrap_or(false);
+    let label = prop_str(props, "label");
+    let spacing = prop_f32(props, "spacing");
+    let width = prop_length(props, "width", Length::Shrink);
+    let id = node.id.clone();
+
+    let mut t = toggler(is_toggled)
+        .on_toggle(move |v| Message::Toggle(id.clone(), v))
+        .width(width);
+
+    if let Some(l) = label {
+        t = t.label(l);
+    }
+    if let Some(s) = spacing {
+        t = t.spacing(s);
+    }
+
+    t.into()
+}
+
+// ---------------------------------------------------------------------------
+// Radio
+// ---------------------------------------------------------------------------
+
+fn render_radio<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let value = prop_str(props, "value").unwrap_or_default();
+    let selected_str = prop_str(props, "selected").unwrap_or_default();
+    let label = prop_str(props, "label").unwrap_or_else(|| value.clone());
+    let id = node.id.clone();
+
+    // Radio::new wants V: Eq + Copy, so we use integer indices:
+    // value 0 = this radio, selected = Some(0) if value == selected_str.
+    let is_selected = if value == selected_str { Some(0u8) } else { None };
+    let select_value = value;
+
+    iced::widget::Radio::new(label, 0u8, is_selected, move |_| {
+        Message::Select(id.clone(), select_value.clone())
+    })
+    .into()
+}
+
+// ---------------------------------------------------------------------------
+// Slider
+// ---------------------------------------------------------------------------
+
+fn render_slider<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let range = prop_range_f64(props);
+    let value = prop_f64(props, "value").unwrap_or(*range.start());
+    let step = prop_f64(props, "step");
+    let width = prop_length(props, "width", Length::Fill);
+    let id = node.id.clone();
+    let release_id = node.id.clone();
+    let release_value = value;
+
+    let mut s = slider(range, value, move |v| {
+        Message::Slide(id.clone(), v)
+    })
+    .on_release(Message::SlideRelease(release_id, release_value))
+    .width(width);
+
+    if let Some(st) = step {
+        s = s.step(st);
+    }
+
+    s.into()
+}
+
+// ---------------------------------------------------------------------------
+// Vertical Slider
+// ---------------------------------------------------------------------------
+
+fn render_vertical_slider<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let range = prop_range_f64(props);
+    let value = prop_f64(props, "value").unwrap_or(*range.start());
+    let step = prop_f64(props, "step");
+    let height = prop_length(props, "height", Length::Fill);
+    let id = node.id.clone();
+    let release_id = node.id.clone();
+    let release_value = value;
+
+    let mut s = vertical_slider(range, value, move |v| {
+        Message::Slide(id.clone(), v)
+    })
+    .on_release(Message::SlideRelease(release_id, release_value))
+    .height(height);
+
+    if let Some(st) = step {
+        s = s.step(st);
+    }
+
+    s.into()
+}
+
+// ---------------------------------------------------------------------------
+// Pick List
+// ---------------------------------------------------------------------------
+
+fn render_pick_list<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let options: Vec<String> = props
+        .and_then(|p| p.get("options"))
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(str::to_owned))
+                .collect()
+        })
+        .unwrap_or_default();
+    let selected = prop_str(props, "selected");
+    let placeholder = prop_str(props, "placeholder");
+    let width = prop_length(props, "width", Length::Shrink);
+    let id = node.id.clone();
+
+    let mut pl = pick_list(options, selected, move |v: String| {
+        Message::Select(id.clone(), v)
+    })
+    .width(width);
+
+    if let Some(p) = placeholder {
+        pl = pl.placeholder(p);
+    }
+
+    pl.into()
+}
+
+// ---------------------------------------------------------------------------
+// Text Editor (stub: render as scrollable text for now)
+// ---------------------------------------------------------------------------
+
+fn render_text_editor<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let content = prop_str(props, "content").unwrap_or_default();
+    let width = prop_length(props, "width", Length::Fill);
+    let height = prop_length(props, "height", Length::Shrink);
+
+    // Full text_editor requires persistent Content state. For now, render as
+    // a text_input so the user can at least see the content.
+    let id = node.id.clone();
+    let placeholder = prop_str(props, "placeholder").unwrap_or_default();
+
+    container(
+        text_input(&placeholder, &content)
+            .on_input(move |v| Message::Input(id.clone(), v))
+            .width(width),
+    )
+    .height(height)
+    .into()
+}
+
+// ---------------------------------------------------------------------------
+// Tooltip
+// ---------------------------------------------------------------------------
+
+fn render_tooltip<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let tip = prop_str(props, "tip").unwrap_or_default();
+    let gap = prop_f32(props, "gap");
+    let position = prop_str(props, "position")
+        .map(|s| match s.to_ascii_lowercase().as_str() {
+            "bottom" => tooltip::Position::Bottom,
+            "left" => tooltip::Position::Left,
+            "right" => tooltip::Position::Right,
+            "follow_cursor" | "follow" => tooltip::Position::FollowCursor,
+            _ => tooltip::Position::Top,
+        })
+        .unwrap_or(tooltip::Position::Top);
+
+    let child: Element<'a, Message> = node
+        .children
+        .first()
+        .map(render)
+        .unwrap_or_else(|| Space::new().into());
+
+    let mut tt = tooltip(child, text(tip), position);
+    if let Some(g) = gap {
+        tt = tt.gap(g);
+    }
+
+    tt.into()
+}
+
+// ---------------------------------------------------------------------------
+// Image
+// ---------------------------------------------------------------------------
+
+fn render_image<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let source = prop_str(props, "source").unwrap_or_default();
+    let width = prop_length(props, "width", Length::Shrink);
+    let height = prop_length(props, "height", Length::Shrink);
+    let content_fit = prop_content_fit(props);
+
+    let mut img = Image::new(source).width(width).height(height);
+    if let Some(cf) = content_fit {
+        img = img.content_fit(cf);
+    }
+
+    img.into()
+}
+
+// ---------------------------------------------------------------------------
+// SVG
+// ---------------------------------------------------------------------------
+
+fn render_svg<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let source = prop_str(props, "source").unwrap_or_default();
+    let width = prop_length(props, "width", Length::Shrink);
+    let height = prop_length(props, "height", Length::Shrink);
+    let content_fit = prop_content_fit(props);
+
+    let mut s = Svg::from_path(source).width(width).height(height);
+    if let Some(cf) = content_fit {
+        s = s.content_fit(cf);
+    }
+
+    s.into()
+}
+
+// ---------------------------------------------------------------------------
+// Markdown (stub: render as text)
+// ---------------------------------------------------------------------------
+
+fn render_markdown<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let content = prop_str(props, "content").unwrap_or_default();
+    let size = prop_f32(props, "size");
+
+    let mut t = text(content);
+    if let Some(s) = size {
+        t = t.size(s);
+    }
+    t.into()
+}
+
+// ---------------------------------------------------------------------------
+// Stack
+// ---------------------------------------------------------------------------
+
+fn render_stack<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let width = prop_length(props, "width", Length::Shrink);
+    let height = prop_length(props, "height", Length::Shrink);
+
+    let children: Vec<Element<'a, Message>> = node.children.iter().map(render).collect();
+
+    Stack::with_children(children)
+        .width(width)
+        .height(height)
+        .into()
+}
+
+// ---------------------------------------------------------------------------
+// Tabs (composite: row of buttons + active child)
+// ---------------------------------------------------------------------------
+
+fn render_tabs<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let active = prop_str(props, "active").unwrap_or_default();
+    let spacing = prop_f32(props, "spacing").unwrap_or(4.0);
+
+    // Build tab header buttons from children. Each child should have an "id"
+    // that acts as its tab key, and optionally a "title" prop for the label.
+    let mut headers: Vec<Element<'a, Message>> = Vec::new();
+    let mut active_child: Option<Element<'a, Message>> = None;
+
+    for child in &node.children {
+        let tab_id = child.id.clone();
+        let label = child
+            .props
+            .as_object()
+            .and_then(|p| p.get("title"))
+            .and_then(|v| v.as_str())
+            .unwrap_or(&child.id);
+        let is_active = tab_id == active;
+
+        let btn = button(text(label.to_owned()))
+            .on_press(Message::Click(tab_id.clone()));
+
+        headers.push(btn.into());
+
+        if is_active {
+            active_child = Some(render(child));
+        }
+    }
+
+    let body = active_child.unwrap_or_else(|| Space::new().into());
+
+    column![
+        row(headers).spacing(spacing),
+        body,
+    ]
+    .into()
+}
+
+// ---------------------------------------------------------------------------
+// Nav (composite: column of buttons)
+// ---------------------------------------------------------------------------
+
+fn render_nav<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let _active = prop_str(props, "active").unwrap_or_default();
+    let spacing = prop_f32(props, "spacing").unwrap_or(2.0);
+
+    let items: Vec<Element<'a, Message>> = node
+        .children
+        .iter()
+        .map(|child| {
+            let label = child
+                .props
+                .as_object()
+                .and_then(|p| p.get("label").or_else(|| p.get("title")))
+                .and_then(|v| v.as_str())
+                .unwrap_or(&child.id);
+            let id = child.id.clone();
+
+            button(text(label.to_owned()))
+                .on_press(Message::Click(id))
+                .into()
+        })
+        .collect();
+
+    column(items).spacing(spacing).into()
+}
+
+// ---------------------------------------------------------------------------
+// Modal (composite: stack with overlay)
+// ---------------------------------------------------------------------------
+
+fn render_modal<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let visible = prop_bool(props, "visible").unwrap_or(false);
+
+    let background: Element<'a, Message> = node
+        .children
+        .first()
+        .map(render)
+        .unwrap_or_else(|| Space::new().into());
+
+    if !visible || node.children.len() < 2 {
+        return background;
+    }
+
+    let overlay = node.children.get(1).map(render).unwrap();
+    let centered_overlay: Element<'a, Message> = container(overlay)
+        .width(Fill)
+        .height(Fill)
+        .center(Fill)
+        .into();
+
+    Stack::with_children(vec![background, centered_overlay])
+        .width(Fill)
+        .height(Fill)
+        .into()
+}
+
+// ---------------------------------------------------------------------------
+// Card (composite: container with title + body)
+// ---------------------------------------------------------------------------
+
+fn render_card<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let title = prop_str(props, "title").unwrap_or_default();
+    let padding = prop_padding(props);
+    let width = prop_length(props, "width", Length::Shrink);
+
+    let body: Element<'a, Message> = node
+        .children
+        .first()
+        .map(render)
+        .unwrap_or_else(|| Space::new().into());
+
+    container(
+        column![text(title).size(18.0), body].spacing(8.0),
+    )
+    .padding(padding)
+    .width(width)
+    .into()
+}
+
+// ---------------------------------------------------------------------------
+// Panel (composite: collapsible section)
+// ---------------------------------------------------------------------------
+
+fn render_panel<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let title = prop_str(props, "title").unwrap_or_default();
+    let collapsed = prop_bool(props, "collapsed").unwrap_or(false);
+    let id = node.id.clone();
+
+    let indicator = if collapsed { "> " } else { "v " };
+    let header: Element<'a, Message> = button(text(format!("{indicator}{title}")))
+        .on_press(Message::Click(id))
+        .into();
+
+    if collapsed {
+        column![header].into()
+    } else {
+        let children: Vec<Element<'a, Message>> = node.children.iter().map(render).collect();
+        let mut items = vec![header];
+        items.extend(children);
+        column(items).spacing(4.0).into()
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Form (composite: column with spacing)
+// ---------------------------------------------------------------------------
+
+fn render_form<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let spacing = prop_f32(props, "spacing").unwrap_or(8.0);
+    let padding = prop_padding(props);
+    let width = prop_length(props, "width", Length::Shrink);
+
+    let children: Vec<Element<'a, Message>> = node.children.iter().map(render).collect();
+
+    column(children)
+        .spacing(spacing)
+        .padding(padding)
+        .width(width)
+        .into()
+}
+
+// ---------------------------------------------------------------------------
+// Split Pane (composite: row with two children at a ratio)
+// ---------------------------------------------------------------------------
+
+fn render_split_pane<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let ratio = prop_f32(props, "ratio").unwrap_or(0.5).clamp(0.0, 1.0);
+    let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
+
+    let left: Element<'a, Message> = node
+        .children
+        .first()
+        .map(render)
+        .unwrap_or_else(|| Space::new().into());
+    let right: Element<'a, Message> = node
+        .children
+        .get(1)
+        .map(render)
+        .unwrap_or_else(|| Space::new().into());
+
+    // Approximate ratio using FillPortion. Scale to integer parts out of 1000.
+    let left_portion = (ratio * 1000.0) as u16;
+    let right_portion = 1000 - left_portion;
+
+    row![
+        container(left).width(Length::FillPortion(left_portion)),
+        container(right).width(Length::FillPortion(right_portion)),
+    ]
+    .spacing(spacing)
+    .width(Fill)
+    .into()
 }
 
 // ---------------------------------------------------------------------------
@@ -294,6 +776,15 @@ fn prop_f32(props: Props<'_>, key: &str) -> Option<f32> {
     match val {
         Value::Number(n) => n.as_f64().map(|v| v as f32),
         Value::String(s) => s.trim().parse::<f32>().ok(),
+        _ => None,
+    }
+}
+
+fn prop_f64(props: Props<'_>, key: &str) -> Option<f64> {
+    let val = props?.get(key)?;
+    match val {
+        Value::Number(n) => n.as_f64(),
+        Value::String(s) => s.trim().parse::<f64>().ok(),
         _ => None,
     }
 }
@@ -368,6 +859,44 @@ fn value_to_vertical_alignment(s: &str) -> Option<alignment::Vertical> {
         "top" | "start" => Some(alignment::Vertical::Top),
         "center" => Some(alignment::Vertical::Center),
         "bottom" | "end" => Some(alignment::Vertical::Bottom),
+        _ => None,
+    }
+}
+
+/// Parse a "range" prop as [min, max] into an inclusive range of f32.
+fn prop_range_f32(props: Props<'_>) -> std::ops::RangeInclusive<f32> {
+    props
+        .and_then(|p| p.get("range"))
+        .and_then(|v| v.as_array())
+        .and_then(|arr| {
+            let min = arr.first()?.as_f64()? as f32;
+            let max = arr.get(1)?.as_f64()? as f32;
+            Some(min..=max)
+        })
+        .unwrap_or(0.0..=100.0)
+}
+
+/// Parse a "range" prop as [min, max] into an inclusive range of f64.
+fn prop_range_f64(props: Props<'_>) -> std::ops::RangeInclusive<f64> {
+    props
+        .and_then(|p| p.get("range"))
+        .and_then(|v| v.as_array())
+        .and_then(|arr| {
+            let min = arr.first()?.as_f64()?;
+            let max = arr.get(1)?.as_f64()?;
+            Some(min..=max)
+        })
+        .unwrap_or(0.0..=100.0)
+}
+
+fn prop_content_fit(props: Props<'_>) -> Option<ContentFit> {
+    let s = prop_str(props, "content_fit")?;
+    match s.to_ascii_lowercase().as_str() {
+        "contain" => Some(ContentFit::Contain),
+        "cover" => Some(ContentFit::Cover),
+        "fill" => Some(ContentFit::Fill),
+        "none" => Some(ContentFit::None),
+        "scale_down" => Some(ContentFit::ScaleDown),
         _ => None,
     }
 }

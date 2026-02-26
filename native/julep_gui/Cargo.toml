@@ -8,6 +8,13 @@ name = "julep_gui"
 path = "src/main.rs"
 
 [dependencies]
-iced = { version = "0.14", features = ["tokio"] }
+iced = { version = "0.14", features = ["tokio", "image", "svg"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+rfd = { version = "0.15", optional = true }
+arboard = { version = "3", optional = true }
+
+[features]
+default = ["dialogs", "clipboard"]
+dialogs = ["rfd"]
+clipboard = ["arboard"]

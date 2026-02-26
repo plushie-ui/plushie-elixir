@@ -49,6 +49,11 @@ defmodule Julep.Bridge do
     GenServer.cast(bridge, {:send_patch, ops})
   end
 
+  @doc "Sends an effect request to the renderer."
+  def send_effect_request(bridge, id, kind, payload) do
+    GenServer.cast(bridge, {:send_effect_request, id, kind, payload})
+  end
+
   @doc "Stops the bridge GenServer."
   def stop(bridge) do
     GenServer.stop(bridge)
@@ -102,6 +107,12 @@ defmodule Julep.Bridge do
 
   def handle_cast({:send_patch, ops}, state) do
     json = Julep.Protocol.encode_patch(ops)
+    send_to_port(state.port, json)
+    {:noreply, state}
+  end
+
+  def handle_cast({:send_effect_request, id, kind, payload}, state) do
+    json = Julep.Protocol.encode_effect_request(id, kind, payload)
     send_to_port(state.port, json)
     {:noreply, state}
   end

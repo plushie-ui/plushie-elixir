@@ -558,6 +558,569 @@ defmodule Julep.UITest do
   end
 
   # ---------------------------------------------------------------------------
+  # toggler/2,3
+  # ---------------------------------------------------------------------------
+
+  describe "toggler/2" do
+    test "produces correct node shape" do
+      node = toggler("dark_mode", true)
+      assert node.id == "dark_mode"
+      assert node.type == "toggler"
+      assert node.props["is_toggled"] == true
+      assert node.children == []
+    end
+
+    test "works with false value" do
+      node = toggler("dark_mode", false)
+      assert node.props["is_toggled"] == false
+    end
+  end
+
+  describe "toggler/3 with opts" do
+    test "extra opts become string-keyed props" do
+      node = toggler("dark_mode", true, label: "Dark mode", spacing: 8)
+      assert node.props["label"] == "Dark mode"
+      assert node.props["spacing"] == 8
+      assert node.props["is_toggled"] == true
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # radio/3,4
+  # ---------------------------------------------------------------------------
+
+  describe "radio/3" do
+    test "produces correct node shape" do
+      node = radio("size_large", "large", "small")
+      assert node.id == "size_large"
+      assert node.type == "radio"
+      assert node.props["value"] == "large"
+      assert node.props["selected"] == "small"
+      assert node.children == []
+    end
+
+    test "selected can be nil" do
+      node = radio("size_large", "large", nil)
+      assert node.props["selected"] == nil
+    end
+  end
+
+  describe "radio/4 with opts" do
+    test "extra opts become string-keyed props" do
+      node = radio("size_large", "large", "large", label: "Large", spacing: 4)
+      assert node.props["label"] == "Large"
+      assert node.props["spacing"] == 4
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # slider/3,4
+  # ---------------------------------------------------------------------------
+
+  describe "slider/3" do
+    test "produces correct node shape" do
+      node = slider("volume", {0, 100}, 50)
+      assert node.id == "volume"
+      assert node.type == "slider"
+      assert node.props["range"] == [0, 100]
+      assert node.props["value"] == 50
+      assert node.children == []
+    end
+  end
+
+  describe "slider/4 with opts" do
+    test "extra opts become string-keyed props" do
+      node = slider("volume", {0, 100}, 50, step: 5, width: :fill)
+      assert node.props["step"] == 5
+      assert node.props["width"] == :fill
+      assert node.props["range"] == [0, 100]
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # vertical_slider/3,4
+  # ---------------------------------------------------------------------------
+
+  describe "vertical_slider/3" do
+    test "produces correct node shape" do
+      node = vertical_slider("brightness", {0, 255}, 128)
+      assert node.id == "brightness"
+      assert node.type == "vertical_slider"
+      assert node.props["range"] == [0, 255]
+      assert node.props["value"] == 128
+      assert node.children == []
+    end
+  end
+
+  describe "vertical_slider/4 with opts" do
+    test "extra opts become string-keyed props" do
+      node = vertical_slider("brightness", {0, 255}, 128, step: 1, width: 20)
+      assert node.props["step"] == 1
+      assert node.props["width"] == 20
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # pick_list/3,4
+  # ---------------------------------------------------------------------------
+
+  describe "pick_list/3" do
+    test "produces correct node shape" do
+      node = pick_list("country", ["UK", "US", "DE"], "UK")
+      assert node.id == "country"
+      assert node.type == "pick_list"
+      assert node.props["options"] == ["UK", "US", "DE"]
+      assert node.props["selected"] == "UK"
+      assert node.children == []
+    end
+
+    test "selected can be nil" do
+      node = pick_list("country", ["UK", "US"], nil)
+      assert node.props["selected"] == nil
+    end
+  end
+
+  describe "pick_list/4 with opts" do
+    test "extra opts become string-keyed props" do
+      node = pick_list("country", ["UK", "US"], "UK", placeholder: "Choose...", width: :fill)
+      assert node.props["placeholder"] == "Choose..."
+      assert node.props["width"] == :fill
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # combo_box/3,4
+  # ---------------------------------------------------------------------------
+
+  describe "combo_box/3" do
+    test "produces correct node shape" do
+      node = combo_box("lang", ["Elixir", "Rust", "Go"], "Elixir")
+      assert node.id == "lang"
+      assert node.type == "combo_box"
+      assert node.props["options"] == ["Elixir", "Rust", "Go"]
+      assert node.props["value"] == "Elixir"
+      assert node.children == []
+    end
+  end
+
+  describe "combo_box/4 with opts" do
+    test "extra opts become string-keyed props" do
+      node = combo_box("lang", ["Elixir", "Rust"], "Elixir", placeholder: "Type...", width: 200)
+      assert node.props["placeholder"] == "Type..."
+      assert node.props["width"] == 200
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # text_editor/2,3
+  # ---------------------------------------------------------------------------
+
+  describe "text_editor/2" do
+    test "produces correct node shape" do
+      node = text_editor("notes", "Hello world")
+      assert node.id == "notes"
+      assert node.type == "text_editor"
+      assert node.props["content"] == "Hello world"
+      assert node.children == []
+    end
+  end
+
+  describe "text_editor/3 with opts" do
+    test "extra opts become string-keyed props" do
+      node = text_editor("notes", "Hello", width: :fill, height: 200)
+      assert node.props["width"] == :fill
+      assert node.props["height"] == 200
+      assert node.props["content"] == "Hello"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # image/2,3
+  # ---------------------------------------------------------------------------
+
+  describe "image/2" do
+    test "produces correct node shape" do
+      node = image("logo", "/assets/logo.png")
+      assert node.id == "logo"
+      assert node.type == "image"
+      assert node.props["source"] == "/assets/logo.png"
+      assert node.children == []
+    end
+  end
+
+  describe "image/3 with opts" do
+    test "extra opts become string-keyed props" do
+      node = image("logo", "/assets/logo.png", width: 200, height: 100, content_fit: :cover)
+      assert node.props["width"] == 200
+      assert node.props["height"] == 100
+      assert node.props["content_fit"] == :cover
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # svg/2,3
+  # ---------------------------------------------------------------------------
+
+  describe "svg/2" do
+    test "produces correct node shape" do
+      node = svg("icon", "/assets/icon.svg")
+      assert node.id == "icon"
+      assert node.type == "svg"
+      assert node.props["source"] == "/assets/icon.svg"
+      assert node.children == []
+    end
+  end
+
+  describe "svg/3 with opts" do
+    test "extra opts become string-keyed props" do
+      node = svg("icon", "/assets/icon.svg", width: 24, height: 24, content_fit: :contain)
+      assert node.props["width"] == 24
+      assert node.props["height"] == 24
+      assert node.props["content_fit"] == :contain
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # markdown/1,2 macro
+  # ---------------------------------------------------------------------------
+
+  describe "markdown/1" do
+    test "produces a markdown node with content prop" do
+      node = markdown("# Hello")
+      assert node.type == "markdown"
+      assert node.props["content"] == "# Hello"
+      assert node.children == []
+    end
+
+    test "auto-generates an id" do
+      node = markdown("# Hello")
+      assert is_binary(node.id)
+      assert String.starts_with?(node.id, "auto:")
+    end
+  end
+
+  describe "markdown/2 with opts" do
+    test "explicit id overrides auto-generated id" do
+      node = markdown("# Hello", id: "my-md")
+      assert node.id == "my-md"
+    end
+
+    test "extra opts become string-keyed props" do
+      node = markdown("# Hello", size: 14)
+      assert node.props["size"] == 14
+      assert node.props["content"] == "# Hello"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # tooltip macro
+  # ---------------------------------------------------------------------------
+
+  describe "tooltip/1" do
+    test "produces a tooltip node with given id" do
+      node = tooltip("tip1")
+      assert node.id == "tip1"
+      assert node.type == "tooltip"
+      assert node.children == []
+    end
+  end
+
+  describe "tooltip id do...end" do
+    test "collects children" do
+      node =
+        tooltip "tip1" do
+          button("save", "Save")
+        end
+
+      assert node.id == "tip1"
+      assert node.type == "tooltip"
+      assert length(node.children) == 1
+      assert hd(node.children).id == "save"
+    end
+  end
+
+  describe "tooltip id, opts do...end" do
+    test "has both props and children" do
+      node =
+        tooltip "tip1", tip: "Save your work", position: :top do
+          button("save", "Save")
+        end
+
+      assert node.props["tip"] == "Save your work"
+      assert node.props["position"] == :top
+      assert length(node.children) == 1
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # tabs macro
+  # ---------------------------------------------------------------------------
+
+  describe "tabs/1" do
+    test "produces a tabs node with given id" do
+      node = tabs("settings_tabs")
+      assert node.id == "settings_tabs"
+      assert node.type == "tabs"
+      assert node.children == []
+    end
+  end
+
+  describe "tabs id do...end" do
+    test "collects children" do
+      node =
+        tabs "settings_tabs" do
+          container("general")
+          container("advanced")
+        end
+
+      assert node.type == "tabs"
+      assert length(node.children) == 2
+    end
+  end
+
+  describe "tabs id, opts do...end" do
+    test "has both props and children" do
+      node =
+        tabs "settings_tabs", active: "general" do
+          container("general")
+        end
+
+      assert node.props["active"] == "general"
+      assert length(node.children) == 1
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # nav macro
+  # ---------------------------------------------------------------------------
+
+  describe "nav/1" do
+    test "produces a nav node with given id" do
+      node = nav("main_nav")
+      assert node.id == "main_nav"
+      assert node.type == "nav"
+      assert node.children == []
+    end
+  end
+
+  describe "nav id do...end" do
+    test "collects children" do
+      node =
+        nav "main_nav" do
+          button("home", "Home")
+          button("settings", "Settings")
+        end
+
+      assert node.type == "nav"
+      assert length(node.children) == 2
+    end
+  end
+
+  describe "nav id, opts do...end" do
+    test "has both props and children" do
+      node =
+        nav "main_nav", active: "home" do
+          button("home", "Home")
+        end
+
+      assert node.props["active"] == "home"
+      assert length(node.children) == 1
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # modal macro
+  # ---------------------------------------------------------------------------
+
+  describe "modal/1" do
+    test "produces a modal node with given id" do
+      node = modal("dialog")
+      assert node.id == "dialog"
+      assert node.type == "modal"
+      assert node.children == []
+    end
+  end
+
+  describe "modal id do...end" do
+    test "collects children" do
+      node =
+        modal "dialog" do
+          text("Are you sure?")
+          button("yes", "Yes")
+        end
+
+      assert node.type == "modal"
+      assert length(node.children) == 2
+    end
+  end
+
+  describe "modal id, opts do...end" do
+    test "has both props and children" do
+      node =
+        modal "dialog", visible: true do
+          text("Confirm")
+        end
+
+      assert node.props["visible"] == true
+      assert length(node.children) == 1
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # card macro
+  # ---------------------------------------------------------------------------
+
+  describe "card/1" do
+    test "produces a card node with given id" do
+      node = card("user_card")
+      assert node.id == "user_card"
+      assert node.type == "card"
+      assert node.children == []
+    end
+  end
+
+  describe "card id do...end" do
+    test "collects children" do
+      node =
+        card "user_card" do
+          text("Alice")
+        end
+
+      assert node.type == "card"
+      assert length(node.children) == 1
+    end
+  end
+
+  describe "card id, opts do...end" do
+    test "has both props and children" do
+      node =
+        card "user_card", title: "Profile", padding: 16 do
+          text("Alice")
+        end
+
+      assert node.props["title"] == "Profile"
+      assert node.props["padding"] == 16
+      assert length(node.children) == 1
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # panel macro
+  # ---------------------------------------------------------------------------
+
+  describe "panel/1" do
+    test "produces a panel node with given id" do
+      node = panel("details")
+      assert node.id == "details"
+      assert node.type == "panel"
+      assert node.children == []
+    end
+  end
+
+  describe "panel id do...end" do
+    test "collects children" do
+      node =
+        panel "details" do
+          text("Some details")
+        end
+
+      assert node.type == "panel"
+      assert length(node.children) == 1
+    end
+  end
+
+  describe "panel id, opts do...end" do
+    test "has both props and children" do
+      node =
+        panel "details", title: "Details", collapsed: false do
+          text("Content")
+        end
+
+      assert node.props["title"] == "Details"
+      assert node.props["collapsed"] == false
+      assert length(node.children) == 1
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # form macro
+  # ---------------------------------------------------------------------------
+
+  describe "form/1" do
+    test "produces a form node with given id" do
+      node = form("login_form")
+      assert node.id == "login_form"
+      assert node.type == "form"
+      assert node.children == []
+    end
+  end
+
+  describe "form id do...end" do
+    test "collects children" do
+      node =
+        form "login_form" do
+          text_input("user", "")
+          button("submit", "Log in")
+        end
+
+      assert node.type == "form"
+      assert length(node.children) == 2
+    end
+  end
+
+  describe "form id, opts do...end" do
+    test "has both props and children" do
+      node =
+        form "login_form", spacing: 8 do
+          text_input("user", "")
+        end
+
+      assert node.props["spacing"] == 8
+      assert length(node.children) == 1
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # split_pane macro
+  # ---------------------------------------------------------------------------
+
+  describe "split_pane/1" do
+    test "produces a split_pane node with given id" do
+      node = split_pane("editor_split")
+      assert node.id == "editor_split"
+      assert node.type == "split_pane"
+      assert node.children == []
+    end
+  end
+
+  describe "split_pane id do...end" do
+    test "collects children" do
+      node =
+        split_pane "editor_split" do
+          container("sidebar")
+          container("main")
+        end
+
+      assert node.type == "split_pane"
+      assert length(node.children) == 2
+    end
+  end
+
+  describe "split_pane id, opts do...end" do
+    test "has both props and children" do
+      node =
+        split_pane "editor_split", ratio: 0.3, direction: :horizontal do
+          container("sidebar")
+          container("main")
+        end
+
+      assert node.props["ratio"] == 0.3
+      assert node.props["direction"] == :horizontal
+      assert length(node.children) == 2
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Counter example view produces expected tree shape
   # ---------------------------------------------------------------------------
 

@@ -453,6 +453,156 @@ defmodule Julep.RuntimeTest do
   end
 
   # ---------------------------------------------------------------------------
+  # describe "error recovery"
+  # ---------------------------------------------------------------------------
+
+  describe "error recovery" do
+    test "update/2 exception does not crash the runtime" do
+      defmodule CrashUpdateApp do
+        use Julep.App
+
+        def init(_opts), do: %{value: 0}
+        def update(_model, :crash), do: raise("boom")
+        def update(model, {:click, "inc"}), do: %{model | value: model.value + 1}
+        def update(model, _event), do: model
+
+        def view(model) do
+          import Julep.UI
+
+          column do
+            text("#{model.value}")
+          end
+        end
+      end
+
+      {runtime, _bridge} = start_runtime(CrashUpdateApp)
+      await_initial_render(runtime)
+
+      # This should not crash the runtime.
+      dispatch_and_wait(runtime, :crash)
+
+      # Runtime is still alive and model unchanged.
+      assert Process.alive?(runtime)
+      state = :sys.get_state(runtime)
+      assert state.model.value == 0
+
+      # Can still process normal events after the crash.
+      dispatch_and_wait(runtime, {:click, "inc"})
+      state = :sys.get_state(runtime)
+      assert state.model.value == 1
+    end
+
+    test "view/1 exception does not crash the runtime" do
+      defmodule CrashViewApp do
+        use Julep.App
+
+        def init(_opts), do: %{crash_view: false}
+        def update(model, :crash_view), do: %{model | crash_view: true}
+        def update(model, :fix_view), do: %{model | crash_view: false}
+        def update(model, _event), do: model
+
+        def view(%{crash_view: true}), do: raise("view boom")
+
+        def view(_model) do
+          import Julep.UI
+
+          column do
+            text("ok")
+          end
+        end
+      end
+
+      {runtime, _bridge} = start_runtime(CrashViewApp)
+      await_initial_render(runtime)
+
+      # Trigger the crashing view -- runtime should survive.
+      dispatch_and_wait(runtime, :crash_view)
+      assert Process.alive?(runtime)
+
+      # Fix the view and confirm the runtime continues normally.
+      dispatch_and_wait(runtime, :fix_view)
+      state = :sys.get_state(runtime)
+      assert state.model.crash_view == false
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # describe "effects"
+  # ---------------------------------------------------------------------------
+
+  describe "effects" do
+    test "effect_request command is forwarded to the bridge" do
+      defmodule EffectApp do
+        use Julep.App
+
+        def init(_opts), do: %{result: nil}
+
+        def update(model, {:click, "open"}) do
+          {cmd, _id} = Julep.Effects.file_open(title: "Pick a file")
+          {model, cmd}
+        end
+
+        def update(model, {:effect_result, _id, {:ok, result}}) do
+          %{model | result: result}
+        end
+
+        def update(model, _event), do: model
+
+        def view(model) do
+          import Julep.UI
+
+          column do
+            text(inspect(model.result))
+          end
+        end
+      end
+
+      {runtime, bridge} = start_runtime(EffectApp)
+      await_initial_render(runtime)
+
+      dispatch_and_wait(runtime, {:click, "open"})
+
+      effect_requests = Julep.Test.MockBridge.get_effect_requests(bridge)
+      assert length(effect_requests) == 1
+
+      [req] = effect_requests
+      assert req.kind == "file_open"
+      assert req.payload == %{title: "Pick a file"}
+    end
+
+    test "effect_result event is dispatched through update" do
+      defmodule EffectResultApp do
+        use Julep.App
+
+        def init(_opts), do: %{path: nil}
+
+        def update(model, {:effect_result, _id, {:ok, %{"path" => path}}}) do
+          %{model | path: path}
+        end
+
+        def update(model, _event), do: model
+
+        def view(model) do
+          import Julep.UI
+
+          column do
+            text(inspect(model.path))
+          end
+        end
+      end
+
+      {runtime, _bridge} = start_runtime(EffectResultApp)
+      await_initial_render(runtime)
+
+      # Simulate the renderer sending back an effect result.
+      dispatch_and_wait(runtime, {:effect_result, "ef_42", {:ok, %{"path" => "/tmp/test.txt"}}})
+
+      state = :sys.get_state(runtime)
+      assert state.model.path == "/tmp/test.txt"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Private helpers
   # ---------------------------------------------------------------------------
 

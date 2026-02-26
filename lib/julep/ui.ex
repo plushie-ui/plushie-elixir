@@ -572,6 +572,567 @@ defmodule Julep.UI do
   end
 
   # ---------------------------------------------------------------------------
+  # Additional input widgets
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Toggle switch.
+
+  Emits `{:toggle, id, boolean}` when toggled.
+
+  ## Example
+
+      toggler("dark_mode", model.dark_mode, label: "Dark mode")
+  """
+  @spec toggler(String.t(), boolean(), keyword()) :: map()
+  def toggler(id, is_toggled, opts \\ []) do
+    base_props = %{"is_toggled" => is_toggled}
+    extra_props =
+      opts
+      |> Keyword.drop([:children, :id, :do])
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+
+    %{id: id, type: "toggler", props: Map.merge(base_props, extra_props), children: []}
+  end
+
+  @doc """
+  Radio button for single-value selection from a group.
+
+  ## Example
+
+      radio("size", "large", model.size, label: "Large")
+  """
+  @spec radio(String.t(), String.t(), String.t() | nil, keyword()) :: map()
+  def radio(id, value, selected, opts \\ []) do
+    base_props = %{"value" => value, "selected" => selected}
+    extra_props =
+      opts
+      |> Keyword.drop([:children, :id, :do])
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+
+    %{id: id, type: "radio", props: Map.merge(base_props, extra_props), children: []}
+  end
+
+  @doc """
+  Horizontal slider for numeric range input.
+
+  ## Arguments
+
+  - `range` -- `{min, max}` tuple
+  - `value` -- current value
+
+  ## Example
+
+      slider("volume", {0, 100}, model.volume, step: 5)
+  """
+  @spec slider(String.t(), {number(), number()}, number(), keyword()) :: map()
+  def slider(id, range, value, opts \\ []) do
+    base_props = %{"range" => Tuple.to_list(range), "value" => value}
+    extra_props =
+      opts
+      |> Keyword.drop([:children, :id, :do])
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+
+    %{id: id, type: "slider", props: Map.merge(base_props, extra_props), children: []}
+  end
+
+  @doc """
+  Vertical slider for numeric range input.
+
+  Same as `slider/4` but oriented vertically.
+
+  ## Example
+
+      vertical_slider("brightness", {0, 100}, model.brightness)
+  """
+  @spec vertical_slider(String.t(), {number(), number()}, number(), keyword()) :: map()
+  def vertical_slider(id, range, value, opts \\ []) do
+    base_props = %{"range" => Tuple.to_list(range), "value" => value}
+    extra_props =
+      opts
+      |> Keyword.drop([:children, :id, :do])
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+
+    %{id: id, type: "vertical_slider", props: Map.merge(base_props, extra_props), children: []}
+  end
+
+  @doc """
+  Dropdown pick list for selecting from a list of options.
+
+  ## Example
+
+      pick_list("country", ["UK", "US", "DE"], model.country, placeholder: "Choose...")
+  """
+  @spec pick_list(String.t(), [String.t()], String.t() | nil, keyword()) :: map()
+  def pick_list(id, options, selected, opts \\ []) do
+    base_props = %{"options" => options, "selected" => selected}
+    extra_props =
+      opts
+      |> Keyword.drop([:children, :id, :do])
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+
+    %{id: id, type: "pick_list", props: Map.merge(base_props, extra_props), children: []}
+  end
+
+  @doc """
+  Combo box with free-text input and dropdown suggestions.
+
+  ## Example
+
+      combo_box("lang", ["Elixir", "Rust", "Go"], model.lang, placeholder: "Type...")
+  """
+  @spec combo_box(String.t(), [String.t()], String.t(), keyword()) :: map()
+  def combo_box(id, options, value, opts \\ []) do
+    base_props = %{"options" => options, "value" => value}
+    extra_props =
+      opts
+      |> Keyword.drop([:children, :id, :do])
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+
+    %{id: id, type: "combo_box", props: Map.merge(base_props, extra_props), children: []}
+  end
+
+  @doc """
+  Multi-line text editor.
+
+  ## Example
+
+      text_editor("notes", model.notes, width: :fill, height: 200)
+  """
+  @spec text_editor(String.t(), String.t(), keyword()) :: map()
+  def text_editor(id, content, opts \\ []) do
+    base_props = %{"content" => content}
+    extra_props =
+      opts
+      |> Keyword.drop([:children, :id, :do])
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+
+    %{id: id, type: "text_editor", props: Map.merge(base_props, extra_props), children: []}
+  end
+
+  # ---------------------------------------------------------------------------
+  # Additional display widgets
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Raster image display.
+
+  ## Example
+
+      image("logo", "/assets/logo.png", width: 200, content_fit: :cover)
+  """
+  @spec image(String.t(), String.t(), keyword()) :: map()
+  def image(id, source, opts \\ []) do
+    base_props = %{"source" => source}
+    extra_props =
+      opts
+      |> Keyword.drop([:children, :id, :do])
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+
+    %{id: id, type: "image", props: Map.merge(base_props, extra_props), children: []}
+  end
+
+  @doc """
+  SVG image display.
+
+  ## Example
+
+      svg("icon", "/assets/icon.svg", width: 24, height: 24)
+  """
+  @spec svg(String.t(), String.t(), keyword()) :: map()
+  def svg(id, source, opts \\ []) do
+    base_props = %{"source" => source}
+    extra_props =
+      opts
+      |> Keyword.drop([:children, :id, :do])
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+
+    %{id: id, type: "svg", props: Map.merge(base_props, extra_props), children: []}
+  end
+
+  @doc """
+  Markdown content renderer.
+
+  Auto-generates an ID from the call site unless `:id` is given in opts.
+
+  ## Example
+
+      markdown("# Hello\\n\\nSome **bold** text")
+  """
+  defmacro markdown(content, opts \\ []) do
+    caller_mod = __CALLER__.module
+    caller_line = __CALLER__.line
+
+    quote do
+      content = unquote(content)
+      opts = unquote(opts)
+      base_props = %{"content" => content}
+      extra_props =
+        opts
+        |> Keyword.drop([:children, :id, :do])
+        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+
+      id = Keyword.get(opts, :id) || Julep.UI.__auto_id__(unquote(caller_mod), unquote(caller_line))
+      %{id: id, type: "markdown", props: Map.merge(base_props, extra_props), children: []}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Additional layout/composite widgets (macros with do block support)
+  # ---------------------------------------------------------------------------
+
+  # -- tooltip(id, opts) ------------------------------------------------------
+
+  @doc """
+  Tooltip wrapper. Children are the content being tooltipped.
+
+  ## Options
+
+  - `:tip` -- tooltip text
+  - `:position` -- `:top`, `:bottom`, `:left`, `:right`
+
+  ## Example
+
+      tooltip "save_tip", tip: "Save your work", position: :top do
+        button("save", "Save")
+      end
+  """
+  defmacro tooltip(id, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_fixed_node__("tooltip", unquote(id), [], children)
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_fixed_node__("tooltip", unquote(id), unquote(opts), [])
+        end
+    end
+  end
+
+  @doc false
+  defmacro tooltip(id, opts, do: block) do
+    exprs = block_to_exprs(block)
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Julep.UI.__build_fixed_node__("tooltip", unquote(id), unquote(opts), children)
+    end
+  end
+
+  # -- tabs(id, opts) ---------------------------------------------------------
+
+  @doc """
+  Tabbed container. Children are the tab content panels.
+
+  ## Options
+
+  - `:active` -- id of the active tab
+
+  ## Example
+
+      tabs "settings_tabs", active: "general" do
+        container "general" do
+          text("General settings")
+        end
+      end
+  """
+  defmacro tabs(id, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_fixed_node__("tabs", unquote(id), [], children)
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_fixed_node__("tabs", unquote(id), unquote(opts), [])
+        end
+    end
+  end
+
+  @doc false
+  defmacro tabs(id, opts, do: block) do
+    exprs = block_to_exprs(block)
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Julep.UI.__build_fixed_node__("tabs", unquote(id), unquote(opts), children)
+    end
+  end
+
+  # -- nav(id, opts) ----------------------------------------------------------
+
+  @doc """
+  Navigation container.
+
+  ## Options
+
+  - `:active` -- id of the active nav item
+
+  ## Example
+
+      nav "main_nav", active: "home" do
+        button("home", "Home")
+        button("settings", "Settings")
+      end
+  """
+  defmacro nav(id, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_fixed_node__("nav", unquote(id), [], children)
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_fixed_node__("nav", unquote(id), unquote(opts), [])
+        end
+    end
+  end
+
+  @doc false
+  defmacro nav(id, opts, do: block) do
+    exprs = block_to_exprs(block)
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Julep.UI.__build_fixed_node__("nav", unquote(id), unquote(opts), children)
+    end
+  end
+
+  # -- modal(id, opts) --------------------------------------------------------
+
+  @doc """
+  Modal dialog overlay.
+
+  ## Options
+
+  - `:visible` -- boolean controlling visibility
+
+  ## Example
+
+      modal "confirm_dialog", visible: model.show_confirm do
+        text("Are you sure?")
+        button("yes", "Yes")
+      end
+  """
+  defmacro modal(id, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_fixed_node__("modal", unquote(id), [], children)
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_fixed_node__("modal", unquote(id), unquote(opts), [])
+        end
+    end
+  end
+
+  @doc false
+  defmacro modal(id, opts, do: block) do
+    exprs = block_to_exprs(block)
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Julep.UI.__build_fixed_node__("modal", unquote(id), unquote(opts), children)
+    end
+  end
+
+  # -- card(id, opts) ---------------------------------------------------------
+
+  @doc """
+  Card container with optional title.
+
+  ## Options
+
+  - `:title` -- card heading text
+  - `:padding` -- inner padding
+
+  ## Example
+
+      card "user_card", title: "Profile", padding: 16 do
+        text("Alice")
+      end
+  """
+  defmacro card(id, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_fixed_node__("card", unquote(id), [], children)
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_fixed_node__("card", unquote(id), unquote(opts), [])
+        end
+    end
+  end
+
+  @doc false
+  defmacro card(id, opts, do: block) do
+    exprs = block_to_exprs(block)
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Julep.UI.__build_fixed_node__("card", unquote(id), unquote(opts), children)
+    end
+  end
+
+  # -- panel(id, opts) --------------------------------------------------------
+
+  @doc """
+  Collapsible panel.
+
+  ## Options
+
+  - `:title` -- panel heading
+  - `:collapsed` -- boolean
+
+  ## Example
+
+      panel "details", title: "Details", collapsed: false do
+        text("Some details here")
+      end
+  """
+  defmacro panel(id, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_fixed_node__("panel", unquote(id), [], children)
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_fixed_node__("panel", unquote(id), unquote(opts), [])
+        end
+    end
+  end
+
+  @doc false
+  defmacro panel(id, opts, do: block) do
+    exprs = block_to_exprs(block)
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Julep.UI.__build_fixed_node__("panel", unquote(id), unquote(opts), children)
+    end
+  end
+
+  # -- form(id, opts) ---------------------------------------------------------
+
+  @doc """
+  Form container for grouping input widgets.
+
+  ## Options
+
+  - `:spacing` -- gap between form fields
+
+  ## Example
+
+      form "login_form", spacing: 8 do
+        text_input("user", "", placeholder: "Username")
+        text_input("pass", "", placeholder: "Password")
+        button("submit", "Log in")
+      end
+  """
+  defmacro form(id, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_fixed_node__("form", unquote(id), [], children)
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_fixed_node__("form", unquote(id), unquote(opts), [])
+        end
+    end
+  end
+
+  @doc false
+  defmacro form(id, opts, do: block) do
+    exprs = block_to_exprs(block)
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Julep.UI.__build_fixed_node__("form", unquote(id), unquote(opts), children)
+    end
+  end
+
+  # -- split_pane(id, opts) ---------------------------------------------------
+
+  @doc """
+  Split pane layout dividing space between two sections.
+
+  ## Options
+
+  - `:ratio` -- float 0.0-1.0 controlling split position
+  - `:direction` -- `:horizontal` or `:vertical`
+
+  ## Example
+
+      split_pane "editor_split", ratio: 0.3, direction: :horizontal do
+        container "sidebar" do
+          text("Sidebar")
+        end
+        container "main" do
+          text("Main content")
+        end
+      end
+  """
+  defmacro split_pane(id, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_fixed_node__("split_pane", unquote(id), [], children)
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_fixed_node__("split_pane", unquote(id), unquote(opts), [])
+        end
+    end
+  end
+
+  @doc false
+  defmacro split_pane(id, opts, do: block) do
+    exprs = block_to_exprs(block)
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Julep.UI.__build_fixed_node__("split_pane", unquote(id), unquote(opts), children)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Public runtime helpers called from macro-generated code
   # ---------------------------------------------------------------------------
 

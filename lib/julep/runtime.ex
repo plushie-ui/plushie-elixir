@@ -104,7 +104,7 @@ defmodule Julep.Runtime do
     tree = render_and_sync(state.app, state.model, state.bridge, nil)
 
     # 5. Execute initial commands.
-    execute_commands(Map.get(state, :init_commands, []))
+    execute_commands(Map.get(state, :init_commands, []), state.bridge)
 
     state = %{state | tree: tree} |> Map.delete(:init_commands)
     state = sync_subscriptions(state, state.model)
@@ -220,61 +220,90 @@ defmodule Julep.Runtime do
 
   # Renders the view and sends either a full snapshot (first render or after
   # restart) or a patch (incremental diff) to the bridge.
-  @spec render_and_sync(module(), term(), pid() | atom(), map() | nil) :: map()
+  # If view/1 raises, returns old_tree unchanged.
+  @spec render_and_sync(module(), term(), pid() | atom(), map() | nil) :: map() | nil
   defp render_and_sync(app, model, bridge, old_tree) do
-    raw_tree = app.view(model)
-    new_tree = Julep.Tree.normalize(raw_tree)
+    case safe_view(app, model) do
+      {:ok, new_tree} ->
+        cond do
+          # First render or after restart -- send full snapshot.
+          is_nil(old_tree) ->
+            Julep.Bridge.send_snapshot(bridge, new_tree)
 
-    cond do
-      # First render or after restart -- send full snapshot.
-      is_nil(old_tree) ->
-        Julep.Bridge.send_snapshot(bridge, new_tree)
+          # Trees identical -- skip send entirely.
+          old_tree == new_tree ->
+            :noop
 
-      # Trees identical -- skip send entirely.
-      old_tree == new_tree ->
-        :noop
+          # Incremental update -- diff and send patch.
+          true ->
+            ops = Julep.Tree.diff(old_tree, new_tree)
 
-      # Incremental update -- diff and send patch.
-      true ->
-        ops = Julep.Tree.diff(old_tree, new_tree)
-
-        if ops != [] do
-          Julep.Bridge.send_patch(bridge, ops)
+            if ops != [] do
+              Julep.Bridge.send_patch(bridge, ops)
+            end
         end
-    end
 
-    new_tree
+        new_tree
+
+      :error ->
+        # Return old tree unchanged.
+        old_tree
+    end
+  end
+
+  defp safe_view(app, model) do
+    raw_tree = app.view(model)
+    {:ok, Julep.Tree.normalize(raw_tree)}
+  rescue
+    e ->
+      Logger.error("julep runtime: view/1 raised: #{Exception.message(e)}")
+      :error
   end
 
   # Full update cycle: update model, execute commands, re-render, sync subs.
+  # Wraps update/2 and view/1 in try/rescue so app exceptions do not crash
+  # the runtime process.
   @spec run_update(map(), term()) :: map()
   defp run_update(%{app: app, model: model, bridge: bridge} = state, event) do
+    case safe_update(app, model, event) do
+      {:ok, new_model, commands} ->
+        execute_commands(commands, bridge)
+        new_tree = render_and_sync(app, new_model, bridge, state.tree)
+        state = %{state | model: new_model, tree: new_tree}
+        sync_subscriptions(state, new_model)
+
+      :error ->
+        # Keep previous model and tree unchanged.
+        state
+    end
+  end
+
+  defp safe_update(app, model, event) do
     {new_model, commands} = unwrap_result(app.update(model, event))
-
-    execute_commands(commands)
-
-    new_tree = render_and_sync(app, new_model, bridge, state.tree)
-
-    state = %{state | model: new_model, tree: new_tree}
-    sync_subscriptions(state, new_model)
+    {:ok, new_model, commands}
+  rescue
+    e ->
+      Logger.error("julep runtime: update/2 raised: #{Exception.message(e)}")
+      :error
   end
 
   # Executes a list of commands. Batch commands are flattened recursively.
-  @spec execute_commands([Julep.Command.t()]) :: :ok
-  defp execute_commands(commands) when is_list(commands) do
-    Enum.each(commands, &execute_command/1)
+  # `bridge` is threaded through so effect_request commands can send to it.
+  @spec execute_commands([Julep.Command.t()], pid() | atom() | nil) :: :ok
+  defp execute_commands(commands, bridge) when is_list(commands) do
+    Enum.each(commands, &execute_command(&1, bridge))
   end
 
-  defp execute_commands(%Julep.Command{} = cmd) do
-    execute_command(cmd)
+  defp execute_commands(%Julep.Command{} = cmd, bridge) do
+    execute_command(cmd, bridge)
   end
 
-  defp execute_commands(_), do: :ok
+  defp execute_commands(_, _bridge), do: :ok
 
-  @spec execute_command(Julep.Command.t()) :: :ok
-  defp execute_command(%Julep.Command{type: :none}), do: :ok
+  @spec execute_command(Julep.Command.t(), pid() | atom() | nil) :: :ok
+  defp execute_command(%Julep.Command{type: :none}, _bridge), do: :ok
 
-  defp execute_command(%Julep.Command{type: :async, payload: %{fun: fun, tag: tag}}) do
+  defp execute_command(%Julep.Command{type: :async, payload: %{fun: fun, tag: tag}}, _bridge) do
     runtime = self()
 
     Task.start(fn ->
@@ -285,29 +314,39 @@ defmodule Julep.Runtime do
     :ok
   end
 
-  defp execute_command(%Julep.Command{type: :send_after, payload: %{delay: delay, event: event}}) do
+  defp execute_command(%Julep.Command{type: :send_after, payload: %{delay: delay, event: event}}, _bridge) do
     Process.send_after(self(), {:send_after_event, event}, delay)
     :ok
   end
 
+  defp execute_command(%Julep.Command{type: :effect_request, payload: %{id: id, kind: kind, opts: opts}}, bridge) do
+    if bridge do
+      Julep.Bridge.send_effect_request(bridge, id, kind, opts)
+    else
+      Logger.warning("julep runtime: effect_request #{kind} (#{id}) without bridge")
+    end
+
+    :ok
+  end
+
   # Widget ops -- bridge messages. Phase 0: log and skip.
-  defp execute_command(%Julep.Command{type: type} = cmd)
+  defp execute_command(%Julep.Command{type: type} = cmd, _bridge)
        when type in [:focus, :focus_next, :focus_previous, :select_all, :scroll_to] do
     Logger.debug("julep runtime: widget op #{type} stubbed for Phase 0: #{inspect(cmd.payload)}")
     :ok
   end
 
   # Window commands -- Phase 2. Skip for now.
-  defp execute_command(%Julep.Command{type: :close_window} = cmd) do
+  defp execute_command(%Julep.Command{type: :close_window} = cmd, _bridge) do
     Logger.debug("julep runtime: close_window stubbed for Phase 2: #{inspect(cmd.payload)}")
     :ok
   end
 
-  defp execute_command(%Julep.Command{type: :batch, payload: %{commands: cmds}}) do
-    execute_commands(cmds)
+  defp execute_command(%Julep.Command{type: :batch, payload: %{commands: cmds}}, bridge) do
+    execute_commands(cmds, bridge)
   end
 
-  defp execute_command(cmd) do
+  defp execute_command(cmd, _bridge) do
     Logger.warning("julep runtime: unknown command: #{inspect(cmd)}")
     :ok
   end

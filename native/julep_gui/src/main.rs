@@ -1,4 +1,6 @@
+mod effects;
 mod protocol;
+mod theming;
 mod tree;
 mod widgets;
 
@@ -25,8 +27,14 @@ enum Message {
     Input(String, String),
     /// A text input was submitted (id, current_value).
     Submit(String, String),
-    /// A checkbox was toggled (id, checked).
+    /// A checkbox or toggler was toggled (id, checked).
     Toggle(String, bool),
+    /// A slider value changed (id, value).
+    Slide(String, f64),
+    /// A slider was released (id, value).
+    SlideRelease(String, f64),
+    /// A pick_list/combo_box/radio selection (id, value).
+    Select(String, String),
     /// Periodic tick used to drain the inbound channel.
     Tick,
 }
@@ -37,6 +45,7 @@ enum Message {
 
 struct App {
     tree: Tree,
+    theme: Theme,
     receiver: Receiver<StdinEvent>,
     stdin_closed: bool,
 }
@@ -53,9 +62,14 @@ impl App {
     fn new(receiver: Receiver<StdinEvent>) -> Self {
         Self {
             tree: Tree::new(),
+            theme: Theme::Dark,
             receiver,
             stdin_closed: false,
         }
+    }
+
+    fn theme(&self) -> Theme {
+        self.theme.clone()
     }
 
     fn update(&mut self, message: Message) -> Task<Message> {
@@ -82,6 +96,18 @@ impl App {
             }
             Message::Toggle(id, value) => {
                 emit_event(OutgoingEvent::toggle(id, value));
+                Task::none()
+            }
+            Message::Slide(id, value) => {
+                emit_event(OutgoingEvent::slide(id, value));
+                Task::none()
+            }
+            Message::SlideRelease(id, value) => {
+                emit_event(OutgoingEvent::slide_release(id, value));
+                Task::none()
+            }
+            Message::Select(id, value) => {
+                emit_event(OutgoingEvent::select(id, value));
                 Task::none()
             }
         }
@@ -131,11 +157,19 @@ impl App {
         match message {
             IncomingMessage::Snapshot { tree } => {
                 eprintln!("julep_gui: snapshot received (root id={})", tree.id);
+                if let Some(theme_val) = tree.props.get("theme") {
+                    self.theme = theming::resolve_theme(theme_val);
+                }
                 self.tree.snapshot(tree);
             }
             IncomingMessage::Patch { ops } => {
                 eprintln!("julep_gui: patch received ({} ops)", ops.len());
                 self.tree.apply_patch(ops);
+            }
+            IncomingMessage::EffectRequest { id, kind, payload } => {
+                eprintln!("julep_gui: effect request: {kind} ({id})");
+                let response = effects::handle_effect(id, &kind, &payload);
+                emit_effect_response(response);
             }
         }
     }
@@ -156,6 +190,24 @@ fn emit_event(event: OutgoingEvent) {
             let _ = handle.flush();
         }
         Err(e) => eprintln!("julep_gui: failed to serialize event: {e}"),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// stdout effect response emitter
+// ---------------------------------------------------------------------------
+
+fn emit_effect_response(response: protocol::EffectResponse) {
+    match serde_json::to_string(&response) {
+        Ok(json) => {
+            let stdout = io::stdout();
+            let mut handle = stdout.lock();
+            if let Err(e) = writeln!(handle, "{json}") {
+                eprintln!("julep_gui: failed to write effect response to stdout: {e}");
+            }
+            let _ = handle.flush();
+        }
+        Err(e) => eprintln!("julep_gui: failed to serialize effect response: {e}"),
     }
 }
 
@@ -233,6 +285,6 @@ fn main() -> iced::Result {
     )
     .title("Julep")
     .subscription(App::subscription)
-    .theme(Theme::Dark)
+    .theme(App::theme)
     .run()
 }

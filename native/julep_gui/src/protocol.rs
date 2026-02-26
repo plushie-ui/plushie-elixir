@@ -7,6 +7,50 @@ use serde_json::Value;
 pub enum IncomingMessage {
     Snapshot { tree: TreeNode },
     Patch { ops: Vec<PatchOp> },
+    EffectRequest {
+        id: String,
+        kind: String,
+        payload: Value,
+    },
+}
+
+/// Response to an effect request, written to stdout as JSONL.
+#[derive(Debug, Serialize)]
+pub struct EffectResponse {
+    #[serde(rename = "type")]
+    pub message_type: &'static str,
+    pub id: String,
+    pub status: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub result: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+impl EffectResponse {
+    pub fn ok(id: String, result: Value) -> Self {
+        Self {
+            message_type: "effect_response",
+            id,
+            status: "ok",
+            result: Some(result),
+            error: None,
+        }
+    }
+
+    pub fn error(id: String, reason: String) -> Self {
+        Self {
+            message_type: "effect_response",
+            id,
+            status: "error",
+            result: None,
+            error: Some(reason),
+        }
+    }
+
+    pub fn unsupported(id: String) -> Self {
+        Self::error(id, "unsupported".to_string())
+    }
 }
 
 /// A single node in the UI tree.
@@ -75,6 +119,33 @@ impl OutgoingEvent {
             family: "toggle",
             id,
             value: Some(Value::Bool(checked)),
+        }
+    }
+
+    pub fn slide(id: String, value: f64) -> Self {
+        Self {
+            message_type: "event",
+            family: "slide",
+            id,
+            value: Some(serde_json::json!(value)),
+        }
+    }
+
+    pub fn slide_release(id: String, value: f64) -> Self {
+        Self {
+            message_type: "event",
+            family: "slide_release",
+            id,
+            value: Some(serde_json::json!(value)),
+        }
+    }
+
+    pub fn select(id: String, value: String) -> Self {
+        Self {
+            message_type: "event",
+            family: "select",
+            id,
+            value: Some(Value::String(value)),
         }
     }
 }
