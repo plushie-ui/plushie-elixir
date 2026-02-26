@@ -65,18 +65,19 @@ defmodule Mix.Tasks.Julep.Download do
   end
 
   defp ssl_opts do
-    [
-      verify: :verify_peer,
-      cacerts: :public_key.cacerts_get(),
-      depth: 3,
-      customize_hostname_check: [
-        match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+    if Code.ensure_loaded?(:public_key) and
+         function_exported?(:public_key, :cacerts_get, 0) do
+      [
+        verify: :verify_peer,
+        cacerts: apply(:public_key, :cacerts_get, []),
+        depth: 3,
+        customize_hostname_check: [
+          match_fun: apply(:public_key, :pkix_verify_hostname_match_fun, [:https])
+        ]
       ]
-    ]
-  rescue
-    _ ->
-      # Fallback for older Erlang versions
+    else
       [verify: :verify_none]
+    end
   end
 
   defp verify_checksum(dest_path, checksum_url) do
