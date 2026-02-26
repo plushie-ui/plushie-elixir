@@ -1204,6 +1204,67 @@ defmodule Julep.UITest do
   end
 
   # ---------------------------------------------------------------------------
+  # canvas edge cases
+  # ---------------------------------------------------------------------------
+
+  describe "canvas with empty shapes" do
+    test "canvas with explicit empty shapes list" do
+      node = canvas("cv", shapes: [])
+      assert node.type == "canvas"
+      assert node.props["shapes"] == []
+    end
+
+    test "canvas with no shapes prop at all" do
+      node = canvas("cv")
+      refute Map.has_key?(node.props, "shapes")
+    end
+
+    test "canvas with all shape types" do
+      shapes = [
+        %{type: "rect", x: 0, y: 0, w: 100, h: 50},
+        %{type: "circle", cx: 50, cy: 50, r: 25},
+        %{type: "line", x1: 0, y1: 0, x2: 100, y2: 100},
+        %{type: "text", x: 10, y: 10, content: "hello"}
+      ]
+
+      node = canvas("cv", shapes: shapes, width: 800, height: 600)
+      assert length(node.props["shapes"]) == 4
+      types = Enum.map(node.props["shapes"], & &1.type)
+      assert types == ["rect", "circle", "line", "text"]
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # table edge cases
+  # ---------------------------------------------------------------------------
+
+  describe "table with empty rows" do
+    test "table with columns but empty rows list" do
+      cols = [%{key: "name", label: "Name", width: 200}]
+      node = table("t", columns: cols, rows: [])
+      assert node.props["columns"] == cols
+      assert node.props["rows"] == []
+    end
+  end
+
+  describe "table with empty columns" do
+    test "table with rows but empty columns list" do
+      rows = [%{name: "Alice"}]
+      node = table("t", columns: [], rows: rows)
+      assert node.props["columns"] == []
+      assert node.props["rows"] == rows
+    end
+  end
+
+  describe "table with no data props" do
+    test "table with no columns or rows at all" do
+      node = table("t")
+      refute Map.has_key?(node.props, "columns")
+      refute Map.has_key?(node.props, "rows")
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Counter example view produces expected tree shape
   # ---------------------------------------------------------------------------
 

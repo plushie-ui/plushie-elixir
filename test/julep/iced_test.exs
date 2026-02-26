@@ -270,6 +270,60 @@ defmodule Julep.IcedTest do
   end
 
   # ===========================================================================
+  # Canvas & table edge cases
+  # ===========================================================================
+
+  describe "canvas edge cases" do
+    test "canvas with empty shapes list" do
+      node = Iced.canvas("cv1", %{shapes: [], width: 400, height: 300})
+      assert node.props["shapes"] == []
+      assert node.props["width"] == 400
+    end
+
+    test "canvas with multiple shape types" do
+      shapes = [
+        %{type: "rect", x: 0, y: 0, w: 50, h: 50},
+        %{type: "circle", cx: 25, cy: 25, r: 10},
+        %{type: "line", x1: 0, y1: 0, x2: 100, y2: 100}
+      ]
+      node = Iced.canvas("cv2", %{shapes: shapes})
+      assert length(node.props["shapes"]) == 3
+    end
+
+    test "canvas with no props has empty props map" do
+      node = Iced.canvas("cv3")
+      assert node.props == %{}
+    end
+  end
+
+  describe "table edge cases" do
+    test "table with empty rows" do
+      cols = [%{key: "id", label: "ID", width: 100}]
+      node = Iced.table("tbl2", %{columns: cols, rows: []})
+      assert node.props["columns"] == cols
+      assert node.props["rows"] == []
+    end
+
+    test "table with empty columns" do
+      node = Iced.table("tbl3", %{columns: [], rows: [%{x: 1}]})
+      assert node.props["columns"] == []
+      assert node.props["rows"] == [%{x: 1}]
+    end
+
+    test "table with both empty columns and rows" do
+      node = Iced.table("tbl4", %{columns: [], rows: []})
+      assert node.props["columns"] == []
+      assert node.props["rows"] == []
+    end
+
+    test "table with many rows" do
+      rows = for i <- 1..100, do: %{id: i, name: "item_#{i}"}
+      node = Iced.table("tbl5", %{rows: rows})
+      assert length(node.props["rows"]) == 100
+    end
+  end
+
+  # ===========================================================================
   # Cross-cutting concerns
   # ===========================================================================
 
@@ -369,6 +423,53 @@ defmodule Julep.IcedTest do
     test "encode/1 rejects unknown themes" do
       assert_raise FunctionClauseError, fn -> Theme.encode(:neon_pink) end
     end
+
+    test "encode/1 passes custom theme maps through unchanged" do
+      custom = %{"name" => "Mine", "primary" => "#ff0000", "background" => "#000000"}
+      assert Theme.encode(custom) == custom
+    end
+
+    test "custom/2 builds a map with name and provided options" do
+      result = Theme.custom("Tokyo Remix", primary: "#7aa2f7", danger: "#f7768e")
+      assert result == %{"name" => "Tokyo Remix", "primary" => "#7aa2f7", "danger" => "#f7768e"}
+    end
+
+    test "custom/2 omits nil options" do
+      result = Theme.custom("Minimal")
+      assert result == %{"name" => "Minimal"}
+    end
+
+    test "custom/2 includes base theme as string" do
+      result = Theme.custom("Nord+", base: :nord, primary: "#88c0d0")
+      assert result == %{"name" => "Nord+", "base" => "nord", "primary" => "#88c0d0"}
+    end
+
+    test "custom/2 accepts string base" do
+      result = Theme.custom("Foo", base: "dracula", text: "#ffffff")
+      assert result == %{"name" => "Foo", "base" => "dracula", "text" => "#ffffff"}
+    end
+
+    test "custom/2 supports all palette fields" do
+      result =
+        Theme.custom("Full",
+          base: :dark,
+          background: "#111111",
+          text: "#eeeeee",
+          primary: "#0000ff",
+          success: "#00ff00",
+          danger: "#ff0000"
+        )
+
+      assert result == %{
+               "name" => "Full",
+               "base" => "dark",
+               "background" => "#111111",
+               "text" => "#eeeeee",
+               "primary" => "#0000ff",
+               "success" => "#00ff00",
+               "danger" => "#ff0000"
+             }
+    end
   end
 
   describe "Font.encode/1" do
@@ -392,6 +493,85 @@ defmodule Julep.IcedTest do
     test "encodes multi-segment weight" do
       result = Font.encode(%{family: "X", weight: :extra_bold})
       assert result["weight"] == "ExtraBold"
+    end
+
+    test "encodes all weight variants" do
+      weights = [:thin, :extra_light, :light, :normal, :medium, :semi_bold, :bold, :extra_bold, :black]
+      expected = ["Thin", "ExtraLight", "Light", "Normal", "Medium", "SemiBold", "Bold", "ExtraBold", "Black"]
+
+      for {weight, exp} <- Enum.zip(weights, expected) do
+        result = Font.encode(%{family: "Test", weight: weight})
+        assert result["weight"] == exp,
+               "expected weight #{inspect(weight)} to encode as #{inspect(exp)}, got #{inspect(result["weight"])}"
+      end
+    end
+
+    test "encodes all style variants" do
+      for {style, expected} <- [{:normal, "Normal"}, {:italic, "Italic"}, {:oblique, "Oblique"}] do
+        result = Font.encode(%{family: "Test", style: style})
+        assert result["style"] == expected
+      end
+    end
+
+    test "encodes font with only family (no weight or style)" do
+      result = Font.encode(%{family: "Roboto"})
+      assert result == %{"family" => "Roboto"}
+      refute Map.has_key?(result, "weight")
+      refute Map.has_key?(result, "style")
+    end
+
+    test "encodes font with weight only (no style)" do
+      result = Font.encode(%{family: "Roboto", weight: :bold})
+      assert result == %{"family" => "Roboto", "weight" => "Bold"}
+      refute Map.has_key?(result, "style")
+    end
+
+    test "encodes font with style only (no weight)" do
+      result = Font.encode(%{family: "Roboto", style: :italic})
+      assert result == %{"family" => "Roboto", "style" => "Italic"}
+      refute Map.has_key?(result, "weight")
+    end
+  end
+
+  # ===========================================================================
+  # Padding edge cases
+  # ===========================================================================
+
+  describe "Padding edge cases" do
+    test "encodes zero padding" do
+      assert Padding.encode(0) == %{"top" => 0, "right" => 0, "bottom" => 0, "left" => 0}
+    end
+
+    test "encodes float padding" do
+      result = Padding.encode(4.5)
+      assert result == %{"top" => 4.5, "right" => 4.5, "bottom" => 4.5, "left" => 4.5}
+    end
+
+    test "encodes asymmetric tuple with zero" do
+      assert Padding.encode({0, 16}) == %{"top" => 0, "right" => 16, "bottom" => 0, "left" => 16}
+    end
+  end
+
+  # ===========================================================================
+  # Length edge cases
+  # ===========================================================================
+
+  describe "Length edge cases" do
+    test "encodes zero as a fixed number" do
+      assert Length.encode(0) == 0
+    end
+
+    test "encodes negative number (no guard prevents it)" do
+      assert Length.encode(-1) == -1
+    end
+
+    test "fill_portion rejects non-positive" do
+      assert_raise FunctionClauseError, fn -> Length.encode({:fill_portion, 0}) end
+      assert_raise FunctionClauseError, fn -> Length.encode({:fill_portion, -1}) end
+    end
+
+    test "fill_portion rejects float" do
+      assert_raise FunctionClauseError, fn -> Length.encode({:fill_portion, 1.5}) end
     end
   end
 end

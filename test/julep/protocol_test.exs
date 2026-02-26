@@ -386,4 +386,176 @@ defmodule Julep.ProtocolTest do
       assert Protocol.parse_key("Hyper") == "Hyper"
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # encode_widget_op/2
+  # ---------------------------------------------------------------------------
+
+  describe "encode_widget_op/2" do
+    test "produces a JSON object with type 'widget_op'" do
+      result = Protocol.encode_widget_op("focus", %{target: "username"})
+      parsed = decode_json!(result)
+      assert parsed["type"] == "widget_op"
+    end
+
+    test "includes the op and payload fields" do
+      result = Protocol.encode_widget_op("scroll_to", %{target: "feed", offset: 42})
+      parsed = decode_json!(result)
+      assert parsed["op"] == "scroll_to"
+      assert parsed["payload"]["target"] == "feed"
+      assert parsed["payload"]["offset"] == 42
+    end
+
+    test "output ends with a trailing newline" do
+      result = Protocol.encode_widget_op("focus_next", %{})
+      assert String.ends_with?(result, "\n")
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # encode_window_op/3
+  # ---------------------------------------------------------------------------
+
+  describe "encode_window_op/3" do
+    test "produces a JSON object with type 'window_op'" do
+      result = Protocol.encode_window_op("open", "main", %{title: "App"})
+      parsed = decode_json!(result)
+      assert parsed["type"] == "window_op"
+    end
+
+    test "includes op, window_id, and settings fields" do
+      result = Protocol.encode_window_op("close", "settings", %{})
+      parsed = decode_json!(result)
+      assert parsed["op"] == "close"
+      assert parsed["window_id"] == "settings"
+      assert parsed["settings"] == %{}
+    end
+
+    test "settings map is preserved" do
+      settings = %{title: "Preferences", width: 800, height: 600}
+      result = Protocol.encode_window_op("open", "prefs", settings)
+      parsed = decode_json!(result)
+      assert parsed["settings"]["title"] == "Preferences"
+      assert parsed["settings"]["width"] == 800
+    end
+
+    test "output ends with a trailing newline" do
+      result = Protocol.encode_window_op("open", "main", %{})
+      assert String.ends_with?(result, "\n")
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # encode_subscription_register/2
+  # ---------------------------------------------------------------------------
+
+  describe "encode_subscription_register/2" do
+    test "produces a JSON object with type 'subscription_register'" do
+      result = Protocol.encode_subscription_register("on_key_press", "keys")
+      parsed = decode_json!(result)
+      assert parsed["type"] == "subscription_register"
+    end
+
+    test "includes kind and tag fields" do
+      result = Protocol.encode_subscription_register("every", "timer_tick")
+      parsed = decode_json!(result)
+      assert parsed["kind"] == "every"
+      assert parsed["tag"] == "timer_tick"
+    end
+
+    test "output ends with a trailing newline" do
+      result = Protocol.encode_subscription_register("on_window_close", "close")
+      assert String.ends_with?(result, "\n")
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # encode_subscription_unregister/1
+  # ---------------------------------------------------------------------------
+
+  describe "encode_subscription_unregister/1" do
+    test "produces a JSON object with type 'subscription_unregister'" do
+      result = Protocol.encode_subscription_unregister("on_key_press")
+      parsed = decode_json!(result)
+      assert parsed["type"] == "subscription_unregister"
+    end
+
+    test "includes the kind field" do
+      result = Protocol.encode_subscription_unregister("every")
+      parsed = decode_json!(result)
+      assert parsed["kind"] == "every"
+    end
+
+    test "does not include a tag field" do
+      result = Protocol.encode_subscription_unregister("on_window_event")
+      parsed = decode_json!(result)
+      refute Map.has_key?(parsed, "tag")
+    end
+
+    test "output ends with a trailing newline" do
+      result = Protocol.encode_subscription_unregister("every")
+      assert String.ends_with?(result, "\n")
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # encode/decode roundtrip
+  # ---------------------------------------------------------------------------
+
+  describe "encode -> decode roundtrip for events" do
+    test "click event survives JSON roundtrip" do
+      # Simulate what the renderer would send back
+      json = Jason.encode!(%{type: "event", family: "click", id: "btn_1"})
+      assert {:click, "btn_1"} = Protocol.decode_message(json)
+    end
+
+    test "input event survives JSON roundtrip" do
+      json = Jason.encode!(%{type: "event", family: "input", id: "field", value: "hello"})
+      assert {:input, "field", "hello"} = Protocol.decode_message(json)
+    end
+
+    test "effect_response ok survives JSON roundtrip" do
+      json = Jason.encode!(%{type: "effect_response", id: "r1", status: "ok", result: %{data: 42}})
+      assert {:effect_result, "r1", {:ok, %{"data" => 42}}} = Protocol.decode_message(json)
+    end
+
+    test "effect_response error survives JSON roundtrip" do
+      json = Jason.encode!(%{type: "effect_response", id: "r2", status: "error", error: "timeout"})
+      assert {:effect_result, "r2", {:error, "timeout"}} = Protocol.decode_message(json)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # decode_message/1 -- key_release events (if supported)
+  # ---------------------------------------------------------------------------
+
+  describe "decode_message/1 -- edge cases" do
+    test "JSON array (not object) is treated as unknown message" do
+      json = Jason.encode!([1, 2, 3])
+      assert {:error, {:unknown_message, _}} = Protocol.decode_message(json)
+    end
+
+    test "JSON null is treated as unknown message" do
+      assert {:error, {:unknown_message, _}} = Protocol.decode_message("null")
+    end
+
+    test "JSON number is treated as unknown message" do
+      assert {:error, {:unknown_message, _}} = Protocol.decode_message("42")
+    end
+
+    test "JSON string is treated as unknown message" do
+      assert {:error, {:unknown_message, _}} = Protocol.decode_message("\"hello\"")
+    end
+
+    test "event with missing required fields treated as unknown" do
+      # click without id
+      json = Jason.encode!(%{type: "event", family: "click"})
+      assert {:error, {:unknown_message, _}} = Protocol.decode_message(json)
+    end
+
+    test "effect_response with unknown status treated as unknown" do
+      json = Jason.encode!(%{type: "effect_response", id: "r", status: "pending", result: nil})
+      assert {:error, {:unknown_message, _}} = Protocol.decode_message(json)
+    end
+  end
 end
