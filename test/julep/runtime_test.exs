@@ -126,34 +126,38 @@ defmodule Julep.RuntimeTest do
       assert text_node.props["content"] == "Value: 0"
     end
 
-    test "dispatching an event updates the model and sends a new snapshot" do
+    test "dispatching an event updates the model and sends a patch" do
       {runtime, bridge} = start_runtime(SimpleApp)
       await_initial_render(runtime)
 
       dispatch_and_wait(runtime, {:click, "inc"})
 
+      # Initial render sends a snapshot; subsequent updates send patches.
       snapshots = Julep.Test.MockBridge.get_snapshots(bridge)
-      assert length(snapshots) == 2
+      assert length(snapshots) == 1
 
-      [_initial, after_inc] = snapshots
-      text_node = find_by_type(after_inc, "text")
+      patches = Julep.Test.MockBridge.get_patches(bridge)
+      assert length(patches) == 1
+
+      # Verify the runtime's current tree reflects the update.
+      state = :sys.get_state(runtime)
+      text_node = find_by_type(state.tree, "text")
       assert text_node.props["content"] == "Value: 1"
     end
 
-    test "multiple events produce multiple snapshots" do
-      {runtime, bridge} = start_runtime(SimpleApp)
+    test "multiple events produce patches and update model correctly" do
+      {runtime, _bridge} = start_runtime(SimpleApp)
       await_initial_render(runtime)
 
       dispatch_and_wait(runtime, {:click, "inc"})
       dispatch_and_wait(runtime, {:click, "inc"})
       dispatch_and_wait(runtime, {:click, "dec"})
 
-      snapshots = Julep.Test.MockBridge.get_snapshots(bridge)
-      # initial + 3 updates
-      assert length(snapshots) == 4
+      state = :sys.get_state(runtime)
+      assert state.model.value == 1
 
-      contents = snapshots |> Enum.map(&find_by_type(&1, "text")) |> Enum.map(& &1.props["content"])
-      assert contents == ["Value: 0", "Value: 1", "Value: 2", "Value: 1"]
+      text_node = find_by_type(state.tree, "text")
+      assert text_node.props["content"] == "Value: 1"
     end
 
     test "unknown events are handled and model remains unchanged" do
@@ -163,12 +167,12 @@ defmodule Julep.RuntimeTest do
       dispatch_and_wait(runtime, {:click, "nope"})
       dispatch_and_wait(runtime, :mystery_event)
 
-      snapshots = Julep.Test.MockBridge.get_snapshots(bridge)
-      # initial + 2 updates, all with value 0
-      assert length(snapshots) == 3
+      # Unknown events don't change the tree, so no patches are sent.
+      patches = Julep.Test.MockBridge.get_patches(bridge)
+      assert patches == []
 
-      contents = snapshots |> Enum.map(&find_by_type(&1, "text")) |> Enum.map(& &1.props["content"])
-      assert Enum.all?(contents, &(&1 == "Value: 0"))
+      state = :sys.get_state(runtime)
+      assert state.model.value == 0
     end
   end
 
@@ -178,25 +182,22 @@ defmodule Julep.RuntimeTest do
 
   describe "commands" do
     test "send_after delivers the event after the specified delay" do
-      {runtime, bridge} = start_runtime(CommandApp)
+      {runtime, _bridge} = start_runtime(CommandApp)
       await_initial_render(runtime)
 
       # send_after(10, :timer_tick) is scheduled in init; wait long enough.
       Process.sleep(80)
-      # Drain the runtime mailbox so the send_after_event is processed.
       :sys.get_state(runtime)
 
-      snapshots = Julep.Test.MockBridge.get_snapshots(bridge)
-      # initial snapshot + snapshot after :timer_tick fires
-      assert length(snapshots) >= 2
+      state = :sys.get_state(runtime)
+      assert state.model.value == 1
 
-      last = List.last(snapshots)
-      text_node = find_by_type(last, "text")
+      text_node = find_by_type(state.tree, "text")
       assert text_node.props["content"] == "1"
     end
 
     test "async command delivers its result through update" do
-      {runtime, bridge} = start_runtime(AsyncApp)
+      {runtime, _bridge} = start_runtime(AsyncApp)
       await_initial_render(runtime)
 
       dispatch_and_wait(runtime, {:click, "async"})
@@ -205,9 +206,10 @@ defmodule Julep.RuntimeTest do
       Process.sleep(50)
       :sys.get_state(runtime)
 
-      snapshots = Julep.Test.MockBridge.get_snapshots(bridge)
-      last = List.last(snapshots)
-      text_node = find_by_type(last, "text")
+      state = :sys.get_state(runtime)
+      assert state.model.value == 42
+
+      text_node = find_by_type(state.tree, "text")
       assert text_node.props["content"] == "42"
     end
 
@@ -241,7 +243,7 @@ defmodule Julep.RuntimeTest do
         end
       end
 
-      {runtime, bridge} = start_runtime(BatchApp)
+      {runtime, _bridge} = start_runtime(BatchApp)
       await_initial_render(runtime)
 
       dispatch_and_wait(runtime, {:click, "batch"})
@@ -250,26 +252,23 @@ defmodule Julep.RuntimeTest do
       Process.sleep(80)
       :sys.get_state(runtime)
 
-      snapshots = Julep.Test.MockBridge.get_snapshots(bridge)
-      last = List.last(snapshots)
-      text_node = find_by_type(last, "text")
+      state = :sys.get_state(runtime)
+      assert state.model.ticks == 2
+
+      text_node = find_by_type(state.tree, "text")
       assert text_node.props["content"] == "ticks:2"
     end
 
     test "init with commands executes them" do
-      {runtime, bridge} = start_runtime(CommandApp)
+      {runtime, _bridge} = start_runtime(CommandApp)
       await_initial_render(runtime)
 
       # The CommandApp init schedules send_after(10, :timer_tick).
       Process.sleep(80)
       :sys.get_state(runtime)
 
-      snapshots = Julep.Test.MockBridge.get_snapshots(bridge)
-      assert length(snapshots) >= 2
-
-      last = List.last(snapshots)
-      text_node = find_by_type(last, "text")
-      assert text_node.props["content"] == "1"
+      state = :sys.get_state(runtime)
+      assert state.model.value == 1
     end
   end
 
@@ -327,6 +326,129 @@ defmodule Julep.RuntimeTest do
 
       [first, second] = snapshots
       assert first == second
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # describe "subscriptions"
+  # ---------------------------------------------------------------------------
+
+  describe "subscriptions" do
+    test "app with every subscription receives periodic tick events" do
+      defmodule TickApp do
+        use Julep.App
+
+        def init(_opts), do: %{ticks: 0}
+
+        def update(model, {:tick, _timestamp}), do: %{model | ticks: model.ticks + 1}
+        def update(model, _event), do: model
+
+        def subscribe(_model), do: [Julep.Subscription.every(20, :tick)]
+
+        def view(model) do
+          import Julep.UI
+          column do
+            text("ticks:#{model.ticks}")
+          end
+        end
+      end
+
+      {runtime, _bridge} = start_runtime(TickApp)
+      await_initial_render(runtime)
+
+      # Wait long enough for at least 2 ticks (20ms interval).
+      Process.sleep(80)
+      :sys.get_state(runtime)
+
+      state = :sys.get_state(runtime)
+      assert state.model.ticks >= 2
+    end
+
+    test "subscription removed when subscribe/1 stops returning it" do
+      defmodule ToggleSubApp do
+        use Julep.App
+
+        def init(_opts), do: %{timer_on: true, ticks: 0}
+
+        def update(model, {:tick, _ts}), do: %{model | ticks: model.ticks + 1}
+        def update(model, :stop_timer), do: %{model | timer_on: false}
+        def update(model, _event), do: model
+
+        def subscribe(model) do
+          if model.timer_on do
+            [Julep.Subscription.every(15, :tick)]
+          else
+            []
+          end
+        end
+
+        def view(model) do
+          import Julep.UI
+          column do
+            text("ticks:#{model.ticks}")
+          end
+        end
+      end
+
+      {runtime, _bridge} = start_runtime(ToggleSubApp)
+      await_initial_render(runtime)
+
+      # Let some ticks accumulate.
+      Process.sleep(60)
+      :sys.get_state(runtime)
+
+      ticks_before = :sys.get_state(runtime).model.ticks
+      assert ticks_before >= 2
+
+      # Stop the timer subscription.
+      dispatch_and_wait(runtime, :stop_timer)
+
+      # Wait and confirm no more ticks arrive.
+      Process.sleep(60)
+      :sys.get_state(runtime)
+
+      ticks_after = :sys.get_state(runtime).model.ticks
+      # Ticks should not have increased after stopping.
+      assert ticks_after == ticks_before
+    end
+
+    test "multiple subscriptions can coexist" do
+      defmodule MultiSubApp do
+        use Julep.App
+
+        def init(_opts), do: %{fast: 0, slow: 0}
+
+        def update(model, {:fast_tick, _ts}), do: %{model | fast: model.fast + 1}
+        def update(model, {:slow_tick, _ts}), do: %{model | slow: model.slow + 1}
+        def update(model, _event), do: model
+
+        def subscribe(_model) do
+          [
+            Julep.Subscription.every(15, :fast_tick),
+            Julep.Subscription.every(40, :slow_tick)
+          ]
+        end
+
+        def view(model) do
+          import Julep.UI
+          column do
+            text("fast:#{model.fast}")
+            text("slow:#{model.slow}")
+          end
+        end
+      end
+
+      {runtime, _bridge} = start_runtime(MultiSubApp)
+      await_initial_render(runtime)
+
+      Process.sleep(100)
+      state = :sys.get_state(runtime)
+
+      # Both subscriptions should have fired at least once.
+      assert state.model.fast >= 2
+      assert state.model.slow >= 1
+      # Fast should tick more than slow.
+      assert state.model.fast > state.model.slow
     end
   end
 

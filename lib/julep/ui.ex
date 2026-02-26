@@ -610,6 +610,18 @@ defmodule Julep.UI do
   @spec find(map(), String.t()) :: map() | nil
   defdelegate find(tree, id), to: Julep.Tree
 
+  @doc "Returns true if a node with `id` exists in the tree."
+  @spec exists?(map() | nil, String.t()) :: boolean()
+  defdelegate exists?(tree, id), to: Julep.Tree
+
+  @doc "Returns all node IDs in the tree."
+  @spec ids(map() | nil) :: [String.t()]
+  defdelegate ids(tree), to: Julep.Tree
+
+  @doc "Finds all nodes matching a predicate."
+  @spec find_all(map() | nil, String.t() | (map() -> boolean())) :: [map()]
+  defdelegate find_all(tree, id_or_pred), to: Julep.Tree
+
   # ---------------------------------------------------------------------------
   # Private macro helpers
   # ---------------------------------------------------------------------------

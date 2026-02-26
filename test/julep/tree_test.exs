@@ -288,6 +288,89 @@ defmodule Julep.TreeTest do
   end
 
   # ---------------------------------------------------------------------------
+  # exists?/2
+  # ---------------------------------------------------------------------------
+
+  describe "exists?/2" do
+    test "returns true for existing node" do
+      tree = %{
+        id: "root",
+        type: "column",
+        props: %{},
+        children: [
+          %{id: "child", type: "text", props: %{}, children: []}
+        ]
+      }
+
+      assert Tree.exists?(tree, "root")
+      assert Tree.exists?(tree, "child")
+    end
+
+    test "returns false for non-existing node" do
+      tree = %{id: "root", type: "column", props: %{}, children: []}
+      refute Tree.exists?(tree, "nope")
+    end
+
+    test "returns false for nil tree" do
+      refute Tree.exists?(nil, "anything")
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # ids/1
+  # ---------------------------------------------------------------------------
+
+  describe "ids/1" do
+    test "returns all IDs depth-first" do
+      tree = %{
+        id: "a",
+        type: "column",
+        props: %{},
+        children: [
+          %{id: "b", type: "text", props: %{}, children: []},
+          %{
+            id: "c",
+            type: "row",
+            props: %{},
+            children: [
+              %{id: "d", type: "text", props: %{}, children: []}
+            ]
+          }
+        ]
+      }
+
+      assert Tree.ids(tree) == ["a", "b", "c", "d"]
+    end
+
+    test "returns empty list for nil" do
+      assert Tree.ids(nil) == []
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # find_all/2 with predicate (additional coverage)
+  # ---------------------------------------------------------------------------
+
+  describe "find_all/2 with predicate" do
+    test "finds all nodes matching predicate" do
+      tree = %{
+        id: "root",
+        type: "column",
+        props: %{},
+        children: [
+          %{id: "t1", type: "text", props: %{}, children: []},
+          %{id: "b1", type: "button", props: %{}, children: []},
+          %{id: "t2", type: "text", props: %{}, children: []}
+        ]
+      }
+
+      texts = Tree.find_all(tree, fn node -> node.type == "text" end)
+      assert length(texts) == 2
+      assert Enum.map(texts, & &1.id) == ["t1", "t2"]
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # stringify_keys/1
   # ---------------------------------------------------------------------------
 
@@ -327,6 +410,160 @@ defmodule Julep.TreeTest do
 
     test "returns empty map for empty input" do
       assert Tree.stringify_keys(%{}) == %{}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # diff/2
+  # ---------------------------------------------------------------------------
+
+  describe "diff/2 -- nil inputs" do
+    test "both nil returns empty list" do
+      assert Tree.diff(nil, nil) == []
+    end
+
+    test "nil to tree returns replace_node at root" do
+      tree = %{id: "root", type: "container", props: %{}, children: []}
+      assert Tree.diff(nil, tree) == [%{op: "replace_node", path: [], node: tree}]
+    end
+
+    test "tree to nil returns remove_child at root" do
+      tree = %{id: "root", type: "container", props: %{}, children: []}
+      assert Tree.diff(tree, nil) == [%{op: "remove_child", path: [], index: 0}]
+    end
+  end
+
+  describe "diff/2 -- identical trees" do
+    test "returns empty list for identical trees" do
+      tree = %{
+        id: "root",
+        type: "container",
+        props: %{"padding" => 10},
+        children: [
+          %{id: "btn", type: "button", props: %{"label" => "OK"}, children: []}
+        ]
+      }
+
+      assert Tree.diff(tree, tree) == []
+    end
+  end
+
+  describe "diff/2 -- replaced root" do
+    test "different root IDs produce replace_node" do
+      old = %{id: "root-a", type: "container", props: %{}, children: []}
+      new = %{id: "root-b", type: "container", props: %{}, children: []}
+      assert Tree.diff(old, new) == [%{op: "replace_node", path: [], node: new}]
+    end
+  end
+
+  describe "diff/2 -- changed props" do
+    test "changed prop value emits update_props with only changed keys" do
+      old = %{id: "root", type: "container", props: %{"color" => "red", "size" => 14}, children: []}
+      new = %{id: "root", type: "container", props: %{"color" => "blue", "size" => 14}, children: []}
+
+      ops = Tree.diff(old, new)
+      assert ops == [%{op: "update_props", path: [], props: %{"color" => "blue"}}]
+    end
+
+    test "added prop emits update_props" do
+      old = %{id: "root", type: "container", props: %{}, children: []}
+      new = %{id: "root", type: "container", props: %{"visible" => true}, children: []}
+
+      ops = Tree.diff(old, new)
+      assert ops == [%{op: "update_props", path: [], props: %{"visible" => true}}]
+    end
+
+    test "removed prop emits update_props with nil value" do
+      old = %{id: "root", type: "container", props: %{"color" => "red"}, children: []}
+      new = %{id: "root", type: "container", props: %{}, children: []}
+
+      ops = Tree.diff(old, new)
+      assert ops == [%{op: "update_props", path: [], props: %{"color" => nil}}]
+    end
+  end
+
+  describe "diff/2 -- added child" do
+    test "new child emits insert_child" do
+      old = %{id: "root", type: "container", props: %{}, children: []}
+      child = %{id: "btn", type: "button", props: %{"label" => "Go"}, children: []}
+      new = %{id: "root", type: "container", props: %{}, children: [child]}
+
+      ops = Tree.diff(old, new)
+      assert ops == [%{op: "insert_child", path: [], index: 0, node: child}]
+    end
+  end
+
+  describe "diff/2 -- removed child" do
+    test "missing child emits remove_child" do
+      child = %{id: "btn", type: "button", props: %{"label" => "Go"}, children: []}
+      old = %{id: "root", type: "container", props: %{}, children: [child]}
+      new = %{id: "root", type: "container", props: %{}, children: []}
+
+      ops = Tree.diff(old, new)
+      assert ops == [%{op: "remove_child", path: [], index: 0}]
+    end
+  end
+
+  describe "diff/2 -- multiple changes" do
+    test "remove + insert + update in a single diff" do
+      old_child_a = %{id: "a", type: "text", props: %{"content" => "hello"}, children: []}
+      old_child_b = %{id: "b", type: "text", props: %{"content" => "world"}, children: []}
+      new_child_a = %{id: "a", type: "text", props: %{"content" => "hi"}, children: []}
+      new_child_c = %{id: "c", type: "button", props: %{"label" => "New"}, children: []}
+
+      old = %{id: "root", type: "container", props: %{}, children: [old_child_a, old_child_b]}
+      new = %{id: "root", type: "container", props: %{}, children: [new_child_a, new_child_c]}
+
+      ops = Tree.diff(old, new)
+
+      # b removed at index 1, a updated at index 0, c inserted at index 1
+      assert [remove, update, insert] = ops
+      assert remove == %{op: "remove_child", path: [], index: 1}
+      assert update == %{op: "update_props", path: [0], props: %{"content" => "hi"}}
+      assert insert == %{op: "insert_child", path: [], index: 1, node: new_child_c}
+    end
+
+    test "multiple removes are ordered high index to low" do
+      child_a = %{id: "a", type: "text", props: %{}, children: []}
+      child_b = %{id: "b", type: "text", props: %{}, children: []}
+      child_c = %{id: "c", type: "text", props: %{}, children: []}
+
+      old = %{id: "root", type: "container", props: %{}, children: [child_a, child_b, child_c]}
+      new = %{id: "root", type: "container", props: %{}, children: []}
+
+      ops = Tree.diff(old, new)
+
+      assert [r1, r2, r3] = ops
+      assert r1.index == 2
+      assert r2.index == 1
+      assert r3.index == 0
+    end
+  end
+
+  describe "diff/2 -- nested changes" do
+    test "changed prop on nested child has correct path" do
+      inner = %{id: "inner", type: "text", props: %{"content" => "old"}, children: []}
+      outer = %{id: "outer", type: "column", props: %{}, children: [inner]}
+      old = %{id: "root", type: "container", props: %{}, children: [outer]}
+
+      inner_new = %{id: "inner", type: "text", props: %{"content" => "new"}, children: []}
+      outer_new = %{id: "outer", type: "column", props: %{}, children: [inner_new]}
+      new = %{id: "root", type: "container", props: %{}, children: [outer_new]}
+
+      ops = Tree.diff(old, new)
+      assert ops == [%{op: "update_props", path: [0, 0], props: %{"content" => "new"}}]
+    end
+
+    test "insert deep in the tree has correct path" do
+      outer = %{id: "outer", type: "column", props: %{}, children: []}
+      old = %{id: "root", type: "container", props: %{}, children: [outer]}
+
+      new_child = %{id: "leaf", type: "button", props: %{}, children: []}
+      outer_new = %{id: "outer", type: "column", props: %{}, children: [new_child]}
+      new = %{id: "root", type: "container", props: %{}, children: [outer_new]}
+
+      ops = Tree.diff(old, new)
+      assert ops == [%{op: "insert_child", path: [0], index: 0, node: new_child}]
     end
   end
 end

@@ -44,6 +44,11 @@ defmodule Julep.Bridge do
     GenServer.cast(bridge, {:send_snapshot, tree})
   end
 
+  @doc "Sends a patch (list of diff ops) to the renderer."
+  def send_patch(bridge, ops) do
+    GenServer.cast(bridge, {:send_patch, ops})
+  end
+
   @doc "Stops the bridge GenServer."
   def stop(bridge) do
     GenServer.stop(bridge)
@@ -91,6 +96,12 @@ defmodule Julep.Bridge do
   @impl true
   def handle_cast({:send_snapshot, tree}, state) do
     json = Julep.Protocol.encode_snapshot(tree)
+    send_to_port(state.port, json)
+    {:noreply, state}
+  end
+
+  def handle_cast({:send_patch, ops}, state) do
+    json = Julep.Protocol.encode_patch(ops)
     send_to_port(state.port, json)
     {:noreply, state}
   end

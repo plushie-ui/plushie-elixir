@@ -14,13 +14,14 @@ defmodule Julep.Runtime do
     4. Sends a full snapshot to the bridge via `Julep.Bridge.send_snapshot/2`.
     5. Executes any commands returned from `init/1`.
 
-  ## Event loop (Phase 0 -- full snapshots)
+  ## Event loop
 
   On every `{:renderer_event, event}`:
     1. Calls `app.update(model, event)`.
     2. Executes returned commands.
     3. Calls `app.view(model)` on the new model.
-    4. Normalizes and sends a full snapshot. Diffing is Phase 1.
+    4. Diffs against the previous tree; sends a patch if changed, or a
+       full snapshot on first render / after renderer restart.
 
   ## State shape
 
@@ -90,7 +91,7 @@ defmodule Julep.Runtime do
     # 1. Initialize app model.
     {model, commands} = unwrap_result(app.init(app_opts))
 
-    state = %{app: app, model: model, bridge: bridge, tree: nil, init_commands: commands}
+    state = %{app: app, model: model, bridge: bridge, tree: nil, init_commands: commands, subscriptions: %{}}
 
     # Defer snapshot send to handle_continue so the supervisor can start
     # Bridge before we try to send to it.
@@ -99,13 +100,15 @@ defmodule Julep.Runtime do
 
   @impl true
   def handle_continue(:initial_render, state) do
-    # 2-4. Render initial tree and push snapshot.
-    tree = render_and_snapshot(state.app, state.model, state.bridge)
+    # 2-4. Render initial tree and push snapshot (old_tree is nil -> full snapshot).
+    tree = render_and_sync(state.app, state.model, state.bridge, nil)
 
     # 5. Execute initial commands.
     execute_commands(Map.get(state, :init_commands, []))
 
-    {:noreply, %{state | tree: tree} |> Map.delete(:init_commands)}
+    state = %{state | tree: tree} |> Map.delete(:init_commands)
+    state = sync_subscriptions(state, state.model)
+    {:noreply, state}
   end
 
   # ---------------------------------------------------------------------------
@@ -174,7 +177,22 @@ defmodule Julep.Runtime do
     {:noreply, state}
   end
 
-  # Ignore anything else -- subscriptions, stray messages, etc.
+  # ---------------------------------------------------------------------------
+  # Subscription ticks
+  # ---------------------------------------------------------------------------
+
+  def handle_info({:subscription_tick, tag, interval}, state) do
+    # Re-arm the timer
+    ref = Process.send_after(self(), {:subscription_tick, tag, interval}, interval)
+    state = put_in(state.subscriptions[{:every, interval, tag}], {:timer, ref})
+
+    # Dispatch the event
+    now = System.monotonic_time(:millisecond)
+    state = run_update(state, {tag, now})
+    {:noreply, state}
+  end
+
+  # Ignore anything else -- stray messages, etc.
   def handle_info(msg, state) do
     Logger.debug("julep runtime: unhandled message: #{inspect(msg)}")
     {:noreply, state}
@@ -200,26 +218,45 @@ defmodule Julep.Runtime do
     {model, []}
   end
 
-  # Calls view, normalizes the tree, sends the snapshot, and returns the
-  # normalized tree (so the state can store it for potential re-sends).
-  @spec render_and_snapshot(module(), term(), pid() | atom()) :: map()
-  defp render_and_snapshot(app, model, bridge) do
-    raw_tree  = app.view(model)
-    tree      = Julep.Tree.normalize(raw_tree)
-    Julep.Bridge.send_snapshot(bridge, tree)
-    tree
+  # Renders the view and sends either a full snapshot (first render or after
+  # restart) or a patch (incremental diff) to the bridge.
+  @spec render_and_sync(module(), term(), pid() | atom(), map() | nil) :: map()
+  defp render_and_sync(app, model, bridge, old_tree) do
+    raw_tree = app.view(model)
+    new_tree = Julep.Tree.normalize(raw_tree)
+
+    cond do
+      # First render or after restart -- send full snapshot.
+      is_nil(old_tree) ->
+        Julep.Bridge.send_snapshot(bridge, new_tree)
+
+      # Trees identical -- skip send entirely.
+      old_tree == new_tree ->
+        :noop
+
+      # Incremental update -- diff and send patch.
+      true ->
+        ops = Julep.Tree.diff(old_tree, new_tree)
+
+        if ops != [] do
+          Julep.Bridge.send_patch(bridge, ops)
+        end
+    end
+
+    new_tree
   end
 
-  # Full update cycle: update model, execute commands, re-render.
+  # Full update cycle: update model, execute commands, re-render, sync subs.
   @spec run_update(map(), term()) :: map()
   defp run_update(%{app: app, model: model, bridge: bridge} = state, event) do
     {new_model, commands} = unwrap_result(app.update(model, event))
 
     execute_commands(commands)
 
-    new_tree = render_and_snapshot(app, new_model, bridge)
+    new_tree = render_and_sync(app, new_model, bridge, state.tree)
 
-    %{state | model: new_model, tree: new_tree}
+    state = %{state | model: new_model, tree: new_tree}
+    sync_subscriptions(state, new_model)
   end
 
   # Executes a list of commands. Batch commands are flattened recursively.
@@ -273,5 +310,53 @@ defmodule Julep.Runtime do
   defp execute_command(cmd) do
     Logger.warning("julep runtime: unknown command: #{inspect(cmd)}")
     :ok
+  end
+
+  # ---------------------------------------------------------------------------
+  # Subscription lifecycle
+  # ---------------------------------------------------------------------------
+
+  @spec sync_subscriptions(map(), term()) :: map()
+  defp sync_subscriptions(state, new_model) do
+    new_specs = state.app.subscribe(new_model)
+    new_by_key = Map.new(new_specs, fn spec -> {Julep.Subscription.key(spec), spec} end)
+    old_keys = Map.keys(state.subscriptions)
+    new_keys = Map.keys(new_by_key)
+
+    # Stop removed subscriptions
+    to_stop = old_keys -- new_keys
+
+    Enum.each(to_stop, fn key ->
+      case Map.get(state.subscriptions, key) do
+        {:timer, ref} -> Process.cancel_timer(ref)
+        _ -> :ok
+      end
+    end)
+
+    # Start new subscriptions
+    to_start = new_keys -- old_keys
+
+    new_entries =
+      Map.new(to_start, fn key ->
+        spec = Map.fetch!(new_by_key, key)
+        {key, start_subscription(spec)}
+      end)
+
+    # Keep existing (unchanged) subscriptions
+    kept = Map.take(state.subscriptions, new_keys -- to_start)
+
+    %{state | subscriptions: Map.merge(kept, new_entries)}
+  end
+
+  defp start_subscription(%{type: :every, interval: interval, tag: tag}) do
+    ref = Process.send_after(self(), {:subscription_tick, tag, interval}, interval)
+    {:timer, ref}
+  end
+
+  defp start_subscription(%{type: type, tag: _tag})
+       when type in [:on_key_press, :on_key_release, :on_window_close, :on_window_event] do
+    # Renderer-side subscriptions -- Phase 2 will send registration messages to bridge.
+    # For now, just track that they're active.
+    {:renderer, type}
   end
 end

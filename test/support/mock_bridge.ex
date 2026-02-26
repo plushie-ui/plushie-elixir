@@ -17,16 +17,29 @@ defmodule Julep.Test.MockBridge do
     GenServer.call(bridge, :get_snapshots)
   end
 
+  @doc "Returns all patches received so far, in order."
+  def get_patches(bridge) do
+    GenServer.call(bridge, :get_patches)
+  end
+
   @impl true
-  def init(_opts), do: {:ok, %{snapshots: []}}
+  def init(_opts), do: {:ok, %{snapshots: [], patches: []}}
 
   @impl true
   def handle_cast({:send_snapshot, tree}, state) do
     {:noreply, %{state | snapshots: state.snapshots ++ [tree]}}
   end
 
+  def handle_cast({:send_patch, ops}, state) do
+    {:noreply, %{state | patches: state.patches ++ [ops]}}
+  end
+
   @impl true
   def handle_call(:get_snapshots, _from, state) do
     {:reply, state.snapshots, state}
+  end
+
+  def handle_call(:get_patches, _from, state) do
+    {:reply, state.patches, state}
   end
 end

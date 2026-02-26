@@ -14,7 +14,7 @@ defmodule Julep.Tree do
   This module provides normalization (ensuring the canonical shape),
   tree search by ID, and predicate-based search.
 
-  No diffing here -- that's Phase 1.
+  Includes tree diffing that produces minimal patch operations.
   """
 
   @type tree_node :: %{
@@ -88,6 +88,28 @@ defmodule Julep.Tree do
 
   def find(_node, _target_id), do: nil
 
+  @doc "Returns true if a node with the given `id` exists in the tree."
+  @spec exists?(map() | nil, String.t()) :: boolean()
+  def exists?(nil, _id), do: false
+
+  def exists?(tree, id) do
+    find(tree, id) != nil
+  end
+
+  @doc "Returns a flat list of all node IDs in the tree (depth-first order)."
+  @spec ids(map() | nil) :: [String.t()]
+  def ids(nil), do: []
+
+  def ids(%{id: id, children: children}) do
+    [id | Enum.flat_map(children, &ids/1)]
+  end
+
+  def ids(%{"id" => id, "children" => children}) do
+    [id | Enum.flat_map(children, &ids/1)]
+  end
+
+  def ids(_), do: []
+
   @doc """
   Finds all nodes in a tree for which `fun` returns truthy.
 
@@ -97,6 +119,95 @@ defmodule Julep.Tree do
   def find_all(node, fun) do
     do_find_all(node, fun, [])
     |> Enum.reverse()
+  end
+
+  @doc """
+  Compares two normalized trees and returns a list of patch operations.
+
+  Patch operations:
+    - `%{op: "replace_node", path: [int], node: map}` -- replace entire subtree
+    - `%{op: "update_props", path: [int], props: map}` -- merge props at path
+    - `%{op: "insert_child", path: [int], index: int, node: map}` -- insert child
+    - `%{op: "remove_child", path: [int], index: int}` -- remove child at index
+
+  Path is a list of child indices from the root. An empty path `[]` means the root node.
+  """
+  @spec diff(map() | nil, map() | nil) :: [map()]
+  def diff(nil, nil), do: []
+  def diff(nil, new_tree), do: [%{op: "replace_node", path: [], node: new_tree}]
+  def diff(_old_tree, nil), do: [%{op: "remove_child", path: [], index: 0}]
+
+  def diff(%{id: old_id} = _old_tree, %{id: new_id} = new_tree) when old_id != new_id do
+    [%{op: "replace_node", path: [], node: new_tree}]
+  end
+
+  def diff(%{} = old_tree, %{} = new_tree) do
+    diff_node(old_tree, new_tree, [])
+  end
+
+  defp diff_node(old, new, path) do
+    prop_ops = diff_props(old.props, new.props, path)
+    child_ops = diff_children(old.children, new.children, path)
+    prop_ops ++ child_ops
+  end
+
+  defp diff_props(old_props, new_props, _path) when old_props == new_props, do: []
+
+  defp diff_props(old_props, new_props, path) do
+    changed =
+      new_props
+      |> Enum.reduce(%{}, fn {k, v}, acc ->
+        case Map.fetch(old_props, k) do
+          {:ok, ^v} -> acc
+          _ -> Map.put(acc, k, v)
+        end
+      end)
+
+    # Keys removed in new -- set to nil so the renderer can clear them
+    removed =
+      old_props
+      |> Enum.reduce(%{}, fn {k, _v}, acc ->
+        if Map.has_key?(new_props, k), do: acc, else: Map.put(acc, k, nil)
+      end)
+
+    merged = Map.merge(changed, removed)
+
+    if map_size(merged) == 0 do
+      []
+    else
+      [%{op: "update_props", path: path, props: merged}]
+    end
+  end
+
+  defp diff_children(old_children, new_children, path) do
+    old_by_id = old_children |> Enum.with_index() |> Map.new(fn {c, i} -> {c.id, {c, i}} end)
+    new_by_id = new_children |> Enum.with_index() |> Map.new(fn {c, _i} -> {c.id, true} end)
+
+    # Removals: old IDs not present in new, highest index first
+    remove_ops =
+      old_by_id
+      |> Enum.reject(fn {id, _} -> Map.has_key?(new_by_id, id) end)
+      |> Enum.sort_by(fn {_, {_, idx}} -> idx end, :desc)
+      |> Enum.map(fn {_, {_, idx}} -> %{op: "remove_child", path: path, index: idx} end)
+
+    # Walk new children for updates and inserts
+    {update_ops, insert_ops} =
+      new_children
+      |> Enum.with_index()
+      |> Enum.reduce({[], []}, fn {child, idx}, {updates, inserts} ->
+        case Map.fetch(old_by_id, child.id) do
+          {:ok, {old_child, _old_idx}} ->
+            child_path = path ++ [idx]
+            ops = diff_node(old_child, child, child_path)
+            {updates ++ ops, inserts}
+
+          :error ->
+            insert = %{op: "insert_child", path: path, index: idx, node: child}
+            {updates, inserts ++ [insert]}
+        end
+      end)
+
+    remove_ops ++ update_ops ++ insert_ops
   end
 
   @doc """
