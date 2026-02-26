@@ -55,6 +55,8 @@ mix julep.gui MyApp
 
 ## Documentation
 
+Core:
+
 - [Charter](docs/charter.md) -- what and why
 - [Architecture](docs/architecture.md) -- the three pieces
 - [App behaviour](docs/app-behaviour.md) -- the Elixir API contract
@@ -62,7 +64,16 @@ mix julep.gui MyApp
 - [Transport](docs/transport.md) -- JSONL protocol between Elixir and Rust
 - [Renderer](docs/renderer.md) -- what the Rust binary does
 - [Effects](docs/effects.md) -- native platform features
+- [Theming](docs/theming.md) -- themes, custom palettes, styling
+- [State helpers](docs/state-helpers.md) -- optional state management modules
 - [Developer experience](docs/developer-experience.md) -- mix tasks, IEx, testing
+- [Roadmap](docs/roadmap.md) -- phased build plan
+
+Decisions:
+
+- [0001: Clean break from icing](docs/decisions/0001-clean-break-from-icing.md)
+- [0002: Elixir-first process model](docs/decisions/0002-elixir-first-process-model.md)
+- [0003: JSONL over stdio transport](docs/decisions/0003-jsonl-over-stdio-transport.md)
 
 ## License
 
