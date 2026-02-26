@@ -38,7 +38,8 @@ defmodule Julep.MixProject do
 
   defp deps do
     [
-      {:jason, "~> 1.4"}
+      {:jason, "~> 1.4"},
+      {:file_system, "~> 1.0", optional: true}
     ]
   end
 end

@@ -6,6 +6,10 @@ defmodule Julep do
 
       {:ok, pid} = Julep.start(MyApp)
 
+  ## Dev mode (live code reloading)
+
+      {:ok, pid} = Julep.start(MyApp, dev: true)
+
   ## Under a supervisor
 
       children = [
@@ -18,6 +22,8 @@ defmodule Julep do
   - `:app_opts`   -- opts forwarded to `app.init/1` (default: `[]`)
   - `:renderer`   -- path to the julep_gui binary (default: built debug binary)
   - `:name`       -- supervisor registration name (default: `Julep`)
+  - `:dev`        -- enable live code reloading (default: `false`)
+  - `:dev_opts`   -- options forwarded to `Julep.DevServer` (default: `[]`)
   """
 
   use Supervisor
@@ -79,6 +85,7 @@ defmodule Julep do
     name          = opts[:instance_name]
     app           = Keyword.fetch!(opts, :app)
     renderer_path = Keyword.get(opts, :renderer, @default_renderer_path)
+    dev?          = Keyword.get(opts, :dev, false)
 
     children = [
       # Runtime starts first and registers under runtime_name(name).
@@ -107,6 +114,23 @@ defmodule Julep do
       )
     ]
 
+    children =
+      if dev? do
+        dev_opts =
+          Keyword.get(opts, :dev_opts, [])
+          |> Keyword.put(:runtime, runtime_name(name))
+          |> Keyword.put_new(:name, dev_server_name(name))
+
+        children ++ [
+          Supervisor.child_spec(
+            {Julep.DevServer, dev_opts},
+            restart: :transient
+          )
+        ]
+      else
+        children
+      end
+
     # :rest_for_one -- if Runtime crashes, Bridge restarts too.
     # :transient -- don't restart children that exit normally (clean window close).
     # :auto_shutdown -- when any significant child exits normally, tear down the tree.
@@ -127,7 +151,8 @@ defmodule Julep do
     end
   end
 
-  defp sup_name(instance_name),     do: :"#{instance_name}.Supervisor"
-  defp runtime_name(instance_name), do: :"#{instance_name}.Runtime"
-  defp bridge_name(instance_name),  do: :"#{instance_name}.Bridge"
+  defp sup_name(instance_name),        do: :"#{instance_name}.Supervisor"
+  defp runtime_name(instance_name),    do: :"#{instance_name}.Runtime"
+  defp bridge_name(instance_name),     do: :"#{instance_name}.Bridge"
+  defp dev_server_name(instance_name), do: :"#{instance_name}.DevServer"
 end

@@ -147,6 +147,12 @@ defmodule Julep.Runtime do
       Julep.Bridge.send_snapshot(state.bridge, state.tree)
     end
 
+    # Re-open all known windows (renderer lost its window map on restart).
+    Enum.each(state.windows, fn window_id ->
+      settings = state.app.window_config(state.model)
+      Julep.Bridge.send_window_op(state.bridge, "open", window_id, settings)
+    end)
+
     {:noreply, state}
   end
 
@@ -190,6 +196,19 @@ defmodule Julep.Runtime do
     # Dispatch the event
     now = System.monotonic_time(:millisecond)
     state = run_update(state, {tag, now})
+    {:noreply, state}
+  end
+
+  # ---------------------------------------------------------------------------
+  # Dev-mode live reload
+  # ---------------------------------------------------------------------------
+
+  def handle_info(:force_rerender, state) do
+    Logger.info("julep runtime: force re-render (code reload)")
+    new_tree = render_and_sync(state.app, state.model, state.bridge, state.tree)
+    state = %{state | tree: new_tree}
+    state = sync_subscriptions(state, state.model)
+    state = sync_windows(state, new_tree)
     {:noreply, state}
   end
 

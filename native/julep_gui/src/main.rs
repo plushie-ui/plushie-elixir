@@ -215,7 +215,13 @@ impl App {
                     self.window_map.remove(&julep_id);
                     eprintln!("julep_gui: window closed: {julep_id}");
                 }
-                Task::none()
+                // All managed windows gone -- exit cleanly.
+                if self.window_map.is_empty() {
+                    eprintln!("julep_gui: all windows closed -- exiting");
+                    iced::exit()
+                } else {
+                    Task::none()
+                }
             }
             Message::WindowOpened(iced_id, julep_id) => {
                 eprintln!("julep_gui: window opened: {julep_id} -> {iced_id:?}");
@@ -430,28 +436,35 @@ impl App {
                 eprintln!("julep_gui: window_op: {op} ({window_id})");
                 match op.as_str() {
                     "open" => {
-                        let width = settings
-                            .get("width")
-                            .and_then(|v| v.as_f64())
-                            .unwrap_or(800.0) as f32;
-                        let height = settings
-                            .get("height")
-                            .and_then(|v| v.as_f64())
-                            .unwrap_or(600.0) as f32;
+                        if self.window_map.contains_key(&window_id) {
+                            eprintln!(
+                                "julep_gui: window_op open: {window_id} already open, skipping"
+                            );
+                        } else {
+                            let width = settings
+                                .get("width")
+                                .and_then(|v| v.as_f64())
+                                .unwrap_or(800.0) as f32;
+                            let height = settings
+                                .get("height")
+                                .and_then(|v| v.as_f64())
+                                .unwrap_or(600.0) as f32;
 
-                        let win_settings = window::Settings {
-                            size: iced::Size::new(width, height),
-                            ..window::Settings::default()
-                        };
+                            let win_settings = window::Settings {
+                                size: iced::Size::new(width, height),
+                                ..window::Settings::default()
+                            };
 
-                        let (iced_id, open_task) = window::open(win_settings);
+                            let (iced_id, open_task) = window::open(win_settings);
 
-                        self.window_map.insert(window_id.clone(), iced_id);
-                        self.reverse_window_map.insert(iced_id, window_id.clone());
+                            self.window_map.insert(window_id.clone(), iced_id);
+                            self.reverse_window_map.insert(iced_id, window_id.clone());
 
-                        let julep_id = window_id;
-                        let task = open_task.map(move |id| Message::WindowOpened(id, julep_id.clone()));
-                        self.pending_tasks.push(task);
+                            let julep_id = window_id;
+                            let task =
+                                open_task.map(move |id| Message::WindowOpened(id, julep_id.clone()));
+                            self.pending_tasks.push(task);
+                        }
                     }
                     "close" => {
                         if let Some(iced_id) = self.window_map.remove(&window_id) {
