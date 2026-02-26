@@ -1,0 +1,13 @@
+/_build/
+/deps/
+/doc/
+/.fetch
+erl_crash.dump
+*.ez
+*.beam
+/tmp/
+.elixir_ls/
+
+# Rust build artifacts
+native/julep_gui/target/
+
