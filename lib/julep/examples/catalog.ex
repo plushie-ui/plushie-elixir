@@ -139,9 +139,9 @@ defmodule Julep.Examples.Catalog do
       toggler("demo_toggler", model.toggler_on, label: "Toggle me")
 
       row spacing: 8 do
-        radio("demo_radio_a", "a", model.radio_selected, label: "Option A")
-        radio("demo_radio_b", "b", model.radio_selected, label: "Option B")
-        radio("demo_radio_c", "c", model.radio_selected, label: "Option C")
+        radio("demo_radio_a", "a", model.radio_selected, label: "Option A", group: "demo_radio")
+        radio("demo_radio_b", "b", model.radio_selected, label: "Option B", group: "demo_radio")
+        radio("demo_radio_c", "c", model.radio_selected, label: "Option C", group: "demo_radio")
       end
 
       slider("demo_slider", {0, 100}, model.slider_value, step: 1)

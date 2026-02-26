@@ -42,6 +42,23 @@ defmodule Julep.Examples.CatalogTest do
     assert model.slider_value == 75
   end
 
+  test "radio group select" do
+    model = Catalog.init([])
+    assert model.radio_selected == "a"
+    model = Catalog.update(model, {:select, "demo_radio", "b"})
+    assert model.radio_selected == "b"
+    model = Catalog.update(model, {:select, "demo_radio", "c"})
+    assert model.radio_selected == "c"
+  end
+
+  test "radio buttons emit group prop in tree" do
+    model = Catalog.init([]) |> Map.put(:active_tab, "input")
+    tree = Catalog.view(model)
+    radios = Julep.UI.find_all(tree, fn node -> node.type == "radio" end)
+    assert length(radios) == 3
+    assert Enum.all?(radios, fn r -> r.props["group"] == "demo_radio" end)
+  end
+
   test "pick list select" do
     model = Catalog.init([])
     model = Catalog.update(model, {:select, "demo_pick", "Medium"})

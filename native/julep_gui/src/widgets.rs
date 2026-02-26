@@ -330,15 +330,15 @@ fn render_radio<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let value = prop_str(props, "value").unwrap_or_default();
     let selected_str = prop_str(props, "selected").unwrap_or_default();
     let label = prop_str(props, "label").unwrap_or_else(|| value.clone());
-    let id = node.id.clone();
+    // Use "group" prop as the event ID so all radios in a group emit the same ID.
+    // Falls back to the node's own ID if no group is set.
+    let event_id = prop_str(props, "group").unwrap_or_else(|| node.id.clone());
 
-    // Radio::new wants V: Eq + Copy, so we use integer indices:
-    // value 0 = this radio, selected = Some(0) if value == selected_str.
     let is_selected = if value == selected_str { Some(0u8) } else { None };
     let select_value = value;
 
     iced::widget::Radio::new(label, 0u8, is_selected, move |_| {
-        Message::Select(id.clone(), select_value.clone())
+        Message::Select(event_id.clone(), select_value.clone())
     })
     .into()
 }

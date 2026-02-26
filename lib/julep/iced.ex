@@ -74,7 +74,7 @@ defmodule Julep.Iced do
   @spec toggler(String.t(), map()) :: map()
   def toggler(id, props \\ %{}), do: node(id, "toggler", props)
 
-  @doc "Radio button. Props: value, selected, label, spacing, width."
+  @doc "Radio button. Props: value, selected, label, group, spacing, width."
   @spec radio(String.t(), map()) :: map()
   def radio(id, props \\ %{}), do: node(id, "radio", props)
 

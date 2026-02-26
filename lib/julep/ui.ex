@@ -598,9 +598,13 @@ defmodule Julep.UI do
   @doc """
   Radio button for single-value selection from a group.
 
+  Use the `group` option so all radios in the same group emit select events
+  with the group name as the ID instead of each radio's individual ID.
+
   ## Example
 
-      radio("size", "large", model.size, label: "Large")
+      radio("size_sm", "small", model.size, label: "Small", group: "size")
+      radio("size_lg", "large", model.size, label: "Large", group: "size")
   """
   @spec radio(String.t(), String.t(), String.t() | nil, keyword()) :: map()
   def radio(id, value, selected, opts \\ []) do
