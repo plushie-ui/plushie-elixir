@@ -67,10 +67,14 @@ Core:
 - [Commands and subscriptions](docs/commands.md) -- async work, timers, widget ops
 - [Transport](docs/transport.md) -- JSONL protocol between Elixir and Rust
 - [Renderer](docs/renderer.md) -- what the Rust binary does
+- [Multi-window](docs/multi-window.md) -- declarative multi-window model
 - [Effects](docs/effects.md) -- native platform features
 - [Theming](docs/theming.md) -- themes, custom palettes, styling
+- [Stateful widgets](docs/stateful-widgets.md) -- text_editor, combo_box, pane_grid
 - [State helpers](docs/state-helpers.md) -- optional state management modules
-- [Developer experience](docs/developer-experience.md) -- mix tasks, IEx, testing
+- [Testing](docs/testing.md) -- unit, snapshot, scenario, and integration testing
+- [Accessibility](docs/accessibility.md) -- planned approach and roadmap
+- [Developer experience](docs/developer-experience.md) -- mix tasks, IEx, project structure
 - [Roadmap](docs/roadmap.md) -- phased build plan
 
 Decisions:

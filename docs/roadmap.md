@@ -8,11 +8,48 @@ demonstration.
 
 **Goal:** Repository, build tooling, and a working hello-world.
 
+Project structure:
+
+```
+julep/
+  lib/
+    julep.ex                    # Public API (start, stop, dispatch, etc.)
+    julep/
+      app.ex                    # Julep.App behaviour definition
+      ui.ex                     # Julep.UI ergonomic builder layer
+      iced.ex                   # Julep.Iced namespace root
+      iced/
+        ...                     # Strict parity widget modules (phase 1+)
+      command.ex                # Julep.Command
+      runtime.ex                # GenServer managing app lifecycle
+      bridge.ex                 # Port-based renderer bridge
+      protocol.ex               # JSONL encode/decode
+      tree.ex                   # Tree normalization and diffing
+  native/
+    julep_gui/
+      Cargo.toml
+      src/
+        main.rs                 # Renderer entry point
+  mix.exs
+  test/
+    ...
+  docs/
+    ...
+```
+
+Checklist:
+
 - [ ] Elixir mix project with `Julep.App` behaviour and `Julep.UI` module.
-- [ ] Rust binary (`julep_gui`) that renders a hardcoded tree from stdin.
-- [ ] Port-based bridge that spawns the renderer and exchanges JSONL.
+- [ ] `Julep.Runtime` GenServer: starts app, manages model, dispatches
+      events, calls view, sends trees to bridge.
+- [ ] `Julep.Bridge`: spawns renderer via Port, sends/receives JSONL.
+- [ ] `Julep.Protocol`: encode snapshots, decode events.
+- [ ] Rust binary (`julep_gui`) that reads a snapshot from stdin, renders
+      a basic tree (column, text, button), and writes click events to stdout.
 - [ ] `mix julep.gui` task that builds the renderer and runs an app.
 - [ ] One trivial app (counter) that compiles, runs, and renders.
+- [ ] Basic test: `Counter.init`, `Counter.update`, `Counter.view` work
+      without the renderer.
 
 **Gate:** `mix julep.gui Counter` opens a window with a working counter.
 
