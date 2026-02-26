@@ -4,14 +4,14 @@ mod theming;
 mod tree;
 mod widgets;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::{self, BufRead, Write};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::time::Duration;
 
 use iced::widget::{container, markdown, text, text_editor};
-use iced::{event, time, Element, Fill, Subscription, Task, Theme};
+use iced::{event, time, window, Element, Fill, Subscription, Task, Theme};
 
 use protocol::{IncomingMessage, KeyModifiers, OutgoingEvent};
 use tree::Tree;
@@ -46,10 +46,12 @@ enum Message {
     KeyPressed(iced::keyboard::Key, iced::keyboard::Modifiers),
     /// A keyboard key was released.
     KeyReleased(iced::keyboard::Key, iced::keyboard::Modifiers),
-    /// A window close was requested.
-    WindowCloseRequested(iced::window::Id),
+    /// A window close was requested by the user (WM close button).
+    WindowCloseRequested(window::Id),
+    /// A window was actually closed by iced.
+    WindowClosed(window::Id),
     /// A new window was opened (iced_id, julep_id).
-    WindowOpened(iced::window::Id, String),
+    WindowOpened(window::Id, String),
 }
 
 // ---------------------------------------------------------------------------
@@ -70,9 +72,9 @@ struct App {
     /// Active subscriptions: kind -> tag.
     active_subscriptions: HashMap<String, String>,
     /// Julep window ID -> iced window ID.
-    window_map: HashMap<String, iced::window::Id>,
+    window_map: HashMap<String, window::Id>,
     /// Iced window ID -> julep window ID.
-    reverse_window_map: HashMap<iced::window::Id, String>,
+    reverse_window_map: HashMap<window::Id, String>,
 }
 
 /// What the stdin reader thread sends back.
@@ -99,7 +101,25 @@ impl App {
         }
     }
 
-    fn theme(&self) -> Theme {
+    fn title_for_window(&self, window_id: window::Id) -> String {
+        if let Some(julep_id) = self.reverse_window_map.get(&window_id) {
+            if let Some(node) = self.tree.find_window(julep_id) {
+                if let Some(title) = node.props.get("title").and_then(|v| v.as_str()) {
+                    return title.to_string();
+                }
+            }
+        }
+        "Julep".to_string()
+    }
+
+    fn theme_for_window(&self, window_id: window::Id) -> Theme {
+        if let Some(julep_id) = self.reverse_window_map.get(&window_id) {
+            if let Some(node) = self.tree.find_window(julep_id) {
+                if let Some(theme_val) = node.props.get("theme") {
+                    return theming::resolve_theme(theme_val);
+                }
+            }
+        }
         self.theme.clone()
     }
 
@@ -187,7 +207,15 @@ impl App {
                 if let Some(julep_id) = self.reverse_window_map.remove(&window_id) {
                     self.window_map.remove(&julep_id);
                 }
-                iced::window::close(window_id)
+                window::close(window_id)
+            }
+            Message::WindowClosed(window_id) => {
+                // Clean up maps when iced confirms a window has closed.
+                if let Some(julep_id) = self.reverse_window_map.remove(&window_id) {
+                    self.window_map.remove(&julep_id);
+                    eprintln!("julep_gui: window closed: {julep_id}");
+                }
+                Task::none()
             }
             Message::WindowOpened(iced_id, julep_id) => {
                 eprintln!("julep_gui: window opened: {julep_id} -> {iced_id:?}");
@@ -198,10 +226,21 @@ impl App {
         }
     }
 
-    fn view(&self) -> Element<'_, Message> {
-        match self.tree.root() {
-            Some(root) => {
-                widgets::render(root, &self.editor_contents, &self.markdown_items)
+    fn view_window(&self, window_id: window::Id) -> Element<'_, Message> {
+        let julep_id = match self.reverse_window_map.get(&window_id) {
+            Some(id) => id,
+            None => {
+                return container(text("unknown window"))
+                    .width(Fill)
+                    .height(Fill)
+                    .center(Fill)
+                    .into();
+            }
+        };
+
+        match self.tree.find_window(julep_id) {
+            Some(window_node) => {
+                widgets::render(window_node, &self.editor_contents, &self.markdown_items)
             }
             None => container(text("waiting for snapshot..."))
                 .width(Fill)
@@ -214,6 +253,8 @@ impl App {
     fn subscription(&self) -> Subscription<Message> {
         let mut subs = vec![
             time::every(Duration::from_millis(16)).map(|_| Message::Tick),
+            // Always listen for window close events so we can clean up maps.
+            window::close_events().map(Message::WindowClosed),
         ];
 
         if self.active_subscriptions.contains_key("on_key_press") {
@@ -247,7 +288,7 @@ impl App {
         }
 
         if self.active_subscriptions.contains_key("on_window_close") {
-            subs.push(iced::window::close_requests().map(Message::WindowCloseRequested));
+            subs.push(window::close_requests().map(Message::WindowCloseRequested));
         }
 
         Subscription::batch(subs)
@@ -296,6 +337,9 @@ impl App {
                         &mut self.markdown_items,
                     );
                 }
+                // Sync windows to match the new tree.
+                let task = self.sync_windows();
+                self.pending_tasks.push(task);
             }
             IncomingMessage::Patch { ops } => {
                 eprintln!("julep_gui: patch received ({} ops)", ops.len());
@@ -308,6 +352,9 @@ impl App {
                         &mut self.markdown_items,
                     );
                 }
+                // Sync windows in case the patch changed the window set.
+                let task = self.sync_windows();
+                self.pending_tasks.push(task);
             }
             IncomingMessage::EffectRequest { id, kind, payload } => {
                 eprintln!("julep_gui: effect request: {kind} ({id})");
@@ -346,8 +393,8 @@ impl App {
                     }
                     "close_window" => {
                         // Close the oldest (main) window, which triggers app exit.
-                        iced::window::oldest().and_then(|id| {
-                            iced::window::close(id)
+                        window::oldest().and_then(|id| {
+                            window::close(id)
                         })
                     }
                     "select_all" => {
@@ -383,11 +430,6 @@ impl App {
                 eprintln!("julep_gui: window_op: {op} ({window_id})");
                 match op.as_str() {
                     "open" => {
-                        let title = settings
-                            .get("title")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("Julep")
-                            .to_string();
                         let width = settings
                             .get("width")
                             .and_then(|v| v.as_f64())
@@ -397,36 +439,24 @@ impl App {
                             .and_then(|v| v.as_f64())
                             .unwrap_or(600.0) as f32;
 
-                        let win_settings = iced::window::Settings {
+                        let win_settings = window::Settings {
                             size: iced::Size::new(width, height),
-                            ..iced::window::Settings::default()
+                            ..window::Settings::default()
                         };
 
-                        let (iced_id, open_task) = iced::window::open(win_settings);
+                        let (iced_id, open_task) = window::open(win_settings);
 
-                        // Store the mapping immediately so we can use the iced_id.
                         self.window_map.insert(window_id.clone(), iced_id);
                         self.reverse_window_map.insert(iced_id, window_id.clone());
 
-                        // The open_task resolves with the iced ID once the window
-                        // is actually created. Map it to WindowOpened so we can
-                        // confirm/update if needed. We also set the window title.
                         let julep_id = window_id;
                         let task = open_task.map(move |id| Message::WindowOpened(id, julep_id.clone()));
-
-                        // Set the title via a gain_focus + chain approach isn't
-                        // needed; iced doesn't expose per-window title via task.
-                        // The title from Settings is used at creation.
-                        let _ = title; // used in Settings above (iced 0.14
-                                       // Settings doesn't have title field --
-                                       // title is set at the application level)
-
                         self.pending_tasks.push(task);
                     }
                     "close" => {
                         if let Some(iced_id) = self.window_map.remove(&window_id) {
                             self.reverse_window_map.remove(&iced_id);
-                            self.pending_tasks.push(iced::window::close(iced_id));
+                            self.pending_tasks.push(window::close(iced_id));
                         } else {
                             eprintln!(
                                 "julep_gui: window_op close: unknown window_id: {window_id}"
@@ -438,6 +468,62 @@ impl App {
                     }
                 }
             }
+        }
+    }
+
+    /// Compare the set of window nodes in the tree against the currently open
+    /// windows and open/close as needed.
+    fn sync_windows(&mut self) -> Task<Message> {
+        let tree_windows: HashSet<String> = self.tree.window_ids().into_iter().collect();
+        let open_windows: HashSet<String> = self.window_map.keys().cloned().collect();
+
+        let mut tasks = Vec::new();
+
+        // Open windows that exist in the tree but are not yet open.
+        for win_id in &tree_windows {
+            if !open_windows.contains(win_id) {
+                let settings = self.window_settings_for(win_id);
+                let (iced_id, open_task) = window::open(settings);
+                self.window_map.insert(win_id.clone(), iced_id);
+                self.reverse_window_map.insert(iced_id, win_id.clone());
+
+                let julep_id = win_id.clone();
+                tasks.push(
+                    open_task.map(move |id| Message::WindowOpened(id, julep_id.clone())),
+                );
+            }
+        }
+
+        // Close windows that are open but no longer in the tree.
+        for win_id in &open_windows {
+            if !tree_windows.contains(win_id) {
+                if let Some(iced_id) = self.window_map.remove(win_id) {
+                    self.reverse_window_map.remove(&iced_id);
+                    tasks.push(window::close(iced_id));
+                }
+            }
+        }
+
+        Task::batch(tasks)
+    }
+
+    /// Build window::Settings from a window node's props.
+    fn window_settings_for(&self, julep_id: &str) -> window::Settings {
+        let mut width = 800.0_f32;
+        let mut height = 600.0_f32;
+
+        if let Some(node) = self.tree.find_window(julep_id) {
+            if let Some(w) = node.props.get("width").and_then(|v| v.as_f64()) {
+                width = w as f32;
+            }
+            if let Some(h) = node.props.get("height").and_then(|v| v.as_f64()) {
+                height = h as f32;
+            }
+        }
+
+        window::Settings {
+            size: iced::Size::new(width, height),
+            ..window::Settings::default()
         }
     }
 }
@@ -556,7 +642,7 @@ fn main() -> iced::Result {
 
     let rx_slot: Mutex<Option<Receiver<StdinEvent>>> = Mutex::new(Some(rx));
 
-    iced::application(
+    iced::daemon(
         move || {
             let rx = rx_slot
                 .lock()
@@ -566,13 +652,13 @@ fn main() -> iced::Result {
                     eprintln!("julep_gui: boot called more than once -- this is a bug");
                     mpsc::channel().1
                 });
-            App::new(rx)
+            (App::new(rx), Task::none())
         },
         App::update,
-        App::view,
+        App::view_window,
     )
-    .title("Julep")
+    .title(App::title_for_window)
     .subscription(App::subscription)
-    .theme(App::theme)
+    .theme(App::theme_for_window)
     .run()
 }

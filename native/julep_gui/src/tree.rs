@@ -22,6 +22,39 @@ impl Tree {
         self.root.as_ref()
     }
 
+    /// Find a window node by its julep ID.
+    ///
+    /// If the root itself is a window with a matching ID, return it.
+    /// Otherwise, search the root's direct children for a window node
+    /// with the given ID.
+    pub fn find_window(&self, julep_id: &str) -> Option<&TreeNode> {
+        let root = self.root.as_ref()?;
+        if root.type_name == "window" && root.id == julep_id {
+            return Some(root);
+        }
+        root.children
+            .iter()
+            .find(|child| child.type_name == "window" && child.id == julep_id)
+    }
+
+    /// Collect the IDs of all window nodes in the tree.
+    ///
+    /// If the root is a window, returns just its ID. Otherwise, returns
+    /// the IDs of all direct children that are window nodes.
+    pub fn window_ids(&self) -> Vec<String> {
+        let Some(root) = self.root.as_ref() else {
+            return Vec::new();
+        };
+        if root.type_name == "window" {
+            return vec![root.id.clone()];
+        }
+        root.children
+            .iter()
+            .filter(|child| child.type_name == "window")
+            .map(|child| child.id.clone())
+            .collect()
+    }
+
     /// Apply a list of patch operations to the current tree.
     pub fn apply_patch(&mut self, ops: Vec<PatchOp>) {
         for op in ops {
