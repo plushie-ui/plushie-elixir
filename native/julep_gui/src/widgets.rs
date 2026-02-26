@@ -1,5 +1,5 @@
 use crate::protocol::TreeNode;
-use iced::widget::{button, checkbox, column, container, progress_bar, row, rule, text, text_input, Space};
+use iced::widget::{button, checkbox, column, container, progress_bar, row, rule, scrollable, text, text_input, Space};
 use iced::{alignment, Element, Fill, Length, Padding};
 use serde_json::Value;
 
@@ -18,6 +18,7 @@ pub fn render<'a>(node: &'a TreeNode) -> Element<'a, Message> {
         "checkbox" => render_checkbox(node),
         "rule" => render_rule(node),
         "progress_bar" => render_progress_bar(node),
+        "scrollable" => render_scrollable(node),
         "window" => render_window(node),
         unknown => {
             eprintln!("julep_gui: unknown node type `{unknown}`, rendering as empty container");
@@ -139,6 +140,27 @@ fn render_space<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let width = prop_length(props, "width", Length::Shrink);
     let height = prop_length(props, "height", Length::Shrink);
     Space::new().width(width).height(height).into()
+}
+
+// ---------------------------------------------------------------------------
+// Scrollable
+// ---------------------------------------------------------------------------
+
+fn render_scrollable<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let width = prop_length(props, "width", Length::Shrink);
+    let height = prop_length(props, "height", Length::Shrink);
+
+    let child: Element<'a, Message> = node
+        .children
+        .first()
+        .map(render)
+        .unwrap_or_else(|| Space::new().into());
+
+    scrollable(child)
+        .width(width)
+        .height(height)
+        .into()
 }
 
 // ---------------------------------------------------------------------------
