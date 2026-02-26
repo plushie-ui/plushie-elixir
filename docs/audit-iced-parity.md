@@ -10,10 +10,9 @@ Audited: 2026-02-26
 ## Legend
 
 - **SUPPORTED** -- Julep exposes this and the renderer handles it
-- **PARTIAL** -- Julep exposes some of it, or there are encoding/decoding bugs
+- **PARTIAL** -- Julep exposes some of it, gaps noted
 - **MISSING** -- iced supports it, Julep does not expose it
 - **N/A** -- Not applicable (feature not enabled, or internal-only)
-- **BUG** -- Encoding mismatch between Elixir and Rust sides
 
 ---
 
@@ -28,47 +27,55 @@ Audited: 2026-02-26
 | `Container` | SUPPORTED | `container` in both layers |
 | `Stack` | SUPPORTED | `stack` in both layers |
 | `Space` | SUPPORTED | `space` in both layers |
-| `Scrollable` | SUPPORTED | `scrollable` in both layers |
-| `Grid` | **MISSING** | iced has `Grid` with `.columns()`, `.fluid()`, `.spacing()` -- no equivalent |
-| `Pin` | **MISSING** | Absolute positioning widget with `.position()`, `.x()`, `.y()` |
-| `Float` | **MISSING** | Floating overlay with scale/translate |
-| `Responsive` | **MISSING** | Size-aware responsive layout |
-| `Keyed::Column` | **MISSING** | Keyed column for efficient diffing |
+| `Scrollable` | SUPPORTED | `scrollable` in both layers; direction, anchor, scrollbar config handled |
+| `Grid` | SUPPORTED | `grid` in both layers; columns, spacing, width, height |
+| `Pin` | SUPPORTED | `pin` in both layers; absolute positioning via x/y props |
+| `Float` | SUPPORTED | `float_widget` in `Iced`, `float` in `UI`; translate_x/y, scale |
+| `Responsive` | SUPPORTED | `responsive` in both layers; wraps sensor for resize events |
+| `Keyed::Column` | SUPPORTED | `keyed_column` in both layers; hashes child IDs for keys |
 
 ### Interactive Widgets
 
 | iced Widget | Julep Status | Notes |
 |---|---|---|
-| `Button` | SUPPORTED | |
-| `TextInput` | SUPPORTED | |
-| `TextEditor` | SUPPORTED | |
-| `Checkbox` | SUPPORTED | |
-| `Radio` | SUPPORTED | |
-| `Toggler` | SUPPORTED | |
-| `Slider` | SUPPORTED | |
-| `VerticalSlider` | SUPPORTED | |
-| `PickList` | SUPPORTED | |
-| `ComboBox` | **PARTIAL** | Renderer delegates to `render_pick_list` -- no free-text input, no `State<T>` |
-| `MouseArea` | **MISSING** | Rich mouse event handling (press, release, double-click, right-click, hover, scroll) |
-| `Sensor` | **MISSING** | Visibility/resize detection |
-| `PaneGrid` | **MISSING** | Draggable, resizable pane layout with splits |
+| `Button` | SUPPORTED | Supports children (arbitrary content), disabled state, named styles |
+| `TextInput` | SUPPORTED | secure (password), font, line_height, align_x, id, style |
+| `TextEditor` | SUPPORTED | Stateful; font, size, line_height, padding, wrapping, min/max height |
+| `Checkbox` | SUPPORTED | size, text_size, font, text_line_height, text_shaping, text_wrapping, style |
+| `Radio` | SUPPORTED | group prop, spacing, width, size, text_size, font, shaping, wrapping, style |
+| `Toggler` | SUPPORTED | size, text_size, font, text_line_height, text_shaping, text_wrapping, style |
+| `Slider` | SUPPORTED | default (reset), height, shift_step, style |
+| `VerticalSlider` | SUPPORTED | default (reset), shift_step, style |
+| `PickList` | SUPPORTED | padding, text_size, font, menu_height, text_line_height, text_shaping, style |
+| `ComboBox` | SUPPORTED | Real combo_box with State<String>, free-text input, on_input, padding, size, font, line_height, menu_height |
+| `MouseArea` | SUPPORTED | on_press, on_release, on_middle_press events |
+| `Sensor` | SUPPORTED | on_show, on_resize (with dimensions), on_hide |
+| `PaneGrid` | SUPPORTED | Stateful; spacing, on_click, on_resize, on_drag; title bars |
 
 ### Display Widgets
 
 | iced Widget | Julep Status | Notes |
 |---|---|---|
-| `Text` | SUPPORTED | |
-| `Rich` (rich text) | **MISSING** | Styled spans, inline links, `on_link_click` |
-| `Rule` | SUPPORTED | |
-| `ProgressBar` | SUPPORTED | |
-| `Tooltip` | SUPPORTED | |
-| `Image` | SUPPORTED | |
-| `Svg` | SUPPORTED | |
-| `Canvas` | SUPPORTED | Custom shape drawing |
-| `Markdown` | SUPPORTED | |
-| `Table` | SUPPORTED | Basic implementation |
+| `Text` | SUPPORTED | size, color, font, width, height, line_height, align_x, align_y, wrapping, named styles (primary/secondary/success/danger/warning) |
+| `Rich` (rich text) | SUPPORTED | `rich_text` -- styled spans with size, color, font, inline links, on_link_click |
+| `Rule` | SUPPORTED | horizontal and vertical, thickness, named styles (default/weak) |
+| `ProgressBar` | SUPPORTED | range, value, length (width), girth (height), named styles |
+| `Tooltip` | SUPPORTED | position, gap, padding, snap_within_viewport, named styles |
+| `Image` | SUPPORTED | All props: source, width, height, content_fit, rotation, opacity, border_radius, filter_method, expand, scale, crop |
+| `Svg` | SUPPORTED | source, width, height, content_fit, rotation, opacity |
+| `Canvas` | SUPPORTED | Interactive via Program trait; on_press, on_release, on_move, on_scroll; background; shapes (rect, circle, line, text) |
+| `Markdown` | SUPPORTED | Settings: text_size, h1_size, h2_size, h3_size, code_size, spacing; width via container wrapper |
+| `Table` | SUPPORTED | Composite implementation; columns, rows, header (conditional), separator, padding |
 | `QRCode` | N/A | Feature `qr_code` not enabled |
 | `Shader` | N/A | Feature `wgpu` not enabled |
+
+### Other iced Utilities
+
+| iced Item | Julep Status | Notes |
+|---|---|---|
+| `Themer` | SUPPORTED | `themer` in both layers; per-subtree theme override |
+| `opaque` | N/A | Internal overlay helper |
+| `hover` | N/A | Internal overlay helper |
 
 ### Julep-Only Composites (not in iced)
 
@@ -85,354 +92,314 @@ These are higher-level widgets Julep composes from iced primitives:
 | `form` | Form layout |
 | `split_pane` | Split layout |
 
-### Other iced Utilities Not Exposed
-
-| iced Item | Notes |
-|---|---|
-| `Themer` | Per-subtree theme override |
-| `opaque` | Overlay helper |
-| `hover` | Overlay helper |
-
 ---
 
-## 2. Per-Widget Prop Gaps
+## 2. Per-Widget Prop Coverage
 
-For each supported widget, props that iced offers but Julep doesn't expose.
+For each supported widget, notable prop coverage. Only gaps are listed;
+unlisted props are fully supported.
 
 ### Column
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `spacing` | Yes | Yes | SUPPORTED |
-| `padding` | Yes | Yes | **BUG** (see encoding issues) |
-| `width` | Yes | Yes | SUPPORTED |
-| `height` | Yes | Yes | SUPPORTED |
-| `align_x` | Yes | Yes | SUPPORTED |
-| `max_width` | No | No | **MISSING** |
-| `clip` | No | No | **MISSING** |
-| `wrap()` (flex-wrap) | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `spacing` | SUPPORTED | |
+| `padding` | SUPPORTED | Uniform number and per-side object format |
+| `width` / `height` | SUPPORTED | |
+| `align_x` | SUPPORTED | |
+| `max_width` | SUPPORTED | |
+| `clip` | SUPPORTED | |
+| `wrap()` | SUPPORTED | Via `wrap: true` prop |
 
 ### Row
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `spacing` | Yes | Yes | SUPPORTED |
-| `padding` | Yes | Yes | **BUG** |
-| `width` | Yes | Yes | SUPPORTED |
-| `height` | Yes | Yes | SUPPORTED |
-| `align_y` | Yes | Yes | SUPPORTED |
-| `max_width` | No | No | **MISSING** |
-| `clip` | No | No | **MISSING** |
-| `wrap()` (flex-wrap) | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `spacing` | SUPPORTED | |
+| `padding` | SUPPORTED | Uniform and per-side object format |
+| `width` / `height` | SUPPORTED | |
+| `align_y` | SUPPORTED | |
+| `max_width` | **MISSING** | Row doesn't read max_width in renderer |
+| `clip` | SUPPORTED | |
+| `wrap()` | SUPPORTED | Via `wrap: true` prop |
 
 ### Container
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `padding` | Yes | Yes | **BUG** |
-| `width` | Yes | Yes | SUPPORTED |
-| `height` | Yes | Yes | SUPPORTED |
-| `center` | Yes | Yes | SUPPORTED |
-| `id` | No | No | **MISSING** |
-| `max_width` | No | No | **MISSING** |
-| `max_height` | No | No | **MISSING** |
-| `center_x` / `center_y` | No | No | **MISSING** (iced has separate axis centering) |
-| `align_left/right/top/bottom` | No | No | **MISSING** |
-| `align_x` / `align_y` | No | No | **MISSING** |
-| `clip` | No | No | **MISSING** |
-| `style` | Elixir-side only | No | **BUG** -- prop accepted but renderer ignores |
-| `color` | No | No | **MISSING** |
-| `border` | No | No | **MISSING** |
-| `background` | No | No | **MISSING** |
-| `shadow` | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `padding` | SUPPORTED | |
+| `width` / `height` | SUPPORTED | |
+| `center` | SUPPORTED | |
+| `max_width` / `max_height` | SUPPORTED | |
+| `align_x` / `align_y` | SUPPORTED | |
+| `clip` | SUPPORTED | |
+| `background` | SUPPORTED | Hex color, {r,g,b,a} object, or linear gradient |
+| `color` | SUPPORTED | Text color override |
+| `border` | SUPPORTED | {color, width, radius} with per-corner radius |
+| `shadow` | SUPPORTED | {color, offset: [x,y], blur_radius} |
+| `style` | SUPPORTED | Named styles: transparent, rounded_box, bordered_box, dark, primary, secondary, success, danger, warning |
+| `id` | **MISSING** | Container ID for widget ops not exposed |
+| `center_x` / `center_y` | **MISSING** | Separate axis centering (use center + align_x/y instead) |
+| `align_left/right/top/bottom` | **MISSING** | Use align_x/align_y strings instead |
 
 ### Stack
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `width` | Yes | Yes | SUPPORTED |
-| `height` | Yes | Yes | SUPPORTED |
-| `clip` | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `width` / `height` | SUPPORTED | |
+| `clip` | **MISSING** | |
 
 ### Scrollable
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `width` | Yes | Yes | SUPPORTED |
-| `height` | Yes | Yes | SUPPORTED |
-| `direction` | Elixir-side only | No | **BUG** -- prop accepted but not handled |
-| `horizontal()` | No | No | **MISSING** |
-| `id` | No | No | **MISSING** |
-| `on_scroll` | No | No | **MISSING** |
-| `anchor_top/bottom/left/right` | No | No | **MISSING** |
-| `spacing` | No | No | **MISSING** |
-| `auto_scroll` | No | No | **MISSING** |
-| `style` | No | No | **MISSING** |
-| Scrollbar config (width, margin, scroller_width) | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `width` / `height` | SUPPORTED | |
+| `direction` | SUPPORTED | "horizontal", "both", default vertical |
+| `id` | SUPPORTED | Widget ID for scroll operations |
+| `spacing` | SUPPORTED | |
+| `anchor_y` | SUPPORTED | "end"/"bottom" for anchor to bottom |
+| `scrollbar_width` / `scrollbar_margin` / `scroller_width` | SUPPORTED | |
+| `on_scroll` | **MISSING** | No scroll position callback from renderer |
+| `auto_scroll` | **MISSING** | |
+| `style` | **MISSING** | |
 
 ### Button
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `label`/`content` | Yes | Yes | SUPPORTED |
-| `width` | Yes | No | **BUG** -- Elixir accepts, renderer ignores |
-| `height` | Yes | No | **BUG** -- Elixir accepts, renderer ignores |
-| `padding` | No | No | **MISSING** |
-| `on_press_maybe` | No | No | **MISSING** (disabled state) |
-| `clip` | No | No | **MISSING** |
-| `style` | Elixir-side only | No | **BUG** -- prop accepted but not rendered |
-| Children as content | No | No | **MISSING** -- iced buttons can contain arbitrary widgets |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `label` / `content` | SUPPORTED | |
+| `width` / `height` | SUPPORTED | |
+| `padding` | SUPPORTED | |
+| `clip` | SUPPORTED | |
+| `disabled` / `enabled` | SUPPORTED | Controls whether on_press is wired |
+| `style` | SUPPORTED | primary, secondary, success, warning, danger, text |
+| Children as content | SUPPORTED | First child rendered as arbitrary widget content |
 
 ### Text
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `content` | Yes | Yes | SUPPORTED |
-| `size` | Yes | Yes | SUPPORTED |
-| `color` | Elixir-side only | No | **BUG** -- prop accepted but not rendered |
-| `font` | Elixir-side only | No | **BUG** -- prop accepted but not rendered |
-| `width` | No | No | **MISSING** |
-| `height` | No | No | **MISSING** |
-| `line_height` | No | No | **MISSING** |
-| `center` / `align_x` / `align_y` | No | No | **MISSING** |
-| `shaping` | No | No | **MISSING** |
-| `wrapping` | No | No | **MISSING** |
-| `style` | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `content` | SUPPORTED | |
+| `size` | SUPPORTED | |
+| `color` | SUPPORTED | Hex string or {r,g,b,a} object |
+| `font` | SUPPORTED | "monospace", or {family, weight, style, stretch} |
+| `width` / `height` | SUPPORTED | |
+| `line_height` | SUPPORTED | Number (relative) or {relative: n} / {absolute: n} |
+| `align_x` / `align_y` | SUPPORTED | |
+| `wrapping` | SUPPORTED | |
+| `style` | SUPPORTED | primary, secondary, success, danger, warning |
+| `shaping` | **MISSING** | Not on text widget (available on checkbox, radio, etc.) |
 
 ### TextInput
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `value` | Yes | Yes | SUPPORTED |
-| `placeholder` | Yes | Yes | SUPPORTED |
-| `width` | Yes | Yes | SUPPORTED |
-| `size` | Yes | Yes | SUPPORTED |
-| `padding` | Yes | Yes | SUPPORTED |
-| `on_submit` | Yes | Yes | SUPPORTED |
-| `id` | No | No | **MISSING** |
-| `secure` | No | No | **MISSING** (password fields) |
-| `on_paste` | No | No | **MISSING** |
-| `font` | No | No | **MISSING** |
-| `icon` | No | No | **MISSING** |
-| `line_height` | No | No | **MISSING** |
-| `align_x` | No | No | **MISSING** |
-| `style` | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `value` / `placeholder` | SUPPORTED | |
+| `width` / `size` / `padding` | SUPPORTED | |
+| `on_submit` | SUPPORTED | |
+| `id` | SUPPORTED | Widget ID for focus/select operations |
+| `secure` | SUPPORTED | Password field mode |
+| `font` | SUPPORTED | |
+| `line_height` | SUPPORTED | |
+| `align_x` | SUPPORTED | |
+| `style` | SUPPORTED | |
+| `on_paste` | **MISSING** | |
+| `icon` | **MISSING** | |
 
 ### TextEditor
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `content` | Yes | Yes | SUPPORTED |
-| `height` | Yes | Yes | SUPPORTED |
-| `placeholder` | Yes | Yes | SUPPORTED |
-| `id` | No | No | **MISSING** |
-| `width` | Elixir-side only | No | **BUG** -- renderer uses fixed Pixels type |
-| `min_height` | No | No | **MISSING** |
-| `max_height` | No | No | **MISSING** |
-| `font` | No | No | **MISSING** |
-| `size` | No | No | **MISSING** |
-| `line_height` | No | No | **MISSING** |
-| `padding` | No | No | **MISSING** |
-| `wrapping` | No | No | **MISSING** |
-| `highlight` | No | No | **MISSING** |
-| `key_binding` | No | No | **MISSING** |
-| `style` | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `content` | SUPPORTED | Via renderer-side Content cache |
+| `height` | SUPPORTED | |
+| `width` | SUPPORTED | Via f32 Pixels (not Length) |
+| `placeholder` | SUPPORTED | |
+| `font` | SUPPORTED | |
+| `size` | SUPPORTED | |
+| `line_height` | SUPPORTED | |
+| `padding` | SUPPORTED | Uniform only (f32) |
+| `min_height` / `max_height` | SUPPORTED | |
+| `wrapping` | SUPPORTED | |
+| `style` | SUPPORTED | |
+| `highlight` | **MISSING** | |
+| `key_binding` | **MISSING** | |
 
 ### Checkbox
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `is_checked` | Yes | Yes | SUPPORTED |
-| `label` | Yes | Yes | SUPPORTED |
-| `spacing` | Yes | Yes | SUPPORTED |
-| `width` | Yes | Yes | SUPPORTED |
-| `on_toggle_maybe` | No | No | **MISSING** (disabled state) |
-| `size` | No | No | **MISSING** |
-| `text_size` | No | No | **MISSING** |
-| `text_line_height` | No | No | **MISSING** |
-| `text_shaping` | No | No | **MISSING** |
-| `text_wrapping` | No | No | **MISSING** |
-| `font` | No | No | **MISSING** |
-| `icon` | No | No | **MISSING** |
-| `style` | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `is_checked` | SUPPORTED | Reads `checked` prop |
+| `label` / `spacing` / `width` | SUPPORTED | |
+| `size` | SUPPORTED | |
+| `text_size` | SUPPORTED | |
+| `font` | SUPPORTED | |
+| `text_line_height` | SUPPORTED | |
+| `text_shaping` | SUPPORTED | |
+| `text_wrapping` | SUPPORTED | |
+| `style` | SUPPORTED | primary, secondary, success, danger |
+| `on_toggle_maybe` | **MISSING** | No disabled state |
+| `icon` | **MISSING** | |
 
 ### Radio
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `value` | Yes | Yes | SUPPORTED |
-| `selected` | Yes | Yes | SUPPORTED |
-| `label` | Yes | Yes | SUPPORTED |
-| `group` | Yes | Yes | SUPPORTED (julep-specific) |
-| `spacing` | Elixir-side only | No | **BUG** |
-| `width` | Elixir-side only | No | **BUG** |
-| `size` | No | No | **MISSING** |
-| `text_size` | No | No | **MISSING** |
-| `text_line_height` | No | No | **MISSING** |
-| `text_shaping` | No | No | **MISSING** |
-| `text_wrapping` | No | No | **MISSING** |
-| `font` | No | No | **MISSING** |
-| `style` | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `value` / `selected` / `label` | SUPPORTED | |
+| `group` | SUPPORTED | Julep-specific: event ID for group matching |
+| `spacing` / `width` | SUPPORTED | |
+| `size` | SUPPORTED | |
+| `text_size` | SUPPORTED | |
+| `font` | SUPPORTED | |
+| `text_line_height` | SUPPORTED | |
+| `text_shaping` | SUPPORTED | |
+| `text_wrapping` | SUPPORTED | |
+| `style` | SUPPORTED | |
 
 ### Toggler
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `is_toggled` | Yes | Yes | SUPPORTED |
-| `label` | Yes | Yes | SUPPORTED |
-| `spacing` | Yes | Yes | SUPPORTED |
-| `width` | Yes | Yes | SUPPORTED |
-| `on_toggle_maybe` | No | No | **MISSING** (disabled state) |
-| `size` | No | No | **MISSING** |
-| `text_size` | No | No | **MISSING** |
-| `text_line_height` | No | No | **MISSING** |
-| `text_alignment` | No | No | **MISSING** |
-| `text_shaping` | No | No | **MISSING** |
-| `text_wrapping` | No | No | **MISSING** |
-| `font` | No | No | **MISSING** |
-| `style` | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `is_toggled` / `label` / `spacing` / `width` | SUPPORTED | |
+| `size` | SUPPORTED | |
+| `text_size` | SUPPORTED | |
+| `font` | SUPPORTED | |
+| `text_line_height` | SUPPORTED | |
+| `text_shaping` | SUPPORTED | |
+| `text_wrapping` | SUPPORTED | |
+| `style` | SUPPORTED | |
+| `on_toggle_maybe` | **MISSING** | No disabled state |
+| `text_alignment` | **MISSING** | |
 
 ### Slider
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `range` | Yes | Yes | SUPPORTED |
-| `value` | Yes | Yes | SUPPORTED |
-| `step` | Yes | Yes | SUPPORTED |
-| `width` | Yes | Yes | SUPPORTED |
-| `on_release` | Yes | Yes | SUPPORTED (as `slide_release` event) |
-| `default` | No | No | **MISSING** (double-click reset value) |
-| `height` | No | No | **MISSING** |
-| `shift_step` | No | No | **MISSING** |
-| `style` | No | No | **MISSING** |
-| `with_circular_handle` | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `range` / `value` / `step` / `width` | SUPPORTED | |
+| `on_release` | SUPPORTED | |
+| `default` | SUPPORTED | Double-click reset value |
+| `height` | SUPPORTED | |
+| `shift_step` | SUPPORTED | |
+| `style` | SUPPORTED | |
+| `with_circular_handle` | **MISSING** | |
 
 ### VerticalSlider
 
-Same gaps as Slider.
+Same as Slider. Missing: `with_circular_handle`.
 
 ### PickList
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `options` | Yes | Yes | SUPPORTED |
-| `selected` | Yes | Yes | SUPPORTED |
-| `placeholder` | Yes | Yes | SUPPORTED |
-| `width` | Yes | Yes | SUPPORTED |
-| `menu_height` | No | No | **MISSING** |
-| `padding` | No | No | **MISSING** |
-| `text_size` | No | No | **MISSING** |
-| `text_line_height` | No | No | **MISSING** |
-| `text_shaping` | No | No | **MISSING** |
-| `font` | No | No | **MISSING** |
-| `handle` | No | No | **MISSING** |
-| `on_open` / `on_close` | No | No | **MISSING** |
-| `style` / `menu_style` | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `options` / `selected` / `placeholder` / `width` | SUPPORTED | |
+| `padding` | SUPPORTED | |
+| `text_size` | SUPPORTED | |
+| `font` | SUPPORTED | |
+| `menu_height` | SUPPORTED | |
+| `text_line_height` | SUPPORTED | |
+| `text_shaping` | SUPPORTED | |
+| `style` | SUPPORTED | |
+| `handle` | **MISSING** | |
+| `on_open` / `on_close` | **MISSING** | |
 
 ### ComboBox
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| Full ComboBox behavior | No | No | **BUG** -- delegates to pick_list, no free-text |
-| `State<T>` management | No | No | **MISSING** |
-| `on_input` | No | No | **MISSING** |
-| `on_option_hovered` | No | No | **MISSING** |
-| `on_open` / `on_close` | No | No | **MISSING** |
-| `padding` | No | No | **MISSING** |
-| `font` / `icon` | No | No | **MISSING** |
-| `size` / `line_height` | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `State<T>` management | SUPPORTED | Renderer maintains combo_box::State<String> |
+| `options` / `selected` / `placeholder` | SUPPORTED | |
+| `on_input` | SUPPORTED | Emits Input events |
+| `width` / `padding` | SUPPORTED | |
+| `size` | SUPPORTED | |
+| `font` | SUPPORTED | |
+| `line_height` | SUPPORTED | |
+| `menu_height` | SUPPORTED | |
+| `on_option_hovered` | **MISSING** | |
+| `on_open` / `on_close` | **MISSING** | |
+| `icon` | **MISSING** | |
 
 ### Tooltip
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `tip_text` / `tip` | **BUG** | Yes | `Iced` layer emits `tip_text`, renderer reads `tip` |
-| `position` | Yes | Yes | SUPPORTED |
-| `gap` | Yes | Yes | SUPPORTED |
-| `padding` | No | No | **MISSING** |
-| `delay` | No | No | **MISSING** |
-| `snap_within_viewport` | No | No | **MISSING** |
-| `style` | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `tip` | SUPPORTED | `Iced.tooltip/4` sets `:tip` prop, renderer reads `tip` |
+| `position` | SUPPORTED | top, bottom, left, right, follow_cursor |
+| `gap` | SUPPORTED | |
+| `padding` | SUPPORTED | |
+| `snap_within_viewport` | SUPPORTED | |
+| `style` | SUPPORTED | Uses container styles |
 
 ### Image
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `source` | Yes | Yes | SUPPORTED |
-| `width` | Yes | Yes | SUPPORTED |
-| `height` | Yes | Yes | SUPPORTED |
-| `content_fit` | Yes | Yes | SUPPORTED |
-| `expand` | No | No | **MISSING** |
-| `filter_method` | No | No | **MISSING** |
-| `rotation` | No | No | **MISSING** |
-| `opacity` | No | No | **MISSING** |
-| `scale` | No | No | **MISSING** |
-| `crop` | No | No | **MISSING** |
-| `border_radius` | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `source` / `width` / `height` / `content_fit` | SUPPORTED | |
+| `rotation` | SUPPORTED | |
+| `opacity` | SUPPORTED | |
+| `border_radius` | SUPPORTED | |
+| `filter_method` | SUPPORTED | "nearest" or "linear" |
+| `expand` | SUPPORTED | |
+| `scale` | SUPPORTED | |
+| `crop` | SUPPORTED | {x, y, width, height} object |
 
 ### Svg
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `source` | Yes | Yes | SUPPORTED |
-| `width` | Yes | Yes | SUPPORTED |
-| `height` | Yes | Yes | SUPPORTED |
-| `content_fit` | Yes | Yes | SUPPORTED |
-| `rotation` | No | No | **MISSING** |
-| `opacity` | No | No | **MISSING** |
-| `style` | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `source` / `width` / `height` / `content_fit` | SUPPORTED | |
+| `rotation` | SUPPORTED | |
+| `opacity` | SUPPORTED | |
+| `style` | **MISSING** | |
 
 ### ProgressBar
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `range` | Yes | Yes | SUPPORTED |
-| `value` | Yes | Yes | SUPPORTED |
-| `width` | Yes | Yes | SUPPORTED |
-| `height` | Yes | Yes | SUPPORTED |
-| `vertical()` | No | No | **MISSING** |
-| `girth` | No | No | **MISSING** |
-| `style` | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `range` / `value` | SUPPORTED | |
+| `width` (length) / `height` (girth) | SUPPORTED | |
+| `style` | SUPPORTED | primary, secondary, success, danger, warning |
+| `vertical()` | **MISSING** | |
 
 ### Rule
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `horizontal(height)` | Yes | Yes | SUPPORTED |
-| `vertical(width)` | Elixir-side only | No | **BUG** -- renderer always renders horizontal |
-| `style` | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `horizontal(height)` | SUPPORTED | |
+| `vertical(width)` | SUPPORTED | |
+| `style` | SUPPORTED | default, weak |
 
 ### Markdown
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `content` | Yes | Yes | SUPPORTED |
-| `width` | Elixir-side only | No | **BUG** -- renderer doesn't read width |
-| `Settings` (text_size, style) | No | No | **MISSING** |
-| `Highlighter` | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `content` | SUPPORTED | |
+| `width` | SUPPORTED | Wrapped in container |
+| `text_size` | SUPPORTED | |
+| `h1_size` / `h2_size` / `h3_size` | SUPPORTED | |
+| `code_size` | SUPPORTED | |
+| `spacing` | SUPPORTED | |
+| `Highlighter` | **MISSING** | Code syntax highlighting |
 
 ### Canvas
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `width` | Yes | Yes | SUPPORTED |
-| `height` | Yes | Yes | SUPPORTED |
-| `shapes` | Yes | Yes | SUPPORTED (rect, circle, line, text) |
-| `background` | Elixir-side only | No | **BUG** -- renderer doesn't read it |
-| Full `Program` trait | No | No | **MISSING** -- iced canvas uses a `Program` trait for interactive drawing |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `width` / `height` | SUPPORTED | |
+| `shapes` | SUPPORTED | rect, circle, line, text |
+| `background` | SUPPORTED | Fill color |
+| Full `Program` trait | SUPPORTED | Interactive canvas via `CanvasProgram` impl |
+| `on_press` / `on_release` / `on_move` / `on_scroll` | SUPPORTED | Individual or via `interactive: true` |
 
 ### Table
 
-| iced Prop | Julep | Renderer | Status |
-|---|---|---|---|
-| `columns` | Yes | Yes | SUPPORTED |
-| `rows` | Yes | Yes | SUPPORTED |
-| `width` | Yes | Yes | SUPPORTED |
-| `header` | Elixir-side only | No | **BUG** -- renderer always renders headers |
-| `sortable` | Elixir-side only | No | **BUG** -- renderer has no sort handling |
-| `padding` / `padding_x` / `padding_y` | No | No | **MISSING** |
-| `separator` / `separator_x` / `separator_y` | No | No | **MISSING** |
-| Column `align_x` / `align_y` | No | No | **MISSING** |
+| iced Prop | Status | Notes |
+|---|---|---|
+| `columns` / `rows` | SUPPORTED | |
+| `width` | SUPPORTED | |
+| `header` | SUPPORTED | Conditional via boolean prop |
+| `separator` | SUPPORTED | Conditional via boolean prop |
+| `padding` | SUPPORTED | |
+| `sortable` | **MISSING** | No sort handling |
+| Column `align_x` / `align_y` | **MISSING** | |
 
 ---
 
@@ -445,15 +412,15 @@ Same gaps as Slider.
 | `Fill` | `:fill` | `"fill"` | SUPPORTED |
 | `Shrink` | `:shrink` | `"shrink"` | SUPPORTED |
 | `Fixed(f32)` | number | number | SUPPORTED |
-| `FillPortion(u16)` | `{:fill_portion, n}` | -- | **BUG** -- Elixir encodes `%{"fill_portion" => n}`, renderer only handles Number and String |
+| `FillPortion(u16)` | `{:fill_portion, n}` | `{"fill_portion": n}` | SUPPORTED -- renderer parses JSON object |
 
 ### Padding
 
 | iced Form | Julep | Renderer | Status |
 |---|---|---|---|
 | Uniform `f32` | number | `padding` key | SUPPORTED |
-| `[vert, horiz]` | `{v, h}` tuple | -- | **BUG** -- Elixir encodes `%{top: v, ...}` map, renderer reads `padding_top` etc. |
-| Per-side struct | `%{top, right, bottom, left}` | `padding_top` etc. | **BUG** -- key name mismatch |
+| `[vert, horiz]` | `{v, h}` tuple | Encoded as per-side map | SUPPORTED |
+| Per-side struct | `%{top, right, bottom, left}` | `{"top": n, ...}` | SUPPORTED -- renderer parses object format |
 
 ### Alignment
 
@@ -467,21 +434,21 @@ Same gaps as Slider.
 
 | iced Feature | Julep | Renderer | Status |
 |---|---|---|---|
-| `:default` / `:monospace` | Yes | No | **BUG** -- Elixir encodes but renderer doesn't read font prop on text |
-| Named family | Yes | No | **BUG** |
-| Weight variants | Yes (9 weights) | No | **BUG** |
-| Style (normal/italic/oblique) | Yes | No | **BUG** |
-| `Stretch` (9 variants) | No | No | **MISSING** |
-| Runtime `font::load` | No | No | **MISSING** |
+| `:default` / `:monospace` | Yes | Yes | SUPPORTED |
+| Named family (serif, cursive, fantasy) | Yes | Yes | SUPPORTED |
+| Weight variants (all 9) | Yes | Yes | SUPPORTED |
+| Style (normal/italic/oblique) | Yes | Yes | SUPPORTED |
+| `Stretch` (9 variants) | Yes | Yes | SUPPORTED |
+| Runtime `font::load` | Via settings/0 | **PARTIAL** | App-level font loading via settings callback |
 
 ### Color
 
 | iced Feature | Julep | Status |
 |---|---|---|
-| `Color` struct (r,g,b,a) | Hex strings only | **PARTIAL** -- only hex color support via theming |
-| `from_rgb8` / `from_rgba8` | No | **MISSING** |
+| Hex strings | `"#rrggbb"` or `"#rrggbbaa"` | SUPPORTED |
+| `{r, g, b, a}` object (0-1 floats) | `%{r: 0.5, g: 0.5, b: 0.5, a: 1.0}` | SUPPORTED |
+| Gradient backgrounds | Linear gradient on container | SUPPORTED |
 | Named constants (BLACK, WHITE, TRANSPARENT) | No | **MISSING** |
-| Gradient backgrounds | No | **MISSING** |
 
 ### ContentFit
 
@@ -497,14 +464,21 @@ Same gaps as Slider.
 
 | iced Feature | Julep | Status |
 |---|---|---|
-| Border struct (color, width, radius) | No | **MISSING** |
-| Per-corner radius | No | **MISSING** |
+| Border struct (color, width, radius) | `%{color: "#hex", width: n, radius: n}` | SUPPORTED |
+| Per-corner radius | Array `[tl, tr, br, bl]` or object `%{top_left: n, ...}` | SUPPORTED |
 
 ### Shadow
 
 | iced Feature | Julep | Status |
 |---|---|---|
-| Shadow struct (color, offset, blur_radius) | No | **MISSING** |
+| Shadow struct (color, offset, blur_radius) | `%{color: "#hex", offset: [x, y], blur_radius: n}` | SUPPORTED |
+
+### Line Height
+
+| iced Feature | Julep | Status |
+|---|---|---|
+| Relative | Number or `%{relative: 1.5}` | SUPPORTED |
+| Absolute | `%{absolute: 20}` | SUPPORTED |
 
 ---
 
@@ -515,10 +489,11 @@ Same gaps as Slider.
 | 22 built-in themes | Yes (all 22) | SUPPORTED |
 | `custom(name, palette)` | Yes | SUPPORTED |
 | Palette fields: background, text, primary, success, danger | Yes | SUPPORTED |
-| Palette field: `warning` | No | **MISSING** |
-| Extended palette generation | No | **MISSING** |
-| Per-widget style functions | No | **MISSING** -- iced has `primary`, `secondary`, `success`, `warning`, `danger`, `text` etc. per widget |
-| `Themer` widget (per-subtree theme) | No | **MISSING** |
+| Palette field: `warning` | Parsed separately (not in iced's base Palette) | SUPPORTED |
+| `base` field for custom themes | Yes | SUPPORTED |
+| Per-widget style functions | Yes | SUPPORTED -- button, container, text, checkbox, progress_bar, rule, etc. have named styles |
+| `Themer` widget (per-subtree theme) | Yes | SUPPORTED |
+| Extended palette generation | No | **MISSING** -- iced auto-generates extended palettes |
 | `theme::Mode` (Light/Dark/None) | No | **MISSING** |
 
 ---
@@ -532,15 +507,19 @@ Same gaps as Slider.
 | `keyboard::listen()` (key release) | `on_key_release(tag)` | SUPPORTED |
 | `window::close_requests()` | `on_window_close(tag)` | SUPPORTED |
 | `window::events()` | `on_window_event(tag)` | SUPPORTED |
-| `window::frames()` | No | **MISSING** -- animation frame subscription |
-| `window::open_events()` | No | **MISSING** |
-| `window::resize_events()` | No | **MISSING** |
-| `event::listen()` | No | **MISSING** -- all runtime events |
-| `event::listen_with()` | No | **MISSING** -- filtered events |
-| `system::theme_changes()` | No | **MISSING** -- OS theme change subscription |
-| `Subscription::batch()` | No | **MISSING** -- combining multiple subscriptions |
-| Mouse events subscription | No | **MISSING** -- no mouse event subscriptions at all |
-| Touch events subscription | No | **MISSING** -- no touch event subscriptions at all |
+| `window::open_events()` | `on_window_open(tag)` | SUPPORTED |
+| `window::resize_events()` | `on_window_resize(tag)` | SUPPORTED |
+| Window focus/unfocus | `on_window_focus(tag)` / `on_window_unfocus(tag)` | SUPPORTED |
+| Window move | `on_window_move(tag)` | SUPPORTED |
+| `window::frames()` | `on_animation_frame(tag)` | SUPPORTED |
+| Mouse move | `on_mouse_move(tag)` | SUPPORTED |
+| Mouse button | `on_mouse_button(tag)` | SUPPORTED |
+| Mouse scroll | `on_mouse_scroll(tag)` | SUPPORTED |
+| Touch events | `on_touch(tag)` | SUPPORTED |
+| File drop | `on_file_drop(tag)` | SUPPORTED |
+| `system::theme_changes()` | `on_theme_change(tag)` | SUPPORTED |
+| `event::listen()` | `on_event(tag)` | SUPPORTED -- catch-all |
+| `Subscription::batch()` | `batch(subscriptions)` | SUPPORTED -- identity (list concat) |
 
 ---
 
@@ -549,6 +528,7 @@ Same gaps as Slider.
 | iced Task | Julep Command | Status |
 |---|---|---|
 | `Task::none()` | `none()` | SUPPORTED |
+| `Task::done(value, mapper)` | `done(value, msg_fn)` | SUPPORTED |
 | `Task::perform(future, map)` | `async(fun, tag)` | SUPPORTED |
 | `Task::batch(tasks)` | `batch(commands)` | SUPPORTED |
 | `focus(id)` | `focus(widget_id)` | SUPPORTED |
@@ -556,9 +536,20 @@ Same gaps as Slider.
 | `focus_previous()` | `focus_previous()` | SUPPORTED |
 | `select_all(id)` | `select_all(widget_id)` | SUPPORTED |
 | `scroll_to(id, offset)` | `scroll_to(widget_id, offset)` | SUPPORTED |
-| Custom send_after | `send_after(delay, event)` | SUPPORTED (julep-specific) |
-| `window::close(id)` | `close_window(window_id)` | SUPPORTED |
-| `Task::done(value)` | No | **MISSING** |
+| `snap_to(id, offset)` | `snap_to(widget_id, x, y)` | SUPPORTED |
+| `snap_to_end(id)` | `snap_to_end(widget_id)` | SUPPORTED |
+| `scroll_by(id, offset)` | `scroll_by(widget_id, x, y)` | SUPPORTED |
+| `text_input::move_cursor_to_front` | `move_cursor_to_front(widget_id)` | SUPPORTED |
+| `text_input::move_cursor_to_end` | `move_cursor_to_end(widget_id)` | SUPPORTED |
+| `text_input::move_cursor_to(pos)` | `move_cursor_to(widget_id, pos)` | SUPPORTED |
+| `text_input::select_range` | `select_range(widget_id, start, end)` | SUPPORTED |
+| Custom `send_after` | `send_after(delay, event)` | SUPPORTED (julep-specific) |
+| `iced::exit()` | `exit()` | SUPPORTED |
+| PaneGrid: split | `pane_split(grid_id, pane_id, axis, new_id)` | SUPPORTED |
+| PaneGrid: close | `pane_close(grid_id, pane_id)` | SUPPORTED |
+| PaneGrid: swap | `pane_swap(grid_id, pane_a, pane_b)` | SUPPORTED |
+| PaneGrid: maximize | `pane_maximize(grid_id, pane_id)` | SUPPORTED |
+| PaneGrid: restore | `pane_restore(grid_id)` | SUPPORTED |
 | `Task::run(stream, map)` | No | **MISSING** |
 | `Task::future(future)` | No | **MISSING** |
 | `Task::stream(stream)` | No | **MISSING** |
@@ -566,12 +557,6 @@ Same gaps as Slider.
 | `.then()` / `.chain()` | No | **MISSING** -- task chaining |
 | `.collect()` | No | **MISSING** |
 | `.abortable()` | No | **MISSING** -- task cancellation |
-| `iced::exit()` | No | **MISSING** -- graceful app exit |
-| `snap_to(id, offset)` | No | **MISSING** -- snap scrollable |
-| `snap_to_end(id)` | No | **MISSING** |
-| `scroll_by(id, offset)` | No | **MISSING** |
-| `text_input::move_cursor_to_front/end/to` | No | **MISSING** |
-| `text_input::select_range` | No | **MISSING** |
 
 ---
 
@@ -581,26 +566,26 @@ Same gaps as Slider.
 |---|---|---|
 | `open(Settings)` | Via tree (declarative) | SUPPORTED (different model) |
 | `close(id)` | `close_window(id)` | SUPPORTED |
-| `resize(id, size)` | No | **MISSING** |
-| `move_to(id, point)` | No | **MISSING** |
-| `maximize(id, bool)` | No | **MISSING** |
-| `minimize(id, bool)` | No | **MISSING** |
-| `set_mode(id, mode)` | No | **MISSING** (fullscreen, hidden) |
-| `toggle_maximize(id)` | No | **MISSING** |
-| `toggle_decorations(id)` | No | **MISSING** |
-| `gain_focus(id)` | No | **MISSING** |
-| `set_level(id, level)` | No | **MISSING** (always-on-top etc.) |
-| `drag(id)` | No | **MISSING** |
-| `drag_resize(id, dir)` | No | **MISSING** |
-| `request_user_attention` | No | **MISSING** |
+| `resize(id, size)` | `resize_window(id, w, h)` | SUPPORTED |
+| `move_to(id, point)` | `move_window(id, x, y)` | SUPPORTED |
+| `maximize(id, bool)` | `maximize_window(id, bool)` | SUPPORTED |
+| `minimize(id, bool)` | `minimize_window(id, bool)` | SUPPORTED |
+| `set_mode(id, mode)` | `set_window_mode(id, mode)` | SUPPORTED |
+| `toggle_maximize(id)` | `toggle_maximize(id)` | SUPPORTED |
+| `toggle_decorations(id)` | `toggle_decorations(id)` | SUPPORTED |
+| `gain_focus(id)` | `gain_focus(id)` | SUPPORTED |
+| `set_level(id, level)` | `set_window_level(id, level)` | SUPPORTED |
+| `drag(id)` | `drag_window(id)` | SUPPORTED |
+| `drag_resize(id, dir)` | `drag_resize_window(id, dir)` | SUPPORTED |
+| `request_user_attention` | `request_user_attention(id, urgency)` | SUPPORTED |
+| `screenshot(id)` | `screenshot(id, tag)` | SUPPORTED |
+| `set_resizable(id, bool)` | `set_resizable(id, bool)` | SUPPORTED |
+| `set_min_size` / `set_max_size` | `set_min_size(id, w, h)` / `set_max_size(id, w, h)` | SUPPORTED |
+| `enable/disable_mouse_passthrough` | `enable_mouse_passthrough(id)` / `disable_mouse_passthrough(id)` | SUPPORTED |
+| `show_system_menu(id)` | `show_system_menu(id)` | SUPPORTED |
+| `size(id)` / `position(id)` queries | `get_window_size(id, tag)` / `get_window_position(id, tag)` | SUPPORTED |
+| `is_maximized(id)` / `is_minimized(id)` | `is_maximized(id, tag)` / `is_minimized(id, tag)` | SUPPORTED |
 | `set_icon(id, icon)` | No | **MISSING** |
-| `screenshot(id)` | No | **MISSING** |
-| `set_resizable(id, bool)` | No | **MISSING** |
-| `set_min_size` / `set_max_size` | No | **MISSING** |
-| `enable/disable_mouse_passthrough` | No | **MISSING** |
-| `show_system_menu(id)` | No | **MISSING** |
-| `size(id)` / `position(id)` queries | No | **MISSING** |
-| `is_maximized(id)` / `is_minimized(id)` | No | **MISSING** |
 | `scale_factor(id)` | No | **MISSING** |
 | `mode(id)` | No | **MISSING** |
 | `raw_id(id)` | No | **MISSING** |
@@ -610,7 +595,7 @@ Same gaps as Slider.
 
 | iced Setting | Julep | Status |
 |---|---|---|
-| `size` | Via `window_config` | PARTIAL |
+| `size` | Via `window_config` | SUPPORTED |
 | `title` | Via `window` node | SUPPORTED |
 | `maximized` | No | **MISSING** |
 | `fullscreen` | No | **MISSING** |
@@ -635,11 +620,11 @@ Same gaps as Slider.
 
 | iced Event | Julep | Status |
 |---|---|---|
-| `KeyPressed` | `{:key_press, key, modifiers}` | **BUG** -- protocol family mismatch (see below) |
-| `KeyReleased` | Subscription exists, no decoder | **BUG** -- no `key_release` handler in decoder |
-| `ModifiersChanged` | No | **MISSING** |
-| `key::Named` variants (200+) | 20 mapped | **PARTIAL** -- only common keys mapped |
-| `key::Character` | Single chars pass through | SUPPORTED |
+| `KeyPressed` | `{:key_press, key, modifiers}` | SUPPORTED |
+| `KeyReleased` | `{:key_release, key, modifiers}` | SUPPORTED |
+| `ModifiersChanged` | `{:modifiers_changed, modifiers}` | SUPPORTED |
+| `key::Named` variants | ~200 mapped | SUPPORTED -- comprehensive named key map |
+| `key::Character` | Characters pass through | SUPPORTED |
 | `physical_key` / `location` | No | **MISSING** |
 | `text` field | No | **MISSING** |
 | `repeat` field | No | **MISSING** |
@@ -659,35 +644,66 @@ Same gaps as Slider.
 
 | iced Event | Julep | Status |
 |---|---|---|
-| `CursorMoved` | No | **MISSING** |
-| `ButtonPressed` | No | **MISSING** |
-| `ButtonReleased` | No | **MISSING** |
-| `WheelScrolled` | No | **MISSING** |
-| `CursorEntered` / `CursorLeft` | No | **MISSING** |
-| All `mouse::Button` variants | No | **MISSING** |
-| `ScrollDelta` (Lines/Pixels) | No | **MISSING** |
+| `CursorMoved` | `{:cursor_moved, x, y}` | SUPPORTED |
+| `CursorEntered` | `{:cursor_entered}` | SUPPORTED |
+| `CursorLeft` | `{:cursor_left}` | SUPPORTED |
+| `ButtonPressed` | `{:button_pressed, button}` | SUPPORTED |
+| `ButtonReleased` | `{:button_released, button}` | SUPPORTED |
+| `WheelScrolled` | `{:wheel_scrolled, dx, dy, unit}` | SUPPORTED |
 
 ### Touch Events
 
 | iced Event | Julep | Status |
 |---|---|---|
-| `FingerPressed` | No | **MISSING** |
-| `FingerMoved` | No | **MISSING** |
-| `FingerLifted` | No | **MISSING** |
-| `FingerLost` | No | **MISSING** |
+| `FingerPressed` | `{:finger_pressed, finger_id, x, y}` | SUPPORTED |
+| `FingerMoved` | `{:finger_moved, finger_id, x, y}` | SUPPORTED |
+| `FingerLifted` | `{:finger_lifted, finger_id, x, y}` | SUPPORTED |
+| `FingerLost` | `{:finger_lost, finger_id, x, y}` | SUPPORTED |
 
 ### Window Events
 
 | iced Event | Julep | Status |
 |---|---|---|
-| `CloseRequested` | `on_window_close` sub | SUPPORTED |
-| `Opened` | No | **MISSING** |
-| `Closed` | No | **MISSING** |
-| `Moved` | No | **MISSING** |
-| `Resized` | No | **MISSING** |
-| `Rescaled` | No | **MISSING** |
-| `Focused` / `Unfocused` | No | **MISSING** |
-| `FileHovered` / `FileDropped` / `FilesHoveredLeft` | No | **MISSING** |
+| `CloseRequested` | `{:window_close_requested, window_id}` | SUPPORTED |
+| `Opened` | `{:window_opened, window_id, position, size}` | SUPPORTED |
+| `Closed` | `{:window_closed, window_id}` | SUPPORTED |
+| `Moved` | `{:window_moved, window_id, x, y}` | SUPPORTED |
+| `Resized` | `{:window_resized, window_id, width, height}` | SUPPORTED |
+| `Rescaled` | `{:window_rescaled, window_id, scale_factor}` | SUPPORTED |
+| `Focused` / `Unfocused` | `{:window_focused, window_id}` / `{:window_unfocused, window_id}` | SUPPORTED |
+| `FileHovered` | `{:file_hovered, window_id, path}` | SUPPORTED |
+| `FileDropped` | `{:file_dropped, window_id, path}` | SUPPORTED |
+| `FilesHoveredLeft` | `{:files_hovered_left, window_id}` | SUPPORTED |
+
+### Canvas Events
+
+| Event | Julep | Status |
+|---|---|---|
+| Press | `{:canvas_press, id, x, y, button}` | SUPPORTED |
+| Release | `{:canvas_release, id, x, y, button}` | SUPPORTED |
+| Move | `{:canvas_move, id, x, y}` | SUPPORTED |
+| Scroll | `{:canvas_scroll, id, x, y, delta_x, delta_y}` | SUPPORTED |
+
+### Sensor Events
+
+| Event | Julep | Status |
+|---|---|---|
+| Resize | `{:sensor_resize, id, width, height}` | SUPPORTED |
+
+### PaneGrid Events
+
+| Event | Julep | Status |
+|---|---|---|
+| Resized | `{:pane_resized, id, split, ratio}` | SUPPORTED |
+| Dragged | `{:pane_dragged, id, pane, target}` | SUPPORTED |
+| Clicked | `{:pane_clicked, id, pane}` | SUPPORTED |
+
+### Other Events
+
+| Event | Julep | Status |
+|---|---|---|
+| Animation frame | `{:animation_frame, timestamp}` | SUPPORTED |
+| Theme changed | `{:theme_changed, mode}` | SUPPORTED |
 
 ---
 
@@ -706,141 +722,76 @@ Same gaps as Slider.
 
 | iced Setting | Julep | Status |
 |---|---|---|
-| `default_font` | No | **MISSING** |
-| `default_text_size` | No | **MISSING** |
-| `fonts` (custom font loading) | No | **MISSING** |
-| `antialiasing` | No | **MISSING** |
+| `default_font` | Via `settings/0` callback | SUPPORTED |
+| `default_text_size` | Via `settings/0` callback | SUPPORTED |
+| `fonts` (custom font loading) | Via `settings/0` callback | SUPPORTED |
+| `antialiasing` | Via `settings/0` callback | SUPPORTED |
+| `subscription` callback | Via `subscribe/1` | SUPPORTED |
 | `vsync` | No | **MISSING** |
 | `scale_factor` callback | No | **MISSING** |
-| `title` callback | No | **MISSING** (per-window title from Elixir) |
-| `theme` callback | No | **MISSING** (dynamic theme from Elixir) |
-| `subscription` callback | Via `subscribe/1` | SUPPORTED |
+| `title` callback | Via `window` node title prop | SUPPORTED (different model) |
+| `theme` callback | Via `window_config` or `themer` widget | SUPPORTED (different model) |
 
 ---
 
-## 11. Protocol Bugs (Elixir <-> Rust Mismatches)
-
-These are cases where Julep's Elixir side and Rust side disagree on the
-wire format, meaning the feature is broken even though both sides have code.
-
-### P1: Padding Encoding
-
-**Elixir** (`Julep.Iced.Padding.encode/1`): Produces `%{"top" => n, "right" => n, "bottom" => n, "left" => n}`.
-
-**Rust** (`widgets.rs`): Reads `padding` (uniform), `padding_top`, `padding_right`, `padding_bottom`, `padding_left` (prefixed keys).
-
-The four-side map from Elixir will be set as the `padding` prop value (a JSON object), but the renderer tries to read `padding` as a number. Per-side keys would need to be `padding_top` etc., not nested inside a map. Uniform padding (a single number) works; per-side does not.
-
-### P2: FillPortion Length
-
-**Elixir** (`Julep.Iced.Length.encode/1`): `{:fill_portion, 3}` -> `%{"fill_portion" => 3}`.
-
-**Rust** (`value_to_length`): Only handles `Number` and `String` JSON values. A JSON object is not matched.
-
-### P3: Key Event Family
-
-**Elixir** (`Julep.Protocol.decode_message/1`): Expects `"family": "key"` with `"key"` field.
-
-**Rust** (`OutgoingEvent`): Emits `"family": "key_press"` / `"family": "key_release"` with key in `"value"` field.
-
-### P4: Key Release Decoding
-
-**Elixir**: No handler for `key_release` family. Subscription `on_key_release` exists but decoded events would be dropped.
-
-### P5: Window Event Family
-
-**Elixir**: Expects `"family": "window"` with `"action"` and `"window_id"` fields.
-
-**Rust**: Emits `"family": "window_close"` with `"tag"` field.
-
-### P6: Tooltip Prop Name
-
-**Elixir** (`Julep.Iced.tooltip/4`): Sets prop `tip_text`.
-
-**Rust** (`render_tooltip`): Reads prop `tip`.
-
-The `Julep.UI` layer correctly passes `tip` -- only the strict parity layer is broken.
-
----
-
-## 12. Summary Statistics
+## 11. Summary Statistics
 
 ### Widgets
 - iced widgets (with enabled features): ~28 distinct widgets
-- Julep supported: 21 (plus 7 composites not in iced)
-- Missing: Grid, Pin, Float, Responsive, MouseArea, Sensor, PaneGrid, Rich, Keyed::Column
-- Broken: ComboBox (delegates to PickList)
+- Julep supported: 28 (plus 7 composites not in iced)
+- Missing: none
+- All widgets fully implemented in both Elixir and Rust layers
 
 ### Props
-- Average prop coverage per supported widget: ~40-60%
-- Most common missing prop categories:
-  - `style` / visual customization (missing on nearly every widget)
-  - `font` / text configuration (missing where applicable)
-  - `max_width` / `max_height` constraints
-  - `clip` on layout containers
-  - `id` for widget operations
+- Average prop coverage per supported widget: ~85-95%
+- Most common remaining gaps:
+  - `on_toggle_maybe` / disabled state for checkbox, toggler
+  - Widget-specific icons
+  - Some event callbacks (`on_open`/`on_close` for pick_list/combo_box)
+  - `on_scroll` for scrollable
+  - Code syntax highlighting for markdown
 
 ### Events
-- Keyboard: PARTIAL (protocol bugs, limited key mapping)
-- Mouse: MISSING entirely
-- Touch: MISSING entirely
-- Window lifecycle: MISSING (only close request supported)
+- Keyboard: SUPPORTED (all key families, comprehensive named key map, modifiers)
+- Mouse: SUPPORTED (cursor move, enter/leave, buttons, wheel scroll)
+- Touch: SUPPORTED (finger press/move/lift/lost)
+- Window lifecycle: SUPPORTED (open, close, close_requested, move, resize, focus, file drop)
+- Canvas: SUPPORTED (press, release, move, scroll)
+- PaneGrid: SUPPORTED (resize, drag, click)
 
 ### Commands
-- Basic set covered (focus, scroll, async, batch)
-- Missing: task chaining, cancellation, exit, cursor ops, scroll_by/snap_to
+- Full set covered: focus, scroll, snap, cursor ops, select, async, batch, done, exit
+- Window operations: comprehensive (resize, move, maximize, minimize, decorations, drag, etc.)
+- PaneGrid operations: split, close, swap, maximize, restore
+- Missing: task chaining (.then/.chain), streaming, cancellation (.abortable)
 
 ### Window Operations
-- Only open (declarative) and close supported
-- Missing: resize, move, maximize, minimize, fullscreen, decorations, focus, drag, etc.
+- Declarative open (via tree) and close supported
+- Full imperative window management: resize, move, maximize, minimize, mode, decorations, focus, drag, screenshots, etc.
+- Missing: set_icon, scale_factor query, mode query, raw_id, monitor_size
 
 ---
 
-## 13. Prioritized Gaps
-
-### Critical (Broken Features)
-
-1. **P1-P5: Protocol mismatches** -- Keyboard events, window events, per-side padding, and fill_portion are encoded but silently broken
-2. **P6: Tooltip prop name** -- `Julep.Iced` layer produces wrong key
-3. **ComboBox** -- Renders as PickList, not a real combo box
-
-### High Priority (Common Use Cases)
-
-4. **`style` props on all widgets** -- No visual customization possible beyond themes
-5. **`font` prop on Text** -- Can't change text font/weight/style
-6. **`color` prop on Text** -- Can't color individual text elements
-7. **Button children** -- iced buttons can contain arbitrary widgets, not just labels
-8. **`secure` on TextInput** -- No password fields
-9. **Disabled states** -- `on_press_maybe`, `on_toggle_maybe` etc. for disabled widgets
-10. **`max_width` / `max_height`** -- Important layout constraints
-11. **Mouse events** -- No hover, click position, scroll delta, right-click
-12. **Window resize/move/maximize** -- Basic window management
-13. **`warning` palette color** -- Missing from custom themes
-14. **Grid widget** -- Common layout need
+## 12. Remaining Gaps (Prioritized)
 
 ### Medium Priority (Power User Features)
 
-15. **PaneGrid** -- Resizable split panes (iced's most complex widget)
-16. **MouseArea** -- Rich mouse interaction zone
-17. **Rich text** -- Styled spans, inline links
-18. **Responsive** -- Size-dependent layouts
-19. **Window settings** -- min/max size, decorations, resizable, etc.
-20. **Scrollable direction/anchoring** -- Horizontal scroll, auto-scroll
-21. **Per-widget styling** -- button::primary, button::danger, etc.
-22. **Text alignment/wrapping** -- Essential text layout
-23. **File drag-and-drop events** -- FileHovered, FileDropped
-24. **OS theme change subscription** -- Respond to dark/light mode changes
-25. **Animation frames subscription** -- `window::frames()` for smooth animation
+1. **Task chaining/streaming** -- `.then()`, `.chain()`, `.abortable()`, `Task::stream()`
+2. **Window initial settings** -- maximized, fullscreen, position, min/max size, decorations, transparent, etc. at window creation time
+3. **`on_scroll` callback for Scrollable** -- scroll position tracking
+4. **Disabled states** -- `on_toggle_maybe` for checkbox/toggler
+5. **`on_open`/`on_close` for pick_list/combo_box** -- dropdown lifecycle events
+6. **Markdown code highlighting** -- syntax highlighting support
+7. **Primary clipboard** -- Linux middle-click paste
 
 ### Low Priority (Nice-to-Have)
 
-26. **Pin / Float** -- Absolute positioning, floating overlays
-27. **Sensor** -- Visibility detection
-28. **Keyed::Column** -- Performance optimization
-29. **Primary clipboard** -- Linux middle-click paste
-30. **Touch events** -- Mobile/tablet support
-31. **Font loading** -- Custom fonts at runtime
-32. **App-level settings** -- default_font, default_text_size, antialiasing
-33. **Task chaining** -- `.then()`, `.chain()`, `.collect()`
-34. **Canvas Program trait** -- Interactive canvas with state
-35. **Markdown highlighter/settings** -- Code highlighting, text size
+8. **`set_icon`** -- window icon
+9. **`scale_factor` query** -- programmatic scale factor access
+10. **Stack `clip`** -- clipping on stack widget
+11. **Widget icons** -- icon prop for text_input, checkbox
+12. **`on_paste` for TextInput** -- paste event callback
+13. **Named color constants** -- BLACK, WHITE, TRANSPARENT as atoms
+14. **`vsync` setting** -- vsync control
+15. **Extended palette generation** -- full iced extended palette support
+16. **`theme::Mode`** -- light/dark/none mode enum

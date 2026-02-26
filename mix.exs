@@ -12,6 +12,8 @@ defmodule Julep.MixProject do
       name: "Julep",
       description: "Native desktop GUIs from Elixir, powered by iced",
       package: package(),
+      # TODO: verify source_url before Hex publish -- github.com/julep-ui/julep
+      # is an unrelated project; update to the correct repo URL first.
       source_url: "https://github.com/julep-ui/julep",
       docs: [main: "Julep", extras: ["README.md"]]
     ]

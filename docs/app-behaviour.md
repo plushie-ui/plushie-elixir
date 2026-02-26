@@ -13,7 +13,8 @@ Elm architecture: model, update, view.
 # Optional:
 @callback subscribe(model) :: [Julep.Subscription.t()]
 @callback handle_renderer_exit(model, exit_reason) :: model
-@callback window_config(model) :: Julep.Window.config()
+@callback window_config(model) :: map()
+@callback settings() :: keyword()
 ```
 
 ### init/1
@@ -81,8 +82,13 @@ taxonomy. Common families:
 - `{:select, field_id, value}` -- selection change
 - `{:toggle, field_id, value}` -- checkbox/toggler change
 - `{:submit, field_id, value}` -- form field submission
-- `{:key_press, key, modifiers}` -- keyboard event
-- `{:window, action, window_id}` -- window lifecycle event
+- `{:key_press, key, modifiers}` -- keyboard event (via subscription)
+- `{:key_release, key, modifiers}` -- keyboard release (via subscription)
+- `{:window_close_requested, window_id}` -- window close requested
+- `{:window_resized, window_id, width, height}` -- window resized
+- `{:canvas_press, id, x, y, button}` -- canvas interaction
+- `{:sensor_resize, id, width, height}` -- sensor size change
+- `{:pane_clicked, id, pane}` -- pane grid click
 
 ### view/1
 
@@ -196,6 +202,31 @@ def window_config(_model) do
   }
 end
 ```
+
+### settings/0 (optional)
+
+Called once at startup to provide application-level settings to the
+renderer. Returns a keyword list.
+
+```elixir
+def settings do
+  [
+    default_font: %{family: "monospace"},
+    default_text_size: 16,
+    antialiasing: true,
+    fonts: ["priv/fonts/Inter.ttf"]
+  ]
+end
+```
+
+Supported keys:
+
+- `default_font` -- a font specification map (same format as font props)
+- `default_text_size` -- a number (pixels)
+- `antialiasing` -- boolean
+- `fonts` -- list of font file paths to load
+
+Default: `[]` (renderer uses its own defaults).
 
 ## Starting the runtime
 

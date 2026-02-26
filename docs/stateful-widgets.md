@@ -25,54 +25,57 @@ structs. The state lives in the renderer process.
 ### text_editor
 
 The renderer maintains the `Content` buffer. Elixir provides initial
-content and receives edit actions:
+content via the `content` prop and receives the full text on every edit:
 
 ```elixir
 # In view:
 text_editor("notes",
-  initial_content: model.notes_text,
-  on_action: "notes_edited",
+  content: model.notes_text,
   placeholder: "Write something...",
   height: 300
 )
 ```
 
-When the user types, the renderer sends the current text back:
+When the user types, the renderer applies the edit action internally,
+then sends the entire text back as an `{:input, id, text}` event --
+the same family as `text_input`:
 
 ```elixir
-def update(model, {:editor_action, "notes", %{text: text}}) do
+def update(model, {:input, "notes", text}) do
   %{model | notes_text: text}
 end
 ```
 
 The renderer owns the cursor position, selection, and undo stack. Elixir
-owns the logical text content. On renderer restart, the initial_content
-prop restores the buffer.
+owns the logical text content. The `content` prop seeds the `Content`
+buffer on first render; subsequent prop changes do not overwrite an
+existing buffer (the renderer keeps its own state for the lifetime of
+the widget).
 
-For programmatic edits (insert text, move cursor), use commands:
-
-```elixir
-Julep.Command.editor_insert("notes", "inserted text")
-Julep.Command.editor_move_cursor("notes", :end)
-Julep.Command.editor_select_all("notes")
-```
+Additional text_editor props supported by the renderer: `font`, `size`,
+`line_height`, `padding` (uniform), `min_height`, `max_height`,
+`wrapping`, `width` (in pixels), `style`.
 
 ### combo_box
 
-The renderer maintains filter text and the filtered option list:
+The renderer maintains `combo_box::State<String>` with the option list
+and filter text:
 
 ```elixir
 # In view:
 combo_box("language",
   options: ["Elixir", "Rust", "Python", "Go", "Ruby"],
   selected: model.language,
-  on_selected: "language_selected",
   placeholder: "Search languages..."
 )
 ```
 
 Elixir provides the full option list and the selected value. The renderer
-handles filtering as the user types. When an option is selected:
+handles filtering as the user types. Two event families fire:
+
+- `{:input, "language", filter_text}` -- as the user types in the search
+  field (only if the renderer wires `on_input`, which it does by default).
+- `{:select, "language", value}` -- when an option is selected.
 
 ```elixir
 def update(model, {:select, "language", value}) do
@@ -80,36 +83,61 @@ def update(model, {:select, "language", value}) do
 end
 ```
 
-If the option list changes (e.g., loaded from an API), update the
-`options` prop and the renderer rebuilds its filter state.
+Additional combo_box props: `width`, `padding`, `size`, `font`,
+`line_height`, `menu_height`.
+
+**Note:** The option list is seeded into the State on first render.
+Changing the `options` prop after the initial render does not update the
+State (the renderer only seeds on first cache miss). This is a known
+limitation.
 
 ### pane_grid
 
-The renderer maintains pane layout and sizes:
+The renderer maintains `pane_grid::State<String>` for pane layout and
+sizes. Children define the initial pane configuration:
 
 ```elixir
 # In view:
-pane_grid("editor_panes",
-  panes: %{
-    "left" => editor_panel(model, :left),
-    "right" => editor_panel(model, :right)
-  },
-  on_resize: "panes_resized",
-  on_drag: "pane_dragged",
-  spacing: 4
-)
-```
-
-Pane content is driven by Elixir (the values in the `panes` map). Pane
-layout (which pane is where, relative sizes) is managed by the renderer.
-
-Resize and drag events notify Elixir if you need to react:
-
-```elixir
-def update(model, {:pane_resized, "editor_panes", layout}) do
-  %{model | pane_layout: layout}
+pane_grid("editor_panes", spacing: 4) do
+  container("left", padding: 8) do
+    editor_panel(model, :left)
+  end
+  container("right", padding: 8) do
+    editor_panel(model, :right)
+  end
 end
 ```
+
+Each child's ID becomes a pane identifier in the State. On first render,
+the renderer creates an initial layout by splitting panes vertically in
+order.
+
+Three event families fire:
+
+- `{:pane_clicked, "editor_panes", pane_id}` -- a pane was clicked.
+- `{:pane_resized, "editor_panes", split_id, ratio}` -- a split divider
+  was dragged; `ratio` is the new split position (0.0-1.0).
+- `{:pane_dragged, "editor_panes", source_pane, target_pane}` -- a pane
+  was drag-and-dropped onto another.
+
+```elixir
+def update(model, {:pane_resized, "editor_panes", _split, _ratio}) do
+  # Layout is managed by the renderer; acknowledge or ignore
+  model
+end
+```
+
+Pane operations are available as commands:
+
+```elixir
+Julep.Command.pane_split("editor_panes", "left", :horizontal, "bottom")
+Julep.Command.pane_close("editor_panes", "left")
+Julep.Command.pane_swap("editor_panes", "left", "right")
+Julep.Command.pane_maximize("editor_panes", "left")
+Julep.Command.pane_restore("editor_panes")
+```
+
+Additional pane_grid props: `width`, `height`.
 
 ## Design principle
 
@@ -144,14 +172,8 @@ The answer depends on the app. Julep provides both options:
 # Just use scrollable normally.
 scrollable "list" do ... end
 
-# Preserved: track scroll position in model.
-scrollable "list", on_scroll: "list_scrolled" do ... end
-
-def update(model, {:scroll, "list", offset}) do
-  %{model | list_scroll: offset}
-end
-
-# Restore via command when navigating back:
+# Preserved: track scroll position in model via a future on_scroll callback.
+# For now, use commands to restore position:
 def update(model, {:click, "back_to_list"}) do
   {%{model | screen: :list},
    Julep.Command.scroll_to("list", model.list_scroll)}
@@ -159,4 +181,5 @@ end
 ```
 
 The default is ephemeral (renderer owns it). Opt in to preservation by
-handling the scroll event and storing the value.
+storing scroll offsets in the model and restoring them via commands when
+navigating back.

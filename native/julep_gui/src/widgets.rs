@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use crate::protocol::TreeNode;
 use iced::widget::{
-    button, canvas, checkbox, column, combo_box, container, grid, markdown, mouse_area, pick_list,
-    pin, progress_bar, rich_text, row, rule, scrollable, sensor, slider, span, text, text_editor,
-    text_input, toggler, tooltip, vertical_slider, Image, Space, Stack, Svg,
+    button, canvas, checkbox, column, combo_box, container, grid, markdown, mouse_area, pane_grid,
+    pick_list, pin, progress_bar, rich_text, row, rule, scrollable, sensor, slider, span, text,
+    text_editor, text_input, toggler, tooltip, vertical_slider, Image, Space, Stack, Svg,
 };
 use iced::widget::keyed;
 use iced::{
@@ -21,6 +21,40 @@ use serde_json::Value;
 use crate::Message;
 
 // ---------------------------------------------------------------------------
+// Widget caches
+// ---------------------------------------------------------------------------
+
+/// Bundles all per-widget caches into a single struct so render functions
+/// don't need to thread 3+ separate HashMap parameters everywhere.
+pub struct WidgetCaches {
+    pub editor_contents: HashMap<String, text_editor::Content>,
+    pub markdown_items: HashMap<String, Vec<markdown::Item>>,
+    pub combo_states: HashMap<String, combo_box::State<String>>,
+    pub combo_options: HashMap<String, Vec<String>>,
+    pub pane_grid_states: HashMap<String, pane_grid::State<String>>,
+}
+
+impl WidgetCaches {
+    pub fn new() -> Self {
+        Self {
+            editor_contents: HashMap::new(),
+            markdown_items: HashMap::new(),
+            combo_states: HashMap::new(),
+            combo_options: HashMap::new(),
+            pane_grid_states: HashMap::new(),
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.editor_contents.clear();
+        self.markdown_items.clear();
+        self.combo_states.clear();
+        self.combo_options.clear();
+        self.pane_grid_states.clear();
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Cache pre-population
 // ---------------------------------------------------------------------------
 
@@ -28,28 +62,21 @@ use crate::Message;
 /// `combo_box` node has an entry in the corresponding cache. This must be
 /// called *before* `render` so that `render` can work with shared (`&`)
 /// references to the caches.
-///
-/// NOTE: The `combo_states` parameter was added for combo_box support.
-/// The main.rs agent must add `combo_box_states: HashMap<String, combo_box::State<String>>`
-/// to the App struct and pass it here.
-pub fn ensure_caches(
-    node: &TreeNode,
-    editor_contents: &mut HashMap<String, text_editor::Content>,
-    markdown_items: &mut HashMap<String, Vec<markdown::Item>>,
-    combo_states: &mut HashMap<String, combo_box::State<String>>,
-) {
+pub fn ensure_caches(node: &TreeNode, caches: &mut WidgetCaches) {
     match node.type_name.as_str() {
         "text_editor" => {
             let props = node.props.as_object();
             let content_str = prop_str(props, "content").unwrap_or_default();
-            editor_contents
+            caches
+                .editor_contents
                 .entry(node.id.clone())
                 .or_insert_with(|| text_editor::Content::with_text(&content_str));
         }
         "markdown" => {
             let props = node.props.as_object();
             let content = prop_str(props, "content").unwrap_or_default();
-            markdown_items
+            caches
+                .markdown_items
                 .entry(node.id.clone())
                 .or_insert_with(|| markdown::parse(&content).collect());
         }
@@ -64,16 +91,50 @@ pub fn ensure_caches(
                         .collect()
                 })
                 .unwrap_or_default();
-            combo_states
+            let cached_options = caches.combo_options.get(&node.id);
+            let options_changed = cached_options.map_or(true, |cached| *cached != options);
+            if options_changed {
+                caches
+                    .combo_states
+                    .insert(node.id.clone(), combo_box::State::new(options.clone()));
+                caches.combo_options.insert(node.id.clone(), options);
+            }
+        }
+        "pane_grid" => {
+            caches
+                .pane_grid_states
                 .entry(node.id.clone())
-                .or_insert_with(|| combo_box::State::new(options.clone()));
-            // TODO: update options if they changed -- for now we only seed on first see
+                .or_insert_with(|| {
+                    let child_ids: Vec<String> =
+                        node.children.iter().map(|c| c.id.clone()).collect();
+                    if child_ids.is_empty() {
+                        let (state, _) = pane_grid::State::new("default".to_string());
+                        state
+                    } else if child_ids.len() == 1 {
+                        let (state, _) = pane_grid::State::new(child_ids[0].clone());
+                        state
+                    } else {
+                        let (mut state, first_pane) =
+                            pane_grid::State::new(child_ids[0].clone());
+                        let mut last_pane = first_pane;
+                        for id in child_ids.iter().skip(1) {
+                            if let Some((new_pane, _)) = state.split(
+                                pane_grid::Axis::Vertical,
+                                last_pane,
+                                id.clone(),
+                            ) {
+                                last_pane = new_pane;
+                            }
+                        }
+                        state
+                    }
+                });
         }
         _ => {}
     }
 
     for child in &node.children {
-        ensure_caches(child, editor_contents, markdown_items, combo_states);
+        ensure_caches(child, caches);
     }
 }
 
@@ -82,61 +143,49 @@ pub fn ensure_caches(
 // ---------------------------------------------------------------------------
 
 /// Map a TreeNode to an iced Element. Unknown types render as an empty container.
-///
-/// NOTE: The `combo_states` parameter was added for combo_box support.
-/// The main.rs agent must pass `&app.combo_box_states` here.
 pub fn render<'a>(
     node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
+    caches: &'a WidgetCaches,
 ) -> Element<'a, Message> {
     match node.type_name.as_str() {
-        "column" => render_column(node, editor_contents, markdown_items, combo_states),
-        "row" => render_row(node, editor_contents, markdown_items, combo_states),
+        "column" => render_column(node, caches),
+        "row" => render_row(node, caches),
         "text" => render_text(node),
-        "button" => render_button(node, editor_contents, markdown_items, combo_states),
-        "container" => render_container(node, editor_contents, markdown_items, combo_states),
+        "button" => render_button(node, caches),
+        "container" => render_container(node, caches),
         "space" => render_space(node),
         "text_input" => render_text_input(node),
         "checkbox" => render_checkbox(node),
         "rule" => render_rule(node),
         "progress_bar" => render_progress_bar(node),
-        "scrollable" => render_scrollable(node, editor_contents, markdown_items, combo_states),
-        "window" => render_window(node, editor_contents, markdown_items, combo_states),
+        "scrollable" => render_scrollable(node, caches),
+        "window" => render_window(node, caches),
         // Native widgets
         "toggler" => render_toggler(node),
         "radio" => render_radio(node),
         "slider" => render_slider(node),
         "vertical_slider" => render_vertical_slider(node),
         "pick_list" => render_pick_list(node),
-        "combo_box" => render_combo_box(node, combo_states),
-        "text_editor" => render_text_editor(node, editor_contents),
-        "tooltip" => render_tooltip(node, editor_contents, markdown_items, combo_states),
+        "combo_box" => render_combo_box(node, caches),
+        "text_editor" => render_text_editor(node, caches),
+        "tooltip" => render_tooltip(node, caches),
         "image" => render_image(node),
         "svg" => render_svg(node),
-        "markdown" => render_markdown(node, markdown_items),
-        "stack" => render_stack(node, editor_contents, markdown_items, combo_states),
+        "markdown" => render_markdown(node, caches),
+        "stack" => render_stack(node, caches),
         "canvas" => render_canvas(node),
         "table" => render_table(node),
         // New native widgets
-        "grid" => render_grid(node, editor_contents, markdown_items, combo_states),
-        "pin" => render_pin(node, editor_contents, markdown_items, combo_states),
-        "mouse_area" => render_mouse_area(node, editor_contents, markdown_items, combo_states),
-        "sensor" => render_sensor(node, editor_contents, markdown_items, combo_states),
+        "grid" => render_grid(node, caches),
+        "pin" => render_pin(node, caches),
+        "mouse_area" => render_mouse_area(node, caches),
+        "sensor" => render_sensor(node, caches),
         "rich_text" | "rich" => render_rich_text(node),
-        "keyed_column" => render_keyed_column(node, editor_contents, markdown_items, combo_states),
-        "float" => render_float(node, editor_contents, markdown_items, combo_states),
-        "responsive" => render_responsive(node, editor_contents, markdown_items, combo_states),
-        "pane_grid" => render_pane_grid_placeholder(node),
-        // Composite widgets
-        "tabs" => render_tabs(node, editor_contents, markdown_items, combo_states),
-        "nav" => render_nav(node),
-        "modal" => render_modal(node, editor_contents, markdown_items, combo_states),
-        "card" => render_card(node, editor_contents, markdown_items, combo_states),
-        "panel" => render_panel(node, editor_contents, markdown_items, combo_states),
-        "form" => render_form(node, editor_contents, markdown_items, combo_states),
-        "split_pane" => render_split_pane(node, editor_contents, markdown_items, combo_states),
+        "keyed_column" => render_keyed_column(node, caches),
+        "float" => render_float(node, caches),
+        "themer" => render_themer(node, caches),
+        "responsive" => render_responsive(node, caches),
+        "pane_grid" => render_pane_grid(node, caches),
         unknown => {
             eprintln!("julep_gui: unknown node type `{unknown}`, rendering as empty container");
             container(Space::new()).into()
@@ -150,13 +199,11 @@ pub fn render<'a>(
 
 fn render_children<'a>(
     node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
+    caches: &'a WidgetCaches,
 ) -> Vec<Element<'a, Message>> {
     node.children
         .iter()
-        .map(|c| render(c, editor_contents, markdown_items, combo_states))
+        .map(|c| render(c, caches))
         .collect()
 }
 
@@ -166,9 +213,7 @@ fn render_children<'a>(
 
 fn render_column<'a>(
     node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
+    caches: &'a WidgetCaches,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
@@ -178,7 +223,7 @@ fn render_column<'a>(
     let align_x = prop_horizontal_alignment(props, "align_x");
     let clip = prop_bool_default(props, "clip", false);
 
-    let children = render_children(node, editor_contents, markdown_items, combo_states);
+    let children = render_children(node, caches);
 
     let mut col = column(children)
         .spacing(spacing)
@@ -205,9 +250,7 @@ fn render_column<'a>(
 
 fn render_row<'a>(
     node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
+    caches: &'a WidgetCaches,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
@@ -217,7 +260,7 @@ fn render_row<'a>(
     let align_y = prop_vertical_alignment(props, "align_y");
     let clip = prop_bool_default(props, "clip", false);
 
-    let children = render_children(node, editor_contents, markdown_items, combo_states);
+    let children = render_children(node, caches);
 
     let r = row(children)
         .spacing(spacing)
@@ -301,9 +344,7 @@ fn render_text<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 
 fn render_button<'a>(
     node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
+    caches: &'a WidgetCaches,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let id = node.id.clone();
@@ -312,7 +353,7 @@ fn render_button<'a>(
     let child: Element<'a, Message> = if !node.children.is_empty() {
         node.children
             .first()
-            .map(|c| render(c, editor_contents, markdown_items, combo_states))
+            .map(|c| render(c, caches))
             .unwrap_or_else(|| Space::new().into())
     } else {
         let label = prop_str(props, "label")
@@ -360,9 +401,7 @@ fn render_button<'a>(
 
 fn render_container<'a>(
     node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
+    caches: &'a WidgetCaches,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let padding = parse_padding_value(props);
@@ -374,7 +413,7 @@ fn render_container<'a>(
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, editor_contents, markdown_items, combo_states))
+        .map(|c| render(c, caches))
         .unwrap_or_else(|| Space::new().into());
 
     let mut c = container(child)
@@ -468,9 +507,7 @@ fn render_space<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 
 fn render_scrollable<'a>(
     node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
+    caches: &'a WidgetCaches,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let width = prop_length(props, "width", Length::Shrink);
@@ -480,7 +517,7 @@ fn render_scrollable<'a>(
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, editor_contents, markdown_items, combo_states))
+        .map(|c| render(c, caches))
         .unwrap_or_else(|| Space::new().into());
 
     let direction = prop_str(props, "direction").unwrap_or_default();
@@ -540,9 +577,7 @@ fn render_scrollable<'a>(
 
 fn render_window<'a>(
     node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
+    caches: &'a WidgetCaches,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let padding = parse_padding_value(props);
@@ -552,7 +587,7 @@ fn render_window<'a>(
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, editor_contents, markdown_items, combo_states))
+        .map(|c| render(c, caches))
         .unwrap_or_else(|| Space::new().into());
 
     container(child)
@@ -993,9 +1028,9 @@ fn render_pick_list<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 
 fn render_combo_box<'a>(
     node: &'a TreeNode,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
+    caches: &'a WidgetCaches,
 ) -> Element<'a, Message> {
-    let state = match combo_states.get(&node.id) {
+    let state = match caches.combo_states.get(&node.id) {
         Some(s) => s,
         None => {
             eprintln!("julep_gui: combo_box cache miss for id={}", node.id);
@@ -1042,14 +1077,14 @@ fn render_combo_box<'a>(
 
 fn render_text_editor<'a>(
     node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
+    caches: &'a WidgetCaches,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let height = prop_length(props, "height", Length::Shrink);
     let placeholder = prop_str(props, "placeholder").unwrap_or_default();
     let id = node.id.clone();
 
-    let content = match editor_contents.get(&node.id) {
+    let content = match caches.editor_contents.get(&node.id) {
         Some(c) => c,
         None => {
             eprintln!("julep_gui: text_editor cache miss for id={}", node.id);
@@ -1108,9 +1143,7 @@ fn render_text_editor<'a>(
 
 fn render_tooltip<'a>(
     node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
+    caches: &'a WidgetCaches,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let tip = prop_str(props, "tip").unwrap_or_default();
@@ -1128,7 +1161,7 @@ fn render_tooltip<'a>(
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, editor_contents, markdown_items, combo_states))
+        .map(|c| render(c, caches))
         .unwrap_or_else(|| Space::new().into());
 
     let mut tt = tooltip(child, text(tip), position);
@@ -1243,10 +1276,10 @@ fn render_svg<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 
 fn render_markdown<'a>(
     node: &'a TreeNode,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    caches: &'a WidgetCaches,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
-    let items = match markdown_items.get(&node.id) {
+    let items = match caches.markdown_items.get(&node.id) {
         Some(items) => items.as_slice(),
         None => {
             eprintln!("julep_gui: markdown cache miss for id={}", node.id);
@@ -1254,7 +1287,49 @@ fn render_markdown<'a>(
         }
     };
 
-    let mut md: Element<'a, Message> = markdown::view(items, iced::Theme::Dark)
+    // Build markdown Settings from props, falling back to theme defaults.
+    let settings = if let Some(text_size) = prop_f32(props, "text_size") {
+        let mut s = markdown::Settings::with_text_size(
+            text_size,
+            markdown::Style::from(&iced::Theme::Dark),
+        );
+        if let Some(v) = prop_f32(props, "h1_size") {
+            s.h1_size = Pixels(v);
+        }
+        if let Some(v) = prop_f32(props, "h2_size") {
+            s.h2_size = Pixels(v);
+        }
+        if let Some(v) = prop_f32(props, "h3_size") {
+            s.h3_size = Pixels(v);
+        }
+        if let Some(v) = prop_f32(props, "code_size") {
+            s.code_size = Pixels(v);
+        }
+        if let Some(v) = prop_f32(props, "spacing") {
+            s.spacing = Pixels(v);
+        }
+        s
+    } else {
+        let mut s = markdown::Settings::from(&iced::Theme::Dark);
+        if let Some(v) = prop_f32(props, "h1_size") {
+            s.h1_size = Pixels(v);
+        }
+        if let Some(v) = prop_f32(props, "h2_size") {
+            s.h2_size = Pixels(v);
+        }
+        if let Some(v) = prop_f32(props, "h3_size") {
+            s.h3_size = Pixels(v);
+        }
+        if let Some(v) = prop_f32(props, "code_size") {
+            s.code_size = Pixels(v);
+        }
+        if let Some(v) = prop_f32(props, "spacing") {
+            s.spacing = Pixels(v);
+        }
+        s
+    };
+
+    let mut md: Element<'a, Message> = markdown::view(items, settings)
         .map(Message::MarkdownUrl)
         .into();
 
@@ -1272,15 +1347,13 @@ fn render_markdown<'a>(
 
 fn render_stack<'a>(
     node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
+    caches: &'a WidgetCaches,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let width = prop_length(props, "width", Length::Shrink);
     let height = prop_length(props, "height", Length::Shrink);
 
-    let children = render_children(node, editor_contents, markdown_items, combo_states);
+    let children = render_children(node, caches);
 
     Stack::with_children(children)
         .width(width)
@@ -1294,9 +1367,7 @@ fn render_stack<'a>(
 
 fn render_grid<'a>(
     node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
+    caches: &'a WidgetCaches,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let cols = props
@@ -1305,7 +1376,7 @@ fn render_grid<'a>(
         .unwrap_or(1) as usize;
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
 
-    let children = render_children(node, editor_contents, markdown_items, combo_states);
+    let children = render_children(node, caches);
 
     let mut g = grid(children).columns(cols).spacing(spacing);
 
@@ -1325,9 +1396,7 @@ fn render_grid<'a>(
 
 fn render_pin<'a>(
     node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
+    caches: &'a WidgetCaches,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let x = prop_f32(props, "x").unwrap_or(0.0);
@@ -1338,7 +1407,7 @@ fn render_pin<'a>(
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, editor_contents, markdown_items, combo_states))
+        .map(|c| render(c, caches))
         .unwrap_or_else(|| Space::new().into());
 
     pin(child)
@@ -1354,14 +1423,12 @@ fn render_pin<'a>(
 
 fn render_mouse_area<'a>(
     node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
+    caches: &'a WidgetCaches,
 ) -> Element<'a, Message> {
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, editor_contents, markdown_items, combo_states))
+        .map(|c| render(c, caches))
         .unwrap_or_else(|| Space::new().into());
 
     let id = node.id.clone();
@@ -1381,14 +1448,12 @@ fn render_mouse_area<'a>(
 
 fn render_sensor<'a>(
     node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
+    caches: &'a WidgetCaches,
 ) -> Element<'a, Message> {
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, editor_contents, markdown_items, combo_states))
+        .map(|c| render(c, caches))
         .unwrap_or_else(|| Space::new().into());
 
     // Sensor needs a key. Use the node id.
@@ -1399,8 +1464,8 @@ fn render_sensor<'a>(
 
     sensor(child)
         .key(id)
-        .on_show(move |_size| Message::Click(format!("{}:show", show_id)))
-        .on_resize(move |_size| Message::Click(format!("{}:resize", resize_id)))
+        .on_show(move |size| Message::SensorResize(format!("{}:show", show_id), size.width, size.height))
+        .on_resize(move |size| Message::SensorResize(resize_id.clone(), size.width, size.height))
         .on_hide(Message::Click(hide_id))
         .into()
 }
@@ -1474,9 +1539,7 @@ fn render_rich_text<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 
 fn render_keyed_column<'a>(
     node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
+    caches: &'a WidgetCaches,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
@@ -1491,7 +1554,7 @@ fn render_keyed_column<'a>(
             let mut hasher = DefaultHasher::new();
             c.id.hash(&mut hasher);
             let key = hasher.finish();
-            let elem = render(c, editor_contents, markdown_items, combo_states);
+            let elem = render(c, caches);
             (key, elem)
         })
         .collect();
@@ -1512,16 +1575,14 @@ fn render_keyed_column<'a>(
 
 fn render_float<'a>(
     node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
+    caches: &'a WidgetCaches,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
 
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, editor_contents, markdown_items, combo_states))
+        .map(|c| render(c, caches))
         .unwrap_or_else(|| Space::new().into());
 
     let tx = prop_f32(props, "translate_x").unwrap_or(0.0);
@@ -1538,20 +1599,39 @@ fn render_float<'a>(
 }
 
 // ---------------------------------------------------------------------------
+// Themer (applies a sub-theme to child content)
+// ---------------------------------------------------------------------------
+
+fn render_themer<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let theme: Option<iced::Theme> = props
+        .and_then(|p| p.get("theme"))
+        .map(|v| crate::theming::resolve_theme_only(v));
+
+    let child: Element<'a, Message> = node
+        .children
+        .first()
+        .map(|c| render(c, caches))
+        .unwrap_or_else(|| Space::new().into());
+
+    iced::widget::Themer::new(theme, child).into()
+}
+
+// ---------------------------------------------------------------------------
 // Responsive (container that reports its size)
 // ---------------------------------------------------------------------------
 
 fn render_responsive<'a>(
     node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
+    caches: &'a WidgetCaches,
 ) -> Element<'a, Message> {
     // iced's Responsive widget takes a closure that receives Size and returns
     // an Element. Since we can't call back to Elixir within a single frame,
-    // we render the children as-is and wrap in a container with the requested
-    // dimensions. This matches the task's guidance: "render as a container
-    // with width/height and emit a resize event."
+    // we render the children as-is and wrap in a sensor so Elixir receives
+    // resize events with the actual measured size.
     let props = node.props.as_object();
     let width = prop_length(props, "width", Length::Fill);
     let height = prop_length(props, "height", Length::Fill);
@@ -1559,50 +1639,143 @@ fn render_responsive<'a>(
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, editor_contents, markdown_items, combo_states))
+        .map(|c| render(c, caches))
         .unwrap_or_else(|| Space::new().into());
 
-    container(child).width(width).height(height).into()
+    let resize_id = node.id.clone();
+
+    sensor(container(child).width(width).height(height))
+        .key(node.id.clone())
+        .on_resize(move |size| Message::SensorResize(resize_id.clone(), size.width, size.height))
+        .into()
 }
 
 // ---------------------------------------------------------------------------
-// PaneGrid (placeholder -- requires complex state management)
+// PaneGrid
 // ---------------------------------------------------------------------------
 
-/// PaneGrid requires persistent `pane_grid::State` that must live across
-/// renders (similar to text_editor::Content). A full implementation needs:
-/// 1. A `pane_grid_states: HashMap<String, pane_grid::State<...>>` in App
-/// 2. Cache population in ensure_caches
-/// 3. Rendering each pane's content from child nodes
-///
-/// For now, render as a placeholder container. The main.rs agent can extend
-/// this once pane_grid state management is added to the App struct.
-fn render_pane_grid_placeholder<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_pane_grid<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
+    let spacing = prop_f32(props, "spacing").unwrap_or(2.0);
     let width = prop_length(props, "width", Length::Fill);
     let height = prop_length(props, "height", Length::Fill);
 
-    container(text("(pane_grid: not yet wired)"))
-        .width(width)
-        .height(height)
-        .into()
+    let state = match caches.pane_grid_states.get(&node.id) {
+        Some(s) => s,
+        None => return text("(pane_grid: no state)").into(),
+    };
+
+    // Pre-render children into a map keyed by julep ID. This avoids
+    // lifetime issues with the PaneGrid closure borrowing both `node`
+    // and `caches` simultaneously.
+    let child_map: HashMap<String, Element<'a, Message>> = node
+        .children
+        .iter()
+        .map(|c| (c.id.clone(), render(c, caches)))
+        .collect();
+
+    // We need to move child_map into the closure but PaneGrid::new
+    // requires FnMut, so use a RefCell to allow mutation.
+    let child_map = std::cell::RefCell::new(child_map);
+
+    let node_id = node.id.clone();
+    let node_id2 = node.id.clone();
+    let node_id3 = node.id.clone();
+
+    let mut pg = pane_grid::PaneGrid::new(state, |_pane, pane_id, _is_maximized| {
+        let child_element: Element<'a, Message> = child_map
+            .borrow_mut()
+            .remove(pane_id)
+            .unwrap_or_else(|| text(format!("(pane: {})", pane_id)).into());
+        let title_bar = pane_grid::TitleBar::new(text(pane_id.clone()).size(12.0));
+        pane_grid::Content::new(child_element).title_bar(title_bar)
+    })
+    .width(width)
+    .height(height)
+    .spacing(spacing);
+
+    pg = pg.on_click(move |pane| Message::PaneClicked(node_id3.clone(), pane));
+    pg = pg.on_resize(10, move |evt| Message::PaneResized(node_id.clone(), evt));
+    pg = pg.on_drag(move |evt| Message::PaneDragged(node_id2.clone(), evt));
+
+    pg.into()
 }
 
 // ---------------------------------------------------------------------------
 // Canvas
 // ---------------------------------------------------------------------------
 
+#[derive(Default)]
+struct CanvasState {
+    cursor_position: Option<Point>,
+}
+
 struct CanvasProgram {
     shapes: Vec<Value>,
     background: Option<Color>,
+    id: String,
+    on_press: bool,
+    on_release: bool,
+    on_move: bool,
+    on_scroll: bool,
+}
+
+impl CanvasProgram {
+    fn is_interactive(&self) -> bool {
+        self.on_press || self.on_release || self.on_move || self.on_scroll
+    }
 }
 
 impl canvas::Program<Message> for CanvasProgram {
-    type State = ();
+    type State = CanvasState;
+
+    fn update(
+        &self,
+        state: &mut CanvasState,
+        event: &iced::Event,
+        bounds: iced::Rectangle,
+        cursor: mouse::Cursor,
+    ) -> Option<iced::widget::Action<Message>> {
+        let position = cursor.position_in(bounds)?;
+        state.cursor_position = Some(position);
+
+        match event {
+            iced::Event::Mouse(mouse::Event::ButtonPressed(button)) if self.on_press => {
+                let btn_str = serialize_mouse_button_for_canvas(button);
+                Some(iced::widget::Action::publish(
+                    Message::CanvasEvent(self.id.clone(), "press".to_string(), position.x, position.y, btn_str),
+                ))
+            }
+            iced::Event::Mouse(mouse::Event::ButtonReleased(button)) if self.on_release => {
+                let btn_str = serialize_mouse_button_for_canvas(button);
+                Some(iced::widget::Action::publish(
+                    Message::CanvasEvent(self.id.clone(), "release".to_string(), position.x, position.y, btn_str),
+                ))
+            }
+            iced::Event::Mouse(mouse::Event::CursorMoved { .. }) if self.on_move => {
+                Some(iced::widget::Action::publish(
+                    Message::CanvasEvent(self.id.clone(), "move".to_string(), position.x, position.y, String::new()),
+                ))
+            }
+            iced::Event::Mouse(mouse::Event::WheelScrolled { delta }) if self.on_scroll => {
+                let (dx, dy) = match delta {
+                    mouse::ScrollDelta::Lines { x, y } => (*x, *y),
+                    mouse::ScrollDelta::Pixels { x, y } => (*x, *y),
+                };
+                Some(iced::widget::Action::publish(
+                    Message::CanvasScroll(self.id.clone(), position.x, position.y, dx, dy),
+                ))
+            }
+            _ => None,
+        }
+    }
 
     fn draw(
         &self,
-        _state: &(),
+        _state: &CanvasState,
         renderer: &iced::Renderer,
         _theme: &iced::Theme,
         bounds: iced::Rectangle,
@@ -1676,6 +1849,31 @@ impl canvas::Program<Message> for CanvasProgram {
 
         vec![frame.into_geometry()]
     }
+
+    fn mouse_interaction(
+        &self,
+        _state: &CanvasState,
+        _bounds: iced::Rectangle,
+        _cursor: mouse::Cursor,
+    ) -> mouse::Interaction {
+        if self.is_interactive() {
+            mouse::Interaction::Crosshair
+        } else {
+            mouse::Interaction::default()
+        }
+    }
+}
+
+/// Serialize a mouse button for canvas events.
+fn serialize_mouse_button_for_canvas(button: &mouse::Button) -> String {
+    match button {
+        mouse::Button::Left => "left".to_string(),
+        mouse::Button::Right => "right".to_string(),
+        mouse::Button::Middle => "middle".to_string(),
+        mouse::Button::Back => "back".to_string(),
+        mouse::Button::Forward => "forward".to_string(),
+        mouse::Button::Other(n) => format!("other_{n}"),
+    }
 }
 
 fn render_canvas<'a>(node: &'a TreeNode) -> Element<'a, Message> {
@@ -1693,10 +1891,25 @@ fn render_canvas<'a>(node: &'a TreeNode) -> Element<'a, Message> {
         .and_then(|p| p.get("background"))
         .and_then(parse_color);
 
-    canvas(CanvasProgram { shapes, background })
-        .width(width)
-        .height(height)
-        .into()
+    let on_press = prop_bool_default(props, "on_press", false);
+    let on_release = prop_bool_default(props, "on_release", false);
+    let on_move = prop_bool_default(props, "on_move", false);
+    let on_scroll = prop_bool_default(props, "on_scroll", false);
+    // "interactive" is a convenience flag that enables all event handlers.
+    let interactive = prop_bool_default(props, "interactive", false);
+
+    canvas(CanvasProgram {
+        shapes,
+        background,
+        id: node.id.clone(),
+        on_press: on_press || interactive,
+        on_release: on_release || interactive,
+        on_move: on_move || interactive,
+        on_scroll: on_scroll || interactive,
+    })
+    .width(width)
+    .height(height)
+    .into()
 }
 
 /// Parse an f32 from a JSON value by key, defaulting to 0.
@@ -1803,229 +2016,6 @@ fn render_table<'a>(node: &'a TreeNode) -> Element<'a, Message> {
             .width(width)
             .padding(padding_val),
     )
-    .into()
-}
-
-// ---------------------------------------------------------------------------
-// Tabs (composite: row of buttons + active child)
-// ---------------------------------------------------------------------------
-
-fn render_tabs<'a>(
-    node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
-) -> Element<'a, Message> {
-    let props = node.props.as_object();
-    let active = prop_str(props, "active").unwrap_or_default();
-    let spacing = prop_f32(props, "spacing").unwrap_or(4.0);
-
-    let mut headers: Vec<Element<'a, Message>> = Vec::new();
-    let mut active_child: Option<Element<'a, Message>> = None;
-
-    for child in &node.children {
-        let tab_id = child.id.clone();
-        let label = child
-            .props
-            .as_object()
-            .and_then(|p| p.get("title"))
-            .and_then(|v| v.as_str())
-            .unwrap_or(&child.id);
-        let is_active = tab_id == active;
-
-        let btn = button(text(label.to_owned()))
-            .on_press(Message::Click(tab_id.clone()));
-
-        headers.push(btn.into());
-
-        if is_active {
-            active_child =
-                Some(render(child, editor_contents, markdown_items, combo_states));
-        }
-    }
-
-    let body = active_child.unwrap_or_else(|| Space::new().into());
-
-    column![row(headers).spacing(spacing), body,].into()
-}
-
-// ---------------------------------------------------------------------------
-// Nav (composite: column of buttons)
-// ---------------------------------------------------------------------------
-
-fn render_nav<'a>(node: &'a TreeNode) -> Element<'a, Message> {
-    let props = node.props.as_object();
-    let _active = prop_str(props, "active").unwrap_or_default();
-    let spacing = prop_f32(props, "spacing").unwrap_or(2.0);
-
-    let items: Vec<Element<'a, Message>> = node
-        .children
-        .iter()
-        .map(|child| {
-            let label = child
-                .props
-                .as_object()
-                .and_then(|p| p.get("label").or_else(|| p.get("title")))
-                .and_then(|v| v.as_str())
-                .unwrap_or(&child.id);
-            let id = child.id.clone();
-
-            button(text(label.to_owned()))
-                .on_press(Message::Click(id))
-                .into()
-        })
-        .collect();
-
-    column(items).spacing(spacing).into()
-}
-
-// ---------------------------------------------------------------------------
-// Modal (composite: stack with overlay)
-// ---------------------------------------------------------------------------
-
-fn render_modal<'a>(
-    node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
-) -> Element<'a, Message> {
-    let props = node.props.as_object();
-    let visible = prop_bool_default(props, "visible", false);
-
-    if !visible || node.children.is_empty() {
-        return Space::new().into();
-    }
-
-    let children = render_children(node, editor_contents, markdown_items, combo_states);
-    let body: Element<'a, Message> = if children.len() == 1 {
-        children.into_iter().next().unwrap()
-    } else {
-        column(children).spacing(8.0).into()
-    };
-
-    container(body)
-        .width(Fill)
-        .height(Fill)
-        .center(Fill)
-        .into()
-}
-
-// ---------------------------------------------------------------------------
-// Card (composite: container with title + body)
-// ---------------------------------------------------------------------------
-
-fn render_card<'a>(
-    node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
-) -> Element<'a, Message> {
-    let props = node.props.as_object();
-    let title = prop_str(props, "title").unwrap_or_default();
-    let padding = parse_padding_value(props);
-    let width = prop_length(props, "width", Length::Shrink);
-
-    let body: Element<'a, Message> = node
-        .children
-        .first()
-        .map(|c| render(c, editor_contents, markdown_items, combo_states))
-        .unwrap_or_else(|| Space::new().into());
-
-    container(column![text(title).size(18.0), body].spacing(8.0))
-        .padding(padding)
-        .width(width)
-        .into()
-}
-
-// ---------------------------------------------------------------------------
-// Panel (composite: collapsible section)
-// ---------------------------------------------------------------------------
-
-fn render_panel<'a>(
-    node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
-) -> Element<'a, Message> {
-    let props = node.props.as_object();
-    let title = prop_str(props, "title").unwrap_or_default();
-    let collapsed = prop_bool_default(props, "collapsed", false);
-    let id = node.id.clone();
-
-    let indicator = if collapsed { "> " } else { "v " };
-    let header: Element<'a, Message> = button(text(format!("{indicator}{title}")))
-        .on_press(Message::Click(id))
-        .into();
-
-    if collapsed {
-        column![header].into()
-    } else {
-        let children = render_children(node, editor_contents, markdown_items, combo_states);
-        let mut items = vec![header];
-        items.extend(children);
-        column(items).spacing(4.0).into()
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Form (composite: column with spacing)
-// ---------------------------------------------------------------------------
-
-fn render_form<'a>(
-    node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
-) -> Element<'a, Message> {
-    let props = node.props.as_object();
-    let spacing = prop_f32(props, "spacing").unwrap_or(8.0);
-    let padding = parse_padding_value(props);
-    let width = prop_length(props, "width", Length::Shrink);
-
-    let children = render_children(node, editor_contents, markdown_items, combo_states);
-
-    column(children)
-        .spacing(spacing)
-        .padding(padding)
-        .width(width)
-        .into()
-}
-
-// ---------------------------------------------------------------------------
-// Split Pane (composite: row with two children at a ratio)
-// ---------------------------------------------------------------------------
-
-fn render_split_pane<'a>(
-    node: &'a TreeNode,
-    editor_contents: &'a HashMap<String, text_editor::Content>,
-    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
-    combo_states: &'a HashMap<String, combo_box::State<String>>,
-) -> Element<'a, Message> {
-    let props = node.props.as_object();
-    let ratio = prop_f32(props, "ratio").unwrap_or(0.5).clamp(0.0, 1.0);
-    let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
-
-    let left: Element<'a, Message> = node
-        .children
-        .first()
-        .map(|c| render(c, editor_contents, markdown_items, combo_states))
-        .unwrap_or_else(|| Space::new().into());
-    let right: Element<'a, Message> = node
-        .children
-        .get(1)
-        .map(|c| render(c, editor_contents, markdown_items, combo_states))
-        .unwrap_or_else(|| Space::new().into());
-
-    // Approximate ratio using FillPortion. Scale to integer parts out of 1000.
-    let left_portion = (ratio * 1000.0) as u16;
-    let right_portion = 1000 - left_portion;
-
-    row![
-        container(left).width(Length::FillPortion(left_portion)),
-        container(right).width(Length::FillPortion(right_portion)),
-    ]
-    .spacing(spacing)
-    .width(Fill)
     .into()
 }
 

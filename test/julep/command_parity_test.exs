@@ -21,7 +21,10 @@ defmodule Julep.CommandParityTest do
   describe "snap_to/3" do
     test "snaps scrollable to offset with defaults" do
       cmd = Command.snap_to("scr1")
-      assert %Command{type: :snap_to, payload: %{target: "scr1", x: 0.0, y: 0.0}} = cmd
+      assert %Command{type: :snap_to, payload: payload} = cmd
+      assert payload.target == "scr1"
+      assert payload.x == 0.0
+      assert payload.y == 0.0
     end
 
     test "snaps scrollable to specific offset" do
@@ -41,7 +44,10 @@ defmodule Julep.CommandParityTest do
   describe "scroll_by/3" do
     test "scrolls by relative offset with defaults" do
       cmd = Command.scroll_by("scr1")
-      assert %Command{type: :scroll_by, payload: %{target: "scr1", x: 0.0, y: 0.0}} = cmd
+      assert %Command{type: :scroll_by, payload: payload} = cmd
+      assert payload.target == "scr1"
+      assert payload.x == 0.0
+      assert payload.y == 0.0
     end
 
     test "scrolls by specific offset" do

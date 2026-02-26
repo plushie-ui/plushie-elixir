@@ -281,6 +281,57 @@ defmodule Julep.Command do
     %__MODULE__{type: :window_query, payload: %{op: "is_minimized", window_id: window_id, tag: to_string(tag)}}
   end
 
+  # ---------------------------------------------------------------------------
+  # PaneGrid operations
+  # ---------------------------------------------------------------------------
+
+  @doc "Split a pane in the pane grid."
+  def pane_split(pane_grid_id, pane_id, axis, new_pane_id) do
+    %__MODULE__{type: :widget_op, payload: %{
+      op: "pane_split",
+      target: pane_grid_id,
+      pane: pane_id,
+      axis: to_string(axis),
+      new_pane_id: new_pane_id
+    }}
+  end
+
+  @doc "Close a pane in the pane grid."
+  def pane_close(pane_grid_id, pane_id) do
+    %__MODULE__{type: :widget_op, payload: %{
+      op: "pane_close",
+      target: pane_grid_id,
+      pane: pane_id
+    }}
+  end
+
+  @doc "Swap two panes in the pane grid."
+  def pane_swap(pane_grid_id, pane_a, pane_b) do
+    %__MODULE__{type: :widget_op, payload: %{
+      op: "pane_swap",
+      target: pane_grid_id,
+      a: pane_a,
+      b: pane_b
+    }}
+  end
+
+  @doc "Maximize a pane in the pane grid."
+  def pane_maximize(pane_grid_id, pane_id) do
+    %__MODULE__{type: :widget_op, payload: %{
+      op: "pane_maximize",
+      target: pane_grid_id,
+      pane: pane_id
+    }}
+  end
+
+  @doc "Restore all panes from maximized state."
+  def pane_restore(pane_grid_id) do
+    %__MODULE__{type: :widget_op, payload: %{
+      op: "pane_restore",
+      target: pane_grid_id
+    }}
+  end
+
   @doc """
   Issue multiple commands. Commands in the batch execute concurrently.
 

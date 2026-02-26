@@ -70,6 +70,10 @@ defmodule Julep.Iced do
   @spec responsive(String.t(), map(), list()) :: map()
   def responsive(id, props \\ %{}, children \\ []), do: node(id, "responsive", props, children)
 
+  @doc "Per-subtree theme override. Props: theme (name string or custom palette map)."
+  @spec themer(String.t(), map(), list()) :: map()
+  def themer(id, props \\ %{}, children \\ []), do: node(id, "themer", props, children)
+
   @doc "Keyed column for efficient list diffing. Props: spacing, padding, width, height, align_x."
   @spec keyed_column(String.t(), map(), list()) :: map()
   def keyed_column(id, props \\ %{}, children \\ []), do: node(id, "keyed_column", props, children)
@@ -130,9 +134,9 @@ defmodule Julep.Iced do
   @spec sensor(String.t(), map(), list()) :: map()
   def sensor(id, props \\ %{}, children \\ []), do: node(id, "sensor", props, children)
 
-  @doc "Pane grid for resizable tiled panes. Props: panes, on_resize, on_drag, spacing."
-  @spec pane_grid(String.t(), map()) :: map()
-  def pane_grid(id, props \\ %{}), do: node(id, "pane_grid", props)
+  @doc "Pane grid for resizable tiled panes. Props: spacing, min_size, on_resize, on_drag, on_click. Children are pane content keyed by ID."
+  @spec pane_grid(String.t(), map(), list()) :: map()
+  def pane_grid(id, props \\ %{}, children \\ []), do: node(id, "pane_grid", props, children)
 
   # ---------------------------------------------------------------------------
   # Display widgets
@@ -151,7 +155,7 @@ defmodule Julep.Iced do
   def progress_bar(id, props \\ %{}), do: node(id, "progress_bar", props)
 
   @doc """
-  Tooltip wrapping child content. The `tip` argument becomes the `tip_text`
+  Tooltip wrapping child content. The `tip` argument becomes the `tip`
   prop. Additional props: position, gap.
   """
   @spec tooltip(String.t(), map(), list(), String.t()) :: map()
@@ -168,7 +172,7 @@ defmodule Julep.Iced do
   @spec svg(String.t(), map()) :: map()
   def svg(id, props \\ %{}), do: node(id, "svg", props)
 
-  @doc "Markdown display. Props: content, width."
+  @doc "Markdown display. Props: content, width, text_size, h1_size, h2_size, h3_size, code_size, spacing."
   @spec markdown(String.t(), map()) :: map()
   def markdown(id, props \\ %{}), do: node(id, "markdown", props)
 
@@ -180,7 +184,7 @@ defmodule Julep.Iced do
   # Canvas & data widgets
   # ---------------------------------------------------------------------------
 
-  @doc "Canvas for drawing shapes. Props: shapes (list), width, height, background."
+  @doc "Canvas for drawing shapes. Props: shapes (list), width, height, background, interactive (bool), on_press, on_release, on_move, on_scroll."
   @spec canvas(String.t(), map()) :: map()
   def canvas(id, props \\ %{}), do: node(id, "canvas", props)
 

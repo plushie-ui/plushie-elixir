@@ -19,7 +19,7 @@ over a simple JSONL-over-stdio transport.
 
 ## Status
 
-Early development. Not yet published on Hex.
+All five roadmap phases complete. Approaching first Hex release.
 
 ## Quick taste
 
@@ -53,6 +53,14 @@ end
 mix julep.gui MyApp
 ```
 
+### Dev mode
+
+```bash
+mix julep.dev MyApp
+```
+
+Edit your source files and watch the GUI update in place. See [dev mode docs](docs/dev-mode.md).
+
 ## Documentation
 
 Core:
@@ -82,6 +90,10 @@ Decisions:
 - [0001: Clean break from icing](docs/decisions/0001-clean-break-from-icing.md)
 - [0002: Elixir-first process model](docs/decisions/0002-elixir-first-process-model.md)
 - [0003: JSONL over stdio transport](docs/decisions/0003-jsonl-over-stdio-transport.md)
+- [0004: Interactive canvas via Program trait](docs/decisions/0004-interactive-canvas.md)
+- [0005: PaneGrid as a stateful widget](docs/decisions/0005-pane-grid-stateful-widget.md)
+- [0006: Responsive layout via sensor](docs/decisions/0006-responsive-via-sensor.md)
+- [0007: Two-tier custom widget strategy](docs/decisions/0007-custom-widget-extension.md)
 
 ## License
 

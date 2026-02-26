@@ -12,8 +12,15 @@ jobs:
 
     strategy:
       matrix:
-        elixir: ['1.15', '1.16', '1.17']
-        otp: ['26', '27']
+        include:
+          - elixir: '1.15'
+            otp: '26'
+          - elixir: '1.16'
+            otp: '26'
+          - elixir: '1.17'
+            otp: '26'
+          - elixir: '1.17'
+            otp: '27'
 
     steps:
       - uses: actions/checkout@v4
@@ -60,6 +67,9 @@ jobs:
 
       - name: Build renderer
         run: cargo build --manifest-path native/julep_gui/Cargo.toml
+
+      - name: Run tests
+        run: cargo test --manifest-path native/julep_gui/Cargo.toml
 
       - name: Check formatting
         run: cargo fmt --manifest-path native/julep_gui/Cargo.toml -- --check

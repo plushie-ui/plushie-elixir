@@ -15,6 +15,10 @@ A Hex package that provides:
 - Mix tasks for development (`mix julep.gui`)
 - Test helpers for asserting on UI trees without the renderer
 
+Apps can optionally implement `settings/0` to configure renderer defaults
+(default_font, default_text_size, antialiasing). Settings are sent once at
+startup before the first snapshot.
+
 This is the only piece app developers interact with directly.
 
 ### 2. julep_gui (Rust binary)
@@ -83,6 +87,13 @@ This is not a client-server architecture. There are no sockets, no
 handshakes, no authentication between the processes. The renderer is a
 child process that speaks stdio. The protocol is intentionally simple
 because the trust boundary is the OS process -- not a network.
+
+## Dev mode
+
+Julep includes live code reloading. `Julep.DevServer` watches `lib/` via
+`:file_system`, debounces rapid saves, recompiles via `Code.compile_file/1`,
+and sends `:force_rerender` to the Runtime. The model is preserved; only
+`view/1` is re-evaluated with the new code. See `docs/dev-mode.md`.
 
 ## Future: Rust-first packaging
 

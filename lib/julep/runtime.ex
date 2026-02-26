@@ -401,6 +401,15 @@ defmodule Julep.Runtime do
     :ok
   end
 
+  defp execute_command(%Julep.Command{type: :widget_op, payload: %{op: op} = payload}, bridge)
+       when op in ["pane_split", "pane_close", "pane_swap", "pane_maximize", "pane_restore"] do
+    if bridge do
+      Julep.Bridge.send_widget_op(bridge, op, Map.delete(payload, :op))
+    end
+
+    :ok
+  end
+
   defp execute_command(%Julep.Command{type: :exit, payload: _payload}, _bridge) do
     Logger.info("julep runtime: exit command received -- stopping")
     send(self(), {:renderer_exit, :normal})

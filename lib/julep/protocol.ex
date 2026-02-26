@@ -750,6 +750,46 @@ defmodule Julep.Protocol do
     {:window, String.to_atom(action), window_id}
   end
 
+  # -- Canvas events --
+
+  defp dispatch(%{"type" => "event", "family" => "canvas_press", "id" => id, "data" => data}) do
+    button = Map.get(data, "button", "left")
+    {:canvas_press, id, data["x"], data["y"], button}
+  end
+
+  defp dispatch(%{"type" => "event", "family" => "canvas_release", "id" => id, "data" => data}) do
+    button = Map.get(data, "button", "left")
+    {:canvas_release, id, data["x"], data["y"], button}
+  end
+
+  defp dispatch(%{"type" => "event", "family" => "canvas_move", "id" => id, "data" => data}) do
+    {:canvas_move, id, data["x"], data["y"]}
+  end
+
+  defp dispatch(%{"type" => "event", "family" => "canvas_scroll", "id" => id, "data" => data}) do
+    {:canvas_scroll, id, data["x"], data["y"], data["delta_x"], data["delta_y"]}
+  end
+
+  # -- Sensor events --
+
+  defp dispatch(%{"type" => "event", "family" => "sensor_resize", "id" => id, "data" => data}) do
+    {:sensor_resize, id, data["width"], data["height"]}
+  end
+
+  # -- PaneGrid events --
+
+  defp dispatch(%{"type" => "event", "family" => "pane_resized", "id" => id, "data" => data}) do
+    {:pane_resized, id, data["split"], data["ratio"]}
+  end
+
+  defp dispatch(%{"type" => "event", "family" => "pane_dragged", "id" => id, "data" => data}) do
+    {:pane_dragged, id, data["pane"], data["target"]}
+  end
+
+  defp dispatch(%{"type" => "event", "family" => "pane_clicked", "id" => id, "data" => data}) do
+    {:pane_clicked, id, data["pane"]}
+  end
+
   # -- Effect responses --
 
   defp dispatch(%{

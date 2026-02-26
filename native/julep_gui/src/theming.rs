@@ -18,6 +18,9 @@ use serde_json::Value;
 pub struct ThemeResult {
     pub theme: Theme,
     /// Custom warning color, if provided in the theme JSON.
+    /// Parsed from user-specified custom palettes for forward compatibility;
+    /// not yet consumed by widget style resolution.
+    #[allow(dead_code)]
     pub warning: Option<Color>,
 }
 
@@ -129,75 +132,6 @@ fn custom_theme_from_object(obj: &serde_json::Map<String, Value>) -> Theme {
         .to_owned();
 
     Theme::custom(name, palette)
-}
-
-// ---------------------------------------------------------------------------
-// Per-widget style helpers
-// ---------------------------------------------------------------------------
-
-// These are exposed as public functions so that widgets.rs can use named
-// style strings to resolve built-in iced style functions. The functions
-// in iced::widget::button, container, etc. are already function pointers
-// that match the expected StyleFn signatures, so widgets.rs applies them
-// directly. These helpers are provided for cases where the warning color
-// override needs to be injected.
-
-/// Create a warning-colored button style using a custom color.
-/// Falls back to `button::warning` if no override is provided.
-pub fn button_warning_style(
-    warning: Option<Color>,
-) -> impl Fn(&Theme, iced::widget::button::Status) -> iced::widget::button::Style {
-    use iced::widget::button;
-    move |theme, status| {
-        if let Some(_color) = warning {
-            // Use the built-in warning which derives from the extended palette.
-            // A truly custom warning would need more work on iced's internals.
-            button::warning(theme, status)
-        } else {
-            button::warning(theme, status)
-        }
-    }
-}
-
-/// Create a warning-colored container style using a custom color.
-pub fn container_warning_style(
-    warning: Option<Color>,
-) -> impl Fn(&Theme) -> iced::widget::container::Style {
-    use iced::widget::container;
-    move |theme| {
-        if let Some(_color) = warning {
-            container::warning(theme)
-        } else {
-            container::warning(theme)
-        }
-    }
-}
-
-/// Create a warning-colored text style using a custom color.
-pub fn text_warning_style(
-    warning_color: Option<Color>,
-) -> impl Fn(&Theme) -> iced::widget::text::Style {
-    move |theme| {
-        if let Some(color) = warning_color {
-            iced::widget::text::Style { color: Some(color) }
-        } else {
-            iced::widget::text::warning(theme)
-        }
-    }
-}
-
-/// Create a warning-colored progress bar style using a custom color.
-pub fn progress_bar_warning_style(
-    warning: Option<Color>,
-) -> impl Fn(&Theme) -> iced::widget::progress_bar::Style {
-    use iced::widget::progress_bar;
-    move |theme| {
-        if let Some(_color) = warning {
-            progress_bar::warning(theme)
-        } else {
-            progress_bar::warning(theme)
-        }
-    }
 }
 
 // ---------------------------------------------------------------------------

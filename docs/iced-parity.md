@@ -16,7 +16,7 @@ know julep. This doc maps iced Rust code to its julep Elixir equivalent.
 | `iced::Font` | `Julep.Iced.Font` |
 | `iced::Task` | `Julep.Command` |
 | `iced::Subscription` | `Julep.Subscription` |
-| `iced::window` | `Julep.Window` |
+| `iced::window` | `Julep.Command` (window_open, window_close, resize_window, etc.) |
 | `iced::keyboard` | (events delivered as tuples) |
 
 `Julep.Iced` is the strict parity layer. Each function maps directly to
@@ -235,7 +235,7 @@ end
 | `Horizontal::Right` | `:right` |
 | `Vertical::Top` | `:top` |
 | `Vertical::Bottom` | `:bottom` |
-| `Color::from_rgb(r, g, b)` | `{r, g, b}` or `"#rrggbb"` |
+| `Color::from_rgb(r, g, b)` | `"#rrggbb"` or `%{r: 0.5, g: 0.5, b: 0.5, a: 1.0}` |
 | `Font::MONOSPACE` | `:monospace` |
 | `Font::with_name("Inter")` | `"Inter"` |
 | `font::Weight::Bold` | `:bold` |
@@ -256,9 +256,28 @@ in `update`. In julep, events are tuples received by `update/2`:
 | `Message::Selected(v)` via `pick_list`/`combo_box` | `{:select, id, value}` |
 | `Message::SliderChanged(v)` via `.on_change()` | `{:slide, id, value}` |
 | `Message::SliderReleased` via `.on_release()` | `{:slide_release, id, value}` |
-| Keyboard event via subscription | `{:key_press, key, modifiers}` |
-| Window close request | `{:window, :close_requested, window_id}` |
-| Window resize | `{:window, :resized, window_id, size}` |
+| Key press via subscription | `{:key_press, key, modifiers}` |
+| Key release via subscription | `{:key_release, key, modifiers}` |
+| Modifiers changed via subscription | `{:modifiers_changed, modifiers}` |
+| Cursor moved via subscription | `{:cursor_moved, x, y}` |
+| Mouse button pressed via subscription | `{:button_pressed, button}` |
+| Mouse button released via subscription | `{:button_released, button}` |
+| Wheel scrolled via subscription | `{:wheel_scrolled, dx, dy, unit}` |
+| Finger pressed via subscription | `{:finger_pressed, finger_id, x, y}` |
+| Window close request | `{:window_close_requested, window_id}` |
+| Window opened | `{:window_opened, window_id, position, size}` |
+| Window closed | `{:window_closed, window_id}` |
+| Window moved | `{:window_moved, window_id, x, y}` |
+| Window resized | `{:window_resized, window_id, width, height}` |
+| Window focused / unfocused | `{:window_focused, window_id}` / `{:window_unfocused, window_id}` |
+| File dropped | `{:file_dropped, window_id, path}` |
+| Canvas press | `{:canvas_press, id, x, y, button}` |
+| Canvas move | `{:canvas_move, id, x, y}` |
+| Sensor resize | `{:sensor_resize, id, width, height}` |
+| PaneGrid click | `{:pane_clicked, id, pane}` |
+| PaneGrid resize | `{:pane_resized, id, split, ratio}` |
+| Animation frame | `{:animation_frame, timestamp}` |
+| Theme changed | `{:theme_changed, mode}` |
 | Timer tick | `{:tick, timestamp}` |
 
 Custom events are strings. The renderer maps widget interactions to event
@@ -271,16 +290,37 @@ Iced's `Task<Message>` maps to `Julep.Command`:
 | Iced | Julep |
 |---|---|
 | `Task::none()` | (return bare model) |
+| `Task::done(value, mapper)` | `Julep.Command.done(value, msg_fn)` |
 | `Task::perform(future, map)` | `Julep.Command.async(fun, event_tag)` |
 | `Task::batch(tasks)` | `Julep.Command.batch([...])` |
 | `text_input::focus(id)` | `Julep.Command.focus(id)` |
 | `text_input::select_all(id)` | `Julep.Command.select_all(id)` |
-| `scrollable::snap_to(id, off)` | `Julep.Command.scroll_to(id, offset)` |
+| `text_input::move_cursor_to(id, pos)` | `Julep.Command.move_cursor_to(id, pos)` |
+| `text_input::move_cursor_to_end(id)` | `Julep.Command.move_cursor_to_end(id)` |
+| `text_input::select_range(id, s, e)` | `Julep.Command.select_range(id, start, end)` |
+| `scrollable::snap_to(id, off)` | `Julep.Command.snap_to(id, x, y)` |
+| `scrollable::snap_to_end(id)` | `Julep.Command.snap_to_end(id)` |
+| `scrollable::scroll_by(id, off)` | `Julep.Command.scroll_by(id, x, y)` |
+| `scrollable::scroll_to(id, off)` | `Julep.Command.scroll_to(id, offset)` |
 | `widget::focus_next()` | `Julep.Command.focus_next()` |
 | `widget::focus_previous()` | `Julep.Command.focus_previous()` |
-| `window::open(settings)` | `Julep.Command.open_window(id, opts)` |
+| `iced::exit()` | `Julep.Command.exit()` |
+| `window::open(settings)` | Via tree (declarative window nodes) |
 | `window::close(id)` | `Julep.Command.close_window(id)` |
-| `window::resize(id, size)` | `Julep.Command.resize_window(id, size)` |
+| `window::resize(id, size)` | `Julep.Command.resize_window(id, w, h)` |
+| `window::move_to(id, point)` | `Julep.Command.move_window(id, x, y)` |
+| `window::maximize(id, bool)` | `Julep.Command.maximize_window(id, bool)` |
+| `window::minimize(id, bool)` | `Julep.Command.minimize_window(id, bool)` |
+| `window::toggle_maximize(id)` | `Julep.Command.toggle_maximize(id)` |
+| `window::toggle_decorations(id)` | `Julep.Command.toggle_decorations(id)` |
+| `window::gain_focus(id)` | `Julep.Command.gain_focus(id)` |
+| `window::drag(id)` | `Julep.Command.drag_window(id)` |
+| `window::screenshot(id)` | `Julep.Command.screenshot(id, tag)` |
+| PaneGrid split | `Julep.Command.pane_split(grid_id, pane_id, axis, new_id)` |
+| PaneGrid close | `Julep.Command.pane_close(grid_id, pane_id)` |
+| PaneGrid swap | `Julep.Command.pane_swap(grid_id, pane_a, pane_b)` |
+| PaneGrid maximize | `Julep.Command.pane_maximize(grid_id, pane_id)` |
+| PaneGrid restore | `Julep.Command.pane_restore(grid_id)` |
 
 See [commands.md](commands.md) for details.
 
@@ -291,11 +331,22 @@ Iced's `Subscription<Message>` maps to `Julep.Subscription`:
 | Iced | Julep |
 |---|---|
 | `Subscription::none()` | `[]` |
-| `time::every(Duration)` | `Julep.Subscription.every(ms)` |
-| `keyboard::on_key_press(f)` | `Julep.Subscription.on_key_press()` |
-| `window::close_requests()` | `Julep.Subscription.on_window_close()` |
-| `window::events()` | `Julep.Subscription.on_window_event()` |
-| `Subscription::batch(subs)` | concatenate lists: `sub_a ++ sub_b` |
+| `time::every(Duration)` | `Julep.Subscription.every(ms, tag)` |
+| `keyboard::on_key_press(f)` | `Julep.Subscription.on_key_press(tag)` |
+| `keyboard::on_key_release(f)` | `Julep.Subscription.on_key_release(tag)` |
+| `window::close_requests()` | `Julep.Subscription.on_window_close(tag)` |
+| `window::events()` | `Julep.Subscription.on_window_event(tag)` |
+| `window::open_events()` | `Julep.Subscription.on_window_open(tag)` |
+| `window::resize_events()` | `Julep.Subscription.on_window_resize(tag)` |
+| `window::frames()` | `Julep.Subscription.on_animation_frame(tag)` |
+| Mouse movement | `Julep.Subscription.on_mouse_move(tag)` |
+| Mouse buttons | `Julep.Subscription.on_mouse_button(tag)` |
+| Mouse scroll | `Julep.Subscription.on_mouse_scroll(tag)` |
+| Touch events | `Julep.Subscription.on_touch(tag)` |
+| File drop | `Julep.Subscription.on_file_drop(tag)` |
+| Theme changes | `Julep.Subscription.on_theme_change(tag)` |
+| Catch-all events | `Julep.Subscription.on_event(tag)` |
+| `Subscription::batch(subs)` | `Julep.Subscription.batch(list)` or concatenate lists |
 
 See [commands.md](commands.md) for details.
 

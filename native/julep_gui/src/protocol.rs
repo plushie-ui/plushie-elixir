@@ -30,6 +30,9 @@ pub enum IncomingMessage {
         #[serde(default)]
         settings: Value,
     },
+    Settings {
+        settings: Value,
+    },
 }
 
 /// Response to an effect request, written to stdout as JSONL.
@@ -443,6 +446,74 @@ impl OutgoingEvent {
         Self {
             value: Some(Value::String(mode)),
             ..Self::tagged("theme_changed", tag)
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Sensor events
+    // -----------------------------------------------------------------------
+
+    pub fn sensor_resize(id: String, width: f32, height: f32) -> Self {
+        Self {
+            data: Some(serde_json::json!({"width": width, "height": height})),
+            ..Self::bare("sensor_resize", id)
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Canvas events
+    // -----------------------------------------------------------------------
+
+    pub fn canvas_press(id: String, x: f32, y: f32, button: String) -> Self {
+        Self {
+            data: Some(serde_json::json!({"x": x, "y": y, "button": button})),
+            ..Self::bare("canvas_press", id)
+        }
+    }
+
+    pub fn canvas_release(id: String, x: f32, y: f32, button: String) -> Self {
+        Self {
+            data: Some(serde_json::json!({"x": x, "y": y, "button": button})),
+            ..Self::bare("canvas_release", id)
+        }
+    }
+
+    pub fn canvas_move(id: String, x: f32, y: f32) -> Self {
+        Self {
+            data: Some(serde_json::json!({"x": x, "y": y})),
+            ..Self::bare("canvas_move", id)
+        }
+    }
+
+    pub fn canvas_scroll(id: String, x: f32, y: f32, delta_x: f32, delta_y: f32) -> Self {
+        Self {
+            data: Some(serde_json::json!({"x": x, "y": y, "delta_x": delta_x, "delta_y": delta_y})),
+            ..Self::bare("canvas_scroll", id)
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // PaneGrid events
+    // -----------------------------------------------------------------------
+
+    pub fn pane_resized(id: String, split: String, ratio: f32) -> Self {
+        Self {
+            data: Some(serde_json::json!({"split": split, "ratio": ratio})),
+            ..Self::bare("pane_resized", id)
+        }
+    }
+
+    pub fn pane_dragged(id: String, pane: String, target: String) -> Self {
+        Self {
+            data: Some(serde_json::json!({"pane": pane, "target": target})),
+            ..Self::bare("pane_dragged", id)
+        }
+    }
+
+    pub fn pane_clicked(id: String, pane: String) -> Self {
+        Self {
+            data: Some(serde_json::json!({"pane": pane})),
+            ..Self::bare("pane_clicked", id)
         }
     }
 }

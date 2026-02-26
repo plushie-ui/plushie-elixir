@@ -54,6 +54,11 @@ end
 | `scrollable(id, opts)` | `scrollable` | Scrollable region |
 | `stack(opts)` | `stack` | Z-axis stacking (overlays) |
 | `space(opts)` | `space` | Flexible spacer |
+| `grid(opts)` | `grid` | Two-dimensional grid layout |
+| `keyed_column(opts)` | `keyed_column` | Column with explicit child keys |
+| `pin(opts)` | `pin` | Pins child to a position within parent |
+| `float(opts)` | `float` | Floats child over siblings |
+| `responsive(id, opts)` | `responsive` | Responds to available size (alias for sensor) |
 
 ### Input widgets
 
@@ -80,25 +85,17 @@ end
 | `svg(id, path_or_data, opts)` | `svg` | Vector image |
 | `markdown(id, content, opts)` | `markdown` | Rendered markdown |
 | `rule(opts)` | `rule` | Horizontal/vertical divider |
+| `rich_text(id, spans, opts)` | `rich_text` | Styled text with multiple spans |
+| `themer(id, theme, opts)` | `themer` | Per-subtree theme override |
 
-### Composite widgets
-
-These are higher-level patterns built from primitives on the renderer side.
-They map to common desktop UI patterns.
+### Interactive widgets
 
 | Function | Type | Description |
 |---|---|---|
-| `table(id, columns, rows, opts)` | `table` | Data table with headers |
-| `tabs(id, items, active, opts)` | `tabs` | Tab bar with content switching |
-| `modal(id, opts)` | `modal` | Modal overlay |
-| `nav(id, items, active, opts)` | `nav` | Navigation sidebar/bar |
-| `form(id, opts)` | `form` | Form container with field layout |
-| `card(id, opts)` | `card` | Content card with header/body |
-| `panel(id, opts)` | `panel` | Collapsible panel |
-| `split_pane(id, opts)` | `split_pane` | Resizable split layout |
-
-The composite widget list will grow based on real usage. Widgets are only
-added when they represent a pattern that appears repeatedly in real apps.
+| `mouse_area(id, opts)` | `mouse_area` | Captures mouse events on children |
+| `sensor(id, opts)` | `sensor` | Detects layout changes and resize |
+| `pane_grid(id, panes, opts)` | `pane_grid` | Resizable tiled pane layout |
+| `canvas(id, shapes, opts)` | `canvas` | 2D drawing surface |
 
 ## Props
 

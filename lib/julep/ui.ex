@@ -718,6 +718,50 @@ defmodule Julep.UI do
     end
   end
 
+  # -- themer(id, opts) -------------------------------------------------------
+
+  @doc """
+  Per-subtree theme override.
+
+  ## Options
+
+  - `:theme` -- theme name string or custom palette map
+
+  ## Example
+
+      themer "dark_section", theme: "Dark" do
+        column do
+          text("This subtree uses the dark theme")
+        end
+      end
+  """
+  defmacro themer(id, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_fixed_node__("themer", unquote(id), [], children)
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_fixed_node__("themer", unquote(id), unquote(opts), [])
+        end
+    end
+  end
+
+  @doc false
+  defmacro themer(id, opts, do: block) do
+    exprs = block_to_exprs(block)
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Julep.UI.__build_fixed_node__("themer", unquote(id), unquote(opts), children)
+    end
+  end
+
   # -- space(opts) ------------------------------------------------------------
 
   @doc """
@@ -1485,23 +1529,50 @@ defmodule Julep.UI do
 
   ## Options
 
-  - `:panes` -- pane configuration
+  - `:spacing` -- gap between panes
+  - `:min_size` -- minimum pane size
   - `:on_resize` -- resize event tag
   - `:on_drag` -- drag event tag
-  - `:spacing` -- gap between panes
+  - `:on_click` -- click event tag
+
+  Children are pane content keyed by ID.
 
   ## Example
 
-      pane_grid("editor_panes", panes: pane_config, spacing: 2)
+      pane_grid "editor_panes", spacing: 2 do
+        column id: "left" do
+          text("Left pane")
+        end
+        column id: "right" do
+          text("Right pane")
+        end
+      end
   """
-  @spec pane_grid(String.t(), keyword()) :: map()
-  def pane_grid(id, opts \\ []) do
-    props =
-      opts
-      |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+  defmacro pane_grid(id, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        exprs = block_to_exprs(block)
 
-    %{id: id, type: "pane_grid", props: props, children: []}
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_fixed_node__("pane_grid", unquote(id), [], children)
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_fixed_node__("pane_grid", unquote(id), unquote(opts), [])
+        end
+    end
+  end
+
+  @doc false
+  defmacro pane_grid(id, opts, do: block) do
+    exprs = block_to_exprs(block)
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Julep.UI.__build_fixed_node__("pane_grid", unquote(id), unquote(opts), children)
+    end
   end
 
   # -- rich_text(id, opts) ----------------------------------------------------

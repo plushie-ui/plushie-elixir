@@ -39,7 +39,20 @@ defmodule Mix.Tasks.Julep.Gui do
       build_renderer(opts[:release] || false)
     end
 
-    renderer_path = renderer_path(opts[:release] || false)
+    renderer_path =
+      if opts[:build] do
+        # We just built it; use the known cargo output path
+        local_build_path(opts[:release] || false)
+      else
+        # Try the smart resolver (env var, priv/bin/, dev build) first.
+        # If --release was passed without --build, prefer the release dev build.
+        if opts[:release] do
+          release_path = local_build_path(true)
+          if File.exists?(release_path), do: release_path, else: Julep.Binary.renderer_path()
+        else
+          Julep.Binary.renderer_path()
+        end
+      end
 
     unless File.exists?(renderer_path) do
       Mix.raise("""
@@ -81,7 +94,7 @@ defmodule Mix.Tasks.Julep.Gui do
     end
   end
 
-  defp renderer_path(release?) do
+  defp local_build_path(release?) do
     profile = if release?, do: "release", else: "debug"
     Path.expand("native/julep_gui/target/#{profile}/julep_gui")
   end
