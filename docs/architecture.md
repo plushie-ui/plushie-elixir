@@ -1,0 +1,93 @@
+# Architecture
+
+Julep has three pieces. Everything else is optional layering on top of these.
+
+## The three pieces
+
+### 1. julep (Elixir library)
+
+A Hex package that provides:
+
+- `Julep.App` behaviour (init, update, view callbacks)
+- `Julep.UI` module for building UI trees
+- A runtime that manages app state and communicates with the renderer
+- A `Port`-based bridge that spawns the renderer and speaks JSONL
+- Mix tasks for development (`mix julep.gui`)
+- Test helpers for asserting on UI trees without the renderer
+
+This is the only piece app developers interact with directly.
+
+### 2. julep_gui (Rust binary)
+
+A standalone executable that:
+
+- Reads JSONL messages from stdin (snapshots and patches)
+- Renders iced widgets based on the UI tree
+- Writes user events to stdout as JSONL
+- Manages window lifecycle, theming, and input handling
+
+The binary has no app-specific logic. It is a generic "display server" for
+julep UI trees. It ships as a precompiled binary or can be built from source
+via `cargo build`.
+
+### 3. Consumer app (Mix project)
+
+A normal Mix project that depends on `:julep` and implements `Julep.App`.
+The demo app (`julep_demo`) is one such consumer.
+
+## Data flow
+
+```
++------------------+       JSONL/stdio       +------------------+
+|                  |  --- snapshots/patches ->|                  |
+|  Elixir runtime  |                         |  julep_gui       |
+|  (Julep.App)     |  <--- events ---------- |  (iced renderer) |
+|                  |                         |                  |
++------------------+                         +------------------+
+       |                                            |
+  owns: state,                                 owns: event loop,
+  logic, UI trees,                             rendering, input,
+  effects requests                             window management
+```
+
+1. Elixir runtime calls `view(model)` to produce a UI tree (plain maps).
+2. Runtime diffs the tree against the previous version.
+3. Diff is encoded as JSONL and sent to the renderer via Port stdin.
+4. Renderer applies the diff to its retained tree and repaints.
+5. User interacts with the UI (clicks, types, etc.).
+6. Renderer encodes the interaction as an event and writes it to stdout.
+7. Elixir runtime receives the event, calls `update(model, event)`.
+8. Cycle repeats from step 1.
+
+On first render (or after reconnect), a full snapshot is sent instead of a
+diff. The renderer handles both transparently.
+
+## Process model
+
+Elixir is the primary process. It spawns the Rust renderer as a child via
+`Port.open/2`. If the renderer crashes, Elixir detects the exit and can
+restart it with bounded backoff, replaying the current snapshot.
+
+This model supports:
+
+- **mix task launch:** `mix julep.gui MyApp` compiles and runs the app.
+- **IEx launch:** `Julep.start(MyApp)` from a running shell.
+- **Library embedding:** start the runtime under your own supervisor for
+  use cases like observability consoles or admin panels.
+- **Testing without GUI:** run the app runtime with no renderer attached;
+  assert on UI trees and event handling directly.
+
+## What this is not
+
+This is not a client-server architecture. There are no sockets, no
+handshakes, no authentication between the processes. The renderer is a
+child process that speaks stdio. The protocol is intentionally simple
+because the trust boundary is the OS process -- not a network.
+
+## Future: Rust-first packaging
+
+For distribution scenarios where having a native binary as the entrypoint
+is preferable (app stores, double-click launchers), a future option could
+have the Rust binary spawn the BEAM as a child instead. The protocol and
+UI model stay identical; only the process hierarchy inverts. This is a
+packaging concern, not an architectural change.
