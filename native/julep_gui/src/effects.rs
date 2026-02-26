@@ -9,7 +9,7 @@ pub fn handle_effect(id: String, kind: &str, payload: &Value) -> EffectResponse 
         "directory_select" => handle_directory_select(id, payload),
         "clipboard_read" => handle_clipboard_read(id),
         "clipboard_write" => handle_clipboard_write(id, payload),
-        "notification" => handle_notification(id),
+        "notification" => handle_notification(id, payload),
         _ => EffectResponse::unsupported(id),
     }
 }
@@ -160,9 +160,32 @@ fn handle_clipboard_write(id: String, _payload: &Value) -> EffectResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Notifications (not supported yet)
+// Notifications (requires "notifications" feature / notify-rust crate)
 // ---------------------------------------------------------------------------
 
-fn handle_notification(id: String) -> EffectResponse {
+#[cfg(feature = "notifications")]
+fn handle_notification(id: String, payload: &Value) -> EffectResponse {
+    let title = payload
+        .get("title")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Julep");
+
+    let body = payload
+        .get("body")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+
+    match notify_rust::Notification::new()
+        .summary(title)
+        .body(body)
+        .show()
+    {
+        Ok(_) => EffectResponse::ok(id, json!(null)),
+        Err(e) => EffectResponse::error(id, format!("notification failed: {e}")),
+    }
+}
+
+#[cfg(not(feature = "notifications"))]
+fn handle_notification(id: String, _payload: &Value) -> EffectResponse {
     EffectResponse::unsupported(id)
 }

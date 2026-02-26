@@ -1121,6 +1121,89 @@ defmodule Julep.UITest do
   end
 
   # ---------------------------------------------------------------------------
+  # canvas/1,2
+  # ---------------------------------------------------------------------------
+
+  describe "canvas/1" do
+    test "produces a canvas node with given id" do
+      node = canvas("drawing")
+      assert node.id == "drawing"
+      assert node.type == "canvas"
+      assert node.props == %{}
+      assert node.children == []
+    end
+  end
+
+  describe "canvas/2 with opts" do
+    test "opts become string-keyed props" do
+      shapes = [%{type: "rect", x: 0, y: 0, w: 100, h: 50}]
+      node = canvas("drawing", shapes: shapes, width: 800, height: 600, background: "#000")
+
+      assert node.props["shapes"] == shapes
+      assert node.props["width"] == 800
+      assert node.props["height"] == 600
+      assert node.props["background"] == "#000"
+      assert node.children == []
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # table/1,2 macro
+  # ---------------------------------------------------------------------------
+
+  describe "table/1" do
+    test "produces a table node with given id" do
+      node = table("users")
+      assert node.id == "users"
+      assert node.type == "table"
+      assert node.children == []
+    end
+  end
+
+  describe "table/2 with opts" do
+    test "columns and rows become string-keyed props" do
+      cols = [%{key: "name", label: "Name", width: 200}]
+      rows = [%{name: "Alice"}, %{name: "Bob"}]
+      node = table("users", columns: cols, rows: rows)
+
+      assert node.props["columns"] == cols
+      assert node.props["rows"] == rows
+      assert node.children == []
+    end
+  end
+
+  describe "table id do...end" do
+    test "collects children from do block" do
+      node =
+        table "users" do
+          text("custom footer")
+        end
+
+      assert node.id == "users"
+      assert node.type == "table"
+      assert length(node.children) == 1
+      assert hd(node.children).props["content"] == "custom footer"
+    end
+  end
+
+  describe "table id, opts do...end" do
+    test "has both props and children" do
+      cols = [%{key: "name", label: "Name", width: 200}]
+      rows = [%{name: "Alice"}]
+
+      node =
+        table "users", columns: cols, rows: rows do
+          text("row template")
+        end
+
+      assert node.props["columns"] == cols
+      assert node.props["rows"] == rows
+      assert length(node.children) == 1
+      assert hd(node.children).props["content"] == "row template"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Counter example view produces expected tree shape
   # ---------------------------------------------------------------------------
 

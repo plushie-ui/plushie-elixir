@@ -29,7 +29,7 @@ defmodule Julep.Protocol do
   @doc """
   Encodes a list of patch operations as a JSON message followed by a newline.
 
-  Stubbed for future use -- the ops list is encoded as-is.
+  The ops list is encoded as-is into the JSON payload.
 
   ## Example
 
@@ -52,6 +52,58 @@ defmodule Julep.Protocol do
   @spec encode_effect_request(String.t(), String.t(), term()) :: String.t()
   def encode_effect_request(id, kind, payload) do
     Jason.encode!(%{type: "effect_request", id: id, kind: kind, payload: payload}) <> "\n"
+  end
+
+  @doc """
+  Encodes a widget operation as a JSON message followed by a newline.
+
+  ## Example
+
+      iex> Julep.Protocol.encode_widget_op("focus", %{target: "username"})
+      ~s({"op":"focus","payload":{"target":"username"},"type":"widget_op"}) <> "\\n"
+  """
+  @spec encode_widget_op(String.t(), map()) :: String.t()
+  def encode_widget_op(op, payload) do
+    Jason.encode!(%{type: "widget_op", op: op, payload: payload}) <> "\n"
+  end
+
+  @doc """
+  Encodes a subscription register message as a JSON message followed by a newline.
+
+  ## Example
+
+      iex> Julep.Protocol.encode_subscription_register("on_key_press", "keys")
+      ~s({"kind":"on_key_press","tag":"keys","type":"subscription_register"}) <> "\\n"
+  """
+  @spec encode_subscription_register(String.t(), String.t()) :: String.t()
+  def encode_subscription_register(kind, tag) do
+    Jason.encode!(%{type: "subscription_register", kind: kind, tag: tag}) <> "\n"
+  end
+
+  @doc """
+  Encodes a subscription unregister message as a JSON message followed by a newline.
+
+  ## Example
+
+      iex> Julep.Protocol.encode_subscription_unregister("on_key_press")
+      ~s({"kind":"on_key_press","type":"subscription_unregister"}) <> "\\n"
+  """
+  @spec encode_subscription_unregister(String.t()) :: String.t()
+  def encode_subscription_unregister(kind) do
+    Jason.encode!(%{type: "subscription_unregister", kind: kind}) <> "\n"
+  end
+
+  @doc """
+  Encodes a window lifecycle operation as a JSON message followed by a newline.
+
+  ## Example
+
+      iex> Julep.Protocol.encode_window_op("open", "main", %{title: "My App"})
+      ~s({"op":"open","settings":{"title":"My App"},"type":"window_op","window_id":"main"}) <> "\\n"
+  """
+  @spec encode_window_op(String.t(), String.t(), map()) :: String.t()
+  def encode_window_op(op, window_id, settings) do
+    Jason.encode!(%{type: "window_op", op: op, window_id: window_id, settings: settings}) <> "\n"
   end
 
   # ---------------------------------------------------------------------------

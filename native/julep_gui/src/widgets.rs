@@ -1,28 +1,73 @@
+use std::collections::HashMap;
+
 use crate::protocol::TreeNode;
 use iced::widget::{
-    button, checkbox, column, container, pick_list, progress_bar, row, rule, scrollable, slider,
-    text, text_input, toggler, tooltip, vertical_slider, Image, Space, Stack, Svg,
+    button, canvas, checkbox, column, container, markdown, pick_list, progress_bar, row, rule,
+    scrollable, slider, text, text_editor, text_input, toggler, tooltip, vertical_slider, Image,
+    Space, Stack, Svg,
 };
-use iced::{alignment, ContentFit, Element, Fill, Length, Padding};
+use iced::{alignment, mouse, Color, ContentFit, Element, Fill, Length, Padding, Point, Size};
 use serde_json::Value;
 
 use crate::Message;
 
-/// Map a TreeNode to an iced Element. Unknown types render as an empty container.
-pub fn render<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+// ---------------------------------------------------------------------------
+// Cache pre-population
+// ---------------------------------------------------------------------------
+
+/// Walk the tree and ensure that every `text_editor` and `markdown` node has
+/// an entry in the corresponding cache. This must be called *before* `render`
+/// so that `render` can work with shared (`&`) references to the caches.
+pub fn ensure_caches(
+    node: &TreeNode,
+    editor_contents: &mut HashMap<String, text_editor::Content>,
+    markdown_items: &mut HashMap<String, Vec<markdown::Item>>,
+) {
     match node.type_name.as_str() {
-        "column" => render_column(node),
-        "row" => render_row(node),
+        "text_editor" => {
+            let props = node.props.as_object();
+            let content_str = prop_str(props, "content").unwrap_or_default();
+            editor_contents
+                .entry(node.id.clone())
+                .or_insert_with(|| text_editor::Content::with_text(&content_str));
+        }
+        "markdown" => {
+            let props = node.props.as_object();
+            let content = prop_str(props, "content").unwrap_or_default();
+            markdown_items
+                .entry(node.id.clone())
+                .or_insert_with(|| markdown::parse(&content).collect());
+        }
+        _ => {}
+    }
+    for child in &node.children {
+        ensure_caches(child, editor_contents, markdown_items);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Public render entry point
+// ---------------------------------------------------------------------------
+
+/// Map a TreeNode to an iced Element. Unknown types render as an empty container.
+pub fn render<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+) -> Element<'a, Message> {
+    match node.type_name.as_str() {
+        "column" => render_column(node, editor_contents, markdown_items),
+        "row" => render_row(node, editor_contents, markdown_items),
         "text" => render_text(node),
         "button" => render_button(node),
-        "container" => render_container(node),
+        "container" => render_container(node, editor_contents, markdown_items),
         "space" => render_space(node),
         "text_input" => render_text_input(node),
         "checkbox" => render_checkbox(node),
         "rule" => render_rule(node),
         "progress_bar" => render_progress_bar(node),
-        "scrollable" => render_scrollable(node),
-        "window" => render_window(node),
+        "scrollable" => render_scrollable(node, editor_contents, markdown_items),
+        "window" => render_window(node, editor_contents, markdown_items),
         // New native widgets
         "toggler" => render_toggler(node),
         "radio" => render_radio(node),
@@ -30,20 +75,22 @@ pub fn render<'a>(node: &'a TreeNode) -> Element<'a, Message> {
         "vertical_slider" => render_vertical_slider(node),
         "pick_list" => render_pick_list(node),
         "combo_box" => render_pick_list(node), // delegate to pick_list for now
-        "text_editor" => render_text_editor(node),
-        "tooltip" => render_tooltip(node),
+        "text_editor" => render_text_editor(node, editor_contents),
+        "tooltip" => render_tooltip(node, editor_contents, markdown_items),
         "image" => render_image(node),
         "svg" => render_svg(node),
-        "markdown" => render_markdown(node),
-        "stack" => render_stack(node),
+        "markdown" => render_markdown(node, markdown_items),
+        "stack" => render_stack(node, editor_contents, markdown_items),
+        "canvas" => render_canvas(node),
+        "table" => render_table(node),
         // Composite widgets
-        "tabs" => render_tabs(node),
+        "tabs" => render_tabs(node, editor_contents, markdown_items),
         "nav" => render_nav(node),
-        "modal" => render_modal(node),
-        "card" => render_card(node),
-        "panel" => render_panel(node),
-        "form" => render_form(node),
-        "split_pane" => render_split_pane(node),
+        "modal" => render_modal(node, editor_contents, markdown_items),
+        "card" => render_card(node, editor_contents, markdown_items),
+        "panel" => render_panel(node, editor_contents, markdown_items),
+        "form" => render_form(node, editor_contents, markdown_items),
+        "split_pane" => render_split_pane(node, editor_contents, markdown_items),
         unknown => {
             eprintln!("julep_gui: unknown node type `{unknown}`, rendering as empty container");
             container(Space::new()).into()
@@ -52,10 +99,29 @@ pub fn render<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 }
 
 // ---------------------------------------------------------------------------
+// Child rendering helper
+// ---------------------------------------------------------------------------
+
+fn render_children<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+) -> Vec<Element<'a, Message>> {
+    node.children
+        .iter()
+        .map(|c| render(c, editor_contents, markdown_items))
+        .collect()
+}
+
+// ---------------------------------------------------------------------------
 // Column
 // ---------------------------------------------------------------------------
 
-fn render_column<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_column<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
     let padding = prop_padding(props);
@@ -63,7 +129,7 @@ fn render_column<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let height = prop_length(props, "height", Length::Shrink);
     let align_x = prop_horizontal_alignment(props, "align_x");
 
-    let children: Vec<Element<'a, Message>> = node.children.iter().map(render).collect();
+    let children = render_children(node, editor_contents, markdown_items);
 
     column(children)
         .spacing(spacing)
@@ -78,7 +144,11 @@ fn render_column<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 // Row
 // ---------------------------------------------------------------------------
 
-fn render_row<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_row<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
     let padding = prop_padding(props);
@@ -86,7 +156,7 @@ fn render_row<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let height = prop_length(props, "height", Length::Shrink);
     let align_y = prop_vertical_alignment(props, "align_y");
 
-    let children: Vec<Element<'a, Message>> = node.children.iter().map(render).collect();
+    let children = render_children(node, editor_contents, markdown_items);
 
     row(children)
         .spacing(spacing)
@@ -133,7 +203,11 @@ fn render_button<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 // Container
 // ---------------------------------------------------------------------------
 
-fn render_container<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_container<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let padding = prop_padding(props);
     let width = prop_length(props, "width", Length::Shrink);
@@ -143,7 +217,7 @@ fn render_container<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(render)
+        .map(|c| render(c, editor_contents, markdown_items))
         .unwrap_or_else(|| Space::new().into());
 
     let mut c = container(child).padding(padding).width(width).height(height);
@@ -170,7 +244,11 @@ fn render_space<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 // Scrollable
 // ---------------------------------------------------------------------------
 
-fn render_scrollable<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_scrollable<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let width = prop_length(props, "width", Length::Shrink);
     let height = prop_length(props, "height", Length::Shrink);
@@ -178,7 +256,7 @@ fn render_scrollable<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(render)
+        .map(|c| render(c, editor_contents, markdown_items))
         .unwrap_or_else(|| Space::new().into());
 
     scrollable(child)
@@ -188,10 +266,14 @@ fn render_scrollable<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 }
 
 // ---------------------------------------------------------------------------
-// Window (top-level container; multi-window is Phase 2)
+// Window (top-level container)
 // ---------------------------------------------------------------------------
 
-fn render_window<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_window<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let padding = prop_padding(props);
     let width = prop_length(props, "width", Fill);
@@ -200,7 +282,7 @@ fn render_window<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(render)
+        .map(|c| render(c, editor_contents, markdown_items))
         .unwrap_or_else(|| Space::new().into());
 
     container(child)
@@ -430,34 +512,49 @@ fn render_pick_list<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 }
 
 // ---------------------------------------------------------------------------
-// Text Editor (stub: render as scrollable text for now)
+// Text Editor
 // ---------------------------------------------------------------------------
 
-fn render_text_editor<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_text_editor<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
-    let content = prop_str(props, "content").unwrap_or_default();
-    let width = prop_length(props, "width", Length::Fill);
     let height = prop_length(props, "height", Length::Shrink);
-
-    // Full text_editor requires persistent Content state. For now, render as
-    // a text_input so the user can at least see the content.
-    let id = node.id.clone();
     let placeholder = prop_str(props, "placeholder").unwrap_or_default();
+    let id = node.id.clone();
 
-    container(
-        text_input(&placeholder, &content)
-            .on_input(move |v| Message::Input(id.clone(), v))
-            .width(width),
-    )
-    .height(height)
-    .into()
+    // Content was pre-populated by ensure_caches; fall back to a stub if
+    // somehow missing (shouldn't happen).
+    let content = match editor_contents.get(&node.id) {
+        Some(c) => c,
+        None => {
+            eprintln!("julep_gui: text_editor cache miss for id={}", node.id);
+            return text("(text_editor: cache miss)").into();
+        }
+    };
+
+    let editor_id = id;
+    let mut te = text_editor(content)
+        .on_action(move |action| Message::TextEditorAction(editor_id.clone(), action))
+        .height(height);
+
+    if !placeholder.is_empty() {
+        te = te.placeholder(placeholder);
+    }
+
+    te.into()
 }
 
 // ---------------------------------------------------------------------------
 // Tooltip
 // ---------------------------------------------------------------------------
 
-fn render_tooltip<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_tooltip<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let tip = prop_str(props, "tip").unwrap_or_default();
     let gap = prop_f32(props, "gap");
@@ -474,7 +571,7 @@ fn render_tooltip<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(render)
+        .map(|c| render(c, editor_contents, markdown_items))
         .unwrap_or_else(|| Space::new().into());
 
     let mut tt = tooltip(child, text(tip), position);
@@ -524,31 +621,40 @@ fn render_svg<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 }
 
 // ---------------------------------------------------------------------------
-// Markdown (stub: render as text)
+// Markdown
 // ---------------------------------------------------------------------------
 
-fn render_markdown<'a>(node: &'a TreeNode) -> Element<'a, Message> {
-    let props = node.props.as_object();
-    let content = prop_str(props, "content").unwrap_or_default();
-    let size = prop_f32(props, "size");
+fn render_markdown<'a>(
+    node: &'a TreeNode,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+) -> Element<'a, Message> {
+    let items = match markdown_items.get(&node.id) {
+        Some(items) => items.as_slice(),
+        None => {
+            eprintln!("julep_gui: markdown cache miss for id={}", node.id);
+            return text("(markdown: cache miss)").into();
+        }
+    };
 
-    let mut t = text(content);
-    if let Some(s) = size {
-        t = t.size(s);
-    }
-    t.into()
+    markdown::view(items, iced::Theme::Dark)
+        .map(Message::MarkdownUrl)
+        .into()
 }
 
 // ---------------------------------------------------------------------------
 // Stack
 // ---------------------------------------------------------------------------
 
-fn render_stack<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_stack<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let width = prop_length(props, "width", Length::Shrink);
     let height = prop_length(props, "height", Length::Shrink);
 
-    let children: Vec<Element<'a, Message>> = node.children.iter().map(render).collect();
+    let children = render_children(node, editor_contents, markdown_items);
 
     Stack::with_children(children)
         .width(width)
@@ -560,13 +666,15 @@ fn render_stack<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 // Tabs (composite: row of buttons + active child)
 // ---------------------------------------------------------------------------
 
-fn render_tabs<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_tabs<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let active = prop_str(props, "active").unwrap_or_default();
     let spacing = prop_f32(props, "spacing").unwrap_or(4.0);
 
-    // Build tab header buttons from children. Each child should have an "id"
-    // that acts as its tab key, and optionally a "title" prop for the label.
     let mut headers: Vec<Element<'a, Message>> = Vec::new();
     let mut active_child: Option<Element<'a, Message>> = None;
 
@@ -586,7 +694,7 @@ fn render_tabs<'a>(node: &'a TreeNode) -> Element<'a, Message> {
         headers.push(btn.into());
 
         if is_active {
-            active_child = Some(render(child));
+            active_child = Some(render(child, editor_contents, markdown_items));
         }
     }
 
@@ -633,7 +741,11 @@ fn render_nav<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 // Modal (composite: stack with overlay)
 // ---------------------------------------------------------------------------
 
-fn render_modal<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_modal<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let visible = prop_bool(props, "visible").unwrap_or(false);
 
@@ -641,8 +753,7 @@ fn render_modal<'a>(node: &'a TreeNode) -> Element<'a, Message> {
         return Space::new().into();
     }
 
-    // Render all children into a column, then center it as an overlay.
-    let children: Vec<Element<'a, Message>> = node.children.iter().map(render).collect();
+    let children = render_children(node, editor_contents, markdown_items);
     let body: Element<'a, Message> = if children.len() == 1 {
         children.into_iter().next().unwrap()
     } else {
@@ -660,7 +771,11 @@ fn render_modal<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 // Card (composite: container with title + body)
 // ---------------------------------------------------------------------------
 
-fn render_card<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_card<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let title = prop_str(props, "title").unwrap_or_default();
     let padding = prop_padding(props);
@@ -669,7 +784,7 @@ fn render_card<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let body: Element<'a, Message> = node
         .children
         .first()
-        .map(render)
+        .map(|c| render(c, editor_contents, markdown_items))
         .unwrap_or_else(|| Space::new().into());
 
     container(
@@ -684,7 +799,11 @@ fn render_card<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 // Panel (composite: collapsible section)
 // ---------------------------------------------------------------------------
 
-fn render_panel<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_panel<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let title = prop_str(props, "title").unwrap_or_default();
     let collapsed = prop_bool(props, "collapsed").unwrap_or(false);
@@ -698,7 +817,7 @@ fn render_panel<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     if collapsed {
         column![header].into()
     } else {
-        let children: Vec<Element<'a, Message>> = node.children.iter().map(render).collect();
+        let children = render_children(node, editor_contents, markdown_items);
         let mut items = vec![header];
         items.extend(children);
         column(items).spacing(4.0).into()
@@ -709,13 +828,17 @@ fn render_panel<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 // Form (composite: column with spacing)
 // ---------------------------------------------------------------------------
 
-fn render_form<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_form<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(8.0);
     let padding = prop_padding(props);
     let width = prop_length(props, "width", Length::Shrink);
 
-    let children: Vec<Element<'a, Message>> = node.children.iter().map(render).collect();
+    let children = render_children(node, editor_contents, markdown_items);
 
     column(children)
         .spacing(spacing)
@@ -728,7 +851,11 @@ fn render_form<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 // Split Pane (composite: row with two children at a ratio)
 // ---------------------------------------------------------------------------
 
-fn render_split_pane<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_split_pane<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let ratio = prop_f32(props, "ratio").unwrap_or(0.5).clamp(0.0, 1.0);
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
@@ -736,12 +863,12 @@ fn render_split_pane<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let left: Element<'a, Message> = node
         .children
         .first()
-        .map(render)
+        .map(|c| render(c, editor_contents, markdown_items))
         .unwrap_or_else(|| Space::new().into());
     let right: Element<'a, Message> = node
         .children
         .get(1)
-        .map(render)
+        .map(|c| render(c, editor_contents, markdown_items))
         .unwrap_or_else(|| Space::new().into());
 
     // Approximate ratio using FillPortion. Scale to integer parts out of 1000.
@@ -755,6 +882,209 @@ fn render_split_pane<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     .spacing(spacing)
     .width(Fill)
     .into()
+}
+
+// ---------------------------------------------------------------------------
+// Canvas
+// ---------------------------------------------------------------------------
+
+struct CanvasProgram {
+    shapes: Vec<Value>,
+}
+
+impl canvas::Program<Message> for CanvasProgram {
+    type State = ();
+
+    fn draw(
+        &self,
+        _state: &(),
+        renderer: &iced::Renderer,
+        _theme: &iced::Theme,
+        bounds: iced::Rectangle,
+        _cursor: mouse::Cursor,
+    ) -> Vec<canvas::Geometry> {
+        let mut frame = canvas::Frame::new(renderer, bounds.size());
+
+        for shape in &self.shapes {
+            let shape_type = shape.get("type").and_then(|v| v.as_str()).unwrap_or("");
+            match shape_type {
+                "rect" => {
+                    let x = json_f32(shape, "x");
+                    let y = json_f32(shape, "y");
+                    let w = json_f32(shape, "w");
+                    let h = json_f32(shape, "h");
+                    let fill = json_color(shape, "fill");
+                    frame.fill_rectangle(Point::new(x, y), Size::new(w, h), fill);
+                }
+                "circle" => {
+                    let x = json_f32(shape, "x");
+                    let y = json_f32(shape, "y");
+                    let r = json_f32(shape, "r");
+                    let fill = json_color(shape, "fill");
+                    let circle = canvas::Path::circle(Point::new(x, y), r);
+                    frame.fill(&circle, fill);
+                }
+                "line" => {
+                    let x1 = json_f32(shape, "x1");
+                    let y1 = json_f32(shape, "y1");
+                    let x2 = json_f32(shape, "x2");
+                    let y2 = json_f32(shape, "y2");
+                    let color = json_color(shape, "fill");
+                    let line = canvas::Path::line(Point::new(x1, y1), Point::new(x2, y2));
+                    frame.stroke(
+                        &line,
+                        canvas::Stroke::default().with_color(color).with_width(1.0),
+                    );
+                }
+                "text" => {
+                    let x = json_f32(shape, "x");
+                    let y = json_f32(shape, "y");
+                    let content = shape
+                        .get("content")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+                    let fill = json_color(shape, "fill");
+                    frame.fill_text(canvas::Text {
+                        content: content.to_owned(),
+                        position: Point::new(x, y),
+                        color: fill,
+                        ..canvas::Text::default()
+                    });
+                }
+                _ => {}
+            }
+        }
+
+        vec![frame.into_geometry()]
+    }
+}
+
+fn render_canvas<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let width = prop_length(props, "width", Length::Fill);
+    let height = prop_length(props, "height", Length::Fixed(200.0));
+
+    let shapes: Vec<Value> = props
+        .and_then(|p| p.get("shapes"))
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    canvas(CanvasProgram { shapes })
+        .width(width)
+        .height(height)
+        .into()
+}
+
+/// Parse an f32 from a JSON value by key, defaulting to 0.
+fn json_f32(val: &Value, key: &str) -> f32 {
+    val.get(key)
+        .and_then(|v| v.as_f64())
+        .map(|v| v as f32)
+        .unwrap_or(0.0)
+}
+
+/// Parse a Color from a JSON "fill" field. Accepts "#rrggbb" hex strings;
+/// defaults to white if missing or unparseable.
+fn json_color(val: &Value, key: &str) -> Color {
+    val.get(key)
+        .and_then(|v| v.as_str())
+        .and_then(parse_hex_color)
+        .unwrap_or(Color::WHITE)
+}
+
+fn parse_hex_color(s: &str) -> Option<Color> {
+    let s = s.strip_prefix('#')?;
+    if s.len() == 6 {
+        let r = u8::from_str_radix(&s[0..2], 16).ok()?;
+        let g = u8::from_str_radix(&s[2..4], 16).ok()?;
+        let b = u8::from_str_radix(&s[4..6], 16).ok()?;
+        Some(Color::from_rgb8(r, g, b))
+    } else if s.len() == 8 {
+        let r = u8::from_str_radix(&s[0..2], 16).ok()?;
+        let g = u8::from_str_radix(&s[2..4], 16).ok()?;
+        let b = u8::from_str_radix(&s[4..6], 16).ok()?;
+        let a = u8::from_str_radix(&s[6..8], 16).ok()?;
+        Some(Color::from_rgba8(r, g, b, a as f32 / 255.0))
+    } else {
+        None
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Table (composite: column/row headers + data rows)
+// ---------------------------------------------------------------------------
+
+fn render_table<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let width = prop_length(props, "width", Length::Fill);
+
+    // "columns" is an array of {key, label} objects.
+    let columns: Vec<(String, String)> = props
+        .and_then(|p| p.get("columns"))
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|col| {
+                    let key = col.get("key")?.as_str()?.to_owned();
+                    let label = col
+                        .get("label")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(&key)
+                        .to_owned();
+                    Some((key, label))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    // "rows" is an array of objects.
+    let rows: Vec<&Value> = props
+        .and_then(|p| p.get("rows"))
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().collect())
+        .unwrap_or_default();
+
+    if columns.is_empty() {
+        return text("(empty table)").into();
+    }
+
+    // Header row
+    let header_cells: Vec<Element<'a, Message>> = columns
+        .iter()
+        .map(|(_key, label)| {
+            container(text(label.clone()).size(14.0))
+                .width(Length::FillPortion(1))
+                .into()
+        })
+        .collect();
+    let header = row(header_cells).spacing(4.0).width(Fill);
+
+    // Data rows
+    let mut table_rows: Vec<Element<'a, Message>> = Vec::new();
+    table_rows.push(header.into());
+    table_rows.push(rule::horizontal(1).into());
+
+    for data_row in &rows {
+        let cells: Vec<Element<'a, Message>> = columns
+            .iter()
+            .map(|(key, _label)| {
+                let cell_text = data_row
+                    .get(key)
+                    .map(|v| match v {
+                        Value::String(s) => s.clone(),
+                        other => other.to_string(),
+                    })
+                    .unwrap_or_default();
+                container(text(cell_text).size(13.0))
+                    .width(Length::FillPortion(1))
+                    .into()
+            })
+            .collect();
+        table_rows.push(row(cells).spacing(4.0).width(Fill).into());
+    }
+
+    scrollable(column(table_rows).spacing(2.0).width(width)).into()
 }
 
 // ---------------------------------------------------------------------------

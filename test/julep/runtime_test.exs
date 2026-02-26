@@ -603,6 +603,201 @@ defmodule Julep.RuntimeTest do
   end
 
   # ---------------------------------------------------------------------------
+  # describe "subscription registration"
+  # ---------------------------------------------------------------------------
+
+  describe "subscription registration" do
+    test "renderer subscription sends register message to bridge" do
+      defmodule KeySubApp do
+        use Julep.App
+
+        def init(_opts), do: %{listening: true}
+        def update(model, _event), do: model
+
+        def subscribe(model) do
+          if model.listening do
+            [Julep.Subscription.on_key_press(:keys)]
+          else
+            []
+          end
+        end
+
+        def view(_model) do
+          import Julep.UI
+          column do
+            text("listening")
+          end
+        end
+      end
+
+      {runtime, bridge} = start_runtime(KeySubApp)
+      await_initial_render(runtime)
+
+      # Allow cast to be processed by the mock bridge.
+      :sys.get_state(bridge)
+
+      registers = Julep.Test.MockBridge.get_subscription_registers(bridge)
+      assert length(registers) == 1
+      assert hd(registers) == %{kind: "on_key_press", tag: "keys"}
+    end
+
+    test "removing a renderer subscription sends unregister message to bridge" do
+      defmodule KeyToggleApp do
+        use Julep.App
+
+        def init(_opts), do: %{listening: true}
+        def update(model, :stop_listening), do: %{model | listening: false}
+        def update(model, _event), do: model
+
+        def subscribe(model) do
+          if model.listening do
+            [Julep.Subscription.on_key_press(:keys)]
+          else
+            []
+          end
+        end
+
+        def view(_model) do
+          import Julep.UI
+          column do
+            text("ok")
+          end
+        end
+      end
+
+      {runtime, bridge} = start_runtime(KeyToggleApp)
+      await_initial_render(runtime)
+      :sys.get_state(bridge)
+
+      # Verify register was sent
+      registers = Julep.Test.MockBridge.get_subscription_registers(bridge)
+      assert length(registers) == 1
+
+      # Now remove the subscription
+      dispatch_and_wait(runtime, :stop_listening)
+      :sys.get_state(bridge)
+
+      unregisters = Julep.Test.MockBridge.get_subscription_unregisters(bridge)
+      assert length(unregisters) == 1
+      assert hd(unregisters) == %{kind: "on_key_press"}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # describe "multi-window support"
+  # ---------------------------------------------------------------------------
+
+  describe "multi-window support" do
+    test "window nodes in the tree trigger window open ops" do
+      defmodule WindowApp do
+        use Julep.App
+
+        def init(_opts), do: %{show_secondary: false}
+        def update(model, :open_secondary), do: %{model | show_secondary: true}
+        def update(model, _event), do: model
+
+        def view(model) do
+          import Julep.UI
+
+          windows = [
+            window "main", title: "Main" do
+              text("hello")
+            end
+          ]
+
+          windows =
+            if model.show_secondary do
+              windows ++ [
+                window "secondary", title: "Secondary" do
+                  text("world")
+                end
+              ]
+            else
+              windows
+            end
+
+          column do
+            windows
+          end
+        end
+
+        def window_config(_model), do: %{title: "App Window"}
+      end
+
+      {runtime, bridge} = start_runtime(WindowApp)
+      await_initial_render(runtime)
+      :sys.get_state(bridge)
+
+      # Initial render should detect the "main" window and send open
+      window_ops = Julep.Test.MockBridge.get_window_ops(bridge)
+      assert length(window_ops) == 1
+      assert hd(window_ops).op == "open"
+      assert hd(window_ops).window_id == "main"
+      assert hd(window_ops).settings == %{title: "App Window"}
+
+      # Open the secondary window
+      dispatch_and_wait(runtime, :open_secondary)
+      :sys.get_state(bridge)
+
+      window_ops = Julep.Test.MockBridge.get_window_ops(bridge)
+      assert length(window_ops) == 2
+
+      second_op = Enum.at(window_ops, 1)
+      assert second_op.op == "open"
+      assert second_op.window_id == "secondary"
+    end
+
+    test "removing a window from the tree triggers window close op" do
+      defmodule WindowCloseApp do
+        use Julep.App
+
+        def init(_opts), do: %{show_window: true}
+        def update(model, :close_it), do: %{model | show_window: false}
+        def update(model, _event), do: model
+
+        def view(model) do
+          import Julep.UI
+
+          if model.show_window do
+            column do
+              window "ephemeral", title: "Temp" do
+                text("temp")
+              end
+            end
+          else
+            column do
+              text("no windows")
+            end
+          end
+        end
+
+        def window_config(_model), do: %{}
+      end
+
+      {runtime, bridge} = start_runtime(WindowCloseApp)
+      await_initial_render(runtime)
+      :sys.get_state(bridge)
+
+      # Initial render opens the window
+      window_ops = Julep.Test.MockBridge.get_window_ops(bridge)
+      assert length(window_ops) == 1
+      assert hd(window_ops).op == "open"
+      assert hd(window_ops).window_id == "ephemeral"
+
+      # Remove the window
+      dispatch_and_wait(runtime, :close_it)
+      :sys.get_state(bridge)
+
+      window_ops = Julep.Test.MockBridge.get_window_ops(bridge)
+      assert length(window_ops) == 2
+
+      close_op = Enum.at(window_ops, 1)
+      assert close_op.op == "close"
+      assert close_op.window_id == "ephemeral"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Private helpers
   # ---------------------------------------------------------------------------
 

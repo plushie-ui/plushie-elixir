@@ -54,6 +54,26 @@ defmodule Julep.Bridge do
     GenServer.cast(bridge, {:send_effect_request, id, kind, payload})
   end
 
+  @doc "Sends a widget operation to the renderer."
+  def send_widget_op(bridge, op, payload) do
+    GenServer.cast(bridge, {:send_widget_op, op, payload})
+  end
+
+  @doc "Registers a renderer-side subscription."
+  def send_subscription_register(bridge, kind, tag) do
+    GenServer.cast(bridge, {:send_subscription_register, kind, tag})
+  end
+
+  @doc "Unregisters a renderer-side subscription."
+  def send_subscription_unregister(bridge, kind) do
+    GenServer.cast(bridge, {:send_subscription_unregister, kind})
+  end
+
+  @doc "Sends a window lifecycle operation to the renderer."
+  def send_window_op(bridge, op, window_id, settings \\ %{}) do
+    GenServer.cast(bridge, {:send_window_op, op, window_id, settings})
+  end
+
   @doc "Stops the bridge GenServer."
   def stop(bridge) do
     GenServer.stop(bridge)
@@ -113,6 +133,30 @@ defmodule Julep.Bridge do
 
   def handle_cast({:send_effect_request, id, kind, payload}, state) do
     json = Julep.Protocol.encode_effect_request(id, kind, payload)
+    send_to_port(state.port, json)
+    {:noreply, state}
+  end
+
+  def handle_cast({:send_widget_op, op, payload}, state) do
+    json = Julep.Protocol.encode_widget_op(op, payload)
+    send_to_port(state.port, json)
+    {:noreply, state}
+  end
+
+  def handle_cast({:send_subscription_register, kind, tag}, state) do
+    json = Julep.Protocol.encode_subscription_register(kind, tag)
+    send_to_port(state.port, json)
+    {:noreply, state}
+  end
+
+  def handle_cast({:send_subscription_unregister, kind}, state) do
+    json = Julep.Protocol.encode_subscription_unregister(kind)
+    send_to_port(state.port, json)
+    {:noreply, state}
+  end
+
+  def handle_cast({:send_window_op, op, window_id, settings}, state) do
+    json = Julep.Protocol.encode_window_op(op, window_id, settings)
     send_to_port(state.port, json)
     {:noreply, state}
   end

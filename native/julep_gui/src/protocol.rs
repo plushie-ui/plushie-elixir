@@ -12,6 +12,24 @@ pub enum IncomingMessage {
         kind: String,
         payload: Value,
     },
+    WidgetOp {
+        op: String,
+        #[serde(default)]
+        payload: Value,
+    },
+    SubscriptionRegister {
+        kind: String,
+        tag: String,
+    },
+    SubscriptionUnregister {
+        kind: String,
+    },
+    WindowOp {
+        op: String,
+        window_id: String,
+        #[serde(default)]
+        settings: Value,
+    },
 }
 
 /// Response to an effect request, written to stdout as JSONL.
@@ -83,6 +101,19 @@ pub struct OutgoingEvent {
     pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub value: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tag: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub modifiers: Option<KeyModifiers>,
+}
+
+/// Serializable representation of keyboard modifiers.
+#[derive(Debug, Serialize)]
+pub struct KeyModifiers {
+    pub shift: bool,
+    pub ctrl: bool,
+    pub alt: bool,
+    pub logo: bool,
 }
 
 impl OutgoingEvent {
@@ -92,6 +123,8 @@ impl OutgoingEvent {
             family: "click",
             id,
             value: None,
+            tag: None,
+            modifiers: None,
         }
     }
 
@@ -101,6 +134,8 @@ impl OutgoingEvent {
             family: "input",
             id,
             value: Some(Value::String(value)),
+            tag: None,
+            modifiers: None,
         }
     }
 
@@ -110,6 +145,8 @@ impl OutgoingEvent {
             family: "submit",
             id,
             value: Some(Value::String(value)),
+            tag: None,
+            modifiers: None,
         }
     }
 
@@ -119,6 +156,8 @@ impl OutgoingEvent {
             family: "toggle",
             id,
             value: Some(Value::Bool(checked)),
+            tag: None,
+            modifiers: None,
         }
     }
 
@@ -128,6 +167,8 @@ impl OutgoingEvent {
             family: "slide",
             id,
             value: Some(serde_json::json!(value)),
+            tag: None,
+            modifiers: None,
         }
     }
 
@@ -137,6 +178,8 @@ impl OutgoingEvent {
             family: "slide_release",
             id,
             value: Some(serde_json::json!(value)),
+            tag: None,
+            modifiers: None,
         }
     }
 
@@ -146,6 +189,41 @@ impl OutgoingEvent {
             family: "select",
             id,
             value: Some(Value::String(value)),
+            tag: None,
+            modifiers: None,
+        }
+    }
+
+    pub fn key_press(tag: String, key: String, modifiers: KeyModifiers) -> Self {
+        Self {
+            message_type: "event",
+            family: "key_press",
+            id: String::new(),
+            value: Some(Value::String(key)),
+            tag: Some(tag),
+            modifiers: Some(modifiers),
+        }
+    }
+
+    pub fn key_release(tag: String, key: String, modifiers: KeyModifiers) -> Self {
+        Self {
+            message_type: "event",
+            family: "key_release",
+            id: String::new(),
+            value: Some(Value::String(key)),
+            tag: Some(tag),
+            modifiers: Some(modifiers),
+        }
+    }
+
+    pub fn window_close(tag: String) -> Self {
+        Self {
+            message_type: "event",
+            family: "window_close",
+            id: String::new(),
+            value: None,
+            tag: Some(tag),
+            modifiers: None,
         }
     }
 }

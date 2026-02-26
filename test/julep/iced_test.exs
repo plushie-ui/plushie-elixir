@@ -227,6 +227,49 @@ defmodule Julep.IcedTest do
   end
 
   # ===========================================================================
+  # Canvas & data widgets
+  # ===========================================================================
+
+  describe "canvas/2" do
+    test "returns correct node shape with defaults" do
+      node = Iced.canvas("cv1")
+      assert node == %{id: "cv1", type: "canvas", props: %{}, children: []}
+    end
+
+    test "passes shapes and dimension props through" do
+      shapes = [%{type: "circle", x: 10, y: 20, r: 5}]
+      node = Iced.canvas("cv1", %{shapes: shapes, width: 400, height: 300, background: "white"})
+
+      assert node.type == "canvas"
+      assert node.props["shapes"] == shapes
+      assert node.props["width"] == 400
+      assert node.props["height"] == 300
+      assert node.props["background"] == "white"
+      assert node.children == []
+    end
+  end
+
+  describe "table/2" do
+    test "returns correct node shape with defaults" do
+      node = Iced.table("tbl1")
+      assert node == %{id: "tbl1", type: "table", props: %{}, children: []}
+    end
+
+    test "passes columns, rows, header, and sortable props through" do
+      cols = [%{key: "name", label: "Name", width: 200}]
+      rows = [%{name: "Alice"}, %{name: "Bob"}]
+      node = Iced.table("tbl1", %{columns: cols, rows: rows, header: true, sortable: false})
+
+      assert node.type == "table"
+      assert node.props["columns"] == cols
+      assert node.props["rows"] == rows
+      assert node.props["header"] == true
+      assert node.props["sortable"] == false
+      assert node.children == []
+    end
+  end
+
+  # ===========================================================================
   # Cross-cutting concerns
   # ===========================================================================
 

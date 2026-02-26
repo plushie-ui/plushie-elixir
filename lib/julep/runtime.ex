@@ -91,7 +91,7 @@ defmodule Julep.Runtime do
     # 1. Initialize app model.
     {model, commands} = unwrap_result(app.init(app_opts))
 
-    state = %{app: app, model: model, bridge: bridge, tree: nil, init_commands: commands, subscriptions: %{}}
+    state = %{app: app, model: model, bridge: bridge, tree: nil, init_commands: commands, subscriptions: %{}, windows: MapSet.new()}
 
     # Defer snapshot send to handle_continue so the supervisor can start
     # Bridge before we try to send to it.
@@ -108,6 +108,7 @@ defmodule Julep.Runtime do
 
     state = %{state | tree: tree} |> Map.delete(:init_commands)
     state = sync_subscriptions(state, state.model)
+    state = sync_windows(state, tree)
     {:noreply, state}
   end
 
@@ -270,7 +271,8 @@ defmodule Julep.Runtime do
         execute_commands(commands, bridge)
         new_tree = render_and_sync(app, new_model, bridge, state.tree)
         state = %{state | model: new_model, tree: new_tree}
-        sync_subscriptions(state, new_model)
+        state = sync_subscriptions(state, new_model)
+        sync_windows(state, new_tree)
 
       :error ->
         # Keep previous model and tree unchanged.
@@ -329,16 +331,20 @@ defmodule Julep.Runtime do
     :ok
   end
 
-  # Widget ops -- bridge messages. Phase 0: log and skip.
-  defp execute_command(%Julep.Command{type: type} = cmd, _bridge)
+  defp execute_command(%Julep.Command{type: type, payload: payload}, bridge)
        when type in [:focus, :focus_next, :focus_previous, :select_all, :scroll_to] do
-    Logger.debug("julep runtime: widget op #{type} stubbed for Phase 0: #{inspect(cmd.payload)}")
+    if bridge do
+      Julep.Bridge.send_widget_op(bridge, Atom.to_string(type), payload)
+    end
+
     :ok
   end
 
-  # Window commands -- Phase 2. Skip for now.
-  defp execute_command(%Julep.Command{type: :close_window} = cmd, _bridge) do
-    Logger.debug("julep runtime: close_window stubbed for Phase 2: #{inspect(cmd.payload)}")
+  defp execute_command(%Julep.Command{type: :close_window, payload: payload}, bridge) do
+    if bridge do
+      Julep.Bridge.send_widget_op(bridge, "close_window", payload)
+    end
+
     :ok
   end
 
@@ -367,8 +373,16 @@ defmodule Julep.Runtime do
 
     Enum.each(to_stop, fn key ->
       case Map.get(state.subscriptions, key) do
-        {:timer, ref} -> Process.cancel_timer(ref)
-        _ -> :ok
+        {:timer, ref} ->
+          Process.cancel_timer(ref)
+
+        {:renderer, type} ->
+          if state.bridge do
+            Julep.Bridge.send_subscription_unregister(state.bridge, Atom.to_string(type))
+          end
+
+        _ ->
+          :ok
       end
     end)
 
@@ -378,7 +392,7 @@ defmodule Julep.Runtime do
     new_entries =
       Map.new(to_start, fn key ->
         spec = Map.fetch!(new_by_key, key)
-        {key, start_subscription(spec)}
+        {key, start_subscription(spec, state.bridge)}
       end)
 
     # Keep existing (unchanged) subscriptions
@@ -387,15 +401,58 @@ defmodule Julep.Runtime do
     %{state | subscriptions: Map.merge(kept, new_entries)}
   end
 
-  defp start_subscription(%{type: :every, interval: interval, tag: tag}) do
+  defp start_subscription(%{type: :every, interval: interval, tag: tag}, _bridge) do
     ref = Process.send_after(self(), {:subscription_tick, tag, interval}, interval)
     {:timer, ref}
   end
 
-  defp start_subscription(%{type: type, tag: _tag})
+  defp start_subscription(%{type: type, tag: tag}, bridge)
        when type in [:on_key_press, :on_key_release, :on_window_close, :on_window_event] do
-    # Renderer-side subscriptions -- Phase 2 will send registration messages to bridge.
-    # For now, just track that they're active.
+    if bridge do
+      Julep.Bridge.send_subscription_register(bridge, Atom.to_string(type), Atom.to_string(tag))
+    end
+
     {:renderer, type}
+  end
+
+  # ---------------------------------------------------------------------------
+  # Window lifecycle
+  # ---------------------------------------------------------------------------
+
+  @spec detect_windows(map() | nil) :: MapSet.t()
+  defp detect_windows(nil), do: MapSet.new()
+
+  defp detect_windows(tree) do
+    Julep.Tree.find_all(tree, fn node -> node.type == "window" end)
+    |> Enum.map(& &1.id)
+    |> MapSet.new()
+  end
+
+  @spec sync_windows(map(), map() | nil) :: map()
+  defp sync_windows(state, tree) do
+    new_windows = detect_windows(tree)
+    current_windows = state.windows
+
+    # Open new windows
+    opened = MapSet.difference(new_windows, current_windows)
+
+    Enum.each(opened, fn window_id ->
+      settings = state.app.window_config(state.model)
+
+      if state.bridge do
+        Julep.Bridge.send_window_op(state.bridge, "open", window_id, settings)
+      end
+    end)
+
+    # Close removed windows
+    closed = MapSet.difference(current_windows, new_windows)
+
+    Enum.each(closed, fn window_id ->
+      if state.bridge do
+        Julep.Bridge.send_window_op(state.bridge, "close", window_id)
+      end
+    end)
+
+    %{state | windows: new_windows}
   end
 end

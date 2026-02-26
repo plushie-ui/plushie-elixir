@@ -135,4 +135,16 @@ defmodule Julep.Iced do
   @doc "Markdown display. Props: content, width."
   @spec markdown(String.t(), map()) :: map()
   def markdown(id, props \\ %{}), do: node(id, "markdown", props)
+
+  # ---------------------------------------------------------------------------
+  # Canvas & data widgets
+  # ---------------------------------------------------------------------------
+
+  @doc "Canvas for drawing shapes. Props: shapes (list), width, height, background."
+  @spec canvas(String.t(), map()) :: map()
+  def canvas(id, props \\ %{}), do: node(id, "canvas", props)
+
+  @doc "Data table. Props: columns (list of %{key, label, width}), rows (list of maps), header (bool), sortable (bool)."
+  @spec table(String.t(), map()) :: map()
+  def table(id, props \\ %{}), do: node(id, "table", props)
 end

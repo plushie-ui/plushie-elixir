@@ -175,6 +175,16 @@ defmodule Julep.Examples.Catalog do
       image("demo_image", "/assets/placeholder.png", width: 120, height: 80)
       svg("demo_svg", "/assets/icon.svg", width: 24, height: 24)
       markdown("## Markdown\n\nSome **bold** and *italic* text.")
+
+      canvas("demo_canvas",
+        width: 200,
+        height: 150,
+        shapes: [
+          %{type: "rect", x: 10, y: 10, w: 80, h: 60, fill: "#3498db"},
+          %{type: "circle", x: 150, y: 75, r: 40, fill: "#e74c3c"},
+          %{type: "line", x1: 10, y1: 130, x2: 190, y2: 130, fill: "#2ecc71"}
+        ]
+      )
     end
   end
 
@@ -235,6 +245,19 @@ defmodule Julep.Examples.Catalog do
           text("Right pane")
         end
       end
+
+      table("demo_table",
+        columns: [
+          %{key: "name", label: "Name"},
+          %{key: "lang", label: "Language"},
+          %{key: "stars", label: "Stars"}
+        ],
+        rows: [
+          %{"name" => "Phoenix", "lang" => "Elixir", "stars" => "20k"},
+          %{"name" => "Iced", "lang" => "Rust", "stars" => "24k"},
+          %{"name" => "React", "lang" => "JavaScript", "stars" => "220k"}
+        ]
+      )
     end
   end
 end

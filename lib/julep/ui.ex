@@ -1137,6 +1137,81 @@ defmodule Julep.UI do
   end
 
   # ---------------------------------------------------------------------------
+  # Canvas (function -- no children)
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Canvas for drawing shapes. No children.
+
+  ## Options
+
+  - `:shapes` -- list of shape descriptors
+  - `:width` / `:height` -- dimensions
+  - `:background` -- background color
+
+  ## Example
+
+      canvas("drawing", shapes: [%{type: "circle", x: 50, y: 50, r: 20}], width: 400, height: 300)
+  """
+  @spec canvas(String.t(), keyword()) :: map()
+  def canvas(id, opts \\ []) do
+    props =
+      opts
+      |> Keyword.drop([:children, :id, :do])
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+
+    %{id: id, type: "canvas", props: props, children: []}
+  end
+
+  # -- table(id, opts) --------------------------------------------------------
+
+  @doc """
+  Data table widget.
+
+  ## Options
+
+  - `:columns` -- list of column descriptors (`%{key, label, width}`)
+  - `:rows` -- list of row data maps
+
+  The `do` block can contain row content templates (e.g. for custom cell
+  rendering). Children from the block are stored in `:children`.
+
+  ## Examples
+
+      table("users", columns: cols, rows: data)
+
+      table "users", columns: cols, rows: data do
+        text("custom footer")
+      end
+  """
+  defmacro table(id, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_fixed_node__("table", unquote(id), [], children)
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_fixed_node__("table", unquote(id), unquote(opts), [])
+        end
+    end
+  end
+
+  @doc false
+  defmacro table(id, opts, do: block) do
+    exprs = block_to_exprs(block)
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Julep.UI.__build_fixed_node__("table", unquote(id), unquote(opts), children)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Public runtime helpers called from macro-generated code
   # ---------------------------------------------------------------------------
 

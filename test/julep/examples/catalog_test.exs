@@ -133,6 +133,26 @@ defmodule Julep.Examples.CatalogTest do
     assert length(modal_node.children) > 0
   end
 
+  test "canvas node exists in display tab" do
+    model = Catalog.init([]) |> Map.put(:active_tab, "display")
+    tree = Catalog.view(model)
+    assert Julep.UI.exists?(tree, "demo_canvas")
+    canvas_node = Julep.UI.find(tree, "demo_canvas")
+    assert canvas_node.type == "canvas"
+    assert is_list(canvas_node.props["shapes"])
+    assert length(canvas_node.props["shapes"]) == 3
+  end
+
+  test "table node exists in composite tab" do
+    model = Catalog.init([]) |> Map.put(:active_tab, "composite")
+    tree = Catalog.view(model)
+    assert Julep.UI.exists?(tree, "demo_table")
+    table_node = Julep.UI.find(tree, "demo_table")
+    assert table_node.type == "table"
+    assert length(table_node.props["columns"]) == 3
+    assert length(table_node.props["rows"]) == 3
+  end
+
   test "unknown events are handled gracefully" do
     model = Catalog.init([])
     model2 = Catalog.update(model, :some_random_event)
