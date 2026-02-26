@@ -184,12 +184,12 @@ defmodule Julep.IcedTest do
   end
 
   describe "tooltip/4" do
-    test "returns correct node shape with tip_text" do
+    test "returns correct node shape with tip" do
       child = Iced.button("btn", %{label: "?"})
       node = Iced.tooltip("tip1", %{position: :top, gap: 4}, [child], "Help text")
 
       assert node.type == "tooltip"
-      assert node.props["tip_text"] == "Help text"
+      assert node.props["tip"] == "Help text"
       assert node.props["position"] == :top
       assert node.props["gap"] == 4
       assert node.children == [child]
@@ -197,7 +197,7 @@ defmodule Julep.IcedTest do
 
     test "works with default props and children" do
       node = Iced.tooltip("tip2", "Just a tip")
-      assert node.props == %{"tip_text" => "Just a tip"}
+      assert node.props == %{"tip" => "Just a tip"}
       assert node.children == []
     end
   end

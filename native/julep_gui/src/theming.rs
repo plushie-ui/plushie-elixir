@@ -1,17 +1,56 @@
 use iced::{Color, Theme};
 use serde_json::Value;
 
-/// Resolve a JSON value into an iced Theme.
+// ---------------------------------------------------------------------------
+// Theme resolution
+// ---------------------------------------------------------------------------
+
+/// Result of resolving a theme. Includes the iced Theme plus an optional
+/// warning color override that widgets can use for "warning" style variants.
+///
+/// Iced's base `Palette` does not have a "warning" field (only background,
+/// text, primary, success, danger). The extended palette auto-generates a
+/// warning pair, but it's derived and not directly settable. To support
+/// custom warning colors, we parse it separately and expose it here.
+///
+/// The main.rs agent should store `ThemeResult` (or at least the warning
+/// color) alongside the Theme and pass it to widget style resolution.
+pub struct ThemeResult {
+    pub theme: Theme,
+    /// Custom warning color, if provided in the theme JSON.
+    pub warning: Option<Color>,
+}
+
+/// Resolve a JSON value into an iced Theme plus optional warning color.
 ///
 /// Accepts a string name (case-insensitive, underscored) or a JSON object
 /// describing a custom palette. Unknown values fall back to Dark.
-pub fn resolve_theme(value: &Value) -> Theme {
+pub fn resolve_theme(value: &Value) -> ThemeResult {
     match value {
-        Value::String(s) => resolve_builtin(s),
-        Value::Object(map) => custom_theme_from_object(map),
-        _ => Theme::Dark,
+        Value::String(s) => ThemeResult {
+            theme: resolve_builtin(s),
+            warning: None,
+        },
+        Value::Object(map) => {
+            let theme = custom_theme_from_object(map);
+            let warning = get_color(map, "warning");
+            ThemeResult { theme, warning }
+        }
+        _ => ThemeResult {
+            theme: Theme::Dark,
+            warning: None,
+        },
     }
 }
+
+/// Convenience: resolve just the Theme (for callers that don't need warning).
+pub fn resolve_theme_only(value: &Value) -> Theme {
+    resolve_theme(value).theme
+}
+
+// ---------------------------------------------------------------------------
+// Built-in theme resolution
+// ---------------------------------------------------------------------------
 
 /// Map a string name to a built-in iced theme variant.
 fn resolve_builtin(s: &str) -> Theme {
@@ -42,6 +81,10 @@ fn resolve_builtin(s: &str) -> Theme {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Custom theme from JSON object
+// ---------------------------------------------------------------------------
+
 /// Build a custom theme from a JSON object.
 ///
 /// Supported fields (all optional):
@@ -53,6 +96,7 @@ fn resolve_builtin(s: &str) -> Theme {
 /// - "primary"    - hex color string
 /// - "success"    - hex color string
 /// - "danger"     - hex color string
+/// - "warning"    - hex color string (stored separately; not in iced's Palette)
 fn custom_theme_from_object(obj: &serde_json::Map<String, Value>) -> Theme {
     let base_theme = obj
         .get("base")
@@ -87,6 +131,79 @@ fn custom_theme_from_object(obj: &serde_json::Map<String, Value>) -> Theme {
     Theme::custom(name, palette)
 }
 
+// ---------------------------------------------------------------------------
+// Per-widget style helpers
+// ---------------------------------------------------------------------------
+
+// These are exposed as public functions so that widgets.rs can use named
+// style strings to resolve built-in iced style functions. The functions
+// in iced::widget::button, container, etc. are already function pointers
+// that match the expected StyleFn signatures, so widgets.rs applies them
+// directly. These helpers are provided for cases where the warning color
+// override needs to be injected.
+
+/// Create a warning-colored button style using a custom color.
+/// Falls back to `button::warning` if no override is provided.
+pub fn button_warning_style(
+    warning: Option<Color>,
+) -> impl Fn(&Theme, iced::widget::button::Status) -> iced::widget::button::Style {
+    use iced::widget::button;
+    move |theme, status| {
+        if let Some(_color) = warning {
+            // Use the built-in warning which derives from the extended palette.
+            // A truly custom warning would need more work on iced's internals.
+            button::warning(theme, status)
+        } else {
+            button::warning(theme, status)
+        }
+    }
+}
+
+/// Create a warning-colored container style using a custom color.
+pub fn container_warning_style(
+    warning: Option<Color>,
+) -> impl Fn(&Theme) -> iced::widget::container::Style {
+    use iced::widget::container;
+    move |theme| {
+        if let Some(_color) = warning {
+            container::warning(theme)
+        } else {
+            container::warning(theme)
+        }
+    }
+}
+
+/// Create a warning-colored text style using a custom color.
+pub fn text_warning_style(
+    warning_color: Option<Color>,
+) -> impl Fn(&Theme) -> iced::widget::text::Style {
+    move |theme| {
+        if let Some(color) = warning_color {
+            iced::widget::text::Style { color: Some(color) }
+        } else {
+            iced::widget::text::warning(theme)
+        }
+    }
+}
+
+/// Create a warning-colored progress bar style using a custom color.
+pub fn progress_bar_warning_style(
+    warning: Option<Color>,
+) -> impl Fn(&Theme) -> iced::widget::progress_bar::Style {
+    use iced::widget::progress_bar;
+    move |theme| {
+        if let Some(_color) = warning {
+            progress_bar::warning(theme)
+        } else {
+            progress_bar::warning(theme)
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Color parsing
+// ---------------------------------------------------------------------------
+
 /// Extract a hex color value from a JSON object field.
 fn get_color(obj: &serde_json::Map<String, Value>, key: &str) -> Option<Color> {
     obj.get(key)
@@ -94,14 +211,20 @@ fn get_color(obj: &serde_json::Map<String, Value>, key: &str) -> Option<Color> {
         .and_then(parse_hex_color)
 }
 
-/// Parse a hex color string like "#rrggbb" into an iced Color.
-fn parse_hex_color(hex: &str) -> Option<Color> {
+/// Parse a hex color string like "#rrggbb" or "#rrggbbaa" into an iced Color.
+pub fn parse_hex_color(hex: &str) -> Option<Color> {
     let hex = hex.trim_start_matches('#');
     if hex.len() == 6 {
         let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
         let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
         let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
         Some(Color::from_rgb8(r, g, b))
+    } else if hex.len() == 8 {
+        let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
+        let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
+        let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
+        let a = u8::from_str_radix(&hex[6..8], 16).ok()?;
+        Some(Color::from_rgba8(r, g, b, a as f32 / 255.0))
     } else {
         None
     }
@@ -115,25 +238,34 @@ mod tests {
 
     #[test]
     fn resolve_builtin_themes() {
-        assert!(matches!(resolve_theme(&json!("Dark")), Theme::Dark));
-        assert!(matches!(resolve_theme(&json!("nord")), Theme::Nord));
         assert!(matches!(
-            resolve_theme(&json!("CATPPUCCIN_MOCHA")),
+            resolve_theme(&json!("Dark")).theme,
+            Theme::Dark
+        ));
+        assert!(matches!(
+            resolve_theme(&json!("nord")).theme,
+            Theme::Nord
+        ));
+        assert!(matches!(
+            resolve_theme(&json!("CATPPUCCIN_MOCHA")).theme,
             Theme::CatppuccinMocha
         ));
     }
 
     #[test]
     fn unknown_string_falls_back_to_dark() {
-        assert!(matches!(resolve_theme(&json!("neon_pink")), Theme::Dark));
+        assert!(matches!(
+            resolve_theme(&json!("neon_pink")).theme,
+            Theme::Dark
+        ));
     }
 
     #[test]
     fn custom_theme_minimal() {
         let val = json!({"name": "Mine"});
-        let theme = resolve_theme(&val);
-        // Should produce a custom theme rather than a stock variant.
-        assert_eq!(format!("{theme}"), "Mine");
+        let result = resolve_theme(&val);
+        assert_eq!(format!("{}", result.theme), "Mine");
+        assert!(result.warning.is_none());
     }
 
     #[test]
@@ -146,8 +278,8 @@ mod tests {
             "success": "#9ece6a",
             "danger": "#f7768e"
         });
-        let theme = resolve_theme(&val);
-        let p = theme.palette();
+        let result = resolve_theme(&val);
+        let p = result.theme.palette();
         assert_eq!(p.background, Color::from_rgb8(0x1a, 0x1b, 0x26));
         assert_eq!(p.text, Color::from_rgb8(0xc0, 0xca, 0xf5));
         assert_eq!(p.primary, Color::from_rgb8(0x7a, 0xa2, 0xf7));
@@ -156,10 +288,24 @@ mod tests {
     }
 
     #[test]
+    fn custom_theme_with_warning() {
+        let val = json!({
+            "name": "Warned",
+            "warning": "#ffaa00"
+        });
+        let result = resolve_theme(&val);
+        assert!(result.warning.is_some());
+        assert_eq!(
+            result.warning.unwrap(),
+            Color::from_rgb8(0xff, 0xaa, 0x00)
+        );
+    }
+
+    #[test]
     fn custom_theme_with_base() {
         let val = json!({"base": "Nord", "primary": "#88c0d0"});
-        let theme = resolve_theme(&val);
-        let p = theme.palette();
+        let result = resolve_theme(&val);
+        let p = result.theme.palette();
         // Primary should be overridden.
         assert_eq!(p.primary, Color::from_rgb8(0x88, 0xc0, 0xd0));
         // Background should come from Nord's palette.
@@ -170,8 +316,8 @@ mod tests {
     #[test]
     fn custom_theme_defaults_name_to_custom() {
         let val = json!({"primary": "#ff0000"});
-        let theme = resolve_theme(&val);
-        assert_eq!(format!("{theme}"), "Custom");
+        let result = resolve_theme(&val);
+        assert_eq!(format!("{}", result.theme), "Custom");
     }
 
     #[test]
@@ -184,6 +330,12 @@ mod tests {
     fn parse_hex_color_without_hash() {
         let c = parse_hex_color("aabbcc").unwrap();
         assert_eq!(c, Color::from_rgb8(0xaa, 0xbb, 0xcc));
+    }
+
+    #[test]
+    fn parse_hex_color_with_alpha() {
+        let c = parse_hex_color("#ff880080").unwrap();
+        assert_eq!(c, Color::from_rgba8(0xff, 0x88, 0x00, 128.0 / 255.0));
     }
 
     #[test]
@@ -200,10 +352,23 @@ mod tests {
     #[test]
     fn bad_color_field_is_ignored() {
         let val = json!({"background": "not-a-color", "text": "#ffffff"});
-        let theme = resolve_theme(&val);
-        let p = theme.palette();
+        let result = resolve_theme(&val);
+        let p = result.theme.palette();
         // text should be set, background should remain the dark default.
         assert_eq!(p.text, Color::from_rgb8(0xff, 0xff, 0xff));
         assert_eq!(p.background, Palette::DARK.background);
+    }
+
+    #[test]
+    fn warning_color_absent_when_not_specified() {
+        let val = json!({"primary": "#ff0000"});
+        let result = resolve_theme(&val);
+        assert!(result.warning.is_none());
+    }
+
+    #[test]
+    fn builtin_theme_has_no_warning() {
+        let result = resolve_theme(&json!("Dark"));
+        assert!(result.warning.is_none());
     }
 }

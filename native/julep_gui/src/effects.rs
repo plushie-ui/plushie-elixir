@@ -9,6 +9,8 @@ pub fn handle_effect(id: String, kind: &str, payload: &Value) -> EffectResponse 
         "directory_select" => handle_directory_select(id, payload),
         "clipboard_read" => handle_clipboard_read(id),
         "clipboard_write" => handle_clipboard_write(id, payload),
+        "clipboard_read_primary" => handle_clipboard_read_primary(id),
+        "clipboard_write_primary" => handle_clipboard_write_primary(id, payload),
         "notification" => handle_notification(id, payload),
         _ => EffectResponse::unsupported(id),
     }
@@ -156,6 +158,69 @@ fn handle_clipboard_write(id: String, payload: &Value) -> EffectResponse {
 
 #[cfg(not(feature = "clipboard"))]
 fn handle_clipboard_write(id: String, _payload: &Value) -> EffectResponse {
+    EffectResponse::unsupported(id)
+}
+
+// Primary clipboard: uses the X11/Wayland primary selection on Linux.
+// On other platforms, falls back to the standard clipboard.
+
+#[cfg(all(feature = "clipboard", target_os = "linux"))]
+fn handle_clipboard_read_primary(id: String) -> EffectResponse {
+    use arboard::{GetExtLinux, LinuxClipboardKind};
+    match arboard::Clipboard::new() {
+        Ok(mut clipboard) => {
+            match clipboard.get().clipboard(LinuxClipboardKind::Primary).text() {
+                Ok(text) => EffectResponse::ok(id, json!({"text": text})),
+                Err(e) => EffectResponse::error(id, format!("primary clipboard read failed: {e}")),
+            }
+        }
+        Err(e) => EffectResponse::error(id, format!("clipboard init failed: {e}")),
+    }
+}
+
+#[cfg(all(feature = "clipboard", target_os = "linux"))]
+fn handle_clipboard_write_primary(id: String, payload: &Value) -> EffectResponse {
+    use arboard::{SetExtLinux, LinuxClipboardKind};
+    let text = payload
+        .get("text")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+
+    match arboard::Clipboard::new() {
+        Ok(mut clipboard) => {
+            match clipboard
+                .set()
+                .clipboard(LinuxClipboardKind::Primary)
+                .text(text.to_string())
+            {
+                Ok(()) => EffectResponse::ok(id, json!(null)),
+                Err(e) => EffectResponse::error(id, format!("primary clipboard write failed: {e}")),
+            }
+        }
+        Err(e) => EffectResponse::error(id, format!("clipboard init failed: {e}")),
+    }
+}
+
+// On non-Linux platforms, primary clipboard falls back to the standard clipboard.
+#[cfg(all(feature = "clipboard", not(target_os = "linux")))]
+fn handle_clipboard_read_primary(id: String) -> EffectResponse {
+    // Primary selection is a Linux/X11 concept; fall back to standard clipboard.
+    handle_clipboard_read(id)
+}
+
+#[cfg(all(feature = "clipboard", not(target_os = "linux")))]
+fn handle_clipboard_write_primary(id: String, payload: &Value) -> EffectResponse {
+    // Primary selection is a Linux/X11 concept; fall back to standard clipboard.
+    handle_clipboard_write(id, payload)
+}
+
+#[cfg(not(feature = "clipboard"))]
+fn handle_clipboard_read_primary(id: String) -> EffectResponse {
+    EffectResponse::unsupported(id)
+}
+
+#[cfg(not(feature = "clipboard"))]
+fn handle_clipboard_write_primary(id: String, _payload: &Value) -> EffectResponse {
     EffectResponse::unsupported(id)
 }
 

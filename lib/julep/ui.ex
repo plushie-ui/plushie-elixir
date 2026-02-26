@@ -403,6 +403,321 @@ defmodule Julep.UI do
     end
   end
 
+  # -- grid(opts) -------------------------------------------------------------
+
+  @doc """
+  Grid layout.
+
+  ## Options
+
+  - `:column_count` -- number of columns
+  - `:column_width` -- width of each column
+  - `:row_height` -- height of each row
+  - `:spacing` -- gap between cells
+  - `:padding` -- padding around grid
+  - `:width` / `:height` -- dimensions
+  - `:id` -- explicit ID (otherwise auto-generated from call site)
+
+  ## Example
+
+      grid column_count: 3, spacing: 8 do
+        for item <- items do
+          text(item.name)
+        end
+      end
+  """
+  defmacro grid(opts_or_block \\ []) do
+    caller_mod = __CALLER__.module
+    caller_line = __CALLER__.line
+
+    case opts_or_block do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_node__("grid", nil, [], children, {unquote(caller_mod), unquote(caller_line)})
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_node__("grid", nil, unquote(opts), [], {unquote(caller_mod), unquote(caller_line)})
+        end
+    end
+  end
+
+  @doc false
+  defmacro grid(opts, do: block) do
+    exprs = block_to_exprs(block)
+    caller_mod = __CALLER__.module
+    caller_line = __CALLER__.line
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Julep.UI.__build_node__("grid", nil, unquote(opts), children, {unquote(caller_mod), unquote(caller_line)})
+    end
+  end
+
+  # -- keyed_column(opts) -----------------------------------------------------
+
+  @doc """
+  Keyed column for efficient list diffing.
+
+  ## Options
+
+  Same as `column/1`.
+
+  ## Example
+
+      keyed_column spacing: 8 do
+        for item <- items do
+          text(item.name, id: item.id)
+        end
+      end
+  """
+  defmacro keyed_column(opts_or_block \\ []) do
+    caller_mod = __CALLER__.module
+    caller_line = __CALLER__.line
+
+    case opts_or_block do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_node__("keyed_column", nil, [], children, {unquote(caller_mod), unquote(caller_line)})
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_node__("keyed_column", nil, unquote(opts), [], {unquote(caller_mod), unquote(caller_line)})
+        end
+    end
+  end
+
+  @doc false
+  defmacro keyed_column(opts, do: block) do
+    exprs = block_to_exprs(block)
+    caller_mod = __CALLER__.module
+    caller_line = __CALLER__.line
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Julep.UI.__build_node__("keyed_column", nil, unquote(opts), children, {unquote(caller_mod), unquote(caller_line)})
+    end
+  end
+
+  # -- responsive(opts) -------------------------------------------------------
+
+  @doc """
+  Responsive layout that adapts to available size.
+
+  ## Options
+
+  - `:width` / `:height` -- dimensions
+  - `:id` -- explicit ID (otherwise auto-generated from call site)
+
+  ## Example
+
+      responsive do
+        column do
+          text("Adapts to size")
+        end
+      end
+  """
+  defmacro responsive(opts_or_block \\ []) do
+    caller_mod = __CALLER__.module
+    caller_line = __CALLER__.line
+
+    case opts_or_block do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_node__("responsive", nil, [], children, {unquote(caller_mod), unquote(caller_line)})
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_node__("responsive", nil, unquote(opts), [], {unquote(caller_mod), unquote(caller_line)})
+        end
+    end
+  end
+
+  @doc false
+  defmacro responsive(opts, do: block) do
+    exprs = block_to_exprs(block)
+    caller_mod = __CALLER__.module
+    caller_line = __CALLER__.line
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Julep.UI.__build_node__("responsive", nil, unquote(opts), children, {unquote(caller_mod), unquote(caller_line)})
+    end
+  end
+
+  # -- pin(id, opts) ----------------------------------------------------------
+
+  @doc """
+  Pin layout for absolute positioning.
+
+  ## Example
+
+      pin "overlay" do
+        text("Pinned content")
+      end
+  """
+  defmacro pin(id, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_fixed_node__("pin", unquote(id), [], children)
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_fixed_node__("pin", unquote(id), unquote(opts), [])
+        end
+    end
+  end
+
+  @doc false
+  defmacro pin(id, opts, do: block) do
+    exprs = block_to_exprs(block)
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Julep.UI.__build_fixed_node__("pin", unquote(id), unquote(opts), children)
+    end
+  end
+
+  # -- float_widget(id, opts) -------------------------------------------------
+
+  @doc """
+  Floating overlay layout.
+
+  ## Example
+
+      float_widget "popup" do
+        text("Floating content")
+      end
+  """
+  defmacro float_widget(id, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_fixed_node__("float", unquote(id), [], children)
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_fixed_node__("float", unquote(id), unquote(opts), [])
+        end
+    end
+  end
+
+  @doc false
+  defmacro float_widget(id, opts, do: block) do
+    exprs = block_to_exprs(block)
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Julep.UI.__build_fixed_node__("float", unquote(id), unquote(opts), children)
+    end
+  end
+
+  # -- mouse_area(id, opts) ---------------------------------------------------
+
+  @doc """
+  Mouse area for capturing mouse events on children.
+
+  ## Options
+
+  - `:on_press`, `:on_release`, `:on_right_press`, `:on_middle_press`
+  - `:on_enter`, `:on_exit`
+
+  ## Example
+
+      mouse_area "clickable" do
+        text("Click me")
+      end
+  """
+  defmacro mouse_area(id, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_fixed_node__("mouse_area", unquote(id), [], children)
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_fixed_node__("mouse_area", unquote(id), unquote(opts), [])
+        end
+    end
+  end
+
+  @doc false
+  defmacro mouse_area(id, opts, do: block) do
+    exprs = block_to_exprs(block)
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Julep.UI.__build_fixed_node__("mouse_area", unquote(id), unquote(opts), children)
+    end
+  end
+
+  # -- sensor(id, opts) -------------------------------------------------------
+
+  @doc """
+  Sensor for detecting layout changes on children.
+
+  ## Options
+
+  - `:on_resize`, `:on_appear`
+
+  ## Example
+
+      sensor "tracked" do
+        text("Monitored content")
+      end
+  """
+  defmacro sensor(id, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_fixed_node__("sensor", unquote(id), [], children)
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_fixed_node__("sensor", unquote(id), unquote(opts), [])
+        end
+    end
+  end
+
+  @doc false
+  defmacro sensor(id, opts, do: block) do
+    exprs = block_to_exprs(block)
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Julep.UI.__build_fixed_node__("sensor", unquote(id), unquote(opts), children)
+    end
+  end
+
   # -- space(opts) ------------------------------------------------------------
 
   @doc """
@@ -1161,6 +1476,56 @@ defmodule Julep.UI do
       |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
 
     %{id: id, type: "canvas", props: props, children: []}
+  end
+
+  # -- pane_grid(id, opts) ----------------------------------------------------
+
+  @doc """
+  Pane grid for resizable tiled panes.
+
+  ## Options
+
+  - `:panes` -- pane configuration
+  - `:on_resize` -- resize event tag
+  - `:on_drag` -- drag event tag
+  - `:spacing` -- gap between panes
+
+  ## Example
+
+      pane_grid("editor_panes", panes: pane_config, spacing: 2)
+  """
+  @spec pane_grid(String.t(), keyword()) :: map()
+  def pane_grid(id, opts \\ []) do
+    props =
+      opts
+      |> Keyword.drop([:children, :id, :do])
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+
+    %{id: id, type: "pane_grid", props: props, children: []}
+  end
+
+  # -- rich_text(id, opts) ----------------------------------------------------
+
+  @doc """
+  Rich text display with styled spans.
+
+  ## Options
+
+  - `:spans` -- list of span descriptors
+  - `:width` -- width
+
+  ## Example
+
+      rich_text("styled", spans: [%{text: "bold", weight: :bold}, %{text: " normal"}])
+  """
+  @spec rich_text(String.t(), keyword()) :: map()
+  def rich_text(id, opts \\ []) do
+    props =
+      opts
+      |> Keyword.drop([:children, :id, :do])
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+
+    %{id: id, type: "rich_text", props: props, children: []}
   end
 
   # -- table(id, opts) --------------------------------------------------------

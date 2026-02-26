@@ -72,6 +72,7 @@ defmodule Julep.Iced.Theme do
     |> maybe_put("primary", opts[:primary])
     |> maybe_put("success", opts[:success])
     |> maybe_put("danger", opts[:danger])
+    |> maybe_put("warning", opts[:warning])
   end
 
   @doc """

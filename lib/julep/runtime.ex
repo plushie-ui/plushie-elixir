@@ -100,6 +100,9 @@ defmodule Julep.Runtime do
 
   @impl true
   def handle_continue(:initial_render, state) do
+    # Send app-level settings to the renderer before the first snapshot.
+    send_settings(state.app, state.bridge)
+
     # 2-4. Render initial tree and push snapshot (old_tree is nil -> full snapshot).
     tree = render_and_sync(state.app, state.model, state.bridge, nil)
 
@@ -222,6 +225,18 @@ defmodule Julep.Runtime do
   # Private helpers
   # ---------------------------------------------------------------------------
 
+  # Sends app-level settings to the bridge if the app defines settings/0
+  # and the result is non-empty.
+  defp send_settings(app, bridge) do
+    if function_exported?(app, :settings, 0) do
+      settings = app.settings()
+
+      if settings != [] and bridge do
+        Julep.Bridge.send_settings(bridge, Map.new(settings))
+      end
+    end
+  end
+
   # Unwraps `app.init/1` or `app.update/2` return values into a
   # `{model, commands}` tuple. Commands are always a flat list of
   # `%Julep.Command{}` structs.
@@ -324,6 +339,12 @@ defmodule Julep.Runtime do
   @spec execute_command(Julep.Command.t(), pid() | atom() | nil) :: :ok
   defp execute_command(%Julep.Command{type: :none}, _bridge), do: :ok
 
+  defp execute_command(%Julep.Command{type: :done, payload: %{value: value, mapper: mapper}}, _bridge) do
+    event = mapper.(value)
+    send(self(), {:renderer_event, event})
+    :ok
+  end
+
   defp execute_command(%Julep.Command{type: :async, payload: %{fun: fun, tag: tag}}, _bridge) do
     runtime = self()
 
@@ -351,7 +372,20 @@ defmodule Julep.Runtime do
   end
 
   defp execute_command(%Julep.Command{type: type, payload: payload}, bridge)
-       when type in [:focus, :focus_next, :focus_previous, :select_all, :scroll_to] do
+       when type in [
+              :focus,
+              :focus_next,
+              :focus_previous,
+              :select_all,
+              :scroll_to,
+              :snap_to,
+              :snap_to_end,
+              :scroll_by,
+              :move_cursor_to_front,
+              :move_cursor_to_end,
+              :move_cursor_to,
+              :select_range
+            ] do
     if bridge do
       Julep.Bridge.send_widget_op(bridge, Atom.to_string(type), payload)
     end
@@ -362,6 +396,30 @@ defmodule Julep.Runtime do
   defp execute_command(%Julep.Command{type: :close_window, payload: payload}, bridge) do
     if bridge do
       Julep.Bridge.send_widget_op(bridge, "close_window", payload)
+    end
+
+    :ok
+  end
+
+  defp execute_command(%Julep.Command{type: :exit, payload: _payload}, _bridge) do
+    Logger.info("julep runtime: exit command received -- stopping")
+    send(self(), {:renderer_exit, :normal})
+    :ok
+  end
+
+  defp execute_command(%Julep.Command{type: :window_op, payload: %{op: op, window_id: window_id} = payload}, bridge) do
+    if bridge do
+      settings = Map.drop(payload, [:op, :window_id])
+      Julep.Bridge.send_window_op(bridge, op, window_id, settings)
+    end
+
+    :ok
+  end
+
+  defp execute_command(%Julep.Command{type: :window_query, payload: %{op: op, window_id: window_id} = payload}, bridge) do
+    if bridge do
+      settings = Map.drop(payload, [:op, :window_id])
+      Julep.Bridge.send_window_op(bridge, op, window_id, settings)
     end
 
     :ok
@@ -426,7 +484,25 @@ defmodule Julep.Runtime do
   end
 
   defp start_subscription(%{type: type, tag: tag}, bridge)
-       when type in [:on_key_press, :on_key_release, :on_window_close, :on_window_event] do
+       when type in [
+              :on_key_press,
+              :on_key_release,
+              :on_window_close,
+              :on_window_event,
+              :on_window_open,
+              :on_window_resize,
+              :on_window_focus,
+              :on_window_unfocus,
+              :on_window_move,
+              :on_mouse_move,
+              :on_mouse_button,
+              :on_mouse_scroll,
+              :on_touch,
+              :on_theme_change,
+              :on_animation_frame,
+              :on_file_drop,
+              :on_event
+            ] do
     if bridge do
       Julep.Bridge.send_subscription_register(bridge, Atom.to_string(type), Atom.to_string(tag))
     end

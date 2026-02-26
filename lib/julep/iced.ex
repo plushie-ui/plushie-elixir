@@ -54,6 +54,26 @@ defmodule Julep.Iced do
   @spec space(String.t(), map()) :: map()
   def space(id, props \\ %{}), do: node(id, "space", props)
 
+  @doc "Grid layout. Props: column_count, column_width, row_height, spacing, padding, width, height."
+  @spec grid(String.t(), map(), list()) :: map()
+  def grid(id, props \\ %{}, children \\ []), do: node(id, "grid", props, children)
+
+  @doc "Pin layout for absolute positioning. Props: width, height."
+  @spec pin(String.t(), map(), list()) :: map()
+  def pin(id, props \\ %{}, children \\ []), do: node(id, "pin", props, children)
+
+  @doc "Floating overlay layout. Props: width, height."
+  @spec float_widget(String.t(), map(), list()) :: map()
+  def float_widget(id, props \\ %{}, children \\ []), do: node(id, "float", props, children)
+
+  @doc "Responsive layout that adapts to available size. Props: width, height."
+  @spec responsive(String.t(), map(), list()) :: map()
+  def responsive(id, props \\ %{}, children \\ []), do: node(id, "responsive", props, children)
+
+  @doc "Keyed column for efficient list diffing. Props: spacing, padding, width, height, align_x."
+  @spec keyed_column(String.t(), map(), list()) :: map()
+  def keyed_column(id, props \\ %{}, children \\ []), do: node(id, "keyed_column", props, children)
+
   # ---------------------------------------------------------------------------
   # Input widgets
   # ---------------------------------------------------------------------------
@@ -99,6 +119,22 @@ defmodule Julep.Iced do
   def text_editor(id, props \\ %{}), do: node(id, "text_editor", props)
 
   # ---------------------------------------------------------------------------
+  # Interactive widgets
+  # ---------------------------------------------------------------------------
+
+  @doc "Mouse area for capturing mouse events on children. Props: on_press, on_release, on_right_press, on_middle_press, on_enter, on_exit."
+  @spec mouse_area(String.t(), map(), list()) :: map()
+  def mouse_area(id, props \\ %{}, children \\ []), do: node(id, "mouse_area", props, children)
+
+  @doc "Sensor for detecting layout changes. Props: on_resize, on_appear."
+  @spec sensor(String.t(), map(), list()) :: map()
+  def sensor(id, props \\ %{}, children \\ []), do: node(id, "sensor", props, children)
+
+  @doc "Pane grid for resizable tiled panes. Props: panes, on_resize, on_drag, spacing."
+  @spec pane_grid(String.t(), map()) :: map()
+  def pane_grid(id, props \\ %{}), do: node(id, "pane_grid", props)
+
+  # ---------------------------------------------------------------------------
   # Display widgets
   # ---------------------------------------------------------------------------
 
@@ -120,7 +156,7 @@ defmodule Julep.Iced do
   """
   @spec tooltip(String.t(), map(), list(), String.t()) :: map()
   def tooltip(id, props \\ %{}, children \\ [], tip) do
-    merged = Map.put(props, :tip_text, tip)
+    merged = Map.put(props, :tip, tip)
     node(id, "tooltip", merged, children)
   end
 
@@ -135,6 +171,10 @@ defmodule Julep.Iced do
   @doc "Markdown display. Props: content, width."
   @spec markdown(String.t(), map()) :: map()
   def markdown(id, props \\ %{}), do: node(id, "markdown", props)
+
+  @doc "Rich text display with styled spans. Props: spans (list of span descriptors), width."
+  @spec rich_text(String.t(), map()) :: map()
+  def rich_text(id, props \\ %{}), do: node(id, "rich_text", props)
 
   # ---------------------------------------------------------------------------
   # Canvas & data widgets

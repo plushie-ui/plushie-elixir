@@ -194,9 +194,11 @@ defmodule Julep.ProtocolTest do
     test "decodes a named key to {:key_press, atom, modifiers_map}" do
       json = Jason.encode!(%{
         type: "event",
-        family: "key",
-        key: "Escape",
-        modifiers: %{ctrl: false, shift: false, alt: false}
+        family: "key_press",
+        id: "",
+        value: "Escape",
+        tag: "keys",
+        modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
       })
       assert {:key_press, :escape, _mods} = Protocol.decode_message(json)
     end
@@ -204,9 +206,11 @@ defmodule Julep.ProtocolTest do
     test "decodes a character key to {:key_press, string, modifiers_map}" do
       json = Jason.encode!(%{
         type: "event",
-        family: "key",
-        key: "a",
-        modifiers: %{}
+        family: "key_press",
+        id: "",
+        value: "a",
+        tag: "keys",
+        modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
       })
       assert {:key_press, "a", _mods} = Protocol.decode_message(json)
     end
@@ -214,9 +218,11 @@ defmodule Julep.ProtocolTest do
     test "modifiers map has ctrl, shift, alt, logo, and command keys" do
       json = Jason.encode!(%{
         type: "event",
-        family: "key",
-        key: "s",
-        modifiers: %{ctrl: true, shift: false}
+        family: "key_press",
+        id: "",
+        value: "s",
+        tag: "keys",
+        modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false}
       })
       {:key_press, _key, mods} = Protocol.decode_message(json)
       assert Map.has_key?(mods, :ctrl)
@@ -229,8 +235,10 @@ defmodule Julep.ProtocolTest do
     test "modifiers present in the wire message are set correctly" do
       json = Jason.encode!(%{
         type: "event",
-        family: "key",
-        key: "c",
+        family: "key_press",
+        id: "",
+        value: "c",
+        tag: "keys",
         modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false}
       })
       {:key_press, _key, mods} = Protocol.decode_message(json)
@@ -241,13 +249,27 @@ defmodule Julep.ProtocolTest do
     test "modifiers absent from the wire message default to false" do
       json = Jason.encode!(%{
         type: "event",
-        family: "key",
-        key: "z",
+        family: "key_press",
+        id: "",
+        value: "z",
+        tag: "keys",
         modifiers: %{}
       })
       {:key_press, _key, mods} = Protocol.decode_message(json)
       assert mods.ctrl == false
       assert mods.alt == false
+    end
+
+    test "decodes a key_release event" do
+      json = Jason.encode!(%{
+        type: "event",
+        family: "key_release",
+        id: "",
+        value: "Enter",
+        tag: "keys",
+        modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
+      })
+      assert {:key_release, :enter, _mods} = Protocol.decode_message(json)
     end
   end
 
@@ -383,7 +405,11 @@ defmodule Julep.ProtocolTest do
     end
 
     test "an unrecognised multi-character string also passes through unchanged" do
-      assert Protocol.parse_key("Hyper") == "Hyper"
+      assert Protocol.parse_key("SomeFutureKey") == "SomeFutureKey"
+    end
+
+    test "Hyper is now a known named key" do
+      assert Protocol.parse_key("Hyper") == :hyper
     end
   end
 

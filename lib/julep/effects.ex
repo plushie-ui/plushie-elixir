@@ -62,6 +62,14 @@ defmodule Julep.Effects do
   @spec clipboard_write(String.t()) :: {Julep.Command.t(), String.t()}
   def clipboard_write(text), do: request(:clipboard_write, text: text)
 
+  @doc "Read primary clipboard (middle-click paste on Linux). Returns `{command, effect_id}`."
+  @spec clipboard_read_primary() :: {Julep.Command.t(), String.t()}
+  def clipboard_read_primary, do: request(:clipboard_read_primary)
+
+  @doc "Write `text` to the primary clipboard. Returns `{command, effect_id}`."
+  @spec clipboard_write_primary(String.t()) :: {Julep.Command.t(), String.t()}
+  def clipboard_write_primary(text), do: request(:clipboard_write_primary, text: text)
+
   @doc "Show an OS notification. Returns `{command, effect_id}`."
   @spec notification(String.t(), String.t()) :: {Julep.Command.t(), String.t()}
   def notification(title, body), do: request(:notification, title: title, body: body)

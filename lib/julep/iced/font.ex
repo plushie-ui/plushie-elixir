@@ -15,6 +15,7 @@ defmodule Julep.Iced.Font do
 
   @weights [:thin, :extra_light, :light, :normal, :medium, :semi_bold, :bold, :extra_bold, :black]
   @styles [:normal, :italic, :oblique]
+  @stretches [:ultra_condensed, :extra_condensed, :condensed, :semi_condensed, :normal, :semi_expanded, :expanded, :extra_expanded, :ultra_expanded]
 
   @type t :: :default | :monospace | String.t() | map()
 
@@ -60,6 +61,12 @@ defmodule Julep.Iced.Font do
       case Map.get(font, :style) do
         nil -> result
         style when style in @styles -> Map.put(result, "style", encode_segment(style))
+      end
+
+    result =
+      case Map.get(font, :stretch) do
+        nil -> result
+        stretch when stretch in @stretches -> Map.put(result, "stretch", encode_segment(stretch))
       end
 
     result

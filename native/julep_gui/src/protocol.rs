@@ -105,6 +105,11 @@ pub struct OutgoingEvent {
     pub tag: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub modifiers: Option<KeyModifiers>,
+    /// Flexible extra data for events that carry additional fields beyond
+    /// the standard id/value/tag/modifiers shape.  Serialized as a flat
+    /// JSON object merged into the event.
+    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    pub data: Option<Value>,
 }
 
 /// Serializable representation of keyboard modifiers.
@@ -114,116 +119,330 @@ pub struct KeyModifiers {
     pub ctrl: bool,
     pub alt: bool,
     pub logo: bool,
+    pub command: bool,
 }
 
+// ---------------------------------------------------------------------------
+// Widget events (click, input, toggle, slide, select, submit)
+// ---------------------------------------------------------------------------
+
 impl OutgoingEvent {
-    pub fn click(id: String) -> Self {
+    /// Helper to build a bare event with only the common fields.
+    fn bare(family: &'static str, id: String) -> Self {
         Self {
             message_type: "event",
-            family: "click",
+            family,
             id,
             value: None,
             tag: None,
             modifiers: None,
+            data: None,
         }
+    }
+
+    /// Helper to build a subscription-tagged event with no widget id.
+    fn tagged(family: &'static str, tag: String) -> Self {
+        Self {
+            message_type: "event",
+            family,
+            id: String::new(),
+            value: None,
+            tag: Some(tag),
+            modifiers: None,
+            data: None,
+        }
+    }
+
+    pub fn click(id: String) -> Self {
+        Self::bare("click", id)
     }
 
     pub fn input(id: String, value: String) -> Self {
         Self {
-            message_type: "event",
-            family: "input",
-            id,
             value: Some(Value::String(value)),
-            tag: None,
-            modifiers: None,
+            ..Self::bare("input", id)
         }
     }
 
     pub fn submit(id: String, value: String) -> Self {
         Self {
-            message_type: "event",
-            family: "submit",
-            id,
             value: Some(Value::String(value)),
-            tag: None,
-            modifiers: None,
+            ..Self::bare("submit", id)
         }
     }
 
     pub fn toggle(id: String, checked: bool) -> Self {
         Self {
-            message_type: "event",
-            family: "toggle",
-            id,
             value: Some(Value::Bool(checked)),
-            tag: None,
-            modifiers: None,
+            ..Self::bare("toggle", id)
         }
     }
 
     pub fn slide(id: String, value: f64) -> Self {
         Self {
-            message_type: "event",
-            family: "slide",
-            id,
             value: Some(serde_json::json!(value)),
-            tag: None,
-            modifiers: None,
+            ..Self::bare("slide", id)
         }
     }
 
     pub fn slide_release(id: String, value: f64) -> Self {
         Self {
-            message_type: "event",
-            family: "slide_release",
-            id,
             value: Some(serde_json::json!(value)),
-            tag: None,
-            modifiers: None,
+            ..Self::bare("slide_release", id)
         }
     }
 
     pub fn select(id: String, value: String) -> Self {
         Self {
-            message_type: "event",
-            family: "select",
-            id,
             value: Some(Value::String(value)),
-            tag: None,
-            modifiers: None,
+            ..Self::bare("select", id)
         }
     }
 
+    // -----------------------------------------------------------------------
+    // Keyboard events
+    // -----------------------------------------------------------------------
+
     pub fn key_press(tag: String, key: String, modifiers: KeyModifiers) -> Self {
         Self {
-            message_type: "event",
-            family: "key_press",
-            id: String::new(),
-            value: Some(Value::String(key)),
-            tag: Some(tag),
             modifiers: Some(modifiers),
+            value: Some(Value::String(key)),
+            ..Self::tagged("key_press", tag)
         }
     }
 
     pub fn key_release(tag: String, key: String, modifiers: KeyModifiers) -> Self {
         Self {
-            message_type: "event",
-            family: "key_release",
-            id: String::new(),
-            value: Some(Value::String(key)),
-            tag: Some(tag),
             modifiers: Some(modifiers),
+            value: Some(Value::String(key)),
+            ..Self::tagged("key_release", tag)
         }
     }
 
-    pub fn window_close(tag: String) -> Self {
+    pub fn modifiers_changed(tag: String, modifiers: KeyModifiers) -> Self {
         Self {
-            message_type: "event",
-            family: "window_close",
-            id: String::new(),
-            value: None,
-            tag: Some(tag),
-            modifiers: None,
+            modifiers: Some(modifiers),
+            ..Self::tagged("modifiers_changed", tag)
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Mouse events
+    // -----------------------------------------------------------------------
+
+    pub fn cursor_moved(tag: String, x: f32, y: f32) -> Self {
+        Self {
+            data: Some(serde_json::json!({"x": x, "y": y})),
+            ..Self::tagged("cursor_moved", tag)
+        }
+    }
+
+    pub fn cursor_entered(tag: String) -> Self {
+        Self::tagged("cursor_entered", tag)
+    }
+
+    pub fn cursor_left(tag: String) -> Self {
+        Self::tagged("cursor_left", tag)
+    }
+
+    pub fn button_pressed(tag: String, button: String) -> Self {
+        Self {
+            value: Some(Value::String(button)),
+            ..Self::tagged("button_pressed", tag)
+        }
+    }
+
+    pub fn button_released(tag: String, button: String) -> Self {
+        Self {
+            value: Some(Value::String(button)),
+            ..Self::tagged("button_released", tag)
+        }
+    }
+
+    pub fn wheel_scrolled(tag: String, delta_x: f32, delta_y: f32, unit: &str) -> Self {
+        Self {
+            data: Some(serde_json::json!({
+                "delta_x": delta_x,
+                "delta_y": delta_y,
+                "unit": unit,
+            })),
+            ..Self::tagged("wheel_scrolled", tag)
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Touch events
+    // -----------------------------------------------------------------------
+
+    pub fn finger_pressed(tag: String, finger_id: u64, x: f32, y: f32) -> Self {
+        Self {
+            data: Some(serde_json::json!({
+                "finger_id": finger_id,
+                "x": x,
+                "y": y,
+            })),
+            ..Self::tagged("finger_pressed", tag)
+        }
+    }
+
+    pub fn finger_moved(tag: String, finger_id: u64, x: f32, y: f32) -> Self {
+        Self {
+            data: Some(serde_json::json!({
+                "finger_id": finger_id,
+                "x": x,
+                "y": y,
+            })),
+            ..Self::tagged("finger_moved", tag)
+        }
+    }
+
+    pub fn finger_lifted(tag: String, finger_id: u64, x: f32, y: f32) -> Self {
+        Self {
+            data: Some(serde_json::json!({
+                "finger_id": finger_id,
+                "x": x,
+                "y": y,
+            })),
+            ..Self::tagged("finger_lifted", tag)
+        }
+    }
+
+    pub fn finger_lost(tag: String, finger_id: u64, x: f32, y: f32) -> Self {
+        Self {
+            data: Some(serde_json::json!({
+                "finger_id": finger_id,
+                "x": x,
+                "y": y,
+            })),
+            ..Self::tagged("finger_lost", tag)
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Window lifecycle events
+    // -----------------------------------------------------------------------
+
+    pub fn window_opened(
+        tag: String,
+        window_id: String,
+        position: Option<(f32, f32)>,
+        width: f32,
+        height: f32,
+    ) -> Self {
+        let pos = position.map(|(x, y)| serde_json::json!({"x": x, "y": y}));
+        Self {
+            data: Some(serde_json::json!({
+                "window_id": window_id,
+                "position": pos,
+                "width": width,
+                "height": height,
+            })),
+            ..Self::tagged("window_opened", tag)
+        }
+    }
+
+    pub fn window_closed(tag: String, window_id: String) -> Self {
+        Self {
+            data: Some(serde_json::json!({"window_id": window_id})),
+            ..Self::tagged("window_closed", tag)
+        }
+    }
+
+    pub fn window_close_requested(tag: String, window_id: String) -> Self {
+        Self {
+            data: Some(serde_json::json!({"window_id": window_id})),
+            ..Self::tagged("window_close_requested", tag)
+        }
+    }
+
+    pub fn window_moved(tag: String, window_id: String, x: f32, y: f32) -> Self {
+        Self {
+            data: Some(serde_json::json!({
+                "window_id": window_id,
+                "x": x,
+                "y": y,
+            })),
+            ..Self::tagged("window_moved", tag)
+        }
+    }
+
+    pub fn window_resized(tag: String, window_id: String, width: f32, height: f32) -> Self {
+        Self {
+            data: Some(serde_json::json!({
+                "window_id": window_id,
+                "width": width,
+                "height": height,
+            })),
+            ..Self::tagged("window_resized", tag)
+        }
+    }
+
+    pub fn window_focused(tag: String, window_id: String) -> Self {
+        Self {
+            data: Some(serde_json::json!({"window_id": window_id})),
+            ..Self::tagged("window_focused", tag)
+        }
+    }
+
+    pub fn window_unfocused(tag: String, window_id: String) -> Self {
+        Self {
+            data: Some(serde_json::json!({"window_id": window_id})),
+            ..Self::tagged("window_unfocused", tag)
+        }
+    }
+
+    pub fn window_rescaled(tag: String, window_id: String, scale_factor: f32) -> Self {
+        Self {
+            data: Some(serde_json::json!({
+                "window_id": window_id,
+                "scale_factor": scale_factor,
+            })),
+            ..Self::tagged("window_rescaled", tag)
+        }
+    }
+
+    pub fn file_hovered(tag: String, window_id: String, path: String) -> Self {
+        Self {
+            data: Some(serde_json::json!({
+                "window_id": window_id,
+                "path": path,
+            })),
+            ..Self::tagged("file_hovered", tag)
+        }
+    }
+
+    pub fn file_dropped(tag: String, window_id: String, path: String) -> Self {
+        Self {
+            data: Some(serde_json::json!({
+                "window_id": window_id,
+                "path": path,
+            })),
+            ..Self::tagged("file_dropped", tag)
+        }
+    }
+
+    pub fn files_hovered_left(tag: String, window_id: String) -> Self {
+        Self {
+            data: Some(serde_json::json!({"window_id": window_id})),
+            ..Self::tagged("files_hovered_left", tag)
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Animation / theme / system events
+    // -----------------------------------------------------------------------
+
+    pub fn animation_frame(tag: String, timestamp_millis: u128) -> Self {
+        Self {
+            data: Some(serde_json::json!({"timestamp": timestamp_millis})),
+            ..Self::tagged("animation_frame", tag)
+        }
+    }
+
+    pub fn theme_changed(tag: String, mode: String) -> Self {
+        Self {
+            value: Some(Value::String(mode)),
+            ..Self::tagged("theme_changed", tag)
         }
     }
 }

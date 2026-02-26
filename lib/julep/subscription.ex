@@ -49,6 +49,88 @@ defmodule Julep.Subscription do
     %{type: :on_window_event, tag: event_tag}
   end
 
+  @doc "Fires when a new window is opened."
+  @spec on_window_open(atom()) :: t()
+  def on_window_open(event_tag) when is_atom(event_tag) do
+    %{type: :on_window_open, tag: event_tag}
+  end
+
+  @doc "Fires when a window is resized."
+  @spec on_window_resize(atom()) :: t()
+  def on_window_resize(event_tag) when is_atom(event_tag) do
+    %{type: :on_window_resize, tag: event_tag}
+  end
+
+  @doc "Fires when a window gains focus."
+  @spec on_window_focus(atom()) :: t()
+  def on_window_focus(event_tag) when is_atom(event_tag) do
+    %{type: :on_window_focus, tag: event_tag}
+  end
+
+  @doc "Fires when a window loses focus."
+  @spec on_window_unfocus(atom()) :: t()
+  def on_window_unfocus(event_tag) when is_atom(event_tag) do
+    %{type: :on_window_unfocus, tag: event_tag}
+  end
+
+  @doc "Fires when a window is moved."
+  @spec on_window_move(atom()) :: t()
+  def on_window_move(event_tag) when is_atom(event_tag) do
+    %{type: :on_window_move, tag: event_tag}
+  end
+
+  @doc "Fires on mouse movement."
+  @spec on_mouse_move(atom()) :: t()
+  def on_mouse_move(event_tag) when is_atom(event_tag) do
+    %{type: :on_mouse_move, tag: event_tag}
+  end
+
+  @doc "Fires on mouse button press/release."
+  @spec on_mouse_button(atom()) :: t()
+  def on_mouse_button(event_tag) when is_atom(event_tag) do
+    %{type: :on_mouse_button, tag: event_tag}
+  end
+
+  @doc "Fires on mouse scroll events."
+  @spec on_mouse_scroll(atom()) :: t()
+  def on_mouse_scroll(event_tag) when is_atom(event_tag) do
+    %{type: :on_mouse_scroll, tag: event_tag}
+  end
+
+  @doc "Fires on touch events."
+  @spec on_touch(atom()) :: t()
+  def on_touch(event_tag) when is_atom(event_tag) do
+    %{type: :on_touch, tag: event_tag}
+  end
+
+  @doc "Fires when the system theme changes."
+  @spec on_theme_change(atom()) :: t()
+  def on_theme_change(event_tag) when is_atom(event_tag) do
+    %{type: :on_theme_change, tag: event_tag}
+  end
+
+  @doc "Fires on each animation frame (vsync tick)."
+  @spec on_animation_frame(atom()) :: t()
+  def on_animation_frame(event_tag) when is_atom(event_tag) do
+    %{type: :on_animation_frame, tag: event_tag}
+  end
+
+  @doc "Fires when a file is dropped on a window."
+  @spec on_file_drop(atom()) :: t()
+  def on_file_drop(event_tag) when is_atom(event_tag) do
+    %{type: :on_file_drop, tag: event_tag}
+  end
+
+  @doc "Fires on any renderer event (catch-all)."
+  @spec on_event(atom()) :: t()
+  def on_event(event_tag) when is_atom(event_tag) do
+    %{type: :on_event, tag: event_tag}
+  end
+
+  @doc "Combines a list of subscriptions. Identity function -- returns the list as-is."
+  @spec batch([t()]) :: [t()]
+  def batch(subscriptions) when is_list(subscriptions), do: subscriptions
+
   @doc """
   Returns a key that uniquely identifies this subscription spec.
   Two specs with the same key are considered the same subscription.

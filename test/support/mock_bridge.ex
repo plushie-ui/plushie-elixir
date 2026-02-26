@@ -47,6 +47,11 @@ defmodule Julep.Test.MockBridge do
     GenServer.call(bridge, :get_window_ops)
   end
 
+  @doc "Returns all settings messages received so far, in order."
+  def get_settings(bridge) do
+    GenServer.call(bridge, :get_settings)
+  end
+
   @impl true
   def init(_opts) do
     {:ok, %{
@@ -56,7 +61,8 @@ defmodule Julep.Test.MockBridge do
       widget_ops: [],
       subscription_registers: [],
       subscription_unregisters: [],
-      window_ops: []
+      window_ops: [],
+      settings: []
     }}
   end
 
@@ -87,6 +93,10 @@ defmodule Julep.Test.MockBridge do
   def handle_cast({:send_subscription_unregister, kind}, state) do
     entry = %{kind: kind}
     {:noreply, %{state | subscription_unregisters: state.subscription_unregisters ++ [entry]}}
+  end
+
+  def handle_cast({:send_settings, settings}, state) do
+    {:noreply, %{state | settings: state.settings ++ [settings]}}
   end
 
   def handle_cast({:send_window_op, op, window_id, settings}, state) do
@@ -121,5 +131,9 @@ defmodule Julep.Test.MockBridge do
 
   def handle_call(:get_window_ops, _from, state) do
     {:reply, state.window_ops, state}
+  end
+
+  def handle_call(:get_settings, _from, state) do
+    {:reply, state.settings, state}
   end
 end

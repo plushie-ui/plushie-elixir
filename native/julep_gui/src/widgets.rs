@@ -2,11 +2,20 @@ use std::collections::HashMap;
 
 use crate::protocol::TreeNode;
 use iced::widget::{
-    button, canvas, checkbox, column, container, markdown, pick_list, progress_bar, row, rule,
-    scrollable, slider, text, text_editor, text_input, toggler, tooltip, vertical_slider, Image,
-    Space, Stack, Svg,
+    button, canvas, checkbox, column, combo_box, container, grid, markdown, mouse_area, pick_list,
+    pin, progress_bar, rich_text, row, rule, scrollable, sensor, slider, span, text, text_editor,
+    text_input, toggler, tooltip, vertical_slider, Image, Space, Stack, Svg,
 };
-use iced::{alignment, mouse, Color, ContentFit, Element, Fill, Length, Padding, Point, Size};
+use iced::widget::keyed;
+use iced::{
+    alignment, font, mouse, Border, Color, ContentFit, Element, Fill, Font, Length,
+    Padding, Pixels, Point, Radians, Rotation, Shadow, Size, Vector,
+};
+use iced::widget::image::FilterMethod;
+use iced::widget::scrollable::Anchor;
+use iced::widget::text::{LineHeight, Wrapping};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use serde_json::Value;
 
 use crate::Message;
@@ -15,13 +24,19 @@ use crate::Message;
 // Cache pre-population
 // ---------------------------------------------------------------------------
 
-/// Walk the tree and ensure that every `text_editor` and `markdown` node has
-/// an entry in the corresponding cache. This must be called *before* `render`
-/// so that `render` can work with shared (`&`) references to the caches.
+/// Walk the tree and ensure that every `text_editor`, `markdown`, and
+/// `combo_box` node has an entry in the corresponding cache. This must be
+/// called *before* `render` so that `render` can work with shared (`&`)
+/// references to the caches.
+///
+/// NOTE: The `combo_states` parameter was added for combo_box support.
+/// The main.rs agent must add `combo_box_states: HashMap<String, combo_box::State<String>>`
+/// to the App struct and pass it here.
 pub fn ensure_caches(
     node: &TreeNode,
     editor_contents: &mut HashMap<String, text_editor::Content>,
     markdown_items: &mut HashMap<String, Vec<markdown::Item>>,
+    combo_states: &mut HashMap<String, combo_box::State<String>>,
 ) {
     match node.type_name.as_str() {
         "text_editor" => {
@@ -38,59 +53,90 @@ pub fn ensure_caches(
                 .entry(node.id.clone())
                 .or_insert_with(|| markdown::parse(&content).collect());
         }
+        "combo_box" => {
+            let props = node.props.as_object();
+            let options: Vec<String> = props
+                .and_then(|p| p.get("options"))
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(str::to_owned))
+                        .collect()
+                })
+                .unwrap_or_default();
+            combo_states
+                .entry(node.id.clone())
+                .or_insert_with(|| combo_box::State::new(options.clone()));
+            // TODO: update options if they changed -- for now we only seed on first see
+        }
         _ => {}
     }
+
     for child in &node.children {
-        ensure_caches(child, editor_contents, markdown_items);
+        ensure_caches(child, editor_contents, markdown_items, combo_states);
     }
 }
 
 // ---------------------------------------------------------------------------
-// Public render entry point
+// Main render dispatch
 // ---------------------------------------------------------------------------
 
 /// Map a TreeNode to an iced Element. Unknown types render as an empty container.
+///
+/// NOTE: The `combo_states` parameter was added for combo_box support.
+/// The main.rs agent must pass `&app.combo_box_states` here.
 pub fn render<'a>(
     node: &'a TreeNode,
     editor_contents: &'a HashMap<String, text_editor::Content>,
     markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
 ) -> Element<'a, Message> {
     match node.type_name.as_str() {
-        "column" => render_column(node, editor_contents, markdown_items),
-        "row" => render_row(node, editor_contents, markdown_items),
+        "column" => render_column(node, editor_contents, markdown_items, combo_states),
+        "row" => render_row(node, editor_contents, markdown_items, combo_states),
         "text" => render_text(node),
-        "button" => render_button(node),
-        "container" => render_container(node, editor_contents, markdown_items),
+        "button" => render_button(node, editor_contents, markdown_items, combo_states),
+        "container" => render_container(node, editor_contents, markdown_items, combo_states),
         "space" => render_space(node),
         "text_input" => render_text_input(node),
         "checkbox" => render_checkbox(node),
         "rule" => render_rule(node),
         "progress_bar" => render_progress_bar(node),
-        "scrollable" => render_scrollable(node, editor_contents, markdown_items),
-        "window" => render_window(node, editor_contents, markdown_items),
-        // New native widgets
+        "scrollable" => render_scrollable(node, editor_contents, markdown_items, combo_states),
+        "window" => render_window(node, editor_contents, markdown_items, combo_states),
+        // Native widgets
         "toggler" => render_toggler(node),
         "radio" => render_radio(node),
         "slider" => render_slider(node),
         "vertical_slider" => render_vertical_slider(node),
         "pick_list" => render_pick_list(node),
-        "combo_box" => render_pick_list(node), // delegate to pick_list for now
+        "combo_box" => render_combo_box(node, combo_states),
         "text_editor" => render_text_editor(node, editor_contents),
-        "tooltip" => render_tooltip(node, editor_contents, markdown_items),
+        "tooltip" => render_tooltip(node, editor_contents, markdown_items, combo_states),
         "image" => render_image(node),
         "svg" => render_svg(node),
         "markdown" => render_markdown(node, markdown_items),
-        "stack" => render_stack(node, editor_contents, markdown_items),
+        "stack" => render_stack(node, editor_contents, markdown_items, combo_states),
         "canvas" => render_canvas(node),
         "table" => render_table(node),
+        // New native widgets
+        "grid" => render_grid(node, editor_contents, markdown_items, combo_states),
+        "pin" => render_pin(node, editor_contents, markdown_items, combo_states),
+        "mouse_area" => render_mouse_area(node, editor_contents, markdown_items, combo_states),
+        "sensor" => render_sensor(node, editor_contents, markdown_items, combo_states),
+        "rich_text" | "rich" => render_rich_text(node),
+        "keyed_column" => render_keyed_column(node, editor_contents, markdown_items, combo_states),
+        "float" => render_float(node, editor_contents, markdown_items, combo_states),
+        "responsive" => render_responsive(node, editor_contents, markdown_items, combo_states),
+        "pane_grid" => render_pane_grid_placeholder(node),
         // Composite widgets
-        "tabs" => render_tabs(node, editor_contents, markdown_items),
+        "tabs" => render_tabs(node, editor_contents, markdown_items, combo_states),
         "nav" => render_nav(node),
-        "modal" => render_modal(node, editor_contents, markdown_items),
-        "card" => render_card(node, editor_contents, markdown_items),
-        "panel" => render_panel(node, editor_contents, markdown_items),
-        "form" => render_form(node, editor_contents, markdown_items),
-        "split_pane" => render_split_pane(node, editor_contents, markdown_items),
+        "modal" => render_modal(node, editor_contents, markdown_items, combo_states),
+        "card" => render_card(node, editor_contents, markdown_items, combo_states),
+        "panel" => render_panel(node, editor_contents, markdown_items, combo_states),
+        "form" => render_form(node, editor_contents, markdown_items, combo_states),
+        "split_pane" => render_split_pane(node, editor_contents, markdown_items, combo_states),
         unknown => {
             eprintln!("julep_gui: unknown node type `{unknown}`, rendering as empty container");
             container(Space::new()).into()
@@ -106,10 +152,11 @@ fn render_children<'a>(
     node: &'a TreeNode,
     editor_contents: &'a HashMap<String, text_editor::Content>,
     markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
 ) -> Vec<Element<'a, Message>> {
     node.children
         .iter()
-        .map(|c| render(c, editor_contents, markdown_items))
+        .map(|c| render(c, editor_contents, markdown_items, combo_states))
         .collect()
 }
 
@@ -121,23 +168,35 @@ fn render_column<'a>(
     node: &'a TreeNode,
     editor_contents: &'a HashMap<String, text_editor::Content>,
     markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
-    let padding = prop_padding(props);
+    let padding = parse_padding_value(props);
     let width = prop_length(props, "width", Length::Shrink);
     let height = prop_length(props, "height", Length::Shrink);
     let align_x = prop_horizontal_alignment(props, "align_x");
+    let clip = prop_bool_default(props, "clip", false);
 
-    let children = render_children(node, editor_contents, markdown_items);
+    let children = render_children(node, editor_contents, markdown_items, combo_states);
 
-    column(children)
+    let mut col = column(children)
         .spacing(spacing)
         .padding(padding)
         .width(width)
         .height(height)
         .align_x(align_x)
-        .into()
+        .clip(clip);
+
+    if let Some(mw) = prop_f32(props, "max_width") {
+        col = col.max_width(mw);
+    }
+
+    if prop_bool_default(props, "wrap", false) {
+        col.wrap().into()
+    } else {
+        col.into()
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -148,23 +207,31 @@ fn render_row<'a>(
     node: &'a TreeNode,
     editor_contents: &'a HashMap<String, text_editor::Content>,
     markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
-    let padding = prop_padding(props);
+    let padding = parse_padding_value(props);
     let width = prop_length(props, "width", Length::Shrink);
     let height = prop_length(props, "height", Length::Shrink);
     let align_y = prop_vertical_alignment(props, "align_y");
+    let clip = prop_bool_default(props, "clip", false);
 
-    let children = render_children(node, editor_contents, markdown_items);
+    let children = render_children(node, editor_contents, markdown_items, combo_states);
 
-    row(children)
+    let r = row(children)
         .spacing(spacing)
         .padding(padding)
         .width(width)
         .height(height)
         .align_y(align_y)
-        .into()
+        .clip(clip);
+
+    if prop_bool_default(props, "wrap", false) {
+        r.wrap().into()
+    } else {
+        r.into()
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -180,6 +247,51 @@ fn render_text<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     if let Some(s) = size {
         t = t.size(s);
     }
+    if let Some(f) = props.and_then(|p| p.get("font")).map(parse_font) {
+        t = t.font(f);
+    }
+    if let Some(c) = props.and_then(|p| p.get("color")).and_then(parse_color) {
+        t = t.color(c);
+    }
+    if let Some(w) = value_to_length_opt(props.and_then(|p| p.get("width"))) {
+        t = t.width(w);
+    }
+    if let Some(h) = value_to_length_opt(props.and_then(|p| p.get("height"))) {
+        t = t.height(h);
+    }
+    if let Some(lh) = parse_line_height(props) {
+        t = t.line_height(lh);
+    }
+    if let Some(ax) = props
+        .and_then(|p| p.get("align_x"))
+        .and_then(|v| v.as_str())
+        .and_then(value_to_horizontal_alignment)
+    {
+        t = t.align_x(ax);
+    }
+    if let Some(ay) = props
+        .and_then(|p| p.get("align_y"))
+        .and_then(|v| v.as_str())
+        .and_then(value_to_vertical_alignment)
+    {
+        t = t.align_y(ay);
+    }
+    if let Some(w) = parse_wrapping(props) {
+        t = t.wrapping(w);
+    }
+
+    // Named style
+    if let Some(style_name) = prop_str(props, "style") {
+        t = match style_name.as_str() {
+            "primary" => t.style(text::primary),
+            "secondary" => t.style(text::secondary),
+            "success" => t.style(text::success),
+            "danger" => t.style(text::danger),
+            "warning" => t.style(text::warning),
+            _ => t.style(text::default),
+        };
+    }
+
     t.into()
 }
 
@@ -187,16 +299,59 @@ fn render_text<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 // Button
 // ---------------------------------------------------------------------------
 
-fn render_button<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_button<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
-    let label = prop_str(props, "label")
-        .or_else(|| prop_str(props, "content"))
-        .unwrap_or_default();
     let id = node.id.clone();
 
-    button(text(label))
-        .on_press(Message::Click(id))
-        .into()
+    // Button can have either a text label or child content
+    let child: Element<'a, Message> = if !node.children.is_empty() {
+        node.children
+            .first()
+            .map(|c| render(c, editor_contents, markdown_items, combo_states))
+            .unwrap_or_else(|| Space::new().into())
+    } else {
+        let label = prop_str(props, "label")
+            .or_else(|| prop_str(props, "content"))
+            .unwrap_or_default();
+        text(label).into()
+    };
+
+    let padding = parse_padding_value(props);
+    let width = prop_length(props, "width", Length::Shrink);
+    let height = prop_length(props, "height", Length::Shrink);
+    let clip = prop_bool_default(props, "clip", false);
+    let disabled = prop_bool_default(props, "disabled", false)
+        || !prop_bool_default(props, "enabled", true);
+
+    let mut b = button(child)
+        .padding(padding)
+        .width(width)
+        .height(height)
+        .clip(clip);
+
+    if !disabled {
+        b = b.on_press(Message::Click(id));
+    }
+
+    // Named style
+    if let Some(style_name) = prop_str(props, "style") {
+        b = match style_name.as_str() {
+            "primary" => b.style(button::primary),
+            "secondary" => b.style(button::secondary),
+            "success" => b.style(button::success),
+            "warning" => b.style(button::warning),
+            "danger" => b.style(button::danger),
+            "text" => b.style(button::text),
+            _ => b.style(button::primary),
+        };
+    }
+
+    b.into()
 }
 
 // ---------------------------------------------------------------------------
@@ -207,23 +362,90 @@ fn render_container<'a>(
     node: &'a TreeNode,
     editor_contents: &'a HashMap<String, text_editor::Content>,
     markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
-    let padding = prop_padding(props);
+    let padding = parse_padding_value(props);
     let width = prop_length(props, "width", Length::Shrink);
     let height = prop_length(props, "height", Length::Shrink);
-    let center = prop_bool(props, "center").unwrap_or(false);
+    let center = prop_bool_default(props, "center", false);
+    let clip = prop_bool_default(props, "clip", false);
 
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, editor_contents, markdown_items))
+        .map(|c| render(c, editor_contents, markdown_items, combo_states))
         .unwrap_or_else(|| Space::new().into());
 
-    let mut c = container(child).padding(padding).width(width).height(height);
+    let mut c = container(child)
+        .padding(padding)
+        .width(width)
+        .height(height)
+        .clip(clip);
+
+    if let Some(mw) = prop_f32(props, "max_width") {
+        c = c.max_width(mw);
+    }
+    if let Some(mh) = prop_f32(props, "max_height") {
+        c = c.max_height(mh);
+    }
 
     if center {
         c = c.center(Fill);
+    }
+
+    if let Some(ax) = props
+        .and_then(|p| p.get("align_x"))
+        .and_then(|v| v.as_str())
+        .and_then(value_to_horizontal_alignment)
+    {
+        c = c.align_x(ax);
+    }
+    if let Some(ay) = props
+        .and_then(|p| p.get("align_y"))
+        .and_then(|v| v.as_str())
+        .and_then(value_to_vertical_alignment)
+    {
+        c = c.align_y(ay);
+    }
+
+    // Inline styling via custom style closure
+    let bg = props.and_then(|p| p.get("background")).and_then(parse_background);
+    let text_color = props.and_then(|p| p.get("color")).and_then(parse_color);
+    let border_val = props.and_then(|p| p.get("border")).map(parse_border);
+    let shadow_val = props.and_then(|p| p.get("shadow")).map(parse_shadow);
+    let has_inline_style =
+        bg.is_some() || text_color.is_some() || border_val.is_some() || shadow_val.is_some();
+
+    if has_inline_style {
+        c = c.style(move |_theme| {
+            let mut style = container::Style::default();
+            style.background = bg;
+            style.text_color = text_color;
+            if let Some(b) = border_val {
+                style.border = b;
+            }
+            if let Some(s) = shadow_val {
+                style.shadow = s;
+            }
+            style
+        });
+    }
+
+    // Named style (overrides inline if both present)
+    if let Some(style_name) = prop_str(props, "style") {
+        c = match style_name.as_str() {
+            "transparent" => c.style(container::transparent),
+            "rounded_box" => c.style(container::rounded_box),
+            "bordered_box" => c.style(container::bordered_box),
+            "dark" => c.style(container::dark),
+            "primary" => c.style(container::primary),
+            "secondary" => c.style(container::secondary),
+            "success" => c.style(container::success),
+            "danger" => c.style(container::danger),
+            "warning" => c.style(container::warning),
+            _ => c,
+        };
     }
 
     c.into()
@@ -248,21 +470,68 @@ fn render_scrollable<'a>(
     node: &'a TreeNode,
     editor_contents: &'a HashMap<String, text_editor::Content>,
     markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let width = prop_length(props, "width", Length::Shrink);
     let height = prop_length(props, "height", Length::Shrink);
+    let spacing = prop_f32(props, "spacing");
 
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, editor_contents, markdown_items))
+        .map(|c| render(c, editor_contents, markdown_items, combo_states))
         .unwrap_or_else(|| Space::new().into());
 
-    scrollable(child)
-        .width(width)
-        .height(height)
-        .into()
+    let direction = prop_str(props, "direction").unwrap_or_default();
+
+    // Build scrollbar configuration from props
+    let build_scrollbar = |props: Props<'_>| -> scrollable::Scrollbar {
+        let mut sb = scrollable::Scrollbar::default();
+        if let Some(w) = prop_f32(props, "scrollbar_width") {
+            sb = sb.width(w);
+        }
+        if let Some(m) = prop_f32(props, "scrollbar_margin") {
+            sb = sb.margin(m);
+        }
+        if let Some(sw) = prop_f32(props, "scroller_width") {
+            sb = sb.scroller_width(sw);
+        }
+        sb
+    };
+
+    let sb = build_scrollbar(props);
+    let mut s = match direction.as_str() {
+        "horizontal" => scrollable(child).direction(scrollable::Direction::Horizontal(sb)),
+        "both" => scrollable(child).direction(scrollable::Direction::Both {
+            vertical: sb,
+            horizontal: build_scrollbar(props),
+        }),
+        _ => scrollable(child).direction(scrollable::Direction::Vertical(sb)),
+    };
+
+    s = s.width(width).height(height);
+
+    // Widget ID
+    if let Some(id_str) = prop_str(props, "id") {
+        s = s.id(id_str);
+    }
+
+    if let Some(sp) = spacing {
+        s = s.spacing(sp);
+    }
+
+    // Anchor
+    if let Some(anchor_str) = prop_str(props, "anchor") {
+        match anchor_str.to_ascii_lowercase().as_str() {
+            "end" | "bottom" | "right" => {
+                s = s.anchor_y(Anchor::End);
+            }
+            _ => {}
+        }
+    }
+
+    s.into()
 }
 
 // ---------------------------------------------------------------------------
@@ -273,16 +542,17 @@ fn render_window<'a>(
     node: &'a TreeNode,
     editor_contents: &'a HashMap<String, text_editor::Content>,
     markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
-    let padding = prop_padding(props);
+    let padding = parse_padding_value(props);
     let width = prop_length(props, "width", Fill);
     let height = prop_length(props, "height", Fill);
 
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, editor_contents, markdown_items))
+        .map(|c| render(c, editor_contents, markdown_items, combo_states))
         .unwrap_or_else(|| Space::new().into());
 
     container(child)
@@ -302,25 +572,51 @@ fn render_text_input<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let placeholder = prop_str(props, "placeholder").unwrap_or_default();
     let width = prop_length(props, "width", Length::Fill);
     let size = prop_f32(props, "size");
-    let padding = prop_f32(props, "padding");
+    let padding = parse_padding_value(props);
+    let secure = prop_bool_default(props, "secure", false);
     let id = node.id.clone();
     let has_on_submit = props.and_then(|p| p.get("on_submit")).is_some();
 
     let mut ti = text_input(&placeholder, &value)
         .on_input(move |v| Message::Input(id.clone(), v))
-        .width(width);
+        .width(width)
+        .padding(padding)
+        .secure(secure);
 
     if let Some(s) = size {
         ti = ti.size(s);
     }
-    if let Some(p) = padding {
-        ti = ti.padding(p);
+    if let Some(f) = props.and_then(|p| p.get("font")).map(parse_font) {
+        ti = ti.font(f);
+    }
+    if let Some(lh) = parse_line_height(props) {
+        ti = ti.line_height(lh);
+    }
+    if let Some(ax) = props
+        .and_then(|p| p.get("align_x"))
+        .and_then(|v| v.as_str())
+        .and_then(value_to_horizontal_alignment)
+    {
+        ti = ti.align_x(ax);
     }
 
     if has_on_submit {
         let submit_id = node.id.clone();
         let submit_value = value.clone();
         ti = ti.on_submit(Message::Submit(submit_id, submit_value));
+    }
+
+    // Widget ID
+    if let Some(id_str) = prop_str(props, "id") {
+        ti = ti.id(id_str);
+    }
+
+    // Named style
+    if let Some(style_name) = prop_str(props, "style") {
+        ti = match style_name.as_str() {
+            "default" => ti.style(text_input::default),
+            _ => ti,
+        };
     }
 
     ti.into()
@@ -333,7 +629,7 @@ fn render_text_input<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 fn render_checkbox<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let props = node.props.as_object();
     let label = prop_str(props, "label").unwrap_or_default();
-    let checked = prop_bool(props, "checked").unwrap_or(false);
+    let checked = prop_bool_default(props, "checked", false);
     let spacing = prop_f32(props, "spacing");
     let width = prop_length(props, "width", Length::Shrink);
     let id = node.id.clone();
@@ -346,18 +642,72 @@ fn render_checkbox<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     if let Some(s) = spacing {
         cb = cb.spacing(s);
     }
+    if let Some(sz) = prop_f32(props, "size") {
+        cb = cb.size(sz);
+    }
+    if let Some(ts) = prop_f32(props, "text_size") {
+        cb = cb.text_size(ts);
+    }
+    if let Some(f) = props.and_then(|p| p.get("font")).map(parse_font) {
+        cb = cb.font(f);
+    }
+    if let Some(lh) = parse_line_height(props) {
+        cb = cb.text_line_height(lh);
+    }
+    if let Some(shaping) = parse_shaping(props) {
+        cb = cb.text_shaping(shaping);
+    }
+    if let Some(w) = parse_wrapping(props) {
+        cb = cb.text_wrapping(w);
+    }
+
+    // Named style
+    if let Some(style_name) = prop_str(props, "style") {
+        cb = match style_name.as_str() {
+            "primary" => cb.style(checkbox::primary),
+            "secondary" => cb.style(checkbox::secondary),
+            "success" => cb.style(checkbox::success),
+            "danger" => cb.style(checkbox::danger),
+            _ => cb.style(checkbox::primary),
+        };
+    }
 
     cb.into()
 }
 
 // ---------------------------------------------------------------------------
-// Rule (horizontal divider)
+// Rule (horizontal/vertical divider)
 // ---------------------------------------------------------------------------
 
 fn render_rule<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let props = node.props.as_object();
-    let height = prop_f32(props, "height").unwrap_or(1.0);
-    rule::horizontal(height).into()
+    let thickness = prop_f32(props, "height")
+        .or_else(|| prop_f32(props, "width"))
+        .or_else(|| prop_f32(props, "thickness"))
+        .unwrap_or(1.0);
+    let direction = prop_str(props, "direction").unwrap_or_default();
+
+    if direction == "vertical" {
+        let mut r = rule::vertical(thickness);
+        if let Some(style_name) = prop_str(props, "style") {
+            r = match style_name.as_str() {
+                "default" => r.style(rule::default),
+                "weak" => r.style(rule::weak),
+                _ => r,
+            };
+        }
+        r.into()
+    } else {
+        let mut r = rule::horizontal(thickness);
+        if let Some(style_name) = prop_str(props, "style") {
+            r = match style_name.as_str() {
+                "default" => r.style(rule::default),
+                "weak" => r.style(rule::weak),
+                _ => r,
+            };
+        }
+        r.into()
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -371,10 +721,21 @@ fn render_progress_bar<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let width = prop_length(props, "width", Length::Fill);
     let height = prop_length(props, "height", Length::Shrink);
 
-    progress_bar(range, value)
-        .length(width)
-        .girth(height)
-        .into()
+    let mut pb = progress_bar(range, value).length(width).girth(height);
+
+    // Named style
+    if let Some(style_name) = prop_str(props, "style") {
+        pb = match style_name.as_str() {
+            "primary" => pb.style(progress_bar::primary),
+            "secondary" => pb.style(progress_bar::secondary),
+            "success" => pb.style(progress_bar::success),
+            "danger" => pb.style(progress_bar::danger),
+            "warning" => pb.style(progress_bar::warning),
+            _ => pb.style(progress_bar::primary),
+        };
+    }
+
+    pb.into()
 }
 
 // ---------------------------------------------------------------------------
@@ -383,7 +744,7 @@ fn render_progress_bar<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 
 fn render_toggler<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let props = node.props.as_object();
-    let is_toggled = prop_bool(props, "is_toggled").unwrap_or(false);
+    let is_toggled = prop_bool_default(props, "is_toggled", false);
     let label = prop_str(props, "label");
     let spacing = prop_f32(props, "spacing");
     let width = prop_length(props, "width", Length::Shrink);
@@ -399,6 +760,32 @@ fn render_toggler<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     if let Some(s) = spacing {
         t = t.spacing(s);
     }
+    if let Some(sz) = prop_f32(props, "size") {
+        t = t.size(sz);
+    }
+    if let Some(ts) = prop_f32(props, "text_size") {
+        t = t.text_size(ts);
+    }
+    if let Some(f) = props.and_then(|p| p.get("font")).map(parse_font) {
+        t = t.font(f);
+    }
+    if let Some(lh) = parse_line_height(props) {
+        t = t.text_line_height(lh);
+    }
+    if let Some(shaping) = parse_shaping(props) {
+        t = t.text_shaping(shaping);
+    }
+    if let Some(w) = parse_wrapping(props) {
+        t = t.text_wrapping(w);
+    }
+
+    // Named style
+    if let Some(style_name) = prop_str(props, "style") {
+        t = match style_name.as_str() {
+            "default" => t.style(toggler::default),
+            _ => t,
+        };
+    }
 
     t.into()
 }
@@ -413,16 +800,49 @@ fn render_radio<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let selected_str = prop_str(props, "selected").unwrap_or_default();
     let label = prop_str(props, "label").unwrap_or_else(|| value.clone());
     // Use "group" prop as the event ID so all radios in a group emit the same ID.
-    // Falls back to the node's own ID if no group is set.
     let event_id = prop_str(props, "group").unwrap_or_else(|| node.id.clone());
 
     let is_selected = if value == selected_str { Some(0u8) } else { None };
     let select_value = value;
 
-    iced::widget::Radio::new(label, 0u8, is_selected, move |_| {
+    let mut r = iced::widget::Radio::new(label, 0u8, is_selected, move |_| {
         Message::Select(event_id.clone(), select_value.clone())
-    })
-    .into()
+    });
+
+    if let Some(s) = prop_f32(props, "spacing") {
+        r = r.spacing(s);
+    }
+    if let Some(w) = value_to_length_opt(props.and_then(|p| p.get("width"))) {
+        r = r.width(w);
+    }
+    if let Some(sz) = prop_f32(props, "size") {
+        r = r.size(sz);
+    }
+    if let Some(ts) = prop_f32(props, "text_size") {
+        r = r.text_size(ts);
+    }
+    if let Some(f) = props.and_then(|p| p.get("font")).map(parse_font) {
+        r = r.font(f);
+    }
+    if let Some(lh) = parse_line_height(props) {
+        r = r.text_line_height(lh);
+    }
+    if let Some(shaping) = parse_shaping(props) {
+        r = r.text_shaping(shaping);
+    }
+    if let Some(w) = parse_wrapping(props) {
+        r = r.text_wrapping(w);
+    }
+
+    // Named style
+    if let Some(style_name) = prop_str(props, "style") {
+        r = match style_name.as_str() {
+            "default" => r.style(iced::widget::radio::default),
+            _ => r,
+        };
+    }
+
+    r.into()
 }
 
 // ---------------------------------------------------------------------------
@@ -447,6 +867,23 @@ fn render_slider<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 
     if let Some(st) = step {
         s = s.step(st);
+    }
+    if let Some(d) = prop_f64(props, "default") {
+        s = s.default(d);
+    }
+    if let Some(h) = prop_f32(props, "height") {
+        s = s.height(h);
+    }
+    if let Some(ss) = prop_f64(props, "shift_step") {
+        s = s.shift_step(ss);
+    }
+
+    // Named style
+    if let Some(style_name) = prop_str(props, "style") {
+        s = match style_name.as_str() {
+            "default" => s.style(slider::default),
+            _ => s,
+        };
     }
 
     s.into()
@@ -475,6 +912,20 @@ fn render_vertical_slider<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     if let Some(st) = step {
         s = s.step(st);
     }
+    if let Some(d) = prop_f64(props, "default") {
+        s = s.default(d);
+    }
+    if let Some(ss) = prop_f64(props, "shift_step") {
+        s = s.shift_step(ss);
+    }
+
+    // Named style
+    if let Some(style_name) = prop_str(props, "style") {
+        s = match style_name.as_str() {
+            "default" => s.style(vertical_slider::default),
+            _ => s,
+        };
+    }
 
     s.into()
 }
@@ -497,18 +948,92 @@ fn render_pick_list<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let selected = prop_str(props, "selected");
     let placeholder = prop_str(props, "placeholder");
     let width = prop_length(props, "width", Length::Shrink);
+    let padding = parse_padding_value(props);
     let id = node.id.clone();
 
     let mut pl = pick_list(options, selected, move |v: String| {
         Message::Select(id.clone(), v)
     })
-    .width(width);
+    .width(width)
+    .padding(padding);
 
     if let Some(p) = placeholder {
         pl = pl.placeholder(p);
     }
+    if let Some(ts) = prop_f32(props, "text_size") {
+        pl = pl.text_size(ts);
+    }
+    if let Some(f) = props.and_then(|p| p.get("font")).map(parse_font) {
+        pl = pl.font(f);
+    }
+    if let Some(mh) = prop_f32(props, "menu_height") {
+        pl = pl.menu_height(mh);
+    }
+    if let Some(lh) = parse_line_height(props) {
+        pl = pl.text_line_height(lh);
+    }
+    if let Some(shaping) = parse_shaping(props) {
+        pl = pl.text_shaping(shaping);
+    }
+
+    // Named style
+    if let Some(style_name) = prop_str(props, "style") {
+        pl = match style_name.as_str() {
+            "default" => pl.style(pick_list::default),
+            _ => pl,
+        };
+    }
 
     pl.into()
+}
+
+// ---------------------------------------------------------------------------
+// Combo Box
+// ---------------------------------------------------------------------------
+
+fn render_combo_box<'a>(
+    node: &'a TreeNode,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
+) -> Element<'a, Message> {
+    let state = match combo_states.get(&node.id) {
+        Some(s) => s,
+        None => {
+            eprintln!("julep_gui: combo_box cache miss for id={}", node.id);
+            return text("(combo_box: cache miss)").into();
+        }
+    };
+
+    let props = node.props.as_object();
+    let selected: Option<String> = prop_str(props, "selected");
+    let placeholder = prop_str(props, "placeholder").unwrap_or_default();
+    let width = prop_length(props, "width", Length::Fill);
+    let padding_val = parse_padding_value(props);
+    let id = node.id.clone();
+    let input_id = node.id.clone();
+
+    let mut cb = combo_box(state, &placeholder, selected.as_ref(), move |selected| {
+        Message::Select(id.clone(), selected)
+    })
+    .width(width)
+    .padding(padding_val);
+
+    // on_input: emit Input events so Elixir can filter
+    cb = cb.on_input(move |v| Message::Input(input_id.clone(), v));
+
+    if let Some(sz) = prop_f32(props, "size") {
+        cb = cb.size(sz);
+    }
+    if let Some(f) = props.and_then(|p| p.get("font")).map(parse_font) {
+        cb = cb.font(f);
+    }
+    if let Some(lh) = parse_line_height(props) {
+        cb = cb.line_height(lh);
+    }
+    if let Some(mh) = prop_f32(props, "menu_height") {
+        cb = cb.menu_height(mh);
+    }
+
+    cb.into()
 }
 
 // ---------------------------------------------------------------------------
@@ -524,8 +1049,6 @@ fn render_text_editor<'a>(
     let placeholder = prop_str(props, "placeholder").unwrap_or_default();
     let id = node.id.clone();
 
-    // Content was pre-populated by ensure_caches; fall back to a stub if
-    // somehow missing (shouldn't happen).
     let content = match editor_contents.get(&node.id) {
         Some(c) => c,
         None => {
@@ -542,6 +1065,39 @@ fn render_text_editor<'a>(
     if !placeholder.is_empty() {
         te = te.placeholder(placeholder);
     }
+    if let Some(f) = props.and_then(|p| p.get("font")).map(parse_font) {
+        te = te.font(f);
+    }
+    if let Some(sz) = prop_f32(props, "size") {
+        te = te.size(sz);
+    }
+    if let Some(lh) = parse_line_height(props) {
+        te = te.line_height(lh);
+    }
+    if let Some(p) = prop_f32(props, "padding") {
+        te = te.padding(p);
+    }
+    if let Some(minh) = prop_f32(props, "min_height") {
+        te = te.min_height(minh);
+    }
+    if let Some(maxh) = prop_f32(props, "max_height") {
+        te = te.max_height(maxh);
+    }
+    if let Some(w) = parse_wrapping(props) {
+        te = te.wrapping(w);
+    }
+    // text_editor.width() takes impl Into<Pixels>, not Length
+    if let Some(w) = prop_f32(props, "width") {
+        te = te.width(w);
+    }
+
+    // Named style
+    if let Some(style_name) = prop_str(props, "style") {
+        te = match style_name.as_str() {
+            "default" => te.style(text_editor::default),
+            _ => te,
+        };
+    }
 
     te.into()
 }
@@ -554,6 +1110,7 @@ fn render_tooltip<'a>(
     node: &'a TreeNode,
     editor_contents: &'a HashMap<String, text_editor::Content>,
     markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let tip = prop_str(props, "tip").unwrap_or_default();
@@ -571,12 +1128,36 @@ fn render_tooltip<'a>(
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, editor_contents, markdown_items))
+        .map(|c| render(c, editor_contents, markdown_items, combo_states))
         .unwrap_or_else(|| Space::new().into());
 
     let mut tt = tooltip(child, text(tip), position);
     if let Some(g) = gap {
         tt = tt.gap(g);
+    }
+
+    // Tooltip padding is a single f32 value (not per-side)
+    if let Some(p) = prop_f32(props, "padding") {
+        tt = tt.padding(p);
+    }
+
+    let snap = prop_bool_default(props, "snap_within_viewport", true);
+    tt = tt.snap_within_viewport(snap);
+
+    // Named style (tooltip uses container::Style)
+    if let Some(style_name) = prop_str(props, "style") {
+        tt = match style_name.as_str() {
+            "transparent" => tt.style(container::transparent),
+            "rounded_box" => tt.style(container::rounded_box),
+            "bordered_box" => tt.style(container::bordered_box),
+            "dark" => tt.style(container::dark),
+            "primary" => tt.style(container::primary),
+            "secondary" => tt.style(container::secondary),
+            "success" => tt.style(container::success),
+            "danger" => tt.style(container::danger),
+            "warning" => tt.style(container::warning),
+            _ => tt,
+        };
     }
 
     tt.into()
@@ -597,6 +1178,36 @@ fn render_image<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     if let Some(cf) = content_fit {
         img = img.content_fit(cf);
     }
+    if let Some(r) = prop_f32(props, "rotation") {
+        img = img.rotation(Rotation::from(Radians(r.to_radians())));
+    }
+    if let Some(o) = prop_f32(props, "opacity") {
+        img = img.opacity(o);
+    }
+    if let Some(br) = prop_f32(props, "border_radius") {
+        img = img.border_radius(br);
+    }
+    if let Some(fm_str) = prop_str(props, "filter_method") {
+        let fm = match fm_str.to_ascii_lowercase().as_str() {
+            "nearest" => FilterMethod::Nearest,
+            _ => FilterMethod::Linear,
+        };
+        img = img.filter_method(fm);
+    }
+    if let Some(expand) = prop_bool(props, "expand") {
+        img = img.expand(expand);
+    }
+    if let Some(scale) = prop_f32(props, "scale") {
+        img = img.scale(scale);
+    }
+    // crop: {"x": u32, "y": u32, "width": u32, "height": u32}
+    if let Some(crop_obj) = props.and_then(|p| p.get("crop")).and_then(|v| v.as_object()) {
+        let cx = crop_obj.get("x").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+        let cy = crop_obj.get("y").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+        let cw = crop_obj.get("width").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+        let ch = crop_obj.get("height").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+        img = img.crop(iced::Rectangle { x: cx, y: cy, width: cw, height: ch });
+    }
 
     img.into()
 }
@@ -616,6 +1227,12 @@ fn render_svg<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     if let Some(cf) = content_fit {
         s = s.content_fit(cf);
     }
+    if let Some(r) = prop_f32(props, "rotation") {
+        s = s.rotation(Rotation::from(Radians(r.to_radians())));
+    }
+    if let Some(o) = prop_f32(props, "opacity") {
+        s = s.opacity(o);
+    }
 
     s.into()
 }
@@ -628,6 +1245,7 @@ fn render_markdown<'a>(
     node: &'a TreeNode,
     markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
 ) -> Element<'a, Message> {
+    let props = node.props.as_object();
     let items = match markdown_items.get(&node.id) {
         Some(items) => items.as_slice(),
         None => {
@@ -636,9 +1254,16 @@ fn render_markdown<'a>(
         }
     };
 
-    markdown::view(items, iced::Theme::Dark)
+    let mut md: Element<'a, Message> = markdown::view(items, iced::Theme::Dark)
         .map(Message::MarkdownUrl)
-        .into()
+        .into();
+
+    // Wrap in container if width is specified
+    if let Some(w) = value_to_length_opt(props.and_then(|p| p.get("width"))) {
+        md = container(md).width(w).into();
+    }
+
+    md
 }
 
 // ---------------------------------------------------------------------------
@@ -649,17 +1274,536 @@ fn render_stack<'a>(
     node: &'a TreeNode,
     editor_contents: &'a HashMap<String, text_editor::Content>,
     markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let width = prop_length(props, "width", Length::Shrink);
     let height = prop_length(props, "height", Length::Shrink);
 
-    let children = render_children(node, editor_contents, markdown_items);
+    let children = render_children(node, editor_contents, markdown_items, combo_states);
 
     Stack::with_children(children)
         .width(width)
         .height(height)
         .into()
+}
+
+// ---------------------------------------------------------------------------
+// Grid
+// ---------------------------------------------------------------------------
+
+fn render_grid<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
+) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let cols = props
+        .and_then(|p| p.get("columns"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(1) as usize;
+    let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
+
+    let children = render_children(node, editor_contents, markdown_items, combo_states);
+
+    let mut g = grid(children).columns(cols).spacing(spacing);
+
+    if let Some(w) = prop_f32(props, "width") {
+        g = g.width(w);
+    }
+    if let Some(h) = prop_f32(props, "height") {
+        g = g.height(h);
+    }
+
+    g.into()
+}
+
+// ---------------------------------------------------------------------------
+// Pin (absolute positioning)
+// ---------------------------------------------------------------------------
+
+fn render_pin<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
+) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let x = prop_f32(props, "x").unwrap_or(0.0);
+    let y = prop_f32(props, "y").unwrap_or(0.0);
+    let width = prop_length(props, "width", Length::Shrink);
+    let height = prop_length(props, "height", Length::Shrink);
+
+    let child: Element<'a, Message> = node
+        .children
+        .first()
+        .map(|c| render(c, editor_contents, markdown_items, combo_states))
+        .unwrap_or_else(|| Space::new().into());
+
+    pin(child)
+        .position(Point::new(x, y))
+        .width(width)
+        .height(height)
+        .into()
+}
+
+// ---------------------------------------------------------------------------
+// MouseArea
+// ---------------------------------------------------------------------------
+
+fn render_mouse_area<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
+) -> Element<'a, Message> {
+    let child: Element<'a, Message> = node
+        .children
+        .first()
+        .map(|c| render(c, editor_contents, markdown_items, combo_states))
+        .unwrap_or_else(|| Space::new().into());
+
+    let id = node.id.clone();
+    let release_id = format!("{}:release", node.id);
+    let middle_id = format!("{}:middle", node.id);
+
+    mouse_area(child)
+        .on_press(Message::Click(id))
+        .on_release(Message::Click(release_id))
+        .on_middle_press(Message::Click(middle_id))
+        .into()
+}
+
+// ---------------------------------------------------------------------------
+// Sensor
+// ---------------------------------------------------------------------------
+
+fn render_sensor<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
+) -> Element<'a, Message> {
+    let child: Element<'a, Message> = node
+        .children
+        .first()
+        .map(|c| render(c, editor_contents, markdown_items, combo_states))
+        .unwrap_or_else(|| Space::new().into());
+
+    // Sensor needs a key. Use the node id.
+    let id = node.id.clone();
+    let show_id = node.id.clone();
+    let resize_id = node.id.clone();
+    let hide_id = format!("{}:hide", node.id);
+
+    sensor(child)
+        .key(id)
+        .on_show(move |_size| Message::Click(format!("{}:show", show_id)))
+        .on_resize(move |_size| Message::Click(format!("{}:resize", resize_id)))
+        .on_hide(Message::Click(hide_id))
+        .into()
+}
+
+// ---------------------------------------------------------------------------
+// Rich Text
+// ---------------------------------------------------------------------------
+
+fn render_rich_text<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let width = prop_length(props, "width", Length::Shrink);
+    let height = prop_length(props, "height", Length::Shrink);
+
+    // spans is an array of objects: {text, size, color, font, link}
+    let spans_value = props.and_then(|p| p.get("spans")).and_then(|v| v.as_array());
+
+    let span_list: Vec<iced::widget::text::Span<'a, String, Font>> = spans_value
+        .map(|arr| {
+            arr.iter()
+                .map(|sv| {
+                    let content = sv
+                        .get("text")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_owned();
+                    let mut s = span(content);
+                    if let Some(sz) = sv.get("size").and_then(|v| v.as_f64()) {
+                        s = s.size(Pixels(sz as f32));
+                    }
+                    if let Some(c) = sv.get("color").and_then(parse_color) {
+                        s = s.color(c);
+                    }
+                    if let Some(f) = sv.get("font") {
+                        s = s.font(parse_font(f));
+                    }
+                    if let Some(link) = sv.get("link").and_then(|v| v.as_str()) {
+                        s = s.link(link.to_owned());
+                    }
+                    s
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let id = node.id.clone();
+    let mut rt = rich_text(span_list)
+        .width(width)
+        .height(height);
+
+    if let Some(sz) = prop_f32(props, "size") {
+        rt = rt.size(sz);
+    }
+    if let Some(f) = props.and_then(|p| p.get("font")).map(parse_font) {
+        rt = rt.font(f);
+    }
+    if let Some(c) = props.and_then(|p| p.get("color")).and_then(parse_color) {
+        rt = rt.color(c);
+    }
+    if let Some(lh) = parse_line_height(props) {
+        rt = rt.line_height(lh);
+    }
+
+    rt = rt.on_link_click(move |link| Message::Click(format!("{}:{}", id, link)));
+
+    rt.into()
+}
+
+// ---------------------------------------------------------------------------
+// Keyed Column
+// ---------------------------------------------------------------------------
+
+fn render_keyed_column<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
+) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
+    let padding = parse_padding_value(props);
+    let width = prop_length(props, "width", Length::Shrink);
+    let height = prop_length(props, "height", Length::Shrink);
+
+    let keyed_children: Vec<(u64, Element<'a, Message>)> = node
+        .children
+        .iter()
+        .map(|c| {
+            let mut hasher = DefaultHasher::new();
+            c.id.hash(&mut hasher);
+            let key = hasher.finish();
+            let elem = render(c, editor_contents, markdown_items, combo_states);
+            (key, elem)
+        })
+        .collect();
+
+    let mut kc = keyed::Column::with_children(keyed_children);
+    kc = kc.spacing(spacing).padding(padding).width(width).height(height);
+
+    if let Some(mw) = prop_f32(props, "max_width") {
+        kc = kc.max_width(mw);
+    }
+
+    kc.into()
+}
+
+// ---------------------------------------------------------------------------
+// Float (floating overlay with scale/translate)
+// ---------------------------------------------------------------------------
+
+fn render_float<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
+) -> Element<'a, Message> {
+    let props = node.props.as_object();
+
+    let child: Element<'a, Message> = node
+        .children
+        .first()
+        .map(|c| render(c, editor_contents, markdown_items, combo_states))
+        .unwrap_or_else(|| Space::new().into());
+
+    let tx = prop_f32(props, "translate_x").unwrap_or(0.0);
+    let ty = prop_f32(props, "translate_y").unwrap_or(0.0);
+
+    let mut f = iced::widget::float(child)
+        .translate(move |_content, _viewport| Vector::new(tx, ty));
+
+    if let Some(s) = prop_f32(props, "scale") {
+        f = f.scale(s);
+    }
+
+    f.into()
+}
+
+// ---------------------------------------------------------------------------
+// Responsive (container that reports its size)
+// ---------------------------------------------------------------------------
+
+fn render_responsive<'a>(
+    node: &'a TreeNode,
+    editor_contents: &'a HashMap<String, text_editor::Content>,
+    markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
+) -> Element<'a, Message> {
+    // iced's Responsive widget takes a closure that receives Size and returns
+    // an Element. Since we can't call back to Elixir within a single frame,
+    // we render the children as-is and wrap in a container with the requested
+    // dimensions. This matches the task's guidance: "render as a container
+    // with width/height and emit a resize event."
+    let props = node.props.as_object();
+    let width = prop_length(props, "width", Length::Fill);
+    let height = prop_length(props, "height", Length::Fill);
+
+    let child: Element<'a, Message> = node
+        .children
+        .first()
+        .map(|c| render(c, editor_contents, markdown_items, combo_states))
+        .unwrap_or_else(|| Space::new().into());
+
+    container(child).width(width).height(height).into()
+}
+
+// ---------------------------------------------------------------------------
+// PaneGrid (placeholder -- requires complex state management)
+// ---------------------------------------------------------------------------
+
+/// PaneGrid requires persistent `pane_grid::State` that must live across
+/// renders (similar to text_editor::Content). A full implementation needs:
+/// 1. A `pane_grid_states: HashMap<String, pane_grid::State<...>>` in App
+/// 2. Cache population in ensure_caches
+/// 3. Rendering each pane's content from child nodes
+///
+/// For now, render as a placeholder container. The main.rs agent can extend
+/// this once pane_grid state management is added to the App struct.
+fn render_pane_grid_placeholder<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let width = prop_length(props, "width", Length::Fill);
+    let height = prop_length(props, "height", Length::Fill);
+
+    container(text("(pane_grid: not yet wired)"))
+        .width(width)
+        .height(height)
+        .into()
+}
+
+// ---------------------------------------------------------------------------
+// Canvas
+// ---------------------------------------------------------------------------
+
+struct CanvasProgram {
+    shapes: Vec<Value>,
+    background: Option<Color>,
+}
+
+impl canvas::Program<Message> for CanvasProgram {
+    type State = ();
+
+    fn draw(
+        &self,
+        _state: &(),
+        renderer: &iced::Renderer,
+        _theme: &iced::Theme,
+        bounds: iced::Rectangle,
+        _cursor: mouse::Cursor,
+    ) -> Vec<canvas::Geometry> {
+        let mut frame = canvas::Frame::new(renderer, bounds.size());
+
+        // Background clear/fill
+        if let Some(bg) = self.background {
+            frame.fill_rectangle(
+                Point::ORIGIN,
+                bounds.size(),
+                bg,
+            );
+        }
+
+        for shape in &self.shapes {
+            let shape_type = shape.get("type").and_then(|v| v.as_str()).unwrap_or("");
+            match shape_type {
+                "rect" => {
+                    let x = json_f32(shape, "x");
+                    let y = json_f32(shape, "y");
+                    let w = json_f32(shape, "w");
+                    let h = json_f32(shape, "h");
+                    let fill = json_color(shape, "fill");
+                    frame.fill_rectangle(Point::new(x, y), Size::new(w, h), fill);
+                }
+                "circle" => {
+                    let x = json_f32(shape, "x");
+                    let y = json_f32(shape, "y");
+                    let r = json_f32(shape, "r");
+                    let fill = json_color(shape, "fill");
+                    let circle = canvas::Path::circle(Point::new(x, y), r);
+                    frame.fill(&circle, fill);
+                }
+                "line" => {
+                    let x1 = json_f32(shape, "x1");
+                    let y1 = json_f32(shape, "y1");
+                    let x2 = json_f32(shape, "x2");
+                    let y2 = json_f32(shape, "y2");
+                    let color = json_color(shape, "fill");
+                    let width = shape
+                        .get("width")
+                        .and_then(|v| v.as_f64())
+                        .map(|v| v as f32)
+                        .unwrap_or(1.0);
+                    let line = canvas::Path::line(Point::new(x1, y1), Point::new(x2, y2));
+                    frame.stroke(
+                        &line,
+                        canvas::Stroke::default().with_color(color).with_width(width),
+                    );
+                }
+                "text" => {
+                    let x = json_f32(shape, "x");
+                    let y = json_f32(shape, "y");
+                    let content = shape
+                        .get("content")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+                    let fill = json_color(shape, "fill");
+                    frame.fill_text(canvas::Text {
+                        content: content.to_owned(),
+                        position: Point::new(x, y),
+                        color: fill,
+                        ..canvas::Text::default()
+                    });
+                }
+                _ => {}
+            }
+        }
+
+        vec![frame.into_geometry()]
+    }
+}
+
+fn render_canvas<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let width = prop_length(props, "width", Length::Fill);
+    let height = prop_length(props, "height", Length::Fixed(200.0));
+
+    let shapes: Vec<Value> = props
+        .and_then(|p| p.get("shapes"))
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    let background = props
+        .and_then(|p| p.get("background"))
+        .and_then(parse_color);
+
+    canvas(CanvasProgram { shapes, background })
+        .width(width)
+        .height(height)
+        .into()
+}
+
+/// Parse an f32 from a JSON value by key, defaulting to 0.
+fn json_f32(val: &Value, key: &str) -> f32 {
+    val.get(key)
+        .and_then(|v| v.as_f64())
+        .map(|v| v as f32)
+        .unwrap_or(0.0)
+}
+
+/// Parse a Color from a JSON "fill" field. Accepts "#rrggbb" hex strings;
+/// defaults to white if missing or unparseable.
+fn json_color(val: &Value, key: &str) -> Color {
+    val.get(key)
+        .and_then(parse_color)
+        .unwrap_or(Color::WHITE)
+}
+
+// ---------------------------------------------------------------------------
+// Table (composite: column/row headers + data rows)
+// ---------------------------------------------------------------------------
+
+fn render_table<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let width = prop_length(props, "width", Length::Fill);
+    let show_header = prop_bool_default(props, "header", true);
+    let padding_val = parse_padding_value(props);
+
+    // "columns" is an array of {key, label} objects.
+    let columns: Vec<(String, String)> = props
+        .and_then(|p| p.get("columns"))
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|col| {
+                    let key = col.get("key")?.as_str()?.to_owned();
+                    let label = col
+                        .get("label")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(&key)
+                        .to_owned();
+                    Some((key, label))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    // "rows" is an array of objects.
+    let rows: Vec<&Value> = props
+        .and_then(|p| p.get("rows"))
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().collect())
+        .unwrap_or_default();
+
+    if columns.is_empty() {
+        return text("(empty table)").into();
+    }
+
+    let mut table_rows: Vec<Element<'a, Message>> = Vec::new();
+
+    // Header row (conditional)
+    if show_header {
+        let header_cells: Vec<Element<'a, Message>> = columns
+            .iter()
+            .map(|(_key, label)| {
+                container(text(label.clone()).size(14.0))
+                    .width(Length::FillPortion(1))
+                    .into()
+            })
+            .collect();
+        let header = row(header_cells).spacing(4.0).width(Fill);
+        table_rows.push(header.into());
+
+        // Separator
+        let show_separator = prop_bool_default(props, "separator", true);
+        if show_separator {
+            table_rows.push(rule::horizontal(1).into());
+        }
+    }
+
+    // Data rows
+    for data_row in &rows {
+        let cells: Vec<Element<'a, Message>> = columns
+            .iter()
+            .map(|(key, _label)| {
+                let cell_text = data_row
+                    .get(key)
+                    .map(|v| match v {
+                        Value::String(s) => s.clone(),
+                        other => other.to_string(),
+                    })
+                    .unwrap_or_default();
+                container(text(cell_text).size(13.0))
+                    .width(Length::FillPortion(1))
+                    .into()
+            })
+            .collect();
+        table_rows.push(row(cells).spacing(4.0).width(Fill).into());
+    }
+
+    scrollable(
+        column(table_rows)
+            .spacing(2.0)
+            .width(width)
+            .padding(padding_val),
+    )
+    .into()
 }
 
 // ---------------------------------------------------------------------------
@@ -670,6 +1814,7 @@ fn render_tabs<'a>(
     node: &'a TreeNode,
     editor_contents: &'a HashMap<String, text_editor::Content>,
     markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let active = prop_str(props, "active").unwrap_or_default();
@@ -694,17 +1839,14 @@ fn render_tabs<'a>(
         headers.push(btn.into());
 
         if is_active {
-            active_child = Some(render(child, editor_contents, markdown_items));
+            active_child =
+                Some(render(child, editor_contents, markdown_items, combo_states));
         }
     }
 
     let body = active_child.unwrap_or_else(|| Space::new().into());
 
-    column![
-        row(headers).spacing(spacing),
-        body,
-    ]
-    .into()
+    column![row(headers).spacing(spacing), body,].into()
 }
 
 // ---------------------------------------------------------------------------
@@ -745,15 +1887,16 @@ fn render_modal<'a>(
     node: &'a TreeNode,
     editor_contents: &'a HashMap<String, text_editor::Content>,
     markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
-    let visible = prop_bool(props, "visible").unwrap_or(false);
+    let visible = prop_bool_default(props, "visible", false);
 
     if !visible || node.children.is_empty() {
         return Space::new().into();
     }
 
-    let children = render_children(node, editor_contents, markdown_items);
+    let children = render_children(node, editor_contents, markdown_items, combo_states);
     let body: Element<'a, Message> = if children.len() == 1 {
         children.into_iter().next().unwrap()
     } else {
@@ -775,24 +1918,23 @@ fn render_card<'a>(
     node: &'a TreeNode,
     editor_contents: &'a HashMap<String, text_editor::Content>,
     markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let title = prop_str(props, "title").unwrap_or_default();
-    let padding = prop_padding(props);
+    let padding = parse_padding_value(props);
     let width = prop_length(props, "width", Length::Shrink);
 
     let body: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, editor_contents, markdown_items))
+        .map(|c| render(c, editor_contents, markdown_items, combo_states))
         .unwrap_or_else(|| Space::new().into());
 
-    container(
-        column![text(title).size(18.0), body].spacing(8.0),
-    )
-    .padding(padding)
-    .width(width)
-    .into()
+    container(column![text(title).size(18.0), body].spacing(8.0))
+        .padding(padding)
+        .width(width)
+        .into()
 }
 
 // ---------------------------------------------------------------------------
@@ -803,10 +1945,11 @@ fn render_panel<'a>(
     node: &'a TreeNode,
     editor_contents: &'a HashMap<String, text_editor::Content>,
     markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let title = prop_str(props, "title").unwrap_or_default();
-    let collapsed = prop_bool(props, "collapsed").unwrap_or(false);
+    let collapsed = prop_bool_default(props, "collapsed", false);
     let id = node.id.clone();
 
     let indicator = if collapsed { "> " } else { "v " };
@@ -817,7 +1960,7 @@ fn render_panel<'a>(
     if collapsed {
         column![header].into()
     } else {
-        let children = render_children(node, editor_contents, markdown_items);
+        let children = render_children(node, editor_contents, markdown_items, combo_states);
         let mut items = vec![header];
         items.extend(children);
         column(items).spacing(4.0).into()
@@ -832,13 +1975,14 @@ fn render_form<'a>(
     node: &'a TreeNode,
     editor_contents: &'a HashMap<String, text_editor::Content>,
     markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(8.0);
-    let padding = prop_padding(props);
+    let padding = parse_padding_value(props);
     let width = prop_length(props, "width", Length::Shrink);
 
-    let children = render_children(node, editor_contents, markdown_items);
+    let children = render_children(node, editor_contents, markdown_items, combo_states);
 
     column(children)
         .spacing(spacing)
@@ -855,6 +1999,7 @@ fn render_split_pane<'a>(
     node: &'a TreeNode,
     editor_contents: &'a HashMap<String, text_editor::Content>,
     markdown_items: &'a HashMap<String, Vec<markdown::Item>>,
+    combo_states: &'a HashMap<String, combo_box::State<String>>,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let ratio = prop_f32(props, "ratio").unwrap_or(0.5).clamp(0.0, 1.0);
@@ -863,12 +2008,12 @@ fn render_split_pane<'a>(
     let left: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, editor_contents, markdown_items))
+        .map(|c| render(c, editor_contents, markdown_items, combo_states))
         .unwrap_or_else(|| Space::new().into());
     let right: Element<'a, Message> = node
         .children
         .get(1)
-        .map(|c| render(c, editor_contents, markdown_items))
+        .map(|c| render(c, editor_contents, markdown_items, combo_states))
         .unwrap_or_else(|| Space::new().into());
 
     // Approximate ratio using FillPortion. Scale to integer parts out of 1000.
@@ -882,209 +2027,6 @@ fn render_split_pane<'a>(
     .spacing(spacing)
     .width(Fill)
     .into()
-}
-
-// ---------------------------------------------------------------------------
-// Canvas
-// ---------------------------------------------------------------------------
-
-struct CanvasProgram {
-    shapes: Vec<Value>,
-}
-
-impl canvas::Program<Message> for CanvasProgram {
-    type State = ();
-
-    fn draw(
-        &self,
-        _state: &(),
-        renderer: &iced::Renderer,
-        _theme: &iced::Theme,
-        bounds: iced::Rectangle,
-        _cursor: mouse::Cursor,
-    ) -> Vec<canvas::Geometry> {
-        let mut frame = canvas::Frame::new(renderer, bounds.size());
-
-        for shape in &self.shapes {
-            let shape_type = shape.get("type").and_then(|v| v.as_str()).unwrap_or("");
-            match shape_type {
-                "rect" => {
-                    let x = json_f32(shape, "x");
-                    let y = json_f32(shape, "y");
-                    let w = json_f32(shape, "w");
-                    let h = json_f32(shape, "h");
-                    let fill = json_color(shape, "fill");
-                    frame.fill_rectangle(Point::new(x, y), Size::new(w, h), fill);
-                }
-                "circle" => {
-                    let x = json_f32(shape, "x");
-                    let y = json_f32(shape, "y");
-                    let r = json_f32(shape, "r");
-                    let fill = json_color(shape, "fill");
-                    let circle = canvas::Path::circle(Point::new(x, y), r);
-                    frame.fill(&circle, fill);
-                }
-                "line" => {
-                    let x1 = json_f32(shape, "x1");
-                    let y1 = json_f32(shape, "y1");
-                    let x2 = json_f32(shape, "x2");
-                    let y2 = json_f32(shape, "y2");
-                    let color = json_color(shape, "fill");
-                    let line = canvas::Path::line(Point::new(x1, y1), Point::new(x2, y2));
-                    frame.stroke(
-                        &line,
-                        canvas::Stroke::default().with_color(color).with_width(1.0),
-                    );
-                }
-                "text" => {
-                    let x = json_f32(shape, "x");
-                    let y = json_f32(shape, "y");
-                    let content = shape
-                        .get("content")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("");
-                    let fill = json_color(shape, "fill");
-                    frame.fill_text(canvas::Text {
-                        content: content.to_owned(),
-                        position: Point::new(x, y),
-                        color: fill,
-                        ..canvas::Text::default()
-                    });
-                }
-                _ => {}
-            }
-        }
-
-        vec![frame.into_geometry()]
-    }
-}
-
-fn render_canvas<'a>(node: &'a TreeNode) -> Element<'a, Message> {
-    let props = node.props.as_object();
-    let width = prop_length(props, "width", Length::Fill);
-    let height = prop_length(props, "height", Length::Fixed(200.0));
-
-    let shapes: Vec<Value> = props
-        .and_then(|p| p.get("shapes"))
-        .and_then(|v| v.as_array())
-        .cloned()
-        .unwrap_or_default();
-
-    canvas(CanvasProgram { shapes })
-        .width(width)
-        .height(height)
-        .into()
-}
-
-/// Parse an f32 from a JSON value by key, defaulting to 0.
-fn json_f32(val: &Value, key: &str) -> f32 {
-    val.get(key)
-        .and_then(|v| v.as_f64())
-        .map(|v| v as f32)
-        .unwrap_or(0.0)
-}
-
-/// Parse a Color from a JSON "fill" field. Accepts "#rrggbb" hex strings;
-/// defaults to white if missing or unparseable.
-fn json_color(val: &Value, key: &str) -> Color {
-    val.get(key)
-        .and_then(|v| v.as_str())
-        .and_then(parse_hex_color)
-        .unwrap_or(Color::WHITE)
-}
-
-fn parse_hex_color(s: &str) -> Option<Color> {
-    let s = s.strip_prefix('#')?;
-    if s.len() == 6 {
-        let r = u8::from_str_radix(&s[0..2], 16).ok()?;
-        let g = u8::from_str_radix(&s[2..4], 16).ok()?;
-        let b = u8::from_str_radix(&s[4..6], 16).ok()?;
-        Some(Color::from_rgb8(r, g, b))
-    } else if s.len() == 8 {
-        let r = u8::from_str_radix(&s[0..2], 16).ok()?;
-        let g = u8::from_str_radix(&s[2..4], 16).ok()?;
-        let b = u8::from_str_radix(&s[4..6], 16).ok()?;
-        let a = u8::from_str_radix(&s[6..8], 16).ok()?;
-        Some(Color::from_rgba8(r, g, b, a as f32 / 255.0))
-    } else {
-        None
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Table (composite: column/row headers + data rows)
-// ---------------------------------------------------------------------------
-
-fn render_table<'a>(node: &'a TreeNode) -> Element<'a, Message> {
-    let props = node.props.as_object();
-    let width = prop_length(props, "width", Length::Fill);
-
-    // "columns" is an array of {key, label} objects.
-    let columns: Vec<(String, String)> = props
-        .and_then(|p| p.get("columns"))
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|col| {
-                    let key = col.get("key")?.as_str()?.to_owned();
-                    let label = col
-                        .get("label")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or(&key)
-                        .to_owned();
-                    Some((key, label))
-                })
-                .collect()
-        })
-        .unwrap_or_default();
-
-    // "rows" is an array of objects.
-    let rows: Vec<&Value> = props
-        .and_then(|p| p.get("rows"))
-        .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().collect())
-        .unwrap_or_default();
-
-    if columns.is_empty() {
-        return text("(empty table)").into();
-    }
-
-    // Header row
-    let header_cells: Vec<Element<'a, Message>> = columns
-        .iter()
-        .map(|(_key, label)| {
-            container(text(label.clone()).size(14.0))
-                .width(Length::FillPortion(1))
-                .into()
-        })
-        .collect();
-    let header = row(header_cells).spacing(4.0).width(Fill);
-
-    // Data rows
-    let mut table_rows: Vec<Element<'a, Message>> = Vec::new();
-    table_rows.push(header.into());
-    table_rows.push(rule::horizontal(1).into());
-
-    for data_row in &rows {
-        let cells: Vec<Element<'a, Message>> = columns
-            .iter()
-            .map(|(key, _label)| {
-                let cell_text = data_row
-                    .get(key)
-                    .map(|v| match v {
-                        Value::String(s) => s.clone(),
-                        other => other.to_string(),
-                    })
-                    .unwrap_or_default();
-                container(text(cell_text).size(13.0))
-                    .width(Length::FillPortion(1))
-                    .into()
-            })
-            .collect();
-        table_rows.push(row(cells).spacing(4.0).width(Fill).into());
-    }
-
-    scrollable(column(table_rows).spacing(2.0).width(width)).into()
 }
 
 // ---------------------------------------------------------------------------
@@ -1119,6 +2061,11 @@ fn prop_bool(props: Props<'_>, key: &str) -> Option<bool> {
     props?.get(key)?.as_bool()
 }
 
+/// Read a boolean prop with a default value.
+fn prop_bool_default(props: Props<'_>, key: &str, default: bool) -> bool {
+    prop_bool(props, key).unwrap_or(default)
+}
+
 fn prop_length(props: Props<'_>, key: &str, fallback: Length) -> Length {
     props
         .and_then(|p| p.get(key))
@@ -1142,17 +2089,96 @@ fn value_to_length(val: &Value) -> Option<Length> {
                 .filter(|v| *v >= 0.0)
                 .map(Length::Fixed),
         },
+        Value::Object(obj) => {
+            // Handle {"fill_portion": N}
+            if let Some(n) = obj.get("fill_portion").and_then(|v| v.as_u64()) {
+                Some(Length::FillPortion(n as u16))
+            } else {
+                Some(Length::Shrink)
+            }
+        }
         _ => None,
     }
 }
 
-fn prop_padding(props: Props<'_>) -> Padding {
-    let base = prop_f32(props, "padding").unwrap_or(0.0).max(0.0);
-    let top = prop_f32(props, "padding_top").unwrap_or(base);
-    let right = prop_f32(props, "padding_right").unwrap_or(base);
-    let bottom = prop_f32(props, "padding_bottom").unwrap_or(base);
-    let left = prop_f32(props, "padding_left").unwrap_or(base);
-    Padding { top, right, bottom, left }
+/// Try to parse a length from an optional Value. Returns None if the value
+/// is absent or unparseable (unlike prop_length which returns a fallback).
+fn value_to_length_opt(val: Option<&Value>) -> Option<Length> {
+    val.and_then(value_to_length)
+}
+
+// ---------------------------------------------------------------------------
+// Padding parsing -- handles both number and object formats
+// ---------------------------------------------------------------------------
+
+/// Parse a padding value from props. Handles:
+/// - `"padding": 10` -- uniform padding
+/// - `"padding": {"top": 10, "right": 5, "bottom": 10, "left": 5}` -- per-side
+/// - Individual `"padding_top"` etc. keys (legacy)
+fn parse_padding_value(props: Props<'_>) -> Padding {
+    let padding_val = props.and_then(|p| p.get("padding"));
+
+    match padding_val {
+        Some(Value::Object(obj)) => {
+            let top = obj
+                .get("top")
+                .and_then(|v| v.as_f64())
+                .map(|v| v as f32)
+                .unwrap_or(0.0)
+                .max(0.0);
+            let right = obj
+                .get("right")
+                .and_then(|v| v.as_f64())
+                .map(|v| v as f32)
+                .unwrap_or(0.0)
+                .max(0.0);
+            let bottom = obj
+                .get("bottom")
+                .and_then(|v| v.as_f64())
+                .map(|v| v as f32)
+                .unwrap_or(0.0)
+                .max(0.0);
+            let left = obj
+                .get("left")
+                .and_then(|v| v.as_f64())
+                .map(|v| v as f32)
+                .unwrap_or(0.0)
+                .max(0.0);
+            Padding {
+                top,
+                right,
+                bottom,
+                left,
+            }
+        }
+        Some(Value::Number(n)) => {
+            let base = n.as_f64().map(|v| v as f32).unwrap_or(0.0).max(0.0);
+            // Check for per-side overrides (legacy format)
+            let top = prop_f32(props, "padding_top").unwrap_or(base);
+            let right = prop_f32(props, "padding_right").unwrap_or(base);
+            let bottom = prop_f32(props, "padding_bottom").unwrap_or(base);
+            let left = prop_f32(props, "padding_left").unwrap_or(base);
+            Padding {
+                top,
+                right,
+                bottom,
+                left,
+            }
+        }
+        _ => {
+            // No padding prop -- check legacy individual keys
+            let top = prop_f32(props, "padding_top").unwrap_or(0.0);
+            let right = prop_f32(props, "padding_right").unwrap_or(0.0);
+            let bottom = prop_f32(props, "padding_bottom").unwrap_or(0.0);
+            let left = prop_f32(props, "padding_left").unwrap_or(0.0);
+            Padding {
+                top,
+                right,
+                bottom,
+                left,
+            }
+        }
+    }
 }
 
 fn prop_horizontal_alignment(props: Props<'_>, key: &str) -> alignment::Horizontal {
@@ -1223,6 +2249,307 @@ fn prop_content_fit(props: Props<'_>) -> Option<ContentFit> {
         "fill" => Some(ContentFit::Fill),
         "none" => Some(ContentFit::None),
         "scale_down" => Some(ContentFit::ScaleDown),
+        _ => None,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Color parsing -- hex string "#rrggbb" / "#rrggbbaa" or {r,g,b,a} object
+// ---------------------------------------------------------------------------
+
+fn parse_hex_color(s: &str) -> Option<Color> {
+    let s = s.strip_prefix('#').unwrap_or(s);
+    if s.len() == 6 {
+        let r = u8::from_str_radix(&s[0..2], 16).ok()?;
+        let g = u8::from_str_radix(&s[2..4], 16).ok()?;
+        let b = u8::from_str_radix(&s[4..6], 16).ok()?;
+        Some(Color::from_rgb8(r, g, b))
+    } else if s.len() == 8 {
+        let r = u8::from_str_radix(&s[0..2], 16).ok()?;
+        let g = u8::from_str_radix(&s[2..4], 16).ok()?;
+        let b = u8::from_str_radix(&s[4..6], 16).ok()?;
+        let a = u8::from_str_radix(&s[6..8], 16).ok()?;
+        Some(Color::from_rgba8(r, g, b, a as f32 / 255.0))
+    } else {
+        None
+    }
+}
+
+/// Parse a color from a JSON value. Accepts:
+/// - A hex string: "#rrggbb" or "#rrggbbaa"
+/// - An object: {"r": 0.5, "g": 0.5, "b": 0.5, "a": 1.0} (0-1 floats)
+fn parse_color(value: &Value) -> Option<Color> {
+    match value {
+        Value::String(s) => parse_hex_color(s),
+        Value::Object(obj) => {
+            let r = obj.get("r").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+            let g = obj.get("g").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+            let b = obj.get("b").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+            let a = obj.get("a").and_then(|v| v.as_f64()).unwrap_or(1.0) as f32;
+            Some(Color::from_rgba(r, g, b, a))
+        }
+        _ => None,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Background parsing (color or gradient)
+// ---------------------------------------------------------------------------
+
+/// Parse a background from a JSON value. Accepts:
+/// - A color string ("#rrggbb") or object ({r,g,b,a}) -> Background::Color
+/// - A gradient object: {"type": "linear", "angle": 45, "stops": [{"offset": 0.0, "color": "#ff0000"}, ...]}
+fn parse_background(value: &Value) -> Option<iced::Background> {
+    match value {
+        Value::String(_) => parse_color(value).map(iced::Background::Color),
+        Value::Object(obj) => {
+            match obj.get("type").and_then(|v| v.as_str()) {
+                Some("linear") => {
+                    let angle_deg = obj
+                        .get("angle")
+                        .and_then(|v| v.as_f64())
+                        .unwrap_or(0.0) as f32;
+                    let angle = Radians(angle_deg.to_radians());
+                    let mut linear = iced::gradient::Linear::new(angle);
+
+                    if let Some(stops) = obj.get("stops").and_then(|v| v.as_array()) {
+                        for stop in stops {
+                            let offset = stop
+                                .get("offset")
+                                .and_then(|v| v.as_f64())
+                                .unwrap_or(0.0) as f32;
+                            let color = stop
+                                .get("color")
+                                .and_then(parse_color)
+                                .unwrap_or(Color::TRANSPARENT);
+                            linear = linear.add_stop(offset, color);
+                        }
+                    }
+
+                    Some(iced::Background::Gradient(
+                        iced::Gradient::Linear(linear),
+                    ))
+                }
+                _ => {
+                    // Fall back to color object parsing ({r, g, b, a})
+                    parse_color(value).map(iced::Background::Color)
+                }
+            }
+        }
+        _ => None,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Font parsing
+// ---------------------------------------------------------------------------
+
+/// Parse a font from a JSON value. Accepts:
+/// - "default" -> Font::DEFAULT
+/// - "monospace" -> Font::MONOSPACE
+/// - An object with optional family, weight, style fields
+fn parse_font(value: &Value) -> Font {
+    match value {
+        Value::String(s) => match s.to_ascii_lowercase().as_str() {
+            "monospace" => Font::MONOSPACE,
+            _ => Font::DEFAULT,
+        },
+        Value::Object(obj) => {
+            let mut f = Font::DEFAULT;
+
+            if let Some(family) = obj.get("family").and_then(|v| v.as_str()) {
+                match family.to_ascii_lowercase().as_str() {
+                    "monospace" | "mono" => f = Font::MONOSPACE,
+                    "serif" => {
+                        f.family = font::Family::Serif;
+                    }
+                    "cursive" => {
+                        f.family = font::Family::Cursive;
+                    }
+                    "fantasy" => {
+                        f.family = font::Family::Fantasy;
+                    }
+                    // Default is SansSerif
+                    _ => {}
+                }
+            }
+
+            if let Some(weight) = obj.get("weight").and_then(|v| v.as_str()) {
+                f.weight = match weight.to_ascii_lowercase().as_str() {
+                    "thin" => font::Weight::Thin,
+                    "extralight" | "extra_light" => font::Weight::ExtraLight,
+                    "light" => font::Weight::Light,
+                    "normal" | "regular" => font::Weight::Normal,
+                    "medium" => font::Weight::Medium,
+                    "semibold" | "semi_bold" => font::Weight::Semibold,
+                    "bold" => font::Weight::Bold,
+                    "extrabold" | "extra_bold" => font::Weight::ExtraBold,
+                    "black" => font::Weight::Black,
+                    _ => font::Weight::Normal,
+                };
+            }
+
+            if let Some(style) = obj.get("style").and_then(|v| v.as_str()) {
+                f.style = match style.to_ascii_lowercase().as_str() {
+                    "italic" => font::Style::Italic,
+                    "oblique" => font::Style::Oblique,
+                    _ => font::Style::Normal,
+                };
+            }
+
+            if let Some(stretch_val) = obj.get("stretch").and_then(|v| v.as_str()) {
+                f.stretch = match stretch_val.to_ascii_lowercase().as_str() {
+                    "ultra_condensed" | "ultracondensed" => font::Stretch::UltraCondensed,
+                    "extra_condensed" | "extracondensed" => font::Stretch::ExtraCondensed,
+                    "condensed" => font::Stretch::Condensed,
+                    "semi_condensed" | "semicondensed" => font::Stretch::SemiCondensed,
+                    "normal" => font::Stretch::Normal,
+                    "semi_expanded" | "semiexpanded" => font::Stretch::SemiExpanded,
+                    "expanded" => font::Stretch::Expanded,
+                    "extra_expanded" | "extraexpanded" => font::Stretch::ExtraExpanded,
+                    "ultra_expanded" | "ultraexpanded" => font::Stretch::UltraExpanded,
+                    _ => font::Stretch::Normal,
+                };
+            }
+
+            f
+        }
+        _ => Font::DEFAULT,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Border and Shadow parsing
+// ---------------------------------------------------------------------------
+
+/// Parse a border from a JSON value.
+/// Accepts: {"color": "#rrggbb", "width": 1.0, "radius": 4.0}
+/// radius can be a number or [tl, tr, br, bl]
+fn parse_border(value: &Value) -> Border {
+    let obj = match value.as_object() {
+        Some(o) => o,
+        None => return Border::default(),
+    };
+
+    let color = obj
+        .get("color")
+        .and_then(parse_color)
+        .unwrap_or(Color::TRANSPARENT);
+    let width = obj
+        .get("width")
+        .and_then(|v| v.as_f64())
+        .map(|v| v as f32)
+        .unwrap_or(0.0);
+    let radius = match obj.get("radius") {
+        Some(Value::Number(n)) => {
+            let r = n.as_f64().unwrap_or(0.0) as f32;
+            r.into()
+        }
+        Some(Value::Array(arr)) if !arr.is_empty() => {
+            // Per-corner: [top_left, top_right, bottom_right, bottom_left]
+            let tl = arr.first().and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+            let tr = arr.get(1).and_then(|v| v.as_f64()).unwrap_or(tl as f64) as f32;
+            let br = arr.get(2).and_then(|v| v.as_f64()).unwrap_or(tl as f64) as f32;
+            let bl = arr.get(3).and_then(|v| v.as_f64()).unwrap_or(tl as f64) as f32;
+            iced::border::Radius { top_left: tl, top_right: tr, bottom_right: br, bottom_left: bl }
+        }
+        Some(Value::Object(radius_obj)) => {
+            // Per-corner object: {"top_left": N, "top_right": N, "bottom_right": N, "bottom_left": N}
+            let tl = radius_obj.get("top_left").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+            let tr = radius_obj.get("top_right").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+            let br = radius_obj.get("bottom_right").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+            let bl = radius_obj.get("bottom_left").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+            iced::border::Radius { top_left: tl, top_right: tr, bottom_right: br, bottom_left: bl }
+        }
+        _ => (0.0_f32).into(),
+    };
+
+    Border {
+        color,
+        width,
+        radius,
+    }
+}
+
+/// Parse a shadow from a JSON value.
+/// Accepts: {"color": "#rrggbb", "offset": [x, y], "blur_radius": 5.0}
+fn parse_shadow(value: &Value) -> Shadow {
+    let obj = match value.as_object() {
+        Some(o) => o,
+        None => return Shadow::default(),
+    };
+
+    let color = obj
+        .get("color")
+        .and_then(parse_color)
+        .unwrap_or(Color::BLACK);
+    let offset = match obj.get("offset").and_then(|v| v.as_array()) {
+        Some(arr) if arr.len() >= 2 => Vector::new(
+            arr[0].as_f64().unwrap_or(0.0) as f32,
+            arr[1].as_f64().unwrap_or(0.0) as f32,
+        ),
+        _ => Vector::new(0.0, 0.0),
+    };
+    let blur_radius = obj
+        .get("blur_radius")
+        .and_then(|v| v.as_f64())
+        .map(|v| v as f32)
+        .unwrap_or(0.0);
+
+    Shadow {
+        color,
+        offset,
+        blur_radius,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Line height and wrapping parsing
+// ---------------------------------------------------------------------------
+
+/// Parse line_height prop. Accepts:
+/// - A number (interpreted as relative multiplier)
+/// - An object {"relative": 1.5} or {"absolute": 20}
+fn parse_line_height(props: Props<'_>) -> Option<LineHeight> {
+    let val = props?.get("line_height")?;
+    match val {
+        Value::Number(n) => {
+            let v = n.as_f64()? as f32;
+            Some(LineHeight::Relative(v))
+        }
+        Value::Object(obj) => {
+            if let Some(r) = obj.get("relative").and_then(|v| v.as_f64()) {
+                Some(LineHeight::Relative(r as f32))
+            } else if let Some(a) = obj.get("absolute").and_then(|v| v.as_f64()) {
+                Some(LineHeight::Absolute(Pixels(a as f32)))
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+/// Parse text_shaping prop from a string.
+fn parse_shaping(props: Props<'_>) -> Option<iced::widget::text::Shaping> {
+    use iced::widget::text::Shaping;
+    let s = prop_str(props, "text_shaping")?;
+    match s.to_ascii_lowercase().as_str() {
+        "basic" => Some(Shaping::Basic),
+        "advanced" => Some(Shaping::Advanced),
+        "auto" => Some(Shaping::Auto),
+        _ => None,
+    }
+}
+
+/// Parse wrapping prop from a string.
+fn parse_wrapping(props: Props<'_>) -> Option<Wrapping> {
+    let s = prop_str(props, "wrapping")?;
+    match s.to_ascii_lowercase().as_str() {
+        "none" => Some(Wrapping::None),
+        "word" => Some(Wrapping::Word),
+        "glyph" => Some(Wrapping::Glyph),
+        "word_or_glyph" => Some(Wrapping::WordOrGlyph),
         _ => None,
     }
 }

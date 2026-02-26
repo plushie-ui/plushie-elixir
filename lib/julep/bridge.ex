@@ -39,6 +39,11 @@ defmodule Julep.Bridge do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
+  @doc "Sends application-level settings to the renderer."
+  def send_settings(bridge, settings) do
+    GenServer.cast(bridge, {:send_settings, settings})
+  end
+
   @doc "Sends an encoded snapshot of `tree` to the renderer."
   def send_snapshot(bridge, tree) do
     GenServer.cast(bridge, {:send_snapshot, tree})
@@ -119,6 +124,12 @@ defmodule Julep.Bridge do
   end
 
   @impl true
+  def handle_cast({:send_settings, settings}, state) do
+    json = Julep.Protocol.encode_settings(settings)
+    send_to_port(state.port, json)
+    {:noreply, state}
+  end
+
   def handle_cast({:send_snapshot, tree}, state) do
     json = Julep.Protocol.encode_snapshot(tree)
     send_to_port(state.port, json)
