@@ -103,6 +103,36 @@ defmodule Julep.Examples.CatalogTest do
     assert tree.type == "window"
   end
 
+  test "demo tabs switch active content" do
+    model = Catalog.init([]) |> Map.put(:active_tab, "composite")
+    assert model.demo_tabs_active == "tab_one"
+
+    model = Catalog.update(model, {:click, "tab_two"})
+    assert model.demo_tabs_active == "tab_two"
+
+    tree = Catalog.view(model)
+    tabs_node = Julep.UI.find(tree, "demo_tabs")
+    assert tabs_node.props["active"] == "tab_two"
+  end
+
+  test "modal hides when not visible and shows when visible" do
+    model = Catalog.init([]) |> Map.put(:active_tab, "composite")
+    assert model.modal_visible == false
+
+    tree = Catalog.view(model)
+    modal_node = Julep.UI.find(tree, "demo_modal")
+    assert modal_node.props["visible"] == false
+
+    model = Catalog.update(model, {:click, "show_modal"})
+    assert model.modal_visible == true
+
+    tree = Catalog.view(model)
+    modal_node = Julep.UI.find(tree, "demo_modal")
+    assert modal_node.props["visible"] == true
+    # Modal should have children (the content) when visible
+    assert length(modal_node.children) > 0
+  end
+
   test "unknown events are handled gracefully" do
     model = Catalog.init([])
     model2 = Catalog.update(model, :some_random_event)

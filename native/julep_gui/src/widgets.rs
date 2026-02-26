@@ -637,26 +637,22 @@ fn render_modal<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let props = node.props.as_object();
     let visible = prop_bool(props, "visible").unwrap_or(false);
 
-    let background: Element<'a, Message> = node
-        .children
-        .first()
-        .map(render)
-        .unwrap_or_else(|| Space::new().into());
-
-    if !visible || node.children.len() < 2 {
-        return background;
+    if !visible || node.children.is_empty() {
+        return Space::new().into();
     }
 
-    let overlay = node.children.get(1).map(render).unwrap();
-    let centered_overlay: Element<'a, Message> = container(overlay)
+    // Render all children into a column, then center it as an overlay.
+    let children: Vec<Element<'a, Message>> = node.children.iter().map(render).collect();
+    let body: Element<'a, Message> = if children.len() == 1 {
+        children.into_iter().next().unwrap()
+    } else {
+        column(children).spacing(8.0).into()
+    };
+
+    container(body)
         .width(Fill)
         .height(Fill)
         .center(Fill)
-        .into();
-
-    Stack::with_children(vec![background, centered_overlay])
-        .width(Fill)
-        .height(Fill)
         .into()
 }
 

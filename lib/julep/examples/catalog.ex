@@ -13,6 +13,7 @@ defmodule Julep.Examples.Catalog do
   def init(_opts) do
     %{
       active_tab: "layout",
+      demo_tabs_active: "tab_one",
       text_value: "",
       checkbox_checked: false,
       toggler_on: false,
@@ -51,6 +52,9 @@ defmodule Julep.Examples.Catalog do
   def update(model, {:click, "demo_panel"}) do
     %{model | panel_collapsed: not model.panel_collapsed}
   end
+
+  def update(model, {:click, "tab_one"}), do: %{model | demo_tabs_active: "tab_one"}
+  def update(model, {:click, "tab_two"}), do: %{model | demo_tabs_active: "tab_two"}
 
   def update(model, {:click, "show_modal"}), do: %{model | modal_visible: true}
   def update(model, {:click, "hide_modal"}), do: %{model | modal_visible: false}
@@ -184,7 +188,7 @@ defmodule Julep.Examples.Catalog do
         button("tooltip_target", "Hover me")
       end
 
-      tabs "demo_tabs", active: "tab_one" do
+      tabs "demo_tabs", active: model.demo_tabs_active do
         container "tab_one" do
           text("Tab one content")
         end
