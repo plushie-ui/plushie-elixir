@@ -5,6 +5,30 @@ defmodule Julep.Command do
   They are plain data -- inspectable, testable, serializable. The runtime
   interprets them after `update/2` returns. Nothing executes inside `update`.
 
+  ## Categories
+
+  - **Basic**: `none/0`, `done/2`, `async/2`, `send_after/2`, `exit/0`
+  - **Focus**: `focus/1`, `focus_next/0`, `focus_previous/0`
+  - **Text**: `select_all/1`, `move_cursor_to_front/1`, `move_cursor_to_end/1`,
+    `move_cursor_to/2`, `select_range/3`
+  - **Scroll**: `scroll_to/2`, `snap_to/3`, `snap_to_end/1`, `scroll_by/3`
+  - **Window ops**: `close_window/1`, `resize_window/3`, `move_window/3`,
+    `maximize_window/2`, `minimize_window/2`, `set_window_mode/2`,
+    `toggle_maximize/1`, `toggle_decorations/1`, `gain_focus/1`,
+    `set_window_level/2`, `drag_window/1`, `drag_resize_window/2`,
+    `request_user_attention/2`, `screenshot/2`, `set_resizable/2`,
+    `set_min_size/3`, `set_max_size/3`, `enable_mouse_passthrough/1`,
+    `disable_mouse_passthrough/1`, `show_system_menu/1`.
+    Note: `set_icon` is not supported -- iced requires raw RGBA pixel data,
+    which is impractical over JSONL. Set the icon at the OS/desktop level
+    instead (`.desktop` file, `Info.plist`, or Windows resource embedding).
+  - **Window queries**: `get_window_size/2`, `get_window_position/2`,
+    `is_maximized/2`, `is_minimized/2`, `get_mode/2`, `get_scale_factor/2`,
+    `raw_id/2`, `monitor_size/2`
+  - **PaneGrid ops**: `pane_split/4`, `pane_close/2`, `pane_swap/3`,
+    `pane_maximize/2`, `pane_restore/1`
+  - **Batch**: `batch/1`
+
   ## Usage
 
       def update(model, {:click, "save"}) do
@@ -137,6 +161,12 @@ defmodule Julep.Command do
 
   # ---------------------------------------------------------------------------
   # Window operations
+  #
+  # Note: set_icon is intentionally not supported. iced's window::set_icon
+  # requires raw RGBA pixel data, which is impractical to serialize over
+  # JSONL. Set your application icon at the OS/desktop level instead (e.g.
+  # .desktop file on Linux, Info.plist on macOS, resource embedding on
+  # Windows).
   # ---------------------------------------------------------------------------
 
   @doc "Resize a window to the given dimensions."
@@ -281,11 +311,49 @@ defmodule Julep.Command do
     %__MODULE__{type: :window_query, payload: %{op: "is_minimized", window_id: window_id, tag: to_string(tag)}}
   end
 
+  @doc """
+  Query the current window mode (windowed, fullscreen, hidden).
+  Result arrives as an effect response keyed by window ID.
+  """
+  @spec get_mode(term(), atom() | String.t()) :: %__MODULE__{}
+  def get_mode(window_id, tag) do
+    %__MODULE__{type: :window_query, payload: %{op: "get_mode", window_id: window_id, tag: to_string(tag)}}
+  end
+
+  @doc """
+  Query the window's current scale factor (DPI scaling).
+  Result arrives as an effect response keyed by window ID.
+  """
+  @spec get_scale_factor(term(), atom() | String.t()) :: %__MODULE__{}
+  def get_scale_factor(window_id, tag) do
+    %__MODULE__{type: :window_query, payload: %{op: "get_scale_factor", window_id: window_id, tag: to_string(tag)}}
+  end
+
+  @doc """
+  Query the raw platform window ID (e.g. X11 window ID, HWND).
+  Result arrives as an effect response keyed by window ID.
+  """
+  @spec raw_id(term(), atom() | String.t()) :: %__MODULE__{}
+  def raw_id(window_id, tag) do
+    %__MODULE__{type: :window_query, payload: %{op: "raw_id", window_id: window_id, tag: to_string(tag)}}
+  end
+
+  @doc """
+  Query the monitor size for the display containing a window.
+  Result arrives as an effect response with `{width, height}` or null
+  if the monitor cannot be determined.
+  """
+  @spec monitor_size(term(), atom() | String.t()) :: %__MODULE__{}
+  def monitor_size(window_id, tag) do
+    %__MODULE__{type: :window_query, payload: %{op: "monitor_size", window_id: window_id, tag: to_string(tag)}}
+  end
+
   # ---------------------------------------------------------------------------
   # PaneGrid operations
   # ---------------------------------------------------------------------------
 
-  @doc "Split a pane in the pane grid."
+  @doc "Split a pane in the pane grid along the given axis."
+  @spec pane_split(term(), term(), atom() | String.t(), term()) :: %__MODULE__{}
   def pane_split(pane_grid_id, pane_id, axis, new_pane_id) do
     %__MODULE__{type: :widget_op, payload: %{
       op: "pane_split",
@@ -297,6 +365,7 @@ defmodule Julep.Command do
   end
 
   @doc "Close a pane in the pane grid."
+  @spec pane_close(term(), term()) :: %__MODULE__{}
   def pane_close(pane_grid_id, pane_id) do
     %__MODULE__{type: :widget_op, payload: %{
       op: "pane_close",
@@ -306,6 +375,7 @@ defmodule Julep.Command do
   end
 
   @doc "Swap two panes in the pane grid."
+  @spec pane_swap(term(), term(), term()) :: %__MODULE__{}
   def pane_swap(pane_grid_id, pane_a, pane_b) do
     %__MODULE__{type: :widget_op, payload: %{
       op: "pane_swap",
@@ -316,6 +386,7 @@ defmodule Julep.Command do
   end
 
   @doc "Maximize a pane in the pane grid."
+  @spec pane_maximize(term(), term()) :: %__MODULE__{}
   def pane_maximize(pane_grid_id, pane_id) do
     %__MODULE__{type: :widget_op, payload: %{
       op: "pane_maximize",
@@ -325,6 +396,7 @@ defmodule Julep.Command do
   end
 
   @doc "Restore all panes from maximized state."
+  @spec pane_restore(term()) :: %__MODULE__{}
   def pane_restore(pane_grid_id) do
     %__MODULE__{type: :widget_op, payload: %{
       op: "pane_restore",

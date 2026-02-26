@@ -93,6 +93,11 @@ Julep.Command.minimize_window(window_id)       # Minimize
 Julep.Command.fullscreen_window(window_id)     # Fullscreen
 ```
 
+> **Not supported: `set_icon`.** iced's `window::set_icon` requires raw RGBA
+> pixel data, which is impractical to serialize over JSONL. Set your
+> application icon at the OS/desktop level instead (`.desktop` file on Linux,
+> `Info.plist` on macOS, resource embedding on Windows).
+
 #### Timers
 
 ```elixir

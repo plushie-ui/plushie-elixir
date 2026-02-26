@@ -1,5 +1,28 @@
 defmodule Julep.Iced.Shadow do
-  @moduledoc "Shadow type for widget styling."
+  @moduledoc """
+  Shadow type for widget styling.
+
+  Used in `container` and other widgets via the `shadow` prop.
+  The renderer parses shadow maps into `iced::Shadow`.
+
+  ## Wire format
+
+      %{
+        color: "#00000080",
+        offset: [4, 4],
+        blur_radius: 8.0
+      }
+
+  The `offset` is an `[x, y]` list. `color` is any color format
+  (see `Julep.Iced.Color`).
+
+  ## Example
+
+      shadow = Julep.Iced.Shadow.new()
+               |> Julep.Iced.Shadow.color("#00000040")
+               |> Julep.Iced.Shadow.offset(2, 2)
+               |> Julep.Iced.Shadow.blur_radius(6)
+  """
 
   @doc "Creates a new shadow with default values."
   @spec new() :: map()

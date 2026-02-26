@@ -32,6 +32,8 @@ pub struct WidgetCaches {
     pub combo_states: HashMap<String, combo_box::State<String>>,
     pub combo_options: HashMap<String, Vec<String>>,
     pub pane_grid_states: HashMap<String, pane_grid::State<String>>,
+    pub default_text_size: Option<f32>,
+    pub default_font: Option<Font>,
 }
 
 impl WidgetCaches {
@@ -42,6 +44,8 @@ impl WidgetCaches {
             combo_states: HashMap::new(),
             combo_options: HashMap::new(),
             pane_grid_states: HashMap::new(),
+            default_text_size: None,
+            default_font: None,
         }
     }
 
@@ -150,22 +154,22 @@ pub fn render<'a>(
     match node.type_name.as_str() {
         "column" => render_column(node, caches),
         "row" => render_row(node, caches),
-        "text" => render_text(node),
+        "text" => render_text(node, caches),
         "button" => render_button(node, caches),
         "container" => render_container(node, caches),
         "space" => render_space(node),
-        "text_input" => render_text_input(node),
-        "checkbox" => render_checkbox(node),
+        "text_input" => render_text_input(node, caches),
+        "checkbox" => render_checkbox(node, caches),
         "rule" => render_rule(node),
         "progress_bar" => render_progress_bar(node),
         "scrollable" => render_scrollable(node, caches),
         "window" => render_window(node, caches),
         // Native widgets
-        "toggler" => render_toggler(node),
-        "radio" => render_radio(node),
+        "toggler" => render_toggler(node, caches),
+        "radio" => render_radio(node, caches),
         "slider" => render_slider(node),
         "vertical_slider" => render_vertical_slider(node),
-        "pick_list" => render_pick_list(node),
+        "pick_list" => render_pick_list(node, caches),
         "combo_box" => render_combo_box(node, caches),
         "text_editor" => render_text_editor(node, caches),
         "tooltip" => render_tooltip(node, caches),
@@ -180,7 +184,7 @@ pub fn render<'a>(
         "pin" => render_pin(node, caches),
         "mouse_area" => render_mouse_area(node, caches),
         "sensor" => render_sensor(node, caches),
-        "rich_text" | "rich" => render_rich_text(node),
+        "rich_text" | "rich" => render_rich_text(node, caches),
         "keyed_column" => render_keyed_column(node, caches),
         "float" => render_float(node, caches),
         "themer" => render_themer(node, caches),
@@ -281,16 +285,17 @@ fn render_row<'a>(
 // Text
 // ---------------------------------------------------------------------------
 
-fn render_text<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_text<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let content = prop_str(props, "content").unwrap_or_default();
-    let size = prop_f32(props, "size");
+    let size = prop_f32(props, "size").or(caches.default_text_size);
 
     let mut t = text(content);
     if let Some(s) = size {
         t = t.size(s);
     }
-    if let Some(f) = props.and_then(|p| p.get("font")).map(parse_font) {
+    let font = props.and_then(|p| p.get("font")).map(parse_font).or(caches.default_font);
+    if let Some(f) = font {
         t = t.font(f);
     }
     if let Some(c) = props.and_then(|p| p.get("color")).and_then(parse_color) {
@@ -601,12 +606,12 @@ fn render_window<'a>(
 // Text Input
 // ---------------------------------------------------------------------------
 
-fn render_text_input<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_text_input<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let value = prop_str(props, "value").unwrap_or_default();
     let placeholder = prop_str(props, "placeholder").unwrap_or_default();
     let width = prop_length(props, "width", Length::Fill);
-    let size = prop_f32(props, "size");
+    let size = prop_f32(props, "size").or(caches.default_text_size);
     let padding = parse_padding_value(props);
     let secure = prop_bool_default(props, "secure", false);
     let id = node.id.clone();
@@ -621,7 +626,8 @@ fn render_text_input<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     if let Some(s) = size {
         ti = ti.size(s);
     }
-    if let Some(f) = props.and_then(|p| p.get("font")).map(parse_font) {
+    let font = props.and_then(|p| p.get("font")).map(parse_font).or(caches.default_font);
+    if let Some(f) = font {
         ti = ti.font(f);
     }
     if let Some(lh) = parse_line_height(props) {
@@ -661,7 +667,7 @@ fn render_text_input<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 // Checkbox
 // ---------------------------------------------------------------------------
 
-fn render_checkbox<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_checkbox<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let label = prop_str(props, "label").unwrap_or_default();
     let checked = prop_bool_default(props, "checked", false);
@@ -680,10 +686,11 @@ fn render_checkbox<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     if let Some(sz) = prop_f32(props, "size") {
         cb = cb.size(sz);
     }
-    if let Some(ts) = prop_f32(props, "text_size") {
+    if let Some(ts) = prop_f32(props, "text_size").or(caches.default_text_size) {
         cb = cb.text_size(ts);
     }
-    if let Some(f) = props.and_then(|p| p.get("font")).map(parse_font) {
+    let font = props.and_then(|p| p.get("font")).map(parse_font).or(caches.default_font);
+    if let Some(f) = font {
         cb = cb.font(f);
     }
     if let Some(lh) = parse_line_height(props) {
@@ -777,7 +784,7 @@ fn render_progress_bar<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 // Toggler
 // ---------------------------------------------------------------------------
 
-fn render_toggler<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_toggler<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let is_toggled = prop_bool_default(props, "is_toggled", false);
     let label = prop_str(props, "label");
@@ -798,10 +805,11 @@ fn render_toggler<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     if let Some(sz) = prop_f32(props, "size") {
         t = t.size(sz);
     }
-    if let Some(ts) = prop_f32(props, "text_size") {
+    if let Some(ts) = prop_f32(props, "text_size").or(caches.default_text_size) {
         t = t.text_size(ts);
     }
-    if let Some(f) = props.and_then(|p| p.get("font")).map(parse_font) {
+    let font = props.and_then(|p| p.get("font")).map(parse_font).or(caches.default_font);
+    if let Some(f) = font {
         t = t.font(f);
     }
     if let Some(lh) = parse_line_height(props) {
@@ -829,7 +837,7 @@ fn render_toggler<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 // Radio
 // ---------------------------------------------------------------------------
 
-fn render_radio<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_radio<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let value = prop_str(props, "value").unwrap_or_default();
     let selected_str = prop_str(props, "selected").unwrap_or_default();
@@ -853,10 +861,11 @@ fn render_radio<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     if let Some(sz) = prop_f32(props, "size") {
         r = r.size(sz);
     }
-    if let Some(ts) = prop_f32(props, "text_size") {
+    if let Some(ts) = prop_f32(props, "text_size").or(caches.default_text_size) {
         r = r.text_size(ts);
     }
-    if let Some(f) = props.and_then(|p| p.get("font")).map(parse_font) {
+    let font = props.and_then(|p| p.get("font")).map(parse_font).or(caches.default_font);
+    if let Some(f) = font {
         r = r.font(f);
     }
     if let Some(lh) = parse_line_height(props) {
@@ -969,7 +978,7 @@ fn render_vertical_slider<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 // Pick List
 // ---------------------------------------------------------------------------
 
-fn render_pick_list<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_pick_list<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let options: Vec<String> = props
         .and_then(|p| p.get("options"))
@@ -995,10 +1004,11 @@ fn render_pick_list<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     if let Some(p) = placeholder {
         pl = pl.placeholder(p);
     }
-    if let Some(ts) = prop_f32(props, "text_size") {
+    if let Some(ts) = prop_f32(props, "text_size").or(caches.default_text_size) {
         pl = pl.text_size(ts);
     }
-    if let Some(f) = props.and_then(|p| p.get("font")).map(parse_font) {
+    let font = props.and_then(|p| p.get("font")).map(parse_font).or(caches.default_font);
+    if let Some(f) = font {
         pl = pl.font(f);
     }
     if let Some(mh) = prop_f32(props, "menu_height") {
@@ -1055,10 +1065,11 @@ fn render_combo_box<'a>(
     // on_input: emit Input events so Elixir can filter
     cb = cb.on_input(move |v| Message::Input(input_id.clone(), v));
 
-    if let Some(sz) = prop_f32(props, "size") {
+    if let Some(sz) = prop_f32(props, "size").or(caches.default_text_size) {
         cb = cb.size(sz);
     }
-    if let Some(f) = props.and_then(|p| p.get("font")).map(parse_font) {
+    let font = props.and_then(|p| p.get("font")).map(parse_font).or(caches.default_font);
+    if let Some(f) = font {
         cb = cb.font(f);
     }
     if let Some(lh) = parse_line_height(props) {
@@ -1100,10 +1111,11 @@ fn render_text_editor<'a>(
     if !placeholder.is_empty() {
         te = te.placeholder(placeholder);
     }
-    if let Some(f) = props.and_then(|p| p.get("font")).map(parse_font) {
+    let font = props.and_then(|p| p.get("font")).map(parse_font).or(caches.default_font);
+    if let Some(f) = font {
         te = te.font(f);
     }
-    if let Some(sz) = prop_f32(props, "size") {
+    if let Some(sz) = prop_f32(props, "size").or(caches.default_text_size) {
         te = te.size(sz);
     }
     if let Some(lh) = parse_line_height(props) {
@@ -1288,7 +1300,7 @@ fn render_markdown<'a>(
     };
 
     // Build markdown Settings from props, falling back to theme defaults.
-    let settings = if let Some(text_size) = prop_f32(props, "text_size") {
+    let settings = if let Some(text_size) = prop_f32(props, "text_size").or(caches.default_text_size) {
         let mut s = markdown::Settings::with_text_size(
             text_size,
             markdown::Style::from(&iced::Theme::Dark),
@@ -1474,7 +1486,7 @@ fn render_sensor<'a>(
 // Rich Text
 // ---------------------------------------------------------------------------
 
-fn render_rich_text<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_rich_text<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let width = prop_length(props, "width", Length::Shrink);
     let height = prop_length(props, "height", Length::Shrink);
@@ -1515,10 +1527,11 @@ fn render_rich_text<'a>(node: &'a TreeNode) -> Element<'a, Message> {
         .width(width)
         .height(height);
 
-    if let Some(sz) = prop_f32(props, "size") {
+    if let Some(sz) = prop_f32(props, "size").or(caches.default_text_size) {
         rt = rt.size(sz);
     }
-    if let Some(f) = props.and_then(|p| p.get("font")).map(parse_font) {
+    let font = props.and_then(|p| p.get("font")).map(parse_font).or(caches.default_font);
+    if let Some(f) = font {
         rt = rt.font(f);
     }
     if let Some(c) = props.and_then(|p| p.get("color")).and_then(parse_color) {
@@ -2541,5 +2554,297 @@ fn parse_wrapping(props: Props<'_>) -> Option<Wrapping> {
         "glyph" => Some(Wrapping::Glyph),
         "word_or_glyph" => Some(Wrapping::WordOrGlyph),
         _ => None,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    /// Helper: build a Props from a json! value. The value must be an object.
+    fn make_props(v: &Value) -> Props<'_> {
+        v.as_object()
+    }
+
+    // -- prop_f32 --
+
+    #[test]
+    fn prop_f32_returns_number() {
+        let v = json!({"size": 16.0});
+        assert_eq!(prop_f32(make_props(&v), "size"), Some(16.0));
+    }
+
+    #[test]
+    fn prop_f32_parses_string() {
+        let v = json!({"size": "24.5"});
+        assert_eq!(prop_f32(make_props(&v), "size"), Some(24.5));
+    }
+
+    #[test]
+    fn prop_f32_returns_none_for_missing_key() {
+        let v = json!({"other": 10});
+        assert_eq!(prop_f32(make_props(&v), "size"), None);
+    }
+
+    #[test]
+    fn prop_f32_returns_none_for_bool() {
+        let v = json!({"size": true});
+        assert_eq!(prop_f32(make_props(&v), "size"), None);
+    }
+
+    // -- prop_bool --
+
+    #[test]
+    fn prop_bool_returns_true() {
+        let v = json!({"visible": true});
+        assert_eq!(prop_bool(make_props(&v), "visible"), Some(true));
+    }
+
+    #[test]
+    fn prop_bool_returns_false() {
+        let v = json!({"visible": false});
+        assert_eq!(prop_bool(make_props(&v), "visible"), Some(false));
+    }
+
+    #[test]
+    fn prop_bool_returns_none_for_missing() {
+        let v = json!({"other": 1});
+        assert_eq!(prop_bool(make_props(&v), "visible"), None);
+    }
+
+    #[test]
+    fn prop_bool_default_uses_fallback() {
+        let v = json!({});
+        assert_eq!(prop_bool_default(make_props(&v), "clip", true), true);
+        assert_eq!(prop_bool_default(make_props(&v), "clip", false), false);
+    }
+
+    // -- prop_str --
+
+    #[test]
+    fn prop_str_returns_string() {
+        let v = json!({"label": "hello"});
+        assert_eq!(prop_str(make_props(&v), "label"), Some("hello".to_string()));
+    }
+
+    // -- prop_length --
+
+    #[test]
+    fn prop_length_fill_string() {
+        let v = json!({"width": "fill"});
+        assert_eq!(prop_length(make_props(&v), "width", Length::Shrink), Fill);
+    }
+
+    #[test]
+    fn prop_length_shrink_string() {
+        let v = json!({"width": "shrink"});
+        assert_eq!(
+            prop_length(make_props(&v), "width", Fill),
+            Length::Shrink
+        );
+    }
+
+    #[test]
+    fn prop_length_fixed_number() {
+        let v = json!({"width": 200.0});
+        assert_eq!(
+            prop_length(make_props(&v), "width", Length::Shrink),
+            Length::Fixed(200.0)
+        );
+    }
+
+    #[test]
+    fn prop_length_fill_portion_object() {
+        let v = json!({"width": {"fill_portion": 3}});
+        assert_eq!(
+            prop_length(make_props(&v), "width", Length::Shrink),
+            Length::FillPortion(3)
+        );
+    }
+
+    #[test]
+    fn prop_length_returns_fallback_for_missing() {
+        let v = json!({});
+        assert_eq!(prop_length(make_props(&v), "width", Fill), Fill);
+    }
+
+    #[test]
+    fn prop_length_numeric_string() {
+        let v = json!({"width": "150"});
+        assert_eq!(
+            prop_length(make_props(&v), "width", Length::Shrink),
+            Length::Fixed(150.0)
+        );
+    }
+
+    // -- parse_color --
+
+    #[test]
+    fn parse_color_hex_rrggbb() {
+        let v = json!("#ff0000");
+        let c = parse_color(&v).unwrap();
+        assert_eq!(c, Color::from_rgb8(255, 0, 0));
+    }
+
+    #[test]
+    fn parse_color_hex_rrggbbaa() {
+        let v = json!("#00ff0080");
+        let c = parse_color(&v).unwrap();
+        assert_eq!(c, Color::from_rgba8(0, 255, 0, 128.0 / 255.0));
+    }
+
+    #[test]
+    fn parse_color_object_rgba() {
+        let v = json!({"r": 0.5, "g": 0.25, "b": 0.75, "a": 0.8});
+        let c = parse_color(&v).unwrap();
+        assert_eq!(c, Color::from_rgba(0.5, 0.25, 0.75, 0.8));
+    }
+
+    #[test]
+    fn parse_color_object_defaults_alpha_to_one() {
+        let v = json!({"r": 1.0, "g": 0.0, "b": 0.0});
+        let c = parse_color(&v).unwrap();
+        assert_eq!(c, Color::from_rgba(1.0, 0.0, 0.0, 1.0));
+    }
+
+    #[test]
+    fn parse_color_returns_none_for_bad_hex() {
+        let v = json!("#xyz");
+        assert!(parse_color(&v).is_none());
+    }
+
+    #[test]
+    fn parse_color_returns_none_for_number() {
+        let v = json!(42);
+        assert!(parse_color(&v).is_none());
+    }
+
+    // -- parse_font --
+
+    #[test]
+    fn parse_font_monospace_string() {
+        let v = json!("monospace");
+        let f = parse_font(&v);
+        assert_eq!(f, Font::MONOSPACE);
+    }
+
+    #[test]
+    fn parse_font_default_string() {
+        let v = json!("default");
+        let f = parse_font(&v);
+        assert_eq!(f, Font::DEFAULT);
+    }
+
+    #[test]
+    fn parse_font_object_with_weight_and_style() {
+        let v = json!({"weight": "bold", "style": "italic"});
+        let f = parse_font(&v);
+        assert_eq!(f.weight, font::Weight::Bold);
+        assert_eq!(f.style, font::Style::Italic);
+    }
+
+    #[test]
+    fn parse_font_object_serif_family() {
+        let v = json!({"family": "serif"});
+        let f = parse_font(&v);
+        assert_eq!(f.family, font::Family::Serif);
+    }
+
+    // -- parse_padding_value --
+
+    #[test]
+    fn parse_padding_uniform_number() {
+        let v = json!({"padding": 10});
+        let p = parse_padding_value(make_props(&v));
+        assert_eq!(p.top, 10.0);
+        assert_eq!(p.right, 10.0);
+        assert_eq!(p.bottom, 10.0);
+        assert_eq!(p.left, 10.0);
+    }
+
+    #[test]
+    fn parse_padding_per_side_object() {
+        let v = json!({"padding": {"top": 1, "right": 2, "bottom": 3, "left": 4}});
+        let p = parse_padding_value(make_props(&v));
+        assert_eq!(p.top, 1.0);
+        assert_eq!(p.right, 2.0);
+        assert_eq!(p.bottom, 3.0);
+        assert_eq!(p.left, 4.0);
+    }
+
+    #[test]
+    fn parse_padding_defaults_to_zero() {
+        let v = json!({});
+        let p = parse_padding_value(make_props(&v));
+        assert_eq!(p.top, 0.0);
+        assert_eq!(p.right, 0.0);
+        assert_eq!(p.bottom, 0.0);
+        assert_eq!(p.left, 0.0);
+    }
+
+    // -- parse_border --
+
+    #[test]
+    fn parse_border_with_all_fields() {
+        let v = json!({"color": "#ff0000", "width": 2.0, "radius": 8.0});
+        let b = parse_border(&v);
+        assert_eq!(b.color, Color::from_rgb8(255, 0, 0));
+        assert_eq!(b.width, 2.0);
+    }
+
+    #[test]
+    fn parse_border_defaults_for_non_object() {
+        let v = json!("not an object");
+        let b = parse_border(&v);
+        assert_eq!(b, Border::default());
+    }
+
+    // -- parse_shadow --
+
+    #[test]
+    fn parse_shadow_with_all_fields() {
+        let v = json!({"color": "#000000", "offset": [3.0, 4.0], "blur_radius": 5.0});
+        let s = parse_shadow(&v);
+        assert_eq!(s.color, Color::from_rgb8(0, 0, 0));
+        assert_eq!(s.offset, Vector::new(3.0, 4.0));
+        assert_eq!(s.blur_radius, 5.0);
+    }
+
+    #[test]
+    fn parse_shadow_defaults_for_non_object() {
+        let v = json!(42);
+        let s = parse_shadow(&v);
+        assert_eq!(s, Shadow::default());
+    }
+
+    // -- WidgetCaches --
+
+    #[test]
+    fn widget_caches_new_is_empty() {
+        let c = WidgetCaches::new();
+        assert!(c.editor_contents.is_empty());
+        assert!(c.markdown_items.is_empty());
+        assert!(c.combo_states.is_empty());
+        assert!(c.combo_options.is_empty());
+        assert!(c.pane_grid_states.is_empty());
+        assert!(c.default_text_size.is_none());
+        assert!(c.default_font.is_none());
+    }
+
+    #[test]
+    fn widget_caches_clear_empties_maps_but_preserves_defaults() {
+        let mut c = WidgetCaches::new();
+        c.default_text_size = Some(14.0);
+        c.default_font = Some(Font::MONOSPACE);
+        c.combo_options.insert("x".into(), vec!["a".into()]);
+        c.clear();
+        assert!(c.combo_options.is_empty());
+        assert_eq!(c.default_text_size, Some(14.0));
+        assert_eq!(c.default_font, Some(Font::MONOSPACE));
     }
 }

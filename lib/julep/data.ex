@@ -2,8 +2,56 @@ defmodule Julep.Data do
   @moduledoc """
   Query pipeline for in-memory record collections. Pure functions
   supporting filter, search, sort, group, and pagination.
+
+  All operations are applied in order: filter, search, sort, then paginate.
+  Grouping is applied to the paginated results.
+
+  ## Example
+
+      records = [
+        %{name: "Alice", age: 30},
+        %{name: "Bob", age: 25},
+        %{name: "Carol", age: 35}
+      ]
+
+      result = Julep.Data.query(records,
+        filter: &(&1.age > 24),
+        sort: {:asc, :name},
+        page: 1,
+        page_size: 10
+      )
+
+      result.entries
+      #=> [%{name: "Alice", age: 30}, %{name: "Bob", age: 25}, %{name: "Carol", age: 35}]
+      result.total
+      #=> 3
   """
 
+  @typedoc """
+  Query result map with keys `:entries`, `:total`, `:page`, `:page_size`,
+  and optionally `:groups`.
+  """
+  @type result :: map()
+
+  @doc """
+  Queries a list of records with optional filtering, searching, sorting,
+  grouping, and pagination.
+
+  ## Options
+
+  - `:filter` -- a function `(record -> boolean)` to filter records.
+  - `:search` -- a `{fields, query_string}` tuple. `fields` is a list of
+    map keys to search; `query_string` is case-insensitive substring-matched.
+  - `:sort` -- a `{direction, field}` tuple or list of tuples.
+    Direction is `:asc` or `:desc`. Field is a map key.
+  - `:group` -- a map key to group paginated results by.
+  - `:page` -- page number (1-based). Default: 1.
+  - `:page_size` -- records per page. Default: 25.
+
+  Returns a result map with `:entries`, `:total`, `:page`, and `:page_size`.
+  If `:group` is specified, `:groups` is also included.
+  """
+  @spec query([map()], keyword()) :: result()
   def query(records, opts \\ []) when is_list(records) do
     filter_fn = Keyword.get(opts, :filter)
     sort_spec = Keyword.get(opts, :sort)

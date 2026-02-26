@@ -2,10 +2,41 @@ defmodule Julep.Selection do
   @moduledoc """
   Selection state for lists and tables. Pure data structure supporting
   single, multi, and range selection modes.
+
+  ## Modes
+
+  - `:single` -- at most one item selected at a time.
+  - `:multi` -- multiple items selectable; `extend: true` adds to the set.
+  - `:range` -- like multi, but `range_select/2` selects a contiguous
+    slice of the `order` list between the anchor and the target.
+
+  ## Example
+
+      sel = Julep.Selection.new(mode: :multi, order: ["a", "b", "c", "d"])
+      sel = Julep.Selection.select(sel, "b")
+      sel = Julep.Selection.select(sel, "d", extend: true)
+      Julep.Selection.selected(sel)
+      #=> MapSet.new(["b", "d"])
   """
 
   defstruct mode: :single, selected: MapSet.new(), anchor: nil, order: []
 
+  @type t :: %__MODULE__{
+          mode: :single | :multi | :range,
+          selected: MapSet.t(),
+          anchor: term() | nil,
+          order: [term()]
+        }
+
+  @doc """
+  Creates a new selection state.
+
+  ## Options
+
+  - `:mode` -- selection mode: `:single` (default), `:multi`, or `:range`.
+  - `:order` -- ordered list of item IDs for range selection.
+  """
+  @spec new(keyword()) :: t()
   def new(opts \\ []) do
     %__MODULE__{
       mode: Keyword.get(opts, :mode, :single),
@@ -15,6 +46,14 @@ defmodule Julep.Selection do
     }
   end
 
+  @doc """
+  Selects `id`. In `:single` mode, replaces the selection. In `:multi`
+  and `:range` modes, replaces unless `extend: true` is passed, in which
+  case `id` is added to the existing selection.
+
+  Sets the anchor to `id` for subsequent range selections.
+  """
+  @spec select(t(), term(), keyword()) :: t()
   def select(sel, id, opts \\ [])
 
   def select(%__MODULE__{mode: :single} = sel, id, _opts) do
@@ -37,6 +76,12 @@ defmodule Julep.Selection do
     end
   end
 
+  @doc """
+  Toggles `id` in the selection. If already selected, removes it;
+  otherwise adds it. In `:single` mode, toggling a selected item
+  clears the selection entirely.
+  """
+  @spec toggle(t(), term()) :: t()
   def toggle(%__MODULE__{mode: :single} = sel, id) do
     if MapSet.member?(sel.selected, id) do
       %{sel | selected: MapSet.new(), anchor: nil}
@@ -53,14 +98,25 @@ defmodule Julep.Selection do
     end
   end
 
+  @doc "Removes `id` from the selection."
+  @spec deselect(t(), term()) :: t()
   def deselect(%__MODULE__{} = sel, id) do
     %{sel | selected: MapSet.delete(sel.selected, id)}
   end
 
+  @doc "Clears all selected items and resets the anchor."
+  @spec clear(t()) :: t()
   def clear(%__MODULE__{} = sel) do
     %{sel | selected: MapSet.new(), anchor: nil}
   end
 
+  @doc """
+  Selects all items in `order` between the current anchor and `id`
+  (inclusive). If there is no anchor, selects only `id`.
+
+  Requires `order` to have been set at creation time via `new/1`.
+  """
+  @spec range_select(t(), term()) :: t()
   def range_select(%__MODULE__{anchor: nil} = sel, id) do
     %{sel | selected: MapSet.new([id]), anchor: id}
   end
@@ -83,8 +139,12 @@ defmodule Julep.Selection do
     end
   end
 
+  @doc "Returns the `MapSet` of currently selected item IDs."
+  @spec selected(t()) :: MapSet.t()
   def selected(%__MODULE__{selected: selected}), do: selected
 
+  @doc "Returns `true` if `id` is currently selected."
+  @spec selected?(t(), term()) :: boolean()
   def selected?(%__MODULE__{selected: selected}, id) do
     MapSet.member?(selected, id)
   end

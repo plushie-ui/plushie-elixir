@@ -9,7 +9,21 @@ defmodule Julep.Effects do
   Each function returns a `{command, effect_id}` tuple. The command is
   dispatched through the runtime like any other `Julep.Command`, and the
   result arrives later as an `{:effect_result, id, result}` event in
-  `update/2`.
+  `update/2`. The result is `{:ok, value}` on success or `{:error, reason}`
+  on failure.
+
+  ## Cargo feature gates
+
+  Effect support in the Rust renderer is gated behind Cargo features.
+  By default, all features are enabled. To build a minimal renderer
+  without OS-level features, disable them at build time:
+
+  - `dialogs` -- file open/save/directory dialogs (uses `rfd` crate).
+  - `clipboard` -- clipboard read/write (uses `arboard` crate).
+  - `notifications` -- OS notifications (uses `notify-rust` crate).
+
+  If a feature is disabled, the renderer returns `{:error, "unsupported"}`
+  for the corresponding effect requests.
 
   ## Example
 

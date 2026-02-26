@@ -11,7 +11,7 @@ use std::thread;
 use std::time::Duration;
 
 use iced::widget::{container, markdown, pane_grid, text, text_editor};
-use iced::{event, system, time, window, Element, Fill, Point, Size, Subscription, Task, Theme};
+use iced::{event, system, time, window, Element, Fill, Font, Point, Size, Subscription, Task, Theme};
 
 use widgets::WidgetCaches;
 
@@ -119,12 +119,10 @@ struct App {
     window_map: HashMap<String, window::Id>,
     /// Iced window ID -> julep window ID.
     reverse_window_map: HashMap<window::Id, String>,
-    /// Raw settings Value from the Elixir settings/0 callback.
-    #[allow(dead_code)]
-    app_settings: Option<serde_json::Value>,
     /// Default text size extracted from settings, if provided.
-    #[allow(dead_code)]
     default_text_size: Option<f32>,
+    /// Default font extracted from settings, if provided.
+    default_font: Option<Font>,
 }
 
 /// What the stdin reader thread sends back.
@@ -147,8 +145,8 @@ impl App {
             active_subscriptions: HashMap::new(),
             window_map: HashMap::new(),
             reverse_window_map: HashMap::new(),
-            app_settings: None,
             default_text_size: None,
+            default_font: None,
         }
     }
 
@@ -407,6 +405,16 @@ impl App {
                             let pos = position.map(|p| (p.x, p.y));
                             emit_event(OutgoingEvent::window_opened(
                                 tag.clone(),
+                                julep_id.clone(),
+                                pos,
+                                size.width,
+                                size.height,
+                            ));
+                        }
+                        if let Some(tag) = self.active_subscriptions.get("on_window_open") {
+                            let pos = position.map(|p| (p.x, p.y));
+                            emit_event(OutgoingEvent::window_opened(
+                                tag.clone(),
                                 julep_id,
                                 pos,
                                 size.width,
@@ -423,6 +431,14 @@ impl App {
                         if let Some(tag) = self.active_subscriptions.get("on_window_event") {
                             emit_event(OutgoingEvent::window_moved(
                                 tag.clone(),
+                                julep_id.clone(),
+                                point.x,
+                                point.y,
+                            ));
+                        }
+                        if let Some(tag) = self.active_subscriptions.get("on_window_move") {
+                            emit_event(OutgoingEvent::window_moved(
+                                tag.clone(),
                                 julep_id,
                                 point.x,
                                 point.y,
@@ -431,6 +447,14 @@ impl App {
                     }
                     window::Event::Resized(size) => {
                         if let Some(tag) = self.active_subscriptions.get("on_window_event") {
+                            emit_event(OutgoingEvent::window_resized(
+                                tag.clone(),
+                                julep_id.clone(),
+                                size.width,
+                                size.height,
+                            ));
+                        }
+                        if let Some(tag) = self.active_subscriptions.get("on_window_resize") {
                             emit_event(OutgoingEvent::window_resized(
                                 tag.clone(),
                                 julep_id,
@@ -450,11 +474,17 @@ impl App {
                     }
                     window::Event::Focused => {
                         if let Some(tag) = self.active_subscriptions.get("on_window_event") {
+                            emit_event(OutgoingEvent::window_focused(tag.clone(), julep_id.clone()));
+                        }
+                        if let Some(tag) = self.active_subscriptions.get("on_window_focus") {
                             emit_event(OutgoingEvent::window_focused(tag.clone(), julep_id));
                         }
                     }
                     window::Event::Unfocused => {
                         if let Some(tag) = self.active_subscriptions.get("on_window_event") {
+                            emit_event(OutgoingEvent::window_unfocused(tag.clone(), julep_id.clone()));
+                        }
+                        if let Some(tag) = self.active_subscriptions.get("on_window_unfocus") {
                             emit_event(OutgoingEvent::window_unfocused(tag.clone(), julep_id));
                         }
                     }
@@ -704,6 +734,11 @@ impl App {
         // -- Window event subscriptions --
         if self.active_subscriptions.contains_key("on_window_event")
             || self.active_subscriptions.contains_key("on_file_drop")
+            || self.active_subscriptions.contains_key("on_window_open")
+            || self.active_subscriptions.contains_key("on_window_resize")
+            || self.active_subscriptions.contains_key("on_window_focus")
+            || self.active_subscriptions.contains_key("on_window_unfocus")
+            || self.active_subscriptions.contains_key("on_window_move")
         {
             subs.push(window::events().map(|(id, evt)| Message::WindowEvent(id, evt)));
         }
@@ -864,7 +899,17 @@ impl App {
                     .get("default_text_size")
                     .and_then(|v| v.as_f64())
                     .map(|v| v as f32);
-                self.app_settings = Some(settings);
+                self.default_font = settings.get("default_font").and_then(|v| {
+                    let family = v.get("family").and_then(|f| f.as_str());
+                    let font = if family == Some("monospace") {
+                        Font::MONOSPACE
+                    } else {
+                        Font::DEFAULT
+                    };
+                    Some(font)
+                });
+                self.caches.default_text_size = self.default_text_size;
+                self.caches.default_font = self.default_font;
             }
         }
     }

@@ -5,26 +5,15 @@ use serde_json::Value;
 // Theme resolution
 // ---------------------------------------------------------------------------
 
-/// Result of resolving a theme. Includes the iced Theme plus an optional
-/// warning color override that widgets can use for "warning" style variants.
-///
-/// Iced's base `Palette` does not have a "warning" field (only background,
-/// text, primary, success, danger). The extended palette auto-generates a
-/// warning pair, but it's derived and not directly settable. To support
-/// custom warning colors, we parse it separately and expose it here.
-///
-/// The main.rs agent should store `ThemeResult` (or at least the warning
-/// color) alongside the Theme and pass it to widget style resolution.
+// Note: iced's Palette does not include a warning color. Custom warning
+// colors are not supported.
+
+/// Result of resolving a theme from JSON.
 pub struct ThemeResult {
     pub theme: Theme,
-    /// Custom warning color, if provided in the theme JSON.
-    /// Parsed from user-specified custom palettes for forward compatibility;
-    /// not yet consumed by widget style resolution.
-    #[allow(dead_code)]
-    pub warning: Option<Color>,
 }
 
-/// Resolve a JSON value into an iced Theme plus optional warning color.
+/// Resolve a JSON value into an iced Theme.
 ///
 /// Accepts a string name (case-insensitive, underscored) or a JSON object
 /// describing a custom palette. Unknown values fall back to Dark.
@@ -32,21 +21,18 @@ pub fn resolve_theme(value: &Value) -> ThemeResult {
     match value {
         Value::String(s) => ThemeResult {
             theme: resolve_builtin(s),
-            warning: None,
         },
         Value::Object(map) => {
             let theme = custom_theme_from_object(map);
-            let warning = get_color(map, "warning");
-            ThemeResult { theme, warning }
+            ThemeResult { theme }
         }
         _ => ThemeResult {
             theme: Theme::Dark,
-            warning: None,
         },
     }
 }
 
-/// Convenience: resolve just the Theme (for callers that don't need warning).
+/// Convenience: resolve and return just the Theme, discarding the wrapper.
 pub fn resolve_theme_only(value: &Value) -> Theme {
     resolve_theme(value).theme
 }
@@ -99,7 +85,6 @@ fn resolve_builtin(s: &str) -> Theme {
 /// - "primary"    - hex color string
 /// - "success"    - hex color string
 /// - "danger"     - hex color string
-/// - "warning"    - hex color string (stored separately; not in iced's Palette)
 fn custom_theme_from_object(obj: &serde_json::Map<String, Value>) -> Theme {
     let base_theme = obj
         .get("base")
@@ -199,7 +184,6 @@ mod tests {
         let val = json!({"name": "Mine"});
         let result = resolve_theme(&val);
         assert_eq!(format!("{}", result.theme), "Mine");
-        assert!(result.warning.is_none());
     }
 
     #[test]
@@ -219,20 +203,6 @@ mod tests {
         assert_eq!(p.primary, Color::from_rgb8(0x7a, 0xa2, 0xf7));
         assert_eq!(p.success, Color::from_rgb8(0x9e, 0xce, 0x6a));
         assert_eq!(p.danger, Color::from_rgb8(0xf7, 0x76, 0x8e));
-    }
-
-    #[test]
-    fn custom_theme_with_warning() {
-        let val = json!({
-            "name": "Warned",
-            "warning": "#ffaa00"
-        });
-        let result = resolve_theme(&val);
-        assert!(result.warning.is_some());
-        assert_eq!(
-            result.warning.unwrap(),
-            Color::from_rgb8(0xff, 0xaa, 0x00)
-        );
     }
 
     #[test]
@@ -291,18 +261,5 @@ mod tests {
         // text should be set, background should remain the dark default.
         assert_eq!(p.text, Color::from_rgb8(0xff, 0xff, 0xff));
         assert_eq!(p.background, Palette::DARK.background);
-    }
-
-    #[test]
-    fn warning_color_absent_when_not_specified() {
-        let val = json!({"primary": "#ff0000"});
-        let result = resolve_theme(&val);
-        assert!(result.warning.is_none());
-    }
-
-    #[test]
-    fn builtin_theme_has_no_warning() {
-        let result = resolve_theme(&json!("Dark"));
-        assert!(result.warning.is_none());
     }
 }

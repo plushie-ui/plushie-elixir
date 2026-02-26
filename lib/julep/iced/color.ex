@@ -1,5 +1,25 @@
 defmodule Julep.Iced.Color do
-  @moduledoc "Color type for iced widget properties."
+  @moduledoc """
+  Color type for iced widget properties.
+
+  The renderer accepts two color formats:
+
+  - Hex string: `"#rrggbb"` or `"#rrggbbaa"`.
+  - RGBA map: `%{r: 0.5, g: 0.5, b: 0.5, a: 1.0}` (floats 0.0-1.0).
+
+  The constructors in this module produce one of these formats.
+
+  ## Examples
+
+      Julep.Iced.Color.from_rgb(255, 128, 0)
+      #=> %{r: 1.0, g: 0.502, b: 0.0, a: 1.0}
+
+      Julep.Iced.Color.from_hex("ff8800")
+      #=> "#ff8800"
+
+      Julep.Iced.Color.black()
+      #=> "#000000"
+  """
 
   @type t :: String.t() | {float(), float(), float()} | {float(), float(), float(), float()}
 

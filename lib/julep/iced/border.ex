@@ -1,5 +1,28 @@
 defmodule Julep.Iced.Border do
-  @moduledoc "Border type for container and widget styling."
+  @moduledoc """
+  Border type for container and widget styling.
+
+  Used in `container` and other widgets via the `border` prop.
+  The renderer parses border maps with `color`, `width`, and `radius` fields.
+
+  ## Wire format
+
+  The encoded border is a map:
+
+      %{color: "#ff0000", width: 2, radius: 8}
+
+  Radius can be a uniform number or a per-corner map:
+
+      %{top_left: 8, top_right: 8, bottom_right: 0, bottom_left: 0}
+
+  ## Example
+
+      border = Julep.Iced.Border.new()
+               |> Julep.Iced.Border.color("#3366ff")
+               |> Julep.Iced.Border.width(2)
+               |> Julep.Iced.Border.rounded(8)
+      # => %{color: "#3366ff", width: 2, radius: 8}
+  """
 
   @doc "Creates a new border with default values."
   @spec new() :: map()
