@@ -60,7 +60,11 @@ Core:
 - [Charter](docs/charter.md) -- what and why
 - [Architecture](docs/architecture.md) -- the three pieces
 - [App behaviour](docs/app-behaviour.md) -- the Elixir API contract
+- [Iced parity guide](docs/iced-parity.md) -- Rust-to-Elixir mapping for iced users
 - [UI trees](docs/ui-trees.md) -- node format and widget catalog
+- [Layout](docs/layout.md) -- length, padding, alignment, spacing
+- [Events](docs/events.md) -- full event taxonomy
+- [Commands and subscriptions](docs/commands.md) -- async work, timers, widget ops
 - [Transport](docs/transport.md) -- JSONL protocol between Elixir and Rust
 - [Renderer](docs/renderer.md) -- what the Rust binary does
 - [Effects](docs/effects.md) -- native platform features

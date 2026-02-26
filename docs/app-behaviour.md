@@ -6,14 +6,20 @@ Elm architecture: model, update, view.
 ## Callbacks
 
 ```elixir
-@callback init(opts :: keyword()) :: model
-@callback update(model, event) :: model
+@callback init(opts :: keyword()) :: model | {model, Julep.Command.t()}
+@callback update(model, event) :: model | {model, Julep.Command.t()}
 @callback view(model) :: Julep.UI.tree()
+
+# Optional:
+@callback subscribe(model) :: [Julep.Subscription.t()]
+@callback handle_renderer_exit(model, exit_reason) :: model
+@callback window_config(model) :: Julep.Window.config()
 ```
 
 ### init/1
 
-Returns the initial model. Called once when the runtime starts.
+Returns the initial model, optionally with commands. Called once when the
+runtime starts.
 
 ```elixir
 def init(_opts) do
@@ -22,6 +28,12 @@ def init(_opts) do
     input: "",
     filter: :all
   }
+end
+
+# Or with a command:
+def init(_opts) do
+  model = %{todos: [], loading: true}
+  {model, Julep.Command.async(fn -> load_todos_from_disk() end, :todos_loaded)}
 end
 ```
 
@@ -33,7 +45,8 @@ apps can accept configuration at startup.
 
 ### update/2
 
-Receives the current model and an event, returns the next model.
+Receives the current model and an event, returns the next model -- optionally
+with commands.
 
 ```elixir
 def update(model, {:click, "add_todo"}) do
@@ -45,22 +58,31 @@ def update(model, {:input, "todo_field", value}) do
   %{model | input: value}
 end
 
+# Returning commands:
+def update(model, {:submit, "todo_field", _value}) do
+  new_todo = %{id: System.unique_integer(), text: model.input, done: false}
+  model = %{model | todos: [new_todo | model.todos], input: ""}
+  {model, Julep.Command.focus("todo_field")}
+end
+
 def update(model, _event), do: model
 ```
 
+Return a bare model when no side effects are needed. Return `{model, command}`
+when you need async work, widget operations, window management, or timers.
+See [commands.md](commands.md) for the full command API.
+
 Events are tuples. The first element is the event family (atom), the rest
-is event-specific data. Common families:
+is event-specific data. See [events.md](events.md) for the full event
+taxonomy. Common families:
 
 - `{:click, button_id}` -- button press
 - `{:input, field_id, value}` -- text input change
 - `{:select, field_id, value}` -- selection change
 - `{:toggle, field_id, value}` -- checkbox/toggler change
 - `{:submit, field_id, value}` -- form field submission
-- `{:key, key_event}` -- keyboard event
-- `{:window, window_event}` -- window lifecycle event
-
-Update must be a pure function of its inputs. Side effects (file I/O, HTTP,
-timers) are handled through the effects system (see [effects.md](effects.md)).
+- `{:key_press, key, modifiers}` -- keyboard event
+- `{:window, action, window_id}` -- window lifecycle event
 
 ### view/1
 
@@ -102,36 +124,77 @@ but you can also build maps directly if preferred.
 start_runtime(MyApp, opts)
   |
   v
-init(opts) -> initial model
+init(opts) -> {model, commands}
+  |
+  v
+subscribe(model) -> active subscriptions
   |
   v
 view(model) -> initial tree -> send snapshot to renderer
   |
   v
-[event received from renderer]
+[event from renderer / subscription / command result]
   |
   v
-update(model, event) -> next model
+update(model, event) -> {model, commands}
   |
   v
-view(next model) -> next tree -> diff -> send patch to renderer
+subscribe(model) -> diff subscriptions (start/stop as needed)
   |
   v
-[repeat from event received]
+view(model) -> next tree -> diff -> send patch to renderer
+  |
+  v
+[repeat from event]
 ```
 
-## Optional callbacks
+### subscribe/1 (optional)
 
-These callbacks have sensible defaults but can be overridden:
+Returns a list of active subscriptions based on the current model. Called
+after every `update`. The runtime diffs the list and starts/stops
+subscriptions automatically.
 
 ```elixir
-# Called when the renderer process exits unexpectedly. Return the model
-# to use when the renderer restarts. Default: return model unchanged.
-@callback handle_renderer_exit(model, exit_reason) :: model
+def subscribe(model) do
+  subs = [Julep.Subscription.on_key_press(:key_event)]
 
-# Called on runtime startup to configure window properties.
-# Default: single window with app module name as title.
-@callback window_config(model) :: Julep.Window.config()
+  if model.auto_refresh do
+    [Julep.Subscription.every(5000, :refresh) | subs]
+  else
+    subs
+  end
+end
+```
+
+Default: `[]` (no subscriptions). See [commands.md](commands.md) for the
+full subscription API.
+
+### handle_renderer_exit/2 (optional)
+
+Called when the renderer process exits unexpectedly. Return the model to
+use when the renderer restarts. Default: return model unchanged.
+
+```elixir
+def handle_renderer_exit(model, _reason) do
+  %{model | status: :renderer_restarting}
+end
+```
+
+### window_config/1 (optional)
+
+Called on runtime startup to configure window properties. Default: single
+window with app module name as title.
+
+```elixir
+def window_config(_model) do
+  %{
+    title: "My App",
+    size: {800, 600},
+    min_size: {400, 300},
+    resizable: true,
+    theme: "dark"
+  }
+end
 ```
 
 ## Starting the runtime
