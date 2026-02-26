@@ -1,5 +1,5 @@
 use crate::protocol::TreeNode;
-use iced::widget::{button, column, container, row, text, Space};
+use iced::widget::{button, checkbox, column, container, progress_bar, row, rule, text, text_input, Space};
 use iced::{alignment, Element, Fill, Length, Padding};
 use serde_json::Value;
 
@@ -14,6 +14,10 @@ pub fn render<'a>(node: &'a TreeNode) -> Element<'a, Message> {
         "button" => render_button(node),
         "container" => render_container(node),
         "space" => render_space(node),
+        "text_input" => render_text_input(node),
+        "checkbox" => render_checkbox(node),
+        "rule" => render_rule(node),
+        "progress_bar" => render_progress_bar(node),
         "window" => render_window(node),
         unknown => {
             eprintln!("julep_gui: unknown node type `{unknown}`, rendering as empty container");
@@ -157,6 +161,99 @@ fn render_window<'a>(node: &'a TreeNode) -> Element<'a, Message> {
         .padding(padding)
         .width(width)
         .height(height)
+        .into()
+}
+
+// ---------------------------------------------------------------------------
+// Text Input
+// ---------------------------------------------------------------------------
+
+fn render_text_input<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let value = prop_str(props, "value").unwrap_or_default();
+    let placeholder = prop_str(props, "placeholder").unwrap_or_default();
+    let width = prop_length(props, "width", Length::Fill);
+    let size = prop_f32(props, "size");
+    let padding = prop_f32(props, "padding");
+    let id = node.id.clone();
+    let has_on_submit = props.and_then(|p| p.get("on_submit")).is_some();
+
+    let mut ti = text_input(&placeholder, &value)
+        .on_input(move |v| Message::Input(id.clone(), v))
+        .width(width);
+
+    if let Some(s) = size {
+        ti = ti.size(s);
+    }
+    if let Some(p) = padding {
+        ti = ti.padding(p);
+    }
+
+    if has_on_submit {
+        let submit_id = node.id.clone();
+        let submit_value = value.clone();
+        ti = ti.on_submit(Message::Submit(submit_id, submit_value));
+    }
+
+    ti.into()
+}
+
+// ---------------------------------------------------------------------------
+// Checkbox
+// ---------------------------------------------------------------------------
+
+fn render_checkbox<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let label = prop_str(props, "label").unwrap_or_default();
+    let checked = prop_bool(props, "checked").unwrap_or(false);
+    let spacing = prop_f32(props, "spacing");
+    let width = prop_length(props, "width", Length::Shrink);
+    let id = node.id.clone();
+
+    let mut cb = checkbox(checked)
+        .label(label)
+        .on_toggle(move |v| Message::Toggle(id.clone(), v))
+        .width(width);
+
+    if let Some(s) = spacing {
+        cb = cb.spacing(s);
+    }
+
+    cb.into()
+}
+
+// ---------------------------------------------------------------------------
+// Rule (horizontal divider)
+// ---------------------------------------------------------------------------
+
+fn render_rule<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let height = prop_f32(props, "height").unwrap_or(1.0);
+    rule::horizontal(height).into()
+}
+
+// ---------------------------------------------------------------------------
+// Progress Bar
+// ---------------------------------------------------------------------------
+
+fn render_progress_bar<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let range = props
+        .and_then(|p| p.get("range"))
+        .and_then(|v| v.as_array())
+        .and_then(|arr| {
+            let min = arr.first()?.as_f64()? as f32;
+            let max = arr.get(1)?.as_f64()? as f32;
+            Some(min..=max)
+        })
+        .unwrap_or(0.0..=100.0);
+    let value = prop_f32(props, "value").unwrap_or(0.0);
+    let width = prop_length(props, "width", Length::Fill);
+    let height = prop_length(props, "height", Length::Shrink);
+
+    progress_bar(range, value)
+        .length(width)
+        .girth(height)
         .into()
 }
 

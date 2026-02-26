@@ -21,9 +21,7 @@ pub struct TreeNode {
     pub children: Vec<TreeNode>,
 }
 
-/// A single patch operation (Phase 0: snapshot-only; ops parsed but not applied).
-// Fields are unused in Phase 0 -- patches are logged and dropped.
-#[allow(dead_code)]
+/// A single patch operation applied incrementally to the retained tree.
 #[derive(Debug, Clone, Deserialize)]
 pub struct PatchOp {
     pub op: String,
@@ -39,6 +37,8 @@ pub struct OutgoingEvent {
     pub message_type: &'static str,
     pub family: &'static str,
     pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value: Option<Value>,
 }
 
 impl OutgoingEvent {
@@ -47,6 +47,34 @@ impl OutgoingEvent {
             message_type: "event",
             family: "click",
             id,
+            value: None,
+        }
+    }
+
+    pub fn input(id: String, value: String) -> Self {
+        Self {
+            message_type: "event",
+            family: "input",
+            id,
+            value: Some(Value::String(value)),
+        }
+    }
+
+    pub fn submit(id: String, value: String) -> Self {
+        Self {
+            message_type: "event",
+            family: "submit",
+            id,
+            value: Some(Value::String(value)),
+        }
+    }
+
+    pub fn toggle(id: String, checked: bool) -> Self {
+        Self {
+            message_type: "event",
+            family: "toggle",
+            id,
+            value: Some(Value::Bool(checked)),
         }
     }
 }

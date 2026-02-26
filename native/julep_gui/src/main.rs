@@ -21,6 +21,12 @@ use tree::Tree;
 enum Message {
     /// A user clicked a button with the given node ID.
     Click(String),
+    /// A text input value changed (id, new_value).
+    Input(String, String),
+    /// A text input was submitted (id, current_value).
+    Submit(String, String),
+    /// A checkbox was toggled (id, checked).
+    Toggle(String, bool),
     /// Periodic tick used to drain the inbound channel.
     Tick,
 }
@@ -64,6 +70,18 @@ impl App {
             }
             Message::Click(id) => {
                 emit_event(OutgoingEvent::click(id));
+                Task::none()
+            }
+            Message::Input(id, value) => {
+                emit_event(OutgoingEvent::input(id, value));
+                Task::none()
+            }
+            Message::Submit(id, value) => {
+                emit_event(OutgoingEvent::submit(id, value));
+                Task::none()
+            }
+            Message::Toggle(id, value) => {
+                emit_event(OutgoingEvent::toggle(id, value));
                 Task::none()
             }
         }
@@ -116,10 +134,8 @@ impl App {
                 self.tree.snapshot(tree);
             }
             IncomingMessage::Patch { ops } => {
-                eprintln!(
-                    "julep_gui: patch received ({} ops) -- ignored in Phase 0",
-                    ops.len()
-                );
+                eprintln!("julep_gui: patch received ({} ops)", ops.len());
+                self.tree.apply_patch(ops);
             }
         }
     }
