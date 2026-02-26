@@ -84,23 +84,36 @@ defmodule Julep do
       # Runtime starts first and registers under runtime_name(name).
       # It defers its initial snapshot send to handle_continue, which fires
       # after init returns -- by then the supervisor has started Bridge.
-      {Julep.Runtime, [
-        app:        app,
-        bridge:     bridge_name(name),
-        name:       runtime_name(name),
-        app_opts:   Keyword.get(opts, :app_opts, [])
-      ]},
+      Supervisor.child_spec(
+        {Julep.Runtime, [
+          app:        app,
+          bridge:     bridge_name(name),
+          name:       runtime_name(name),
+          app_opts:   Keyword.get(opts, :app_opts, [])
+        ]},
+        restart: :transient,
+        significant: true
+      ),
       # Bridge starts second and can already send events to the registered
       # runtime_name because Runtime is alive by this point.
-      {Julep.Bridge, [
-        renderer_path: Path.expand(renderer_path),
-        runtime:       runtime_name(name),
-        name:          bridge_name(name)
-      ]}
+      Supervisor.child_spec(
+        {Julep.Bridge, [
+          renderer_path: Path.expand(renderer_path),
+          runtime:       runtime_name(name),
+          name:          bridge_name(name)
+        ]},
+        restart: :transient,
+        significant: true
+      )
     ]
 
-    # :rest_for_one: if Runtime crashes, Bridge restarts too (correct order).
-    Supervisor.init(children, strategy: :rest_for_one)
+    # :rest_for_one -- if Runtime crashes, Bridge restarts too.
+    # :transient -- don't restart children that exit normally (clean window close).
+    # :auto_shutdown -- when any significant child exits normally, tear down the tree.
+    Supervisor.init(children,
+      strategy: :rest_for_one,
+      auto_shutdown: :any_significant
+    )
   end
 
   # ---------------------------------------------------------------------------

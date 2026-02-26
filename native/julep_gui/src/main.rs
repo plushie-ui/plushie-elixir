@@ -32,6 +32,7 @@ enum Message {
 struct App {
     tree: Tree,
     receiver: Receiver<StdinEvent>,
+    stdin_closed: bool,
 }
 
 /// What the stdin reader thread sends back.
@@ -47,6 +48,7 @@ impl App {
         Self {
             tree: Tree::new(),
             receiver,
+            stdin_closed: false,
         }
     }
 
@@ -54,7 +56,11 @@ impl App {
         match message {
             Message::Tick => {
                 self.drain_stdin();
-                Task::none()
+                if self.stdin_closed {
+                    iced::exit()
+                } else {
+                    Task::none()
+                }
             }
             Message::Click(id) => {
                 emit_event(OutgoingEvent::click(id));
@@ -89,12 +95,14 @@ impl App {
                     eprintln!("julep_gui: stdin warning: {msg}");
                 }
                 Ok(StdinEvent::Closed) => {
-                    eprintln!("julep_gui: stdin closed -- renderer will be idle");
+                    eprintln!("julep_gui: stdin closed -- exiting");
+                    self.stdin_closed = true;
                     break;
                 }
                 Err(mpsc::TryRecvError::Empty) => break,
                 Err(mpsc::TryRecvError::Disconnected) => {
-                    eprintln!("julep_gui: stdin reader disconnected");
+                    eprintln!("julep_gui: stdin reader disconnected -- exiting");
+                    self.stdin_closed = true;
                     break;
                 }
             }

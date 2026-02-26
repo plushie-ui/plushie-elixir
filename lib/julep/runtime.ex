@@ -122,6 +122,12 @@ defmodule Julep.Runtime do
   # Renderer lifecycle
   # ---------------------------------------------------------------------------
 
+  def handle_info({:renderer_exit, :normal}, state) do
+    # Clean exit (user closed window). Shut down the runtime.
+    Logger.info("julep runtime: renderer exited normally -- shutting down")
+    {:stop, :normal, state}
+  end
+
   def handle_info({:renderer_exit, reason}, state) do
     Logger.warning("julep runtime: renderer exited: #{inspect(reason)}")
 

@@ -108,6 +108,13 @@ defmodule Julep.Bridge do
     {:noreply, %{state | buffer: state.buffer <> to_string(chunk)}}
   end
 
+  def handle_info({port, {:exit_status, 0}}, %{port: port} = state) do
+    # Clean exit (user closed window). Stop normally -- don't restart.
+    Logger.info("julep bridge: renderer exited cleanly (status 0)")
+    send(state.runtime, {:renderer_exit, :normal})
+    {:stop, :normal, %{state | port: nil}}
+  end
+
   def handle_info({port, {:exit_status, status}}, %{port: port} = state) do
     handle_port_exit(state, {:exit_status, status})
   end
