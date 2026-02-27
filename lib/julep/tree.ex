@@ -44,7 +44,7 @@ defmodule Julep.Tree do
   `:children`. Props are normalized to string keys. Children are
   always a list, normalized recursively.
   """
-  @spec normalize(tree :: nil | tree_node() | [tree_node()]) :: tree_node()
+  @spec normalize(tree :: nil | tree_node() | [tree_node()] | struct()) :: tree_node()
   def normalize(nil), do: @empty_container
 
   def normalize([]), do: @empty_container
@@ -58,6 +58,10 @@ defmodule Julep.Tree do
       props: %{},
       children: Enum.map(nodes, &normalize/1)
     }
+  end
+
+  def normalize(%module{} = widget) when is_atom(module) do
+    normalize(Julep.Iced.Widget.to_node(widget))
   end
 
   def normalize(%{} = node) do

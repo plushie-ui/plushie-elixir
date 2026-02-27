@@ -1,0 +1,113 @@
+defmodule Julep.Iced.Widget.KeyedColumn do
+  @moduledoc """
+  Keyed column -- like `column/3` but uses child IDs as keys for efficient
+  list diffing by the iced runtime. Use for dynamic lists where items are
+  added, removed, or reordered.
+
+  ## Props
+
+  - `spacing` (number) -- vertical space between children in pixels. Default: 0.
+  - `padding` (number | map) -- padding inside the column. See `Julep.Iced.Padding`.
+  - `width` (length) -- column width. Default: shrink. See `Julep.Iced.Length`.
+  - `height` (length) -- column height. Default: shrink.
+  - `max_width` (number) -- maximum width in pixels.
+  """
+
+  alias Julep.Iced.Widget.Build
+
+  @type option ::
+          {:spacing, number()}
+          | {:padding, Julep.Iced.Padding.t()}
+          | {:width, Julep.Iced.Length.t()}
+          | {:height, Julep.Iced.Length.t()}
+          | {:max_width, number()}
+
+  @type t :: %__MODULE__{
+          id: String.t(),
+          spacing: number() | nil,
+          padding: Julep.Iced.Padding.t() | nil,
+          width: Julep.Iced.Length.t() | nil,
+          height: Julep.Iced.Length.t() | nil,
+          max_width: number() | nil,
+          children: [Julep.Iced.ui_node() | struct()]
+        }
+
+  defstruct [
+    :id,
+    :spacing,
+    :padding,
+    :width,
+    :height,
+    :max_width,
+    children: []
+  ]
+
+  @doc "Creates a new keyed column struct with optional keyword opts."
+  @spec new(id :: String.t(), opts :: [option()]) :: t()
+  def new(id, opts \\ []) when is_binary(id) do
+    %__MODULE__{id: id} |> with_options(opts)
+  end
+
+  @doc "Applies keyword options to an existing keyed column struct."
+  @spec with_options(keyed_column :: t(), opts :: [option()]) :: t()
+  def with_options(%__MODULE__{} = kc, []), do: kc
+
+  def with_options(%__MODULE__{} = kc, opts) do
+    Enum.reduce(opts, kc, fn
+      {:spacing, v}, acc -> spacing(acc, v)
+      {:padding, v}, acc -> padding(acc, v)
+      {:width, v}, acc -> width(acc, v)
+      {:height, v}, acc -> height(acc, v)
+      {:max_width, v}, acc -> max_width(acc, v)
+      {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
+    end)
+  end
+
+  @doc "Sets the spacing between children in pixels."
+  @spec spacing(keyed_column :: t(), spacing :: number()) :: t()
+  def spacing(%__MODULE__{} = kc, spacing), do: %{kc | spacing: spacing}
+
+  @doc "Sets the padding inside the column."
+  @spec padding(keyed_column :: t(), padding :: Julep.Iced.Padding.t()) :: t()
+  def padding(%__MODULE__{} = kc, padding), do: %{kc | padding: padding}
+
+  @doc "Sets the column width."
+  @spec width(keyed_column :: t(), width :: Julep.Iced.Length.t()) :: t()
+  def width(%__MODULE__{} = kc, width), do: %{kc | width: width}
+
+  @doc "Sets the column height."
+  @spec height(keyed_column :: t(), height :: Julep.Iced.Length.t()) :: t()
+  def height(%__MODULE__{} = kc, height), do: %{kc | height: height}
+
+  @doc "Sets the maximum width in pixels."
+  @spec max_width(keyed_column :: t(), max_width :: number()) :: t()
+  def max_width(%__MODULE__{} = kc, max_width), do: %{kc | max_width: max_width}
+
+  @doc "Appends a child to the keyed column."
+  @spec push(keyed_column :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
+  def push(%__MODULE__{} = kc, child), do: %{kc | children: kc.children ++ [child]}
+
+  @doc "Appends multiple children to the keyed column."
+  @spec extend(keyed_column :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
+  def extend(%__MODULE__{} = kc, children), do: %{kc | children: kc.children ++ children}
+
+  @doc "Converts this keyed column struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
+  @spec build(keyed_column :: t()) :: Julep.Iced.ui_node()
+  def build(%__MODULE__{} = kc), do: Julep.Iced.Widget.to_node(kc)
+
+  defimpl Julep.Iced.Widget do
+    import Julep.Iced.Widget.Build
+
+    def to_node(kc) do
+      props =
+        %{}
+        |> put_if(kc.spacing, "spacing")
+        |> put_if(kc.padding, "padding")
+        |> put_if(kc.width, "width")
+        |> put_if(kc.height, "height")
+        |> put_if(kc.max_width, "max_width")
+
+      %{id: kc.id, type: "keyed_column", props: props, children: children_to_nodes(kc.children)}
+    end
+  end
+end
