@@ -88,6 +88,49 @@ the full CI pipeline locally and stops on first failure:
 7. `cargo fmt --check` (renderer)
 8. `cargo clippy -D warnings` (renderer)
 
+## Testing
+
+Write tests once, choose the fidelity level at runtime. Three backends behind
+a unified API:
+
+| | Sim | Headless | Full |
+|---|---|---|---|
+| Speed | ~ms | ~100ms | ~seconds |
+| Rust binary | No | Yes | Yes |
+| Display server | No | No | Yes |
+| Pixel snapshots | No | Tree-hash | GPU pixels |
+
+```elixir
+defmodule MyAppTest do
+  use Julep.Test.Case, app: MyApp
+
+  test "clicking increment updates counter" do
+    click("#increment")
+    assert find!("#count") |> text() == "1"
+  end
+
+  @tag backend: :headless
+  test "structural regression" do
+    click("#increment")
+    assert_snapshot("counter-at-1")
+  end
+end
+```
+
+The default backend is `:sim` -- pure Elixir, no Rust binary, no display
+server. Override per-test with `@tag backend:`, per-module with
+`use Julep.Test.Case, backend:`, or globally with `JULEP_TEST_BACKEND=`.
+
+Script-based testing via `.julep` files:
+
+```bash
+mix julep.script                     # run test scripts
+mix julep.replay path.julep          # replay with real windows
+```
+
+See [Testing guide](docs/testing.md) for the full API, backend comparison,
+pixel regression workflow, and CI configuration.
+
 ## Documentation
 
 Core:
@@ -107,7 +150,7 @@ Core:
 - [Theming](docs/theming.md) -- themes, custom palettes, styling
 - [Stateful widgets](docs/stateful-widgets.md) -- text_editor, combo_box, pane_grid
 - [State helpers](docs/state-helpers.md) -- optional state management modules
-- [Testing](docs/testing.md) -- unit, snapshot, scenario, and integration testing
+- [Testing](docs/testing.md) -- three-backend test framework and pixel regression
 - [Accessibility](docs/accessibility.md) -- planned approach and roadmap
 - [Developer experience](docs/developer-experience.md) -- mix tasks, IEx, project structure
 - [Roadmap](docs/roadmap.md) -- phased build plan
@@ -122,6 +165,7 @@ Decisions:
 - [0005: PaneGrid as a stateful widget](docs/decisions/0005-pane-grid-stateful-widget.md)
 - [0006: Responsive layout via sensor](docs/decisions/0006-responsive-via-sensor.md)
 - [0007: Two-tier custom widget strategy](docs/decisions/0007-custom-widget-extension.md)
+- [0008: Test framework architecture](docs/decisions/0008-test-framework-architecture.md)
 
 ## License
 
