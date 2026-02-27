@@ -90,10 +90,18 @@ the full CI pipeline locally and stops on first failure:
 
 ## Testing
 
-GUI testing is usually painful. Julep's Elm architecture sidesteps the
-typical problems -- `update/2` is pure, `view/1` returns data, and the
-framework ships with a test harness that lets you click buttons, type text,
-and assert on results without any infrastructure:
+Write your tests once, then run them at whatever fidelity you need. Julep
+ships a test framework with three interchangeable backends:
+
+- **Simulated** -- millisecond tests with zero setup. No Rust binary, no
+  display server. Click buttons, type text, assert on results.
+- **Headless** -- real Rust rendering without a display. Catches wire
+  protocol bugs and structural regressions across library upgrades.
+- **Full** -- real windows with GPU rendering. Pixel-accurate screenshot
+  regression, platform effects, the works.
+
+All three use the same API. Swap between them with a single line change --
+or let CI run all three.
 
 ```elixir
 defmodule MyAppTest do
@@ -106,11 +114,9 @@ defmodule MyAppTest do
 end
 ```
 
-Tests run in milliseconds with zero setup. When you need more confidence --
-pixel regression checks, visual diffs across library upgrades, real window
-rendering -- the same test code scales up without being rewritten.
-
-See the [Testing guide](docs/testing.md) for the full story.
+Script interactions as `.julep` files for acceptance tests and visual
+demos, capture golden-file screenshots for pixel regression, or just test
+your logic fast and move on. See the [Testing guide](docs/testing.md).
 
 ## Documentation
 
