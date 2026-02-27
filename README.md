@@ -90,17 +90,10 @@ the full CI pipeline locally and stops on first failure:
 
 ## Testing
 
-The Elm architecture makes julep apps unusually testable. `update/2` is a
-pure function. `view/1` returns plain data. No mocks needed for the core
-loop. But pure-function unit tests can't catch everything -- a misspelled
-prop name, an iced version bump that shifts widget rendering, a platform
-effect that silently changed behaviour. You need tests that cross the
-Elixir-Rust boundary too.
-
-Julep ships a test framework with progressive fidelity: millisecond tests
-for logic, headless Rust rendering for protocol verification, and real GPU
-windows for full-stack confidence. Same test code, same assertions -- you
-choose the depth.
+GUI testing is usually painful. Julep's Elm architecture sidesteps the
+typical problems -- `update/2` is pure, `view/1` returns data, and the
+framework ships with a test harness that lets you click buttons, type text,
+and assert on results without any infrastructure:
 
 ```elixir
 defmodule MyAppTest do
@@ -113,12 +106,11 @@ defmodule MyAppTest do
 end
 ```
 
-No setup, no Rust binary, no display server. Tests run in milliseconds by
-default. When you need deeper verification, swap backends with a single tag
-and the same test exercises the real renderer or captures GPU pixels.
+Tests run in milliseconds with zero setup. When you need more confidence --
+pixel regression checks, visual diffs across library upgrades, real window
+rendering -- the same test code scales up without being rewritten.
 
-See the [Testing guide](docs/testing.md) for the full API, backend
-comparison, pixel regression workflow, and CI configuration.
+See the [Testing guide](docs/testing.md) for the full story.
 
 ## Documentation
 
