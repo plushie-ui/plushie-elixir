@@ -7,8 +7,9 @@ know julep. This doc maps iced Rust code to its julep Elixir equivalent.
 
 | Iced (Rust) | Julep (Elixir) |
 |---|---|
-| `iced::widget::*` | `Julep.Iced.*` (strict parity) |
-| -- | `Julep.UI` (ergonomic layer, delegates to `Julep.Iced`) |
+| `iced::widget::*` | `Julep.Iced.Widget.*` (typed structs with builders) |
+| -- | `Julep.Iced` (untyped convenience facade, produces raw node maps) |
+| -- | `Julep.UI` (ergonomic layer, `do` blocks and keyword props) |
 | `iced::Length` | `Julep.Iced.Length` |
 | `iced::Padding` | `Julep.Iced.Padding` |
 | `iced::alignment` | `Julep.Iced.Alignment` |
@@ -19,15 +20,18 @@ know julep. This doc maps iced Rust code to its julep Elixir equivalent.
 | `iced::window` | `Julep.Command` (window_open, window_close, resize_window, etc.) |
 | `iced::keyboard` | (events delivered as tuples) |
 
-`Julep.Iced` is the strict parity layer. Each function maps directly to
-an iced widget with the same name and the same prop vocabulary. If iced
-calls it `spacing`, julep calls it `spacing`. If iced calls it `align_x`,
-julep calls it `align_x`.
+`Julep.Iced.Widget.*` is the typed parity layer. Each widget module matches
+an iced widget 1:1 -- same name, same prop vocabulary. If iced calls it
+`spacing`, julep calls it `spacing`. Widgets are typed structs with builder
+functions and keyword opts, giving you compile-time safety via dialyzer.
 
-`Julep.UI` is the ergonomic layer. It delegates to `Julep.Iced` for node
-construction but adds `do` block syntax, auto-ID generation for anonymous
-nodes, and keyword-list conveniences. The output is identical -- same
-nodes, same props.
+`Julep.Iced` is the untyped convenience facade. Each function produces a
+raw `ui_node()` map from a props map. Useful for quick prototyping or when
+you don't need compile-time type checking.
+
+`Julep.UI` is the ergonomic layer. It produces the same node maps but adds
+`do` block syntax, auto-ID generation for anonymous nodes, and keyword-list
+conveniences.
 
 ## Side-by-side examples
 
@@ -44,13 +48,27 @@ column![
 ].spacing(16).padding(20)
 ```
 
-**Julep.Iced (strict parity):**
+**Julep.Iced.Widget (typed builders):**
+```elixir
+alias Julep.Iced.Widget.{Column, Row, Text, Button}
+
+Column.new("main_col", spacing: 16, padding: 20)
+|> Column.push(Text.new("greeting", "Hello, world!", size: 24))
+|> Column.push(
+  Row.new("btn_row", spacing: 8)
+  |> Row.push(Button.new("inc", "Increment"))
+  |> Row.push(Button.new("dec", "Decrement"))
+)
+|> Column.build()
+```
+
+**Julep.Iced (untyped facade):**
 ```elixir
 Iced.column("main_col", %{spacing: 16, padding: 20}, [
   Iced.text("greeting", %{content: "Hello, world!", size: 24}),
   Iced.row("btn_row", %{spacing: 8}, [
-    Iced.button("inc", %{label: "Increment", on_press: "increment"}),
-    Iced.button("dec", %{label: "Decrement", on_press: "decrement"})
+    Iced.button("inc", %{label: "Increment"}),
+    Iced.button("dec", %{label: "Decrement"})
   ])
 ])
 ```
@@ -68,7 +86,9 @@ column spacing: 16, padding: 20 do
 end
 ```
 
-All three produce the same tree. Use whichever reads best for your context.
+All three produce the same `ui_node()` tree. Use whichever reads best for
+your context. The typed builders catch errors at compile time via dialyzer;
+the facade and UI layer are quicker to write for simple cases.
 
 ### Text input
 
@@ -81,13 +101,22 @@ text_input("Enter name...", &self.name)
     .width(Length::Fill)
 ```
 
-**Julep.Iced:**
+**Julep.Iced.Widget:**
+```elixir
+TextInput.new("name_field", model.name,
+  placeholder: "Enter name...",
+  on_submit: true,
+  padding: 8,
+  width: :fill
+)
+```
+
+**Julep.Iced (facade):**
 ```elixir
 Iced.text_input("name_field", %{
   placeholder: "Enter name...",
   value: model.name,
-  on_input: "name_changed",
-  on_submit: "name_submitted",
+  on_submit: true,
   padding: 8,
   width: :fill
 })
@@ -112,12 +141,16 @@ checkbox("Remember me", self.remember)
     .spacing(8)
 ```
 
-**Julep.Iced:**
+**Julep.Iced.Widget:**
+```elixir
+Checkbox.new("remember", "Remember me", model.remember, spacing: 8)
+```
+
+**Julep.Iced (facade):**
 ```elixir
 Iced.checkbox("remember", %{
   label: "Remember me",
-  is_checked: model.remember,
-  on_toggle: "remember_toggled",
+  is_toggled: model.remember,
   spacing: 8
 })
 ```
@@ -131,12 +164,16 @@ slider(0..=100, self.volume, Message::VolumeChanged)
     .width(200)
 ```
 
-**Julep.Iced:**
+**Julep.Iced.Widget:**
+```elixir
+Slider.new("volume", {0, 100}, model.volume, step: 1, width: 200)
+```
+
+**Julep.Iced (facade):**
 ```elixir
 Iced.slider("volume", %{
   range: {0, 100},
   value: model.volume,
-  on_change: "volume_changed",
   step: 1,
   width: 200
 })
@@ -150,12 +187,19 @@ pick_list(&["Small", "Medium", "Large"][..], self.size.as_deref(), Message::Size
     .placeholder("Choose size")
 ```
 
-**Julep.Iced:**
+**Julep.Iced.Widget:**
+```elixir
+PickList.new("size_picker", ["Small", "Medium", "Large"],
+  selected: model.size,
+  placeholder: "Choose size"
+)
+```
+
+**Julep.Iced (facade):**
 ```elixir
 Iced.pick_list("size_picker", %{
   options: ["Small", "Medium", "Large"],
   selected: model.size,
-  on_selected: "size_selected",
   placeholder: "Choose size"
 })
 ```
@@ -170,11 +214,18 @@ container(content)
     .style(container::rounded_box)
 ```
 
-**Julep.Iced:**
+**Julep.Iced.Widget:**
+```elixir
+Container.new("wrapper", padding: 16, center: true, style: :rounded_box)
+|> Container.push(content)
+|> Container.build()
+```
+
+**Julep.Iced (facade):**
 ```elixir
 Iced.container("wrapper", %{
   padding: 16,
-  center: :fill,
+  center: true,
   style: :rounded_box
 }, [content])
 ```
@@ -190,10 +241,17 @@ tooltip(
 )
 ```
 
-**Julep.Iced:**
+**Julep.Iced.Widget:**
+```elixir
+Tooltip.new("help_tip", "Click for help", position: :top)
+|> Tooltip.push(Button.new("help_btn", "?"))
+|> Tooltip.build()
+```
+
+**Julep.Iced (facade):**
 ```elixir
 Iced.tooltip("help_tip", %{position: :top}, [
-  Iced.button("help_btn", %{label: "?", on_press: "help"})
+  Iced.button("help_btn", %{label: "?"})
 ], "Click for help")
 ```
 
@@ -376,9 +434,15 @@ names.
 ## What iced has that julep exposes differently
 
 - **Builder pattern.** Iced uses method chaining (`button("x").on_press(M).width(100)`).
-  Julep uses prop maps or keyword lists. Same data, different syntax.
+  Julep mirrors this with typed builder functions on each widget module
+  (`Button.new("x", "label") |> Button.width(100)`). Keyword opts on the
+  constructor are also supported (`Button.new("x", "label", width: 100)`).
+  The untyped facade and Julep.UI layers use prop maps and keyword lists
+  respectively.
 - **Closures for styling.** Iced passes closure references for custom styles.
-  Julep uses style atoms (`:primary`, `:danger`) or property maps.
+  Julep uses style atoms (`:primary`, `:danger`) or property maps, since
+  closures can't be serialized over the JSONL transport. The renderer
+  resolves style names to iced's built-in style functions.
 - **Generic type parameters.** Iced widgets are parameterized over Theme,
   Renderer, and Message. Julep hides this entirely -- the renderer handles
   type resolution from the JSON props.

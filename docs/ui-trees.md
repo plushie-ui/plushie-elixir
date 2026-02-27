@@ -99,18 +99,22 @@ end
 
 ## Props
 
-Props are always string-keyed maps when serialized. The builder functions
-accept keyword lists and normalize them.
+Props are always string-keyed maps when serialized. All three builder layers
+produce the same node shape:
 
 ```elixir
-# Builder (keyword syntax):
+# Julep.Iced.Widget (typed struct with builders):
+alias Julep.Iced.Widget.Button
+Button.new("save", "Save", style: :primary, padding: 8) |> Button.build()
+
+# Julep.UI (keyword syntax):
 button("save", "Save", style: :primary, padding: 8)
 
-# Resulting node:
+# Resulting node (identical from both):
 %{
   id: "save",
   type: "button",
-  props: %{"label" => "Save", "event" => "save", "style" => "primary", "padding" => 8},
+  props: %{"label" => "Save", "style" => "primary", "padding" => 8},
   children: []
 }
 ```
