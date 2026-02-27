@@ -3,7 +3,7 @@
 Comprehensive comparison of iced 0.14.0 (with features: `tokio`, `image`,
 `svg`, `markdown`, `canvas`) against what Julep exposes to Elixir.
 
-Audited: 2026-02-26
+Audited: 2026-02-27
 
 ---
 
@@ -77,20 +77,12 @@ Audited: 2026-02-26
 | `opaque` | N/A | Internal overlay helper |
 | `hover` | N/A | Internal overlay helper |
 
-### Julep-Only Composites (not in iced)
-
-These are higher-level widgets Julep composes from iced primitives:
+### Julep-Only (not in iced)
 
 | Widget | Notes |
 |---|---|
-| `window` | Multi-window container |
-| `tabs` | Tab switching |
-| `nav` | Navigation sidebar |
-| `modal` | Modal overlay |
-| `card` | Card container |
-| `panel` | Collapsible panel |
-| `form` | Form layout |
-| `split_pane` | Split layout |
+| `window` | Multi-window container (declarative open/close) |
+| `table` | Composite: columns, rows, header, separator |
 
 ---
 
@@ -377,7 +369,7 @@ Same as Slider. Missing: `with_circular_handle`.
 | `h1_size` / `h2_size` / `h3_size` | SUPPORTED | |
 | `code_size` | SUPPORTED | |
 | `spacing` | SUPPORTED | |
-| `Highlighter` | **MISSING** | Code syntax highlighting |
+| `Highlighter` | SUPPORTED | `highlighter` feature enabled in Cargo.toml; iced renders code blocks with syntax highlighting |
 
 ### Canvas
 
@@ -489,7 +481,7 @@ Same as Slider. Missing: `with_circular_handle`.
 | 22 built-in themes | Yes (all 22) | SUPPORTED |
 | `custom(name, palette)` | Yes | SUPPORTED |
 | Palette fields: background, text, primary, success, danger | Yes | SUPPORTED |
-| Palette field: `warning` | Parsed separately (not in iced's base Palette) | SUPPORTED |
+| Palette field: `warning` | N/A | iced's Palette has no warning field; removed from Julep |
 | `base` field for custom themes | Yes | SUPPORTED |
 | Per-widget style functions | Yes | SUPPORTED -- button, container, text, checkbox, progress_bar, rule, etc. have named styles |
 | `Themer` widget (per-subtree theme) | Yes | SUPPORTED |
@@ -585,11 +577,11 @@ Same as Slider. Missing: `with_circular_handle`.
 | `show_system_menu(id)` | `show_system_menu(id)` | SUPPORTED |
 | `size(id)` / `position(id)` queries | `get_window_size(id, tag)` / `get_window_position(id, tag)` | SUPPORTED |
 | `is_maximized(id)` / `is_minimized(id)` | `is_maximized(id, tag)` / `is_minimized(id, tag)` | SUPPORTED |
-| `set_icon(id, icon)` | No | **MISSING** |
-| `scale_factor(id)` | No | **MISSING** |
-| `mode(id)` | No | **MISSING** |
-| `raw_id(id)` | No | **MISSING** |
-| `monitor_size(id)` | No | **MISSING** |
+| `set_icon(id, icon)` | No | **UNSUPPORTED** -- requires RGBA pixel data impractical over JSONL |
+| `scale_factor(id)` | `get_scale_factor(id, tag)` | SUPPORTED |
+| `mode(id)` | `get_mode(id, tag)` | SUPPORTED |
+| `raw_id(id)` | `raw_id(id, tag)` | SUPPORTED |
+| `monitor_size(id)` | `monitor_size(id, tag)` | SUPPORTED |
 
 ### Window Settings
 
@@ -738,7 +730,7 @@ Same as Slider. Missing: `with_circular_handle`.
 
 ### Widgets
 - iced widgets (with enabled features): ~28 distinct widgets
-- Julep supported: 28 (plus 7 composites not in iced)
+- Julep supported: 28 (plus `window` and `table` not in iced)
 - Missing: none
 - All widgets fully implemented in both Elixir and Rust layers
 
@@ -749,7 +741,7 @@ Same as Slider. Missing: `with_circular_handle`.
   - Widget-specific icons
   - Some event callbacks (`on_open`/`on_close` for pick_list/combo_box)
   - `on_scroll` for scrollable
-  - Code syntax highlighting for markdown
+  - Some style props (scrollable style, svg style)
 
 ### Events
 - Keyboard: SUPPORTED (all key families, comprehensive named key map, modifiers)
@@ -768,7 +760,7 @@ Same as Slider. Missing: `with_circular_handle`.
 ### Window Operations
 - Declarative open (via tree) and close supported
 - Full imperative window management: resize, move, maximize, minimize, mode, decorations, focus, drag, screenshots, etc.
-- Missing: set_icon, scale_factor query, mode query, raw_id, monitor_size
+- Missing: set_icon (intentionally unsupported -- RGBA pixel data impractical over JSONL)
 
 ---
 
@@ -781,17 +773,15 @@ Same as Slider. Missing: `with_circular_handle`.
 3. **`on_scroll` callback for Scrollable** -- scroll position tracking
 4. **Disabled states** -- `on_toggle_maybe` for checkbox/toggler
 5. **`on_open`/`on_close` for pick_list/combo_box** -- dropdown lifecycle events
-6. **Markdown code highlighting** -- syntax highlighting support
-7. **Primary clipboard** -- Linux middle-click paste
+6. **Primary clipboard** -- Linux middle-click paste
 
 ### Low Priority (Nice-to-Have)
 
-8. **`set_icon`** -- window icon
-9. **`scale_factor` query** -- programmatic scale factor access
-10. **Stack `clip`** -- clipping on stack widget
-11. **Widget icons** -- icon prop for text_input, checkbox
-12. **`on_paste` for TextInput** -- paste event callback
-13. **Named color constants** -- BLACK, WHITE, TRANSPARENT as atoms
-14. **`vsync` setting** -- vsync control
-15. **Extended palette generation** -- full iced extended palette support
-16. **`theme::Mode`** -- light/dark/none mode enum
+7. **`set_icon`** -- requires RGBA pixel data; intentionally unsupported
+8. **Stack `clip`** -- clipping on stack widget
+9. **Widget icons** -- icon prop for text_input, checkbox
+10. **`on_paste` for TextInput** -- paste event callback
+11. **Named color constants** -- BLACK, WHITE, TRANSPARENT as atoms
+12. **`vsync` setting** -- vsync control
+13. **Extended palette generation** -- full iced extended palette support
+14. **`theme::Mode`** -- light/dark/none mode enum
