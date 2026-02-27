@@ -37,6 +37,36 @@ pub enum IncomingMessage {
     Settings {
         settings: Value,
     },
+    /// Query the current tree or find a widget.
+    Query {
+        id: String,
+        target: String,
+        #[serde(default)]
+        selector: Value,
+    },
+    /// Interact with a widget (click, type, etc.)
+    Interact {
+        id: String,
+        action: String,
+        #[serde(default)]
+        selector: Value,
+        #[serde(default)]
+        payload: Value,
+    },
+    /// Capture a pixel snapshot.
+    #[allow(dead_code)]
+    SnapshotCapture {
+        id: String,
+        name: String,
+        #[serde(default)]
+        theme: Value,
+        #[serde(default)]
+        viewport: Value,
+    },
+    /// Reset the app state.
+    Reset {
+        id: String,
+    },
 }
 
 /// Response to an effect request, written to stdout as JSONL.
@@ -78,8 +108,104 @@ impl EffectResponse {
     }
 }
 
+/// Response to a Query message.
+#[derive(Debug, Serialize)]
+pub struct QueryResponse {
+    #[serde(rename = "type")]
+    pub message_type: &'static str,
+    pub id: String,
+    pub target: String,
+    pub data: Value,
+}
+
+impl QueryResponse {
+    pub fn new(id: String, target: String, data: Value) -> Self {
+        Self {
+            message_type: "query_response",
+            id,
+            target,
+            data,
+        }
+    }
+}
+
+/// Response to an Interact message.
+#[derive(Debug, Serialize)]
+pub struct InteractResponse {
+    #[serde(rename = "type")]
+    pub message_type: &'static str,
+    pub id: String,
+    pub events: Vec<Value>,
+}
+
+impl InteractResponse {
+    pub fn new(id: String, events: Vec<Value>) -> Self {
+        Self {
+            message_type: "interact_response",
+            id,
+            events,
+        }
+    }
+}
+
+/// Response to a SnapshotCapture message.
+#[derive(Debug, Serialize)]
+#[allow(dead_code)]
+pub struct SnapshotCaptureResponse {
+    #[serde(rename = "type")]
+    pub message_type: &'static str,
+    pub id: String,
+    pub name: String,
+    pub hash: String,
+    pub width: u32,
+    pub height: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rgba_base64: Option<String>,
+}
+
+#[allow(dead_code)]
+impl SnapshotCaptureResponse {
+    pub fn new(
+        id: String,
+        name: String,
+        hash: String,
+        width: u32,
+        height: u32,
+        rgba_base64: Option<String>,
+    ) -> Self {
+        Self {
+            message_type: "snapshot_response",
+            id,
+            name,
+            hash,
+            width,
+            height,
+            rgba_base64,
+        }
+    }
+}
+
+/// Response to a Reset message.
+#[derive(Debug, Serialize)]
+pub struct ResetResponse {
+    #[serde(rename = "type")]
+    pub message_type: &'static str,
+    pub id: String,
+    pub status: &'static str,
+}
+
+impl ResetResponse {
+    pub fn ok(id: String) -> Self {
+        Self {
+            message_type: "reset_response",
+            id,
+            status: "ok",
+        }
+    }
+}
+
 /// A single node in the UI tree.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TreeNode {
     pub id: String,
     #[serde(rename = "type")]
@@ -91,7 +217,7 @@ pub struct TreeNode {
 }
 
 /// A single patch operation applied incrementally to the retained tree.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct PatchOp {
     pub op: String,
     pub path: Vec<usize>,

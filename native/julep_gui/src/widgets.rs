@@ -11,8 +11,8 @@ use iced::widget::{
     text_editor, text_input, toggler, tooltip, vertical_slider, Image, Space, Stack, Svg,
 };
 use iced::{
-    alignment, font, mouse, Border, Color, ContentFit, Element, Fill, Font, Length, Padding,
-    Pixels, Point, Radians, Rotation, Shadow, Size, Vector,
+    alignment, font, mouse, widget, Border, Color, ContentFit, Element, Fill, Font, Length,
+    Padding, Pixels, Point, Radians, Rotation, Shadow, Size, Vector,
 };
 use serde_json::Value;
 use std::collections::hash_map::DefaultHasher;
@@ -226,11 +226,13 @@ fn render_column<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a
         col = col.max_width(mw);
     }
 
-    if prop_bool_default(props, "wrap", false) {
+    let elem: Element<'a, Message> = if prop_bool_default(props, "wrap", false) {
         col.wrap().into()
     } else {
         col.into()
-    }
+    };
+
+    container(elem).id(widget::Id::from(node.id.clone())).into()
 }
 
 // ---------------------------------------------------------------------------
@@ -265,11 +267,15 @@ fn render_row<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, M
     };
 
     // Row doesn't have max_width natively; wrap in a container to constrain it.
-    if let Some(mw) = max_width {
+    let row_elem = if let Some(mw) = max_width {
         container(elem).max_width(mw).into()
     } else {
         elem
-    }
+    };
+
+    container(row_elem)
+        .id(widget::Id::from(node.id.clone()))
+        .into()
 }
 
 // ---------------------------------------------------------------------------
@@ -388,7 +394,7 @@ fn render_button<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a
         };
     }
 
-    b.into()
+    container(b).id(widget::Id::from(node.id.clone())).into()
 }
 
 // ---------------------------------------------------------------------------
@@ -484,6 +490,9 @@ fn render_container<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
         };
     }
 
+    // Widget ID for operations targeting
+    c = c.id(widget::Id::from(node.id.clone()));
+
     c.into()
 }
 
@@ -543,10 +552,8 @@ fn render_scrollable<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Elemen
 
     s = s.width(width).height(height);
 
-    // Widget ID
-    if let Some(id_str) = prop_str(props, "id") {
-        s = s.id(id_str);
-    }
+    // Widget ID -- always set from node.id like other widgets
+    s = s.id(widget::Id::from(node.id.clone()));
 
     if let Some(sp) = spacing {
         s = s.spacing(sp);
@@ -709,7 +716,7 @@ fn render_checkbox<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<
         };
     }
 
-    cb.into()
+    container(cb).id(widget::Id::from(node.id.clone())).into()
 }
 
 // ---------------------------------------------------------------------------
@@ -832,7 +839,7 @@ fn render_toggler<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'
         };
     }
 
-    t.into()
+    container(t).id(widget::Id::from(node.id.clone())).into()
 }
 
 // ---------------------------------------------------------------------------
@@ -895,7 +902,7 @@ fn render_radio<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a,
         };
     }
 
-    r.into()
+    container(r).id(widget::Id::from(node.id.clone())).into()
 }
 
 // ---------------------------------------------------------------------------
@@ -937,7 +944,7 @@ fn render_slider<'a>(node: &'a TreeNode) -> Element<'a, Message> {
         };
     }
 
-    s.into()
+    container(s).id(widget::Id::from(node.id.clone())).into()
 }
 
 // ---------------------------------------------------------------------------
@@ -976,7 +983,7 @@ fn render_vertical_slider<'a>(node: &'a TreeNode) -> Element<'a, Message> {
         };
     }
 
-    s.into()
+    container(s).id(widget::Id::from(node.id.clone())).into()
 }
 
 // ---------------------------------------------------------------------------
@@ -1037,7 +1044,7 @@ fn render_pick_list<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
         };
     }
 
-    pl.into()
+    container(pl).id(widget::Id::from(node.id.clone())).into()
 }
 
 // ---------------------------------------------------------------------------
@@ -1087,7 +1094,7 @@ fn render_combo_box<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
         cb = cb.menu_height(mh);
     }
 
-    cb.into()
+    container(cb).id(widget::Id::from(node.id.clone())).into()
 }
 
 // ---------------------------------------------------------------------------
@@ -1153,6 +1160,9 @@ fn render_text_editor<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Eleme
             _ => te,
         };
     }
+
+    // Widget ID for operations targeting
+    te = te.id(widget::Id::from(node.id.clone()));
 
     te.into()
 }

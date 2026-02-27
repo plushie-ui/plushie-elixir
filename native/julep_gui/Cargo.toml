@@ -14,9 +14,14 @@ serde_json = "1"
 rfd = { version = "0.15", optional = true }
 arboard = { version = "3", optional = true }
 notify-rust = { version = "4", optional = true }
+iced_test = { version = "0.14", optional = true }
+sha2 = { version = "0.10", optional = true }
+base64 = { version = "0.22", optional = true }
 
 [features]
 default = ["dialogs", "clipboard", "notifications"]
 dialogs = ["rfd"]
 clipboard = ["arboard"]
 notifications = ["notify-rust"]
+headless = ["iced_test", "sha2", "base64"]
+test-mode = ["sha2", "base64"]

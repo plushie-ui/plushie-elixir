@@ -1,0 +1,365 @@
+defmodule Julep.Test.Backend.Full do
+  @moduledoc """
+  Full test backend with real iced windows.
+
+  Spawns `julep_gui --test` which runs a real `iced::daemon` with GPU
+  rendering, but also accepts test protocol messages (Query, Interact,
+  SnapshotCapture, Reset) on stdin alongside normal Snapshot/Patch messages.
+
+  ## Requirements
+
+  Build the renderer with test-mode support:
+
+      cd native/julep_gui && cargo build --features test-mode
+
+  For CI (headless environment), use Xvfb:
+
+      sudo apt-get install -y xvfb mesa-vulkan-drivers
+      Xvfb :99 -screen 0 1024x768x24 &
+      export DISPLAY=:99
+      export WINIT_UNIX_BACKEND=x11
+
+  ## Capabilities
+
+  - Real windows open and render via wgpu.
+  - Effects (file dialogs, clipboard, notifications) actually work.
+  - Subscriptions fire normally.
+  - Screenshots capture actual GPU-rendered pixels.
+  - Interactions inject real Messages into the iced runtime.
+
+  ## When to use
+
+  End-to-end integration tests that verify the full stack including window
+  lifecycle, real rendering, and platform effects. Slowest backend but
+  highest confidence.
+  """
+
+  @behaviour Julep.Test.Backend
+
+  use GenServer
+
+  alias Julep.Test.Element
+  alias Julep.Test.Snapshot
+
+  # -- Backend callbacks --
+
+  @impl Julep.Test.Backend
+  def start(app, opts \\ []) do
+    GenServer.start(__MODULE__, {app, opts})
+  end
+
+  @impl Julep.Test.Backend
+  def stop(pid), do: GenServer.stop(pid)
+
+  @impl Julep.Test.Backend
+  def find(pid, selector), do: GenServer.call(pid, {:find, selector}, 15_000)
+
+  @impl Julep.Test.Backend
+  def find!(pid, selector) do
+    case find(pid, selector) do
+      nil -> raise "Element not found: #{inspect(selector)}"
+      element -> element
+    end
+  end
+
+  @impl Julep.Test.Backend
+  def click(pid, selector), do: GenServer.call(pid, {:interact, "click", selector, %{}}, 15_000)
+
+  @impl Julep.Test.Backend
+  def type_text(pid, selector, text) do
+    GenServer.call(pid, {:interact, "type_text", selector, %{"text" => text}}, 15_000)
+  end
+
+  @impl Julep.Test.Backend
+  def submit(pid, selector) do
+    GenServer.call(pid, {:interact, "submit", selector, %{}}, 15_000)
+  end
+
+  @impl Julep.Test.Backend
+  def toggle(pid, selector) do
+    GenServer.call(pid, {:interact, "toggle", selector, %{}}, 15_000)
+  end
+
+  @impl Julep.Test.Backend
+  def select(pid, selector, value) do
+    GenServer.call(pid, {:interact, "select", selector, %{"value" => value}}, 15_000)
+  end
+
+  @impl Julep.Test.Backend
+  def slide(pid, selector, value) do
+    GenServer.call(pid, {:interact, "slide", selector, %{"value" => value}}, 15_000)
+  end
+
+  @impl Julep.Test.Backend
+  def model(pid), do: GenServer.call(pid, :model)
+
+  @impl Julep.Test.Backend
+  def tree(pid), do: GenServer.call(pid, :tree, 15_000)
+
+  @impl Julep.Test.Backend
+  def snapshot(pid, name), do: GenServer.call(pid, {:snapshot, name}, 30_000)
+
+  @impl Julep.Test.Backend
+  def reset(pid), do: GenServer.call(pid, :reset, 15_000)
+
+  @impl Julep.Test.Backend
+  def await_async(_pid, _tag, _timeout \\ 5000), do: :ok
+
+  # -- GenServer --
+
+  @impl GenServer
+  def init({app, opts}) do
+    renderer_path = Julep.Binary.renderer_path()
+
+    port =
+      Port.open({:spawn_executable, renderer_path}, [
+        :binary,
+        :exit_status,
+        {:line, 65_536},
+        {:args, ["--test"]}
+      ])
+
+    {model, _commands} = init_app(app, opts)
+    tree = render_tree(app, model)
+
+    # Send initial snapshot -- this will open real windows
+    snapshot_msg = Jason.encode!(%{type: "snapshot", tree: tree})
+    Port.command(port, [snapshot_msg, "\n"])
+
+    {:ok,
+     %{
+       port: port,
+       app: app,
+       opts: opts,
+       model: model,
+       tree: tree,
+       buffer: "",
+       pending: %{},
+       next_id: 1
+     }}
+  end
+
+  @impl GenServer
+  def handle_call({:find, selector}, from, state) do
+    {id, state} = next_id(state)
+    sel = encode_selector(selector)
+    send_message(state.port, %{type: "query", id: id, target: "find", selector: sel})
+    {:noreply, put_in(state, [:pending, id], {:find, from})}
+  end
+
+  def handle_call(:tree, from, state) do
+    {id, state} = next_id(state)
+    send_message(state.port, %{type: "query", id: id, target: "tree", selector: %{}})
+    {:noreply, put_in(state, [:pending, id], {:tree, from})}
+  end
+
+  def handle_call({:interact, action, selector, payload}, from, state) do
+    {id, state} = next_id(state)
+    sel = encode_selector(selector)
+
+    send_message(state.port, %{
+      type: "interact",
+      id: id,
+      action: action,
+      selector: sel,
+      payload: payload
+    })
+
+    {:noreply, put_in(state, [:pending, id], {:interact, from, action})}
+  end
+
+  def handle_call({:snapshot, name}, from, state) do
+    {id, state} = next_id(state)
+
+    send_message(state.port, %{
+      type: "snapshot_capture",
+      id: id,
+      name: name,
+      theme: %{},
+      viewport: %{}
+    })
+
+    {:noreply, put_in(state, [:pending, id], {:snapshot, from, name})}
+  end
+
+  def handle_call(:model, _from, state) do
+    {:reply, state.model, state}
+  end
+
+  def handle_call(:reset, from, state) do
+    {id, state} = next_id(state)
+    send_message(state.port, %{type: "reset", id: id})
+
+    {model, _commands} = init_app(state.app, state.opts)
+    tree = render_tree(state.app, model)
+    snapshot_msg = Jason.encode!(%{type: "snapshot", tree: tree})
+    Port.command(state.port, [snapshot_msg, "\n"])
+
+    {:noreply, put_in(%{state | model: model, tree: tree}, [:pending, id], {:reset, from})}
+  end
+
+  @impl GenServer
+  def handle_info({port, {:data, {:eol, line}}}, %{port: port} = state) do
+    full_line = state.buffer <> line
+    state = %{state | buffer: ""}
+
+    case Jason.decode(full_line) do
+      {:ok, response} ->
+        state = handle_response(response, state)
+        {:noreply, state}
+
+      {:error, _} ->
+        {:noreply, state}
+    end
+  end
+
+  def handle_info({port, {:data, {:noeol, chunk}}}, %{port: port} = state) do
+    {:noreply, %{state | buffer: state.buffer <> chunk}}
+  end
+
+  def handle_info({port, {:exit_status, code}}, %{port: port} = state) do
+    for {_id, pending} <- state.pending do
+      case pending do
+        {_type, from} -> GenServer.reply(from, {:error, {:renderer_exited, code}})
+        {_type, from, _extra} -> GenServer.reply(from, {:error, {:renderer_exited, code}})
+      end
+    end
+
+    {:stop, {:renderer_exited, code}, state}
+  end
+
+  def handle_info(_msg, state), do: {:noreply, state}
+
+  # -- Response handling --
+
+  defp handle_response(%{"type" => "query_response", "id" => id} = resp, state) do
+    case Map.pop(state.pending, id) do
+      {nil, _} ->
+        state
+
+      {{:find, from}, pending} ->
+        element =
+          case resp["data"] do
+            nil -> nil
+            data when data == %{} -> nil
+            data -> Element.from_node(data)
+          end
+
+        GenServer.reply(from, element)
+        %{state | pending: pending}
+
+      {{:tree, from}, pending} ->
+        GenServer.reply(from, resp["data"])
+        %{state | pending: pending}
+    end
+  end
+
+  defp handle_response(%{"type" => "interact_response", "id" => id} = resp, state) do
+    case Map.pop(state.pending, id) do
+      {nil, _} ->
+        state
+
+      {{:interact, from, _action}, pending} ->
+        state = dispatch_events(resp["events"] || [], state)
+        GenServer.reply(from, :ok)
+        %{state | pending: pending}
+    end
+  end
+
+  defp handle_response(%{"type" => "snapshot_response", "id" => id} = resp, state) do
+    case Map.pop(state.pending, id) do
+      {nil, _} ->
+        state
+
+      {{:snapshot, from, _name}, pending} ->
+        snapshot = %Snapshot{
+          name: resp["name"],
+          hash: resp["hash"],
+          size: {resp["width"] || 0, resp["height"] || 0},
+          rgba_data: decode_rgba(resp["rgba_base64"])
+        }
+
+        GenServer.reply(from, snapshot)
+        %{state | pending: pending}
+    end
+  end
+
+  defp handle_response(%{"type" => "reset_response", "id" => id}, state) do
+    case Map.pop(state.pending, id) do
+      {nil, _} ->
+        state
+
+      {{:reset, from}, pending} ->
+        GenServer.reply(from, :ok)
+        %{state | pending: pending}
+    end
+  end
+
+  defp handle_response(%{"type" => "event"} = event, state) do
+    dispatch_event(event, state)
+  end
+
+  defp handle_response(_unknown, state), do: state
+
+  # -- Event dispatching --
+
+  defp dispatch_events(events, state) do
+    Enum.reduce(events, state, fn event, acc -> dispatch_event(event, acc) end)
+  end
+
+  defp dispatch_event(%{"event" => type, "id" => id} = event, state) do
+    elixir_event = decode_event(type, id, event)
+
+    {model, _commands} =
+      case state.app.update(state.model, elixir_event) do
+        {m, c} -> {m, c}
+        m -> {m, []}
+      end
+
+    tree = render_tree(state.app, model)
+    snapshot_msg = Jason.encode!(%{type: "snapshot", tree: tree})
+    Port.command(state.port, [snapshot_msg, "\n"])
+
+    %{state | model: model, tree: tree}
+  end
+
+  defp dispatch_event(_event, state), do: state
+
+  defp decode_event("click", id, _event), do: {:click, id}
+  defp decode_event("input", id, event), do: {:input, id, event["value"] || ""}
+  defp decode_event("submit", id, event), do: {:submit, id, event["value"] || ""}
+  defp decode_event("toggle", id, event), do: {:toggle, id, event["value"] || false}
+  defp decode_event("select", id, event), do: {:select, id, event["value"] || ""}
+  defp decode_event("slide", id, event), do: {:slide, id, event["value"] || 0}
+  defp decode_event(type, id, _event), do: {String.to_atom(type), id}
+
+  # -- Helpers --
+
+  defp init_app(app, opts) do
+    case app.init(opts) do
+      {model, commands} -> {model, commands}
+      model -> {model, []}
+    end
+  end
+
+  defp render_tree(app, model) do
+    app.view(model) |> Julep.Tree.normalize()
+  end
+
+  defp next_id(state) do
+    id = "req_#{state.next_id}"
+    {id, %{state | next_id: state.next_id + 1}}
+  end
+
+  defp encode_selector("#" <> id), do: %{"by" => "id", "value" => id}
+  defp encode_selector({:point, x, y}), do: %{"by" => "point", "x" => x, "y" => y}
+  defp encode_selector(text) when is_binary(text), do: %{"by" => "text", "value" => text}
+
+  defp send_message(port, msg) do
+    json = Jason.encode!(msg)
+    Port.command(port, [json, "\n"])
+  end
+
+  defp decode_rgba(nil), do: nil
+  defp decode_rgba(base64) when is_binary(base64), do: Base.decode64!(base64)
+end
