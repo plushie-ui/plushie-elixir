@@ -32,7 +32,7 @@ defmodule Julep.Iced.Theme do
     :ferra
   ]
 
-  @type t :: atom() | map()
+  @type t :: atom() | String.t() | map()
 
   @doc """
   Returns the list of all known built-in theme atoms.

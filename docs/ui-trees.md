@@ -80,13 +80,13 @@ end
 |---|---|---|
 | `text(content, opts)` | `text` | Text label |
 | `progress_bar(range, value, opts)` | `progress_bar` | Progress indicator |
-| `tooltip(target, content, opts)` | `tooltip` | Hover tooltip |
+| `tooltip(id, opts)` | `tooltip` | Hover tooltip |
 | `image(id, path_or_url, opts)` | `image` | Raster image |
 | `svg(id, path_or_data, opts)` | `svg` | Vector image |
 | `markdown(id, content, opts)` | `markdown` | Rendered markdown |
 | `rule(opts)` | `rule` | Horizontal/vertical divider |
-| `rich_text(id, spans, opts)` | `rich_text` | Styled text with multiple spans |
-| `themer(id, theme, opts)` | `themer` | Per-subtree theme override |
+| `rich_text(id, opts)` | `rich_text` | Styled text with multiple spans |
+| `themer(id, opts)` | `themer` | Per-subtree theme override |
 
 ### Interactive widgets
 

@@ -10,7 +10,7 @@ defmodule Julep.Iced.Widget.Themer do
 
   @type t :: %__MODULE__{
           id: String.t(),
-          theme: String.t() | map(),
+          theme: Julep.Iced.Theme.t(),
           children: [Julep.Iced.ui_node() | struct()]
         }
 
@@ -21,7 +21,7 @@ defmodule Julep.Iced.Widget.Themer do
   ]
 
   @doc "Creates a new themer struct with the given theme."
-  @spec new(id :: String.t(), theme :: String.t() | map()) :: t()
+  @spec new(id :: String.t(), theme :: Julep.Iced.Theme.t()) :: t()
   def new(id, theme) when is_binary(id) do
     %__MODULE__{id: id, theme: theme}
   end

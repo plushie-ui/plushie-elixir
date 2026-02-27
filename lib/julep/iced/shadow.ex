@@ -26,7 +26,7 @@ defmodule Julep.Iced.Shadow do
 
   @typedoc "Shadow specification with color, offset, and blur radius."
   @type t :: %{
-          color: String.t(),
+          color: Julep.Iced.Color.t(),
           offset_x: number(),
           offset_y: number(),
           blur_radius: number()
@@ -37,7 +37,7 @@ defmodule Julep.Iced.Shadow do
   def new, do: %{color: "#000000", offset_x: 0, offset_y: 0, blur_radius: 0}
 
   @doc "Sets the shadow color."
-  @spec color(shadow :: t(), color :: String.t()) :: t()
+  @spec color(shadow :: t(), color :: Julep.Iced.Color.t()) :: t()
   def color(shadow, color), do: %{shadow | color: color}
 
   @doc "Sets the shadow offset."
