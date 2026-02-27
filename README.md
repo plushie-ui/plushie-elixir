@@ -115,9 +115,10 @@ defmodule MyAppTest do
 end
 ```
 
-Script interactions as `.julep` files for acceptance tests and visual
-demos, capture golden-file screenshots for pixel regression, or just test
-your logic fast and move on. See the [Testing guide](docs/testing.md).
+Write test scenarios in Elixir with the full power of ExUnit, or use
+declarative `.julep` scripts for acceptance tests and visual demos. Capture
+golden-file screenshots for pixel regression, or just test your logic fast
+and move on. See the [Testing guide](docs/testing.md).
 
 ## Documentation
 
