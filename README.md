@@ -61,6 +61,31 @@ mix julep.dev MyApp
 
 Edit your source files and watch the GUI update in place. See [dev mode docs](docs/dev-mode.md).
 
+## Getting started
+
+```bash
+mix deps.get                          # fetch Elixir deps
+mix julep.build                       # build the Rust renderer (requires cargo)
+mix julep.gui Counter                 # run an example app
+mix julep.gui Catalog                 # run the full widget catalog
+```
+
+## Development
+
+```bash
+mix preflight                         # run all CI checks locally
+```
+
+This is the single command to verify everything before pushing. It runs
+the full CI pipeline locally and stops on first failure:
+
+1. `mix compile --warnings-as-errors`
+2. `mix test`
+3. `cargo build` (renderer)
+4. `cargo test` (renderer)
+5. `cargo fmt --check` (renderer)
+6. `cargo clippy -D warnings` (renderer)
+
 ## Documentation
 
 Core:
@@ -84,6 +109,7 @@ Core:
 - [Accessibility](docs/accessibility.md) -- planned approach and roadmap
 - [Developer experience](docs/developer-experience.md) -- mix tasks, IEx, project structure
 - [Roadmap](docs/roadmap.md) -- phased build plan
+- [Iced parity audit](docs/audit-iced-parity.md) -- detailed coverage matrix against iced 0.14
 
 Decisions:
 
