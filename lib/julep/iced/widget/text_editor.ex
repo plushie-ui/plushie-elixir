@@ -28,6 +28,8 @@ defmodule Julep.Iced.Widget.TextEditor do
 
   alias Julep.Iced.Widget.Build
 
+  @type style :: :default
+
   @type option ::
           {:content, String.t()}
           | {:placeholder, String.t()}
@@ -39,8 +41,8 @@ defmodule Julep.Iced.Widget.TextEditor do
           | {:size, number()}
           | {:line_height, number() | map()}
           | {:padding, number()}
-          | {:wrapping, atom()}
-          | {:style, atom()}
+          | {:wrapping, Julep.Iced.Wrapping.t()}
+          | {:style, style()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -54,8 +56,8 @@ defmodule Julep.Iced.Widget.TextEditor do
           size: number() | nil,
           line_height: number() | map() | nil,
           padding: number() | nil,
-          wrapping: atom() | nil,
-          style: atom() | nil
+          wrapping: Julep.Iced.Wrapping.t() | nil,
+          style: style() | nil
         }
 
   defstruct [
@@ -143,11 +145,11 @@ defmodule Julep.Iced.Widget.TextEditor do
   def padding(%__MODULE__{} = ed, padding), do: %{ed | padding: padding}
 
   @doc "Sets the text wrapping mode."
-  @spec wrapping(text_editor :: t(), wrapping :: atom()) :: t()
+  @spec wrapping(text_editor :: t(), wrapping :: Julep.Iced.Wrapping.t()) :: t()
   def wrapping(%__MODULE__{} = ed, wrapping), do: %{ed | wrapping: wrapping}
 
   @doc "Sets the text editor style."
-  @spec style(text_editor :: t(), style :: atom()) :: t()
+  @spec style(text_editor :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = ed, style), do: %{ed | style: style}
 
   @doc "Converts this text editor struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
@@ -170,8 +172,8 @@ defmodule Julep.Iced.Widget.TextEditor do
         |> put_if(ed.size, "size")
         |> put_if(ed.line_height, "line_height")
         |> put_if(ed.padding, "padding")
-        |> put_if(ed.wrapping, "wrapping", &to_string/1)
-        |> put_if(ed.style, "style", &to_string/1)
+        |> put_if(ed.wrapping, "wrapping")
+        |> put_if(ed.style, "style")
 
       %{id: ed.id, type: "text_editor", props: props, children: []}
     end

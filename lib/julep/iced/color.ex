@@ -2,67 +2,167 @@ defmodule Julep.Iced.Color do
   @moduledoc """
   Color type for iced widget properties.
 
-  The renderer accepts two color formats:
+  All colors are canonical hex strings: `"#rrggbb"` or `"#rrggbbaa"`.
 
-  - Hex string: `"#rrggbb"` or `"#rrggbbaa"`.
-  - RGBA map: `%{r: 0.5, g: 0.5, b: 0.5, a: 1.0}` (floats 0.0-1.0).
-
-  The constructors in this module produce one of these formats.
+  Use the constructors `from_rgb/3`, `from_rgba/4`, and `from_hex/1` to build
+  colors. Use `cast/1` to normalize any supported input form (named atoms
+  or hex strings) into a canonical hex string.
 
   ## Examples
 
-      Julep.Iced.Color.from_rgb(255, 128, 0)
-      #=> %{r: 1.0, g: 0.502, b: 0.0, a: 1.0}
+      iex> Julep.Iced.Color.from_rgb(255, 128, 0)
+      "#ff8000"
 
-      Julep.Iced.Color.from_hex("ff8800")
-      #=> "#ff8800"
+      iex> Julep.Iced.Color.from_hex("ff8800")
+      "#ff8800"
 
-      Julep.Iced.Color.black()
-      #=> "#000000"
+      iex> Julep.Iced.Color.cast(:red)
+      "#ff0000"
   """
 
-  @type t :: String.t() | {float(), float(), float()} | {float(), float(), float(), float()}
+  @type t :: String.t()
 
-  @doc "Creates an RGBA color map from 0-255 RGB values."
-  @spec from_rgb(r :: number(), g :: number(), b :: number()) :: map()
-  def from_rgb(r, g, b) when is_number(r) and is_number(g) and is_number(b) do
-    %{r: r / 255, g: g / 255, b: b / 255, a: 1.0}
+  @named_colors %{
+    black: "#000000",
+    white: "#ffffff",
+    transparent: "#00000000",
+    red: "#ff0000",
+    green: "#00ff00",
+    blue: "#0000ff",
+    yellow: "#ffff00",
+    cyan: "#00ffff",
+    magenta: "#ff00ff",
+    gray: "#808080",
+    grey: "#808080"
+  }
+
+  @doc """
+  Creates a hex color string from 0-255 RGB integer values.
+
+  ## Examples
+
+      iex> Julep.Iced.Color.from_rgb(0, 0, 0)
+      "#000000"
+
+      iex> Julep.Iced.Color.from_rgb(255, 255, 255)
+      "#ffffff"
+
+      iex> Julep.Iced.Color.from_rgb(255, 128, 0)
+      "#ff8000"
+  """
+  @spec from_rgb(r :: integer(), g :: integer(), b :: integer()) :: t()
+  def from_rgb(r, g, b) when is_integer(r) and is_integer(g) and is_integer(b) do
+    "#" <> hex_byte(r) <> hex_byte(g) <> hex_byte(b)
   end
 
-  @doc "Creates an RGBA color map from 0-255 RGB values with an alpha channel (0.0-1.0)."
-  @spec from_rgba(r :: number(), g :: number(), b :: number(), a :: float()) :: map()
+  @doc """
+  Creates a hex color string with alpha from 0-255 RGB integers and a 0.0-1.0 alpha float.
+
+  ## Examples
+
+      iex> Julep.Iced.Color.from_rgba(255, 0, 0, 1.0)
+      "#ff0000ff"
+
+      iex> Julep.Iced.Color.from_rgba(0, 0, 0, 0.0)
+      "#00000000"
+
+      iex> Julep.Iced.Color.from_rgba(255, 128, 0, 0.5)
+      "#ff800080"
+  """
+  @spec from_rgba(r :: integer(), g :: integer(), b :: integer(), a :: float()) :: t()
   def from_rgba(r, g, b, a)
-      when is_number(r) and is_number(g) and is_number(b) and is_number(a) do
-    %{r: r / 255, g: g / 255, b: b / 255, a: a}
+      when is_integer(r) and is_integer(g) and is_integer(b) and is_number(a) do
+    "#" <> hex_byte(r) <> hex_byte(g) <> hex_byte(b) <> hex_byte(round(a * 255))
   end
 
-  @doc "Creates a hex color string from a hex string (with or without leading #)."
-  @spec from_hex(hex :: String.t()) :: String.t()
+  @doc """
+  Normalizes a hex string (with or without leading `#`) to canonical form.
+
+  Downcases the hex digits for consistency.
+
+  ## Examples
+
+      iex> Julep.Iced.Color.from_hex("#FF8800")
+      "#ff8800"
+
+      iex> Julep.Iced.Color.from_hex("ff8800")
+      "#ff8800"
+
+      iex> Julep.Iced.Color.from_hex("#ff880080")
+      "#ff880080"
+  """
+  @spec from_hex(hex :: String.t()) :: t()
   def from_hex("#" <> hex), do: from_hex(hex)
 
   def from_hex(hex) when byte_size(hex) == 6 do
-    "#" <> hex
+    "#" <> String.downcase(hex)
   end
 
   def from_hex(hex) when byte_size(hex) == 8 do
-    "#" <> hex
+    "#" <> String.downcase(hex)
   end
 
   @doc "Returns black as a hex string."
-  @spec black() :: String.t()
+  @spec black() :: t()
   def black, do: "#000000"
 
   @doc "Returns white as a hex string."
-  @spec white() :: String.t()
+  @spec white() :: t()
   def white, do: "#ffffff"
 
-  @doc "Returns fully transparent black as an RGBA map."
-  @spec transparent() :: map()
-  def transparent, do: %{r: 0.0, g: 0.0, b: 0.0, a: 0.0}
+  @doc "Returns fully transparent black as a hex string."
+  @spec transparent() :: t()
+  def transparent, do: "#00000000"
 
-  @doc "Encodes a color value to the wire format."
-  @spec encode(color :: String.t() | map()) :: String.t() | map()
+  @doc """
+  Normalizes any supported color input to a canonical hex string.
+
+  Accepts:
+
+  - Named atoms: `:black`, `:white`, `:transparent`, `:red`, `:green`, `:blue`,
+    `:yellow`, `:cyan`, `:magenta`, `:gray` / `:grey`
+  - Hex strings: `"#rrggbb"` or `"#rrggbbaa"` (passed through, downcased)
+
+  Raises `ArgumentError` for unsupported atoms.
+
+  ## Examples
+
+      iex> Julep.Iced.Color.cast(:black)
+      "#000000"
+
+      iex> Julep.Iced.Color.cast(:transparent)
+      "#00000000"
+
+      iex> Julep.Iced.Color.cast("#FF0000")
+      "#ff0000"
+  """
+  @spec cast(color :: atom() | String.t()) :: t()
+  def cast(name) when is_atom(name) do
+    case Map.fetch(@named_colors, name) do
+      {:ok, hex} -> hex
+      :error -> raise ArgumentError, "unknown color name: #{inspect(name)}"
+    end
+  end
+
+  def cast("#" <> _ = hex), do: from_hex(hex)
+
+  @doc """
+  Encodes a color for the wire format. Identity since all colors are hex strings.
+
+  ## Examples
+
+      iex> Julep.Iced.Color.encode("#ff0000")
+      "#ff0000"
+  """
+  @spec encode(color :: t()) :: t()
   def encode(color) when is_binary(color), do: color
-  def encode(%{r: _, g: _, b: _, a: _} = color), do: color
-  def encode(%{r: r, g: g, b: b}), do: %{r: r, g: g, b: b, a: 1.0}
+
+  # Converts an integer 0-255 to a zero-padded two-character lowercase hex string.
+  @spec hex_byte(value :: integer()) :: String.t()
+  defp hex_byte(value) when value >= 0 and value <= 255 do
+    value
+    |> Integer.to_string(16)
+    |> String.downcase()
+    |> String.pad_leading(2, "0")
+  end
 end

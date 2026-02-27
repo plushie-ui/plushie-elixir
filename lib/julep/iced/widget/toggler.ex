@@ -15,6 +15,7 @@ defmodule Julep.Iced.Widget.Toggler do
   - `text_shaping` (string) -- text shaping: `"basic"`, `"advanced"`, or `"auto"`.
   - `wrapping` (string) -- text wrapping: `"none"`, `"word"`, `"glyph"`, `"word_or_glyph"`.
   - `style` (string) -- named style. Currently only `"default"`.
+  - `disabled` (boolean) -- when true, the toggler cannot be toggled. Default: false.
 
   ## Events
 
@@ -22,6 +23,8 @@ defmodule Julep.Iced.Widget.Toggler do
   """
 
   alias Julep.Iced.Widget.Build
+
+  @type style :: :default
 
   @type option ::
           {:label, String.t()}
@@ -31,9 +34,10 @@ defmodule Julep.Iced.Widget.Toggler do
           | {:text_size, number()}
           | {:font, Julep.Iced.Font.t()}
           | {:line_height, number() | map()}
-          | {:text_shaping, atom()}
-          | {:wrapping, atom()}
-          | {:style, atom()}
+          | {:text_shaping, Julep.Iced.Shaping.t()}
+          | {:wrapping, Julep.Iced.Wrapping.t()}
+          | {:style, style()}
+          | {:disabled, boolean()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -45,9 +49,10 @@ defmodule Julep.Iced.Widget.Toggler do
           text_size: number() | nil,
           font: Julep.Iced.Font.t() | nil,
           line_height: number() | map() | nil,
-          text_shaping: atom() | nil,
-          wrapping: atom() | nil,
-          style: atom() | nil
+          text_shaping: Julep.Iced.Shaping.t() | nil,
+          wrapping: Julep.Iced.Wrapping.t() | nil,
+          style: style() | nil,
+          disabled: boolean() | nil
         }
 
   defstruct [
@@ -62,7 +67,8 @@ defmodule Julep.Iced.Widget.Toggler do
     :line_height,
     :text_shaping,
     :wrapping,
-    :style
+    :style,
+    :disabled
   ]
 
   @doc "Creates a new toggler struct with the given toggle state and optional keyword opts."
@@ -87,6 +93,7 @@ defmodule Julep.Iced.Widget.Toggler do
       {:text_shaping, v}, acc -> text_shaping(acc, v)
       {:wrapping, v}, acc -> wrapping(acc, v)
       {:style, v}, acc -> style(acc, v)
+      {:disabled, v}, acc -> disabled(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -120,16 +127,20 @@ defmodule Julep.Iced.Widget.Toggler do
   def line_height(%__MODULE__{} = tg, line_height), do: %{tg | line_height: line_height}
 
   @doc "Sets the text shaping strategy."
-  @spec text_shaping(toggler :: t(), text_shaping :: atom()) :: t()
+  @spec text_shaping(toggler :: t(), text_shaping :: Julep.Iced.Shaping.t()) :: t()
   def text_shaping(%__MODULE__{} = tg, text_shaping), do: %{tg | text_shaping: text_shaping}
 
   @doc "Sets the text wrapping mode."
-  @spec wrapping(toggler :: t(), wrapping :: atom()) :: t()
+  @spec wrapping(toggler :: t(), wrapping :: Julep.Iced.Wrapping.t()) :: t()
   def wrapping(%__MODULE__{} = tg, wrapping), do: %{tg | wrapping: wrapping}
 
   @doc "Sets the toggler style."
-  @spec style(toggler :: t(), style :: atom()) :: t()
+  @spec style(toggler :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = tg, style), do: %{tg | style: style}
+
+  @doc "Sets whether the toggler is disabled."
+  @spec disabled(toggler :: t(), disabled :: boolean()) :: t()
+  def disabled(%__MODULE__{} = tg, disabled), do: %{tg | disabled: disabled}
 
   @doc "Converts this toggler struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(toggler :: t()) :: Julep.Iced.ui_node()
@@ -149,9 +160,10 @@ defmodule Julep.Iced.Widget.Toggler do
         |> put_if(tg.text_size, "text_size")
         |> put_if(tg.font, "font")
         |> put_if(tg.line_height, "line_height")
-        |> put_if(tg.text_shaping, "text_shaping", &to_string/1)
-        |> put_if(tg.wrapping, "wrapping", &to_string/1)
-        |> put_if(tg.style, "style", &to_string/1)
+        |> put_if(tg.text_shaping, "text_shaping")
+        |> put_if(tg.wrapping, "wrapping")
+        |> put_if(tg.style, "style")
+        |> put_if(tg.disabled, "disabled")
 
       %{id: tg.id, type: "toggler", props: props, children: []}
     end

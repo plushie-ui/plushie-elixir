@@ -26,10 +26,11 @@ defmodule Julep.Runtime do
   ## State shape
 
       %{
-        app:    module,          # the Julep.App implementation
-        model:  term(),          # current application model
-        bridge: pid() | atom(),  # Julep.Bridge pid or registered name
-        tree:   map() | nil      # last normalized tree (for re-send on restart)
+        app:          module,          # the Julep.App implementation
+        model:        term(),          # current application model
+        bridge:       pid() | atom(),  # Julep.Bridge pid or registered name
+        tree:         map() | nil,     # last normalized tree (for re-send on restart)
+        async_tasks:  map()            # %{tag => pid} for running async/stream tasks
       }
 
   ## Exit trapping
@@ -98,7 +99,8 @@ defmodule Julep.Runtime do
       tree: nil,
       init_commands: commands,
       subscriptions: %{},
-      windows: MapSet.new()
+      windows: MapSet.new(),
+      async_tasks: %{}
     }
 
     # Defer snapshot send to handle_continue so the supervisor can start
@@ -115,9 +117,9 @@ defmodule Julep.Runtime do
     tree = render_and_sync(state.app, state.model, state.bridge, nil)
 
     # 5. Execute initial commands.
-    execute_commands(Map.get(state, :init_commands, []), state.bridge)
-
-    state = %{state | tree: tree} |> Map.delete(:init_commands)
+    state = %{state | tree: tree}
+    state = execute_commands(Map.get(state, :init_commands, []), state)
+    state = Map.delete(state, :init_commands)
     state = sync_subscriptions(state, state.model)
     state = sync_windows(state, tree)
     {:noreply, state}
@@ -172,6 +174,21 @@ defmodule Julep.Runtime do
   # ---------------------------------------------------------------------------
 
   def handle_info({:async_result, tag, result}, state) do
+    # Only remove the task from tracking if the process has exited (i.e. this
+    # is the final result, not an intermediate stream emit).
+    state =
+      case Map.get(state.async_tasks, tag) do
+        pid when is_pid(pid) ->
+          if Process.alive?(pid) do
+            state
+          else
+            %{state | async_tasks: Map.delete(state.async_tasks, tag)}
+          end
+
+        _ ->
+          state
+      end
+
     state = run_update(state, {tag, result})
     {:noreply, state}
   end
@@ -310,9 +327,10 @@ defmodule Julep.Runtime do
   defp run_update(%{app: app, model: model, bridge: bridge} = state, event) do
     case safe_update(app, model, event) do
       {:ok, new_model, commands} ->
-        execute_commands(commands, bridge)
+        state = %{state | model: new_model}
+        state = execute_commands(commands, state)
         new_tree = render_and_sync(app, new_model, bridge, state.tree)
-        state = %{state | model: new_model, tree: new_tree}
+        state = %{state | tree: new_tree}
         state = sync_subscriptions(state, new_model)
         sync_windows(state, new_tree)
 
@@ -332,63 +350,93 @@ defmodule Julep.Runtime do
   end
 
   # Executes a list of commands. Batch commands are flattened recursively.
-  # `bridge` is threaded through so effect_request commands can send to it.
-  @spec execute_commands([Julep.Command.t()], pid() | atom() | nil) :: :ok
-  defp execute_commands(commands, bridge) when is_list(commands) do
-    Enum.each(commands, &execute_command(&1, bridge))
+  # State is threaded through so commands can read/write async_tasks and bridge.
+  @spec execute_commands([Julep.Command.t()] | Julep.Command.t() | term(), map()) :: map()
+  defp execute_commands(commands, state) when is_list(commands) do
+    Enum.reduce(commands, state, &execute_command/2)
   end
 
-  defp execute_commands(%Julep.Command{} = cmd, bridge) do
-    execute_command(cmd, bridge)
+  defp execute_commands(%Julep.Command{} = cmd, state) do
+    execute_command(cmd, state)
   end
 
-  defp execute_commands(_, _bridge), do: :ok
+  defp execute_commands(_, state), do: state
 
-  @spec execute_command(Julep.Command.t(), pid() | atom() | nil) :: :ok
-  defp execute_command(%Julep.Command{type: :none}, _bridge), do: :ok
+  @spec execute_command(Julep.Command.t(), map()) :: map()
+  defp execute_command(%Julep.Command{type: :none}, state), do: state
 
   defp execute_command(
          %Julep.Command{type: :done, payload: %{value: value, mapper: mapper}},
-         _bridge
+         state
        ) do
     event = mapper.(value)
     send(self(), {:renderer_event, event})
-    :ok
+    state
   end
 
-  defp execute_command(%Julep.Command{type: :async, payload: %{fun: fun, tag: tag}}, _bridge) do
+  defp execute_command(%Julep.Command{type: :async, payload: %{fun: fun, tag: tag}}, state) do
     runtime = self()
 
-    Task.start(fn ->
-      result = fun.()
-      send(runtime, {:async_result, tag, result})
-    end)
+    {:ok, pid} =
+      Task.start_link(fn ->
+        result = fun.()
+        send(runtime, {:async_result, tag, result})
+      end)
 
-    :ok
+    put_in(state.async_tasks[tag], pid)
+  end
+
+  defp execute_command(
+         %Julep.Command{type: :stream, payload: %{fun: fun, tag: tag}},
+         state
+       ) do
+    runtime = self()
+    emit = fn value -> send(runtime, {:async_result, tag, value}) end
+
+    {:ok, pid} =
+      Task.start_link(fn ->
+        result = fun.(emit)
+        send(runtime, {:async_result, tag, result})
+      end)
+
+    put_in(state.async_tasks[tag], pid)
+  end
+
+  defp execute_command(%Julep.Command{type: :cancel, payload: %{tag: tag}}, state) do
+    case Map.get(state.async_tasks, tag) do
+      nil ->
+        state
+
+      pid ->
+        Process.exit(pid, :kill)
+        %{state | async_tasks: Map.delete(state.async_tasks, tag)}
+    end
   end
 
   defp execute_command(
          %Julep.Command{type: :send_after, payload: %{delay: delay, event: event}},
-         _bridge
+         state
        ) do
     Process.send_after(self(), {:send_after_event, event}, delay)
-    :ok
+    state
   end
 
   defp execute_command(
          %Julep.Command{type: :effect_request, payload: %{id: id, kind: kind, opts: opts}},
-         bridge
+         state
        ) do
+    bridge = state.bridge
+
     if bridge do
       Julep.Bridge.send_effect_request(bridge, id, kind, opts)
     else
       Logger.warning("julep runtime: effect_request #{kind} (#{id}) without bridge")
     end
 
-    :ok
+    state
   end
 
-  defp execute_command(%Julep.Command{type: type, payload: payload}, bridge)
+  defp execute_command(%Julep.Command{type: type, payload: payload}, state)
        when type in [
               :focus,
               :focus_next,
@@ -403,67 +451,67 @@ defmodule Julep.Runtime do
               :move_cursor_to,
               :select_range
             ] do
-    if bridge do
-      Julep.Bridge.send_widget_op(bridge, Atom.to_string(type), payload)
+    if state.bridge do
+      Julep.Bridge.send_widget_op(state.bridge, Atom.to_string(type), payload)
     end
 
-    :ok
+    state
   end
 
-  defp execute_command(%Julep.Command{type: :close_window, payload: payload}, bridge) do
-    if bridge do
-      Julep.Bridge.send_widget_op(bridge, "close_window", payload)
+  defp execute_command(%Julep.Command{type: :close_window, payload: payload}, state) do
+    if state.bridge do
+      Julep.Bridge.send_widget_op(state.bridge, "close_window", payload)
     end
 
-    :ok
+    state
   end
 
-  defp execute_command(%Julep.Command{type: :widget_op, payload: %{op: op} = payload}, bridge)
+  defp execute_command(%Julep.Command{type: :widget_op, payload: %{op: op} = payload}, state)
        when op in ["pane_split", "pane_close", "pane_swap", "pane_maximize", "pane_restore"] do
-    if bridge do
-      Julep.Bridge.send_widget_op(bridge, op, Map.delete(payload, :op))
+    if state.bridge do
+      Julep.Bridge.send_widget_op(state.bridge, op, Map.delete(payload, :op))
     end
 
-    :ok
+    state
   end
 
-  defp execute_command(%Julep.Command{type: :exit, payload: _payload}, _bridge) do
+  defp execute_command(%Julep.Command{type: :exit, payload: _payload}, state) do
     Logger.info("julep runtime: exit command received -- stopping")
     send(self(), {:renderer_exit, :normal})
-    :ok
+    state
   end
 
   defp execute_command(
          %Julep.Command{type: :window_op, payload: %{op: op, window_id: window_id} = payload},
-         bridge
+         state
        ) do
-    if bridge do
+    if state.bridge do
       settings = Map.drop(payload, [:op, :window_id])
-      Julep.Bridge.send_window_op(bridge, op, window_id, settings)
+      Julep.Bridge.send_window_op(state.bridge, op, window_id, settings)
     end
 
-    :ok
+    state
   end
 
   defp execute_command(
          %Julep.Command{type: :window_query, payload: %{op: op, window_id: window_id} = payload},
-         bridge
+         state
        ) do
-    if bridge do
+    if state.bridge do
       settings = Map.drop(payload, [:op, :window_id])
-      Julep.Bridge.send_window_op(bridge, op, window_id, settings)
+      Julep.Bridge.send_window_op(state.bridge, op, window_id, settings)
     end
 
-    :ok
+    state
   end
 
-  defp execute_command(%Julep.Command{type: :batch, payload: %{commands: cmds}}, bridge) do
-    execute_commands(cmds, bridge)
+  defp execute_command(%Julep.Command{type: :batch, payload: %{commands: cmds}}, state) do
+    execute_commands(cmds, state)
   end
 
-  defp execute_command(cmd, _bridge) do
+  defp execute_command(cmd, state) do
     Logger.warning("julep runtime: unknown command: #{inspect(cmd)}")
-    :ok
+    state
   end
 
   # ---------------------------------------------------------------------------

@@ -85,7 +85,7 @@ defmodule Julep.Iced.Widget.ProgressBar do
         |> put_if(bar.value, "value")
         |> put_if(bar.width, "width")
         |> put_if(bar.height, "height")
-        |> put_if(bar.style, "style", &to_string/1)
+        |> put_if(bar.style, "style")
 
       %{id: bar.id, type: "progress_bar", props: props, children: []}
     end

@@ -90,8 +90,8 @@ defmodule Julep.Iced.Widget.RichText do
   def font(%__MODULE__{} = rt, font), do: %{rt | font: font}
 
   @doc "Sets the default text color for all spans."
-  @spec color(rich_text :: t(), color :: Julep.Iced.Color.t()) :: t()
-  def color(%__MODULE__{} = rt, color), do: %{rt | color: color}
+  @spec color(rich_text :: t(), color :: Julep.Iced.Color.t() | atom()) :: t()
+  def color(%__MODULE__{} = rt, color), do: %{rt | color: Julep.Iced.Color.cast(color)}
 
   @doc "Sets the line height."
   @spec line_height(rich_text :: t(), line_height :: number() | map()) :: t()

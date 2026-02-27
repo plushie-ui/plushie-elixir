@@ -21,13 +21,15 @@ defmodule Julep.Iced.Widget.Slider do
 
   alias Julep.Iced.Widget.Build
 
+  @type style :: :default
+
   @type option ::
           {:step, number()}
           | {:shift_step, number()}
           | {:default, number()}
           | {:width, Julep.Iced.Length.t()}
           | {:height, number()}
-          | {:style, atom()}
+          | {:style, style()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -38,7 +40,7 @@ defmodule Julep.Iced.Widget.Slider do
           default: number() | nil,
           width: Julep.Iced.Length.t() | nil,
           height: number() | nil,
-          style: atom() | nil
+          style: style() | nil
         }
 
   defstruct [:id, :range, :value, :step, :shift_step, :default, :width, :height, :style]
@@ -92,7 +94,7 @@ defmodule Julep.Iced.Widget.Slider do
   def height(%__MODULE__{} = slider, height), do: %{slider | height: height}
 
   @doc "Sets the slider style."
-  @spec style(slider :: t(), style :: atom()) :: t()
+  @spec style(slider :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = slider, style), do: %{slider | style: style}
 
   @doc "Converts this slider struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
@@ -106,13 +108,13 @@ defmodule Julep.Iced.Widget.Slider do
       props =
         %{}
         |> put_if(slider.value, "value")
-        |> put_if(slider.range, "range", fn {min, max} -> [min, max] end)
+        |> put_if(slider.range, "range")
         |> put_if(slider.step, "step")
         |> put_if(slider.shift_step, "shift_step")
         |> put_if(slider.default, "default")
         |> put_if(slider.width, "width")
         |> put_if(slider.height, "height")
-        |> put_if(slider.style, "style", &to_string/1)
+        |> put_if(slider.style, "style")
 
       %{id: slider.id, type: "slider", props: props, children: []}
     end

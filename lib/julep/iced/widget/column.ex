@@ -23,7 +23,7 @@ defmodule Julep.Iced.Widget.Column do
           | {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
           | {:max_width, number()}
-          | {:align_x, atom() | String.t()}
+          | {:align_x, Julep.Iced.Alignment.t()}
           | {:clip, boolean()}
           | {:wrap, boolean()}
 
@@ -34,7 +34,7 @@ defmodule Julep.Iced.Widget.Column do
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
           max_width: number() | nil,
-          align_x: atom() | String.t() | nil,
+          align_x: Julep.Iced.Alignment.t() | nil,
           clip: boolean() | nil,
           wrap: boolean() | nil,
           children: [Julep.Iced.ui_node() | struct()]
@@ -98,7 +98,7 @@ defmodule Julep.Iced.Widget.Column do
   def max_width(%__MODULE__{} = col, max_width), do: %{col | max_width: max_width}
 
   @doc "Sets the horizontal alignment of children."
-  @spec align_x(column :: t(), align_x :: atom() | String.t()) :: t()
+  @spec align_x(column :: t(), align_x :: Julep.Iced.Alignment.t()) :: t()
   def align_x(%__MODULE__{} = col, align_x), do: %{col | align_x: align_x}
 
   @doc "Sets whether children that overflow are clipped."
@@ -132,7 +132,7 @@ defmodule Julep.Iced.Widget.Column do
         |> put_if(col.width, "width")
         |> put_if(col.height, "height")
         |> put_if(col.max_width, "max_width")
-        |> put_if(col.align_x, "align_x", &to_string/1)
+        |> put_if(col.align_x, "align_x")
         |> put_if(col.clip, "clip")
         |> put_if(col.wrap, "wrap")
 

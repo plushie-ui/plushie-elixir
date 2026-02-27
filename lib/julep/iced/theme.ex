@@ -32,7 +32,31 @@ defmodule Julep.Iced.Theme do
     :ferra
   ]
 
-  @type t :: atom() | String.t() | map()
+  @type builtin ::
+          :light
+          | :dark
+          | :dracula
+          | :nord
+          | :solarized_light
+          | :solarized_dark
+          | :gruvbox_light
+          | :gruvbox_dark
+          | :catppuccin_latte
+          | :catppuccin_frappe
+          | :catppuccin_macchiato
+          | :catppuccin_mocha
+          | :tokyo_night
+          | :tokyo_night_storm
+          | :tokyo_night_light
+          | :kanagawa_wave
+          | :kanagawa_dragon
+          | :kanagawa_lotus
+          | :moonfly
+          | :nightfly
+          | :oxocarbon
+          | :ferra
+
+  @type t :: builtin() | String.t() | map()
 
   @doc """
   Returns the list of all known built-in theme atoms.

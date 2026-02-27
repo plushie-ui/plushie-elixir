@@ -31,6 +31,8 @@ defmodule Julep.Iced.Widget.Radio do
 
   alias Julep.Iced.Widget.Build
 
+  @type style :: :default
+
   @type option ::
           {:label, String.t()}
           | {:group, String.t()}
@@ -40,9 +42,9 @@ defmodule Julep.Iced.Widget.Radio do
           | {:text_size, number()}
           | {:font, Julep.Iced.Font.t()}
           | {:line_height, number() | map()}
-          | {:text_shaping, atom()}
-          | {:wrapping, atom()}
-          | {:style, atom()}
+          | {:text_shaping, Julep.Iced.Shaping.t()}
+          | {:wrapping, Julep.Iced.Wrapping.t()}
+          | {:style, style()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -56,9 +58,9 @@ defmodule Julep.Iced.Widget.Radio do
           text_size: number() | nil,
           font: Julep.Iced.Font.t() | nil,
           line_height: number() | map() | nil,
-          text_shaping: atom() | nil,
-          wrapping: atom() | nil,
-          style: atom() | nil
+          text_shaping: Julep.Iced.Shaping.t() | nil,
+          wrapping: Julep.Iced.Wrapping.t() | nil,
+          style: style() | nil
         }
 
   defstruct [
@@ -143,15 +145,15 @@ defmodule Julep.Iced.Widget.Radio do
   def line_height(%__MODULE__{} = r, line_height), do: %{r | line_height: line_height}
 
   @doc "Sets the text shaping strategy."
-  @spec text_shaping(radio :: t(), text_shaping :: atom()) :: t()
+  @spec text_shaping(radio :: t(), text_shaping :: Julep.Iced.Shaping.t()) :: t()
   def text_shaping(%__MODULE__{} = r, text_shaping), do: %{r | text_shaping: text_shaping}
 
   @doc "Sets the text wrapping mode."
-  @spec wrapping(radio :: t(), wrapping :: atom()) :: t()
+  @spec wrapping(radio :: t(), wrapping :: Julep.Iced.Wrapping.t()) :: t()
   def wrapping(%__MODULE__{} = r, wrapping), do: %{r | wrapping: wrapping}
 
   @doc "Sets the radio style."
-  @spec style(radio :: t(), style :: atom()) :: t()
+  @spec style(radio :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = r, style), do: %{r | style: style}
 
   @doc "Converts this radio struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
@@ -174,9 +176,9 @@ defmodule Julep.Iced.Widget.Radio do
         |> put_if(r.text_size, "text_size")
         |> put_if(r.font, "font")
         |> put_if(r.line_height, "line_height")
-        |> put_if(r.text_shaping, "text_shaping", &to_string/1)
-        |> put_if(r.wrapping, "wrapping", &to_string/1)
-        |> put_if(r.style, "style", &to_string/1)
+        |> put_if(r.text_shaping, "text_shaping")
+        |> put_if(r.wrapping, "wrapping")
+        |> put_if(r.style, "style")
 
       %{id: r.id, type: "radio", props: props, children: []}
     end

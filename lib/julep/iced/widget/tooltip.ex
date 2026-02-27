@@ -19,21 +19,32 @@ defmodule Julep.Iced.Widget.Tooltip do
 
   alias Julep.Iced.Widget.Build
 
+  @type style ::
+          :transparent
+          | :rounded_box
+          | :bordered_box
+          | :dark
+          | :primary
+          | :secondary
+          | :success
+          | :danger
+          | :warning
+
   @type option ::
-          {:position, atom()}
+          {:position, Julep.Iced.Position.t()}
           | {:gap, number()}
           | {:padding, number()}
           | {:snap_within_viewport, boolean()}
-          | {:style, atom()}
+          | {:style, style()}
 
   @type t :: %__MODULE__{
           id: String.t(),
           tip: String.t(),
-          position: atom() | nil,
+          position: Julep.Iced.Position.t() | nil,
           gap: number() | nil,
           padding: number() | nil,
           snap_within_viewport: boolean() | nil,
-          style: atom() | nil,
+          style: style() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
@@ -61,7 +72,7 @@ defmodule Julep.Iced.Widget.Tooltip do
   end
 
   @doc "Sets the tooltip position."
-  @spec position(tooltip :: t(), position :: atom()) :: t()
+  @spec position(tooltip :: t(), position :: Julep.Iced.Position.t()) :: t()
   def position(%__MODULE__{} = tt, position), do: %{tt | position: position}
 
   @doc "Sets the gap between tooltip and content."
@@ -77,7 +88,7 @@ defmodule Julep.Iced.Widget.Tooltip do
   def snap_within_viewport(%__MODULE__{} = tt, snap), do: %{tt | snap_within_viewport: snap}
 
   @doc "Sets the tooltip style."
-  @spec style(tooltip :: t(), style :: atom()) :: t()
+  @spec style(tooltip :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = tt, style), do: %{tt | style: style}
 
   @doc "Appends a child to the tooltip."
@@ -99,11 +110,11 @@ defmodule Julep.Iced.Widget.Tooltip do
       props =
         %{}
         |> put_if(tt.tip, "tip")
-        |> put_if(tt.position, "position", &to_string/1)
+        |> put_if(tt.position, "position")
         |> put_if(tt.gap, "gap")
         |> put_if(tt.padding, "padding")
         |> put_if(tt.snap_within_viewport, "snap_within_viewport")
-        |> put_if(tt.style, "style", &to_string/1)
+        |> put_if(tt.style, "style")
 
       %{id: tt.id, type: "tooltip", props: props, children: children_to_nodes(tt.children)}
     end

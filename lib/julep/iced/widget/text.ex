@@ -30,9 +30,9 @@ defmodule Julep.Iced.Widget.Text do
           | {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
           | {:line_height, number() | map()}
-          | {:align_x, atom()}
-          | {:align_y, atom()}
-          | {:wrapping, atom()}
+          | {:align_x, Julep.Iced.Alignment.t()}
+          | {:align_y, Julep.Iced.Alignment.t()}
+          | {:wrapping, Julep.Iced.Wrapping.t()}
           | {:style, style()}
 
   @type t :: %__MODULE__{
@@ -44,9 +44,9 @@ defmodule Julep.Iced.Widget.Text do
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
           line_height: number() | map() | nil,
-          align_x: atom() | nil,
-          align_y: atom() | nil,
-          wrapping: atom() | nil,
+          align_x: Julep.Iced.Alignment.t() | nil,
+          align_y: Julep.Iced.Alignment.t() | nil,
+          wrapping: Julep.Iced.Wrapping.t() | nil,
           style: style() | nil
         }
 
@@ -96,8 +96,8 @@ defmodule Julep.Iced.Widget.Text do
   def size(%__MODULE__{} = txt, size), do: %{txt | size: size}
 
   @doc "Sets the text color."
-  @spec color(text :: t(), color :: Julep.Iced.Color.t()) :: t()
-  def color(%__MODULE__{} = txt, color), do: %{txt | color: color}
+  @spec color(text :: t(), color :: Julep.Iced.Color.t() | atom()) :: t()
+  def color(%__MODULE__{} = txt, color), do: %{txt | color: Julep.Iced.Color.cast(color)}
 
   @doc "Sets the font."
   @spec font(text :: t(), font :: Julep.Iced.Font.t()) :: t()
@@ -116,15 +116,15 @@ defmodule Julep.Iced.Widget.Text do
   def line_height(%__MODULE__{} = txt, line_height), do: %{txt | line_height: line_height}
 
   @doc "Sets the horizontal text alignment."
-  @spec align_x(text :: t(), align_x :: atom()) :: t()
+  @spec align_x(text :: t(), align_x :: Julep.Iced.Alignment.t()) :: t()
   def align_x(%__MODULE__{} = txt, align_x), do: %{txt | align_x: align_x}
 
   @doc "Sets the vertical text alignment."
-  @spec align_y(text :: t(), align_y :: atom()) :: t()
+  @spec align_y(text :: t(), align_y :: Julep.Iced.Alignment.t()) :: t()
   def align_y(%__MODULE__{} = txt, align_y), do: %{txt | align_y: align_y}
 
   @doc "Sets the text wrapping mode."
-  @spec wrapping(text :: t(), wrapping :: atom()) :: t()
+  @spec wrapping(text :: t(), wrapping :: Julep.Iced.Wrapping.t()) :: t()
   def wrapping(%__MODULE__{} = txt, wrapping), do: %{txt | wrapping: wrapping}
 
   @doc "Sets the text style."
@@ -148,10 +148,10 @@ defmodule Julep.Iced.Widget.Text do
         |> put_if(txt.width, "width")
         |> put_if(txt.height, "height")
         |> put_if(txt.line_height, "line_height")
-        |> put_if(txt.align_x, "align_x", &to_string/1)
-        |> put_if(txt.align_y, "align_y", &to_string/1)
-        |> put_if(txt.wrapping, "wrapping", &to_string/1)
-        |> put_if(txt.style, "style", &to_string/1)
+        |> put_if(txt.align_x, "align_x")
+        |> put_if(txt.align_y, "align_y")
+        |> put_if(txt.wrapping, "wrapping")
+        |> put_if(txt.style, "style")
 
       %{id: txt.id, type: "text", props: props, children: []}
     end

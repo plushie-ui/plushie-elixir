@@ -17,14 +17,14 @@ defmodule Julep.Iced.Widget.Rule do
   @type option ::
           {:height, number()}
           | {:width, number()}
-          | {:direction, atom()}
+          | {:direction, Julep.Iced.Direction.t()}
           | {:style, style()}
 
   @type t :: %__MODULE__{
           id: String.t(),
           height: number() | nil,
           width: number() | nil,
-          direction: atom() | nil,
+          direction: Julep.Iced.Direction.t() | nil,
           style: style() | nil
         }
 
@@ -59,7 +59,7 @@ defmodule Julep.Iced.Widget.Rule do
   def width(%__MODULE__{} = rule, width), do: %{rule | width: width}
 
   @doc "Sets the rule direction."
-  @spec direction(rule :: t(), direction :: atom()) :: t()
+  @spec direction(rule :: t(), direction :: Julep.Iced.Direction.t()) :: t()
   def direction(%__MODULE__{} = rule, direction), do: %{rule | direction: direction}
 
   @doc "Sets the rule style."
@@ -78,8 +78,8 @@ defmodule Julep.Iced.Widget.Rule do
         %{}
         |> put_if(rule.height, "height")
         |> put_if(rule.width, "width")
-        |> put_if(rule.direction, "direction", &to_string/1)
-        |> put_if(rule.style, "style", &to_string/1)
+        |> put_if(rule.direction, "direction")
+        |> put_if(rule.style, "style")
 
       %{id: rule.id, type: "rule", props: props, children: []}
     end

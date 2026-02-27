@@ -16,6 +16,7 @@ defmodule Julep.Iced.Widget.Checkbox do
   - `wrapping` (string) -- text wrapping: `"none"`, `"word"`, `"glyph"`, `"word_or_glyph"`.
   - `style` (string) -- named style. One of: `"primary"` (default), `"secondary"`,
     `"success"`, `"danger"`.
+  - `disabled` (boolean) -- when true, the checkbox cannot be toggled. Default: false.
 
   ## Events
 
@@ -33,9 +34,10 @@ defmodule Julep.Iced.Widget.Checkbox do
           | {:text_size, number()}
           | {:font, Julep.Iced.Font.t()}
           | {:line_height, number() | map()}
-          | {:text_shaping, atom()}
-          | {:wrapping, atom()}
+          | {:text_shaping, Julep.Iced.Shaping.t()}
+          | {:wrapping, Julep.Iced.Wrapping.t()}
           | {:style, style()}
+          | {:disabled, boolean()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -47,9 +49,10 @@ defmodule Julep.Iced.Widget.Checkbox do
           text_size: number() | nil,
           font: Julep.Iced.Font.t() | nil,
           line_height: number() | map() | nil,
-          text_shaping: atom() | nil,
-          wrapping: atom() | nil,
-          style: style() | nil
+          text_shaping: Julep.Iced.Shaping.t() | nil,
+          wrapping: Julep.Iced.Wrapping.t() | nil,
+          style: style() | nil,
+          disabled: boolean() | nil
         }
 
   defstruct [
@@ -64,7 +67,8 @@ defmodule Julep.Iced.Widget.Checkbox do
     :line_height,
     :text_shaping,
     :wrapping,
-    :style
+    :style,
+    :disabled
   ]
 
   @doc "Creates a new checkbox struct with the given label, toggle state, and optional keyword opts."
@@ -89,6 +93,7 @@ defmodule Julep.Iced.Widget.Checkbox do
       {:text_shaping, v}, acc -> text_shaping(acc, v)
       {:wrapping, v}, acc -> wrapping(acc, v)
       {:style, v}, acc -> style(acc, v)
+      {:disabled, v}, acc -> disabled(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -118,16 +123,20 @@ defmodule Julep.Iced.Widget.Checkbox do
   def line_height(%__MODULE__{} = cb, line_height), do: %{cb | line_height: line_height}
 
   @doc "Sets the text shaping strategy."
-  @spec text_shaping(checkbox :: t(), text_shaping :: atom()) :: t()
+  @spec text_shaping(checkbox :: t(), text_shaping :: Julep.Iced.Shaping.t()) :: t()
   def text_shaping(%__MODULE__{} = cb, text_shaping), do: %{cb | text_shaping: text_shaping}
 
   @doc "Sets the text wrapping mode."
-  @spec wrapping(checkbox :: t(), wrapping :: atom()) :: t()
+  @spec wrapping(checkbox :: t(), wrapping :: Julep.Iced.Wrapping.t()) :: t()
   def wrapping(%__MODULE__{} = cb, wrapping), do: %{cb | wrapping: wrapping}
 
   @doc "Sets the checkbox style."
   @spec style(checkbox :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = cb, style), do: %{cb | style: style}
+
+  @doc "Sets whether the checkbox is disabled."
+  @spec disabled(checkbox :: t(), disabled :: boolean()) :: t()
+  def disabled(%__MODULE__{} = cb, disabled), do: %{cb | disabled: disabled}
 
   @doc "Converts this checkbox struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(checkbox :: t()) :: Julep.Iced.ui_node()
@@ -147,9 +156,10 @@ defmodule Julep.Iced.Widget.Checkbox do
         |> put_if(cb.text_size, "text_size")
         |> put_if(cb.font, "font")
         |> put_if(cb.line_height, "line_height")
-        |> put_if(cb.text_shaping, "text_shaping", &to_string/1)
-        |> put_if(cb.wrapping, "wrapping", &to_string/1)
-        |> put_if(cb.style, "style", &to_string/1)
+        |> put_if(cb.text_shaping, "text_shaping")
+        |> put_if(cb.wrapping, "wrapping")
+        |> put_if(cb.style, "style")
+        |> put_if(cb.disabled, "disabled")
 
       %{id: cb.id, type: "checkbox", props: props, children: []}
     end

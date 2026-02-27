@@ -59,6 +59,69 @@ def update(model, {:data_fetched, body}) do
 end
 ```
 
+#### Streaming async work
+
+`Command.stream/2` is sugar for spawning a process that sends multiple
+intermediate results to `update/2` over time. The function receives an
+`emit` callback; each call to `emit` delivers a `{event_tag, value}` event
+through the normal update cycle. The function's final return value is also
+delivered as `{event_tag, result}`.
+
+```elixir
+Julep.Command.stream(fun, event_tag)
+
+# fun receives an emit callback: fn value -> sends {:async_result, tag, value}
+# Each emit call dispatches {event_tag, value} through update/2.
+# The function's final return value is dispatched the same way.
+```
+
+```elixir
+def update(model, {:click, "import"}) do
+  cmd = Julep.Command.stream(fn emit ->
+    rows =
+      "big.csv"
+      |> File.stream!()
+      |> Enum.with_index(1)
+      |> Enum.map(fn {line, n} ->
+        row = parse_row(line)
+        emit.({:progress, n})
+        row
+      end)
+
+    {:complete, rows}
+  end, :file_import)
+
+  {%{model | importing: true}, cmd}
+end
+
+def update(model, {:file_import, {:progress, n}}) do
+  %{model | rows_imported: n}
+end
+
+def update(model, {:file_import, {:complete, rows}}) do
+  %{model | importing: false, data: rows}
+end
+```
+
+This is convenience sugar. You can achieve the same thing with a bare
+`Task` and `send/2` -- see [DIY patterns](#diy-patterns) below.
+
+#### Cancelling async work
+
+`Command.cancel/1` cancels a running `async` or `stream` command by its
+event tag. The runtime tracks running tasks by tag and terminates the
+associated process. If the task has already completed, this is a no-op.
+
+```elixir
+Julep.Command.cancel(event_tag)
+```
+
+```elixir
+def update(model, {:click, "cancel_import"}) do
+  {%{model | importing: false}, Julep.Command.cancel(:file_import)}
+end
+```
+
 #### Widget operations
 
 These send operation requests to the renderer:
@@ -132,6 +195,109 @@ Commands in a batch execute concurrently.
 When `update` returns a bare model (not a tuple), the runtime treats it as
 `{model, Julep.Command.none()}`. You never need to write `Command.none()`
 explicitly.
+
+### Chaining commands
+
+In iced, commands support `.then()` and `.chain()` for sequencing async
+work. Julep does not need dedicated chaining combinators because the Elm
+update cycle provides this naturally: each `update/2` can return
+`{model, commands}`, and the result of each command feeds back into
+`update/2` as an event, which can return more commands.
+
+The model is updated and `view/1` is re-rendered between each step. This
+is actually more powerful than iced's chaining because you get full model
+updates and UI refreshes at every link in the chain, not just at the end.
+
+```elixir
+# Step 1: user clicks "deploy" -- validate first
+def update(model, {:click, "deploy"}) do
+  cmd = Julep.Command.async(fn -> validate_config(model.config) end, :validated)
+  {%{model | status: :validating}, cmd}
+end
+
+# Step 2: validation result arrives -- if OK, start the build
+def update(model, {:validated, :ok}) do
+  cmd = Julep.Command.async(fn -> build_release(model.config) end, :built)
+  {%{model | status: :building}, cmd}
+end
+
+def update(model, {:validated, {:error, reason}}) do
+  %{model | status: {:failed, reason}}
+end
+
+# Step 3: build result arrives -- if OK, push it
+def update(model, {:built, {:ok, artifact}}) do
+  cmd = Julep.Command.async(fn -> push_artifact(artifact) end, :deployed)
+  {%{model | status: :deploying}, cmd}
+end
+
+# Step 4: done
+def update(model, {:deployed, :ok}) do
+  %{model | status: :live}
+end
+```
+
+Each step is a separate `update/2` clause with its own model state. The
+UI reflects progress at every stage. No special chaining API needed --
+the architecture is the API.
+
+### DIY patterns
+
+The `Command` module is convenience sugar, not a requirement. Elixir
+already has all the concurrency primitives you need. Some users will
+prefer the direct approach, and that is perfectly fine.
+
+#### Streaming with bare processes
+
+The runtime is a `GenServer`. You can send messages to it directly from
+any process, and they arrive as events in `update/2`:
+
+```elixir
+def update(model, {:click, "import"}) do
+  runtime = self()
+
+  pid = spawn_link(fn ->
+    "big.csv"
+    |> File.stream!()
+    |> Stream.with_index(1)
+    |> Enum.each(fn {line, n} ->
+      row = parse_row(line)
+      send(runtime, {:import_progress, n, row})
+    end)
+
+    send(runtime, :import_done)
+  end)
+
+  {%{model | importing: true, import_pid: pid}, Julep.Command.none()}
+end
+
+def update(model, {:import_progress, n, row}) do
+  %{model | rows_imported: n, data: model.data ++ [row]}
+end
+
+def update(model, :import_done) do
+  %{model | importing: false, import_pid: nil}
+end
+```
+
+#### Cancellation with PIDs
+
+If you track the PID yourself, cancellation is just `Process.exit/2`:
+
+```elixir
+def update(model, {:click, "cancel_import"}) do
+  if model.import_pid, do: Process.exit(model.import_pid, :kill)
+  %{model | importing: false, import_pid: nil}
+end
+```
+
+#### When to use which
+
+Use `Command.async/2` and `Command.stream/2` when you want the runtime
+to manage task lifecycle and deliver results through the standard
+`{tag, result}` convention. Use bare processes when you need more control
+over message shapes, supervision, or when the command abstraction feels
+like overhead for your use case.
 
 ### How commands work internally
 

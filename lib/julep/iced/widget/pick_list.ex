@@ -23,6 +23,8 @@ defmodule Julep.Iced.Widget.PickList do
 
   alias Julep.Iced.Widget.Build
 
+  @type style :: :default
+
   @type option ::
           {:selected, String.t()}
           | {:placeholder, String.t()}
@@ -32,8 +34,8 @@ defmodule Julep.Iced.Widget.PickList do
           | {:font, Julep.Iced.Font.t()}
           | {:line_height, number() | map()}
           | {:menu_height, number()}
-          | {:text_shaping, atom()}
-          | {:style, atom()}
+          | {:text_shaping, Julep.Iced.Shaping.t()}
+          | {:style, style()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -46,8 +48,8 @@ defmodule Julep.Iced.Widget.PickList do
           font: Julep.Iced.Font.t() | nil,
           line_height: number() | map() | nil,
           menu_height: number() | nil,
-          text_shaping: atom() | nil,
-          style: atom() | nil
+          text_shaping: Julep.Iced.Shaping.t() | nil,
+          style: style() | nil
         }
 
   defstruct [
@@ -124,11 +126,11 @@ defmodule Julep.Iced.Widget.PickList do
   def menu_height(%__MODULE__{} = pl, menu_height), do: %{pl | menu_height: menu_height}
 
   @doc "Sets the text shaping strategy."
-  @spec text_shaping(pick_list :: t(), text_shaping :: atom()) :: t()
+  @spec text_shaping(pick_list :: t(), text_shaping :: Julep.Iced.Shaping.t()) :: t()
   def text_shaping(%__MODULE__{} = pl, text_shaping), do: %{pl | text_shaping: text_shaping}
 
   @doc "Sets the pick list style."
-  @spec style(pick_list :: t(), style :: atom()) :: t()
+  @spec style(pick_list :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = pl, style), do: %{pl | style: style}
 
   @doc "Converts this pick list struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
@@ -150,8 +152,8 @@ defmodule Julep.Iced.Widget.PickList do
         |> put_if(pl.font, "font")
         |> put_if(pl.line_height, "line_height")
         |> put_if(pl.menu_height, "menu_height")
-        |> put_if(pl.text_shaping, "text_shaping", &to_string/1)
-        |> put_if(pl.style, "style", &to_string/1)
+        |> put_if(pl.text_shaping, "text_shaping")
+        |> put_if(pl.style, "style")
 
       %{id: pl.id, type: "pick_list", props: props, children: []}
     end

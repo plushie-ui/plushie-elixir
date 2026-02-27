@@ -809,6 +809,192 @@ defmodule Julep.RuntimeTest do
   end
 
   # ---------------------------------------------------------------------------
+  # describe "stream and cancel commands"
+  # ---------------------------------------------------------------------------
+
+  describe "stream and cancel commands" do
+    test "stream emits multiple intermediate results through update" do
+      defmodule StreamApp do
+        use Julep.App
+
+        def init(_opts), do: %{chunks: [], final: nil}
+
+        def update(model, {:click, "start_stream"}) do
+          cmd =
+            Julep.Command.stream(
+              fn emit ->
+                emit.({:chunk, "a"})
+                emit.({:chunk, "b"})
+                emit.({:chunk, "c"})
+                :done
+              end,
+              :import
+            )
+
+          {model, cmd}
+        end
+
+        def update(model, {:import, {:chunk, value}}) do
+          %{model | chunks: model.chunks ++ [value]}
+        end
+
+        def update(model, {:import, :done}) do
+          %{model | final: :done}
+        end
+
+        def update(model, _event), do: model
+
+        def view(model) do
+          import Julep.UI
+
+          column do
+            text("chunks:#{length(model.chunks)}")
+          end
+        end
+      end
+
+      {runtime, _bridge} = start_runtime(StreamApp)
+      await_initial_render(runtime)
+
+      dispatch_and_wait(runtime, {:click, "start_stream"})
+
+      # Give the stream task time to emit all values and complete.
+      Process.sleep(100)
+      :sys.get_state(runtime)
+
+      state = :sys.get_state(runtime)
+      assert state.model.chunks == ["a", "b", "c"]
+      assert state.model.final == :done
+    end
+
+    test "cancel stops a running stream task" do
+      defmodule CancelStreamApp do
+        use Julep.App
+
+        def init(_opts), do: %{chunks: [], cancelled: false}
+
+        def update(model, {:click, "start"}) do
+          cmd =
+            Julep.Command.stream(
+              fn emit ->
+                # Emit one value then block long enough to be cancelled.
+                emit.({:chunk, "first"})
+                Process.sleep(5000)
+                emit.({:chunk, "second"})
+                :done
+              end,
+              :import
+            )
+
+          {model, cmd}
+        end
+
+        def update(model, {:click, "cancel"}) do
+          {%{model | cancelled: true}, Julep.Command.cancel(:import)}
+        end
+
+        def update(model, {:import, {:chunk, value}}) do
+          %{model | chunks: model.chunks ++ [value]}
+        end
+
+        def update(model, {:import, :done}) do
+          model
+        end
+
+        def update(model, _event), do: model
+
+        def view(model) do
+          import Julep.UI
+
+          column do
+            text("chunks:#{length(model.chunks)}")
+          end
+        end
+      end
+
+      {runtime, _bridge} = start_runtime(CancelStreamApp)
+      await_initial_render(runtime)
+
+      # Start the stream
+      dispatch_and_wait(runtime, {:click, "start"})
+
+      # Let the first emit arrive
+      Process.sleep(50)
+      :sys.get_state(runtime)
+
+      state = :sys.get_state(runtime)
+      assert state.model.chunks == ["first"]
+      assert Map.has_key?(state.async_tasks, :import)
+
+      # Cancel the stream
+      dispatch_and_wait(runtime, {:click, "cancel"})
+
+      state = :sys.get_state(runtime)
+      assert state.model.cancelled == true
+      assert state.async_tasks == %{}
+
+      # Wait and confirm no more chunks arrive
+      Process.sleep(100)
+      :sys.get_state(runtime)
+
+      state = :sys.get_state(runtime)
+      assert state.model.chunks == ["first"]
+    end
+
+    test "cancel is a no-op when no task is running for the tag" do
+      defmodule CancelNoopApp do
+        use Julep.App
+
+        def init(_opts), do: %{value: 0}
+
+        def update(model, {:click, "cancel"}) do
+          {%{model | value: model.value + 1}, Julep.Command.cancel(:nonexistent)}
+        end
+
+        def update(model, _event), do: model
+
+        def view(model) do
+          import Julep.UI
+
+          column do
+            text("#{model.value}")
+          end
+        end
+      end
+
+      {runtime, _bridge} = start_runtime(CancelNoopApp)
+      await_initial_render(runtime)
+
+      # Should not crash
+      dispatch_and_wait(runtime, {:click, "cancel"})
+
+      state = :sys.get_state(runtime)
+      assert state.model.value == 1
+      assert state.async_tasks == %{}
+    end
+
+    test "async tasks are tracked in async_tasks and cleaned up on completion" do
+      {runtime, _bridge} = start_runtime(AsyncApp)
+      await_initial_render(runtime)
+
+      dispatch_and_wait(runtime, {:click, "async"})
+
+      # The task might still be running -- check it was tracked.
+      # (For a fast fn -> 42, it might already be done, but the tracking
+      # code runs synchronously before the task completes in most cases.)
+
+      # Give the task time to complete and the runtime to process the result.
+      Process.sleep(50)
+      :sys.get_state(runtime)
+
+      state = :sys.get_state(runtime)
+      assert state.model.value == 42
+      # After completion, the tag should be cleaned up.
+      assert state.async_tasks == %{}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Private helpers
   # ---------------------------------------------------------------------------
 

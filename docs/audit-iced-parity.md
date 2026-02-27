@@ -111,7 +111,7 @@ unlisted props are fully supported.
 | `padding` | SUPPORTED | Uniform and per-side object format |
 | `width` / `height` | SUPPORTED | |
 | `align_y` | SUPPORTED | |
-| `max_width` | **MISSING** | Row doesn't read max_width in renderer |
+| `max_width` | SUPPORTED | Elixir exposes prop; renderer wraps row in container for max_width constraint |
 | `clip` | SUPPORTED | |
 | `wrap()` | SUPPORTED | Via `wrap: true` prop |
 
@@ -139,7 +139,7 @@ unlisted props are fully supported.
 | iced Prop | Status | Notes |
 |---|---|---|
 | `width` / `height` | SUPPORTED | |
-| `clip` | **MISSING** | |
+| `clip` | SUPPORTED | Both Elixir (Stack widget) and Rust renderer handle clip prop |
 
 ### Scrollable
 
@@ -151,7 +151,7 @@ unlisted props are fully supported.
 | `spacing` | SUPPORTED | |
 | `anchor_y` | SUPPORTED | "end"/"bottom" for anchor to bottom |
 | `scrollbar_width` / `scrollbar_margin` / `scroller_width` | SUPPORTED | |
-| `on_scroll` | **MISSING** | No scroll position callback from renderer |
+| `on_scroll` | **DEFERRED** | Requires custom event middleware for scroll position callbacks |
 | `auto_scroll` | **MISSING** | |
 | `style` | **MISSING** | |
 
@@ -229,7 +229,7 @@ unlisted props are fully supported.
 | `text_shaping` | SUPPORTED | |
 | `text_wrapping` | SUPPORTED | |
 | `style` | SUPPORTED | primary, secondary, success, danger |
-| `on_toggle_maybe` | **MISSING** | No disabled state |
+| `disabled` | SUPPORTED | Both Elixir (Checkbox widget) and Rust renderer support disabled prop |
 | `icon` | **MISSING** | |
 
 ### Radio
@@ -259,7 +259,7 @@ unlisted props are fully supported.
 | `text_shaping` | SUPPORTED | |
 | `text_wrapping` | SUPPORTED | |
 | `style` | SUPPORTED | |
-| `on_toggle_maybe` | **MISSING** | No disabled state |
+| `disabled` | SUPPORTED | Both Elixir (Toggler widget) and Rust renderer support disabled prop |
 | `text_alignment` | **MISSING** | |
 
 ### Slider
@@ -291,7 +291,7 @@ Same as Slider. Missing: `with_circular_handle`.
 | `text_shaping` | SUPPORTED | |
 | `style` | SUPPORTED | |
 | `handle` | **MISSING** | |
-| `on_open` / `on_close` | **MISSING** | |
+| `on_open` / `on_close` | **BLOCKED** | Not exposed by iced 0.14 API |
 
 ### ComboBox
 
@@ -306,7 +306,7 @@ Same as Slider. Missing: `with_circular_handle`.
 | `line_height` | SUPPORTED | |
 | `menu_height` | SUPPORTED | |
 | `on_option_hovered` | **MISSING** | |
-| `on_open` / `on_close` | **MISSING** | |
+| `on_open` / `on_close` | **BLOCKED** | Not exposed by iced 0.14 API |
 | `icon` | **MISSING** | |
 
 ### Tooltip
@@ -440,7 +440,7 @@ Same as Slider. Missing: `with_circular_handle`.
 | Hex strings | `"#rrggbb"` or `"#rrggbbaa"` | SUPPORTED |
 | `{r, g, b, a}` object (0-1 floats) | `%{r: 0.5, g: 0.5, b: 0.5, a: 1.0}` | SUPPORTED |
 | Gradient backgrounds | Linear gradient on container | SUPPORTED |
-| Named constants (BLACK, WHITE, TRANSPARENT) | No | **MISSING** |
+| Named constants (BLACK, WHITE, TRANSPARENT) | `Color.cast/1` accepts named atoms (`:black`, `:white`, `:red`, etc.) and hex strings | SUPPORTED |
 
 ### ContentFit
 
@@ -542,13 +542,13 @@ Same as Slider. Missing: `with_circular_handle`.
 | PaneGrid: swap | `pane_swap(grid_id, pane_a, pane_b)` | SUPPORTED |
 | PaneGrid: maximize | `pane_maximize(grid_id, pane_id)` | SUPPORTED |
 | PaneGrid: restore | `pane_restore(grid_id)` | SUPPORTED |
-| `Task::run(stream, map)` | No | **MISSING** |
+| `Task::run(stream, map)` | `Command.stream/2` | SUPPORTED -- streams events from an enumerable |
 | `Task::future(future)` | No | **MISSING** |
-| `Task::stream(stream)` | No | **MISSING** |
+| `Task::stream(stream)` | `Command.stream/2` | SUPPORTED |
 | `task::blocking(fn)` | No | **MISSING** |
-| `.then()` / `.chain()` | No | **MISSING** -- task chaining |
+| `.then()` / `.chain()` | By design | SUPPORTED -- handled by the Elm update loop; each `update/2` can return new commands, creating natural chains with model updates between steps |
 | `.collect()` | No | **MISSING** |
-| `.abortable()` | No | **MISSING** -- task cancellation |
+| `.abortable()` | `Command.cancel/1` | SUPPORTED -- cancels a running async or stream command by its event tag |
 
 ---
 
@@ -737,10 +737,9 @@ Same as Slider. Missing: `with_circular_handle`.
 ### Props
 - Average prop coverage per supported widget: ~85-95%
 - Most common remaining gaps:
-  - `on_toggle_maybe` / disabled state for checkbox, toggler
   - Widget-specific icons
-  - Some event callbacks (`on_open`/`on_close` for pick_list/combo_box)
-  - `on_scroll` for scrollable
+  - `on_open`/`on_close` for pick_list/combo_box (BLOCKED by iced 0.14)
+  - `on_scroll` for scrollable (DEFERRED -- requires custom event middleware)
   - Some style props (scrollable style, svg style)
 
 ### Events
@@ -755,7 +754,7 @@ Same as Slider. Missing: `with_circular_handle`.
 - Full set covered: focus, scroll, snap, cursor ops, select, async, batch, done, exit
 - Window operations: comprehensive (resize, move, maximize, minimize, decorations, drag, etc.)
 - PaneGrid operations: split, close, swap, maximize, restore
-- Missing: task chaining (.then/.chain), streaming, cancellation (.abortable)
+- Task chaining handled by Elm update loop (by design); streaming via `Command.stream/2`; cancellation via `Command.cancel/1`
 
 ### Window Operations
 - Declarative open (via tree) and close supported
@@ -768,20 +767,16 @@ Same as Slider. Missing: `with_circular_handle`.
 
 ### Medium Priority (Power User Features)
 
-1. **Task chaining/streaming** -- `.then()`, `.chain()`, `.abortable()`, `Task::stream()`
-2. **Window initial settings** -- maximized, fullscreen, position, min/max size, decorations, transparent, etc. at window creation time
-3. **`on_scroll` callback for Scrollable** -- scroll position tracking
-4. **Disabled states** -- `on_toggle_maybe` for checkbox/toggler
-5. **`on_open`/`on_close` for pick_list/combo_box** -- dropdown lifecycle events
-6. **Primary clipboard** -- Linux middle-click paste
+1. **Window initial settings** -- maximized, fullscreen, position, min/max size, decorations, transparent, etc. at window creation time
+2. **`on_scroll` callback for Scrollable** -- DEFERRED; requires custom event middleware for scroll position tracking
+3. **`on_open`/`on_close` for pick_list/combo_box** -- BLOCKED by iced 0.14; not exposed in the API
+4. **Primary clipboard** -- Linux middle-click paste
 
 ### Low Priority (Nice-to-Have)
 
-7. **`set_icon`** -- requires RGBA pixel data; intentionally unsupported
-8. **Stack `clip`** -- clipping on stack widget
-9. **Widget icons** -- icon prop for text_input, checkbox
-10. **`on_paste` for TextInput** -- paste event callback
-11. **Named color constants** -- BLACK, WHITE, TRANSPARENT as atoms
-12. **`vsync` setting** -- vsync control
-13. **Extended palette generation** -- full iced extended palette support
-14. **`theme::Mode`** -- light/dark/none mode enum
+5. **`set_icon`** -- requires RGBA pixel data; intentionally unsupported
+6. **Widget icons** -- icon prop for text_input, checkbox
+7. **`on_paste` for TextInput** -- paste event callback
+8. **`vsync` setting** -- vsync control
+9. **Extended palette generation** -- full iced extended palette support
+10. **`theme::Mode`** -- light/dark/none mode enum

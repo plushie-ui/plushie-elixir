@@ -18,7 +18,7 @@ defmodule Julep.Iced.Widget.Svg do
   @type option ::
           {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
-          | {:content_fit, atom()}
+          | {:content_fit, Julep.Iced.ContentFit.t()}
           | {:rotation, number()}
           | {:opacity, number()}
 
@@ -27,7 +27,7 @@ defmodule Julep.Iced.Widget.Svg do
           source: String.t(),
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
-          content_fit: atom() | nil,
+          content_fit: Julep.Iced.ContentFit.t() | nil,
           rotation: number() | nil,
           opacity: number() | nil
         }
@@ -64,7 +64,7 @@ defmodule Julep.Iced.Widget.Svg do
   def height(%__MODULE__{} = svg, height), do: %{svg | height: height}
 
   @doc "Sets how the SVG fits its bounds."
-  @spec content_fit(svg :: t(), content_fit :: atom()) :: t()
+  @spec content_fit(svg :: t(), content_fit :: Julep.Iced.ContentFit.t()) :: t()
   def content_fit(%__MODULE__{} = svg, content_fit), do: %{svg | content_fit: content_fit}
 
   @doc "Sets the rotation angle in degrees."
@@ -88,7 +88,7 @@ defmodule Julep.Iced.Widget.Svg do
         |> put_if(svg.source, "source")
         |> put_if(svg.width, "width")
         |> put_if(svg.height, "height")
-        |> put_if(svg.content_fit, "content_fit", &to_string/1)
+        |> put_if(svg.content_fit, "content_fit")
         |> put_if(svg.rotation, "rotation")
         |> put_if(svg.opacity, "opacity")
 

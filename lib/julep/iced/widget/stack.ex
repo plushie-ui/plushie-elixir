@@ -6,6 +6,7 @@ defmodule Julep.Iced.Widget.Stack do
 
   - `width` (length) -- stack width. Default: shrink. See `Julep.Iced.Length`.
   - `height` (length) -- stack height. Default: shrink.
+  - `clip` (boolean) -- clip children that overflow. Default: false.
   """
 
   alias Julep.Iced.Widget.Build
@@ -13,11 +14,13 @@ defmodule Julep.Iced.Widget.Stack do
   @type option ::
           {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
+          | {:clip, boolean()}
 
   @type t :: %__MODULE__{
           id: String.t(),
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
+          clip: boolean() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
@@ -25,6 +28,7 @@ defmodule Julep.Iced.Widget.Stack do
     :id,
     :width,
     :height,
+    :clip,
     children: []
   ]
 
@@ -42,6 +46,7 @@ defmodule Julep.Iced.Widget.Stack do
     Enum.reduce(opts, stack, fn
       {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
+      {:clip, v}, acc -> clip(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -53,6 +58,10 @@ defmodule Julep.Iced.Widget.Stack do
   @doc "Sets the stack height."
   @spec height(stack :: t(), height :: Julep.Iced.Length.t()) :: t()
   def height(%__MODULE__{} = stack, height), do: %{stack | height: height}
+
+  @doc "Sets whether children that overflow are clipped."
+  @spec clip(stack :: t(), clip :: boolean()) :: t()
+  def clip(%__MODULE__{} = stack, clip), do: %{stack | clip: clip}
 
   @doc "Appends a child to the stack."
   @spec push(stack :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
@@ -74,6 +83,7 @@ defmodule Julep.Iced.Widget.Stack do
         %{}
         |> put_if(stack.width, "width")
         |> put_if(stack.height, "height")
+        |> put_if(stack.clip, "clip")
 
       %{id: stack.id, type: "stack", props: props, children: children_to_nodes(stack.children)}
     end

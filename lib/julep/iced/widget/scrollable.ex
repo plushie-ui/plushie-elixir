@@ -20,23 +20,23 @@ defmodule Julep.Iced.Widget.Scrollable do
   @type option ::
           {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
-          | {:direction, atom() | String.t()}
+          | {:direction, Julep.Iced.Direction.t()}
           | {:spacing, number()}
           | {:scrollbar_width, number()}
           | {:scrollbar_margin, number()}
           | {:scroller_width, number()}
-          | {:anchor, atom() | String.t()}
+          | {:anchor, Julep.Iced.Anchor.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
-          direction: atom() | String.t() | nil,
+          direction: Julep.Iced.Direction.t() | nil,
           spacing: number() | nil,
           scrollbar_width: number() | nil,
           scrollbar_margin: number() | nil,
           scroller_width: number() | nil,
-          anchor: atom() | String.t() | nil,
+          anchor: Julep.Iced.Anchor.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
@@ -86,7 +86,7 @@ defmodule Julep.Iced.Widget.Scrollable do
   def height(%__MODULE__{} = s, height), do: %{s | height: height}
 
   @doc "Sets the scroll direction."
-  @spec direction(scrollable :: t(), direction :: atom() | String.t()) :: t()
+  @spec direction(scrollable :: t(), direction :: Julep.Iced.Direction.t()) :: t()
   def direction(%__MODULE__{} = s, direction), do: %{s | direction: direction}
 
   @doc "Sets the spacing between scrollbar and content."
@@ -108,7 +108,7 @@ defmodule Julep.Iced.Widget.Scrollable do
   def scroller_width(%__MODULE__{} = s, scroller_width), do: %{s | scroller_width: scroller_width}
 
   @doc "Sets the scroll anchor."
-  @spec anchor(scrollable :: t(), anchor :: atom() | String.t()) :: t()
+  @spec anchor(scrollable :: t(), anchor :: Julep.Iced.Anchor.t()) :: t()
   def anchor(%__MODULE__{} = s, anchor), do: %{s | anchor: anchor}
 
   @doc "Appends a child to the scrollable."
@@ -131,12 +131,12 @@ defmodule Julep.Iced.Widget.Scrollable do
         %{}
         |> put_if(s.width, "width")
         |> put_if(s.height, "height")
-        |> put_if(s.direction, "direction", &to_string/1)
+        |> put_if(s.direction, "direction")
         |> put_if(s.spacing, "spacing")
         |> put_if(s.scrollbar_width, "scrollbar_width")
         |> put_if(s.scrollbar_margin, "scrollbar_margin")
         |> put_if(s.scroller_width, "scroller_width")
-        |> put_if(s.anchor, "anchor", &to_string/1)
+        |> put_if(s.anchor, "anchor")
 
       %{id: s.id, type: "scrollable", props: props, children: children_to_nodes(s.children)}
     end

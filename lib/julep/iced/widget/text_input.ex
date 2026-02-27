@@ -29,6 +29,8 @@ defmodule Julep.Iced.Widget.TextInput do
 
   alias Julep.Iced.Widget.Build
 
+  @type style :: :default
+
   @type option ::
           {:placeholder, String.t()}
           | {:padding, Julep.Iced.Padding.t()}
@@ -36,10 +38,10 @@ defmodule Julep.Iced.Widget.TextInput do
           | {:size, number()}
           | {:font, Julep.Iced.Font.t()}
           | {:line_height, number() | map()}
-          | {:align_x, atom() | String.t()}
+          | {:align_x, Julep.Iced.Alignment.t()}
           | {:on_submit, boolean()}
           | {:secure, boolean()}
-          | {:style, atom()}
+          | {:style, style()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -50,10 +52,10 @@ defmodule Julep.Iced.Widget.TextInput do
           size: number() | nil,
           font: Julep.Iced.Font.t() | nil,
           line_height: number() | map() | nil,
-          align_x: atom() | String.t() | nil,
+          align_x: Julep.Iced.Alignment.t() | nil,
           on_submit: boolean() | nil,
           secure: boolean() | nil,
-          style: atom() | nil
+          style: style() | nil
         }
 
   defstruct [
@@ -122,7 +124,7 @@ defmodule Julep.Iced.Widget.TextInput do
   def line_height(%__MODULE__{} = ti, line_height), do: %{ti | line_height: line_height}
 
   @doc "Sets the horizontal text alignment."
-  @spec align_x(text_input :: t(), align_x :: atom() | String.t()) :: t()
+  @spec align_x(text_input :: t(), align_x :: Julep.Iced.Alignment.t()) :: t()
   def align_x(%__MODULE__{} = ti, align_x), do: %{ti | align_x: align_x}
 
   @doc "Enables or disables submit on Enter."
@@ -134,7 +136,7 @@ defmodule Julep.Iced.Widget.TextInput do
   def secure(%__MODULE__{} = ti, secure), do: %{ti | secure: secure}
 
   @doc "Sets the input style."
-  @spec style(text_input :: t(), style :: atom()) :: t()
+  @spec style(text_input :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = ti, style), do: %{ti | style: style}
 
   @doc "Converts this text input struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
@@ -154,10 +156,10 @@ defmodule Julep.Iced.Widget.TextInput do
         |> put_if(ti.size, "size")
         |> put_if(ti.font, "font")
         |> put_if(ti.line_height, "line_height")
-        |> put_if(ti.align_x, "align_x", &to_string/1)
+        |> put_if(ti.align_x, "align_x")
         |> put_if(ti.on_submit, "on_submit")
         |> put_if(ti.secure, "secure")
-        |> put_if(ti.style, "style", &to_string/1)
+        |> put_if(ti.style, "style")
 
       %{id: ti.id, type: "text_input", props: props, children: []}
     end

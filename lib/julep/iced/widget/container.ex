@@ -44,8 +44,8 @@ defmodule Julep.Iced.Widget.Container do
           | {:max_height, number()}
           | {:center, boolean()}
           | {:clip, boolean()}
-          | {:align_x, atom() | String.t()}
-          | {:align_y, atom() | String.t()}
+          | {:align_x, Julep.Iced.Alignment.t()}
+          | {:align_y, Julep.Iced.Alignment.t()}
           | {:background, Julep.Iced.Color.t() | Julep.Iced.Gradient.t()}
           | {:color, Julep.Iced.Color.t()}
           | {:border, Julep.Iced.Border.t()}
@@ -61,8 +61,8 @@ defmodule Julep.Iced.Widget.Container do
           max_height: number() | nil,
           center: boolean() | nil,
           clip: boolean() | nil,
-          align_x: atom() | String.t() | nil,
-          align_y: atom() | String.t() | nil,
+          align_x: Julep.Iced.Alignment.t() | nil,
+          align_y: Julep.Iced.Alignment.t() | nil,
           background: Julep.Iced.Color.t() | Julep.Iced.Gradient.t() | nil,
           color: Julep.Iced.Color.t() | nil,
           border: Julep.Iced.Border.t() | nil,
@@ -149,11 +149,11 @@ defmodule Julep.Iced.Widget.Container do
   def clip(%__MODULE__{} = c, clip), do: %{c | clip: clip}
 
   @doc "Sets the horizontal alignment of the child."
-  @spec align_x(container :: t(), align_x :: atom() | String.t()) :: t()
+  @spec align_x(container :: t(), align_x :: Julep.Iced.Alignment.t()) :: t()
   def align_x(%__MODULE__{} = c, align_x), do: %{c | align_x: align_x}
 
   @doc "Sets the vertical alignment of the child."
-  @spec align_y(container :: t(), align_y :: atom() | String.t()) :: t()
+  @spec align_y(container :: t(), align_y :: Julep.Iced.Alignment.t()) :: t()
   def align_y(%__MODULE__{} = c, align_y), do: %{c | align_y: align_y}
 
   @doc "Sets the background fill (color or gradient)."
@@ -162,8 +162,8 @@ defmodule Julep.Iced.Widget.Container do
   def background(%__MODULE__{} = c, background), do: %{c | background: background}
 
   @doc "Sets the text color override."
-  @spec color(container :: t(), color :: Julep.Iced.Color.t()) :: t()
-  def color(%__MODULE__{} = c, color), do: %{c | color: color}
+  @spec color(container :: t(), color :: Julep.Iced.Color.t() | atom()) :: t()
+  def color(%__MODULE__{} = c, color), do: %{c | color: Julep.Iced.Color.cast(color)}
 
   @doc "Sets the border specification."
   @spec border(container :: t(), border :: Julep.Iced.Border.t()) :: t()
@@ -202,13 +202,13 @@ defmodule Julep.Iced.Widget.Container do
         |> put_if(c.max_height, "max_height")
         |> put_if(c.center, "center")
         |> put_if(c.clip, "clip")
-        |> put_if(c.align_x, "align_x", &to_string/1)
-        |> put_if(c.align_y, "align_y", &to_string/1)
+        |> put_if(c.align_x, "align_x")
+        |> put_if(c.align_y, "align_y")
         |> put_if(c.background, "background")
         |> put_if(c.color, "color")
         |> put_if(c.border, "border")
         |> put_if(c.shadow, "shadow")
-        |> put_if(c.style, "style", &to_string/1)
+        |> put_if(c.style, "style")
 
       %{id: c.id, type: "container", props: props, children: children_to_nodes(c.children)}
     end

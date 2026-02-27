@@ -9,6 +9,7 @@ defmodule Julep.Iced.Widget.Row do
   - `width` (length) -- width of the row. Default: shrink. See `Julep.Iced.Length`.
   - `height` (length) -- height of the row. Default: shrink.
   - `align_y` (string) -- vertical alignment of children: `"top"`, `"center"`, `"bottom"`.
+  - `max_width` (number) -- maximum width of the row in pixels.
   - `clip` (boolean) -- clip children that overflow. Default: false.
   - `wrap` (boolean) -- wrap children to next row when they overflow. Default: false.
   """
@@ -20,7 +21,8 @@ defmodule Julep.Iced.Widget.Row do
           | {:padding, Julep.Iced.Padding.t()}
           | {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
-          | {:align_y, atom() | String.t()}
+          | {:align_y, Julep.Iced.Alignment.t()}
+          | {:max_width, number()}
           | {:clip, boolean()}
           | {:wrap, boolean()}
 
@@ -30,7 +32,8 @@ defmodule Julep.Iced.Widget.Row do
           padding: Julep.Iced.Padding.t() | nil,
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
-          align_y: atom() | String.t() | nil,
+          align_y: Julep.Iced.Alignment.t() | nil,
+          max_width: number() | nil,
           clip: boolean() | nil,
           wrap: boolean() | nil,
           children: [Julep.Iced.ui_node() | struct()]
@@ -43,6 +46,7 @@ defmodule Julep.Iced.Widget.Row do
     :width,
     :height,
     :align_y,
+    :max_width,
     :clip,
     :wrap,
     children: []
@@ -65,6 +69,7 @@ defmodule Julep.Iced.Widget.Row do
       {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
       {:align_y, v}, acc -> align_y(acc, v)
+      {:max_width, v}, acc -> max_width(acc, v)
       {:clip, v}, acc -> clip(acc, v)
       {:wrap, v}, acc -> wrap(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
@@ -88,8 +93,12 @@ defmodule Julep.Iced.Widget.Row do
   def height(%__MODULE__{} = row, height), do: %{row | height: height}
 
   @doc "Sets the vertical alignment of children."
-  @spec align_y(row :: t(), align_y :: atom() | String.t()) :: t()
+  @spec align_y(row :: t(), align_y :: Julep.Iced.Alignment.t()) :: t()
   def align_y(%__MODULE__{} = row, align_y), do: %{row | align_y: align_y}
+
+  @doc "Sets the maximum width of the row in pixels."
+  @spec max_width(row :: t(), max_width :: number()) :: t()
+  def max_width(%__MODULE__{} = row, max_width), do: %{row | max_width: max_width}
 
   @doc "Sets whether children that overflow are clipped."
   @spec clip(row :: t(), clip :: boolean()) :: t()
@@ -121,7 +130,8 @@ defmodule Julep.Iced.Widget.Row do
         |> put_if(row.padding, "padding")
         |> put_if(row.width, "width")
         |> put_if(row.height, "height")
-        |> put_if(row.align_y, "align_y", &to_string/1)
+        |> put_if(row.align_y, "align_y")
+        |> put_if(row.max_width, "max_width")
         |> put_if(row.clip, "clip")
         |> put_if(row.wrap, "wrap")
 

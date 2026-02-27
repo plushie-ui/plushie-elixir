@@ -256,10 +256,19 @@ fn render_row<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, M
         .align_y(align_y)
         .clip(clip);
 
-    if prop_bool_default(props, "wrap", false) {
+    let max_width = prop_f32(props, "max_width");
+
+    let elem: Element<'a, Message> = if prop_bool_default(props, "wrap", false) {
         r.wrap().into()
     } else {
         r.into()
+    };
+
+    // Row doesn't have max_width natively; wrap in a container to constrain it.
+    if let Some(mw) = max_width {
+        container(elem).max_width(mw).into()
+    } else {
+        elem
     }
 }
 
@@ -655,10 +664,13 @@ fn render_checkbox<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<
     let width = prop_length(props, "width", Length::Shrink);
     let id = node.id.clone();
 
-    let mut cb = checkbox(checked)
-        .label(label)
-        .on_toggle(move |v| Message::Toggle(id.clone(), v))
-        .width(width);
+    let disabled = prop_bool_default(props, "disabled", false);
+
+    let mut cb = checkbox(checked).label(label).width(width);
+
+    if !disabled {
+        cb = cb.on_toggle(move |v| Message::Toggle(id.clone(), v));
+    }
 
     if let Some(s) = spacing {
         cb = cb.spacing(s);
@@ -775,9 +787,13 @@ fn render_toggler<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'
     let width = prop_length(props, "width", Length::Shrink);
     let id = node.id.clone();
 
-    let mut t = toggler(is_toggled)
-        .on_toggle(move |v| Message::Toggle(id.clone(), v))
-        .width(width);
+    let disabled = prop_bool_default(props, "disabled", false);
+
+    let mut t = toggler(is_toggled).width(width);
+
+    if !disabled {
+        t = t.on_toggle(move |v| Message::Toggle(id.clone(), v));
+    }
 
     if let Some(l) = label {
         t = t.label(l);
@@ -1354,12 +1370,14 @@ fn render_stack<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a,
     let props = node.props.as_object();
     let width = prop_length(props, "width", Length::Shrink);
     let height = prop_length(props, "height", Length::Shrink);
+    let clip = prop_bool_default(props, "clip", false);
 
     let children = render_children(node, caches);
 
     Stack::with_children(children)
         .width(width)
         .height(height)
+        .clip(clip)
         .into()
 }
 

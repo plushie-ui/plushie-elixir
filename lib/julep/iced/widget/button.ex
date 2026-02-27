@@ -110,7 +110,7 @@ defmodule Julep.Iced.Widget.Button do
         |> put_if(btn.height, "height")
         |> put_if(btn.padding, "padding")
         |> put_if(btn.clip, "clip")
-        |> put_if(btn.style, "style", &to_string/1)
+        |> put_if(btn.style, "style")
         |> put_if(btn.disabled, "disabled")
 
       %{id: btn.id, type: "button", props: props, children: []}

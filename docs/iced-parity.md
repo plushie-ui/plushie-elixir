@@ -15,6 +15,16 @@ know julep. This doc maps iced Rust code to its julep Elixir equivalent.
 | `iced::alignment` | `Julep.Iced.Alignment` |
 | `iced::Theme` | `Julep.Iced.Theme` |
 | `iced::Font` | `Julep.Iced.Font` |
+| `iced::Color` | `Julep.Iced.Color` |
+| `iced::Shadow` | `Julep.Iced.Shadow` |
+| `iced::text::Wrapping` | `Julep.Iced.Wrapping` |
+| `iced::text::Shaping` | `Julep.Iced.Shaping` |
+| `iced::ContentFit` | `Julep.Iced.ContentFit` |
+| `iced::widget::scrollable::Direction` | `Julep.Iced.Direction` |
+| `iced::widget::tooltip::Position` | `Julep.Iced.Position` |
+| `iced::widget::image::FilterMethod` | `Julep.Iced.FilterMethod` |
+| `iced::widget::scrollable::Anchor` | `Julep.Iced.Anchor` |
+| -- | `Julep.Iced.Encode` (wire-format encoding protocol) |
 | `iced::Task` | `Julep.Command` |
 | `iced::Subscription` | `Julep.Subscription` |
 | `iced::window` | `Julep.Command` (window_open, window_close, resize_window, etc.) |
@@ -293,7 +303,9 @@ end
 | `Horizontal::Right` | `:right` |
 | `Vertical::Top` | `:top` |
 | `Vertical::Bottom` | `:bottom` |
-| `Color::from_rgb(r, g, b)` | `"#rrggbb"` or `%{r: 0.5, g: 0.5, b: 0.5, a: 1.0}` |
+| `Color::from_rgb(r, g, b)` | `Color.from_rgb(255, 128, 0)` returns `"#ff8000"` |
+| `Color::from_rgba(r, g, b, a)` | `Color.from_rgba(255, 128, 0, 0.5)` returns `"#ff800080"` |
+| Named colors (BLACK, WHITE, etc.) | `Color.cast(:black)`, `Color.cast(:red)`, etc. |
 | `Font::MONOSPACE` | `:monospace` |
 | `Font::with_name("Inter")` | `"Inter"` |
 | `font::Weight::Bold` | `:bold` |
@@ -418,6 +430,93 @@ See [commands.md](commands.md) for details.
 
 Theme names are snake_case strings matching the iced `Theme` enum variant
 names.
+
+## Type system
+
+### Encode protocol
+
+`Julep.Iced.Encode` is a protocol that handles wire-format encoding
+automatically. `Build.put_if/3` calls `Encode.encode/1` on every prop value,
+so widget `to_node/1` implementations do not need manual transforms for
+atoms, tuples, maps, or custom types.
+
+Built-in implementations:
+
+| Elixir type | Wire encoding |
+|---|---|
+| Atom (non-boolean) | String (`Atom.to_string/1`) |
+| `true` / `false` / `nil` | Pass through |
+| String / Integer / Float | Pass through |
+| Tuple | List (recursive encoding) |
+| Map | Map (values recursively encoded) |
+| List | List (elements recursively encoded) |
+| `Julep.Iced.Shadow` | `%{"color" => hex, "offset" => [x, y], "blur_radius" => n}` |
+
+Custom types can implement `Julep.Iced.Encode` to define their own wire
+encoding. The `Any` fallback passes values through unchanged.
+
+### Shared type modules
+
+These modules provide typed representations and wire encoding for iced's
+core value types. Each defines a `@type t`, a set of valid atoms, and an
+`encode/1` function.
+
+| Module | iced equivalent | Values |
+|---|---|---|
+| `Julep.Iced.Length` | `iced::Length` | `:fill`, `:shrink`, number, `{:fill_portion, n}` |
+| `Julep.Iced.Padding` | `iced::Padding` | number, `{v, h}` tuple, `%{top, right, bottom, left}` |
+| `Julep.Iced.Alignment` | `iced::alignment` | `:start`, `:center`, `:end`, `:left`, `:right`, `:top`, `:bottom` |
+| `Julep.Iced.Theme` | `iced::Theme` | 22 built-in theme strings, custom palette maps |
+| `Julep.Iced.Font` | `iced::Font` | `:default`, `:monospace`, family string, `%{family, weight, style, stretch}` |
+| `Julep.Iced.Wrapping` | `iced::text::Wrapping` | `:none`, `:word`, `:glyph`, `:word_or_glyph` |
+| `Julep.Iced.Shaping` | `iced::text::Shaping` | `:basic`, `:advanced` |
+| `Julep.Iced.ContentFit` | `iced::ContentFit` | `:contain`, `:cover`, `:fill`, `:none`, `:scale_down` |
+| `Julep.Iced.Direction` | `iced::widget::scrollable::Direction` | `:horizontal`, `:vertical` |
+| `Julep.Iced.Position` | `iced::widget::tooltip::Position` | `:top`, `:bottom`, `:left`, `:right`, `:follow_cursor` |
+| `Julep.Iced.FilterMethod` | `iced::widget::image::FilterMethod` | `:nearest`, `:linear` |
+| `Julep.Iced.Anchor` | `iced::widget::scrollable::Anchor` | `:start`, `:end` |
+
+### Color
+
+`Julep.Iced.Color` uses hex strings as the canonical form. All constructors
+return `"#rrggbb"` or `"#rrggbbaa"` strings.
+
+| Function | Input | Output |
+|---|---|---|
+| `from_rgb(r, g, b)` | 0-255 integers | `"#rrggbb"` |
+| `from_rgba(r, g, b, a)` | 0-255 integers + 0.0-1.0 float | `"#rrggbbaa"` |
+| `from_hex(hex)` | Hex string with or without `#` | Normalized `"#rrggbb"` or `"#rrggbbaa"` |
+| `cast(atom_or_hex)` | Named atom or hex string | Canonical hex string |
+| `black()` / `white()` / `transparent()` | -- | Convenience constants |
+
+`cast/1` is the normalization entrypoint. It accepts named atoms (`:black`,
+`:white`, `:transparent`, `:red`, `:green`, `:blue`, `:yellow`, `:cyan`,
+`:magenta`, `:gray`, `:grey`) and hex strings. Raises `ArgumentError` for
+unknown atom names.
+
+The `{r, g, b, a}` float object format from earlier iterations has been
+replaced by hex-only canonical form. All color values on the wire are
+strings.
+
+### Shadow
+
+`Julep.Iced.Shadow` is a typed struct with builder functions:
+
+```elixir
+Shadow.new()
+|> Shadow.color("#00000040")
+|> Shadow.offset(2, 2)
+|> Shadow.blur_radius(6)
+```
+
+Fields: `color` (`Color.t()`), `offset_x` (number), `offset_y` (number),
+`blur_radius` (number). The `color/2` builder accepts any form that
+`Color.cast/1` supports (named atoms and hex strings).
+
+Shadow implements the `Julep.Iced.Encode` protocol, encoding to the wire
+format `%{"color" => hex, "offset" => [x, y], "blur_radius" => n}`.
+Widget `to_node/1` implementations pass Shadow structs directly via
+`Build.put_if/3` -- no manual conversion needed.
 
 ## What julep adds that iced does not have
 

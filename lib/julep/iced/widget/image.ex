@@ -23,11 +23,11 @@ defmodule Julep.Iced.Widget.Image do
   @type option ::
           {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
-          | {:content_fit, atom()}
+          | {:content_fit, Julep.Iced.ContentFit.t()}
           | {:rotation, number()}
           | {:opacity, number()}
           | {:border_radius, number()}
-          | {:filter_method, atom()}
+          | {:filter_method, Julep.Iced.FilterMethod.t()}
           | {:expand, boolean()}
           | {:scale, number()}
           | {:crop, map()}
@@ -37,11 +37,11 @@ defmodule Julep.Iced.Widget.Image do
           source: String.t(),
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
-          content_fit: atom() | nil,
+          content_fit: Julep.Iced.ContentFit.t() | nil,
           rotation: number() | nil,
           opacity: number() | nil,
           border_radius: number() | nil,
-          filter_method: atom() | nil,
+          filter_method: Julep.Iced.FilterMethod.t() | nil,
           expand: boolean() | nil,
           scale: number() | nil,
           crop: map() | nil
@@ -97,7 +97,7 @@ defmodule Julep.Iced.Widget.Image do
   def height(%__MODULE__{} = img, height), do: %{img | height: height}
 
   @doc "Sets how the image fits its bounds."
-  @spec content_fit(image :: t(), content_fit :: atom()) :: t()
+  @spec content_fit(image :: t(), content_fit :: Julep.Iced.ContentFit.t()) :: t()
   def content_fit(%__MODULE__{} = img, content_fit), do: %{img | content_fit: content_fit}
 
   @doc "Sets the rotation angle in degrees."
@@ -113,7 +113,7 @@ defmodule Julep.Iced.Widget.Image do
   def border_radius(%__MODULE__{} = img, border_radius), do: %{img | border_radius: border_radius}
 
   @doc "Sets the image filter method."
-  @spec filter_method(image :: t(), filter_method :: atom()) :: t()
+  @spec filter_method(image :: t(), filter_method :: Julep.Iced.FilterMethod.t()) :: t()
   def filter_method(%__MODULE__{} = img, filter_method), do: %{img | filter_method: filter_method}
 
   @doc "Sets whether the image expands to fill available space."
@@ -141,11 +141,11 @@ defmodule Julep.Iced.Widget.Image do
         |> put_if(img.source, "source")
         |> put_if(img.width, "width")
         |> put_if(img.height, "height")
-        |> put_if(img.content_fit, "content_fit", &to_string/1)
+        |> put_if(img.content_fit, "content_fit")
         |> put_if(img.rotation, "rotation")
         |> put_if(img.opacity, "opacity")
         |> put_if(img.border_radius, "border_radius")
-        |> put_if(img.filter_method, "filter_method", &to_string/1)
+        |> put_if(img.filter_method, "filter_method")
         |> put_if(img.expand, "expand")
         |> put_if(img.scale, "scale")
         |> put_if(img.crop, "crop")

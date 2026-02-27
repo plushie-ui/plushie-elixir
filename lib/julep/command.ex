@@ -7,7 +7,7 @@ defmodule Julep.Command do
 
   ## Categories
 
-  - **Basic**: `none/0`, `done/2`, `async/2`, `send_after/2`, `exit/0`
+  - **Basic**: `none/0`, `done/2`, `async/2`, `stream/2`, `cancel/1`, `send_after/2`, `exit/0`
   - **Focus**: `focus/1`, `focus_next/0`, `focus_previous/0`
   - **Text**: `select_all/1`, `move_cursor_to_front/1`, `move_cursor_to_end/1`,
     `move_cursor_to/2`, `select_range/3`
@@ -515,6 +515,43 @@ defmodule Julep.Command do
         target: pane_grid_id
       }
     }
+  end
+
+  @doc """
+  Run `fun` as a streaming async task. The function receives an `emit` callback
+  that can send intermediate results to `update/2` as `{event_tag, value}`.
+  The function's final return value is also delivered as `{event_tag, result}`.
+
+  This is sugar over spawning a process manually. You can achieve the same
+  thing with bare `Task` and `send/2` if you prefer direct Elixir patterns.
+
+  ## Example
+
+      Command.stream(fn emit ->
+        for chunk <- File.stream!("big.csv") do
+          emit.({:chunk, process(chunk)})
+        end
+        :done
+      end, :file_import)
+  """
+  @spec stream(fun :: (fun() -> term()), event_tag :: atom()) :: %__MODULE__{}
+  def stream(fun, event_tag) when is_function(fun, 1) and is_atom(event_tag) do
+    %__MODULE__{type: :stream, payload: %{fun: fun, tag: event_tag}}
+  end
+
+  @doc """
+  Cancel a running async or stream command by its tag.
+
+  If the task has already completed, this is a no-op. The runtime tracks
+  running tasks by their event tag and terminates the associated process.
+
+  ## Example
+
+      Command.cancel(:file_import)
+  """
+  @spec cancel(event_tag :: atom()) :: %__MODULE__{}
+  def cancel(event_tag) when is_atom(event_tag) do
+    %__MODULE__{type: :cancel, payload: %{tag: event_tag}}
   end
 
   @doc """

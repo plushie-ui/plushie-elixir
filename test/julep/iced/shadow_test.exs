@@ -4,14 +4,24 @@ defmodule Julep.Iced.ShadowTest do
   alias Julep.Iced.Shadow
 
   describe "new/0" do
-    test "returns default shadow" do
-      assert Shadow.new() == %{color: "#000000", offset_x: 0, offset_y: 0, blur_radius: 0}
+    test "returns default shadow struct" do
+      assert Shadow.new() == %Shadow{
+               color: "#000000",
+               offset_x: 0,
+               offset_y: 0,
+               blur_radius: 0
+             }
     end
   end
 
   describe "color/2" do
     test "sets the shadow color" do
       shadow = Shadow.new() |> Shadow.color("#ff0000")
+      assert shadow.color == "#ff0000"
+    end
+
+    test "casts atom color names" do
+      shadow = Shadow.new() |> Shadow.color(:red)
       assert shadow.color == "#ff0000"
     end
   end
@@ -51,14 +61,20 @@ defmodule Julep.Iced.ShadowTest do
         |> Shadow.offset(2, 4)
         |> Shadow.blur_radius(8)
 
-      assert shadow == %{color: "#333333", offset_x: 2, offset_y: 4, blur_radius: 8}
+      assert shadow == %Shadow{color: "#333333", offset_x: 2, offset_y: 4, blur_radius: 8}
     end
   end
 
-  describe "encode/1" do
-    test "passes through the shadow map unchanged" do
-      shadow = Shadow.new() |> Shadow.color("#abc") |> Shadow.blur_radius(5)
-      assert Shadow.encode(shadow) == shadow
+  describe "struct" do
+    test "is a proper struct" do
+      shadow = Shadow.new()
+      assert %Shadow{} = shadow
+    end
+
+    test "builder functions require struct" do
+      assert_raise FunctionClauseError, fn ->
+        Shadow.color(%{color: "#000000", offset_x: 0, offset_y: 0, blur_radius: 0}, "#ff0000")
+      end
     end
   end
 end

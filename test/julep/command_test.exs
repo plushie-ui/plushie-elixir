@@ -245,4 +245,60 @@ defmodule Julep.CommandTest do
       assert length(batch.payload.commands) == 1
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # stream/2
+  # ---------------------------------------------------------------------------
+
+  describe "stream/2" do
+    test "returns a Command with type :stream" do
+      cmd = Command.stream(fn _emit -> :ok end, :my_stream)
+      assert cmd.type == :stream
+    end
+
+    test "stores the function under :fun in the payload" do
+      fun = fn _emit -> :done end
+      cmd = Command.stream(fun, :import)
+      assert cmd.payload.fun == fun
+    end
+
+    test "stores the event tag under :tag in the payload" do
+      cmd = Command.stream(fn _emit -> :ok end, :file_import)
+      assert cmd.payload.tag == :file_import
+    end
+
+    test "raises when the function does not accept exactly one argument" do
+      assert_raise FunctionClauseError, fn ->
+        Command.stream(fn -> :ok end, :tag)
+      end
+    end
+
+    test "raises when the event tag is not an atom" do
+      assert_raise FunctionClauseError, fn ->
+        Command.stream(fn _emit -> :ok end, "string_tag")
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # cancel/1
+  # ---------------------------------------------------------------------------
+
+  describe "cancel/1" do
+    test "returns a Command with type :cancel" do
+      cmd = Command.cancel(:my_stream)
+      assert cmd.type == :cancel
+    end
+
+    test "stores the event tag under :tag in the payload" do
+      cmd = Command.cancel(:file_import)
+      assert cmd.payload.tag == :file_import
+    end
+
+    test "raises when the event tag is not an atom" do
+      assert_raise FunctionClauseError, fn ->
+        Command.cancel("string_tag")
+      end
+    end
+  end
 end

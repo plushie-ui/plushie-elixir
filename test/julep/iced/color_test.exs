@@ -3,41 +3,38 @@ defmodule Julep.Iced.ColorTest do
 
   alias Julep.Iced.Color
 
+  doctest Julep.Iced.Color
+
   describe "from_rgb/3" do
-    test "converts 0-255 RGB to normalized RGBA map" do
-      assert Color.from_rgb(255, 0, 0) == %{r: 1.0, g: 0.0, b: 0.0, a: 1.0}
+    test "converts 0-255 RGB to hex string" do
+      assert Color.from_rgb(255, 0, 0) == "#ff0000"
     end
 
     test "converts mid-range values" do
-      result = Color.from_rgb(128, 64, 32)
-      assert_in_delta result.r, 128 / 255, 0.001
-      assert_in_delta result.g, 64 / 255, 0.001
-      assert_in_delta result.b, 32 / 255, 0.001
-      assert result.a == 1.0
+      assert Color.from_rgb(128, 64, 32) == "#804020"
     end
 
-    test "converts all zeros to black with full alpha" do
-      assert Color.from_rgb(0, 0, 0) == %{r: 0.0, g: 0.0, b: 0.0, a: 1.0}
+    test "converts all zeros to black" do
+      assert Color.from_rgb(0, 0, 0) == "#000000"
     end
 
-    test "converts all 255 to white with full alpha" do
-      assert Color.from_rgb(255, 255, 255) == %{r: 1.0, g: 1.0, b: 1.0, a: 1.0}
+    test "converts all 255 to white" do
+      assert Color.from_rgb(255, 255, 255) == "#ffffff"
     end
   end
 
   describe "from_rgba/4" do
-    test "converts 0-255 RGB with alpha" do
-      assert Color.from_rgba(255, 0, 0, 0.5) == %{r: 1.0, g: 0.0, b: 0.0, a: 0.5}
+    test "converts 0-255 RGB with full alpha" do
+      assert Color.from_rgba(255, 0, 0, 1.0) == "#ff0000ff"
     end
 
-    test "alpha of 0.0 is fully transparent" do
-      result = Color.from_rgba(100, 100, 100, 0.0)
-      assert result.a == 0.0
+    test "converts with half alpha" do
+      # 0.5 * 255 = 127.5, rounds to 128 = 0x80
+      assert Color.from_rgba(255, 0, 0, 0.5) == "#ff000080"
     end
 
-    test "alpha of 1.0 is fully opaque" do
-      result = Color.from_rgba(100, 100, 100, 1.0)
-      assert result.a == 1.0
+    test "zero alpha is fully transparent" do
+      assert Color.from_rgba(100, 100, 100, 0.0) == "#64646400"
     end
   end
 
@@ -54,8 +51,8 @@ defmodule Julep.Iced.ColorTest do
       assert Color.from_hex("#abcdef") == "#abcdef"
     end
 
-    test "passes through lowercase hex" do
-      assert Color.from_hex("aabbcc") == "#aabbcc"
+    test "downcases uppercase hex" do
+      assert Color.from_hex("#FF0000") == "#ff0000"
     end
   end
 
@@ -72,23 +69,51 @@ defmodule Julep.Iced.ColorTest do
   end
 
   describe "transparent/0" do
-    test "returns fully transparent black RGBA map" do
-      assert Color.transparent() == %{r: 0.0, g: 0.0, b: 0.0, a: 0.0}
+    test "returns fully transparent black hex string" do
+      assert Color.transparent() == "#00000000"
+    end
+  end
+
+  describe "cast/1" do
+    test "casts named atom :black" do
+      assert Color.cast(:black) == "#000000"
+    end
+
+    test "casts named atom :white" do
+      assert Color.cast(:white) == "#ffffff"
+    end
+
+    test "casts named atom :transparent" do
+      assert Color.cast(:transparent) == "#00000000"
+    end
+
+    test "casts named atom :red" do
+      assert Color.cast(:red) == "#ff0000"
+    end
+
+    test "casts :gray and :grey to same value" do
+      assert Color.cast(:gray) == Color.cast(:grey)
+      assert Color.cast(:gray) == "#808080"
+    end
+
+    test "casts hex string passthrough" do
+      assert Color.cast("#ff0000") == "#ff0000"
+    end
+
+    test "casts uppercase hex string with downcase" do
+      assert Color.cast("#FF0000") == "#ff0000"
+    end
+
+    test "raises on unknown atom" do
+      assert_raise ArgumentError, ~r/unknown color name/, fn ->
+        Color.cast(:chartreuse)
+      end
     end
   end
 
   describe "encode/1" do
     test "passes through hex strings unchanged" do
       assert Color.encode("#ff0000") == "#ff0000"
-    end
-
-    test "passes through RGBA maps unchanged" do
-      color = %{r: 1.0, g: 0.0, b: 0.0, a: 1.0}
-      assert Color.encode(color) == color
-    end
-
-    test "adds default alpha to RGB-only map" do
-      assert Color.encode(%{r: 1.0, g: 0.0, b: 0.0}) == %{r: 1.0, g: 0.0, b: 0.0, a: 1.0}
     end
   end
 end

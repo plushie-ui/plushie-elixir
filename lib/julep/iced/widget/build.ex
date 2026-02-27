@@ -4,7 +4,7 @@ defmodule Julep.Iced.Widget.Build do
   @doc "Adds `key => value` to props if value is not nil."
   @spec put_if(props :: map(), value :: term(), key :: String.t()) :: map()
   def put_if(props, nil, _key), do: props
-  def put_if(props, value, key), do: Map.put(props, key, value)
+  def put_if(props, value, key), do: Map.put(props, key, Julep.Iced.Encode.encode(value))
 
   @doc "Adds `key => transform.(value)` to props if value is not nil."
   @spec put_if(
