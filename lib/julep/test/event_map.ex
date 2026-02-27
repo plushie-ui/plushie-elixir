@@ -26,6 +26,10 @@ defmodule Julep.Test.EventMap do
   @doc "Infers the event produced by clicking a widget."
   @spec click(element :: Element.t()) :: {:ok, tuple()} | {:error, String.t()}
   def click(%Element{type: "button", id: id}), do: {:ok, {:click, id}}
+
+  def click(%Element{type: type}) when type in ~w(checkbox toggler),
+    do: {:error, "cannot click a #{type} widget -- use toggle/1 instead"}
+
   def click(%Element{type: type}), do: {:error, "cannot click a #{type} widget"}
 
   @doc "Infers the event produced by typing text into a widget."
@@ -53,6 +57,9 @@ defmodule Julep.Test.EventMap do
     current = props["is_toggled"] || false
     {:ok, {:toggle, id, !current}}
   end
+
+  def toggle(%Element{type: type}) when type in ~w(button),
+    do: {:error, "cannot toggle a #{type} widget -- use click/1 instead"}
 
   def toggle(%Element{type: type}), do: {:error, "cannot toggle a #{type} widget"}
 

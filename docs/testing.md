@@ -6,479 +6,28 @@ Tests are documentation. They tell the next person how the feature works.
 
 The Elm architecture makes julep apps unusually easy to test. `update/2` is
 a pure function: model in, model out. `view/1` returns plain maps. No
-mocks, no processes, no infrastructure needed for the core loop.
+mocks, no processes, no infrastructure needed for the core loop. Most of
+your app logic can be tested with nothing but ExUnit.
 
-**Progressive fidelity.** Start fast, add confidence layers:
+When you need to go deeper -- clicking buttons, verifying widgets appear,
+catching rendering regressions -- julep ships a test framework with
+progressive fidelity:
 
 1. **Sim** (pure Elixir) -- millisecond tests for logic and tree structure.
 2. **Headless** (Rust renderer, no display) -- protocol round-trips and
-   tree-hash snapshots.
+   tree-hash snapshots, powered by iced's
+   [iced_test](https://docs.rs/iced_test) crate and
+   [tiny-skia](https://github.com/linebender/tiny-skia) software renderer.
 3. **Full** (real iced windows) -- GPU pixels, effects, subscriptions.
 
-Most tests should be sim tests. Headless and full exist for the things
-sim cannot catch: encoding bugs, rendering regressions, platform effects.
+Write your tests once; swap backends with a single line. Most tests should
+be sim tests. Headless and full exist for the things sim cannot catch.
 
 
-## Quick start
+## Unit testing
 
-```elixir
-defmodule MyApp.CounterTest do
-  use Julep.Test.Case, app: MyApp.Counter
-
-  test "clicking increment updates counter" do
-    click("#increment")
-    assert find!("#count") |> text() == "1"
-  end
-end
-```
-
-That is it. `Julep.Test.Case` starts a session, imports all helper
-functions, and tears down on exit. The default backend is `:sim` -- no
-Rust binary, no display server, no setup.
-
-
-## Three backends
-
-| | `:sim` | `:headless` | `:full` |
-|---|---|---|---|
-| **Module** | `Julep.Test.Backend.Sim` | `Julep.Test.Backend.Headless` | `Julep.Test.Backend.Full` |
-| **Speed** | ~ms | ~100ms | ~seconds |
-| **Rust binary?** | No | Yes (`--headless`) | Yes (`--test`) |
-| **Display server?** | No | No | Yes (Xvfb in CI) |
-| **Tests logic** | Yes | Yes | Yes |
-| **Tests tree structure** | Yes | Yes | Yes |
-| **Protocol round-trip** | No | Yes | Yes |
-| **Pixel snapshots** | No | Tree-hash only | Real GPU pixels |
-| **Effects** | Collected, not executed | Not executed | Executed |
-| **Subscriptions** | Not active | Not active | Active |
-| **Real windows** | No | No | Yes |
-| **Dependencies** | None | `cargo build --features headless` | `cargo build --features test-mode`, Xvfb, mesa-vulkan-drivers |
-
-### When to use each
-
-- **`:sim`** -- Default for everything. Logic, tree assertions, event flow.
-  Covers 90% of app testing.
-- **`:headless`** -- When you need to verify the JSONL wire protocol
-  encodes/decodes correctly, or when you want tree-hash snapshots to detect
-  unintended structural changes across iced version bumps.
-- **`:full`** -- When you need real GPU-rendered pixels, platform effects
-  (file dialogs, clipboard, notifications), or subscription-driven
-  behaviour. Use sparingly.
-
-
-## Backend selection
-
-The backend is resolved through a priority chain:
-
-| Priority | Source | Example |
-|---|---|---|
-| 1 | Per-test tag | `@tag backend: :headless` |
-| 2 | Module option | `use Julep.Test.Case, app: MyApp, backend: :headless` |
-| 3 | Environment variable | `JULEP_TEST_BACKEND=headless mix test` |
-| 4 | Application config | `config :julep, :test_backend, :sim` |
-| 5 | Default | `:sim` |
-
-You can use either the atom shorthand (`:sim`, `:headless`, `:full`) or
-the full module name (`Julep.Test.Backend.Sim`, etc.).
-
-```elixir
-# Override a single test
-@tag backend: :headless
-test "protocol round-trip" do
-  tree = tree()
-  assert is_map(tree)
-end
-
-# Override the whole module
-use Julep.Test.Case, app: MyApp, backend: :full
-
-# Override via env for CI
-# JULEP_TEST_BACKEND=headless mix test
-```
-
-
-## Finding and interacting with widgets
-
-### Selectors
-
-Two selector forms are supported:
-
-- **`"#id"`** -- Find by widget ID. The `#` prefix is required.
-- **`"text content"`** -- Find by text content (checks `content`, `label`,
-  `value`, `placeholder` props in that order).
-
-A third form exists for rendered backends:
-
-- **`{:point, x, y}`** -- Find by pixel coordinates (headless/full only).
-
-### Element handles
-
-`find/1` and `find!/1` return a `Julep.Test.Element` struct:
-
-```elixir
-element = find!("#my-button")
-element.id       # => "my-button"
-element.type     # => "button"
-element.props    # => %{"label" => "Click me", ...}
-element.children # => [...]
-```
-
-Use `text/1` to extract the display text from an element:
-
-```elixir
-assert find!("#count") |> text() == "42"
-```
-
-`text/1` checks props in order: `content`, `label`, `value`, `placeholder`.
-
-### Interaction functions
-
-All interaction functions accept a selector (string) as the first argument.
-They are imported automatically by `Julep.Test.Case`.
-
-| Function | Widget types | Event produced |
-|---|---|---|
-| `click(selector)` | `button` | `{:click, id}` |
-| `type_text(selector, text)` | `text_input`, `text_editor` | `{:input, id, text}` |
-| `submit(selector)` | `text_input` | `{:submit, id, value}` |
-| `toggle(selector)` | `checkbox`, `toggler` | `{:toggle, id, !current}` |
-| `select(selector, value)` | `pick_list`, `combo_box`, `radio` | `{:select, id_or_group, value}` |
-| `slide(selector, value)` | `slider`, `vertical_slider` | `{:slide, id, value}` |
-
-Interacting with the wrong widget type raises an error. For example,
-`click("#my-checkbox")` will raise because checkboxes respond to `toggle`,
-not `click`.
-
-
-## Assertions
-
-### Text assertions
-
-```elixir
-# Via assert + find! + text()
-assert find!("#count") |> text() == "42"
-
-# Via assert_text macro (finds + compares in one step)
-assert_text "#count", "42"
-```
-
-### Existence assertions
-
-```elixir
-# Widget exists
-assert_exists "#my-button"
-
-# Widget does not exist (e.g., conditionally rendered)
-assert_not_exists "#admin-panel"
-```
-
-### Model inspection
-
-```elixir
-# Access the current model directly
-assert model().count == 5
-assert model().loading == false
-```
-
-### Tree inspection
-
-```elixir
-# Get the full normalized tree
-tree = tree()
-assert tree["type"] == "column"
-```
-
-
-## Pixel regression testing
-
-Pixel snapshots catch visual regressions that tree-level assertions miss.
-They are most valuable when bumping iced versions or changing the renderer.
-
-### Golden file workflow
-
-```elixir
-# In a test using :headless or :full backend
-@tag backend: :headless
-test "counter renders correctly" do
-  click("#increment")
-  assert_snapshot("counter-at-1")
-end
-```
-
-`assert_snapshot/1` does the following:
-
-1. Calls `snapshot/1` to capture the current rendered state.
-2. Looks for a golden file at `test/snapshots/<name>.sha256`.
-3. **First run:** Creates the golden file with the SHA-256 hash. Test passes.
-4. **Subsequent runs:** Compares the current hash against the stored hash.
-   If they match, the test passes. If they differ, the test fails with a
-   diff showing both hashes.
-
-### Updating golden files
-
-When the visual change is intentional:
-
-```bash
-JULEP_UPDATE_SNAPSHOTS=1 mix test
-```
-
-This overwrites all golden files with current hashes.
-
-### What gets hashed
-
-- **Headless backend:** SHA-256 of the serialized tree JSON. This catches
-  structural changes but not pixel-level rendering differences.
-- **Full backend:** SHA-256 of the actual RGBA pixel data from the GPU.
-  This catches any visual change, including font rendering, spacing, and
-  anti-aliasing differences.
-
-### When to use pixel regression
-
-- After bumping the iced dependency version.
-- When changing the renderer's widget rendering code.
-- When modifying the theme system or color handling.
-- When you need absolute confidence that "it looks the same."
-
-
-## The simulated backend (`:sim`)
-
-The sim backend runs your app's `init/update/view` loop entirely in Elixir.
-No Rust, no Port, no external process.
-
-### How it works
-
-1. Calls `app.init(opts)` to get the initial model.
-2. Calls `app.view(model)` and normalizes the tree via `Julep.Tree.normalize/1`.
-3. On interaction (e.g., `click("#increment")`):
-   a. Finds the element in the tree by selector.
-   b. Uses `Julep.Test.EventMap` to infer the event from the widget type.
-   c. Dispatches the event through `app.update(model, event)`.
-   d. Re-renders the tree.
-4. State is held in a GenServer for the duration of the test.
-
-### EventMap inference
-
-`Julep.Test.EventMap` maps widget types to the events they would produce.
-For example, clicking a `button` with id `"inc"` infers `{:click, "inc"}`.
-Toggling a `checkbox` with `is_checked: false` infers `{:toggle, id, true}`.
-
-Full inference table:
-
-| Widget | click | type_text | submit | toggle | select | slide |
-|---|---|---|---|---|---|---|
-| `button` | `{:click, id}` | -- | -- | -- | -- | -- |
-| `checkbox` | -- | -- | -- | `{:toggle, id, !checked}` | -- | -- |
-| `toggler` | -- | -- | -- | `{:toggle, id, !toggled}` | -- | -- |
-| `radio` | -- | -- | -- | -- | `{:select, group, value}` | -- |
-| `text_input` | -- | `{:input, id, text}` | `{:submit, id, val}` | -- | -- | -- |
-| `text_editor` | -- | `{:input, id, text}` | -- | -- | -- | -- |
-| `slider` | -- | -- | -- | -- | -- | `{:slide, id, val}` |
-| `vertical_slider` | -- | -- | -- | -- | -- | `{:slide, id, val}` |
-| `pick_list` | -- | -- | -- | -- | `{:select, id, val}` | -- |
-| `combo_box` | -- | -- | -- | -- | `{:select, id, val}` | -- |
-
-### What sim can test
-
-- App logic (model transitions via `update/2`).
-- Tree structure (which widgets appear, their props, nesting).
-- Event flow (click -> update -> re-render -> assert).
-- Commands returned from `update/2` (type, target, tag -- not execution).
-
-### What sim cannot test
-
-- Wire protocol encoding/decoding (no Rust involvement).
-- Pixel rendering (no renderer).
-- Platform effects (file dialogs, clipboard, notifications).
-- Subscriptions (timer ticks, keyboard events, window events).
-- Interaction edge cases that differ from EventMap's inference.
-
-
-## The headless backend (`:headless`)
-
-The headless backend spawns the Rust renderer in headless mode and
-communicates via JSONL over stdio with a correlation-ID protocol.
-
-### How it works
-
-1. Spawns `julep_gui --headless` as a Port.
-2. Calls `app.init(opts)` and `app.view(model)` locally.
-3. Sends the initial tree to the renderer as a `snapshot` message.
-4. On interactions, sends `interact` messages with correlation IDs.
-5. The renderer responds with `interact_response` containing the events
-   that would have been generated.
-6. Events are dispatched through the local `update/view` loop.
-7. Updated trees are sent back to the renderer.
-
-### Correlation-ID protocol
-
-Every request (query, interact, snapshot_capture, reset) includes an `id`
-field. The renderer echoes this `id` in its response, allowing the
-GenServer to match responses to pending callers. This handles the
-asynchronous nature of Port communication.
-
-Example exchange:
-
-```json
-{"type":"query","id":"req_1","target":"find","selector":{"by":"id","value":"count"}}
-```
-
-```json
-{"type":"query_response","id":"req_1","target":"find","data":{"id":"count","type":"text","props":{"content":"0"},"children":[]}}
-```
-
-### Requirements
-
-Build the renderer with headless support:
-
-```bash
-cd native/julep_gui && cargo build --features headless
-```
-
-No display server is needed. The headless binary uses `Core` directly
-without creating an `iced::daemon`.
-
-### What headless adds over sim
-
-- **Protocol verification.** Proves the JSONL wire format encodes and
-  decodes correctly end-to-end.
-- **Tree round-trips.** The tree is serialized to JSON, sent to Rust,
-  parsed, and can be queried back -- verifying structural fidelity.
-- **Tree-hash snapshots.** SHA-256 hashes of the serialized tree JSON
-  provide structural regression detection.
-
-
-## The full backend (`:full`)
-
-The full backend runs a real `iced::daemon` with GPU rendering, but also
-accepts test protocol messages alongside normal snapshot/patch messages.
-
-### How it works
-
-1. Spawns `julep_gui --test` as a Port.
-2. Same local init/view loop as headless.
-3. Sends the initial tree, which opens real iced windows.
-4. Interactions are handled through the test protocol and dispatched
-   as real iced Messages.
-5. Snapshots capture actual GPU-rendered RGBA pixel data.
-
-### Requirements
-
-Build the renderer with test-mode support:
-
-```bash
-cd native/julep_gui && cargo build --features test-mode
-```
-
-For CI or headless environments:
-
-```bash
-sudo apt-get install -y xvfb mesa-vulkan-drivers
-Xvfb :99 -screen 0 1024x768x24 &
-export DISPLAY=:99
-export WINIT_UNIX_BACKEND=x11
-```
-
-### What full adds over headless
-
-- **Real GPU pixels.** Actual wgpu rendering with font rasterization,
-  anti-aliasing, and compositing.
-- **Platform effects.** File dialogs, clipboard, and notifications work.
-- **Subscriptions.** Timer ticks, keyboard events, and window events fire
-  normally.
-- **Real window lifecycle.** Windows open, close, resize, and focus.
-- **Pixel-accurate snapshots.** Screenshots capture exactly what a user
-  would see.
-
-
-## Script-based testing
-
-`.julep` scripts provide a declarative, language-agnostic format for
-describing interaction sequences. They are useful for acceptance tests,
-demos, and cross-project test sharing.
-
-### The `.julep` format
-
-A `.julep` file has a header section and an instruction section separated
-by `-----`:
-
-```
-app: MyApp.Counter
-viewport: 800x600
-theme: dark
-backend: sim
------
-click "#increment"
-click "#increment"
-expect "Count: 2"
-snapshot "counter-at-2"
-assert_text "#count" "2"
-wait 500
-```
-
-#### Header fields
-
-| Field | Required | Default | Description |
-|---|---|---|---|
-| `app` | Yes | -- | Module implementing `Julep.App` |
-| `viewport` | No | `800x600` | Viewport size as `WxH` |
-| `theme` | No | `dark` | Theme name |
-| `backend` | No | `sim` | Backend: `sim`, `headless`, or `full` |
-
-Lines starting with `#` are comments.
-
-#### Instructions
-
-| Instruction | Syntax | Description |
-|---|---|---|
-| `click` | `click "selector"` | Click a widget |
-| `type` | `type "selector" "text"` | Type text into a widget |
-| `type` (key) | `type enter` | Type a special key (`enter`, `escape`, `tab`, `backspace`) |
-| `expect` | `expect "text"` | Assert that text appears somewhere in the tree |
-| `snapshot` | `snapshot "name"` | Capture and assert a pixel snapshot |
-| `assert_text` | `assert_text "selector" "text"` | Assert specific widget has specific text |
-| `wait` | `wait 500` | Wait N milliseconds (respected in replay mode) |
-
-Quoted strings support the `"selector"` syntax. Selectors follow the same
-rules as Elixir tests (`"#id"` for IDs, `"text"` for text content).
-
-### `mix julep.script`
-
-Run `.julep` scripts as tests:
-
-```bash
-# Run all scripts in test/scripts/
-mix julep.script
-
-# Run specific scripts
-mix julep.script test/scripts/counter.julep test/scripts/todo.julep
-```
-
-The task starts the application, parses each script, runs it through
-`Julep.Test.Script.Runner`, and reports pass/fail results.
-
-### `mix julep.replay`
-
-Replay a script with real windows for demos and debugging:
-
-```bash
-mix julep.replay test/scripts/counter.julep
-```
-
-Replay mode forces the `:full` backend and respects `wait` timings, so
-you see the interactions happen in real time.
-
-### Relationship to iced's `.ice` format
-
-The `.julep` format is a superset of iced's `.ice` test script format.
-The core instructions (`click`, `type`, `expect`, `snapshot`) use the
-same syntax. Julep adds `assert_text`, `wait`, and the header section
-for app configuration.
-
-
-## Unit testing (pure functions)
-
-The Elm architecture means most of your app logic lives in pure functions.
-Test them directly without any test framework infrastructure.
+The Elm architecture means you can test most of your app with plain
+ExUnit -- no test framework needed.
 
 ### Testing `update/2`
 
@@ -494,6 +43,9 @@ end
 
 ### Testing commands from `update/2`
 
+Commands are data. Inspect their type, target, and tag without executing
+them.
+
 ```elixir
 test "submitting todo refocuses the input" do
   model = %{todos: [], input: "Buy milk"}
@@ -504,9 +56,6 @@ test "submitting todo refocuses the input" do
 end
 ```
 
-Commands are data. Inspect their type, target, and tag without executing
-them.
-
 ### Testing `view/1`
 
 ```elixir
@@ -514,6 +63,7 @@ test "view shows todo count" do
   model = %{todos: [%{id: 1, text: "Buy milk", done: false}], input: "", filter: :all}
   tree = MyApp.view(model)
 
+  # Julep.UI.find/2 walks the tree by ID (see "Tree query helpers" below)
   counter = Julep.UI.find(tree, "todo_count")
   assert counter.props["content"] =~ "1"
 end
@@ -571,6 +121,459 @@ it compares the tree. Update snapshots after intentional changes:
 
 ```bash
 JULEP_UPDATE_SNAPSHOTS=1 mix test
+```
+
+
+## The test framework
+
+Unit tests cover logic. But they can't click a button, verify a widget
+appears after an interaction, or catch a rendering regression when you bump
+iced. That's what the test framework is for.
+
+```elixir
+defmodule MyApp.CounterTest do
+  use Julep.Test.Case, app: MyApp.Counter
+
+  test "clicking increment updates counter" do
+    click("#increment")
+    assert find!("#count") |> text() == "1"
+  end
+end
+```
+
+`Julep.Test.Case` starts a session, imports all helper functions, and tears
+down on exit. The default backend is `:sim` -- no Rust binary, no display
+server, no setup.
+
+### What you get
+
+- **`find/1`** and **`find!/1`** -- locate widgets by selector, get back an
+  `Element` struct with id, type, props, and children.
+- **`click/1`**, **`type_text/2`**, **`submit/1`**, **`toggle/1`**,
+  **`select/2`**, **`slide/2`** -- interact with widgets.
+- **`assert_text/2`**, **`assert_exists/1`**, **`assert_not_exists/1`** --
+  scoped assertions.
+- **`model/0`** and **`tree/0`** -- inspect current state directly.
+- **`snapshot/1`** and **`assert_snapshot/1`** -- pixel regression.
+- **`await_async/2`** -- wait for a tagged async task to complete.
+- **`reset/0`** -- return to initial state without creating a new session.
+
+
+## Selectors, interactions, and assertions
+
+### Selectors
+
+Two selector forms:
+
+- **`"#id"`** -- find by widget ID. The `#` prefix is required.
+- **`"text content"`** -- find by text content (checks `content`, `label`,
+  `value`, `placeholder` props in that order).
+
+A third form for rendered backends:
+
+- **`{:point, x, y}`** -- find by pixel coordinates (headless/full only).
+
+### Element handles
+
+`find/1` returns nil if not found. `find!/1` raises.
+
+```elixir
+element = find!("#my-button")
+element.id       # => "my-button"
+element.type     # => "button"
+element.props    # => %{"label" => "Click me", ...}
+element.children # => [...]
+```
+
+Use `text/1` to extract display text:
+
+```elixir
+assert find!("#count") |> text() == "42"
+```
+
+`text/1` checks props in order: `content`, `label`, `value`, `placeholder`.
+
+### Interaction functions
+
+All interaction functions accept a selector string. They are imported
+automatically by `Julep.Test.Case`.
+
+| Function | Widget types | Event produced |
+|---|---|---|
+| `click(selector)` | `button` | `{:click, id}` |
+| `type_text(selector, text)` | `text_input`, `text_editor` | `{:input, id, text}` |
+| `submit(selector)` | `text_input` | `{:submit, id, value}` |
+| `toggle(selector)` | `checkbox`, `toggler` | `{:toggle, id, !current}` |
+| `select(selector, value)` | `pick_list`, `combo_box`, `radio` | `{:select, id_or_group, value}` |
+| `slide(selector, value)` | `slider`, `vertical_slider` | `{:slide, id, value}` |
+
+Interacting with the wrong widget type raises with a clear message. See
+[Debugging](#debugging-and-error-messages) for examples.
+
+### Assertions
+
+```elixir
+# Text content
+assert find!("#count") |> text() == "42"
+assert_text "#count", "42"
+
+# Existence
+assert_exists "#my-button"
+assert_not_exists "#admin-panel"
+
+# Model state
+assert model().count == 5
+
+# Full tree
+tree = tree()
+assert tree["type"] == "column"
+```
+
+
+## Choosing a backend
+
+**What are you testing?**
+
+- **App logic and tree structure?** Use `:sim`. It's the default, runs in
+  milliseconds, and needs nothing beyond Elixir. This covers the vast
+  majority of app testing.
+
+- **Bumping iced or changing the renderer?** Use `:headless`. It runs
+  your tree through the real Rust renderer, catching protocol mismatches
+  and structural drift that sim can't see. Tree-hash snapshots give you
+  a baseline to diff against.
+
+- **Platform effects, subscriptions, or pixel accuracy?** Use `:full`. Real
+  iced windows with GPU rendering. File dialogs work, timers fire,
+  screenshots capture exactly what a user would see. Use sparingly -- it's
+  the slowest backend and needs a display server.
+
+### Capabilities
+
+| | `:sim` | `:headless` | `:full` |
+|---|---|---|---|
+| **Speed** | ~ms | ~100ms | ~seconds |
+| **Rust binary** | No | Yes (`--headless`) | Yes (`--test`) |
+| **Display server** | No | No | Yes (Xvfb in CI) |
+| **Tests logic** | Yes | Yes | Yes |
+| **Tests tree structure** | Yes | Yes | Yes |
+| **Protocol round-trip** | No | Yes | Yes |
+| **Pixel snapshots** | No | Tree-hash only | Real GPU pixels |
+| **Effects** | Collected, not executed | Not executed | Executed |
+| **Subscriptions** | Not active | Not active | Active |
+| **Real windows** | No | No | Yes |
+
+### Backend selection
+
+The backend is resolved through a priority chain:
+
+| Priority | Source | Example |
+|---|---|---|
+| 1 | Per-test tag | `@tag backend: :headless` |
+| 2 | Module option | `use Julep.Test.Case, app: MyApp, backend: :headless` |
+| 3 | Environment variable | `JULEP_TEST_BACKEND=headless mix test` |
+| 4 | Application config | `config :julep, :test_backend, :sim` |
+| 5 | Default | `:sim` |
+
+Atom shorthands (`:sim`, `:headless`, `:full`) and full module names
+(`Julep.Test.Backend.Sim`, etc.) both work.
+
+```elixir
+# Override a single test
+@tag backend: :headless
+test "protocol round-trip" do
+  tree = tree()
+  assert is_map(tree)
+end
+
+# Override the whole module
+use Julep.Test.Case, app: MyApp, backend: :full
+
+# Override via env for CI
+# JULEP_TEST_BACKEND=headless mix test
+```
+
+
+## Pixel regression
+
+Pixel snapshots catch visual regressions that tree-level assertions miss.
+They are most valuable when bumping iced versions or changing the renderer.
+
+### Golden file workflow
+
+```elixir
+@tag backend: :headless
+test "counter renders correctly" do
+  click("#increment")
+  assert_snapshot("counter-at-1")
+end
+```
+
+`assert_snapshot/1`:
+
+1. Captures the current rendered state via `snapshot/1`.
+2. Looks for a golden file at `test/snapshots/<name>.sha256`.
+3. **First run:** Creates the golden file. Test passes.
+4. **Subsequent runs:** Compares hashes. Mismatch fails the test with both
+   hashes shown.
+
+### Updating golden files
+
+When the change is intentional:
+
+```bash
+JULEP_UPDATE_SNAPSHOTS=1 mix test
+```
+
+### What gets hashed
+
+- **Headless:** SHA-256 of the serialized tree JSON. Catches structural
+  changes but not pixel-level rendering differences.
+- **Full:** SHA-256 of actual RGBA pixel data from the GPU. Catches any
+  visual change, including fonts, spacing, and anti-aliasing.
+
+### When to use pixel regression
+
+- After bumping the iced dependency.
+- When changing widget rendering code in the renderer.
+- When modifying the theme system or color handling.
+- When you need absolute confidence that "it looks the same."
+
+
+## Script-based testing
+
+`.julep` scripts provide a declarative format for describing interaction
+sequences. The format is a superset of iced's
+[`.ice` test scripts](https://docs.rs/iced_test/latest/iced_test/ice/) --
+the core instructions (`click`, `type`, `expect`, `snapshot`) use the same
+syntax. Julep adds `assert_text`, `wait`, and a header section for app
+configuration.
+
+### The `.julep` format
+
+A `.julep` file has a header and an instruction section separated by
+`-----`:
+
+```
+app: MyApp.Counter
+viewport: 800x600
+theme: dark
+backend: sim
+-----
+click "#increment"
+click "#increment"
+expect "Count: 2"
+snapshot "counter-at-2"
+assert_text "#count" "2"
+wait 500
+```
+
+#### Header fields
+
+| Field | Required | Default | Description |
+|---|---|---|---|
+| `app` | Yes | -- | Module implementing `Julep.App` |
+| `viewport` | No | `800x600` | Viewport size as `WxH` |
+| `theme` | No | `dark` | Theme name |
+| `backend` | No | `sim` | Backend: `sim`, `headless`, or `full` |
+
+Lines starting with `#` are comments.
+
+#### Instructions
+
+| Instruction | Syntax | Description |
+|---|---|---|
+| `click` | `click "selector"` | Click a widget |
+| `type` | `type "selector" "text"` | Type text into a widget |
+| `type` (key) | `type enter` | Send a special key (`enter`, `escape`, `tab`, `backspace`) |
+| `expect` | `expect "text"` | Assert text appears somewhere in the tree |
+| `snapshot` | `snapshot "name"` | Capture and assert a pixel snapshot |
+| `assert_text` | `assert_text "selector" "text"` | Assert widget has specific text |
+| `wait` | `wait 500` | Pause N milliseconds (respected in replay mode) |
+
+### Running scripts
+
+```bash
+# Run all scripts in test/scripts/
+mix julep.script
+
+# Run specific scripts
+mix julep.script test/scripts/counter.julep test/scripts/todo.julep
+```
+
+### Replaying scripts
+
+```bash
+mix julep.replay test/scripts/counter.julep
+```
+
+Replay mode forces the `:full` backend and respects `wait` timings, so you
+see interactions happen in real time with real windows. Use cases:
+
+- **Debugging visual issues.** See exactly what the user sees, step by step.
+- **Demos.** Walk through a feature for stakeholders without writing a
+  separate demo app.
+- **Onboarding.** New team members can replay scripts to understand user
+  flows visually.
+- **Documentation.** Record a replay to capture screenshots or screen
+  recordings for docs.
+
+
+## Backend reference
+
+### Simulated (`:sim`)
+
+Runs your app's `init/update/view` loop entirely in Elixir. No Rust, no
+Port, no external process.
+
+On interaction (e.g., `click("#increment")`), the sim backend finds the
+element in the tree, uses `Julep.Test.EventMap` to infer the correct event
+from the widget type, dispatches it through `update/2`, and re-renders.
+
+#### EventMap inference
+
+| Widget | click | type_text | submit | toggle | select | slide |
+|---|---|---|---|---|---|---|
+| `button` | `{:click, id}` | -- | -- | -- | -- | -- |
+| `checkbox` | -- | -- | -- | `{:toggle, id, !checked}` | -- | -- |
+| `toggler` | -- | -- | -- | `{:toggle, id, !toggled}` | -- | -- |
+| `radio` | -- | -- | -- | -- | `{:select, group, value}` | -- |
+| `text_input` | -- | `{:input, id, text}` | `{:submit, id, val}` | -- | -- | -- |
+| `text_editor` | -- | `{:input, id, text}` | -- | -- | -- | -- |
+| `slider` | -- | -- | -- | -- | -- | `{:slide, id, val}` |
+| `vertical_slider` | -- | -- | -- | -- | -- | `{:slide, id, val}` |
+| `pick_list` | -- | -- | -- | -- | `{:select, id, val}` | -- |
+| `combo_box` | -- | -- | -- | -- | `{:select, id, val}` | -- |
+
+#### What sim can test
+
+- App logic (model transitions).
+- Tree structure (which widgets appear, their props, nesting).
+- Event flow (interact -> update -> re-render -> assert).
+- Commands returned from `update/2` (type, target, tag -- not execution).
+
+#### What sim cannot test
+
+- Wire protocol encoding/decoding (no Rust involvement).
+- Pixel rendering.
+- Platform effects (file dialogs, clipboard, notifications).
+- Subscriptions (timers, keyboard, window events).
+
+### Headless (`:headless`)
+
+Spawns the Rust renderer in headless mode and communicates via JSONL with
+correlation IDs for request/response matching.
+
+**Requirements:**
+
+```bash
+cd native/julep_gui && cargo build --features headless
+```
+
+No display server needed.
+
+**What it adds over sim:**
+
+- **Protocol verification.** The tree is serialized, sent to Rust, parsed,
+  and queried back -- proving the wire format works end-to-end.
+- **Tree-hash snapshots.** SHA-256 hashes of the tree JSON provide
+  structural regression detection.
+
+### Full (`:full`)
+
+Runs a real `iced::daemon` with GPU rendering, while also accepting test
+protocol messages.
+
+**Requirements:**
+
+```bash
+cd native/julep_gui && cargo build --features test-mode
+```
+
+For CI or headless environments:
+
+```bash
+sudo apt-get install -y xvfb mesa-vulkan-drivers
+Xvfb :99 -screen 0 1024x768x24 &
+export DISPLAY=:99
+export WINIT_UNIX_BACKEND=x11
+```
+
+**What it adds over headless:**
+
+- **Real GPU pixels.** wgpu rendering with font rasterization and compositing.
+- **Platform effects.** File dialogs, clipboard, and notifications work.
+- **Subscriptions.** Timers, keyboard, and window events fire normally.
+- **Real window lifecycle.** Windows open, close, resize, and focus.
+- **Pixel-accurate snapshots.** Screenshots capture exactly what a user sees.
+
+
+## Debugging and error messages
+
+### Element not found
+
+```elixir
+find!("#nonexistent")
+# ** (RuntimeError) Element not found: "#nonexistent"
+```
+
+**Fix:** Check the selector. Use `tree()` to inspect the current tree and
+verify the widget's ID or text content:
+
+```elixir
+tree() |> IO.inspect(label: "current tree")
+```
+
+### Wrong interaction type
+
+```elixir
+click("#my-checkbox")
+# ** (RuntimeError) cannot click a checkbox widget -- use toggle/1 instead
+```
+
+**Fix:** Use the correct interaction function. Checkboxes respond to
+`toggle/1`, not `click/1`. See the
+[interaction table](#interaction-functions) for the mapping.
+
+### Snapshot on sim backend
+
+```elixir
+assert_snapshot("my-snapshot")
+# ** (RuntimeError) pixel snapshots require the :headless or :full backend --
+#    the :sim backend only tests logic and tree structure
+```
+
+**Fix:** Tag the test with `@tag backend: :headless` or `:full`.
+
+### Headless binary not built
+
+```
+** (EXIT) {:renderer_exited, 1}
+```
+
+**Fix:** Build the renderer with the headless feature:
+
+```bash
+cd native/julep_gui && cargo build --features headless
+```
+
+### Inspecting state when a test fails
+
+When an assertion fails and you need to understand why, `model/0` and
+`tree/0` are your best tools:
+
+```elixir
+test "debugging a failing test" do
+  click("#increment")
+
+  # What does the model look like?
+  IO.inspect(model(), label: "model after click")
+
+  # What's in the tree?
+  IO.inspect(tree(), label: "tree after click")
+
+  assert find!("#count") |> text() == "1"
+end
 ```
 
 
@@ -648,8 +651,8 @@ end
 
 ### Testing async workflows
 
-When `update/2` returns an async command, use `await_async/2` to wait
-for it to complete:
+When `update/2` returns an async command, use `await_async/2` to wait for
+completion:
 
 ```elixir
 test "fetching data loads results" do
@@ -662,8 +665,8 @@ test "fetching data loads results" do
 end
 ```
 
-In the sim backend, `await_async` returns immediately (async commands
-are collected but not executed). Test the command shape instead:
+In the sim backend, `await_async` returns immediately (async commands are
+collected but not executed). Test the command shape instead:
 
 ```elixir
 test "clicking fetch starts async load" do
@@ -677,8 +680,7 @@ end
 
 ### Multi-window testing
 
-Multi-window apps can be tested at any backend level. The sim backend
-tracks the full tree including window nodes:
+The sim backend tracks the full tree including window nodes:
 
 ```elixir
 test "opening settings window" do
@@ -700,16 +702,15 @@ end
 
 ### Custom selectors
 
-For cases where `#id` and text selectors are not enough, access the
-session directly:
+For cases where `#id` and text selectors aren't enough, access the session
+directly:
 
 ```elixir
 test "custom query" do
-  session = session()
-  tree = Julep.Test.Session.tree(session)
+  tree = tree()
 
-  # Manual tree traversal
-  buttons = collect_nodes(tree, fn n -> n["type"] == "button" end)
+  # Julep.UI.find_all/2 walks the tree depth-first with a predicate
+  buttons = Julep.UI.find_all(tree, fn n -> n.type == "button" end)
   assert length(buttons) == 3
 end
 ```
