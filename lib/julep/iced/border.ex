@@ -43,7 +43,12 @@ defmodule Julep.Iced.Border do
   @doc "Creates a per-corner radius map."
   @spec radius(number(), number(), number(), number()) :: map()
   def radius(top_left, top_right, bottom_right, bottom_left) do
-    %{top_left: top_left, top_right: top_right, bottom_right: bottom_right, bottom_left: bottom_left}
+    %{
+      top_left: top_left,
+      top_right: top_right,
+      bottom_right: bottom_right,
+      bottom_left: bottom_left
+    }
   end
 
   @doc "Encodes a border to the wire format. Per-corner radius maps are converted to string keys."

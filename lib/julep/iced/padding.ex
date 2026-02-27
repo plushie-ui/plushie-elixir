@@ -11,7 +11,10 @@ defmodule Julep.Iced.Padding do
   `encode/1` always normalises to the full four-side map.
   """
 
-  @type t :: number() | {number(), number()} | %{top: number(), right: number(), bottom: number(), left: number()}
+  @type t ::
+          number()
+          | {number(), number()}
+          | %{top: number(), right: number(), bottom: number(), left: number()}
 
   @doc """
   Normalises a padding value to the canonical four-side map with string keys.

@@ -5,8 +5,12 @@ use serde_json::Value;
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum IncomingMessage {
-    Snapshot { tree: TreeNode },
-    Patch { ops: Vec<PatchOp> },
+    Snapshot {
+        tree: TreeNode,
+    },
+    Patch {
+        ops: Vec<PatchOp>,
+    },
     EffectRequest {
         id: String,
         kind: String,
@@ -529,7 +533,8 @@ mod tests {
 
     #[test]
     fn deserialize_snapshot() {
-        let json = r#"{"type":"snapshot","tree":{"id":"root","type":"column","props":{},"children":[]}}"#;
+        let json =
+            r#"{"type":"snapshot","tree":{"id":"root","type":"column","props":{},"children":[]}}"#;
         let msg: IncomingMessage = serde_json::from_str(json).unwrap();
         match msg {
             IncomingMessage::Snapshot { tree } => {
@@ -680,7 +685,11 @@ mod tests {
         let json = r#"{"type":"window_op","op":"resize","window_id":"main","settings":{"width":800,"height":600}}"#;
         let msg: IncomingMessage = serde_json::from_str(json).unwrap();
         match msg {
-            IncomingMessage::WindowOp { op, window_id, settings } => {
+            IncomingMessage::WindowOp {
+                op,
+                window_id,
+                settings,
+            } => {
                 assert_eq!(op, "resize");
                 assert_eq!(window_id, "main");
                 assert_eq!(settings["width"], 800);
@@ -695,7 +704,11 @@ mod tests {
         let json = r#"{"type":"window_op","op":"close","window_id":"popup"}"#;
         let msg: IncomingMessage = serde_json::from_str(json).unwrap();
         match msg {
-            IncomingMessage::WindowOp { op, window_id, settings } => {
+            IncomingMessage::WindowOp {
+                op,
+                window_id,
+                settings,
+            } => {
                 assert_eq!(op, "close");
                 assert_eq!(window_id, "popup");
                 assert!(settings.is_null());
@@ -779,7 +792,8 @@ mod tests {
 
     #[test]
     fn patch_op_insert_child() {
-        let json = r#"{"op":"insert_child","path":[],"index":0,"node":{"id":"new","type":"button"}}"#;
+        let json =
+            r#"{"op":"insert_child","path":[],"index":0,"node":{"id":"new","type":"button"}}"#;
         let op: PatchOp = serde_json::from_str(json).unwrap();
         assert_eq!(op.op, "insert_child");
         assert!(op.path.is_empty());
@@ -872,7 +886,13 @@ mod tests {
 
     #[test]
     fn serialize_key_press_with_modifiers() {
-        let mods = KeyModifiers { shift: true, ctrl: false, alt: true, logo: false, command: false };
+        let mods = KeyModifiers {
+            shift: true,
+            ctrl: false,
+            alt: true,
+            logo: false,
+            command: false,
+        };
         let evt = OutgoingEvent::key_press("keys".to_string(), "a".to_string(), mods);
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "key_press");
@@ -888,7 +908,13 @@ mod tests {
 
     #[test]
     fn serialize_key_release() {
-        let mods = KeyModifiers { shift: false, ctrl: false, alt: false, logo: false, command: false };
+        let mods = KeyModifiers {
+            shift: false,
+            ctrl: false,
+            alt: false,
+            logo: false,
+            command: false,
+        };
         let evt = OutgoingEvent::key_release("keys".to_string(), "Escape".to_string(), mods);
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "key_release");
@@ -897,7 +923,13 @@ mod tests {
 
     #[test]
     fn serialize_modifiers_changed() {
-        let mods = KeyModifiers { shift: true, ctrl: true, alt: false, logo: false, command: false };
+        let mods = KeyModifiers {
+            shift: true,
+            ctrl: true,
+            alt: false,
+            logo: false,
+            command: false,
+        };
         let evt = OutgoingEvent::modifiers_changed("mods".to_string(), mods);
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "modifiers_changed");
@@ -1043,14 +1075,16 @@ mod tests {
 
     #[test]
     fn serialize_window_close_requested() {
-        let evt = OutgoingEvent::window_close_requested("win_events".to_string(), "main".to_string());
+        let evt =
+            OutgoingEvent::window_close_requested("win_events".to_string(), "main".to_string());
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "window_close_requested");
     }
 
     #[test]
     fn serialize_window_moved() {
-        let evt = OutgoingEvent::window_moved("win_events".to_string(), "main".to_string(), 50.0, 100.0);
+        let evt =
+            OutgoingEvent::window_moved("win_events".to_string(), "main".to_string(), 50.0, 100.0);
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "window_moved");
         assert_eq!(json["x"], 50.0);
@@ -1059,7 +1093,12 @@ mod tests {
 
     #[test]
     fn serialize_window_resized() {
-        let evt = OutgoingEvent::window_resized("win_events".to_string(), "main".to_string(), 1920.0, 1080.0);
+        let evt = OutgoingEvent::window_resized(
+            "win_events".to_string(),
+            "main".to_string(),
+            1920.0,
+            1080.0,
+        );
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "window_resized");
         assert_eq!(json["width"], 1920.0);
@@ -1089,7 +1128,11 @@ mod tests {
 
     #[test]
     fn serialize_file_hovered() {
-        let evt = OutgoingEvent::file_hovered("win_events".to_string(), "main".to_string(), "/tmp/a.txt".to_string());
+        let evt = OutgoingEvent::file_hovered(
+            "win_events".to_string(),
+            "main".to_string(),
+            "/tmp/a.txt".to_string(),
+        );
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "file_hovered");
         assert_eq!(json["path"], "/tmp/a.txt");
@@ -1097,7 +1140,11 @@ mod tests {
 
     #[test]
     fn serialize_file_dropped() {
-        let evt = OutgoingEvent::file_dropped("win_events".to_string(), "main".to_string(), "/tmp/b.txt".to_string());
+        let evt = OutgoingEvent::file_dropped(
+            "win_events".to_string(),
+            "main".to_string(),
+            "/tmp/b.txt".to_string(),
+        );
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "file_dropped");
         assert_eq!(json["path"], "/tmp/b.txt");
@@ -1176,7 +1223,11 @@ mod tests {
 
     #[test]
     fn serialize_pane_dragged() {
-        let evt = OutgoingEvent::pane_dragged("pg1".to_string(), "pane_a".to_string(), "pane_b".to_string());
+        let evt = OutgoingEvent::pane_dragged(
+            "pg1".to_string(),
+            "pane_a".to_string(),
+            "pane_b".to_string(),
+        );
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "pane_dragged");
         assert_eq!(json["pane"], "pane_a");
@@ -1259,7 +1310,13 @@ mod tests {
 
     #[test]
     fn outgoing_event_roundtrip_all_fields_present() {
-        let mods = KeyModifiers { shift: true, ctrl: false, alt: false, logo: false, command: true };
+        let mods = KeyModifiers {
+            shift: true,
+            ctrl: false,
+            alt: false,
+            logo: false,
+            command: true,
+        };
         let evt = OutgoingEvent::key_press("kb".to_string(), "Enter".to_string(), mods);
         let serialized = serde_json::to_string(&evt).unwrap();
         let parsed: Value = serde_json::from_str(&serialized).unwrap();

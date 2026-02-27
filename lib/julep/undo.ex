@@ -69,11 +69,7 @@ defmodule Julep.Undo do
 
     case maybe_coalesce(u, command, now) do
       {:coalesce, merged_entry} ->
-        %{u |
-          current: new_model,
-          undo_stack: [merged_entry | tl(u.undo_stack)],
-          redo_stack: []
-        }
+        %{u | current: new_model, undo_stack: [merged_entry | tl(u.undo_stack)], redo_stack: []}
 
       :no_coalesce ->
         entry = %{
@@ -84,11 +80,7 @@ defmodule Julep.Undo do
           timestamp: now
         }
 
-        %{u |
-          current: new_model,
-          undo_stack: [entry | u.undo_stack],
-          redo_stack: []
-        }
+        %{u | current: new_model, undo_stack: [entry | u.undo_stack], redo_stack: []}
     end
   end
 
@@ -99,11 +91,7 @@ defmodule Julep.Undo do
   def undo(%__MODULE__{undo_stack: [entry | rest]} = u) do
     old_model = entry.undo_fn.(u.current)
 
-    %{u |
-      current: old_model,
-      undo_stack: rest,
-      redo_stack: [entry | u.redo_stack]
-    }
+    %{u | current: old_model, undo_stack: rest, redo_stack: [entry | u.redo_stack]}
   end
 
   @doc "Redo the last undone command. Returns unchanged if the redo stack is empty."
@@ -113,11 +101,7 @@ defmodule Julep.Undo do
   def redo(%__MODULE__{redo_stack: [entry | rest]} = u) do
     new_model = entry.apply_fn.(u.current)
 
-    %{u |
-      current: new_model,
-      redo_stack: rest,
-      undo_stack: [entry | u.undo_stack]
-    }
+    %{u | current: new_model, redo_stack: rest, undo_stack: [entry | u.undo_stack]}
   end
 
   @doc "Return the current model."
@@ -147,10 +131,11 @@ defmodule Julep.Undo do
     if coalesce_key != nil and coalesce_key == top.coalesce and now - top.timestamp <= window do
       # Compose apply: old apply then new apply.
       # Compose undo: new undo then old undo (reverse order).
-      merged = %{top |
-        apply_fn: fn model -> command.apply.(top.apply_fn.(model)) end,
-        undo_fn: fn model -> top.undo_fn.(command.undo.(model)) end,
-        timestamp: now
+      merged = %{
+        top
+        | apply_fn: fn model -> command.apply.(top.apply_fn.(model)) end,
+          undo_fn: fn model -> top.undo_fn.(command.undo.(model)) end,
+          timestamp: now
       }
 
       {:coalesce, merged}

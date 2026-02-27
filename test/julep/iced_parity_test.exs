@@ -115,9 +115,14 @@ defmodule Julep.IcedParityTest do
 
     test "supports all mouse event props" do
       props = %{
-        on_press: :p, on_release: :r, on_right_press: :rp,
-        on_middle_press: :mp, on_enter: :enter, on_exit: :exit
+        on_press: :p,
+        on_release: :r,
+        on_right_press: :rp,
+        on_middle_press: :mp,
+        on_enter: :enter,
+        on_exit: :exit
       }
+
       node = Iced.mouse_area("ma1", props)
       assert node.props["on_press"] == :p
       assert node.props["on_right_press"] == :rp
@@ -177,6 +182,7 @@ defmodule Julep.IcedParityTest do
         %{text: " and ", weight: :normal},
         %{text: "italic", style: :italic}
       ]
+
       node = Iced.rich_text("rt1", %{spans: spans, width: :fill})
       assert node.props["spans"] == spans
       assert node.props["width"] == :fill
@@ -257,15 +263,17 @@ defmodule Julep.IcedParityTest do
     end
 
     test "includes warning alongside all other palette colors" do
-      result = Theme.custom("Full",
-        base: :dark,
-        background: "#1a1b26",
-        text: "#c0caf5",
-        primary: "#7aa2f7",
-        success: "#9ece6a",
-        danger: "#f7768e",
-        warning: "#e0af68"
-      )
+      result =
+        Theme.custom("Full",
+          base: :dark,
+          background: "#1a1b26",
+          text: "#c0caf5",
+          primary: "#7aa2f7",
+          success: "#9ece6a",
+          danger: "#f7768e",
+          warning: "#e0af68"
+        )
+
       assert result["warning"] == "#e0af68"
       assert result["success"] == "#9ece6a"
       assert result["danger"] == "#f7768e"

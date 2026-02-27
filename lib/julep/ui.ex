@@ -209,12 +209,25 @@ defmodule Julep.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Julep.UI.__build_node__("column", nil, [], children, {unquote(caller_mod), unquote(caller_line)})
+
+          Julep.UI.__build_node__(
+            "column",
+            nil,
+            [],
+            children,
+            {unquote(caller_mod), unquote(caller_line)}
+          )
         end
 
       opts ->
         quote do
-          Julep.UI.__build_node__("column", nil, unquote(opts), [], {unquote(caller_mod), unquote(caller_line)})
+          Julep.UI.__build_node__(
+            "column",
+            nil,
+            unquote(opts),
+            [],
+            {unquote(caller_mod), unquote(caller_line)}
+          )
         end
     end
   end
@@ -227,7 +240,14 @@ defmodule Julep.UI do
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Julep.UI.__build_node__("column", nil, unquote(opts), children, {unquote(caller_mod), unquote(caller_line)})
+
+      Julep.UI.__build_node__(
+        "column",
+        nil,
+        unquote(opts),
+        children,
+        {unquote(caller_mod), unquote(caller_line)}
+      )
     end
   end
 
@@ -257,12 +277,25 @@ defmodule Julep.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Julep.UI.__build_node__("row", nil, [], children, {unquote(caller_mod), unquote(caller_line)})
+
+          Julep.UI.__build_node__(
+            "row",
+            nil,
+            [],
+            children,
+            {unquote(caller_mod), unquote(caller_line)}
+          )
         end
 
       opts ->
         quote do
-          Julep.UI.__build_node__("row", nil, unquote(opts), [], {unquote(caller_mod), unquote(caller_line)})
+          Julep.UI.__build_node__(
+            "row",
+            nil,
+            unquote(opts),
+            [],
+            {unquote(caller_mod), unquote(caller_line)}
+          )
         end
     end
   end
@@ -275,7 +308,14 @@ defmodule Julep.UI do
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Julep.UI.__build_node__("row", nil, unquote(opts), children, {unquote(caller_mod), unquote(caller_line)})
+
+      Julep.UI.__build_node__(
+        "row",
+        nil,
+        unquote(opts),
+        children,
+        {unquote(caller_mod), unquote(caller_line)}
+      )
     end
   end
 
@@ -381,12 +421,25 @@ defmodule Julep.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Julep.UI.__build_node__("stack", nil, [], children, {unquote(caller_mod), unquote(caller_line)})
+
+          Julep.UI.__build_node__(
+            "stack",
+            nil,
+            [],
+            children,
+            {unquote(caller_mod), unquote(caller_line)}
+          )
         end
 
       opts ->
         quote do
-          Julep.UI.__build_node__("stack", nil, unquote(opts), [], {unquote(caller_mod), unquote(caller_line)})
+          Julep.UI.__build_node__(
+            "stack",
+            nil,
+            unquote(opts),
+            [],
+            {unquote(caller_mod), unquote(caller_line)}
+          )
         end
     end
   end
@@ -399,7 +452,14 @@ defmodule Julep.UI do
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Julep.UI.__build_node__("stack", nil, unquote(opts), children, {unquote(caller_mod), unquote(caller_line)})
+
+      Julep.UI.__build_node__(
+        "stack",
+        nil,
+        unquote(opts),
+        children,
+        {unquote(caller_mod), unquote(caller_line)}
+      )
     end
   end
 
@@ -436,12 +496,25 @@ defmodule Julep.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Julep.UI.__build_node__("grid", nil, [], children, {unquote(caller_mod), unquote(caller_line)})
+
+          Julep.UI.__build_node__(
+            "grid",
+            nil,
+            [],
+            children,
+            {unquote(caller_mod), unquote(caller_line)}
+          )
         end
 
       opts ->
         quote do
-          Julep.UI.__build_node__("grid", nil, unquote(opts), [], {unquote(caller_mod), unquote(caller_line)})
+          Julep.UI.__build_node__(
+            "grid",
+            nil,
+            unquote(opts),
+            [],
+            {unquote(caller_mod), unquote(caller_line)}
+          )
         end
     end
   end
@@ -454,7 +527,14 @@ defmodule Julep.UI do
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Julep.UI.__build_node__("grid", nil, unquote(opts), children, {unquote(caller_mod), unquote(caller_line)})
+
+      Julep.UI.__build_node__(
+        "grid",
+        nil,
+        unquote(opts),
+        children,
+        {unquote(caller_mod), unquote(caller_line)}
+      )
     end
   end
 
@@ -485,12 +565,25 @@ defmodule Julep.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Julep.UI.__build_node__("keyed_column", nil, [], children, {unquote(caller_mod), unquote(caller_line)})
+
+          Julep.UI.__build_node__(
+            "keyed_column",
+            nil,
+            [],
+            children,
+            {unquote(caller_mod), unquote(caller_line)}
+          )
         end
 
       opts ->
         quote do
-          Julep.UI.__build_node__("keyed_column", nil, unquote(opts), [], {unquote(caller_mod), unquote(caller_line)})
+          Julep.UI.__build_node__(
+            "keyed_column",
+            nil,
+            unquote(opts),
+            [],
+            {unquote(caller_mod), unquote(caller_line)}
+          )
         end
     end
   end
@@ -503,7 +596,14 @@ defmodule Julep.UI do
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Julep.UI.__build_node__("keyed_column", nil, unquote(opts), children, {unquote(caller_mod), unquote(caller_line)})
+
+      Julep.UI.__build_node__(
+        "keyed_column",
+        nil,
+        unquote(opts),
+        children,
+        {unquote(caller_mod), unquote(caller_line)}
+      )
     end
   end
 
@@ -535,12 +635,25 @@ defmodule Julep.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Julep.UI.__build_node__("responsive", nil, [], children, {unquote(caller_mod), unquote(caller_line)})
+
+          Julep.UI.__build_node__(
+            "responsive",
+            nil,
+            [],
+            children,
+            {unquote(caller_mod), unquote(caller_line)}
+          )
         end
 
       opts ->
         quote do
-          Julep.UI.__build_node__("responsive", nil, unquote(opts), [], {unquote(caller_mod), unquote(caller_line)})
+          Julep.UI.__build_node__(
+            "responsive",
+            nil,
+            unquote(opts),
+            [],
+            {unquote(caller_mod), unquote(caller_line)}
+          )
         end
     end
   end
@@ -553,7 +666,14 @@ defmodule Julep.UI do
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Julep.UI.__build_node__("responsive", nil, unquote(opts), children, {unquote(caller_mod), unquote(caller_line)})
+
+      Julep.UI.__build_node__(
+        "responsive",
+        nil,
+        unquote(opts),
+        children,
+        {unquote(caller_mod), unquote(caller_line)}
+      )
     end
   end
 
@@ -777,7 +897,13 @@ defmodule Julep.UI do
     caller_line = __CALLER__.line
 
     quote do
-      Julep.UI.__build_node__("space", nil, unquote(opts), [], {unquote(caller_mod), unquote(caller_line)})
+      Julep.UI.__build_node__(
+        "space",
+        nil,
+        unquote(opts),
+        [],
+        {unquote(caller_mod), unquote(caller_line)}
+      )
     end
   end
 
@@ -797,6 +923,7 @@ defmodule Julep.UI do
   @spec button(String.t(), String.t(), keyword()) :: map()
   def button(id, label, opts \\ []) do
     base_props = %{"label" => label}
+
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
@@ -817,6 +944,7 @@ defmodule Julep.UI do
   @spec text_input(String.t(), String.t(), keyword()) :: map()
   def text_input(id, value, opts \\ []) do
     base_props = %{"value" => value}
+
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
@@ -837,6 +965,7 @@ defmodule Julep.UI do
   @spec checkbox(String.t(), boolean(), keyword()) :: map()
   def checkbox(id, checked, opts \\ []) do
     base_props = %{"checked" => checked}
+
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
@@ -866,12 +995,15 @@ defmodule Julep.UI do
       content = unquote(content)
       opts = unquote(opts)
       base_props = %{"content" => content}
+
       extra_props =
         opts
         |> Keyword.drop([:children, :id, :do])
         |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
 
-      id = Keyword.get(opts, :id) || Julep.UI.__auto_id__(unquote(caller_mod), unquote(caller_line))
+      id =
+        Keyword.get(opts, :id) || Julep.UI.__auto_id__(unquote(caller_mod), unquote(caller_line))
+
       %{id: id, type: "text", props: Map.merge(base_props, extra_props), children: []}
     end
   end
@@ -889,12 +1021,15 @@ defmodule Julep.UI do
 
     quote do
       opts = unquote(opts)
+
       props =
         opts
         |> Keyword.drop([:children, :id, :do])
         |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
 
-      id = Keyword.get(opts, :id) || Julep.UI.__auto_id__(unquote(caller_mod), unquote(caller_line))
+      id =
+        Keyword.get(opts, :id) || Julep.UI.__auto_id__(unquote(caller_mod), unquote(caller_line))
+
       %{id: id, type: "rule", props: props, children: []}
     end
   end
@@ -920,12 +1055,15 @@ defmodule Julep.UI do
       value = unquote(value)
       opts = unquote(opts)
       base_props = %{"range" => Tuple.to_list(range), "value" => value}
+
       extra_props =
         opts
         |> Keyword.drop([:children, :id, :do])
         |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
 
-      id = Keyword.get(opts, :id) || Julep.UI.__auto_id__(unquote(caller_mod), unquote(caller_line))
+      id =
+        Keyword.get(opts, :id) || Julep.UI.__auto_id__(unquote(caller_mod), unquote(caller_line))
+
       %{id: id, type: "progress_bar", props: Map.merge(base_props, extra_props), children: []}
     end
   end
@@ -946,6 +1084,7 @@ defmodule Julep.UI do
   @spec toggler(String.t(), boolean(), keyword()) :: map()
   def toggler(id, is_toggled, opts \\ []) do
     base_props = %{"is_toggled" => is_toggled}
+
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
@@ -968,6 +1107,7 @@ defmodule Julep.UI do
   @spec radio(String.t(), String.t(), String.t() | nil, keyword()) :: map()
   def radio(id, value, selected, opts \\ []) do
     base_props = %{"value" => value, "selected" => selected}
+
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
@@ -991,6 +1131,7 @@ defmodule Julep.UI do
   @spec slider(String.t(), {number(), number()}, number(), keyword()) :: map()
   def slider(id, range, value, opts \\ []) do
     base_props = %{"range" => Tuple.to_list(range), "value" => value}
+
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
@@ -1011,6 +1152,7 @@ defmodule Julep.UI do
   @spec vertical_slider(String.t(), {number(), number()}, number(), keyword()) :: map()
   def vertical_slider(id, range, value, opts \\ []) do
     base_props = %{"range" => Tuple.to_list(range), "value" => value}
+
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
@@ -1029,6 +1171,7 @@ defmodule Julep.UI do
   @spec pick_list(String.t(), [String.t()], String.t() | nil, keyword()) :: map()
   def pick_list(id, options, selected, opts \\ []) do
     base_props = %{"options" => options, "selected" => selected}
+
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
@@ -1047,6 +1190,7 @@ defmodule Julep.UI do
   @spec combo_box(String.t(), [String.t()], String.t(), keyword()) :: map()
   def combo_box(id, options, value, opts \\ []) do
     base_props = %{"options" => options, "value" => value}
+
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
@@ -1065,6 +1209,7 @@ defmodule Julep.UI do
   @spec text_editor(String.t(), String.t(), keyword()) :: map()
   def text_editor(id, content, opts \\ []) do
     base_props = %{"content" => content}
+
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
@@ -1087,6 +1232,7 @@ defmodule Julep.UI do
   @spec image(String.t(), String.t(), keyword()) :: map()
   def image(id, source, opts \\ []) do
     base_props = %{"source" => source}
+
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
@@ -1105,6 +1251,7 @@ defmodule Julep.UI do
   @spec svg(String.t(), String.t(), keyword()) :: map()
   def svg(id, source, opts \\ []) do
     base_props = %{"source" => source}
+
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
@@ -1130,12 +1277,15 @@ defmodule Julep.UI do
       content = unquote(content)
       opts = unquote(opts)
       base_props = %{"content" => content}
+
       extra_props =
         opts
         |> Keyword.drop([:children, :id, :do])
         |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
 
-      id = Keyword.get(opts, :id) || Julep.UI.__auto_id__(unquote(caller_mod), unquote(caller_line))
+      id =
+        Keyword.get(opts, :id) || Julep.UI.__auto_id__(unquote(caller_mod), unquote(caller_line))
+
       %{id: id, type: "markdown", props: Map.merge(base_props, extra_props), children: []}
     end
   end

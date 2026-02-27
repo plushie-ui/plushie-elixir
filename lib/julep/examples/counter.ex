@@ -13,6 +13,7 @@ defmodule Julep.Examples.Counter do
     window "main", title: "Counter" do
       column padding: 16, spacing: 8 do
         text("Count: #{model.count}")
+
         row spacing: 8 do
           button("increment", "+")
           button("decrement", "-")

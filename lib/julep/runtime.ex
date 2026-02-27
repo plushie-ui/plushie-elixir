@@ -82,7 +82,7 @@ defmodule Julep.Runtime do
   def init(opts) do
     Process.flag(:trap_exit, true)
 
-    app    = Keyword.fetch!(opts, :app)
+    app = Keyword.fetch!(opts, :app)
     bridge = Keyword.fetch!(opts, :bridge)
 
     # App opts can be passed explicitly via :app_opts, or as remaining keys.
@@ -91,7 +91,15 @@ defmodule Julep.Runtime do
     # 1. Initialize app model.
     {model, commands} = unwrap_result(app.init(app_opts))
 
-    state = %{app: app, model: model, bridge: bridge, tree: nil, init_commands: commands, subscriptions: %{}, windows: MapSet.new()}
+    state = %{
+      app: app,
+      model: model,
+      bridge: bridge,
+      tree: nil,
+      init_commands: commands,
+      subscriptions: %{},
+      windows: MapSet.new()
+    }
 
     # Defer snapshot send to handle_continue so the supervisor can start
     # Bridge before we try to send to it.
@@ -339,7 +347,10 @@ defmodule Julep.Runtime do
   @spec execute_command(Julep.Command.t(), pid() | atom() | nil) :: :ok
   defp execute_command(%Julep.Command{type: :none}, _bridge), do: :ok
 
-  defp execute_command(%Julep.Command{type: :done, payload: %{value: value, mapper: mapper}}, _bridge) do
+  defp execute_command(
+         %Julep.Command{type: :done, payload: %{value: value, mapper: mapper}},
+         _bridge
+       ) do
     event = mapper.(value)
     send(self(), {:renderer_event, event})
     :ok
@@ -356,12 +367,18 @@ defmodule Julep.Runtime do
     :ok
   end
 
-  defp execute_command(%Julep.Command{type: :send_after, payload: %{delay: delay, event: event}}, _bridge) do
+  defp execute_command(
+         %Julep.Command{type: :send_after, payload: %{delay: delay, event: event}},
+         _bridge
+       ) do
     Process.send_after(self(), {:send_after_event, event}, delay)
     :ok
   end
 
-  defp execute_command(%Julep.Command{type: :effect_request, payload: %{id: id, kind: kind, opts: opts}}, bridge) do
+  defp execute_command(
+         %Julep.Command{type: :effect_request, payload: %{id: id, kind: kind, opts: opts}},
+         bridge
+       ) do
     if bridge do
       Julep.Bridge.send_effect_request(bridge, id, kind, opts)
     else
@@ -416,7 +433,10 @@ defmodule Julep.Runtime do
     :ok
   end
 
-  defp execute_command(%Julep.Command{type: :window_op, payload: %{op: op, window_id: window_id} = payload}, bridge) do
+  defp execute_command(
+         %Julep.Command{type: :window_op, payload: %{op: op, window_id: window_id} = payload},
+         bridge
+       ) do
     if bridge do
       settings = Map.drop(payload, [:op, :window_id])
       Julep.Bridge.send_window_op(bridge, op, window_id, settings)
@@ -425,7 +445,10 @@ defmodule Julep.Runtime do
     :ok
   end
 
-  defp execute_command(%Julep.Command{type: :window_query, payload: %{op: op, window_id: window_id} = payload}, bridge) do
+  defp execute_command(
+         %Julep.Command{type: :window_query, payload: %{op: op, window_id: window_id} = payload},
+         bridge
+       ) do
     if bridge do
       settings = Map.drop(payload, [:op, :window_id])
       Julep.Bridge.send_window_op(bridge, op, window_id, settings)

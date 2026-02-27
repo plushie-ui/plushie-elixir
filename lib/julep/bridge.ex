@@ -105,20 +105,20 @@ defmodule Julep.Bridge do
   @impl true
   def init(opts) do
     renderer_path = Keyword.fetch!(opts, :renderer_path)
-    runtime       = Keyword.fetch!(opts, :runtime)
+    runtime = Keyword.fetch!(opts, :runtime)
 
     state = %__MODULE__{
-      port:          nil,
-      runtime:       runtime,
+      port: nil,
+      runtime: runtime,
       renderer_path: renderer_path,
-      buffer:        "",
-      max_restarts:  Keyword.get(opts, :max_restarts, 5),
+      buffer: "",
+      max_restarts: Keyword.get(opts, :max_restarts, 5),
       restart_count: 0,
       restart_delay: Keyword.get(opts, :restart_delay, 100)
     }
 
     case open_port(state) do
-      {:ok, state}     -> {:ok, state}
+      {:ok, state} -> {:ok, state}
       {:error, reason} -> {:stop, reason}
     end
   end
@@ -175,8 +175,8 @@ defmodule Julep.Bridge do
   # Complete line -- flush any buffered prefix and dispatch.
   @impl true
   def handle_info({port, {:data, {:eol, chunk}}}, %{port: port} = state) do
-    line   = state.buffer <> to_string(chunk)
-    state  = dispatch_line(line, %{state | buffer: ""})
+    line = state.buffer <> to_string(chunk)
+    state = dispatch_line(line, %{state | buffer: ""})
     {:noreply, state}
   end
 
@@ -232,12 +232,13 @@ defmodule Julep.Bridge do
     path = state.renderer_path
 
     if File.exists?(path) do
-      port = Port.open({:spawn_executable, path}, [
-        :binary,
-        :exit_status,
-        :use_stdio,
-        {:line, 65_536}
-      ])
+      port =
+        Port.open({:spawn_executable, path}, [
+          :binary,
+          :exit_status,
+          :use_stdio,
+          {:line, 65_536}
+        ])
 
       {:ok, %{state | port: port, buffer: ""}}
     else

@@ -32,7 +32,8 @@ defmodule Julep.MixProject do
       links: %{
         "GitHub" => "https://github.com/julep-ui/julep"
       },
-      files: ~w(lib native/julep_gui/src native/julep_gui/Cargo.toml mix.exs README.md LICENSE)
+      files: ~w(lib native/julep_gui/src native/julep_gui/Cargo.toml mix.exs README.md LICENSE),
+      exclude_patterns: [~r/julep\.preflight\.ex$/]
     ]
   end
 

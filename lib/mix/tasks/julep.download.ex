@@ -49,9 +49,14 @@ defmodule Mix.Tasks.Julep.Download do
       {~c"user-agent", ~c"julep-mix-task"}
     ]
 
-    case :httpc.request(:get, {String.to_charlist(url), headers}, [
-           {:ssl, ssl_opts()}
-         ], body_format: :binary) do
+    case :httpc.request(
+           :get,
+           {String.to_charlist(url), headers},
+           [
+             {:ssl, ssl_opts()}
+           ],
+           body_format: :binary
+         ) do
       {:ok, {{_, 200, _}, _headers, body}} ->
         File.write!(dest_path, body)
         :ok
@@ -105,9 +110,14 @@ defmodule Mix.Tasks.Julep.Download do
     Application.ensure_all_started(:inets)
     Application.ensure_all_started(:ssl)
 
-    case :httpc.request(:get, {String.to_charlist(url), []}, [
-           {:ssl, ssl_opts()}
-         ], body_format: :binary) do
+    case :httpc.request(
+           :get,
+           {String.to_charlist(url), []},
+           [
+             {:ssl, ssl_opts()}
+           ],
+           body_format: :binary
+         ) do
       {:ok, {{_, 200, _}, _, body}} -> {:ok, to_string(body)}
       _ -> {:error, :not_found}
     end

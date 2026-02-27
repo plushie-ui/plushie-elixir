@@ -227,7 +227,8 @@ defmodule Julep.Examples.Catalog do
       end
 
       # Themer - overrides the theme for its subtree
-      themer "demo_themer", theme: %{background: "#1a1a2e", text: "#e0e0e0", primary: "#0f3460"} do
+      themer "demo_themer",
+        theme: %{background: "#1a1a2e", text: "#e0e0e0", primary: "#0f3460"} do
         container "themed_box", padding: 12 do
           column spacing: 4 do
             text("Themed section with custom palette")

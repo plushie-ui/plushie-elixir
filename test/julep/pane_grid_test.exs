@@ -78,22 +78,37 @@ defmodule Julep.PaneGridTest do
 
   describe "pane event dispatch" do
     test "decodes pane_resized" do
-      msg = %{"type" => "event", "family" => "pane_resized", "id" => "pg1",
-              "data" => %{"split" => 0, "ratio" => 0.45}}
+      msg = %{
+        "type" => "event",
+        "family" => "pane_resized",
+        "id" => "pg1",
+        "data" => %{"split" => 0, "ratio" => 0.45}
+      }
+
       assert {:pane_resized, "pg1", 0, 0.45} =
                Julep.Protocol.decode_message(Jason.encode!(msg))
     end
 
     test "decodes pane_dragged" do
-      msg = %{"type" => "event", "family" => "pane_dragged", "id" => "pg1",
-              "data" => %{"pane" => "left", "target" => "right"}}
+      msg = %{
+        "type" => "event",
+        "family" => "pane_dragged",
+        "id" => "pg1",
+        "data" => %{"pane" => "left", "target" => "right"}
+      }
+
       assert {:pane_dragged, "pg1", "left", "right"} =
                Julep.Protocol.decode_message(Jason.encode!(msg))
     end
 
     test "decodes pane_clicked" do
-      msg = %{"type" => "event", "family" => "pane_clicked", "id" => "pg1",
-              "data" => %{"pane" => "left"}}
+      msg = %{
+        "type" => "event",
+        "family" => "pane_clicked",
+        "id" => "pg1",
+        "data" => %{"pane" => "left"}
+      }
+
       assert {:pane_clicked, "pg1", "left"} =
                Julep.Protocol.decode_message(Jason.encode!(msg))
     end

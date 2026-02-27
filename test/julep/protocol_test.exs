@@ -168,22 +168,26 @@ defmodule Julep.ProtocolTest do
 
   describe "decode_message/1 -- window events" do
     test "decodes a window event to {:window, action_atom, window_id}" do
-      json = Jason.encode!(%{
-        type: "event",
-        family: "window",
-        action: "close",
-        window_id: "main"
-      })
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "window",
+          action: "close",
+          window_id: "main"
+        })
+
       assert Protocol.decode_message(json) == {:window, :close, "main"}
     end
 
     test "converts the action string to an atom" do
-      json = Jason.encode!(%{
-        type: "event",
-        family: "window",
-        action: "minimize",
-        window_id: "settings"
-      })
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "window",
+          action: "minimize",
+          window_id: "settings"
+        })
+
       {:window, action, _} = Protocol.decode_message(json)
       assert is_atom(action)
       assert action == :minimize
@@ -192,38 +196,44 @@ defmodule Julep.ProtocolTest do
 
   describe "decode_message/1 -- key events" do
     test "decodes a named key to {:key_press, atom, modifiers_map}" do
-      json = Jason.encode!(%{
-        type: "event",
-        family: "key_press",
-        id: "",
-        value: "Escape",
-        tag: "keys",
-        modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
-      })
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "key_press",
+          id: "",
+          value: "Escape",
+          tag: "keys",
+          modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
+        })
+
       assert {:key_press, :escape, _mods} = Protocol.decode_message(json)
     end
 
     test "decodes a character key to {:key_press, string, modifiers_map}" do
-      json = Jason.encode!(%{
-        type: "event",
-        family: "key_press",
-        id: "",
-        value: "a",
-        tag: "keys",
-        modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
-      })
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "key_press",
+          id: "",
+          value: "a",
+          tag: "keys",
+          modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
+        })
+
       assert {:key_press, "a", _mods} = Protocol.decode_message(json)
     end
 
     test "modifiers map has ctrl, shift, alt, logo, and command keys" do
-      json = Jason.encode!(%{
-        type: "event",
-        family: "key_press",
-        id: "",
-        value: "s",
-        tag: "keys",
-        modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false}
-      })
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "key_press",
+          id: "",
+          value: "s",
+          tag: "keys",
+          modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false}
+        })
+
       {:key_press, _key, mods} = Protocol.decode_message(json)
       assert Map.has_key?(mods, :ctrl)
       assert Map.has_key?(mods, :shift)
@@ -233,54 +243,62 @@ defmodule Julep.ProtocolTest do
     end
 
     test "modifiers present in the wire message are set correctly" do
-      json = Jason.encode!(%{
-        type: "event",
-        family: "key_press",
-        id: "",
-        value: "c",
-        tag: "keys",
-        modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false}
-      })
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "key_press",
+          id: "",
+          value: "c",
+          tag: "keys",
+          modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false}
+        })
+
       {:key_press, _key, mods} = Protocol.decode_message(json)
       assert mods.ctrl == true
       assert mods.shift == false
     end
 
     test "modifiers absent from the wire message default to false" do
-      json = Jason.encode!(%{
-        type: "event",
-        family: "key_press",
-        id: "",
-        value: "z",
-        tag: "keys",
-        modifiers: %{}
-      })
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "key_press",
+          id: "",
+          value: "z",
+          tag: "keys",
+          modifiers: %{}
+        })
+
       {:key_press, _key, mods} = Protocol.decode_message(json)
       assert mods.ctrl == false
       assert mods.alt == false
     end
 
     test "decodes a key_release event" do
-      json = Jason.encode!(%{
-        type: "event",
-        family: "key_release",
-        id: "",
-        value: "Enter",
-        tag: "keys",
-        modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
-      })
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "key_release",
+          id: "",
+          value: "Enter",
+          tag: "keys",
+          modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
+        })
+
       assert {:key_release, :enter, _mods} = Protocol.decode_message(json)
     end
   end
 
   describe "decode_message/1 -- effect_response ok" do
     test "decodes an ok effect response to {:effect_result, id, {:ok, result}}" do
-      json = Jason.encode!(%{
-        type: "effect_response",
-        id: "req_1",
-        status: "ok",
-        result: %{body: "hello"}
-      })
+      json =
+        Jason.encode!(%{
+          type: "effect_response",
+          id: "req_1",
+          status: "ok",
+          result: %{body: "hello"}
+        })
+
       assert {:effect_result, "req_1", {:ok, result}} = Protocol.decode_message(json)
       assert result["body"] == "hello"
     end
@@ -293,13 +311,16 @@ defmodule Julep.ProtocolTest do
 
   describe "decode_message/1 -- effect_response error" do
     test "decodes an error effect response to {:effect_result, id, {:error, reason}}" do
-      json = Jason.encode!(%{
-        type: "effect_response",
-        id: "req_2",
-        status: "error",
-        error: "connection refused"
-      })
-      assert Protocol.decode_message(json) == {:effect_result, "req_2", {:error, "connection refused"}}
+      json =
+        Jason.encode!(%{
+          type: "effect_response",
+          id: "req_2",
+          status: "error",
+          error: "connection refused"
+        })
+
+      assert Protocol.decode_message(json) ==
+               {:effect_result, "req_2", {:error, "connection refused"}}
     end
   end
 
@@ -381,6 +402,7 @@ defmodule Julep.ProtocolTest do
       for n <- 1..12 do
         key_string = "F#{n}"
         expected_atom = :"f#{n}"
+
         assert Protocol.parse_key(key_string) == expected_atom,
                "expected parse_key(#{inspect(key_string)}) == #{inspect(expected_atom)}"
       end
@@ -541,12 +563,16 @@ defmodule Julep.ProtocolTest do
     end
 
     test "effect_response ok survives JSON roundtrip" do
-      json = Jason.encode!(%{type: "effect_response", id: "r1", status: "ok", result: %{data: 42}})
+      json =
+        Jason.encode!(%{type: "effect_response", id: "r1", status: "ok", result: %{data: 42}})
+
       assert {:effect_result, "r1", {:ok, %{"data" => 42}}} = Protocol.decode_message(json)
     end
 
     test "effect_response error survives JSON roundtrip" do
-      json = Jason.encode!(%{type: "effect_response", id: "r2", status: "error", error: "timeout"})
+      json =
+        Jason.encode!(%{type: "effect_response", id: "r2", status: "error", error: "timeout"})
+
       assert {:effect_result, "r2", {:error, "timeout"}} = Protocol.decode_message(json)
     end
   end

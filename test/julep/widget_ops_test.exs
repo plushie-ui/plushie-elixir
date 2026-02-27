@@ -111,6 +111,7 @@ defmodule Julep.WidgetOpsTest do
 
     def view(_model) do
       import Julep.UI
+
       column do
         text("widget ops test")
       end
@@ -217,7 +218,10 @@ defmodule Julep.WidgetOpsTest do
       runtime_name = :"runtime_nil_#{tag}"
 
       {:ok, _bridge} = Julep.Test.MockBridge.start_link(name: bridge_name)
-      {:ok, runtime} = Julep.Runtime.start_link(app: WidgetOpApp, bridge: bridge_name, name: runtime_name)
+
+      {:ok, runtime} =
+        Julep.Runtime.start_link(app: WidgetOpApp, bridge: bridge_name, name: runtime_name)
+
       await_initial_render(runtime)
 
       # This test just verifies the runtime doesn't crash when processing
@@ -233,11 +237,13 @@ defmodule Julep.WidgetOpsTest do
         def init(_opts), do: %{}
 
         def update(model, :batch_ops) do
-          cmd = Command.batch([
-            Command.focus("first"),
-            Command.focus_next(),
-            Command.close_window("main")
-          ])
+          cmd =
+            Command.batch([
+              Command.focus("first"),
+              Command.focus_next(),
+              Command.close_window("main")
+            ])
+
           {model, cmd}
         end
 
@@ -245,6 +251,7 @@ defmodule Julep.WidgetOpsTest do
 
         def view(_model) do
           import Julep.UI
+
           column do
             text("batch test")
           end

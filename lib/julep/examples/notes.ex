@@ -13,12 +13,13 @@ defmodule Julep.Examples.Notes do
 
   def init(_opts) do
     %{
-      state: Julep.State.new(%{
-        notes: [],
-        next_id: 1,
-        search_query: "",
-        editing_id: nil
-      }),
+      state:
+        Julep.State.new(%{
+          notes: [],
+          next_id: 1,
+          search_query: "",
+          editing_id: nil
+        }),
       selection: Julep.Selection.new(mode: :multi),
       undo: Julep.Undo.new(%{text: "", title: ""}),
       route: Julep.Route.new("/list")
@@ -39,10 +40,11 @@ defmodule Julep.Examples.Notes do
       |> Julep.State.put([:next_id], id + 1)
       |> Julep.State.put([:editing_id], id)
 
-    %{model |
-      state: state,
-      undo: Julep.Undo.new(%{title: "", text: ""}),
-      route: Julep.Route.push(model.route, "/edit")
+    %{
+      model
+      | state: state,
+        undo: Julep.Undo.new(%{title: "", text: ""}),
+        route: Julep.Route.push(model.route, "/edit")
     }
   end
 
@@ -54,10 +56,11 @@ defmodule Julep.Examples.Notes do
     if note do
       state = Julep.State.put(model.state, [:editing_id], id)
 
-      %{model |
-        state: state,
-        undo: Julep.Undo.new(%{title: note.title, text: note.body}),
-        route: Julep.Route.push(model.route, "/edit")
+      %{
+        model
+        | state: state,
+          undo: Julep.Undo.new(%{title: note.title, text: note.body}),
+          route: Julep.Route.push(model.route, "/edit")
       }
     else
       model
@@ -68,10 +71,7 @@ defmodule Julep.Examples.Notes do
     model = save_current_edit(model)
     state = Julep.State.put(model.state, [:editing_id], nil)
 
-    %{model |
-      state: state,
-      route: Julep.Route.pop(model.route)
-    }
+    %{model | state: state, route: Julep.Route.pop(model.route)}
   end
 
   def update(model, {:click, "delete_selected"}) do
@@ -82,10 +82,7 @@ defmodule Julep.Examples.Notes do
         Enum.reject(notes, fn n -> MapSet.member?(selected, n.id) end)
       end)
 
-    %{model |
-      state: state,
-      selection: Julep.Selection.clear(model.selection)
-    }
+    %{model | state: state, selection: Julep.Selection.clear(model.selection)}
   end
 
   def update(model, {:input, "search", query}) do

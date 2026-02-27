@@ -222,9 +222,14 @@ defmodule Julep.TreeTest do
         type: "container",
         props: %{},
         children: [
-          %{id: "a", type: "column", props: %{}, children: [
-            %{id: "target", type: "text", props: %{}, children: []}
-          ]},
+          %{
+            id: "a",
+            type: "column",
+            props: %{},
+            children: [
+              %{id: "target", type: "text", props: %{}, children: []}
+            ]
+          },
           %{id: "b", type: "column", props: %{}, children: []}
         ]
       }
@@ -458,8 +463,19 @@ defmodule Julep.TreeTest do
 
   describe "diff/2 -- changed props" do
     test "changed prop value emits update_props with only changed keys" do
-      old = %{id: "root", type: "container", props: %{"color" => "red", "size" => 14}, children: []}
-      new = %{id: "root", type: "container", props: %{"color" => "blue", "size" => 14}, children: []}
+      old = %{
+        id: "root",
+        type: "container",
+        props: %{"color" => "red", "size" => 14},
+        children: []
+      }
+
+      new = %{
+        id: "root",
+        type: "container",
+        props: %{"color" => "blue", "size" => 14},
+        children: []
+      }
 
       ops = Tree.diff(old, new)
       assert ops == [%{op: "update_props", path: [], props: %{"color" => "blue"}}]

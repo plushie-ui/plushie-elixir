@@ -9,7 +9,7 @@ defmodule JulepUIParityTestHelper do
   end
 
   def grid_with_opts do
-    grid column_count: 3, spacing: 4
+    grid(column_count: 3, spacing: 4)
   end
 
   def grid_with_do_block do
@@ -26,7 +26,7 @@ defmodule JulepUIParityTestHelper do
   end
 
   def grid_with_explicit_id do
-    grid id: "my_grid", column_count: 3
+    grid(id: "my_grid", column_count: 3)
   end
 
   # -- keyed_column --
@@ -403,7 +403,7 @@ defmodule Julep.UIParityTest do
       for node <- nodes do
         for key <- Map.keys(node.props) do
           assert is_binary(key),
-            "#{node.type} has non-string prop key: #{inspect(key)}"
+                 "#{node.type} has non-string prop key: #{inspect(key)}"
         end
       end
     end

@@ -82,33 +82,35 @@ defmodule Julep do
 
   @impl true
   def init(opts) do
-    name          = opts[:instance_name]
-    app           = Keyword.fetch!(opts, :app)
+    name = opts[:instance_name]
+    app = Keyword.fetch!(opts, :app)
     renderer_path = Keyword.get(opts, :renderer, @default_renderer_path)
-    dev?          = Keyword.get(opts, :dev, false)
+    dev? = Keyword.get(opts, :dev, false)
 
     children = [
       # Runtime starts first and registers under runtime_name(name).
       # It defers its initial snapshot send to handle_continue, which fires
       # after init returns -- by then the supervisor has started Bridge.
       Supervisor.child_spec(
-        {Julep.Runtime, [
-          app:        app,
-          bridge:     bridge_name(name),
-          name:       runtime_name(name),
-          app_opts:   Keyword.get(opts, :app_opts, [])
-        ]},
+        {Julep.Runtime,
+         [
+           app: app,
+           bridge: bridge_name(name),
+           name: runtime_name(name),
+           app_opts: Keyword.get(opts, :app_opts, [])
+         ]},
         restart: :transient,
         significant: true
       ),
       # Bridge starts second and can already send events to the registered
       # runtime_name because Runtime is alive by this point.
       Supervisor.child_spec(
-        {Julep.Bridge, [
-          renderer_path: Path.expand(renderer_path),
-          runtime:       runtime_name(name),
-          name:          bridge_name(name)
-        ]},
+        {Julep.Bridge,
+         [
+           renderer_path: Path.expand(renderer_path),
+           runtime: runtime_name(name),
+           name: bridge_name(name)
+         ]},
         restart: :transient,
         significant: true
       )
@@ -121,12 +123,13 @@ defmodule Julep do
           |> Keyword.put(:runtime, runtime_name(name))
           |> Keyword.put_new(:name, dev_server_name(name))
 
-        children ++ [
-          Supervisor.child_spec(
-            {Julep.DevServer, dev_opts},
-            restart: :transient
-          )
-        ]
+        children ++
+          [
+            Supervisor.child_spec(
+              {Julep.DevServer, dev_opts},
+              restart: :transient
+            )
+          ]
       else
         children
       end
@@ -147,12 +150,12 @@ defmodule Julep do
   defp put_instance_name(opts) do
     case Keyword.fetch(opts, :name) do
       {:ok, name} -> Keyword.put_new(opts, :instance_name, name)
-      :error      -> Keyword.put_new(opts, :instance_name, __MODULE__)
+      :error -> Keyword.put_new(opts, :instance_name, __MODULE__)
     end
   end
 
-  defp sup_name(instance_name),        do: :"#{instance_name}.Supervisor"
-  defp runtime_name(instance_name),    do: :"#{instance_name}.Runtime"
-  defp bridge_name(instance_name),     do: :"#{instance_name}.Bridge"
+  defp sup_name(instance_name), do: :"#{instance_name}.Supervisor"
+  defp runtime_name(instance_name), do: :"#{instance_name}.Runtime"
+  defp bridge_name(instance_name), do: :"#{instance_name}.Bridge"
   defp dev_server_name(instance_name), do: :"#{instance_name}.DevServer"
 end

@@ -156,7 +156,10 @@ defmodule Julep.Command do
   @doc "Select a range of text in the input."
   @spec select_range(term(), non_neg_integer(), non_neg_integer()) :: %__MODULE__{}
   def select_range(widget_id, start_pos, end_pos) do
-    %__MODULE__{type: :select_range, payload: %{target: widget_id, start: start_pos, end: end_pos}}
+    %__MODULE__{
+      type: :select_range,
+      payload: %{target: widget_id, start: start_pos, end: end_pos}
+    }
   end
 
   # ---------------------------------------------------------------------------
@@ -172,7 +175,10 @@ defmodule Julep.Command do
   @doc "Resize a window to the given dimensions."
   @spec resize_window(term(), number(), number()) :: %__MODULE__{}
   def resize_window(window_id, width, height) do
-    %__MODULE__{type: :window_op, payload: %{op: "resize", window_id: window_id, width: width, height: height}}
+    %__MODULE__{
+      type: :window_op,
+      payload: %{op: "resize", window_id: window_id, width: width, height: height}
+    }
   end
 
   @doc "Move a window to the given position."
@@ -184,19 +190,28 @@ defmodule Julep.Command do
   @doc "Maximize or restore a window."
   @spec maximize_window(term(), boolean()) :: %__MODULE__{}
   def maximize_window(window_id, maximized \\ true) do
-    %__MODULE__{type: :window_op, payload: %{op: "maximize", window_id: window_id, value: maximized}}
+    %__MODULE__{
+      type: :window_op,
+      payload: %{op: "maximize", window_id: window_id, value: maximized}
+    }
   end
 
   @doc "Minimize or restore a window."
   @spec minimize_window(term(), boolean()) :: %__MODULE__{}
   def minimize_window(window_id, minimized \\ true) do
-    %__MODULE__{type: :window_op, payload: %{op: "minimize", window_id: window_id, value: minimized}}
+    %__MODULE__{
+      type: :window_op,
+      payload: %{op: "minimize", window_id: window_id, value: minimized}
+    }
   end
 
   @doc "Set window mode (windowed, fullscreen, etc.)."
   @spec set_window_mode(term(), atom() | String.t()) :: %__MODULE__{}
   def set_window_mode(window_id, mode) do
-    %__MODULE__{type: :window_op, payload: %{op: "set_mode", window_id: window_id, mode: to_string(mode)}}
+    %__MODULE__{
+      type: :window_op,
+      payload: %{op: "set_mode", window_id: window_id, mode: to_string(mode)}
+    }
   end
 
   @doc "Toggle window maximized state."
@@ -220,7 +235,10 @@ defmodule Julep.Command do
   @doc "Set window stacking level (:normal, :always_on_top, :always_on_bottom)."
   @spec set_window_level(term(), atom() | String.t()) :: %__MODULE__{}
   def set_window_level(window_id, level) do
-    %__MODULE__{type: :window_op, payload: %{op: "set_level", window_id: window_id, level: to_string(level)}}
+    %__MODULE__{
+      type: :window_op,
+      payload: %{op: "set_level", window_id: window_id, level: to_string(level)}
+    }
   end
 
   @doc "Start dragging the window."
@@ -232,49 +250,77 @@ defmodule Julep.Command do
   @doc "Start drag-resizing the window from the given edge/corner direction."
   @spec drag_resize_window(term(), atom() | String.t()) :: %__MODULE__{}
   def drag_resize_window(window_id, direction) do
-    %__MODULE__{type: :window_op, payload: %{op: "drag_resize", window_id: window_id, direction: to_string(direction)}}
+    %__MODULE__{
+      type: :window_op,
+      payload: %{op: "drag_resize", window_id: window_id, direction: to_string(direction)}
+    }
   end
 
   @doc "Request user attention for a window. Urgency can be :informational or :critical."
   @spec request_user_attention(term(), atom() | nil) :: %__MODULE__{}
   def request_user_attention(window_id, urgency \\ nil) do
-    %__MODULE__{type: :window_op, payload: %{op: "request_attention", window_id: window_id, urgency: urgency && to_string(urgency)}}
+    %__MODULE__{
+      type: :window_op,
+      payload: %{
+        op: "request_attention",
+        window_id: window_id,
+        urgency: urgency && to_string(urgency)
+      }
+    }
   end
 
   @doc "Take a screenshot of a window. Result arrives as a tagged event."
   @spec screenshot(term(), atom() | String.t()) :: %__MODULE__{}
   def screenshot(window_id, tag) do
-    %__MODULE__{type: :window_op, payload: %{op: "screenshot", window_id: window_id, tag: to_string(tag)}}
+    %__MODULE__{
+      type: :window_op,
+      payload: %{op: "screenshot", window_id: window_id, tag: to_string(tag)}
+    }
   end
 
   @doc "Set whether a window is resizable."
   @spec set_resizable(term(), boolean()) :: %__MODULE__{}
   def set_resizable(window_id, resizable) do
-    %__MODULE__{type: :window_op, payload: %{op: "set_resizable", window_id: window_id, value: resizable}}
+    %__MODULE__{
+      type: :window_op,
+      payload: %{op: "set_resizable", window_id: window_id, value: resizable}
+    }
   end
 
   @doc "Set the minimum size of a window."
   @spec set_min_size(term(), number(), number()) :: %__MODULE__{}
   def set_min_size(window_id, width, height) do
-    %__MODULE__{type: :window_op, payload: %{op: "set_min_size", window_id: window_id, width: width, height: height}}
+    %__MODULE__{
+      type: :window_op,
+      payload: %{op: "set_min_size", window_id: window_id, width: width, height: height}
+    }
   end
 
   @doc "Set the maximum size of a window."
   @spec set_max_size(term(), number(), number()) :: %__MODULE__{}
   def set_max_size(window_id, width, height) do
-    %__MODULE__{type: :window_op, payload: %{op: "set_max_size", window_id: window_id, width: width, height: height}}
+    %__MODULE__{
+      type: :window_op,
+      payload: %{op: "set_max_size", window_id: window_id, width: width, height: height}
+    }
   end
 
   @doc "Enable mouse passthrough on a window (clicks pass through to windows below)."
   @spec enable_mouse_passthrough(term()) :: %__MODULE__{}
   def enable_mouse_passthrough(window_id) do
-    %__MODULE__{type: :window_op, payload: %{op: "mouse_passthrough", window_id: window_id, value: true}}
+    %__MODULE__{
+      type: :window_op,
+      payload: %{op: "mouse_passthrough", window_id: window_id, value: true}
+    }
   end
 
   @doc "Disable mouse passthrough on a window."
   @spec disable_mouse_passthrough(term()) :: %__MODULE__{}
   def disable_mouse_passthrough(window_id) do
-    %__MODULE__{type: :window_op, payload: %{op: "mouse_passthrough", window_id: window_id, value: false}}
+    %__MODULE__{
+      type: :window_op,
+      payload: %{op: "mouse_passthrough", window_id: window_id, value: false}
+    }
   end
 
   @doc "Show the system menu for a window."
@@ -290,25 +336,37 @@ defmodule Julep.Command do
   @doc "Query the size of a window. Result arrives as `{tag, {width, height}}`."
   @spec get_window_size(term(), atom() | String.t()) :: %__MODULE__{}
   def get_window_size(window_id, tag) do
-    %__MODULE__{type: :window_query, payload: %{op: "get_size", window_id: window_id, tag: to_string(tag)}}
+    %__MODULE__{
+      type: :window_query,
+      payload: %{op: "get_size", window_id: window_id, tag: to_string(tag)}
+    }
   end
 
   @doc "Query the position of a window. Result arrives as `{tag, {x, y}}`."
   @spec get_window_position(term(), atom() | String.t()) :: %__MODULE__{}
   def get_window_position(window_id, tag) do
-    %__MODULE__{type: :window_query, payload: %{op: "get_position", window_id: window_id, tag: to_string(tag)}}
+    %__MODULE__{
+      type: :window_query,
+      payload: %{op: "get_position", window_id: window_id, tag: to_string(tag)}
+    }
   end
 
   @doc "Query whether a window is maximized. Result arrives as `{tag, boolean}`."
   @spec is_maximized(term(), atom() | String.t()) :: %__MODULE__{}
   def is_maximized(window_id, tag) do
-    %__MODULE__{type: :window_query, payload: %{op: "is_maximized", window_id: window_id, tag: to_string(tag)}}
+    %__MODULE__{
+      type: :window_query,
+      payload: %{op: "is_maximized", window_id: window_id, tag: to_string(tag)}
+    }
   end
 
   @doc "Query whether a window is minimized. Result arrives as `{tag, boolean}`."
   @spec is_minimized(term(), atom() | String.t()) :: %__MODULE__{}
   def is_minimized(window_id, tag) do
-    %__MODULE__{type: :window_query, payload: %{op: "is_minimized", window_id: window_id, tag: to_string(tag)}}
+    %__MODULE__{
+      type: :window_query,
+      payload: %{op: "is_minimized", window_id: window_id, tag: to_string(tag)}
+    }
   end
 
   @doc """
@@ -317,7 +375,10 @@ defmodule Julep.Command do
   """
   @spec get_mode(term(), atom() | String.t()) :: %__MODULE__{}
   def get_mode(window_id, tag) do
-    %__MODULE__{type: :window_query, payload: %{op: "get_mode", window_id: window_id, tag: to_string(tag)}}
+    %__MODULE__{
+      type: :window_query,
+      payload: %{op: "get_mode", window_id: window_id, tag: to_string(tag)}
+    }
   end
 
   @doc """
@@ -326,7 +387,10 @@ defmodule Julep.Command do
   """
   @spec get_scale_factor(term(), atom() | String.t()) :: %__MODULE__{}
   def get_scale_factor(window_id, tag) do
-    %__MODULE__{type: :window_query, payload: %{op: "get_scale_factor", window_id: window_id, tag: to_string(tag)}}
+    %__MODULE__{
+      type: :window_query,
+      payload: %{op: "get_scale_factor", window_id: window_id, tag: to_string(tag)}
+    }
   end
 
   @doc """
@@ -335,7 +399,10 @@ defmodule Julep.Command do
   """
   @spec raw_id(term(), atom() | String.t()) :: %__MODULE__{}
   def raw_id(window_id, tag) do
-    %__MODULE__{type: :window_query, payload: %{op: "raw_id", window_id: window_id, tag: to_string(tag)}}
+    %__MODULE__{
+      type: :window_query,
+      payload: %{op: "raw_id", window_id: window_id, tag: to_string(tag)}
+    }
   end
 
   @doc """
@@ -345,7 +412,10 @@ defmodule Julep.Command do
   """
   @spec monitor_size(term(), atom() | String.t()) :: %__MODULE__{}
   def monitor_size(window_id, tag) do
-    %__MODULE__{type: :window_query, payload: %{op: "monitor_size", window_id: window_id, tag: to_string(tag)}}
+    %__MODULE__{
+      type: :window_query,
+      payload: %{op: "monitor_size", window_id: window_id, tag: to_string(tag)}
+    }
   end
 
   # ---------------------------------------------------------------------------
@@ -355,53 +425,68 @@ defmodule Julep.Command do
   @doc "Split a pane in the pane grid along the given axis."
   @spec pane_split(term(), term(), atom() | String.t(), term()) :: %__MODULE__{}
   def pane_split(pane_grid_id, pane_id, axis, new_pane_id) do
-    %__MODULE__{type: :widget_op, payload: %{
-      op: "pane_split",
-      target: pane_grid_id,
-      pane: pane_id,
-      axis: to_string(axis),
-      new_pane_id: new_pane_id
-    }}
+    %__MODULE__{
+      type: :widget_op,
+      payload: %{
+        op: "pane_split",
+        target: pane_grid_id,
+        pane: pane_id,
+        axis: to_string(axis),
+        new_pane_id: new_pane_id
+      }
+    }
   end
 
   @doc "Close a pane in the pane grid."
   @spec pane_close(term(), term()) :: %__MODULE__{}
   def pane_close(pane_grid_id, pane_id) do
-    %__MODULE__{type: :widget_op, payload: %{
-      op: "pane_close",
-      target: pane_grid_id,
-      pane: pane_id
-    }}
+    %__MODULE__{
+      type: :widget_op,
+      payload: %{
+        op: "pane_close",
+        target: pane_grid_id,
+        pane: pane_id
+      }
+    }
   end
 
   @doc "Swap two panes in the pane grid."
   @spec pane_swap(term(), term(), term()) :: %__MODULE__{}
   def pane_swap(pane_grid_id, pane_a, pane_b) do
-    %__MODULE__{type: :widget_op, payload: %{
-      op: "pane_swap",
-      target: pane_grid_id,
-      a: pane_a,
-      b: pane_b
-    }}
+    %__MODULE__{
+      type: :widget_op,
+      payload: %{
+        op: "pane_swap",
+        target: pane_grid_id,
+        a: pane_a,
+        b: pane_b
+      }
+    }
   end
 
   @doc "Maximize a pane in the pane grid."
   @spec pane_maximize(term(), term()) :: %__MODULE__{}
   def pane_maximize(pane_grid_id, pane_id) do
-    %__MODULE__{type: :widget_op, payload: %{
-      op: "pane_maximize",
-      target: pane_grid_id,
-      pane: pane_id
-    }}
+    %__MODULE__{
+      type: :widget_op,
+      payload: %{
+        op: "pane_maximize",
+        target: pane_grid_id,
+        pane: pane_id
+      }
+    }
   end
 
   @doc "Restore all panes from maximized state."
   @spec pane_restore(term()) :: %__MODULE__{}
   def pane_restore(pane_grid_id) do
-    %__MODULE__{type: :widget_op, payload: %{
-      op: "pane_restore",
-      target: pane_grid_id
-    }}
+    %__MODULE__{
+      type: :widget_op,
+      payload: %{
+        op: "pane_restore",
+        target: pane_grid_id
+      }
+    }
   end
 
   @doc """

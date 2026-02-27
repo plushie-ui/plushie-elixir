@@ -3,15 +3,25 @@ defmodule Julep.SensorTest do
 
   describe "sensor resize event dispatch" do
     test "decodes sensor_resize" do
-      msg = %{"type" => "event", "family" => "sensor_resize", "id" => "s1",
-              "data" => %{"width" => 450.0, "height" => 300.0}}
+      msg = %{
+        "type" => "event",
+        "family" => "sensor_resize",
+        "id" => "s1",
+        "data" => %{"width" => 450.0, "height" => 300.0}
+      }
+
       assert {:sensor_resize, "s1", 450.0, 300.0} =
                Julep.Protocol.decode_message(Jason.encode!(msg))
     end
 
     test "decodes sensor_resize with integer values" do
-      msg = %{"type" => "event", "family" => "sensor_resize", "id" => "s1",
-              "data" => %{"width" => 800, "height" => 600}}
+      msg = %{
+        "type" => "event",
+        "family" => "sensor_resize",
+        "id" => "s1",
+        "data" => %{"width" => 800, "height" => 600}
+      }
+
       assert {:sensor_resize, "s1", 800, 600} =
                Julep.Protocol.decode_message(Jason.encode!(msg))
     end

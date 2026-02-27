@@ -31,7 +31,8 @@ defmodule Julep.Iced.Color do
 
   @doc "Creates an RGBA color map from 0-255 RGB values with an alpha channel (0.0-1.0)."
   @spec from_rgba(number(), number(), number(), float()) :: map()
-  def from_rgba(r, g, b, a) when is_number(r) and is_number(g) and is_number(b) and is_number(a) do
+  def from_rgba(r, g, b, a)
+      when is_number(r) and is_number(g) and is_number(b) and is_number(a) do
     %{r: r / 255, g: g / 255, b: b / 255, a: a}
   end
 

@@ -73,7 +73,13 @@ defmodule Julep.IcedTest do
   describe "button/2" do
     test "returns correct node shape" do
       node = Iced.button("btn1", %{label: "Click me", style: :primary})
-      assert node == %{id: "btn1", type: "button", props: %{"label" => "Click me", "style" => :primary}, children: []}
+
+      assert node == %{
+               id: "btn1",
+               type: "button",
+               props: %{"label" => "Click me", "style" => :primary},
+               children: []
+             }
     end
   end
 
@@ -286,6 +292,7 @@ defmodule Julep.IcedTest do
         %{type: "circle", cx: 25, cy: 25, r: 10},
         %{type: "line", x1: 0, y1: 0, x2: 100, y2: 100}
       ]
+
       node = Iced.canvas("cv2", %{shapes: shapes})
       assert length(node.props["shapes"]) == 3
     end
@@ -341,7 +348,13 @@ defmodule Julep.IcedTest do
 
   describe "children default" do
     test "layout widgets default to empty children" do
-      for builder <- [&Iced.column/1, &Iced.row/1, &Iced.container/1, &Iced.scrollable/1, &Iced.stack/1] do
+      for builder <- [
+            &Iced.column/1,
+            &Iced.row/1,
+            &Iced.container/1,
+            &Iced.scrollable/1,
+            &Iced.stack/1
+          ] do
         assert builder.("x").children == []
       end
     end
@@ -496,11 +509,33 @@ defmodule Julep.IcedTest do
     end
 
     test "encodes all weight variants" do
-      weights = [:thin, :extra_light, :light, :normal, :medium, :semi_bold, :bold, :extra_bold, :black]
-      expected = ["Thin", "ExtraLight", "Light", "Normal", "Medium", "SemiBold", "Bold", "ExtraBold", "Black"]
+      weights = [
+        :thin,
+        :extra_light,
+        :light,
+        :normal,
+        :medium,
+        :semi_bold,
+        :bold,
+        :extra_bold,
+        :black
+      ]
+
+      expected = [
+        "Thin",
+        "ExtraLight",
+        "Light",
+        "Normal",
+        "Medium",
+        "SemiBold",
+        "Bold",
+        "ExtraBold",
+        "Black"
+      ]
 
       for {weight, exp} <- Enum.zip(weights, expected) do
         result = Font.encode(%{family: "Test", weight: weight})
+
         assert result["weight"] == exp,
                "expected weight #{inspect(weight)} to encode as #{inspect(exp)}, got #{inspect(result["weight"])}"
       end

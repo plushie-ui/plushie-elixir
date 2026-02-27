@@ -1,32 +1,34 @@
 defmodule Mix.Tasks.Julep.Preflight do
   @moduledoc """
-  Runs all CI checks locally: Elixir compile, tests, Rust build, tests, fmt, clippy.
-
-  Exits with a non-zero status on first failure.
+  Runs all CI checks locally. Exits with a non-zero status on first failure.
 
   ## Usage
 
-      mix julep.preflight
+      mix preflight
 
   ## What it runs
 
-  1. `mix compile --warnings-as-errors`
-  2. `mix test`
-  3. `cargo build` (renderer)
-  4. `cargo test` (renderer)
-  5. `cargo fmt -- --check` (renderer)
-  6. `cargo clippy -- -D warnings` (renderer)
+  1. `mix format --check-formatted`
+  2. `mix compile --warnings-as-errors`
+  3. `mix test`
+  4. `cargo build` (renderer)
+  5. `cargo test` (renderer)
+  6. `cargo fmt -- --check` (renderer)
+  7. `cargo clippy -- -D warnings` (renderer)
   """
 
   use Mix.Task
 
   @shortdoc "Run all CI checks locally"
 
-  @cargo_manifest Path.expand("native/julep_gui/Cargo.toml")
+  defp cargo_manifest do
+    Path.join(File.cwd!(), "native/julep_gui/Cargo.toml")
+  end
 
   @impl Mix.Task
   def run(_args) do
     steps = [
+      {"mix format --check-formatted", fn -> mix_format() end},
       {"mix compile --warnings-as-errors", fn -> mix_compile() end},
       {"mix test", fn -> mix_test() end},
       {"cargo build", fn -> cargo(["build"]) end},
@@ -51,6 +53,13 @@ defmodule Mix.Tasks.Julep.Preflight do
     Mix.shell().info([:green, "\nAll checks passed.", :reset])
   end
 
+  defp mix_format do
+    case cmd("mix", ["format", "--check-formatted"]) do
+      0 -> :ok
+      code -> {:error, code}
+    end
+  end
+
   defp mix_compile do
     case Mix.Task.run("compile", ["--warnings-as-errors"]) do
       {:error, _} -> {:error, 1}
@@ -66,31 +75,32 @@ defmodule Mix.Tasks.Julep.Preflight do
   end
 
   defp cargo(args) do
-    case cmd("cargo", args ++ ["--manifest-path", @cargo_manifest]) do
+    case cmd("cargo", args ++ ["--manifest-path", cargo_manifest()]) do
       0 -> :ok
       code -> {:error, code}
     end
   end
 
   defp cargo_fmt do
-    case cmd("cargo", ["fmt", "--manifest-path", @cargo_manifest, "--", "--check"]) do
+    case cmd("cargo", ["fmt", "--manifest-path", cargo_manifest(), "--", "--check"]) do
       0 -> :ok
       code -> {:error, code}
     end
   end
 
   defp cargo_clippy do
-    case cmd("cargo", ["clippy", "--manifest-path", @cargo_manifest, "--", "-D", "warnings"]) do
+    case cmd("cargo", ["clippy", "--manifest-path", cargo_manifest(), "--", "-D", "warnings"]) do
       0 -> :ok
       code -> {:error, code}
     end
   end
 
   defp cmd(command, args) do
-    {_, code} = System.cmd(command, args,
-      stderr_to_stdout: true,
-      into: IO.stream(:stdio, :line)
-    )
+    {_, code} =
+      System.cmd(command, args,
+        stderr_to_stdout: true,
+        into: IO.stream(:stdio, :line)
+      )
 
     code
   end

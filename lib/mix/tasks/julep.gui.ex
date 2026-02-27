@@ -20,16 +20,19 @@ defmodule Mix.Tasks.Julep.Gui do
 
   @impl Mix.Task
   def run(args) do
-    {opts, args, _} = OptionParser.parse(args,
-      strict: [build: :boolean, release: :boolean]
-    )
+    {opts, args, _} =
+      OptionParser.parse(args,
+        strict: [build: :boolean, release: :boolean]
+      )
 
-    app_module = case args do
-      [mod_str | _] ->
-        Module.concat([mod_str])
-      [] ->
-        Mix.raise("Usage: mix julep.gui ModuleName")
-    end
+    app_module =
+      case args do
+        [mod_str | _] ->
+          Module.concat([mod_str])
+
+        [] ->
+          Mix.raise("Usage: mix julep.gui ModuleName")
+      end
 
     # Ensure the project is compiled
     Mix.Task.run("compile")
@@ -71,6 +74,7 @@ defmodule Mix.Tasks.Julep.Gui do
         Mix.shell().info("Julep started with #{inspect(app_module)}")
         # Block until the supervisor exits
         ref = Process.monitor(pid)
+
         receive do
           {:DOWN, ^ref, :process, ^pid, reason} ->
             if reason != :normal do
@@ -88,6 +92,7 @@ defmodule Mix.Tasks.Julep.Gui do
     args = if release?, do: args ++ ["--release"], else: args
 
     Mix.shell().info("Building renderer...")
+
     case System.cmd("cargo", args, stderr_to_stdout: true, into: IO.stream(:stdio, :line)) do
       {_, 0} -> :ok
       {_, code} -> Mix.raise("cargo build failed with exit code #{code}")

@@ -9,10 +9,11 @@ defmodule Julep.Iced.GradientTest do
 
       assert grad.type == "linear"
       assert grad.angle == 0.0
+
       assert grad.stops == [
-        %{offset: 0.0, color: "#ff0000"},
-        %{offset: 1.0, color: "#0000ff"}
-      ]
+               %{offset: 0.0, color: "#ff0000"},
+               %{offset: 1.0, color: "#0000ff"}
+             ]
     end
 
     test "accepts single stop" do

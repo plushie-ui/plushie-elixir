@@ -79,12 +79,13 @@ mix preflight                         # run all CI checks locally
 This is the single command to verify everything before pushing. It runs
 the full CI pipeline locally and stops on first failure:
 
-1. `mix compile --warnings-as-errors`
-2. `mix test`
-3. `cargo build` (renderer)
-4. `cargo test` (renderer)
-5. `cargo fmt --check` (renderer)
-6. `cargo clippy -D warnings` (renderer)
+1. `mix format --check-formatted`
+2. `mix compile --warnings-as-errors`
+3. `mix test`
+4. `cargo build` (renderer)
+5. `cargo test` (renderer)
+6. `cargo fmt --check` (renderer)
+7. `cargo clippy -D warnings` (renderer)
 
 ## Documentation
 

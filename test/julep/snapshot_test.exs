@@ -13,7 +13,11 @@ defmodule Julep.SnapshotTest do
   # ---------------------------------------------------------------------------
 
   defp tmp_snapshot_path(name) do
-    Path.join([System.tmp_dir!(), "julep_snapshot_test_#{System.unique_integer([:positive])}", name])
+    Path.join([
+      System.tmp_dir!(),
+      "julep_snapshot_test_#{System.unique_integer([:positive])}",
+      name
+    ])
   end
 
   defp simple_tree do
@@ -357,5 +361,4 @@ defmodule Julep.SnapshotTest do
       assert Map.has_key?(decoded, "children")
     end
   end
-
 end

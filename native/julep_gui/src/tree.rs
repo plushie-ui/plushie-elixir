@@ -259,10 +259,11 @@ mod tests {
     #[test]
     fn snapshot_preserves_children() {
         let mut tree = Tree::new();
-        let root = make_node_with_children("root", "column", vec![
-            make_node("a", "text"),
-            make_node("b", "button"),
-        ]);
+        let root = make_node_with_children(
+            "root",
+            "column",
+            vec![make_node("a", "text"), make_node("b", "button")],
+        );
         tree.snapshot(root);
         assert_eq!(tree.root().unwrap().children.len(), 2);
         assert_eq!(tree.root().unwrap().children[0].id, "a");
@@ -293,10 +294,11 @@ mod tests {
     #[test]
     fn find_window_in_children() {
         let mut tree = Tree::new();
-        let root = make_node_with_children("root", "column", vec![
-            make_node("win1", "window"),
-            make_node("win2", "window"),
-        ]);
+        let root = make_node_with_children(
+            "root",
+            "column",
+            vec![make_node("win1", "window"), make_node("win2", "window")],
+        );
         tree.snapshot(root);
         assert!(tree.find_window("win1").is_some());
         assert!(tree.find_window("win2").is_some());
@@ -319,11 +321,15 @@ mod tests {
     #[test]
     fn find_window_ignores_non_window_children() {
         let mut tree = Tree::new();
-        let root = make_node_with_children("root", "column", vec![
-            make_node("btn", "button"),
-            make_node("win", "window"),
-            make_node("txt", "text"),
-        ]);
+        let root = make_node_with_children(
+            "root",
+            "column",
+            vec![
+                make_node("btn", "button"),
+                make_node("win", "window"),
+                make_node("txt", "text"),
+            ],
+        );
         tree.snapshot(root);
         assert!(tree.find_window("btn").is_none());
         assert!(tree.find_window("txt").is_none());
@@ -333,11 +339,15 @@ mod tests {
     #[test]
     fn find_window_does_not_search_grandchildren() {
         let mut tree = Tree::new();
-        let root = make_node_with_children("root", "column", vec![
-            make_node_with_children("inner", "row", vec![
-                make_node("deep_win", "window"),
-            ]),
-        ]);
+        let root = make_node_with_children(
+            "root",
+            "column",
+            vec![make_node_with_children(
+                "inner",
+                "row",
+                vec![make_node("deep_win", "window")],
+            )],
+        );
         tree.snapshot(root);
         // find_window only searches root and direct children
         assert!(tree.find_window("deep_win").is_none());
@@ -358,11 +368,15 @@ mod tests {
     #[test]
     fn window_ids_collects_child_windows() {
         let mut tree = Tree::new();
-        let root = make_node_with_children("root", "column", vec![
-            make_node("w1", "window"),
-            make_node("w2", "window"),
-            make_node("w3", "window"),
-        ]);
+        let root = make_node_with_children(
+            "root",
+            "column",
+            vec![
+                make_node("w1", "window"),
+                make_node("w2", "window"),
+                make_node("w3", "window"),
+            ],
+        );
         tree.snapshot(root);
         let ids = tree.window_ids();
         assert_eq!(ids.len(), 3);
@@ -374,11 +388,15 @@ mod tests {
     #[test]
     fn window_ids_skips_non_windows() {
         let mut tree = Tree::new();
-        let root = make_node_with_children("root", "column", vec![
-            make_node("w1", "window"),
-            make_node("btn", "button"),
-            make_node("w2", "window"),
-        ]);
+        let root = make_node_with_children(
+            "root",
+            "column",
+            vec![
+                make_node("w1", "window"),
+                make_node("btn", "button"),
+                make_node("w2", "window"),
+            ],
+        );
         tree.snapshot(root);
         let ids = tree.window_ids();
         assert_eq!(ids.len(), 2);
@@ -406,9 +424,13 @@ mod tests {
     fn patch_replace_root() {
         let mut tree = Tree::new();
         tree.snapshot(make_node("old", "column"));
-        let op = make_patch_op("replace_node", vec![], json!({
-            "node": {"id": "new", "type": "row", "props": {}, "children": []}
-        }));
+        let op = make_patch_op(
+            "replace_node",
+            vec![],
+            json!({
+                "node": {"id": "new", "type": "row", "props": {}, "children": []}
+            }),
+        );
         tree.apply_patch(vec![op]);
         assert_eq!(tree.root().unwrap().id, "new");
         assert_eq!(tree.root().unwrap().type_name, "row");
@@ -417,43 +439,66 @@ mod tests {
     #[test]
     fn patch_replace_child() {
         let mut tree = Tree::new();
-        let root = make_node_with_children("root", "column", vec![
-            make_node("a", "text"),
-            make_node("b", "button"),
-        ]);
+        let root = make_node_with_children(
+            "root",
+            "column",
+            vec![make_node("a", "text"), make_node("b", "button")],
+        );
         tree.snapshot(root);
-        let op = make_patch_op("replace_node", vec![1], json!({
-            "node": {"id": "c", "type": "text", "props": {"content": "replaced"}, "children": []}
-        }));
+        let op = make_patch_op(
+            "replace_node",
+            vec![1],
+            json!({
+                "node": {"id": "c", "type": "text", "props": {"content": "replaced"}, "children": []}
+            }),
+        );
         tree.apply_patch(vec![op]);
         assert_eq!(tree.root().unwrap().children[1].id, "c");
-        assert_eq!(tree.root().unwrap().children[1].props["content"], "replaced");
+        assert_eq!(
+            tree.root().unwrap().children[1].props["content"],
+            "replaced"
+        );
     }
 
     #[test]
     fn patch_replace_nested_child() {
         let mut tree = Tree::new();
-        let root = make_node_with_children("root", "column", vec![
-            make_node_with_children("row", "row", vec![
-                make_node("inner", "text"),
-            ]),
-        ]);
+        let root = make_node_with_children(
+            "root",
+            "column",
+            vec![make_node_with_children(
+                "row",
+                "row",
+                vec![make_node("inner", "text")],
+            )],
+        );
         tree.snapshot(root);
-        let op = make_patch_op("replace_node", vec![0, 0], json!({
-            "node": {"id": "replaced", "type": "button", "props": {}, "children": []}
-        }));
+        let op = make_patch_op(
+            "replace_node",
+            vec![0, 0],
+            json!({
+                "node": {"id": "replaced", "type": "button", "props": {}, "children": []}
+            }),
+        );
         tree.apply_patch(vec![op]);
         assert_eq!(tree.root().unwrap().children[0].children[0].id, "replaced");
-        assert_eq!(tree.root().unwrap().children[0].children[0].type_name, "button");
+        assert_eq!(
+            tree.root().unwrap().children[0].children[0].type_name,
+            "button"
+        );
     }
 
     #[test]
     fn patch_replace_out_of_bounds_does_not_panic() {
         let mut tree = Tree::new();
         tree.snapshot(make_node("root", "column"));
-        let op = make_patch_op("replace_node", vec![5], json!({
-            "node": {"id": "x", "type": "text", "props": {}, "children": []}
-        }));
+        let op = make_patch_op(
+            "replace_node",
+            vec![5],
+            json!({
+                "node": {"id": "x", "type": "text", "props": {}, "children": []}
+            }),
+        );
         // Should print an error to stderr but not panic
         tree.apply_patch(vec![op]);
         // Root is unchanged
@@ -467,10 +512,18 @@ mod tests {
     #[test]
     fn patch_update_props_on_root() {
         let mut tree = Tree::new();
-        tree.snapshot(make_node_with_props("root", "column", json!({"spacing": 5})));
-        let op = make_patch_op("update_props", vec![], json!({
-            "props": {"spacing": 10, "padding": 20}
-        }));
+        tree.snapshot(make_node_with_props(
+            "root",
+            "column",
+            json!({"spacing": 5}),
+        ));
+        let op = make_patch_op(
+            "update_props",
+            vec![],
+            json!({
+                "props": {"spacing": 10, "padding": 20}
+            }),
+        );
         tree.apply_patch(vec![op]);
         assert_eq!(tree.root().unwrap().props["spacing"], 10);
         assert_eq!(tree.root().unwrap().props["padding"], 20);
@@ -479,10 +532,18 @@ mod tests {
     #[test]
     fn patch_update_props_removes_null_keys() {
         let mut tree = Tree::new();
-        tree.snapshot(make_node_with_props("root", "text", json!({"content": "hi", "size": 14})));
-        let op = make_patch_op("update_props", vec![], json!({
-            "props": {"size": null}
-        }));
+        tree.snapshot(make_node_with_props(
+            "root",
+            "text",
+            json!({"content": "hi", "size": 14}),
+        ));
+        let op = make_patch_op(
+            "update_props",
+            vec![],
+            json!({
+                "props": {"size": null}
+            }),
+        );
         tree.apply_patch(vec![op]);
         assert_eq!(tree.root().unwrap().props["content"], "hi");
         assert!(tree.root().unwrap().props.get("size").is_none());
@@ -491,13 +552,23 @@ mod tests {
     #[test]
     fn patch_update_props_on_child() {
         let mut tree = Tree::new();
-        let root = make_node_with_children("root", "column", vec![
-            make_node_with_props("txt", "text", json!({"content": "old"})),
-        ]);
+        let root = make_node_with_children(
+            "root",
+            "column",
+            vec![make_node_with_props(
+                "txt",
+                "text",
+                json!({"content": "old"}),
+            )],
+        );
         tree.snapshot(root);
-        let op = make_patch_op("update_props", vec![0], json!({
-            "props": {"content": "new"}
-        }));
+        let op = make_patch_op(
+            "update_props",
+            vec![0],
+            json!({
+                "props": {"content": "new"}
+            }),
+        );
         tree.apply_patch(vec![op]);
         assert_eq!(tree.root().unwrap().children[0].props["content"], "new");
     }
@@ -509,14 +580,16 @@ mod tests {
     #[test]
     fn patch_insert_child_at_beginning() {
         let mut tree = Tree::new();
-        let root = make_node_with_children("root", "column", vec![
-            make_node("a", "text"),
-        ]);
+        let root = make_node_with_children("root", "column", vec![make_node("a", "text")]);
         tree.snapshot(root);
-        let op = make_patch_op("insert_child", vec![], json!({
-            "index": 0,
-            "node": {"id": "b", "type": "button", "props": {}, "children": []}
-        }));
+        let op = make_patch_op(
+            "insert_child",
+            vec![],
+            json!({
+                "index": 0,
+                "node": {"id": "b", "type": "button", "props": {}, "children": []}
+            }),
+        );
         tree.apply_patch(vec![op]);
         assert_eq!(tree.root().unwrap().children.len(), 2);
         assert_eq!(tree.root().unwrap().children[0].id, "b");
@@ -526,14 +599,16 @@ mod tests {
     #[test]
     fn patch_insert_child_at_end() {
         let mut tree = Tree::new();
-        let root = make_node_with_children("root", "column", vec![
-            make_node("a", "text"),
-        ]);
+        let root = make_node_with_children("root", "column", vec![make_node("a", "text")]);
         tree.snapshot(root);
-        let op = make_patch_op("insert_child", vec![], json!({
-            "index": 1,
-            "node": {"id": "b", "type": "button", "props": {}, "children": []}
-        }));
+        let op = make_patch_op(
+            "insert_child",
+            vec![],
+            json!({
+                "index": 1,
+                "node": {"id": "b", "type": "button", "props": {}, "children": []}
+            }),
+        );
         tree.apply_patch(vec![op]);
         assert_eq!(tree.root().unwrap().children.len(), 2);
         assert_eq!(tree.root().unwrap().children[1].id, "b");
@@ -543,10 +618,14 @@ mod tests {
     fn patch_insert_child_beyond_length_appends() {
         let mut tree = Tree::new();
         tree.snapshot(make_node("root", "column"));
-        let op = make_patch_op("insert_child", vec![], json!({
-            "index": 99,
-            "node": {"id": "x", "type": "text", "props": {}, "children": []}
-        }));
+        let op = make_patch_op(
+            "insert_child",
+            vec![],
+            json!({
+                "index": 99,
+                "node": {"id": "x", "type": "text", "props": {}, "children": []}
+            }),
+        );
         tree.apply_patch(vec![op]);
         assert_eq!(tree.root().unwrap().children.len(), 1);
         assert_eq!(tree.root().unwrap().children[0].id, "x");
@@ -555,16 +634,24 @@ mod tests {
     #[test]
     fn patch_insert_child_into_nested_parent() {
         let mut tree = Tree::new();
-        let root = make_node_with_children("root", "column", vec![
-            make_node_with_children("row", "row", vec![
-                make_node("existing", "text"),
-            ]),
-        ]);
+        let root = make_node_with_children(
+            "root",
+            "column",
+            vec![make_node_with_children(
+                "row",
+                "row",
+                vec![make_node("existing", "text")],
+            )],
+        );
         tree.snapshot(root);
-        let op = make_patch_op("insert_child", vec![0], json!({
-            "index": 0,
-            "node": {"id": "new", "type": "button", "props": {}, "children": []}
-        }));
+        let op = make_patch_op(
+            "insert_child",
+            vec![0],
+            json!({
+                "index": 0,
+                "node": {"id": "new", "type": "button", "props": {}, "children": []}
+            }),
+        );
         tree.apply_patch(vec![op]);
         let row = &tree.root().unwrap().children[0];
         assert_eq!(row.children.len(), 2);
@@ -579,11 +666,15 @@ mod tests {
     #[test]
     fn patch_remove_child() {
         let mut tree = Tree::new();
-        let root = make_node_with_children("root", "column", vec![
-            make_node("a", "text"),
-            make_node("b", "button"),
-            make_node("c", "text"),
-        ]);
+        let root = make_node_with_children(
+            "root",
+            "column",
+            vec![
+                make_node("a", "text"),
+                make_node("b", "button"),
+                make_node("c", "text"),
+            ],
+        );
         tree.snapshot(root);
         let op = make_patch_op("remove_child", vec![], json!({"index": 1}));
         tree.apply_patch(vec![op]);
@@ -595,10 +686,11 @@ mod tests {
     #[test]
     fn patch_remove_child_first() {
         let mut tree = Tree::new();
-        let root = make_node_with_children("root", "column", vec![
-            make_node("a", "text"),
-            make_node("b", "button"),
-        ]);
+        let root = make_node_with_children(
+            "root",
+            "column",
+            vec![make_node("a", "text"), make_node("b", "button")],
+        );
         tree.snapshot(root);
         let op = make_patch_op("remove_child", vec![], json!({"index": 0}));
         tree.apply_patch(vec![op]);
@@ -609,10 +701,11 @@ mod tests {
     #[test]
     fn patch_remove_child_last() {
         let mut tree = Tree::new();
-        let root = make_node_with_children("root", "column", vec![
-            make_node("a", "text"),
-            make_node("b", "button"),
-        ]);
+        let root = make_node_with_children(
+            "root",
+            "column",
+            vec![make_node("a", "text"), make_node("b", "button")],
+        );
         tree.snapshot(root);
         let op = make_patch_op("remove_child", vec![], json!({"index": 1}));
         tree.apply_patch(vec![op]);
@@ -654,18 +747,30 @@ mod tests {
         tree.snapshot(make_node("root", "column"));
 
         let ops = vec![
-            make_patch_op("insert_child", vec![], json!({
-                "index": 0,
-                "node": {"id": "a", "type": "text", "props": {}, "children": []}
-            })),
-            make_patch_op("insert_child", vec![], json!({
-                "index": 1,
-                "node": {"id": "b", "type": "text", "props": {}, "children": []}
-            })),
-            make_patch_op("insert_child", vec![], json!({
-                "index": 1,
-                "node": {"id": "c", "type": "text", "props": {}, "children": []}
-            })),
+            make_patch_op(
+                "insert_child",
+                vec![],
+                json!({
+                    "index": 0,
+                    "node": {"id": "a", "type": "text", "props": {}, "children": []}
+                }),
+            ),
+            make_patch_op(
+                "insert_child",
+                vec![],
+                json!({
+                    "index": 1,
+                    "node": {"id": "b", "type": "text", "props": {}, "children": []}
+                }),
+            ),
+            make_patch_op(
+                "insert_child",
+                vec![],
+                json!({
+                    "index": 1,
+                    "node": {"id": "c", "type": "text", "props": {}, "children": []}
+                }),
+            ),
         ];
         tree.apply_patch(ops);
         let children = &tree.root().unwrap().children;
@@ -682,9 +787,13 @@ mod tests {
     #[test]
     fn patch_on_empty_tree_does_not_panic() {
         let mut tree = Tree::new();
-        let op = make_patch_op("replace_node", vec![], json!({
-            "node": {"id": "x", "type": "text", "props": {}, "children": []}
-        }));
+        let op = make_patch_op(
+            "replace_node",
+            vec![],
+            json!({
+                "node": {"id": "x", "type": "text", "props": {}, "children": []}
+            }),
+        );
         tree.apply_patch(vec![op]);
         // Still empty -- the op should fail gracefully
         assert!(tree.root().is_none());
@@ -697,17 +806,27 @@ mod tests {
     #[test]
     fn patch_deep_path_navigation() {
         let mut tree = Tree::new();
-        let root = make_node_with_children("root", "column", vec![
-            make_node_with_children("r0", "row", vec![
-                make_node_with_children("r0c0", "column", vec![
-                    make_node("deep", "text"),
-                ]),
-            ]),
-        ]);
+        let root = make_node_with_children(
+            "root",
+            "column",
+            vec![make_node_with_children(
+                "r0",
+                "row",
+                vec![make_node_with_children(
+                    "r0c0",
+                    "column",
+                    vec![make_node("deep", "text")],
+                )],
+            )],
+        );
         tree.snapshot(root);
-        let op = make_patch_op("update_props", vec![0, 0, 0], json!({
-            "props": {"content": "updated deep"}
-        }));
+        let op = make_patch_op(
+            "update_props",
+            vec![0, 0, 0],
+            json!({
+                "props": {"content": "updated deep"}
+            }),
+        );
         tree.apply_patch(vec![op]);
         let deep = &tree.root().unwrap().children[0].children[0].children[0];
         assert_eq!(deep.props["content"], "updated deep");
@@ -717,9 +836,13 @@ mod tests {
     fn patch_invalid_path_does_not_panic() {
         let mut tree = Tree::new();
         tree.snapshot(make_node("root", "column"));
-        let op = make_patch_op("update_props", vec![0, 1, 2], json!({
-            "props": {"x": 1}
-        }));
+        let op = make_patch_op(
+            "update_props",
+            vec![0, 1, 2],
+            json!({
+                "props": {"x": 1}
+            }),
+        );
         tree.apply_patch(vec![op]);
         // Root unchanged
         assert_eq!(tree.root().unwrap().id, "root");

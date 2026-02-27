@@ -153,111 +153,111 @@ defmodule Julep.Protocol do
   # which produces the variant name as-is (e.g. "ArrowUp", "F1", "Escape").
   @named_keys %{
     # Navigation
-    "Escape"     => :escape,
-    "Enter"      => :enter,
-    "Tab"        => :tab,
-    "Backspace"  => :backspace,
-    "Delete"     => :delete,
-    "ArrowUp"    => :arrow_up,
-    "ArrowDown"  => :arrow_down,
-    "ArrowLeft"  => :arrow_left,
+    "Escape" => :escape,
+    "Enter" => :enter,
+    "Tab" => :tab,
+    "Backspace" => :backspace,
+    "Delete" => :delete,
+    "ArrowUp" => :arrow_up,
+    "ArrowDown" => :arrow_down,
+    "ArrowLeft" => :arrow_left,
     "ArrowRight" => :arrow_right,
-    "Home"       => :home,
-    "End"        => :end,
-    "PageUp"     => :page_up,
-    "PageDown"   => :page_down,
-    "Space"      => :space,
-    "Insert"     => :insert,
-    "Clear"      => :clear,
+    "Home" => :home,
+    "End" => :end,
+    "PageUp" => :page_up,
+    "PageDown" => :page_down,
+    "Space" => :space,
+    "Insert" => :insert,
+    "Clear" => :clear,
 
     # Modifier keys
-    "Alt"        => :alt,
-    "AltGraph"   => :alt_graph,
-    "CapsLock"   => :caps_lock,
-    "Control"    => :control,
-    "Fn"         => :fn_key,
-    "FnLock"     => :fn_lock,
-    "NumLock"    => :num_lock,
+    "Alt" => :alt,
+    "AltGraph" => :alt_graph,
+    "CapsLock" => :caps_lock,
+    "Control" => :control,
+    "Fn" => :fn_key,
+    "FnLock" => :fn_lock,
+    "NumLock" => :num_lock,
     "ScrollLock" => :scroll_lock,
-    "Shift"      => :shift,
-    "Symbol"     => :symbol,
+    "Shift" => :shift,
+    "Symbol" => :symbol,
     "SymbolLock" => :symbol_lock,
-    "Meta"       => :meta,
-    "Hyper"      => :hyper,
-    "Super"      => :super_key,
+    "Meta" => :meta,
+    "Hyper" => :hyper,
+    "Super" => :super_key,
 
     # Editing keys
-    "Copy"       => :copy,
-    "Cut"        => :cut,
-    "Paste"      => :paste,
-    "Redo"       => :redo,
-    "Undo"       => :undo,
-    "CrSel"      => :cr_sel,
-    "EraseEof"   => :erase_eof,
-    "ExSel"      => :ex_sel,
+    "Copy" => :copy,
+    "Cut" => :cut,
+    "Paste" => :paste,
+    "Redo" => :redo,
+    "Undo" => :undo,
+    "CrSel" => :cr_sel,
+    "EraseEof" => :erase_eof,
+    "ExSel" => :ex_sel,
 
     # UI keys
-    "Accept"     => :accept,
-    "Again"      => :again,
-    "Attn"       => :attn,
-    "Cancel"     => :cancel,
+    "Accept" => :accept,
+    "Again" => :again,
+    "Attn" => :attn,
+    "Cancel" => :cancel,
     "ContextMenu" => :context_menu,
-    "Execute"    => :execute,
-    "Find"       => :find,
-    "Help"       => :help,
-    "Pause"      => :pause,
-    "Play"       => :play,
-    "Props"      => :props,
-    "Select"     => :select,
-    "ZoomIn"     => :zoom_in,
-    "ZoomOut"    => :zoom_out,
+    "Execute" => :execute,
+    "Find" => :find,
+    "Help" => :help,
+    "Pause" => :pause,
+    "Play" => :play,
+    "Props" => :props,
+    "Select" => :select,
+    "ZoomIn" => :zoom_in,
+    "ZoomOut" => :zoom_out,
 
     # System keys
     "BrightnessDown" => :brightness_down,
-    "BrightnessUp"   => :brightness_up,
-    "Eject"      => :eject,
-    "LogOff"     => :log_off,
-    "Power"      => :power,
-    "PowerOff"   => :power_off,
+    "BrightnessUp" => :brightness_up,
+    "Eject" => :eject,
+    "LogOff" => :log_off,
+    "Power" => :power,
+    "PowerOff" => :power_off,
     "PrintScreen" => :print_screen,
-    "Hibernate"  => :hibernate,
-    "Standby"    => :standby,
-    "WakeUp"     => :wake_up,
+    "Hibernate" => :hibernate,
+    "Standby" => :standby,
+    "WakeUp" => :wake_up,
 
     # IME keys
-    "AllCandidates"    => :all_candidates,
-    "Alphanumeric"     => :alphanumeric,
-    "CodeInput"        => :code_input,
-    "Compose"          => :compose,
-    "Convert"          => :convert,
-    "FinalMode"        => :final_mode,
-    "GroupFirst"       => :group_first,
-    "GroupLast"        => :group_last,
-    "GroupNext"        => :group_next,
-    "GroupPrevious"    => :group_previous,
-    "ModeChange"       => :mode_change,
-    "NextCandidate"    => :next_candidate,
-    "NonConvert"       => :non_convert,
+    "AllCandidates" => :all_candidates,
+    "Alphanumeric" => :alphanumeric,
+    "CodeInput" => :code_input,
+    "Compose" => :compose,
+    "Convert" => :convert,
+    "FinalMode" => :final_mode,
+    "GroupFirst" => :group_first,
+    "GroupLast" => :group_last,
+    "GroupNext" => :group_next,
+    "GroupPrevious" => :group_previous,
+    "ModeChange" => :mode_change,
+    "NextCandidate" => :next_candidate,
+    "NonConvert" => :non_convert,
     "PreviousCandidate" => :previous_candidate,
-    "Process"          => :process,
-    "SingleCandidate"  => :single_candidate,
+    "Process" => :process,
+    "SingleCandidate" => :single_candidate,
 
     # Korean IME
     "HangulMode" => :hangul_mode,
-    "HanjaMode"  => :hanja_mode,
-    "JunjaMode"  => :junja_mode,
+    "HanjaMode" => :hanja_mode,
+    "JunjaMode" => :junja_mode,
 
     # Japanese IME
-    "Eisu"             => :eisu,
-    "Hankaku"          => :hankaku,
-    "Hiragana"         => :hiragana,
+    "Eisu" => :eisu,
+    "Hankaku" => :hankaku,
+    "Hiragana" => :hiragana,
     "HiraganaKatakana" => :hiragana_katakana,
-    "KanaMode"         => :kana_mode,
-    "KanjiMode"        => :kanji_mode,
-    "Katakana"         => :katakana,
-    "Romaji"           => :romaji,
-    "Zenkaku"          => :zenkaku,
-    "ZenkakuHankaku"   => :zenkaku_hankaku,
+    "KanaMode" => :kana_mode,
+    "KanjiMode" => :kanji_mode,
+    "Katakana" => :katakana,
+    "Romaji" => :romaji,
+    "Zenkaku" => :zenkaku,
+    "ZenkakuHankaku" => :zenkaku_hankaku,
 
     # Soft keys
     "Soft1" => :soft1,
@@ -266,156 +266,156 @@ defmodule Julep.Protocol do
     "Soft4" => :soft4,
 
     # Media keys
-    "ChannelDown"       => :channel_down,
-    "ChannelUp"         => :channel_up,
-    "Close"             => :close,
-    "MailForward"       => :mail_forward,
-    "MailReply"         => :mail_reply,
-    "MailSend"          => :mail_send,
-    "MediaClose"        => :media_close,
-    "MediaFastForward"  => :media_fast_forward,
-    "MediaPause"        => :media_pause,
-    "MediaPlay"         => :media_play,
-    "MediaPlayPause"    => :media_play_pause,
-    "MediaRecord"       => :media_record,
-    "MediaRewind"       => :media_rewind,
-    "MediaStop"         => :media_stop,
-    "MediaTrackNext"    => :media_track_next,
+    "ChannelDown" => :channel_down,
+    "ChannelUp" => :channel_up,
+    "Close" => :close,
+    "MailForward" => :mail_forward,
+    "MailReply" => :mail_reply,
+    "MailSend" => :mail_send,
+    "MediaClose" => :media_close,
+    "MediaFastForward" => :media_fast_forward,
+    "MediaPause" => :media_pause,
+    "MediaPlay" => :media_play,
+    "MediaPlayPause" => :media_play_pause,
+    "MediaRecord" => :media_record,
+    "MediaRewind" => :media_rewind,
+    "MediaStop" => :media_stop,
+    "MediaTrackNext" => :media_track_next,
     "MediaTrackPrevious" => :media_track_previous,
-    "New"               => :new,
-    "Open"              => :open,
-    "Print"             => :print,
-    "Save"              => :save,
-    "SpellCheck"        => :spell_check,
+    "New" => :new,
+    "Open" => :open,
+    "Print" => :print,
+    "Save" => :save,
+    "SpellCheck" => :spell_check,
 
     # Audio keys
-    "AudioBalanceLeft"     => :audio_balance_left,
-    "AudioBalanceRight"    => :audio_balance_right,
-    "AudioBassBoostDown"   => :audio_bass_boost_down,
+    "AudioBalanceLeft" => :audio_balance_left,
+    "AudioBalanceRight" => :audio_balance_right,
+    "AudioBassBoostDown" => :audio_bass_boost_down,
     "AudioBassBoostToggle" => :audio_bass_boost_toggle,
-    "AudioBassBoostUp"     => :audio_bass_boost_up,
-    "AudioFaderFront"      => :audio_fader_front,
-    "AudioFaderRear"       => :audio_fader_rear,
+    "AudioBassBoostUp" => :audio_bass_boost_up,
+    "AudioFaderFront" => :audio_fader_front,
+    "AudioFaderRear" => :audio_fader_rear,
     "AudioSurroundModeNext" => :audio_surround_mode_next,
-    "AudioTrebleDown"      => :audio_treble_down,
-    "AudioTrebleUp"        => :audio_treble_up,
-    "AudioVolumeDown"      => :audio_volume_down,
-    "AudioVolumeUp"        => :audio_volume_up,
-    "AudioVolumeMute"      => :audio_volume_mute,
+    "AudioTrebleDown" => :audio_treble_down,
+    "AudioTrebleUp" => :audio_treble_up,
+    "AudioVolumeDown" => :audio_volume_down,
+    "AudioVolumeUp" => :audio_volume_up,
+    "AudioVolumeMute" => :audio_volume_mute,
 
     # Microphone keys
-    "MicrophoneToggle"     => :microphone_toggle,
+    "MicrophoneToggle" => :microphone_toggle,
     "MicrophoneVolumeDown" => :microphone_volume_down,
-    "MicrophoneVolumeUp"   => :microphone_volume_up,
+    "MicrophoneVolumeUp" => :microphone_volume_up,
     "MicrophoneVolumeMute" => :microphone_volume_mute,
 
     # Speech keys
     "SpeechCorrectionList" => :speech_correction_list,
-    "SpeechInputToggle"    => :speech_input_toggle,
+    "SpeechInputToggle" => :speech_input_toggle,
 
     # Launch keys
     "LaunchApplication1" => :launch_application1,
     "LaunchApplication2" => :launch_application2,
-    "LaunchCalendar"     => :launch_calendar,
-    "LaunchContacts"     => :launch_contacts,
-    "LaunchMail"         => :launch_mail,
-    "LaunchMediaPlayer"  => :launch_media_player,
-    "LaunchMusicPlayer"  => :launch_music_player,
-    "LaunchPhone"        => :launch_phone,
-    "LaunchScreenSaver"  => :launch_screen_saver,
-    "LaunchSpreadsheet"  => :launch_spreadsheet,
-    "LaunchWebBrowser"   => :launch_web_browser,
-    "LaunchWebCam"       => :launch_web_cam,
+    "LaunchCalendar" => :launch_calendar,
+    "LaunchContacts" => :launch_contacts,
+    "LaunchMail" => :launch_mail,
+    "LaunchMediaPlayer" => :launch_media_player,
+    "LaunchMusicPlayer" => :launch_music_player,
+    "LaunchPhone" => :launch_phone,
+    "LaunchScreenSaver" => :launch_screen_saver,
+    "LaunchSpreadsheet" => :launch_spreadsheet,
+    "LaunchWebBrowser" => :launch_web_browser,
+    "LaunchWebCam" => :launch_web_cam,
     "LaunchWordProcessor" => :launch_word_processor,
 
     # Browser keys
-    "BrowserBack"      => :browser_back,
+    "BrowserBack" => :browser_back,
     "BrowserFavorites" => :browser_favorites,
-    "BrowserForward"   => :browser_forward,
-    "BrowserHome"      => :browser_home,
-    "BrowserRefresh"   => :browser_refresh,
-    "BrowserSearch"    => :browser_search,
-    "BrowserStop"      => :browser_stop,
+    "BrowserForward" => :browser_forward,
+    "BrowserHome" => :browser_home,
+    "BrowserRefresh" => :browser_refresh,
+    "BrowserSearch" => :browser_search,
+    "BrowserStop" => :browser_stop,
 
     # Mobile / phone keys
-    "AppSwitch"        => :app_switch,
-    "Call"             => :call,
-    "Camera"           => :camera,
-    "CameraFocus"      => :camera_focus,
-    "EndCall"          => :end_call,
-    "GoBack"           => :go_back,
-    "GoHome"           => :go_home,
-    "HeadsetHook"      => :headset_hook,
+    "AppSwitch" => :app_switch,
+    "Call" => :call,
+    "Camera" => :camera,
+    "CameraFocus" => :camera_focus,
+    "EndCall" => :end_call,
+    "GoBack" => :go_back,
+    "GoHome" => :go_home,
+    "HeadsetHook" => :headset_hook,
     "LastNumberRedial" => :last_number_redial,
-    "Notification"     => :notification,
-    "MannerMode"       => :manner_mode,
-    "VoiceDial"        => :voice_dial,
+    "Notification" => :notification,
+    "MannerMode" => :manner_mode,
+    "VoiceDial" => :voice_dial,
 
     # TV keys
-    "TV"                         => :tv,
-    "TV3DMode"                   => :tv_3d_mode,
-    "TVAntennaCable"             => :tv_antenna_cable,
-    "TVAudioDescription"         => :tv_audio_description,
-    "TVAudioDescriptionMixDown"  => :tv_audio_description_mix_down,
-    "TVAudioDescriptionMixUp"    => :tv_audio_description_mix_up,
-    "TVContentsMenu"             => :tv_contents_menu,
-    "TVDataService"              => :tv_data_service,
-    "TVInput"                    => :tv_input,
-    "TVInputComponent1"          => :tv_input_component1,
-    "TVInputComponent2"          => :tv_input_component2,
-    "TVInputComposite1"          => :tv_input_composite1,
-    "TVInputComposite2"          => :tv_input_composite2,
-    "TVInputHDMI1"               => :tv_input_hdmi1,
-    "TVInputHDMI2"               => :tv_input_hdmi2,
-    "TVInputHDMI3"               => :tv_input_hdmi3,
-    "TVInputHDMI4"               => :tv_input_hdmi4,
-    "TVInputVGA1"                => :tv_input_vga1,
-    "TVMediaContext"             => :tv_media_context,
-    "TVNetwork"                  => :tv_network,
-    "TVNumberEntry"              => :tv_number_entry,
-    "TVPower"                    => :tv_power,
-    "TVRadioService"             => :tv_radio_service,
-    "TVSatellite"                => :tv_satellite,
-    "TVSatelliteBS"              => :tv_satellite_bs,
-    "TVSatelliteCS"              => :tv_satellite_cs,
-    "TVSatelliteToggle"          => :tv_satellite_toggle,
-    "TVTerrestrialAnalog"        => :tv_terrestrial_analog,
-    "TVTerrestrialDigital"       => :tv_terrestrial_digital,
-    "TVTimer"                    => :tv_timer,
+    "TV" => :tv,
+    "TV3DMode" => :tv_3d_mode,
+    "TVAntennaCable" => :tv_antenna_cable,
+    "TVAudioDescription" => :tv_audio_description,
+    "TVAudioDescriptionMixDown" => :tv_audio_description_mix_down,
+    "TVAudioDescriptionMixUp" => :tv_audio_description_mix_up,
+    "TVContentsMenu" => :tv_contents_menu,
+    "TVDataService" => :tv_data_service,
+    "TVInput" => :tv_input,
+    "TVInputComponent1" => :tv_input_component1,
+    "TVInputComponent2" => :tv_input_component2,
+    "TVInputComposite1" => :tv_input_composite1,
+    "TVInputComposite2" => :tv_input_composite2,
+    "TVInputHDMI1" => :tv_input_hdmi1,
+    "TVInputHDMI2" => :tv_input_hdmi2,
+    "TVInputHDMI3" => :tv_input_hdmi3,
+    "TVInputHDMI4" => :tv_input_hdmi4,
+    "TVInputVGA1" => :tv_input_vga1,
+    "TVMediaContext" => :tv_media_context,
+    "TVNetwork" => :tv_network,
+    "TVNumberEntry" => :tv_number_entry,
+    "TVPower" => :tv_power,
+    "TVRadioService" => :tv_radio_service,
+    "TVSatellite" => :tv_satellite,
+    "TVSatelliteBS" => :tv_satellite_bs,
+    "TVSatelliteCS" => :tv_satellite_cs,
+    "TVSatelliteToggle" => :tv_satellite_toggle,
+    "TVTerrestrialAnalog" => :tv_terrestrial_analog,
+    "TVTerrestrialDigital" => :tv_terrestrial_digital,
+    "TVTimer" => :tv_timer,
 
     # Numpad keys
-    "Key11"              => :key11,
-    "Key12"              => :key12,
-    "NumpadBackspace"    => :numpad_backspace,
-    "NumpadClear"        => :numpad_clear,
-    "NumpadClearEntry"   => :numpad_clear_entry,
-    "NumpadComma"        => :numpad_comma,
-    "NumpadDecimal"      => :numpad_decimal,
-    "NumpadDivide"       => :numpad_divide,
-    "NumpadEnter"        => :numpad_enter,
-    "NumpadEqual"        => :numpad_equal,
-    "NumpadHash"         => :numpad_hash,
-    "NumpadMemoryAdd"    => :numpad_memory_add,
-    "NumpadMemoryClear"  => :numpad_memory_clear,
+    "Key11" => :key11,
+    "Key12" => :key12,
+    "NumpadBackspace" => :numpad_backspace,
+    "NumpadClear" => :numpad_clear,
+    "NumpadClearEntry" => :numpad_clear_entry,
+    "NumpadComma" => :numpad_comma,
+    "NumpadDecimal" => :numpad_decimal,
+    "NumpadDivide" => :numpad_divide,
+    "NumpadEnter" => :numpad_enter,
+    "NumpadEqual" => :numpad_equal,
+    "NumpadHash" => :numpad_hash,
+    "NumpadMemoryAdd" => :numpad_memory_add,
+    "NumpadMemoryClear" => :numpad_memory_clear,
     "NumpadMemoryRecall" => :numpad_memory_recall,
-    "NumpadMemoryStore"  => :numpad_memory_store,
+    "NumpadMemoryStore" => :numpad_memory_store,
     "NumpadMemorySubtract" => :numpad_memory_subtract,
-    "NumpadMultiply"     => :numpad_multiply,
-    "NumpadParenLeft"    => :numpad_paren_left,
-    "NumpadParenRight"   => :numpad_paren_right,
-    "NumpadStar"         => :numpad_star,
-    "NumpadSubtract"     => :numpad_subtract,
+    "NumpadMultiply" => :numpad_multiply,
+    "NumpadParenLeft" => :numpad_paren_left,
+    "NumpadParenRight" => :numpad_paren_right,
+    "NumpadStar" => :numpad_star,
+    "NumpadSubtract" => :numpad_subtract,
 
     # Function keys F1-F35
-    "F1"  => :f1,
-    "F2"  => :f2,
-    "F3"  => :f3,
-    "F4"  => :f4,
-    "F5"  => :f5,
-    "F6"  => :f6,
-    "F7"  => :f7,
-    "F8"  => :f8,
-    "F9"  => :f9,
+    "F1" => :f1,
+    "F2" => :f2,
+    "F3" => :f3,
+    "F4" => :f4,
+    "F5" => :f5,
+    "F6" => :f6,
+    "F7" => :f7,
+    "F8" => :f8,
+    "F9" => :f9,
     "F10" => :f10,
     "F11" => :f11,
     "F12" => :f12,
@@ -470,15 +470,16 @@ defmodule Julep.Protocol do
 
   defp parse_modifiers(mods) when is_map(mods) do
     %{
-      ctrl:    Map.get(mods, "ctrl", false),
-      shift:   Map.get(mods, "shift", false),
-      alt:     Map.get(mods, "alt", false),
-      logo:    Map.get(mods, "logo", false),
+      ctrl: Map.get(mods, "ctrl", false),
+      shift: Map.get(mods, "shift", false),
+      alt: Map.get(mods, "alt", false),
+      logo: Map.get(mods, "logo", false),
       command: Map.get(mods, "command", false)
     }
   end
 
-  defp parse_modifiers(_), do: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
+  defp parse_modifiers(_),
+    do: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
 
   # ---------------------------------------------------------------------------
   # Private dispatch
@@ -518,28 +519,28 @@ defmodule Julep.Protocol do
   # Rust emits family "key_press" with the key in "value" and modifiers in "modifiers".
 
   defp dispatch(%{
-    "type"      => "event",
-    "family"    => "key_press",
-    "value"     => key,
-    "modifiers" => mods
-  }) do
+         "type" => "event",
+         "family" => "key_press",
+         "value" => key,
+         "modifiers" => mods
+       }) do
     {:key_press, parse_key(key), parse_modifiers(mods)}
   end
 
   defp dispatch(%{
-    "type"      => "event",
-    "family"    => "key_release",
-    "value"     => key,
-    "modifiers" => mods
-  }) do
+         "type" => "event",
+         "family" => "key_release",
+         "value" => key,
+         "modifiers" => mods
+       }) do
     {:key_release, parse_key(key), parse_modifiers(mods)}
   end
 
   defp dispatch(%{
-    "type"      => "event",
-    "family"    => "modifiers_changed",
-    "modifiers" => mods
-  }) do
+         "type" => "event",
+         "family" => "modifiers_changed",
+         "modifiers" => mods
+       }) do
     {:modifiers_changed, parse_modifiers(mods)}
   end
 
@@ -566,187 +567,189 @@ defmodule Julep.Protocol do
   end
 
   defp dispatch(%{
-    "type"    => "event",
-    "family"  => "wheel_scrolled",
-    "delta_x" => dx,
-    "delta_y" => dy,
-    "unit"    => unit
-  }) do
+         "type" => "event",
+         "family" => "wheel_scrolled",
+         "delta_x" => dx,
+         "delta_y" => dy,
+         "unit" => unit
+       }) do
     {:wheel_scrolled, dx, dy, unit}
   end
 
   # -- Touch events --
 
   defp dispatch(%{
-    "type"      => "event",
-    "family"    => "finger_pressed",
-    "finger_id" => finger_id,
-    "x"         => x,
-    "y"         => y
-  }) do
+         "type" => "event",
+         "family" => "finger_pressed",
+         "finger_id" => finger_id,
+         "x" => x,
+         "y" => y
+       }) do
     {:finger_pressed, finger_id, x, y}
   end
 
   defp dispatch(%{
-    "type"      => "event",
-    "family"    => "finger_moved",
-    "finger_id" => finger_id,
-    "x"         => x,
-    "y"         => y
-  }) do
+         "type" => "event",
+         "family" => "finger_moved",
+         "finger_id" => finger_id,
+         "x" => x,
+         "y" => y
+       }) do
     {:finger_moved, finger_id, x, y}
   end
 
   defp dispatch(%{
-    "type"      => "event",
-    "family"    => "finger_lifted",
-    "finger_id" => finger_id,
-    "x"         => x,
-    "y"         => y
-  }) do
+         "type" => "event",
+         "family" => "finger_lifted",
+         "finger_id" => finger_id,
+         "x" => x,
+         "y" => y
+       }) do
     {:finger_lifted, finger_id, x, y}
   end
 
   defp dispatch(%{
-    "type"      => "event",
-    "family"    => "finger_lost",
-    "finger_id" => finger_id,
-    "x"         => x,
-    "y"         => y
-  }) do
+         "type" => "event",
+         "family" => "finger_lost",
+         "finger_id" => finger_id,
+         "x" => x,
+         "y" => y
+       }) do
     {:finger_lost, finger_id, x, y}
   end
 
   # -- Window lifecycle events --
 
   defp dispatch(%{
-    "type"      => "event",
-    "family"    => "window_opened",
-    "window_id" => window_id,
-    "position"  => position,
-    "width"     => width,
-    "height"    => height
-  }) do
-    pos = case position do
-      %{"x" => x, "y" => y} -> {x, y}
-      _ -> nil
-    end
+         "type" => "event",
+         "family" => "window_opened",
+         "window_id" => window_id,
+         "position" => position,
+         "width" => width,
+         "height" => height
+       }) do
+    pos =
+      case position do
+        %{"x" => x, "y" => y} -> {x, y}
+        _ -> nil
+      end
+
     {:window_opened, window_id, pos, {width, height}}
   end
 
   defp dispatch(%{
-    "type"      => "event",
-    "family"    => "window_closed",
-    "window_id" => window_id
-  }) do
+         "type" => "event",
+         "family" => "window_closed",
+         "window_id" => window_id
+       }) do
     {:window_closed, window_id}
   end
 
   defp dispatch(%{
-    "type"      => "event",
-    "family"    => "window_close_requested",
-    "window_id" => window_id
-  }) do
+         "type" => "event",
+         "family" => "window_close_requested",
+         "window_id" => window_id
+       }) do
     {:window_close_requested, window_id}
   end
 
   defp dispatch(%{
-    "type"      => "event",
-    "family"    => "window_moved",
-    "window_id" => window_id,
-    "x"         => x,
-    "y"         => y
-  }) do
+         "type" => "event",
+         "family" => "window_moved",
+         "window_id" => window_id,
+         "x" => x,
+         "y" => y
+       }) do
     {:window_moved, window_id, x, y}
   end
 
   defp dispatch(%{
-    "type"      => "event",
-    "family"    => "window_resized",
-    "window_id" => window_id,
-    "width"     => width,
-    "height"    => height
-  }) do
+         "type" => "event",
+         "family" => "window_resized",
+         "window_id" => window_id,
+         "width" => width,
+         "height" => height
+       }) do
     {:window_resized, window_id, width, height}
   end
 
   defp dispatch(%{
-    "type"      => "event",
-    "family"    => "window_focused",
-    "window_id" => window_id
-  }) do
+         "type" => "event",
+         "family" => "window_focused",
+         "window_id" => window_id
+       }) do
     {:window_focused, window_id}
   end
 
   defp dispatch(%{
-    "type"      => "event",
-    "family"    => "window_unfocused",
-    "window_id" => window_id
-  }) do
+         "type" => "event",
+         "family" => "window_unfocused",
+         "window_id" => window_id
+       }) do
     {:window_unfocused, window_id}
   end
 
   defp dispatch(%{
-    "type"         => "event",
-    "family"       => "window_rescaled",
-    "window_id"    => window_id,
-    "scale_factor" => scale_factor
-  }) do
+         "type" => "event",
+         "family" => "window_rescaled",
+         "window_id" => window_id,
+         "scale_factor" => scale_factor
+       }) do
     {:window_rescaled, window_id, scale_factor}
   end
 
   defp dispatch(%{
-    "type"      => "event",
-    "family"    => "file_hovered",
-    "window_id" => window_id,
-    "path"      => path
-  }) do
+         "type" => "event",
+         "family" => "file_hovered",
+         "window_id" => window_id,
+         "path" => path
+       }) do
     {:file_hovered, window_id, path}
   end
 
   defp dispatch(%{
-    "type"      => "event",
-    "family"    => "file_dropped",
-    "window_id" => window_id,
-    "path"      => path
-  }) do
+         "type" => "event",
+         "family" => "file_dropped",
+         "window_id" => window_id,
+         "path" => path
+       }) do
     {:file_dropped, window_id, path}
   end
 
   defp dispatch(%{
-    "type"      => "event",
-    "family"    => "files_hovered_left",
-    "window_id" => window_id
-  }) do
+         "type" => "event",
+         "family" => "files_hovered_left",
+         "window_id" => window_id
+       }) do
     {:files_hovered_left, window_id}
   end
 
   # -- Animation / theme / system events --
 
   defp dispatch(%{
-    "type"      => "event",
-    "family"    => "animation_frame",
-    "timestamp" => timestamp
-  }) do
+         "type" => "event",
+         "family" => "animation_frame",
+         "timestamp" => timestamp
+       }) do
     {:animation_frame, timestamp}
   end
 
   defp dispatch(%{
-    "type"  => "event",
-    "family" => "theme_changed",
-    "value" => mode
-  }) do
+         "type" => "event",
+         "family" => "theme_changed",
+         "value" => mode
+       }) do
     {:theme_changed, mode}
   end
 
   # -- Legacy window event format (kept for backwards compatibility) --
 
   defp dispatch(%{
-    "type"      => "event",
-    "family"    => "window",
-    "action"    => action,
-    "window_id" => window_id
-  }) do
+         "type" => "event",
+         "family" => "window",
+         "action" => action,
+         "window_id" => window_id
+       }) do
     {:window, String.to_atom(action), window_id}
   end
 
@@ -793,20 +796,20 @@ defmodule Julep.Protocol do
   # -- Effect responses --
 
   defp dispatch(%{
-    "type"   => "effect_response",
-    "id"     => id,
-    "status" => "ok",
-    "result" => result
-  }) do
+         "type" => "effect_response",
+         "id" => id,
+         "status" => "ok",
+         "result" => result
+       }) do
     {:effect_result, id, {:ok, result}}
   end
 
   defp dispatch(%{
-    "type"   => "effect_response",
-    "id"     => id,
-    "status" => "error",
-    "error"  => reason
-  }) do
+         "type" => "effect_response",
+         "id" => id,
+         "status" => "error",
+         "error" => reason
+       }) do
     {:effect_result, id, {:error, reason}}
   end
 

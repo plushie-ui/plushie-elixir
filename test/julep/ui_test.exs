@@ -22,6 +22,7 @@ defmodule JulepUITestHelper do
   def column_with_if(show?) do
     column do
       text("always")
+
       if show? do
         text("sometimes")
       end
@@ -32,6 +33,7 @@ defmodule JulepUITestHelper do
     window "main", title: "Test" do
       column padding: 16 do
         text("hello")
+
         row do
           button("btn1", "One")
           button("btn2", "Two")

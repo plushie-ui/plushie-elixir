@@ -16,6 +16,7 @@ defmodule Julep.RuntimeTest do
 
     def view(model) do
       import Julep.UI
+
       column do
         text("Value: #{model.value}")
         button("inc", "+")
@@ -39,6 +40,7 @@ defmodule Julep.RuntimeTest do
 
     def view(model) do
       import Julep.UI
+
       column do
         text("#{model.value}")
       end
@@ -64,6 +66,7 @@ defmodule Julep.RuntimeTest do
 
     def view(model) do
       import Julep.UI
+
       column do
         text("#{model.value}")
       end
@@ -236,6 +239,7 @@ defmodule Julep.RuntimeTest do
 
         def view(model) do
           import Julep.UI
+
           column do
             text("ticks:#{model.ticks}")
             button("batch", "Go")
@@ -287,6 +291,7 @@ defmodule Julep.RuntimeTest do
 
         def view(model) do
           import Julep.UI
+
           column do
             text(inspect(model.status))
           end
@@ -347,6 +352,7 @@ defmodule Julep.RuntimeTest do
 
         def view(model) do
           import Julep.UI
+
           column do
             text("ticks:#{model.ticks}")
           end
@@ -384,6 +390,7 @@ defmodule Julep.RuntimeTest do
 
         def view(model) do
           import Julep.UI
+
           column do
             text("ticks:#{model.ticks}")
           end
@@ -431,6 +438,7 @@ defmodule Julep.RuntimeTest do
 
         def view(model) do
           import Julep.UI
+
           column do
             text("fast:#{model.fast}")
             text("slow:#{model.slow}")
@@ -624,6 +632,7 @@ defmodule Julep.RuntimeTest do
 
         def view(_model) do
           import Julep.UI
+
           column do
             text("listening")
           end
@@ -659,6 +668,7 @@ defmodule Julep.RuntimeTest do
 
         def view(_model) do
           import Julep.UI
+
           column do
             text("ok")
           end
@@ -707,11 +717,12 @@ defmodule Julep.RuntimeTest do
 
           windows =
             if model.show_secondary do
-              windows ++ [
-                window "secondary", title: "Secondary" do
-                  text("world")
-                end
-              ]
+              windows ++
+                [
+                  window "secondary", title: "Secondary" do
+                    text("world")
+                  end
+                ]
             else
               windows
             end

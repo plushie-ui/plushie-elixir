@@ -239,7 +239,8 @@ defmodule Julep.Iced do
   - `max_width` (number) -- maximum width in pixels.
   """
   @spec keyed_column(String.t(), props(), [ui_node()]) :: ui_node()
-  def keyed_column(id, props \\ %{}, children \\ []), do: node(id, "keyed_column", props, children)
+  def keyed_column(id, props \\ %{}, children \\ []),
+    do: node(id, "keyed_column", props, children)
 
   # ---------------------------------------------------------------------------
   # Input widgets

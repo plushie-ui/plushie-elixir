@@ -54,16 +54,17 @@ defmodule Julep.Test.MockBridge do
 
   @impl true
   def init(_opts) do
-    {:ok, %{
-      snapshots: [],
-      patches: [],
-      effect_requests: [],
-      widget_ops: [],
-      subscription_registers: [],
-      subscription_unregisters: [],
-      window_ops: [],
-      settings: []
-    }}
+    {:ok,
+     %{
+       snapshots: [],
+       patches: [],
+       effect_requests: [],
+       widget_ops: [],
+       subscription_registers: [],
+       subscription_unregisters: [],
+       window_ops: [],
+       settings: []
+     }}
   end
 
   @impl true

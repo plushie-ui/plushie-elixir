@@ -15,7 +15,17 @@ defmodule Julep.Iced.Font do
 
   @weights [:thin, :extra_light, :light, :normal, :medium, :semi_bold, :bold, :extra_bold, :black]
   @styles [:normal, :italic, :oblique]
-  @stretches [:ultra_condensed, :extra_condensed, :condensed, :semi_condensed, :normal, :semi_expanded, :expanded, :extra_expanded, :ultra_expanded]
+  @stretches [
+    :ultra_condensed,
+    :extra_condensed,
+    :condensed,
+    :semi_condensed,
+    :normal,
+    :semi_expanded,
+    :expanded,
+    :extra_expanded,
+    :ultra_expanded
+  ]
 
   @type t :: :default | :monospace | String.t() | map()
 

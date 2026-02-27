@@ -26,6 +26,7 @@ defmodule Julep.BinaryTest do
 
     test "includes an architecture component" do
       name = Binary.binary_name()
+
       assert String.contains?(name, "x86_64") or
                String.contains?(name, "aarch64") or
                String.contains?(name, "arm") or
@@ -54,7 +55,10 @@ defmodule Julep.BinaryTest do
       System.put_env("JULEP_RENDERER_PATH", fake_bin)
 
       on_exit(fn ->
-        if previous, do: System.put_env("JULEP_RENDERER_PATH", previous), else: System.delete_env("JULEP_RENDERER_PATH")
+        if previous,
+          do: System.put_env("JULEP_RENDERER_PATH", previous),
+          else: System.delete_env("JULEP_RENDERER_PATH")
+
         File.rm(fake_bin)
       end)
 

@@ -93,13 +93,18 @@ defmodule Julep.DevServerTest do
     name = :"dev_server_test_#{tag}"
     debounce_ms = Keyword.get(opts, :debounce_ms, 100)
 
-    {:ok, pid} = GenServer.start_link(Julep.DevServer.TestHarness, %{
-      runtime: runtime,
-      watcher: nil,
-      debounce_ms: debounce_ms,
-      debounce_ref: nil,
-      recompiling: false
-    }, name: name)
+    {:ok, pid} =
+      GenServer.start_link(
+        Julep.DevServer.TestHarness,
+        %{
+          runtime: runtime,
+          watcher: nil,
+          debounce_ms: debounce_ms,
+          debounce_ref: nil,
+          recompiling: false
+        },
+        name: name
+      )
 
     {:ok, pid}
   end

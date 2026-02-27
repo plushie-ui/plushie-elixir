@@ -104,6 +104,7 @@ defmodule Julep.SubscriptionParityTest do
         Subscription.on_mouse_move(:mouse),
         Subscription.on_touch(:touch)
       ]
+
       assert Subscription.batch(subs) == subs
     end
 

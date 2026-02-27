@@ -60,13 +60,25 @@ defmodule Julep.Examples.TodoTest do
 
   describe "update/2 -- toggling" do
     test "toggle marks todo done" do
-      model = %{todos: [%{id: 1, text: "Buy milk", done: false}], input: "", next_id: 2, filter: :all}
+      model = %{
+        todos: [%{id: 1, text: "Buy milk", done: false}],
+        input: "",
+        next_id: 2,
+        filter: :all
+      }
+
       model = Todo.update(model, {:toggle, "todo:1", true})
       assert [%{id: 1, done: true}] = model.todos
     end
 
     test "toggle marks todo undone" do
-      model = %{todos: [%{id: 1, text: "Buy milk", done: true}], input: "", next_id: 2, filter: :all}
+      model = %{
+        todos: [%{id: 1, text: "Buy milk", done: true}],
+        input: "",
+        next_id: 2,
+        filter: :all
+      }
+
       model = Todo.update(model, {:toggle, "todo:1", false})
       assert [%{id: 1, done: false}] = model.todos
     end
