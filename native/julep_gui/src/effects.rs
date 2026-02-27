@@ -142,10 +142,7 @@ fn handle_clipboard_read(id: String) -> EffectResponse {
 
 #[cfg(feature = "clipboard")]
 fn handle_clipboard_write(id: String, payload: &Value) -> EffectResponse {
-    let text = payload
-        .get("text")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+    let text = payload.get("text").and_then(|v| v.as_str()).unwrap_or("");
 
     match arboard::Clipboard::new() {
         Ok(mut clipboard) => match clipboard.set_text(text.to_string()) {
@@ -169,7 +166,11 @@ fn handle_clipboard_read_primary(id: String) -> EffectResponse {
     use arboard::{GetExtLinux, LinuxClipboardKind};
     match arboard::Clipboard::new() {
         Ok(mut clipboard) => {
-            match clipboard.get().clipboard(LinuxClipboardKind::Primary).text() {
+            match clipboard
+                .get()
+                .clipboard(LinuxClipboardKind::Primary)
+                .text()
+            {
                 Ok(text) => EffectResponse::ok(id, json!({"text": text})),
                 Err(e) => EffectResponse::error(id, format!("primary clipboard read failed: {e}")),
             }
@@ -180,11 +181,8 @@ fn handle_clipboard_read_primary(id: String) -> EffectResponse {
 
 #[cfg(all(feature = "clipboard", target_os = "linux"))]
 fn handle_clipboard_write_primary(id: String, payload: &Value) -> EffectResponse {
-    use arboard::{SetExtLinux, LinuxClipboardKind};
-    let text = payload
-        .get("text")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+    use arboard::{LinuxClipboardKind, SetExtLinux};
+    let text = payload.get("text").and_then(|v| v.as_str()).unwrap_or("");
 
     match arboard::Clipboard::new() {
         Ok(mut clipboard) => {
@@ -235,10 +233,7 @@ fn handle_notification(id: String, payload: &Value) -> EffectResponse {
         .and_then(|v| v.as_str())
         .unwrap_or("Julep");
 
-    let body = payload
-        .get("body")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+    let body = payload.get("body").and_then(|v| v.as_str()).unwrap_or("");
 
     match notify_rust::Notification::new()
         .summary(title)

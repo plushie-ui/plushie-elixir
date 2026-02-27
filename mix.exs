@@ -15,7 +15,8 @@ defmodule Julep.MixProject do
       # TODO: verify source_url before Hex publish -- github.com/julep-ui/julep
       # is an unrelated project; update to the correct repo URL first.
       source_url: "https://github.com/julep-ui/julep",
-      docs: [main: "Julep", extras: ["README.md"]]
+      docs: [main: "Julep", extras: ["README.md"]],
+      aliases: aliases()
     ]
   end
 
@@ -32,6 +33,12 @@ defmodule Julep.MixProject do
         "GitHub" => "https://github.com/julep-ui/julep"
       },
       files: ~w(lib native/julep_gui/src native/julep_gui/Cargo.toml mix.exs README.md LICENSE)
+    ]
+  end
+
+  defp aliases do
+    [
+      preflight: "julep.preflight"
     ]
   end
 

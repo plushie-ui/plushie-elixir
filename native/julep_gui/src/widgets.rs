@@ -1,22 +1,22 @@
 use std::collections::HashMap;
 
 use crate::protocol::TreeNode;
+use iced::widget::image::FilterMethod;
+use iced::widget::keyed;
+use iced::widget::scrollable::Anchor;
+use iced::widget::text::{LineHeight, Wrapping};
 use iced::widget::{
     button, canvas, checkbox, column, combo_box, container, grid, markdown, mouse_area, pane_grid,
     pick_list, pin, progress_bar, rich_text, row, rule, scrollable, sensor, slider, span, text,
     text_editor, text_input, toggler, tooltip, vertical_slider, Image, Space, Stack, Svg,
 };
-use iced::widget::keyed;
 use iced::{
-    alignment, font, mouse, Border, Color, ContentFit, Element, Fill, Font, Length,
-    Padding, Pixels, Point, Radians, Rotation, Shadow, Size, Vector,
+    alignment, font, mouse, Border, Color, ContentFit, Element, Fill, Font, Length, Padding,
+    Pixels, Point, Radians, Rotation, Shadow, Size, Vector,
 };
-use iced::widget::image::FilterMethod;
-use iced::widget::scrollable::Anchor;
-use iced::widget::text::{LineHeight, Wrapping};
+use serde_json::Value;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
-use serde_json::Value;
 
 use crate::Message;
 
@@ -96,7 +96,7 @@ pub fn ensure_caches(node: &TreeNode, caches: &mut WidgetCaches) {
                 })
                 .unwrap_or_default();
             let cached_options = caches.combo_options.get(&node.id);
-            let options_changed = cached_options.map_or(true, |cached| *cached != options);
+            let options_changed = cached_options.is_none_or(|cached| *cached != options);
             if options_changed {
                 caches
                     .combo_states
@@ -118,15 +118,12 @@ pub fn ensure_caches(node: &TreeNode, caches: &mut WidgetCaches) {
                         let (state, _) = pane_grid::State::new(child_ids[0].clone());
                         state
                     } else {
-                        let (mut state, first_pane) =
-                            pane_grid::State::new(child_ids[0].clone());
+                        let (mut state, first_pane) = pane_grid::State::new(child_ids[0].clone());
                         let mut last_pane = first_pane;
                         for id in child_ids.iter().skip(1) {
-                            if let Some((new_pane, _)) = state.split(
-                                pane_grid::Axis::Vertical,
-                                last_pane,
-                                id.clone(),
-                            ) {
+                            if let Some((new_pane, _)) =
+                                state.split(pane_grid::Axis::Vertical, last_pane, id.clone())
+                            {
                                 last_pane = new_pane;
                             }
                         }
@@ -147,10 +144,7 @@ pub fn ensure_caches(node: &TreeNode, caches: &mut WidgetCaches) {
 // ---------------------------------------------------------------------------
 
 /// Map a TreeNode to an iced Element. Unknown types render as an empty container.
-pub fn render<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+pub fn render<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     match node.type_name.as_str() {
         "column" => render_column(node, caches),
         "row" => render_row(node, caches),
@@ -201,24 +195,15 @@ pub fn render<'a>(
 // Child rendering helper
 // ---------------------------------------------------------------------------
 
-fn render_children<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Vec<Element<'a, Message>> {
-    node.children
-        .iter()
-        .map(|c| render(c, caches))
-        .collect()
+fn render_children<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Vec<Element<'a, Message>> {
+    node.children.iter().map(|c| render(c, caches)).collect()
 }
 
 // ---------------------------------------------------------------------------
 // Column
 // ---------------------------------------------------------------------------
 
-fn render_column<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_column<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
     let padding = parse_padding_value(props);
@@ -252,10 +237,7 @@ fn render_column<'a>(
 // Row
 // ---------------------------------------------------------------------------
 
-fn render_row<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_row<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
     let padding = parse_padding_value(props);
@@ -294,7 +276,10 @@ fn render_text<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, 
     if let Some(s) = size {
         t = t.size(s);
     }
-    let font = props.and_then(|p| p.get("font")).map(parse_font).or(caches.default_font);
+    let font = props
+        .and_then(|p| p.get("font"))
+        .map(parse_font)
+        .or(caches.default_font);
     if let Some(f) = font {
         t = t.font(f);
     }
@@ -347,10 +332,7 @@ fn render_text<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, 
 // Button
 // ---------------------------------------------------------------------------
 
-fn render_button<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_button<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let id = node.id.clone();
 
@@ -371,8 +353,8 @@ fn render_button<'a>(
     let width = prop_length(props, "width", Length::Shrink);
     let height = prop_length(props, "height", Length::Shrink);
     let clip = prop_bool_default(props, "clip", false);
-    let disabled = prop_bool_default(props, "disabled", false)
-        || !prop_bool_default(props, "enabled", true);
+    let disabled =
+        prop_bool_default(props, "disabled", false) || !prop_bool_default(props, "enabled", true);
 
     let mut b = button(child)
         .padding(padding)
@@ -404,10 +386,7 @@ fn render_button<'a>(
 // Container
 // ---------------------------------------------------------------------------
 
-fn render_container<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_container<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let padding = parse_padding_value(props);
     let width = prop_length(props, "width", Length::Shrink);
@@ -454,7 +433,9 @@ fn render_container<'a>(
     }
 
     // Inline styling via custom style closure
-    let bg = props.and_then(|p| p.get("background")).and_then(parse_background);
+    let bg = props
+        .and_then(|p| p.get("background"))
+        .and_then(parse_background);
     let text_color = props.and_then(|p| p.get("color")).and_then(parse_color);
     let border_val = props.and_then(|p| p.get("border")).map(parse_border);
     let shadow_val = props.and_then(|p| p.get("shadow")).map(parse_shadow);
@@ -463,9 +444,11 @@ fn render_container<'a>(
 
     if has_inline_style {
         c = c.style(move |_theme| {
-            let mut style = container::Style::default();
-            style.background = bg;
-            style.text_color = text_color;
+            let mut style = container::Style {
+                background: bg,
+                text_color,
+                ..Default::default()
+            };
             if let Some(b) = border_val {
                 style.border = b;
             }
@@ -510,10 +493,7 @@ fn render_space<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 // Scrollable
 // ---------------------------------------------------------------------------
 
-fn render_scrollable<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_scrollable<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let width = prop_length(props, "width", Length::Shrink);
     let height = prop_length(props, "height", Length::Shrink);
@@ -580,10 +560,7 @@ fn render_scrollable<'a>(
 // Window (top-level container)
 // ---------------------------------------------------------------------------
 
-fn render_window<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_window<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let padding = parse_padding_value(props);
     let width = prop_length(props, "width", Fill);
@@ -626,7 +603,10 @@ fn render_text_input<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Elemen
     if let Some(s) = size {
         ti = ti.size(s);
     }
-    let font = props.and_then(|p| p.get("font")).map(parse_font).or(caches.default_font);
+    let font = props
+        .and_then(|p| p.get("font"))
+        .map(parse_font)
+        .or(caches.default_font);
     if let Some(f) = font {
         ti = ti.font(f);
     }
@@ -689,7 +669,10 @@ fn render_checkbox<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<
     if let Some(ts) = prop_f32(props, "text_size").or(caches.default_text_size) {
         cb = cb.text_size(ts);
     }
-    let font = props.and_then(|p| p.get("font")).map(parse_font).or(caches.default_font);
+    let font = props
+        .and_then(|p| p.get("font"))
+        .map(parse_font)
+        .or(caches.default_font);
     if let Some(f) = font {
         cb = cb.font(f);
     }
@@ -808,7 +791,10 @@ fn render_toggler<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'
     if let Some(ts) = prop_f32(props, "text_size").or(caches.default_text_size) {
         t = t.text_size(ts);
     }
-    let font = props.and_then(|p| p.get("font")).map(parse_font).or(caches.default_font);
+    let font = props
+        .and_then(|p| p.get("font"))
+        .map(parse_font)
+        .or(caches.default_font);
     if let Some(f) = font {
         t = t.font(f);
     }
@@ -845,7 +831,11 @@ fn render_radio<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a,
     // Use "group" prop as the event ID so all radios in a group emit the same ID.
     let event_id = prop_str(props, "group").unwrap_or_else(|| node.id.clone());
 
-    let is_selected = if value == selected_str { Some(0u8) } else { None };
+    let is_selected = if value == selected_str {
+        Some(0u8)
+    } else {
+        None
+    };
     let select_value = value;
 
     let mut r = iced::widget::Radio::new(label, 0u8, is_selected, move |_| {
@@ -864,7 +854,10 @@ fn render_radio<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a,
     if let Some(ts) = prop_f32(props, "text_size").or(caches.default_text_size) {
         r = r.text_size(ts);
     }
-    let font = props.and_then(|p| p.get("font")).map(parse_font).or(caches.default_font);
+    let font = props
+        .and_then(|p| p.get("font"))
+        .map(parse_font)
+        .or(caches.default_font);
     if let Some(f) = font {
         r = r.font(f);
     }
@@ -903,11 +896,9 @@ fn render_slider<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let release_id = node.id.clone();
     let release_value = value;
 
-    let mut s = slider(range, value, move |v| {
-        Message::Slide(id.clone(), v)
-    })
-    .on_release(Message::SlideRelease(release_id, release_value))
-    .width(width);
+    let mut s = slider(range, value, move |v| Message::Slide(id.clone(), v))
+        .on_release(Message::SlideRelease(release_id, release_value))
+        .width(width);
 
     if let Some(st) = step {
         s = s.step(st);
@@ -947,11 +938,9 @@ fn render_vertical_slider<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let release_id = node.id.clone();
     let release_value = value;
 
-    let mut s = vertical_slider(range, value, move |v| {
-        Message::Slide(id.clone(), v)
-    })
-    .on_release(Message::SlideRelease(release_id, release_value))
-    .height(height);
+    let mut s = vertical_slider(range, value, move |v| Message::Slide(id.clone(), v))
+        .on_release(Message::SlideRelease(release_id, release_value))
+        .height(height);
 
     if let Some(st) = step {
         s = s.step(st);
@@ -1007,7 +996,10 @@ fn render_pick_list<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
     if let Some(ts) = prop_f32(props, "text_size").or(caches.default_text_size) {
         pl = pl.text_size(ts);
     }
-    let font = props.and_then(|p| p.get("font")).map(parse_font).or(caches.default_font);
+    let font = props
+        .and_then(|p| p.get("font"))
+        .map(parse_font)
+        .or(caches.default_font);
     if let Some(f) = font {
         pl = pl.font(f);
     }
@@ -1036,10 +1028,7 @@ fn render_pick_list<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
 // Combo Box
 // ---------------------------------------------------------------------------
 
-fn render_combo_box<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_combo_box<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let state = match caches.combo_states.get(&node.id) {
         Some(s) => s,
         None => {
@@ -1068,7 +1057,10 @@ fn render_combo_box<'a>(
     if let Some(sz) = prop_f32(props, "size").or(caches.default_text_size) {
         cb = cb.size(sz);
     }
-    let font = props.and_then(|p| p.get("font")).map(parse_font).or(caches.default_font);
+    let font = props
+        .and_then(|p| p.get("font"))
+        .map(parse_font)
+        .or(caches.default_font);
     if let Some(f) = font {
         cb = cb.font(f);
     }
@@ -1086,10 +1078,7 @@ fn render_combo_box<'a>(
 // Text Editor
 // ---------------------------------------------------------------------------
 
-fn render_text_editor<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_text_editor<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let height = prop_length(props, "height", Length::Shrink);
     let placeholder = prop_str(props, "placeholder").unwrap_or_default();
@@ -1111,7 +1100,10 @@ fn render_text_editor<'a>(
     if !placeholder.is_empty() {
         te = te.placeholder(placeholder);
     }
-    let font = props.and_then(|p| p.get("font")).map(parse_font).or(caches.default_font);
+    let font = props
+        .and_then(|p| p.get("font"))
+        .map(parse_font)
+        .or(caches.default_font);
     if let Some(f) = font {
         te = te.font(f);
     }
@@ -1153,10 +1145,7 @@ fn render_text_editor<'a>(
 // Tooltip
 // ---------------------------------------------------------------------------
 
-fn render_tooltip<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_tooltip<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let tip = prop_str(props, "tip").unwrap_or_default();
     let gap = prop_f32(props, "gap");
@@ -1246,12 +1235,20 @@ fn render_image<'a>(node: &'a TreeNode) -> Element<'a, Message> {
         img = img.scale(scale);
     }
     // crop: {"x": u32, "y": u32, "width": u32, "height": u32}
-    if let Some(crop_obj) = props.and_then(|p| p.get("crop")).and_then(|v| v.as_object()) {
+    if let Some(crop_obj) = props
+        .and_then(|p| p.get("crop"))
+        .and_then(|v| v.as_object())
+    {
         let cx = crop_obj.get("x").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
         let cy = crop_obj.get("y").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
         let cw = crop_obj.get("width").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
         let ch = crop_obj.get("height").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
-        img = img.crop(iced::Rectangle { x: cx, y: cy, width: cw, height: ch });
+        img = img.crop(iced::Rectangle {
+            x: cx,
+            y: cy,
+            width: cw,
+            height: ch,
+        });
     }
 
     img.into()
@@ -1286,10 +1283,7 @@ fn render_svg<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 // Markdown
 // ---------------------------------------------------------------------------
 
-fn render_markdown<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_markdown<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let items = match caches.markdown_items.get(&node.id) {
         Some(items) => items.as_slice(),
@@ -1300,50 +1294,49 @@ fn render_markdown<'a>(
     };
 
     // Build markdown Settings from props, falling back to theme defaults.
-    let settings = if let Some(text_size) = prop_f32(props, "text_size").or(caches.default_text_size) {
-        let mut s = markdown::Settings::with_text_size(
-            text_size,
-            markdown::Style::from(&iced::Theme::Dark),
-        );
-        if let Some(v) = prop_f32(props, "h1_size") {
-            s.h1_size = Pixels(v);
-        }
-        if let Some(v) = prop_f32(props, "h2_size") {
-            s.h2_size = Pixels(v);
-        }
-        if let Some(v) = prop_f32(props, "h3_size") {
-            s.h3_size = Pixels(v);
-        }
-        if let Some(v) = prop_f32(props, "code_size") {
-            s.code_size = Pixels(v);
-        }
-        if let Some(v) = prop_f32(props, "spacing") {
-            s.spacing = Pixels(v);
-        }
-        s
-    } else {
-        let mut s = markdown::Settings::from(&iced::Theme::Dark);
-        if let Some(v) = prop_f32(props, "h1_size") {
-            s.h1_size = Pixels(v);
-        }
-        if let Some(v) = prop_f32(props, "h2_size") {
-            s.h2_size = Pixels(v);
-        }
-        if let Some(v) = prop_f32(props, "h3_size") {
-            s.h3_size = Pixels(v);
-        }
-        if let Some(v) = prop_f32(props, "code_size") {
-            s.code_size = Pixels(v);
-        }
-        if let Some(v) = prop_f32(props, "spacing") {
-            s.spacing = Pixels(v);
-        }
-        s
-    };
+    let settings =
+        if let Some(text_size) = prop_f32(props, "text_size").or(caches.default_text_size) {
+            let mut s = markdown::Settings::with_text_size(
+                text_size,
+                markdown::Style::from(&iced::Theme::Dark),
+            );
+            if let Some(v) = prop_f32(props, "h1_size") {
+                s.h1_size = Pixels(v);
+            }
+            if let Some(v) = prop_f32(props, "h2_size") {
+                s.h2_size = Pixels(v);
+            }
+            if let Some(v) = prop_f32(props, "h3_size") {
+                s.h3_size = Pixels(v);
+            }
+            if let Some(v) = prop_f32(props, "code_size") {
+                s.code_size = Pixels(v);
+            }
+            if let Some(v) = prop_f32(props, "spacing") {
+                s.spacing = Pixels(v);
+            }
+            s
+        } else {
+            let mut s = markdown::Settings::from(&iced::Theme::Dark);
+            if let Some(v) = prop_f32(props, "h1_size") {
+                s.h1_size = Pixels(v);
+            }
+            if let Some(v) = prop_f32(props, "h2_size") {
+                s.h2_size = Pixels(v);
+            }
+            if let Some(v) = prop_f32(props, "h3_size") {
+                s.h3_size = Pixels(v);
+            }
+            if let Some(v) = prop_f32(props, "code_size") {
+                s.code_size = Pixels(v);
+            }
+            if let Some(v) = prop_f32(props, "spacing") {
+                s.spacing = Pixels(v);
+            }
+            s
+        };
 
-    let mut md: Element<'a, Message> = markdown::view(items, settings)
-        .map(Message::MarkdownUrl)
-        .into();
+    let mut md: Element<'a, Message> = markdown::view(items, settings).map(Message::MarkdownUrl);
 
     // Wrap in container if width is specified
     if let Some(w) = value_to_length_opt(props.and_then(|p| p.get("width"))) {
@@ -1357,10 +1350,7 @@ fn render_markdown<'a>(
 // Stack
 // ---------------------------------------------------------------------------
 
-fn render_stack<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_stack<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let width = prop_length(props, "width", Length::Shrink);
     let height = prop_length(props, "height", Length::Shrink);
@@ -1377,10 +1367,7 @@ fn render_stack<'a>(
 // Grid
 // ---------------------------------------------------------------------------
 
-fn render_grid<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_grid<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let cols = props
         .and_then(|p| p.get("columns"))
@@ -1406,10 +1393,7 @@ fn render_grid<'a>(
 // Pin (absolute positioning)
 // ---------------------------------------------------------------------------
 
-fn render_pin<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_pin<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let x = prop_f32(props, "x").unwrap_or(0.0);
     let y = prop_f32(props, "y").unwrap_or(0.0);
@@ -1433,10 +1417,7 @@ fn render_pin<'a>(
 // MouseArea
 // ---------------------------------------------------------------------------
 
-fn render_mouse_area<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_mouse_area<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let child: Element<'a, Message> = node
         .children
         .first()
@@ -1458,10 +1439,7 @@ fn render_mouse_area<'a>(
 // Sensor
 // ---------------------------------------------------------------------------
 
-fn render_sensor<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_sensor<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let child: Element<'a, Message> = node
         .children
         .first()
@@ -1476,7 +1454,9 @@ fn render_sensor<'a>(
 
     sensor(child)
         .key(id)
-        .on_show(move |size| Message::SensorResize(format!("{}:show", show_id), size.width, size.height))
+        .on_show(move |size| {
+            Message::SensorResize(format!("{}:show", show_id), size.width, size.height)
+        })
         .on_resize(move |size| Message::SensorResize(resize_id.clone(), size.width, size.height))
         .on_hide(Message::Click(hide_id))
         .into()
@@ -1492,7 +1472,9 @@ fn render_rich_text<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
     let height = prop_length(props, "height", Length::Shrink);
 
     // spans is an array of objects: {text, size, color, font, link}
-    let spans_value = props.and_then(|p| p.get("spans")).and_then(|v| v.as_array());
+    let spans_value = props
+        .and_then(|p| p.get("spans"))
+        .and_then(|v| v.as_array());
 
     let span_list: Vec<iced::widget::text::Span<'a, String, Font>> = spans_value
         .map(|arr| {
@@ -1523,14 +1505,15 @@ fn render_rich_text<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
         .unwrap_or_default();
 
     let id = node.id.clone();
-    let mut rt = rich_text(span_list)
-        .width(width)
-        .height(height);
+    let mut rt = rich_text(span_list).width(width).height(height);
 
     if let Some(sz) = prop_f32(props, "size").or(caches.default_text_size) {
         rt = rt.size(sz);
     }
-    let font = props.and_then(|p| p.get("font")).map(parse_font).or(caches.default_font);
+    let font = props
+        .and_then(|p| p.get("font"))
+        .map(parse_font)
+        .or(caches.default_font);
     if let Some(f) = font {
         rt = rt.font(f);
     }
@@ -1550,10 +1533,7 @@ fn render_rich_text<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
 // Keyed Column
 // ---------------------------------------------------------------------------
 
-fn render_keyed_column<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_keyed_column<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
     let padding = parse_padding_value(props);
@@ -1573,7 +1553,11 @@ fn render_keyed_column<'a>(
         .collect();
 
     let mut kc = keyed::Column::with_children(keyed_children);
-    kc = kc.spacing(spacing).padding(padding).width(width).height(height);
+    kc = kc
+        .spacing(spacing)
+        .padding(padding)
+        .width(width)
+        .height(height);
 
     if let Some(mw) = prop_f32(props, "max_width") {
         kc = kc.max_width(mw);
@@ -1586,10 +1570,7 @@ fn render_keyed_column<'a>(
 // Float (floating overlay with scale/translate)
 // ---------------------------------------------------------------------------
 
-fn render_float<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_float<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
 
     let child: Element<'a, Message> = node
@@ -1601,8 +1582,8 @@ fn render_float<'a>(
     let tx = prop_f32(props, "translate_x").unwrap_or(0.0);
     let ty = prop_f32(props, "translate_y").unwrap_or(0.0);
 
-    let mut f = iced::widget::float(child)
-        .translate(move |_content, _viewport| Vector::new(tx, ty));
+    let mut f =
+        iced::widget::float(child).translate(move |_content, _viewport| Vector::new(tx, ty));
 
     if let Some(s) = prop_f32(props, "scale") {
         f = f.scale(s);
@@ -1615,14 +1596,11 @@ fn render_float<'a>(
 // Themer (applies a sub-theme to child content)
 // ---------------------------------------------------------------------------
 
-fn render_themer<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_themer<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let theme: Option<iced::Theme> = props
         .and_then(|p| p.get("theme"))
-        .map(|v| crate::theming::resolve_theme_only(v));
+        .map(crate::theming::resolve_theme_only);
 
     let child: Element<'a, Message> = node
         .children
@@ -1637,10 +1615,7 @@ fn render_themer<'a>(
 // Responsive (container that reports its size)
 // ---------------------------------------------------------------------------
 
-fn render_responsive<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_responsive<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     // iced's Responsive widget takes a closure that receives Size and returns
     // an Element. Since we can't call back to Elixir within a single frame,
     // we render the children as-is and wrap in a sensor so Elixir receives
@@ -1667,10 +1642,7 @@ fn render_responsive<'a>(
 // PaneGrid
 // ---------------------------------------------------------------------------
 
-fn render_pane_grid<'a>(
-    node: &'a TreeNode,
-    caches: &'a WidgetCaches,
-) -> Element<'a, Message> {
+fn render_pane_grid<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(2.0);
     let width = prop_length(props, "width", Length::Fill);
@@ -1758,29 +1730,45 @@ impl canvas::Program<Message> for CanvasProgram {
         match event {
             iced::Event::Mouse(mouse::Event::ButtonPressed(button)) if self.on_press => {
                 let btn_str = serialize_mouse_button_for_canvas(button);
-                Some(iced::widget::Action::publish(
-                    Message::CanvasEvent(self.id.clone(), "press".to_string(), position.x, position.y, btn_str),
-                ))
+                Some(iced::widget::Action::publish(Message::CanvasEvent(
+                    self.id.clone(),
+                    "press".to_string(),
+                    position.x,
+                    position.y,
+                    btn_str,
+                )))
             }
             iced::Event::Mouse(mouse::Event::ButtonReleased(button)) if self.on_release => {
                 let btn_str = serialize_mouse_button_for_canvas(button);
-                Some(iced::widget::Action::publish(
-                    Message::CanvasEvent(self.id.clone(), "release".to_string(), position.x, position.y, btn_str),
-                ))
+                Some(iced::widget::Action::publish(Message::CanvasEvent(
+                    self.id.clone(),
+                    "release".to_string(),
+                    position.x,
+                    position.y,
+                    btn_str,
+                )))
             }
             iced::Event::Mouse(mouse::Event::CursorMoved { .. }) if self.on_move => {
-                Some(iced::widget::Action::publish(
-                    Message::CanvasEvent(self.id.clone(), "move".to_string(), position.x, position.y, String::new()),
-                ))
+                Some(iced::widget::Action::publish(Message::CanvasEvent(
+                    self.id.clone(),
+                    "move".to_string(),
+                    position.x,
+                    position.y,
+                    String::new(),
+                )))
             }
             iced::Event::Mouse(mouse::Event::WheelScrolled { delta }) if self.on_scroll => {
                 let (dx, dy) = match delta {
                     mouse::ScrollDelta::Lines { x, y } => (*x, *y),
                     mouse::ScrollDelta::Pixels { x, y } => (*x, *y),
                 };
-                Some(iced::widget::Action::publish(
-                    Message::CanvasScroll(self.id.clone(), position.x, position.y, dx, dy),
-                ))
+                Some(iced::widget::Action::publish(Message::CanvasScroll(
+                    self.id.clone(),
+                    position.x,
+                    position.y,
+                    dx,
+                    dy,
+                )))
             }
             _ => None,
         }
@@ -1798,11 +1786,7 @@ impl canvas::Program<Message> for CanvasProgram {
 
         // Background clear/fill
         if let Some(bg) = self.background {
-            frame.fill_rectangle(
-                Point::ORIGIN,
-                bounds.size(),
-                bg,
-            );
+            frame.fill_rectangle(Point::ORIGIN, bounds.size(), bg);
         }
 
         for shape in &self.shapes {
@@ -1838,16 +1822,15 @@ impl canvas::Program<Message> for CanvasProgram {
                     let line = canvas::Path::line(Point::new(x1, y1), Point::new(x2, y2));
                     frame.stroke(
                         &line,
-                        canvas::Stroke::default().with_color(color).with_width(width),
+                        canvas::Stroke::default()
+                            .with_color(color)
+                            .with_width(width),
                     );
                 }
                 "text" => {
                     let x = json_f32(shape, "x");
                     let y = json_f32(shape, "y");
-                    let content = shape
-                        .get("content")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("");
+                    let content = shape.get("content").and_then(|v| v.as_str()).unwrap_or("");
                     let fill = json_color(shape, "fill");
                     frame.fill_text(canvas::Text {
                         content: content.to_owned(),
@@ -1936,9 +1919,7 @@ fn json_f32(val: &Value, key: &str) -> f32 {
 /// Parse a Color from a JSON "fill" field. Accepts "#rrggbb" hex strings;
 /// defaults to white if missing or unparseable.
 fn json_color(val: &Value, key: &str) -> Color {
-    val.get(key)
-        .and_then(parse_color)
-        .unwrap_or(Color::WHITE)
+    val.get(key).and_then(parse_color).unwrap_or(Color::WHITE)
 }
 
 // ---------------------------------------------------------------------------
@@ -2308,19 +2289,14 @@ fn parse_background(value: &Value) -> Option<iced::Background> {
         Value::Object(obj) => {
             match obj.get("type").and_then(|v| v.as_str()) {
                 Some("linear") => {
-                    let angle_deg = obj
-                        .get("angle")
-                        .and_then(|v| v.as_f64())
-                        .unwrap_or(0.0) as f32;
+                    let angle_deg = obj.get("angle").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
                     let angle = Radians(angle_deg.to_radians());
                     let mut linear = iced::gradient::Linear::new(angle);
 
                     if let Some(stops) = obj.get("stops").and_then(|v| v.as_array()) {
                         for stop in stops {
-                            let offset = stop
-                                .get("offset")
-                                .and_then(|v| v.as_f64())
-                                .unwrap_or(0.0) as f32;
+                            let offset =
+                                stop.get("offset").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
                             let color = stop
                                 .get("color")
                                 .and_then(parse_color)
@@ -2329,9 +2305,7 @@ fn parse_background(value: &Value) -> Option<iced::Background> {
                         }
                     }
 
-                    Some(iced::Background::Gradient(
-                        iced::Gradient::Linear(linear),
-                    ))
+                    Some(iced::Background::Gradient(iced::Gradient::Linear(linear)))
                 }
                 _ => {
                     // Fall back to color object parsing ({r, g, b, a})
@@ -2454,15 +2428,37 @@ fn parse_border(value: &Value) -> Border {
             let tr = arr.get(1).and_then(|v| v.as_f64()).unwrap_or(tl as f64) as f32;
             let br = arr.get(2).and_then(|v| v.as_f64()).unwrap_or(tl as f64) as f32;
             let bl = arr.get(3).and_then(|v| v.as_f64()).unwrap_or(tl as f64) as f32;
-            iced::border::Radius { top_left: tl, top_right: tr, bottom_right: br, bottom_left: bl }
+            iced::border::Radius {
+                top_left: tl,
+                top_right: tr,
+                bottom_right: br,
+                bottom_left: bl,
+            }
         }
         Some(Value::Object(radius_obj)) => {
             // Per-corner object: {"top_left": N, "top_right": N, "bottom_right": N, "bottom_left": N}
-            let tl = radius_obj.get("top_left").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
-            let tr = radius_obj.get("top_right").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
-            let br = radius_obj.get("bottom_right").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
-            let bl = radius_obj.get("bottom_left").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
-            iced::border::Radius { top_left: tl, top_right: tr, bottom_right: br, bottom_left: bl }
+            let tl = radius_obj
+                .get("top_left")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0) as f32;
+            let tr = radius_obj
+                .get("top_right")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0) as f32;
+            let br = radius_obj
+                .get("bottom_right")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0) as f32;
+            let bl = radius_obj
+                .get("bottom_left")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0) as f32;
+            iced::border::Radius {
+                top_left: tl,
+                top_right: tr,
+                bottom_right: br,
+                bottom_left: bl,
+            }
         }
         _ => (0.0_f32).into(),
     };
@@ -2523,10 +2519,10 @@ fn parse_line_height(props: Props<'_>) -> Option<LineHeight> {
         Value::Object(obj) => {
             if let Some(r) = obj.get("relative").and_then(|v| v.as_f64()) {
                 Some(LineHeight::Relative(r as f32))
-            } else if let Some(a) = obj.get("absolute").and_then(|v| v.as_f64()) {
-                Some(LineHeight::Absolute(Pixels(a as f32)))
             } else {
-                None
+                obj.get("absolute")
+                    .and_then(|v| v.as_f64())
+                    .map(|a| LineHeight::Absolute(Pixels(a as f32)))
             }
         }
         _ => None,
@@ -2643,10 +2639,7 @@ mod tests {
     #[test]
     fn prop_length_shrink_string() {
         let v = json!({"width": "shrink"});
-        assert_eq!(
-            prop_length(make_props(&v), "width", Fill),
-            Length::Shrink
-        );
+        assert_eq!(prop_length(make_props(&v), "width", Fill), Length::Shrink);
     }
 
     #[test]

@@ -11,7 +11,9 @@ use std::thread;
 use std::time::Duration;
 
 use iced::widget::{container, markdown, pane_grid, text, text_editor};
-use iced::{event, system, time, window, Element, Fill, Font, Point, Size, Subscription, Task, Theme};
+use iced::{
+    event, system, time, window, Element, Fill, Font, Point, Size, Subscription, Task, Theme,
+};
 
 use widgets::WidgetCaches;
 
@@ -363,10 +365,7 @@ impl App {
             Message::WindowCloseRequested(window_id) => {
                 if let Some(tag) = self.active_subscriptions.get("on_window_close") {
                     let julep_id = self.julep_id_for(&window_id);
-                    emit_event(OutgoingEvent::window_close_requested(
-                        tag.clone(),
-                        julep_id,
-                    ));
+                    emit_event(OutgoingEvent::window_close_requested(tag.clone(), julep_id));
                 }
                 // Remove from maps if this was a julep-managed window.
                 if let Some(julep_id) = self.reverse_window_map.remove(&window_id) {
@@ -474,7 +473,10 @@ impl App {
                     }
                     window::Event::Focused => {
                         if let Some(tag) = self.active_subscriptions.get("on_window_event") {
-                            emit_event(OutgoingEvent::window_focused(tag.clone(), julep_id.clone()));
+                            emit_event(OutgoingEvent::window_focused(
+                                tag.clone(),
+                                julep_id.clone(),
+                            ));
                         }
                         if let Some(tag) = self.active_subscriptions.get("on_window_focus") {
                             emit_event(OutgoingEvent::window_focused(tag.clone(), julep_id));
@@ -482,7 +484,10 @@ impl App {
                     }
                     window::Event::Unfocused => {
                         if let Some(tag) = self.active_subscriptions.get("on_window_event") {
-                            emit_event(OutgoingEvent::window_unfocused(tag.clone(), julep_id.clone()));
+                            emit_event(OutgoingEvent::window_unfocused(
+                                tag.clone(),
+                                julep_id.clone(),
+                            ));
                         }
                         if let Some(tag) = self.active_subscriptions.get("on_window_unfocus") {
                             emit_event(OutgoingEvent::window_unfocused(tag.clone(), julep_id));
@@ -615,9 +620,7 @@ impl App {
         };
 
         match self.tree.find_window(julep_id) {
-            Some(window_node) => {
-                widgets::render(window_node, &self.caches)
-            }
+            Some(window_node) => widgets::render(window_node, &self.caches),
             None => container(text("waiting for snapshot..."))
                 .width(Fill)
                 .height(Fill)
@@ -664,7 +667,10 @@ impl App {
             }));
         }
 
-        if self.active_subscriptions.contains_key("on_modifiers_changed") {
+        if self
+            .active_subscriptions
+            .contains_key("on_modifiers_changed")
+        {
             subs.push(event::listen_with(|evt, _status, _window| {
                 if let iced::Event::Keyboard(iced::keyboard::Event::ModifiersChanged(mods)) = evt {
                     Some(Message::ModifiersChanged(mods))
@@ -768,7 +774,9 @@ impl App {
                     key, modifiers, ..
                 }) => Some(Message::KeyPressed(key, modifiers)),
                 iced::Event::Keyboard(iced::keyboard::Event::KeyReleased {
-                    key, modifiers, ..
+                    key,
+                    modifiers,
+                    ..
                 }) => Some(Message::KeyReleased(key, modifiers)),
                 iced::Event::Keyboard(iced::keyboard::Event::ModifiersChanged(mods)) => {
                     Some(Message::ModifiersChanged(mods))
@@ -899,14 +907,13 @@ impl App {
                     .get("default_text_size")
                     .and_then(|v| v.as_f64())
                     .map(|v| v as f32);
-                self.default_font = settings.get("default_font").and_then(|v| {
+                self.default_font = settings.get("default_font").map(|v| {
                     let family = v.get("family").and_then(|f| f.as_str());
-                    let font = if family == Some("monospace") {
+                    if family == Some("monospace") {
                         Font::MONOSPACE
                     } else {
                         Font::DEFAULT
-                    };
-                    Some(font)
+                    }
                 });
                 self.caches.default_text_size = self.default_text_size;
                 self.caches.default_font = self.default_font;
@@ -972,14 +979,8 @@ impl App {
             }
             "snap_to" => {
                 let target = get_target();
-                let x = payload
-                    .get("x")
-                    .and_then(|v| v.as_f64())
-                    .map(|v| v as f32);
-                let y = payload
-                    .get("y")
-                    .and_then(|v| v.as_f64())
-                    .map(|v| v as f32);
+                let x = payload.get("x").and_then(|v| v.as_f64()).map(|v| v as f32);
+                let y = payload.get("y").and_then(|v| v.as_f64()).map(|v| v as f32);
                 iced::widget::operation::snap_to(
                     iced::widget::Id::from(target),
                     iced::widget::operation::RelativeOffset { x, y },
@@ -994,14 +995,8 @@ impl App {
             }
             "select_range" => {
                 let target = get_target();
-                let start = payload
-                    .get("start")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0) as usize;
-                let end = payload
-                    .get("end")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0) as usize;
+                let start = payload.get("start").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+                let end = payload.get("end").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
                 iced::widget::operation::select_range(iced::widget::Id::from(target), start, end)
             }
             "move_cursor_to_front" => {
@@ -1016,14 +1011,11 @@ impl App {
                     .get("position")
                     .and_then(|v| v.as_u64())
                     .unwrap_or(0) as usize;
-                iced::widget::operation::move_cursor_to(
-                    iced::widget::Id::from(target),
-                    position,
-                )
+                iced::widget::operation::move_cursor_to(iced::widget::Id::from(target), position)
             }
             "close_window" => {
                 // Close the oldest (main) window, which triggers app exit.
-                window::oldest().and_then(|id| window::close(id))
+                window::oldest().and_then(window::close)
             }
             "exit" => iced::exit(),
             // -- PaneGrid operations --
@@ -1137,9 +1129,7 @@ impl App {
         match op {
             "open" => {
                 if self.window_map.contains_key(window_id) {
-                    eprintln!(
-                        "julep_gui: window_op open: {window_id} already open, skipping"
-                    );
+                    eprintln!("julep_gui: window_op open: {window_id} already open, skipping");
                     return Task::none();
                 }
 
@@ -1179,14 +1169,8 @@ impl App {
             }
             "move" => {
                 if let Some(&iced_id) = self.window_map.get(window_id) {
-                    let x = settings
-                        .get("x")
-                        .and_then(|v| v.as_f64())
-                        .unwrap_or(0.0) as f32;
-                    let y = settings
-                        .get("y")
-                        .and_then(|v| v.as_f64())
-                        .unwrap_or(0.0) as f32;
+                    let x = settings.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+                    let y = settings.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
                     window::move_to(iced_id, Point::new(x, y))
                 } else {
                     Task::none()
@@ -1278,13 +1262,14 @@ impl App {
             }
             "request_attention" => {
                 if let Some(&iced_id) = self.window_map.get(window_id) {
-                    let urgency = settings
-                        .get("urgency")
-                        .and_then(|v| v.as_str())
-                        .map(|s| match s {
-                            "critical" => window::UserAttention::Critical,
-                            _ => window::UserAttention::Informational,
-                        });
+                    let urgency =
+                        settings
+                            .get("urgency")
+                            .and_then(|v| v.as_str())
+                            .map(|s| match s {
+                                "critical" => window::UserAttention::Critical,
+                                _ => window::UserAttention::Informational,
+                            });
                     window::request_user_attention(iced_id, urgency)
                 } else {
                     Task::none()
@@ -1380,10 +1365,8 @@ impl App {
                             window::Mode::Fullscreen => "fullscreen",
                             window::Mode::Hidden => "hidden",
                         };
-                        let resp = protocol::EffectResponse::ok(
-                            wid.clone(),
-                            serde_json::json!(mode_str),
-                        );
+                        let resp =
+                            protocol::EffectResponse::ok(wid.clone(), serde_json::json!(mode_str));
                         emit_effect_response(resp);
                         Message::Tick
                     })
@@ -1395,10 +1378,8 @@ impl App {
                 if let Some(&iced_id) = self.window_map.get(window_id) {
                     let wid = window_id.to_string();
                     window::scale_factor(iced_id).map(move |factor| {
-                        let resp = protocol::EffectResponse::ok(
-                            wid.clone(),
-                            serde_json::json!(factor),
-                        );
+                        let resp =
+                            protocol::EffectResponse::ok(wid.clone(), serde_json::json!(factor));
                         emit_effect_response(resp);
                         Message::Tick
                     })
@@ -1410,10 +1391,8 @@ impl App {
                 if let Some(&iced_id) = self.window_map.get(window_id) {
                     let wid = window_id.to_string();
                     window::is_maximized(iced_id).map(move |val| {
-                        let resp = protocol::EffectResponse::ok(
-                            wid.clone(),
-                            serde_json::json!(val),
-                        );
+                        let resp =
+                            protocol::EffectResponse::ok(wid.clone(), serde_json::json!(val));
                         emit_effect_response(resp);
                         Message::Tick
                     })
@@ -1425,10 +1404,8 @@ impl App {
                 if let Some(&iced_id) = self.window_map.get(window_id) {
                     let wid = window_id.to_string();
                     window::is_minimized(iced_id).map(move |val| {
-                        let resp = protocol::EffectResponse::ok(
-                            wid.clone(),
-                            serde_json::json!(val),
-                        );
+                        let resp =
+                            protocol::EffectResponse::ok(wid.clone(), serde_json::json!(val));
                         emit_effect_response(resp);
                         Message::Tick
                     })
@@ -1466,10 +1443,8 @@ impl App {
                 if let Some(&iced_id) = self.window_map.get(window_id) {
                     let wid = window_id.to_string();
                     window::raw_id::<Message>(iced_id).map(move |raw| {
-                        let resp = protocol::EffectResponse::ok(
-                            wid.clone(),
-                            serde_json::json!(raw),
-                        );
+                        let resp =
+                            protocol::EffectResponse::ok(wid.clone(), serde_json::json!(raw));
                         emit_effect_response(resp);
                         Message::Tick
                     })
@@ -1482,7 +1457,9 @@ impl App {
                     let wid = window_id.to_string();
                     window::monitor_size(iced_id).map(move |size_opt| {
                         let result = match size_opt {
-                            Some(size) => serde_json::json!({"width": size.width, "height": size.height}),
+                            Some(size) => {
+                                serde_json::json!({"width": size.width, "height": size.height})
+                            }
                             None => serde_json::Value::Null,
                         };
                         let resp = protocol::EffectResponse::ok(wid.clone(), result);
@@ -1517,9 +1494,7 @@ impl App {
                 self.reverse_window_map.insert(iced_id, win_id.clone());
 
                 let julep_id = win_id.clone();
-                tasks.push(
-                    open_task.map(move |id| Message::WindowOpened(id, julep_id.clone())),
-                );
+                tasks.push(open_task.map(move |id| Message::WindowOpened(id, julep_id.clone())));
             }
         }
 
@@ -1571,14 +1546,8 @@ fn find_pane_by_julep_id(
 
 /// Parse a full `window::Settings` from a JSON value (node props or op settings).
 fn parse_window_settings(v: &serde_json::Value) -> window::Settings {
-    let width = v
-        .get("width")
-        .and_then(|v| v.as_f64())
-        .unwrap_or(800.0) as f32;
-    let height = v
-        .get("height")
-        .and_then(|v| v.as_f64())
-        .unwrap_or(600.0) as f32;
+    let width = v.get("width").and_then(|v| v.as_f64()).unwrap_or(800.0) as f32;
+    let height = v.get("height").and_then(|v| v.as_f64()).unwrap_or(600.0) as f32;
 
     let maximized = v
         .get("maximized")
@@ -1589,14 +1558,8 @@ fn parse_window_settings(v: &serde_json::Value) -> window::Settings {
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
     let visible = v.get("visible").and_then(|v| v.as_bool()).unwrap_or(true);
-    let resizable = v
-        .get("resizable")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(true);
-    let closeable = v
-        .get("closeable")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(true);
+    let resizable = v.get("resizable").and_then(|v| v.as_bool()).unwrap_or(true);
+    let closeable = v.get("closeable").and_then(|v| v.as_bool()).unwrap_or(true);
     let minimizable = v
         .get("minimizable")
         .and_then(|v| v.as_bool())
@@ -1628,11 +1591,7 @@ fn parse_window_settings(v: &serde_json::Value) -> window::Settings {
     let min_size = parse_optional_size(v.get("min_size").unwrap_or(&serde_json::Value::Null));
     let max_size = parse_optional_size(v.get("max_size").unwrap_or(&serde_json::Value::Null));
 
-    let level = parse_window_level(
-        v.get("level")
-            .and_then(|v| v.as_str())
-            .unwrap_or("normal"),
-    );
+    let level = parse_window_level(v.get("level").and_then(|v| v.as_str()).unwrap_or("normal"));
 
     window::Settings {
         size: Size::new(width, height),

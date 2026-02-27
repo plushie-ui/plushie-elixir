@@ -26,9 +26,7 @@ pub fn resolve_theme(value: &Value) -> ThemeResult {
             let theme = custom_theme_from_object(map);
             ThemeResult { theme }
         }
-        _ => ThemeResult {
-            theme: Theme::Dark,
-        },
+        _ => ThemeResult { theme: Theme::Dark },
     }
 }
 
@@ -79,7 +77,7 @@ fn resolve_builtin(s: &str) -> Theme {
 /// Supported fields (all optional):
 /// - "name"       - display name for the theme (default: "Custom")
 /// - "base"       - built-in theme name whose palette is used as the starting
-///                  point (default: dark)
+///   point (default: dark)
 /// - "background" - hex color string, e.g. "#1a1b26"
 /// - "text"       - hex color string
 /// - "primary"    - hex color string
@@ -157,14 +155,8 @@ mod tests {
 
     #[test]
     fn resolve_builtin_themes() {
-        assert!(matches!(
-            resolve_theme(&json!("Dark")).theme,
-            Theme::Dark
-        ));
-        assert!(matches!(
-            resolve_theme(&json!("nord")).theme,
-            Theme::Nord
-        ));
+        assert!(matches!(resolve_theme(&json!("Dark")).theme, Theme::Dark));
+        assert!(matches!(resolve_theme(&json!("nord")).theme, Theme::Nord));
         assert!(matches!(
             resolve_theme(&json!("CATPPUCCIN_MOCHA")).theme,
             Theme::CatppuccinMocha
