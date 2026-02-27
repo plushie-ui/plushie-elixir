@@ -4,6 +4,7 @@ defmodule Julep.Test.SimTest do
   alias Julep.Test.Backend.Sim
   alias Julep.Test.Element
   alias Julep.Test.Screenshot
+  alias Julep.Test.Session
   alias Julep.Test.Snapshot
 
   defmodule CounterApp do
@@ -181,6 +182,14 @@ defmodule Julep.Test.SimTest do
       assert shot.hash == ""
       assert shot.size == {0, 0}
       assert shot.rgba_data == nil
+    end
+
+    test "assert_screenshot is a no-op on sim (empty hash accepted)", %{pid: pid} do
+      session = %Session{backend: Sim, pid: pid}
+      Process.put(:julep_test_session, session)
+
+      assert Julep.Test.Helpers.assert_screenshot("sim-noop-test") == :ok
+      refute File.exists?("test/screenshots/sim-noop-test.sha256")
     end
   end
 

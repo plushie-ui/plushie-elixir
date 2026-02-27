@@ -170,14 +170,14 @@ defmodule Julep.Test.Helpers do
   @doc """
   Creates and registers a new test session for `app`.
 
-  Resolves the backend from env var, application config, or defaults to
-  `:sim`. Stores the session in the process dictionary so all helper
-  functions work without explicit session threading.
+  Resolves the backend from `JULEP_TEST_BACKEND` env var, application
+  config, or defaults to `:sim`. Stores the session in the process
+  dictionary so all helper functions work without explicit session threading.
 
   Call this in a test or setup block when not using `Julep.Test.Case`.
   """
-  @spec start(app :: module(), opts :: keyword()) :: Session.t()
-  def start(app, _opts \\ []) do
+  @spec start(app :: module()) :: Session.t()
+  def start(app) do
     backend_mod = Julep.Test.Case.resolve_backend()
     session = Session.start(app, backend: backend_mod)
     Process.put(:julep_test_session, session)

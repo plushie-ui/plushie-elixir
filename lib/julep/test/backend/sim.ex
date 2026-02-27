@@ -7,7 +7,8 @@ defmodule Julep.Test.Backend.Sim do
 
   ## Limitations
 
-  - Cannot take pixel snapshots (use `:headless` or `:full` for that).
+  - Cannot take pixel screenshots (use `:full` for that). Structural
+    snapshots work via tree hashing.
   - Widget ops (focus, scroll), window ops, and timers are silently skipped
     (they need a renderer). Async, stream, done, and batch commands are
     executed synchronously so `update/2` chains work without waiting.

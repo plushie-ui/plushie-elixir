@@ -3,8 +3,8 @@ defmodule Julep.Test.Backend.Headless do
   Headless test backend using the Rust renderer with iced_test Simulator.
 
   Spawns `julep_gui --headless` as a Port and communicates via JSONL with
-  correlation-ID protocol. Provides pixel snapshots via tiny-skia (no display
-  server required) and real widget rendering for visual regression testing.
+  correlation-ID protocol. Provides structural tree snapshots and real widget
+  rendering for regression testing. No display server required.
 
   ## Requirements
 

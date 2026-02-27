@@ -5,7 +5,7 @@ defmodule Julep.Test.Backend do
   Three backends provide different fidelity levels:
 
   - `:sim` -- pure Elixir, no Rust. Fastest. Tests logic and tree structure.
-  - `:headless` -- real Rust renderer with iced_test Simulator. Pixel snapshots.
+  - `:headless` -- real Rust renderer with iced_test Simulator. Structural snapshots.
   - `:full` -- real iced windows (Xvfb in CI). Effects, subscriptions, GPU rendering.
 
   All backends return the same types (`Element`, `Snapshot`, `Screenshot`,
