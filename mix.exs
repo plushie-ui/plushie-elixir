@@ -16,7 +16,8 @@ defmodule Julep.MixProject do
       # is an unrelated project; update to the correct repo URL first.
       source_url: "https://github.com/julep-ui/julep",
       docs: [main: "Julep", extras: ["README.md"]],
-      aliases: aliases()
+      aliases: aliases(),
+      dialyzer: [plt_add_apps: [:mix, :ex_unit, :inets, :ssl]]
     ]
   end
 
@@ -49,7 +50,8 @@ defmodule Julep.MixProject do
   defp deps do
     [
       {:jason, "~> 1.4"},
-      {:file_system, "~> 1.0", optional: true}
+      {:file_system, "~> 1.0", optional: true},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
     ]
   end
 end

@@ -35,51 +35,61 @@ defmodule Julep.Bridge do
     - `:max_restarts`  - max restart attempts before giving up (default: 5)
     - `:restart_delay` - base delay in ms for exponential back-off (default: 100)
   """
+  @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
   @doc "Sends application-level settings to the renderer."
+  @spec send_settings(GenServer.server(), map()) :: :ok
   def send_settings(bridge, settings) do
     GenServer.cast(bridge, {:send_settings, settings})
   end
 
   @doc "Sends an encoded snapshot of `tree` to the renderer."
+  @spec send_snapshot(GenServer.server(), map()) :: :ok
   def send_snapshot(bridge, tree) do
     GenServer.cast(bridge, {:send_snapshot, tree})
   end
 
   @doc "Sends a patch (list of diff ops) to the renderer."
+  @spec send_patch(GenServer.server(), [map()]) :: :ok
   def send_patch(bridge, ops) do
     GenServer.cast(bridge, {:send_patch, ops})
   end
 
   @doc "Sends an effect request to the renderer."
+  @spec send_effect_request(GenServer.server(), String.t(), String.t(), map()) :: :ok
   def send_effect_request(bridge, id, kind, payload) do
     GenServer.cast(bridge, {:send_effect_request, id, kind, payload})
   end
 
   @doc "Sends a widget operation to the renderer."
+  @spec send_widget_op(GenServer.server(), String.t(), map()) :: :ok
   def send_widget_op(bridge, op, payload) do
     GenServer.cast(bridge, {:send_widget_op, op, payload})
   end
 
   @doc "Registers a renderer-side subscription."
+  @spec send_subscription_register(GenServer.server(), String.t(), String.t()) :: :ok
   def send_subscription_register(bridge, kind, tag) do
     GenServer.cast(bridge, {:send_subscription_register, kind, tag})
   end
 
   @doc "Unregisters a renderer-side subscription."
+  @spec send_subscription_unregister(GenServer.server(), String.t()) :: :ok
   def send_subscription_unregister(bridge, kind) do
     GenServer.cast(bridge, {:send_subscription_unregister, kind})
   end
 
   @doc "Sends a window lifecycle operation to the renderer."
+  @spec send_window_op(GenServer.server(), String.t(), String.t(), map()) :: :ok
   def send_window_op(bridge, op, window_id, settings \\ %{}) do
     GenServer.cast(bridge, {:send_window_op, op, window_id, settings})
   end
 
   @doc "Stops the bridge GenServer."
+  @spec stop(GenServer.server()) :: :ok
   def stop(bridge) do
     GenServer.stop(bridge)
   end

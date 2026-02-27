@@ -9,6 +9,7 @@ defmodule Julep.Binary do
   2. Precompiled binary in priv/
   3. Development build in native/julep_gui/target/
   """
+  @spec renderer_path() :: String.t()
   def renderer_path do
     System.get_env("JULEP_RENDERER_PATH") ||
       precompiled_path() ||
@@ -17,6 +18,7 @@ defmodule Julep.Binary do
   end
 
   @doc "Returns the platform-specific binary name."
+  @spec binary_name() :: String.t()
   def binary_name do
     os = os_name()
     arch = arch_name()

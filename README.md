@@ -82,10 +82,11 @@ the full CI pipeline locally and stops on first failure:
 1. `mix format --check-formatted`
 2. `mix compile --warnings-as-errors`
 3. `mix test`
-4. `cargo build` (renderer)
-5. `cargo test` (renderer)
-6. `cargo fmt --check` (renderer)
-7. `cargo clippy -D warnings` (renderer)
+4. `mix dialyzer`
+5. `cargo build` (renderer)
+6. `cargo test` (renderer)
+7. `cargo fmt --check` (renderer)
+8. `cargo clippy -D warnings` (renderer)
 
 ## Documentation
 
