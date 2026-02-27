@@ -57,14 +57,14 @@ defmodule Julep.App do
   @doc """
   Called after every update. Returns a UI tree as a plain map.
   """
-  @callback view(model) :: map()
+  @callback view(model) :: Julep.Iced.ui_node()
 
   @doc """
   Called after every update. Returns the list of active subscriptions.
   The runtime diffs this list and starts or stops subscriptions as needed.
   Default: `[]`.
   """
-  @callback subscribe(model) :: [map()]
+  @callback subscribe(model) :: [Julep.Subscription.t()]
 
   @doc """
   Called when the renderer process exits unexpectedly. Return the model to

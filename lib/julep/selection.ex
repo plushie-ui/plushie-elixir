@@ -36,7 +36,7 @@ defmodule Julep.Selection do
   - `:mode` -- selection mode: `:single` (default), `:multi`, or `:range`.
   - `:order` -- ordered list of item IDs for range selection.
   """
-  @spec new(keyword()) :: t()
+  @spec new(opts :: keyword()) :: t()
   def new(opts \\ []) do
     %__MODULE__{
       mode: Keyword.get(opts, :mode, :single),
@@ -53,7 +53,7 @@ defmodule Julep.Selection do
 
   Sets the anchor to `id` for subsequent range selections.
   """
-  @spec select(t(), term(), keyword()) :: t()
+  @spec select(sel :: t(), id :: term(), opts :: keyword()) :: t()
   def select(sel, id, opts \\ [])
 
   def select(%__MODULE__{mode: :single} = sel, id, _opts) do
@@ -81,7 +81,7 @@ defmodule Julep.Selection do
   otherwise adds it. In `:single` mode, toggling a selected item
   clears the selection entirely.
   """
-  @spec toggle(t(), term()) :: t()
+  @spec toggle(sel :: t(), id :: term()) :: t()
   def toggle(%__MODULE__{mode: :single} = sel, id) do
     if MapSet.member?(sel.selected, id) do
       %{sel | selected: MapSet.new(), anchor: nil}
@@ -99,13 +99,13 @@ defmodule Julep.Selection do
   end
 
   @doc "Removes `id` from the selection."
-  @spec deselect(t(), term()) :: t()
+  @spec deselect(sel :: t(), id :: term()) :: t()
   def deselect(%__MODULE__{} = sel, id) do
     %{sel | selected: MapSet.delete(sel.selected, id)}
   end
 
   @doc "Clears all selected items and resets the anchor."
-  @spec clear(t()) :: t()
+  @spec clear(sel :: t()) :: t()
   def clear(%__MODULE__{} = sel) do
     %{sel | selected: MapSet.new(), anchor: nil}
   end
@@ -116,7 +116,7 @@ defmodule Julep.Selection do
 
   Requires `order` to have been set at creation time via `new/1`.
   """
-  @spec range_select(t(), term()) :: t()
+  @spec range_select(sel :: t(), id :: term()) :: t()
   def range_select(%__MODULE__{anchor: nil} = sel, id) do
     %{sel | selected: MapSet.new([id]), anchor: id}
   end
@@ -140,11 +140,11 @@ defmodule Julep.Selection do
   end
 
   @doc "Returns the `MapSet` of currently selected item IDs."
-  @spec selected(t()) :: MapSet.t()
+  @spec selected(sel :: t()) :: MapSet.t()
   def selected(%__MODULE__{selected: selected}), do: selected
 
   @doc "Returns `true` if `id` is currently selected."
-  @spec selected?(t(), term()) :: boolean()
+  @spec selected?(sel :: t(), id :: term()) :: boolean()
   def selected?(%__MODULE__{selected: selected}, id) do
     MapSet.member?(selected, id)
   end

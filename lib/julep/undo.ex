@@ -51,7 +51,7 @@ defmodule Julep.Undo do
         }
 
   @doc "Create a new undo stack with `model` as the initial state."
-  @spec new(term()) :: t()
+  @spec new(model :: term()) :: t()
   def new(model), do: %__MODULE__{current: model}
 
   @doc """
@@ -62,7 +62,7 @@ defmodule Julep.Undo do
   stack and the time delta is within `:coalesce_window_ms`, the entry is
   merged rather than pushed.
   """
-  @spec apply(t(), command()) :: t()
+  @spec apply(undo :: t(), command :: command()) :: t()
   def apply(%__MODULE__{} = u, command) do
     now = timestamp()
     new_model = command.apply.(u.current)
@@ -85,7 +85,7 @@ defmodule Julep.Undo do
   end
 
   @doc "Undo the last command. Returns unchanged if the undo stack is empty."
-  @spec undo(t()) :: t()
+  @spec undo(undo :: t()) :: t()
   def undo(%__MODULE__{undo_stack: []} = u), do: u
 
   def undo(%__MODULE__{undo_stack: [entry | rest]} = u) do
@@ -95,7 +95,7 @@ defmodule Julep.Undo do
   end
 
   @doc "Redo the last undone command. Returns unchanged if the redo stack is empty."
-  @spec redo(t()) :: t()
+  @spec redo(undo :: t()) :: t()
   def redo(%__MODULE__{redo_stack: []} = u), do: u
 
   def redo(%__MODULE__{redo_stack: [entry | rest]} = u) do
@@ -105,19 +105,19 @@ defmodule Julep.Undo do
   end
 
   @doc "Return the current model."
-  @spec current(t()) :: term()
+  @spec current(undo :: t()) :: term()
   def current(%__MODULE__{current: c}), do: c
 
   @doc "Return `true` if there are entries on the undo stack."
-  @spec can_undo?(t()) :: boolean()
+  @spec can_undo?(undo :: t()) :: boolean()
   def can_undo?(%__MODULE__{undo_stack: s}), do: s != []
 
   @doc "Return `true` if there are entries on the redo stack."
-  @spec can_redo?(t()) :: boolean()
+  @spec can_redo?(undo :: t()) :: boolean()
   def can_redo?(%__MODULE__{redo_stack: s}), do: s != []
 
   @doc "Return the labels from the undo stack, most recent first."
-  @spec history(t()) :: [String.t() | nil]
+  @spec history(undo :: t()) :: [String.t() | nil]
   def history(%__MODULE__{undo_stack: s}), do: Enum.map(s, & &1.label)
 
   # -- Private ---------------------------------------------------------------

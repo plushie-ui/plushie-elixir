@@ -23,6 +23,6 @@ defmodule Julep.Iced.Alignment do
       iex> Julep.Iced.Alignment.encode(:end)
       "end"
   """
-  @spec encode(t()) :: String.t()
+  @spec encode(alignment :: t()) :: String.t()
   def encode(value) when value in @valid, do: Atom.to_string(value)
 end

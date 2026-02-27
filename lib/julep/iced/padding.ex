@@ -30,7 +30,7 @@ defmodule Julep.Iced.Padding do
       iex> Julep.Iced.Padding.encode(%{top: 1, right: 2, bottom: 3, left: 4})
       %{"top" => 1, "right" => 2, "bottom" => 3, "left" => 4}
   """
-  @spec encode(t()) :: map()
+  @spec encode(padding :: t()) :: map()
   def encode(n) when is_number(n) do
     %{"top" => n, "right" => n, "bottom" => n, "left" => n}
   end

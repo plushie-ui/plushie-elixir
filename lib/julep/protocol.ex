@@ -21,7 +21,7 @@ defmodule Julep.Protocol do
       iex> Julep.Protocol.encode_settings(%{antialiasing: true, default_text_size: 16})
       ~s({"settings":{"antialiasing":true,"default_text_size":16},"type":"settings"}) <> "\\n"
   """
-  @spec encode_settings(map()) :: String.t()
+  @spec encode_settings(settings :: map()) :: String.t()
   def encode_settings(settings) when is_map(settings) do
     Jason.encode!(%{type: "settings", settings: settings}) <> "\n"
   end
@@ -34,7 +34,7 @@ defmodule Julep.Protocol do
       iex> Julep.Protocol.encode_snapshot(%{tag: "text", value: "hello"})
       ~s({"tree":{"tag":"text","value":"hello"},"type":"snapshot"}) <> "\\n"
   """
-  @spec encode_snapshot(term()) :: String.t()
+  @spec encode_snapshot(tree :: term()) :: String.t()
   def encode_snapshot(tree) do
     Jason.encode!(%{type: "snapshot", tree: tree}) <> "\n"
   end
@@ -49,7 +49,7 @@ defmodule Julep.Protocol do
       iex> Julep.Protocol.encode_patch([])
       ~s({"ops":[],"type":"patch"}) <> "\\n"
   """
-  @spec encode_patch(list()) :: String.t()
+  @spec encode_patch(ops :: list()) :: String.t()
   def encode_patch(ops) do
     Jason.encode!(%{type: "patch", ops: ops}) <> "\n"
   end
@@ -62,7 +62,8 @@ defmodule Julep.Protocol do
       iex> Julep.Protocol.encode_effect_request("req_1", "http", %{url: "https://example.com"})
       ~s({"id":"req_1","kind":"http","payload":{"url":"https://example.com"},"type":"effect_request"}) <> "\\n"
   """
-  @spec encode_effect_request(String.t(), String.t(), term()) :: String.t()
+  @spec encode_effect_request(id :: String.t(), kind :: String.t(), payload :: term()) ::
+          String.t()
   def encode_effect_request(id, kind, payload) do
     Jason.encode!(%{type: "effect_request", id: id, kind: kind, payload: payload}) <> "\n"
   end
@@ -75,7 +76,7 @@ defmodule Julep.Protocol do
       iex> Julep.Protocol.encode_widget_op("focus", %{target: "username"})
       ~s({"op":"focus","payload":{"target":"username"},"type":"widget_op"}) <> "\\n"
   """
-  @spec encode_widget_op(String.t(), map()) :: String.t()
+  @spec encode_widget_op(op :: String.t(), payload :: map()) :: String.t()
   def encode_widget_op(op, payload) do
     Jason.encode!(%{type: "widget_op", op: op, payload: payload}) <> "\n"
   end
@@ -88,7 +89,7 @@ defmodule Julep.Protocol do
       iex> Julep.Protocol.encode_subscription_register("on_key_press", "keys")
       ~s({"kind":"on_key_press","tag":"keys","type":"subscription_register"}) <> "\\n"
   """
-  @spec encode_subscription_register(String.t(), String.t()) :: String.t()
+  @spec encode_subscription_register(kind :: String.t(), tag :: String.t()) :: String.t()
   def encode_subscription_register(kind, tag) do
     Jason.encode!(%{type: "subscription_register", kind: kind, tag: tag}) <> "\n"
   end
@@ -101,7 +102,7 @@ defmodule Julep.Protocol do
       iex> Julep.Protocol.encode_subscription_unregister("on_key_press")
       ~s({"kind":"on_key_press","type":"subscription_unregister"}) <> "\\n"
   """
-  @spec encode_subscription_unregister(String.t()) :: String.t()
+  @spec encode_subscription_unregister(kind :: String.t()) :: String.t()
   def encode_subscription_unregister(kind) do
     Jason.encode!(%{type: "subscription_unregister", kind: kind}) <> "\n"
   end
@@ -114,7 +115,8 @@ defmodule Julep.Protocol do
       iex> Julep.Protocol.encode_window_op("open", "main", %{title: "My App"})
       ~s({"op":"open","settings":{"title":"My App"},"type":"window_op","window_id":"main"}) <> "\\n"
   """
-  @spec encode_window_op(String.t(), String.t(), map()) :: String.t()
+  @spec encode_window_op(op :: String.t(), window_id :: String.t(), settings :: map()) ::
+          String.t()
   def encode_window_op(op, window_id, settings) do
     Jason.encode!(%{type: "window_op", op: op, window_id: window_id, settings: settings}) <> "\n"
   end
@@ -136,7 +138,7 @@ defmodule Julep.Protocol do
       iex> Julep.Protocol.decode_message("not json")
       {:error, :invalid_json}
   """
-  @spec decode_message(String.t()) :: tuple() | {:error, term()}
+  @spec decode_message(json_string :: String.t()) :: tuple() | {:error, term()}
   def decode_message(json_string) do
     case Jason.decode(json_string) do
       {:ok, msg} -> dispatch(msg)
@@ -459,7 +461,7 @@ defmodule Julep.Protocol do
       iex> Julep.Protocol.parse_key("a")
       "a"
   """
-  @spec parse_key(String.t()) :: atom() | String.t()
+  @spec parse_key(key :: String.t()) :: atom() | String.t()
   def parse_key(key) when is_binary(key) do
     Map.get(@named_keys, key, key)
   end

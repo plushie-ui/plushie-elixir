@@ -32,7 +32,7 @@ defmodule Julep.State do
 
   The initial revision is 0.
   """
-  @spec new(map()) :: t()
+  @spec new(data :: map()) :: t()
   def new(data) when is_map(data) do
     %__MODULE__{data: data, revision: 0, transaction: nil}
   end
@@ -43,7 +43,7 @@ defmodule Julep.State do
   An empty path returns the entire data map. Path elements are keys
   passed to `Kernel.get_in/2`.
   """
-  @spec get(t(), list()) :: term()
+  @spec get(state :: t(), path :: list()) :: term()
   def get(%__MODULE__{data: data}, []), do: data
 
   def get(%__MODULE__{data: data}, path) when is_list(path) do
@@ -51,7 +51,7 @@ defmodule Julep.State do
   end
 
   @doc "Sets the value at `path` to `value`, incrementing the revision."
-  @spec put(t(), list(), term()) :: t()
+  @spec put(state :: t(), path :: list(), value :: term()) :: t()
   def put(%__MODULE__{} = state, path, value) when is_list(path) do
     new_data = put_in(state.data, path, value)
     %{state | data: new_data, revision: state.revision + 1}
@@ -62,14 +62,14 @@ defmodule Julep.State do
 
   `fun` receives the current value and must return the new value.
   """
-  @spec update(t(), list(), (term() -> term())) :: t()
+  @spec update(state :: t(), path :: list(), fun :: (term() -> term())) :: t()
   def update(%__MODULE__{} = state, path, fun) when is_list(path) and is_function(fun, 1) do
     new_data = update_in(state.data, path, fun)
     %{state | data: new_data, revision: state.revision + 1}
   end
 
   @doc "Returns the current revision number."
-  @spec revision(t()) :: non_neg_integer()
+  @spec revision(state :: t()) :: non_neg_integer()
   def revision(%__MODULE__{revision: rev}), do: rev
 
   @doc """
@@ -78,7 +78,7 @@ defmodule Julep.State do
   Returns `{:error, :transaction_already_active}` if a transaction is
   already in progress.
   """
-  @spec begin_transaction(t()) :: t() | {:error, :transaction_already_active}
+  @spec begin_transaction(state :: t()) :: t() | {:error, :transaction_already_active}
   def begin_transaction(%__MODULE__{transaction: nil} = state) do
     %{state | transaction: %{data: state.data, revision: state.revision}}
   end
@@ -90,7 +90,7 @@ defmodule Julep.State do
   Commits the active transaction, setting the revision to one past the
   pre-transaction value.
   """
-  @spec commit_transaction(t()) :: t()
+  @spec commit_transaction(state :: t()) :: t()
   def commit_transaction(%__MODULE__{transaction: %{revision: old_rev}} = state) do
     %{state | transaction: nil, revision: old_rev + 1}
   end
@@ -99,7 +99,7 @@ defmodule Julep.State do
   Rolls back the active transaction, restoring the data and revision
   to their pre-transaction values.
   """
-  @spec rollback_transaction(t()) :: t()
+  @spec rollback_transaction(state :: t()) :: t()
   def rollback_transaction(%__MODULE__{transaction: %{} = snapshot} = state) do
     %{state | data: snapshot.data, revision: snapshot.revision, transaction: nil}
   end

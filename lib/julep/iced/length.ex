@@ -29,7 +29,7 @@ defmodule Julep.Iced.Length do
       iex> Julep.Iced.Length.encode(200)
       200
   """
-  @spec encode(t()) :: String.t() | number() | map()
+  @spec encode(length :: t()) :: String.t() | number() | map()
   def encode(:fill), do: "fill"
   def encode(:shrink), do: "shrink"
   def encode({:fill_portion, n}) when is_integer(n) and n > 0, do: %{"fill_portion" => n}

@@ -63,7 +63,7 @@ defmodule Julep.Iced.Theme do
       iex> Julep.Iced.Theme.custom("Nord+", base: :nord, primary: "#88c0d0")
       %{"name" => "Nord+", "base" => "nord", "primary" => "#88c0d0"}
   """
-  @spec custom(String.t(), keyword()) :: map()
+  @spec custom(name :: String.t(), opts :: keyword()) :: map()
   def custom(name, opts \\ []) when is_binary(name) and is_list(opts) do
     %{"name" => name}
     |> maybe_put("base", encode_base(opts[:base]))
@@ -92,7 +92,7 @@ defmodule Julep.Iced.Theme do
       iex> Julep.Iced.Theme.encode(%{"name" => "Mine", "primary" => "#ff0000"})
       %{"name" => "Mine", "primary" => "#ff0000"}
   """
-  @spec encode(t()) :: String.t() | map()
+  @spec encode(theme :: t()) :: String.t() | map()
   def encode(theme) when theme in @themes do
     theme
     |> Atom.to_string()

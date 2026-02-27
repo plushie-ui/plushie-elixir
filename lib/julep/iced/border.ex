@@ -24,24 +24,44 @@ defmodule Julep.Iced.Border do
       # => %{color: "#3366ff", width: 2, radius: 8}
   """
 
+  @typedoc "Per-corner radius map."
+  @type radius_map :: %{
+          top_left: number(),
+          top_right: number(),
+          bottom_right: number(),
+          bottom_left: number()
+        }
+
+  @typedoc "Border specification with color, width, and radius."
+  @type t :: %{
+          color: Julep.Iced.Color.t() | nil,
+          width: number(),
+          radius: number() | radius_map()
+        }
+
   @doc "Creates a new border with default values."
-  @spec new() :: map()
+  @spec new() :: t()
   def new, do: %{color: nil, width: 0, radius: 0}
 
   @doc "Sets the border color."
-  @spec color(map(), term()) :: map()
+  @spec color(border :: t(), color :: Julep.Iced.Color.t()) :: t()
   def color(border, color), do: %{border | color: color}
 
   @doc "Sets the border width."
-  @spec width(map(), number()) :: map()
+  @spec width(border :: t(), width :: number()) :: t()
   def width(border, width), do: %{border | width: width}
 
   @doc "Sets a uniform corner radius."
-  @spec rounded(map(), number()) :: map()
+  @spec rounded(border :: t(), radius :: number()) :: t()
   def rounded(border, radius), do: %{border | radius: radius}
 
   @doc "Creates a per-corner radius map."
-  @spec radius(number(), number(), number(), number()) :: map()
+  @spec radius(
+          top_left :: number(),
+          top_right :: number(),
+          bottom_right :: number(),
+          bottom_left :: number()
+        ) :: radius_map()
   def radius(top_left, top_right, bottom_right, bottom_left) do
     %{
       top_left: top_left,
@@ -52,7 +72,7 @@ defmodule Julep.Iced.Border do
   end
 
   @doc "Encodes a border to the wire format. Per-corner radius maps are converted to string keys."
-  @spec encode(map()) :: map()
+  @spec encode(border :: t()) :: map()
   def encode(%{} = border) do
     Map.update(border, :radius, border[:radius], &encode_radius/1)
   end

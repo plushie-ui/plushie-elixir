@@ -29,7 +29,13 @@ defmodule Julep.Subscription do
       end
   """
 
-  @type t :: map()
+  @typedoc """
+  A subscription specification. Every subscription has a `:type` atom
+  identifying the kind (`:every`, `:on_key_press`, etc.) and a `:tag`
+  atom used as the event prefix in `update/2`. Additional keys vary
+  by subscription type.
+  """
+  @type t :: %{optional(atom()) => term(), type: atom(), tag: atom()}
 
   @doc """
   Timer that fires every `interval_ms` milliseconds.
@@ -37,7 +43,7 @@ defmodule Julep.Subscription do
   Delivers `{tag, timestamp}` to `update/2` on each tick, where
   `timestamp` is `System.monotonic_time(:millisecond)`.
   """
-  @spec every(pos_integer(), atom()) :: t()
+  @spec every(interval_ms :: pos_integer(), event_tag :: atom()) :: t()
   def every(interval_ms, event_tag)
       when is_integer(interval_ms) and interval_ms > 0 and is_atom(event_tag) do
     %{type: :every, interval: interval_ms, tag: event_tag}
@@ -51,7 +57,7 @@ defmodule Julep.Subscription do
   or a single-character string for printable keys. `modifiers` is a map
   with `:ctrl`, `:shift`, `:alt`, `:logo`, `:command` booleans.
   """
-  @spec on_key_press(atom()) :: t()
+  @spec on_key_press(event_tag :: atom()) :: t()
   def on_key_press(event_tag) when is_atom(event_tag) do
     %{type: :on_key_press, tag: event_tag}
   end
@@ -62,7 +68,7 @@ defmodule Julep.Subscription do
   Delivers `{:key_release, key, modifiers}` to `update/2`. Same format
   as `on_key_press/1`.
   """
-  @spec on_key_release(atom()) :: t()
+  @spec on_key_release(event_tag :: atom()) :: t()
   def on_key_release(event_tag) when is_atom(event_tag) do
     %{type: :on_key_release, tag: event_tag}
   end
@@ -72,7 +78,7 @@ defmodule Julep.Subscription do
 
   Delivers `{:window_close_requested, window_id}` to `update/2`.
   """
-  @spec on_window_close(atom()) :: t()
+  @spec on_window_close(event_tag :: atom()) :: t()
   def on_window_close(event_tag) when is_atom(event_tag) do
     %{type: :on_window_close, tag: event_tag}
   end
@@ -82,7 +88,7 @@ defmodule Julep.Subscription do
 
   Delivers various `{:window_*, ...}` tuples depending on the event.
   """
-  @spec on_window_event(atom()) :: t()
+  @spec on_window_event(event_tag :: atom()) :: t()
   def on_window_event(event_tag) when is_atom(event_tag) do
     %{type: :on_window_event, tag: event_tag}
   end
@@ -93,7 +99,7 @@ defmodule Julep.Subscription do
   Delivers `{:window_opened, window_id, position, {width, height}}` to
   `update/2`. `position` is `{x, y}` or `nil`.
   """
-  @spec on_window_open(atom()) :: t()
+  @spec on_window_open(event_tag :: atom()) :: t()
   def on_window_open(event_tag) when is_atom(event_tag) do
     %{type: :on_window_open, tag: event_tag}
   end
@@ -103,7 +109,7 @@ defmodule Julep.Subscription do
 
   Delivers `{:window_resized, window_id, width, height}` to `update/2`.
   """
-  @spec on_window_resize(atom()) :: t()
+  @spec on_window_resize(event_tag :: atom()) :: t()
   def on_window_resize(event_tag) when is_atom(event_tag) do
     %{type: :on_window_resize, tag: event_tag}
   end
@@ -113,7 +119,7 @@ defmodule Julep.Subscription do
 
   Delivers `{:window_focused, window_id}` to `update/2`.
   """
-  @spec on_window_focus(atom()) :: t()
+  @spec on_window_focus(event_tag :: atom()) :: t()
   def on_window_focus(event_tag) when is_atom(event_tag) do
     %{type: :on_window_focus, tag: event_tag}
   end
@@ -123,7 +129,7 @@ defmodule Julep.Subscription do
 
   Delivers `{:window_unfocused, window_id}` to `update/2`.
   """
-  @spec on_window_unfocus(atom()) :: t()
+  @spec on_window_unfocus(event_tag :: atom()) :: t()
   def on_window_unfocus(event_tag) when is_atom(event_tag) do
     %{type: :on_window_unfocus, tag: event_tag}
   end
@@ -133,7 +139,7 @@ defmodule Julep.Subscription do
 
   Delivers `{:window_moved, window_id, x, y}` to `update/2`.
   """
-  @spec on_window_move(atom()) :: t()
+  @spec on_window_move(event_tag :: atom()) :: t()
   def on_window_move(event_tag) when is_atom(event_tag) do
     %{type: :on_window_move, tag: event_tag}
   end
@@ -143,7 +149,7 @@ defmodule Julep.Subscription do
 
   Delivers `{:cursor_moved, x, y}` to `update/2`.
   """
-  @spec on_mouse_move(atom()) :: t()
+  @spec on_mouse_move(event_tag :: atom()) :: t()
   def on_mouse_move(event_tag) when is_atom(event_tag) do
     %{type: :on_mouse_move, tag: event_tag}
   end
@@ -154,7 +160,7 @@ defmodule Julep.Subscription do
   Delivers `{:button_pressed, button}` or `{:button_released, button}`
   to `update/2`. `button` is a string like `"left"`, `"right"`, `"middle"`.
   """
-  @spec on_mouse_button(atom()) :: t()
+  @spec on_mouse_button(event_tag :: atom()) :: t()
   def on_mouse_button(event_tag) when is_atom(event_tag) do
     %{type: :on_mouse_button, tag: event_tag}
   end
@@ -164,7 +170,7 @@ defmodule Julep.Subscription do
 
   Delivers `{:wheel_scrolled, delta_x, delta_y, unit}` to `update/2`.
   """
-  @spec on_mouse_scroll(atom()) :: t()
+  @spec on_mouse_scroll(event_tag :: atom()) :: t()
   def on_mouse_scroll(event_tag) when is_atom(event_tag) do
     %{type: :on_mouse_scroll, tag: event_tag}
   end
@@ -177,7 +183,7 @@ defmodule Julep.Subscription do
   `{:finger_lifted, finger_id, x, y}`, or
   `{:finger_lost, finger_id, x, y}` to `update/2`.
   """
-  @spec on_touch(atom()) :: t()
+  @spec on_touch(event_tag :: atom()) :: t()
   def on_touch(event_tag) when is_atom(event_tag) do
     %{type: :on_touch, tag: event_tag}
   end
@@ -188,7 +194,7 @@ defmodule Julep.Subscription do
   Delivers `{:theme_changed, mode}` to `update/2` where `mode` is
   a string like `"light"` or `"dark"`.
   """
-  @spec on_theme_change(atom()) :: t()
+  @spec on_theme_change(event_tag :: atom()) :: t()
   def on_theme_change(event_tag) when is_atom(event_tag) do
     %{type: :on_theme_change, tag: event_tag}
   end
@@ -198,7 +204,7 @@ defmodule Julep.Subscription do
 
   Delivers `{:animation_frame, timestamp}` to `update/2`.
   """
-  @spec on_animation_frame(atom()) :: t()
+  @spec on_animation_frame(event_tag :: atom()) :: t()
   def on_animation_frame(event_tag) when is_atom(event_tag) do
     %{type: :on_animation_frame, tag: event_tag}
   end
@@ -210,7 +216,7 @@ defmodule Julep.Subscription do
   Also fires `{:file_hovered, window_id, path}` while hovering
   and `{:files_hovered_left, window_id}` when the hover exits.
   """
-  @spec on_file_drop(atom()) :: t()
+  @spec on_file_drop(event_tag :: atom()) :: t()
   def on_file_drop(event_tag) when is_atom(event_tag) do
     %{type: :on_file_drop, tag: event_tag}
   end
@@ -221,20 +227,20 @@ defmodule Julep.Subscription do
   Use this to receive all event types that the renderer emits.
   The event tuple shape varies by event family.
   """
-  @spec on_event(atom()) :: t()
+  @spec on_event(event_tag :: atom()) :: t()
   def on_event(event_tag) when is_atom(event_tag) do
     %{type: :on_event, tag: event_tag}
   end
 
   @doc "Combines a list of subscriptions. Identity function -- returns the list as-is."
-  @spec batch([t()]) :: [t()]
+  @spec batch(subscriptions :: [t()]) :: [t()]
   def batch(subscriptions) when is_list(subscriptions), do: subscriptions
 
   @doc """
   Returns a key that uniquely identifies this subscription spec.
   Two specs with the same key are considered the same subscription.
   """
-  @spec key(t()) :: term()
+  @spec key(sub :: t()) :: term()
   def key(%{type: type, tag: tag} = sub) do
     case type do
       :every -> {:every, Map.get(sub, :interval), tag}

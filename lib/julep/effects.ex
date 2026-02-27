@@ -37,13 +37,23 @@ defmodule Julep.Effects do
       end
   """
 
+  @typedoc """
+  Return value from all effect functions: a command to dispatch through
+  the runtime and a unique ID for matching the `{:effect_result, id, result}`
+  event that arrives later in `update/2`.
+  """
+  @type effect_request :: {Julep.Command.t(), effect_id()}
+
+  @typedoc "Unique identifier for tracking an in-flight effect."
+  @type effect_id :: String.t()
+
   @doc """
   Generic effect request. Returns `{command, effect_id}`.
 
   `kind` is an atom identifying the effect type. `opts` is a keyword list
   of parameters sent as the effect payload.
   """
-  @spec request(atom(), keyword()) :: {Julep.Command.t(), String.t()}
+  @spec request(kind :: atom(), opts :: keyword()) :: effect_request()
   def request(kind, opts \\ []) do
     id = generate_id()
     payload = Map.new(opts)
@@ -57,35 +67,35 @@ defmodule Julep.Effects do
   end
 
   @doc "Open-file dialog. Returns `{command, effect_id}`."
-  @spec file_open(keyword()) :: {Julep.Command.t(), String.t()}
+  @spec file_open(opts :: keyword()) :: effect_request()
   def file_open(opts \\ []), do: request(:file_open, opts)
 
   @doc "Save-file dialog. Returns `{command, effect_id}`."
-  @spec file_save(keyword()) :: {Julep.Command.t(), String.t()}
+  @spec file_save(opts :: keyword()) :: effect_request()
   def file_save(opts \\ []), do: request(:file_save, opts)
 
   @doc "Directory picker. Returns `{command, effect_id}`."
-  @spec directory_select(keyword()) :: {Julep.Command.t(), String.t()}
+  @spec directory_select(opts :: keyword()) :: effect_request()
   def directory_select(opts \\ []), do: request(:directory_select, opts)
 
   @doc "Read clipboard contents. Returns `{command, effect_id}`."
-  @spec clipboard_read() :: {Julep.Command.t(), String.t()}
+  @spec clipboard_read() :: effect_request()
   def clipboard_read, do: request(:clipboard_read)
 
   @doc "Write `text` to the clipboard. Returns `{command, effect_id}`."
-  @spec clipboard_write(String.t()) :: {Julep.Command.t(), String.t()}
+  @spec clipboard_write(text :: String.t()) :: effect_request()
   def clipboard_write(text), do: request(:clipboard_write, text: text)
 
   @doc "Read primary clipboard (middle-click paste on Linux). Returns `{command, effect_id}`."
-  @spec clipboard_read_primary() :: {Julep.Command.t(), String.t()}
+  @spec clipboard_read_primary() :: effect_request()
   def clipboard_read_primary, do: request(:clipboard_read_primary)
 
   @doc "Write `text` to the primary clipboard. Returns `{command, effect_id}`."
-  @spec clipboard_write_primary(String.t()) :: {Julep.Command.t(), String.t()}
+  @spec clipboard_write_primary(text :: String.t()) :: effect_request()
   def clipboard_write_primary(text), do: request(:clipboard_write_primary, text: text)
 
   @doc "Show an OS notification. Returns `{command, effect_id}`."
-  @spec notification(String.t(), String.t()) :: {Julep.Command.t(), String.t()}
+  @spec notification(title :: String.t(), body :: String.t()) :: effect_request()
   def notification(title, body), do: request(:notification, title: title, body: body)
 
   # Generates a unique, monotonically increasing effect ID.

@@ -76,12 +76,12 @@ defmodule Julep.UI do
   All opts keys except `:children`, `:id`, and `:do` become string-keyed props.
   """
   @spec __build_node__(
-          String.t(),
-          String.t() | nil,
-          keyword(),
-          [map()],
-          {module(), non_neg_integer()}
-        ) :: map()
+          type :: String.t(),
+          id :: String.t() | nil,
+          opts :: keyword(),
+          children :: [Julep.Iced.ui_node()],
+          caller :: {module(), non_neg_integer()}
+        ) :: Julep.Iced.ui_node()
   def __build_node__(type, id, opts, children, {caller_mod, caller_line}) do
     resolved_id =
       id ||
@@ -109,7 +109,7 @@ defmodule Julep.UI do
   end
 
   @doc false
-  @spec __auto_id__(module() | nil, non_neg_integer()) :: String.t()
+  @spec __auto_id__(mod :: module() | nil, line :: non_neg_integer()) :: String.t()
   def __auto_id__(nil, line), do: "auto:nomodule:#{line}"
 
   def __auto_id__(mod, line) do
@@ -920,7 +920,7 @@ defmodule Julep.UI do
 
       button("save", "Save", style: :primary)
   """
-  @spec button(String.t(), String.t(), keyword()) :: map()
+  @spec button(id :: String.t(), label :: String.t(), opts :: keyword()) :: Julep.Iced.ui_node()
   def button(id, label, opts \\ []) do
     base_props = %{"label" => label}
 
@@ -941,7 +941,8 @@ defmodule Julep.UI do
 
       text_input("name", model.name, placeholder: "Your name")
   """
-  @spec text_input(String.t(), String.t(), keyword()) :: map()
+  @spec text_input(id :: String.t(), value :: String.t(), opts :: keyword()) ::
+          Julep.Iced.ui_node()
   def text_input(id, value, opts \\ []) do
     base_props = %{"value" => value}
 
@@ -962,7 +963,8 @@ defmodule Julep.UI do
 
       checkbox("agree", model.agreed, label: "I agree")
   """
-  @spec checkbox(String.t(), boolean(), keyword()) :: map()
+  @spec checkbox(id :: String.t(), checked :: boolean(), opts :: keyword()) ::
+          Julep.Iced.ui_node()
   def checkbox(id, checked, opts \\ []) do
     base_props = %{"checked" => checked}
 
@@ -1081,7 +1083,8 @@ defmodule Julep.UI do
 
       toggler("dark_mode", model.dark_mode, label: "Dark mode")
   """
-  @spec toggler(String.t(), boolean(), keyword()) :: map()
+  @spec toggler(id :: String.t(), is_toggled :: boolean(), opts :: keyword()) ::
+          Julep.Iced.ui_node()
   def toggler(id, is_toggled, opts \\ []) do
     base_props = %{"is_toggled" => is_toggled}
 
@@ -1104,7 +1107,13 @@ defmodule Julep.UI do
       radio("size_sm", "small", model.size, label: "Small", group: "size")
       radio("size_lg", "large", model.size, label: "Large", group: "size")
   """
-  @spec radio(String.t(), String.t(), String.t() | nil, keyword()) :: map()
+  @spec radio(
+          id :: String.t(),
+          value :: String.t(),
+          selected :: String.t() | nil,
+          opts :: keyword()
+        ) ::
+          Julep.Iced.ui_node()
   def radio(id, value, selected, opts \\ []) do
     base_props = %{"value" => value, "selected" => selected}
 
@@ -1128,7 +1137,13 @@ defmodule Julep.UI do
 
       slider("volume", {0, 100}, model.volume, step: 5)
   """
-  @spec slider(String.t(), {number(), number()}, number(), keyword()) :: map()
+  @spec slider(
+          id :: String.t(),
+          range :: {number(), number()},
+          value :: number(),
+          opts :: keyword()
+        ) ::
+          Julep.Iced.ui_node()
   def slider(id, range, value, opts \\ []) do
     base_props = %{"range" => Tuple.to_list(range), "value" => value}
 
@@ -1149,7 +1164,13 @@ defmodule Julep.UI do
 
       vertical_slider("brightness", {0, 100}, model.brightness)
   """
-  @spec vertical_slider(String.t(), {number(), number()}, number(), keyword()) :: map()
+  @spec vertical_slider(
+          id :: String.t(),
+          range :: {number(), number()},
+          value :: number(),
+          opts :: keyword()
+        ) ::
+          Julep.Iced.ui_node()
   def vertical_slider(id, range, value, opts \\ []) do
     base_props = %{"range" => Tuple.to_list(range), "value" => value}
 
@@ -1168,7 +1189,12 @@ defmodule Julep.UI do
 
       pick_list("country", ["UK", "US", "DE"], model.country, placeholder: "Choose...")
   """
-  @spec pick_list(String.t(), [String.t()], String.t() | nil, keyword()) :: map()
+  @spec pick_list(
+          id :: String.t(),
+          options :: [String.t()],
+          selected :: String.t() | nil,
+          opts :: keyword()
+        ) :: Julep.Iced.ui_node()
   def pick_list(id, options, selected, opts \\ []) do
     base_props = %{"options" => options, "selected" => selected}
 
@@ -1187,7 +1213,13 @@ defmodule Julep.UI do
 
       combo_box("lang", ["Elixir", "Rust", "Go"], model.lang, placeholder: "Type...")
   """
-  @spec combo_box(String.t(), [String.t()], String.t(), keyword()) :: map()
+  @spec combo_box(
+          id :: String.t(),
+          options :: [String.t()],
+          value :: String.t(),
+          opts :: keyword()
+        ) ::
+          Julep.Iced.ui_node()
   def combo_box(id, options, value, opts \\ []) do
     base_props = %{"options" => options, "value" => value}
 
@@ -1206,7 +1238,8 @@ defmodule Julep.UI do
 
       text_editor("notes", model.notes, width: :fill, height: 200)
   """
-  @spec text_editor(String.t(), String.t(), keyword()) :: map()
+  @spec text_editor(id :: String.t(), content :: String.t(), opts :: keyword()) ::
+          Julep.Iced.ui_node()
   def text_editor(id, content, opts \\ []) do
     base_props = %{"content" => content}
 
@@ -1229,7 +1262,7 @@ defmodule Julep.UI do
 
       image("logo", "/assets/logo.png", width: 200, content_fit: :cover)
   """
-  @spec image(String.t(), String.t(), keyword()) :: map()
+  @spec image(id :: String.t(), source :: String.t(), opts :: keyword()) :: Julep.Iced.ui_node()
   def image(id, source, opts \\ []) do
     base_props = %{"source" => source}
 
@@ -1248,7 +1281,7 @@ defmodule Julep.UI do
 
       svg("icon", "/assets/icon.svg", width: 24, height: 24)
   """
-  @spec svg(String.t(), String.t(), keyword()) :: map()
+  @spec svg(id :: String.t(), source :: String.t(), opts :: keyword()) :: Julep.Iced.ui_node()
   def svg(id, source, opts \\ []) do
     base_props = %{"source" => source}
 
@@ -1662,7 +1695,7 @@ defmodule Julep.UI do
 
       canvas("drawing", shapes: [%{type: "circle", x: 50, y: 50, r: 20}], width: 400, height: 300)
   """
-  @spec canvas(String.t(), keyword()) :: map()
+  @spec canvas(id :: String.t(), opts :: keyword()) :: Julep.Iced.ui_node()
   def canvas(id, opts \\ []) do
     props =
       opts
@@ -1739,7 +1772,7 @@ defmodule Julep.UI do
 
       rich_text("styled", spans: [%{text: "bold", weight: :bold}, %{text: " normal"}])
   """
-  @spec rich_text(String.t(), keyword()) :: map()
+  @spec rich_text(id :: String.t(), opts :: keyword()) :: Julep.Iced.ui_node()
   def rich_text(id, opts \\ []) do
     props =
       opts
@@ -1802,7 +1835,13 @@ defmodule Julep.UI do
   # ---------------------------------------------------------------------------
 
   @doc false
-  @spec __build_fixed_node__(String.t(), String.t(), keyword(), [map()]) :: map()
+  @spec __build_fixed_node__(
+          type :: String.t(),
+          id :: String.t(),
+          opts :: keyword(),
+          children :: [Julep.Iced.ui_node()]
+        ) ::
+          Julep.Iced.ui_node()
   def __build_fixed_node__(type, id, opts, children) do
     resolved_children =
       if children != [] do
@@ -1833,19 +1872,23 @@ defmodule Julep.UI do
       tree = MyApp.view(model)
       Julep.UI.find(tree, "save_button")
   """
-  @spec find(map(), String.t()) :: map() | nil
+  @spec find(tree :: Julep.Iced.ui_node(), id :: String.t()) :: Julep.Iced.ui_node() | nil
   defdelegate find(tree, id), to: Julep.Tree
 
   @doc "Returns true if a node with `id` exists in the tree."
-  @spec exists?(map() | nil, String.t()) :: boolean()
+  @spec exists?(tree :: Julep.Iced.ui_node() | nil, id :: String.t()) :: boolean()
   defdelegate exists?(tree, id), to: Julep.Tree
 
   @doc "Returns all node IDs in the tree."
-  @spec ids(map() | nil) :: [String.t()]
+  @spec ids(tree :: Julep.Iced.ui_node() | nil) :: [String.t()]
   defdelegate ids(tree), to: Julep.Tree
 
   @doc "Finds all nodes matching a predicate."
-  @spec find_all(map() | nil, String.t() | (map() -> boolean())) :: [map()]
+  @spec find_all(
+          tree :: Julep.Iced.ui_node() | nil,
+          id_or_pred :: String.t() | (Julep.Iced.ui_node() -> boolean())
+        ) ::
+          [Julep.Iced.ui_node()]
   defdelegate find_all(tree, id_or_pred), to: Julep.Tree
 
   # ---------------------------------------------------------------------------

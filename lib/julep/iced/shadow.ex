@@ -24,23 +24,31 @@ defmodule Julep.Iced.Shadow do
                |> Julep.Iced.Shadow.blur_radius(6)
   """
 
+  @typedoc "Shadow specification with color, offset, and blur radius."
+  @type t :: %{
+          color: String.t(),
+          offset_x: number(),
+          offset_y: number(),
+          blur_radius: number()
+        }
+
   @doc "Creates a new shadow with default values."
-  @spec new() :: map()
+  @spec new() :: t()
   def new, do: %{color: "#000000", offset_x: 0, offset_y: 0, blur_radius: 0}
 
   @doc "Sets the shadow color."
-  @spec color(map(), term()) :: map()
+  @spec color(shadow :: t(), color :: String.t()) :: t()
   def color(shadow, color), do: %{shadow | color: color}
 
   @doc "Sets the shadow offset."
-  @spec offset(map(), number(), number()) :: map()
+  @spec offset(shadow :: t(), x :: number(), y :: number()) :: t()
   def offset(shadow, x, y), do: %{shadow | offset_x: x, offset_y: y}
 
   @doc "Sets the shadow blur radius."
-  @spec blur_radius(map(), number()) :: map()
+  @spec blur_radius(shadow :: t(), r :: number()) :: t()
   def blur_radius(shadow, r), do: %{shadow | blur_radius: r}
 
   @doc "Encodes a shadow to the wire format."
-  @spec encode(map()) :: map()
+  @spec encode(shadow :: t()) :: t()
   def encode(%{} = shadow), do: shadow
 end

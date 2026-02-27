@@ -27,8 +27,14 @@ defmodule Julep.Iced.Gradient do
       ])
   """
 
-  @doc "Creates a linear gradient with an angle (radians) and a list of `{offset, color}` stops."
-  @spec linear(number(), [{number(), term()}]) :: map()
+  @typedoc "A gradient color stop with offset (0.0-1.0) and color."
+  @type stop :: %{offset: float(), color: String.t()}
+
+  @typedoc "Gradient specification with type, angle, and color stops."
+  @type t :: %{type: String.t(), angle: number(), stops: [stop()]}
+
+  @doc "Creates a linear gradient with an angle (degrees) and a list of `{offset, color}` stops."
+  @spec linear(angle :: number(), stops :: [{number(), String.t()}]) :: t()
   def linear(angle, stops) when is_number(angle) and is_list(stops) do
     %{
       type: "linear",
@@ -38,6 +44,6 @@ defmodule Julep.Iced.Gradient do
   end
 
   @doc "Encodes a gradient to the wire format."
-  @spec encode(map()) :: map()
+  @spec encode(gradient :: t()) :: t()
   def encode(%{} = gradient), do: gradient
 end

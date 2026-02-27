@@ -46,7 +46,7 @@ defmodule Julep.Iced.Font do
       iex> Julep.Iced.Font.encode(%{family: "Inter", weight: :bold, style: :italic})
       %{"family" => "Inter", "weight" => "Bold", "style" => "Italic"}
   """
-  @spec encode(t()) :: String.t() | map()
+  @spec encode(font :: t()) :: String.t() | map()
   def encode(:default), do: "default"
   def encode(:monospace), do: "monospace"
 

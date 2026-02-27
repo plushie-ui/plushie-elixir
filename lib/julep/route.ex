@@ -22,14 +22,17 @@ defmodule Julep.Route do
 
   defstruct stack: []
 
-  @type t :: %__MODULE__{stack: [{term(), map()}]}
+  @typedoc "A navigation stack entry: `{path, params}`."
+  @type entry :: {term(), map()}
+
+  @type t :: %__MODULE__{stack: [entry()]}
 
   @doc """
   Creates a new route with `initial_path` at the bottom of the stack.
 
   `params` defaults to an empty map.
   """
-  @spec new(term(), map()) :: t()
+  @spec new(initial_path :: term(), params :: map()) :: t()
   def new(initial_path, params \\ %{}) do
     %__MODULE__{stack: [{initial_path, params}]}
   end
@@ -37,7 +40,7 @@ defmodule Julep.Route do
   @doc """
   Pushes a new `path` (with optional `params`) onto the navigation stack.
   """
-  @spec push(t(), term(), map()) :: t()
+  @spec push(route :: t(), path :: term(), params :: map()) :: t()
   def push(%__MODULE__{stack: stack} = route, path, params \\ %{}) do
     %{route | stack: [{path, params} | stack]}
   end
@@ -46,7 +49,7 @@ defmodule Julep.Route do
   Pops the top entry from the stack. Returns the route unchanged if
   only one entry remains (the root is never popped).
   """
-  @spec pop(t()) :: t()
+  @spec pop(route :: t()) :: t()
   def pop(%__MODULE__{stack: [_current | rest]} = route) when rest != [] do
     %{route | stack: rest}
   end
@@ -54,18 +57,18 @@ defmodule Julep.Route do
   def pop(%__MODULE__{} = route), do: route
 
   @doc "Returns the current (top) path."
-  @spec current(t()) :: term()
+  @spec current(route :: t()) :: term()
   def current(%__MODULE__{stack: [{path, _} | _]}), do: path
 
   @doc "Returns the params associated with the current (top) path."
-  @spec params(t()) :: map()
+  @spec params(route :: t()) :: map()
   def params(%__MODULE__{stack: [{_, params} | _]}), do: params
 
   @doc "Returns `true` if there is more than one entry on the stack."
-  @spec can_go_back?(t()) :: boolean()
+  @spec can_go_back?(route :: t()) :: boolean()
   def can_go_back?(%__MODULE__{stack: stack}), do: length(stack) > 1
 
   @doc "Returns a list of all paths in the stack, most recent first."
-  @spec history(t()) :: [term()]
+  @spec history(route :: t()) :: [term()]
   def history(%__MODULE__{stack: stack}), do: Enum.map(stack, fn {path, _} -> path end)
 end

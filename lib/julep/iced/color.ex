@@ -24,20 +24,20 @@ defmodule Julep.Iced.Color do
   @type t :: String.t() | {float(), float(), float()} | {float(), float(), float(), float()}
 
   @doc "Creates an RGBA color map from 0-255 RGB values."
-  @spec from_rgb(number(), number(), number()) :: map()
+  @spec from_rgb(r :: number(), g :: number(), b :: number()) :: map()
   def from_rgb(r, g, b) when is_number(r) and is_number(g) and is_number(b) do
     %{r: r / 255, g: g / 255, b: b / 255, a: 1.0}
   end
 
   @doc "Creates an RGBA color map from 0-255 RGB values with an alpha channel (0.0-1.0)."
-  @spec from_rgba(number(), number(), number(), float()) :: map()
+  @spec from_rgba(r :: number(), g :: number(), b :: number(), a :: float()) :: map()
   def from_rgba(r, g, b, a)
       when is_number(r) and is_number(g) and is_number(b) and is_number(a) do
     %{r: r / 255, g: g / 255, b: b / 255, a: a}
   end
 
   @doc "Creates a hex color string from a hex string (with or without leading #)."
-  @spec from_hex(String.t()) :: String.t()
+  @spec from_hex(hex :: String.t()) :: String.t()
   def from_hex("#" <> hex), do: from_hex(hex)
 
   def from_hex(hex) when byte_size(hex) == 6 do
@@ -61,7 +61,7 @@ defmodule Julep.Iced.Color do
   def transparent, do: %{r: 0.0, g: 0.0, b: 0.0, a: 0.0}
 
   @doc "Encodes a color value to the wire format."
-  @spec encode(String.t() | map()) :: String.t() | map()
+  @spec encode(color :: String.t() | map()) :: String.t() | map()
   def encode(color) when is_binary(color), do: color
   def encode(%{r: _, g: _, b: _, a: _} = color), do: color
   def encode(%{r: r, g: g, b: b}), do: %{r: r, g: g, b: b, a: 1.0}

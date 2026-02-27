@@ -44,7 +44,7 @@ defmodule Julep.Tree do
   `:children`. Props are normalized to string keys. Children are
   always a list, normalized recursively.
   """
-  @spec normalize(nil | tree_node() | [tree_node()]) :: tree_node()
+  @spec normalize(tree :: nil | tree_node() | [tree_node()]) :: tree_node()
   def normalize(nil), do: @empty_container
 
   def normalize([]), do: @empty_container
@@ -79,7 +79,7 @@ defmodule Julep.Tree do
 
   Returns the node map, or `nil` if not found. Searches depth-first.
   """
-  @spec find(tree_node(), String.t()) :: tree_node() | nil
+  @spec find(tree :: tree_node(), id :: String.t()) :: tree_node() | nil
   def find(%{id: id} = node, id), do: node
 
   def find(%{children: children}, target_id) when is_list(children) do
@@ -89,7 +89,7 @@ defmodule Julep.Tree do
   def find(_node, _target_id), do: nil
 
   @doc "Returns true if a node with the given `id` exists in the tree."
-  @spec exists?(map() | nil, String.t()) :: boolean()
+  @spec exists?(tree :: map() | nil, id :: String.t()) :: boolean()
   def exists?(nil, _id), do: false
 
   def exists?(tree, id) do
@@ -97,7 +97,7 @@ defmodule Julep.Tree do
   end
 
   @doc "Returns a flat list of all node IDs in the tree (depth-first order)."
-  @spec ids(map() | nil) :: [String.t()]
+  @spec ids(tree :: map() | nil) :: [String.t()]
   def ids(nil), do: []
 
   def ids(%{id: id, children: children}) do
@@ -115,7 +115,7 @@ defmodule Julep.Tree do
 
   Walks the entire tree depth-first and accumulates all matches.
   """
-  @spec find_all(tree_node(), (tree_node() -> as_boolean(term()))) :: [tree_node()]
+  @spec find_all(node :: tree_node(), fun :: (tree_node() -> as_boolean(term()))) :: [tree_node()]
   def find_all(node, fun) do
     do_find_all(node, fun, [])
     |> Enum.reverse()
@@ -132,7 +132,7 @@ defmodule Julep.Tree do
 
   Path is a list of child indices from the root. An empty path `[]` means the root node.
   """
-  @spec diff(map() | nil, map() | nil) :: [map()]
+  @spec diff(old_tree :: map() | nil, new_tree :: map() | nil) :: [map()]
   def diff(nil, nil), do: []
   def diff(nil, new_tree), do: [%{op: "replace_node", path: [], node: new_tree}]
   def diff(_old_tree, nil), do: [%{op: "remove_child", path: [], index: 0}]
@@ -216,7 +216,7 @@ defmodule Julep.Tree do
   Recursively stringifies nested map values. Does NOT recurse into
   lists (child nodes are not prop values and must not be treated as such).
   """
-  @spec stringify_keys(map()) :: %{String.t() => term()}
+  @spec stringify_keys(map :: map()) :: %{String.t() => term()}
   def stringify_keys(%{} = map) do
     Map.new(map, fn
       {k, v} when is_atom(k) -> {Atom.to_string(k), stringify_value(v)}

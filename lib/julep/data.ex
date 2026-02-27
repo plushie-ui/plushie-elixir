@@ -28,10 +28,15 @@ defmodule Julep.Data do
   """
 
   @typedoc """
-  Query result map with keys `:entries`, `:total`, `:page`, `:page_size`,
-  and optionally `:groups`.
+  Query result with paginated entries, total count, and optional grouping.
   """
-  @type result :: map()
+  @type result :: %{
+          entries: [map()],
+          total: non_neg_integer(),
+          page: pos_integer(),
+          page_size: pos_integer(),
+          groups: %{optional(term()) => [map()]} | nil
+        }
 
   @doc """
   Queries a list of records with optional filtering, searching, sorting,
@@ -51,7 +56,7 @@ defmodule Julep.Data do
   Returns a result map with `:entries`, `:total`, `:page`, and `:page_size`.
   If `:group` is specified, `:groups` is also included.
   """
-  @spec query([map()], keyword()) :: result()
+  @spec query(records :: [map()], opts :: keyword()) :: result()
   def query(records, opts \\ []) when is_list(records) do
     filter_fn = Keyword.get(opts, :filter)
     sort_spec = Keyword.get(opts, :sort)

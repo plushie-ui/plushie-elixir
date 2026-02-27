@@ -23,7 +23,7 @@ defmodule Julep.Test do
   On subsequent runs, compares and fails with a diff if different.
   Set `JULEP_UPDATE_SNAPSHOTS=1` to overwrite existing snapshots.
   """
-  @spec assert_snapshot(map(), String.t()) :: :ok
+  @spec assert_snapshot(tree :: map(), path :: String.t()) :: :ok
   def assert_snapshot(tree, path) do
     normalized = normalize_for_snapshot(tree)
     current_json = Jason.encode!(normalized, pretty: true)

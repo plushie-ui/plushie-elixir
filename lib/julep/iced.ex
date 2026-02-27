@@ -77,7 +77,7 @@ defmodule Julep.Iced do
   - `clip` (boolean) -- clip children that overflow. Default: false.
   - `wrap` (boolean) -- wrap children to next column when they overflow. Default: false.
   """
-  @spec column(String.t(), props(), [ui_node()]) :: ui_node()
+  @spec column(id :: String.t(), props :: props(), children :: [ui_node()]) :: ui_node()
   def column(id, props \\ %{}, children \\ []), do: node(id, "column", props, children)
 
   @doc """
@@ -93,7 +93,7 @@ defmodule Julep.Iced do
   - `clip` (boolean) -- clip children that overflow. Default: false.
   - `wrap` (boolean) -- wrap children to next row when they overflow. Default: false.
   """
-  @spec row(String.t(), props(), [ui_node()]) :: ui_node()
+  @spec row(id :: String.t(), props :: props(), children :: [ui_node()]) :: ui_node()
   def row(id, props \\ %{}, children \\ []), do: node(id, "row", props, children)
 
   @doc """
@@ -119,7 +119,7 @@ defmodule Julep.Iced do
     `"bordered_box"`, `"dark"`, `"primary"`, `"secondary"`, `"success"`,
     `"danger"`, `"warning"`. Overrides inline style props if both are set.
   """
-  @spec container(String.t(), props(), [ui_node()]) :: ui_node()
+  @spec container(id :: String.t(), props :: props(), children :: [ui_node()]) :: ui_node()
   def container(id, props \\ %{}, children \\ []), do: node(id, "container", props, children)
 
   @doc """
@@ -137,7 +137,7 @@ defmodule Julep.Iced do
   - `id` (string) -- widget ID for programmatic scroll control via `Julep.Command`.
   - `anchor` (string) -- scroll anchor: `"start"` (default) or `"end"` / `"bottom"` / `"right"`.
   """
-  @spec scrollable(String.t(), props(), [ui_node()]) :: ui_node()
+  @spec scrollable(id :: String.t(), props :: props(), children :: [ui_node()]) :: ui_node()
   def scrollable(id, props \\ %{}, children \\ []), do: node(id, "scrollable", props, children)
 
   @doc """
@@ -148,7 +148,7 @@ defmodule Julep.Iced do
   - `width` (length) -- stack width. Default: shrink. See `Julep.Iced.Length`.
   - `height` (length) -- stack height. Default: shrink.
   """
-  @spec stack(String.t(), props(), [ui_node()]) :: ui_node()
+  @spec stack(id :: String.t(), props :: props(), children :: [ui_node()]) :: ui_node()
   def stack(id, props \\ %{}, children \\ []), do: node(id, "stack", props, children)
 
   @doc """
@@ -159,7 +159,7 @@ defmodule Julep.Iced do
   - `width` (length) -- space width. Default: shrink. See `Julep.Iced.Length`.
   - `height` (length) -- space height. Default: shrink.
   """
-  @spec space(String.t(), props()) :: ui_node()
+  @spec space(id :: String.t(), props :: props()) :: ui_node()
   def space(id, props \\ %{}), do: node(id, "space", props)
 
   @doc """
@@ -172,7 +172,7 @@ defmodule Julep.Iced do
   - `width` (number) -- grid width in pixels.
   - `height` (number) -- grid height in pixels.
   """
-  @spec grid(String.t(), props(), [ui_node()]) :: ui_node()
+  @spec grid(id :: String.t(), props :: props(), children :: [ui_node()]) :: ui_node()
   def grid(id, props \\ %{}, children \\ []), do: node(id, "grid", props, children)
 
   @doc """
@@ -185,7 +185,7 @@ defmodule Julep.Iced do
   - `width` (length) -- pin container width. Default: shrink. See `Julep.Iced.Length`.
   - `height` (length) -- pin container height. Default: shrink.
   """
-  @spec pin(String.t(), props(), [ui_node()]) :: ui_node()
+  @spec pin(id :: String.t(), props :: props(), children :: [ui_node()]) :: ui_node()
   def pin(id, props \\ %{}, children \\ []), do: node(id, "pin", props, children)
 
   @doc """
@@ -197,7 +197,7 @@ defmodule Julep.Iced do
   - `translate_y` (number) -- vertical translation in pixels. Default: 0.
   - `scale` (number) -- scale factor for the child content.
   """
-  @spec float_widget(String.t(), props(), [ui_node()]) :: ui_node()
+  @spec float_widget(id :: String.t(), props :: props(), children :: [ui_node()]) :: ui_node()
   def float_widget(id, props \\ %{}, children \\ []), do: node(id, "float", props, children)
 
   @doc """
@@ -211,7 +211,7 @@ defmodule Julep.Iced do
   - `width` (length) -- container width. Default: fill. See `Julep.Iced.Length`.
   - `height` (length) -- container height. Default: fill.
   """
-  @spec responsive(String.t(), props(), [ui_node()]) :: ui_node()
+  @spec responsive(id :: String.t(), props :: props(), children :: [ui_node()]) :: ui_node()
   def responsive(id, props \\ %{}, children \\ []), do: node(id, "responsive", props, children)
 
   @doc """
@@ -222,7 +222,7 @@ defmodule Julep.Iced do
   - `theme` (string | map) -- a built-in theme name string (e.g. `"Dark"`, `"Nord"`)
     or a custom palette map. See `Julep.Iced.Theme`.
   """
-  @spec themer(String.t(), props(), [ui_node()]) :: ui_node()
+  @spec themer(id :: String.t(), props :: props(), children :: [ui_node()]) :: ui_node()
   def themer(id, props \\ %{}, children \\ []), do: node(id, "themer", props, children)
 
   @doc """
@@ -238,7 +238,7 @@ defmodule Julep.Iced do
   - `height` (length) -- column height. Default: shrink.
   - `max_width` (number) -- maximum width in pixels.
   """
-  @spec keyed_column(String.t(), props(), [ui_node()]) :: ui_node()
+  @spec keyed_column(id :: String.t(), props :: props(), children :: [ui_node()]) :: ui_node()
   def keyed_column(id, props \\ %{}, children \\ []),
     do: node(id, "keyed_column", props, children)
 
@@ -268,7 +268,7 @@ defmodule Julep.Iced do
 
   - `{:click, id}` -- emitted on press (unless disabled).
   """
-  @spec button(String.t(), props()) :: ui_node()
+  @spec button(id :: String.t(), props :: props()) :: ui_node()
   def button(id, props \\ %{}), do: node(id, "button", props)
 
   @doc """
@@ -298,7 +298,7 @@ defmodule Julep.Iced do
   - `{:input, id, value}` -- emitted on every text change.
   - `{:submit, id, value}` -- emitted on Enter (requires `on_submit` prop).
   """
-  @spec text_input(String.t(), props()) :: ui_node()
+  @spec text_input(id :: String.t(), props :: props()) :: ui_node()
   def text_input(id, props \\ %{}), do: node(id, "text_input", props)
 
   @doc """
@@ -323,7 +323,7 @@ defmodule Julep.Iced do
 
   - `{:toggle, id, value}` -- emitted on toggle, `value` is the new boolean state.
   """
-  @spec checkbox(String.t(), props()) :: ui_node()
+  @spec checkbox(id :: String.t(), props :: props()) :: ui_node()
   def checkbox(id, props \\ %{}), do: node(id, "checkbox", props)
 
   @doc """
@@ -347,7 +347,7 @@ defmodule Julep.Iced do
 
   - `{:toggle, id, value}` -- emitted on toggle, `value` is the new boolean state.
   """
-  @spec toggler(String.t(), props()) :: ui_node()
+  @spec toggler(id :: String.t(), props :: props()) :: ui_node()
   def toggler(id, props \\ %{}), do: node(id, "toggler", props)
 
   @doc """
@@ -379,7 +379,7 @@ defmodule Julep.Iced do
   - `{:select, group_or_id, value}` -- emitted when this radio is selected.
     The first element is the `group` prop if set, otherwise the node ID.
   """
-  @spec radio(String.t(), props()) :: ui_node()
+  @spec radio(id :: String.t(), props :: props()) :: ui_node()
   def radio(id, props \\ %{}), do: node(id, "radio", props)
 
   @doc """
@@ -401,7 +401,7 @@ defmodule Julep.Iced do
   - `{:slide, id, value}` -- emitted continuously while dragging.
   - `{:slide_release, id, value}` -- emitted when drag ends.
   """
-  @spec slider(String.t(), props()) :: ui_node()
+  @spec slider(id :: String.t(), props :: props()) :: ui_node()
   def slider(id, props \\ %{}), do: node(id, "slider", props)
 
   @doc """
@@ -422,7 +422,7 @@ defmodule Julep.Iced do
   - `{:slide, id, value}` -- emitted continuously while dragging.
   - `{:slide_release, id, value}` -- emitted when drag ends.
   """
-  @spec vertical_slider(String.t(), props()) :: ui_node()
+  @spec vertical_slider(id :: String.t(), props :: props()) :: ui_node()
   def vertical_slider(id, props \\ %{}), do: node(id, "vertical_slider", props)
 
   @doc """
@@ -446,7 +446,7 @@ defmodule Julep.Iced do
 
   - `{:select, id, value}` -- emitted when an option is selected.
   """
-  @spec pick_list(String.t(), props()) :: ui_node()
+  @spec pick_list(id :: String.t(), props :: props()) :: ui_node()
   def pick_list(id, props \\ %{}), do: node(id, "pick_list", props)
 
   @doc """
@@ -472,7 +472,7 @@ defmodule Julep.Iced do
   - `{:select, id, value}` -- emitted when an option is selected.
   - `{:input, id, value}` -- emitted on every text input change (for filtering).
   """
-  @spec combo_box(String.t(), props()) :: ui_node()
+  @spec combo_box(id :: String.t(), props :: props()) :: ui_node()
   def combo_box(id, props \\ %{}), do: node(id, "combo_box", props)
 
   @doc """
@@ -501,7 +501,7 @@ defmodule Julep.Iced do
   The editor emits text action events handled internally by the renderer.
   Content changes are reported back to Elixir via the protocol.
   """
-  @spec text_editor(String.t(), props()) :: ui_node()
+  @spec text_editor(id :: String.t(), props :: props()) :: ui_node()
   def text_editor(id, props \\ %{}), do: node(id, "text_editor", props)
 
   # ---------------------------------------------------------------------------
@@ -523,7 +523,7 @@ defmodule Julep.Iced do
   - `{:click, "id:release"}` -- left mouse button released.
   - `{:click, "id:middle"}` -- middle mouse button pressed.
   """
-  @spec mouse_area(String.t(), props(), [ui_node()]) :: ui_node()
+  @spec mouse_area(id :: String.t(), props :: props(), children :: [ui_node()]) :: ui_node()
   def mouse_area(id, props \\ %{}, children \\ []), do: node(id, "mouse_area", props, children)
 
   @doc """
@@ -539,7 +539,7 @@ defmodule Julep.Iced do
   - `{:sensor_resize, "id:show", width, height}` -- emitted when child becomes visible.
   - `{:click, "id:hide"}` -- emitted when child becomes hidden.
   """
-  @spec sensor(String.t(), props(), [ui_node()]) :: ui_node()
+  @spec sensor(id :: String.t(), props :: props(), children :: [ui_node()]) :: ui_node()
   def sensor(id, props \\ %{}, children \\ []), do: node(id, "sensor", props, children)
 
   @doc """
@@ -560,7 +560,7 @@ defmodule Julep.Iced do
   - `{:pane_resized, id, split, ratio}` -- emitted when a split is resized.
   - `{:pane_dragged, id, pane, target}` -- emitted when a pane is dragged.
   """
-  @spec pane_grid(String.t(), props(), [ui_node()]) :: ui_node()
+  @spec pane_grid(id :: String.t(), props :: props(), children :: [ui_node()]) :: ui_node()
   def pane_grid(id, props \\ %{}, children \\ []), do: node(id, "pane_grid", props, children)
 
   # ---------------------------------------------------------------------------
@@ -586,7 +586,7 @@ defmodule Julep.Iced do
   - `style` (string) -- named style. One of: `"default"`, `"primary"`, `"secondary"`,
     `"success"`, `"danger"`, `"warning"`.
   """
-  @spec text(String.t(), props()) :: ui_node()
+  @spec text(id :: String.t(), props :: props()) :: ui_node()
   def text(id, props \\ %{}), do: node(id, "text", props)
 
   @doc """
@@ -599,7 +599,7 @@ defmodule Julep.Iced do
   - `direction` (string) -- `"horizontal"` (default) or `"vertical"`.
   - `style` (string) -- named style: `"default"` or `"weak"`.
   """
-  @spec rule(String.t(), props()) :: ui_node()
+  @spec rule(id :: String.t(), props :: props()) :: ui_node()
   def rule(id, props \\ %{}), do: node(id, "rule", props)
 
   @doc """
@@ -614,7 +614,7 @@ defmodule Julep.Iced do
   - `style` (string) -- named style. One of: `"primary"` (default), `"secondary"`,
     `"success"`, `"danger"`, `"warning"`.
   """
-  @spec progress_bar(String.t(), props()) :: ui_node()
+  @spec progress_bar(id :: String.t(), props :: props()) :: ui_node()
   def progress_bar(id, props \\ %{}), do: node(id, "progress_bar", props)
 
   @doc """
@@ -634,7 +634,8 @@ defmodule Julep.Iced do
     `"transparent"`, `"rounded_box"`, `"bordered_box"`, `"dark"`, `"primary"`,
     `"secondary"`, `"success"`, `"danger"`, `"warning"`.
   """
-  @spec tooltip(String.t(), props(), [ui_node()], String.t()) :: ui_node()
+  @spec tooltip(id :: String.t(), props :: props(), children :: [ui_node()], tip :: String.t()) ::
+          ui_node()
   def tooltip(id, props \\ %{}, children \\ [], tip) do
     merged = Map.put(props, :tip, tip)
     node(id, "tooltip", merged, children)
@@ -658,7 +659,7 @@ defmodule Julep.Iced do
   - `scale` (number) -- scale factor for the image.
   - `crop` (map) -- crop rectangle: `%{x, y, width, height}` (integer pixel values).
   """
-  @spec image(String.t(), props()) :: ui_node()
+  @spec image(id :: String.t(), props :: props()) :: ui_node()
   def image(id, props \\ %{}), do: node(id, "image", props)
 
   @doc """
@@ -674,7 +675,7 @@ defmodule Julep.Iced do
   - `rotation` (number) -- rotation angle in degrees.
   - `opacity` (number) -- opacity from 0.0 (transparent) to 1.0 (opaque).
   """
-  @spec svg(String.t(), props()) :: ui_node()
+  @spec svg(id :: String.t(), props :: props()) :: ui_node()
   def svg(id, props \\ %{}), do: node(id, "svg", props)
 
   @doc """
@@ -697,7 +698,7 @@ defmodule Julep.Iced do
 
   - Link clicks are forwarded as `MarkdownUrl` messages by the renderer.
   """
-  @spec markdown(String.t(), props()) :: ui_node()
+  @spec markdown(id :: String.t(), props :: props()) :: ui_node()
   def markdown(id, props \\ %{}), do: node(id, "markdown", props)
 
   @doc """
@@ -722,7 +723,7 @@ defmodule Julep.Iced do
 
   - `{:click, "id:link_value"}` -- emitted when a span link is clicked.
   """
-  @spec rich_text(String.t(), props()) :: ui_node()
+  @spec rich_text(id :: String.t(), props :: props()) :: ui_node()
   def rich_text(id, props \\ %{}), do: node(id, "rich_text", props)
 
   # ---------------------------------------------------------------------------
@@ -759,7 +760,7 @@ defmodule Julep.Iced do
   - `{:canvas_move, id, x, y}` -- mouse moved over canvas.
   - `{:canvas_scroll, id, x, y, delta_x, delta_y}` -- mouse scrolled on canvas.
   """
-  @spec canvas(String.t(), props()) :: ui_node()
+  @spec canvas(id :: String.t(), props :: props()) :: ui_node()
   def canvas(id, props \\ %{}), do: node(id, "canvas", props)
 
   @doc """
@@ -776,6 +777,6 @@ defmodule Julep.Iced do
   - `width` (length) -- table width. Default: fill. See `Julep.Iced.Length`.
   - `padding` (number | map) -- table padding. See `Julep.Iced.Padding`.
   """
-  @spec table(String.t(), props()) :: ui_node()
+  @spec table(id :: String.t(), props :: props()) :: ui_node()
   def table(id, props \\ %{}), do: node(id, "table", props)
 end
