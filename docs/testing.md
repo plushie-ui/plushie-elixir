@@ -4,14 +4,11 @@
 
 Tests are documentation. They tell the next person how the feature works.
 
-The Elm architecture makes julep apps unusually easy to test. `update/2` is
-a pure function: model in, model out. `view/1` returns plain maps. No
-mocks, no processes, no infrastructure needed for the core loop. Most of
-your app logic can be tested with nothing but ExUnit.
-
-When you need to go deeper -- clicking buttons, verifying widgets appear,
-catching rendering regressions -- julep ships a test framework with
-progressive fidelity:
+The Elm architecture makes julep apps unusually easy to test. Your core
+callbacks are pure functions operating on plain data -- no mocks, no
+processes, no infrastructure. When you need to go deeper -- clicking
+buttons, verifying widgets appear, catching rendering regressions -- julep
+ships a test framework with progressive fidelity:
 
 1. **Sim** (pure Elixir) -- millisecond tests for logic and tree structure.
 2. **Headless** (Rust renderer, no display) -- protocol round-trips and
@@ -26,8 +23,8 @@ be sim tests. Headless and full exist for the things sim cannot catch.
 
 ## Unit testing
 
-The Elm architecture means you can test most of your app with plain
-ExUnit -- no test framework needed.
+`update/2` is a pure function: model in, model out. `view/1` returns plain
+maps. You can test most of your app with nothing but ExUnit.
 
 ### Testing `update/2`
 
@@ -52,7 +49,7 @@ test "submitting todo refocuses the input" do
   {model, cmd} = MyApp.update(model, {:submit, "todo_input", "Buy milk"})
 
   assert [%{text: "Buy milk"}] = model.todos
-  assert %Julep.Command{type: :focus, target: "todo_input"} = cmd
+  assert %Julep.Command{type: :focus, payload: %{target: "todo_input"}} = cmd
 end
 ```
 
@@ -96,16 +93,20 @@ end
 `Julep.UI` provides helpers for querying trees outside the test framework:
 
 ```elixir
-Julep.UI.find(tree, "my_button")
-Julep.UI.find(tree, fn node -> node.type == "text" end)
-Julep.UI.find_all(tree, fn node -> node.type == "button" end)
-Julep.UI.exists?(tree, "my_button")
-Julep.UI.ids(tree)
+Julep.UI.find(tree, "my_button")           # find by ID
+Julep.UI.exists?(tree, "my_button")        # check existence
+Julep.UI.ids(tree)                         # all IDs (depth-first)
+Julep.UI.find_all(tree, fn node ->         # find by predicate
+  node.type == "button"
+end)
 ```
 
 ### JSON tree snapshots
 
-For complex views, snapshot tests catch unintended structural changes:
+For complex views, snapshot the tree as JSON to catch unintended structural
+changes. `Julep.Test.assert_snapshot/2` compares a tree against a stored
+JSON file (this is separate from the pixel-level `assert_snapshot/1` in the
+test framework):
 
 ```elixir
 test "initial view snapshot" do
@@ -116,8 +117,8 @@ test "initial view snapshot" do
 end
 ```
 
-On first run, `assert_snapshot` writes the JSON file. On subsequent runs,
-it compares the tree. Update snapshots after intentional changes:
+First run writes the file. Subsequent runs compare. Update after intentional
+changes:
 
 ```bash
 JULEP_UPDATE_SNAPSHOTS=1 mix test
@@ -136,7 +137,7 @@ defmodule MyApp.CounterTest do
 
   test "clicking increment updates counter" do
     click("#increment")
-    assert find!("#count") |> text() == "1"
+    assert_text "#count", "1"
   end
 end
 ```
@@ -151,8 +152,8 @@ server, no setup.
   `Element` struct with id, type, props, and children.
 - **`click/1`**, **`type_text/2`**, **`submit/1`**, **`toggle/1`**,
   **`select/2`**, **`slide/2`** -- interact with widgets.
-- **`assert_text/2`**, **`assert_exists/1`**, **`assert_not_exists/1`** --
-  scoped assertions.
+- **`assert_text/2`**, **`assert_exists/1`**, **`assert_not_exists/1`**,
+  **`assert_model/1`** -- scoped assertions.
 - **`model/0`** and **`tree/0`** -- inspect current state directly.
 - **`snapshot/1`** and **`assert_snapshot/1`** -- pixel regression.
 - **`await_async/2`** -- wait for a tagged async task to complete.
@@ -213,8 +214,7 @@ Interacting with the wrong widget type raises with a clear message. See
 ### Assertions
 
 ```elixir
-# Text content
-assert find!("#count") |> text() == "42"
+# Text content (assert_text is the preferred form)
 assert_text "#count", "42"
 
 # Existence
@@ -223,10 +223,12 @@ assert_not_exists "#admin-panel"
 
 # Model state
 assert model().count == 5
+assert_model %{count: 5}
 
-# Full tree
-tree = tree()
-assert tree["type"] == "column"
+# Direct element access when you need more control
+element = find!("#count")
+assert text(element) == "42"
+assert element.type == "button"
 ```
 
 
@@ -389,6 +391,11 @@ Lines starting with `#` are comments.
 | `expect` | `expect "text"` | Assert text appears somewhere in the tree |
 | `snapshot` | `snapshot "name"` | Capture and assert a pixel snapshot |
 | `assert_text` | `assert_text "selector" "text"` | Assert widget has specific text |
+| `assert_model` | `assert_model "expression"` | Assert expression appears in inspected model |
+| `press` | `press key` | Press a key down |
+| `release` | `release key` | Release a key |
+| `move` | `move "selector"` | Move mouse to a widget |
+| `move_to` | `move_to x y` | Move mouse to pixel coordinates |
 | `wait` | `wait 500` | Pause N milliseconds (respected in replay mode) |
 
 ### Running scripts
@@ -461,8 +468,7 @@ from the widget type, dispatches it through `update/2`, and re-renders.
 
 ### Headless (`:headless`)
 
-Spawns the Rust renderer in headless mode and communicates via JSONL with
-correlation IDs for request/response matching.
+Spawns the Rust renderer in headless mode and communicates via JSONL.
 
 **Requirements:**
 
@@ -674,7 +680,7 @@ test "clicking fetch starts async load" do
   {model, cmd} = MyApp.update(model, {:click, "fetch"})
 
   assert model.loading == true
-  assert %Julep.Command{type: :async, tag: :data_loaded} = cmd
+  assert %Julep.Command{type: :async, payload: %{tag: :data_loaded}} = cmd
 end
 ```
 
