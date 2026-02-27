@@ -90,15 +90,17 @@ the full CI pipeline locally and stops on first failure:
 
 ## Testing
 
-Write tests once, choose the fidelity level at runtime. Three backends behind
-a unified API:
+The Elm architecture makes julep apps unusually testable. `update/2` is a
+pure function. `view/1` returns plain data. No mocks needed for the core
+loop. But pure-function unit tests can't catch everything -- a misspelled
+prop name, an iced version bump that shifts widget rendering, a platform
+effect that silently changed behaviour. You need tests that cross the
+Elixir-Rust boundary too.
 
-| | Sim | Headless | Full |
-|---|---|---|---|
-| Speed | ~ms | ~100ms | ~seconds |
-| Rust binary | No | Yes | Yes |
-| Display server | No | No | Yes |
-| Pixel snapshots | No | Tree-hash | GPU pixels |
+Julep ships a test framework with progressive fidelity: millisecond tests
+for logic, headless Rust rendering for protocol verification, and real GPU
+windows for full-stack confidence. Same test code, same assertions -- you
+choose the depth.
 
 ```elixir
 defmodule MyAppTest do
@@ -108,28 +110,15 @@ defmodule MyAppTest do
     click("#increment")
     assert find!("#count") |> text() == "1"
   end
-
-  @tag backend: :headless
-  test "structural regression" do
-    click("#increment")
-    assert_snapshot("counter-at-1")
-  end
 end
 ```
 
-The default backend is `:sim` -- pure Elixir, no Rust binary, no display
-server. Override per-test with `@tag backend:`, per-module with
-`use Julep.Test.Case, backend:`, or globally with `JULEP_TEST_BACKEND=`.
+No setup, no Rust binary, no display server. Tests run in milliseconds by
+default. When you need deeper verification, swap backends with a single tag
+and the same test exercises the real renderer or captures GPU pixels.
 
-Script-based testing via `.julep` files:
-
-```bash
-mix julep.script                     # run test scripts
-mix julep.replay path.julep          # replay with real windows
-```
-
-See [Testing guide](docs/testing.md) for the full API, backend comparison,
-pixel regression workflow, and CI configuration.
+See the [Testing guide](docs/testing.md) for the full API, backend
+comparison, pixel regression workflow, and CI configuration.
 
 ## Documentation
 
