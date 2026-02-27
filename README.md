@@ -96,7 +96,8 @@ ships a test framework with three interchangeable backends:
 - **Simulated** -- millisecond tests with zero setup. No Rust binary, no
   display server. Click buttons, type text, assert on results.
 - **Headless** -- real Rust rendering powered by iced's
-  [iced_test](https://docs.rs/iced_test) and tiny-skia, no display server
+  [iced_test](https://docs.rs/iced_test) and
+  [tiny-skia](https://github.com/linebender/tiny-skia), no display server
   needed. Catches protocol bugs and structural regressions across upgrades.
 - **Full** -- real iced windows with GPU rendering. Pixel-accurate
   screenshot regression, platform effects, the works.
@@ -125,9 +126,13 @@ end
 ```
 
 Write test scenarios in Elixir with the full power of ExUnit, or use
-declarative `.julep` scripts for acceptance tests and visual demos. Capture
-golden-file screenshots for pixel regression, or just test your logic fast
-and move on. See the [Testing guide](docs/testing.md).
+declarative `.julep` scripts -- a superset of iced's
+[`.ice` format](https://docs.rs/iced_test/latest/iced_test/ice/) --
+for acceptance tests and visual demos. Capture golden-file screenshots for
+pixel regression, or just test your logic fast and move on.
+
+See the [Testing guide](docs/testing.md) for the full API, backend details,
+and CI configuration.
 
 ## Documentation
 
