@@ -27,15 +27,15 @@ defmodule Julep.Iced.Widget.MouseArea do
   def new(id) when is_binary(id), do: %__MODULE__{id: id}
 
   @doc "Appends a child to the mouse area."
-  @spec push(ma :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
+  @spec push(mouse_area :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
   def push(%__MODULE__{} = ma, child), do: %{ma | children: ma.children ++ [child]}
 
   @doc "Appends multiple children to the mouse area."
-  @spec extend(ma :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
+  @spec extend(mouse_area :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
   def extend(%__MODULE__{} = ma, children), do: %{ma | children: ma.children ++ children}
 
   @doc "Converts this mouse area struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
-  @spec build(ma :: t()) :: Julep.Iced.ui_node()
+  @spec build(mouse_area :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = ma), do: Julep.Iced.Widget.to_node(ma)
 
   defimpl Julep.Iced.Widget do

@@ -52,7 +52,7 @@ defmodule Julep.Iced.Widget.VerticalSlider do
   end
 
   @doc "Applies keyword options to an existing vertical slider struct."
-  @spec with_options(slider :: t(), opts :: [option()]) :: t()
+  @spec with_options(vertical_slider :: t(), opts :: [option()]) :: t()
   def with_options(%__MODULE__{} = slider, []), do: slider
 
   def with_options(%__MODULE__{} = slider, opts) do
@@ -67,27 +67,27 @@ defmodule Julep.Iced.Widget.VerticalSlider do
   end
 
   @doc "Sets the step increment."
-  @spec step(slider :: t(), step :: number()) :: t()
+  @spec step(vertical_slider :: t(), step :: number()) :: t()
   def step(%__MODULE__{} = slider, step), do: %{slider | step: step}
 
   @doc "Sets the step increment when Shift is held."
-  @spec shift_step(slider :: t(), shift_step :: number()) :: t()
+  @spec shift_step(vertical_slider :: t(), shift_step :: number()) :: t()
   def shift_step(%__MODULE__{} = slider, shift_step), do: %{slider | shift_step: shift_step}
 
   @doc "Sets the default value (double-click resets to this)."
-  @spec default(slider :: t(), default :: number()) :: t()
+  @spec default(vertical_slider :: t(), default :: number()) :: t()
   def default(%__MODULE__{} = slider, default), do: %{slider | default: default}
 
   @doc "Sets the slider height."
-  @spec height(slider :: t(), height :: Julep.Iced.Length.t()) :: t()
+  @spec height(vertical_slider :: t(), height :: Julep.Iced.Length.t()) :: t()
   def height(%__MODULE__{} = slider, height), do: %{slider | height: height}
 
   @doc "Sets the slider style."
-  @spec style(slider :: t(), style :: atom()) :: t()
+  @spec style(vertical_slider :: t(), style :: atom()) :: t()
   def style(%__MODULE__{} = slider, style), do: %{slider | style: style}
 
   @doc "Converts this vertical slider struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
-  @spec build(slider :: t()) :: Julep.Iced.ui_node()
+  @spec build(vertical_slider :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = slider), do: Julep.Iced.Widget.to_node(slider)
 
   defimpl Julep.Iced.Widget do

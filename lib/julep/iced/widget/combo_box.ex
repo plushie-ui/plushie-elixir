@@ -16,7 +16,6 @@ defmodule Julep.Iced.Widget.ComboBox do
   - `font` (string | map) -- font specification. See `Julep.Iced.Font`.
   - `line_height` (number | map) -- text line height.
   - `menu_height` (number) -- maximum height of the dropdown menu in pixels.
-  - `style` (string) -- named style. Currently only `"default"`.
 
   ## Events
 
@@ -35,7 +34,6 @@ defmodule Julep.Iced.Widget.ComboBox do
           | {:font, Julep.Iced.Font.t()}
           | {:line_height, number() | map()}
           | {:menu_height, number()}
-          | {:style, atom()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -47,8 +45,7 @@ defmodule Julep.Iced.Widget.ComboBox do
           size: number() | nil,
           font: Julep.Iced.Font.t() | nil,
           line_height: number() | map() | nil,
-          menu_height: number() | nil,
-          style: atom() | nil
+          menu_height: number() | nil
         }
 
   defstruct [
@@ -61,8 +58,7 @@ defmodule Julep.Iced.Widget.ComboBox do
     :size,
     :font,
     :line_height,
-    :menu_height,
-    :style
+    :menu_height
   ]
 
   @doc "Creates a new combo box struct with the given options and optional keyword opts."
@@ -85,7 +81,6 @@ defmodule Julep.Iced.Widget.ComboBox do
       {:font, v}, acc -> font(acc, v)
       {:line_height, v}, acc -> line_height(acc, v)
       {:menu_height, v}, acc -> menu_height(acc, v)
-      {:style, v}, acc -> style(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -122,10 +117,6 @@ defmodule Julep.Iced.Widget.ComboBox do
   @spec menu_height(combo_box :: t(), menu_height :: number()) :: t()
   def menu_height(%__MODULE__{} = cb, menu_height), do: %{cb | menu_height: menu_height}
 
-  @doc "Sets the combo box style."
-  @spec style(combo_box :: t(), style :: atom()) :: t()
-  def style(%__MODULE__{} = cb, style), do: %{cb | style: style}
-
   @doc "Converts this combo box struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(combo_box :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = cb), do: Julep.Iced.Widget.to_node(cb)
@@ -145,7 +136,6 @@ defmodule Julep.Iced.Widget.ComboBox do
         |> put_if(cb.font, "font")
         |> put_if(cb.line_height, "line_height")
         |> put_if(cb.menu_height, "menu_height")
-        |> put_if(cb.style, "style", &to_string/1)
 
       %{id: cb.id, type: "combo_box", props: props, children: []}
     end

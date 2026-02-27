@@ -36,7 +36,7 @@ defmodule Julep.Iced.Widget.Canvas do
           {:shapes, [map()]}
           | {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
-          | {:background, term()}
+          | {:background, Julep.Iced.Color.t()}
           | {:interactive, boolean()}
           | {:on_press, boolean()}
           | {:on_release, boolean()}
@@ -48,7 +48,7 @@ defmodule Julep.Iced.Widget.Canvas do
           shapes: [map()] | nil,
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
-          background: term() | nil,
+          background: Julep.Iced.Color.t() | nil,
           interactive: boolean() | nil,
           on_press: boolean() | nil,
           on_release: boolean() | nil,
@@ -107,7 +107,7 @@ defmodule Julep.Iced.Widget.Canvas do
   def height(%__MODULE__{} = canvas, height), do: %{canvas | height: height}
 
   @doc "Sets the canvas background color."
-  @spec background(canvas :: t(), background :: term()) :: t()
+  @spec background(canvas :: t(), background :: Julep.Iced.Color.t()) :: t()
   def background(%__MODULE__{} = canvas, background), do: %{canvas | background: background}
 
   @doc "Sets whether all mouse event handlers are enabled."

@@ -62,7 +62,7 @@ defmodule Julep.Iced.Widget.Markdown do
   end
 
   @doc "Applies keyword options to an existing markdown struct."
-  @spec with_options(md :: t(), opts :: [option()]) :: t()
+  @spec with_options(markdown :: t(), opts :: [option()]) :: t()
   def with_options(%__MODULE__{} = md, []), do: md
 
   def with_options(%__MODULE__{} = md, opts) do
@@ -79,35 +79,35 @@ defmodule Julep.Iced.Widget.Markdown do
   end
 
   @doc "Sets the container width."
-  @spec width(md :: t(), width :: Julep.Iced.Length.t()) :: t()
+  @spec width(markdown :: t(), width :: Julep.Iced.Length.t()) :: t()
   def width(%__MODULE__{} = md, width), do: %{md | width: width}
 
   @doc "Sets the base text size."
-  @spec text_size(md :: t(), text_size :: number()) :: t()
+  @spec text_size(markdown :: t(), text_size :: number()) :: t()
   def text_size(%__MODULE__{} = md, text_size), do: %{md | text_size: text_size}
 
   @doc "Sets the heading 1 size."
-  @spec h1_size(md :: t(), h1_size :: number()) :: t()
+  @spec h1_size(markdown :: t(), h1_size :: number()) :: t()
   def h1_size(%__MODULE__{} = md, h1_size), do: %{md | h1_size: h1_size}
 
   @doc "Sets the heading 2 size."
-  @spec h2_size(md :: t(), h2_size :: number()) :: t()
+  @spec h2_size(markdown :: t(), h2_size :: number()) :: t()
   def h2_size(%__MODULE__{} = md, h2_size), do: %{md | h2_size: h2_size}
 
   @doc "Sets the heading 3 size."
-  @spec h3_size(md :: t(), h3_size :: number()) :: t()
+  @spec h3_size(markdown :: t(), h3_size :: number()) :: t()
   def h3_size(%__MODULE__{} = md, h3_size), do: %{md | h3_size: h3_size}
 
   @doc "Sets the code block text size."
-  @spec code_size(md :: t(), code_size :: number()) :: t()
+  @spec code_size(markdown :: t(), code_size :: number()) :: t()
   def code_size(%__MODULE__{} = md, code_size), do: %{md | code_size: code_size}
 
   @doc "Sets the spacing between markdown elements."
-  @spec spacing(md :: t(), spacing :: number()) :: t()
+  @spec spacing(markdown :: t(), spacing :: number()) :: t()
   def spacing(%__MODULE__{} = md, spacing), do: %{md | spacing: spacing}
 
   @doc "Converts this markdown struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
-  @spec build(md :: t()) :: Julep.Iced.ui_node()
+  @spec build(markdown :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = md), do: Julep.Iced.Widget.to_node(md)
 
   defimpl Julep.Iced.Widget do

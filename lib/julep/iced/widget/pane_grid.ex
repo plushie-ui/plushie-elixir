@@ -42,7 +42,7 @@ defmodule Julep.Iced.Widget.PaneGrid do
   end
 
   @doc "Applies keyword options to an existing pane grid struct."
-  @spec with_options(pg :: t(), opts :: [option()]) :: t()
+  @spec with_options(pane_grid :: t(), opts :: [option()]) :: t()
   def with_options(%__MODULE__{} = pg, []), do: pg
 
   def with_options(%__MODULE__{} = pg, opts) do
@@ -55,27 +55,27 @@ defmodule Julep.Iced.Widget.PaneGrid do
   end
 
   @doc "Sets the spacing between panes."
-  @spec spacing(pg :: t(), spacing :: number()) :: t()
+  @spec spacing(pane_grid :: t(), spacing :: number()) :: t()
   def spacing(%__MODULE__{} = pg, spacing), do: %{pg | spacing: spacing}
 
   @doc "Sets the pane grid width."
-  @spec width(pg :: t(), width :: Julep.Iced.Length.t()) :: t()
+  @spec width(pane_grid :: t(), width :: Julep.Iced.Length.t()) :: t()
   def width(%__MODULE__{} = pg, width), do: %{pg | width: width}
 
   @doc "Sets the pane grid height."
-  @spec height(pg :: t(), height :: Julep.Iced.Length.t()) :: t()
+  @spec height(pane_grid :: t(), height :: Julep.Iced.Length.t()) :: t()
   def height(%__MODULE__{} = pg, height), do: %{pg | height: height}
 
   @doc "Appends a child pane to the grid."
-  @spec push(pg :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
+  @spec push(pane_grid :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
   def push(%__MODULE__{} = pg, child), do: %{pg | children: pg.children ++ [child]}
 
   @doc "Appends multiple child panes to the grid."
-  @spec extend(pg :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
+  @spec extend(pane_grid :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
   def extend(%__MODULE__{} = pg, children), do: %{pg | children: pg.children ++ children}
 
   @doc "Converts this pane grid struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
-  @spec build(pg :: t()) :: Julep.Iced.ui_node()
+  @spec build(pane_grid :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = pg), do: Julep.Iced.Widget.to_node(pg)
 
   defimpl Julep.Iced.Widget do

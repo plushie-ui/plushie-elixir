@@ -29,8 +29,8 @@ defmodule Julep.Iced.Widget.RichText do
           | {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
           | {:size, number()}
-          | {:font, String.t() | map()}
-          | {:color, term()}
+          | {:font, Julep.Iced.Font.t()}
+          | {:color, Julep.Iced.Color.t()}
           | {:line_height, number() | map()}
 
   @type t :: %__MODULE__{
@@ -39,8 +39,8 @@ defmodule Julep.Iced.Widget.RichText do
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
           size: number() | nil,
-          font: String.t() | map() | nil,
-          color: term() | nil,
+          font: Julep.Iced.Font.t() | nil,
+          color: Julep.Iced.Color.t() | nil,
           line_height: number() | map() | nil
         }
 
@@ -53,7 +53,7 @@ defmodule Julep.Iced.Widget.RichText do
   end
 
   @doc "Applies keyword options to an existing rich text struct."
-  @spec with_options(rt :: t(), opts :: [option()]) :: t()
+  @spec with_options(rich_text :: t(), opts :: [option()]) :: t()
   def with_options(%__MODULE__{} = rt, []), do: rt
 
   def with_options(%__MODULE__{} = rt, opts) do
@@ -70,35 +70,35 @@ defmodule Julep.Iced.Widget.RichText do
   end
 
   @doc "Sets the list of span descriptors."
-  @spec spans(rt :: t(), spans :: [map()]) :: t()
+  @spec spans(rich_text :: t(), spans :: [map()]) :: t()
   def spans(%__MODULE__{} = rt, spans), do: %{rt | spans: spans}
 
   @doc "Sets the widget width."
-  @spec width(rt :: t(), width :: Julep.Iced.Length.t()) :: t()
+  @spec width(rich_text :: t(), width :: Julep.Iced.Length.t()) :: t()
   def width(%__MODULE__{} = rt, width), do: %{rt | width: width}
 
   @doc "Sets the widget height."
-  @spec height(rt :: t(), height :: Julep.Iced.Length.t()) :: t()
+  @spec height(rich_text :: t(), height :: Julep.Iced.Length.t()) :: t()
   def height(%__MODULE__{} = rt, height), do: %{rt | height: height}
 
   @doc "Sets the default font size for all spans."
-  @spec size(rt :: t(), size :: number()) :: t()
+  @spec size(rich_text :: t(), size :: number()) :: t()
   def size(%__MODULE__{} = rt, size), do: %{rt | size: size}
 
   @doc "Sets the default font for all spans."
-  @spec font(rt :: t(), font :: String.t() | map()) :: t()
+  @spec font(rich_text :: t(), font :: Julep.Iced.Font.t()) :: t()
   def font(%__MODULE__{} = rt, font), do: %{rt | font: font}
 
   @doc "Sets the default text color for all spans."
-  @spec color(rt :: t(), color :: term()) :: t()
+  @spec color(rich_text :: t(), color :: Julep.Iced.Color.t()) :: t()
   def color(%__MODULE__{} = rt, color), do: %{rt | color: color}
 
   @doc "Sets the line height."
-  @spec line_height(rt :: t(), line_height :: number() | map()) :: t()
+  @spec line_height(rich_text :: t(), line_height :: number() | map()) :: t()
   def line_height(%__MODULE__{} = rt, line_height), do: %{rt | line_height: line_height}
 
   @doc "Converts this rich text struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
-  @spec build(rt :: t()) :: Julep.Iced.ui_node()
+  @spec build(rich_text :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = rt), do: Julep.Iced.Widget.to_node(rt)
 
   defimpl Julep.Iced.Widget do

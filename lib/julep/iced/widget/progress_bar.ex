@@ -45,7 +45,7 @@ defmodule Julep.Iced.Widget.ProgressBar do
   end
 
   @doc "Applies keyword options to an existing progress bar struct."
-  @spec with_options(bar :: t(), opts :: [option()]) :: t()
+  @spec with_options(progress_bar :: t(), opts :: [option()]) :: t()
   def with_options(%__MODULE__{} = bar, []), do: bar
 
   def with_options(%__MODULE__{} = bar, opts) do
@@ -58,19 +58,19 @@ defmodule Julep.Iced.Widget.ProgressBar do
   end
 
   @doc "Sets the progress bar width."
-  @spec width(bar :: t(), width :: Julep.Iced.Length.t()) :: t()
+  @spec width(progress_bar :: t(), width :: Julep.Iced.Length.t()) :: t()
   def width(%__MODULE__{} = bar, width), do: %{bar | width: width}
 
   @doc "Sets the progress bar height."
-  @spec height(bar :: t(), height :: Julep.Iced.Length.t()) :: t()
+  @spec height(progress_bar :: t(), height :: Julep.Iced.Length.t()) :: t()
   def height(%__MODULE__{} = bar, height), do: %{bar | height: height}
 
   @doc "Sets the progress bar style."
-  @spec style(bar :: t(), style :: style()) :: t()
+  @spec style(progress_bar :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = bar, style), do: %{bar | style: style}
 
   @doc "Converts this progress bar struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
-  @spec build(bar :: t()) :: Julep.Iced.ui_node()
+  @spec build(progress_bar :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = bar), do: Julep.Iced.Widget.to_node(bar)
 
   defimpl Julep.Iced.Widget do
