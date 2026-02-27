@@ -95,10 +95,11 @@ ships a test framework with three interchangeable backends:
 
 - **Simulated** -- millisecond tests with zero setup. No Rust binary, no
   display server. Click buttons, type text, assert on results.
-- **Headless** -- real Rust rendering without a display. Catches wire
-  protocol bugs and structural regressions across library upgrades.
-- **Full** -- real windows with GPU rendering. Pixel-accurate screenshot
-  regression, platform effects, the works.
+- **Headless** -- real Rust rendering powered by iced's
+  [iced_test](https://docs.rs/iced_test) and tiny-skia, no display server
+  needed. Catches protocol bugs and structural regressions across upgrades.
+- **Full** -- real iced windows with GPU rendering. Pixel-accurate
+  screenshot regression, platform effects, the works.
 
 All three use the same API. Swap between them with a single line change --
 or let CI run all three.
