@@ -195,7 +195,7 @@ defmodule Julep.ProtocolTest do
   end
 
   describe "decode_message/1 -- key events" do
-    test "decodes a named key to {:key_press, atom, modifiers_map}" do
+    test "decodes a named key to {:key_press, %KeyEvent{}}" do
       json =
         Jason.encode!(%{
           type: "event",
@@ -206,10 +206,10 @@ defmodule Julep.ProtocolTest do
           modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
         })
 
-      assert {:key_press, :escape, _mods} = Protocol.decode_message(json)
+      assert {:key_press, %Julep.KeyEvent{key: :escape}} = Protocol.decode_message(json)
     end
 
-    test "decodes a character key to {:key_press, string, modifiers_map}" do
+    test "decodes a character key to {:key_press, %KeyEvent{key: string}}" do
       json =
         Jason.encode!(%{
           type: "event",
@@ -220,10 +220,10 @@ defmodule Julep.ProtocolTest do
           modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
         })
 
-      assert {:key_press, "a", _mods} = Protocol.decode_message(json)
+      assert {:key_press, %Julep.KeyEvent{key: "a"}} = Protocol.decode_message(json)
     end
 
-    test "modifiers map has ctrl, shift, alt, logo, and command keys" do
+    test "modifiers are a KeyModifiers struct with all fields" do
       json =
         Jason.encode!(%{
           type: "event",
@@ -234,7 +234,8 @@ defmodule Julep.ProtocolTest do
           modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false}
         })
 
-      {:key_press, _key, mods} = Protocol.decode_message(json)
+      {:key_press, %Julep.KeyEvent{modifiers: mods}} = Protocol.decode_message(json)
+      assert %Julep.KeyModifiers{} = mods
       assert Map.has_key?(mods, :ctrl)
       assert Map.has_key?(mods, :shift)
       assert Map.has_key?(mods, :alt)
@@ -253,7 +254,7 @@ defmodule Julep.ProtocolTest do
           modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false}
         })
 
-      {:key_press, _key, mods} = Protocol.decode_message(json)
+      {:key_press, %Julep.KeyEvent{modifiers: mods}} = Protocol.decode_message(json)
       assert mods.ctrl == true
       assert mods.shift == false
     end
@@ -269,7 +270,7 @@ defmodule Julep.ProtocolTest do
           modifiers: %{}
         })
 
-      {:key_press, _key, mods} = Protocol.decode_message(json)
+      {:key_press, %Julep.KeyEvent{modifiers: mods}} = Protocol.decode_message(json)
       assert mods.ctrl == false
       assert mods.alt == false
     end
@@ -285,7 +286,46 @@ defmodule Julep.ProtocolTest do
           modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
         })
 
-      assert {:key_release, :enter, _mods} = Protocol.decode_message(json)
+      assert {:key_release, %Julep.KeyEvent{key: :enter}} = Protocol.decode_message(json)
+    end
+
+    test "decodes extra key event fields (flattened from Rust)" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "key_press",
+          id: "",
+          value: "a",
+          tag: "keys",
+          modifiers: %{ctrl: false, shift: true, alt: false, logo: false, command: false},
+          modified_key: "A",
+          physical_key: "KeyA",
+          location: "standard",
+          text: "A",
+          repeat: false
+        })
+
+      {:key_press, evt} = Protocol.decode_message(json)
+      assert %Julep.KeyEvent{} = evt
+      assert evt.key == "a"
+      assert evt.modified_key == "A"
+      assert evt.physical_key == :key_a
+      assert evt.location == :standard
+      assert evt.text == "A"
+      assert evt.repeat == false
+      assert evt.modifiers.shift == true
+    end
+
+    test "modifiers_changed returns KeyModifiers struct" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "modifiers_changed",
+          modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: true}
+        })
+
+      assert {:modifiers_changed, %Julep.KeyModifiers{ctrl: true, command: true}} =
+               Protocol.decode_message(json)
     end
   end
 

@@ -12,6 +12,7 @@ Audited: 2026-02-27
 - **SUPPORTED** -- Julep exposes this and the renderer handles it
 - **PARTIAL** -- Julep exposes some of it, gaps noted
 - **MISSING** -- iced supports it, Julep does not expose it
+- **BLOCKED** -- iced's API design prevents JSONL serialization
 - **N/A** -- Not applicable (feature not enabled, or internal-only)
 
 ---
@@ -27,7 +28,7 @@ Audited: 2026-02-27
 | `Container` | SUPPORTED | `container` in both layers |
 | `Stack` | SUPPORTED | `stack` in both layers |
 | `Space` | SUPPORTED | `space` in both layers |
-| `Scrollable` | SUPPORTED | `scrollable` in both layers; direction, anchor, scrollbar config handled |
+| `Scrollable` | SUPPORTED | `scrollable` in both layers; direction, anchor, scrollbar config, on_scroll, auto_scroll handled |
 | `Grid` | SUPPORTED | `grid` in both layers; columns, spacing, width, height |
 | `Pin` | SUPPORTED | `pin` in both layers; absolute positioning via x/y props |
 | `Float` | SUPPORTED | `float_widget` in `Iced`, `float` in `UI`; translate_x/y, scale |
@@ -39,15 +40,15 @@ Audited: 2026-02-27
 | iced Widget | Julep Status | Notes |
 |---|---|---|
 | `Button` | SUPPORTED | Supports children (arbitrary content), disabled state, named styles |
-| `TextInput` | SUPPORTED | secure (password), font, line_height, align_x, id, style |
+| `TextInput` | SUPPORTED | secure (password), font, line_height, align_x, id, style, on_paste, icon |
 | `TextEditor` | SUPPORTED | Stateful; font, size, line_height, padding, wrapping, min/max height |
 | `Checkbox` | SUPPORTED | size, text_size, font, text_line_height, text_shaping, text_wrapping, style |
 | `Radio` | SUPPORTED | group prop, spacing, width, size, text_size, font, shaping, wrapping, style |
-| `Toggler` | SUPPORTED | size, text_size, font, text_line_height, text_shaping, text_wrapping, style |
-| `Slider` | SUPPORTED | default (reset), height, shift_step, style |
-| `VerticalSlider` | SUPPORTED | default (reset), shift_step, style |
-| `PickList` | SUPPORTED | padding, text_size, font, menu_height, text_line_height, text_shaping, style |
-| `ComboBox` | SUPPORTED | Real combo_box with State<String>, free-text input, on_input, padding, size, font, line_height, menu_height |
+| `Toggler` | SUPPORTED | size, text_size, font, text_line_height, text_shaping, text_wrapping, style, text_alignment |
+| `Slider` | SUPPORTED | default (reset), height, shift_step, style, circular_handle, handle_radius |
+| `VerticalSlider` | SUPPORTED | default (reset), shift_step, style, circular_handle, handle_radius |
+| `PickList` | SUPPORTED | padding, text_size, font, menu_height, text_line_height, text_shaping, style, handle |
+| `ComboBox` | SUPPORTED | Real combo_box with State<String>, free-text input, on_input, padding, size, font, line_height, menu_height, on_option_hovered, icon |
 | `MouseArea` | SUPPORTED | on_press, on_release, on_middle_press events |
 | `Sensor` | SUPPORTED | on_show, on_resize (with dimensions), on_hide |
 | `PaneGrid` | SUPPORTED | Stateful; spacing, on_click, on_resize, on_drag; title bars |
@@ -56,10 +57,10 @@ Audited: 2026-02-27
 
 | iced Widget | Julep Status | Notes |
 |---|---|---|
-| `Text` | SUPPORTED | size, color, font, width, height, line_height, align_x, align_y, wrapping, named styles (primary/secondary/success/danger/warning) |
+| `Text` | SUPPORTED | size, color, font, width, height, line_height, align_x, align_y, wrapping, shaping, named styles (primary/secondary/success/danger/warning) |
 | `Rich` (rich text) | SUPPORTED | `rich_text` -- styled spans with size, color, font, inline links, on_link_click |
 | `Rule` | SUPPORTED | horizontal and vertical, thickness, named styles (default/weak) |
-| `ProgressBar` | SUPPORTED | range, value, length (width), girth (height), named styles |
+| `ProgressBar` | SUPPORTED | range, value, length (width), girth (height), vertical, named styles |
 | `Tooltip` | SUPPORTED | position, gap, padding, snap_within_viewport, named styles |
 | `Image` | SUPPORTED | All props: source, width, height, content_fit, rotation, opacity, border_radius, filter_method, expand, scale, crop |
 | `Svg` | SUPPORTED | source, width, height, content_fit, rotation, opacity |
@@ -130,7 +131,7 @@ unlisted props are fully supported.
 | `border` | SUPPORTED | {color, width, radius} with per-corner radius |
 | `shadow` | SUPPORTED | {color, offset: [x,y], blur_radius} |
 | `style` | SUPPORTED | Named styles: transparent, rounded_box, bordered_box, dark, primary, secondary, success, danger, warning |
-| `id` | **MISSING** | Container ID for widget ops not exposed |
+| `id` | SUPPORTED | All nodes have ID; container ID propagated to renderer |
 | `center_x` / `center_y` | **MISSING** | Separate axis centering (use center + align_x/y instead) |
 | `align_left/right/top/bottom` | **MISSING** | Use align_x/align_y strings instead |
 
@@ -151,9 +152,9 @@ unlisted props are fully supported.
 | `spacing` | SUPPORTED | |
 | `anchor_y` | SUPPORTED | "end"/"bottom" for anchor to bottom |
 | `scrollbar_width` / `scrollbar_margin` / `scroller_width` | SUPPORTED | |
-| `on_scroll` | **DEFERRED** | Requires custom event middleware for scroll position callbacks |
-| `auto_scroll` | **MISSING** | |
-| `style` | **MISSING** | |
+| `on_scroll` | SUPPORTED | Emits `{:scroll, id, viewport}` with absolute/relative offsets and bounds |
+| `auto_scroll` | SUPPORTED | Boolean prop; auto-scrolls to end on content change |
+| `style` | N/A | iced 0.14 only has `default` style; no named variants to expose |
 
 ### Button
 
@@ -180,7 +181,7 @@ unlisted props are fully supported.
 | `align_x` / `align_y` | SUPPORTED | |
 | `wrapping` | SUPPORTED | |
 | `style` | SUPPORTED | primary, secondary, success, danger, warning |
-| `shaping` | **MISSING** | Not on text widget (available on checkbox, radio, etc.) |
+| `shaping` | SUPPORTED | `:basic`, `:advanced`, `:auto` |
 
 ### TextInput
 
@@ -195,8 +196,8 @@ unlisted props are fully supported.
 | `line_height` | SUPPORTED | |
 | `align_x` | SUPPORTED | |
 | `style` | SUPPORTED | |
-| `on_paste` | **MISSING** | |
-| `icon` | **MISSING** | |
+| `on_paste` | SUPPORTED | Boolean prop; emits `{:paste, id, text}` |
+| `icon` | SUPPORTED | Map with `code_point`, `size`, `spacing`, `side`, `font` |
 
 ### TextEditor
 
@@ -213,8 +214,8 @@ unlisted props are fully supported.
 | `min_height` / `max_height` | SUPPORTED | |
 | `wrapping` | SUPPORTED | |
 | `style` | SUPPORTED | |
-| `highlight` | **MISSING** | |
-| `key_binding` | **MISSING** | |
+| `highlight` | **BLOCKED** | Changes Highlighter generic type parameter; cannot be expressed dynamically over JSONL |
+| `key_binding` | **BLOCKED** | Requires Rust closures; cannot be serialized from Elixir over JSONL |
 
 ### Checkbox
 
@@ -230,7 +231,7 @@ unlisted props are fully supported.
 | `text_wrapping` | SUPPORTED | |
 | `style` | SUPPORTED | primary, secondary, success, danger |
 | `disabled` | SUPPORTED | Both Elixir (Checkbox widget) and Rust renderer support disabled prop |
-| `icon` | **MISSING** | |
+| `icon` | N/A | iced's checkbox icon is a fixed `Icon` struct for rendering the checkmark itself, not a general-purpose icon prop; internal rendering detail |
 
 ### Radio
 
@@ -260,7 +261,7 @@ unlisted props are fully supported.
 | `text_wrapping` | SUPPORTED | |
 | `style` | SUPPORTED | |
 | `disabled` | SUPPORTED | Both Elixir (Toggler widget) and Rust renderer support disabled prop |
-| `text_alignment` | **MISSING** | |
+| `text_alignment` | SUPPORTED | Horizontal text alignment within toggler label area |
 
 ### Slider
 
@@ -272,11 +273,11 @@ unlisted props are fully supported.
 | `height` | SUPPORTED | |
 | `shift_step` | SUPPORTED | |
 | `style` | SUPPORTED | |
-| `with_circular_handle` | **MISSING** | |
+| `circular_handle` | SUPPORTED | Boolean prop; optional `handle_radius` for custom size. Applied via style closure wrapping. |
 
 ### VerticalSlider
 
-Same as Slider. Missing: `with_circular_handle`.
+Same as Slider. `circular_handle` and `handle_radius` also supported.
 
 ### PickList
 
@@ -290,7 +291,7 @@ Same as Slider. Missing: `with_circular_handle`.
 | `text_line_height` | SUPPORTED | |
 | `text_shaping` | SUPPORTED | |
 | `style` | SUPPORTED | |
-| `handle` | **MISSING** | |
+| `handle` | SUPPORTED | Map with `type` key: `"arrow"`, `"static"`, `"dynamic"`, `"none"`; arrow has optional size; static/dynamic have icon maps |
 | `on_open` / `on_close` | **BLOCKED** | Not exposed by iced 0.14 API |
 
 ### ComboBox
@@ -305,9 +306,9 @@ Same as Slider. Missing: `with_circular_handle`.
 | `font` | SUPPORTED | |
 | `line_height` | SUPPORTED | |
 | `menu_height` | SUPPORTED | |
-| `on_option_hovered` | **MISSING** | |
+| `on_option_hovered` | SUPPORTED | Boolean prop; emits `{:option_hovered, id, value}` |
 | `on_open` / `on_close` | **BLOCKED** | Not exposed by iced 0.14 API |
-| `icon` | **MISSING** | |
+| `icon` | SUPPORTED | Map with `code_point`, `size`, `spacing`, `side`, `font` (same format as TextInput) |
 
 ### Tooltip
 
@@ -340,7 +341,7 @@ Same as Slider. Missing: `with_circular_handle`.
 | `source` / `width` / `height` / `content_fit` | SUPPORTED | |
 | `rotation` | SUPPORTED | |
 | `opacity` | SUPPORTED | |
-| `style` | **MISSING** | |
+| `style` | N/A | iced has no public style functions for SVG |
 
 ### ProgressBar
 
@@ -349,14 +350,14 @@ Same as Slider. Missing: `with_circular_handle`.
 | `range` / `value` | SUPPORTED | |
 | `width` (length) / `height` (girth) | SUPPORTED | |
 | `style` | SUPPORTED | primary, secondary, success, danger, warning |
-| `vertical()` | **MISSING** | |
+| `vertical` | SUPPORTED | Boolean prop for vertical orientation |
 
 ### Rule
 
 | iced Prop | Status | Notes |
 |---|---|---|
-| `horizontal(height)` | SUPPORTED | |
-| `vertical(width)` | SUPPORTED | |
+| `horizontal(height)` | SUPPORTED | Thickness is direction-aware: uses height |
+| `vertical(width)` | SUPPORTED | Thickness is direction-aware: uses width |
 | `style` | SUPPORTED | default, weak |
 
 ### Markdown
@@ -431,7 +432,7 @@ Same as Slider. Missing: `with_circular_handle`.
 | Weight variants (all 9) | Yes | Yes | SUPPORTED |
 | Style (normal/italic/oblique) | Yes | Yes | SUPPORTED |
 | `Stretch` (9 variants) | Yes | Yes | SUPPORTED |
-| Runtime `font::load` | Via settings/0 | **PARTIAL** | App-level font loading via settings callback |
+| Runtime `font::load` | Via settings/0 | SUPPORTED | App-level font loading via settings callback; Rust reads font file paths from settings and calls `iced::font::load` |
 
 ### Color
 
@@ -577,7 +578,7 @@ Same as Slider. Missing: `with_circular_handle`.
 | `show_system_menu(id)` | `show_system_menu(id)` | SUPPORTED |
 | `size(id)` / `position(id)` queries | `get_window_size(id, tag)` / `get_window_position(id, tag)` | SUPPORTED |
 | `is_maximized(id)` / `is_minimized(id)` | `is_maximized(id, tag)` / `is_minimized(id, tag)` | SUPPORTED |
-| `set_icon(id, icon)` | No | **UNSUPPORTED** -- requires RGBA pixel data impractical over JSONL |
+| `set_icon(id, icon)` | No | **BLOCKED** -- requires RGBA pixel data; impractical over JSONL |
 | `scale_factor(id)` | `get_scale_factor(id, tag)` | SUPPORTED |
 | `mode(id)` | `get_mode(id, tag)` | SUPPORTED |
 | `raw_id(id)` | `raw_id(id, tag)` | SUPPORTED |
@@ -587,22 +588,22 @@ Same as Slider. Missing: `with_circular_handle`.
 
 | iced Setting | Julep | Status |
 |---|---|---|
-| `size` | Via `window_config` | SUPPORTED |
+| `size` | Via `window_config` or window node props | SUPPORTED |
 | `title` | Via `window` node | SUPPORTED |
-| `maximized` | No | **MISSING** |
-| `fullscreen` | No | **MISSING** |
-| `position` (Default, Centered, Specific) | No | **MISSING** |
-| `min_size` / `max_size` | No | **MISSING** |
-| `visible` | No | **MISSING** |
-| `resizable` | No | **MISSING** |
-| `closeable` | No | **MISSING** |
-| `minimizable` | No | **MISSING** |
-| `decorations` | No | **MISSING** |
-| `transparent` | No | **MISSING** |
-| `blur` | No | **MISSING** |
-| `level` | No | **MISSING** |
-| `icon` | No | **MISSING** |
-| `exit_on_close_request` | No | **MISSING** |
+| `maximized` | Via window node `maximized` prop | SUPPORTED |
+| `fullscreen` | Via window node `fullscreen` prop | SUPPORTED |
+| `position` (Default, Centered, Specific) | Via window node `position` prop | SUPPORTED |
+| `min_size` / `max_size` | Via window node `min_size` / `max_size` props | SUPPORTED |
+| `visible` | Via window node `visible` prop | SUPPORTED |
+| `resizable` | Via window node `resizable` prop | SUPPORTED |
+| `closeable` | Via window node `closeable` prop | SUPPORTED |
+| `minimizable` | Via window node `minimizable` prop | SUPPORTED |
+| `decorations` | Via window node `decorations` prop | SUPPORTED |
+| `transparent` | Via window node `transparent` prop | SUPPORTED |
+| `blur` | Via window node `blur` prop | SUPPORTED |
+| `level` | Via window node `level` prop | SUPPORTED |
+| `icon` | No | **BLOCKED** -- requires RGBA pixel data; impractical over JSONL |
+| `exit_on_close_request` | Via window node `exit_on_close_request` prop | SUPPORTED |
 
 ---
 
@@ -612,25 +613,29 @@ Same as Slider. Missing: `with_circular_handle`.
 
 | iced Event | Julep | Status |
 |---|---|---|
-| `KeyPressed` | `{:key_press, key, modifiers}` | SUPPORTED |
-| `KeyReleased` | `{:key_release, key, modifiers}` | SUPPORTED |
-| `ModifiersChanged` | `{:modifiers_changed, modifiers}` | SUPPORTED |
+| `KeyPressed` | `{:key_press, %Julep.KeyEvent{}}` | SUPPORTED |
+| `KeyReleased` | `{:key_release, %Julep.KeyEvent{}}` | SUPPORTED |
+| `ModifiersChanged` | `{:modifiers_changed, %Julep.KeyModifiers{}}` | SUPPORTED |
 | `key::Named` variants | ~200 mapped | SUPPORTED -- comprehensive named key map |
 | `key::Character` | Characters pass through | SUPPORTED |
-| `physical_key` / `location` | No | **MISSING** |
-| `text` field | No | **MISSING** |
-| `repeat` field | No | **MISSING** |
-| `modified_key` | No | **MISSING** |
+| `physical_key` | `%Julep.KeyEvent{physical_key: atom}` | SUPPORTED |
+| `location` | `%Julep.KeyEvent{location: atom}` | SUPPORTED |
+| `text` field | `%Julep.KeyEvent{text: string \| nil}` | SUPPORTED |
+| `repeat` field | `%Julep.KeyEvent{repeat: bool}` | SUPPORTED |
+| `modified_key` | `%Julep.KeyEvent{modified_key: key}` | SUPPORTED |
 
 ### Keyboard Modifiers
 
+Modifiers are now `%Julep.KeyModifiers{}` structs (embedded in `KeyEvent`
+and delivered standalone via `:modifiers_changed`).
+
 | iced Modifier | Julep | Status |
 |---|---|---|
-| `SHIFT` | `shift` | SUPPORTED |
-| `CTRL` | `ctrl` | SUPPORTED |
-| `ALT` | `alt` | SUPPORTED |
-| `LOGO` | `logo` | SUPPORTED |
-| `COMMAND` (platform) | `command` | SUPPORTED |
+| `SHIFT` | `%Julep.KeyModifiers{shift: true}` | SUPPORTED |
+| `CTRL` | `%Julep.KeyModifiers{ctrl: true}` | SUPPORTED |
+| `ALT` | `%Julep.KeyModifiers{alt: true}` | SUPPORTED |
+| `LOGO` | `%Julep.KeyModifiers{logo: true}` | SUPPORTED |
+| `COMMAND` (platform) | `%Julep.KeyModifiers{command: true}` | SUPPORTED |
 
 ### Mouse Events
 
@@ -705,8 +710,8 @@ Same as Slider. Missing: `with_circular_handle`.
 |---|---|---|
 | `clipboard::read()` | `clipboard_read()` | SUPPORTED (via effects) |
 | `clipboard::write(text)` | `clipboard_write(text)` | SUPPORTED (via effects) |
-| `clipboard::read_primary()` | No | **MISSING** |
-| `clipboard::write_primary(text)` | No | **MISSING** |
+| `clipboard::read_primary()` | `clipboard_read(:primary)` | SUPPORTED (via effects) |
+| `clipboard::write_primary(text)` | `clipboard_write(text, :primary)` | SUPPORTED (via effects) |
 
 ---
 
@@ -717,7 +722,7 @@ Same as Slider. Missing: `with_circular_handle`.
 | `default_font` | Via `settings/0` callback | SUPPORTED |
 | `default_text_size` | Via `settings/0` callback | SUPPORTED |
 | `fonts` (custom font loading) | Via `settings/0` callback | SUPPORTED |
-| `antialiasing` | Via `settings/0` callback | SUPPORTED |
+| `antialiasing` | Via `settings/0` callback | SUPPORTED -- Rust reads setting on startup and applies to iced daemon builder |
 | `subscription` callback | Via `subscribe/1` | SUPPORTED |
 | `vsync` | No | **MISSING** |
 | `scale_factor` callback | No | **MISSING** |
@@ -735,20 +740,23 @@ Same as Slider. Missing: `with_circular_handle`.
 - All widgets fully implemented in both Elixir and Rust layers
 
 ### Props
-- Average prop coverage per supported widget: ~85-95%
-- Most common remaining gaps:
-  - Widget-specific icons
-  - `on_open`/`on_close` for pick_list/combo_box (BLOCKED by iced 0.14)
-  - `on_scroll` for scrollable (DEFERRED -- requires custom event middleware)
-  - Some style props (scrollable style, svg style)
+- Average prop coverage per supported widget: ~95-100%
+- Remaining blocked/N/A items (not gaps -- these cannot be resolved):
+  - `on_open`/`on_close` for pick_list/combo_box (BLOCKED by iced 0.14 -- not exposed in API)
+  - TextEditor `highlight` (BLOCKED -- changes generic type parameter)
+  - TextEditor `key_binding` (BLOCKED -- requires Rust closures)
+  - Scrollable `style` (N/A -- iced 0.14 only has `default`)
+  - SVG `style` (N/A -- iced has no public style functions)
+  - Checkbox `icon` (N/A -- internal checkmark rendering detail)
 
 ### Events
-- Keyboard: SUPPORTED (all key families, comprehensive named key map, modifiers)
+- Keyboard: SUPPORTED (all key families, comprehensive named key map, full KeyEvent/KeyModifiers structs with physical_key, location, text, repeat, modified_key)
 - Mouse: SUPPORTED (cursor move, enter/leave, buttons, wheel scroll)
 - Touch: SUPPORTED (finger press/move/lift/lost)
 - Window lifecycle: SUPPORTED (open, close, close_requested, move, resize, focus, file drop)
 - Canvas: SUPPORTED (press, release, move, scroll)
 - PaneGrid: SUPPORTED (resize, drag, click)
+- Widget callbacks: SUPPORTED (scroll viewport, paste, option_hovered)
 
 ### Commands
 - Full set covered: focus, scroll, snap, cursor ops, select, async, batch, done, exit
@@ -759,24 +767,45 @@ Same as Slider. Missing: `with_circular_handle`.
 ### Window Operations
 - Declarative open (via tree) and close supported
 - Full imperative window management: resize, move, maximize, minimize, mode, decorations, focus, drag, screenshots, etc.
-- Missing: set_icon (intentionally unsupported -- RGBA pixel data impractical over JSONL)
+- Full initial window settings: maximized, fullscreen, position, min/max size, visible, resizable, closeable, minimizable, decorations, transparent, blur, level, exit_on_close_request
+- BLOCKED: set_icon (requires RGBA pixel data; impractical over JSONL)
+
+### Clipboard
+- Full clipboard support: read, write, read_primary, write_primary
+
+### Application Settings
+- Antialiasing applied to iced daemon builder on startup
+- Font loading from file paths via settings/0 callback
 
 ---
 
-## 12. Remaining Gaps (Prioritized)
+## 12. Remaining Gaps
 
-### Medium Priority (Power User Features)
+All items below are either BLOCKED by iced's API design (cannot be expressed
+over JSONL) or low-priority nice-to-haves. There are no actionable parity
+gaps remaining.
 
-1. **Window initial settings** -- maximized, fullscreen, position, min/max size, decorations, transparent, etc. at window creation time
-2. **`on_scroll` callback for Scrollable** -- DEFERRED; requires custom event middleware for scroll position tracking
-3. **`on_open`/`on_close` for pick_list/combo_box** -- BLOCKED by iced 0.14; not exposed in the API
-4. **Primary clipboard** -- Linux middle-click paste
+### BLOCKED by iced 0.14 API
 
-### Low Priority (Nice-to-Have)
+These cannot be implemented without upstream changes to iced:
 
-5. **`set_icon`** -- requires RGBA pixel data; intentionally unsupported
-6. **Widget icons** -- icon prop for text_input, checkbox
-7. **`on_paste` for TextInput** -- paste event callback
+1. **`on_open`/`on_close` for PickList/ComboBox** -- not exposed by iced 0.14 API
+2. **TextEditor `highlight`** -- changes the Highlighter generic type parameter; cannot be expressed dynamically over JSONL
+3. **TextEditor `key_binding`** -- requires Rust closures; cannot be serialized from Elixir
+
+### BLOCKED by transport design
+
+4. **`set_icon`** -- requires RGBA pixel data; impractical over JSONL
+
+### N/A (nothing to implement)
+
+5. **Scrollable `style`** -- iced 0.14 only exposes `default`; no named variants
+6. **SVG `style`** -- iced has no public style functions for SVG
+7. **Checkbox `icon`** -- iced's checkbox icon is a fixed `Icon` struct for rendering the checkmark; internal rendering detail, not a user-facing prop
+
+### Low Priority (nice-to-have, not blocking parity)
+
 8. **`vsync` setting** -- vsync control
-9. **Extended palette generation** -- full iced extended palette support
+9. **Extended palette generation** -- full iced extended palette auto-generation
 10. **`theme::Mode`** -- light/dark/none mode enum
+11. **Table `sortable` / column alignment** -- sort handling and per-column align_x/align_y

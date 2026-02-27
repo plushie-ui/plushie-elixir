@@ -17,6 +17,7 @@ defmodule Julep.Iced.Widget.Text do
   - `wrapping` (string) -- text wrapping: `"none"`, `"word"`, `"glyph"`, `"word_or_glyph"`.
   - `style` (string) -- named style. One of: `"default"`, `"primary"`, `"secondary"`,
     `"success"`, `"danger"`, `"warning"`.
+  - `shaping` (string) -- text shaping strategy: `"basic"` or `"advanced"`. See `Julep.Iced.Shaping`.
   """
 
   alias Julep.Iced.Widget.Build
@@ -33,6 +34,7 @@ defmodule Julep.Iced.Widget.Text do
           | {:align_x, Julep.Iced.Alignment.t()}
           | {:align_y, Julep.Iced.Alignment.t()}
           | {:wrapping, Julep.Iced.Wrapping.t()}
+          | {:shaping, Julep.Iced.Shaping.t()}
           | {:style, style()}
 
   @type t :: %__MODULE__{
@@ -47,6 +49,7 @@ defmodule Julep.Iced.Widget.Text do
           align_x: Julep.Iced.Alignment.t() | nil,
           align_y: Julep.Iced.Alignment.t() | nil,
           wrapping: Julep.Iced.Wrapping.t() | nil,
+          shaping: Julep.Iced.Shaping.t() | nil,
           style: style() | nil
         }
 
@@ -62,6 +65,7 @@ defmodule Julep.Iced.Widget.Text do
     :align_x,
     :align_y,
     :wrapping,
+    :shaping,
     :style
   ]
 
@@ -86,6 +90,7 @@ defmodule Julep.Iced.Widget.Text do
       {:align_x, v}, acc -> align_x(acc, v)
       {:align_y, v}, acc -> align_y(acc, v)
       {:wrapping, v}, acc -> wrapping(acc, v)
+      {:shaping, v}, acc -> shaping(acc, v)
       {:style, v}, acc -> style(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -127,6 +132,10 @@ defmodule Julep.Iced.Widget.Text do
   @spec wrapping(text :: t(), wrapping :: Julep.Iced.Wrapping.t()) :: t()
   def wrapping(%__MODULE__{} = txt, wrapping), do: %{txt | wrapping: wrapping}
 
+  @doc "Sets the text shaping strategy."
+  @spec shaping(text :: t(), shaping :: Julep.Iced.Shaping.t()) :: t()
+  def shaping(%__MODULE__{} = txt, shaping), do: %{txt | shaping: shaping}
+
   @doc "Sets the text style."
   @spec style(text :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = txt, style), do: %{txt | style: style}
@@ -151,6 +160,7 @@ defmodule Julep.Iced.Widget.Text do
         |> put_if(txt.align_x, "align_x")
         |> put_if(txt.align_y, "align_y")
         |> put_if(txt.wrapping, "wrapping")
+        |> put_if(txt.shaping, "text_shaping")
         |> put_if(txt.style, "style")
 
       %{id: txt.id, type: "text", props: props, children: []}

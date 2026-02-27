@@ -21,7 +21,9 @@ defmodule Julep.ProtocolParityTest do
           modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
         })
 
-      assert {:key_press, :escape, %{ctrl: false}} = Protocol.decode_message(json)
+      assert {:key_press,
+              %Julep.KeyEvent{key: :escape, modifiers: %Julep.KeyModifiers{ctrl: false}}} =
+               Protocol.decode_message(json)
     end
 
     test "decodes character key" do
@@ -33,7 +35,8 @@ defmodule Julep.ProtocolParityTest do
           modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false}
         })
 
-      assert {:key_press, "a", %{ctrl: true}} = Protocol.decode_message(json)
+      assert {:key_press, %Julep.KeyEvent{key: "a", modifiers: %Julep.KeyModifiers{ctrl: true}}} =
+               Protocol.decode_message(json)
     end
 
     test "decodes with ctrl+shift modifiers" do
@@ -45,7 +48,11 @@ defmodule Julep.ProtocolParityTest do
           modifiers: %{ctrl: true, shift: true, alt: false, logo: false, command: false}
         })
 
-      assert {:key_press, :tab, %{ctrl: true, shift: true}} = Protocol.decode_message(json)
+      assert {:key_press,
+              %Julep.KeyEvent{
+                key: :tab,
+                modifiers: %Julep.KeyModifiers{ctrl: true, shift: true}
+              }} = Protocol.decode_message(json)
     end
   end
 
@@ -59,7 +66,7 @@ defmodule Julep.ProtocolParityTest do
           modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
         })
 
-      assert {:key_release, :control, _mods} = Protocol.decode_message(json)
+      assert {:key_release, %Julep.KeyEvent{key: :control}} = Protocol.decode_message(json)
     end
   end
 

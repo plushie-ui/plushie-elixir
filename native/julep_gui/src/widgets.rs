@@ -327,6 +327,9 @@ fn render_text<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, 
     if let Some(w) = parse_wrapping(props) {
         t = t.wrapping(w);
     }
+    if let Some(shaping) = parse_shaping(props) {
+        t = t.shaping(shaping);
+    }
 
     // Named style
     if let Some(style_name) = prop_str(props, "style") {
@@ -569,6 +572,33 @@ fn render_scrollable<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Elemen
         }
     }
 
+    // on_scroll: emit viewport data when scroll position changes
+    if prop_bool_default(props, "on_scroll", false) {
+        let scroll_id = node.id.clone();
+        s = s.on_scroll(move |viewport| {
+            let abs = viewport.absolute_offset();
+            let rel = viewport.relative_offset();
+            let bounds = viewport.bounds();
+            let content_bounds = viewport.content_bounds();
+            Message::ScrollEvent(
+                scroll_id.clone(),
+                abs.x,
+                abs.y,
+                rel.x,
+                rel.y,
+                bounds.width,
+                bounds.height,
+                content_bounds.width,
+                content_bounds.height,
+            )
+        });
+    }
+
+    // auto_scroll: automatically scroll to show new content
+    if prop_bool_default(props, "auto_scroll", false) {
+        s = s.auto_scroll(true);
+    }
+
     s.into()
 }
 
@@ -641,6 +671,18 @@ fn render_text_input<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Elemen
         let submit_id = node.id.clone();
         let submit_value = value.clone();
         ti = ti.on_submit(Message::Submit(submit_id, submit_value));
+    }
+
+    if prop_bool_default(props, "on_paste", false) {
+        let paste_id = node.id.clone();
+        ti = ti.on_paste(move |text| Message::Paste(paste_id.clone(), text));
+    }
+
+    if let Some(icon) = props
+        .and_then(|p| p.get("icon"))
+        .and_then(parse_text_input_icon)
+    {
+        ti = ti.icon(icon);
     }
 
     // Widget ID
@@ -725,11 +767,18 @@ fn render_checkbox<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<
 
 fn render_rule<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let props = node.props.as_object();
-    let thickness = prop_f32(props, "height")
-        .or_else(|| prop_f32(props, "width"))
-        .or_else(|| prop_f32(props, "thickness"))
-        .unwrap_or(1.0);
     let direction = prop_str(props, "direction").unwrap_or_default();
+
+    // Thickness is the cross-axis dimension:
+    // horizontal rule -> height, vertical rule -> width.
+    // "thickness" is a universal alias for either.
+    let thickness = if direction == "vertical" {
+        prop_f32(props, "width")
+    } else {
+        prop_f32(props, "height")
+    }
+    .or_else(|| prop_f32(props, "thickness"))
+    .unwrap_or(1.0);
 
     if direction == "vertical" {
         let mut r = rule::vertical(thickness);
@@ -766,6 +815,10 @@ fn render_progress_bar<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let height = prop_length(props, "height", Length::Shrink);
 
     let mut pb = progress_bar(range, value).length(width).girth(height);
+
+    if prop_bool_default(props, "vertical", false) {
+        pb = pb.vertical();
+    }
 
     // Named style
     if let Some(style_name) = prop_str(props, "style") {
@@ -829,6 +882,13 @@ fn render_toggler<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'
     }
     if let Some(w) = parse_wrapping(props) {
         t = t.text_wrapping(w);
+    }
+    if let Some(align) = props
+        .and_then(|p| p.get("text_alignment"))
+        .and_then(|v| v.as_str())
+        .and_then(value_to_horizontal_alignment)
+    {
+        t = t.text_alignment(align);
     }
 
     // Named style
@@ -936,8 +996,14 @@ fn render_slider<'a>(node: &'a TreeNode) -> Element<'a, Message> {
         s = s.shift_step(ss);
     }
 
-    // Named style
-    if let Some(style_name) = prop_str(props, "style") {
+    // Style with optional circular handle
+    let circular = prop_bool_default(props, "circular_handle", false);
+    if circular {
+        let radius = prop_f32(props, "handle_radius").unwrap_or(8.0);
+        s = s.style(move |theme, status| {
+            slider::default(theme, status).with_circular_handle(radius)
+        });
+    } else if let Some(style_name) = prop_str(props, "style") {
         s = match style_name.as_str() {
             "default" => s.style(slider::default),
             _ => s,
@@ -1036,6 +1102,10 @@ fn render_pick_list<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
         pl = pl.text_shaping(shaping);
     }
 
+    if let Some(handle) = parse_pick_list_handle(props) {
+        pl = pl.handle(handle);
+    }
+
     // Named style
     if let Some(style_name) = prop_str(props, "style") {
         pl = match style_name.as_str() {
@@ -1092,6 +1162,16 @@ fn render_combo_box<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
     }
     if let Some(mh) = prop_f32(props, "menu_height") {
         cb = cb.menu_height(mh);
+    }
+    if let Some(icon) = props
+        .and_then(|p| p.get("icon"))
+        .and_then(parse_text_input_icon)
+    {
+        cb = cb.icon(icon);
+    }
+    if prop_bool_default(props, "on_option_hovered", false) {
+        let hover_id = node.id.clone();
+        cb = cb.on_option_hovered(move |val| Message::OptionHovered(hover_id.clone(), val));
     }
 
     container(cb).id(widget::Id::from(node.id.clone())).into()
@@ -2577,6 +2657,98 @@ fn parse_wrapping(props: Props<'_>) -> Option<Wrapping> {
         "word" => Some(Wrapping::Word),
         "glyph" => Some(Wrapping::Glyph),
         "word_or_glyph" => Some(Wrapping::WordOrGlyph),
+        _ => None,
+    }
+}
+
+/// Parse a text_input::Icon from a JSON value.
+fn parse_text_input_icon(value: &Value) -> Option<text_input::Icon<Font>> {
+    let obj = value.as_object()?;
+
+    let code_point = obj
+        .get("code_point")
+        .and_then(|v| v.as_str())
+        .and_then(|s| s.chars().next())?;
+
+    let font = obj.get("font").map(parse_font).unwrap_or(Font::DEFAULT);
+
+    let size = obj
+        .get("size")
+        .and_then(|v| v.as_f64())
+        .map(|v| Pixels(v as f32));
+
+    let spacing = obj
+        .get("spacing")
+        .and_then(|v| v.as_f64())
+        .map(|v| v as f32)
+        .unwrap_or(4.0);
+
+    let side = match obj.get("side").and_then(|v| v.as_str()).unwrap_or("left") {
+        "right" | "trailing" => text_input::Side::Right,
+        _ => text_input::Side::Left,
+    };
+
+    Some(text_input::Icon {
+        font,
+        code_point,
+        size,
+        spacing,
+        side,
+    })
+}
+
+/// Parse a pick_list::Icon from a JSON value.
+fn parse_pick_list_icon(value: &Value) -> Option<pick_list::Icon<Font>> {
+    let obj = value.as_object()?;
+
+    let code_point = obj
+        .get("code_point")
+        .and_then(|v| v.as_str())
+        .and_then(|s| s.chars().next())?;
+
+    let font = obj.get("font").map(parse_font).unwrap_or(Font::DEFAULT);
+
+    let size = obj
+        .get("size")
+        .and_then(|v| v.as_f64())
+        .map(|v| Pixels(v as f32));
+
+    let line_height = parse_line_height(Some(obj)).unwrap_or(LineHeight::Relative(1.2));
+
+    let shaping = parse_shaping(Some(obj)).unwrap_or(iced::widget::text::Shaping::Basic);
+
+    Some(pick_list::Icon {
+        font,
+        code_point,
+        size,
+        line_height,
+        shaping,
+    })
+}
+
+/// Parse a PickList Handle from props.
+fn parse_pick_list_handle(props: Props<'_>) -> Option<pick_list::Handle<Font>> {
+    let handle_obj = props?.get("handle")?.as_object()?;
+    let handle_type = handle_obj.get("type")?.as_str()?;
+
+    match handle_type {
+        "arrow" => {
+            let size = handle_obj
+                .get("size")
+                .and_then(|v| v.as_f64())
+                .map(|v| Pixels(v as f32));
+            Some(pick_list::Handle::Arrow { size })
+        }
+        "static" => {
+            let icon = parse_pick_list_icon(handle_obj.get("icon")?)?;
+            Some(pick_list::Handle::Static(icon))
+        }
+        "dynamic" => {
+            let closed = parse_pick_list_icon(handle_obj.get("closed")?)?;
+            let open = parse_pick_list_icon(handle_obj.get("open")?)?;
+            Some(pick_list::Handle::Dynamic { closed, open })
+        }
+        "none" => Some(pick_list::Handle::None),
         _ => None,
     }
 }

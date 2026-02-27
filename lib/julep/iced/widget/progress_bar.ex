@@ -10,6 +10,7 @@ defmodule Julep.Iced.Widget.ProgressBar do
   - `height` (length) -- bar height. Default: shrink.
   - `style` (string) -- named style. One of: `"primary"` (default), `"secondary"`,
     `"success"`, `"danger"`, `"warning"`.
+  - `vertical` (boolean) -- when `true`, renders the progress bar vertically.
   """
 
   alias Julep.Iced.Widget.Build
@@ -20,6 +21,7 @@ defmodule Julep.Iced.Widget.ProgressBar do
           {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
           | {:style, style()}
+          | {:vertical, boolean()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -27,10 +29,11 @@ defmodule Julep.Iced.Widget.ProgressBar do
           value: number(),
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
-          style: style() | nil
+          style: style() | nil,
+          vertical: boolean() | nil
         }
 
-  defstruct [:id, :range, :value, :width, :height, :style]
+  defstruct [:id, :range, :value, :width, :height, :style, :vertical]
 
   @doc "Creates a new progress bar struct with the given range, value, and optional keyword opts."
   @spec new(
@@ -53,6 +56,7 @@ defmodule Julep.Iced.Widget.ProgressBar do
       {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
       {:style, v}, acc -> style(acc, v)
+      {:vertical, v}, acc -> vertical(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -68,6 +72,10 @@ defmodule Julep.Iced.Widget.ProgressBar do
   @doc "Sets the progress bar style."
   @spec style(progress_bar :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = bar, style), do: %{bar | style: style}
+
+  @doc "Renders the progress bar vertically."
+  @spec vertical(progress_bar :: t(), vertical :: boolean()) :: t()
+  def vertical(%__MODULE__{} = bar, vertical), do: %{bar | vertical: vertical}
 
   @doc "Converts this progress bar struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(progress_bar :: t()) :: Julep.Iced.ui_node()
@@ -86,6 +94,7 @@ defmodule Julep.Iced.Widget.ProgressBar do
         |> put_if(bar.width, "width")
         |> put_if(bar.height, "height")
         |> put_if(bar.style, "style")
+        |> put_if(bar.vertical, "vertical")
 
       %{id: bar.id, type: "progress_bar", props: props, children: []}
     end

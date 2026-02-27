@@ -14,6 +14,13 @@ defmodule Julep.Iced.Widget.PickList do
   - `line_height` (number | map) -- text line height.
   - `menu_height` (number) -- maximum height of the dropdown menu in pixels.
   - `text_shaping` (string) -- text shaping: `"basic"`, `"advanced"`, or `"auto"`.
+  - `handle` (map) -- customise the dropdown handle indicator. Map with a `type` key:
+    - `%{type: "arrow"}` -- default arrow (optional `size` in pixels).
+    - `%{type: "arrow", size: 12}` -- arrow with explicit size.
+    - `%{type: "static", icon: icon_map}` -- fixed icon.
+    - `%{type: "dynamic", closed: icon_map, open: icon_map}` -- state-dependent icons.
+    - `%{type: "none"}` -- no handle.
+    Icon maps: `%{code_point: "char", size: n, font: font, spacing: n, line_height: n}`.
   - `style` (string) -- named style. Currently only `"default"`.
 
   ## Events
@@ -35,6 +42,7 @@ defmodule Julep.Iced.Widget.PickList do
           | {:line_height, number() | map()}
           | {:menu_height, number()}
           | {:text_shaping, Julep.Iced.Shaping.t()}
+          | {:handle, map()}
           | {:style, style()}
 
   @type t :: %__MODULE__{
@@ -49,6 +57,7 @@ defmodule Julep.Iced.Widget.PickList do
           line_height: number() | map() | nil,
           menu_height: number() | nil,
           text_shaping: Julep.Iced.Shaping.t() | nil,
+          handle: map() | nil,
           style: style() | nil
         }
 
@@ -64,6 +73,7 @@ defmodule Julep.Iced.Widget.PickList do
     :line_height,
     :menu_height,
     :text_shaping,
+    :handle,
     :style
   ]
 
@@ -88,6 +98,7 @@ defmodule Julep.Iced.Widget.PickList do
       {:line_height, v}, acc -> line_height(acc, v)
       {:menu_height, v}, acc -> menu_height(acc, v)
       {:text_shaping, v}, acc -> text_shaping(acc, v)
+      {:handle, v}, acc -> handle(acc, v)
       {:style, v}, acc -> style(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -129,6 +140,10 @@ defmodule Julep.Iced.Widget.PickList do
   @spec text_shaping(pick_list :: t(), text_shaping :: Julep.Iced.Shaping.t()) :: t()
   def text_shaping(%__MODULE__{} = pl, text_shaping), do: %{pl | text_shaping: text_shaping}
 
+  @doc "Sets the dropdown handle style."
+  @spec handle(pick_list :: t(), handle :: map()) :: t()
+  def handle(%__MODULE__{} = pl, handle) when is_map(handle), do: %{pl | handle: handle}
+
   @doc "Sets the pick list style."
   @spec style(pick_list :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = pl, style), do: %{pl | style: style}
@@ -153,6 +168,7 @@ defmodule Julep.Iced.Widget.PickList do
         |> put_if(pl.line_height, "line_height")
         |> put_if(pl.menu_height, "menu_height")
         |> put_if(pl.text_shaping, "text_shaping")
+        |> put_if(pl.handle, "handle")
         |> put_if(pl.style, "style")
 
       %{id: pl.id, type: "pick_list", props: props, children: []}

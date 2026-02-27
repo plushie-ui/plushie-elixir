@@ -13,6 +13,10 @@ defmodule Julep.Iced.Widget.Scrollable do
   - `scroller_width` (number) -- width of the scroller handle in pixels.
   - `id` (string) -- widget ID for programmatic scroll control via `Julep.Command`.
   - `anchor` (string) -- scroll anchor: `"start"` (default) or `"end"` / `"bottom"` / `"right"`.
+  - `on_scroll` (boolean) -- when `true`, emits `{:scroll, id, viewport}` events on scroll.
+    The viewport map contains `absolute_x`, `absolute_y`, `relative_x`, `relative_y`,
+    `bounds` (as `{width, height}`), and `content_bounds` (as `{width, height}`).
+  - `auto_scroll` (boolean) -- when `true`, automatically scrolls to show new content.
   """
 
   alias Julep.Iced.Widget.Build
@@ -26,6 +30,8 @@ defmodule Julep.Iced.Widget.Scrollable do
           | {:scrollbar_margin, number()}
           | {:scroller_width, number()}
           | {:anchor, Julep.Iced.Anchor.t()}
+          | {:on_scroll, boolean()}
+          | {:auto_scroll, boolean()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -37,6 +43,8 @@ defmodule Julep.Iced.Widget.Scrollable do
           scrollbar_margin: number() | nil,
           scroller_width: number() | nil,
           anchor: Julep.Iced.Anchor.t() | nil,
+          on_scroll: boolean() | nil,
+          auto_scroll: boolean() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
@@ -50,6 +58,8 @@ defmodule Julep.Iced.Widget.Scrollable do
     :scrollbar_margin,
     :scroller_width,
     :anchor,
+    :on_scroll,
+    :auto_scroll,
     children: []
   ]
 
@@ -73,6 +83,8 @@ defmodule Julep.Iced.Widget.Scrollable do
       {:scrollbar_margin, v}, acc -> scrollbar_margin(acc, v)
       {:scroller_width, v}, acc -> scroller_width(acc, v)
       {:anchor, v}, acc -> anchor(acc, v)
+      {:on_scroll, v}, acc -> on_scroll(acc, v)
+      {:auto_scroll, v}, acc -> auto_scroll(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -111,6 +123,14 @@ defmodule Julep.Iced.Widget.Scrollable do
   @spec anchor(scrollable :: t(), anchor :: Julep.Iced.Anchor.t()) :: t()
   def anchor(%__MODULE__{} = s, anchor), do: %{s | anchor: anchor}
 
+  @doc "Enables scroll position change events."
+  @spec on_scroll(scrollable :: t(), on_scroll :: boolean()) :: t()
+  def on_scroll(%__MODULE__{} = s, on_scroll), do: %{s | on_scroll: on_scroll}
+
+  @doc "Enables automatic scrolling to show new content."
+  @spec auto_scroll(scrollable :: t(), auto_scroll :: boolean()) :: t()
+  def auto_scroll(%__MODULE__{} = s, auto_scroll), do: %{s | auto_scroll: auto_scroll}
+
   @doc "Appends a child to the scrollable."
   @spec push(scrollable :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
   def push(%__MODULE__{} = s, child), do: %{s | children: s.children ++ [child]}
@@ -137,6 +157,8 @@ defmodule Julep.Iced.Widget.Scrollable do
         |> put_if(s.scrollbar_margin, "scrollbar_margin")
         |> put_if(s.scroller_width, "scroller_width")
         |> put_if(s.anchor, "anchor")
+        |> put_if(s.on_scroll, "on_scroll")
+        |> put_if(s.auto_scroll, "auto_scroll")
 
       %{id: s.id, type: "scrollable", props: props, children: children_to_nodes(s.children)}
     end

@@ -449,6 +449,135 @@ defmodule Julep.Protocol do
     "Unidentified" => :unidentified
   }
 
+  # Physical key codes -- Rust KeyCode Debug format -> Elixir atoms.
+  # Covers all standard US keyboard physical keys. Unknown codes pass through
+  # as strings.
+  @physical_keys %{
+    # Letters
+    "KeyA" => :key_a,
+    "KeyB" => :key_b,
+    "KeyC" => :key_c,
+    "KeyD" => :key_d,
+    "KeyE" => :key_e,
+    "KeyF" => :key_f,
+    "KeyG" => :key_g,
+    "KeyH" => :key_h,
+    "KeyI" => :key_i,
+    "KeyJ" => :key_j,
+    "KeyK" => :key_k,
+    "KeyL" => :key_l,
+    "KeyM" => :key_m,
+    "KeyN" => :key_n,
+    "KeyO" => :key_o,
+    "KeyP" => :key_p,
+    "KeyQ" => :key_q,
+    "KeyR" => :key_r,
+    "KeyS" => :key_s,
+    "KeyT" => :key_t,
+    "KeyU" => :key_u,
+    "KeyV" => :key_v,
+    "KeyW" => :key_w,
+    "KeyX" => :key_x,
+    "KeyY" => :key_y,
+    "KeyZ" => :key_z,
+    # Digits
+    "Digit0" => :digit_0,
+    "Digit1" => :digit_1,
+    "Digit2" => :digit_2,
+    "Digit3" => :digit_3,
+    "Digit4" => :digit_4,
+    "Digit5" => :digit_5,
+    "Digit6" => :digit_6,
+    "Digit7" => :digit_7,
+    "Digit8" => :digit_8,
+    "Digit9" => :digit_9,
+    # Function keys
+    "F1" => :f1,
+    "F2" => :f2,
+    "F3" => :f3,
+    "F4" => :f4,
+    "F5" => :f5,
+    "F6" => :f6,
+    "F7" => :f7,
+    "F8" => :f8,
+    "F9" => :f9,
+    "F10" => :f10,
+    "F11" => :f11,
+    "F12" => :f12,
+    "F13" => :f13,
+    "F14" => :f14,
+    "F15" => :f15,
+    "F16" => :f16,
+    "F17" => :f17,
+    "F18" => :f18,
+    "F19" => :f19,
+    "F20" => :f20,
+    "F21" => :f21,
+    "F22" => :f22,
+    "F23" => :f23,
+    "F24" => :f24,
+    # Modifiers
+    "ShiftLeft" => :shift_left,
+    "ShiftRight" => :shift_right,
+    "ControlLeft" => :control_left,
+    "ControlRight" => :control_right,
+    "AltLeft" => :alt_left,
+    "AltRight" => :alt_right,
+    "MetaLeft" => :meta_left,
+    "MetaRight" => :meta_right,
+    # Navigation
+    "Escape" => :escape,
+    "Enter" => :enter,
+    "Tab" => :tab,
+    "Backspace" => :backspace,
+    "Delete" => :delete,
+    "Insert" => :insert,
+    "Home" => :home,
+    "End" => :end,
+    "PageUp" => :page_up,
+    "PageDown" => :page_down,
+    "ArrowUp" => :arrow_up,
+    "ArrowDown" => :arrow_down,
+    "ArrowLeft" => :arrow_left,
+    "ArrowRight" => :arrow_right,
+    "Space" => :space,
+    "CapsLock" => :caps_lock,
+    # Punctuation / symbols
+    "Minus" => :minus,
+    "Equal" => :equal,
+    "BracketLeft" => :bracket_left,
+    "BracketRight" => :bracket_right,
+    "Backslash" => :backslash,
+    "Semicolon" => :semicolon,
+    "Quote" => :quote,
+    "Backquote" => :backquote,
+    "Comma" => :comma,
+    "Period" => :period,
+    "Slash" => :slash,
+    # Numpad
+    "Numpad0" => :numpad_0,
+    "Numpad1" => :numpad_1,
+    "Numpad2" => :numpad_2,
+    "Numpad3" => :numpad_3,
+    "Numpad4" => :numpad_4,
+    "Numpad5" => :numpad_5,
+    "Numpad6" => :numpad_6,
+    "Numpad7" => :numpad_7,
+    "Numpad8" => :numpad_8,
+    "Numpad9" => :numpad_9,
+    "NumpadAdd" => :numpad_add,
+    "NumpadSubtract" => :numpad_subtract,
+    "NumpadMultiply" => :numpad_multiply,
+    "NumpadDivide" => :numpad_divide,
+    "NumpadDecimal" => :numpad_decimal,
+    "NumpadEnter" => :numpad_enter,
+    "NumLock" => :num_lock,
+    "ScrollLock" => :scroll_lock,
+    "PrintScreen" => :print_screen,
+    "Pause" => :pause,
+    "ContextMenu" => :context_menu
+  }
+
   @doc """
   Converts a key name string to an atom for named keys, or returns the string
   unchanged for single-character keys.
@@ -471,7 +600,7 @@ defmodule Julep.Protocol do
   # ---------------------------------------------------------------------------
 
   defp parse_modifiers(mods) when is_map(mods) do
-    %{
+    %Julep.KeyModifiers{
       ctrl: Map.get(mods, "ctrl", false),
       shift: Map.get(mods, "shift", false),
       alt: Map.get(mods, "alt", false),
@@ -480,8 +609,18 @@ defmodule Julep.Protocol do
     }
   end
 
-  defp parse_modifiers(_),
-    do: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
+  defp parse_modifiers(_), do: %Julep.KeyModifiers{}
+
+  defp parse_physical_key(nil), do: nil
+
+  defp parse_physical_key(str) when is_binary(str) do
+    Map.get(@physical_keys, str, str)
+  end
+
+  defp parse_location("left"), do: :left
+  defp parse_location("right"), do: :right
+  defp parse_location("numpad"), do: :numpad
+  defp parse_location(_), do: :standard
 
   # ---------------------------------------------------------------------------
   # Private dispatch
@@ -517,25 +656,61 @@ defmodule Julep.Protocol do
     {:slide_release, id, value}
   end
 
-  # -- Keyboard events --
-  # Rust emits family "key_press" with the key in "value" and modifiers in "modifiers".
-
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "key_press",
-         "value" => key,
-         "modifiers" => mods
-       }) do
-    {:key_press, parse_key(key), parse_modifiers(mods)}
+  defp dispatch(%{"type" => "event", "family" => "paste", "id" => id, "value" => text}) do
+    {:paste, id, text}
   end
 
   defp dispatch(%{
          "type" => "event",
-         "family" => "key_release",
-         "value" => key,
-         "modifiers" => mods
+         "family" => "option_hovered",
+         "id" => id,
+         "value" => value
        }) do
-    {:key_release, parse_key(key), parse_modifiers(mods)}
+    {:option_hovered, id, value}
+  end
+
+  # -- Keyboard events --
+  # Rust emits family "key_press" with the key in "value", modifiers in "modifiers",
+  # and extra fields (modified_key, physical_key, location, text, repeat) in "data".
+
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "key_press",
+           "value" => key,
+           "modifiers" => mods
+         } = msg
+       ) do
+    {:key_press,
+     %Julep.KeyEvent{
+       key: parse_key(key),
+       modified_key: parse_key(msg["modified_key"] || key),
+       physical_key: parse_physical_key(msg["physical_key"]),
+       location: parse_location(msg["location"]),
+       modifiers: parse_modifiers(mods),
+       text: msg["text"],
+       repeat: msg["repeat"] || false
+     }}
+  end
+
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "key_release",
+           "value" => key,
+           "modifiers" => mods
+         } = msg
+       ) do
+    {:key_release,
+     %Julep.KeyEvent{
+       key: parse_key(key),
+       modified_key: parse_key(msg["modified_key"] || key),
+       physical_key: parse_physical_key(msg["physical_key"]),
+       location: parse_location(msg["location"]),
+       modifiers: parse_modifiers(mods),
+       text: nil,
+       repeat: false
+     }}
   end
 
   defp dispatch(%{
@@ -793,6 +968,18 @@ defmodule Julep.Protocol do
 
   defp dispatch(%{"type" => "event", "family" => "pane_clicked", "id" => id, "data" => data}) do
     {:pane_clicked, id, data["pane"]}
+  end
+
+  defp dispatch(%{"type" => "event", "family" => "scroll", "id" => id, "data" => data}) do
+    {:scroll, id,
+     %{
+       absolute_x: data["absolute_x"],
+       absolute_y: data["absolute_y"],
+       relative_x: data["relative_x"],
+       relative_y: data["relative_y"],
+       bounds: {data["bounds_width"], data["bounds_height"]},
+       content_bounds: {data["content_width"], data["content_height"]}
+     }}
   end
 
   # -- Effect responses --

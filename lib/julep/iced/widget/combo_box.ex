@@ -16,11 +16,16 @@ defmodule Julep.Iced.Widget.ComboBox do
   - `font` (string | map) -- font specification. See `Julep.Iced.Font`.
   - `line_height` (number | map) -- text line height.
   - `menu_height` (number) -- maximum height of the dropdown menu in pixels.
+  - `icon` (map) -- display an icon inside the text input. Same format as
+    `Julep.Iced.Widget.TextInput` icon prop.
+  - `on_option_hovered` (boolean) -- when true, emits `{:option_hovered, id, value}`
+    when hovering over a dropdown option. Default: false.
 
   ## Events
 
   - `{:select, id, value}` -- emitted when an option is selected.
   - `{:input, id, value}` -- emitted on every text input change (for filtering).
+  - `{:option_hovered, id, value}` -- emitted on hover (requires `on_option_hovered` prop).
   """
 
   alias Julep.Iced.Widget.Build
@@ -34,6 +39,8 @@ defmodule Julep.Iced.Widget.ComboBox do
           | {:font, Julep.Iced.Font.t()}
           | {:line_height, number() | map()}
           | {:menu_height, number()}
+          | {:icon, map()}
+          | {:on_option_hovered, boolean()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -45,7 +52,9 @@ defmodule Julep.Iced.Widget.ComboBox do
           size: number() | nil,
           font: Julep.Iced.Font.t() | nil,
           line_height: number() | map() | nil,
-          menu_height: number() | nil
+          menu_height: number() | nil,
+          icon: map() | nil,
+          on_option_hovered: boolean() | nil
         }
 
   defstruct [
@@ -58,7 +67,9 @@ defmodule Julep.Iced.Widget.ComboBox do
     :size,
     :font,
     :line_height,
-    :menu_height
+    :menu_height,
+    :icon,
+    :on_option_hovered
   ]
 
   @doc "Creates a new combo box struct with the given options and optional keyword opts."
@@ -81,6 +92,8 @@ defmodule Julep.Iced.Widget.ComboBox do
       {:font, v}, acc -> font(acc, v)
       {:line_height, v}, acc -> line_height(acc, v)
       {:menu_height, v}, acc -> menu_height(acc, v)
+      {:icon, v}, acc -> icon(acc, v)
+      {:on_option_hovered, v}, acc -> on_option_hovered(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -117,6 +130,15 @@ defmodule Julep.Iced.Widget.ComboBox do
   @spec menu_height(combo_box :: t(), menu_height :: number()) :: t()
   def menu_height(%__MODULE__{} = cb, menu_height), do: %{cb | menu_height: menu_height}
 
+  @doc "Sets the icon displayed inside the text input."
+  @spec icon(combo_box :: t(), icon :: map()) :: t()
+  def icon(%__MODULE__{} = cb, icon) when is_map(icon), do: %{cb | icon: icon}
+
+  @doc "Enables or disables option hover event emission."
+  @spec on_option_hovered(combo_box :: t(), on_option_hovered :: boolean()) :: t()
+  def on_option_hovered(%__MODULE__{} = cb, on_option_hovered),
+    do: %{cb | on_option_hovered: on_option_hovered}
+
   @doc "Converts this combo box struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(combo_box :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = cb), do: Julep.Iced.Widget.to_node(cb)
@@ -136,6 +158,8 @@ defmodule Julep.Iced.Widget.ComboBox do
         |> put_if(cb.font, "font")
         |> put_if(cb.line_height, "line_height")
         |> put_if(cb.menu_height, "menu_height")
+        |> put_if(cb.icon, "icon")
+        |> put_if(cb.on_option_hovered, "on_option_hovered")
 
       %{id: cb.id, type: "combo_box", props: props, children: []}
     end

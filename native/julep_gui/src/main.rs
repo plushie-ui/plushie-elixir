@@ -18,6 +18,23 @@ use iced::widget::{container, markdown, pane_grid, text, text_editor};
 use iced::{event, system, time, window, Element, Fill, Point, Size, Subscription, Task, Theme};
 
 use protocol::{IncomingMessage, KeyModifiers, OutgoingEvent};
+use serde_json::Value;
+
+// ---------------------------------------------------------------------------
+// Keyboard event data
+// ---------------------------------------------------------------------------
+
+/// All fields from an iced keyboard event, packed for Message transport.
+#[derive(Debug, Clone)]
+struct KeyEventData {
+    key: iced::keyboard::Key,
+    modified_key: iced::keyboard::Key,
+    physical_key: iced::keyboard::key::Physical,
+    location: iced::keyboard::Location,
+    modifiers: iced::keyboard::Modifiers,
+    text: Option<String>,
+    repeat: bool,
+}
 
 // ---------------------------------------------------------------------------
 // Message
@@ -45,10 +62,10 @@ pub(crate) enum Message {
     MarkdownUrl(markdown::Uri),
     /// Periodic tick used to drain the inbound channel.
     Tick,
-    /// A keyboard key was pressed.
-    KeyPressed(iced::keyboard::Key, iced::keyboard::Modifiers),
-    /// A keyboard key was released.
-    KeyReleased(iced::keyboard::Key, iced::keyboard::Modifiers),
+    /// A keyboard key was pressed (full event data).
+    KeyPressed(KeyEventData),
+    /// A keyboard key was released (full event data).
+    KeyReleased(KeyEventData),
     /// Keyboard modifiers changed.
     ModifiersChanged(iced::keyboard::Modifiers),
     /// A window close was requested by the user (WM close button).
@@ -99,6 +116,12 @@ pub(crate) enum Message {
     PaneDragged(String, iced::widget::pane_grid::DragEvent),
     /// PaneGrid pane was clicked (grid_id, pane).
     PaneClicked(String, iced::widget::pane_grid::Pane),
+    /// Scrollable viewport changed (id, viewport data).
+    ScrollEvent(String, f32, f32, f32, f32, f32, f32, f32, f32),
+    /// Text was pasted into a text_input (id, pasted_text).
+    Paste(String, String),
+    /// ComboBox option was hovered (combo_id, option_value).
+    OptionHovered(String, String),
 }
 
 // ---------------------------------------------------------------------------
@@ -216,25 +239,15 @@ impl App {
             }
 
             // -- Keyboard events --
-            Message::KeyPressed(key, mods) => {
+            Message::KeyPressed(data) => {
                 if let Some(tag) = self.core.active_subscriptions.get("on_key_press") {
-                    let key_str = serialize_key(&key);
-                    emit_event(OutgoingEvent::key_press(
-                        tag.clone(),
-                        key_str,
-                        serialize_modifiers(mods),
-                    ));
+                    emit_event(OutgoingEvent::key_press(tag.clone(), &data));
                 }
                 Task::none()
             }
-            Message::KeyReleased(key, mods) => {
+            Message::KeyReleased(data) => {
                 if let Some(tag) = self.core.active_subscriptions.get("on_key_release") {
-                    let key_str = serialize_key(&key);
-                    emit_event(OutgoingEvent::key_release(
-                        tag.clone(),
-                        key_str,
-                        serialize_modifiers(mods),
-                    ));
+                    emit_event(OutgoingEvent::key_release(tag.clone(), &data));
                 }
                 Task::none()
             }
@@ -582,6 +595,30 @@ impl App {
                 }
                 Task::none()
             }
+            Message::ScrollEvent(
+                id,
+                abs_x,
+                abs_y,
+                rel_x,
+                rel_y,
+                bounds_w,
+                bounds_h,
+                content_w,
+                content_h,
+            ) => {
+                emit_event(OutgoingEvent::scroll(
+                    id, abs_x, abs_y, rel_x, rel_y, bounds_w, bounds_h, content_w, content_h,
+                ));
+                Task::none()
+            }
+            Message::Paste(id, text) => {
+                emit_event(OutgoingEvent::paste(id, text));
+                Task::none()
+            }
+            Message::OptionHovered(id, value) => {
+                emit_event(OutgoingEvent::option_hovered(id, value));
+                Task::none()
+            }
         }
     }
 
@@ -619,11 +656,23 @@ impl App {
             subs.push(event::listen_with(|evt, _status, _window| {
                 if let iced::Event::Keyboard(iced::keyboard::Event::KeyPressed {
                     key,
+                    modified_key,
+                    physical_key,
+                    location,
                     modifiers,
-                    ..
+                    text,
+                    repeat,
                 }) = evt
                 {
-                    Some(Message::KeyPressed(key, modifiers))
+                    Some(Message::KeyPressed(KeyEventData {
+                        key,
+                        modified_key,
+                        physical_key,
+                        location,
+                        modifiers,
+                        text: text.map(|s| s.to_string()),
+                        repeat,
+                    }))
                 } else {
                     None
                 }
@@ -638,11 +687,21 @@ impl App {
             subs.push(event::listen_with(|evt, _status, _window| {
                 if let iced::Event::Keyboard(iced::keyboard::Event::KeyReleased {
                     key,
+                    modified_key,
+                    physical_key,
+                    location,
                     modifiers,
-                    ..
                 }) = evt
                 {
-                    Some(Message::KeyReleased(key, modifiers))
+                    Some(Message::KeyReleased(KeyEventData {
+                        key,
+                        modified_key,
+                        physical_key,
+                        location,
+                        modifiers,
+                        text: None,
+                        repeat: false,
+                    }))
                 } else {
                     None
                 }
@@ -792,13 +851,37 @@ impl App {
             subs.push(event::listen_with(|evt, _status, window| match evt {
                 // Keyboard
                 iced::Event::Keyboard(iced::keyboard::Event::KeyPressed {
-                    key, modifiers, ..
-                }) => Some(Message::KeyPressed(key, modifiers)),
+                    key,
+                    modified_key,
+                    physical_key,
+                    location,
+                    modifiers,
+                    text,
+                    repeat,
+                }) => Some(Message::KeyPressed(KeyEventData {
+                    key,
+                    modified_key,
+                    physical_key,
+                    location,
+                    modifiers,
+                    text: text.map(|s| s.to_string()),
+                    repeat,
+                })),
                 iced::Event::Keyboard(iced::keyboard::Event::KeyReleased {
                     key,
+                    modified_key,
+                    physical_key,
+                    location,
                     modifiers,
-                    ..
-                }) => Some(Message::KeyReleased(key, modifiers)),
+                }) => Some(Message::KeyReleased(KeyEventData {
+                    key,
+                    modified_key,
+                    physical_key,
+                    location,
+                    modifiers,
+                    text: None,
+                    repeat: false,
+                })),
                 iced::Event::Keyboard(iced::keyboard::Event::ModifiersChanged(mods)) => {
                     Some(Message::ModifiersChanged(mods))
                 }
@@ -1715,6 +1798,24 @@ fn serialize_modifiers(mods: iced::keyboard::Modifiers) -> KeyModifiers {
     }
 }
 
+fn serialize_physical_key(physical: &iced::keyboard::key::Physical) -> String {
+    match physical {
+        iced::keyboard::key::Physical::Code(code) => format!("{code:?}"),
+        iced::keyboard::key::Physical::Unidentified(code) => {
+            format!("Unidentified({code:?})")
+        }
+    }
+}
+
+fn serialize_location(location: &iced::keyboard::Location) -> &'static str {
+    match location {
+        iced::keyboard::Location::Standard => "standard",
+        iced::keyboard::Location::Left => "left",
+        iced::keyboard::Location::Right => "right",
+        iced::keyboard::Location::Numpad => "numpad",
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Mouse serialization helpers
 // ---------------------------------------------------------------------------
@@ -1790,6 +1891,19 @@ pub(crate) fn message_to_event(msg: &Message) -> Option<OutgoingEvent> {
         Message::SlideRelease(id, value) => Some(OutgoingEvent::slide_release(id.clone(), *value)),
         Message::Select(id, value) => Some(OutgoingEvent::select(id.clone(), value.clone())),
         Message::SensorResize(id, w, h) => Some(OutgoingEvent::sensor_resize(id.clone(), *w, *h)),
+        Message::ScrollEvent(id, abs_x, abs_y, rel_x, rel_y, bw, bh, cw, ch) => {
+            Some(OutgoingEvent::scroll(
+                id.clone(),
+                *abs_x,
+                *abs_y,
+                *rel_x,
+                *rel_y,
+                *bw,
+                *bh,
+                *cw,
+                *ch,
+            ))
+        }
         _ => None,
     }
 }
@@ -1839,6 +1953,71 @@ fn spawn_stdin_reader(sender: Sender<StdinEvent>) {
 // Entry point
 // ---------------------------------------------------------------------------
 
+/// Read the first line from stdin synchronously, expecting a Settings message.
+/// Returns the settings Value (or a default empty object) and any font load
+/// tasks that should be executed on startup.
+fn read_initial_settings() -> (Value, bool, Vec<Vec<u8>>) {
+    use io::BufRead;
+    let stdin = io::stdin();
+    let mut reader = io::BufReader::new(stdin.lock());
+    let mut line = String::new();
+
+    let default = || (Value::Object(Default::default()), false, Vec::new());
+
+    match reader.read_line(&mut line) {
+        Ok(0) => {
+            eprintln!("julep_gui: stdin closed before settings received");
+            default()
+        }
+        Ok(_) => {
+            let trimmed = line.trim();
+            match serde_json::from_str::<IncomingMessage>(trimmed) {
+                Ok(IncomingMessage::Settings { settings }) => {
+                    eprintln!("julep_gui: initial settings received");
+                    let antialiasing = settings
+                        .get("antialiasing")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+
+                    let mut font_bytes: Vec<Vec<u8>> = Vec::new();
+                    if let Some(fonts) = settings.get("fonts").and_then(|v| v.as_array()) {
+                        for font_val in fonts {
+                            if let Some(path) = font_val.as_str() {
+                                match std::fs::read(path) {
+                                    Ok(bytes) => {
+                                        eprintln!("julep_gui: loaded font: {path}");
+                                        font_bytes.push(bytes);
+                                    }
+                                    Err(e) => {
+                                        eprintln!("julep_gui: failed to load font {path}: {e}");
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    (settings, antialiasing, font_bytes)
+                }
+                Ok(other) => {
+                    eprintln!(
+                        "julep_gui: expected Settings as first message, got {:?}",
+                        std::mem::discriminant(&other)
+                    );
+                    default()
+                }
+                Err(e) => {
+                    eprintln!("julep_gui: failed to parse initial settings: {e}");
+                    default()
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("julep_gui: failed to read initial settings: {e}");
+            default()
+        }
+    }
+}
+
 fn main() -> iced::Result {
     let args: Vec<String> = std::env::args().collect();
 
@@ -1852,6 +2031,11 @@ fn main() -> iced::Result {
 
     let test_mode = args.contains(&"--test".to_string());
 
+    // Read the first message synchronously to get antialiasing and font
+    // settings before the daemon starts. This must happen before the stdin
+    // reader thread is spawned.
+    let (initial_settings, antialiasing, font_bytes) = read_initial_settings();
+
     // The boot closure must be `Fn`, but channel setup must only happen once.
     // Use a Mutex<Option<Receiver>> captured in the closure: the first call
     // takes the receiver out; subsequent calls (which iced never makes) get a
@@ -1862,6 +2046,8 @@ fn main() -> iced::Result {
     spawn_stdin_reader(tx);
 
     let rx_slot: Mutex<Option<Receiver<StdinEvent>>> = Mutex::new(Some(rx));
+    let settings_slot: Mutex<Option<(Value, Vec<Vec<u8>>)>> =
+        Mutex::new(Some((initial_settings, font_bytes)));
 
     iced::daemon(
         move || {
@@ -1873,7 +2059,37 @@ fn main() -> iced::Result {
                     eprintln!("julep_gui: boot called more than once -- this is a bug");
                     mpsc::channel().1
                 });
-            (App::new(rx, test_mode), Task::none())
+            let (settings, fonts) = settings_slot
+                .lock()
+                .expect("settings_slot lock poisoned")
+                .take()
+                .unwrap_or_default();
+
+            let mut app = App::new(rx, test_mode);
+
+            // Apply initial settings to Core (Settings doesn't produce effects)
+            let _ = app.core.apply(IncomingMessage::Settings { settings });
+
+            // Build font load tasks
+            let font_tasks: Vec<Task<Message>> = fonts
+                .into_iter()
+                .map(|bytes| {
+                    iced::font::load(bytes).map(|result| {
+                        if let Err(e) = result {
+                            eprintln!("julep_gui: font load error: {e:?}");
+                        }
+                        Message::Tick
+                    })
+                })
+                .collect();
+
+            let task = if font_tasks.is_empty() {
+                Task::none()
+            } else {
+                Task::batch(font_tasks)
+            };
+
+            (app, task)
         },
         App::update,
         App::view_window,
@@ -1881,5 +2097,6 @@ fn main() -> iced::Result {
     .title(App::title_for_window)
     .subscription(App::subscription)
     .theme(App::theme_for_window)
+    .antialiasing(antialiasing)
     .run()
 }

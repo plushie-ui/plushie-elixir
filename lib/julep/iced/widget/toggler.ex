@@ -14,6 +14,7 @@ defmodule Julep.Iced.Widget.Toggler do
   - `line_height` (number | map) -- label line height.
   - `text_shaping` (string) -- text shaping: `"basic"`, `"advanced"`, or `"auto"`.
   - `wrapping` (string) -- text wrapping: `"none"`, `"word"`, `"glyph"`, `"word_or_glyph"`.
+  - `text_alignment` (string) -- horizontal label alignment: `"left"`, `"center"`, `"right"`.
   - `style` (string) -- named style. Currently only `"default"`.
   - `disabled` (boolean) -- when true, the toggler cannot be toggled. Default: false.
 
@@ -36,6 +37,7 @@ defmodule Julep.Iced.Widget.Toggler do
           | {:line_height, number() | map()}
           | {:text_shaping, Julep.Iced.Shaping.t()}
           | {:wrapping, Julep.Iced.Wrapping.t()}
+          | {:text_alignment, Julep.Iced.Alignment.t()}
           | {:style, style()}
           | {:disabled, boolean()}
 
@@ -51,6 +53,7 @@ defmodule Julep.Iced.Widget.Toggler do
           line_height: number() | map() | nil,
           text_shaping: Julep.Iced.Shaping.t() | nil,
           wrapping: Julep.Iced.Wrapping.t() | nil,
+          text_alignment: Julep.Iced.Alignment.t() | nil,
           style: style() | nil,
           disabled: boolean() | nil
         }
@@ -67,6 +70,7 @@ defmodule Julep.Iced.Widget.Toggler do
     :line_height,
     :text_shaping,
     :wrapping,
+    :text_alignment,
     :style,
     :disabled
   ]
@@ -92,6 +96,7 @@ defmodule Julep.Iced.Widget.Toggler do
       {:line_height, v}, acc -> line_height(acc, v)
       {:text_shaping, v}, acc -> text_shaping(acc, v)
       {:wrapping, v}, acc -> wrapping(acc, v)
+      {:text_alignment, v}, acc -> text_alignment(acc, v)
       {:style, v}, acc -> style(acc, v)
       {:disabled, v}, acc -> disabled(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
@@ -134,6 +139,11 @@ defmodule Julep.Iced.Widget.Toggler do
   @spec wrapping(toggler :: t(), wrapping :: Julep.Iced.Wrapping.t()) :: t()
   def wrapping(%__MODULE__{} = tg, wrapping), do: %{tg | wrapping: wrapping}
 
+  @doc "Sets the horizontal label text alignment."
+  @spec text_alignment(toggler :: t(), text_alignment :: Julep.Iced.Alignment.t()) :: t()
+  def text_alignment(%__MODULE__{} = tg, text_alignment),
+    do: %{tg | text_alignment: text_alignment}
+
   @doc "Sets the toggler style."
   @spec style(toggler :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = tg, style), do: %{tg | style: style}
@@ -162,6 +172,7 @@ defmodule Julep.Iced.Widget.Toggler do
         |> put_if(tg.line_height, "line_height")
         |> put_if(tg.text_shaping, "text_shaping")
         |> put_if(tg.wrapping, "wrapping")
+        |> put_if(tg.text_alignment, "text_alignment")
         |> put_if(tg.style, "style")
         |> put_if(tg.disabled, "disabled")
 

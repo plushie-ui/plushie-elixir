@@ -336,18 +336,30 @@ impl OutgoingEvent {
     // Keyboard events
     // -----------------------------------------------------------------------
 
-    pub fn key_press(tag: String, key: String, modifiers: KeyModifiers) -> Self {
+    pub fn key_press(tag: String, data: &crate::KeyEventData) -> Self {
         Self {
-            modifiers: Some(modifiers),
-            value: Some(Value::String(key)),
+            modifiers: Some(crate::serialize_modifiers(data.modifiers)),
+            value: Some(Value::String(crate::serialize_key(&data.key))),
+            data: Some(serde_json::json!({
+                "modified_key": crate::serialize_key(&data.modified_key),
+                "physical_key": crate::serialize_physical_key(&data.physical_key),
+                "location": crate::serialize_location(&data.location),
+                "text": data.text.as_deref(),
+                "repeat": data.repeat,
+            })),
             ..Self::tagged("key_press", tag)
         }
     }
 
-    pub fn key_release(tag: String, key: String, modifiers: KeyModifiers) -> Self {
+    pub fn key_release(tag: String, data: &crate::KeyEventData) -> Self {
         Self {
-            modifiers: Some(modifiers),
-            value: Some(Value::String(key)),
+            modifiers: Some(crate::serialize_modifiers(data.modifiers)),
+            value: Some(Value::String(crate::serialize_key(&data.key))),
+            data: Some(serde_json::json!({
+                "modified_key": crate::serialize_key(&data.modified_key),
+                "physical_key": crate::serialize_physical_key(&data.physical_key),
+                "location": crate::serialize_location(&data.location),
+            })),
             ..Self::tagged("key_release", tag)
         }
     }
@@ -644,6 +656,55 @@ impl OutgoingEvent {
         Self {
             data: Some(serde_json::json!({"pane": pane})),
             ..Self::bare("pane_clicked", id)
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // TextInput paste event
+    // -----------------------------------------------------------------------
+
+    pub fn paste(id: String, text: String) -> Self {
+        Self {
+            value: Some(Value::String(text)),
+            ..Self::bare("paste", id)
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // ComboBox option hovered event
+    // -----------------------------------------------------------------------
+
+    pub fn option_hovered(id: String, value: String) -> Self {
+        Self {
+            value: Some(Value::String(value)),
+            ..Self::bare("option_hovered", id)
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Scrollable events
+    // -----------------------------------------------------------------------
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn scroll(
+        id: String,
+        abs_x: f32,
+        abs_y: f32,
+        rel_x: f32,
+        rel_y: f32,
+        bounds_w: f32,
+        bounds_h: f32,
+        content_w: f32,
+        content_h: f32,
+    ) -> Self {
+        Self {
+            data: Some(serde_json::json!({
+                "absolute_x": abs_x, "absolute_y": abs_y,
+                "relative_x": rel_x, "relative_y": rel_y,
+                "bounds_width": bounds_w, "bounds_height": bounds_h,
+                "content_width": content_w, "content_height": content_h,
+            })),
+            ..Self::bare("scroll", id)
         }
     }
 }
@@ -1010,16 +1071,44 @@ mod tests {
     // OutgoingEvent serialization -- keyboard events
     // -----------------------------------------------------------------------
 
+    fn make_key_event_data(key_str: &str, shift: bool, alt: bool) -> crate::KeyEventData {
+        use iced::keyboard;
+        crate::KeyEventData {
+            key: if key_str.len() == 1 {
+                keyboard::Key::Character(key_str.into())
+            } else {
+                keyboard::Key::Named(keyboard::key::Named::Escape)
+            },
+            modified_key: if key_str.len() == 1 {
+                keyboard::Key::Character(key_str.to_uppercase().into())
+            } else {
+                keyboard::Key::Named(keyboard::key::Named::Escape)
+            },
+            physical_key: keyboard::key::Physical::Code(keyboard::key::Code::KeyA),
+            location: keyboard::Location::Standard,
+            modifiers: {
+                let mut m = keyboard::Modifiers::empty();
+                if shift {
+                    m = m | keyboard::Modifiers::SHIFT;
+                }
+                if alt {
+                    m = m | keyboard::Modifiers::ALT;
+                }
+                m
+            },
+            text: if key_str.len() == 1 {
+                Some(key_str.to_string())
+            } else {
+                None
+            },
+            repeat: false,
+        }
+    }
+
     #[test]
     fn serialize_key_press_with_modifiers() {
-        let mods = KeyModifiers {
-            shift: true,
-            ctrl: false,
-            alt: true,
-            logo: false,
-            command: false,
-        };
-        let evt = OutgoingEvent::key_press("keys".to_string(), "a".to_string(), mods);
+        let data = make_key_event_data("a", true, true);
+        let evt = OutgoingEvent::key_press("keys".to_string(), &data);
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "key_press");
         assert_eq!(json["tag"], "keys");
@@ -1030,21 +1119,23 @@ mod tests {
         assert_eq!(json["modifiers"]["alt"], true);
         assert_eq!(json["modifiers"]["logo"], false);
         assert_eq!(json["modifiers"]["command"], false);
+        // New fields
+        assert_eq!(json["modified_key"], "A");
+        assert_eq!(json["physical_key"], "KeyA");
+        assert_eq!(json["location"], "standard");
+        assert_eq!(json["text"], "a");
+        assert_eq!(json["repeat"], false);
     }
 
     #[test]
     fn serialize_key_release() {
-        let mods = KeyModifiers {
-            shift: false,
-            ctrl: false,
-            alt: false,
-            logo: false,
-            command: false,
-        };
-        let evt = OutgoingEvent::key_release("keys".to_string(), "Escape".to_string(), mods);
+        let data = make_key_event_data("Escape", false, false);
+        let evt = OutgoingEvent::key_release("keys".to_string(), &data);
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "key_release");
         assert_eq!(json["value"], "Escape");
+        // key_release should not have text or repeat
+        assert!(json.get("text").is_none() || json["text"].is_null());
     }
 
     #[test]
@@ -1436,21 +1527,19 @@ mod tests {
 
     #[test]
     fn outgoing_event_roundtrip_all_fields_present() {
-        let mods = KeyModifiers {
-            shift: true,
-            ctrl: false,
-            alt: false,
-            logo: false,
-            command: true,
-        };
-        let evt = OutgoingEvent::key_press("kb".to_string(), "Enter".to_string(), mods);
+        let data = make_key_event_data("a", true, false);
+        let evt = OutgoingEvent::key_press("kb".to_string(), &data);
         let serialized = serde_json::to_string(&evt).unwrap();
         let parsed: Value = serde_json::from_str(&serialized).unwrap();
         assert_eq!(parsed["type"], "event");
         assert_eq!(parsed["family"], "key_press");
-        assert_eq!(parsed["value"], "Enter");
+        assert_eq!(parsed["value"], "a");
         assert_eq!(parsed["tag"], "kb");
-        assert_eq!(parsed["modifiers"]["command"], true);
+        assert_eq!(parsed["modifiers"]["shift"], true);
+        // Extra fields from KeyEventData
+        assert!(parsed.get("modified_key").is_some());
+        assert!(parsed.get("physical_key").is_some());
+        assert!(parsed.get("location").is_some());
     }
 
     #[test]

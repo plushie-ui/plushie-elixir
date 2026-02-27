@@ -28,7 +28,7 @@ know julep. This doc maps iced Rust code to its julep Elixir equivalent.
 | `iced::Task` | `Julep.Command` |
 | `iced::Subscription` | `Julep.Subscription` |
 | `iced::window` | `Julep.Command` (window_open, window_close, resize_window, etc.) |
-| `iced::keyboard` | (events delivered as tuples) |
+| `iced::keyboard` | Events delivered as `%Julep.KeyEvent{}` / `%Julep.KeyModifiers{}` structs |
 
 `Julep.Iced.Widget.*` is the typed parity layer. Each widget module matches
 an iced widget 1:1 -- same name, same prop vocabulary. If iced calls it
@@ -326,9 +326,9 @@ in `update`. In julep, events are tuples received by `update/2`:
 | `Message::Selected(v)` via `pick_list`/`combo_box` | `{:select, id, value}` |
 | `Message::SliderChanged(v)` via `.on_change()` | `{:slide, id, value}` |
 | `Message::SliderReleased` via `.on_release()` | `{:slide_release, id, value}` |
-| Key press via subscription | `{:key_press, key, modifiers}` |
-| Key release via subscription | `{:key_release, key, modifiers}` |
-| Modifiers changed via subscription | `{:modifiers_changed, modifiers}` |
+| Key press via subscription | `{:key_press, %Julep.KeyEvent{}}` |
+| Key release via subscription | `{:key_release, %Julep.KeyEvent{}}` |
+| Modifiers changed via subscription | `{:modifiers_changed, %Julep.KeyModifiers{}}` |
 | Cursor moved via subscription | `{:cursor_moved, x, y}` |
 | Mouse button pressed via subscription | `{:button_pressed, button}` |
 | Mouse button released via subscription | `{:button_released, button}` |
@@ -343,6 +343,9 @@ in `update`. In julep, events are tuples received by `update/2`:
 | File dropped | `{:file_dropped, window_id, path}` |
 | Canvas press | `{:canvas_press, id, x, y, button}` |
 | Canvas move | `{:canvas_move, id, x, y}` |
+| Scrollable on_scroll | `{:scroll, id, %{absolute_x, absolute_y, relative_x, relative_y, bounds, content_bounds}}` |
+| TextInput on_paste | `{:paste, id, text}` |
+| ComboBox on_option_hovered | `{:option_hovered, id, value}` |
 | Sensor resize | `{:sensor_resize, id, width, height}` |
 | PaneGrid click | `{:pane_clicked, id, pane}` |
 | PaneGrid resize | `{:pane_resized, id, split, ratio}` |
@@ -588,6 +591,202 @@ implementation. The headless backend uses `Core` with JSONL serialization
 rather than iced_test's in-process `Simulator`. This is a consequence of
 the cross-process architecture: Elixir owns state and logic, Rust owns
 rendering. Testing must cross that boundary.
+
+## New in this parity pass
+
+### Scrollable on_scroll and auto_scroll
+
+**Iced:**
+```rust
+scrollable(content)
+    .on_scroll(Message::Scrolled)
+```
+
+**Julep.Iced.Widget:**
+```elixir
+Scrollable.new("log", on_scroll: true, auto_scroll: true)
+|> Scrollable.push(content)
+```
+
+`on_scroll: true` emits `{:scroll, id, viewport}` where viewport contains
+`absolute_x`, `absolute_y`, `relative_x`, `relative_y`, `bounds`, and
+`content_bounds`. `auto_scroll: true` keeps the scrollable pinned to the
+end when content changes.
+
+### ProgressBar vertical
+
+**Iced:**
+```rust
+progress_bar(0.0..=100.0, value).vertical()
+```
+
+**Julep.Iced.Widget:**
+```elixir
+ProgressBar.new("upload", {0, 100}, progress, vertical: true)
+```
+
+### Text shaping
+
+**Iced:**
+```rust
+text("Hello").shaping(text::Shaping::Advanced)
+```
+
+**Julep.Iced.Widget:**
+```elixir
+Text.new("greeting", "Hello", shaping: :advanced)
+```
+
+Values: `:basic`, `:advanced`, `:auto`.
+
+### Keyboard events (KeyEvent and KeyModifiers structs)
+
+**BREAKING CHANGE.** Keyboard events now use typed structs.
+
+Old format:
+```elixir
+{:key_press, key, %{ctrl: bool, shift: bool, ...}}
+```
+
+New format:
+```elixir
+{:key_press, %Julep.KeyEvent{
+  key: key,
+  modified_key: key,
+  physical_key: atom,
+  location: :standard | :left | :right | :numpad,
+  modifiers: %Julep.KeyModifiers{shift: bool, ctrl: bool, alt: bool, logo: bool, command: bool},
+  text: string | nil,
+  repeat: bool
+}}
+```
+
+All fields from iced's keyboard event are now captured: `physical_key`,
+`location`, `text`, `repeat`, and `modified_key`.
+
+### Toggler text_alignment
+
+**Iced:**
+```rust
+toggler(value).text_alignment(alignment::Horizontal::Right)
+```
+
+**Julep.Iced.Widget:**
+```elixir
+Toggler.new("dark_mode", "Dark mode", model.dark, text_alignment: :right)
+```
+
+### TextInput on_paste and icon
+
+**Iced:**
+```rust
+text_input("placeholder", &value)
+    .on_paste(Message::Pasted)
+    .icon(text_input::Icon { code_point: '\u{1F50D}', ... })
+```
+
+**Julep.Iced.Widget:**
+```elixir
+TextInput.new("search", model.query,
+  on_paste: true,
+  icon: %{code_point: "magnifying_glass", size: 16, spacing: 8, side: "left"}
+)
+```
+
+`on_paste: true` emits `{:paste, id, text}`. The `icon` prop accepts a map
+with `code_point`, `size`, `spacing`, `side`, and `font`.
+
+### ComboBox on_option_hovered and icon
+
+```elixir
+ComboBox.new("search", options,
+  on_option_hovered: true,
+  icon: %{code_point: "search", size: 14, spacing: 8, side: "left"}
+)
+```
+
+`on_option_hovered: true` emits `{:option_hovered, id, value}`. Icon format
+is the same as TextInput.
+
+### PickList handle
+
+**Iced:**
+```rust
+pick_list(options, selected, Message::Selected)
+    .handle(pick_list::Handle::Arrow { size: Some(16.0) })
+```
+
+**Julep.Iced.Widget:**
+```elixir
+PickList.new("size", options,
+  handle: %{type: "arrow", size: 16}
+)
+```
+
+Handle types: `"arrow"` (optional size), `"static"` (icon map), `"dynamic"`
+(icon map), `"none"`.
+
+### Slider circular_handle
+
+**Iced:**
+```rust
+slider(0..=100, value, Message::Changed)
+    .style(|theme, status| {
+        let mut style = slider::default(theme, status);
+        style.handle.shape = HandleShape::Circle { radius: 8.0 };
+        style
+    })
+```
+
+**Julep.Iced.Widget:**
+```elixir
+Slider.new("volume", {0, 100}, model.volume,
+  circular_handle: true,
+  handle_radius: 8
+)
+```
+
+### Window initial settings
+
+Window nodes now accept all iced window settings as props. The Runtime
+extracts them and merges with `app.window_config`:
+
+```elixir
+def view(model) do
+  window "editor",
+    width: 1200, height: 800,
+    position: {100, 100},
+    min_size: {400, 300},
+    maximized: model.start_maximized,
+    decorations: true,
+    transparent: false,
+    resizable: true do
+    # window content
+  end
+end
+```
+
+Supported props: `width`, `height`, `position`, `min_size`, `max_size`,
+`maximized`, `fullscreen`, `visible`, `resizable`, `closeable`,
+`minimizable`, `decorations`, `transparent`, `blur`, `level`,
+`exit_on_close_request`.
+
+### Application settings (antialiasing and fonts)
+
+The Rust startup sequence now reads the first stdin line synchronously for
+settings before spawning the iced daemon:
+
+```elixir
+def settings do
+  %{
+    antialiasing: true,
+    fonts: ["/path/to/CustomFont.ttf", "/path/to/Icons.otf"]
+  }
+end
+```
+
+Antialiasing is applied to the iced daemon builder. Font file paths are
+loaded at startup via `iced::font::load`.
 
 ## What julep adds that iced does not have
 

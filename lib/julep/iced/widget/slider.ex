@@ -11,6 +11,8 @@ defmodule Julep.Iced.Widget.Slider do
   - `default` (number) -- default value (double-click resets to this).
   - `height` (number) -- slider track height in pixels.
   - `shift_step` (number) -- step increment when Shift is held.
+  - `circular_handle` (boolean) -- use a circular handle instead of the
+    default rectangular one. Default: false.
   - `style` (string) -- named style. Currently only `"default"`.
 
   ## Events
@@ -29,6 +31,7 @@ defmodule Julep.Iced.Widget.Slider do
           | {:default, number()}
           | {:width, Julep.Iced.Length.t()}
           | {:height, number()}
+          | {:circular_handle, boolean()}
           | {:style, style()}
 
   @type t :: %__MODULE__{
@@ -40,10 +43,22 @@ defmodule Julep.Iced.Widget.Slider do
           default: number() | nil,
           width: Julep.Iced.Length.t() | nil,
           height: number() | nil,
+          circular_handle: boolean() | nil,
           style: style() | nil
         }
 
-  defstruct [:id, :range, :value, :step, :shift_step, :default, :width, :height, :style]
+  defstruct [
+    :id,
+    :range,
+    :value,
+    :step,
+    :shift_step,
+    :default,
+    :width,
+    :height,
+    :circular_handle,
+    :style
+  ]
 
   @doc "Creates a new slider struct with the given range, value, and optional keyword opts."
   @spec new(
@@ -68,6 +83,7 @@ defmodule Julep.Iced.Widget.Slider do
       {:default, v}, acc -> __MODULE__.default(acc, v)
       {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
+      {:circular_handle, v}, acc -> circular_handle(acc, v)
       {:style, v}, acc -> style(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -93,6 +109,11 @@ defmodule Julep.Iced.Widget.Slider do
   @spec height(slider :: t(), height :: number()) :: t()
   def height(%__MODULE__{} = slider, height), do: %{slider | height: height}
 
+  @doc "Sets whether the slider handle is circular."
+  @spec circular_handle(slider :: t(), circular_handle :: boolean()) :: t()
+  def circular_handle(%__MODULE__{} = slider, circular_handle),
+    do: %{slider | circular_handle: circular_handle}
+
   @doc "Sets the slider style."
   @spec style(slider :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = slider, style), do: %{slider | style: style}
@@ -114,6 +135,7 @@ defmodule Julep.Iced.Widget.Slider do
         |> put_if(slider.default, "default")
         |> put_if(slider.width, "width")
         |> put_if(slider.height, "height")
+        |> put_if(slider.circular_handle, "circular_handle")
         |> put_if(slider.style, "style")
 
       %{id: slider.id, type: "slider", props: props, children: []}

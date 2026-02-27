@@ -19,12 +19,21 @@ defmodule Julep.Iced.Widget.TextInput do
     Emits `{:submit, id, value}`.
   - `id` (string) -- widget ID for programmatic focus via `Julep.Command.focus/1`.
   - `style` (string) -- named style. Currently only `"default"`.
+  - `icon` (map) -- display an icon inside the input field. Map with keys:
+    - `code_point` (string) -- single character to render as the icon. Required.
+    - `size` (number) -- icon font size in pixels. Optional.
+    - `spacing` (number) -- pixels between icon and text. Default: 4.0.
+    - `side` (string) -- `"left"` or `"right"`. Default: `"left"`.
+    - `font` (string | map) -- icon font. Default: system default.
+  - `on_paste` (boolean) -- when true, emits `{:paste, id, text}` when user
+    pastes text. Default: false.
   - `secure` (boolean) -- mask input as password dots. Default: false.
 
   ## Events
 
   - `{:input, id, value}` -- emitted on every text change.
   - `{:submit, id, value}` -- emitted on Enter (requires `on_submit` prop).
+  - `{:paste, id, text}` -- emitted on paste (requires `on_paste` prop).
   """
 
   alias Julep.Iced.Widget.Build
@@ -39,7 +48,9 @@ defmodule Julep.Iced.Widget.TextInput do
           | {:font, Julep.Iced.Font.t()}
           | {:line_height, number() | map()}
           | {:align_x, Julep.Iced.Alignment.t()}
+          | {:icon, map()}
           | {:on_submit, boolean()}
+          | {:on_paste, boolean()}
           | {:secure, boolean()}
           | {:style, style()}
 
@@ -53,7 +64,9 @@ defmodule Julep.Iced.Widget.TextInput do
           font: Julep.Iced.Font.t() | nil,
           line_height: number() | map() | nil,
           align_x: Julep.Iced.Alignment.t() | nil,
+          icon: map() | nil,
           on_submit: boolean() | nil,
+          on_paste: boolean() | nil,
           secure: boolean() | nil,
           style: style() | nil
         }
@@ -68,7 +81,9 @@ defmodule Julep.Iced.Widget.TextInput do
     :font,
     :line_height,
     :align_x,
+    :icon,
     :on_submit,
+    :on_paste,
     :secure,
     :style
   ]
@@ -92,7 +107,9 @@ defmodule Julep.Iced.Widget.TextInput do
       {:font, v}, acc -> font(acc, v)
       {:line_height, v}, acc -> line_height(acc, v)
       {:align_x, v}, acc -> align_x(acc, v)
+      {:icon, v}, acc -> icon(acc, v)
       {:on_submit, v}, acc -> on_submit(acc, v)
+      {:on_paste, v}, acc -> on_paste(acc, v)
       {:secure, v}, acc -> secure(acc, v)
       {:style, v}, acc -> style(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
@@ -127,9 +144,17 @@ defmodule Julep.Iced.Widget.TextInput do
   @spec align_x(text_input :: t(), align_x :: Julep.Iced.Alignment.t()) :: t()
   def align_x(%__MODULE__{} = ti, align_x), do: %{ti | align_x: align_x}
 
+  @doc "Sets the icon displayed inside the input field."
+  @spec icon(text_input :: t(), icon :: map()) :: t()
+  def icon(%__MODULE__{} = ti, icon) when is_map(icon), do: %{ti | icon: icon}
+
   @doc "Enables or disables submit on Enter."
   @spec on_submit(text_input :: t(), on_submit :: boolean()) :: t()
   def on_submit(%__MODULE__{} = ti, on_submit), do: %{ti | on_submit: on_submit}
+
+  @doc "Enables or disables paste event emission."
+  @spec on_paste(text_input :: t(), on_paste :: boolean()) :: t()
+  def on_paste(%__MODULE__{} = ti, on_paste), do: %{ti | on_paste: on_paste}
 
   @doc "Sets whether input is masked as a password."
   @spec secure(text_input :: t(), secure :: boolean()) :: t()
@@ -157,7 +182,9 @@ defmodule Julep.Iced.Widget.TextInput do
         |> put_if(ti.font, "font")
         |> put_if(ti.line_height, "line_height")
         |> put_if(ti.align_x, "align_x")
+        |> put_if(ti.icon, "icon")
         |> put_if(ti.on_submit, "on_submit")
+        |> put_if(ti.on_paste, "on_paste")
         |> put_if(ti.secure, "secure")
         |> put_if(ti.style, "style")
 

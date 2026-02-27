@@ -603,6 +603,28 @@ defmodule Julep.Runtime do
     |> MapSet.new()
   end
 
+  # Window setting keys that can be specified as node props on window elements.
+  @window_prop_keys ~w(
+    width height position min_size max_size maximized fullscreen visible
+    resizable closeable minimizable decorations transparent blur level
+    exit_on_close_request
+  )
+
+  @spec extract_window_props(tree :: map() | nil, window_id :: String.t()) :: map()
+  defp extract_window_props(nil, _window_id), do: %{}
+
+  defp extract_window_props(tree, window_id) do
+    case Julep.Tree.find_all(tree, fn node ->
+           node.type == "window" and node.id == window_id
+         end) do
+      [%{props: props} | _] when is_map(props) ->
+        Map.take(props, @window_prop_keys)
+
+      _ ->
+        %{}
+    end
+  end
+
   @spec sync_windows(map(), map() | nil) :: map()
   defp sync_windows(state, tree) do
     new_windows = detect_windows(tree)
@@ -612,7 +634,9 @@ defmodule Julep.Runtime do
     opened = MapSet.difference(new_windows, current_windows)
 
     Enum.each(opened, fn window_id ->
-      settings = state.app.window_config(state.model)
+      base_settings = state.app.window_config(state.model)
+      per_window_props = extract_window_props(tree, window_id)
+      settings = Map.merge(base_settings, per_window_props)
 
       if state.bridge do
         Julep.Bridge.send_window_op(state.bridge, "open", window_id, settings)
