@@ -23,6 +23,7 @@ defmodule Julep.Test.Helpers do
 
   alias Julep.Test.Backend
   alias Julep.Test.Element
+  alias Julep.Test.Screenshot
   alias Julep.Test.Session
   alias Julep.Test.Snapshot
 
@@ -73,9 +74,13 @@ defmodule Julep.Test.Helpers do
   @spec tree() :: map()
   def tree, do: Session.tree(session())
 
-  @doc "Captures a pixel snapshot with the given name."
+  @doc "Captures a structural tree snapshot with the given name."
   @spec snapshot(name :: String.t()) :: Snapshot.t()
   def snapshot(name), do: Session.snapshot(session(), name)
+
+  @doc "Captures a pixel screenshot with the given name. No-op on :sim and :headless."
+  @spec screenshot(name :: String.t()) :: Screenshot.t()
+  def screenshot(name), do: Session.screenshot(session(), name)
 
   @doc "Extracts text content from an element."
   @spec text(element :: Element.t()) :: String.t() | nil
@@ -128,7 +133,7 @@ defmodule Julep.Test.Helpers do
   end
 
   @doc """
-  Captures a pixel snapshot and asserts it matches the golden file.
+  Captures a structural tree snapshot and asserts it matches the golden file.
 
   On first run, creates the golden file. On subsequent runs, compares hashes.
   Set `JULEP_UPDATE_SNAPSHOTS=1` to force-update golden files.
@@ -138,6 +143,20 @@ defmodule Julep.Test.Helpers do
     snap = snapshot(name)
     golden_dir = Path.join(["test", "snapshots"])
     Snapshot.assert_match(snap, golden_dir)
+  end
+
+  @doc """
+  Captures a pixel screenshot and asserts it matches the golden file.
+
+  On first run, creates the golden file. On subsequent runs, compares hashes.
+  Set `JULEP_UPDATE_SCREENSHOTS=1` to force-update golden files. No-op on
+  :sim and :headless backends (empty hash is silently accepted).
+  """
+  @spec assert_screenshot(name :: String.t()) :: :ok
+  def assert_screenshot(name) do
+    snap = screenshot(name)
+    golden_dir = Path.join(["test", "screenshots"])
+    Screenshot.assert_match(snap, golden_dir)
   end
 
   @doc "Waits for a tagged async task to complete."
@@ -151,16 +170,15 @@ defmodule Julep.Test.Helpers do
   @doc """
   Creates and registers a new test session for `app`.
 
-  Mirrors the setup logic from `Julep.Test.Case`. Resolves the backend from
-  opts, falling back through env var, application config, and finally `:sim`.
-  Stores the session in the process dictionary so all helper functions work
-  without explicit session threading.
+  Resolves the backend from env var, application config, or defaults to
+  `:sim`. Stores the session in the process dictionary so all helper
+  functions work without explicit session threading.
 
   Call this in a test or setup block when not using `Julep.Test.Case`.
   """
   @spec start(app :: module(), opts :: keyword()) :: Session.t()
-  def start(app, opts \\ []) do
-    backend_mod = Julep.Test.Case.resolve_backend(opts[:backend], nil)
+  def start(app, _opts \\ []) do
+    backend_mod = Julep.Test.Case.resolve_backend()
     session = Session.start(app, backend: backend_mod)
     Process.put(:julep_test_session, session)
     session

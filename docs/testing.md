@@ -2,29 +2,16 @@
 
 ## Philosophy
 
-Tests are documentation. They tell the next person how the feature works.
-
-The Elm architecture makes julep apps unusually easy to test. Your core
-callbacks are pure functions operating on plain data -- no mocks, no
-processes, no infrastructure. When you need to go deeper -- clicking
-buttons, verifying widgets appear, catching rendering regressions -- julep
-ships a test framework with progressive fidelity:
-
-1. **Sim** (pure Elixir) -- millisecond tests for logic and tree structure.
-2. **Headless** (Rust renderer, no display) -- protocol round-trips and
-   tree-hash snapshots, powered by iced's
-   [iced_test](https://docs.rs/iced_test) crate and
-   [tiny-skia](https://github.com/linebender/tiny-skia) software renderer.
-3. **Full** (real iced windows) -- GPU pixels, effects, subscriptions.
-
-Write your tests once; swap backends with a single line. Most tests should
-be sim tests. Headless and full exist for the things sim cannot catch.
+Progressive fidelity: test your app's logic with fast, pure-Elixir sim tests;
+promote to headless or full backends when you need wire-protocol verification
+or pixel-accurate screenshots. See
+[ADR-0008](decisions/0008-test-framework-architecture.md) for design rationale.
 
 
 ## Unit testing
 
-`update/2` is a pure function: model in, model out. `view/1` returns plain
-maps. You can test most of your app with nothing but ExUnit.
+`update/2` is pure, `view/1` returns maps. Plain ExUnit -- no framework
+needed.
 
 ### Testing `update/2`
 
@@ -40,8 +27,9 @@ end
 
 ### Testing commands from `update/2`
 
-Commands are data. Inspect their type, target, and tag without executing
-them.
+Commands are plain `%Julep.Command{}` structs. Pattern-match on `type` and
+`payload` to verify what `update/2` asked the runtime to do, without
+executing anything.
 
 ```elixir
 test "submitting todo refocuses the input" do
@@ -50,6 +38,13 @@ test "submitting todo refocuses the input" do
 
   assert [%{text: "Buy milk"}] = model.todos
   assert %Julep.Command{type: :focus, payload: %{target: "todo_input"}} = cmd
+end
+
+test "save triggers an async task" do
+  model = %{data: "unsaved"}
+  {_model, cmd} = MyApp.update(model, {:click, "save"})
+
+  assert %Julep.Command{type: :async, payload: %{tag: :save_result}} = cmd
 end
 ```
 
@@ -60,20 +55,8 @@ test "view shows todo count" do
   model = %{todos: [%{id: 1, text: "Buy milk", done: false}], input: "", filter: :all}
   tree = MyApp.view(model)
 
-  # Julep.UI.find/2 walks the tree by ID (see "Tree query helpers" below)
-  counter = Julep.UI.find(tree, "todo_count")
+  counter = Julep.Tree.find(tree, "todo_count")
   assert counter.props["content"] =~ "1"
-end
-```
-
-### Testing `subscribe/1`
-
-```elixir
-test "timer subscription active when running" do
-  model = %{timer_running: true}
-  subs = MyApp.subscribe(model)
-
-  assert Enum.any?(subs, fn sub -> sub.type == :every end)
 end
 ```
 
@@ -90,46 +73,53 @@ end
 
 ### Tree query helpers
 
-`Julep.UI` provides helpers for querying trees outside the test framework:
+`Julep.Tree` provides helpers for querying view trees directly:
 
 ```elixir
-Julep.UI.find(tree, "my_button")           # find by ID
-Julep.UI.exists?(tree, "my_button")        # check existence
-Julep.UI.ids(tree)                         # all IDs (depth-first)
-Julep.UI.find_all(tree, fn node ->         # find by predicate
+Julep.Tree.find(tree, "my_button")            # find node by ID
+Julep.Tree.exists?(tree, "my_button")         # check existence
+Julep.Tree.ids(tree)                          # all IDs (depth-first)
+Julep.Tree.find_all(tree, fn node ->          # find by predicate
   node.type == "button"
 end)
 ```
 
+These work on the raw `ui_node()` maps returned by `view/1`. No test
+session or backend required.
+
 ### JSON tree snapshots
 
-For complex views, snapshot the tree as JSON to catch unintended structural
-changes. `Julep.Test.assert_snapshot/2` compares a tree against a stored
-JSON file (this is separate from the pixel-level `assert_snapshot/1` in the
-test framework):
+For complex views, snapshot the entire tree as JSON to catch unintended
+structural changes. `Julep.Test.assert_tree_snapshot/2` compares a tree
+against a stored JSON file at the unit test level -- no backend needed.
 
 ```elixir
 test "initial view snapshot" do
   model = MyApp.init([])
   tree = MyApp.view(model)
 
-  Julep.Test.assert_snapshot(tree, "test/snapshots/initial_view.json")
+  Julep.Test.assert_tree_snapshot(tree, "test/snapshots/initial_view.json")
 end
 ```
 
-First run writes the file. Subsequent runs compare. Update after intentional
-changes:
+First run writes the file. Subsequent runs compare and fail with a diff on
+mismatch. Update after intentional changes:
 
 ```bash
 JULEP_UPDATE_SNAPSHOTS=1 mix test
 ```
 
+This is a pure JSON comparison -- it normalizes map key ordering for stable
+output. It is distinct from the framework's `assert_snapshot/1` (which uses
+SHA-256 hashes of the tree via a backend session) and `assert_screenshot/1`
+(which compares pixel data).
+
 
 ## The test framework
 
-Unit tests cover logic. But they can't click a button, verify a widget
+Unit tests cover logic. But they cannot click a button, verify a widget
 appears after an interaction, or catch a rendering regression when you bump
-iced. That's what the test framework is for.
+iced. That is what the test framework is for.
 
 ```elixir
 defmodule MyApp.CounterTest do
@@ -146,21 +136,23 @@ end
 down on exit. The default backend is `:sim` -- no Rust binary, no display
 server, no setup.
 
-### What you get
-
-- **`find/1`** and **`find!/1`** -- locate widgets by selector, get back an
-  `Element` struct with id, type, props, and children.
-- **`click/1`**, **`type_text/2`**, **`submit/1`**, **`toggle/1`**,
-  **`select/2`**, **`slide/2`** -- interact with widgets.
-- **`assert_text/2`**, **`assert_exists/1`**, **`assert_not_exists/1`**,
-  **`assert_model/1`** -- scoped assertions.
-- **`model/0`** and **`tree/0`** -- inspect current state directly.
-- **`snapshot/1`** and **`assert_snapshot/1`** -- pixel regression.
-- **`await_async/2`** -- wait for a tagged async task to complete.
-- **`reset/0`** -- return to initial state without creating a new session.
-
 
 ## Selectors, interactions, and assertions
+
+### Where do widget IDs come from?
+
+Every widget in julep gets an ID from the first argument to its builder or
+constructor. For example, `Button.new("save_btn", "Save")` creates a button
+with ID `"save_btn"`. In `Julep.UI`, `button("save_btn", "Save")` does the
+same thing.
+
+When using selectors in tests, prefix the ID with `#`:
+
+```elixir
+click("#save_btn")
+find!("#save_btn")
+assert_text "#save_btn", "Save"
+```
 
 ### Selectors
 
@@ -168,15 +160,18 @@ Two selector forms:
 
 - **`"#id"`** -- find by widget ID. The `#` prefix is required.
 - **`"text content"`** -- find by text content (checks `content`, `label`,
-  `value`, `placeholder` props in that order).
+  `value`, `placeholder` props in that order, depth-first).
 
-A third form for rendered backends:
-
-- **`{:point, x, y}`** -- find by pixel coordinates (headless/full only).
+```elixir
+click("#my_button")         # by ID
+find!("Click me")           # by text content
+assert_exists "#sidebar"    # by ID
+```
 
 ### Element handles
 
-`find/1` returns nil if not found. `find!/1` raises.
+`find/1` returns `nil` if not found. `find!/1` raises with a clear message.
+Both return an `Element` struct:
 
 ```elixir
 element = find!("#my-button")
@@ -186,13 +181,14 @@ element.props    # => %{"label" => "Click me", ...}
 element.children # => [...]
 ```
 
-Use `text/1` to extract display text:
+Use `text/1` to extract display text from an element:
 
 ```elixir
 assert find!("#count") |> text() == "42"
 ```
 
 `text/1` checks props in order: `content`, `label`, `value`, `placeholder`.
+Returns `nil` if no text prop is found.
 
 ### Interaction functions
 
@@ -208,49 +204,72 @@ automatically by `Julep.Test.Case`.
 | `select(selector, value)` | `pick_list`, `combo_box`, `radio` | `{:select, id_or_group, value}` |
 | `slide(selector, value)` | `slider`, `vertical_slider` | `{:slide, id, value}` |
 
-Interacting with the wrong widget type raises with a clear message. See
-[Debugging](#debugging-and-error-messages) for examples.
+Interacting with the wrong widget type raises with an actionable hint:
+
+```
+cannot click a checkbox widget -- use toggle/1 instead
+```
 
 ### Assertions
 
 ```elixir
-# Text content (assert_text is the preferred form)
+# Text content
 assert_text "#count", "42"
 
 # Existence
 assert_exists "#my-button"
 assert_not_exists "#admin-panel"
 
-# Model state
+# Full model equality
+assert_model %{count: 5, name: "test"}
+
+# Direct model inspection
 assert model().count == 5
-assert_model %{count: 5}
 
 # Direct element access when you need more control
 element = find!("#count")
 assert text(element) == "42"
-assert element.type == "button"
+assert element.type == "text"
 ```
 
 
-## Choosing a backend
+## API reference
 
-**What are you testing?**
+All of the following are imported by `use Julep.Test.Case`:
 
-- **App logic and tree structure?** Use `:sim`. It's the default, runs in
-  milliseconds, and needs nothing beyond Elixir. This covers the vast
-  majority of app testing.
+| Function | Description |
+|---|---|
+| `find(selector)` | Find element by selector, returns `nil` if not found |
+| `find!(selector)` | Find element by selector, raises if not found |
+| `click(selector)` | Click a button widget |
+| `type_text(selector, text)` | Type text into a text_input or text_editor |
+| `submit(selector)` | Submit a text_input (simulates pressing enter) |
+| `toggle(selector)` | Toggle a checkbox or toggler |
+| `select(selector, value)` | Select a value from pick_list, combo_box, or radio |
+| `slide(selector, value)` | Slide a slider to a numeric value |
+| `model()` | Returns the current app model |
+| `tree()` | Returns the current normalized UI tree |
+| `text(element)` | Extract text content from an Element struct |
+| `snapshot(name)` | Capture a structural tree snapshot |
+| `screenshot(name)` | Capture a pixel screenshot (no-op on sim/headless) |
+| `assert_text(selector, expected)` | Assert widget contains expected text |
+| `assert_exists(selector)` | Assert widget exists in the tree |
+| `assert_not_exists(selector)` | Assert widget does NOT exist in the tree |
+| `assert_model(expected)` | Assert model equals expected (strict equality) |
+| `assert_snapshot(name)` | Capture snapshot and assert it matches golden file |
+| `assert_screenshot(name)` | Capture screenshot and assert it matches golden file |
+| `await_async(tag, timeout \\ 5000)` | Wait for a tagged async task to complete |
+| `reset()` | Reset session to initial state |
+| `start(app, opts \\ [])` | Start a session manually (when not using Case) |
+| `session()` | Returns the current test session from the process dictionary |
 
-- **Bumping iced or changing the renderer?** Use `:headless`. It runs
-  your tree through the real Rust renderer, catching protocol mismatches
-  and structural drift that sim can't see. Tree-hash snapshots give you
-  a baseline to diff against.
 
-- **Platform effects, subscriptions, or pixel accuracy?** Use `:full`. Real
-  iced windows with GPU rendering. File dialogs work, timers fire,
-  screenshots capture exactly what a user would see. Use sparingly -- it's
-  the slowest backend and needs a display server.
+## Backends
 
-### Capabilities
+All tests work on all backends. Write tests once, swap backends without
+changing assertions.
+
+### Three backends
 
 | | `:sim` | `:headless` | `:full` |
 |---|---|---|---|
@@ -260,96 +279,126 @@ assert element.type == "button"
 | **Tests logic** | Yes | Yes | Yes |
 | **Tests tree structure** | Yes | Yes | Yes |
 | **Protocol round-trip** | No | Yes | Yes |
-| **Pixel snapshots** | No | Tree-hash only | Real GPU pixels |
+| **Structural snapshots** | Yes | Yes | Yes |
+| **Pixel screenshots** | No | No | Yes |
 | **Effects** | Collected, not executed | Not executed | Executed |
 | **Subscriptions** | Not active | Not active | Active |
 | **Real windows** | No | No | Yes |
 
+- **`:sim`** -- pure Elixir. Tests app logic and tree structure. No Rust, no
+  display, sub-millisecond. The right default for 90% of tests.
+
+- **`:headless`** -- real Rust renderer with `iced_test` Simulator (no
+  display server). Proves the JSONL wire protocol works end-to-end.
+  Tree-hash snapshots detect structural drift. Build with
+  `cargo build --features headless`.
+
+- **`:full`** -- real `iced::daemon` with GPU rendering. Effects work,
+  subscriptions fire, pixel screenshots capture exactly what a user sees.
+  Build with `cargo build --features test-mode`. Needs Xvfb in CI.
+
 ### Backend selection
 
-The backend is resolved through a priority chain:
+You never choose a backend in your test code. Backend selection is an
+infrastructure decision made via environment variable or application config.
+Tests are portable across all three.
 
 | Priority | Source | Example |
 |---|---|---|
-| 1 | Per-test tag | `@tag backend: :headless` |
-| 2 | Module option | `use Julep.Test.Case, app: MyApp, backend: :headless` |
-| 3 | Environment variable | `JULEP_TEST_BACKEND=headless mix test` |
-| 4 | Application config | `config :julep, :test_backend, :sim` |
-| 5 | Default | `:sim` |
+| 1 | Environment variable | `JULEP_TEST_BACKEND=headless mix test` |
+| 2 | Application config | `config :julep, :test_backend, :sim` |
+| 3 | Default | `:sim` |
 
 Atom shorthands (`:sim`, `:headless`, `:full`) and full module names
-(`Julep.Test.Backend.Sim`, etc.) both work.
+(`Julep.Test.Backend.Sim`, etc.) both work in application config.
+
+
+## Snapshots and screenshots
+
+Julep has three distinct regression testing mechanisms. Understanding the
+difference is important.
+
+### Structural snapshots (`assert_snapshot`)
+
+`assert_snapshot/1` captures a SHA-256 hash of the serialized UI tree and
+compares it against a golden file. It works on all three backends because
+every backend can produce a tree.
 
 ```elixir
-# Override a single test
-@tag backend: :headless
-test "protocol round-trip" do
-  tree = tree()
-  assert is_map(tree)
+test "counter initial state" do
+  assert_snapshot("counter-initial")
 end
 
-# Override the whole module
-use Julep.Test.Case, app: MyApp, backend: :full
-
-# Override via env for CI
-# JULEP_TEST_BACKEND=headless mix test
-```
-
-
-## Pixel regression
-
-Pixel snapshots catch visual regressions that tree-level assertions miss.
-They are most valuable when bumping iced versions or changing the renderer.
-
-### Golden file workflow
-
-```elixir
-@tag backend: :headless
-test "counter renders correctly" do
+test "counter after increment" do
   click("#increment")
   assert_snapshot("counter-at-1")
 end
 ```
 
-`assert_snapshot/1`:
+Golden files are stored in `test/snapshots/` as `.sha256` files. On first
+run, the golden file is created automatically. On subsequent runs, the hash
+is compared and the test fails on mismatch.
 
-1. Captures the current rendered state via `snapshot/1`.
-2. Looks for a golden file at `test/snapshots/<name>.sha256`.
-3. **First run:** Creates the golden file. Test passes.
-4. **Subsequent runs:** Compares hashes. Mismatch fails the test with both
-   hashes shown.
-
-### Updating golden files
-
-When the change is intentional:
+To update golden files after intentional changes:
 
 ```bash
 JULEP_UPDATE_SNAPSHOTS=1 mix test
 ```
 
-### What gets hashed
+### Pixel screenshots (`assert_screenshot`)
 
-- **Headless:** SHA-256 of the serialized tree JSON. Catches structural
-  changes but not pixel-level rendering differences.
-- **Full:** SHA-256 of actual RGBA pixel data from the GPU. Catches any
-  visual change, including fonts, spacing, and anti-aliasing.
+`assert_screenshot/1` captures real RGBA pixel data from the GPU and
+compares it against a golden file. It only produces meaningful data on the
+`:full` backend. On `:sim` and `:headless`, it silently succeeds as a no-op
+(returns an empty hash, which is accepted without creating or checking a
+golden file).
 
-### When to use pixel regression
+```elixir
+test "counter renders correctly" do
+  click("#increment")
+  assert_screenshot("counter-at-1")
+end
+```
 
-- After bumping the iced dependency.
-- When changing widget rendering code in the renderer.
-- When modifying the theme system or color handling.
-- When you need absolute confidence that "it looks the same."
+Golden files are stored in `test/screenshots/` as `.sha256` files. The
+workflow is the same as structural snapshots but uses a separate env var:
+
+```bash
+JULEP_UPDATE_SCREENSHOTS=1 mix test
+```
+
+Because screenshots silently no-op on sim and headless, you can include
+`assert_screenshot` calls in any test without conditional logic. They will
+only produce assertions when run on the full backend.
+
+### JSON tree snapshots (`assert_tree_snapshot`)
+
+`Julep.Test.assert_tree_snapshot/2` is a unit-test-level tool that compares
+a raw tree map against a stored JSON file. No backend or session needed.
+See the [Unit testing](#json-tree-snapshots) section above.
+
+### When to use each
+
+- **`assert_snapshot`** -- always appropriate. Catches structural regressions
+  (widgets appearing/disappearing, prop changes, nesting changes). Works on
+  every backend. Use liberally.
+
+- **`assert_screenshot`** -- after bumping iced, changing the renderer,
+  modifying themes, or any change that affects visual output. Only meaningful
+  on the full backend. Include alongside `assert_snapshot` for critical views.
+
+- **`assert_tree_snapshot`** -- for unit tests of `view/1` output. No
+  framework overhead. Good for documenting what a view produces for a given
+  model state.
 
 
 ## Script-based testing
 
 `.julep` scripts provide a declarative format for describing interaction
-sequences. The format is a superset of iced's
-[`.ice` test scripts](https://docs.rs/iced_test/latest/iced_test/ice/) --
-the core instructions (`click`, `type`, `expect`, `snapshot`) use the same
-syntax. Julep adds `assert_text`, `wait`, and a header section for app
-configuration.
+sequences. The format is a superset of iced's `.ice` test scripts -- the
+core instructions (`click`, `type`, `expect`, `snapshot`) use the same
+syntax. Julep adds `assert_text`, `assert_model`, `screenshot`, `wait`, and
+a header section for app configuration.
 
 ### The `.julep` format
 
@@ -366,6 +415,7 @@ click "#increment"
 click "#increment"
 expect "Count: 2"
 snapshot "counter-at-2"
+screenshot "counter-pixels"
 assert_text "#count" "2"
 wait 500
 ```
@@ -379,24 +429,25 @@ wait 500
 | `theme` | No | `dark` | Theme name |
 | `backend` | No | `sim` | Backend: `sim`, `headless`, or `full` |
 
-Lines starting with `#` are comments.
+Lines starting with `#` are comments (in both header and body sections).
 
 #### Instructions
 
-| Instruction | Syntax | Description |
-|---|---|---|
-| `click` | `click "selector"` | Click a widget |
-| `type` | `type "selector" "text"` | Type text into a widget |
-| `type` (key) | `type enter` | Send a special key (`enter`, `escape`, `tab`, `backspace`) |
-| `expect` | `expect "text"` | Assert text appears somewhere in the tree |
-| `snapshot` | `snapshot "name"` | Capture and assert a pixel snapshot |
-| `assert_text` | `assert_text "selector" "text"` | Assert widget has specific text |
-| `assert_model` | `assert_model "expression"` | Assert expression appears in inspected model |
-| `press` | `press key` | Press a key down |
-| `release` | `release key` | Release a key |
-| `move` | `move "selector"` | Move mouse to a widget |
-| `move_to` | `move_to x y` | Move mouse to pixel coordinates |
-| `wait` | `wait 500` | Pause N milliseconds (respected in replay mode) |
+| Instruction | Syntax | Sim support | Description |
+|---|---|---|---|
+| `click` | `click "selector"` | Yes | Click a widget |
+| `type` | `type "selector" "text"` | Yes | Type text into a widget |
+| `type` (key) | `type enter` | No-op | Send a special key (`enter`, `escape`, `tab`, `backspace`) |
+| `expect` | `expect "text"` | Yes | Assert text appears somewhere in the tree |
+| `snapshot` | `snapshot "name"` | Yes | Capture and assert a structural snapshot |
+| `screenshot` | `screenshot "name"` | No-op on sim/headless | Capture and assert a pixel screenshot |
+| `assert_text` | `assert_text "selector" "text"` | Yes | Assert widget has specific text |
+| `assert_model` | `assert_model "expression"` | Yes | Assert expression appears in inspected model (substring match) |
+| `press` | `press key` | No-op | Press a key down |
+| `release` | `release key` | No-op | Release a key |
+| `move` | `move "selector"` | No-op | Move mouse to a widget |
+| `move` (coords) | `move "x,y"` | No-op | Move mouse to pixel coordinates |
+| `wait` | `wait 500` | Ignored (except replay) | Pause N milliseconds |
 
 ### Running scripts
 
@@ -415,103 +466,51 @@ mix julep.replay test/scripts/counter.julep
 ```
 
 Replay mode forces the `:full` backend and respects `wait` timings, so you
-see interactions happen in real time with real windows. Use cases:
-
-- **Debugging visual issues.** See exactly what the user sees, step by step.
-- **Demos.** Walk through a feature for stakeholders without writing a
-  separate demo app.
-- **Onboarding.** New team members can replay scripts to understand user
-  flows visually.
-- **Documentation.** Record a replay to capture screenshots or screen
-  recordings for docs.
+see interactions happen in real time with real windows. Useful for debugging
+visual issues, demos, and onboarding.
 
 
-## Backend reference
+## Testing async workflows
 
-### Simulated (`:sim`)
+### On the sim backend
 
-Runs your app's `init/update/view` loop entirely in Elixir. No Rust, no
-Port, no external process.
+The sim backend executes `async`, `stream`, and `done` commands
+synchronously. When `update/2` returns a command like
+`Command.async(fn -> fetch_data() end, :data_loaded)`, the sim backend
+immediately calls the function, gets the result, and dispatches
+`{:data_loaded, result}` through `update/2` -- all within the same call.
 
-On interaction (e.g., `click("#increment")`), the sim backend finds the
-element in the tree, uses `Julep.Test.EventMap` to infer the correct event
-from the widget type, dispatches it through `update/2`, and re-renders.
+This means `await_async/2` returns `:ok` immediately (the work is already
+done):
 
-#### EventMap inference
-
-| Widget | click | type_text | submit | toggle | select | slide |
-|---|---|---|---|---|---|---|
-| `button` | `{:click, id}` | -- | -- | -- | -- | -- |
-| `checkbox` | -- | -- | -- | `{:toggle, id, !checked}` | -- | -- |
-| `toggler` | -- | -- | -- | `{:toggle, id, !toggled}` | -- | -- |
-| `radio` | -- | -- | -- | -- | `{:select, group, value}` | -- |
-| `text_input` | -- | `{:input, id, text}` | `{:submit, id, val}` | -- | -- | -- |
-| `text_editor` | -- | `{:input, id, text}` | -- | -- | -- | -- |
-| `slider` | -- | -- | -- | -- | -- | `{:slide, id, val}` |
-| `vertical_slider` | -- | -- | -- | -- | -- | `{:slide, id, val}` |
-| `pick_list` | -- | -- | -- | -- | `{:select, id, val}` | -- |
-| `combo_box` | -- | -- | -- | -- | `{:select, id, val}` | -- |
-
-#### What sim can test
-
-- App logic (model transitions).
-- Tree structure (which widgets appear, their props, nesting).
-- Event flow (interact -> update -> re-render -> assert).
-- Commands returned from `update/2` (type, target, tag -- not execution).
-
-#### What sim cannot test
-
-- Wire protocol encoding/decoding (no Rust involvement).
-- Pixel rendering.
-- Platform effects (file dialogs, clipboard, notifications).
-- Subscriptions (timers, keyboard, window events).
-
-### Headless (`:headless`)
-
-Spawns the Rust renderer in headless mode and communicates via JSONL.
-
-**Requirements:**
-
-```bash
-cd native/julep_gui && cargo build --features headless
+```elixir
+test "fetching data loads results" do
+  click("#fetch")
+  # On sim, the async command already executed synchronously.
+  # await_async is a no-op -- the model is already updated.
+  await_async(:data_loaded)
+  assert length(model().results) > 0
+end
 ```
 
-No display server needed.
+Widget ops (focus, scroll), window ops, and timers are silently skipped on
+sim because they require a renderer. Test the command shape at the unit test
+level instead:
 
-**What it adds over sim:**
+```elixir
+test "clicking fetch starts async load" do
+  model = %{loading: false, data: nil}
+  {model, cmd} = MyApp.update(model, {:click, "fetch"})
 
-- **Protocol verification.** The tree is serialized, sent to Rust, parsed,
-  and queried back -- proving the wire format works end-to-end.
-- **Tree-hash snapshots.** SHA-256 hashes of the tree JSON provide
-  structural regression detection.
-
-### Full (`:full`)
-
-Runs a real `iced::daemon` with GPU rendering, while also accepting test
-protocol messages.
-
-**Requirements:**
-
-```bash
-cd native/julep_gui && cargo build --features test-mode
+  assert model.loading == true
+  assert %Julep.Command{type: :async, payload: %{tag: :data_loaded}} = cmd
+end
 ```
 
-For CI or headless environments:
+### On headless and full backends
 
-```bash
-sudo apt-get install -y xvfb mesa-vulkan-drivers
-Xvfb :99 -screen 0 1024x768x24 &
-export DISPLAY=:99
-export WINIT_UNIX_BACKEND=x11
-```
-
-**What it adds over headless:**
-
-- **Real GPU pixels.** wgpu rendering with font rasterization and compositing.
-- **Platform effects.** File dialogs, clipboard, and notifications work.
-- **Subscriptions.** Timers, keyboard, and window events fire normally.
-- **Real window lifecycle.** Windows open, close, resize, and focus.
-- **Pixel-accurate snapshots.** Screenshots capture exactly what a user sees.
+`await_async/2` is currently a no-op on headless and full backends. See
+[testing-caveats.md](testing-caveats.md) for details and workarounds.
 
 
 ## Debugging and error messages
@@ -523,8 +522,8 @@ find!("#nonexistent")
 # ** (RuntimeError) Element not found: "#nonexistent"
 ```
 
-**Fix:** Check the selector. Use `tree()` to inspect the current tree and
-verify the widget's ID or text content:
+Use `tree()` to inspect the current tree and verify the widget's ID or text
+content:
 
 ```elixir
 tree() |> IO.inspect(label: "current tree")
@@ -537,19 +536,8 @@ click("#my-checkbox")
 # ** (RuntimeError) cannot click a checkbox widget -- use toggle/1 instead
 ```
 
-**Fix:** Use the correct interaction function. Checkboxes respond to
-`toggle/1`, not `click/1`. See the
+Use the correct interaction function for the widget type. See the
 [interaction table](#interaction-functions) for the mapping.
-
-### Snapshot on sim backend
-
-```elixir
-assert_snapshot("my-snapshot")
-# ** (RuntimeError) pixel snapshots require the :headless or :full backend --
-#    the :sim backend only tests logic and tree structure
-```
-
-**Fix:** Tag the test with `@tag backend: :headless` or `:full`.
 
 ### Headless binary not built
 
@@ -557,7 +545,7 @@ assert_snapshot("my-snapshot")
 ** (EXIT) {:renderer_exited, 1}
 ```
 
-**Fix:** Build the renderer with the headless feature:
+Build the renderer with the headless feature:
 
 ```bash
 cd native/julep_gui && cargo build --features headless
@@ -565,17 +553,13 @@ cd native/julep_gui && cargo build --features headless
 
 ### Inspecting state when a test fails
 
-When an assertion fails and you need to understand why, `model/0` and
-`tree/0` are your best tools:
+`model/0` and `tree/0` are your best debugging tools:
 
 ```elixir
 test "debugging a failing test" do
   click("#increment")
 
-  # What does the model look like?
   IO.inspect(model(), label: "model after click")
-
-  # What's in the tree?
   IO.inspect(tree(), label: "tree after click")
 
   assert find!("#count") |> text() == "1"
@@ -620,18 +604,20 @@ Requires a display server and GPU drivers.
     JULEP_TEST_BACKEND=full mix test
 ```
 
-### Mixed backend CI
+### Progressive CI
 
-Use tags to run different test subsets with different backends:
+Run sim tests fast, then promote to higher-fidelity backends for subsets:
 
 ```yaml
-# Run sim tests (fast, most tests)
-- run: mix test --exclude headless --exclude full
+# All tests on sim (fast, catches logic bugs)
+- run: mix test
 
-# Run headless tests
-- run: JULEP_TEST_BACKEND=headless mix test --only headless
+# Headless for protocol verification
+- run: |
+    cd native/julep_gui && cargo build --features headless
+    JULEP_TEST_BACKEND=headless mix test --only headless
 
-# Run full tests
+# Full for pixel regression
 - run: |
     Xvfb :99 -screen 0 1024x768x24 &
     export DISPLAY=:99
@@ -653,106 +639,16 @@ end
 ```
 
 
-## Advanced patterns
+## Known limitations
 
-### Testing async workflows
+See [testing-caveats.md](testing-caveats.md) for detailed workarounds for
+each limitation.
 
-When `update/2` returns an async command, use `await_async/2` to wait for
-completion:
-
-```elixir
-test "fetching data loads results" do
-  click("#fetch")
-  assert model().loading == true
-
-  await_async(:data_loaded)
-  assert model().loading == false
-  assert length(model().results) > 0
-end
-```
-
-In the sim backend, `await_async` returns immediately (async commands are
-collected but not executed). Test the command shape instead:
-
-```elixir
-test "clicking fetch starts async load" do
-  model = %{loading: false, data: nil}
-  {model, cmd} = MyApp.update(model, {:click, "fetch"})
-
-  assert model.loading == true
-  assert %Julep.Command{type: :async, payload: %{tag: :data_loaded}} = cmd
-end
-```
-
-### Multi-window testing
-
-The sim backend tracks the full tree including window nodes:
-
-```elixir
-test "opening settings window" do
-  click("#open-settings")
-  assert_exists "#settings-window"
-end
-```
-
-For real window lifecycle testing, use the full backend:
-
-```elixir
-@tag backend: :full
-test "settings window opens and renders" do
-  click("#open-settings")
-  assert_exists "#settings-window"
-  assert_snapshot("settings-window-open")
-end
-```
-
-### Custom selectors
-
-For cases where `#id` and text selectors aren't enough, access the session
-directly:
-
-```elixir
-test "custom query" do
-  tree = tree()
-
-  # Julep.UI.find_all/2 walks the tree depth-first with a predicate
-  buttons = Julep.UI.find_all(tree, fn n -> n.type == "button" end)
-  assert length(buttons) == 3
-end
-```
-
-### Scenario testing
-
-Chain interactions to test multi-step user flows:
-
-```elixir
-test "complete todo flow: add, toggle, filter" do
-  type_text("#todo_input", "Buy milk")
-  submit("#todo_input")
-
-  assert_text "#todo-count", "1 item"
-
-  toggle("#todo:1")
-  click("#filter-active")
-
-  assert_not_exists "#todo:1"
-  assert_text "#todo-count", "0 items"
-end
-```
-
-This reads like a user story. Anyone can understand what it tests.
-
-### Resetting session state
-
-Use `reset/0` to return to the initial state without creating a new
-session:
-
-```elixir
-test "multiple scenarios in one test" do
-  click("#increment")
-  assert model().count == 1
-
-  reset()
-  assert model().count == 0
-end
-```
+- `await_async` is a no-op on headless and full backends.
+- Script instructions `press`, `release`, `move`, `move_to` are no-ops on
+  all backends.
+- `type_key` is a no-op on all backends.
+- Pixel screenshots are only available on the full backend.
+- Script `assert_model` uses substring matching against the inspected model.
+- `submit/1` in sim uses the tree's current `value` prop, not text you
+  previously typed via `type_text`.

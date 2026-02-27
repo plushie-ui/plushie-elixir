@@ -8,6 +8,7 @@ defmodule Julep.Test.Session do
 
   alias Julep.Test.Backend
   alias Julep.Test.Element
+  alias Julep.Test.Screenshot
   alias Julep.Test.Snapshot
 
   @type t :: %__MODULE__{
@@ -70,9 +71,13 @@ defmodule Julep.Test.Session do
   @spec tree(session :: t()) :: map()
   def tree(%__MODULE__{backend: b, pid: p}), do: b.tree(p)
 
-  @doc "Captures a pixel snapshot (requires :headless or :full backend)."
+  @doc "Captures a structural tree snapshot. Works on all backends."
   @spec snapshot(session :: t(), name :: String.t()) :: Snapshot.t()
   def snapshot(%__MODULE__{backend: b, pid: p}, name), do: b.snapshot(p, name)
+
+  @doc "Captures a pixel screenshot. Only produces data on :full backend."
+  @spec screenshot(session :: t(), name :: String.t()) :: Screenshot.t()
+  def screenshot(%__MODULE__{backend: b, pid: p}, name), do: b.screenshot(p, name)
 
   @doc "Resets the session to initial state."
   @spec reset(session :: t()) :: :ok

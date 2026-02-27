@@ -8,14 +8,15 @@ defmodule Julep.Test.Backend do
   - `:headless` -- real Rust renderer with iced_test Simulator. Pixel snapshots.
   - `:full` -- real iced windows (Xvfb in CI). Effects, subscriptions, GPU rendering.
 
-  All backends return the same types (`Element`, `Snapshot`, etc.) so tests
-  can switch backends without changing assertions.
+  All backends return the same types (`Element`, `Snapshot`, `Screenshot`,
+  etc.) so tests can switch backends without changing assertions.
   """
 
   alias Julep.Test.Element
+  alias Julep.Test.Screenshot
   alias Julep.Test.Snapshot
 
-  @type selector :: String.t() | {:point, number(), number()}
+  @type selector :: String.t()
 
   @callback start(app :: module(), opts :: keyword()) :: {:ok, pid()}
   @callback stop(session :: pid()) :: :ok
@@ -30,6 +31,7 @@ defmodule Julep.Test.Backend do
   @callback model(session :: pid()) :: term()
   @callback tree(session :: pid()) :: map()
   @callback snapshot(session :: pid(), name :: String.t()) :: Snapshot.t()
+  @callback screenshot(session :: pid(), name :: String.t()) :: Screenshot.t()
   @callback reset(session :: pid()) :: :ok
   @callback await_async(session :: pid(), tag :: atom(), timeout :: non_neg_integer()) :: :ok
 end

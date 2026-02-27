@@ -45,7 +45,8 @@ Introduce a three-backend test framework behind a unified API:
 - **`Julep.Test.Case`** -- ExUnit case template with automatic setup/teardown.
 - **`Julep.Test.Helpers`** -- convenience functions imported by Case.
 - **`Julep.Test.Element`** -- struct representing a found widget.
-- **`Julep.Test.Snapshot`** -- pixel snapshot with golden-file comparison.
+- **`Julep.Test.Snapshot`** -- structural tree snapshot with golden-file comparison.
+- **`Julep.Test.Screenshot`** -- pixel screenshot with golden-file comparison.
 - **`Julep.Test.EventMap`** -- widget-type-to-event inference for sim.
 - **`Julep.Test.Script`** -- parser for `.julep` test scripts.
 - **`Julep.Test.Script.Runner`** -- executor for parsed scripts.

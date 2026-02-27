@@ -124,6 +124,17 @@ defmodule Julep.Test.ScriptTest do
       assert msg =~ "unknown instruction"
     end
 
+    test "parses screenshot instruction" do
+      input = """
+      app: Test
+      -----
+      screenshot "home-screen"
+      """
+
+      assert {:ok, script} = Script.parse(input)
+      assert script.instructions == [{:screenshot, "home-screen"}]
+    end
+
     test "parses headless and full backend values" do
       for {backend_str, expected} <- [{"headless", :headless}, {"full", :full}] do
         input = """

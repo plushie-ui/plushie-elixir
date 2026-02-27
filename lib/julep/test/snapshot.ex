@@ -1,9 +1,10 @@
 defmodule Julep.Test.Snapshot do
   @moduledoc """
-  Pixel snapshot for visual regression testing.
+  Structural tree snapshot for regression testing.
 
-  Captures RGBA pixel data from rendered backends (:headless, :full) and
-  compares against golden files using SHA-256 hashes.
+  Captures a hash of the serialized UI tree structure and compares against
+  golden files using SHA-256 hashes. Works on all backends (:sim, :headless,
+  :full).
 
   ## Golden file workflow
 
@@ -22,7 +23,7 @@ defmodule Julep.Test.Snapshot do
   defstruct [:name, :hash, :size, :rgba_data]
 
   @doc """
-  Asserts that a snapshot matches its golden file.
+  Asserts that a structural snapshot matches its golden file.
 
   If no golden file exists, creates one (first run). If `JULEP_UPDATE_SNAPSHOTS=1`
   is set, updates the golden file. Otherwise, compares SHA-256 hashes and raises

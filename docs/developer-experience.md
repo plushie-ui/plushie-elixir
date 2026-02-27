@@ -133,39 +133,46 @@ defmodule MyAppTest do
 end
 ```
 
-### Snapshot tests
+### Tree snapshots
 
 ```elixir
 test "initial view snapshot" do
   model = MyApp.init([])
   tree = MyApp.view(model)
-  assert_snapshot(tree, "test/snapshots/initial_view.json")
+  Julep.Test.assert_tree_snapshot(tree, "test/snapshots/initial_view.json")
 end
 ```
 
-`assert_snapshot` compares the tree against a stored JSON file. On first
-run (or with `JULEP_UPDATE_SNAPSHOTS=1`), it writes the file. On subsequent
-runs, it asserts equality.
+`assert_tree_snapshot` compares the tree against a stored JSON file. On
+first run (or with `JULEP_UPDATE_SNAPSHOTS=1`), it writes the file. On
+subsequent runs, it asserts equality. This is a pure JSON comparison at the
+unit test level -- no backend or session needed.
 
-### Integration tests (with renderer)
+For framework-level structural snapshots (SHA-256 hash comparison via a
+test session), use `assert_snapshot("name")`. For pixel-level screenshots
+(full backend only, no-op on sim/headless), use `assert_screenshot("name")`
+with `JULEP_UPDATE_SCREENSHOTS=1` to update golden files. See
+[testing.md](testing.md) for full details.
 
-For tests that need the actual renderer (visual regression, interaction
-flows), julep provides a test helper that starts the renderer in headless
-mode (iced 0.14 supports this natively):
+### Integration tests (with test framework)
+
+For tests that need interaction simulation (clicking buttons, typing text,
+verifying widgets appear), use the test framework:
 
 ```elixir
 defmodule MyAppIntegrationTest do
-  use Julep.IntegrationCase
+  use Julep.Test.Case, app: MyApp
 
   test "clicking increment updates the count" do
-    {:ok, app} = start_app(MyApp)
-    send_event(app, {:click, "inc"})
-    assert_tree(app, fn tree ->
-      Julep.UI.find(tree, fn n -> n.props["content"] == "Count: 1" end)
-    end)
+    click("#inc")
+    assert_text "#count", "Count: 1"
   end
 end
 ```
+
+The default backend is `:sim` (pure Elixir, no renderer needed). Set
+`JULEP_TEST_BACKEND=headless` or `JULEP_TEST_BACKEND=full` for higher
+fidelity. See [testing.md](testing.md) for the full guide.
 
 ## Project structure
 

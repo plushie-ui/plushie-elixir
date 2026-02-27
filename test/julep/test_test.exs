@@ -1,13 +1,13 @@
 defmodule Julep.TestTest do
   use ExUnit.Case, async: true
 
-  describe "assert_snapshot/2" do
+  describe "assert_tree_snapshot/2" do
     @tag :tmp_dir
     test "creates snapshot on first run", %{tmp_dir: tmp_dir} do
       tree = %{id: "root", type: "text", props: %{"content" => "hello"}, children: []}
       path = Path.join(tmp_dir, "snapshot.json")
 
-      Julep.Test.assert_snapshot(tree, path)
+      Julep.Test.assert_tree_snapshot(tree, path)
       assert File.exists?(path)
       stored = Jason.decode!(File.read!(path))
       assert stored["id"] == "root"
@@ -18,9 +18,9 @@ defmodule Julep.TestTest do
       tree = %{id: "root", type: "text", props: %{"content" => "hello"}, children: []}
       path = Path.join(tmp_dir, "snapshot.json")
 
-      Julep.Test.assert_snapshot(tree, path)
+      Julep.Test.assert_tree_snapshot(tree, path)
       # Second call should pass
-      Julep.Test.assert_snapshot(tree, path)
+      Julep.Test.assert_tree_snapshot(tree, path)
     end
 
     @tag :tmp_dir
@@ -29,10 +29,10 @@ defmodule Julep.TestTest do
       tree2 = %{id: "root", type: "text", props: %{"content" => "world"}, children: []}
       path = Path.join(tmp_dir, "snapshot.json")
 
-      Julep.Test.assert_snapshot(tree1, path)
+      Julep.Test.assert_tree_snapshot(tree1, path)
 
       assert_raise ExUnit.AssertionError, fn ->
-        Julep.Test.assert_snapshot(tree2, path)
+        Julep.Test.assert_tree_snapshot(tree2, path)
       end
     end
   end

@@ -7,7 +7,7 @@ defmodule Julep.Test.EventMapTest do
   # -- Helpers --
 
   defp el(id, type, props \\ %{}) do
-    %Element{id: id, type: type, props: props, children: [], bounds: nil}
+    %Element{id: id, type: type, props: props, children: []}
   end
 
   # -- click/1 --

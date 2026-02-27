@@ -6,7 +6,7 @@ defmodule Julep.Test.Script.Runner do
   and collects results.
   """
 
-  alias Julep.Test.{Session, Script, Snapshot}
+  alias Julep.Test.{Screenshot, Session, Script, Snapshot}
 
   @backend_map %{
     sim: Julep.Test.Backend.Sim,
@@ -63,27 +63,34 @@ defmodule Julep.Test.Script.Runner do
   end
 
   defp execute(_session, {:type_key, _key}, _replay?) do
-    # Key events require subscription support -- skip in sim mode
+    # No-op: key press/release events require subscription support which the
+    # interact protocol doesn't implement yet. See docs/testing-caveats.md.
     :ok
   end
 
   defp execute(_session, {:press, _key}, _replay?) do
-    # Key press requires subscription support -- no-op in sim mode
+    # No-op: key press/release events require subscription support which the
+    # interact protocol doesn't implement yet. See docs/testing-caveats.md.
     :ok
   end
 
   defp execute(_session, {:release, _key}, _replay?) do
-    # Key release requires subscription support -- no-op in sim mode
+    # No-op: key press/release events require subscription support which the
+    # interact protocol doesn't implement yet. See docs/testing-caveats.md.
     :ok
   end
 
   defp execute(_session, {:move, _selector}, _replay?) do
-    # Mouse move requires a rendered backend -- no-op in sim mode
+    # No-op: mouse move events require a rendered backend with spatial
+    # layout. The interact protocol doesn't support this yet.
+    # See docs/testing-caveats.md.
     :ok
   end
 
   defp execute(_session, {:move_to, _x, _y}, _replay?) do
-    # Mouse move requires a rendered backend -- no-op in sim mode
+    # No-op: mouse move events require a rendered backend with spatial
+    # layout. The interact protocol doesn't support this yet.
+    # See docs/testing-caveats.md.
     :ok
   end
 
@@ -114,6 +121,15 @@ defmodule Julep.Test.Script.Runner do
     snap = Session.snapshot(session, name)
     golden_dir = Path.join(["test", "snapshots"])
     Snapshot.assert_match(snap, golden_dir)
+    :ok
+  rescue
+    e -> {:error, Exception.message(e)}
+  end
+
+  defp execute(session, {:screenshot, name}, _replay?) do
+    screenshot = Session.screenshot(session, name)
+    golden_dir = Path.join(["test", "screenshots"])
+    Screenshot.assert_match(screenshot, golden_dir)
     :ok
   rescue
     e -> {:error, Exception.message(e)}

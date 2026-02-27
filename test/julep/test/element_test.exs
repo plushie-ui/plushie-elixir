@@ -12,7 +12,6 @@ defmodule Julep.Test.ElementTest do
       assert element.type == "button"
       assert element.props == %{"label" => "OK"}
       assert element.children == []
-      assert element.bounds == nil
     end
 
     test "creates element from string-keyed map" do

@@ -3,6 +3,8 @@ defmodule Julep.Test.SimTest do
 
   alias Julep.Test.Backend.Sim
   alias Julep.Test.Element
+  alias Julep.Test.Screenshot
+  alias Julep.Test.Snapshot
 
   defmodule CounterApp do
     use Julep.App
@@ -149,10 +151,344 @@ defmodule Julep.Test.SimTest do
   end
 
   describe "snapshot/2" do
-    test "raises with clear message about backend requirement", %{pid: pid} do
-      assert_raise RuntimeError, ~r/headless.*full/i, fn ->
-        Sim.snapshot(pid, "my-snapshot")
+    test "returns a Snapshot struct with a non-empty hash", %{pid: pid} do
+      snap = Sim.snapshot(pid, "my-snapshot")
+      assert %Snapshot{} = snap
+      assert snap.name == "my-snapshot"
+      assert snap.hash != ""
+      assert String.length(snap.hash) == 64
+    end
+
+    test "produces consistent hashes for the same tree state", %{pid: pid} do
+      snap1 = Sim.snapshot(pid, "a")
+      snap2 = Sim.snapshot(pid, "b")
+      assert snap1.hash == snap2.hash
+    end
+
+    test "produces different hashes after state changes", %{pid: pid} do
+      snap_before = Sim.snapshot(pid, "before")
+      Sim.click(pid, "#increment")
+      snap_after = Sim.snapshot(pid, "after")
+      refute snap_before.hash == snap_after.hash
+    end
+  end
+
+  describe "screenshot/2" do
+    test "returns a Screenshot struct with empty hash (no-op)", %{pid: pid} do
+      shot = Sim.screenshot(pid, "my-screenshot")
+      assert %Screenshot{} = shot
+      assert shot.name == "my-screenshot"
+      assert shot.hash == ""
+      assert shot.size == {0, 0}
+      assert shot.rgba_data == nil
+    end
+  end
+
+  describe "command processing" do
+    defmodule AsyncApp do
+      use Julep.App
+
+      def init(_opts), do: %{value: nil}
+
+      def update(model, {:click, "fetch"}) do
+        cmd = Julep.Command.async(fn -> 42 end, :fetched)
+        {model, cmd}
       end
+
+      def update(model, {:fetched, result}), do: %{model | value: result}
+      def update(model, _event), do: model
+
+      def view(model) do
+        %{
+          id: "root",
+          type: "column",
+          props: %{},
+          children: [
+            %{
+              id: "display",
+              type: "text",
+              props: %{"content" => "Value: #{inspect(model.value)}"},
+              children: []
+            },
+            %{id: "fetch", type: "button", props: %{"label" => "Fetch"}, children: []}
+          ]
+        }
+      end
+    end
+
+    test "async command is executed and result dispatched through update" do
+      {:ok, pid} = Sim.start(AsyncApp)
+      on_exit(fn -> if Process.alive?(pid), do: Sim.stop(pid) end)
+
+      assert Sim.model(pid).value == nil
+
+      Sim.click(pid, "#fetch")
+      assert Sim.model(pid).value == 42
+    end
+
+    defmodule DoneApp do
+      use Julep.App
+
+      def init(_opts), do: %{greeting: nil}
+
+      def update(model, {:click, "greet"}) do
+        cmd = Julep.Command.done("world", fn name -> {:greeted, "hello #{name}"} end)
+        {model, cmd}
+      end
+
+      def update(model, {:greeted, msg}), do: %{model | greeting: msg}
+      def update(model, _event), do: model
+
+      def view(model) do
+        %{
+          id: "root",
+          type: "column",
+          props: %{},
+          children: [
+            %{
+              id: "msg",
+              type: "text",
+              props: %{"content" => inspect(model.greeting)},
+              children: []
+            },
+            %{id: "greet", type: "button", props: %{"label" => "Greet"}, children: []}
+          ]
+        }
+      end
+    end
+
+    test "done command maps value and dispatches through update" do
+      {:ok, pid} = Sim.start(DoneApp)
+      on_exit(fn -> if Process.alive?(pid), do: Sim.stop(pid) end)
+
+      Sim.click(pid, "#greet")
+      assert Sim.model(pid).greeting == "hello world"
+    end
+
+    defmodule SkippedOpsApp do
+      use Julep.App
+
+      def init(_opts), do: %{clicked: false}
+
+      def update(model, {:click, "go"}) do
+        cmds = [
+          Julep.Command.focus("some_input"),
+          Julep.Command.scroll_to("scroller", 0),
+          Julep.Command.close_window("win"),
+          Julep.Command.none()
+        ]
+
+        {%{model | clicked: true}, cmds}
+      end
+
+      def update(model, _event), do: model
+
+      def view(model) do
+        %{
+          id: "root",
+          type: "column",
+          props: %{},
+          children: [
+            %{id: "go", type: "button", props: %{"label" => "Go"}, children: []},
+            %{
+              id: "status",
+              type: "text",
+              props: %{"content" => "clicked=#{model.clicked}"},
+              children: []
+            }
+          ]
+        }
+      end
+    end
+
+    test "widget ops and window ops are silently skipped" do
+      {:ok, pid} = Sim.start(SkippedOpsApp)
+      on_exit(fn -> if Process.alive?(pid), do: Sim.stop(pid) end)
+
+      Sim.click(pid, "#go")
+      assert Sim.model(pid).clicked == true
+    end
+
+    defmodule ChainedAsyncApp do
+      use Julep.App
+
+      def init(_opts), do: %{steps: []}
+
+      def update(model, {:click, "start"}) do
+        cmd = Julep.Command.async(fn -> :step_1 end, :chain)
+        {model, cmd}
+      end
+
+      def update(model, {:chain, :step_1}) do
+        model = %{model | steps: model.steps ++ [:step_1]}
+        cmd = Julep.Command.async(fn -> :step_2 end, :chain)
+        {model, cmd}
+      end
+
+      def update(model, {:chain, :step_2}) do
+        model = %{model | steps: model.steps ++ [:step_2]}
+        cmd = Julep.Command.async(fn -> :step_3 end, :chain)
+        {model, cmd}
+      end
+
+      def update(model, {:chain, :step_3}) do
+        %{model | steps: model.steps ++ [:step_3]}
+      end
+
+      def update(model, _event), do: model
+
+      def view(model) do
+        %{
+          id: "root",
+          type: "column",
+          props: %{},
+          children: [
+            %{id: "start", type: "button", props: %{"label" => "Start"}, children: []},
+            %{
+              id: "steps",
+              type: "text",
+              props: %{"content" => inspect(model.steps)},
+              children: []
+            }
+          ]
+        }
+      end
+    end
+
+    test "chained async commands are processed to completion" do
+      {:ok, pid} = Sim.start(ChainedAsyncApp)
+      on_exit(fn -> if Process.alive?(pid), do: Sim.stop(pid) end)
+
+      Sim.click(pid, "#start")
+      assert Sim.model(pid).steps == [:step_1, :step_2, :step_3]
+    end
+
+    defmodule BatchApp do
+      use Julep.App
+
+      def init(_opts), do: %{a: nil, b: nil}
+
+      def update(model, {:click, "go"}) do
+        cmds =
+          Julep.Command.batch([
+            Julep.Command.async(fn -> :val_a end, :got_a),
+            Julep.Command.async(fn -> :val_b end, :got_b)
+          ])
+
+        {model, cmds}
+      end
+
+      def update(model, {:got_a, val}), do: %{model | a: val}
+      def update(model, {:got_b, val}), do: %{model | b: val}
+      def update(model, _event), do: model
+
+      def view(_model) do
+        %{
+          id: "root",
+          type: "column",
+          props: %{},
+          children: [
+            %{id: "go", type: "button", props: %{"label" => "Go"}, children: []}
+          ]
+        }
+      end
+    end
+
+    test "batch commands are unwrapped and each sub-command is processed" do
+      {:ok, pid} = Sim.start(BatchApp)
+      on_exit(fn -> if Process.alive?(pid), do: Sim.stop(pid) end)
+
+      Sim.click(pid, "#go")
+      model = Sim.model(pid)
+      assert model.a == :val_a
+      assert model.b == :val_b
+    end
+
+    defmodule StreamApp do
+      use Julep.App
+
+      def init(_opts), do: %{chunks: [], final: nil}
+
+      def update(model, {:click, "stream"}) do
+        cmd =
+          Julep.Command.stream(
+            fn emit ->
+              emit.({:chunk, "a"})
+              emit.({:chunk, "b"})
+              emit.({:chunk, "c"})
+              :done
+            end,
+            :import
+          )
+
+        {model, cmd}
+      end
+
+      def update(model, {:import, {:chunk, val}}) do
+        %{model | chunks: model.chunks ++ [val]}
+      end
+
+      def update(model, {:import, :done}) do
+        %{model | final: :done}
+      end
+
+      def update(model, _event), do: model
+
+      def view(_model) do
+        %{
+          id: "root",
+          type: "column",
+          props: %{},
+          children: [
+            %{id: "stream", type: "button", props: %{"label" => "Stream"}, children: []}
+          ]
+        }
+      end
+    end
+
+    test "stream command processes emitted values and final result" do
+      {:ok, pid} = Sim.start(StreamApp)
+      on_exit(fn -> if Process.alive?(pid), do: Sim.stop(pid) end)
+
+      Sim.click(pid, "#stream")
+      model = Sim.model(pid)
+      assert model.chunks == ["a", "b", "c"]
+      assert model.final == :done
+    end
+
+    defmodule InitCommandApp do
+      use Julep.App
+
+      def init(_opts) do
+        cmd = Julep.Command.async(fn -> "loaded" end, :init_data)
+        {%{data: nil}, cmd}
+      end
+
+      def update(model, {:init_data, val}), do: %{model | data: val}
+      def update(model, _event), do: model
+
+      def view(model) do
+        %{
+          id: "root",
+          type: "text",
+          props: %{"content" => inspect(model.data)},
+          children: []
+        }
+      end
+    end
+
+    test "commands from init are processed" do
+      {:ok, pid} = Sim.start(InitCommandApp)
+      on_exit(fn -> if Process.alive?(pid), do: Sim.stop(pid) end)
+
+      assert Sim.model(pid).data == "loaded"
+    end
+
+    test "await_async is a no-op (work is already done synchronously)" do
+      {:ok, pid} = Sim.start(AsyncApp)
+      on_exit(fn -> if Process.alive?(pid), do: Sim.stop(pid) end)
+
+      assert Sim.await_async(pid, :whatever) == :ok
     end
   end
 

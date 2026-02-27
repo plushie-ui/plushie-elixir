@@ -39,6 +39,7 @@ defmodule Julep.Test.Backend.Full do
   use GenServer
 
   alias Julep.Test.Element
+  alias Julep.Test.Screenshot
   alias Julep.Test.Snapshot
 
   # -- Backend callbacks --
@@ -98,6 +99,11 @@ defmodule Julep.Test.Backend.Full do
 
   @impl Julep.Test.Backend
   def snapshot(pid, name), do: GenServer.call(pid, {:snapshot, name}, 30_000)
+
+  @impl Julep.Test.Backend
+  def screenshot(_pid, name) do
+    %Screenshot{name: name, hash: "", size: {0, 0}, rgba_data: nil}
+  end
 
   @impl Julep.Test.Backend
   def reset(pid), do: GenServer.call(pid, :reset, 15_000)
@@ -352,7 +358,6 @@ defmodule Julep.Test.Backend.Full do
   end
 
   defp encode_selector("#" <> id), do: %{"by" => "id", "value" => id}
-  defp encode_selector({:point, x, y}), do: %{"by" => "point", "x" => x, "y" => y}
   defp encode_selector(text) when is_binary(text), do: %{"by" => "text", "value" => text}
 
   defp send_message(port, msg) do

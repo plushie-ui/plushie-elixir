@@ -3,19 +3,17 @@ defmodule Julep.Test.Element do
   Represents a widget element found in the UI tree during testing.
 
   Created by `find/2` and used for scoped assertions. Contains the widget's
-  ID, type, props, children, and optional layout bounds (populated only by
-  rendered backends like :headless and :full).
+  ID, type, props, and children.
   """
 
   @type t :: %__MODULE__{
           id: String.t(),
           type: String.t(),
           props: map(),
-          children: [t()],
-          bounds: {number(), number(), number(), number()} | nil
+          children: [t()]
         }
 
-  defstruct [:id, :type, :props, :children, :bounds]
+  defstruct [:id, :type, :props, :children]
 
   @doc "Creates an Element from a ui_node map (%{id, type, props, children})."
   @spec from_node(node :: map()) :: t()
@@ -24,8 +22,7 @@ defmodule Julep.Test.Element do
       id: node[:id] || node["id"],
       type: node[:type] || node["type"],
       props: node[:props] || node["props"] || %{},
-      children: (node[:children] || node["children"] || []) |> Enum.map(&from_node/1),
-      bounds: nil
+      children: (node[:children] || node["children"] || []) |> Enum.map(&from_node/1)
     }
   end
 

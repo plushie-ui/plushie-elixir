@@ -15,15 +15,11 @@ defmodule Julep.Test.Case do
 
   ## Backend selection
 
-  The backend determines how deeply interactions are tested:
+  The backend is resolved from environment or application config:
 
-  | Priority | Source | Example |
-  |----------|--------|---------|
-  | 1 | Per-test tag | `@tag backend: :headless` |
-  | 2 | Module option | `use Julep.Test.Case, app: MyApp, backend: :headless` |
-  | 3 | Environment variable | `JULEP_TEST_BACKEND=headless` |
-  | 4 | Application config | `config :julep, :test_backend, :sim` |
-  | 5 | Default | `:sim` |
+  - `JULEP_TEST_BACKEND` env var (e.g. `headless`, `full`, `sim`)
+  - `config :julep, :test_backend, :sim` application config
+  - Default: `:sim`
   """
 
   use ExUnit.CaseTemplate
@@ -32,17 +28,12 @@ defmodule Julep.Test.Case do
 
   using opts do
     app = Keyword.fetch!(opts, :app)
-    default_backend = Keyword.get(opts, :backend)
 
     quote do
       import Julep.Test.Helpers
 
-      setup context do
-        backend_mod =
-          Julep.Test.Case.resolve_backend(
-            context[:backend],
-            unquote(default_backend)
-          )
+      setup _context do
+        backend_mod = Julep.Test.Case.resolve_backend()
 
         session = Session.start(unquote(app), backend: backend_mod)
         Process.put(:julep_test_session, session)
@@ -63,18 +54,9 @@ defmodule Julep.Test.Case do
   }
 
   @doc false
-  @spec resolve_backend(
-          tag_backend :: atom() | module() | nil,
-          module_backend :: atom() | module() | nil
-        ) :: module()
-  def resolve_backend(tag_backend, module_backend) do
+  @spec resolve_backend() :: module()
+  def resolve_backend do
     cond do
-      tag_backend ->
-        Map.get(@backend_map, tag_backend, tag_backend)
-
-      module_backend ->
-        Map.get(@backend_map, module_backend, module_backend)
-
       env = System.get_env("JULEP_TEST_BACKEND") ->
         Map.get(@backend_map, String.to_existing_atom(env), Julep.Test.Backend.Sim)
 

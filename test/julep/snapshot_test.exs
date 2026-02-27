@@ -80,7 +80,7 @@ defmodule Julep.SnapshotTest do
       path = tmp_snapshot_path("first_run.json")
       refute File.exists?(path)
 
-      result = Julep.Test.assert_snapshot(simple_tree(), path)
+      result = Julep.Test.assert_tree_snapshot(simple_tree(), path)
 
       assert result == :ok
       assert File.exists?(path)
@@ -90,7 +90,7 @@ defmodule Julep.SnapshotTest do
       path = tmp_snapshot_path("deeply/nested/dir/snap.json")
       refute File.exists?(Path.dirname(path))
 
-      assert :ok = Julep.Test.assert_snapshot(simple_tree(), path)
+      assert :ok = Julep.Test.assert_tree_snapshot(simple_tree(), path)
       assert File.exists?(path)
     end
   end
@@ -105,17 +105,17 @@ defmodule Julep.SnapshotTest do
       tree = simple_tree()
 
       # First run -- writes
-      assert :ok = Julep.Test.assert_snapshot(tree, path)
+      assert :ok = Julep.Test.assert_tree_snapshot(tree, path)
       # Second run -- compares
-      assert :ok = Julep.Test.assert_snapshot(tree, path)
+      assert :ok = Julep.Test.assert_tree_snapshot(tree, path)
     end
 
     test "passes on identical nested trees" do
       path = tmp_snapshot_path("match_nested.json")
       tree = nested_tree()
 
-      assert :ok = Julep.Test.assert_snapshot(tree, path)
-      assert :ok = Julep.Test.assert_snapshot(tree, path)
+      assert :ok = Julep.Test.assert_tree_snapshot(tree, path)
+      assert :ok = Julep.Test.assert_tree_snapshot(tree, path)
     end
   end
 
@@ -130,12 +130,12 @@ defmodule Julep.SnapshotTest do
       changed = put_in(original, [:props, "title"], "Changed Title")
 
       # Write the original
-      assert :ok = Julep.Test.assert_snapshot(original, path)
+      assert :ok = Julep.Test.assert_tree_snapshot(original, path)
 
       # Compare with the changed tree -- should blow up
       error =
         assert_raise ExUnit.AssertionError, fn ->
-          Julep.Test.assert_snapshot(changed, path)
+          Julep.Test.assert_tree_snapshot(changed, path)
         end
 
       assert error.message =~ "Snapshot mismatch"
@@ -148,11 +148,11 @@ defmodule Julep.SnapshotTest do
       original = simple_tree()
       changed = put_in(original, [:props, "title"], "New Title")
 
-      assert :ok = Julep.Test.assert_snapshot(original, path)
+      assert :ok = Julep.Test.assert_tree_snapshot(original, path)
 
       error =
         assert_raise ExUnit.AssertionError, fn ->
-          Julep.Test.assert_snapshot(changed, path)
+          Julep.Test.assert_tree_snapshot(changed, path)
         end
 
       assert error.message =~ "Expected (stored):"
@@ -175,14 +175,14 @@ defmodule Julep.SnapshotTest do
       changed = put_in(original, [:props, "title"], "Updated Title")
 
       # Write original
-      assert :ok = Julep.Test.assert_snapshot(original, path)
+      assert :ok = Julep.Test.assert_tree_snapshot(original, path)
       original_contents = File.read!(path)
 
       # Enable update mode
       System.put_env("JULEP_UPDATE_SNAPSHOTS", "1")
 
       # Should not raise -- should overwrite
-      assert :ok = Julep.Test.assert_snapshot(changed, path)
+      assert :ok = Julep.Test.assert_tree_snapshot(changed, path)
 
       updated_contents = File.read!(path)
       refute original_contents == updated_contents
@@ -195,15 +195,15 @@ defmodule Julep.SnapshotTest do
       changed = put_in(original, [:props, "title"], "V2 Title")
 
       # Write original
-      assert :ok = Julep.Test.assert_snapshot(original, path)
+      assert :ok = Julep.Test.assert_tree_snapshot(original, path)
 
       # Overwrite
       System.put_env("JULEP_UPDATE_SNAPSHOTS", "1")
-      assert :ok = Julep.Test.assert_snapshot(changed, path)
+      assert :ok = Julep.Test.assert_tree_snapshot(changed, path)
 
       # Now compare without update mode
       System.delete_env("JULEP_UPDATE_SNAPSHOTS")
-      assert :ok = Julep.Test.assert_snapshot(changed, path)
+      assert :ok = Julep.Test.assert_tree_snapshot(changed, path)
     end
 
     test "does not overwrite when env var is set to something other than 1" do
@@ -211,12 +211,12 @@ defmodule Julep.SnapshotTest do
       original = simple_tree()
       changed = put_in(original, [:props, "title"], "Nope")
 
-      assert :ok = Julep.Test.assert_snapshot(original, path)
+      assert :ok = Julep.Test.assert_tree_snapshot(original, path)
 
       System.put_env("JULEP_UPDATE_SNAPSHOTS", "yes")
 
       assert_raise ExUnit.AssertionError, fn ->
-        Julep.Test.assert_snapshot(changed, path)
+        Julep.Test.assert_tree_snapshot(changed, path)
       end
     end
   end
@@ -230,15 +230,15 @@ defmodule Julep.SnapshotTest do
       path = tmp_snapshot_path("nested_roundtrip.json")
       tree = nested_tree()
 
-      assert :ok = Julep.Test.assert_snapshot(tree, path)
-      assert :ok = Julep.Test.assert_snapshot(tree, path)
+      assert :ok = Julep.Test.assert_tree_snapshot(tree, path)
+      assert :ok = Julep.Test.assert_tree_snapshot(tree, path)
     end
 
     test "nested tree snapshot preserves all node types and props" do
       path = tmp_snapshot_path("nested_contents.json")
       tree = nested_tree()
 
-      assert :ok = Julep.Test.assert_snapshot(tree, path)
+      assert :ok = Julep.Test.assert_tree_snapshot(tree, path)
 
       stored = File.read!(path)
       decoded = Jason.decode!(stored)
@@ -277,7 +277,7 @@ defmodule Julep.SnapshotTest do
       path = tmp_snapshot_path("nested_change.json")
       tree = nested_tree()
 
-      assert :ok = Julep.Test.assert_snapshot(tree, path)
+      assert :ok = Julep.Test.assert_tree_snapshot(tree, path)
 
       # Mutate a deeply nested label
       changed =
@@ -286,7 +286,7 @@ defmodule Julep.SnapshotTest do
         end)
 
       assert_raise ExUnit.AssertionError, fn ->
-        Julep.Test.assert_snapshot(changed, path)
+        Julep.Test.assert_tree_snapshot(changed, path)
       end
     end
   end
@@ -300,7 +300,7 @@ defmodule Julep.SnapshotTest do
       path = tmp_snapshot_path("valid_json.json")
       tree = simple_tree()
 
-      assert :ok = Julep.Test.assert_snapshot(tree, path)
+      assert :ok = Julep.Test.assert_tree_snapshot(tree, path)
       contents = File.read!(path)
 
       # Should parse without error
@@ -310,7 +310,7 @@ defmodule Julep.SnapshotTest do
     test "output is pretty-printed (contains newlines and indentation)" do
       path = tmp_snapshot_path("pretty.json")
 
-      assert :ok = Julep.Test.assert_snapshot(simple_tree(), path)
+      assert :ok = Julep.Test.assert_tree_snapshot(simple_tree(), path)
       contents = File.read!(path)
 
       assert String.contains?(contents, "\n")
@@ -322,8 +322,8 @@ defmodule Julep.SnapshotTest do
       path_b = tmp_snapshot_path("deterministic_b.json")
       tree = nested_tree()
 
-      assert :ok = Julep.Test.assert_snapshot(tree, path_a)
-      assert :ok = Julep.Test.assert_snapshot(tree, path_b)
+      assert :ok = Julep.Test.assert_tree_snapshot(tree, path_a)
+      assert :ok = Julep.Test.assert_tree_snapshot(tree, path_b)
 
       assert File.read!(path_a) == File.read!(path_b)
     end
@@ -339,7 +339,7 @@ defmodule Julep.SnapshotTest do
         children: []
       }
 
-      assert :ok = Julep.Test.assert_snapshot(tree, path)
+      assert :ok = Julep.Test.assert_tree_snapshot(tree, path)
       contents = File.read!(path)
 
       # The props object should have keys in order: alpha, middle, zebra
@@ -349,7 +349,7 @@ defmodule Julep.SnapshotTest do
     test "atom keys are converted to strings in JSON output" do
       path = tmp_snapshot_path("atom_keys.json")
 
-      assert :ok = Julep.Test.assert_snapshot(simple_tree(), path)
+      assert :ok = Julep.Test.assert_tree_snapshot(simple_tree(), path)
       contents = File.read!(path)
       decoded = Jason.decode!(contents)
 

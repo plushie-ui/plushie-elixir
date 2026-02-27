@@ -36,6 +36,7 @@ defmodule Julep.Test.Script do
           | {:move_to, non_neg_integer(), non_neg_integer()}
           | {:expect, String.t()}
           | {:snapshot, String.t()}
+          | {:screenshot, String.t()}
           | {:assert_text, String.t(), String.t()}
           | {:assert_model, String.t()}
           | {:wait, non_neg_integer()}
@@ -157,6 +158,9 @@ defmodule Julep.Test.Script do
 
       ["snapshot", name] ->
         {:ok, {:snapshot, name}}
+
+      ["screenshot", name] ->
+        {:ok, {:screenshot, name}}
 
       ["assert_text", selector, text] ->
         {:ok, {:assert_text, selector, text}}
