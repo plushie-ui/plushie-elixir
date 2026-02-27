@@ -105,12 +105,21 @@ All three use the same API. Swap between them with a single line change --
 or let CI run all three.
 
 ```elixir
-defmodule MyAppTest do
-  use Julep.Test.Case, app: MyApp
+defmodule TodoTest do
+  use Julep.Test.Case, app: MyApp.Todo
 
-  test "clicking increment updates counter" do
-    click("#increment")
-    assert find!("#count") |> text() == "1"
+  test "complete todo flow" do
+    type_text("#new_todo", "Buy milk")
+    submit("#new_todo")
+
+    assert_text "#todo_count", "1 item"
+    assert_exists "#todo:1"
+
+    toggle("#todo:1")
+    click("#filter_completed")
+
+    assert_text "#todo_count", "0 items"
+    assert_not_exists "#todo:1"
   end
 end
 ```
