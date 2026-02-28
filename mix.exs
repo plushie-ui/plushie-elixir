@@ -7,6 +7,7 @@ defmodule Julep.MixProject do
       version: "0.1.0",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
+      compilers: Mix.compilers() ++ [:julep_gui],
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       name: "Julep",
