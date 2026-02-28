@@ -1,3 +1,4 @@
+mod codec;
 mod effects;
 #[cfg(feature = "headless")]
 mod headless;
@@ -9,16 +10,21 @@ mod tree;
 mod widgets;
 
 use std::collections::{HashMap, HashSet};
-use std::io::{self, BufRead, Write};
+use std::io::{self, BufRead, Read, Write};
 use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::OnceLock;
 use std::thread;
 use std::time::Duration;
 
 use iced::widget::{container, markdown, pane_grid, text, text_editor};
 use iced::{event, system, time, window, Element, Fill, Point, Size, Subscription, Task, Theme};
 
+use base64::Engine as _;
 use protocol::{IncomingMessage, KeyModifiers, OutgoingEvent};
 use serde_json::Value;
+
+/// Wire codec negotiated at startup (auto-detected or forced via CLI flag).
+static WIRE_CODEC: OnceLock<codec::Codec> = OnceLock::new();
 
 // ---------------------------------------------------------------------------
 // Keyboard event data
@@ -154,7 +160,7 @@ enum StdinEvent {
 impl App {
     fn new(receiver: Receiver<StdinEvent>, test_mode: bool) -> Self {
         if test_mode {
-            eprintln!("julep_gui: running in test mode");
+            log::info!("running in test mode");
         }
         Self {
             core: julep_core::Core::new(),
@@ -234,7 +240,7 @@ impl App {
                 Task::none()
             }
             Message::MarkdownUrl(url) => {
-                eprintln!("julep_gui: markdown link clicked: {url}");
+                log::debug!("markdown link clicked: {url}");
                 Task::none()
             }
 
@@ -371,18 +377,18 @@ impl App {
                     if let Some(tag) = self.core.active_subscriptions.get("on_window_event") {
                         emit_event(OutgoingEvent::window_closed(tag.clone(), julep_id.clone()));
                     }
-                    eprintln!("julep_gui: window closed: {julep_id}");
+                    log::info!("window closed: {julep_id}");
                 }
                 // All managed windows gone -- exit cleanly.
                 if self.window_map.is_empty() {
-                    eprintln!("julep_gui: all windows closed -- exiting");
+                    log::info!("all windows closed -- exiting");
                     iced::exit()
                 } else {
                     Task::none()
                 }
             }
             Message::WindowOpened(iced_id, julep_id) => {
-                eprintln!("julep_gui: window opened: {julep_id} -> {iced_id:?}");
+                log::info!("window opened: {julep_id} -> {iced_id:?}");
                 self.window_map.insert(julep_id.clone(), iced_id);
                 self.reverse_window_map.insert(iced_id, julep_id);
                 Task::none()
@@ -978,16 +984,16 @@ impl App {
                     self.apply(incoming);
                 }
                 Ok(StdinEvent::Warning(msg)) => {
-                    eprintln!("julep_gui: stdin warning: {msg}");
+                    log::warn!("stdin warning: {msg}");
                 }
                 Ok(StdinEvent::Closed) => {
-                    eprintln!("julep_gui: stdin closed -- exiting");
+                    log::info!("stdin closed -- exiting");
                     self.stdin_closed = true;
                     break;
                 }
                 Err(mpsc::TryRecvError::Empty) => break,
                 Err(mpsc::TryRecvError::Disconnected) => {
-                    eprintln!("julep_gui: stdin reader disconnected -- exiting");
+                    log::warn!("stdin reader disconnected -- exiting");
                     self.stdin_closed = true;
                     break;
                 }
@@ -1215,7 +1221,7 @@ impl App {
                 Task::none()
             }
             other => {
-                eprintln!("julep_gui: unknown widget_op: {other}");
+                log::warn!("unknown widget_op: {other}");
                 Task::none()
             }
         }
@@ -1234,7 +1240,7 @@ impl App {
         match op {
             "open" => {
                 if self.window_map.contains_key(window_id) {
-                    eprintln!("julep_gui: window_op open: {window_id} already open, skipping");
+                    log::warn!("window_op open: {window_id} already open, skipping");
                     return Task::none();
                 }
 
@@ -1253,7 +1259,7 @@ impl App {
                     self.reverse_window_map.remove(&iced_id);
                     window::close(iced_id)
                 } else {
-                    eprintln!("julep_gui: window_op close: unknown window_id: {window_id}");
+                    log::warn!("window_op close: unknown window_id: {window_id}");
                     Task::none()
                 }
             }
@@ -1524,7 +1530,6 @@ impl App {
                     window::screenshot(iced_id).map(move |screenshot| {
                         #[cfg(feature = "test-mode")]
                         let rgba_b64 = {
-                            use base64::Engine;
                             Some(base64::engine::general_purpose::STANDARD.encode(&screenshot.rgba))
                         };
                         #[cfg(not(feature = "test-mode"))]
@@ -1547,11 +1552,44 @@ impl App {
                 }
             }
             "set_icon" => {
-                // Icon support requires raw RGBA pixel data and dimensions,
-                // which is complex to pass over JSONL. Recognized but not yet
-                // implemented.
-                eprintln!("julep_gui: set_icon not yet supported (requires RGBA pixel data)");
-                Task::none()
+                if let Some(&iced_id) = self.window_map.get(window_id) {
+                    let icon_data_b64 = settings
+                        .get("icon_data")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+                    let width = settings.get("width").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+                    let height =
+                        settings.get("height").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+
+                    match base64::engine::general_purpose::STANDARD.decode(icon_data_b64) {
+                        Ok(rgba) => {
+                            let expected_len = (width as usize) * (height as usize) * 4;
+                            if rgba.len() != expected_len {
+                                log::error!(
+                                    "set_icon: expected {} bytes ({}x{}x4), got {}",
+                                    expected_len,
+                                    width,
+                                    height,
+                                    rgba.len()
+                                );
+                                return Task::none();
+                            }
+                            match window::icon::from_rgba(rgba, width, height) {
+                                Ok(icon) => window::set_icon(iced_id, icon),
+                                Err(e) => {
+                                    log::error!("set_icon: icon creation failed: {e}");
+                                    Task::none()
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            log::error!("set_icon: base64 decode failed: {e}");
+                            Task::none()
+                        }
+                    }
+                } else {
+                    Task::none()
+                }
             }
             "raw_id" => {
                 if let Some(&iced_id) = self.window_map.get(window_id) {
@@ -1585,7 +1623,7 @@ impl App {
                 }
             }
             other => {
-                eprintln!("julep_gui: unknown window_op: {other}");
+                log::warn!("unknown window_op: {other}");
                 Task::none()
             }
         }
@@ -1843,16 +1881,17 @@ fn serialize_scroll_delta(delta: &iced::mouse::ScrollDelta) -> (f32, f32, &'stat
 // ---------------------------------------------------------------------------
 
 fn emit_event(event: OutgoingEvent) {
-    match serde_json::to_string(&event) {
-        Ok(json) => {
+    let codec = WIRE_CODEC.get().unwrap_or(&codec::Codec::MsgPack);
+    match codec.encode(&event) {
+        Ok(bytes) => {
             let stdout = io::stdout();
             let mut handle = stdout.lock();
-            if let Err(e) = writeln!(handle, "{json}") {
-                eprintln!("julep_gui: failed to write event to stdout: {e}");
+            if let Err(e) = handle.write_all(&bytes) {
+                log::error!("failed to write event to stdout: {e}");
             }
             let _ = handle.flush();
         }
-        Err(e) => eprintln!("julep_gui: failed to serialize event: {e}"),
+        Err(e) => log::error!("failed to serialize event: {e}"),
     }
 }
 
@@ -1861,16 +1900,17 @@ fn emit_event(event: OutgoingEvent) {
 // ---------------------------------------------------------------------------
 
 fn emit_effect_response(response: protocol::EffectResponse) {
-    match serde_json::to_string(&response) {
-        Ok(json) => {
+    let codec = WIRE_CODEC.get().unwrap_or(&codec::Codec::MsgPack);
+    match codec.encode(&response) {
+        Ok(bytes) => {
             let stdout = io::stdout();
             let mut handle = stdout.lock();
-            if let Err(e) = writeln!(handle, "{json}") {
-                eprintln!("julep_gui: failed to write effect response to stdout: {e}");
+            if let Err(e) = handle.write_all(&bytes) {
+                log::error!("failed to write effect response to stdout: {e}");
             }
             let _ = handle.flush();
         }
-        Err(e) => eprintln!("julep_gui: failed to serialize effect response: {e}"),
+        Err(e) => log::error!("failed to serialize effect response: {e}"),
     }
 }
 
@@ -1912,40 +1952,36 @@ pub(crate) fn message_to_event(msg: &Message) -> Option<OutgoingEvent> {
 // stdin reader thread
 // ---------------------------------------------------------------------------
 
-fn spawn_stdin_reader(sender: Sender<StdinEvent>) {
+fn spawn_stdin_reader(sender: Sender<StdinEvent>, mut reader: io::BufReader<io::Stdin>) {
     thread::spawn(move || {
-        let stdin = io::stdin();
-        let reader = io::BufReader::new(stdin.lock());
+        let codec = WIRE_CODEC.get().expect("WIRE_CODEC not initialized");
 
-        for line in reader.lines() {
-            match line {
-                Ok(raw) => {
-                    let trimmed = raw.trim();
-                    if trimmed.is_empty() {
-                        continue;
-                    }
-                    match serde_json::from_str::<IncomingMessage>(trimmed) {
-                        Ok(msg) => {
-                            if sender.send(StdinEvent::Message(msg)).is_err() {
-                                return;
-                            }
-                        }
-                        Err(e) => {
-                            let warning = format!("parse error: {e} (input: {trimmed})");
-                            if sender.send(StdinEvent::Warning(warning)).is_err() {
-                                return;
-                            }
-                        }
-                    }
+        loop {
+            match codec.read_message(&mut reader) {
+                Ok(None) => {
+                    let _ = sender.send(StdinEvent::Closed);
+                    break;
                 }
+                Ok(Some(bytes)) => match codec.decode::<IncomingMessage>(&bytes) {
+                    Ok(msg) => {
+                        if sender.send(StdinEvent::Message(msg)).is_err() {
+                            return;
+                        }
+                    }
+                    Err(e) => {
+                        let warning = format!("parse error: {e}");
+                        if sender.send(StdinEvent::Warning(warning)).is_err() {
+                            return;
+                        }
+                    }
+                },
                 Err(e) => {
                     let _ = sender.send(StdinEvent::Warning(format!("read error: {e}")));
+                    let _ = sender.send(StdinEvent::Closed);
                     break;
                 }
             }
         }
-
-        let _ = sender.send(StdinEvent::Closed);
     });
 }
 
@@ -1953,67 +1989,165 @@ fn spawn_stdin_reader(sender: Sender<StdinEvent>) {
 // Entry point
 // ---------------------------------------------------------------------------
 
-/// Read the first line from stdin synchronously, expecting a Settings message.
-/// Returns the settings Value (or a default empty object) and any font load
-/// tasks that should be executed on startup.
-fn read_initial_settings() -> (Value, bool, Vec<Vec<u8>>) {
-    use io::BufRead;
-    let stdin = io::stdin();
-    let mut reader = io::BufReader::new(stdin.lock());
-    let mut line = String::new();
+/// Read the first message from stdin synchronously, expecting a Settings message.
+/// Determines the wire codec (from CLI flag or auto-detection) and stores it in
+/// `WIRE_CODEC`. Returns the settings Value, antialiasing flag, font bytes, and
+/// the buffered reader (to be handed off to the stdin reader thread).
+fn read_initial_settings(
+    forced_codec: Option<codec::Codec>,
+) -> (Value, bool, Vec<Vec<u8>>, io::BufReader<io::Stdin>) {
+    let mut reader = io::BufReader::new(io::stdin());
 
-    let default = || (Value::Object(Default::default()), false, Vec::new());
-
-    match reader.read_line(&mut line) {
-        Ok(0) => {
-            eprintln!("julep_gui: stdin closed before settings received");
-            default()
+    // Determine codec: forced by CLI flag, or auto-detected from first byte.
+    //
+    // Auto-detect reads one byte to determine the format: '{' (0x7B) = JSON,
+    // anything else = MsgPack length prefix. We use read_exact (blocking) rather
+    // than fill_buf (non-blocking peek) because fill_buf on a pipe can return
+    // empty before the writer has sent any data, causing a false EOF.
+    //
+    // Since the detection byte is consumed, we read the rest of the first
+    // message manually (the remaining 3 bytes of the MsgPack length prefix,
+    // or the rest of the JSON line).
+    let (codec, first_byte) = match forced_codec {
+        Some(c) => (c, None),
+        None => {
+            let mut first = [0u8; 1];
+            match reader.read_exact(&mut first) {
+                Ok(()) => {}
+                Err(e) => {
+                    log::error!("stdin closed before settings received: {e}");
+                    let _ = WIRE_CODEC.set(codec::Codec::MsgPack);
+                    return (Value::Object(Default::default()), false, Vec::new(), reader);
+                }
+            }
+            (
+                codec::Codec::detect_from_first_byte(first[0]),
+                Some(first[0]),
+            )
         }
-        Ok(_) => {
-            let trimmed = line.trim();
-            match serde_json::from_str::<IncomingMessage>(trimmed) {
-                Ok(IncomingMessage::Settings { settings }) => {
-                    eprintln!("julep_gui: initial settings received");
-                    let antialiasing = settings
-                        .get("antialiasing")
-                        .and_then(|v| v.as_bool())
-                        .unwrap_or(false);
+    };
+    log::info!("wire codec: {codec:?}");
+    WIRE_CODEC
+        .set(codec)
+        .expect("WIRE_CODEC already initialized");
 
-                    let mut font_bytes: Vec<Vec<u8>> = Vec::new();
-                    if let Some(fonts) = settings.get("fonts").and_then(|v| v.as_array()) {
-                        for font_val in fonts {
-                            if let Some(path) = font_val.as_str() {
-                                match std::fs::read(path) {
-                                    Ok(bytes) => {
-                                        eprintln!("julep_gui: loaded font: {path}");
-                                        font_bytes.push(bytes);
-                                    }
-                                    Err(e) => {
-                                        eprintln!("julep_gui: failed to load font {path}: {e}");
-                                    }
-                                }
+    // Read the first framed message. If we consumed a detection byte, we need
+    // to account for it when reading the rest of the message.
+    let payload = if let Some(byte) = first_byte {
+        match codec {
+            codec::Codec::MsgPack => {
+                // byte is the first of the 4-byte BE length prefix. Read 3 more.
+                let mut rest = [0u8; 3];
+                if let Err(e) = reader.read_exact(&mut rest) {
+                    log::error!("failed to read initial settings: {e}");
+                    return (Value::Object(Default::default()), false, Vec::new(), reader);
+                }
+                let len = u32::from_be_bytes([byte, rest[0], rest[1], rest[2]]) as usize;
+                let mut payload = vec![0u8; len];
+                if let Err(e) = reader.read_exact(&mut payload) {
+                    log::error!("failed to read initial settings payload: {e}");
+                    return (Value::Object(Default::default()), false, Vec::new(), reader);
+                }
+                payload
+            }
+            codec::Codec::Json => {
+                // byte is '{'. Read the rest of the line, prepend '{'.
+                let mut line = String::new();
+                if let Err(e) = reader.read_line(&mut line) {
+                    log::error!("failed to read initial settings: {e}");
+                    return (Value::Object(Default::default()), false, Vec::new(), reader);
+                }
+                let full = format!("{}{}", byte as char, line.trim());
+                full.into_bytes()
+            }
+        }
+    } else {
+        // Forced codec -- no detection byte consumed. Use normal read_message.
+        match codec.read_message(&mut reader) {
+            Ok(Some(bytes)) => bytes,
+            Ok(None) => {
+                log::error!("stdin closed before settings received");
+                return (Value::Object(Default::default()), false, Vec::new(), reader);
+            }
+            Err(e) => {
+                log::error!("failed to read initial settings: {e}");
+                return (Value::Object(Default::default()), false, Vec::new(), reader);
+            }
+        }
+    };
+
+    // Decode the payload into an IncomingMessage.
+    let msg: IncomingMessage = match codec.decode(&payload) {
+        Ok(m) => m,
+        Err(err) => {
+            log::error!("failed to decode initial settings: {err}");
+            if forced_codec.is_some() {
+                // Emit error in the forced codec's format so the client can decode it.
+                let error = serde_json::json!({"type": "error", "message": format!("decode failed: {err}")});
+                let fallback =
+                    format!("{{\"type\":\"error\",\"message\":\"decode failed: {err}\"}}\n");
+                let bytes = codec
+                    .encode(&error)
+                    .unwrap_or_else(|_| fallback.into_bytes());
+                let _ = io::stdout().lock().write_all(&bytes);
+                let _ = io::stdout().lock().flush();
+            } else {
+                // No forced codec -- emit plain JSON error for diagnostics.
+                let error_msg = format!(
+                    "{{\"type\":\"error\",\"message\":\"failed to decode initial settings: {err}\"}}\n"
+                );
+                let _ = io::stdout().lock().write_all(error_msg.as_bytes());
+                let _ = io::stdout().lock().flush();
+            }
+            std::process::exit(1);
+        }
+    };
+
+    // Extract Settings variant.
+    match msg {
+        IncomingMessage::Settings { settings } => {
+            log::info!("initial settings received");
+            let antialiasing = settings
+                .get("antialiasing")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let mut font_bytes: Vec<Vec<u8>> = Vec::new();
+            if let Some(fonts) = settings.get("fonts").and_then(|v| v.as_array()) {
+                for font_val in fonts {
+                    if let Some(path) = font_val.as_str() {
+                        match std::fs::read(path) {
+                            Ok(bytes) => {
+                                log::info!("loaded font: {path}");
+                                font_bytes.push(bytes);
+                            }
+                            Err(e) => {
+                                log::error!("failed to load font {path}: {e}");
                             }
                         }
                     }
-
-                    (settings, antialiasing, font_bytes)
-                }
-                Ok(other) => {
-                    eprintln!(
-                        "julep_gui: expected Settings as first message, got {:?}",
-                        std::mem::discriminant(&other)
-                    );
-                    default()
-                }
-                Err(e) => {
-                    eprintln!("julep_gui: failed to parse initial settings: {e}");
-                    default()
                 }
             }
+
+            (settings, antialiasing, font_bytes, reader)
         }
-        Err(e) => {
-            eprintln!("julep_gui: failed to read initial settings: {e}");
-            default()
+        other => {
+            let variant = match &other {
+                IncomingMessage::Snapshot { .. } => "snapshot",
+                IncomingMessage::Patch { .. } => "patch",
+                IncomingMessage::EffectRequest { .. } => "effect_request",
+                IncomingMessage::WidgetOp { .. } => "widget_op",
+                IncomingMessage::SubscriptionRegister { .. } => "subscription_register",
+                IncomingMessage::SubscriptionUnregister { .. } => "subscription_unregister",
+                IncomingMessage::WindowOp { .. } => "window_op",
+                IncomingMessage::Settings { .. } => "settings",
+                IncomingMessage::Query { .. } => "query",
+                IncomingMessage::Interact { .. } => "interact",
+                IncomingMessage::SnapshotCapture { .. } => "snapshot_capture",
+                IncomingMessage::Reset { .. } => "reset",
+            };
+            log::error!("expected settings as first message, got {variant}");
+            (Value::Object(Default::default()), false, Vec::new(), reader)
         }
     }
 }
@@ -2021,10 +2155,23 @@ fn read_initial_settings() -> (Value, bool, Vec<Vec<u8>>) {
 fn main() -> iced::Result {
     let args: Vec<String> = std::env::args().collect();
 
+    // Levelled logging via RUST_LOG. Default: warn (quiet). Use
+    // RUST_LOG=julep_gui=debug (or =info, =trace) for more output.
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
+
+    // Parse codec flags early so all modes (headless, test, normal) can use them.
+    let forced_codec = if args.contains(&"--msgpack".to_string()) {
+        Some(codec::Codec::MsgPack)
+    } else if args.contains(&"--json".to_string()) {
+        Some(codec::Codec::Json)
+    } else {
+        None
+    };
+
     #[cfg(feature = "headless")]
     {
         if args.contains(&"--headless".to_string()) {
-            headless::headless_mode::run();
+            headless::headless_mode::run(forced_codec);
             return Ok(());
         }
     }
@@ -2034,7 +2181,7 @@ fn main() -> iced::Result {
     // Read the first message synchronously to get antialiasing and font
     // settings before the daemon starts. This must happen before the stdin
     // reader thread is spawned.
-    let (initial_settings, antialiasing, font_bytes) = read_initial_settings();
+    let (initial_settings, antialiasing, font_bytes, reader) = read_initial_settings(forced_codec);
 
     // The boot closure must be `Fn`, but channel setup must only happen once.
     // Use a Mutex<Option<Receiver>> captured in the closure: the first call
@@ -2043,7 +2190,7 @@ fn main() -> iced::Result {
     use std::sync::Mutex;
 
     let (tx, rx) = mpsc::channel::<StdinEvent>();
-    spawn_stdin_reader(tx);
+    spawn_stdin_reader(tx, reader);
 
     let rx_slot: Mutex<Option<Receiver<StdinEvent>>> = Mutex::new(Some(rx));
     let settings_slot: Mutex<Option<(Value, Vec<Vec<u8>>)>> =
@@ -2056,7 +2203,7 @@ fn main() -> iced::Result {
                 .expect("rx_slot lock poisoned")
                 .take()
                 .unwrap_or_else(|| {
-                    eprintln!("julep_gui: boot called more than once -- this is a bug");
+                    log::error!("boot called more than once -- this is a bug");
                     mpsc::channel().1
                 });
             let (settings, fonts) = settings_slot
@@ -2076,7 +2223,7 @@ fn main() -> iced::Result {
                 .map(|bytes| {
                     iced::font::load(bytes).map(|result| {
                         if let Err(e) = result {
-                            eprintln!("julep_gui: font load error: {e:?}");
+                            log::error!("font load error: {e:?}");
                         }
                         Message::Tick
                     })

@@ -5,12 +5,12 @@
 
 ## What it does
 
-1. Reads JSONL messages from stdin (snapshots and patches).
+1. Reads messages from stdin (JSONL or MessagePack) (snapshots and patches).
 2. Maintains a retained tree of UI nodes.
 3. Maps each node type to an iced widget.
 4. Renders the widget tree using iced's reactive rendering.
 5. Captures user interactions (clicks, input, etc.).
-6. Writes events to stdout as JSONL.
+6. Writes events to stdout (JSONL or MessagePack).
 7. Handles native effect requests (file dialogs, clipboard, etc.).
 
 ## What it does not do
@@ -29,7 +29,7 @@ The renderer is a single iced application with these responsibilities:
 
 ### stdin reader (background thread)
 
-A dedicated thread reads lines from stdin, parses JSON, and sends parsed
+A dedicated thread reads from stdin, parses messages (JSONL or MessagePack), and sends parsed
 messages to the main iced application via an `mpsc` channel. This keeps
 stdin I/O off the main thread.
 
@@ -163,7 +163,7 @@ The binary can also be built automatically by `mix julep.gui --build`.
 
 ## Testing the renderer in isolation
 
-Since the renderer speaks JSONL, it can be tested without Elixir:
+Since the renderer speaks JSONL (or MessagePack), it can be tested without Elixir:
 
 ```bash
 echo '{"type":"snapshot","tree":{"id":"root","type":"column","props":{},"children":[{"id":"hello","type":"text","props":{"content":"Hello, world!"},"children":[]}]}}' | ./julep_gui
@@ -171,3 +171,66 @@ echo '{"type":"snapshot","tree":{"id":"root","type":"column","props":{},"childre
 
 Pipe JSON fixtures in, observe the window. Useful for visual regression
 testing and renderer development.
+
+## Debugging the renderer
+
+The renderer uses the standard Rust `log` + `env_logger` crate pair. All log
+output goes to stderr (stdout is reserved for the wire protocol). When
+launched by Julep, the default log level is `error` (set via the `:log_level`
+option). The renderer's own built-in default is `warn`.
+
+### RUST_LOG environment variable
+
+Set `RUST_LOG` to control verbosity. The renderer's crate name is `julep_gui`:
+
+```bash
+# Show everything at debug level and above
+RUST_LOG=julep_gui=debug mix julep.gui MyApp
+
+# Show only errors
+RUST_LOG=julep_gui=error mix julep.gui MyApp
+
+# Per-module filtering
+RUST_LOG=julep_gui::widgets=debug,julep_gui::julep_core=debug mix julep.gui MyApp
+
+# Trace level (most verbose -- future use)
+RUST_LOG=julep_gui=trace mix julep.gui MyApp
+```
+
+### Elixir :log_level option
+
+Set the renderer log level from Elixir without touching environment variables:
+
+```elixir
+# In your app startup
+Julep.start(MyApp, log_level: :debug)
+
+# Or via the mix task (always uses the default :error level)
+```
+
+The `:log_level` option translates to a `RUST_LOG` env var on the spawned
+renderer Port. If `RUST_LOG` is already set in the environment, it takes
+precedence.
+
+### Log levels
+
+| Level | What you see |
+|-------|-------------|
+| `error` | Decode failures, I/O errors, protocol violations, invariant breaks |
+| `warn` | Unknown ops, cache misses, unexpected-but-recoverable state |
+| `info` | Lifecycle events: codec negotiated, settings received, window open/close, fonts loaded |
+| `debug` | Protocol traffic: snapshot/patch received, effect requests, widget ops, subscriptions |
+
+### Output format
+
+Log lines include a UTC timestamp, level, and module target:
+
+```
+[2026-02-28T12:34:56Z INFO  julep_gui] wire codec: MsgPack
+[2026-02-28T12:34:56Z INFO  julep_gui] initial settings received
+[2026-02-28T12:34:56Z DEBUG julep_gui::julep_core] snapshot received (root id=main)
+```
+
+The module target (`julep_gui::julep_core`, `julep_gui::widgets`, etc.)
+replaces the old hand-rolled `"julep_gui:"` prefix and enables per-module
+filtering via `RUST_LOG`.

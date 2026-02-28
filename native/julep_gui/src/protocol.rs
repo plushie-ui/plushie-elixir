@@ -239,9 +239,9 @@ pub struct OutgoingEvent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub modifiers: Option<KeyModifiers>,
     /// Flexible extra data for events that carry additional fields beyond
-    /// the standard id/value/tag/modifiers shape.  Serialized as a flat
-    /// JSON object merged into the event.
-    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    /// the standard id/value/tag/modifiers shape.  Serialized as a nested
+    /// `"data"` object.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<Value>,
 }
 
@@ -1119,12 +1119,12 @@ mod tests {
         assert_eq!(json["modifiers"]["alt"], true);
         assert_eq!(json["modifiers"]["logo"], false);
         assert_eq!(json["modifiers"]["command"], false);
-        // New fields
-        assert_eq!(json["modified_key"], "A");
-        assert_eq!(json["physical_key"], "KeyA");
-        assert_eq!(json["location"], "standard");
-        assert_eq!(json["text"], "a");
-        assert_eq!(json["repeat"], false);
+        // New fields (nested under "data")
+        assert_eq!(json["data"]["modified_key"], "A");
+        assert_eq!(json["data"]["physical_key"], "KeyA");
+        assert_eq!(json["data"]["location"], "standard");
+        assert_eq!(json["data"]["text"], "a");
+        assert_eq!(json["data"]["repeat"], false);
     }
 
     #[test]
@@ -1164,8 +1164,8 @@ mod tests {
         let evt = OutgoingEvent::cursor_moved("mouse".to_string(), 100.0, 200.0);
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "cursor_moved");
-        assert_eq!(json["x"], 100.0);
-        assert_eq!(json["y"], 200.0);
+        assert_eq!(json["data"]["x"], 100.0);
+        assert_eq!(json["data"]["y"], 200.0);
     }
 
     #[test]
@@ -1204,9 +1204,9 @@ mod tests {
         let evt = OutgoingEvent::wheel_scrolled("mouse".to_string(), 0.0, -3.0, "line");
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "wheel_scrolled");
-        assert_eq!(json["delta_x"], 0.0);
-        assert_eq!(json["delta_y"], -3.0);
-        assert_eq!(json["unit"], "line");
+        assert_eq!(json["data"]["delta_x"], 0.0);
+        assert_eq!(json["data"]["delta_y"], -3.0);
+        assert_eq!(json["data"]["unit"], "line");
     }
 
     // -----------------------------------------------------------------------
@@ -1218,9 +1218,9 @@ mod tests {
         let evt = OutgoingEvent::finger_pressed("touch".to_string(), 1, 50.0, 75.0);
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "finger_pressed");
-        assert_eq!(json["finger_id"], 1);
-        assert_eq!(json["x"], 50.0);
-        assert_eq!(json["y"], 75.0);
+        assert_eq!(json["data"]["finger_id"], 1);
+        assert_eq!(json["data"]["x"], 50.0);
+        assert_eq!(json["data"]["y"], 75.0);
     }
 
     #[test]
@@ -1228,7 +1228,7 @@ mod tests {
         let evt = OutgoingEvent::finger_moved("touch".to_string(), 2, 60.0, 80.0);
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "finger_moved");
-        assert_eq!(json["finger_id"], 2);
+        assert_eq!(json["data"]["finger_id"], 2);
     }
 
     #[test]
@@ -1243,7 +1243,7 @@ mod tests {
         let evt = OutgoingEvent::finger_lost("touch".to_string(), 3, 0.0, 0.0);
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "finger_lost");
-        assert_eq!(json["finger_id"], 3);
+        assert_eq!(json["data"]["finger_id"], 3);
     }
 
     // -----------------------------------------------------------------------
@@ -1261,11 +1261,11 @@ mod tests {
         );
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "window_opened");
-        assert_eq!(json["window_id"], "main");
-        assert_eq!(json["width"], 800.0);
-        assert_eq!(json["height"], 600.0);
-        assert_eq!(json["position"]["x"], 10.0);
-        assert_eq!(json["position"]["y"], 20.0);
+        assert_eq!(json["data"]["window_id"], "main");
+        assert_eq!(json["data"]["width"], 800.0);
+        assert_eq!(json["data"]["height"], 600.0);
+        assert_eq!(json["data"]["position"]["x"], 10.0);
+        assert_eq!(json["data"]["position"]["y"], 20.0);
     }
 
     #[test]
@@ -1279,7 +1279,7 @@ mod tests {
         );
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "window_opened");
-        assert!(json["position"].is_null());
+        assert!(json["data"]["position"].is_null());
     }
 
     #[test]
@@ -1287,7 +1287,7 @@ mod tests {
         let evt = OutgoingEvent::window_closed("win_events".to_string(), "popup".to_string());
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "window_closed");
-        assert_eq!(json["window_id"], "popup");
+        assert_eq!(json["data"]["window_id"], "popup");
     }
 
     #[test]
@@ -1304,8 +1304,8 @@ mod tests {
             OutgoingEvent::window_moved("win_events".to_string(), "main".to_string(), 50.0, 100.0);
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "window_moved");
-        assert_eq!(json["x"], 50.0);
-        assert_eq!(json["y"], 100.0);
+        assert_eq!(json["data"]["x"], 50.0);
+        assert_eq!(json["data"]["y"], 100.0);
     }
 
     #[test]
@@ -1318,7 +1318,7 @@ mod tests {
         );
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "window_resized");
-        assert_eq!(json["width"], 1920.0);
+        assert_eq!(json["data"]["width"], 1920.0);
     }
 
     #[test]
@@ -1340,7 +1340,7 @@ mod tests {
         let evt = OutgoingEvent::window_rescaled("win_events".to_string(), "main".to_string(), 2.0);
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "window_rescaled");
-        assert_eq!(json["scale_factor"], 2.0);
+        assert_eq!(json["data"]["scale_factor"], 2.0);
     }
 
     #[test]
@@ -1352,7 +1352,7 @@ mod tests {
         );
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "file_hovered");
-        assert_eq!(json["path"], "/tmp/a.txt");
+        assert_eq!(json["data"]["path"], "/tmp/a.txt");
     }
 
     #[test]
@@ -1364,7 +1364,7 @@ mod tests {
         );
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "file_dropped");
-        assert_eq!(json["path"], "/tmp/b.txt");
+        assert_eq!(json["data"]["path"], "/tmp/b.txt");
     }
 
     #[test]
@@ -1384,8 +1384,8 @@ mod tests {
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "sensor_resize");
         assert_eq!(json["id"], "s1");
-        assert_eq!(json["width"], 100.0);
-        assert_eq!(json["height"], 200.0);
+        assert_eq!(json["data"]["width"], 100.0);
+        assert_eq!(json["data"]["height"], 200.0);
     }
 
     // -----------------------------------------------------------------------
@@ -1397,8 +1397,8 @@ mod tests {
         let evt = OutgoingEvent::canvas_press("c1".to_string(), 10.0, 20.0, "Left".to_string());
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "canvas_press");
-        assert_eq!(json["x"], 10.0);
-        assert_eq!(json["button"], "Left");
+        assert_eq!(json["data"]["x"], 10.0);
+        assert_eq!(json["data"]["button"], "Left");
     }
 
     #[test]
@@ -1413,8 +1413,8 @@ mod tests {
         let evt = OutgoingEvent::canvas_move("c1".to_string(), 30.0, 40.0);
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "canvas_move");
-        assert_eq!(json["x"], 30.0);
-        assert_eq!(json["y"], 40.0);
+        assert_eq!(json["data"]["x"], 30.0);
+        assert_eq!(json["data"]["y"], 40.0);
     }
 
     #[test]
@@ -1422,7 +1422,7 @@ mod tests {
         let evt = OutgoingEvent::canvas_scroll("c1".to_string(), 5.0, 5.0, 0.0, -1.0);
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "canvas_scroll");
-        assert_eq!(json["delta_y"], -1.0);
+        assert_eq!(json["data"]["delta_y"], -1.0);
     }
 
     // -----------------------------------------------------------------------
@@ -1434,8 +1434,8 @@ mod tests {
         let evt = OutgoingEvent::pane_resized("pg1".to_string(), "split_0".to_string(), 0.5);
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "pane_resized");
-        assert_eq!(json["split"], "split_0");
-        assert_eq!(json["ratio"], json!(0.5));
+        assert_eq!(json["data"]["split"], "split_0");
+        assert_eq!(json["data"]["ratio"], json!(0.5));
     }
 
     #[test]
@@ -1447,8 +1447,8 @@ mod tests {
         );
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "pane_dragged");
-        assert_eq!(json["pane"], "pane_a");
-        assert_eq!(json["target"], "pane_b");
+        assert_eq!(json["data"]["pane"], "pane_a");
+        assert_eq!(json["data"]["target"], "pane_b");
     }
 
     #[test]
@@ -1456,7 +1456,7 @@ mod tests {
         let evt = OutgoingEvent::pane_clicked("pg1".to_string(), "pane_x".to_string());
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "pane_clicked");
-        assert_eq!(json["pane"], "pane_x");
+        assert_eq!(json["data"]["pane"], "pane_x");
     }
 
     // -----------------------------------------------------------------------
@@ -1468,7 +1468,7 @@ mod tests {
         let evt = OutgoingEvent::animation_frame("anim".to_string(), 16000);
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "animation_frame");
-        assert_eq!(json["timestamp"], 16000);
+        assert_eq!(json["data"]["timestamp"], 16000);
     }
 
     #[test]
@@ -1536,10 +1536,10 @@ mod tests {
         assert_eq!(parsed["value"], "a");
         assert_eq!(parsed["tag"], "kb");
         assert_eq!(parsed["modifiers"]["shift"], true);
-        // Extra fields from KeyEventData
-        assert!(parsed.get("modified_key").is_some());
-        assert!(parsed.get("physical_key").is_some());
-        assert!(parsed.get("location").is_some());
+        // Extra fields from KeyEventData (nested under "data")
+        assert!(parsed["data"].get("modified_key").is_some());
+        assert!(parsed["data"].get("physical_key").is_some());
+        assert!(parsed["data"].get("location").is_some());
     }
 
     #[test]

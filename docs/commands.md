@@ -156,10 +156,8 @@ Julep.Command.minimize_window(window_id)       # Minimize
 Julep.Command.fullscreen_window(window_id)     # Fullscreen
 ```
 
-> **Not supported: `set_icon`.** iced's `window::set_icon` requires raw RGBA
-> pixel data, which is impractical to serialize over JSONL. Set your
-> application icon at the OS/desktop level instead (`.desktop` file on Linux,
-> `Info.plist` on macOS, resource embedding on Windows).
+`set_icon` sets the window icon from raw RGBA pixel data. The data is
+base64-encoded for wire transport. See `Julep.Command.set_icon/4`.
 
 #### Timers
 
@@ -307,9 +305,9 @@ interprets them:
 - **Async commands** spawn an Elixir `Task` under the runtime's supervisor.
   When the task completes, the result is wrapped in the event tag and
   dispatched through `update/2`.
-- **Widget operations** are encoded as JSONL messages and sent to the
+- **Widget operations** are encoded as wire messages and sent to the
   renderer.
-- **Window commands** are encoded as JSONL messages to the renderer.
+- **Window commands** are encoded as wire messages to the renderer.
 - **Timers** use `Process.send_after` under the hood.
 
 Commands are not side effects in `update`. They are descriptions of side
@@ -416,7 +414,7 @@ false, the runtime stops it. No explicit cleanup needed.
 - **Time subscriptions** use Elixir's `:timer` or `Process.send_after`
   loop.
 - **Keyboard and window subscriptions** are registered with the renderer
-  via JSONL messages. The renderer sends events when they occur.
+  via wire messages. The renderer sends events when they occur.
 
 Subscriptions that require the renderer (keyboard, window) are paused
 during renderer restart and resumed once the renderer is back.
@@ -430,7 +428,7 @@ native platform operations handled by the renderer (see [effects.md](effects.md)
 |---|---|---|
 | Handled by | Elixir runtime | Rust renderer |
 | Examples | async work, timers, focus | file dialogs, clipboard, notifications |
-| Transport | internal (no JSONL) | JSONL request/response |
+| Transport | internal | wire protocol request/response |
 | Return from | `update/2` | `update/2` (via `Julep.Effects.request`) |
 
 Widget operations and window commands are a hybrid -- they are initiated

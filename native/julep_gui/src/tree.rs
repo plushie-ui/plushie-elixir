@@ -59,7 +59,7 @@ impl Tree {
     pub fn apply_patch(&mut self, ops: Vec<PatchOp>) {
         for op in ops {
             if let Err(e) = self.apply_op(&op) {
-                eprintln!("julep_gui: failed to apply patch op {:?}: {}", op.op, e);
+                log::warn!("failed to apply patch op {:?}: {}", op.op, e);
             }
         }
     }
@@ -153,7 +153,7 @@ impl Tree {
                 }
             }
             other => {
-                eprintln!("julep_gui: unknown patch op: {other}");
+                log::warn!("unknown patch op: {other}");
                 Ok(())
             }
         }

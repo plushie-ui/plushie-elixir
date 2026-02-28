@@ -15,6 +15,7 @@ pub mod test_helpers {
     use crate::protocol::{
         IncomingMessage, InteractResponse, QueryResponse, ResetResponse, TreeNode,
     };
+    use crate::WIRE_CODEC;
 
     /// Check if a message is a test-mode message (Query, Interact, etc.)
     pub fn is_test_message(msg: &IncomingMessage) -> bool {
@@ -28,7 +29,6 @@ pub mod test_helpers {
     }
 
     /// Handle a test-mode Query message.
-    /// Returns JSON responses directly (tree serialization, widget find).
     pub fn handle_query(core: &Core, id: String, target: String, selector: Value) {
         let data = match target.as_str() {
             "tree" => match core.tree.root() {
@@ -44,7 +44,7 @@ pub mod test_helpers {
             }
             _ => Value::Null,
         };
-        emit_json(&QueryResponse::new(id, target, data));
+        emit_wire(&QueryResponse::new(id, target, data));
     }
 
     /// Handle a test-mode Interact message.
@@ -101,13 +101,13 @@ pub mod test_helpers {
             }
             _ => vec![],
         };
-        emit_json(&InteractResponse::new(id, events));
+        emit_wire(&InteractResponse::new(id, events));
     }
 
     /// Handle a Reset message -- reinitialise the core to a blank state.
     pub fn handle_reset(core: &mut Core, id: String) {
         *core = Core::new();
-        emit_json(&ResetResponse::ok(id));
+        emit_wire(&ResetResponse::ok(id));
     }
 
     /// Handle a SnapshotCapture message in test mode.
@@ -128,7 +128,7 @@ pub mod test_helpers {
         hasher.update(tree_json.as_bytes());
         let hash = format!("{:x}", hasher.finalize());
 
-        emit_json(&SnapshotCaptureResponse::new(id, name, hash, 0, 0, None));
+        emit_wire(&SnapshotCaptureResponse::new(id, name, hash, 0, 0, None));
     }
 
     // -- helpers --
@@ -146,12 +146,17 @@ pub mod test_helpers {
         Value::Null
     }
 
-    fn emit_json<T: serde::Serialize>(value: &T) {
-        if let Ok(json) = serde_json::to_string(value) {
-            let stdout = io::stdout();
-            let mut handle = stdout.lock();
-            let _ = writeln!(handle, "{json}");
-            let _ = handle.flush();
+    /// Write a serialized response to stdout using the negotiated wire codec.
+    fn emit_wire<T: serde::Serialize>(value: &T) {
+        let codec = WIRE_CODEC.get().expect("WIRE_CODEC not initialized");
+        match codec.encode(value) {
+            Ok(bytes) => {
+                let stdout = io::stdout();
+                let mut handle = stdout.lock();
+                let _ = handle.write_all(&bytes);
+                let _ = handle.flush();
+            }
+            Err(e) => log::error!("encode error: {e}"),
         }
     }
 }

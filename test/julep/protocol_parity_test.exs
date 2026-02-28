@@ -23,7 +23,7 @@ defmodule Julep.ProtocolParityTest do
 
       assert {:key_press,
               %Julep.KeyEvent{key: :escape, modifiers: %Julep.KeyModifiers{ctrl: false}}} =
-               Protocol.decode_message(json)
+               Protocol.decode_message(json, :json)
     end
 
     test "decodes character key" do
@@ -36,7 +36,7 @@ defmodule Julep.ProtocolParityTest do
         })
 
       assert {:key_press, %Julep.KeyEvent{key: "a", modifiers: %Julep.KeyModifiers{ctrl: true}}} =
-               Protocol.decode_message(json)
+               Protocol.decode_message(json, :json)
     end
 
     test "decodes with ctrl+shift modifiers" do
@@ -52,7 +52,7 @@ defmodule Julep.ProtocolParityTest do
               %Julep.KeyEvent{
                 key: :tab,
                 modifiers: %Julep.KeyModifiers{ctrl: true, shift: true}
-              }} = Protocol.decode_message(json)
+              }} = Protocol.decode_message(json, :json)
     end
   end
 
@@ -66,7 +66,7 @@ defmodule Julep.ProtocolParityTest do
           modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
         })
 
-      assert {:key_release, %Julep.KeyEvent{key: :control}} = Protocol.decode_message(json)
+      assert {:key_release, %Julep.KeyEvent{key: :control}} = Protocol.decode_message(json, :json)
     end
   end
 
@@ -336,46 +336,46 @@ defmodule Julep.ProtocolParityTest do
 
   describe "cursor_moved event" do
     test "decodes cursor position" do
-      json = Jason.encode!(%{type: "event", family: "cursor_moved", x: 100.5, y: 200.3})
-      assert {:cursor_moved, 100.5, 200.3} = Protocol.decode_message(json)
+      json = Jason.encode!(%{type: "event", family: "cursor_moved", data: %{x: 100.5, y: 200.3}})
+      assert {:cursor_moved, 100.5, 200.3} = Protocol.decode_message(json, :json)
     end
 
     test "decodes integer coordinates" do
-      json = Jason.encode!(%{type: "event", family: "cursor_moved", x: 0, y: 0})
-      assert {:cursor_moved, 0, 0} = Protocol.decode_message(json)
+      json = Jason.encode!(%{type: "event", family: "cursor_moved", data: %{x: 0, y: 0}})
+      assert {:cursor_moved, 0, 0} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "cursor_entered event" do
     test "decodes cursor entered" do
       json = Jason.encode!(%{type: "event", family: "cursor_entered"})
-      assert {:cursor_entered} = Protocol.decode_message(json)
+      assert {:cursor_entered} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "cursor_left event" do
     test "decodes cursor left" do
       json = Jason.encode!(%{type: "event", family: "cursor_left"})
-      assert {:cursor_left} = Protocol.decode_message(json)
+      assert {:cursor_left} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "button_pressed event" do
     test "decodes mouse button press" do
       json = Jason.encode!(%{type: "event", family: "button_pressed", value: "left"})
-      assert {:button_pressed, "left"} = Protocol.decode_message(json)
+      assert {:button_pressed, "left"} = Protocol.decode_message(json, :json)
     end
 
     test "decodes right button press" do
       json = Jason.encode!(%{type: "event", family: "button_pressed", value: "right"})
-      assert {:button_pressed, "right"} = Protocol.decode_message(json)
+      assert {:button_pressed, "right"} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "button_released event" do
     test "decodes mouse button release" do
       json = Jason.encode!(%{type: "event", family: "button_released", value: "left"})
-      assert {:button_released, "left"} = Protocol.decode_message(json)
+      assert {:button_released, "left"} = Protocol.decode_message(json, :json)
     end
   end
 
@@ -385,12 +385,10 @@ defmodule Julep.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "wheel_scrolled",
-          delta_x: 0.0,
-          delta_y: -3.0,
-          unit: "line"
+          data: %{delta_x: 0.0, delta_y: -3.0, unit: "line"}
         })
 
-      assert {:wheel_scrolled, 0.0, -3.0, "line"} = Protocol.decode_message(json)
+      assert {:wheel_scrolled, 0.0, -3.0, "line"} = Protocol.decode_message(json, :json)
     end
 
     test "decodes pixel scroll unit" do
@@ -398,12 +396,10 @@ defmodule Julep.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "wheel_scrolled",
-          delta_x: 10.0,
-          delta_y: 20.0,
-          unit: "pixel"
+          data: %{delta_x: 10.0, delta_y: 20.0, unit: "pixel"}
         })
 
-      assert {:wheel_scrolled, 10.0, 20.0, "pixel"} = Protocol.decode_message(json)
+      assert {:wheel_scrolled, 10.0, 20.0, "pixel"} = Protocol.decode_message(json, :json)
     end
   end
 
@@ -414,36 +410,52 @@ defmodule Julep.ProtocolParityTest do
   describe "finger_pressed event" do
     test "decodes finger press with id and position" do
       json =
-        Jason.encode!(%{type: "event", family: "finger_pressed", finger_id: 0, x: 50.0, y: 75.0})
+        Jason.encode!(%{
+          type: "event",
+          family: "finger_pressed",
+          data: %{finger_id: 0, x: 50.0, y: 75.0}
+        })
 
-      assert {:finger_pressed, 0, 50.0, 75.0} = Protocol.decode_message(json)
+      assert {:finger_pressed, 0, 50.0, 75.0} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "finger_moved event" do
     test "decodes finger move" do
       json =
-        Jason.encode!(%{type: "event", family: "finger_moved", finger_id: 1, x: 60.0, y: 80.0})
+        Jason.encode!(%{
+          type: "event",
+          family: "finger_moved",
+          data: %{finger_id: 1, x: 60.0, y: 80.0}
+        })
 
-      assert {:finger_moved, 1, 60.0, 80.0} = Protocol.decode_message(json)
+      assert {:finger_moved, 1, 60.0, 80.0} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "finger_lifted event" do
     test "decodes finger lift" do
       json =
-        Jason.encode!(%{type: "event", family: "finger_lifted", finger_id: 0, x: 55.0, y: 70.0})
+        Jason.encode!(%{
+          type: "event",
+          family: "finger_lifted",
+          data: %{finger_id: 0, x: 55.0, y: 70.0}
+        })
 
-      assert {:finger_lifted, 0, 55.0, 70.0} = Protocol.decode_message(json)
+      assert {:finger_lifted, 0, 55.0, 70.0} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "finger_lost event" do
     test "decodes finger lost" do
       json =
-        Jason.encode!(%{type: "event", family: "finger_lost", finger_id: 2, x: 30.0, y: 40.0})
+        Jason.encode!(%{
+          type: "event",
+          family: "finger_lost",
+          data: %{finger_id: 2, x: 30.0, y: 40.0}
+        })
 
-      assert {:finger_lost, 2, 30.0, 40.0} = Protocol.decode_message(json)
+      assert {:finger_lost, 2, 30.0, 40.0} = Protocol.decode_message(json, :json)
     end
   end
 
@@ -457,13 +469,11 @@ defmodule Julep.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "window_opened",
-          window_id: "main",
-          position: %{x: 100, y: 200},
-          width: 800,
-          height: 600
+          data: %{window_id: "main", position: %{x: 100, y: 200}, width: 800, height: 600}
         })
 
-      assert {:window_opened, "main", {100, 200}, {800, 600}} = Protocol.decode_message(json)
+      assert {:window_opened, "main", {100, 200}, {800, 600}} =
+               Protocol.decode_message(json, :json)
     end
 
     test "decodes window opened with nil position" do
@@ -471,29 +481,32 @@ defmodule Julep.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "window_opened",
-          window_id: "main",
-          position: nil,
-          width: 1024,
-          height: 768
+          data: %{window_id: "main", position: nil, width: 1024, height: 768}
         })
 
-      assert {:window_opened, "main", nil, {1024, 768}} = Protocol.decode_message(json)
+      assert {:window_opened, "main", nil, {1024, 768}} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "window_closed event" do
     test "decodes window closed" do
-      json = Jason.encode!(%{type: "event", family: "window_closed", window_id: "settings"})
-      assert {:window_closed, "settings"} = Protocol.decode_message(json)
+      json =
+        Jason.encode!(%{type: "event", family: "window_closed", data: %{window_id: "settings"}})
+
+      assert {:window_closed, "settings"} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "window_moved event" do
     test "decodes window moved with coordinates" do
       json =
-        Jason.encode!(%{type: "event", family: "window_moved", window_id: "main", x: 300, y: 150})
+        Jason.encode!(%{
+          type: "event",
+          family: "window_moved",
+          data: %{window_id: "main", x: 300, y: 150}
+        })
 
-      assert {:window_moved, "main", 300, 150} = Protocol.decode_message(json)
+      assert {:window_moved, "main", 300, 150} = Protocol.decode_message(json, :json)
     end
   end
 
@@ -503,26 +516,26 @@ defmodule Julep.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "window_resized",
-          window_id: "main",
-          width: 1920,
-          height: 1080
+          data: %{window_id: "main", width: 1920, height: 1080}
         })
 
-      assert {:window_resized, "main", 1920, 1080} = Protocol.decode_message(json)
+      assert {:window_resized, "main", 1920, 1080} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "window_focused event" do
     test "decodes window focused" do
-      json = Jason.encode!(%{type: "event", family: "window_focused", window_id: "main"})
-      assert {:window_focused, "main"} = Protocol.decode_message(json)
+      json = Jason.encode!(%{type: "event", family: "window_focused", data: %{window_id: "main"}})
+      assert {:window_focused, "main"} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "window_unfocused event" do
     test "decodes window unfocused" do
-      json = Jason.encode!(%{type: "event", family: "window_unfocused", window_id: "main"})
-      assert {:window_unfocused, "main"} = Protocol.decode_message(json)
+      json =
+        Jason.encode!(%{type: "event", family: "window_unfocused", data: %{window_id: "main"}})
+
+      assert {:window_unfocused, "main"} = Protocol.decode_message(json, :json)
     end
   end
 
@@ -532,18 +545,23 @@ defmodule Julep.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "window_rescaled",
-          window_id: "main",
-          scale_factor: 2.0
+          data: %{window_id: "main", scale_factor: 2.0}
         })
 
-      assert {:window_rescaled, "main", 2.0} = Protocol.decode_message(json)
+      assert {:window_rescaled, "main", 2.0} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "window_close_requested event" do
     test "decodes window close request" do
-      json = Jason.encode!(%{type: "event", family: "window_close_requested", window_id: "main"})
-      assert {:window_close_requested, "main"} = Protocol.decode_message(json)
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "window_close_requested",
+          data: %{window_id: "main"}
+        })
+
+      assert {:window_close_requested, "main"} = Protocol.decode_message(json, :json)
     end
   end
 
@@ -557,11 +575,10 @@ defmodule Julep.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "file_hovered",
-          window_id: "main",
-          path: "/tmp/test.txt"
+          data: %{window_id: "main", path: "/tmp/test.txt"}
         })
 
-      assert {:file_hovered, "main", "/tmp/test.txt"} = Protocol.decode_message(json)
+      assert {:file_hovered, "main", "/tmp/test.txt"} = Protocol.decode_message(json, :json)
     end
   end
 
@@ -571,18 +588,19 @@ defmodule Julep.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "file_dropped",
-          window_id: "main",
-          path: "/tmp/image.png"
+          data: %{window_id: "main", path: "/tmp/image.png"}
         })
 
-      assert {:file_dropped, "main", "/tmp/image.png"} = Protocol.decode_message(json)
+      assert {:file_dropped, "main", "/tmp/image.png"} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "files_hovered_left event" do
     test "decodes files hovered left" do
-      json = Jason.encode!(%{type: "event", family: "files_hovered_left", window_id: "main"})
-      assert {:files_hovered_left, "main"} = Protocol.decode_message(json)
+      json =
+        Jason.encode!(%{type: "event", family: "files_hovered_left", data: %{window_id: "main"}})
+
+      assert {:files_hovered_left, "main"} = Protocol.decode_message(json, :json)
     end
   end
 
@@ -600,7 +618,7 @@ defmodule Julep.ProtocolParityTest do
         })
 
       assert {:modifiers_changed, %{ctrl: true, alt: true, shift: false}} =
-               Protocol.decode_message(json)
+               Protocol.decode_message(json, :json)
     end
 
     test "handles missing modifier fields with defaults" do
@@ -608,31 +626,33 @@ defmodule Julep.ProtocolParityTest do
 
       assert {:modifiers_changed,
               %{ctrl: false, shift: false, alt: false, logo: false, command: false}} =
-               Protocol.decode_message(json)
+               Protocol.decode_message(json, :json)
     end
   end
 
   describe "animation_frame event" do
     test "decodes animation frame with timestamp" do
-      json = Jason.encode!(%{type: "event", family: "animation_frame", timestamp: 16666})
-      assert {:animation_frame, 16666} = Protocol.decode_message(json)
+      json = Jason.encode!(%{type: "event", family: "animation_frame", data: %{timestamp: 16666}})
+      assert {:animation_frame, 16666} = Protocol.decode_message(json, :json)
     end
 
     test "decodes float timestamp" do
-      json = Jason.encode!(%{type: "event", family: "animation_frame", timestamp: 16.666})
-      assert {:animation_frame, 16.666} = Protocol.decode_message(json)
+      json =
+        Jason.encode!(%{type: "event", family: "animation_frame", data: %{timestamp: 16.666}})
+
+      assert {:animation_frame, 16.666} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "theme_changed event" do
     test "decodes theme change to dark" do
       json = Jason.encode!(%{type: "event", family: "theme_changed", value: "dark"})
-      assert {:theme_changed, "dark"} = Protocol.decode_message(json)
+      assert {:theme_changed, "dark"} = Protocol.decode_message(json, :json)
     end
 
     test "decodes theme change to light" do
       json = Jason.encode!(%{type: "event", family: "theme_changed", value: "light"})
-      assert {:theme_changed, "light"} = Protocol.decode_message(json)
+      assert {:theme_changed, "light"} = Protocol.decode_message(json, :json)
     end
   end
 end

@@ -2,14 +2,23 @@ defmodule Julep.Bridge do
   @moduledoc """
   Port-based bridge to the julep_gui renderer process.
 
-  Manages the stdio Port, buffers partial JSONL lines, and forwards
-  decoded events to the runtime process.
+  Manages the stdio Port, buffers partial JSONL lines (JSON mode) or receives
+  length-prefixed frames (MessagePack mode), and forwards decoded events to
+  the runtime process.
 
-  The Port is opened with `{:line, 65_536}`, which causes the driver to
-  deliver data as `{port, {:data, {:eol, line}}}` for complete lines and
-  `{port, {:data, {:noeol, chunk}}}` for partial lines that exceed the
-  line buffer. Partial chunks are accumulated in `buffer` and flushed when
-  the matching `:eol` chunk arrives.
+  Supports two wire formats controlled by the `:format` option:
+
+  - `:json` -- JSONL over stdio. Opt-in for debugging and observability. The Port is opened with
+    `{:line, 65_536}`, which causes the driver to deliver data as
+    `{port, {:data, {:eol, line}}}` for complete lines and
+    `{port, {:data, {:noeol, chunk}}}` for partial lines that exceed the
+    line buffer. Partial chunks are accumulated in `buffer` and flushed when
+    the matching `:eol` chunk arrives.
+
+  - `:msgpack` (default) -- MessagePack over stdio with 4-byte big-endian
+    length-prefixed framing. The Port is opened with `{:packet, 4}`, which
+    causes the Erlang Port driver to handle framing automatically in both
+    directions. Complete frames arrive as `{port, {:data, binary}}`.
 
   On unexpected exit the bridge applies exponential back-off and attempts
   to restart the renderer up to `max_restarts` times. If the limit is
@@ -32,6 +41,9 @@ defmodule Julep.Bridge do
 
   Optional opts:
     - `:name`          - registration name passed to `GenServer.start_link/3`
+    - `:format`        - wire format, `:msgpack` (default) or `:json`
+    - `:log_level`     - renderer log level (`:error`, `:warning`, `:info`, `:debug`).
+                         Default: `:error`. Ignored when `RUST_LOG` is set in the environment.
     - `:max_restarts`  - max restart attempts before giving up (default: 5)
     - `:restart_delay` - base delay in ms for exponential back-off (default: 100)
   """
@@ -117,6 +129,8 @@ defmodule Julep.Bridge do
     :runtime,
     :renderer_path,
     :buffer,
+    :format,
+    :log_level,
     :max_restarts,
     :restart_count,
     :restart_delay
@@ -130,12 +144,17 @@ defmodule Julep.Bridge do
   def init(opts) do
     renderer_path = Keyword.fetch!(opts, :renderer_path)
     runtime = Keyword.fetch!(opts, :runtime)
+    format = Keyword.get(opts, :format, :msgpack)
+
+    log_level = Keyword.get(opts, :log_level, :error)
 
     state = %__MODULE__{
       port: nil,
       runtime: runtime,
       renderer_path: renderer_path,
       buffer: "",
+      format: format,
+      log_level: log_level,
       max_restarts: Keyword.get(opts, :max_restarts, 5),
       restart_count: 0,
       restart_delay: Keyword.get(opts, :restart_delay, 100)
@@ -149,58 +168,65 @@ defmodule Julep.Bridge do
 
   @impl true
   def handle_cast({:send_settings, settings}, state) do
-    json = Julep.Protocol.encode_settings(settings)
-    send_to_port(state.port, json)
+    data = Julep.Protocol.encode_settings(settings, state.format)
+    send_to_port(state.port, data)
     {:noreply, state}
   end
 
   def handle_cast({:send_snapshot, tree}, state) do
-    json = Julep.Protocol.encode_snapshot(tree)
-    send_to_port(state.port, json)
+    data = Julep.Protocol.encode_snapshot(tree, state.format)
+    send_to_port(state.port, data)
     {:noreply, state}
   end
 
   def handle_cast({:send_patch, ops}, state) do
-    json = Julep.Protocol.encode_patch(ops)
-    send_to_port(state.port, json)
+    data = Julep.Protocol.encode_patch(ops, state.format)
+    send_to_port(state.port, data)
     {:noreply, state}
   end
 
   def handle_cast({:send_effect_request, id, kind, payload}, state) do
-    json = Julep.Protocol.encode_effect_request(id, kind, payload)
-    send_to_port(state.port, json)
+    data = Julep.Protocol.encode_effect_request(id, kind, payload, state.format)
+    send_to_port(state.port, data)
     {:noreply, state}
   end
 
   def handle_cast({:send_widget_op, op, payload}, state) do
-    json = Julep.Protocol.encode_widget_op(op, payload)
-    send_to_port(state.port, json)
+    data = Julep.Protocol.encode_widget_op(op, payload, state.format)
+    send_to_port(state.port, data)
     {:noreply, state}
   end
 
   def handle_cast({:send_subscription_register, kind, tag}, state) do
-    json = Julep.Protocol.encode_subscription_register(kind, tag)
-    send_to_port(state.port, json)
+    data = Julep.Protocol.encode_subscription_register(kind, tag, state.format)
+    send_to_port(state.port, data)
     {:noreply, state}
   end
 
   def handle_cast({:send_subscription_unregister, kind}, state) do
-    json = Julep.Protocol.encode_subscription_unregister(kind)
-    send_to_port(state.port, json)
+    data = Julep.Protocol.encode_subscription_unregister(kind, state.format)
+    send_to_port(state.port, data)
     {:noreply, state}
   end
 
   def handle_cast({:send_window_op, op, window_id, settings}, state) do
-    json = Julep.Protocol.encode_window_op(op, window_id, settings)
-    send_to_port(state.port, json)
+    data = Julep.Protocol.encode_window_op(op, window_id, settings, state.format)
+    send_to_port(state.port, data)
+    {:noreply, state}
+  end
+
+  # MessagePack frame -- {:packet, 4} driver delivers raw binaries.
+  @impl true
+  def handle_info({port, {:data, binary}}, %{port: port, format: :msgpack} = state)
+      when is_binary(binary) do
+    state = dispatch_message(binary, :msgpack, state)
     {:noreply, state}
   end
 
   # Complete line -- flush any buffered prefix and dispatch.
-  @impl true
   def handle_info({port, {:data, {:eol, chunk}}}, %{port: port} = state) do
     line = state.buffer <> to_string(chunk)
-    state = dispatch_line(line, %{state | buffer: ""})
+    state = dispatch_message(line, :json, %{state | buffer: ""})
     {:noreply, state}
   end
 
@@ -256,13 +282,17 @@ defmodule Julep.Bridge do
     path = state.renderer_path
 
     if File.exists?(path) do
+      port_opts =
+        case state.format do
+          :msgpack -> [:binary, :exit_status, :use_stdio, {:packet, 4}]
+          :json -> [:binary, :exit_status, :use_stdio, {:line, 65_536}]
+        end
+
+      args = if state.format == :json, do: ["--json"], else: []
+      env = renderer_env(state.log_level)
+
       port =
-        Port.open({:spawn_executable, path}, [
-          :binary,
-          :exit_status,
-          :use_stdio,
-          {:line, 65_536}
-        ])
+        Port.open({:spawn_executable, path}, [{:args, args}, {:env, env} | port_opts])
 
       {:ok, %{state | port: port, buffer: ""}}
     else
@@ -270,12 +300,31 @@ defmodule Julep.Bridge do
     end
   end
 
+  # Build the environment variables for the renderer Port. Sets RUST_LOG
+  # when an explicit :log_level was configured, but only when the system
+  # environment doesn't already have RUST_LOG set (env var always wins).
+  defp renderer_env(log_level) do
+    if System.get_env("RUST_LOG") do
+      []
+    else
+      rust_log =
+        case log_level do
+          :error -> "julep_gui=error"
+          :warning -> "julep_gui=warn"
+          :info -> "julep_gui=info"
+          :debug -> "julep_gui=debug"
+        end
+
+      [{~c"RUST_LOG", String.to_charlist(rust_log)}]
+    end
+  end
+
   defp send_to_port(port, data) when is_port(port) do
     Port.command(port, data)
   end
 
-  defp dispatch_line(line, state) do
-    case Julep.Protocol.decode_message(line) do
+  defp dispatch_message(data, format, state) do
+    case Julep.Protocol.decode_message(data, format) do
       {:error, reason} ->
         Logger.warning("julep bridge: failed to decode message: #{inspect(reason)}")
 

@@ -86,7 +86,7 @@ defmodule Julep.PaneGridTest do
       }
 
       assert {:pane_resized, "pg1", 0, 0.45} =
-               Julep.Protocol.decode_message(Jason.encode!(msg))
+               Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
     test "decodes pane_dragged" do
@@ -98,7 +98,7 @@ defmodule Julep.PaneGridTest do
       }
 
       assert {:pane_dragged, "pg1", "left", "right"} =
-               Julep.Protocol.decode_message(Jason.encode!(msg))
+               Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
     test "decodes pane_clicked" do
@@ -110,7 +110,7 @@ defmodule Julep.PaneGridTest do
       }
 
       assert {:pane_clicked, "pg1", "left"} =
-               Julep.Protocol.decode_message(Jason.encode!(msg))
+               Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
   end
 end

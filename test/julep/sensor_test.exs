@@ -11,7 +11,7 @@ defmodule Julep.SensorTest do
       }
 
       assert {:sensor_resize, "s1", 450.0, 300.0} =
-               Julep.Protocol.decode_message(Jason.encode!(msg))
+               Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
     test "decodes sensor_resize with integer values" do
@@ -23,7 +23,7 @@ defmodule Julep.SensorTest do
       }
 
       assert {:sensor_resize, "s1", 800, 600} =
-               Julep.Protocol.decode_message(Jason.encode!(msg))
+               Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
   end
 

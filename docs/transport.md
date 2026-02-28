@@ -1,18 +1,82 @@
 # Transport
 
-The transport between Elixir and the renderer is JSONL (newline-delimited
-JSON) over stdio. Elixir writes to the renderer's stdin. The renderer writes
+The transport between Elixir and the renderer is MessagePack over stdio by
+default, with JSONL available as an alternative for debugging and
+observability. Elixir writes to the renderer's stdin. The renderer writes
 to stdout. That is the entire transport.
 
-## Why JSONL over stdio
+## Why stdio
 
-- **Simple.** No framing protocol, no length prefixes, no handshake. One
-  JSON object per line, terminated by `\n`.
-- **Debuggable.** Pipe the output to `jq` and you can see everything.
+- **Simple.** No framing protocol, no handshake. MessagePack uses a 4-byte
+  length prefix handled transparently by the Erlang Port driver.
 - **Portable.** Works on every OS. No platform-specific IPC to maintain.
-- **Fast enough.** A desktop UI updates at most ~60 times per second. JSON
-  encoding/decoding at that rate is not a bottleneck. If it ever becomes
-  one, we measure first and optimize second.
+- **Fast enough.** A desktop UI updates at most ~60 times per second.
+  MessagePack serialization at that rate is not a bottleneck for most apps.
+- **Debuggable when needed.** JSON mode exists for observability: pipe the
+  output to `jq` and you can see everything. Enable it with `format: :json`
+  on the Elixir side or `--json` on the Rust side.
+
+## Binary protocol (MessagePack)
+
+### Overview
+
+Julep supports both MessagePack and JSONL as wire formats. MessagePack is
+the default. The message shapes are identical -- only the encoding differs.
+MessagePack reduces serialization overhead for high-frequency messages and
+enables a future path to native binary data payloads without base64 overhead.
+Currently, binary data (e.g. window icons) uses base64 encoding in both formats.
+
+### How to enable JSON mode
+
+MessagePack is used by default. JSON is available for debugging and
+observability.
+
+**Elixir side:** pass `format: :json` to the Bridge when starting the
+renderer.
+
+**Rust side:**
+- `--json` forces JSON mode.
+- No flag: MessagePack is the default. The renderer also auto-detects from
+  the first byte of stdin (see below).
+
+### Framing
+
+**JSON mode:** newline-delimited. Each message is one UTF-8 JSON object
+terminated by `\n`. The Erlang Port uses `{:line, 65_536}`.
+
+**MessagePack mode:** 4-byte big-endian u32 length prefix followed by the
+msgpack payload. The Erlang Port uses `{:packet, 4}`, which handles the
+length-prefix framing transparently on both send and receive. The Protocol
+module deals only in raw payloads; framing is the Port driver's job.
+
+### Auto-detection
+
+When no flag is passed, the renderer peeks at the first byte of stdin via
+`fill_buf()`. `{` (0x7B) means JSON -- all JSON messages are objects, so the
+first byte is always `{`. Any other byte is treated as the first byte of a
+4-byte length prefix, indicating MessagePack.
+
+### Error handling
+
+**Without a flag (auto-detect):** if the first message fails to decode, the
+renderer emits a human-readable JSON error on stdout and exits. This ensures
+the client always gets something readable regardless of what was sent.
+
+**With a flag (`--json`):** if the first message fails to decode, the
+renderer responds with an error in JSON format (so the client can decode it)
+and exits.
+
+### Mode locked at startup
+
+The format is determined once from the first message and locked for the
+session. There is no per-message switching.
+
+### Libraries
+
+- **Rust:** `rmp-serde`, using named serialization (`to_vec_named`).
+- **Elixir:** `msgpax`.
+
+Both are always compiled in. No feature gates.
 
 ## Message types
 
@@ -87,9 +151,12 @@ Result of a native effect request.
 
 ## Buffering
 
-The Elixir side reads from the Port in chunks. Chunks may contain partial
-lines. The runtime buffers incomplete lines and processes complete ones.
-This is standard JSONL handling.
+**JSON mode:** the Elixir side reads from the Port in chunks. Chunks may
+contain partial lines. The runtime buffers incomplete lines and processes
+complete ones. This is standard JSONL handling.
+
+**MessagePack mode:** the `{:packet, 4}` Port driver handles framing and
+always delivers complete messages. No line buffering is needed.
 
 ## Reconnection
 

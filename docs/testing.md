@@ -289,13 +289,14 @@ changing assertions.
   display, sub-millisecond. The right default for 90% of tests.
 
 - **`:headless`** -- real Rust renderer with `iced_test` Simulator (no
-  display server). Proves the JSONL wire protocol works end-to-end.
-  Tree-hash snapshots detect structural drift. Build with
+  display server). Proves the wire protocol works end-to-end (msgpack by
+  default). Tree-hash snapshots detect structural drift. Build with
   `cargo build --features headless`.
 
 - **`:full`** -- real `iced::daemon` with GPU rendering. Effects work,
   subscriptions fire, pixel screenshots capture exactly what a user sees.
-  Build with `cargo build --features test-mode`. Needs Xvfb in CI.
+  Build with `cargo build --features test-mode`. Needs a display server
+  (Xvfb or headless Weston).
 
 ### Backend selection
 
@@ -590,7 +591,9 @@ Requires the Rust toolchain and the headless feature build.
 
 ### Full CI
 
-Requires a display server and GPU drivers.
+Requires a display server and GPU/software rendering. Two options:
+
+**Option A: Xvfb (X11)**
 
 ```yaml
 - run: |
@@ -604,6 +607,28 @@ Requires a display server and GPU drivers.
     JULEP_TEST_BACKEND=full mix test
 ```
 
+**Option B: Weston (Wayland)**
+
+Weston's headless backend provides a Wayland compositor without a physical
+display. Combined with `vulkan-swrast` (Mesa software rasterizer), this
+runs the full rendering pipeline on CPU.
+
+```yaml
+- run: |
+    sudo apt-get install -y weston mesa-vulkan-drivers
+    cd native/julep_gui
+    cargo build --features test-mode
+- run: |
+    export XDG_RUNTIME_DIR=/tmp/julep-xdg-runtime
+    mkdir -p "$XDG_RUNTIME_DIR" && chmod 0700 "$XDG_RUNTIME_DIR"
+    weston --backend=headless --width=1024 --height=768 --socket=julep-test &
+    sleep 1
+    export WAYLAND_DISPLAY=julep-test
+    JULEP_TEST_BACKEND=full mix test
+```
+
+On Arch Linux, `weston` and `vulkan-swrast` are available via pacman.
+
 ### Progressive CI
 
 Run sim tests fast, then promote to higher-fidelity backends for subsets:
@@ -612,12 +637,12 @@ Run sim tests fast, then promote to higher-fidelity backends for subsets:
 # All tests on sim (fast, catches logic bugs)
 - run: mix test
 
-# Headless for protocol verification
+# Full suite on headless for protocol verification
 - run: |
     cd native/julep_gui && cargo build --features headless
-    JULEP_TEST_BACKEND=headless mix test --only headless
+    JULEP_TEST_BACKEND=headless mix test
 
-# Full for pixel regression
+# Full for pixel regression (tagged subset)
 - run: |
     Xvfb :99 -screen 0 1024x768x24 &
     export DISPLAY=:99
@@ -637,6 +662,27 @@ test "window opens and renders" do
   # ...
 end
 ```
+
+
+## Wire format in test backends
+
+The headless and full backends communicate with the renderer using the same
+wire protocol as the production Bridge. By default, both use MessagePack
+(`{:packet, 4}` framing). JSON is available for debugging:
+
+```elixir
+# In test setup or application config
+config :julep, :test_format, :json
+```
+
+Or pass `format: :json` in backend opts when starting a session manually:
+
+```elixir
+session = Session.start(MyApp, backend: Julep.Test.Backend.Headless, format: :json)
+```
+
+The sim backend does not use a wire protocol (pure Elixir, no renderer
+process), so the format option has no effect on it.
 
 
 ## Known limitations

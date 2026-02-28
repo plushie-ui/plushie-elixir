@@ -4,41 +4,55 @@ pub mod headless_mode {
 
     use serde_json::Value;
 
+    use crate::codec::Codec;
     use crate::julep_core::Core;
     use crate::protocol::{
         IncomingMessage, InteractResponse, QueryResponse, ResetResponse, SnapshotCaptureResponse,
     };
+    use crate::WIRE_CODEC;
 
     /// Run the headless mode event loop.
-    /// No iced::daemon. Reads JSONL from stdin, processes through Core,
-    /// writes responses to stdout.
-    pub fn run() {
+    /// No iced::daemon. Reads framed messages from stdin, processes through Core,
+    /// writes responses to stdout using the negotiated wire codec.
+    pub fn run(forced_codec: Option<Codec>) {
         let mut core = Core::new();
         let stdin = io::stdin();
-        let reader = io::BufReader::new(stdin.lock());
+        let mut reader = io::BufReader::new(stdin.lock());
 
-        for line in reader.lines() {
-            match line {
-                Ok(raw) => {
-                    let trimmed = raw.trim();
-                    if trimmed.is_empty() {
-                        continue;
-                    }
-                    match serde_json::from_str::<IncomingMessage>(trimmed) {
-                        Ok(msg) => handle_message(&mut core, msg),
-                        Err(e) => {
-                            eprintln!("julep_gui [headless]: parse error: {e} (input: {trimmed})");
-                        }
-                    }
+        // Determine codec: forced by CLI flag, or auto-detected from first byte.
+        let codec = match forced_codec {
+            Some(c) => c,
+            None => {
+                let buf = reader.fill_buf().unwrap_or(&[]);
+                if buf.is_empty() {
+                    log::error!("stdin closed before first message");
+                    return;
                 }
+                Codec::detect_from_first_byte(buf[0])
+            }
+        };
+        log::info!("wire codec: {codec:?}");
+        WIRE_CODEC
+            .set(codec)
+            .expect("WIRE_CODEC already initialized");
+
+        loop {
+            match codec.read_message(&mut reader) {
+                Ok(None) => break,
+                Ok(Some(bytes)) => match codec.decode::<IncomingMessage>(&bytes) {
+                    Ok(msg) => handle_message(&mut core, msg),
+                    Err(e) => {
+                        log::error!("decode error: {e}");
+                    }
+                },
                 Err(e) => {
-                    eprintln!("julep_gui [headless]: read error: {e}");
+                    log::error!("read error: {e}");
                     break;
                 }
             }
         }
 
-        eprintln!("julep_gui [headless]: stdin closed, exiting");
+        log::info!("stdin closed, exiting");
     }
 
     fn handle_message(core: &mut Core, msg: IncomingMessage) {
@@ -63,10 +77,10 @@ pub mod headless_mode {
                 for effect in effects {
                     match effect {
                         crate::julep_core::CoreEffect::EmitEvent(event) => {
-                            emit_json(&event);
+                            emit_wire(&event);
                         }
                         crate::julep_core::CoreEffect::EmitEffectResponse(response) => {
-                            emit_json(&response);
+                            emit_wire(&response);
                         }
                         _ => {} // No-op for window/widget ops in headless
                     }
@@ -116,12 +130,12 @@ pub mod headless_mode {
                 }
             }
             _ => {
-                eprintln!("julep_gui [headless]: unknown query target: {target}");
+                log::warn!("unknown query target: {target}");
                 Value::Null
             }
         };
 
-        emit_json(&QueryResponse::new(id, target, data));
+        emit_wire(&QueryResponse::new(id, target, data));
     }
 
     fn handle_interact(
@@ -181,12 +195,12 @@ pub mod headless_mode {
                 ]
             }
             _ => {
-                eprintln!("julep_gui [headless]: unknown action '{action}' or widget not found");
+                log::warn!("unknown action '{action}' or widget not found");
                 vec![]
             }
         };
 
-        emit_json(&InteractResponse::new(id, events));
+        emit_wire(&InteractResponse::new(id, events));
     }
 
     fn handle_snapshot_capture(core: &Core, id: String, name: String) {
@@ -205,7 +219,7 @@ pub mod headless_mode {
             format!("{:x}", hasher.finalize())
         };
 
-        emit_json(&SnapshotCaptureResponse::new(
+        emit_wire(&SnapshotCaptureResponse::new(
             id, name, hash, 0, // no pixel dimensions for tree-hash snapshots
             0, None, // no RGBA data
         ));
@@ -213,7 +227,7 @@ pub mod headless_mode {
 
     fn handle_reset(core: &mut Core, id: String) {
         *core = Core::new();
-        emit_json(&ResetResponse::ok(id));
+        emit_wire(&ResetResponse::ok(id));
     }
 
     // -- Selector parsing --
@@ -294,17 +308,19 @@ pub mod headless_mode {
         None
     }
 
-    fn emit_json<T: serde::Serialize>(value: &T) {
-        match serde_json::to_string(value) {
-            Ok(json) => {
+    /// Write a serialized response to stdout using the negotiated wire codec.
+    fn emit_wire<T: serde::Serialize>(value: &T) {
+        let codec = WIRE_CODEC.get().expect("WIRE_CODEC not initialized");
+        match codec.encode(value) {
+            Ok(bytes) => {
                 let stdout = io::stdout();
                 let mut handle = stdout.lock();
-                if let Err(e) = writeln!(handle, "{json}") {
-                    eprintln!("julep_gui [headless]: write error: {e}");
+                if let Err(e) = handle.write_all(&bytes) {
+                    log::error!("write error: {e}");
                 }
                 let _ = handle.flush();
             }
-            Err(e) => eprintln!("julep_gui [headless]: serialize error: {e}"),
+            Err(e) => log::error!("encode error: {e}"),
         }
     }
 

@@ -3,122 +3,169 @@ defmodule Julep.Protocol do
   Wire protocol encoding and decoding between the Elixir runtime and the iced
   renderer process.
 
-  Messages are newline-delimited JSON. Each encode function returns a JSON
-  string with a trailing newline ready to be written to the port. The decode
-  function accepts a single JSON string (without the newline) and returns an
+  Supports two wire formats:
+
+  * `:json` -- newline-delimited JSON. Opt-in for debugging and observability.
+    Each encode function returns a JSON string with a trailing newline.
+  * `:msgpack` -- MessagePack via `Msgpax` (default). Returns raw binary with no
+    length prefix (Erlang's `{:packet, 4}` Port driver handles framing).
+
+  The decode function accepts a binary in either format and returns an
   Elixir event tuple.
   """
+
+  @typedoc "Wire format for protocol messages."
+  @type format :: :json | :msgpack
+
+  # ---------------------------------------------------------------------------
+  # Serialization helpers
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Encodes an arbitrary map as a wire-format binary.
+
+  For `:json`, returns a JSON string with a trailing newline.
+  For `:msgpack`, returns raw msgpack bytes (no length prefix -- the Erlang
+  `{:packet, 4}` Port driver handles framing).
+  """
+  @spec encode(message :: map(), format :: format()) :: binary()
+  def encode(map, format \\ :msgpack), do: serialize(map, format)
+
+  @doc """
+  Decodes a wire-format binary into a string-keyed map without dispatch.
+
+  Unlike `decode_message/2` which dispatches into Elixir event tuples, this
+  returns the raw deserialized map. Used by test backends that handle
+  renderer responses (query_response, interact_response, etc.) directly.
+  """
+  @spec decode(data :: binary(), format :: format()) :: {:ok, map()} | {:error, term()}
+  def decode(data, format \\ :msgpack), do: deserialize(data, format)
+
+  defp serialize(map, :json), do: Jason.encode!(map) <> "\n"
+  defp serialize(map, :msgpack), do: Msgpax.pack!(map, iodata: false)
+
+  defp deserialize(data, :json), do: Jason.decode(data)
+  defp deserialize(data, :msgpack), do: Msgpax.unpack(data)
 
   # ---------------------------------------------------------------------------
   # Encoding
   # ---------------------------------------------------------------------------
 
   @doc """
-  Encodes application-level settings as a JSON message followed by a newline.
+  Encodes application-level settings as a protocol message.
 
   ## Example
 
-      iex> Julep.Protocol.encode_settings(%{antialiasing: true, default_text_size: 16})
+      iex> Julep.Protocol.encode_settings(%{antialiasing: true, default_text_size: 16}, :json)
       ~s({"settings":{"antialiasing":true,"default_text_size":16},"type":"settings"}) <> "\\n"
   """
-  @spec encode_settings(settings :: map()) :: String.t()
-  def encode_settings(settings) when is_map(settings) do
-    Jason.encode!(%{type: "settings", settings: settings}) <> "\n"
+  @spec encode_settings(settings :: map(), format :: format()) :: binary()
+  def encode_settings(settings, format \\ :msgpack) when is_map(settings) do
+    serialize(%{type: "settings", settings: settings}, format)
   end
 
   @doc """
-  Encodes a UI tree snapshot as a JSON message followed by a newline.
+  Encodes a UI tree snapshot as a protocol message.
 
   ## Example
 
-      iex> Julep.Protocol.encode_snapshot(%{tag: "text", value: "hello"})
+      iex> Julep.Protocol.encode_snapshot(%{tag: "text", value: "hello"}, :json)
       ~s({"tree":{"tag":"text","value":"hello"},"type":"snapshot"}) <> "\\n"
   """
-  @spec encode_snapshot(tree :: term()) :: String.t()
-  def encode_snapshot(tree) do
-    Jason.encode!(%{type: "snapshot", tree: tree}) <> "\n"
+  @spec encode_snapshot(tree :: term(), format :: format()) :: binary()
+  def encode_snapshot(tree, format \\ :msgpack) do
+    serialize(%{type: "snapshot", tree: tree}, format)
   end
 
   @doc """
-  Encodes a list of patch operations as a JSON message followed by a newline.
+  Encodes a list of patch operations as a protocol message.
 
-  The ops list is encoded as-is into the JSON payload.
+  The ops list is encoded as-is into the payload.
 
   ## Example
 
-      iex> Julep.Protocol.encode_patch([])
+      iex> Julep.Protocol.encode_patch([], :json)
       ~s({"ops":[],"type":"patch"}) <> "\\n"
   """
-  @spec encode_patch(ops :: list()) :: String.t()
-  def encode_patch(ops) do
-    Jason.encode!(%{type: "patch", ops: ops}) <> "\n"
+  @spec encode_patch(ops :: list(), format :: format()) :: binary()
+  def encode_patch(ops, format \\ :msgpack) do
+    serialize(%{type: "patch", ops: ops}, format)
   end
 
   @doc """
-  Encodes an effect request as a JSON message followed by a newline.
+  Encodes an effect request as a protocol message.
 
   ## Example
 
       iex> Julep.Protocol.encode_effect_request("req_1", "http", %{url: "https://example.com"})
       ~s({"id":"req_1","kind":"http","payload":{"url":"https://example.com"},"type":"effect_request"}) <> "\\n"
   """
-  @spec encode_effect_request(id :: String.t(), kind :: String.t(), payload :: term()) ::
-          String.t()
-  def encode_effect_request(id, kind, payload) do
-    Jason.encode!(%{type: "effect_request", id: id, kind: kind, payload: payload}) <> "\n"
+  @spec encode_effect_request(
+          id :: String.t(),
+          kind :: String.t(),
+          payload :: term(),
+          format :: format()
+        ) :: binary()
+  def encode_effect_request(id, kind, payload, format \\ :msgpack) do
+    serialize(%{type: "effect_request", id: id, kind: kind, payload: payload}, format)
   end
 
   @doc """
-  Encodes a widget operation as a JSON message followed by a newline.
+  Encodes a widget operation as a protocol message.
 
   ## Example
 
       iex> Julep.Protocol.encode_widget_op("focus", %{target: "username"})
       ~s({"op":"focus","payload":{"target":"username"},"type":"widget_op"}) <> "\\n"
   """
-  @spec encode_widget_op(op :: String.t(), payload :: map()) :: String.t()
-  def encode_widget_op(op, payload) do
-    Jason.encode!(%{type: "widget_op", op: op, payload: payload}) <> "\n"
+  @spec encode_widget_op(op :: String.t(), payload :: map(), format :: format()) :: binary()
+  def encode_widget_op(op, payload, format \\ :msgpack) do
+    serialize(%{type: "widget_op", op: op, payload: payload}, format)
   end
 
   @doc """
-  Encodes a subscription register message as a JSON message followed by a newline.
+  Encodes a subscription register message as a protocol message.
 
   ## Example
 
       iex> Julep.Protocol.encode_subscription_register("on_key_press", "keys")
       ~s({"kind":"on_key_press","tag":"keys","type":"subscription_register"}) <> "\\n"
   """
-  @spec encode_subscription_register(kind :: String.t(), tag :: String.t()) :: String.t()
-  def encode_subscription_register(kind, tag) do
-    Jason.encode!(%{type: "subscription_register", kind: kind, tag: tag}) <> "\n"
+  @spec encode_subscription_register(kind :: String.t(), tag :: String.t(), format :: format()) ::
+          binary()
+  def encode_subscription_register(kind, tag, format \\ :msgpack) do
+    serialize(%{type: "subscription_register", kind: kind, tag: tag}, format)
   end
 
   @doc """
-  Encodes a subscription unregister message as a JSON message followed by a newline.
+  Encodes a subscription unregister message as a protocol message.
 
   ## Example
 
       iex> Julep.Protocol.encode_subscription_unregister("on_key_press")
       ~s({"kind":"on_key_press","type":"subscription_unregister"}) <> "\\n"
   """
-  @spec encode_subscription_unregister(kind :: String.t()) :: String.t()
-  def encode_subscription_unregister(kind) do
-    Jason.encode!(%{type: "subscription_unregister", kind: kind}) <> "\n"
+  @spec encode_subscription_unregister(kind :: String.t(), format :: format()) :: binary()
+  def encode_subscription_unregister(kind, format \\ :msgpack) do
+    serialize(%{type: "subscription_unregister", kind: kind}, format)
   end
 
   @doc """
-  Encodes a window lifecycle operation as a JSON message followed by a newline.
+  Encodes a window lifecycle operation as a protocol message.
 
   ## Example
 
       iex> Julep.Protocol.encode_window_op("open", "main", %{title: "My App"})
       ~s({"op":"open","settings":{"title":"My App"},"type":"window_op","window_id":"main"}) <> "\\n"
   """
-  @spec encode_window_op(op :: String.t(), window_id :: String.t(), settings :: map()) ::
-          String.t()
-  def encode_window_op(op, window_id, settings) do
-    Jason.encode!(%{type: "window_op", op: op, window_id: window_id, settings: settings}) <> "\n"
+  @spec encode_window_op(
+          op :: String.t(),
+          window_id :: String.t(),
+          settings :: map(),
+          format :: format()
+        ) :: binary()
+  def encode_window_op(op, window_id, settings, format \\ :msgpack) do
+    serialize(%{type: "window_op", op: op, window_id: window_id, settings: settings}, format)
   end
 
   # ---------------------------------------------------------------------------
@@ -126,7 +173,7 @@ defmodule Julep.Protocol do
   # ---------------------------------------------------------------------------
 
   @doc """
-  Decodes a JSON string into an event tuple.
+  Decodes a protocol message into an event tuple.
 
   Returns `{:error, reason}` on parse failure or an unrecognised message shape.
 
@@ -136,13 +183,13 @@ defmodule Julep.Protocol do
       {:click, "btn_save"}
 
       iex> Julep.Protocol.decode_message("not json")
-      {:error, :invalid_json}
+      {:error, :decode_failed}
   """
-  @spec decode_message(json_string :: String.t()) :: tuple() | {:error, term()}
-  def decode_message(json_string) do
-    case Jason.decode(json_string) do
+  @spec decode_message(data :: binary(), format :: format()) :: tuple() | {:error, term()}
+  def decode_message(data, format \\ :msgpack) do
+    case deserialize(data, format) do
       {:ok, msg} -> dispatch(msg)
-      {:error, _} -> {:error, :invalid_json}
+      {:error, _} -> {:error, :decode_failed}
     end
   end
 
@@ -626,6 +673,50 @@ defmodule Julep.Protocol do
   # Private dispatch
   # ---------------------------------------------------------------------------
 
+  # -- Outgoing message types (for roundtrip testing and diagnostics) --
+
+  defp dispatch(%{"type" => "settings", "settings" => settings}) do
+    {:settings, settings}
+  end
+
+  defp dispatch(%{"type" => "snapshot", "tree" => tree}) do
+    {:snapshot, tree}
+  end
+
+  defp dispatch(%{"type" => "patch", "ops" => ops}) do
+    {:patch, ops}
+  end
+
+  defp dispatch(%{
+         "type" => "effect_request",
+         "id" => id,
+         "kind" => kind,
+         "payload" => payload
+       }) do
+    {:effect_request, id, kind, payload}
+  end
+
+  defp dispatch(%{"type" => "widget_op", "op" => op, "payload" => payload}) do
+    {:widget_op, op, payload}
+  end
+
+  defp dispatch(%{"type" => "subscription_register", "kind" => kind, "tag" => tag}) do
+    {:subscription_register, kind, tag}
+  end
+
+  defp dispatch(%{"type" => "subscription_unregister", "kind" => kind}) do
+    {:subscription_unregister, kind}
+  end
+
+  defp dispatch(%{
+         "type" => "window_op",
+         "op" => op,
+         "window_id" => window_id,
+         "settings" => settings
+       }) do
+    {:window_op, op, window_id, settings}
+  end
+
   # -- Widget events --
 
   defp dispatch(%{"type" => "event", "family" => "click", "id" => id}) do
@@ -681,15 +772,17 @@ defmodule Julep.Protocol do
            "modifiers" => mods
          } = msg
        ) do
+    data = msg["data"] || %{}
+
     {:key_press,
      %Julep.KeyEvent{
        key: parse_key(key),
-       modified_key: parse_key(msg["modified_key"] || key),
-       physical_key: parse_physical_key(msg["physical_key"]),
-       location: parse_location(msg["location"]),
+       modified_key: parse_key(data["modified_key"] || key),
+       physical_key: parse_physical_key(data["physical_key"]),
+       location: parse_location(data["location"]),
        modifiers: parse_modifiers(mods),
-       text: msg["text"],
-       repeat: msg["repeat"] || false
+       text: data["text"],
+       repeat: data["repeat"] || false
      }}
   end
 
@@ -701,12 +794,14 @@ defmodule Julep.Protocol do
            "modifiers" => mods
          } = msg
        ) do
+    data = msg["data"] || %{}
+
     {:key_release,
      %Julep.KeyEvent{
        key: parse_key(key),
-       modified_key: parse_key(msg["modified_key"] || key),
-       physical_key: parse_physical_key(msg["physical_key"]),
-       location: parse_location(msg["location"]),
+       modified_key: parse_key(data["modified_key"] || key),
+       physical_key: parse_physical_key(data["physical_key"]),
+       location: parse_location(data["location"]),
        modifiers: parse_modifiers(mods),
        text: nil,
        repeat: false
@@ -723,7 +818,7 @@ defmodule Julep.Protocol do
 
   # -- Mouse events --
 
-  defp dispatch(%{"type" => "event", "family" => "cursor_moved", "x" => x, "y" => y}) do
+  defp dispatch(%{"type" => "event", "family" => "cursor_moved", "data" => %{"x" => x, "y" => y}}) do
     {:cursor_moved, x, y}
   end
 
@@ -746,9 +841,7 @@ defmodule Julep.Protocol do
   defp dispatch(%{
          "type" => "event",
          "family" => "wheel_scrolled",
-         "delta_x" => dx,
-         "delta_y" => dy,
-         "unit" => unit
+         "data" => %{"delta_x" => dx, "delta_y" => dy, "unit" => unit}
        }) do
     {:wheel_scrolled, dx, dy, unit}
   end
@@ -758,9 +851,7 @@ defmodule Julep.Protocol do
   defp dispatch(%{
          "type" => "event",
          "family" => "finger_pressed",
-         "finger_id" => finger_id,
-         "x" => x,
-         "y" => y
+         "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
        }) do
     {:finger_pressed, finger_id, x, y}
   end
@@ -768,9 +859,7 @@ defmodule Julep.Protocol do
   defp dispatch(%{
          "type" => "event",
          "family" => "finger_moved",
-         "finger_id" => finger_id,
-         "x" => x,
-         "y" => y
+         "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
        }) do
     {:finger_moved, finger_id, x, y}
   end
@@ -778,9 +867,7 @@ defmodule Julep.Protocol do
   defp dispatch(%{
          "type" => "event",
          "family" => "finger_lifted",
-         "finger_id" => finger_id,
-         "x" => x,
-         "y" => y
+         "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
        }) do
     {:finger_lifted, finger_id, x, y}
   end
@@ -788,9 +875,7 @@ defmodule Julep.Protocol do
   defp dispatch(%{
          "type" => "event",
          "family" => "finger_lost",
-         "finger_id" => finger_id,
-         "x" => x,
-         "y" => y
+         "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
        }) do
     {:finger_lost, finger_id, x, y}
   end
@@ -800,14 +885,11 @@ defmodule Julep.Protocol do
   defp dispatch(%{
          "type" => "event",
          "family" => "window_opened",
-         "window_id" => window_id,
-         "position" => position,
-         "width" => width,
-         "height" => height
+         "data" => %{"window_id" => window_id, "width" => width, "height" => height} = data
        }) do
     pos =
-      case position do
-        %{"x" => x, "y" => y} -> {x, y}
+      case data do
+        %{"position" => %{"x" => x, "y" => y}} -> {x, y}
         _ -> nil
       end
 
@@ -817,7 +899,7 @@ defmodule Julep.Protocol do
   defp dispatch(%{
          "type" => "event",
          "family" => "window_closed",
-         "window_id" => window_id
+         "data" => %{"window_id" => window_id}
        }) do
     {:window_closed, window_id}
   end
@@ -825,7 +907,7 @@ defmodule Julep.Protocol do
   defp dispatch(%{
          "type" => "event",
          "family" => "window_close_requested",
-         "window_id" => window_id
+         "data" => %{"window_id" => window_id}
        }) do
     {:window_close_requested, window_id}
   end
@@ -833,9 +915,7 @@ defmodule Julep.Protocol do
   defp dispatch(%{
          "type" => "event",
          "family" => "window_moved",
-         "window_id" => window_id,
-         "x" => x,
-         "y" => y
+         "data" => %{"window_id" => window_id, "x" => x, "y" => y}
        }) do
     {:window_moved, window_id, x, y}
   end
@@ -843,9 +923,7 @@ defmodule Julep.Protocol do
   defp dispatch(%{
          "type" => "event",
          "family" => "window_resized",
-         "window_id" => window_id,
-         "width" => width,
-         "height" => height
+         "data" => %{"window_id" => window_id, "width" => width, "height" => height}
        }) do
     {:window_resized, window_id, width, height}
   end
@@ -853,7 +931,7 @@ defmodule Julep.Protocol do
   defp dispatch(%{
          "type" => "event",
          "family" => "window_focused",
-         "window_id" => window_id
+         "data" => %{"window_id" => window_id}
        }) do
     {:window_focused, window_id}
   end
@@ -861,7 +939,7 @@ defmodule Julep.Protocol do
   defp dispatch(%{
          "type" => "event",
          "family" => "window_unfocused",
-         "window_id" => window_id
+         "data" => %{"window_id" => window_id}
        }) do
     {:window_unfocused, window_id}
   end
@@ -869,8 +947,7 @@ defmodule Julep.Protocol do
   defp dispatch(%{
          "type" => "event",
          "family" => "window_rescaled",
-         "window_id" => window_id,
-         "scale_factor" => scale_factor
+         "data" => %{"window_id" => window_id, "scale_factor" => scale_factor}
        }) do
     {:window_rescaled, window_id, scale_factor}
   end
@@ -878,8 +955,7 @@ defmodule Julep.Protocol do
   defp dispatch(%{
          "type" => "event",
          "family" => "file_hovered",
-         "window_id" => window_id,
-         "path" => path
+         "data" => %{"window_id" => window_id, "path" => path}
        }) do
     {:file_hovered, window_id, path}
   end
@@ -887,8 +963,7 @@ defmodule Julep.Protocol do
   defp dispatch(%{
          "type" => "event",
          "family" => "file_dropped",
-         "window_id" => window_id,
-         "path" => path
+         "data" => %{"window_id" => window_id, "path" => path}
        }) do
     {:file_dropped, window_id, path}
   end
@@ -896,7 +971,7 @@ defmodule Julep.Protocol do
   defp dispatch(%{
          "type" => "event",
          "family" => "files_hovered_left",
-         "window_id" => window_id
+         "data" => %{"window_id" => window_id}
        }) do
     {:files_hovered_left, window_id}
   end
@@ -906,7 +981,7 @@ defmodule Julep.Protocol do
   defp dispatch(%{
          "type" => "event",
          "family" => "animation_frame",
-         "timestamp" => timestamp
+         "data" => %{"timestamp" => timestamp}
        }) do
     {:animation_frame, timestamp}
   end

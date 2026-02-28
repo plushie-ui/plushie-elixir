@@ -13,13 +13,13 @@ defmodule Julep.WidgetOpsTest do
 
   describe "Protocol.encode_widget_op/2" do
     test "produces a JSON object with type 'widget_op'" do
-      result = Protocol.encode_widget_op("focus", %{target: "username"})
+      result = Protocol.encode_widget_op("focus", %{target: "username"}, :json)
       parsed = decode_json!(result)
       assert parsed["type"] == "widget_op"
     end
 
     test "includes the op and payload fields" do
-      result = Protocol.encode_widget_op("scroll_to", %{target: "log", offset: 100})
+      result = Protocol.encode_widget_op("scroll_to", %{target: "log", offset: 100}, :json)
       parsed = decode_json!(result)
       assert parsed["op"] == "scroll_to"
       assert parsed["payload"]["target"] == "log"
@@ -27,17 +27,17 @@ defmodule Julep.WidgetOpsTest do
     end
 
     test "output ends with a trailing newline" do
-      result = Protocol.encode_widget_op("focus_next", %{})
+      result = Protocol.encode_widget_op("focus_next", %{}, :json)
       assert String.ends_with?(result, "\n")
     end
 
     test "output is valid JSON before the trailing newline" do
-      result = Protocol.encode_widget_op("select_all", %{target: "editor"})
+      result = Protocol.encode_widget_op("select_all", %{target: "editor"}, :json)
       assert {:ok, _} = Jason.decode(String.trim_trailing(result, "\n"))
     end
 
     test "empty payload encodes correctly" do
-      result = Protocol.encode_widget_op("focus_previous", %{})
+      result = Protocol.encode_widget_op("focus_previous", %{}, :json)
       parsed = decode_json!(result)
       assert parsed["payload"] == %{}
     end

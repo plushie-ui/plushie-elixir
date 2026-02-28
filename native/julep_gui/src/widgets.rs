@@ -185,7 +185,7 @@ pub fn render<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, M
         "responsive" => render_responsive(node, caches),
         "pane_grid" => render_pane_grid(node, caches),
         unknown => {
-            eprintln!("julep_gui: unknown node type `{unknown}`, rendering as empty container");
+            log::warn!("unknown node type `{unknown}`, rendering as empty container");
             container(Space::new()).into()
         }
     }
@@ -1125,7 +1125,7 @@ fn render_combo_box<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
     let state = match caches.combo_states.get(&node.id) {
         Some(s) => s,
         None => {
-            eprintln!("julep_gui: combo_box cache miss for id={}", node.id);
+            log::warn!("combo_box cache miss for id={}", node.id);
             return text("(combo_box: cache miss)").into();
         }
     };
@@ -1190,7 +1190,7 @@ fn render_text_editor<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Eleme
     let content = match caches.editor_contents.get(&node.id) {
         Some(c) => c,
         None => {
-            eprintln!("julep_gui: text_editor cache miss for id={}", node.id);
+            log::warn!("text_editor cache miss for id={}", node.id);
             return text("(text_editor: cache miss)").into();
         }
     };
@@ -1394,7 +1394,7 @@ fn render_markdown<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<
     let items = match caches.markdown_items.get(&node.id) {
         Some(items) => items.as_slice(),
         None => {
-            eprintln!("julep_gui: markdown cache miss for id={}", node.id);
+            log::warn!("markdown cache miss for id={}", node.id);
             return text("(markdown: cache miss)").into();
         }
     };

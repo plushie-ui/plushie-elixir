@@ -6,7 +6,7 @@ notifications, and similar features are effects.
 
 ## Design principle
 
-Effects are simple request/response pairs over the same JSONL transport.
+Effects are simple request/response pairs over the same stdio transport.
 Elixir asks, the renderer does, the renderer replies. No capability model,
 no policy engine, no permission framework. If an effect is requested, the
 renderer executes it.

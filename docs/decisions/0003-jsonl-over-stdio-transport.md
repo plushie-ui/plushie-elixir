@@ -53,3 +53,10 @@ envelopes, no framing, no sockets, no binary encoding.
 
 High. Switching to a different encoding or adding envelope fields is a
 localized change in the bridge and renderer. The app API does not change.
+
+## Addendum: MessagePack (2026-02)
+
+MessagePack was added as an alternative wire format alongside JSONL. The
+rationale and details are documented in `docs/transport.md`. This does not
+change the original decision -- JSONL remains the default. MessagePack is
+opt-in for workloads that benefit from faster serialization.

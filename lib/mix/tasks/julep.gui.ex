@@ -12,6 +12,7 @@ defmodule Mix.Tasks.Julep.Gui do
 
   - `--build` -- Build the renderer binary before starting (cargo build)
   - `--release` -- Use the release build of the renderer
+  - `--json` -- Use JSON instead of MessagePack for wire protocol (opt-in for debugging)
   """
 
   use Mix.Task
@@ -22,7 +23,7 @@ defmodule Mix.Tasks.Julep.Gui do
   def run(args) do
     {opts, args, _} =
       OptionParser.parse(args,
-        strict: [build: :boolean, release: :boolean]
+        strict: [build: :boolean, release: :boolean, json: :boolean]
       )
 
     app_module =
@@ -69,7 +70,12 @@ defmodule Mix.Tasks.Julep.Gui do
     Mix.Task.run("app.start")
 
     # Start Julep with the given app module
-    case Julep.start(app_module, renderer: renderer_path) do
+    start_opts = [renderer: renderer_path]
+
+    start_opts =
+      if opts[:json], do: Keyword.put(start_opts, :format, :json), else: start_opts
+
+    case Julep.start(app_module, start_opts) do
       {:ok, pid} ->
         Mix.shell().info("Julep started with #{inspect(app_module)}")
         # Block until the supervisor exits

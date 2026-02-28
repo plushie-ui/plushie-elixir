@@ -12,7 +12,7 @@ Audited: 2026-02-27
 - **SUPPORTED** -- Julep exposes this and the renderer handles it
 - **PARTIAL** -- Julep exposes some of it, gaps noted
 - **MISSING** -- iced supports it, Julep does not expose it
-- **BLOCKED** -- iced's API design prevents JSONL serialization
+- **BLOCKED** -- iced's API design or transport constraints prevent implementation
 - **N/A** -- Not applicable (feature not enabled, or internal-only)
 
 ---
@@ -578,7 +578,7 @@ Same as Slider. `circular_handle` and `handle_radius` also supported.
 | `show_system_menu(id)` | `show_system_menu(id)` | SUPPORTED |
 | `size(id)` / `position(id)` queries | `get_window_size(id, tag)` / `get_window_position(id, tag)` | SUPPORTED |
 | `is_maximized(id)` / `is_minimized(id)` | `is_maximized(id, tag)` / `is_minimized(id, tag)` | SUPPORTED |
-| `set_icon(id, icon)` | No | **BLOCKED** -- requires RGBA pixel data; impractical over JSONL |
+| `set_icon(id, icon)` | `set_icon(id, width, height, rgba)` | SUPPORTED |
 | `scale_factor(id)` | `get_scale_factor(id, tag)` | SUPPORTED |
 | `mode(id)` | `get_mode(id, tag)` | SUPPORTED |
 | `raw_id(id)` | `raw_id(id, tag)` | SUPPORTED |
@@ -602,7 +602,7 @@ Same as Slider. `circular_handle` and `handle_radius` also supported.
 | `transparent` | Via window node `transparent` prop | SUPPORTED |
 | `blur` | Via window node `blur` prop | SUPPORTED |
 | `level` | Via window node `level` prop | SUPPORTED |
-| `icon` | No | **BLOCKED** -- requires RGBA pixel data; impractical over JSONL |
+| `icon` | SUPPORTED | via `set_icon/4` command with RGBA pixel data |
 | `exit_on_close_request` | Via window node `exit_on_close_request` prop | SUPPORTED |
 
 ---
@@ -768,7 +768,7 @@ and delivered standalone via `:modifiers_changed`).
 - Declarative open (via tree) and close supported
 - Full imperative window management: resize, move, maximize, minimize, mode, decorations, focus, drag, screenshots, etc.
 - Full initial window settings: maximized, fullscreen, position, min/max size, visible, resizable, closeable, minimizable, decorations, transparent, blur, level, exit_on_close_request
-- BLOCKED: set_icon (requires RGBA pixel data; impractical over JSONL)
+- Window icon: via `set_icon/4` command with RGBA pixel data
 
 ### Clipboard
 - Full clipboard support: read, write, read_primary, write_primary
@@ -781,9 +781,8 @@ and delivered standalone via `:modifiers_changed`).
 
 ## 12. Remaining Gaps
 
-All items below are either BLOCKED by iced's API design (cannot be expressed
-over JSONL) or low-priority nice-to-haves. There are no actionable parity
-gaps remaining.
+All items below are either BLOCKED by iced's API design or low-priority
+nice-to-haves. There are no actionable parity gaps remaining.
 
 ### BLOCKED by iced 0.14 API
 
@@ -793,19 +792,15 @@ These cannot be implemented without upstream changes to iced:
 2. **TextEditor `highlight`** -- changes the Highlighter generic type parameter; cannot be expressed dynamically over JSONL
 3. **TextEditor `key_binding`** -- requires Rust closures; cannot be serialized from Elixir
 
-### BLOCKED by transport design
-
-4. **`set_icon`** -- requires RGBA pixel data; impractical over JSONL
-
 ### N/A (nothing to implement)
 
-5. **Scrollable `style`** -- iced 0.14 only exposes `default`; no named variants
-6. **SVG `style`** -- iced has no public style functions for SVG
-7. **Checkbox `icon`** -- iced's checkbox icon is a fixed `Icon` struct for rendering the checkmark; internal rendering detail, not a user-facing prop
+4. **Scrollable `style`** -- iced 0.14 only exposes `default`; no named variants
+5. **SVG `style`** -- iced has no public style functions for SVG
+6. **Checkbox `icon`** -- iced's checkbox icon is a fixed `Icon` struct for rendering the checkmark; internal rendering detail, not a user-facing prop
 
 ### Low Priority (nice-to-have, not blocking parity)
 
-8. **`vsync` setting** -- vsync control
-9. **Extended palette generation** -- full iced extended palette auto-generation
-10. **`theme::Mode`** -- light/dark/none mode enum
-11. **Table `sortable` / column alignment** -- sort handling and per-column align_x/align_y
+7. **`vsync` setting** -- vsync control
+8. **Extended palette generation** -- full iced extended palette auto-generation
+9. **`theme::Mode`** -- light/dark/none mode enum
+10. **Table `sortable` / column alignment** -- sort handling and per-column align_x/align_y

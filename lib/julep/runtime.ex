@@ -103,8 +103,8 @@ defmodule Julep.Runtime do
       async_tasks: %{}
     }
 
-    # Defer snapshot send to handle_continue so the supervisor can start
-    # Bridge before we try to send to it.
+    # Defer rendering to handle_continue. Bridge is already started (it's
+    # the first child in the supervisor tree), so it's safe to cast to it.
     {:ok, state, {:continue, :initial_render}}
   end
 
@@ -153,7 +153,10 @@ defmodule Julep.Runtime do
   end
 
   def handle_info(:renderer_restarted, state) do
-    Logger.info("julep runtime: renderer restarted -- re-sending current snapshot")
+    Logger.info("julep runtime: renderer restarted -- re-sending settings and snapshot")
+
+    # The new renderer process expects Settings as the first message.
+    send_settings(state.app, state.bridge)
 
     # Re-send the last known tree so the renderer can reconstruct its state.
     if state.tree do
@@ -250,16 +253,21 @@ defmodule Julep.Runtime do
   # Private helpers
   # ---------------------------------------------------------------------------
 
-  # Sends app-level settings to the bridge if the app defines settings/0
-  # and the result is non-empty.
+  # Sends app-level settings to the bridge. The renderer expects a Settings
+  # message as the very first message on stdin (before any snapshot), so this
+  # must always send something, even if the app doesn't define settings/0.
   defp send_settings(app, bridge) do
-    if function_exported?(app, :settings, 0) do
-      settings = app.settings()
-
-      if settings != [] and bridge do
-        Julep.Bridge.send_settings(bridge, Map.new(settings))
+    settings =
+      if function_exported?(app, :settings, 0) do
+        case app.settings() do
+          s when is_list(s) and s != [] -> Map.new(s)
+          _ -> %{}
+        end
+      else
+        %{}
       end
-    end
+
+    if bridge, do: Julep.Bridge.send_settings(bridge, settings)
   end
 
   # Unwraps `app.init/1` or `app.update/2` return values into a

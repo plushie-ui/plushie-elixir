@@ -11,7 +11,7 @@ A Hex package that provides:
 - `Julep.App` behaviour (init, update, view callbacks)
 - `Julep.UI` module for building UI trees
 - A runtime that manages app state and communicates with the renderer
-- A `Port`-based bridge that spawns the renderer and speaks JSONL
+- A `Port`-based bridge that spawns the renderer and speaks MessagePack (or JSONL)
 - Mix tasks for development (`mix julep.gui`)
 - Test helpers for asserting on UI trees without the renderer
 
@@ -25,9 +25,9 @@ This is the only piece app developers interact with directly.
 
 A standalone executable that:
 
-- Reads JSONL messages from stdin (snapshots and patches)
+- Reads messages from stdin (MessagePack or JSONL) (snapshots and patches)
 - Renders iced widgets based on the UI tree
-- Writes user events to stdout as JSONL
+- Writes user events to stdout (MessagePack or JSONL)
 - Manages window lifecycle, theming, and input handling
 
 The binary has no app-specific logic. It is a generic "display server" for
@@ -42,7 +42,7 @@ The demo app (`julep_demo`) is one such consumer.
 ## Data flow
 
 ```
-+------------------+       JSONL/stdio       +------------------+
++------------------+  msgpack/stdio (default) +------------------+
 |                  |  --- snapshots/patches ->|                  |
 |  Elixir runtime  |                         |  julep_gui       |
 |  (Julep.App)     |  <--- events ---------- |  (iced renderer) |
@@ -56,10 +56,10 @@ The demo app (`julep_demo`) is one such consumer.
 
 1. Elixir runtime calls `view(model)` to produce a UI tree (plain maps).
 2. Runtime diffs the tree against the previous version.
-3. Diff is encoded as JSONL and sent to the renderer via Port stdin.
+3. Diff is encoded (MessagePack by default, or JSONL) and sent to the renderer via Port stdin.
 4. Renderer applies the diff to its retained tree and repaints.
 5. User interacts with the UI (clicks, types, etc.).
-6. Renderer encodes the interaction as an event and writes it to stdout.
+6. Renderer encodes the interaction as an event (MessagePack by default, or JSONL) and writes it to stdout.
 7. Elixir runtime receives the event, calls `update(model, event)`.
 8. Cycle repeats from step 1.
 

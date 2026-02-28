@@ -2,9 +2,10 @@ defmodule Julep.Test.Backend.Headless do
   @moduledoc """
   Headless test backend using the Rust renderer with iced_test Simulator.
 
-  Spawns `julep_gui --headless` as a Port and communicates via JSONL with
-  correlation-ID protocol. Provides structural tree snapshots and real widget
-  rendering for regression testing. No display server required.
+  Spawns `julep_gui --headless` as a Port and communicates via the negotiated
+  wire format (msgpack by default, json opt-in). Provides structural tree
+  snapshots and real widget rendering for regression testing. No display server
+  required.
 
   ## Requirements
 
@@ -105,26 +106,27 @@ defmodule Julep.Test.Backend.Headless do
 
   @impl GenServer
   def init({app, opts}) do
+    format = Keyword.get(opts, :format, :msgpack)
     renderer_path = resolve_renderer_path()
 
     port =
       Port.open({:spawn_executable, renderer_path}, [
         :binary,
         :exit_status,
-        {:line, 65_536},
-        {:args, ["--headless"]}
+        :use_stdio
+        | port_opts(format) ++ [{:args, port_args(format)}]
       ])
 
     {model, _commands} = init_app(app, opts)
     tree = render_tree(app, model)
 
     # Send initial snapshot to the renderer
-    snapshot_msg = Jason.encode!(%{type: "snapshot", tree: tree})
-    Port.command(port, [snapshot_msg, "\n"])
+    send_message(port, format, %{type: "snapshot", tree: tree})
 
     {:ok,
      %{
        port: port,
+       format: format,
        app: app,
        opts: opts,
        model: model,
@@ -135,82 +137,48 @@ defmodule Julep.Test.Backend.Headless do
      }}
   end
 
-  @impl GenServer
-  def handle_call({:find, selector}, from, state) do
-    {id, state} = next_id(state)
-    sel = encode_selector(selector)
-    send_message(state.port, %{type: "query", id: id, target: "find", selector: sel})
-    {:noreply, put_in(state, [:pending, id], {:find, from})}
-  end
+  # -- Port configuration --
 
-  def handle_call(:tree, from, state) do
-    {id, state} = next_id(state)
-    send_message(state.port, %{type: "query", id: id, target: "tree", selector: %{}})
-    {:noreply, put_in(state, [:pending, id], {:tree, from})}
-  end
+  defp port_opts(:json), do: [{:line, 65_536}]
+  defp port_opts(:msgpack), do: [{:packet, 4}]
 
-  def handle_call({:interact, action, selector, payload}, from, state) do
-    {id, state} = next_id(state)
-    sel = encode_selector(selector)
+  defp port_args(:json), do: ["--headless", "--json"]
+  defp port_args(:msgpack), do: ["--headless"]
 
-    send_message(state.port, %{
-      type: "interact",
-      id: id,
-      action: action,
-      selector: sel,
-      payload: payload
-    })
-
-    {:noreply, put_in(state, [:pending, id], {:interact, from, action})}
-  end
-
-  def handle_call({:snapshot, name}, from, state) do
-    {id, state} = next_id(state)
-
-    send_message(state.port, %{
-      type: "snapshot_capture",
-      id: id,
-      name: name,
-      theme: %{},
-      viewport: %{}
-    })
-
-    {:noreply, put_in(state, [:pending, id], {:snapshot, from, name})}
-  end
-
-  def handle_call(:model, _from, state) do
-    {:reply, state.model, state}
-  end
-
-  def handle_call(:reset, from, state) do
-    {id, state} = next_id(state)
-    send_message(state.port, %{type: "reset", id: id})
-
-    {model, _commands} = init_app(state.app, state.opts)
-    tree = render_tree(state.app, model)
-    snapshot_msg = Jason.encode!(%{type: "snapshot", tree: tree})
-    Port.command(state.port, [snapshot_msg, "\n"])
-
-    {:noreply, put_in(%{state | model: model, tree: tree}, [:pending, id], {:reset, from})}
-  end
+  # -- Incoming data handlers --
 
   @impl GenServer
-  def handle_info({port, {:data, {:eol, line}}}, %{port: port} = state) do
+  # JSON mode: line-buffered data
+  def handle_call(msg, from, state), do: do_handle_call(msg, from, state)
+
+  @impl GenServer
+  def handle_info({port, {:data, {:eol, line}}}, %{port: port, format: :json} = state) do
     full_line = state.buffer <> line
     state = %{state | buffer: ""}
 
-    case Jason.decode(full_line) do
+    case Julep.Protocol.decode(full_line, :json) do
       {:ok, response} ->
-        state = handle_response(response, state)
-        {:noreply, state}
+        {:noreply, handle_response(response, state)}
 
       {:error, _} ->
         {:noreply, state}
     end
   end
 
-  def handle_info({port, {:data, {:noeol, chunk}}}, %{port: port} = state) do
+  def handle_info({port, {:data, {:noeol, chunk}}}, %{port: port, format: :json} = state) do
     {:noreply, %{state | buffer: state.buffer <> chunk}}
+  end
+
+  # MsgPack mode: complete framed messages from {:packet, 4}
+  def handle_info({port, {:data, binary}}, %{port: port, format: :msgpack} = state)
+      when is_binary(binary) do
+    case Julep.Protocol.decode(binary, :msgpack) do
+      {:ok, response} ->
+        {:noreply, handle_response(response, state)}
+
+      {:error, _} ->
+        {:noreply, state}
+    end
   end
 
   def handle_info({port, {:exit_status, code}}, %{port: port} = state) do
@@ -226,6 +194,69 @@ defmodule Julep.Test.Backend.Headless do
   end
 
   def handle_info(_msg, state), do: {:noreply, state}
+
+  # -- Call handlers --
+
+  defp do_handle_call({:find, selector}, from, state) do
+    {id, state} = next_id(state)
+    sel = encode_selector(selector)
+
+    send_message(state.port, state.format, %{type: "query", id: id, target: "find", selector: sel})
+
+    {:noreply, put_in(state, [:pending, id], {:find, from})}
+  end
+
+  defp do_handle_call(:tree, from, state) do
+    {id, state} = next_id(state)
+
+    send_message(state.port, state.format, %{type: "query", id: id, target: "tree", selector: %{}})
+
+    {:noreply, put_in(state, [:pending, id], {:tree, from})}
+  end
+
+  defp do_handle_call({:interact, action, selector, payload}, from, state) do
+    {id, state} = next_id(state)
+    sel = encode_selector(selector)
+
+    send_message(state.port, state.format, %{
+      type: "interact",
+      id: id,
+      action: action,
+      selector: sel,
+      payload: payload
+    })
+
+    {:noreply, put_in(state, [:pending, id], {:interact, from, action})}
+  end
+
+  defp do_handle_call({:snapshot, name}, from, state) do
+    {id, state} = next_id(state)
+
+    send_message(state.port, state.format, %{
+      type: "snapshot_capture",
+      id: id,
+      name: name,
+      theme: %{},
+      viewport: %{}
+    })
+
+    {:noreply, put_in(state, [:pending, id], {:snapshot, from, name})}
+  end
+
+  defp do_handle_call(:model, _from, state) do
+    {:reply, state.model, state}
+  end
+
+  defp do_handle_call(:reset, from, state) do
+    {id, state} = next_id(state)
+    send_message(state.port, state.format, %{type: "reset", id: id})
+
+    {model, _commands} = init_app(state.app, state.opts)
+    tree = render_tree(state.app, model)
+    send_message(state.port, state.format, %{type: "snapshot", tree: tree})
+
+    {:noreply, put_in(%{state | model: model, tree: tree}, [:pending, id], {:reset, from})}
+  end
 
   # -- Response handling --
 
@@ -295,8 +326,7 @@ defmodule Julep.Test.Backend.Headless do
 
   defp handle_response(%{"type" => "event"} = event, state) do
     # Events from the renderer -- dispatch through update loop
-    state = dispatch_event(event, state)
-    state
+    dispatch_event(event, state)
   end
 
   defp handle_response(_unknown, state), do: state
@@ -319,8 +349,7 @@ defmodule Julep.Test.Backend.Headless do
     tree = render_tree(state.app, model)
 
     # Send updated tree to renderer
-    snapshot_msg = Jason.encode!(%{type: "snapshot", tree: tree})
-    Port.command(state.port, [snapshot_msg, "\n"])
+    send_message(state.port, state.format, %{type: "snapshot", tree: tree})
 
     %{state | model: model, tree: tree}
   end
@@ -360,9 +389,9 @@ defmodule Julep.Test.Backend.Headless do
   defp encode_selector("#" <> id), do: %{"by" => "id", "value" => id}
   defp encode_selector(text) when is_binary(text), do: %{"by" => "text", "value" => text}
 
-  defp send_message(port, msg) do
-    json = Jason.encode!(msg)
-    Port.command(port, [json, "\n"])
+  defp send_message(port, format, msg) do
+    data = Julep.Protocol.encode(msg, format)
+    Port.command(port, data)
   end
 
   defp decode_rgba(nil), do: nil

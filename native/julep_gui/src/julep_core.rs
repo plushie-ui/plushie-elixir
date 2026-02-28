@@ -57,7 +57,7 @@ impl Core {
 
         match message {
             IncomingMessage::Snapshot { tree } => {
-                eprintln!("julep_gui: snapshot received (root id={})", tree.id);
+                log::debug!("snapshot received (root id={})", tree.id);
                 if let Some(theme_val) = tree.props.get("theme") {
                     let theme = theming::resolve_theme_only(theme_val);
                     effects.push(CoreEffect::ThemeChanged(theme));
@@ -70,7 +70,7 @@ impl Core {
                 effects.push(CoreEffect::SyncWindows);
             }
             IncomingMessage::Patch { ops } => {
-                eprintln!("julep_gui: patch received ({} ops)", ops.len());
+                log::debug!("patch received ({} ops)", ops.len());
                 self.tree.apply_patch(ops);
                 if let Some(root) = self.tree.root() {
                     widgets::ensure_caches(root, &mut self.caches);
@@ -78,20 +78,20 @@ impl Core {
                 effects.push(CoreEffect::SyncWindows);
             }
             IncomingMessage::EffectRequest { id, kind, payload } => {
-                eprintln!("julep_gui: effect request: {kind} ({id})");
+                log::debug!("effect request: {kind} ({id})");
                 let response = effects::handle_effect(id, &kind, &payload);
                 effects.push(CoreEffect::EmitEffectResponse(response));
             }
             IncomingMessage::WidgetOp { op, payload } => {
-                eprintln!("julep_gui: widget_op: {op}");
+                log::debug!("widget_op: {op}");
                 effects.push(CoreEffect::WidgetOp { op, payload });
             }
             IncomingMessage::SubscriptionRegister { kind, tag } => {
-                eprintln!("julep_gui: subscription register: {kind} -> {tag}");
+                log::debug!("subscription register: {kind} -> {tag}");
                 self.active_subscriptions.insert(kind, tag);
             }
             IncomingMessage::SubscriptionUnregister { kind } => {
-                eprintln!("julep_gui: subscription unregister: {kind}");
+                log::debug!("subscription unregister: {kind}");
                 self.active_subscriptions.remove(&kind);
             }
             IncomingMessage::WindowOp {
@@ -99,7 +99,7 @@ impl Core {
                 window_id,
                 settings,
             } => {
-                eprintln!("julep_gui: window_op: {op} ({window_id})");
+                log::debug!("window_op: {op} ({window_id})");
                 effects.push(CoreEffect::WindowOp {
                     op,
                     window_id,
@@ -107,7 +107,7 @@ impl Core {
                 });
             }
             IncomingMessage::Settings { settings } => {
-                eprintln!("julep_gui: settings received");
+                log::debug!("settings received");
                 self.default_text_size = settings
                     .get("default_text_size")
                     .and_then(|v| v.as_f64())
@@ -124,7 +124,7 @@ impl Core {
                 self.caches.default_font = self.default_font;
             }
             _ => {
-                eprintln!("julep_gui: unhandled message type in core");
+                log::warn!("unhandled message type in core");
             }
         }
 

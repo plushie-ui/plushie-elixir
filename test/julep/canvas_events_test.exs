@@ -11,7 +11,7 @@ defmodule Julep.CanvasEventsTest do
       }
 
       assert {:canvas_press, "my_canvas", 42.5, 100.0, "left"} =
-               Julep.Protocol.decode_message(Jason.encode!(msg))
+               Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
     test "decodes canvas_release" do
@@ -23,7 +23,7 @@ defmodule Julep.CanvasEventsTest do
       }
 
       assert {:canvas_release, "c1", 10.0, 20.0, "right"} =
-               Julep.Protocol.decode_message(Jason.encode!(msg))
+               Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
     test "decodes canvas_move" do
@@ -35,7 +35,7 @@ defmodule Julep.CanvasEventsTest do
       }
 
       assert {:canvas_move, "c1", 5.5, 3.2} =
-               Julep.Protocol.decode_message(Jason.encode!(msg))
+               Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
     test "decodes canvas_scroll" do
@@ -47,7 +47,7 @@ defmodule Julep.CanvasEventsTest do
       }
 
       assert {:canvas_scroll, "c1", 1.5, 2.5, 0.5, -3.0} =
-               Julep.Protocol.decode_message(Jason.encode!(msg))
+               Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
     test "canvas_press defaults button to left when missing" do
@@ -59,7 +59,7 @@ defmodule Julep.CanvasEventsTest do
       }
 
       assert {:canvas_press, "c1", 1.0, 2.0, "left"} =
-               Julep.Protocol.decode_message(Jason.encode!(msg))
+               Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
     test "canvas_release defaults button to left when missing" do
@@ -71,7 +71,7 @@ defmodule Julep.CanvasEventsTest do
       }
 
       assert {:canvas_release, "c1", 1.0, 2.0, "left"} =
-               Julep.Protocol.decode_message(Jason.encode!(msg))
+               Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
   end
 

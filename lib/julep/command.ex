@@ -18,10 +18,7 @@ defmodule Julep.Command do
     `set_window_level/2`, `drag_window/1`, `drag_resize_window/2`,
     `request_user_attention/2`, `screenshot/2`, `set_resizable/2`,
     `set_min_size/3`, `set_max_size/3`, `enable_mouse_passthrough/1`,
-    `disable_mouse_passthrough/1`, `show_system_menu/1`.
-    Note: `set_icon` is not supported -- iced requires raw RGBA pixel data,
-    which is impractical over JSONL. Set the icon at the OS/desktop level
-    instead (`.desktop` file, `Info.plist`, or Windows resource embedding).
+    `disable_mouse_passthrough/1`, `show_system_menu/1`, `set_icon/4`.
   - **Window queries**: `get_window_size/2`, `get_window_position/2`,
     `is_maximized/2`, `is_minimized/2`, `get_mode/2`, `get_scale_factor/2`,
     `raw_id/2`, `monitor_size/2`
@@ -182,13 +179,40 @@ defmodule Julep.Command do
 
   # ---------------------------------------------------------------------------
   # Window operations
-  #
-  # Note: set_icon is intentionally not supported. iced's window::set_icon
-  # requires raw RGBA pixel data, which is impractical to serialize over
-  # JSONL. Set your application icon at the OS/desktop level instead (e.g.
-  # .desktop file on Linux, Info.plist on macOS, resource embedding on
-  # Windows).
   # ---------------------------------------------------------------------------
+
+  @doc """
+  Sets the window icon from raw RGBA pixel data.
+
+  The `rgba_data` must be a binary of `width * height * 4` bytes (one byte
+  each for R, G, B, A per pixel, row-major). The data is base64-encoded
+  for wire transport.
+
+  ## Example
+
+      icon_data = File.read!("icon_32x32.rgba")
+      Julep.Command.set_icon("main", icon_data, 32, 32)
+  """
+  @spec set_icon(
+          window_id :: window_id(),
+          rgba_data :: binary(),
+          width :: pos_integer(),
+          height :: pos_integer()
+        ) :: %__MODULE__{}
+  def set_icon(window_id, rgba_data, width, height)
+      when is_binary(rgba_data) and is_integer(width) and width > 0 and is_integer(height) and
+             height > 0 do
+    %__MODULE__{
+      type: :window_op,
+      payload: %{
+        op: "set_icon",
+        window_id: window_id,
+        icon_data: Base.encode64(rgba_data),
+        width: width,
+        height: height
+      }
+    }
+  end
 
   @doc "Resize a window to the given dimensions."
   @spec resize_window(window_id :: window_id(), width :: number(), height :: number()) ::

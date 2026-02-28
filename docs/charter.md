@@ -41,7 +41,8 @@ a reusable Rust renderer handles painting and platform integration.
    handling, effects. The Rust side is a rendering backend.
 2. **Start simple, stay simple.** No speculative architecture. Add complexity
    only when a real use case demands it.
-3. **Inspectable by default.** The JSONL transport is human-readable. UI trees
-   are plain maps. Everything can be tested without the renderer.
+3. **Inspectable by default.** The default transport is MessagePack for
+   performance. JSON mode is available for debugging and observability.
+   UI trees are plain maps. Everything can be tested without the renderer.
 4. **One way to do things.** Minimize API surface. Prefer a single clear path
    over multiple equivalent options.
