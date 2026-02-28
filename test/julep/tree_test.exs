@@ -119,6 +119,19 @@ defmodule Julep.TreeTest do
       assert result.props["size"] == 14
       refute Map.has_key?(result.props, :color)
     end
+
+    test "encodes struct-valued props (StyleMap) without raising" do
+      style =
+        Julep.Iced.StyleMap.new()
+        |> Julep.Iced.StyleMap.background("#1b2435")
+        |> Julep.Iced.StyleMap.text_color("#eaf0fb")
+
+      node = %{id: "c", type: "container", props: %{style: style}, children: []}
+      result = Tree.normalize(node)
+
+      assert result.props["style"]["background"] == "#1b2435"
+      assert result.props["style"]["text_color"] == "#eaf0fb"
+    end
   end
 
   describe "normalize/1 -- recursion into children" do
