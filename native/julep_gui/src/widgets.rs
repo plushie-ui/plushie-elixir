@@ -1649,6 +1649,8 @@ fn render_text_editor<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Eleme
             Some("inspired_github") => iced::highlighter::Theme::InspiredGitHub,
             _ => iced::highlighter::Theme::SolarizedDark,
         };
+        // Set ID before highlight() -- .id() is only available on PlainText variant
+        te = te.id(wid);
         let mut hl = te.highlight(&syntax, theme);
         if let Some(sf) = style_fn {
             hl = hl.style(sf);
