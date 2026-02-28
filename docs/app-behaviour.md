@@ -195,8 +195,9 @@ window with app module name as title.
 def window_config(_model) do
   %{
     title: "My App",
-    size: {800, 600},
-    min_size: {400, 300},
+    width: 800,
+    height: 600,
+    min_size: %{width: 400, height: 300},
     resizable: true,
     theme: "dark"
   }
@@ -263,7 +264,7 @@ test "view renders todo list" do
   model = %{todos: [%{id: 1, text: "Buy milk", done: false}], input: "", filter: :all}
   tree = MyApp.view(model)
 
-  assert Julep.UI.find(tree, "todo:1")
+  assert Julep.UI.exists?(tree, "todo:1")
 end
 ```
 

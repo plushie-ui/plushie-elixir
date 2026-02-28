@@ -58,5 +58,6 @@ localized change in the bridge and renderer. The app API does not change.
 
 MessagePack was added as an alternative wire format alongside JSONL. The
 rationale and details are documented in `docs/transport.md`. This does not
-change the original decision -- JSONL remains the default. MessagePack is
-opt-in for workloads that benefit from faster serialization.
+change the original decision's transport mechanism (stdio). MessagePack is
+now the default format for better performance. JSONL is available via the
+`--json` flag for debugging and human-readable inspection.

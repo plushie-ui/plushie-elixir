@@ -95,7 +95,9 @@ Both are always compiled in. No feature gates.
 
 #### snapshot
 
-Full UI tree. Sent on initial render and after renderer restart.
+Full UI tree. Sent on initial render and after renderer restart. On
+restart, the runtime must send a `settings` message before the snapshot
+-- the new renderer process always expects Settings as its first message.
 
 ```json
 {"type": "snapshot", "tree": { ... }}

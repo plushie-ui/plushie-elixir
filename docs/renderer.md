@@ -102,23 +102,15 @@ These map 1:1 to iced built-in widgets:
 
 ### Composite widgets
 
-These are assembled from iced primitives by the renderer. They encode
-common desktop UI patterns:
+The renderer assembles these from iced primitives:
 
 | Node type | Built from | Description |
 |---|---|---|
 | `window` | Container + window management | Top-level window |
-| `tabs` | Row of buttons + content swap | Tab bar |
-| `nav` | Column of buttons | Navigation sidebar |
-| `modal` | Float/overlay + container | Modal dialog |
-| `card` | Container with header/body | Content card |
-| `panel` | Collapsible container | Expandable section |
-| `form` | Column + labeled fields | Form layout |
-| `split_pane` | Row with drag handle | Resizable panes |
 
-Composite widgets exist to save app developers from manually assembling
-common patterns. They are convenience, not magic -- the same result can
-always be achieved with direct iced widgets.
+Note: The UI-only composites (tabs, nav, modal, card, panel, form,
+split_pane) were removed. Apps build these patterns directly using iced
+primitives via `Julep.UI` or the widget layer.
 
 ## Theming
 

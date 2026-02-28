@@ -180,11 +180,17 @@ polished UI patterns with style maps.
 
 ## System theme detection
 
-The renderer detects the OS light/dark preference and sends a window event:
+The renderer detects the OS light/dark preference and sends a theme event.
+Subscribe with `Julep.Subscription.on_theme_change/1`:
 
 ```elixir
-def update(model, {:window, "system_theme_changed", theme}) do
-  %{model | preferred_theme: theme}
+def subscribe(_model) do
+  [Julep.Subscription.on_theme_change(:theme_changed)]
+end
+
+def update(model, {:theme_changed, mode}) do
+  # mode is "light" or "dark"
+  %{model | preferred_theme: mode}
 end
 ```
 
