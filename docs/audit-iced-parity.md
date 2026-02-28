@@ -215,8 +215,8 @@ unlisted props are fully supported.
 | `min_height` / `max_height` | SUPPORTED | |
 | `wrapping` | SUPPORTED | |
 | `style` | SUPPORTED | |
-| `highlight` | **BLOCKED** | Changes Highlighter generic type parameter; cannot be expressed dynamically over JSONL |
-| `key_binding` | **BLOCKED** | Requires Rust closures; cannot be serialized from Elixir over JSONL |
+| `highlight` | **BLOCKED** | Changes Highlighter generic type parameter; cannot be expressed dynamically over the wire protocol |
+| `key_binding` | **BLOCKED** | Requires Rust closures; cannot be serialized from Elixir over the wire protocol |
 
 ### Checkbox
 

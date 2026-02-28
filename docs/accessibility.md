@@ -20,7 +20,7 @@ changes, and navigate the widget tree.
 
 ## What julep needs to do
 
-Since julep drives iced via JSONL, the accessibility story depends on
+Since julep drives iced via the wire protocol, the accessibility story depends on
 how well the renderer maps tree nodes to accessible widgets:
 
 1. **Direct iced widgets (text, button, checkbox, etc.) should work
@@ -77,7 +77,7 @@ The `a11y` prop would be passed through to the renderer's accesskit node.
 
 - Building our own accessibility tree separate from iced's. Iced already
   handles this via accesskit. We use it.
-- Implementing ARIA in the JSONL protocol. The renderer maps props to
+- Implementing ARIA in the wire protocol. The renderer maps props to
   accesskit attributes. Elixir does not need to know about accesskit
   internals.
 - Blocking v1 on accessibility. The foundation (iced + accesskit) is

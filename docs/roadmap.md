@@ -23,7 +23,7 @@ julep/
       command.ex                # Julep.Command
       runtime.ex                # GenServer managing app lifecycle
       bridge.ex                 # Port-based renderer bridge
-      protocol.ex               # JSONL encode/decode
+      protocol.ex               # wire protocol encode/decode
       tree.ex                   # Tree normalization and diffing
   native/
     julep_gui/
@@ -42,7 +42,7 @@ Checklist:
 - [x] Elixir mix project with `Julep.App` behaviour and `Julep.UI` module.
 - [x] `Julep.Runtime` GenServer: starts app, manages model, dispatches
       events, calls view, sends trees to bridge.
-- [x] `Julep.Bridge`: spawns renderer via Port, sends/receives JSONL.
+- [x] `Julep.Bridge`: spawns renderer via Port, sends/receives MessagePack (or JSONL).
 - [x] `Julep.Protocol`: encode snapshots, decode events.
 - [x] Rust binary (`julep_gui`) that reads a snapshot from stdin, renders
       a basic tree (column, text, button), and writes click events to stdout.

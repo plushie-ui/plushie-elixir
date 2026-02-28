@@ -122,18 +122,38 @@ def update(model, {:click, "cancel_import"}) do
 end
 ```
 
+#### Done (lift a value)
+
+`Command.done/2` wraps an already-resolved value as a command. The runtime
+immediately dispatches `msg_fn.(value)` through `update/2` without spawning
+a task. Useful for lifting a pure value into the command pipeline.
+
+```elixir
+Julep.Command.done(value, msg_fn)
+```
+
+```elixir
+def update(model, {:click, "reset"}) do
+  {model, Julep.Command.done(:defaults, fn v -> {:config_loaded, v} end)}
+end
+```
+
+#### Exit
+
+`Command.exit/0` terminates the application.
+
+```elixir
+Julep.Command.exit()
+```
+
 #### Widget operations
 
-These send operation requests to the renderer:
+##### Focus
 
 ```elixir
 Julep.Command.focus(widget_id)           # Focus a text input
 Julep.Command.focus_next()               # Focus next focusable widget
 Julep.Command.focus_previous()           # Focus previous focusable widget
-Julep.Command.select_all(widget_id)      # Select all text in input
-Julep.Command.move_cursor(widget_id, pos) # Move cursor to position
-Julep.Command.scroll_to(widget_id, offset) # Scroll to position
-Julep.Command.snap_to(widget_id, offset)   # Snap scroll position
 ```
 
 Example:
@@ -144,20 +164,165 @@ def update(model, {:click, "new_todo"}) do
 end
 ```
 
-#### Window management
+##### Text operations
 
 ```elixir
-Julep.Command.open_window(window_id, opts)    # Open a new window
-Julep.Command.close_window(window_id)         # Close a window
-Julep.Command.resize_window(window_id, {w, h}) # Resize
-Julep.Command.move_window(window_id, {x, y})   # Move
-Julep.Command.maximize_window(window_id)       # Maximize
-Julep.Command.minimize_window(window_id)       # Minimize
-Julep.Command.fullscreen_window(window_id)     # Fullscreen
+Julep.Command.select_all(widget_id)                    # Select all text
+Julep.Command.move_cursor_to_front(widget_id)          # Cursor to start
+Julep.Command.move_cursor_to_end(widget_id)            # Cursor to end
+Julep.Command.move_cursor_to(widget_id, position)      # Cursor to char position
+Julep.Command.select_range(widget_id, start_pos, end_pos) # Select character range
 ```
 
-`set_icon` sets the window icon from raw RGBA pixel data. The data is
-base64-encoded for wire transport. See `Julep.Command.set_icon/4`.
+Example:
+
+```elixir
+def update(model, {:click, "select_word"}) do
+  {model, Julep.Command.select_range("editor", 5, 10)}
+end
+```
+
+##### Scroll operations
+
+```elixir
+Julep.Command.scroll_to(widget_id, offset)   # Scroll to absolute position
+Julep.Command.snap_to(widget_id, x, y)       # Snap scroll to absolute offset
+Julep.Command.snap_to_end(widget_id)          # Snap to end of scrollable content
+Julep.Command.scroll_by(widget_id, x, y)     # Scroll by relative delta
+```
+
+Example:
+
+```elixir
+def update(model, {:click, "scroll_bottom"}) do
+  {model, Julep.Command.snap_to_end("chat_log")}
+end
+```
+
+#### Window management
+
+Windows are opened declaratively by including window nodes in the view tree.
+There is no `open_window` command. To open a window, add a `window` node to
+the tree returned by `view/1`. To close one, remove it or use
+`close_window/1`.
+
+```elixir
+Julep.Command.close_window(window_id)                        # Close a window
+Julep.Command.resize_window(window_id, width, height)        # Resize
+Julep.Command.move_window(window_id, x, y)                   # Move
+Julep.Command.maximize_window(window_id)                     # Maximize (default: true)
+Julep.Command.maximize_window(window_id, false)              # Restore from maximized
+Julep.Command.minimize_window(window_id)                     # Minimize (default: true)
+Julep.Command.minimize_window(window_id, false)              # Restore from minimized
+Julep.Command.set_window_mode(window_id, mode)               # :fullscreen, :windowed, etc.
+Julep.Command.toggle_maximize(window_id)                     # Toggle maximize state
+Julep.Command.toggle_decorations(window_id)                  # Toggle title bar/borders
+Julep.Command.gain_focus(window_id)                          # Bring window to front
+Julep.Command.set_window_level(window_id, level)             # :normal, :always_on_top, etc.
+Julep.Command.drag_window(window_id)                         # Initiate OS window drag
+Julep.Command.drag_resize_window(window_id, direction)       # Initiate OS resize from edge
+Julep.Command.request_user_attention(window_id, urgency)     # Flash taskbar (:informational, :critical)
+Julep.Command.screenshot(window_id, tag)                     # Capture window pixels
+Julep.Command.set_resizable(window_id, value)                # Enable/disable resize
+Julep.Command.set_min_size(window_id, width, height)         # Set minimum window size
+Julep.Command.set_max_size(window_id, width, height)         # Set maximum window size
+Julep.Command.enable_mouse_passthrough(window_id)            # Click-through window
+Julep.Command.disable_mouse_passthrough(window_id)           # Normal click handling
+Julep.Command.show_system_menu(window_id)                    # Show OS window menu
+Julep.Command.set_icon(window_id, rgba_data, width, height)  # Set window icon (raw RGBA)
+```
+
+Example:
+
+```elixir
+def update(model, {:click, "go_fullscreen"}) do
+  {model, Julep.Command.set_window_mode("main", :fullscreen)}
+end
+
+def update(model, {:click, "pin_on_top"}) do
+  {model, Julep.Command.set_window_level("main", :always_on_top)}
+end
+```
+
+`set_icon/4` sends raw RGBA pixel data (base64-encoded for wire transport).
+The `rgba_data` must be a binary of `width * height * 4` bytes.
+
+#### Window queries
+
+Window queries are commands whose results arrive as events in `update/2`.
+Each takes a `tag` to identify the response.
+
+```elixir
+Julep.Command.get_window_size(window_id, tag)       # Result: {tag, {width, height}}
+Julep.Command.get_window_position(window_id, tag)   # Result: {tag, {x, y}}
+Julep.Command.is_maximized(window_id, tag)           # Result: {tag, boolean}
+Julep.Command.is_minimized(window_id, tag)           # Result: {tag, boolean}
+Julep.Command.get_mode(window_id, tag)               # Result: {tag, mode}
+Julep.Command.get_scale_factor(window_id, tag)       # Result: {tag, scale}
+Julep.Command.raw_id(window_id, tag)                 # Result: {tag, platform_id}
+Julep.Command.monitor_size(window_id, tag)           # Result: {tag, {width, height}}
+```
+
+Example:
+
+```elixir
+def update(model, {:click, "check_size"}) do
+  {model, Julep.Command.get_window_size("main", :got_size)}
+end
+
+def update(model, {:got_size, {width, height}}) do
+  %{model | window_width: width, window_height: height}
+end
+```
+
+#### Image operations
+
+In-memory images can be created, updated, and deleted at runtime. The
+`Image` widget references them via `%{handle: "name"}` as its source.
+
+```elixir
+Julep.Command.create_image(handle, data)                     # From PNG/JPEG bytes
+Julep.Command.create_image(handle, width, height, pixels)    # From raw RGBA pixels
+Julep.Command.update_image(handle, data)                     # Update with PNG/JPEG
+Julep.Command.update_image(handle, width, height, pixels)    # Update with raw RGBA
+Julep.Command.delete_image(handle)                           # Remove in-memory image
+```
+
+Example:
+
+```elixir
+def update(model, {:click, "load_preview"}) do
+  cmd = Julep.Command.async(fn ->
+    File.read!("preview.png")
+  end, :preview_loaded)
+  {model, cmd}
+end
+
+def update(model, {:preview_loaded, data}) do
+  {model, Julep.Command.create_image("preview", data)}
+end
+```
+
+#### PaneGrid operations
+
+Commands for manipulating panes in a `PaneGrid` widget.
+
+```elixir
+Julep.Command.pane_split(widget_id, pane, axis, new_pane_id)  # Split a pane
+Julep.Command.pane_close(widget_id, pane)                     # Close a pane
+Julep.Command.pane_swap(widget_id, pane_a, pane_b)            # Swap two panes
+Julep.Command.pane_maximize(widget_id, pane)                  # Maximize a pane
+Julep.Command.pane_restore(widget_id)                         # Restore from maximized
+```
+
+Example:
+
+```elixir
+def update(model, {:click, "split_editor"}) do
+  cmd = Julep.Command.pane_split("pane_grid", "editor", :horizontal, "new_editor")
+  {model, cmd}
+end
+```
 
 #### Timers
 
@@ -186,7 +351,8 @@ Julep.Command.batch([
 ])
 ```
 
-Commands in a batch execute concurrently.
+Commands in a batch are dispatched together. Async commands spawn concurrent
+tasks.
 
 #### No-op
 
@@ -308,6 +474,10 @@ interprets them:
 - **Widget operations** are encoded as wire messages and sent to the
   renderer.
 - **Window commands** are encoded as wire messages to the renderer.
+- **Window queries** are encoded as wire messages. The renderer responds
+  with the result, which the runtime delivers as a tagged event.
+- **Image operations** are encoded as wire messages to the renderer.
+- **PaneGrid operations** are encoded as widget ops sent to the renderer.
 - **Timers** use `Process.send_after` under the hood.
 
 Commands are not side effects in `update`. They are descriptions of side
@@ -359,24 +529,98 @@ it.
 
 ### Available subscriptions
 
+#### Time
+
 ```elixir
-# Time
 Julep.Subscription.every(interval_ms, event_tag)
 # Delivers: {event_tag, timestamp} every interval_ms
+```
 
-# Keyboard
+#### Keyboard
+
+```elixir
 Julep.Subscription.on_key_press(event_tag)
 # Delivers: {event_tag, key, modifiers}
 
 Julep.Subscription.on_key_release(event_tag)
 # Delivers: {event_tag, key, modifiers}
+```
 
-# Window events
+#### Window lifecycle
+
+```elixir
 Julep.Subscription.on_window_close(event_tag)
 # Delivers: {event_tag, window_id}
 
+Julep.Subscription.on_window_open(event_tag)
+# Delivers: {:window_opened, window_id, position, {width, height}}
+
+Julep.Subscription.on_window_resize(event_tag)
+# Delivers: {:window_resized, window_id, width, height}
+
+Julep.Subscription.on_window_focus(event_tag)
+# Delivers: {:window_focused, window_id}
+
+Julep.Subscription.on_window_unfocus(event_tag)
+# Delivers: {:window_unfocused, window_id}
+
+Julep.Subscription.on_window_move(event_tag)
+# Delivers: {:window_moved, window_id, x, y}
+
 Julep.Subscription.on_window_event(event_tag)
-# Delivers: {event_tag, window_id, event}
+# Delivers: various {:window_*, ...} tuples (catch-all for window events)
+```
+
+#### Mouse
+
+```elixir
+Julep.Subscription.on_mouse_move(event_tag)
+# Delivers: {:cursor_moved, x, y}
+
+Julep.Subscription.on_mouse_button(event_tag)
+# Delivers: {:button_pressed, button} or {:button_released, button}
+
+Julep.Subscription.on_mouse_scroll(event_tag)
+# Delivers: {:wheel_scrolled, delta_x, delta_y, unit}
+```
+
+#### Touch
+
+```elixir
+Julep.Subscription.on_touch(event_tag)
+# Delivers: {:finger_pressed, finger_id, x, y}
+#           {:finger_moved, finger_id, x, y}
+#           {:finger_lifted, finger_id, x, y}
+#           {:finger_lost, finger_id, x, y}
+```
+
+#### System
+
+```elixir
+Julep.Subscription.on_theme_change(event_tag)
+# Delivers: {:theme_changed, mode}  (mode is "light" or "dark")
+
+Julep.Subscription.on_animation_frame(event_tag)
+# Delivers: {:animation_frame, timestamp}
+
+Julep.Subscription.on_file_drop(event_tag)
+# Delivers: {:file_dropped, window_id, path}
+#           {:file_hovered, window_id, path}
+#           {:files_hovered_left, window_id}
+```
+
+#### Catch-all
+
+```elixir
+Julep.Subscription.on_event(event_tag)
+# Receives all renderer events. Tuple shape varies by event family.
+```
+
+#### Batch
+
+```elixir
+Julep.Subscription.batch(subscriptions)
+# Combines multiple subscriptions into a flat list. Identity function.
 ```
 
 ### Subscription lifecycle
@@ -413,11 +657,13 @@ false, the runtime stops it. No explicit cleanup needed.
 
 - **Time subscriptions** use Elixir's `:timer` or `Process.send_after`
   loop.
-- **Keyboard and window subscriptions** are registered with the renderer
-  via wire messages. The renderer sends events when they occur.
+- **Keyboard, mouse, touch, and window subscriptions** are registered with
+  the renderer via wire messages. The renderer sends events when they occur.
+- **System subscriptions** (theme change, animation frame, file drop) are
+  also renderer-side event sources.
 
-Subscriptions that require the renderer (keyboard, window) are paused
-during renderer restart and resumed once the renderer is back.
+Subscriptions that require the renderer (everything except timers) are
+paused during renderer restart and resumed once the renderer is back.
 
 ## Commands vs. effects
 

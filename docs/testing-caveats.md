@@ -11,7 +11,7 @@ to work around it, and what a real fix would look like.
 backends without actually waiting for the async task to complete.
 
 **Why:** The headless and full backends dispatch events back through the
-JSONL protocol. Async commands are executed by the sim layer's
+wire protocol. Async commands are executed by the sim layer's
 `process_commands` on the Elixir side, but the headless/full GenServer
 implementations do not track running tasks by tag. The sim backend does not
 need `await_async` at all because it executes async commands synchronously.

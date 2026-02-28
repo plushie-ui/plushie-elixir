@@ -21,27 +21,38 @@ renderer (decide whether to execute it). Keep the renderer dumb.
 
 ```elixir
 def update(model, {:click, "open_file"}) do
-  Julep.Effects.request(:file_open,
+  {cmd, _id} = Julep.Effects.file_open(
     title: "Choose a file",
     filters: [{"Text files", "*.txt"}, {"All files", "*"}]
   )
-  model
+  {model, cmd}
 end
 
-def update(model, {:effect_result, "file_open", {:ok, %{path: path}}}) do
+def update(model, {:effect_result, _id, {:ok, %{"path" => path}}}) do
   %{model | file_path: path}
 end
 
-def update(model, {:effect_result, "file_open", {:error, "cancelled"}}) do
+def update(model, {:effect_result, _id, {:error, "cancelled"}}) do
   model
 end
 ```
 
-The `Julep.Effects.request/2` call sends an `effect_request` message to the
-renderer. The result arrives as an event in a subsequent `update` call.
-Effects are asynchronous -- the model is not blocked waiting for the result.
+Every effect function returns `{command, effect_id}`. The command must be
+returned from `update` as part of a `{model, command}` tuple -- discarding
+it silently does nothing. The effect ID is auto-generated (e.g. `"ef_1"`)
+and can be stored in the model if you need to correlate a specific response.
+
+Result keys come from the renderer as string keys, not atoms (e.g.
+`%{"path" => path}`, not `%{path: path}`).
+
+The result arrives as an `{:effect_result, id, result}` event in a
+subsequent `update` call. Effects are asynchronous -- the model is not
+blocked waiting for the result.
 
 ### Transport
+
+MessagePack is the default wire format. JSON shown here for readability
+(use `--json` flag for JSONL mode).
 
 ```json
 -> {"type": "effect_request", "id": "ef_1", "kind": "file_open", "payload": {"title": "Choose a file", "filters": [["Text files", "*.txt"], ["All files", "*"]]}}
@@ -60,6 +71,8 @@ automatically.
 | `directory_select` | Directory picker | `title` | `{path}` or error |
 | `clipboard_read` | Read clipboard | -- | `{text}` or error |
 | `clipboard_write` | Write to clipboard | `text` | ok or error |
+| `clipboard_read_primary` | Read primary selection (Linux) | -- | `{text}` or error |
+| `clipboard_write_primary` | Write to primary selection (Linux) | `text` | ok or error |
 | `notification` | Show OS notification | `title`, `body` | ok |
 
 All effects can return `{"status": "error", "error": "unsupported"}` if the

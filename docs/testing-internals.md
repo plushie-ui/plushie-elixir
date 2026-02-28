@@ -38,7 +38,7 @@ are building an app with julep, see [testing.md](testing.md) instead.
                  |                |              |
            pure Elixir      Port: julep_gui  Port: julep_gui
            EventMap         --headless       --test
-           process_commands  JSONL protocol   JSONL protocol
+           process_commands  wire protocol    wire protocol
                                               real iced windows
 ```
 
@@ -56,9 +56,9 @@ are building an app with julep, see [testing.md](testing.md) instead.
    and handles interactions differently:
    - **Sim** runs `init/update/view` locally, uses `EventMap` to infer
      events, and executes commands synchronously.
-   - **Headless** spawns `julep_gui --headless` via Port, sends JSONL
+   - **Headless** spawns `julep_gui --headless` via Port, sends wire protocol
      queries, and processes responses asynchronously via correlation IDs.
-   - **Full** spawns `julep_gui --test` via Port, same JSONL protocol as
+   - **Full** spawns `julep_gui --test` via Port, same wire protocol as
      headless but with real iced windows and GPU rendering.
 
 
@@ -109,7 +109,7 @@ in the sim backend:
 4. Update the EventMap inference table in the module's `@moduledoc`.
 
 5. The headless and full backends do not use EventMap -- they inject
-   interactions via the JSONL protocol and the Rust renderer generates the
+   interactions via the wire protocol and the Rust renderer generates the
    real events. Ensure the Rust side handles the new widget type in
    `headless.rs` and `test_mode.rs`.
 
@@ -132,7 +132,7 @@ toggle, select, slide):
 4. Implement the callback in all three backends:
    - **Sim:** Add an `EventMap` function and a `handle_call` clause.
    - **Headless:** Add a `handle_call` clause that sends an `interact`
-     JSONL message with the new action name.
+     wire protocol message with the new action name.
    - **Full:** Same as headless.
 
 5. On the Rust side, handle the new action in the interact message
@@ -275,7 +275,7 @@ The headless backend (`lib/julep/test/backend/headless.ex`) spawns
 
 ### Protocol
 
-Communication uses JSONL (one JSON object per line) with correlation IDs.
+Communication uses the wire protocol (MessagePack by default, JSONL via `--json`) with correlation IDs.
 Each request includes an `"id"` field (e.g., `"req_1"`). The renderer
 echoes the same `"id"` in its response. The GenServer maintains a `pending`
 map from ID to `{type, from}` or `{type, from, extra}` tuples.
@@ -379,8 +379,8 @@ sessions, or the test framework at all.
 | `lib/julep/test.ex` | `assert_tree_snapshot/2` for unit-level JSON tree comparison |
 | `lib/julep/test/backend.ex` | `Backend` behaviour (16 callbacks) |
 | `lib/julep/test/backend/sim.ex` | Pure Elixir backend, EventMap-based event inference |
-| `lib/julep/test/backend/headless.ex` | Rust renderer via `--headless` Port, JSONL protocol |
-| `lib/julep/test/backend/full.ex` | Real iced windows via `--test` Port, JSONL protocol |
+| `lib/julep/test/backend/headless.ex` | Rust renderer via `--headless` Port, wire protocol |
+| `lib/julep/test/backend/full.ex` | Real iced windows via `--test` Port, wire protocol |
 | `lib/julep/test/case.ex` | ExUnit case template, backend resolution, setup/teardown |
 | `lib/julep/test/helpers.ex` | Imported helper functions (find, click, assert_text, ...) |
 | `lib/julep/test/session.ex` | Session facade wrapping backend module + pid |
@@ -391,7 +391,7 @@ sessions, or the test framework at all.
 | `lib/julep/test/script.ex` | `.julep` script parser |
 | `lib/julep/test/script/runner.ex` | Script execution engine |
 | `native/julep_gui/src/julep_core.rs` | Core struct (tree, caches, subscriptions) |
-| `native/julep_gui/src/headless.rs` | `--headless` mode: Core + JSONL, no iced runtime |
+| `native/julep_gui/src/headless.rs` | `--headless` mode: Core + wire protocol, no iced runtime |
 | `native/julep_gui/src/test_mode.rs` | `--test` mode: real iced::daemon + test protocol |
 | `test/support/mock_bridge.ex` | Test double tracking bridge calls |
 | `test/support/integration_case.ex` | ExUnit case template for integration tests |

@@ -72,6 +72,7 @@ end
 | `pick_list(id, options, selected, opts)` | `pick_list` | Dropdown select |
 | `combo_box(id, options, value, opts)` | `combo_box` | Searchable select |
 | `slider(id, range, value, opts)` | `slider` | Horizontal slider |
+| `vertical_slider(id, range, value, opts)` | `vertical_slider` | Vertical slider |
 | `text_editor(id, content, opts)` | `text_editor` | Multi-line text editor |
 
 ### Display widgets
@@ -96,6 +97,124 @@ end
 | `sensor(id, opts)` | `sensor` | Detects layout changes and resize |
 | `pane_grid(id, panes, opts)` | `pane_grid` | Resizable tiled pane layout |
 | `canvas(id, shapes, opts)` | `canvas` | 2D drawing surface |
+
+### Canvas drawing with Julep.Canvas.Shape
+
+The `canvas` widget renders 2D graphics from a `layers` prop -- a map of
+named layers, each containing a list of shape descriptors. `Julep.Canvas.Shape`
+provides builder functions that produce these descriptors as plain maps.
+
+```elixir
+alias Julep.Canvas.Shape
+
+canvas("my_canvas",
+  layers: %{
+    "background" => [
+      Shape.rect(0, 0, 400, 300, fill: "#e0e0e0"),
+      Shape.circle(200, 150, 50, fill: "#3498db")
+    ],
+    "overlay" => [
+      Shape.text(180, 160, "Hello", fill: "#ffffff", size: 24)
+    ]
+  },
+  width: 400,
+  height: 300
+)
+```
+
+Layers are rendered in alphabetical order by name. The renderer caches each
+layer independently and only re-tessellates when the layer's content changes.
+
+#### Shape builders
+
+| Function | Description |
+|---|---|
+| `rect(x, y, w, h, opts)` | Rectangle at position `(x, y)` with given width and height. |
+| `circle(x, y, r, opts)` | Circle centered at `(x, y)` with radius `r`. |
+| `line(x1, y1, x2, y2, opts)` | Line from `(x1, y1)` to `(x2, y2)`. |
+| `text(x, y, content, opts)` | Text string at `(x, y)`. Opts: `:fill`, `:size`, `:font`. |
+| `path(commands, opts)` | Arbitrary path from a list of path commands. |
+| `image(source, x, y, w, h)` | Raster image drawn at `(x, y)` with given dimensions. |
+| `svg(source, x, y, w, h)` | SVG drawn at `(x, y)` with given dimensions. |
+
+All shape builders accept `:fill` and `:stroke` keyword options (except
+`line` which only accepts `:stroke`, and `image`/`svg` which accept neither).
+`:fill` is a color hex string or a gradient map. `:stroke` is a stroke
+descriptor built with `stroke/3`.
+
+#### Stroke builder
+
+`stroke(color, width, opts)` builds a stroke descriptor.
+
+Options:
+- `:cap` -- `"butt"`, `"round"`, or `"square"` (default: `"butt"`)
+- `:join` -- `"miter"`, `"round"`, or `"bevel"` (default: `"miter"`)
+- `:dash` -- `{segments, offset}` where segments is a list of numbers
+
+```elixir
+Shape.line(0, 0, 100, 100,
+  stroke: Shape.stroke("#333", 2, cap: "round", dash: {[5, 3], 0})
+)
+```
+
+#### Gradient fills
+
+`linear_gradient(from, to, stops)` builds a gradient usable as a `:fill`
+value. `from` and `to` are `{x, y}` coordinate tuples. `stops` is a list of
+`{offset, color}` tuples where offset ranges from 0.0 to 1.0.
+
+```elixir
+Shape.rect(0, 0, 200, 100,
+  fill: Shape.linear_gradient({0, 0}, {200, 0}, [{0.0, "#ff0000"}, {1.0, "#0000ff"}])
+)
+```
+
+#### Path commands
+
+Build paths from a list of commands passed to `path/2`:
+
+| Function | Description |
+|---|---|
+| `move_to(x, y)` | Move the pen to `(x, y)` without drawing. |
+| `line_to(x, y)` | Draw a line to `(x, y)`. |
+| `bezier_to(cp1x, cp1y, cp2x, cp2y, x, y)` | Cubic bezier curve with two control points. |
+| `quadratic_to(cpx, cpy, x, y)` | Quadratic bezier curve with one control point. |
+| `arc(cx, cy, r, start_angle, end_angle)` | Arc centered at `(cx, cy)` with radius and angles in radians. |
+| `arc_to(x1, y1, x2, y2, radius)` | Tangent arc through two points with given radius. |
+| `ellipse(cx, cy, rx, ry, rotation, start_angle, end_angle)` | Elliptical arc. |
+| `rounded_rect(x, y, w, h, radius)` | Rounded rectangle as a path command. |
+| `close()` | Close the current path. |
+
+```elixir
+Shape.path(
+  [Shape.move_to(0, 0), Shape.line_to(100, 0), Shape.line_to(50, 80), Shape.close()],
+  fill: "#0088ff",
+  stroke: Shape.stroke("#000", 2)
+)
+```
+
+#### Transform commands
+
+Transform commands are interleaved with shapes in a layer's shape list.
+Use `push_transform/0` and `pop_transform/0` to save and restore state.
+
+| Function | Description |
+|---|---|
+| `push_transform()` | Save the current transform state onto the stack. |
+| `pop_transform()` | Restore the previously saved transform state. |
+| `translate(x, y)` | Translate the coordinate origin by `(x, y)`. |
+| `rotate(angle)` | Rotate the coordinate system (angle in radians). |
+| `scale(x, y)` | Scale the coordinate system by `(x, y)`. |
+
+```elixir
+[
+  Shape.push_transform(),
+  Shape.translate(100, 100),
+  Shape.rotate(:math.pi() / 4),
+  Shape.rect(0, 0, 50, 50, fill: "#f00"),
+  Shape.pop_transform()
+]
+```
 
 ## Props
 

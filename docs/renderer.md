@@ -5,12 +5,12 @@
 
 ## What it does
 
-1. Reads messages from stdin (JSONL or MessagePack) (snapshots and patches).
+1. Reads messages from stdin (MessagePack by default, or JSONL) (snapshots and patches).
 2. Maintains a retained tree of UI nodes.
 3. Maps each node type to an iced widget.
 4. Renders the widget tree using iced's reactive rendering.
 5. Captures user interactions (clicks, input, etc.).
-6. Writes events to stdout (JSONL or MessagePack).
+6. Writes events to stdout (MessagePack by default, or JSONL).
 7. Handles native effect requests (file dialogs, clipboard, etc.).
 
 ## What it does not do
@@ -29,7 +29,7 @@ The renderer is a single iced application with these responsibilities:
 
 ### stdin reader (background thread)
 
-A dedicated thread reads from stdin, parses messages (JSONL or MessagePack), and sends parsed
+A dedicated thread reads from stdin, parses messages (MessagePack by default, or JSONL), and sends parsed
 messages to the main iced application via an `mpsc` channel. This keeps
 stdin I/O off the main thread.
 
@@ -163,7 +163,7 @@ The binary can also be built automatically by `mix julep.gui --build`.
 
 ## Testing the renderer in isolation
 
-Since the renderer speaks JSONL (or MessagePack), it can be tested without Elixir:
+Since the renderer speaks MessagePack (or JSONL), it can be tested without Elixir:
 
 ```bash
 echo '{"type":"snapshot","tree":{"id":"root","type":"column","props":{},"children":[{"id":"hello","type":"text","props":{"content":"Hello, world!"},"children":[]}]}}' | ./julep_gui

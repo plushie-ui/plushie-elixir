@@ -15,8 +15,9 @@ defmodule Julep.Subscription do
   ## Renderer subscriptions
 
   All other constructors register event listeners on the Rust renderer
-  via the JSONL protocol. The renderer sends events back as JSON which
-  the runtime decodes into tuples documented on each constructor.
+  via the wire protocol (MessagePack by default, JSONL via `--json`).
+  The renderer sends events back which the runtime decodes into tuples
+  documented on each constructor.
 
   ## Example
 
@@ -52,10 +53,10 @@ defmodule Julep.Subscription do
   @doc """
   Fires on key press events from the renderer.
 
-  Delivers `{:key_press, key, modifiers}` to `update/2`. The `key` is
-  either an atom for named keys (`:escape`, `:enter`, `:arrow_up`, etc.)
-  or a single-character string for printable keys. `modifiers` is a map
-  with `:ctrl`, `:shift`, `:alt`, `:logo`, `:command` booleans.
+  Delivers `{:key_press, %Julep.KeyEvent{}}` to `update/2`. The
+  `KeyEvent` struct contains `key`, `modified_key`, `physical_key`,
+  `location`, `modifiers` (a `%Julep.KeyModifiers{}`), `text`, and
+  `repeat` fields. See `Julep.KeyEvent` for full details.
   """
   @spec on_key_press(event_tag :: atom()) :: t()
   def on_key_press(event_tag) when is_atom(event_tag) do
@@ -65,7 +66,7 @@ defmodule Julep.Subscription do
   @doc """
   Fires on key release events from the renderer.
 
-  Delivers `{:key_release, key, modifiers}` to `update/2`. Same format
+  Delivers `{:key_release, %Julep.KeyEvent{}}` to `update/2`. Same format
   as `on_key_press/1`.
   """
   @spec on_key_release(event_tag :: atom()) :: t()
