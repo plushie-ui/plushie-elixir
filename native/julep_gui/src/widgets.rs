@@ -2449,7 +2449,7 @@ struct CanvasState {
     cursor_position: Option<Point>,
 }
 
-struct CanvasProgram {
+struct CanvasProgram<'a> {
     /// Ordered layers, each containing a list of shapes/commands.
     layers: Vec<(String, Vec<Value>)>,
     background: Option<Color>,
@@ -2458,9 +2458,11 @@ struct CanvasProgram {
     on_release: bool,
     on_move: bool,
     on_scroll: bool,
+    /// Reference to the image registry for resolving in-memory image handles.
+    images: &'a crate::image_registry::ImageRegistry,
 }
 
-impl CanvasProgram {
+impl CanvasProgram<'_> {
     fn is_interactive(&self) -> bool {
         self.on_press || self.on_release || self.on_move || self.on_scroll
     }
@@ -2641,7 +2643,11 @@ fn build_path_from_commands(commands: &[Value]) -> canvas::Path {
 }
 
 /// Draw a single shape (or transform command) into the frame.
-fn draw_canvas_shape(frame: &mut canvas::Frame, shape: &Value) {
+fn draw_canvas_shape(
+    frame: &mut canvas::Frame,
+    shape: &Value,
+    images: &crate::image_registry::ImageRegistry,
+) {
     let shape_type = shape.get("type").and_then(|v| v.as_str()).unwrap_or("");
     match shape_type {
         // -- Transform commands --
@@ -2771,7 +2777,6 @@ fn draw_canvas_shape(frame: &mut canvas::Frame, shape: &Value) {
             }
         }
         "image" => {
-            let source = shape.get("source").and_then(|v| v.as_str()).unwrap_or("");
             let x = json_f32(shape, "x");
             let y = json_f32(shape, "y");
             let w = json_f32(shape, "w");
@@ -2782,7 +2787,28 @@ fn draw_canvas_shape(frame: &mut canvas::Frame, shape: &Value) {
                 width: w,
                 height: h,
             };
-            let handle = iced::widget::image::Handle::from_path(source);
+            // Source can be a string (file path) or an object with "handle" key
+            // (in-memory image from the registry), same as the Image widget.
+            let source_val = shape.get("source");
+            let handle = match source_val {
+                Some(Value::Object(obj)) => {
+                    if let Some(name) = obj.get("handle").and_then(|v| v.as_str()) {
+                        match images.get(name) {
+                            Some(h) => h.clone(),
+                            None => {
+                                log::warn!("canvas image: unknown registry handle: {name}");
+                                return;
+                            }
+                        }
+                    } else {
+                        return;
+                    }
+                }
+                _ => {
+                    let path = source_val.and_then(|v| v.as_str()).unwrap_or("");
+                    iced::widget::image::Handle::from_path(path)
+                }
+            };
             frame.draw_image(bounds, &handle);
         }
         "svg" => {
@@ -2804,7 +2830,7 @@ fn draw_canvas_shape(frame: &mut canvas::Frame, shape: &Value) {
     }
 }
 
-impl canvas::Program<Message> for CanvasProgram {
+impl canvas::Program<Message> for CanvasProgram<'_> {
     type State = CanvasState;
 
     fn update(
@@ -2879,10 +2905,10 @@ impl canvas::Program<Message> for CanvasProgram {
             frame.fill_rectangle(Point::ORIGIN, bounds.size(), bg);
         }
 
-        // Draw each layer in order
+        // Draw each layer in order (layers are pre-sorted alphabetically)
         for (_layer_name, shapes) in &self.layers {
             for shape in shapes {
-                draw_canvas_shape(&mut frame, shape);
+                draw_canvas_shape(&mut frame, shape, self.images);
             }
         }
 
@@ -2917,7 +2943,7 @@ fn serialize_mouse_button_for_canvas(button: &mouse::Button) -> String {
 
 fn render_canvas<'a>(
     node: &'a TreeNode,
-    _images: &'a crate::image_registry::ImageRegistry,
+    images: &'a crate::image_registry::ImageRegistry,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let width = prop_length(props, "width", Length::Fill);
@@ -2925,7 +2951,8 @@ fn render_canvas<'a>(
 
     // Read layers as a JSON object (map of layer name -> shape array).
     // Falls back to the old "shapes" prop for backwards compatibility.
-    let layers: Vec<(String, Vec<Value>)> = if let Some(layers_obj) = props
+    // Layers are sorted alphabetically by name for deterministic draw order.
+    let mut layers: Vec<(String, Vec<Value>)> = if let Some(layers_obj) = props
         .and_then(|p| p.get("layers"))
         .and_then(|v| v.as_object())
     {
@@ -2949,6 +2976,7 @@ fn render_canvas<'a>(
             vec![("default".to_string(), shapes)]
         }
     };
+    layers.sort_by(|a, b| a.0.cmp(&b.0));
 
     let background = props
         .and_then(|p| p.get("background"))
@@ -2969,6 +2997,7 @@ fn render_canvas<'a>(
         on_release: on_release || interactive,
         on_move: on_move || interactive,
         on_scroll: on_scroll || interactive,
+        images,
     })
     .width(width)
     .height(height)

@@ -138,7 +138,7 @@ enters that state:
 ```elixir
 nav_item_style =
   StyleMap.new()
-  |> StyleMap.background("#transparent")
+  |> StyleMap.background("#00000000")
   |> StyleMap.text_color("#cccccc")
   |> StyleMap.hovered(%{background: "#333333", text_color: "#ffffff"})
   |> StyleMap.pressed(%{background: "#222222"})

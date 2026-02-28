@@ -221,6 +221,7 @@ defmodule ToolbarApp do
   @behaviour Julep.App
 
   alias Julep.Iced.StyleMap
+  alias Julep.Iced.Border
 
   def init(_opts), do: %{bold: false, italic: false, underline: false}
 
@@ -274,7 +275,7 @@ defmodule ToolbarApp do
     StyleMap.new()
     |> StyleMap.background("#d0d0d0")
     |> StyleMap.text_color("#1a1a1a")
-    |> StyleMap.border(%{color: "#b0b0b0", width: 1, radius: 3})
+    |> StyleMap.border(Border.new() |> Border.color("#b0b0b0") |> Border.width(1) |> Border.rounded(3))
     |> StyleMap.hovered(%{background: "#c0c0c0"})
   end
 
@@ -773,7 +774,7 @@ defmodule BadgeApp do
     StyleMap.new()
     |> StyleMap.background("#3366ff")
     |> StyleMap.text_color("#ffffff")
-    |> StyleMap.border(%{color: "#3366ff", width: 1, radius: 999})
+    |> StyleMap.border(Border.new() |> Border.color("#3366ff") |> Border.width(1) |> Border.rounded(999))
     |> StyleMap.hovered(%{background: "#4477ff"})
   end
 
@@ -781,7 +782,7 @@ defmodule BadgeApp do
     StyleMap.new()
     |> StyleMap.background("#f0f0f0")
     |> StyleMap.text_color("#333333")
-    |> StyleMap.border(%{color: "#cccccc", width: 1, radius: 999})
+    |> StyleMap.border(Border.new() |> Border.color("#cccccc") |> Border.width(1) |> Border.rounded(999))
     |> StyleMap.hovered(%{background: "#e4e4e4"})
   end
 end

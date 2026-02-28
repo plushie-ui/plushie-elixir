@@ -103,8 +103,20 @@ defmodule Julep.Iced.StyleMap do
   end
 
   @spec normalize_override(override :: status_override() | keyword()) :: status_override()
-  defp normalize_override(override) when is_list(override), do: Map.new(override)
-  defp normalize_override(override) when is_map(override), do: override
+  defp normalize_override(override) when is_list(override), do: normalize_override(Map.new(override))
+
+  defp normalize_override(override) when is_map(override) do
+    override
+    |> cast_color_field(:background)
+    |> cast_color_field(:text_color)
+  end
+
+  defp cast_color_field(map, key) do
+    case Map.get(map, key) do
+      nil -> map
+      val -> Map.put(map, key, Color.cast(val))
+    end
+  end
 end
 
 defimpl Julep.Iced.Encode, for: Julep.Iced.StyleMap do
