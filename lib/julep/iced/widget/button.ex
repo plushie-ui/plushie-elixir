@@ -22,9 +22,10 @@ defmodule Julep.Iced.Widget.Button do
   - `{:click, id}` -- emitted on press (unless disabled).
   """
 
+  alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
-  @type style :: :primary | :secondary | :success | :warning | :danger | :text
+  @type style :: :primary | :secondary | :success | :warning | :danger | :text | StyleMap.t()
 
   @type option ::
           {:width, Julep.Iced.Length.t()}

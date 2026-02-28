@@ -10,9 +10,10 @@ defmodule Julep.Iced.Widget.Rule do
   - `style` (string) -- named style: `"default"` or `"weak"`.
   """
 
+  alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
-  @type style :: :default | :weak
+  @type style :: :default | :weak | StyleMap.t()
 
   @type option ::
           {:height, number()}

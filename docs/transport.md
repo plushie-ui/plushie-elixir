@@ -24,7 +24,12 @@ Julep supports both MessagePack and JSONL as wire formats. MessagePack is
 the default. The message shapes are identical -- only the encoding differs.
 MessagePack reduces serialization overhead for high-frequency messages and
 enables a future path to native binary data payloads without base64 overhead.
-Currently, binary data (e.g. window icons) uses base64 encoding in both formats.
+Currently, binary data (e.g. window icons, in-memory image pixels) uses
+base64 encoding in both formats. This is because the Rust codec routes
+msgpack through `serde_json::Value` as an intermediate for tagged enum
+dispatch (see `codec.rs`), and `serde_json::Value` cannot represent raw
+binary data. When this codec layer is reworked, image payloads can switch
+to native msgpack binary type for zero base64 overhead.
 
 ### How to enable JSON mode
 

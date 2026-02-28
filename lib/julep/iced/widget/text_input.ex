@@ -36,9 +36,10 @@ defmodule Julep.Iced.Widget.TextInput do
   - `{:paste, id, text}` -- emitted on paste (requires `on_paste` prop).
   """
 
+  alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
-  @type style :: :default
+  @type style :: :default | StyleMap.t()
 
   @type option ::
           {:placeholder, String.t()}

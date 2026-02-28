@@ -1,18 +1,20 @@
 defmodule Julep.Iced.Widget.Canvas do
   @moduledoc """
-  Canvas for drawing shapes.
+  Canvas for drawing shapes, organized into named layers.
 
-  Shapes are rendered via an iced `canvas::Program`. The canvas supports
-  rect, circle, line, and text shape primitives.
+  Layers are a map of layer names to shape lists. Each layer maps to an iced
+  `Cache` on the Rust side -- only changed layers are re-tessellated. This
+  prevents performance footguns when rendering thousands of shapes in a stable
+  layer.
+
+  Shape descriptors are plain maps with string keys. Use `Julep.Canvas.Shape`
+  for convenience builders, or construct maps directly.
 
   ## Props
 
-  - `shapes` (list of maps) -- shape descriptors. Each shape has a `type` field:
-    - `%{type: "rect", x, y, w, h, fill}` -- filled rectangle.
-    - `%{type: "circle", x, y, r, fill}` -- filled circle.
-    - `%{type: "line", x1, y1, x2, y2, fill, width}` -- stroked line.
-    - `%{type: "text", x, y, content, fill}` -- drawn text.
-    Colors are hex strings for the `fill` field.
+  - `layers` (map of string => list of maps) -- named layers of shape
+    descriptors. Each layer is independently cached. Shapes within a layer
+    are drawn in order. Layers are drawn in alphabetical order by name.
   - `width` (length) -- canvas width. Default: fill. See `Julep.Iced.Length`.
   - `height` (length) -- canvas height. Default: 200px.
   - `background` (color) -- canvas background color. See `Julep.Iced.Color`.
@@ -21,6 +23,20 @@ defmodule Julep.Iced.Widget.Canvas do
   - `on_release` (boolean) -- enable mouse release events. Default: false.
   - `on_move` (boolean) -- enable mouse move events. Default: false.
   - `on_scroll` (boolean) -- enable mouse scroll events. Default: false.
+
+  ## Shape types
+
+  Shapes are plain maps. See `Julep.Canvas.Shape` for builder functions.
+
+  - `%{"type" => "rect", "x" => x, "y" => y, "w" => w, "h" => h}` -- rectangle.
+  - `%{"type" => "circle", "x" => x, "y" => y, "r" => r}` -- circle.
+  - `%{"type" => "line", "x1" => x1, "y1" => y1, "x2" => x2, "y2" => y2}` -- line.
+  - `%{"type" => "text", "x" => x, "y" => y, "content" => text}` -- text.
+  - `%{"type" => "path", "commands" => [...]}` -- arbitrary path.
+  - `%{"type" => "image", "source" => path, "x" => x, "y" => y, "w" => w, "h" => h}` -- image.
+  - `%{"type" => "svg", "source" => path, "x" => x, "y" => y, "w" => w, "h" => h}` -- SVG.
+
+  All shapes accept optional `fill` (hex color or gradient) and `stroke` fields.
 
   ## Events
 
@@ -33,7 +49,7 @@ defmodule Julep.Iced.Widget.Canvas do
   alias Julep.Iced.Widget.Build
 
   @type option ::
-          {:shapes, [map()]}
+          {:layers, %{String.t() => [map()]}}
           | {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
           | {:background, Julep.Iced.Color.t()}
@@ -45,7 +61,7 @@ defmodule Julep.Iced.Widget.Canvas do
 
   @type t :: %__MODULE__{
           id: String.t(),
-          shapes: [map()] | nil,
+          layers: %{String.t() => [map()]} | nil,
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
           background: Julep.Iced.Color.t() | nil,
@@ -58,7 +74,7 @@ defmodule Julep.Iced.Widget.Canvas do
 
   defstruct [
     :id,
-    :shapes,
+    :layers,
     :width,
     :height,
     :background,
@@ -81,7 +97,7 @@ defmodule Julep.Iced.Widget.Canvas do
 
   def with_options(%__MODULE__{} = canvas, opts) do
     Enum.reduce(opts, canvas, fn
-      {:shapes, v}, acc -> shapes(acc, v)
+      {:layers, v}, acc -> layers(acc, v)
       {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
       {:background, v}, acc -> background(acc, v)
@@ -94,9 +110,16 @@ defmodule Julep.Iced.Widget.Canvas do
     end)
   end
 
-  @doc "Sets the list of shape descriptors."
-  @spec shapes(canvas :: t(), shapes :: [map()]) :: t()
-  def shapes(%__MODULE__{} = canvas, shapes), do: %{canvas | shapes: shapes}
+  @doc "Sets the layers map (layer name => list of shape descriptors)."
+  @spec layers(canvas :: t(), layers :: %{String.t() => [map()]}) :: t()
+  def layers(%__MODULE__{} = canvas, layers), do: %{canvas | layers: layers}
+
+  @doc "Adds a single named layer to the canvas. Merges with existing layers."
+  @spec layer(canvas :: t(), name :: String.t(), shapes :: [map()]) :: t()
+  def layer(%__MODULE__{} = canvas, name, shapes) do
+    current = canvas.layers || %{}
+    %{canvas | layers: Map.put(current, name, shapes)}
+  end
 
   @doc "Sets the canvas width."
   @spec width(canvas :: t(), width :: Julep.Iced.Length.t()) :: t()
@@ -140,7 +163,7 @@ defmodule Julep.Iced.Widget.Canvas do
     def to_node(canvas) do
       props =
         %{}
-        |> put_if(canvas.shapes, "shapes")
+        |> put_if(canvas.layers, "layers")
         |> put_if(canvas.width, "width")
         |> put_if(canvas.height, "height")
         |> put_if(canvas.background, "background")

@@ -21,9 +21,10 @@ defmodule Julep.Iced.Widget.Slider do
   - `{:slide_release, id, value}` -- emitted when drag ends.
   """
 
+  alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
-  @type style :: :default
+  @type style :: :default | StyleMap.t()
 
   @type option ::
           {:step, number()}

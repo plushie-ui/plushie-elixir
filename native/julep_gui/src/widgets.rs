@@ -144,20 +144,24 @@ pub fn ensure_caches(node: &TreeNode, caches: &mut WidgetCaches) {
 // ---------------------------------------------------------------------------
 
 /// Map a TreeNode to an iced Element. Unknown types render as an empty container.
-pub fn render<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+pub fn render<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
     match node.type_name.as_str() {
-        "column" => render_column(node, caches),
-        "row" => render_row(node, caches),
+        "column" => render_column(node, caches, images),
+        "row" => render_row(node, caches, images),
         "text" => render_text(node, caches),
-        "button" => render_button(node, caches),
-        "container" => render_container(node, caches),
+        "button" => render_button(node, caches, images),
+        "container" => render_container(node, caches, images),
         "space" => render_space(node),
         "text_input" => render_text_input(node, caches),
         "checkbox" => render_checkbox(node, caches),
         "rule" => render_rule(node),
         "progress_bar" => render_progress_bar(node),
-        "scrollable" => render_scrollable(node, caches),
-        "window" => render_window(node, caches),
+        "scrollable" => render_scrollable(node, caches, images),
+        "window" => render_window(node, caches, images),
         // Native widgets
         "toggler" => render_toggler(node, caches),
         "radio" => render_radio(node, caches),
@@ -166,24 +170,24 @@ pub fn render<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, M
         "pick_list" => render_pick_list(node, caches),
         "combo_box" => render_combo_box(node, caches),
         "text_editor" => render_text_editor(node, caches),
-        "tooltip" => render_tooltip(node, caches),
-        "image" => render_image(node),
+        "tooltip" => render_tooltip(node, caches, images),
+        "image" => render_image(node, images),
         "svg" => render_svg(node),
         "markdown" => render_markdown(node, caches),
-        "stack" => render_stack(node, caches),
-        "canvas" => render_canvas(node),
+        "stack" => render_stack(node, caches, images),
+        "canvas" => render_canvas(node, images),
         "table" => render_table(node),
         // New native widgets
-        "grid" => render_grid(node, caches),
-        "pin" => render_pin(node, caches),
-        "mouse_area" => render_mouse_area(node, caches),
-        "sensor" => render_sensor(node, caches),
+        "grid" => render_grid(node, caches, images),
+        "pin" => render_pin(node, caches, images),
+        "mouse_area" => render_mouse_area(node, caches, images),
+        "sensor" => render_sensor(node, caches, images),
         "rich_text" | "rich" => render_rich_text(node, caches),
-        "keyed_column" => render_keyed_column(node, caches),
-        "float" => render_float(node, caches),
-        "themer" => render_themer(node, caches),
-        "responsive" => render_responsive(node, caches),
-        "pane_grid" => render_pane_grid(node, caches),
+        "keyed_column" => render_keyed_column(node, caches, images),
+        "float" => render_float(node, caches, images),
+        "themer" => render_themer(node, caches, images),
+        "responsive" => render_responsive(node, caches, images),
+        "pane_grid" => render_pane_grid(node, caches, images),
         unknown => {
             log::warn!("unknown node type `{unknown}`, rendering as empty container");
             container(Space::new()).into()
@@ -195,15 +199,26 @@ pub fn render<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, M
 // Child rendering helper
 // ---------------------------------------------------------------------------
 
-fn render_children<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Vec<Element<'a, Message>> {
-    node.children.iter().map(|c| render(c, caches)).collect()
+fn render_children<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Vec<Element<'a, Message>> {
+    node.children
+        .iter()
+        .map(|c| render(c, caches, images))
+        .collect()
 }
 
 // ---------------------------------------------------------------------------
 // Column
 // ---------------------------------------------------------------------------
 
-fn render_column<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+fn render_column<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
     let padding = parse_padding_value(props);
@@ -212,7 +227,7 @@ fn render_column<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a
     let align_x = prop_horizontal_alignment(props, "align_x");
     let clip = prop_bool_default(props, "clip", false);
 
-    let children = render_children(node, caches);
+    let children = render_children(node, caches, images);
 
     let mut col = column(children)
         .spacing(spacing)
@@ -239,7 +254,11 @@ fn render_column<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a
 // Row
 // ---------------------------------------------------------------------------
 
-fn render_row<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+fn render_row<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
     let padding = parse_padding_value(props);
@@ -248,7 +267,7 @@ fn render_row<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, M
     let align_y = prop_vertical_alignment(props, "align_y");
     let clip = prop_bool_default(props, "clip", false);
 
-    let children = render_children(node, caches);
+    let children = render_children(node, caches, images);
 
     let r = row(children)
         .spacing(spacing)
@@ -350,7 +369,11 @@ fn render_text<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, 
 // Button
 // ---------------------------------------------------------------------------
 
-fn render_button<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+fn render_button<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let id = node.id.clone();
 
@@ -358,7 +381,7 @@ fn render_button<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a
     let child: Element<'a, Message> = if !node.children.is_empty() {
         node.children
             .first()
-            .map(|c| render(c, caches))
+            .map(|c| render(c, caches, images))
             .unwrap_or_else(|| Space::new().into())
     } else {
         let label = prop_str(props, "label")
@@ -384,17 +407,112 @@ fn render_button<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a
         b = b.on_press(Message::Click(id));
     }
 
-    // Named style
-    if let Some(style_name) = prop_str(props, "style") {
-        b = match style_name.as_str() {
-            "primary" => b.style(button::primary),
-            "secondary" => b.style(button::secondary),
-            "success" => b.style(button::success),
-            "warning" => b.style(button::warning),
-            "danger" => b.style(button::danger),
-            "text" => b.style(button::text),
-            _ => b.style(button::primary),
-        };
+    // Style: string name or style map object
+    if let Some(style_val) = props.and_then(|p| p.get("style")) {
+        if let Some(style_name) = style_val.as_str() {
+            b = match style_name {
+                "primary" => b.style(button::primary),
+                "secondary" => b.style(button::secondary),
+                "success" => b.style(button::success),
+                "warning" => b.style(button::warning),
+                "danger" => b.style(button::danger),
+                "text" => b.style(button::text),
+                _ => b.style(button::primary),
+            };
+        } else if let Some(obj) = style_val.as_object() {
+            let base = parse_style_map_fields(obj);
+            let hover_fields = obj
+                .get("hovered")
+                .and_then(|v| v.as_object())
+                .map(parse_style_map_fields);
+            let pressed_fields = obj
+                .get("pressed")
+                .and_then(|v| v.as_object())
+                .map(parse_style_map_fields);
+            let disabled_fields = obj
+                .get("disabled")
+                .and_then(|v| v.as_object())
+                .map(parse_style_map_fields);
+
+            b = b.style(move |theme: &iced::Theme, status| {
+                let default_style = button::primary(theme, status);
+                let mut style = default_style;
+                // Apply base fields
+                if let Some(bg) = base.background {
+                    style.background = Some(bg);
+                }
+                if let Some(tc) = base.text_color {
+                    style.text_color = tc;
+                }
+                if let Some(brd) = base.border {
+                    style.border = brd;
+                }
+                if let Some(shd) = base.shadow {
+                    style.shadow = shd;
+                }
+                // Status-specific overrides
+                match status {
+                    button::Status::Hovered => {
+                        if let Some(ref fields) = hover_fields {
+                            if let Some(bg) = fields.background {
+                                style.background = Some(bg);
+                            }
+                            if let Some(tc) = fields.text_color {
+                                style.text_color = tc;
+                            }
+                            if let Some(brd) = fields.border {
+                                style.border = brd;
+                            }
+                            if let Some(shd) = fields.shadow {
+                                style.shadow = shd;
+                            }
+                        } else if let Some(bg) = style.background {
+                            style.background = Some(darken_background(bg, 0.9));
+                        }
+                    }
+                    button::Status::Pressed => {
+                        if let Some(ref fields) = pressed_fields {
+                            if let Some(bg) = fields.background {
+                                style.background = Some(bg);
+                            }
+                            if let Some(tc) = fields.text_color {
+                                style.text_color = tc;
+                            }
+                            if let Some(brd) = fields.border {
+                                style.border = brd;
+                            }
+                            if let Some(shd) = fields.shadow {
+                                style.shadow = shd;
+                            }
+                        }
+                        // else: pressed = base (matching iced's pattern)
+                    }
+                    button::Status::Disabled => {
+                        if let Some(ref fields) = disabled_fields {
+                            if let Some(bg) = fields.background {
+                                style.background = Some(bg);
+                            }
+                            if let Some(tc) = fields.text_color {
+                                style.text_color = tc;
+                            }
+                            if let Some(brd) = fields.border {
+                                style.border = brd;
+                            }
+                            if let Some(shd) = fields.shadow {
+                                style.shadow = shd;
+                            }
+                        } else {
+                            if let Some(bg) = style.background {
+                                style.background = Some(alpha_background(bg, 0.5));
+                            }
+                            style.text_color = alpha_color(style.text_color, 0.5);
+                        }
+                    }
+                    _ => {}
+                }
+                style
+            });
+        }
     }
 
     container(b).id(widget::Id::from(node.id.clone())).into()
@@ -404,7 +522,11 @@ fn render_button<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a
 // Container
 // ---------------------------------------------------------------------------
 
-fn render_container<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+fn render_container<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let padding = parse_padding_value(props);
     let width = prop_length(props, "width", Length::Shrink);
@@ -415,7 +537,7 @@ fn render_container<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches))
+        .map(|c| render(c, caches, images))
         .unwrap_or_else(|| Space::new().into());
 
     let mut c = container(child)
@@ -477,20 +599,38 @@ fn render_container<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
         });
     }
 
-    // Named style (overrides inline if both present)
-    if let Some(style_name) = prop_str(props, "style") {
-        c = match style_name.as_str() {
-            "transparent" => c.style(container::transparent),
-            "rounded_box" => c.style(container::rounded_box),
-            "bordered_box" => c.style(container::bordered_box),
-            "dark" => c.style(container::dark),
-            "primary" => c.style(container::primary),
-            "secondary" => c.style(container::secondary),
-            "success" => c.style(container::success),
-            "danger" => c.style(container::danger),
-            "warning" => c.style(container::warning),
-            _ => c,
-        };
+    // Named style or style map (overrides inline if both present)
+    if let Some(style_val) = props.and_then(|p| p.get("style")) {
+        if let Some(style_name) = style_val.as_str() {
+            c = match style_name {
+                "transparent" => c.style(container::transparent),
+                "rounded_box" => c.style(container::rounded_box),
+                "bordered_box" => c.style(container::bordered_box),
+                "dark" => c.style(container::dark),
+                "primary" => c.style(container::primary),
+                "secondary" => c.style(container::secondary),
+                "success" => c.style(container::success),
+                "danger" => c.style(container::danger),
+                "warning" => c.style(container::warning),
+                _ => c,
+            };
+        } else if let Some(obj) = style_val.as_object() {
+            let base = parse_style_map_fields(obj);
+            c = c.style(move |_theme| {
+                let mut style = container::Style {
+                    background: base.background,
+                    text_color: base.text_color,
+                    ..Default::default()
+                };
+                if let Some(brd) = base.border {
+                    style.border = brd;
+                }
+                if let Some(shd) = base.shadow {
+                    style.shadow = shd;
+                }
+                style
+            });
+        }
     }
 
     // Widget ID for operations targeting
@@ -514,7 +654,11 @@ fn render_space<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 // Scrollable
 // ---------------------------------------------------------------------------
 
-fn render_scrollable<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+fn render_scrollable<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let width = prop_length(props, "width", Length::Shrink);
     let height = prop_length(props, "height", Length::Shrink);
@@ -523,7 +667,7 @@ fn render_scrollable<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Elemen
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches))
+        .map(|c| render(c, caches, images))
         .unwrap_or_else(|| Space::new().into());
 
     let direction = prop_str(props, "direction").unwrap_or_default();
@@ -606,7 +750,11 @@ fn render_scrollable<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Elemen
 // Window (top-level container)
 // ---------------------------------------------------------------------------
 
-fn render_window<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+fn render_window<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let padding = parse_padding_value(props);
     let width = prop_length(props, "width", Fill);
@@ -615,7 +763,7 @@ fn render_window<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches))
+        .map(|c| render(c, caches, images))
         .unwrap_or_else(|| Space::new().into());
 
     container(child)
@@ -690,12 +838,80 @@ fn render_text_input<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Elemen
         ti = ti.id(id_str);
     }
 
-    // Named style
-    if let Some(style_name) = prop_str(props, "style") {
-        ti = match style_name.as_str() {
-            "default" => ti.style(text_input::default),
-            _ => ti,
-        };
+    // Style: string name or style map object
+    if let Some(style_val) = props.and_then(|p| p.get("style")) {
+        if let Some(style_name) = style_val.as_str() {
+            ti = match style_name {
+                "default" => ti.style(text_input::default),
+                _ => ti,
+            };
+        } else if let Some(obj) = style_val.as_object() {
+            let base = parse_style_map_fields(obj);
+            let focused_fields = obj
+                .get("focused")
+                .and_then(|v| v.as_object())
+                .map(parse_style_map_fields);
+            let hovered_fields = obj
+                .get("hovered")
+                .and_then(|v| v.as_object())
+                .map(parse_style_map_fields);
+            let disabled_fields = obj
+                .get("disabled")
+                .and_then(|v| v.as_object())
+                .map(parse_style_map_fields);
+
+            ti = ti.style(move |theme: &iced::Theme, status| {
+                let mut style = text_input::default(theme, status);
+                // Apply base: background, border, text_color -> value
+                if let Some(iced::Background::Color(c)) = base.background {
+                    style.background = iced::Background::Color(c);
+                }
+                if let Some(brd) = base.border {
+                    style.border = brd;
+                }
+                if let Some(tc) = base.text_color {
+                    style.value = tc;
+                }
+                let apply_text_input_fields =
+                    |style: &mut text_input::Style, fields: &StyleMapFields| {
+                        if let Some(iced::Background::Color(c)) = fields.background {
+                            style.background = iced::Background::Color(c);
+                        }
+                        if let Some(brd) = fields.border {
+                            style.border = brd;
+                        }
+                        if let Some(tc) = fields.text_color {
+                            style.value = tc;
+                        }
+                    };
+                match status {
+                    text_input::Status::Focused { .. } => {
+                        if let Some(ref fields) = focused_fields {
+                            apply_text_input_fields(&mut style, fields);
+                        }
+                    }
+                    text_input::Status::Hovered => {
+                        if let Some(ref fields) = hovered_fields {
+                            apply_text_input_fields(&mut style, fields);
+                        } else if let iced::Background::Color(c) = style.background {
+                            style.background = iced::Background::Color(darken_color(c, 0.9));
+                        }
+                    }
+                    text_input::Status::Disabled => {
+                        if let Some(ref fields) = disabled_fields {
+                            apply_text_input_fields(&mut style, fields);
+                        } else {
+                            if let iced::Background::Color(c) = style.background {
+                                style.background = iced::Background::Color(alpha_color(c, 0.5));
+                            }
+                            style.value = alpha_color(style.value, 0.5);
+                        }
+                    }
+                    _ => {}
+                }
+                style
+            });
+        }
     }
 
     ti.into()
@@ -747,15 +963,52 @@ fn render_checkbox<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<
         cb = cb.text_wrapping(w);
     }
 
-    // Named style
-    if let Some(style_name) = prop_str(props, "style") {
-        cb = match style_name.as_str() {
-            "primary" => cb.style(checkbox::primary),
-            "secondary" => cb.style(checkbox::secondary),
-            "success" => cb.style(checkbox::success),
-            "danger" => cb.style(checkbox::danger),
-            _ => cb.style(checkbox::primary),
-        };
+    // Style: string name or style map object
+    if let Some(style_val) = props.and_then(|p| p.get("style")) {
+        if let Some(style_name) = style_val.as_str() {
+            cb = match style_name {
+                "primary" => cb.style(checkbox::primary),
+                "secondary" => cb.style(checkbox::secondary),
+                "success" => cb.style(checkbox::success),
+                "danger" => cb.style(checkbox::danger),
+                _ => cb.style(checkbox::primary),
+            };
+        } else if let Some(obj) = style_val.as_object() {
+            let base = parse_style_map_fields(obj);
+            let hovered_fields = obj
+                .get("hovered")
+                .and_then(|v| v.as_object())
+                .map(parse_style_map_fields);
+
+            cb = cb.style(move |theme: &iced::Theme, status| {
+                let mut style = checkbox::primary(theme, status);
+                if let Some(iced::Background::Color(c)) = base.background {
+                    style.background = iced::Background::Color(c);
+                }
+                if let Some(brd) = base.border {
+                    style.border = brd;
+                }
+                if let Some(tc) = base.text_color {
+                    style.text_color = Some(tc);
+                }
+                if matches!(status, checkbox::Status::Hovered { .. }) {
+                    if let Some(ref fields) = hovered_fields {
+                        if let Some(iced::Background::Color(c)) = fields.background {
+                            style.background = iced::Background::Color(c);
+                        }
+                        if let Some(brd) = fields.border {
+                            style.border = brd;
+                        }
+                        if let Some(tc) = fields.text_color {
+                            style.text_color = Some(tc);
+                        }
+                    } else if let iced::Background::Color(c) = style.background {
+                        style.background = iced::Background::Color(darken_color(c, 0.9));
+                    }
+                }
+                style
+            });
+        }
     }
 
     container(cb).id(widget::Id::from(node.id.clone())).into()
@@ -782,22 +1035,51 @@ fn render_rule<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 
     if direction == "vertical" {
         let mut r = rule::vertical(thickness);
-        if let Some(style_name) = prop_str(props, "style") {
-            r = match style_name.as_str() {
-                "default" => r.style(rule::default),
-                "weak" => r.style(rule::weak),
-                _ => r,
-            };
+        if let Some(style_val) = props.and_then(|p| p.get("style")) {
+            if let Some(style_name) = style_val.as_str() {
+                r = match style_name {
+                    "default" => r.style(rule::default),
+                    "weak" => r.style(rule::weak),
+                    _ => r,
+                };
+            } else if let Some(obj) = style_val.as_object() {
+                let base = parse_style_map_fields(obj);
+                r = r.style(move |theme: &iced::Theme| {
+                    let mut style = rule::default(theme);
+                    // Map background -> color
+                    if let Some(iced::Background::Color(c)) = base.background {
+                        style.color = c;
+                    }
+                    if let Some(brd) = base.border {
+                        style.radius = brd.radius;
+                    }
+                    style
+                });
+            }
         }
         r.into()
     } else {
         let mut r = rule::horizontal(thickness);
-        if let Some(style_name) = prop_str(props, "style") {
-            r = match style_name.as_str() {
-                "default" => r.style(rule::default),
-                "weak" => r.style(rule::weak),
-                _ => r,
-            };
+        if let Some(style_val) = props.and_then(|p| p.get("style")) {
+            if let Some(style_name) = style_val.as_str() {
+                r = match style_name {
+                    "default" => r.style(rule::default),
+                    "weak" => r.style(rule::weak),
+                    _ => r,
+                };
+            } else if let Some(obj) = style_val.as_object() {
+                let base = parse_style_map_fields(obj);
+                r = r.style(move |theme: &iced::Theme| {
+                    let mut style = rule::default(theme);
+                    if let Some(iced::Background::Color(c)) = base.background {
+                        style.color = c;
+                    }
+                    if let Some(brd) = base.border {
+                        style.radius = brd.radius;
+                    }
+                    style
+                });
+            }
         }
         r.into()
     }
@@ -820,16 +1102,34 @@ fn render_progress_bar<'a>(node: &'a TreeNode) -> Element<'a, Message> {
         pb = pb.vertical();
     }
 
-    // Named style
-    if let Some(style_name) = prop_str(props, "style") {
-        pb = match style_name.as_str() {
-            "primary" => pb.style(progress_bar::primary),
-            "secondary" => pb.style(progress_bar::secondary),
-            "success" => pb.style(progress_bar::success),
-            "danger" => pb.style(progress_bar::danger),
-            "warning" => pb.style(progress_bar::warning),
-            _ => pb.style(progress_bar::primary),
-        };
+    // Style: string name or style map object
+    if let Some(style_val) = props.and_then(|p| p.get("style")) {
+        if let Some(style_name) = style_val.as_str() {
+            pb = match style_name {
+                "primary" => pb.style(progress_bar::primary),
+                "secondary" => pb.style(progress_bar::secondary),
+                "success" => pb.style(progress_bar::success),
+                "danger" => pb.style(progress_bar::danger),
+                "warning" => pb.style(progress_bar::warning),
+                _ => pb.style(progress_bar::primary),
+            };
+        } else if let Some(obj) = style_val.as_object() {
+            let base = parse_style_map_fields(obj);
+            pb = pb.style(move |theme: &iced::Theme| {
+                let mut style = progress_bar::primary(theme);
+                if let Some(iced::Background::Color(c)) = base.background {
+                    style.background = iced::Background::Color(c);
+                }
+                // text_color -> bar color
+                if let Some(tc) = base.text_color {
+                    style.bar = iced::Background::Color(tc);
+                }
+                if let Some(brd) = base.border {
+                    style.border = brd;
+                }
+                style
+            });
+        }
     }
 
     pb.into()
@@ -891,12 +1191,48 @@ fn render_toggler<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'
         t = t.text_alignment(align);
     }
 
-    // Named style
-    if let Some(style_name) = prop_str(props, "style") {
-        t = match style_name.as_str() {
-            "default" => t.style(toggler::default),
-            _ => t,
-        };
+    // Style: string name or style map object
+    if let Some(style_val) = props.and_then(|p| p.get("style")) {
+        if let Some(style_name) = style_val.as_str() {
+            t = match style_name {
+                "default" => t.style(toggler::default),
+                _ => t,
+            };
+        } else if let Some(obj) = style_val.as_object() {
+            let base = parse_style_map_fields(obj);
+            let hovered_fields = obj
+                .get("hovered")
+                .and_then(|v| v.as_object())
+                .map(parse_style_map_fields);
+
+            t = t.style(move |theme: &iced::Theme, status| {
+                let mut style = toggler::default(theme, status);
+                // Map background directly to toggler background
+                if let Some(bg) = base.background {
+                    style.background = bg;
+                }
+                if let Some(tc) = base.text_color {
+                    style.text_color = Some(tc);
+                }
+                if let Some(brd) = base.border {
+                    style.background_border_width = brd.width;
+                    style.background_border_color = brd.color;
+                }
+                if matches!(status, toggler::Status::Hovered { .. }) {
+                    if let Some(ref fields) = hovered_fields {
+                        if let Some(bg) = fields.background {
+                            style.background = bg;
+                        }
+                        if let Some(tc) = fields.text_color {
+                            style.text_color = Some(tc);
+                        }
+                    } else {
+                        style.background = darken_background(style.background, 0.9);
+                    }
+                }
+                style
+            });
+        }
     }
 
     container(t).id(widget::Id::from(node.id.clone())).into()
@@ -954,12 +1290,53 @@ fn render_radio<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a,
         r = r.text_wrapping(w);
     }
 
-    // Named style
-    if let Some(style_name) = prop_str(props, "style") {
-        r = match style_name.as_str() {
-            "default" => r.style(iced::widget::radio::default),
-            _ => r,
-        };
+    // Style: string name or style map object
+    if let Some(style_val) = props.and_then(|p| p.get("style")) {
+        if let Some(style_name) = style_val.as_str() {
+            r = match style_name {
+                "default" => r.style(iced::widget::radio::default),
+                _ => r,
+            };
+        } else if let Some(obj) = style_val.as_object() {
+            let base = parse_style_map_fields(obj);
+            let hovered_fields = obj
+                .get("hovered")
+                .and_then(|v| v.as_object())
+                .map(parse_style_map_fields);
+
+            r = r.style(move |theme: &iced::Theme, status| {
+                let mut style = iced::widget::radio::default(theme, status);
+                // Map background directly
+                if let Some(iced::Background::Color(c)) = base.background {
+                    style.background = iced::Background::Color(c);
+                }
+                if let Some(tc) = base.text_color {
+                    style.text_color = Some(tc);
+                }
+                // Map border -> border_width/border_color
+                if let Some(brd) = base.border {
+                    style.border_width = brd.width;
+                    style.border_color = brd.color;
+                }
+                if matches!(status, iced::widget::radio::Status::Hovered { .. }) {
+                    if let Some(ref fields) = hovered_fields {
+                        if let Some(iced::Background::Color(c)) = fields.background {
+                            style.background = iced::Background::Color(c);
+                        }
+                        if let Some(tc) = fields.text_color {
+                            style.text_color = Some(tc);
+                        }
+                        if let Some(brd) = fields.border {
+                            style.border_width = brd.width;
+                            style.border_color = brd.color;
+                        }
+                    } else {
+                        style.background = darken_background(style.background, 0.9);
+                    }
+                }
+                style
+            });
+        }
     }
 
     container(r).id(widget::Id::from(node.id.clone())).into()
@@ -1003,11 +1380,45 @@ fn render_slider<'a>(node: &'a TreeNode) -> Element<'a, Message> {
         s = s.style(move |theme, status| {
             slider::default(theme, status).with_circular_handle(radius)
         });
-    } else if let Some(style_name) = prop_str(props, "style") {
-        s = match style_name.as_str() {
-            "default" => s.style(slider::default),
-            _ => s,
-        };
+    } else if let Some(style_val) = props.and_then(|p| p.get("style")) {
+        if let Some(style_name) = style_val.as_str() {
+            s = match style_name {
+                "default" => s.style(slider::default),
+                _ => s,
+            };
+        } else if let Some(obj) = style_val.as_object() {
+            let base = parse_style_map_fields(obj);
+            let hovered_fields = obj
+                .get("hovered")
+                .and_then(|v| v.as_object())
+                .map(parse_style_map_fields);
+
+            s = s.style(move |theme: &iced::Theme, status| {
+                let mut style = slider::default(theme, status);
+                // Best effort: background -> handle color, border -> handle border
+                if let Some(iced::Background::Color(c)) = base.background {
+                    style.handle.background = iced::Background::Color(c);
+                }
+                if let Some(brd) = base.border {
+                    style.handle.border_width = brd.width;
+                    style.handle.border_color = brd.color;
+                }
+                if matches!(status, slider::Status::Hovered) {
+                    if let Some(ref fields) = hovered_fields {
+                        if let Some(iced::Background::Color(c)) = fields.background {
+                            style.handle.background = iced::Background::Color(c);
+                        }
+                        if let Some(brd) = fields.border {
+                            style.handle.border_width = brd.width;
+                            style.handle.border_color = brd.color;
+                        }
+                    } else {
+                        style.handle.background = darken_background(style.handle.background, 0.9);
+                    }
+                }
+                style
+            });
+        }
     }
 
     container(s).id(widget::Id::from(node.id.clone())).into()
@@ -1041,12 +1452,45 @@ fn render_vertical_slider<'a>(node: &'a TreeNode) -> Element<'a, Message> {
         s = s.shift_step(ss);
     }
 
-    // Named style
-    if let Some(style_name) = prop_str(props, "style") {
-        s = match style_name.as_str() {
-            "default" => s.style(vertical_slider::default),
-            _ => s,
-        };
+    // Style: string name or style map object
+    if let Some(style_val) = props.and_then(|p| p.get("style")) {
+        if let Some(style_name) = style_val.as_str() {
+            s = match style_name {
+                "default" => s.style(vertical_slider::default),
+                _ => s,
+            };
+        } else if let Some(obj) = style_val.as_object() {
+            let base = parse_style_map_fields(obj);
+            let hovered_fields = obj
+                .get("hovered")
+                .and_then(|v| v.as_object())
+                .map(parse_style_map_fields);
+
+            s = s.style(move |theme: &iced::Theme, status| {
+                let mut style = vertical_slider::default(theme, status);
+                if let Some(iced::Background::Color(c)) = base.background {
+                    style.handle.background = iced::Background::Color(c);
+                }
+                if let Some(brd) = base.border {
+                    style.handle.border_width = brd.width;
+                    style.handle.border_color = brd.color;
+                }
+                if matches!(status, vertical_slider::Status::Hovered) {
+                    if let Some(ref fields) = hovered_fields {
+                        if let Some(iced::Background::Color(c)) = fields.background {
+                            style.handle.background = iced::Background::Color(c);
+                        }
+                        if let Some(brd) = fields.border {
+                            style.handle.border_width = brd.width;
+                            style.handle.border_color = brd.color;
+                        }
+                    } else {
+                        style.handle.background = darken_background(style.handle.background, 0.9);
+                    }
+                }
+                style
+            });
+        }
     }
 
     container(s).id(widget::Id::from(node.id.clone())).into()
@@ -1106,12 +1550,49 @@ fn render_pick_list<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
         pl = pl.handle(handle);
     }
 
-    // Named style
-    if let Some(style_name) = prop_str(props, "style") {
-        pl = match style_name.as_str() {
-            "default" => pl.style(pick_list::default),
-            _ => pl,
-        };
+    // Style: string name or style map object
+    if let Some(style_val) = props.and_then(|p| p.get("style")) {
+        if let Some(style_name) = style_val.as_str() {
+            pl = match style_name {
+                "default" => pl.style(pick_list::default),
+                _ => pl,
+            };
+        } else if let Some(obj) = style_val.as_object() {
+            let base = parse_style_map_fields(obj);
+            let hovered_fields = obj
+                .get("hovered")
+                .and_then(|v| v.as_object())
+                .map(parse_style_map_fields);
+
+            pl = pl.style(move |theme: &iced::Theme, status| {
+                let mut style = pick_list::default(theme, status);
+                if let Some(tc) = base.text_color {
+                    style.text_color = tc;
+                }
+                if let Some(iced::Background::Color(c)) = base.background {
+                    style.background = iced::Background::Color(c);
+                }
+                if let Some(brd) = base.border {
+                    style.border = brd;
+                }
+                if matches!(status, pick_list::Status::Hovered) {
+                    if let Some(ref fields) = hovered_fields {
+                        if let Some(tc) = fields.text_color {
+                            style.text_color = tc;
+                        }
+                        if let Some(iced::Background::Color(c)) = fields.background {
+                            style.background = iced::Background::Color(c);
+                        }
+                        if let Some(brd) = fields.border {
+                            style.border = brd;
+                        }
+                    } else if let iced::Background::Color(c) = style.background {
+                        style.background = iced::Background::Color(darken_color(c, 0.9));
+                    }
+                }
+                style
+            });
+        }
     }
 
     container(pl).id(widget::Id::from(node.id.clone())).into()
@@ -1233,12 +1714,79 @@ fn render_text_editor<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Eleme
         te = te.width(w);
     }
 
-    // Named style
-    if let Some(style_name) = prop_str(props, "style") {
-        te = match style_name.as_str() {
-            "default" => te.style(text_editor::default),
-            _ => te,
-        };
+    // Style: string name or style map object
+    if let Some(style_val) = props.and_then(|p| p.get("style")) {
+        if let Some(style_name) = style_val.as_str() {
+            te = match style_name {
+                "default" => te.style(text_editor::default),
+                _ => te,
+            };
+        } else if let Some(obj) = style_val.as_object() {
+            let base = parse_style_map_fields(obj);
+            let focused_fields = obj
+                .get("focused")
+                .and_then(|v| v.as_object())
+                .map(parse_style_map_fields);
+            let hovered_fields = obj
+                .get("hovered")
+                .and_then(|v| v.as_object())
+                .map(parse_style_map_fields);
+            let disabled_fields = obj
+                .get("disabled")
+                .and_then(|v| v.as_object())
+                .map(parse_style_map_fields);
+
+            te = te.style(move |theme: &iced::Theme, status| {
+                let mut style = text_editor::default(theme, status);
+                if let Some(iced::Background::Color(c)) = base.background {
+                    style.background = iced::Background::Color(c);
+                }
+                if let Some(brd) = base.border {
+                    style.border = brd;
+                }
+                if let Some(tc) = base.text_color {
+                    style.value = tc;
+                }
+                let apply_editor_fields =
+                    |style: &mut text_editor::Style, fields: &StyleMapFields| {
+                        if let Some(iced::Background::Color(c)) = fields.background {
+                            style.background = iced::Background::Color(c);
+                        }
+                        if let Some(brd) = fields.border {
+                            style.border = brd;
+                        }
+                        if let Some(tc) = fields.text_color {
+                            style.value = tc;
+                        }
+                    };
+                match status {
+                    text_editor::Status::Focused { .. } => {
+                        if let Some(ref fields) = focused_fields {
+                            apply_editor_fields(&mut style, fields);
+                        }
+                    }
+                    text_editor::Status::Hovered => {
+                        if let Some(ref fields) = hovered_fields {
+                            apply_editor_fields(&mut style, fields);
+                        } else if let iced::Background::Color(c) = style.background {
+                            style.background = iced::Background::Color(darken_color(c, 0.9));
+                        }
+                    }
+                    text_editor::Status::Disabled => {
+                        if let Some(ref fields) = disabled_fields {
+                            apply_editor_fields(&mut style, fields);
+                        } else {
+                            if let iced::Background::Color(c) = style.background {
+                                style.background = iced::Background::Color(alpha_color(c, 0.5));
+                            }
+                            style.value = alpha_color(style.value, 0.5);
+                        }
+                    }
+                    _ => {}
+                }
+                style
+            });
+        }
     }
 
     // Widget ID for operations targeting
@@ -1251,7 +1799,11 @@ fn render_text_editor<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Eleme
 // Tooltip
 // ---------------------------------------------------------------------------
 
-fn render_tooltip<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+fn render_tooltip<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let tip = prop_str(props, "tip").unwrap_or_default();
     let gap = prop_f32(props, "gap");
@@ -1268,7 +1820,7 @@ fn render_tooltip<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches))
+        .map(|c| render(c, caches, images))
         .unwrap_or_else(|| Space::new().into());
 
     let mut tt = tooltip(child, text(tip), position);
@@ -1284,20 +1836,38 @@ fn render_tooltip<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'
     let snap = prop_bool_default(props, "snap_within_viewport", true);
     tt = tt.snap_within_viewport(snap);
 
-    // Named style (tooltip uses container::Style)
-    if let Some(style_name) = prop_str(props, "style") {
-        tt = match style_name.as_str() {
-            "transparent" => tt.style(container::transparent),
-            "rounded_box" => tt.style(container::rounded_box),
-            "bordered_box" => tt.style(container::bordered_box),
-            "dark" => tt.style(container::dark),
-            "primary" => tt.style(container::primary),
-            "secondary" => tt.style(container::secondary),
-            "success" => tt.style(container::success),
-            "danger" => tt.style(container::danger),
-            "warning" => tt.style(container::warning),
-            _ => tt,
-        };
+    // Style: string name or style map (tooltip uses container::Style)
+    if let Some(style_val) = props.and_then(|p| p.get("style")) {
+        if let Some(style_name) = style_val.as_str() {
+            tt = match style_name {
+                "transparent" => tt.style(container::transparent),
+                "rounded_box" => tt.style(container::rounded_box),
+                "bordered_box" => tt.style(container::bordered_box),
+                "dark" => tt.style(container::dark),
+                "primary" => tt.style(container::primary),
+                "secondary" => tt.style(container::secondary),
+                "success" => tt.style(container::success),
+                "danger" => tt.style(container::danger),
+                "warning" => tt.style(container::warning),
+                _ => tt,
+            };
+        } else if let Some(obj) = style_val.as_object() {
+            let base = parse_style_map_fields(obj);
+            tt = tt.style(move |_theme| {
+                let mut style = container::Style {
+                    background: base.background,
+                    text_color: base.text_color,
+                    ..Default::default()
+                };
+                if let Some(brd) = base.border {
+                    style.border = brd;
+                }
+                if let Some(shd) = base.shadow {
+                    style.shadow = shd;
+                }
+                style
+            });
+        }
     }
 
     tt.into()
@@ -1307,14 +1877,39 @@ fn render_tooltip<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'
 // Image
 // ---------------------------------------------------------------------------
 
-fn render_image<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_image<'a>(
+    node: &'a TreeNode,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
-    let source = prop_str(props, "source").unwrap_or_default();
     let width = prop_length(props, "width", Length::Shrink);
     let height = prop_length(props, "height", Length::Shrink);
     let content_fit = prop_content_fit(props);
 
-    let mut img = Image::new(source).width(width).height(height);
+    // source can be a string (file path) or an object with a "handle" field
+    // (in-memory image from the registry).
+    let source_val = props.and_then(|p| p.get("source"));
+    let handle: iced::widget::image::Handle = match source_val {
+        Some(Value::Object(obj)) => {
+            if let Some(name) = obj.get("handle").and_then(|v| v.as_str()) {
+                match images.get(name) {
+                    Some(h) => h.clone(),
+                    None => {
+                        log::warn!("image: unknown registry handle: {name}");
+                        iced::widget::image::Handle::from_bytes(vec![])
+                    }
+                }
+            } else {
+                iced::widget::image::Handle::from_bytes(vec![])
+            }
+        }
+        _ => {
+            let path = prop_str(props, "source").unwrap_or_default();
+            iced::widget::image::Handle::from_path(path)
+        }
+    };
+
+    let mut img = Image::new(handle).width(width).height(height);
     if let Some(cf) = content_fit {
         img = img.content_fit(cf);
     }
@@ -1456,13 +2051,17 @@ fn render_markdown<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<
 // Stack
 // ---------------------------------------------------------------------------
 
-fn render_stack<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+fn render_stack<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let width = prop_length(props, "width", Length::Shrink);
     let height = prop_length(props, "height", Length::Shrink);
     let clip = prop_bool_default(props, "clip", false);
 
-    let children = render_children(node, caches);
+    let children = render_children(node, caches, images);
 
     Stack::with_children(children)
         .width(width)
@@ -1475,7 +2074,11 @@ fn render_stack<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a,
 // Grid
 // ---------------------------------------------------------------------------
 
-fn render_grid<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+fn render_grid<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let cols = props
         .and_then(|p| p.get("columns"))
@@ -1483,7 +2086,7 @@ fn render_grid<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, 
         .unwrap_or(1) as usize;
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
 
-    let children = render_children(node, caches);
+    let children = render_children(node, caches, images);
 
     let mut g = grid(children).columns(cols).spacing(spacing);
 
@@ -1501,7 +2104,11 @@ fn render_grid<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, 
 // Pin (absolute positioning)
 // ---------------------------------------------------------------------------
 
-fn render_pin<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+fn render_pin<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let x = prop_f32(props, "x").unwrap_or(0.0);
     let y = prop_f32(props, "y").unwrap_or(0.0);
@@ -1511,7 +2118,7 @@ fn render_pin<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, M
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches))
+        .map(|c| render(c, caches, images))
         .unwrap_or_else(|| Space::new().into());
 
     pin(child)
@@ -1525,33 +2132,49 @@ fn render_pin<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, M
 // MouseArea
 // ---------------------------------------------------------------------------
 
-fn render_mouse_area<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+fn render_mouse_area<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
+    let props = node.props.as_object();
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches))
+        .map(|c| render(c, caches, images))
         .unwrap_or_else(|| Space::new().into());
 
     let id = node.id.clone();
     let release_id = format!("{}:release", node.id);
     let middle_id = format!("{}:middle", node.id);
 
-    mouse_area(child)
+    let mut ma = mouse_area(child)
         .on_press(Message::Click(id))
         .on_release(Message::Click(release_id))
-        .on_middle_press(Message::Click(middle_id))
-        .into()
+        .on_middle_press(Message::Click(middle_id));
+
+    if let Some(cursor) = prop_str(props, "cursor") {
+        if let Some(interaction) = parse_interaction(&cursor) {
+            ma = ma.interaction(interaction);
+        }
+    }
+
+    ma.into()
 }
 
 // ---------------------------------------------------------------------------
 // Sensor
 // ---------------------------------------------------------------------------
 
-fn render_sensor<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+fn render_sensor<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches))
+        .map(|c| render(c, caches, images))
         .unwrap_or_else(|| Space::new().into());
 
     // Sensor needs a key. Use the node id.
@@ -1641,7 +2264,11 @@ fn render_rich_text<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
 // Keyed Column
 // ---------------------------------------------------------------------------
 
-fn render_keyed_column<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+fn render_keyed_column<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
     let padding = parse_padding_value(props);
@@ -1655,7 +2282,7 @@ fn render_keyed_column<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Elem
             let mut hasher = DefaultHasher::new();
             c.id.hash(&mut hasher);
             let key = hasher.finish();
-            let elem = render(c, caches);
+            let elem = render(c, caches, images);
             (key, elem)
         })
         .collect();
@@ -1678,13 +2305,17 @@ fn render_keyed_column<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Elem
 // Float (floating overlay with scale/translate)
 // ---------------------------------------------------------------------------
 
-fn render_float<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+fn render_float<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
 
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches))
+        .map(|c| render(c, caches, images))
         .unwrap_or_else(|| Space::new().into());
 
     let tx = prop_f32(props, "translate_x").unwrap_or(0.0);
@@ -1704,7 +2335,11 @@ fn render_float<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a,
 // Themer (applies a sub-theme to child content)
 // ---------------------------------------------------------------------------
 
-fn render_themer<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+fn render_themer<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let theme: Option<iced::Theme> = props
         .and_then(|p| p.get("theme"))
@@ -1713,7 +2348,7 @@ fn render_themer<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches))
+        .map(|c| render(c, caches, images))
         .unwrap_or_else(|| Space::new().into());
 
     iced::widget::Themer::new(theme, child).into()
@@ -1723,7 +2358,11 @@ fn render_themer<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a
 // Responsive (container that reports its size)
 // ---------------------------------------------------------------------------
 
-fn render_responsive<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+fn render_responsive<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
     // iced's Responsive widget takes a closure that receives Size and returns
     // an Element. Since we can't call back to Elixir within a single frame,
     // we render the children as-is and wrap in a sensor so Elixir receives
@@ -1735,7 +2374,7 @@ fn render_responsive<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Elemen
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches))
+        .map(|c| render(c, caches, images))
         .unwrap_or_else(|| Space::new().into());
 
     let resize_id = node.id.clone();
@@ -1750,7 +2389,11 @@ fn render_responsive<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Elemen
 // PaneGrid
 // ---------------------------------------------------------------------------
 
-fn render_pane_grid<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+fn render_pane_grid<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(2.0);
     let width = prop_length(props, "width", Length::Fill);
@@ -1767,7 +2410,7 @@ fn render_pane_grid<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
     let child_map: HashMap<String, Element<'a, Message>> = node
         .children
         .iter()
-        .map(|c| (c.id.clone(), render(c, caches)))
+        .map(|c| (c.id.clone(), render(c, caches, images)))
         .collect();
 
     // We need to move child_map into the closure but PaneGrid::new
@@ -1807,7 +2450,8 @@ struct CanvasState {
 }
 
 struct CanvasProgram {
-    shapes: Vec<Value>,
+    /// Ordered layers, each containing a list of shapes/commands.
+    layers: Vec<(String, Vec<Value>)>,
     background: Option<Color>,
     id: String,
     on_press: bool,
@@ -1819,6 +2463,344 @@ struct CanvasProgram {
 impl CanvasProgram {
     fn is_interactive(&self) -> bool {
         self.on_press || self.on_release || self.on_move || self.on_scroll
+    }
+}
+
+/// Parse a canvas fill value. If string, hex color. If gradient object,
+/// build a gradient::Linear. Falls back to white.
+fn parse_canvas_fill(value: &Value) -> canvas::Fill {
+    match value {
+        Value::String(s) => {
+            let color = parse_hex_color(s).unwrap_or(Color::WHITE);
+            canvas::Fill::from(color)
+        }
+        Value::Object(obj) => match obj.get("type").and_then(|v| v.as_str()) {
+            Some("linear") => {
+                let start = obj
+                    .get("start")
+                    .and_then(|v| v.as_array())
+                    .map(|a| {
+                        Point::new(
+                            a.first().and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                            a.get(1).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                        )
+                    })
+                    .unwrap_or(Point::ORIGIN);
+                let end = obj
+                    .get("end")
+                    .and_then(|v| v.as_array())
+                    .map(|a| {
+                        Point::new(
+                            a.first().and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                            a.get(1).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                        )
+                    })
+                    .unwrap_or(Point::ORIGIN);
+                let mut linear = canvas::gradient::Linear::new(start, end);
+                if let Some(stops) = obj.get("stops").and_then(|v| v.as_array()) {
+                    for stop in stops {
+                        if let Some(arr) = stop.as_array() {
+                            let offset = arr.first().and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+                            let color = arr
+                                .get(1)
+                                .and_then(parse_color)
+                                .unwrap_or(Color::TRANSPARENT);
+                            linear = linear.add_stop(offset, color);
+                        }
+                    }
+                }
+                canvas::Fill {
+                    style: canvas::Style::Gradient(canvas::Gradient::Linear(linear)),
+                    rule: canvas::fill::Rule::NonZero,
+                }
+            }
+            _ => {
+                let color = parse_color(value).unwrap_or(Color::WHITE);
+                canvas::Fill::from(color)
+            }
+        },
+        _ => canvas::Fill::from(Color::WHITE),
+    }
+}
+
+/// Parse a canvas stroke from a JSON object.
+fn parse_canvas_stroke(value: &Value) -> canvas::Stroke<'static> {
+    let obj = match value.as_object() {
+        Some(o) => o,
+        None => return canvas::Stroke::default(),
+    };
+    let color = obj
+        .get("color")
+        .and_then(parse_color)
+        .unwrap_or(Color::WHITE);
+    let width = obj
+        .get("width")
+        .and_then(|v| v.as_f64())
+        .map(|v| v as f32)
+        .unwrap_or(1.0);
+    let cap = match obj.get("cap").and_then(|v| v.as_str()).unwrap_or("butt") {
+        "round" => canvas::LineCap::Round,
+        "square" => canvas::LineCap::Square,
+        _ => canvas::LineCap::Butt,
+    };
+    let join = match obj.get("join").and_then(|v| v.as_str()).unwrap_or("miter") {
+        "round" => canvas::LineJoin::Round,
+        "bevel" => canvas::LineJoin::Bevel,
+        _ => canvas::LineJoin::Miter,
+    };
+    let mut stroke = canvas::Stroke::default()
+        .with_color(color)
+        .with_width(width)
+        .with_line_cap(cap)
+        .with_line_join(join);
+    if let Some(dash_obj) = obj.get("dash").and_then(|v| v.as_object()) {
+        let segments_val = dash_obj
+            .get("segments")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        let segments: Vec<f32> = segments_val
+            .iter()
+            .filter_map(|v| v.as_f64().map(|n| n as f32))
+            .collect();
+        let offset = dash_obj
+            .get("offset")
+            .and_then(|v| v.as_u64())
+            .map(|v| v as usize)
+            .unwrap_or(0);
+        // LineDash borrows segments, but we need 'static. Use a leaked Box.
+        let segments: &'static [f32] = Box::leak(segments.into_boxed_slice());
+        stroke.line_dash = canvas::LineDash { segments, offset };
+    }
+    stroke
+}
+
+/// Build a Path from an array of path commands.
+fn build_path_from_commands(commands: &[Value]) -> canvas::Path {
+    canvas::Path::new(|builder| {
+        for cmd in commands {
+            if let Some(s) = cmd.as_str() {
+                if s == "close" {
+                    builder.close();
+                }
+                continue;
+            }
+            let arr = match cmd.as_array() {
+                Some(a) if !a.is_empty() => a,
+                _ => continue,
+            };
+            let cmd_name = arr[0].as_str().unwrap_or("");
+            let f = |i: usize| -> f32 {
+                arr.get(i)
+                    .and_then(|v| v.as_f64())
+                    .map(|v| v as f32)
+                    .unwrap_or(0.0)
+            };
+            match cmd_name {
+                "move_to" => builder.move_to(Point::new(f(1), f(2))),
+                "line_to" => builder.line_to(Point::new(f(1), f(2))),
+                "bezier_to" => builder.bezier_curve_to(
+                    Point::new(f(1), f(2)),
+                    Point::new(f(3), f(4)),
+                    Point::new(f(5), f(6)),
+                ),
+                "quadratic_to" => {
+                    builder.quadratic_curve_to(Point::new(f(1), f(2)), Point::new(f(3), f(4)))
+                }
+                "arc" => {
+                    builder.arc(canvas::path::Arc {
+                        center: Point::new(f(1), f(2)),
+                        radius: f(3),
+                        start_angle: Radians(f(4)),
+                        end_angle: Radians(f(5)),
+                    });
+                }
+                "arc_to" => {
+                    builder.arc_to(Point::new(f(1), f(2)), Point::new(f(3), f(4)), f(5));
+                }
+                "ellipse" => {
+                    builder.ellipse(canvas::path::arc::Elliptical {
+                        center: Point::new(f(1), f(2)),
+                        radii: Vector::new(f(3), f(4)),
+                        rotation: Radians(f(5)),
+                        start_angle: Radians(f(6)),
+                        end_angle: Radians(f(7)),
+                    });
+                }
+                "rounded_rect" => {
+                    builder.rounded_rectangle(
+                        Point::new(f(1), f(2)),
+                        Size::new(f(3), f(4)),
+                        iced::border::Radius::new(f(5)),
+                    );
+                }
+                _ => {}
+            }
+        }
+    })
+}
+
+/// Draw a single shape (or transform command) into the frame.
+fn draw_canvas_shape(frame: &mut canvas::Frame, shape: &Value) {
+    let shape_type = shape.get("type").and_then(|v| v.as_str()).unwrap_or("");
+    match shape_type {
+        // -- Transform commands --
+        "save" => frame.push_transform(),
+        "restore" => frame.pop_transform(),
+        "translate" => {
+            let x = json_f32(shape, "x");
+            let y = json_f32(shape, "y");
+            frame.translate(Vector::new(x, y));
+        }
+        "rotate" => {
+            let angle = json_f32(shape, "angle");
+            frame.rotate(Radians(angle));
+        }
+        "scale" => {
+            // Uniform scaling via "factor", or non-uniform via "x"/"y".
+            if let Some(factor) = shape.get("factor").and_then(|v| v.as_f64()) {
+                frame.scale(factor as f32);
+            } else {
+                let x = shape.get("x").and_then(|v| v.as_f64()).unwrap_or(1.0) as f32;
+                let y = shape.get("y").and_then(|v| v.as_f64()).unwrap_or(1.0) as f32;
+                frame.scale_nonuniform(Vector::new(x, y));
+            }
+        }
+        // -- Primitive shapes --
+        "rect" => {
+            let x = json_f32(shape, "x");
+            let y = json_f32(shape, "y");
+            let w = json_f32(shape, "w");
+            let h = json_f32(shape, "h");
+            let rect_path = if let Some(r) = shape.get("radius").and_then(|v| v.as_f64()) {
+                canvas::Path::rounded_rectangle(
+                    Point::new(x, y),
+                    Size::new(w, h),
+                    iced::border::Radius::from(r as f32),
+                )
+            } else {
+                canvas::Path::rectangle(Point::new(x, y), Size::new(w, h))
+            };
+            if let Some(fill_val) = shape.get("fill") {
+                let fill = parse_canvas_fill(fill_val);
+                frame.fill(&rect_path, fill);
+            } else if shape.get("stroke").is_none() {
+                // Legacy fallback: no fill or stroke key means solid white fill
+                frame.fill_rectangle(Point::new(x, y), Size::new(w, h), Color::WHITE);
+            }
+            if let Some(stroke_val) = shape.get("stroke") {
+                let stroke = parse_canvas_stroke(stroke_val);
+                frame.stroke(&rect_path, stroke);
+            }
+        }
+        "circle" => {
+            let x = json_f32(shape, "x");
+            let y = json_f32(shape, "y");
+            let r = json_f32(shape, "r");
+            let circle_path = canvas::Path::circle(Point::new(x, y), r);
+            if let Some(fill_val) = shape.get("fill") {
+                let fill = parse_canvas_fill(fill_val);
+                frame.fill(&circle_path, fill);
+            } else if shape.get("stroke").is_none() {
+                frame.fill(&circle_path, Color::WHITE);
+            }
+            if let Some(stroke_val) = shape.get("stroke") {
+                let stroke = parse_canvas_stroke(stroke_val);
+                frame.stroke(&circle_path, stroke);
+            }
+        }
+        "line" => {
+            let x1 = json_f32(shape, "x1");
+            let y1 = json_f32(shape, "y1");
+            let x2 = json_f32(shape, "x2");
+            let y2 = json_f32(shape, "y2");
+            let line_path = canvas::Path::line(Point::new(x1, y1), Point::new(x2, y2));
+            if let Some(stroke_val) = shape.get("stroke") {
+                let stroke = parse_canvas_stroke(stroke_val);
+                frame.stroke(&line_path, stroke);
+            } else {
+                // Legacy: use fill color as stroke color
+                let color = json_color(shape, "fill");
+                let width = shape
+                    .get("width")
+                    .and_then(|v| v.as_f64())
+                    .map(|v| v as f32)
+                    .unwrap_or(1.0);
+                frame.stroke(
+                    &line_path,
+                    canvas::Stroke::default()
+                        .with_color(color)
+                        .with_width(width),
+                );
+            }
+        }
+        "text" => {
+            let x = json_f32(shape, "x");
+            let y = json_f32(shape, "y");
+            let content = shape.get("content").and_then(|v| v.as_str()).unwrap_or("");
+            let fill_color = json_color(shape, "fill");
+            let size = shape.get("size").and_then(|v| v.as_f64()).map(|v| v as f32);
+            let mut canvas_text = canvas::Text {
+                content: content.to_owned(),
+                position: Point::new(x, y),
+                color: fill_color,
+                ..canvas::Text::default()
+            };
+            if let Some(s) = size {
+                canvas_text.size = Pixels(s);
+            }
+            if let Some(f) = shape.get("font") {
+                canvas_text.font = parse_font(f);
+            }
+            frame.fill_text(canvas_text);
+        }
+        "path" => {
+            let commands = shape
+                .get("commands")
+                .and_then(|v| v.as_array())
+                .map(|a| a.as_slice())
+                .unwrap_or(&[]);
+            let path = build_path_from_commands(commands);
+            if let Some(fill_val) = shape.get("fill") {
+                let fill = parse_canvas_fill(fill_val);
+                frame.fill(&path, fill);
+            }
+            if let Some(stroke_val) = shape.get("stroke") {
+                let stroke = parse_canvas_stroke(stroke_val);
+                frame.stroke(&path, stroke);
+            }
+        }
+        "image" => {
+            let source = shape.get("source").and_then(|v| v.as_str()).unwrap_or("");
+            let x = json_f32(shape, "x");
+            let y = json_f32(shape, "y");
+            let w = json_f32(shape, "w");
+            let h = json_f32(shape, "h");
+            let bounds = iced::Rectangle {
+                x,
+                y,
+                width: w,
+                height: h,
+            };
+            let handle = iced::widget::image::Handle::from_path(source);
+            frame.draw_image(bounds, &handle);
+        }
+        "svg" => {
+            let source = shape.get("source").and_then(|v| v.as_str()).unwrap_or("");
+            let x = json_f32(shape, "x");
+            let y = json_f32(shape, "y");
+            let w = json_f32(shape, "w");
+            let h = json_f32(shape, "h");
+            let bounds = iced::Rectangle {
+                x,
+                y,
+                width: w,
+                height: h,
+            };
+            let handle = iced::widget::svg::Handle::from_path(source);
+            frame.draw_svg(bounds, &handle);
+        }
+        _ => {}
     }
 }
 
@@ -1897,57 +2879,10 @@ impl canvas::Program<Message> for CanvasProgram {
             frame.fill_rectangle(Point::ORIGIN, bounds.size(), bg);
         }
 
-        for shape in &self.shapes {
-            let shape_type = shape.get("type").and_then(|v| v.as_str()).unwrap_or("");
-            match shape_type {
-                "rect" => {
-                    let x = json_f32(shape, "x");
-                    let y = json_f32(shape, "y");
-                    let w = json_f32(shape, "w");
-                    let h = json_f32(shape, "h");
-                    let fill = json_color(shape, "fill");
-                    frame.fill_rectangle(Point::new(x, y), Size::new(w, h), fill);
-                }
-                "circle" => {
-                    let x = json_f32(shape, "x");
-                    let y = json_f32(shape, "y");
-                    let r = json_f32(shape, "r");
-                    let fill = json_color(shape, "fill");
-                    let circle = canvas::Path::circle(Point::new(x, y), r);
-                    frame.fill(&circle, fill);
-                }
-                "line" => {
-                    let x1 = json_f32(shape, "x1");
-                    let y1 = json_f32(shape, "y1");
-                    let x2 = json_f32(shape, "x2");
-                    let y2 = json_f32(shape, "y2");
-                    let color = json_color(shape, "fill");
-                    let width = shape
-                        .get("width")
-                        .and_then(|v| v.as_f64())
-                        .map(|v| v as f32)
-                        .unwrap_or(1.0);
-                    let line = canvas::Path::line(Point::new(x1, y1), Point::new(x2, y2));
-                    frame.stroke(
-                        &line,
-                        canvas::Stroke::default()
-                            .with_color(color)
-                            .with_width(width),
-                    );
-                }
-                "text" => {
-                    let x = json_f32(shape, "x");
-                    let y = json_f32(shape, "y");
-                    let content = shape.get("content").and_then(|v| v.as_str()).unwrap_or("");
-                    let fill = json_color(shape, "fill");
-                    frame.fill_text(canvas::Text {
-                        content: content.to_owned(),
-                        position: Point::new(x, y),
-                        color: fill,
-                        ..canvas::Text::default()
-                    });
-                }
-                _ => {}
+        // Draw each layer in order
+        for (_layer_name, shapes) in &self.layers {
+            for shape in shapes {
+                draw_canvas_shape(&mut frame, shape);
             }
         }
 
@@ -1980,16 +2915,40 @@ fn serialize_mouse_button_for_canvas(button: &mouse::Button) -> String {
     }
 }
 
-fn render_canvas<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+fn render_canvas<'a>(
+    node: &'a TreeNode,
+    _images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let width = prop_length(props, "width", Length::Fill);
     let height = prop_length(props, "height", Length::Fixed(200.0));
 
-    let shapes: Vec<Value> = props
-        .and_then(|p| p.get("shapes"))
-        .and_then(|v| v.as_array())
-        .cloned()
-        .unwrap_or_default();
+    // Read layers as a JSON object (map of layer name -> shape array).
+    // Falls back to the old "shapes" prop for backwards compatibility.
+    let layers: Vec<(String, Vec<Value>)> = if let Some(layers_obj) = props
+        .and_then(|p| p.get("layers"))
+        .and_then(|v| v.as_object())
+    {
+        layers_obj
+            .iter()
+            .map(|(name, shapes)| {
+                let shape_vec = shapes.as_array().cloned().unwrap_or_default();
+                (name.clone(), shape_vec)
+            })
+            .collect()
+    } else {
+        // Legacy: single flat "shapes" array -> one anonymous layer
+        let shapes: Vec<Value> = props
+            .and_then(|p| p.get("shapes"))
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        if shapes.is_empty() {
+            vec![]
+        } else {
+            vec![("default".to_string(), shapes)]
+        }
+    };
 
     let background = props
         .and_then(|p| p.get("background"))
@@ -2003,7 +2962,7 @@ fn render_canvas<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let interactive = prop_bool_default(props, "interactive", false);
 
     canvas(CanvasProgram {
-        shapes,
+        layers,
         background,
         id: node.id.clone(),
         on_press: on_press || interactive,
@@ -2346,6 +3305,40 @@ fn prop_content_fit(props: Props<'_>) -> Option<ContentFit> {
 }
 
 // ---------------------------------------------------------------------------
+// Mouse interaction (cursor) parsing
+// ---------------------------------------------------------------------------
+
+fn parse_interaction(s: &str) -> Option<mouse::Interaction> {
+    Some(match s {
+        "pointer" => mouse::Interaction::Pointer,
+        "grab" => mouse::Interaction::Grab,
+        "grabbing" => mouse::Interaction::Grabbing,
+        "crosshair" => mouse::Interaction::Crosshair,
+        "text" => mouse::Interaction::Text,
+        "move" => mouse::Interaction::Move,
+        "not_allowed" => mouse::Interaction::NotAllowed,
+        "progress" => mouse::Interaction::Progress,
+        "wait" => mouse::Interaction::Wait,
+        "help" => mouse::Interaction::Help,
+        "cell" => mouse::Interaction::Cell,
+        "copy" => mouse::Interaction::Copy,
+        "alias" => mouse::Interaction::Alias,
+        "no_drop" => mouse::Interaction::NoDrop,
+        "all_scroll" => mouse::Interaction::AllScroll,
+        "zoom_in" => mouse::Interaction::ZoomIn,
+        "zoom_out" => mouse::Interaction::ZoomOut,
+        "context_menu" => mouse::Interaction::ContextMenu,
+        "resizing_horizontally" => mouse::Interaction::ResizingHorizontally,
+        "resizing_vertically" => mouse::Interaction::ResizingVertically,
+        "resizing_diagonally_up" => mouse::Interaction::ResizingDiagonallyUp,
+        "resizing_diagonally_down" => mouse::Interaction::ResizingDiagonallyDown,
+        "resizing_column" => mouse::Interaction::ResizingColumn,
+        "resizing_row" => mouse::Interaction::ResizingRow,
+        _ => return None,
+    })
+}
+
+// ---------------------------------------------------------------------------
 // Color parsing -- hex string "#rrggbb" / "#rrggbbaa" or {r,g,b,a} object
 // ---------------------------------------------------------------------------
 
@@ -2607,6 +3600,61 @@ fn parse_shadow(value: &Value) -> Shadow {
         color,
         offset,
         blur_radius,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Style map parsing
+// ---------------------------------------------------------------------------
+
+/// Parsed fields from a style map JSON object. All fields are optional;
+/// only those present in the JSON get populated.
+#[derive(Clone, Default)]
+struct StyleMapFields {
+    background: Option<iced::Background>,
+    text_color: Option<Color>,
+    border: Option<Border>,
+    shadow: Option<Shadow>,
+}
+
+fn parse_style_map_fields(obj: &serde_json::Map<String, Value>) -> StyleMapFields {
+    StyleMapFields {
+        background: obj.get("background").and_then(parse_background),
+        text_color: obj.get("text_color").and_then(parse_color),
+        border: obj.get("border").map(parse_border),
+        shadow: obj.get("shadow").map(parse_shadow),
+    }
+}
+
+fn darken_color(color: Color, factor: f32) -> Color {
+    Color {
+        r: color.r * factor,
+        g: color.g * factor,
+        b: color.b * factor,
+        a: color.a,
+    }
+}
+
+fn alpha_color(color: Color, alpha: f32) -> Color {
+    Color {
+        r: color.r,
+        g: color.g,
+        b: color.b,
+        a: color.a * alpha,
+    }
+}
+
+fn darken_background(bg: iced::Background, factor: f32) -> iced::Background {
+    match bg {
+        iced::Background::Color(c) => iced::Background::Color(darken_color(c, factor)),
+        other => other,
+    }
+}
+
+fn alpha_background(bg: iced::Background, alpha: f32) -> iced::Background {
+    match bg {
+        iced::Background::Color(c) => iced::Background::Color(alpha_color(c, alpha)),
+        other => other,
     }
 }
 

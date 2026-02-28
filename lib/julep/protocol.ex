@@ -151,6 +151,22 @@ defmodule Julep.Protocol do
   end
 
   @doc """
+  Encodes an image operation as a protocol message.
+
+  Image ops are `create_image`, `update_image`, or `delete_image`. The payload
+  map contains the op-specific fields (handle, data/pixels, width, height).
+
+  ## Example
+
+      iex> Julep.Protocol.encode_image_op("create_image", %{handle: "logo", data: "base64..."})
+      ~s({"handle":"logo","data":"base64...","op":"create_image","type":"image_op"}) <> "\\n"
+  """
+  @spec encode_image_op(op :: String.t(), payload :: map(), format :: format()) :: binary()
+  def encode_image_op(op, payload, format \\ :msgpack) do
+    serialize(Map.merge(%{type: "image_op", op: op}, payload), format)
+  end
+
+  @doc """
   Encodes a window lifecycle operation as a protocol message.
 
   ## Example

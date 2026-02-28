@@ -513,6 +513,14 @@ defmodule Julep.Runtime do
     state
   end
 
+  defp execute_command(%Julep.Command{type: :image_op, payload: %{op: op} = payload}, state) do
+    if state.bridge do
+      Julep.Bridge.send_image_op(state.bridge, op, Map.delete(payload, :op))
+    end
+
+    state
+  end
+
   defp execute_command(%Julep.Command{type: :batch, payload: %{commands: cmds}}, state) do
     execute_commands(cmds, state)
   end

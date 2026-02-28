@@ -29,6 +29,15 @@ pub enum CoreEffect {
     },
     /// Theme changed (for the global/root theme only).
     ThemeChanged(iced::Theme),
+    /// Image operation (create/update/delete in-memory handles).
+    ImageOp {
+        op: String,
+        handle: String,
+        data: Option<String>,
+        pixels: Option<String>,
+        width: Option<u32>,
+        height: Option<u32>,
+    },
 }
 
 /// Pure state core, decoupled from iced runtime.
@@ -122,6 +131,24 @@ impl Core {
                 });
                 self.caches.default_text_size = self.default_text_size;
                 self.caches.default_font = self.default_font;
+            }
+            IncomingMessage::ImageOp {
+                op,
+                handle,
+                data,
+                pixels,
+                width,
+                height,
+            } => {
+                log::debug!("image_op: {op} ({handle})");
+                effects.push(CoreEffect::ImageOp {
+                    op,
+                    handle,
+                    data,
+                    pixels,
+                    width,
+                    height,
+                });
             }
             _ => {
                 log::warn!("unhandled message type in core");

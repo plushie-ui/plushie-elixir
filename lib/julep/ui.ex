@@ -1394,17 +1394,21 @@ defmodule Julep.UI do
   # ---------------------------------------------------------------------------
 
   @doc """
-  Canvas for drawing shapes. No children.
+  Canvas for drawing shapes organized into named layers. No children.
 
   ## Options
 
-  - `:shapes` -- list of shape descriptors
+  - `:layers` -- map of layer names to shape descriptor lists
   - `:width` / `:height` -- dimensions
   - `:background` -- background color
 
   ## Example
 
-      canvas("drawing", shapes: [%{type: "circle", x: 50, y: 50, r: 20}], width: 400, height: 300)
+      canvas("drawing",
+        layers: %{"main" => [%{"type" => "circle", "x" => 50, "y" => 50, "r" => 20}]},
+        width: 400,
+        height: 300
+      )
   """
   @spec canvas(id :: String.t(), opts :: keyword()) :: Julep.Iced.ui_node()
   def canvas(id, opts \\ []) do

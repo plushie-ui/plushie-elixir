@@ -23,9 +23,10 @@ defmodule Julep.Iced.Widget.Checkbox do
   - `{:toggle, id, value}` -- emitted on toggle, `value` is the new boolean state.
   """
 
+  alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
-  @type style :: :primary | :secondary | :success | :danger
+  @type style :: :primary | :secondary | :success | :danger | StyleMap.t()
 
   @type option ::
           {:spacing, number()}

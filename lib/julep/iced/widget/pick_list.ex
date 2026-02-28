@@ -28,9 +28,10 @@ defmodule Julep.Iced.Widget.PickList do
   - `{:select, id, value}` -- emitted when an option is selected.
   """
 
+  alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
-  @type style :: :default
+  @type style :: :default | StyleMap.t()
 
   @type option ::
           {:selected, String.t()}

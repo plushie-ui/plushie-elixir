@@ -23,9 +23,10 @@ defmodule Julep.Iced.Widget.Toggler do
   - `{:toggle, id, value}` -- emitted on toggle, `value` is the new boolean state.
   """
 
+  alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
-  @type style :: :default
+  @type style :: :default | StyleMap.t()
 
   @type option ::
           {:label, String.t()}

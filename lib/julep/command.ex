@@ -24,6 +24,8 @@ defmodule Julep.Command do
     `raw_id/2`, `monitor_size/2`
   - **PaneGrid ops**: `pane_split/4`, `pane_close/2`, `pane_swap/3`,
     `pane_maximize/2`, `pane_restore/1`
+  - **Image ops**: `create_image/2`, `create_image/4`, `update_image/2`,
+    `update_image/4`, `delete_image/1`
   - **Batch**: `batch/1`
 
   ## Usage
@@ -576,6 +578,79 @@ defmodule Julep.Command do
   @spec cancel(event_tag :: atom()) :: %__MODULE__{}
   def cancel(event_tag) when is_atom(event_tag) do
     %__MODULE__{type: :cancel, payload: %{tag: event_tag}}
+  end
+
+  # ---------------------------------------------------------------------------
+  # Image operations
+  # ---------------------------------------------------------------------------
+
+  @doc "Creates an in-memory image from encoded PNG/JPEG bytes (base64 encoded)."
+  @spec create_image(handle :: String.t(), data :: binary()) :: %__MODULE__{}
+  def create_image(handle, data) when is_binary(handle) and is_binary(data) do
+    %__MODULE__{
+      type: :image_op,
+      payload: %{op: "create_image", handle: handle, data: Base.encode64(data)}
+    }
+  end
+
+  @doc "Creates an in-memory image from raw RGBA pixel data (base64 encoded)."
+  @spec create_image(
+          handle :: String.t(),
+          width :: pos_integer(),
+          height :: pos_integer(),
+          pixels :: binary()
+        ) :: %__MODULE__{}
+  def create_image(handle, width, height, pixels)
+      when is_binary(handle) and is_integer(width) and is_integer(height) and is_binary(pixels) do
+    %__MODULE__{
+      type: :image_op,
+      payload: %{
+        op: "create_image",
+        handle: handle,
+        width: width,
+        height: height,
+        pixels: Base.encode64(pixels)
+      }
+    }
+  end
+
+  @doc "Updates an existing in-memory image with new encoded PNG/JPEG bytes."
+  @spec update_image(handle :: String.t(), data :: binary()) :: %__MODULE__{}
+  def update_image(handle, data) when is_binary(handle) and is_binary(data) do
+    %__MODULE__{
+      type: :image_op,
+      payload: %{op: "update_image", handle: handle, data: Base.encode64(data)}
+    }
+  end
+
+  @doc "Updates an existing in-memory image with new raw RGBA pixel data."
+  @spec update_image(
+          handle :: String.t(),
+          width :: pos_integer(),
+          height :: pos_integer(),
+          pixels :: binary()
+        ) :: %__MODULE__{}
+  def update_image(handle, width, height, pixels)
+      when is_binary(handle) and is_integer(width) and is_integer(height) and is_binary(pixels) do
+    %__MODULE__{
+      type: :image_op,
+      payload: %{
+        op: "update_image",
+        handle: handle,
+        width: width,
+        height: height,
+        pixels: Base.encode64(pixels)
+      }
+    }
+  end
+
+  @doc "Deletes an in-memory image by handle name."
+  @spec delete_image(handle :: String.t()) :: %__MODULE__{}
+  def delete_image(handle) when is_binary(handle) do
+    %__MODULE__{
+      type: :image_op,
+      payload: %{op: "delete_image", handle: handle}
+    }
   end
 
   @doc """

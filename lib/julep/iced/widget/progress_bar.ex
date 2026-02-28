@@ -13,9 +13,10 @@ defmodule Julep.Iced.Widget.ProgressBar do
   - `vertical` (boolean) -- when `true`, renders the progress bar vertically.
   """
 
+  alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
-  @type style :: :primary | :secondary | :success | :danger | :warning
+  @type style :: :primary | :secondary | :success | :danger | :warning | StyleMap.t()
 
   @type option ::
           {:width, Julep.Iced.Length.t()}

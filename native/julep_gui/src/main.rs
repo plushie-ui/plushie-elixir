@@ -2,6 +2,7 @@ mod codec;
 mod effects;
 #[cfg(feature = "headless")]
 mod headless;
+mod image_registry;
 mod julep_core;
 mod protocol;
 mod test_mode;
@@ -151,6 +152,8 @@ struct App {
     reverse_window_map: HashMap<window::Id, String>,
     /// When true, handle Query/Interact/SnapshotCapture/Reset on stdin.
     test_mode: bool,
+    /// In-memory image handles for use by Image widgets and canvas draw.
+    image_registry: image_registry::ImageRegistry,
 }
 
 /// What the stdin reader thread sends back.
@@ -173,6 +176,7 @@ impl App {
             window_map: HashMap::new(),
             reverse_window_map: HashMap::new(),
             test_mode,
+            image_registry: image_registry::ImageRegistry::new(),
         }
     }
 
@@ -689,7 +693,9 @@ impl App {
         };
 
         match self.core.tree.find_window(julep_id) {
-            Some(window_node) => widgets::render(window_node, &self.core.caches),
+            Some(window_node) => {
+                widgets::render(window_node, &self.core.caches, &self.image_registry)
+            }
             None => container(text("waiting for snapshot..."))
                 .width(Fill)
                 .height(Fill)
@@ -1006,6 +1012,23 @@ impl App {
                 julep_core::CoreEffect::ThemeChanged(theme) => {
                     self.theme = theme;
                 }
+                julep_core::CoreEffect::ImageOp {
+                    op,
+                    handle,
+                    data,
+                    pixels,
+                    width,
+                    height,
+                } => {
+                    self.handle_image_op(
+                        &op,
+                        &handle,
+                        data.as_deref(),
+                        pixels.as_deref(),
+                        width,
+                        height,
+                    );
+                }
             }
         }
     }
@@ -1201,6 +1224,60 @@ impl App {
             other => {
                 log::warn!("unknown widget_op: {other}");
                 Task::none()
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Image operations
+    // -----------------------------------------------------------------------
+
+    fn handle_image_op(
+        &mut self,
+        op: &str,
+        handle: &str,
+        data: Option<&str>,
+        pixels: Option<&str>,
+        width: Option<u32>,
+        height: Option<u32>,
+    ) {
+        use base64::engine::general_purpose::STANDARD;
+
+        match op {
+            "create_image" | "update_image" => {
+                if let Some(pixel_data) = pixels {
+                    // RGBA pixel data
+                    match STANDARD.decode(pixel_data) {
+                        Ok(decoded) => {
+                            let w = width.unwrap_or(0);
+                            let h = height.unwrap_or(0);
+                            self.image_registry
+                                .create_from_rgba(handle.to_string(), w, h, decoded);
+                        }
+                        Err(e) => {
+                            log::warn!("image_op {op}: failed to decode pixels: {e}");
+                        }
+                    }
+                } else if let Some(encoded) = data {
+                    // Encoded image bytes (PNG, JPEG, etc.)
+                    match STANDARD.decode(encoded) {
+                        Ok(decoded) => {
+                            self.image_registry
+                                .create_from_bytes(handle.to_string(), decoded);
+                        }
+                        Err(e) => {
+                            log::warn!("image_op {op}: failed to decode data: {e}");
+                        }
+                    }
+                } else {
+                    log::warn!("image_op {op}: missing data or pixels field");
+                }
+            }
+            "delete_image" => {
+                self.image_registry.delete(handle);
+            }
+            other => {
+                log::warn!("unknown image_op: {other}");
             }
         }
     }
@@ -2145,6 +2222,7 @@ fn read_initial_settings(
                 IncomingMessage::Interact { .. } => "interact",
                 IncomingMessage::SnapshotCapture { .. } => "snapshot_capture",
                 IncomingMessage::Reset { .. } => "reset",
+                IncomingMessage::ImageOp { .. } => "image_op",
             };
             log::error!("expected settings as first message, got {variant}");
             (Value::Object(Default::default()), false, Vec::new(), reader)

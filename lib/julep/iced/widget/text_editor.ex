@@ -26,9 +26,10 @@ defmodule Julep.Iced.Widget.TextEditor do
   Content changes are reported back to Elixir via the protocol.
   """
 
+  alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
-  @type style :: :default
+  @type style :: :default | StyleMap.t()
 
   @type option ::
           {:content, String.t()}

@@ -23,6 +23,7 @@ defmodule Julep.Iced.Widget.Container do
     `"danger"`, `"warning"`. Overrides inline style props if both are set.
   """
 
+  alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
   @type style ::
@@ -35,6 +36,7 @@ defmodule Julep.Iced.Widget.Container do
           | :success
           | :danger
           | :warning
+          | StyleMap.t()
 
   @type option ::
           {:padding, Julep.Iced.Padding.t()}

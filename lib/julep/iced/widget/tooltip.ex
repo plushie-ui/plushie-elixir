@@ -17,6 +17,7 @@ defmodule Julep.Iced.Widget.Tooltip do
     `"secondary"`, `"success"`, `"danger"`, `"warning"`.
   """
 
+  alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
   @type style ::
@@ -29,6 +30,7 @@ defmodule Julep.Iced.Widget.Tooltip do
           | :success
           | :danger
           | :warning
+          | StyleMap.t()
 
   @type option ::
           {:position, Julep.Iced.Position.t()}

@@ -1,10 +1,11 @@
 defmodule Julep.Iced.Widget.Image do
   @moduledoc """
-  Image display -- renders a raster image from a file path.
+  Image display -- renders a raster image from a file path or an in-memory handle.
 
   ## Props
 
-  - `source` (string) -- path to the image file.
+  - `source` (string or handle ref) -- path to the image file, or
+    `%{handle: name}` for an in-memory image created via `Julep.Command.create_image/2`.
   - `width` (length) -- image width. Default: shrink. See `Julep.Iced.Length`.
   - `height` (length) -- image height. Default: shrink.
   - `content_fit` (string) -- how the image fits its bounds: `"contain"`,
@@ -20,6 +21,9 @@ defmodule Julep.Iced.Widget.Image do
 
   alias Julep.Iced.Widget.Build
 
+  @typedoc "Image source: a file path string or a handle reference map."
+  @type source :: String.t() | %{handle: String.t()}
+
   @type option ::
           {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
@@ -34,7 +38,7 @@ defmodule Julep.Iced.Widget.Image do
 
   @type t :: %__MODULE__{
           id: String.t(),
-          source: String.t(),
+          source: source(),
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
           content_fit: Julep.Iced.ContentFit.t() | nil,
@@ -62,9 +66,21 @@ defmodule Julep.Iced.Widget.Image do
     :crop
   ]
 
-  @doc "Creates a new image struct with the given source path and optional keyword opts."
-  @spec new(id :: String.t(), source :: String.t(), opts :: [option()]) :: t()
-  def new(id, source, opts \\ []) when is_binary(id) and is_binary(source) do
+  @doc """
+  Creates a new image struct with the given source and optional keyword opts.
+
+  The `source` can be a file path string or a handle reference map
+  (`%{handle: "name"}`) for in-memory images created via
+  `Julep.Command.create_image/2`.
+  """
+  @spec new(id :: String.t(), source :: source(), opts :: [option()]) :: t()
+  def new(id, source, opts \\ [])
+
+  def new(id, source, opts) when is_binary(id) and is_binary(source) do
+    %__MODULE__{id: id, source: source} |> with_options(opts)
+  end
+
+  def new(id, %{handle: handle} = source, opts) when is_binary(id) and is_binary(handle) do
     %__MODULE__{id: id, source: source} |> with_options(opts)
   end
 

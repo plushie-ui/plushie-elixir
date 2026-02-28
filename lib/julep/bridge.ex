@@ -114,6 +114,12 @@ defmodule Julep.Bridge do
     GenServer.cast(bridge, {:send_window_op, op, window_id, settings})
   end
 
+  @doc "Sends an image operation (create/update/delete) to the renderer."
+  @spec send_image_op(bridge :: GenServer.server(), op :: String.t(), payload :: map()) :: :ok
+  def send_image_op(bridge, op, payload) do
+    GenServer.cast(bridge, {:send_image_op, op, payload})
+  end
+
   @doc "Stops the bridge GenServer."
   @spec stop(bridge :: GenServer.server()) :: :ok
   def stop(bridge) do
@@ -211,6 +217,12 @@ defmodule Julep.Bridge do
 
   def handle_cast({:send_window_op, op, window_id, settings}, state) do
     data = Julep.Protocol.encode_window_op(op, window_id, settings, state.format)
+    send_to_port(state.port, data)
+    {:noreply, state}
+  end
+
+  def handle_cast({:send_image_op, op, payload}, state) do
+    data = Julep.Protocol.encode_image_op(op, payload, state.format)
     send_to_port(state.port, data)
     {:noreply, state}
   end

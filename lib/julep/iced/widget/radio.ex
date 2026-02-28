@@ -29,9 +29,10 @@ defmodule Julep.Iced.Widget.Radio do
     The first element is the `group` prop if set, otherwise the node ID.
   """
 
+  alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
-  @type style :: :default
+  @type style :: :default | StyleMap.t()
 
   @type option ::
           {:label, String.t()}

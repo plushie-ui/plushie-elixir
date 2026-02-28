@@ -67,6 +67,19 @@ pub enum IncomingMessage {
     Reset {
         id: String,
     },
+    /// Image operation (create, update, delete in-memory image handles).
+    ImageOp {
+        op: String,
+        handle: String,
+        #[serde(default)]
+        data: Option<String>,
+        #[serde(default)]
+        pixels: Option<String>,
+        #[serde(default)]
+        width: Option<u32>,
+        #[serde(default)]
+        height: Option<u32>,
+    },
 }
 
 /// Response to an effect request, written to stdout as JSONL.
