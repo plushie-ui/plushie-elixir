@@ -52,6 +52,25 @@ defmodule Julep.UI do
   For stable identity across re-renders (scroll position, focus), supply an
   explicit `:id` opt.
 
+  ## Formatter
+
+  Julep exports formatter settings that keep layout blocks paren-free so
+  they read like declarative markup. Add `:julep` to `import_deps` in
+  your `.formatter.exs`:
+
+      # .formatter.exs
+      [
+        inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"],
+        import_deps: [:julep]
+      ]
+
+  Layout blocks stay paren-free; leaf widgets keep parens for clarity:
+
+      column padding: 8 do
+        text("Count: \#{model.count}", size: 24)
+        button("inc", "+1")
+      end
+
   ## Tree query
 
   `find/2` is re-exported from `Julep.Tree` for convenience:

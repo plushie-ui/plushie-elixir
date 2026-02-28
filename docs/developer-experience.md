@@ -13,6 +13,31 @@ defp deps do
 end
 ```
 
+### Formatter config
+
+If you prefer writing `Julep.UI` widget definitions without parentheses,
+Julep exports formatter settings so `mix format` won't add them.
+Add `:julep` to `import_deps` in your `.formatter.exs`:
+
+```elixir
+# .formatter.exs
+[
+  inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"],
+  import_deps: [:julep]
+]
+```
+
+This keeps layout blocks paren-free so they read like declarative markup:
+
+```elixir
+window "main", title: "Counter" do
+  column padding: 16, spacing: 8 do
+    text("Count: #{model.count}", size: 24)
+    button("inc", "+1")
+  end
+end
+```
+
 ### Write an app
 
 ```elixir
