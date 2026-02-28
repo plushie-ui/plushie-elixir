@@ -3,7 +3,7 @@
 Comprehensive comparison of iced 0.14.0 (with features: `tokio`, `image`,
 `svg`, `markdown`, `canvas`) against what Julep exposes to Elixir.
 
-Audited: 2026-02-27
+Audited: 2026-02-27. Updated: 2026-02-28 (canvas, image, theming gaps).
 
 ---
 
@@ -62,9 +62,9 @@ Audited: 2026-02-27
 | `Rule` | SUPPORTED | horizontal and vertical, thickness, named styles (default/weak) |
 | `ProgressBar` | SUPPORTED | range, value, length (width), girth (height), vertical, named styles |
 | `Tooltip` | SUPPORTED | position, gap, padding, snap_within_viewport, named styles |
-| `Image` | SUPPORTED | All props: source, width, height, content_fit, rotation, opacity, border_radius, filter_method, expand, scale, crop |
+| `Image` | PARTIAL | All display props supported. Source is file path only; missing `Handle::from_bytes` (in-memory encoded images) and `Handle::from_rgba` (raw pixel buffers). See per-widget section. |
 | `Svg` | SUPPORTED | source, width, height, content_fit, rotation, opacity |
-| `Canvas` | SUPPORTED | Interactive via Program trait; on_press, on_release, on_move, on_scroll; background; shapes (rect, circle, line, text) |
+| `Canvas` | PARTIAL | Interactive events fully supported. Drawing limited to 4 shape types (rect, circle, line, text). Missing: arbitrary paths, bezier/quadratic curves, arcs, rounded rects, stroked shapes, stroke styles, gradients, transforms, clipping, draw_image, draw_svg. See per-widget section. |
 | `Markdown` | SUPPORTED | Settings: text_size, h1_size, h2_size, h3_size, code_size, spacing; width via container wrapper |
 | `Table` | SUPPORTED | Composite implementation; columns, rows, header (conditional), separator, padding |
 | `QRCode` | N/A | Feature `qr_code` not enabled |
@@ -325,7 +325,7 @@ Same as Slider. `circular_handle` and `handle_radius` also supported.
 
 | iced Prop | Status | Notes |
 |---|---|---|
-| `source` / `width` / `height` / `content_fit` | SUPPORTED | |
+| `source` / `width` / `height` / `content_fit` | SUPPORTED | Source is file path only |
 | `rotation` | SUPPORTED | |
 | `opacity` | SUPPORTED | |
 | `border_radius` | SUPPORTED | |
@@ -333,6 +333,9 @@ Same as Slider. `circular_handle` and `handle_radius` also supported.
 | `expand` | SUPPORTED | |
 | `scale` | SUPPORTED | |
 | `crop` | SUPPORTED | {x, y, width, height} object |
+| `Handle::from_bytes` | **MISSING** | In-memory encoded images (PNG/JPEG bytes). Requires image registry: Elixir uploads data with a handle name, renderer caches it, widgets reference by name. |
+| `Handle::from_rgba` | **MISSING** | Raw RGBA pixel buffers. Same registry approach. Enables dynamic/procedural images. |
+| Image lifecycle | **MISSING** | `create_image`, `update_image`, `delete_image` commands for explicit lifecycle management. Elixir owns lifecycle; renderer is a dumb cache. |
 
 ### Svg
 
@@ -377,10 +380,27 @@ Same as Slider. `circular_handle` and `handle_radius` also supported.
 | iced Prop | Status | Notes |
 |---|---|---|
 | `width` / `height` | SUPPORTED | |
-| `shapes` | SUPPORTED | rect, circle, line, text |
 | `background` | SUPPORTED | Fill color |
-| Full `Program` trait | SUPPORTED | Interactive canvas via `CanvasProgram` impl |
 | `on_press` / `on_release` / `on_move` / `on_scroll` | SUPPORTED | Individual or via `interactive: true` |
+| Shape: rect | SUPPORTED | Filled rectangle (x, y, w, h, fill) |
+| Shape: circle | SUPPORTED | Filled circle (x, y, r, fill) |
+| Shape: line | SUPPORTED | Stroked line (x1, y1, x2, y2, fill, width) |
+| Shape: text | SUPPORTED | Filled text (x, y, content, fill); font/size use defaults |
+| Arbitrary paths | **MISSING** | `Path::new(builder)` with move_to, line_to, close -- polygons, freeform shapes |
+| Bezier curves | **MISSING** | `builder.bezier_curve_to(ctrl_a, ctrl_b, to)` -- cubic beziers |
+| Quadratic curves | **MISSING** | `builder.quadratic_curve_to(ctrl, to)` |
+| Arcs | **MISSING** | `builder.arc(center, radius, start, end)`, `arc_to`, `ellipse` |
+| Rounded rectangles | **MISSING** | `Path::rounded_rectangle(pos, size, radius)` |
+| Stroked shapes | **MISSING** | `frame.stroke(&path, stroke)` for any path; currently only lines have strokes |
+| Stroke styles | **MISSING** | `LineCap` (butt/square/round), `LineJoin` (miter/round/bevel), dash patterns |
+| Gradient fills | **MISSING** | `Linear::new(start, end).add_stop(offset, color)` -- up to 8 stops |
+| Fill rules | **MISSING** | `NonZero` / `EvenOdd` for complex paths with holes |
+| Transforms | **MISSING** | `frame.translate()`, `frame.rotate()`, `frame.scale()`, `scale_nonuniform()` |
+| Save/restore | **MISSING** | `frame.with_save(\|f\| { ... })` -- transform stack |
+| Clipping | **MISSING** | `frame.with_clip(region, \|f\| { ... })` |
+| Draw image | **MISSING** | `frame.draw_image(bounds, image)` -- draw raster images on canvas |
+| Draw SVG | **MISSING** | `frame.draw_svg(bounds, svg)` -- draw SVGs on canvas |
+| Text font/size | **MISSING** | `canvas::Text { size, font, ... }` -- currently uses defaults |
 
 ### Table
 
@@ -484,9 +504,12 @@ Same as Slider. `circular_handle` and `handle_radius` also supported.
 | Palette fields: background, text, primary, success, danger | Yes | SUPPORTED |
 | Palette field: `warning` | N/A | iced's Palette has no warning field; removed from Julep |
 | `base` field for custom themes | Yes | SUPPORTED |
-| Per-widget style functions | Yes | SUPPORTED -- button, container, text, checkbox, progress_bar, rule, etc. have named styles |
+| Per-widget named styles | Yes | SUPPORTED -- button, container, text, checkbox, progress_bar, rule, etc. have named style atoms |
 | `Themer` widget (per-subtree theme) | Yes | SUPPORTED |
-| Extended palette generation | No | **MISSING** -- iced auto-generates extended palettes |
+| Status-aware styling (hover/press/focus) | Internally | SUPPORTED -- iced's Catalog handles this on the Rust side; named presets include full hover/press/focus/disabled visual feedback automatically. Not customizable from Elixir. |
+| Custom `StyleFn` closures | No | **BLOCKED** -- closures cannot cross the IPC boundary. Workaround: let `style` prop accept a map of fields; Rust constructs a one-off closure from the values. |
+| Inline style maps (non-container) | No | **MISSING** -- Container accepts `background`, `border`, `shadow` as direct props. Other widgets only accept named style atoms. |
+| Extended palette shade control | No | **MISSING** -- iced derives base/strong/weak shades per color. Julep passes 5 flat colors and lets iced's Oklch generation handle shades; users cannot control individual variants. |
 | `theme::Mode` (Light/Dark/None) | No | **MISSING** |
 
 ---
@@ -735,19 +758,22 @@ and delivered standalone via `:modifiers_changed`).
 
 ### Widgets
 - iced widgets (with enabled features): ~28 distinct widgets
-- Julep supported: 28 (plus `window` and `table` not in iced)
-- Missing: none
-- All widgets fully implemented in both Elixir and Rust layers
+- Julep fully supported: 26 (plus `window` and `table` not in iced)
+- Julep partially supported: 2 (Canvas -- limited drawing primitives; Image -- file paths only, no in-memory handles)
 
 ### Props
 - Average prop coverage per supported widget: ~95-100%
-- Remaining blocked/N/A items (not gaps -- these cannot be resolved):
-  - `on_open`/`on_close` for pick_list/combo_box (BLOCKED by iced 0.14 -- not exposed in API)
-  - TextEditor `highlight` (BLOCKED -- changes generic type parameter)
-  - TextEditor `key_binding` (BLOCKED -- requires Rust closures)
+- Notable actionable gaps:
+  - Canvas drawing primitives (paths, curves, gradients, transforms, clipping)
+  - Image in-memory handles (from_bytes, from_rgba) and lifecycle commands
+  - Inline style maps for non-container widgets
+- Remaining blocked/N/A items (cannot be resolved):
+  - `on_open`/`on_close` for pick_list/combo_box (BLOCKED by iced 0.14)
+  - TextEditor `highlight` (BLOCKED -- generic type parameter)
+  - TextEditor `key_binding` (BLOCKED -- Rust closures)
   - Scrollable `style` (N/A -- iced 0.14 only has `default`)
-  - SVG `style` (N/A -- iced has no public style functions)
-  - Checkbox `icon` (N/A -- internal checkmark rendering detail)
+  - SVG `style` (N/A -- no public style functions)
+  - Checkbox `icon` (N/A -- internal rendering detail)
 
 ### Events
 - Keyboard: SUPPORTED (all key families, comprehensive named key map, full KeyEvent/KeyModifiers structs with physical_key, location, text, repeat, modified_key)
@@ -781,26 +807,32 @@ and delivered standalone via `:modifiers_changed`).
 
 ## 12. Remaining Gaps
 
-All items below are either BLOCKED by iced's API design or low-priority
-nice-to-haves. There are no actionable parity gaps remaining.
-
 ### BLOCKED by iced 0.14 API
 
 These cannot be implemented without upstream changes to iced:
 
 1. **`on_open`/`on_close` for PickList/ComboBox** -- not exposed by iced 0.14 API
-2. **TextEditor `highlight`** -- changes the Highlighter generic type parameter; cannot be expressed dynamically over JSONL
+2. **TextEditor `highlight`** -- changes the Highlighter generic type parameter; cannot be expressed dynamically
 3. **TextEditor `key_binding`** -- requires Rust closures; cannot be serialized from Elixir
 
 ### N/A (nothing to implement)
 
 4. **Scrollable `style`** -- iced 0.14 only exposes `default`; no named variants
 5. **SVG `style`** -- iced has no public style functions for SVG
-6. **Checkbox `icon`** -- iced's checkbox icon is a fixed `Icon` struct for rendering the checkmark; internal rendering detail, not a user-facing prop
+6. **Checkbox `icon`** -- iced's checkbox icon is a fixed `Icon` struct for rendering the checkmark; internal rendering detail
 
-### Low Priority (nice-to-have, not blocking parity)
+### BLOCKED by IPC boundary
 
-7. **`vsync` setting** -- vsync control
-8. **Extended palette generation** -- full iced extended palette auto-generation
-9. **`theme::Mode`** -- light/dark/none mode enum
-10. **Table `sortable` / column alignment** -- sort handling and per-column align_x/align_y
+7. **Custom `StyleFn` closures** -- iced allows arbitrary `Box<dyn Fn(&Theme, Status) -> Style>` per widget. Closures cannot be serialized. Workaround: accept style maps on the `style` prop and construct closures from field values on the Rust side.
+
+### Actionable gaps
+
+These can be implemented within the current architecture:
+
+8. **Canvas drawing primitives** -- only 4 shape types (rect, circle, line, text). Missing: arbitrary paths (move_to/line_to/bezier/arc/close), stroked shapes, stroke styles, gradient fills, fill rules, transforms, clipping, draw_image, draw_svg, text font/size. All serializable as data. This is the largest single gap in terms of what it unlocks.
+9. **In-memory images** -- Image widget only supports file paths. iced has `Handle::from_bytes` (encoded PNG/JPEG) and `Handle::from_rgba` (raw pixels). Requires an image registry on the Rust side with explicit create/update/delete commands from Elixir.
+10. **Inline style maps for non-container widgets** -- Container supports `background`, `border`, `shadow` as direct props; other widgets only accept named style atoms. Extending the `style` prop to accept maps would close the custom styling gap without needing closures.
+11. **Extended palette shade control** -- iced derives base/strong/weak/weaker/weakest shades per color via Oklch. Julep passes 5 flat colors and lets iced generate shades. Users cannot control individual variants.
+12. **`theme::Mode`** -- light/dark/none mode enum
+13. **`vsync` setting** -- vsync control
+14. **Table `sortable` / column alignment** -- sort handling and per-column align_x/align_y

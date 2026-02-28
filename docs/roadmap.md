@@ -132,7 +132,38 @@ subscriptions, commands, and window operations audited and aligned.
 
 Hot code reload is complete and shipped in Phase 3.
 
-These are things that might matter but are not on the critical path:
+### Canvas drawing primitives
+
+The canvas currently supports 4 shape types (rect, circle, line, text).
+iced's canvas Frame supports arbitrary paths (bezier curves, arcs,
+quadratic curves, rounded rects), stroked shapes with full stroke styles
+(line cap, join, dash patterns), gradient fills, transforms
+(translate/rotate/scale), save/restore, clipping regions, and drawing
+images and SVGs onto the canvas. All of this is serializable as data --
+paths are sequences of commands, gradients are arrays of color stops,
+transforms are simple numeric values. This is the largest single gap in
+terms of what it unlocks for users (charts, diagrams, drawing apps).
+
+### In-memory image handles
+
+The Image widget only supports file path sources. iced has
+`Handle::from_bytes` (encoded PNG/JPEG data) and `Handle::from_rgba`
+(raw RGBA pixel buffers). Implementing this requires a named image
+registry on the Rust side with `create_image`, `update_image`, and
+`delete_image` commands from Elixir. Elixir owns image lifecycle
+(explicit create/delete); the renderer is a dumb cache. This also
+enables canvas `draw_image` for in-memory images.
+
+### Custom widget styling (style maps)
+
+Named style atoms (`:primary`, `:danger`) cover the common cases. iced's
+full `StyleFn` closures cannot cross the IPC boundary, but we can let
+the `style` prop accept a map of fields (`%{background: "#0f3460",
+border: %{...}}`). The Rust renderer would construct a one-off closure
+from the map values. This closes the gap for users who need a custom
+look without implementing a full custom theme.
+
+### Other
 
 - **Rust-first packaging.** Rust binary as the entrypoint that embeds the
   BEAM. For app store distribution and double-click launchers.
