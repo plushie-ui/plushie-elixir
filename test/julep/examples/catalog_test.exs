@@ -139,8 +139,8 @@ defmodule Julep.Examples.CatalogTest do
     assert Julep.UI.exists?(tree, "demo_canvas")
     canvas_node = Julep.UI.find(tree, "demo_canvas")
     assert canvas_node.type == "canvas"
-    assert is_list(canvas_node.props["shapes"])
-    assert length(canvas_node.props["shapes"]) == 3
+    assert is_map(canvas_node.props["layers"])
+    assert map_size(canvas_node.props["layers"]) > 0
   end
 
   test "table node exists in composite tab" do

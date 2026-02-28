@@ -45,17 +45,20 @@ impl Codec {
     /// For JSON, `bytes` is the UTF-8 JSON text (without the trailing newline).
     /// For MsgPack, `bytes` is the raw msgpack payload (without the length prefix).
     ///
-    /// MsgPack decoding goes through an intermediate `serde_json::Value` because
-    /// rmp-serde doesn't reliably support serde's internally-tagged enums
-    /// (`#[serde(tag = "type")]`). The JSON deserializer handles tag dispatch
-    /// correctly, so we convert msgpack -> Value -> T.
+    /// MsgPack decoding routes through `rmpv::Value` as an intermediate. This
+    /// preserves binary data (msgpack's bin type) as JSON arrays of byte values,
+    /// which the `deserialize_binary_field` custom deserializer in protocol.rs
+    /// can reconstruct into `Vec<u8>`. The `serde_json::Value` intermediate is
+    /// still needed for tag dispatch (`#[serde(tag = "type")]`) which rmp-serde
+    /// doesn't handle reliably for externally-produced msgpack.
     pub fn decode<T: DeserializeOwned>(&self, bytes: &[u8]) -> Result<T, String> {
         match self {
             Codec::Json => serde_json::from_slice(bytes).map_err(|e| format!("json decode: {e}")),
             Codec::MsgPack => {
-                let val: serde_json::Value =
-                    rmp_serde::from_slice(bytes).map_err(|e| format!("msgpack decode: {e}"))?;
-                serde_json::from_value(val)
+                let rmpv_val: rmpv::Value = rmpv::decode::read_value(&mut &bytes[..])
+                    .map_err(|e| format!("msgpack decode (rmpv): {e}"))?;
+                let json_val = rmpv_to_json(rmpv_val);
+                serde_json::from_value(json_val)
                     .map_err(|e| format!("msgpack decode (tag dispatch): {e}"))
             }
         }
@@ -105,6 +108,77 @@ impl Codec {
             Codec::Json
         } else {
             Codec::MsgPack
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// rmpv::Value -> serde_json::Value conversion
+// ---------------------------------------------------------------------------
+
+/// Convert an rmpv::Value to serde_json::Value, preserving binary data as
+/// JSON arrays of byte values (u8). This is the key difference from the old
+/// rmp_serde -> serde_json::Value path, which silently dropped binary data
+/// (serde_json::Value has no binary type).
+///
+/// The `deserialize_binary_field` custom deserializer in protocol.rs knows
+/// how to reconstruct `Vec<u8>` from these byte arrays.
+fn rmpv_to_json(val: rmpv::Value) -> serde_json::Value {
+    match val {
+        rmpv::Value::Nil => serde_json::Value::Null,
+        rmpv::Value::Boolean(b) => serde_json::Value::Bool(b),
+        rmpv::Value::Integer(n) => {
+            if let Some(i) = n.as_i64() {
+                serde_json::Value::Number(i.into())
+            } else if let Some(u) = n.as_u64() {
+                serde_json::Value::Number(u.into())
+            } else {
+                // Fallback: shouldn't happen for msgpack integers
+                serde_json::Value::Null
+            }
+        }
+        rmpv::Value::F32(f) => serde_json::Number::from_f64(f as f64)
+            .map(serde_json::Value::Number)
+            .unwrap_or(serde_json::Value::Null),
+        rmpv::Value::F64(f) => serde_json::Number::from_f64(f)
+            .map(serde_json::Value::Number)
+            .unwrap_or(serde_json::Value::Null),
+        rmpv::Value::String(s) => {
+            // rmpv::Utf8String -- may or may not be valid UTF-8
+            match s.into_str() {
+                Some(valid) => serde_json::Value::String(valid.to_string()),
+                None => serde_json::Value::Null,
+            }
+        }
+        rmpv::Value::Binary(bytes) => {
+            // Preserve raw bytes as a JSON array of u8 values.
+            // The deserialize_binary_field custom deserializer reconstructs Vec<u8>.
+            serde_json::Value::Array(
+                bytes
+                    .into_iter()
+                    .map(|b| serde_json::Value::Number(b.into()))
+                    .collect(),
+            )
+        }
+        rmpv::Value::Array(arr) => {
+            serde_json::Value::Array(arr.into_iter().map(rmpv_to_json).collect())
+        }
+        rmpv::Value::Map(entries) => {
+            let mut map = serde_json::Map::new();
+            for (k, v) in entries {
+                // Map keys: try to use string representation
+                let key = match k {
+                    rmpv::Value::String(s) => s.into_str().unwrap_or_default().to_string(),
+                    rmpv::Value::Integer(n) => n.to_string(),
+                    other => format!("{other}"),
+                };
+                map.insert(key, rmpv_to_json(v));
+            }
+            serde_json::Value::Object(map)
+        }
+        rmpv::Value::Ext(_, _) => {
+            // Extension types not used in julep protocol
+            serde_json::Value::Null
         }
     }
 }
@@ -281,7 +355,7 @@ mod tests {
     // These tests build raw msgpack via serde_json::Value -> rmp_serde
     // (which is format-agnostic, not tagged-enum-aware) to simulate what
     // an external producer like Msgpax sends. The Codec::decode workaround
-    // (msgpack -> Value -> serde_json::from_value) must handle these.
+    // (msgpack -> rmpv::Value -> serde_json::Value -> T) must handle these.
 
     #[test]
     fn msgpack_external_tagged_enum_alpha() {
@@ -324,6 +398,119 @@ mod tests {
         assert!(matches!(decoded, IncomingMessage::Snapshot { .. }));
     }
 
+    // -- Binary data preservation through rmpv path --
+
+    #[test]
+    fn msgpack_image_op_with_native_binary() {
+        // Simulate what Elixir sends when using Msgpax.Bin for binary data.
+        // Build raw msgpack with a binary field using rmpv directly.
+        use rmpv::Value as RmpvValue;
+
+        let pixel_bytes: Vec<u8> = vec![255, 0, 0, 255, 0, 255, 0, 255]; // 2 RGBA pixels
+        let msg = RmpvValue::Map(vec![
+            (
+                RmpvValue::String("type".into()),
+                RmpvValue::String("image_op".into()),
+            ),
+            (
+                RmpvValue::String("op".into()),
+                RmpvValue::String("create_image".into()),
+            ),
+            (
+                RmpvValue::String("handle".into()),
+                RmpvValue::String("test_img".into()),
+            ),
+            (
+                RmpvValue::String("pixels".into()),
+                RmpvValue::Binary(pixel_bytes.clone()),
+            ),
+            (
+                RmpvValue::String("width".into()),
+                RmpvValue::Integer(1.into()),
+            ),
+            (
+                RmpvValue::String("height".into()),
+                RmpvValue::Integer(2.into()),
+            ),
+        ]);
+
+        let mut buf = Vec::new();
+        rmpv::encode::write_value(&mut buf, &msg).unwrap();
+
+        let decoded: crate::protocol::IncomingMessage = Codec::MsgPack.decode(&buf).unwrap();
+        match decoded {
+            crate::protocol::IncomingMessage::ImageOp {
+                op,
+                handle,
+                pixels,
+                width,
+                height,
+                data,
+            } => {
+                assert_eq!(op, "create_image");
+                assert_eq!(handle, "test_img");
+                assert_eq!(pixels, Some(pixel_bytes));
+                assert_eq!(width, Some(1));
+                assert_eq!(height, Some(2));
+                assert!(data.is_none());
+            }
+            other => panic!("expected ImageOp, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn msgpack_image_op_with_base64_string() {
+        // JSON mode: binary data arrives as base64-encoded string.
+        use crate::protocol::IncomingMessage;
+        use base64::Engine as _;
+
+        let pixel_bytes: Vec<u8> = vec![255, 0, 0, 255];
+        let b64 = base64::engine::general_purpose::STANDARD.encode(&pixel_bytes);
+
+        let json_msg = json!({
+            "type": "image_op",
+            "op": "create_image",
+            "handle": "test_img",
+            "pixels": b64,
+            "width": 1,
+            "height": 1
+        });
+        let json_str = serde_json::to_string(&json_msg).unwrap();
+
+        let decoded: IncomingMessage = Codec::Json.decode(json_str.as_bytes()).unwrap();
+        match decoded {
+            IncomingMessage::ImageOp { pixels, .. } => {
+                assert_eq!(pixels, Some(pixel_bytes));
+            }
+            other => panic!("expected ImageOp, got {other:?}"),
+        }
+    }
+
+    // -- rmpv_to_json unit tests --
+
+    #[test]
+    fn rmpv_to_json_preserves_binary_as_array() {
+        let binary = rmpv::Value::Binary(vec![1, 2, 3]);
+        let result = rmpv_to_json(binary);
+        assert_eq!(result, json!([1, 2, 3]));
+    }
+
+    #[test]
+    fn rmpv_to_json_handles_nested_map() {
+        let val = rmpv::Value::Map(vec![
+            (
+                rmpv::Value::String("key".into()),
+                rmpv::Value::String("val".into()),
+            ),
+            (
+                rmpv::Value::String("num".into()),
+                rmpv::Value::Integer(42.into()),
+            ),
+        ]);
+        let result = rmpv_to_json(val);
+        assert_eq!(result, json!({"key": "val", "num": 42}));
+    }
+
     // -- detect --
 
     #[test]
@@ -339,5 +526,89 @@ mod tests {
     #[test]
     fn detect_msgpack_from_fixmap() {
         assert_eq!(Codec::detect_from_first_byte(0x85), Codec::MsgPack);
+    }
+
+    // -- Additional rmpv_to_json coverage --
+
+    #[test]
+    fn rmpv_to_json_deeply_nested_maps() {
+        // Nested map: {"outer": {"inner": {"deep": 42}}}
+        let val = rmpv::Value::Map(vec![(
+            rmpv::Value::String("outer".into()),
+            rmpv::Value::Map(vec![(
+                rmpv::Value::String("inner".into()),
+                rmpv::Value::Map(vec![(
+                    rmpv::Value::String("deep".into()),
+                    rmpv::Value::Integer(42.into()),
+                )]),
+            )]),
+        )]);
+        let result = rmpv_to_json(val);
+        assert_eq!(result, json!({"outer": {"inner": {"deep": 42}}}));
+    }
+
+    #[test]
+    fn rmpv_to_json_binary_in_nested_map() {
+        // Binary data nested inside a map should be preserved as byte arrays.
+        let val = rmpv::Value::Map(vec![
+            (
+                rmpv::Value::String("name".into()),
+                rmpv::Value::String("img".into()),
+            ),
+            (
+                rmpv::Value::String("pixels".into()),
+                rmpv::Value::Binary(vec![255, 128, 0, 255]),
+            ),
+        ]);
+        let result = rmpv_to_json(val);
+        assert_eq!(result["name"], json!("img"));
+        assert_eq!(result["pixels"], json!([255, 128, 0, 255]));
+    }
+
+    #[test]
+    fn msgpack_roundtrip_with_binary_field() {
+        // Encode a message containing binary data via msgpack, decode it,
+        // and verify the binary field comes through as a byte array.
+        use rmpv::Value as RmpvValue;
+
+        let raw_bytes: Vec<u8> = vec![0xDE, 0xAD, 0xBE, 0xEF];
+        let msg = RmpvValue::Map(vec![
+            (
+                RmpvValue::String("type".into()),
+                RmpvValue::String("alpha".into()),
+            ),
+            (
+                RmpvValue::String("value".into()),
+                RmpvValue::String("hello".into()),
+            ),
+            (
+                RmpvValue::String("payload".into()),
+                RmpvValue::Binary(raw_bytes.clone()),
+            ),
+        ]);
+
+        // Encode to raw msgpack bytes.
+        let mut buf = Vec::new();
+        rmpv::encode::write_value(&mut buf, &msg).unwrap();
+
+        // The rmpv_to_json path preserves binary as an array of u8.
+        let rmpv_val: rmpv::Value = rmpv::decode::read_value(&mut &buf[..]).unwrap();
+        let json_val = rmpv_to_json(rmpv_val);
+
+        // The tagged enum fields decode fine.
+        assert_eq!(json_val["type"], "alpha");
+        assert_eq!(json_val["value"], "hello");
+
+        // Binary preserved as array of byte values.
+        let payload = json_val["payload"].as_array().unwrap();
+        let bytes: Vec<u8> = payload.iter().map(|v| v.as_u64().unwrap() as u8).collect();
+        assert_eq!(bytes, raw_bytes);
+    }
+
+    #[test]
+    fn rmpv_to_json_handles_nil_and_bool() {
+        assert_eq!(rmpv_to_json(rmpv::Value::Nil), json!(null));
+        assert_eq!(rmpv_to_json(rmpv::Value::Boolean(true)), json!(true));
+        assert_eq!(rmpv_to_json(rmpv::Value::Boolean(false)), json!(false));
     }
 }

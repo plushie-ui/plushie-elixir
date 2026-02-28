@@ -187,8 +187,9 @@ defmodule Julep.Command do
   Sets the window icon from raw RGBA pixel data.
 
   The `rgba_data` must be a binary of `width * height * 4` bytes (one byte
-  each for R, G, B, A per pixel, row-major). The data is base64-encoded
-  for wire transport.
+  each for R, G, B, A per pixel, row-major). The data is base64-encoded for
+  wire transport (set_icon goes through the generic WindowOp settings map
+  which doesn't support native binary fields).
 
   ## Example
 
@@ -584,16 +585,26 @@ defmodule Julep.Command do
   # Image operations
   # ---------------------------------------------------------------------------
 
-  @doc "Creates an in-memory image from encoded PNG/JPEG bytes (base64 encoded)."
+  @doc """
+  Creates an in-memory image from encoded PNG/JPEG bytes.
+
+  The raw binary is stored as-is in the command payload. The protocol layer
+  handles format-specific encoding (native binary for msgpack, base64 for JSON).
+  """
   @spec create_image(handle :: String.t(), data :: binary()) :: %__MODULE__{}
   def create_image(handle, data) when is_binary(handle) and is_binary(data) do
     %__MODULE__{
       type: :image_op,
-      payload: %{op: "create_image", handle: handle, data: Base.encode64(data)}
+      payload: %{op: "create_image", handle: handle, data: data}
     }
   end
 
-  @doc "Creates an in-memory image from raw RGBA pixel data (base64 encoded)."
+  @doc """
+  Creates an in-memory image from raw RGBA pixel data.
+
+  The raw binary is stored as-is in the command payload. The protocol layer
+  handles format-specific encoding (native binary for msgpack, base64 for JSON).
+  """
   @spec create_image(
           handle :: String.t(),
           width :: pos_integer(),
@@ -609,21 +620,31 @@ defmodule Julep.Command do
         handle: handle,
         width: width,
         height: height,
-        pixels: Base.encode64(pixels)
+        pixels: pixels
       }
     }
   end
 
-  @doc "Updates an existing in-memory image with new encoded PNG/JPEG bytes."
+  @doc """
+  Updates an existing in-memory image with new encoded PNG/JPEG bytes.
+
+  The raw binary is stored as-is in the command payload. The protocol layer
+  handles format-specific encoding (native binary for msgpack, base64 for JSON).
+  """
   @spec update_image(handle :: String.t(), data :: binary()) :: %__MODULE__{}
   def update_image(handle, data) when is_binary(handle) and is_binary(data) do
     %__MODULE__{
       type: :image_op,
-      payload: %{op: "update_image", handle: handle, data: Base.encode64(data)}
+      payload: %{op: "update_image", handle: handle, data: data}
     }
   end
 
-  @doc "Updates an existing in-memory image with new raw RGBA pixel data."
+  @doc """
+  Updates an existing in-memory image with new raw RGBA pixel data.
+
+  The raw binary is stored as-is in the command payload. The protocol layer
+  handles format-specific encoding (native binary for msgpack, base64 for JSON).
+  """
   @spec update_image(
           handle :: String.t(),
           width :: pos_integer(),
@@ -639,7 +660,7 @@ defmodule Julep.Command do
         handle: handle,
         width: width,
         height: height,
-        pixels: Base.encode64(pixels)
+        pixels: pixels
       }
     }
   end

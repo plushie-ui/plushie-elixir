@@ -1236,39 +1236,27 @@ impl App {
         &mut self,
         op: &str,
         handle: &str,
-        data: Option<&str>,
-        pixels: Option<&str>,
+        data: Option<&[u8]>,
+        pixels: Option<&[u8]>,
         width: Option<u32>,
         height: Option<u32>,
     ) {
-        use base64::engine::general_purpose::STANDARD;
-
         match op {
             "create_image" | "update_image" => {
-                if let Some(pixel_data) = pixels {
-                    // RGBA pixel data
-                    match STANDARD.decode(pixel_data) {
-                        Ok(decoded) => {
-                            let w = width.unwrap_or(0);
-                            let h = height.unwrap_or(0);
-                            self.image_registry
-                                .create_from_rgba(handle.to_string(), w, h, decoded);
-                        }
-                        Err(e) => {
-                            log::warn!("image_op {op}: failed to decode pixels: {e}");
-                        }
-                    }
-                } else if let Some(encoded) = data {
-                    // Encoded image bytes (PNG, JPEG, etc.)
-                    match STANDARD.decode(encoded) {
-                        Ok(decoded) => {
-                            self.image_registry
-                                .create_from_bytes(handle.to_string(), decoded);
-                        }
-                        Err(e) => {
-                            log::warn!("image_op {op}: failed to decode data: {e}");
-                        }
-                    }
+                if let Some(pixel_bytes) = pixels {
+                    // RGBA pixel data (raw bytes, no base64 decode needed)
+                    let w = width.unwrap_or(0);
+                    let h = height.unwrap_or(0);
+                    self.image_registry.create_from_rgba(
+                        handle.to_string(),
+                        w,
+                        h,
+                        pixel_bytes.to_vec(),
+                    );
+                } else if let Some(image_bytes) = data {
+                    // Encoded image bytes (PNG, JPEG, etc. -- raw bytes)
+                    self.image_registry
+                        .create_from_bytes(handle.to_string(), image_bytes.to_vec());
                 } else {
                     log::warn!("image_op {op}: missing data or pixels field");
                 }

@@ -33,8 +33,8 @@ pub enum CoreEffect {
     ImageOp {
         op: String,
         handle: String,
-        data: Option<String>,
-        pixels: Option<String>,
+        data: Option<Vec<u8>>,
+        pixels: Option<Vec<u8>>,
         width: Option<u32>,
         height: Option<u32>,
     },

@@ -128,40 +128,37 @@ Rust installed.
 **Iced 0.14 parity audit** -- completed. All widgets, props, events,
 subscriptions, commands, and window operations audited and aligned.
 
-## Future (not scheduled)
+## Completed (post-Phase 5)
 
 Hot code reload is complete and shipped in Phase 3.
 
-### Canvas drawing primitives
+### Canvas drawing primitives (shipped)
 
-The canvas currently supports 4 shape types (rect, circle, line, text).
-iced's canvas Frame supports arbitrary paths (bezier curves, arcs,
-quadratic curves, rounded rects), stroked shapes with full stroke styles
-(line cap, join, dash patterns), gradient fills, transforms
-(translate/rotate/scale), save/restore, clipping regions, and drawing
-images and SVGs onto the canvas. All of this is serializable as data --
-paths are sequences of commands, gradients are arrays of color stops,
-transforms are simple numeric values. This is the largest single gap in
-terms of what it unlocks for users (charts, diagrams, drawing apps).
+Layer-based caching (`layers` prop replaces old `shapes` prop). Arbitrary
+paths (bezier, quadratic, arcs, ellipses, rounded rects), stroked shapes
+with full stroke styles (line cap, join, dash), gradient fills (linear),
+transforms (translate/rotate/scale with push_transform/pop_transform
+stack), draw_image, draw_svg, text with font/size. Remaining minor gaps:
+fill rules and clipping.
 
-### In-memory image handles
+### In-memory image handles (shipped)
 
-The Image widget only supports file path sources. iced has
-`Handle::from_bytes` (encoded PNG/JPEG data) and `Handle::from_rgba`
-(raw RGBA pixel buffers). Implementing this requires a named image
-registry on the Rust side with `create_image`, `update_image`, and
-`delete_image` commands from Elixir. Elixir owns image lifecycle
-(explicit create/delete); the renderer is a dumb cache. This also
-enables canvas `draw_image` for in-memory images.
+Image registry on the Rust side with `create_image`, `update_image`, and
+`delete_image` commands from Elixir. Supports encoded bytes
+(`Handle::from_bytes`) and raw RGBA pixels (`Handle::from_rgba`). Elixir
+owns lifecycle; renderer is a dumb cache. Canvas `draw_image` works with
+in-memory images.
 
-### Custom widget styling (style maps)
+### Custom widget styling / style maps (shipped)
 
-Named style atoms (`:primary`, `:danger`) cover the common cases. iced's
-full `StyleFn` closures cannot cross the IPC boundary, but we can let
-the `style` prop accept a map of fields (`%{background: "#0f3460",
-border: %{...}}`). The Rust renderer would construct a one-off closure
-from the map values. This closes the gap for users who need a custom
-look without implementing a full custom theme.
+`Julep.Iced.StyleMap` type module. All 13 styleable widgets accept
+`StyleMap.t()` alongside named preset atoms. The `style` prop accepts a
+map of fields (background, text_color, border, shadow) with status
+overrides (hovered, pressed, disabled, focused). Rust constructs one-off
+closures from the map values. Auto-derives hover (darken 10%) and
+disabled (50% alpha) states.
+
+## Future (not scheduled)
 
 ### Other
 

@@ -22,14 +22,20 @@ to stdout. That is the entire transport.
 
 Julep supports both MessagePack and JSONL as wire formats. MessagePack is
 the default. The message shapes are identical -- only the encoding differs.
-MessagePack reduces serialization overhead for high-frequency messages and
-enables a future path to native binary data payloads without base64 overhead.
-Currently, binary data (e.g. window icons, in-memory image pixels) uses
-base64 encoding in both formats. This is because the Rust codec routes
-msgpack through `serde_json::Value` as an intermediate for tagged enum
-dispatch (see `codec.rs`), and `serde_json::Value` cannot represent raw
-binary data. When this codec layer is reworked, image payloads can switch
-to native msgpack binary type for zero base64 overhead.
+MessagePack reduces serialization overhead for high-frequency messages.
+
+Binary data handling differs by format:
+
+- **MessagePack mode:** binary data (e.g. in-memory image pixels) uses the
+  native msgpack binary type. The Rust codec decodes msgpack via `rmpv::Value`
+  as an intermediate, which preserves binary fields as byte arrays. These are
+  converted to JSON number arrays for tag dispatch through `serde_json::Value`
+  (still needed for `#[serde(tag = "type")]` enums), then reconstructed into
+  `Vec<u8>` by a custom deserializer in `protocol.rs`. No base64 overhead.
+- **JSON mode:** binary data uses base64 encoding (JSON has no binary type).
+
+Some commands (e.g. `set_icon/4`) still use base64 in both formats for
+simplicity. The native binary path applies to image registry payloads.
 
 ### How to enable JSON mode
 

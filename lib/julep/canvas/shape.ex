@@ -24,11 +24,11 @@ defmodule Julep.Canvas.Shape do
   Transform commands are interleaved with shapes in a layer's shape list:
 
       [
-        save(),
+        push_transform(),
         translate(100, 100),
         rotate(:math.pi() / 4),
         rect(0, 0, 50, 50, fill: "#f00"),
-        restore()
+        pop_transform()
       ]
 
   ## Gradients
@@ -172,13 +172,13 @@ defmodule Julep.Canvas.Shape do
 
   # -- Transform commands -----------------------------------------------------
 
-  @doc "Save the current transform state."
-  @spec save() :: map()
-  def save, do: %{"type" => "save"}
+  @doc "Push (save) the current transform state onto the stack."
+  @spec push_transform() :: map()
+  def push_transform, do: %{"type" => "push_transform"}
 
-  @doc "Restore the previously saved transform state."
-  @spec restore() :: map()
-  def restore, do: %{"type" => "restore"}
+  @doc "Pop (restore) the previously saved transform state from the stack."
+  @spec pop_transform() :: map()
+  def pop_transform, do: %{"type" => "pop_transform"}
 
   @doc "Translate the coordinate origin."
   @spec translate(x :: number(), y :: number()) :: map()

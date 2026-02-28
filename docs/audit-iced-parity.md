@@ -336,7 +336,7 @@ Same as Slider. `circular_handle` and `handle_radius` also supported.
 | `crop` | SUPPORTED | {x, y, width, height} object |
 | `Handle::from_bytes` | SUPPORTED | In-memory encoded images (PNG/JPEG bytes) via image registry. `Julep.Command.create_image/2` uploads base64-encoded data; widget references by `%{handle: "name"}`. |
 | `Handle::from_rgba` | SUPPORTED | Raw RGBA pixel buffers via image registry. `Julep.Command.create_image/4` with width, height, pixels. |
-| Image lifecycle | SUPPORTED | `create_image`, `update_image`, `delete_image` commands. Elixir owns lifecycle; renderer is a dumb cache. Binary data uses base64 encoding (native msgpack binary deferred until codec rework). |
+| Image lifecycle | SUPPORTED | `create_image`, `update_image`, `delete_image` commands. Elixir owns lifecycle; renderer is a dumb cache. In msgpack mode, binary data uses native msgpack binary type (preserved via rmpv decode path). In JSON mode, binary data uses base64 encoding. |
 
 ### Svg
 
@@ -393,7 +393,7 @@ Same as Slider. `circular_handle` and `handle_radius` also supported.
 | Stroke styles | SUPPORTED | `LineCap` (butt/square/round), `LineJoin` (miter/round/bevel), `LineDash` (segments, offset) |
 | Gradient fills | SUPPORTED | Linear gradients: `{type: "linear", start, end, stops}` -- up to 8 stops |
 | Transforms | SUPPORTED | `translate(x, y)`, `rotate(angle)`, `scale(factor)` / `scale(x, y)` |
-| Save/restore | SUPPORTED | Transform stack via save/restore commands |
+| Save/restore | SUPPORTED | Transform stack via push_transform/pop_transform commands |
 | Draw image | SUPPORTED | `frame.draw_image(bounds, image)` via `{type: "image", source, x, y, w, h}` |
 | Draw SVG | SUPPORTED | `frame.draw_svg(bounds, svg)` via `{type: "svg", source, x, y, w, h}` |
 | Fill rules | **MISSING** | `NonZero` / `EvenOdd` for complex paths with holes |
@@ -756,14 +756,11 @@ and delivered standalone via `:modifiers_changed`).
 ### Widgets
 - iced widgets (with enabled features): ~28 distinct widgets
 - Julep fully supported: 26 (plus `window` and `table` not in iced)
-- Julep partially supported: 2 (Canvas -- limited drawing primitives; Image -- file paths only, no in-memory handles)
+- Julep partially supported: 0
 
 ### Props
 - Average prop coverage per supported widget: ~95-100%
-- Notable actionable gaps:
-  - Canvas drawing primitives (paths, curves, gradients, transforms, clipping)
-  - Image in-memory handles (from_bytes, from_rgba) and lifecycle commands
-  - Inline style maps for non-container widgets
+- Notable actionable gaps: none (canvas primitives, in-memory images, and style maps all shipped)
 - Remaining blocked/N/A items (cannot be resolved):
   - `on_open`/`on_close` for pick_list/combo_box (BLOCKED by iced 0.14)
   - TextEditor `highlight` (BLOCKED -- generic type parameter)
@@ -822,13 +819,16 @@ These cannot be implemented without upstream changes to iced:
 
 7. **Custom `StyleFn` closures** -- iced allows arbitrary `Box<dyn Fn(&Theme, Status) -> Style>` per widget. Closures cannot be serialized. Workaround: accept style maps on the `style` prop and construct closures from field values on the Rust side.
 
-### Actionable gaps
+### Shipped (previously actionable)
 
-These can be implemented within the current architecture:
+These were identified as gaps and have since been implemented:
 
-8. **Canvas drawing primitives** -- only 4 shape types (rect, circle, line, text). Missing: arbitrary paths (move_to/line_to/bezier/arc/close), stroked shapes, stroke styles, gradient fills, fill rules, transforms, clipping, draw_image, draw_svg, text font/size. All serializable as data. This is the largest single gap in terms of what it unlocks.
-9. **In-memory images** -- Image widget only supports file paths. iced has `Handle::from_bytes` (encoded PNG/JPEG) and `Handle::from_rgba` (raw pixels). Requires an image registry on the Rust side with explicit create/update/delete commands from Elixir.
-10. **Inline style maps for non-container widgets** -- Container supports `background`, `border`, `shadow` as direct props; other widgets only accept named style atoms. Extending the `style` prop to accept maps would close the custom styling gap without needing closures.
+8. **Canvas drawing primitives** -- SHIPPED. Layer-based caching, arbitrary paths (bezier, quadratic, arcs, ellipses, rounded rects), stroke styles (cap, join, dash), gradient fills, transforms (translate, rotate, scale with push/pop stack), draw_image, draw_svg, text with font/size. Remaining minor gaps: fill rules and clipping.
+9. **In-memory images** -- SHIPPED. Image registry on the Rust side with `create_image`, `update_image`, `delete_image` commands. Supports both encoded bytes (`Handle::from_bytes`) and raw RGBA pixels (`Handle::from_rgba`).
+10. **Inline style maps for non-container widgets** -- SHIPPED. `Julep.Iced.StyleMap` supports all 13 styleable widgets with background, text_color, border, shadow, plus status overrides (hovered, pressed, disabled, focused) and auto-derived hover/disabled states.
+
+### Remaining actionable gaps
+
 11. **Extended palette shade control** -- iced derives base/strong/weak/weaker/weakest shades per color via Oklch. Julep passes 5 flat colors and lets iced generate shades. Users cannot control individual variants.
 12. **`theme::Mode`** -- light/dark/none mode enum
 13. **`vsync` setting** -- vsync control

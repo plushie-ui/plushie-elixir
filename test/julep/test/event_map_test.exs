@@ -144,4 +144,75 @@ defmodule Julep.Test.EventMapTest do
       assert msg =~ "cannot slide"
     end
   end
+
+  # -- canvas_press/4 --
+
+  describe "canvas_press/4" do
+    test "returns canvas_press event with default button" do
+      assert {:ok, {:canvas_press, "drawing", 10.0, 20.0, "left"}} =
+               EventMap.canvas_press(el("drawing", "canvas"), 10.0, 20.0)
+    end
+
+    test "returns canvas_press event with explicit button" do
+      assert {:ok, {:canvas_press, "drawing", 5.0, 15.0, "right"}} =
+               EventMap.canvas_press(el("drawing", "canvas"), 5.0, 15.0, "right")
+    end
+
+    test "returns error for non-canvas widget" do
+      assert {:error, msg} = EventMap.canvas_press(el("btn", "button"), 0, 0)
+      assert msg =~ "cannot canvas_press"
+    end
+  end
+
+  # -- canvas_release/4 --
+
+  describe "canvas_release/4" do
+    test "returns canvas_release event with default button" do
+      assert {:ok, {:canvas_release, "drawing", 10.0, 20.0, "left"}} =
+               EventMap.canvas_release(el("drawing", "canvas"), 10.0, 20.0)
+    end
+
+    test "returns canvas_release event with explicit button" do
+      assert {:ok, {:canvas_release, "drawing", 5.0, 15.0, "middle"}} =
+               EventMap.canvas_release(el("drawing", "canvas"), 5.0, 15.0, "middle")
+    end
+
+    test "returns error for non-canvas widget" do
+      assert {:error, msg} = EventMap.canvas_release(el("x", "text"), 0, 0)
+      assert msg =~ "cannot canvas_release"
+    end
+  end
+
+  # -- canvas_move/3 --
+
+  describe "canvas_move/3" do
+    test "returns canvas_move event" do
+      assert {:ok, {:canvas_move, "drawing", 30.0, 40.0}} =
+               EventMap.canvas_move(el("drawing", "canvas"), 30.0, 40.0)
+    end
+
+    test "returns error for non-canvas widget" do
+      assert {:error, msg} = EventMap.canvas_move(el("x", "slider"), 0, 0)
+      assert msg =~ "cannot canvas_move"
+    end
+  end
+
+  # -- canvas_scroll/5 --
+
+  describe "canvas_scroll/5" do
+    test "returns canvas_scroll event with default deltas" do
+      assert {:ok, {:canvas_scroll, "drawing", 5.0, 5.0, 0, 1}} =
+               EventMap.canvas_scroll(el("drawing", "canvas"), 5.0, 5.0)
+    end
+
+    test "returns canvas_scroll event with custom deltas" do
+      assert {:ok, {:canvas_scroll, "drawing", 5.0, 5.0, 2.0, -3.0}} =
+               EventMap.canvas_scroll(el("drawing", "canvas"), 5.0, 5.0, 2.0, -3.0)
+    end
+
+    test "returns error for non-canvas widget" do
+      assert {:error, msg} = EventMap.canvas_scroll(el("x", "button"), 0, 0)
+      assert msg =~ "cannot canvas_scroll"
+    end
+  end
 end

@@ -103,7 +103,8 @@ defmodule Julep.Iced.StyleMap do
   end
 
   @spec normalize_override(override :: status_override() | keyword()) :: status_override()
-  defp normalize_override(override) when is_list(override), do: normalize_override(Map.new(override))
+  defp normalize_override(override) when is_list(override),
+    do: normalize_override(Map.new(override))
 
   defp normalize_override(override) when is_map(override) do
     override

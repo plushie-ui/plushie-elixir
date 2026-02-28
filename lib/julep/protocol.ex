@@ -156,14 +156,48 @@ defmodule Julep.Protocol do
   Image ops are `create_image`, `update_image`, or `delete_image`. The payload
   map contains the op-specific fields (handle, data/pixels, width, height).
 
+  Binary fields (`data`, `pixels`) are encoded based on the wire format:
+  - `:msgpack` -- wrapped in `Msgpax.Bin` for native msgpack binary type (zero overhead)
+  - `:json` -- base64-encoded strings (JSON has no binary type)
+
   ## Example
 
-      iex> Julep.Protocol.encode_image_op("create_image", %{handle: "logo", data: "base64..."})
-      ~s({"handle":"logo","data":"base64...","op":"create_image","type":"image_op"}) <> "\\n"
+      iex> Julep.Protocol.encode_image_op("create_image", %{handle: "logo", data: <<1, 2, 3>>}, :json)
+      ~s({"data":"AQID","handle":"logo","op":"create_image","type":"image_op"}) <> "\\n"
   """
   @spec encode_image_op(op :: String.t(), payload :: map(), format :: format()) :: binary()
   def encode_image_op(op, payload, format \\ :msgpack) do
+    payload = encode_binary_fields(payload, format)
     serialize(Map.merge(%{type: "image_op", op: op}, payload), format)
+  end
+
+  # Encode binary fields in image op payloads based on wire format.
+  defp encode_binary_fields(payload, :msgpack) do
+    payload
+    |> maybe_wrap_binary(:data)
+    |> maybe_wrap_binary(:pixels)
+  end
+
+  defp encode_binary_fields(payload, :json) do
+    payload
+    |> maybe_base64_encode(:data)
+    |> maybe_base64_encode(:pixels)
+  end
+
+  defp maybe_wrap_binary(payload, key) do
+    case Map.get(payload, key) do
+      nil -> payload
+      bin when is_binary(bin) -> Map.put(payload, key, Msgpax.Bin.new(bin))
+      _other -> payload
+    end
+  end
+
+  defp maybe_base64_encode(payload, key) do
+    case Map.get(payload, key) do
+      nil -> payload
+      bin when is_binary(bin) -> Map.put(payload, key, Base.encode64(bin))
+      _other -> payload
+    end
   end
 
   @doc """

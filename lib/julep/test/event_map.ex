@@ -19,6 +19,15 @@ defmodule Julep.Test.EventMap do
   | slider       | -                  | -                     | -                   | -                         | -                         | `{:slide, id, val}`|
   | pick_list    | -                  | -                     | -                   | -                         | `{:select, id, val}`      | -                  |
   | combo_box    | -                  | -                     | -                   | -                         | `{:select, id, val}`      | -                  |
+
+  Canvas widgets use dedicated event producers instead of the generic verbs above:
+
+  | Producer         | Event                                       |
+  |------------------|---------------------------------------------|
+  | `canvas_press`   | `{:canvas_press, id, x, y, button}`         |
+  | `canvas_release` | `{:canvas_release, id, x, y, button}`       |
+  | `canvas_move`    | `{:canvas_move, id, x, y}`                  |
+  | `canvas_scroll`  | `{:canvas_scroll, id, x, y, delta_x, delta_y}` |
   """
 
   alias Julep.Test.Element
@@ -79,4 +88,57 @@ defmodule Julep.Test.EventMap do
   def slide(%Element{type: "slider", id: id}, value), do: {:ok, {:slide, id, value}}
   def slide(%Element{type: "vertical_slider", id: id}, value), do: {:ok, {:slide, id, value}}
   def slide(%Element{type: type}, _value), do: {:error, "cannot slide a #{type} widget"}
+
+  # -- Canvas events --
+
+  @doc "Produces a canvas press event at the given coordinates."
+  @spec canvas_press(element :: Element.t(), x :: number(), y :: number(), button :: String.t()) ::
+          {:ok, tuple()} | {:error, String.t()}
+  def canvas_press(element, x, y, button \\ "left")
+
+  def canvas_press(%Element{type: "canvas", id: id}, x, y, button) do
+    {:ok, {:canvas_press, id, x, y, button}}
+  end
+
+  def canvas_press(%Element{type: type}, _x, _y, _button),
+    do: {:error, "cannot canvas_press a #{type} widget"}
+
+  @doc "Produces a canvas release event at the given coordinates."
+  @spec canvas_release(element :: Element.t(), x :: number(), y :: number(), button :: String.t()) ::
+          {:ok, tuple()} | {:error, String.t()}
+  def canvas_release(element, x, y, button \\ "left")
+
+  def canvas_release(%Element{type: "canvas", id: id}, x, y, button) do
+    {:ok, {:canvas_release, id, x, y, button}}
+  end
+
+  def canvas_release(%Element{type: type}, _x, _y, _button),
+    do: {:error, "cannot canvas_release a #{type} widget"}
+
+  @doc "Produces a canvas cursor move event at the given coordinates."
+  @spec canvas_move(element :: Element.t(), x :: number(), y :: number()) ::
+          {:ok, tuple()} | {:error, String.t()}
+  def canvas_move(%Element{type: "canvas", id: id}, x, y) do
+    {:ok, {:canvas_move, id, x, y}}
+  end
+
+  def canvas_move(%Element{type: type}, _x, _y),
+    do: {:error, "cannot canvas_move a #{type} widget"}
+
+  @doc "Produces a canvas scroll event at the given coordinates with scroll deltas."
+  @spec canvas_scroll(
+          element :: Element.t(),
+          x :: number(),
+          y :: number(),
+          delta_x :: number(),
+          delta_y :: number()
+        ) :: {:ok, tuple()} | {:error, String.t()}
+  def canvas_scroll(element, x, y, delta_x \\ 0, delta_y \\ 1)
+
+  def canvas_scroll(%Element{type: "canvas", id: id}, x, y, delta_x, delta_y) do
+    {:ok, {:canvas_scroll, id, x, y, delta_x, delta_y}}
+  end
+
+  def canvas_scroll(%Element{type: type}, _x, _y, _delta_x, _delta_y),
+    do: {:error, "cannot canvas_scroll a #{type} widget"}
 end

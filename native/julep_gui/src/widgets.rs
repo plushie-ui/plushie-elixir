@@ -32,6 +32,10 @@ pub struct WidgetCaches {
     pub combo_states: HashMap<String, combo_box::State<String>>,
     pub combo_options: HashMap<String, Vec<String>>,
     pub pane_grid_states: HashMap<String, pane_grid::State<String>>,
+    /// Per-canvas, per-layer geometry caches. Outer key is node ID, inner key
+    /// is layer name. The u64 is a content hash of the layer's shapes array --
+    /// when it changes the cache is cleared so the layer re-tessellates.
+    pub canvas_caches: HashMap<String, HashMap<String, (u64, canvas::Cache)>>,
     pub default_text_size: Option<f32>,
     pub default_font: Option<Font>,
 }
@@ -44,6 +48,7 @@ impl WidgetCaches {
             combo_states: HashMap::new(),
             combo_options: HashMap::new(),
             pane_grid_states: HashMap::new(),
+            canvas_caches: HashMap::new(),
             default_text_size: None,
             default_font: None,
         }
@@ -55,6 +60,7 @@ impl WidgetCaches {
         self.combo_states.clear();
         self.combo_options.clear();
         self.pane_grid_states.clear();
+        self.canvas_caches.clear();
     }
 }
 
@@ -131,6 +137,31 @@ pub fn ensure_caches(node: &TreeNode, caches: &mut WidgetCaches) {
                     }
                 });
         }
+        "canvas" => {
+            let props = node.props.as_object();
+            // Build layer map: either from "layers" (object) or "shapes" (array -> single layer).
+            let layer_map = canvas_layer_map(props);
+            let node_caches = caches.canvas_caches.entry(node.id.clone()).or_default();
+
+            // Update or create caches for each layer.
+            for (layer_name, shapes_json) in &layer_map {
+                let hash = hash_json_str(shapes_json);
+                match node_caches.get(layer_name) {
+                    Some((existing_hash, cache)) => {
+                        if *existing_hash != hash {
+                            cache.clear();
+                            node_caches.insert(layer_name.clone(), (hash, canvas::Cache::new()));
+                        }
+                    }
+                    None => {
+                        node_caches.insert(layer_name.clone(), (hash, canvas::Cache::new()));
+                    }
+                }
+            }
+
+            // Remove stale layers that are no longer in the tree.
+            node_caches.retain(|name, _| layer_map.contains_key(name));
+        }
         _ => {}
     }
 
@@ -175,7 +206,7 @@ pub fn render<'a>(
         "svg" => render_svg(node),
         "markdown" => render_markdown(node, caches),
         "stack" => render_stack(node, caches, images),
-        "canvas" => render_canvas(node, images),
+        "canvas" => render_canvas(node, caches, images),
         "table" => render_table(node),
         // New native widgets
         "grid" => render_grid(node, caches, images),
@@ -420,92 +451,54 @@ fn render_button<'a>(
                 _ => b.style(button::primary),
             };
         } else if let Some(obj) = style_val.as_object() {
-            let base = parse_style_map_fields(obj);
-            let hover_fields = obj
-                .get("hovered")
-                .and_then(|v| v.as_object())
-                .map(parse_style_map_fields);
-            let pressed_fields = obj
-                .get("pressed")
-                .and_then(|v| v.as_object())
-                .map(parse_style_map_fields);
-            let disabled_fields = obj
-                .get("disabled")
-                .and_then(|v| v.as_object())
-                .map(parse_style_map_fields);
-
+            let ov = parse_style_overrides(obj);
             b = b.style(move |theme: &iced::Theme, status| {
-                let default_style = button::primary(theme, status);
-                let mut style = default_style;
-                // Apply base fields
-                if let Some(bg) = base.background {
+                let mut style = button::primary(theme, status);
+                if let Some(bg) = ov.base.background {
                     style.background = Some(bg);
                 }
-                if let Some(tc) = base.text_color {
+                if let Some(tc) = ov.base.text_color {
                     style.text_color = tc;
                 }
-                if let Some(brd) = base.border {
+                if let Some(brd) = ov.base.border {
                     style.border = brd;
                 }
-                if let Some(shd) = base.shadow {
+                if let Some(shd) = ov.base.shadow {
                     style.shadow = shd;
                 }
-                // Status-specific overrides
+                let apply = |style: &mut button::Style, f: &StyleMapFields| {
+                    if let Some(bg) = f.background {
+                        style.background = Some(bg);
+                    }
+                    if let Some(tc) = f.text_color {
+                        style.text_color = tc;
+                    }
+                    if let Some(brd) = f.border {
+                        style.border = brd;
+                    }
+                    if let Some(shd) = f.shadow {
+                        style.shadow = shd;
+                    }
+                };
                 match status {
                     button::Status::Hovered => {
-                        if let Some(ref fields) = hover_fields {
-                            if let Some(bg) = fields.background {
-                                style.background = Some(bg);
-                            }
-                            if let Some(tc) = fields.text_color {
-                                style.text_color = tc;
-                            }
-                            if let Some(brd) = fields.border {
-                                style.border = brd;
-                            }
-                            if let Some(shd) = fields.shadow {
-                                style.shadow = shd;
-                            }
-                        } else if let Some(bg) = style.background {
-                            style.background = Some(darken_background(bg, 0.9));
+                        if let Some(ref f) = ov.hovered {
+                            apply(&mut style, f);
+                        } else {
+                            style.background = auto_derive_hover_bg(style.background);
                         }
                     }
                     button::Status::Pressed => {
-                        if let Some(ref fields) = pressed_fields {
-                            if let Some(bg) = fields.background {
-                                style.background = Some(bg);
-                            }
-                            if let Some(tc) = fields.text_color {
-                                style.text_color = tc;
-                            }
-                            if let Some(brd) = fields.border {
-                                style.border = brd;
-                            }
-                            if let Some(shd) = fields.shadow {
-                                style.shadow = shd;
-                            }
+                        if let Some(ref f) = ov.pressed {
+                            apply(&mut style, f);
                         }
-                        // else: pressed = base (matching iced's pattern)
                     }
                     button::Status::Disabled => {
-                        if let Some(ref fields) = disabled_fields {
-                            if let Some(bg) = fields.background {
-                                style.background = Some(bg);
-                            }
-                            if let Some(tc) = fields.text_color {
-                                style.text_color = tc;
-                            }
-                            if let Some(brd) = fields.border {
-                                style.border = brd;
-                            }
-                            if let Some(shd) = fields.shadow {
-                                style.shadow = shd;
-                            }
+                        if let Some(ref f) = ov.disabled {
+                            apply(&mut style, f);
                         } else {
-                            if let Some(bg) = style.background {
-                                style.background = Some(alpha_background(bg, 0.5));
-                            }
-                            style.text_color = alpha_color(style.text_color, 0.5);
+                            style.background = auto_derive_disabled_bg(style.background);
+                            style.text_color = auto_derive_disabled_text(style.text_color);
                         }
                     }
                     _ => {}
@@ -615,21 +608,8 @@ fn render_container<'a>(
                 _ => c,
             };
         } else if let Some(obj) = style_val.as_object() {
-            let base = parse_style_map_fields(obj);
-            c = c.style(move |_theme| {
-                let mut style = container::Style {
-                    background: base.background,
-                    text_color: base.text_color,
-                    ..Default::default()
-                };
-                if let Some(brd) = base.border {
-                    style.border = brd;
-                }
-                if let Some(shd) = base.shadow {
-                    style.shadow = shd;
-                }
-                style
-            });
+            let ov = parse_style_overrides(obj);
+            c = c.style(move |_theme| container_style_from_base(&ov.base));
         }
     }
 
@@ -846,60 +826,26 @@ fn render_text_input<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Elemen
                 _ => ti,
             };
         } else if let Some(obj) = style_val.as_object() {
-            let base = parse_style_map_fields(obj);
-            let focused_fields = obj
-                .get("focused")
-                .and_then(|v| v.as_object())
-                .map(parse_style_map_fields);
-            let hovered_fields = obj
-                .get("hovered")
-                .and_then(|v| v.as_object())
-                .map(parse_style_map_fields);
-            let disabled_fields = obj
-                .get("disabled")
-                .and_then(|v| v.as_object())
-                .map(parse_style_map_fields);
-
+            let ov = parse_style_overrides(obj);
             ti = ti.style(move |theme: &iced::Theme, status| {
                 let mut style = text_input::default(theme, status);
-                // Apply base: background, border, text_color -> value
-                if let Some(iced::Background::Color(c)) = base.background {
-                    style.background = iced::Background::Color(c);
-                }
-                if let Some(brd) = base.border {
-                    style.border = brd;
-                }
-                if let Some(tc) = base.text_color {
-                    style.value = tc;
-                }
-                let apply_text_input_fields =
-                    |style: &mut text_input::Style, fields: &StyleMapFields| {
-                        if let Some(iced::Background::Color(c)) = fields.background {
-                            style.background = iced::Background::Color(c);
-                        }
-                        if let Some(brd) = fields.border {
-                            style.border = brd;
-                        }
-                        if let Some(tc) = fields.text_color {
-                            style.value = tc;
-                        }
-                    };
+                apply_text_input_fields(&mut style, &ov.base);
                 match status {
                     text_input::Status::Focused { .. } => {
-                        if let Some(ref fields) = focused_fields {
-                            apply_text_input_fields(&mut style, fields);
+                        if let Some(ref f) = ov.focused {
+                            apply_text_input_fields(&mut style, f);
                         }
                     }
                     text_input::Status::Hovered => {
-                        if let Some(ref fields) = hovered_fields {
-                            apply_text_input_fields(&mut style, fields);
+                        if let Some(ref f) = ov.hovered {
+                            apply_text_input_fields(&mut style, f);
                         } else if let iced::Background::Color(c) = style.background {
                             style.background = iced::Background::Color(darken_color(c, 0.9));
                         }
                     }
                     text_input::Status::Disabled => {
-                        if let Some(ref fields) = disabled_fields {
-                            apply_text_input_fields(&mut style, fields);
+                        if let Some(ref f) = ov.disabled {
+                            apply_text_input_fields(&mut style, f);
                         } else {
                             if let iced::Background::Color(c) = style.background {
                                 style.background = iced::Background::Color(alpha_color(c, 0.5));
@@ -974,34 +920,13 @@ fn render_checkbox<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<
                 _ => cb.style(checkbox::primary),
             };
         } else if let Some(obj) = style_val.as_object() {
-            let base = parse_style_map_fields(obj);
-            let hovered_fields = obj
-                .get("hovered")
-                .and_then(|v| v.as_object())
-                .map(parse_style_map_fields);
-
+            let ov = parse_style_overrides(obj);
             cb = cb.style(move |theme: &iced::Theme, status| {
                 let mut style = checkbox::primary(theme, status);
-                if let Some(iced::Background::Color(c)) = base.background {
-                    style.background = iced::Background::Color(c);
-                }
-                if let Some(brd) = base.border {
-                    style.border = brd;
-                }
-                if let Some(tc) = base.text_color {
-                    style.text_color = Some(tc);
-                }
+                apply_checkbox_fields(&mut style, &ov.base);
                 if matches!(status, checkbox::Status::Hovered { .. }) {
-                    if let Some(ref fields) = hovered_fields {
-                        if let Some(iced::Background::Color(c)) = fields.background {
-                            style.background = iced::Background::Color(c);
-                        }
-                        if let Some(brd) = fields.border {
-                            style.border = brd;
-                        }
-                        if let Some(tc) = fields.text_color {
-                            style.text_color = Some(tc);
-                        }
+                    if let Some(ref f) = ov.hovered {
+                        apply_checkbox_fields(&mut style, f);
                     } else if let iced::Background::Color(c) = style.background {
                         style.background = iced::Background::Color(darken_color(c, 0.9));
                     }
@@ -1043,17 +968,9 @@ fn render_rule<'a>(node: &'a TreeNode) -> Element<'a, Message> {
                     _ => r,
                 };
             } else if let Some(obj) = style_val.as_object() {
-                let base = parse_style_map_fields(obj);
+                let ov = parse_style_overrides(obj);
                 r = r.style(move |theme: &iced::Theme| {
-                    let mut style = rule::default(theme);
-                    // Map background -> color
-                    if let Some(iced::Background::Color(c)) = base.background {
-                        style.color = c;
-                    }
-                    if let Some(brd) = base.border {
-                        style.radius = brd.radius;
-                    }
-                    style
+                    apply_rule_style(&mut rule::default(theme), &ov.base)
                 });
             }
         }
@@ -1068,16 +985,9 @@ fn render_rule<'a>(node: &'a TreeNode) -> Element<'a, Message> {
                     _ => r,
                 };
             } else if let Some(obj) = style_val.as_object() {
-                let base = parse_style_map_fields(obj);
+                let ov = parse_style_overrides(obj);
                 r = r.style(move |theme: &iced::Theme| {
-                    let mut style = rule::default(theme);
-                    if let Some(iced::Background::Color(c)) = base.background {
-                        style.color = c;
-                    }
-                    if let Some(brd) = base.border {
-                        style.radius = brd.radius;
-                    }
-                    style
+                    apply_rule_style(&mut rule::default(theme), &ov.base)
                 });
             }
         }
@@ -1114,17 +1024,16 @@ fn render_progress_bar<'a>(node: &'a TreeNode) -> Element<'a, Message> {
                 _ => pb.style(progress_bar::primary),
             };
         } else if let Some(obj) = style_val.as_object() {
-            let base = parse_style_map_fields(obj);
+            let ov = parse_style_overrides(obj);
             pb = pb.style(move |theme: &iced::Theme| {
                 let mut style = progress_bar::primary(theme);
-                if let Some(iced::Background::Color(c)) = base.background {
+                if let Some(iced::Background::Color(c)) = ov.base.background {
                     style.background = iced::Background::Color(c);
                 }
-                // text_color -> bar color
-                if let Some(tc) = base.text_color {
+                if let Some(tc) = ov.base.text_color {
                     style.bar = iced::Background::Color(tc);
                 }
-                if let Some(brd) = base.border {
+                if let Some(brd) = ov.base.border {
                     style.border = brd;
                 }
                 style
@@ -1199,33 +1108,13 @@ fn render_toggler<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'
                 _ => t,
             };
         } else if let Some(obj) = style_val.as_object() {
-            let base = parse_style_map_fields(obj);
-            let hovered_fields = obj
-                .get("hovered")
-                .and_then(|v| v.as_object())
-                .map(parse_style_map_fields);
-
+            let ov = parse_style_overrides(obj);
             t = t.style(move |theme: &iced::Theme, status| {
                 let mut style = toggler::default(theme, status);
-                // Map background directly to toggler background
-                if let Some(bg) = base.background {
-                    style.background = bg;
-                }
-                if let Some(tc) = base.text_color {
-                    style.text_color = Some(tc);
-                }
-                if let Some(brd) = base.border {
-                    style.background_border_width = brd.width;
-                    style.background_border_color = brd.color;
-                }
+                apply_toggler_fields(&mut style, &ov.base);
                 if matches!(status, toggler::Status::Hovered { .. }) {
-                    if let Some(ref fields) = hovered_fields {
-                        if let Some(bg) = fields.background {
-                            style.background = bg;
-                        }
-                        if let Some(tc) = fields.text_color {
-                            style.text_color = Some(tc);
-                        }
+                    if let Some(ref f) = ov.hovered {
+                        apply_toggler_fields(&mut style, f);
                     } else {
                         style.background = darken_background(style.background, 0.9);
                     }
@@ -1298,38 +1187,13 @@ fn render_radio<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a,
                 _ => r,
             };
         } else if let Some(obj) = style_val.as_object() {
-            let base = parse_style_map_fields(obj);
-            let hovered_fields = obj
-                .get("hovered")
-                .and_then(|v| v.as_object())
-                .map(parse_style_map_fields);
-
+            let ov = parse_style_overrides(obj);
             r = r.style(move |theme: &iced::Theme, status| {
                 let mut style = iced::widget::radio::default(theme, status);
-                // Map background directly
-                if let Some(iced::Background::Color(c)) = base.background {
-                    style.background = iced::Background::Color(c);
-                }
-                if let Some(tc) = base.text_color {
-                    style.text_color = Some(tc);
-                }
-                // Map border -> border_width/border_color
-                if let Some(brd) = base.border {
-                    style.border_width = brd.width;
-                    style.border_color = brd.color;
-                }
+                apply_radio_fields(&mut style, &ov.base);
                 if matches!(status, iced::widget::radio::Status::Hovered { .. }) {
-                    if let Some(ref fields) = hovered_fields {
-                        if let Some(iced::Background::Color(c)) = fields.background {
-                            style.background = iced::Background::Color(c);
-                        }
-                        if let Some(tc) = fields.text_color {
-                            style.text_color = Some(tc);
-                        }
-                        if let Some(brd) = fields.border {
-                            style.border_width = brd.width;
-                            style.border_color = brd.color;
-                        }
+                    if let Some(ref f) = ov.hovered {
+                        apply_radio_fields(&mut style, f);
                     } else {
                         style.background = darken_background(style.background, 0.9);
                     }
@@ -1387,31 +1251,13 @@ fn render_slider<'a>(node: &'a TreeNode) -> Element<'a, Message> {
                 _ => s,
             };
         } else if let Some(obj) = style_val.as_object() {
-            let base = parse_style_map_fields(obj);
-            let hovered_fields = obj
-                .get("hovered")
-                .and_then(|v| v.as_object())
-                .map(parse_style_map_fields);
-
+            let ov = parse_style_overrides(obj);
             s = s.style(move |theme: &iced::Theme, status| {
                 let mut style = slider::default(theme, status);
-                // Best effort: background -> handle color, border -> handle border
-                if let Some(iced::Background::Color(c)) = base.background {
-                    style.handle.background = iced::Background::Color(c);
-                }
-                if let Some(brd) = base.border {
-                    style.handle.border_width = brd.width;
-                    style.handle.border_color = brd.color;
-                }
+                apply_slider_handle_fields(&mut style.handle, &ov.base);
                 if matches!(status, slider::Status::Hovered) {
-                    if let Some(ref fields) = hovered_fields {
-                        if let Some(iced::Background::Color(c)) = fields.background {
-                            style.handle.background = iced::Background::Color(c);
-                        }
-                        if let Some(brd) = fields.border {
-                            style.handle.border_width = brd.width;
-                            style.handle.border_color = brd.color;
-                        }
+                    if let Some(ref f) = ov.hovered {
+                        apply_slider_handle_fields(&mut style.handle, f);
                     } else {
                         style.handle.background = darken_background(style.handle.background, 0.9);
                     }
@@ -1460,30 +1306,13 @@ fn render_vertical_slider<'a>(node: &'a TreeNode) -> Element<'a, Message> {
                 _ => s,
             };
         } else if let Some(obj) = style_val.as_object() {
-            let base = parse_style_map_fields(obj);
-            let hovered_fields = obj
-                .get("hovered")
-                .and_then(|v| v.as_object())
-                .map(parse_style_map_fields);
-
+            let ov = parse_style_overrides(obj);
             s = s.style(move |theme: &iced::Theme, status| {
                 let mut style = vertical_slider::default(theme, status);
-                if let Some(iced::Background::Color(c)) = base.background {
-                    style.handle.background = iced::Background::Color(c);
-                }
-                if let Some(brd) = base.border {
-                    style.handle.border_width = brd.width;
-                    style.handle.border_color = brd.color;
-                }
+                apply_slider_handle_fields(&mut style.handle, &ov.base);
                 if matches!(status, vertical_slider::Status::Hovered) {
-                    if let Some(ref fields) = hovered_fields {
-                        if let Some(iced::Background::Color(c)) = fields.background {
-                            style.handle.background = iced::Background::Color(c);
-                        }
-                        if let Some(brd) = fields.border {
-                            style.handle.border_width = brd.width;
-                            style.handle.border_color = brd.color;
-                        }
+                    if let Some(ref f) = ov.hovered {
+                        apply_slider_handle_fields(&mut style.handle, f);
                     } else {
                         style.handle.background = darken_background(style.handle.background, 0.9);
                     }
@@ -1558,34 +1387,13 @@ fn render_pick_list<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
                 _ => pl,
             };
         } else if let Some(obj) = style_val.as_object() {
-            let base = parse_style_map_fields(obj);
-            let hovered_fields = obj
-                .get("hovered")
-                .and_then(|v| v.as_object())
-                .map(parse_style_map_fields);
-
+            let ov = parse_style_overrides(obj);
             pl = pl.style(move |theme: &iced::Theme, status| {
                 let mut style = pick_list::default(theme, status);
-                if let Some(tc) = base.text_color {
-                    style.text_color = tc;
-                }
-                if let Some(iced::Background::Color(c)) = base.background {
-                    style.background = iced::Background::Color(c);
-                }
-                if let Some(brd) = base.border {
-                    style.border = brd;
-                }
+                apply_pick_list_fields(&mut style, &ov.base);
                 if matches!(status, pick_list::Status::Hovered) {
-                    if let Some(ref fields) = hovered_fields {
-                        if let Some(tc) = fields.text_color {
-                            style.text_color = tc;
-                        }
-                        if let Some(iced::Background::Color(c)) = fields.background {
-                            style.background = iced::Background::Color(c);
-                        }
-                        if let Some(brd) = fields.border {
-                            style.border = brd;
-                        }
+                    if let Some(ref f) = ov.hovered {
+                        apply_pick_list_fields(&mut style, f);
                     } else if let iced::Background::Color(c) = style.background {
                         style.background = iced::Background::Color(darken_color(c, 0.9));
                     }
@@ -1722,59 +1530,26 @@ fn render_text_editor<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Eleme
                 _ => te,
             };
         } else if let Some(obj) = style_val.as_object() {
-            let base = parse_style_map_fields(obj);
-            let focused_fields = obj
-                .get("focused")
-                .and_then(|v| v.as_object())
-                .map(parse_style_map_fields);
-            let hovered_fields = obj
-                .get("hovered")
-                .and_then(|v| v.as_object())
-                .map(parse_style_map_fields);
-            let disabled_fields = obj
-                .get("disabled")
-                .and_then(|v| v.as_object())
-                .map(parse_style_map_fields);
-
+            let ov = parse_style_overrides(obj);
             te = te.style(move |theme: &iced::Theme, status| {
                 let mut style = text_editor::default(theme, status);
-                if let Some(iced::Background::Color(c)) = base.background {
-                    style.background = iced::Background::Color(c);
-                }
-                if let Some(brd) = base.border {
-                    style.border = brd;
-                }
-                if let Some(tc) = base.text_color {
-                    style.value = tc;
-                }
-                let apply_editor_fields =
-                    |style: &mut text_editor::Style, fields: &StyleMapFields| {
-                        if let Some(iced::Background::Color(c)) = fields.background {
-                            style.background = iced::Background::Color(c);
-                        }
-                        if let Some(brd) = fields.border {
-                            style.border = brd;
-                        }
-                        if let Some(tc) = fields.text_color {
-                            style.value = tc;
-                        }
-                    };
+                apply_text_editor_fields(&mut style, &ov.base);
                 match status {
                     text_editor::Status::Focused { .. } => {
-                        if let Some(ref fields) = focused_fields {
-                            apply_editor_fields(&mut style, fields);
+                        if let Some(ref f) = ov.focused {
+                            apply_text_editor_fields(&mut style, f);
                         }
                     }
                     text_editor::Status::Hovered => {
-                        if let Some(ref fields) = hovered_fields {
-                            apply_editor_fields(&mut style, fields);
+                        if let Some(ref f) = ov.hovered {
+                            apply_text_editor_fields(&mut style, f);
                         } else if let iced::Background::Color(c) = style.background {
                             style.background = iced::Background::Color(darken_color(c, 0.9));
                         }
                     }
                     text_editor::Status::Disabled => {
-                        if let Some(ref fields) = disabled_fields {
-                            apply_editor_fields(&mut style, fields);
+                        if let Some(ref f) = ov.disabled {
+                            apply_text_editor_fields(&mut style, f);
                         } else {
                             if let iced::Background::Color(c) = style.background {
                                 style.background = iced::Background::Color(alpha_color(c, 0.5));
@@ -1852,21 +1627,8 @@ fn render_tooltip<'a>(
                 _ => tt,
             };
         } else if let Some(obj) = style_val.as_object() {
-            let base = parse_style_map_fields(obj);
-            tt = tt.style(move |_theme| {
-                let mut style = container::Style {
-                    background: base.background,
-                    text_color: base.text_color,
-                    ..Default::default()
-                };
-                if let Some(brd) = base.border {
-                    style.border = brd;
-                }
-                if let Some(shd) = base.shadow {
-                    style.shadow = shd;
-                }
-                style
-            });
+            let ov = parse_style_overrides(obj);
+            tt = tt.style(move |_theme| container_style_from_base(&ov.base));
         }
     }
 
@@ -2444,14 +2206,53 @@ fn render_pane_grid<'a>(
 // Canvas
 // ---------------------------------------------------------------------------
 
+/// Build a sorted layer map from canvas props. Supports two prop formats:
+/// - `"layers"`: a JSON object mapping layer_name -> array of shapes (preferred)
+/// - `"shapes"`: a flat JSON array of shapes (legacy, wrapped as a single "default" layer)
+///
+/// If both are present, `"layers"` wins. Returns a BTreeMap so layer order is
+/// deterministic (alphabetical by name).
+fn canvas_layer_map(
+    props: Option<&serde_json::Map<String, Value>>,
+) -> std::collections::BTreeMap<String, String> {
+    let mut map = std::collections::BTreeMap::new();
+
+    if let Some(layers_obj) = props
+        .and_then(|p| p.get("layers"))
+        .and_then(|v| v.as_object())
+    {
+        for (name, shapes_val) in layers_obj {
+            map.insert(name.clone(), shapes_val.to_string());
+        }
+    } else if let Some(shapes_arr) = props.and_then(|p| p.get("shapes")) {
+        map.insert("default".to_string(), shapes_arr.to_string());
+    }
+
+    map
+}
+
+/// Hash a JSON string using DefaultHasher.
+fn hash_json_str(s: &str) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    s.hash(&mut hasher);
+    hasher.finish()
+}
+
+/// Parse a layer's shapes from a JSON string back into a Vec<Value>.
+fn parse_layer_shapes(json_str: &str) -> Vec<Value> {
+    serde_json::from_str::<Vec<Value>>(json_str).unwrap_or_default()
+}
+
 #[derive(Default)]
 struct CanvasState {
     cursor_position: Option<Point>,
 }
 
 struct CanvasProgram<'a> {
-    /// Ordered layers, each containing a list of shapes/commands.
+    /// Sorted layer data: (layer_name, shapes array).
     layers: Vec<(String, Vec<Value>)>,
+    /// Per-layer caches from WidgetCaches.
+    caches: Option<&'a HashMap<String, (u64, canvas::Cache)>>,
     background: Option<Color>,
     id: String,
     on_press: bool,
@@ -2651,8 +2452,8 @@ fn draw_canvas_shape(
     let shape_type = shape.get("type").and_then(|v| v.as_str()).unwrap_or("");
     match shape_type {
         // -- Transform commands --
-        "save" => frame.push_transform(),
-        "restore" => frame.pop_transform(),
+        "push_transform" => frame.push_transform(),
+        "pop_transform" => frame.pop_transform(),
         "translate" => {
             let x = json_f32(shape, "x");
             let y = json_f32(shape, "y");
@@ -2898,21 +2699,37 @@ impl canvas::Program<Message> for CanvasProgram<'_> {
         bounds: iced::Rectangle,
         _cursor: mouse::Cursor,
     ) -> Vec<canvas::Geometry> {
-        let mut frame = canvas::Frame::new(renderer, bounds.size());
+        let mut geometries = Vec::new();
 
-        // Background clear/fill
+        // Background fill -- cheap single rect, not cached.
         if let Some(bg) = self.background {
+            let mut frame = canvas::Frame::new(renderer, bounds.size());
             frame.fill_rectangle(Point::ORIGIN, bounds.size(), bg);
+            geometries.push(frame.into_geometry());
         }
 
-        // Draw each layer in order (layers are pre-sorted alphabetically)
-        for (_layer_name, shapes) in &self.layers {
-            for shape in shapes {
-                draw_canvas_shape(&mut frame, shape, self.images);
-            }
+        // Draw each layer, using its cache when available.
+        let images = self.images;
+        for (layer_name, shapes) in &self.layers {
+            let geom = if let Some((_hash, cache)) = self.caches.and_then(|c| c.get(layer_name)) {
+                cache.draw(renderer, bounds.size(), |frame| {
+                    for shape in shapes {
+                        draw_canvas_shape(frame, shape, images);
+                    }
+                })
+            } else {
+                // No cache available (shouldn't happen after ensure_caches, but
+                // handle gracefully by drawing uncached).
+                let mut frame = canvas::Frame::new(renderer, bounds.size());
+                for shape in shapes {
+                    draw_canvas_shape(&mut frame, shape, images);
+                }
+                frame.into_geometry()
+            };
+            geometries.push(geom);
         }
 
-        vec![frame.into_geometry()]
+        geometries
     }
 
     fn mouse_interaction(
@@ -2943,40 +2760,21 @@ fn serialize_mouse_button_for_canvas(button: &mouse::Button) -> String {
 
 fn render_canvas<'a>(
     node: &'a TreeNode,
+    caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let width = prop_length(props, "width", Length::Fill);
     let height = prop_length(props, "height", Length::Fixed(200.0));
 
-    // Read layers as a JSON object (map of layer name -> shape array).
-    // Falls back to the old "shapes" prop for backwards compatibility.
-    // Layers are sorted alphabetically by name for deterministic draw order.
-    let mut layers: Vec<(String, Vec<Value>)> = if let Some(layers_obj) = props
-        .and_then(|p| p.get("layers"))
-        .and_then(|v| v.as_object())
-    {
-        layers_obj
-            .iter()
-            .map(|(name, shapes)| {
-                let shape_vec = shapes.as_array().cloned().unwrap_or_default();
-                (name.clone(), shape_vec)
-            })
-            .collect()
-    } else {
-        // Legacy: single flat "shapes" array -> one anonymous layer
-        let shapes: Vec<Value> = props
-            .and_then(|p| p.get("shapes"))
-            .and_then(|v| v.as_array())
-            .cloned()
-            .unwrap_or_default();
-        if shapes.is_empty() {
-            vec![]
-        } else {
-            vec![("default".to_string(), shapes)]
-        }
-    };
-    layers.sort_by(|a, b| a.0.cmp(&b.0));
+    // Build sorted layer data from either "layers" or "shapes" prop.
+    let layer_map = canvas_layer_map(props);
+    let layers: Vec<(String, Vec<Value>)> = layer_map
+        .into_iter()
+        .map(|(name, json_str)| (name, parse_layer_shapes(&json_str)))
+        .collect();
+
+    let node_caches = caches.canvas_caches.get(&node.id);
 
     let background = props
         .and_then(|p| p.get("background"))
@@ -2991,6 +2789,7 @@ fn render_canvas<'a>(
 
     canvas(CanvasProgram {
         layers,
+        caches: node_caches,
         background,
         id: node.id.clone(),
         on_press: on_press || interactive,
@@ -3655,6 +3454,183 @@ fn parse_style_map_fields(obj: &serde_json::Map<String, Value>) -> StyleMapField
     }
 }
 
+/// Parsed style overrides for all status variants. The base fields are always
+/// present; status-specific overrides are optional.
+#[derive(Clone)]
+struct StyleOverrides {
+    base: StyleMapFields,
+    hovered: Option<StyleMapFields>,
+    pressed: Option<StyleMapFields>,
+    disabled: Option<StyleMapFields>,
+    focused: Option<StyleMapFields>,
+}
+
+fn parse_style_overrides(obj: &serde_json::Map<String, Value>) -> StyleOverrides {
+    StyleOverrides {
+        base: parse_style_map_fields(obj),
+        hovered: obj
+            .get("hovered")
+            .and_then(|v| v.as_object())
+            .map(parse_style_map_fields),
+        pressed: obj
+            .get("pressed")
+            .and_then(|v| v.as_object())
+            .map(parse_style_map_fields),
+        disabled: obj
+            .get("disabled")
+            .and_then(|v| v.as_object())
+            .map(parse_style_map_fields),
+        focused: obj
+            .get("focused")
+            .and_then(|v| v.as_object())
+            .map(parse_style_map_fields),
+    }
+}
+
+/// Auto-derive hover background by darkening the base background to 90%.
+fn auto_derive_hover_bg(bg: Option<iced::Background>) -> Option<iced::Background> {
+    bg.map(|b| darken_background(b, 0.9))
+}
+
+/// Auto-derive disabled background by reducing alpha to 50%.
+fn auto_derive_disabled_bg(bg: Option<iced::Background>) -> Option<iced::Background> {
+    bg.map(|b| alpha_background(b, 0.5))
+}
+
+/// Auto-derive disabled text color by reducing alpha to 50%.
+fn auto_derive_disabled_text(color: Color) -> Color {
+    alpha_color(color, 0.5)
+}
+
+/// Apply style map fields to a text_input or text_editor style. Both widgets
+/// map background as `Background::Color`, border directly, and text_color to
+/// the `value` field (the typed text color).
+fn apply_text_input_fields(style: &mut text_input::Style, fields: &StyleMapFields) {
+    if let Some(iced::Background::Color(c)) = fields.background {
+        style.background = iced::Background::Color(c);
+    }
+    if let Some(brd) = fields.border {
+        style.border = brd;
+    }
+    if let Some(tc) = fields.text_color {
+        style.value = tc;
+    }
+}
+
+/// Apply style map fields to a text_editor style. Same field mapping as
+/// text_input (background, border, text_color -> value).
+fn apply_text_editor_fields(style: &mut text_editor::Style, fields: &StyleMapFields) {
+    if let Some(iced::Background::Color(c)) = fields.background {
+        style.background = iced::Background::Color(c);
+    }
+    if let Some(brd) = fields.border {
+        style.border = brd;
+    }
+    if let Some(tc) = fields.text_color {
+        style.value = tc;
+    }
+}
+
+/// Apply style map fields to a pick_list style. Background is
+/// `Background::Color`, text_color and border map directly.
+fn apply_pick_list_fields(style: &mut pick_list::Style, fields: &StyleMapFields) {
+    if let Some(tc) = fields.text_color {
+        style.text_color = tc;
+    }
+    if let Some(iced::Background::Color(c)) = fields.background {
+        style.background = iced::Background::Color(c);
+    }
+    if let Some(brd) = fields.border {
+        style.border = brd;
+    }
+}
+
+/// Apply style map fields to a slider handle. Background maps to
+/// handle.background as `Background::Color`, border maps to
+/// handle.border_width/border_color. Shared by slider and vertical_slider.
+fn apply_slider_handle_fields(handle: &mut slider::Handle, fields: &StyleMapFields) {
+    if let Some(iced::Background::Color(c)) = fields.background {
+        handle.background = iced::Background::Color(c);
+    }
+    if let Some(brd) = fields.border {
+        handle.border_width = brd.width;
+        handle.border_color = brd.color;
+    }
+}
+
+/// Apply style map fields to a radio style. Background is `Background::Color`,
+/// text_color wraps in `Some`, border maps to border_width/border_color.
+fn apply_radio_fields(style: &mut iced::widget::radio::Style, fields: &StyleMapFields) {
+    if let Some(iced::Background::Color(c)) = fields.background {
+        style.background = iced::Background::Color(c);
+    }
+    if let Some(tc) = fields.text_color {
+        style.text_color = Some(tc);
+    }
+    if let Some(brd) = fields.border {
+        style.border_width = brd.width;
+        style.border_color = brd.color;
+    }
+}
+
+/// Apply style map fields to a toggler style. Background maps directly,
+/// text_color wraps in `Some`, border maps to border_width/border_color.
+fn apply_toggler_fields(style: &mut toggler::Style, fields: &StyleMapFields) {
+    if let Some(bg) = fields.background {
+        style.background = bg;
+    }
+    if let Some(tc) = fields.text_color {
+        style.text_color = Some(tc);
+    }
+    if let Some(brd) = fields.border {
+        style.background_border_width = brd.width;
+        style.background_border_color = brd.color;
+    }
+}
+
+/// Apply style map fields to a rule style. Maps background -> color,
+/// border -> radius.
+fn apply_rule_style(style: &mut rule::Style, fields: &StyleMapFields) -> rule::Style {
+    if let Some(iced::Background::Color(c)) = fields.background {
+        style.color = c;
+    }
+    if let Some(brd) = fields.border {
+        style.radius = brd.radius;
+    }
+    *style
+}
+
+/// Apply style map fields to a checkbox style. Background is `Background::Color`,
+/// border directly, text_color wrapped in `Some`.
+fn apply_checkbox_fields(style: &mut checkbox::Style, fields: &StyleMapFields) {
+    if let Some(iced::Background::Color(c)) = fields.background {
+        style.background = iced::Background::Color(c);
+    }
+    if let Some(brd) = fields.border {
+        style.border = brd;
+    }
+    if let Some(tc) = fields.text_color {
+        style.text_color = Some(tc);
+    }
+}
+
+/// Build a `container::Style` from base style map fields. Used by both
+/// container and tooltip widgets which share the same style type.
+fn container_style_from_base(base: &StyleMapFields) -> container::Style {
+    let mut style = container::Style {
+        background: base.background,
+        text_color: base.text_color,
+        ..Default::default()
+    };
+    if let Some(brd) = base.border {
+        style.border = brd;
+    }
+    if let Some(shd) = base.shadow {
+        style.shadow = shd;
+    }
+    style
+}
+
 fn darken_color(color: Color, factor: f32) -> Color {
     Color {
         r: color.r * factor,
@@ -4116,5 +4092,290 @@ mod tests {
         assert!(c.combo_options.is_empty());
         assert_eq!(c.default_text_size, Some(14.0));
         assert_eq!(c.default_font, Some(Font::MONOSPACE));
+    }
+
+    // -- Style map tests --
+
+    #[test]
+    fn style_map_parse_overrides_basic() {
+        let obj = json!({
+            "background": "#ff0000",
+            "text_color": "#00ff00",
+            "border": {"color": "#0000ff", "width": 2.0, "radius": 4.0},
+            "hovered": {
+                "background": "#880000",
+                "text_color": "#008800"
+            },
+            "pressed": {
+                "background": "#440000"
+            },
+            "disabled": {
+                "text_color": "#999999"
+            },
+            "focused": {
+                "border": {"color": "#ffffff", "width": 3.0, "radius": 0.0}
+            }
+        });
+        let map = obj.as_object().unwrap();
+        let overrides = parse_style_overrides(map);
+
+        // Base fields
+        assert!(overrides.base.background.is_some());
+        assert!(overrides.base.text_color.is_some());
+        assert!(overrides.base.border.is_some());
+        assert_eq!(
+            overrides.base.text_color.unwrap(),
+            Color::from_rgb8(0, 255, 0)
+        );
+
+        // Hovered override present with both fields
+        let hovered = overrides.hovered.unwrap();
+        assert!(hovered.background.is_some());
+        assert!(hovered.text_color.is_some());
+
+        // Pressed override present with background only
+        let pressed = overrides.pressed.unwrap();
+        assert!(pressed.background.is_some());
+        assert!(pressed.text_color.is_none());
+
+        // Disabled override present with text_color only
+        let disabled = overrides.disabled.unwrap();
+        assert!(disabled.background.is_none());
+        assert!(disabled.text_color.is_some());
+
+        // Focused override present with border only
+        let focused = overrides.focused.unwrap();
+        assert!(focused.border.is_some());
+        assert!(focused.background.is_none());
+    }
+
+    #[test]
+    fn style_map_parse_overrides_missing() {
+        // Only base fields, no status overrides at all.
+        let obj = json!({"background": "#aabbcc"});
+        let map = obj.as_object().unwrap();
+        let overrides = parse_style_overrides(map);
+
+        assert!(overrides.base.background.is_some());
+        assert!(overrides.hovered.is_none());
+        assert!(overrides.pressed.is_none());
+        assert!(overrides.disabled.is_none());
+        assert!(overrides.focused.is_none());
+    }
+
+    #[test]
+    fn style_map_auto_derive_hover() {
+        // darken_background multiplies RGB by factor (0.9), alpha unchanged.
+        let bg = Some(iced::Background::Color(Color::from_rgba(
+            1.0, 0.5, 0.0, 1.0,
+        )));
+        let result = auto_derive_hover_bg(bg);
+        match result {
+            Some(iced::Background::Color(c)) => {
+                // 1.0 * 0.9 = 0.9
+                assert!((c.r - 0.9).abs() < 0.001);
+                // 0.5 * 0.9 = 0.45
+                assert!((c.g - 0.45).abs() < 0.001);
+                // 0.0 * 0.9 = 0.0
+                assert!((c.b - 0.0).abs() < 0.001);
+                // alpha unchanged
+                assert!((c.a - 1.0).abs() < 0.001);
+            }
+            other => panic!("expected Background::Color, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn style_map_auto_derive_disabled_bg() {
+        // alpha_background multiplies alpha by 0.5, RGB unchanged.
+        let bg = Some(iced::Background::Color(Color::from_rgba(
+            0.8, 0.6, 0.4, 1.0,
+        )));
+        let result = auto_derive_disabled_bg(bg);
+        match result {
+            Some(iced::Background::Color(c)) => {
+                assert!((c.r - 0.8).abs() < 0.001);
+                assert!((c.g - 0.6).abs() < 0.001);
+                assert!((c.b - 0.4).abs() < 0.001);
+                // 1.0 * 0.5 = 0.5
+                assert!((c.a - 0.5).abs() < 0.001);
+            }
+            other => panic!("expected Background::Color, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn style_map_auto_derive_disabled_text() {
+        let color = Color::from_rgba(1.0, 1.0, 1.0, 0.8);
+        let result = auto_derive_disabled_text(color);
+        // RGB unchanged, alpha halved: 0.8 * 0.5 = 0.4
+        assert!((result.r - 1.0).abs() < 0.001);
+        assert!((result.g - 1.0).abs() < 0.001);
+        assert!((result.b - 1.0).abs() < 0.001);
+        assert!((result.a - 0.4).abs() < 0.001);
+    }
+
+    // -- Canvas caching tests --
+
+    #[test]
+    fn canvas_layer_map_from_layers() {
+        let v = json!({
+            "layers": {
+                "background": [{"type": "rect", "width": 100}],
+                "foreground": [{"type": "circle", "radius": 50}]
+            }
+        });
+        let props = make_props(&v);
+        let result = canvas_layer_map(props);
+        assert_eq!(result.len(), 2);
+        assert!(result.contains_key("background"));
+        assert!(result.contains_key("foreground"));
+        // Values are the stringified JSON of each layer's shapes array.
+        let bg: Value = serde_json::from_str(result.get("background").unwrap()).unwrap();
+        assert!(bg.is_array());
+        assert_eq!(bg.as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn canvas_layer_map_from_shapes() {
+        // Legacy "shapes" key wraps in a "default" layer.
+        let v = json!({
+            "shapes": [{"type": "line", "x1": 0, "y1": 0, "x2": 100, "y2": 100}]
+        });
+        let props = make_props(&v);
+        let result = canvas_layer_map(props);
+        assert_eq!(result.len(), 1);
+        assert!(result.contains_key("default"));
+    }
+
+    #[test]
+    fn canvas_hash_changes() {
+        let hash_a = hash_json_str("[{\"type\":\"rect\"}]");
+        let hash_b = hash_json_str("[{\"type\":\"circle\"}]");
+        let hash_a2 = hash_json_str("[{\"type\":\"rect\"}]");
+
+        // Same input produces same hash.
+        assert_eq!(hash_a, hash_a2);
+        // Different input produces different hash.
+        assert_ne!(hash_a, hash_b);
+    }
+
+    // -- Canvas layer sort order --
+
+    #[test]
+    fn canvas_layer_sort_order() {
+        let v = json!({
+            "layers": {
+                "charlie": [{"type": "rect"}],
+                "alpha": [{"type": "circle"}],
+                "bravo": [{"type": "line"}]
+            }
+        });
+        let props = make_props(&v);
+        let result = canvas_layer_map(props);
+        let keys: Vec<&String> = result.keys().collect();
+        assert_eq!(keys, vec!["alpha", "bravo", "charlie"]);
+    }
+
+    // -- Canvas path commands --
+
+    #[test]
+    fn canvas_path_commands_basic() {
+        let shape = json!({
+            "type": "path",
+            "commands": [
+                ["move_to", 10, 20],
+                ["line_to", 30, 40],
+                "close"
+            ]
+        });
+        assert_eq!(shape.get("type").and_then(|v| v.as_str()), Some("path"));
+        let commands = shape.get("commands").and_then(|v| v.as_array()).unwrap();
+        assert_eq!(commands.len(), 3);
+        // First command is an array starting with "move_to".
+        let move_cmd = commands[0].as_array().unwrap();
+        assert_eq!(move_cmd[0].as_str(), Some("move_to"));
+        assert_eq!(move_cmd[1].as_f64(), Some(10.0));
+        assert_eq!(move_cmd[2].as_f64(), Some(20.0));
+        // Second command is an array starting with "line_to".
+        let line_cmd = commands[1].as_array().unwrap();
+        assert_eq!(line_cmd[0].as_str(), Some("line_to"));
+        assert_eq!(line_cmd[1].as_f64(), Some(30.0));
+        assert_eq!(line_cmd[2].as_f64(), Some(40.0));
+        // Third command is the bare string "close".
+        assert_eq!(commands[2].as_str(), Some("close"));
+    }
+
+    // -- Canvas stroke parsing --
+
+    #[test]
+    fn canvas_stroke_parse() {
+        let stroke_val = json!({
+            "color": "#ff0000",
+            "width": 3.0,
+            "cap": "round",
+            "join": "bevel"
+        });
+        let stroke = parse_canvas_stroke(&stroke_val);
+        assert_eq!(
+            stroke.style,
+            canvas::Style::Solid(Color::from_rgb8(255, 0, 0))
+        );
+        assert_eq!(stroke.width, 3.0);
+        // LineCap and LineJoin don't impl PartialEq, so use Debug format.
+        assert_eq!(format!("{:?}", stroke.line_cap), "Round");
+        assert_eq!(format!("{:?}", stroke.line_join), "Bevel");
+    }
+
+    // -- Canvas gradient fill parsing --
+
+    #[test]
+    fn canvas_gradient_parse() {
+        let fill_val = json!({
+            "type": "linear",
+            "start": [0.0, 0.0],
+            "end": [100.0, 0.0],
+            "stops": [
+                [0.0, "#ff0000"],
+                [1.0, "#0000ff"]
+            ]
+        });
+        let fill = parse_canvas_fill(&fill_val);
+        // The fill rule should be NonZero for gradient fills.
+        assert_eq!(fill.rule, canvas::fill::Rule::NonZero);
+        // The style should be a gradient, not a solid color.
+        match &fill.style {
+            canvas::Style::Gradient(canvas::Gradient::Linear(_)) => {}
+            other => panic!("expected Gradient::Linear, got {other:?}"),
+        }
+    }
+
+    // -- Image registry handle lookup --
+
+    #[test]
+    fn image_registry_handle_lookup() {
+        use crate::image_registry::ImageRegistry;
+
+        let mut registry = ImageRegistry::new();
+        // Minimal valid 1x1 RGB PNG.
+        let png_bytes: Vec<u8> = vec![
+            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // signature
+            0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
+            0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, // 1x1
+            0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, // 8-bit RGB
+            0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, // IDAT
+            0x54, 0x08, 0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xE2,
+            0x21, 0xBC, 0x33, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, // IEND
+            0x44, 0xAE, 0x42, 0x60, 0x82,
+        ];
+        registry.create_from_bytes("test_sprite".to_string(), png_bytes);
+        assert!(
+            registry.get("test_sprite").is_some(),
+            "registered handle should be retrievable"
+        );
+        assert!(
+            registry.get("nonexistent").is_none(),
+            "unregistered name should return None"
+        );
     }
 }

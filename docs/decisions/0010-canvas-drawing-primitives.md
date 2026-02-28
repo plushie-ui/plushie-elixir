@@ -10,7 +10,7 @@ The canvas widget currently supports only four basic shapes (rect, circle, line,
 text). iced's canvas Frame API supports arbitrary paths (bezier curves, arcs,
 quadratic curves, rounded rects), stroked shapes with full stroke styles (line
 cap, join, dash patterns), gradient fills (linear), transforms
-(translate/rotate/scale with save/restore stack), and drawing images and SVGs.
+(translate/rotate/scale with push_transform/pop_transform stack), and drawing images and SVGs.
 All of this is serializable as data. The canvas is the primary custom drawing
 escape hatch (ADR 0004) but without these primitives it is limited to toy use
 cases.
@@ -37,8 +37,8 @@ gradient object:
 `{type: "linear", start: [x, y], end: [x, y], stops: [[offset, color], ...]}`.
 
 **Transform stack.** Shapes in a layer can include transform commands:
-`{type: "save"}`, `{type: "translate", x, y}`, `{type: "rotate", angle}`,
-`{type: "scale", x, y}`, `{type: "restore"}`. These match iced's Frame API
+`{type: "push_transform"}`, `{type: "translate", x, y}`, `{type: "rotate", angle}`,
+`{type: "scale", x, y}`, `{type: "pop_transform"}`. These match iced's Frame API
 directly.
 
 **Canvas text improvements.** The text shape gets `font` and `size` fields.

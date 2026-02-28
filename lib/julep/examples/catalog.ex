@@ -337,11 +337,20 @@ defmodule Julep.Examples.Catalog do
       canvas("demo_canvas",
         width: 200,
         height: 150,
-        shapes: [
-          %{type: "rect", x: 10, y: 10, w: 80, h: 60, fill: "#3498db"},
-          %{type: "circle", x: 150, y: 75, r: 40, fill: "#e74c3c"},
-          %{type: "line", x1: 10, y1: 130, x2: 190, y2: 130, fill: "#2ecc71"}
-        ]
+        layers: %{
+          "default" => [
+            %{type: "rect", x: 10, y: 10, w: 80, h: 60, fill: "#3498db"},
+            %{type: "circle", x: 150, y: 75, r: 40, fill: "#e74c3c"},
+            %{
+              type: "line",
+              x1: 10,
+              y1: 130,
+              x2: 190,
+              y2: 130,
+              stroke: %{color: "#2ecc71", width: 2}
+            }
+          ]
+        }
       )
     end
   end

@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
 /// Messages sent from Elixir to the renderer over stdin (JSONL).
@@ -68,13 +68,16 @@ pub enum IncomingMessage {
         id: String,
     },
     /// Image operation (create, update, delete in-memory image handles).
+    ///
+    /// Binary fields (`data`, `pixels`) accept either raw bytes (from msgpack)
+    /// or base64-encoded strings (from JSON). The custom deserializer handles both.
     ImageOp {
         op: String,
         handle: String,
-        #[serde(default)]
-        data: Option<String>,
-        #[serde(default)]
-        pixels: Option<String>,
+        #[serde(default, deserialize_with = "deserialize_binary_field")]
+        data: Option<Vec<u8>>,
+        #[serde(default, deserialize_with = "deserialize_binary_field")]
+        pixels: Option<Vec<u8>>,
         #[serde(default)]
         width: Option<u32>,
         #[serde(default)]
@@ -719,6 +722,54 @@ impl OutgoingEvent {
             })),
             ..Self::bare("scroll", id)
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Binary field deserialization (handles both raw bytes and base64 strings)
+// ---------------------------------------------------------------------------
+
+/// Deserializes a binary field that may arrive as:
+/// - Raw bytes (msgpack binary type, via rmpv path)
+/// - Base64-encoded string (JSON path)
+/// - null / absent (returns None)
+///
+/// When the codec's rmpv-based decode extracts binary fields and injects them
+/// as `serde_json::Value::Array` of u8 values, serde picks them up as Vec<u8>.
+/// When the field arrives as a base64 string (JSON mode), we decode it here.
+fn deserialize_binary_field<'de, D>(deserializer: D) -> Result<Option<Vec<u8>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de::Error;
+
+    let val: Option<Value> = Option::deserialize(deserializer)?;
+    match val {
+        None => Ok(None),
+        Some(Value::Null) => Ok(None),
+        // Base64 string (JSON mode)
+        Some(Value::String(s)) => {
+            use base64::Engine as _;
+            base64::engine::general_purpose::STANDARD
+                .decode(&s)
+                .map(Some)
+                .map_err(|e| D::Error::custom(format!("base64 decode: {e}")))
+        }
+        // Array of u8 values (injected by rmpv binary extraction)
+        Some(Value::Array(arr)) => {
+            let bytes: Result<Vec<u8>, _> = arr
+                .into_iter()
+                .map(|v| {
+                    v.as_u64()
+                        .and_then(|n| u8::try_from(n).ok())
+                        .ok_or_else(|| D::Error::custom("expected u8 in binary array"))
+                })
+                .collect();
+            bytes.map(Some)
+        }
+        Some(other) => Err(D::Error::custom(format!(
+            "expected string, array, or null for binary field, got {other}"
+        ))),
     }
 }
 
