@@ -85,6 +85,9 @@ defmodule Julep.App do
   - `default_font` -- a font specification map (same format as font props)
   - `default_text_size` -- a number (pixels)
   - `antialiasing` -- boolean
+  - `vsync` -- boolean (defaults to `true`). When enabled, the renderer
+    synchronizes frame presentation with the display refresh rate. Disabling
+    it can improve rendering performance on some platforms.
   - `fonts` -- list of font paths to load
 
   Default: `[]` (renderer uses its own defaults).

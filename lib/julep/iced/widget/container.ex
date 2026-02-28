@@ -158,6 +158,36 @@ defmodule Julep.Iced.Widget.Container do
   @spec align_y(container :: t(), align_y :: Julep.Iced.Alignment.t()) :: t()
   def align_y(%__MODULE__{} = c, align_y), do: %{c | align_y: align_y}
 
+  @doc "Centers content horizontally. Sets width and align_x: :center."
+  @spec center_x(container :: t(), width :: Julep.Iced.Length.t()) :: t()
+  def center_x(%__MODULE__{} = container, width \\ :fill),
+    do: %{container | width: width, align_x: :center}
+
+  @doc "Centers content vertically. Sets height and align_y: :center."
+  @spec center_y(container :: t(), height :: Julep.Iced.Length.t()) :: t()
+  def center_y(%__MODULE__{} = container, height \\ :fill),
+    do: %{container | height: height, align_y: :center}
+
+  @doc "Aligns content to the left. Sets width and align_x: :left."
+  @spec align_left(container :: t(), width :: Julep.Iced.Length.t()) :: t()
+  def align_left(%__MODULE__{} = container, width \\ :fill),
+    do: %{container | width: width, align_x: :left}
+
+  @doc "Aligns content to the right. Sets width and align_x: :right."
+  @spec align_right(container :: t(), width :: Julep.Iced.Length.t()) :: t()
+  def align_right(%__MODULE__{} = container, width \\ :fill),
+    do: %{container | width: width, align_x: :right}
+
+  @doc "Aligns content to the top. Sets height and align_y: :top."
+  @spec align_top(container :: t(), height :: Julep.Iced.Length.t()) :: t()
+  def align_top(%__MODULE__{} = container, height \\ :fill),
+    do: %{container | height: height, align_y: :top}
+
+  @doc "Aligns content to the bottom. Sets height and align_y: :bottom."
+  @spec align_bottom(container :: t(), height :: Julep.Iced.Length.t()) :: t()
+  def align_bottom(%__MODULE__{} = container, height \\ :fill),
+    do: %{container | height: height, align_y: :bottom}
+
   @doc "Sets the background fill (color or gradient)."
   @spec background(container :: t(), background :: Julep.Iced.Color.t() | Julep.Iced.Gradient.t()) ::
           t()

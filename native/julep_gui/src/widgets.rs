@@ -908,7 +908,57 @@ fn render_checkbox<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<
     if let Some(w) = parse_wrapping(props) {
         cb = cb.text_wrapping(w);
     }
-
+    if let Some(icon_val) = props
+        .and_then(|p| p.get("icon"))
+        .and_then(|v| v.as_object())
+    {
+        if let Some(cp_str) = icon_val.get("code_point").and_then(|v| v.as_str()) {
+            if let Some(code_point) = cp_str.chars().next() {
+                let icon_font = icon_val
+                    .get("font")
+                    .map(parse_font)
+                    .unwrap_or(Font::DEFAULT);
+                let icon_size = icon_val
+                    .get("size")
+                    .and_then(|v| v.as_f64())
+                    .map(|v| Pixels(v as f32));
+                let icon_line_height = icon_val
+                    .get("line_height")
+                    .and_then(|v| match v {
+                        Value::Number(n) => n.as_f64().map(|r| LineHeight::Relative(r as f32)),
+                        Value::Object(obj) => {
+                            if let Some(r) = obj.get("relative").and_then(|v| v.as_f64()) {
+                                Some(LineHeight::Relative(r as f32))
+                            } else {
+                                obj.get("absolute")
+                                    .and_then(|v| v.as_f64())
+                                    .map(|a| LineHeight::Absolute(Pixels(a as f32)))
+                            }
+                        }
+                        _ => None,
+                    })
+                    .unwrap_or(LineHeight::default());
+                let icon_shaping = icon_val
+                    .get("shaping")
+                    .and_then(|v| v.as_str())
+                    .and_then(|s| match s.to_ascii_lowercase().as_str() {
+                        "basic" => Some(iced::widget::text::Shaping::Basic),
+                        "advanced" => Some(iced::widget::text::Shaping::Advanced),
+                        "auto" => Some(iced::widget::text::Shaping::Auto),
+                        _ => None,
+                    })
+                    .unwrap_or(iced::widget::text::Shaping::Auto);
+                let icon_struct = checkbox::Icon {
+                    font: icon_font,
+                    code_point,
+                    size: icon_size,
+                    line_height: icon_line_height,
+                    shaping: icon_shaping,
+                };
+                cb = cb.icon(icon_struct);
+            }
+        }
+    }
     // Style: string name or style map object
     if let Some(style_val) = props.and_then(|p| p.get("style")) {
         if let Some(style_name) = style_val.as_str() {
@@ -1403,6 +1453,15 @@ fn render_pick_list<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
         }
     }
 
+    if prop_bool_default(props, "on_open", false) {
+        let open_id = node.id.clone();
+        pl = pl.on_open(Message::Event(open_id, Value::Null, "open".into()));
+    }
+    if prop_bool_default(props, "on_close", false) {
+        let close_id = node.id.clone();
+        pl = pl.on_close(Message::Event(close_id, Value::Null, "close".into()));
+    }
+
     container(pl).id(widget::Id::from(node.id.clone())).into()
 }
 
@@ -1461,6 +1520,14 @@ fn render_combo_box<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
     if prop_bool_default(props, "on_option_hovered", false) {
         let hover_id = node.id.clone();
         cb = cb.on_option_hovered(move |val| Message::OptionHovered(hover_id.clone(), val));
+    }
+    if prop_bool_default(props, "on_open", false) {
+        let open_id = node.id.clone();
+        cb = cb.on_open(Message::Event(open_id, Value::Null, "open".into()));
+    }
+    if prop_bool_default(props, "on_close", false) {
+        let close_id = node.id.clone();
+        cb = cb.on_close(Message::Event(close_id, Value::Null, "close".into()));
     }
 
     container(cb).id(widget::Id::from(node.id.clone())).into()
@@ -1522,52 +1589,78 @@ fn render_text_editor<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Eleme
         te = te.width(w);
     }
 
-    // Style: string name or style map object
-    if let Some(style_val) = props.and_then(|p| p.get("style")) {
-        if let Some(style_name) = style_val.as_str() {
-            te = match style_name {
-                "default" => te.style(text_editor::default),
-                _ => te,
-            };
-        } else if let Some(obj) = style_val.as_object() {
-            let ov = parse_style_overrides(obj);
-            te = te.style(move |theme: &iced::Theme, status| {
-                let mut style = text_editor::default(theme, status);
-                apply_text_editor_fields(&mut style, &ov.base);
-                match status {
-                    text_editor::Status::Focused { .. } => {
-                        if let Some(ref f) = ov.focused {
-                            apply_text_editor_fields(&mut style, f);
-                        }
-                    }
-                    text_editor::Status::Hovered => {
-                        if let Some(ref f) = ov.hovered {
-                            apply_text_editor_fields(&mut style, f);
-                        } else if let iced::Background::Color(c) = style.background {
-                            style.background = iced::Background::Color(darken_color(c, 0.9));
-                        }
-                    }
-                    text_editor::Status::Disabled => {
-                        if let Some(ref f) = ov.disabled {
-                            apply_text_editor_fields(&mut style, f);
-                        } else {
-                            if let iced::Background::Color(c) = style.background {
-                                style.background = iced::Background::Color(alpha_color(c, 0.5));
-                            }
-                            style.value = alpha_color(style.value, 0.5);
-                        }
-                    }
-                    _ => {}
+    // Style closure, shared between plain and highlighted paths
+    #[allow(clippy::type_complexity)]
+    let style_fn: Option<Box<dyn Fn(&iced::Theme, text_editor::Status) -> text_editor::Style>> =
+        if let Some(style_val) = props.and_then(|p| p.get("style")) {
+            if let Some(style_name) = style_val.as_str() {
+                match style_name {
+                    "default" => Some(Box::new(text_editor::default)),
+                    _ => None,
                 }
-                style
-            });
+            } else if let Some(obj) = style_val.as_object() {
+                let ov = parse_style_overrides(obj);
+                Some(Box::new(move |theme: &iced::Theme, status| {
+                    let mut style = text_editor::default(theme, status);
+                    apply_text_editor_fields(&mut style, &ov.base);
+                    match status {
+                        text_editor::Status::Focused { .. } => {
+                            if let Some(ref f) = ov.focused {
+                                apply_text_editor_fields(&mut style, f);
+                            }
+                        }
+                        text_editor::Status::Hovered => {
+                            if let Some(ref f) = ov.hovered {
+                                apply_text_editor_fields(&mut style, f);
+                            } else if let iced::Background::Color(c) = style.background {
+                                style.background = iced::Background::Color(darken_color(c, 0.9));
+                            }
+                        }
+                        text_editor::Status::Disabled => {
+                            if let Some(ref f) = ov.disabled {
+                                apply_text_editor_fields(&mut style, f);
+                            } else {
+                                if let iced::Background::Color(c) = style.background {
+                                    style.background = iced::Background::Color(alpha_color(c, 0.5));
+                                }
+                                style.value = alpha_color(style.value, 0.5);
+                            }
+                        }
+                        _ => {}
+                    }
+                    style
+                }))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+    let wid = widget::Id::from(node.id.clone());
+
+    // Syntax highlighting changes the generic type parameter, so we must
+    // branch here and produce Element from each path separately.
+    if let Some(syntax) = prop_str(props, "highlight_syntax") {
+        let theme = match prop_str(props, "highlight_theme").as_deref() {
+            Some("base16_mocha") => iced::highlighter::Theme::Base16Mocha,
+            Some("base16_ocean") => iced::highlighter::Theme::Base16Ocean,
+            Some("base16_eighties") => iced::highlighter::Theme::Base16Eighties,
+            Some("inspired_github") => iced::highlighter::Theme::InspiredGitHub,
+            _ => iced::highlighter::Theme::SolarizedDark,
+        };
+        let mut hl = te.highlight(&syntax, theme);
+        if let Some(sf) = style_fn {
+            hl = hl.style(sf);
         }
+        hl.into()
+    } else {
+        if let Some(sf) = style_fn {
+            te = te.style(sf);
+        }
+        te = te.id(wid);
+        te.into()
     }
-
-    // Widget ID for operations targeting
-    te = te.id(widget::Id::from(node.id.clone()));
-
-    te.into()
 }
 
 // ---------------------------------------------------------------------------
@@ -2309,13 +2402,26 @@ impl CanvasProgram<'_> {
     }
 }
 
+/// Parse a `fill_rule` string into a `canvas::fill::Rule`. Defaults to `NonZero`.
+fn parse_fill_rule(value: Option<&Value>) -> canvas::fill::Rule {
+    match value.and_then(|v| v.as_str()) {
+        Some("even_odd") => canvas::fill::Rule::EvenOdd,
+        _ => canvas::fill::Rule::NonZero,
+    }
+}
+
 /// Parse a canvas fill value. If string, hex color. If gradient object,
-/// build a gradient::Linear. Falls back to white.
-fn parse_canvas_fill(value: &Value) -> canvas::Fill {
+/// build a gradient::Linear. Falls back to white. The `shape` parameter
+/// provides the parent shape object for reading the `fill_rule` key.
+fn parse_canvas_fill(value: &Value, shape: &Value) -> canvas::Fill {
+    let rule = parse_fill_rule(shape.get("fill_rule"));
     match value {
         Value::String(s) => {
             let color = parse_hex_color(s).unwrap_or(Color::WHITE);
-            canvas::Fill::from(color)
+            canvas::Fill {
+                style: canvas::Style::Solid(color),
+                rule,
+            }
         }
         Value::Object(obj) => match obj.get("type").and_then(|v| v.as_str()) {
             Some("linear") => {
@@ -2354,15 +2460,21 @@ fn parse_canvas_fill(value: &Value) -> canvas::Fill {
                 }
                 canvas::Fill {
                     style: canvas::Style::Gradient(canvas::Gradient::Linear(linear)),
-                    rule: canvas::fill::Rule::NonZero,
+                    rule,
                 }
             }
             _ => {
                 let color = parse_color(value).unwrap_or(Color::WHITE);
-                canvas::Fill::from(color)
+                canvas::Fill {
+                    style: canvas::Style::Solid(color),
+                    rule,
+                }
             }
         },
-        _ => canvas::Fill::from(Color::WHITE),
+        _ => canvas::Fill {
+            style: canvas::Style::Solid(Color::WHITE),
+            rule,
+        },
     }
 }
 
@@ -2483,6 +2595,77 @@ fn build_path_from_commands(commands: &[Value]) -> canvas::Path {
     })
 }
 
+/// Draw a sequence of shapes, handling push_clip/pop_clip nesting.
+fn draw_canvas_shapes(
+    frame: &mut canvas::Frame,
+    shapes: &[&Value],
+    images: &crate::image_registry::ImageRegistry,
+) {
+    let mut i = 0;
+    while i < shapes.len() {
+        let shape = shapes[i];
+        let shape_type = shape.get("type").and_then(|v| v.as_str()).unwrap_or("");
+        match shape_type {
+            "push_clip" => {
+                let x = shape.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+                let y = shape.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+                let w = shape.get("w").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+                let h = shape.get("h").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+                let (end_offset, clipped) = collect_clipped_shapes(&shapes[i + 1..]);
+                let clip_rect = iced::Rectangle {
+                    x,
+                    y,
+                    width: w,
+                    height: h,
+                };
+                frame.with_clip(clip_rect, |f| {
+                    draw_canvas_shapes(f, &clipped, images);
+                });
+                // Skip past the matching pop_clip
+                i = i + 1 + end_offset + 1;
+            }
+            "pop_clip" => {
+                // Stray pop_clip at top level -- should not happen if properly paired.
+                log::warn!("canvas: pop_clip without matching push_clip");
+                i += 1;
+            }
+            _ => {
+                draw_canvas_shape(frame, shape, images);
+                i += 1;
+            }
+        }
+    }
+}
+
+/// Collect shapes between a push_clip and its matching pop_clip, respecting
+/// nesting. Returns (index_of_pop_clip_in_slice, collected_shapes).
+fn collect_clipped_shapes<'a>(shapes: &[&'a Value]) -> (usize, Vec<&'a Value>) {
+    let mut depth: usize = 0;
+    let mut result: Vec<&'a Value> = Vec::new();
+    for (i, &shape) in shapes.iter().enumerate() {
+        let t = shape.get("type").and_then(|v| v.as_str()).unwrap_or("");
+        match t {
+            "push_clip" => {
+                depth += 1;
+                result.push(shape);
+            }
+            "pop_clip" if depth == 0 => {
+                return (i, result);
+            }
+            "pop_clip" => {
+                depth -= 1;
+                result.push(shape);
+            }
+            _ => {
+                result.push(shape);
+            }
+        }
+    }
+    // No matching pop_clip found -- draw all remaining shapes anyway.
+    log::warn!("canvas: push_clip without matching pop_clip");
+    (shapes.len(), result)
+}
+
 /// Draw a single shape (or transform command) into the frame.
 fn draw_canvas_shape(
     frame: &mut canvas::Frame,
@@ -2529,7 +2712,7 @@ fn draw_canvas_shape(
                 canvas::Path::rectangle(Point::new(x, y), Size::new(w, h))
             };
             if let Some(fill_val) = shape.get("fill") {
-                let fill = parse_canvas_fill(fill_val);
+                let fill = parse_canvas_fill(fill_val, shape);
                 frame.fill(&rect_path, fill);
             } else if shape.get("stroke").is_none() {
                 // Legacy fallback: no fill or stroke key means solid white fill
@@ -2546,7 +2729,7 @@ fn draw_canvas_shape(
             let r = json_f32(shape, "r");
             let circle_path = canvas::Path::circle(Point::new(x, y), r);
             if let Some(fill_val) = shape.get("fill") {
-                let fill = parse_canvas_fill(fill_val);
+                let fill = parse_canvas_fill(fill_val, shape);
                 frame.fill(&circle_path, fill);
             } else if shape.get("stroke").is_none() {
                 frame.fill(&circle_path, Color::WHITE);
@@ -2609,7 +2792,7 @@ fn draw_canvas_shape(
                 .unwrap_or(&[]);
             let path = build_path_from_commands(commands);
             if let Some(fill_val) = shape.get("fill") {
-                let fill = parse_canvas_fill(fill_val);
+                let fill = parse_canvas_fill(fill_val, shape);
                 frame.fill(&path, fill);
             }
             if let Some(stroke_val) = shape.get("stroke") {
@@ -2751,19 +2934,16 @@ impl canvas::Program<Message> for CanvasProgram<'_> {
         // Draw each layer, using its cache when available.
         let images = self.images;
         for (layer_name, shapes) in &self.layers {
+            let shape_refs: Vec<&Value> = shapes.iter().collect();
             let geom = if let Some((_hash, cache)) = self.caches.and_then(|c| c.get(layer_name)) {
                 cache.draw(renderer, bounds.size(), |frame| {
-                    for shape in shapes {
-                        draw_canvas_shape(frame, shape, images);
-                    }
+                    draw_canvas_shapes(frame, &shape_refs, images);
                 })
             } else {
                 // No cache available (shouldn't happen after ensure_caches, but
                 // handle gracefully by drawing uncached).
                 let mut frame = canvas::Frame::new(renderer, bounds.size());
-                for shape in shapes {
-                    draw_canvas_shape(&mut frame, shape, images);
-                }
+                draw_canvas_shapes(&mut frame, &shape_refs, images);
                 frame.into_geometry()
             };
             geometries.push(geom);
@@ -2861,14 +3041,17 @@ fn json_color(val: &Value, key: &str) -> Color {
 // Table (composite: column/row headers + data rows)
 // ---------------------------------------------------------------------------
 
-fn render_table<'a>(node: &'a TreeNode) -> Element<'a, Message> {
-    let props = node.props.as_object();
-    let width = prop_length(props, "width", Length::Fill);
-    let show_header = prop_bool_default(props, "header", true);
-    let padding_val = parse_padding_value(props);
+/// Parsed column descriptor from the "columns" prop.
+struct TableColumn {
+    key: String,
+    label: String,
+    align: alignment::Horizontal,
+    width: Length,
+    sortable: bool,
+}
 
-    // "columns" is an array of {key, label} objects.
-    let columns: Vec<(String, String)> = props
+fn parse_table_columns(props: Props<'_>) -> Vec<TableColumn> {
+    props
         .and_then(|p| p.get("columns"))
         .and_then(|v| v.as_array())
         .map(|arr| {
@@ -2880,11 +3063,43 @@ fn render_table<'a>(node: &'a TreeNode) -> Element<'a, Message> {
                         .and_then(|v| v.as_str())
                         .unwrap_or(&key)
                         .to_owned();
-                    Some((key, label))
+                    let align = col
+                        .get("align")
+                        .and_then(|v| v.as_str())
+                        .and_then(value_to_horizontal_alignment)
+                        .unwrap_or(alignment::Horizontal::Left);
+                    let width = col
+                        .get("width")
+                        .and_then(value_to_length)
+                        .unwrap_or(Length::FillPortion(1));
+                    let sortable = col
+                        .get("sortable")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+                    Some(TableColumn {
+                        key,
+                        label,
+                        align,
+                        width,
+                        sortable,
+                    })
                 })
                 .collect()
         })
-        .unwrap_or_default();
+        .unwrap_or_default()
+}
+
+fn render_table<'a>(node: &'a TreeNode) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let width = prop_length(props, "width", Length::Fill);
+    let show_header = prop_bool_default(props, "header", true);
+    let padding_val = parse_padding_value(props);
+    let table_id = node.id.clone();
+
+    let sort_by = prop_str(props, "sort_by");
+    let sort_order = prop_str(props, "sort_order");
+
+    let columns = parse_table_columns(props);
 
     // "rows" is an array of objects.
     let rows: Vec<&Value> = props
@@ -2903,10 +3118,41 @@ fn render_table<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     if show_header {
         let header_cells: Vec<Element<'a, Message>> = columns
             .iter()
-            .map(|(_key, label)| {
-                container(text(label.clone()).size(14.0))
-                    .width(Length::FillPortion(1))
+            .map(|col| {
+                // Build sort indicator if this column is currently sorted.
+                let sort_indicator = if sort_by.as_deref() == Some(&col.key) {
+                    match sort_order.as_deref() {
+                        Some("asc") => " \u{25B2}",
+                        Some("desc") => " \u{25BC}",
+                        _ => "",
+                    }
+                } else {
+                    ""
+                };
+
+                let label_text = format!("{}{}", col.label, sort_indicator);
+
+                if col.sortable {
+                    let click_id = table_id.clone();
+                    let click_key = col.key.clone();
+                    container(
+                        button(text(label_text).size(14.0))
+                            .on_press(Message::Event(
+                                click_id,
+                                serde_json::json!({"column": click_key}),
+                                "sort".into(),
+                            ))
+                            .style(button::text),
+                    )
+                    .width(col.width)
+                    .align_x(col.align)
                     .into()
+                } else {
+                    container(text(label_text).size(14.0))
+                        .width(col.width)
+                        .align_x(col.align)
+                        .into()
+                }
             })
             .collect();
         let header = row(header_cells).spacing(4.0).width(Fill);
@@ -2923,16 +3169,17 @@ fn render_table<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     for data_row in &rows {
         let cells: Vec<Element<'a, Message>> = columns
             .iter()
-            .map(|(key, _label)| {
+            .map(|col| {
                 let cell_text = data_row
-                    .get(key)
+                    .get(&col.key)
                     .map(|v| match v {
                         Value::String(s) => s.clone(),
                         other => other.to_string(),
                     })
                     .unwrap_or_default();
                 container(text(cell_text).size(13.0))
-                    .width(Length::FillPortion(1))
+                    .width(col.width)
+                    .align_x(col.align)
                     .into()
             })
             .collect();
@@ -4380,7 +4627,8 @@ mod tests {
                 [1.0, "#0000ff"]
             ]
         });
-        let fill = parse_canvas_fill(&fill_val);
+        let shape = json!({"fill": fill_val.clone()});
+        let fill = parse_canvas_fill(&fill_val, &shape);
         // The fill rule should be NonZero for gradient fills.
         assert_eq!(fill.rule, canvas::fill::Rule::NonZero);
         // The style should be a gradient, not a solid color.
@@ -4388,6 +4636,32 @@ mod tests {
             canvas::Style::Gradient(canvas::Gradient::Linear(_)) => {}
             other => panic!("expected Gradient::Linear, got {other:?}"),
         }
+    }
+
+    // -- Canvas fill_rule parsing --
+
+    #[test]
+    fn canvas_fill_rule_defaults_to_non_zero() {
+        let fill_val = json!("#ff0000");
+        let shape = json!({"fill": "#ff0000"});
+        let fill = parse_canvas_fill(&fill_val, &shape);
+        assert_eq!(fill.rule, canvas::fill::Rule::NonZero);
+    }
+
+    #[test]
+    fn canvas_fill_rule_even_odd() {
+        let fill_val = json!("#00ff00");
+        let shape = json!({"fill": "#00ff00", "fill_rule": "even_odd"});
+        let fill = parse_canvas_fill(&fill_val, &shape);
+        assert_eq!(fill.rule, canvas::fill::Rule::EvenOdd);
+    }
+
+    #[test]
+    fn canvas_fill_rule_explicit_non_zero() {
+        let fill_val = json!("#0000ff");
+        let shape = json!({"fill": "#0000ff", "fill_rule": "non_zero"});
+        let fill = parse_canvas_fill(&fill_val, &shape);
+        assert_eq!(fill.rule, canvas::fill::Rule::NonZero);
     }
 
     // -- Image registry handle lookup --
@@ -4417,5 +4691,50 @@ mod tests {
             registry.get("nonexistent").is_none(),
             "unregistered name should return None"
         );
+    }
+
+    // -- Canvas clipping tests --
+
+    #[test]
+    fn collect_clipped_shapes_simple() {
+        let shapes = vec![
+            json!({"type": "rect", "x": 0, "y": 0, "w": 50, "h": 50}),
+            json!({"type": "pop_clip"}),
+        ];
+        let refs: Vec<&Value> = shapes.iter().collect();
+        let (end_idx, collected) = collect_clipped_shapes(&refs);
+        assert_eq!(end_idx, 1); // pop_clip is at index 1
+        assert_eq!(collected.len(), 1); // just the rect
+        assert_eq!(
+            collected[0].get("type").and_then(|v| v.as_str()),
+            Some("rect")
+        );
+    }
+
+    #[test]
+    fn collect_clipped_shapes_nested() {
+        let shapes = vec![
+            json!({"type": "push_clip", "x": 10, "y": 10, "w": 50, "h": 50}),
+            json!({"type": "rect", "x": 0, "y": 0, "w": 20, "h": 20}),
+            json!({"type": "pop_clip"}),
+            json!({"type": "circle", "x": 25, "y": 25, "r": 10}),
+            json!({"type": "pop_clip"}),
+        ];
+        let refs: Vec<&Value> = shapes.iter().collect();
+        let (end_idx, collected) = collect_clipped_shapes(&refs);
+        // The outer pop_clip is at index 4
+        assert_eq!(end_idx, 4);
+        // Collected: push_clip, rect, pop_clip (inner), circle
+        assert_eq!(collected.len(), 4);
+    }
+
+    #[test]
+    fn collect_clipped_shapes_no_pop() {
+        let shapes = vec![json!({"type": "rect", "x": 0, "y": 0, "w": 50, "h": 50})];
+        let refs: Vec<&Value> = shapes.iter().collect();
+        let (end_idx, collected) = collect_clipped_shapes(&refs);
+        // No pop_clip found -- returns all shapes
+        assert_eq!(end_idx, shapes.len());
+        assert_eq!(collected.len(), 1);
     }
 }

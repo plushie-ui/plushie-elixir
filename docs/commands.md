@@ -230,6 +230,7 @@ Julep.Command.enable_mouse_passthrough(window_id)            # Click-through win
 Julep.Command.disable_mouse_passthrough(window_id)           # Normal click handling
 Julep.Command.show_system_menu(window_id)                    # Show OS window menu
 Julep.Command.set_icon(window_id, rgba_data, width, height)  # Set window icon (raw RGBA)
+Julep.Command.set_resize_increments(window_id, width, height) # Set resize step increments
 ```
 
 Example:
@@ -272,6 +273,29 @@ end
 
 def update(model, {:got_size, {width, height}}) do
   %{model | window_width: width, window_height: height}
+end
+```
+
+#### System queries
+
+System-level queries that are not scoped to a specific window.
+
+```elixir
+Julep.Command.get_system_info(tag)     # Result: {:system_info, tag, info_map}
+Julep.Command.get_system_theme(tag)    # Result: {:system_theme, tag, mode}
+```
+
+`get_system_info/1` returns a map with platform details (CPU, memory, OS,
+graphics adapter). `get_system_theme/1` returns the current OS theme mode
+(`"light"` or `"dark"`).
+
+```elixir
+def update(model, {:click, "detect_theme"}) do
+  {model, Julep.Command.get_system_theme(:theme_detected)}
+end
+
+def update(model, {:system_theme, :theme_detected, mode}) do
+  %{model | os_theme: mode}
 end
 ```
 
@@ -664,6 +688,25 @@ false, the runtime stops it. No explicit cleanup needed.
 
 Subscriptions that require the renderer (everything except timers) are
 paused during renderer restart and resumed once the renderer is back.
+
+## Application settings
+
+The `settings/0` callback is documented in
+[app-behaviour.md](app-behaviour.md). Notable settings relevant to
+commands and rendering:
+
+- `vsync` -- boolean (default `true`). Controls vertical sync. Set to
+  `false` for uncapped frame rates (useful for benchmarks or animation-heavy
+  apps at the cost of higher GPU usage).
+
+```elixir
+def settings do
+  [
+    antialiasing: true,
+    vsync: false
+  ]
+end
+```
 
 ## Commands vs. effects
 

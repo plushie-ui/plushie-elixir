@@ -102,6 +102,36 @@ defmodule Julep.Test.EventMap do
   def slide(%Element{type: "vertical_slider", id: id}, value), do: {:ok, {:slide, id, value}}
   def slide(%Element{type: type}, _value), do: {:error, "cannot slide a #{type} widget"}
 
+  # -- Open/Close events --
+
+  @doc "Produces an open event for a pick_list widget."
+  @spec pick_list_open(element :: Element.t()) :: {:ok, tuple()} | {:error, String.t()}
+  def pick_list_open(%Element{type: "pick_list", id: id}), do: {:ok, {:open, id}}
+
+  def pick_list_open(%Element{type: type}),
+    do: {:error, "cannot produce open event for a #{type} widget"}
+
+  @doc "Produces a close event for a pick_list widget."
+  @spec pick_list_close(element :: Element.t()) :: {:ok, tuple()} | {:error, String.t()}
+  def pick_list_close(%Element{type: "pick_list", id: id}), do: {:ok, {:close, id}}
+
+  def pick_list_close(%Element{type: type}),
+    do: {:error, "cannot produce close event for a #{type} widget"}
+
+  @doc "Produces an open event for a combo_box widget."
+  @spec combo_box_open(element :: Element.t()) :: {:ok, tuple()} | {:error, String.t()}
+  def combo_box_open(%Element{type: "combo_box", id: id}), do: {:ok, {:open, id}}
+
+  def combo_box_open(%Element{type: type}),
+    do: {:error, "cannot produce open event for a #{type} widget"}
+
+  @doc "Produces a close event for a combo_box widget."
+  @spec combo_box_close(element :: Element.t()) :: {:ok, tuple()} | {:error, String.t()}
+  def combo_box_close(%Element{type: "combo_box", id: id}), do: {:ok, {:close, id}}
+
+  def combo_box_close(%Element{type: type}),
+    do: {:error, "cannot produce close event for a #{type} widget"}
+
   # -- Canvas events --
 
   @doc "Produces a canvas press event at the given coordinates."
@@ -225,4 +255,16 @@ defmodule Julep.Test.EventMap do
 
   def mouse_scroll(%Element{type: type}, _delta_x, _delta_y),
     do: {:error, "cannot mouse_scroll a #{type} widget"}
+
+  # -- Table events --
+
+  @doc "Produces a table sort event for the given column key."
+  @spec table_sort(element :: Element.t(), column :: String.t()) ::
+          {:ok, tuple()} | {:error, String.t()}
+  def table_sort(%Element{type: "table", id: id}, column) do
+    {:ok, {:sort, id, column}}
+  end
+
+  def table_sort(%Element{type: type}, _column),
+    do: {:error, "cannot table_sort a #{type} widget"}
 end

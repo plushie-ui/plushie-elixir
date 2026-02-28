@@ -26,6 +26,8 @@ defmodule Julep.Iced.Widget.PickList do
   ## Events
 
   - `{:select, id, value}` -- emitted when an option is selected.
+  - `{:open, id}` -- emitted when the dropdown menu is opened (requires `on_open: true`).
+  - `{:close, id}` -- emitted when the dropdown menu is closed (requires `on_close: true`).
   """
 
   alias Julep.Iced.StyleMap
@@ -45,6 +47,8 @@ defmodule Julep.Iced.Widget.PickList do
           | {:text_shaping, Julep.Iced.Shaping.t()}
           | {:handle, map()}
           | {:style, style()}
+          | {:on_open, boolean()}
+          | {:on_close, boolean()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -59,7 +63,9 @@ defmodule Julep.Iced.Widget.PickList do
           menu_height: number() | nil,
           text_shaping: Julep.Iced.Shaping.t() | nil,
           handle: map() | nil,
-          style: style() | nil
+          style: style() | nil,
+          on_open: boolean() | nil,
+          on_close: boolean() | nil
         }
 
   defstruct [
@@ -75,7 +81,9 @@ defmodule Julep.Iced.Widget.PickList do
     :menu_height,
     :text_shaping,
     :handle,
-    :style
+    :style,
+    :on_open,
+    :on_close
   ]
 
   @doc "Creates a new pick list struct with the given options and optional keyword opts."
@@ -101,6 +109,8 @@ defmodule Julep.Iced.Widget.PickList do
       {:text_shaping, v}, acc -> text_shaping(acc, v)
       {:handle, v}, acc -> handle(acc, v)
       {:style, v}, acc -> style(acc, v)
+      {:on_open, v}, acc -> on_open(acc, v)
+      {:on_close, v}, acc -> on_close(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -149,6 +159,14 @@ defmodule Julep.Iced.Widget.PickList do
   @spec style(pick_list :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = pl, style), do: %{pl | style: style}
 
+  @doc "Enables or disables the open event when the dropdown menu opens."
+  @spec on_open(pick_list :: t(), on_open :: boolean()) :: t()
+  def on_open(%__MODULE__{} = pl, on_open), do: %{pl | on_open: on_open}
+
+  @doc "Enables or disables the close event when the dropdown menu closes."
+  @spec on_close(pick_list :: t(), on_close :: boolean()) :: t()
+  def on_close(%__MODULE__{} = pl, on_close), do: %{pl | on_close: on_close}
+
   @doc "Converts this pick list struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(pick_list :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = pl), do: Julep.Iced.Widget.to_node(pl)
@@ -171,6 +189,8 @@ defmodule Julep.Iced.Widget.PickList do
         |> put_if(pl.text_shaping, "text_shaping")
         |> put_if(pl.handle, "handle")
         |> put_if(pl.style, "style")
+        |> put_if(pl.on_open, "on_open")
+        |> put_if(pl.on_close, "on_close")
 
       %{id: pl.id, type: "pick_list", props: props, children: []}
     end

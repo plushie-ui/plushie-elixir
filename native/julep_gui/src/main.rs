@@ -142,6 +142,10 @@ pub(crate) enum Message {
     MouseAreaMove(String, f32, f32),
     /// MouseArea scroll event (id, delta_x, delta_y).
     MouseAreaScroll(String, f32, f32),
+    /// Generic widget event (id, data, family).
+    /// Used for on_open, on_close, sort, and other events that carry a
+    /// family string and optional JSON data payload.
+    Event(String, Value, String),
 }
 
 // ---------------------------------------------------------------------------
@@ -281,7 +285,8 @@ impl App {
             | Message::Toggle(..)
             | Message::Slide(..)
             | Message::SlideRelease(..)
-            | Message::Select(..)) => {
+            | Message::Select(..)
+            | Message::Event(..)) => {
                 if let Some(event) = message_to_event(msg) {
                     emit_event(event);
                 }
@@ -1693,6 +1698,65 @@ impl App {
                     Task::none()
                 }
             }
+            // -- System queries: not window-specific, use tag from settings --
+            "get_system_theme" => {
+                let tag = settings
+                    .get("tag")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("system_theme")
+                    .to_string();
+                system::theme().map(move |mode| {
+                    let mode_str = match mode {
+                        iced::theme::Mode::Light => "light",
+                        iced::theme::Mode::Dark => "dark",
+                        iced::theme::Mode::None => "none",
+                    };
+                    emit_query_response("system_theme", &tag, serde_json::json!(mode_str));
+                    Message::NoOp
+                })
+            }
+            "get_system_info" => {
+                let tag = settings
+                    .get("tag")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("system_info")
+                    .to_string();
+                system::information().map(move |info| {
+                    let data = serde_json::json!({
+                        "system_name": info.system_name,
+                        "system_kernel": info.system_kernel,
+                        "system_version": info.system_version,
+                        "system_short_version": info.system_short_version,
+                        "cpu_brand": info.cpu_brand,
+                        "cpu_cores": info.cpu_cores,
+                        "memory_total": info.memory_total,
+                        "memory_used": info.memory_used,
+                        "graphics_backend": info.graphics_backend,
+                        "graphics_adapter": info.graphics_adapter,
+                    });
+                    emit_query_response("system_info", &tag, data);
+                    Message::NoOp
+                })
+            }
+            "set_resize_increments" => {
+                if let Some(&iced_id) = self.window_map.get(window_id) {
+                    let w = settings
+                        .get("width")
+                        .and_then(|v| v.as_f64())
+                        .map(|v| v as f32);
+                    let h = settings
+                        .get("height")
+                        .and_then(|v| v.as_f64())
+                        .map(|v| v as f32);
+                    let increments = match (w, h) {
+                        (Some(w), Some(h)) => Some(Size::new(w, h)),
+                        _ => None,
+                    };
+                    window::set_resize_increments(iced_id, increments)
+                } else {
+                    Task::none()
+                }
+            }
             other => {
                 log::warn!("unknown window_op: {other}");
                 Task::none()
@@ -1985,6 +2049,29 @@ fn emit_effect_response(response: protocol::EffectResponse) {
     }
 }
 
+/// Emit a query_response message to stdout. Used for system-level queries
+/// (system_info, system_theme) that are not window-specific.
+fn emit_query_response(kind: &str, tag: &str, data: serde_json::Value) {
+    let msg = serde_json::json!({
+        "type": "query_response",
+        "kind": kind,
+        "tag": tag,
+        "data": data,
+    });
+    let codec = WIRE_CODEC.get().unwrap_or(&codec::Codec::MsgPack);
+    match codec.encode(&msg) {
+        Ok(bytes) => {
+            let stdout = io::stdout();
+            let mut handle = stdout.lock();
+            if let Err(e) = handle.write_all(&bytes) {
+                log::error!("failed to write query response to stdout: {e}");
+            }
+            let _ = handle.flush();
+        }
+        Err(e) => log::error!("failed to serialize query response: {e}"),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Message -> OutgoingEvent mapping
 // ---------------------------------------------------------------------------
@@ -2030,7 +2117,30 @@ pub(crate) fn message_to_event(msg: &Message) -> Option<OutgoingEvent> {
                 *ch,
             ))
         }
+        Message::Event(id, data, family) => {
+            let data_opt = if data.is_null() {
+                None
+            } else {
+                Some(data.clone())
+            };
+            Some(OutgoingEvent::generic(
+                family_str_to_static(family),
+                id.clone(),
+                data_opt,
+            ))
+        }
         _ => None,
+    }
+}
+
+/// Maps dynamic family strings to static str references for OutgoingEvent.
+/// Extends as new event families are added.
+fn family_str_to_static(s: &str) -> &'static str {
+    match s {
+        "open" => "open",
+        "close" => "close",
+        "sort" => "sort",
+        _ => "event",
     }
 }
 
@@ -2099,11 +2209,16 @@ fn spawn_stdin_reader(
 
 /// Read the first message from stdin synchronously, expecting a Settings message.
 /// Determines the wire codec (from CLI flag or auto-detection) and stores it in
-/// `WIRE_CODEC`. Returns the settings Value, antialiasing flag, font bytes, and
+/// `WIRE_CODEC`. Returns the settings Value, iced Settings, font bytes, and
 /// the buffered reader (to be handed off to the stdin reader thread).
 fn read_initial_settings(
     forced_codec: Option<codec::Codec>,
-) -> (Value, bool, Vec<Vec<u8>>, io::BufReader<io::Stdin>) {
+) -> (
+    Value,
+    iced::Settings,
+    Vec<Vec<u8>>,
+    io::BufReader<io::Stdin>,
+) {
     let mut reader = io::BufReader::new(io::stdin());
 
     // Determine codec: forced by CLI flag, or auto-detected from first byte.
@@ -2125,7 +2240,12 @@ fn read_initial_settings(
                 Err(e) => {
                     log::error!("stdin closed before settings received: {e}");
                     let _ = WIRE_CODEC.set(codec::Codec::MsgPack);
-                    return (Value::Object(Default::default()), false, Vec::new(), reader);
+                    return (
+                        Value::Object(Default::default()),
+                        iced::Settings::default(),
+                        Vec::new(),
+                        reader,
+                    );
                 }
             }
             (
@@ -2148,13 +2268,23 @@ fn read_initial_settings(
                 let mut rest = [0u8; 3];
                 if let Err(e) = reader.read_exact(&mut rest) {
                     log::error!("failed to read initial settings: {e}");
-                    return (Value::Object(Default::default()), false, Vec::new(), reader);
+                    return (
+                        Value::Object(Default::default()),
+                        iced::Settings::default(),
+                        Vec::new(),
+                        reader,
+                    );
                 }
                 let len = u32::from_be_bytes([byte, rest[0], rest[1], rest[2]]) as usize;
                 let mut payload = vec![0u8; len];
                 if let Err(e) = reader.read_exact(&mut payload) {
                     log::error!("failed to read initial settings payload: {e}");
-                    return (Value::Object(Default::default()), false, Vec::new(), reader);
+                    return (
+                        Value::Object(Default::default()),
+                        iced::Settings::default(),
+                        Vec::new(),
+                        reader,
+                    );
                 }
                 payload
             }
@@ -2163,7 +2293,12 @@ fn read_initial_settings(
                 let mut line = String::new();
                 if let Err(e) = reader.read_line(&mut line) {
                     log::error!("failed to read initial settings: {e}");
-                    return (Value::Object(Default::default()), false, Vec::new(), reader);
+                    return (
+                        Value::Object(Default::default()),
+                        iced::Settings::default(),
+                        Vec::new(),
+                        reader,
+                    );
                 }
                 let full = format!("{}{}", byte as char, line.trim());
                 full.into_bytes()
@@ -2175,11 +2310,21 @@ fn read_initial_settings(
             Ok(Some(bytes)) => bytes,
             Ok(None) => {
                 log::error!("stdin closed before settings received");
-                return (Value::Object(Default::default()), false, Vec::new(), reader);
+                return (
+                    Value::Object(Default::default()),
+                    iced::Settings::default(),
+                    Vec::new(),
+                    reader,
+                );
             }
             Err(e) => {
                 log::error!("failed to read initial settings: {e}");
-                return (Value::Object(Default::default()), false, Vec::new(), reader);
+                return (
+                    Value::Object(Default::default()),
+                    iced::Settings::default(),
+                    Vec::new(),
+                    reader,
+                );
             }
         }
     };
@@ -2219,6 +2364,15 @@ fn read_initial_settings(
                 .get("antialiasing")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
+            let vsync = settings
+                .get("vsync")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(true);
+            let iced_settings = iced::Settings {
+                antialiasing,
+                vsync,
+                ..Default::default()
+            };
 
             let mut font_bytes: Vec<Vec<u8>> = Vec::new();
             if let Some(fonts) = settings.get("fonts").and_then(|v| v.as_array()) {
@@ -2237,7 +2391,7 @@ fn read_initial_settings(
                 }
             }
 
-            (settings, antialiasing, font_bytes, reader)
+            (settings, iced_settings, font_bytes, reader)
         }
         other => {
             let variant = match &other {
@@ -2256,7 +2410,12 @@ fn read_initial_settings(
                 IncomingMessage::ImageOp { .. } => "image_op",
             };
             log::error!("expected settings as first message, got {variant}");
-            (Value::Object(Default::default()), false, Vec::new(), reader)
+            (
+                Value::Object(Default::default()),
+                iced::Settings::default(),
+                Vec::new(),
+                reader,
+            )
         }
     }
 }
@@ -2287,10 +2446,10 @@ fn main() -> iced::Result {
 
     let test_mode = args.contains(&"--test".to_string());
 
-    // Read the first message synchronously to get antialiasing and font
-    // settings before the daemon starts. This must happen before the stdin
+    // Read the first message synchronously to get iced settings and font
+    // data before the daemon starts. This must happen before the stdin
     // reader thread is spawned.
-    let (initial_settings, antialiasing, font_bytes, reader) = read_initial_settings(forced_codec);
+    let (initial_settings, iced_settings, font_bytes, reader) = read_initial_settings(forced_codec);
 
     // Spawn stdin reader thread with tokio channel. The receiver goes into
     // STDIN_RX so the subscription (which is a fn pointer, not a closure)
@@ -2342,6 +2501,6 @@ fn main() -> iced::Result {
     .title(App::title_for_window)
     .subscription(App::subscription)
     .theme(App::theme_for_window)
-    .antialiasing(antialiasing)
+    .settings(iced_settings)
     .run()
 }

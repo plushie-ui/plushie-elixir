@@ -18,10 +18,12 @@ defmodule Julep.Command do
     `set_window_level/2`, `drag_window/1`, `drag_resize_window/2`,
     `request_user_attention/2`, `screenshot/2`, `set_resizable/2`,
     `set_min_size/3`, `set_max_size/3`, `enable_mouse_passthrough/1`,
-    `disable_mouse_passthrough/1`, `show_system_menu/1`, `set_icon/4`.
+    `disable_mouse_passthrough/1`, `show_system_menu/1`, `set_icon/4`,
+    `set_resize_increments/3`.
   - **Window queries**: `get_window_size/2`, `get_window_position/2`,
     `is_maximized/2`, `is_minimized/2`, `get_mode/2`, `get_scale_factor/2`,
     `raw_id/2`, `monitor_size/2`
+  - **System queries**: `get_system_theme/1`, `get_system_info/1`
   - **PaneGrid ops**: `pane_split/4`, `pane_close/2`, `pane_swap/3`,
     `pane_maximize/2`, `pane_restore/1`
   - **Image ops**: `create_image/2`, `create_image/4`, `update_image/2`,
@@ -378,6 +380,30 @@ defmodule Julep.Command do
     %__MODULE__{type: :window_op, payload: %{op: "show_system_menu", window_id: window_id}}
   end
 
+  @doc """
+  Sets the resize increment size for a window.
+
+  When set, the window will only resize in multiples of the given width and
+  height. Pass `nil` for both to clear the constraint. Useful for terminal
+  emulators and grid-aligned apps.
+  """
+  @spec set_resize_increments(
+          window_id :: window_id(),
+          width :: number() | nil,
+          height :: number() | nil
+        ) :: %__MODULE__{}
+  def set_resize_increments(window_id, width, height) do
+    %__MODULE__{
+      type: :window_op,
+      payload: %{
+        op: "set_resize_increments",
+        window_id: window_id,
+        width: width,
+        height: height
+      }
+    }
+  end
+
   # ---------------------------------------------------------------------------
   # Window queries (results arrive as events)
   # ---------------------------------------------------------------------------
@@ -464,6 +490,65 @@ defmodule Julep.Command do
     %__MODULE__{
       type: :window_query,
       payload: %{op: "monitor_size", window_id: window_id, tag: to_string(tag)}
+    }
+  end
+
+  # ---------------------------------------------------------------------------
+  # System queries (results arrive as events)
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Query the current system theme (light/dark mode).
+
+  The result arrives in `update/2` as `{:system_theme, tag, mode}` where
+  `tag` is the stringified event tag and `mode` is `"light"`, `"dark"`, or
+  `"none"` (when no system preference is detected).
+
+  ## Example
+
+      def update(model, {:click, "check_theme"}) do
+        {model, Julep.Command.get_system_theme(:theme_result)}
+      end
+
+      def update(model, {:system_theme, "theme_result", mode}) do
+        %{model | theme_mode: mode}
+      end
+  """
+  @spec get_system_theme(tag :: event_tag()) :: %__MODULE__{}
+  def get_system_theme(tag) do
+    %__MODULE__{
+      type: :window_query,
+      payload: %{op: "get_system_theme", window_id: "_system", tag: to_string(tag)}
+    }
+  end
+
+  @doc """
+  Query system information (OS, CPU, memory, graphics).
+
+  The result arrives in `update/2` as `{:system_info, tag, info}` where `tag`
+  is the stringified event tag and `info` is a map with keys:
+  `"system_name"`, `"system_kernel"`, `"system_version"`,
+  `"system_short_version"`, `"cpu_brand"`, `"cpu_cores"`, `"memory_total"`,
+  `"memory_used"`, `"graphics_backend"`, `"graphics_adapter"`.
+
+  Requires the renderer to be built with the `sysinfo` iced feature. Without
+  it, the result map will contain `%{"error" => "sysinfo feature not enabled"}`.
+
+  ## Example
+
+      def update(model, {:click, "sys_info"}) do
+        {model, Julep.Command.get_system_info(:sys_info)}
+      end
+
+      def update(model, {:system_info, "sys_info", info}) do
+        %{model | system: info}
+      end
+  """
+  @spec get_system_info(tag :: event_tag()) :: %__MODULE__{}
+  def get_system_info(tag) do
+    %__MODULE__{
+      type: :window_query,
+      payload: %{op: "get_system_info", window_id: "_system", tag: to_string(tag)}
     }
   end
 

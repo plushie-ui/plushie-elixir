@@ -249,3 +249,98 @@ fn handle_notification(id: String, payload: &Value) -> EffectResponse {
 fn handle_notification(id: String, _payload: &Value) -> EffectResponse {
     EffectResponse::unsupported(id)
 }
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn unknown_effect_returns_unsupported() {
+        let resp = handle_effect("eff-1".to_string(), "teleport_sandwich", &json!({}));
+        assert_eq!(resp.status, "error");
+        assert_eq!(resp.error.as_deref(), Some("unsupported"));
+        assert_eq!(resp.id, "eff-1");
+    }
+
+    /// Dispatch every known effect kind with a minimal payload and verify
+    /// none of them panic. The handlers may return "unsupported" (when the
+    /// corresponding feature is not compiled in) or "error" (when the OS
+    /// resource -- clipboard, display server, notification daemon -- is
+    /// unavailable in the test environment). That's fine: we're testing
+    /// that the routing reaches the right handler and returns cleanly.
+    #[test]
+    fn dispatch_routes_all_known_kinds_without_panic() {
+        let kinds_with_payloads: Vec<(&str, Value)> = vec![
+            ("file_open", json!({"title": "Pick a file"})),
+            (
+                "file_save",
+                json!({"title": "Save", "default_name": "out.txt"}),
+            ),
+            ("directory_select", json!({"title": "Choose dir"})),
+            ("clipboard_read", json!({})),
+            ("clipboard_write", json!({"text": "hello"})),
+            ("clipboard_read_primary", json!({})),
+            ("clipboard_write_primary", json!({"text": "primary"})),
+            ("notification", json!({"title": "Test", "body": "body"})),
+        ];
+
+        for (kind, payload) in &kinds_with_payloads {
+            let id = format!("test-{kind}");
+            let resp = handle_effect(id.clone(), kind, payload);
+
+            // Must get a well-formed response with matching id.
+            assert_eq!(resp.id, id, "id mismatch for kind {kind}");
+            assert_eq!(resp.message_type, "effect_response");
+            assert!(
+                resp.status == "ok" || resp.status == "error",
+                "unexpected status '{}' for kind {kind}",
+                resp.status
+            );
+        }
+    }
+
+    /// Verify that minimal/empty payloads don't cause panics -- handlers
+    /// should defensively unwrap_or on missing fields, not panic.
+    #[test]
+    fn handlers_tolerate_empty_payloads() {
+        let kinds: &[&str] = &[
+            "file_open",
+            "file_save",
+            "directory_select",
+            "clipboard_read",
+            "clipboard_write",
+            "clipboard_read_primary",
+            "clipboard_write_primary",
+            "notification",
+        ];
+
+        for kind in kinds {
+            let resp = handle_effect(format!("empty-{kind}"), kind, &json!({}));
+            assert_eq!(resp.message_type, "effect_response");
+        }
+    }
+
+    /// Multiple unknown kinds all return unsupported with distinct ids.
+    #[test]
+    fn unknown_kinds_preserve_id() {
+        for i in 0..5 {
+            let id = format!("unk-{i}");
+            let resp = handle_effect(id.clone(), &format!("bogus_{i}"), &json!(null));
+            assert_eq!(resp.id, id);
+            assert_eq!(resp.status, "error");
+            assert_eq!(resp.error.as_deref(), Some("unsupported"));
+        }
+    }
+
+    // NOTE: The feature-gated handler implementations (file dialogs via rfd,
+    // clipboard via arboard, notifications via notify-rust) interact with real
+    // OS resources -- display server, clipboard daemon, notification service.
+    // They can't be meaningfully unit-tested without those services running.
+    // Integration-level testing of those paths belongs in a CI environment
+    // with Xvfb / a clipboard provider available, not in pure unit tests.
+}

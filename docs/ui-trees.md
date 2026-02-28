@@ -142,6 +142,20 @@ All shape builders accept `:fill` and `:stroke` keyword options (except
 `:fill` is a color hex string or a gradient map. `:stroke` is a stroke
 descriptor built with `stroke/3`.
 
+Shapes that use `:fill` also accept `:fill_rule` to control how overlapping
+paths determine interior regions:
+
+- `:non_zero` (default) -- standard winding-number rule
+- `:even_odd` -- alternating fill for shapes with holes
+
+```elixir
+Shape.path(
+  [Shape.move_to(0, 0), Shape.line_to(100, 0), Shape.line_to(50, 80), Shape.close()],
+  fill: "#0088ff",
+  fill_rule: :even_odd
+)
+```
+
 #### Stroke builder
 
 `stroke(color, width, opts)` builds a stroke descriptor.
@@ -214,6 +228,62 @@ Use `push_transform/0` and `pop_transform/0` to save and restore state.
   Shape.rect(0, 0, 50, 50, fill: "#f00"),
   Shape.pop_transform()
 ]
+```
+
+#### Clipping
+
+Clip commands restrict drawing to a rectangular region. Use
+`push_clip/4` and `pop_clip/0` to scope the clip. They are interleaved
+with shapes in a layer's shape list, similar to transforms.
+
+| Function | Description |
+|---|---|
+| `push_clip(x, y, w, h)` | Clip all subsequent drawing to the rectangle at `(x, y)` with `w` x `h`. |
+| `pop_clip()` | Restore the previous clip region. |
+
+```elixir
+[
+  Shape.push_clip(50, 50, 200, 100),
+  Shape.circle(100, 100, 80, fill: "#3498db"),
+  Shape.pop_clip()
+]
+```
+
+On the wire, these are encoded as:
+
+```json
+{"type": "push_clip", "x": 50, "y": 50, "w": 200, "h": 100}
+{"type": "pop_clip"}
+```
+
+### Table column descriptors
+
+The `table` widget accepts a `columns` prop -- a list of column descriptor
+maps. Each descriptor supports the following fields:
+
+| Field | Required | Description |
+|---|---|---|
+| `key` | yes | String key identifying the column. Used in sort events. |
+| `label` | yes | Display label for the column header. |
+| `align` | no | Horizontal alignment of cell content: `"left"`, `"center"`, `"right"`. |
+| `width` | no | Column width: number (fixed pixels), `"fill"`, or `{"fill_portion": n}`. |
+| `sortable` | no | Boolean. When true, the column header is clickable and emits `{:sort, id, column_key}`. |
+
+The table itself accepts `sort_by` (string, the key of the currently sorted
+column) and `sort_order` (`"asc"` or `"desc"`) props to reflect sort state
+in the header.
+
+```elixir
+table("users",
+  columns: [
+    %{key: "name", label: "Name", sortable: true, width: "fill"},
+    %{key: "age", label: "Age", sortable: true, width: 80, align: "right"},
+    %{key: "role", label: "Role", width: {:fill_portion, 2}}
+  ],
+  rows: model.users,
+  sort_by: model.sort_by,
+  sort_order: model.sort_order
+)
 ```
 
 ## Props

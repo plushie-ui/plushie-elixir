@@ -810,6 +810,12 @@ defmodule Julep.Protocol do
     {:option_hovered, id, value}
   end
 
+  defp dispatch(%{"type" => "event", "family" => "open", "id" => id}),
+    do: {:open, id}
+
+  defp dispatch(%{"type" => "event", "family" => "close", "id" => id}),
+    do: {:close, id}
+
   # -- Keyboard events --
   # Rust emits family "key_press" with the key in "value", modifiers in "modifiers",
   # and extra fields (modified_key, physical_key, location, text, repeat) in "data".
@@ -1139,6 +1145,10 @@ defmodule Julep.Protocol do
     {:pane_clicked, id, data["pane"]}
   end
 
+  defp dispatch(%{"type" => "event", "family" => "sort", "id" => id, "data" => data}) do
+    {:sort, id, data["column"]}
+  end
+
   defp dispatch(%{"type" => "event", "family" => "scroll", "id" => id, "data" => data}) do
     {:scroll, id,
      %{
@@ -1169,6 +1179,26 @@ defmodule Julep.Protocol do
          "error" => reason
        }) do
     {:effect_result, id, {:error, reason}}
+  end
+
+  # -- System query responses --
+
+  defp dispatch(%{
+         "type" => "query_response",
+         "kind" => "system_info",
+         "tag" => tag,
+         "data" => data
+       }) do
+    {:system_info, tag, data}
+  end
+
+  defp dispatch(%{
+         "type" => "query_response",
+         "kind" => "system_theme",
+         "tag" => tag,
+         "data" => data
+       }) do
+    {:system_theme, tag, data}
   end
 
   defp dispatch(msg) do

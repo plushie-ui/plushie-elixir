@@ -10,5 +10,11 @@
   # is correct -- it only uses MapSet API functions, never inspects internals.
   {"lib/julep/selection.ex", :contract_with_opaque},
   {"lib/julep/runtime.ex", :contract_with_opaque},
-  {"lib/julep/runtime.ex", :call_without_opaque}
+  {"lib/julep/runtime.ex", :call_without_opaque},
+
+  # Convenience alignment builders return t() which is correct, but dialyzer
+  # infers a more specific success type (e.g. align_x: :left). The spec is
+  # accurate -- t() subsumes the specific field values.
+  {"lib/julep/iced/widget/container.ex", :invalid_contract},
+
 ]

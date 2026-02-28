@@ -302,6 +302,15 @@ impl OutgoingEvent {
         }
     }
 
+    /// Generic widget event with a family string and optional data payload.
+    /// Used for on_open, on_close, sort, and other events.
+    pub fn generic(family: &'static str, id: String, data: Option<Value>) -> Self {
+        Self {
+            data,
+            ..Self::bare(family, id)
+        }
+    }
+
     pub fn click(id: String) -> Self {
         Self::bare("click", id)
     }

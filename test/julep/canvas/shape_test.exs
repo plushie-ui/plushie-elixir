@@ -192,6 +192,31 @@ defmodule Julep.Canvas.ShapeTest do
     end
   end
 
+  # -- Fill rule --------------------------------------------------------------
+
+  describe "fill_rule option" do
+    test "fill_rule :even_odd adds fill_rule to shape map" do
+      result = Shape.rect(0, 0, 100, 50, fill: "#ff0000", fill_rule: :even_odd)
+      assert result["fill_rule"] == "even_odd"
+    end
+
+    test "fill_rule :non_zero adds explicit fill_rule to shape map" do
+      result = Shape.circle(50, 50, 25, fill: "#00ff00", fill_rule: :non_zero)
+      assert result["fill_rule"] == "non_zero"
+    end
+
+    test "fill_rule is omitted when not set" do
+      result = Shape.rect(0, 0, 100, 50, fill: "#ff0000")
+      refute Map.has_key?(result, "fill_rule")
+    end
+
+    test "fill_rule works on path shapes" do
+      commands = [Shape.move_to(0, 0), Shape.line_to(100, 0), Shape.close()]
+      result = Shape.path(commands, fill: "#0088ff", fill_rule: :even_odd)
+      assert result["fill_rule"] == "even_odd"
+    end
+  end
+
   # -- Stroke helper ----------------------------------------------------------
 
   describe "stroke/3" do
@@ -255,6 +280,62 @@ defmodule Julep.Canvas.ShapeTest do
                "w" => 24,
                "h" => 24
              }
+    end
+  end
+
+  # -- Clipping commands ------------------------------------------------------
+
+  describe "push_clip/4" do
+    test "produces a push_clip descriptor with position and size" do
+      result = Shape.push_clip(10, 20, 100, 80)
+
+      assert result == %{"type" => "push_clip", "x" => 10, "y" => 20, "w" => 100, "h" => 80}
+    end
+
+    test "accepts float coordinates" do
+      result = Shape.push_clip(10.5, 20.5, 100.0, 80.0)
+      assert result["x"] == 10.5
+      assert result["y"] == 20.5
+    end
+  end
+
+  describe "pop_clip/0" do
+    test "produces a pop_clip descriptor" do
+      assert Shape.pop_clip() == %{"type" => "pop_clip"}
+    end
+  end
+
+  describe "clip region sequences" do
+    test "push_clip and pop_clip bracket shapes in a valid sequence" do
+      shapes = [
+        Shape.push_clip(10, 10, 100, 80),
+        Shape.rect(0, 0, 200, 200, fill: "#ff0000"),
+        Shape.circle(50, 50, 25, fill: "#00ff00"),
+        Shape.pop_clip()
+      ]
+
+      assert length(shapes) == 4
+      assert hd(shapes)["type"] == "push_clip"
+      assert List.last(shapes)["type"] == "pop_clip"
+
+      # Interior shapes are unchanged
+      assert Enum.at(shapes, 1)["type"] == "rect"
+      assert Enum.at(shapes, 2)["type"] == "circle"
+    end
+
+    test "nested clip regions produce valid sequences" do
+      shapes = [
+        Shape.push_clip(0, 0, 200, 200),
+        Shape.push_clip(10, 10, 100, 100),
+        Shape.rect(0, 0, 50, 50, fill: "#f00"),
+        Shape.pop_clip(),
+        Shape.rect(0, 0, 150, 150, fill: "#0f0"),
+        Shape.pop_clip()
+      ]
+
+      assert length(shapes) == 6
+      types = Enum.map(shapes, & &1["type"])
+      assert types == ["push_clip", "push_clip", "rect", "pop_clip", "rect", "pop_clip"]
     end
   end
 end

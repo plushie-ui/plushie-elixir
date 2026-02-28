@@ -31,6 +31,18 @@ defmodule Julep.Canvas.Shape do
         pop_transform()
       ]
 
+  ## Clipping
+
+  Clip regions restrict drawing to a rectangular area:
+
+      [
+        push_clip(10, 10, 100, 80),
+        rect(0, 0, 200, 200, fill: "#ff0000"),
+        pop_clip()
+      ]
+
+  Clip regions nest -- inner clips are intersected with outer clips.
+
   ## Gradients
 
   Use `linear_gradient/3` as a `fill` value:
@@ -192,6 +204,20 @@ defmodule Julep.Canvas.Shape do
   @spec scale(x :: number(), y :: number()) :: map()
   def scale(x, y), do: %{"type" => "scale", "x" => x, "y" => y}
 
+  # -- Clipping commands ------------------------------------------------------
+
+  @doc "Pushes a clipping rectangle. All shapes until the matching pop_clip are clipped to this region."
+  @spec push_clip(x :: number(), y :: number(), w :: number(), h :: number()) :: map()
+  def push_clip(x, y, w, h) do
+    %{"type" => "push_clip", "x" => x, "y" => y, "w" => w, "h" => h}
+  end
+
+  @doc "Pops the most recent clipping rectangle."
+  @spec pop_clip() :: map()
+  def pop_clip do
+    %{"type" => "pop_clip"}
+  end
+
   # -- Gradient builder -------------------------------------------------------
 
   @doc """
@@ -262,9 +288,16 @@ defmodule Julep.Canvas.Shape do
   # -- Private helpers --------------------------------------------------------
 
   defp apply_fill(shape, opts) do
-    case Keyword.get(opts, :fill) do
+    shape =
+      case Keyword.get(opts, :fill) do
+        nil -> shape
+        fill -> Map.put(shape, "fill", fill)
+      end
+
+    case Keyword.get(opts, :fill_rule) do
       nil -> shape
-      fill -> Map.put(shape, "fill", fill)
+      :non_zero -> Map.put(shape, "fill_rule", "non_zero")
+      :even_odd -> Map.put(shape, "fill_rule", "even_odd")
     end
   end
 

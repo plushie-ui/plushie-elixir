@@ -62,13 +62,11 @@ defmodule Mix.Tasks.Compile.JulepGui do
       [Path.join(@native_dir, "Cargo.toml"), Path.join(@native_dir, "Cargo.lock")]
   end
 
-  defp needs_rebuild?(sources, nil), do: sources != []
+  defp needs_rebuild?(_sources, nil), do: true
 
   defp needs_rebuild?(sources, last_mtime) do
     max_mtime(sources) > last_mtime
   end
-
-  defp max_mtime([]), do: 0
 
   defp max_mtime(sources) do
     sources

@@ -18,6 +18,9 @@ defmodule Julep.Iced.Widget.TextEditor do
   - `line_height` (number | map) -- line height.
   - `padding` (number) -- uniform padding in pixels.
   - `wrapping` (string) -- text wrapping: `"none"`, `"word"`, `"glyph"`, `"word_or_glyph"`.
+  - `highlight_syntax` (string) -- language extension for syntax highlighting (e.g. "rs", "py", "ex").
+  - `highlight_theme` (string) -- highlighter theme. One of `"solarized_dark"`, `"base16_mocha"`,
+    `"base16_ocean"`, `"base16_eighties"`, `"inspired_github"`. Defaults to `"solarized_dark"`.
   - `style` (string) -- named style. Currently only `"default"`.
 
   ## Events
@@ -43,6 +46,8 @@ defmodule Julep.Iced.Widget.TextEditor do
           | {:line_height, number() | map()}
           | {:padding, number()}
           | {:wrapping, Julep.Iced.Wrapping.t()}
+          | {:highlight_syntax, String.t()}
+          | {:highlight_theme, String.t()}
           | {:style, style()}
 
   @type t :: %__MODULE__{
@@ -58,6 +63,8 @@ defmodule Julep.Iced.Widget.TextEditor do
           line_height: number() | map() | nil,
           padding: number() | nil,
           wrapping: Julep.Iced.Wrapping.t() | nil,
+          highlight_syntax: String.t() | nil,
+          highlight_theme: String.t() | nil,
           style: style() | nil
         }
 
@@ -74,6 +81,8 @@ defmodule Julep.Iced.Widget.TextEditor do
     :line_height,
     :padding,
     :wrapping,
+    :highlight_syntax,
+    :highlight_theme,
     :style
   ]
 
@@ -100,6 +109,8 @@ defmodule Julep.Iced.Widget.TextEditor do
       {:line_height, v}, acc -> line_height(acc, v)
       {:padding, v}, acc -> padding(acc, v)
       {:wrapping, v}, acc -> wrapping(acc, v)
+      {:highlight_syntax, v}, acc -> highlight_syntax(acc, v)
+      {:highlight_theme, v}, acc -> highlight_theme(acc, v)
       {:style, v}, acc -> style(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -149,6 +160,16 @@ defmodule Julep.Iced.Widget.TextEditor do
   @spec wrapping(text_editor :: t(), wrapping :: Julep.Iced.Wrapping.t()) :: t()
   def wrapping(%__MODULE__{} = ed, wrapping), do: %{ed | wrapping: wrapping}
 
+  @doc "Sets the syntax language for highlighting (e.g. \"rs\", \"py\", \"ex\")."
+  @spec highlight_syntax(text_editor :: t(), highlight_syntax :: String.t()) :: t()
+  def highlight_syntax(%__MODULE__{} = ed, highlight_syntax),
+    do: %{ed | highlight_syntax: highlight_syntax}
+
+  @doc "Sets the highlighter color theme."
+  @spec highlight_theme(text_editor :: t(), highlight_theme :: String.t()) :: t()
+  def highlight_theme(%__MODULE__{} = ed, highlight_theme),
+    do: %{ed | highlight_theme: highlight_theme}
+
   @doc "Sets the text editor style."
   @spec style(text_editor :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = ed, style), do: %{ed | style: style}
@@ -174,6 +195,8 @@ defmodule Julep.Iced.Widget.TextEditor do
         |> put_if(ed.line_height, "line_height")
         |> put_if(ed.padding, "padding")
         |> put_if(ed.wrapping, "wrapping")
+        |> put_if(ed.highlight_syntax, "highlight_syntax")
+        |> put_if(ed.highlight_theme, "highlight_theme")
         |> put_if(ed.style, "style")
 
       %{id: ed.id, type: "text_editor", props: props, children: []}

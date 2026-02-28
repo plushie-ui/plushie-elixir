@@ -26,6 +26,8 @@ defmodule Julep.Iced.Widget.ComboBox do
   - `{:select, id, value}` -- emitted when an option is selected.
   - `{:input, id, value}` -- emitted on every text input change (for filtering).
   - `{:option_hovered, id, value}` -- emitted on hover (requires `on_option_hovered` prop).
+  - `{:open, id}` -- emitted when the dropdown menu is opened (requires `on_open: true`).
+  - `{:close, id}` -- emitted when the dropdown menu is closed (requires `on_close: true`).
   """
 
   alias Julep.Iced.Widget.Build
@@ -41,6 +43,8 @@ defmodule Julep.Iced.Widget.ComboBox do
           | {:menu_height, number()}
           | {:icon, map()}
           | {:on_option_hovered, boolean()}
+          | {:on_open, boolean()}
+          | {:on_close, boolean()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -54,7 +58,9 @@ defmodule Julep.Iced.Widget.ComboBox do
           line_height: number() | map() | nil,
           menu_height: number() | nil,
           icon: map() | nil,
-          on_option_hovered: boolean() | nil
+          on_option_hovered: boolean() | nil,
+          on_open: boolean() | nil,
+          on_close: boolean() | nil
         }
 
   defstruct [
@@ -69,7 +75,9 @@ defmodule Julep.Iced.Widget.ComboBox do
     :line_height,
     :menu_height,
     :icon,
-    :on_option_hovered
+    :on_option_hovered,
+    :on_open,
+    :on_close
   ]
 
   @doc "Creates a new combo box struct with the given options and optional keyword opts."
@@ -94,6 +102,8 @@ defmodule Julep.Iced.Widget.ComboBox do
       {:menu_height, v}, acc -> menu_height(acc, v)
       {:icon, v}, acc -> icon(acc, v)
       {:on_option_hovered, v}, acc -> on_option_hovered(acc, v)
+      {:on_open, v}, acc -> on_open(acc, v)
+      {:on_close, v}, acc -> on_close(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -139,6 +149,14 @@ defmodule Julep.Iced.Widget.ComboBox do
   def on_option_hovered(%__MODULE__{} = cb, on_option_hovered),
     do: %{cb | on_option_hovered: on_option_hovered}
 
+  @doc "Enables or disables the open event when the dropdown menu opens."
+  @spec on_open(combo_box :: t(), on_open :: boolean()) :: t()
+  def on_open(%__MODULE__{} = cb, on_open), do: %{cb | on_open: on_open}
+
+  @doc "Enables or disables the close event when the dropdown menu closes."
+  @spec on_close(combo_box :: t(), on_close :: boolean()) :: t()
+  def on_close(%__MODULE__{} = cb, on_close), do: %{cb | on_close: on_close}
+
   @doc "Converts this combo box struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(combo_box :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = cb), do: Julep.Iced.Widget.to_node(cb)
@@ -160,6 +178,8 @@ defmodule Julep.Iced.Widget.ComboBox do
         |> put_if(cb.menu_height, "menu_height")
         |> put_if(cb.icon, "icon")
         |> put_if(cb.on_option_hovered, "on_option_hovered")
+        |> put_if(cb.on_open, "on_open")
+        |> put_if(cb.on_close, "on_close")
 
       %{id: cb.id, type: "combo_box", props: props, children: []}
     end

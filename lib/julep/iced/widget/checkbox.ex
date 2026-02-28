@@ -16,6 +16,8 @@ defmodule Julep.Iced.Widget.Checkbox do
   - `wrapping` (string) -- text wrapping: `"none"`, `"word"`, `"glyph"`, `"word_or_glyph"`.
   - `style` (string) -- named style. One of: `"primary"` (default), `"secondary"`,
     `"success"`, `"danger"`.
+  - `icon` (map) -- custom icon for the check mark. Map with `:code_point` (required),
+    and optional `:size`, `:line_height`, `:font`, `:shaping`.
   - `disabled` (boolean) -- when true, the checkbox cannot be toggled. Default: false.
 
   ## Events
@@ -38,6 +40,7 @@ defmodule Julep.Iced.Widget.Checkbox do
           | {:text_shaping, Julep.Iced.Shaping.t()}
           | {:wrapping, Julep.Iced.Wrapping.t()}
           | {:style, style()}
+          | {:icon, map()}
           | {:disabled, boolean()}
 
   @type t :: %__MODULE__{
@@ -53,6 +56,7 @@ defmodule Julep.Iced.Widget.Checkbox do
           text_shaping: Julep.Iced.Shaping.t() | nil,
           wrapping: Julep.Iced.Wrapping.t() | nil,
           style: style() | nil,
+          icon: map() | nil,
           disabled: boolean() | nil
         }
 
@@ -69,6 +73,7 @@ defmodule Julep.Iced.Widget.Checkbox do
     :text_shaping,
     :wrapping,
     :style,
+    :icon,
     :disabled
   ]
 
@@ -94,6 +99,7 @@ defmodule Julep.Iced.Widget.Checkbox do
       {:text_shaping, v}, acc -> text_shaping(acc, v)
       {:wrapping, v}, acc -> wrapping(acc, v)
       {:style, v}, acc -> style(acc, v)
+      {:icon, v}, acc -> icon(acc, v)
       {:disabled, v}, acc -> disabled(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -135,6 +141,10 @@ defmodule Julep.Iced.Widget.Checkbox do
   @spec style(checkbox :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = cb, style), do: %{cb | style: style}
 
+  @doc "Sets a custom icon for the check mark."
+  @spec icon(checkbox :: t(), icon :: map()) :: t()
+  def icon(%__MODULE__{} = cb, icon) when is_map(icon), do: %{cb | icon: icon}
+
   @doc "Sets whether the checkbox is disabled."
   @spec disabled(checkbox :: t(), disabled :: boolean()) :: t()
   def disabled(%__MODULE__{} = cb, disabled), do: %{cb | disabled: disabled}
@@ -160,6 +170,7 @@ defmodule Julep.Iced.Widget.Checkbox do
         |> put_if(cb.text_shaping, "text_shaping")
         |> put_if(cb.wrapping, "wrapping")
         |> put_if(cb.style, "style")
+        |> put_if(cb.icon, "icon")
         |> put_if(cb.disabled, "disabled")
 
       %{id: cb.id, type: "checkbox", props: props, children: []}
