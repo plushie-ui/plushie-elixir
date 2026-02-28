@@ -90,7 +90,7 @@ defmodule Julep do
     renderer_path = Keyword.get(opts, :renderer, @default_renderer_path)
     dev? = Keyword.get(opts, :dev, false)
     format = Keyword.get(opts, :format, :msgpack)
-    log_level = Keyword.get(opts, :log_level, nil)
+    log_level = Keyword.get(opts, :log_level, :error)
 
     children = [
       # Bridge starts first: opens the Port and spawns the renderer process,
