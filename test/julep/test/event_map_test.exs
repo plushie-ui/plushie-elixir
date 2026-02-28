@@ -215,4 +215,124 @@ defmodule Julep.Test.EventMapTest do
       assert msg =~ "cannot canvas_scroll"
     end
   end
+
+  # -- mouse_right_press/1 --
+
+  describe "mouse_right_press/1" do
+    test "returns event for mouse_area" do
+      assert {:ok, {:mouse_right_press, "zone"}} =
+               EventMap.mouse_right_press(el("zone", "mouse_area"))
+    end
+
+    test "returns error for non-mouse_area widget" do
+      assert {:error, msg} = EventMap.mouse_right_press(el("x", "button"))
+      assert msg =~ "cannot mouse_right_press"
+    end
+  end
+
+  # -- mouse_right_release/1 --
+
+  describe "mouse_right_release/1" do
+    test "returns event for mouse_area" do
+      assert {:ok, {:mouse_right_release, "zone"}} =
+               EventMap.mouse_right_release(el("zone", "mouse_area"))
+    end
+
+    test "returns error for non-mouse_area widget" do
+      assert {:error, msg} = EventMap.mouse_right_release(el("x", "text"))
+      assert msg =~ "cannot mouse_right_release"
+    end
+  end
+
+  # -- mouse_middle_release/1 --
+
+  describe "mouse_middle_release/1" do
+    test "returns event for mouse_area" do
+      assert {:ok, {:mouse_middle_release, "zone"}} =
+               EventMap.mouse_middle_release(el("zone", "mouse_area"))
+    end
+
+    test "returns error for non-mouse_area widget" do
+      assert {:error, msg} = EventMap.mouse_middle_release(el("x", "text"))
+      assert msg =~ "cannot mouse_middle_release"
+    end
+  end
+
+  # -- mouse_double_click/1 --
+
+  describe "mouse_double_click/1" do
+    test "returns event for mouse_area" do
+      assert {:ok, {:mouse_double_click, "zone"}} =
+               EventMap.mouse_double_click(el("zone", "mouse_area"))
+    end
+
+    test "returns error for non-mouse_area widget" do
+      assert {:error, msg} = EventMap.mouse_double_click(el("x", "button"))
+      assert msg =~ "cannot mouse_double_click"
+    end
+  end
+
+  # -- mouse_enter/1 --
+
+  describe "mouse_enter/1" do
+    test "returns event for mouse_area" do
+      assert {:ok, {:mouse_enter, "zone"}} =
+               EventMap.mouse_enter(el("zone", "mouse_area"))
+    end
+
+    test "returns error for non-mouse_area widget" do
+      assert {:error, msg} = EventMap.mouse_enter(el("x", "text"))
+      assert msg =~ "cannot mouse_enter"
+    end
+  end
+
+  # -- mouse_exit/1 --
+
+  describe "mouse_exit/1" do
+    test "returns event for mouse_area" do
+      assert {:ok, {:mouse_exit, "zone"}} =
+               EventMap.mouse_exit(el("zone", "mouse_area"))
+    end
+
+    test "returns error for non-mouse_area widget" do
+      assert {:error, msg} = EventMap.mouse_exit(el("x", "text"))
+      assert msg =~ "cannot mouse_exit"
+    end
+  end
+
+  # -- mouse_move/3 --
+
+  describe "mouse_move/3" do
+    test "returns event for mouse_area" do
+      assert {:ok, {:mouse_move, "zone", 10.0, 20.0}} =
+               EventMap.mouse_move(el("zone", "mouse_area"), 10.0, 20.0)
+    end
+
+    test "returns error for non-mouse_area widget" do
+      assert {:error, msg} = EventMap.mouse_move(el("x", "button"), 0, 0)
+      assert msg =~ "cannot mouse_move"
+    end
+  end
+
+  # -- mouse_scroll/3 --
+
+  describe "mouse_scroll/3" do
+    test "returns event with default deltas" do
+      assert {:ok, {:mouse_scroll, "zone", delta_x, delta_y}} =
+               EventMap.mouse_scroll(el("zone", "mouse_area"))
+
+      assert delta_x == +0.0
+      assert delta_y == 1.0
+    end
+
+    test "returns event with custom deltas" do
+      assert {:ok, {:mouse_scroll, "zone", 2.0, -3.0}} =
+               EventMap.mouse_scroll(el("zone", "mouse_area"), 2.0, -3.0)
+    end
+
+    test "returns error for non-mouse_area widget" do
+      assert {:error, msg} = EventMap.mouse_scroll(el("x", "button"), 0, 0)
+      assert msg =~ "cannot mouse_scroll"
+    end
+  end
 end

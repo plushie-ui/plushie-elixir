@@ -1055,6 +1055,50 @@ defmodule Julep.Protocol do
     {:window, String.to_atom(action), window_id}
   end
 
+  # -- MouseArea events --
+
+  defp dispatch(%{"type" => "event", "family" => "mouse_right_press", "id" => id}) do
+    {:mouse_right_press, id}
+  end
+
+  defp dispatch(%{"type" => "event", "family" => "mouse_right_release", "id" => id}) do
+    {:mouse_right_release, id}
+  end
+
+  defp dispatch(%{"type" => "event", "family" => "mouse_middle_release", "id" => id}) do
+    {:mouse_middle_release, id}
+  end
+
+  defp dispatch(%{"type" => "event", "family" => "mouse_double_click", "id" => id}) do
+    {:mouse_double_click, id}
+  end
+
+  defp dispatch(%{"type" => "event", "family" => "mouse_enter", "id" => id}) do
+    {:mouse_enter, id}
+  end
+
+  defp dispatch(%{"type" => "event", "family" => "mouse_exit", "id" => id}) do
+    {:mouse_exit, id}
+  end
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "mouse_move",
+         "id" => id,
+         "data" => %{"x" => x, "y" => y}
+       }) do
+    {:mouse_move, id, x, y}
+  end
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "mouse_scroll",
+         "id" => id,
+         "data" => %{"delta_x" => dx, "delta_y" => dy}
+       }) do
+    {:mouse_scroll, id, dx, dy}
+  end
+
   # -- Canvas events --
 
   defp dispatch(%{"type" => "event", "family" => "canvas_press", "id" => id, "data" => data}) do

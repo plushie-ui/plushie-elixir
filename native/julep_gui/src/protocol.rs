@@ -651,6 +651,48 @@ impl OutgoingEvent {
     }
 
     // -----------------------------------------------------------------------
+    // MouseArea events
+    // -----------------------------------------------------------------------
+
+    pub fn mouse_right_press(id: String) -> Self {
+        Self::bare("mouse_right_press", id)
+    }
+
+    pub fn mouse_right_release(id: String) -> Self {
+        Self::bare("mouse_right_release", id)
+    }
+
+    pub fn mouse_middle_release(id: String) -> Self {
+        Self::bare("mouse_middle_release", id)
+    }
+
+    pub fn mouse_double_click(id: String) -> Self {
+        Self::bare("mouse_double_click", id)
+    }
+
+    pub fn mouse_enter(id: String) -> Self {
+        Self::bare("mouse_enter", id)
+    }
+
+    pub fn mouse_exit(id: String) -> Self {
+        Self::bare("mouse_exit", id)
+    }
+
+    pub fn mouse_area_move(id: String, x: f32, y: f32) -> Self {
+        Self {
+            data: Some(serde_json::json!({"x": x, "y": y})),
+            ..Self::bare("mouse_move", id)
+        }
+    }
+
+    pub fn mouse_area_scroll(id: String, delta_x: f32, delta_y: f32) -> Self {
+        Self {
+            data: Some(serde_json::json!({"delta_x": delta_x, "delta_y": delta_y})),
+            ..Self::bare("mouse_scroll", id)
+        }
+    }
+
+    // -----------------------------------------------------------------------
     // PaneGrid events
     // -----------------------------------------------------------------------
 
@@ -1487,6 +1529,74 @@ mod tests {
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "canvas_scroll");
         assert_eq!(json["data"]["delta_y"], -1.0);
+    }
+
+    // -----------------------------------------------------------------------
+    // OutgoingEvent serialization -- mouse area events
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn serialize_mouse_right_press() {
+        let evt = OutgoingEvent::mouse_right_press("zone".to_string());
+        let json = serde_json::to_value(&evt).unwrap();
+        assert_eq!(json["family"], "mouse_right_press");
+        assert_eq!(json["id"], "zone");
+    }
+
+    #[test]
+    fn serialize_mouse_right_release() {
+        let evt = OutgoingEvent::mouse_right_release("zone".to_string());
+        let json = serde_json::to_value(&evt).unwrap();
+        assert_eq!(json["family"], "mouse_right_release");
+    }
+
+    #[test]
+    fn serialize_mouse_middle_release() {
+        let evt = OutgoingEvent::mouse_middle_release("zone".to_string());
+        let json = serde_json::to_value(&evt).unwrap();
+        assert_eq!(json["family"], "mouse_middle_release");
+    }
+
+    #[test]
+    fn serialize_mouse_double_click() {
+        let evt = OutgoingEvent::mouse_double_click("zone".to_string());
+        let json = serde_json::to_value(&evt).unwrap();
+        assert_eq!(json["family"], "mouse_double_click");
+    }
+
+    #[test]
+    fn serialize_mouse_enter() {
+        let evt = OutgoingEvent::mouse_enter("zone".to_string());
+        let json = serde_json::to_value(&evt).unwrap();
+        assert_eq!(json["family"], "mouse_enter");
+    }
+
+    #[test]
+    fn serialize_mouse_exit() {
+        let evt = OutgoingEvent::mouse_exit("zone".to_string());
+        let json = serde_json::to_value(&evt).unwrap();
+        assert_eq!(json["family"], "mouse_exit");
+    }
+
+    #[test]
+    fn serialize_mouse_area_move() {
+        let evt = OutgoingEvent::mouse_area_move("zone".to_string(), 10.5, 20.3);
+        let json = serde_json::to_value(&evt).unwrap();
+        assert_eq!(json["family"], "mouse_move");
+        assert_eq!(json["id"], "zone");
+        let data = &json["data"];
+        assert!((data["x"].as_f64().unwrap() - 10.5).abs() < 0.01);
+        assert!((data["y"].as_f64().unwrap() - 20.3).abs() < 0.01);
+    }
+
+    #[test]
+    fn serialize_mouse_area_scroll() {
+        let evt = OutgoingEvent::mouse_area_scroll("zone".to_string(), 0.0, -3.0);
+        let json = serde_json::to_value(&evt).unwrap();
+        assert_eq!(json["family"], "mouse_scroll");
+        assert_eq!(json["id"], "zone");
+        assert_eq!(json["data"]["delta_x"], 0.0);
+        assert_eq!(json["data"]["delta_y"], -3.0);
     }
 
     // -----------------------------------------------------------------------

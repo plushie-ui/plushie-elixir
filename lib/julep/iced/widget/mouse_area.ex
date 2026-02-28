@@ -2,7 +2,8 @@ defmodule Julep.Iced.Widget.MouseArea do
   @moduledoc """
   Mouse area -- captures mouse events on child content.
 
-  Wraps child content and emits click events for various mouse buttons.
+  Wraps child content and emits click events for various mouse buttons,
+  hover enter/exit, cursor movement, scroll, and double-click events.
   Optionally sets the mouse cursor when hovering the area.
 
   ## Props
@@ -14,12 +15,33 @@ defmodule Julep.Iced.Widget.MouseArea do
     `:resizing_horizontally`, `:resizing_vertically`,
     `:resizing_diagonally_up`, `:resizing_diagonally_down`,
     `:resizing_column`, `:resizing_row`.
+  - `on_right_press` (boolean) -- enable right mouse button press events.
+  - `on_right_release` (boolean) -- enable right mouse button release events.
+  - `on_middle_release` (boolean) -- enable middle mouse button release events.
+  - `on_double_click` (boolean) -- enable double-click events.
+  - `on_enter` (boolean) -- enable cursor enter events.
+  - `on_exit` (boolean) -- enable cursor exit events.
+  - `on_move` (boolean) -- enable cursor move events.
+  - `on_scroll` (boolean) -- enable scroll wheel events.
 
   ## Events
+
+  Always emitted (unconditional):
 
   - `{:click, id}` -- left mouse button pressed.
   - `{:click, "id:release"}` -- left mouse button released.
   - `{:click, "id:middle"}` -- middle mouse button pressed.
+
+  Conditional (opt-in via props):
+
+  - `{:mouse_right_press, id}` -- right mouse button pressed.
+  - `{:mouse_right_release, id}` -- right mouse button released.
+  - `{:mouse_middle_release, id}` -- middle mouse button released.
+  - `{:mouse_double_click, id}` -- left mouse button double-clicked.
+  - `{:mouse_enter, id}` -- cursor entered the area.
+  - `{:mouse_exit, id}` -- cursor exited the area.
+  - `{:mouse_move, id, x, y}` -- cursor moved within the area.
+  - `{:mouse_scroll, id, delta_x, delta_y}` -- scroll wheel within the area.
   """
 
   alias Julep.Iced.Widget.Build
@@ -50,15 +72,44 @@ defmodule Julep.Iced.Widget.MouseArea do
           | :resizing_column
           | :resizing_row
 
-  @type option :: {:cursor, cursor()}
+  @type option ::
+          {:cursor, cursor()}
+          | {:on_right_press, boolean()}
+          | {:on_right_release, boolean()}
+          | {:on_middle_release, boolean()}
+          | {:on_double_click, boolean()}
+          | {:on_enter, boolean()}
+          | {:on_exit, boolean()}
+          | {:on_move, boolean()}
+          | {:on_scroll, boolean()}
 
   @type t :: %__MODULE__{
           id: String.t(),
           cursor: cursor() | nil,
+          on_right_press: boolean() | nil,
+          on_right_release: boolean() | nil,
+          on_middle_release: boolean() | nil,
+          on_double_click: boolean() | nil,
+          on_enter: boolean() | nil,
+          on_exit: boolean() | nil,
+          on_move: boolean() | nil,
+          on_scroll: boolean() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
-  defstruct [:id, :cursor, children: []]
+  defstruct [
+    :id,
+    :cursor,
+    :on_right_press,
+    :on_right_release,
+    :on_middle_release,
+    :on_double_click,
+    :on_enter,
+    :on_exit,
+    :on_move,
+    :on_scroll,
+    children: []
+  ]
 
   @doc "Creates a new mouse area struct."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
@@ -71,6 +122,14 @@ defmodule Julep.Iced.Widget.MouseArea do
   def with_options(%__MODULE__{} = ma, opts) do
     Enum.reduce(opts, ma, fn
       {:cursor, v}, acc -> cursor(acc, v)
+      {:on_right_press, v}, acc -> on_right_press(acc, v)
+      {:on_right_release, v}, acc -> on_right_release(acc, v)
+      {:on_middle_release, v}, acc -> on_middle_release(acc, v)
+      {:on_double_click, v}, acc -> on_double_click(acc, v)
+      {:on_enter, v}, acc -> on_enter(acc, v)
+      {:on_exit, v}, acc -> on_exit(acc, v)
+      {:on_move, v}, acc -> on_move(acc, v)
+      {:on_scroll, v}, acc -> on_scroll(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -78,6 +137,38 @@ defmodule Julep.Iced.Widget.MouseArea do
   @doc "Sets the mouse cursor shown on hover."
   @spec cursor(mouse_area :: t(), cursor :: cursor()) :: t()
   def cursor(%__MODULE__{} = ma, cursor), do: %{ma | cursor: cursor}
+
+  @doc "Enables or disables right mouse button press events."
+  @spec on_right_press(mouse_area :: t(), enabled :: boolean()) :: t()
+  def on_right_press(%__MODULE__{} = ma, enabled), do: %{ma | on_right_press: enabled}
+
+  @doc "Enables or disables right mouse button release events."
+  @spec on_right_release(mouse_area :: t(), enabled :: boolean()) :: t()
+  def on_right_release(%__MODULE__{} = ma, enabled), do: %{ma | on_right_release: enabled}
+
+  @doc "Enables or disables middle mouse button release events."
+  @spec on_middle_release(mouse_area :: t(), enabled :: boolean()) :: t()
+  def on_middle_release(%__MODULE__{} = ma, enabled), do: %{ma | on_middle_release: enabled}
+
+  @doc "Enables or disables double-click events."
+  @spec on_double_click(mouse_area :: t(), enabled :: boolean()) :: t()
+  def on_double_click(%__MODULE__{} = ma, enabled), do: %{ma | on_double_click: enabled}
+
+  @doc "Enables or disables cursor enter events."
+  @spec on_enter(mouse_area :: t(), enabled :: boolean()) :: t()
+  def on_enter(%__MODULE__{} = ma, enabled), do: %{ma | on_enter: enabled}
+
+  @doc "Enables or disables cursor exit events."
+  @spec on_exit(mouse_area :: t(), enabled :: boolean()) :: t()
+  def on_exit(%__MODULE__{} = ma, enabled), do: %{ma | on_exit: enabled}
+
+  @doc "Enables or disables cursor move events."
+  @spec on_move(mouse_area :: t(), enabled :: boolean()) :: t()
+  def on_move(%__MODULE__{} = ma, enabled), do: %{ma | on_move: enabled}
+
+  @doc "Enables or disables scroll wheel events."
+  @spec on_scroll(mouse_area :: t(), enabled :: boolean()) :: t()
+  def on_scroll(%__MODULE__{} = ma, enabled), do: %{ma | on_scroll: enabled}
 
   @doc "Appends a child to the mouse area."
   @spec push(mouse_area :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
@@ -98,6 +189,14 @@ defmodule Julep.Iced.Widget.MouseArea do
       props =
         %{}
         |> put_if(ma.cursor, "cursor")
+        |> put_if(ma.on_right_press, "on_right_press")
+        |> put_if(ma.on_right_release, "on_right_release")
+        |> put_if(ma.on_middle_release, "on_middle_release")
+        |> put_if(ma.on_double_click, "on_double_click")
+        |> put_if(ma.on_enter, "on_enter")
+        |> put_if(ma.on_exit, "on_exit")
+        |> put_if(ma.on_move, "on_move")
+        |> put_if(ma.on_scroll, "on_scroll")
 
       %{id: ma.id, type: "mouse_area", props: props, children: children_to_nodes(ma.children)}
     end

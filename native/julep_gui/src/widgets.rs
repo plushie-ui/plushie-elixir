@@ -1915,6 +1915,46 @@ fn render_mouse_area<'a>(
         .on_release(Message::Click(release_id))
         .on_middle_press(Message::Click(middle_id));
 
+    // Conditional event handlers (opt-in via boolean props)
+    if prop_bool_default(props, "on_right_press", false) {
+        let ev_id = node.id.clone();
+        ma = ma.on_right_press(Message::MouseAreaEvent(ev_id, "right_press".into()));
+    }
+    if prop_bool_default(props, "on_right_release", false) {
+        let ev_id = node.id.clone();
+        ma = ma.on_right_release(Message::MouseAreaEvent(ev_id, "right_release".into()));
+    }
+    if prop_bool_default(props, "on_middle_release", false) {
+        let ev_id = node.id.clone();
+        ma = ma.on_middle_release(Message::MouseAreaEvent(ev_id, "middle_release".into()));
+    }
+    if prop_bool_default(props, "on_double_click", false) {
+        let ev_id = node.id.clone();
+        ma = ma.on_double_click(Message::MouseAreaEvent(ev_id, "double_click".into()));
+    }
+    if prop_bool_default(props, "on_enter", false) {
+        let ev_id = node.id.clone();
+        ma = ma.on_enter(Message::MouseAreaEvent(ev_id, "enter".into()));
+    }
+    if prop_bool_default(props, "on_exit", false) {
+        let ev_id = node.id.clone();
+        ma = ma.on_exit(Message::MouseAreaEvent(ev_id, "exit".into()));
+    }
+    if prop_bool_default(props, "on_move", false) {
+        let ev_id = node.id.clone();
+        ma = ma.on_move(move |p| Message::MouseAreaMove(ev_id.clone(), p.x, p.y));
+    }
+    if prop_bool_default(props, "on_scroll", false) {
+        let ev_id = node.id.clone();
+        ma = ma.on_scroll(move |delta| {
+            let (dx, dy) = match delta {
+                mouse::ScrollDelta::Lines { x, y } => (x, y),
+                mouse::ScrollDelta::Pixels { x, y } => (x, y),
+            };
+            Message::MouseAreaScroll(ev_id.clone(), dx, dy)
+        });
+    }
+
     if let Some(cursor) = prop_str(props, "cursor") {
         if let Some(interaction) = parse_interaction(&cursor) {
             ma = ma.interaction(interaction);

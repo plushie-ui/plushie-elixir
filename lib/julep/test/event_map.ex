@@ -20,6 +20,19 @@ defmodule Julep.Test.EventMap do
   | pick_list    | -                  | -                     | -                   | -                         | `{:select, id, val}`      | -                  |
   | combo_box    | -                  | -                     | -                   | -                         | `{:select, id, val}`      | -                  |
 
+  MouseArea widgets use dedicated event producers for conditional events:
+
+  | Producer              | Event                                            |
+  |-----------------------|--------------------------------------------------|
+  | `mouse_right_press`   | `{:mouse_right_press, id}`                       |
+  | `mouse_right_release` | `{:mouse_right_release, id}`                     |
+  | `mouse_middle_release`| `{:mouse_middle_release, id}`                    |
+  | `mouse_double_click`  | `{:mouse_double_click, id}`                      |
+  | `mouse_enter`         | `{:mouse_enter, id}`                             |
+  | `mouse_exit`          | `{:mouse_exit, id}`                              |
+  | `mouse_move`          | `{:mouse_move, id, x, y}`                        |
+  | `mouse_scroll`        | `{:mouse_scroll, id, delta_x, delta_y}`          |
+
   Canvas widgets use dedicated event producers instead of the generic verbs above:
 
   | Producer         | Event                                       |
@@ -141,4 +154,75 @@ defmodule Julep.Test.EventMap do
 
   def canvas_scroll(%Element{type: type}, _x, _y, _delta_x, _delta_y),
     do: {:error, "cannot canvas_scroll a #{type} widget"}
+
+  # -- MouseArea events --
+
+  @doc "Produces a mouse right-press event for a mouse_area widget."
+  @spec mouse_right_press(element :: Element.t()) :: {:ok, tuple()} | {:error, String.t()}
+  def mouse_right_press(%Element{type: "mouse_area", id: id}),
+    do: {:ok, {:mouse_right_press, id}}
+
+  def mouse_right_press(%Element{type: type}),
+    do: {:error, "cannot mouse_right_press a #{type} widget"}
+
+  @doc "Produces a mouse right-release event for a mouse_area widget."
+  @spec mouse_right_release(element :: Element.t()) :: {:ok, tuple()} | {:error, String.t()}
+  def mouse_right_release(%Element{type: "mouse_area", id: id}),
+    do: {:ok, {:mouse_right_release, id}}
+
+  def mouse_right_release(%Element{type: type}),
+    do: {:error, "cannot mouse_right_release a #{type} widget"}
+
+  @doc "Produces a mouse middle-release event for a mouse_area widget."
+  @spec mouse_middle_release(element :: Element.t()) :: {:ok, tuple()} | {:error, String.t()}
+  def mouse_middle_release(%Element{type: "mouse_area", id: id}),
+    do: {:ok, {:mouse_middle_release, id}}
+
+  def mouse_middle_release(%Element{type: type}),
+    do: {:error, "cannot mouse_middle_release a #{type} widget"}
+
+  @doc "Produces a mouse double-click event for a mouse_area widget."
+  @spec mouse_double_click(element :: Element.t()) :: {:ok, tuple()} | {:error, String.t()}
+  def mouse_double_click(%Element{type: "mouse_area", id: id}),
+    do: {:ok, {:mouse_double_click, id}}
+
+  def mouse_double_click(%Element{type: type}),
+    do: {:error, "cannot mouse_double_click a #{type} widget"}
+
+  @doc "Produces a mouse enter event for a mouse_area widget."
+  @spec mouse_enter(element :: Element.t()) :: {:ok, tuple()} | {:error, String.t()}
+  def mouse_enter(%Element{type: "mouse_area", id: id}), do: {:ok, {:mouse_enter, id}}
+
+  def mouse_enter(%Element{type: type}),
+    do: {:error, "cannot mouse_enter a #{type} widget"}
+
+  @doc "Produces a mouse exit event for a mouse_area widget."
+  @spec mouse_exit(element :: Element.t()) :: {:ok, tuple()} | {:error, String.t()}
+  def mouse_exit(%Element{type: "mouse_area", id: id}), do: {:ok, {:mouse_exit, id}}
+
+  def mouse_exit(%Element{type: type}),
+    do: {:error, "cannot mouse_exit a #{type} widget"}
+
+  @doc "Produces a mouse move event for a mouse_area widget at the given coordinates."
+  @spec mouse_move(element :: Element.t(), x :: number(), y :: number()) ::
+          {:ok, tuple()} | {:error, String.t()}
+  def mouse_move(%Element{type: "mouse_area", id: id}, x, y),
+    do: {:ok, {:mouse_move, id, x, y}}
+
+  def mouse_move(%Element{type: type}, _x, _y),
+    do: {:error, "cannot mouse_move a #{type} widget"}
+
+  @doc "Produces a mouse scroll event for a mouse_area widget with scroll deltas."
+  @spec mouse_scroll(
+          element :: Element.t(),
+          delta_x :: number(),
+          delta_y :: number()
+        ) :: {:ok, tuple()} | {:error, String.t()}
+  def mouse_scroll(element, delta_x \\ 0.0, delta_y \\ 1.0)
+
+  def mouse_scroll(%Element{type: "mouse_area", id: id}, delta_x, delta_y),
+    do: {:ok, {:mouse_scroll, id, delta_x, delta_y}}
+
+  def mouse_scroll(%Element{type: type}, _delta_x, _delta_y),
+    do: {:error, "cannot mouse_scroll a #{type} widget"}
 end

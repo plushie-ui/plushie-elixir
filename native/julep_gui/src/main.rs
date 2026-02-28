@@ -135,6 +135,13 @@ pub(crate) enum Message {
     Paste(String, String),
     /// ComboBox option was hovered (combo_id, option_value).
     OptionHovered(String, String),
+    /// MouseArea simple event (id, kind). Kind is one of: right_press,
+    /// right_release, middle_release, double_click, enter, exit.
+    MouseAreaEvent(String, String),
+    /// MouseArea cursor move event (id, x, y).
+    MouseAreaMove(String, f32, f32),
+    /// MouseArea scroll event (id, delta_x, delta_y).
+    MouseAreaScroll(String, f32, f32),
 }
 
 // ---------------------------------------------------------------------------
@@ -675,6 +682,27 @@ impl App {
             }
             Message::OptionHovered(id, value) => {
                 emit_event(OutgoingEvent::option_hovered(id, value));
+                Task::none()
+            }
+            Message::MouseAreaEvent(id, kind) => {
+                let event = match kind.as_str() {
+                    "right_press" => OutgoingEvent::mouse_right_press(id),
+                    "right_release" => OutgoingEvent::mouse_right_release(id),
+                    "middle_release" => OutgoingEvent::mouse_middle_release(id),
+                    "double_click" => OutgoingEvent::mouse_double_click(id),
+                    "enter" => OutgoingEvent::mouse_enter(id),
+                    "exit" => OutgoingEvent::mouse_exit(id),
+                    _ => return Task::none(),
+                };
+                emit_event(event);
+                Task::none()
+            }
+            Message::MouseAreaMove(id, x, y) => {
+                emit_event(OutgoingEvent::mouse_area_move(id, x, y));
+                Task::none()
+            }
+            Message::MouseAreaScroll(id, dx, dy) => {
+                emit_event(OutgoingEvent::mouse_area_scroll(id, dx, dy));
                 Task::none()
             }
         }
@@ -1974,6 +2002,21 @@ pub(crate) fn message_to_event(msg: &Message) -> Option<OutgoingEvent> {
         Message::SlideRelease(id, value) => Some(OutgoingEvent::slide_release(id.clone(), *value)),
         Message::Select(id, value) => Some(OutgoingEvent::select(id.clone(), value.clone())),
         Message::SensorResize(id, w, h) => Some(OutgoingEvent::sensor_resize(id.clone(), *w, *h)),
+        Message::MouseAreaEvent(id, kind) => match kind.as_str() {
+            "right_press" => Some(OutgoingEvent::mouse_right_press(id.clone())),
+            "right_release" => Some(OutgoingEvent::mouse_right_release(id.clone())),
+            "middle_release" => Some(OutgoingEvent::mouse_middle_release(id.clone())),
+            "double_click" => Some(OutgoingEvent::mouse_double_click(id.clone())),
+            "enter" => Some(OutgoingEvent::mouse_enter(id.clone())),
+            "exit" => Some(OutgoingEvent::mouse_exit(id.clone())),
+            _ => None,
+        },
+        Message::MouseAreaMove(id, x, y) => {
+            Some(OutgoingEvent::mouse_area_move(id.clone(), *x, *y))
+        }
+        Message::MouseAreaScroll(id, dx, dy) => {
+            Some(OutgoingEvent::mouse_area_scroll(id.clone(), *dx, *dy))
+        }
         Message::ScrollEvent(id, abs_x, abs_y, rel_x, rel_y, bw, bh, cw, ch) => {
             Some(OutgoingEvent::scroll(
                 id.clone(),

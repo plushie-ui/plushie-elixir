@@ -90,10 +90,107 @@ defmodule Julep.Iced.Widget.MouseAreaTest do
   end
 
   # ---------------------------------------------------------------------------
-  # with_options/2 -- error case
+  # Event prop builders
+  # ---------------------------------------------------------------------------
+
+  describe "event prop builders" do
+    test "on_right_press/2 sets the field" do
+      ma = MouseArea.new("ma1") |> MouseArea.on_right_press(true)
+      assert ma.on_right_press == true
+    end
+
+    test "on_right_release/2 sets the field" do
+      ma = MouseArea.new("ma1") |> MouseArea.on_right_release(true)
+      assert ma.on_right_release == true
+    end
+
+    test "on_middle_release/2 sets the field" do
+      ma = MouseArea.new("ma1") |> MouseArea.on_middle_release(true)
+      assert ma.on_middle_release == true
+    end
+
+    test "on_double_click/2 sets the field" do
+      ma = MouseArea.new("ma1") |> MouseArea.on_double_click(true)
+      assert ma.on_double_click == true
+    end
+
+    test "on_enter/2 sets the field" do
+      ma = MouseArea.new("ma1") |> MouseArea.on_enter(true)
+      assert ma.on_enter == true
+    end
+
+    test "on_exit/2 sets the field" do
+      ma = MouseArea.new("ma1") |> MouseArea.on_exit(true)
+      assert ma.on_exit == true
+    end
+
+    test "on_move/2 sets the field" do
+      ma = MouseArea.new("ma1") |> MouseArea.on_move(true)
+      assert ma.on_move == true
+    end
+
+    test "on_scroll/2 sets the field" do
+      ma = MouseArea.new("ma1") |> MouseArea.on_scroll(true)
+      assert ma.on_scroll == true
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # build/1 -- event props in output
+  # ---------------------------------------------------------------------------
+
+  describe "build/1 event props" do
+    test "includes event props when set to true" do
+      node =
+        MouseArea.new("ma1")
+        |> MouseArea.on_right_press(true)
+        |> MouseArea.on_move(true)
+        |> MouseArea.on_scroll(true)
+        |> MouseArea.build()
+
+      assert node.props["on_right_press"] == true
+      assert node.props["on_move"] == true
+      assert node.props["on_scroll"] == true
+    end
+
+    test "omits event props when nil" do
+      node = MouseArea.new("ma1") |> MouseArea.build()
+
+      for key <- ~w(on_right_press on_right_release on_middle_release
+                     on_double_click on_enter on_exit on_move on_scroll) do
+        refute Map.has_key?(node.props, key)
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # with_options/2
   # ---------------------------------------------------------------------------
 
   describe "with_options/2" do
+    test "accepts all event options" do
+      ma =
+        MouseArea.new("ma1",
+          on_right_press: true,
+          on_right_release: true,
+          on_middle_release: true,
+          on_double_click: true,
+          on_enter: true,
+          on_exit: true,
+          on_move: true,
+          on_scroll: true
+        )
+
+      assert ma.on_right_press == true
+      assert ma.on_right_release == true
+      assert ma.on_middle_release == true
+      assert ma.on_double_click == true
+      assert ma.on_enter == true
+      assert ma.on_exit == true
+      assert ma.on_move == true
+      assert ma.on_scroll == true
+    end
+
     test "raises on unknown option" do
       assert_raise ArgumentError, fn ->
         MouseArea.new("ma1", style: :fancy)
