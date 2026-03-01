@@ -1,0 +1,292 @@
+defmodule Julep.Test.Backend.CommandProcessorTest do
+  use ExUnit.Case, async: true
+
+  alias Julep.Test.Backend.CommandProcessor
+
+  # -- Test apps --
+
+  defmodule AsyncApp do
+    use Julep.App
+
+    def init(_opts), do: {%{status: :idle, data: nil}, []}
+
+    def update(model, {:click, "fetch"}) do
+      cmd = Julep.Command.async(fn -> {:ok, "fetched"} end, :data_loaded)
+      {model, cmd}
+    end
+
+    def update(model, {:data_loaded, result}), do: %{model | status: :done, data: result}
+    def update(model, _event), do: model
+
+    def view(model) do
+      %{
+        id: "root",
+        type: "column",
+        props: %{},
+        children: [
+          %{id: "status", type: "text", props: %{"content" => "#{model.status}"}, children: []},
+          %{id: "fetch", type: "button", props: %{"label" => "Fetch"}, children: []}
+        ]
+      }
+    end
+  end
+
+  defmodule StreamApp do
+    use Julep.App
+
+    def init(_opts), do: {%{items: []}, []}
+
+    def update(model, {:click, "stream"}) do
+      cmd =
+        Julep.Command.stream(
+          fn emit ->
+            emit.(:a)
+            emit.(:b)
+            :done
+          end,
+          :streamed
+        )
+
+      {model, cmd}
+    end
+
+    def update(model, {:streamed, :done}), do: %{model | items: model.items ++ [:final]}
+    def update(model, {:streamed, item}), do: %{model | items: model.items ++ [item]}
+    def update(model, _event), do: model
+
+    def view(model) do
+      %{id: "root", type: "text", props: %{"content" => inspect(model.items)}, children: []}
+    end
+  end
+
+  defmodule BatchApp do
+    use Julep.App
+
+    def init(_opts), do: {%{a: false, b: false}, []}
+
+    def update(model, {:click, "both"}) do
+      cmd =
+        Julep.Command.batch([
+          Julep.Command.done(:set_a, fn v -> {:got_a, v} end),
+          Julep.Command.done(:set_b, fn v -> {:got_b, v} end)
+        ])
+
+      {model, cmd}
+    end
+
+    def update(model, {:got_a, _}), do: %{model | a: true}
+    def update(model, {:got_b, _}), do: %{model | b: true}
+    def update(model, _event), do: model
+
+    def view(model) do
+      %{id: "root", type: "text", props: %{"content" => inspect(model)}, children: []}
+    end
+  end
+
+  defmodule DoneApp do
+    use Julep.App
+
+    def init(_opts), do: {%{result: nil}, []}
+
+    def update(model, {:click, "go"}) do
+      cmd = Julep.Command.done(42, fn v -> {:computed, v * 2} end)
+      {model, cmd}
+    end
+
+    def update(model, {:computed, v}), do: %{model | result: v}
+    def update(model, _event), do: model
+
+    def view(model) do
+      %{id: "root", type: "text", props: %{"content" => inspect(model.result)}, children: []}
+    end
+  end
+
+  defmodule NoneApp do
+    use Julep.App
+
+    def init(_opts), do: {%{count: 0}, [Julep.Command.none()]}
+
+    def update(model, _event), do: model
+
+    def view(model) do
+      %{id: "root", type: "text", props: %{"content" => "#{model.count}"}, children: []}
+    end
+  end
+
+  defmodule InitCommandApp do
+    use Julep.App
+
+    def init(_opts) do
+      cmd = Julep.Command.async(fn -> "loaded" end, :init_data)
+      {%{data: nil}, cmd}
+    end
+
+    def update(model, {:init_data, data}), do: %{model | data: data}
+    def update(model, _event), do: model
+
+    def view(model) do
+      %{id: "root", type: "text", props: %{"content" => inspect(model.data)}, children: []}
+    end
+  end
+
+  defmodule SingleCommandApp do
+    use Julep.App
+
+    def init(_opts) do
+      cmd = Julep.Command.done(:hello, fn v -> {:init_done, v} end)
+      {%{initialized: false}, cmd}
+    end
+
+    def update(model, {:init_done, _}), do: %{model | initialized: true}
+    def update(model, _event), do: model
+
+    def view(model) do
+      %{id: "root", type: "text", props: %{"content" => "#{model.initialized}"}, children: []}
+    end
+  end
+
+  describe "process/3" do
+    test "processes async commands synchronously" do
+      {model, _commands} = AsyncApp.init([])
+      {model, commands} = CommandProcessor.dispatch_update(AsyncApp, model, {:click, "fetch"})
+      model = CommandProcessor.process(AsyncApp, model, commands)
+
+      assert model.status == :done
+      assert model.data == {:ok, "fetched"}
+    end
+
+    test "processes stream commands with intermediate values" do
+      {model, _commands} = StreamApp.init([])
+      {model, commands} = CommandProcessor.dispatch_update(StreamApp, model, {:click, "stream"})
+      model = CommandProcessor.process(StreamApp, model, commands)
+
+      assert model.items == [:a, :b, :final]
+    end
+
+    test "processes batch commands" do
+      {model, _commands} = BatchApp.init([])
+      {model, commands} = CommandProcessor.dispatch_update(BatchApp, model, {:click, "both"})
+      model = CommandProcessor.process(BatchApp, model, commands)
+
+      assert model.a == true
+      assert model.b == true
+    end
+
+    test "processes done commands" do
+      {model, _commands} = DoneApp.init([])
+      {model, commands} = CommandProcessor.dispatch_update(DoneApp, model, {:click, "go"})
+      model = CommandProcessor.process(DoneApp, model, commands)
+
+      assert model.result == 84
+    end
+
+    test "handles none commands" do
+      model = CommandProcessor.process(NoneApp, %{count: 0}, [Julep.Command.none()])
+      assert model.count == 0
+    end
+
+    test "handles empty command list" do
+      model = CommandProcessor.process(NoneApp, %{count: 5}, [])
+      assert model.count == 5
+    end
+
+    test "handles non-list input gracefully" do
+      model = CommandProcessor.process(NoneApp, %{count: 5}, nil)
+      assert model.count == 5
+    end
+
+    test "handles single command struct" do
+      cmd = Julep.Command.done(42, fn v -> {:computed, v * 2} end)
+      model = CommandProcessor.process(DoneApp, %{result: nil}, cmd)
+      assert model.result == 84
+    end
+
+    test "respects max recursion depth" do
+      # An app that always returns more commands -- should not loop forever
+      defmodule InfiniteApp do
+        use Julep.App
+        def init(_), do: %{depth: 0}
+
+        def update(model, {:go, _}) do
+          {%{model | depth: model.depth + 1},
+           Julep.Command.done(:again, fn _ -> {:go, :again} end)}
+        end
+
+        def update(model, _), do: model
+
+        def view(model),
+          do: %{id: "r", type: "text", props: %{"content" => "#{model.depth}"}, children: []}
+      end
+
+      cmd = Julep.Command.done(:start, fn _ -> {:go, :first} end)
+      model = CommandProcessor.process(InfiniteApp, %{depth: 0}, cmd)
+
+      # Should have stopped at max depth (100), not loop forever
+      assert model.depth > 0
+      assert model.depth <= 101
+    end
+  end
+
+  describe "dispatch_update/3" do
+    test "normalizes bare model return" do
+      {model, commands} = CommandProcessor.dispatch_update(NoneApp, %{count: 0}, :whatever)
+      assert model == %{count: 0}
+      assert commands == []
+    end
+
+    test "normalizes {model, commands} list return" do
+      {model, commands} =
+        CommandProcessor.dispatch_update(AsyncApp, %{status: :idle, data: nil}, {:click, "fetch"})
+
+      assert model.status == :idle
+      assert [%Julep.Command{type: :async}] = commands
+    end
+
+    test "normalizes {model, single_command} return" do
+      {model, commands} =
+        CommandProcessor.dispatch_update(
+          SingleCommandApp,
+          %{initialized: false},
+          {:click, "nope"}
+        )
+
+      # SingleCommandApp.update returns bare model for unknown events
+      assert model == %{initialized: false}
+      assert commands == []
+    end
+  end
+
+  describe "integration with sim backend" do
+    test "sim backend processes init commands" do
+      alias Julep.Test.Backend.Sim
+
+      {:ok, pid} = Sim.start(InitCommandApp)
+      model = Sim.model(pid)
+
+      assert model.data == "loaded"
+      Sim.stop(pid)
+    end
+
+    test "sim backend processes single command from init" do
+      alias Julep.Test.Backend.Sim
+
+      {:ok, pid} = Sim.start(SingleCommandApp)
+      model = Sim.model(pid)
+
+      assert model.initialized == true
+      Sim.stop(pid)
+    end
+
+    test "sim backend processes commands from interactions" do
+      alias Julep.Test.Backend.Sim
+
+      {:ok, pid} = Sim.start(AsyncApp)
+      Sim.click(pid, "#fetch")
+      model = Sim.model(pid)
+
+      assert model.status == :done
+      assert model.data == {:ok, "fetched"}
+      Sim.stop(pid)
+    end
+  end
+end

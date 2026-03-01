@@ -251,7 +251,8 @@ All of the following are imported by `use Julep.Test.Case`:
 | `tree()` | Returns the current normalized UI tree |
 | `text(element)` | Extract text content from an Element struct |
 | `snapshot(name)` | Capture a structural tree snapshot |
-| `screenshot(name)` | Capture a pixel screenshot (no-op on sim/headless) |
+| `screenshot(name)` | Capture a pixel screenshot (no-op on sim) |
+| `save_screenshot(name)` | Capture screenshot and save as PNG to `test/screenshots/` |
 | `assert_text(selector, expected)` | Assert widget contains expected text |
 | `assert_exists(selector)` | Assert widget exists in the tree |
 | `assert_not_exists(selector)` | Assert widget does NOT exist in the tree |
@@ -259,6 +260,10 @@ All of the following are imported by `use Julep.Test.Case`:
 | `assert_snapshot(name)` | Capture snapshot and assert it matches golden file |
 | `assert_screenshot(name)` | Capture screenshot and assert it matches golden file |
 | `await_async(tag, timeout \\ 5000)` | Wait for a tagged async task to complete |
+| `press(key)` | Press a key (key down). Supports modifiers: `"ctrl+s"` |
+| `release(key)` | Release a key (key up). Supports modifiers: `"ctrl+s"` |
+| `move_to(x, y)` | Move the cursor to absolute coordinates |
+| `type_key(key)` | Type a key (press + release). Supports modifiers: `"enter"` |
 | `reset()` | Reset session to initial state |
 | `start(app, opts \\ [])` | Start a session manually (when not using Case) |
 | `session()` | Returns the current test session from the process dictionary |
@@ -280,7 +285,7 @@ changing assertions.
 | **Tests tree structure** | Yes | Yes | Yes |
 | **Protocol round-trip** | No | Yes | Yes |
 | **Structural snapshots** | Yes | Yes | Yes |
-| **Pixel screenshots** | No | No | Yes |
+| **Pixel screenshots** | No | Yes (software) | Yes |
 | **Effects** | Collected, not executed | Not executed | Executed |
 | **Subscriptions** | Not active | Not active | Active |
 | **Real windows** | No | No | Yes |
@@ -348,11 +353,15 @@ JULEP_UPDATE_SNAPSHOTS=1 mix test
 
 ### Pixel screenshots (`assert_screenshot`)
 
-`assert_screenshot/1` captures real RGBA pixel data from the GPU and
-compares it against a golden file. It only produces meaningful data on the
-`:full` backend. On `:sim` and `:headless`, it silently succeeds as a no-op
-(returns an empty hash, which is accepted without creating or checking a
-golden file).
+`assert_screenshot/1` captures real RGBA pixel data and compares it against
+a golden file. It produces meaningful data on both the `:full` backend (GPU
+rendering via wgpu) and the `:headless` backend (software rendering via
+tiny-skia). On `:sim`, it silently succeeds as a no-op (returns an empty
+hash, which is accepted without creating or checking a golden file).
+
+Note that headless screenshots use software rendering, so pixels will not
+match GPU output exactly. Maintain separate golden files per backend, or
+use headless screenshots for layout regression testing only.
 
 ```elixir
 test "counter renders correctly" do
@@ -368,9 +377,9 @@ workflow is the same as structural snapshots but uses a separate env var:
 JULEP_UPDATE_SCREENSHOTS=1 mix test
 ```
 
-Because screenshots silently no-op on sim and headless, you can include
+Because screenshots silently no-op on sim, you can include
 `assert_screenshot` calls in any test without conditional logic. They will
-only produce assertions when run on the full backend.
+produce assertions when run on the headless or full backends.
 
 ### JSON tree snapshots (`assert_tree_snapshot`)
 
@@ -438,16 +447,16 @@ Lines starting with `#` are comments (in both header and body sections).
 |---|---|---|---|
 | `click` | `click "selector"` | Yes | Click a widget |
 | `type` | `type "selector" "text"` | Yes | Type text into a widget |
-| `type` (key) | `type enter` | No-op | Send a special key (`enter`, `escape`, `tab`, `backspace`) |
+| `type` (key) | `type enter` | Yes | Send a special key (press + release). Supports modifiers: `type ctrl+s` |
 | `expect` | `expect "text"` | Yes | Assert text appears somewhere in the tree |
 | `snapshot` | `snapshot "name"` | Yes | Capture and assert a structural snapshot |
-| `screenshot` | `screenshot "name"` | No-op on sim/headless | Capture and assert a pixel screenshot |
+| `screenshot` | `screenshot "name"` | No-op on sim | Capture and assert a pixel screenshot |
 | `assert_text` | `assert_text "selector" "text"` | Yes | Assert widget has specific text |
 | `assert_model` | `assert_model "expression"` | Yes | Assert expression appears in inspected model (substring match) |
-| `press` | `press key` | No-op | Press a key down |
-| `release` | `release key` | No-op | Release a key |
-| `move` | `move "selector"` | No-op | Move mouse to a widget |
-| `move` (coords) | `move "x,y"` | No-op | Move mouse to pixel coordinates |
+| `press` | `press key` | Yes | Press a key down. Supports modifiers: `press ctrl+s` |
+| `release` | `release key` | Yes | Release a key. Supports modifiers: `release ctrl+s` |
+| `move` | `move "selector"` | No-op | Move mouse to a widget (requires widget bounds) |
+| `move` (coords) | `move "x,y"` | Yes | Move mouse to pixel coordinates |
 | `wait` | `wait 500` | Ignored (except replay) | Pause N milliseconds |
 
 ### Running scripts
@@ -510,8 +519,9 @@ end
 
 ### On headless and full backends
 
-`await_async/2` is currently a no-op on headless and full backends. See
-[testing-caveats.md](testing-caveats.md) for details and workarounds.
+All three backends now use the shared `CommandProcessor` to execute async
+commands synchronously. `await_async/2` returns `:ok` immediately on all
+backends because the commands have already completed.
 
 
 ## Debugging and error messages
@@ -690,9 +700,11 @@ process), so the format option has no effect on it.
 See [testing-caveats.md](testing-caveats.md) for detailed workarounds for
 each limitation.
 
-- `await_async` is a no-op on headless and full backends.
-- Script instructions `press`, `release`, `move`, `move_to` are no-ops on
-  all backends.
-- `type_key` is a no-op on all backends.
-- Pixel screenshots are only available on the full backend.
+- Script instruction `move` (move cursor to a widget by selector) is a
+  no-op. It requires widget bounds from layout, which only the renderer knows.
+- `move_to` on the sim backend dispatches `{:cursor_moved, x, y}` but has
+  no spatial layout info. Mouse area enter/exit events won't fire.
+- Pixel screenshots are only available on the headless and full backends (sim returns stubs).
+- Headless screenshots use software rendering (tiny-skia) and may not match
+  GPU output pixel-for-pixel.
 - Script `assert_model` uses substring matching against the inspected model.

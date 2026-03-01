@@ -29,6 +29,7 @@ defmodule Julep.Test.Backend.Headless do
 
   use GenServer
 
+  alias Julep.Test.Backend.CommandProcessor
   alias Julep.Test.Element
   alias Julep.Test.Screenshot
   alias Julep.Test.Snapshot
@@ -100,6 +101,26 @@ defmodule Julep.Test.Backend.Headless do
   @impl Julep.Test.Backend
   def await_async(_pid, _tag, _timeout \\ 5000), do: :ok
 
+  @impl Julep.Test.Backend
+  def press(pid, key) do
+    GenServer.call(pid, {:interact, "press", nil, %{"key" => key}}, 10_000)
+  end
+
+  @impl Julep.Test.Backend
+  def release(pid, key) do
+    GenServer.call(pid, {:interact, "release", nil, %{"key" => key}}, 10_000)
+  end
+
+  @impl Julep.Test.Backend
+  def move_to(pid, x, y) do
+    GenServer.call(pid, {:interact, "move_to", nil, %{"x" => x, "y" => y}}, 10_000)
+  end
+
+  @impl Julep.Test.Backend
+  def type_key(pid, key) do
+    GenServer.call(pid, {:interact, "type_key", nil, %{"key" => key}}, 10_000)
+  end
+
   # -- GenServer --
 
   @impl GenServer
@@ -115,7 +136,8 @@ defmodule Julep.Test.Backend.Headless do
         | port_opts(format) ++ [{:args, port_args(format)}]
       ])
 
-    {model, _commands} = init_app(app, opts)
+    {model, commands} = init_app(app, opts)
+    model = CommandProcessor.process(app, model, commands)
     tree = render_tree(app, model)
 
     # Send initial snapshot to the renderer
@@ -247,7 +269,9 @@ defmodule Julep.Test.Backend.Headless do
     send_message(state.port, state.format, %{
       type: "screenshot_capture",
       id: id,
-      name: name
+      name: name,
+      width: 1024,
+      height: 768
     })
 
     {:noreply, put_in(state, [:pending, id], {:screenshot, from, name})}
@@ -261,7 +285,8 @@ defmodule Julep.Test.Backend.Headless do
     {id, state} = next_id(state)
     send_message(state.port, state.format, %{type: "reset", id: id})
 
-    {model, _commands} = init_app(state.app, state.opts)
+    {model, commands} = init_app(state.app, state.opts)
+    model = CommandProcessor.process(state.app, model, commands)
     tree = render_tree(state.app, model)
     send_message(state.port, state.format, %{type: "snapshot", tree: tree})
 
@@ -367,11 +392,8 @@ defmodule Julep.Test.Backend.Headless do
   defp dispatch_event(%{"event" => type, "id" => id} = event, state) do
     elixir_event = decode_event(type, id, event)
 
-    {model, _commands} =
-      case state.app.update(state.model, elixir_event) do
-        {m, c} -> {m, c}
-        m -> {m, []}
-      end
+    {model, commands} = CommandProcessor.dispatch_update(state.app, state.model, elixir_event)
+    model = CommandProcessor.process(state.app, model, commands)
 
     tree = render_tree(state.app, model)
 
@@ -389,13 +411,90 @@ defmodule Julep.Test.Backend.Headless do
   defp decode_event("toggle", id, event), do: {:toggle, id, event["value"] || false}
   defp decode_event("select", id, event), do: {:select, id, event["value"] || ""}
   defp decode_event("slide", id, event), do: {:slide, id, event["value"] || 0}
+
+  defp decode_event("key_press", _id, event) do
+    {:key_press, decode_key_event(event)}
+  end
+
+  defp decode_event("key_release", _id, event) do
+    {:key_release, decode_key_event(event)}
+  end
+
+  defp decode_event("cursor_moved", _id, event) do
+    x = event["x"] || 0
+    y = event["y"] || 0
+    {:cursor_moved, x, y}
+  end
+
   defp decode_event(type, id, _event), do: {String.to_atom(type), id}
+
+  defp decode_key_event(event) do
+    key_str = event["key"] || ""
+    modifiers_map = event["modifiers"] || %{}
+
+    key = parse_wire_key_name(key_str)
+
+    modifiers = %Julep.KeyModifiers{
+      ctrl: modifiers_map["ctrl"] || false,
+      shift: modifiers_map["shift"] || false,
+      alt: modifiers_map["alt"] || false,
+      logo: modifiers_map["logo"] || false,
+      command: modifiers_map["ctrl"] || false
+    }
+
+    text =
+      if is_binary(key) and byte_size(key) == 1,
+        do: key,
+        else: nil
+
+    %Julep.KeyEvent{
+      key: key,
+      modified_key: key,
+      physical_key: nil,
+      location: :standard,
+      modifiers: modifiers,
+      text: text,
+      repeat: false
+    }
+  end
+
+  @wire_key_names %{
+    "enter" => :enter,
+    "escape" => :escape,
+    "tab" => :tab,
+    "backspace" => :backspace,
+    "space" => :space,
+    "delete" => :delete,
+    "up" => :up,
+    "down" => :down,
+    "left" => :left,
+    "right" => :right,
+    "home" => :home,
+    "end" => :end,
+    "page_up" => :page_up,
+    "page_down" => :page_down,
+    "f1" => :f1,
+    "f2" => :f2,
+    "f3" => :f3,
+    "f4" => :f4,
+    "f5" => :f5,
+    "f6" => :f6,
+    "f7" => :f7,
+    "f8" => :f8,
+    "f9" => :f9,
+    "f10" => :f10,
+    "f11" => :f11,
+    "f12" => :f12
+  }
+
+  defp parse_wire_key_name(name), do: Map.get(@wire_key_names, name, name)
 
   # -- Helpers --
 
   defp init_app(app, opts) do
     case app.init(opts) do
-      {model, commands} -> {model, commands}
+      {model, commands} when is_list(commands) -> {model, commands}
+      {model, %Julep.Command{} = cmd} -> {model, [cmd]}
       model -> {model, []}
     end
   end
@@ -413,6 +512,7 @@ defmodule Julep.Test.Backend.Headless do
     {id, %{state | next_id: state.next_id + 1}}
   end
 
+  defp encode_selector(nil), do: %{}
   defp encode_selector("#" <> id), do: %{"by" => "id", "value" => id}
   defp encode_selector(text) when is_binary(text), do: %{"by" => "text", "value" => text}
 

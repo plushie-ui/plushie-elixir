@@ -68,6 +68,78 @@ The palette map is passed to iced's `Theme::custom()` with Oklch-based
 palette generation (iced 0.14). Only the colors you specify are overridden;
 the rest are derived automatically.
 
+## Extended palette shade overrides
+
+When you set a custom theme, iced generates an "extended palette" of shade
+variants from your six core colors. These shades (strong, weak, base, etc.)
+control how widgets render their backgrounds, borders, and text in different
+states. By default the shades are derived automatically using iced's
+Oklch-based color math.
+
+If the auto-generated shades don't match your design, you can override
+individual shades by adding flat keys to the theme map. Only the shades
+you specify are replaced -- the rest keep their generated values.
+
+### Why override shades?
+
+- Pin a specific button hover or pressed color
+- Ensure WCAG contrast ratios on specific shade/text pairs
+- Match an existing brand color system that doesn't follow iced's derivation
+
+### Key naming convention
+
+For the five color families (primary, secondary, success, warning, danger),
+each has three shade levels:
+
+| Key | What it controls |
+|-----|------------------|
+| `{family}_base` | Base shade background |
+| `{family}_weak` | Weak shade background |
+| `{family}_strong` | Strong shade background |
+| `{family}_base_text` | Text color on the base shade |
+| `{family}_weak_text` | Text color on the weak shade |
+| `{family}_strong_text` | Text color on the strong shade |
+
+Where `{family}` is one of: `primary`, `secondary`, `success`, `warning`,
+`danger`.
+
+The background family has eight levels:
+
+| Key | What it controls |
+|-----|------------------|
+| `background_base` | Base background |
+| `background_weakest` | Weakest background shade |
+| `background_weaker` | Weaker background shade |
+| `background_weak` | Weak background shade |
+| `background_neutral` | Neutral background shade |
+| `background_strong` | Strong background shade |
+| `background_stronger` | Stronger background shade |
+| `background_strongest` | Strongest background shade |
+
+Each background key also supports a `_text` suffix (e.g.
+`background_weakest_text`).
+
+### Example
+
+```elixir
+window "main", theme: %{
+  "name" => "branded",
+  "background" => "#1a1a2e",
+  "text" => "#e0e0e0",
+  "primary" => "#0f3460",
+  # Override the strong primary shade and its text color
+  "primary_strong" => "#1a5276",
+  "primary_strong_text" => "#ffffff",
+  # Pin the weakest background for sidebar panels
+  "background_weakest" => "#0d0d1a"
+} do
+  # ...
+end
+```
+
+Shade overrides only apply to custom themes (map values). Built-in theme
+atoms like `:dark` or `:nord` are not affected.
+
 ## Per-subtree theme override
 
 Themes can be overridden for a subtree:

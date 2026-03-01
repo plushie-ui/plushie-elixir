@@ -62,36 +62,38 @@ defmodule Julep.Test.Script.Runner do
     e -> {:error, Exception.message(e)}
   end
 
-  defp execute(_session, {:type_key, _key}, _replay?) do
-    # No-op: key press/release events require subscription support which the
-    # interact protocol doesn't implement yet. See docs/testing-caveats.md.
+  defp execute(session, {:type_key, key}, _replay?) do
+    Session.type_key(session, key)
     :ok
+  rescue
+    e -> {:error, Exception.message(e)}
   end
 
-  defp execute(_session, {:press, _key}, _replay?) do
-    # No-op: key press/release events require subscription support which the
-    # interact protocol doesn't implement yet. See docs/testing-caveats.md.
+  defp execute(session, {:press, key}, _replay?) do
+    Session.press(session, key)
     :ok
+  rescue
+    e -> {:error, Exception.message(e)}
   end
 
-  defp execute(_session, {:release, _key}, _replay?) do
-    # No-op: key press/release events require subscription support which the
-    # interact protocol doesn't implement yet. See docs/testing-caveats.md.
+  defp execute(session, {:release, key}, _replay?) do
+    Session.release(session, key)
     :ok
+  rescue
+    e -> {:error, Exception.message(e)}
   end
 
   defp execute(_session, {:move, _selector}, _replay?) do
-    # No-op: mouse move events require a rendered backend with spatial
-    # layout. The interact protocol doesn't support this yet.
-    # See docs/testing-caveats.md.
+    # No-op: moving cursor to a widget by selector requires widget bounds
+    # from layout, which only the renderer knows. See docs/testing-caveats.md.
     :ok
   end
 
-  defp execute(_session, {:move_to, _x, _y}, _replay?) do
-    # No-op: mouse move events require a rendered backend with spatial
-    # layout. The interact protocol doesn't support this yet.
-    # See docs/testing-caveats.md.
+  defp execute(session, {:move_to, x, y}, _replay?) do
+    Session.move_to(session, x, y)
     :ok
+  rescue
+    e -> {:error, Exception.message(e)}
   end
 
   defp execute(session, {:assert_model, expression}, _replay?) do

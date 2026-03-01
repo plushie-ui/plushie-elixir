@@ -100,9 +100,100 @@ pub mod test_helpers {
                     serde_json::json!({"type": "event", "event": "slide", "id": widget_id, "value": value}),
                 ]
             }
+            "press" => {
+                let payload_map = payload.as_object();
+                let (key, modifiers) = parse_key_and_modifiers(payload_map);
+                vec![serde_json::json!({
+                    "type": "event", "event": "key_press", "id": "", "key": key, "modifiers": modifiers
+                })]
+            }
+            "release" => {
+                let payload_map = payload.as_object();
+                let (key, modifiers) = parse_key_and_modifiers(payload_map);
+                vec![serde_json::json!({
+                    "type": "event", "event": "key_release", "id": "", "key": key, "modifiers": modifiers
+                })]
+            }
+            "move_to" => {
+                let x = payload.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                let y = payload.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                vec![serde_json::json!({
+                    "type": "event", "event": "cursor_moved", "id": "", "x": x, "y": y
+                })]
+            }
+            "type_key" => {
+                let payload_map = payload.as_object();
+                let (key, modifiers) = parse_key_and_modifiers(payload_map);
+                vec![
+                    serde_json::json!({
+                        "type": "event", "event": "key_press", "id": "", "key": key, "modifiers": modifiers
+                    }),
+                    serde_json::json!({
+                        "type": "event", "event": "key_release", "id": "", "key": key, "modifiers": modifiers
+                    }),
+                ]
+            }
             _ => vec![],
         };
         emit_wire(&InteractResponse::new(id, events));
+    }
+
+    /// Parse key and modifiers from an interact payload.
+    ///
+    /// Supports two formats:
+    /// 1. Explicit modifiers map: `{"key": "s", "modifiers": {"ctrl": true, ...}}`
+    /// 2. Combined key string: `{"key": "ctrl+s"}` -- splits on `+` and extracts
+    ///    modifier prefixes (ctrl/command, shift, alt, logo/super/meta).
+    fn parse_key_and_modifiers(
+        payload: Option<&serde_json::Map<String, serde_json::Value>>,
+    ) -> (String, serde_json::Value) {
+        let empty_map = serde_json::Map::new();
+        let map = payload.unwrap_or(&empty_map);
+
+        let raw_key = map
+            .get("key")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        // Explicit modifiers map takes priority
+        if let Some(mods) = map.get("modifiers").and_then(|v| v.as_object()) {
+            let modifiers = serde_json::json!({
+                "shift": mods.get("shift").and_then(|v| v.as_bool()).unwrap_or(false),
+                "ctrl": mods.get("ctrl").and_then(|v| v.as_bool()).unwrap_or(false),
+                "alt": mods.get("alt").and_then(|v| v.as_bool()).unwrap_or(false),
+                "logo": mods.get("logo").and_then(|v| v.as_bool()).unwrap_or(false),
+            });
+            return (raw_key, modifiers);
+        }
+
+        // Parse "ctrl+s" style combined key strings
+        let parts: Vec<&str> = raw_key.split('+').collect();
+        if parts.len() > 1 {
+            let key = parts.last().unwrap().to_string();
+            let mut shift = false;
+            let mut ctrl = false;
+            let mut alt = false;
+            let mut logo = false;
+            for &part in &parts[..parts.len() - 1] {
+                match part {
+                    "ctrl" | "command" => ctrl = true,
+                    "shift" => shift = true,
+                    "alt" => alt = true,
+                    "logo" | "super" | "meta" => logo = true,
+                    _ => {}
+                }
+            }
+            let modifiers = serde_json::json!({
+                "shift": shift, "ctrl": ctrl, "alt": alt, "logo": logo,
+            });
+            (key, modifiers)
+        } else {
+            let modifiers = serde_json::json!({
+                "shift": false, "ctrl": false, "alt": false, "logo": false,
+            });
+            (raw_key, modifiers)
+        }
     }
 
     /// Handle a Reset message -- reinitialise the core to a blank state.
@@ -276,6 +367,8 @@ mod tests {
         let msg = IncomingMessage::ScreenshotCapture {
             id: "sc1".to_string(),
             name: "test_shot".to_string(),
+            width: None,
+            height: None,
         };
         assert!(test_helpers::is_test_message(&msg));
     }

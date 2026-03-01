@@ -78,9 +78,25 @@ defmodule Julep.Test.Helpers do
   @spec snapshot(name :: String.t()) :: Snapshot.t()
   def snapshot(name), do: Session.snapshot(session(), name)
 
-  @doc "Captures a pixel screenshot with the given name. No-op on :sim and :headless."
+  @doc "Captures a pixel screenshot with the given name. No-op on :sim."
   @spec screenshot(name :: String.t()) :: Screenshot.t()
   def screenshot(name), do: Session.screenshot(session(), name)
+
+  @doc """
+  Save a screenshot as a PNG file to `test/screenshots/{name}.png`.
+
+  Takes a screenshot, saves it, and returns the screenshot struct.
+  Creates the `test/screenshots/` directory if it doesn't exist.
+  No-op on backends that don't support pixel capture.
+  """
+  @spec save_screenshot(name :: String.t()) :: Screenshot.t()
+  def save_screenshot(name) do
+    s = screenshot(name)
+    dir = Path.join("test", "screenshots")
+    File.mkdir_p!(dir)
+    Screenshot.save_png(s, Path.join(dir, "#{name}.png"))
+    s
+  end
 
   @doc "Extracts text content from an element."
   @spec text(element :: Element.t()) :: String.t() | nil
@@ -150,7 +166,7 @@ defmodule Julep.Test.Helpers do
 
   On first run, creates the golden file. On subsequent runs, compares hashes.
   Set `JULEP_UPDATE_SCREENSHOTS=1` to force-update golden files. No-op on
-  :sim and :headless backends (empty hash is silently accepted).
+  :sim backend (empty hash is silently accepted).
   """
   @spec assert_screenshot(name :: String.t()) :: :ok
   def assert_screenshot(name) do
@@ -162,6 +178,22 @@ defmodule Julep.Test.Helpers do
   @doc "Waits for a tagged async task to complete."
   @spec await_async(tag :: atom(), timeout :: non_neg_integer()) :: :ok
   def await_async(tag, timeout \\ 5000), do: Session.await_async(session(), tag, timeout)
+
+  @doc "Presses a key (key down). Key string may include modifiers, e.g. `\"ctrl+s\"`."
+  @spec press(key :: String.t()) :: :ok
+  def press(key), do: Session.press(session(), key)
+
+  @doc "Releases a key (key up). Key string may include modifiers, e.g. `\"ctrl+s\"`."
+  @spec release(key :: String.t()) :: :ok
+  def release(key), do: Session.release(session(), key)
+
+  @doc "Moves the cursor to the given coordinates."
+  @spec move_to(x :: number(), y :: number()) :: :ok
+  def move_to(x, y), do: Session.move_to(session(), x, y)
+
+  @doc "Types a key (press + release). Key string may include modifiers, e.g. `\"enter\"`."
+  @spec type_key(key :: String.t()) :: :ok
+  def type_key(key), do: Session.type_key(session(), key)
 
   @doc "Resets the session to initial state."
   @spec reset() :: :ok

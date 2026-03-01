@@ -34,4 +34,8 @@ defmodule Julep.Test.Backend do
   @callback screenshot(session :: pid(), name :: String.t()) :: Screenshot.t()
   @callback reset(session :: pid()) :: :ok
   @callback await_async(session :: pid(), tag :: atom(), timeout :: non_neg_integer()) :: :ok
+  @callback press(session :: pid(), key :: String.t()) :: :ok
+  @callback release(session :: pid(), key :: String.t()) :: :ok
+  @callback move_to(session :: pid(), x :: number(), y :: number()) :: :ok
+  @callback type_key(session :: pid(), key :: String.t()) :: :ok
 end

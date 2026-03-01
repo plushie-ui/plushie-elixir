@@ -290,7 +290,7 @@ impl App {
                                 return Task::none();
                             }
                             #[cfg(feature = "test-mode")]
-                            IncomingMessage::ScreenshotCapture { id, name } => {
+                            IncomingMessage::ScreenshotCapture { id, name, .. } => {
                                 // Capture real GPU-rendered pixels via iced
                                 if let Some((_, &iced_id)) = self.window_map.iter().next() {
                                     return window::screenshot(iced_id).map(move |shot| {
@@ -2131,15 +2131,10 @@ fn emit_query_response(kind: &str, tag: &str, data: serde_json::Value) {
 }
 
 // ---------------------------------------------------------------------------
-// stdout screenshot response emitter (format-aware: native binary for msgpack,
-// base64 for JSON)
+// stdout screenshot response emitter -- delegates to shared protocol function
 // ---------------------------------------------------------------------------
 
-/// Emit a screenshot_response to stdout.
-///
-/// Uses native msgpack binary (`rmpv::Value::Binary`) for pixel data when the
-/// wire codec is MsgPack, and base64-encoded string when JSON. This avoids the
-/// ~33% size overhead of base64 on the hot path.
+/// Emit a screenshot_response to stdout (thin wrapper around shared function).
 #[cfg(feature = "test-mode")]
 fn emit_screenshot_response(
     id: &str,
@@ -2149,85 +2144,7 @@ fn emit_screenshot_response(
     height: u32,
     rgba_bytes: &[u8],
 ) {
-    let codec = WIRE_CODEC.get().unwrap_or(&codec::Codec::MsgPack);
-    let bytes = match codec {
-        codec::Codec::MsgPack => {
-            use rmpv::Value as RmpvValue;
-
-            let mut entries = vec![
-                (
-                    RmpvValue::String("type".into()),
-                    RmpvValue::String("screenshot_response".into()),
-                ),
-                (RmpvValue::String("id".into()), RmpvValue::String(id.into())),
-                (
-                    RmpvValue::String("name".into()),
-                    RmpvValue::String(name.into()),
-                ),
-                (
-                    RmpvValue::String("hash".into()),
-                    RmpvValue::String(hash.into()),
-                ),
-                (
-                    RmpvValue::String("width".into()),
-                    RmpvValue::Integer((width as i64).into()),
-                ),
-                (
-                    RmpvValue::String("height".into()),
-                    RmpvValue::Integer((height as i64).into()),
-                ),
-            ];
-            if !rgba_bytes.is_empty() {
-                entries.push((
-                    RmpvValue::String("rgba".into()),
-                    RmpvValue::Binary(rgba_bytes.to_vec()),
-                ));
-            }
-            let map = RmpvValue::Map(entries);
-
-            let mut payload = Vec::new();
-            if let Err(e) = rmpv::encode::write_value(&mut payload, &map) {
-                log::error!("msgpack encode screenshot: {e}");
-                return;
-            }
-            let len = payload.len() as u32;
-            let mut bytes = Vec::with_capacity(4 + payload.len());
-            bytes.extend_from_slice(&len.to_be_bytes());
-            bytes.extend_from_slice(&payload);
-            bytes
-        }
-        codec::Codec::Json => {
-            let mut map = serde_json::json!({
-                "type": "screenshot_response",
-                "id": id,
-                "name": name,
-                "hash": hash,
-                "width": width,
-                "height": height,
-            });
-            if !rgba_bytes.is_empty() {
-                let b64 = base64::engine::general_purpose::STANDARD.encode(rgba_bytes);
-                map["rgba_base64"] = serde_json::Value::String(b64);
-            }
-            match serde_json::to_vec(&map) {
-                Ok(mut bytes) => {
-                    bytes.push(b'\n');
-                    bytes
-                }
-                Err(e) => {
-                    log::error!("json encode screenshot: {e}");
-                    return;
-                }
-            }
-        }
-    };
-
-    let stdout = io::stdout();
-    let mut handle = stdout.lock();
-    if let Err(e) = handle.write_all(&bytes) {
-        log::error!("failed to write screenshot response to stdout: {e}");
-    }
-    let _ = handle.flush();
+    protocol::emit_screenshot_response(id, name, hash, width, height, rgba_bytes);
 }
 
 // ---------------------------------------------------------------------------

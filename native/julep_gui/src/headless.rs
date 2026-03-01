@@ -2,6 +2,7 @@
 pub mod headless_mode {
     use std::io::{self, BufRead, Write};
 
+    use iced::Theme;
     use serde_json::Value;
 
     use crate::codec::Codec;
@@ -12,11 +13,17 @@ pub mod headless_mode {
     };
     use crate::WIRE_CODEC;
 
+    /// Default screenshot width when not specified by the caller.
+    const DEFAULT_SCREENSHOT_WIDTH: u32 = 1024;
+    /// Default screenshot height when not specified by the caller.
+    const DEFAULT_SCREENSHOT_HEIGHT: u32 = 768;
+
     /// Run the headless mode event loop.
     /// No iced::daemon. Reads framed messages from stdin, processes through Core,
     /// writes responses to stdout using the negotiated wire codec.
     pub fn run(forced_codec: Option<Codec>) {
         let mut core = Core::new();
+        let mut theme = Theme::Dark;
         let stdin = io::stdin();
         let mut reader = io::BufReader::new(stdin.lock());
 
@@ -41,7 +48,7 @@ pub mod headless_mode {
             match codec.read_message(&mut reader) {
                 Ok(None) => break,
                 Ok(Some(bytes)) => match codec.decode::<IncomingMessage>(&bytes) {
-                    Ok(msg) => handle_message(&mut core, msg),
+                    Ok(msg) => handle_message(&mut core, &mut theme, msg),
                     Err(e) => {
                         log::error!("decode error: {e}");
                     }
@@ -56,7 +63,7 @@ pub mod headless_mode {
         log::info!("stdin closed, exiting");
     }
 
-    fn handle_message(core: &mut Core, msg: IncomingMessage) {
+    fn handle_message(core: &mut Core, theme: &mut Theme, msg: IncomingMessage) {
         match msg {
             // Normal messages go through Core::apply()
             IncomingMessage::Snapshot { .. }
@@ -75,7 +82,7 @@ pub mod headless_mode {
                 // - EmitEffectResponse: write to stdout
                 // - WidgetOp: no-op (no real iced widgets to operate on)
                 // - WindowOp: no-op (no real windows)
-                // - ThemeChanged: no-op (theme stored in core for rendering)
+                // - ThemeChanged: track for screenshot rendering
                 for effect in effects {
                     match effect {
                         crate::julep_core::CoreEffect::EmitEvent(event) => {
@@ -83,6 +90,9 @@ pub mod headless_mode {
                         }
                         crate::julep_core::CoreEffect::EmitEffectResponse(response) => {
                             emit_wire(&response);
+                        }
+                        crate::julep_core::CoreEffect::ThemeChanged(t) => {
+                            *theme = t;
                         }
                         _ => {} // No-op for window/widget ops in headless
                     }
@@ -108,8 +118,15 @@ pub mod headless_mode {
             IncomingMessage::SnapshotCapture { id, name, .. } => {
                 handle_snapshot_capture(core, id, name);
             }
-            IncomingMessage::ScreenshotCapture { id, name } => {
-                handle_screenshot_capture(id, name);
+            IncomingMessage::ScreenshotCapture {
+                id,
+                name,
+                width,
+                height,
+            } => {
+                let w = width.unwrap_or(DEFAULT_SCREENSHOT_WIDTH);
+                let h = height.unwrap_or(DEFAULT_SCREENSHOT_HEIGHT);
+                handle_screenshot_capture(core, theme, id, name, w, h);
             }
             IncomingMessage::Reset { id } => {
                 handle_reset(core, id);
@@ -199,6 +216,39 @@ pub mod headless_mode {
                     serde_json::json!({"type": "event", "event": "slide", "id": wid, "value": value}),
                 ]
             }
+            ("press", _) => {
+                let payload_map = payload.as_object();
+                let (key, modifiers) = parse_key_and_modifiers(payload_map);
+                vec![serde_json::json!({
+                    "type": "event", "event": "key_press", "id": "", "key": key, "modifiers": modifiers
+                })]
+            }
+            ("release", _) => {
+                let payload_map = payload.as_object();
+                let (key, modifiers) = parse_key_and_modifiers(payload_map);
+                vec![serde_json::json!({
+                    "type": "event", "event": "key_release", "id": "", "key": key, "modifiers": modifiers
+                })]
+            }
+            ("move_to", _) => {
+                let x = payload.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                let y = payload.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                vec![serde_json::json!({
+                    "type": "event", "event": "cursor_moved", "id": "", "x": x, "y": y
+                })]
+            }
+            ("type_key", _) => {
+                let payload_map = payload.as_object();
+                let (key, modifiers) = parse_key_and_modifiers(payload_map);
+                vec![
+                    serde_json::json!({
+                        "type": "event", "event": "key_press", "id": "", "key": key, "modifiers": modifiers
+                    }),
+                    serde_json::json!({
+                        "type": "event", "event": "key_release", "id": "", "key": key, "modifiers": modifiers
+                    }),
+                ]
+            }
             _ => {
                 log::warn!("unknown action '{action}' or widget not found");
                 vec![]
@@ -206,6 +256,64 @@ pub mod headless_mode {
         };
 
         emit_wire(&InteractResponse::new(id, events));
+    }
+
+    /// Parse key and modifiers from an interact payload.
+    ///
+    /// Supports two formats:
+    /// 1. Explicit modifiers map: `{"key": "s", "modifiers": {"ctrl": true, ...}}`
+    /// 2. Combined key string: `{"key": "ctrl+s"}` -- splits on `+` and extracts
+    ///    modifier prefixes (ctrl/command, shift, alt, logo/super/meta).
+    fn parse_key_and_modifiers(
+        payload: Option<&serde_json::Map<String, serde_json::Value>>,
+    ) -> (String, serde_json::Value) {
+        let empty_map = serde_json::Map::new();
+        let map = payload.unwrap_or(&empty_map);
+
+        let raw_key = map
+            .get("key")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        // Explicit modifiers map takes priority
+        if let Some(mods) = map.get("modifiers").and_then(|v| v.as_object()) {
+            let modifiers = serde_json::json!({
+                "shift": mods.get("shift").and_then(|v| v.as_bool()).unwrap_or(false),
+                "ctrl": mods.get("ctrl").and_then(|v| v.as_bool()).unwrap_or(false),
+                "alt": mods.get("alt").and_then(|v| v.as_bool()).unwrap_or(false),
+                "logo": mods.get("logo").and_then(|v| v.as_bool()).unwrap_or(false),
+            });
+            return (raw_key, modifiers);
+        }
+
+        // Parse "ctrl+s" style combined key strings
+        let parts: Vec<&str> = raw_key.split('+').collect();
+        if parts.len() > 1 {
+            let key = parts.last().unwrap().to_string();
+            let mut shift = false;
+            let mut ctrl = false;
+            let mut alt = false;
+            let mut logo = false;
+            for &part in &parts[..parts.len() - 1] {
+                match part {
+                    "ctrl" | "command" => ctrl = true,
+                    "shift" => shift = true,
+                    "alt" => alt = true,
+                    "logo" | "super" | "meta" => logo = true,
+                    _ => {}
+                }
+            }
+            let modifiers = serde_json::json!({
+                "shift": shift, "ctrl": ctrl, "alt": alt, "logo": logo,
+            });
+            (key, modifiers)
+        } else {
+            let modifiers = serde_json::json!({
+                "shift": false, "ctrl": false, "alt": false, "logo": false,
+            });
+            (raw_key, modifiers)
+        }
     }
 
     fn handle_snapshot_capture(core: &Core, id: String, name: String) {
@@ -229,10 +337,78 @@ pub mod headless_mode {
 
     /// Handle a ScreenshotCapture message in headless mode.
     ///
-    /// Headless mode cannot capture pixels (no GPU renderer), so we return an
-    /// empty screenshot response. The Elixir side silently accepts empty hashes.
-    fn handle_screenshot_capture(id: String, name: String) {
-        emit_wire(&ScreenshotResponseEmpty::new(id, name));
+    /// Uses iced's `Headless` renderer trait (backed by tiny-skia) to produce
+    /// real RGBA pixel data without a display server or GPU. Builds an iced
+    /// `UserInterface` from the current tree, draws it, and captures pixels
+    /// via `renderer.screenshot()`.
+    fn handle_screenshot_capture(
+        core: &mut Core,
+        theme: &Theme,
+        id: String,
+        name: String,
+        width: u32,
+        height: u32,
+    ) {
+        use iced_test::core::renderer::Headless as HeadlessTrait;
+        use iced_test::core::theme::Base;
+        use sha2::{Digest, Sha256};
+
+        let root = match core.tree.root() {
+            Some(r) => r,
+            None => {
+                emit_wire(&ScreenshotResponseEmpty::new(id, name));
+                return;
+            }
+        };
+
+        // Prepare caches and build the iced Element from the tree.
+        crate::widgets::ensure_caches(root, &mut core.caches);
+        let images = crate::image_registry::ImageRegistry::new();
+        let element: iced::Element<'_, crate::Message> =
+            crate::widgets::render(root, &core.caches, &images);
+
+        // Create a headless tiny-skia renderer.
+        let mut renderer = match iced::futures::executor::block_on(iced::Renderer::new(
+            iced::Font::DEFAULT,
+            iced::Pixels(16.0),
+            None,
+        )) {
+            Some(r) => r,
+            None => {
+                log::error!("failed to create headless renderer");
+                emit_wire(&ScreenshotResponseEmpty::new(id, name));
+                return;
+            }
+        };
+
+        let size = iced::Size::new(width as f32, height as f32);
+        let mut ui = iced_test::runtime::UserInterface::build(
+            element,
+            size,
+            iced_test::runtime::user_interface::Cache::default(),
+            &mut renderer,
+        );
+
+        let base = theme.base();
+        ui.draw(
+            &mut renderer,
+            theme,
+            &iced_test::core::renderer::Style {
+                text_color: base.text_color,
+            },
+            iced::mouse::Cursor::Unavailable,
+        );
+
+        let phys_size = iced::Size::new(width, height);
+        let rgba = renderer.screenshot(phys_size, 1.0, base.background_color);
+
+        let hash = {
+            let mut hasher = Sha256::new();
+            hasher.update(&rgba);
+            format!("{:x}", hasher.finalize())
+        };
+
+        crate::protocol::emit_screenshot_response(&id, &name, &hash, width, height, &rgba);
     }
 
     fn handle_reset(core: &mut Core, id: String) {

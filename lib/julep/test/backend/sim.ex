@@ -25,6 +25,7 @@ defmodule Julep.Test.Backend.Sim do
 
   use GenServer
 
+  alias Julep.Test.Backend.CommandProcessor
   alias Julep.Test.Element
   alias Julep.Test.EventMap
   alias Julep.Test.Screenshot
@@ -89,12 +90,24 @@ defmodule Julep.Test.Backend.Sim do
   @impl Julep.Test.Backend
   def await_async(_pid, _tag, _timeout \\ 5000), do: :ok
 
+  @impl Julep.Test.Backend
+  def press(pid, key), do: GenServer.call(pid, {:press, key})
+
+  @impl Julep.Test.Backend
+  def release(pid, key), do: GenServer.call(pid, {:release, key})
+
+  @impl Julep.Test.Backend
+  def move_to(pid, x, y), do: GenServer.call(pid, {:move_to, x, y})
+
+  @impl Julep.Test.Backend
+  def type_key(pid, key), do: GenServer.call(pid, {:type_key, key})
+
   # -- GenServer implementation --
 
   @impl GenServer
   def init({app, opts}) do
     {model, commands} = init_app(app, opts)
-    model = process_commands(app, model, commands)
+    model = CommandProcessor.process(app, model, commands)
     tree = render_tree(app, model)
     {:ok, %{app: app, opts: opts, model: model, tree: tree, typed_text: %{}}}
   end
@@ -167,9 +180,36 @@ defmodule Julep.Test.Backend.Sim do
 
   def handle_call(:reset, _from, state) do
     {model, commands} = init_app(state.app, state.opts)
-    model = process_commands(state.app, model, commands)
+    model = CommandProcessor.process(state.app, model, commands)
     tree = render_tree(state.app, model)
     {:reply, :ok, %{state | model: model, tree: tree, typed_text: %{}}}
+  end
+
+  def handle_call({:press, key}, _from, state) do
+    {modifiers, parsed_key} = parse_key_string(key)
+    key_event = build_key_event(parsed_key, modifiers)
+    state = dispatch_raw(state, {:key_press, key_event})
+    {:reply, :ok, state}
+  end
+
+  def handle_call({:release, key}, _from, state) do
+    {modifiers, parsed_key} = parse_key_string(key)
+    key_event = build_key_event(parsed_key, modifiers)
+    state = dispatch_raw(state, {:key_release, key_event})
+    {:reply, :ok, state}
+  end
+
+  def handle_call({:move_to, x, y}, _from, state) do
+    state = dispatch_raw(state, {:cursor_moved, x, y})
+    {:reply, :ok, state}
+  end
+
+  def handle_call({:type_key, key}, _from, state) do
+    {modifiers, parsed_key} = parse_key_string(key)
+    key_event = build_key_event(parsed_key, modifiers)
+    state = dispatch_raw(state, {:key_press, key_event})
+    state = dispatch_raw(state, {:key_release, key_event})
+    {:reply, :ok, state}
   end
 
   # -- Private helpers --
@@ -196,77 +236,13 @@ defmodule Julep.Test.Backend.Sim do
 
     case event_fn.(element) do
       {:ok, event} ->
-        {model, commands} = dispatch_update(state.app, state.model, event)
-        model = process_commands(state.app, model, commands)
+        {model, commands} = CommandProcessor.dispatch_update(state.app, state.model, event)
+        model = CommandProcessor.process(state.app, model, commands)
         tree = render_tree(state.app, model)
         %{state | model: model, tree: tree}
 
       {:error, reason} ->
         raise reason
-    end
-  end
-
-  defp dispatch_update(app, model, event) do
-    case app.update(model, event) do
-      {model, commands} when is_list(commands) -> {model, commands}
-      {model, %Julep.Command{} = cmd} -> {model, [cmd]}
-      model -> {model, []}
-    end
-  end
-
-  # Maximum recursion depth to prevent infinite command loops.
-  @max_command_depth 100
-
-  defp process_commands(app, model, commands, depth \\ 0)
-  defp process_commands(_app, model, [], _depth), do: model
-  defp process_commands(_app, model, _commands, depth) when depth > @max_command_depth, do: model
-
-  defp process_commands(app, model, commands, depth) do
-    Enum.reduce(commands, model, fn
-      %Julep.Command{type: :async, payload: %{fun: fun, tag: tag}}, acc ->
-        result = fun.()
-        {new_model, new_commands} = dispatch_update(app, acc, {tag, result})
-        process_commands(app, new_model, new_commands, depth + 1)
-
-      %Julep.Command{type: :stream, payload: %{fun: fun, tag: tag}}, acc ->
-        # Run stream synchronously. Collect emitted values via the mailbox,
-        # then process each as {tag, value}. The final return value is also
-        # dispatched, matching Runtime behaviour.
-        ref = make_ref()
-        parent = self()
-        emit = fn value -> send(parent, {:sim_stream, ref, value}) end
-        final = fun.(emit)
-
-        acc = drain_stream_messages(app, acc, tag, ref, depth)
-
-        {new_model, new_commands} = dispatch_update(app, acc, {tag, final})
-        process_commands(app, new_model, new_commands, depth + 1)
-
-      %Julep.Command{type: :done, payload: %{value: value, mapper: mapper}}, acc ->
-        event = mapper.(value)
-        {new_model, new_commands} = dispatch_update(app, acc, event)
-        process_commands(app, new_model, new_commands, depth + 1)
-
-      %Julep.Command{type: :batch, payload: %{commands: cmds}}, acc ->
-        process_commands(app, acc, cmds, depth + 1)
-
-      %Julep.Command{type: :none}, acc ->
-        acc
-
-      %Julep.Command{}, acc ->
-        # Widget ops, window ops, timers, cancel -- skip (needs renderer)
-        acc
-    end)
-  end
-
-  defp drain_stream_messages(app, model, tag, ref, depth) do
-    receive do
-      {:sim_stream, ^ref, value} ->
-        {new_model, new_commands} = dispatch_update(app, model, {tag, value})
-        new_model = process_commands(app, new_model, new_commands, depth + 1)
-        drain_stream_messages(app, new_model, tag, ref, depth)
-    after
-      0 -> model
     end
   end
 
@@ -302,5 +278,91 @@ defmodule Julep.Test.Backend.Sim do
       children = node[:children] || node["children"] || []
       Enum.find_value(children, &find_by_text(&1, text))
     end
+  end
+
+  # -- Raw input helpers --
+
+  defp dispatch_raw(state, event) do
+    {model, commands} = CommandProcessor.dispatch_update(state.app, state.model, event)
+    model = CommandProcessor.process(state.app, model, commands)
+    tree = render_tree(state.app, model)
+    %{state | model: model, tree: tree}
+  end
+
+  defp build_key_event(parsed_key, modifiers) do
+    text =
+      if is_binary(parsed_key) and byte_size(parsed_key) == 1,
+        do: parsed_key,
+        else: nil
+
+    %Julep.KeyEvent{
+      key: parsed_key,
+      modified_key: parsed_key,
+      physical_key: nil,
+      location: :standard,
+      modifiers: modifiers,
+      text: text,
+      repeat: false
+    }
+  end
+
+  @modifier_names ~w(ctrl shift alt logo command)
+
+  defp parse_key_string(key_string) do
+    parts = String.split(key_string, "+")
+
+    {mod_parts, key_parts} =
+      Enum.split_with(parts, fn part -> part in @modifier_names end)
+
+    modifiers =
+      Enum.reduce(mod_parts, %Julep.KeyModifiers{}, fn
+        "ctrl", acc -> %{acc | ctrl: true, command: true}
+        "shift", acc -> %{acc | shift: true}
+        "alt", acc -> %{acc | alt: true}
+        "logo", acc -> %{acc | logo: true}
+        "command", acc -> %{acc | command: true, ctrl: true}
+      end)
+
+    key_name =
+      case key_parts do
+        [name] -> parse_key_name(name)
+        [] -> raise ArgumentError, "No key name in key string: #{inspect(key_string)}"
+        _ -> raise ArgumentError, "Multiple key names in key string: #{inspect(key_string)}"
+      end
+
+    {modifiers, key_name}
+  end
+
+  @named_keys %{
+    "enter" => :enter,
+    "escape" => :escape,
+    "tab" => :tab,
+    "backspace" => :backspace,
+    "space" => :space,
+    "delete" => :delete,
+    "up" => :up,
+    "down" => :down,
+    "left" => :left,
+    "right" => :right,
+    "home" => :home,
+    "end" => :end,
+    "page_up" => :page_up,
+    "page_down" => :page_down,
+    "f1" => :f1,
+    "f2" => :f2,
+    "f3" => :f3,
+    "f4" => :f4,
+    "f5" => :f5,
+    "f6" => :f6,
+    "f7" => :f7,
+    "f8" => :f8,
+    "f9" => :f9,
+    "f10" => :f10,
+    "f11" => :f11,
+    "f12" => :f12
+  }
+
+  defp parse_key_name(name) do
+    Map.get(@named_keys, name, name)
   end
 end

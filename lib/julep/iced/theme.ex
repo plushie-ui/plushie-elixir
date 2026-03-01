@@ -5,6 +5,45 @@ defmodule Julep.Iced.Theme do
   Each built-in theme is an atom that maps to the corresponding `iced::Theme`
   variant on the Rust side. Custom themes are plain maps that the renderer
   parses into an `iced::Theme::custom()` palette.
+
+  ## Extended palette shade overrides
+
+  Custom themes automatically generate shade variants (strong, weak, etc.)
+  from the six core palette colors using iced's Oklch-based algorithm. If
+  you need precise control over specific shades, you can override them with
+  flat keys in the theme map. Shade overrides only apply to custom themes --
+  built-in themes are not affected.
+
+  Each shade key targets a specific `Pair` (background color + text color)
+  in the extended palette. Append `_text` to any shade key to override
+  the text color for that shade.
+
+  ### Color families (base, weak, strong)
+
+  `primary`, `secondary`, `success`, `warning`, `danger` -- each has
+  `{family}_base`, `{family}_weak`, `{family}_strong`, plus `_text`
+  variants.
+
+  ### Background family (8 levels)
+
+  `background_base`, `background_weakest`, `background_weaker`,
+  `background_weak`, `background_neutral`, `background_strong`,
+  `background_stronger`, `background_strongest`, plus `_text` variants.
+
+  ### Example
+
+      # Custom theme with shade overrides
+      theme = %{
+        "name" => "my-theme",
+        "background" => "#1a1a2e",
+        "text" => "#e0e0e0",
+        "primary" => "#0f3460",
+        "primary_strong" => "#1a5276",
+        "primary_strong_text" => "#ffffff",
+        "background_weakest" => "#0d0d1a"
+      }
+
+  Any shade key you omit keeps the auto-generated value.
   """
 
   @themes [

@@ -64,7 +64,7 @@ are building an app with julep, see [testing.md](testing.md) instead.
 
 ## Backend behaviour
 
-`Julep.Test.Backend` defines 16 callbacks that every backend must implement:
+`Julep.Test.Backend` defines 20 callbacks that every backend must implement:
 
 | Callback | Signature | Purpose |
 |---|---|---|
@@ -84,6 +84,10 @@ are building an app with julep, see [testing.md](testing.md) instead.
 | `screenshot/2` | `(pid, name) -> Screenshot.t` | Capture pixel screenshot |
 | `reset/1` | `(pid) -> :ok` | Reset to initial state |
 | `await_async/3` | `(pid, tag, timeout) -> :ok` | Wait for async task |
+| `press/2` | `(pid, key) -> :ok` | Press a key (key down). Supports modifiers |
+| `release/2` | `(pid, key) -> :ok` | Release a key (key up). Supports modifiers |
+| `move_to/3` | `(pid, x, y) -> :ok` | Move cursor to coordinates |
+| `type_key/2` | `(pid, key) -> :ok` | Type a key (press + release) |
 
 
 ## How to add a new widget to EventMap
@@ -314,9 +318,15 @@ tree, and sends the updated tree back to the renderer.
 
 ### Screenshot behaviour
 
-The headless backend returns an empty `Screenshot` struct (hash `""`,
-size `{0, 0}`, no RGBA data). `Screenshot.assert_match/2` silently accepts
-empty hashes, making `assert_screenshot` a no-op on headless.
+The headless backend sends a `screenshot_capture` message with viewport
+dimensions (`width: 1024`, `height: 768`) to the renderer. The Rust
+headless renderer uses tiny-skia to software-render the current UI tree
+into an RGBA pixel buffer at the requested viewport size, computes a
+SHA-256 hash of the pixel data, and returns a `screenshot_response` with
+the hash, dimensions, and raw RGBA bytes.
+
+See [Headless screenshot pipeline](#headless-screenshot-pipeline) below
+for the full rendering flow.
 
 
 ## Full backend internals
@@ -362,10 +372,11 @@ hash in the response.
    but uses `test/screenshots/` and `JULEP_UPDATE_SCREENSHOTS`.
 4. The sim backend returns an empty `Screenshot` struct (hash `""`, size
    `{0, 0}`, nil pixel data) because there is no renderer.
-5. The headless backend sends `screenshot_capture` to the renderer, which
-   returns an empty response (no GPU renderer available in headless mode).
-6. Empty hashes (from sim/headless) are silently accepted without creating
-   or checking golden files.
+5. The headless backend sends `screenshot_capture` with viewport dimensions
+   to the renderer. The Rust headless renderer software-renders via tiny-skia
+   and returns real RGBA pixel data with a SHA-256 hash.
+6. Empty hashes (from sim) are silently accepted without creating or
+   checking golden files.
 
 ### JSON tree snapshots (`Julep.Test.assert_tree_snapshot/2`)
 
@@ -380,12 +391,66 @@ This is a standalone function in `Julep.Test` -- it does not use backends,
 sessions, or the test framework at all.
 
 
+## Headless screenshot pipeline
+
+The headless backend produces real pixel screenshots via tiny-skia software
+rendering, without a display server or GPU. The flow:
+
+1. **Elixir sends `screenshot_capture`** with `name`, `width`, and `height`
+   fields. The viewport dimensions (default 1024x768) tell the renderer what
+   surface size to use.
+
+2. **Rust builds a `UserInterface`** from the current widget tree using
+   iced's layout engine. The tree is the same one used for structural
+   snapshots and interactions.
+
+3. **tiny-skia surface allocation.** A `tiny_skia::Pixmap` is created at the
+   requested viewport dimensions (width x height). This is an in-memory RGBA
+   pixel buffer with no GPU involvement.
+
+4. **Rendering.** The iced `UserInterface` is drawn to the tiny-skia surface
+   via iced's software rendering backend. This produces the same widget
+   layout as GPU rendering but with software rasterization (anti-aliasing and
+   subpixel behavior may differ from wgpu output).
+
+5. **SHA-256 hash.** The raw RGBA bytes are hashed to produce a stable
+   fingerprint for golden file comparison.
+
+6. **Wire response.** The renderer emits a `screenshot_response` containing:
+   - `name`: echoed from the request
+   - `hash`: hex-encoded SHA-256 of the RGBA data
+   - `width`, `height`: actual rendered dimensions
+   - `rgba` (msgpack) or `rgba_base64` (JSON): the raw pixel data
+
+7. **Elixir receives the response** and constructs a `Screenshot` struct
+   with the hash, size, and RGBA data. `assert_match/2` compares the hash
+   against golden files. `save_png/2` can write the RGBA data to a PNG file
+   for visual inspection.
+
+### Why tiny-skia
+
+tiny-skia is a pure-Rust 2D rendering library that implements a subset of
+Skia's rasterization. It has no system dependencies (no GPU, no display
+server, no X11/Wayland). iced already supports tiny-skia as a rendering
+backend, making it a natural choice for headless screenshot rendering.
+
+### Limitations
+
+- Software rendering produces different anti-aliasing and subpixel output
+  compared to GPU rendering (wgpu). Golden files from headless and full
+  backends are not interchangeable.
+- The viewport dimensions are hardcoded at 1024x768 in the headless backend.
+  A future enhancement could make these configurable via backend options.
+- Text rendering differences between tiny-skia and wgpu may cause hash
+  mismatches even for identical widget trees.
+
+
 ## Source file index
 
 | File | Purpose |
 |---|---|
 | `lib/julep/test.ex` | `assert_tree_snapshot/2` for unit-level JSON tree comparison |
-| `lib/julep/test/backend.ex` | `Backend` behaviour (16 callbacks) |
+| `lib/julep/test/backend.ex` | `Backend` behaviour (20 callbacks) |
 | `lib/julep/test/backend/sim.ex` | Pure Elixir backend, EventMap-based event inference |
 | `lib/julep/test/backend/headless.ex` | Rust renderer via `--headless` Port, wire protocol |
 | `lib/julep/test/backend/full.ex` | Real iced windows via `--test` Port, wire protocol |

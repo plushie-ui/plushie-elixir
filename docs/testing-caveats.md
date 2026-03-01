@@ -5,113 +5,77 @@ resolution. Each entry documents what the limitation is, why it exists, how
 to work around it, and what a real fix would look like.
 
 
-## `await_async` is a no-op on headless and full backends
+## ~~`await_async` is a no-op on headless and full backends~~ (resolved)
 
-**What:** `await_async/2` returns `:ok` immediately on the headless and full
-backends without actually waiting for the async task to complete.
+**Fixed.** All three backends now use the shared `CommandProcessor` module
+to execute async/stream/done/batch commands synchronously. Commands returned
+by `init/1` and `update/2` are processed immediately, so `await_async`
+correctly returns `:ok` -- the commands have already completed by the time
+it is called.
 
-**Why:** The headless and full backends dispatch events back through the
-wire protocol. Async commands are executed by the sim layer's
-`process_commands` on the Elixir side, but the headless/full GenServer
-implementations do not track running tasks by tag. The sim backend does not
-need `await_async` at all because it executes async commands synchronously.
-
-**Workaround:** On headless/full, use `Process.sleep/1` with a reasonable
-timeout after triggering an async action, then assert on the model state.
-Alternatively, test async command shapes at the unit test level:
-
-```elixir
-# Unit test level -- verify the command is correct
-{_model, cmd} = MyApp.update(model, {:click, "fetch"})
-assert %Julep.Command{type: :async, payload: %{tag: :data_loaded}} = cmd
-
-# Sim test level -- async executes synchronously, no waiting needed
-click("#fetch")
-assert length(model().results) > 0
-```
-
-**Real fix:** Track async tasks by tag in the headless/full backend
-GenServers and implement a polling or message-based wait in `await_async`.
+The `CommandProcessor` was extracted from the sim backend's private
+implementation and is shared by sim, headless, and full backends.
 
 
-## Script instructions `press`, `release`, `move`, `move_to` are no-ops
+## ~~Script instructions `press`, `release`, `move`, `move_to` are no-ops~~ (mostly resolved)
 
-**What:** The `press`, `release`, `move`, and `move_to` script instructions
-silently do nothing on all backends.
+**Fixed.** `press/1`, `release/1`, `type_key/1`, and `move_to/2` are now
+implemented as backend callbacks, session delegates, and importable helpers.
+Key strings support modifier prefixes: `"ctrl+s"`, `"shift+enter"`,
+`"ctrl+shift+z"`. Named keys are mapped to atoms: `"enter"` -> `:enter`,
+`"escape"` -> `:escape`, etc.
 
-**Why:** These instructions require subscription-level event injection (key
-press/release events, mouse movement events) which the interact protocol
-does not implement. The interact protocol handles widget-level interactions
-(click, type_text, toggle, etc.) but not raw input events.
+All three backends support these operations:
+- **sim:** Dispatches `{:key_press, %KeyEvent{}}` / `{:key_release, ...}` /
+  `{:cursor_moved, x, y}` directly through `update/2`.
+- **headless/full:** Sends interact messages over the wire protocol. Rust
+  side parses the key string and emits event JSON.
 
-**Workaround:** For key-driven behavior, test at the unit level by
-dispatching the event tuple directly:
-
-```elixir
-event = {:key_press, %Julep.KeyEvent{key: :enter, modifiers: %{}}}
-model = MyApp.update(model, event)
-```
-
-For mouse movement, there is no workaround in the test framework. Test the
-`update/2` handler directly with the event tuples your subscriptions
-produce.
-
-**Real fix:** Extend the interact protocol to support raw input events.
-This requires changes in both the Elixir protocol encoder and the Rust
-`headless.rs`/`test_mode.rs` handlers.
+**Remaining limitation:** `move` (move cursor to a widget by selector)
+remains a no-op. It requires widget bounds from layout, which only the
+renderer knows. `move_to/2` (move to absolute coordinates) works on all
+backends, but on sim it has no spatial layout info -- mouse area enter/exit
+events won't fire because there's no hit testing against widget bounds.
 
 
-## `type_key` is a no-op on all backends
+## ~~`type_key` is a no-op on all backends~~ (resolved)
 
-**What:** The `type_key` script instruction (e.g., `type enter`) does
-nothing on any backend.
-
-**Why:** Same root cause as `press`/`release`. Special key events are
-subscription-level events, not widget interactions. The interact protocol
-does not support injecting keyboard events.
-
-**Workaround:** Use `submit/1` for the common case of pressing Enter in a
-text input. For other key events, test at the unit level:
-
-```elixir
-# Instead of `type_key "escape"` in a script:
-event = {:key_press, %Julep.KeyEvent{key: :escape, modifiers: %{}}}
-model = MyApp.update(model, event)
-```
-
-**Real fix:** Same as `press`/`release` -- extend the interact protocol.
+**Fixed.** `type_key/1` dispatches both a `key_press` and `key_release`
+event. Supports modifier prefixes like `"ctrl+c"` and named keys like
+`"enter"`, `"escape"`, `"tab"`.
 
 
-## Screenshots are stubs on sim and headless backends
+## ~~Screenshots are stubs on sim and headless backends~~ (partially resolved)
 
-**What:** `screenshot/1` and `assert_screenshot/1` return real RGBA pixel
-data on the full backend but silently no-op on sim and headless. The sim
-and headless backends return a `Screenshot` struct with an empty hash, and
-`assert_match` accepts empty hashes without creating or checking golden
-files.
+**What:** `screenshot/1` and `assert_screenshot/1` now return real RGBA pixel
+data on both the `:full` and `:headless` backends. Only the `:sim` backend
+returns a stub (empty hash, no pixel data).
 
-**Why:** The sim backend has no renderer, so there are no pixels to capture.
-The headless backend uses `iced_test` Simulator for tree-level testing but
-does not render to a pixel buffer. The full backend runs wgpu and captures
-real GPU-rendered RGBA pixels via `iced::window::screenshot()`.
+**Why this changed:** The headless backend now uses tiny-skia software
+rendering to produce real RGBA screenshots without a display server. The
+`screenshot_capture` message includes viewport dimensions (`width`, `height`)
+which the Rust headless renderer uses to size the tiny-skia surface.
 
-**Workaround:** Include `assert_screenshot` calls freely in your tests.
-They will automatically activate when run on the full backend. No
-conditional logic needed:
+**Remaining caveat:** Headless screenshots use software rendering (tiny-skia),
+so pixels will not match GPU-rendered output (`:full` backend) exactly. Use
+headless screenshots for catching layout regressions and verifying the
+rendering pipeline; use full screenshots for pixel-perfect visual regression
+against GPU output.
+
+The sim backend still returns an empty `Screenshot` struct because it has no
+renderer at all. `assert_match` silently accepts empty hashes.
+
+`save_png/2` and the `save_screenshot/1` helper can write RGBA data to disk
+as valid PNG files for manual inspection or archival:
 
 ```elixir
 test "renders correctly" do
   click("#increment")
   assert_snapshot("counter-at-1")       # always works
-  assert_screenshot("counter-pixels")   # only checks on :full
+  assert_screenshot("counter-pixels")   # checks on :headless and :full
+  save_screenshot("counter-debug")      # writes PNG to test/screenshots/
 end
 ```
-
-**Real fix:** The headless backend could potentially render to a pixel
-buffer via tiny-skia. This would give screenshot support without a display
-server but with software rendering (different from GPU output). Whether this
-is desirable depends on the use case -- software-rendered screenshots would
-not match GPU-rendered ones pixel-for-pixel.
 
 
 ## Script `assert_model` uses substring matching

@@ -75,7 +75,7 @@ defmodule Julep.Test.Session do
   @spec snapshot(session :: t(), name :: String.t()) :: Snapshot.t()
   def snapshot(%__MODULE__{backend: b, pid: p}, name), do: b.snapshot(p, name)
 
-  @doc "Captures a pixel screenshot. Only produces data on :full backend."
+  @doc "Captures a pixel screenshot. No-op on :sim."
   @spec screenshot(session :: t(), name :: String.t()) :: Screenshot.t()
   def screenshot(%__MODULE__{backend: b, pid: p}, name), do: b.screenshot(p, name)
 
@@ -87,4 +87,20 @@ defmodule Julep.Test.Session do
   @spec await_async(session :: t(), tag :: atom(), timeout :: non_neg_integer()) :: :ok
   def await_async(%__MODULE__{backend: b, pid: p}, tag, timeout \\ 5000),
     do: b.await_async(p, tag, timeout)
+
+  @doc "Presses a key (key down). Key string may include modifiers, e.g. `\"ctrl+s\"`."
+  @spec press(session :: t(), key :: String.t()) :: :ok
+  def press(%__MODULE__{backend: b, pid: p}, key), do: b.press(p, key)
+
+  @doc "Releases a key (key up). Key string may include modifiers, e.g. `\"ctrl+s\"`."
+  @spec release(session :: t(), key :: String.t()) :: :ok
+  def release(%__MODULE__{backend: b, pid: p}, key), do: b.release(p, key)
+
+  @doc "Moves the cursor to the given coordinates."
+  @spec move_to(session :: t(), x :: number(), y :: number()) :: :ok
+  def move_to(%__MODULE__{backend: b, pid: p}, x, y), do: b.move_to(p, x, y)
+
+  @doc "Types a key (press + release). Key string may include modifiers, e.g. `\"enter\"`."
+  @spec type_key(session :: t(), key :: String.t()) :: :ok
+  def type_key(%__MODULE__{backend: b, pid: p}, key), do: b.type_key(p, key)
 end

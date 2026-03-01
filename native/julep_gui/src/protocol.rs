@@ -68,6 +68,10 @@ pub enum IncomingMessage {
     ScreenshotCapture {
         id: String,
         name: String,
+        #[serde(default)]
+        width: Option<u32>,
+        #[serde(default)]
+        height: Option<u32>,
     },
     /// Reset the app state.
     Reset {
@@ -228,6 +232,109 @@ impl ScreenshotResponseEmpty {
             height: 0,
         }
     }
+}
+
+/// Emit a screenshot response with RGBA pixel data to stdout.
+///
+/// Uses native msgpack binary (`rmpv::Value::Binary`) for pixel data when the
+/// wire codec is MsgPack, and base64-encoded string when JSON. This avoids the
+/// ~33% size overhead of base64 on the hot path.
+///
+/// Shared between test-mode (main.rs) and headless (headless.rs).
+#[allow(dead_code)]
+pub fn emit_screenshot_response(
+    id: &str,
+    name: &str,
+    hash: &str,
+    width: u32,
+    height: u32,
+    rgba_bytes: &[u8],
+) {
+    use std::io::Write;
+
+    let codec = crate::WIRE_CODEC
+        .get()
+        .unwrap_or(&crate::codec::Codec::MsgPack);
+    let bytes = match codec {
+        crate::codec::Codec::MsgPack => {
+            use rmpv::Value as RmpvValue;
+
+            let mut entries = vec![
+                (
+                    RmpvValue::String("type".into()),
+                    RmpvValue::String("screenshot_response".into()),
+                ),
+                (RmpvValue::String("id".into()), RmpvValue::String(id.into())),
+                (
+                    RmpvValue::String("name".into()),
+                    RmpvValue::String(name.into()),
+                ),
+                (
+                    RmpvValue::String("hash".into()),
+                    RmpvValue::String(hash.into()),
+                ),
+                (
+                    RmpvValue::String("width".into()),
+                    RmpvValue::Integer((width as i64).into()),
+                ),
+                (
+                    RmpvValue::String("height".into()),
+                    RmpvValue::Integer((height as i64).into()),
+                ),
+            ];
+            if !rgba_bytes.is_empty() {
+                entries.push((
+                    RmpvValue::String("rgba".into()),
+                    RmpvValue::Binary(rgba_bytes.to_vec()),
+                ));
+            }
+            let map = RmpvValue::Map(entries);
+
+            let mut payload = Vec::new();
+            if let Err(e) = rmpv::encode::write_value(&mut payload, &map) {
+                log::error!("msgpack encode screenshot: {e}");
+                return;
+            }
+            let len = payload.len() as u32;
+            let mut bytes = Vec::with_capacity(4 + payload.len());
+            bytes.extend_from_slice(&len.to_be_bytes());
+            bytes.extend_from_slice(&payload);
+            bytes
+        }
+        crate::codec::Codec::Json => {
+            use base64::Engine;
+
+            let mut map = serde_json::json!({
+                "type": "screenshot_response",
+                "id": id,
+                "name": name,
+                "hash": hash,
+                "width": width,
+                "height": height,
+            });
+            if !rgba_bytes.is_empty() {
+                let b64 = base64::engine::general_purpose::STANDARD.encode(rgba_bytes);
+                map["rgba_base64"] = serde_json::Value::String(b64);
+            }
+            match serde_json::to_vec(&map) {
+                Ok(mut bytes) => {
+                    bytes.push(b'\n');
+                    bytes
+                }
+                Err(e) => {
+                    log::error!("json encode screenshot: {e}");
+                    return;
+                }
+            }
+        }
+    };
+
+    let stdout = std::io::stdout();
+    let mut handle = stdout.lock();
+    if let Err(e) = handle.write_all(&bytes) {
+        log::error!("failed to write screenshot response to stdout: {e}");
+    }
+    let _ = handle.flush();
 }
 
 /// Response to a Reset message.
