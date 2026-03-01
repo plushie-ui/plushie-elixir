@@ -82,17 +82,18 @@ model = MyApp.update(model, event)
 **Real fix:** Same as `press`/`release` -- extend the interact protocol.
 
 
-## Screenshots are only available on the full backend
+## Screenshots are stubs on sim and headless backends
 
-**What:** `screenshot/1` and `assert_screenshot/1` silently no-op on the
-sim and headless backends. They return a `Screenshot` struct with an empty
-hash, and `assert_match` accepts empty hashes without creating or checking
-golden files.
+**What:** `screenshot/1` and `assert_screenshot/1` return real RGBA pixel
+data on the full backend but silently no-op on sim and headless. The sim
+and headless backends return a `Screenshot` struct with an empty hash, and
+`assert_match` accepts empty hashes without creating or checking golden
+files.
 
 **Why:** The sim backend has no renderer, so there are no pixels to capture.
 The headless backend uses `iced_test` Simulator for tree-level testing but
-does not render to a pixel buffer. Only the full backend runs wgpu and
-produces real RGBA pixel data.
+does not render to a pixel buffer. The full backend runs wgpu and captures
+real GPU-rendered RGBA pixels via `iced::window::screenshot()`.
 
 **Workaround:** Include `assert_screenshot` calls freely in your tests.
 They will automatically activate when run on the full backend. No
@@ -105,12 +106,6 @@ test "renders correctly" do
   assert_screenshot("counter-pixels")   # only checks on :full
 end
 ```
-
-**Note:** The `:full` backend currently returns empty `Screenshot` structs
-as well. The screenshot capture command is sent to the renderer, but the
-response handling does not yet populate the struct with pixel data. This
-is acknowledged in `testing-internals.md` and will be resolved when the
-full backend's screenshot pipeline is completed.
 
 **Real fix:** The headless backend could potentially render to a pixel
 buffer via tiny-skia. This would give screenshot support without a display

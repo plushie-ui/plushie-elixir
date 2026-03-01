@@ -7,7 +7,8 @@ pub mod headless_mode {
     use crate::codec::Codec;
     use crate::julep_core::Core;
     use crate::protocol::{
-        IncomingMessage, InteractResponse, QueryResponse, ResetResponse, SnapshotCaptureResponse,
+        IncomingMessage, InteractResponse, QueryResponse, ResetResponse, ScreenshotResponseEmpty,
+        SnapshotCaptureResponse,
     };
     use crate::WIRE_CODEC;
 
@@ -65,7 +66,8 @@ pub mod headless_mode {
             | IncomingMessage::SubscriptionRegister { .. }
             | IncomingMessage::SubscriptionUnregister { .. }
             | IncomingMessage::WindowOp { .. }
-            | IncomingMessage::Settings { .. } => {
+            | IncomingMessage::Settings { .. }
+            | IncomingMessage::ImageOp { .. } => {
                 let effects = core.apply(msg);
                 // In headless mode, we handle effects differently:
                 // - SyncWindows: no-op (no real windows)
@@ -105,6 +107,9 @@ pub mod headless_mode {
             }
             IncomingMessage::SnapshotCapture { id, name, .. } => {
                 handle_snapshot_capture(core, id, name);
+            }
+            IncomingMessage::ScreenshotCapture { id, name } => {
+                handle_screenshot_capture(id, name);
             }
             IncomingMessage::Reset { id } => {
                 handle_reset(core, id);
@@ -219,10 +224,15 @@ pub mod headless_mode {
             format!("{:x}", hasher.finalize())
         };
 
-        emit_wire(&SnapshotCaptureResponse::new(
-            id, name, hash, 0, // no pixel dimensions for tree-hash snapshots
-            0, None, // no RGBA data
-        ));
+        emit_wire(&SnapshotCaptureResponse::new(id, name, hash, 0, 0));
+    }
+
+    /// Handle a ScreenshotCapture message in headless mode.
+    ///
+    /// Headless mode cannot capture pixels (no GPU renderer), so we return an
+    /// empty screenshot response. The Elixir side silently accepts empty hashes.
+    fn handle_screenshot_capture(id: String, name: String) {
+        emit_wire(&ScreenshotResponseEmpty::new(id, name));
     }
 
     fn handle_reset(core: &mut Core, id: String) {

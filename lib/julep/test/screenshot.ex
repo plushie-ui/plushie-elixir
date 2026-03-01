@@ -2,9 +2,16 @@ defmodule Julep.Test.Screenshot do
   @moduledoc """
   Pixel screenshot for visual regression testing.
 
-  Captures RGBA pixel data from the :full backend and compares against
-  golden files using SHA-256 hashes. No-op on :sim and :headless backends
-  (returns an empty hash, which assert_match silently accepts).
+  Captures pixel-level rendering data for visual regression testing.
+  The `:full` backend uses GPU rendering via iced/wgpu and captures real
+  RGBA pixel data through `iced::window::screenshot()`. The wire protocol
+  uses native msgpack binary for pixel data (no base64 overhead) or base64
+  for JSON mode. The `:sim` and `:headless` backends return empty stubs
+  (hash `""`, no pixel data) because they lack a GPU renderer.
+
+  `assert_match/2` silently accepts empty hashes, so tests using
+  `assert_screenshot` work on all backends without conditional logic --
+  the assertion simply skips on sim and headless.
 
   ## Golden file workflow
 

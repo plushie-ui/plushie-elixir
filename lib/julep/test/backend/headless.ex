@@ -92,9 +92,7 @@ defmodule Julep.Test.Backend.Headless do
   def snapshot(pid, name), do: GenServer.call(pid, {:snapshot, name}, 30_000)
 
   @impl Julep.Test.Backend
-  def screenshot(_pid, name) do
-    %Screenshot{name: name, hash: "", size: {0, 0}, rgba_data: nil}
-  end
+  def screenshot(pid, name), do: GenServer.call(pid, {:screenshot, name}, 30_000)
 
   @impl Julep.Test.Backend
   def reset(pid), do: GenServer.call(pid, :reset, 10_000)
@@ -243,6 +241,18 @@ defmodule Julep.Test.Backend.Headless do
     {:noreply, put_in(state, [:pending, id], {:snapshot, from, name})}
   end
 
+  defp do_handle_call({:screenshot, name}, from, state) do
+    {id, state} = next_id(state)
+
+    send_message(state.port, state.format, %{
+      type: "screenshot_capture",
+      id: id,
+      name: name
+    })
+
+    {:noreply, put_in(state, [:pending, id], {:screenshot, from, name})}
+  end
+
   defp do_handle_call(:model, _from, state) do
     {:reply, state.model, state}
   end
@@ -305,10 +315,28 @@ defmodule Julep.Test.Backend.Headless do
           name: resp["name"],
           hash: resp["hash"],
           size: {resp["width"] || 0, resp["height"] || 0},
-          rgba_data: decode_rgba(resp["rgba_base64"])
+          rgba_data: nil
         }
 
         GenServer.reply(from, snapshot)
+        %{state | pending: pending}
+    end
+  end
+
+  defp handle_response(%{"type" => "screenshot_response", "id" => id} = resp, state) do
+    case Map.pop(state.pending, id) do
+      {nil, _} ->
+        state
+
+      {{:screenshot, from, _name}, pending} ->
+        screenshot = %Screenshot{
+          name: resp["name"],
+          hash: resp["hash"] || "",
+          size: {resp["width"] || 0, resp["height"] || 0},
+          rgba_data: extract_rgba(resp)
+        }
+
+        GenServer.reply(from, screenshot)
         %{state | pending: pending}
     end
   end
@@ -394,6 +422,10 @@ defmodule Julep.Test.Backend.Headless do
     Port.command(port, data)
   end
 
-  defp decode_rgba(nil), do: nil
-  defp decode_rgba(base64) when is_binary(base64), do: Base.decode64!(base64)
+  # Extract RGBA pixel data from a screenshot_response.
+  # msgpack: native binary in "rgba" key (already an Elixir binary).
+  # JSON: base64-encoded string in "rgba_base64" key.
+  defp extract_rgba(%{"rgba" => rgba}) when is_binary(rgba), do: rgba
+  defp extract_rgba(%{"rgba_base64" => b64}) when is_binary(b64), do: Base.decode64!(b64)
+  defp extract_rgba(_), do: nil
 end

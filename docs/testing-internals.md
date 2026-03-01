@@ -291,6 +291,7 @@ map from ID to `{type, from}` or `{type, from, extra}` tuples.
 | `query` (target: `tree`) | Get the full rendered tree |
 | `interact` | Simulate a user interaction |
 | `snapshot_capture` | Capture a structural snapshot |
+| `screenshot_capture` | Capture a pixel screenshot |
 | `reset` | Reset renderer state |
 
 **Incoming (Rust to Elixir):**
@@ -299,7 +300,8 @@ map from ID to `{type, from}` or `{type, from, extra}` tuples.
 |---|---|
 | `query_response` | Response to a query |
 | `interact_response` | Response with generated events |
-| `snapshot_response` | Snapshot hash and optional RGBA data |
+| `snapshot_response` | Structural snapshot hash |
+| `screenshot_response` | Screenshot hash and RGBA pixel data |
 | `reset_response` | Acknowledgement of reset |
 | `event` | Asynchronous event from the renderer |
 
@@ -329,8 +331,7 @@ Key differences from headless:
 - Real windows open and render via wgpu.
 - Effects (file dialogs, clipboard, notifications) actually work.
 - Subscriptions fire normally.
-- Screenshots could capture real GPU-rendered RGBA pixels (currently returns
-  empty screenshots -- this is a known gap to be filled).
+- Screenshots capture real GPU-rendered RGBA pixels via `iced::window::screenshot()`.
 - Longer GenServer call timeouts (15s vs 10s) due to GPU initialization.
 
 
@@ -352,11 +353,18 @@ hash in the response.
 
 ### Pixel screenshots (`Screenshot`)
 
-1. The backend captures RGBA pixel data (only meaningful on full backend).
+1. The full backend sends a `screenshot_capture` message to the renderer and
+   receives a `screenshot_response` containing a SHA-256 hash of the pixel
+   data plus the raw RGBA bytes. The wire format uses native msgpack binary
+   for the RGBA data (no base64 overhead) or base64 encoding in JSON mode.
 2. SHA-256 hash of the pixel data produces the screenshot hash.
 3. `Screenshot.assert_match/2` works the same as `Snapshot.assert_match/2`
    but uses `test/screenshots/` and `JULEP_UPDATE_SCREENSHOTS`.
-4. Empty hashes (from sim/headless) are silently accepted without creating
+4. The sim backend returns an empty `Screenshot` struct (hash `""`, size
+   `{0, 0}`, nil pixel data) because there is no renderer.
+5. The headless backend sends `screenshot_capture` to the renderer, which
+   returns an empty response (no GPU renderer available in headless mode).
+6. Empty hashes (from sim/headless) are silently accepted without creating
    or checking golden files.
 
 ### JSON tree snapshots (`Julep.Test.assert_tree_snapshot/2`)

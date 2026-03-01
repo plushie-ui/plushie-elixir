@@ -24,6 +24,7 @@ pub mod test_helpers {
             IncomingMessage::Query { .. }
                 | IncomingMessage::Interact { .. }
                 | IncomingMessage::SnapshotCapture { .. }
+                | IncomingMessage::ScreenshotCapture { .. }
                 | IncomingMessage::Reset { .. }
         )
     }
@@ -128,7 +129,7 @@ pub mod test_helpers {
         hasher.update(tree_json.as_bytes());
         let hash = format!("{:x}", hasher.finalize());
 
-        emit_wire(&SnapshotCaptureResponse::new(id, name, hash, 0, 0, None));
+        emit_wire(&SnapshotCaptureResponse::new(id, name, hash, 0, 0));
     }
 
     // -- helpers --
@@ -266,5 +267,48 @@ mod tests {
 
         let resp = QueryResponse::new("q1".to_string(), "tree".to_string(), Value::Null);
         assert_eq!(resp.data, Value::Null);
+    }
+
+    // -- screenshot protocol --
+
+    #[test]
+    fn is_test_message_returns_true_for_screenshot_capture() {
+        let msg = IncomingMessage::ScreenshotCapture {
+            id: "sc1".to_string(),
+            name: "test_shot".to_string(),
+        };
+        assert!(test_helpers::is_test_message(&msg));
+    }
+
+    #[test]
+    fn snapshot_capture_response_has_no_rgba_field() {
+        use crate::protocol::SnapshotCaptureResponse;
+
+        let resp = SnapshotCaptureResponse::new(
+            "s1".to_string(),
+            "snap".to_string(),
+            "abc123".to_string(),
+            100,
+            200,
+        );
+        let json = serde_json::to_value(&resp).unwrap();
+        assert!(
+            json.get("rgba_base64").is_none(),
+            "SnapshotCaptureResponse should not have an rgba_base64 field"
+        );
+    }
+
+    #[test]
+    fn screenshot_response_empty_has_correct_structure() {
+        use crate::protocol::ScreenshotResponseEmpty;
+
+        let resp = ScreenshotResponseEmpty::new("sc1".to_string(), "test_shot".to_string());
+        assert_eq!(resp.message_type, "screenshot_response");
+        assert_eq!(resp.hash, "");
+        assert_eq!(resp.width, 0);
+        assert_eq!(resp.height, 0);
+
+        let json = serde_json::to_value(&resp).unwrap();
+        assert_eq!(json.get("type").unwrap(), "screenshot_response");
     }
 }

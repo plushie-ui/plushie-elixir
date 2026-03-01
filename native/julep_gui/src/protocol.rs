@@ -53,7 +53,7 @@ pub enum IncomingMessage {
         #[serde(default)]
         payload: Value,
     },
-    /// Capture a pixel snapshot.
+    /// Capture a structural tree snapshot (hash of JSON tree).
     #[allow(dead_code)]
     SnapshotCapture {
         id: String,
@@ -62,6 +62,12 @@ pub enum IncomingMessage {
         theme: Value,
         #[serde(default)]
         viewport: Value,
+    },
+    /// Capture a pixel screenshot (GPU-rendered RGBA data).
+    #[allow(dead_code)]
+    ScreenshotCapture {
+        id: String,
+        name: String,
     },
     /// Reset the app state.
     Reset {
@@ -165,6 +171,9 @@ impl InteractResponse {
 }
 
 /// Response to a SnapshotCapture message.
+///
+/// Snapshots capture structural tree data (hash of JSON tree). No pixel data.
+/// For pixel data, see the `screenshot_response` message type.
 #[derive(Debug, Serialize)]
 #[allow(dead_code)]
 pub struct SnapshotCaptureResponse {
@@ -175,20 +184,11 @@ pub struct SnapshotCaptureResponse {
     pub hash: String,
     pub width: u32,
     pub height: u32,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rgba_base64: Option<String>,
 }
 
 #[allow(dead_code)]
 impl SnapshotCaptureResponse {
-    pub fn new(
-        id: String,
-        name: String,
-        hash: String,
-        width: u32,
-        height: u32,
-        rgba_base64: Option<String>,
-    ) -> Self {
+    pub fn new(id: String, name: String, hash: String, width: u32, height: u32) -> Self {
         Self {
             message_type: "snapshot_response",
             id,
@@ -196,7 +196,36 @@ impl SnapshotCaptureResponse {
             hash,
             width,
             height,
-            rgba_base64,
+        }
+    }
+}
+
+/// Empty screenshot response for backends that cannot capture pixels.
+///
+/// Used by headless mode. The full backend uses a format-aware emit function
+/// instead (native binary for msgpack, base64 for JSON).
+#[derive(Debug, Serialize)]
+#[allow(dead_code)]
+pub struct ScreenshotResponseEmpty {
+    #[serde(rename = "type")]
+    pub message_type: &'static str,
+    pub id: String,
+    pub name: String,
+    pub hash: String,
+    pub width: u32,
+    pub height: u32,
+}
+
+#[allow(dead_code)]
+impl ScreenshotResponseEmpty {
+    pub fn new(id: String, name: String) -> Self {
+        Self {
+            message_type: "screenshot_response",
+            id,
+            name,
+            hash: String::new(),
+            width: 0,
+            height: 0,
         }
     }
 }
