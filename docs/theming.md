@@ -181,8 +181,24 @@ polished UI patterns with style maps.
 
 ## System theme detection
 
-The renderer detects the OS light/dark preference and sends a theme event.
-Subscribe with `Julep.Subscription.on_theme_change/1`:
+The simplest way to follow the OS light/dark preference is to set the
+window theme to `"system"`:
+
+```elixir
+window "main", title: "My App", theme: "system" do
+  # content
+end
+```
+
+The renderer tracks the current OS mode and applies Light or Dark
+automatically. This also works in `settings/0` for the app-level default:
+
+```elixir
+def settings, do: [theme: "system"]
+```
+
+For manual control, subscribe to theme change events with
+`Julep.Subscription.on_theme_change/1`:
 
 ```elixir
 def subscribe(_model) do
@@ -196,6 +212,11 @@ end
 ```
 
 Your app can use this to follow the system theme or ignore it entirely.
+
+**Note:** The `themer` widget (per-subtree theme override) does not support
+`"system"` as a theme value. Setting a themer's theme to `"system"` is
+treated as "no override" (the parent theme passes through). Use `"system"`
+on window nodes or in `settings/0` instead.
 
 ## Density
 

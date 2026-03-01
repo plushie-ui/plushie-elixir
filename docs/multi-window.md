@@ -73,8 +73,9 @@ window "main",
   decorations: true,
   transparent: false,
   visible: true,
-  theme: "dark",
-  level: :normal  # :normal | :always_on_top | :always_on_bottom
+  theme: "dark",       # or "system" to follow OS preference
+  level: :normal,      # :normal | :always_on_top | :always_on_bottom
+  scale_factor: 1.5    # per-window UI scale (overrides global setting)
 do
   content(model)
 end
