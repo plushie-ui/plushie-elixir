@@ -330,8 +330,7 @@ defmodule Julep.Test.Backend.Full do
         snapshot = %Snapshot{
           name: resp["name"],
           hash: resp["hash"],
-          size: {resp["width"] || 0, resp["height"] || 0},
-          rgba_data: nil
+          size: {resp["width"] || 0, resp["height"] || 0}
         }
 
         GenServer.reply(from, snapshot)

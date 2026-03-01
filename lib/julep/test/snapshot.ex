@@ -16,11 +16,10 @@ defmodule Julep.Test.Snapshot do
   @type t :: %__MODULE__{
           name: String.t(),
           hash: String.t(),
-          size: {non_neg_integer(), non_neg_integer()},
-          rgba_data: binary() | nil
+          size: {non_neg_integer(), non_neg_integer()}
         }
 
-  defstruct [:name, :hash, :size, :rgba_data]
+  defstruct [:name, :hash, :size]
 
   @doc """
   Asserts that a structural snapshot matches its golden file.

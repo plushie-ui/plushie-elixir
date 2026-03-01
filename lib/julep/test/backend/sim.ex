@@ -161,7 +161,7 @@ defmodule Julep.Test.Backend.Sim do
   def handle_call({:snapshot, name}, _from, state) do
     json = Jason.encode!(state.tree)
     hash = Snapshot.hash(json)
-    snap = %Snapshot{name: name, hash: hash, size: {0, 0}, rgba_data: nil}
+    snap = %Snapshot{name: name, hash: hash, size: {0, 0}}
     {:reply, snap, state}
   end
 

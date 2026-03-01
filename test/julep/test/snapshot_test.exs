@@ -38,7 +38,7 @@ defmodule Julep.Test.SnapshotTest do
 
   describe "assert_match/2" do
     test "creates golden file on first run", %{golden_dir: dir} do
-      snap = %Snapshot{name: "first-run", hash: "abc123", size: {100, 100}, rgba_data: nil}
+      snap = %Snapshot{name: "first-run", hash: "abc123", size: {100, 100}}
       golden_path = Path.join(dir, "first-run.sha256")
 
       refute File.exists?(golden_path)
@@ -51,14 +51,14 @@ defmodule Julep.Test.SnapshotTest do
       hash = Snapshot.hash("pixel data")
       File.write!(Path.join(dir, "matching.sha256"), hash)
 
-      snap = %Snapshot{name: "matching", hash: hash, size: {10, 10}, rgba_data: nil}
+      snap = %Snapshot{name: "matching", hash: hash, size: {10, 10}}
       assert :ok = Snapshot.assert_match(snap, dir)
     end
 
     test "raises when hashes differ", %{golden_dir: dir} do
       File.write!(Path.join(dir, "stale.sha256"), "old_hash")
 
-      snap = %Snapshot{name: "stale", hash: "new_hash", size: {10, 10}, rgba_data: nil}
+      snap = %Snapshot{name: "stale", hash: "new_hash", size: {10, 10}}
 
       assert_raise ExUnit.AssertionError, ~r/Snapshot mismatch/, fn ->
         Snapshot.assert_match(snap, dir)
@@ -69,7 +69,7 @@ defmodule Julep.Test.SnapshotTest do
       golden_path = Path.join(dir, "updatable.sha256")
       File.write!(golden_path, "old_hash")
 
-      snap = %Snapshot{name: "updatable", hash: "new_hash", size: {10, 10}, rgba_data: nil}
+      snap = %Snapshot{name: "updatable", hash: "new_hash", size: {10, 10}}
 
       # Set env, run, then clean up
       System.put_env("JULEP_UPDATE_SNAPSHOTS", "1")
@@ -85,7 +85,7 @@ defmodule Julep.Test.SnapshotTest do
     test "error message includes expected and actual hashes", %{golden_dir: dir} do
       File.write!(Path.join(dir, "details.sha256"), "expected_hash")
 
-      snap = %Snapshot{name: "details", hash: "actual_hash", size: {10, 10}, rgba_data: nil}
+      snap = %Snapshot{name: "details", hash: "actual_hash", size: {10, 10}}
 
       error =
         assert_raise ExUnit.AssertionError, fn ->
