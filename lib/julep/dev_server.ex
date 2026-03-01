@@ -39,8 +39,8 @@ defmodule Julep.DevServer do
     dirs = Keyword.get(opts, :dirs, @default_dirs) |> Enum.map(&Path.expand/1)
     debounce_ms = Keyword.get(opts, :debounce_ms, @default_debounce_ms)
 
-    {:ok, watcher} = FileSystem.start_link(dirs: dirs)
-    FileSystem.subscribe(watcher)
+    {:ok, watcher} = apply(FileSystem, :start_link, [[dirs: dirs]])
+    apply(FileSystem, :subscribe, [watcher])
 
     state = %{
       runtime: runtime,
