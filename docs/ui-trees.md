@@ -296,7 +296,7 @@ The `svg` widget renders vector graphics from an SVG file.
 | `width` | length | Widget width (`:fill`, `:shrink`, or number) |
 | `height` | length | Widget height (`:fill`, `:shrink`, or number) |
 | `content_fit` | string | How the SVG fits its bounds: `"contain"`, `"cover"`, `"fill"`, `"none"`, `"scale_down"` |
-| `rotation` | number | Rotation angle in radians |
+| `rotation` | number | Rotation angle in degrees |
 | `opacity` | number | Opacity from 0.0 (transparent) to 1.0 (opaque) |
 | `color` | color | Color tint applied to the SVG |
 
@@ -328,7 +328,7 @@ optional syntax highlighting and key binding customization.
 | `padding` | number | Uniform padding in pixels |
 | `wrapping` | atom | Text wrapping: `:none`, `:word`, `:glyph`, `:word_or_glyph` |
 | `highlight_syntax` | string | Language name for syntax highlighting (e.g. `"elixir"`, `"rust"`) |
-| `highlight_theme` | string | Syntax highlighting theme name (e.g. `"github"`, `"dracula"`) |
+| `highlight_theme` | string | Syntax highlighting theme: `"solarized_dark"`, `"base16_mocha"`, `"base16_ocean"`, `"base16_eighties"`, `"inspired_github"` |
 | `key_bindings` | list | Declarative key binding rules for editor behavior |
 | `style` | atom or StyleMap | Named style preset or custom style map |
 
@@ -342,7 +342,7 @@ text_editor("code",
   padding: 12,
   wrapping: :word,
   highlight_syntax: "elixir",
-  highlight_theme: "github",
+  highlight_theme: "inspired_github",
   height: :fill
 )
 ```
