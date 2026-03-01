@@ -48,7 +48,8 @@ does not implement. The interact protocol handles widget-level interactions
 dispatching the event tuple directly:
 
 ```elixir
-model = MyApp.update(model, {:key_press, "Enter", %{}})
+event = {:key_press, %Julep.KeyEvent{key: :enter, modifiers: %{}}}
+model = MyApp.update(model, event)
 ```
 
 For mouse movement, there is no workaround in the test framework. Test the
@@ -74,7 +75,8 @@ text input. For other key events, test at the unit level:
 
 ```elixir
 # Instead of `type_key "escape"` in a script:
-model = MyApp.update(model, {:key_press, "Escape", %{}})
+event = {:key_press, %Julep.KeyEvent{key: :escape, modifiers: %{}}}
+model = MyApp.update(model, event)
 ```
 
 **Real fix:** Same as `press`/`release` -- extend the interact protocol.
@@ -143,38 +145,13 @@ restricted expression parser that supports basic patterns (e.g.,
 `field: value` pairs) without full `Code.eval_string`.
 
 
-## `submit/1` in sim uses tree props, not typed text
+## ~~`submit/1` in sim uses tree props, not typed text~~ (resolved)
 
-**What:** When calling `submit("#my_input")` on the sim backend, the
-submitted value comes from the `value` prop currently stored in the tree,
-not from text you typed via `type_text/2` earlier in the same test.
+**Fixed.** The sim backend now tracks text typed via `type_text/2` per
+widget and uses it as the submit value. `type_text("#name", "Alice")`
+followed by `submit("#name")` submits `"Alice"` regardless of whether
+`view/1` echoes the value back into the text_input's `value` prop.
 
-**Why:** The sim backend's `EventMap.submit/1` reads the element's
-`props["value"]` to construct the `{:submit, id, value}` event. However,
-`type_text/2` dispatches an `{:input, id, text}` event which updates the
-model and re-renders the tree. If your `update/2` handler stores the typed
-text in the model and your `view/1` reflects it back in the text_input's
-`value` prop, then `submit/1` will pick up the correct value.
-
-The issue arises when `view/1` does not echo the typed text back into the
-text_input's `value` prop. In that case, `submit/1` will use whatever
-`value` was in the tree before the type event.
-
-**Workaround:** Ensure your `view/1` always binds the text_input's `value`
-prop to the model field that `update/2` updates on `{:input, id, text}`.
-This is good practice regardless:
-
-```elixir
-# In view/1:
-text_input("name", model.name, placeholder: "Enter name...")
-
-# In update/2:
-def update(model, {:input, "name", value}), do: %{model | name: value}
-```
-
-With this pattern, `type_text("#name", "Alice")` followed by
-`submit("#name")` will submit `"Alice"` as expected.
-
-**Real fix:** The sim backend could track text that has been typed via
-`type_text` and use it as the submit value, falling back to tree props. This
-would match the behaviour of real text inputs more closely.
+The fallback to `EventMap.submit/1` (which reads the tree prop) still
+applies when `submit` is called without a prior `type_text` for that
+widget. `reset/0` clears the typed text tracking.

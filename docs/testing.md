@@ -696,5 +696,3 @@ each limitation.
 - `type_key` is a no-op on all backends.
 - Pixel screenshots are only available on the full backend.
 - Script `assert_model` uses substring matching against the inspected model.
-- `submit/1` in sim uses the tree's current `value` prop, not text you
-  previously typed via `type_text`.

@@ -211,7 +211,7 @@ renderer's actual event generation.
 | `checkbox` | error (use toggle) | error | error | `{:toggle, id, !is_checked}` | error | error |
 | `toggler` | error (use toggle) | error | error | `{:toggle, id, !is_toggled}` | error | error |
 | `radio` | error | error | error | error | `{:select, group, value}` | error |
-| `text_input` | error | `{:input, id, text}` | `{:submit, id, props["value"]}` | error | error | error |
+| `text_input` | error | `{:input, id, text}` | `{:submit, id, typed \|\| props["value"]}` | error | error | error |
 | `text_editor` | error | `{:input, id, text}` | error | error | error | error |
 | `slider` | error | error | error | error | error | `{:slide, id, value}` |
 | `vertical_slider` | error | error | error | error | error | `{:slide, id, value}` |
