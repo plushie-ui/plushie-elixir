@@ -88,6 +88,12 @@ defmodule Julep.App do
   - `vsync` -- boolean (defaults to `true`). When enabled, the renderer
     synchronizes frame presentation with the display refresh rate. Disabling
     it can improve rendering performance on some platforms.
+  - `scale_factor` -- number (defaults to `1.0`). Multiplier on top of OS
+    DPI scaling. Setting `2.0` on a 2x HiDPI display gives 4x physical
+    pixels per logical pixel. Per-window overrides are supported via the
+    `scale_factor` prop on window nodes.
+  - `theme` -- string or map. The app-level theme. Use `"system"` to
+    follow the OS light/dark preference automatically.
   - `fonts` -- list of font paths to load
 
   Default: `[]` (renderer uses its own defaults).

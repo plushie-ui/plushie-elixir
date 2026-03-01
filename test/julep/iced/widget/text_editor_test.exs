@@ -95,6 +95,16 @@ defmodule Julep.Iced.Widget.TextEditorTest do
       ed = TextEditor.new("id") |> TextEditor.style(:default)
       assert ed.style == :default
     end
+
+    test "key_bindings/2 sets key bindings" do
+      bindings = [
+        %{"key" => "s", "modifiers" => ["ctrl"], "binding" => %{"custom" => "save"}},
+        %{"binding" => "default"}
+      ]
+
+      ed = TextEditor.new("id") |> TextEditor.key_bindings(bindings)
+      assert ed.key_bindings == bindings
+    end
   end
 
   describe "build/1" do
@@ -126,6 +136,22 @@ defmodule Julep.Iced.Widget.TextEditorTest do
       refute Map.has_key?(node.props, "highlight_syntax")
       refute Map.has_key?(node.props, "highlight_theme")
       refute Map.has_key?(node.props, "style")
+      refute Map.has_key?(node.props, "key_bindings")
+    end
+
+    test "includes key_bindings in props when set" do
+      bindings = [
+        %{"key" => "s", "modifiers" => ["ctrl"], "binding" => %{"custom" => "save"}},
+        %{"named" => "Enter", "modifiers" => ["ctrl"], "binding" => "enter"},
+        %{"binding" => "default"}
+      ]
+
+      node =
+        TextEditor.new("ed")
+        |> TextEditor.key_bindings(bindings)
+        |> TextEditor.build()
+
+      assert node.props["key_bindings"] == bindings
     end
 
     test "includes highlight fields alongside content" do
@@ -157,6 +183,16 @@ defmodule Julep.Iced.Widget.TextEditorTest do
       assert ed.highlight_syntax == "py"
       assert ed.highlight_theme == "base16_ocean"
       assert ed.wrapping == :word
+    end
+
+    test "routes key_bindings option" do
+      bindings = [%{"binding" => "default"}]
+
+      ed =
+        TextEditor.new("id")
+        |> TextEditor.with_options(key_bindings: bindings)
+
+      assert ed.key_bindings == bindings
     end
 
     test "raises on unknown option" do

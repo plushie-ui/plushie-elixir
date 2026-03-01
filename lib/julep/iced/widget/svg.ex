@@ -11,8 +11,10 @@ defmodule Julep.Iced.Widget.Svg do
     `"cover"`, `"fill"`, `"none"`, `"scale_down"`.
   - `rotation` (number) -- rotation angle in degrees.
   - `opacity` (number) -- opacity from 0.0 (transparent) to 1.0 (opaque).
+  - `color` (color) -- color tint applied to the SVG. See `Julep.Iced.Color`.
   """
 
+  alias Julep.Iced.Color
   alias Julep.Iced.Widget.Build
 
   @type option ::
@@ -21,6 +23,7 @@ defmodule Julep.Iced.Widget.Svg do
           | {:content_fit, Julep.Iced.ContentFit.t()}
           | {:rotation, number()}
           | {:opacity, number()}
+          | {:color, Julep.Iced.Color.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -29,10 +32,11 @@ defmodule Julep.Iced.Widget.Svg do
           height: Julep.Iced.Length.t() | nil,
           content_fit: Julep.Iced.ContentFit.t() | nil,
           rotation: number() | nil,
-          opacity: number() | nil
+          opacity: number() | nil,
+          color: Julep.Iced.Color.t() | nil
         }
 
-  defstruct [:id, :source, :width, :height, :content_fit, :rotation, :opacity]
+  defstruct [:id, :source, :width, :height, :content_fit, :rotation, :opacity, :color]
 
   @doc "Creates a new SVG struct with the given source path and optional keyword opts."
   @spec new(id :: String.t(), source :: String.t(), opts :: [option()]) :: t()
@@ -51,6 +55,7 @@ defmodule Julep.Iced.Widget.Svg do
       {:content_fit, v}, acc -> content_fit(acc, v)
       {:rotation, v}, acc -> rotation(acc, v)
       {:opacity, v}, acc -> opacity(acc, v)
+      {:color, v}, acc -> color(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -75,6 +80,10 @@ defmodule Julep.Iced.Widget.Svg do
   @spec opacity(svg :: t(), opacity :: number()) :: t()
   def opacity(%__MODULE__{} = svg, opacity), do: %{svg | opacity: opacity}
 
+  @doc "Sets the color tint applied to the SVG."
+  @spec color(svg :: t(), color :: Julep.Iced.Color.t()) :: t()
+  def color(%__MODULE__{} = svg, color), do: %{svg | color: Color.cast(color)}
+
   @doc "Converts this SVG struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(svg :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = svg), do: Julep.Iced.Widget.to_node(svg)
@@ -91,6 +100,7 @@ defmodule Julep.Iced.Widget.Svg do
         |> put_if(svg.content_fit, "content_fit")
         |> put_if(svg.rotation, "rotation")
         |> put_if(svg.opacity, "opacity")
+        |> put_if(svg.color, "color")
 
       %{id: svg.id, type: "svg", props: props, children: []}
     end

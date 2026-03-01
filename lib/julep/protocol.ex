@@ -816,6 +816,9 @@ defmodule Julep.Protocol do
   defp dispatch(%{"type" => "event", "family" => "close", "id" => id}),
     do: {:close, id}
 
+  defp dispatch(%{"type" => "event", "family" => "key_binding", "id" => id, "data" => data}),
+    do: {:key_binding, id, data}
+
   # -- Keyboard events --
   # Rust emits family "key_press" with the key in "value", modifiers in "modifiers",
   # and extra fields (modified_key, physical_key, location, text, repeat) in "data".

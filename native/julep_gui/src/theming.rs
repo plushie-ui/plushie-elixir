@@ -5,9 +5,6 @@ use serde_json::Value;
 // Theme resolution
 // ---------------------------------------------------------------------------
 
-// Note: iced's Palette does not include a warning color. Custom warning
-// colors are not supported.
-
 /// Result of resolving a theme from JSON.
 pub struct ThemeResult {
     pub theme: Theme,
@@ -30,9 +27,14 @@ pub fn resolve_theme(value: &Value) -> ThemeResult {
     }
 }
 
-/// Convenience: resolve and return just the Theme, discarding the wrapper.
-pub fn resolve_theme_only(value: &Value) -> Theme {
-    resolve_theme(value).theme
+/// Resolve a theme value, returning `None` for `"system"` (follow OS preference).
+pub fn resolve_theme_only(value: &Value) -> Option<Theme> {
+    if let Some(s) = value.as_str() {
+        if s.eq_ignore_ascii_case("system") {
+            return None;
+        }
+    }
+    Some(resolve_theme(value).theme)
 }
 
 // ---------------------------------------------------------------------------
@@ -82,6 +84,7 @@ fn resolve_builtin(s: &str) -> Theme {
 /// - "text"       - hex color string
 /// - "primary"    - hex color string
 /// - "success"    - hex color string
+/// - "warning"    - hex color string
 /// - "danger"     - hex color string
 fn custom_theme_from_object(obj: &serde_json::Map<String, Value>) -> Theme {
     let base_theme = obj
@@ -103,6 +106,9 @@ fn custom_theme_from_object(obj: &serde_json::Map<String, Value>) -> Theme {
     }
     if let Some(color) = get_color(obj, "success") {
         palette.success = color;
+    }
+    if let Some(color) = get_color(obj, "warning") {
+        palette.warning = color;
     }
     if let Some(color) = get_color(obj, "danger") {
         palette.danger = color;
@@ -164,6 +170,18 @@ mod tests {
     }
 
     #[test]
+    fn system_theme_returns_none() {
+        assert!(resolve_theme_only(&json!("system")).is_none());
+        assert!(resolve_theme_only(&json!("System")).is_none());
+    }
+
+    #[test]
+    fn non_system_returns_some() {
+        assert!(resolve_theme_only(&json!("Dark")).is_some());
+        assert!(resolve_theme_only(&json!({"primary": "#ff0000"})).is_some());
+    }
+
+    #[test]
     fn unknown_string_falls_back_to_dark() {
         assert!(matches!(
             resolve_theme(&json!("neon_pink")).theme,
@@ -195,6 +213,14 @@ mod tests {
         assert_eq!(p.primary, Color::from_rgb8(0x7a, 0xa2, 0xf7));
         assert_eq!(p.success, Color::from_rgb8(0x9e, 0xce, 0x6a));
         assert_eq!(p.danger, Color::from_rgb8(0xf7, 0x76, 0x8e));
+    }
+
+    #[test]
+    fn custom_theme_with_warning_color() {
+        let val = json!({"warning": "#f9e2af"});
+        let result = resolve_theme(&val);
+        let p = result.theme.palette();
+        assert_eq!(p.warning, Color::from_rgb8(0xf9, 0xe2, 0xaf));
     }
 
     #[test]

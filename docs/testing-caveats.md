@@ -104,6 +104,12 @@ test "renders correctly" do
 end
 ```
 
+**Note:** The `:full` backend currently returns empty `Screenshot` structs
+as well. The screenshot capture command is sent to the renderer, but the
+response handling does not yet populate the struct with pixel data. This
+is acknowledged in `testing-internals.md` and will be resolved when the
+full backend's screenshot pipeline is completed.
+
 **Real fix:** The headless backend could potentially render to a pixel
 buffer via tiny-skia. This would give screenshot support without a display
 server but with software rendering (different from GPU output). Whether this

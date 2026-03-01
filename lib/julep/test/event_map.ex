@@ -256,6 +256,17 @@ defmodule Julep.Test.EventMap do
   def mouse_scroll(%Element{type: type}, _delta_x, _delta_y),
     do: {:error, "cannot mouse_scroll a #{type} widget"}
 
+  # -- TextEditor key_binding events --
+
+  @doc "Produces a key_binding event for a text_editor widget."
+  @spec text_editor_key_binding(element :: Element.t(), tag :: String.t()) ::
+          {:ok, tuple()} | {:error, String.t()}
+  def text_editor_key_binding(%Element{type: "text_editor", id: id}, tag),
+    do: {:ok, {:key_binding, id, tag}}
+
+  def text_editor_key_binding(%Element{type: type}, _tag),
+    do: {:error, "cannot produce key_binding event for a #{type} widget"}
+
   # -- Table events --
 
   @doc "Produces a table sort event for the given column key."

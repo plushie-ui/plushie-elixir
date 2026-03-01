@@ -82,8 +82,8 @@ taxonomy. Common families:
 - `{:select, field_id, value}` -- selection change
 - `{:toggle, field_id, value}` -- checkbox/toggler change
 - `{:submit, field_id, value}` -- form field submission
-- `{:key_press, key, modifiers}` -- keyboard event (via subscription)
-- `{:key_release, key, modifiers}` -- keyboard release (via subscription)
+- `{:key_press, %Julep.KeyEvent{}}` -- keyboard event (via subscription)
+- `{:key_release, %Julep.KeyEvent{}}` -- keyboard release (via subscription)
 - `{:window_close_requested, window_id}` -- window close requested
 - `{:window_resized, window_id, width, height}` -- window resized
 - `{:canvas_press, id, x, y, button}` -- canvas interaction
@@ -226,6 +226,13 @@ Supported keys:
 - `default_text_size` -- a number (pixels)
 - `antialiasing` -- boolean
 - `fonts` -- list of font file paths to load
+- `vsync` -- boolean (default `true`). Controls vertical sync.
+- `scale_factor` -- number (default `1.0`). Global UI scale factor applied
+  to all windows.
+
+To follow the OS light/dark preference automatically, set the window
+`theme` prop to `"system"`. The renderer detects the current OS theme
+and applies the matching built-in light or dark theme.
 
 Default: `[]` (renderer uses its own defaults).
 
@@ -264,7 +271,7 @@ test "view renders todo list" do
   model = %{todos: [%{id: 1, text: "Buy milk", done: false}], input: "", filter: :all}
   tree = MyApp.view(model)
 
-  assert Julep.UI.exists?(tree, "todo:1")
+  assert Julep.Tree.find(tree, "todo:1")
 end
 ```
 

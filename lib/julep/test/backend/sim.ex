@@ -96,7 +96,7 @@ defmodule Julep.Test.Backend.Sim do
     {model, commands} = init_app(app, opts)
     model = process_commands(app, model, commands)
     tree = render_tree(app, model)
-    {:ok, %{app: app, opts: opts, model: model, tree: tree}}
+    {:ok, %{app: app, opts: opts, model: model, tree: tree, typed_text: %{}}}
   end
 
   @impl GenServer
@@ -111,13 +111,28 @@ defmodule Julep.Test.Backend.Sim do
   end
 
   def handle_call({:type_text, selector, text}, _from, state) do
+    element = find_in_tree(state.tree, selector)
+    unless element, do: raise("Element not found: #{inspect(selector)}")
+
     state = interact(state, selector, &EventMap.input(&1, text))
+    state = %{state | typed_text: Map.put(state.typed_text, element.id, text)}
     {:reply, :ok, state}
   end
 
   def handle_call({:submit, selector}, _from, state) do
-    state = interact(state, selector, &EventMap.submit/1)
-    {:reply, :ok, state}
+    element = find_in_tree(state.tree, selector)
+    unless element, do: raise("Element not found: #{inspect(selector)}")
+
+    # Use typed text if available, otherwise fall back to EventMap.submit
+    case Map.get(state.typed_text, element.id) do
+      nil ->
+        state = interact(state, selector, &EventMap.submit/1)
+        {:reply, :ok, state}
+
+      text ->
+        state = interact(state, selector, fn _el -> {:ok, {:submit, element.id, text}} end)
+        {:reply, :ok, state}
+    end
   end
 
   def handle_call({:toggle, selector}, _from, state) do
@@ -154,7 +169,7 @@ defmodule Julep.Test.Backend.Sim do
     {model, commands} = init_app(state.app, state.opts)
     model = process_commands(state.app, model, commands)
     tree = render_tree(state.app, model)
-    {:reply, :ok, %{state | model: model, tree: tree}}
+    {:reply, :ok, %{state | model: model, tree: tree, typed_text: %{}}}
   end
 
   # -- Private helpers --

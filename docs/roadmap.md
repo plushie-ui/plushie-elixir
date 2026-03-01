@@ -138,8 +138,8 @@ Layer-based caching (`layers` prop replaces old `shapes` prop). Arbitrary
 paths (bezier, quadratic, arcs, ellipses, rounded rects), stroked shapes
 with full stroke styles (line cap, join, dash), gradient fills (linear),
 transforms (translate/rotate/scale with push_transform/pop_transform
-stack), draw_image, draw_svg, text with font/size. Remaining minor gaps:
-fill rules and clipping.
+stack), draw_image, draw_svg, text with font/size, fill rules
+(non_zero/even_odd), and clipping (push_clip/pop_clip).
 
 ### In-memory image handles (shipped)
 

@@ -184,12 +184,17 @@ If the renderer process exits unexpectedly, the runtime:
 After a configurable number of failed restart attempts, the runtime gives
 up and exits. The supervisor strategy determines what happens next.
 
-## No envelope, no lanes, no correlation IDs
+## No envelope, no lanes
 
 This protocol intentionally omits features like message envelopes, priority
-lanes, request/response correlation, and trace context propagation. These
-add complexity and solve problems we do not currently have.
+lanes, and trace context propagation. These add complexity and solve
+problems we do not currently have.
 
-If profiling or operational experience reveals a need for any of these, they
-can be added as optional envelope fields without breaking the base protocol.
-The renderer ignores unrecognized top-level keys.
+The one exception is effect request/response messages, which use an `id`
+field for correlation (e.g. `"req_1"`). This allows the runtime to match
+asynchronous effect results back to the originating request. Outside of
+effects, messages do not carry correlation IDs.
+
+If profiling or operational experience reveals a need for envelopes or
+priority lanes, they can be added as optional fields without breaking the
+base protocol. The renderer ignores unrecognized top-level keys.

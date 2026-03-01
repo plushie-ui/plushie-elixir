@@ -85,7 +85,7 @@ after creation, use window commands:
 
 ```elixir
 def update(model, {:click, "go_fullscreen"}) do
-  {model, Julep.Command.fullscreen_window("main")}
+  {model, Julep.Command.set_window_mode("main", :fullscreen)}
 end
 ```
 
@@ -95,11 +95,11 @@ Window events include the window ID so your app knows which window they
 came from:
 
 ```elixir
-def update(model, {:window, :close_requested, "inspector"}) do
+def update(model, {:window_close_requested, "inspector"}) do
   %{model | inspector_open: false}
 end
 
-def update(model, {:window, :close_requested, "main"}) do
+def update(model, {:window_close_requested, "main"}) do
   if model.unsaved_changes do
     %{model | confirm_exit: true}
   else
@@ -107,11 +107,11 @@ def update(model, {:window, :close_requested, "main"}) do
   end
 end
 
-def update(model, {:window, :resized, "main", {width, height}}) do
+def update(model, {:window_resized, "main", width, height}) do
   %{model | window_size: {width, height}}
 end
 
-def update(model, {:window, :focused, window_id}) do
+def update(model, {:window_focused, window_id}) do
   %{model | active_window: window_id}
 end
 ```
@@ -119,17 +119,17 @@ end
 ## Window close behaviour
 
 By default, when the user clicks the close button on a window, the
-renderer sends a `{:window, :close_requested, window_id}` event instead
+renderer sends a `{:window_close_requested, window_id}` event instead
 of closing immediately. Your app decides what to do:
 
 ```elixir
 # Let it close (remove it from view):
-def update(model, {:window, :close_requested, "settings"}) do
+def update(model, {:window_close_requested, "settings"}) do
   %{model | settings_open: false}
 end
 
 # Block the close:
-def update(model, {:window, :close_requested, "main"}) do
+def update(model, {:window_close_requested, "main"}) do
   %{model | show_save_dialog: true}
 end
 ```
@@ -139,25 +139,39 @@ window stays open. This prevents accidental closes. To close a window
 programmatically, remove it from the tree (return `view/1` without it) or
 use `Julep.Command.close_window(id)`.
 
-## Opening windows from commands
+## Opening windows declaratively
 
-For windows that need specific OS-level configuration at open time (like
-position or monitor), use a command:
+Windows are opened by adding window nodes to the tree returned by
+`view/1`. There is no `open_window` command. To open a new window, set a
+flag in your model and include the window node conditionally:
 
 ```elixir
 def update(model, {:click, "open_settings"}) do
-  cmd = Julep.Command.open_window("settings",
-    title: "Settings",
-    size: {500, 400},
-    position: :center
-  )
-  {%{model | settings_open: true}, cmd}
+  %{model | settings_open: true}
+end
+
+def view(model) do
+  import Julep.UI
+
+  windows = [
+    window "main", title: "My App" do
+      main_content(model)
+    end
+  ]
+
+  if model.settings_open do
+    settings = window "settings", title: "Settings", size: {500, 400} do
+      settings_panel(model)
+    end
+    windows ++ [settings]
+  else
+    windows
+  end
 end
 ```
 
-The window still needs a corresponding node in `view/1` or it will be
-immediately closed on the next diff. The command provides initial OS
-window configuration; the tree provides content.
+When the runtime detects a new window ID in the tree, the renderer opens
+the corresponding OS window. When the ID disappears, the window closes.
 
 ## Primary window
 
@@ -174,8 +188,8 @@ The renderer tracks which window has OS focus. Window focus/unfocus events
 are delivered as:
 
 ```elixir
-{:window, :focused, window_id}
-{:window, :unfocused, window_id}
+{:window_focused, window_id}
+{:window_unfocused, window_id}
 ```
 
 The app can use these to adjust behaviour (e.g., pause animations in

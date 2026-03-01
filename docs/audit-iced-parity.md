@@ -64,7 +64,7 @@ in-memory images, mouse_area cursor, iced parity gaps batch).
 | `ProgressBar` | SUPPORTED | range, value, length (width), girth (height), vertical, named styles |
 | `Tooltip` | SUPPORTED | position, gap, padding, snap_within_viewport, named styles |
 | `Image` | SUPPORTED | All display props supported. File path and in-memory handles (`Handle::from_bytes`, `Handle::from_rgba`) via image registry commands. |
-| `Svg` | SUPPORTED | source, width, height, content_fit, rotation, opacity |
+| `Svg` | SUPPORTED | source, width, height, content_fit, rotation, opacity, color (tint) |
 | `Canvas` | SUPPORTED | Interactive events, layer-based caching, arbitrary paths (bezier, quadratic, arcs, ellipses, rounded rects), stroke styles (cap, join, dash), gradient fills, transforms (translate, rotate, scale), draw_image, draw_svg, text with font/size, fill rules (non_zero/even_odd), clipping (push_clip/pop_clip). See per-widget section. |
 | `Markdown` | SUPPORTED | Settings: text_size, h1_size, h2_size, h3_size, code_size, spacing; width via container wrapper |
 | `Table` | SUPPORTED | Composite implementation; columns, rows, header (conditional), separator, padding, sortable columns, per-column align/width |
@@ -216,7 +216,7 @@ unlisted props are fully supported.
 | `wrapping` | SUPPORTED | |
 | `style` | SUPPORTED | |
 | `highlight` | PARTIAL | Syntax highlighting via `highlight_syntax` (language name) and `highlight_theme` (theme name) props. Custom `Highlighter` trait impls still blocked (generic type parameter). |
-| `key_binding` | **BLOCKED** | Requires Rust closures; cannot be serialized from Elixir over the wire protocol |
+| `key_binding` | SUPPORTED | Declarative key binding rules via `key_bindings` prop; Rust constructs the closure from the rule set |
 
 ### Checkbox
 
@@ -345,7 +345,8 @@ Same as Slider. `circular_handle` and `handle_radius` also supported.
 | `source` / `width` / `height` / `content_fit` | SUPPORTED | |
 | `rotation` | SUPPORTED | |
 | `opacity` | SUPPORTED | |
-| `style` | N/A | iced has no public style functions for SVG |
+| `color` | SUPPORTED | Color tint applied to the SVG |
+| `style` | PARTIAL | Color tint supported via `color` prop; status-sensitive style closures blocked (cannot serialize from Elixir) |
 
 ### ProgressBar
 
@@ -499,7 +500,7 @@ Same as Slider. `circular_handle` and `handle_radius` also supported.
 | 22 built-in themes | Yes (all 22) | SUPPORTED |
 | `custom(name, palette)` | Yes | SUPPORTED |
 | Palette fields: background, text, primary, success, danger | Yes | SUPPORTED |
-| Palette field: `warning` | N/A | iced's Palette has no warning field; removed from Julep |
+| Palette field: `warning` | SUPPORTED | Custom palette accepts `warning` hex color for warning-themed widgets |
 | `base` field for custom themes | Yes | SUPPORTED |
 | Per-widget named styles | Yes | SUPPORTED -- button, container, text, checkbox, progress_bar, rule, etc. have named style atoms |
 | `Themer` widget (per-subtree theme) | Yes | SUPPORTED |
@@ -507,7 +508,7 @@ Same as Slider. `circular_handle` and `handle_radius` also supported.
 | Custom `StyleFn` closures | Via style maps | SUPPORTED -- `Julep.Iced.StyleMap` struct crosses IPC as JSON object; Rust constructs one-off closures from the values. Supports background, text_color, border, shadow, plus status overrides (hovered, pressed, disabled, focused). Auto-derives hover (darken 10%), disabled (50% alpha). Works on all 13 styleable widgets: button, container, text_input, text_editor, checkbox, radio, toggler, pick_list, progress_bar, rule, slider, vertical_slider, tooltip. |
 | Inline style maps (non-container) | Yes | SUPPORTED -- All 13 styleable widgets accept `StyleMap.t()` in addition to named preset atoms. |
 | Extended palette shade control | No | **MISSING** -- iced derives base/strong/weak shades per color. Julep passes 5 flat colors and lets iced's Oklch generation handle shades; users cannot control individual variants. |
-| `theme::Mode` (Light/Dark/None) | No | **MISSING** |
+| `theme::Mode` (Light/Dark/None) | Via `"system"` theme value | SUPPORTED -- setting window theme to `"system"` follows OS light/dark preference |
 
 ---
 
@@ -748,7 +749,7 @@ and delivered standalone via `:modifiers_changed`).
 | `antialiasing` | Via `settings/0` callback | SUPPORTED -- Rust reads setting on startup and applies to iced daemon builder |
 | `subscription` callback | Via `subscribe/1` | SUPPORTED |
 | `vsync` | Via `settings/0` callback | SUPPORTED -- boolean (default true) |
-| `scale_factor` callback | No | **MISSING** |
+| `scale_factor` callback | Via `settings/0` callback | SUPPORTED -- `scale_factor` key in settings/0 |
 | `title` callback | Via `window` node title prop | SUPPORTED (different model) |
 | `theme` callback | Via `window_config` or `themer` widget | SUPPORTED (different model) |
 
@@ -766,9 +767,8 @@ and delivered standalone via `:modifiers_changed`).
 - Notable actionable gaps: none (canvas primitives, in-memory images, and style maps all shipped)
 - Remaining blocked/N/A items (cannot be resolved):
   - TextEditor custom `Highlighter` trait (BLOCKED -- generic type parameter; named syntax/theme supported)
-  - TextEditor `key_binding` (BLOCKED -- Rust closures)
   - Scrollable custom `style` (BLOCKED -- closure-based)
-  - SVG custom `style` (BLOCKED -- closure-based)
+  - SVG custom `style` (PARTIAL -- color tint supported, status-sensitive closures blocked)
   - Checkbox `text_alignment` (N/A -- not in iced 0.14.2)
 
 ### Events
@@ -799,6 +799,7 @@ and delivered standalone via `:modifiers_changed`).
 - Antialiasing applied to iced daemon builder on startup
 - Font loading from file paths via settings/0 callback
 - vsync control via settings/0 callback
+- scale_factor control via settings/0 callback
 
 ---
 
@@ -809,10 +810,9 @@ and delivered standalone via `:modifiers_changed`).
 These cannot be implemented without upstream changes or fundamentally different transport:
 
 1. **TextEditor custom `Highlighter`** -- changes the Highlighter generic type parameter; cannot be expressed dynamically. Named syntax/theme highlighting is supported; custom Highlighter trait impls are not.
-2. **TextEditor `key_binding`** -- requires Rust closures; cannot be serialized from Elixir
-3. **Scrollable custom `style`** -- closure-based; cannot be serialized (only `default` exposed by iced 0.14)
-4. **SVG custom `style`** -- closure-based; iced has no public named style functions for SVG
-5. **Checkbox `text_alignment`** -- not available in iced 0.14.2
+2. **Scrollable custom `style`** -- closure-based; cannot be serialized (only `default` exposed by iced 0.14)
+3. **SVG custom `style`** -- PARTIAL: color tint supported via `color` prop; status-sensitive style closures blocked (cannot serialize from Elixir)
+4. **Checkbox `text_alignment`** -- not available in iced 0.14.2
 
 ### BLOCKED by IPC boundary (workaround shipped)
 
@@ -834,8 +834,12 @@ These were identified as gaps and have since been implemented:
 16. **`vsync` setting** -- SHIPPED. Boolean in settings/0 (default true).
 17. **`set_resize_increments` command** -- SHIPPED.
 18. **System queries** -- SHIPPED. `get_system_info/1` and `get_system_theme/1`.
+19. **TextEditor `key_binding`** -- SHIPPED. Declarative key binding rules via `key_bindings` prop.
+20. **`scale_factor` setting** -- SHIPPED. Via `settings/0` callback.
+21. **`theme::Mode`** -- SHIPPED. Window theme `"system"` follows OS light/dark preference.
+22. **SVG color tint** -- SHIPPED. `color` prop applies a color tint to the SVG.
+23. **Custom palette `warning` field** -- SHIPPED. Custom themes accept `warning` hex color.
 
 ### Remaining actionable gaps
 
-19. **Extended palette shade control** -- iced derives base/strong/weak/weaker/weakest shades per color via Oklch. Julep passes 5 flat colors and lets iced generate shades. Users cannot control individual variants.
-20. **`theme::Mode`** -- light/dark/none mode enum
+24. **Extended palette shade control** -- iced derives base/strong/weak/weaker/weakest shades per color via Oklch. Julep passes 5 flat colors and lets iced generate shades. Users cannot control individual variants.

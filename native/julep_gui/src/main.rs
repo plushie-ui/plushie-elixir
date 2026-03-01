@@ -165,6 +165,13 @@ struct App {
     test_mode: bool,
     /// In-memory image handles for use by Image widgets and canvas draw.
     image_registry: image_registry::ImageRegistry,
+    /// Current system theme, tracked via ThemeChanged subscription.
+    /// Used when a window or app theme is set to "system".
+    system_theme: Theme,
+    /// True when the app-level theme is "system" (follow OS preference).
+    theme_follows_system: bool,
+    /// Global scale factor multiplier (1.0 = follow OS DPI).
+    scale_factor: f32,
 }
 
 /// What the stdin reader thread sends back.
@@ -188,6 +195,9 @@ impl App {
             reverse_window_map: HashMap::new(),
             test_mode,
             image_registry: image_registry::ImageRegistry::new(),
+            system_theme: Theme::Dark,
+            theme_follows_system: false,
+            scale_factor: 1.0,
         }
     }
 
@@ -206,11 +216,29 @@ impl App {
         if let Some(julep_id) = self.reverse_window_map.get(&window_id) {
             if let Some(node) = self.core.tree.find_window(julep_id) {
                 if let Some(theme_val) = node.props.get("theme") {
-                    return theming::resolve_theme_only(theme_val);
+                    return theming::resolve_theme_only(theme_val)
+                        .unwrap_or_else(|| self.system_theme.clone());
                 }
             }
         }
-        self.theme.clone()
+        if self.theme_follows_system {
+            self.system_theme.clone()
+        } else {
+            self.theme.clone()
+        }
+    }
+
+    /// Return the scale factor for a window. Per-window overrides take
+    /// precedence over the global setting.
+    fn scale_factor_for_window(&self, window_id: window::Id) -> f32 {
+        if let Some(julep_id) = self.reverse_window_map.get(&window_id) {
+            if let Some(node) = self.core.tree.find_window(julep_id) {
+                if let Some(sf) = node.props.get("scale_factor").and_then(|v| v.as_f64()) {
+                    return sf as f32;
+                }
+            }
+        }
+        self.scale_factor
     }
 
     /// Resolve a julep window ID string from an iced window::Id.
@@ -600,6 +628,12 @@ impl App {
                 Task::none()
             }
             Message::ThemeChanged(mode) => {
+                // Track system theme so "system" theme value follows OS preference
+                self.system_theme = match mode {
+                    iced::theme::Mode::Light => Theme::Light,
+                    iced::theme::Mode::Dark => Theme::Dark,
+                    _ => Theme::Dark,
+                };
                 if let Some(tag) = self.core.active_subscriptions.get("on_theme_change") {
                     let mode_str = match mode {
                         iced::theme::Mode::Light => "light",
@@ -1044,6 +1078,10 @@ impl App {
                 }
                 julep_core::CoreEffect::ThemeChanged(theme) => {
                     self.theme = theme;
+                    self.theme_follows_system = false;
+                }
+                julep_core::CoreEffect::ThemeFollowsSystem => {
+                    self.theme_follows_system = true;
                 }
                 julep_core::CoreEffect::ImageOp {
                     op,
@@ -2140,6 +2178,7 @@ fn family_str_to_static(s: &str) -> &'static str {
         "open" => "open",
         "close" => "close",
         "sort" => "sort",
+        "key_binding" => "key_binding",
         _ => "event",
     }
 }
@@ -2471,6 +2510,13 @@ fn main() -> iced::Result {
 
             let mut app = App::new(test_mode);
 
+            // Extract scale_factor before applying settings to Core
+            app.scale_factor = settings
+                .get("scale_factor")
+                .and_then(|v| v.as_f64())
+                .map(|v| v as f32)
+                .unwrap_or(1.0);
+
             // Apply initial settings to Core (Settings doesn't produce effects)
             let _ = app.core.apply(IncomingMessage::Settings { settings });
 
@@ -2501,6 +2547,7 @@ fn main() -> iced::Result {
     .title(App::title_for_window)
     .subscription(App::subscription)
     .theme(App::theme_for_window)
+    .scale_factor(App::scale_factor_for_window)
     .settings(iced_settings)
     .run()
 }

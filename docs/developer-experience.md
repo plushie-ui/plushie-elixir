@@ -152,8 +152,8 @@ defmodule MyAppTest do
   test "view contains counter" do
     model = %{count: 42}
     tree = MyApp.view(model)
-    text_node = Julep.UI.find(tree, fn node -> node.type == "text" end)
-    assert text_node.props["content"] =~ "42"
+    node = Julep.Tree.find(tree, "main")
+    assert node != nil
   end
 end
 ```

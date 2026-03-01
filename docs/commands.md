@@ -698,12 +698,16 @@ commands and rendering:
 - `vsync` -- boolean (default `true`). Controls vertical sync. Set to
   `false` for uncapped frame rates (useful for benchmarks or animation-heavy
   apps at the cost of higher GPU usage).
+- `scale_factor` -- number (default `1.0`). Global UI scale factor applied
+  to all windows. Values greater than 1.0 make the UI larger; less than 1.0
+  makes it smaller.
 
 ```elixir
 def settings do
   [
     antialiasing: true,
-    vsync: false
+    vsync: false,
+    scale_factor: 1.5
   ]
 end
 ```

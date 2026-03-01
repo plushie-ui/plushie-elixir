@@ -29,6 +29,8 @@ pub enum CoreEffect {
     },
     /// Theme changed (for the global/root theme only).
     ThemeChanged(iced::Theme),
+    /// App-level theme should follow the system preference.
+    ThemeFollowsSystem,
     /// Image operation (create/update/delete in-memory handles).
     ImageOp {
         op: String,
@@ -68,8 +70,10 @@ impl Core {
             IncomingMessage::Snapshot { tree } => {
                 log::debug!("snapshot received (root id={})", tree.id);
                 if let Some(theme_val) = tree.props.get("theme") {
-                    let theme = theming::resolve_theme_only(theme_val);
-                    effects.push(CoreEffect::ThemeChanged(theme));
+                    match theming::resolve_theme_only(theme_val) {
+                        Some(theme) => effects.push(CoreEffect::ThemeChanged(theme)),
+                        None => effects.push(CoreEffect::ThemeFollowsSystem),
+                    }
                 }
                 self.tree.snapshot(tree);
                 self.caches.clear();

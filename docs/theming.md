@@ -22,8 +22,9 @@ end
 
 ## Built-in themes
 
-Iced 0.14 ships with 30+ themes. Julep passes the theme name string
-directly to the renderer, which resolves it to an iced `Theme` variant.
+Iced 0.14 ships with 22 built-in themes. Julep passes the theme name
+string directly to the renderer, which resolves it to an iced `Theme`
+variant.
 
 Common themes:
 
@@ -199,18 +200,22 @@ Your app can use this to follow the system theme or ignore it entirely.
 ## Density
 
 For apps that need density-aware spacing (compact, comfortable, roomy),
-julep provides a simple `Julep.Layout` helper:
+build a simple helper function in your app:
 
 ```elixir
-density = :compact
-spacing = Julep.Layout.token(:spacing_md, density)
-# => 4 (compact) vs 8 (comfortable) vs 12 (roomy)
+defp spacing(density, size) do
+  case {density, size} do
+    {:compact, :md}      -> 4
+    {:comfortable, :md}  -> 8
+    {:roomy, :md}        -> 12
+    # ... etc.
+  end
+end
 
-column spacing: spacing do
+column spacing: spacing(:compact, :md) do
   # ...
 end
 ```
 
-This is a pure function that maps token names to numeric values based on
-density. There is no global density setting -- your app decides how to use
-it.
+There is no global density setting or built-in density module -- your app
+decides how to handle it.

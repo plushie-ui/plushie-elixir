@@ -286,6 +286,67 @@ table("users",
 )
 ```
 
+### SVG widget props
+
+The `svg` widget renders vector graphics from an SVG file.
+
+| Prop | Type | Description |
+|---|---|---|
+| `source` | string | Path to the SVG file |
+| `width` | length | Widget width (`:fill`, `:shrink`, or number) |
+| `height` | length | Widget height (`:fill`, `:shrink`, or number) |
+| `content_fit` | string | How the SVG fits its bounds: `"contain"`, `"cover"`, `"fill"`, `"none"`, `"scale_down"` |
+| `rotation` | number | Rotation angle in radians |
+| `opacity` | number | Opacity from 0.0 (transparent) to 1.0 (opaque) |
+| `color` | color | Color tint applied to the SVG |
+
+```elixir
+svg("logo", "priv/logo.svg",
+  width: 200,
+  height: 200,
+  content_fit: "contain",
+  opacity: 0.8,
+  color: "#3498db"
+)
+```
+
+### TextEditor widget props
+
+The `text_editor` widget provides a multi-line text editing area with
+optional syntax highlighting and key binding customization.
+
+| Prop | Type | Description |
+|---|---|---|
+| `placeholder` | string | Placeholder text shown when empty |
+| `width` | number | Width in pixels (f32, not Length) |
+| `height` | length | Widget height (`:fill`, `:shrink`, or number) |
+| `min_height` | number | Minimum height in pixels |
+| `max_height` | number | Maximum height in pixels |
+| `font` | font | Font specification (family, weight, style, stretch) |
+| `size` | number | Text size in pixels |
+| `line_height` | number or map | Line height: number (relative), `%{relative: n}`, or `%{absolute: n}` |
+| `padding` | number | Uniform padding in pixels |
+| `wrapping` | atom | Text wrapping: `:none`, `:word`, `:glyph`, `:word_or_glyph` |
+| `highlight_syntax` | string | Language name for syntax highlighting (e.g. `"elixir"`, `"rust"`) |
+| `highlight_theme` | string | Syntax highlighting theme name (e.g. `"github"`, `"dracula"`) |
+| `key_bindings` | list | Declarative key binding rules for editor behavior |
+| `style` | atom or StyleMap | Named style preset or custom style map |
+
+```elixir
+text_editor("code",
+  model.source_code,
+  placeholder: "Enter code...",
+  font: %{family: "monospace"},
+  size: 14,
+  line_height: 1.5,
+  padding: 12,
+  wrapping: :word,
+  highlight_syntax: "elixir",
+  highlight_theme: "github",
+  height: :fill
+)
+```
+
 ## Props
 
 Props are always string-keyed maps when serialized. All three builder layers
@@ -365,8 +426,8 @@ tree = MyApp.view(model)
 # Print the tree
 IO.inspect(tree, pretty: true)
 
-# Find a node
-Julep.UI.find(tree, "my_button")
+# Find a node by ID
+Julep.Tree.find(tree, "my_button")
 
 # Encode as JSON (what the renderer sees)
 Jason.encode!(tree, pretty: true)

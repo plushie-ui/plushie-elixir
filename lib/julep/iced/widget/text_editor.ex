@@ -22,6 +22,10 @@ defmodule Julep.Iced.Widget.TextEditor do
   - `highlight_theme` (string) -- highlighter theme. One of `"solarized_dark"`, `"base16_mocha"`,
     `"base16_ocean"`, `"base16_eighties"`, `"inspired_github"`. Defaults to `"solarized_dark"`.
   - `style` (string) -- named style. Currently only `"default"`.
+  - `key_bindings` (list of maps) -- declarative key binding rules for the editor.
+    Each rule is a map with optional `key` (character), `named` (named key string),
+    `modifiers` (list of modifier strings), and `binding` (the action to take).
+    See `key_bindings/2` for details.
 
   ## Events
 
@@ -49,6 +53,7 @@ defmodule Julep.Iced.Widget.TextEditor do
           | {:highlight_syntax, String.t()}
           | {:highlight_theme, String.t()}
           | {:style, style()}
+          | {:key_bindings, [map()]}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -65,7 +70,8 @@ defmodule Julep.Iced.Widget.TextEditor do
           wrapping: Julep.Iced.Wrapping.t() | nil,
           highlight_syntax: String.t() | nil,
           highlight_theme: String.t() | nil,
-          style: style() | nil
+          style: style() | nil,
+          key_bindings: [map()] | nil
         }
 
   defstruct [
@@ -83,7 +89,8 @@ defmodule Julep.Iced.Widget.TextEditor do
     :wrapping,
     :highlight_syntax,
     :highlight_theme,
-    :style
+    :style,
+    :key_bindings
   ]
 
   @doc "Creates a new text editor struct with the given id and optional keyword opts."
@@ -112,6 +119,7 @@ defmodule Julep.Iced.Widget.TextEditor do
       {:highlight_syntax, v}, acc -> highlight_syntax(acc, v)
       {:highlight_theme, v}, acc -> highlight_theme(acc, v)
       {:style, v}, acc -> style(acc, v)
+      {:key_bindings, v}, acc -> key_bindings(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -174,6 +182,29 @@ defmodule Julep.Iced.Widget.TextEditor do
   @spec style(text_editor :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = ed, style), do: %{ed | style: style}
 
+  @doc """
+  Sets declarative key binding rules for the editor.
+
+  Each rule is a map with:
+
+  - `"key"` (string) -- a character to match (layout-independent via `to_latin`).
+  - `"named"` (string) -- a named key like `"Enter"`, `"Escape"`, `"Tab"`, etc.
+  - `"modifiers"` (list of strings) -- required modifiers: `"shift"`, `"ctrl"`,
+    `"alt"`, `"logo"`, `"command"`, `"jump"`.
+  - `"binding"` -- the action: a string like `"copy"`, `"cut"`, `"paste"`,
+    `"enter"`, `"backspace"`, `"delete"`, `"unfocus"`, `"select_all"`,
+    `"select_word"`, `"select_line"`, `"default"`, or a map for complex
+    actions like `%{"move" => "left"}`, `%{"select" => "word_right"}`,
+    `%{"insert" => "x"}`, `%{"custom" => "my_tag"}`,
+    `%{"sequence" => [binding1, binding2, ...]}`.
+
+  Rules are matched in order. The first matching rule wins. If no rule matches,
+  the key press is ignored (no binding). Use `"default"` as the binding to
+  delegate to iced's built-in key handler.
+  """
+  @spec key_bindings(text_editor :: t(), key_bindings :: [map()]) :: t()
+  def key_bindings(%__MODULE__{} = ed, key_bindings), do: %{ed | key_bindings: key_bindings}
+
   @doc "Converts this text editor struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(text_editor :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = ed), do: Julep.Iced.Widget.to_node(ed)
@@ -198,6 +229,7 @@ defmodule Julep.Iced.Widget.TextEditor do
         |> put_if(ed.highlight_syntax, "highlight_syntax")
         |> put_if(ed.highlight_theme, "highlight_theme")
         |> put_if(ed.style, "style")
+        |> put_if(ed.key_bindings, "key_bindings")
 
       %{id: ed.id, type: "text_editor", props: props, children: []}
     end

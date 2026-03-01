@@ -11,8 +11,8 @@ use iced::widget::{
     text_editor, text_input, toggler, tooltip, vertical_slider, Image, Space, Stack, Svg,
 };
 use iced::{
-    alignment, font, mouse, widget, Border, Color, ContentFit, Element, Fill, Font, Length,
-    Padding, Pixels, Point, Radians, Rotation, Shadow, Size, Vector,
+    alignment, font, keyboard, mouse, widget, Border, Color, ContentFit, Element, Fill, Font,
+    Length, Padding, Pixels, Point, Radians, Rotation, Shadow, Size, Vector,
 };
 use serde_json::Value;
 use std::collections::hash_map::DefaultHasher;
@@ -1534,6 +1534,153 @@ fn render_combo_box<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element
 }
 
 // ---------------------------------------------------------------------------
+// Text Editor key binding helpers
+// ---------------------------------------------------------------------------
+
+/// Parse a JSON motion string into an iced Motion.
+fn parse_motion(s: &str) -> Option<text_editor::Motion> {
+    use text_editor::Motion;
+    match s {
+        "left" => Some(Motion::Left),
+        "right" => Some(Motion::Right),
+        "up" => Some(Motion::Up),
+        "down" => Some(Motion::Down),
+        "word_left" => Some(Motion::WordLeft),
+        "word_right" => Some(Motion::WordRight),
+        "home" => Some(Motion::Home),
+        "end" => Some(Motion::End),
+        "page_up" => Some(Motion::PageUp),
+        "page_down" => Some(Motion::PageDown),
+        "document_start" => Some(Motion::DocumentStart),
+        "document_end" => Some(Motion::DocumentEnd),
+        _ => None,
+    }
+}
+
+/// Parse a JSON binding value into an iced Binding.
+fn parse_binding(val: &Value, id: &str) -> Option<text_editor::Binding<Message>> {
+    use text_editor::Binding;
+    match val {
+        Value::String(s) => match s.as_str() {
+            "copy" => Some(Binding::Copy),
+            "cut" => Some(Binding::Cut),
+            "paste" => Some(Binding::Paste),
+            "select_all" => Some(Binding::SelectAll),
+            "enter" => Some(Binding::Enter),
+            "backspace" => Some(Binding::Backspace),
+            "delete" => Some(Binding::Delete),
+            "unfocus" => Some(Binding::Unfocus),
+            "select_word" => Some(Binding::SelectWord),
+            "select_line" => Some(Binding::SelectLine),
+            // "default" is handled at the rule-matching level, not here
+            _ => None,
+        },
+        Value::Object(obj) => {
+            if let Some(m) = obj
+                .get("move")
+                .and_then(|v| v.as_str())
+                .and_then(parse_motion)
+            {
+                return Some(Binding::Move(m));
+            }
+            if let Some(m) = obj
+                .get("select")
+                .and_then(|v| v.as_str())
+                .and_then(parse_motion)
+            {
+                return Some(Binding::Select(m));
+            }
+            if let Some(c) = obj
+                .get("insert")
+                .and_then(|v| v.as_str())
+                .and_then(|s| s.chars().next())
+            {
+                return Some(Binding::Insert(c));
+            }
+            if let Some(tag) = obj.get("custom").and_then(|v| v.as_str()) {
+                let event_id = id.to_string();
+                return Some(Binding::Custom(Message::Event(
+                    event_id,
+                    serde_json::json!(tag),
+                    "key_binding".to_string(),
+                )));
+            }
+            if let Some(seq) = obj.get("sequence").and_then(|v| v.as_array()) {
+                let bindings: Vec<_> = seq.iter().filter_map(|v| parse_binding(v, id)).collect();
+                if !bindings.is_empty() {
+                    return Some(Binding::Sequence(bindings));
+                }
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
+/// Check if a KeyPress matches the modifiers specified in a binding rule.
+fn match_modifiers(mods: &keyboard::Modifiers, required: &[String]) -> bool {
+    for m in required {
+        let ok = match m.as_str() {
+            "shift" => mods.shift(),
+            "ctrl" => mods.control(),
+            "alt" => mods.alt(),
+            "logo" => mods.logo(),
+            "command" => mods.command(),
+            "jump" => mods.jump(),
+            _ => false,
+        };
+        if !ok {
+            return false;
+        }
+    }
+    true
+}
+
+/// Match a named key string against a KeyPress key.
+fn match_named_key(named_key: &str, key: &keyboard::Key) -> bool {
+    use keyboard::key::Named;
+    let target = match named_key {
+        "Enter" => Named::Enter,
+        "Backspace" => Named::Backspace,
+        "Delete" => Named::Delete,
+        "Escape" => Named::Escape,
+        "Tab" => Named::Tab,
+        "Space" => Named::Space,
+        "ArrowLeft" => Named::ArrowLeft,
+        "ArrowRight" => Named::ArrowRight,
+        "ArrowUp" => Named::ArrowUp,
+        "ArrowDown" => Named::ArrowDown,
+        "Home" => Named::Home,
+        "End" => Named::End,
+        "PageUp" => Named::PageUp,
+        "PageDown" => Named::PageDown,
+        "F1" => Named::F1,
+        "F2" => Named::F2,
+        "F3" => Named::F3,
+        "F4" => Named::F4,
+        "F5" => Named::F5,
+        "F6" => Named::F6,
+        "F7" => Named::F7,
+        "F8" => Named::F8,
+        "F9" => Named::F9,
+        "F10" => Named::F10,
+        "F11" => Named::F11,
+        "F12" => Named::F12,
+        _ => return false,
+    };
+    matches!(key, keyboard::Key::Named(n) if *n == target)
+}
+
+/// Pre-parsed key binding rule for closure capture.
+struct KeyRule {
+    key: Option<String>,
+    named: Option<String>,
+    modifiers: Vec<String>,
+    binding_val: Value,
+    is_default: bool,
+}
+
+// ---------------------------------------------------------------------------
 // Text Editor
 // ---------------------------------------------------------------------------
 
@@ -1587,6 +1734,76 @@ fn render_text_editor<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Eleme
     // text_editor.width() takes impl Into<Pixels>, not Length
     if let Some(w) = prop_f32(props, "width") {
         te = te.width(w);
+    }
+
+    // Key bindings -- declarative rules parsed into a closure
+    if let Some(rules) = props
+        .and_then(|p| p.get("key_bindings"))
+        .and_then(|v| v.as_array())
+    {
+        let editor_id = node.id.clone();
+        let parsed_rules: Vec<KeyRule> = rules
+            .iter()
+            .filter_map(|rule| {
+                let obj = rule.as_object()?;
+                let key = obj.get("key").and_then(|v| v.as_str()).map(str::to_owned);
+                let named = obj.get("named").and_then(|v| v.as_str()).map(str::to_owned);
+                let modifiers = obj
+                    .get("modifiers")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_str().map(str::to_owned))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                let binding_val = obj.get("binding").cloned().unwrap_or(Value::Null);
+                let is_default = binding_val.as_str() == Some("default");
+                Some(KeyRule {
+                    key,
+                    named,
+                    modifiers,
+                    binding_val,
+                    is_default,
+                })
+            })
+            .collect();
+
+        if !parsed_rules.is_empty() {
+            te = te.key_binding(move |key_press: text_editor::KeyPress| {
+                for rule in &parsed_rules {
+                    // Check modifiers first
+                    if !match_modifiers(&key_press.modifiers, &rule.modifiers) {
+                        continue;
+                    }
+
+                    // Check key match
+                    if let Some(ref key_char) = rule.key {
+                        // Match via to_latin for layout-independent character matching
+                        let latin = key_press.key.to_latin(key_press.physical_key);
+                        match latin {
+                            Some(c) if c.to_string() == *key_char => {}
+                            _ => continue,
+                        }
+                    } else if let Some(ref named_key) = rule.named {
+                        if !match_named_key(named_key, &key_press.key) {
+                            continue;
+                        }
+                    }
+                    // else: no key/named constraint -- matches any key (catch-all rule)
+
+                    // Default binding: delegate to iced's built-in handler
+                    if rule.is_default {
+                        return text_editor::Binding::from_key_press(key_press);
+                    }
+
+                    // Parse the specific binding
+                    return parse_binding(&rule.binding_val, &editor_id);
+                }
+                // No rule matched -- no binding
+                None
+            });
+        }
     }
 
     // Style closure, shared between plain and highlighted paths
@@ -1832,6 +2049,11 @@ fn render_svg<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     }
     if let Some(o) = prop_f32(props, "opacity") {
         s = s.opacity(o);
+    }
+    if let Some(color_str) = prop_str(props, "color") {
+        if let Some(c) = crate::theming::parse_hex_color(&color_str) {
+            s = s.style(move |_theme, _status| iced::widget::svg::Style { color: Some(c) });
+        }
     }
 
     s.into()
@@ -2240,7 +2462,7 @@ fn render_themer<'a>(
     let props = node.props.as_object();
     let theme: Option<iced::Theme> = props
         .and_then(|p| p.get("theme"))
-        .map(crate::theming::resolve_theme_only);
+        .and_then(crate::theming::resolve_theme_only);
 
     let child: Element<'a, Message> = node
         .children

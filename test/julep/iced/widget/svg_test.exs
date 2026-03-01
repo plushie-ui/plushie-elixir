@@ -18,6 +18,7 @@ defmodule Julep.Iced.Widget.SvgTest do
       assert svg.content_fit == nil
       assert svg.rotation == nil
       assert svg.opacity == nil
+      assert svg.color == nil
     end
 
     test "accepts keyword opts" do
@@ -62,6 +63,18 @@ defmodule Julep.Iced.Widget.SvgTest do
     end
   end
 
+  describe "color/2" do
+    test "sets the color field with hex string" do
+      svg = Svg.new("i", "a.svg") |> Svg.color("#ff0000")
+      assert svg.color == "#ff0000"
+    end
+
+    test "normalizes named color atoms" do
+      svg = Svg.new("i", "a.svg") |> Svg.color(:red)
+      assert svg.color == "#ff0000"
+    end
+  end
+
   describe "build/1" do
     test "returns a map with correct type and id" do
       node = Svg.new("icon1", "logo.svg") |> Svg.build()
@@ -83,6 +96,7 @@ defmodule Julep.Iced.Widget.SvgTest do
         |> Svg.content_fit(:contain)
         |> Svg.rotation(90)
         |> Svg.opacity(0.75)
+        |> Svg.color("#00ff00")
         |> Svg.build()
 
       assert node.props["width"] == 32
@@ -90,6 +104,7 @@ defmodule Julep.Iced.Widget.SvgTest do
       assert node.props["content_fit"] == "contain"
       assert node.props["rotation"] == 90
       assert node.props["opacity"] == 0.75
+      assert node.props["color"] == "#00ff00"
     end
 
     test "omits nil optional props" do
@@ -99,6 +114,7 @@ defmodule Julep.Iced.Widget.SvgTest do
       refute Map.has_key?(node.props, "content_fit")
       refute Map.has_key?(node.props, "rotation")
       refute Map.has_key?(node.props, "opacity")
+      refute Map.has_key?(node.props, "color")
     end
   end
 
@@ -110,7 +126,8 @@ defmodule Julep.Iced.Widget.SvgTest do
           height: 48,
           content_fit: :fill,
           rotation: 180,
-          opacity: 1.0
+          opacity: 1.0,
+          color: "#ff0000"
         )
 
       assert svg.width == 48
@@ -118,11 +135,12 @@ defmodule Julep.Iced.Widget.SvgTest do
       assert svg.content_fit == :fill
       assert svg.rotation == 180
       assert svg.opacity == 1.0
+      assert svg.color == "#ff0000"
     end
 
     test "raises on unknown option" do
-      assert_raise ArgumentError, ~r/unknown option.*:color/, fn ->
-        Svg.new("i", "a.svg", color: "red")
+      assert_raise ArgumentError, ~r/unknown option.*:border/, fn ->
+        Svg.new("i", "a.svg", border: true)
       end
     end
   end
