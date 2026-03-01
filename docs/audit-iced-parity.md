@@ -507,7 +507,7 @@ Same as Slider. `circular_handle` and `handle_radius` also supported.
 | Status-aware styling (hover/press/focus) | Internally | SUPPORTED -- iced's Catalog handles this on the Rust side; named presets include full hover/press/focus/disabled visual feedback automatically. Not customizable from Elixir. |
 | Custom `StyleFn` closures | Via style maps | SUPPORTED -- `Julep.Iced.StyleMap` struct crosses IPC as JSON object; Rust constructs one-off closures from the values. Supports background, text_color, border, shadow, plus status overrides (hovered, pressed, disabled, focused). Auto-derives hover (darken 10%), disabled (50% alpha). Works on all 13 styleable widgets: button, container, text_input, text_editor, checkbox, radio, toggler, pick_list, progress_bar, rule, slider, vertical_slider, tooltip. |
 | Inline style maps (non-container) | Yes | SUPPORTED -- All 13 styleable widgets accept `StyleMap.t()` in addition to named preset atoms. |
-| Extended palette shade control | No | **MISSING** -- iced derives base/strong/weak shades per color. Julep passes 5 flat colors and lets iced's Oklch generation handle shades; users cannot control individual variants. |
+| Extended palette shade control | Yes | SUPPORTED -- custom themes accept optional shade override keys (`primary_strong`, `background_weak`, etc.) to override individual Extended palette variants. Uses `Theme::custom_with_fn` with `Extended::generate` as base, then overlays specified shades. |
 | `theme::Mode` (Light/Dark/None) | Via `"system"` theme value | SUPPORTED -- setting window theme to `"system"` follows OS light/dark preference |
 
 ---
@@ -839,7 +839,8 @@ These were identified as gaps and have since been implemented:
 21. **`theme::Mode`** -- SHIPPED. Window theme `"system"` follows OS light/dark preference.
 22. **SVG color tint** -- SHIPPED. `color` prop applies a color tint to the SVG.
 23. **Custom palette `warning` field** -- SHIPPED. Custom themes accept `warning` hex color.
+24. **Extended palette shade control** -- SHIPPED. Custom themes accept shade override keys (`primary_strong`, `background_weak`, etc.) via `Theme::custom_with_fn`.
 
 ### Remaining actionable gaps
 
-24. **Extended palette shade control** -- iced derives base/strong/weak/weaker/weakest shades per color via Oklch. Julep passes 5 flat colors and lets iced generate shades. Users cannot control individual variants.
+None. All identified parity gaps have been resolved.

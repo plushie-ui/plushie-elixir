@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 mod codec;
 mod effects;
 #[cfg(feature = "headless")]
