@@ -130,7 +130,7 @@ defmodule Julep.Examples.CatalogTest do
     modal_node = Julep.UI.find(tree, "demo_modal")
     assert modal_node.props["visible"] == true
     # Modal should have children (the content) when visible
-    assert length(modal_node.children) > 0
+    assert modal_node.children != []
   end
 
   test "canvas node exists in display tab" do

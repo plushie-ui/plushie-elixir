@@ -277,11 +277,9 @@ defmodule Julep.Bridge do
 
   @impl true
   def terminate(_reason, %{port: port} = _state) when is_port(port) do
-    try do
-      Port.close(port)
-    catch
-      _, _ -> :ok
-    end
+    Port.close(port)
+  catch
+    _, _ -> :ok
   end
 
   def terminate(_reason, _state), do: :ok

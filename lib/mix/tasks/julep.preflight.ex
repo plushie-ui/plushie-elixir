@@ -10,12 +10,13 @@ defmodule Mix.Tasks.Julep.Preflight do
 
   1. `mix format --check-formatted`
   2. `mix compile --warnings-as-errors`
-  3. `mix test`
-  4. `mix dialyzer`
-  5. `cargo build` (renderer)
-  6. `cargo test` (renderer)
-  7. `cargo fmt -- --check` (renderer)
-  8. `cargo clippy -- -D warnings` (renderer)
+  3. `mix credo --strict`
+  4. `mix test`
+  5. `mix dialyzer`
+  6. `cargo build` (renderer)
+  7. `cargo test` (renderer)
+  8. `cargo fmt -- --check` (renderer)
+  9. `cargo clippy -- -D warnings` (renderer)
   """
 
   use Mix.Task
@@ -31,6 +32,7 @@ defmodule Mix.Tasks.Julep.Preflight do
     steps = [
       {"mix format --check-formatted", fn -> mix_format() end},
       {"mix compile --warnings-as-errors", fn -> mix_compile() end},
+      {"mix credo --strict", fn -> mix_credo() end},
       {"mix test", fn -> mix_test() end},
       {"mix dialyzer", fn -> mix_dialyzer() end},
       {"cargo build", fn -> cargo(["build"]) end},
@@ -66,6 +68,13 @@ defmodule Mix.Tasks.Julep.Preflight do
     case Mix.Task.run("compile", ["--warnings-as-errors"]) do
       {:error, _} -> {:error, 1}
       _ -> :ok
+    end
+  end
+
+  defp mix_credo do
+    case cmd("mix", ["credo", "--strict"]) do
+      0 -> :ok
+      code -> {:error, code}
     end
   end
 

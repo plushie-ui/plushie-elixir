@@ -1,4 +1,6 @@
 defmodule Julep.Examples.Counter do
+  @moduledoc "Minimal counter example. Increment and decrement buttons."
+
   use Julep.App
 
   def init(_opts), do: %{count: 0}

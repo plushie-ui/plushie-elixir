@@ -168,7 +168,7 @@ defmodule Julep.Iced.Widget.TextEditor do
   @spec wrapping(text_editor :: t(), wrapping :: Julep.Iced.Wrapping.t()) :: t()
   def wrapping(%__MODULE__{} = ed, wrapping), do: %{ed | wrapping: wrapping}
 
-  @doc "Sets the syntax language for highlighting (e.g. \"rs\", \"py\", \"ex\")."
+  @doc ~S[Sets the syntax language for highlighting (e.g. "rs", "py", "ex").]
   @spec highlight_syntax(text_editor :: t(), highlight_syntax :: String.t()) :: t()
   def highlight_syntax(%__MODULE__{} = ed, highlight_syntax),
     do: %{ed | highlight_syntax: highlight_syntax}

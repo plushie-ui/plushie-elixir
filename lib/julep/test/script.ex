@@ -140,15 +140,7 @@ defmodule Julep.Test.Script do
         {:ok, {:release, key}}
 
       ["move", target] ->
-        case String.split(target, ",") do
-          [x_str, y_str] ->
-            {:ok,
-             {:move_to, String.to_integer(String.trim(x_str)),
-              String.to_integer(String.trim(y_str))}}
-
-          _ ->
-            {:ok, {:move, target}}
-        end
+        {:ok, parse_move_target(target)}
 
       ["assert_model", expr] ->
         {:ok, {:assert_model, expr}}
@@ -170,6 +162,16 @@ defmodule Julep.Test.Script do
 
       _ ->
         {:error, "unknown instruction: #{line}"}
+    end
+  end
+
+  defp parse_move_target(target) do
+    case String.split(target, ",") do
+      [x_str, y_str] ->
+        {:move_to, String.to_integer(String.trim(x_str)), String.to_integer(String.trim(y_str))}
+
+      _ ->
+        {:move, target}
     end
   end
 

@@ -6,7 +6,7 @@ defmodule Julep.Test.Script.Runner do
   and collects results.
   """
 
-  alias Julep.Test.{Screenshot, Session, Script, Snapshot}
+  alias Julep.Test.{Screenshot, Script, Session, Snapshot}
 
   @backend_map %{
     sim: Julep.Test.Backend.Sim,

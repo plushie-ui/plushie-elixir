@@ -1,8 +1,8 @@
 defmodule Julep.EffectsTest do
   use ExUnit.Case, async: true
 
-  alias Julep.Effects
   alias Julep.Command
+  alias Julep.Effects
 
   describe "request/2" do
     test "returns {command, id} with correct type and payload" do

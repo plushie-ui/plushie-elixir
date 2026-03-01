@@ -54,7 +54,8 @@ defmodule Julep.MixProject do
       {:jason, "~> 1.4"},
       {:msgpax, "~> 2.3"},
       {:file_system, "~> 1.0", optional: true},
-      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end
 end

@@ -5,10 +5,10 @@ defmodule Julep.Iced.Widget.VerticalSliderTest do
 
   describe "new/4" do
     test "creates struct with id, range, and value" do
-      vs = VerticalSlider.new("pitch", {20, 20000}, 440)
+      vs = VerticalSlider.new("pitch", {20, 20_000}, 440)
       assert %VerticalSlider{} = vs
       assert vs.id == "pitch"
-      assert vs.range == {20, 20000}
+      assert vs.range == {20, 20_000}
       assert vs.value == 440
     end
 

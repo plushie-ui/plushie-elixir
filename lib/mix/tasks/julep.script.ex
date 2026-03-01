@@ -26,30 +26,7 @@ defmodule Mix.Tasks.Julep.Script do
       System.halt(0)
     end
 
-    results =
-      Enum.map(paths, fn path ->
-        Mix.shell().info("Running #{path}...")
-
-        case Julep.Test.Script.parse_file(path) do
-          {:ok, script} ->
-            case Julep.Test.Script.Runner.run(script) do
-              :ok ->
-                Mix.shell().info("  PASS")
-                :ok
-
-              {:error, failures} ->
-                for {_instruction, reason} <- failures do
-                  Mix.shell().error("  FAIL: #{reason}")
-                end
-
-                :error
-            end
-
-          {:error, reason} ->
-            Mix.shell().error("  Parse error: #{reason}")
-            :error
-        end
-      end)
+    results = Enum.map(paths, &run_script/1)
 
     failures = Enum.count(results, &(&1 == :error))
     passes = Enum.count(results, &(&1 == :ok))
@@ -58,6 +35,30 @@ defmodule Mix.Tasks.Julep.Script do
 
     if failures > 0 do
       System.halt(1)
+    end
+  end
+
+  defp run_script(path) do
+    Mix.shell().info("Running #{path}...")
+
+    case Julep.Test.Script.parse_file(path) do
+      {:ok, script} ->
+        case Julep.Test.Script.Runner.run(script) do
+          :ok ->
+            Mix.shell().info("  PASS")
+            :ok
+
+          {:error, failures} ->
+            for {_instruction, reason} <- failures do
+              Mix.shell().error("  FAIL: #{reason}")
+            end
+
+            :error
+        end
+
+      {:error, reason} ->
+        Mix.shell().error("  Parse error: #{reason}")
+        :error
     end
   end
 end

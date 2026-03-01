@@ -632,8 +632,10 @@ defmodule Julep.ProtocolParityTest do
 
   describe "animation_frame event" do
     test "decodes animation frame with timestamp" do
-      json = Jason.encode!(%{type: "event", family: "animation_frame", data: %{timestamp: 16666}})
-      assert {:animation_frame, 16666} = Protocol.decode_message(json, :json)
+      json =
+        Jason.encode!(%{type: "event", family: "animation_frame", data: %{timestamp: 16_666}})
+
+      assert {:animation_frame, 16_666} = Protocol.decode_message(json, :json)
     end
 
     test "decodes float timestamp" do
