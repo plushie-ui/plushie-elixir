@@ -567,6 +567,39 @@ defmodule Julep.TreeTest do
       assert r2.index == 1
       assert r3.index == 0
     end
+
+    test "insert before existing sibling keeps update path on original child" do
+      old_child_a = %{id: "a", type: "text", props: %{"content" => "old"}, children: []}
+      old_child_b = %{id: "b", type: "text", props: %{"content" => "b"}, children: []}
+      old = %{id: "root", type: "container", props: %{}, children: [old_child_a, old_child_b]}
+
+      new_child_x = %{id: "x", type: "text", props: %{"content" => "x"}, children: []}
+      new_child_a = %{id: "a", type: "text", props: %{"content" => "new"}, children: []}
+
+      new = %{
+        id: "root",
+        type: "container",
+        props: %{},
+        children: [new_child_x, new_child_a, old_child_b]
+      }
+
+      ops = Tree.diff(old, new)
+
+      assert [update, insert] = ops
+      assert update == %{op: "update_props", path: [0], props: %{"content" => "new"}}
+      assert insert == %{op: "insert_child", path: [], index: 0, node: new_child_x}
+    end
+
+    test "reordered children emit replace_node to preserve correct order" do
+      child_a = %{id: "a", type: "text", props: %{"content" => "A"}, children: []}
+      child_b = %{id: "b", type: "text", props: %{"content" => "B"}, children: []}
+      child_c = %{id: "c", type: "text", props: %{"content" => "C"}, children: []}
+
+      old = %{id: "root", type: "container", props: %{}, children: [child_a, child_b, child_c]}
+      new = %{id: "root", type: "container", props: %{}, children: [child_c, child_b, child_a]}
+
+      assert Tree.diff(old, new) == [%{op: "replace_node", path: [], node: new}]
+    end
   end
 
   describe "diff/2 -- nested changes" do
