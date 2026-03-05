@@ -58,6 +58,7 @@ impl ImageRegistry {
     }
 
     #[cfg(not(feature = "widget-image"))]
+    #[allow(dead_code)]
     pub fn get(&self, _name: &str) -> Option<&()> {
         None
     }

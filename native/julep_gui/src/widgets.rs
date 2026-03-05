@@ -19,6 +19,7 @@ use iced::widget::{
     progress_bar, rich_text, row, rule, scrollable, sensor, slider, span, text, text_editor,
     text_input, toggler, tooltip, vertical_slider, Space, Stack,
 };
+#[allow(unused_imports)]
 use iced::{
     alignment, font, keyboard, mouse, widget, Border, Color, ContentFit, Element, Fill, Font,
     Length, Padding, Pixels, Point, Radians, Rotation, Shadow, Size, Vector,
@@ -1950,6 +1951,7 @@ fn render_text_editor<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Eleme
 
     // Syntax highlighting changes the generic type parameter, so we must
     // branch here and produce Element from each path separately.
+    #[cfg(feature = "widget-highlighter")]
     if let Some(syntax) = prop_str(props, "highlight_syntax") {
         let theme = match prop_str(props, "highlight_theme").as_deref() {
             Some("base16_mocha") => iced::highlighter::Theme::Base16Mocha,
@@ -1964,8 +1966,10 @@ fn render_text_editor<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Eleme
         if let Some(sf) = style_fn {
             hl = hl.style(sf);
         }
-        hl.into()
-    } else {
+        return hl.into();
+    }
+
+    {
         if let Some(sf) = style_fn {
             te = te.style(sf);
         }
@@ -3869,6 +3873,7 @@ fn prop_range_f64(props: Props<'_>) -> std::ops::RangeInclusive<f64> {
         .unwrap_or(0.0..=100.0)
 }
 
+#[cfg(any(feature = "widget-image", feature = "widget-svg"))]
 fn prop_content_fit(props: Props<'_>) -> Option<ContentFit> {
     let s = prop_str(props, "content_fit")?;
     match s.to_ascii_lowercase().as_str() {

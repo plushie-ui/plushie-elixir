@@ -19,7 +19,9 @@ use std::sync::{Mutex, OnceLock};
 use std::thread;
 
 use iced::futures::SinkExt;
-use iced::widget::{container, markdown, pane_grid, text, text_editor};
+use iced::widget::{container, pane_grid, text, text_editor};
+#[cfg(feature = "widget-markdown")]
+use iced::widget::markdown;
 use iced::{event, stream, system, window, Element, Fill, Point, Size, Subscription, Task, Theme};
 
 use base64::Engine as _;
@@ -73,6 +75,7 @@ pub(crate) enum Message {
     /// A text editor action (id, action).
     TextEditorAction(String, text_editor::Action),
     /// A markdown link was clicked.
+    #[cfg(feature = "widget-markdown")]
     MarkdownUrl(markdown::Uri),
     /// A message arrived from the stdin reader (or stdin closed).
     Stdin(StdinEvent),
@@ -132,8 +135,10 @@ pub(crate) enum Message {
     /// Sensor widget resize event (id, width, height).
     SensorResize(String, f32, f32),
     /// Canvas interaction event (id, kind, x, y, extra).
+    #[cfg(feature = "widget-canvas")]
     CanvasEvent(String, String, f32, f32, String),
     /// Canvas scroll event (id, cursor_x, cursor_y, delta_x, delta_y).
+    #[cfg(feature = "widget-canvas")]
     CanvasScroll(String, f32, f32, f32, f32),
     /// PaneGrid pane was resized (grid_id, resize_event).
     PaneResized(String, iced::widget::pane_grid::ResizeEvent),
@@ -363,6 +368,7 @@ impl App {
                 }
                 Task::none()
             }
+            #[cfg(feature = "widget-markdown")]
             Message::MarkdownUrl(url) => {
                 log::debug!("markdown link clicked: {url}");
                 Task::none()
@@ -709,6 +715,7 @@ impl App {
                 emit_event(OutgoingEvent::sensor_resize(id, width, height));
                 Task::none()
             }
+            #[cfg(feature = "widget-canvas")]
             Message::CanvasEvent(id, kind, x, y, extra) => {
                 match kind.as_str() {
                     "press" => emit_event(OutgoingEvent::canvas_press(id, x, y, extra)),
@@ -718,6 +725,7 @@ impl App {
                 }
                 Task::none()
             }
+            #[cfg(feature = "widget-canvas")]
             Message::CanvasScroll(id, cx, cy, dx, dy) => {
                 emit_event(OutgoingEvent::canvas_scroll(id, cx, cy, dx, dy));
                 Task::none()
@@ -1845,6 +1853,7 @@ impl App {
                     Message::NoOp
                 })
             }
+            #[cfg(feature = "widget-sysinfo")]
             "get_system_info" => {
                 let tag = settings
                     .get("tag")
@@ -1867,6 +1876,11 @@ impl App {
                     emit_query_response("system_info", &tag, data);
                     Message::NoOp
                 })
+            }
+            #[cfg(not(feature = "widget-sysinfo"))]
+            "get_system_info" => {
+                log::warn!("get_system_info requires the 'widget-sysinfo' feature");
+                Task::none()
             }
             "set_resize_increments" => {
                 if let Some(&iced_id) = self.window_map.get(window_id) {
