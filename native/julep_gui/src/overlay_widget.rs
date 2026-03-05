@@ -154,8 +154,12 @@ impl Widget<Message, iced::Theme, iced::Renderer> for OverlayWrapper<'_> {
         translation: Vector,
     ) -> Option<overlay::Element<'b, Message, iced::Theme, iced::Renderer>> {
         let mut children = tree.children.iter_mut();
-        let anchor_tree = children.next().unwrap();
-        let content_tree = children.next().unwrap();
+        let anchor_tree = children
+            .next()
+            .expect("OverlayWrapper must have anchor tree child");
+        let content_tree = children
+            .next()
+            .expect("OverlayWrapper must have content tree child");
 
         // Collect any overlay from the anchor child itself.
         let anchor_overlay = self.anchor.as_widget_mut().overlay(
@@ -260,8 +264,9 @@ impl overlay::Overlay<Message, iced::Theme, iced::Renderer> for OverlayContent<'
             ),
         };
 
-        let final_x = x + self.offset_x;
-        let final_y = y + self.offset_y;
+        let final_x = (x + self.offset_x).clamp(0.0, (bounds.width - content_size.width).max(0.0));
+        let final_y =
+            (y + self.offset_y).clamp(0.0, (bounds.height - content_size.height).max(0.0));
 
         layout::Node::with_children(content_size, vec![content_layout])
             .move_to(Point::new(final_x, final_y))
@@ -275,12 +280,16 @@ impl overlay::Overlay<Message, iced::Theme, iced::Renderer> for OverlayContent<'
         layout: Layout<'_>,
         cursor: iced::mouse::Cursor,
     ) {
+        let content_layout = layout
+            .children()
+            .next()
+            .expect("overlay content must have a child layout");
         self.content.as_widget().draw(
             self.tree,
             renderer,
             theme,
             style,
-            layout.children().next().unwrap(),
+            content_layout,
             cursor,
             &Rectangle::with_size(Size::INFINITE),
         );
@@ -295,10 +304,14 @@ impl overlay::Overlay<Message, iced::Theme, iced::Renderer> for OverlayContent<'
         clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
     ) {
+        let content_layout = layout
+            .children()
+            .next()
+            .expect("overlay content must have a child layout");
         self.content.as_widget_mut().update(
             self.tree,
             event,
-            layout.children().next().unwrap(),
+            content_layout,
             cursor,
             renderer,
             clipboard,
@@ -314,12 +327,49 @@ impl overlay::Overlay<Message, iced::Theme, iced::Renderer> for OverlayContent<'
         renderer: &iced::Renderer,
     ) -> iced::mouse::Interaction {
         let viewport = Rectangle::with_size(Size::INFINITE);
+        let content_layout = layout
+            .children()
+            .next()
+            .expect("overlay content must have a child layout");
         self.content.as_widget().mouse_interaction(
             self.tree,
-            layout.children().next().unwrap(),
+            content_layout,
             cursor,
             &viewport,
             renderer,
+        )
+    }
+
+    fn operate(
+        &mut self,
+        layout: Layout<'_>,
+        renderer: &iced::Renderer,
+        operation: &mut dyn widget::Operation,
+    ) {
+        let content_layout = layout
+            .children()
+            .next()
+            .expect("overlay content must have a child layout");
+        self.content
+            .as_widget_mut()
+            .operate(self.tree, content_layout, renderer, operation);
+    }
+
+    fn overlay<'c>(
+        &'c mut self,
+        layout: Layout<'c>,
+        renderer: &iced::Renderer,
+    ) -> Option<overlay::Element<'c, Message, iced::Theme, iced::Renderer>> {
+        let content_layout = layout
+            .children()
+            .next()
+            .expect("overlay content must have a child layout");
+        self.content.as_widget_mut().overlay(
+            self.tree,
+            content_layout,
+            renderer,
+            &layout.bounds(),
+            Vector::ZERO,
         )
     }
 }
