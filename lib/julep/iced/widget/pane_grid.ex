@@ -24,16 +24,18 @@ defmodule Julep.Iced.Widget.PaneGrid do
           {:spacing, number()}
           | {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
+          | {:min_size, number()}
 
   @type t :: %__MODULE__{
           id: String.t(),
           spacing: number() | nil,
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
+          min_size: number() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
-  defstruct [:id, :spacing, :width, :height, children: []]
+  defstruct [:id, :spacing, :width, :height, :min_size, children: []]
 
   @doc "Creates a new pane grid struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
@@ -50,6 +52,7 @@ defmodule Julep.Iced.Widget.PaneGrid do
       {:spacing, v}, acc -> spacing(acc, v)
       {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
+      {:min_size, v}, acc -> min_size(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -65,6 +68,10 @@ defmodule Julep.Iced.Widget.PaneGrid do
   @doc "Sets the pane grid height."
   @spec height(pane_grid :: t(), height :: Julep.Iced.Length.t()) :: t()
   def height(%__MODULE__{} = pg, height), do: %{pg | height: height}
+
+  @doc "Sets the minimum pane size in pixels."
+  @spec min_size(pane_grid :: t(), min_size :: number()) :: t()
+  def min_size(%__MODULE__{} = pg, min_size), do: %{pg | min_size: min_size}
 
   @doc "Appends a child pane to the grid."
   @spec push(pane_grid :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
@@ -87,6 +94,7 @@ defmodule Julep.Iced.Widget.PaneGrid do
         |> put_if(pg.spacing, "spacing")
         |> put_if(pg.width, "width")
         |> put_if(pg.height, "height")
+        |> put_if(pg.min_size, "min_size")
 
       %{id: pg.id, type: "pane_grid", props: props, children: children_to_nodes(pg.children)}
     end

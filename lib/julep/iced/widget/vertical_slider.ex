@@ -27,6 +27,7 @@ defmodule Julep.Iced.Widget.VerticalSlider do
           {:step, number()}
           | {:shift_step, number()}
           | {:default, number()}
+          | {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
           | {:style, style()}
 
@@ -37,11 +38,12 @@ defmodule Julep.Iced.Widget.VerticalSlider do
           step: number() | nil,
           shift_step: number() | nil,
           default: number() | nil,
+          width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
           style: style() | nil
         }
 
-  defstruct [:id, :range, :value, :step, :shift_step, :default, :height, :style]
+  defstruct [:id, :range, :value, :step, :shift_step, :default, :width, :height, :style]
 
   @doc "Creates a new vertical slider struct with the given range, value, and optional keyword opts."
   @spec new(
@@ -63,6 +65,7 @@ defmodule Julep.Iced.Widget.VerticalSlider do
       {:step, v}, acc -> step(acc, v)
       {:shift_step, v}, acc -> shift_step(acc, v)
       {:default, v}, acc -> __MODULE__.default(acc, v)
+      {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
       {:style, v}, acc -> style(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
@@ -80,6 +83,10 @@ defmodule Julep.Iced.Widget.VerticalSlider do
   @doc "Sets the default value (double-click resets to this)."
   @spec default(vertical_slider :: t(), default :: number()) :: t()
   def default(%__MODULE__{} = slider, default), do: %{slider | default: default}
+
+  @doc "Sets the slider width."
+  @spec width(vertical_slider :: t(), width :: Julep.Iced.Length.t()) :: t()
+  def width(%__MODULE__{} = slider, width), do: %{slider | width: width}
 
   @doc "Sets the slider height."
   @spec height(vertical_slider :: t(), height :: Julep.Iced.Length.t()) :: t()
@@ -104,6 +111,7 @@ defmodule Julep.Iced.Widget.VerticalSlider do
         |> put_if(slider.step, "step")
         |> put_if(slider.shift_step, "shift_step")
         |> put_if(slider.default, "default")
+        |> put_if(slider.width, "width")
         |> put_if(slider.height, "height")
         |> put_if(slider.style, "style")
 

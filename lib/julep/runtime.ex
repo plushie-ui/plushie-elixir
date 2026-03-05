@@ -594,6 +594,7 @@ defmodule Julep.Runtime do
               :on_mouse_button,
               :on_mouse_scroll,
               :on_touch,
+              :on_ime,
               :on_theme_change,
               :on_animation_frame,
               :on_file_drop,

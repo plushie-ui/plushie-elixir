@@ -19,7 +19,7 @@ defmodule Julep.Command do
     `request_user_attention/2`, `screenshot/2`, `set_resizable/2`,
     `set_min_size/3`, `set_max_size/3`, `enable_mouse_passthrough/1`,
     `disable_mouse_passthrough/1`, `show_system_menu/1`, `set_icon/4`,
-    `set_resize_increments/3`.
+    `set_resize_increments/3`, `allow_automatic_tabbing/1`.
   - **Window queries**: `get_window_size/2`, `get_window_position/2`,
     `is_maximized/2`, `is_minimized/2`, `get_mode/2`, `get_scale_factor/2`,
     `raw_id/2`, `monitor_size/2`
@@ -401,6 +401,20 @@ defmodule Julep.Command do
         width: width,
         height: height
       }
+    }
+  end
+
+  @doc """
+  Sets whether the system can automatically organize windows into tabs.
+
+  This is a macOS-specific setting. On other platforms it is a no-op.
+  See: https://developer.apple.com/documentation/appkit/nswindow/1646657-allowsautomaticwindowtabbing
+  """
+  @spec allow_automatic_tabbing(enabled :: boolean()) :: %__MODULE__{}
+  def allow_automatic_tabbing(enabled) when is_boolean(enabled) do
+    %__MODULE__{
+      type: :window_op,
+      payload: %{op: "allow_automatic_tabbing", window_id: "_global", enabled: enabled}
     }
   end
 

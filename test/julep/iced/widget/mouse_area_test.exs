@@ -104,6 +104,11 @@ defmodule Julep.Iced.Widget.MouseAreaTest do
       assert ma.on_right_release == true
     end
 
+    test "on_middle_press/2 sets the field" do
+      ma = MouseArea.new("ma1") |> MouseArea.on_middle_press(true)
+      assert ma.on_middle_press == true
+    end
+
     test "on_middle_release/2 sets the field" do
       ma = MouseArea.new("ma1") |> MouseArea.on_middle_release(true)
       assert ma.on_middle_release == true
@@ -156,7 +161,7 @@ defmodule Julep.Iced.Widget.MouseAreaTest do
     test "omits event props when nil" do
       node = MouseArea.new("ma1") |> MouseArea.build()
 
-      for key <- ~w(on_right_press on_right_release on_middle_release
+      for key <- ~w(on_right_press on_right_release on_middle_press on_middle_release
                      on_double_click on_enter on_exit on_move on_scroll) do
         refute Map.has_key?(node.props, key)
       end
@@ -173,6 +178,7 @@ defmodule Julep.Iced.Widget.MouseAreaTest do
         MouseArea.new("ma1",
           on_right_press: true,
           on_right_release: true,
+          on_middle_press: true,
           on_middle_release: true,
           on_double_click: true,
           on_enter: true,
@@ -183,6 +189,7 @@ defmodule Julep.Iced.Widget.MouseAreaTest do
 
       assert ma.on_right_press == true
       assert ma.on_right_release == true
+      assert ma.on_middle_press == true
       assert ma.on_middle_release == true
       assert ma.on_double_click == true
       assert ma.on_enter == true

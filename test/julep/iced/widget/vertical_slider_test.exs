@@ -17,6 +17,7 @@ defmodule Julep.Iced.Widget.VerticalSliderTest do
       assert vs.step == nil
       assert vs.shift_step == nil
       assert vs.default == nil
+      assert vs.width == nil
       assert vs.height == nil
       assert vs.style == nil
     end
@@ -49,6 +50,11 @@ defmodule Julep.Iced.Widget.VerticalSliderTest do
       assert vs.height == 200
     end
 
+    test "width/2 sets width" do
+      vs = VerticalSlider.new("id", {0, 10}, 5) |> VerticalSlider.width(40)
+      assert vs.width == 40
+    end
+
     test "style/2 sets style" do
       vs = VerticalSlider.new("id", {0, 10}, 5) |> VerticalSlider.style(:default)
       assert vs.style == :default
@@ -70,8 +76,12 @@ defmodule Julep.Iced.Widget.VerticalSliderTest do
     end
 
     test "includes non-nil optional props" do
-      node = VerticalSlider.new("vs", {0, 10}, 5, step: 2, height: 300) |> VerticalSlider.build()
+      node =
+        VerticalSlider.new("vs", {0, 10}, 5, step: 2, width: 40, height: 300)
+        |> VerticalSlider.build()
+
       assert node.props["step"] == 2
+      assert node.props["width"] == 40
       assert node.props["height"] == 300
     end
 
@@ -96,8 +106,8 @@ defmodule Julep.Iced.Widget.VerticalSliderTest do
     end
 
     test "raises on unknown option" do
-      assert_raise ArgumentError, ~r/unknown option.*:width/, fn ->
-        VerticalSlider.new("id", {0, 10}, 5, width: 100)
+      assert_raise ArgumentError, ~r/unknown option.*:bogus/, fn ->
+        VerticalSlider.new("id", {0, 10}, 5, bogus: true)
       end
     end
   end

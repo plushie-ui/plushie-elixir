@@ -14,6 +14,7 @@ defmodule Julep.Iced.Widget.PaneGridTest do
       assert pg.spacing == nil
       assert pg.width == nil
       assert pg.height == nil
+      assert pg.min_size == nil
       assert pg.children == []
     end
 
@@ -42,6 +43,13 @@ defmodule Julep.Iced.Widget.PaneGridTest do
     test "sets the height field" do
       pg = PaneGrid.new("pg1") |> PaneGrid.height(500)
       assert pg.height == 500
+    end
+  end
+
+  describe "min_size/2" do
+    test "sets the min_size field" do
+      pg = PaneGrid.new("pg1") |> PaneGrid.min_size(50)
+      assert pg.min_size == 50
     end
   end
 
@@ -82,11 +90,17 @@ defmodule Julep.Iced.Widget.PaneGridTest do
       assert node.props["width"] == "fill"
     end
 
+    test "includes min_size in props when set" do
+      node = PaneGrid.new("pg1", min_size: 30) |> PaneGrid.build()
+      assert node.props["min_size"] == 30
+    end
+
     test "omits nil props" do
       node = PaneGrid.new("pg1") |> PaneGrid.build()
       refute Map.has_key?(node.props, "spacing")
       refute Map.has_key?(node.props, "width")
       refute Map.has_key?(node.props, "height")
+      refute Map.has_key?(node.props, "min_size")
     end
 
     test "converts children to nodes" do
@@ -99,10 +113,11 @@ defmodule Julep.Iced.Widget.PaneGridTest do
 
   describe "with_options/2" do
     test "routes all known options" do
-      pg = PaneGrid.new("pg1", spacing: 3, width: :fill, height: 400)
+      pg = PaneGrid.new("pg1", spacing: 3, width: :fill, height: 400, min_size: 25)
       assert pg.spacing == 3
       assert pg.width == :fill
       assert pg.height == 400
+      assert pg.min_size == 25
     end
 
     test "raises on unknown option" do

@@ -177,6 +177,21 @@ defmodule Julep.Subscription do
   end
 
   @doc """
+  Fires on IME (Input Method Editor) events.
+
+  Delivers one of:
+
+  * `{:ime_opened}` -- the IME session started
+  * `{:ime_preedit, text, {start, end} | nil}` -- composing text updated
+  * `{:ime_commit, text}` -- final text committed
+  * `{:ime_closed}` -- the IME session ended
+  """
+  @spec on_ime(event_tag :: atom()) :: t()
+  def on_ime(event_tag) when is_atom(event_tag) do
+    %{type: :on_ime, tag: event_tag}
+  end
+
+  @doc """
   Fires on touch events.
 
   Delivers `{:finger_pressed, finger_id, x, y}`,

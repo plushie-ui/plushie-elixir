@@ -333,6 +333,68 @@ defmodule Julep.ProtocolTest do
     end
   end
 
+  describe "decode_message/1 -- IME events" do
+    test "decodes ime opened" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "ime",
+          tag: "ime_tag",
+          data: %{kind: "opened"}
+        })
+
+      assert {:ime_opened} = Protocol.decode_message(json, :json)
+    end
+
+    test "decodes ime preedit with cursor" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "ime",
+          tag: "ime_tag",
+          data: %{kind: "preedit", text: "hello", cursor: %{start: 2, end: 5}}
+        })
+
+      assert {:ime_preedit, "hello", {2, 5}} = Protocol.decode_message(json, :json)
+    end
+
+    test "decodes ime preedit without cursor" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "ime",
+          tag: "ime_tag",
+          data: %{kind: "preedit", text: "hi", cursor: nil}
+        })
+
+      assert {:ime_preedit, "hi", nil} = Protocol.decode_message(json, :json)
+    end
+
+    test "decodes ime commit" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "ime",
+          tag: "ime_tag",
+          data: %{kind: "commit", text: "final"}
+        })
+
+      assert {:ime_commit, "final"} = Protocol.decode_message(json, :json)
+    end
+
+    test "decodes ime closed" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "ime",
+          tag: "ime_tag",
+          data: %{kind: "closed"}
+        })
+
+      assert {:ime_closed} = Protocol.decode_message(json, :json)
+    end
+  end
+
   describe "decode_message/1 -- effect_response ok" do
     test "decodes an ok effect response to {:effect_result, id, {:ok, result}}" do
       json =

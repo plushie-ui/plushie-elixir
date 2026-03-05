@@ -3,8 +3,9 @@
 Comprehensive comparison of iced 0.14.0 (with features: `tokio`, `image`,
 `svg`, `markdown`, `canvas`) against what Julep exposes to Elixir.
 
-Audited: 2026-02-27. Updated: 2026-02-28 (style maps, canvas primitives,
-in-memory images, mouse_area cursor, iced parity gaps batch).
+Audited: 2026-02-27. Updated: 2026-03-05 (cross-referenced external audit,
+added remaining gaps section for QR code, IME, lazy, overlay, automatic
+tabbing).
 
 ---
 
@@ -68,14 +69,16 @@ in-memory images, mouse_area cursor, iced parity gaps batch).
 | `Canvas` | SUPPORTED | Interactive events, layer-based caching, arbitrary paths (bezier, quadratic, arcs, ellipses, rounded rects), stroke styles (cap, join, dash), gradient fills, transforms (translate, rotate, scale), draw_image, draw_svg, text with font/size, fill rules (non_zero/even_odd), clipping (push_clip/pop_clip). See per-widget section. |
 | `Markdown` | SUPPORTED | Settings: text_size, h1_size, h2_size, h3_size, code_size, spacing; width via container wrapper |
 | `Table` | SUPPORTED | Composite implementation; columns, rows, header (conditional), separator, padding, sortable columns, per-column align/width |
-| `QRCode` | N/A | Feature `qr_code` not enabled |
-| `Shader` | N/A | Feature `wgpu` not enabled |
+| `QRCode` | MISSING | iced renders QR codes via the `qrcode` crate. Props: data (bytes), cell_size, total_size, style (foreground/background colors). Low implementation complexity -- pure display widget with no state or events. |
+| `Shader` | N/A | Custom wgpu shader programs. Requires Rust-side `Program` trait impl with mutable state and direct GPU access. Fundamentally incompatible with Julep's "Elixir owns state" model; cannot be expressed over IPC. |
+| `Lazy` | MISSING | Defers widget tree construction until a dependency hash changes. In iced, a closure rebuilds the subtree only when the hash differs. Julep's tree diffing already avoids re-rendering unchanged subtrees, but doesn't defer *building* them on the Elixir side. See section 12. |
 
 ### Other iced Utilities
 
 | iced Item | Julep Status | Notes |
 |---|---|---|
 | `Themer` | SUPPORTED | `themer` in both layers; per-subtree theme override |
+| `overlay` | N/A | Trait-based system for rendering widgets above others (z-ordered). Used internally by PickList, ComboBox, Tooltip for dropdowns/popups. Julep's supported widgets already use overlays via iced; exposing overlay as a *public* API requires custom Rust widget authoring, which Julep doesn't support. |
 | `opaque` | N/A | Internal overlay helper |
 | `hover` | N/A | Internal overlay helper |
 
@@ -565,12 +568,13 @@ Same as Slider. `circular_handle` and `handle_radius` also supported.
 | PaneGrid: maximize | `pane_maximize(grid_id, pane_id)` | SUPPORTED |
 | PaneGrid: restore | `pane_restore(grid_id)` | SUPPORTED |
 | `Task::run(stream, map)` | `Command.stream/2` | SUPPORTED -- streams events from an enumerable |
-| `Task::future(future)` | No | **MISSING** |
+| `Task::future(future)` | No | N/A -- `future` is `perform` without a mapper; `Command.async/2` covers this |
 | `Task::stream(stream)` | `Command.stream/2` | SUPPORTED |
-| `task::blocking(fn)` | No | **MISSING** |
+| `task::blocking(fn)` | No | N/A -- Elixir handles blocking work natively via `Task` or spawned processes |
 | `.then()` / `.chain()` | By design | SUPPORTED -- handled by the Elm update loop; each `update/2` can return new commands, creating natural chains with model updates between steps |
-| `.collect()` | No | **MISSING** |
+| `.map()` / `.collect()` / `.discard()` | No | N/A -- iced task combinators for composing async work; Julep handles composition in Elixir via standard concurrency patterns |
 | `.abortable()` | `Command.cancel/1` | SUPPORTED -- cancels a running async or stream command by its event tag |
+| `window::allow_automatic_tabbing(bool)` | No | **MISSING** -- macOS feature for automatic window tab grouping. Trivial to wire through. |
 
 ---
 
@@ -719,6 +723,20 @@ and delivered standalone via `:modifiers_changed`).
 | Dragged | `{:pane_dragged, id, pane, target}` | SUPPORTED |
 | Clicked | `{:pane_clicked, id, pane}` | SUPPORTED |
 
+### Input Method (IME) Events
+
+| iced Event | Julep | Status |
+|---|---|---|
+| `InputMethod::Opened` | -- | MISSING |
+| `InputMethod::Preedit(text, cursor_range)` | -- | MISSING |
+| `InputMethod::Commit(text)` | -- | MISSING |
+| `InputMethod::Closed` | -- | MISSING |
+
+IME events enable non-Latin text input (CJK, complex scripts). iced exposes
+these as `Event::InputMethod(...)` variants from winit. Julep's renderer
+currently filters them out of the event dispatch. TextInput and TextEditor in
+iced use IME internally for composition sequences. See section 12.
+
 ### Other Events
 
 | Event | Julep | Status |
@@ -758,13 +776,18 @@ and delivered standalone via `:modifiers_changed`).
 ## 11. Summary Statistics
 
 ### Widgets
-- iced widgets (with enabled features): ~28 distinct widgets
-- Julep fully supported: 26 (plus `window` and `table` not in iced)
-- Julep partially supported: 0
+- iced widgets (all features): ~30 distinct widgets
+- Julep fully supported: 28 (plus `window` and `table` not in iced)
+- Julep missing: 1 (Lazy)
+- Julep N/A (architectural): 1 (Shader)
 
 ### Props
-- Average prop coverage per supported widget: ~95-100%
-- Notable actionable gaps: none (canvas primitives, in-memory images, and style maps all shipped)
+- Average prop coverage per supported widget: ~95%
+- All prop-level gaps resolved (tooltip delay, sensor delay, mouse_area
+  on_middle_press, pane_grid min_size, vertical_slider width -- all SHIPPED)
+  - Button `on_press_with` / `on_press_maybe` (N/A -- closure/Option patterns; Julep uses disabled flag)
+  - TextInput `on_input_maybe` / `on_submit_maybe` / `on_paste_maybe` (N/A -- Option patterns)
+  - Toggler `on_toggle_maybe` (N/A -- Option pattern)
 - Remaining blocked/N/A items (cannot be resolved):
   - TextEditor custom `Highlighter` trait (BLOCKED -- generic type parameter; named syntax/theme supported)
   - Scrollable custom `style` (BLOCKED -- closure-based)
@@ -779,6 +802,7 @@ and delivered standalone via `:modifiers_changed`).
 - Canvas: SUPPORTED (press, release, move, scroll)
 - PaneGrid: SUPPORTED (resize, drag, click)
 - Widget callbacks: SUPPORTED (scroll viewport, paste, option_hovered, open/close, sort)
+- IME: **MISSING** (Opened, Preedit, Commit, Closed -- needed for CJK text input)
 
 ### Commands
 - Full set covered: focus, scroll, snap, cursor ops, select, async, batch, done, exit
@@ -840,7 +864,90 @@ These were identified as gaps and have since been implemented:
 22. **SVG color tint** -- SHIPPED. `color` prop applies a color tint to the SVG.
 23. **Custom palette `warning` field** -- SHIPPED. Custom themes accept `warning` hex color.
 24. **Extended palette shade control** -- SHIPPED. Custom themes accept shade override keys (`primary_strong`, `background_weak`, etc.) via `Theme::custom_with_fn`.
+25. **QR Code widget** -- SHIPPED. Feature-gated (`widget-qr-code`). Elixir struct with data, cell_size, cell_color, background_color, error_correction. Rust renderer encodes via `qrcode` crate, renders via `canvas::Cache`.
+26. **IME events** -- SHIPPED. `on_ime/1` subscription wires `Event::InputMethod` variants (Opened, Preedit, Commit, Closed) through the protocol. Event tuples: `{:ime_opened}`, `{:ime_preedit, text, cursor}`, `{:ime_commit, text}`, `{:ime_closed}`.
+27. **Tooltip `delay`** -- SHIPPED. Milliseconds prop, `Duration::from_millis` on Rust side.
+28. **Sensor `delay`** -- SHIPPED. Same pattern as tooltip delay. Sensor converted from zero-options to single-option widget.
+29. **MouseArea `on_middle_press`** -- SHIPPED. Boolean prop matching `on_middle_release` pattern. Rust side changed from unconditional to conditional.
+30. **PaneGrid `min_size`** -- SHIPPED. Pixels number prop.
+31. **VerticalSlider `width`** -- SHIPPED. Pixels number prop.
+32. **`allow_automatic_tabbing`** -- SHIPPED. `Command.allow_automatic_tabbing/1` window op with `"_global"` id.
+33. **Overlay node type** -- SHIPPED. Custom `OverlayWrapper` Rust widget implementing `iced::advanced::Widget` with overlay support. First child = anchor (normal flow), second child = overlay content (iced overlay layer). Props: position, gap, offset_x, offset_y, width.
+34. **`iced_features` config** -- SHIPPED. Compile-time `config :julep, iced_features: :all | [atoms]`. Cargo.toml restructured with individual widget features. `Julep.Features` module. Build task/compiler feature integration.
+35. **Widget extension architecture** -- SHIPPED. ADR 0012 documents pure Elixir and Elixir+Rust widget extension packages.
 
-### Remaining actionable gaps
+### Remaining gaps
 
-None. All identified parity gaps have been resolved.
+Cross-referenced with external source-level audit (julep-iced-audit,
+2026-03-02, 394 concepts across 8 rounds).
+
+#### Implementable -- widget
+
+1. **Lazy widget** -- defers subtree construction until a dependency hash
+   changes. In iced, `lazy(dependency, |dep| { ... })` rebuilds only when
+   the hash differs. Julep's tree diff already skips unchanged subtrees on
+   the *renderer* side, but doesn't help the *Elixir* side avoid rebuilding
+   the tree map. A Julep-native approach: `lazy("key", dependency_term,
+   fn)` node type where the runtime hashes `dependency_term` and only calls
+   `fn` when it changes, reusing the previous subtree otherwise. Medium
+   complexity -- needs runtime-level caching, not just renderer changes.
+
+#### Architectural -- cannot implement directly
+
+2. **Shader widget** -- custom wgpu shader programs with Rust-side mutable
+   `State` and `Primitive` types. Requires implementing iced's
+   `shader::Program` trait in Rust. Fundamentally incompatible with Julep's
+   IPC model: state lives in Rust, not Elixir; shader code is WGSL/GLSL,
+   not serializable. Would require users to write custom Rust and rebuild
+   the renderer binary. Deferred (ADR 0007).
+
+3. **Task combinators** (`map`, `then`, `chain`, `collect`, `discard`) --
+   iced's `Task<T>` type supports monadic composition for chaining async
+   work. Julep handles this at the Elixir level: `update/2` returns
+   `{model, commands}`, and each command completion triggers another
+   `update/2` call, creating natural sequential chains. Elixir's own `Task`
+   module and standard concurrency patterns cover parallel and streaming
+   use cases. Not a gap in capability, but a different composition model.
+
+4. **Subscription combinators** (`run`, `run_with`, `with`, `filter_map`,
+   `from_recipe`) -- iced's `Subscription` type supports recipe-based
+   composition. Julep uses explicit named constructors (`on_key_press`,
+   `every`, etc.) instead. Capability is equivalent; composition model
+   differs.
+
+5. **Event::Status** (`Ignored`/`Captured`) -- internal to iced's event
+   propagation loop. Determines whether an event bubbles. Not observable at
+   the app level in Julep's architecture; the renderer handles propagation
+   internally.
+
+6. **RedrawRequested** -- iced's `window::Event::RedrawRequested` is a
+    render-loop scheduling signal. Internal to the renderer; not meaningful
+    to expose over IPC.
+
+#### Note: iced's `_maybe` / `_with` pattern
+
+iced 0.14 added `on_press_maybe`, `on_input_maybe`, `on_submit_maybe`,
+`on_paste_maybe`, and `on_toggle_maybe` methods. These accept
+`Option<Message>` and disable the widget when `None`. iced also added
+`on_press_with` (closure variant for lazy message creation).
+
+Julep doesn't need these. The `_maybe` pattern exists because Rust widgets
+are constructed in `view()` and need to express "sometimes this handler
+exists" inline. Julep already handles this via the `disabled` boolean prop
+(button, checkbox, toggler) and by simply omitting event props from the
+node map when they shouldn't fire. The capability is equivalent.
+
+#### External audit notes
+
+The external audit (394 concepts, 8 rounds) also flagged:
+
+- **Embedded tester/devtools** (17 concepts) -- iced's embedded test
+  recorder, devtools panel, Comet launcher, and time-travel debugging.
+  These are iced's internal developer tooling, not app-level API. Julep's
+  sim/headless/script test backends serve the same purpose differently.
+  Not planned.
+
+- **Feature flag model** (16 concepts) -- iced exposes compile-time Cargo
+  feature flags (tokio, image, svg, canvas, markdown, etc.). Julep selects
+  these statically in the renderer's `Cargo.toml`. The capabilities are
+  present; they're just not toggleable from Elixir. Not a runtime gap.

@@ -1,14 +1,23 @@
 use std::collections::HashMap;
 
 use crate::protocol::TreeNode;
+#[cfg(any(feature = "widget-canvas", feature = "widget-qr-code"))]
+use iced::widget::canvas;
+#[cfg(feature = "widget-image")]
 use iced::widget::image::FilterMethod;
 use iced::widget::keyed;
+#[cfg(feature = "widget-markdown")]
+use iced::widget::markdown;
 use iced::widget::scrollable::Anchor;
 use iced::widget::text::{LineHeight, Wrapping};
+#[cfg(feature = "widget-image")]
+use iced::widget::Image;
+#[cfg(feature = "widget-svg")]
+use iced::widget::Svg;
 use iced::widget::{
-    button, canvas, checkbox, column, combo_box, container, grid, markdown, mouse_area, pane_grid,
-    pick_list, pin, progress_bar, rich_text, row, rule, scrollable, sensor, slider, span, text,
-    text_editor, text_input, toggler, tooltip, vertical_slider, Image, Space, Stack, Svg,
+    button, checkbox, column, combo_box, container, grid, mouse_area, pane_grid, pick_list, pin,
+    progress_bar, rich_text, row, rule, scrollable, sensor, slider, span, text, text_editor,
+    text_input, toggler, tooltip, vertical_slider, Space, Stack,
 };
 use iced::{
     alignment, font, keyboard, mouse, widget, Border, Color, ContentFit, Element, Fill, Font,
@@ -17,6 +26,7 @@ use iced::{
 use serde_json::Value;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::time::Duration;
 
 use crate::Message;
 
@@ -28,6 +38,7 @@ use crate::Message;
 /// don't need to thread 3+ separate HashMap parameters everywhere.
 pub struct WidgetCaches {
     pub editor_contents: HashMap<String, text_editor::Content>,
+    #[cfg(feature = "widget-markdown")]
     pub markdown_items: HashMap<String, Vec<markdown::Item>>,
     pub combo_states: HashMap<String, combo_box::State<String>>,
     pub combo_options: HashMap<String, Vec<String>>,
@@ -35,7 +46,11 @@ pub struct WidgetCaches {
     /// Per-canvas, per-layer geometry caches. Outer key is node ID, inner key
     /// is layer name. The u64 is a content hash of the layer's shapes array --
     /// when it changes the cache is cleared so the layer re-tessellates.
+    #[cfg(feature = "widget-canvas")]
     pub canvas_caches: HashMap<String, HashMap<String, (u64, canvas::Cache)>>,
+    /// Per-qr_code caches. Key is node ID, value is (content hash, canvas Cache).
+    #[cfg(feature = "widget-qr-code")]
+    pub qr_code_caches: HashMap<String, (u64, canvas::Cache)>,
     pub default_text_size: Option<f32>,
     pub default_font: Option<Font>,
 }
@@ -44,11 +59,15 @@ impl WidgetCaches {
     pub fn new() -> Self {
         Self {
             editor_contents: HashMap::new(),
+            #[cfg(feature = "widget-markdown")]
             markdown_items: HashMap::new(),
             combo_states: HashMap::new(),
             combo_options: HashMap::new(),
             pane_grid_states: HashMap::new(),
+            #[cfg(feature = "widget-canvas")]
             canvas_caches: HashMap::new(),
+            #[cfg(feature = "widget-qr-code")]
+            qr_code_caches: HashMap::new(),
             default_text_size: None,
             default_font: None,
         }
@@ -56,11 +75,15 @@ impl WidgetCaches {
 
     pub fn clear(&mut self) {
         self.editor_contents.clear();
+        #[cfg(feature = "widget-markdown")]
         self.markdown_items.clear();
         self.combo_states.clear();
         self.combo_options.clear();
         self.pane_grid_states.clear();
+        #[cfg(feature = "widget-canvas")]
         self.canvas_caches.clear();
+        #[cfg(feature = "widget-qr-code")]
+        self.qr_code_caches.clear();
     }
 }
 
@@ -82,6 +105,7 @@ pub fn ensure_caches(node: &TreeNode, caches: &mut WidgetCaches) {
                 .entry(node.id.clone())
                 .or_insert_with(|| text_editor::Content::with_text(&content_str));
         }
+        #[cfg(feature = "widget-markdown")]
         "markdown" => {
             let props = node.props.as_object();
             let content = prop_str(props, "content").unwrap_or_default();
@@ -137,6 +161,7 @@ pub fn ensure_caches(node: &TreeNode, caches: &mut WidgetCaches) {
                     }
                 });
         }
+        #[cfg(feature = "widget-canvas")]
         "canvas" => {
             let props = node.props.as_object();
             // Build layer map: either from "layers" (object) or "shapes" (array -> single layer).
@@ -161,6 +186,35 @@ pub fn ensure_caches(node: &TreeNode, caches: &mut WidgetCaches) {
 
             // Remove stale layers that are no longer in the tree.
             node_caches.retain(|name, _| layer_map.contains_key(name));
+        }
+        #[cfg(feature = "widget-qr-code")]
+        "qr_code" => {
+            let props = node.props.as_object();
+            let data = prop_str(props, "data").unwrap_or_default();
+            let cell_size = prop_f32(props, "cell_size").unwrap_or(4.0);
+            let ec = prop_str(props, "error_correction").unwrap_or_default();
+            // Hash data + cell_size + error_correction for cache invalidation.
+            let mut hasher = DefaultHasher::new();
+            data.hash(&mut hasher);
+            cell_size.to_bits().hash(&mut hasher);
+            ec.hash(&mut hasher);
+            let hash = hasher.finish();
+
+            match caches.qr_code_caches.get(&node.id) {
+                Some((existing_hash, existing_cache)) => {
+                    if *existing_hash != hash {
+                        existing_cache.clear();
+                        caches
+                            .qr_code_caches
+                            .insert(node.id.clone(), (hash, canvas::Cache::new()));
+                    }
+                }
+                None => {
+                    caches
+                        .qr_code_caches
+                        .insert(node.id.clone(), (hash, canvas::Cache::new()));
+                }
+            }
         }
         _ => {}
     }
@@ -202,11 +256,23 @@ pub fn render<'a>(
         "combo_box" => render_combo_box(node, caches),
         "text_editor" => render_text_editor(node, caches),
         "tooltip" => render_tooltip(node, caches, images),
+        #[cfg(feature = "widget-image")]
         "image" => render_image(node, images),
+        #[cfg(not(feature = "widget-image"))]
+        "image" => render_feature_disabled("image", "widget-image"),
+        #[cfg(feature = "widget-svg")]
         "svg" => render_svg(node),
+        #[cfg(not(feature = "widget-svg"))]
+        "svg" => render_feature_disabled("svg", "widget-svg"),
+        #[cfg(feature = "widget-markdown")]
         "markdown" => render_markdown(node, caches),
+        #[cfg(not(feature = "widget-markdown"))]
+        "markdown" => render_feature_disabled("markdown", "widget-markdown"),
         "stack" => render_stack(node, caches, images),
+        #[cfg(feature = "widget-canvas")]
         "canvas" => render_canvas(node, caches, images),
+        #[cfg(not(feature = "widget-canvas"))]
+        "canvas" => render_feature_disabled("canvas", "widget-canvas"),
         "table" => render_table(node),
         // New native widgets
         "grid" => render_grid(node, caches, images),
@@ -219,11 +285,32 @@ pub fn render<'a>(
         "themer" => render_themer(node, caches, images),
         "responsive" => render_responsive(node, caches, images),
         "pane_grid" => render_pane_grid(node, caches, images),
+        "overlay" => render_overlay(node, caches, images),
+        // Feature-gated widgets
+        #[cfg(feature = "widget-qr-code")]
+        "qr_code" => render_qr_code(node, caches),
+        #[cfg(not(feature = "widget-qr-code"))]
+        "qr_code" => render_feature_disabled("qr_code", "widget-qr-code"),
         unknown => {
             log::warn!("unknown node type `{unknown}`, rendering as empty container");
             container(Space::new()).into()
         }
     }
+}
+
+#[cfg(not(all(
+    feature = "widget-image",
+    feature = "widget-svg",
+    feature = "widget-canvas",
+    feature = "widget-markdown",
+    feature = "widget-qr-code"
+)))]
+fn render_feature_disabled<'a>(widget_name: &str, feature_name: &str) -> Element<'a, Message> {
+    iced::widget::text(format!(
+        "Widget '{}' requires feature '{}'",
+        widget_name, feature_name
+    ))
+    .into()
 }
 
 // ---------------------------------------------------------------------------
@@ -1329,6 +1416,7 @@ fn render_vertical_slider<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let range = prop_range_f64(props);
     let value = prop_f64(props, "value").unwrap_or(*range.start());
     let step = prop_f64(props, "step");
+    let width = prop_f32(props, "width");
     let height = prop_length(props, "height", Length::Fill);
     let id = node.id.clone();
     let release_id = node.id.clone();
@@ -1337,6 +1425,10 @@ fn render_vertical_slider<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let mut s = vertical_slider(range, value, move |v| Message::Slide(id.clone(), v))
         .on_release(Message::SlideRelease(release_id, release_value))
         .height(height);
+
+    if let Some(w) = width {
+        s = s.width(w);
+    }
 
     if let Some(st) = step {
         s = s.step(st);
@@ -1923,6 +2015,10 @@ fn render_tooltip<'a>(
     let snap = prop_bool_default(props, "snap_within_viewport", true);
     tt = tt.snap_within_viewport(snap);
 
+    if let Some(d) = prop_f64(props, "delay") {
+        tt = tt.delay(Duration::from_millis(d as u64));
+    }
+
     // Style: string name or style map (tooltip uses container::Style)
     if let Some(style_val) = props.and_then(|p| p.get("style")) {
         if let Some(style_name) = style_val.as_str() {
@@ -1951,6 +2047,7 @@ fn render_tooltip<'a>(
 // Image
 // ---------------------------------------------------------------------------
 
+#[cfg(feature = "widget-image")]
 fn render_image<'a>(
     node: &'a TreeNode,
     images: &'a crate::image_registry::ImageRegistry,
@@ -2033,6 +2130,7 @@ fn render_image<'a>(
 // SVG
 // ---------------------------------------------------------------------------
 
+#[cfg(feature = "widget-svg")]
 fn render_svg<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     let props = node.props.as_object();
     let source = prop_str(props, "source").unwrap_or_default();
@@ -2063,6 +2161,7 @@ fn render_svg<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 // Markdown
 // ---------------------------------------------------------------------------
 
+#[cfg(feature = "widget-markdown")]
 fn render_markdown<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
     let props = node.props.as_object();
     let items = match caches.markdown_items.get(&node.id) {
@@ -2225,14 +2324,16 @@ fn render_mouse_area<'a>(
 
     let id = node.id.clone();
     let release_id = format!("{}:release", node.id);
-    let middle_id = format!("{}:middle", node.id);
 
     let mut ma = mouse_area(child)
         .on_press(Message::Click(id))
-        .on_release(Message::Click(release_id))
-        .on_middle_press(Message::Click(middle_id));
+        .on_release(Message::Click(release_id));
 
     // Conditional event handlers (opt-in via boolean props)
+    if prop_bool_default(props, "on_middle_press", false) {
+        let middle_id = format!("{}:middle", node.id);
+        ma = ma.on_middle_press(Message::Click(middle_id));
+    }
     if prop_bool_default(props, "on_right_press", false) {
         let ev_id = node.id.clone();
         ma = ma.on_right_press(Message::MouseAreaEvent(ev_id, "right_press".into()));
@@ -2302,14 +2403,21 @@ fn render_sensor<'a>(
     let resize_id = node.id.clone();
     let hide_id = format!("{}:hide", node.id);
 
-    sensor(child)
+    let props = node.props.as_object();
+
+    let mut s = sensor(child)
         .key(id)
         .on_show(move |size| {
             Message::SensorResize(format!("{}:show", show_id), size.width, size.height)
         })
         .on_resize(move |size| Message::SensorResize(resize_id.clone(), size.width, size.height))
-        .on_hide(Message::Click(hide_id))
-        .into()
+        .on_hide(Message::Click(hide_id));
+
+    if let Some(d) = prop_f64(props, "delay") {
+        s = s.delay(Duration::from_millis(d as u64));
+    }
+
+    s.into()
 }
 
 // ---------------------------------------------------------------------------
@@ -2552,8 +2660,12 @@ fn render_pane_grid<'a>(
     .height(height)
     .spacing(spacing);
 
+    let min_size = prop_f32(props, "min_size").unwrap_or(10.0);
+
     pg = pg.on_click(move |pane| Message::PaneClicked(node_id3.clone(), pane));
-    pg = pg.on_resize(10, move |evt| Message::PaneResized(node_id.clone(), evt));
+    pg = pg.on_resize(min_size, move |evt| {
+        Message::PaneResized(node_id.clone(), evt)
+    });
     pg = pg.on_drag(move |evt| Message::PaneDragged(node_id2.clone(), evt));
 
     pg.into()
@@ -2563,6 +2675,7 @@ fn render_pane_grid<'a>(
 // Canvas
 // ---------------------------------------------------------------------------
 
+#[cfg(feature = "widget-canvas")]
 /// Build a sorted layer map from canvas props. Supports two prop formats:
 /// - `"layers"`: a JSON object mapping layer_name -> array of shapes (preferred)
 /// - `"shapes"`: a flat JSON array of shapes (legacy, wrapped as a single "default" layer)
@@ -2588,6 +2701,7 @@ fn canvas_layer_map(
     map
 }
 
+#[cfg(feature = "widget-canvas")]
 /// Hash a JSON string using DefaultHasher.
 fn hash_json_str(s: &str) -> u64 {
     let mut hasher = DefaultHasher::new();
@@ -2595,16 +2709,19 @@ fn hash_json_str(s: &str) -> u64 {
     hasher.finish()
 }
 
+#[cfg(feature = "widget-canvas")]
 /// Parse a layer's shapes from a JSON string back into a Vec<Value>.
 fn parse_layer_shapes(json_str: &str) -> Vec<Value> {
     serde_json::from_str::<Vec<Value>>(json_str).unwrap_or_default()
 }
 
+#[cfg(feature = "widget-canvas")]
 #[derive(Default)]
 struct CanvasState {
     cursor_position: Option<Point>,
 }
 
+#[cfg(feature = "widget-canvas")]
 struct CanvasProgram<'a> {
     /// Sorted layer data: (layer_name, shapes array).
     layers: Vec<(String, Vec<Value>)>,
@@ -2620,12 +2737,14 @@ struct CanvasProgram<'a> {
     images: &'a crate::image_registry::ImageRegistry,
 }
 
+#[cfg(feature = "widget-canvas")]
 impl CanvasProgram<'_> {
     fn is_interactive(&self) -> bool {
         self.on_press || self.on_release || self.on_move || self.on_scroll
     }
 }
 
+#[cfg(feature = "widget-canvas")]
 /// Parse a `fill_rule` string into a `canvas::fill::Rule`. Defaults to `NonZero`.
 fn parse_fill_rule(value: Option<&Value>) -> canvas::fill::Rule {
     match value.and_then(|v| v.as_str()) {
@@ -2634,6 +2753,7 @@ fn parse_fill_rule(value: Option<&Value>) -> canvas::fill::Rule {
     }
 }
 
+#[cfg(feature = "widget-canvas")]
 /// Parse a canvas fill value. If string, hex color. If gradient object,
 /// build a gradient::Linear. Falls back to white. The `shape` parameter
 /// provides the parent shape object for reading the `fill_rule` key.
@@ -2702,6 +2822,7 @@ fn parse_canvas_fill(value: &Value, shape: &Value) -> canvas::Fill {
     }
 }
 
+#[cfg(feature = "widget-canvas")]
 /// Parse a canvas stroke from a JSON object.
 fn parse_canvas_stroke(value: &Value) -> canvas::Stroke<'static> {
     let obj = match value.as_object() {
@@ -2754,6 +2875,7 @@ fn parse_canvas_stroke(value: &Value) -> canvas::Stroke<'static> {
     stroke
 }
 
+#[cfg(feature = "widget-canvas")]
 /// Build a Path from an array of path commands.
 fn build_path_from_commands(commands: &[Value]) -> canvas::Path {
     canvas::Path::new(|builder| {
@@ -2819,6 +2941,7 @@ fn build_path_from_commands(commands: &[Value]) -> canvas::Path {
     })
 }
 
+#[cfg(feature = "widget-canvas")]
 /// Draw a sequence of shapes, handling push_clip/pop_clip nesting.
 fn draw_canvas_shapes(
     frame: &mut canvas::Frame,
@@ -2861,6 +2984,7 @@ fn draw_canvas_shapes(
     }
 }
 
+#[cfg(feature = "widget-canvas")]
 /// Collect shapes between a push_clip and its matching pop_clip, respecting
 /// nesting. Returns (index_of_pop_clip_in_slice, collected_shapes).
 fn collect_clipped_shapes<'a>(shapes: &[&'a Value]) -> (usize, Vec<&'a Value>) {
@@ -2890,6 +3014,7 @@ fn collect_clipped_shapes<'a>(shapes: &[&'a Value]) -> (usize, Vec<&'a Value>) {
     (shapes.len(), result)
 }
 
+#[cfg(feature = "widget-canvas")]
 /// Draw a single shape (or transform command) into the frame.
 fn draw_canvas_shape(
     frame: &mut canvas::Frame,
@@ -3024,6 +3149,7 @@ fn draw_canvas_shape(
                 frame.stroke(&path, stroke);
             }
         }
+        #[cfg(feature = "widget-image")]
         "image" => {
             let x = json_f32(shape, "x");
             let y = json_f32(shape, "y");
@@ -3078,6 +3204,7 @@ fn draw_canvas_shape(
     }
 }
 
+#[cfg(feature = "widget-canvas")]
 impl canvas::Program<Message> for CanvasProgram<'_> {
     type State = CanvasState;
 
@@ -3190,6 +3317,7 @@ impl canvas::Program<Message> for CanvasProgram<'_> {
     }
 }
 
+#[cfg(feature = "widget-canvas")]
 /// Serialize a mouse button for canvas events.
 fn serialize_mouse_button_for_canvas(button: &mouse::Button) -> String {
     match button {
@@ -3202,6 +3330,7 @@ fn serialize_mouse_button_for_canvas(button: &mouse::Button) -> String {
     }
 }
 
+#[cfg(feature = "widget-canvas")]
 fn render_canvas<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
@@ -3247,6 +3376,7 @@ fn render_canvas<'a>(
     .into()
 }
 
+#[cfg(feature = "widget-canvas")]
 /// Parse an f32 from a JSON value by key, defaulting to 0.
 fn json_f32(val: &Value, key: &str) -> f32 {
     val.get(key)
@@ -3255,10 +3385,118 @@ fn json_f32(val: &Value, key: &str) -> f32 {
         .unwrap_or(0.0)
 }
 
+#[cfg(feature = "widget-canvas")]
 /// Parse a Color from a JSON "fill" field. Accepts "#rrggbb" hex strings;
 /// defaults to white if missing or unparseable.
 fn json_color(val: &Value, key: &str) -> Color {
     val.get(key).and_then(parse_color).unwrap_or(Color::WHITE)
+}
+
+// ---------------------------------------------------------------------------
+// QR Code
+// ---------------------------------------------------------------------------
+
+#[cfg(feature = "widget-qr-code")]
+struct QrCodeProgram<'a> {
+    modules: Vec<Vec<bool>>,
+    cell_size: f32,
+    cell_color: Color,
+    background_color: Color,
+    cache: Option<&'a (u64, canvas::Cache)>,
+}
+
+#[cfg(feature = "widget-qr-code")]
+impl canvas::Program<Message> for QrCodeProgram<'_> {
+    type State = ();
+
+    fn draw(
+        &self,
+        _state: &Self::State,
+        renderer: &iced::Renderer,
+        _theme: &iced::Theme,
+        bounds: iced::Rectangle,
+        _cursor: mouse::Cursor,
+    ) -> Vec<canvas::Geometry> {
+        let draw_fn = |frame: &mut canvas::Frame| {
+            // Fill background
+            frame.fill_rectangle(Point::ORIGIN, bounds.size(), self.background_color);
+            // Draw each dark module as a filled square
+            for (row_idx, row) in self.modules.iter().enumerate() {
+                for (col_idx, &dark) in row.iter().enumerate() {
+                    if dark {
+                        let x = col_idx as f32 * self.cell_size;
+                        let y = row_idx as f32 * self.cell_size;
+                        frame.fill_rectangle(
+                            Point::new(x, y),
+                            Size::new(self.cell_size, self.cell_size),
+                            self.cell_color,
+                        );
+                    }
+                }
+            }
+        };
+
+        if let Some((_hash, ref cache)) = self.cache {
+            vec![cache.draw(renderer, bounds.size(), draw_fn)]
+        } else {
+            let mut frame = canvas::Frame::new(renderer, bounds.size());
+            draw_fn(&mut frame);
+            vec![frame.into_geometry()]
+        }
+    }
+}
+
+#[cfg(feature = "widget-qr-code")]
+fn render_qr_code<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+    let props = node.props.as_object();
+    let data = prop_str(props, "data").unwrap_or_default();
+    let cell_size = prop_f32(props, "cell_size").unwrap_or(4.0);
+    let ec_str = prop_str(props, "error_correction").unwrap_or_default();
+    let cell_color = prop_str(props, "cell_color")
+        .and_then(|s| parse_hex_color(&s))
+        .unwrap_or(Color::BLACK);
+    let background_color = prop_str(props, "background_color")
+        .and_then(|s| parse_hex_color(&s))
+        .unwrap_or(Color::WHITE);
+
+    let ec_level = match ec_str.as_str() {
+        "low" => qrcode::EcLevel::L,
+        "quartile" => qrcode::EcLevel::Q,
+        "high" => qrcode::EcLevel::H,
+        _ => qrcode::EcLevel::M,
+    };
+
+    let qr = match qrcode::QrCode::with_error_correction_level(data.as_bytes(), ec_level) {
+        Ok(qr) => qr,
+        Err(e) => {
+            log::warn!("qr_code: failed to encode data: {e}");
+            return text(format!("QR code error: {e}")).into();
+        }
+    };
+
+    let width = qr.width();
+    let modules: Vec<Vec<bool>> = (0..width)
+        .map(|y| {
+            (0..width)
+                .map(|x| qr[(x, y)] == qrcode::types::Color::Dark)
+                .collect()
+        })
+        .collect();
+
+    let pixel_size = width as f32 * cell_size;
+
+    let cache_entry = caches.qr_code_caches.get(&node.id);
+
+    canvas(QrCodeProgram {
+        modules,
+        cell_size,
+        cell_color,
+        background_color,
+        cache: cache_entry,
+    })
+    .width(Length::Fixed(pixel_size))
+    .height(Length::Fixed(pixel_size))
+    .into()
 }
 
 // ---------------------------------------------------------------------------
@@ -4318,6 +4556,41 @@ fn parse_pick_list_handle(props: Props<'_>) -> Option<pick_list::Handle<Font>> {
 }
 
 // ---------------------------------------------------------------------------
+// Overlay
+// ---------------------------------------------------------------------------
+
+fn render_overlay<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    images: &'a crate::image_registry::ImageRegistry,
+) -> Element<'a, Message> {
+    use crate::overlay_widget;
+
+    let props = node.props.as_object();
+    let position = prop_str(props, "position").unwrap_or_else(|| "below".to_string());
+    let gap = prop_f32(props, "gap").unwrap_or(0.0);
+    let offset_x = prop_f32(props, "offset_x").unwrap_or(0.0);
+    let offset_y = prop_f32(props, "offset_y").unwrap_or(0.0);
+
+    let children = &node.children;
+    if children.len() < 2 {
+        return text("overlay requires 2 children").into();
+    }
+
+    let anchor = render(&children[0], caches, images);
+    let content = render(&children[1], caches, images);
+
+    let pos = match position.as_str() {
+        "above" => overlay_widget::Position::Above,
+        "left" => overlay_widget::Position::Left,
+        "right" => overlay_widget::Position::Right,
+        _ => overlay_widget::Position::Below,
+    };
+
+    overlay_widget::OverlayWrapper::new(anchor, content, pos, gap, offset_x, offset_y).into()
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -4585,6 +4858,7 @@ mod tests {
     fn widget_caches_new_is_empty() {
         let c = WidgetCaches::new();
         assert!(c.editor_contents.is_empty());
+        #[cfg(feature = "widget-markdown")]
         assert!(c.markdown_items.is_empty());
         assert!(c.combo_states.is_empty());
         assert!(c.combo_options.is_empty());
@@ -4728,6 +5002,7 @@ mod tests {
 
     // -- Canvas caching tests --
 
+    #[cfg(feature = "widget-canvas")]
     #[test]
     fn canvas_layer_map_from_layers() {
         let v = json!({
@@ -4747,6 +5022,7 @@ mod tests {
         assert_eq!(bg.as_array().unwrap().len(), 1);
     }
 
+    #[cfg(feature = "widget-canvas")]
     #[test]
     fn canvas_layer_map_from_shapes() {
         // Legacy "shapes" key wraps in a "default" layer.
@@ -4759,6 +5035,7 @@ mod tests {
         assert!(result.contains_key("default"));
     }
 
+    #[cfg(feature = "widget-canvas")]
     #[test]
     fn canvas_hash_changes() {
         let hash_a = hash_json_str("[{\"type\":\"rect\"}]");
@@ -4773,6 +5050,7 @@ mod tests {
 
     // -- Canvas layer sort order --
 
+    #[cfg(feature = "widget-canvas")]
     #[test]
     fn canvas_layer_sort_order() {
         let v = json!({
@@ -4790,6 +5068,7 @@ mod tests {
 
     // -- Canvas path commands --
 
+    #[cfg(feature = "widget-canvas")]
     #[test]
     fn canvas_path_commands_basic() {
         let shape = json!({
@@ -4819,6 +5098,7 @@ mod tests {
 
     // -- Canvas stroke parsing --
 
+    #[cfg(feature = "widget-canvas")]
     #[test]
     fn canvas_stroke_parse() {
         let stroke_val = json!({
@@ -4840,6 +5120,7 @@ mod tests {
 
     // -- Canvas gradient fill parsing --
 
+    #[cfg(feature = "widget-canvas")]
     #[test]
     fn canvas_gradient_parse() {
         let fill_val = json!({
@@ -4864,6 +5145,7 @@ mod tests {
 
     // -- Canvas fill_rule parsing --
 
+    #[cfg(feature = "widget-canvas")]
     #[test]
     fn canvas_fill_rule_defaults_to_non_zero() {
         let fill_val = json!("#ff0000");
@@ -4872,6 +5154,7 @@ mod tests {
         assert_eq!(fill.rule, canvas::fill::Rule::NonZero);
     }
 
+    #[cfg(feature = "widget-canvas")]
     #[test]
     fn canvas_fill_rule_even_odd() {
         let fill_val = json!("#00ff00");
@@ -4880,6 +5163,7 @@ mod tests {
         assert_eq!(fill.rule, canvas::fill::Rule::EvenOdd);
     }
 
+    #[cfg(feature = "widget-canvas")]
     #[test]
     fn canvas_fill_rule_explicit_non_zero() {
         let fill_val = json!("#0000ff");
@@ -4890,6 +5174,7 @@ mod tests {
 
     // -- Image registry handle lookup --
 
+    #[cfg(feature = "widget-image")]
     #[test]
     fn image_registry_handle_lookup() {
         use crate::image_registry::ImageRegistry;
@@ -4919,6 +5204,7 @@ mod tests {
 
     // -- Canvas clipping tests --
 
+    #[cfg(feature = "widget-canvas")]
     #[test]
     fn collect_clipped_shapes_simple() {
         let shapes = vec![
@@ -4935,6 +5221,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "widget-canvas")]
     #[test]
     fn collect_clipped_shapes_nested() {
         let shapes = vec![
@@ -4952,6 +5239,7 @@ mod tests {
         assert_eq!(collected.len(), 4);
     }
 
+    #[cfg(feature = "widget-canvas")]
     #[test]
     fn collect_clipped_shapes_no_pop() {
         let shapes = vec![json!({"type": "rect", "x": 0, "y": 0, "w": 50, "h": 50})];

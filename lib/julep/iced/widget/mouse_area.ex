@@ -17,6 +17,7 @@ defmodule Julep.Iced.Widget.MouseArea do
     `:resizing_column`, `:resizing_row`.
   - `on_right_press` (boolean) -- enable right mouse button press events.
   - `on_right_release` (boolean) -- enable right mouse button release events.
+  - `on_middle_press` (boolean) -- enable middle mouse button press events.
   - `on_middle_release` (boolean) -- enable middle mouse button release events.
   - `on_double_click` (boolean) -- enable double-click events.
   - `on_enter` (boolean) -- enable cursor enter events.
@@ -30,10 +31,10 @@ defmodule Julep.Iced.Widget.MouseArea do
 
   - `{:click, id}` -- left mouse button pressed.
   - `{:click, "id:release"}` -- left mouse button released.
-  - `{:click, "id:middle"}` -- middle mouse button pressed.
 
   Conditional (opt-in via props):
 
+  - `{:click, "id:middle"}` -- middle mouse button pressed.
   - `{:mouse_right_press, id}` -- right mouse button pressed.
   - `{:mouse_right_release, id}` -- right mouse button released.
   - `{:mouse_middle_release, id}` -- middle mouse button released.
@@ -76,6 +77,7 @@ defmodule Julep.Iced.Widget.MouseArea do
           {:cursor, cursor()}
           | {:on_right_press, boolean()}
           | {:on_right_release, boolean()}
+          | {:on_middle_press, boolean()}
           | {:on_middle_release, boolean()}
           | {:on_double_click, boolean()}
           | {:on_enter, boolean()}
@@ -88,6 +90,7 @@ defmodule Julep.Iced.Widget.MouseArea do
           cursor: cursor() | nil,
           on_right_press: boolean() | nil,
           on_right_release: boolean() | nil,
+          on_middle_press: boolean() | nil,
           on_middle_release: boolean() | nil,
           on_double_click: boolean() | nil,
           on_enter: boolean() | nil,
@@ -102,6 +105,7 @@ defmodule Julep.Iced.Widget.MouseArea do
     :cursor,
     :on_right_press,
     :on_right_release,
+    :on_middle_press,
     :on_middle_release,
     :on_double_click,
     :on_enter,
@@ -124,6 +128,7 @@ defmodule Julep.Iced.Widget.MouseArea do
       {:cursor, v}, acc -> cursor(acc, v)
       {:on_right_press, v}, acc -> on_right_press(acc, v)
       {:on_right_release, v}, acc -> on_right_release(acc, v)
+      {:on_middle_press, v}, acc -> on_middle_press(acc, v)
       {:on_middle_release, v}, acc -> on_middle_release(acc, v)
       {:on_double_click, v}, acc -> on_double_click(acc, v)
       {:on_enter, v}, acc -> on_enter(acc, v)
@@ -145,6 +150,10 @@ defmodule Julep.Iced.Widget.MouseArea do
   @doc "Enables or disables right mouse button release events."
   @spec on_right_release(mouse_area :: t(), enabled :: boolean()) :: t()
   def on_right_release(%__MODULE__{} = ma, enabled), do: %{ma | on_right_release: enabled}
+
+  @doc "Enables or disables middle mouse button press events."
+  @spec on_middle_press(mouse_area :: t(), enabled :: boolean()) :: t()
+  def on_middle_press(%__MODULE__{} = ma, enabled), do: %{ma | on_middle_press: enabled}
 
   @doc "Enables or disables middle mouse button release events."
   @spec on_middle_release(mouse_area :: t(), enabled :: boolean()) :: t()
@@ -191,6 +200,7 @@ defmodule Julep.Iced.Widget.MouseArea do
         |> put_if(ma.cursor, "cursor")
         |> put_if(ma.on_right_press, "on_right_press")
         |> put_if(ma.on_right_release, "on_right_release")
+        |> put_if(ma.on_middle_press, "on_middle_press")
         |> put_if(ma.on_middle_release, "on_middle_release")
         |> put_if(ma.on_double_click, "on_double_click")
         |> put_if(ma.on_enter, "on_enter")

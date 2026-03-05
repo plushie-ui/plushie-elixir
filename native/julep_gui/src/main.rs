@@ -6,6 +6,7 @@ mod effects;
 mod headless;
 mod image_registry;
 mod julep_core;
+mod overlay_widget;
 mod protocol;
 mod test_mode;
 mod theming;
@@ -83,6 +84,15 @@ pub(crate) enum Message {
     KeyReleased(KeyEventData),
     /// Keyboard modifiers changed.
     ModifiersChanged(iced::keyboard::Modifiers),
+    // -- IME events --
+    /// IME session opened.
+    ImeOpened,
+    /// IME preedit text updated (composing text, optional cursor range).
+    ImePreedit(String, Option<std::ops::Range<usize>>),
+    /// IME committed final text.
+    ImeCommit(String),
+    /// IME session closed.
+    ImeClosed,
     /// A window close was requested by the user (WM close button).
     WindowCloseRequested(window::Id),
     /// A window was actually closed by iced.
@@ -468,6 +478,32 @@ impl App {
                         pos.x,
                         pos.y,
                     ));
+                }
+                Task::none()
+            }
+
+            // -- IME events --
+            Message::ImeOpened => {
+                if let Some(tag) = self.core.active_subscriptions.get("on_ime") {
+                    emit_event(OutgoingEvent::ime_opened(tag.clone()));
+                }
+                Task::none()
+            }
+            Message::ImePreedit(text, cursor) => {
+                if let Some(tag) = self.core.active_subscriptions.get("on_ime") {
+                    emit_event(OutgoingEvent::ime_preedit(tag.clone(), text, cursor));
+                }
+                Task::none()
+            }
+            Message::ImeCommit(text) => {
+                if let Some(tag) = self.core.active_subscriptions.get("on_ime") {
+                    emit_event(OutgoingEvent::ime_commit(tag.clone(), text));
+                }
+                Task::none()
+            }
+            Message::ImeClosed => {
+                if let Some(tag) = self.core.active_subscriptions.get("on_ime") {
+                    emit_event(OutgoingEvent::ime_closed(tag.clone()));
                 }
                 Task::none()
             }
@@ -936,6 +972,26 @@ impl App {
             }));
         }
 
+        // -- IME subscriptions --
+        if self.core.active_subscriptions.contains_key("on_ime") {
+            subs.push(event::listen_with(|evt, _status, _window| match evt {
+                iced::Event::InputMethod(iced::advanced::input_method::Event::Opened) => {
+                    Some(Message::ImeOpened)
+                }
+                iced::Event::InputMethod(iced::advanced::input_method::Event::Preedit(
+                    text,
+                    cursor,
+                )) => Some(Message::ImePreedit(text, cursor)),
+                iced::Event::InputMethod(iced::advanced::input_method::Event::Commit(text)) => {
+                    Some(Message::ImeCommit(text))
+                }
+                iced::Event::InputMethod(iced::advanced::input_method::Event::Closed) => {
+                    Some(Message::ImeClosed)
+                }
+                _ => None,
+            }));
+        }
+
         // -- Window event subscriptions --
         if self
             .core
@@ -1065,6 +1121,20 @@ impl App {
                 }
                 iced::Event::Touch(iced::touch::Event::FingerLost { id, position }) => {
                     Some(Message::FingerLost(id, position, window))
+                }
+                // IME
+                iced::Event::InputMethod(iced::advanced::input_method::Event::Opened) => {
+                    Some(Message::ImeOpened)
+                }
+                iced::Event::InputMethod(iced::advanced::input_method::Event::Preedit(
+                    text,
+                    cursor,
+                )) => Some(Message::ImePreedit(text, cursor)),
+                iced::Event::InputMethod(iced::advanced::input_method::Event::Commit(text)) => {
+                    Some(Message::ImeCommit(text))
+                }
+                iced::Event::InputMethod(iced::advanced::input_method::Event::Closed) => {
+                    Some(Message::ImeClosed)
                 }
                 // Window events handled by on_window_event
                 _ => None,
@@ -1816,6 +1886,13 @@ impl App {
                 } else {
                     Task::none()
                 }
+            }
+            "allow_automatic_tabbing" => {
+                let enabled = settings
+                    .get("enabled")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true);
+                window::allow_automatic_tabbing(enabled)
             }
             other => {
                 log::warn!("unknown window_op: {other}");

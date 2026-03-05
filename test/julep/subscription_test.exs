@@ -71,6 +71,17 @@ defmodule Julep.SubscriptionTest do
     end
   end
 
+  describe "on_ime/1" do
+    test "returns a map with type and tag" do
+      spec = Subscription.on_ime(:ime_input)
+      assert spec == %{type: :on_ime, tag: :ime_input}
+    end
+
+    test "rejects non-atom tag" do
+      assert_raise FunctionClauseError, fn -> Subscription.on_ime("nope") end
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # describe "key/1"
   # ---------------------------------------------------------------------------

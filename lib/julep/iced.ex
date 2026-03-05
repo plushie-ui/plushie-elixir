@@ -175,6 +175,16 @@ defmodule Julep.Iced do
   def keyed_column(id, props \\ %{}, children \\ []),
     do: Node.build(id, "keyed_column", props, children)
 
+  @doc """
+  Overlay container -- positions second child as a floating overlay relative
+  to the first child (anchor).
+
+  See `Julep.Iced.Widget.Overlay` for full props documentation.
+  """
+  @spec overlay(id :: String.t(), props :: props(), children :: [ui_node()]) :: ui_node()
+  def overlay(id, props \\ %{}, children \\ []),
+    do: Node.build(id, "overlay", props, children)
+
   # ---------------------------------------------------------------------------
   # Input widgets
   # ---------------------------------------------------------------------------
@@ -381,4 +391,12 @@ defmodule Julep.Iced do
   """
   @spec table(id :: String.t(), props :: props()) :: ui_node()
   def table(id, props \\ %{}), do: Node.build(id, "table", props)
+
+  @doc """
+  QR code display -- renders a QR code from a data string.
+
+  See `Julep.Iced.Widget.QrCode` for full props documentation.
+  """
+  @spec qr_code(id :: String.t(), props :: props()) :: ui_node()
+  def qr_code(id, props \\ %{}), do: Node.build(id, "qr_code", props)
 end

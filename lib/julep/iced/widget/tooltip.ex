@@ -37,6 +37,7 @@ defmodule Julep.Iced.Widget.Tooltip do
           | {:gap, number()}
           | {:padding, number()}
           | {:snap_within_viewport, boolean()}
+          | {:delay, non_neg_integer()}
           | {:style, style()}
 
   @type t :: %__MODULE__{
@@ -46,11 +47,22 @@ defmodule Julep.Iced.Widget.Tooltip do
           gap: number() | nil,
           padding: number() | nil,
           snap_within_viewport: boolean() | nil,
+          delay: non_neg_integer() | nil,
           style: style() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
-  defstruct [:id, :tip, :position, :gap, :padding, :snap_within_viewport, :style, children: []]
+  defstruct [
+    :id,
+    :tip,
+    :position,
+    :gap,
+    :padding,
+    :snap_within_viewport,
+    :delay,
+    :style,
+    children: []
+  ]
 
   @doc "Creates a new tooltip struct with the given tip text and optional keyword opts."
   @spec new(id :: String.t(), tip :: String.t(), opts :: [option()]) :: t()
@@ -68,6 +80,7 @@ defmodule Julep.Iced.Widget.Tooltip do
       {:gap, v}, acc -> gap(acc, v)
       {:padding, v}, acc -> padding(acc, v)
       {:snap_within_viewport, v}, acc -> snap_within_viewport(acc, v)
+      {:delay, v}, acc -> delay(acc, v)
       {:style, v}, acc -> style(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -88,6 +101,10 @@ defmodule Julep.Iced.Widget.Tooltip do
   @doc "Sets whether the tooltip snaps within the viewport."
   @spec snap_within_viewport(tooltip :: t(), snap :: boolean()) :: t()
   def snap_within_viewport(%__MODULE__{} = tt, snap), do: %{tt | snap_within_viewport: snap}
+
+  @doc "Sets the tooltip delay in milliseconds before showing."
+  @spec delay(tooltip :: t(), delay :: non_neg_integer()) :: t()
+  def delay(%__MODULE__{} = tt, delay), do: %{tt | delay: delay}
 
   @doc "Sets the tooltip style."
   @spec style(tooltip :: t(), style :: style()) :: t()
@@ -116,6 +133,7 @@ defmodule Julep.Iced.Widget.Tooltip do
         |> put_if(tt.gap, "gap")
         |> put_if(tt.padding, "padding")
         |> put_if(tt.snap_within_viewport, "snap_within_viewport")
+        |> put_if(tt.delay, "delay")
         |> put_if(tt.style, "style")
 
       %{id: tt.id, type: "tooltip", props: props, children: children_to_nodes(tt.children)}

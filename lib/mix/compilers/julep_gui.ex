@@ -36,7 +36,7 @@ defmodule Mix.Tasks.Compile.JulepGui do
   defp compile(manifest_path, sources) do
     Mix.shell().info("Compiling julep_gui...")
 
-    cmd_args = ["build", "--manifest-path", manifest_path]
+    cmd_args = ["build", "--manifest-path", manifest_path] ++ feature_flags()
 
     case System.cmd("cargo", cmd_args, stderr_to_stdout: true) do
       {_output, 0} ->
@@ -54,6 +54,18 @@ defmodule Mix.Tasks.Compile.JulepGui do
         }
 
         {:error, [diagnostic]}
+    end
+  end
+
+  defp feature_flags do
+    case Application.get_env(:julep, :iced_features, :all) do
+      :all ->
+        []
+
+      features when is_list(features) ->
+        widget_features = Enum.map(features, &Julep.Features.cargo_feature_name/1)
+        all_features = widget_features ++ ["dialogs", "clipboard", "notifications"]
+        ["--no-default-features", "--features", Enum.join(all_features, ",")]
     end
   end
 

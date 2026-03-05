@@ -905,6 +905,48 @@ defmodule Julep.Protocol do
     {:wheel_scrolled, dx, dy, unit}
   end
 
+  # -- IME events --
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "ime",
+         "data" => %{"kind" => "opened"}
+       }) do
+    {:ime_opened}
+  end
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "ime",
+         "data" => %{"kind" => "preedit", "text" => text, "cursor" => %{"start" => s, "end" => e}}
+       }) do
+    {:ime_preedit, text, {s, e}}
+  end
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "ime",
+         "data" => %{"kind" => "preedit", "text" => text}
+       }) do
+    {:ime_preedit, text, nil}
+  end
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "ime",
+         "data" => %{"kind" => "commit", "text" => text}
+       }) do
+    {:ime_commit, text}
+  end
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "ime",
+         "data" => %{"kind" => "closed"}
+       }) do
+    {:ime_closed}
+  end
+
   # -- Touch events --
 
   defp dispatch(%{

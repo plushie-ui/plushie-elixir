@@ -12,6 +12,7 @@ defmodule Julep.Iced.Widget.TooltipTest do
       assert tt.gap == nil
       assert tt.padding == nil
       assert tt.snap_within_viewport == nil
+      assert tt.delay == nil
       assert tt.style == nil
       assert tt.children == []
     end
@@ -47,6 +48,11 @@ defmodule Julep.Iced.Widget.TooltipTest do
     test "style/2 sets the style field" do
       tt = Tooltip.new("tt1", "Tip") |> Tooltip.style(:dark)
       assert tt.style == :dark
+    end
+
+    test "delay/2 sets the delay field" do
+      tt = Tooltip.new("tt1", "Tip") |> Tooltip.delay(500)
+      assert tt.delay == 500
     end
   end
 
@@ -88,12 +94,18 @@ defmodule Julep.Iced.Widget.TooltipTest do
       assert node.props["style"] == "primary"
     end
 
+    test "includes delay in props when set" do
+      node = Tooltip.new("tt1", "Tip") |> Tooltip.delay(300) |> Tooltip.build()
+      assert node.props["delay"] == 300
+    end
+
     test "omits nil props" do
       node = Tooltip.new("tt1", "Tip") |> Tooltip.build()
       refute Map.has_key?(node.props, "position")
       refute Map.has_key?(node.props, "gap")
       refute Map.has_key?(node.props, "padding")
       refute Map.has_key?(node.props, "snap_within_viewport")
+      refute Map.has_key?(node.props, "delay")
       refute Map.has_key?(node.props, "style")
     end
 
@@ -116,6 +128,7 @@ defmodule Julep.Iced.Widget.TooltipTest do
           gap: 6,
           padding: 10,
           snap_within_viewport: true,
+          delay: 200,
           style: :warning
         )
 
@@ -123,6 +136,7 @@ defmodule Julep.Iced.Widget.TooltipTest do
       assert tt.gap == 6
       assert tt.padding == 10
       assert tt.snap_within_viewport == true
+      assert tt.delay == 200
       assert tt.style == :warning
     end
 

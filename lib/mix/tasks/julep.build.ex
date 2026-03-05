@@ -16,6 +16,7 @@ defmodule Mix.Tasks.Julep.Build do
 
     cmd_args = ["build", "--manifest-path", manifest_path]
     cmd_args = if release?, do: cmd_args ++ ["--release"], else: cmd_args
+    cmd_args = cmd_args ++ feature_flags()
 
     Mix.shell().info("Building julep_gui#{if release?, do: " (release)", else: ""}...")
 
@@ -29,6 +30,20 @@ defmodule Mix.Tasks.Julep.Build do
         Mix.shell().error("Build failed (exit code #{status}):")
         Mix.shell().error(output)
         Mix.raise("cargo build failed")
+    end
+  end
+
+  defp feature_flags do
+    case Application.get_env(:julep, :iced_features, :all) do
+      :all ->
+        # Default Cargo features include builtin-all -- no extra flags needed.
+        []
+
+      features when is_list(features) ->
+        # Build with only the requested widget features plus the non-widget defaults.
+        widget_features = Enum.map(features, &Julep.Features.cargo_feature_name/1)
+        all_features = widget_features ++ ["dialogs", "clipboard", "notifications"]
+        ["--no-default-features", "--features", Enum.join(all_features, ",")]
     end
   end
 end

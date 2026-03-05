@@ -376,6 +376,54 @@ defmodule Julep.UI do
     end
   end
 
+  # -- overlay(id, opts) ------------------------------------------------------
+
+  @doc """
+  Overlay container. First child is the anchor, second is the overlay content.
+
+  ## Options
+
+  - `:position` -- `:below`, `:above`, `:left`, `:right`
+  - `:gap` -- space between anchor and overlay in pixels
+  - `:offset_x` -- horizontal offset in pixels
+  - `:offset_y` -- vertical offset in pixels
+
+  ## Example
+
+      overlay "popup", position: :below, gap: 4 do
+        button("anchor", "Click me")
+        container "dropdown" do
+          text("dropdown_text", "Dropdown content")
+        end
+      end
+  """
+  defmacro overlay(id, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_fixed_node__("overlay", unquote(id), [], children)
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_fixed_node__("overlay", unquote(id), unquote(opts), [])
+        end
+    end
+  end
+
+  @doc false
+  defmacro overlay(id, opts, do: block) do
+    exprs = block_to_exprs(block)
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Julep.UI.__build_fixed_node__("overlay", unquote(id), unquote(opts), children)
+    end
+  end
+
   # -- scrollable(id, opts) ---------------------------------------------------
 
   @doc """
@@ -1605,6 +1653,41 @@ defmodule Julep.UI do
         ) ::
           [Julep.Iced.ui_node()]
   defdelegate find_all(tree, id_or_pred), to: Julep.Tree
+
+  # ---------------------------------------------------------------------------
+  # QR Code (function -- no children)
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  QR code display. No children.
+
+  ## Arguments
+
+  - `id` -- unique identifier
+  - `data` -- the string to encode
+
+  ## Options
+
+  - `:cell_size` -- size of each QR module in pixels (default 4.0)
+  - `:cell_color` -- color of dark modules
+  - `:background_color` -- color of light modules
+  - `:error_correction` -- `:low`, `:medium` (default), `:quartile`, `:high`
+
+  ## Example
+
+      qr_code("my_qr", "https://example.com", cell_size: 6)
+  """
+  @spec qr_code(id :: String.t(), data :: String.t(), opts :: keyword()) :: Julep.Iced.ui_node()
+  def qr_code(id, data, opts \\ []) do
+    base_props = %{"data" => data}
+
+    extra_props =
+      opts
+      |> Keyword.drop([:children, :id, :do])
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+
+    %{id: id, type: "qr_code", props: Map.merge(base_props, extra_props), children: []}
+  end
 
   # ---------------------------------------------------------------------------
   # Private macro helpers

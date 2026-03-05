@@ -4,7 +4,7 @@ defmodule Julep.Iced.Widget.Sensor do
 
   ## Props
 
-  No additional props beyond children. Events are derived from the node ID.
+  - `delay` (non_neg_integer) -- delay in milliseconds before emitting events.
 
   ## Events
 
@@ -13,16 +13,36 @@ defmodule Julep.Iced.Widget.Sensor do
   - `{:click, "id:hide"}` -- emitted when child becomes hidden.
   """
 
+  alias Julep.Iced.Widget.Build
+
+  @type option :: {:delay, non_neg_integer()}
+
   @type t :: %__MODULE__{
           id: String.t(),
+          delay: non_neg_integer() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
-  defstruct [:id, children: []]
+  defstruct [:id, :delay, children: []]
 
-  @doc "Creates a new sensor struct."
-  @spec new(id :: String.t()) :: t()
-  def new(id) when is_binary(id), do: %__MODULE__{id: id}
+  @doc "Creates a new sensor struct with optional keyword opts."
+  @spec new(id :: String.t(), opts :: [option()]) :: t()
+  def new(id, opts \\ []) when is_binary(id), do: %__MODULE__{id: id} |> with_options(opts)
+
+  @doc "Applies keyword options to an existing sensor struct."
+  @spec with_options(sensor :: t(), opts :: [option()]) :: t()
+  def with_options(%__MODULE__{} = sensor, []), do: sensor
+
+  def with_options(%__MODULE__{} = sensor, opts) do
+    Enum.reduce(opts, sensor, fn
+      {:delay, v}, acc -> delay(acc, v)
+      {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
+    end)
+  end
+
+  @doc "Sets the sensor delay in milliseconds."
+  @spec delay(sensor :: t(), delay :: non_neg_integer()) :: t()
+  def delay(%__MODULE__{} = sensor, delay), do: %{sensor | delay: delay}
 
   @doc "Appends a child to the sensor."
   @spec push(sensor :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
@@ -41,10 +61,14 @@ defmodule Julep.Iced.Widget.Sensor do
     import Julep.Iced.Widget.Build
 
     def to_node(sensor) do
+      props =
+        %{}
+        |> put_if(sensor.delay, "delay")
+
       %{
         id: sensor.id,
         type: "sensor",
-        props: %{},
+        props: props,
         children: children_to_nodes(sensor.children)
       }
     end
