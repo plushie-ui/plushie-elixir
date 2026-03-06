@@ -36,8 +36,7 @@ defmodule Mix.Tasks.Compile.JulepGui do
   defp compile(manifest_path, sources) do
     Mix.shell().info("Compiling julep_gui...")
 
-    cmd_args =
-      ["build", "--manifest-path", manifest_path, "-p", "julep-bin"] ++ feature_flags()
+    cmd_args = ["build", "--manifest-path", manifest_path] ++ feature_flags()
 
     case System.cmd("cargo", cmd_args, stderr_to_stdout: true) do
       {_output, 0} ->
@@ -71,13 +70,41 @@ defmodule Mix.Tasks.Compile.JulepGui do
   end
 
   defp rust_sources do
-    Path.wildcard(Path.join(@native_dir, "**/*.rs")) ++
-      [
-        Path.join(@native_dir, "Cargo.toml"),
-        Path.join(@native_dir, "Cargo.lock"),
-        Path.join([@native_dir, "julep-core", "Cargo.toml"]),
-        Path.join([@native_dir, "julep-bin", "Cargo.toml"])
-      ]
+    stock =
+      Path.wildcard(Path.join(@native_dir, "{src,tests}/**/*.rs")) ++
+        [Path.join(@native_dir, "Cargo.toml"), Path.join(@native_dir, "Cargo.lock")]
+
+    stock ++ extension_sources()
+  end
+
+  defp extension_sources do
+    extensions = Mix.Tasks.Julep.Build.discover_extensions()
+
+    Enum.flat_map(extensions, fn mod ->
+      crate_path = resolve_extension_crate_path(mod)
+
+      if File.dir?(crate_path) do
+        Path.wildcard(Path.join(crate_path, "{src,tests}/**/*.rs")) ++
+          [Path.join(crate_path, "Cargo.toml")]
+      else
+        []
+      end
+    end)
+  end
+
+  defp resolve_extension_crate_path(mod) do
+    deps_paths = Mix.Project.deps_paths()
+    app = Application.get_application(mod)
+    crate_rel = mod.native_crate()
+
+    base =
+      if app && Map.has_key?(deps_paths, app) do
+        deps_paths[app]
+      else
+        File.cwd!()
+      end
+
+    Path.join(base, crate_rel)
   end
 
   defp needs_rebuild?(_sources, nil), do: true
