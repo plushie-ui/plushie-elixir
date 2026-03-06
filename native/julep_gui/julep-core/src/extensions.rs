@@ -146,8 +146,7 @@ impl Default for ExtensionCaches {
 
 /// Environment passed to extension render().
 pub struct WidgetEnv<'a> {
-    pub caches: &'a WidgetCaches,
-    pub extension_caches: &'a ExtensionCaches,
+    pub caches: &'a ExtensionCaches,
     pub images: &'a ImageRegistry,
     pub theme: &'a Theme,
     pub render_ctx: RenderContext<'a>,
@@ -338,15 +337,24 @@ impl ExtensionDispatcher {
         }
     }
 
-    /// Route configuration to extensions.
+    /// Route configuration to extensions. `config` is the value of the
+    /// `extension_config` key from Settings -- a JSON object keyed by
+    /// each extension's `config_key()`.
     pub fn init_all(&mut self, config: &Value) {
-        let ext_config = config.get("extension_config").unwrap_or(&Value::Null);
         for (idx, ext) in self.extensions.iter_mut().enumerate() {
             if self.poisoned[idx] {
                 continue;
             }
-            let slice = ext_config.get(ext.config_key()).unwrap_or(&Value::Null);
-            ext.init(slice);
+            let key = ext.config_key().to_string();
+            let slice = config.get(&key).unwrap_or(&Value::Null);
+            let result = catch_unwind(AssertUnwindSafe(|| {
+                ext.init(slice);
+            }));
+            if let Err(panic) = result {
+                let msg = panic_message(&panic);
+                log::error!("extension `{key}` panicked in init: {msg}");
+                self.poisoned[idx] = true;
+            }
         }
     }
 

@@ -71,7 +71,7 @@ defmodule Mix.Tasks.Compile.JulepGui do
 
   defp rust_sources do
     stock =
-      Path.wildcard(Path.join(@native_dir, "{src,tests}/**/*.rs")) ++
+      Path.wildcard(Path.join(@native_dir, "**/*.rs")) ++
         [Path.join(@native_dir, "Cargo.toml"), Path.join(@native_dir, "Cargo.lock")]
 
     stock ++ extension_sources()

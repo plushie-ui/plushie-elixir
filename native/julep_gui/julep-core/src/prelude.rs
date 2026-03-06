@@ -9,13 +9,15 @@ pub use crate::extensions::{
     EventResult, ExtensionCaches, ExtensionDispatcher, RenderContext, WidgetEnv, WidgetExtension,
 };
 
+// App builder
+pub use crate::app::JulepAppBuilder;
+
 // Wire types
 pub use crate::message::Message;
 pub use crate::protocol::{OutgoingEvent, TreeNode};
 
-// Renderer internals extensions may need
+// Renderer types extensions may need
 pub use crate::image_registry::ImageRegistry;
-pub use crate::widgets::WidgetCaches;
 
 // Prop helpers
 pub use crate::prop_helpers::*;

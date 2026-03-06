@@ -313,15 +313,25 @@ pub fn render<'a>(
                     extensions: dispatcher,
                 };
                 let env = crate::extensions::WidgetEnv {
-                    caches,
-                    extension_caches: &caches.extension,
+                    caches: &caches.extension,
                     images,
                     theme,
                     render_ctx,
                 };
-                dispatcher
-                    .render(node, &env)
-                    .unwrap_or_else(|| container(Space::new()).into())
+                // catch_unwind at the render boundary: extension panics produce
+                // a red placeholder instead of crashing the renderer.
+                match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    dispatcher.render(node, &env)
+                })) {
+                    Ok(Some(element)) => element,
+                    Ok(None) => container(Space::new()).into(),
+                    Err(_) => {
+                        log::error!("extension panicked in render for node `{}`", node.id);
+                        iced::widget::text(format!("Extension error: node `{}`", node.id))
+                            .color(iced::Color::from_rgb(1.0, 0.0, 0.0))
+                            .into()
+                    }
+                }
             } else {
                 log::warn!("unknown node type `{unknown}`, rendering as empty container");
                 container(Space::new()).into()

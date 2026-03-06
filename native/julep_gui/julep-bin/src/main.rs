@@ -2519,8 +2519,7 @@ fn main() -> iced::Result {
                 .take()
                 .unwrap_or_default();
 
-            let builder = julep_core::app::JulepAppBuilder::new().test_mode(test_mode);
-            let dispatcher = builder.build_dispatcher();
+            let dispatcher = julep_core::app::JulepAppBuilder::new().build_dispatcher();
             let mut app = App::new(test_mode, dispatcher);
 
             // Extract scale_factor before applying settings to Core
