@@ -100,7 +100,7 @@ defmodule Mix.Tasks.Julep.Preflight do
   end
 
   defp cargo_fmt do
-    case cmd("cargo", ["fmt", "--manifest-path", cargo_manifest(), "--", "--check"]) do
+    case cmd("cargo", ["fmt", "--all", "--manifest-path", cargo_manifest(), "--", "--check"]) do
       0 -> :ok
       code -> {:error, code}
     end

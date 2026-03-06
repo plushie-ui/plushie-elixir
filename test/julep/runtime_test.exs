@@ -1006,7 +1006,7 @@ defmodule Julep.RuntimeTest do
       await_initial_render(runtime)
 
       settings_list = Julep.Test.MockBridge.get_settings(bridge)
-      assert length(settings_list) >= 1
+      assert settings_list != []
 
       # The first settings message should contain the extension_config.
       settings = hd(settings_list)
@@ -1022,7 +1022,7 @@ defmodule Julep.RuntimeTest do
       await_initial_render(runtime)
 
       settings_list = Julep.Test.MockBridge.get_settings(bridge)
-      assert length(settings_list) >= 1
+      assert settings_list != []
 
       settings = hd(settings_list)
       refute Map.has_key?(settings, "extension_config")
