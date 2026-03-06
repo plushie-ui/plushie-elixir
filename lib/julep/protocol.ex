@@ -1146,7 +1146,21 @@ defmodule Julep.Protocol do
          "action" => action,
          "window_id" => window_id
        }) do
-    {:window, String.to_atom(action), window_id}
+    atom_action =
+      try do
+        String.to_existing_atom(action)
+      rescue
+        ArgumentError ->
+          require Logger
+          Logger.warning("julep protocol: unknown legacy window action: #{inspect(action)}")
+          nil
+      end
+
+    if atom_action do
+      {:window, atom_action, window_id}
+    else
+      {:error, {:unknown_window_action, action}}
+    end
   end
 
   # -- MouseArea events --

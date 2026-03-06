@@ -177,7 +177,7 @@ defmodule Julep.Test.EventMap do
           delta_x :: number(),
           delta_y :: number()
         ) :: {:ok, tuple()} | {:error, String.t()}
-  def canvas_scroll(element, x, y, delta_x \\ 0, delta_y \\ 1)
+  def canvas_scroll(element, x, y, delta_x \\ 0.0, delta_y \\ 1.0)
 
   def canvas_scroll(%Element{type: "canvas", id: id}, x, y, delta_x, delta_y) do
     {:ok, {:canvas_scroll, id, x, y, delta_x, delta_y}}

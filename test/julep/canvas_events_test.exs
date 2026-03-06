@@ -77,18 +77,18 @@ defmodule Julep.CanvasEventsTest do
 
   describe "canvas interactive props" do
     test "canvas node with interactive prop" do
-      node = Julep.Iced.canvas("c1", %{interactive: true, shapes: []})
+      node = Julep.Iced.canvas("c1", %{interactive: true, layers: %{}})
       assert node.props["interactive"] == true
     end
 
     test "canvas node with individual event props" do
-      node = Julep.Iced.canvas("c1", %{on_press: true, on_move: true, shapes: []})
+      node = Julep.Iced.canvas("c1", %{on_press: true, on_move: true, layers: %{}})
       assert node.props["on_press"] == true
       assert node.props["on_move"] == true
     end
 
     test "canvas node has correct type" do
-      node = Julep.Iced.canvas("c1", %{shapes: []})
+      node = Julep.Iced.canvas("c1", %{layers: %{}})
       assert node.id == "c1"
       assert node.type == "canvas"
     end

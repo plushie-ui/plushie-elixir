@@ -30,7 +30,7 @@ defmodule Julep.Runtime do
         model:        term(),          # current application model
         bridge:       pid() | atom(),  # Julep.Bridge pid or registered name
         tree:         map() | nil,     # last normalized tree (for re-send on restart)
-        async_tasks:  map()            # %{tag => pid} for running async/stream tasks
+        async_tasks:  map()            # %{tag => {pid, nonce}} for running async/stream tasks
       }
 
   ## Exit trapping
@@ -176,24 +176,32 @@ defmodule Julep.Runtime do
   # Async task completions
   # ---------------------------------------------------------------------------
 
-  def handle_info({:async_result, tag, result}, state) do
-    # Only remove the task from tracking if the process has exited (i.e. this
-    # is the final result, not an intermediate stream emit).
-    state =
-      case Map.get(state.async_tasks, tag) do
-        pid when is_pid(pid) ->
-          if Process.alive?(pid) do
-            state
-          else
-            %{state | async_tasks: Map.delete(state.async_tasks, tag)}
-          end
+  def handle_info({:async_result, tag, nonce, result}, state) do
+    case Map.get(state.async_tasks, tag) do
+      {_pid, ^nonce} ->
+        # Nonce matches -- this is from the current task.
+        state = run_update(state, {tag, result})
+        {:noreply, state}
 
-        _ ->
-          state
-      end
+      _ ->
+        # Stale or unknown -- discard.
+        {:noreply, state}
+    end
+  end
 
-    state = run_update(state, {tag, result})
-    {:noreply, state}
+  def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
+    # Clean up async_tasks entry when the task process exits.
+    tag =
+      Enum.find_value(state.async_tasks, fn
+        {tag, {^pid, _nonce}} -> tag
+        _ -> nil
+      end)
+
+    if tag do
+      {:noreply, %{state | async_tasks: Map.delete(state.async_tasks, tag)}}
+    else
+      {:noreply, state}
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -393,14 +401,16 @@ defmodule Julep.Runtime do
 
   defp execute_command(%Julep.Command{type: :async, payload: %{fun: fun, tag: tag}}, state) do
     runtime = self()
+    nonce = make_ref()
 
     {:ok, pid} =
       Task.start_link(fn ->
         result = fun.()
-        send(runtime, {:async_result, tag, result})
+        send(runtime, {:async_result, tag, nonce, result})
       end)
 
-    put_in(state.async_tasks[tag], pid)
+    Process.monitor(pid)
+    put_in(state.async_tasks[tag], {pid, nonce})
   end
 
   defp execute_command(
@@ -408,25 +418,27 @@ defmodule Julep.Runtime do
          state
        ) do
     runtime = self()
-    emit = fn value -> send(runtime, {:async_result, tag, value}) end
+    nonce = make_ref()
+    emit = fn value -> send(runtime, {:async_result, tag, nonce, value}) end
 
     {:ok, pid} =
       Task.start_link(fn ->
         result = fun.(emit)
-        send(runtime, {:async_result, tag, result})
+        send(runtime, {:async_result, tag, nonce, result})
       end)
 
-    put_in(state.async_tasks[tag], pid)
+    Process.monitor(pid)
+    put_in(state.async_tasks[tag], {pid, nonce})
   end
 
   defp execute_command(%Julep.Command{type: :cancel, payload: %{tag: tag}}, state) do
     case Map.get(state.async_tasks, tag) do
-      nil ->
-        state
-
-      pid ->
+      {pid, _nonce} when is_pid(pid) ->
         Process.exit(pid, :kill)
         %{state | async_tasks: Map.delete(state.async_tasks, tag)}
+
+      nil ->
+        state
     end
   end
 
@@ -632,7 +644,8 @@ defmodule Julep.Runtime do
               :on_theme_change,
               :on_animation_frame,
               :on_file_drop,
-              :on_event
+              :on_event,
+              :on_modifiers_changed
             ] do
     if bridge do
       Julep.Bridge.send_subscription_register(bridge, Atom.to_string(type), Atom.to_string(tag))

@@ -201,7 +201,7 @@ defmodule Julep.Test.EventMapTest do
 
   describe "canvas_scroll/5" do
     test "returns canvas_scroll event with default deltas" do
-      assert {:ok, {:canvas_scroll, "drawing", 5.0, 5.0, 0, 1}} =
+      assert {:ok, {:canvas_scroll, "drawing", 5.0, 5.0, 0.0, 1.0}} =
                EventMap.canvas_scroll(el("drawing", "canvas"), 5.0, 5.0)
     end
 

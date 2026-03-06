@@ -95,6 +95,7 @@ impl Core {
                 self.tree.apply_patch(ops);
                 if let Some(root) = self.tree.root() {
                     widgets::ensure_caches(root, &mut self.caches);
+                    widgets::prune_stale_canvas_caches(root, &mut self.caches);
                 }
                 effects.push(CoreEffect::SyncWindows);
             }

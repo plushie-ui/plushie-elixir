@@ -426,7 +426,18 @@ defmodule Julep.Test.Backend.Headless do
     {:cursor_moved, x, y}
   end
 
-  defp decode_event(type, id, _event), do: {String.to_atom(type), id}
+  defp decode_event(type, id, _event) do
+    atom =
+      try do
+        String.to_existing_atom(type)
+      rescue
+        ArgumentError ->
+          reraise "unknown event type #{inspect(type)} for widget #{inspect(id)}",
+                  __STACKTRACE__
+      end
+
+    {atom, id}
+  end
 
   defp decode_key_event(event) do
     key_str = event["key"] || ""

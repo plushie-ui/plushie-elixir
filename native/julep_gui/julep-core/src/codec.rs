@@ -156,16 +156,21 @@ fn rmpv_to_json(val: rmpv::Value) -> serde_json::Value {
         }
         rmpv::Value::F32(f) => serde_json::Number::from_f64(f as f64)
             .map(serde_json::Value::Number)
-            .unwrap_or(serde_json::Value::Null),
+            .unwrap_or_else(|| {
+                log::warn!("rmpv_to_json: non-finite f32 ({f}) replaced with 0.0");
+                serde_json::Value::Number(serde_json::Number::from_f64(0.0).unwrap())
+            }),
         rmpv::Value::F64(f) => serde_json::Number::from_f64(f)
             .map(serde_json::Value::Number)
-            .unwrap_or(serde_json::Value::Null),
+            .unwrap_or_else(|| {
+                log::warn!("rmpv_to_json: non-finite f64 ({f}) replaced with 0.0");
+                serde_json::Value::Number(serde_json::Number::from_f64(0.0).unwrap())
+            }),
         rmpv::Value::String(s) => {
-            // rmpv::Utf8String -- may or may not be valid UTF-8
-            match s.into_str() {
-                Some(valid) => serde_json::Value::String(valid.to_string()),
-                None => serde_json::Value::Null,
-            }
+            // rmpv::Utf8String -- may or may not be valid UTF-8.
+            // Use lossy conversion so invalid bytes become U+FFFD instead of
+            // silently mapping to null (which breaks tag dispatch on "type").
+            serde_json::Value::String(String::from_utf8_lossy(s.as_bytes()).into_owned())
         }
         rmpv::Value::Binary(bytes) => {
             // Preserve raw bytes as a JSON array of u8 values.
@@ -193,8 +198,10 @@ fn rmpv_to_json(val: rmpv::Value) -> serde_json::Value {
             }
             serde_json::Value::Object(map)
         }
-        rmpv::Value::Ext(_, _) => {
-            // Extension types not used in julep protocol
+        rmpv::Value::Ext(type_id, _bytes) => {
+            log::warn!(
+                "rmpv_to_json: msgpack ext type {type_id} not supported, replaced with null"
+            );
             serde_json::Value::Null
         }
     }

@@ -33,8 +33,12 @@ defmodule Julep.Subscription do
   @typedoc """
   A subscription specification. Every subscription has a `:type` atom
   identifying the kind (`:every`, `:on_key_press`, etc.) and a `:tag`
-  atom used as the event prefix in `update/2`. Additional keys vary
-  by subscription type.
+  atom used for subscription management. For timer subscriptions, the
+  tag is also the event prefix in `update/2` (e.g. `{tag, timestamp}`).
+  For renderer subscriptions (keyboard, window, mouse, etc.), the tag
+  is sent to the renderer to register/unregister the listener but is
+  not included in the event tuple -- those use fixed event names like
+  `:key_press`, `:key_release`, etc. Additional keys vary by type.
   """
   @type t :: %{optional(atom()) => term(), type: atom(), tag: atom()}
 
@@ -54,9 +58,11 @@ defmodule Julep.Subscription do
   Fires on key press events from the renderer.
 
   Delivers `{:key_press, %Julep.KeyEvent{}}` to `update/2`. The
-  `KeyEvent` struct contains `key`, `modified_key`, `physical_key`,
-  `location`, `modifiers` (a `%Julep.KeyModifiers{}`), `text`, and
-  `repeat` fields. See `Julep.KeyEvent` for full details.
+  `event_tag` is used internally by the runtime to register/unregister
+  the subscription with the renderer -- it is not included in the event
+  tuple delivered to `update/2`.
+
+  See `Julep.KeyEvent` and `Julep.KeyModifiers` for struct definitions.
   """
   @spec on_key_press(event_tag :: atom()) :: t()
   def on_key_press(event_tag) when is_atom(event_tag) do
@@ -66,8 +72,9 @@ defmodule Julep.Subscription do
   @doc """
   Fires on key release events from the renderer.
 
-  Delivers `{:key_release, %Julep.KeyEvent{}}` to `update/2`. Same format
-  as `on_key_press/1`.
+  Delivers `{:key_release, %Julep.KeyEvent{}}` to `update/2`. Same
+  format as `on_key_press/1`. The `event_tag` is used for subscription
+  management only.
   """
   @spec on_key_release(event_tag :: atom()) :: t()
   def on_key_release(event_tag) when is_atom(event_tag) do
@@ -246,6 +253,12 @@ defmodule Julep.Subscription do
   @spec on_event(event_tag :: atom()) :: t()
   def on_event(event_tag) when is_atom(event_tag) do
     %{type: :on_event, tag: event_tag}
+  end
+
+  @doc "Subscribes to keyboard modifier state changes (shift, ctrl, alt, etc.)."
+  @spec on_modifiers_changed(tag :: atom()) :: t()
+  def on_modifiers_changed(tag) when is_atom(tag) do
+    %{type: :on_modifiers_changed, tag: tag}
   end
 
   @doc "Combines a list of subscriptions. Identity function -- returns the list as-is."

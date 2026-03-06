@@ -266,19 +266,34 @@ impl App {
 
             // -- Keyboard events --
             Message::KeyPressed(data) => {
-                if let Some(tag) = self.core.active_subscriptions.get("on_key_press") {
+                let tag = self
+                    .core
+                    .active_subscriptions
+                    .get("on_key_press")
+                    .or_else(|| self.core.active_subscriptions.get("on_event"));
+                if let Some(tag) = tag {
                     emit_event(OutgoingEvent::key_press(tag.clone(), &data));
                 }
                 Task::none()
             }
             Message::KeyReleased(data) => {
-                if let Some(tag) = self.core.active_subscriptions.get("on_key_release") {
+                let tag = self
+                    .core
+                    .active_subscriptions
+                    .get("on_key_release")
+                    .or_else(|| self.core.active_subscriptions.get("on_event"));
+                if let Some(tag) = tag {
                     emit_event(OutgoingEvent::key_release(tag.clone(), &data));
                 }
                 Task::none()
             }
             Message::ModifiersChanged(mods) => {
-                if let Some(tag) = self.core.active_subscriptions.get("on_modifiers_changed") {
+                let tag = self
+                    .core
+                    .active_subscriptions
+                    .get("on_modifiers_changed")
+                    .or_else(|| self.core.active_subscriptions.get("on_event"));
+                if let Some(tag) = tag {
                     emit_event(OutgoingEvent::modifiers_changed(
                         tag.clone(),
                         serialize_modifiers(mods),
@@ -289,25 +304,45 @@ impl App {
 
             // -- Mouse events --
             Message::CursorMoved(pos, _win) => {
-                if let Some(tag) = self.core.active_subscriptions.get("on_mouse_move") {
+                let tag = self
+                    .core
+                    .active_subscriptions
+                    .get("on_mouse_move")
+                    .or_else(|| self.core.active_subscriptions.get("on_event"));
+                if let Some(tag) = tag {
                     emit_event(OutgoingEvent::cursor_moved(tag.clone(), pos.x, pos.y));
                 }
                 Task::none()
             }
             Message::CursorEntered(_win) => {
-                if let Some(tag) = self.core.active_subscriptions.get("on_mouse_move") {
+                let tag = self
+                    .core
+                    .active_subscriptions
+                    .get("on_mouse_move")
+                    .or_else(|| self.core.active_subscriptions.get("on_event"));
+                if let Some(tag) = tag {
                     emit_event(OutgoingEvent::cursor_entered(tag.clone()));
                 }
                 Task::none()
             }
             Message::CursorLeft(_win) => {
-                if let Some(tag) = self.core.active_subscriptions.get("on_mouse_move") {
+                let tag = self
+                    .core
+                    .active_subscriptions
+                    .get("on_mouse_move")
+                    .or_else(|| self.core.active_subscriptions.get("on_event"));
+                if let Some(tag) = tag {
                     emit_event(OutgoingEvent::cursor_left(tag.clone()));
                 }
                 Task::none()
             }
             Message::MouseButtonPressed(button, _win) => {
-                if let Some(tag) = self.core.active_subscriptions.get("on_mouse_button") {
+                let tag = self
+                    .core
+                    .active_subscriptions
+                    .get("on_mouse_button")
+                    .or_else(|| self.core.active_subscriptions.get("on_event"));
+                if let Some(tag) = tag {
                     emit_event(OutgoingEvent::button_pressed(
                         tag.clone(),
                         serialize_mouse_button(&button),
@@ -316,7 +351,12 @@ impl App {
                 Task::none()
             }
             Message::MouseButtonReleased(button, _win) => {
-                if let Some(tag) = self.core.active_subscriptions.get("on_mouse_button") {
+                let tag = self
+                    .core
+                    .active_subscriptions
+                    .get("on_mouse_button")
+                    .or_else(|| self.core.active_subscriptions.get("on_event"));
+                if let Some(tag) = tag {
                     emit_event(OutgoingEvent::button_released(
                         tag.clone(),
                         serialize_mouse_button(&button),
@@ -325,7 +365,12 @@ impl App {
                 Task::none()
             }
             Message::WheelScrolled(delta, _win) => {
-                if let Some(tag) = self.core.active_subscriptions.get("on_mouse_scroll") {
+                let tag = self
+                    .core
+                    .active_subscriptions
+                    .get("on_mouse_scroll")
+                    .or_else(|| self.core.active_subscriptions.get("on_event"));
+                if let Some(tag) = tag {
                     let (dx, dy, unit) = serialize_scroll_delta(&delta);
                     emit_event(OutgoingEvent::wheel_scrolled(tag.clone(), dx, dy, unit));
                 }
@@ -334,7 +379,12 @@ impl App {
 
             // -- Touch events --
             Message::FingerPressed(finger, pos, _win) => {
-                if let Some(tag) = self.core.active_subscriptions.get("on_touch") {
+                let tag = self
+                    .core
+                    .active_subscriptions
+                    .get("on_touch")
+                    .or_else(|| self.core.active_subscriptions.get("on_event"));
+                if let Some(tag) = tag {
                     emit_event(OutgoingEvent::finger_pressed(
                         tag.clone(),
                         finger.0,
@@ -345,7 +395,12 @@ impl App {
                 Task::none()
             }
             Message::FingerMoved(finger, pos, _win) => {
-                if let Some(tag) = self.core.active_subscriptions.get("on_touch") {
+                let tag = self
+                    .core
+                    .active_subscriptions
+                    .get("on_touch")
+                    .or_else(|| self.core.active_subscriptions.get("on_event"));
+                if let Some(tag) = tag {
                     emit_event(OutgoingEvent::finger_moved(
                         tag.clone(),
                         finger.0,
@@ -356,7 +411,12 @@ impl App {
                 Task::none()
             }
             Message::FingerLifted(finger, pos, _win) => {
-                if let Some(tag) = self.core.active_subscriptions.get("on_touch") {
+                let tag = self
+                    .core
+                    .active_subscriptions
+                    .get("on_touch")
+                    .or_else(|| self.core.active_subscriptions.get("on_event"));
+                if let Some(tag) = tag {
                     emit_event(OutgoingEvent::finger_lifted(
                         tag.clone(),
                         finger.0,
@@ -367,7 +427,12 @@ impl App {
                 Task::none()
             }
             Message::FingerLost(finger, pos, _win) => {
-                if let Some(tag) = self.core.active_subscriptions.get("on_touch") {
+                let tag = self
+                    .core
+                    .active_subscriptions
+                    .get("on_touch")
+                    .or_else(|| self.core.active_subscriptions.get("on_event"));
+                if let Some(tag) = tag {
                     emit_event(OutgoingEvent::finger_lost(
                         tag.clone(),
                         finger.0,
@@ -739,8 +804,10 @@ impl App {
             window::close_events().map(Message::WindowClosed),
         ];
 
+        let has_on_event = self.core.active_subscriptions.contains_key("on_event");
+
         // -- Keyboard subscriptions --
-        if self.core.active_subscriptions.contains_key("on_key_press") {
+        if has_on_event || self.core.active_subscriptions.contains_key("on_key_press") {
             subs.push(event::listen_with(|evt, _status, _window| {
                 if let iced::Event::Keyboard(iced::keyboard::Event::KeyPressed {
                     key,
@@ -767,10 +834,11 @@ impl App {
             }));
         }
 
-        if self
-            .core
-            .active_subscriptions
-            .contains_key("on_key_release")
+        if has_on_event
+            || self
+                .core
+                .active_subscriptions
+                .contains_key("on_key_release")
         {
             subs.push(event::listen_with(|evt, _status, _window| {
                 if let iced::Event::Keyboard(iced::keyboard::Event::KeyReleased {
@@ -796,10 +864,11 @@ impl App {
             }));
         }
 
-        if self
-            .core
-            .active_subscriptions
-            .contains_key("on_modifiers_changed")
+        if has_on_event
+            || self
+                .core
+                .active_subscriptions
+                .contains_key("on_modifiers_changed")
         {
             subs.push(event::listen_with(|evt, _status, _window| {
                 if let iced::Event::Keyboard(iced::keyboard::Event::ModifiersChanged(mods)) = evt {
@@ -811,7 +880,7 @@ impl App {
         }
 
         // -- Mouse subscriptions --
-        if self.core.active_subscriptions.contains_key("on_mouse_move") {
+        if has_on_event || self.core.active_subscriptions.contains_key("on_mouse_move") {
             subs.push(event::listen_with(|evt, _status, window| match evt {
                 iced::Event::Mouse(iced::mouse::Event::CursorMoved { position }) => {
                     Some(Message::CursorMoved(position, window))
@@ -826,10 +895,11 @@ impl App {
             }));
         }
 
-        if self
-            .core
-            .active_subscriptions
-            .contains_key("on_mouse_button")
+        if has_on_event
+            || self
+                .core
+                .active_subscriptions
+                .contains_key("on_mouse_button")
         {
             subs.push(event::listen_with(|evt, _status, window| match evt {
                 iced::Event::Mouse(iced::mouse::Event::ButtonPressed(button)) => {
@@ -842,10 +912,11 @@ impl App {
             }));
         }
 
-        if self
-            .core
-            .active_subscriptions
-            .contains_key("on_mouse_scroll")
+        if has_on_event
+            || self
+                .core
+                .active_subscriptions
+                .contains_key("on_mouse_scroll")
         {
             subs.push(event::listen_with(|evt, _status, window| {
                 if let iced::Event::Mouse(iced::mouse::Event::WheelScrolled { delta }) = evt {
@@ -857,7 +928,7 @@ impl App {
         }
 
         // -- Touch subscriptions --
-        if self.core.active_subscriptions.contains_key("on_touch") {
+        if has_on_event || self.core.active_subscriptions.contains_key("on_touch") {
             subs.push(event::listen_with(|evt, _status, window| match evt {
                 iced::Event::Touch(iced::touch::Event::FingerPressed { id, position }) => {
                     Some(Message::FingerPressed(id, position, window))
