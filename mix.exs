@@ -1,6 +1,28 @@
 defmodule Julep.MixProject do
   use Mix.Project
 
+  # Load extension beam files so Code.ensure_loaded? guards evaluate correctly.
+  # Each extension depends on :julep (circular path dep), so we can't use Mix
+  # deps. Instead, we add their compiled ebin dirs to the code path and
+  # pre-load all their modules.
+  if Mix.env() in [:dev, :test] do
+    for ext <- ~w(julep_sparkline julep_hex_view julep_code_view julep_plot julep_timeline) do
+      ebin = Path.expand("../#{ext}/_build/dev/lib/#{ext}/ebin")
+
+      if File.dir?(ebin) do
+        Code.append_path(ebin)
+
+        ebin
+        |> File.ls!()
+        |> Enum.filter(&String.ends_with?(&1, ".beam"))
+        |> Enum.each(fn beam ->
+          mod = beam |> String.trim_trailing(".beam") |> String.to_atom()
+          Code.ensure_loaded(mod)
+        end)
+      end
+    end
+  end
+
   def project do
     [
       app: :julep,
@@ -9,6 +31,7 @@ defmodule Julep.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: Mix.compilers() ++ [:julep_gui],
       elixirc_options: [warnings_as_errors: true],
+      consolidate_protocols: Mix.env() != :test,
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       name: "Julep",
@@ -56,6 +79,8 @@ defmodule Julep.MixProject do
       {:file_system, "~> 1.0", optional: true},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
+      # Extension packages are loaded via Code.append_path in mix.exs (above)
+      # to avoid circular path deps (each extension depends on :julep).
     ]
   end
 end
