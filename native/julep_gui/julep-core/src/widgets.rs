@@ -29,7 +29,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 
-use crate::Message;
+use crate::message::Message;
 
 // ---------------------------------------------------------------------------
 // Widget caches
@@ -54,6 +54,12 @@ pub struct WidgetCaches {
     pub qr_code_caches: HashMap<String, (u64, canvas::Cache)>,
     pub default_text_size: Option<f32>,
     pub default_font: Option<Font>,
+}
+
+impl Default for WidgetCaches {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl WidgetCaches {

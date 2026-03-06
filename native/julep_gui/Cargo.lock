@@ -2199,14 +2199,28 @@ dependencies = [
 ]
 
 [[package]]
-name = "julep_gui"
+name = "julep-bin"
 version = "0.1.0"
 dependencies = [
- "arboard",
  "base64",
  "env_logger",
  "iced",
  "iced_test",
+ "julep-core",
+ "log",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tokio",
+]
+
+[[package]]
+name = "julep-core"
+version = "0.1.0"
+dependencies = [
+ "arboard",
+ "base64",
+ "iced",
  "log",
  "notify-rust",
  "qrcode",
@@ -2215,7 +2229,6 @@ dependencies = [
  "rmpv",
  "serde",
  "serde_json",
- "sha2",
  "tokio",
 ]
 

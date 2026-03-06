@@ -9,13 +9,13 @@ pub mod test_helpers {
 
     use serde_json::Value;
 
-    use crate::julep_core::Core;
+    use julep_core::codec::Codec;
+    use julep_core::engine::Core;
     #[cfg(feature = "test-mode")]
-    use crate::protocol::SnapshotCaptureResponse;
-    use crate::protocol::{
+    use julep_core::protocol::SnapshotCaptureResponse;
+    use julep_core::protocol::{
         IncomingMessage, InteractResponse, QueryResponse, ResetResponse, TreeNode,
     };
-    use crate::WIRE_CODEC;
 
     /// Check if a message is a test-mode message (Query, Interact, etc.)
     pub fn is_test_message(msg: &IncomingMessage) -> bool {
@@ -240,7 +240,7 @@ pub mod test_helpers {
 
     /// Write a serialized response to stdout using the negotiated wire codec.
     fn emit_wire<T: serde::Serialize>(value: &T) {
-        let codec = WIRE_CODEC.get().expect("WIRE_CODEC not initialized");
+        let codec = Codec::get_global();
         match codec.encode(value) {
             Ok(bytes) => {
                 let stdout = io::stdout();
@@ -257,8 +257,8 @@ pub mod test_helpers {
 mod tests {
     use serde_json::Value;
 
-    use crate::protocol::{IncomingMessage, TreeNode};
-    use crate::test_mode::test_helpers;
+    use super::test_helpers;
+    use julep_core::protocol::{IncomingMessage, TreeNode};
 
     fn make_tree_node(id: &str, type_name: &str) -> TreeNode {
         TreeNode {
@@ -339,7 +339,7 @@ mod tests {
 
     #[test]
     fn query_response_has_correct_structure() {
-        use crate::protocol::QueryResponse;
+        use julep_core::protocol::QueryResponse;
 
         let resp = QueryResponse::new(
             "q42".to_string(),
@@ -354,7 +354,7 @@ mod tests {
 
     #[test]
     fn query_response_null_data_when_tree_empty() {
-        use crate::protocol::QueryResponse;
+        use julep_core::protocol::QueryResponse;
 
         let resp = QueryResponse::new("q1".to_string(), "tree".to_string(), Value::Null);
         assert_eq!(resp.data, Value::Null);
@@ -375,7 +375,7 @@ mod tests {
 
     #[test]
     fn snapshot_capture_response_has_no_rgba_field() {
-        use crate::protocol::SnapshotCaptureResponse;
+        use julep_core::protocol::SnapshotCaptureResponse;
 
         let resp = SnapshotCaptureResponse::new(
             "s1".to_string(),
@@ -393,7 +393,7 @@ mod tests {
 
     #[test]
     fn screenshot_response_empty_has_correct_structure() {
-        use crate::protocol::ScreenshotResponseEmpty;
+        use julep_core::protocol::ScreenshotResponseEmpty;
 
         let resp = ScreenshotResponseEmpty::new("sc1".to_string(), "test_shot".to_string());
         assert_eq!(resp.message_type, "screenshot_response");

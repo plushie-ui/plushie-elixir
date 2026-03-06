@@ -5,13 +5,12 @@ pub mod headless_mode {
     use iced::Theme;
     use serde_json::Value;
 
-    use crate::codec::Codec;
-    use crate::julep_core::Core;
-    use crate::protocol::{
+    use julep_core::codec::Codec;
+    use julep_core::engine::Core;
+    use julep_core::protocol::{
         IncomingMessage, InteractResponse, QueryResponse, ResetResponse, ScreenshotResponseEmpty,
         SnapshotCaptureResponse,
     };
-    use crate::WIRE_CODEC;
 
     /// Default screenshot width when not specified by the caller.
     const DEFAULT_SCREENSHOT_WIDTH: u32 = 1024;
@@ -40,9 +39,7 @@ pub mod headless_mode {
             }
         };
         log::info!("wire codec: {codec:?}");
-        WIRE_CODEC
-            .set(codec)
-            .expect("WIRE_CODEC already initialized");
+        Codec::set_global(codec);
 
         loop {
             match codec.read_message(&mut reader) {
@@ -85,13 +82,13 @@ pub mod headless_mode {
                 // - ThemeChanged: track for screenshot rendering
                 for effect in effects {
                     match effect {
-                        crate::julep_core::CoreEffect::EmitEvent(event) => {
+                        julep_core::engine::CoreEffect::EmitEvent(event) => {
                             emit_wire(&event);
                         }
-                        crate::julep_core::CoreEffect::EmitEffectResponse(response) => {
+                        julep_core::engine::CoreEffect::EmitEffectResponse(response) => {
                             emit_wire(&response);
                         }
-                        crate::julep_core::CoreEffect::ThemeChanged(t) => {
+                        julep_core::engine::CoreEffect::ThemeChanged(t) => {
                             *theme = t;
                         }
                         _ => {} // No-op for window/widget ops in headless
@@ -362,10 +359,10 @@ pub mod headless_mode {
         };
 
         // Prepare caches and build the iced Element from the tree.
-        crate::widgets::ensure_caches(root, &mut core.caches);
-        let images = crate::image_registry::ImageRegistry::new();
-        let element: iced::Element<'_, crate::Message> =
-            crate::widgets::render(root, &core.caches, &images);
+        julep_core::widgets::ensure_caches(root, &mut core.caches);
+        let images = julep_core::image_registry::ImageRegistry::new();
+        let element: iced::Element<'_, julep_core::message::Message> =
+            julep_core::widgets::render(root, &core.caches, &images);
 
         // Create a headless tiny-skia renderer.
         let mut renderer = match iced::futures::executor::block_on(iced::Renderer::new(
@@ -408,7 +405,7 @@ pub mod headless_mode {
             format!("{:x}", hasher.finalize())
         };
 
-        crate::protocol::emit_screenshot_response(&id, &name, &hash, width, height, &rgba);
+        julep_core::protocol::emit_screenshot_response(&id, &name, &hash, width, height, &rgba);
     }
 
     fn handle_reset(core: &mut Core, id: String) {
@@ -442,7 +439,7 @@ pub mod headless_mode {
         }
     }
 
-    fn search_by_id(node: &crate::protocol::TreeNode, id: &str) -> Option<Value> {
+    fn search_by_id(node: &julep_core::protocol::TreeNode, id: &str) -> Option<Value> {
         if node.id == id {
             return serde_json::to_value(node).ok();
         }
@@ -461,7 +458,7 @@ pub mod headless_mode {
         }
     }
 
-    fn search_by_text(node: &crate::protocol::TreeNode, text: &str) -> Option<Value> {
+    fn search_by_text(node: &julep_core::protocol::TreeNode, text: &str) -> Option<Value> {
         // Check common text props
         for key in &["content", "label", "value", "placeholder"] {
             if let Some(val) = node.props.get(*key) {
@@ -478,7 +475,7 @@ pub mod headless_mode {
         None
     }
 
-    fn find_id_by_text(node: &crate::protocol::TreeNode, text: &str) -> Option<String> {
+    fn find_id_by_text(node: &julep_core::protocol::TreeNode, text: &str) -> Option<String> {
         for key in &["content", "label", "value", "placeholder"] {
             if let Some(val) = node.props.get(*key) {
                 if val.as_str() == Some(text) {
@@ -496,7 +493,7 @@ pub mod headless_mode {
 
     /// Write a serialized response to stdout using the negotiated wire codec.
     fn emit_wire<T: serde::Serialize>(value: &T) {
-        let codec = WIRE_CODEC.get().expect("WIRE_CODEC not initialized");
+        let codec = Codec::get_global();
         match codec.encode(value) {
             Ok(bytes) => {
                 let stdout = io::stdout();
@@ -515,8 +512,8 @@ pub mod headless_mode {
         use serde_json::Value;
 
         use super::*;
-        use crate::julep_core::Core;
-        use crate::protocol::TreeNode;
+        use julep_core::engine::Core;
+        use julep_core::protocol::TreeNode;
 
         fn make_node(id: &str, type_name: &str) -> TreeNode {
             TreeNode {

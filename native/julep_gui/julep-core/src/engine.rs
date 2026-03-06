@@ -51,6 +51,12 @@ pub struct Core {
     pub default_font: Option<Font>,
 }
 
+impl Default for Core {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Core {
     pub fn new() -> Self {
         Self {

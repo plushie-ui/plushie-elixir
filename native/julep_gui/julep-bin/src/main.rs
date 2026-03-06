@@ -1,35 +1,26 @@
 #![deny(warnings)]
 
-mod codec;
-mod effects;
 #[cfg(feature = "headless")]
 mod headless;
-mod image_registry;
-mod julep_core;
-mod overlay_widget;
-mod protocol;
 mod test_mode;
-mod theming;
-mod tree;
-mod widgets;
 
 use std::collections::{HashMap, HashSet};
 use std::io::{self, BufRead, Read, Write};
-use std::sync::{Mutex, OnceLock};
+use std::sync::Mutex;
 use std::thread;
 
 use iced::futures::SinkExt;
-#[cfg(feature = "widget-markdown")]
-use iced::widget::markdown;
-use iced::widget::{container, pane_grid, text, text_editor};
+use iced::widget::{container, pane_grid, text};
 use iced::{event, stream, system, window, Element, Fill, Point, Size, Subscription, Task, Theme};
 
 use base64::Engine as _;
-use protocol::{IncomingMessage, KeyModifiers, OutgoingEvent};
+use julep_core::codec::Codec;
+use julep_core::message::{
+    serialize_modifiers, serialize_mouse_button, serialize_scroll_delta, KeyEventData, Message,
+    StdinEvent,
+};
+use julep_core::protocol::{IncomingMessage, OutgoingEvent};
 use serde_json::Value;
-
-/// Wire codec negotiated at startup (auto-detected or forced via CLI flag).
-static WIRE_CODEC: OnceLock<codec::Codec> = OnceLock::new();
 
 /// One-shot slot for the stdin receiver. The subscription takes it once on
 /// first call. Uses a Mutex because `Subscription::run` requires `fn() -> Stream`
@@ -37,140 +28,11 @@ static WIRE_CODEC: OnceLock<codec::Codec> = OnceLock::new();
 static STDIN_RX: Mutex<Option<tokio::sync::mpsc::Receiver<StdinEvent>>> = Mutex::new(None);
 
 // ---------------------------------------------------------------------------
-// Keyboard event data
-// ---------------------------------------------------------------------------
-
-/// All fields from an iced keyboard event, packed for Message transport.
-#[derive(Debug, Clone)]
-struct KeyEventData {
-    key: iced::keyboard::Key,
-    modified_key: iced::keyboard::Key,
-    physical_key: iced::keyboard::key::Physical,
-    location: iced::keyboard::Location,
-    modifiers: iced::keyboard::Modifiers,
-    text: Option<String>,
-    repeat: bool,
-}
-
-// ---------------------------------------------------------------------------
-// Message
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Clone)]
-pub(crate) enum Message {
-    /// A user clicked a button with the given node ID.
-    Click(String),
-    /// A text input value changed (id, new_value).
-    Input(String, String),
-    /// A text input was submitted (id, current_value).
-    Submit(String, String),
-    /// A checkbox or toggler was toggled (id, checked).
-    Toggle(String, bool),
-    /// A slider value changed (id, value).
-    Slide(String, f64),
-    /// A slider was released (id, value).
-    SlideRelease(String, f64),
-    /// A pick_list/combo_box/radio selection (id, value).
-    Select(String, String),
-    /// A text editor action (id, action).
-    TextEditorAction(String, text_editor::Action),
-    /// A markdown link was clicked.
-    #[cfg(feature = "widget-markdown")]
-    MarkdownUrl(markdown::Uri),
-    /// A message arrived from the stdin reader (or stdin closed).
-    Stdin(StdinEvent),
-    /// No-op: used as return value for fire-and-forget tasks (font loads, etc.)
-    NoOp,
-    /// A keyboard key was pressed (full event data).
-    KeyPressed(KeyEventData),
-    /// A keyboard key was released (full event data).
-    KeyReleased(KeyEventData),
-    /// Keyboard modifiers changed.
-    ModifiersChanged(iced::keyboard::Modifiers),
-    // -- IME events --
-    /// IME session opened.
-    ImeOpened,
-    /// IME preedit text updated (composing text, optional cursor range).
-    ImePreedit(String, Option<std::ops::Range<usize>>),
-    /// IME committed final text.
-    ImeCommit(String),
-    /// IME session closed.
-    ImeClosed,
-    /// A window close was requested by the user (WM close button).
-    WindowCloseRequested(window::Id),
-    /// A window was actually closed by iced.
-    WindowClosed(window::Id),
-    /// A new window was opened (iced_id, julep_id).
-    WindowOpened(window::Id, String),
-    // -- Mouse events --
-    /// Cursor moved to (x, y) in a window.
-    CursorMoved(Point, window::Id),
-    /// Cursor entered a window.
-    CursorEntered(window::Id),
-    /// Cursor left a window.
-    CursorLeft(window::Id),
-    /// Mouse button pressed.
-    MouseButtonPressed(iced::mouse::Button, window::Id),
-    /// Mouse button released.
-    MouseButtonReleased(iced::mouse::Button, window::Id),
-    /// Mouse wheel scrolled.
-    WheelScrolled(iced::mouse::ScrollDelta, window::Id),
-    // -- Touch events --
-    /// Touch finger pressed.
-    FingerPressed(iced::touch::Finger, Point, window::Id),
-    /// Touch finger moved.
-    FingerMoved(iced::touch::Finger, Point, window::Id),
-    /// Touch finger lifted.
-    FingerLifted(iced::touch::Finger, Point, window::Id),
-    /// Touch finger lost.
-    FingerLost(iced::touch::Finger, Point, window::Id),
-    // -- Window lifecycle events --
-    /// A window event from iced (window_id, event).
-    WindowEvent(window::Id, window::Event),
-    // -- System / animation events --
-    /// Animation frame with timestamp.
-    AnimationFrame(iced::time::Instant),
-    /// System theme mode changed.
-    ThemeChanged(iced::theme::Mode),
-    /// Sensor widget resize event (id, width, height).
-    SensorResize(String, f32, f32),
-    /// Canvas interaction event (id, kind, x, y, extra).
-    #[cfg(feature = "widget-canvas")]
-    CanvasEvent(String, String, f32, f32, String),
-    /// Canvas scroll event (id, cursor_x, cursor_y, delta_x, delta_y).
-    #[cfg(feature = "widget-canvas")]
-    CanvasScroll(String, f32, f32, f32, f32),
-    /// PaneGrid pane was resized (grid_id, resize_event).
-    PaneResized(String, iced::widget::pane_grid::ResizeEvent),
-    /// PaneGrid pane was dragged (grid_id, drag_event).
-    PaneDragged(String, iced::widget::pane_grid::DragEvent),
-    /// PaneGrid pane was clicked (grid_id, pane).
-    PaneClicked(String, iced::widget::pane_grid::Pane),
-    /// Scrollable viewport changed (id, viewport data).
-    ScrollEvent(String, f32, f32, f32, f32, f32, f32, f32, f32),
-    /// Text was pasted into a text_input (id, pasted_text).
-    Paste(String, String),
-    /// ComboBox option was hovered (combo_id, option_value).
-    OptionHovered(String, String),
-    /// MouseArea simple event (id, kind). Kind is one of: right_press,
-    /// right_release, middle_release, double_click, enter, exit.
-    MouseAreaEvent(String, String),
-    /// MouseArea cursor move event (id, x, y).
-    MouseAreaMove(String, f32, f32),
-    /// MouseArea scroll event (id, delta_x, delta_y).
-    MouseAreaScroll(String, f32, f32),
-    /// Generic widget event (id, data, family).
-    /// Used for on_open, on_close, sort, and other events that carry a
-    /// family string and optional JSON data payload.
-    Event(String, Value, String),
-}
-
-// ---------------------------------------------------------------------------
 // App state
 // ---------------------------------------------------------------------------
 
 struct App {
-    core: julep_core::Core,
+    core: julep_core::engine::Core,
     theme: Theme,
     /// Tasks generated by apply() that must be returned from update().
     pending_tasks: Vec<Task<Message>>,
@@ -181,7 +43,7 @@ struct App {
     /// When true, handle Query/Interact/SnapshotCapture/ScreenshotCapture/Reset on stdin.
     test_mode: bool,
     /// In-memory image handles for use by Image widgets and canvas draw.
-    image_registry: image_registry::ImageRegistry,
+    image_registry: julep_core::image_registry::ImageRegistry,
     /// Current system theme, tracked via ThemeChanged subscription.
     /// Used when a window or app theme is set to "system".
     system_theme: Theme,
@@ -191,27 +53,19 @@ struct App {
     scale_factor: f32,
 }
 
-/// What the stdin reader thread sends back.
-#[derive(Debug, Clone)]
-enum StdinEvent {
-    Message(IncomingMessage),
-    Closed,
-    Warning(String),
-}
-
 impl App {
     fn new(test_mode: bool) -> Self {
         if test_mode {
             log::info!("running in test mode");
         }
         Self {
-            core: julep_core::Core::new(),
+            core: julep_core::engine::Core::new(),
             theme: Theme::Dark,
             pending_tasks: Vec::new(),
             window_map: HashMap::new(),
             reverse_window_map: HashMap::new(),
             test_mode,
-            image_registry: image_registry::ImageRegistry::new(),
+            image_registry: julep_core::image_registry::ImageRegistry::new(),
             system_theme: Theme::Dark,
             theme_follows_system: false,
             scale_factor: 1.0,
@@ -233,7 +87,7 @@ impl App {
         if let Some(julep_id) = self.reverse_window_map.get(&window_id) {
             if let Some(node) = self.core.tree.find_window(julep_id) {
                 if let Some(theme_val) = node.props.get("theme") {
-                    return theming::resolve_theme_only(theme_val)
+                    return julep_core::theming::resolve_theme_only(theme_val)
                         .unwrap_or_else(|| self.system_theme.clone());
                 }
             }
@@ -828,7 +682,7 @@ impl App {
 
         match self.core.tree.find_window(julep_id) {
             Some(window_node) => {
-                widgets::render(window_node, &self.core.caches, &self.image_registry)
+                julep_core::widgets::render(window_node, &self.core.caches, &self.image_registry)
             }
             None => container(text("waiting for snapshot..."))
                 .width(Fill)
@@ -1157,19 +1011,19 @@ impl App {
         let effects = self.core.apply(message);
         for effect in effects {
             match effect {
-                julep_core::CoreEffect::SyncWindows => {
+                julep_core::engine::CoreEffect::SyncWindows => {
                     let task = self.sync_windows();
                     self.pending_tasks.push(task);
                 }
-                julep_core::CoreEffect::EmitEvent(event) => emit_event(event),
-                julep_core::CoreEffect::EmitEffectResponse(response) => {
+                julep_core::engine::CoreEffect::EmitEvent(event) => emit_event(event),
+                julep_core::engine::CoreEffect::EmitEffectResponse(response) => {
                     emit_effect_response(response)
                 }
-                julep_core::CoreEffect::WidgetOp { op, payload } => {
+                julep_core::engine::CoreEffect::WidgetOp { op, payload } => {
                     let task = self.handle_widget_op(&op, &payload);
                     self.pending_tasks.push(task);
                 }
-                julep_core::CoreEffect::WindowOp {
+                julep_core::engine::CoreEffect::WindowOp {
                     op,
                     window_id,
                     settings,
@@ -1177,14 +1031,14 @@ impl App {
                     let task = self.handle_window_op(&op, &window_id, &settings);
                     self.pending_tasks.push(task);
                 }
-                julep_core::CoreEffect::ThemeChanged(theme) => {
+                julep_core::engine::CoreEffect::ThemeChanged(theme) => {
                     self.theme = theme;
                     self.theme_follows_system = false;
                 }
-                julep_core::CoreEffect::ThemeFollowsSystem => {
+                julep_core::engine::CoreEffect::ThemeFollowsSystem => {
                     self.theme_follows_system = true;
                 }
-                julep_core::CoreEffect::ImageOp {
+                julep_core::engine::CoreEffect::ImageOp {
                     op,
                     handle,
                     data,
@@ -1655,7 +1509,7 @@ impl App {
                 if let Some(&iced_id) = self.window_map.get(window_id) {
                     let wid = window_id.to_string();
                     window::size(iced_id).map(move |size| {
-                        let resp = protocol::EffectResponse::ok(
+                        let resp = julep_core::protocol::EffectResponse::ok(
                             wid.clone(),
                             serde_json::json!({"width": size.width, "height": size.height}),
                         );
@@ -1674,7 +1528,7 @@ impl App {
                             Some(p) => serde_json::json!({"x": p.x, "y": p.y}),
                             None => serde_json::Value::Null,
                         };
-                        let resp = protocol::EffectResponse::ok(wid.clone(), val);
+                        let resp = julep_core::protocol::EffectResponse::ok(wid.clone(), val);
                         emit_effect_response(resp);
                         Message::NoOp
                     })
@@ -1691,8 +1545,10 @@ impl App {
                             window::Mode::Fullscreen => "fullscreen",
                             window::Mode::Hidden => "hidden",
                         };
-                        let resp =
-                            protocol::EffectResponse::ok(wid.clone(), serde_json::json!(mode_str));
+                        let resp = julep_core::protocol::EffectResponse::ok(
+                            wid.clone(),
+                            serde_json::json!(mode_str),
+                        );
                         emit_effect_response(resp);
                         Message::NoOp
                     })
@@ -1704,8 +1560,10 @@ impl App {
                 if let Some(&iced_id) = self.window_map.get(window_id) {
                     let wid = window_id.to_string();
                     window::scale_factor(iced_id).map(move |factor| {
-                        let resp =
-                            protocol::EffectResponse::ok(wid.clone(), serde_json::json!(factor));
+                        let resp = julep_core::protocol::EffectResponse::ok(
+                            wid.clone(),
+                            serde_json::json!(factor),
+                        );
                         emit_effect_response(resp);
                         Message::NoOp
                     })
@@ -1717,8 +1575,10 @@ impl App {
                 if let Some(&iced_id) = self.window_map.get(window_id) {
                     let wid = window_id.to_string();
                     window::is_maximized(iced_id).map(move |val| {
-                        let resp =
-                            protocol::EffectResponse::ok(wid.clone(), serde_json::json!(val));
+                        let resp = julep_core::protocol::EffectResponse::ok(
+                            wid.clone(),
+                            serde_json::json!(val),
+                        );
                         emit_effect_response(resp);
                         Message::NoOp
                     })
@@ -1730,8 +1590,10 @@ impl App {
                 if let Some(&iced_id) = self.window_map.get(window_id) {
                     let wid = window_id.to_string();
                     window::is_minimized(iced_id).map(move |val| {
-                        let resp =
-                            protocol::EffectResponse::ok(wid.clone(), serde_json::json!(val));
+                        let resp = julep_core::protocol::EffectResponse::ok(
+                            wid.clone(),
+                            serde_json::json!(val),
+                        );
                         emit_effect_response(resp);
                         Message::NoOp
                     })
@@ -1758,7 +1620,7 @@ impl App {
                         if let Some(b64) = rgba_b64 {
                             data["rgba_base64"] = serde_json::json!(b64);
                         }
-                        let resp = protocol::EffectResponse::ok(wid.clone(), data);
+                        let resp = julep_core::protocol::EffectResponse::ok(wid.clone(), data);
                         emit_effect_response(resp);
                         Message::NoOp
                     })
@@ -1810,8 +1672,10 @@ impl App {
                 if let Some(&iced_id) = self.window_map.get(window_id) {
                     let wid = window_id.to_string();
                     window::raw_id::<Message>(iced_id).map(move |raw| {
-                        let resp =
-                            protocol::EffectResponse::ok(wid.clone(), serde_json::json!(raw));
+                        let resp = julep_core::protocol::EffectResponse::ok(
+                            wid.clone(),
+                            serde_json::json!(raw),
+                        );
                         emit_effect_response(resp);
                         Message::NoOp
                     })
@@ -1829,7 +1693,7 @@ impl App {
                             }
                             None => serde_json::Value::Null,
                         };
-                        let resp = protocol::EffectResponse::ok(wid.clone(), result);
+                        let resp = julep_core::protocol::EffectResponse::ok(wid.clone(), result);
                         emit_effect_response(resp);
                         Message::NoOp
                     })
@@ -2102,73 +1966,11 @@ fn parse_direction(s: &str) -> window::Direction {
 }
 
 // ---------------------------------------------------------------------------
-// Key serialization helpers
-// ---------------------------------------------------------------------------
-
-fn serialize_key(key: &iced::keyboard::Key) -> String {
-    match key {
-        iced::keyboard::Key::Named(named) => format!("{named:?}"),
-        iced::keyboard::Key::Character(c) => c.to_string(),
-        iced::keyboard::Key::Unidentified => "Unidentified".to_string(),
-    }
-}
-
-fn serialize_modifiers(mods: iced::keyboard::Modifiers) -> KeyModifiers {
-    KeyModifiers {
-        shift: mods.shift(),
-        ctrl: mods.control(),
-        alt: mods.alt(),
-        logo: mods.logo(),
-        command: mods.command(),
-    }
-}
-
-fn serialize_physical_key(physical: &iced::keyboard::key::Physical) -> String {
-    match physical {
-        iced::keyboard::key::Physical::Code(code) => format!("{code:?}"),
-        iced::keyboard::key::Physical::Unidentified(code) => {
-            format!("Unidentified({code:?})")
-        }
-    }
-}
-
-fn serialize_location(location: &iced::keyboard::Location) -> &'static str {
-    match location {
-        iced::keyboard::Location::Standard => "standard",
-        iced::keyboard::Location::Left => "left",
-        iced::keyboard::Location::Right => "right",
-        iced::keyboard::Location::Numpad => "numpad",
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Mouse serialization helpers
-// ---------------------------------------------------------------------------
-
-fn serialize_mouse_button(button: &iced::mouse::Button) -> String {
-    match button {
-        iced::mouse::Button::Left => "left".to_string(),
-        iced::mouse::Button::Right => "right".to_string(),
-        iced::mouse::Button::Middle => "middle".to_string(),
-        iced::mouse::Button::Back => "back".to_string(),
-        iced::mouse::Button::Forward => "forward".to_string(),
-        iced::mouse::Button::Other(n) => format!("other_{n}"),
-    }
-}
-
-fn serialize_scroll_delta(delta: &iced::mouse::ScrollDelta) -> (f32, f32, &'static str) {
-    match delta {
-        iced::mouse::ScrollDelta::Lines { x, y } => (*x, *y, "lines"),
-        iced::mouse::ScrollDelta::Pixels { x, y } => (*x, *y, "pixels"),
-    }
-}
-
-// ---------------------------------------------------------------------------
 // stdout event emitter
 // ---------------------------------------------------------------------------
 
 fn emit_event(event: OutgoingEvent) {
-    let codec = WIRE_CODEC.get().unwrap_or(&codec::Codec::MsgPack);
+    let codec = Codec::get_global();
     match codec.encode(&event) {
         Ok(bytes) => {
             let stdout = io::stdout();
@@ -2186,8 +1988,8 @@ fn emit_event(event: OutgoingEvent) {
 // stdout effect response emitter
 // ---------------------------------------------------------------------------
 
-fn emit_effect_response(response: protocol::EffectResponse) {
-    let codec = WIRE_CODEC.get().unwrap_or(&codec::Codec::MsgPack);
+fn emit_effect_response(response: julep_core::protocol::EffectResponse) {
+    let codec = Codec::get_global();
     match codec.encode(&response) {
         Ok(bytes) => {
             let stdout = io::stdout();
@@ -2210,7 +2012,7 @@ fn emit_query_response(kind: &str, tag: &str, data: serde_json::Value) {
         "tag": tag,
         "data": data,
     });
-    let codec = WIRE_CODEC.get().unwrap_or(&codec::Codec::MsgPack);
+    let codec = Codec::get_global();
     match codec.encode(&msg) {
         Ok(bytes) => {
             let stdout = io::stdout();
@@ -2238,7 +2040,7 @@ fn emit_screenshot_response(
     height: u32,
     rgba_bytes: &[u8],
 ) {
-    protocol::emit_screenshot_response(id, name, hash, width, height, rgba_bytes);
+    julep_core::protocol::emit_screenshot_response(id, name, hash, width, height, rgba_bytes);
 }
 
 // ---------------------------------------------------------------------------
@@ -2293,16 +2095,11 @@ pub(crate) fn message_to_event(msg: &Message) -> Option<OutgoingEvent> {
             } else {
                 Some(data.clone())
             };
-            Some(OutgoingEvent::generic(
-                family.clone(),
-                id.clone(),
-                data_opt,
-            ))
+            Some(OutgoingEvent::generic(family.clone(), id.clone(), data_opt))
         }
         _ => None,
     }
 }
-
 
 // ---------------------------------------------------------------------------
 // stdin subscription + reader thread
@@ -2332,7 +2129,7 @@ fn spawn_stdin_reader(
     mut reader: io::BufReader<io::Stdin>,
 ) {
     thread::spawn(move || {
-        let codec = WIRE_CODEC.get().expect("WIRE_CODEC not initialized");
+        let codec = Codec::get_global();
 
         loop {
             match codec.read_message(&mut reader) {
@@ -2369,10 +2166,10 @@ fn spawn_stdin_reader(
 
 /// Read the first message from stdin synchronously, expecting a Settings message.
 /// Determines the wire codec (from CLI flag or auto-detection) and stores it in
-/// `WIRE_CODEC`. Returns the settings Value, iced Settings, font bytes, and
+/// the global wire codec. Returns the settings Value, iced Settings, font bytes, and
 /// the buffered reader (to be handed off to the stdin reader thread).
 fn read_initial_settings(
-    forced_codec: Option<codec::Codec>,
+    forced_codec: Option<Codec>,
 ) -> (
     Value,
     iced::Settings,
@@ -2399,7 +2196,7 @@ fn read_initial_settings(
                 Ok(()) => {}
                 Err(e) => {
                     log::error!("stdin closed before settings received: {e}");
-                    let _ = WIRE_CODEC.set(codec::Codec::MsgPack);
+                    Codec::set_global(Codec::MsgPack);
                     return (
                         Value::Object(Default::default()),
                         iced::Settings::default(),
@@ -2408,22 +2205,17 @@ fn read_initial_settings(
                     );
                 }
             }
-            (
-                codec::Codec::detect_from_first_byte(first[0]),
-                Some(first[0]),
-            )
+            (Codec::detect_from_first_byte(first[0]), Some(first[0]))
         }
     };
     log::info!("wire codec: {codec:?}");
-    WIRE_CODEC
-        .set(codec)
-        .expect("WIRE_CODEC already initialized");
+    Codec::set_global(codec);
 
     // Read the first framed message. If we consumed a detection byte, we need
     // to account for it when reading the rest of the message.
     let payload = if let Some(byte) = first_byte {
         match codec {
-            codec::Codec::MsgPack => {
+            Codec::MsgPack => {
                 // byte is the first of the 4-byte BE length prefix. Read 3 more.
                 let mut rest = [0u8; 3];
                 if let Err(e) = reader.read_exact(&mut rest) {
@@ -2448,7 +2240,7 @@ fn read_initial_settings(
                 }
                 payload
             }
-            codec::Codec::Json => {
+            Codec::Json => {
                 // byte is '{'. Read the rest of the line, prepend '{'.
                 let mut line = String::new();
                 if let Err(e) = reader.read_line(&mut line) {
@@ -2590,9 +2382,9 @@ fn main() -> iced::Result {
 
     // Parse codec flags early so all modes (headless, test, normal) can use them.
     let forced_codec = if args.contains(&"--msgpack".to_string()) {
-        Some(codec::Codec::MsgPack)
+        Some(Codec::MsgPack)
     } else if args.contains(&"--json".to_string()) {
-        Some(codec::Codec::Json)
+        Some(Codec::Json)
     } else {
         None
     };

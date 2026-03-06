@@ -252,9 +252,7 @@ pub fn emit_screenshot_response(
 ) {
     use std::io::Write;
 
-    let codec = crate::WIRE_CODEC
-        .get()
-        .unwrap_or(&crate::codec::Codec::MsgPack);
+    let codec = crate::codec::Codec::get_global();
     let bytes = match codec {
         crate::codec::Codec::MsgPack => {
             use rmpv::Value as RmpvValue;
@@ -497,14 +495,14 @@ impl OutgoingEvent {
     // Keyboard events
     // -----------------------------------------------------------------------
 
-    pub fn key_press(tag: String, data: &crate::KeyEventData) -> Self {
+    pub fn key_press(tag: String, data: &crate::message::KeyEventData) -> Self {
         Self {
-            modifiers: Some(crate::serialize_modifiers(data.modifiers)),
-            value: Some(Value::String(crate::serialize_key(&data.key))),
+            modifiers: Some(crate::message::serialize_modifiers(data.modifiers)),
+            value: Some(Value::String(crate::message::serialize_key(&data.key))),
             data: Some(serde_json::json!({
-                "modified_key": crate::serialize_key(&data.modified_key),
-                "physical_key": crate::serialize_physical_key(&data.physical_key),
-                "location": crate::serialize_location(&data.location),
+                "modified_key": crate::message::serialize_key(&data.modified_key),
+                "physical_key": crate::message::serialize_physical_key(&data.physical_key),
+                "location": crate::message::serialize_location(&data.location),
                 "text": data.text.as_deref(),
                 "repeat": data.repeat,
             })),
@@ -512,14 +510,14 @@ impl OutgoingEvent {
         }
     }
 
-    pub fn key_release(tag: String, data: &crate::KeyEventData) -> Self {
+    pub fn key_release(tag: String, data: &crate::message::KeyEventData) -> Self {
         Self {
-            modifiers: Some(crate::serialize_modifiers(data.modifiers)),
-            value: Some(Value::String(crate::serialize_key(&data.key))),
+            modifiers: Some(crate::message::serialize_modifiers(data.modifiers)),
+            value: Some(Value::String(crate::message::serialize_key(&data.key))),
             data: Some(serde_json::json!({
-                "modified_key": crate::serialize_key(&data.modified_key),
-                "physical_key": crate::serialize_physical_key(&data.physical_key),
-                "location": crate::serialize_location(&data.location),
+                "modified_key": crate::message::serialize_key(&data.modified_key),
+                "physical_key": crate::message::serialize_physical_key(&data.physical_key),
+                "location": crate::message::serialize_location(&data.location),
             })),
             ..Self::tagged("key_release", tag)
         }
@@ -1365,9 +1363,9 @@ mod tests {
     // OutgoingEvent serialization -- keyboard events
     // -----------------------------------------------------------------------
 
-    fn make_key_event_data(key_str: &str, shift: bool, alt: bool) -> crate::KeyEventData {
+    fn make_key_event_data(key_str: &str, shift: bool, alt: bool) -> crate::message::KeyEventData {
         use iced::keyboard;
-        crate::KeyEventData {
+        crate::message::KeyEventData {
             key: if key_str.len() == 1 {
                 keyboard::Key::Character(key_str.into())
             } else {

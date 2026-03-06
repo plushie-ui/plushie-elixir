@@ -11,6 +11,12 @@ pub struct ImageRegistry {
     handles: HashMap<String, image::Handle>,
 }
 
+impl Default for ImageRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ImageRegistry {
     pub fn new() -> Self {
         Self {

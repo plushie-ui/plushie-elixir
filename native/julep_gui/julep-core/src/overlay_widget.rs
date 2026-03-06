@@ -4,7 +4,7 @@
 //! Modelled after iced's tooltip widget but without hover delay or container
 //! styling -- the overlay is always visible and the caller controls content.
 
-use crate::Message;
+use crate::message::Message;
 
 use iced::advanced::layout::{self, Layout};
 use iced::advanced::overlay;

@@ -1,6 +1,11 @@
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::io::{self, BufRead};
+use std::sync::OnceLock;
+
+/// Global wire codec negotiated at startup. Set once by the binary crate,
+/// read by protocol.rs (emit_screenshot_response) and headless/test modes.
+static WIRE_CODEC: OnceLock<Codec> = OnceLock::new();
 
 /// Wire codec for communication with the host process.
 ///
@@ -109,6 +114,18 @@ impl Codec {
         } else {
             Codec::MsgPack
         }
+    }
+
+    /// Store the negotiated codec in the global slot. Panics if called twice.
+    pub fn set_global(codec: Codec) {
+        WIRE_CODEC
+            .set(codec)
+            .expect("WIRE_CODEC already initialized");
+    }
+
+    /// Get the global wire codec. Returns MsgPack if not yet initialized.
+    pub fn get_global() -> &'static Codec {
+        WIRE_CODEC.get().unwrap_or(&Codec::MsgPack)
     }
 }
 
