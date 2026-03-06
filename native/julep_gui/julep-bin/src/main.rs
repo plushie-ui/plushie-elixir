@@ -15,6 +15,7 @@ use iced::{event, stream, system, window, Element, Fill, Point, Size, Subscripti
 
 use base64::Engine as _;
 use julep_core::codec::Codec;
+use julep_core::extensions::{EventResult, ExtensionDispatcher};
 use julep_core::message::{
     serialize_modifiers, serialize_mouse_button, serialize_scroll_delta, KeyEventData, Message,
     StdinEvent,
@@ -51,10 +52,12 @@ struct App {
     theme_follows_system: bool,
     /// Global scale factor multiplier (1.0 = follow OS DPI).
     scale_factor: f32,
+    /// Extension dispatcher for custom widget types.
+    dispatcher: ExtensionDispatcher,
 }
 
 impl App {
-    fn new(test_mode: bool) -> Self {
+    fn new(test_mode: bool, dispatcher: ExtensionDispatcher) -> Self {
         if test_mode {
             log::info!("running in test mode");
         }
@@ -69,6 +72,7 @@ impl App {
             system_theme: Theme::Dark,
             theme_follows_system: false,
             scale_factor: 1.0,
+            dispatcher,
         }
     }
 
@@ -204,10 +208,42 @@ impl App {
             | Message::Toggle(..)
             | Message::Slide(..)
             | Message::SlideRelease(..)
-            | Message::Select(..)
-            | Message::Event(..)) => {
+            | Message::Select(..)) => {
                 if let Some(event) = message_to_event(msg) {
                     emit_event(event);
+                }
+                Task::none()
+            }
+            // Generic extension-aware events: route through dispatcher first.
+            Message::Event(ref id, ref data, ref family) => {
+                let result =
+                    self.dispatcher
+                        .handle_event(id, family, data, &mut self.core.caches.extension);
+                match result {
+                    EventResult::PassThrough => {
+                        let data_opt = if data.is_null() {
+                            None
+                        } else {
+                            Some(data.clone())
+                        };
+                        emit_event(OutgoingEvent::generic(family.clone(), id.clone(), data_opt));
+                    }
+                    EventResult::Consumed(events) => {
+                        for ev in events {
+                            emit_event(ev);
+                        }
+                    }
+                    EventResult::Observed(events) => {
+                        let data_opt = if data.is_null() {
+                            None
+                        } else {
+                            Some(data.clone())
+                        };
+                        emit_event(OutgoingEvent::generic(family.clone(), id.clone(), data_opt));
+                        for ev in events {
+                            emit_event(ev);
+                        }
+                    }
                 }
                 Task::none()
             }
@@ -681,9 +717,13 @@ impl App {
         };
 
         match self.core.tree.find_window(julep_id) {
-            Some(window_node) => {
-                julep_core::widgets::render(window_node, &self.core.caches, &self.image_registry)
-            }
+            Some(window_node) => julep_core::widgets::render(
+                window_node,
+                &self.core.caches,
+                &self.image_registry,
+                &self.theme,
+                &self.dispatcher,
+            ),
             None => container(text("waiting for snapshot..."))
                 .width(Fill)
                 .height(Fill)
@@ -1008,6 +1048,12 @@ impl App {
     }
 
     fn apply(&mut self, message: IncomingMessage) {
+        let is_snapshot = matches!(message, IncomingMessage::Snapshot { .. });
+        let is_tree_change = matches!(
+            message,
+            IncomingMessage::Snapshot { .. } | IncomingMessage::Patch { .. }
+        );
+
         let effects = self.core.apply(message);
         for effect in effects {
             match effect {
@@ -1055,6 +1101,17 @@ impl App {
                         height,
                     );
                 }
+            }
+        }
+
+        // After tree changes, notify extensions so they can prepare/cleanup state.
+        if is_tree_change {
+            if is_snapshot {
+                self.dispatcher.clear_poisoned();
+            }
+            if let Some(root) = self.core.tree.root() {
+                self.dispatcher
+                    .prepare_all(root, &mut self.core.caches.extension, &self.theme);
             }
         }
     }
@@ -2422,7 +2479,9 @@ fn main() -> iced::Result {
                 .take()
                 .unwrap_or_default();
 
-            let mut app = App::new(test_mode);
+            let builder = julep_core::app::JulepAppBuilder::new().test_mode(test_mode);
+            let dispatcher = builder.build_dispatcher();
+            let mut app = App::new(test_mode, dispatcher);
 
             // Extract scale_factor before applying settings to Core
             app.scale_factor = settings

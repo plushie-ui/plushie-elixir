@@ -29,6 +29,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 
+use crate::extensions::ExtensionDispatcher;
 use crate::message::Message;
 
 // ---------------------------------------------------------------------------
@@ -243,20 +244,22 @@ pub fn render<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     match node.type_name.as_str() {
-        "column" => render_column(node, caches, images),
-        "row" => render_row(node, caches, images),
+        "column" => render_column(node, caches, images, theme, dispatcher),
+        "row" => render_row(node, caches, images, theme, dispatcher),
         "text" => render_text(node, caches),
-        "button" => render_button(node, caches, images),
-        "container" => render_container(node, caches, images),
+        "button" => render_button(node, caches, images, theme, dispatcher),
+        "container" => render_container(node, caches, images, theme, dispatcher),
         "space" => render_space(node),
         "text_input" => render_text_input(node, caches),
         "checkbox" => render_checkbox(node, caches),
         "rule" => render_rule(node),
         "progress_bar" => render_progress_bar(node),
-        "scrollable" => render_scrollable(node, caches, images),
-        "window" => render_window(node, caches, images),
+        "scrollable" => render_scrollable(node, caches, images, theme, dispatcher),
+        "window" => render_window(node, caches, images, theme, dispatcher),
         // Native widgets
         "toggler" => render_toggler(node, caches),
         "radio" => render_radio(node, caches),
@@ -265,7 +268,7 @@ pub fn render<'a>(
         "pick_list" => render_pick_list(node, caches),
         "combo_box" => render_combo_box(node, caches),
         "text_editor" => render_text_editor(node, caches),
-        "tooltip" => render_tooltip(node, caches, images),
+        "tooltip" => render_tooltip(node, caches, images, theme, dispatcher),
         #[cfg(feature = "widget-image")]
         "image" => render_image(node, images),
         #[cfg(not(feature = "widget-image"))]
@@ -278,32 +281,51 @@ pub fn render<'a>(
         "markdown" => render_markdown(node, caches),
         #[cfg(not(feature = "widget-markdown"))]
         "markdown" => render_feature_disabled("markdown", "widget-markdown"),
-        "stack" => render_stack(node, caches, images),
+        "stack" => render_stack(node, caches, images, theme, dispatcher),
         #[cfg(feature = "widget-canvas")]
-        "canvas" => render_canvas(node, caches, images),
+        "canvas" => render_canvas(node, caches, images, theme, dispatcher),
         #[cfg(not(feature = "widget-canvas"))]
         "canvas" => render_feature_disabled("canvas", "widget-canvas"),
         "table" => render_table(node),
         // New native widgets
-        "grid" => render_grid(node, caches, images),
-        "pin" => render_pin(node, caches, images),
-        "mouse_area" => render_mouse_area(node, caches, images),
-        "sensor" => render_sensor(node, caches, images),
+        "grid" => render_grid(node, caches, images, theme, dispatcher),
+        "pin" => render_pin(node, caches, images, theme, dispatcher),
+        "mouse_area" => render_mouse_area(node, caches, images, theme, dispatcher),
+        "sensor" => render_sensor(node, caches, images, theme, dispatcher),
         "rich_text" | "rich" => render_rich_text(node, caches),
-        "keyed_column" => render_keyed_column(node, caches, images),
-        "float" => render_float(node, caches, images),
-        "themer" => render_themer(node, caches, images),
-        "responsive" => render_responsive(node, caches, images),
-        "pane_grid" => render_pane_grid(node, caches, images),
-        "overlay" => render_overlay(node, caches, images),
+        "keyed_column" => render_keyed_column(node, caches, images, theme, dispatcher),
+        "float" => render_float(node, caches, images, theme, dispatcher),
+        "themer" => render_themer(node, caches, images, theme, dispatcher),
+        "responsive" => render_responsive(node, caches, images, theme, dispatcher),
+        "pane_grid" => render_pane_grid(node, caches, images, theme, dispatcher),
+        "overlay" => render_overlay(node, caches, images, theme, dispatcher),
         // Feature-gated widgets
         #[cfg(feature = "widget-qr-code")]
         "qr_code" => render_qr_code(node, caches),
         #[cfg(not(feature = "widget-qr-code"))]
         "qr_code" => render_feature_disabled("qr_code", "widget-qr-code"),
         unknown => {
-            log::warn!("unknown node type `{unknown}`, rendering as empty container");
-            container(Space::new()).into()
+            if dispatcher.handles_type(unknown) {
+                let render_ctx = crate::extensions::RenderContext {
+                    caches,
+                    images,
+                    theme,
+                    extensions: dispatcher,
+                };
+                let env = crate::extensions::WidgetEnv {
+                    caches,
+                    extension_caches: &caches.extension,
+                    images,
+                    theme,
+                    render_ctx,
+                };
+                dispatcher
+                    .render(node, &env)
+                    .unwrap_or_else(|| container(Space::new()).into())
+            } else {
+                log::warn!("unknown node type `{unknown}`, rendering as empty container");
+                container(Space::new()).into()
+            }
         }
     }
 }
@@ -331,10 +353,12 @@ fn render_children<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Vec<Element<'a, Message>> {
     node.children
         .iter()
-        .map(|c| render(c, caches, images))
+        .map(|c| render(c, caches, images, theme, dispatcher))
         .collect()
 }
 
@@ -346,6 +370,8 @@ fn render_column<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
@@ -355,7 +381,7 @@ fn render_column<'a>(
     let align_x = prop_horizontal_alignment(props, "align_x");
     let clip = prop_bool_default(props, "clip", false);
 
-    let children = render_children(node, caches, images);
+    let children = render_children(node, caches, images, theme, dispatcher);
 
     let mut col = column(children)
         .spacing(spacing)
@@ -386,6 +412,8 @@ fn render_row<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
@@ -395,7 +423,7 @@ fn render_row<'a>(
     let align_y = prop_vertical_alignment(props, "align_y");
     let clip = prop_bool_default(props, "clip", false);
 
-    let children = render_children(node, caches, images);
+    let children = render_children(node, caches, images, theme, dispatcher);
 
     let r = row(children)
         .spacing(spacing)
@@ -501,6 +529,8 @@ fn render_button<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let id = node.id.clone();
@@ -509,7 +539,7 @@ fn render_button<'a>(
     let child: Element<'a, Message> = if !node.children.is_empty() {
         node.children
             .first()
-            .map(|c| render(c, caches, images))
+            .map(|c| render(c, caches, images, theme, dispatcher))
             .unwrap_or_else(|| Space::new().into())
     } else {
         let label = prop_str(props, "label")
@@ -616,6 +646,8 @@ fn render_container<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let padding = parse_padding_value(props);
@@ -627,7 +659,7 @@ fn render_container<'a>(
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches, images))
+        .map(|c| render(c, caches, images, theme, dispatcher))
         .unwrap_or_else(|| Space::new().into());
 
     let mut c = container(child)
@@ -735,6 +767,8 @@ fn render_scrollable<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let width = prop_length(props, "width", Length::Shrink);
@@ -744,7 +778,7 @@ fn render_scrollable<'a>(
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches, images))
+        .map(|c| render(c, caches, images, theme, dispatcher))
         .unwrap_or_else(|| Space::new().into());
 
     let direction = prop_str(props, "direction").unwrap_or_default();
@@ -831,6 +865,8 @@ fn render_window<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let padding = parse_padding_value(props);
@@ -840,7 +876,7 @@ fn render_window<'a>(
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches, images))
+        .map(|c| render(c, caches, images, theme, dispatcher))
         .unwrap_or_else(|| Space::new().into());
 
     container(child)
@@ -1995,6 +2031,8 @@ fn render_tooltip<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let tip = prop_str(props, "tip").unwrap_or_default();
@@ -2012,7 +2050,7 @@ fn render_tooltip<'a>(
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches, images))
+        .map(|c| render(c, caches, images, theme, dispatcher))
         .unwrap_or_else(|| Space::new().into());
 
     let mut tt = tooltip(child, text(tip), position);
@@ -2246,13 +2284,15 @@ fn render_stack<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let width = prop_length(props, "width", Length::Shrink);
     let height = prop_length(props, "height", Length::Shrink);
     let clip = prop_bool_default(props, "clip", false);
 
-    let children = render_children(node, caches, images);
+    let children = render_children(node, caches, images, theme, dispatcher);
 
     Stack::with_children(children)
         .width(width)
@@ -2269,6 +2309,8 @@ fn render_grid<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let cols = props
@@ -2277,7 +2319,7 @@ fn render_grid<'a>(
         .unwrap_or(1) as usize;
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
 
-    let children = render_children(node, caches, images);
+    let children = render_children(node, caches, images, theme, dispatcher);
 
     let mut g = grid(children).columns(cols).spacing(spacing);
 
@@ -2299,6 +2341,8 @@ fn render_pin<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let x = prop_f32(props, "x").unwrap_or(0.0);
@@ -2309,7 +2353,7 @@ fn render_pin<'a>(
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches, images))
+        .map(|c| render(c, caches, images, theme, dispatcher))
         .unwrap_or_else(|| Space::new().into());
 
     pin(child)
@@ -2327,12 +2371,14 @@ fn render_mouse_area<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches, images))
+        .map(|c| render(c, caches, images, theme, dispatcher))
         .unwrap_or_else(|| Space::new().into());
 
     let id = node.id.clone();
@@ -2403,11 +2449,13 @@ fn render_sensor<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches, images))
+        .map(|c| render(c, caches, images, theme, dispatcher))
         .unwrap_or_else(|| Space::new().into());
 
     // Sensor needs a key. Use the node id.
@@ -2508,6 +2556,8 @@ fn render_keyed_column<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
@@ -2522,7 +2572,7 @@ fn render_keyed_column<'a>(
             let mut hasher = DefaultHasher::new();
             c.id.hash(&mut hasher);
             let key = hasher.finish();
-            let elem = render(c, caches, images);
+            let elem = render(c, caches, images, theme, dispatcher);
             (key, elem)
         })
         .collect();
@@ -2549,13 +2599,15 @@ fn render_float<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
 
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches, images))
+        .map(|c| render(c, caches, images, theme, dispatcher))
         .unwrap_or_else(|| Space::new().into());
 
     let tx = prop_f32(props, "translate_x").unwrap_or(0.0);
@@ -2579,19 +2631,21 @@ fn render_themer<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
-    let theme: Option<iced::Theme> = props
+    let resolved_theme: Option<iced::Theme> = props
         .and_then(|p| p.get("theme"))
         .and_then(crate::theming::resolve_theme_only);
 
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches, images))
+        .map(|c| render(c, caches, images, theme, dispatcher))
         .unwrap_or_else(|| Space::new().into());
 
-    iced::widget::Themer::new(theme, child).into()
+    iced::widget::Themer::new(resolved_theme, child).into()
 }
 
 // ---------------------------------------------------------------------------
@@ -2602,6 +2656,8 @@ fn render_responsive<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     // iced's Responsive widget takes a closure that receives Size and returns
     // an Element. Since we can't call back to Elixir within a single frame,
@@ -2614,7 +2670,7 @@ fn render_responsive<'a>(
     let child: Element<'a, Message> = node
         .children
         .first()
-        .map(|c| render(c, caches, images))
+        .map(|c| render(c, caches, images, theme, dispatcher))
         .unwrap_or_else(|| Space::new().into());
 
     let resize_id = node.id.clone();
@@ -2633,6 +2689,8 @@ fn render_pane_grid<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let spacing = prop_f32(props, "spacing").unwrap_or(2.0);
@@ -2650,7 +2708,7 @@ fn render_pane_grid<'a>(
     let child_map: HashMap<String, Element<'a, Message>> = node
         .children
         .iter()
-        .map(|c| (c.id.clone(), render(c, caches, images)))
+        .map(|c| (c.id.clone(), render(c, caches, images, theme, dispatcher)))
         .collect();
 
     // We need to move child_map into the closure but PaneGrid::new
@@ -3348,6 +3406,8 @@ fn render_canvas<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    _theme: &'a iced::Theme,
+    _dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     let props = node.props.as_object();
     let width = prop_length(props, "width", Length::Fill);
@@ -4577,6 +4637,8 @@ fn render_overlay<'a>(
     node: &'a TreeNode,
     caches: &'a WidgetCaches,
     images: &'a crate::image_registry::ImageRegistry,
+    theme: &'a iced::Theme,
+    dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
     use crate::overlay_widget;
 
@@ -4591,8 +4653,8 @@ fn render_overlay<'a>(
         return text("overlay requires 2 children").into();
     }
 
-    let anchor = render(&children[0], caches, images);
-    let content = render(&children[1], caches, images);
+    let anchor = render(&children[0], caches, images, theme, dispatcher);
+    let content = render(&children[1], caches, images, theme, dispatcher);
 
     let pos = match position.as_str() {
         "above" => overlay_widget::Position::Above,

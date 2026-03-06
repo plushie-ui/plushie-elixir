@@ -1,5 +1,6 @@
 #![deny(warnings)]
 
+pub mod app;
 pub mod codec;
 pub mod effects;
 pub mod engine;

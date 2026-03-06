@@ -38,7 +38,7 @@ pub trait WidgetExtension: Send + Sync + 'static {
     fn prepare(&mut self, _node: &TreeNode, _caches: &mut ExtensionCaches, _theme: &Theme) {}
 
     /// Build an iced Element for a node. Called in the immutable phase (view).
-    fn render<'a>(&self, node: &'a TreeNode, env: &'a WidgetEnv<'a>) -> Element<'a, Message>;
+    fn render<'a>(&self, node: &'a TreeNode, env: &WidgetEnv<'a>) -> Element<'a, Message>;
 
     /// Handle an event emitted by this extension's widgets. Called before
     /// the event reaches the wire.
@@ -154,25 +154,18 @@ pub struct WidgetEnv<'a> {
 }
 
 /// Renders child nodes through the main dispatch. Copy-able (all shared refs).
-///
-/// Fields marked allow(dead_code) are wired in by Commit D when the render
-/// signature is updated to thread extensions through the full dispatch.
 #[derive(Clone, Copy)]
 pub struct RenderContext<'a> {
     pub(crate) caches: &'a WidgetCaches,
     pub(crate) images: &'a ImageRegistry,
-    #[allow(dead_code)]
     pub(crate) theme: &'a Theme,
-    #[allow(dead_code)]
     pub(crate) extensions: &'a ExtensionDispatcher,
 }
 
 impl<'a> RenderContext<'a> {
     /// Render a child node through the main dispatch.
     pub fn render_child(&self, node: &'a TreeNode) -> Element<'a, Message> {
-        // Stub: calls old 3-param render for now. Commit D updates this
-        // to the full 5-param signature.
-        crate::widgets::render(node, self.caches, self.images)
+        crate::widgets::render(node, self.caches, self.images, self.theme, self.extensions)
     }
 }
 
@@ -365,7 +358,7 @@ impl ExtensionDispatcher {
     pub fn render<'a>(
         &'a self,
         node: &'a TreeNode,
-        env: &'a WidgetEnv<'a>,
+        env: &WidgetEnv<'a>,
     ) -> Option<Element<'a, Message>> {
         let &idx = self.type_name_index.get(node.type_name.as_str())?;
         if self.poisoned[idx] {

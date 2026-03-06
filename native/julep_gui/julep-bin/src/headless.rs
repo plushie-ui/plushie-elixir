@@ -361,8 +361,9 @@ pub mod headless_mode {
         // Prepare caches and build the iced Element from the tree.
         julep_core::widgets::ensure_caches(root, &mut core.caches);
         let images = julep_core::image_registry::ImageRegistry::new();
+        let dispatcher = julep_core::extensions::ExtensionDispatcher::default();
         let element: iced::Element<'_, julep_core::message::Message> =
-            julep_core::widgets::render(root, &core.caches, &images);
+            julep_core::widgets::render(root, &core.caches, &images, theme, &dispatcher);
 
         // Create a headless tiny-skia renderer.
         let mut renderer = match iced::futures::executor::block_on(iced::Renderer::new(
