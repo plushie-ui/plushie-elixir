@@ -53,13 +53,24 @@ defmodule Julep.Test.EventMap do
   def click(%Element{type: type}) when type in ~w(checkbox toggler),
     do: {:error, "cannot click a #{type} widget -- use toggle/1 instead"}
 
-  def click(%Element{type: type}), do: {:error, "cannot click a #{type} widget"}
+  def click(%Element{type: type} = el) do
+    case Julep.Test.ExtensionEvents.dispatch(:click, el, []) do
+      :not_handled -> {:error, "cannot click a #{type} widget"}
+      result -> result
+    end
+  end
 
   @doc "Infers the event produced by typing text into a widget."
   @spec input(element :: Element.t(), text :: String.t()) :: {:ok, tuple()} | {:error, String.t()}
   def input(%Element{type: "text_input", id: id}, text), do: {:ok, {:input, id, text}}
   def input(%Element{type: "text_editor", id: id}, text), do: {:ok, {:input, id, text}}
-  def input(%Element{type: type}, _text), do: {:error, "cannot type into a #{type} widget"}
+
+  def input(%Element{type: type} = el, text) do
+    case Julep.Test.ExtensionEvents.dispatch(:input, el, [text]) do
+      :not_handled -> {:error, "cannot type into a #{type} widget"}
+      result -> result
+    end
+  end
 
   @doc "Infers the event produced by submitting a widget."
   @spec submit(element :: Element.t()) :: {:ok, tuple()} | {:error, String.t()}
@@ -67,7 +78,12 @@ defmodule Julep.Test.EventMap do
     {:ok, {:submit, id, props["value"] || ""}}
   end
 
-  def submit(%Element{type: type}), do: {:error, "cannot submit a #{type} widget"}
+  def submit(%Element{type: type} = el) do
+    case Julep.Test.ExtensionEvents.dispatch(:submit, el, []) do
+      :not_handled -> {:error, "cannot submit a #{type} widget"}
+      result -> result
+    end
+  end
 
   @doc "Infers the event produced by toggling a widget."
   @spec toggle(element :: Element.t()) :: {:ok, tuple()} | {:error, String.t()}
@@ -84,7 +100,12 @@ defmodule Julep.Test.EventMap do
   def toggle(%Element{type: type}) when type in ~w(button),
     do: {:error, "cannot toggle a #{type} widget -- use click/1 instead"}
 
-  def toggle(%Element{type: type}), do: {:error, "cannot toggle a #{type} widget"}
+  def toggle(%Element{type: type} = el) do
+    case Julep.Test.ExtensionEvents.dispatch(:toggle, el, []) do
+      :not_handled -> {:error, "cannot toggle a #{type} widget"}
+      result -> result
+    end
+  end
 
   @doc "Infers the event produced by selecting a value from a widget."
   @spec select(element :: Element.t(), value :: term()) :: {:ok, tuple()} | {:error, String.t()}
@@ -95,13 +116,25 @@ defmodule Julep.Test.EventMap do
 
   def select(%Element{type: "pick_list", id: id}, value), do: {:ok, {:select, id, value}}
   def select(%Element{type: "combo_box", id: id}, value), do: {:ok, {:select, id, value}}
-  def select(%Element{type: type}, _value), do: {:error, "cannot select from a #{type} widget"}
+
+  def select(%Element{type: type} = el, value) do
+    case Julep.Test.ExtensionEvents.dispatch(:select, el, [value]) do
+      :not_handled -> {:error, "cannot select from a #{type} widget"}
+      result -> result
+    end
+  end
 
   @doc "Infers the event produced by sliding a widget to a value."
   @spec slide(element :: Element.t(), value :: number()) :: {:ok, tuple()} | {:error, String.t()}
   def slide(%Element{type: "slider", id: id}, value), do: {:ok, {:slide, id, value}}
   def slide(%Element{type: "vertical_slider", id: id}, value), do: {:ok, {:slide, id, value}}
-  def slide(%Element{type: type}, _value), do: {:error, "cannot slide a #{type} widget"}
+
+  def slide(%Element{type: type} = el, value) do
+    case Julep.Test.ExtensionEvents.dispatch(:slide, el, [value]) do
+      :not_handled -> {:error, "cannot slide a #{type} widget"}
+      result -> result
+    end
+  end
 
   # -- Open/Close events --
 

@@ -35,6 +35,9 @@ defmodule Julep.Test.Case do
       setup _context do
         backend_mod = Julep.Test.Case.resolve_backend()
 
+        # Register extension sim events so custom widget types can be tested
+        Julep.Test.ExtensionEvents.register_all()
+
         session = Session.start(unquote(app), backend: backend_mod)
         Process.put(:julep_test_session, session)
 

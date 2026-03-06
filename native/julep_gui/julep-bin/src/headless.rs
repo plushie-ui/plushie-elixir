@@ -17,10 +17,12 @@ pub mod headless_mode {
     /// Default screenshot height when not specified by the caller.
     const DEFAULT_SCREENSHOT_HEIGHT: u32 = 768;
 
+    use julep_core::extensions::ExtensionDispatcher;
+
     /// Run the headless mode event loop.
     /// No iced::daemon. Reads framed messages from stdin, processes through Core,
     /// writes responses to stdout using the negotiated wire codec.
-    pub fn run(forced_codec: Option<Codec>) {
+    pub fn run(forced_codec: Option<Codec>, dispatcher: ExtensionDispatcher) {
         let mut core = Core::new();
         let mut theme = Theme::Dark;
         let stdin = io::stdin();
@@ -45,7 +47,7 @@ pub mod headless_mode {
             match codec.read_message(&mut reader) {
                 Ok(None) => break,
                 Ok(Some(bytes)) => match codec.decode::<IncomingMessage>(&bytes) {
-                    Ok(msg) => handle_message(&mut core, &mut theme, msg),
+                    Ok(msg) => handle_message(&mut core, &mut theme, &dispatcher, msg),
                     Err(e) => {
                         log::error!("decode error: {e}");
                     }
@@ -60,7 +62,12 @@ pub mod headless_mode {
         log::info!("stdin closed, exiting");
     }
 
-    fn handle_message(core: &mut Core, theme: &mut Theme, msg: IncomingMessage) {
+    fn handle_message(
+        core: &mut Core,
+        theme: &mut Theme,
+        dispatcher: &ExtensionDispatcher,
+        msg: IncomingMessage,
+    ) {
         match msg {
             // Normal messages go through Core::apply()
             IncomingMessage::Snapshot { .. }
@@ -123,7 +130,7 @@ pub mod headless_mode {
             } => {
                 let w = width.unwrap_or(DEFAULT_SCREENSHOT_WIDTH);
                 let h = height.unwrap_or(DEFAULT_SCREENSHOT_HEIGHT);
-                handle_screenshot_capture(core, theme, id, name, w, h);
+                handle_screenshot_capture(core, theme, dispatcher, id, name, w, h);
             }
             IncomingMessage::Reset { id } => {
                 handle_reset(core, id);
@@ -351,6 +358,7 @@ pub mod headless_mode {
     fn handle_screenshot_capture(
         core: &mut Core,
         theme: &Theme,
+        dispatcher: &ExtensionDispatcher,
         id: String,
         name: String,
         width: u32,
@@ -371,9 +379,8 @@ pub mod headless_mode {
         // Prepare caches and build the iced Element from the tree.
         julep_core::widgets::ensure_caches(root, &mut core.caches);
         let images = julep_core::image_registry::ImageRegistry::new();
-        let dispatcher = julep_core::extensions::ExtensionDispatcher::default();
         let element: iced::Element<'_, julep_core::message::Message> =
-            julep_core::widgets::render(root, &core.caches, &images, theme, &dispatcher);
+            julep_core::widgets::render(root, &core.caches, &images, theme, dispatcher);
 
         // Create a headless tiny-skia renderer.
         let mut renderer = match iced::futures::executor::block_on(iced::Renderer::new(

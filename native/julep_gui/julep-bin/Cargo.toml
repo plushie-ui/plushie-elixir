@@ -3,6 +3,10 @@ name = "julep-bin"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "julep_bin"
+path = "src/lib.rs"
+
 [[bin]]
 name = "julep_gui"
 path = "src/main.rs"

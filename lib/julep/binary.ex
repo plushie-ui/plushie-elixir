@@ -6,12 +6,14 @@ defmodule Julep.Binary do
 
   Resolution order:
   1. JULEP_RENDERER_PATH environment variable
-  2. Precompiled binary in priv/
-  3. Development build in native/julep_gui/target/
+  2. Custom extension build in _build/<env>/julep_renderer/target/
+  3. Precompiled binary in priv/
+  4. Development build in native/julep_gui/target/
   """
   @spec renderer_path() :: String.t()
   def renderer_path do
     System.get_env("JULEP_RENDERER_PATH") ||
+      custom_build_path() ||
       precompiled_path() ||
       dev_build_path() ||
       raise "julep_gui binary not found. Run `mix julep.build` or `mix julep.download`."
@@ -24,6 +26,26 @@ defmodule Julep.Binary do
     arch = arch_name()
     ext = if os == "windows", do: ".exe", else: ""
     "julep_gui-#{os}-#{arch}#{ext}"
+  end
+
+  defp custom_build_path do
+    for profile <- ["release", "debug"] do
+      ext = if os_name() == "windows", do: ".exe", else: ""
+
+      path =
+        Path.join([
+          Mix.Project.build_path(),
+          "julep_renderer",
+          "target",
+          profile,
+          "julep_gui#{ext}"
+        ])
+
+      if File.exists?(path), do: path
+    end
+    |> Enum.find(& &1)
+  rescue
+    _ -> nil
   end
 
   defp precompiled_path do

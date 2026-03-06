@@ -37,4 +37,20 @@ defmodule Julep.Extension do
 
   @doc "Node type strings this extension handles."
   @callback type_names() :: [String.t()]
+
+  @doc """
+  Infers the sim event produced by a verb applied to an extension widget.
+
+  Called by the sim test backend when the built-in `EventMap` does not
+  recognize the widget type. Return `{:ok, event_tuple}` to handle,
+  `{:error, reason}` for a known-bad interaction, or `:not_handled`
+  to fall through to the default error.
+
+  Optional -- extensions that don't implement this callback will behave
+  as if they returned `:not_handled` for every verb.
+  """
+  @callback sim_events(verb :: atom(), element :: Julep.Test.Element.t(), args :: list()) ::
+              {:ok, tuple()} | {:error, String.t()} | :not_handled
+
+  @optional_callbacks [sim_events: 3]
 end

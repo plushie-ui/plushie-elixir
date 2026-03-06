@@ -123,7 +123,7 @@ defmodule Mix.Tasks.Julep.Build do
 
   # -- Extension build --------------------------------------------------------
 
-  defp build_with_extensions(extensions, _args) do
+  defp build_with_extensions(extensions, args) do
     build_dir = Path.join(Mix.Project.build_path(), "julep_renderer")
     File.mkdir_p!(build_dir)
 
@@ -137,10 +137,28 @@ defmodule Mix.Tasks.Julep.Build do
         "with #{length(extensions)} extension(s): #{ext_names}"
     )
 
-    Mix.shell().info(
-      "Note: cargo build is not yet supported for custom workspaces. " <>
-        "The generated files are a preview of the future build output."
-    )
+    release? = "--release" in args or Mix.env() == :prod
+    release_flags = if release?, do: ["--release"], else: []
+    profile = if release?, do: "release", else: "debug"
+
+    Mix.shell().info("Building custom renderer#{if release?, do: " (release)", else: ""}...")
+
+    case System.cmd("cargo", ["build"] ++ release_flags,
+           cd: build_dir,
+           stderr_to_stdout: true
+         ) do
+      {output, 0} ->
+        Mix.shell().info("Build succeeded.")
+        if "--verbose" in args, do: Mix.shell().info(output)
+        binary = Path.join([build_dir, "target", profile, "julep_gui"])
+        Mix.shell().info("Binary: #{binary}")
+        :ok
+
+      {output, status} ->
+        Mix.shell().error("Build failed (exit code #{status}):")
+        Mix.shell().error(output)
+        Mix.raise("cargo build failed for custom renderer workspace")
+    end
   end
 
   defp resolve_crate_paths(extensions) do
@@ -219,15 +237,10 @@ defmodule Mix.Tasks.Julep.Build do
 
     use julep_core::app::JulepAppBuilder;
 
-    fn main() {
+    fn main() -> iced::Result {
         let builder = JulepAppBuilder::new()
                 #{ext_registrations};
-
-        // Build and run the custom renderer.
-        // Note: the actual run mechanism depends on julep-bin exposing
-        // a public entry point. For now this generates the builder setup.
-        let _dispatcher = builder.build_dispatcher();
-        todo!("julep-bin does not yet expose a public run() function");
+        julep_bin::run(builder)
     }
     """
   end
