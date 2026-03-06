@@ -93,6 +93,27 @@ pub enum IncomingMessage {
         #[serde(default)]
         height: Option<u32>,
     },
+    /// A single extension command pushed to a native extension widget.
+    /// Bypasses the normal tree update / diff / patch cycle.
+    ExtensionCommand {
+        node_id: String,
+        op: String,
+        #[serde(default)]
+        payload: Value,
+    },
+    /// A batch of extension commands processed in one cycle.
+    ExtensionCommandBatch {
+        commands: Vec<ExtensionCommandItem>,
+    },
+}
+
+/// A single item within an `ExtensionCommandBatch`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ExtensionCommandItem {
+    pub node_id: String,
+    pub op: String,
+    #[serde(default)]
+    pub payload: Value,
 }
 
 /// Response to an effect request, written to stdout as JSONL.
@@ -1971,5 +1992,53 @@ mod tests {
         assert!(!serialized.contains("\"value\""));
         assert!(!serialized.contains("\"tag\""));
         assert!(!serialized.contains("\"modifiers\""));
+    }
+
+    // -----------------------------------------------------------------------
+    // ExtensionCommand deserialization
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn extension_command_deserializes() {
+        let json = r#"{"type":"extension_command","node_id":"term-1","op":"write","payload":{"data":"hello"}}"#;
+        let msg: IncomingMessage = serde_json::from_str(json).unwrap();
+        match msg {
+            IncomingMessage::ExtensionCommand {
+                node_id,
+                op,
+                payload,
+            } => {
+                assert_eq!(node_id, "term-1");
+                assert_eq!(op, "write");
+                assert_eq!(payload["data"], "hello");
+            }
+            _ => panic!("wrong variant"),
+        }
+    }
+
+    #[test]
+    fn extension_command_batch_deserializes() {
+        let json = r#"{"type":"extension_command_batch","commands":[{"node_id":"term-1","op":"write","payload":{"data":"a"}},{"node_id":"log-1","op":"append","payload":{"line":"x"}}]}"#;
+        let msg: IncomingMessage = serde_json::from_str(json).unwrap();
+        match msg {
+            IncomingMessage::ExtensionCommandBatch { commands } => {
+                assert_eq!(commands.len(), 2);
+                assert_eq!(commands[0].node_id, "term-1");
+                assert_eq!(commands[1].op, "append");
+            }
+            _ => panic!("wrong variant"),
+        }
+    }
+
+    #[test]
+    fn extension_command_with_default_payload() {
+        let json = r#"{"type":"extension_command","node_id":"ext-1","op":"reset"}"#;
+        let msg: IncomingMessage = serde_json::from_str(json).unwrap();
+        match msg {
+            IncomingMessage::ExtensionCommand { payload, .. } => {
+                assert!(payload.is_null());
+            }
+            _ => panic!("wrong variant"),
+        }
     }
 }

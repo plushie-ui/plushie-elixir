@@ -448,9 +448,9 @@ defmodule Julep.ProtocolTest do
       assert {:error, {:unknown_message, _}} = Protocol.decode_message(json, :json)
     end
 
-    test "unknown event family dispatches through extension catch-all" do
+    test "returns {:error, {:unknown_message, _}} for a known type with an unknown family" do
       json = Jason.encode!(%{type: "event", family: "levitate", id: "wizard"})
-      assert {:levitate, "wizard", nil} = Protocol.decode_message(json, :json)
+      assert {:error, {:unknown_message, _}} = Protocol.decode_message(json, :json)
     end
 
     test "the unknown_message tuple carries the decoded map" do
@@ -458,28 +458,6 @@ defmodule Julep.ProtocolTest do
       {:error, {:unknown_message, msg}} = Protocol.decode_message(json, :json)
       assert is_map(msg)
       assert msg["type"] == "mystery"
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # decode_message/1 -- extension event families
-  # ---------------------------------------------------------------------------
-
-  describe "decode_message/1 -- extension event families" do
-    test "unknown family decodes to {family_atom, id, data}" do
-      json = Jason.encode!(%{type: "event", family: "span_clicked", id: "node1"})
-      assert {:span_clicked, "node1", nil} = Protocol.decode_message(json, :json)
-    end
-
-    test "unknown family with data" do
-      json = Jason.encode!(%{type: "event", family: "span_clicked", id: "node1", data: %{"foo" => "bar"}})
-      assert {:span_clicked, "node1", %{"foo" => "bar"}} = Protocol.decode_message(json, :json)
-    end
-
-    test "unknown family from msgpack" do
-      event = %{"type" => "event", "family" => "view_changed", "id" => "plot1"}
-      packed = Msgpax.pack!(event, iodata: false)
-      assert {:view_changed, "plot1", nil} = Protocol.decode_message(packed, :msgpack)
     end
   end
 
@@ -914,6 +892,57 @@ defmodule Julep.ProtocolTest do
 
     test "invalid msgpack returns {:error, :decode_failed}" do
       assert {:error, :decode_failed} = Protocol.decode_message(<<0xFF, 0xFF>>, :msgpack)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # encode_extension_command/4
+  # ---------------------------------------------------------------------------
+
+  describe "encode_extension_command/4" do
+    test "produces valid JSON message" do
+      result = Protocol.encode_extension_command("term-1", "write", %{"data" => "hello"}, :json)
+      decoded = decode_json!(result)
+      assert decoded["type"] == "extension_command"
+      assert decoded["node_id"] == "term-1"
+      assert decoded["op"] == "write"
+      assert decoded["payload"]["data"] == "hello"
+    end
+
+    test "produces valid msgpack message" do
+      result = Protocol.encode_extension_command("ext-1", "reset", %{}, :msgpack)
+      {:ok, decoded} = Msgpax.unpack(result)
+      assert decoded["type"] == "extension_command"
+      assert decoded["node_id"] == "ext-1"
+      assert decoded["op"] == "reset"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # encode_extension_commands/2
+  # ---------------------------------------------------------------------------
+
+  describe "encode_extension_commands/2" do
+    test "produces valid JSON batch message" do
+      commands = [
+        {"term-1", "write", %{"data" => "a"}},
+        {"log-1", "append", %{"line" => "x"}}
+      ]
+
+      result = Protocol.encode_extension_commands(commands, :json)
+      decoded = decode_json!(result)
+      assert decoded["type"] == "extension_command_batch"
+      assert length(decoded["commands"]) == 2
+      assert Enum.at(decoded["commands"], 0)["node_id"] == "term-1"
+      assert Enum.at(decoded["commands"], 1)["op"] == "append"
+    end
+
+    test "produces valid msgpack batch message" do
+      commands = [{"n1", "op1", %{"k" => "v"}}]
+      result = Protocol.encode_extension_commands(commands, :msgpack)
+      {:ok, decoded} = Msgpax.unpack(result)
+      assert decoded["type"] == "extension_command_batch"
+      assert length(decoded["commands"]) == 1
     end
   end
 end

@@ -267,6 +267,15 @@ defmodule Julep.Runtime do
         %{}
       end
 
+    extension_config = Application.get_env(:julep, :extension_config, %{})
+
+    settings =
+      if extension_config != %{} do
+        Map.put(settings, "extension_config", extension_config)
+      else
+        settings
+      end
+
     if bridge, do: Julep.Bridge.send_settings(bridge, settings)
   end
 
@@ -516,6 +525,31 @@ defmodule Julep.Runtime do
   defp execute_command(%Julep.Command{type: :image_op, payload: %{op: op} = payload}, state) do
     if state.bridge do
       Julep.Bridge.send_image_op(state.bridge, op, Map.delete(payload, :op))
+    end
+
+    state
+  end
+
+  defp execute_command(
+         %Julep.Command{
+           type: :extension_command,
+           payload: %{node_id: node_id, op: op, payload: payload}
+         },
+         state
+       ) do
+    if state.bridge do
+      Julep.Bridge.send_extension_command(state.bridge, node_id, op, payload)
+    end
+
+    state
+  end
+
+  defp execute_command(
+         %Julep.Command{type: :extension_commands, payload: %{commands: commands}},
+         state
+       ) do
+    if state.bridge do
+      Julep.Bridge.send_extension_commands(state.bridge, commands)
     end
 
     state

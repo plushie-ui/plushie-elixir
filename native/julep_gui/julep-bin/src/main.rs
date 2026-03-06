@@ -1048,6 +1048,41 @@ impl App {
     }
 
     fn apply(&mut self, message: IncomingMessage) {
+        // Extension commands bypass the normal tree update / diff / patch cycle.
+        match &message {
+            IncomingMessage::ExtensionCommand {
+                node_id,
+                op,
+                payload,
+            } => {
+                let events = self.dispatcher.handle_command(
+                    node_id,
+                    op,
+                    payload,
+                    &mut self.core.caches.extension,
+                );
+                for ev in events {
+                    emit_event(ev);
+                }
+                return;
+            }
+            IncomingMessage::ExtensionCommandBatch { commands } => {
+                for cmd in commands {
+                    let events = self.dispatcher.handle_command(
+                        &cmd.node_id,
+                        &cmd.op,
+                        &cmd.payload,
+                        &mut self.core.caches.extension,
+                    );
+                    for ev in events {
+                        emit_event(ev);
+                    }
+                }
+                return;
+            }
+            _ => {}
+        }
+
         let is_snapshot = matches!(message, IncomingMessage::Snapshot { .. });
         let is_tree_change = matches!(
             message,
@@ -1100,6 +1135,9 @@ impl App {
                         width,
                         height,
                     );
+                }
+                julep_core::engine::CoreEffect::ExtensionConfig(config) => {
+                    self.dispatcher.init_all(&config);
                 }
             }
         }
@@ -2418,6 +2456,8 @@ fn read_initial_settings(
                 IncomingMessage::ScreenshotCapture { .. } => "screenshot_capture",
                 IncomingMessage::Reset { .. } => "reset",
                 IncomingMessage::ImageOp { .. } => "image_op",
+                IncomingMessage::ExtensionCommand { .. } => "extension_command",
+                IncomingMessage::ExtensionCommandBatch { .. } => "extension_command_batch",
             };
             log::error!("expected settings as first message, got {variant}");
             (

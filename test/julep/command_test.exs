@@ -329,4 +329,48 @@ defmodule Julep.CommandTest do
       end
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # extension_command/3
+  # ---------------------------------------------------------------------------
+
+  describe "extension_command/3" do
+    test "returns a Command with type :extension_command" do
+      cmd = Command.extension_command("node-1", "write", %{data: "hi"})
+      assert cmd.type == :extension_command
+      assert cmd.payload.node_id == "node-1"
+      assert cmd.payload.op == "write"
+      assert cmd.payload.payload == %{data: "hi"}
+    end
+
+    test "defaults payload to empty map" do
+      cmd = Command.extension_command("node-1", "reset")
+      assert cmd.payload.payload == %{}
+    end
+
+    test "raises when node_id is not a binary" do
+      assert_raise FunctionClauseError, fn ->
+        Command.extension_command(:not_a_string, "op")
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # extension_commands/1
+  # ---------------------------------------------------------------------------
+
+  describe "extension_commands/1" do
+    test "returns a Command with type :extension_commands" do
+      cmds = [{"n1", "op1", %{a: 1}}, {"n2", "op2", %{b: 2}}]
+      cmd = Command.extension_commands(cmds)
+      assert cmd.type == :extension_commands
+      assert cmd.payload.commands == cmds
+    end
+
+    test "raises when given a non-list" do
+      assert_raise FunctionClauseError, fn ->
+        Command.extension_commands("not a list")
+      end
+    end
+  end
 end

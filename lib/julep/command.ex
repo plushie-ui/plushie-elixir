@@ -773,6 +773,36 @@ defmodule Julep.Command do
     }
   end
 
+  # ---------------------------------------------------------------------------
+  # Extension commands
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Send a command to a native extension widget.
+
+  Extension commands bypass the normal tree update / diff / patch cycle and
+  are delivered directly to the target extension widget on the Rust side.
+  """
+  @spec extension_command(node_id :: String.t(), op :: String.t(), payload :: map()) ::
+          %__MODULE__{}
+  def extension_command(node_id, op, payload \\ %{})
+      when is_binary(node_id) and is_binary(op) do
+    %__MODULE__{
+      type: :extension_command,
+      payload: %{node_id: node_id, op: op, payload: payload}
+    }
+  end
+
+  @doc """
+  Send a batch of extension commands (processed in one cycle).
+
+  Each command in the list is a `{node_id, op, payload}` tuple.
+  """
+  @spec extension_commands(commands :: [{String.t(), String.t(), map()}]) :: %__MODULE__{}
+  def extension_commands(commands) when is_list(commands) do
+    %__MODULE__{type: :extension_commands, payload: %{commands: commands}}
+  end
+
   @doc """
   Issue multiple commands. Commands in the batch execute concurrently.
 

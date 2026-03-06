@@ -128,6 +128,16 @@ pub mod headless_mode {
             IncomingMessage::Reset { id } => {
                 handle_reset(core, id);
             }
+            // Extension commands bypass tree updates. No dispatcher in headless mode.
+            IncomingMessage::ExtensionCommand { node_id, op, .. } => {
+                log::debug!("extension_command in headless: node_id={node_id} op={op} (ignored)");
+            }
+            IncomingMessage::ExtensionCommandBatch { commands } => {
+                log::debug!(
+                    "extension_command_batch in headless: {} commands (ignored)",
+                    commands.len()
+                );
+            }
         }
     }
 

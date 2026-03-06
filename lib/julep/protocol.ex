@@ -201,6 +201,49 @@ defmodule Julep.Protocol do
   end
 
   @doc """
+  Encodes a single extension command as a protocol message.
+
+  Extension commands bypass the normal tree update / diff / patch cycle
+  and are delivered directly to the target extension widget on the Rust side.
+  """
+  @spec encode_extension_command(
+          node_id :: String.t(),
+          op :: String.t(),
+          payload :: map(),
+          format :: format()
+        ) :: binary()
+  def encode_extension_command(node_id, op, payload, format \\ :msgpack) do
+    serialize(
+      %{
+        "type" => "extension_command",
+        "node_id" => node_id,
+        "op" => op,
+        "payload" => payload
+      },
+      format
+    )
+  end
+
+  @doc """
+  Encodes a batch of extension commands as a protocol message.
+
+  Each command in the list is a `{node_id, op, payload}` tuple.
+  All commands in the batch are processed in a single cycle on the Rust side.
+  """
+  @spec encode_extension_commands(
+          commands :: [{String.t(), String.t(), map()}],
+          format :: format()
+        ) :: binary()
+  def encode_extension_commands(commands, format \\ :msgpack) when is_list(commands) do
+    items =
+      Enum.map(commands, fn {node_id, op, payload} ->
+        %{"node_id" => node_id, "op" => op, "payload" => payload}
+      end)
+
+    serialize(%{"type" => "extension_command_batch", "commands" => items}, format)
+  end
+
+  @doc """
   Encodes a window lifecycle operation as a protocol message.
 
   ## Example
@@ -1248,12 +1291,6 @@ defmodule Julep.Protocol do
          "data" => data
        }) do
     {:system_theme, tag, data}
-  end
-
-  # Catch-all for extension event families not handled above.
-  defp dispatch(%{"type" => "event", "family" => family, "id" => id} = msg) do
-    data = Map.get(msg, "data")
-    {String.to_atom(family), id, data}
   end
 
   defp dispatch(msg) do

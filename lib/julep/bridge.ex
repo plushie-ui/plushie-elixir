@@ -120,6 +120,26 @@ defmodule Julep.Bridge do
     GenServer.cast(bridge, {:send_image_op, op, payload})
   end
 
+  @doc "Sends a single extension command to the renderer."
+  @spec send_extension_command(
+          bridge :: GenServer.server(),
+          node_id :: String.t(),
+          op :: String.t(),
+          payload :: map()
+        ) :: :ok
+  def send_extension_command(bridge, node_id, op, payload) do
+    GenServer.cast(bridge, {:send_extension_command, node_id, op, payload})
+  end
+
+  @doc "Sends a batch of extension commands to the renderer."
+  @spec send_extension_commands(
+          bridge :: GenServer.server(),
+          commands :: [{String.t(), String.t(), map()}]
+        ) :: :ok
+  def send_extension_commands(bridge, commands) do
+    GenServer.cast(bridge, {:send_extension_commands, commands})
+  end
+
   @doc "Stops the bridge GenServer."
   @spec stop(bridge :: GenServer.server()) :: :ok
   def stop(bridge) do
@@ -223,6 +243,18 @@ defmodule Julep.Bridge do
 
   def handle_cast({:send_image_op, op, payload}, state) do
     data = Julep.Protocol.encode_image_op(op, payload, state.format)
+    send_to_port(state.port, data)
+    {:noreply, state}
+  end
+
+  def handle_cast({:send_extension_command, node_id, op, payload}, state) do
+    data = Julep.Protocol.encode_extension_command(node_id, op, payload, state.format)
+    send_to_port(state.port, data)
+    {:noreply, state}
+  end
+
+  def handle_cast({:send_extension_commands, commands}, state) do
+    data = Julep.Protocol.encode_extension_commands(commands, state.format)
     send_to_port(state.port, data)
     {:noreply, state}
   end
