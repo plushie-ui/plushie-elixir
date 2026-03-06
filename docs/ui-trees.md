@@ -97,7 +97,7 @@ end
 | `mouse_area(id, opts)` | `mouse_area` | Captures mouse events on children |
 | `sensor(id, opts)` | `sensor` | Detects layout changes and resize |
 | `pane_grid(id, panes, opts)` | `pane_grid` | Resizable tiled pane layout |
-| `canvas(id, shapes, opts)` | `canvas` | 2D drawing surface |
+| `canvas(id, opts)` | `canvas` | 2D drawing surface (layers via `layers:` option) |
 | `overlay(id, opts)` | `overlay` | Positions child as floating overlay above anchor |
 
 ### Canvas drawing with Julep.Canvas.Shape

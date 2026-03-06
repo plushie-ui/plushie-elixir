@@ -376,8 +376,9 @@ Julep.Command.batch([
 ])
 ```
 
-Commands in a batch are dispatched together. Async commands spawn concurrent
-tasks.
+Commands in a batch are dispatched sequentially. Async commands spawn
+concurrent tasks, but the dispatch loop itself processes each command in
+order (`Enum.reduce` in the runtime).
 
 #### Extension commands
 
@@ -586,10 +587,15 @@ Julep.Subscription.every(interval_ms, event_tag)
 
 ```elixir
 Julep.Subscription.on_key_press(event_tag)
-# Delivers: {event_tag, key, modifiers}
+# Delivers: {:key_press, %Julep.KeyEvent{}}
 
 Julep.Subscription.on_key_release(event_tag)
-# Delivers: {event_tag, key, modifiers}
+# Delivers: {:key_release, %Julep.KeyEvent{}}
+
+# The event_tag is used by the runtime to register/unregister the
+# subscription with the renderer. It is NOT included in the event
+# tuple delivered to update/2. See docs/events.md for the full
+# KeyEvent and KeyModifiers struct definitions.
 ```
 
 #### Window lifecycle
