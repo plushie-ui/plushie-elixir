@@ -154,15 +154,53 @@ extension system.
 - The discovery mechanism finds all loaded extensions.
 - sim_events callbacks work for extensions that implement them.
 
-## Summary: Core improvements to consider
+## Post-build Audit
 
-1. **Add `prop_u32`/`prop_usize` to prop_helpers** -- integer props are
-   common and the f32 cast workaround is error-prone.
-2. **Document `Message::Event` construction** -- extension authors need
+A thorough code audit after initial build uncovered bugs across all
+packages. All have been fixed.
+
+### Bugs fixed in core
+
+- `build_with_extensions` didn't pass `feature_flags()` to cargo.
+- Generated Cargo.toml had no `headless`/`test-mode` feature forwarding.
+- `extensions_demo_test.exs` failed in envs without extension packages.
+- `renderer.rs` silently dropped all extensions on double-init.
+- `register_all/0` didn't detect type name collisions at runtime.
+
+### Bugs fixed in extensions
+
+- **sparkline:** NaN/Inf propagation in ring buffer, fill path geometry
+  wrong for single sample, timer firing when paused.
+- **hex_view:** Last-row hex padding miscalculation (8-byte group gap),
+  width prop on wrong element, hardcoded ASCII color invisible on light
+  themes, zero-length highlight accepted.
+- **code_view:** `wrap` prop documented but never read in Rust, nested
+  highlight events reset instead of popping stack, grammar load failures
+  swallowed silently, `DefaultHasher` not stable across Rust versions.
+- **plot:** Canvas cache created and thrown away every frame, pan/zoom
+  non-functional (`Consumed(vec![])` suppressed events but published no
+  Message for iced to re-render), `sim_events` matched bare map instead
+  of Element struct, no clipping of series to plot area.
+- **timeline:** Hit test returned first-in-list instead of topmost visual
+  match, inverted intervals rendered backwards, `ms_to_x` divide-by-zero
+  with equal viewport bounds.
+
+### Core improvements completed
+
+1. **Added `prop_u32`/`prop_u64`/`prop_usize`/`prop_i64` to
+   prop_helpers.** Integer props no longer need float casts.
+2. **Collision detection in `register_all/0`.** Runtime registration
+   raises on type name conflicts from different modules.
+3. **Feature forwarding in build task.** Custom extension builds now
+   correctly forward `:iced_features` config and `headless`/`test-mode`.
+
+### Core improvements still to consider
+
+1. **Document `Message::Event` construction** -- extension authors need
    to know how to emit events from custom widgets.
-3. **Document event family strings** -- which families the renderer sends
+2. **Document event family strings** -- which families the renderer sends
    for which interactions.
-4. **Consider `pub` visibility for `RenderContext` fields** -- or provide
+3. **Consider `pub` visibility for `RenderContext` fields** -- or provide
    a test helper that constructs `WidgetEnv` for extension unit tests.
-5. **iced 0.14 migration guide** -- document the Widget trait changes
+4. **iced 0.14 migration guide** -- document the Widget trait changes
    for custom Widget extension authors.
