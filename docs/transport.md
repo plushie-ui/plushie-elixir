@@ -138,6 +138,43 @@ Request the renderer to perform a native effect.
 
 See [effects.md](effects.md) for details.
 
+#### extension_command
+
+Push data directly to a native extension widget, bypassing the normal
+view/diff/patch cycle. Used for high-frequency updates (terminal output,
+streaming log lines, real-time plot data).
+
+```json
+{"type": "extension_command", "node_id": "term-1", "op": "write", "payload": {"data": "hello"}}
+```
+
+#### extension_command_batch
+
+Multiple extension commands processed in one cycle. The renderer handles
+all commands before triggering a single view update.
+
+```json
+{"type": "extension_command_batch", "commands": [
+  {"node_id": "term-1", "op": "write", "payload": {"data": "line 1"}},
+  {"node_id": "log-1", "op": "append", "payload": {"line": "entry"}}
+]}
+```
+
+#### settings (extension_config field)
+
+The `settings` message may include an `extension_config` object. The
+renderer routes each key to the extension whose `config_key()` matches.
+
+```json
+{"type": "settings", "settings": {
+  "default_text_size": 16,
+  "extension_config": {
+    "terminal": {"shell": "/bin/bash", "rows": 24},
+    "plot": {"gpu": true}
+  }
+}}
+```
+
 ### Renderer -> Elixir
 
 #### event

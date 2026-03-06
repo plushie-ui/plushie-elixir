@@ -226,7 +226,7 @@ RUST_LOG=julep_gui=debug mix julep.gui MyApp
 RUST_LOG=julep_gui=error mix julep.gui MyApp
 
 # Per-module filtering
-RUST_LOG=julep_gui::widgets=debug,julep_gui::julep_core=debug mix julep.gui MyApp
+RUST_LOG=julep_core::widgets=debug,julep_core::engine=debug mix julep.gui MyApp
 
 # Trace level (most verbose -- future use)
 RUST_LOG=julep_gui=trace mix julep.gui MyApp
@@ -263,9 +263,8 @@ Log lines include a UTC timestamp, level, and module target:
 ```
 [2026-02-28T12:34:56Z INFO  julep_gui] wire codec: MsgPack
 [2026-02-28T12:34:56Z INFO  julep_gui] initial settings received
-[2026-02-28T12:34:56Z DEBUG julep_gui::julep_core] snapshot received (root id=main)
+[2026-02-28T12:34:56Z DEBUG julep_core::engine] snapshot received (root id=main)
 ```
 
-The module target (`julep_gui::julep_core`, `julep_gui::widgets`, etc.)
-replaces the old hand-rolled `"julep_gui:"` prefix and enables per-module
-filtering via `RUST_LOG`.
+The module target (`julep_core::engine`, `julep_core::widgets`, etc.)
+enables per-module filtering via `RUST_LOG`.

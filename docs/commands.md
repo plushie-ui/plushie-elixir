@@ -379,6 +379,27 @@ Julep.Command.batch([
 Commands in a batch are dispatched together. Async commands spawn concurrent
 tasks.
 
+#### Extension commands
+
+Push data directly to a native Rust extension widget without triggering the
+view/diff/patch cycle. Used for high-frequency data like terminal output or
+streaming log lines.
+
+```elixir
+# Single command
+Julep.Command.extension_command("term-1", "write", %{data: output})
+
+# Batch (all processed before next view cycle)
+Julep.Command.extension_commands([
+  {"term-1", "write", %{data: line1}},
+  {"log-1", "append", %{line: entry}}
+])
+```
+
+Extension commands are only meaningful for widgets backed by a
+`WidgetExtension` Rust implementation. They are silently ignored for
+widgets without an extension handler.
+
 #### No-op
 
 When `update` returns a bare model (not a tuple), the runtime treats it as
