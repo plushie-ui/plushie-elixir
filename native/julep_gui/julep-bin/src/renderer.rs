@@ -2590,7 +2590,7 @@ pub(crate) fn run(builder: julep_core::app::JulepAppBuilder) -> iced::Result {
                 .lock()
                 .expect("builder_slot lock poisoned")
                 .take()
-                .unwrap_or_default()
+                .expect("daemon init closure called more than once")
                 .build_dispatcher();
             let mut app = App::new(test_mode, dispatcher);
 

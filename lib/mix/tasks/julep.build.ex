@@ -143,7 +143,7 @@ defmodule Mix.Tasks.Julep.Build do
 
     Mix.shell().info("Building custom renderer#{if release?, do: " (release)", else: ""}...")
 
-    case System.cmd("cargo", ["build"] ++ release_flags,
+    case System.cmd("cargo", ["build"] ++ release_flags ++ feature_flags(),
            cd: build_dir,
            stderr_to_stdout: true
          ) do
@@ -221,6 +221,8 @@ defmodule Mix.Tasks.Julep.Build do
 
     [features]
     default = ["julep-core/default"]
+    headless = ["julep-bin/headless"]
+    test-mode = ["julep-bin/test-mode"]
     """
   end
 

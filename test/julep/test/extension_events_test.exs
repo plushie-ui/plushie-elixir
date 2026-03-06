@@ -96,6 +96,28 @@ defmodule Julep.Test.ExtensionEventsTest do
       assert {:ok, {:chart_click, "c2", "default"}} =
                ExtensionEvents.dispatch(:click, el("c2", "line_chart"), [])
     end
+
+    test "re-registering the same module is idempotent" do
+      ExtensionEvents.register(TerminalExtension)
+      ExtensionEvents.register(TerminalExtension)
+
+      assert {:ok, {:terminal_focus, "t1"}} =
+               ExtensionEvents.dispatch(:click, el("t1", "terminal"), [])
+    end
+
+    test "raises on type name collision from a different module" do
+      ExtensionEvents.register(TerminalExtension)
+
+      # Fake module that claims the same type name as TerminalExtension.
+      # Deliberately omits @behaviour so register_all won't discover it.
+      defmodule ConflictingTerminal do
+        def type_names, do: ["terminal"]
+      end
+
+      assert_raise RuntimeError, ~r/collision/i, fn ->
+        ExtensionEvents.register(ConflictingTerminal)
+      end
+    end
   end
 
   # -- dispatch/3 -------------------------------------------------------------

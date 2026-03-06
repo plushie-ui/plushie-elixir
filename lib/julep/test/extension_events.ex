@@ -17,11 +17,25 @@ defmodule Julep.Test.ExtensionEvents do
 
   Stores the module in `:persistent_term` keyed by each type name
   returned by `module.type_names/0`.
+
+  Raises if any type name is already claimed by a different module.
+  Re-registering the same module for the same type is a no-op.
   """
   @spec register(module :: module()) :: :ok
   def register(module) do
     for type_name <- module.type_names() do
-      :persistent_term.put({__MODULE__, type_name}, module)
+      case :persistent_term.get({__MODULE__, type_name}, :not_found) do
+        :not_found ->
+          :persistent_term.put({__MODULE__, type_name}, module)
+
+        ^module ->
+          # Already registered by the same module -- idempotent
+          :ok
+
+        other_module ->
+          raise "Extension type name collision: #{inspect(type_name)} is claimed by " <>
+                  "#{inspect(other_module)} and #{inspect(module)}"
+      end
     end
 
     :ok
@@ -69,12 +83,21 @@ defmodule Julep.Test.ExtensionEvents do
 
   This is a convenience that mirrors `Mix.Tasks.Julep.Build.discover_extensions/0`
   but does not depend on Mix. Safe to call multiple times (idempotent).
+
+  Skips modules whose type names collide with an already-registered extension
+  (logs a warning). Use `register/1` directly for strict collision checking.
   """
   @spec register_all() :: :ok
   def register_all do
     for {mod, _} <- :code.all_loaded(),
         extension?(mod) do
-      register(mod)
+      try do
+        register(mod)
+      rescue
+        e in RuntimeError ->
+          require Logger
+          Logger.warning("Skipping extension #{inspect(mod)}: #{Exception.message(e)}")
+      end
     end
 
     :ok
@@ -89,6 +112,9 @@ defmodule Julep.Test.ExtensionEvents do
     end
   end
 
+  # NOTE: This logic is duplicated in Mix.Tasks.Julep.Build.mod_behaviours/1.
+  # We intentionally avoid depending on Mix here since this module is used in
+  # test runtime, not build tooling.
   defp extension?(mod) do
     if function_exported?(mod, :module_info, 1) do
       behaviours =

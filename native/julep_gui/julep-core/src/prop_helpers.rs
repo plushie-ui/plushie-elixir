@@ -49,6 +49,41 @@ pub fn prop_f64(node: &TreeNode, key: &str) -> Option<f64> {
     }
 }
 
+/// Get a u32 prop value. Accepts JSON numbers and numeric strings.
+pub fn prop_u32(node: &TreeNode, key: &str) -> Option<u32> {
+    let val = props(node)?.get(key)?;
+    match val {
+        Value::Number(n) => n.as_u64().and_then(|v| u32::try_from(v).ok()),
+        Value::String(s) => s.trim().parse::<u32>().ok(),
+        _ => None,
+    }
+}
+
+/// Get a u64 prop value. Accepts JSON numbers and numeric strings.
+pub fn prop_u64(node: &TreeNode, key: &str) -> Option<u64> {
+    let val = props(node)?.get(key)?;
+    match val {
+        Value::Number(n) => n.as_u64(),
+        Value::String(s) => s.trim().parse::<u64>().ok(),
+        _ => None,
+    }
+}
+
+/// Get a usize prop value. Accepts JSON numbers and numeric strings.
+pub fn prop_usize(node: &TreeNode, key: &str) -> Option<usize> {
+    prop_u64(node, key).and_then(|v| usize::try_from(v).ok())
+}
+
+/// Get an i64 prop value. Accepts JSON numbers and numeric strings.
+pub fn prop_i64(node: &TreeNode, key: &str) -> Option<i64> {
+    let val = props(node)?.get(key)?;
+    match val {
+        Value::Number(n) => n.as_i64(),
+        Value::String(s) => s.trim().parse::<i64>().ok(),
+        _ => None,
+    }
+}
+
 /// Get a boolean prop value.
 pub fn prop_bool(node: &TreeNode, key: &str) -> Option<bool> {
     props(node)?.get(key)?.as_bool()
@@ -252,6 +287,110 @@ mod tests {
         let node = make_node(json!({"value": "99.9"}));
         let v = prop_f64(&node, "value").unwrap();
         assert!((v - 99.9).abs() < 0.0001);
+    }
+
+    // -- prop_u32 --
+
+    #[test]
+    fn test_prop_u32_number() {
+        let node = make_node(json!({"count": 42}));
+        assert_eq!(prop_u32(&node, "count"), Some(42));
+    }
+
+    #[test]
+    fn test_prop_u32_string() {
+        let node = make_node(json!({"count": "123"}));
+        assert_eq!(prop_u32(&node, "count"), Some(123));
+    }
+
+    #[test]
+    fn test_prop_u32_missing() {
+        let node = make_node(json!({}));
+        assert_eq!(prop_u32(&node, "count"), None);
+    }
+
+    #[test]
+    fn test_prop_u32_negative() {
+        let node = make_node(json!({"count": -1}));
+        assert_eq!(prop_u32(&node, "count"), None);
+    }
+
+    #[test]
+    fn test_prop_u32_overflow() {
+        let node = make_node(json!({"count": 5_000_000_000u64}));
+        assert_eq!(prop_u32(&node, "count"), None);
+    }
+
+    // -- prop_u64 --
+
+    #[test]
+    fn test_prop_u64_number() {
+        let node = make_node(json!({"big": 9_000_000_000u64}));
+        assert_eq!(prop_u64(&node, "big"), Some(9_000_000_000));
+    }
+
+    #[test]
+    fn test_prop_u64_string() {
+        let node = make_node(json!({"big": "999"}));
+        assert_eq!(prop_u64(&node, "big"), Some(999));
+    }
+
+    #[test]
+    fn test_prop_u64_missing() {
+        let node = make_node(json!({}));
+        assert_eq!(prop_u64(&node, "big"), None);
+    }
+
+    #[test]
+    fn test_prop_u64_negative() {
+        let node = make_node(json!({"big": -1}));
+        assert_eq!(prop_u64(&node, "big"), None);
+    }
+
+    // -- prop_usize --
+
+    #[test]
+    fn test_prop_usize_number() {
+        let node = make_node(json!({"idx": 7}));
+        assert_eq!(prop_usize(&node, "idx"), Some(7));
+    }
+
+    #[test]
+    fn test_prop_usize_string() {
+        let node = make_node(json!({"idx": "42"}));
+        assert_eq!(prop_usize(&node, "idx"), Some(42));
+    }
+
+    #[test]
+    fn test_prop_usize_missing() {
+        let node = make_node(json!({}));
+        assert_eq!(prop_usize(&node, "idx"), None);
+    }
+
+    // -- prop_i64 --
+
+    #[test]
+    fn test_prop_i64_positive() {
+        let node = make_node(json!({"offset": 100}));
+        assert_eq!(prop_i64(&node, "offset"), Some(100));
+    }
+
+    #[test]
+    fn test_prop_i64_negative() {
+        let node = make_node(json!({"offset": -50}));
+        assert_eq!(prop_i64(&node, "offset"), Some(-50));
+    }
+
+    #[test]
+    fn test_prop_i64_string() {
+        let node = make_node(json!({"offset": "-99"}));
+        assert_eq!(prop_i64(&node, "offset"), Some(-99));
+    }
+
+    #[test]
+    fn test_prop_i64_missing() {
+        let node = make_node(json!({}));
+        assert_eq!(prop_i64(&node, "offset"), None);
     }
 
     #[test]

@@ -135,7 +135,9 @@ pub mod headless_mode {
             IncomingMessage::Reset { id } => {
                 handle_reset(core, id);
             }
-            // Extension commands bypass tree updates. No dispatcher in headless mode.
+            // Extension commands bypass tree updates. The dispatcher is used for
+            // rendering extension widgets (e.g. during screenshot capture) but not
+            // for processing extension commands in headless mode.
             IncomingMessage::ExtensionCommand { node_id, op, .. } => {
                 log::debug!("extension_command in headless: node_id={node_id} op={op} (ignored)");
             }
