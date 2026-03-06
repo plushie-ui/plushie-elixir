@@ -2,154 +2,248 @@
 
 ## Status
 
-Accepted.
+Accepted. Supersedes the placeholder version of this ADR and fulfils ADR
+0007's deferred Tier 2 design.
 
 ## Context
 
-ADR 0007 established two tiers for custom widgets: interactive canvas (Tier
-1, available now) and a future JulepWidget trait for native Rust extensions
-(Tier 2). This ADR details the package architecture for Tier 2 and clarifies
-how third-party widget packages integrate with Julep's build and distribution
-model.
+ADR 0007 established two tiers: interactive canvas (Tier 1, shipped) and
+native Rust extensions (Tier 2, deferred). Canvas covers most custom
+rendering needs, but some widgets genuinely need Rust: terminal emulators
+backed by PTY connections, GPU-accelerated plotting, virtual-scrolling log
+viewers, force-directed graph layouts. These all share the same problem:
+they need internal state that lives in Rust and events that don't
+round-trip through Elixir.
 
-Two categories of widget packages exist:
+The renderer is currently a monolithic binary (`julep_gui`) with no
+library API. The `Message` enum is closed. `WidgetCaches` has named fields
+for each built-in stateful widget. External code has no way in.
 
-1. **Pure Elixir** -- composition of existing primitives. These already work
-   today via the `Julep.Iced.Widget` protocol.
-2. **Elixir + Rust** -- new native widget types that require custom rendering
-   code. These need build infrastructure, trait contracts, and discovery.
+Several iced 0.14-compatible widget crates exist on crates.io (iced_term,
+iced_plot, iced_aw, iced_gif, iced_color_picker) that could be wrapped as
+julep extensions if the infrastructure existed.
 
-The existing `iced_features` config toggles built-in iced feature gates
-(e.g., `svg`, `image`, `canvas`). Extensions are a separate concern --
-they add entirely new widget types from external dependencies rather than
-toggling capabilities of the stock renderer.
+A detailed design document with code examples, stress-test widgets, and
+a 14-step implementation sequence exists as a working document outside
+the repository (`rust-extensions.md`).
 
 ## Decision
 
-### Pure Elixir widget packages
+### Crate restructuring
 
-These already work with no additional infrastructure. A package provides
-Elixir modules implementing the `Julep.Iced.Widget` protocol. The `to_node/1`
-implementation composes existing built-in node types -- canvas layers, columns,
-rows, containers, sliders, etc. No Rust code, no custom build steps.
+Split `julep_gui` into a workspace with two crates:
 
-Example: a color picker package provides a `ColorPicker` struct whose
-`to_node/1` emits a canvas (hue wheel) alongside sliders (saturation,
-lightness). The result is a standard `ui_node()` map that the stock renderer
-handles without modification.
+- **julep-core** -- library crate (the SDK). Exports TreeNode, Message,
+  WidgetCaches, prop helpers, the render function, the WidgetExtension
+  trait, ExtensionCaches, ExtensionDispatcher, and re-exported iced types.
+  Published to crates.io.
+- **julep-bin** -- binary crate (thin main). Creates a JulepApp with no
+  extensions and runs it.
 
-Pure Elixir packages work with prebuilt renderer binaries. They are the
-recommended approach for most extension needs.
-
-### Elixir + Rust widget packages
-
-For cases where composition is insufficient -- custom text layout, GPU
-shaders, platform-native controls, or performance-critical rendering -- a
-package ships both Elixir modules and a Rust crate.
-
-The model follows Rustler's precedent: the Rust crate lives in the package
-(e.g., `native/my_widget/`), and Julep's build task discovers it, adds it
-as a Cargo dependency, and links it into a custom renderer binary that
-replaces the stock `julep_gui`.
-
-The Elixir side provides typed widget structs implementing the
-`Julep.Iced.Widget` protocol, same as pure Elixir packages. The `to_node/1`
-output uses a custom `type` string that the stock renderer does not recognize
-but the extended renderer does.
+The existing `julep_core.rs` module (the `Core` struct) is renamed to
+`engine.rs` to avoid collision with the crate name.
 
 ### WidgetExtension trait
 
-The Rust side of an extension crate implements a `WidgetExtension` trait
-(the production name for ADR 0007's "JulepWidget trait"):
+Eight methods, most with defaults:
 
 ```rust
-pub trait WidgetExtension {
-    /// Widget type names this extension handles (e.g., ["color_wheel"]).
+pub trait WidgetExtension: Send + Sync + 'static {
     fn type_names(&self) -> &[&str];
-
-    /// Render a node of a supported type into an iced Element.
-    fn render<'a>(
-        &'a self,
-        node: &UiNode,
-        children: Vec<Element<'a, Message>>,
-    ) -> Element<'a, Message>;
-
-    /// Populate caches for stateful extension widgets.
-    /// Called during apply(), before view().
-    fn ensure_caches(&mut self, node: &UiNode);
+    fn config_key(&self) -> &str;
+    fn init(&mut self, _config: &Value) {}
+    fn prepare(&mut self, _node: &TreeNode, _caches: &mut ExtensionCaches,
+               _theme: &Theme) {}
+    fn render<'a>(&self, node: &'a TreeNode, env: &'a WidgetEnv<'a>)
+        -> Element<'a, Message>;
+    fn handle_event(&mut self, _node_id: &str, _family: &str,
+        _data: &Value, _caches: &mut ExtensionCaches) -> EventResult {
+        EventResult::PassThrough
+    }
+    fn handle_command(&mut self, _node_id: &str, _op: &str,
+        _payload: &Value, _caches: &mut ExtensionCaches) -> Vec<OutgoingEvent> {
+        vec![]
+    }
+    fn cleanup(&mut self, _node_id: &str, _caches: &mut ExtensionCaches) {}
 }
 ```
 
-Dispatch in the renderer's `render()` function falls through after built-in
-widget types. If no built-in matches, registered extensions are checked in
-order. If no extension matches either, the node is skipped with a warning log.
+- **type_names** -- node type strings this extension handles.
+- **config_key** -- key used to route config from the Settings wire
+  message's `extension_config` object.
+- **init** -- receives config from Elixir on startup and renderer restart.
+- **prepare** -- mutable phase before view. Initializes or syncs per-node
+  state in ExtensionCaches. Has theme access for pre-computing
+  theme-dependent values.
+- **render** -- immutable phase. Builds an iced Element from a node.
+  Receives a WidgetEnv with caches, images, theme, and a RenderContext
+  for rendering child nodes.
+- **handle_event** -- intercepts events before they reach the wire.
+  Returns PassThrough, Consumed, or Observed.
+- **handle_command** -- receives high-frequency data push from Elixir
+  without triggering a view/diff/patch cycle.
+- **cleanup** -- called when a node is removed from the tree.
 
-### Discovery and build
+### Three usage tiers through one trait
 
-Extension crates are discovered via Mix project configuration:
+**Tier A (render-only):** Implement type_names, config_key, render. No
+state, no events. Example: syntax-highlighted code view via tree-sitter.
+
+**Tier B (wrapping iced crates):** Add prepare and handle_event. Map the
+wrapped crate's messages to Message::Event via Element::map. Example:
+iced_plot GPU-accelerated plotting.
+
+**Tier C (custom Widget):** Return a custom `iced::advanced::Widget` impl
+from render(). Full iced lifecycle: size(), layout(), draw(), update()
+with shell.publish() and shell.capture_event(). Example: interval
+timeline for distributed trace visualization.
+
+### ExtensionDispatcher
+
+Owns extensions and routing state. Lives on the App struct alongside
+Core:
+
+- **type_name_index** (HashMap) -- built once at construction for O(1)
+  lookup. Also detects duplicate type names (panics with a clear error).
+- **node_extension_map** (HashMap) -- rebuilt on each prepare walk. Maps
+  node IDs to extension indices.
+- **poisoned flags** -- per-extension panic flag, cleared on Snapshot.
+
+Key methods: `prepare_all()` (walks tree, calls prepare, prunes stale
+nodes), `handle_event()`, `handle_command()`, `init_all()` (routes
+config via config_key), `render()` (builds WidgetEnv, delegates to
+extension), `clear_poisoned()`.
+
+### ExtensionCaches
+
+Type-erased `HashMap<String, Box<dyn Any + Send + Sync>>` keyed by node
+ID. One struct per node containing all per-node state. `canvas::Cache`
+is `!Send + !Sync` (wraps RefCell) and cannot be stored here -- it
+belongs in iced's widget tree state (Tag/State). Caches are cleared on
+Snapshot (full tree replacement) and pruned on Patch (stale nodes get
+cleanup).
+
+### RenderContext for child rendering
+
+A Copy struct holding shared references (caches, images, theme,
+dispatcher). Extensions call `env.render_ctx.render_child(node)` to
+render subtrees through the main dispatch. Avoids closure lifetime
+challenges entirely.
+
+### EventResult
+
+Three variants: PassThrough (forward to Elixir unchanged), Consumed
+(handle internally, optionally emit different events), Observed (handle
+AND forward original). The distinction matters for reusability -- a
+terminal extension can't predict whether consumers want keystroke events
+for macro recording or accessibility.
+
+### Data push pattern
+
+ExtensionCommand and extension_command_batch wire messages bypass the
+Elixir view/diff/patch cycle. The renderer routes commands to extensions
+by node ID. Batch messages trigger one view cycle for all commands.
+Essential for real-time monitoring widgets (sparklines, log viewers).
+
+### Extension panic safety
+
+catch_unwind at all dispatch boundaries. render() panics return a red
+diagnostic placeholder. prepare/handle_event/handle_command panics
+poison the extension -- subsequent calls are skipped, nodes render as
+placeholders. Poisoned extensions can't receive cleanup() calls; the
+dispatcher removes cache entries directly. Poisoned flags clear on
+Snapshot.
+
+### Julep.Extension behaviour (Elixir side)
 
 ```elixir
-def project do
-  [
-    julep_extensions: [
-      {:fancy_charts, path: "native/fancy_charts"},
-      {:my_widget, dep: :my_widget_package}
-    ]
-  ]
-end
+@callback native_crate() :: String.t()
+@callback rust_constructor() :: String.t()
+@callback type_names() :: [String.t()]
 ```
 
-`mix julep.build` reads this list, generates a Cargo workspace that includes
-the stock `julep_gui` crate plus all extension crates, and builds a single
-renderer binary. The generated `main.rs` registers each extension with the
-renderer before entering the event loop.
+- **native_crate** -- path to the Rust crate relative to package root.
+- **rust_constructor** -- full Rust constructor expression, pasted into
+  the generated main.rs as `Box::new(<expression>)`.
+- **type_names** -- enables compile-time collision detection without
+  touching Rust.
 
-Auto-discovery from Mix deps is a possible future convenience -- scan deps
-for a `julep_extension: true` marker in their `mix.exs` -- but explicit
-configuration is the initial approach. Explicit is better than magic.
+Discovery scans compiled modules (both deps and consumer's own app) for
+Julep.Extension implementations via module attribute introspection.
 
-### Prebuilt binaries
+### Build system
 
-Prebuilt renderer binaries do not include extensions. They contain only the
-stock built-in widgets. This is a deliberate constraint:
+When extensions are present, `mix julep.build` generates a Cargo
+workspace in `_build/julep_renderer/` with a main.rs that registers all
+extensions, then runs `cargo build --release`. Crate paths are resolved
+relative to dep roots (for packages) or project root (for consumer-
+authored extensions). Cache manifest tracks extension list and source
+mtimes for incremental rebuilds.
 
-- Pure Elixir extension packages work with prebuilt binaries (no custom
-  rendering code needed).
-- Elixir + Rust extension packages require compiling a custom renderer from
-  source. The app using them must have a Rust toolchain available at build
-  time.
+### Consumer-authored extensions
 
-This keeps prebuilt binary distribution simple and avoids combinatorial
-explosion of binary variants.
+Consumers can write extensions directly in their app (no separate hex
+package needed). They put a Rust crate in their project's `native/`
+directory and implement `Julep.Extension` in their app. The build task
+discovers it alongside dep extensions.
 
-### iced_features vs extensions
+### Render dispatch changes
 
-These are orthogonal:
+The current `render()` function takes 3 parameters (node, caches,
+images). Extensions add 2 more: theme (needed for palette access when
+building Elements) and dispatcher (for extension routing). Built-in
+types are unchanged in the match. Unknown types fall through to
+`dispatcher.render()`.
 
-- `iced_features` toggles built-in iced feature gates on the stock renderer.
-  Affects what built-in widgets are available (e.g., `image`, `svg`, `canvas`).
-  Works with prebuilt binaries when prebuilts include the feature.
-- Extensions add new widget types from external Rust crates. Always requires
-  compiling from source. Does not affect built-in widget availability.
+### Prerequisite fixes
 
-A project can use both: toggle `iced_features` for built-in capabilities and
-add extensions for custom widget types.
+Before any extension code:
+
+1. Change `OutgoingEvent.family` from `&'static str` to `String`.
+   Remove `family_str_to_static()`.
+2. Add a family-level catch-all to `protocol.ex` dispatch for unknown
+   event families (returns `{String.to_atom(family), id, data}`).
+
+### Extension config
+
+Piggybacks on the existing Settings wire message via an
+`extension_config` field keyed by config_key. No new message type.
+Consumer sets config in application env; Runtime includes it in Settings.
+
+## Alternatives considered
+
+- **Dynamic loading (dlopen).** ABI stability nightmare, unsafe,
+  platform-specific. iced types can't cross a C FFI boundary.
+- **WASM sandbox.** Serialization boundary, performance overhead, no
+  platform APIs or GPU.
+- **Function registry (no trait).** Loses shared state between
+  prepare/render/handle_event.
+- **iced Component wrapper.** Communication back to parent is
+  constrained; custom Widget is more powerful.
+- **Two separate traits (simple + power).** Single trait with defaults
+  achieves the same scaling without migration.
+- **Per-type registration.** Makes sharing state between types harder
+  (requires Arc). Internal match on type_name is mechanical boilerplate.
+- **Result return from render().** Forces every simple extension to wrap
+  in Ok(). Extensions should handle their own error states.
 
 ## Consequences
 
-- Pure Elixir widget packages work today with zero infrastructure changes.
-  This covers the majority of extension use cases.
-- Elixir + Rust packages follow an established pattern (Rustler) that the
-  Elixir ecosystem already understands.
-- The renderer remains a single statically-linked binary. No runtime plugin
-  loading, no WASM sandbox, no shared library fragility.
-- Apps using only pure Elixir extensions can ship with prebuilt binaries.
-  Apps using Rust extensions require a build-from-source step.
-- The `WidgetExtension` trait contract is minimal (three functions). It
-  mirrors the renderer's own internal structure (`type_names` for dispatch,
-  `render` for view, `ensure_caches` for stateful widgets).
-- Extension discovery is explicit via project config, avoiding hidden
-  dependencies or surprising build behavior.
-- The trait and build infrastructure are not implemented yet. This ADR
-  establishes the architecture so that when Tier 2 demand materializes
-  (per ADR 0007), the design is already decided.
+- Package authors can create hybrid Elixir + Rust widget packages
+  following an established pattern (Rustler-like).
+- The renderer remains a single statically-linked binary. No runtime
+  plugins, no WASM, no shared libraries.
+- Pure Elixir widget packages continue to work with prebuilt binaries.
+  Rust extensions require a toolchain.
+- The trait scales from trivial render-only widgets (one method) to
+  full custom iced Widgets with autonomous state (all methods).
+- Event interception (Consumed/Observed/PassThrough) enables wrapping
+  existing iced widget crates without modifying them.
+- Data push commands bypass the Elixir view cycle for high-frequency
+  updates.
+- Panic isolation prevents buggy extensions from crashing the renderer.
+- Build-time collision detection catches conflicting type names before
+  Rust compilation.
+- The crate split (julep-core + julep-bin) makes julep-core publishable
+  to crates.io as an extension SDK.
+- ADR 0007's Tier 2 is no longer deferred.

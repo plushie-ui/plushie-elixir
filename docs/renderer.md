@@ -99,6 +99,14 @@ These map 1:1 to iced built-in widgets:
 | `table` | `table` |
 | `stack` | `stack` |
 | `grid` | `grid` |
+| `rich_text` | `rich_text` |
+| `pane_grid` | `pane_grid` |
+| `keyed_column` | `keyed_column` |
+| `mouse_area` | `mouse_area` |
+| `sensor` | `sensor` |
+| `pin` | `pin` |
+| `float` | `float` |
+| `themer` | `Themer` |
 
 ### Composite widgets
 
@@ -107,6 +115,9 @@ The renderer assembles these from iced primitives:
 | Node type | Built from | Description |
 |---|---|---|
 | `window` | Container + window management | Top-level window |
+| `qr_code` | `canvas` + `qrcode` crate | QR rendered via `canvas::Program` |
+| `overlay` | Custom `OverlayWrapper` widget impl | Positions child as floating overlay |
+| `responsive` | `sensor` + `container` | Wraps children in a sensor so Elixir receives resize events |
 
 Note: The UI-only composites (tabs, nav, modal, card, panel, form,
 split_pane) were removed. Apps build these patterns directly using iced
@@ -141,14 +152,46 @@ The renderer maintains local state for stateful widgets:
 This state is keyed by node ID. As long as the ID stays stable across
 renders, widget state persists. If the ID changes, state is reset.
 
+## Feature flags
+
+Widget features can be toggled at compile time via Cargo features. By
+default all built-in widgets are enabled via the `builtin-all` feature.
+
+| Feature | Iced feature | Widget |
+|---|---|---|
+| `widget-image` | `iced/image` | `image` |
+| `widget-svg` | `iced/svg` | `svg` |
+| `widget-canvas` | `iced/canvas` | `canvas` |
+| `widget-markdown` | `iced/markdown` | `markdown` |
+| `widget-highlighter` | `iced/highlighter` | TextEditor syntax highlighting |
+| `widget-sysinfo` | `iced/sysinfo` | `get_system_info` command |
+| `widget-qr-code` | `iced/canvas` + `qrcode` crate | `qr_code` |
+
+When a feature is disabled, the renderer renders a placeholder error text
+for that widget type. Platform features (`dialogs`, `clipboard`,
+`notifications`) are always included in the default build.
+
+On the Elixir side, `Julep.Features` resolves the configured feature set
+from `Application.get_env(:julep, :iced_features, :all)` and the build
+tasks (`mix julep.build`, auto-compiler) pass the corresponding
+`--features` flags to Cargo.
+
 ## Building
 
 ```bash
-# Debug build
+# Debug build (all features)
 cargo build --manifest-path native/julep_gui/Cargo.toml
 
 # Release build
 cargo build --manifest-path native/julep_gui/Cargo.toml --release
+
+# Minimal build (no optional widgets)
+cargo build --manifest-path native/julep_gui/Cargo.toml \
+  --no-default-features --features "dialogs,clipboard,notifications"
+
+# Single widget only
+cargo build --manifest-path native/julep_gui/Cargo.toml \
+  --no-default-features --features "dialogs,clipboard,notifications,widget-qr-code"
 ```
 
 The binary can also be built automatically by `mix julep.gui --build`.

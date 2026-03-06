@@ -31,6 +31,7 @@ know julep. This doc maps iced Rust code to its julep Elixir equivalent.
 | `iced::keyboard` | Events delivered as `%Julep.KeyEvent{}` / `%Julep.KeyModifiers{}` structs |
 | `iced::keyboard::Event` | `Julep.KeyEvent` (key, modified_key, physical_key, location, modifiers, text, repeat) |
 | `iced::keyboard::Modifiers` | `Julep.KeyModifiers` (ctrl, shift, alt, logo, command; query functions like `ctrl?/1`) |
+| -- | `Julep.Features` (feature flag resolution for iced widget features) |
 
 `Julep.Iced.Widget.*` is the typed parity layer. Each widget module matches
 an iced widget 1:1 -- same name, same prop vocabulary. If iced calls it
@@ -354,6 +355,10 @@ in `update`. In julep, events are tuples received by `update/2`:
 | Animation frame | `{:animation_frame, timestamp}` |
 | Theme changed | `{:theme_changed, mode}` |
 | Timer tick | `{:tick, timestamp}` |
+| IME opened | `{:ime_opened}` |
+| IME preedit | `{:ime_preedit, text, {start, end} \| nil}` |
+| IME commit | `{:ime_commit, text}` |
+| IME closed | `{:ime_closed}` |
 
 Custom events are strings. The renderer maps widget interactions to event
 tuples using the node's `id` and the interaction type.
@@ -396,6 +401,7 @@ Iced's `Task<Message>` maps to `Julep.Command`:
 | PaneGrid swap | `Julep.Command.pane_swap(grid_id, pane_a, pane_b)` |
 | PaneGrid maximize | `Julep.Command.pane_maximize(grid_id, pane_id)` |
 | PaneGrid restore | `Julep.Command.pane_restore(grid_id)` |
+| `window::allow_automatic_tabbing(bool)` | `Julep.Command.allow_automatic_tabbing(bool)` |
 
 See [commands.md](commands.md) for details.
 
@@ -418,6 +424,7 @@ Iced's `Subscription<Message>` maps to `Julep.Subscription`:
 | Mouse buttons | `Julep.Subscription.on_mouse_button(tag)` |
 | Mouse scroll | `Julep.Subscription.on_mouse_scroll(tag)` |
 | Touch events | `Julep.Subscription.on_touch(tag)` |
+| IME events | `Julep.Subscription.on_ime(tag)` |
 | File drop | `Julep.Subscription.on_file_drop(tag)` |
 | Theme changes | `Julep.Subscription.on_theme_change(tag)` |
 | Catch-all events | `Julep.Subscription.on_event(tag)` |
@@ -598,7 +605,7 @@ rather than iced_test's in-process `Simulator`. This is a consequence of
 the cross-process architecture: Elixir owns state and logic, Rust owns
 rendering. Testing must cross that boundary.
 
-## New in this parity pass
+## Detailed widget examples
 
 ### Scrollable on_scroll and auto_scroll
 

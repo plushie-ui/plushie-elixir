@@ -736,6 +736,23 @@ defmodule Julep.ProtocolTest do
   end
 
   # ---------------------------------------------------------------------------
+  # decode_message/1 -- mouse area events
+  # ---------------------------------------------------------------------------
+
+  describe "decode_message/1 -- mouse_middle_press" do
+    test "decodes mouse_middle_press event to {:mouse_middle_press, id}" do
+      json = Jason.encode!(%{type: "event", family: "mouse_middle_press", id: "zone"})
+      assert Protocol.decode_message(json, :json) == {:mouse_middle_press, "zone"}
+    end
+
+    test "decodes mouse_middle_press from msgpack" do
+      event = %{"type" => "event", "family" => "mouse_middle_press", "id" => "zone"}
+      packed = Msgpax.pack!(event, iodata: false)
+      assert {:mouse_middle_press, "zone"} = Protocol.decode_message(packed, :msgpack)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # decode_message/1 -- key_release events (if supported)
   # ---------------------------------------------------------------------------
 

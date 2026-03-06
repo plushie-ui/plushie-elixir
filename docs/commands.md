@@ -231,6 +231,7 @@ Julep.Command.disable_mouse_passthrough(window_id)           # Normal click hand
 Julep.Command.show_system_menu(window_id)                    # Show OS window menu
 Julep.Command.set_icon(window_id, rgba_data, width, height)  # Set window icon (raw RGBA)
 Julep.Command.set_resize_increments(window_id, width, height) # Set resize step increments
+Julep.Command.allow_automatic_tabbing(enabled)               # Enable/disable macOS automatic tab grouping
 ```
 
 Example:
@@ -618,6 +619,16 @@ Julep.Subscription.on_touch(event_tag)
 #           {:finger_lost, finger_id, x, y}
 ```
 
+#### IME (Input Method Editor)
+
+```elixir
+Julep.Subscription.on_ime(event_tag)
+# Delivers: {:ime_opened}
+#           {:ime_preedit, text, {start, end} | nil}
+#           {:ime_commit, text}
+#           {:ime_closed}
+```
+
 #### System
 
 ```elixir
@@ -711,6 +722,42 @@ def settings do
   ]
 end
 ```
+
+## Feature flags
+
+The `iced_features` application config controls which widget features are
+compiled into the renderer binary. By default all built-in widgets are
+enabled.
+
+```elixir
+# config/config.exs
+
+# Default: all built-in widgets enabled
+config :julep, :iced_features, :all
+
+# Explicit list: only include what you need (smaller binary)
+config :julep, :iced_features, [:image, :svg, :canvas]
+```
+
+Available features: `:image`, `:svg`, `:canvas`, `:markdown`,
+`:highlighter`, `:sysinfo`, `:qr_code`.
+
+When set to an explicit list, `mix julep.build` and the auto-compiler pass
+the corresponding `--features` flags to Cargo. Platform features (dialogs,
+clipboard, notifications) are always included regardless of this setting.
+
+`Julep.Features` provides runtime queries:
+
+```elixir
+Julep.Features.iced_features()           # :all or list of atoms
+Julep.Features.iced_feature_enabled?(:svg)  # true or false
+Julep.Features.all_iced_features()       # list of all known features
+```
+
+When a feature is disabled, the renderer renders a placeholder error text
+for that widget type rather than crashing.
+
+See [renderer.md](renderer.md#feature-flags) for Cargo-level details.
 
 ## Commands vs. effects
 

@@ -240,17 +240,17 @@ always fire, and opt-in events enabled by boolean props on the
 ```elixir
 {:click, id}              # left press
 {:click, "id:release"}    # left release
-{:click, "id:middle"}     # middle press
 ```
 
-These use the standard `{:click, _}` family. The release and middle
-variants append a suffix to the id string.
+These use the standard `{:click, _}` family. The release variant appends
+a suffix to the id string.
 
 **Opt-in events (enabled via boolean props):**
 
 ```elixir
 {:mouse_right_press, id}                # right press (prop: on_right_press: true)
 {:mouse_right_release, id}              # right release (prop: on_right_release: true)
+{:mouse_middle_press, id}               # middle press (prop: on_middle_press: true)
 {:mouse_middle_release, id}             # middle release (prop: on_middle_release: true)
 {:mouse_double_click, id}              # double click (prop: on_double_click: true)
 {:mouse_enter, id}                      # cursor entered (prop: on_enter: true)
@@ -416,6 +416,32 @@ end
 # Use text field for text input handling
 def update(model, {:key_press, %Julep.KeyEvent{text: text}}) when text != nil do
   append_char(model, text)
+end
+```
+
+## IME events
+
+Delivered when IME subscriptions are active (see
+[commands.md](commands.md)). Input Method Editor events support CJK and
+other compose-based text input.
+
+```elixir
+{:ime_opened}
+{:ime_preedit, text, {start, end} | nil}
+{:ime_commit, text}
+{:ime_closed}
+```
+
+`preedit` fires during composition with the in-progress text and optional
+cursor range. `commit` fires when the user finalises a composed string.
+
+```elixir
+def update(model, {:ime_preedit, text, _cursor}) do
+  %{model | composing: text}
+end
+
+def update(model, {:ime_commit, text}) do
+  %{model | composing: nil, value: model.value <> text}
 end
 ```
 

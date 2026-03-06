@@ -2335,8 +2335,8 @@ fn render_mouse_area<'a>(
 
     // Conditional event handlers (opt-in via boolean props)
     if prop_bool_default(props, "on_middle_press", false) {
-        let middle_id = format!("{}:middle", node.id);
-        ma = ma.on_middle_press(Message::Click(middle_id));
+        let ev_id = node.id.clone();
+        ma = ma.on_middle_press(Message::MouseAreaEvent(ev_id, "middle_press".into()));
     }
     if prop_bool_default(props, "on_right_press", false) {
         let ev_id = node.id.clone();

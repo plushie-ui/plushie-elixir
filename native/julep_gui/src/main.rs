@@ -19,9 +19,9 @@ use std::sync::{Mutex, OnceLock};
 use std::thread;
 
 use iced::futures::SinkExt;
-use iced::widget::{container, pane_grid, text, text_editor};
 #[cfg(feature = "widget-markdown")]
 use iced::widget::markdown;
+use iced::widget::{container, pane_grid, text, text_editor};
 use iced::{event, stream, system, window, Element, Fill, Point, Size, Subscription, Task, Theme};
 
 use base64::Engine as _;
@@ -793,6 +793,7 @@ impl App {
                 let event = match kind.as_str() {
                     "right_press" => OutgoingEvent::mouse_right_press(id),
                     "right_release" => OutgoingEvent::mouse_right_release(id),
+                    "middle_press" => OutgoingEvent::mouse_middle_press(id),
                     "middle_release" => OutgoingEvent::mouse_middle_release(id),
                     "double_click" => OutgoingEvent::mouse_double_click(id),
                     "enter" => OutgoingEvent::mouse_enter(id),
@@ -2260,6 +2261,7 @@ pub(crate) fn message_to_event(msg: &Message) -> Option<OutgoingEvent> {
         Message::MouseAreaEvent(id, kind) => match kind.as_str() {
             "right_press" => Some(OutgoingEvent::mouse_right_press(id.clone())),
             "right_release" => Some(OutgoingEvent::mouse_right_release(id.clone())),
+            "middle_press" => Some(OutgoingEvent::mouse_middle_press(id.clone())),
             "middle_release" => Some(OutgoingEvent::mouse_middle_release(id.clone())),
             "double_click" => Some(OutgoingEvent::mouse_double_click(id.clone())),
             "enter" => Some(OutgoingEvent::mouse_enter(id.clone())),

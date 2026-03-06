@@ -846,6 +846,10 @@ impl OutgoingEvent {
         Self::bare("mouse_right_release", id)
     }
 
+    pub fn mouse_middle_press(id: String) -> Self {
+        Self::bare("mouse_middle_press", id)
+    }
+
     pub fn mouse_middle_release(id: String) -> Self {
         Self::bare("mouse_middle_release", id)
     }
@@ -1732,6 +1736,14 @@ mod tests {
         let evt = OutgoingEvent::mouse_right_release("zone".to_string());
         let json = serde_json::to_value(&evt).unwrap();
         assert_eq!(json["family"], "mouse_right_release");
+    }
+
+    #[test]
+    fn serialize_mouse_middle_press() {
+        let evt = OutgoingEvent::mouse_middle_press("zone".to_string());
+        let json = serde_json::to_value(&evt).unwrap();
+        assert_eq!(json["family"], "mouse_middle_press");
+        assert_eq!(json["id"], "zone");
     }
 
     #[test]

@@ -26,6 +26,7 @@ defmodule Julep.Test.EventMap do
   |-----------------------|--------------------------------------------------|
   | `mouse_right_press`   | `{:mouse_right_press, id}`                       |
   | `mouse_right_release` | `{:mouse_right_release, id}`                     |
+  | `mouse_middle_press`  | `{:mouse_middle_press, id}`                      |
   | `mouse_middle_release`| `{:mouse_middle_release, id}`                    |
   | `mouse_double_click`  | `{:mouse_double_click, id}`                      |
   | `mouse_enter`         | `{:mouse_enter, id}`                             |
@@ -202,6 +203,14 @@ defmodule Julep.Test.EventMap do
 
   def mouse_right_release(%Element{type: type}),
     do: {:error, "cannot mouse_right_release a #{type} widget"}
+
+  @doc "Produces a mouse middle-press event for a mouse_area widget."
+  @spec mouse_middle_press(element :: Element.t()) :: {:ok, tuple()} | {:error, String.t()}
+  def mouse_middle_press(%Element{type: "mouse_area", id: id}),
+    do: {:ok, {:mouse_middle_press, id}}
+
+  def mouse_middle_press(%Element{type: type}),
+    do: {:error, "cannot mouse_middle_press a #{type} widget"}
 
   @doc "Produces a mouse middle-release event for a mouse_area widget."
   @spec mouse_middle_release(element :: Element.t()) :: {:ok, tuple()} | {:error, String.t()}

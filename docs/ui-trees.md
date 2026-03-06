@@ -88,6 +88,7 @@ end
 | `rule(opts)` | `rule` | Horizontal/vertical divider |
 | `rich_text(id, opts)` | `rich_text` | Styled text with multiple spans |
 | `themer(id, opts)` | `themer` | Per-subtree theme override |
+| `qr_code(id, data, opts)` | `qr_code` | QR code from string data |
 
 ### Interactive widgets
 
@@ -97,6 +98,7 @@ end
 | `sensor(id, opts)` | `sensor` | Detects layout changes and resize |
 | `pane_grid(id, panes, opts)` | `pane_grid` | Resizable tiled pane layout |
 | `canvas(id, shapes, opts)` | `canvas` | 2D drawing surface |
+| `overlay(id, opts)` | `overlay` | Positions child as floating overlay above anchor |
 
 ### Canvas drawing with Julep.Canvas.Shape
 
@@ -345,6 +347,57 @@ text_editor("code",
   highlight_theme: "inspired_github",
   height: :fill
 )
+```
+
+### QR Code widget props
+
+The `qr_code` widget renders a QR code from a data string. Requires the
+`widget-qr-code` Cargo feature flag on the renderer (enabled by default
+via `builtin-all`).
+
+| Prop | Type | Description |
+|---|---|---|
+| `data` | string | Data to encode. Required. |
+| `cell_size` | number | Pixels per QR module (default: 4.0) |
+| `cell_color` | color | Color of dark modules (default: black) |
+| `background_color` | color | Color of light modules (default: white) |
+| `error_correction` | atom | `:low`, `:medium` (default), `:quartile`, `:high` |
+
+```elixir
+qr_code("invite", "https://example.com/join/abc123",
+  cell_size: 6,
+  cell_color: "#1a1a2e",
+  background_color: "#ffffff",
+  error_correction: :quartile
+)
+```
+
+### Overlay widget props
+
+The `overlay` widget positions a floating child relative to an anchor child.
+It expects exactly two children: the first is the **anchor**, rendered inline
+in the normal layout flow; the second is the **overlay content**, rendered in
+iced's overlay layer above all other widgets. The overlay escapes parent
+clipping bounds, making it suitable for dropdowns, popovers, and tooltips.
+
+| Prop | Type | Description |
+|---|---|---|
+| `position` | atom | Position relative to anchor: `:below` (default), `:above`, `:left`, `:right` |
+| `gap` | number | Space in pixels between anchor and overlay (default: 0) |
+| `offset_x` | number | Horizontal offset in pixels applied after positioning |
+| `offset_y` | number | Vertical offset in pixels applied after positioning |
+| `width` | length | Width of the overlay node (`:fill`, `:shrink`, or number) |
+
+```elixir
+overlay("dropdown", position: :below, gap: 4) do
+  button("toggle", "Options")
+
+  column padding: 8, spacing: 4 do
+    button("opt_a", "Option A")
+    button("opt_b", "Option B")
+    button("opt_c", "Option C")
+  end
+end
 ```
 
 ## Props

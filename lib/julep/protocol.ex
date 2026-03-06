@@ -1116,6 +1116,10 @@ defmodule Julep.Protocol do
     {:mouse_right_release, id}
   end
 
+  defp dispatch(%{"type" => "event", "family" => "mouse_middle_press", "id" => id}) do
+    {:mouse_middle_press, id}
+  end
+
   defp dispatch(%{"type" => "event", "family" => "mouse_middle_release", "id" => id}) do
     {:mouse_middle_release, id}
   end

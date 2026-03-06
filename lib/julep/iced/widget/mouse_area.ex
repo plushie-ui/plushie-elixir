@@ -34,7 +34,7 @@ defmodule Julep.Iced.Widget.MouseArea do
 
   Conditional (opt-in via props):
 
-  - `{:click, "id:middle"}` -- middle mouse button pressed.
+  - `{:mouse_middle_press, id}` -- middle mouse button pressed.
   - `{:mouse_right_press, id}` -- right mouse button pressed.
   - `{:mouse_right_release, id}` -- right mouse button released.
   - `{:mouse_middle_release, id}` -- middle mouse button released.
