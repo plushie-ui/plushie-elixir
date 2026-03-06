@@ -1,5 +1,5 @@
 defmodule Julep.Examples.ExtensionsDemoTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   # Skip all tests when extension packages aren't compiled into the project.
   # The demo module references JulepSparkline, JulepHexView, etc. which live
@@ -161,16 +161,14 @@ defmodule Julep.Examples.ExtensionsDemoTest do
     # ---------------------------------------------------------------------------
 
     describe "sim_events" do
-      test "plot click produces plot_click event" do
+      test "plot click produces click event matching real protocol" do
         element = %Julep.Test.Element{type: "plot", id: "p1", props: %{}, children: []}
-        assert {:ok, {:plot_click, "p1", nil, nil}} = JulepPlot.sim_events(:click, element, [])
+        assert {:ok, {:click, "p1"}} = JulepPlot.sim_events(:click, element, [])
       end
 
-      test "timeline click produces timeline_click event" do
+      test "timeline click produces click event matching real protocol" do
         element = %Julep.Test.Element{type: "timeline", id: "t1", props: %{}, children: []}
-
-        assert {:ok, {:timeline_click, "t1", nil}} =
-                 JulepTimeline.sim_events(:click, element, [])
+        assert {:ok, {:click, "t1"}} = JulepTimeline.sim_events(:click, element, [])
       end
     end
 

@@ -47,8 +47,8 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
         {:code_input, text} ->
           %{model | code: text}
 
-        {:timeline_click, _id, interval_id} ->
-          %{model | selected_interval: interval_id}
+        {:click, "timeline"} ->
+          %{model | selected_interval: "clicked"}
 
         _ ->
           model

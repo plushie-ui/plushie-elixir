@@ -141,8 +141,12 @@ extension system.
   `Element::new(TimelineWidget { ... })` from `render()` is seamless.
 - No lifetime issues -- borrowing node data in the Widget impl works
   because `render()` receives `&'a TreeNode` with the right lifetime.
-- The `prepare`/`render` split handles complex state well -- viewport
-  state persists in ExtensionCaches across renders.
+- **Viewport state lives in iced's widget tree** -- the `State` struct
+  attached via `Tree::new()` holds pan/zoom state. This is the correct
+  iced pattern for per-instance mutable state that survives across
+  renders. `ExtensionCaches` is reserved for data that the `prepare()`
+  step computes (e.g. parsed/cached content), not interactive state
+  that the `update()` method mutates in response to events.
 - Hit testing, pan, zoom all work correctly in the custom Widget.
 
 ## Phase 6: Coexistence
@@ -193,6 +197,26 @@ packages. All have been fixed.
    raises on type name conflicts from different modules.
 3. **Feature forwarding in build task.** Custom extension builds now
    correctly forward `:iced_features` config and `headless`/`test-mode`.
+
+### Additional fixes from second audit
+
+- **Sim vs real event shape mismatch.** `sim_events/3` in julep_plot and
+  julep_timeline returned custom event tuples (`{:plot_click, id, ...}`,
+  `{:timeline_click, id, ...}`) that don't match the real protocol
+  dispatch. The Rust renderer emits `Message::Event(id, data, "click")`
+  which the Elixir protocol decodes as `{:click, id}`. Fixed sim_events
+  to return `{:ok, {:click, id}}` and updated demo update handlers.
+- **Plot interactive prop fix.** Canvas events only reach `handle_event`
+  when the plot node has `interactive: true`. Without it, pan/zoom/click
+  events pass through as raw canvas events.
+- **Code view hardcoded syntax colors.** String, Type, and Number
+  highlight colors were hardcoded RGB values, making them invisible or
+  clashing on non-dark themes. Fixed to derive from `theme.palette()`:
+  String uses `palette.success`, Type uses `palette.danger`, Number
+  blends primary and text.
+- **Coexistence test `async: true`.** The extensions demo test mutates
+  `persistent_term` state via `register_all/0`, which is global. Changed
+  to `async: false`.
 
 ### Core improvements still to consider
 
