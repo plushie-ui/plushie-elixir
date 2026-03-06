@@ -45,9 +45,9 @@ defmodule Julep.Examples.ExtensionsDemoTest do
     describe "update/2 -- toggle_pause" do
       test "toggles paused state" do
         model = ExtensionsDemo.init(nil)
-        updated = ExtensionsDemo.update(model, {:toggle_pause})
+        updated = ExtensionsDemo.update(model, :toggle_pause)
         assert updated.paused == true
-        updated2 = ExtensionsDemo.update(updated, {:toggle_pause})
+        updated2 = ExtensionsDemo.update(updated, :toggle_pause)
         assert updated2.paused == false
       end
     end

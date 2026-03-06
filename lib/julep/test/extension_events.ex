@@ -10,6 +10,8 @@ defmodule Julep.Test.ExtensionEvents do
   Registration is keyed by type name (string) in `:persistent_term`.
   """
 
+  require Logger
+
   alias Julep.Test.Element
 
   @doc """
@@ -95,7 +97,6 @@ defmodule Julep.Test.ExtensionEvents do
         register(mod)
       rescue
         e in RuntimeError ->
-          require Logger
           Logger.warning("Skipping extension #{inspect(mod)}: #{Exception.message(e)}")
       end
     end

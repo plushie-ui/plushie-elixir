@@ -217,6 +217,7 @@ defmodule Mix.Tasks.Julep.Build do
     [dependencies]
     julep-core = { path = "#{julep_core_rel}" }
     julep-bin = { path = "#{julep_bin_rel}" }
+    iced = { version = "0.14", features = ["advanced"] }
     #{ext_deps}
 
     [features]

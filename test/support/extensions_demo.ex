@@ -1,4 +1,6 @@
-if Code.ensure_loaded?(JulepSparkline) do
+if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
+     Code.ensure_loaded?(JulepCodeView) and Code.ensure_loaded?(JulepPlot) and
+     Code.ensure_loaded?(JulepTimeline) do
   defmodule Julep.Examples.ExtensionsDemo do
     @moduledoc """
     Demo app using all 5 extension widgets simultaneously.
@@ -36,7 +38,7 @@ if Code.ensure_loaded?(JulepSparkline) do
             {%{model | tick: tick}, [JulepSparkline.Command.push("spark", value)]}
           end
 
-        {:toggle_pause} ->
+        :toggle_pause ->
           %{model | paused: not model.paused}
 
         {:hex_input, text} ->
