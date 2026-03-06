@@ -995,6 +995,41 @@ defmodule Julep.RuntimeTest do
   end
 
   # ---------------------------------------------------------------------------
+  # describe "extension config in settings"
+  # ---------------------------------------------------------------------------
+
+  describe "extension config in settings" do
+    test "settings includes extension_config from application env" do
+      Application.put_env(:julep, :extension_config, %{"terminal" => %{"shell" => "/bin/bash"}})
+
+      {runtime, bridge} = start_runtime(SimpleApp)
+      await_initial_render(runtime)
+
+      settings_list = Julep.Test.MockBridge.get_settings(bridge)
+      assert length(settings_list) >= 1
+
+      # The first settings message should contain the extension_config.
+      settings = hd(settings_list)
+      assert settings["extension_config"] == %{"terminal" => %{"shell" => "/bin/bash"}}
+    after
+      Application.delete_env(:julep, :extension_config)
+    end
+
+    test "settings omits extension_config when application env is empty" do
+      Application.delete_env(:julep, :extension_config)
+
+      {runtime, bridge} = start_runtime(SimpleApp)
+      await_initial_render(runtime)
+
+      settings_list = Julep.Test.MockBridge.get_settings(bridge)
+      assert length(settings_list) >= 1
+
+      settings = hd(settings_list)
+      refute Map.has_key?(settings, "extension_config")
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Private helpers
   # ---------------------------------------------------------------------------
 

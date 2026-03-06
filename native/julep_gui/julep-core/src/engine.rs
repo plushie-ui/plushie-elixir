@@ -40,6 +40,8 @@ pub enum CoreEffect {
         width: Option<u32>,
         height: Option<u32>,
     },
+    /// Extension configuration received from Elixir.
+    ExtensionConfig(Value),
 }
 
 /// Pure state core, decoupled from iced runtime.
@@ -141,6 +143,10 @@ impl Core {
                 });
                 self.caches.default_text_size = self.default_text_size;
                 self.caches.default_font = self.default_font;
+
+                if let Some(ext_config) = settings.get("extension_config") {
+                    effects.push(CoreEffect::ExtensionConfig(ext_config.clone()));
+                }
             }
             IncomingMessage::ImageOp {
                 op,
@@ -313,13 +319,51 @@ mod tests {
     }
 
     #[test]
-    fn settings_returns_no_effects() {
+    fn settings_without_extension_config_returns_no_effects() {
         let mut core = Core::new();
         let msg = IncomingMessage::Settings {
             settings: serde_json::json!({"default_text_size": 14.0}),
         };
         let effects = core.apply(msg);
         assert!(effects.is_empty());
+    }
+
+    #[test]
+    fn settings_with_extension_config_emits_effect() {
+        let mut core = Core::new();
+        let msg = IncomingMessage::Settings {
+            settings: serde_json::json!({
+                "default_text_size": 14.0,
+                "extension_config": {
+                    "terminal": {"shell": "/bin/bash"}
+                }
+            }),
+        };
+        let effects = core.apply(msg);
+        let has_ext_config = effects
+            .iter()
+            .any(|e| matches!(e, CoreEffect::ExtensionConfig(_)));
+        assert!(has_ext_config);
+    }
+
+    #[test]
+    fn settings_with_extension_config_contains_correct_value() {
+        let mut core = Core::new();
+        let config_val = serde_json::json!({"terminal": {"shell": "/bin/zsh"}});
+        let msg = IncomingMessage::Settings {
+            settings: serde_json::json!({
+                "extension_config": config_val,
+            }),
+        };
+        let effects = core.apply(msg);
+        let ext_config = effects.iter().find_map(|e| match e {
+            CoreEffect::ExtensionConfig(v) => Some(v),
+            _ => None,
+        });
+        assert_eq!(
+            ext_config.unwrap(),
+            &serde_json::json!({"terminal": {"shell": "/bin/zsh"}})
+        );
     }
 
     // -- SubscriptionRegister / SubscriptionUnregister --
