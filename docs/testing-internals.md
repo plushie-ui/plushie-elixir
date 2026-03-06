@@ -463,8 +463,8 @@ backend, making it a natural choice for headless screenshot rendering.
 | `lib/julep/test/event_map.ex` | Widget type to event inference for sim backend |
 | `lib/julep/test/script.ex` | `.julep` script parser |
 | `lib/julep/test/script/runner.ex` | Script execution engine |
-| `native/julep_gui/src/julep_core.rs` | Core struct (tree, caches, subscriptions) |
-| `native/julep_gui/src/headless.rs` | `--headless` mode: Core + wire protocol, no iced runtime |
-| `native/julep_gui/src/test_mode.rs` | `--test` mode: real iced::daemon + test protocol |
+| `native/julep_gui/julep-core/src/engine.rs` | Core struct (tree, caches, subscriptions) |
+| `native/julep_gui/julep-bin/src/headless.rs` | `--headless` mode: Core + wire protocol, no iced runtime |
+| `native/julep_gui/julep-bin/src/test_mode.rs` | `--test` mode: real iced::daemon + test protocol |
 | `test/support/mock_bridge.ex` | Test double tracking bridge calls |
 | `test/support/integration_case.ex` | ExUnit case template for integration tests |

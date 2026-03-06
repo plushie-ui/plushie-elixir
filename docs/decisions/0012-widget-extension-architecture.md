@@ -2,8 +2,9 @@
 
 ## Status
 
-Accepted. Supersedes the placeholder version of this ADR and fulfils ADR
-0007's deferred Tier 2 design.
+Accepted and implemented (steps 1-9). Supersedes the placeholder version
+of this ADR and fulfils ADR 0007's deferred Tier 2 design. Steps 10-14
+(dogfooding extensions, generator, docs) are future work.
 
 ## Context
 

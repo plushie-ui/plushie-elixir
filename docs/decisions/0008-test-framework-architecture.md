@@ -53,7 +53,7 @@ Introduce a three-backend test framework behind a unified API:
 
 On the Rust side:
 
-- **`julep_core.rs`** -- `Core` struct extracted from `App`, holding tree
+- **`engine.rs`** -- `Core` struct extracted from `App`, holding tree
   state, caches, and subscriptions. Processes `IncomingMessage`s and
   returns `CoreEffect`s. Decoupled from `iced::daemon`.
 - **`headless.rs`** -- `--headless` mode: reads JSONL from stdin, processes
@@ -93,7 +93,7 @@ No test rewriting.
 
 ### Why Core extraction
 
-The `Core` struct in `julep_core.rs` holds all renderer state that is not
+The `Core` struct in `engine.rs` holds all renderer state that is not
 tied to `iced::daemon`: the tree, widget caches, active subscriptions,
 and default font/text-size settings. By extracting this from `App`, we
 gain:
