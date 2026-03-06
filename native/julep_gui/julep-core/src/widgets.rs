@@ -54,6 +54,7 @@ pub struct WidgetCaches {
     pub qr_code_caches: HashMap<String, (u64, canvas::Cache)>,
     pub default_text_size: Option<f32>,
     pub default_font: Option<Font>,
+    pub extension: crate::extensions::ExtensionCaches,
 }
 
 impl Default for WidgetCaches {
@@ -77,6 +78,7 @@ impl WidgetCaches {
             qr_code_caches: HashMap::new(),
             default_text_size: None,
             default_font: None,
+            extension: crate::extensions::ExtensionCaches::new(),
         }
     }
 
@@ -91,6 +93,7 @@ impl WidgetCaches {
         self.canvas_caches.clear();
         #[cfg(feature = "widget-qr-code")]
         self.qr_code_caches.clear();
+        self.extension.clear();
     }
 }
 

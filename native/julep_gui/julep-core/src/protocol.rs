@@ -445,6 +445,11 @@ impl OutgoingEvent {
         }
     }
 
+    /// Convenience constructor for extension-emitted events.
+    pub fn extension_event(family: String, id: String, data: Option<Value>) -> Self {
+        Self::generic(family, id, data)
+    }
+
     pub fn click(id: String) -> Self {
         Self::bare("click", id)
     }
