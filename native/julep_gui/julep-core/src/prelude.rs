@@ -6,7 +6,8 @@
 
 // Core extension types
 pub use crate::extensions::{
-    EventResult, ExtensionCaches, ExtensionDispatcher, RenderContext, WidgetEnv, WidgetExtension,
+    EventResult, ExtensionCaches, ExtensionDispatcher, GenerationCounter, RenderContext, WidgetEnv,
+    WidgetExtension,
 };
 
 // App builder

@@ -210,6 +210,24 @@ impl App {
                 Task::none()
             }
             // Generic extension-aware events: route through dispatcher first.
+            //
+            // Redraw contract: iced::daemon rebuilds user interfaces (calls
+            // view_window for every open window) and requests a
+            // window-level redraw after every update() call, regardless of
+            // the Task returned here. Returning Task::none() is therefore
+            // correct for all three EventResult variants -- the view IS
+            // rebuilt, and any state the extension mutated in
+            // ExtensionCaches will be visible to the next render() call.
+            //
+            // Canvas caching note: if an extension renders via
+            // canvas::Cache, the cached geometry is NOT automatically
+            // invalidated by a view rebuild. The extension must call
+            // cache.clear() itself when its state changes -- typically by
+            // using a GenerationCounter (see extensions.rs) bumped in
+            // handle_event and checked in Program::draw(). There is no
+            // need to emit dummy events or return special Tasks to force a
+            // redraw; iced already takes care of the update-view-render
+            // cycle.
             Message::Event(ref id, ref data, ref family) => {
                 let result =
                     self.dispatcher

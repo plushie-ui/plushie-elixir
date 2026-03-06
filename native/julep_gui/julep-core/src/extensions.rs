@@ -155,10 +155,10 @@ pub struct WidgetEnv<'a> {
 /// Renders child nodes through the main dispatch. Copy-able (all shared refs).
 #[derive(Clone, Copy)]
 pub struct RenderContext<'a> {
-    pub(crate) caches: &'a WidgetCaches,
-    pub(crate) images: &'a ImageRegistry,
-    pub(crate) theme: &'a Theme,
-    pub(crate) extensions: &'a ExtensionDispatcher,
+    pub caches: &'a WidgetCaches,
+    pub images: &'a ImageRegistry,
+    pub theme: &'a Theme,
+    pub extensions: &'a ExtensionDispatcher,
 }
 
 impl<'a> RenderContext<'a> {
@@ -396,6 +396,69 @@ impl Default for ExtensionDispatcher {
         Self::new(vec![])
     }
 }
+
+// ---------------------------------------------------------------------------
+// GenerationCounter
+// ---------------------------------------------------------------------------
+
+/// A monotonically increasing counter for tracking data changes.
+///
+/// Store in `ExtensionCaches` alongside your data. Call `bump()` when data
+/// changes (in `handle_command` or `prepare`). In your `canvas::Program`
+/// implementation, compare the generation against a saved value in your
+/// `Program::State` to decide whether to clear and redraw the cache.
+///
+/// # Example
+///
+/// ```ignore
+/// struct MyState {
+///     generation: u64,
+///     cache: canvas::Cache,
+/// }
+///
+/// impl canvas::Program<Message> for MyProgram {
+///     type State = MyState;
+///
+///     fn draw(&self, state: &MyState, ...) -> Vec<Geometry> {
+///         if state.generation != self.current_generation {
+///             state.cache.clear();
+///             // update state.generation after draw
+///         }
+///         vec![state.cache.draw(renderer, bounds.size(), |frame| { ... })]
+///     }
+/// }
+/// ```
+#[derive(Debug, Clone)]
+pub struct GenerationCounter {
+    value: u64,
+}
+
+impl GenerationCounter {
+    /// Create a new counter starting at zero.
+    pub fn new() -> Self {
+        Self { value: 0 }
+    }
+
+    /// Return the current generation value.
+    pub fn get(&self) -> u64 {
+        self.value
+    }
+
+    /// Increment the generation. Wraps on overflow (u64 -- effectively never).
+    pub fn bump(&mut self) {
+        self.value = self.value.wrapping_add(1);
+    }
+}
+
+impl Default for GenerationCounter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Private helpers
+// ---------------------------------------------------------------------------
 
 fn render_poisoned_placeholder<'a>(node: &TreeNode) -> Element<'a, Message> {
     use iced::widget::text;

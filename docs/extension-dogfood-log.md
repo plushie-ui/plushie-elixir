@@ -196,11 +196,30 @@ packages. All have been fixed.
 
 ### Core improvements still to consider
 
-1. **Document `Message::Event` construction** -- extension authors need
-   to know how to emit events from custom widgets.
-2. **Document event family strings** -- which families the renderer sends
-   for which interactions.
+1. ~~**Document `Message::Event` construction** -- extension authors need
+   to know how to emit events from custom widgets.~~ Done in `docs/extensions.md`.
+2. ~~**Document event family strings** -- which families the renderer sends
+   for which interactions.~~ Done in `docs/extensions.md`.
 3. **Consider `pub` visibility for `RenderContext` fields** -- or provide
    a test helper that constructs `WidgetEnv` for extension unit tests.
-4. **iced 0.14 migration guide** -- document the Widget trait changes
-   for custom Widget extension authors.
+   Resolved: `widget_env_with()` in `julep_core::testing` already provides
+   this. Documented in `docs/extensions.md`.
+4. ~~**iced 0.14 migration guide** -- document the Widget trait changes
+   for custom Widget extension authors.~~ Done in `docs/extensions.md`.
+
+## Phase 7: Documentation
+
+All outstanding documentation items from the dogfooding exercise have been
+resolved. `docs/extensions.md` covers:
+
+- Quick start (Elixir behaviour + Rust trait, build integration)
+- Extension tiers (A/B/C with examples and code)
+- `Message::Event` construction for custom Widget implementations
+- Complete event family reference table (all families from protocol.rs)
+- `EventResult` guide with gotchas (canvas cache invalidation)
+- `canvas::Cache` and `GenerationCounter` pattern
+- iced 0.14 Widget trait migration guide
+- Prop helpers reference
+- Testing guidance (Elixir, Rust, render smoke tests, sim backend)
+- `ExtensionCaches` API reference
+- Panic isolation behavior

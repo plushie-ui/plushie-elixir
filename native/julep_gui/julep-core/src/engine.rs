@@ -431,3 +431,205 @@ mod tests {
         assert!(effects.is_empty());
     }
 }
+
+// ---------------------------------------------------------------------------
+// Extension dispatch + caches integration tests
+//
+// These verify that the EventResult::Consumed path correctly preserves
+// extension cache mutations -- the underlying mechanism that makes
+// Task::none() safe in the renderer's Message::Event handler.
+// ---------------------------------------------------------------------------
+#[cfg(test)]
+mod extension_event_tests {
+    use iced::{Element, Theme};
+    use serde_json::{json, Value};
+
+    use crate::extensions::{
+        EventResult, ExtensionCaches, ExtensionDispatcher, GenerationCounter, WidgetEnv,
+        WidgetExtension,
+    };
+    use crate::message::Message;
+    use crate::protocol::{OutgoingEvent, TreeNode};
+
+    /// A test extension that bumps a GenerationCounter and mutates a
+    /// cache entry on every Consumed event.
+    struct CountingExtension;
+
+    impl WidgetExtension for CountingExtension {
+        fn type_names(&self) -> &[&str] {
+            &["counter_widget"]
+        }
+
+        fn config_key(&self) -> &str {
+            "counting"
+        }
+
+        fn prepare(&mut self, node: &TreeNode, caches: &mut ExtensionCaches, _theme: &Theme) {
+            // Seed initial state if absent.
+            caches.get_or_insert(&node.id, GenerationCounter::new);
+        }
+
+        fn render<'a>(&self, _node: &'a TreeNode, _env: &WidgetEnv<'a>) -> Element<'a, Message> {
+            iced::widget::text("test").into()
+        }
+
+        fn handle_event(
+            &mut self,
+            node_id: &str,
+            _family: &str,
+            _data: &Value,
+            caches: &mut ExtensionCaches,
+        ) -> EventResult {
+            // Mutate caches and return Consumed with no events -- the
+            // scenario that was suspected of suppressing redraws.
+            if let Some(gen) = caches.get_mut::<GenerationCounter>(node_id) {
+                gen.bump();
+            }
+            EventResult::Consumed(vec![])
+        }
+    }
+
+    /// Another test extension that returns Observed with synthetic events.
+    struct ObservingExtension;
+
+    impl WidgetExtension for ObservingExtension {
+        fn type_names(&self) -> &[&str] {
+            &["observer_widget"]
+        }
+
+        fn config_key(&self) -> &str {
+            "observing"
+        }
+
+        fn prepare(&mut self, node: &TreeNode, caches: &mut ExtensionCaches, _theme: &Theme) {
+            caches.get_or_insert(&node.id, GenerationCounter::new);
+        }
+
+        fn render<'a>(&self, _node: &'a TreeNode, _env: &WidgetEnv<'a>) -> Element<'a, Message> {
+            iced::widget::text("test").into()
+        }
+
+        fn handle_event(
+            &mut self,
+            node_id: &str,
+            _family: &str,
+            _data: &Value,
+            caches: &mut ExtensionCaches,
+        ) -> EventResult {
+            if let Some(gen) = caches.get_mut::<GenerationCounter>(node_id) {
+                gen.bump();
+            }
+            EventResult::Observed(vec![OutgoingEvent::generic(
+                "viewport".to_string(),
+                node_id.to_string(),
+                Some(json!({"zoom": 1.5})),
+            )])
+        }
+    }
+
+    fn make_tree(id: &str, type_name: &str) -> TreeNode {
+        TreeNode {
+            id: id.to_string(),
+            type_name: type_name.to_string(),
+            props: json!({}),
+            children: vec![],
+        }
+    }
+
+    // -- Consumed with empty events mutates caches --------------------------
+
+    #[test]
+    fn consumed_empty_events_still_mutates_caches() {
+        let ext: Box<dyn WidgetExtension> = Box::new(CountingExtension);
+        let mut dispatcher = ExtensionDispatcher::new(vec![ext]);
+        let mut caches = ExtensionCaches::new();
+        let root = make_tree("cw-1", "counter_widget");
+
+        // prepare registers the node and seeds the cache
+        dispatcher.prepare_all(&root, &mut caches, &Theme::Dark);
+        assert_eq!(caches.get::<GenerationCounter>("cw-1").unwrap().get(), 0);
+
+        // handle_event with Consumed(vec![]) modifies caches
+        let result = dispatcher.handle_event("cw-1", "click", &Value::Null, &mut caches);
+        assert!(matches!(result, EventResult::Consumed(ref v) if v.is_empty()));
+
+        // Cache mutation is visible -- generation was bumped
+        assert_eq!(caches.get::<GenerationCounter>("cw-1").unwrap().get(), 1);
+    }
+
+    #[test]
+    fn consumed_caches_accumulate_across_multiple_events() {
+        let ext: Box<dyn WidgetExtension> = Box::new(CountingExtension);
+        let mut dispatcher = ExtensionDispatcher::new(vec![ext]);
+        let mut caches = ExtensionCaches::new();
+        let root = make_tree("cw-1", "counter_widget");
+
+        dispatcher.prepare_all(&root, &mut caches, &Theme::Dark);
+
+        for _ in 0..5 {
+            dispatcher.handle_event("cw-1", "click", &Value::Null, &mut caches);
+        }
+
+        assert_eq!(caches.get::<GenerationCounter>("cw-1").unwrap().get(), 5);
+    }
+
+    // -- Observed returns events AND mutates caches -------------------------
+
+    #[test]
+    fn observed_mutates_caches_and_returns_events() {
+        let ext: Box<dyn WidgetExtension> = Box::new(ObservingExtension);
+        let mut dispatcher = ExtensionDispatcher::new(vec![ext]);
+        let mut caches = ExtensionCaches::new();
+        let root = make_tree("ow-1", "observer_widget");
+
+        dispatcher.prepare_all(&root, &mut caches, &Theme::Dark);
+
+        let result = dispatcher.handle_event("ow-1", "pan", &Value::Null, &mut caches);
+        match result {
+            EventResult::Observed(events) => {
+                assert_eq!(events.len(), 1);
+            }
+            other => panic!("expected Observed, got {:?}", variant_name(&other)),
+        }
+
+        assert_eq!(caches.get::<GenerationCounter>("ow-1").unwrap().get(), 1);
+    }
+
+    // -- PassThrough for unknown nodes --------------------------------------
+
+    #[test]
+    fn unknown_node_returns_passthrough() {
+        let ext: Box<dyn WidgetExtension> = Box::new(CountingExtension);
+        let mut dispatcher = ExtensionDispatcher::new(vec![ext]);
+        let mut caches = ExtensionCaches::new();
+
+        // Don't call prepare_all -- no node registered
+        let result = dispatcher.handle_event("nonexistent", "click", &Value::Null, &mut caches);
+        assert!(matches!(result, EventResult::PassThrough));
+    }
+
+    // -- GenerationCounter as redraw signal ---------------------------------
+
+    #[test]
+    fn generation_counter_detects_stale_state() {
+        let mut gen = GenerationCounter::new();
+        let saved = gen.get();
+        assert_eq!(saved, 0);
+
+        gen.bump();
+        assert_ne!(gen.get(), saved, "generation should differ after bump");
+
+        // Simulates the pattern in canvas::Program::draw -- compare saved
+        // value to current, clear cache if they differ.
+        let needs_redraw = gen.get() != saved;
+        assert!(needs_redraw);
+    }
+
+    fn variant_name(result: &EventResult) -> &'static str {
+        match result {
+            EventResult::PassThrough => "PassThrough",
+            EventResult::Consumed(_) => "Consumed",
+            EventResult::Observed(_) => "Observed",
+        }
+    }
+}
