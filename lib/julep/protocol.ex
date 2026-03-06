@@ -1250,6 +1250,12 @@ defmodule Julep.Protocol do
     {:system_theme, tag, data}
   end
 
+  # Catch-all for extension event families not handled above.
+  defp dispatch(%{"type" => "event", "family" => family, "id" => id} = msg) do
+    data = Map.get(msg, "data")
+    {String.to_atom(family), id, data}
+  end
+
   defp dispatch(msg) do
     {:error, {:unknown_message, msg}}
   end

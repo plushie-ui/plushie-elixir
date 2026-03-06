@@ -448,9 +448,9 @@ defmodule Julep.ProtocolTest do
       assert {:error, {:unknown_message, _}} = Protocol.decode_message(json, :json)
     end
 
-    test "returns {:error, {:unknown_message, _}} for a known type with an unknown family" do
+    test "unknown event family dispatches through extension catch-all" do
       json = Jason.encode!(%{type: "event", family: "levitate", id: "wizard"})
-      assert {:error, {:unknown_message, _}} = Protocol.decode_message(json, :json)
+      assert {:levitate, "wizard", nil} = Protocol.decode_message(json, :json)
     end
 
     test "the unknown_message tuple carries the decoded map" do
@@ -458,6 +458,28 @@ defmodule Julep.ProtocolTest do
       {:error, {:unknown_message, msg}} = Protocol.decode_message(json, :json)
       assert is_map(msg)
       assert msg["type"] == "mystery"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # decode_message/1 -- extension event families
+  # ---------------------------------------------------------------------------
+
+  describe "decode_message/1 -- extension event families" do
+    test "unknown family decodes to {family_atom, id, data}" do
+      json = Jason.encode!(%{type: "event", family: "span_clicked", id: "node1"})
+      assert {:span_clicked, "node1", nil} = Protocol.decode_message(json, :json)
+    end
+
+    test "unknown family with data" do
+      json = Jason.encode!(%{type: "event", family: "span_clicked", id: "node1", data: %{"foo" => "bar"}})
+      assert {:span_clicked, "node1", %{"foo" => "bar"}} = Protocol.decode_message(json, :json)
+    end
+
+    test "unknown family from msgpack" do
+      event = %{"type" => "event", "family" => "view_changed", "id" => "plot1"}
+      packed = Msgpax.pack!(event, iodata: false)
+      assert {:view_changed, "plot1", nil} = Protocol.decode_message(packed, :msgpack)
     end
   end
 

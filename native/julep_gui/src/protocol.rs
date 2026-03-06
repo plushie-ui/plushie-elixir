@@ -382,7 +382,7 @@ pub struct PatchOp {
 pub struct OutgoingEvent {
     #[serde(rename = "type")]
     pub message_type: &'static str,
-    pub family: &'static str,
+    pub family: String,
     pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub value: Option<Value>,
@@ -413,10 +413,10 @@ pub struct KeyModifiers {
 
 impl OutgoingEvent {
     /// Helper to build a bare event with only the common fields.
-    fn bare(family: &'static str, id: String) -> Self {
+    fn bare(family: impl Into<String>, id: String) -> Self {
         Self {
             message_type: "event",
-            family,
+            family: family.into(),
             id,
             value: None,
             tag: None,
@@ -426,10 +426,10 @@ impl OutgoingEvent {
     }
 
     /// Helper to build a subscription-tagged event with no widget id.
-    fn tagged(family: &'static str, tag: String) -> Self {
+    fn tagged(family: impl Into<String>, tag: String) -> Self {
         Self {
             message_type: "event",
-            family,
+            family: family.into(),
             id: String::new(),
             value: None,
             tag: Some(tag),
@@ -440,7 +440,7 @@ impl OutgoingEvent {
 
     /// Generic widget event with a family string and optional data payload.
     /// Used for on_open, on_close, sort, and other events.
-    pub fn generic(family: &'static str, id: String, data: Option<Value>) -> Self {
+    pub fn generic(family: impl Into<String>, id: String, data: Option<Value>) -> Self {
         Self {
             data,
             ..Self::bare(family, id)

@@ -2294,7 +2294,7 @@ pub(crate) fn message_to_event(msg: &Message) -> Option<OutgoingEvent> {
                 Some(data.clone())
             };
             Some(OutgoingEvent::generic(
-                family_str_to_static(family),
+                family.clone(),
                 id.clone(),
                 data_opt,
             ))
@@ -2303,17 +2303,6 @@ pub(crate) fn message_to_event(msg: &Message) -> Option<OutgoingEvent> {
     }
 }
 
-/// Maps dynamic family strings to static str references for OutgoingEvent.
-/// Extends as new event families are added.
-fn family_str_to_static(s: &str) -> &'static str {
-    match s {
-        "open" => "open",
-        "close" => "close",
-        "sort" => "sort",
-        "key_binding" => "key_binding",
-        _ => "event",
-    }
-}
 
 // ---------------------------------------------------------------------------
 // stdin subscription + reader thread
