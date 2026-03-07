@@ -140,8 +140,8 @@ With `Julep.UI` (do-block syntax):
 import Julep.UI
 
 # Headings
-text("Welcome to MyApp", a11y: %{role: "heading", level: 1})
-text("Settings", a11y: %{role: "heading", level: 2})
+text("Welcome to MyApp", id: "title", a11y: %{role: "heading", level: 1})
+text("Settings", id: "settings_heading", a11y: %{role: "heading", level: 2})
 
 # Icon buttons that need a label for screen readers
 button("close", "X", a11y: %{label: "Close dialog"})
@@ -152,31 +152,35 @@ container "search_results", a11y: %{role: "region", label: "Search results"} do
 end
 
 # Live regions -- AT announces changes automatically
-text("#{@saved_count} items saved", a11y: %{live: :polite})
+text("#{model.saved_count} items saved", a11y: %{live: :polite})
 
 # Decorative elements hidden from AT
 rule(a11y: %{hidden: true})
-image("divider", source: "/images/decorative-line.png", a11y: %{hidden: true})
+image("divider", "/images/decorative-line.png", a11y: %{hidden: true})
 
 # Disclosure / expandable sections
-container "details", a11y: %{expanded: @expanded, role: "group", label: "Advanced options"} do
-  if @expanded do
+container "details", a11y: %{expanded: model.expanded, role: "group", label: "Advanced options"} do
+  if model.expanded do
     # ...
   end
 end
 
 # Required form fields
-text_input("email", value: model.email, a11y: %{required: true, label: "Email address"})
+text_input("email", model.email, a11y: %{required: true, label: "Email address"})
 ```
 
-With the typed widget builder API:
+With the typed widget builder API (`Julep.Iced.Widget.*`):
 
 ```elixir
-alias Julep.Iced.Widget.{Button, TextInput}
+alias Julep.Iced.Widget.{Button, Text, TextInput}
 
 Button.new("close", "X")
 |> Button.a11y(%{label: "Close dialog"})
 |> Button.build()
+
+Text.new("Welcome")
+|> Text.a11y(%{role: "heading", level: 1})
+|> Text.build()
 
 TextInput.new("email", model.email)
 |> TextInput.a11y(%{required: true, label: "Email address"})
@@ -231,11 +235,11 @@ input, checkbox, and toggle has either:
 # Good -- label is auto-inferred from the button's label prop
 button("save", "Save document")
 
-# Good -- icon button with explicit a11y label
-button("settings", icon("gear"), a11y: %{label: "Settings"})
+# Good -- terse label with explicit a11y override for clarity
+button("close", "X", a11y: %{label: "Close dialog"})
 
-# Bad -- screen reader just says "button"
-button("settings", icon("gear"))
+# Bad -- screen reader just announces "button" with no name
+button("do_thing", "")
 ```
 
 ### Use headings to create structure
@@ -247,12 +251,12 @@ section titles:
 def view(model) do
   window "main", title: "MyApp" do
     column do
-      text("Dashboard", a11y: %{role: "heading", level: 1})
+      text("Dashboard", id: "page_title", a11y: %{role: "heading", level: 1})
 
-      text("Recent activity", a11y: %{role: "heading", level: 2})
+      text("Recent activity", id: "h_recent", a11y: %{role: "heading", level: 2})
       # ... activity list ...
 
-      text("Quick actions", a11y: %{role: "heading", level: 2})
+      text("Quick actions", id: "h_actions", a11y: %{role: "heading", level: 2})
       # ... action buttons ...
     end
   end
@@ -278,8 +282,8 @@ column do
     # ...
   end
 
-  container "search", a11y: %{role: "search", label: "Search"} do
-    text_input("query", value: model.query, placeholder: "Search...")
+  container "search_area", a11y: %{role: "search", label: "Search"} do
+    text_input("query", model.query, placeholder: "Search...")
     button("go", "Search")
   end
 end
@@ -296,17 +300,17 @@ without the user navigating to it, use live regions:
 
 ```elixir
 # Status bar that announces changes
-text(model.status_message, a11y: %{live: :polite})
+text(model.status_message, id: "status", a11y: %{live: :polite})
 
 # Error message that interrupts
 if model.error do
-  text(model.error,
-    a11y: %{live: :assertive, role: "alert", label: model.error}
+  text(model.error, id: "error",
+    a11y: %{live: :assertive, role: "alert"}
   )
 end
 
 # Counter value announced on change
-text("Count: #{model.count}", a11y: %{live: :polite})
+text("Count: #{model.count}", id: "counter", a11y: %{live: :polite})
 ```
 
 **Tip:** Only mark the element that changes as live, not its parent
@@ -319,24 +323,22 @@ Label your inputs, mark required fields, and provide clear error feedback:
 
 ```elixir
 column spacing: 12 do
-  text("Create account", a11y: %{role: "heading", level: 1})
+  text("Create account", id: "form_heading", a11y: %{role: "heading", level: 1})
 
   column spacing: 4 do
     text("Username")
-    text_input("username",
-      value: model.username,
+    text_input("username", model.username,
       a11y: %{required: true, label: "Username"}
     )
   end
 
   column spacing: 4 do
     text("Email")
-    text_input("email",
-      value: model.email,
+    text_input("email", model.email,
       a11y: %{required: true, label: "Email address"}
     )
     if model.email_error do
-      text(model.email_error,
+      text(model.email_error, id: "email_error",
         a11y: %{live: :assertive, role: "alert"}
       )
     end
@@ -360,7 +362,7 @@ Decorative elements that add no information should be hidden from AT:
 rule(a11y: %{hidden: true})
 
 # Decorative images
-image("hero", source: "/images/banner.png", a11y: %{hidden: true})
+image("hero", "/images/banner.png", a11y: %{hidden: true})
 
 # Spacing elements
 space(a11y: %{hidden: true})
@@ -370,7 +372,7 @@ Don't hide functional elements. If an image conveys information, give it
 an `alt` prop instead:
 
 ```elixir
-image("status_icon", source: icon_path, alt: "Status: online")
+image("status_icon", icon_path, alt: "Status: online")
 ```
 
 ### Canvas widgets
@@ -403,7 +405,8 @@ For disclosure widgets, toggleable panels, and dropdown menus:
 ```elixir
 def view(model) do
   column do
-    button("toggle_details", if(model.show_details, do: "Hide details", else: "Show details"),
+    button("toggle_details",
+      if(model.show_details, do: "Hide details", else: "Show details"),
       a11y: %{expanded: model.show_details}
     )
 
@@ -459,11 +462,11 @@ intended role:
 use Julep.Test.Case, app: MyApp
 
 test "heading has correct role" do
-  assert_role("#title", "heading")
+  assert_role("#page_title", "heading")
 end
 
 test "nav container is a navigation landmark" do
-  assert_role("#main_nav", "navigation")
+  assert_role("#nav", "navigation")
 end
 ```
 
