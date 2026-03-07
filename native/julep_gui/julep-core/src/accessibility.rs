@@ -54,7 +54,7 @@ pub fn role_for_type(type_name: &str) -> Role {
         "markdown" => Role::Document,
         "pane_grid" => Role::Group,
         "rule" => Role::Splitter,
-        "rich_text" => Role::Label,
+        "rich_text" | "rich" => Role::Label,
         _ => Role::Unknown,
     }
 }

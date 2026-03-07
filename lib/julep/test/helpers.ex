@@ -159,7 +159,15 @@ defmodule Julep.Test.Helpers do
   defmacro assert_a11y(selector, expected) do
     quote do
       element = Julep.Test.Helpers.find!(unquote(selector))
-      actual_a11y = Julep.Test.Element.a11y(element) || %{}
+      raw_a11y = Julep.Test.Element.a11y(element)
+
+      if is_nil(raw_a11y) do
+        raise ExUnit.AssertionError,
+          message:
+            "Expected a11y props on element #{inspect(unquote(selector))}, but no a11y prop was set"
+      end
+
+      actual_a11y = raw_a11y
 
       for {key, expected_value} <- unquote(expected) do
         actual_value = Map.get(actual_a11y, key)

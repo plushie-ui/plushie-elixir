@@ -159,6 +159,11 @@ impl App {
                                 return Task::none();
                             }
                             IncomingMessage::Reset { id } => {
+                                #[cfg(feature = "a11y")]
+                                {
+                                    self.focused_id = None;
+                                    self.a11y_node_map.clear();
+                                }
                                 crate::test_mode::test_helpers::handle_reset(&mut self.core, id);
                                 return Task::none();
                             }
@@ -1298,6 +1303,14 @@ impl App {
         let root_clone = root.clone();
         self.a11y_node_map.clear();
         Self::collect_a11y_node_ids_into(&root_clone, &mut self.a11y_node_map);
+
+        // Clear stale focused_id if the node no longer exists in the tree.
+        if let Some(ref fid) = self.focused_id {
+            let focus_nid = accessibility::node_id_from_str(fid);
+            if !self.a11y_node_map.contains_key(&focus_nid) {
+                self.focused_id = None;
+            }
+        }
 
         let focused = self.focused_id.as_deref();
         for (&iced_id, julep_id) in &self.reverse_window_map {
