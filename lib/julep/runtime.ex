@@ -31,7 +31,8 @@ defmodule Julep.Runtime do
         bridge:          pid() | atom(),  # Julep.Bridge pid or registered name
         tree:            map() | nil,     # last normalized tree (for re-send on restart)
         async_tasks:     map(),           # %{tag => {pid, nonce}} for running async/stream tasks
-        pending_effects: map()            # %{id => timer_ref} for in-flight effect requests
+        pending_effects: map(),           # %{id => timer_ref} for in-flight effect requests
+        pending_timers:  map()            # %{event => timer_ref} for send_after dedup/cancel
       }
 
   ## Exit trapping
@@ -105,7 +106,8 @@ defmodule Julep.Runtime do
       subscriptions: %{},
       windows: MapSet.new(),
       async_tasks: %{},
-      pending_effects: %{}
+      pending_effects: %{},
+      pending_timers: %{}
     }
 
     # Defer rendering to handle_continue. Bridge is already started (it's
@@ -233,6 +235,7 @@ defmodule Julep.Runtime do
   # ---------------------------------------------------------------------------
 
   def handle_info({:send_after_event, event}, state) do
+    state = %{state | pending_timers: Map.delete(state.pending_timers, event)}
     state = run_update(state, event)
     {:noreply, state}
   end
@@ -294,8 +297,18 @@ defmodule Julep.Runtime do
 
   # Ignore anything else -- stray messages, etc.
   def handle_info(msg, state) do
-    Logger.debug("julep runtime: unhandled message: #{inspect(msg)}")
+    Logger.warning("julep runtime: unhandled message: #{inspect(msg)}")
     {:noreply, state}
+  end
+
+  @impl true
+  def terminate(_reason, state) do
+    # Cancel all pending send_after timers so they don't fire into the void.
+    Enum.each(state.pending_timers, fn {_event, ref} ->
+      Process.cancel_timer(ref)
+    end)
+
+    :ok
   end
 
   # ---------------------------------------------------------------------------
@@ -378,7 +391,11 @@ defmodule Julep.Runtime do
   end
 
   defp safe_view(app, model) do
-    raw_tree = app.view(model)
+    raw_tree =
+      :telemetry.span([:julep, :view], %{app: app}, fn ->
+        {app.view(model), %{}}
+      end)
+
     {:ok, Julep.Tree.normalize(raw_tree)}
   rescue
     e ->
@@ -407,7 +424,11 @@ defmodule Julep.Runtime do
   end
 
   defp safe_update(app, model, event) do
-    {new_model, commands} = unwrap_result(app.update(model, event))
+    {new_model, commands} =
+      :telemetry.span([:julep, :update], %{app: app, event: event}, fn ->
+        {unwrap_result(app.update(model, event)), %{}}
+      end)
+
     {:ok, new_model, commands}
   rescue
     e ->
@@ -487,8 +508,15 @@ defmodule Julep.Runtime do
          %Julep.Command{type: :send_after, payload: %{delay: delay, event: event}},
          state
        ) do
-    Process.send_after(self(), {:send_after_event, event}, delay)
-    state
+    # Cancel any existing timer for the same event key to prevent duplicates.
+    case Map.get(state.pending_timers, event) do
+      nil -> :ok
+      old_ref -> Process.cancel_timer(old_ref)
+    end
+
+    ref = Process.send_after(self(), {:send_after_event, event}, delay)
+    pending_timers = Map.put(state.pending_timers, event, ref)
+    %{state | pending_timers: pending_timers}
   end
 
   defp execute_command(

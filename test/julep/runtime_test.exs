@@ -237,18 +237,20 @@ defmodule Julep.RuntimeTest do
 
     test "batch commands are all executed" do
       # Build an app whose update returns a batch of two send_after commands.
+      # Uses distinct event keys since duplicate keys cause timer dedup.
       defmodule BatchApp do
         use Julep.App
 
         def init(_opts), do: %{ticks: 0}
 
-        def update(model, :tick), do: %{model | ticks: model.ticks + 1}
+        def update(model, :tick_a), do: %{model | ticks: model.ticks + 1}
+        def update(model, :tick_b), do: %{model | ticks: model.ticks + 1}
 
         def update(model, {:click, "batch"}) do
           cmd =
             Julep.Command.batch([
-              Julep.Command.send_after(10, :tick),
-              Julep.Command.send_after(10, :tick)
+              Julep.Command.send_after(10, :tick_a),
+              Julep.Command.send_after(10, :tick_b)
             ])
 
           {model, cmd}

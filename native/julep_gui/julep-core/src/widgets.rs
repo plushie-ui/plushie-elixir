@@ -376,8 +376,9 @@ pub fn render<'a>(
                         let at_threshold = dispatcher.record_render_panic(unknown);
                         if at_threshold {
                             log::error!(
-                                "extension for type `{unknown}` hit render panic \
-                                 threshold, will be poisoned on next prepare cycle"
+                                "[id={}] extension for type `{unknown}` hit render panic \
+                                 threshold, will be poisoned on next prepare cycle",
+                                node.id
                             );
                         } else {
                             log::error!("extension panicked in render for node `{}`", node.id);
@@ -388,7 +389,10 @@ pub fn render<'a>(
                     }
                 }
             } else {
-                log::warn!("unknown node type `{unknown}`, rendering as empty container");
+                log::warn!(
+                    "[id={}] unknown node type `{unknown}`, rendering as empty container",
+                    node.id
+                );
                 container(Space::new()).into()
             }
         }
@@ -2177,7 +2181,7 @@ fn render_image<'a>(
                 match images.get(name) {
                     Some(h) => h.clone(),
                     None => {
-                        log::warn!("image: unknown registry handle: {name}");
+                        log::warn!("[id={}] image: unknown registry handle: {name}", node.id);
                         iced::widget::image::Handle::from_bytes(vec![])
                     }
                 }
@@ -3667,7 +3671,7 @@ fn render_qr_code<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'
     let qr = match qrcode::QrCode::with_error_correction_level(data.as_bytes(), ec_level) {
         Ok(qr) => qr,
         Err(e) => {
-            log::warn!("qr_code: failed to encode data: {e}");
+            log::warn!("[id={}] qr_code: failed to encode data: {e}", node.id);
             return text(format!("QR code error: {e}")).into();
         }
     };

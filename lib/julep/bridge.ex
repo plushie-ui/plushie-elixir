@@ -313,8 +313,10 @@ defmodule Julep.Bridge do
   def handle_info(:restart_renderer, state) do
     case open_port(state) do
       {:ok, state} ->
+        new_count = state.restart_count + 1
+        :telemetry.execute([:julep, :bridge, :restart], %{count: new_count}, %{})
         send(state.runtime, :renderer_restarted)
-        {:noreply, %{state | restart_count: state.restart_count + 1}}
+        {:noreply, %{state | restart_count: new_count}}
 
       {:error, reason} ->
         {:stop, {:renderer_restart_failed, reason}, state}
@@ -382,6 +384,7 @@ defmodule Julep.Bridge do
   defp send_to_port(port, data) when is_port(port) do
     try do
       Port.command(port, data)
+      :telemetry.execute([:julep, :bridge, :send], %{byte_size: IO.iodata_length(data)}, %{})
     rescue
       ArgumentError ->
         Logger.warning("julep bridge: port closed during send")
@@ -390,6 +393,8 @@ defmodule Julep.Bridge do
   end
 
   defp dispatch_message(data, format, state) do
+    :telemetry.execute([:julep, :bridge, :receive], %{byte_size: byte_size(data)}, %{})
+
     case Julep.Protocol.decode_message(data, format) do
       {:error, reason} ->
         Logger.warning("julep bridge: failed to decode message: #{inspect(reason)}")

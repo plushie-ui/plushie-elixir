@@ -4,8 +4,12 @@ defmodule Mix.Tasks.Julep.Build do
 
   use Mix.Task
 
+  @min_rust_version {1, 75, 0}
+
   @impl true
   def run(args) do
+    check_rust_toolchain()
+
     # Ensure the project is compiled so extension modules are available
     Mix.Task.run("compile", [])
 
@@ -17,6 +21,42 @@ defmodule Mix.Tasks.Julep.Build do
       check_collisions!(extensions)
       build_with_extensions(extensions, args)
     end
+  end
+
+  defp check_rust_toolchain do
+    {min_major, min_minor, min_patch} = @min_rust_version
+    min_str = "#{min_major}.#{min_minor}.#{min_patch}"
+
+    case System.cmd("rustc", ["--version"], stderr_to_stdout: true) do
+      {output, 0} ->
+        case Regex.run(~r/rustc (\d+)\.(\d+)\.(\d+)/, output) do
+          [_, major, minor, patch] ->
+            version =
+              {String.to_integer(major), String.to_integer(minor), String.to_integer(patch)}
+
+            if version < @min_rust_version do
+              Mix.shell().info(
+                "Warning: rustc #{major}.#{minor}.#{patch} detected, " <>
+                  "but julep_gui requires >= #{min_str}. " <>
+                  "Consider upgrading with `rustup update`."
+              )
+            end
+
+          _ ->
+            Mix.shell().info(
+              "Warning: could not parse rustc version from: #{String.trim(output)}"
+            )
+        end
+
+      {_, _} ->
+        Mix.raise("rustc not found. Install Rust #{min_str}+ via https://rustup.rs")
+    end
+  rescue
+    ErlangError ->
+      {min_major, min_minor, min_patch} = @min_rust_version
+      min_str = "#{min_major}.#{min_minor}.#{min_patch}"
+
+      Mix.raise("rustc not found. Install Rust #{min_str}+ via https://rustup.rs")
   end
 
   defp build_stock(args) do

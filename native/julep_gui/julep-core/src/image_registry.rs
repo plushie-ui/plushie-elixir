@@ -4,6 +4,30 @@ use std::collections::HashMap;
 #[cfg(feature = "widget-image")]
 use iced::widget::image;
 
+/// Sniff the image format from the first few bytes (magic bytes).
+/// Returns `None` if the format is not recognized.
+fn sniff_image_format(data: &[u8]) -> Option<&'static str> {
+    if data.len() < 4 {
+        return None;
+    }
+    if data.starts_with(&[0x89, 0x50, 0x4E, 0x47]) {
+        return Some("PNG");
+    }
+    if data.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        return Some("JPEG");
+    }
+    if data.starts_with(b"GIF8") {
+        return Some("GIF");
+    }
+    if data.starts_with(b"RIFF") && data.len() >= 12 && &data[8..12] == b"WEBP" {
+        return Some("WebP");
+    }
+    if data.starts_with(b"BM") {
+        return Some("BMP");
+    }
+    None
+}
+
 /// In-memory registry for image handles. Allows Elixir to send raw pixel
 /// or encoded image data and reference them by name in the UI tree.
 pub struct ImageRegistry {
@@ -41,6 +65,13 @@ impl ImageRegistry {
                 data.len()
             );
             return;
+        }
+        if sniff_image_format(&data).is_none() && !data.is_empty() {
+            log::warn!(
+                "image: unrecognized format (first bytes: {:02x?}), passing through [id={}]",
+                &data[..data.len().min(4)],
+                name
+            );
         }
         self.handles.insert(name, image::Handle::from_bytes(data));
     }
@@ -187,5 +218,46 @@ mod tests {
         // 2x2 RGBA = 16 bytes
         reg.create_from_rgba("ok".to_string(), 2, 2, vec![0; 16]);
         assert!(reg.get("ok").is_some());
+    }
+
+    #[test]
+    fn sniff_png() {
+        assert_eq!(
+            sniff_image_format(&[0x89, 0x50, 0x4E, 0x47, 0x0D]),
+            Some("PNG")
+        );
+    }
+
+    #[test]
+    fn sniff_jpeg() {
+        assert_eq!(sniff_image_format(&[0xFF, 0xD8, 0xFF, 0xE0]), Some("JPEG"));
+    }
+
+    #[test]
+    fn sniff_gif() {
+        assert_eq!(sniff_image_format(b"GIF89a"), Some("GIF"));
+    }
+
+    #[test]
+    fn sniff_webp() {
+        let mut data = vec![0u8; 12];
+        data[..4].copy_from_slice(b"RIFF");
+        data[8..12].copy_from_slice(b"WEBP");
+        assert_eq!(sniff_image_format(&data), Some("WebP"));
+    }
+
+    #[test]
+    fn sniff_bmp() {
+        assert_eq!(sniff_image_format(b"BM\x00\x00"), Some("BMP"));
+    }
+
+    #[test]
+    fn sniff_unknown() {
+        assert_eq!(sniff_image_format(&[0x00, 0x01, 0x02, 0x03]), None);
+    }
+
+    #[test]
+    fn sniff_too_short() {
+        assert_eq!(sniff_image_format(&[0x89, 0x50]), None);
     }
 }
