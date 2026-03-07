@@ -30,6 +30,7 @@ defmodule Julep.Iced.Widget.VerticalSlider do
           | {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
           | {:style, style()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -40,10 +41,11 @@ defmodule Julep.Iced.Widget.VerticalSlider do
           default: number() | nil,
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
-          style: style() | nil
+          style: style() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
-  defstruct [:id, :range, :value, :step, :shift_step, :default, :width, :height, :style]
+  defstruct [:id, :range, :value, :step, :shift_step, :default, :width, :height, :style, :a11y]
 
   @doc "Creates a new vertical slider struct with the given range, value, and optional keyword opts."
   @spec new(
@@ -68,6 +70,7 @@ defmodule Julep.Iced.Widget.VerticalSlider do
       {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
       {:style, v}, acc -> style(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -96,6 +99,10 @@ defmodule Julep.Iced.Widget.VerticalSlider do
   @spec style(vertical_slider :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = slider, style), do: %{slider | style: style}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(vertical_slider :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = slider, a11y), do: %{slider | a11y: a11y}
+
   @doc "Converts this vertical slider struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(vertical_slider :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = slider), do: Julep.Iced.Widget.to_node(slider)
@@ -114,6 +121,7 @@ defmodule Julep.Iced.Widget.VerticalSlider do
         |> put_if(slider.width, "width")
         |> put_if(slider.height, "height")
         |> put_if(slider.style, "style")
+        |> put_if(slider.a11y, "a11y")
 
       %{id: slider.id, type: "vertical_slider", props: props, children: []}
     end

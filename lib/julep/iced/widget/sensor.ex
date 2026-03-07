@@ -15,15 +15,18 @@ defmodule Julep.Iced.Widget.Sensor do
 
   alias Julep.Iced.Widget.Build
 
-  @type option :: {:delay, non_neg_integer()}
+  @type option ::
+          {:delay, non_neg_integer()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
           delay: non_neg_integer() | nil,
+          a11y: Julep.Iced.A11y.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
-  defstruct [:id, :delay, children: []]
+  defstruct [:id, :delay, :a11y, children: []]
 
   @doc "Creates a new sensor struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
@@ -36,6 +39,7 @@ defmodule Julep.Iced.Widget.Sensor do
   def with_options(%__MODULE__{} = sensor, opts) do
     Enum.reduce(opts, sensor, fn
       {:delay, v}, acc -> delay(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -53,6 +57,10 @@ defmodule Julep.Iced.Widget.Sensor do
   def extend(%__MODULE__{} = sensor, children),
     do: %{sensor | children: Enum.reverse(children) ++ sensor.children}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(sensor :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = sensor, a11y), do: %{sensor | a11y: a11y}
+
   @doc "Converts this sensor struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(sensor :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = sensor), do: Julep.Iced.Widget.to_node(sensor)
@@ -64,6 +72,7 @@ defmodule Julep.Iced.Widget.Sensor do
       props =
         %{}
         |> put_if(sensor.delay, "delay")
+        |> put_if(sensor.a11y, "a11y")
 
       %{
         id: sensor.id,

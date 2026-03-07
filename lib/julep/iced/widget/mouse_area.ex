@@ -84,6 +84,7 @@ defmodule Julep.Iced.Widget.MouseArea do
           | {:on_exit, boolean()}
           | {:on_move, boolean()}
           | {:on_scroll, boolean()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -97,6 +98,7 @@ defmodule Julep.Iced.Widget.MouseArea do
           on_exit: boolean() | nil,
           on_move: boolean() | nil,
           on_scroll: boolean() | nil,
+          a11y: Julep.Iced.A11y.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
@@ -112,6 +114,7 @@ defmodule Julep.Iced.Widget.MouseArea do
     :on_exit,
     :on_move,
     :on_scroll,
+    :a11y,
     children: []
   ]
 
@@ -135,6 +138,7 @@ defmodule Julep.Iced.Widget.MouseArea do
       {:on_exit, v}, acc -> on_exit(acc, v)
       {:on_move, v}, acc -> on_move(acc, v)
       {:on_scroll, v}, acc -> on_scroll(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -188,6 +192,10 @@ defmodule Julep.Iced.Widget.MouseArea do
   def extend(%__MODULE__{} = ma, children),
     do: %{ma | children: Enum.reverse(children) ++ ma.children}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(mouse_area :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = ma, a11y), do: %{ma | a11y: a11y}
+
   @doc "Converts this mouse area struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(mouse_area :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = ma), do: Julep.Iced.Widget.to_node(ma)
@@ -208,6 +216,7 @@ defmodule Julep.Iced.Widget.MouseArea do
         |> put_if(ma.on_exit, "on_exit")
         |> put_if(ma.on_move, "on_move")
         |> put_if(ma.on_scroll, "on_scroll")
+        |> put_if(ma.a11y, "a11y")
 
       %{
         id: ma.id,

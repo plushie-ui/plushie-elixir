@@ -35,6 +35,7 @@ defmodule Julep.Iced.Widget.Image do
           | {:expand, boolean()}
           | {:scale, number()}
           | {:crop, map()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -48,7 +49,8 @@ defmodule Julep.Iced.Widget.Image do
           filter_method: Julep.Iced.FilterMethod.t() | nil,
           expand: boolean() | nil,
           scale: number() | nil,
-          crop: map() | nil
+          crop: map() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
   defstruct [
@@ -63,7 +65,8 @@ defmodule Julep.Iced.Widget.Image do
     :filter_method,
     :expand,
     :scale,
-    :crop
+    :crop,
+    :a11y
   ]
 
   @doc """
@@ -100,6 +103,7 @@ defmodule Julep.Iced.Widget.Image do
       {:expand, v}, acc -> expand(acc, v)
       {:scale, v}, acc -> scale(acc, v)
       {:crop, v}, acc -> crop(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -144,6 +148,10 @@ defmodule Julep.Iced.Widget.Image do
   @spec crop(image :: t(), crop :: map()) :: t()
   def crop(%__MODULE__{} = img, crop), do: %{img | crop: crop}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(image :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = img, a11y), do: %{img | a11y: a11y}
+
   @doc "Converts this image struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(image :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = img), do: Julep.Iced.Widget.to_node(img)
@@ -165,6 +173,7 @@ defmodule Julep.Iced.Widget.Image do
         |> put_if(img.expand, "expand")
         |> put_if(img.scale, "scale")
         |> put_if(img.crop, "crop")
+        |> put_if(img.a11y, "a11y")
 
       %{id: img.id, type: "image", props: props, children: []}
     end

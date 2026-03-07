@@ -27,6 +27,27 @@ IDs must be stable across renders for the same logical element. If a list
 item's ID changes, the renderer treats it as a removal + insertion, losing
 any widget-local state (text cursor position, scroll offset).
 
+### The a11y prop
+
+Any widget node can include an `a11y` key in its props map to annotate
+accessibility semantics:
+
+```elixir
+%{
+  id: "heading",
+  type: "text",
+  props: %{
+    "content" => "Welcome",
+    "a11y" => %{"role" => "heading", "level" => 1}
+  },
+  children: []
+}
+```
+
+See [accessibility](accessibility.md) for the full list of `a11y` fields.
+The renderer auto-infers roles and labels from widget types and props, so
+most widgets need no explicit `a11y` annotation.
+
 ## Building trees with Julep.UI
 
 `Julep.UI` provides builder functions that produce these maps. The `do`

@@ -54,6 +54,7 @@ defmodule Julep.Iced.Widget.TextEditor do
           | {:highlight_theme, String.t()}
           | {:style, style()}
           | {:key_bindings, [map()]}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -71,7 +72,8 @@ defmodule Julep.Iced.Widget.TextEditor do
           highlight_syntax: String.t() | nil,
           highlight_theme: String.t() | nil,
           style: style() | nil,
-          key_bindings: [map()] | nil
+          key_bindings: [map()] | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
   defstruct [
@@ -90,7 +92,8 @@ defmodule Julep.Iced.Widget.TextEditor do
     :highlight_syntax,
     :highlight_theme,
     :style,
-    :key_bindings
+    :key_bindings,
+    :a11y
   ]
 
   @doc "Creates a new text editor struct with the given id and optional keyword opts."
@@ -120,6 +123,7 @@ defmodule Julep.Iced.Widget.TextEditor do
       {:highlight_theme, v}, acc -> highlight_theme(acc, v)
       {:style, v}, acc -> style(acc, v)
       {:key_bindings, v}, acc -> key_bindings(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -205,6 +209,10 @@ defmodule Julep.Iced.Widget.TextEditor do
   @spec key_bindings(text_editor :: t(), key_bindings :: [map()]) :: t()
   def key_bindings(%__MODULE__{} = ed, key_bindings), do: %{ed | key_bindings: key_bindings}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(text_editor :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = ed, a11y), do: %{ed | a11y: a11y}
+
   @doc "Converts this text editor struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(text_editor :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = ed), do: Julep.Iced.Widget.to_node(ed)
@@ -230,6 +238,7 @@ defmodule Julep.Iced.Widget.TextEditor do
         |> put_if(ed.highlight_theme, "highlight_theme")
         |> put_if(ed.style, "style")
         |> put_if(ed.key_bindings, "key_bindings")
+        |> put_if(ed.a11y, "a11y")
 
       %{id: ed.id, type: "text_editor", props: props, children: []}
     end

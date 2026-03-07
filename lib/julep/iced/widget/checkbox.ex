@@ -42,6 +42,7 @@ defmodule Julep.Iced.Widget.Checkbox do
           | {:style, style()}
           | {:icon, map()}
           | {:disabled, boolean()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -57,7 +58,8 @@ defmodule Julep.Iced.Widget.Checkbox do
           wrapping: Julep.Iced.Wrapping.t() | nil,
           style: style() | nil,
           icon: map() | nil,
-          disabled: boolean() | nil
+          disabled: boolean() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
   defstruct [
@@ -74,7 +76,8 @@ defmodule Julep.Iced.Widget.Checkbox do
     :wrapping,
     :style,
     :icon,
-    :disabled
+    :disabled,
+    :a11y
   ]
 
   @doc "Creates a new checkbox struct with the given label, toggle state, and optional keyword opts."
@@ -101,6 +104,7 @@ defmodule Julep.Iced.Widget.Checkbox do
       {:style, v}, acc -> style(acc, v)
       {:icon, v}, acc -> icon(acc, v)
       {:disabled, v}, acc -> disabled(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -149,6 +153,10 @@ defmodule Julep.Iced.Widget.Checkbox do
   @spec disabled(checkbox :: t(), disabled :: boolean()) :: t()
   def disabled(%__MODULE__{} = cb, disabled), do: %{cb | disabled: disabled}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(checkbox :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = cb, a11y), do: %{cb | a11y: a11y}
+
   @doc "Converts this checkbox struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(checkbox :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = cb), do: Julep.Iced.Widget.to_node(cb)
@@ -172,6 +180,7 @@ defmodule Julep.Iced.Widget.Checkbox do
         |> put_if(cb.style, "style")
         |> put_if(cb.icon, "icon")
         |> put_if(cb.disabled, "disabled")
+        |> put_if(cb.a11y, "a11y")
 
       %{id: cb.id, type: "checkbox", props: props, children: []}
     end

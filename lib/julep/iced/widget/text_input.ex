@@ -54,6 +54,7 @@ defmodule Julep.Iced.Widget.TextInput do
           | {:on_paste, boolean()}
           | {:secure, boolean()}
           | {:style, style()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -69,7 +70,8 @@ defmodule Julep.Iced.Widget.TextInput do
           on_submit: boolean() | nil,
           on_paste: boolean() | nil,
           secure: boolean() | nil,
-          style: style() | nil
+          style: style() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
   defstruct [
@@ -86,7 +88,8 @@ defmodule Julep.Iced.Widget.TextInput do
     :on_submit,
     :on_paste,
     :secure,
-    :style
+    :style,
+    :a11y
   ]
 
   @doc "Creates a new text input struct with the given value and optional keyword opts."
@@ -113,6 +116,7 @@ defmodule Julep.Iced.Widget.TextInput do
       {:on_paste, v}, acc -> on_paste(acc, v)
       {:secure, v}, acc -> secure(acc, v)
       {:style, v}, acc -> style(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -165,6 +169,10 @@ defmodule Julep.Iced.Widget.TextInput do
   @spec style(text_input :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = ti, style), do: %{ti | style: style}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(text_input :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = ti, a11y), do: %{ti | a11y: a11y}
+
   @doc "Converts this text input struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(text_input :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = ti), do: Julep.Iced.Widget.to_node(ti)
@@ -188,6 +196,7 @@ defmodule Julep.Iced.Widget.TextInput do
         |> put_if(ti.on_paste, "on_paste")
         |> put_if(ti.secure, "secure")
         |> put_if(ti.style, "style")
+        |> put_if(ti.a11y, "a11y")
 
       %{id: ti.id, type: "text_input", props: props, children: []}
     end

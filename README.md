@@ -16,6 +16,8 @@ over a MessagePack-over-stdio transport (JSONL available for debugging).
   library in a larger OTP application.
 - **Powerful.** Full access to iced's widget catalog, theming, multi-window,
   and native platform features -- without writing Rust.
+- **Accessible.** Optional accesskit integration for screen reader support
+  on macOS, Linux, and Windows. See [docs/accessibility.md](docs/accessibility.md).
 
 ## Status
 

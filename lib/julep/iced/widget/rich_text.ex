@@ -32,6 +32,7 @@ defmodule Julep.Iced.Widget.RichText do
           | {:font, Julep.Iced.Font.t()}
           | {:color, Julep.Iced.Color.t()}
           | {:line_height, number() | map()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -41,10 +42,11 @@ defmodule Julep.Iced.Widget.RichText do
           size: number() | nil,
           font: Julep.Iced.Font.t() | nil,
           color: Julep.Iced.Color.t() | nil,
-          line_height: number() | map() | nil
+          line_height: number() | map() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
-  defstruct [:id, :spans, :width, :height, :size, :font, :color, :line_height]
+  defstruct [:id, :spans, :width, :height, :size, :font, :color, :line_height, :a11y]
 
   @doc "Creates a new rich text struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
@@ -65,6 +67,7 @@ defmodule Julep.Iced.Widget.RichText do
       {:font, v}, acc -> font(acc, v)
       {:color, v}, acc -> color(acc, v)
       {:line_height, v}, acc -> line_height(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -97,6 +100,10 @@ defmodule Julep.Iced.Widget.RichText do
   @spec line_height(rich_text :: t(), line_height :: number() | map()) :: t()
   def line_height(%__MODULE__{} = rt, line_height), do: %{rt | line_height: line_height}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(rich_text :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = rt, a11y), do: %{rt | a11y: a11y}
+
   @doc "Converts this rich text struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(rich_text :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = rt), do: Julep.Iced.Widget.to_node(rt)
@@ -114,6 +121,7 @@ defmodule Julep.Iced.Widget.RichText do
         |> put_if(rt.font, "font")
         |> put_if(rt.color, "color")
         |> put_if(rt.line_height, "line_height")
+        |> put_if(rt.a11y, "a11y")
 
       %{id: rt.id, type: "rich_text", props: props, children: []}
     end

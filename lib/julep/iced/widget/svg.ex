@@ -24,6 +24,7 @@ defmodule Julep.Iced.Widget.Svg do
           | {:rotation, number()}
           | {:opacity, number()}
           | {:color, Julep.Iced.Color.t()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -33,10 +34,11 @@ defmodule Julep.Iced.Widget.Svg do
           content_fit: Julep.Iced.ContentFit.t() | nil,
           rotation: number() | nil,
           opacity: number() | nil,
-          color: Julep.Iced.Color.t() | nil
+          color: Julep.Iced.Color.t() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
-  defstruct [:id, :source, :width, :height, :content_fit, :rotation, :opacity, :color]
+  defstruct [:id, :source, :width, :height, :content_fit, :rotation, :opacity, :color, :a11y]
 
   @doc "Creates a new SVG struct with the given source path and optional keyword opts."
   @spec new(id :: String.t(), source :: String.t(), opts :: [option()]) :: t()
@@ -56,6 +58,7 @@ defmodule Julep.Iced.Widget.Svg do
       {:rotation, v}, acc -> rotation(acc, v)
       {:opacity, v}, acc -> opacity(acc, v)
       {:color, v}, acc -> color(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -84,6 +87,10 @@ defmodule Julep.Iced.Widget.Svg do
   @spec color(svg :: t(), color :: Julep.Iced.Color.t()) :: t()
   def color(%__MODULE__{} = svg, color), do: %{svg | color: Color.cast(color)}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(svg :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = svg, a11y), do: %{svg | a11y: a11y}
+
   @doc "Converts this SVG struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(svg :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = svg), do: Julep.Iced.Widget.to_node(svg)
@@ -101,6 +108,7 @@ defmodule Julep.Iced.Widget.Svg do
         |> put_if(svg.rotation, "rotation")
         |> put_if(svg.opacity, "opacity")
         |> put_if(svg.color, "color")
+        |> put_if(svg.a11y, "a11y")
 
       %{id: svg.id, type: "svg", props: props, children: []}
     end

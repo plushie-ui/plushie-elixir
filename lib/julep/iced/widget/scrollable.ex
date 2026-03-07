@@ -32,6 +32,7 @@ defmodule Julep.Iced.Widget.Scrollable do
           | {:anchor, Julep.Iced.Anchor.t()}
           | {:on_scroll, boolean()}
           | {:auto_scroll, boolean()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -45,6 +46,7 @@ defmodule Julep.Iced.Widget.Scrollable do
           anchor: Julep.Iced.Anchor.t() | nil,
           on_scroll: boolean() | nil,
           auto_scroll: boolean() | nil,
+          a11y: Julep.Iced.A11y.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
@@ -60,6 +62,7 @@ defmodule Julep.Iced.Widget.Scrollable do
     :anchor,
     :on_scroll,
     :auto_scroll,
+    :a11y,
     children: []
   ]
 
@@ -85,6 +88,7 @@ defmodule Julep.Iced.Widget.Scrollable do
       {:anchor, v}, acc -> anchor(acc, v)
       {:on_scroll, v}, acc -> on_scroll(acc, v)
       {:auto_scroll, v}, acc -> auto_scroll(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -140,6 +144,10 @@ defmodule Julep.Iced.Widget.Scrollable do
   def extend(%__MODULE__{} = s, children),
     do: %{s | children: Enum.reverse(children) ++ s.children}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(scrollable :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = s, a11y), do: %{s | a11y: a11y}
+
   @doc "Converts this scrollable struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(scrollable :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = s), do: Julep.Iced.Widget.to_node(s)
@@ -160,6 +168,7 @@ defmodule Julep.Iced.Widget.Scrollable do
         |> put_if(s.anchor, "anchor")
         |> put_if(s.on_scroll, "on_scroll")
         |> put_if(s.auto_scroll, "auto_scroll")
+        |> put_if(s.a11y, "a11y")
 
       %{
         id: s.id,

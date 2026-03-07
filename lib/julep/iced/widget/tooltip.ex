@@ -39,6 +39,7 @@ defmodule Julep.Iced.Widget.Tooltip do
           | {:snap_within_viewport, boolean()}
           | {:delay, non_neg_integer()}
           | {:style, style()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -49,6 +50,7 @@ defmodule Julep.Iced.Widget.Tooltip do
           snap_within_viewport: boolean() | nil,
           delay: non_neg_integer() | nil,
           style: style() | nil,
+          a11y: Julep.Iced.A11y.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
@@ -61,6 +63,7 @@ defmodule Julep.Iced.Widget.Tooltip do
     :snap_within_viewport,
     :delay,
     :style,
+    :a11y,
     children: []
   ]
 
@@ -82,6 +85,7 @@ defmodule Julep.Iced.Widget.Tooltip do
       {:snap_within_viewport, v}, acc -> snap_within_viewport(acc, v)
       {:delay, v}, acc -> delay(acc, v)
       {:style, v}, acc -> style(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -119,6 +123,10 @@ defmodule Julep.Iced.Widget.Tooltip do
   def extend(%__MODULE__{} = tt, children),
     do: %{tt | children: Enum.reverse(children) ++ tt.children}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(tooltip :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = tt, a11y), do: %{tt | a11y: a11y}
+
   @doc "Converts this tooltip struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(tooltip :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = tt), do: Julep.Iced.Widget.to_node(tt)
@@ -136,6 +144,7 @@ defmodule Julep.Iced.Widget.Tooltip do
         |> put_if(tt.snap_within_viewport, "snap_within_viewport")
         |> put_if(tt.delay, "delay")
         |> put_if(tt.style, "style")
+        |> put_if(tt.a11y, "a11y")
 
       %{
         id: tt.id,

@@ -26,6 +26,7 @@ defmodule Julep.Iced.Widget.Column do
           | {:align_x, Julep.Iced.Alignment.t()}
           | {:clip, boolean()}
           | {:wrap, boolean()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -37,6 +38,7 @@ defmodule Julep.Iced.Widget.Column do
           align_x: Julep.Iced.Alignment.t() | nil,
           clip: boolean() | nil,
           wrap: boolean() | nil,
+          a11y: Julep.Iced.A11y.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
@@ -50,6 +52,7 @@ defmodule Julep.Iced.Widget.Column do
     :align_x,
     :clip,
     :wrap,
+    :a11y,
     children: []
   ]
 
@@ -73,6 +76,7 @@ defmodule Julep.Iced.Widget.Column do
       {:align_x, v}, acc -> align_x(acc, v)
       {:clip, v}, acc -> clip(acc, v)
       {:wrap, v}, acc -> wrap(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -118,6 +122,10 @@ defmodule Julep.Iced.Widget.Column do
   def extend(%__MODULE__{} = col, children),
     do: %{col | children: Enum.reverse(children) ++ col.children}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(column :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = col, a11y), do: %{col | a11y: a11y}
+
   @doc "Converts this column struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(column :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = col), do: Julep.Iced.Widget.to_node(col)
@@ -136,6 +144,7 @@ defmodule Julep.Iced.Widget.Column do
         |> put_if(col.align_x, "align_x")
         |> put_if(col.clip, "clip")
         |> put_if(col.wrap, "wrap")
+        |> put_if(col.a11y, "a11y")
 
       %{
         id: col.id,

@@ -36,4 +36,67 @@ defmodule Julep.Test.Element do
   def text(%__MODULE__{props: props}) do
     props["content"] || props["label"] || props["value"] || props["placeholder"]
   end
+
+  @doc "Returns the a11y props map from the element, or nil if not set."
+  @spec a11y(element :: t()) :: map() | nil
+  def a11y(%__MODULE__{props: props}) do
+    props["a11y"]
+  end
+
+  @doc """
+  Returns the inferred accessibility role for this element.
+
+  Mirrors the Rust-side role mapping in julep_core::accessibility.
+  If the element has an explicit a11y role override, that takes precedence.
+  """
+  @spec inferred_role(element :: t()) :: String.t()
+  def inferred_role(%__MODULE__{} = element) do
+    case get_in(element.props, ["a11y", "role"]) do
+      role when is_binary(role) -> role
+      _ -> role_for_type(element.type)
+    end
+  end
+
+  @role_map %{
+    "button" => "button",
+    "text" => "label",
+    "rich_text" => "label",
+    "text_input" => "text_input",
+    "text_editor" => "multiline_text_input",
+    "checkbox" => "check_box",
+    "toggler" => "switch",
+    "radio" => "radio_button",
+    "slider" => "slider",
+    "vertical_slider" => "slider",
+    "pick_list" => "combo_box",
+    "combo_box" => "combo_box",
+    "progress_bar" => "progress_indicator",
+    "scrollable" => "scroll_view",
+    "container" => "generic_container",
+    "column" => "generic_container",
+    "row" => "generic_container",
+    "stack" => "generic_container",
+    "keyed_column" => "generic_container",
+    "grid" => "generic_container",
+    "float" => "generic_container",
+    "pin" => "generic_container",
+    "responsive" => "generic_container",
+    "space" => "generic_container",
+    "themer" => "generic_container",
+    "mouse_area" => "generic_container",
+    "sensor" => "generic_container",
+    "overlay" => "generic_container",
+    "window" => "window",
+    "image" => "image",
+    "svg" => "image",
+    "qr_code" => "image",
+    "canvas" => "canvas",
+    "table" => "table",
+    "tooltip" => "tooltip",
+    "markdown" => "document",
+    "pane_grid" => "group",
+    "rule" => "splitter"
+  }
+
+  defp role_for_type(type_name), do: Map.get(@role_map, type_name, "unknown")
 end

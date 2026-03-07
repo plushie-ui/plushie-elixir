@@ -21,6 +21,7 @@ defmodule Julep.Iced.Widget.KeyedColumn do
           | {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
           | {:max_width, number()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -29,6 +30,7 @@ defmodule Julep.Iced.Widget.KeyedColumn do
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
           max_width: number() | nil,
+          a11y: Julep.Iced.A11y.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
@@ -39,6 +41,7 @@ defmodule Julep.Iced.Widget.KeyedColumn do
     :width,
     :height,
     :max_width,
+    :a11y,
     children: []
   ]
 
@@ -59,6 +62,7 @@ defmodule Julep.Iced.Widget.KeyedColumn do
       {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
       {:max_width, v}, acc -> max_width(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -92,6 +96,10 @@ defmodule Julep.Iced.Widget.KeyedColumn do
   def extend(%__MODULE__{} = kc, children),
     do: %{kc | children: Enum.reverse(children) ++ kc.children}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(keyed_column :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = kc, a11y), do: %{kc | a11y: a11y}
+
   @doc "Converts this keyed column struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(keyed_column :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = kc), do: Julep.Iced.Widget.to_node(kc)
@@ -107,6 +115,7 @@ defmodule Julep.Iced.Widget.KeyedColumn do
         |> put_if(kc.width, "width")
         |> put_if(kc.height, "height")
         |> put_if(kc.max_width, "max_width")
+        |> put_if(kc.a11y, "a11y")
 
       %{
         id: kc.id,

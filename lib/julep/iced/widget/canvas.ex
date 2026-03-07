@@ -58,6 +58,7 @@ defmodule Julep.Iced.Widget.Canvas do
           | {:on_release, boolean()}
           | {:on_move, boolean()}
           | {:on_scroll, boolean()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -69,7 +70,8 @@ defmodule Julep.Iced.Widget.Canvas do
           on_press: boolean() | nil,
           on_release: boolean() | nil,
           on_move: boolean() | nil,
-          on_scroll: boolean() | nil
+          on_scroll: boolean() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
   defstruct [
@@ -82,7 +84,8 @@ defmodule Julep.Iced.Widget.Canvas do
     :on_press,
     :on_release,
     :on_move,
-    :on_scroll
+    :on_scroll,
+    :a11y
   ]
 
   @doc "Creates a new canvas struct with optional keyword opts."
@@ -106,6 +109,7 @@ defmodule Julep.Iced.Widget.Canvas do
       {:on_release, v}, acc -> on_release(acc, v)
       {:on_move, v}, acc -> on_move(acc, v)
       {:on_scroll, v}, acc -> on_scroll(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -154,6 +158,10 @@ defmodule Julep.Iced.Widget.Canvas do
   @spec on_scroll(canvas :: t(), on_scroll :: boolean()) :: t()
   def on_scroll(%__MODULE__{} = canvas, on_scroll), do: %{canvas | on_scroll: on_scroll}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(canvas :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = canvas, a11y), do: %{canvas | a11y: a11y}
+
   @doc "Converts this canvas struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(canvas :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = canvas), do: Julep.Iced.Widget.to_node(canvas)
@@ -173,6 +181,7 @@ defmodule Julep.Iced.Widget.Canvas do
         |> put_if(canvas.on_release, "on_release")
         |> put_if(canvas.on_move, "on_move")
         |> put_if(canvas.on_scroll, "on_scroll")
+        |> put_if(canvas.a11y, "a11y")
 
       %{id: canvas.id, type: "canvas", props: props, children: []}
     end

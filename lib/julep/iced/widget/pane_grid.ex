@@ -25,6 +25,7 @@ defmodule Julep.Iced.Widget.PaneGrid do
           | {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
           | {:min_size, number()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -32,10 +33,11 @@ defmodule Julep.Iced.Widget.PaneGrid do
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
           min_size: number() | nil,
+          a11y: Julep.Iced.A11y.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
-  defstruct [:id, :spacing, :width, :height, :min_size, children: []]
+  defstruct [:id, :spacing, :width, :height, :min_size, :a11y, children: []]
 
   @doc "Creates a new pane grid struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
@@ -53,6 +55,7 @@ defmodule Julep.Iced.Widget.PaneGrid do
       {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
       {:min_size, v}, acc -> min_size(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -82,6 +85,10 @@ defmodule Julep.Iced.Widget.PaneGrid do
   def extend(%__MODULE__{} = pg, children),
     do: %{pg | children: Enum.reverse(children) ++ pg.children}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(pane_grid :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = pg, a11y), do: %{pg | a11y: a11y}
+
   @doc "Converts this pane grid struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(pane_grid :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = pg), do: Julep.Iced.Widget.to_node(pg)
@@ -96,6 +103,7 @@ defmodule Julep.Iced.Widget.PaneGrid do
         |> put_if(pg.width, "width")
         |> put_if(pg.height, "height")
         |> put_if(pg.min_size, "min_size")
+        |> put_if(pg.a11y, "a11y")
 
       %{
         id: pg.id,

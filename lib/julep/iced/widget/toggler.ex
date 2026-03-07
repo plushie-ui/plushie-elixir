@@ -41,6 +41,7 @@ defmodule Julep.Iced.Widget.Toggler do
           | {:text_alignment, Julep.Iced.Alignment.t()}
           | {:style, style()}
           | {:disabled, boolean()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -56,7 +57,8 @@ defmodule Julep.Iced.Widget.Toggler do
           wrapping: Julep.Iced.Wrapping.t() | nil,
           text_alignment: Julep.Iced.Alignment.t() | nil,
           style: style() | nil,
-          disabled: boolean() | nil
+          disabled: boolean() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
   defstruct [
@@ -73,7 +75,8 @@ defmodule Julep.Iced.Widget.Toggler do
     :wrapping,
     :text_alignment,
     :style,
-    :disabled
+    :disabled,
+    :a11y
   ]
 
   @doc "Creates a new toggler struct with the given toggle state and optional keyword opts."
@@ -100,6 +103,7 @@ defmodule Julep.Iced.Widget.Toggler do
       {:text_alignment, v}, acc -> text_alignment(acc, v)
       {:style, v}, acc -> style(acc, v)
       {:disabled, v}, acc -> disabled(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -153,6 +157,10 @@ defmodule Julep.Iced.Widget.Toggler do
   @spec disabled(toggler :: t(), disabled :: boolean()) :: t()
   def disabled(%__MODULE__{} = tg, disabled), do: %{tg | disabled: disabled}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(toggler :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = tg, a11y), do: %{tg | a11y: a11y}
+
   @doc "Converts this toggler struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(toggler :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = tg), do: Julep.Iced.Widget.to_node(tg)
@@ -176,6 +184,7 @@ defmodule Julep.Iced.Widget.Toggler do
         |> put_if(tg.text_alignment, "text_alignment")
         |> put_if(tg.style, "style")
         |> put_if(tg.disabled, "disabled")
+        |> put_if(tg.a11y, "a11y")
 
       %{id: tg.id, type: "toggler", props: props, children: []}
     end

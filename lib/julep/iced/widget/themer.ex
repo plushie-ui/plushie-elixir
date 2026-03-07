@@ -11,12 +11,14 @@ defmodule Julep.Iced.Widget.Themer do
   @type t :: %__MODULE__{
           id: String.t(),
           theme: Julep.Iced.Theme.t(),
+          a11y: Julep.Iced.A11y.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
   defstruct [
     :id,
     :theme,
+    :a11y,
     children: []
   ]
 
@@ -35,6 +37,10 @@ defmodule Julep.Iced.Widget.Themer do
   def extend(%__MODULE__{} = t, children),
     do: %{t | children: Enum.reverse(children) ++ t.children}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(themer :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = t, a11y), do: %{t | a11y: a11y}
+
   @doc "Converts this themer struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(themer :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = t), do: Julep.Iced.Widget.to_node(t)
@@ -43,7 +49,9 @@ defmodule Julep.Iced.Widget.Themer do
     import Julep.Iced.Widget.Build
 
     def to_node(t) do
-      props = %{"theme" => t.theme}
+      props =
+        %{"theme" => t.theme}
+        |> put_if(t.a11y, "a11y")
 
       %{
         id: t.id,

@@ -15,12 +15,14 @@ defmodule Julep.Iced.Widget.Float do
           {:translate_x, number()}
           | {:translate_y, number()}
           | {:scale, number()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
           translate_x: number() | nil,
           translate_y: number() | nil,
           scale: number() | nil,
+          a11y: Julep.Iced.A11y.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
@@ -29,6 +31,7 @@ defmodule Julep.Iced.Widget.Float do
     :translate_x,
     :translate_y,
     :scale,
+    :a11y,
     children: []
   ]
 
@@ -47,6 +50,7 @@ defmodule Julep.Iced.Widget.Float do
       {:translate_x, v}, acc -> translate_x(acc, v)
       {:translate_y, v}, acc -> translate_y(acc, v)
       {:scale, v}, acc -> scale(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -72,6 +76,10 @@ defmodule Julep.Iced.Widget.Float do
   def extend(%__MODULE__{} = fw, children),
     do: %{fw | children: Enum.reverse(children) ++ fw.children}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(float_widget :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = fw, a11y), do: %{fw | a11y: a11y}
+
   @doc "Converts this float struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(float_widget :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = fw), do: Julep.Iced.Widget.to_node(fw)
@@ -85,6 +93,7 @@ defmodule Julep.Iced.Widget.Float do
         |> put_if(fw.translate_x, "translate_x")
         |> put_if(fw.translate_y, "translate_y")
         |> put_if(fw.scale, "scale")
+        |> put_if(fw.a11y, "a11y")
 
       %{
         id: fw.id,

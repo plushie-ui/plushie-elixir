@@ -16,11 +16,13 @@ defmodule Julep.Iced.Widget.Responsive do
   @type option ::
           {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
+          a11y: Julep.Iced.A11y.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
@@ -28,6 +30,7 @@ defmodule Julep.Iced.Widget.Responsive do
     :id,
     :width,
     :height,
+    :a11y,
     children: []
   ]
 
@@ -45,6 +48,7 @@ defmodule Julep.Iced.Widget.Responsive do
     Enum.reduce(opts, r, fn
       {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -66,6 +70,10 @@ defmodule Julep.Iced.Widget.Responsive do
   def extend(%__MODULE__{} = r, children),
     do: %{r | children: Enum.reverse(children) ++ r.children}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(responsive :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = r, a11y), do: %{r | a11y: a11y}
+
   @doc "Converts this responsive struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(responsive :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = r), do: Julep.Iced.Widget.to_node(r)
@@ -78,6 +86,7 @@ defmodule Julep.Iced.Widget.Responsive do
         %{}
         |> put_if(r.width, "width")
         |> put_if(r.height, "height")
+        |> put_if(r.a11y, "a11y")
 
       %{
         id: r.id,

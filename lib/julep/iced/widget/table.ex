@@ -35,6 +35,7 @@ defmodule Julep.Iced.Widget.Table do
           | {:padding, Julep.Iced.Padding.t()}
           | {:sort_by, String.t()}
           | {:sort_order, sort_order()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -45,10 +46,22 @@ defmodule Julep.Iced.Widget.Table do
           width: Julep.Iced.Length.t() | nil,
           padding: Julep.Iced.Padding.t() | nil,
           sort_by: String.t() | nil,
-          sort_order: sort_order() | nil
+          sort_order: sort_order() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
-  defstruct [:id, :columns, :rows, :header, :separator, :width, :padding, :sort_by, :sort_order]
+  defstruct [
+    :id,
+    :columns,
+    :rows,
+    :header,
+    :separator,
+    :width,
+    :padding,
+    :sort_by,
+    :sort_order,
+    :a11y
+  ]
 
   @doc "Creates a new table struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
@@ -70,6 +83,7 @@ defmodule Julep.Iced.Widget.Table do
       {:padding, v}, acc -> padding(acc, v)
       {:sort_by, v}, acc -> sort_by(acc, v)
       {:sort_order, v}, acc -> sort_order(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -106,6 +120,10 @@ defmodule Julep.Iced.Widget.Table do
   @spec sort_order(table :: t(), sort_order :: sort_order()) :: t()
   def sort_order(%__MODULE__{} = tbl, sort_order), do: %{tbl | sort_order: sort_order}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(table :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = tbl, a11y), do: %{tbl | a11y: a11y}
+
   @doc "Converts this table struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(table :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = tbl), do: Julep.Iced.Widget.to_node(tbl)
@@ -124,6 +142,7 @@ defmodule Julep.Iced.Widget.Table do
         |> put_if(tbl.padding, "padding")
         |> put_if(tbl.sort_by, "sort_by")
         |> put_if(tbl.sort_order, "sort_order")
+        |> put_if(tbl.a11y, "a11y")
 
       %{id: tbl.id, type: "table", props: props, children: []}
     end

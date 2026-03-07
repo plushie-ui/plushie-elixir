@@ -46,6 +46,7 @@ defmodule Julep.Iced.Widget.Radio do
           | {:text_shaping, Julep.Iced.Shaping.t()}
           | {:wrapping, Julep.Iced.Wrapping.t()}
           | {:style, style()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -61,7 +62,8 @@ defmodule Julep.Iced.Widget.Radio do
           line_height: number() | map() | nil,
           text_shaping: Julep.Iced.Shaping.t() | nil,
           wrapping: Julep.Iced.Wrapping.t() | nil,
-          style: style() | nil
+          style: style() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
   defstruct [
@@ -78,7 +80,8 @@ defmodule Julep.Iced.Widget.Radio do
     :line_height,
     :text_shaping,
     :wrapping,
-    :style
+    :style,
+    :a11y
   ]
 
   @doc "Creates a new radio struct with the given value, selected state, and optional keyword opts."
@@ -109,6 +112,7 @@ defmodule Julep.Iced.Widget.Radio do
       {:text_shaping, v}, acc -> text_shaping(acc, v)
       {:wrapping, v}, acc -> wrapping(acc, v)
       {:style, v}, acc -> style(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -157,6 +161,10 @@ defmodule Julep.Iced.Widget.Radio do
   @spec style(radio :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = r, style), do: %{r | style: style}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(radio :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = r, a11y), do: %{r | a11y: a11y}
+
   @doc "Converts this radio struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(radio :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = r), do: Julep.Iced.Widget.to_node(r)
@@ -180,6 +188,7 @@ defmodule Julep.Iced.Widget.Radio do
         |> put_if(r.text_shaping, "text_shaping")
         |> put_if(r.wrapping, "wrapping")
         |> put_if(r.style, "style")
+        |> put_if(r.a11y, "a11y")
 
       %{id: r.id, type: "radio", props: props, children: []}
     end

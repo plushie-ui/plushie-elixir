@@ -49,6 +49,7 @@ defmodule Julep.Iced.Widget.PickList do
           | {:style, style()}
           | {:on_open, boolean()}
           | {:on_close, boolean()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -65,7 +66,8 @@ defmodule Julep.Iced.Widget.PickList do
           handle: map() | nil,
           style: style() | nil,
           on_open: boolean() | nil,
-          on_close: boolean() | nil
+          on_close: boolean() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
   defstruct [
@@ -83,7 +85,8 @@ defmodule Julep.Iced.Widget.PickList do
     :handle,
     :style,
     :on_open,
-    :on_close
+    :on_close,
+    :a11y
   ]
 
   @doc "Creates a new pick list struct with the given options and optional keyword opts."
@@ -111,6 +114,7 @@ defmodule Julep.Iced.Widget.PickList do
       {:style, v}, acc -> style(acc, v)
       {:on_open, v}, acc -> on_open(acc, v)
       {:on_close, v}, acc -> on_close(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -167,6 +171,10 @@ defmodule Julep.Iced.Widget.PickList do
   @spec on_close(pick_list :: t(), on_close :: boolean()) :: t()
   def on_close(%__MODULE__{} = pl, on_close), do: %{pl | on_close: on_close}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(pick_list :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = pl, a11y), do: %{pl | a11y: a11y}
+
   @doc "Converts this pick list struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(pick_list :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = pl), do: Julep.Iced.Widget.to_node(pl)
@@ -191,6 +199,7 @@ defmodule Julep.Iced.Widget.PickList do
         |> put_if(pl.style, "style")
         |> put_if(pl.on_open, "on_open")
         |> put_if(pl.on_close, "on_close")
+        |> put_if(pl.a11y, "a11y")
 
       %{id: pl.id, type: "pick_list", props: props, children: []}
     end

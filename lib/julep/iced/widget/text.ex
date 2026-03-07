@@ -36,6 +36,7 @@ defmodule Julep.Iced.Widget.Text do
           | {:wrapping, Julep.Iced.Wrapping.t()}
           | {:shaping, Julep.Iced.Shaping.t()}
           | {:style, style()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -50,7 +51,8 @@ defmodule Julep.Iced.Widget.Text do
           align_y: Julep.Iced.Alignment.t() | nil,
           wrapping: Julep.Iced.Wrapping.t() | nil,
           shaping: Julep.Iced.Shaping.t() | nil,
-          style: style() | nil
+          style: style() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
   defstruct [
@@ -66,7 +68,8 @@ defmodule Julep.Iced.Widget.Text do
     :align_y,
     :wrapping,
     :shaping,
-    :style
+    :style,
+    :a11y
   ]
 
   @doc "Creates a new text widget struct with the given content and optional keyword opts."
@@ -92,6 +95,7 @@ defmodule Julep.Iced.Widget.Text do
       {:wrapping, v}, acc -> wrapping(acc, v)
       {:shaping, v}, acc -> shaping(acc, v)
       {:style, v}, acc -> style(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -140,6 +144,10 @@ defmodule Julep.Iced.Widget.Text do
   @spec style(text :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = txt, style), do: %{txt | style: style}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(text :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = txt, a11y), do: %{txt | a11y: a11y}
+
   @doc "Converts this text struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(text :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = txt), do: Julep.Iced.Widget.to_node(txt)
@@ -162,6 +170,7 @@ defmodule Julep.Iced.Widget.Text do
         |> put_if(txt.wrapping, "wrapping")
         |> put_if(txt.shaping, "text_shaping")
         |> put_if(txt.style, "style")
+        |> put_if(txt.a11y, "a11y")
 
       %{id: txt.id, type: "text", props: props, children: []}
     end

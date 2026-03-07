@@ -29,6 +29,7 @@ defmodule Julep.Iced.Widget.Overlay do
           | {:offset_x, number()}
           | {:offset_y, number()}
           | {:width, Julep.Iced.Length.t()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -37,6 +38,7 @@ defmodule Julep.Iced.Widget.Overlay do
           offset_x: number() | nil,
           offset_y: number() | nil,
           width: Julep.Iced.Length.t() | nil,
+          a11y: Julep.Iced.A11y.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
@@ -47,6 +49,7 @@ defmodule Julep.Iced.Widget.Overlay do
     :offset_x,
     :offset_y,
     :width,
+    :a11y,
     children: []
   ]
 
@@ -67,6 +70,7 @@ defmodule Julep.Iced.Widget.Overlay do
       {:offset_x, v}, acc -> offset_x(acc, v)
       {:offset_y, v}, acc -> offset_y(acc, v)
       {:width, v}, acc -> width(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -100,6 +104,10 @@ defmodule Julep.Iced.Widget.Overlay do
   def extend(%__MODULE__{} = overlay, children),
     do: %{overlay | children: Enum.reverse(children) ++ overlay.children}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(overlay :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = overlay, a11y), do: %{overlay | a11y: a11y}
+
   @doc "Converts this overlay struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(overlay :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = overlay), do: Julep.Iced.Widget.to_node(overlay)
@@ -115,6 +123,7 @@ defmodule Julep.Iced.Widget.Overlay do
         |> put_if(overlay.offset_x, "offset_x")
         |> put_if(overlay.offset_y, "offset_y")
         |> put_if(overlay.width, "width")
+        |> put_if(overlay.a11y, "a11y")
 
       %{
         id: overlay.id,

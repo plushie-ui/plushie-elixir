@@ -48,6 +48,12 @@ struct App {
     scale_factor: f32,
     /// Extension dispatcher for custom widget types.
     dispatcher: ExtensionDispatcher,
+    /// Currently focused node ID for accessibility, if any.
+    #[cfg(feature = "a11y")]
+    focused_id: Option<String>,
+    /// Reverse map from accesskit NodeId (hashed) to julep string ID.
+    #[cfg(feature = "a11y")]
+    a11y_node_map: HashMap<accesskit::NodeId, String>,
 }
 
 impl App {
@@ -67,6 +73,10 @@ impl App {
             theme_follows_system: false,
             scale_factor: 1.0,
             dispatcher,
+            #[cfg(feature = "a11y")]
+            focused_id: None,
+            #[cfg(feature = "a11y")]
+            a11y_node_map: HashMap::new(),
         }
     }
 
@@ -183,6 +193,8 @@ impl App {
                         }
                     }
                     self.apply(incoming);
+                    #[cfg(feature = "a11y")]
+                    self.handle_a11y_action_requests();
                     let tasks: Vec<Task<Message>> = self.pending_tasks.drain(..).collect();
                     Task::batch(tasks)
                 }
@@ -1255,6 +1267,94 @@ impl App {
             if let Some(root) = self.core.tree.root() {
                 self.dispatcher
                     .prepare_all(root, &mut self.core.caches.extension, &self.theme);
+            }
+        }
+
+        #[cfg(feature = "a11y")]
+        if is_tree_change {
+            self.push_accessibility_updates();
+        }
+    }
+
+    /// Push accesskit tree updates to all open windows.
+    ///
+    /// Rebuilds the reverse NodeId -> string ID map from the current tree,
+    /// then pushes a `TreeUpdate` per window via `iced_winit::a11y`.
+    #[cfg(feature = "a11y")]
+    fn push_accessibility_updates(&mut self) {
+        use julep_core::accessibility;
+
+        if self.reverse_window_map.is_empty() {
+            return;
+        }
+
+        let Some(root) = self.core.tree.root() else {
+            return;
+        };
+
+        // Rebuild reverse map: accesskit NodeId -> julep string ID.
+        // Clone the root so we don't hold an immutable borrow on self.core
+        // while mutating self.a11y_node_map.
+        let root_clone = root.clone();
+        self.a11y_node_map.clear();
+        Self::collect_a11y_node_ids_into(&root_clone, &mut self.a11y_node_map);
+
+        let focused = self.focused_id.as_deref();
+        for (&iced_id, julep_id) in &self.reverse_window_map {
+            let node = self.core.tree.find_window(julep_id).unwrap_or(&root_clone);
+            let update = accessibility::build_tree_update(node, focused);
+            iced_winit::a11y::update_tree(iced_id, update);
+        }
+    }
+
+    /// Recursively collect all tree node IDs into the reverse map.
+    #[cfg(feature = "a11y")]
+    fn collect_a11y_node_ids_into(
+        node: &julep_core::protocol::TreeNode,
+        map: &mut HashMap<accesskit::NodeId, String>,
+    ) {
+        use julep_core::accessibility;
+
+        let nid = accessibility::node_id_from_str(&node.id);
+        map.insert(nid, node.id.clone());
+        for child in &node.children {
+            Self::collect_a11y_node_ids_into(child, map);
+        }
+    }
+
+    /// Poll for and handle pending accessibility action requests from AT.
+    #[cfg(feature = "a11y")]
+    fn handle_a11y_action_requests(&mut self) {
+        let actions = iced_winit::a11y::drain_action_requests();
+        for action_req in actions {
+            let node_id_str = self.a11y_node_map.get(&action_req.request.target).cloned();
+            match action_req.request.action {
+                accesskit::Action::Click => {
+                    if let Some(id) = node_id_str {
+                        emit_event(OutgoingEvent::click(id));
+                    }
+                }
+                accesskit::Action::Focus => {
+                    self.focused_id = node_id_str;
+                }
+                accesskit::Action::SetValue => {
+                    if let (Some(id), Some(accesskit::ActionData::Value(value))) =
+                        (node_id_str, action_req.request.data)
+                    {
+                        emit_event(OutgoingEvent::input(id, value.to_string()));
+                    }
+                }
+                other => {
+                    if let Some(id) = node_id_str {
+                        emit_event(OutgoingEvent::generic(
+                            "a11y_action",
+                            id,
+                            Some(serde_json::json!({
+                                "action": format!("{:?}", other),
+                            })),
+                        ));
+                    }
+                }
             }
         }
     }

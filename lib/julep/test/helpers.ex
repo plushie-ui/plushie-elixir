@@ -149,6 +149,62 @@ defmodule Julep.Test.Helpers do
   end
 
   @doc """
+  Asserts that a widget has the expected accessibility attributes.
+
+  Finds the widget by selector and checks that its `a11y` prop map
+  contains all the expected key-value pairs.
+
+      assert_a11y("#heading", %{"role" => "heading", "level" => 1})
+  """
+  defmacro assert_a11y(selector, expected) do
+    quote do
+      element = Julep.Test.Helpers.find!(unquote(selector))
+      actual_a11y = Julep.Test.Element.a11y(element) || %{}
+
+      for {key, expected_value} <- unquote(expected) do
+        actual_value = Map.get(actual_a11y, key)
+
+        unless actual_value == expected_value do
+          raise ExUnit.AssertionError,
+            message: """
+            Expected a11y #{inspect(key)} to be #{inspect(expected_value)} \
+            for #{inspect(unquote(selector))}, got #{inspect(actual_value)}
+
+            Full a11y: #{inspect(actual_a11y)}
+            """
+        end
+      end
+
+      :ok
+    end
+  end
+
+  @doc """
+  Asserts that a widget has the expected accessibility role.
+
+  Checks the inferred role (from widget type + any a11y override).
+
+      assert_role("#save-button", "button")
+      assert_role("#heading", "heading")
+  """
+  defmacro assert_role(selector, expected_role) do
+    quote do
+      element = Julep.Test.Helpers.find!(unquote(selector))
+      actual_role = Julep.Test.Element.inferred_role(element)
+
+      unless actual_role == unquote(expected_role) do
+        raise ExUnit.AssertionError,
+          message: """
+          Expected role #{inspect(unquote(expected_role))} \
+          for #{inspect(unquote(selector))}, got #{inspect(actual_role)}
+          """
+      end
+
+      :ok
+    end
+  end
+
+  @doc """
   Captures a structural tree snapshot and asserts it matches the golden file.
 
   On first run, creates the golden file. On subsequent runs, compares hashes.

@@ -20,6 +20,7 @@ notify-rust = { version = "4", optional = true }
 base64 = "0.22"
 tokio = { version = "1", features = ["sync"] }
 qrcode = { version = "0.14", optional = true, default-features = false }
+accesskit = { version = "0.18", optional = true }
 
 [features]
 default = ["builtin-all", "dialogs", "clipboard", "notifications"]
@@ -34,3 +35,4 @@ widget-qr-code = ["iced/canvas", "dep:qrcode"]
 dialogs = ["rfd"]
 clipboard = ["arboard"]
 notifications = ["notify-rust"]
+a11y = ["dep:accesskit"]

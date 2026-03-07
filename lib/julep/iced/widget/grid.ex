@@ -23,6 +23,7 @@ defmodule Julep.Iced.Widget.Grid do
           | {:height, number()}
           | {:column_width, Julep.Iced.Length.t()}
           | {:row_height, Julep.Iced.Length.t()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -32,6 +33,7 @@ defmodule Julep.Iced.Widget.Grid do
           height: number() | nil,
           column_width: Julep.Iced.Length.t() | nil,
           row_height: Julep.Iced.Length.t() | nil,
+          a11y: Julep.Iced.A11y.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
@@ -43,6 +45,7 @@ defmodule Julep.Iced.Widget.Grid do
     :height,
     :column_width,
     :row_height,
+    :a11y,
     children: []
   ]
 
@@ -64,6 +67,7 @@ defmodule Julep.Iced.Widget.Grid do
       {:height, v}, acc -> height(acc, v)
       {:column_width, v}, acc -> column_width(acc, v)
       {:row_height, v}, acc -> row_height(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -101,6 +105,10 @@ defmodule Julep.Iced.Widget.Grid do
   def extend(%__MODULE__{} = grid, children),
     do: %{grid | children: Enum.reverse(children) ++ grid.children}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(grid :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = grid, a11y), do: %{grid | a11y: a11y}
+
   @doc "Converts this grid struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(grid :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = grid), do: Julep.Iced.Widget.to_node(grid)
@@ -117,6 +125,7 @@ defmodule Julep.Iced.Widget.Grid do
         |> put_if(grid.height, "height")
         |> put_if(grid.column_width, "column_width")
         |> put_if(grid.row_height, "row_height")
+        |> put_if(grid.a11y, "a11y")
 
       %{
         id: grid.id,

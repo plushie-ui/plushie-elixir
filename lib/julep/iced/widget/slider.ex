@@ -34,6 +34,7 @@ defmodule Julep.Iced.Widget.Slider do
           | {:height, number()}
           | {:circular_handle, boolean()}
           | {:style, style()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -45,7 +46,8 @@ defmodule Julep.Iced.Widget.Slider do
           width: Julep.Iced.Length.t() | nil,
           height: number() | nil,
           circular_handle: boolean() | nil,
-          style: style() | nil
+          style: style() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
   defstruct [
@@ -58,7 +60,8 @@ defmodule Julep.Iced.Widget.Slider do
     :width,
     :height,
     :circular_handle,
-    :style
+    :style,
+    :a11y
   ]
 
   @doc "Creates a new slider struct with the given range, value, and optional keyword opts."
@@ -86,6 +89,7 @@ defmodule Julep.Iced.Widget.Slider do
       {:height, v}, acc -> height(acc, v)
       {:circular_handle, v}, acc -> circular_handle(acc, v)
       {:style, v}, acc -> style(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -119,6 +123,10 @@ defmodule Julep.Iced.Widget.Slider do
   @spec style(slider :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = slider, style), do: %{slider | style: style}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(slider :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = slider, a11y), do: %{slider | a11y: a11y}
+
   @doc "Converts this slider struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(slider :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = slider), do: Julep.Iced.Widget.to_node(slider)
@@ -138,6 +146,7 @@ defmodule Julep.Iced.Widget.Slider do
         |> put_if(slider.height, "height")
         |> put_if(slider.circular_handle, "circular_handle")
         |> put_if(slider.style, "style")
+        |> put_if(slider.a11y, "a11y")
 
       %{id: slider.id, type: "slider", props: props, children: []}
     end

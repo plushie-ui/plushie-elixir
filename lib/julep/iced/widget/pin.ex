@@ -17,6 +17,7 @@ defmodule Julep.Iced.Widget.Pin do
           | {:y, number()}
           | {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -24,6 +25,7 @@ defmodule Julep.Iced.Widget.Pin do
           y: number() | nil,
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
+          a11y: Julep.Iced.A11y.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
@@ -33,6 +35,7 @@ defmodule Julep.Iced.Widget.Pin do
     :y,
     :width,
     :height,
+    :a11y,
     children: []
   ]
 
@@ -52,6 +55,7 @@ defmodule Julep.Iced.Widget.Pin do
       {:y, v}, acc -> y(acc, v)
       {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -81,6 +85,10 @@ defmodule Julep.Iced.Widget.Pin do
   def extend(%__MODULE__{} = pin, children),
     do: %{pin | children: Enum.reverse(children) ++ pin.children}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(pin :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = pin, a11y), do: %{pin | a11y: a11y}
+
   @doc "Converts this pin struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(pin :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = pin), do: Julep.Iced.Widget.to_node(pin)
@@ -95,6 +103,7 @@ defmodule Julep.Iced.Widget.Pin do
         |> put_if(pin.y, "y")
         |> put_if(pin.width, "width")
         |> put_if(pin.height, "height")
+        |> put_if(pin.a11y, "a11y")
 
       %{
         id: pin.id,

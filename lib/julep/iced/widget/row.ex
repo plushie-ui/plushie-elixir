@@ -25,6 +25,7 @@ defmodule Julep.Iced.Widget.Row do
           | {:max_width, number()}
           | {:clip, boolean()}
           | {:wrap, boolean()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -36,6 +37,7 @@ defmodule Julep.Iced.Widget.Row do
           max_width: number() | nil,
           clip: boolean() | nil,
           wrap: boolean() | nil,
+          a11y: Julep.Iced.A11y.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
@@ -49,6 +51,7 @@ defmodule Julep.Iced.Widget.Row do
     :max_width,
     :clip,
     :wrap,
+    :a11y,
     children: []
   ]
 
@@ -72,6 +75,7 @@ defmodule Julep.Iced.Widget.Row do
       {:max_width, v}, acc -> max_width(acc, v)
       {:clip, v}, acc -> clip(acc, v)
       {:wrap, v}, acc -> wrap(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -117,6 +121,10 @@ defmodule Julep.Iced.Widget.Row do
   def extend(%__MODULE__{} = row, children),
     do: %{row | children: Enum.reverse(children) ++ row.children}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(row :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = row, a11y), do: %{row | a11y: a11y}
+
   @doc "Converts this row struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(row :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = row), do: Julep.Iced.Widget.to_node(row)
@@ -135,6 +143,7 @@ defmodule Julep.Iced.Widget.Row do
         |> put_if(row.max_width, "max_width")
         |> put_if(row.clip, "clip")
         |> put_if(row.wrap, "wrap")
+        |> put_if(row.a11y, "a11y")
 
       %{
         id: row.id,

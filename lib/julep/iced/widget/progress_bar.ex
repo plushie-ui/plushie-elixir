@@ -23,6 +23,7 @@ defmodule Julep.Iced.Widget.ProgressBar do
           | {:height, Julep.Iced.Length.t()}
           | {:style, style()}
           | {:vertical, boolean()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -31,10 +32,11 @@ defmodule Julep.Iced.Widget.ProgressBar do
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
           style: style() | nil,
-          vertical: boolean() | nil
+          vertical: boolean() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
-  defstruct [:id, :range, :value, :width, :height, :style, :vertical]
+  defstruct [:id, :range, :value, :width, :height, :style, :vertical, :a11y]
 
   @doc "Creates a new progress bar struct with the given range, value, and optional keyword opts."
   @spec new(
@@ -58,6 +60,7 @@ defmodule Julep.Iced.Widget.ProgressBar do
       {:height, v}, acc -> height(acc, v)
       {:style, v}, acc -> style(acc, v)
       {:vertical, v}, acc -> vertical(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -78,6 +81,10 @@ defmodule Julep.Iced.Widget.ProgressBar do
   @spec vertical(progress_bar :: t(), vertical :: boolean()) :: t()
   def vertical(%__MODULE__{} = bar, vertical), do: %{bar | vertical: vertical}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(progress_bar :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = bar, a11y), do: %{bar | a11y: a11y}
+
   @doc "Converts this progress bar struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(progress_bar :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = bar), do: Julep.Iced.Widget.to_node(bar)
@@ -96,6 +103,7 @@ defmodule Julep.Iced.Widget.ProgressBar do
         |> put_if(bar.height, "height")
         |> put_if(bar.style, "style")
         |> put_if(bar.vertical, "vertical")
+        |> put_if(bar.a11y, "a11y")
 
       %{id: bar.id, type: "progress_bar", props: props, children: []}
     end

@@ -13,17 +13,20 @@ defmodule Julep.Iced.Widget.Space do
   @type option ::
           {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
           width: Julep.Iced.Length.t() | nil,
-          height: Julep.Iced.Length.t() | nil
+          height: Julep.Iced.Length.t() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
   defstruct [
     :id,
     :width,
-    :height
+    :height,
+    :a11y
   ]
 
   @doc "Creates a new space struct with optional keyword opts."
@@ -40,6 +43,7 @@ defmodule Julep.Iced.Widget.Space do
     Enum.reduce(opts, space, fn
       {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -51,6 +55,10 @@ defmodule Julep.Iced.Widget.Space do
   @doc "Sets the space height."
   @spec height(space :: t(), height :: Julep.Iced.Length.t()) :: t()
   def height(%__MODULE__{} = space, height), do: %{space | height: height}
+
+  @doc "Sets accessibility annotations."
+  @spec a11y(space :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = space, a11y), do: %{space | a11y: a11y}
 
   @doc "Converts this space struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(space :: t()) :: Julep.Iced.ui_node()
@@ -64,6 +72,7 @@ defmodule Julep.Iced.Widget.Space do
         %{}
         |> put_if(space.width, "width")
         |> put_if(space.height, "height")
+        |> put_if(space.a11y, "a11y")
 
       %{id: space.id, type: "space", props: props, children: []}
     end

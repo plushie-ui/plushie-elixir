@@ -35,6 +35,7 @@ defmodule Julep.Iced.Widget.Button do
           | {:style, style()}
           | {:disabled, boolean()}
           | {:enabled, boolean()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -44,10 +45,11 @@ defmodule Julep.Iced.Widget.Button do
           padding: Julep.Iced.Padding.t() | nil,
           clip: boolean() | nil,
           style: style() | nil,
-          disabled: boolean() | nil
+          disabled: boolean() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
-  defstruct [:id, :label, :width, :height, :padding, :clip, :style, :disabled]
+  defstruct [:id, :label, :width, :height, :padding, :clip, :style, :disabled, :a11y]
 
   @doc "Creates a new button struct with the given label and optional keyword opts."
   @spec new(id :: String.t(), label :: String.t(), opts :: [option()]) :: t()
@@ -68,6 +70,7 @@ defmodule Julep.Iced.Widget.Button do
       {:style, v}, acc -> style(acc, v)
       {:disabled, v}, acc -> disabled(acc, v)
       {:enabled, v}, acc -> disabled(acc, !v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -96,6 +99,10 @@ defmodule Julep.Iced.Widget.Button do
   @spec disabled(button :: t(), disabled :: boolean()) :: t()
   def disabled(%__MODULE__{} = btn, disabled), do: %{btn | disabled: disabled}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(button :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = btn, a11y), do: %{btn | a11y: a11y}
+
   @doc "Converts this button struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(button :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = btn), do: Julep.Iced.Widget.to_node(btn)
@@ -113,6 +120,7 @@ defmodule Julep.Iced.Widget.Button do
         |> put_if(btn.clip, "clip")
         |> put_if(btn.style, "style")
         |> put_if(btn.disabled, "disabled")
+        |> put_if(btn.a11y, "a11y")
 
       %{id: btn.id, type: "button", props: props, children: []}
     end

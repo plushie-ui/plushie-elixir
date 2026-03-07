@@ -30,6 +30,7 @@ defmodule Julep.Iced.Widget.Markdown do
           | {:h3_size, number()}
           | {:code_size, number()}
           | {:spacing, number()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -40,7 +41,8 @@ defmodule Julep.Iced.Widget.Markdown do
           h2_size: number() | nil,
           h3_size: number() | nil,
           code_size: number() | nil,
-          spacing: number() | nil
+          spacing: number() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
   defstruct [
@@ -52,7 +54,8 @@ defmodule Julep.Iced.Widget.Markdown do
     :h2_size,
     :h3_size,
     :code_size,
-    :spacing
+    :spacing,
+    :a11y
   ]
 
   @doc "Creates a new markdown struct with the given content and optional keyword opts."
@@ -74,6 +77,7 @@ defmodule Julep.Iced.Widget.Markdown do
       {:h3_size, v}, acc -> h3_size(acc, v)
       {:code_size, v}, acc -> code_size(acc, v)
       {:spacing, v}, acc -> spacing(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -106,6 +110,10 @@ defmodule Julep.Iced.Widget.Markdown do
   @spec spacing(markdown :: t(), spacing :: number()) :: t()
   def spacing(%__MODULE__{} = md, spacing), do: %{md | spacing: spacing}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(markdown :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = md, a11y), do: %{md | a11y: a11y}
+
   @doc "Converts this markdown struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(markdown :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = md), do: Julep.Iced.Widget.to_node(md)
@@ -124,6 +132,7 @@ defmodule Julep.Iced.Widget.Markdown do
         |> put_if(md.h3_size, "h3_size")
         |> put_if(md.code_size, "code_size")
         |> put_if(md.spacing, "spacing")
+        |> put_if(md.a11y, "a11y")
 
       %{id: md.id, type: "markdown", props: props, children: []}
     end

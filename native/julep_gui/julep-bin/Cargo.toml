@@ -22,6 +22,8 @@ base64 = "0.22"
 tokio = { version = "1", features = ["sync"] }
 iced_test = { version = "0.14", optional = true }
 sha2 = { version = "0.10", optional = true }
+iced_winit = { version = "0.14", optional = true }
+accesskit = { version = "0.18", optional = true }
 
 [features]
 default = ["builtin-all", "dialogs", "clipboard", "notifications"]
@@ -38,3 +40,4 @@ clipboard = ["julep-core/clipboard"]
 notifications = ["julep-core/notifications"]
 headless = ["iced_test", "sha2"]
 test-mode = ["sha2"]
+a11y = ["julep-core/a11y", "dep:iced_winit", "iced_winit/a11y", "dep:accesskit"]

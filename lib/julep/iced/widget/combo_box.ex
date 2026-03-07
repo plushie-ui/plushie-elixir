@@ -45,6 +45,7 @@ defmodule Julep.Iced.Widget.ComboBox do
           | {:on_option_hovered, boolean()}
           | {:on_open, boolean()}
           | {:on_close, boolean()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -60,7 +61,8 @@ defmodule Julep.Iced.Widget.ComboBox do
           icon: map() | nil,
           on_option_hovered: boolean() | nil,
           on_open: boolean() | nil,
-          on_close: boolean() | nil
+          on_close: boolean() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
   defstruct [
@@ -77,7 +79,8 @@ defmodule Julep.Iced.Widget.ComboBox do
     :icon,
     :on_option_hovered,
     :on_open,
-    :on_close
+    :on_close,
+    :a11y
   ]
 
   @doc "Creates a new combo box struct with the given options and optional keyword opts."
@@ -104,6 +107,7 @@ defmodule Julep.Iced.Widget.ComboBox do
       {:on_option_hovered, v}, acc -> on_option_hovered(acc, v)
       {:on_open, v}, acc -> on_open(acc, v)
       {:on_close, v}, acc -> on_close(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -157,6 +161,10 @@ defmodule Julep.Iced.Widget.ComboBox do
   @spec on_close(combo_box :: t(), on_close :: boolean()) :: t()
   def on_close(%__MODULE__{} = cb, on_close), do: %{cb | on_close: on_close}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(combo_box :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = cb, a11y), do: %{cb | a11y: a11y}
+
   @doc "Converts this combo box struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(combo_box :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = cb), do: Julep.Iced.Widget.to_node(cb)
@@ -180,6 +188,7 @@ defmodule Julep.Iced.Widget.ComboBox do
         |> put_if(cb.on_option_hovered, "on_option_hovered")
         |> put_if(cb.on_open, "on_open")
         |> put_if(cb.on_close, "on_close")
+        |> put_if(cb.a11y, "a11y")
 
       %{id: cb.id, type: "combo_box", props: props, children: []}
     end

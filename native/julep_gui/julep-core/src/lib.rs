@@ -61,3 +61,6 @@ pub mod testing;
 pub mod theming;
 pub mod tree;
 pub mod widgets;
+
+#[cfg(feature = "a11y")]
+pub mod accessibility;

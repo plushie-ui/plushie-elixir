@@ -20,16 +20,18 @@ defmodule Julep.Iced.Widget.Rule do
           | {:width, number()}
           | {:direction, Julep.Iced.Direction.t()}
           | {:style, style()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
           height: number() | nil,
           width: number() | nil,
           direction: Julep.Iced.Direction.t() | nil,
-          style: style() | nil
+          style: style() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
-  defstruct [:id, :height, :width, :direction, :style]
+  defstruct [:id, :height, :width, :direction, :style, :a11y]
 
   @doc "Creates a new rule struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
@@ -47,6 +49,7 @@ defmodule Julep.Iced.Widget.Rule do
       {:width, v}, acc -> width(acc, v)
       {:direction, v}, acc -> direction(acc, v)
       {:style, v}, acc -> style(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -67,6 +70,10 @@ defmodule Julep.Iced.Widget.Rule do
   @spec style(rule :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = rule, style), do: %{rule | style: style}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(rule :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = rule, a11y), do: %{rule | a11y: a11y}
+
   @doc "Converts this rule struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(rule :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = rule), do: Julep.Iced.Widget.to_node(rule)
@@ -81,6 +88,7 @@ defmodule Julep.Iced.Widget.Rule do
         |> put_if(rule.width, "width")
         |> put_if(rule.direction, "direction")
         |> put_if(rule.style, "style")
+        |> put_if(rule.a11y, "a11y")
 
       %{id: rule.id, type: "rule", props: props, children: []}
     end

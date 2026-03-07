@@ -53,6 +53,7 @@ defmodule Julep.Iced.Widget.Container do
           | {:border, Julep.Iced.Border.t()}
           | {:shadow, Julep.Iced.Shadow.t()}
           | {:style, style()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -70,6 +71,7 @@ defmodule Julep.Iced.Widget.Container do
           border: Julep.Iced.Border.t() | nil,
           shadow: Julep.Iced.Shadow.t() | nil,
           style: style() | nil,
+          a11y: Julep.Iced.A11y.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
@@ -89,6 +91,7 @@ defmodule Julep.Iced.Widget.Container do
     :border,
     :shadow,
     :style,
+    :a11y,
     children: []
   ]
 
@@ -118,6 +121,7 @@ defmodule Julep.Iced.Widget.Container do
       {:border, v}, acc -> border(acc, v)
       {:shadow, v}, acc -> shadow(acc, v)
       {:style, v}, acc -> style(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -218,6 +222,10 @@ defmodule Julep.Iced.Widget.Container do
   def extend(%__MODULE__{} = c, children),
     do: %{c | children: Enum.reverse(children) ++ c.children}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(container :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = c, a11y), do: %{c | a11y: a11y}
+
   @doc "Converts this container struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(container :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = c), do: Julep.Iced.Widget.to_node(c)
@@ -242,6 +250,7 @@ defmodule Julep.Iced.Widget.Container do
         |> put_if(c.border, "border")
         |> put_if(c.shadow, "shadow")
         |> put_if(c.style, "style")
+        |> put_if(c.a11y, "a11y")
 
       %{
         id: c.id,

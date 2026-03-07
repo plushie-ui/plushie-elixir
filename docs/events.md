@@ -617,6 +617,29 @@ end
 
 See [effects.md](effects.md).
 
+### Accessibility action
+
+```elixir
+{:a11y_action, id, action_name}
+```
+
+Generated when an assistive technology triggers a non-standard action on a
+widget. Standard AT actions are mapped to normal events: Click/Default
+becomes `{:click, id}`, SetValue becomes `{:input, id, value}`. This event
+catches everything else.
+
+The `action_name` is a string representation of the accesskit action (e.g.
+`"ScrollDown"`, `"Increment"`, `"Decrement"`).
+
+```elixir
+def update(model, {:a11y_action, "volume", "Increment"}) do
+  %{model | volume: min(model.volume + 5, 100)}
+end
+```
+
+Note: This event is only generated when the renderer is built with the
+`a11y` feature flag.
+
 ## Catch-all
 
 Always include a catch-all clause:

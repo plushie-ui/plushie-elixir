@@ -26,6 +26,7 @@ defmodule Julep.Iced.Widget.QrCode do
           | {:cell_color, Julep.Iced.Color.t()}
           | {:background_color, Julep.Iced.Color.t()}
           | {:error_correction, error_correction()}
+          | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -33,10 +34,11 @@ defmodule Julep.Iced.Widget.QrCode do
           cell_size: number() | nil,
           cell_color: Julep.Iced.Color.t() | nil,
           background_color: Julep.Iced.Color.t() | nil,
-          error_correction: error_correction() | nil
+          error_correction: error_correction() | nil,
+          a11y: Julep.Iced.A11y.t() | nil
         }
 
-  defstruct [:id, :data, :cell_size, :cell_color, :background_color, :error_correction]
+  defstruct [:id, :data, :cell_size, :cell_color, :background_color, :error_correction, :a11y]
 
   @doc "Creates a new QR code struct with the given data string and optional keyword opts."
   @spec new(id :: String.t(), data :: String.t(), opts :: [option()]) :: t()
@@ -54,6 +56,7 @@ defmodule Julep.Iced.Widget.QrCode do
       {:cell_color, v}, acc -> cell_color(acc, v)
       {:background_color, v}, acc -> background_color(acc, v)
       {:error_correction, v}, acc -> error_correction(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -76,6 +79,10 @@ defmodule Julep.Iced.Widget.QrCode do
   def error_correction(%__MODULE__{} = qr, error_correction),
     do: %{qr | error_correction: error_correction}
 
+  @doc "Sets accessibility annotations."
+  @spec a11y(qr_code :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = qr, a11y), do: %{qr | a11y: a11y}
+
   @doc "Converts this QR code struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(qr_code :: t()) :: Julep.Iced.ui_node()
   def build(%__MODULE__{} = qr), do: Julep.Iced.Widget.to_node(qr)
@@ -91,6 +98,7 @@ defmodule Julep.Iced.Widget.QrCode do
         |> put_if(qr.cell_color, "cell_color")
         |> put_if(qr.background_color, "background_color")
         |> put_if(qr.error_correction, "error_correction")
+        |> put_if(qr.a11y, "a11y")
 
       %{id: qr.id, type: "qr_code", props: props, children: []}
     end
