@@ -25,7 +25,7 @@ All five roadmap phases complete. Approaching first Hex release.
 
 ```elixir
 defmodule MyApp do
-  @behaviour Julep.App
+  use Julep.App
 
   def init(_opts), do: %{count: 0}
 
@@ -107,12 +107,13 @@ the full CI pipeline locally and stops on first failure:
 
 1. `mix format --check-formatted`
 2. `mix compile --warnings-as-errors`
-3. `mix test`
-4. `mix dialyzer`
-5. `cargo build` (renderer)
-6. `cargo test` (renderer)
-7. `cargo fmt --check` (renderer)
-8. `cargo clippy -D warnings` (renderer)
+3. `mix credo --strict`
+4. `mix test`
+5. `mix dialyzer`
+6. `cargo build` (renderer)
+7. `cargo test` (renderer)
+8. `cargo fmt --check` (renderer)
+9. `cargo clippy -D warnings` (renderer)
 
 ## Testing
 
@@ -195,6 +196,10 @@ Decisions:
 - [0006: Responsive layout via sensor](docs/decisions/0006-responsive-via-sensor.md)
 - [0007: Two-tier custom widget strategy](docs/decisions/0007-custom-widget-extension.md)
 - [0008: Test framework architecture](docs/decisions/0008-test-framework-architecture.md)
+- [0009: Style maps](docs/decisions/0009-style-maps.md)
+- [0010: Canvas drawing primitives](docs/decisions/0010-canvas-drawing-primitives.md)
+- [0011: Composition patterns](docs/decisions/0011-composition-patterns.md)
+- [0012: Widget extension architecture](docs/decisions/0012-widget-extension-architecture.md)
 
 ## License
 

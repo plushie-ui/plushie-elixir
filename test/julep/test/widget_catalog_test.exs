@@ -89,9 +89,9 @@ defmodule Julep.Test.WidgetCatalogTest do
       assert result.children == []
     end
 
-    test "missing id defaults to \"unknown\"" do
+    test "missing id generates unique unknown_ prefix" do
       result = Tree.normalize(%{type: "text", props: %{}, children: []})
-      assert result.id == "unknown"
+      assert String.starts_with?(result.id, "unknown_")
     end
   end
 

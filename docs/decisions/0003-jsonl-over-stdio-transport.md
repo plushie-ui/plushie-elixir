@@ -1,5 +1,7 @@
 # 0003: JSONL over stdio transport
 
+**Update:** MessagePack is now the default transport format (see ADR-0009). JSONL remains available for debugging via the `--json` flag.
+
 ## Status
 
 Accepted.

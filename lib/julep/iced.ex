@@ -333,9 +333,9 @@ defmodule Julep.Iced do
 
   See `Julep.Iced.Widget.Tooltip` for full props documentation.
   """
-  @spec tooltip(id :: String.t(), props :: props(), children :: [ui_node()], tip :: String.t()) ::
+  @spec tooltip(id :: String.t(), tip :: String.t(), props :: props(), children :: [ui_node()]) ::
           ui_node()
-  def tooltip(id, props \\ %{}, children \\ [], tip) do
+  def tooltip(id, tip, props \\ %{}, children \\ []) do
     merged = Map.put(props, :tip, tip)
     Node.build(id, "tooltip", merged, children)
   end

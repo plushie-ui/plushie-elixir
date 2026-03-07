@@ -599,6 +599,9 @@ Julep.Subscription.on_key_press(event_tag)
 Julep.Subscription.on_key_release(event_tag)
 # Delivers: {:key_release, %Julep.KeyEvent{}}
 
+Julep.Subscription.on_modifiers_changed(event_tag)
+# Delivers: {:modifiers_changed, %Julep.KeyModifiers{}}
+
 # The event_tag is used by the runtime to register/unregister the
 # subscription with the renderer. It is NOT included in the event
 # tuple delivered to update/2. See docs/events.md for the full

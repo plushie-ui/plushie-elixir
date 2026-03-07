@@ -1,4 +1,6 @@
 defmodule Julep.Tree do
+  require Logger
+
   @moduledoc """
   Utilities for working with Julep UI trees.
 
@@ -65,7 +67,7 @@ defmodule Julep.Tree do
   end
 
   def normalize(%{} = node) do
-    id = fetch_field(node, :id, "id") || "unknown"
+    id = fetch_field(node, :id, "id") || "unknown_#{:erlang.unique_integer([:positive])}"
     type = fetch_field(node, :type, "type") || "container"
     props = fetch_field(node, :props, "props") || %{}
     children = fetch_field(node, :children, "children") || []
@@ -87,6 +89,12 @@ defmodule Julep.Tree do
   def find(%{id: id} = node, id), do: node
 
   def find(%{children: children}, target_id) when is_list(children) do
+    Enum.find_value(children, &find(&1, target_id))
+  end
+
+  def find(%{"id" => id} = node, id), do: node
+
+  def find(%{"children" => children}, target_id) when is_list(children) do
     Enum.find_value(children, &find(&1, target_id))
   end
 
@@ -193,6 +201,12 @@ defmodule Julep.Tree do
   end
 
   defp diff_children(old_children, new_children, path) do
+    new_ids = Enum.map(new_children, & &1.id)
+
+    if length(new_ids) != MapSet.size(MapSet.new(new_ids)) do
+      Logger.warning("julep tree: duplicate child IDs detected: #{inspect(new_ids)}")
+    end
+
     old_by_id = old_children |> Enum.with_index() |> Map.new(fn {c, i} -> {c.id, {c, i}} end)
     new_by_id = new_children |> Enum.with_index() |> Map.new(fn {c, i} -> {c.id, {c, i}} end)
 
@@ -224,6 +238,9 @@ defmodule Julep.Tree do
         end
       end)
 
+    # Ordering is load-bearing: removals descending (highest index first to
+    # avoid index shift), then updates (on adjusted indices), then inserts
+    # ascending (lowest index first to build correctly).
     remove_ops ++ update_ops ++ insert_ops
   end
 
@@ -284,6 +301,11 @@ defmodule Julep.Tree do
   # Lists in props are treated as scalar sequences (e.g. color tuples, ranges),
   # not as child node collections.
   defp stringify_value(%{} = v), do: stringify_keys(v)
+
+  defp stringify_value(list) when is_list(list) do
+    Enum.map(list, &stringify_value/1)
+  end
+
   defp stringify_value(v), do: v
 
   # Fetches a field by atom key first, then string key, returning nil if absent.

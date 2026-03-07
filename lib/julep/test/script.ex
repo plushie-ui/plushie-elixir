@@ -34,6 +34,9 @@ defmodule Julep.Test.Script do
           | {:release, String.t()}
           | {:move, String.t()}
           | {:move_to, non_neg_integer(), non_neg_integer()}
+          | {:toggle, String.t()}
+          | {:select, String.t(), String.t()}
+          | {:slide, String.t(), number()}
           | {:expect, String.t()}
           | {:snapshot, String.t()}
           | {:screenshot, String.t()}
@@ -123,47 +126,36 @@ defmodule Julep.Test.Script do
   end
 
   defp parse_instruction(line) do
-    case tokenize(line) do
-      ["click", selector] ->
-        {:ok, {:click, selector}}
-
-      ["type", selector, text] ->
-        {:ok, {:type_text, selector, text}}
-
-      ["type", key] when key in ~w[enter escape tab backspace] ->
-        {:ok, {:type_key, key}}
-
-      ["press", key] ->
-        {:ok, {:press, key}}
-
-      ["release", key] ->
-        {:ok, {:release, key}}
-
-      ["move", target] ->
-        {:ok, parse_move_target(target)}
-
-      ["assert_model", expr] ->
-        {:ok, {:assert_model, expr}}
-
-      ["expect", text] ->
-        {:ok, {:expect, text}}
-
-      ["snapshot", name] ->
-        {:ok, {:snapshot, name}}
-
-      ["screenshot", name] ->
-        {:ok, {:screenshot, name}}
-
-      ["assert_text", selector, text] ->
-        {:ok, {:assert_text, selector, text}}
-
-      ["wait", ms] ->
-        {:ok, {:wait, String.to_integer(ms)}}
-
-      _ ->
-        {:error, "unknown instruction: #{line}"}
-    end
+    tokens = tokenize(line)
+    parse_action(tokens) || parse_assertion(tokens) || {:error, "unknown instruction: #{line}"}
   end
+
+  # Actions: interactions and input
+  defp parse_action(["click", selector]), do: {:ok, {:click, selector}}
+  defp parse_action(["toggle", selector]), do: {:ok, {:toggle, selector}}
+  defp parse_action(["select", selector, value]), do: {:ok, {:select, selector, value}}
+
+  defp parse_action(["slide", selector, value]),
+    do: {:ok, {:slide, selector, parse_number(value)}}
+
+  defp parse_action(["type", selector, text]), do: {:ok, {:type_text, selector, text}}
+
+  defp parse_action(["type", key]) when key in ~w[enter escape tab backspace],
+    do: {:ok, {:type_key, key}}
+
+  defp parse_action(["press", key]), do: {:ok, {:press, key}}
+  defp parse_action(["release", key]), do: {:ok, {:release, key}}
+  defp parse_action(["move", target]), do: {:ok, parse_move_target(target)}
+  defp parse_action(["wait", ms]), do: {:ok, {:wait, String.to_integer(ms)}}
+  defp parse_action(_tokens), do: nil
+
+  # Assertions and captures
+  defp parse_assertion(["expect", text]), do: {:ok, {:expect, text}}
+  defp parse_assertion(["snapshot", name]), do: {:ok, {:snapshot, name}}
+  defp parse_assertion(["screenshot", name]), do: {:ok, {:screenshot, name}}
+  defp parse_assertion(["assert_text", selector, text]), do: {:ok, {:assert_text, selector, text}}
+  defp parse_assertion(["assert_model", expr]), do: {:ok, {:assert_model, expr}}
+  defp parse_assertion(_tokens), do: nil
 
   defp parse_move_target(target) do
     case String.split(target, ",") do
@@ -172,6 +164,13 @@ defmodule Julep.Test.Script do
 
       _ ->
         {:move, target}
+    end
+  end
+
+  defp parse_number(str) do
+    case Integer.parse(str) do
+      {int, ""} -> int
+      _ -> String.to_float(str)
     end
   end
 

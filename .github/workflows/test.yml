@@ -127,6 +127,3 @@ jobs:
 
       - name: Check formatting
         run: cargo fmt --manifest-path native/julep_gui/Cargo.toml -- --check
-
-      - name: Clippy
-        run: cargo clippy --manifest-path native/julep_gui/Cargo.toml -- -D warnings

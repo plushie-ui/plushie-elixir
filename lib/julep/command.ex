@@ -60,11 +60,13 @@ defmodule Julep.Command do
   @type event_tag :: atom() | String.t()
 
   @typedoc """
-  A command or list of commands to be dispatched by the runtime.
+  A command to be dispatched by the runtime.
 
-  Single commands are `%Command{}` structs. `batch/1` produces a list.
+  Always a `%Command{}` struct. `batch/1` wraps multiple commands into a
+  single struct with `type: :batch`. The runtime normalizes bare lists
+  internally, but the public type is always a struct.
   """
-  @type t :: %__MODULE__{type: atom(), payload: map()} | [%__MODULE__{}]
+  @type t :: %__MODULE__{type: atom(), payload: map()}
 
   @doc "A no-op command. Returned implicitly when `update/2` returns a bare model."
   @spec none() :: %__MODULE__{}
@@ -240,7 +242,7 @@ defmodule Julep.Command do
   def maximize_window(window_id, maximized \\ true) do
     %__MODULE__{
       type: :window_op,
-      payload: %{op: "maximize", window_id: window_id, value: maximized}
+      payload: %{op: "maximize", window_id: window_id, maximized: maximized}
     }
   end
 
@@ -249,7 +251,7 @@ defmodule Julep.Command do
   def minimize_window(window_id, minimized \\ true) do
     %__MODULE__{
       type: :window_op,
-      payload: %{op: "minimize", window_id: window_id, value: minimized}
+      payload: %{op: "minimize", window_id: window_id, minimized: minimized}
     }
   end
 
@@ -332,7 +334,7 @@ defmodule Julep.Command do
   def set_resizable(window_id, resizable) do
     %__MODULE__{
       type: :window_op,
-      payload: %{op: "set_resizable", window_id: window_id, value: resizable}
+      payload: %{op: "set_resizable", window_id: window_id, resizable: resizable}
     }
   end
 
@@ -361,7 +363,7 @@ defmodule Julep.Command do
   def enable_mouse_passthrough(window_id) do
     %__MODULE__{
       type: :window_op,
-      payload: %{op: "mouse_passthrough", window_id: window_id, value: true}
+      payload: %{op: "mouse_passthrough", window_id: window_id, enabled: true}
     }
   end
 
@@ -370,7 +372,7 @@ defmodule Julep.Command do
   def disable_mouse_passthrough(window_id) do
     %__MODULE__{
       type: :window_op,
-      payload: %{op: "mouse_passthrough", window_id: window_id, value: false}
+      payload: %{op: "mouse_passthrough", window_id: window_id, enabled: false}
     }
   end
 

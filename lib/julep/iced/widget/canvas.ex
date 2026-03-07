@@ -131,7 +131,8 @@ defmodule Julep.Iced.Widget.Canvas do
 
   @doc "Sets the canvas background color."
   @spec background(canvas :: t(), background :: Julep.Iced.Color.t()) :: t()
-  def background(%__MODULE__{} = canvas, background), do: %{canvas | background: background}
+  def background(%__MODULE__{} = canvas, background),
+    do: %{canvas | background: Julep.Iced.Color.cast(background)}
 
   @doc "Sets whether all mouse event handlers are enabled."
   @spec interactive(canvas :: t(), interactive :: boolean()) :: t()

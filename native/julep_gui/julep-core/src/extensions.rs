@@ -126,11 +126,29 @@ impl ExtensionCaches {
         key: &str,
         default: impl FnOnce() -> T,
     ) -> &mut T {
+        let ns_key = Self::namespaced_key(namespace, key);
+
+        // Check for type mismatch on an existing entry *before* consuming
+        // the default closure, so we can replace the stale value with a
+        // fresh default of the correct type.
+        let needs_replace = self
+            .inner
+            .get(&ns_key)
+            .is_some_and(|v| v.downcast_ref::<T>().is_none());
+
+        if needs_replace {
+            log::warn!(
+                "extension cache type mismatch for key `{ns_key}`: \
+                 replacing existing entry with new default"
+            );
+            self.inner.remove(&ns_key);
+        }
+
         self.inner
-            .entry(Self::namespaced_key(namespace, key))
+            .entry(ns_key)
             .or_insert_with(|| Box::new(default()))
             .downcast_mut()
-            .expect("ExtensionCaches type mismatch")
+            .expect("downcast must succeed: entry was just inserted with correct type")
     }
 
     pub fn insert<T: Send + Sync + 'static>(&mut self, namespace: &str, key: String, value: T) {
@@ -231,6 +249,21 @@ impl ExtensionDispatcher {
                     "extension `{}` registered with empty type_names(); \
                      it will never match any node type",
                     ext.config_key()
+                );
+            }
+        }
+
+        // Check for duplicate config_key values.
+        let mut seen_config_keys: HashMap<&str, usize> = HashMap::new();
+        for (idx, ext) in extensions.iter().enumerate() {
+            let key = ext.config_key();
+            if let Some(prev_idx) = seen_config_keys.insert(key, idx) {
+                panic!(
+                    "duplicate extension config_key `{key}`: \
+                     extension at index {prev_idx} (type_names: {:?}) and \
+                     extension at index {idx} (type_names: {:?}) both use it",
+                    extensions[prev_idx].type_names(),
+                    ext.type_names(),
                 );
             }
         }
@@ -405,7 +438,16 @@ impl ExtensionDispatcher {
                     self.extensions[ext_idx].config_key()
                 );
                 self.poisoned[ext_idx] = true;
-                vec![]
+                // Report the panic back to Elixir so update/2 can handle it.
+                let error_data = serde_json::json!({
+                    "error": msg,
+                    "op": op,
+                });
+                vec![OutgoingEvent::generic(
+                    "extension_error",
+                    node_id.to_string(),
+                    Some(error_data),
+                )]
             }
         }
     }
@@ -709,6 +751,16 @@ mod tests {
         ExtensionDispatcher::new(vec![Box::new(ext)]);
     }
 
+    // -- Duplicate config_key validation ---------------------------------------
+
+    #[test]
+    #[should_panic(expected = "duplicate extension config_key `charts`")]
+    fn duplicate_config_key_panics() {
+        let ext_a = TestExtension::new(vec!["sparkline"], "charts");
+        let ext_b = TestExtension::new(vec!["heatmap"], "charts");
+        ExtensionDispatcher::new(vec![Box::new(ext_a), Box::new(ext_b)]);
+    }
+
     // -- Empty type_names validation (warn, don't panic) ---------------------
 
     #[test]
@@ -754,11 +806,13 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "type mismatch")]
-    fn cache_get_or_insert_type_mismatch_panics() {
+    fn cache_get_or_insert_type_mismatch_replaces_with_default() {
         let mut caches = ExtensionCaches::new();
         caches.insert("ns", "key".to_string(), 42u32);
-        let _ = caches.get_or_insert::<String>("ns", "key", || "oops".to_string());
+        // Previously this panicked. Now it logs a warning, replaces the
+        // stale entry, and returns a fresh default of the requested type.
+        let val = caches.get_or_insert::<String>("ns", "key", || "replaced".to_string());
+        assert_eq!(val, "replaced");
     }
 
     #[test]
@@ -954,5 +1008,60 @@ mod tests {
     fn panic_message_unknown_type() {
         let p: Box<dyn Any + Send> = Box::new(42u32);
         assert_eq!(panic_message(&p), "unknown panic");
+    }
+
+    // -- handle_command panic emits error event ------------------------------
+
+    /// Extension that panics on handle_command.
+    struct PanickingCommandExtension;
+
+    impl WidgetExtension for PanickingCommandExtension {
+        fn type_names(&self) -> &[&str] {
+            &["panicker"]
+        }
+        fn config_key(&self) -> &str {
+            "panicker"
+        }
+        fn render<'a>(&self, _node: &'a TreeNode, _env: &WidgetEnv<'a>) -> Element<'a, Message> {
+            use iced::widget::text;
+            text("panicker").into()
+        }
+        fn handle_command(
+            &mut self,
+            _node_id: &str,
+            _op: &str,
+            _payload: &Value,
+            _caches: &mut ExtensionCaches,
+        ) -> Vec<OutgoingEvent> {
+            panic!("command went boom");
+        }
+    }
+
+    #[test]
+    fn handle_command_panic_emits_error_event() {
+        let ext = PanickingCommandExtension;
+        let mut dispatcher = ExtensionDispatcher::new(vec![Box::new(ext)]);
+        let mut caches = ExtensionCaches::new();
+
+        // Register the node in the extension map via prepare_all.
+        let mut root = make_node("root", "column");
+        root.children.push(make_node("p1", "panicker"));
+        dispatcher.prepare_all(&root, &mut caches, &Theme::Dark);
+
+        let events = dispatcher.handle_command("p1", "do_thing", &Value::Null, &mut caches);
+
+        assert_eq!(events.len(), 1);
+        let event = &events[0];
+        assert_eq!(event.family, "extension_error");
+        assert_eq!(event.id, "p1");
+        let data = event.data.as_ref().expect("should have data");
+        assert_eq!(
+            data.get("error").and_then(|v| v.as_str()),
+            Some("command went boom")
+        );
+        assert_eq!(data.get("op").and_then(|v| v.as_str()), Some("do_thing"));
+
+        // Extension should also be poisoned.
+        assert!(dispatcher.is_poisoned(0));
     }
 }

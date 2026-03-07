@@ -120,12 +120,12 @@ defmodule Julep.CommandParityTest do
     test "defaults to maximized true" do
       cmd = Command.maximize_window("main")
       assert cmd.payload.op == "maximize"
-      assert cmd.payload.value == true
+      assert cmd.payload.maximized == true
     end
 
     test "can set maximized false to restore" do
       cmd = Command.maximize_window("main", false)
-      assert cmd.payload.value == false
+      assert cmd.payload.maximized == false
     end
   end
 
@@ -133,12 +133,12 @@ defmodule Julep.CommandParityTest do
     test "defaults to minimized true" do
       cmd = Command.minimize_window("main")
       assert cmd.payload.op == "minimize"
-      assert cmd.payload.value == true
+      assert cmd.payload.minimized == true
     end
 
     test "can set minimized false to restore" do
       cmd = Command.minimize_window("main", false)
-      assert cmd.payload.value == false
+      assert cmd.payload.minimized == false
     end
   end
 
@@ -225,7 +225,7 @@ defmodule Julep.CommandParityTest do
     test "sets resizable flag" do
       cmd = Command.set_resizable("main", false)
       assert cmd.payload.op == "set_resizable"
-      assert cmd.payload.value == false
+      assert cmd.payload.resizable == false
     end
   end
 
@@ -251,7 +251,7 @@ defmodule Julep.CommandParityTest do
     test "enables passthrough" do
       cmd = Command.enable_mouse_passthrough("overlay")
       assert cmd.payload.op == "mouse_passthrough"
-      assert cmd.payload.value == true
+      assert cmd.payload.enabled == true
     end
   end
 
@@ -259,7 +259,7 @@ defmodule Julep.CommandParityTest do
     test "disables passthrough" do
       cmd = Command.disable_mouse_passthrough("overlay")
       assert cmd.payload.op == "mouse_passthrough"
-      assert cmd.payload.value == false
+      assert cmd.payload.enabled == false
     end
   end
 

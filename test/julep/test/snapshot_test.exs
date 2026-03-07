@@ -1,5 +1,5 @@
 defmodule Julep.Test.SnapshotTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Julep.Test.Snapshot
 
@@ -80,6 +80,33 @@ defmodule Julep.Test.SnapshotTest do
       after
         System.delete_env("JULEP_UPDATE_SNAPSHOTS")
       end
+    end
+
+    test "uses backend-scoped golden file when backend is set", %{golden_dir: dir} do
+      snap = %Snapshot{name: "scoped", hash: "sim_hash", size: {0, 0}, backend: :sim}
+      golden_path = Path.join(dir, "scoped.sim.sha256")
+
+      refute File.exists?(golden_path)
+      assert :ok = Snapshot.assert_match(snap, dir)
+      assert File.exists?(golden_path)
+      assert File.read!(golden_path) == "sim_hash"
+
+      # Different backend creates a separate golden file
+      snap2 = %Snapshot{name: "scoped", hash: "headless_hash", size: {0, 0}, backend: :headless}
+      headless_path = Path.join(dir, "scoped.headless.sha256")
+
+      refute File.exists?(headless_path)
+      assert :ok = Snapshot.assert_match(snap2, dir)
+      assert File.exists?(headless_path)
+      assert File.read!(headless_path) == "headless_hash"
+    end
+
+    test "nil backend uses unscoped golden file (backwards compat)", %{golden_dir: dir} do
+      snap = %Snapshot{name: "legacy", hash: "legacy_hash", size: {0, 0}, backend: nil}
+      golden_path = Path.join(dir, "legacy.sha256")
+
+      assert :ok = Snapshot.assert_match(snap, dir)
+      assert File.exists?(golden_path)
     end
 
     test "error message includes expected and actual hashes", %{golden_dir: dir} do

@@ -120,6 +120,12 @@ impl Codec {
                     Err(e) => return Err(e),
                 }
                 let len = u32::from_be_bytes(len_buf) as usize;
+                if len == 0 {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "empty frame received",
+                    ));
+                }
                 if len > MAX_MESSAGE_SIZE {
                     return Err(io::Error::new(
                         io::ErrorKind::InvalidData,

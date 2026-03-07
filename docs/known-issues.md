@@ -81,6 +81,47 @@ directly, and either ignore `text_color` for progress bars or log a
 warning. This requires a wire format addition and Elixir-side `StyleMap`
 change.
 
+## ensure_caches O(n) on every apply
+
+**Location:** `native/julep_gui/julep-core/src/widgets.rs`, `ensure_caches`
+
+**Issue:** The `ensure_caches()` function walks all nodes on every
+`apply()` call to maintain widget caches (text_editor Content, combo_box
+State, canvas Cache, etc.). This is O(n) in tree size. For most apps this
+is negligible, but apps with thousands of stateful widgets may see
+measurable overhead. Incremental cache updates (only processing changed
+subtrees from patch ops) would reduce this to O(changed) but requires
+significant architectural work.
+
+**Impact:** Low for typical apps. Only relevant for very large trees with
+many stateful widgets (text_editor, combo_box, canvas).
+
+**Fix:** Track which subtrees changed via patch ops and only walk those
+in `ensure_caches()`. Requires threading patch metadata through to the
+cache maintenance layer, which touches Core, Tree, and the widget cache
+system. Not worth the complexity until a real app hits this bottleneck.
+
+## Child reorder triggers full subtree replacement
+
+**Location:** `lib/julep/tree.ex`, `diff_children` / `children_reordered?`
+
+**Issue:** When children of a node are reordered (same IDs, different
+positions), the diffing algorithm detects this via `children_reordered?`
+and emits a single `replace_node` operation for the entire parent subtree
+rather than computing individual move operations. This means reordering
+one item in a 100-element list serializes all 100 children.
+
+**Impact:** Low for most apps. Reordering is uncommon in typical UIs.
+Apps with drag-and-drop reordering of large lists may see larger-than-
+necessary patches. The full replacement is always correct -- it's a
+performance concern, not a correctness concern.
+
+**Fix:** Add a `move_child` patch operation that communicates the old and
+new index. The Rust side would need a corresponding `apply_move` handler.
+This requires changes to the wire protocol, tree.ex diffing, and
+tree.rs patching -- a non-trivial effort. Not worth doing until profiling
+shows reorder patches as a bottleneck.
+
 ## Only one subscription tag per kind on the renderer
 
 **Location:** `native/julep_gui/julep-core/src/engine.rs` (`active_subscriptions`),

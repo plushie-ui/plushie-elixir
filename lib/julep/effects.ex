@@ -90,6 +90,32 @@ defmodule Julep.Effects do
   @spec notification(title :: String.t(), body :: String.t()) :: Julep.Command.t()
   def notification(title, body), do: request(:notification, title: title, body: body)
 
+  # Default timeouts per effect kind (milliseconds). File dialogs get longer
+  # because users interact with them; clipboard/notification ops are fast.
+  @default_timeouts %{
+    "clipboard_read" => 5_000,
+    "clipboard_write" => 5_000,
+    "clipboard_read_primary" => 5_000,
+    "clipboard_write_primary" => 5_000,
+    "file_open" => 120_000,
+    "file_open_multiple" => 120_000,
+    "file_save" => 120_000,
+    "folder_open" => 120_000,
+    "directory_select" => 120_000,
+    "notification" => 5_000
+  }
+
+  @doc """
+  Returns the default timeout (in ms) for the given effect kind, or nil
+  if no specific default is configured.
+  """
+  @spec default_timeout(kind :: String.t()) :: non_neg_integer() | nil
+  def default_timeout(kind) when is_binary(kind) do
+    Map.get(@default_timeouts, kind)
+  end
+
+  def default_timeout(_), do: nil
+
   # Generates a unique, monotonically increasing effect ID.
   defp generate_id do
     "ef_" <> Integer.to_string(System.unique_integer([:positive, :monotonic]))

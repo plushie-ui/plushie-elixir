@@ -86,10 +86,9 @@ end
 Additional combo_box props: `width`, `padding`, `size`, `font`,
 `line_height`, `menu_height`.
 
-**Note:** The option list is seeded into the State on first render.
-Changing the `options` prop after the initial render does not update the
-State (the renderer only seeds on first cache miss). This is a known
-limitation.
+Option changes are detected and applied dynamically. The renderer
+compares the incoming `options` prop against the current State on each
+render pass and updates the option list when changes are found.
 
 ### pane_grid
 

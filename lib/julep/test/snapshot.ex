@@ -16,10 +16,11 @@ defmodule Julep.Test.Snapshot do
   @type t :: %__MODULE__{
           name: String.t(),
           hash: String.t(),
-          size: {non_neg_integer(), non_neg_integer()}
+          size: {non_neg_integer(), non_neg_integer()},
+          backend: atom() | nil
         }
 
-  defstruct [:name, :hash, :size]
+  defstruct [:name, :hash, :size, :backend]
 
   @doc """
   Asserts that a structural snapshot matches its golden file.
@@ -31,7 +32,8 @@ defmodule Julep.Test.Snapshot do
   @spec assert_match(snapshot :: t(), golden_dir :: String.t()) :: :ok
   def assert_match(%__MODULE__{} = snapshot, golden_dir) do
     File.mkdir_p!(golden_dir)
-    golden_path = Path.join(golden_dir, "#{snapshot.name}.sha256")
+    suffix = if snapshot.backend, do: ".#{snapshot.backend}", else: ""
+    golden_path = Path.join(golden_dir, "#{snapshot.name}#{suffix}.sha256")
 
     cond do
       System.get_env("JULEP_UPDATE_SNAPSHOTS") == "1" ->

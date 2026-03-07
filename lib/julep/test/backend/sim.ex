@@ -144,6 +144,7 @@ defmodule Julep.Test.Backend.Sim do
 
       text ->
         state = interact(state, selector, fn _el -> {:ok, {:submit, element.id, text}} end)
+        state = %{state | typed_text: Map.delete(state.typed_text, element.id)}
         {:reply, :ok, state}
     end
   end
@@ -306,6 +307,9 @@ defmodule Julep.Test.Backend.Sim do
     }
   end
 
+  # NOTE: Sim key parsing is Linux-centric. "command" maps to ctrl
+  # (not logo/super on macOS). This matches the headless backend
+  # behaviour but may differ from native macOS key handling.
   @modifier_names ~w(ctrl shift alt logo command)
 
   defp parse_key_string(key_string) do

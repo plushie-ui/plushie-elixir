@@ -911,7 +911,8 @@ This means a bug in one extension cannot crash the renderer or affect other
 extensions. But it also means panics are unrecoverable until the next
 snapshot -- design your extension to avoid panics in production.
 
-**Note:** `render()` is NOT wrapped in `catch_unwind` because the returned
-`Element` borrows from `WidgetEnv`, making it incompatible with the
-`catch_unwind` closure boundary. If `render()` panics, it propagates. Test
-your render path thoroughly.
+**Note:** `render()` panics ARE caught via `catch_unwind` in
+`widgets::render()`. When a render panic is caught, the extension is
+marked as "poisoned" and subsequent renders skip it, returning a red
+error placeholder text until `clear_poisoned()` is called (typically on
+the next `Snapshot` message).

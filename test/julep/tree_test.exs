@@ -63,9 +63,9 @@ defmodule Julep.TreeTest do
       assert result.type == "container"
     end
 
-    test "missing id defaults to \"unknown\"" do
+    test "missing id generates unique unknown_ prefix" do
       result = Tree.normalize(%{type: "button"})
-      assert result.id == "unknown"
+      assert String.starts_with?(result.id, "unknown_")
     end
   end
 

@@ -71,12 +71,17 @@ defmodule Julep.Data do
       |> maybe_search(search_opts)
       |> maybe_sort(sort_spec)
 
-    total = length(result)
+    offset = (page - 1) * page_size
 
-    entries =
+    {entries, total} =
       result
-      |> Enum.drop((page - 1) * page_size)
-      |> Enum.take(page_size)
+      |> Enum.with_index()
+      |> Enum.reduce({[], 0}, fn {item, idx}, {acc, count} ->
+        acc = if idx >= offset and idx < offset + page_size, do: [item | acc], else: acc
+        {acc, count + 1}
+      end)
+
+    entries = Enum.reverse(entries)
 
     base = %{entries: entries, total: total, page: page, page_size: page_size}
 

@@ -488,11 +488,11 @@ impl App {
                     let julep_id = self.julep_id_for(&window_id);
                     emit_event(OutgoingEvent::window_close_requested(tag.clone(), julep_id));
                 }
-                // Remove from maps if this was a julep-managed window.
-                if let Some(julep_id) = self.reverse_window_map.remove(&window_id) {
-                    self.window_map.remove(&julep_id);
-                }
-                window::close(window_id)
+                // Do NOT close the window or remove from maps here. Elixir
+                // decides whether to close by sending a close_window command
+                // or removing the window from the tree. Closing immediately
+                // would bypass app-level confirmation dialogs.
+                Task::none()
             }
             Message::WindowClosed(window_id) => {
                 // Clean up maps when iced confirms a window has closed.
@@ -1223,6 +1223,27 @@ impl App {
                 julep_core::engine::CoreEffect::ExtensionConfig(config) => {
                     self.dispatcher.init_all(&config);
                 }
+                julep_core::engine::CoreEffect::SpawnAsyncEffect {
+                    request_id,
+                    effect_type,
+                    params,
+                } => {
+                    let task = Task::perform(
+                        async move {
+                            julep_core::effects::handle_async_effect(
+                                request_id,
+                                &effect_type,
+                                &params,
+                            )
+                            .await
+                        },
+                        |response| {
+                            emit_effect_response(response);
+                            Message::NoOp
+                        },
+                    );
+                    self.pending_tasks.push(task);
+                }
             }
         }
 
@@ -1331,8 +1352,24 @@ impl App {
                 iced::widget::operation::move_cursor_to(iced::widget::Id::from(target), position)
             }
             "close_window" => {
-                // Close the oldest (main) window, which triggers app exit.
-                window::oldest().and_then(window::close)
+                // Look up the julep window_id from the payload and close the
+                // correct iced window. Falls back to oldest window only if no
+                // window_id is provided (backwards compat).
+                let win_id = payload
+                    .get("window_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default();
+                if !win_id.is_empty() {
+                    if let Some(iced_id) = self.window_map.remove(win_id) {
+                        self.reverse_window_map.remove(&iced_id);
+                        window::close(iced_id)
+                    } else {
+                        log::warn!("close_window: unknown window_id: {win_id}");
+                        Task::none()
+                    }
+                } else {
+                    window::oldest().and_then(window::close)
+                }
             }
             "exit" => iced::exit(),
             // -- PaneGrid operations --
@@ -1508,6 +1545,81 @@ impl App {
                     window::close(iced_id)
                 } else {
                     log::warn!("window_op close: unknown window_id: {window_id}");
+                    Task::none()
+                }
+            }
+            "update" => {
+                // Apply changed window props to an already-open window.
+                // Elixir sends this when a surviving window's props change
+                // between renders.
+                if let Some(&iced_id) = self.window_map.get(window_id) {
+                    let mut tasks: Vec<Task<Message>> = Vec::new();
+
+                    if let Some(obj) = settings.as_object() {
+                        if let Some(title) = obj.get("title").and_then(|v| v.as_str()) {
+                            log::debug!("update window {window_id}: title={title}");
+                            // Title is read from the tree in title(), no task needed.
+                            let _ = title;
+                        }
+                        if obj.contains_key("width") || obj.contains_key("height") {
+                            let w =
+                                obj.get("width").and_then(|v| v.as_f64()).unwrap_or(800.0) as f32;
+                            let h =
+                                obj.get("height").and_then(|v| v.as_f64()).unwrap_or(600.0) as f32;
+                            tasks.push(window::resize(iced_id, Size::new(w, h)));
+                        }
+                        if let Some(maximized) = obj.get("maximized").and_then(|v| v.as_bool()) {
+                            tasks.push(window::maximize(iced_id, maximized));
+                        }
+                        if let Some(resizable) = obj.get("resizable").and_then(|v| v.as_bool()) {
+                            tasks.push(window::set_resizable(iced_id, resizable));
+                        }
+                        if let Some(visible) = obj.get("visible").and_then(|v| v.as_bool()) {
+                            let mode = if visible {
+                                window::Mode::Windowed
+                            } else {
+                                window::Mode::Hidden
+                            };
+                            tasks.push(window::set_mode(iced_id, mode));
+                        }
+                        if let Some(fullscreen) = obj.get("fullscreen").and_then(|v| v.as_bool()) {
+                            let mode = if fullscreen {
+                                window::Mode::Fullscreen
+                            } else {
+                                window::Mode::Windowed
+                            };
+                            tasks.push(window::set_mode(iced_id, mode));
+                        }
+                        if obj.contains_key("min_size") {
+                            let sz = parse_optional_size(
+                                obj.get("min_size").unwrap_or(&serde_json::Value::Null),
+                            );
+                            tasks.push(window::set_min_size(iced_id, sz));
+                        }
+                        if obj.contains_key("max_size") {
+                            let sz = parse_optional_size(
+                                obj.get("max_size").unwrap_or(&serde_json::Value::Null),
+                            );
+                            tasks.push(window::set_max_size(iced_id, sz));
+                        }
+                        if obj.contains_key("level") {
+                            let level = parse_window_level(
+                                obj.get("level")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("normal"),
+                            );
+                            tasks.push(window::set_level(iced_id, level));
+                        }
+                        if obj.contains_key("decorations") {
+                            // iced only has toggle_decorations; we track desired state
+                            // by checking the node props later. For now, toggle.
+                            tasks.push(window::toggle_decorations(iced_id));
+                        }
+                    }
+
+                    Task::batch(tasks)
+                } else {
+                    log::warn!("window_op update: unknown window_id: {window_id}");
                     Task::none()
                 }
             }

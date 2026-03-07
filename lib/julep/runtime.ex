@@ -44,6 +44,19 @@ defmodule Julep.Runtime do
 
   require Logger
 
+  @typep state :: %{
+           app: module(),
+           model: term(),
+           bridge: pid() | atom(),
+           tree: map() | nil,
+           subscriptions: map(),
+           windows: MapSet.t(),
+           async_tasks: map(),
+           pending_effects: map(),
+           pending_timers: map(),
+           consecutive_errors: non_neg_integer()
+         }
+
   # Default timeout for effect requests (30 seconds).
   @effect_timeout_ms 30_000
 
@@ -107,7 +120,8 @@ defmodule Julep.Runtime do
       windows: MapSet.new(),
       async_tasks: %{},
       pending_effects: %{},
-      pending_timers: %{}
+      pending_timers: %{},
+      consecutive_errors: 0
     }
 
     # Defer rendering to handle_continue. Bridge is already started (it's
@@ -215,19 +229,10 @@ defmodule Julep.Runtime do
     end
   end
 
-  def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
-    # Clean up async_tasks entry when the task process exits.
-    tag =
-      Enum.find_value(state.async_tasks, fn
-        {tag, {^pid, _nonce}} -> tag
-        _ -> nil
-      end)
-
-    if tag do
-      {:noreply, %{state | async_tasks: Map.delete(state.async_tasks, tag)}}
-    else
-      {:noreply, state}
-    end
+  def handle_info({:DOWN, _ref, :process, _pid, _reason}, state) do
+    # Safety net -- monitors are no longer placed on async tasks, but handle
+    # gracefully in case external code monitors something linked to us.
+    {:noreply, state}
   end
 
   # ---------------------------------------------------------------------------
@@ -251,6 +256,7 @@ defmodule Julep.Runtime do
         {:noreply, state}
 
       {_timer_ref, pending_effects} ->
+        :telemetry.execute([:julep, :runtime, :effect_timeout], %{count: 1}, %{id: id})
         state = %{state | pending_effects: pending_effects}
         state = run_update(state, {:effect_result, id, {:error, :timeout}})
         {:noreply, state}
@@ -262,9 +268,19 @@ defmodule Julep.Runtime do
   # ---------------------------------------------------------------------------
 
   def handle_info({:EXIT, pid, reason}, state) do
-    Logger.warning("julep runtime: linked process #{inspect(pid)} exited: #{inspect(reason)}")
-    # Don't crash; let the bridge restart machinery handle recovery.
-    {:noreply, state}
+    # Clean up async_tasks entry if this was an async task process.
+    tag =
+      Enum.find_value(state.async_tasks, fn
+        {tag, {^pid, _nonce}} -> tag
+        _ -> nil
+      end)
+
+    if tag do
+      {:noreply, %{state | async_tasks: Map.delete(state.async_tasks, tag)}}
+    else
+      Logger.warning("julep runtime: linked process #{inspect(pid)} exited: #{inspect(reason)}")
+      {:noreply, state}
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -272,14 +288,24 @@ defmodule Julep.Runtime do
   # ---------------------------------------------------------------------------
 
   def handle_info({:subscription_tick, tag, interval}, state) do
-    # Re-arm the timer
-    ref = Process.send_after(self(), {:subscription_tick, tag, interval}, interval)
-    state = put_in(state.subscriptions[{:every, interval, tag}], {:timer, ref})
+    key = {:every, interval, tag}
 
-    # Dispatch the event
-    now = System.monotonic_time(:millisecond)
-    state = run_update(state, {tag, now})
-    {:noreply, state}
+    if Map.has_key?(state.subscriptions, key) do
+      # Drain any queued ticks for the same key to coalesce frames.
+      drain_matching_ticks(tag, interval)
+
+      # Re-arm the timer.
+      ref = Process.send_after(self(), {:subscription_tick, tag, interval}, interval)
+      state = put_in(state.subscriptions[key], {:timer, ref})
+
+      # Dispatch the event.
+      now = System.monotonic_time(:millisecond)
+      state = run_update(state, {tag, now})
+      {:noreply, state}
+    else
+      # Subscription was cancelled -- discard stale tick.
+      {:noreply, state}
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -305,6 +331,17 @@ defmodule Julep.Runtime do
   def terminate(_reason, state) do
     # Cancel all pending send_after timers so they don't fire into the void.
     Enum.each(state.pending_timers, fn {_event, ref} ->
+      Process.cancel_timer(ref)
+    end)
+
+    # Cancel subscription timers.
+    Enum.each(state.subscriptions, fn
+      {_key, {:timer, ref}} -> Process.cancel_timer(ref)
+      _ -> :ok
+    end)
+
+    # Cancel effect timeout timers.
+    Enum.each(state.pending_effects, fn {_id, ref} ->
       Process.cancel_timer(ref)
     end)
 
@@ -364,22 +401,17 @@ defmodule Julep.Runtime do
   defp render_and_sync(app, model, bridge, old_tree) do
     case safe_view(app, model) do
       {:ok, new_tree} ->
-        cond do
+        if is_nil(old_tree) do
           # First render or after restart -- send full snapshot.
-          is_nil(old_tree) ->
-            Julep.Bridge.send_snapshot(bridge, new_tree)
+          Julep.Bridge.send_snapshot(bridge, new_tree)
+        else
+          # Incremental update -- diff produces an empty list for identical
+          # trees, so the previous O(n) equality pre-check is unnecessary.
+          ops = Julep.Tree.diff(old_tree, new_tree)
 
-          # Trees identical -- skip send entirely.
-          old_tree == new_tree ->
-            :noop
-
-          # Incremental update -- diff and send patch.
-          true ->
-            ops = Julep.Tree.diff(old_tree, new_tree)
-
-            if ops != [] do
-              Julep.Bridge.send_patch(bridge, ops)
-            end
+          if ops != [] do
+            Julep.Bridge.send_patch(bridge, ops)
+          end
         end
 
         new_tree
@@ -399,18 +431,24 @@ defmodule Julep.Runtime do
     {:ok, Julep.Tree.normalize(raw_tree)}
   rescue
     e ->
-      Logger.error("julep runtime: view/1 raised: #{Exception.message(e)}")
+      :telemetry.execute([:julep, :runtime, :view_error], %{count: 1}, %{app: app})
+
+      Logger.error("""
+      julep runtime: view/1 raised: #{Exception.message(e)}
+      #{Exception.format_stacktrace(__STACKTRACE__)}
+      """)
+
       :error
   end
 
   # Full update cycle: update model, execute commands, re-render, sync subs.
   # Wraps update/2 and view/1 in try/rescue so app exceptions do not crash
   # the runtime process.
-  @spec run_update(map(), term()) :: map()
+  @spec run_update(state(), term()) :: state()
   defp run_update(%{app: app, model: model, bridge: bridge} = state, event) do
-    case safe_update(app, model, event) do
+    case safe_update(app, model, event, state.consecutive_errors) do
       {:ok, new_model, commands} ->
-        state = %{state | model: new_model}
+        state = %{state | model: new_model, consecutive_errors: 0}
         state = execute_commands(commands, state)
         new_tree = render_and_sync(app, new_model, bridge, state.tree)
         state = %{state | tree: new_tree}
@@ -418,12 +456,19 @@ defmodule Julep.Runtime do
         sync_windows(state, new_tree)
 
       :error ->
-        # Keep previous model and tree unchanged.
-        state
+        count = state.consecutive_errors + 1
+
+        if count == 100 do
+          Logger.warning(
+            "julep runtime: 100 consecutive update errors -- suppressing further logs"
+          )
+        end
+
+        %{state | consecutive_errors: count}
     end
   end
 
-  defp safe_update(app, model, event) do
+  defp safe_update(app, model, event, consecutive_errors) do
     {new_model, commands} =
       :telemetry.span([:julep, :update], %{app: app, event: event}, fn ->
         {unwrap_result(app.update(model, event)), %{}}
@@ -432,7 +477,29 @@ defmodule Julep.Runtime do
     {:ok, new_model, commands}
   rescue
     e ->
-      Logger.error("julep runtime: update/2 raised: #{Exception.message(e)}")
+      :telemetry.execute([:julep, :runtime, :update_error], %{count: 1}, %{
+        app: app,
+        event: event
+      })
+
+      # Rate-limit logging: normal up to 10, debug up to 100, then suppress.
+      cond do
+        consecutive_errors < 10 ->
+          Logger.error("""
+          julep runtime: update/2 raised: #{Exception.message(e)}
+          #{Exception.format_stacktrace(__STACKTRACE__)}
+          """)
+
+        consecutive_errors < 100 ->
+          Logger.debug("""
+          julep runtime: update/2 raised (repeated): #{Exception.message(e)}
+          #{Exception.format_stacktrace(__STACKTRACE__)}
+          """)
+
+        true ->
+          :ok
+      end
+
       :error
   end
 
@@ -462,6 +529,9 @@ defmodule Julep.Runtime do
   end
 
   defp execute_command(%Julep.Command{type: :async, payload: %{fun: fun, tag: tag}}, state) do
+    # Kill any existing task with the same tag before starting a new one.
+    state = cancel_existing_task(state, tag)
+
     runtime = self()
     nonce = make_ref()
 
@@ -471,7 +541,6 @@ defmodule Julep.Runtime do
         send(runtime, {:async_result, tag, nonce, result})
       end)
 
-    Process.monitor(pid)
     put_in(state.async_tasks[tag], {pid, nonce})
   end
 
@@ -479,6 +548,9 @@ defmodule Julep.Runtime do
          %Julep.Command{type: :stream, payload: %{fun: fun, tag: tag}},
          state
        ) do
+    # Kill any existing task with the same tag before starting a new one.
+    state = cancel_existing_task(state, tag)
+
     runtime = self()
     nonce = make_ref()
     emit = fn value -> send(runtime, {:async_result, tag, nonce, value}) end
@@ -489,7 +561,6 @@ defmodule Julep.Runtime do
         send(runtime, {:async_result, tag, nonce, result})
       end)
 
-    Process.monitor(pid)
     put_in(state.async_tasks[tag], {pid, nonce})
   end
 
@@ -531,8 +602,10 @@ defmodule Julep.Runtime do
       Logger.warning("julep runtime: effect_request #{kind} (#{id}) without bridge")
     end
 
-    # Start a timeout timer for this effect request.
-    ref = Process.send_after(self(), {:effect_timeout, id}, @effect_timeout_ms)
+    # Start a timeout timer for this effect request, using a per-effect default
+    # if one is configured.
+    timeout = Julep.Effects.default_timeout(kind) || @effect_timeout_ms
+    ref = Process.send_after(self(), {:effect_timeout, id}, timeout)
     put_in(state.pending_effects[id], ref)
   end
 
@@ -655,11 +728,11 @@ defmodule Julep.Runtime do
   defp sync_subscriptions(state, new_model) do
     new_specs = state.app.subscribe(new_model)
     new_by_key = Map.new(new_specs, fn spec -> {Julep.Subscription.key(spec), spec} end)
-    old_keys = Map.keys(state.subscriptions)
-    new_keys = Map.keys(new_by_key)
+    old_key_set = state.subscriptions |> Map.keys() |> MapSet.new()
+    new_key_set = new_by_key |> Map.keys() |> MapSet.new()
 
     # Stop removed subscriptions
-    to_stop = old_keys -- new_keys
+    to_stop = MapSet.difference(old_key_set, new_key_set)
 
     Enum.each(to_stop, fn key ->
       case Map.get(state.subscriptions, key) do
@@ -677,7 +750,7 @@ defmodule Julep.Runtime do
     end)
 
     # Start new subscriptions
-    to_start = new_keys -- old_keys
+    to_start = MapSet.difference(new_key_set, old_key_set)
 
     new_entries =
       Map.new(to_start, fn key ->
@@ -686,7 +759,8 @@ defmodule Julep.Runtime do
       end)
 
     # Keep existing (unchanged) subscriptions
-    kept = Map.take(state.subscriptions, new_keys -- to_start)
+    kept_keys = MapSet.difference(new_key_set, to_start) |> MapSet.to_list()
+    kept = Map.take(state.subscriptions, kept_keys)
 
     %{state | subscriptions: Map.merge(kept, new_entries)}
   end
@@ -729,19 +803,30 @@ defmodule Julep.Runtime do
   # Window lifecycle
   # ---------------------------------------------------------------------------
 
+  # Window nodes are only recognized at root level or as direct children of
+  # the root node. This matches the Rust renderer's find_window_nodes / window_ids
+  # which also only checks root + direct children. Deeply nested window nodes
+  # are not supported and will be ignored by both sides.
   @spec detect_windows(map() | nil) :: MapSet.t()
   defp detect_windows(nil), do: MapSet.new()
 
-  defp detect_windows(tree) do
-    Julep.Tree.find_all(tree, fn node -> node.type == "window" end)
+  defp detect_windows(%{type: "window", id: id}) do
+    MapSet.new([id])
+  end
+
+  defp detect_windows(%{children: children}) when is_list(children) do
+    children
+    |> Enum.filter(fn node -> node.type == "window" end)
     |> Enum.map(& &1.id)
     |> MapSet.new()
   end
 
+  defp detect_windows(_), do: MapSet.new()
+
   # Window setting keys that can be specified as node props on window elements.
   @window_prop_keys ~w(
-    width height position min_size max_size maximized fullscreen visible
-    resizable closeable minimizable decorations transparent blur level
+    size width height position min_size max_size maximized fullscreen
+    visible resizable closeable minimizable decorations transparent blur level
     exit_on_close_request
   )
 
@@ -749,14 +834,64 @@ defmodule Julep.Runtime do
   defp extract_window_props(nil, _window_id), do: %{}
 
   defp extract_window_props(tree, window_id) do
-    case Julep.Tree.find_all(tree, fn node ->
-           node.type == "window" and node.id == window_id
-         end) do
-      [%{props: props} | _] when is_map(props) ->
-        Map.take(props, @window_prop_keys)
+    props =
+      case find_window_node(tree, window_id) do
+        %{props: props} when is_map(props) ->
+          Map.take(props, @window_prop_keys)
+
+        _ ->
+          %{}
+      end
+
+    decompose_size_tuples(props)
+  end
+
+  # Find a window node at root level or as a direct child (matching Rust depth).
+  defp find_window_node(%{type: "window", id: id} = node, id), do: node
+
+  defp find_window_node(%{children: children}, window_id) when is_list(children) do
+    Enum.find(children, fn node -> node.type == "window" and node.id == window_id end)
+  end
+
+  defp find_window_node(_, _), do: nil
+
+  # Decompose size tuples into separate width/height keys that Rust expects.
+  # size: {w, h}     -> width: w, height: h  (and remove size key)
+  # min_size: {w, h} -> min_size: %{"width" => w, "height" => h}
+  # max_size: {w, h} -> max_size: %{"width" => w, "height" => h}
+  # Also handles lists (which is what the Encode protocol produces from tuples).
+  @spec decompose_size_tuples(map()) :: map()
+  defp decompose_size_tuples(props) do
+    props
+    |> decompose_size()
+    |> decompose_nested_size("min_size")
+    |> decompose_nested_size("max_size")
+  end
+
+  defp decompose_size(props) do
+    case Map.get(props, "size") do
+      {w, h} ->
+        props
+        |> Map.delete("size")
+        |> Map.put_new("width", w)
+        |> Map.put_new("height", h)
+
+      [w, h] ->
+        props
+        |> Map.delete("size")
+        |> Map.put_new("width", w)
+        |> Map.put_new("height", h)
 
       _ ->
-        %{}
+        props
+    end
+  end
+
+  defp decompose_nested_size(props, key) do
+    case Map.get(props, key) do
+      {w, h} -> Map.put(props, key, %{"width" => w, "height" => h})
+      [w, h] -> Map.put(props, key, %{"width" => w, "height" => h})
+      _ -> props
     end
   end
 
@@ -831,5 +966,31 @@ defmodule Julep.Runtime do
       end)
 
     %{state | pending_effects: %{}}
+  end
+
+  # Kills an existing async task with the given tag, if one is running.
+  # Used before starting a replacement task to avoid orphaned processes.
+  @spec cancel_existing_task(map(), term()) :: map()
+  defp cancel_existing_task(state, tag) do
+    case Map.get(state.async_tasks, tag) do
+      {old_pid, _nonce} ->
+        Process.exit(old_pid, :kill)
+        %{state | async_tasks: Map.delete(state.async_tasks, tag)}
+
+      nil ->
+        state
+    end
+  end
+
+  # Drains queued subscription ticks for the same tag/interval from the
+  # mailbox. This coalesces rapid-fire animation or timer ticks so the
+  # runtime only processes the latest one, avoiding redundant update cycles.
+  @spec drain_matching_ticks(term(), non_neg_integer()) :: :ok
+  defp drain_matching_ticks(tag, interval) do
+    receive do
+      {:subscription_tick, ^tag, ^interval} -> drain_matching_ticks(tag, interval)
+    after
+      0 -> :ok
+    end
   end
 end

@@ -317,7 +317,16 @@ pub fn emit_screenshot_response(
                 log::error!("msgpack encode screenshot: {e}");
                 return;
             }
-            let len = payload.len() as u32;
+            let len = match u32::try_from(payload.len()) {
+                Ok(n) => n,
+                Err(_) => {
+                    log::error!(
+                        "screenshot payload exceeds u32::MAX ({} bytes)",
+                        payload.len()
+                    );
+                    return;
+                }
+            };
             let mut bytes = Vec::with_capacity(4 + payload.len());
             bytes.extend_from_slice(&len.to_be_bytes());
             bytes.extend_from_slice(&payload);

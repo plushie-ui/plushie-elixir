@@ -26,7 +26,7 @@ Iced 0.14 ships with 22 built-in themes. Julep passes the theme name
 string directly to the renderer, which resolves it to an iced `Theme`
 variant.
 
-Common themes:
+All 22 built-in themes:
 
 | Name | Description |
 |---|---|
@@ -39,13 +39,21 @@ Common themes:
 | `gruvbox_light` | Gruvbox Light |
 | `gruvbox_dark` | Gruvbox Dark |
 | `catppuccin_latte` | Catppuccin Latte (light) |
+| `catppuccin_frappe` | Catppuccin Frappe |
+| `catppuccin_macchiato` | Catppuccin Macchiato |
 | `catppuccin_mocha` | Catppuccin Mocha (dark) |
 | `tokyo_night` | Tokyo Night |
+| `tokyo_night_storm` | Tokyo Night Storm |
+| `tokyo_night_light` | Tokyo Night Light |
 | `kanagawa_wave` | Kanagawa Wave |
+| `kanagawa_dragon` | Kanagawa Dragon |
+| `kanagawa_lotus` | Kanagawa Lotus |
+| `moonfly` | Moonfly |
+| `nightfly` | Nightfly |
 | `oxocarbon` | Oxocarbon |
+| `ferra` | Ferra |
 
-The full list is whatever iced's `Theme` enum provides. Unknown names fall
-back to `dark`.
+Unknown names fall back to `dark`.
 
 ## Custom themes
 

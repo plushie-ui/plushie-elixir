@@ -17,6 +17,25 @@ defmodule Mix.Tasks.Compile.JulepGui do
 
   @impl true
   def run(_args) do
+    # If a precompiled binary already exists (e.g. downloaded for Hex consumers),
+    # skip the cargo build entirely so Rust is not required.
+    precompiled = Path.join([File.cwd!(), "priv", "bin", "julep_gui#{executable_extension()}"])
+
+    if File.exists?(precompiled) do
+      {:noop, []}
+    else
+      run_cargo_build()
+    end
+  end
+
+  defp executable_extension do
+    case :os.type() do
+      {:win32, _} -> ".exe"
+      _ -> ""
+    end
+  end
+
+  defp run_cargo_build do
     manifest_path = Path.join([File.cwd!(), @native_dir, "Cargo.toml"])
 
     unless File.exists?(manifest_path) do

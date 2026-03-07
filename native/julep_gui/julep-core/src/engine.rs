@@ -42,6 +42,12 @@ pub enum CoreEffect {
     },
     /// Extension configuration received from Elixir.
     ExtensionConfig(Value),
+    /// Spawn an async effect (e.g. file dialogs) via Task::perform.
+    SpawnAsyncEffect {
+        request_id: String,
+        effect_type: String,
+        params: Value,
+    },
 }
 
 /// Pure state core, decoupled from iced runtime.
@@ -136,8 +142,16 @@ impl Core {
             }
             IncomingMessage::EffectRequest { id, kind, payload } => {
                 log::debug!("effect request: {kind} ({id})");
-                let response = effects::handle_effect(id, &kind, &payload);
-                effects.push(CoreEffect::EmitEffectResponse(response));
+                if effects::is_async_effect(&kind) {
+                    effects.push(CoreEffect::SpawnAsyncEffect {
+                        request_id: id,
+                        effect_type: kind,
+                        params: payload,
+                    });
+                } else {
+                    let response = effects::handle_effect(id, &kind, &payload);
+                    effects.push(CoreEffect::EmitEffectResponse(response));
+                }
             }
             IncomingMessage::WidgetOp { op, payload } => {
                 log::debug!("widget_op: {op}");

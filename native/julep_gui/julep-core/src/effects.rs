@@ -2,6 +2,11 @@ use serde_json::{json, Value};
 
 use crate::protocol::EffectResponse;
 
+/// Returns true for effect kinds that should run asynchronously (file dialogs).
+pub fn is_async_effect(kind: &str) -> bool {
+    matches!(kind, "file_open" | "file_save" | "directory_select")
+}
+
 pub fn handle_effect(id: String, kind: &str, payload: &Value) -> EffectResponse {
     match kind {
         "file_open" => handle_file_open(id, payload),
@@ -247,6 +252,113 @@ fn handle_notification(id: String, payload: &Value) -> EffectResponse {
 
 #[cfg(not(feature = "notifications"))]
 fn handle_notification(id: String, _payload: &Value) -> EffectResponse {
+    EffectResponse::unsupported(id)
+}
+
+// ---------------------------------------------------------------------------
+// Async effect handlers (file dialogs via rfd::AsyncFileDialog)
+// ---------------------------------------------------------------------------
+
+/// Handle an async effect and return an EffectResponse. The response format
+/// matches the sync handlers exactly so Elixir can deserialize uniformly.
+#[cfg(feature = "dialogs")]
+pub async fn handle_async_effect(id: String, effect_type: &str, params: &Value) -> EffectResponse {
+    match effect_type {
+        "file_open" => {
+            let title = params
+                .get("title")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Open File");
+
+            let mut dialog = rfd::AsyncFileDialog::new().set_title(title);
+
+            if let Some(filters) = params.get("filters").and_then(|v| v.as_array()) {
+                for filter in filters {
+                    if let Some(arr) = filter.as_array() {
+                        if arr.len() >= 2 {
+                            if let (Some(name), Some(ext)) = (arr[0].as_str(), arr[1].as_str()) {
+                                let extensions: Vec<&str> = ext
+                                    .split(';')
+                                    .map(|e| e.trim().trim_start_matches("*."))
+                                    .collect();
+                                dialog = dialog.add_filter(name, &extensions);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if let Some(dir) = params.get("directory").and_then(|v| v.as_str()) {
+                dialog = dialog.set_directory(dir);
+            }
+
+            match dialog.pick_file().await {
+                Some(handle) => {
+                    EffectResponse::ok(id, json!({"path": handle.path().to_string_lossy()}))
+                }
+                None => EffectResponse::error(id, "cancelled".to_string()),
+            }
+        }
+        "file_save" => {
+            let title = params
+                .get("title")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Save File");
+
+            let mut dialog = rfd::AsyncFileDialog::new().set_title(title);
+
+            if let Some(name) = params.get("default_name").and_then(|v| v.as_str()) {
+                dialog = dialog.set_file_name(name);
+            }
+
+            if let Some(filters) = params.get("filters").and_then(|v| v.as_array()) {
+                for filter in filters {
+                    if let Some(arr) = filter.as_array() {
+                        if arr.len() >= 2 {
+                            if let (Some(name), Some(ext)) = (arr[0].as_str(), arr[1].as_str()) {
+                                let extensions: Vec<&str> = ext
+                                    .split(';')
+                                    .map(|e| e.trim().trim_start_matches("*."))
+                                    .collect();
+                                dialog = dialog.add_filter(name, &extensions);
+                            }
+                        }
+                    }
+                }
+            }
+
+            match dialog.save_file().await {
+                Some(handle) => {
+                    EffectResponse::ok(id, json!({"path": handle.path().to_string_lossy()}))
+                }
+                None => EffectResponse::error(id, "cancelled".to_string()),
+            }
+        }
+        "directory_select" => {
+            let title = params
+                .get("title")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Select Directory");
+
+            let dialog = rfd::AsyncFileDialog::new().set_title(title);
+
+            match dialog.pick_folder().await {
+                Some(handle) => {
+                    EffectResponse::ok(id, json!({"path": handle.path().to_string_lossy()}))
+                }
+                None => EffectResponse::error(id, "cancelled".to_string()),
+            }
+        }
+        _ => EffectResponse::unsupported(id),
+    }
+}
+
+#[cfg(not(feature = "dialogs"))]
+pub async fn handle_async_effect(
+    id: String,
+    _effect_type: &str,
+    _params: &Value,
+) -> EffectResponse {
     EffectResponse::unsupported(id)
 }
 

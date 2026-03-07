@@ -84,10 +84,8 @@ pub mod headless_mode {
         // Track whether this message might change the tree or settings so
         // we know when to call extension lifecycle hooks.
         let is_settings = matches!(msg, IncomingMessage::Settings { .. });
-        let is_tree_change = matches!(
-            msg,
-            IncomingMessage::Snapshot { .. } | IncomingMessage::Patch { .. }
-        );
+        let is_snapshot = matches!(msg, IncomingMessage::Snapshot { .. });
+        let is_tree_change = is_snapshot || matches!(msg, IncomingMessage::Patch { .. });
 
         match msg {
             // Normal messages go through Core::apply()
@@ -136,6 +134,22 @@ pub mod headless_mode {
                         julep_core::engine::CoreEffect::EmitEffectResponse(response) => {
                             emit_wire(&response);
                         }
+                        julep_core::engine::CoreEffect::SpawnAsyncEffect {
+                            request_id,
+                            effect_type,
+                            ..
+                        } => {
+                            // Headless has no display for file dialogs --
+                            // return cancelled immediately.
+                            log::debug!(
+                                "headless: async effect {effect_type} returning cancelled \
+                                 (no display)"
+                            );
+                            emit_wire(&julep_core::protocol::EffectResponse::error(
+                                request_id,
+                                "cancelled".to_string(),
+                            ));
+                        }
                         julep_core::engine::CoreEffect::ThemeChanged(t) => {
                             *theme = t;
                         }
@@ -145,6 +159,11 @@ pub mod headless_mode {
 
                 // Prepare extensions after tree changes (Snapshot/Patch).
                 if is_tree_change {
+                    // On Snapshot, give previously-poisoned extensions a
+                    // fresh chance (same as Reset does).
+                    if is_snapshot {
+                        dispatcher.clear_poisoned();
+                    }
                     if let Some(root) = core.tree.root() {
                         dispatcher.prepare_all(root, ext_caches, theme);
                     }
@@ -176,8 +195,8 @@ pub mod headless_mode {
                 width,
                 height,
             } => {
-                let w = width.unwrap_or(DEFAULT_SCREENSHOT_WIDTH);
-                let h = height.unwrap_or(DEFAULT_SCREENSHOT_HEIGHT);
+                let w = width.unwrap_or(DEFAULT_SCREENSHOT_WIDTH).max(1);
+                let h = height.unwrap_or(DEFAULT_SCREENSHOT_HEIGHT).max(1);
                 handle_screenshot_capture(core, theme, dispatcher, id, name, w, h);
             }
             IncomingMessage::Reset { id } => {

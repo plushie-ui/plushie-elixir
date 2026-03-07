@@ -383,6 +383,9 @@ defmodule Julep.Bridge do
 
   defp send_to_port(port, data) when is_port(port) do
     Port.command(port, data)
+    # byte_size measures payload size (excludes framing overhead in both
+    # JSON and msgpack modes). This is intentionally consistent across
+    # formats -- framing is a transport concern, not a telemetry concern.
     :telemetry.execute([:julep, :bridge, :send], %{byte_size: IO.iodata_length(data)}, %{})
   rescue
     ArgumentError ->
@@ -396,6 +399,7 @@ defmodule Julep.Bridge do
     case Julep.Protocol.decode_message(data, format) do
       {:error, reason} ->
         Logger.warning("julep bridge: failed to decode message: #{inspect(reason)}")
+        :telemetry.execute([:julep, :bridge, :decode_error], %{}, %{reason: reason})
         state
 
       event ->
@@ -422,6 +426,11 @@ defmodule Julep.Bridge do
         3. Check system dependencies (libxkbcommon, etc.)
         4. Try running the renderer directly: ./path/to/julep_gui --json
       """)
+
+      :telemetry.execute([:julep, :bridge, :max_restarts_reached], %{}, %{
+        reason: reason,
+        max_restarts: state.max_restarts
+      })
 
       {:stop, {:max_restarts_reached, reason}, state}
     end

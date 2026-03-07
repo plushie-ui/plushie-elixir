@@ -37,9 +37,7 @@ defmodule Julep.MixProject do
       name: "Julep",
       description: "Native desktop GUIs from Elixir, powered by iced",
       package: package(),
-      # TODO: verify source_url before Hex publish -- github.com/julep-ui/julep
-      # is an unrelated project; update to the correct repo URL first.
-      source_url: "https://github.com/julep-ui/julep",
+      source_url: "https://github.com/lincracy/julep",
       docs: [main: "Julep", extras: ["README.md"]],
       aliases: aliases(),
       dialyzer: [plt_add_apps: [:mix, :ex_unit, :inets, :ssl]]
@@ -56,7 +54,7 @@ defmodule Julep.MixProject do
     [
       licenses: ["MIT"],
       links: %{
-        "GitHub" => "https://github.com/julep-ui/julep"
+        "GitHub" => "https://github.com/lincracy/julep"
       },
       files: ~w(
         lib
@@ -89,7 +87,8 @@ defmodule Julep.MixProject do
       {:telemetry, "~> 1.0"},
       {:file_system, "~> 1.0", optional: true},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.31", only: :dev, runtime: false}
       # Extension packages are loaded via Code.append_path in mix.exs (above)
       # to avoid circular path deps (each extension depends on :julep).
     ]
