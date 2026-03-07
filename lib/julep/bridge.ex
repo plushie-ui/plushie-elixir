@@ -382,14 +382,12 @@ defmodule Julep.Bridge do
   defp send_to_port(nil, _data), do: :ok
 
   defp send_to_port(port, data) when is_port(port) do
-    try do
-      Port.command(port, data)
-      :telemetry.execute([:julep, :bridge, :send], %{byte_size: IO.iodata_length(data)}, %{})
-    rescue
-      ArgumentError ->
-        Logger.warning("julep bridge: port closed during send")
-        :error
-    end
+    Port.command(port, data)
+    :telemetry.execute([:julep, :bridge, :send], %{byte_size: IO.iodata_length(data)}, %{})
+  rescue
+    ArgumentError ->
+      Logger.warning("julep bridge: port closed during send")
+      :error
   end
 
   defp dispatch_message(data, format, state) do

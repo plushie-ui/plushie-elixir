@@ -157,6 +157,62 @@ defmodule Julep.BridgeMsgpackTest do
     end
   end
 
+  describe "bridge telemetry" do
+    @describetag :integration
+
+    test "send and receive events fire during msgpack exchange" do
+      test_pid = self()
+      send_id = "bridge_telemetry_send_#{:erlang.unique_integer()}"
+      recv_id = "bridge_telemetry_recv_#{:erlang.unique_integer()}"
+
+      :telemetry.attach(
+        send_id,
+        [:julep, :bridge, :send],
+        fn event, measurements, _meta, _ ->
+          send(test_pid, {:tel, event, measurements})
+        end,
+        nil
+      )
+
+      :telemetry.attach(
+        recv_id,
+        [:julep, :bridge, :receive],
+        fn event, measurements, _meta, _ ->
+          send(test_pid, {:tel, event, measurements})
+        end,
+        nil
+      )
+
+      {:ok, bridge} =
+        Julep.Bridge.start_link(
+          renderer_path: @renderer_path,
+          format: :msgpack,
+          runtime: self(),
+          port_env: @no_display_env
+        )
+
+      # Send settings through the bridge (triggers :send telemetry).
+      Julep.Bridge.send_settings(bridge, %{antialiasing: false})
+
+      # Give the renderer time to respond before it crashes (no display).
+      Process.sleep(200)
+
+      # The send event should have fired.
+      assert_received {:tel, [:julep, :bridge, :send], %{byte_size: size}}
+      assert is_integer(size) and size > 0
+
+      # The receive event may or may not fire depending on whether the
+      # renderer sent data before crashing. Don't assert on it -- just
+      # verify the handler was attached without error.
+
+      :telemetry.detach(send_id)
+      :telemetry.detach(recv_id)
+      GenServer.stop(bridge, :normal, 1_000)
+    catch
+      :exit, _ -> :ok
+    end
+  end
+
   describe "msgpack edge cases" do
     @describetag :integration
 

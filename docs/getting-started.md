@@ -31,12 +31,16 @@ cd my_app
 
 ### 2. Add Julep as a dependency
 
-In `mix.exs`:
+In `mix.exs`, add julep to your deps. Until julep is published on Hex,
+use a git or path dependency:
 
 ```elixir
 defp deps do
   [
-    {:julep, "~> 0.1"}
+    # From git:
+    {:julep, git: "https://github.com/julep-ui/julep.git"},
+    # Or from a local checkout:
+    # {:julep, path: "../julep"},
   ]
 end
 ```
