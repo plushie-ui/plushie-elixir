@@ -1,6 +1,9 @@
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
+/// Expected protocol version. The Elixir side embeds this in Settings.
+pub const PROTOCOL_VERSION: &str = "1.0";
+
 /// Messages sent from Elixir to the renderer over stdin (JSONL).
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]

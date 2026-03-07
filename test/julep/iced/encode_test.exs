@@ -1,3 +1,7 @@
+defmodule Julep.Iced.EncodeTest.BogusStruct do
+  defstruct [:x]
+end
+
 defmodule Julep.Iced.EncodeTest do
   use ExUnit.Case, async: true
 
@@ -84,9 +88,20 @@ defmodule Julep.Iced.EncodeTest do
   end
 
   describe "Any (fallback)" do
-    test "unknown structs pass through" do
+    test "unknown values raise Protocol.UndefinedError" do
       ref = make_ref()
-      assert Encode.encode(ref) == ref
+
+      assert_raise Protocol.UndefinedError, fn ->
+        Encode.encode(ref)
+      end
+    end
+
+    test "unknown structs raise with module name in message" do
+      bogus = struct(Julep.Iced.EncodeTest.BogusStruct, x: 1)
+
+      assert_raise Protocol.UndefinedError, ~r/BogusStruct/, fn ->
+        Encode.encode(bogus)
+      end
     end
   end
 

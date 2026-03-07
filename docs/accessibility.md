@@ -27,11 +27,16 @@ how well the renderer maps tree nodes to accessible widgets:
    automatically.** The renderer constructs real iced widgets, which
    carry accesskit semantics natively. No extra work needed.
 
-2. **Composite widgets (tabs, nav, modal, card, etc.) need explicit
-   accessibility annotations.** These are assembled from primitives and
-   may not automatically convey the right roles and relationships. The
-   renderer must set appropriate roles (tab, tablist, dialog, navigation)
-   and ARIA-like properties.
+2. **App-level composites (tables, overlays, pane grids, etc.) need
+   explicit accessibility annotations.** These are assembled from
+   primitives and may not automatically convey the right roles and
+   relationships. The renderer must set appropriate roles and ARIA-like
+   properties.
+
+   Note: the original UI-only composite widgets (tabs, nav, modal, card,
+   panel, form, split_pane) were removed from the codebase. Apps that
+   need these patterns build them from primitives, making app-level
+   accessibility annotations (Phase 3 below) the relevant path.
 
 3. **Custom content (canvas, shader) has no automatic accessibility.**
    Apps using these widgets must provide alternative text or descriptions
@@ -44,19 +49,19 @@ how well the renderer maps tree nodes to accessible widgets:
 Do nothing special. Direct widget mapping gives us iced's built-in
 accessibility. Verify it works with screen readers on each platform.
 
-### Phase 2: composite widget roles
+### Phase 2: built-in widget roles
 
-Add role annotations to composite widgets in the renderer:
+Add role annotations to built-in widgets that assemble primitives:
 
-| Composite widget | Accessible role |
+| Widget | Accessible role |
 |---|---|
-| tabs | `tablist` + `tab` + `tabpanel` |
-| nav | `navigation` |
-| modal | `dialog` |
-| card | `group` or `article` |
-| panel | `group` with `expanded`/`collapsed` |
-| form | `form` |
 | table | `table` + `row` + `cell` |
+| pane_grid | `group` with split semantics |
+| overlay | contextual role (e.g. `dialog`, `tooltip`) based on usage |
+
+Note: the original composite widgets (tabs, nav, modal, card, panel, form)
+were removed. Apps build these patterns from primitives and should use the
+app-level annotation mechanism (Phase 3) for accessibility roles.
 
 ### Phase 3: app-level annotations
 

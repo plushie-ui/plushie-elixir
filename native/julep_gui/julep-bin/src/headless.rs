@@ -17,13 +17,23 @@ pub mod headless_mode {
     /// Default screenshot height when not specified by the caller.
     const DEFAULT_SCREENSHOT_HEIGHT: u32 = 768;
 
-    use julep_core::extensions::ExtensionDispatcher;
+    use julep_core::extensions::{ExtensionCaches, ExtensionDispatcher};
 
     /// Run the headless mode event loop.
     /// No iced::daemon. Reads framed messages from stdin, processes through Core,
     /// writes responses to stdout using the negotiated wire codec.
-    pub fn run(forced_codec: Option<Codec>, dispatcher: ExtensionDispatcher) {
+    ///
+    /// Extensions are initialized when a Settings message arrives (via
+    /// `init_all`) and prepared after each tree-changing message (via
+    /// `prepare_all`). Full extension interactivity (handle_event,
+    /// handle_command) is supported. Note that extension rendering in
+    /// headless mode goes through the same `widgets::render` path used
+    /// for screenshot capture, so extensions that rely on real iced widget
+    /// state (e.g. focus, scroll position) won't behave identically to the
+    /// full daemon mode.
+    pub fn run(forced_codec: Option<Codec>, mut dispatcher: ExtensionDispatcher) {
         let mut core = Core::new();
+        let mut ext_caches = ExtensionCaches::new();
         let mut theme = Theme::Dark;
         let stdin = io::stdin();
         let mut reader = io::BufReader::new(stdin.lock());
@@ -47,7 +57,9 @@ pub mod headless_mode {
             match codec.read_message(&mut reader) {
                 Ok(None) => break,
                 Ok(Some(bytes)) => match codec.decode::<IncomingMessage>(&bytes) {
-                    Ok(msg) => handle_message(&mut core, &mut theme, &dispatcher, msg),
+                    Ok(msg) => {
+                        handle_message(&mut core, &mut theme, &mut dispatcher, &mut ext_caches, msg)
+                    }
                     Err(e) => {
                         log::error!("decode error: {e}");
                     }
@@ -65,9 +77,18 @@ pub mod headless_mode {
     fn handle_message(
         core: &mut Core,
         theme: &mut Theme,
-        dispatcher: &ExtensionDispatcher,
+        dispatcher: &mut ExtensionDispatcher,
+        ext_caches: &mut ExtensionCaches,
         msg: IncomingMessage,
     ) {
+        // Track whether this message might change the tree or settings so
+        // we know when to call extension lifecycle hooks.
+        let is_settings = matches!(msg, IncomingMessage::Settings { .. });
+        let is_tree_change = matches!(
+            msg,
+            IncomingMessage::Snapshot { .. } | IncomingMessage::Patch { .. }
+        );
+
         match msg {
             // Normal messages go through Core::apply()
             IncomingMessage::Snapshot { .. }
@@ -79,7 +100,27 @@ pub mod headless_mode {
             | IncomingMessage::WindowOp { .. }
             | IncomingMessage::Settings { .. }
             | IncomingMessage::ImageOp { .. } => {
+                // Extract extension_config before apply consumes the message.
+                let ext_config = if is_settings {
+                    if let IncomingMessage::Settings { ref settings } = msg {
+                        settings
+                            .get("extension_config")
+                            .cloned()
+                            .unwrap_or(Value::Null)
+                    } else {
+                        Value::Null
+                    }
+                } else {
+                    Value::Null
+                };
+
                 let effects = core.apply(msg);
+
+                // Route extension config on Settings.
+                if is_settings {
+                    dispatcher.init_all(&ext_config);
+                }
+
                 // In headless mode, we handle effects differently:
                 // - SyncWindows: no-op (no real windows)
                 // - EmitEvent: write to stdout
@@ -99,6 +140,13 @@ pub mod headless_mode {
                             *theme = t;
                         }
                         _ => {} // No-op for window/widget ops in headless
+                    }
+                }
+
+                // Prepare extensions after tree changes (Snapshot/Patch).
+                if is_tree_change {
+                    if let Some(root) = core.tree.root() {
+                        dispatcher.prepare_all(root, ext_caches, theme);
                     }
                 }
             }
@@ -134,18 +182,26 @@ pub mod headless_mode {
             }
             IncomingMessage::Reset { id } => {
                 handle_reset(core, id);
+                dispatcher.clear_poisoned();
             }
-            // Extension commands bypass tree updates. The dispatcher is used for
-            // rendering extension widgets (e.g. during screenshot capture) but not
-            // for processing extension commands in headless mode.
-            IncomingMessage::ExtensionCommand { node_id, op, .. } => {
-                log::debug!("extension_command in headless: node_id={node_id} op={op} (ignored)");
+            IncomingMessage::ExtensionCommand {
+                node_id,
+                op,
+                payload,
+            } => {
+                let events = dispatcher.handle_command(&node_id, &op, &payload, ext_caches);
+                for event in events {
+                    emit_wire(&event);
+                }
             }
             IncomingMessage::ExtensionCommandBatch { commands } => {
-                log::debug!(
-                    "extension_command_batch in headless: {} commands (ignored)",
-                    commands.len()
-                );
+                for cmd in commands {
+                    let events =
+                        dispatcher.handle_command(&cmd.node_id, &cmd.op, &cmd.payload, ext_caches);
+                    for event in events {
+                        emit_wire(&event);
+                    }
+                }
             }
         }
     }

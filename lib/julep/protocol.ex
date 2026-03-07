@@ -57,10 +57,11 @@ defmodule Julep.Protocol do
   ## Example
 
       iex> Julep.Protocol.encode_settings(%{antialiasing: true, default_text_size: 16}, :json)
-      ~s({"settings":{"antialiasing":true,"default_text_size":16},"type":"settings"}) <> "\\n"
+      ~s({"settings":{"antialiasing":true,"default_text_size":16,"protocol_version":"1.0"},"type":"settings"}) <> "\\n"
   """
   @spec encode_settings(settings :: map(), format :: format()) :: binary()
   def encode_settings(settings, format \\ :msgpack) when is_map(settings) do
+    settings = Map.put_new(settings, :protocol_version, "1.0")
     serialize(%{type: "settings", settings: settings}, format)
   end
 

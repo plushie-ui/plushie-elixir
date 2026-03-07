@@ -26,16 +26,38 @@ fn props(node: &TreeNode) -> Props<'_> {
 
 /// Get a string prop value.
 pub fn prop_str(node: &TreeNode, key: &str) -> Option<String> {
-    props(node)?.get(key)?.as_str().map(str::to_owned)
+    let val = props(node)?.get(key)?;
+    match val.as_str() {
+        Some(s) => Some(s.to_owned()),
+        None => {
+            log::trace!("prop '{}': expected string, got {:?}", key, val);
+            None
+        }
+    }
 }
 
 /// Get an f32 prop value. Accepts both JSON numbers and numeric strings.
 pub fn prop_f32(node: &TreeNode, key: &str) -> Option<f32> {
     let val = props(node)?.get(key)?;
     match val {
-        Value::Number(n) => n.as_f64().map(|v| v as f32),
-        Value::String(s) => s.trim().parse::<f32>().ok(),
-        _ => None,
+        Value::Number(n) => match n.as_f64() {
+            Some(f) => Some(f as f32),
+            None => {
+                log::trace!("prop '{}': number failed f64 conversion: {:?}", key, val);
+                None
+            }
+        },
+        Value::String(s) => match s.trim().parse::<f32>() {
+            Ok(f) => Some(f),
+            Err(_) => {
+                log::trace!("prop '{}': string not parseable as f32: {:?}", key, s);
+                None
+            }
+        },
+        _ => {
+            log::trace!("prop '{}': expected f64, got {:?}", key, val);
+            None
+        }
     }
 }
 
@@ -43,9 +65,24 @@ pub fn prop_f32(node: &TreeNode, key: &str) -> Option<f32> {
 pub fn prop_f64(node: &TreeNode, key: &str) -> Option<f64> {
     let val = props(node)?.get(key)?;
     match val {
-        Value::Number(n) => n.as_f64(),
-        Value::String(s) => s.trim().parse::<f64>().ok(),
-        _ => None,
+        Value::Number(n) => match n.as_f64() {
+            Some(f) => Some(f),
+            None => {
+                log::trace!("prop '{}': number failed f64 conversion: {:?}", key, val);
+                None
+            }
+        },
+        Value::String(s) => match s.trim().parse::<f64>() {
+            Ok(f) => Some(f),
+            Err(_) => {
+                log::trace!("prop '{}': string not parseable as f64: {:?}", key, s);
+                None
+            }
+        },
+        _ => {
+            log::trace!("prop '{}': expected f64, got {:?}", key, val);
+            None
+        }
     }
 }
 
@@ -53,9 +90,24 @@ pub fn prop_f64(node: &TreeNode, key: &str) -> Option<f64> {
 pub fn prop_u32(node: &TreeNode, key: &str) -> Option<u32> {
     let val = props(node)?.get(key)?;
     match val {
-        Value::Number(n) => n.as_u64().and_then(|v| u32::try_from(v).ok()),
-        Value::String(s) => s.trim().parse::<u32>().ok(),
-        _ => None,
+        Value::Number(n) => match n.as_u64().and_then(|v| u32::try_from(v).ok()) {
+            Some(u) => Some(u),
+            None => {
+                log::trace!("prop '{}': expected u32, got {:?}", key, val);
+                None
+            }
+        },
+        Value::String(s) => match s.trim().parse::<u32>() {
+            Ok(u) => Some(u),
+            Err(_) => {
+                log::trace!("prop '{}': string not parseable as u32: {:?}", key, s);
+                None
+            }
+        },
+        _ => {
+            log::trace!("prop '{}': expected u32, got {:?}", key, val);
+            None
+        }
     }
 }
 
@@ -63,9 +115,24 @@ pub fn prop_u32(node: &TreeNode, key: &str) -> Option<u32> {
 pub fn prop_u64(node: &TreeNode, key: &str) -> Option<u64> {
     let val = props(node)?.get(key)?;
     match val {
-        Value::Number(n) => n.as_u64(),
-        Value::String(s) => s.trim().parse::<u64>().ok(),
-        _ => None,
+        Value::Number(n) => match n.as_u64() {
+            Some(u) => Some(u),
+            None => {
+                log::trace!("prop '{}': expected u64, got {:?}", key, val);
+                None
+            }
+        },
+        Value::String(s) => match s.trim().parse::<u64>() {
+            Ok(u) => Some(u),
+            Err(_) => {
+                log::trace!("prop '{}': string not parseable as u64: {:?}", key, s);
+                None
+            }
+        },
+        _ => {
+            log::trace!("prop '{}': expected u64, got {:?}", key, val);
+            None
+        }
     }
 }
 
@@ -78,15 +145,37 @@ pub fn prop_usize(node: &TreeNode, key: &str) -> Option<usize> {
 pub fn prop_i64(node: &TreeNode, key: &str) -> Option<i64> {
     let val = props(node)?.get(key)?;
     match val {
-        Value::Number(n) => n.as_i64(),
-        Value::String(s) => s.trim().parse::<i64>().ok(),
-        _ => None,
+        Value::Number(n) => match n.as_i64() {
+            Some(i) => Some(i),
+            None => {
+                log::trace!("prop '{}': expected i64, got {:?}", key, val);
+                None
+            }
+        },
+        Value::String(s) => match s.trim().parse::<i64>() {
+            Ok(i) => Some(i),
+            Err(_) => {
+                log::trace!("prop '{}': string not parseable as i64: {:?}", key, s);
+                None
+            }
+        },
+        _ => {
+            log::trace!("prop '{}': expected i64, got {:?}", key, val);
+            None
+        }
     }
 }
 
 /// Get a boolean prop value.
 pub fn prop_bool(node: &TreeNode, key: &str) -> Option<bool> {
-    props(node)?.get(key)?.as_bool()
+    let val = props(node)?.get(key)?;
+    match val.as_bool() {
+        Some(b) => Some(b),
+        None => {
+            log::trace!("prop '{}': expected bool, got {:?}", key, val);
+            None
+        }
+    }
 }
 
 /// Get a boolean prop value with a default.
@@ -98,7 +187,13 @@ pub fn prop_bool_default(node: &TreeNode, key: &str, default: bool) -> bool {
 pub fn prop_length(node: &TreeNode, key: &str, fallback: Length) -> Length {
     props(node)
         .and_then(|p| p.get(key))
-        .and_then(value_to_length)
+        .and_then(|v| match value_to_length(v) {
+            Some(len) => Some(len),
+            None => {
+                log::trace!("prop '{}': expected length, got {:?}", key, v);
+                None
+            }
+        })
         .unwrap_or(fallback)
 }
 
@@ -131,16 +226,29 @@ pub fn prop_range_f64(node: &TreeNode) -> std::ops::RangeInclusive<f64> {
 /// Parse a hex color string prop (`#RRGGBB` or `#RRGGBBAA`) to `iced::Color`.
 pub fn prop_color(node: &TreeNode, key: &str) -> Option<Color> {
     let hex = prop_str(node, key)?;
-    parse_hex_color(&hex)
+    match parse_hex_color(&hex) {
+        Some(c) => Some(c),
+        None => {
+            log::trace!("prop '{}': invalid hex color: {:?}", key, hex);
+            None
+        }
+    }
 }
 
 /// Get an array of f32 values from a prop.
 pub fn prop_f32_array(node: &TreeNode, key: &str) -> Option<Vec<f32>> {
-    props(node)?.get(key)?.as_array().map(|arr| {
-        arr.iter()
-            .filter_map(|v| v.as_f64().map(|f| f as f32))
-            .collect()
-    })
+    let val = props(node)?.get(key)?;
+    match val.as_array() {
+        Some(arr) => Some(
+            arr.iter()
+                .filter_map(|v| v.as_f64().map(|f| f as f32))
+                .collect(),
+        ),
+        None => {
+            log::trace!("prop '{}': expected array, got {:?}", key, val);
+            None
+        }
+    }
 }
 
 /// Parse a horizontal alignment prop.
@@ -170,7 +278,10 @@ pub fn prop_content_fit(node: &TreeNode) -> Option<ContentFit> {
         "fill" => Some(ContentFit::Fill),
         "none" => Some(ContentFit::None),
         "scale_down" => Some(ContentFit::ScaleDown),
-        _ => None,
+        _ => {
+            log::trace!("prop 'content_fit': unrecognized value: {:?}", s);
+            None
+        }
     }
 }
 
@@ -272,6 +383,12 @@ mod tests {
     #[test]
     fn test_prop_f32_missing() {
         let node = make_node(json!({}));
+        assert!(prop_f32(&node, "size").is_none());
+    }
+
+    #[test]
+    fn test_prop_f32_wrong_type() {
+        let node = make_node(json!({"size": true}));
         assert!(prop_f32(&node, "size").is_none());
     }
 
@@ -406,6 +523,12 @@ mod tests {
         assert!(prop_bool_default(&node, "disabled", false));
         assert!(!prop_bool_default(&node, "missing", false));
         assert!(prop_bool_default(&node, "missing", true));
+    }
+
+    #[test]
+    fn test_prop_bool_wrong_type() {
+        let node = make_node(json!({"disabled": "yes"}));
+        assert_eq!(prop_bool(&node, "disabled"), None);
     }
 
     #[test]

@@ -794,7 +794,9 @@ defmodule Julep.ProtocolTest do
     test "settings roundtrip" do
       settings = %{"theme" => "dark"}
       encoded = Protocol.encode_settings(settings, :msgpack)
-      assert {:settings, ^settings} = Protocol.decode_message(encoded, :msgpack)
+      assert {:settings, decoded_settings} = Protocol.decode_message(encoded, :msgpack)
+      assert decoded_settings["theme"] == "dark"
+      assert decoded_settings["protocol_version"] == "1.0"
     end
 
     test "snapshot roundtrip" do

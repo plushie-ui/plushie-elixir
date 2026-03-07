@@ -2578,7 +2578,10 @@ pub(crate) fn run(builder: julep_core::app::JulepAppBuilder) -> iced::Result {
         }
     }
 
+    #[cfg(feature = "test-mode")]
     let test_mode = args.contains(&"--test".to_string());
+    #[cfg(not(feature = "test-mode"))]
+    let test_mode = false;
 
     // Read the first message synchronously to get iced settings and font
     // data before the daemon starts. This must happen before the stdin

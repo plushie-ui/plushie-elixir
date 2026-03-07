@@ -211,11 +211,12 @@ defmodule Julep.Iced.Widget.Container do
 
   @doc "Appends a child to the container."
   @spec push(container :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
-  def push(%__MODULE__{} = c, child), do: %{c | children: c.children ++ [child]}
+  def push(%__MODULE__{} = c, child), do: %{c | children: [child | c.children]}
 
   @doc "Appends multiple children to the container."
   @spec extend(container :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
-  def extend(%__MODULE__{} = c, children), do: %{c | children: c.children ++ children}
+  def extend(%__MODULE__{} = c, children),
+    do: %{c | children: Enum.reverse(children) ++ c.children}
 
   @doc "Converts this container struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(container :: t()) :: Julep.Iced.ui_node()
@@ -242,7 +243,12 @@ defmodule Julep.Iced.Widget.Container do
         |> put_if(c.shadow, "shadow")
         |> put_if(c.style, "style")
 
-      %{id: c.id, type: "container", props: props, children: children_to_nodes(c.children)}
+      %{
+        id: c.id,
+        type: "container",
+        props: props,
+        children: children_to_nodes(Enum.reverse(c.children))
+      }
     end
   end
 end

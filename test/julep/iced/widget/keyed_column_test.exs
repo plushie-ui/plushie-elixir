@@ -68,8 +68,10 @@ defmodule Julep.Iced.Widget.KeyedColumnTest do
       c1 = %{id: "item1", type: "text", props: %{}, children: []}
       c2 = %{id: "item2", type: "text", props: %{}, children: []}
       kc = KeyedColumn.new("kc1") |> KeyedColumn.push(c1) |> KeyedColumn.push(c2)
-      assert Enum.at(kc.children, 0) == c1
-      assert Enum.at(kc.children, 1) == c2
+      # Internal list is reversed; build restores order
+      node = KeyedColumn.build(kc)
+      assert Enum.at(node.children, 0) == c1
+      assert Enum.at(node.children, 1) == c2
     end
   end
 

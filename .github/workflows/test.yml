@@ -37,6 +37,13 @@ jobs:
           path: deps
           key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
 
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: _build
+          key: ${{ runner.os }}-build-${{ matrix.elixir }}-${{ matrix.otp }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-build-${{ matrix.elixir }}-${{ matrix.otp }}-
+
       - name: Install dependencies
         run: mix deps.get
 
@@ -45,6 +52,9 @@ jobs:
 
       - name: Compile
         run: mix compile --warnings-as-errors
+
+      - name: Credo
+        run: mix credo --strict
 
       - name: Run tests
         run: mix test
@@ -66,6 +76,13 @@ jobs:
         with:
           path: deps
           key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: _build
+          key: ${{ runner.os }}-build-dialyzer-1.17-27-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-build-dialyzer-1.17-27-
 
       - name: Install dependencies
         run: mix deps.get
@@ -101,6 +118,9 @@ jobs:
 
       - name: Build renderer
         run: cargo build --manifest-path native/julep_gui/Cargo.toml
+
+      - name: Clippy
+        run: cargo clippy --manifest-path native/julep_gui/Cargo.toml -- -D warnings
 
       - name: Run tests
         run: cargo test --manifest-path native/julep_gui/Cargo.toml

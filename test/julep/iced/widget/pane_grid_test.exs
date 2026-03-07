@@ -64,7 +64,9 @@ defmodule Julep.Iced.Widget.PaneGridTest do
       c1 = %{id: "c1", type: "text", props: %{}, children: []}
       c2 = %{id: "c2", type: "text", props: %{}, children: []}
       pg = PaneGrid.new("pg1") |> PaneGrid.push(c1) |> PaneGrid.push(c2)
-      assert pg.children == [c1, c2]
+      assert pg.children == [c2, c1]
+      node = PaneGrid.build(pg)
+      assert node.children == [c1, c2]
     end
   end
 
@@ -73,7 +75,9 @@ defmodule Julep.Iced.Widget.PaneGridTest do
       c1 = %{id: "c1", type: "text", props: %{}, children: []}
       c2 = %{id: "c2", type: "text", props: %{}, children: []}
       pg = PaneGrid.new("pg1") |> PaneGrid.extend([c1, c2])
-      assert pg.children == [c1, c2]
+      assert pg.children == [c2, c1]
+      node = PaneGrid.build(pg)
+      assert node.children == [c1, c2]
     end
   end
 

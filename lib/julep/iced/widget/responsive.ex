@@ -59,11 +59,12 @@ defmodule Julep.Iced.Widget.Responsive do
 
   @doc "Appends a child to the responsive container."
   @spec push(responsive :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
-  def push(%__MODULE__{} = r, child), do: %{r | children: r.children ++ [child]}
+  def push(%__MODULE__{} = r, child), do: %{r | children: [child | r.children]}
 
   @doc "Appends multiple children to the responsive container."
   @spec extend(responsive :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
-  def extend(%__MODULE__{} = r, children), do: %{r | children: r.children ++ children}
+  def extend(%__MODULE__{} = r, children),
+    do: %{r | children: Enum.reverse(children) ++ r.children}
 
   @doc "Converts this responsive struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(responsive :: t()) :: Julep.Iced.ui_node()
@@ -78,7 +79,12 @@ defmodule Julep.Iced.Widget.Responsive do
         |> put_if(r.width, "width")
         |> put_if(r.height, "height")
 
-      %{id: r.id, type: "responsive", props: props, children: children_to_nodes(r.children)}
+      %{
+        id: r.id,
+        type: "responsive",
+        props: props,
+        children: children_to_nodes(Enum.reverse(r.children))
+      }
     end
   end
 end

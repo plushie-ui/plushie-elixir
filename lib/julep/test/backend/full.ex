@@ -133,6 +133,12 @@ defmodule Julep.Test.Backend.Full do
   # -- GenServer --
 
   @impl GenServer
+  def terminate(_reason, state) do
+    if state.port && Port.info(state.port) != nil, do: Port.close(state.port)
+    :ok
+  end
+
+  @impl GenServer
   def init({app, opts}) do
     format = Keyword.get(opts, :format, :msgpack)
     renderer_path = Julep.Binary.renderer_path()

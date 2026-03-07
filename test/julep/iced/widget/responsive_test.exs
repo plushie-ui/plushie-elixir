@@ -48,7 +48,9 @@ defmodule Julep.Iced.Widget.ResponsiveTest do
       c1 = %{id: "c1", type: "text", props: %{}, children: []}
       c2 = %{id: "c2", type: "text", props: %{}, children: []}
       r = Responsive.new("r1") |> Responsive.push(c1) |> Responsive.push(c2)
-      assert r.children == [c1, c2]
+      assert r.children == [c2, c1]
+      node = Responsive.build(r)
+      assert node.children == [c1, c2]
     end
   end
 
@@ -57,7 +59,9 @@ defmodule Julep.Iced.Widget.ResponsiveTest do
       c1 = %{id: "c1", type: "text", props: %{}, children: []}
       c2 = %{id: "c2", type: "text", props: %{}, children: []}
       r = Responsive.new("r1") |> Responsive.extend([c1, c2])
-      assert r.children == [c1, c2]
+      assert r.children == [c2, c1]
+      node = Responsive.build(r)
+      assert node.children == [c1, c2]
     end
   end
 

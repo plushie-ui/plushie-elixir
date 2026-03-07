@@ -21,7 +21,7 @@ renderer (decide whether to execute it). Keep the renderer dumb.
 
 ```elixir
 def update(model, {:click, "open_file"}) do
-  {cmd, _id} = Julep.Effects.file_open(
+  cmd = Julep.Effects.file_open(
     title: "Choose a file",
     filters: [{"Text files", "*.txt"}, {"All files", "*"}]
   )
@@ -37,10 +37,11 @@ def update(model, {:effect_result, _id, {:error, "cancelled"}}) do
 end
 ```
 
-Every effect function returns `{command, effect_id}`. The command must be
+Every effect function returns a `Julep.Command` struct. The command must be
 returned from `update` as part of a `{model, command}` tuple -- discarding
 it silently does nothing. The effect ID is auto-generated (e.g. `"ef_1"`)
-and can be stored in the model if you need to correlate a specific response.
+and embedded in the command payload. You can extract it via
+`cmd.payload.id` if you need to correlate a specific response.
 
 Result keys come from the renderer as string keys, not atoms (e.g.
 `%{"path" => path}`, not `%{path: path}`).

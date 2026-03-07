@@ -78,7 +78,7 @@ defmodule Mix.Tasks.Compile.JulepGui do
   end
 
   defp extension_sources do
-    extensions = Mix.Tasks.Julep.Build.discover_extensions()
+    extensions = Mix.Tasks.Julep.Build.configured_extensions()
 
     Enum.flat_map(extensions, fn mod ->
       crate_path = resolve_extension_crate_path(mod)

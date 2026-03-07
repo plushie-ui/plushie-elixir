@@ -29,7 +29,7 @@ defmodule Mix.Tasks.Julep.Download do
           File.chmod!(dest_path, 0o755)
           Mix.shell().info("Downloaded to #{dest_path}")
 
-          # Verify checksum if available
+          # Verify checksum (mandatory -- fails if checksum file is missing or mismatched)
           checksum_url = url <> ".sha256"
           verify_checksum(dest_path, checksum_url)
 
@@ -42,6 +42,23 @@ defmodule Mix.Tasks.Julep.Download do
   end
 
   defp download(url, dest_path) do
+    case download_binary(url) do
+      {:ok, body} ->
+        File.write!(dest_path, body)
+        :ok
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @max_redirects 5
+
+  defp download_binary(url, redirects_left \\ @max_redirects)
+
+  defp download_binary(_url, 0), do: {:error, :too_many_redirects}
+
+  defp download_binary(url, redirects_left) do
     Application.ensure_all_started(:inets)
     Application.ensure_all_started(:ssl)
 
@@ -53,13 +70,22 @@ defmodule Mix.Tasks.Julep.Download do
            :get,
            {String.to_charlist(url), headers},
            [
-             {:ssl, ssl_opts()}
+             {:ssl, ssl_opts()},
+             {:autoredirect, false}
            ],
            body_format: :binary
          ) do
       {:ok, {{_, 200, _}, _headers, body}} ->
-        File.write!(dest_path, body)
-        :ok
+        {:ok, body}
+
+      {:ok, {{_, status, _}, resp_headers, _body}} when status in [301, 302, 303, 307, 308] ->
+        case List.keyfind(resp_headers, ~c"location", 0) do
+          {_, location} ->
+            download_binary(to_string(location), redirects_left - 1)
+
+          nil ->
+            {:error, {:redirect_without_location, status}}
+        end
 
       {:ok, {{_, status, _}, _, _}} ->
         {:error, {:http_status, status}}
@@ -101,25 +127,20 @@ defmodule Mix.Tasks.Julep.Download do
           Mix.raise("Checksum verification failed")
         end
 
-      {:error, _} ->
-        Mix.shell().info("No checksum file found; skipping verification.")
+      {:error, reason} ->
+        File.rm(dest_path)
+
+        Mix.raise(
+          "SHA256 checksum file could not be downloaded (#{inspect(reason)}). " <>
+            "Refusing to use unverified binary. URL: #{checksum_url}"
+        )
     end
   end
 
   defp download_text(url) do
-    Application.ensure_all_started(:inets)
-    Application.ensure_all_started(:ssl)
-
-    case :httpc.request(
-           :get,
-           {String.to_charlist(url), []},
-           [
-             {:ssl, ssl_opts()}
-           ],
-           body_format: :binary
-         ) do
-      {:ok, {{_, 200, _}, _, body}} -> {:ok, to_string(body)}
-      _ -> {:error, :not_found}
+    case download_binary(url) do
+      {:ok, body} -> {:ok, to_string(body)}
+      {:error, reason} -> {:error, reason}
     end
   end
 end

@@ -124,6 +124,12 @@ defmodule Julep.Test.Backend.Headless do
   # -- GenServer --
 
   @impl GenServer
+  def terminate(_reason, state) do
+    if state.port && Port.info(state.port) != nil, do: Port.close(state.port)
+    :ok
+  end
+
+  @impl GenServer
   def init({app, opts}) do
     format = Keyword.get(opts, :format, :msgpack)
     renderer_path = resolve_renderer_path()
@@ -516,6 +522,19 @@ defmodule Julep.Test.Backend.Headless do
 
   defp resolve_renderer_path do
     Julep.Binary.renderer_path()
+  rescue
+    e in RuntimeError ->
+      if String.contains?(e.message, "julep_gui binary not found") do
+        reraise """
+                julep_gui headless binary not found.
+
+                The headless backend requires a renderer built with the headless feature.
+                Run: cargo build --features headless --manifest-path native/julep_gui/Cargo.toml
+                """,
+                __STACKTRACE__
+      else
+        reraise e, __STACKTRACE__
+      end
   end
 
   defp next_id(state) do

@@ -6,10 +6,10 @@ defmodule Mix.Tasks.Julep.Build do
 
   @impl true
   def run(args) do
-    # Ensure the project is compiled so we can discover extensions
+    # Ensure the project is compiled so extension modules are available
     Mix.Task.run("compile", [])
 
-    extensions = discover_extensions()
+    extensions = configured_extensions()
 
     if extensions == [] do
       build_stock(args)
@@ -61,18 +61,51 @@ defmodule Mix.Tasks.Julep.Build do
     end
   end
 
-  # -- Extension discovery ----------------------------------------------------
+  # -- Extension registration -------------------------------------------------
 
   @doc """
-  Finds all loaded modules that implement the `Julep.Extension` behaviour.
+  Returns the list of extension modules from application config.
+
+  Users register extensions explicitly in their config.exs:
+
+      config :julep, extensions: [MyApp.SparklineExtension]
+
+  This replaces the previous `:code.all_loaded/0` auto-discovery approach,
+  which was unreliable because it only saw modules already loaded by the VM
+  at the time of the call.
   """
-  @spec discover_extensions() :: [module()]
-  def discover_extensions do
-    for {mod, _} <- :code.all_loaded(),
-        behaviours = mod_behaviours(mod),
-        Julep.Extension in behaviours do
-      mod
+  @spec configured_extensions() :: [module()]
+  def configured_extensions do
+    extensions = Application.get_env(:julep, :extensions, [])
+
+    unless is_list(extensions) do
+      Mix.raise("""
+      Invalid :extensions config for :julep.
+
+      Expected a list of modules, got: #{inspect(extensions)}
+
+      Configure in config.exs:
+          config :julep, extensions: [MyApp.SparklineExtension]
+      """)
     end
+
+    # Validate that each module implements the Julep.Extension behaviour.
+    Enum.each(extensions, fn mod ->
+      unless Code.ensure_loaded?(mod) do
+        Mix.raise("Extension module #{inspect(mod)} could not be loaded")
+      end
+
+      behaviours = mod_behaviours(mod)
+
+      unless Julep.Extension in behaviours do
+        Mix.raise(
+          "Module #{inspect(mod)} is listed in :julep :extensions config " <>
+            "but does not implement the Julep.Extension behaviour"
+        )
+      end
+    end)
+
+    extensions
   end
 
   defp mod_behaviours(mod) do

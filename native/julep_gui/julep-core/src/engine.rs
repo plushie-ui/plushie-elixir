@@ -51,6 +51,11 @@ pub struct Core {
     pub active_subscriptions: HashMap<String, String>,
     pub default_text_size: Option<f32>,
     pub default_font: Option<Font>,
+    /// Cached resolved theme from the root node's `theme` prop.
+    /// Only re-resolved when the raw JSON value changes.
+    pub cached_theme: Option<iced::Theme>,
+    /// Raw JSON of the last resolved theme prop, used for change detection.
+    cached_theme_json: Option<String>,
 }
 
 impl Default for Core {
@@ -67,6 +72,33 @@ impl Core {
             active_subscriptions: HashMap::new(),
             default_text_size: None,
             default_font: None,
+            cached_theme: None,
+            cached_theme_json: None,
+        }
+    }
+
+    /// Resolve and cache a theme from a JSON prop value. Only re-resolves
+    /// when the serialized JSON differs from the cached version.
+    fn resolve_and_cache_theme(
+        &mut self,
+        theme_val: &serde_json::Value,
+        effects: &mut Vec<CoreEffect>,
+    ) {
+        let json_str = theme_val.to_string();
+        if self.cached_theme_json.as_deref() == Some(&json_str) {
+            // Theme prop unchanged -- skip resolution.
+            return;
+        }
+        self.cached_theme_json = Some(json_str);
+        match theming::resolve_theme_only(theme_val) {
+            Some(theme) => {
+                self.cached_theme = Some(theme.clone());
+                effects.push(CoreEffect::ThemeChanged(theme));
+            }
+            None => {
+                self.cached_theme = None;
+                effects.push(CoreEffect::ThemeFollowsSystem);
+            }
         }
     }
 
@@ -78,10 +110,7 @@ impl Core {
             IncomingMessage::Snapshot { tree } => {
                 log::debug!("snapshot received (root id={})", tree.id);
                 if let Some(theme_val) = tree.props.get("theme") {
-                    match theming::resolve_theme_only(theme_val) {
-                        Some(theme) => effects.push(CoreEffect::ThemeChanged(theme)),
-                        None => effects.push(CoreEffect::ThemeFollowsSystem),
-                    }
+                    self.resolve_and_cache_theme(theme_val, &mut effects);
                 }
                 self.tree.snapshot(tree);
                 self.caches.clear();
@@ -93,9 +122,15 @@ impl Core {
             IncomingMessage::Patch { ops } => {
                 log::debug!("patch received ({} ops)", ops.len());
                 self.tree.apply_patch(ops);
+                // Re-check root theme prop in case a patch changed it.
+                if let Some(root) = self.tree.root() {
+                    if let Some(theme_val) = root.props.get("theme") {
+                        let theme_val = theme_val.clone();
+                        self.resolve_and_cache_theme(&theme_val, &mut effects);
+                    }
+                }
                 if let Some(root) = self.tree.root() {
                     widgets::ensure_caches(root, &mut self.caches);
-                    widgets::prune_stale_canvas_caches(root, &mut self.caches);
                 }
                 effects.push(CoreEffect::SyncWindows);
             }
@@ -130,6 +165,20 @@ impl Core {
             }
             IncomingMessage::Settings { settings } => {
                 log::debug!("settings received");
+
+                // Protocol version check
+                if let Some(v) = settings.get("protocol_version").and_then(|v| v.as_str()) {
+                    if v != crate::protocol::PROTOCOL_VERSION {
+                        log::warn!(
+                            "protocol version mismatch: expected {}, got {}",
+                            crate::protocol::PROTOCOL_VERSION,
+                            v
+                        );
+                    }
+                } else {
+                    log::warn!("no protocol_version in Settings, assuming compatible");
+                }
+
                 self.default_text_size = settings
                     .get("default_text_size")
                     .and_then(|v| v.as_f64())
@@ -466,7 +515,7 @@ mod extension_event_tests {
 
         fn prepare(&mut self, node: &TreeNode, caches: &mut ExtensionCaches, _theme: &Theme) {
             // Seed initial state if absent.
-            caches.get_or_insert(&node.id, GenerationCounter::new);
+            caches.get_or_insert(self.config_key(), &node.id, GenerationCounter::new);
         }
 
         fn render<'a>(&self, _node: &'a TreeNode, _env: &WidgetEnv<'a>) -> Element<'a, Message> {
@@ -482,7 +531,7 @@ mod extension_event_tests {
         ) -> EventResult {
             // Mutate caches and return Consumed with no events -- the
             // scenario that was suspected of suppressing redraws.
-            if let Some(gen) = caches.get_mut::<GenerationCounter>(node_id) {
+            if let Some(gen) = caches.get_mut::<GenerationCounter>(self.config_key(), node_id) {
                 gen.bump();
             }
             EventResult::Consumed(vec![])
@@ -502,7 +551,7 @@ mod extension_event_tests {
         }
 
         fn prepare(&mut self, node: &TreeNode, caches: &mut ExtensionCaches, _theme: &Theme) {
-            caches.get_or_insert(&node.id, GenerationCounter::new);
+            caches.get_or_insert(self.config_key(), &node.id, GenerationCounter::new);
         }
 
         fn render<'a>(&self, _node: &'a TreeNode, _env: &WidgetEnv<'a>) -> Element<'a, Message> {
@@ -516,7 +565,7 @@ mod extension_event_tests {
             _data: &Value,
             caches: &mut ExtensionCaches,
         ) -> EventResult {
-            if let Some(gen) = caches.get_mut::<GenerationCounter>(node_id) {
+            if let Some(gen) = caches.get_mut::<GenerationCounter>(self.config_key(), node_id) {
                 gen.bump();
             }
             EventResult::Observed(vec![OutgoingEvent::generic(
@@ -547,14 +596,26 @@ mod extension_event_tests {
 
         // prepare registers the node and seeds the cache
         dispatcher.prepare_all(&root, &mut caches, &Theme::Dark);
-        assert_eq!(caches.get::<GenerationCounter>("cw-1").unwrap().get(), 0);
+        assert_eq!(
+            caches
+                .get::<GenerationCounter>("counting", "cw-1")
+                .unwrap()
+                .get(),
+            0
+        );
 
         // handle_event with Consumed(vec![]) modifies caches
         let result = dispatcher.handle_event("cw-1", "click", &Value::Null, &mut caches);
         assert!(matches!(result, EventResult::Consumed(ref v) if v.is_empty()));
 
         // Cache mutation is visible -- generation was bumped
-        assert_eq!(caches.get::<GenerationCounter>("cw-1").unwrap().get(), 1);
+        assert_eq!(
+            caches
+                .get::<GenerationCounter>("counting", "cw-1")
+                .unwrap()
+                .get(),
+            1
+        );
     }
 
     #[test]
@@ -570,7 +631,13 @@ mod extension_event_tests {
             dispatcher.handle_event("cw-1", "click", &Value::Null, &mut caches);
         }
 
-        assert_eq!(caches.get::<GenerationCounter>("cw-1").unwrap().get(), 5);
+        assert_eq!(
+            caches
+                .get::<GenerationCounter>("counting", "cw-1")
+                .unwrap()
+                .get(),
+            5
+        );
     }
 
     // -- Observed returns events AND mutates caches -------------------------
@@ -592,7 +659,13 @@ mod extension_event_tests {
             other => panic!("expected Observed, got {:?}", variant_name(&other)),
         }
 
-        assert_eq!(caches.get::<GenerationCounter>("ow-1").unwrap().get(), 1);
+        assert_eq!(
+            caches
+                .get::<GenerationCounter>("observing", "ow-1")
+                .unwrap()
+                .get(),
+            1
+        );
     }
 
     // -- PassThrough for unknown nodes --------------------------------------

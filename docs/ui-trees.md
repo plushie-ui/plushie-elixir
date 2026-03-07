@@ -32,6 +32,16 @@ any widget-local state (text cursor position, scroll offset).
 `Julep.UI` provides builder functions that produce these maps. The `do`
 block syntax is optional sugar.
 
+> **WARNING: Auto-generated IDs are unstable.** `Julep.UI` builders that
+> don't receive an explicit `:id` option generate one from the call site
+> line number (e.g. `"auto:MyApp:42"`). These IDs change when you refactor
+> code, add or remove lines, or wrap calls in conditional branches. When
+> an ID changes, the renderer treats it as a removal + insertion, losing
+> widget-local state (scroll position, focus, editor content).
+>
+> **Always supply explicit IDs for stateful widgets:** `text_editor`,
+> `combo_box`, `pane_grid`, `scrollable`, `text_input`.
+
 ```elixir
 import Julep.UI
 
@@ -399,6 +409,52 @@ overlay("dropdown", position: :below, gap: 4) do
   end
 end
 ```
+
+## Choosing a builder layer
+
+Julep provides three ways to build UI trees. All three produce identical
+`ui_node()` maps -- pick based on your needs:
+
+| Layer | Best for | Trade-offs |
+|---|---|---|
+| `Julep.UI` | View functions, prototyping | Ergonomic `do` blocks, keyword props, auto-generated IDs. Readable and concise. No compile-time type checking on props. |
+| `Julep.Iced.Widget.*` | Production code, library authors | Typed structs with builder pattern. IDE autocompletion, dialyzer-checked types, explicit prop names. More verbose. Ground truth layer -- every widget is a module with full iced parity. |
+| `Julep.Iced` | Dynamic widget construction | Untyped facade: pass widget type and props as maps. Useful when widget types or props come from data at runtime. No type safety. |
+
+**`Julep.UI`** -- import it and use `do` blocks for a clean, readable `view/1`:
+
+```elixir
+import Julep.UI
+
+column padding: 8, spacing: 4 do
+  text("Hello")
+  button("save", "Save", style: :primary)
+end
+```
+
+**`Julep.Iced.Widget.*`** -- typed structs with builder chaining. Best when
+you want dialyzer catching prop mistakes:
+
+```elixir
+alias Julep.Iced.Widget.{Column, Text, Button}
+
+Column.new("main", padding: 8, spacing: 4)
+|> Column.push(Text.new("Hello"))
+|> Column.push(Button.new("save", "Save", style: :primary))
+|> Column.build()
+```
+
+**`Julep.Iced`** -- untyped convenience when building widgets dynamically:
+
+```elixir
+Julep.Iced.column("main", %{"padding" => 8, "spacing" => 4}, [
+  Julep.Iced.text("hello", %{"content" => "Hello"}),
+  Julep.Iced.button("save", %{"label" => "Save", "style" => "primary"})
+])
+```
+
+You can mix layers freely -- the output is always the same `%{id, type,
+props, children}` map.
 
 ## Props
 

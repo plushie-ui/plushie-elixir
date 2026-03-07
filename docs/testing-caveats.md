@@ -114,3 +114,65 @@ followed by `submit("#name")` submits `"Alice"` regardless of whether
 The fallback to `EventMap.submit/1` (which reads the tree prop) still
 applies when `submit` is called without a prior `type_text` for that
 widget. `reset/0` clears the typed text tracking.
+
+
+## CommandProcessor executes async commands synchronously
+
+**What:** The shared `CommandProcessor` module
+(`Julep.Test.Backend.CommandProcessor`) executes all async, stream, done,
+and batch commands synchronously in all three test backends (sim, headless,
+full). When `update/2` returns an async command, the function is called
+immediately and its result is dispatched through `update/2` before control
+returns to the test.
+
+**Why this matters:** Timing and concurrency bugs will not surface in tests
+that use the sim backend. Code that depends on ordering of concurrent
+operations, race conditions between async tasks, or specific timing of
+intermediate results will appear to work correctly in sim tests but may
+fail in production where `Task.async` and `Process.send_after` execute
+asynchronously.
+
+**What this affects:**
+
+- Tests that verify async error handling under concurrent load.
+- Tests that depend on ordering when multiple async commands race.
+- Tests for debouncing or throttling logic driven by command timing.
+- Tests for cancellation of in-flight async work (cancel executes
+  instantly in sim, but in production the task may have already emitted
+  intermediate results before receiving the cancel signal).
+
+**Workaround:** For timing-sensitive or concurrency-sensitive behaviour,
+use the headless or full backends. The headless backend does not require a
+display server and can be enabled via `JULEP_TEST_BACKEND=headless` after
+building the renderer with `cargo build --features headless`.
+
+For unit tests that verify async result dispatch (not timing), the sim
+backend's synchronous execution is a feature, not a bug -- tests run in
+milliseconds without flakiness.
+
+
+## Sim backend has no spatial layout
+
+**What:** The sim backend does not perform layout. Widgets have no
+position or size. This means:
+
+- `move_to/2` dispatches a `{:cursor_moved, x, y}` event, but mouse area
+  enter/exit events will not fire because there is no hit testing.
+- `find/1` locates elements by ID or text content, not by visual position.
+- Screenshot assertions always pass with an empty hash on sim.
+
+**Workaround:** Use the headless backend for tests that depend on spatial
+layout. Use the full backend for tests that depend on real window
+behaviour (focus, hover states, GPU rendering).
+
+
+## Port cleanup on backend teardown
+
+**What:** The headless and full backends spawn a renderer process via
+Erlang's `Port`. The `terminate/2` callback on both backends closes the
+port when the GenServer stops, preventing orphaned renderer processes.
+
+If a test crashes without triggering `on_exit` cleanup, the port's linked
+process will be killed by the BEAM's process exit propagation. However,
+calling `stop/1` explicitly (or relying on `on_exit` in the test setup)
+is preferred to ensure clean shutdown and log output.

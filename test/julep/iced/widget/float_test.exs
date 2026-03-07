@@ -57,8 +57,10 @@ defmodule Julep.Iced.Widget.FloatTest do
       c2 = %{id: "c2", type: "text", props: %{}, children: []}
       fw = Float.new("f1") |> Float.push(c1) |> Float.push(c2)
       assert length(fw.children) == 2
-      assert Enum.at(fw.children, 0) == c1
-      assert Enum.at(fw.children, 1) == c2
+      # Internal list is reversed; build restores order
+      node = Float.build(fw)
+      assert Enum.at(node.children, 0) == c1
+      assert Enum.at(node.children, 1) == c2
     end
   end
 

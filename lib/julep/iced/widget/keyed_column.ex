@@ -85,11 +85,12 @@ defmodule Julep.Iced.Widget.KeyedColumn do
 
   @doc "Appends a child to the keyed column."
   @spec push(keyed_column :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
-  def push(%__MODULE__{} = kc, child), do: %{kc | children: kc.children ++ [child]}
+  def push(%__MODULE__{} = kc, child), do: %{kc | children: [child | kc.children]}
 
   @doc "Appends multiple children to the keyed column."
   @spec extend(keyed_column :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
-  def extend(%__MODULE__{} = kc, children), do: %{kc | children: kc.children ++ children}
+  def extend(%__MODULE__{} = kc, children),
+    do: %{kc | children: Enum.reverse(children) ++ kc.children}
 
   @doc "Converts this keyed column struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(keyed_column :: t()) :: Julep.Iced.ui_node()
@@ -107,7 +108,12 @@ defmodule Julep.Iced.Widget.KeyedColumn do
         |> put_if(kc.height, "height")
         |> put_if(kc.max_width, "max_width")
 
-      %{id: kc.id, type: "keyed_column", props: props, children: children_to_nodes(kc.children)}
+      %{
+        id: kc.id,
+        type: "keyed_column",
+        props: props,
+        children: children_to_nodes(Enum.reverse(kc.children))
+      }
     end
   end
 end

@@ -288,14 +288,14 @@ defmodule Julep.UIParityTest do
 
     test "mouse_area with event props and do block" do
       node = H.mouse_area_with_do()
-      assert node.props["on_press"] == :clicked
+      assert node.props["on_press"] == "clicked"
       assert length(node.children) == 1
     end
 
     test "mouse_area with multiple event props" do
       node = H.mouse_area_with_opts_and_do()
-      assert node.props["on_press"] == :p
-      assert node.props["on_release"] == :r
+      assert node.props["on_press"] == "p"
+      assert node.props["on_release"] == "r"
       assert length(node.children) == 1
     end
   end
@@ -314,7 +314,7 @@ defmodule Julep.UIParityTest do
 
     test "sensor with event props and do block" do
       node = H.sensor_with_do()
-      assert node.props["on_resize"] == :resized
+      assert node.props["on_resize"] == "resized"
       assert length(node.children) == 1
     end
   end
@@ -334,7 +334,7 @@ defmodule Julep.UIParityTest do
 
     test "pane_grid with options" do
       node = H.pane_grid_with_opts()
-      assert node.props["panes"] == [:a, :b]
+      assert node.props["panes"] == ["a", "b"]
       assert node.props["spacing"] == 2
     end
   end
@@ -354,7 +354,7 @@ defmodule Julep.UIParityTest do
 
     test "rich_text with spans" do
       node = H.rich_text_with_spans()
-      assert node.props["spans"] == [%{text: "hello", weight: :bold}]
+      assert node.props["spans"] == [%{text: "hello", weight: "bold"}]
     end
   end
 

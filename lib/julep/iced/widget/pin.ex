@@ -74,11 +74,12 @@ defmodule Julep.Iced.Widget.Pin do
 
   @doc "Appends a child to the pin."
   @spec push(pin :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
-  def push(%__MODULE__{} = pin, child), do: %{pin | children: pin.children ++ [child]}
+  def push(%__MODULE__{} = pin, child), do: %{pin | children: [child | pin.children]}
 
   @doc "Appends multiple children to the pin."
   @spec extend(pin :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
-  def extend(%__MODULE__{} = pin, children), do: %{pin | children: pin.children ++ children}
+  def extend(%__MODULE__{} = pin, children),
+    do: %{pin | children: Enum.reverse(children) ++ pin.children}
 
   @doc "Converts this pin struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(pin :: t()) :: Julep.Iced.ui_node()
@@ -95,7 +96,12 @@ defmodule Julep.Iced.Widget.Pin do
         |> put_if(pin.width, "width")
         |> put_if(pin.height, "height")
 
-      %{id: pin.id, type: "pin", props: props, children: children_to_nodes(pin.children)}
+      %{
+        id: pin.id,
+        type: "pin",
+        props: props,
+        children: children_to_nodes(Enum.reverse(pin.children))
+      }
     end
   end
 end

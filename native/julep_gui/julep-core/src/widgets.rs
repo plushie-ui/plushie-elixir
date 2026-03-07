@@ -41,7 +41,7 @@ use crate::message::Message;
 pub struct WidgetCaches {
     pub editor_contents: HashMap<String, text_editor::Content>,
     #[cfg(feature = "widget-markdown")]
-    pub markdown_items: HashMap<String, Vec<markdown::Item>>,
+    pub markdown_items: HashMap<String, (u64, Vec<markdown::Item>)>,
     pub combo_states: HashMap<String, combo_box::State<String>>,
     pub combo_options: HashMap<String, Vec<String>>,
     pub pane_grid_states: HashMap<String, pane_grid::State<String>>,
@@ -106,7 +106,19 @@ impl WidgetCaches {
 /// `combo_box` node has an entry in the corresponding cache. This must be
 /// called *before* `render` so that `render` can work with shared (`&`)
 /// references to the caches.
+///
+/// After populating caches, prunes stale entries for nodes no longer in the
+/// tree across all cache types.
 pub fn ensure_caches(node: &TreeNode, caches: &mut WidgetCaches) {
+    let mut live_ids = HashSet::new();
+    ensure_caches_walk(node, caches, &mut live_ids);
+    prune_all_stale_caches(&live_ids, caches);
+}
+
+/// Inner recursive walk: populate caches and collect live node IDs.
+fn ensure_caches_walk(node: &TreeNode, caches: &mut WidgetCaches, live_ids: &mut HashSet<String>) {
+    live_ids.insert(node.id.clone());
+
     match node.type_name.as_str() {
         "text_editor" => {
             let props = node.props.as_object();
@@ -120,10 +132,14 @@ pub fn ensure_caches(node: &TreeNode, caches: &mut WidgetCaches) {
         "markdown" => {
             let props = node.props.as_object();
             let content = prop_str(props, "content").unwrap_or_default();
-            caches
-                .markdown_items
-                .entry(node.id.clone())
-                .or_insert_with(|| markdown::parse(&content).collect());
+            let hash = hash_str(&content);
+            match caches.markdown_items.get(&node.id) {
+                Some((existing_hash, _)) if *existing_hash == hash => {}
+                _ => {
+                    let items: Vec<_> = markdown::parse(&content).collect();
+                    caches.markdown_items.insert(node.id.clone(), (hash, items));
+                }
+            }
         }
         "combo_box" => {
             let props = node.props.as_object();
@@ -146,31 +162,41 @@ pub fn ensure_caches(node: &TreeNode, caches: &mut WidgetCaches) {
             }
         }
         "pane_grid" => {
-            caches
-                .pane_grid_states
-                .entry(node.id.clone())
-                .or_insert_with(|| {
-                    let child_ids: Vec<String> =
-                        node.children.iter().map(|c| c.id.clone()).collect();
-                    if child_ids.is_empty() {
-                        let (state, _) = pane_grid::State::new("default".to_string());
-                        state
-                    } else if child_ids.len() == 1 {
-                        let (state, _) = pane_grid::State::new(child_ids[0].clone());
-                        state
-                    } else {
-                        let (mut state, first_pane) = pane_grid::State::new(child_ids[0].clone());
-                        let mut last_pane = first_pane;
-                        for id in child_ids.iter().skip(1) {
-                            if let Some((new_pane, _)) =
-                                state.split(pane_grid::Axis::Vertical, last_pane, id.clone())
-                            {
-                                last_pane = new_pane;
-                            }
+            let child_ids: HashSet<String> = node.children.iter().map(|c| c.id.clone()).collect();
+
+            if let Some(state) = caches.pane_grid_states.get_mut(&node.id) {
+                // Prune panes whose child nodes no longer exist.
+                let stale_panes: Vec<pane_grid::Pane> = state
+                    .panes
+                    .iter()
+                    .filter(|(_pane, id)| !child_ids.contains(*id))
+                    .map(|(pane, _id)| *pane)
+                    .collect();
+                for pane in stale_panes {
+                    state.close(pane);
+                }
+            } else {
+                let child_list: Vec<String> = node.children.iter().map(|c| c.id.clone()).collect();
+                let new_state = if child_list.is_empty() {
+                    let (state, _) = pane_grid::State::new("default".to_string());
+                    state
+                } else if child_list.len() == 1 {
+                    let (state, _) = pane_grid::State::new(child_list[0].clone());
+                    state
+                } else {
+                    let (mut state, first_pane) = pane_grid::State::new(child_list[0].clone());
+                    let mut last_pane = first_pane;
+                    for id in child_list.iter().skip(1) {
+                        if let Some((new_pane, _)) =
+                            state.split(pane_grid::Axis::Vertical, last_pane, id.clone())
+                        {
+                            last_pane = new_pane;
                         }
-                        state
                     }
-                });
+                    state
+                };
+                caches.pane_grid_states.insert(node.id.clone(), new_state);
+            }
         }
         #[cfg(feature = "widget-canvas")]
         "canvas" => {
@@ -181,7 +207,7 @@ pub fn ensure_caches(node: &TreeNode, caches: &mut WidgetCaches) {
 
             // Update or create caches for each layer.
             for (layer_name, shapes_json) in &layer_map {
-                let hash = hash_json_str(shapes_json);
+                let hash = hash_str(shapes_json);
                 match node_caches.get(layer_name) {
                     Some((existing_hash, _cache)) => {
                         if *existing_hash != hash {
@@ -230,33 +256,25 @@ pub fn ensure_caches(node: &TreeNode, caches: &mut WidgetCaches) {
     }
 
     for child in &node.children {
-        ensure_caches(child, caches);
+        ensure_caches_walk(child, caches, live_ids);
     }
 }
 
-/// Remove canvas_caches entries for canvas nodes no longer in the tree.
-/// Call after ensure_caches to avoid leaking cache entries when canvases
-/// are removed via patches.
-#[cfg(feature = "widget-canvas")]
-pub fn prune_stale_canvas_caches(root: &TreeNode, caches: &mut WidgetCaches) {
-    let mut live_ids = HashSet::new();
-    collect_canvas_ids(root, &mut live_ids);
+/// Prune all cache types, removing entries whose node IDs are no longer live.
+fn prune_all_stale_caches(live_ids: &HashSet<String>, caches: &mut WidgetCaches) {
+    caches.editor_contents.retain(|id, _| live_ids.contains(id));
+    #[cfg(feature = "widget-markdown")]
+    caches.markdown_items.retain(|id, _| live_ids.contains(id));
+    caches.combo_states.retain(|id, _| live_ids.contains(id));
+    caches.combo_options.retain(|id, _| live_ids.contains(id));
+    caches
+        .pane_grid_states
+        .retain(|id, _| live_ids.contains(id));
+    #[cfg(feature = "widget-canvas")]
     caches.canvas_caches.retain(|id, _| live_ids.contains(id));
+    #[cfg(feature = "widget-qr-code")]
+    caches.qr_code_caches.retain(|id, _| live_ids.contains(id));
 }
-
-#[cfg(feature = "widget-canvas")]
-fn collect_canvas_ids(node: &TreeNode, ids: &mut HashSet<String>) {
-    if node.type_name == "canvas" {
-        ids.insert(node.id.clone());
-    }
-    for child in &node.children {
-        collect_canvas_ids(child, ids);
-    }
-}
-
-/// No-op when canvas feature is disabled.
-#[cfg(not(feature = "widget-canvas"))]
-pub fn prune_stale_canvas_caches(_root: &TreeNode, _caches: &mut WidgetCaches) {}
 
 // ---------------------------------------------------------------------------
 // Main render dispatch
@@ -270,6 +288,9 @@ pub fn render<'a>(
     theme: &'a iced::Theme,
     dispatcher: &'a ExtensionDispatcher,
 ) -> Element<'a, Message> {
+    #[cfg(debug_assertions)]
+    validate_props(node);
+
     match node.type_name.as_str() {
         "column" => render_column(node, caches, images, theme, dispatcher),
         "row" => render_row(node, caches, images, theme, dispatcher),
@@ -301,7 +322,7 @@ pub fn render<'a>(
         #[cfg(not(feature = "widget-svg"))]
         "svg" => render_feature_disabled("svg", "widget-svg"),
         #[cfg(feature = "widget-markdown")]
-        "markdown" => render_markdown(node, caches),
+        "markdown" => render_markdown(node, caches, theme),
         #[cfg(not(feature = "widget-markdown"))]
         "markdown" => render_feature_disabled("markdown", "widget-markdown"),
         "stack" => render_stack(node, caches, images, theme, dispatcher),
@@ -343,13 +364,24 @@ pub fn render<'a>(
                 };
                 // catch_unwind at the render boundary: extension panics produce
                 // a red placeholder instead of crashing the renderer.
+                // We track consecutive render panics via an atomic counter
+                // on the dispatcher; after N consecutive panics, the
+                // extension is poisoned on the next prepare_all cycle.
                 match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     dispatcher.render(node, &env)
                 })) {
                     Ok(Some(element)) => element,
                     Ok(None) => container(Space::new()).into(),
                     Err(_) => {
-                        log::error!("extension panicked in render for node `{}`", node.id);
+                        let at_threshold = dispatcher.record_render_panic(unknown);
+                        if at_threshold {
+                            log::error!(
+                                "extension for type `{unknown}` hit render panic \
+                                 threshold, will be poisoned on next prepare cycle"
+                            );
+                        } else {
+                            log::error!("extension panicked in render for node `{}`", node.id);
+                        }
                         iced::widget::text(format!("Extension error: node `{}`", node.id))
                             .color(iced::Color::from_rgb(1.0, 0.0, 0.0))
                             .into()
@@ -1434,7 +1466,9 @@ fn render_slider<'a>(node: &'a TreeNode) -> Element<'a, Message> {
         .width(width);
 
     if let Some(st) = step {
-        s = s.step(st);
+        // Clamp step to a small positive minimum to prevent division by
+        // zero or infinite loops in iced's slider internals.
+        s = s.step(st.max(f64::EPSILON));
     }
     if let Some(d) = prop_f64(props, "default") {
         s = s.default(d);
@@ -1503,7 +1537,7 @@ fn render_vertical_slider<'a>(node: &'a TreeNode) -> Element<'a, Message> {
     }
 
     if let Some(st) = step {
-        s = s.step(st);
+        s = s.step(st.max(f64::EPSILON));
     }
     if let Some(d) = prop_f64(props, "default") {
         s = s.default(d);
@@ -2239,10 +2273,14 @@ fn render_svg<'a>(node: &'a TreeNode) -> Element<'a, Message> {
 // ---------------------------------------------------------------------------
 
 #[cfg(feature = "widget-markdown")]
-fn render_markdown<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<'a, Message> {
+fn render_markdown<'a>(
+    node: &'a TreeNode,
+    caches: &'a WidgetCaches,
+    theme: &'a iced::Theme,
+) -> Element<'a, Message> {
     let props = node.props.as_object();
     let items = match caches.markdown_items.get(&node.id) {
-        Some(items) => items.as_slice(),
+        Some((_hash, items)) => items.as_slice(),
         None => {
             log::warn!("markdown cache miss for id={}", node.id);
             return text("(markdown: cache miss)").into();
@@ -2252,10 +2290,7 @@ fn render_markdown<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<
     // Build markdown Settings from props, falling back to theme defaults.
     let settings =
         if let Some(text_size) = prop_f32(props, "text_size").or(caches.default_text_size) {
-            let mut s = markdown::Settings::with_text_size(
-                text_size,
-                markdown::Style::from(&iced::Theme::Dark),
-            );
+            let mut s = markdown::Settings::with_text_size(text_size, markdown::Style::from(theme));
             if let Some(v) = prop_f32(props, "h1_size") {
                 s.h1_size = Pixels(v);
             }
@@ -2273,7 +2308,7 @@ fn render_markdown<'a>(node: &'a TreeNode, caches: &'a WidgetCaches) -> Element<
             }
             s
         } else {
-            let mut s = markdown::Settings::from(&iced::Theme::Dark);
+            let mut s = markdown::Settings::from(theme);
             if let Some(v) = prop_f32(props, "h1_size") {
                 s.h1_size = Pixels(v);
             }
@@ -2345,15 +2380,31 @@ fn render_grid<'a>(
         .unwrap_or(1) as usize;
     let spacing = prop_f32(props, "spacing").unwrap_or(0.0);
 
+    let column_width = prop_length(props, "column_width", Length::Shrink);
+    let row_height = prop_length(props, "row_height", Length::Shrink);
+
     let children = render_children(node, caches, images, theme, dispatcher);
 
     let mut g = grid(children).columns(cols).spacing(spacing);
 
+    // Legacy pixel-only width/height props
     if let Some(w) = prop_f32(props, "width") {
         g = g.width(w);
     }
     if let Some(h) = prop_f32(props, "height") {
         g = g.height(h);
+    }
+
+    // Length-typed column_width: only Fixed maps to Pixels for iced's Grid::width
+    if props.and_then(|p| p.get("column_width")).is_some() {
+        if let Length::Fixed(px) = column_width {
+            g = g.width(px);
+        }
+    }
+
+    // Length-typed row_height: maps to Grid::height via Sizing::EvenlyDistribute
+    if props.and_then(|p| p.get("row_height")).is_some() {
+        g = g.height(row_height);
     }
 
     g.into()
@@ -2798,11 +2849,10 @@ fn canvas_layer_map(
     map
 }
 
-#[cfg(feature = "widget-canvas")]
-/// Hash a JSON string using DefaultHasher for same-process cache invalidation.
+/// Hash a string using DefaultHasher for same-process cache invalidation.
 /// NOTE: DefaultHasher output is not stable across Rust versions or builds.
 /// These hashes must never be persisted or compared across process restarts.
-fn hash_json_str(s: &str) -> u64 {
+fn hash_str(s: &str) -> u64 {
     let mut hasher = DefaultHasher::new();
     s.hash(&mut hasher);
     hasher.finish()
@@ -2895,6 +2945,18 @@ fn parse_canvas_fill(value: &Value, shape: &Value) -> canvas::Fill {
         }
         Value::Object(obj) => match obj.get("type").and_then(|v| v.as_str()) {
             Some("linear") => {
+                // Warn on unrecognized canvas gradient keys
+                let valid_keys: &[&str] = &["type", "start", "end", "stops"];
+                for key in obj.keys() {
+                    if !valid_keys.contains(&key.as_str()) {
+                        log::warn!(
+                            "unrecognized canvas gradient key '{}' (valid: {:?})",
+                            key,
+                            valid_keys
+                        );
+                    }
+                }
+
                 let start = obj
                     .get("start")
                     .and_then(|v| v.as_array())
@@ -2930,6 +2992,17 @@ fn parse_canvas_fill(value: &Value, shape: &Value) -> canvas::Fill {
                 }
                 canvas::Fill {
                     style: canvas::Style::Gradient(canvas::Gradient::Linear(linear)),
+                    rule,
+                }
+            }
+            Some(other) => {
+                log::warn!(
+                    "unrecognized canvas gradient type '{}' (supported: \"linear\")",
+                    other
+                );
+                let color = parse_color(value).unwrap_or(Color::WHITE);
+                canvas::Fill {
+                    style: canvas::Style::Solid(color),
                     rule,
                 }
             }
@@ -4093,12 +4166,36 @@ fn parse_background(value: &Value) -> Option<iced::Background> {
         Value::Object(obj) => {
             match obj.get("type").and_then(|v| v.as_str()) {
                 Some("linear") => {
+                    // Warn on unrecognized gradient keys
+                    let valid_keys: &[&str] = &["type", "angle", "stops"];
+                    for key in obj.keys() {
+                        if !valid_keys.contains(&key.as_str()) {
+                            log::warn!(
+                                "unrecognized background gradient key '{}' (valid: {:?})",
+                                key,
+                                valid_keys
+                            );
+                        }
+                    }
+
                     let angle_deg = obj.get("angle").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
                     let angle = Radians(angle_deg.to_radians());
                     let mut linear = iced::gradient::Linear::new(angle);
 
                     if let Some(stops) = obj.get("stops").and_then(|v| v.as_array()) {
+                        let valid_stop_keys: &[&str] = &["offset", "color"];
                         for stop in stops {
+                            if let Some(stop_obj) = stop.as_object() {
+                                for key in stop_obj.keys() {
+                                    if !valid_stop_keys.contains(&key.as_str()) {
+                                        log::warn!(
+                                            "unrecognized gradient stop key '{}' (valid: {:?})",
+                                            key,
+                                            valid_stop_keys
+                                        );
+                                    }
+                                }
+                            }
                             let offset =
                                 stop.get("offset").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
                             let color = stop
@@ -4110,6 +4207,13 @@ fn parse_background(value: &Value) -> Option<iced::Background> {
                     }
 
                     Some(iced::Background::Gradient(iced::Gradient::Linear(linear)))
+                }
+                Some(other) => {
+                    log::warn!(
+                        "unrecognized gradient type '{}' (supported: \"linear\")",
+                        other
+                    );
+                    parse_color(value).map(iced::Background::Color)
                 }
                 _ => {
                     // Fall back to color object parsing ({r, g, b, a})
@@ -4150,8 +4254,16 @@ fn parse_font(value: &Value) -> Font {
                     "fantasy" => {
                         f.family = font::Family::Fantasy;
                     }
-                    // Default is SansSerif
-                    _ => {}
+                    // Default is SansSerif; unrecognized names are passed
+                    // through as custom font families (user-loaded fonts).
+                    "default" | "sans_serif" | "sans-serif" | "sansserif" | "" => {}
+                    other => {
+                        // Leak the string to get a 'static lifetime. Font
+                        // family names are a small, finite set that lives for
+                        // the process lifetime, so this is acceptable.
+                        let leaked: &'static str = Box::leak(other.to_owned().into_boxed_str());
+                        f.family = font::Family::Name(leaked);
+                    }
                 }
             }
 
@@ -4750,6 +4862,234 @@ fn render_overlay<'a>(
 }
 
 // ---------------------------------------------------------------------------
+// Debug-mode prop validation (H-08 / M-14)
+// ---------------------------------------------------------------------------
+
+/// Prop type expectations for validation.
+#[cfg(debug_assertions)]
+#[derive(Debug, Clone, Copy)]
+enum PropType {
+    Str,
+    Number,
+    Bool,
+    Length,
+    Color,
+    Array,
+    Any,
+}
+
+#[cfg(debug_assertions)]
+fn prop_type_matches(val: &Value, expected: PropType) -> bool {
+    match expected {
+        PropType::Str => val.is_string(),
+        PropType::Number => val.is_number() || val.is_string(), // numeric strings accepted
+        PropType::Bool => val.is_boolean(),
+        PropType::Length => val.is_number() || val.is_string() || val.is_object(),
+        PropType::Color => val.is_string(),
+        PropType::Array => val.is_array(),
+        PropType::Any => true,
+    }
+}
+
+/// Validate props for known widget types. Only active in debug builds.
+/// Logs warnings for unexpected prop names or mismatched types.
+#[cfg(debug_assertions)]
+fn validate_props(node: &TreeNode) {
+    use PropType::*;
+
+    let expected: &[(&str, PropType)] = match node.type_name.as_str() {
+        "button" => &[
+            ("label", Str),
+            ("style", Any),
+            ("width", Length),
+            ("height", Length),
+            ("padding", Any),
+            ("clip", Bool),
+            ("disabled", Bool),
+        ],
+        "text" => &[
+            ("content", Str),
+            ("size", Number),
+            ("color", Color),
+            ("font", Any),
+            ("width", Length),
+            ("height", Length),
+            ("horizontal_alignment", Str),
+            ("vertical_alignment", Str),
+            ("line_height", Number),
+            ("shaping", Str),
+            ("wrapping", Str),
+        ],
+        "column" => &[
+            ("spacing", Number),
+            ("padding", Any),
+            ("width", Length),
+            ("height", Length),
+            ("max_width", Number),
+            ("align_items", Str),
+            ("clip", Bool),
+        ],
+        "row" => &[
+            ("spacing", Number),
+            ("padding", Any),
+            ("width", Length),
+            ("height", Length),
+            ("max_width", Number),
+            ("align_items", Str),
+            ("clip", Bool),
+        ],
+        "container" => &[
+            ("padding", Any),
+            ("width", Length),
+            ("height", Length),
+            ("max_width", Number),
+            ("max_height", Number),
+            ("center_x", Any),
+            ("center_y", Any),
+            ("horizontal_alignment", Str),
+            ("vertical_alignment", Str),
+            ("clip", Bool),
+            ("style", Any),
+            ("background", Any),
+        ],
+        "text_input" => &[
+            ("value", Str),
+            ("placeholder", Str),
+            ("font", Any),
+            ("width", Length),
+            ("padding", Any),
+            ("size", Number),
+            ("line_height", Number),
+            ("secure", Bool),
+            ("style", Any),
+            ("icon", Any),
+            ("disabled", Bool),
+        ],
+        "slider" => &[
+            ("value", Number),
+            ("range", Array),
+            ("step", Number),
+            ("width", Length),
+            ("height", Number),
+            ("style", Any),
+            ("shift_step", Number),
+            ("default", Number),
+        ],
+        "checkbox" => &[
+            ("label", Str),
+            ("is_checked", Bool),
+            ("size", Number),
+            ("font", Any),
+            ("text_size", Number),
+            ("spacing", Number),
+            ("width", Length),
+            ("style", Any),
+            ("icon", Any),
+            ("disabled", Bool),
+        ],
+        "toggler" => &[
+            ("label", Str),
+            ("is_toggled", Bool),
+            ("size", Number),
+            ("font", Any),
+            ("text_size", Number),
+            ("spacing", Number),
+            ("width", Length),
+            ("style", Any),
+            ("disabled", Bool),
+        ],
+        "progress_bar" => &[
+            ("value", Number),
+            ("range", Array),
+            ("width", Length),
+            ("height", Length),
+            ("style", Any),
+        ],
+        "image" => &[
+            ("source", Any),
+            ("width", Length),
+            ("height", Length),
+            ("content_fit", Str),
+            ("filter_method", Str),
+            ("rotation", Any),
+            ("opacity", Number),
+            ("border_radius", Any),
+        ],
+        "svg" => &[
+            ("source", Str),
+            ("width", Length),
+            ("height", Length),
+            ("content_fit", Str),
+            ("rotation", Any),
+            ("opacity", Number),
+            ("color", Color),
+        ],
+        "scrollable" => &[
+            ("width", Length),
+            ("height", Length),
+            ("direction", Any),
+            ("style", Any),
+            ("anchor", Str),
+            ("spacing", Number),
+        ],
+        "grid" => &[
+            ("columns", Number),
+            ("spacing", Number),
+            ("width", Number),
+            ("height", Number),
+            ("column_width", Length),
+            ("row_height", Length),
+        ],
+        "radio" => &[
+            ("label", Str),
+            ("value", Str),
+            ("selected", Any),
+            ("size", Number),
+            ("font", Any),
+            ("text_size", Number),
+            ("spacing", Number),
+            ("width", Length),
+            ("style", Any),
+            ("group", Str),
+        ],
+        _ => return, // Unknown widget type -- skip validation
+    };
+
+    let props = match node.props.as_object() {
+        Some(p) => p,
+        None => return,
+    };
+
+    let expected_names: Vec<&str> = expected.iter().map(|(name, _)| *name).collect();
+
+    for (key, val) in props {
+        match expected.iter().find(|(name, _)| name == key) {
+            Some((_, expected_type)) => {
+                if !prop_type_matches(val, *expected_type) {
+                    log::warn!(
+                        "widget '{}' ({}): prop '{}' has unexpected type {:?} (expected {:?})",
+                        node.id,
+                        node.type_name,
+                        key,
+                        val,
+                        expected_type
+                    );
+                }
+            }
+            None => {
+                log::warn!(
+                    "widget '{}' ({}): unexpected prop '{}' (known: {:?})",
+                    node.id,
+                    node.type_name,
+                    key,
+                    expected_names
+                );
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -5197,9 +5537,9 @@ mod tests {
     #[cfg(feature = "widget-canvas")]
     #[test]
     fn canvas_hash_changes() {
-        let hash_a = hash_json_str("[{\"type\":\"rect\"}]");
-        let hash_b = hash_json_str("[{\"type\":\"circle\"}]");
-        let hash_a2 = hash_json_str("[{\"type\":\"rect\"}]");
+        let hash_a = hash_str("[{\"type\":\"rect\"}]");
+        let hash_b = hash_str("[{\"type\":\"circle\"}]");
+        let hash_a2 = hash_str("[{\"type\":\"rect\"}]");
 
         // Same input produces same hash.
         assert_eq!(hash_a, hash_a2);

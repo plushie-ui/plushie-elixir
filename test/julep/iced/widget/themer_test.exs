@@ -32,7 +32,9 @@ defmodule Julep.Iced.Widget.ThemerTest do
       c1 = %{id: "c1", type: "text", props: %{}, children: []}
       c2 = %{id: "c2", type: "text", props: %{}, children: []}
       t = Themer.new("th1", "Dark") |> Themer.push(c1) |> Themer.push(c2)
-      assert t.children == [c1, c2]
+      assert t.children == [c2, c1]
+      node = Themer.build(t)
+      assert node.children == [c1, c2]
     end
   end
 
@@ -41,7 +43,9 @@ defmodule Julep.Iced.Widget.ThemerTest do
       c1 = %{id: "c1", type: "text", props: %{}, children: []}
       c2 = %{id: "c2", type: "text", props: %{}, children: []}
       t = Themer.new("th1", "Dark") |> Themer.extend([c1, c2])
-      assert t.children == [c1, c2]
+      assert t.children == [c2, c1]
+      node = Themer.build(t)
+      assert node.children == [c1, c2]
     end
   end
 

@@ -110,11 +110,12 @@ defmodule Julep.Iced.Widget.Row do
 
   @doc "Appends a child to the row."
   @spec push(row :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
-  def push(%__MODULE__{} = row, child), do: %{row | children: row.children ++ [child]}
+  def push(%__MODULE__{} = row, child), do: %{row | children: [child | row.children]}
 
   @doc "Appends multiple children to the row."
   @spec extend(row :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
-  def extend(%__MODULE__{} = row, children), do: %{row | children: row.children ++ children}
+  def extend(%__MODULE__{} = row, children),
+    do: %{row | children: Enum.reverse(children) ++ row.children}
 
   @doc "Converts this row struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(row :: t()) :: Julep.Iced.ui_node()
@@ -135,7 +136,12 @@ defmodule Julep.Iced.Widget.Row do
         |> put_if(row.clip, "clip")
         |> put_if(row.wrap, "wrap")
 
-      %{id: row.id, type: "row", props: props, children: children_to_nodes(row.children)}
+      %{
+        id: row.id,
+        type: "row",
+        props: props,
+        children: children_to_nodes(Enum.reverse(row.children))
+      }
     end
   end
 end

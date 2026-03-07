@@ -65,11 +65,12 @@ defmodule Julep.Iced.Widget.Stack do
 
   @doc "Appends a child to the stack."
   @spec push(stack :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
-  def push(%__MODULE__{} = stack, child), do: %{stack | children: stack.children ++ [child]}
+  def push(%__MODULE__{} = stack, child), do: %{stack | children: [child | stack.children]}
 
   @doc "Appends multiple children to the stack."
   @spec extend(stack :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
-  def extend(%__MODULE__{} = stack, children), do: %{stack | children: stack.children ++ children}
+  def extend(%__MODULE__{} = stack, children),
+    do: %{stack | children: Enum.reverse(children) ++ stack.children}
 
   @doc "Converts this stack struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(stack :: t()) :: Julep.Iced.ui_node()
@@ -85,7 +86,12 @@ defmodule Julep.Iced.Widget.Stack do
         |> put_if(stack.height, "height")
         |> put_if(stack.clip, "clip")
 
-      %{id: stack.id, type: "stack", props: props, children: children_to_nodes(stack.children)}
+      %{
+        id: stack.id,
+        type: "stack",
+        props: props,
+        children: children_to_nodes(Enum.reverse(stack.children))
+      }
     end
   end
 end

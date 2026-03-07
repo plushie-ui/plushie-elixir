@@ -5,7 +5,7 @@ Native desktop GUIs from Elixir, powered by [iced](https://github.com/iced-rs/ic
 Julep is an Elixir library for building native cross-platform desktop applications.
 You write your app logic, state management, and UI trees entirely in Elixir. A thin
 Rust binary handles rendering via the iced GUI toolkit and sends user events back
-over a simple JSONL-over-stdio transport.
+over a MessagePack-over-stdio transport (JSONL available for debugging).
 
 ## Goals
 
@@ -60,6 +60,32 @@ mix julep.dev MyApp
 ```
 
 Edit your source files and watch the GUI update in place. See [dev mode docs](docs/dev-mode.md).
+
+## System Requirements
+
+Building the Rust renderer requires a working Rust toolchain (`cargo`). Install
+via [rustup](https://rustup.rs/). Platform-specific dependencies:
+
+**Linux**
+
+```bash
+# Debian/Ubuntu
+sudo apt-get install libxkbcommon-dev libwayland-dev libx11-dev cmake fontconfig pkg-config
+
+# Arch Linux
+sudo pacman -S libxkbcommon wayland libx11 cmake fontconfig pkgconf
+```
+
+**macOS**
+
+```bash
+xcode-select --install
+```
+
+**Windows**
+
+Install [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+with the "Desktop development with C++" workload.
 
 ## Getting started
 
@@ -146,7 +172,7 @@ Core:
 - [Layout](docs/layout.md) -- length, padding, alignment, spacing
 - [Events](docs/events.md) -- full event taxonomy
 - [Commands and subscriptions](docs/commands.md) -- async work, timers, widget ops
-- [Transport](docs/transport.md) -- JSONL protocol between Elixir and Rust
+- [Transport](docs/transport.md) -- MessagePack wire protocol (JSONL for debugging)
 - [Renderer](docs/renderer.md) -- what the Rust binary does
 - [Multi-window](docs/multi-window.md) -- declarative multi-window model
 - [Effects](docs/effects.md) -- native platform features

@@ -544,6 +544,13 @@ end
 Subscriptions are ongoing event sources. Unlike commands (one-shot),
 subscriptions produce events continuously as long as they are active.
 
+**Important: tag semantics differ by subscription type.** For timer
+subscriptions (`every/2`), the tag becomes the event wrapper -- `update/2`
+receives `{tag, timestamp}`. For all renderer subscriptions (keyboard,
+mouse, window, etc.), the tag is management-only and does NOT appear in
+the event tuple. Renderer events arrive as fixed tuples like
+`{:key_press, %Julep.KeyEvent{}}` regardless of what tag you chose.
+
 ### The subscribe callback
 
 ```elixir

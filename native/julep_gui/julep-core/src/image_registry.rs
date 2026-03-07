@@ -25,9 +25,23 @@ impl ImageRegistry {
         }
     }
 
+    /// Maximum dimension (width or height) for a single image.
+    const MAX_DIMENSION: u32 = 16384;
+
+    /// Maximum pixel data size in bytes (256 MB).
+    const MAX_PIXEL_BYTES: usize = 256 * 1024 * 1024;
+
     /// Store an image from encoded bytes (PNG, JPEG, etc.).
     #[cfg(feature = "widget-image")]
     pub fn create_from_bytes(&mut self, name: String, data: Vec<u8>) {
+        if data.len() > Self::MAX_PIXEL_BYTES {
+            log::error!(
+                "image registry: encoded data for '{}' exceeds 256 MB limit ({} bytes)",
+                name,
+                data.len()
+            );
+            return;
+        }
         self.handles.insert(name, image::Handle::from_bytes(data));
     }
 
@@ -39,6 +53,39 @@ impl ImageRegistry {
     /// Store an image from raw RGBA pixel data.
     #[cfg(feature = "widget-image")]
     pub fn create_from_rgba(&mut self, name: String, width: u32, height: u32, pixels: Vec<u8>) {
+        if width > Self::MAX_DIMENSION || height > Self::MAX_DIMENSION {
+            log::error!(
+                "image registry: dimensions {}x{} for '{}' exceed max {}",
+                width,
+                height,
+                name,
+                Self::MAX_DIMENSION
+            );
+            return;
+        }
+
+        let expected = (width as usize) * (height as usize) * 4;
+        if pixels.len() != expected {
+            log::error!(
+                "image registry: RGBA data size mismatch for '{}': expected {} bytes ({}x{}x4), got {}",
+                name,
+                expected,
+                width,
+                height,
+                pixels.len()
+            );
+            return;
+        }
+
+        if pixels.len() > Self::MAX_PIXEL_BYTES {
+            log::error!(
+                "image registry: pixel data for '{}' exceeds 256 MB limit ({} bytes)",
+                name,
+                pixels.len()
+            );
+            return;
+        }
+
         self.handles
             .insert(name, image::Handle::from_rgba(width, height, pixels));
     }
@@ -117,5 +164,28 @@ mod tests {
         reg.create_from_bytes("img".to_string(), vec![1]);
         reg.create_from_bytes("img".to_string(), vec![2, 3]);
         assert!(reg.get("img").is_some());
+    }
+
+    #[test]
+    fn rgba_size_mismatch_rejected() {
+        let mut reg = ImageRegistry::new();
+        // 2x2 RGBA should be 16 bytes, providing only 4
+        reg.create_from_rgba("bad".to_string(), 2, 2, vec![255, 0, 0, 255]);
+        assert!(reg.get("bad").is_none());
+    }
+
+    #[test]
+    fn rgba_dimension_too_large_rejected() {
+        let mut reg = ImageRegistry::new();
+        reg.create_from_rgba("huge".to_string(), 16385, 1, vec![0; 16385 * 4]);
+        assert!(reg.get("huge").is_none());
+    }
+
+    #[test]
+    fn rgba_valid_dimensions_accepted() {
+        let mut reg = ImageRegistry::new();
+        // 2x2 RGBA = 16 bytes
+        reg.create_from_rgba("ok".to_string(), 2, 2, vec![0; 16]);
+        assert!(reg.get("ok").is_some());
     }
 }

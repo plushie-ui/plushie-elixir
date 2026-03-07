@@ -112,11 +112,12 @@ defmodule Julep.Iced.Widget.Tooltip do
 
   @doc "Appends a child to the tooltip."
   @spec push(tooltip :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
-  def push(%__MODULE__{} = tt, child), do: %{tt | children: tt.children ++ [child]}
+  def push(%__MODULE__{} = tt, child), do: %{tt | children: [child | tt.children]}
 
   @doc "Appends multiple children to the tooltip."
   @spec extend(tooltip :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
-  def extend(%__MODULE__{} = tt, children), do: %{tt | children: tt.children ++ children}
+  def extend(%__MODULE__{} = tt, children),
+    do: %{tt | children: Enum.reverse(children) ++ tt.children}
 
   @doc "Converts this tooltip struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(tooltip :: t()) :: Julep.Iced.ui_node()
@@ -136,7 +137,12 @@ defmodule Julep.Iced.Widget.Tooltip do
         |> put_if(tt.delay, "delay")
         |> put_if(tt.style, "style")
 
-      %{id: tt.id, type: "tooltip", props: props, children: children_to_nodes(tt.children)}
+      %{
+        id: tt.id,
+        type: "tooltip",
+        props: props,
+        children: children_to_nodes(Enum.reverse(tt.children))
+      }
     end
   end
 end

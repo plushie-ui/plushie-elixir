@@ -75,11 +75,12 @@ defmodule Julep.Iced.Widget.PaneGrid do
 
   @doc "Appends a child pane to the grid."
   @spec push(pane_grid :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
-  def push(%__MODULE__{} = pg, child), do: %{pg | children: pg.children ++ [child]}
+  def push(%__MODULE__{} = pg, child), do: %{pg | children: [child | pg.children]}
 
   @doc "Appends multiple child panes to the grid."
   @spec extend(pane_grid :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
-  def extend(%__MODULE__{} = pg, children), do: %{pg | children: pg.children ++ children}
+  def extend(%__MODULE__{} = pg, children),
+    do: %{pg | children: Enum.reverse(children) ++ pg.children}
 
   @doc "Converts this pane grid struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(pane_grid :: t()) :: Julep.Iced.ui_node()
@@ -96,7 +97,12 @@ defmodule Julep.Iced.Widget.PaneGrid do
         |> put_if(pg.height, "height")
         |> put_if(pg.min_size, "min_size")
 
-      %{id: pg.id, type: "pane_grid", props: props, children: children_to_nodes(pg.children)}
+      %{
+        id: pg.id,
+        type: "pane_grid",
+        props: props,
+        children: children_to_nodes(Enum.reverse(pg.children))
+      }
     end
   end
 end

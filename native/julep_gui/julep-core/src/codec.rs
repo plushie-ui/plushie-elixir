@@ -3,6 +3,14 @@ use serde::Serialize;
 use std::io::{self, BufRead};
 use std::sync::OnceLock;
 
+/// Maximum size for a single wire message (64 MiB). Applied to both JSON
+/// line reads and msgpack length-prefixed frames.
+const MAX_MESSAGE_SIZE: usize = 64 * 1024 * 1024;
+
+/// Maximum nesting depth for `rmpv_to_json` conversion. Prevents stack
+/// overflow from deeply nested (or maliciously crafted) msgpack payloads.
+const MAX_RMPV_DEPTH: usize = 128;
+
 /// Global wire codec negotiated at startup. Set once by the binary crate,
 /// read by protocol.rs (emit_screenshot_response) and headless/test modes.
 static WIRE_CODEC: OnceLock<Codec> = OnceLock::new();
@@ -36,7 +44,12 @@ impl Codec {
             Codec::MsgPack => {
                 let payload =
                     rmp_serde::to_vec_named(value).map_err(|e| format!("msgpack encode: {e}"))?;
-                let len = payload.len() as u32;
+                let len = u32::try_from(payload.len()).map_err(|_| {
+                    format!(
+                        "payload exceeds 4 GiB frame limit ({} bytes)",
+                        payload.len()
+                    )
+                })?;
                 let mut bytes = Vec::with_capacity(4 + payload.len());
                 bytes.extend_from_slice(&len.to_be_bytes());
                 bytes.extend_from_slice(&payload);
@@ -83,6 +96,16 @@ impl Codec {
                 if n == 0 {
                     return Ok(None);
                 }
+                if line.len() > MAX_MESSAGE_SIZE {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!(
+                            "JSON message exceeds {} byte limit ({} bytes)",
+                            MAX_MESSAGE_SIZE,
+                            line.len()
+                        ),
+                    ));
+                }
                 let trimmed = line.trim();
                 if trimmed.is_empty() {
                     continue;
@@ -97,6 +120,15 @@ impl Codec {
                     Err(e) => return Err(e),
                 }
                 let len = u32::from_be_bytes(len_buf) as usize;
+                if len > MAX_MESSAGE_SIZE {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!(
+                            "msgpack frame exceeds {} byte limit ({} bytes)",
+                            MAX_MESSAGE_SIZE, len
+                        ),
+                    ));
+                }
                 let mut payload = vec![0u8; len];
                 reader.read_exact(&mut payload)?;
                 Ok(Some(payload))
@@ -140,7 +172,19 @@ impl Codec {
 ///
 /// The `deserialize_binary_field` custom deserializer in protocol.rs knows
 /// how to reconstruct `Vec<u8>` from these byte arrays.
+///
+/// Recursion depth is capped at `MAX_RMPV_DEPTH` to prevent stack overflow
+/// from deeply nested or malicious payloads.
 fn rmpv_to_json(val: rmpv::Value) -> serde_json::Value {
+    rmpv_to_json_inner(val, 0)
+}
+
+fn rmpv_to_json_inner(val: rmpv::Value, depth: usize) -> serde_json::Value {
+    if depth > MAX_RMPV_DEPTH {
+        log::error!("rmpv_to_json: recursion depth exceeded {MAX_RMPV_DEPTH}, replaced with null");
+        return serde_json::Value::Null;
+    }
+
     match val {
         rmpv::Value::Nil => serde_json::Value::Null,
         rmpv::Value::Boolean(b) => serde_json::Value::Bool(b),
@@ -182,9 +226,11 @@ fn rmpv_to_json(val: rmpv::Value) -> serde_json::Value {
                     .collect(),
             )
         }
-        rmpv::Value::Array(arr) => {
-            serde_json::Value::Array(arr.into_iter().map(rmpv_to_json).collect())
-        }
+        rmpv::Value::Array(arr) => serde_json::Value::Array(
+            arr.into_iter()
+                .map(|v| rmpv_to_json_inner(v, depth + 1))
+                .collect(),
+        ),
         rmpv::Value::Map(entries) => {
             let mut map = serde_json::Map::new();
             for (k, v) in entries {
@@ -194,7 +240,7 @@ fn rmpv_to_json(val: rmpv::Value) -> serde_json::Value {
                     rmpv::Value::Integer(n) => n.to_string(),
                     other => format!("{other}"),
                 };
-                map.insert(key, rmpv_to_json(v));
+                map.insert(key, rmpv_to_json_inner(v, depth + 1));
             }
             serde_json::Value::Object(map)
         }

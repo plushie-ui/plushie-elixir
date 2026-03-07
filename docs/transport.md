@@ -221,6 +221,23 @@ If the renderer process exits unexpectedly, the runtime:
 After a configurable number of failed restart attempts, the runtime gives
 up and exits. The supervisor strategy determines what happens next.
 
+## Float precision (f64 to f32)
+
+Elixir floats are IEEE 754 f64 (64-bit double precision). The Rust renderer
+uses f32 for pixel-level widget props -- width, height, spacing, padding,
+border radius, font size, and similar visual parameters. This truncation is
+intentional: sub-pixel precision beyond f32 (~7 significant digits) is
+meaningless for rendering. No desktop display can distinguish 1.0000001px
+from 1.0000002px.
+
+Slider values are the exception. Sliders use f64 end-to-end to preserve
+user data precision, since the slider value represents domain data (not
+pixels).
+
+If precision matters for your domain data, keep it in the Elixir model at
+full f64 precision and only convert to display values in `view/1`. The
+truncation happens at the wire boundary and only affects rendering props.
+
 ## No envelope, no lanes
 
 This protocol intentionally omits features like message envelopes, priority

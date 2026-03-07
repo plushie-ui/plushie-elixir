@@ -46,12 +46,12 @@ defmodule Julep.Iced.Widget.Sensor do
 
   @doc "Appends a child to the sensor."
   @spec push(sensor :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
-  def push(%__MODULE__{} = sensor, child), do: %{sensor | children: sensor.children ++ [child]}
+  def push(%__MODULE__{} = sensor, child), do: %{sensor | children: [child | sensor.children]}
 
   @doc "Appends multiple children to the sensor."
   @spec extend(sensor :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
   def extend(%__MODULE__{} = sensor, children),
-    do: %{sensor | children: sensor.children ++ children}
+    do: %{sensor | children: Enum.reverse(children) ++ sensor.children}
 
   @doc "Converts this sensor struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(sensor :: t()) :: Julep.Iced.ui_node()
@@ -69,7 +69,7 @@ defmodule Julep.Iced.Widget.Sensor do
         id: sensor.id,
         type: "sensor",
         props: props,
-        children: children_to_nodes(sensor.children)
+        children: children_to_nodes(Enum.reverse(sensor.children))
       }
     end
   end

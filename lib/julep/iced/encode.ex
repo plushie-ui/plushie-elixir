@@ -15,7 +15,7 @@ defprotocol Julep.Iced.Encode do
   - **Tuple**: converted to list with recursive encoding
   - **Map**: values recursively encoded
   - **List**: elements recursively encoded
-  - **Any**: fallback pass through
+  - **Any**: raises `Protocol.UndefinedError` (no silent passthrough)
   """
 
   @fallback_to_any true
@@ -63,7 +63,18 @@ defimpl Julep.Iced.Encode, for: List do
 end
 
 defimpl Julep.Iced.Encode, for: Any do
-  def encode(value), do: value
+  def encode(%{__struct__: mod} = value) do
+    raise Protocol.UndefinedError,
+      protocol: Julep.Iced.Encode,
+      value: value,
+      description: "#{inspect(mod)} does not implement Julep.Iced.Encode"
+  end
+
+  def encode(value) do
+    raise Protocol.UndefinedError,
+      protocol: Julep.Iced.Encode,
+      value: value
+  end
 end
 
 defimpl Julep.Iced.Encode, for: Julep.Iced.Shadow do

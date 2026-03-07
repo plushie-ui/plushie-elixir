@@ -33,5 +33,10 @@ defmodule Julep.Iced.Length do
   def encode(:fill), do: "fill"
   def encode(:shrink), do: "shrink"
   def encode({:fill_portion, n}) when is_integer(n) and n > 0, do: %{"fill_portion" => n}
+
+  def encode(n) when is_number(n) and n < 0 do
+    raise ArgumentError, "length must be non-negative, got: #{n}"
+  end
+
   def encode(n) when is_number(n), do: n
 end

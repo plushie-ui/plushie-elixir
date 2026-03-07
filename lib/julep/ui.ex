@@ -46,11 +46,21 @@ defmodule Julep.UI do
 
   ## Auto-IDs
 
-  Layout and display widgets that do not receive an explicit `:id` option
-  generate one from the call site: `"auto:ModuleName:42"`. This is stable
-  within a render but will change if you move the call to a different line.
-  For stable identity across re-renders (scroll position, focus), supply an
-  explicit `:id` opt.
+  **WARNING: Auto-generated IDs are unstable.** Layout and display widgets
+  that do not receive an explicit `:id` option generate one from the call
+  site line number: `"auto:ModuleName:42"`. These IDs change whenever you
+  refactor code, add/remove lines above the call, or use conditional
+  rendering (`if`/`case`) that moves the call to a different branch.
+
+  When an ID changes between renders, the renderer treats it as a
+  removal + insertion, **losing all widget-local state** (scroll position,
+  text cursor, focus, editor content).
+
+  **Always supply explicit `:id` opts for stateful widgets:**
+  `text_editor`, `combo_box`, `pane_grid`, `scrollable`, `text_input`.
+
+  Auto-IDs are fine for purely visual widgets like `text`, `row`, `column`
+  where state loss is invisible.
 
   ## Formatter
 
@@ -117,7 +127,7 @@ defmodule Julep.UI do
     props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
     %{
       id: resolved_id,
@@ -994,7 +1004,7 @@ defmodule Julep.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
     %{id: id, type: "button", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1016,7 +1026,7 @@ defmodule Julep.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
     %{id: id, type: "text_input", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1038,7 +1048,7 @@ defmodule Julep.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
     %{id: id, type: "checkbox", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1068,7 +1078,7 @@ defmodule Julep.UI do
       extra_props =
         opts
         |> Keyword.drop([:children, :id, :do])
-        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
       id =
         Keyword.get(opts, :id) || Julep.UI.__auto_id__(unquote(caller_mod), unquote(caller_line))
@@ -1094,7 +1104,7 @@ defmodule Julep.UI do
       props =
         opts
         |> Keyword.drop([:children, :id, :do])
-        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
       id =
         Keyword.get(opts, :id) || Julep.UI.__auto_id__(unquote(caller_mod), unquote(caller_line))
@@ -1128,7 +1138,7 @@ defmodule Julep.UI do
       extra_props =
         opts
         |> Keyword.drop([:children, :id, :do])
-        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
       id =
         Keyword.get(opts, :id) || Julep.UI.__auto_id__(unquote(caller_mod), unquote(caller_line))
@@ -1158,7 +1168,7 @@ defmodule Julep.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
     %{id: id, type: "toggler", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1187,7 +1197,7 @@ defmodule Julep.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
     %{id: id, type: "radio", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1217,7 +1227,7 @@ defmodule Julep.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
     %{id: id, type: "slider", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1244,7 +1254,7 @@ defmodule Julep.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
     %{id: id, type: "vertical_slider", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1268,7 +1278,7 @@ defmodule Julep.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
     %{id: id, type: "pick_list", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1293,7 +1303,7 @@ defmodule Julep.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
     %{id: id, type: "combo_box", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1313,7 +1323,7 @@ defmodule Julep.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
     %{id: id, type: "text_editor", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1336,7 +1346,7 @@ defmodule Julep.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
     %{id: id, type: "image", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1355,7 +1365,7 @@ defmodule Julep.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
     %{id: id, type: "svg", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1381,7 +1391,7 @@ defmodule Julep.UI do
       extra_props =
         opts
         |> Keyword.drop([:children, :id, :do])
-        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
       id =
         Keyword.get(opts, :id) || Julep.UI.__auto_id__(unquote(caller_mod), unquote(caller_line))
@@ -1463,7 +1473,7 @@ defmodule Julep.UI do
     props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
     %{id: id, type: "canvas", props: props, children: []}
   end
@@ -1540,7 +1550,7 @@ defmodule Julep.UI do
     props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
     %{id: id, type: "rich_text", props: props, children: []}
   end
@@ -1616,7 +1626,7 @@ defmodule Julep.UI do
     props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
     %{id: id, type: type, props: props, children: resolved_children}
   end
@@ -1684,7 +1694,7 @@ defmodule Julep.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
     %{id: id, type: "qr_code", props: Map.merge(base_props, extra_props), children: []}
   end

@@ -181,11 +181,12 @@ defmodule Julep.Iced.Widget.MouseArea do
 
   @doc "Appends a child to the mouse area."
   @spec push(mouse_area :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
-  def push(%__MODULE__{} = ma, child), do: %{ma | children: ma.children ++ [child]}
+  def push(%__MODULE__{} = ma, child), do: %{ma | children: [child | ma.children]}
 
   @doc "Appends multiple children to the mouse area."
   @spec extend(mouse_area :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
-  def extend(%__MODULE__{} = ma, children), do: %{ma | children: ma.children ++ children}
+  def extend(%__MODULE__{} = ma, children),
+    do: %{ma | children: Enum.reverse(children) ++ ma.children}
 
   @doc "Converts this mouse area struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(mouse_area :: t()) :: Julep.Iced.ui_node()
@@ -208,7 +209,12 @@ defmodule Julep.Iced.Widget.MouseArea do
         |> put_if(ma.on_move, "on_move")
         |> put_if(ma.on_scroll, "on_scroll")
 
-      %{id: ma.id, type: "mouse_area", props: props, children: children_to_nodes(ma.children)}
+      %{
+        id: ma.id,
+        type: "mouse_area",
+        props: props,
+        children: children_to_nodes(Enum.reverse(ma.children))
+      }
     end
   end
 end

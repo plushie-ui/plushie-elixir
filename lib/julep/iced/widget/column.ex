@@ -111,11 +111,12 @@ defmodule Julep.Iced.Widget.Column do
 
   @doc "Appends a child to the column."
   @spec push(column :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
-  def push(%__MODULE__{} = col, child), do: %{col | children: col.children ++ [child]}
+  def push(%__MODULE__{} = col, child), do: %{col | children: [child | col.children]}
 
   @doc "Appends multiple children to the column."
   @spec extend(column :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
-  def extend(%__MODULE__{} = col, children), do: %{col | children: col.children ++ children}
+  def extend(%__MODULE__{} = col, children),
+    do: %{col | children: Enum.reverse(children) ++ col.children}
 
   @doc "Converts this column struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(column :: t()) :: Julep.Iced.ui_node()
@@ -136,7 +137,12 @@ defmodule Julep.Iced.Widget.Column do
         |> put_if(col.clip, "clip")
         |> put_if(col.wrap, "wrap")
 
-      %{id: col.id, type: "column", props: props, children: children_to_nodes(col.children)}
+      %{
+        id: col.id,
+        type: "column",
+        props: props,
+        children: children_to_nodes(Enum.reverse(col.children))
+      }
     end
   end
 end

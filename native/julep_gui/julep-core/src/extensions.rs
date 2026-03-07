@@ -1,6 +1,7 @@
 use std::any::Any;
 use std::collections::HashMap;
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::sync::atomic::{AtomicU32, Ordering};
 
 use iced::{Element, Theme};
 use log;
@@ -85,7 +86,12 @@ pub enum EventResult {
 // ExtensionCaches
 // ---------------------------------------------------------------------------
 
-/// Type-erased cache storage for extensions, keyed by node ID.
+/// Type-erased cache storage for extensions.
+///
+/// Keys are namespaced by extension `config_key()` to prevent collisions
+/// between extensions that happen to use the same cache key string. All
+/// public methods accept a `namespace` parameter (the extension's
+/// `config_key()`) which is prefixed onto the raw key internally.
 pub struct ExtensionCaches {
     inner: HashMap<String, Box<dyn Any + Send + Sync>>,
 }
@@ -97,36 +103,56 @@ impl ExtensionCaches {
         }
     }
 
-    pub fn get<T: 'static>(&self, key: &str) -> Option<&T> {
-        self.inner.get(key)?.downcast_ref()
+    /// Build the internal namespaced key: `"config_key:raw_key"`.
+    fn namespaced_key(namespace: &str, key: &str) -> String {
+        format!("{namespace}:{key}")
     }
 
-    pub fn get_mut<T: 'static>(&mut self, key: &str) -> Option<&mut T> {
-        self.inner.get_mut(key)?.downcast_mut()
+    pub fn get<T: 'static>(&self, namespace: &str, key: &str) -> Option<&T> {
+        self.inner
+            .get(&Self::namespaced_key(namespace, key))?
+            .downcast_ref()
+    }
+
+    pub fn get_mut<T: 'static>(&mut self, namespace: &str, key: &str) -> Option<&mut T> {
+        self.inner
+            .get_mut(&Self::namespaced_key(namespace, key))?
+            .downcast_mut()
     }
 
     pub fn get_or_insert<T: Send + Sync + 'static>(
         &mut self,
+        namespace: &str,
         key: &str,
         default: impl FnOnce() -> T,
     ) -> &mut T {
         self.inner
-            .entry(key.to_string())
+            .entry(Self::namespaced_key(namespace, key))
             .or_insert_with(|| Box::new(default()))
             .downcast_mut()
             .expect("ExtensionCaches type mismatch")
     }
 
-    pub fn insert<T: Send + Sync + 'static>(&mut self, key: String, value: T) {
-        self.inner.insert(key, Box::new(value));
+    pub fn insert<T: Send + Sync + 'static>(&mut self, namespace: &str, key: String, value: T) {
+        self.inner
+            .insert(Self::namespaced_key(namespace, &key), Box::new(value));
     }
 
-    pub fn remove(&mut self, key: &str) -> bool {
-        self.inner.remove(key).is_some()
+    pub fn remove(&mut self, namespace: &str, key: &str) -> bool {
+        self.inner
+            .remove(&Self::namespaced_key(namespace, key))
+            .is_some()
     }
 
-    pub fn contains(&self, key: &str) -> bool {
-        self.inner.contains_key(key)
+    pub fn contains(&self, namespace: &str, key: &str) -> bool {
+        self.inner
+            .contains_key(&Self::namespaced_key(namespace, key))
+    }
+
+    /// Remove all entries for a given namespace prefix.
+    pub fn remove_namespace(&mut self, namespace: &str) {
+        let prefix = format!("{namespace}:");
+        self.inner.retain(|k, _| !k.starts_with(&prefix));
     }
 
     pub fn clear(&mut self) {
@@ -172,35 +198,66 @@ impl<'a> RenderContext<'a> {
 // ExtensionDispatcher
 // ---------------------------------------------------------------------------
 
+/// Number of consecutive render panics before an extension is poisoned.
+const RENDER_PANIC_THRESHOLD: u32 = 3;
+
 /// Owns extensions and routing state.
 pub struct ExtensionDispatcher {
     extensions: Vec<Box<dyn WidgetExtension>>,
     type_name_index: HashMap<String, usize>,
     node_extension_map: HashMap<String, usize>,
     poisoned: Vec<bool>,
+    /// Per-extension consecutive render panic counter. Stored as AtomicU32
+    /// so `record_render_panic` can be called with `&self` (the dispatcher
+    /// is borrowed immutably during view/render).
+    render_panic_counts: Vec<AtomicU32>,
 }
 
 impl ExtensionDispatcher {
     pub fn new(extensions: Vec<Box<dyn WidgetExtension>>) -> Self {
         let n = extensions.len();
+
+        // Validate extension metadata before building the index.
+        for ext in &extensions {
+            if ext.config_key().is_empty() {
+                panic!(
+                    "extension registered with empty config_key() \
+                     (type_names: {:?})",
+                    ext.type_names()
+                );
+            }
+            if ext.type_names().is_empty() {
+                log::warn!(
+                    "extension `{}` registered with empty type_names(); \
+                     it will never match any node type",
+                    ext.config_key()
+                );
+            }
+        }
+
         let mut type_name_index = HashMap::new();
         for (idx, ext) in extensions.iter().enumerate() {
             for &name in ext.type_names() {
                 if let Some(prev_idx) = type_name_index.insert(name.to_string(), idx) {
                     panic!(
-                        "duplicate extension type name `{name}`: registered by \
-                         `{}` and `{}`",
+                        "duplicate extension type name `{name}`: \
+                         extension `{}` (index {prev_idx}) and \
+                         extension `{}` (index {idx}) both claim it",
                         extensions[prev_idx].config_key(),
                         ext.config_key(),
                     );
                 }
             }
         }
+
+        let render_panic_counts = (0..n).map(|_| AtomicU32::new(0)).collect();
+
         Self {
             extensions,
             type_name_index,
             node_extension_map: HashMap::new(),
             poisoned: vec![false; n],
+            render_panic_counts,
         }
     }
 
@@ -217,12 +274,12 @@ impl ExtensionDispatcher {
         // Prune stale nodes
         for (old_id, ext_idx) in &self.node_extension_map {
             if !new_map.contains_key(old_id) {
+                let ns = self.extensions[*ext_idx].config_key().to_string();
                 if self.poisoned[*ext_idx] {
-                    caches.remove(old_id);
+                    caches.remove(&ns, old_id);
                     log::warn!(
-                        "skipping cleanup for poisoned extension `{}`; \
+                        "skipping cleanup for poisoned extension `{ns}`; \
                          cache entry removed for node `{old_id}`",
-                        self.extensions[*ext_idx].config_key()
                     );
                 } else {
                     let result = catch_unwind(AssertUnwindSafe(|| {
@@ -230,18 +287,34 @@ impl ExtensionDispatcher {
                     }));
                     if let Err(panic) = result {
                         let msg = panic_message(&panic);
-                        log::error!(
-                            "extension `{}` panicked in cleanup: {msg}",
-                            self.extensions[*ext_idx].config_key()
-                        );
+                        log::error!("extension `{ns}` panicked in cleanup: {msg}",);
                         self.poisoned[*ext_idx] = true;
-                        caches.remove(old_id);
+                        caches.remove(&ns, old_id);
                     }
                 }
             }
         }
 
         self.node_extension_map = new_map;
+
+        // Check render panic counters -- poison extensions that exceeded
+        // the threshold. Also reset counters for non-poisoned extensions
+        // (a successful prepare cycle implies the tree was rebuilt, so
+        // we give extensions a fresh chance).
+        for idx in 0..self.extensions.len() {
+            let count = self.render_panic_counts[idx].load(Ordering::Relaxed);
+            if count >= RENDER_PANIC_THRESHOLD && !self.poisoned[idx] {
+                log::error!(
+                    "extension `{}` hit {} consecutive render panics, poisoning",
+                    self.extensions[idx].config_key(),
+                    count,
+                );
+                self.poisoned[idx] = true;
+            }
+            if !self.poisoned[idx] {
+                self.render_panic_counts[idx].store(0, Ordering::Relaxed);
+            }
+        }
     }
 
     fn walk_prepare(
@@ -363,6 +436,11 @@ impl ExtensionDispatcher {
     /// The caller must construct the `WidgetEnv` and pass it in. This avoids
     /// a borrow-checker issue where a locally-constructed env would be dropped
     /// before the returned Element (which borrows from the env).
+    ///
+    /// Note: catch_unwind happens in the caller (`widgets::render`) because
+    /// the returned Element borrows from env and can't be wrapped in a
+    /// closure. When a render panic is caught, the caller should call
+    /// `record_render_panic` to track consecutive failures.
     pub fn render<'a>(
         &'a self,
         node: &'a TreeNode,
@@ -372,22 +450,47 @@ impl ExtensionDispatcher {
         if self.poisoned[idx] {
             return Some(render_poisoned_placeholder(node));
         }
-        // No catch_unwind here: the returned Element borrows from env, so
-        // we can't wrap this in a closure. We also can't poison (only have
-        // &self). If an extension panics in render, it propagates --
-        // prepare_all will re-evaluate on the next tick.
         let element = self.extensions[idx].render(node, env);
+        // Successful render -- reset consecutive panic counter.
+        self.render_panic_counts[idx].store(0, Ordering::Relaxed);
         Some(element)
     }
 
-    /// Reset all poisoned flags. Called on Snapshot.
+    /// Record a render panic for the extension that handles `type_name`.
+    /// Called by the catch_unwind wrapper in `widgets::render` (which has
+    /// only `&self`). Uses AtomicU32 so no `&mut self` is required.
+    /// Returns `true` if the extension has reached the poison threshold.
+    pub fn record_render_panic(&self, type_name: &str) -> bool {
+        if let Some(&idx) = self.type_name_index.get(type_name) {
+            let prev = self.render_panic_counts[idx].fetch_add(1, Ordering::Relaxed);
+            prev + 1 >= RENDER_PANIC_THRESHOLD
+        } else {
+            false
+        }
+    }
+
+    /// Reset all poisoned flags and render panic counters. Called on Snapshot.
     pub fn clear_poisoned(&mut self) {
         self.poisoned.fill(false);
+        for counter in &self.render_panic_counts {
+            counter.store(0, Ordering::Relaxed);
+        }
     }
 
     /// Check if any extensions are registered.
     pub fn is_empty(&self) -> bool {
         self.extensions.is_empty()
+    }
+
+    /// Check if a specific extension (by index) is poisoned.
+    #[cfg(test)]
+    pub fn is_poisoned(&self, idx: usize) -> bool {
+        self.poisoned.get(idx).copied().unwrap_or(false)
+    }
+
+    /// Number of registered extensions.
+    pub fn len(&self) -> usize {
+        self.extensions.len()
     }
 }
 
@@ -475,5 +578,381 @@ fn panic_message(panic: &Box<dyn Any + Send>) -> String {
         s.clone()
     } else {
         "unknown panic".to_string()
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -- Test extension implementations --------------------------------------
+
+    /// Minimal test extension that renders a text widget.
+    struct TestExtension {
+        type_names: Vec<&'static str>,
+        config_key: &'static str,
+        init_called: bool,
+    }
+
+    impl TestExtension {
+        fn new(type_names: Vec<&'static str>, config_key: &'static str) -> Self {
+            Self {
+                type_names,
+                config_key,
+                init_called: false,
+            }
+        }
+    }
+
+    impl WidgetExtension for TestExtension {
+        fn type_names(&self) -> &[&str] {
+            &self.type_names
+        }
+
+        fn config_key(&self) -> &str {
+            self.config_key
+        }
+
+        fn init(&mut self, _config: &Value) {
+            self.init_called = true;
+        }
+
+        fn render<'a>(&self, node: &'a TreeNode, _env: &WidgetEnv<'a>) -> Element<'a, Message> {
+            use iced::widget::text;
+            text(format!("test:{}", node.id)).into()
+        }
+    }
+
+    /// Extension with empty type_names (valid but useless -- should warn).
+    struct EmptyTypesExtension;
+
+    impl WidgetExtension for EmptyTypesExtension {
+        fn type_names(&self) -> &[&str] {
+            &[]
+        }
+        fn config_key(&self) -> &str {
+            "empty_types"
+        }
+        fn render<'a>(&self, _node: &'a TreeNode, _env: &WidgetEnv<'a>) -> Element<'a, Message> {
+            use iced::widget::text;
+            text("empty").into()
+        }
+    }
+
+    fn make_node(id: &str, type_name: &str) -> TreeNode {
+        TreeNode {
+            id: id.to_string(),
+            type_name: type_name.to_string(),
+            props: serde_json::json!({}),
+            children: vec![],
+        }
+    }
+
+    // -- Registration and type_name_index ------------------------------------
+
+    #[test]
+    fn registration_builds_type_name_index() {
+        let ext = TestExtension::new(vec!["sparkline", "heatmap"], "charts");
+        let dispatcher = ExtensionDispatcher::new(vec![Box::new(ext)]);
+
+        assert!(dispatcher.handles_type("sparkline"));
+        assert!(dispatcher.handles_type("heatmap"));
+        assert!(!dispatcher.handles_type("unknown"));
+    }
+
+    #[test]
+    fn registration_with_multiple_extensions() {
+        let ext_a = TestExtension::new(vec!["sparkline"], "charts");
+        let ext_b = TestExtension::new(vec!["gauge"], "instruments");
+        let dispatcher = ExtensionDispatcher::new(vec![Box::new(ext_a), Box::new(ext_b)]);
+
+        assert!(dispatcher.handles_type("sparkline"));
+        assert!(dispatcher.handles_type("gauge"));
+        assert_eq!(dispatcher.len(), 2);
+    }
+
+    #[test]
+    fn empty_dispatcher_handles_nothing() {
+        let dispatcher = ExtensionDispatcher::default();
+        assert!(dispatcher.is_empty());
+        assert!(!dispatcher.handles_type("anything"));
+    }
+
+    // -- Duplicate type name detection ---------------------------------------
+
+    #[test]
+    #[should_panic(expected = "duplicate extension type name `sparkline`")]
+    fn duplicate_type_name_panics() {
+        let ext_a = TestExtension::new(vec!["sparkline"], "charts_a");
+        let ext_b = TestExtension::new(vec!["sparkline"], "charts_b");
+        ExtensionDispatcher::new(vec![Box::new(ext_a), Box::new(ext_b)]);
+    }
+
+    #[test]
+    #[should_panic(expected = "both claim it")]
+    fn duplicate_type_name_error_identifies_conflicting_extensions() {
+        let ext_a = TestExtension::new(vec!["widget_x"], "ext_alpha");
+        let ext_b = TestExtension::new(vec!["widget_x"], "ext_beta");
+        ExtensionDispatcher::new(vec![Box::new(ext_a), Box::new(ext_b)]);
+    }
+
+    // -- Empty config_key validation -----------------------------------------
+
+    #[test]
+    #[should_panic(expected = "empty config_key()")]
+    fn empty_config_key_panics() {
+        let ext = TestExtension::new(vec!["widget"], "");
+        ExtensionDispatcher::new(vec![Box::new(ext)]);
+    }
+
+    // -- Empty type_names validation (warn, don't panic) ---------------------
+
+    #[test]
+    fn empty_type_names_does_not_panic() {
+        // Should log a warning but not panic.
+        let ext = EmptyTypesExtension;
+        let dispatcher = ExtensionDispatcher::new(vec![Box::new(ext)]);
+        assert_eq!(dispatcher.len(), 1);
+        assert!(!dispatcher.handles_type("anything"));
+    }
+
+    // -- ExtensionCaches: get/insert/get_or_insert ---------------------------
+
+    #[test]
+    fn cache_insert_and_get() {
+        let mut caches = ExtensionCaches::new();
+        caches.insert("charts", "node1".to_string(), 42u32);
+
+        assert_eq!(caches.get::<u32>("charts", "node1"), Some(&42));
+        assert_eq!(caches.get::<u32>("charts", "node2"), None);
+    }
+
+    #[test]
+    fn cache_get_mut() {
+        let mut caches = ExtensionCaches::new();
+        caches.insert("ns", "key".to_string(), vec![1, 2, 3]);
+
+        if let Some(v) = caches.get_mut::<Vec<i32>>("ns", "key") {
+            v.push(4);
+        }
+        assert_eq!(caches.get::<Vec<i32>>("ns", "key"), Some(&vec![1, 2, 3, 4]));
+    }
+
+    #[test]
+    fn cache_get_or_insert_creates_default() {
+        let mut caches = ExtensionCaches::new();
+        let val = caches.get_or_insert::<String>("ns", "key", || "hello".to_string());
+        assert_eq!(val, "hello");
+
+        // Second call returns existing value, doesn't overwrite.
+        let val = caches.get_or_insert::<String>("ns", "key", || "world".to_string());
+        assert_eq!(val, "hello");
+    }
+
+    #[test]
+    #[should_panic(expected = "type mismatch")]
+    fn cache_get_or_insert_type_mismatch_panics() {
+        let mut caches = ExtensionCaches::new();
+        caches.insert("ns", "key".to_string(), 42u32);
+        let _ = caches.get_or_insert::<String>("ns", "key", || "oops".to_string());
+    }
+
+    #[test]
+    fn cache_wrong_type_returns_none() {
+        let mut caches = ExtensionCaches::new();
+        caches.insert("ns", "key".to_string(), 42u32);
+
+        // Asking for a different type returns None (not a panic for get).
+        assert_eq!(caches.get::<String>("ns", "key"), None);
+    }
+
+    #[test]
+    fn cache_remove_and_contains() {
+        let mut caches = ExtensionCaches::new();
+        caches.insert("ns", "key".to_string(), 1u8);
+
+        assert!(caches.contains("ns", "key"));
+        assert!(caches.remove("ns", "key"));
+        assert!(!caches.contains("ns", "key"));
+        assert!(!caches.remove("ns", "key"));
+    }
+
+    #[test]
+    fn cache_clear_removes_everything() {
+        let mut caches = ExtensionCaches::new();
+        caches.insert("a", "k1".to_string(), 1u32);
+        caches.insert("b", "k2".to_string(), 2u32);
+
+        caches.clear();
+        assert!(!caches.contains("a", "k1"));
+        assert!(!caches.contains("b", "k2"));
+    }
+
+    // -- Cache namespace isolation -------------------------------------------
+
+    #[test]
+    fn cache_namespace_isolation() {
+        let mut caches = ExtensionCaches::new();
+
+        // Two extensions use the same raw key "data" -- they shouldn't collide.
+        caches.insert("charts", "data".to_string(), vec![1.0f64, 2.0, 3.0]);
+        caches.insert("gauges", "data".to_string(), 42u32);
+
+        assert_eq!(
+            caches.get::<Vec<f64>>("charts", "data"),
+            Some(&vec![1.0, 2.0, 3.0])
+        );
+        assert_eq!(caches.get::<u32>("gauges", "data"), Some(&42));
+    }
+
+    #[test]
+    fn cache_remove_namespace() {
+        let mut caches = ExtensionCaches::new();
+        caches.insert("charts", "a".to_string(), 1u32);
+        caches.insert("charts", "b".to_string(), 2u32);
+        caches.insert("gauges", "a".to_string(), 3u32);
+
+        caches.remove_namespace("charts");
+
+        assert!(!caches.contains("charts", "a"));
+        assert!(!caches.contains("charts", "b"));
+        assert!(caches.contains("gauges", "a"));
+    }
+
+    // -- Poison flag management ----------------------------------------------
+
+    #[test]
+    fn poison_flag_set_and_clear() {
+        let ext = TestExtension::new(vec!["sparkline"], "charts");
+        let mut dispatcher = ExtensionDispatcher::new(vec![Box::new(ext)]);
+
+        assert!(!dispatcher.is_poisoned(0));
+
+        // Simulate poisoning via render panic counter.
+        for _ in 0..RENDER_PANIC_THRESHOLD {
+            dispatcher.record_render_panic("sparkline");
+        }
+
+        // Poisoning happens on next prepare_all call.
+        let root = make_node("root", "column");
+        let mut caches = ExtensionCaches::new();
+        dispatcher.prepare_all(&root, &mut caches, &Theme::Dark);
+
+        assert!(dispatcher.is_poisoned(0));
+
+        // clear_poisoned resets everything.
+        dispatcher.clear_poisoned();
+        assert!(!dispatcher.is_poisoned(0));
+    }
+
+    // -- Render panic tracking -----------------------------------------------
+
+    #[test]
+    fn record_render_panic_increments_counter() {
+        let ext = TestExtension::new(vec!["sparkline"], "charts");
+        let dispatcher = ExtensionDispatcher::new(vec![Box::new(ext)]);
+
+        // Below threshold -- returns false.
+        assert!(!dispatcher.record_render_panic("sparkline"));
+        assert!(!dispatcher.record_render_panic("sparkline"));
+
+        // At threshold -- returns true.
+        assert!(dispatcher.record_render_panic("sparkline"));
+    }
+
+    #[test]
+    fn record_render_panic_unknown_type_returns_false() {
+        let dispatcher = ExtensionDispatcher::default();
+        assert!(!dispatcher.record_render_panic("nonexistent"));
+    }
+
+    // -- EventResult variants ------------------------------------------------
+
+    #[test]
+    fn event_result_pass_through() {
+        let result = EventResult::PassThrough;
+        assert!(matches!(result, EventResult::PassThrough));
+    }
+
+    #[test]
+    fn event_result_consumed_with_events() {
+        let events = vec![OutgoingEvent::generic("test", "n1".to_string(), None)];
+        let result = EventResult::Consumed(events);
+        match result {
+            EventResult::Consumed(e) => assert_eq!(e.len(), 1),
+            _ => panic!("expected Consumed"),
+        }
+    }
+
+    #[test]
+    fn event_result_observed_with_events() {
+        let events = vec![OutgoingEvent::generic("test", "n1".to_string(), None)];
+        let result = EventResult::Observed(events);
+        match result {
+            EventResult::Observed(e) => assert_eq!(e.len(), 1),
+            _ => panic!("expected Observed"),
+        }
+    }
+
+    // -- GenerationCounter ---------------------------------------------------
+
+    #[test]
+    fn generation_counter_starts_at_zero() {
+        let counter = GenerationCounter::new();
+        assert_eq!(counter.get(), 0);
+    }
+
+    #[test]
+    fn generation_counter_bumps() {
+        let mut counter = GenerationCounter::new();
+        counter.bump();
+        assert_eq!(counter.get(), 1);
+        counter.bump();
+        assert_eq!(counter.get(), 2);
+    }
+
+    #[test]
+    fn generation_counter_default() {
+        let counter = GenerationCounter::default();
+        assert_eq!(counter.get(), 0);
+    }
+
+    // -- init_all ------------------------------------------------------------
+
+    #[test]
+    fn init_all_routes_config_by_key() {
+        let ext = TestExtension::new(vec!["sparkline"], "charts");
+        let mut dispatcher = ExtensionDispatcher::new(vec![Box::new(ext)]);
+
+        let config = serde_json::json!({"charts": {"color": "red"}});
+        dispatcher.init_all(&config);
+
+        // Can't easily inspect init_called through the trait object, but
+        // at least verify no panic occurred.
+        assert!(!dispatcher.is_poisoned(0));
+    }
+
+    // -- panic_message helper ------------------------------------------------
+
+    #[test]
+    fn panic_message_extracts_str() {
+        let p: Box<dyn Any + Send> = Box::new("boom");
+        assert_eq!(panic_message(&p), "boom");
+    }
+
+    #[test]
+    fn panic_message_extracts_string() {
+        let p: Box<dyn Any + Send> = Box::new("kaboom".to_string());
+        assert_eq!(panic_message(&p), "kaboom");
+    }
+
+    #[test]
+    fn panic_message_unknown_type() {
+        let p: Box<dyn Any + Send> = Box::new(42u32);
+        assert_eq!(panic_message(&p), "unknown panic");
     }
 }

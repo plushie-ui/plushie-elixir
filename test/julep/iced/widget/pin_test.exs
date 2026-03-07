@@ -63,8 +63,10 @@ defmodule Julep.Iced.Widget.PinTest do
       c2 = %{id: "c2", type: "text", props: %{}, children: []}
       p = Pin.new("p1") |> Pin.push(c1) |> Pin.push(c2)
       assert length(p.children) == 2
-      assert Enum.at(p.children, 0) == c1
-      assert Enum.at(p.children, 1) == c2
+      # Internal list is reversed; build restores order
+      node = Pin.build(p)
+      assert Enum.at(node.children, 0) == c1
+      assert Enum.at(node.children, 1) == c2
     end
   end
 

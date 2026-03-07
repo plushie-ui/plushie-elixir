@@ -63,8 +63,10 @@ defmodule Julep.Iced.Widget.GridTest do
       c1 = %{id: "c1", type: "text", props: %{}, children: []}
       c2 = %{id: "c2", type: "text", props: %{}, children: []}
       g = Grid.new("g1") |> Grid.push(c1) |> Grid.push(c2)
-      assert Enum.at(g.children, 0) == c1
-      assert Enum.at(g.children, 1) == c2
+      # Internal list is reversed; build restores order
+      node = Grid.build(g)
+      assert Enum.at(node.children, 0) == c1
+      assert Enum.at(node.children, 1) == c2
     end
   end
 

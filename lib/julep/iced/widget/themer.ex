@@ -28,11 +28,12 @@ defmodule Julep.Iced.Widget.Themer do
 
   @doc "Appends a child to the themer."
   @spec push(themer :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
-  def push(%__MODULE__{} = t, child), do: %{t | children: t.children ++ [child]}
+  def push(%__MODULE__{} = t, child), do: %{t | children: [child | t.children]}
 
   @doc "Appends multiple children to the themer."
   @spec extend(themer :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
-  def extend(%__MODULE__{} = t, children), do: %{t | children: t.children ++ children}
+  def extend(%__MODULE__{} = t, children),
+    do: %{t | children: Enum.reverse(children) ++ t.children}
 
   @doc "Converts this themer struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(themer :: t()) :: Julep.Iced.ui_node()
@@ -44,7 +45,12 @@ defmodule Julep.Iced.Widget.Themer do
     def to_node(t) do
       props = %{"theme" => t.theme}
 
-      %{id: t.id, type: "themer", props: props, children: children_to_nodes(t.children)}
+      %{
+        id: t.id,
+        type: "themer",
+        props: props,
+        children: children_to_nodes(Enum.reverse(t.children))
+      }
     end
   end
 end

@@ -1,5 +1,11 @@
 # iced 0.14 Parity Audit
 
+> **Historical reference document.** This file is a point-in-time audit
+> snapshot (~49KB) and is not actively maintained. It was used to drive the
+> iced parity gap closure work. For the current state of widget support, see
+> `docs/ui-trees.md` (widget catalog) and the typed widget modules under
+> `lib/julep/iced/widget/`.
+
 Comprehensive comparison of iced 0.14.0 (with features: `tokio`, `image`,
 `svg`, `markdown`, `canvas`) against what Julep exposes to Elixir.
 

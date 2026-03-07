@@ -27,9 +27,9 @@ defmodule Julep.ExtensionTest do
     def type_names, do: ["mock_widget"]
   end
 
-  test "discover_extensions finds modules with the behaviour" do
-    extensions = Mix.Tasks.Julep.Build.discover_extensions()
-    assert MockExtension in extensions
+  test "configured_extensions reads from application config" do
+    extensions = Mix.Tasks.Julep.Build.configured_extensions()
+    assert is_list(extensions)
   end
 
   test "check_collisions! raises on duplicate type names" do

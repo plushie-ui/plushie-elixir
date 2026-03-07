@@ -108,6 +108,29 @@ defmodule Julep.RuntimeTest do
     :sys.get_state(runtime)
   end
 
+  # Polls :sys.get_state until a condition is met or timeout expires.
+  # Used for async operations where Process.sleep is not appropriate.
+  defp await_condition(runtime, condition_fn, timeout \\ 500) do
+    deadline = System.monotonic_time(:millisecond) + timeout
+
+    do_await_condition(runtime, condition_fn, deadline)
+  end
+
+  defp do_await_condition(runtime, condition_fn, deadline) do
+    state = :sys.get_state(runtime)
+
+    if condition_fn.(state) do
+      state
+    else
+      if System.monotonic_time(:millisecond) >= deadline do
+        flunk("Timed out waiting for condition. Last state: #{inspect(state.model)}")
+      else
+        Process.sleep(5)
+        do_await_condition(runtime, condition_fn, deadline)
+      end
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # describe "init/update/view cycle"
   # ---------------------------------------------------------------------------
@@ -205,12 +228,8 @@ defmodule Julep.RuntimeTest do
 
       dispatch_and_wait(runtime, {:click, "async"})
 
-      # Give the spawned Task time to complete and the runtime to process it.
-      Process.sleep(50)
-      :sys.get_state(runtime)
-
-      state = :sys.get_state(runtime)
-      assert state.model.value == 42
+      # Wait for the spawned Task to complete and the runtime to process it.
+      state = await_condition(runtime, fn s -> s.model.value == 42 end)
 
       text_node = find_by_type(state.tree, "text")
       assert text_node.props["content"] == "42"
@@ -546,7 +565,7 @@ defmodule Julep.RuntimeTest do
         def init(_opts), do: %{result: nil}
 
         def update(model, {:click, "open"}) do
-          {cmd, _id} = Julep.Effects.file_open(title: "Pick a file")
+          cmd = Julep.Effects.file_open(title: "Pick a file")
           {model, cmd}
         end
 
@@ -858,13 +877,9 @@ defmodule Julep.RuntimeTest do
 
       dispatch_and_wait(runtime, {:click, "start_stream"})
 
-      # Give the stream task time to emit all values and complete.
-      Process.sleep(100)
-      :sys.get_state(runtime)
-
-      state = :sys.get_state(runtime)
+      # Wait for the stream task to emit all values and complete.
+      state = await_condition(runtime, fn s -> s.model.final == :done end)
       assert state.model.chunks == ["a", "b", "c"]
-      assert state.model.final == :done
     end
 
     test "cancel stops a running stream task" do
@@ -918,12 +933,8 @@ defmodule Julep.RuntimeTest do
       # Start the stream
       dispatch_and_wait(runtime, {:click, "start"})
 
-      # Let the first emit arrive
-      Process.sleep(50)
-      :sys.get_state(runtime)
-
-      state = :sys.get_state(runtime)
-      assert state.model.chunks == ["first"]
+      # Wait for the first emit to arrive
+      state = await_condition(runtime, fn s -> s.model.chunks == ["first"] end)
       assert Map.has_key?(state.async_tasks, :import)
 
       # Cancel the stream
@@ -979,17 +990,14 @@ defmodule Julep.RuntimeTest do
 
       dispatch_and_wait(runtime, {:click, "async"})
 
-      # The task might still be running -- check it was tracked.
-      # (For a fast fn -> 42, it might already be done, but the tracking
-      # code runs synchronously before the task completes in most cases.)
+      # Wait for the task to complete, the result to be processed, and the
+      # async_tasks map to be cleaned up (all happen in the same handle_info).
+      state =
+        await_condition(runtime, fn s ->
+          s.model.value == 42 and s.async_tasks == %{}
+        end)
 
-      # Give the task time to complete and the runtime to process the result.
-      Process.sleep(50)
-      :sys.get_state(runtime)
-
-      state = :sys.get_state(runtime)
       assert state.model.value == 42
-      # After completion, the tag should be cleaned up.
       assert state.async_tasks == %{}
     end
   end

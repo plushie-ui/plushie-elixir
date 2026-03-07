@@ -157,6 +157,106 @@ defmodule Julep.BridgeMsgpackTest do
     end
   end
 
+  describe "msgpack edge cases" do
+    @describetag :integration
+
+    test "oversized message is handled gracefully" do
+      port =
+        Port.open({:spawn_executable, @renderer_path}, [
+          :binary,
+          :exit_status,
+          :use_stdio,
+          {:packet, 4},
+          {:args, ["--msgpack"]},
+          {:env, @no_display_env}
+        ])
+
+      # Build a message with a very large string prop to exercise large payload handling.
+      # {:packet, 4} supports up to ~4GB frames, so this tests the decoder with bulk data.
+      large_value = String.duplicate("x", 1_000_000)
+
+      oversized_msg =
+        Msgpax.pack!(%{
+          "type" => "settings",
+          "settings" => %{"bogus_key" => large_value}
+        })
+
+      Port.command(port, oversized_msg)
+
+      messages = collect_port_messages(port, [], 5_000)
+
+      # The renderer should either process the message or exit cleanly.
+      # It must not hang indefinitely.
+      assert length(messages) >= 1
+    end
+
+    test "malformed msgpack data causes error, not crash" do
+      port =
+        Port.open({:spawn_executable, @renderer_path}, [
+          :binary,
+          :exit_status,
+          :use_stdio,
+          {:packet, 4},
+          {:args, ["--msgpack"]},
+          {:env, @no_display_env}
+        ])
+
+      # Send truncated / invalid msgpack bytes.
+      Port.command(port, <<0xC1, 0xFF, 0x00, 0xDE, 0xAD>>)
+
+      messages = collect_port_messages(port, [], 5_000)
+
+      # The renderer should exit (decode error or display error),
+      # not hang or segfault.
+      assert Enum.any?(messages, &match?({:exit_status, _}, &1)),
+             "expected renderer to exit after malformed data"
+    end
+
+    test "binary data round-trips through msgpack encoding" do
+      # Verify that Julep.Protocol can encode and decode a message containing
+      # binary data (e.g. image bytes) without corruption.
+      raw_bytes = :crypto.strong_rand_bytes(256)
+      base64 = Base.encode64(raw_bytes)
+
+      # Encode a message containing base64 binary data (how images are sent).
+      msg = %{
+        type: "snapshot",
+        tree: %{id: "root", type: "image", props: %{"data" => base64}, children: []}
+      }
+
+      encoded = Julep.Protocol.encode(msg, :msgpack)
+
+      # Decode it back and verify the binary data survived the round-trip.
+      {:ok, decoded} = Julep.Protocol.decode(encoded, :msgpack)
+      assert decoded["tree"]["props"]["data"] == base64
+
+      # Verify the original bytes can be recovered from the base64.
+      assert Base.decode64!(decoded["tree"]["props"]["data"]) == raw_bytes
+    end
+
+    test "empty map message is handled" do
+      port =
+        Port.open({:spawn_executable, @renderer_path}, [
+          :binary,
+          :exit_status,
+          :use_stdio,
+          {:packet, 4},
+          {:args, ["--msgpack"]},
+          {:env, @no_display_env}
+        ])
+
+      # Send a valid msgpack map with no "type" field.
+      empty_msg = Msgpax.pack!(%{"not_a_type" => "hello"})
+      Port.command(port, empty_msg)
+
+      messages = collect_port_messages(port, [], 5_000)
+
+      # Should exit (no display) without protocol panic.
+      assert Enum.any?(messages, &match?({:exit_status, _}, &1)),
+             "expected renderer to exit"
+    end
+  end
+
   # Collect port messages until exit_status or timeout.
   defp collect_port_messages(port, acc, timeout) do
     receive do

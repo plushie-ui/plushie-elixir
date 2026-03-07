@@ -133,11 +133,12 @@ defmodule Julep.Iced.Widget.Scrollable do
 
   @doc "Appends a child to the scrollable."
   @spec push(scrollable :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
-  def push(%__MODULE__{} = s, child), do: %{s | children: s.children ++ [child]}
+  def push(%__MODULE__{} = s, child), do: %{s | children: [child | s.children]}
 
   @doc "Appends multiple children to the scrollable."
   @spec extend(scrollable :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
-  def extend(%__MODULE__{} = s, children), do: %{s | children: s.children ++ children}
+  def extend(%__MODULE__{} = s, children),
+    do: %{s | children: Enum.reverse(children) ++ s.children}
 
   @doc "Converts this scrollable struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(scrollable :: t()) :: Julep.Iced.ui_node()
@@ -160,7 +161,12 @@ defmodule Julep.Iced.Widget.Scrollable do
         |> put_if(s.on_scroll, "on_scroll")
         |> put_if(s.auto_scroll, "auto_scroll")
 
-      %{id: s.id, type: "scrollable", props: props, children: children_to_nodes(s.children)}
+      %{
+        id: s.id,
+        type: "scrollable",
+        props: props,
+        children: children_to_nodes(Enum.reverse(s.children))
+      }
     end
   end
 end

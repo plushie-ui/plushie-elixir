@@ -28,6 +28,12 @@ defmodule Julep.Bridge do
 
   require Logger
 
+  # Maximum accumulated buffer size for partial JSON lines (64 MiB).
+  @max_buffer_size 64 * 1024 * 1024
+
+  # Maximum exponential backoff delay in milliseconds.
+  @max_backoff_ms 5_000
+
   # ---------------------------------------------------------------------------
   # Public API
   # ---------------------------------------------------------------------------
@@ -276,7 +282,17 @@ defmodule Julep.Bridge do
 
   # Partial line exceeding {:line, N} -- accumulate.
   def handle_info({port, {:data, {:noeol, chunk}}}, %{port: port} = state) do
-    {:noreply, %{state | buffer: state.buffer <> to_string(chunk)}}
+    new_buffer = state.buffer <> to_string(chunk)
+
+    if byte_size(new_buffer) > @max_buffer_size do
+      Logger.error(
+        "julep bridge: JSON buffer exceeded #{@max_buffer_size} bytes, dropping message"
+      )
+
+      {:noreply, %{state | buffer: ""}}
+    else
+      {:noreply, %{state | buffer: new_buffer}}
+    end
   end
 
   def handle_info({port, {:exit_status, 0}}, %{port: port} = state) do
@@ -364,29 +380,46 @@ defmodule Julep.Bridge do
   defp send_to_port(nil, _data), do: :ok
 
   defp send_to_port(port, data) when is_port(port) do
-    Port.command(port, data)
+    try do
+      Port.command(port, data)
+    rescue
+      ArgumentError ->
+        Logger.warning("julep bridge: port closed during send")
+        :error
+    end
   end
 
   defp dispatch_message(data, format, state) do
     case Julep.Protocol.decode_message(data, format) do
       {:error, reason} ->
         Logger.warning("julep bridge: failed to decode message: #{inspect(reason)}")
+        state
 
       event ->
         send(state.runtime, {:renderer_event, event})
+        # Reset restart count on first successful message from the renderer.
+        %{state | restart_count: 0}
     end
-
-    state
   end
 
   defp handle_port_exit(state, reason) do
     send(state.runtime, {:renderer_exit, reason})
 
     if state.restart_count < state.max_restarts do
-      delay = round(state.restart_delay * :math.pow(2, state.restart_count))
+      delay = min(round(state.restart_delay * :math.pow(2, state.restart_count)), @max_backoff_ms)
       Process.send_after(self(), :restart_renderer, delay)
       {:noreply, %{state | port: nil}}
     else
+      Logger.error("""
+      julep bridge: renderer crashed #{state.max_restarts} times, giving up.
+
+      Troubleshooting:
+        1. Check RUST_LOG=julep_gui=debug for renderer errors
+        2. Verify the binary exists: mix julep.build
+        3. Check system dependencies (libxkbcommon, etc.)
+        4. Try running the renderer directly: ./path/to/julep_gui --json
+      """)
+
       {:stop, {:max_restarts_reached, reason}, state}
     end
   end

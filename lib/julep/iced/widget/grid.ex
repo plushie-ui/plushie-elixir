@@ -8,6 +8,10 @@ defmodule Julep.Iced.Widget.Grid do
   - `spacing` (number) -- spacing between grid cells in pixels. Default: 0.
   - `width` (number) -- grid width in pixels.
   - `height` (number) -- grid height in pixels.
+  - `column_width` (Length) -- width of each column. Accepts `:fill`, `:shrink`,
+    `{:fill_portion, n}`, or a fixed pixel number.
+  - `row_height` (Length) -- height of each row. Accepts `:fill`, `:shrink`,
+    `{:fill_portion, n}`, or a fixed pixel number.
   """
 
   alias Julep.Iced.Widget.Build
@@ -17,6 +21,8 @@ defmodule Julep.Iced.Widget.Grid do
           | {:spacing, number()}
           | {:width, number()}
           | {:height, number()}
+          | {:column_width, Julep.Iced.Length.t()}
+          | {:row_height, Julep.Iced.Length.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -24,6 +30,8 @@ defmodule Julep.Iced.Widget.Grid do
           spacing: number() | nil,
           width: number() | nil,
           height: number() | nil,
+          column_width: Julep.Iced.Length.t() | nil,
+          row_height: Julep.Iced.Length.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
@@ -33,6 +41,8 @@ defmodule Julep.Iced.Widget.Grid do
     :spacing,
     :width,
     :height,
+    :column_width,
+    :row_height,
     children: []
   ]
 
@@ -52,6 +62,8 @@ defmodule Julep.Iced.Widget.Grid do
       {:spacing, v}, acc -> spacing(acc, v)
       {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
+      {:column_width, v}, acc -> column_width(acc, v)
+      {:row_height, v}, acc -> row_height(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -72,13 +84,22 @@ defmodule Julep.Iced.Widget.Grid do
   @spec height(grid :: t(), height :: number()) :: t()
   def height(%__MODULE__{} = grid, height), do: %{grid | height: height}
 
+  @doc "Sets the column width using a Length value (fill/shrink/fixed/fill_portion)."
+  @spec column_width(grid :: t(), column_width :: Julep.Iced.Length.t()) :: t()
+  def column_width(%__MODULE__{} = grid, column_width), do: %{grid | column_width: column_width}
+
+  @doc "Sets the row height using a Length value (fill/shrink/fixed/fill_portion)."
+  @spec row_height(grid :: t(), row_height :: Julep.Iced.Length.t()) :: t()
+  def row_height(%__MODULE__{} = grid, row_height), do: %{grid | row_height: row_height}
+
   @doc "Appends a child to the grid."
   @spec push(grid :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
-  def push(%__MODULE__{} = grid, child), do: %{grid | children: grid.children ++ [child]}
+  def push(%__MODULE__{} = grid, child), do: %{grid | children: [child | grid.children]}
 
   @doc "Appends multiple children to the grid."
   @spec extend(grid :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
-  def extend(%__MODULE__{} = grid, children), do: %{grid | children: grid.children ++ children}
+  def extend(%__MODULE__{} = grid, children),
+    do: %{grid | children: Enum.reverse(children) ++ grid.children}
 
   @doc "Converts this grid struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(grid :: t()) :: Julep.Iced.ui_node()
@@ -94,8 +115,15 @@ defmodule Julep.Iced.Widget.Grid do
         |> put_if(grid.spacing, "spacing")
         |> put_if(grid.width, "width")
         |> put_if(grid.height, "height")
+        |> put_if(grid.column_width, "column_width")
+        |> put_if(grid.row_height, "row_height")
 
-      %{id: grid.id, type: "grid", props: props, children: children_to_nodes(grid.children)}
+      %{
+        id: grid.id,
+        type: "grid",
+        props: props,
+        children: children_to_nodes(Enum.reverse(grid.children))
+      }
     end
   end
 end

@@ -16,7 +16,19 @@ defmodule Julep.Binary do
       custom_build_path() ||
       precompiled_path() ||
       dev_build_path() ||
-      raise "julep_gui binary not found. Run `mix julep.build` or `mix julep.download`."
+      raise """
+      julep_gui binary not found. Searched:
+        - $JULEP_RENDERER_PATH (not set)
+        - Custom build in _build/
+        - Precompiled in priv/bin/
+        - Dev build in native/julep_gui/target/
+
+      To build from source:
+        cargo build --release --manifest-path native/julep_gui/Cargo.toml
+
+      To download a precompiled binary:
+        mix julep.download
+      """
   end
 
   @doc "Returns the platform-specific binary name."

@@ -596,8 +596,9 @@ defmodule Julep.IcedTest do
       assert Length.encode(0) == 0
     end
 
-    test "encodes negative number (no guard prevents it)" do
-      assert Length.encode(-1) == -1
+    test "rejects negative number with ArgumentError" do
+      assert_raise ArgumentError, ~r/non-negative/, fn -> Length.encode(-1) end
+      assert_raise ArgumentError, ~r/non-negative/, fn -> Length.encode(-0.5) end
     end
 
     test "fill_portion rejects non-positive" do

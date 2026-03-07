@@ -93,12 +93,12 @@ defmodule Julep.Iced.Widget.Overlay do
 
   @doc "Appends a child to the overlay."
   @spec push(overlay :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
-  def push(%__MODULE__{} = overlay, child), do: %{overlay | children: overlay.children ++ [child]}
+  def push(%__MODULE__{} = overlay, child), do: %{overlay | children: [child | overlay.children]}
 
   @doc "Appends multiple children to the overlay."
   @spec extend(overlay :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
   def extend(%__MODULE__{} = overlay, children),
-    do: %{overlay | children: overlay.children ++ children}
+    do: %{overlay | children: Enum.reverse(children) ++ overlay.children}
 
   @doc "Converts this overlay struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(overlay :: t()) :: Julep.Iced.ui_node()
@@ -120,7 +120,7 @@ defmodule Julep.Iced.Widget.Overlay do
         id: overlay.id,
         type: "overlay",
         props: props,
-        children: children_to_nodes(overlay.children)
+        children: children_to_nodes(Enum.reverse(overlay.children))
       }
     end
   end

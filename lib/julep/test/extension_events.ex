@@ -83,7 +83,7 @@ defmodule Julep.Test.ExtensionEvents do
   @doc """
   Discovers all loaded modules implementing `Julep.Extension` and registers them.
 
-  This is a convenience that mirrors `Mix.Tasks.Julep.Build.discover_extensions/0`
+  This is a convenience that mirrors `Mix.Tasks.Julep.Build.configured_extensions/0`
   but does not depend on Mix. Safe to call multiple times (idempotent).
 
   Skips modules whose type names collide with an already-registered extension

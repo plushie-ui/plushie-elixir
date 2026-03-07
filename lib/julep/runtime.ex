@@ -26,11 +26,12 @@ defmodule Julep.Runtime do
   ## State shape
 
       %{
-        app:          module,          # the Julep.App implementation
-        model:        term(),          # current application model
-        bridge:       pid() | atom(),  # Julep.Bridge pid or registered name
-        tree:         map() | nil,     # last normalized tree (for re-send on restart)
-        async_tasks:  map()            # %{tag => {pid, nonce}} for running async/stream tasks
+        app:             module,          # the Julep.App implementation
+        model:           term(),          # current application model
+        bridge:          pid() | atom(),  # Julep.Bridge pid or registered name
+        tree:            map() | nil,     # last normalized tree (for re-send on restart)
+        async_tasks:     map(),           # %{tag => {pid, nonce}} for running async/stream tasks
+        pending_effects: map()            # %{id => timer_ref} for in-flight effect requests
       }
 
   ## Exit trapping
@@ -41,6 +42,9 @@ defmodule Julep.Runtime do
   use GenServer
 
   require Logger
+
+  # Default timeout for effect requests (30 seconds).
+  @effect_timeout_ms 30_000
 
   # ---------------------------------------------------------------------------
   # Public API
@@ -100,7 +104,8 @@ defmodule Julep.Runtime do
       init_commands: commands,
       subscriptions: %{},
       windows: MapSet.new(),
-      async_tasks: %{}
+      async_tasks: %{},
+      pending_effects: %{}
     }
 
     # Defer rendering to handle_continue. Bridge is already started (it's
@@ -130,6 +135,12 @@ defmodule Julep.Runtime do
   # ---------------------------------------------------------------------------
 
   @impl true
+  def handle_info({:renderer_event, {:effect_result, id, _result} = event}, state) do
+    state = cancel_pending_effect(state, id)
+    state = run_update(state, event)
+    {:noreply, state}
+  end
+
   def handle_info({:renderer_event, event}, state) do
     state = run_update(state, event)
     {:noreply, state}
@@ -155,13 +166,26 @@ defmodule Julep.Runtime do
   def handle_info(:renderer_restarted, state) do
     Logger.info("julep runtime: renderer restarted -- re-sending settings and snapshot")
 
+    # Flush all pending effect requests -- the renderer that would have
+    # responded is gone.
+    state = flush_pending_effects(state, :renderer_restarted)
+
     # The new renderer process expects Settings as the first message.
     send_settings(state.app, state.bridge)
 
-    # Re-send the last known tree so the renderer can reconstruct its state.
-    if state.tree do
-      Julep.Bridge.send_snapshot(state.bridge, state.tree)
+    # Re-run view/1 to get a fresh tree rather than relying on a stale cache.
+    tree =
+      case safe_view(state.app, state.model) do
+        {:ok, new_tree} -> new_tree
+        :error -> state.tree
+      end
+
+    if tree do
+      Julep.Bridge.send_snapshot(state.bridge, tree)
     end
+
+    # Re-sync subscriptions with the new renderer.
+    state = sync_subscriptions(state, state.model)
 
     # Re-open all known windows (renderer lost its window map on restart).
     Enum.each(state.windows, fn window_id ->
@@ -169,7 +193,7 @@ defmodule Julep.Runtime do
       Julep.Bridge.send_window_op(state.bridge, "open", window_id, settings)
     end)
 
-    {:noreply, state}
+    {:noreply, %{state | tree: tree}}
   end
 
   # ---------------------------------------------------------------------------
@@ -211,6 +235,23 @@ defmodule Julep.Runtime do
   def handle_info({:send_after_event, event}, state) do
     state = run_update(state, event)
     {:noreply, state}
+  end
+
+  # ---------------------------------------------------------------------------
+  # Effect request timeouts
+  # ---------------------------------------------------------------------------
+
+  def handle_info({:effect_timeout, id}, state) do
+    case Map.pop(state.pending_effects, id) do
+      {nil, _} ->
+        # Already resolved or flushed -- ignore.
+        {:noreply, state}
+
+      {_timer_ref, pending_effects} ->
+        state = %{state | pending_effects: pending_effects}
+        state = run_update(state, {:effect_result, id, {:error, :timeout}})
+        {:noreply, state}
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -462,7 +503,9 @@ defmodule Julep.Runtime do
       Logger.warning("julep runtime: effect_request #{kind} (#{id}) without bridge")
     end
 
-    state
+    # Start a timeout timer for this effect request.
+    ref = Process.send_after(self(), {:effect_timeout, id}, @effect_timeout_ms)
+    put_in(state.pending_effects[id], ref)
   end
 
   defp execute_command(%Julep.Command{type: type, payload: payload}, state)
@@ -716,6 +759,49 @@ defmodule Julep.Runtime do
       end
     end)
 
+    # Diff window props for windows that are still open -- send update ops
+    # for any changed props (title, size, position, etc.).
+    surviving = MapSet.intersection(current_windows, new_windows)
+
+    Enum.each(surviving, fn window_id ->
+      old_props = extract_window_props(state.tree, window_id)
+      new_props = extract_window_props(tree, window_id)
+
+      if old_props != new_props and state.bridge do
+        Julep.Bridge.send_window_op(state.bridge, "update", window_id, new_props)
+      end
+    end)
+
     %{state | windows: new_windows}
+  end
+
+  # ---------------------------------------------------------------------------
+  # Effect request tracking
+  # ---------------------------------------------------------------------------
+
+  # Cancels the timeout timer for a resolved effect request.
+  @spec cancel_pending_effect(map(), String.t()) :: map()
+  defp cancel_pending_effect(state, id) do
+    case Map.pop(state.pending_effects, id) do
+      {nil, _} ->
+        state
+
+      {timer_ref, pending_effects} ->
+        Process.cancel_timer(timer_ref)
+        %{state | pending_effects: pending_effects}
+    end
+  end
+
+  # Flushes all pending effect requests, dispatching error results through
+  # update/2 and cancelling their timers.
+  @spec flush_pending_effects(map(), atom()) :: map()
+  defp flush_pending_effects(state, reason) do
+    state =
+      Enum.reduce(state.pending_effects, state, fn {id, timer_ref}, acc ->
+        Process.cancel_timer(timer_ref)
+        run_update(acc, {:effect_result, id, {:error, reason}})
+      end)
+
+    %{state | pending_effects: %{}}
   end
 end

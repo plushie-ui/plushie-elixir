@@ -65,11 +65,12 @@ defmodule Julep.Iced.Widget.Float do
 
   @doc "Appends a child to the float."
   @spec push(float_widget :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
-  def push(%__MODULE__{} = fw, child), do: %{fw | children: fw.children ++ [child]}
+  def push(%__MODULE__{} = fw, child), do: %{fw | children: [child | fw.children]}
 
   @doc "Appends multiple children to the float."
   @spec extend(float_widget :: t(), children :: [Julep.Iced.ui_node() | struct()]) :: t()
-  def extend(%__MODULE__{} = fw, children), do: %{fw | children: fw.children ++ children}
+  def extend(%__MODULE__{} = fw, children),
+    do: %{fw | children: Enum.reverse(children) ++ fw.children}
 
   @doc "Converts this float struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(float_widget :: t()) :: Julep.Iced.ui_node()
@@ -85,7 +86,12 @@ defmodule Julep.Iced.Widget.Float do
         |> put_if(fw.translate_y, "translate_y")
         |> put_if(fw.scale, "scale")
 
-      %{id: fw.id, type: "float", props: props, children: children_to_nodes(fw.children)}
+      %{
+        id: fw.id,
+        type: "float",
+        props: props,
+        children: children_to_nodes(Enum.reverse(fw.children))
+      }
     end
   end
 end

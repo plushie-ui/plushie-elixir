@@ -144,15 +144,15 @@ mod tests {
     #[test]
     fn test_ext_caches_creation() {
         let c = ext_caches();
-        assert!(!c.contains("anything"));
+        assert!(!c.contains("test", "anything"));
     }
 
     #[test]
     fn test_ext_caches_insert_and_get() {
         let mut c = ext_caches();
-        c.insert("counter".to_string(), 42u32);
-        assert_eq!(c.get::<u32>("counter"), Some(&42));
-        assert!(c.contains("counter"));
+        c.insert("ns", "counter".to_string(), 42u32);
+        assert_eq!(c.get::<u32>("ns", "counter"), Some(&42));
+        assert!(c.contains("ns", "counter"));
     }
 
     #[test]
@@ -190,7 +190,7 @@ mod tests {
         let env = widget_env_with(&ec, &wc, &images, &theme, &disp);
 
         // Verify env fields are accessible and point to our instances
-        assert!(!env.caches.contains("anything"));
+        assert!(!env.caches.contains("test", "anything"));
         assert!(env.render_ctx.extensions.is_empty());
     }
 
@@ -227,15 +227,19 @@ mod tests {
         use crate::extensions::GenerationCounter;
 
         let mut caches = ext_caches();
-        caches.insert("spark-1:gen".to_string(), GenerationCounter::new());
+        caches.insert("spark", "spark-1:gen".to_string(), GenerationCounter::new());
 
-        let gen = caches.get_mut::<GenerationCounter>("spark-1:gen").unwrap();
+        let gen = caches
+            .get_mut::<GenerationCounter>("spark", "spark-1:gen")
+            .unwrap();
         assert_eq!(gen.get(), 0);
         gen.bump();
         assert_eq!(gen.get(), 1);
 
         // Re-borrow to verify persistence
-        let gen = caches.get::<GenerationCounter>("spark-1:gen").unwrap();
+        let gen = caches
+            .get::<GenerationCounter>("spark", "spark-1:gen")
+            .unwrap();
         assert_eq!(gen.get(), 1);
     }
 }

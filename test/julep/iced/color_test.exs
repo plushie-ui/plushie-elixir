@@ -106,7 +106,7 @@ defmodule Julep.Iced.ColorTest do
 
     test "raises on unknown atom" do
       assert_raise ArgumentError, ~r/unknown color name/, fn ->
-        Color.cast(:chartreuse)
+        Color.cast(:nonexistent_color)
       end
     end
   end
