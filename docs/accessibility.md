@@ -2,9 +2,9 @@
 
 Julep provides built-in accessibility support via
 [accesskit](https://github.com/AccessKit/accesskit), a cross-platform
-accessibility toolkit. When the `a11y` feature is enabled in the renderer,
-native platform accessibility APIs are activated automatically: VoiceOver on
-macOS, AT-SPI/Orca on Linux, and UI Automation/NVDA/JAWS on Windows.
+accessibility toolkit. The default renderer build includes accessibility,
+activating native platform APIs automatically: VoiceOver on macOS,
+AT-SPI/Orca on Linux, and UI Automation/NVDA/JAWS on Windows.
 
 Screen reader users, keyboard-only users, and other AT users interact with
 the same widgets and receive the same events as mouse users. No special
@@ -40,8 +40,10 @@ Elixir app                Renderer                      Platform AT
    |<-- {:click, id} --------|                              |
 ```
 
-The `a11y` feature is additive. Everything works identically without it --
-the accessibility code is fully gated behind `#[cfg(feature = "a11y")]`.
+The `a11y` feature is included in the default build. It can be disabled for
+a smaller binary, but all functionality works identically either way. The
+accessibility code is gated behind `#[cfg(feature = "a11y")]` in the Rust
+source.
 
 
 ## Auto-inference
@@ -537,20 +539,22 @@ end
 ```
 
 
-## Building with accessibility
+## Building
 
-The `a11y` feature is optional and additive:
+Accessibility is enabled by default. A standard `cargo build` includes it:
 
 ```bash
-# Without accessibility (default)
 cd native/julep_gui
 cargo build --release
-
-# With accessibility
-cargo build --release --features a11y
 ```
 
-The feature flag controls:
+To build _without_ accessibility (smaller binary, no accesskit dependency):
+
+```bash
+cargo build --release --no-default-features --features builtin-all,dialogs,clipboard,notifications
+```
+
+The `a11y` feature flag controls:
 
 | Crate | What it enables |
 |---|---|
@@ -559,8 +563,7 @@ The feature flag controls:
 | `julep-bin` | Tree update pushes, AT action handling |
 
 Without the feature, the `a11y` prop is still accepted in UI trees (it's
-just a map in props) but has no effect -- useful for adding annotations
-before enabling the feature.
+just a map in props) but has no effect.
 
 
 ## Platform support
@@ -583,8 +586,8 @@ To manually verify accessibility with a real screen reader:
 ### Linux (Orca)
 
 ```bash
-# Build with a11y
-cd native/julep_gui && cargo build --features a11y
+# Build the renderer (a11y is included by default)
+cd native/julep_gui && cargo build
 
 # Start Orca (usually Super+Alt+S, or from accessibility settings)
 orca &
@@ -599,8 +602,8 @@ Activate buttons with Enter or Space.
 ### macOS (VoiceOver)
 
 ```bash
-# Build with a11y
-cd native/julep_gui && cargo build --features a11y
+# Build the renderer (a11y is included by default)
+cd native/julep_gui && cargo build
 
 # Toggle VoiceOver: Cmd+F5
 # Run your app
@@ -613,8 +616,8 @@ should announce each widget's role and label.
 ### Windows (NVDA)
 
 ```bash
-# Build with a11y
-cd native/julep_gui && cargo build --features a11y
+# Build the renderer (a11y is included by default)
+cd native/julep_gui && cargo build
 
 # Start NVDA
 # Run your app

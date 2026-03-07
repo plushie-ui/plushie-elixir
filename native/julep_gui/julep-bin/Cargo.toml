@@ -26,7 +26,7 @@ iced_winit = { version = "0.14", optional = true }
 accesskit = { version = "0.18", optional = true }
 
 [features]
-default = ["builtin-all", "dialogs", "clipboard", "notifications"]
+default = ["builtin-all", "dialogs", "clipboard", "notifications", "a11y"]
 builtin-all = ["widget-image", "widget-svg", "widget-canvas", "widget-markdown", "widget-highlighter", "widget-sysinfo", "widget-qr-code"]
 widget-image = ["julep-core/widget-image"]
 widget-svg = ["julep-core/widget-svg"]
