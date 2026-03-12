@@ -127,17 +127,50 @@ fn handle_directory_select(id: String, _payload: &Value) -> EffectResponse {
 
 // ---------------------------------------------------------------------------
 // Clipboard (requires "clipboard" feature / arboard crate)
+//
+// A single Clipboard instance is kept alive for the process lifetime.
+// On Wayland, arboard serves clipboard data from a background thread
+// tied to the Clipboard instance -- dropping it loses the data.
 // ---------------------------------------------------------------------------
 
 #[cfg(feature = "clipboard")]
+fn with_clipboard(id: &str, f: impl FnOnce(&mut arboard::Clipboard, &str) -> EffectResponse) -> EffectResponse {
+    use std::sync::Mutex;
+
+    static CLIPBOARD: Mutex<Option<arboard::Clipboard>> = Mutex::new(None);
+
+    let mut guard = match CLIPBOARD.lock() {
+        Ok(g) => g,
+        Err(e) => {
+            log::warn!("clipboard mutex poisoned: {e}");
+            return EffectResponse::error(id.to_string(), format!("clipboard lock failed: {e}"));
+        }
+    };
+
+    let clipboard = match guard.as_mut() {
+        Some(c) => c,
+        None => {
+            match arboard::Clipboard::new() {
+                Ok(c) => {
+                    *guard = Some(c);
+                    guard.as_mut().unwrap()
+                }
+                Err(e) => return EffectResponse::error(id.to_string(), format!("clipboard init failed: {e}")),
+            }
+        }
+    };
+
+    f(clipboard, id)
+}
+
+#[cfg(feature = "clipboard")]
 fn handle_clipboard_read(id: String) -> EffectResponse {
-    match arboard::Clipboard::new() {
-        Ok(mut clipboard) => match clipboard.get_text() {
-            Ok(text) => EffectResponse::ok(id, json!({"text": text})),
-            Err(e) => EffectResponse::error(id, format!("clipboard read failed: {e}")),
-        },
-        Err(e) => EffectResponse::error(id, format!("clipboard init failed: {e}")),
-    }
+    with_clipboard(&id, |clipboard, id| {
+        match clipboard.get_text() {
+            Ok(text) => EffectResponse::ok(id.to_string(), json!({"text": text})),
+            Err(e) => EffectResponse::error(id.to_string(), format!("clipboard read failed: {e}")),
+        }
+    })
 }
 
 #[cfg(not(feature = "clipboard"))]
@@ -147,15 +180,14 @@ fn handle_clipboard_read(id: String) -> EffectResponse {
 
 #[cfg(feature = "clipboard")]
 fn handle_clipboard_write(id: String, payload: &Value) -> EffectResponse {
-    let text = payload.get("text").and_then(|v| v.as_str()).unwrap_or("");
+    let text = payload.get("text").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
-    match arboard::Clipboard::new() {
-        Ok(mut clipboard) => match clipboard.set_text(text.to_string()) {
-            Ok(()) => EffectResponse::ok(id, json!(null)),
-            Err(e) => EffectResponse::error(id, format!("clipboard write failed: {e}")),
-        },
-        Err(e) => EffectResponse::error(id, format!("clipboard init failed: {e}")),
-    }
+    with_clipboard(&id, |clipboard, id| {
+        match clipboard.set_text(text) {
+            Ok(()) => EffectResponse::ok(id.to_string(), json!(null)),
+            Err(e) => EffectResponse::error(id.to_string(), format!("clipboard write failed: {e}")),
+        }
+    })
 }
 
 #[cfg(not(feature = "clipboard"))]
@@ -169,51 +201,44 @@ fn handle_clipboard_write(id: String, _payload: &Value) -> EffectResponse {
 #[cfg(all(feature = "clipboard", target_os = "linux"))]
 fn handle_clipboard_read_primary(id: String) -> EffectResponse {
     use arboard::{GetExtLinux, LinuxClipboardKind};
-    match arboard::Clipboard::new() {
-        Ok(mut clipboard) => {
-            match clipboard
-                .get()
-                .clipboard(LinuxClipboardKind::Primary)
-                .text()
-            {
-                Ok(text) => EffectResponse::ok(id, json!({"text": text})),
-                Err(e) => EffectResponse::error(id, format!("primary clipboard read failed: {e}")),
-            }
+
+    with_clipboard(&id, |clipboard, id| {
+        match clipboard
+            .get()
+            .clipboard(LinuxClipboardKind::Primary)
+            .text()
+        {
+            Ok(text) => EffectResponse::ok(id.to_string(), json!({"text": text})),
+            Err(e) => EffectResponse::error(id.to_string(), format!("primary clipboard read failed: {e}")),
         }
-        Err(e) => EffectResponse::error(id, format!("clipboard init failed: {e}")),
-    }
+    })
 }
 
 #[cfg(all(feature = "clipboard", target_os = "linux"))]
 fn handle_clipboard_write_primary(id: String, payload: &Value) -> EffectResponse {
     use arboard::{LinuxClipboardKind, SetExtLinux};
-    let text = payload.get("text").and_then(|v| v.as_str()).unwrap_or("");
+    let text = payload.get("text").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
-    match arboard::Clipboard::new() {
-        Ok(mut clipboard) => {
-            match clipboard
-                .set()
-                .clipboard(LinuxClipboardKind::Primary)
-                .text(text.to_string())
-            {
-                Ok(()) => EffectResponse::ok(id, json!(null)),
-                Err(e) => EffectResponse::error(id, format!("primary clipboard write failed: {e}")),
-            }
+    with_clipboard(&id, |clipboard, id| {
+        match clipboard
+            .set()
+            .clipboard(LinuxClipboardKind::Primary)
+            .text(text)
+        {
+            Ok(()) => EffectResponse::ok(id.to_string(), json!(null)),
+            Err(e) => EffectResponse::error(id.to_string(), format!("primary clipboard write failed: {e}")),
         }
-        Err(e) => EffectResponse::error(id, format!("clipboard init failed: {e}")),
-    }
+    })
 }
 
 // On non-Linux platforms, primary clipboard falls back to the standard clipboard.
 #[cfg(all(feature = "clipboard", not(target_os = "linux")))]
 fn handle_clipboard_read_primary(id: String) -> EffectResponse {
-    // Primary selection is a Linux/X11 concept; fall back to standard clipboard.
     handle_clipboard_read(id)
 }
 
 #[cfg(all(feature = "clipboard", not(target_os = "linux")))]
 fn handle_clipboard_write_primary(id: String, payload: &Value) -> EffectResponse {
-    // Primary selection is a Linux/X11 concept; fall back to standard clipboard.
     handle_clipboard_write(id, payload)
 }
 
