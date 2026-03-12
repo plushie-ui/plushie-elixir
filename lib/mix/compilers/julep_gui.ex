@@ -5,7 +5,10 @@ defmodule Mix.Tasks.Compile.JulepGui do
   use Mix.Task.Compiler
 
   @manifest "compile.julep_gui"
-  @native_dir Path.join(~w(native julep_gui))
+  # Anchor to the julep project root so this works when compiled as a
+  # path dependency (where File.cwd!() is the consumer project).
+  @project_root Path.expand("../../..", __DIR__)
+  @native_dir Path.join(@project_root, "native/julep_gui")
 
   @impl true
   def manifests, do: [manifest_path()]
@@ -19,7 +22,7 @@ defmodule Mix.Tasks.Compile.JulepGui do
   def run(_args) do
     # If a precompiled binary already exists (e.g. downloaded for Hex consumers),
     # skip the cargo build entirely so Rust is not required.
-    precompiled = Path.join([File.cwd!(), "priv", "bin", "julep_gui#{executable_extension()}"])
+    precompiled = Path.join([@project_root, "priv", "bin", "julep_gui#{executable_extension()}"])
 
     if File.exists?(precompiled) do
       {:noop, []}
@@ -36,7 +39,7 @@ defmodule Mix.Tasks.Compile.JulepGui do
   end
 
   defp run_cargo_build do
-    manifest_path = Path.join([File.cwd!(), @native_dir, "Cargo.toml"])
+    manifest_path = Path.join(@native_dir, "Cargo.toml")
 
     unless File.exists?(manifest_path) do
       Mix.raise("Cargo.toml not found at #{manifest_path}")
@@ -57,7 +60,7 @@ defmodule Mix.Tasks.Compile.JulepGui do
 
     cmd_args = ["build", "--manifest-path", manifest_path] ++ feature_flags()
 
-    case System.cmd("cargo", cmd_args, stderr_to_stdout: true) do
+    case System.cmd("cargo", cmd_args, stderr_to_stdout: true, cd: @native_dir) do
       {_output, 0} ->
         write_manifest(max_mtime(sources))
         {:ok, []}
