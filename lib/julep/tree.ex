@@ -306,6 +306,13 @@ defmodule Julep.Tree do
     Enum.map(list, &stringify_value/1)
   end
 
+  # Tuples can leak into props from incorrect function calls (e.g. keyword
+  # opts passed as positional args). Convert to list for wire-format compat
+  # -- matches the behaviour of Julep.Iced.Encode.Tuple.
+  defp stringify_value(tuple) when is_tuple(tuple) do
+    tuple |> Tuple.to_list() |> Enum.map(&stringify_value/1)
+  end
+
   defp stringify_value(v), do: v
 
   # Fetches a field by atom key first, then string key, returning nil if absent.

@@ -147,6 +147,23 @@ defmodule Julep.UI do
   end
 
   # ---------------------------------------------------------------------------
+  # Positional argument validation
+  # ---------------------------------------------------------------------------
+
+  # Several widget functions accept required values as positional args followed
+  # by an optional keyword list.  It is easy to accidentally pass the value as
+  # a keyword (e.g. `text_input("id", value: v)` instead of
+  # `text_input("id", v)`).  Elixir merges the keyword into the preceding
+  # argument silently, so we guard against it here.  A FunctionClauseError
+  # showing the keyword list in the args is far clearer than a cryptic
+  # Msgpax.Packer error three layers deep.
+
+  @doc false
+  defguard is_keyword(v)
+           when is_list(v) and v != [] and is_tuple(hd(v)) and tuple_size(hd(v)) == 2 and
+                  is_atom(elem(hd(v), 0))
+
+  # ---------------------------------------------------------------------------
   # Layout widgets
   # ---------------------------------------------------------------------------
 
@@ -1020,7 +1037,9 @@ defmodule Julep.UI do
   """
   @spec text_input(id :: String.t(), value :: String.t(), opts :: keyword()) ::
           Julep.Iced.ui_node()
-  def text_input(id, value, opts \\ []) do
+  def text_input(id, value, opts \\ [])
+
+  def text_input(id, value, opts) when not is_keyword(value) do
     base_props = %{"value" => value}
 
     extra_props =
@@ -1042,7 +1061,9 @@ defmodule Julep.UI do
   """
   @spec checkbox(id :: String.t(), checked :: boolean(), opts :: keyword()) ::
           Julep.Iced.ui_node()
-  def checkbox(id, checked, opts \\ []) do
+  def checkbox(id, checked, opts \\ [])
+
+  def checkbox(id, checked, opts) when not is_keyword(checked) do
     base_props = %{"checked" => checked}
 
     extra_props =
@@ -1162,7 +1183,9 @@ defmodule Julep.UI do
   """
   @spec toggler(id :: String.t(), is_toggled :: boolean(), opts :: keyword()) ::
           Julep.Iced.ui_node()
-  def toggler(id, is_toggled, opts \\ []) do
+  def toggler(id, is_toggled, opts \\ [])
+
+  def toggler(id, is_toggled, opts) when not is_keyword(is_toggled) do
     base_props = %{"is_toggled" => is_toggled}
 
     extra_props =
@@ -1191,7 +1214,9 @@ defmodule Julep.UI do
           opts :: keyword()
         ) ::
           Julep.Iced.ui_node()
-  def radio(id, value, selected, opts \\ []) do
+  def radio(id, value, selected, opts \\ [])
+
+  def radio(id, value, selected, opts) when not is_keyword(value) and not is_keyword(selected) do
     base_props = %{"value" => value, "selected" => selected}
 
     extra_props =
@@ -1221,7 +1246,9 @@ defmodule Julep.UI do
           opts :: keyword()
         ) ::
           Julep.Iced.ui_node()
-  def slider(id, range, value, opts \\ []) do
+  def slider(id, range, value, opts \\ [])
+
+  def slider(id, range, value, opts) when not is_keyword(range) and not is_keyword(value) do
     base_props = %{"range" => Tuple.to_list(range), "value" => value}
 
     extra_props =
@@ -1248,7 +1275,10 @@ defmodule Julep.UI do
           opts :: keyword()
         ) ::
           Julep.Iced.ui_node()
-  def vertical_slider(id, range, value, opts \\ []) do
+  def vertical_slider(id, range, value, opts \\ [])
+
+  def vertical_slider(id, range, value, opts)
+      when not is_keyword(range) and not is_keyword(value) do
     base_props = %{"range" => Tuple.to_list(range), "value" => value}
 
     extra_props =
@@ -1272,7 +1302,10 @@ defmodule Julep.UI do
           selected :: String.t() | nil,
           opts :: keyword()
         ) :: Julep.Iced.ui_node()
-  def pick_list(id, options, selected, opts \\ []) do
+  def pick_list(id, options, selected, opts \\ [])
+
+  def pick_list(id, options, selected, opts)
+      when not is_keyword(options) and not is_keyword(selected) do
     base_props = %{"options" => options, "selected" => selected}
 
     extra_props =
@@ -1297,7 +1330,10 @@ defmodule Julep.UI do
           opts :: keyword()
         ) ::
           Julep.Iced.ui_node()
-  def combo_box(id, options, value, opts \\ []) do
+  def combo_box(id, options, value, opts \\ [])
+
+  def combo_box(id, options, value, opts)
+      when not is_keyword(options) and not is_keyword(value) do
     base_props = %{"options" => options, "value" => value}
 
     extra_props =
@@ -1317,7 +1353,9 @@ defmodule Julep.UI do
   """
   @spec text_editor(id :: String.t(), content :: String.t(), opts :: keyword()) ::
           Julep.Iced.ui_node()
-  def text_editor(id, content, opts \\ []) do
+  def text_editor(id, content, opts \\ [])
+
+  def text_editor(id, content, opts) when not is_keyword(content) do
     base_props = %{"content" => content}
 
     extra_props =
@@ -1340,7 +1378,9 @@ defmodule Julep.UI do
       image("logo", "/assets/logo.png", width: 200, content_fit: :cover)
   """
   @spec image(id :: String.t(), source :: String.t(), opts :: keyword()) :: Julep.Iced.ui_node()
-  def image(id, source, opts \\ []) do
+  def image(id, source, opts \\ [])
+
+  def image(id, source, opts) when not is_keyword(source) do
     base_props = %{"source" => source}
 
     extra_props =
@@ -1359,7 +1399,9 @@ defmodule Julep.UI do
       svg("icon", "/assets/icon.svg", width: 24, height: 24)
   """
   @spec svg(id :: String.t(), source :: String.t(), opts :: keyword()) :: Julep.Iced.ui_node()
-  def svg(id, source, opts \\ []) do
+  def svg(id, source, opts \\ [])
+
+  def svg(id, source, opts) when not is_keyword(source) do
     base_props = %{"source" => source}
 
     extra_props =
