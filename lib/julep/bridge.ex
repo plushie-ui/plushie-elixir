@@ -323,6 +323,10 @@ defmodule Julep.Bridge do
     end
   end
 
+  def handle_info({:stop_protocol_mismatch, got, expected}, state) do
+    {:stop, {:protocol_mismatch, got, expected}, state}
+  end
+
   def handle_info(_msg, state), do: {:noreply, state}
 
   @impl true

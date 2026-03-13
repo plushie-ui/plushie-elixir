@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - Extension config via Settings wire message
 - ExtensionCommand wire protocol for high-frequency data push to extensions
 - Split `julep_gui` into `julep-core` library crate and `julep-bin` binary crate
+- Moved Rust renderer into separate `julep-renderer` repo; renamed binary
+  from `julep_gui` to `julep-renderer` (see ADR 0014)
+- Protocol version handshake: renderer emits `hello` on startup, bridge
+  validates protocol compatibility
 
 ### Fixed
 - Overlay widget: missing trait methods, viewport clamping, safe unwraps
