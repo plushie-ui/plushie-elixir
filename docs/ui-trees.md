@@ -87,9 +87,9 @@ end
 | `space(opts)` | `space` | Flexible spacer |
 | `grid(opts)` | `grid` | Two-dimensional grid layout |
 | `keyed_column(opts)` | `keyed_column` | Column with explicit child keys |
-| `pin(opts)` | `pin` | Pins child to a position within parent |
-| `float(opts)` | `float` | Floats child over siblings |
-| `responsive(id, opts)` | `responsive` | Responds to available size (alias for sensor) |
+| `pin(id, opts)` | `pin` | Pins child to a position within parent |
+| `float_widget(id, opts)` | `float` | Floats child over siblings |
+| `responsive(opts)` | `responsive` | Responds to available size (alias for sensor) |
 
 ### Input widgets
 
@@ -98,7 +98,7 @@ end
 | `button(id, label, opts)` | `button` | Clickable button |
 | `text_input(id, value, opts)` | `text_input` | Single-line text field |
 | `checkbox(id, checked, opts)` | `checkbox` | Boolean toggle (checkbox) |
-| `toggler(id, checked, opts)` | `toggler` | Boolean toggle (switch) |
+| `toggler(id, is_toggled, opts)` | `toggler` | Boolean toggle (switch) |
 | `radio(id, value, selected, opts)` | `radio` | Radio button |
 | `pick_list(id, options, selected, opts)` | `pick_list` | Dropdown select |
 | `combo_box(id, options, value, opts)` | `combo_box` | Searchable select |
@@ -113,9 +113,9 @@ end
 | `text(content, opts)` | `text` | Text label |
 | `progress_bar(range, value, opts)` | `progress_bar` | Progress indicator |
 | `tooltip(id, opts)` | `tooltip` | Hover tooltip |
-| `image(id, path_or_url, opts)` | `image` | Raster image |
-| `svg(id, path_or_data, opts)` | `svg` | Vector image |
-| `markdown(id, content, opts)` | `markdown` | Rendered markdown |
+| `image(id, source, opts)` | `image` | Raster image |
+| `svg(id, source, opts)` | `svg` | Vector image |
+| `markdown(content, opts)` | `markdown` | Rendered markdown |
 | `rule(opts)` | `rule` | Horizontal/vertical divider |
 | `rich_text(id, opts)` | `rich_text` | Styled text with multiple spans |
 | `themer(id, opts)` | `themer` | Per-subtree theme override |
@@ -127,9 +127,114 @@ end
 |---|---|---|
 | `mouse_area(id, opts)` | `mouse_area` | Captures mouse events on children |
 | `sensor(id, opts)` | `sensor` | Detects layout changes and resize |
-| `pane_grid(id, panes, opts)` | `pane_grid` | Resizable tiled pane layout |
+| `pane_grid(id, opts)` | `pane_grid` | Resizable tiled pane layout |
 | `canvas(id, opts)` | `canvas` | 2D drawing surface (layers via `layers:` option) |
 | `overlay(id, opts)` | `overlay` | Positions child as floating overlay above anchor |
+
+### How `Julep.UI` handles widget IDs
+
+`Julep.UI` builders use two different conventions for the `id` argument.
+This is the #1 source of confusion for new users, so it is worth
+understanding the rule behind it.
+
+**The rule:** Widgets that emit events or hold renderer-side state take `id`
+as a required positional first argument. Widgets that are purely structural
+(layout containers, display-only) take `id` as an optional keyword in `opts`
+and auto-generate one from the call site if omitted.
+
+The rationale: if a widget emits events, the `id` appears in every event
+tuple your `update/2` receives (e.g. `{:click, "save"}`). Making it
+positional forces you to choose a meaningful, stable ID up front. Layout
+containers rarely need explicit IDs -- the auto-generated ones work fine
+for diffing.
+
+#### Positional `id` -- macros (required, first arg)
+
+These are macros defined as `defmacro widget(id, opts \\ [])`. The first
+argument is always the id string. All support `do` blocks for children.
+
+| Widget | Signature |
+|---|---|
+| `window` | `window(id, opts)` |
+| `container` | `container(id, opts)` |
+| `scrollable` | `scrollable(id, opts)` |
+| `pin` | `pin(id, opts)` |
+| `float_widget` | `float_widget(id, opts)` |
+| `overlay` | `overlay(id, opts)` |
+| `tooltip` | `tooltip(id, opts)` |
+| `mouse_area` | `mouse_area(id, opts)` |
+| `sensor` | `sensor(id, opts)` |
+| `themer` | `themer(id, opts)` |
+| `pane_grid` | `pane_grid(id, opts)` |
+| `table` | `table(id, opts)` |
+
+#### Positional `id` -- functions (required, first arg)
+
+These are plain functions, not macros. They do not support `do` blocks.
+`id` is the first positional argument; remaining positional arguments carry
+the widget's primary data (label, value, range, etc.).
+
+| Widget | Signature |
+|---|---|
+| `button` | `button(id, label, opts)` |
+| `text_input` | `text_input(id, value, opts)` |
+| `checkbox` | `checkbox(id, checked, opts)` |
+| `toggler` | `toggler(id, is_toggled, opts)` |
+| `radio` | `radio(id, value, selected, opts)` |
+| `slider` | `slider(id, range, value, opts)` |
+| `vertical_slider` | `vertical_slider(id, range, value, opts)` |
+| `pick_list` | `pick_list(id, options, selected, opts)` |
+| `combo_box` | `combo_box(id, options, value, opts)` |
+| `text_editor` | `text_editor(id, content, opts)` |
+| `image` | `image(id, source, opts)` |
+| `svg` | `svg(id, source, opts)` |
+| `canvas` | `canvas(id, opts)` |
+| `rich_text` | `rich_text(id, opts)` |
+| `qr_code` | `qr_code(id, data, opts)` |
+
+#### Keyword `id:` -- auto-generated if omitted
+
+These macros take only `opts` (no positional `id`). If you need a stable
+ID, pass `id: "my_id"` in the keyword options. Otherwise an auto-ID is
+generated from the call site (`"auto:ModuleName:42"`).
+
+| Widget | Signature | Notes |
+|---|---|---|
+| `column` | `column(opts)` | Layout container |
+| `row` | `row(opts)` | Layout container |
+| `stack` | `stack(opts)` | Layout container |
+| `grid` | `grid(opts)` | Layout container |
+| `keyed_column` | `keyed_column(opts)` | Layout container |
+| `responsive` | `responsive(opts)` | Layout container |
+| `space` | `space(opts)` | Spacer (no children) |
+| `rule` | `rule(opts)` | Divider (no children) |
+| `text` | `text(content, opts)` | Content is positional; id from keyword |
+| `markdown` | `markdown(content, opts)` | Content is positional; id from keyword |
+| `progress_bar` | `progress_bar(range, value, opts)` | Range and value are positional; id from keyword |
+
+#### Why the split matters
+
+```elixir
+# GOOD: button emits {:click, "save"} -- positional id is clear
+button("save", "Save")
+
+# GOOD: column is structural -- auto-id is fine
+column padding: 8 do
+  text("Hello")
+end
+
+# CAREFUL: if you need a column's id for scrolling or testing,
+# pass it explicitly via keyword
+column id: "main_list", spacing: 4 do
+  for item <- items, do: text(item.name)
+end
+
+# WRONG: this does NOT work -- column does not take positional id
+# column("main_list", spacing: 4)  # <-- compile error
+```
+
+> **Tip:** When in doubt, check whether the widget emits events. If it does,
+> `id` is positional. If it doesn't, `id` is keyword (or omitted).
 
 ### Canvas drawing with Julep.Canvas.Shape
 

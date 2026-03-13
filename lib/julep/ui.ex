@@ -1232,16 +1232,17 @@ defmodule Julep.UI do
 
   ## Arguments
 
-  - `range` -- `{min, max}` tuple
+  - `range` -- `{min, max}` tuple or `min..max` Range
   - `value` -- current value
 
   ## Example
 
       slider("volume", {0, 100}, model.volume, step: 5)
+      slider("volume", 0..100, model.volume, step: 5)
   """
   @spec slider(
           id :: String.t(),
-          range :: {number(), number()},
+          range :: {number(), number()} | Range.t(),
           value :: number(),
           opts :: keyword()
         ) ::
@@ -1249,7 +1250,8 @@ defmodule Julep.UI do
   def slider(id, range, value, opts \\ [])
 
   def slider(id, range, value, opts) when not is_keyword(range) and not is_keyword(value) do
-    base_props = %{"range" => Tuple.to_list(range), "value" => value}
+    {range_min, range_max} = normalize_range(range)
+    base_props = %{"range" => [range_min, range_max], "value" => value}
 
     extra_props =
       opts
@@ -1262,15 +1264,16 @@ defmodule Julep.UI do
   @doc """
   Vertical slider for numeric range input.
 
-  Same as `slider/4` but oriented vertically.
+  Same as `slider/4` but oriented vertically. Accepts `{min, max}` or `min..max`.
 
   ## Example
 
       vertical_slider("brightness", {0, 100}, model.brightness)
+      vertical_slider("brightness", 0..100, model.brightness)
   """
   @spec vertical_slider(
           id :: String.t(),
-          range :: {number(), number()},
+          range :: {number(), number()} | Range.t(),
           value :: number(),
           opts :: keyword()
         ) ::
@@ -1279,7 +1282,8 @@ defmodule Julep.UI do
 
   def vertical_slider(id, range, value, opts)
       when not is_keyword(range) and not is_keyword(value) do
-    base_props = %{"range" => Tuple.to_list(range), "value" => value}
+    {range_min, range_max} = normalize_range(range)
+    base_props = %{"range" => [range_min, range_max], "value" => value}
 
     extra_props =
       opts
@@ -1740,6 +1744,13 @@ defmodule Julep.UI do
 
     %{id: id, type: "qr_code", props: Map.merge(base_props, extra_props), children: []}
   end
+
+  # ---------------------------------------------------------------------------
+  # Private helpers
+  # ---------------------------------------------------------------------------
+
+  defp normalize_range({min, max}), do: {min, max}
+  defp normalize_range(first..last//_), do: {first, last}
 
   # ---------------------------------------------------------------------------
   # Private macro helpers

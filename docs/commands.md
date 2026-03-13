@@ -252,17 +252,45 @@ The `rgba_data` must be a binary of `width * height * 4` bytes.
 #### Window queries
 
 Window queries are commands whose results arrive as events in `update/2`.
-Each takes a `tag` to identify the response.
+Despite accepting a `tag` parameter, window property queries use the
+**effect response** transport -- results arrive as `{:effect_result, id, result}`
+tuples where `id` is the **window_id string** (the `tag` is currently
+unused for these queries). System queries use a separate path where the
+tag is used.
+
+##### Window property queries
+
+These go through the effect/window_op system. Results arrive in `update/2`
+as `{:effect_result, window_id, {:ok, data}}` where `window_id` is the
+string ID of the window and `data` varies by query type.
 
 ```elixir
-Julep.Command.get_window_size(window_id, tag)       # Result: {tag, {width, height}}
-Julep.Command.get_window_position(window_id, tag)   # Result: {tag, {x, y}}
-Julep.Command.is_maximized(window_id, tag)           # Result: {tag, boolean}
-Julep.Command.is_minimized(window_id, tag)           # Result: {tag, boolean}
-Julep.Command.get_mode(window_id, tag)               # Result: {tag, mode}
-Julep.Command.get_scale_factor(window_id, tag)       # Result: {tag, scale}
-Julep.Command.raw_id(window_id, tag)                 # Result: {tag, platform_id}
-Julep.Command.monitor_size(window_id, tag)           # Result: {tag, {width, height}}
+Julep.Command.get_window_size(window_id, tag)
+# Result: {:effect_result, window_id, {:ok, %{"width" => w, "height" => h}}}
+
+Julep.Command.get_window_position(window_id, tag)
+# Result: {:effect_result, window_id, {:ok, %{"x" => x, "y" => y}}}
+# (nil if position is unavailable)
+
+Julep.Command.get_mode(window_id, tag)
+# Result: {:effect_result, window_id, {:ok, mode}}
+# mode is "windowed", "fullscreen", or "hidden"
+
+Julep.Command.get_scale_factor(window_id, tag)
+# Result: {:effect_result, window_id, {:ok, factor}}
+
+Julep.Command.is_maximized(window_id, tag)
+# Result: {:effect_result, window_id, {:ok, boolean}}
+
+Julep.Command.is_minimized(window_id, tag)
+# Result: {:effect_result, window_id, {:ok, boolean}}
+
+Julep.Command.raw_id(window_id, tag)
+# Result: {:effect_result, window_id, {:ok, platform_id}}
+
+Julep.Command.monitor_size(window_id, tag)
+# Result: {:effect_result, window_id, {:ok, %{"width" => w, "height" => h}}}
+# (nil if monitor cannot be determined)
 ```
 
 Example:
@@ -272,30 +300,46 @@ def update(model, {:click, "check_size"}) do
   {model, Julep.Command.get_window_size("main", :got_size)}
 end
 
-def update(model, {:got_size, {width, height}}) do
-  %{model | window_width: width, window_height: height}
+def update(model, {:effect_result, "main", {:ok, %{"width" => w, "height" => h}}}) do
+  %{model | window_width: w, window_height: h}
 end
 ```
 
-#### System queries
+**Note:** Because the response is keyed by `window_id` rather than `tag`,
+issuing multiple different queries against the same window will produce
+results that share the same `window_id` key. Distinguish them by the shape
+of the `data` map (e.g. `%{"width" => _, "height" => _}` for size vs.
+`%{"x" => _, "y" => _}` for position).
 
-System-level queries that are not scoped to a specific window.
+##### System queries
+
+System-level queries use a different transport path. Results arrive as
+dedicated tuples where the **tag** (stringified) identifies the response.
 
 ```elixir
-Julep.Command.get_system_info(tag)     # Result: {:system_info, tag, info_map}
-Julep.Command.get_system_theme(tag)    # Result: {:system_theme, tag, mode}
+Julep.Command.get_system_theme(tag)
+# Result: {:system_theme, tag_string, mode}
+# mode is "light", "dark", or "none"
+
+Julep.Command.get_system_info(tag)
+# Result: {:system_info, tag_string, info_map}
+# info_map keys: "system_name", "system_kernel", "system_version",
+#   "system_short_version", "cpu_brand", "cpu_cores", "memory_total",
+#   "memory_used", "graphics_backend", "graphics_adapter"
+# Requires the renderer to be built with the `sysinfo` feature.
 ```
 
-`get_system_info/1` returns a map with platform details (CPU, memory, OS,
-graphics adapter). `get_system_theme/1` returns the current OS theme mode
-(`"light"` or `"dark"`).
+**Important:** The `tag` arrives as a **string** in `update/2`, even if you
+pass an atom. `Julep.Command.get_system_theme(:theme_detected)` produces
+`{:system_theme, "theme_detected", mode}` -- match on the string, not the
+atom.
 
 ```elixir
 def update(model, {:click, "detect_theme"}) do
   {model, Julep.Command.get_system_theme(:theme_detected)}
 end
 
-def update(model, {:system_theme, :theme_detected, mode}) do
+def update(model, {:system_theme, "theme_detected", mode}) do
   %{model | os_theme: mode}
 end
 ```
@@ -521,8 +565,10 @@ interprets them:
 - **Widget operations** are encoded as wire messages and sent to the
   renderer.
 - **Window commands** are encoded as wire messages to the renderer.
-- **Window queries** are encoded as wire messages. The renderer responds
-  with the result, which the runtime delivers as a tagged event.
+- **Window property queries** (get_size, get_position, etc.) are sent as
+  window_op wire messages. The renderer responds with an `effect_response`
+  keyed by window_id. **System queries** (get_system_theme, get_system_info)
+  use a separate `query_response` wire message keyed by tag.
 - **Image operations** are encoded as wire messages to the renderer.
 - **PaneGrid operations** are encoded as widget ops sent to the renderer.
 - **Timers** use `Process.send_after` under the hood.
