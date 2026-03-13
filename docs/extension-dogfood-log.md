@@ -7,7 +7,7 @@ extension system.
 
 ### Issues found and fixed
 
-- **julep-bin had no public `run()`.** The binary crate hardcoded
+- **julep-renderer had no public `run()`.** The binary crate hardcoded
   `JulepAppBuilder::new().build_dispatcher()` in `main()`. Extensions
   couldn't inject themselves. Fixed by splitting into lib + bin targets
   with `pub fn run(builder: JulepAppBuilder) -> iced::Result`.
@@ -17,7 +17,7 @@ extension system.
   actually run `cargo build` and find the resulting binary.
 
 - **Generated main.rs had `todo!()`.** The template code contained
-  `todo!("julep-bin does not yet expose a public run() function")`.
+  `todo!("julep-renderer does not yet expose a public run() function")`.
   Replaced with working code that chains `.extension()` calls and
   delegates to `julep_bin::run()`.
 

@@ -29,7 +29,7 @@ defmodule Julep.MixProject do
       version: "0.1.0",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
-      compilers: Mix.compilers() ++ [:julep_gui],
+      compilers: Mix.compilers() ++ [:julep_renderer],
       elixirc_options: [warnings_as_errors: true],
       consolidate_protocols: Mix.env() != :test,
       start_permanent: Mix.env() == :prod,
@@ -58,10 +58,6 @@ defmodule Julep.MixProject do
       },
       files: ~w(
         lib
-        native/julep_gui/julep-core
-        native/julep_gui/julep-bin
-        native/julep_gui/Cargo.toml
-        native/julep_gui/Cargo.lock
         mix.exs
         README.md
         LICENSE

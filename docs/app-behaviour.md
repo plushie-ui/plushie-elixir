@@ -241,7 +241,7 @@ Default: `[]` (renderer uses its own defaults).
 ```elixir
 # From IEx or application code:
 {:ok, pid} = Julep.start(MyApp)
-{:ok, pid} = Julep.start(MyApp, name: :my_app, renderer: "/path/to/julep_gui")
+{:ok, pid} = Julep.start(MyApp, name: :my_app, renderer: "/path/to/julep-renderer")
 
 # Under a supervisor:
 children = [

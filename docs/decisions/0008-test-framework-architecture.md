@@ -7,7 +7,7 @@ Accepted
 ## Context
 
 Julep is an Elixir library that renders native desktop GUIs via a Rust
-binary (`julep_gui`) using iced. The Elm architecture makes pure-function
+binary (`julep-renderer`) using iced. The Elm architecture makes pure-function
 unit testing of `update/2` and `view/1` straightforward, but several
 important categories of bugs cannot be caught by unit tests alone:
 
@@ -39,8 +39,8 @@ Introduce a three-backend test framework behind a unified API:
 
 - **`Julep.Test.Backend`** -- behaviour defining the test interface.
 - **`Julep.Test.Backend.Sim`** -- pure Elixir, no Rust.
-- **`Julep.Test.Backend.Headless`** -- Rust renderer via `julep_gui --headless`.
-- **`Julep.Test.Backend.Full`** -- real iced windows via `julep_gui --test`.
+- **`Julep.Test.Backend.Headless`** -- Rust renderer via `julep-renderer --headless`.
+- **`Julep.Test.Backend.Full`** -- real iced windows via `julep-renderer --test`.
 - **`Julep.Test.Session`** -- facade wrapping a backend + process pair.
 - **`Julep.Test.Case`** -- ExUnit case template with automatic setup/teardown.
 - **`Julep.Test.Helpers`** -- convenience functions imported by Case.

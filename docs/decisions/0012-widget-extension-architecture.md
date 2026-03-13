@@ -16,7 +16,7 @@ viewers, force-directed graph layouts. These all share the same problem:
 they need internal state that lives in Rust and events that don't
 round-trip through Elixir.
 
-The renderer is currently a monolithic binary (`julep_gui`) with no
+The renderer is currently a monolithic binary (`julep-renderer`) with no
 library API. The `Message` enum is closed. `WidgetCaches` has named fields
 for each built-in stateful widget. External code has no way in.
 
@@ -32,13 +32,13 @@ the repository (`rust-extensions.md`).
 
 ### Crate restructuring
 
-Split `julep_gui` into a workspace with two crates:
+Split the renderer into a workspace with two crates:
 
 - **julep-core** -- library crate (the SDK). Exports TreeNode, Message,
   WidgetCaches, prop helpers, the render function, the WidgetExtension
   trait, ExtensionCaches, ExtensionDispatcher, and re-exported iced types.
   Published to crates.io.
-- **julep-bin** -- binary crate (thin main). Creates a JulepApp with no
+- **julep-renderer** -- binary crate (thin main). Creates a JulepApp with no
   extensions and runs it.
 
 The existing `julep_core.rs` module (the `Core` struct) is renamed to
@@ -245,6 +245,6 @@ Consumer sets config in application env; Runtime includes it in Settings.
 - Panic isolation prevents buggy extensions from crashing the renderer.
 - Build-time collision detection catches conflicting type names before
   Rust compilation.
-- The crate split (julep-core + julep-bin) makes julep-core publishable
+- The crate split (julep-core + julep-renderer) makes julep-core publishable
   to crates.io as an extension SDK.
 - ADR 0007's Tier 2 is no longer deferred.

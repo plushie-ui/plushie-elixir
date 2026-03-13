@@ -1,10 +1,10 @@
 defmodule Julep.BridgeMsgpackTest do
   @moduledoc """
   Integration test verifying msgpack protocol works end-to-end between
-  Elixir and the julep_gui binary.
+  Elixir and the julep-renderer binary.
 
-  Requires the debug binary at native/julep_gui/target/debug/julep_gui.
-  Build it with `cargo build` before running these tests.
+  Requires the debug binary at ../julep-renderer/target/debug/julep-renderer.
+  Build it with `cd ../julep-renderer && cargo build` before running these tests.
 
   The spawned renderer processes have display env vars stripped so they
   always crash on iced startup (no display server), regardless of the
@@ -13,7 +13,7 @@ defmodule Julep.BridgeMsgpackTest do
   """
   use ExUnit.Case, async: false
 
-  @renderer_path Path.expand("native/julep_gui/target/debug/julep_gui")
+  @renderer_path Path.expand("../julep-renderer/target/debug/julep-renderer")
 
   # Strip display env vars so the renderer always fails to find a display,
   # even when tests run under Xvfb or Weston. Erlang's Port :env option

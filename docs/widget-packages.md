@@ -324,7 +324,7 @@ end
 ### Visual testing with headless or full backend
 
 For pixel-level validation, use the headless or full test backend. These
-require the julep_gui binary. Typically only needed for the package author's
+require the julep-renderer binary. Typically only needed for the package author's
 CI, not for consumers:
 
 ```elixir
@@ -339,7 +339,7 @@ Document these in your package README:
 1. **Minimum julep version.** Your package depends on julep; specify the
    compatible range.
 2. **No renderer changes needed.** Pure Elixir packages work with the stock
-   julep_gui binary. Consumers do not need to rebuild anything.
+   julep-renderer binary. Consumers do not need to rebuild anything.
 3. **Which built-in features are required.** If your widget uses canvas,
    consumers need the `widget-canvas` feature enabled (it is by default).
    If it uses images, they need `widget-image`. Document this if it matters.

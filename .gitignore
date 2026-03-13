@@ -8,6 +8,4 @@ erl_crash.dump
 /tmp/
 .elixir_ls/
 
-# Rust build artifacts
-native/julep_gui/target/
 

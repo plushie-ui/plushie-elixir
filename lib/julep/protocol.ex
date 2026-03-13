@@ -14,8 +14,14 @@ defmodule Julep.Protocol do
   Elixir event tuple.
   """
 
+  @protocol_version 1
+
   @typedoc "Wire format for protocol messages."
   @type format :: :json | :msgpack
+
+  @doc "Returns the current protocol version number."
+  @spec protocol_version() :: non_neg_integer()
+  def protocol_version, do: @protocol_version
 
   # ---------------------------------------------------------------------------
   # Serialization helpers
@@ -57,11 +63,11 @@ defmodule Julep.Protocol do
   ## Example
 
       iex> Julep.Protocol.encode_settings(%{antialiasing: true, default_text_size: 16}, :json)
-      ~s({"settings":{"antialiasing":true,"default_text_size":16,"protocol_version":"1.0"},"type":"settings"}) <> "\\n"
+      ~s({"settings":{"antialiasing":true,"default_text_size":16,"protocol_version":1},"type":"settings"}) <> "\\n"
   """
   @spec encode_settings(settings :: map(), format :: format()) :: binary()
   def encode_settings(settings, format \\ :msgpack) when is_map(settings) do
-    settings = Map.put_new(settings, :protocol_version, "1.0")
+    settings = Map.put_new(settings, :protocol_version, @protocol_version)
     serialize(%{type: "settings", settings: settings}, format)
   end
 
@@ -1306,6 +1312,15 @@ defmodule Julep.Protocol do
          "data" => data
        }) do
     {:system_theme, tag, data}
+  end
+
+  defp dispatch(%{
+         "type" => "hello",
+         "protocol" => protocol,
+         "version" => version,
+         "name" => name
+       }) do
+    {:hello, protocol, version, name}
   end
 
   defp dispatch(msg) do

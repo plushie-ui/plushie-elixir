@@ -796,7 +796,7 @@ defmodule Julep.ProtocolTest do
       encoded = Protocol.encode_settings(settings, :msgpack)
       assert {:settings, decoded_settings} = Protocol.decode_message(encoded, :msgpack)
       assert decoded_settings["theme"] == "dark"
-      assert decoded_settings["protocol_version"] == "1.0"
+      assert decoded_settings["protocol_version"] == 1
     end
 
     test "snapshot roundtrip" do
@@ -917,6 +917,48 @@ defmodule Julep.ProtocolTest do
       assert decoded["type"] == "extension_command"
       assert decoded["node_id"] == "ext-1"
       assert decoded["op"] == "reset"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # hello message
+  # ---------------------------------------------------------------------------
+
+  describe "decode_message/1 -- hello" do
+    test "decodes a hello message to {:hello, protocol, version, name}" do
+      json =
+        Jason.encode!(%{
+          type: "hello",
+          protocol: 1,
+          version: "0.1.0",
+          name: "julep-renderer"
+        })
+
+      assert {:hello, 1, "0.1.0", "julep-renderer"} = Protocol.decode_message(json, :json)
+    end
+
+    test "decodes hello from msgpack" do
+      msg = %{
+        "type" => "hello",
+        "protocol" => 1,
+        "version" => "0.2.0",
+        "name" => "julep-renderer"
+      }
+
+      packed = Msgpax.pack!(msg, iodata: false)
+      assert {:hello, 1, "0.2.0", "julep-renderer"} = Protocol.decode_message(packed, :msgpack)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # protocol_version/0
+  # ---------------------------------------------------------------------------
+
+  describe "protocol_version/0" do
+    test "returns a positive integer" do
+      version = Protocol.protocol_version()
+      assert is_integer(version)
+      assert version > 0
     end
   end
 

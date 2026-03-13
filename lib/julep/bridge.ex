@@ -1,6 +1,6 @@
 defmodule Julep.Bridge do
   @moduledoc """
-  Port-based bridge to the julep_gui renderer process.
+  Port-based bridge to the julep-renderer process.
 
   Manages the stdio Port, buffers partial JSONL lines (JSON mode) or receives
   length-prefixed frames (MessagePack mode), and forwards decoded events to
@@ -42,7 +42,7 @@ defmodule Julep.Bridge do
   Starts the bridge linked to the calling process.
 
   Required opts:
-    - `:renderer_path` - filesystem path to the julep_gui binary
+    - `:renderer_path` - filesystem path to the julep-renderer binary
     - `:runtime`       - pid to receive `{:renderer_event, event}` messages
 
   Optional opts:
@@ -369,10 +369,10 @@ defmodule Julep.Bridge do
     else
       rust_log =
         case log_level do
-          :error -> "julep_gui=error"
-          :warning -> "julep_gui=warn"
-          :info -> "julep_gui=info"
-          :debug -> "julep_gui=debug"
+          :error -> "julep_renderer=error"
+          :warning -> "julep_renderer=warn"
+          :info -> "julep_renderer=info"
+          :debug -> "julep_renderer=debug"
         end
 
       [{~c"RUST_LOG", String.to_charlist(rust_log)}]
@@ -402,6 +402,25 @@ defmodule Julep.Bridge do
         :telemetry.execute([:julep, :bridge, :decode_error], %{}, %{reason: reason})
         state
 
+      {:hello, protocol, version, name} ->
+        expected = Julep.Protocol.protocol_version()
+
+        if protocol != expected do
+          Logger.error(
+            "julep bridge: protocol mismatch -- renderer reports protocol #{protocol}, " <>
+              "expected #{expected}. Stopping bridge."
+          )
+
+          send(self(), {:stop_protocol_mismatch, protocol, expected})
+        else
+          Logger.info(
+            "julep bridge: renderer hello -- #{name} v#{version} (protocol #{protocol})"
+          )
+        end
+
+        send(state.runtime, {:renderer_event, {:hello, protocol, version, name}})
+        %{state | restart_count: 0}
+
       event ->
         send(state.runtime, {:renderer_event, event})
         # Reset restart count on first successful message from the renderer.
@@ -421,10 +440,10 @@ defmodule Julep.Bridge do
       julep bridge: renderer crashed #{state.max_restarts} times, giving up.
 
       Troubleshooting:
-        1. Check RUST_LOG=julep_gui=debug for renderer errors
+        1. Check RUST_LOG=julep_renderer=debug for renderer errors
         2. Verify the binary exists: mix julep.build
         3. Check system dependencies (libxkbcommon, etc.)
-        4. Try running the renderer directly: ./path/to/julep_gui --json
+        4. Try running the renderer directly: ./path/to/julep-renderer --json
       """)
 
       :telemetry.execute([:julep, :bridge, :max_restarts_reached], %{}, %{

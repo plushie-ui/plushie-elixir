@@ -23,7 +23,7 @@ custom controls, and simple games without writing any Rust.
 layout, custom scrolling, or deep iced styling integration. Users write Rust
 implementing a `JulepWidget` trait, build a custom renderer binary, and
 register their widget types. The custom renderer replaces the stock
-`julep_gui` binary.
+`julep-renderer` binary.
 
 Explicitly rejected alternatives:
 

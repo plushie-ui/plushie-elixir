@@ -157,6 +157,11 @@ defmodule Julep.Runtime do
     {:noreply, state}
   end
 
+  def handle_info({:renderer_event, {:hello, _protocol, version, name}}, state) do
+    Logger.info("julep runtime: renderer connected -- #{name} v#{version}")
+    {:noreply, state}
+  end
+
   def handle_info({:renderer_event, event}, state) do
     state = run_update(state, event)
     {:noreply, state}

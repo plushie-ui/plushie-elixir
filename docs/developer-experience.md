@@ -81,7 +81,7 @@ Builds (if needed) and launches the renderer with your app.
 mix julep.gui MyApp                # debug build, auto-build renderer
 mix julep.gui MyApp --release      # release build
 mix julep.gui MyApp --no-build     # skip cargo build, use existing binary
-mix julep.gui MyApp --renderer /path/to/julep_gui  # explicit binary path
+mix julep.gui MyApp --renderer /path/to/julep-renderer  # explicit binary path
 ```
 
 ### mix julep.build

@@ -544,7 +544,7 @@ adapts them to the cross-process architecture.
 
 | iced_test concept | Julep equivalent |
 |---|---|
-| `Simulator` (in-process headless) | `Julep.Test.Backend.Headless` (cross-process via `julep_gui --headless`) |
+| `Simulator` (in-process headless) | `Julep.Test.Backend.Headless` (cross-process via `julep-renderer --headless`) |
 | `Simulator::click(id)` | `click("#id")` via test protocol |
 | `Simulator::find(id)` | `find!("#id")` via query protocol |
 | `Simulator::snapshot()` | `snapshot("name")` structural tree snapshot via snapshot_capture protocol |
@@ -566,7 +566,7 @@ test protocol queries.
 ### Core extraction for testability
 
 To support headless testing without an `iced::daemon`, julep extracts
-renderer state into a `Core` struct (`native/julep_gui/julep-core/src/engine.rs`).
+renderer state into a `Core` struct (`julep-renderer/julep-core/src/engine.rs`).
 Core holds the tree, widget caches, and subscription state. It processes
 `IncomingMessage`s and returns `CoreEffect`s that the host (App or
 headless loop) can handle.

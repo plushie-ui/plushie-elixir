@@ -559,7 +559,7 @@ Use the correct interaction function for the widget type. See the
 Build the renderer with the headless feature:
 
 ```bash
-cd native/julep_gui && cargo build --features headless
+cd ../julep-renderer && cargo build --features headless
 ```
 
 ### Inspecting state when a test fails
@@ -594,7 +594,7 @@ Requires the Rust toolchain and the headless feature build.
 
 ```yaml
 - run: |
-    cd native/julep_gui
+    cd ../julep-renderer
     cargo build --features headless
 - run: JULEP_TEST_BACKEND=headless mix test
 ```
@@ -608,7 +608,7 @@ Requires a display server and GPU/software rendering. Two options:
 ```yaml
 - run: |
     sudo apt-get install -y xvfb mesa-vulkan-drivers
-    cd native/julep_gui
+    cd ../julep-renderer
     cargo build --features test-mode
 - run: |
     Xvfb :99 -screen 0 1024x768x24 &
@@ -626,7 +626,7 @@ runs the full rendering pipeline on CPU.
 ```yaml
 - run: |
     sudo apt-get install -y weston mesa-vulkan-drivers
-    cd native/julep_gui
+    cd ../julep-renderer
     cargo build --features test-mode
 - run: |
     export XDG_RUNTIME_DIR=/tmp/julep-xdg-runtime
@@ -649,7 +649,7 @@ Run sim tests fast, then promote to higher-fidelity backends for subsets:
 
 # Full suite on headless for protocol verification
 - run: |
-    cd native/julep_gui && cargo build --features headless
+    cd ../julep-renderer && cargo build --features headless
     JULEP_TEST_BACKEND=headless mix test
 
 # Full for pixel regression (tagged subset)

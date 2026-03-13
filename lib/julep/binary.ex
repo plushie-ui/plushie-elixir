@@ -1,31 +1,34 @@
 defmodule Julep.Binary do
-  @moduledoc "Resolves the path to the julep_gui renderer binary."
+  @moduledoc "Resolves the path to the julep-renderer binary."
 
   @doc """
-  Returns the path to the julep_gui binary.
+  Returns the path to the julep-renderer binary.
 
   Resolution order:
   1. JULEP_RENDERER_PATH environment variable
-  2. Custom extension build in _build/<env>/julep_renderer/target/
-  3. Precompiled binary in priv/
-  4. Development build in native/julep_gui/target/
+  2. Application config `:binary_path`
+  3. Custom extension build in _build/<env>/julep_renderer/target/
+  4. Precompiled binary in priv/
+  5. Sibling repo at ../julep-renderer/target/
   """
   @spec renderer_path() :: String.t()
   def renderer_path do
     path =
       System.get_env("JULEP_RENDERER_PATH") ||
+        app_config_path() ||
         custom_build_path() ||
         precompiled_path() ||
-        dev_build_path() ||
+        sibling_repo_path() ||
         raise """
-        julep_gui binary not found. Searched:
+        julep-renderer binary not found. Searched:
           - $JULEP_RENDERER_PATH (not set)
+          - Application config :binary_path (not set)
           - Custom build in _build/
           - Precompiled in priv/bin/
-          - Dev build in native/julep_gui/target/
+          - Sibling repo at ../julep-renderer/target/
 
         To build from source:
-          cargo build --release --manifest-path native/julep_gui/Cargo.toml
+          cd ../julep-renderer && cargo build
 
         To download a precompiled binary:
           mix julep.download
@@ -52,7 +55,7 @@ defmodule Julep.Binary do
 
         if binary_arch != nil and sys_arch != nil and binary_arch != sys_arch do
           raise """
-          Architecture mismatch: julep_gui binary is #{binary_arch} but \
+          Architecture mismatch: julep-renderer binary is #{binary_arch} but \
           system is #{sys_arch}.
 
           Binary: #{path}
@@ -78,7 +81,7 @@ defmodule Julep.Binary do
     os = os_name()
     arch = arch_name()
     ext = if os == "windows", do: ".exe", else: ""
-    "julep_gui-#{os}-#{arch}#{ext}"
+    "julep-renderer-#{os}-#{arch}#{ext}"
   end
 
   @spec detect_arch(file_output :: String.t()) :: :x86_64 | :aarch64 | nil
@@ -101,6 +104,15 @@ defmodule Julep.Binary do
     end
   end
 
+  defp app_config_path do
+    case Application.get_env(:julep, :binary_path) do
+      nil -> nil
+      path when is_binary(path) -> if File.exists?(path), do: path
+    end
+  rescue
+    _ -> nil
+  end
+
   defp custom_build_path do
     for profile <- ["release", "debug"] do
       ext = if os_name() == "windows", do: ".exe", else: ""
@@ -111,7 +123,7 @@ defmodule Julep.Binary do
           "julep_renderer",
           "target",
           profile,
-          "julep_gui#{ext}"
+          "julep-renderer#{ext}"
         ])
 
       if File.exists?(path), do: path
@@ -128,14 +140,14 @@ defmodule Julep.Binary do
     _ -> nil
   end
 
-  defp dev_build_path do
-    # Try release first, then debug
-    for profile <- ["release", "debug"] do
-      ext = if os_name() == "windows", do: ".exe", else: ""
-      path = Path.join([File.cwd!(), "native", "julep_gui", "target", profile, "julep_gui#{ext}"])
+  defp sibling_repo_path do
+    for release? <- [true, false] do
+      path = Mix.JulepHelpers.renderer_binary_path(release?)
       if File.exists?(path), do: path
     end
     |> Enum.find(& &1)
+  rescue
+    _ -> nil
   end
 
   defp os_name do

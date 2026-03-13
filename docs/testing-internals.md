@@ -36,7 +36,7 @@ are building an app with julep, see [testing.md](testing.md) instead.
            |            |  |(GenServer) |  |(GenServer) |
            +-----+------+  +-----+-----+  +-----+-----+
                  |                |              |
-           pure Elixir      Port: julep_gui  Port: julep_gui
+           pure Elixir      Port: julep-renderer  Port: julep-renderer
            EventMap         --headless       --test
            process_commands  wire protocol    wire protocol
                                               real iced windows
@@ -56,9 +56,9 @@ are building an app with julep, see [testing.md](testing.md) instead.
    and handles interactions differently:
    - **Sim** runs `init/update/view` locally, uses `EventMap` to infer
      events, and executes commands synchronously.
-   - **Headless** spawns `julep_gui --headless` via Port, sends wire protocol
+   - **Headless** spawns `julep-renderer --headless` via Port, sends wire protocol
      queries, and processes responses asynchronously via correlation IDs.
-   - **Full** spawns `julep_gui --test` via Port, same wire protocol as
+   - **Full** spawns `julep-renderer --test` via Port, same wire protocol as
      headless but with real iced windows and GPU rendering.
 
 
@@ -275,7 +275,7 @@ Two search strategies:
 ## Headless backend internals
 
 The headless backend (`lib/julep/test/backend/headless.ex`) spawns
-`julep_gui --headless` as a Port.
+`julep-renderer --headless` as a Port.
 
 ### Protocol
 
@@ -332,7 +332,7 @@ for the full rendering flow.
 ## Full backend internals
 
 The full backend (`lib/julep/test/backend/full.ex`) is structurally
-identical to the headless backend but spawns `julep_gui --test` instead of
+identical to the headless backend but spawns `julep-renderer --test` instead of
 `--headless`. The Rust renderer runs a real `iced::daemon` with GPU
 rendering alongside the test protocol message handler.
 
@@ -463,8 +463,8 @@ backend, making it a natural choice for headless screenshot rendering.
 | `lib/julep/test/event_map.ex` | Widget type to event inference for sim backend |
 | `lib/julep/test/script.ex` | `.julep` script parser |
 | `lib/julep/test/script/runner.ex` | Script execution engine |
-| `native/julep_gui/julep-core/src/engine.rs` | Core struct (tree, caches, subscriptions) |
-| `native/julep_gui/julep-bin/src/headless.rs` | `--headless` mode: Core + wire protocol, no iced runtime |
-| `native/julep_gui/julep-bin/src/test_mode.rs` | `--test` mode: real iced::daemon + test protocol |
+| `julep-renderer/julep-core/src/engine.rs` | Core struct (tree, caches, subscriptions) |
+| `julep-renderer/julep-renderer/src/headless.rs` | `--headless` mode: Core + wire protocol, no iced runtime |
+| `julep-renderer/julep-renderer/src/test_mode.rs` | `--test` mode: real iced::daemon + test protocol |
 | `test/support/mock_bridge.ex` | Test double tracking bridge calls |
 | `test/support/integration_case.ex` | ExUnit case template for integration tests |

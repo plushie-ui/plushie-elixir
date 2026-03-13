@@ -20,7 +20,7 @@ defmodule Julep do
 
   - `:app`        -- (required) the app module implementing `Julep.App`
   - `:app_opts`   -- opts forwarded to `app.init/1` (default: `[]`)
-  - `:renderer`   -- path to the julep_gui binary (default: built debug binary)
+  - `:renderer`   -- path to the julep-renderer binary (default: auto-resolved)
   - `:name`       -- supervisor registration name (default: `Julep`)
   - `:dev`        -- enable live code reloading (default: `false`)
   - `:dev_opts`   -- options forwarded to `Julep.DevServer` (default: `[]`)
@@ -31,7 +31,7 @@ defmodule Julep do
 
   use Supervisor
 
-  @default_renderer_path "native/julep_gui/target/debug/julep_gui"
+  @default_renderer_path :auto
 
   # ---------------------------------------------------------------------------
   # Public API
@@ -87,7 +87,11 @@ defmodule Julep do
   def init(opts) do
     name = opts[:instance_name]
     app = Keyword.fetch!(opts, :app)
-    renderer_path = Keyword.get(opts, :renderer, @default_renderer_path)
+    renderer_path =
+      case Keyword.get(opts, :renderer, @default_renderer_path) do
+        :auto -> Julep.Binary.renderer_path()
+        path -> path
+      end
     dev? = Keyword.get(opts, :dev, false)
     format = Keyword.get(opts, :format, :msgpack)
     log_level = Keyword.get(opts, :log_level, :error)

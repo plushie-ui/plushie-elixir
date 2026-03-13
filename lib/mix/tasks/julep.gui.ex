@@ -62,7 +62,7 @@ defmodule Mix.Tasks.Julep.Gui do
       Mix.raise("""
       Renderer binary not found at #{renderer_path}.
       Run `mix julep.gui #{inspect(app_module)} --build` to build it,
-      or build manually with: cargo build --manifest-path native/julep_gui/Cargo.toml
+      or build manually with: cd ../julep-renderer && cargo build
       """)
     end
 
@@ -94,19 +94,23 @@ defmodule Mix.Tasks.Julep.Gui do
   end
 
   defp build_renderer(release?) do
-    args = ["build", "--manifest-path", "native/julep_gui/Cargo.toml"]
+    source_dir = Mix.JulepHelpers.renderer_source_path()
+    args = ["build"]
     args = if release?, do: args ++ ["--release"], else: args
 
     Mix.shell().info("Building renderer...")
 
-    case System.cmd("cargo", args, stderr_to_stdout: true, into: IO.stream(:stdio, :line)) do
+    case System.cmd("cargo", args,
+           stderr_to_stdout: true,
+           into: IO.stream(:stdio, :line),
+           cd: source_dir
+         ) do
       {_, 0} -> :ok
       {_, code} -> Mix.raise("cargo build failed with exit code #{code}")
     end
   end
 
   defp local_build_path(release?) do
-    profile = if release?, do: "release", else: "debug"
-    Path.expand("native/julep_gui/target/#{profile}/julep_gui")
+    Mix.JulepHelpers.renderer_binary_path(release?)
   end
 end

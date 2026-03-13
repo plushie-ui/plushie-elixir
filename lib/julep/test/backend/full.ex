@@ -2,7 +2,7 @@ defmodule Julep.Test.Backend.Full do
   @moduledoc """
   Full test backend with real iced windows.
 
-  Spawns `julep_gui --test` which runs a real `iced::daemon` with GPU
+  Spawns `julep-renderer --test` which runs a real `iced::daemon` with GPU
   rendering, but also accepts test protocol messages (Query, Interact,
   SnapshotCapture, Reset) on stdin alongside normal Snapshot/Patch messages.
 
@@ -10,7 +10,7 @@ defmodule Julep.Test.Backend.Full do
 
   Build the renderer with test-mode support:
 
-      cd native/julep_gui && cargo build --features test-mode
+      cd ../julep-renderer && cargo build --features test-mode
 
   For CI (headless environment), use Xvfb:
 

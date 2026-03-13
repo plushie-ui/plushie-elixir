@@ -177,7 +177,7 @@ mix julep.gui --json MyApp.Counter
 Enable verbose renderer logging:
 
 ```sh
-RUST_LOG=julep_gui=debug mix julep.gui MyApp.Counter
+RUST_LOG=julep_renderer=debug mix julep.gui MyApp.Counter
 ```
 
 ## Next steps

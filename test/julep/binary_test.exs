@@ -12,8 +12,8 @@ defmodule Julep.BinaryTest do
       assert is_binary(Binary.binary_name())
     end
 
-    test "starts with 'julep_gui-'" do
-      assert String.starts_with?(Binary.binary_name(), "julep_gui-")
+    test "starts with 'julep-renderer-'" do
+      assert String.starts_with?(Binary.binary_name(), "julep-renderer-")
     end
 
     test "includes an OS component" do
@@ -47,7 +47,7 @@ defmodule Julep.BinaryTest do
     setup do
       # Create a temporary file to act as the binary
       tmp_dir = System.tmp_dir!()
-      fake_bin = Path.join(tmp_dir, "julep_gui_fake_#{System.unique_integer([:positive])}")
+      fake_bin = Path.join(tmp_dir, "julep_renderer_fake_#{System.unique_integer([:positive])}")
       File.write!(fake_bin, "#!/bin/sh\n")
       File.chmod!(fake_bin, 0o755)
 
@@ -91,7 +91,7 @@ defmodule Julep.BinaryTest do
         assert is_binary(path)
       rescue
         e in RuntimeError ->
-          assert Exception.message(e) =~ "julep_gui binary not found"
+          assert Exception.message(e) =~ "julep-renderer binary not found"
       end
     end
   end

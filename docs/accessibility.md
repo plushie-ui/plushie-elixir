@@ -544,7 +544,7 @@ end
 Accessibility is enabled by default. A standard `cargo build` includes it:
 
 ```bash
-cd native/julep_gui
+cd ../julep-renderer
 cargo build --release
 ```
 
@@ -560,7 +560,7 @@ The `a11y` feature flag controls:
 |---|---|
 | `iced_winit` (vendored) | accesskit + accesskit_winit deps, per-window adapter management |
 | `julep-core` | `accessibility` module (tree-to-accesskit conversion) |
-| `julep-bin` | Tree update pushes, AT action handling |
+| `julep-renderer` | Tree update pushes, AT action handling |
 
 Without the feature, the `a11y` prop is still accepted in UI trees (it's
 just a map in props) but has no effect.
@@ -587,7 +587,7 @@ To manually verify accessibility with a real screen reader:
 
 ```bash
 # Build the renderer (a11y is included by default)
-cd native/julep_gui && cargo build
+cd ../julep-renderer && cargo build
 
 # Start Orca (usually Super+Alt+S, or from accessibility settings)
 orca &
@@ -603,7 +603,7 @@ Activate buttons with Enter or Space.
 
 ```bash
 # Build the renderer (a11y is included by default)
-cd native/julep_gui && cargo build
+cd ../julep-renderer && cargo build
 
 # Toggle VoiceOver: Cmd+F5
 # Run your app
@@ -617,7 +617,7 @@ should announce each widget's role and label.
 
 ```bash
 # Build the renderer (a11y is included by default)
-cd native/julep_gui && cargo build
+cd ../julep-renderer && cargo build
 
 # Start NVDA
 # Run your app
@@ -650,7 +650,7 @@ The patch adds an `a11y` module to iced_winit with:
 - **`process_event`** -- called for every `WindowEvent`. Forwards to the
   adapter so accesskit can track focus and window state.
 - **`update_tree`** -- public API for pushing `TreeUpdate` to a window's
-  adapter. Called by julep-bin after tree changes.
+  adapter. Called by julep-renderer after tree changes.
 - **`drain_action_requests`** -- returns queued AT action requests for
   processing by the renderer.
 
@@ -673,7 +673,7 @@ are removed from the parent's child list.
 
 ### Renderer integration
 
-In `julep-bin/renderer.rs`:
+In `julep-renderer/renderer.rs`:
 
 - `push_accessibility_updates()` -- called after every tree change (both
   snapshots and patches). Clones the root, builds a `TreeUpdate`, pushes

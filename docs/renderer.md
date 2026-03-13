@@ -1,6 +1,7 @@
 # Renderer
 
-`julep_gui` is a standalone Rust binary that renders julep UI trees using the
+`julep-renderer` is a standalone Rust binary (in the sibling `julep-renderer`
+repository) that renders julep UI trees using the
 [iced](https://github.com/iced-rs/iced) toolkit (currently v0.14).
 
 ## What it does
@@ -180,17 +181,17 @@ tasks (`mix julep.build`, auto-compiler) pass the corresponding
 
 ```bash
 # Debug build (all features)
-cargo build --manifest-path native/julep_gui/Cargo.toml
+cd ../julep-renderer && cargo build
 
 # Release build
-cargo build --manifest-path native/julep_gui/Cargo.toml --release
+cd ../julep-renderer && cargo build --release
 
 # Minimal build (no optional widgets)
-cargo build --manifest-path native/julep_gui/Cargo.toml \
+cd ../julep-renderer && cargo build \
   --no-default-features --features "dialogs,clipboard,notifications"
 
 # Single widget only
-cargo build --manifest-path native/julep_gui/Cargo.toml \
+cd ../julep-renderer && cargo build \
   --no-default-features --features "dialogs,clipboard,notifications,widget-qr-code"
 ```
 
@@ -201,7 +202,7 @@ The binary can also be built automatically by `mix julep.gui --build`.
 Since the renderer speaks MessagePack (or JSONL), it can be tested without Elixir:
 
 ```bash
-echo '{"type":"snapshot","tree":{"id":"root","type":"column","props":{},"children":[{"id":"hello","type":"text","props":{"content":"Hello, world!"},"children":[]}]}}' | ./julep_gui
+echo '{"type":"snapshot","tree":{"id":"root","type":"column","props":{},"children":[{"id":"hello","type":"text","props":{"content":"Hello, world!"},"children":[]}]}}' | ./julep-renderer
 ```
 
 Pipe JSON fixtures in, observe the window. Useful for visual regression
@@ -216,20 +217,20 @@ option). The renderer's own built-in default is `warn`.
 
 ### RUST_LOG environment variable
 
-Set `RUST_LOG` to control verbosity. The renderer's crate name is `julep_gui`:
+Set `RUST_LOG` to control verbosity. The renderer's crate name is `julep_renderer`:
 
 ```bash
 # Show everything at debug level and above
-RUST_LOG=julep_gui=debug mix julep.gui MyApp
+RUST_LOG=julep_renderer=debug mix julep.gui MyApp
 
 # Show only errors
-RUST_LOG=julep_gui=error mix julep.gui MyApp
+RUST_LOG=julep_renderer=error mix julep.gui MyApp
 
 # Per-module filtering
 RUST_LOG=julep_core::widgets=debug,julep_core::engine=debug mix julep.gui MyApp
 
 # Trace level (most verbose -- future use)
-RUST_LOG=julep_gui=trace mix julep.gui MyApp
+RUST_LOG=julep_renderer=trace mix julep.gui MyApp
 ```
 
 ### Elixir :log_level option
@@ -261,8 +262,8 @@ precedence.
 Log lines include a UTC timestamp, level, and module target:
 
 ```
-[2026-02-28T12:34:56Z INFO  julep_gui] wire codec: MsgPack
-[2026-02-28T12:34:56Z INFO  julep_gui] initial settings received
+[2026-02-28T12:34:56Z INFO  julep_renderer] wire codec: MsgPack
+[2026-02-28T12:34:56Z INFO  julep_renderer] initial settings received
 [2026-02-28T12:34:56Z DEBUG julep_core::engine] snapshot received (root id=main)
 ```
 

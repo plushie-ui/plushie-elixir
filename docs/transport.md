@@ -177,6 +177,16 @@ renderer routes each key to the extension whose `config_key()` matches.
 
 ### Renderer -> Elixir
 
+#### hello
+
+Protocol version handshake. Emitted by the renderer on startup before
+reading any messages from stdin. The Elixir bridge validates the
+protocol version to ensure compatibility.
+
+```json
+{"type": "hello", "version": 1}
+```
+
 #### event
 
 User interaction.

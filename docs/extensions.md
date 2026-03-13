@@ -58,7 +58,7 @@ the renderer binary directly. The `JulepAppBuilder` chains `.extension()` calls
 in the generated `main.rs`:
 
 ```rust
-julep_bin::run(
+julep_renderer::run(
     JulepAppBuilder::new()
         .extension(Box::new(my_sparkline::SparklineExtension::new()))
 )
