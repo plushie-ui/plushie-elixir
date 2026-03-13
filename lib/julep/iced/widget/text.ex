@@ -20,6 +20,7 @@ defmodule Julep.Iced.Widget.Text do
   - `shaping` (string) -- text shaping strategy: `"basic"` or `"advanced"`. See `Julep.Iced.Shaping`.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.Widget.Build
 
   @type style :: :default | :primary | :secondary | :success | :danger | :warning
@@ -146,7 +147,7 @@ defmodule Julep.Iced.Widget.Text do
 
   @doc "Sets accessibility annotations."
   @spec a11y(text :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = txt, a11y), do: %{txt | a11y: a11y}
+  def a11y(%__MODULE__{} = txt, a11y), do: %{txt | a11y: A11y.cast(a11y)}
 
   @doc "Converts this text struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(text :: t()) :: Julep.Iced.ui_node()

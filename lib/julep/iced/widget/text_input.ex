@@ -36,6 +36,7 @@ defmodule Julep.Iced.Widget.TextInput do
   - `{:paste, id, text}` -- emitted on paste (requires `on_paste` prop).
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
@@ -171,7 +172,7 @@ defmodule Julep.Iced.Widget.TextInput do
 
   @doc "Sets accessibility annotations."
   @spec a11y(text_input :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = ti, a11y), do: %{ti | a11y: a11y}
+  def a11y(%__MODULE__{} = ti, a11y), do: %{ti | a11y: A11y.cast(a11y)}
 
   @doc "Converts this text input struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(text_input :: t()) :: Julep.Iced.ui_node()

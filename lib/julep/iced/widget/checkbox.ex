@@ -25,6 +25,7 @@ defmodule Julep.Iced.Widget.Checkbox do
   - `{:toggle, id, value}` -- emitted on toggle, `value` is the new boolean state.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
@@ -155,7 +156,7 @@ defmodule Julep.Iced.Widget.Checkbox do
 
   @doc "Sets accessibility annotations."
   @spec a11y(checkbox :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = cb, a11y), do: %{cb | a11y: a11y}
+  def a11y(%__MODULE__{} = cb, a11y), do: %{cb | a11y: A11y.cast(a11y)}
 
   @doc "Converts this checkbox struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(checkbox :: t()) :: Julep.Iced.ui_node()

@@ -11,6 +11,7 @@ defmodule Julep.Iced.Widget.Responsive do
   - `height` (length) -- container height. Default: fill.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.Widget.Build
 
   @type option ::
@@ -72,7 +73,7 @@ defmodule Julep.Iced.Widget.Responsive do
 
   @doc "Sets accessibility annotations."
   @spec a11y(responsive :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = r, a11y), do: %{r | a11y: a11y}
+  def a11y(%__MODULE__{} = r, a11y), do: %{r | a11y: A11y.cast(a11y)}
 
   @doc "Converts this responsive struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(responsive :: t()) :: Julep.Iced.ui_node()

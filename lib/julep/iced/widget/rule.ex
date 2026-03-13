@@ -10,6 +10,7 @@ defmodule Julep.Iced.Widget.Rule do
   - `style` (string) -- named style: `"default"` or `"weak"`.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
@@ -72,7 +73,7 @@ defmodule Julep.Iced.Widget.Rule do
 
   @doc "Sets accessibility annotations."
   @spec a11y(rule :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = rule, a11y), do: %{rule | a11y: a11y}
+  def a11y(%__MODULE__{} = rule, a11y), do: %{rule | a11y: A11y.cast(a11y)}
 
   @doc "Converts this rule struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(rule :: t()) :: Julep.Iced.ui_node()

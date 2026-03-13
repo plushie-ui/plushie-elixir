@@ -46,6 +46,7 @@ defmodule Julep.Iced.Widget.Canvas do
   - `{:canvas_scroll, id, x, y, delta_x, delta_y}` -- mouse scrolled on canvas.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.Widget.Build
 
   @type option ::
@@ -160,7 +161,7 @@ defmodule Julep.Iced.Widget.Canvas do
 
   @doc "Sets accessibility annotations."
   @spec a11y(canvas :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = canvas, a11y), do: %{canvas | a11y: a11y}
+  def a11y(%__MODULE__{} = canvas, a11y), do: %{canvas | a11y: A11y.cast(a11y)}
 
   @doc "Converts this canvas struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(canvas :: t()) :: Julep.Iced.ui_node()

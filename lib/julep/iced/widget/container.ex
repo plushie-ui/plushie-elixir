@@ -23,6 +23,7 @@ defmodule Julep.Iced.Widget.Container do
     `"danger"`, `"warning"`. Overrides inline style props if both are set.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
@@ -224,7 +225,7 @@ defmodule Julep.Iced.Widget.Container do
 
   @doc "Sets accessibility annotations."
   @spec a11y(container :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = c, a11y), do: %{c | a11y: a11y}
+  def a11y(%__MODULE__{} = c, a11y), do: %{c | a11y: A11y.cast(a11y)}
 
   @doc "Converts this container struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(container :: t()) :: Julep.Iced.ui_node()

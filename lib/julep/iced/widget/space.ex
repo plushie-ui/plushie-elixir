@@ -8,6 +8,7 @@ defmodule Julep.Iced.Widget.Space do
   - `height` (length) -- space height. Default: shrink.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.Widget.Build
 
   @type option ::
@@ -58,7 +59,7 @@ defmodule Julep.Iced.Widget.Space do
 
   @doc "Sets accessibility annotations."
   @spec a11y(space :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = space, a11y), do: %{space | a11y: a11y}
+  def a11y(%__MODULE__{} = space, a11y), do: %{space | a11y: A11y.cast(a11y)}
 
   @doc "Converts this space struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(space :: t()) :: Julep.Iced.ui_node()

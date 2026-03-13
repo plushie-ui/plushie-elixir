@@ -22,6 +22,7 @@ defmodule Julep.Iced.Widget.Button do
   - `{:click, id}` -- emitted on press (unless disabled).
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
@@ -101,7 +102,7 @@ defmodule Julep.Iced.Widget.Button do
 
   @doc "Sets accessibility annotations."
   @spec a11y(button :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = btn, a11y), do: %{btn | a11y: a11y}
+  def a11y(%__MODULE__{} = btn, a11y), do: %{btn | a11y: A11y.cast(a11y)}
 
   @doc "Converts this button struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(button :: t()) :: Julep.Iced.ui_node()

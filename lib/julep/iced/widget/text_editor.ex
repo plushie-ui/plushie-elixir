@@ -33,6 +33,7 @@ defmodule Julep.Iced.Widget.TextEditor do
   Content changes are reported back to Elixir via the protocol.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
@@ -211,7 +212,7 @@ defmodule Julep.Iced.Widget.TextEditor do
 
   @doc "Sets accessibility annotations."
   @spec a11y(text_editor :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = ed, a11y), do: %{ed | a11y: a11y}
+  def a11y(%__MODULE__{} = ed, a11y), do: %{ed | a11y: A11y.cast(a11y)}
 
   @doc "Converts this text editor struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(text_editor :: t()) :: Julep.Iced.ui_node()

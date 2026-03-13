@@ -18,6 +18,7 @@ defmodule Julep.Iced.Widget.VerticalSlider do
   - `{:slide_release, id, value}` -- emitted when drag ends.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
@@ -101,7 +102,7 @@ defmodule Julep.Iced.Widget.VerticalSlider do
 
   @doc "Sets accessibility annotations."
   @spec a11y(vertical_slider :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = slider, a11y), do: %{slider | a11y: a11y}
+  def a11y(%__MODULE__{} = slider, a11y), do: %{slider | a11y: A11y.cast(a11y)}
 
   @doc "Converts this vertical slider struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(vertical_slider :: t()) :: Julep.Iced.ui_node()

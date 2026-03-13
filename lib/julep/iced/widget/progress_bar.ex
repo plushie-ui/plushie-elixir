@@ -13,6 +13,7 @@ defmodule Julep.Iced.Widget.ProgressBar do
   - `vertical` (boolean) -- when `true`, renders the progress bar vertically.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
@@ -83,7 +84,7 @@ defmodule Julep.Iced.Widget.ProgressBar do
 
   @doc "Sets accessibility annotations."
   @spec a11y(progress_bar :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = bar, a11y), do: %{bar | a11y: a11y}
+  def a11y(%__MODULE__{} = bar, a11y), do: %{bar | a11y: A11y.cast(a11y)}
 
   @doc "Converts this progress bar struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(progress_bar :: t()) :: Julep.Iced.ui_node()

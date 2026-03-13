@@ -86,3 +86,12 @@ defimpl Julep.Iced.Encode, for: Julep.Iced.Shadow do
     }
   end
 end
+
+defimpl Julep.Iced.Encode, for: Julep.Iced.A11y do
+  def encode(%Julep.Iced.A11y{} = a11y) do
+    a11y
+    |> Map.from_struct()
+    |> Enum.reject(fn {_, v} -> is_nil(v) end)
+    |> Map.new(fn {k, v} -> {to_string(k), Julep.Iced.Encode.encode(v)} end)
+  end
+end

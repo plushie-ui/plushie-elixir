@@ -15,6 +15,7 @@ defmodule Julep.Iced.Widget.Column do
   - `wrap` (boolean) -- wrap children to next column when they overflow. Default: false.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.Widget.Build
 
   @type option ::
@@ -124,7 +125,7 @@ defmodule Julep.Iced.Widget.Column do
 
   @doc "Sets accessibility annotations."
   @spec a11y(column :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = col, a11y), do: %{col | a11y: a11y}
+  def a11y(%__MODULE__{} = col, a11y), do: %{col | a11y: A11y.cast(a11y)}
 
   @doc "Converts this column struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(column :: t()) :: Julep.Iced.ui_node()

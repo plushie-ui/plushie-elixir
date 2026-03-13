@@ -19,6 +19,7 @@ defmodule Julep.Iced.Widget.Scrollable do
   - `auto_scroll` (boolean) -- when `true`, automatically scrolls to show new content.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.Widget.Build
 
   @type option ::
@@ -146,7 +147,7 @@ defmodule Julep.Iced.Widget.Scrollable do
 
   @doc "Sets accessibility annotations."
   @spec a11y(scrollable :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = s, a11y), do: %{s | a11y: a11y}
+  def a11y(%__MODULE__{} = s, a11y), do: %{s | a11y: A11y.cast(a11y)}
 
   @doc "Converts this scrollable struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(scrollable :: t()) :: Julep.Iced.ui_node()

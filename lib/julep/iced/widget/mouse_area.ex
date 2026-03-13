@@ -45,6 +45,7 @@ defmodule Julep.Iced.Widget.MouseArea do
   - `{:mouse_scroll, id, delta_x, delta_y}` -- scroll wheel within the area.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.Widget.Build
 
   @type cursor ::
@@ -194,7 +195,7 @@ defmodule Julep.Iced.Widget.MouseArea do
 
   @doc "Sets accessibility annotations."
   @spec a11y(mouse_area :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = ma, a11y), do: %{ma | a11y: a11y}
+  def a11y(%__MODULE__{} = ma, a11y), do: %{ma | a11y: A11y.cast(a11y)}
 
   @doc "Converts this mouse area struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(mouse_area :: t()) :: Julep.Iced.ui_node()

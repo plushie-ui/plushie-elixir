@@ -20,6 +20,7 @@ defmodule Julep.Iced.Widget.Markdown do
   - Link clicks are forwarded as `MarkdownUrl` messages by the renderer.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.Widget.Build
 
   @type option ::
@@ -112,7 +113,7 @@ defmodule Julep.Iced.Widget.Markdown do
 
   @doc "Sets accessibility annotations."
   @spec a11y(markdown :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = md, a11y), do: %{md | a11y: a11y}
+  def a11y(%__MODULE__{} = md, a11y), do: %{md | a11y: A11y.cast(a11y)}
 
   @doc "Converts this markdown struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(markdown :: t()) :: Julep.Iced.ui_node()

@@ -10,6 +10,7 @@ defmodule Julep.Iced.Widget.Pin do
   - `height` (length) -- pin container height. Default: shrink.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.Widget.Build
 
   @type option ::
@@ -87,7 +88,7 @@ defmodule Julep.Iced.Widget.Pin do
 
   @doc "Sets accessibility annotations."
   @spec a11y(pin :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = pin, a11y), do: %{pin | a11y: a11y}
+  def a11y(%__MODULE__{} = pin, a11y), do: %{pin | a11y: A11y.cast(a11y)}
 
   @doc "Converts this pin struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(pin :: t()) :: Julep.Iced.ui_node()

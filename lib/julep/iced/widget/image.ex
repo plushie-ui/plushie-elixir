@@ -19,6 +19,7 @@ defmodule Julep.Iced.Widget.Image do
   - `crop` (map) -- crop rectangle: `%{x, y, width, height}` (integer pixel values).
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.Widget.Build
 
   @typedoc "Image source: a file path string or a handle reference map."
@@ -150,7 +151,7 @@ defmodule Julep.Iced.Widget.Image do
 
   @doc "Sets accessibility annotations."
   @spec a11y(image :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = img, a11y), do: %{img | a11y: a11y}
+  def a11y(%__MODULE__{} = img, a11y), do: %{img | a11y: A11y.cast(a11y)}
 
   @doc "Converts this image struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(image :: t()) :: Julep.Iced.ui_node()

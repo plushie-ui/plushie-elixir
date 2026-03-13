@@ -22,6 +22,7 @@ defmodule Julep.Iced.Widget.Table do
   - `sort_order` (`:asc` | `:desc` | nil) -- current sort direction.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.Widget.Build
 
   @type sort_order :: :asc | :desc
@@ -122,7 +123,7 @@ defmodule Julep.Iced.Widget.Table do
 
   @doc "Sets accessibility annotations."
   @spec a11y(table :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = tbl, a11y), do: %{tbl | a11y: a11y}
+  def a11y(%__MODULE__{} = tbl, a11y), do: %{tbl | a11y: A11y.cast(a11y)}
 
   @doc "Converts this table struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(table :: t()) :: Julep.Iced.ui_node()

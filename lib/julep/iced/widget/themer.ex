@@ -8,6 +8,8 @@ defmodule Julep.Iced.Widget.Themer do
     or a custom palette map. See `Julep.Iced.Theme`.
   """
 
+  alias Julep.Iced.A11y
+
   @type t :: %__MODULE__{
           id: String.t(),
           theme: Julep.Iced.Theme.t(),
@@ -39,7 +41,7 @@ defmodule Julep.Iced.Widget.Themer do
 
   @doc "Sets accessibility annotations."
   @spec a11y(themer :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = t, a11y), do: %{t | a11y: a11y}
+  def a11y(%__MODULE__{} = t, a11y), do: %{t | a11y: A11y.cast(a11y)}
 
   @doc "Converts this themer struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(themer :: t()) :: Julep.Iced.ui_node()

@@ -9,6 +9,7 @@ defmodule Julep.Iced.Widget.Float do
   - `scale` (number) -- scale factor for the child content.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.Widget.Build
 
   @type option ::
@@ -78,7 +79,7 @@ defmodule Julep.Iced.Widget.Float do
 
   @doc "Sets accessibility annotations."
   @spec a11y(float_widget :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = fw, a11y), do: %{fw | a11y: a11y}
+  def a11y(%__MODULE__{} = fw, a11y), do: %{fw | a11y: A11y.cast(a11y)}
 
   @doc "Converts this float struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(float_widget :: t()) :: Julep.Iced.ui_node()

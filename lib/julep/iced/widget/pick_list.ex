@@ -30,6 +30,7 @@ defmodule Julep.Iced.Widget.PickList do
   - `{:close, id}` -- emitted when the dropdown menu is closed (requires `on_close: true`).
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
@@ -173,7 +174,7 @@ defmodule Julep.Iced.Widget.PickList do
 
   @doc "Sets accessibility annotations."
   @spec a11y(pick_list :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = pl, a11y), do: %{pl | a11y: a11y}
+  def a11y(%__MODULE__{} = pl, a11y), do: %{pl | a11y: A11y.cast(a11y)}
 
   @doc "Converts this pick list struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(pick_list :: t()) :: Julep.Iced.ui_node()

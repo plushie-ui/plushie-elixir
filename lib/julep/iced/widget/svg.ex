@@ -14,6 +14,7 @@ defmodule Julep.Iced.Widget.Svg do
   - `color` (color) -- color tint applied to the SVG. See `Julep.Iced.Color`.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.Color
   alias Julep.Iced.Widget.Build
 
@@ -89,7 +90,7 @@ defmodule Julep.Iced.Widget.Svg do
 
   @doc "Sets accessibility annotations."
   @spec a11y(svg :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = svg, a11y), do: %{svg | a11y: a11y}
+  def a11y(%__MODULE__{} = svg, a11y), do: %{svg | a11y: A11y.cast(a11y)}
 
   @doc "Converts this SVG struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(svg :: t()) :: Julep.Iced.ui_node()

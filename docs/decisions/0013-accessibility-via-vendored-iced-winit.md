@@ -1,8 +1,10 @@
 # ADR 0013: Accessibility via vendored iced_winit
 
+> **Status: Superseded by [ADR 0015](0015-iced-native-accessibility.md)**
+
 ## Status
 
-Accepted
+Superseded
 
 ## Context
 

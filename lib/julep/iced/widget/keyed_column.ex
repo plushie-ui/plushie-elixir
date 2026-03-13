@@ -13,6 +13,7 @@ defmodule Julep.Iced.Widget.KeyedColumn do
   - `max_width` (number) -- maximum width in pixels.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.Widget.Build
 
   @type option ::
@@ -98,7 +99,7 @@ defmodule Julep.Iced.Widget.KeyedColumn do
 
   @doc "Sets accessibility annotations."
   @spec a11y(keyed_column :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = kc, a11y), do: %{kc | a11y: a11y}
+  def a11y(%__MODULE__{} = kc, a11y), do: %{kc | a11y: A11y.cast(a11y)}
 
   @doc "Converts this keyed column struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(keyed_column :: t()) :: Julep.Iced.ui_node()

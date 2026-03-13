@@ -14,6 +14,7 @@ defmodule Julep.Iced.Widget.Grid do
     `{:fill_portion, n}`, or a fixed pixel number.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.Widget.Build
 
   @type option ::
@@ -107,7 +108,7 @@ defmodule Julep.Iced.Widget.Grid do
 
   @doc "Sets accessibility annotations."
   @spec a11y(grid :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = grid, a11y), do: %{grid | a11y: a11y}
+  def a11y(%__MODULE__{} = grid, a11y), do: %{grid | a11y: A11y.cast(a11y)}
 
   @doc "Converts this grid struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(grid :: t()) :: Julep.Iced.ui_node()

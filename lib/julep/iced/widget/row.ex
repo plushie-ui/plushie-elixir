@@ -14,6 +14,7 @@ defmodule Julep.Iced.Widget.Row do
   - `wrap` (boolean) -- wrap children to next row when they overflow. Default: false.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.Widget.Build
 
   @type option ::
@@ -123,7 +124,7 @@ defmodule Julep.Iced.Widget.Row do
 
   @doc "Sets accessibility annotations."
   @spec a11y(row :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = row, a11y), do: %{row | a11y: a11y}
+  def a11y(%__MODULE__{} = row, a11y), do: %{row | a11y: A11y.cast(a11y)}
 
   @doc "Converts this row struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(row :: t()) :: Julep.Iced.ui_node()

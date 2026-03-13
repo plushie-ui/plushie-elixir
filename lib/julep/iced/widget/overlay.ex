@@ -19,6 +19,7 @@ defmodule Julep.Iced.Widget.Overlay do
   2. The overlay content (rendered as a floating overlay above everything else).
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.Widget.Build
 
   @type position :: :below | :above | :left | :right
@@ -106,7 +107,7 @@ defmodule Julep.Iced.Widget.Overlay do
 
   @doc "Sets accessibility annotations."
   @spec a11y(overlay :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = overlay, a11y), do: %{overlay | a11y: a11y}
+  def a11y(%__MODULE__{} = overlay, a11y), do: %{overlay | a11y: A11y.cast(a11y)}
 
   @doc "Converts this overlay struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(overlay :: t()) :: Julep.Iced.ui_node()

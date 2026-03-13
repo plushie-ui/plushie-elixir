@@ -23,6 +23,7 @@ defmodule Julep.Iced.Widget.Toggler do
   - `{:toggle, id, value}` -- emitted on toggle, `value` is the new boolean state.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
@@ -159,7 +160,7 @@ defmodule Julep.Iced.Widget.Toggler do
 
   @doc "Sets accessibility annotations."
   @spec a11y(toggler :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = tg, a11y), do: %{tg | a11y: a11y}
+  def a11y(%__MODULE__{} = tg, a11y), do: %{tg | a11y: A11y.cast(a11y)}
 
   @doc "Converts this toggler struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(toggler :: t()) :: Julep.Iced.ui_node()

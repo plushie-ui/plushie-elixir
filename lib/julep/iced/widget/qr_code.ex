@@ -16,6 +16,7 @@ defmodule Julep.Iced.Widget.QrCode do
     `:medium` (default), `:quartile`, `:high`.
   """
 
+  alias Julep.Iced.A11y
   alias Julep.Iced.Color
   alias Julep.Iced.Widget.Build
 
@@ -81,7 +82,7 @@ defmodule Julep.Iced.Widget.QrCode do
 
   @doc "Sets accessibility annotations."
   @spec a11y(qr_code :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = qr, a11y), do: %{qr | a11y: a11y}
+  def a11y(%__MODULE__{} = qr, a11y), do: %{qr | a11y: A11y.cast(a11y)}
 
   @doc "Converts this QR code struct to a `ui_node()` map via the `Julep.Iced.Widget` protocol."
   @spec build(qr_code :: t()) :: Julep.Iced.ui_node()
