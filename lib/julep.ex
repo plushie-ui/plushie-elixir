@@ -20,7 +20,7 @@ defmodule Julep do
 
   - `:app`        -- (required) the app module implementing `Julep.App`
   - `:app_opts`   -- opts forwarded to `app.init/1` (default: `[]`)
-  - `:renderer`   -- path to the julep-renderer binary (default: auto-resolved)
+  - `:renderer`   -- path to the julep binary (default: auto-resolved)
   - `:name`       -- supervisor registration name (default: `Julep`)
   - `:dev`        -- enable live code reloading (default: `false`)
   - `:dev_opts`   -- options forwarded to `Julep.DevServer` (default: `[]`)

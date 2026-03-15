@@ -8,7 +8,7 @@ permissions:
   contents: write
 
 jobs:
-  # Renderer binaries are built and released from the julep-renderer repo.
+  # Renderer binaries are built and released from the julep repo.
 
   publish-hex:
     runs-on: ubuntu-latest

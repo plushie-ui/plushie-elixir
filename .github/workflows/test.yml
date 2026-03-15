@@ -97,4 +97,4 @@ jobs:
       - name: Dialyzer
         run: mix dialyzer
 
-  # Rust renderer CI lives in the julep-renderer repo.
+  # Rust renderer CI lives in the julep repo.

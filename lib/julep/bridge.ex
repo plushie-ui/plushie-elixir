@@ -1,6 +1,6 @@
 defmodule Julep.Bridge do
   @moduledoc """
-  Port-based bridge to the julep-renderer process.
+  Port-based bridge to the julep renderer process.
 
   Manages the stdio Port, buffers partial JSONL lines (JSON mode) or receives
   length-prefixed frames (MessagePack mode), and forwards decoded events to
@@ -42,7 +42,7 @@ defmodule Julep.Bridge do
   Starts the bridge linked to the calling process.
 
   Required opts:
-    - `:renderer_path` - filesystem path to the julep-renderer binary
+    - `:renderer_path` - filesystem path to the julep binary
     - `:runtime`       - pid to receive `{:renderer_event, event}` messages
 
   Optional opts:
@@ -373,10 +373,10 @@ defmodule Julep.Bridge do
     else
       rust_log =
         case log_level do
-          :error -> "julep_renderer=error"
-          :warning -> "julep_renderer=warn"
-          :info -> "julep_renderer=info"
-          :debug -> "julep_renderer=debug"
+          :error -> "julep=error"
+          :warning -> "julep=warn"
+          :info -> "julep=info"
+          :debug -> "julep=debug"
         end
 
       [{~c"RUST_LOG", String.to_charlist(rust_log)}]
@@ -444,10 +444,10 @@ defmodule Julep.Bridge do
       julep bridge: renderer crashed #{state.max_restarts} times, giving up.
 
       Troubleshooting:
-        1. Check RUST_LOG=julep_renderer=debug for renderer errors
+        1. Check RUST_LOG=julep=debug for renderer errors
         2. Verify the binary exists: mix julep.build
         3. Check system dependencies (libxkbcommon, etc.)
-        4. Try running the renderer directly: ./path/to/julep-renderer --json
+        4. Try running the renderer directly: ./path/to/julep --json
       """)
 
       :telemetry.execute([:julep, :bridge, :max_restarts_reached], %{}, %{

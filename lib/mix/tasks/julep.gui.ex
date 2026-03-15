@@ -62,7 +62,7 @@ defmodule Mix.Tasks.Julep.Gui do
       Mix.raise("""
       Renderer binary not found at #{renderer_path}.
       Run `mix julep.gui #{inspect(app_module)} --build` to build it,
-      or build manually with: cd ../julep-renderer && cargo build
+      or build manually with: cd ../julep && cargo build
       """)
     end
 

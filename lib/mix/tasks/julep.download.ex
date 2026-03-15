@@ -1,6 +1,6 @@
 defmodule Mix.Tasks.Julep.Download do
-  @moduledoc "Download a precompiled julep-renderer binary for the current platform."
-  @shortdoc "Download precompiled julep-renderer binary"
+  @moduledoc "Download a precompiled julep binary for the current platform."
+  @shortdoc "Download precompiled julep binary"
 
   use Mix.Task
 

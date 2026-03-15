@@ -12,8 +12,8 @@ defmodule Julep.BinaryTest do
       assert is_binary(Binary.binary_name())
     end
 
-    test "starts with 'julep-renderer-'" do
-      assert String.starts_with?(Binary.binary_name(), "julep-renderer-")
+    test "starts with 'julep-'" do
+      assert String.starts_with?(Binary.binary_name(), "julep-")
     end
 
     test "includes an OS component" do
@@ -91,7 +91,7 @@ defmodule Julep.BinaryTest do
         assert is_binary(path)
       rescue
         e in RuntimeError ->
-          assert Exception.message(e) =~ "julep-renderer binary not found"
+          assert Exception.message(e) =~ "julep binary not found"
       end
     end
   end

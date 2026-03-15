@@ -1,6 +1,6 @@
 defmodule Mix.Tasks.Compile.JulepRenderer do
-  @moduledoc "Mix compiler that checks for the julep-renderer binary."
-  @shortdoc "Check julep-renderer availability"
+  @moduledoc "Mix compiler that checks for the julep binary."
+  @shortdoc "Check julep availability"
 
   use Mix.Task.Compiler
 
@@ -22,13 +22,13 @@ defmodule Mix.Tasks.Compile.JulepRenderer do
     rescue
       _ ->
         diagnostic = %Mix.Task.Compiler.Diagnostic{
-          file: "julep-renderer",
+          file: "julep",
           severity: :warning,
           message: """
-          julep-renderer binary not found.
+          julep binary not found.
 
           The renderer is now a separate repository. To build it:
-            cd ../julep-renderer && cargo build
+            cd ../julep && cargo build
 
           Or set JULEP_RENDERER_PATH to an existing binary.
           Or run: mix julep.download

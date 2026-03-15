@@ -2,7 +2,7 @@ defmodule Julep.Test.Backend.Headless do
   @moduledoc """
   Headless test backend using the Rust renderer with iced_test Simulator.
 
-  Spawns `julep-renderer --headless` as a Port and communicates via the negotiated
+  Spawns `julep --headless` as a Port and communicates via the negotiated
   wire format (msgpack by default, json opt-in). Provides structural tree
   snapshots and real widget rendering for regression testing. No display server
   required.
@@ -11,7 +11,7 @@ defmodule Julep.Test.Backend.Headless do
 
   Build the renderer with headless support:
 
-      cd ../julep-renderer && cargo build --features headless
+      cd ../julep && cargo build --features headless
 
   ## Limitations
 
@@ -59,12 +59,12 @@ defmodule Julep.Test.Backend.Headless do
     Julep.Binary.renderer_path()
   rescue
     e in RuntimeError ->
-      if String.contains?(e.message, "julep-renderer binary not found") do
+      if String.contains?(e.message, "julep binary not found") do
         reraise """
-                julep-renderer headless binary not found.
+                julep headless binary not found.
 
                 The headless backend requires a renderer built with the headless feature.
-                Run: cd ../julep-renderer && cargo build --features headless
+                Run: cd ../julep && cargo build --features headless
                 """,
                 __STACKTRACE__
       else

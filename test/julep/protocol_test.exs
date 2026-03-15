@@ -931,10 +931,10 @@ defmodule Julep.ProtocolTest do
           type: "hello",
           protocol: 1,
           version: "0.1.0",
-          name: "julep-renderer"
+          name: "julep"
         })
 
-      assert {:hello, 1, "0.1.0", "julep-renderer"} = Protocol.decode_message(json, :json)
+      assert {:hello, 1, "0.1.0", "julep"} = Protocol.decode_message(json, :json)
     end
 
     test "decodes hello from msgpack" do
@@ -942,11 +942,11 @@ defmodule Julep.ProtocolTest do
         "type" => "hello",
         "protocol" => 1,
         "version" => "0.2.0",
-        "name" => "julep-renderer"
+        "name" => "julep"
       }
 
       packed = Msgpax.pack!(msg, iodata: false)
-      assert {:hello, 1, "0.2.0", "julep-renderer"} = Protocol.decode_message(packed, :msgpack)
+      assert {:hello, 1, "0.2.0", "julep"} = Protocol.decode_message(packed, :msgpack)
     end
   end
 

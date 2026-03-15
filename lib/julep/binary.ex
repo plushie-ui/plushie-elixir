@@ -1,15 +1,15 @@
 defmodule Julep.Binary do
-  @moduledoc "Resolves the path to the julep-renderer binary."
+  @moduledoc "Resolves the path to the julep binary."
 
   @doc """
-  Returns the path to the julep-renderer binary.
+  Returns the path to the julep binary.
 
   Resolution order:
   1. JULEP_RENDERER_PATH environment variable
   2. Application config `:binary_path`
-  3. Custom extension build in _build/<env>/julep_renderer/target/
+  3. Custom extension build in _build/<env>/julep/target/
   4. Precompiled binary in priv/
-  5. Sibling repo at ../julep-renderer/target/
+  5. Sibling repo at ../julep/target/
   """
   @spec renderer_path() :: String.t()
   def renderer_path do
@@ -20,15 +20,15 @@ defmodule Julep.Binary do
         precompiled_path() ||
         sibling_repo_path() ||
         raise """
-        julep-renderer binary not found. Searched:
+        julep binary not found. Searched:
           - $JULEP_RENDERER_PATH (not set)
           - Application config :binary_path (not set)
           - Custom build in _build/
           - Precompiled in priv/bin/
-          - Sibling repo at ../julep-renderer/target/
+          - Sibling repo at ../julep/target/
 
         To build from source:
-          cd ../julep-renderer && cargo build
+          cd ../julep && cargo build
 
         To download a precompiled binary:
           mix julep.download
@@ -55,7 +55,7 @@ defmodule Julep.Binary do
 
         if binary_arch != nil and sys_arch != nil and binary_arch != sys_arch do
           raise """
-          Architecture mismatch: julep-renderer binary is #{binary_arch} but \
+          Architecture mismatch: julep binary is #{binary_arch} but \
           system is #{sys_arch}.
 
           Binary: #{path}
@@ -81,7 +81,7 @@ defmodule Julep.Binary do
     os = os_name()
     arch = arch_name()
     ext = if os == "windows", do: ".exe", else: ""
-    "julep-renderer-#{os}-#{arch}#{ext}"
+    "julep-#{os}-#{arch}#{ext}"
   end
 
   @spec detect_arch(file_output :: String.t()) :: :x86_64 | :aarch64 | nil
@@ -120,10 +120,10 @@ defmodule Julep.Binary do
       path =
         Path.join([
           Mix.Project.build_path(),
-          "julep_renderer",
+          "julep",
           "target",
           profile,
-          "julep-renderer#{ext}"
+          "julep#{ext}"
         ])
 
       if File.exists?(path), do: path

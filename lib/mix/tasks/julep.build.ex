@@ -1,6 +1,6 @@
 defmodule Mix.Tasks.Julep.Build do
-  @moduledoc "Build the julep-renderer binary."
-  @shortdoc "Build the julep-renderer"
+  @moduledoc "Build the julep binary."
+  @shortdoc "Build the julep binary"
 
   use Mix.Task
 
@@ -37,7 +37,7 @@ defmodule Mix.Tasks.Julep.Build do
             if version < @min_rust_version do
               Mix.shell().info(
                 "Warning: rustc #{major}.#{minor}.#{patch} detected, " <>
-                  "but julep-renderer requires >= #{min_str}. " <>
+                  "but julep requires >= #{min_str}. " <>
                   "Consider upgrading with `rustup update`."
               )
             end
@@ -64,10 +64,10 @@ defmodule Mix.Tasks.Julep.Build do
 
     unless File.dir?(source_dir) do
       Mix.raise("""
-      julep-renderer source not found at #{source_dir}.
+      julep source not found at #{source_dir}.
 
       Clone the renderer repo:
-        git clone <renderer-repo-url> ../julep-renderer
+        git clone <renderer-repo-url> ../julep
 
       Or set JULEP_RENDERER_SOURCE to the correct path.
       """)
@@ -75,11 +75,11 @@ defmodule Mix.Tasks.Julep.Build do
 
     release? = "--release" in args
 
-    cmd_args = ["build", "-p", "julep-renderer"]
+    cmd_args = ["build", "-p", "julep"]
     cmd_args = if release?, do: cmd_args ++ ["--release"], else: cmd_args
     cmd_args = cmd_args ++ feature_flags()
 
-    Mix.shell().info("Building julep-renderer#{if release?, do: " (release)", else: ""}...")
+    Mix.shell().info("Building julep#{if release?, do: " (release)", else: ""}...")
 
     case System.cmd("cargo", cmd_args, stderr_to_stdout: true, cd: source_dir) do
       {output, 0} ->
@@ -204,7 +204,7 @@ defmodule Mix.Tasks.Julep.Build do
   # -- Extension build --------------------------------------------------------
 
   defp build_with_extensions(extensions, args) do
-    build_dir = Path.join(Mix.Project.build_path(), "julep_renderer")
+    build_dir = Path.join(Mix.Project.build_path(), "julep")
     File.mkdir_p!(build_dir)
 
     crate_paths = resolve_crate_paths(extensions)
@@ -230,7 +230,7 @@ defmodule Mix.Tasks.Julep.Build do
       {output, 0} ->
         Mix.shell().info("Build succeeded.")
         if "--verbose" in args, do: Mix.shell().info(output)
-        binary = Path.join([build_dir, "target", profile, "julep-renderer"])
+        binary = Path.join([build_dir, "target", profile, "julep"])
         Mix.shell().info("Binary: #{binary}")
         :ok
 
@@ -274,8 +274,8 @@ defmodule Mix.Tasks.Julep.Build do
     julep_core_path = Path.join(source_path, "julep-core")
     julep_core_rel = Path.relative_to(julep_core_path, build_dir)
 
-    julep_renderer_path = Path.join(source_path, "julep-renderer")
-    julep_renderer_rel = Path.relative_to(julep_renderer_path, build_dir)
+    julep_bin_path = Path.join(source_path, "julep")
+    julep_bin_rel = Path.relative_to(julep_bin_path, build_dir)
 
     ext_deps =
       Enum.map_join(extensions, "\n", fn mod ->
@@ -292,19 +292,19 @@ defmodule Mix.Tasks.Julep.Build do
     edition = "2021"
 
     [[bin]]
-    name = "julep-renderer"
+    name = "julep"
     path = "src/main.rs"
 
     [dependencies]
     julep-core = { path = "#{julep_core_rel}" }
-    julep-renderer = { path = "#{julep_renderer_rel}" }
+    julep = { path = "#{julep_bin_rel}" }
     iced = { version = "0.14", features = ["advanced"] }
     #{ext_deps}
 
     [features]
     default = ["julep-core/default"]
-    headless = ["julep-renderer/headless"]
-    test-mode = ["julep-renderer/test-mode"]
+    headless = ["julep/headless"]
+    test-mode = ["julep/test-mode"]
     """
   end
 
@@ -324,7 +324,7 @@ defmodule Mix.Tasks.Julep.Build do
     fn main() -> iced::Result {
         let builder = JulepAppBuilder::new()
                 #{ext_registrations};
-        julep_renderer::run(builder)
+        julep::run(builder)
     }
     """
   end
