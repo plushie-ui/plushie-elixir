@@ -31,6 +31,7 @@ defmodule Julep.Iced.Widget.PaneGrid do
           | {:min_size, number()}
           | {:divider_color, Julep.Iced.Color.t()}
           | {:divider_width, number()}
+          | {:leeway, number()}
           | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -41,11 +42,12 @@ defmodule Julep.Iced.Widget.PaneGrid do
           min_size: number() | nil,
           divider_color: Julep.Iced.Color.t() | nil,
           divider_width: number() | nil,
+          leeway: number() | nil,
           a11y: Julep.Iced.A11y.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
-  defstruct [:id, :spacing, :width, :height, :min_size, :divider_color, :divider_width, :a11y, children: []]
+  defstruct [:id, :spacing, :width, :height, :min_size, :divider_color, :divider_width, :leeway, :a11y, children: []]
 
   @doc "Creates a new pane grid struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
@@ -65,6 +67,7 @@ defmodule Julep.Iced.Widget.PaneGrid do
       {:min_size, v}, acc -> min_size(acc, v)
       {:divider_color, v}, acc -> divider_color(acc, v)
       {:divider_width, v}, acc -> divider_width(acc, v)
+      {:leeway, v}, acc -> leeway(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -95,6 +98,10 @@ defmodule Julep.Iced.Widget.PaneGrid do
   @spec divider_width(pane_grid :: t(), divider_width :: number()) :: t()
   def divider_width(%__MODULE__{} = pg, divider_width), do: %{pg | divider_width: divider_width}
 
+  @doc "Sets the drag leeway in pixels (how far a pane must be dragged before it detaches)."
+  @spec leeway(pane_grid :: t(), leeway :: number()) :: t()
+  def leeway(%__MODULE__{} = pg, leeway), do: %{pg | leeway: leeway}
+
   @doc "Appends a child pane to the grid."
   @spec push(pane_grid :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
   def push(%__MODULE__{} = pg, child), do: %{pg | children: [child | pg.children]}
@@ -124,6 +131,7 @@ defmodule Julep.Iced.Widget.PaneGrid do
         |> put_if(pg.min_size, "min_size")
         |> put_if(pg.divider_color, "divider_color")
         |> put_if(pg.divider_width, "divider_width")
+        |> put_if(pg.leeway, "leeway")
         |> put_if(pg.a11y, "a11y")
 
       %{

@@ -29,14 +29,17 @@ defmodule Julep.Event.Pane do
   """
 
   @type t :: %__MODULE__{
-          type: :resized | :dragged | :clicked,
+          type: :resized | :dragged | :clicked | :focus_cycle,
           id: String.t(),
           pane: term(),
           split: term(),
           ratio: number() | nil,
-          target: term()
+          target: term(),
+          action: String.t() | nil,
+          region: String.t() | nil,
+          edge: String.t() | nil
         }
 
   @enforce_keys [:type, :id]
-  defstruct [:type, :id, :pane, :split, :ratio, :target]
+  defstruct [:type, :id, :pane, :split, :ratio, :target, :action, :region, :edge]
 end

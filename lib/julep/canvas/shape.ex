@@ -265,16 +265,27 @@ defmodule Julep.Canvas.Shape do
 
   # -- Image / SVG on canvas --------------------------------------------------
 
-  @doc "Draws a raster image on the canvas at the given position and size."
+  @doc """
+  Draws a raster image on the canvas at the given position and size.
+
+  ## Options
+
+  - `:rotation` -- rotation angle in radians.
+  - `:opacity` -- opacity multiplier (0.0-1.0).
+  """
   @spec image(
           source :: String.t(),
           x :: number(),
           y :: number(),
           w :: number(),
-          h :: number()
+          h :: number(),
+          opts :: keyword()
         ) :: map()
-  def image(source, x, y, w, h),
-    do: %{"type" => "image", "source" => source, "x" => x, "y" => y, "w" => w, "h" => h}
+  def image(source, x, y, w, h, opts \\ []) do
+    %{"type" => "image", "source" => source, "x" => x, "y" => y, "w" => w, "h" => h}
+    |> maybe_put(opts, :rotation, "rotation")
+    |> apply_opacity(opts)
+  end
 
   @doc "Draws an SVG on the canvas at the given position and size."
   @spec svg(

@@ -1267,11 +1267,23 @@ defmodule Julep.Protocol do
   end
 
   defp dispatch(%{"type" => "event", "family" => "pane_dragged", "id" => id, "data" => data}) do
-    %Pane{type: :dragged, id: id, pane: data["pane"], target: data["target"]}
+    %Pane{
+      type: :dragged,
+      id: id,
+      pane: data["pane"],
+      target: data["target"],
+      action: data["action"],
+      region: data["region"],
+      edge: data["edge"]
+    }
   end
 
   defp dispatch(%{"type" => "event", "family" => "pane_clicked", "id" => id, "data" => data}) do
     %Pane{type: :clicked, id: id, pane: data["pane"]}
+  end
+
+  defp dispatch(%{"type" => "event", "family" => "pane_focus_cycle", "id" => id, "data" => data}) do
+    %Pane{type: :focus_cycle, id: id, pane: data["pane"]}
   end
 
   defp dispatch(%{"type" => "event", "family" => "sort", "id" => id, "data" => data}) do
@@ -1331,6 +1343,15 @@ defmodule Julep.Protocol do
          "data" => data
        }) do
     %System{type: :system_theme, tag: tag, data: data}
+  end
+
+  defp dispatch(%{
+         "type" => "query_response",
+         "kind" => "image_list",
+         "tag" => tag,
+         "data" => data
+       }) do
+    %System{type: :image_list, tag: tag, data: data}
   end
 
   # -- All windows closed --

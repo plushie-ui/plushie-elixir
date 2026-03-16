@@ -806,6 +806,29 @@ defmodule Julep.Command do
     }
   end
 
+  @doc """
+  Lists all in-memory image handles.
+
+  The result arrives in `update/2` as
+  `%System{type: :image_list, tag: tag, data: %{"handles" => [...]}}`.
+  """
+  @spec list_images(tag :: atom()) :: %__MODULE__{}
+  def list_images(tag) when is_atom(tag) do
+    %__MODULE__{
+      type: :widget_op,
+      payload: %{op: "list_images", tag: Atom.to_string(tag)}
+    }
+  end
+
+  @doc "Clears all in-memory images."
+  @spec clear_images() :: %__MODULE__{}
+  def clear_images do
+    %__MODULE__{
+      type: :widget_op,
+      payload: %{op: "clear_images"}
+    }
+  end
+
   # ---------------------------------------------------------------------------
   # Extension commands
   # ---------------------------------------------------------------------------

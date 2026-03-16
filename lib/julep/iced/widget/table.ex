@@ -23,6 +23,7 @@ defmodule Julep.Iced.Widget.Table do
   """
 
   alias Julep.Iced.A11y
+  alias Julep.Iced.Color
   alias Julep.Iced.Widget.Build
 
   @type sort_order :: :asc | :desc
@@ -38,6 +39,10 @@ defmodule Julep.Iced.Widget.Table do
           | {:sort_order, sort_order()}
           | {:header_text_size, number()}
           | {:row_text_size, number()}
+          | {:cell_spacing, number()}
+          | {:row_spacing, number()}
+          | {:separator_thickness, number()}
+          | {:separator_color, Julep.Iced.Color.t()}
           | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -52,6 +57,10 @@ defmodule Julep.Iced.Widget.Table do
           sort_order: sort_order() | nil,
           header_text_size: number() | nil,
           row_text_size: number() | nil,
+          cell_spacing: number() | nil,
+          row_spacing: number() | nil,
+          separator_thickness: number() | nil,
+          separator_color: Julep.Iced.Color.t() | nil,
           a11y: Julep.Iced.A11y.t() | nil
         }
 
@@ -67,6 +76,10 @@ defmodule Julep.Iced.Widget.Table do
     :sort_order,
     :header_text_size,
     :row_text_size,
+    :cell_spacing,
+    :row_spacing,
+    :separator_thickness,
+    :separator_color,
     :a11y
   ]
 
@@ -92,6 +105,10 @@ defmodule Julep.Iced.Widget.Table do
       {:sort_order, v}, acc -> sort_order(acc, v)
       {:header_text_size, v}, acc -> header_text_size(acc, v)
       {:row_text_size, v}, acc -> row_text_size(acc, v)
+      {:cell_spacing, v}, acc -> cell_spacing(acc, v)
+      {:row_spacing, v}, acc -> row_spacing(acc, v)
+      {:separator_thickness, v}, acc -> separator_thickness(acc, v)
+      {:separator_color, v}, acc -> separator_color(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -139,6 +156,26 @@ defmodule Julep.Iced.Widget.Table do
   def row_text_size(%__MODULE__{} = tbl, row_text_size),
     do: %{tbl | row_text_size: row_text_size}
 
+  @doc "Sets the horizontal spacing between cells in pixels."
+  @spec cell_spacing(table :: t(), cell_spacing :: number()) :: t()
+  def cell_spacing(%__MODULE__{} = tbl, cell_spacing),
+    do: %{tbl | cell_spacing: cell_spacing}
+
+  @doc "Sets the vertical spacing between rows in pixels."
+  @spec row_spacing(table :: t(), row_spacing :: number()) :: t()
+  def row_spacing(%__MODULE__{} = tbl, row_spacing),
+    do: %{tbl | row_spacing: row_spacing}
+
+  @doc "Sets the separator line thickness in pixels."
+  @spec separator_thickness(table :: t(), separator_thickness :: number()) :: t()
+  def separator_thickness(%__MODULE__{} = tbl, separator_thickness),
+    do: %{tbl | separator_thickness: separator_thickness}
+
+  @doc "Sets the separator line color."
+  @spec separator_color(table :: t(), separator_color :: Julep.Iced.Color.t()) :: t()
+  def separator_color(%__MODULE__{} = tbl, separator_color),
+    do: %{tbl | separator_color: Color.cast(separator_color)}
+
   @doc "Sets accessibility annotations."
   @spec a11y(table :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
   def a11y(%__MODULE__{} = tbl, a11y), do: %{tbl | a11y: A11y.cast(a11y)}
@@ -163,6 +200,10 @@ defmodule Julep.Iced.Widget.Table do
         |> put_if(tbl.sort_order, "sort_order")
         |> put_if(tbl.header_text_size, "header_text_size")
         |> put_if(tbl.row_text_size, "row_text_size")
+        |> put_if(tbl.cell_spacing, "cell_spacing")
+        |> put_if(tbl.row_spacing, "row_spacing")
+        |> put_if(tbl.separator_thickness, "separator_thickness")
+        |> put_if(tbl.separator_color, "separator_color")
         |> put_if(tbl.a11y, "a11y")
 
       %{id: tbl.id, type: "table", props: props, children: []}

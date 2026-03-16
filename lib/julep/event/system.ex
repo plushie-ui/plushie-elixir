@@ -35,7 +35,8 @@ defmodule Julep.Event.System do
             | :system_theme
             | :animation_frame
             | :theme_changed
-            | :all_windows_closed,
+            | :all_windows_closed
+            | :image_list,
           tag: String.t() | nil,
           data: term()
         }
