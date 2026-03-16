@@ -158,17 +158,17 @@ defmodule Julep.Tree do
   end
 
   defp diff_node(old, new, path) do
-    cond do
-      old.type != new.type ->
-        [%{op: "replace_node", path: path, node: new}]
+    if old.type != new.type do
+      [%{op: "replace_node", path: path, node: new}]
+    else
+      case diff_children(old.children, new.children, path) do
+        :reordered ->
+          [%{op: "replace_node", path: path, node: new}]
 
-      children_reordered?(old.children, new.children) ->
-        [%{op: "replace_node", path: path, node: new}]
-
-      true ->
-        prop_ops = diff_props(old.props, new.props, path)
-        child_ops = diff_children(old.children, new.children, path)
-        prop_ops ++ child_ops
+        child_ops ->
+          prop_ops = diff_props(old.props, new.props, path)
+          prop_ops ++ child_ops
+      end
     end
   end
 
@@ -201,66 +201,61 @@ defmodule Julep.Tree do
   end
 
   defp diff_children(old_children, new_children, path) do
-    new_ids = Enum.map(new_children, & &1.id)
-
-    if length(new_ids) != MapSet.size(MapSet.new(new_ids)) do
-      Logger.warning("julep tree: duplicate child IDs detected: #{inspect(new_ids)}")
-    end
-
     old_by_id = old_children |> Enum.with_index() |> Map.new(fn {c, i} -> {c.id, {c, i}} end)
     new_by_id = new_children |> Enum.with_index() |> Map.new(fn {c, i} -> {c.id, {c, i}} end)
 
-    # Removals: old IDs not present in new, highest index first
-    removed_indices =
-      old_by_id
-      |> Enum.reject(fn {id, _} -> Map.has_key?(new_by_id, id) end)
-      |> Enum.map(fn {_, {_, idx}} -> idx end)
-
-    remove_ops =
-      removed_indices
-      |> Enum.sort(:desc)
-      |> Enum.map(fn idx -> %{op: "remove_child", path: path, index: idx} end)
-
-    # Walk new children for updates and inserts
-    {update_ops, insert_ops} =
-      new_children
-      |> Enum.with_index()
-      |> Enum.reduce({[], []}, fn {child, idx}, {updates, inserts} ->
-        case Map.fetch(old_by_id, child.id) do
-          {:ok, {old_child, old_idx}} ->
-            child_path = path ++ [index_after_removals(old_idx, removed_indices)]
-            ops = diff_node(old_child, child, child_path)
-            {updates ++ ops, inserts}
-
-          :error ->
-            insert = %{op: "insert_child", path: path, index: idx, node: child}
-            {updates, inserts ++ [insert]}
-        end
-      end)
-
-    # Ordering is load-bearing: removals descending (highest index first to
-    # avoid index shift), then updates (on adjusted indices), then inserts
-    # ascending (lowest index first to build correctly).
-    remove_ops ++ update_ops ++ insert_ops
-  end
-
-  # Reorder detection uses set comparison of common child IDs, not LCS
-  # (Longest Common Subsequence). LCS would produce minimal move operations
-  # but is O(n^2) and complex to implement. Set comparison is O(n) and
-  # catches all reorders, at the cost of producing a full replace_node
-  # instead of individual moves. This is a deliberate
-  # simplicity-over-optimality tradeoff.
-  defp children_reordered?(old_children, new_children) do
-    old_ids = Enum.map(old_children, & &1.id)
     new_ids = Enum.map(new_children, & &1.id)
 
-    old_set = MapSet.new(old_ids)
-    new_set = MapSet.new(new_ids)
+    if length(new_ids) != map_size(new_by_id) do
+      Logger.warning("julep tree: duplicate child IDs detected: #{inspect(new_ids)}")
+    end
 
-    common_old = Enum.filter(old_ids, &MapSet.member?(new_set, &1))
-    common_new = Enum.filter(new_ids, &MapSet.member?(old_set, &1))
+    # Reorder detection uses the maps we already built, avoiding duplicate
+    # MapSet construction. Uses key set comparison of common child IDs, not
+    # LCS (Longest Common Subsequence). LCS would produce minimal move
+    # operations but is O(n^2). Set comparison is O(n) and catches all
+    # reorders, at the cost of producing a full replace_node instead of
+    # individual moves. Deliberate simplicity-over-optimality tradeoff.
+    old_ids = Enum.map(old_children, & &1.id)
+    common_old = Enum.filter(old_ids, &Map.has_key?(new_by_id, &1))
+    common_new = Enum.filter(new_ids, &Map.has_key?(old_by_id, &1))
 
-    common_old != common_new
+    if common_old != common_new do
+      :reordered
+    else
+      # Removals: old IDs not present in new, highest index first
+      removed_indices =
+        old_by_id
+        |> Enum.reject(fn {id, _} -> Map.has_key?(new_by_id, id) end)
+        |> Enum.map(fn {_, {_, idx}} -> idx end)
+
+      remove_ops =
+        removed_indices
+        |> Enum.sort(:desc)
+        |> Enum.map(fn idx -> %{op: "remove_child", path: path, index: idx} end)
+
+      # Walk new children for updates and inserts
+      {update_ops, insert_ops} =
+        new_children
+        |> Enum.with_index()
+        |> Enum.reduce({[], []}, fn {child, idx}, {updates, inserts} ->
+          case Map.fetch(old_by_id, child.id) do
+            {:ok, {old_child, old_idx}} ->
+              child_path = path ++ [index_after_removals(old_idx, removed_indices)]
+              ops = diff_node(old_child, child, child_path)
+              {updates ++ ops, inserts}
+
+            :error ->
+              insert = %{op: "insert_child", path: path, index: idx, node: child}
+              {updates, inserts ++ [insert]}
+          end
+        end)
+
+      # Ordering is load-bearing: removals descending (highest index first to
+      # avoid index shift), then updates (on adjusted indices), then inserts
+      # ascending (lowest index first to build correctly).
+      remove_ops ++ update_ops ++ insert_ops
+    end
   end
 
   defp index_after_removals(old_idx, removed_indices) do
