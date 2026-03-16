@@ -670,3 +670,49 @@ Jason.encode!(tree, pretty: true)
 
 This makes debugging straightforward: you can see exactly what the renderer
 will receive without running it.
+
+## Widget type reference
+
+Maps the `type` string in `ui_node()` maps to the corresponding typed widget
+module and `Julep.UI` builder function.
+
+| Type string | Widget module | UI builder |
+|---|---|---|
+| `"button"` | `Julep.Iced.Widget.Button` | `Julep.UI.button/3` |
+| `"canvas"` | `Julep.Iced.Widget.Canvas` | `Julep.UI.canvas/2` |
+| `"checkbox"` | `Julep.Iced.Widget.Checkbox` | `Julep.UI.checkbox/3` |
+| `"column"` | `Julep.Iced.Widget.Column` | `Julep.UI.column/1` |
+| `"combo_box"` | `Julep.Iced.Widget.ComboBox` | `Julep.UI.combo_box/4` |
+| `"container"` | `Julep.Iced.Widget.Container` | `Julep.UI.container/2` |
+| `"float"` | `Julep.Iced.Widget.Float` | `Julep.UI.float_widget/2` |
+| `"grid"` | `Julep.Iced.Widget.Grid` | `Julep.UI.grid/1` |
+| `"image"` | `Julep.Iced.Widget.Image` | `Julep.UI.image/3` |
+| `"keyed_column"` | `Julep.Iced.Widget.KeyedColumn` | `Julep.UI.keyed_column/1` |
+| `"markdown"` | `Julep.Iced.Widget.Markdown` | `Julep.UI.markdown/2` |
+| `"mouse_area"` | `Julep.Iced.Widget.MouseArea` | `Julep.UI.mouse_area/2` |
+| `"overlay"` | `Julep.Iced.Widget.Overlay` | `Julep.UI.overlay/2` |
+| `"pane_grid"` | `Julep.Iced.Widget.PaneGrid` | `Julep.UI.pane_grid/2` |
+| `"pick_list"` | `Julep.Iced.Widget.PickList` | `Julep.UI.pick_list/4` |
+| `"pin"` | `Julep.Iced.Widget.Pin` | `Julep.UI.pin/2` |
+| `"progress_bar"` | `Julep.Iced.Widget.ProgressBar` | `Julep.UI.progress_bar/3` |
+| `"qr_code"` | `Julep.Iced.Widget.QrCode` | `Julep.UI.qr_code/3` |
+| `"radio"` | `Julep.Iced.Widget.Radio` | `Julep.UI.radio/4` |
+| `"responsive"` | `Julep.Iced.Widget.Responsive` | `Julep.UI.responsive/1` |
+| `"rich_text"` | `Julep.Iced.Widget.RichText` | `Julep.UI.rich_text/2` |
+| `"row"` | `Julep.Iced.Widget.Row` | `Julep.UI.row/1` |
+| `"rule"` | `Julep.Iced.Widget.Rule` | `Julep.UI.rule/1` |
+| `"scrollable"` | `Julep.Iced.Widget.Scrollable` | `Julep.UI.scrollable/2` |
+| `"sensor"` | `Julep.Iced.Widget.Sensor` | `Julep.UI.sensor/2` |
+| `"slider"` | `Julep.Iced.Widget.Slider` | `Julep.UI.slider/4` |
+| `"space"` | `Julep.Iced.Widget.Space` | `Julep.UI.space/1` |
+| `"stack"` | `Julep.Iced.Widget.Stack` | `Julep.UI.stack/1` |
+| `"svg"` | `Julep.Iced.Widget.Svg` | `Julep.UI.svg/3` |
+| `"table"` | `Julep.Iced.Widget.Table` | `Julep.UI.table/2` |
+| `"text"` | `Julep.Iced.Widget.Text` | `Julep.UI.text/2` |
+| `"text_editor"` | `Julep.Iced.Widget.TextEditor` | `Julep.UI.text_editor/3` |
+| `"text_input"` | `Julep.Iced.Widget.TextInput` | `Julep.UI.text_input/3` |
+| `"themer"` | `Julep.Iced.Widget.Themer` | `Julep.UI.themer/2` |
+| `"toggler"` | `Julep.Iced.Widget.Toggler` | `Julep.UI.toggler/3` |
+| `"tooltip"` | `Julep.Iced.Widget.Tooltip` | `Julep.UI.tooltip/2` |
+| `"vertical_slider"` | `Julep.Iced.Widget.VerticalSlider` | `Julep.UI.vertical_slider/4` |
+| `"window"` | -- | `Julep.UI.window/2` |

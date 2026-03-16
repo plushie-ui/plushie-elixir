@@ -7,6 +7,8 @@ defmodule Julep.Iced.Widget.Scrollable do
   - `width` (length) -- width of the scrollable area. Default: shrink. See `Julep.Iced.Length`.
   - `height` (length) -- height of the scrollable area. Default: shrink.
   - `direction` (string) -- scroll direction: `"vertical"` (default), `"horizontal"`, or `"both"`.
+    Setting `:both` enables bidirectional scrolling, but per-axis scrollbar
+    customization (independent widths, margins per axis) is not yet supported.
   - `spacing` (number) -- spacing between scrollbar and content.
   - `scrollbar_width` (number) -- width of the scrollbar track in pixels.
   - `scrollbar_margin` (number) -- margin around the scrollbar in pixels.

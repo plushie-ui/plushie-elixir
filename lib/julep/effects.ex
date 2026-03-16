@@ -58,7 +58,13 @@ defmodule Julep.Effects do
     }
   end
 
-  @doc "Open-file dialog. Returns a command."
+  @doc """
+  Open-file dialog. Returns a command.
+
+  Filter format is `{"Label", "*.ext"}`. The renderer translates to
+  platform-native format: glob patterns on Linux (GTK), UTIs on macOS,
+  and filter patterns on Windows.
+  """
   @spec file_open(opts :: keyword()) :: Julep.Command.t()
   def file_open(opts \\ []), do: request(:file_open, opts)
 
@@ -86,7 +92,12 @@ defmodule Julep.Effects do
   @spec clipboard_write_primary(text :: String.t()) :: Julep.Command.t()
   def clipboard_write_primary(text), do: request(:clipboard_write_primary, text: text)
 
-  @doc "Show an OS notification. Returns a command."
+  @doc """
+  Show an OS notification. Returns a command.
+
+  On macOS, notifications may require the app to be bundled (.app) or have
+  notification entitlements to display.
+  """
   @spec notification(title :: String.t(), body :: String.t()) :: Julep.Command.t()
   def notification(title, body), do: request(:notification, title: title, body: body)
 

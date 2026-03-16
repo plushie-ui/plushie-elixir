@@ -102,3 +102,16 @@ is preferable (app stores, double-click launchers), a future option could
 have the Rust binary spawn the BEAM as a child instead. The protocol and
 UI model stay identical; only the process hierarchy inverts. This is a
 packaging concern, not an architectural change.
+
+## Glossary
+
+- **ui_node** -- A plain map with keys `id`, `type`, `props`, and `children` representing a single widget in the UI tree.
+- **patch** -- A diff operation (replace_node, update_props, insert_child, remove_child) sent to the renderer to update the displayed tree incrementally.
+- **snapshot** -- A complete UI tree sent to the renderer, used on initial render and after renderer restart.
+- **command** -- A side-effect descriptor returned from `update/2` that the runtime executes asynchronously (e.g. async work, widget ops, window management).
+- **subscription** -- A declarative specification of ongoing event sources (timers, keyboard, window events) that the runtime manages based on model state.
+- **effect** -- A platform I/O operation (file dialog, clipboard, notification) requested via `Julep.Effects` and executed by the renderer.
+- **event_tag** -- An atom or string identifier embedded in commands and returned in result events, used to correlate requests with responses.
+- **widget_op** -- A command targeting a specific widget instance (focus, scroll_to, select_all) identified by widget ID.
+- **session** -- A `Julep.Test.Session` struct wrapping a test backend module and process, providing the unified test interaction API.
+- **backend** -- One of three `Julep.Test.Backend` implementations (sim, headless, full) that execute test interactions at different fidelity levels.

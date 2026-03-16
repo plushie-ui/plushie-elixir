@@ -185,6 +185,10 @@ Core:
 - [Testing](docs/testing.md) -- three-backend test framework and pixel regression
 - [Accessibility](docs/accessibility.md) -- planned approach and roadmap
 - [Developer experience](docs/developer-experience.md) -- mix tasks, IEx, project structure
+- [Composition patterns](docs/composition-patterns.md) -- tabs, sidebars, modals, cards
+- [Widget authoring](docs/widget-authoring.md) -- how to build typed widgets
+- [Widget packages](docs/widget-packages.md) -- publishing reusable widget packages
+- [Known issues](docs/known-issues.md) -- tracked limitations and workarounds
 - [Roadmap](docs/roadmap.md) -- phased build plan
 - [Iced parity audit](docs/audit-iced-parity.md) -- detailed coverage matrix against iced 0.14
 

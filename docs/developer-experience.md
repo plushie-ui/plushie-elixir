@@ -42,7 +42,7 @@ end
 
 ```elixir
 defmodule MyApp do
-  @behaviour Julep.App
+  use Julep.App
 
   def init(_opts), do: %{count: 0}
 

@@ -201,8 +201,9 @@ User interaction.
 {"type": "event", "family": "input", "id": "name_field", "value": "Alice"}
 {"type": "event", "family": "toggle", "id": "dark_mode", "value": true}
 {"type": "event", "family": "submit", "id": "name_field", "value": "Alice"}
-{"type": "event", "family": "window", "action": "close_requested", "window_id": "main"}
-{"type": "event", "family": "key", "key": "Escape", "modifiers": ["ctrl"]}
+{"type": "event", "family": "window_close_requested", "id": "main"}
+{"type": "event", "family": "key_press", "value": "Escape", "modifiers": {"ctrl": true, "shift": false, "alt": false, "logo": false, "command": false}, "data": {"modified_key": "Escape", "physical_key": "Escape", "location": "standard", "text": null, "repeat": false}}
+{"type": "event", "family": "key_release", "value": "Escape", "modifiers": {"ctrl": true, "shift": false, "alt": false, "logo": false, "command": false}, "data": {"modified_key": "Escape", "physical_key": "Escape", "location": "standard"}}
 ```
 
 #### effect_response

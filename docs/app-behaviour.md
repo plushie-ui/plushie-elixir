@@ -188,8 +188,8 @@ end
 
 ### window_config/1 (optional)
 
-Called on runtime startup to configure window properties. Default: single
-window with app module name as title.
+Called when windows are opened, including at startup and after renderer
+restart. Default: single window with app module name as title.
 
 ```elixir
 def window_config(_model) do
@@ -277,3 +277,15 @@ end
 
 Since `update` is a pure function and `view` returns plain maps, no special
 test infrastructure is needed. The renderer is not involved.
+
+## Configuration
+
+Application-level configuration is set via `config :julep, key, value` in
+your `config.exs` (or per-environment config files).
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `:test_backend` | `:sim \| :headless \| :full` | `:sim` | Test backend used by `Julep.Test.Case`. Override per-run with `JULEP_TEST_BACKEND` env var. |
+| `:test_format` | `:json \| :msgpack` | `:msgpack` | Wire format for test sessions. Set to `:json` for easier debugging. |
+| `:extension_config` | `map()` | `%{}` | Configuration map passed to widget extensions at runtime. |
+| `:iced_features` | `:all \| [atom()]` | `:all` | Cargo feature flags for the renderer build. Controls which iced widgets and capabilities are compiled in. |
