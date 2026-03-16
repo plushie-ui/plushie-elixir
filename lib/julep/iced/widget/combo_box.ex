@@ -20,6 +20,7 @@ defmodule Julep.Iced.Widget.ComboBox do
     `Julep.Iced.Widget.TextInput` icon prop.
   - `on_option_hovered` (boolean) -- when true, emits `%Widget{type: :option_hovered, id: id, value: value}`
     when hovering over a dropdown option. Default: false.
+  - `shaping` -- text shaping strategy. See `Julep.Iced.Shaping`.
   - `style` -- named preset atom (`:default`) or `StyleMap.t()` for custom styling.
     See `Julep.Iced.StyleMap`.
 
@@ -51,6 +52,7 @@ defmodule Julep.Iced.Widget.ComboBox do
           | {:on_option_hovered, boolean()}
           | {:on_open, boolean()}
           | {:on_close, boolean()}
+          | {:shaping, Julep.Iced.Shaping.t()}
           | {:style, style()}
           | {:a11y, Julep.Iced.A11y.t()}
 
@@ -69,6 +71,7 @@ defmodule Julep.Iced.Widget.ComboBox do
           on_option_hovered: boolean() | nil,
           on_open: boolean() | nil,
           on_close: boolean() | nil,
+          shaping: Julep.Iced.Shaping.t() | nil,
           style: style() | nil,
           a11y: Julep.Iced.A11y.t() | nil
         }
@@ -88,6 +91,7 @@ defmodule Julep.Iced.Widget.ComboBox do
     :on_option_hovered,
     :on_open,
     :on_close,
+    :shaping,
     :style,
     :a11y
   ]
@@ -116,6 +120,7 @@ defmodule Julep.Iced.Widget.ComboBox do
       {:on_option_hovered, v}, acc -> on_option_hovered(acc, v)
       {:on_open, v}, acc -> on_open(acc, v)
       {:on_close, v}, acc -> on_close(acc, v)
+      {:shaping, v}, acc -> shaping(acc, v)
       {:style, v}, acc -> style(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
@@ -171,6 +176,10 @@ defmodule Julep.Iced.Widget.ComboBox do
   @spec on_close(combo_box :: t(), on_close :: boolean()) :: t()
   def on_close(%__MODULE__{} = cb, on_close), do: %{cb | on_close: on_close}
 
+  @doc "Sets the text shaping strategy."
+  @spec shaping(combo_box :: t(), shaping :: Julep.Iced.Shaping.t()) :: t()
+  def shaping(%__MODULE__{} = cb, shaping), do: %{cb | shaping: shaping}
+
   @doc "Sets the combo box style. Accepts a named preset atom or a `StyleMap`."
   @spec style(combo_box :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = cb, style), do: %{cb | style: style}
@@ -202,6 +211,7 @@ defmodule Julep.Iced.Widget.ComboBox do
         |> put_if(cb.on_option_hovered, "on_option_hovered")
         |> put_if(cb.on_open, "on_open")
         |> put_if(cb.on_close, "on_close")
+        |> put_if(cb.shaping, "shaping")
         |> put_if(cb.style, "style")
         |> put_if(cb.a11y, "a11y")
 

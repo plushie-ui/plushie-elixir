@@ -16,7 +16,7 @@ defmodule Julep.Test.Backend do
   alias Julep.Test.Screenshot
   alias Julep.Test.Snapshot
 
-  @type selector :: String.t()
+  @type selector :: String.t() | {:role, String.t()} | {:label, String.t()} | :focused
 
   @callback start(app :: module(), opts :: keyword()) :: {:ok, pid()}
   @callback stop(session :: pid()) :: :ok

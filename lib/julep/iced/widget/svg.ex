@@ -12,6 +12,8 @@ defmodule Julep.Iced.Widget.Svg do
   - `rotation` (number) -- rotation angle in degrees.
   - `opacity` (number) -- opacity from 0.0 (transparent) to 1.0 (opaque).
   - `color` (color) -- color tint applied to the SVG. See `Julep.Iced.Color`.
+  - `alt` (string) -- alt text for the SVG (accessibility).
+  - `description` (string) -- longer description for the SVG (accessibility).
   """
 
   alias Julep.Iced.A11y
@@ -25,6 +27,8 @@ defmodule Julep.Iced.Widget.Svg do
           | {:rotation, number()}
           | {:opacity, number()}
           | {:color, Julep.Iced.Color.t()}
+          | {:alt, String.t()}
+          | {:description, String.t()}
           | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -36,10 +40,12 @@ defmodule Julep.Iced.Widget.Svg do
           rotation: number() | nil,
           opacity: number() | nil,
           color: Julep.Iced.Color.t() | nil,
+          alt: String.t() | nil,
+          description: String.t() | nil,
           a11y: Julep.Iced.A11y.t() | nil
         }
 
-  defstruct [:id, :source, :width, :height, :content_fit, :rotation, :opacity, :color, :a11y]
+  defstruct [:id, :source, :width, :height, :content_fit, :rotation, :opacity, :color, :alt, :description, :a11y]
 
   @doc "Creates a new SVG struct with the given source path and optional keyword opts."
   @spec new(id :: String.t(), source :: String.t(), opts :: [option()]) :: t()
@@ -59,6 +65,8 @@ defmodule Julep.Iced.Widget.Svg do
       {:rotation, v}, acc -> rotation(acc, v)
       {:opacity, v}, acc -> opacity(acc, v)
       {:color, v}, acc -> color(acc, v)
+      {:alt, v}, acc -> alt(acc, v)
+      {:description, v}, acc -> description(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -88,6 +96,15 @@ defmodule Julep.Iced.Widget.Svg do
   @spec color(svg :: t(), color :: Julep.Iced.Color.t()) :: t()
   def color(%__MODULE__{} = svg, color), do: %{svg | color: Color.cast(color)}
 
+  @doc "Sets the alt text for the SVG."
+  @spec alt(svg :: t(), alt :: String.t()) :: t()
+  def alt(%__MODULE__{} = svg, alt) when is_binary(alt), do: %{svg | alt: alt}
+
+  @doc "Sets a longer description for the SVG."
+  @spec description(svg :: t(), description :: String.t()) :: t()
+  def description(%__MODULE__{} = svg, description) when is_binary(description),
+    do: %{svg | description: description}
+
   @doc "Sets accessibility annotations."
   @spec a11y(svg :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
   def a11y(%__MODULE__{} = svg, a11y), do: %{svg | a11y: A11y.cast(a11y)}
@@ -109,6 +126,8 @@ defmodule Julep.Iced.Widget.Svg do
         |> put_if(svg.rotation, "rotation")
         |> put_if(svg.opacity, "opacity")
         |> put_if(svg.color, "color")
+        |> put_if(svg.alt, "alt")
+        |> put_if(svg.description, "description")
         |> put_if(svg.a11y, "a11y")
 
       %{id: svg.id, type: "svg", props: props, children: []}

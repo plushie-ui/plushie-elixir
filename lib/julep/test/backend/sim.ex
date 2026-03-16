@@ -255,6 +255,18 @@ defmodule Julep.Test.Backend.Sim do
     find_by_id(tree, id)
   end
 
+  defp find_in_tree(tree, {:role, role}) when is_binary(role) do
+    find_by_role(tree, role)
+  end
+
+  defp find_in_tree(tree, {:label, label}) when is_binary(label) do
+    find_by_label(tree, label)
+  end
+
+  defp find_in_tree(tree, :focused) do
+    find_focused_node(tree)
+  end
+
   defp find_in_tree(tree, text) when is_binary(text) do
     find_by_text(tree, text)
   end
@@ -282,6 +294,45 @@ defmodule Julep.Test.Backend.Sim do
     else
       children = node[:children] || node["children"] || []
       Enum.find_value(children, &find_by_text(&1, text))
+    end
+  end
+
+  defp find_by_role(nil, _role), do: nil
+
+  defp find_by_role(%{} = node, role) do
+    element = Element.from_node(node)
+
+    if Element.inferred_role(element) == role do
+      element
+    else
+      children = node[:children] || node["children"] || []
+      Enum.find_value(children, &find_by_role(&1, role))
+    end
+  end
+
+  defp find_by_label(nil, _label), do: nil
+
+  defp find_by_label(%{} = node, label) do
+    a11y = (node[:props] || node["props"] || %{})["a11y"]
+
+    if is_map(a11y) and a11y["label"] == label do
+      Element.from_node(node)
+    else
+      children = node[:children] || node["children"] || []
+      Enum.find_value(children, &find_by_label(&1, label))
+    end
+  end
+
+  defp find_focused_node(nil), do: nil
+
+  defp find_focused_node(%{} = node) do
+    props = node[:props] || node["props"] || %{}
+
+    if props["focused"] == true do
+      Element.from_node(node)
+    else
+      children = node[:children] || node["children"] || []
+      Enum.find_value(children, &find_focused_node/1)
     end
   end
 

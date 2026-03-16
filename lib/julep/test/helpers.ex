@@ -42,6 +42,19 @@ defmodule Julep.Test.Helpers do
   @spec find!(selector :: Backend.selector()) :: Element.t()
   def find!(selector), do: Session.find!(session(), selector)
 
+  @doc "Finds an element by its accessibility role. Returns nil if not found."
+  @spec find_by_role(role :: atom() | String.t()) :: Element.t() | nil
+  def find_by_role(role) when is_atom(role), do: find_by_role(to_string(role))
+  def find_by_role(role) when is_binary(role), do: Session.find(session(), {:role, role})
+
+  @doc "Finds an element by its accessibility label. Returns nil if not found."
+  @spec find_by_label(label :: String.t()) :: Element.t() | nil
+  def find_by_label(label) when is_binary(label), do: Session.find(session(), {:label, label})
+
+  @doc "Finds the currently focused element. Returns nil if none is focused."
+  @spec find_focused() :: Element.t() | nil
+  def find_focused, do: Session.find(session(), :focused)
+
   @doc "Clicks a widget identified by selector."
   @spec click(selector :: Backend.selector()) :: :ok
   def click(selector), do: Session.click(session(), selector)

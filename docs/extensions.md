@@ -154,8 +154,9 @@ with viewport state, hit testing, pan/zoom, all persisted in
 
 ```rust
 fn prepare(&mut self, node: &TreeNode, caches: &mut ExtensionCaches, theme: &Theme) {
-    // Initialize or sync per-node state
-    let state = caches.get_or_insert::<SparklineState>(&node.id, || {
+    // Initialize or sync per-node state.
+    // First arg is the namespace (typically config_key()), second is the node ID.
+    let state = caches.get_or_insert::<SparklineState>(self.config_key(), &node.id, || {
         SparklineState::new(prop_usize(node, "capacity").unwrap_or(100))
     });
     // Update from props if needed
@@ -171,7 +172,7 @@ fn handle_command(
 ) -> Vec<OutgoingEvent> {
     match op {
         "push" => {
-            if let Some(state) = caches.get_mut::<SparklineState>(node_id) {
+            if let Some(state) = caches.get_mut::<SparklineState>(self.config_key(), node_id) {
                 if let Some(value) = payload.as_f64() {
                     state.push(value as f32);
                     state.generation.bump();
@@ -184,7 +185,7 @@ fn handle_command(
 }
 
 fn cleanup(&mut self, node_id: &str, caches: &mut ExtensionCaches) {
-    caches.remove(node_id);
+    caches.remove(self.config_key(), node_id);
 }
 ```
 
@@ -476,7 +477,7 @@ In `prepare` or `handle_command`, bump the generation when data changes:
 ```rust
 fn handle_command(&mut self, node_id: &str, op: &str, payload: &Value, caches: &mut ExtensionCaches) -> Vec<OutgoingEvent> {
     if op == "push" {
-        if let Some(data) = caches.get_mut::<SparklineData>(node_id) {
+        if let Some(data) = caches.get_mut::<SparklineData>(self.config_key(), node_id) {
             data.samples.push(payload.as_f64().unwrap_or(0.0) as f32);
             data.generation.bump();  // signal that a redraw is needed
         }
@@ -787,7 +788,7 @@ mod tests {
         let events = ext.handle_command("s-1", "push", &json!(42.0), &mut caches);
         assert!(events.is_empty());
 
-        let state = caches.get::<SparklineState>("s-1").unwrap();
+        let state = caches.get::<SparklineState>("sparkline", "s-1").unwrap();
         assert_eq!(state.samples.len(), 1);
     }
 
@@ -798,10 +799,10 @@ mod tests {
 
         let n = node("s-1", "sparkline");
         ext.prepare(&n, &mut caches, &iced::Theme::Dark);
-        assert!(caches.contains("s-1"));
+        assert!(caches.contains("sparkline", "s-1"));
 
         ext.cleanup("s-1", &mut caches);
-        assert!(!caches.contains("s-1"));
+        assert!(!caches.contains("sparkline", "s-1"));
     }
 }
 ```
@@ -868,28 +869,28 @@ with your extension's widget types in the sim backend.
 
 ## ExtensionCaches
 
-`ExtensionCaches` is type-erased storage (`HashMap<String, Box<dyn Any + Send + Sync>>`)
-keyed by node ID. It is the primary mechanism for persisting state between
+`ExtensionCaches` is type-erased storage keyed by `(namespace, key)` pairs.
+The namespace is typically your extension's `config_key()`, and the key is
+the node ID. This is the primary mechanism for persisting state between
 `prepare`/`render`/`handle_event`/`handle_command` calls.
 
 Key methods:
 
 | Method | Signature | Notes |
 |---|---|---|
-| `get::<T>(key)` | `-> Option<&T>` | Immutable access |
-| `get_mut::<T>(key)` | `-> Option<&mut T>` | Mutable access |
-| `get_or_insert::<T>(key, default_fn)` | `-> &mut T` | Initialize if absent. Panics on type mismatch. |
-| `insert::<T>(key, value)` | `-> ()` | Overwrites existing |
-| `remove(key)` | `-> bool` | Returns whether key existed |
-| `contains(key)` | `-> bool` | |
-| `clear()` | `-> ()` | Remove all entries |
+| `get::<T>(ns, key)` | `-> Option<&T>` | Immutable access |
+| `get_mut::<T>(ns, key)` | `-> Option<&mut T>` | Mutable access |
+| `get_or_insert::<T>(ns, key, default_fn)` | `-> &mut T` | Initialize if absent. Replaces on type mismatch. |
+| `insert::<T>(ns, key, value)` | `-> ()` | Overwrites existing |
+| `remove(ns, key)` | `-> bool` | Returns whether key existed |
+| `contains(ns, key)` | `-> bool` | |
+| `remove_namespace(ns)` | `-> ()` | Remove all entries for a namespace |
 
 Common keying patterns:
 
-- **Per-node state:** use the node ID directly: `caches.get::<MyState>(&node.id)`
-- **Per-node sub-keys:** use `format!("{}:gen", node.id)` for auxiliary data
-  like generation counters
-- **Global extension state:** use your config key: `caches.get::<GlobalConfig>(self.config_key())`
+- **Per-node state:** `caches.get::<MyState>(self.config_key(), &node.id)`
+- **Per-node sub-keys:** `caches.get::<GenerationCounter>(self.config_key(), &format!("{}:gen", node.id))`
+- **Global extension state:** `caches.get::<GlobalConfig>(self.config_key(), "_global")`
 
 The type parameter `T` must be `Send + Sync + 'static`. This is why
 `canvas::Cache` (which is `!Send + !Sync`) cannot be stored here.

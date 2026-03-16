@@ -484,6 +484,9 @@ defmodule Julep.Test.Backend.RendererBase do
 
       defp encode_selector(nil), do: %{}
       defp encode_selector("#" <> id), do: %{"by" => "id", "value" => id}
+      defp encode_selector({:role, role}) when is_binary(role), do: %{"by" => "role", "value" => role}
+      defp encode_selector({:label, label}) when is_binary(label), do: %{"by" => "label", "value" => label}
+      defp encode_selector(:focused), do: %{"by" => "focused"}
       defp encode_selector(text) when is_binary(text), do: %{"by" => "text", "value" => text}
 
       defp send_message(port, format, msg) do

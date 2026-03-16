@@ -17,6 +17,8 @@ defmodule Julep.Iced.Widget.Image do
   - `expand` (boolean) -- expand image to fill available space.
   - `scale` (number) -- scale factor for the image.
   - `crop` (map) -- crop rectangle: `%{x, y, width, height}` (integer pixel values).
+  - `alt` (string) -- alt text for the image (accessibility).
+  - `description` (string) -- longer description for the image (accessibility).
   """
 
   alias Julep.Iced.A11y
@@ -36,6 +38,8 @@ defmodule Julep.Iced.Widget.Image do
           | {:expand, boolean()}
           | {:scale, number()}
           | {:crop, map()}
+          | {:alt, String.t()}
+          | {:description, String.t()}
           | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -51,6 +55,8 @@ defmodule Julep.Iced.Widget.Image do
           expand: boolean() | nil,
           scale: number() | nil,
           crop: map() | nil,
+          alt: String.t() | nil,
+          description: String.t() | nil,
           a11y: Julep.Iced.A11y.t() | nil
         }
 
@@ -67,6 +73,8 @@ defmodule Julep.Iced.Widget.Image do
     :expand,
     :scale,
     :crop,
+    :alt,
+    :description,
     :a11y
   ]
 
@@ -104,6 +112,8 @@ defmodule Julep.Iced.Widget.Image do
       {:expand, v}, acc -> expand(acc, v)
       {:scale, v}, acc -> scale(acc, v)
       {:crop, v}, acc -> crop(acc, v)
+      {:alt, v}, acc -> alt(acc, v)
+      {:description, v}, acc -> description(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -149,6 +159,15 @@ defmodule Julep.Iced.Widget.Image do
   @spec crop(image :: t(), crop :: map()) :: t()
   def crop(%__MODULE__{} = img, crop), do: %{img | crop: crop}
 
+  @doc "Sets the alt text for the image."
+  @spec alt(image :: t(), alt :: String.t()) :: t()
+  def alt(%__MODULE__{} = img, alt) when is_binary(alt), do: %{img | alt: alt}
+
+  @doc "Sets a longer description for the image."
+  @spec description(image :: t(), description :: String.t()) :: t()
+  def description(%__MODULE__{} = img, description) when is_binary(description),
+    do: %{img | description: description}
+
   @doc "Sets accessibility annotations."
   @spec a11y(image :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
   def a11y(%__MODULE__{} = img, a11y), do: %{img | a11y: A11y.cast(a11y)}
@@ -174,6 +193,8 @@ defmodule Julep.Iced.Widget.Image do
         |> put_if(img.expand, "expand")
         |> put_if(img.scale, "scale")
         |> put_if(img.crop, "crop")
+        |> put_if(img.alt, "alt")
+        |> put_if(img.description, "description")
         |> put_if(img.a11y, "a11y")
 
       %{id: img.id, type: "image", props: props, children: []}
