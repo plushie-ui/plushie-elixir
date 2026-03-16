@@ -776,7 +776,12 @@ defmodule Julep.Runtime do
   defp sync_subscriptions(state, new_model) do
     new_specs =
       try do
-        state.app.subscribe(new_model)
+        case state.app.subscribe(new_model) do
+          specs when is_list(specs) -> specs
+          other ->
+            Logger.error("julep runtime: subscribe/1 must return a list, got: #{inspect(other)}")
+            []
+        end
       rescue
         e ->
           Logger.error("""
