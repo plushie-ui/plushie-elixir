@@ -356,6 +356,24 @@ defmodule Julep.CommandTest do
   end
 
   # ---------------------------------------------------------------------------
+  # announce/1
+  # ---------------------------------------------------------------------------
+
+  describe "announce/1" do
+    test "returns a widget_op Command with op announce" do
+      cmd = Command.announce("File saved")
+      assert cmd.type == :widget_op
+      assert cmd.payload == %{op: "announce", text: "File saved"}
+    end
+
+    test "raises when text is not a binary" do
+      assert_raise FunctionClauseError, fn ->
+        Command.announce(:not_a_string)
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # extension_commands/1
   # ---------------------------------------------------------------------------
 

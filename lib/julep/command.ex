@@ -28,6 +28,7 @@ defmodule Julep.Command do
     `pane_maximize/2`, `pane_restore/1`
   - **Image ops**: `create_image/2`, `create_image/4`, `update_image/2`,
     `update_image/4`, `delete_image/1`
+  - **Accessibility**: `announce/1`
   - **Batch**: `batch/1`
 
   ## Usage
@@ -573,6 +574,28 @@ defmodule Julep.Command do
       type: :window_query,
       payload: %{op: "get_system_info", window_id: "_system", tag: to_string(tag)}
     }
+  end
+
+  # ---------------------------------------------------------------------------
+  # Accessibility
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Triggers a screen reader announcement without a visible widget.
+
+  The text is immediately announced by assistive technology as a
+  live-region assertion. Useful for status updates, error messages,
+  and other dynamic content that should be announced but doesn't
+  need to be visually displayed.
+
+  ## Example
+
+      Command.announce("File saved successfully")
+      Command.announce("3 search results found")
+  """
+  @spec announce(text :: String.t()) :: t()
+  def announce(text) when is_binary(text) do
+    %__MODULE__{type: :widget_op, payload: %{op: "announce", text: text}}
   end
 
   # ---------------------------------------------------------------------------
