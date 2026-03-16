@@ -178,17 +178,23 @@ defmodule Julep.Protocol do
     serialize(Map.merge(%{type: "image_op", op: op}, payload), format)
   end
 
-  # Encode binary fields in image op payloads based on wire format.
+  # Encode binary fields in payloads based on wire format.
+  # 2-arity version for image ops (hardcoded :data/:pixels keys).
   defp encode_binary_fields(payload, :msgpack) do
-    payload
-    |> maybe_wrap_binary(:data)
-    |> maybe_wrap_binary(:pixels)
+    encode_binary_fields(payload, :msgpack, [:data, :pixels])
   end
 
   defp encode_binary_fields(payload, :json) do
-    payload
-    |> maybe_base64_encode(:data)
-    |> maybe_base64_encode(:pixels)
+    encode_binary_fields(payload, :json, [:data, :pixels])
+  end
+
+  # 3-arity version with explicit key list (used by window ops for icon_data).
+  defp encode_binary_fields(payload, :msgpack, keys) do
+    Enum.reduce(keys, payload, &maybe_wrap_binary(&2, &1))
+  end
+
+  defp encode_binary_fields(payload, :json, keys) do
+    Enum.reduce(keys, payload, &maybe_base64_encode(&2, &1))
   end
 
   defp maybe_wrap_binary(payload, key) do
@@ -265,6 +271,9 @@ defmodule Julep.Protocol do
           format :: format()
         ) :: binary()
   def encode_window_op(op, window_id, settings, format \\ :msgpack) do
+    # Binary fields in window op settings (e.g. icon_data for set_icon) need
+    # format-specific encoding, same as image ops.
+    settings = encode_binary_fields(settings, format, [:icon_data])
     serialize(%{type: "window_op", op: op, window_id: window_id, settings: settings}, format)
   end
 
@@ -1143,31 +1152,6 @@ defmodule Julep.Protocol do
          "value" => mode
        }) do
     {:theme_changed, mode}
-  end
-
-  # -- Legacy window event format (kept for backwards compatibility) --
-
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "window",
-         "action" => action,
-         "window_id" => window_id
-       }) do
-    atom_action =
-      try do
-        String.to_existing_atom(action)
-      rescue
-        ArgumentError ->
-          require Logger
-          Logger.warning("julep protocol: unknown legacy window action: #{inspect(action)}")
-          nil
-      end
-
-    if atom_action do
-      {:window, atom_action, window_id}
-    else
-      {:error, {:unknown_window_action, action}}
-    end
   end
 
   # -- MouseArea events --

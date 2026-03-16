@@ -96,6 +96,9 @@ defmodule Julep do
     format = Keyword.get(opts, :format, :msgpack)
     log_level = Keyword.get(opts, :log_level, :error)
 
+    # Bridge MUST start before Runtime. Runtime's handle_continue(:initial_render)
+    # fires immediately and casts Settings + Snapshot to Bridge. If Bridge hasn't
+    # started yet, those casts are lost and the renderer hangs.
     children = [
       # Bridge starts first: opens the Port and spawns the renderer process,
       # which blocks on stdin waiting for a Settings message. Bridge registers

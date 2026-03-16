@@ -168,34 +168,6 @@ defmodule Julep.ProtocolTest do
     end
   end
 
-  describe "decode_message/1 -- window events" do
-    test "decodes a window event to {:window, action_atom, window_id}" do
-      json =
-        Jason.encode!(%{
-          type: "event",
-          family: "window",
-          action: "close",
-          window_id: "main"
-        })
-
-      assert Protocol.decode_message(json, :json) == {:window, :close, "main"}
-    end
-
-    test "converts the action string to an atom" do
-      json =
-        Jason.encode!(%{
-          type: "event",
-          family: "window",
-          action: "minimize",
-          window_id: "settings"
-        })
-
-      {:window, action, _} = Protocol.decode_message(json, :json)
-      assert is_atom(action)
-      assert action == :minimize
-    end
-  end
-
   describe "decode_message/1 -- key events" do
     test "decodes a named key to {:key_press, %KeyEvent{}}" do
       json =
@@ -604,50 +576,39 @@ defmodule Julep.ProtocolTest do
   # ---------------------------------------------------------------------------
 
   describe "window_op with binary data (set_icon)" do
-    test "roundtrips icon_data through JSON as base64 string" do
+    test "encodes raw icon_data as base64 in JSON mode" do
       rgba = :crypto.strong_rand_bytes(32 * 32 * 4)
-      encoded = Base.encode64(rgba)
 
       json =
         Protocol.encode_window_op(
           "set_icon",
           "main",
-          %{
-            "icon_data" => encoded,
-            "width" => 32,
-            "height" => 32
-          },
+          %{icon_data: rgba, width: 32, height: 32},
           :json
         )
 
       assert {:ok, decoded} = Jason.decode(String.trim_trailing(json, "\n"))
       assert decoded["type"] == "window_op"
       assert decoded["op"] == "set_icon"
-      assert decoded["settings"]["icon_data"] == encoded
       assert Base.decode64!(decoded["settings"]["icon_data"]) == rgba
     end
 
-    test "roundtrips icon_data through msgpack as base64 string" do
+    test "encodes raw icon_data as native binary in msgpack mode" do
       rgba = :crypto.strong_rand_bytes(32 * 32 * 4)
-      encoded = Base.encode64(rgba)
 
       data =
         Protocol.encode_window_op(
           "set_icon",
           "main",
-          %{
-            "icon_data" => encoded,
-            "width" => 32,
-            "height" => 32
-          },
+          %{icon_data: rgba, width: 32, height: 32},
           :msgpack
         )
 
       assert {:ok, decoded} = Msgpax.unpack(data)
       assert decoded["type"] == "window_op"
       assert decoded["op"] == "set_icon"
-      assert decoded["settings"]["icon_data"] == encoded
-      assert Base.decode64!(decoded["settings"]["icon_data"]) == rgba
+      # msgpack native binary roundtrips back to raw binary
+      assert decoded["settings"]["icon_data"] == rgba
     end
   end
 
