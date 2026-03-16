@@ -349,6 +349,11 @@ defmodule Julep.Bridge do
       port_opts =
         case state.format do
           :msgpack -> [:binary, :exit_status, :use_stdio, {:packet, 4}]
+          # 65KB line limit is sufficient for normal protocol messages.
+          # Unusually large JSON messages (e.g., full tree snapshots with
+          # many nodes) may be split into :noeol chunks, which are buffered
+          # and reassembled. For large payloads, use msgpack mode (default)
+          # which has no line limit.
           :json -> [:binary, :exit_status, :use_stdio, {:line, 65_536}]
         end
 
