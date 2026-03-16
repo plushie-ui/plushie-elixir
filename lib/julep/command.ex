@@ -32,7 +32,7 @@ defmodule Julep.Command do
 
   ## Usage
 
-      def update(model, {:click, "save"}) do
+      def update(model, %Julep.Event.Widget{type: :click, id: "save"}) do
         cmd = Julep.Command.async(fn -> save(model) end, :save_result)
         {model, cmd}
       end
@@ -529,7 +529,7 @@ defmodule Julep.Command do
 
   ## Example
 
-      def update(model, {:click, "check_theme"}) do
+      def update(model, %Julep.Event.Widget{type: :click, id: "check_theme"}) do
         {model, Julep.Command.get_system_theme(:theme_result)}
       end
 
@@ -559,7 +559,7 @@ defmodule Julep.Command do
 
   ## Example
 
-      def update(model, {:click, "sys_info"}) do
+      def update(model, %Julep.Event.Widget{type: :click, id: "sys_info"}) do
         {model, Julep.Command.get_system_info(:sys_info)}
       end
 

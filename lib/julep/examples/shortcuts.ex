@@ -8,6 +8,8 @@ defmodule Julep.Examples.Shortcuts do
 
   use Julep.App
 
+  alias Julep.Event.Key
+
   @max_log_entries 50
 
   # -- init ------------------------------------------------------------------
@@ -18,7 +20,7 @@ defmodule Julep.Examples.Shortcuts do
 
   # -- update ----------------------------------------------------------------
 
-  def update(model, {:key_press, %Julep.KeyEvent{} = event}) do
+  def update(model, %Key{type: :press} = event) do
     entry = format_key_event(event, model.count + 1)
 
     %{

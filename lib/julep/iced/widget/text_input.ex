@@ -2,7 +2,7 @@ defmodule Julep.Iced.Widget.TextInput do
   @moduledoc """
   Text input field -- single-line editable text.
 
-  Emits `{:input, id, value}` on every keystroke.
+  Emits `%Widget{type: :input, id: id, value: value}` on every keystroke.
 
   ## Props
 
@@ -16,7 +16,7 @@ defmodule Julep.Iced.Widget.TextInput do
     map with `%{relative: n}` or `%{absolute: n}` for explicit control.
   - `align_x` (string) -- text horizontal alignment: `"left"`, `"center"`, `"right"`.
   - `on_submit` (any) -- when present (any truthy value), enables submit on Enter.
-    Emits `{:submit, id, value}`.
+    Emits `%Widget{type: :submit, id: id, value: value}`.
   - `id` (string) -- widget ID for programmatic focus via `Julep.Command.focus/1`.
   - `style` (string) -- named style. Currently only `"default"`.
   - `icon` (map) -- display an icon inside the input field. Map with keys:
@@ -25,15 +25,15 @@ defmodule Julep.Iced.Widget.TextInput do
     - `spacing` (number) -- pixels between icon and text. Default: 4.0.
     - `side` (string) -- `"left"` or `"right"`. Default: `"left"`.
     - `font` (string | map) -- icon font. Default: system default.
-  - `on_paste` (boolean) -- when true, emits `{:paste, id, text}` when user
+  - `on_paste` (boolean) -- when true, emits `%Widget{type: :paste, id: id, value: text}` when user
     pastes text. Default: false.
   - `secure` (boolean) -- mask input as password dots. Default: false.
 
   ## Events
 
-  - `{:input, id, value}` -- emitted on every text change.
-  - `{:submit, id, value}` -- emitted on Enter (requires `on_submit` prop).
-  - `{:paste, id, text}` -- emitted on paste (requires `on_paste` prop).
+  - `%Widget{type: :input, id: id, value: value}` -- emitted on every text change.
+  - `%Widget{type: :submit, id: id, value: value}` -- emitted on Enter (requires `on_submit` prop).
+  - `%Widget{type: :paste, id: id, value: text}` -- emitted on paste (requires `on_paste` prop).
   """
 
   alias Julep.Iced.A11y

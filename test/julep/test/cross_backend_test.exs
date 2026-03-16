@@ -12,6 +12,8 @@ defmodule Julep.Test.CrossBackendTest do
 
   use ExUnit.Case, async: true
 
+  alias Julep.Event.Widget
+
   alias Julep.Test.Backend.Sim
 
   # -- Test apps -----------------------------------------------------------
@@ -21,8 +23,8 @@ defmodule Julep.Test.CrossBackendTest do
 
     def init(_opts), do: %{count: 0}
 
-    def update(model, {:click, "inc"}), do: %{model | count: model.count + 1}
-    def update(model, {:click, "dec"}), do: %{model | count: model.count - 1}
+    def update(model, %Widget{type: :click, id: "inc"}), do: %{model | count: model.count + 1}
+    def update(model, %Widget{type: :click, id: "dec"}), do: %{model | count: model.count - 1}
     def update(model, _event), do: model
 
     def view(model) do
@@ -49,9 +51,9 @@ defmodule Julep.Test.CrossBackendTest do
 
     def init(_opts), do: %{items: [], input: ""}
 
-    def update(model, {:input, "task", value}), do: %{model | input: value}
+    def update(model, %Widget{type: :input, id: "task", value: value}), do: %{model | input: value}
 
-    def update(model, {:submit, "task", _value}) do
+    def update(model, %Widget{type: :submit, id: "task", value: _value}) do
       if model.input != "" do
         %{model | items: model.items ++ [model.input], input: ""}
       else

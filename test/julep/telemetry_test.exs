@@ -1,6 +1,8 @@
 defmodule Julep.TelemetryTest do
   use ExUnit.Case, async: true
 
+  alias Julep.Event.Widget
+
   # ---------------------------------------------------------------------------
   # Minimal app for driving the update/view loop.
   # ---------------------------------------------------------------------------
@@ -10,7 +12,7 @@ defmodule Julep.TelemetryTest do
 
     def init(_opts), do: %{value: 0}
 
-    def update(model, {:click, "inc"}), do: %{model | value: model.value + 1}
+    def update(model, %Widget{type: :click, id: "inc"}), do: %{model | value: model.value + 1}
     def update(model, _event), do: model
 
     def view(model) do
@@ -87,7 +89,7 @@ defmodule Julep.TelemetryTest do
 
       stop_id = attach([:julep, :update, :stop], self())
 
-      Julep.Runtime.dispatch(runtime, {:click, "inc"})
+      Julep.Runtime.dispatch(runtime, %Widget{type: :click, id: "inc"})
       # Synchronise -- ensures the event has been processed.
       :sys.get_state(runtime)
 

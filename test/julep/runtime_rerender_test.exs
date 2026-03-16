@@ -1,6 +1,8 @@
 defmodule Julep.RuntimeRerenderTest do
   use ExUnit.Case, async: true
 
+  alias Julep.Event.Widget
+
   # ---------------------------------------------------------------------------
   # Test app: counter whose view text changes when the model changes.
   # ---------------------------------------------------------------------------
@@ -9,7 +11,7 @@ defmodule Julep.RuntimeRerenderTest do
     use Julep.App
 
     def init(_opts), do: %{count: 0}
-    def update(model, {:click, "inc"}), do: %{model | count: model.count + 1}
+    def update(model, %Widget{type: :click, id: "inc"}), do: %{model | count: model.count + 1}
     def update(model, _event), do: model
 
     def view(model) do
@@ -88,8 +90,8 @@ defmodule Julep.RuntimeRerenderTest do
       {runtime, bridge} = start_runtime(CounterApp)
 
       # Mutate model via normal event first.
-      dispatch_and_wait(runtime, {:click, "inc"})
-      dispatch_and_wait(runtime, {:click, "inc"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
 
       state = :sys.get_state(runtime)
       assert state.model.count == 2
@@ -111,9 +113,9 @@ defmodule Julep.RuntimeRerenderTest do
     test "model is preserved across force_rerender" do
       {runtime, _bridge} = start_runtime(CounterApp)
 
-      dispatch_and_wait(runtime, {:click, "inc"})
-      dispatch_and_wait(runtime, {:click, "inc"})
-      dispatch_and_wait(runtime, {:click, "inc"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
 
       model_before = :sys.get_state(runtime).model
 
@@ -152,7 +154,7 @@ defmodule Julep.RuntimeRerenderTest do
 
       force_rerender_and_wait(runtime)
 
-      dispatch_and_wait(runtime, {:click, "inc"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
 
       state = :sys.get_state(runtime)
       assert state.model.count == 1

@@ -30,7 +30,7 @@ defmodule Julep.Effects do
 
   ## Example
 
-      def update(model, {:click, "open"}) do
+      def update(model, %Julep.Event.Widget{type: :click, id: "open"}) do
         cmd = Julep.Effects.file_open(title: "Pick a file")
         {model, cmd}
       end

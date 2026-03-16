@@ -1,13 +1,15 @@
 defmodule Julep.Test.SessionTest do
   use Julep.Test.Case, app: Julep.Test.SessionTest.CounterApp
 
+  alias Julep.Event.Widget
+
   defmodule CounterApp do
     use Julep.App
 
     def init(_opts), do: %{count: 0}
 
-    def update(model, {:click, "increment"}), do: %{model | count: model.count + 1}
-    def update(model, {:click, "decrement"}), do: %{model | count: model.count - 1}
+    def update(model, %Widget{type: :click, id: "increment"}), do: %{model | count: model.count + 1}
+    def update(model, %Widget{type: :click, id: "decrement"}), do: %{model | count: model.count - 1}
     def update(model, _event), do: model
 
     def view(model) do

@@ -9,6 +9,8 @@ defmodule Julep.Examples.AsyncFetch do
 
   use Julep.App
 
+  alias Julep.Event.Widget
+
   # -- init ------------------------------------------------------------------
 
   def init(_opts) do
@@ -17,7 +19,7 @@ defmodule Julep.Examples.AsyncFetch do
 
   # -- update ----------------------------------------------------------------
 
-  def update(model, {:click, "fetch"}) do
+  def update(model, %Widget{type: :click, id: "fetch"}) do
     cmd =
       Julep.Command.async(
         fn ->

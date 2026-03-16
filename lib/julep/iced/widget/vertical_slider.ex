@@ -14,8 +14,8 @@ defmodule Julep.Iced.Widget.VerticalSlider do
 
   ## Events
 
-  - `{:slide, id, value}` -- emitted continuously while dragging.
-  - `{:slide_release, id, value}` -- emitted when drag ends.
+  - `%Widget{type: :slide, id: id, value: value}` -- emitted continuously while dragging.
+  - `%Widget{type: :slide_release, id: id, value: value}` -- emitted when drag ends.
   """
 
   alias Julep.Iced.A11y

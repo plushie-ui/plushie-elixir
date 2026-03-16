@@ -190,7 +190,7 @@ defmodule Julep.Iced do
   # ---------------------------------------------------------------------------
 
   @doc """
-  Button -- clickable widget that emits `{:click, id}` events.
+  Button -- clickable widget that emits `%Widget{type: :click, id: id}` events.
 
   See `Julep.Iced.Widget.Button` for full props documentation.
   """

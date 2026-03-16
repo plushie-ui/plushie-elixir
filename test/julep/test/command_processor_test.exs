@@ -1,6 +1,8 @@
 defmodule Julep.Test.Backend.CommandProcessorTest do
   use ExUnit.Case, async: true
 
+  alias Julep.Event.Widget
+
   alias Julep.Test.Backend.CommandProcessor
 
   # -- Test apps --
@@ -10,7 +12,7 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
 
     def init(_opts), do: {%{status: :idle, data: nil}, []}
 
-    def update(model, {:click, "fetch"}) do
+    def update(model, %Widget{type: :click, id: "fetch"}) do
       cmd = Julep.Command.async(fn -> {:ok, "fetched"} end, :data_loaded)
       {model, cmd}
     end
@@ -36,7 +38,7 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
 
     def init(_opts), do: {%{items: []}, []}
 
-    def update(model, {:click, "stream"}) do
+    def update(model, %Widget{type: :click, id: "stream"}) do
       cmd =
         Julep.Command.stream(
           fn emit ->
@@ -64,7 +66,7 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
 
     def init(_opts), do: {%{a: false, b: false}, []}
 
-    def update(model, {:click, "both"}) do
+    def update(model, %Widget{type: :click, id: "both"}) do
       cmd =
         Julep.Command.batch([
           Julep.Command.done(:set_a, fn v -> {:got_a, v} end),
@@ -88,7 +90,7 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
 
     def init(_opts), do: {%{result: nil}, []}
 
-    def update(model, {:click, "go"}) do
+    def update(model, %Widget{type: :click, id: "go"}) do
       cmd = Julep.Command.done(42, fn v -> {:computed, v * 2} end)
       {model, cmd}
     end
@@ -148,7 +150,7 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
   describe "process/3" do
     test "processes async commands synchronously" do
       {model, _commands} = AsyncApp.init([])
-      {model, commands} = CommandProcessor.dispatch_update(AsyncApp, model, {:click, "fetch"})
+      {model, commands} = CommandProcessor.dispatch_update(AsyncApp, model, %Widget{type: :click, id: "fetch"})
       model = CommandProcessor.process(AsyncApp, model, commands)
 
       assert model.status == :done
@@ -157,7 +159,7 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
 
     test "processes stream commands with intermediate values" do
       {model, _commands} = StreamApp.init([])
-      {model, commands} = CommandProcessor.dispatch_update(StreamApp, model, {:click, "stream"})
+      {model, commands} = CommandProcessor.dispatch_update(StreamApp, model, %Widget{type: :click, id: "stream"})
       model = CommandProcessor.process(StreamApp, model, commands)
 
       assert model.items == [:a, :b, :final]
@@ -165,7 +167,7 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
 
     test "processes batch commands" do
       {model, _commands} = BatchApp.init([])
-      {model, commands} = CommandProcessor.dispatch_update(BatchApp, model, {:click, "both"})
+      {model, commands} = CommandProcessor.dispatch_update(BatchApp, model, %Widget{type: :click, id: "both"})
       model = CommandProcessor.process(BatchApp, model, commands)
 
       assert model.a == true
@@ -174,7 +176,7 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
 
     test "processes done commands" do
       {model, _commands} = DoneApp.init([])
-      {model, commands} = CommandProcessor.dispatch_update(DoneApp, model, {:click, "go"})
+      {model, commands} = CommandProcessor.dispatch_update(DoneApp, model, %Widget{type: :click, id: "go"})
       model = CommandProcessor.process(DoneApp, model, commands)
 
       assert model.result == 84
@@ -236,7 +238,7 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
 
     test "normalizes {model, commands} list return" do
       {model, commands} =
-        CommandProcessor.dispatch_update(AsyncApp, %{status: :idle, data: nil}, {:click, "fetch"})
+        CommandProcessor.dispatch_update(AsyncApp, %{status: :idle, data: nil}, %Widget{type: :click, id: "fetch"})
 
       assert model.status == :idle
       assert [%Julep.Command{type: :async}] = commands
@@ -247,7 +249,7 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
         CommandProcessor.dispatch_update(
           SingleCommandApp,
           %{initialized: false},
-          {:click, "nope"}
+          %Widget{type: :click, id: "nope"}
         )
 
       # SingleCommandApp.update returns bare model for unknown events

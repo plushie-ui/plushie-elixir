@@ -18,6 +18,7 @@ defmodule Julep.Examples.ColorPicker do
   use Julep.App
 
   alias Julep.Canvas.Shape
+  alias Julep.Event.Canvas
 
   # -- Geometry constants ------------------------------------------------------
 
@@ -38,7 +39,7 @@ defmodule Julep.Examples.ColorPicker do
     %{hue: 0.0, saturation: 1.0, value: 1.0, drag: :none}
   end
 
-  def update(model, {:canvas_press, "picker", x, y, "left"}) do
+  def update(model, %Canvas{type: :press, id: "picker", x: x, y: y, button: "left"}) do
     dx = x - @cx
     dy = y - @cy
     dist = :math.sqrt(dx * dx + dy * dy)
@@ -55,7 +56,7 @@ defmodule Julep.Examples.ColorPicker do
     end
   end
 
-  def update(model, {:canvas_move, "picker", x, y}) do
+  def update(model, %Canvas{type: :move, id: "picker", x: x, y: y}) do
     case model.drag do
       :ring -> %{model | hue: hue_from_point(x - @cx, y - @cy)}
       :square -> apply_sv(model, x, y)
@@ -63,7 +64,7 @@ defmodule Julep.Examples.ColorPicker do
     end
   end
 
-  def update(model, {:canvas_release, "picker", _x, _y, _button}) do
+  def update(model, %Canvas{type: :release, id: "picker"}) do
     %{model | drag: :none}
   end
 

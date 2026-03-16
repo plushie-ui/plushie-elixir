@@ -7,6 +7,8 @@ defmodule Julep.Examples.Todo do
 
   use Julep.App
 
+  alias Julep.Event.Widget
+
   # -- init ------------------------------------------------------------------
 
   def init(_opts) do
@@ -20,19 +22,19 @@ defmodule Julep.Examples.Todo do
 
   # -- update ----------------------------------------------------------------
 
-  def update(model, {:input, "todo_input", value}) do
+  def update(model, %Widget{type: :input, id: "todo_input", value: value}) do
     %{model | input: value}
   end
 
-  def update(model, {:submit, "todo_input", _value}) do
+  def update(model, %Widget{type: :submit, id: "todo_input"}) do
     add_todo(model)
   end
 
-  def update(model, {:click, "add_todo"}) do
+  def update(model, %Widget{type: :click, id: "add_todo"}) do
     add_todo(model)
   end
 
-  def update(model, {:toggle, "todo:" <> id_str, checked}) do
+  def update(model, %Widget{type: :toggle, id: "todo:" <> id_str, value: checked}) do
     id = String.to_integer(id_str)
 
     todos =
@@ -44,17 +46,19 @@ defmodule Julep.Examples.Todo do
     %{model | todos: todos}
   end
 
-  def update(model, {:click, "delete:" <> id_str}) do
+  def update(model, %Widget{type: :click, id: "delete:" <> id_str}) do
     id = String.to_integer(id_str)
     todos = Enum.reject(model.todos, fn todo -> todo.id == id end)
     %{model | todos: todos}
   end
 
-  def update(model, {:click, "filter_all"}), do: %{model | filter: :all}
-  def update(model, {:click, "filter_active"}), do: %{model | filter: :active}
-  def update(model, {:click, "filter_completed"}), do: %{model | filter: :completed}
+  def update(model, %Widget{type: :click, id: "filter_all"}), do: %{model | filter: :all}
+  def update(model, %Widget{type: :click, id: "filter_active"}), do: %{model | filter: :active}
 
-  def update(model, {:click, "clear_completed"}) do
+  def update(model, %Widget{type: :click, id: "filter_completed"}),
+    do: %{model | filter: :completed}
+
+  def update(model, %Widget{type: :click, id: "clear_completed"}) do
     todos = Enum.reject(model.todos, fn todo -> todo.done end)
     %{model | todos: todos}
   end

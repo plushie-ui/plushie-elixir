@@ -9,6 +9,8 @@ defmodule Julep.Examples.Notes do
 
   use Julep.App
 
+  alias Julep.Event.Widget
+
   # -- init ------------------------------------------------------------------
 
   def init(_opts) do
@@ -28,7 +30,7 @@ defmodule Julep.Examples.Notes do
 
   # -- update ----------------------------------------------------------------
 
-  def update(model, {:click, "new_note"}) do
+  def update(model, %Widget{type: :click, id: "new_note"}) do
     state = model.state
     id = Julep.State.get(state, [:next_id])
 
@@ -48,7 +50,7 @@ defmodule Julep.Examples.Notes do
     }
   end
 
-  def update(model, {:click, "note:" <> id_str}) do
+  def update(model, %Widget{type: :click, id: "note:" <> id_str}) do
     id = String.to_integer(id_str)
     notes = Julep.State.get(model.state, [:notes])
     note = Enum.find(notes, fn n -> n.id == id end)
@@ -67,14 +69,14 @@ defmodule Julep.Examples.Notes do
     end
   end
 
-  def update(model, {:click, "back"}) do
+  def update(model, %Widget{type: :click, id: "back"}) do
     model = save_current_edit(model)
     state = Julep.State.put(model.state, [:editing_id], nil)
 
     %{model | state: state, route: Julep.Route.pop(model.route)}
   end
 
-  def update(model, {:click, "delete_selected"}) do
+  def update(model, %Widget{type: :click, id: "delete_selected"}) do
     selected = Julep.Selection.selected(model.selection)
 
     state =
@@ -85,11 +87,11 @@ defmodule Julep.Examples.Notes do
     %{model | state: state, selection: Julep.Selection.clear(model.selection)}
   end
 
-  def update(model, {:input, "search", query}) do
+  def update(model, %Widget{type: :input, id: "search", value: query}) do
     %{model | state: Julep.State.put(model.state, [:search_query], query)}
   end
 
-  def update(model, {:input, "title", value}) do
+  def update(model, %Widget{type: :input, id: "title", value: value}) do
     old_title = Julep.Undo.current(model.undo).title
 
     cmd = %{
@@ -101,7 +103,7 @@ defmodule Julep.Examples.Notes do
     %{model | undo: Julep.Undo.apply(model.undo, cmd)}
   end
 
-  def update(model, {:input, "body", value}) do
+  def update(model, %Widget{type: :input, id: "body", value: value}) do
     old_text = Julep.Undo.current(model.undo).text
 
     cmd = %{
@@ -113,15 +115,15 @@ defmodule Julep.Examples.Notes do
     %{model | undo: Julep.Undo.apply(model.undo, cmd)}
   end
 
-  def update(model, {:click, "undo"}) do
+  def update(model, %Widget{type: :click, id: "undo"}) do
     %{model | undo: Julep.Undo.undo(model.undo)}
   end
 
-  def update(model, {:click, "redo"}) do
+  def update(model, %Widget{type: :click, id: "redo"}) do
     %{model | undo: Julep.Undo.redo(model.undo)}
   end
 
-  def update(model, {:toggle, "note_select:" <> id_str, _checked}) do
+  def update(model, %Widget{type: :toggle, id: "note_select:" <> id_str}) do
     id = String.to_integer(id_str)
     %{model | selection: Julep.Selection.toggle(model.selection, id)}
   end

@@ -1,6 +1,8 @@
 defmodule Julep.Examples.CatalogTest do
   use ExUnit.Case, async: true
 
+  alias Julep.Event.Widget
+
   alias Julep.Examples.Catalog
 
   test "init returns expected model" do
@@ -10,7 +12,7 @@ defmodule Julep.Examples.CatalogTest do
 
   test "switching tabs" do
     model = Catalog.init([])
-    model = Catalog.update(model, {:click, "tab_input"})
+    model = Catalog.update(model, %Widget{type: :click, id: "tab_input"})
     assert model.active_tab == "input"
   end
 
@@ -26,28 +28,28 @@ defmodule Julep.Examples.CatalogTest do
 
   test "text input updates" do
     model = Catalog.init([])
-    model = Catalog.update(model, {:input, "demo_input", "hello"})
+    model = Catalog.update(model, %Widget{type: :input, id: "demo_input", value: "hello"})
     assert model.text_value == "hello"
   end
 
   test "checkbox toggle" do
     model = Catalog.init([])
-    model = Catalog.update(model, {:toggle, "demo_check", true})
+    model = Catalog.update(model, %Widget{type: :toggle, id: "demo_check", value: true})
     assert model.checkbox_checked == true
   end
 
   test "slider change" do
     model = Catalog.init([])
-    model = Catalog.update(model, {:slide, "demo_slider", 75})
+    model = Catalog.update(model, %Widget{type: :slide, id: "demo_slider", value: 75})
     assert model.slider_value == 75
   end
 
   test "radio group select" do
     model = Catalog.init([])
     assert model.radio_selected == "a"
-    model = Catalog.update(model, {:select, "demo_radio", "b"})
+    model = Catalog.update(model, %Widget{type: :select, id: "demo_radio", value: "b"})
     assert model.radio_selected == "b"
-    model = Catalog.update(model, {:select, "demo_radio", "c"})
+    model = Catalog.update(model, %Widget{type: :select, id: "demo_radio", value: "c"})
     assert model.radio_selected == "c"
   end
 
@@ -61,23 +63,23 @@ defmodule Julep.Examples.CatalogTest do
 
   test "pick list select" do
     model = Catalog.init([])
-    model = Catalog.update(model, {:select, "demo_pick", "Medium"})
+    model = Catalog.update(model, %Widget{type: :select, id: "demo_pick", value: "Medium"})
     assert model.pick_list_selected == "Medium"
   end
 
   test "modal show/hide" do
     model = Catalog.init([])
-    model = Catalog.update(model, {:click, "show_modal"})
+    model = Catalog.update(model, %Widget{type: :click, id: "show_modal"})
     assert model.modal_visible == true
-    model = Catalog.update(model, {:click, "hide_modal"})
+    model = Catalog.update(model, %Widget{type: :click, id: "hide_modal"})
     assert model.modal_visible == false
   end
 
   test "panel collapse toggle" do
     model = Catalog.init([])
-    model = Catalog.update(model, {:click, "demo_panel"})
+    model = Catalog.update(model, %Widget{type: :click, id: "demo_panel"})
     assert model.panel_collapsed == true
-    model = Catalog.update(model, {:click, "demo_panel"})
+    model = Catalog.update(model, %Widget{type: :click, id: "demo_panel"})
     assert model.panel_collapsed == false
   end
 
@@ -107,7 +109,7 @@ defmodule Julep.Examples.CatalogTest do
     model = Catalog.init([]) |> Map.put(:active_tab, "composite")
     assert model.demo_tabs_active == "tab_one"
 
-    model = Catalog.update(model, {:click, "tab_two"})
+    model = Catalog.update(model, %Widget{type: :click, id: "tab_two"})
     assert model.demo_tabs_active == "tab_two"
 
     tree = Catalog.view(model)
@@ -123,7 +125,7 @@ defmodule Julep.Examples.CatalogTest do
     modal_node = Julep.UI.find(tree, "demo_modal")
     assert modal_node.props["visible"] == false
 
-    model = Catalog.update(model, {:click, "show_modal"})
+    model = Catalog.update(model, %Widget{type: :click, id: "show_modal"})
     assert model.modal_visible == true
 
     tree = Catalog.view(model)

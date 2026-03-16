@@ -1,6 +1,8 @@
 defmodule Julep.Examples.TodoTest do
   use ExUnit.Case, async: true
 
+  alias Julep.Event.Widget
+
   alias Julep.Examples.Todo
 
   # ---------------------------------------------------------------------------
@@ -24,7 +26,7 @@ defmodule Julep.Examples.TodoTest do
   describe "update/2 -- adding todos" do
     test "submit adds todo and clears input" do
       model = %{todos: [], input: "Buy milk", next_id: 1, filter: :all}
-      model = Todo.update(model, {:submit, "todo_input", "Buy milk"})
+      model = Todo.update(model, %Widget{type: :submit, id: "todo_input", value: "Buy milk"})
 
       assert [%{id: 1, text: "Buy milk", done: false}] = model.todos
       assert model.input == ""
@@ -33,22 +35,22 @@ defmodule Julep.Examples.TodoTest do
 
     test "click add_todo adds todo" do
       model = %{todos: [], input: "Buy milk", next_id: 1, filter: :all}
-      model = Todo.update(model, {:click, "add_todo"})
+      model = Todo.update(model, %Widget{type: :click, id: "add_todo"})
 
       assert [%{id: 1, text: "Buy milk", done: false}] = model.todos
     end
 
     test "empty input does nothing" do
       model = %{todos: [], input: "", next_id: 1, filter: :all}
-      model = Todo.update(model, {:click, "add_todo"})
+      model = Todo.update(model, %Widget{type: :click, id: "add_todo"})
       assert model.todos == []
     end
 
     test "increments next_id" do
       model = %{todos: [], input: "First", next_id: 1, filter: :all}
-      model = Todo.update(model, {:click, "add_todo"})
+      model = Todo.update(model, %Widget{type: :click, id: "add_todo"})
       model = %{model | input: "Second"}
-      model = Todo.update(model, {:click, "add_todo"})
+      model = Todo.update(model, %Widget{type: :click, id: "add_todo"})
       assert [%{id: 1}, %{id: 2}] = model.todos
       assert model.next_id == 3
     end
@@ -67,7 +69,7 @@ defmodule Julep.Examples.TodoTest do
         filter: :all
       }
 
-      model = Todo.update(model, {:toggle, "todo:1", true})
+      model = Todo.update(model, %Widget{type: :toggle, id: "todo:1", value: true})
       assert [%{id: 1, done: true}] = model.todos
     end
 
@@ -79,7 +81,7 @@ defmodule Julep.Examples.TodoTest do
         filter: :all
       }
 
-      model = Todo.update(model, {:toggle, "todo:1", false})
+      model = Todo.update(model, %Widget{type: :toggle, id: "todo:1", value: false})
       assert [%{id: 1, done: false}] = model.todos
     end
   end
@@ -97,7 +99,7 @@ defmodule Julep.Examples.TodoTest do
         filter: :all
       }
 
-      model = Todo.update(model, {:click, "delete:1"})
+      model = Todo.update(model, %Widget{type: :click, id: "delete:1"})
       assert [%{id: 2, text: "B"}] = model.todos
     end
   end
@@ -109,19 +111,19 @@ defmodule Julep.Examples.TodoTest do
   describe "update/2 -- filtering" do
     test "filter_all sets filter to :all" do
       model = %{todos: [], input: "", next_id: 1, filter: :active}
-      model = Todo.update(model, {:click, "filter_all"})
+      model = Todo.update(model, %Widget{type: :click, id: "filter_all"})
       assert model.filter == :all
     end
 
     test "filter_active sets filter to :active" do
       model = %{todos: [], input: "", next_id: 1, filter: :all}
-      model = Todo.update(model, {:click, "filter_active"})
+      model = Todo.update(model, %Widget{type: :click, id: "filter_active"})
       assert model.filter == :active
     end
 
     test "filter_completed sets filter to :completed" do
       model = %{todos: [], input: "", next_id: 1, filter: :all}
-      model = Todo.update(model, {:click, "filter_completed"})
+      model = Todo.update(model, %Widget{type: :click, id: "filter_completed"})
       assert model.filter == :completed
     end
   end
@@ -143,7 +145,7 @@ defmodule Julep.Examples.TodoTest do
         filter: :all
       }
 
-      model = Todo.update(model, {:click, "clear_completed"})
+      model = Todo.update(model, %Widget{type: :click, id: "clear_completed"})
       assert [%{id: 2, text: "Open"}] = model.todos
     end
   end
@@ -155,7 +157,7 @@ defmodule Julep.Examples.TodoTest do
   describe "update/2 -- unknown events" do
     test "returns model unchanged" do
       model = Todo.init([])
-      assert Todo.update(model, {:click, "nonexistent"}) == model
+      assert Todo.update(model, %Widget{type: :click, id: "nonexistent"}) == model
     end
   end
 
@@ -222,21 +224,21 @@ defmodule Julep.Examples.TodoTest do
       model = Todo.init([])
 
       # Add a todo via input + submit
-      model = Todo.update(model, {:input, "todo_input", "Buy milk"})
-      model = Todo.update(model, {:submit, "todo_input", "Buy milk"})
+      model = Todo.update(model, %Widget{type: :input, id: "todo_input", value: "Buy milk"})
+      model = Todo.update(model, %Widget{type: :submit, id: "todo_input", value: "Buy milk"})
       assert length(model.todos) == 1
 
       # Add another via click
       model = %{model | input: "Walk dog"}
-      model = Todo.update(model, {:click, "add_todo"})
+      model = Todo.update(model, %Widget{type: :click, id: "add_todo"})
       assert length(model.todos) == 2
 
       # Toggle first
-      model = Todo.update(model, {:toggle, "todo:1", true})
+      model = Todo.update(model, %Widget{type: :toggle, id: "todo:1", value: true})
       assert hd(model.todos).done == true
 
       # Filter to active
-      model = Todo.update(model, {:click, "filter_active"})
+      model = Todo.update(model, %Widget{type: :click, id: "filter_active"})
       tree = Julep.Tree.normalize(Todo.view(model))
 
       # Only "Walk dog" should be visible
@@ -244,7 +246,7 @@ defmodule Julep.Examples.TodoTest do
       assert Julep.Tree.exists?(tree, "todo:2")
 
       # Clear completed
-      model = Todo.update(model, {:click, "clear_completed"})
+      model = Todo.update(model, %Widget{type: :click, id: "clear_completed"})
       assert length(model.todos) == 1
       assert hd(model.todos).text == "Walk dog"
     end

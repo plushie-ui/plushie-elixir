@@ -1,6 +1,8 @@
 defmodule Julep.Test.SimRawInputTest do
   use ExUnit.Case, async: true
 
+  alias Julep.Event.Mouse
+
   alias Julep.Test.Backend.Sim
 
   defmodule KeyApp do
@@ -8,15 +10,15 @@ defmodule Julep.Test.SimRawInputTest do
 
     def init(_opts), do: %{events: [], cursor: {0, 0}}
 
-    def update(model, {:key_press, %Julep.KeyEvent{} = event}) do
+    def update(model, %Julep.Event.Key{type: :press} = event) do
       %{model | events: model.events ++ [{:press, event.key, event.modifiers}]}
     end
 
-    def update(model, {:key_release, %Julep.KeyEvent{} = event}) do
+    def update(model, %Julep.Event.Key{type: :release} = event) do
       %{model | events: model.events ++ [{:release, event.key, event.modifiers}]}
     end
 
-    def update(model, {:cursor_moved, %{x: x, y: y}}) do
+    def update(model, %Mouse{type: :moved, x: x, y: y}) do
       %{model | cursor: {x, y}}
     end
 
@@ -162,8 +164,9 @@ defmodule Julep.Test.SimRawInputTest do
       # We need a more detailed app to check the full KeyEvent
       defmodule DetailKeyApp do
         use Julep.App
+        alias Julep.Event.Key
         def init(_), do: %{event: nil}
-        def update(model, {:key_press, event}), do: %{model | event: event}
+        def update(model, %Key{type: :press} = event), do: %{model | event: event}
         def update(model, _), do: model
 
         def view(model) do

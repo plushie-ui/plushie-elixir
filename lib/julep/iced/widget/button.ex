@@ -1,6 +1,6 @@
 defmodule Julep.Iced.Widget.Button do
   @moduledoc """
-  Button -- clickable widget that emits `{:click, id}` events.
+  Button -- clickable widget that emits `%Widget{type: :click, id: id}` events.
 
   The button can contain either a text label (via the `label` or `content` prop)
   or arbitrary child content (if children are provided, the first child is rendered).
@@ -19,7 +19,7 @@ defmodule Julep.Iced.Widget.Button do
 
   ## Events
 
-  - `{:click, id}` -- emitted on press (unless disabled).
+  - `%Widget{type: :click, id: id}` -- emitted on press (unless disabled).
   """
 
   alias Julep.Iced.A11y

@@ -1,6 +1,9 @@
 defmodule Julep.Examples.ColorPickerTest do
   use ExUnit.Case, async: true
 
+  alias Julep.Event.Widget
+  alias Julep.Event.Canvas
+
   alias Julep.Examples.ColorPicker
 
   # ---------------------------------------------------------------------------
@@ -25,7 +28,7 @@ defmodule Julep.Examples.ColorPickerTest do
     test "press at top of ring selects hue near 0" do
       model = ColorPicker.init([])
       # Top of ring: (200, 30) -- distance 170, within 150..190
-      result = ColorPicker.update(model, {:canvas_press, "picker", 200.0, 30.0, "left"})
+      result = ColorPicker.update(model, %Canvas{type: :press, id: "picker", x: 200.0, y: 30.0, button: "left"})
       assert result.drag == :ring
       # Hue should be near 0 (top = red)
       assert_in_delta result.hue, 0.0, 2.0
@@ -34,7 +37,7 @@ defmodule Julep.Examples.ColorPickerTest do
     test "press at right of ring selects hue near 90" do
       model = ColorPicker.init([])
       # Right of ring: (370, 200) -- distance 170
-      result = ColorPicker.update(model, {:canvas_press, "picker", 370.0, 200.0, "left"})
+      result = ColorPicker.update(model, %Canvas{type: :press, id: "picker", x: 370.0, y: 200.0, button: "left"})
       assert result.drag == :ring
       assert_in_delta result.hue, 90.0, 2.0
     end
@@ -42,7 +45,7 @@ defmodule Julep.Examples.ColorPickerTest do
     test "press at bottom of ring selects hue near 180" do
       model = ColorPicker.init([])
       # Bottom of ring: (200, 370)
-      result = ColorPicker.update(model, {:canvas_press, "picker", 200.0, 370.0, "left"})
+      result = ColorPicker.update(model, %Canvas{type: :press, id: "picker", x: 200.0, y: 370.0, button: "left"})
       assert result.drag == :ring
       assert_in_delta result.hue, 180.0, 2.0
     end
@@ -50,7 +53,7 @@ defmodule Julep.Examples.ColorPickerTest do
     test "press at left of ring selects hue near 270" do
       model = ColorPicker.init([])
       # Left of ring: (30, 200)
-      result = ColorPicker.update(model, {:canvas_press, "picker", 30.0, 200.0, "left"})
+      result = ColorPicker.update(model, %Canvas{type: :press, id: "picker", x: 30.0, y: 200.0, button: "left"})
       assert result.drag == :ring
       assert_in_delta result.hue, 270.0, 2.0
     end
@@ -63,7 +66,7 @@ defmodule Julep.Examples.ColorPickerTest do
   describe "update/2 -- square press" do
     test "press at top-left of square sets s=0, v=1" do
       model = ColorPicker.init([])
-      result = ColorPicker.update(model, {:canvas_press, "picker", 100.0, 100.0, "left"})
+      result = ColorPicker.update(model, %Canvas{type: :press, id: "picker", x: 100.0, y: 100.0, button: "left"})
       assert result.drag == :square
       assert_in_delta result.saturation, 0.0, 0.01
       assert_in_delta result.value, 1.0, 0.01
@@ -71,7 +74,7 @@ defmodule Julep.Examples.ColorPickerTest do
 
     test "press at bottom-right of square sets s=1, v=0" do
       model = ColorPicker.init([])
-      result = ColorPicker.update(model, {:canvas_press, "picker", 300.0, 300.0, "left"})
+      result = ColorPicker.update(model, %Canvas{type: :press, id: "picker", x: 300.0, y: 300.0, button: "left"})
       assert result.drag == :square
       assert_in_delta result.saturation, 1.0, 0.01
       assert_in_delta result.value, 0.0, 0.01
@@ -79,7 +82,7 @@ defmodule Julep.Examples.ColorPickerTest do
 
     test "press at center of square sets s=0.5, v=0.5" do
       model = ColorPicker.init([])
-      result = ColorPicker.update(model, {:canvas_press, "picker", 200.0, 200.0, "left"})
+      result = ColorPicker.update(model, %Canvas{type: :press, id: "picker", x: 200.0, y: 200.0, button: "left"})
       assert result.drag == :square
       assert_in_delta result.saturation, 0.5, 0.01
       assert_in_delta result.value, 0.5, 0.01
@@ -95,7 +98,7 @@ defmodule Julep.Examples.ColorPickerTest do
       model = ColorPicker.init([])
       # (200, 200) is distance 0 from center, well inside inner_r=150
       # but also inside the SV square (100..300), so it hits the square
-      result = ColorPicker.update(model, {:canvas_press, "picker", 200.0, 200.0, "left"})
+      result = ColorPicker.update(model, %Canvas{type: :press, id: "picker", x: 200.0, y: 200.0, button: "left"})
       # Center is inside the square, so drag is :square
       assert result.drag == :square
     end
@@ -104,20 +107,20 @@ defmodule Julep.Examples.ColorPickerTest do
       model = ColorPicker.init([])
       # (5, 5) is distance ~276 from center, outside outer_r=190
       # and outside square (100..300)
-      result = ColorPicker.update(model, {:canvas_press, "picker", 5.0, 5.0, "left"})
+      result = ColorPicker.update(model, %Canvas{type: :press, id: "picker", x: 5.0, y: 5.0, button: "left"})
       assert result == model
     end
 
     test "press between ring and square is ignored" do
       model = ColorPicker.init([])
       # (200, 90) is distance 110 from center -- inside inner_r but outside square
-      result = ColorPicker.update(model, {:canvas_press, "picker", 200.0, 90.0, "left"})
+      result = ColorPicker.update(model, %Canvas{type: :press, id: "picker", x: 200.0, y: 90.0, button: "left"})
       assert result == model
     end
 
     test "right-click is ignored" do
       model = ColorPicker.init([])
-      result = ColorPicker.update(model, {:canvas_press, "picker", 200.0, 30.0, "right"})
+      result = ColorPicker.update(model, %Canvas{type: :press, id: "picker", x: 200.0, y: 30.0, button: "right"})
       assert result == model
     end
   end
@@ -130,28 +133,28 @@ defmodule Julep.Examples.ColorPickerTest do
     test "move while dragging ring updates hue" do
       model = %{hue: 0.0, saturation: 1.0, value: 1.0, drag: :ring}
       # Move cursor to the right side: should set hue near 90
-      result = ColorPicker.update(model, {:canvas_move, "picker", 370.0, 200.0})
+      result = ColorPicker.update(model, %Canvas{type: :move, id: "picker", x: 370.0, y: 200.0})
       assert_in_delta result.hue, 90.0, 2.0
       assert result.drag == :ring
     end
 
     test "move while dragging square updates s and v" do
       model = %{hue: 0.0, saturation: 0.0, value: 1.0, drag: :square}
-      result = ColorPicker.update(model, {:canvas_move, "picker", 250.0, 250.0})
+      result = ColorPicker.update(model, %Canvas{type: :move, id: "picker", x: 250.0, y: 250.0})
       assert_in_delta result.saturation, 0.75, 0.01
       assert_in_delta result.value, 0.25, 0.01
     end
 
     test "move clamps s/v to 0..1 when outside square" do
       model = %{hue: 0.0, saturation: 0.5, value: 0.5, drag: :square}
-      result = ColorPicker.update(model, {:canvas_move, "picker", 50.0, 350.0})
+      result = ColorPicker.update(model, %Canvas{type: :move, id: "picker", x: 50.0, y: 350.0})
       assert result.saturation == 0.0
       assert result.value == 0.0
     end
 
     test "move while not dragging is ignored" do
       model = %{hue: 45.0, saturation: 0.5, value: 0.8, drag: :none}
-      result = ColorPicker.update(model, {:canvas_move, "picker", 200.0, 200.0})
+      result = ColorPicker.update(model, %Canvas{type: :move, id: "picker", x: 200.0, y: 200.0})
       assert result == model
     end
   end
@@ -163,7 +166,7 @@ defmodule Julep.Examples.ColorPickerTest do
   describe "update/2 -- canvas_release" do
     test "release clears drag" do
       model = %{hue: 90.0, saturation: 0.5, value: 0.8, drag: :ring}
-      result = ColorPicker.update(model, {:canvas_release, "picker", 200.0, 200.0, "left"})
+      result = ColorPicker.update(model, %Canvas{type: :release, id: "picker", x: 200.0, y: 200.0, button: "left"})
       assert result.drag == :none
       # Other values unchanged
       assert result.hue == 90.0
@@ -172,7 +175,7 @@ defmodule Julep.Examples.ColorPickerTest do
 
     test "release while not dragging is a no-op" do
       model = %{hue: 0.0, saturation: 1.0, value: 1.0, drag: :none}
-      result = ColorPicker.update(model, {:canvas_release, "picker", 100.0, 100.0, "left"})
+      result = ColorPicker.update(model, %Canvas{type: :release, id: "picker", x: 100.0, y: 100.0, button: "left"})
       assert result.drag == :none
     end
   end
@@ -184,7 +187,7 @@ defmodule Julep.Examples.ColorPickerTest do
   describe "update/2 -- unknown events" do
     test "non-canvas events pass through" do
       model = ColorPicker.init([])
-      assert ColorPicker.update(model, {:click, "something"}) == model
+      assert ColorPicker.update(model, %Widget{type: :click, id: "something"}) == model
       assert ColorPicker.update(model, :tick) == model
     end
   end
@@ -310,27 +313,27 @@ defmodule Julep.Examples.ColorPickerTest do
       model =
         ColorPicker.init([])
         # Press on ring at right side (hue ~90, yellow-green)
-        |> ColorPicker.update({:canvas_press, "picker", 370.0, 200.0, "left"})
+        |> ColorPicker.update(%Canvas{type: :press, id: "picker", x: 370.0, y: 200.0, button: "left"})
 
       assert model.drag == :ring
       assert_in_delta model.hue, 90.0, 2.0
 
       # Drag ring to bottom (hue ~180, cyan)
-      model = ColorPicker.update(model, {:canvas_move, "picker", 200.0, 370.0})
+      model = ColorPicker.update(model, %Canvas{type: :move, id: "picker", x: 200.0, y: 370.0})
       assert_in_delta model.hue, 180.0, 2.0
 
       # Release ring
-      model = ColorPicker.update(model, {:canvas_release, "picker", 200.0, 370.0, "left"})
+      model = ColorPicker.update(model, %Canvas{type: :release, id: "picker", x: 200.0, y: 370.0, button: "left"})
       assert model.drag == :none
 
       # Press on SV square center
-      model = ColorPicker.update(model, {:canvas_press, "picker", 200.0, 200.0, "left"})
+      model = ColorPicker.update(model, %Canvas{type: :press, id: "picker", x: 200.0, y: 200.0, button: "left"})
       assert model.drag == :square
       assert_in_delta model.saturation, 0.5, 0.01
       assert_in_delta model.value, 0.5, 0.01
 
       # Release
-      model = ColorPicker.update(model, {:canvas_release, "picker", 200.0, 200.0, "left"})
+      model = ColorPicker.update(model, %Canvas{type: :release, id: "picker", x: 200.0, y: 200.0, button: "left"})
       assert model.drag == :none
 
       # View reflects the selection

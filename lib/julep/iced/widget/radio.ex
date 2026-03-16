@@ -25,8 +25,8 @@ defmodule Julep.Iced.Widget.Radio do
 
   ## Events
 
-  - `{:select, group_or_id, value}` -- emitted when this radio is selected.
-    The first element is the `group` prop if set, otherwise the node ID.
+  - `%Widget{type: :select, id: group_or_id, value: value}` -- emitted when this radio is selected.
+    The `id` is the `group` prop if set, otherwise the node ID.
   """
 
   alias Julep.Iced.A11y

@@ -12,6 +12,8 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
     """
 
     use Julep.App
+
+    alias Julep.Event.Widget
     import Julep.UI
 
     @impl true
@@ -47,7 +49,7 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
         {:code_input, text} ->
           %{model | code: text}
 
-        {:click, "timeline"} ->
+        %Widget{type: :click, id: "timeline"} ->
           %{model | selected_interval: "clicked"}
 
         _ ->

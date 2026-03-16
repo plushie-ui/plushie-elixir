@@ -29,20 +29,20 @@ defmodule Julep.Iced.Widget.MouseArea do
 
   Always emitted (unconditional):
 
-  - `{:click, id}` -- left mouse button pressed.
-  - `{:click, "id:release"}` -- left mouse button released.
+  - `%Widget{type: :click, id: id}` -- left mouse button pressed.
+  - `%Widget{type: :click, id: "id:release"}` -- left mouse button released.
 
-  Conditional (opt-in via props):
+  Conditional (opt-in via props, delivered as `%MouseArea{}` structs):
 
-  - `{:mouse_middle_press, id}` -- middle mouse button pressed.
-  - `{:mouse_right_press, id}` -- right mouse button pressed.
-  - `{:mouse_right_release, id}` -- right mouse button released.
-  - `{:mouse_middle_release, id}` -- middle mouse button released.
-  - `{:mouse_double_click, id}` -- left mouse button double-clicked.
-  - `{:mouse_enter, id}` -- cursor entered the area.
-  - `{:mouse_exit, id}` -- cursor exited the area.
-  - `{:mouse_move, id, x, y}` -- cursor moved within the area.
-  - `{:mouse_scroll, id, delta_x, delta_y}` -- scroll wheel within the area.
+  - `%MouseArea{type: :middle_press, id: id}` -- middle mouse button pressed.
+  - `%MouseArea{type: :right_press, id: id}` -- right mouse button pressed.
+  - `%MouseArea{type: :right_release, id: id}` -- right mouse button released.
+  - `%MouseArea{type: :middle_release, id: id}` -- middle mouse button released.
+  - `%MouseArea{type: :double_click, id: id}` -- left mouse button double-clicked.
+  - `%MouseArea{type: :enter, id: id}` -- cursor entered the area.
+  - `%MouseArea{type: :exit, id: id}` -- cursor exited the area.
+  - `%MouseArea{type: :move, id: id, x: x, y: y}` -- cursor moved within the area.
+  - `%MouseArea{type: :scroll, id: id, delta_x: dx, delta_y: dy}` -- scroll wheel within the area.
   """
 
   alias Julep.Iced.A11y

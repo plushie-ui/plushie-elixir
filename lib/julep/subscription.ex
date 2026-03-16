@@ -29,10 +29,10 @@ defmodule Julep.Subscription do
   documented on each constructor.
 
       Julep.Subscription.on_key_press(:my_keys)
-      # update/2 receives: {:key_press, %Julep.KeyEvent{}} -- NOT {:my_keys, ...}
+      # update/2 receives: %Julep.Event.Key{type: :press, ...} -- NOT {:my_keys, ...}
 
       Julep.Subscription.on_window_resize(:win_resize)
-      # update/2 receives: {:window_resized, window_id, width, height}
+      # update/2 receives: %Julep.Event.Window{type: :resized, ...}
 
   ## Example
 
@@ -49,8 +49,8 @@ defmodule Julep.Subscription do
         %{model | ticks: model.ticks + 1}
       end
 
-      def update(model, {:key_press, %Julep.KeyEvent{key: "Escape"}}) do
-        # Renderer subscription tag is NOT in the event -- match on :key_press.
+      def update(model, %Julep.Event.Key{type: :press, key: :escape}) do
+        # Renderer subscription tag is NOT in the event -- match on struct type.
         %{model | menu_open: false}
       end
   """
@@ -62,8 +62,8 @@ defmodule Julep.Subscription do
   tag is also the event prefix in `update/2` (e.g. `{tag, timestamp}`).
   For renderer subscriptions (keyboard, window, mouse, etc.), the tag
   is sent to the renderer to register/unregister the listener but is
-  not included in the event tuple -- those use fixed event names like
-  `:key_press`, `:key_release`, etc. Additional keys vary by type.
+  not included in the event struct -- those use typed event structs like
+  `%Julep.Event.Key{}`, `%Julep.Event.Window{}`, etc.
   """
   @type t :: %{optional(atom()) => term(), type: atom(), tag: atom()}
 
@@ -90,18 +90,18 @@ defmodule Julep.Subscription do
   @doc """
   Fires on key press events from the renderer.
 
-  Delivers `{:key_press, %Julep.KeyEvent{}}` to `update/2`. The
+  Delivers `%Julep.Event.Key{type: :press, ...}` to `update/2`. The
   `event_tag` is used **only for subscription management** (registration
-  and diffing). It does NOT appear in the event tuple.
+  and diffing). It does NOT appear in the event struct.
 
-  See `Julep.KeyEvent` and `Julep.KeyModifiers` for struct definitions.
+  See `Julep.Event.Key` and `Julep.KeyModifiers` for struct definitions.
 
   ## Example
 
       Julep.Subscription.on_key_press(:my_keys)
 
-      # In update/2 -- match on :key_press, NOT the tag:
-      def update(model, {:key_press, %Julep.KeyEvent{key: "Enter"}}), do: ...
+      # In update/2 -- match on the struct, NOT the tag:
+      def update(model, %Julep.Event.Key{type: :press, key: :enter}), do: ...
   """
   @spec on_key_press(event_tag :: atom()) :: t()
   def on_key_press(event_tag) when is_atom(event_tag) do
@@ -111,16 +111,16 @@ defmodule Julep.Subscription do
   @doc """
   Fires on key release events from the renderer.
 
-  Delivers `{:key_release, %Julep.KeyEvent{}}` to `update/2`. Same
+  Delivers `%Julep.Event.Key{type: :release, ...}` to `update/2`. Same
   format as `on_key_press/1`. The `event_tag` is used for subscription
-  management only -- it does NOT appear in the event tuple.
+  management only -- it does NOT appear in the event struct.
 
   ## Example
 
       Julep.Subscription.on_key_release(:keys)
 
       # In update/2:
-      def update(model, {:key_release, %Julep.KeyEvent{key: key}}), do: ...
+      def update(model, %Julep.Event.Key{type: :release, key: key}), do: ...
   """
   @spec on_key_release(event_tag :: atom()) :: t()
   def on_key_release(event_tag) when is_atom(event_tag) do
@@ -130,7 +130,7 @@ defmodule Julep.Subscription do
   @doc """
   Fires when a window close is requested (e.g. user clicks the close button).
 
-  Delivers `{:window_close_requested, window_id}` to `update/2`.
+  Delivers `%Julep.Event.Window{type: :close_requested, window_id: id}` to `update/2`.
   The `event_tag` is for subscription management only.
 
   ## Example
@@ -138,7 +138,7 @@ defmodule Julep.Subscription do
       Julep.Subscription.on_window_close(:win_close)
 
       # In update/2:
-      def update(model, {:window_close_requested, window_id}), do: ...
+      def update(model, %Julep.Event.Window{type: :close_requested, window_id: wid}), do: ...
   """
   @spec on_window_close(event_tag :: atom()) :: t()
   def on_window_close(event_tag) when is_atom(event_tag) do
@@ -148,7 +148,7 @@ defmodule Julep.Subscription do
   @doc """
   Fires on general window events (resize, move, focus, etc.).
 
-  Delivers various `{:window_*, ...}` tuples depending on the event.
+  Delivers `%Julep.Event.Window{}` structs depending on the event.
   The `event_tag` is for subscription management only.
   """
   @spec on_window_event(event_tag :: atom()) :: t()
@@ -159,9 +159,8 @@ defmodule Julep.Subscription do
   @doc """
   Fires when a new window is opened.
 
-  Delivers `{:window_opened, window_id, position, {width, height}}` to
-  `update/2`. `position` is `{x, y}` or `nil`. The `event_tag` is for
-  subscription management only.
+  Delivers `%Julep.Event.Window{type: :opened, window_id: id, ...}` to
+  `update/2`. The `event_tag` is for subscription management only.
   """
   @spec on_window_open(event_tag :: atom()) :: t()
   def on_window_open(event_tag) when is_atom(event_tag) do
@@ -171,7 +170,7 @@ defmodule Julep.Subscription do
   @doc """
   Fires when a window is resized.
 
-  Delivers `{:window_resized, window_id, width, height}` to `update/2`.
+  Delivers `%Julep.Event.Window{type: :resized, window_id: id, width: w, height: h}` to `update/2`.
   The `event_tag` is for subscription management only.
   """
   @spec on_window_resize(event_tag :: atom()) :: t()
@@ -182,7 +181,7 @@ defmodule Julep.Subscription do
   @doc """
   Fires when a window gains focus.
 
-  Delivers `{:window_focused, window_id}` to `update/2`.
+  Delivers `%Julep.Event.Window{type: :focused, window_id: id}` to `update/2`.
   The `event_tag` is for subscription management only.
   """
   @spec on_window_focus(event_tag :: atom()) :: t()
@@ -193,7 +192,7 @@ defmodule Julep.Subscription do
   @doc """
   Fires when a window loses focus.
 
-  Delivers `{:window_unfocused, window_id}` to `update/2`.
+  Delivers `%Julep.Event.Window{type: :unfocused, window_id: id}` to `update/2`.
   The `event_tag` is for subscription management only.
   """
   @spec on_window_unfocus(event_tag :: atom()) :: t()
@@ -204,7 +203,7 @@ defmodule Julep.Subscription do
   @doc """
   Fires when a window is moved.
 
-  Delivers `{:window_moved, window_id, x, y}` to `update/2`.
+  Delivers `%Julep.Event.Window{type: :moved, window_id: id, x: x, y: y}` to `update/2`.
   The `event_tag` is for subscription management only.
   """
   @spec on_window_move(event_tag :: atom()) :: t()
@@ -215,9 +214,8 @@ defmodule Julep.Subscription do
   @doc """
   Fires on mouse movement.
 
-  Delivers `{:cursor_moved, %{x: x, y: y, captured: bool}}` to `update/2`.
-  Also delivers `{:cursor_entered, %{captured: bool}}` and
-  `{:cursor_left, %{captured: bool}}`.
+  Delivers `%Mouse{type: :moved, x: x, y: y, captured: bool}` to `update/2`.
+  Also delivers `%Mouse{type: :entered, ...}` and `%Mouse{type: :left, ...}`.
   The `event_tag` is for subscription management only.
   """
   @spec on_mouse_move(event_tag :: atom()) :: t()
@@ -228,8 +226,8 @@ defmodule Julep.Subscription do
   @doc """
   Fires on mouse button press/release.
 
-  Delivers `{:button_pressed, %{button: str, captured: bool}}` or
-  `{:button_released, %{button: str, captured: bool}}` to `update/2`.
+  Delivers `%Mouse{type: :button_pressed, button: str, captured: bool}` or
+  `%Mouse{type: :button_released, button: str, captured: bool}` to `update/2`.
   `button` is `"left"`, `"right"`, or `"middle"`.
   The `event_tag` is for subscription management only.
   """
@@ -241,7 +239,7 @@ defmodule Julep.Subscription do
   @doc """
   Fires on mouse scroll events.
 
-  Delivers `{:wheel_scrolled, %{delta_x: num, delta_y: num, unit: str, captured: bool}}`
+  Delivers `%Mouse{type: :wheel_scrolled, delta_x: num, delta_y: num, unit: str, captured: bool}`
   to `update/2`.
   The `event_tag` is for subscription management only.
   """
@@ -255,10 +253,10 @@ defmodule Julep.Subscription do
 
   Delivers one of:
 
-  * `{:ime_opened, %{captured: bool}}` -- the IME session started
-  * `{:ime_preedit, %{text: str, cursor: {start, end} | nil, captured: bool}}`
-  * `{:ime_commit, %{text: str, captured: bool}}` -- final text committed
-  * `{:ime_closed, %{captured: bool}}` -- the IME session ended
+  * `%Ime{type: :opened, captured: bool}` -- the IME session started
+  * `%Ime{type: :preedit, text: str, cursor: {start, end_pos} | nil, captured: bool}`
+  * `%Ime{type: :commit, text: str, captured: bool}` -- final text committed
+  * `%Ime{type: :closed, captured: bool}` -- the IME session ended
 
   The `event_tag` is for subscription management only.
   """
@@ -270,8 +268,8 @@ defmodule Julep.Subscription do
   @doc """
   Fires on touch events.
 
-  Delivers `{:finger_pressed, %{finger_id: id, x: num, y: num, captured: bool}}`,
-  `{:finger_moved, ...}`, `{:finger_lifted, ...}`, or `{:finger_lost, ...}`
+  Delivers `%Touch{type: :pressed, finger_id: id, x: num, y: num, captured: bool}`,
+  `%Touch{type: :moved, ...}`, `%Touch{type: :lifted, ...}`, or `%Touch{type: :lost, ...}`
   to `update/2`.
   The `event_tag` is for subscription management only.
   """
@@ -283,7 +281,7 @@ defmodule Julep.Subscription do
   @doc """
   Fires when the system theme changes (light/dark mode).
 
-  Delivers `{:theme_changed, mode}` to `update/2` where `mode` is
+  Delivers `%System{type: :theme_changed, data: mode}` to `update/2` where `mode` is
   a string like `"light"` or `"dark"`. The `event_tag` is for subscription
   management only.
   """
@@ -295,7 +293,7 @@ defmodule Julep.Subscription do
   @doc """
   Fires on each animation frame (vsync tick).
 
-  Delivers `{:animation_frame, timestamp}` to `update/2`.
+  Delivers `%System{type: :animation_frame, data: timestamp}` to `update/2`.
   The `event_tag` is for subscription management only.
   """
   @spec on_animation_frame(event_tag :: atom()) :: t()
@@ -306,9 +304,9 @@ defmodule Julep.Subscription do
   @doc """
   Fires when a file is dropped on a window.
 
-  Delivers `{:file_dropped, window_id, path}` to `update/2`.
-  Also fires `{:file_hovered, window_id, path}` while hovering
-  and `{:files_hovered_left, window_id}` when the hover exits.
+  Delivers `%Window{type: :file_dropped, window_id: id, path: path}` to `update/2`.
+  Also fires `%Window{type: :file_hovered, ...}` while hovering
+  and `%Window{type: :files_hovered_left, ...}` when the hover exits.
   The `event_tag` is for subscription management only.
   """
   @spec on_file_drop(event_tag :: atom()) :: t()
@@ -320,7 +318,7 @@ defmodule Julep.Subscription do
   Fires on any renderer event (catch-all).
 
   Use this to receive all event types that the renderer emits.
-  The event tuple shape varies by event family. The `event_tag` is for
+  The event struct type varies by event family. The `event_tag` is for
   subscription management only.
   """
   @spec on_event(event_tag :: atom()) :: t()

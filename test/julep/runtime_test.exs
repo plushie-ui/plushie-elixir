@@ -1,6 +1,9 @@
 defmodule Julep.RuntimeTest do
   use ExUnit.Case, async: true
 
+  alias Julep.Event.Widget
+  alias Julep.Event.Effect
+
   # ---------------------------------------------------------------------------
   # Test app: simple counter driven by button click events.
   # ---------------------------------------------------------------------------
@@ -10,8 +13,8 @@ defmodule Julep.RuntimeTest do
 
     def init(_opts), do: %{value: 0}
 
-    def update(model, {:click, "inc"}), do: %{model | value: model.value + 1}
-    def update(model, {:click, "dec"}), do: %{model | value: model.value - 1}
+    def update(model, %Widget{type: :click, id: "inc"}), do: %{model | value: model.value + 1}
+    def update(model, %Widget{type: :click, id: "dec"}), do: %{model | value: model.value - 1}
     def update(model, _event), do: model
 
     def view(model) do
@@ -56,7 +59,7 @@ defmodule Julep.RuntimeTest do
 
     def init(_opts), do: %{value: 0}
 
-    def update(model, {:click, "async"}) do
+    def update(model, %Widget{type: :click, id: "async"}) do
       cmd = Julep.Command.async(fn -> 42 end, :async_result)
       {model, cmd}
     end
@@ -156,7 +159,7 @@ defmodule Julep.RuntimeTest do
       {runtime, bridge} = start_runtime(SimpleApp)
       await_initial_render(runtime)
 
-      dispatch_and_wait(runtime, {:click, "inc"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
 
       # Initial render sends a snapshot; subsequent updates send patches.
       snapshots = Julep.Test.MockBridge.get_snapshots(bridge)
@@ -175,9 +178,9 @@ defmodule Julep.RuntimeTest do
       {runtime, _bridge} = start_runtime(SimpleApp)
       await_initial_render(runtime)
 
-      dispatch_and_wait(runtime, {:click, "inc"})
-      dispatch_and_wait(runtime, {:click, "inc"})
-      dispatch_and_wait(runtime, {:click, "dec"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "dec"})
 
       state = :sys.get_state(runtime)
       assert state.model.value == 1
@@ -190,7 +193,7 @@ defmodule Julep.RuntimeTest do
       {runtime, bridge} = start_runtime(SimpleApp)
       await_initial_render(runtime)
 
-      dispatch_and_wait(runtime, {:click, "nope"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "nope"})
       dispatch_and_wait(runtime, :mystery_event)
 
       # Unknown events don't change the tree, so no patches are sent.
@@ -226,7 +229,7 @@ defmodule Julep.RuntimeTest do
       {runtime, _bridge} = start_runtime(AsyncApp)
       await_initial_render(runtime)
 
-      dispatch_and_wait(runtime, {:click, "async"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "async"})
 
       # Wait for the spawned Task to complete and the runtime to process it.
       state = await_condition(runtime, fn s -> s.model.value == 42 end)
@@ -246,7 +249,7 @@ defmodule Julep.RuntimeTest do
         def update(model, :tick_a), do: %{model | ticks: model.ticks + 1}
         def update(model, :tick_b), do: %{model | ticks: model.ticks + 1}
 
-        def update(model, {:click, "batch"}) do
+        def update(model, %Widget{type: :click, id: "batch"}) do
           cmd =
             Julep.Command.batch([
               Julep.Command.send_after(10, :tick_a),
@@ -271,7 +274,7 @@ defmodule Julep.RuntimeTest do
       {runtime, _bridge} = start_runtime(BatchApp)
       await_initial_render(runtime)
 
-      dispatch_and_wait(runtime, {:click, "batch"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "batch"})
 
       # Wait for both delayed events to fire.
       Process.sleep(80)
@@ -492,7 +495,7 @@ defmodule Julep.RuntimeTest do
 
         def init(_opts), do: %{value: 0}
         def update(_model, :crash), do: raise("boom")
-        def update(model, {:click, "inc"}), do: %{model | value: model.value + 1}
+        def update(model, %Widget{type: :click, id: "inc"}), do: %{model | value: model.value + 1}
         def update(model, _event), do: model
 
         def view(model) do
@@ -516,7 +519,7 @@ defmodule Julep.RuntimeTest do
       assert state.model.value == 0
 
       # Can still process normal events after the crash.
-      dispatch_and_wait(runtime, {:click, "inc"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
       state = :sys.get_state(runtime)
       assert state.model.value == 1
     end
@@ -563,15 +566,16 @@ defmodule Julep.RuntimeTest do
     test "effect_request command is forwarded to the bridge" do
       defmodule EffectApp do
         use Julep.App
+        alias Julep.Event.Effect
 
         def init(_opts), do: %{result: nil}
 
-        def update(model, {:click, "open"}) do
+        def update(model, %Widget{type: :click, id: "open"}) do
           cmd = Julep.Effects.file_open(title: "Pick a file")
           {model, cmd}
         end
 
-        def update(model, {:effect_result, _id, {:ok, result}}) do
+        def update(model, %Effect{result: {:ok, result}}) do
           %{model | result: result}
         end
 
@@ -589,7 +593,7 @@ defmodule Julep.RuntimeTest do
       {runtime, bridge} = start_runtime(EffectApp)
       await_initial_render(runtime)
 
-      dispatch_and_wait(runtime, {:click, "open"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "open"})
 
       effect_requests = Julep.Test.MockBridge.get_effect_requests(bridge)
       assert length(effect_requests) == 1
@@ -602,10 +606,11 @@ defmodule Julep.RuntimeTest do
     test "effect_result event is dispatched through update" do
       defmodule EffectResultApp do
         use Julep.App
+        alias Julep.Event.Effect
 
         def init(_opts), do: %{path: nil}
 
-        def update(model, {:effect_result, _id, {:ok, %{"path" => path}}}) do
+        def update(model, %Effect{result: {:ok, %{"path" => path}}}) do
           %{model | path: path}
         end
 
@@ -624,7 +629,7 @@ defmodule Julep.RuntimeTest do
       await_initial_render(runtime)
 
       # Simulate the renderer sending back an effect result.
-      dispatch_and_wait(runtime, {:effect_result, "ef_42", {:ok, %{"path" => "/tmp/test.txt"}}})
+      dispatch_and_wait(runtime, %Effect{id: "ef_42", result: {:ok, %{"path" => "/tmp/test.txt"}}})
 
       state = :sys.get_state(runtime)
       assert state.model.path == "/tmp/test.txt"
@@ -840,7 +845,7 @@ defmodule Julep.RuntimeTest do
 
         def init(_opts), do: %{chunks: [], final: nil}
 
-        def update(model, {:click, "start_stream"}) do
+        def update(model, %Widget{type: :click, id: "start_stream"}) do
           cmd =
             Julep.Command.stream(
               fn emit ->
@@ -877,7 +882,7 @@ defmodule Julep.RuntimeTest do
       {runtime, _bridge} = start_runtime(StreamApp)
       await_initial_render(runtime)
 
-      dispatch_and_wait(runtime, {:click, "start_stream"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "start_stream"})
 
       # Wait for the stream task to emit all values and complete.
       state = await_condition(runtime, fn s -> s.model.final == :done end)
@@ -890,7 +895,7 @@ defmodule Julep.RuntimeTest do
 
         def init(_opts), do: %{chunks: [], cancelled: false}
 
-        def update(model, {:click, "start"}) do
+        def update(model, %Widget{type: :click, id: "start"}) do
           cmd =
             Julep.Command.stream(
               fn emit ->
@@ -906,7 +911,7 @@ defmodule Julep.RuntimeTest do
           {model, cmd}
         end
 
-        def update(model, {:click, "cancel"}) do
+        def update(model, %Widget{type: :click, id: "cancel"}) do
           {%{model | cancelled: true}, Julep.Command.cancel(:import)}
         end
 
@@ -933,14 +938,14 @@ defmodule Julep.RuntimeTest do
       await_initial_render(runtime)
 
       # Start the stream
-      dispatch_and_wait(runtime, {:click, "start"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "start"})
 
       # Wait for the first emit to arrive
       state = await_condition(runtime, fn s -> s.model.chunks == ["first"] end)
       assert Map.has_key?(state.async_tasks, :import)
 
       # Cancel the stream
-      dispatch_and_wait(runtime, {:click, "cancel"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "cancel"})
 
       state = :sys.get_state(runtime)
       assert state.model.cancelled == true
@@ -960,7 +965,7 @@ defmodule Julep.RuntimeTest do
 
         def init(_opts), do: %{value: 0}
 
-        def update(model, {:click, "cancel"}) do
+        def update(model, %Widget{type: :click, id: "cancel"}) do
           {%{model | value: model.value + 1}, Julep.Command.cancel(:nonexistent)}
         end
 
@@ -979,7 +984,7 @@ defmodule Julep.RuntimeTest do
       await_initial_render(runtime)
 
       # Should not crash
-      dispatch_and_wait(runtime, {:click, "cancel"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "cancel"})
 
       state = :sys.get_state(runtime)
       assert state.model.value == 1
@@ -990,7 +995,7 @@ defmodule Julep.RuntimeTest do
       {runtime, _bridge} = start_runtime(AsyncApp)
       await_initial_render(runtime)
 
-      dispatch_and_wait(runtime, {:click, "async"})
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "async"})
 
       # Wait for the task to complete, the result to be processed, and the
       # async_tasks map to be cleaned up (all happen in the same handle_info).

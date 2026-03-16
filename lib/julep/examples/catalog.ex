@@ -40,6 +40,8 @@ defmodule Julep.Examples.Catalog do
 
   use Julep.App
 
+  alias Julep.Event.{Widget, MouseArea, Sensor}
+
   # -- init ------------------------------------------------------------------
 
   def init(_opts) do
@@ -67,53 +69,80 @@ defmodule Julep.Examples.Catalog do
   # -- update ----------------------------------------------------------------
 
   # Tab switching
-  def update(model, {:click, "tab_layout"}), do: %{model | active_tab: "layout"}
-  def update(model, {:click, "tab_input"}), do: %{model | active_tab: "input"}
-  def update(model, {:click, "tab_display"}), do: %{model | active_tab: "display"}
-  def update(model, {:click, "tab_composite"}), do: %{model | active_tab: "composite"}
+  def update(model, %Widget{type: :click, id: "tab_layout"}), do: %{model | active_tab: "layout"}
+  def update(model, %Widget{type: :click, id: "tab_input"}), do: %{model | active_tab: "input"}
+
+  def update(model, %Widget{type: :click, id: "tab_display"}),
+    do: %{model | active_tab: "display"}
+
+  def update(model, %Widget{type: :click, id: "tab_composite"}),
+    do: %{model | active_tab: "composite"}
 
   # Input widgets
-  def update(model, {:input, "demo_input", value}), do: %{model | text_value: value}
-  def update(model, {:toggle, "demo_check", val}), do: %{model | checkbox_checked: val}
-  def update(model, {:toggle, "demo_toggler", val}), do: %{model | toggler_on: val}
-  def update(model, {:slide, "demo_slider", val}), do: %{model | slider_value: val}
-  def update(model, {:slide, "demo_vslider", val}), do: %{model | vslider_value: val}
-  def update(model, {:select, "demo_radio", val}), do: %{model | radio_selected: val}
-  def update(model, {:select, "demo_pick", val}), do: %{model | pick_list_selected: val}
-  def update(model, {:select, "demo_combo", val}), do: %{model | combo_value: val}
-  def update(model, {:input, "demo_editor", val}), do: %{model | editor_content: val}
+  def update(model, %Widget{type: :input, id: "demo_input", value: value}),
+    do: %{model | text_value: value}
+
+  def update(model, %Widget{type: :toggle, id: "demo_check", value: val}),
+    do: %{model | checkbox_checked: val}
+
+  def update(model, %Widget{type: :toggle, id: "demo_toggler", value: val}),
+    do: %{model | toggler_on: val}
+
+  def update(model, %Widget{type: :slide, id: "demo_slider", value: val}),
+    do: %{model | slider_value: val}
+
+  def update(model, %Widget{type: :slide, id: "demo_vslider", value: val}),
+    do: %{model | vslider_value: val}
+
+  def update(model, %Widget{type: :select, id: "demo_radio", value: val}),
+    do: %{model | radio_selected: val}
+
+  def update(model, %Widget{type: :select, id: "demo_pick", value: val}),
+    do: %{model | pick_list_selected: val}
+
+  def update(model, %Widget{type: :select, id: "demo_combo", value: val}),
+    do: %{model | combo_value: val}
+
+  def update(model, %Widget{type: :input, id: "demo_editor", value: val}),
+    do: %{model | editor_content: val}
 
   # Composite section - simulated tab switching with buttons
-  def update(model, {:click, "tab_one"}), do: %{model | demo_tabs_active: "tab_one"}
-  def update(model, {:click, "tab_two"}), do: %{model | demo_tabs_active: "tab_two"}
+  def update(model, %Widget{type: :click, id: "tab_one"}),
+    do: %{model | demo_tabs_active: "tab_one"}
+
+  def update(model, %Widget{type: :click, id: "tab_two"}),
+    do: %{model | demo_tabs_active: "tab_two"}
 
   # Modal show/hide
-  def update(model, {:click, "show_modal"}), do: %{model | modal_visible: true}
-  def update(model, {:click, "hide_modal"}), do: %{model | modal_visible: false}
+  def update(model, %Widget{type: :click, id: "show_modal"}),
+    do: %{model | modal_visible: true}
+
+  def update(model, %Widget{type: :click, id: "hide_modal"}),
+    do: %{model | modal_visible: false}
 
   # Panel collapse toggle
-  def update(model, {:click, "demo_panel"}) do
+  def update(model, %Widget{type: :click, id: "demo_panel"}) do
     %{model | panel_collapsed: not model.panel_collapsed}
   end
 
   # Interactive widgets
-  def update(model, {:click, "counter_btn"}) do
+  def update(model, %Widget{type: :click, id: "counter_btn"}) do
     %{model | click_count: model.click_count + 1}
   end
 
-  def update(model, {:click, "inc_progress"}) do
+  def update(model, %Widget{type: :click, id: "inc_progress"}) do
     %{model | progress: min(model.progress + 5, 100)}
   end
 
-  def update(model, {:mouse_enter, "demo_mouse_area"}) do
+  def update(model, %MouseArea{type: :enter, id: "demo_mouse_area"}) do
     %{model | mouse_area_status: "hovering"}
   end
 
-  def update(model, {:mouse_exit, "demo_mouse_area"}) do
+  def update(model, %MouseArea{type: :exit, id: "demo_mouse_area"}) do
     %{model | mouse_area_status: "idle"}
   end
 
-  def update(model, {:sensor, "demo_sensor", _data}) do
+  def update(model, %Sensor{type: :resize, id: "demo_sensor"}) do
     %{model | sensor_status: "activated"}
   end
 

@@ -8,9 +8,9 @@ defmodule Julep.Iced.Widget.Sensor do
 
   ## Events
 
-  - `{:sensor_resize, id, width, height}` -- emitted on resize.
-  - `{:sensor_resize, "id:show", width, height}` -- emitted when child becomes visible.
-  - `{:click, "id:hide"}` -- emitted when child becomes hidden.
+  - `%Sensor{type: :resize, id: id, width: w, height: h}` -- emitted on resize.
+  - `%Sensor{type: :resize, id: "id:show", width: w, height: h}` -- emitted when child becomes visible.
+  - `%Widget{type: :click, id: "id:hide"}` -- emitted when child becomes hidden.
   """
 
   alias Julep.Iced.A11y

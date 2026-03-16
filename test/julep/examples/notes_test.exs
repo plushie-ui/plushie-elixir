@@ -1,6 +1,8 @@
 defmodule Julep.Examples.NotesTest do
   use ExUnit.Case, async: true
 
+  alias Julep.Event.Widget
+
   alias Julep.Examples.Notes
 
   describe "init/1" do
@@ -24,7 +26,7 @@ defmodule Julep.Examples.NotesTest do
   describe "note management" do
     test "creating a new note" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "new_note"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
 
       notes = Julep.State.get(model.state, [:notes])
       assert length(notes) == 1
@@ -33,9 +35,9 @@ defmodule Julep.Examples.NotesTest do
 
     test "new note gets incrementing id" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "new_note"})
-      model = Notes.update(model, {:click, "back"})
-      model = Notes.update(model, {:click, "new_note"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
+      model = Notes.update(model, %Widget{type: :click, id: "back"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
 
       notes = Julep.State.get(model.state, [:notes])
       assert [%{id: 1}, %{id: 2}] = notes
@@ -43,26 +45,26 @@ defmodule Julep.Examples.NotesTest do
 
     test "editing a note title" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "new_note"})
-      model = Notes.update(model, {:input, "title", "My Note"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
+      model = Notes.update(model, %Widget{type: :input, id: "title", value: "My Note"})
 
       assert Julep.Undo.current(model.undo).title == "My Note"
     end
 
     test "editing a note body" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "new_note"})
-      model = Notes.update(model, {:input, "body", "Some content"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
+      model = Notes.update(model, %Widget{type: :input, id: "body", value: "Some content"})
 
       assert Julep.Undo.current(model.undo).text == "Some content"
     end
 
     test "edits are saved when navigating back" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "new_note"})
-      model = Notes.update(model, {:input, "title", "Saved Title"})
-      model = Notes.update(model, {:input, "body", "Saved Body"})
-      model = Notes.update(model, {:click, "back"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
+      model = Notes.update(model, %Widget{type: :input, id: "title", value: "Saved Title"})
+      model = Notes.update(model, %Widget{type: :input, id: "body", value: "Saved Body"})
+      model = Notes.update(model, %Widget{type: :click, id: "back"})
 
       [note] = Julep.State.get(model.state, [:notes])
       assert note.title == "Saved Title"
@@ -71,39 +73,39 @@ defmodule Julep.Examples.NotesTest do
 
     test "undo/redo" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "new_note"})
-      model = Notes.update(model, {:input, "title", "First"})
-      model = Notes.update(model, {:input, "title", "Second"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
+      model = Notes.update(model, %Widget{type: :input, id: "title", value: "First"})
+      model = Notes.update(model, %Widget{type: :input, id: "title", value: "Second"})
 
-      model = Notes.update(model, {:click, "undo"})
+      model = Notes.update(model, %Widget{type: :click, id: "undo"})
       assert Julep.Undo.current(model.undo).title == "First"
 
-      model = Notes.update(model, {:click, "redo"})
+      model = Notes.update(model, %Widget{type: :click, id: "redo"})
       assert Julep.Undo.current(model.undo).title == "Second"
     end
 
     test "undo all the way back to initial state" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "new_note"})
-      model = Notes.update(model, {:input, "title", "Only Change"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
+      model = Notes.update(model, %Widget{type: :input, id: "title", value: "Only Change"})
 
-      model = Notes.update(model, {:click, "undo"})
+      model = Notes.update(model, %Widget{type: :click, id: "undo"})
       assert Julep.Undo.current(model.undo).title == ""
     end
 
     test "delete selected notes" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "new_note"})
-      model = Notes.update(model, {:click, "back"})
-      model = Notes.update(model, {:click, "new_note"})
-      model = Notes.update(model, {:click, "back"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
+      model = Notes.update(model, %Widget{type: :click, id: "back"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
+      model = Notes.update(model, %Widget{type: :click, id: "back"})
 
       notes = Julep.State.get(model.state, [:notes])
       assert length(notes) == 2
 
       first_id = hd(notes).id |> to_string()
-      model = Notes.update(model, {:toggle, "note_select:#{first_id}", true})
-      model = Notes.update(model, {:click, "delete_selected"})
+      model = Notes.update(model, %Widget{type: :toggle, id: "note_select:#{first_id}", value: true})
+      model = Notes.update(model, %Widget{type: :click, id: "delete_selected"})
 
       notes = Julep.State.get(model.state, [:notes])
       assert length(notes) == 1
@@ -111,24 +113,24 @@ defmodule Julep.Examples.NotesTest do
 
     test "delete clears selection afterwards" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "new_note"})
-      model = Notes.update(model, {:click, "back"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
+      model = Notes.update(model, %Widget{type: :click, id: "back"})
 
-      model = Notes.update(model, {:toggle, "note_select:1", true})
-      model = Notes.update(model, {:click, "delete_selected"})
+      model = Notes.update(model, %Widget{type: :toggle, id: "note_select:1", value: true})
+      model = Notes.update(model, %Widget{type: :click, id: "delete_selected"})
 
       assert Julep.Selection.selected(model.selection) == MapSet.new()
     end
 
     test "clicking a note loads its content into undo" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "new_note"})
-      model = Notes.update(model, {:input, "title", "Hello"})
-      model = Notes.update(model, {:input, "body", "World"})
-      model = Notes.update(model, {:click, "back"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
+      model = Notes.update(model, %Widget{type: :input, id: "title", value: "Hello"})
+      model = Notes.update(model, %Widget{type: :input, id: "body", value: "World"})
+      model = Notes.update(model, %Widget{type: :click, id: "back"})
 
       # Now re-open the note
-      model = Notes.update(model, {:click, "note:1"})
+      model = Notes.update(model, %Widget{type: :click, id: "note:1"})
       assert Julep.Undo.current(model.undo).title == "Hello"
       assert Julep.Undo.current(model.undo).text == "World"
       # Fresh undo stack -- no history from previous edit session
@@ -137,14 +139,14 @@ defmodule Julep.Examples.NotesTest do
 
     test "search filters notes" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "new_note"})
-      model = Notes.update(model, {:input, "title", "Shopping List"})
-      model = Notes.update(model, {:click, "back"})
-      model = Notes.update(model, {:click, "new_note"})
-      model = Notes.update(model, {:input, "title", "Meeting Notes"})
-      model = Notes.update(model, {:click, "back"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
+      model = Notes.update(model, %Widget{type: :input, id: "title", value: "Shopping List"})
+      model = Notes.update(model, %Widget{type: :click, id: "back"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
+      model = Notes.update(model, %Widget{type: :input, id: "title", value: "Meeting Notes"})
+      model = Notes.update(model, %Widget{type: :click, id: "back"})
 
-      model = Notes.update(model, {:input, "search", "shop"})
+      model = Notes.update(model, %Widget{type: :input, id: "search", value: "shop"})
 
       assert Julep.State.get(model.state, [:search_query]) == "shop"
     end
@@ -153,32 +155,32 @@ defmodule Julep.Examples.NotesTest do
   describe "selection" do
     test "toggling note selection on" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "new_note"})
-      model = Notes.update(model, {:click, "back"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
+      model = Notes.update(model, %Widget{type: :click, id: "back"})
 
-      model = Notes.update(model, {:toggle, "note_select:1", true})
+      model = Notes.update(model, %Widget{type: :toggle, id: "note_select:1", value: true})
       assert Julep.Selection.selected?(model.selection, 1)
     end
 
     test "toggling note selection off" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "new_note"})
-      model = Notes.update(model, {:click, "back"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
+      model = Notes.update(model, %Widget{type: :click, id: "back"})
 
-      model = Notes.update(model, {:toggle, "note_select:1", true})
-      model = Notes.update(model, {:toggle, "note_select:1", false})
+      model = Notes.update(model, %Widget{type: :toggle, id: "note_select:1", value: true})
+      model = Notes.update(model, %Widget{type: :toggle, id: "note_select:1", value: false})
       refute Julep.Selection.selected?(model.selection, 1)
     end
 
     test "multi-select allows selecting multiple notes" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "new_note"})
-      model = Notes.update(model, {:click, "back"})
-      model = Notes.update(model, {:click, "new_note"})
-      model = Notes.update(model, {:click, "back"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
+      model = Notes.update(model, %Widget{type: :click, id: "back"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
+      model = Notes.update(model, %Widget{type: :click, id: "back"})
 
-      model = Notes.update(model, {:toggle, "note_select:1", true})
-      model = Notes.update(model, {:toggle, "note_select:2", true})
+      model = Notes.update(model, %Widget{type: :toggle, id: "note_select:1", value: true})
+      model = Notes.update(model, %Widget{type: :toggle, id: "note_select:2", value: true})
 
       assert Julep.Selection.selected?(model.selection, 1)
       assert Julep.Selection.selected?(model.selection, 2)
@@ -194,16 +196,16 @@ defmodule Julep.Examples.NotesTest do
 
     test "edit view renders without errors" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "new_note"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
       tree = Notes.view(model)
       assert tree.type == "window"
     end
 
     test "list view contains expected widgets" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "new_note"})
-      model = Notes.update(model, {:input, "title", "Test Note"})
-      model = Notes.update(model, {:click, "back"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
+      model = Notes.update(model, %Widget{type: :input, id: "title", value: "Test Note"})
+      model = Notes.update(model, %Widget{type: :click, id: "back"})
 
       tree = Notes.view(model)
       assert Julep.UI.exists?(tree, "search")
@@ -214,7 +216,7 @@ defmodule Julep.Examples.NotesTest do
 
     test "edit view contains expected widgets" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "new_note"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
 
       tree = Notes.view(model)
       assert Julep.UI.exists?(tree, "back")
@@ -228,25 +230,25 @@ defmodule Julep.Examples.NotesTest do
   describe "routing" do
     test "back returns to list" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "new_note"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
       assert Julep.Route.current(model.route) == "/edit"
 
-      model = Notes.update(model, {:click, "back"})
+      model = Notes.update(model, %Widget{type: :click, id: "back"})
       assert Julep.Route.current(model.route) == "/list"
     end
 
     test "clicking a note navigates to edit" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "new_note"})
-      model = Notes.update(model, {:click, "back"})
+      model = Notes.update(model, %Widget{type: :click, id: "new_note"})
+      model = Notes.update(model, %Widget{type: :click, id: "back"})
 
-      model = Notes.update(model, {:click, "note:1"})
+      model = Notes.update(model, %Widget{type: :click, id: "note:1"})
       assert Julep.Route.current(model.route) == "/edit"
     end
 
     test "clicking nonexistent note does not navigate" do
       model = Notes.init([])
-      model = Notes.update(model, {:click, "note:999"})
+      model = Notes.update(model, %Widget{type: :click, id: "note:999"})
       assert Julep.Route.current(model.route) == "/list"
     end
   end

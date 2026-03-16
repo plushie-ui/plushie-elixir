@@ -65,7 +65,7 @@ mix julep.gui Julep.Examples.Clock
 
 Logs keyboard events to a scrollable list. Demonstrates
 `Julep.Subscription.on_key_press/1` for global keyboard handling. Shows
-modifier key detection (Ctrl, Alt, Shift, Super) and the `Julep.KeyEvent`
+modifier key detection (Ctrl, Alt, Shift, Super) and the `Julep.Event.Key`
 struct.
 
 ```sh

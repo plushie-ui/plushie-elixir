@@ -1022,7 +1022,7 @@ defmodule Julep.UI do
   @doc """
   Clickable button.
 
-  Emits `{:click, id}` when clicked.
+  Emits `%Widget{type: :click, id: id}` when clicked.
 
   ## Example
 
@@ -1043,7 +1043,7 @@ defmodule Julep.UI do
   @doc """
   Single-line text input.
 
-  Emits `{:input, id, value}` on change and `{:submit, id, value}` on Enter.
+  Emits `%Widget{type: :input, id: id, value: value}` on change and `%Widget{type: :submit, id: id, value: value}` on Enter.
 
   ## Example
 
@@ -1067,7 +1067,7 @@ defmodule Julep.UI do
   @doc """
   Boolean checkbox toggle.
 
-  Emits `{:toggle, id, boolean}` when toggled.
+  Emits `%Widget{type: :toggle, id: id, value: boolean}` when toggled.
 
   ## Example
 
@@ -1189,7 +1189,7 @@ defmodule Julep.UI do
   @doc """
   Toggle switch.
 
-  Emits `{:toggle, id, boolean}` when toggled.
+  Emits `%Widget{type: :toggle, id: id, value: boolean}` when toggled.
 
   ## Example
 

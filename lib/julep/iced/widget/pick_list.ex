@@ -25,9 +25,9 @@ defmodule Julep.Iced.Widget.PickList do
 
   ## Events
 
-  - `{:select, id, value}` -- emitted when an option is selected.
-  - `{:open, id}` -- emitted when the dropdown menu is opened (requires `on_open: true`).
-  - `{:close, id}` -- emitted when the dropdown menu is closed (requires `on_close: true`).
+  - `%Widget{type: :select, id: id, value: value}` -- emitted when an option is selected.
+  - `%Widget{type: :open, id: id}` -- emitted when the dropdown menu is opened (requires `on_open: true`).
+  - `%Widget{type: :close, id: id}` -- emitted when the dropdown menu is closed (requires `on_close: true`).
   """
 
   alias Julep.Iced.A11y

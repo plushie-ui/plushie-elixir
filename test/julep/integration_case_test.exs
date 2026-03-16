@@ -1,6 +1,8 @@
 defmodule Julep.IntegrationCaseTest do
   use Julep.IntegrationCase, async: true
 
+  alias Julep.Event.Widget
+
   alias Julep.Examples.Counter
   alias Julep.Examples.Todo
 
@@ -26,7 +28,7 @@ defmodule Julep.IntegrationCaseTest do
     test "dispatches events through the runtime" do
       {runtime, _bridge} = start_app(Counter)
 
-      send_event(runtime, {:click, "increment"})
+      send_event(runtime, %Widget{type: :click, id: "increment"})
 
       model = get_model(runtime)
       assert model.count == 1
@@ -68,9 +70,9 @@ defmodule Julep.IntegrationCaseTest do
     test "counter app increments and decrements" do
       {runtime, _bridge} = start_app(Counter)
 
-      send_event(runtime, {:click, "increment"})
-      send_event(runtime, {:click, "increment"})
-      send_event(runtime, {:click, "decrement"})
+      send_event(runtime, %Widget{type: :click, id: "increment"})
+      send_event(runtime, %Widget{type: :click, id: "increment"})
+      send_event(runtime, %Widget{type: :click, id: "decrement"})
 
       model = get_model(runtime)
       assert model.count == 1
@@ -86,10 +88,10 @@ defmodule Julep.IntegrationCaseTest do
       {runtime, _bridge} = start_app(Todo)
 
       # Type in the input
-      send_event(runtime, {:input, "todo_input", "Buy milk"})
+      send_event(runtime, %Widget{type: :input, id: "todo_input", value: "Buy milk"})
 
       # Submit
-      send_event(runtime, {:submit, "todo_input", "Buy milk"})
+      send_event(runtime, %Widget{type: :submit, id: "todo_input", value: "Buy milk"})
 
       model = get_model(runtime)
       assert length(model.todos) == 1

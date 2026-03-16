@@ -44,6 +44,8 @@ defmodule Julep.Runtime do
 
   require Logger
 
+  alias Julep.Event.Effect
+
   @typep state :: %{
            app: module(),
            model: term(),
@@ -151,7 +153,7 @@ defmodule Julep.Runtime do
   # ---------------------------------------------------------------------------
 
   @impl true
-  def handle_info({:renderer_event, {:effect_result, id, _result} = event}, state) do
+  def handle_info({:renderer_event, %Effect{id: id} = event}, state) do
     state = cancel_pending_effect(state, id)
     state = run_update(state, event)
     {:noreply, state}
@@ -263,7 +265,7 @@ defmodule Julep.Runtime do
       {_timer_ref, pending_effects} ->
         :telemetry.execute([:julep, :runtime, :effect_timeout], %{count: 1}, %{id: id})
         state = %{state | pending_effects: pending_effects}
-        state = run_update(state, {:effect_result, id, {:error, :timeout}})
+        state = run_update(state, %Effect{id: id, result: {:error, :timeout}})
         {:noreply, state}
     end
   end
@@ -967,7 +969,7 @@ defmodule Julep.Runtime do
     state =
       Enum.reduce(state.pending_effects, state, fn {id, timer_ref}, acc ->
         Process.cancel_timer(timer_ref)
-        run_update(acc, {:effect_result, id, {:error, reason}})
+        run_update(acc, %Effect{id: id, result: {:error, reason}})
       end)
 
     %{state | pending_effects: %{}}

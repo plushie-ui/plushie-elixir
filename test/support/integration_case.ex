@@ -17,7 +17,7 @@ defmodule Julep.IntegrationCase do
             assert tree.type == "window"
           end)
 
-          send_event(runtime, {:click, "increment"})
+          send_event(runtime, %Julep.Event.Widget{type: :click, id: "increment"})
 
           model = get_model(runtime)
           assert model.count == 1

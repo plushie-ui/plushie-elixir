@@ -22,7 +22,7 @@ defmodule Julep.Iced.Widget.Checkbox do
 
   ## Events
 
-  - `{:toggle, id, value}` -- emitted on toggle, `value` is the new boolean state.
+  - `%Widget{type: :toggle, id: id, value: bool}` -- emitted on toggle, `value` is the new boolean state.
   """
 
   alias Julep.Iced.A11y

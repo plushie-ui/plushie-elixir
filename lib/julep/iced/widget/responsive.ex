@@ -2,8 +2,9 @@ defmodule Julep.Iced.Widget.Responsive do
   @moduledoc """
   Responsive layout -- adapts to available size by reporting resize events.
 
-  The renderer wraps child content in a sensor that sends `{:sensor_resize, id, w, h}`
-  events so the Elixir app can adjust its view based on the measured size.
+  The renderer wraps child content in a sensor that sends
+  `%Sensor{type: :resize, id: id, width: w, height: h}` events so the
+  Elixir app can adjust its view based on the measured size.
 
   ## Props
 

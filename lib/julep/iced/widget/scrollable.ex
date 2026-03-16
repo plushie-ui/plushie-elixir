@@ -15,7 +15,7 @@ defmodule Julep.Iced.Widget.Scrollable do
   - `scroller_width` (number) -- width of the scroller handle in pixels.
   - `id` (string) -- widget ID for programmatic scroll control via `Julep.Command`.
   - `anchor` (string) -- scroll anchor: `"start"` (default) or `"end"` / `"bottom"` / `"right"`.
-  - `on_scroll` (boolean) -- when `true`, emits `{:scroll, id, viewport}` events on scroll.
+  - `on_scroll` (boolean) -- when `true`, emits `%Widget{type: :scroll, id: id, data: viewport}` events on scroll.
     The viewport map contains `absolute_x`, `absolute_y`, `relative_x`, `relative_y`,
     `bounds` (as `{width, height}`), and `content_bounds` (as `{width, height}`).
   - `auto_scroll` (boolean) -- when `true`, automatically scrolls to show new content.

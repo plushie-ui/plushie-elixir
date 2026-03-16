@@ -1,6 +1,8 @@
 defmodule Julep.SensorTest do
   use ExUnit.Case, async: true
 
+  alias Julep.Event.Sensor
+
   describe "sensor resize event dispatch" do
     test "decodes sensor_resize" do
       msg = %{
@@ -10,7 +12,7 @@ defmodule Julep.SensorTest do
         "data" => %{"width" => 450.0, "height" => 300.0}
       }
 
-      assert {:sensor_resize, "s1", 450.0, 300.0} =
+      assert %Sensor{type: :resize, id: "s1", width: 450.0, height: 300.0} =
                Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
@@ -22,7 +24,7 @@ defmodule Julep.SensorTest do
         "data" => %{"width" => 800, "height" => 600}
       }
 
-      assert {:sensor_resize, "s1", 800, 600} =
+      assert %Sensor{type: :resize, id: "s1", width: 800, height: 600} =
                Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
   end

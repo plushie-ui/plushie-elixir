@@ -19,7 +19,7 @@ defmodule Julep.Iced.Widget.RichText do
 
   ## Events
 
-  - `{:click, "id:link_value"}` -- emitted when a span link is clicked.
+  - `%Widget{type: :click, id: "id:link_value"}` -- emitted when a span link is clicked.
   """
 
   alias Julep.Iced.A11y

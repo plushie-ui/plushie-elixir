@@ -25,6 +25,9 @@ defmodule Julep.Test.Backend.Sim do
 
   use GenServer
 
+  alias Julep.Event.Key, as: KeyEvent
+  alias Julep.Event.Mouse, as: MouseEvent
+  alias Julep.Event.Widget, as: WidgetEvent
   alias Julep.Test.Backend.CommandProcessor
   alias Julep.Test.Element
   alias Julep.Test.EventMap
@@ -143,7 +146,7 @@ defmodule Julep.Test.Backend.Sim do
         {:reply, :ok, state}
 
       text ->
-        state = interact(state, selector, fn _el -> {:ok, {:submit, element.id, text}} end)
+        state = interact(state, selector, fn _el -> {:ok, %WidgetEvent{type: :submit, id: element.id, value: text}} end)
         state = %{state | typed_text: Map.delete(state.typed_text, element.id)}
         {:reply, :ok, state}
     end
@@ -188,28 +191,29 @@ defmodule Julep.Test.Backend.Sim do
 
   def handle_call({:press, key}, _from, state) do
     {modifiers, parsed_key} = parse_key_string(key)
-    key_event = build_key_event(parsed_key, modifiers)
-    state = dispatch_raw(state, {:key_press, key_event})
+    key_event = build_key_event(:press, parsed_key, modifiers)
+    state = dispatch_raw(state, key_event)
     {:reply, :ok, state}
   end
 
   def handle_call({:release, key}, _from, state) do
     {modifiers, parsed_key} = parse_key_string(key)
-    key_event = build_key_event(parsed_key, modifiers)
-    state = dispatch_raw(state, {:key_release, key_event})
+    key_event = build_key_event(:release, parsed_key, modifiers)
+    state = dispatch_raw(state, key_event)
     {:reply, :ok, state}
   end
 
   def handle_call({:move_to, x, y}, _from, state) do
-    state = dispatch_raw(state, {:cursor_moved, %{x: x, y: y, captured: false}})
+    state = dispatch_raw(state, %MouseEvent{type: :moved, x: x, y: y})
     {:reply, :ok, state}
   end
 
   def handle_call({:type_key, key}, _from, state) do
     {modifiers, parsed_key} = parse_key_string(key)
-    key_event = build_key_event(parsed_key, modifiers)
-    state = dispatch_raw(state, {:key_press, key_event})
-    state = dispatch_raw(state, {:key_release, key_event})
+    press_event = build_key_event(:press, parsed_key, modifiers)
+    release_event = build_key_event(:release, parsed_key, modifiers)
+    state = dispatch_raw(state, press_event)
+    state = dispatch_raw(state, release_event)
     {:reply, :ok, state}
   end
 
@@ -290,13 +294,14 @@ defmodule Julep.Test.Backend.Sim do
     %{state | model: model, tree: tree}
   end
 
-  defp build_key_event(parsed_key, modifiers) do
+  defp build_key_event(type, parsed_key, modifiers) do
     text =
       if is_binary(parsed_key) and byte_size(parsed_key) == 1,
         do: parsed_key,
         else: nil
 
-    %Julep.KeyEvent{
+    %KeyEvent{
+      type: type,
       key: parsed_key,
       modified_key: parsed_key,
       physical_key: nil,

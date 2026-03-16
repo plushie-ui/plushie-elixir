@@ -1,6 +1,8 @@
 defmodule Julep.Test.SimTest do
   use ExUnit.Case, async: true
 
+  alias Julep.Event.Widget
+
   alias Julep.Test.Backend.Sim
   alias Julep.Test.Element
   alias Julep.Test.Screenshot
@@ -12,8 +14,8 @@ defmodule Julep.Test.SimTest do
 
     def init(_opts), do: %{count: 0}
 
-    def update(model, {:click, "increment"}), do: %{model | count: model.count + 1}
-    def update(model, {:click, "decrement"}), do: %{model | count: model.count - 1}
+    def update(model, %Widget{type: :click, id: "increment"}), do: %{model | count: model.count + 1}
+    def update(model, %Widget{type: :click, id: "decrement"}), do: %{model | count: model.count - 1}
     def update(model, _event), do: model
 
     def view(model) do
@@ -199,7 +201,7 @@ defmodule Julep.Test.SimTest do
 
       def init(_opts), do: %{value: nil}
 
-      def update(model, {:click, "fetch"}) do
+      def update(model, %Widget{type: :click, id: "fetch"}) do
         cmd = Julep.Command.async(fn -> 42 end, :fetched)
         {model, cmd}
       end
@@ -240,7 +242,7 @@ defmodule Julep.Test.SimTest do
 
       def init(_opts), do: %{greeting: nil}
 
-      def update(model, {:click, "greet"}) do
+      def update(model, %Widget{type: :click, id: "greet"}) do
         cmd = Julep.Command.done("world", fn name -> {:greeted, "hello #{name}"} end)
         {model, cmd}
       end
@@ -279,7 +281,7 @@ defmodule Julep.Test.SimTest do
 
       def init(_opts), do: %{clicked: false}
 
-      def update(model, {:click, "go"}) do
+      def update(model, %Widget{type: :click, id: "go"}) do
         cmds = [
           Julep.Command.focus("some_input"),
           Julep.Command.scroll_to("scroller", 0),
@@ -323,7 +325,7 @@ defmodule Julep.Test.SimTest do
 
       def init(_opts), do: %{steps: []}
 
-      def update(model, {:click, "start"}) do
+      def update(model, %Widget{type: :click, id: "start"}) do
         cmd = Julep.Command.async(fn -> :step_1 end, :chain)
         {model, cmd}
       end
@@ -377,7 +379,7 @@ defmodule Julep.Test.SimTest do
 
       def init(_opts), do: %{a: nil, b: nil}
 
-      def update(model, {:click, "go"}) do
+      def update(model, %Widget{type: :click, id: "go"}) do
         cmds =
           Julep.Command.batch([
             Julep.Command.async(fn -> :val_a end, :got_a),
@@ -418,7 +420,7 @@ defmodule Julep.Test.SimTest do
 
       def init(_opts), do: %{chunks: [], final: nil}
 
-      def update(model, {:click, "stream"}) do
+      def update(model, %Widget{type: :click, id: "stream"}) do
         cmd =
           Julep.Command.stream(
             fn emit ->

@@ -11,8 +11,10 @@ defmodule Julep.Protocol do
     length prefix (Erlang's `{:packet, 4}` Port driver handles framing).
 
   The decode function accepts a binary in either format and returns an
-  Elixir event tuple.
+  event struct (see `Julep.Event.*`) or an internal tuple.
   """
+
+  alias Julep.Event.{Widget, Key, Modifiers, Mouse, Touch, Ime, Window, Canvas, MouseArea, Pane, Sensor, Effect, System}
 
   @protocol_version 1
 
@@ -288,8 +290,8 @@ defmodule Julep.Protocol do
 
   ## Examples
 
-      iex> Julep.Protocol.decode_message(~s({"type":"event","family":"click","id":"btn_save"}))
-      {:click, "btn_save"}
+      iex> Julep.Protocol.decode_message(~s({"type":"event","family":"click","id":"btn_save"}), :json)
+      %Julep.Event.Widget{type: :click, id: "btn_save", value: nil, data: nil}
 
       iex> Julep.Protocol.decode_message("not json")
       {:error, :decode_failed}
@@ -829,35 +831,35 @@ defmodule Julep.Protocol do
   # -- Widget events --
 
   defp dispatch(%{"type" => "event", "family" => "click", "id" => id}) do
-    {:click, id}
+    %Widget{type: :click, id: id}
   end
 
   defp dispatch(%{"type" => "event", "family" => "input", "id" => id, "value" => value}) do
-    {:input, id, value}
+    %Widget{type: :input, id: id, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "submit", "id" => id, "value" => value}) do
-    {:submit, id, value}
+    %Widget{type: :submit, id: id, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "toggle", "id" => id, "value" => value}) do
-    {:toggle, id, value}
+    %Widget{type: :toggle, id: id, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "select", "id" => id, "value" => value}) do
-    {:select, id, value}
+    %Widget{type: :select, id: id, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "slide", "id" => id, "value" => value}) do
-    {:slide, id, value}
+    %Widget{type: :slide, id: id, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "slide_release", "id" => id, "value" => value}) do
-    {:slide_release, id, value}
+    %Widget{type: :slide_release, id: id, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "paste", "id" => id, "value" => text}) do
-    {:paste, id, text}
+    %Widget{type: :paste, id: id, value: text}
   end
 
   defp dispatch(%{
@@ -866,17 +868,17 @@ defmodule Julep.Protocol do
          "id" => id,
          "value" => value
        }) do
-    {:option_hovered, id, value}
+    %Widget{type: :option_hovered, id: id, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "open", "id" => id}),
-    do: {:open, id}
+    do: %Widget{type: :open, id: id}
 
   defp dispatch(%{"type" => "event", "family" => "close", "id" => id}),
-    do: {:close, id}
+    do: %Widget{type: :close, id: id}
 
   defp dispatch(%{"type" => "event", "family" => "key_binding", "id" => id, "data" => data}),
-    do: {:key_binding, id, data}
+    do: %Widget{type: :key_binding, id: id, data: data}
 
   # -- Keyboard events --
   # Rust emits family "key_press" with the key in "value", modifiers in "modifiers",
@@ -892,17 +894,17 @@ defmodule Julep.Protocol do
        ) do
     data = msg["data"] || %{}
 
-    {:key_press,
-     %Julep.KeyEvent{
-       key: parse_key(key),
-       modified_key: parse_key(data["modified_key"] || key),
-       physical_key: parse_physical_key(data["physical_key"]),
-       location: parse_location(data["location"]),
-       modifiers: parse_modifiers(mods),
-       text: data["text"],
-       repeat: data["repeat"] || false,
-       captured: msg["captured"] || false
-     }}
+    %Key{
+      type: :press,
+      key: parse_key(key),
+      modified_key: parse_key(data["modified_key"] || key),
+      physical_key: parse_physical_key(data["physical_key"]),
+      location: parse_location(data["location"]),
+      modifiers: parse_modifiers(mods),
+      text: data["text"],
+      repeat: data["repeat"] || false,
+      captured: msg["captured"] || false
+    }
   end
 
   defp dispatch(
@@ -915,25 +917,27 @@ defmodule Julep.Protocol do
        ) do
     data = msg["data"] || %{}
 
-    {:key_release,
-     %Julep.KeyEvent{
-       key: parse_key(key),
-       modified_key: parse_key(data["modified_key"] || key),
-       physical_key: parse_physical_key(data["physical_key"]),
-       location: parse_location(data["location"]),
-       modifiers: parse_modifiers(mods),
-       text: nil,
-       repeat: false,
-       captured: msg["captured"] || false
-     }}
+    %Key{
+      type: :release,
+      key: parse_key(key),
+      modified_key: parse_key(data["modified_key"] || key),
+      physical_key: parse_physical_key(data["physical_key"]),
+      location: parse_location(data["location"]),
+      modifiers: parse_modifiers(mods),
+      text: nil,
+      repeat: false,
+      captured: msg["captured"] || false
+    }
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "modifiers_changed",
-         "modifiers" => mods
-       }) do
-    {:modifiers_changed, parse_modifiers(mods)}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "modifiers_changed",
+           "modifiers" => mods
+         } = msg
+       ) do
+    %Modifiers{modifiers: parse_modifiers(mods), captured: msg["captured"] || false}
   end
 
   # -- Mouse events --
@@ -941,23 +945,23 @@ defmodule Julep.Protocol do
   defp dispatch(
          %{"type" => "event", "family" => "cursor_moved", "data" => %{"x" => x, "y" => y}} = msg
        ) do
-    {:cursor_moved, %{x: x, y: y, captured: msg["captured"] || false}}
+    %Mouse{type: :moved, x: x, y: y, captured: msg["captured"] || false}
   end
 
   defp dispatch(%{"type" => "event", "family" => "cursor_entered"} = msg) do
-    {:cursor_entered, %{captured: msg["captured"] || false}}
+    %Mouse{type: :entered, captured: msg["captured"] || false}
   end
 
   defp dispatch(%{"type" => "event", "family" => "cursor_left"} = msg) do
-    {:cursor_left, %{captured: msg["captured"] || false}}
+    %Mouse{type: :left, captured: msg["captured"] || false}
   end
 
   defp dispatch(%{"type" => "event", "family" => "button_pressed", "value" => button} = msg) do
-    {:button_pressed, %{button: button, captured: msg["captured"] || false}}
+    %Mouse{type: :button_pressed, button: button, captured: msg["captured"] || false}
   end
 
   defp dispatch(%{"type" => "event", "family" => "button_released", "value" => button} = msg) do
-    {:button_released, %{button: button, captured: msg["captured"] || false}}
+    %Mouse{type: :button_released, button: button, captured: msg["captured"] || false}
   end
 
   defp dispatch(
@@ -967,8 +971,13 @@ defmodule Julep.Protocol do
            "data" => %{"delta_x" => dx, "delta_y" => dy, "unit" => unit}
          } = msg
        ) do
-    {:wheel_scrolled,
-     %{delta_x: dx, delta_y: dy, unit: unit, captured: msg["captured"] || false}}
+    %Mouse{
+      type: :wheel_scrolled,
+      delta_x: dx,
+      delta_y: dy,
+      unit: unit,
+      captured: msg["captured"] || false
+    }
   end
 
   # -- IME events --
@@ -980,7 +989,7 @@ defmodule Julep.Protocol do
            "data" => %{"kind" => "opened"}
          } = msg
        ) do
-    {:ime_opened, %{captured: msg["captured"] || false}}
+    %Ime{type: :opened, captured: msg["captured"] || false}
   end
 
   defp dispatch(
@@ -990,8 +999,7 @@ defmodule Julep.Protocol do
            "data" => %{"kind" => "preedit", "text" => text, "cursor" => %{"start" => s, "end" => e}}
          } = msg
        ) do
-    {:ime_preedit,
-     %{text: text, cursor: {s, e}, captured: msg["captured"] || false}}
+    %Ime{type: :preedit, text: text, cursor: {s, e}, captured: msg["captured"] || false}
   end
 
   defp dispatch(
@@ -1001,8 +1009,7 @@ defmodule Julep.Protocol do
            "data" => %{"kind" => "preedit", "text" => text}
          } = msg
        ) do
-    {:ime_preedit,
-     %{text: text, cursor: nil, captured: msg["captured"] || false}}
+    %Ime{type: :preedit, text: text, cursor: nil, captured: msg["captured"] || false}
   end
 
   defp dispatch(
@@ -1012,7 +1019,7 @@ defmodule Julep.Protocol do
            "data" => %{"kind" => "commit", "text" => text}
          } = msg
        ) do
-    {:ime_commit, %{text: text, captured: msg["captured"] || false}}
+    %Ime{type: :commit, text: text, captured: msg["captured"] || false}
   end
 
   defp dispatch(
@@ -1022,7 +1029,7 @@ defmodule Julep.Protocol do
            "data" => %{"kind" => "closed"}
          } = msg
        ) do
-    {:ime_closed, %{captured: msg["captured"] || false}}
+    %Ime{type: :closed, captured: msg["captured"] || false}
   end
 
   # -- Touch events --
@@ -1034,8 +1041,7 @@ defmodule Julep.Protocol do
            "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
-    {:finger_pressed,
-     %{finger_id: finger_id, x: x, y: y, captured: msg["captured"] || false}}
+    %Touch{type: :pressed, finger_id: finger_id, x: x, y: y, captured: msg["captured"] || false}
   end
 
   defp dispatch(
@@ -1045,8 +1051,7 @@ defmodule Julep.Protocol do
            "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
-    {:finger_moved,
-     %{finger_id: finger_id, x: x, y: y, captured: msg["captured"] || false}}
+    %Touch{type: :moved, finger_id: finger_id, x: x, y: y, captured: msg["captured"] || false}
   end
 
   defp dispatch(
@@ -1056,8 +1061,7 @@ defmodule Julep.Protocol do
            "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
-    {:finger_lifted,
-     %{finger_id: finger_id, x: x, y: y, captured: msg["captured"] || false}}
+    %Touch{type: :lifted, finger_id: finger_id, x: x, y: y, captured: msg["captured"] || false}
   end
 
   defp dispatch(
@@ -1067,8 +1071,7 @@ defmodule Julep.Protocol do
            "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
-    {:finger_lost,
-     %{finger_id: finger_id, x: x, y: y, captured: msg["captured"] || false}}
+    %Touch{type: :lost, finger_id: finger_id, x: x, y: y, captured: msg["captured"] || false}
   end
 
   # -- Window lifecycle events --
@@ -1084,7 +1087,7 @@ defmodule Julep.Protocol do
         _ -> nil
       end
 
-    {:window_opened, window_id, pos, {width, height}}
+    %Window{type: :opened, window_id: window_id, position: pos, width: width, height: height}
   end
 
   defp dispatch(%{
@@ -1092,7 +1095,7 @@ defmodule Julep.Protocol do
          "family" => "window_closed",
          "data" => %{"window_id" => window_id}
        }) do
-    {:window_closed, window_id}
+    %Window{type: :closed, window_id: window_id}
   end
 
   defp dispatch(%{
@@ -1100,7 +1103,7 @@ defmodule Julep.Protocol do
          "family" => "window_close_requested",
          "data" => %{"window_id" => window_id}
        }) do
-    {:window_close_requested, window_id}
+    %Window{type: :close_requested, window_id: window_id}
   end
 
   defp dispatch(%{
@@ -1108,7 +1111,7 @@ defmodule Julep.Protocol do
          "family" => "window_moved",
          "data" => %{"window_id" => window_id, "x" => x, "y" => y}
        }) do
-    {:window_moved, window_id, x, y}
+    %Window{type: :moved, window_id: window_id, x: x, y: y}
   end
 
   defp dispatch(%{
@@ -1116,7 +1119,7 @@ defmodule Julep.Protocol do
          "family" => "window_resized",
          "data" => %{"window_id" => window_id, "width" => width, "height" => height}
        }) do
-    {:window_resized, window_id, width, height}
+    %Window{type: :resized, window_id: window_id, width: width, height: height}
   end
 
   defp dispatch(%{
@@ -1124,7 +1127,7 @@ defmodule Julep.Protocol do
          "family" => "window_focused",
          "data" => %{"window_id" => window_id}
        }) do
-    {:window_focused, window_id}
+    %Window{type: :focused, window_id: window_id}
   end
 
   defp dispatch(%{
@@ -1132,7 +1135,7 @@ defmodule Julep.Protocol do
          "family" => "window_unfocused",
          "data" => %{"window_id" => window_id}
        }) do
-    {:window_unfocused, window_id}
+    %Window{type: :unfocused, window_id: window_id}
   end
 
   defp dispatch(%{
@@ -1140,7 +1143,7 @@ defmodule Julep.Protocol do
          "family" => "window_rescaled",
          "data" => %{"window_id" => window_id, "scale_factor" => scale_factor}
        }) do
-    {:window_rescaled, window_id, scale_factor}
+    %Window{type: :rescaled, window_id: window_id, scale_factor: scale_factor}
   end
 
   defp dispatch(%{
@@ -1148,7 +1151,7 @@ defmodule Julep.Protocol do
          "family" => "file_hovered",
          "data" => %{"window_id" => window_id, "path" => path}
        }) do
-    {:file_hovered, window_id, path}
+    %Window{type: :file_hovered, window_id: window_id, path: path}
   end
 
   defp dispatch(%{
@@ -1156,7 +1159,7 @@ defmodule Julep.Protocol do
          "family" => "file_dropped",
          "data" => %{"window_id" => window_id, "path" => path}
        }) do
-    {:file_dropped, window_id, path}
+    %Window{type: :file_dropped, window_id: window_id, path: path}
   end
 
   defp dispatch(%{
@@ -1164,7 +1167,7 @@ defmodule Julep.Protocol do
          "family" => "files_hovered_left",
          "data" => %{"window_id" => window_id}
        }) do
-    {:files_hovered_left, window_id}
+    %Window{type: :files_hovered_left, window_id: window_id}
   end
 
   # -- Animation / theme / system events --
@@ -1174,7 +1177,7 @@ defmodule Julep.Protocol do
          "family" => "animation_frame",
          "data" => %{"timestamp" => timestamp}
        }) do
-    {:animation_frame, timestamp}
+    %System{type: :animation_frame, data: timestamp}
   end
 
   defp dispatch(%{
@@ -1182,37 +1185,37 @@ defmodule Julep.Protocol do
          "family" => "theme_changed",
          "value" => mode
        }) do
-    {:theme_changed, mode}
+    %System{type: :theme_changed, data: mode}
   end
 
   # -- MouseArea events --
 
   defp dispatch(%{"type" => "event", "family" => "mouse_right_press", "id" => id}) do
-    {:mouse_right_press, id}
+    %MouseArea{type: :right_press, id: id}
   end
 
   defp dispatch(%{"type" => "event", "family" => "mouse_right_release", "id" => id}) do
-    {:mouse_right_release, id}
+    %MouseArea{type: :right_release, id: id}
   end
 
   defp dispatch(%{"type" => "event", "family" => "mouse_middle_press", "id" => id}) do
-    {:mouse_middle_press, id}
+    %MouseArea{type: :middle_press, id: id}
   end
 
   defp dispatch(%{"type" => "event", "family" => "mouse_middle_release", "id" => id}) do
-    {:mouse_middle_release, id}
+    %MouseArea{type: :middle_release, id: id}
   end
 
   defp dispatch(%{"type" => "event", "family" => "mouse_double_click", "id" => id}) do
-    {:mouse_double_click, id}
+    %MouseArea{type: :double_click, id: id}
   end
 
   defp dispatch(%{"type" => "event", "family" => "mouse_enter", "id" => id}) do
-    {:mouse_enter, id}
+    %MouseArea{type: :enter, id: id}
   end
 
   defp dispatch(%{"type" => "event", "family" => "mouse_exit", "id" => id}) do
-    {:mouse_exit, id}
+    %MouseArea{type: :exit, id: id}
   end
 
   defp dispatch(%{
@@ -1221,7 +1224,7 @@ defmodule Julep.Protocol do
          "id" => id,
          "data" => %{"x" => x, "y" => y}
        }) do
-    {:mouse_move, id, x, y}
+    %MouseArea{type: :move, id: id, x: x, y: y}
   end
 
   defp dispatch(%{
@@ -1230,63 +1233,64 @@ defmodule Julep.Protocol do
          "id" => id,
          "data" => %{"delta_x" => dx, "delta_y" => dy}
        }) do
-    {:mouse_scroll, id, dx, dy}
+    %MouseArea{type: :scroll, id: id, delta_x: dx, delta_y: dy}
   end
 
   # -- Canvas events --
 
   defp dispatch(%{"type" => "event", "family" => "canvas_press", "id" => id, "data" => data}) do
-    button = Map.get(data, "button", "left")
-    {:canvas_press, id, data["x"], data["y"], button}
+    %Canvas{type: :press, id: id, x: data["x"], y: data["y"], button: Map.get(data, "button", "left")}
   end
 
   defp dispatch(%{"type" => "event", "family" => "canvas_release", "id" => id, "data" => data}) do
-    button = Map.get(data, "button", "left")
-    {:canvas_release, id, data["x"], data["y"], button}
+    %Canvas{type: :release, id: id, x: data["x"], y: data["y"], button: Map.get(data, "button", "left")}
   end
 
   defp dispatch(%{"type" => "event", "family" => "canvas_move", "id" => id, "data" => data}) do
-    {:canvas_move, id, data["x"], data["y"]}
+    %Canvas{type: :move, id: id, x: data["x"], y: data["y"]}
   end
 
   defp dispatch(%{"type" => "event", "family" => "canvas_scroll", "id" => id, "data" => data}) do
-    {:canvas_scroll, id, data["x"], data["y"], data["delta_x"], data["delta_y"]}
+    %Canvas{type: :scroll, id: id, x: data["x"], y: data["y"], delta_x: data["delta_x"], delta_y: data["delta_y"]}
   end
 
   # -- Sensor events --
 
   defp dispatch(%{"type" => "event", "family" => "sensor_resize", "id" => id, "data" => data}) do
-    {:sensor_resize, id, data["width"], data["height"]}
+    %Sensor{type: :resize, id: id, width: data["width"], height: data["height"]}
   end
 
   # -- PaneGrid events --
 
   defp dispatch(%{"type" => "event", "family" => "pane_resized", "id" => id, "data" => data}) do
-    {:pane_resized, id, data["split"], data["ratio"]}
+    %Pane{type: :resized, id: id, split: data["split"], ratio: data["ratio"]}
   end
 
   defp dispatch(%{"type" => "event", "family" => "pane_dragged", "id" => id, "data" => data}) do
-    {:pane_dragged, id, data["pane"], data["target"]}
+    %Pane{type: :dragged, id: id, pane: data["pane"], target: data["target"]}
   end
 
   defp dispatch(%{"type" => "event", "family" => "pane_clicked", "id" => id, "data" => data}) do
-    {:pane_clicked, id, data["pane"]}
+    %Pane{type: :clicked, id: id, pane: data["pane"]}
   end
 
   defp dispatch(%{"type" => "event", "family" => "sort", "id" => id, "data" => data}) do
-    {:sort, id, data["column"]}
+    %Widget{type: :sort, id: id, data: data["column"]}
   end
 
   defp dispatch(%{"type" => "event", "family" => "scroll", "id" => id, "data" => data}) do
-    {:scroll, id,
-     %{
-       absolute_x: data["absolute_x"],
-       absolute_y: data["absolute_y"],
-       relative_x: data["relative_x"],
-       relative_y: data["relative_y"],
-       bounds: {data["bounds_width"], data["bounds_height"]},
-       content_bounds: {data["content_width"], data["content_height"]}
-     }}
+    %Widget{
+      type: :scroll,
+      id: id,
+      data: %{
+        absolute_x: data["absolute_x"],
+        absolute_y: data["absolute_y"],
+        relative_x: data["relative_x"],
+        relative_y: data["relative_y"],
+        bounds: {data["bounds_width"], data["bounds_height"]},
+        content_bounds: {data["content_width"], data["content_height"]}
+      }
+    }
   end
 
   # -- Effect responses --
@@ -1297,7 +1301,7 @@ defmodule Julep.Protocol do
          "status" => "ok",
          "result" => result
        }) do
-    {:effect_result, id, {:ok, result}}
+    %Effect{id: id, result: {:ok, result}}
   end
 
   defp dispatch(%{
@@ -1306,7 +1310,7 @@ defmodule Julep.Protocol do
          "status" => "error",
          "error" => reason
        }) do
-    {:effect_result, id, {:error, reason}}
+    %Effect{id: id, result: {:error, reason}}
   end
 
   # -- System query responses --
@@ -1317,7 +1321,7 @@ defmodule Julep.Protocol do
          "tag" => tag,
          "data" => data
        }) do
-    {:system_info, tag, data}
+    %System{type: :system_info, tag: tag, data: data}
   end
 
   defp dispatch(%{
@@ -1326,7 +1330,7 @@ defmodule Julep.Protocol do
          "tag" => tag,
          "data" => data
        }) do
-    {:system_theme, tag, data}
+    %System{type: :system_theme, tag: tag, data: data}
   end
 
   defp dispatch(%{

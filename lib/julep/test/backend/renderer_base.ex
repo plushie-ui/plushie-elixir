@@ -19,6 +19,9 @@ defmodule Julep.Test.Backend.RendererBase do
 
       require Logger
 
+      alias Julep.Event.Key, as: KeyEvent
+      alias Julep.Event.Mouse, as: MouseEvent
+      alias Julep.Event.Widget, as: WidgetEvent
       alias Julep.Test.Backend.CommandProcessor
       alias Julep.Test.Element
       alias Julep.Test.Screenshot
@@ -363,25 +366,25 @@ defmodule Julep.Test.Backend.RendererBase do
 
       defp dispatch_event(_event, state), do: state
 
-      defp decode_event("click", id, _event), do: {:click, id}
-      defp decode_event("input", id, event), do: {:input, id, event["value"] || ""}
-      defp decode_event("submit", id, event), do: {:submit, id, event["value"] || ""}
-      defp decode_event("toggle", id, event), do: {:toggle, id, event["value"] || false}
-      defp decode_event("select", id, event), do: {:select, id, event["value"] || ""}
-      defp decode_event("slide", id, event), do: {:slide, id, event["value"] || 0}
+      defp decode_event("click", id, _event), do: %WidgetEvent{type: :click, id: id}
+      defp decode_event("input", id, event), do: %WidgetEvent{type: :input, id: id, value: event["value"] || ""}
+      defp decode_event("submit", id, event), do: %WidgetEvent{type: :submit, id: id, value: event["value"] || ""}
+      defp decode_event("toggle", id, event), do: %WidgetEvent{type: :toggle, id: id, value: event["value"] || false}
+      defp decode_event("select", id, event), do: %WidgetEvent{type: :select, id: id, value: event["value"] || ""}
+      defp decode_event("slide", id, event), do: %WidgetEvent{type: :slide, id: id, value: event["value"] || 0}
 
       defp decode_event("key_press", _id, event) do
-        {:key_press, decode_key_event(event)}
+        decode_key_event(:press, event)
       end
 
       defp decode_event("key_release", _id, event) do
-        {:key_release, decode_key_event(event)}
+        decode_key_event(:release, event)
       end
 
       defp decode_event("cursor_moved", _id, event) do
         x = event["x"] || 0
         y = event["y"] || 0
-        {:cursor_moved, %{x: x, y: y, captured: false}}
+        %MouseEvent{type: :moved, x: x, y: y}
       end
 
       @known_extension_events ~w(extension_event extension_error)a
@@ -398,7 +401,7 @@ defmodule Julep.Test.Backend.RendererBase do
         end
       end
 
-      defp decode_key_event(event) do
+      defp decode_key_event(type, event) do
         key_str = event["key"] || ""
         modifiers_map = event["modifiers"] || %{}
 
@@ -417,7 +420,8 @@ defmodule Julep.Test.Backend.RendererBase do
             do: key,
             else: nil
 
-        %Julep.KeyEvent{
+        %KeyEvent{
+          type: type,
           key: key,
           modified_key: key,
           physical_key: nil,

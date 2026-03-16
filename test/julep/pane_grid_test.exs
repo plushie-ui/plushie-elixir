@@ -1,6 +1,8 @@
 defmodule Julep.PaneGridTest do
   use ExUnit.Case, async: true
 
+  alias Julep.Event.Pane
+
   describe "Julep.Iced.pane_grid/3" do
     test "creates pane_grid node with children" do
       left = Julep.Iced.text("left", %{content: "Left"})
@@ -85,7 +87,7 @@ defmodule Julep.PaneGridTest do
         "data" => %{"split" => 0, "ratio" => 0.45}
       }
 
-      assert {:pane_resized, "pg1", 0, 0.45} =
+      assert %Pane{type: :resized, id: "pg1", split: 0, ratio: 0.45} =
                Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
@@ -97,7 +99,7 @@ defmodule Julep.PaneGridTest do
         "data" => %{"pane" => "left", "target" => "right"}
       }
 
-      assert {:pane_dragged, "pg1", "left", "right"} =
+      assert %Pane{type: :dragged, id: "pg1", pane: "left", target: "right"} =
                Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
@@ -109,7 +111,7 @@ defmodule Julep.PaneGridTest do
         "data" => %{"pane" => "left"}
       }
 
-      assert {:pane_clicked, "pg1", "left"} =
+      assert %Pane{type: :clicked, id: "pg1", pane: "left"} =
                Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
   end

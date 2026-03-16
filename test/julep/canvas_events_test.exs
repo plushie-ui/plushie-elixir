@@ -1,6 +1,8 @@
 defmodule Julep.CanvasEventsTest do
   use ExUnit.Case, async: true
 
+  alias Julep.Event.Canvas
+
   describe "canvas event dispatch" do
     test "decodes canvas_press" do
       msg = %{
@@ -10,7 +12,7 @@ defmodule Julep.CanvasEventsTest do
         "data" => %{"x" => 42.5, "y" => 100.0, "button" => "left"}
       }
 
-      assert {:canvas_press, "my_canvas", 42.5, 100.0, "left"} =
+      assert %Canvas{type: :press, id: "my_canvas", x: 42.5, y: 100.0, button: "left"} =
                Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
@@ -22,7 +24,7 @@ defmodule Julep.CanvasEventsTest do
         "data" => %{"x" => 10.0, "y" => 20.0, "button" => "right"}
       }
 
-      assert {:canvas_release, "c1", 10.0, 20.0, "right"} =
+      assert %Canvas{type: :release, id: "c1", x: 10.0, y: 20.0, button: "right"} =
                Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
@@ -34,7 +36,7 @@ defmodule Julep.CanvasEventsTest do
         "data" => %{"x" => 5.5, "y" => 3.2}
       }
 
-      assert {:canvas_move, "c1", 5.5, 3.2} =
+      assert %Canvas{type: :move, id: "c1", x: 5.5, y: 3.2} =
                Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
@@ -46,7 +48,7 @@ defmodule Julep.CanvasEventsTest do
         "data" => %{"x" => 1.5, "y" => 2.5, "delta_x" => 0.5, "delta_y" => -3.0}
       }
 
-      assert {:canvas_scroll, "c1", 1.5, 2.5, 0.5, -3.0} =
+      assert %Canvas{type: :scroll, id: "c1", x: 1.5, y: 2.5, delta_x: 0.5, delta_y: -3.0} =
                Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
@@ -58,7 +60,7 @@ defmodule Julep.CanvasEventsTest do
         "data" => %{"x" => 1.0, "y" => 2.0}
       }
 
-      assert {:canvas_press, "c1", 1.0, 2.0, "left"} =
+      assert %Canvas{type: :press, id: "c1", x: 1.0, y: 2.0, button: "left"} =
                Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
@@ -70,7 +72,7 @@ defmodule Julep.CanvasEventsTest do
         "data" => %{"x" => 1.0, "y" => 2.0}
       }
 
-      assert {:canvas_release, "c1", 1.0, 2.0, "left"} =
+      assert %Canvas{type: :release, id: "c1", x: 1.0, y: 2.0, button: "left"} =
                Julep.Protocol.decode_message(Jason.encode!(msg), :json)
     end
   end

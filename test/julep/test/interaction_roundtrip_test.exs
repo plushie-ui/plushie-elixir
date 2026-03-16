@@ -1,6 +1,8 @@
 defmodule Julep.Test.InteractionRoundtripTest do
   use ExUnit.Case, async: true
 
+  alias Julep.Event.Widget
+
   alias Julep.Test.Backend.Sim
 
   # A single app that has one of each interactive widget type and tracks every
@@ -20,31 +22,31 @@ defmodule Julep.Test.InteractionRoundtripTest do
       }
     end
 
-    def update(model, {:click, "submit_btn"} = event) do
+    def update(model, %Widget{type: :click, id: "submit_btn"} = event) do
       %{model | last_event: event}
     end
 
-    def update(model, {:input, "name_input", text} = event) do
+    def update(model, %Widget{type: :input, id: "name_input", value: text} = event) do
       %{model | last_event: event, text_value: text}
     end
 
-    def update(model, {:toggle, "agree_check", value} = event) do
+    def update(model, %Widget{type: :toggle, id: "agree_check", value: value} = event) do
       %{model | last_event: event, checkbox_state: value}
     end
 
-    def update(model, {:toggle, "dark_mode", value} = event) do
+    def update(model, %Widget{type: :toggle, id: "dark_mode", value: value} = event) do
       %{model | last_event: event, toggler_state: value}
     end
 
-    def update(model, {:slide, "volume", value} = event) do
+    def update(model, %Widget{type: :slide, id: "volume", value: value} = event) do
       %{model | last_event: event, slider_value: value}
     end
 
-    def update(model, {:select, "language", value} = event) do
+    def update(model, %Widget{type: :select, id: "language", value: value} = event) do
       %{model | last_event: event, selected: value}
     end
 
-    def update(model, {:submit, "name_input", value} = event) do
+    def update(model, %Widget{type: :submit, id: "name_input", value: value} = event) do
       %{model | last_event: event, text_value: value}
     end
 
@@ -102,12 +104,12 @@ defmodule Julep.Test.InteractionRoundtripTest do
     {:ok, pid: pid}
   end
 
-  # -- click -> {:click, id} --
+  # -- click -> %Widget{type: :click, id: id} --
 
   describe "click button" do
-    test "dispatches {:click, id}", %{pid: pid} do
+    test "dispatches %Widget{type: :click, id: id}", %{pid: pid} do
       Sim.click(pid, "#submit_btn")
-      assert Sim.model(pid).last_event == {:click, "submit_btn"}
+      assert Sim.model(pid).last_event == %Widget{type: :click, id: "submit_btn"}
     end
   end
 
@@ -116,7 +118,7 @@ defmodule Julep.Test.InteractionRoundtripTest do
   describe "type_text into text_input" do
     test "dispatches {:input, id, text}", %{pid: pid} do
       Sim.type_text(pid, "#name_input", "Arthur")
-      assert Sim.model(pid).last_event == {:input, "name_input", "Arthur"}
+      assert Sim.model(pid).last_event == %Widget{type: :input, id: "name_input", value: "Arthur"}
     end
 
     test "model field updated with typed text", %{pid: pid} do
@@ -139,7 +141,7 @@ defmodule Julep.Test.InteractionRoundtripTest do
     test "dispatches {:toggle, id, value} from unchecked state", %{pid: pid} do
       # Initial state: checkbox_state = false, prop is_checked = false
       Sim.toggle(pid, "#agree_check")
-      assert Sim.model(pid).last_event == {:toggle, "agree_check", true}
+      assert Sim.model(pid).last_event == %Widget{type: :toggle, id: "agree_check", value: true}
     end
 
     test "model field flips to true on first toggle", %{pid: pid} do
@@ -159,7 +161,7 @@ defmodule Julep.Test.InteractionRoundtripTest do
   describe "toggle toggler" do
     test "dispatches {:toggle, id, value} from off state", %{pid: pid} do
       Sim.toggle(pid, "#dark_mode")
-      assert Sim.model(pid).last_event == {:toggle, "dark_mode", true}
+      assert Sim.model(pid).last_event == %Widget{type: :toggle, id: "dark_mode", value: true}
     end
 
     test "model field reflects new toggler state", %{pid: pid} do
@@ -173,7 +175,7 @@ defmodule Julep.Test.InteractionRoundtripTest do
   describe "slide slider" do
     test "dispatches {:slide, id, value}", %{pid: pid} do
       Sim.slide(pid, "#volume", 80)
-      assert Sim.model(pid).last_event == {:slide, "volume", 80}
+      assert Sim.model(pid).last_event == %Widget{type: :slide, id: "volume", value: 80}
     end
 
     test "model field updated with slid value", %{pid: pid} do
@@ -192,7 +194,7 @@ defmodule Julep.Test.InteractionRoundtripTest do
   describe "select from pick_list" do
     test "dispatches {:select, id, value}", %{pid: pid} do
       Sim.select(pid, "#language", "Elixir")
-      assert Sim.model(pid).last_event == {:select, "language", "Elixir"}
+      assert Sim.model(pid).last_event == %Widget{type: :select, id: "language", value: "Elixir"}
     end
 
     test "model field updated with selected value", %{pid: pid} do
@@ -214,12 +216,12 @@ defmodule Julep.Test.InteractionRoundtripTest do
       # First type something so there's a value in the model and view prop.
       Sim.type_text(pid, "#name_input", "Marvin")
       Sim.submit(pid, "#name_input")
-      assert Sim.model(pid).last_event == {:submit, "name_input", "Marvin"}
+      assert Sim.model(pid).last_event == %Widget{type: :submit, id: "name_input", value: "Marvin"}
     end
 
     test "submit with no value dispatches empty string", %{pid: pid} do
       Sim.submit(pid, "#name_input")
-      assert Sim.model(pid).last_event == {:submit, "name_input", ""}
+      assert Sim.model(pid).last_event == %Widget{type: :submit, id: "name_input", value: ""}
     end
   end
 

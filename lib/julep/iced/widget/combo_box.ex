@@ -18,16 +18,16 @@ defmodule Julep.Iced.Widget.ComboBox do
   - `menu_height` (number) -- maximum height of the dropdown menu in pixels.
   - `icon` (map) -- display an icon inside the text input. Same format as
     `Julep.Iced.Widget.TextInput` icon prop.
-  - `on_option_hovered` (boolean) -- when true, emits `{:option_hovered, id, value}`
+  - `on_option_hovered` (boolean) -- when true, emits `%Widget{type: :option_hovered, id: id, value: value}`
     when hovering over a dropdown option. Default: false.
 
   ## Events
 
-  - `{:select, id, value}` -- emitted when an option is selected.
-  - `{:input, id, value}` -- emitted on every text input change (for filtering).
-  - `{:option_hovered, id, value}` -- emitted on hover (requires `on_option_hovered` prop).
-  - `{:open, id}` -- emitted when the dropdown menu is opened (requires `on_open: true`).
-  - `{:close, id}` -- emitted when the dropdown menu is closed (requires `on_close: true`).
+  - `%Widget{type: :select, id: id, value: value}` -- emitted when an option is selected.
+  - `%Widget{type: :input, id: id, value: value}` -- emitted on every text input change (for filtering).
+  - `%Widget{type: :option_hovered, id: id, value: value}` -- emitted on hover (requires `on_option_hovered` prop).
+  - `%Widget{type: :open, id: id}` -- emitted when the dropdown menu is opened (requires `on_open: true`).
+  - `%Widget{type: :close, id: id}` -- emitted when the dropdown menu is closed (requires `on_close: true`).
   """
 
   alias Julep.Iced.A11y
