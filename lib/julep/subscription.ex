@@ -168,6 +168,11 @@ defmodule Julep.Subscription do
 
   Delivers `%Julep.Event.Window{}` structs depending on the event.
   The `event_tag` is for subscription management only.
+
+  **Note:** If both `on_window_event` and a specific subscription
+  (e.g. `on_window_resize`) are registered, matching events will be
+  delivered twice -- once from each subscription. Use either the
+  aggregate or specific subscriptions, not both.
   """
   @spec on_window_event(event_tag :: atom()) :: t()
   def on_window_event(event_tag) when is_atom(event_tag) do
