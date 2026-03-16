@@ -138,33 +138,6 @@ defmodule Julep.Iced.Theme do
     |> maybe_put("warning", opts[:warning])
   end
 
-  @doc """
-  Encodes a theme to its wire-format representation.
-
-  Built-in theme atoms are converted to PascalCase strings. Custom theme maps
-  are passed through unchanged.
-
-  ## Examples
-
-      iex> Julep.Iced.Theme.encode(:dark)
-      "Dark"
-
-      iex> Julep.Iced.Theme.encode(:catppuccin_mocha)
-      "CatppuccinMocha"
-
-      iex> Julep.Iced.Theme.encode(%{"name" => "Mine", "primary" => "#ff0000"})
-      %{"name" => "Mine", "primary" => "#ff0000"}
-  """
-  @spec encode(theme :: t()) :: String.t() | map()
-  def encode(theme) when theme in @themes do
-    theme
-    |> Atom.to_string()
-    |> String.split("_")
-    |> Enum.map_join(&String.capitalize/1)
-  end
-
-  def encode(%{} = custom) when is_map(custom), do: custom
-
   # -- Private ----------------------------------------------------------------
 
   defp maybe_put(map, _key, nil), do: map

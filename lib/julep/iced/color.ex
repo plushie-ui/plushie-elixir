@@ -240,6 +240,14 @@ defmodule Julep.Iced.Color do
   @spec from_hex(hex :: String.t()) :: t()
   def from_hex("#" <> hex), do: from_hex(hex)
 
+  def from_hex(<<r, g, b>> = hex) when byte_size(hex) == 3 do
+    from_hex(<<r, r, g, g, b, b>>)
+  end
+
+  def from_hex(<<r, g, b, a>> = hex) when byte_size(hex) == 4 do
+    from_hex(<<r, r, g, g, b, b, a, a>>)
+  end
+
   def from_hex(hex) when byte_size(hex) == 6 do
     "#" <> String.downcase(hex)
   end
@@ -294,6 +302,7 @@ defmodule Julep.Iced.Color do
   end
 
   def cast("#" <> _ = hex), do: from_hex(hex)
+  def cast(hex) when is_binary(hex), do: from_hex(hex)
 
   @doc """
   Returns the map of all supported named colors.

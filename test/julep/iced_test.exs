@@ -425,23 +425,6 @@ defmodule Julep.IcedTest do
       assert :catppuccin_mocha in themes
     end
 
-    test "encode/1 converts to PascalCase" do
-      assert Theme.encode(:dark) == "Dark"
-      assert Theme.encode(:light) == "Light"
-      assert Theme.encode(:catppuccin_mocha) == "CatppuccinMocha"
-      assert Theme.encode(:solarized_light) == "SolarizedLight"
-      assert Theme.encode(:tokyo_night_storm) == "TokyoNightStorm"
-    end
-
-    test "encode/1 rejects unknown themes" do
-      assert_raise FunctionClauseError, fn -> Theme.encode(:neon_pink) end
-    end
-
-    test "encode/1 passes custom theme maps through unchanged" do
-      custom = %{"name" => "Mine", "primary" => "#ff0000", "background" => "#000000"}
-      assert Theme.encode(custom) == custom
-    end
-
     test "custom/2 builds a map with name and provided options" do
       result = Theme.custom("Tokyo Remix", primary: "#7aa2f7", danger: "#f7768e")
       assert result == %{"name" => "Tokyo Remix", "primary" => "#7aa2f7", "danger" => "#f7768e"}

@@ -52,7 +52,8 @@ defmodule Julep.Iced.Widget.Themer do
 
     def to_node(t) do
       props =
-        %{"theme" => t.theme}
+        %{}
+        |> put_if(t.theme, "theme")
         |> put_if(t.a11y, "a11y")
 
       %{
