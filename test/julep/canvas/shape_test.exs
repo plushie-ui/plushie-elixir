@@ -338,4 +338,64 @@ defmodule Julep.Canvas.ShapeTest do
       assert types == ["push_clip", "push_clip", "rect", "pop_clip", "rect", "pop_clip"]
     end
   end
+
+  # -- Per-shape opacity ------------------------------------------------------
+
+  describe "opacity option" do
+    test "rect accepts opacity" do
+      result = Shape.rect(0, 0, 100, 50, fill: "#ff0000", opacity: 0.5)
+      assert result["opacity"] == 0.5
+    end
+
+    test "circle accepts opacity" do
+      result = Shape.circle(50, 50, 25, fill: "#00ff00", opacity: 0.3)
+      assert result["opacity"] == 0.3
+    end
+
+    test "line accepts opacity" do
+      result = Shape.line(0, 0, 100, 100, stroke: Shape.stroke("#000", 1), opacity: 0.8)
+      assert result["opacity"] == 0.8
+    end
+
+    test "text accepts opacity" do
+      result = Shape.text(10, 10, "Faded", fill: "#000", opacity: 0.25)
+      assert result["opacity"] == 0.25
+    end
+
+    test "path accepts opacity" do
+      result = Shape.path([Shape.move_to(0, 0)], fill: "#fff", opacity: 0.1)
+      assert result["opacity"] == 0.1
+    end
+
+    test "opacity is omitted when not set" do
+      result = Shape.rect(0, 0, 100, 50, fill: "#ff0000")
+      refute Map.has_key?(result, "opacity")
+    end
+  end
+
+  # -- Text alignment ---------------------------------------------------------
+
+  describe "text alignment options" do
+    test "text accepts align_x" do
+      result = Shape.text(100, 50, "Centered", fill: "#000", align_x: "center")
+      assert result["align_x"] == "center"
+    end
+
+    test "text accepts align_y" do
+      result = Shape.text(100, 50, "Middle", fill: "#000", align_y: "center")
+      assert result["align_y"] == "center"
+    end
+
+    test "text accepts both align_x and align_y" do
+      result = Shape.text(100, 50, "Both", fill: "#000", align_x: "right", align_y: "bottom")
+      assert result["align_x"] == "right"
+      assert result["align_y"] == "bottom"
+    end
+
+    test "alignment keys are omitted when not set" do
+      result = Shape.text(10, 10, "Default")
+      refute Map.has_key?(result, "align_x")
+      refute Map.has_key?(result, "align_y")
+    end
+  end
 end

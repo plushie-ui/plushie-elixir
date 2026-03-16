@@ -43,6 +43,23 @@ defmodule Julep.Canvas.Shape do
 
   Clip regions nest -- inner clips are intersected with outer clips.
 
+  ## Per-shape opacity
+
+  All shapes accept an `:opacity` option (0.0-1.0) that multiplies into
+  the fill and stroke color alpha channels:
+
+      rect(0, 0, 100, 100, fill: "#ff0000", opacity: 0.5)
+      circle(50, 50, 25, stroke: stroke("#000", 2), opacity: 0.3)
+
+  ## Text alignment
+
+  The `text/4` builder accepts `:align_x` and `:align_y` options:
+
+      text(100, 50, "Centered", fill: "#000", align_x: "center", align_y: "center")
+
+  Valid values for `:align_x`: `"left"`, `"center"`, `"right"`.
+  Valid values for `:align_y`: `"top"`, `"center"`, `"bottom"`.
+
   ## Gradients
 
   Use `linear_gradient/3` as a `fill` value:
@@ -61,6 +78,7 @@ defmodule Julep.Canvas.Shape do
     %{"type" => "rect", "x" => x, "y" => y, "w" => w, "h" => h}
     |> apply_fill(opts)
     |> apply_stroke(opts)
+    |> apply_opacity(opts)
   end
 
   @doc "Builds a circle shape descriptor."
@@ -69,6 +87,7 @@ defmodule Julep.Canvas.Shape do
     %{"type" => "circle", "x" => x, "y" => y, "r" => r}
     |> apply_fill(opts)
     |> apply_stroke(opts)
+    |> apply_opacity(opts)
   end
 
   @doc "Builds a line shape descriptor."
@@ -82,6 +101,7 @@ defmodule Julep.Canvas.Shape do
   def line(x1, y1, x2, y2, opts \\ []) do
     %{"type" => "line", "x1" => x1, "y1" => y1, "x2" => x2, "y2" => y2}
     |> apply_stroke(opts)
+    |> apply_opacity(opts)
   end
 
   @doc "Builds a text shape descriptor."
@@ -91,6 +111,9 @@ defmodule Julep.Canvas.Shape do
     |> apply_fill(opts)
     |> maybe_put(opts, :size, "size")
     |> maybe_put(opts, :font, "font")
+    |> maybe_put(opts, :align_x, "align_x")
+    |> maybe_put(opts, :align_y, "align_y")
+    |> apply_opacity(opts)
   end
 
   # -- Path shape -------------------------------------------------------------
@@ -107,6 +130,7 @@ defmodule Julep.Canvas.Shape do
     %{"type" => "path", "commands" => commands}
     |> apply_fill(opts)
     |> apply_stroke(opts)
+    |> apply_opacity(opts)
   end
 
   # -- Path commands ----------------------------------------------------------
@@ -319,6 +343,13 @@ defmodule Julep.Canvas.Shape do
     case Keyword.get(opts, :dash) do
       nil -> map
       {segments, offset} -> Map.put(map, "dash", %{"segments" => segments, "offset" => offset})
+    end
+  end
+
+  defp apply_opacity(shape, opts) do
+    case Keyword.get(opts, :opacity) do
+      nil -> shape
+      opacity -> Map.put(shape, "opacity", opacity)
     end
   end
 end
