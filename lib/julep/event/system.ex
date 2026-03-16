@@ -8,8 +8,8 @@ defmodule Julep.Event.System do
 
   ## Fields
 
-    * `type` - `:system_info`, `:system_theme`, `:animation_frame`, or
-      `:theme_changed`
+    * `type` - `:system_info`, `:system_theme`, `:animation_frame`,
+      `:theme_changed`, or `:all_windows_closed`
     * `tag` - caller-supplied correlation tag from the originating query
     * `data` - payload; shape depends on event type (e.g. a map of system
       info fields, a theme name string, or a frame timestamp)
@@ -30,7 +30,12 @@ defmodule Julep.Event.System do
   """
 
   @type t :: %__MODULE__{
-          type: :system_info | :system_theme | :animation_frame | :theme_changed,
+          type:
+            :system_info
+            | :system_theme
+            | :animation_frame
+            | :theme_changed
+            | :all_windows_closed,
           tag: String.t() | nil,
           data: term()
         }

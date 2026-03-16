@@ -129,6 +129,23 @@ defmodule Julep.Subscription do
   end
 
   @doc """
+  Fires when keyboard modifier state changes (shift, ctrl, alt, etc.).
+
+  Delivers `%Julep.Event.Modifiers{modifiers: %KeyModifiers{}, captured: bool}`
+  to `update/2`. The `event_tag` is for subscription management only.
+
+  ## Example
+
+      Julep.Subscription.on_modifiers_changed(:mods)
+
+      def update(model, %Julep.Event.Modifiers{modifiers: %{shift: true}}), do: ...
+  """
+  @spec on_modifiers_changed(event_tag :: atom()) :: t()
+  def on_modifiers_changed(event_tag) when is_atom(event_tag) do
+    %{type: :on_modifiers_changed, tag: event_tag}
+  end
+
+  @doc """
   Fires when a window close is requested (e.g. user clicks the close button).
 
   Delivers `%Julep.Event.Window{type: :close_requested, window_id: id}` to `update/2`.
@@ -325,15 +342,6 @@ defmodule Julep.Subscription do
   @spec on_event(event_tag :: atom()) :: t()
   def on_event(event_tag) when is_atom(event_tag) do
     %{type: :on_event, tag: event_tag}
-  end
-
-  @doc """
-  Subscribes to keyboard modifier state changes (shift, ctrl, alt, etc.).
-  The `event_tag` is for subscription management only.
-  """
-  @spec on_modifiers_changed(tag :: atom()) :: t()
-  def on_modifiers_changed(tag) when is_atom(tag) do
-    %{type: :on_modifiers_changed, tag: tag}
   end
 
   @doc "Combines a list of subscriptions. Identity function -- returns the list as-is."

@@ -1333,6 +1333,14 @@ defmodule Julep.Protocol do
     %System{type: :system_theme, tag: tag, data: data}
   end
 
+  # -- All windows closed --
+
+  defp dispatch(%{"type" => "event", "family" => "all_windows_closed"}) do
+    %System{type: :all_windows_closed}
+  end
+
+  # -- Hello (internal, never reaches update/2) --
+
   defp dispatch(%{
          "type" => "hello",
          "protocol" => protocol,
@@ -1340,6 +1348,12 @@ defmodule Julep.Protocol do
          "name" => name
        }) do
     {:hello, protocol, version, name}
+  end
+
+  # -- Generic/extension events (unrecognized families) --
+
+  defp dispatch(%{"type" => "event", "family" => family, "id" => id} = msg) do
+    %Widget{type: String.to_atom(family), id: id, data: msg["data"], value: msg["value"]}
   end
 
   defp dispatch(msg) do
