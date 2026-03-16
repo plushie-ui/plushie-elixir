@@ -1353,7 +1353,7 @@ defmodule Julep.Protocol do
   # -- Generic/extension events (unrecognized families) --
 
   defp dispatch(%{"type" => "event", "family" => family, "id" => id} = msg) do
-    %Widget{type: String.to_atom(family), id: id, data: msg["data"], value: msg["value"]}
+    %Widget{type: family, id: id, data: msg["data"], value: msg["value"]}
   end
 
   defp dispatch(msg) do

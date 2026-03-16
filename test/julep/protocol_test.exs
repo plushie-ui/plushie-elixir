@@ -429,7 +429,7 @@ defmodule Julep.ProtocolTest do
 
     test "unknown event family dispatches as generic Widget event" do
       json = Jason.encode!(%{type: "event", family: "levitate", id: "wizard"})
-      assert %Julep.Event.Widget{type: :levitate, id: "wizard"} = Protocol.decode_message(json, :json)
+      assert %Julep.Event.Widget{type: "levitate", id: "wizard"} = Protocol.decode_message(json, :json)
     end
 
     test "the unknown_message tuple carries the decoded map" do

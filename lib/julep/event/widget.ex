@@ -12,6 +12,7 @@ defmodule Julep.Event.Widget do
   @type event_type ::
           :click | :input | :submit | :toggle | :select | :slide | :slide_release
           | :paste | :open | :close | :option_hovered | :key_binding | :sort | :scroll
+          | String.t()
 
   @type t :: %__MODULE__{
           type: event_type(),
