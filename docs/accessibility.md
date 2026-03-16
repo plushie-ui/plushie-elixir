@@ -149,6 +149,11 @@ override or augment the inferred semantics.
 | `expanded` | `boolean()` | Expanded/collapsed state (menus, disclosures) |
 | `required` | `boolean()` | Mark form field as required |
 | `level` | `pos_integer()` | Heading level (1-6, only meaningful with `:heading` role) |
+| `busy` | `boolean()` | Loading/processing state (AT announces when done) |
+| `invalid` | `boolean()` | Form validation failure |
+| `modal` | `boolean()` | Dialog is modal (AT restricts navigation to this container) |
+| `read_only` | `boolean()` | Can be read but not edited |
+| `mnemonic` | `String.t()` | Alt+letter keyboard shortcut (single character) |
 
 The type is defined in `Julep.Iced.A11y`. All fields are optional -- only
 include what you need. Both structs and bare maps are accepted; bare maps
@@ -686,7 +691,8 @@ behind switching to this approach.
 
 - **`A11yOverride`** -- wraps any iced `Element` and intercepts `operate()`
   to apply Elixir-side overrides from the `a11y` prop (role, label,
-  description, live, expanded, required, level).
+  description, live, expanded, required, level, busy, invalid, modal,
+  read_only, mnemonic).
 - **`HiddenInterceptor`** -- wraps an `Element` and suppresses it from the
   accessibility tree when `hidden: true` is set.
 

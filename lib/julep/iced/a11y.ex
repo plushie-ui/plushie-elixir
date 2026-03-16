@@ -21,10 +21,16 @@ defmodule Julep.Iced.A11y do
   - `expanded` -- expanded/collapsed state for disclosure widgets
   - `required` -- marks a form field as required
   - `level` -- heading level (1-6)
+  - `busy` -- loading/processing state
+  - `invalid` -- form validation failure
+  - `modal` -- dialog is modal
+  - `read_only` -- can be read but not edited
+  - `mnemonic` -- Alt+letter keyboard shortcut (single character)
   """
 
   defstruct [:role, :label, :description, :live, :hidden, :expanded,
-             :required, :level]
+             :required, :level, :busy, :invalid, :modal, :read_only,
+             :mnemonic]
 
   @type role ::
           :alert
@@ -80,7 +86,12 @@ defmodule Julep.Iced.A11y do
           hidden: boolean() | nil,
           expanded: boolean() | nil,
           required: boolean() | nil,
-          level: pos_integer() | nil
+          level: pos_integer() | nil,
+          busy: boolean() | nil,
+          invalid: boolean() | nil,
+          modal: boolean() | nil,
+          read_only: boolean() | nil,
+          mnemonic: String.t() | nil
         }
 
   @doc """
@@ -110,7 +121,12 @@ defmodule Julep.Iced.A11y do
       hidden: map[:hidden],
       expanded: map[:expanded],
       required: map[:required],
-      level: map[:level]
+      level: map[:level],
+      busy: map[:busy],
+      invalid: map[:invalid],
+      modal: map[:modal],
+      read_only: map[:read_only],
+      mnemonic: map[:mnemonic]
     }
   end
 end

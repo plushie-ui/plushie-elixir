@@ -48,4 +48,112 @@ defmodule Julep.Iced.A11yTest do
       assert node.props["a11y"]["label"] == "Close"
     end
   end
+
+  alias Julep.Iced.A11y
+
+  describe "struct creation with new fields" do
+    test "busy field" do
+      a = %A11y{busy: true}
+      assert a.busy == true
+    end
+
+    test "invalid field" do
+      a = %A11y{invalid: true}
+      assert a.invalid == true
+    end
+
+    test "modal field" do
+      a = %A11y{modal: true}
+      assert a.modal == true
+    end
+
+    test "read_only field" do
+      a = %A11y{read_only: true}
+      assert a.read_only == true
+    end
+
+    test "mnemonic field" do
+      a = %A11y{mnemonic: "S"}
+      assert a.mnemonic == "S"
+    end
+
+    test "new fields default to nil" do
+      a = %A11y{}
+      assert a.busy == nil
+      assert a.invalid == nil
+      assert a.modal == nil
+      assert a.read_only == nil
+      assert a.mnemonic == nil
+    end
+  end
+
+  describe "cast/1 with new fields" do
+    test "cast bare map with busy" do
+      a = A11y.cast(%{busy: true, label: "Loading"})
+      assert %A11y{busy: true, label: "Loading"} = a
+    end
+
+    test "cast bare map with invalid" do
+      a = A11y.cast(%{invalid: true, required: true})
+      assert %A11y{invalid: true, required: true} = a
+    end
+
+    test "cast bare map with modal" do
+      a = A11y.cast(%{modal: true, role: :dialog})
+      assert %A11y{modal: true, role: :dialog} = a
+    end
+
+    test "cast bare map with read_only" do
+      a = A11y.cast(%{read_only: true})
+      assert %A11y{read_only: true} = a
+    end
+
+    test "cast bare map with mnemonic" do
+      a = A11y.cast(%{mnemonic: "F"})
+      assert %A11y{mnemonic: "F"} = a
+    end
+
+    test "cast bare map with all new fields" do
+      a = A11y.cast(%{busy: true, invalid: false, modal: true, read_only: true, mnemonic: "X"})
+      assert a.busy == true
+      assert a.invalid == false
+      assert a.modal == true
+      assert a.read_only == true
+      assert a.mnemonic == "X"
+    end
+
+    test "cast passthrough for struct with new fields" do
+      a = %A11y{busy: true, modal: true}
+      assert A11y.cast(a) == a
+    end
+  end
+
+  describe "encoding new fields" do
+    test "nil new fields are omitted from encoding" do
+      a = %A11y{label: "test"}
+      encoded = Julep.Iced.Encode.encode(a)
+      refute Map.has_key?(encoded, "busy")
+      refute Map.has_key?(encoded, "invalid")
+      refute Map.has_key?(encoded, "modal")
+      refute Map.has_key?(encoded, "read_only")
+      refute Map.has_key?(encoded, "mnemonic")
+    end
+
+    test "present new fields are included in encoding" do
+      a = %A11y{busy: true, invalid: true, modal: true, read_only: true, mnemonic: "S"}
+      encoded = Julep.Iced.Encode.encode(a)
+      assert encoded["busy"] == true
+      assert encoded["invalid"] == true
+      assert encoded["modal"] == true
+      assert encoded["read_only"] == true
+      assert encoded["mnemonic"] == "S"
+    end
+
+    test "false values are preserved in encoding" do
+      a = %A11y{busy: false, invalid: false}
+      encoded = Julep.Iced.Encode.encode(a)
+      assert encoded["busy"] == false
+      assert encoded["invalid"] == false
+    end
+  end
 end
