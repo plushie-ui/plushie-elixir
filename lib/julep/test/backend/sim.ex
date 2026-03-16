@@ -201,7 +201,7 @@ defmodule Julep.Test.Backend.Sim do
   end
 
   def handle_call({:move_to, x, y}, _from, state) do
-    state = dispatch_raw(state, {:cursor_moved, x, y})
+    state = dispatch_raw(state, {:cursor_moved, %{x: x, y: y, captured: false}})
     {:reply, :ok, state}
   end
 

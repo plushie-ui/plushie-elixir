@@ -315,7 +315,7 @@ defmodule Julep.ProtocolTest do
           data: %{kind: "opened"}
         })
 
-      assert {:ime_opened} = Protocol.decode_message(json, :json)
+      assert {:ime_opened, %{captured: false}} = Protocol.decode_message(json, :json)
     end
 
     test "decodes ime preedit with cursor" do
@@ -327,7 +327,7 @@ defmodule Julep.ProtocolTest do
           data: %{kind: "preedit", text: "hello", cursor: %{start: 2, end: 5}}
         })
 
-      assert {:ime_preedit, "hello", {2, 5}} = Protocol.decode_message(json, :json)
+      assert {:ime_preedit, %{text: "hello", cursor: {2, 5}, captured: false}} = Protocol.decode_message(json, :json)
     end
 
     test "decodes ime preedit without cursor" do
@@ -339,7 +339,7 @@ defmodule Julep.ProtocolTest do
           data: %{kind: "preedit", text: "hi", cursor: nil}
         })
 
-      assert {:ime_preedit, "hi", nil} = Protocol.decode_message(json, :json)
+      assert {:ime_preedit, %{text: "hi", cursor: nil, captured: false}} = Protocol.decode_message(json, :json)
     end
 
     test "decodes ime commit" do
@@ -351,7 +351,7 @@ defmodule Julep.ProtocolTest do
           data: %{kind: "commit", text: "final"}
         })
 
-      assert {:ime_commit, "final"} = Protocol.decode_message(json, :json)
+      assert {:ime_commit, %{text: "final", captured: false}} = Protocol.decode_message(json, :json)
     end
 
     test "decodes ime closed" do
@@ -363,7 +363,7 @@ defmodule Julep.ProtocolTest do
           data: %{kind: "closed"}
         })
 
-      assert {:ime_closed} = Protocol.decode_message(json, :json)
+      assert {:ime_closed, %{captured: false}} = Protocol.decode_message(json, :json)
     end
   end
 

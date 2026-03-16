@@ -381,7 +381,7 @@ defmodule Julep.Test.Backend.RendererBase do
       defp decode_event("cursor_moved", _id, event) do
         x = event["x"] || 0
         y = event["y"] || 0
-        {:cursor_moved, x, y}
+        {:cursor_moved, %{x: x, y: y, captured: false}}
       end
 
       @known_extension_events ~w(extension_event extension_error)a

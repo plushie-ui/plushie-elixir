@@ -938,108 +938,137 @@ defmodule Julep.Protocol do
 
   # -- Mouse events --
 
-  defp dispatch(%{"type" => "event", "family" => "cursor_moved", "data" => %{"x" => x, "y" => y}}) do
-    {:cursor_moved, x, y}
+  defp dispatch(
+         %{"type" => "event", "family" => "cursor_moved", "data" => %{"x" => x, "y" => y}} = msg
+       ) do
+    {:cursor_moved, %{x: x, y: y, captured: msg["captured"] || false}}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "cursor_entered"}) do
-    {:cursor_entered}
+  defp dispatch(%{"type" => "event", "family" => "cursor_entered"} = msg) do
+    {:cursor_entered, %{captured: msg["captured"] || false}}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "cursor_left"}) do
-    {:cursor_left}
+  defp dispatch(%{"type" => "event", "family" => "cursor_left"} = msg) do
+    {:cursor_left, %{captured: msg["captured"] || false}}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "button_pressed", "value" => button}) do
-    {:button_pressed, button}
+  defp dispatch(%{"type" => "event", "family" => "button_pressed", "value" => button} = msg) do
+    {:button_pressed, %{button: button, captured: msg["captured"] || false}}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "button_released", "value" => button}) do
-    {:button_released, button}
+  defp dispatch(%{"type" => "event", "family" => "button_released", "value" => button} = msg) do
+    {:button_released, %{button: button, captured: msg["captured"] || false}}
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "wheel_scrolled",
-         "data" => %{"delta_x" => dx, "delta_y" => dy, "unit" => unit}
-       }) do
-    {:wheel_scrolled, dx, dy, unit}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "wheel_scrolled",
+           "data" => %{"delta_x" => dx, "delta_y" => dy, "unit" => unit}
+         } = msg
+       ) do
+    {:wheel_scrolled,
+     %{delta_x: dx, delta_y: dy, unit: unit, captured: msg["captured"] || false}}
   end
 
   # -- IME events --
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "ime",
-         "data" => %{"kind" => "opened"}
-       }) do
-    {:ime_opened}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "ime",
+           "data" => %{"kind" => "opened"}
+         } = msg
+       ) do
+    {:ime_opened, %{captured: msg["captured"] || false}}
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "ime",
-         "data" => %{"kind" => "preedit", "text" => text, "cursor" => %{"start" => s, "end" => e}}
-       }) do
-    {:ime_preedit, text, {s, e}}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "ime",
+           "data" => %{"kind" => "preedit", "text" => text, "cursor" => %{"start" => s, "end" => e}}
+         } = msg
+       ) do
+    {:ime_preedit,
+     %{text: text, cursor: {s, e}, captured: msg["captured"] || false}}
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "ime",
-         "data" => %{"kind" => "preedit", "text" => text}
-       }) do
-    {:ime_preedit, text, nil}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "ime",
+           "data" => %{"kind" => "preedit", "text" => text}
+         } = msg
+       ) do
+    {:ime_preedit,
+     %{text: text, cursor: nil, captured: msg["captured"] || false}}
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "ime",
-         "data" => %{"kind" => "commit", "text" => text}
-       }) do
-    {:ime_commit, text}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "ime",
+           "data" => %{"kind" => "commit", "text" => text}
+         } = msg
+       ) do
+    {:ime_commit, %{text: text, captured: msg["captured"] || false}}
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "ime",
-         "data" => %{"kind" => "closed"}
-       }) do
-    {:ime_closed}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "ime",
+           "data" => %{"kind" => "closed"}
+         } = msg
+       ) do
+    {:ime_closed, %{captured: msg["captured"] || false}}
   end
 
   # -- Touch events --
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "finger_pressed",
-         "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
-       }) do
-    {:finger_pressed, finger_id, x, y}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "finger_pressed",
+           "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
+         } = msg
+       ) do
+    {:finger_pressed,
+     %{finger_id: finger_id, x: x, y: y, captured: msg["captured"] || false}}
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "finger_moved",
-         "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
-       }) do
-    {:finger_moved, finger_id, x, y}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "finger_moved",
+           "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
+         } = msg
+       ) do
+    {:finger_moved,
+     %{finger_id: finger_id, x: x, y: y, captured: msg["captured"] || false}}
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "finger_lifted",
-         "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
-       }) do
-    {:finger_lifted, finger_id, x, y}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "finger_lifted",
+           "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
+         } = msg
+       ) do
+    {:finger_lifted,
+     %{finger_id: finger_id, x: x, y: y, captured: msg["captured"] || false}}
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "finger_lost",
-         "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
-       }) do
-    {:finger_lost, finger_id, x, y}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "finger_lost",
+           "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
+         } = msg
+       ) do
+    {:finger_lost,
+     %{finger_id: finger_id, x: x, y: y, captured: msg["captured"] || false}}
   end
 
   # -- Window lifecycle events --

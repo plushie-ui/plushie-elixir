@@ -16,7 +16,7 @@ defmodule Julep.Test.SimRawInputTest do
       %{model | events: model.events ++ [{:release, event.key, event.modifiers}]}
     end
 
-    def update(model, {:cursor_moved, x, y}) do
+    def update(model, {:cursor_moved, %{x: x, y: y}}) do
       %{model | cursor: {x, y}}
     end
 

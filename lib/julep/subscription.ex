@@ -215,7 +215,9 @@ defmodule Julep.Subscription do
   @doc """
   Fires on mouse movement.
 
-  Delivers `{:cursor_moved, x, y}` to `update/2`.
+  Delivers `{:cursor_moved, %{x: x, y: y, captured: bool}}` to `update/2`.
+  Also delivers `{:cursor_entered, %{captured: bool}}` and
+  `{:cursor_left, %{captured: bool}}`.
   The `event_tag` is for subscription management only.
   """
   @spec on_mouse_move(event_tag :: atom()) :: t()
@@ -226,8 +228,9 @@ defmodule Julep.Subscription do
   @doc """
   Fires on mouse button press/release.
 
-  Delivers `{:button_pressed, button}` or `{:button_released, button}`
-  to `update/2`. `button` is a string like `"left"`, `"right"`, `"middle"`.
+  Delivers `{:button_pressed, %{button: str, captured: bool}}` or
+  `{:button_released, %{button: str, captured: bool}}` to `update/2`.
+  `button` is `"left"`, `"right"`, or `"middle"`.
   The `event_tag` is for subscription management only.
   """
   @spec on_mouse_button(event_tag :: atom()) :: t()
@@ -238,7 +241,8 @@ defmodule Julep.Subscription do
   @doc """
   Fires on mouse scroll events.
 
-  Delivers `{:wheel_scrolled, delta_x, delta_y, unit}` to `update/2`.
+  Delivers `{:wheel_scrolled, %{delta_x: num, delta_y: num, unit: str, captured: bool}}`
+  to `update/2`.
   The `event_tag` is for subscription management only.
   """
   @spec on_mouse_scroll(event_tag :: atom()) :: t()
@@ -251,10 +255,10 @@ defmodule Julep.Subscription do
 
   Delivers one of:
 
-  * `{:ime_opened}` -- the IME session started
-  * `{:ime_preedit, text, {start, end} | nil}` -- composing text updated
-  * `{:ime_commit, text}` -- final text committed
-  * `{:ime_closed}` -- the IME session ended
+  * `{:ime_opened, %{captured: bool}}` -- the IME session started
+  * `{:ime_preedit, %{text: str, cursor: {start, end} | nil, captured: bool}}`
+  * `{:ime_commit, %{text: str, captured: bool}}` -- final text committed
+  * `{:ime_closed, %{captured: bool}}` -- the IME session ended
 
   The `event_tag` is for subscription management only.
   """
@@ -266,10 +270,9 @@ defmodule Julep.Subscription do
   @doc """
   Fires on touch events.
 
-  Delivers `{:finger_pressed, finger_id, x, y}`,
-  `{:finger_moved, finger_id, x, y}`,
-  `{:finger_lifted, finger_id, x, y}`, or
-  `{:finger_lost, finger_id, x, y}` to `update/2`.
+  Delivers `{:finger_pressed, %{finger_id: id, x: num, y: num, captured: bool}}`,
+  `{:finger_moved, ...}`, `{:finger_lifted, ...}`, or `{:finger_lost, ...}`
+  to `update/2`.
   The `event_tag` is for subscription management only.
   """
   @spec on_touch(event_tag :: atom()) :: t()

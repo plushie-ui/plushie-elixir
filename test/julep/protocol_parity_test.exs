@@ -337,45 +337,45 @@ defmodule Julep.ProtocolParityTest do
   describe "cursor_moved event" do
     test "decodes cursor position" do
       json = Jason.encode!(%{type: "event", family: "cursor_moved", data: %{x: 100.5, y: 200.3}})
-      assert {:cursor_moved, 100.5, 200.3} = Protocol.decode_message(json, :json)
+      assert {:cursor_moved, %{x: 100.5, y: 200.3, captured: false}} = Protocol.decode_message(json, :json)
     end
 
     test "decodes integer coordinates" do
       json = Jason.encode!(%{type: "event", family: "cursor_moved", data: %{x: 0, y: 0}})
-      assert {:cursor_moved, 0, 0} = Protocol.decode_message(json, :json)
+      assert {:cursor_moved, %{x: 0, y: 0, captured: false}} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "cursor_entered event" do
     test "decodes cursor entered" do
       json = Jason.encode!(%{type: "event", family: "cursor_entered"})
-      assert {:cursor_entered} = Protocol.decode_message(json, :json)
+      assert {:cursor_entered, %{captured: false}} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "cursor_left event" do
     test "decodes cursor left" do
       json = Jason.encode!(%{type: "event", family: "cursor_left"})
-      assert {:cursor_left} = Protocol.decode_message(json, :json)
+      assert {:cursor_left, %{captured: false}} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "button_pressed event" do
     test "decodes mouse button press" do
       json = Jason.encode!(%{type: "event", family: "button_pressed", value: "left"})
-      assert {:button_pressed, "left"} = Protocol.decode_message(json, :json)
+      assert {:button_pressed, %{button: "left", captured: false}} = Protocol.decode_message(json, :json)
     end
 
     test "decodes right button press" do
       json = Jason.encode!(%{type: "event", family: "button_pressed", value: "right"})
-      assert {:button_pressed, "right"} = Protocol.decode_message(json, :json)
+      assert {:button_pressed, %{button: "right", captured: false}} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "button_released event" do
     test "decodes mouse button release" do
       json = Jason.encode!(%{type: "event", family: "button_released", value: "left"})
-      assert {:button_released, "left"} = Protocol.decode_message(json, :json)
+      assert {:button_released, %{button: "left", captured: false}} = Protocol.decode_message(json, :json)
     end
   end
 
@@ -388,7 +388,7 @@ defmodule Julep.ProtocolParityTest do
           data: %{delta_x: 0.0, delta_y: -3.0, unit: "line"}
         })
 
-      assert {:wheel_scrolled, 0.0, -3.0, "line"} = Protocol.decode_message(json, :json)
+      assert {:wheel_scrolled, %{delta_x: 0.0, delta_y: -3.0, unit: "line", captured: false}} = Protocol.decode_message(json, :json)
     end
 
     test "decodes pixel scroll unit" do
@@ -399,7 +399,7 @@ defmodule Julep.ProtocolParityTest do
           data: %{delta_x: 10.0, delta_y: 20.0, unit: "pixel"}
         })
 
-      assert {:wheel_scrolled, 10.0, 20.0, "pixel"} = Protocol.decode_message(json, :json)
+      assert {:wheel_scrolled, %{delta_x: 10.0, delta_y: 20.0, unit: "pixel", captured: false}} = Protocol.decode_message(json, :json)
     end
   end
 
@@ -416,7 +416,7 @@ defmodule Julep.ProtocolParityTest do
           data: %{finger_id: 0, x: 50.0, y: 75.0}
         })
 
-      assert {:finger_pressed, 0, 50.0, 75.0} = Protocol.decode_message(json, :json)
+      assert {:finger_pressed, %{finger_id: 0, x: 50.0, y: 75.0, captured: false}} = Protocol.decode_message(json, :json)
     end
   end
 
@@ -429,7 +429,7 @@ defmodule Julep.ProtocolParityTest do
           data: %{finger_id: 1, x: 60.0, y: 80.0}
         })
 
-      assert {:finger_moved, 1, 60.0, 80.0} = Protocol.decode_message(json, :json)
+      assert {:finger_moved, %{finger_id: 1, x: 60.0, y: 80.0, captured: false}} = Protocol.decode_message(json, :json)
     end
   end
 
@@ -442,7 +442,7 @@ defmodule Julep.ProtocolParityTest do
           data: %{finger_id: 0, x: 55.0, y: 70.0}
         })
 
-      assert {:finger_lifted, 0, 55.0, 70.0} = Protocol.decode_message(json, :json)
+      assert {:finger_lifted, %{finger_id: 0, x: 55.0, y: 70.0, captured: false}} = Protocol.decode_message(json, :json)
     end
   end
 
@@ -455,7 +455,7 @@ defmodule Julep.ProtocolParityTest do
           data: %{finger_id: 2, x: 30.0, y: 40.0}
         })
 
-      assert {:finger_lost, 2, 30.0, 40.0} = Protocol.decode_message(json, :json)
+      assert {:finger_lost, %{finger_id: 2, x: 30.0, y: 40.0, captured: false}} = Protocol.decode_message(json, :json)
     end
   end
 
