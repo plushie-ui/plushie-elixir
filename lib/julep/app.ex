@@ -43,7 +43,7 @@ defmodule Julep.App do
   """
 
   @type model :: term()
-  @type event :: Julep.Event.t() | {atom(), term()}
+  @type event :: Julep.Event.t()
   @type command :: Julep.Command.t() | [Julep.Command.t()]
 
   @doc """

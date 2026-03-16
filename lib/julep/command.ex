@@ -37,7 +37,7 @@ defmodule Julep.Command do
         {model, cmd}
       end
 
-      def update(model, {:save_result, :ok}), do: %{model | saved: true}
+      def update(model, %Julep.Event.Async{tag: :save_result, result: :ok}), do: %{model | saved: true}
 
   Multiple commands can be issued at once via `batch/1`:
 
@@ -85,7 +85,7 @@ defmodule Julep.Command do
 
   @doc """
   Run `fun` asynchronously in a Task. When it returns, the runtime dispatches
-  `{event_tag, result}` through `update/2`.
+  `%Julep.Event.Async{tag: event_tag, result: result}` through `update/2`.
   """
   @spec async(fun :: fun(), event_tag :: atom()) :: %__MODULE__{}
   def async(fun, event_tag) when is_function(fun) and is_atom(event_tag) do
@@ -654,8 +654,9 @@ defmodule Julep.Command do
 
   @doc """
   Run `fun` as a streaming async task. The function receives an `emit` callback
-  that can send intermediate results to `update/2` as `{event_tag, value}`.
-  The function's final return value is also delivered as `{event_tag, result}`.
+  that sends intermediate results to `update/2` as
+  `%Julep.Event.Stream{tag: event_tag, value: value}`. The function's final
+  return value is delivered as `%Julep.Event.Async{tag: event_tag, result: result}`.
 
   This is sugar over spawning a process manually. You can achieve the same
   thing with bare `Task` and `send/2` if you prefer direct Elixir patterns.

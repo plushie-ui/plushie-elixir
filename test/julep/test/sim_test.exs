@@ -206,7 +206,7 @@ defmodule Julep.Test.SimTest do
         {model, cmd}
       end
 
-      def update(model, {:fetched, result}), do: %{model | value: result}
+      def update(model, %Julep.Event.Async{tag: :fetched, result: result}), do: %{model | value: result}
       def update(model, _event), do: model
 
       def view(model) do
@@ -330,19 +330,19 @@ defmodule Julep.Test.SimTest do
         {model, cmd}
       end
 
-      def update(model, {:chain, :step_1}) do
+      def update(model, %Julep.Event.Async{tag: :chain, result: :step_1}) do
         model = %{model | steps: model.steps ++ [:step_1]}
         cmd = Julep.Command.async(fn -> :step_2 end, :chain)
         {model, cmd}
       end
 
-      def update(model, {:chain, :step_2}) do
+      def update(model, %Julep.Event.Async{tag: :chain, result: :step_2}) do
         model = %{model | steps: model.steps ++ [:step_2]}
         cmd = Julep.Command.async(fn -> :step_3 end, :chain)
         {model, cmd}
       end
 
-      def update(model, {:chain, :step_3}) do
+      def update(model, %Julep.Event.Async{tag: :chain, result: :step_3}) do
         %{model | steps: model.steps ++ [:step_3]}
       end
 
@@ -389,8 +389,8 @@ defmodule Julep.Test.SimTest do
         {model, cmds}
       end
 
-      def update(model, {:got_a, val}), do: %{model | a: val}
-      def update(model, {:got_b, val}), do: %{model | b: val}
+      def update(model, %Julep.Event.Async{tag: :got_a, result: val}), do: %{model | a: val}
+      def update(model, %Julep.Event.Async{tag: :got_b, result: val}), do: %{model | b: val}
       def update(model, _event), do: model
 
       def view(_model) do
@@ -435,11 +435,11 @@ defmodule Julep.Test.SimTest do
         {model, cmd}
       end
 
-      def update(model, {:import, {:chunk, val}}) do
+      def update(model, %Julep.Event.Stream{tag: :import, value: {:chunk, val}}) do
         %{model | chunks: model.chunks ++ [val]}
       end
 
-      def update(model, {:import, :done}) do
+      def update(model, %Julep.Event.Async{tag: :import, result: :done}) do
         %{model | final: :done}
       end
 
@@ -475,7 +475,7 @@ defmodule Julep.Test.SimTest do
         {%{data: nil}, cmd}
       end
 
-      def update(model, {:init_data, val}), do: %{model | data: val}
+      def update(model, %Julep.Event.Async{tag: :init_data, result: val}), do: %{model | data: val}
       def update(model, _event), do: model
 
       def view(model) do

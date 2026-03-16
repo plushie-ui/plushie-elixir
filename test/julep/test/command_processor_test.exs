@@ -17,7 +17,7 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
       {model, cmd}
     end
 
-    def update(model, {:data_loaded, result}), do: %{model | status: :done, data: result}
+    def update(model, %Julep.Event.Async{tag: :data_loaded, result: result}), do: %{model | status: :done, data: result}
     def update(model, _event), do: model
 
     def view(model) do
@@ -52,8 +52,8 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
       {model, cmd}
     end
 
-    def update(model, {:streamed, :done}), do: %{model | items: model.items ++ [:final]}
-    def update(model, {:streamed, item}), do: %{model | items: model.items ++ [item]}
+    def update(model, %Julep.Event.Async{tag: :streamed, result: :done}), do: %{model | items: model.items ++ [:final]}
+    def update(model, %Julep.Event.Stream{tag: :streamed, value: item}), do: %{model | items: model.items ++ [item]}
     def update(model, _event), do: model
 
     def view(model) do
@@ -123,7 +123,7 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
       {%{data: nil}, cmd}
     end
 
-    def update(model, {:init_data, data}), do: %{model | data: data}
+    def update(model, %Julep.Event.Async{tag: :init_data, result: data}), do: %{model | data: data}
     def update(model, _event), do: model
 
     def view(model) do

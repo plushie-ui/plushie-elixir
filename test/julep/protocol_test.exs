@@ -384,13 +384,13 @@ defmodule Julep.ProtocolTest do
           result: %{body: "hello"}
         })
 
-      assert %Effect{id: "req_1", result: {:ok, result}} = Protocol.decode_message(json, :json)
+      assert %Effect{request_id: "req_1", result: {:ok, result}} = Protocol.decode_message(json, :json)
       assert result["body"] == "hello"
     end
 
     test "result can be any JSON-decodable value" do
       json = Jason.encode!(%{type: "effect_response", id: "r", status: "ok", result: 99})
-      assert %Effect{id: "r", result: {:ok, 99}} = Protocol.decode_message(json, :json)
+      assert %Effect{request_id: "r", result: {:ok, 99}} = Protocol.decode_message(json, :json)
     end
   end
 
@@ -405,7 +405,7 @@ defmodule Julep.ProtocolTest do
         })
 
       assert Protocol.decode_message(json, :json) ==
-               %Effect{id: "req_2", result: {:error, "connection refused"}}
+               %Effect{request_id: "req_2", result: {:error, "connection refused"}}
     end
   end
 
@@ -692,14 +692,14 @@ defmodule Julep.ProtocolTest do
       json =
         Jason.encode!(%{type: "effect_response", id: "r1", status: "ok", result: %{data: 42}})
 
-      assert %Effect{id: "r1", result: {:ok, %{"data" => 42}}} = Protocol.decode_message(json, :json)
+      assert %Effect{request_id: "r1", result: {:ok, %{"data" => 42}}} = Protocol.decode_message(json, :json)
     end
 
     test "effect_response error survives JSON roundtrip" do
       json =
         Jason.encode!(%{type: "effect_response", id: "r2", status: "error", error: "timeout"})
 
-      assert %Effect{id: "r2", result: {:error, "timeout"}} = Protocol.decode_message(json, :json)
+      assert %Effect{request_id: "r2", result: {:error, "timeout"}} = Protocol.decode_message(json, :json)
     end
   end
 
@@ -842,7 +842,7 @@ defmodule Julep.ProtocolTest do
 
       packed = Msgpax.pack!(msg, iodata: false)
 
-      assert %Effect{id: "r1", result: {:ok, %{"data" => 42}}} =
+      assert %Effect{request_id: "r1", result: {:ok, %{"data" => 42}}} =
                Protocol.decode_message(packed, :msgpack)
     end
 
@@ -856,7 +856,7 @@ defmodule Julep.ProtocolTest do
 
       packed = Msgpax.pack!(msg, iodata: false)
 
-      assert %Effect{id: "r2", result: {:error, "timeout"}} =
+      assert %Effect{request_id: "r2", result: {:error, "timeout"}} =
                Protocol.decode_message(packed, :msgpack)
     end
 

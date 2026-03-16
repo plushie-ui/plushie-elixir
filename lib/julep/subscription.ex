@@ -13,11 +13,11 @@ defmodule Julep.Subscription do
 
   ### Timer subscriptions (`:every`)
 
-  For `every/2`, the tag **becomes the event wrapper**. Your `update/2`
-  receives `{tag, timestamp}`. The tag IS the message identifier.
+  For `every/2`, the tag **becomes part of the Timer struct**. Your `update/2`
+  receives `%Julep.Event.Timer{tag: tag, timestamp: timestamp}`.
 
       Julep.Subscription.every(1000, :tick)
-      # update/2 receives: {:tick, 1234567890}
+      # update/2 receives: %Julep.Event.Timer{tag: :tick, timestamp: 1234567890}
 
   ### Renderer subscriptions (all others)
 
@@ -44,8 +44,8 @@ defmodule Julep.Subscription do
         subs
       end
 
-      def update(model, {:tick, _timestamp}) do
-        # Timer tag appears as the first element of the event tuple.
+      def update(model, %Julep.Event.Timer{tag: :tick}) do
+        # Timer events are Timer structs with tag and timestamp fields.
         %{model | ticks: model.ticks + 1}
       end
 
@@ -59,7 +59,8 @@ defmodule Julep.Subscription do
   A subscription specification. Every subscription has a `:type` atom
   identifying the kind (`:every`, `:on_key_press`, etc.) and a `:tag`
   atom used for subscription management. For timer subscriptions, the
-  tag is also the event prefix in `update/2` (e.g. `{tag, timestamp}`).
+  tag is also part of the Timer event struct in `update/2`
+  (e.g. `%Julep.Event.Timer{tag: tag, timestamp: timestamp}`).
   For renderer subscriptions (keyboard, window, mouse, etc.), the tag
   is sent to the renderer to register/unregister the listener but is
   not included in the event struct -- those use typed event structs like
@@ -70,16 +71,16 @@ defmodule Julep.Subscription do
   @doc """
   Timer that fires every `interval_ms` milliseconds.
 
-  The tag becomes the event wrapper -- `update/2` receives
-  `{event_tag, timestamp}` where `timestamp` is
-  `System.monotonic_time(:millisecond)`.
+  The tag becomes part of the Timer event struct -- `update/2` receives
+  `%Julep.Event.Timer{tag: event_tag, timestamp: timestamp}` where
+  `timestamp` is `System.monotonic_time(:millisecond)`.
 
   ## Example
 
       Julep.Subscription.every(1000, :tick)
 
       # In update/2:
-      def update(model, {:tick, _timestamp}), do: %{model | count: model.count + 1}
+      def update(model, %Julep.Event.Timer{tag: :tick}), do: %{model | count: model.count + 1}
   """
   @spec every(interval_ms :: pos_integer(), event_tag :: atom()) :: t()
   def every(interval_ms, event_tag)

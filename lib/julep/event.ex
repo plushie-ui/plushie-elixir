@@ -1,7 +1,7 @@
 defmodule Julep.Event do
   @moduledoc "Event types delivered to `update/2`."
 
-  alias Julep.Event.{Widget, Key, Modifiers, Mouse, Touch, Ime, Window, Canvas, MouseArea, Pane, Sensor, Effect, System}
+  alias Julep.Event.{Widget, Key, Modifiers, Mouse, Touch, Ime, Window, Canvas, MouseArea, Pane, Sensor, Effect, System, Timer, Async, Stream}
 
   @type t ::
           Widget.t()
@@ -17,4 +17,7 @@ defmodule Julep.Event do
           | Sensor.t()
           | Effect.t()
           | System.t()
+          | Timer.t()
+          | Async.t()
+          | Stream.t()
 end

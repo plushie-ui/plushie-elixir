@@ -7,11 +7,11 @@ defmodule Julep.Effects do
   clipboard access, notifications, and similar.
 
   Each function returns a `Julep.Command` struct. Dispatch it from
-  `update/2` like any other command. The result arrives later as an
-  `{:effect_result, id, result}` event in `update/2`. The `id` is
-  auto-generated internally and embedded in the command payload. Match
-  on it in the result event if you need to correlate requests and
-  responses.
+  `update/2` like any other command. The result arrives later as a
+  `%Julep.Event.Effect{request_id: id, result: result}` event in
+  `update/2`. The `request_id` is auto-generated internally and embedded
+  in the command payload. Match on it in the result event if you need to
+  correlate requests and responses.
 
   The result is `{:ok, value}` on success or `{:error, reason}` on failure.
 
@@ -35,7 +35,7 @@ defmodule Julep.Effects do
         {model, cmd}
       end
 
-      def update(model, {:effect_result, _id, {:ok, result}}) do
+      def update(model, %Julep.Event.Effect{result: {:ok, result}}) do
         %{model | file: result}
       end
   """

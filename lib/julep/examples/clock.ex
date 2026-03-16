@@ -3,7 +3,7 @@ defmodule Julep.Examples.Clock do
   Clock example showing the current time, updated every second.
 
   Demonstrates `Julep.Subscription.every/2` for timer-based updates.
-  The subscription delivers `{:tick, timestamp}` to `update/2` each second.
+  The subscription delivers `%Julep.Event.Timer{tag: :tick, timestamp: ...}` to `update/2` each second.
   """
 
   use Julep.App
@@ -16,7 +16,7 @@ defmodule Julep.Examples.Clock do
 
   # -- update ----------------------------------------------------------------
 
-  def update(model, {:tick, _timestamp}) do
+  def update(model, %Julep.Event.Timer{tag: :tick}) do
     %{model | time: current_time()}
   end
 

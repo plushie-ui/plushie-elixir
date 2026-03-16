@@ -64,7 +64,7 @@ defmodule Julep.RuntimeTest do
       {model, cmd}
     end
 
-    def update(model, {:async_result, result}), do: %{model | value: result}
+    def update(model, %Julep.Event.Async{tag: :async_result, result: result}), do: %{model | value: result}
     def update(model, _event), do: model
 
     def view(model) do
@@ -369,7 +369,7 @@ defmodule Julep.RuntimeTest do
 
         def init(_opts), do: %{ticks: 0}
 
-        def update(model, {:tick, _timestamp}), do: %{model | ticks: model.ticks + 1}
+        def update(model, %Julep.Event.Timer{tag: :tick}), do: %{model | ticks: model.ticks + 1}
         def update(model, _event), do: model
 
         def subscribe(_model), do: [Julep.Subscription.every(20, :tick)]
@@ -400,7 +400,7 @@ defmodule Julep.RuntimeTest do
 
         def init(_opts), do: %{timer_on: true, ticks: 0}
 
-        def update(model, {:tick, _ts}), do: %{model | ticks: model.ticks + 1}
+        def update(model, %Julep.Event.Timer{tag: :tick}), do: %{model | ticks: model.ticks + 1}
         def update(model, :stop_timer), do: %{model | timer_on: false}
         def update(model, _event), do: model
 
@@ -449,8 +449,8 @@ defmodule Julep.RuntimeTest do
 
         def init(_opts), do: %{fast: 0, slow: 0}
 
-        def update(model, {:fast_tick, _ts}), do: %{model | fast: model.fast + 1}
-        def update(model, {:slow_tick, _ts}), do: %{model | slow: model.slow + 1}
+        def update(model, %Julep.Event.Timer{tag: :fast_tick}), do: %{model | fast: model.fast + 1}
+        def update(model, %Julep.Event.Timer{tag: :slow_tick}), do: %{model | slow: model.slow + 1}
         def update(model, _event), do: model
 
         def subscribe(_model) do
@@ -629,7 +629,7 @@ defmodule Julep.RuntimeTest do
       await_initial_render(runtime)
 
       # Simulate the renderer sending back an effect result.
-      dispatch_and_wait(runtime, %Effect{id: "ef_42", result: {:ok, %{"path" => "/tmp/test.txt"}}})
+      dispatch_and_wait(runtime, %Effect{request_id: "ef_42", result: {:ok, %{"path" => "/tmp/test.txt"}}})
 
       state = :sys.get_state(runtime)
       assert state.model.path == "/tmp/test.txt"
@@ -860,11 +860,11 @@ defmodule Julep.RuntimeTest do
           {model, cmd}
         end
 
-        def update(model, {:import, {:chunk, value}}) do
+        def update(model, %Julep.Event.Stream{tag: :import, value: {:chunk, value}}) do
           %{model | chunks: model.chunks ++ [value]}
         end
 
-        def update(model, {:import, :done}) do
+        def update(model, %Julep.Event.Async{tag: :import, result: :done}) do
           %{model | final: :done}
         end
 
@@ -915,11 +915,11 @@ defmodule Julep.RuntimeTest do
           {%{model | cancelled: true}, Julep.Command.cancel(:import)}
         end
 
-        def update(model, {:import, {:chunk, value}}) do
+        def update(model, %Julep.Event.Stream{tag: :import, value: {:chunk, value}}) do
           %{model | chunks: model.chunks ++ [value]}
         end
 
-        def update(model, {:import, :done}) do
+        def update(model, %Julep.Event.Async{tag: :import, result: :done}) do
           model
         end
 

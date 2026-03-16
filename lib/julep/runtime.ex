@@ -44,7 +44,7 @@ defmodule Julep.Runtime do
 
   require Logger
 
-  alias Julep.Event.Effect
+  alias Julep.Event.{Async, Effect, Stream, Timer}
 
   @typep state :: %{
            app: module(),
@@ -153,7 +153,7 @@ defmodule Julep.Runtime do
   # ---------------------------------------------------------------------------
 
   @impl true
-  def handle_info({:renderer_event, %Effect{id: id} = event}, state) do
+  def handle_info({:renderer_event, %Effect{request_id: id} = event}, state) do
     state = cancel_pending_effect(state, id)
     state = run_update(state, event)
     {:noreply, state}
@@ -227,7 +227,20 @@ defmodule Julep.Runtime do
     case Map.get(state.async_tasks, tag) do
       {_pid, ^nonce} ->
         # Nonce matches -- this is from the current task.
-        state = run_update(state, {tag, result})
+        state = run_update(state, %Async{tag: tag, result: result})
+        {:noreply, state}
+
+      _ ->
+        # Stale or unknown -- discard.
+        {:noreply, state}
+    end
+  end
+
+  def handle_info({:stream_value, tag, nonce, value}, state) do
+    case Map.get(state.async_tasks, tag) do
+      {_pid, ^nonce} ->
+        # Nonce matches -- this is from the current stream task.
+        state = run_update(state, %Stream{tag: tag, value: value})
         {:noreply, state}
 
       _ ->
@@ -265,7 +278,7 @@ defmodule Julep.Runtime do
       {_timer_ref, pending_effects} ->
         :telemetry.execute([:julep, :runtime, :effect_timeout], %{count: 1}, %{id: id})
         state = %{state | pending_effects: pending_effects}
-        state = run_update(state, %Effect{id: id, result: {:error, :timeout}})
+        state = run_update(state, %Effect{request_id: id, result: {:error, :timeout}})
         {:noreply, state}
     end
   end
@@ -307,7 +320,7 @@ defmodule Julep.Runtime do
 
       # Dispatch the event.
       now = System.monotonic_time(:millisecond)
-      state = run_update(state, {tag, now})
+      state = run_update(state, %Timer{tag: tag, timestamp: now})
       {:noreply, state}
     else
       # Subscription was cancelled -- discard stale tick.
@@ -560,7 +573,7 @@ defmodule Julep.Runtime do
 
     runtime = self()
     nonce = make_ref()
-    emit = fn value -> send(runtime, {:async_result, tag, nonce, value}) end
+    emit = fn value -> send(runtime, {:stream_value, tag, nonce, value}) end
 
     {:ok, pid} =
       Task.start_link(fn ->
@@ -969,7 +982,7 @@ defmodule Julep.Runtime do
     state =
       Enum.reduce(state.pending_effects, state, fn {id, timer_ref}, acc ->
         Process.cancel_timer(timer_ref)
-        run_update(acc, %Effect{id: id, result: {:error, reason}})
+        run_update(acc, %Effect{request_id: id, result: {:error, reason}})
       end)
 
     %{state | pending_effects: %{}}

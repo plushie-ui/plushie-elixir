@@ -4,7 +4,7 @@ defmodule Julep.Examples.AsyncFetch do
 
   Demonstrates `Julep.Command.async/2` for running expensive operations
   off the main update loop. The result is delivered back to `update/2`
-  as `{:fetch_result, value}`.
+  as `%Julep.Event.Async{tag: :fetch_result, result: value}`.
   """
 
   use Julep.App
@@ -33,7 +33,7 @@ defmodule Julep.Examples.AsyncFetch do
     {%{model | status: :loading, result: nil}, cmd}
   end
 
-  def update(model, {:fetch_result, value}) do
+  def update(model, %Julep.Event.Async{tag: :fetch_result, result: value}) do
     %{model | status: :done, result: value}
   end
 

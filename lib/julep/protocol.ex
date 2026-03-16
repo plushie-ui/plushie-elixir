@@ -1301,7 +1301,7 @@ defmodule Julep.Protocol do
          "status" => "ok",
          "result" => result
        }) do
-    %Effect{id: id, result: {:ok, result}}
+    %Effect{request_id: id, result: {:ok, result}}
   end
 
   defp dispatch(%{
@@ -1310,7 +1310,7 @@ defmodule Julep.Protocol do
          "status" => "error",
          "error" => reason
        }) do
-    %Effect{id: id, result: {:error, reason}}
+    %Effect{request_id: id, result: {:error, reason}}
   end
 
   # -- System query responses --
