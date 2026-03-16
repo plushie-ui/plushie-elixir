@@ -28,6 +28,8 @@ defmodule Julep.Iced.Widget.TextInput do
   - `on_paste` (boolean) -- when true, emits `%Widget{type: :paste, id: id, value: text}` when user
     pastes text. Default: false.
   - `secure` (boolean) -- mask input as password dots. Default: false.
+  - `placeholder_color` (string) -- hex color for the placeholder text.
+  - `selection_color` (string) -- hex color for the text selection highlight.
 
   ## Events
 
@@ -37,6 +39,7 @@ defmodule Julep.Iced.Widget.TextInput do
   """
 
   alias Julep.Iced.A11y
+  alias Julep.Iced.Color
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
@@ -55,6 +58,8 @@ defmodule Julep.Iced.Widget.TextInput do
           | {:on_paste, boolean()}
           | {:secure, boolean()}
           | {:style, style()}
+          | {:placeholder_color, Julep.Iced.Color.t()}
+          | {:selection_color, Julep.Iced.Color.t()}
           | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -72,6 +77,8 @@ defmodule Julep.Iced.Widget.TextInput do
           on_paste: boolean() | nil,
           secure: boolean() | nil,
           style: style() | nil,
+          placeholder_color: Julep.Iced.Color.t() | nil,
+          selection_color: Julep.Iced.Color.t() | nil,
           a11y: Julep.Iced.A11y.t() | nil
         }
 
@@ -90,6 +97,8 @@ defmodule Julep.Iced.Widget.TextInput do
     :on_paste,
     :secure,
     :style,
+    :placeholder_color,
+    :selection_color,
     :a11y
   ]
 
@@ -117,6 +126,8 @@ defmodule Julep.Iced.Widget.TextInput do
       {:on_paste, v}, acc -> on_paste(acc, v)
       {:secure, v}, acc -> secure(acc, v)
       {:style, v}, acc -> style(acc, v)
+      {:placeholder_color, v}, acc -> placeholder_color(acc, v)
+      {:selection_color, v}, acc -> selection_color(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -170,6 +181,16 @@ defmodule Julep.Iced.Widget.TextInput do
   @spec style(text_input :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = ti, style), do: %{ti | style: style}
 
+  @doc "Sets the placeholder text color. Accepts any form `Color.cast/1` supports."
+  @spec placeholder_color(text_input :: t(), color :: Julep.Iced.Color.t() | atom()) :: t()
+  def placeholder_color(%__MODULE__{} = ti, color),
+    do: %{ti | placeholder_color: Color.cast(color)}
+
+  @doc "Sets the text selection highlight color. Accepts any form `Color.cast/1` supports."
+  @spec selection_color(text_input :: t(), color :: Julep.Iced.Color.t() | atom()) :: t()
+  def selection_color(%__MODULE__{} = ti, color),
+    do: %{ti | selection_color: Color.cast(color)}
+
   @doc "Sets accessibility annotations."
   @spec a11y(text_input :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
   def a11y(%__MODULE__{} = ti, a11y), do: %{ti | a11y: A11y.cast(a11y)}
@@ -197,6 +218,8 @@ defmodule Julep.Iced.Widget.TextInput do
         |> put_if(ti.on_paste, "on_paste")
         |> put_if(ti.secure, "secure")
         |> put_if(ti.style, "style")
+        |> put_if(ti.placeholder_color, "placeholder_color")
+        |> put_if(ti.selection_color, "selection_color")
         |> put_if(ti.a11y, "a11y")
 
       %{id: ti.id, type: "text_input", props: props, children: []}

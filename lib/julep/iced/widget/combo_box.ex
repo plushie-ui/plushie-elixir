@@ -31,7 +31,10 @@ defmodule Julep.Iced.Widget.ComboBox do
   """
 
   alias Julep.Iced.A11y
+  alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
+
+  @type style :: :default | StyleMap.t()
 
   @type option ::
           {:selected, String.t()}
@@ -46,6 +49,7 @@ defmodule Julep.Iced.Widget.ComboBox do
           | {:on_option_hovered, boolean()}
           | {:on_open, boolean()}
           | {:on_close, boolean()}
+          | {:style, style()}
           | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -63,6 +67,7 @@ defmodule Julep.Iced.Widget.ComboBox do
           on_option_hovered: boolean() | nil,
           on_open: boolean() | nil,
           on_close: boolean() | nil,
+          style: style() | nil,
           a11y: Julep.Iced.A11y.t() | nil
         }
 
@@ -81,6 +86,7 @@ defmodule Julep.Iced.Widget.ComboBox do
     :on_option_hovered,
     :on_open,
     :on_close,
+    :style,
     :a11y
   ]
 
@@ -108,6 +114,7 @@ defmodule Julep.Iced.Widget.ComboBox do
       {:on_option_hovered, v}, acc -> on_option_hovered(acc, v)
       {:on_open, v}, acc -> on_open(acc, v)
       {:on_close, v}, acc -> on_close(acc, v)
+      {:style, v}, acc -> style(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -162,6 +169,10 @@ defmodule Julep.Iced.Widget.ComboBox do
   @spec on_close(combo_box :: t(), on_close :: boolean()) :: t()
   def on_close(%__MODULE__{} = cb, on_close), do: %{cb | on_close: on_close}
 
+  @doc "Sets the combo box style. Accepts a named preset atom or a `StyleMap`."
+  @spec style(combo_box :: t(), style :: style()) :: t()
+  def style(%__MODULE__{} = cb, style), do: %{cb | style: style}
+
   @doc "Sets accessibility annotations."
   @spec a11y(combo_box :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
   def a11y(%__MODULE__{} = cb, a11y), do: %{cb | a11y: A11y.cast(a11y)}
@@ -189,6 +200,7 @@ defmodule Julep.Iced.Widget.ComboBox do
         |> put_if(cb.on_option_hovered, "on_option_hovered")
         |> put_if(cb.on_open, "on_open")
         |> put_if(cb.on_close, "on_close")
+        |> put_if(cb.style, "style")
         |> put_if(cb.a11y, "a11y")
 
       %{id: cb.id, type: "combo_box", props: props, children: []}

@@ -5,7 +5,11 @@ defmodule Julep.Iced.BorderTest do
 
   describe "new/0" do
     test "returns default border with nil color, zero width, zero radius" do
-      assert Border.new() == %{color: nil, width: 0, radius: 0}
+      border = Border.new()
+      assert %Border{} = border
+      assert border.color == nil
+      assert border.width == 0
+      assert border.radius == 0
     end
   end
 
@@ -60,7 +64,7 @@ defmodule Julep.Iced.BorderTest do
         |> Border.width(1)
         |> Border.rounded(4)
 
-      assert border == %{color: "#333", width: 1, radius: 4}
+      assert %Border{color: "#333", width: 1, radius: 4} = border
     end
 
     test "uses per-corner radius in a border" do
@@ -75,9 +79,31 @@ defmodule Julep.Iced.BorderTest do
   end
 
   describe "encode/1" do
-    test "passes through the border map unchanged" do
+    test "encodes a border struct to a plain map" do
       border = Border.new() |> Border.color("#fff") |> Border.width(1)
-      assert Border.encode(border) == border
+      encoded = Border.encode(border)
+      assert encoded == %{color: "#fff", width: 1, radius: 0}
+    end
+
+    test "encodes per-corner radius to string keys" do
+      border = Border.new() |> Border.rounded(0)
+      border = %{border | radius: Border.radius(4, 4, 0, 0)}
+      encoded = Border.encode(border)
+
+      assert encoded.radius == %{
+               "top_left" => 4,
+               "top_right" => 4,
+               "bottom_right" => 0,
+               "bottom_left" => 0
+             }
+    end
+  end
+
+  describe "Encode protocol" do
+    test "encodes via the protocol" do
+      border = Border.new() |> Border.color("#abc") |> Border.width(2) |> Border.rounded(6)
+      encoded = Julep.Iced.Encode.encode(border)
+      assert encoded == %{color: "#abc", width: 2, radius: 6}
     end
   end
 end

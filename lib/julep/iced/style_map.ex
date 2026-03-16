@@ -7,6 +7,9 @@ defmodule Julep.Iced.StyleMap do
   style. Status overrides (`hovered`, `pressed`, `disabled`, `focused`) apply
   partial style changes for those interaction states.
 
+  The `background` field accepts either a solid color (hex string or named
+  atom) or a `Julep.Iced.Gradient` for gradient fills.
+
   ## Wire format
 
       %{
@@ -25,20 +28,30 @@ defmodule Julep.Iced.StyleMap do
               |> Julep.Iced.StyleMap.hovered(%{background: "#5588ff"})
 
       Button.new("btn", "Click me", style: style)
+
+  Gradient backgrounds work the same way:
+
+      gradient = Julep.Iced.Gradient.linear(90, [{0.0, "#ff0000"}, {1.0, "#0000ff"}])
+
+      style = Julep.Iced.StyleMap.new()
+              |> Julep.Iced.StyleMap.background(gradient)
+
+      Container.new("ctr", [], style: style)
   """
 
   alias Julep.Iced.Color
+  alias Julep.Iced.Gradient
 
   @typedoc "Partial style override for an interaction state."
   @type status_override :: %{
-          optional(:background) => Color.t(),
+          optional(:background) => Color.t() | Gradient.t(),
           optional(:text_color) => Color.t(),
           optional(:border) => Julep.Iced.Border.t(),
           optional(:shadow) => Julep.Iced.Shadow.t()
         }
 
   @type t :: %__MODULE__{
-          background: Color.t() | nil,
+          background: Color.t() | Gradient.t() | nil,
           text_color: Color.t() | nil,
           border: Julep.Iced.Border.t() | nil,
           shadow: Julep.Iced.Shadow.t() | nil,
@@ -54,8 +67,12 @@ defmodule Julep.Iced.StyleMap do
   @spec new() :: t()
   def new, do: %__MODULE__{}
 
-  @doc "Sets the background color. Accepts any form `Color.cast/1` supports."
-  @spec background(style_map :: t(), background :: Color.t() | atom()) :: t()
+  @doc "Sets the background. Accepts a color (any form `Color.cast/1` supports) or a `Gradient`."
+  @spec background(style_map :: t(), background :: Color.t() | Gradient.t() | atom()) :: t()
+  def background(%__MODULE__{} = style_map, %{type: "linear"} = gradient) do
+    %{style_map | background: gradient}
+  end
+
   def background(%__MODULE__{} = style_map, background) do
     %{style_map | background: Color.cast(background)}
   end

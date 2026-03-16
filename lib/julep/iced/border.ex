@@ -1,19 +1,23 @@
 defmodule Julep.Iced.Border do
   @moduledoc """
-  Border type for container and widget styling.
+  Border specification for container and widget styling.
 
-  Used in `container` and other widgets via the `border` prop.
-  The renderer parses border maps with `color`, `width`, and `radius` fields.
+  A border has three properties:
+
+    * `color` - hex color string (e.g. `"#ff0000"`). `nil` means no color override.
+    * `width` - border width in pixels. Default: `0`.
+    * `radius` - corner radius. Either a uniform number or a per-corner
+      `radius_map()` from `radius/4`. Default: `0`.
 
   ## Wire format
 
   The encoded border is a map:
 
-      %{color: "#ff0000", width: 2, radius: 8}
+      %{"color" => "#ff0000", "width" => 2, "radius" => 8}
 
   Radius can be a uniform number or a per-corner map:
 
-      %{top_left: 8, top_right: 8, bottom_right: 0, bottom_left: 0}
+      %{"top_left" => 8, "top_right" => 8, "bottom_right" => 0, "bottom_left" => 0}
 
   ## Example
 
@@ -21,7 +25,6 @@ defmodule Julep.Iced.Border do
                |> Julep.Iced.Border.color("#3366ff")
                |> Julep.Iced.Border.width(2)
                |> Julep.Iced.Border.rounded(8)
-      # => %{color: "#3366ff", width: 2, radius: 8}
   """
 
   @typedoc "Per-corner radius map."
@@ -33,27 +36,29 @@ defmodule Julep.Iced.Border do
         }
 
   @typedoc "Border specification with color, width, and radius."
-  @type t :: %{
+  @type t :: %__MODULE__{
           color: Julep.Iced.Color.t() | nil,
           width: number(),
           radius: number() | radius_map()
         }
 
-  @doc "Creates a new border with default values."
+  defstruct color: nil, width: 0, radius: 0
+
+  @doc "Creates a new border with default values (no color, zero width, zero radius)."
   @spec new() :: t()
-  def new, do: %{color: nil, width: 0, radius: 0}
+  def new, do: %__MODULE__{}
 
   @doc "Sets the border color."
   @spec color(border :: t(), color :: Julep.Iced.Color.t()) :: t()
-  def color(border, color), do: %{border | color: color}
+  def color(%__MODULE__{} = border, color), do: %{border | color: color}
 
   @doc "Sets the border width."
   @spec width(border :: t(), width :: number()) :: t()
-  def width(border, width), do: %{border | width: width}
+  def width(%__MODULE__{} = border, width), do: %{border | width: width}
 
   @doc "Sets a uniform corner radius."
   @spec rounded(border :: t(), radius :: number()) :: t()
-  def rounded(border, radius), do: %{border | radius: radius}
+  def rounded(%__MODULE__{} = border, radius), do: %{border | radius: radius}
 
   @doc "Creates a per-corner radius map."
   @spec radius(
@@ -73,8 +78,8 @@ defmodule Julep.Iced.Border do
 
   @doc "Encodes a border to the wire format. Per-corner radius maps are converted to string keys."
   @spec encode(border :: t()) :: map()
-  def encode(%{} = border) do
-    Map.update(border, :radius, border[:radius], &encode_radius/1)
+  def encode(%__MODULE__{} = border) do
+    %{color: border.color, width: border.width, radius: encode_radius(border.radius)}
   end
 
   defp encode_radius(%{top_left: tl, top_right: tr, bottom_right: br, bottom_left: bl}) do
@@ -82,4 +87,10 @@ defmodule Julep.Iced.Border do
   end
 
   defp encode_radius(radius), do: radius
+end
+
+defimpl Julep.Iced.Encode, for: Julep.Iced.Border do
+  def encode(%Julep.Iced.Border{} = border) do
+    Julep.Iced.Border.encode(border)
+  end
 end

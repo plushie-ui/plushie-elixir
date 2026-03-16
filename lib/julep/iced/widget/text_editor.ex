@@ -26,6 +26,8 @@ defmodule Julep.Iced.Widget.TextEditor do
     Each rule is a map with optional `key` (character), `named` (named key string),
     `modifiers` (list of modifier strings), and `binding` (the action to take).
     See `key_bindings/2` for details.
+  - `placeholder_color` (string) -- hex color for the placeholder text.
+  - `selection_color` (string) -- hex color for the text selection highlight.
 
   ## Events
 
@@ -34,6 +36,7 @@ defmodule Julep.Iced.Widget.TextEditor do
   """
 
   alias Julep.Iced.A11y
+  alias Julep.Iced.Color
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
@@ -55,6 +58,8 @@ defmodule Julep.Iced.Widget.TextEditor do
           | {:highlight_theme, String.t()}
           | {:style, style()}
           | {:key_bindings, [map()]}
+          | {:placeholder_color, Julep.Iced.Color.t()}
+          | {:selection_color, Julep.Iced.Color.t()}
           | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -74,6 +79,8 @@ defmodule Julep.Iced.Widget.TextEditor do
           highlight_theme: String.t() | nil,
           style: style() | nil,
           key_bindings: [map()] | nil,
+          placeholder_color: Julep.Iced.Color.t() | nil,
+          selection_color: Julep.Iced.Color.t() | nil,
           a11y: Julep.Iced.A11y.t() | nil
         }
 
@@ -94,6 +101,8 @@ defmodule Julep.Iced.Widget.TextEditor do
     :highlight_theme,
     :style,
     :key_bindings,
+    :placeholder_color,
+    :selection_color,
     :a11y
   ]
 
@@ -124,6 +133,8 @@ defmodule Julep.Iced.Widget.TextEditor do
       {:highlight_theme, v}, acc -> highlight_theme(acc, v)
       {:style, v}, acc -> style(acc, v)
       {:key_bindings, v}, acc -> key_bindings(acc, v)
+      {:placeholder_color, v}, acc -> placeholder_color(acc, v)
+      {:selection_color, v}, acc -> selection_color(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -210,6 +221,16 @@ defmodule Julep.Iced.Widget.TextEditor do
   @spec key_bindings(text_editor :: t(), key_bindings :: [map()]) :: t()
   def key_bindings(%__MODULE__{} = ed, key_bindings), do: %{ed | key_bindings: key_bindings}
 
+  @doc "Sets the placeholder text color. Accepts any form `Color.cast/1` supports."
+  @spec placeholder_color(text_editor :: t(), color :: Julep.Iced.Color.t() | atom()) :: t()
+  def placeholder_color(%__MODULE__{} = ed, color),
+    do: %{ed | placeholder_color: Color.cast(color)}
+
+  @doc "Sets the text selection highlight color. Accepts any form `Color.cast/1` supports."
+  @spec selection_color(text_editor :: t(), color :: Julep.Iced.Color.t() | atom()) :: t()
+  def selection_color(%__MODULE__{} = ed, color),
+    do: %{ed | selection_color: Color.cast(color)}
+
   @doc "Sets accessibility annotations."
   @spec a11y(text_editor :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
   def a11y(%__MODULE__{} = ed, a11y), do: %{ed | a11y: A11y.cast(a11y)}
@@ -239,6 +260,8 @@ defmodule Julep.Iced.Widget.TextEditor do
         |> put_if(ed.highlight_theme, "highlight_theme")
         |> put_if(ed.style, "style")
         |> put_if(ed.key_bindings, "key_bindings")
+        |> put_if(ed.placeholder_color, "placeholder_color")
+        |> put_if(ed.selection_color, "selection_color")
         |> put_if(ed.a11y, "a11y")
 
       %{id: ed.id, type: "text_editor", props: props, children: []}

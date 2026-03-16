@@ -56,7 +56,7 @@ defmodule Julep.Iced.StyleMapTest do
       border = Border.new() |> Border.color("#000000") |> Border.width(2) |> Border.rounded(4)
       style = StyleMap.new() |> StyleMap.border(border)
 
-      assert style.border == %{color: "#000000", width: 2, radius: 4}
+      assert %Border{color: "#000000", width: 2, radius: 4} = style.border
     end
   end
 
