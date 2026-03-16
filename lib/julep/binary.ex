@@ -114,6 +114,8 @@ defmodule Julep.Binary do
   end
 
   defp custom_build_path do
+    bin_name = custom_binary_name()
+
     for profile <- ["release", "debug"] do
       ext = if os_name() == "windows", do: ".exe", else: ""
 
@@ -123,7 +125,7 @@ defmodule Julep.Binary do
           "julep",
           "target",
           profile,
-          "julep#{ext}"
+          "#{bin_name}#{ext}"
         ])
 
       if File.exists?(path), do: path
@@ -131,6 +133,20 @@ defmodule Julep.Binary do
     |> Enum.find(& &1)
   rescue
     _ -> nil
+  end
+
+  defp custom_binary_name do
+    case Application.get_env(:julep, :binary_name) do
+      nil ->
+        app = Mix.Project.config()[:app] |> Atom.to_string() |> String.replace("_", "-")
+        "#{app}-julep"
+
+      name when is_binary(name) ->
+        name
+    end
+  rescue
+    # Mix.Project may not be available at runtime
+    _ -> "julep"
   end
 
   defp precompiled_path do

@@ -37,7 +37,7 @@ defmodule Julep.MixProject do
       name: "Julep",
       description: "Native desktop GUIs from Elixir, powered by iced",
       package: package(),
-      source_url: "https://github.com/lincracy/julep",
+      source_url: "https://github.com/julep-ui/julep-elixir",
       docs: [main: "Julep", extras: ["README.md"]],
       aliases: aliases(),
       dialyzer: [plt_add_apps: [:mix, :ex_unit, :inets, :ssl]]
@@ -54,7 +54,7 @@ defmodule Julep.MixProject do
     [
       licenses: ["MIT"],
       links: %{
-        "GitHub" => "https://github.com/lincracy/julep"
+        "GitHub" => "https://github.com/julep-ui/julep-elixir"
       },
       files: ~w(
         lib
