@@ -126,7 +126,14 @@ defmodule Julep.Iced.A11y do
       invalid: map[:invalid],
       modal: map[:modal],
       read_only: map[:read_only],
-      mnemonic: map[:mnemonic]
+      mnemonic: validate_mnemonic(map[:mnemonic])
     }
+  end
+
+  defp validate_mnemonic(nil), do: nil
+  defp validate_mnemonic(<<_::utf8>> = char), do: char
+
+  defp validate_mnemonic(other) do
+    raise ArgumentError, "a11y mnemonic must be a single character, got: #{inspect(other)}"
   end
 end

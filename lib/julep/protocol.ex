@@ -900,7 +900,8 @@ defmodule Julep.Protocol do
        location: parse_location(data["location"]),
        modifiers: parse_modifiers(mods),
        text: data["text"],
-       repeat: data["repeat"] || false
+       repeat: data["repeat"] || false,
+       captured: msg["captured"] || false
      }}
   end
 
@@ -922,7 +923,8 @@ defmodule Julep.Protocol do
        location: parse_location(data["location"]),
        modifiers: parse_modifiers(mods),
        text: nil,
-       repeat: false
+       repeat: false,
+       captured: msg["captured"] || false
      }}
   end
 

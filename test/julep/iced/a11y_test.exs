@@ -128,6 +128,29 @@ defmodule Julep.Iced.A11yTest do
     end
   end
 
+  describe "mnemonic validation" do
+    test "nil mnemonic passes validation" do
+      a = A11y.cast(%{mnemonic: nil})
+      assert a.mnemonic == nil
+    end
+
+    test "single ASCII character passes validation" do
+      a = A11y.cast(%{mnemonic: "F"})
+      assert a.mnemonic == "F"
+    end
+
+    test "single precomposed Unicode character passes validation" do
+      a = A11y.cast(%{mnemonic: "\u00E9"})
+      assert a.mnemonic == "\u00E9"
+    end
+
+    test "multi-character string raises ArgumentError" do
+      assert_raise ArgumentError, ~r/single character/, fn ->
+        A11y.cast(%{mnemonic: "AB"})
+      end
+    end
+  end
+
   describe "encoding new fields" do
     test "nil new fields are omitted from encoding" do
       a = %A11y{label: "test"}

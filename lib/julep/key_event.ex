@@ -22,19 +22,28 @@ defmodule Julep.KeyEvent do
     non-printable keys. Only present on key_press events.
   - `repeat` -- `true` if this is a key repeat (held down). Only present
     on key_press events.
+  - `captured` -- `true` if a widget already consumed this event (e.g. a
+    TextEditor inserted a Tab character). Use this to avoid double-handling
+    events that a focused widget already processed.
 
   ## Pattern matching
 
   Match on the key for simple cases:
 
-      def update(model, {:key_press, %KeyEvent{key: :escape}}) do
+      def update(model, {:key_press, %KeyEvent{key: :escape, captured: false}}) do
         close(model)
       end
 
   Use modifiers for shortcuts:
 
-      def update(model, {:key_press, %KeyEvent{key: "s", modifiers: %{command: true}}}) do
+      def update(model, {:key_press, %KeyEvent{key: "s", modifiers: %{command: true}, captured: false}}) do
         save(model)
+      end
+
+  Filter out captured events for global hotkeys:
+
+      def update(model, {:key_press, %KeyEvent{captured: true}}) do
+        model  # widget already handled it
       end
 
   Check physical keys for layout-independent bindings (e.g. WASD):
@@ -54,7 +63,8 @@ defmodule Julep.KeyEvent do
           location: location(),
           modifiers: Julep.KeyModifiers.t(),
           text: String.t() | nil,
-          repeat: boolean()
+          repeat: boolean(),
+          captured: boolean()
         }
 
   defstruct [
@@ -64,6 +74,7 @@ defmodule Julep.KeyEvent do
     location: :standard,
     modifiers: %Julep.KeyModifiers{},
     text: nil,
-    repeat: false
+    repeat: false,
+    captured: false
   ]
 end
