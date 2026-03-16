@@ -100,7 +100,7 @@ defmodule Julep.UI do
   - `id`       -- explicit id string, or nil to auto-generate
   - `opts`     -- keyword list; may include `:children` and `:id`
   - `children` -- already-evaluated child list (wins over `:children` opt)
-  - `caller`   -- `{module, line}` used for auto-ID generation
+  - `auto_id`  -- pre-computed fallback ID string (computed at compile time)
 
   All opts keys except `:children`, `:id`, and `:do` become string-keyed props.
   """
@@ -109,13 +109,13 @@ defmodule Julep.UI do
           id :: String.t() | nil,
           opts :: keyword(),
           children :: [Julep.Iced.ui_node()],
-          caller :: {module(), non_neg_integer()}
+          auto_id :: String.t()
         ) :: Julep.Iced.ui_node()
-  def __build_node__(type, id, opts, children, {caller_mod, caller_line}) do
+  def __build_node__(type, id, opts, children, auto_id) do
     resolved_id =
       id ||
         Keyword.get(opts, :id) ||
-        __auto_id__(caller_mod, caller_line)
+        auto_id
 
     resolved_children =
       if children != [] do
@@ -137,11 +137,25 @@ defmodule Julep.UI do
     }
   end
 
+  # Kept for external callers. Internal macros use compile_auto_id/2 to
+  # compute the string at compile time and inject a literal, avoiding
+  # runtime Module.split + Enum.join on every render.
   @doc false
   @spec __auto_id__(mod :: module() | nil, line :: non_neg_integer()) :: String.t()
   def __auto_id__(nil, line), do: "auto:nomodule:#{line}"
 
   def __auto_id__(mod, line) do
+    mod_str = mod |> Module.split() |> Enum.join(".")
+    "auto:#{mod_str}:#{line}"
+  end
+
+  # Compile-time auto ID computation. Called inside defmacro bodies where
+  # __CALLER__.module and __CALLER__.line are known at compile time.
+  # The result is injected as a string literal in the generated code.
+  @doc false
+  defp compile_auto_id(nil, line), do: "auto:nomodule:#{line}"
+
+  defp compile_auto_id(mod, line) do
     mod_str = mod |> Module.split() |> Enum.join(".")
     "auto:#{mod_str}:#{line}"
   end
@@ -261,7 +275,7 @@ defmodule Julep.UI do
             nil,
             [],
             children,
-            {unquote(caller_mod), unquote(caller_line)}
+            unquote(compile_auto_id(caller_mod, caller_line))
           )
         end
 
@@ -272,7 +286,7 @@ defmodule Julep.UI do
             nil,
             unquote(opts),
             [],
-            {unquote(caller_mod), unquote(caller_line)}
+            unquote(compile_auto_id(caller_mod, caller_line))
           )
         end
     end
@@ -292,7 +306,7 @@ defmodule Julep.UI do
         nil,
         unquote(opts),
         children,
-        {unquote(caller_mod), unquote(caller_line)}
+        unquote(compile_auto_id(caller_mod, caller_line))
       )
     end
   end
@@ -329,7 +343,7 @@ defmodule Julep.UI do
             nil,
             [],
             children,
-            {unquote(caller_mod), unquote(caller_line)}
+            unquote(compile_auto_id(caller_mod, caller_line))
           )
         end
 
@@ -340,7 +354,7 @@ defmodule Julep.UI do
             nil,
             unquote(opts),
             [],
-            {unquote(caller_mod), unquote(caller_line)}
+            unquote(compile_auto_id(caller_mod, caller_line))
           )
         end
     end
@@ -360,7 +374,7 @@ defmodule Julep.UI do
         nil,
         unquote(opts),
         children,
-        {unquote(caller_mod), unquote(caller_line)}
+        unquote(compile_auto_id(caller_mod, caller_line))
       )
     end
   end
@@ -521,7 +535,7 @@ defmodule Julep.UI do
             nil,
             [],
             children,
-            {unquote(caller_mod), unquote(caller_line)}
+            unquote(compile_auto_id(caller_mod, caller_line))
           )
         end
 
@@ -532,7 +546,7 @@ defmodule Julep.UI do
             nil,
             unquote(opts),
             [],
-            {unquote(caller_mod), unquote(caller_line)}
+            unquote(compile_auto_id(caller_mod, caller_line))
           )
         end
     end
@@ -552,7 +566,7 @@ defmodule Julep.UI do
         nil,
         unquote(opts),
         children,
-        {unquote(caller_mod), unquote(caller_line)}
+        unquote(compile_auto_id(caller_mod, caller_line))
       )
     end
   end
@@ -596,7 +610,7 @@ defmodule Julep.UI do
             nil,
             [],
             children,
-            {unquote(caller_mod), unquote(caller_line)}
+            unquote(compile_auto_id(caller_mod, caller_line))
           )
         end
 
@@ -607,7 +621,7 @@ defmodule Julep.UI do
             nil,
             unquote(opts),
             [],
-            {unquote(caller_mod), unquote(caller_line)}
+            unquote(compile_auto_id(caller_mod, caller_line))
           )
         end
     end
@@ -627,7 +641,7 @@ defmodule Julep.UI do
         nil,
         unquote(opts),
         children,
-        {unquote(caller_mod), unquote(caller_line)}
+        unquote(compile_auto_id(caller_mod, caller_line))
       )
     end
   end
@@ -665,7 +679,7 @@ defmodule Julep.UI do
             nil,
             [],
             children,
-            {unquote(caller_mod), unquote(caller_line)}
+            unquote(compile_auto_id(caller_mod, caller_line))
           )
         end
 
@@ -676,7 +690,7 @@ defmodule Julep.UI do
             nil,
             unquote(opts),
             [],
-            {unquote(caller_mod), unquote(caller_line)}
+            unquote(compile_auto_id(caller_mod, caller_line))
           )
         end
     end
@@ -696,7 +710,7 @@ defmodule Julep.UI do
         nil,
         unquote(opts),
         children,
-        {unquote(caller_mod), unquote(caller_line)}
+        unquote(compile_auto_id(caller_mod, caller_line))
       )
     end
   end
@@ -735,7 +749,7 @@ defmodule Julep.UI do
             nil,
             [],
             children,
-            {unquote(caller_mod), unquote(caller_line)}
+            unquote(compile_auto_id(caller_mod, caller_line))
           )
         end
 
@@ -746,7 +760,7 @@ defmodule Julep.UI do
             nil,
             unquote(opts),
             [],
-            {unquote(caller_mod), unquote(caller_line)}
+            unquote(compile_auto_id(caller_mod, caller_line))
           )
         end
     end
@@ -766,7 +780,7 @@ defmodule Julep.UI do
         nil,
         unquote(opts),
         children,
-        {unquote(caller_mod), unquote(caller_line)}
+        unquote(compile_auto_id(caller_mod, caller_line))
       )
     end
   end
@@ -996,7 +1010,7 @@ defmodule Julep.UI do
         nil,
         unquote(opts),
         [],
-        {unquote(caller_mod), unquote(caller_line)}
+        unquote(compile_auto_id(caller_mod, caller_line))
       )
     end
   end
@@ -1102,7 +1116,7 @@ defmodule Julep.UI do
         |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
       id =
-        Keyword.get(opts, :id) || Julep.UI.__auto_id__(unquote(caller_mod), unquote(caller_line))
+        Keyword.get(opts, :id) || unquote(compile_auto_id(caller_mod, caller_line))
 
       %{id: id, type: "text", props: Map.merge(base_props, extra_props), children: []}
     end
@@ -1128,7 +1142,7 @@ defmodule Julep.UI do
         |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
       id =
-        Keyword.get(opts, :id) || Julep.UI.__auto_id__(unquote(caller_mod), unquote(caller_line))
+        Keyword.get(opts, :id) || unquote(compile_auto_id(caller_mod, caller_line))
 
       %{id: id, type: "rule", props: props, children: []}
     end
@@ -1162,7 +1176,7 @@ defmodule Julep.UI do
         |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
       id =
-        Keyword.get(opts, :id) || Julep.UI.__auto_id__(unquote(caller_mod), unquote(caller_line))
+        Keyword.get(opts, :id) || unquote(compile_auto_id(caller_mod, caller_line))
 
       %{id: id, type: "progress_bar", props: Map.merge(base_props, extra_props), children: []}
     end
@@ -1440,7 +1454,7 @@ defmodule Julep.UI do
         |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
 
       id =
-        Keyword.get(opts, :id) || Julep.UI.__auto_id__(unquote(caller_mod), unquote(caller_line))
+        Keyword.get(opts, :id) || unquote(compile_auto_id(caller_mod, caller_line))
 
       %{id: id, type: "markdown", props: Map.merge(base_props, extra_props), children: []}
     end
