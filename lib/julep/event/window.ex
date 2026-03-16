@@ -25,5 +25,6 @@ defmodule Julep.Event.Window do
           scale_factor: number() | nil
         }
 
+  @enforce_keys [:type, :window_id]
   defstruct [:type, :window_id, :x, :y, :width, :height, :position, :path, :scale_factor]
 end

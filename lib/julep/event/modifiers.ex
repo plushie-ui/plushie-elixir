@@ -28,8 +28,9 @@ defmodule Julep.Event.Modifiers do
           captured: boolean()
         }
 
+  @enforce_keys [:modifiers]
   defstruct [
-    modifiers: %Julep.KeyModifiers{},
+    :modifiers,
     captured: false
   ]
 end

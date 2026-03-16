@@ -43,5 +43,6 @@ defmodule Julep.Event.MouseArea do
           delta_y: number() | nil
         }
 
+  @enforce_keys [:type, :id]
   defstruct [:type, :id, :x, :y, :delta_x, :delta_y]
 end

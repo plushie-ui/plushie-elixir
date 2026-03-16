@@ -22,5 +22,6 @@ defmodule Julep.Event.Mouse do
           captured: boolean()
         }
 
+  @enforce_keys [:type]
   defstruct [:type, :x, :y, :button, :delta_x, :delta_y, :unit, captured: false]
 end

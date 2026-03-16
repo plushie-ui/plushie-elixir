@@ -18,5 +18,6 @@ defmodule Julep.Event.Timer do
           timestamp: integer()
         }
 
+  @enforce_keys [:tag, :timestamp]
   defstruct [:tag, :timestamp]
 end

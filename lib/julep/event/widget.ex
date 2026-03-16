@@ -20,5 +20,6 @@ defmodule Julep.Event.Widget do
           data: map() | nil
         }
 
+  @enforce_keys [:type, :id]
   defstruct [:type, :id, :value, :data]
 end

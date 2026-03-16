@@ -23,6 +23,7 @@ defmodule Julep.Event.Key do
           captured: boolean()
         }
 
+  @enforce_keys [:type, :key]
   defstruct [
     :type,
     :key,

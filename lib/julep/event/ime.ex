@@ -30,5 +30,6 @@ defmodule Julep.Event.Ime do
           captured: boolean()
         }
 
+  @enforce_keys [:type]
   defstruct [:type, :text, :cursor, captured: false]
 end

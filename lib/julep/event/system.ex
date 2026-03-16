@@ -35,5 +35,6 @@ defmodule Julep.Event.System do
           data: term()
         }
 
+  @enforce_keys [:type]
   defstruct [:type, :tag, :data]
 end

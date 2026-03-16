@@ -37,5 +37,6 @@ defmodule Julep.Event.Pane do
           target: term()
         }
 
+  @enforce_keys [:type, :id]
   defstruct [:type, :id, :pane, :split, :ratio, :target]
 end

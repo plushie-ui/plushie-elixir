@@ -38,5 +38,6 @@ defmodule Julep.Event.Canvas do
           delta_y: number() | nil
         }
 
+  @enforce_keys [:type, :id, :x, :y]
   defstruct [:type, :id, :x, :y, :button, :delta_x, :delta_y]
 end

@@ -21,5 +21,6 @@ defmodule Julep.Event.Async do
           result: {:ok, term()} | {:error, term()}
         }
 
+  @enforce_keys [:tag, :result]
   defstruct [:tag, :result]
 end

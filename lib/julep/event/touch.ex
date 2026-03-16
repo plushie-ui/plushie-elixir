@@ -37,5 +37,6 @@ defmodule Julep.Event.Touch do
           captured: boolean()
         }
 
+  @enforce_keys [:type, :finger_id, :x, :y]
   defstruct [:type, :finger_id, :x, :y, captured: false]
 end

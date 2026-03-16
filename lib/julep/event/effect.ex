@@ -32,5 +32,6 @@ defmodule Julep.Event.Effect do
           result: {:ok, term()} | {:error, term()}
         }
 
+  @enforce_keys [:request_id, :result]
   defstruct [:request_id, :result]
 end

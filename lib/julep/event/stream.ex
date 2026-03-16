@@ -18,5 +18,6 @@ defmodule Julep.Event.Stream do
           value: term()
         }
 
+  @enforce_keys [:tag, :value]
   defstruct [:tag, :value]
 end

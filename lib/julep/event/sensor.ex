@@ -31,5 +31,6 @@ defmodule Julep.Event.Sensor do
           height: number()
         }
 
+  @enforce_keys [:type, :id, :width, :height]
   defstruct [:type, :id, :width, :height]
 end
