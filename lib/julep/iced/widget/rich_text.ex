@@ -10,6 +10,15 @@ defmodule Julep.Iced.Widget.RichText do
     - `color` (color) -- text color. See `Julep.Iced.Color`.
     - `font` (string | map) -- font specification. See `Julep.Iced.Font`.
     - `link` (string) -- makes this span a clickable link.
+    - `underline` (boolean) -- renders the span with an underline.
+    - `strikethrough` (boolean) -- renders the span with a strikethrough line.
+    - `line_height` (number) -- relative line height for this span.
+    - `padding` (number | map) -- padding around the span. A number applies
+      uniformly; a map with `top`, `right`, `bottom`, `left` keys sets per-side.
+    - `highlight` (map) -- visual highlight behind the span text. Accepts:
+      - `background` (color) -- background color. See `Julep.Iced.Color`.
+      - `border` (map) -- border around the highlight. Accepts `color` (color),
+        `width` (number), and `radius` (number or list of 4 numbers).
   - `width` (length) -- widget width. Default: shrink. See `Julep.Iced.Length`.
   - `height` (length) -- widget height. Default: shrink.
   - `size` (number) -- default font size for all spans.
