@@ -8,8 +8,9 @@ defmodule Julep.Iced.Widget.Button do
   ## Props
 
   - `label` (string) -- text label displayed on the button. Also accepts `content` as an alias.
-  - `style` (string) -- named style. One of: `"primary"` (default), `"secondary"`,
-    `"success"`, `"warning"`, `"danger"`, `"text"`.
+  - `style` -- named preset atom (`:primary` (default), `:secondary`, `:success`,
+    `:warning`, `:danger`, `:text`, `:background`, `:subtle`) or `StyleMap.t()`
+    for custom styling. See `Julep.Iced.StyleMap`.
   - `width` (length) -- button width. Default: shrink. See `Julep.Iced.Length`.
   - `height` (length) -- button height. Default: shrink.
   - `padding` (number | map) -- internal padding. See `Julep.Iced.Padding`.
@@ -26,7 +27,8 @@ defmodule Julep.Iced.Widget.Button do
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
-  @type style :: :primary | :secondary | :success | :warning | :danger | :text | StyleMap.t()
+  @type style ::
+          :primary | :secondary | :success | :warning | :danger | :text | :background | :subtle | StyleMap.t()
 
   @type option ::
           {:width, Julep.Iced.Length.t()}

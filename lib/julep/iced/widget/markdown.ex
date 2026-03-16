@@ -14,6 +14,7 @@ defmodule Julep.Iced.Widget.Markdown do
   - `h3_size` (number) -- heading 3 size in pixels.
   - `code_size` (number) -- code block text size in pixels.
   - `spacing` (number) -- spacing between markdown elements in pixels.
+  - `link_color` (hex color) -- color to override the default link color.
 
   ## Events
 

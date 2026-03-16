@@ -13,6 +13,8 @@ defmodule Julep.Iced.Widget.Scrollable do
   - `scrollbar_width` (number) -- width of the scrollbar track in pixels.
   - `scrollbar_margin` (number) -- margin around the scrollbar in pixels.
   - `scroller_width` (number) -- width of the scroller handle in pixels.
+  - `scrollbar_color` (hex color) -- color for the scrollbar track background.
+  - `scroller_color` (hex color) -- color for the scroller thumb.
   - `id` (string) -- widget ID for programmatic scroll control via `Julep.Command`.
   - `anchor` (string) -- scroll anchor: `"start"` (default) or `"end"` / `"bottom"` / `"right"`.
   - `on_scroll` (boolean) -- when `true`, emits `%Widget{type: :scroll, id: id, data: viewport}` events on scroll.

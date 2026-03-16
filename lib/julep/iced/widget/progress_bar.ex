@@ -8,8 +8,9 @@ defmodule Julep.Iced.Widget.ProgressBar do
   - `value` (number) -- current progress value. Default: 0.
   - `width` (length) -- bar width. Default: fill. See `Julep.Iced.Length`.
   - `height` (length) -- bar height. Default: shrink.
-  - `style` (string) -- named style. One of: `"primary"` (default), `"secondary"`,
-    `"success"`, `"danger"`, `"warning"`.
+  - `style` -- named preset atom (`:primary` (default), `:secondary`, `:success`,
+    `:danger`, `:warning`) or `StyleMap.t()` for custom styling.
+    See `Julep.Iced.StyleMap`.
   - `vertical` (boolean) -- when `true`, renders the progress bar vertically.
   """
 

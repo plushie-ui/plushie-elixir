@@ -13,6 +13,8 @@ defmodule Julep.Iced.Widget.Slider do
   - `shift_step` (number) -- step increment when Shift is held.
   - `circular_handle` (boolean) -- use a circular handle instead of the
     default rectangular one. Default: false.
+  - `rail_color` (hex color) -- color for the slider rail (both active and inactive portions).
+  - `rail_width` (number) -- rail thickness in pixels.
   - `style` (string) -- named style. Currently only `"default"`.
 
   ## Events

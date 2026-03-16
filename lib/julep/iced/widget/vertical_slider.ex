@@ -10,6 +10,8 @@ defmodule Julep.Iced.Widget.VerticalSlider do
   - `height` (length) -- slider height. Default: fill. See `Julep.Iced.Length`.
   - `default` (number) -- default value (double-click resets to this).
   - `shift_step` (number) -- step increment when Shift is held.
+  - `rail_color` (hex color) -- color for the slider rail (both active and inactive portions).
+  - `rail_width` (number) -- rail thickness in pixels.
   - `style` (string) -- named style. Currently only `"default"`.
 
   ## Events

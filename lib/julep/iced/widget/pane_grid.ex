@@ -10,6 +10,8 @@ defmodule Julep.Iced.Widget.PaneGrid do
   - `spacing` (number) -- space between panes in pixels. Default: 2.
   - `width` (length) -- grid width. Default: fill. See `Julep.Iced.Length`.
   - `height` (length) -- grid height. Default: fill.
+  - `divider_color` (hex color) -- color for the split divider.
+  - `divider_width` (number) -- divider thickness in pixels.
 
   ## Events
 

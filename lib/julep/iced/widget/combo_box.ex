@@ -20,6 +20,8 @@ defmodule Julep.Iced.Widget.ComboBox do
     `Julep.Iced.Widget.TextInput` icon prop.
   - `on_option_hovered` (boolean) -- when true, emits `%Widget{type: :option_hovered, id: id, value: value}`
     when hovering over a dropdown option. Default: false.
+  - `style` -- named preset atom (`:default`) or `StyleMap.t()` for custom styling.
+    See `Julep.Iced.StyleMap`.
 
   ## Events
 

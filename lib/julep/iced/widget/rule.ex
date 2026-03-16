@@ -7,7 +7,8 @@ defmodule Julep.Iced.Widget.Rule do
   - `height` (number) -- line thickness in pixels (for horizontal rules). Default: 1.
   - `width` (number) -- line thickness in pixels (for vertical rules). Also accepts `thickness`.
   - `direction` (string) -- `"horizontal"` (default) or `"vertical"`.
-  - `style` (string) -- named style: `"default"` or `"weak"`.
+  - `style` -- named preset atom (`:default`, `:weak`) or `StyleMap.t()` for
+    custom styling. See `Julep.Iced.StyleMap`.
   """
 
   alias Julep.Iced.A11y
