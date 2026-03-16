@@ -191,9 +191,9 @@ defmodule Julep.Command do
   Sets the window icon from raw RGBA pixel data.
 
   The `rgba_data` must be a binary of `width * height * 4` bytes (one byte
-  each for R, G, B, A per pixel, row-major). The data is base64-encoded for
-  wire transport (set_icon goes through the generic WindowOp settings map
-  which doesn't support native binary fields).
+  each for R, G, B, A per pixel, row-major). The raw binary is stored as-is
+  in the command payload. The protocol layer handles format-specific encoding
+  (native binary for msgpack via Msgpax.Bin, base64 for JSON).
 
   ## Example
 
@@ -214,7 +214,7 @@ defmodule Julep.Command do
       payload: %{
         op: "set_icon",
         window_id: window_id,
-        icon_data: Base.encode64(rgba_data),
+        icon_data: rgba_data,
         width: width,
         height: height
       }
@@ -282,7 +282,12 @@ defmodule Julep.Command do
     %__MODULE__{type: :window_op, payload: %{op: "gain_focus", window_id: window_id}}
   end
 
-  @doc "Set window stacking level (:normal, :always_on_top, :always_on_bottom)."
+  @doc """
+  Set window stacking level (:normal, :always_on_top, :always_on_bottom).
+
+  On Wayland, window stacking is compositor-controlled and this command may
+  be silently ignored.
+  """
   @spec set_window_level(window_id :: window_id(), level :: atom() | String.t()) :: %__MODULE__{}
   def set_window_level(window_id, level) do
     %__MODULE__{
@@ -518,7 +523,9 @@ defmodule Julep.Command do
 
   The result arrives in `update/2` as `{:system_theme, tag, mode}` where
   `tag` is the stringified event tag and `mode` is `"light"`, `"dark"`, or
-  `"none"` (when no system preference is detected).
+  `"none"` (when no system preference is detected). Returns `"none"` on
+  Linux systems without a desktop environment. Apps should provide a theme
+  fallback.
 
   ## Example
 
