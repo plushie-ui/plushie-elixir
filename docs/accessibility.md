@@ -154,6 +154,13 @@ override or augment the inferred semantics.
 | `modal` | `boolean()` | Dialog is modal (AT restricts navigation to this container) |
 | `read_only` | `boolean()` | Can be read but not edited |
 | `mnemonic` | `String.t()` | Alt+letter keyboard shortcut (single character) |
+| `toggled` | `boolean()` | Toggled/checked state (for custom toggle widgets) |
+| `selected` | `boolean()` | Selected state (for custom selectable widgets) |
+| `value` | `String.t()` | Current value as a string (for custom value-displaying widgets) |
+| `orientation` | `:horizontal \| :vertical` | Orientation hint for AT navigation |
+| `labelled_by` | `String.t()` | ID of the widget that labels this one |
+| `described_by` | `String.t()` | ID of the widget that describes this one |
+| `error_message` | `String.t()` | ID of the widget showing the error message |
 
 The type is defined in `Julep.Iced.A11y`. All fields are optional -- only
 include what you need. Both structs and bare maps are accepted; bare maps
@@ -388,6 +395,47 @@ end
 a text label with the input below it. The visible text and the input are
 separate widgets in the tree. The `a11y` label connects them for AT users.
 
+#### Cross-widget relationships
+
+Instead of duplicating label text in the `a11y` prop, you can point to
+another widget by ID using `labelled_by`, `described_by`, and
+`error_message`. The renderer resolves these to accesskit node
+references so the screen reader follows the relationship automatically.
+
+```elixir
+column spacing: 12 do
+  text("Create account", id: "form_heading", a11y: %A11y{role: :heading, level: 1})
+
+  column spacing: 4 do
+    text("Email", id: "email-label")
+    text("We'll send a confirmation link", id: "email-help")
+    text_input("email", model.email,
+      a11y: %A11y{
+        labelled_by: "email-label",
+        described_by: "email-help",
+        error_message: "email-error"
+      }
+    )
+    if model.email_error do
+      text(model.email_error, id: "email-error",
+        a11y: %A11y{role: :alert, live: :assertive}
+      )
+    end
+  end
+
+  button("submit", "Create account")
+end
+```
+
+When the user focuses the email input, the screen reader announces the
+label text from the `email-label` widget and the description from
+`email-help`. If the field is invalid, it also announces the error text
+from `email-error`.
+
+Use `labelled_by` instead of `label` when a visible text widget already
+provides the label -- it avoids duplicating the string and keeps the
+label in sync if you change the visible text.
+
 ### Hiding decorative content
 
 Decorative elements that add no information should be hidden from AT:
@@ -432,6 +480,38 @@ canvas("drawing",
 For complex interactive canvases, consider whether the canvas is the right
 choice for AT users, or whether an alternative text-based representation
 would work better.
+
+### Custom widgets with state
+
+When building custom widgets with canvas or other primitives, use `toggled`,
+`selected`, `value`, and `orientation` to expose their state to AT users.
+Without these, screen readers have no way to know the state of a custom
+control drawn with raw shapes.
+
+```elixir
+# Custom toggle switch built with canvas
+canvas("dark-mode-switch", layers: [...],
+  a11y: %A11y{
+    role: :switch,
+    label: "Dark mode",
+    toggled: model.dark_mode
+  })
+
+# Custom gauge showing percentage
+canvas("cpu-gauge", layers: [...],
+  a11y: %A11y{
+    role: :meter,
+    label: "CPU usage",
+    value: "#{model.cpu_percent}%",
+    orientation: :horizontal
+  })
+```
+
+`toggled` and `selected` are booleans. Use `toggled` for on/off controls
+(switches, checkboxes) and `selected` for selection state (list items, tabs).
+`value` is a string describing the current value in human-readable form.
+`orientation` tells AT users whether a control is horizontal or vertical,
+which affects how they navigate it.
 
 ### Expanded/collapsed state
 

@@ -26,11 +26,19 @@ defmodule Julep.Iced.A11y do
   - `modal` -- dialog is modal
   - `read_only` -- can be read but not edited
   - `mnemonic` -- Alt+letter keyboard shortcut (single character)
+  - `toggled` -- toggled/checked state (for custom toggle widgets)
+  - `selected` -- selected state (for custom selectable widgets)
+  - `value` -- current value as a string (for custom value-displaying widgets)
+  - `orientation` -- `:horizontal` or `:vertical` (for custom oriented widgets)
+  - `labelled_by` -- ID of the widget that labels this one
+  - `described_by` -- ID of the widget that describes this one
+  - `error_message` -- ID of the widget showing the error message for this one
   """
 
   defstruct [:role, :label, :description, :live, :hidden, :expanded,
              :required, :level, :busy, :invalid, :modal, :read_only,
-             :mnemonic]
+             :mnemonic, :toggled, :selected, :value, :orientation,
+             :labelled_by, :described_by, :error_message]
 
   @type role ::
           :alert
@@ -78,6 +86,8 @@ defmodule Julep.Iced.A11y do
 
   @type live :: :off | :polite | :assertive
 
+  @type orientation :: :horizontal | :vertical
+
   @type t :: %__MODULE__{
           role: role() | nil,
           label: String.t() | nil,
@@ -91,7 +101,14 @@ defmodule Julep.Iced.A11y do
           invalid: boolean() | nil,
           modal: boolean() | nil,
           read_only: boolean() | nil,
-          mnemonic: String.t() | nil
+          mnemonic: String.t() | nil,
+          toggled: boolean() | nil,
+          selected: boolean() | nil,
+          value: String.t() | nil,
+          orientation: orientation() | nil,
+          labelled_by: String.t() | nil,
+          described_by: String.t() | nil,
+          error_message: String.t() | nil
         }
 
   @doc """
@@ -126,7 +143,14 @@ defmodule Julep.Iced.A11y do
       invalid: map[:invalid],
       modal: map[:modal],
       read_only: map[:read_only],
-      mnemonic: validate_mnemonic(map[:mnemonic])
+      mnemonic: validate_mnemonic(map[:mnemonic]),
+      toggled: map[:toggled],
+      selected: map[:selected],
+      value: map[:value],
+      orientation: map[:orientation],
+      labelled_by: map[:labelled_by],
+      described_by: map[:described_by],
+      error_message: map[:error_message]
     }
   end
 

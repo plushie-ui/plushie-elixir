@@ -151,6 +151,158 @@ defmodule Julep.Iced.A11yTest do
     end
   end
 
+  describe "struct creation with toggled/selected/value/orientation" do
+    test "toggled field" do
+      a = %A11y{toggled: true}
+      assert a.toggled == true
+    end
+
+    test "selected field" do
+      a = %A11y{selected: true}
+      assert a.selected == true
+    end
+
+    test "value field" do
+      a = %A11y{value: "75%"}
+      assert a.value == "75%"
+    end
+
+    test "orientation field" do
+      a = %A11y{orientation: :horizontal}
+      assert a.orientation == :horizontal
+    end
+
+    test "new state fields default to nil" do
+      a = %A11y{}
+      assert a.toggled == nil
+      assert a.selected == nil
+      assert a.value == nil
+      assert a.orientation == nil
+    end
+  end
+
+  describe "cast/1 with toggled/selected/value/orientation" do
+    test "cast bare map with toggled" do
+      a = A11y.cast(%{toggled: true, role: :switch})
+      assert %A11y{toggled: true, role: :switch} = a
+    end
+
+    test "cast bare map with toggled false" do
+      a = A11y.cast(%{toggled: false})
+      assert %A11y{toggled: false} = a
+    end
+
+    test "cast bare map with selected" do
+      a = A11y.cast(%{selected: true})
+      assert %A11y{selected: true} = a
+    end
+
+    test "cast bare map with value" do
+      a = A11y.cast(%{value: "42%", role: :meter})
+      assert %A11y{value: "42%", role: :meter} = a
+    end
+
+    test "cast bare map with orientation horizontal" do
+      a = A11y.cast(%{orientation: :horizontal})
+      assert %A11y{orientation: :horizontal} = a
+    end
+
+    test "cast bare map with orientation vertical" do
+      a = A11y.cast(%{orientation: :vertical})
+      assert %A11y{orientation: :vertical} = a
+    end
+
+    test "cast bare map with all new state fields" do
+      a = A11y.cast(%{toggled: true, selected: false, value: "50%", orientation: :vertical})
+      assert a.toggled == true
+      assert a.selected == false
+      assert a.value == "50%"
+      assert a.orientation == :vertical
+    end
+
+    test "cast passthrough preserves new state fields" do
+      a = %A11y{toggled: true, value: "80%", orientation: :horizontal}
+      assert A11y.cast(a) == a
+    end
+  end
+
+  describe "encoding toggled/selected/value/orientation" do
+    test "nil state fields are omitted from encoding" do
+      a = %A11y{label: "test"}
+      encoded = Julep.Iced.Encode.encode(a)
+      refute Map.has_key?(encoded, "toggled")
+      refute Map.has_key?(encoded, "selected")
+      refute Map.has_key?(encoded, "value")
+      refute Map.has_key?(encoded, "orientation")
+    end
+
+    test "present state fields are included in encoding" do
+      a = %A11y{toggled: true, selected: false, value: "75%", orientation: :horizontal}
+      encoded = Julep.Iced.Encode.encode(a)
+      assert encoded["toggled"] == true
+      assert encoded["selected"] == false
+      assert encoded["value"] == "75%"
+      assert encoded["orientation"] == "horizontal"
+    end
+
+    test "false toggled is preserved in encoding" do
+      a = %A11y{toggled: false}
+      encoded = Julep.Iced.Encode.encode(a)
+      assert encoded["toggled"] == false
+    end
+  end
+
+  describe "relationship fields" do
+    test "labelled_by field" do
+      a = %A11y{labelled_by: "email-label"}
+      assert a.labelled_by == "email-label"
+    end
+
+    test "described_by field" do
+      a = %A11y{described_by: "email-help"}
+      assert a.described_by == "email-help"
+    end
+
+    test "error_message field" do
+      a = %A11y{error_message: "email-error"}
+      assert a.error_message == "email-error"
+    end
+
+    test "relationship fields default to nil" do
+      a = %A11y{}
+      assert a.labelled_by == nil
+      assert a.described_by == nil
+      assert a.error_message == nil
+    end
+
+    test "cast bare map with labelled_by" do
+      a = A11y.cast(%{labelled_by: "name-label"})
+      assert %A11y{labelled_by: "name-label"} = a
+    end
+
+    test "cast bare map with described_by" do
+      a = A11y.cast(%{described_by: "name-help"})
+      assert %A11y{described_by: "name-help"} = a
+    end
+
+    test "cast bare map with error_message" do
+      a = A11y.cast(%{error_message: "name-error"})
+      assert %A11y{error_message: "name-error"} = a
+    end
+
+    test "cast bare map with all relationship fields" do
+      a = A11y.cast(%{labelled_by: "lb", described_by: "db", error_message: "em"})
+      assert a.labelled_by == "lb"
+      assert a.described_by == "db"
+      assert a.error_message == "em"
+    end
+
+    test "cast passthrough preserves relationship fields" do
+      a = %A11y{labelled_by: "lb", described_by: "db", error_message: "em"}
+      assert A11y.cast(a) == a
+    end
+  end
+
   describe "encoding new fields" do
     test "nil new fields are omitted from encoding" do
       a = %A11y{label: "test"}
@@ -177,6 +329,22 @@ defmodule Julep.Iced.A11yTest do
       encoded = Julep.Iced.Encode.encode(a)
       assert encoded["busy"] == false
       assert encoded["invalid"] == false
+    end
+
+    test "nil relationship fields are omitted from encoding" do
+      a = %A11y{label: "test"}
+      encoded = Julep.Iced.Encode.encode(a)
+      refute Map.has_key?(encoded, "labelled_by")
+      refute Map.has_key?(encoded, "described_by")
+      refute Map.has_key?(encoded, "error_message")
+    end
+
+    test "present relationship fields are included in encoding" do
+      a = %A11y{labelled_by: "lb", described_by: "db", error_message: "em"}
+      encoded = Julep.Iced.Encode.encode(a)
+      assert encoded["labelled_by"] == "lb"
+      assert encoded["described_by"] == "db"
+      assert encoded["error_message"] == "em"
     end
   end
 end
