@@ -21,6 +21,7 @@ defmodule Julep.Iced.Widget.Markdown do
   """
 
   alias Julep.Iced.A11y
+  alias Julep.Iced.Color
   alias Julep.Iced.Widget.Build
 
   @type option ::
@@ -31,6 +32,7 @@ defmodule Julep.Iced.Widget.Markdown do
           | {:h3_size, number()}
           | {:code_size, number()}
           | {:spacing, number()}
+          | {:link_color, Julep.Iced.Color.t()}
           | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -43,6 +45,7 @@ defmodule Julep.Iced.Widget.Markdown do
           h3_size: number() | nil,
           code_size: number() | nil,
           spacing: number() | nil,
+          link_color: Julep.Iced.Color.t() | nil,
           a11y: Julep.Iced.A11y.t() | nil
         }
 
@@ -56,6 +59,7 @@ defmodule Julep.Iced.Widget.Markdown do
     :h3_size,
     :code_size,
     :spacing,
+    :link_color,
     :a11y
   ]
 
@@ -78,6 +82,7 @@ defmodule Julep.Iced.Widget.Markdown do
       {:h3_size, v}, acc -> h3_size(acc, v)
       {:code_size, v}, acc -> code_size(acc, v)
       {:spacing, v}, acc -> spacing(acc, v)
+      {:link_color, v}, acc -> link_color(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -111,6 +116,11 @@ defmodule Julep.Iced.Widget.Markdown do
   @spec spacing(markdown :: t(), spacing :: number()) :: t()
   def spacing(%__MODULE__{} = md, spacing), do: %{md | spacing: spacing}
 
+  @doc "Sets the link text color."
+  @spec link_color(markdown :: t(), link_color :: Julep.Iced.Color.t()) :: t()
+  def link_color(%__MODULE__{} = md, link_color),
+    do: %{md | link_color: Color.cast(link_color)}
+
   @doc "Sets accessibility annotations."
   @spec a11y(markdown :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
   def a11y(%__MODULE__{} = md, a11y), do: %{md | a11y: A11y.cast(a11y)}
@@ -133,6 +143,7 @@ defmodule Julep.Iced.Widget.Markdown do
         |> put_if(md.h3_size, "h3_size")
         |> put_if(md.code_size, "code_size")
         |> put_if(md.spacing, "spacing")
+        |> put_if(md.link_color, "link_color")
         |> put_if(md.a11y, "a11y")
 
       %{id: md.id, type: "markdown", props: props, children: []}

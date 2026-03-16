@@ -19,6 +19,7 @@ defmodule Julep.Iced.Widget.VerticalSlider do
   """
 
   alias Julep.Iced.A11y
+  alias Julep.Iced.Color
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
@@ -30,6 +31,8 @@ defmodule Julep.Iced.Widget.VerticalSlider do
           | {:default, number()}
           | {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
+          | {:rail_color, Julep.Iced.Color.t()}
+          | {:rail_width, number()}
           | {:style, style()}
           | {:a11y, Julep.Iced.A11y.t()}
 
@@ -42,11 +45,13 @@ defmodule Julep.Iced.Widget.VerticalSlider do
           default: number() | nil,
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
+          rail_color: Julep.Iced.Color.t() | nil,
+          rail_width: number() | nil,
           style: style() | nil,
           a11y: Julep.Iced.A11y.t() | nil
         }
 
-  defstruct [:id, :range, :value, :step, :shift_step, :default, :width, :height, :style, :a11y]
+  defstruct [:id, :range, :value, :step, :shift_step, :default, :width, :height, :rail_color, :rail_width, :style, :a11y]
 
   @doc "Creates a new vertical slider struct with the given range, value, and optional keyword opts."
   @spec new(
@@ -70,6 +75,8 @@ defmodule Julep.Iced.Widget.VerticalSlider do
       {:default, v}, acc -> __MODULE__.default(acc, v)
       {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
+      {:rail_color, v}, acc -> rail_color(acc, v)
+      {:rail_width, v}, acc -> rail_width(acc, v)
       {:style, v}, acc -> style(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
@@ -96,6 +103,15 @@ defmodule Julep.Iced.Widget.VerticalSlider do
   @spec height(vertical_slider :: t(), height :: Julep.Iced.Length.t()) :: t()
   def height(%__MODULE__{} = slider, height), do: %{slider | height: height}
 
+  @doc "Sets the rail color."
+  @spec rail_color(vertical_slider :: t(), rail_color :: Julep.Iced.Color.t()) :: t()
+  def rail_color(%__MODULE__{} = slider, rail_color),
+    do: %{slider | rail_color: Color.cast(rail_color)}
+
+  @doc "Sets the rail width in pixels."
+  @spec rail_width(vertical_slider :: t(), rail_width :: number()) :: t()
+  def rail_width(%__MODULE__{} = slider, rail_width), do: %{slider | rail_width: rail_width}
+
   @doc "Sets the slider style."
   @spec style(vertical_slider :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = slider, style), do: %{slider | style: style}
@@ -121,6 +137,8 @@ defmodule Julep.Iced.Widget.VerticalSlider do
         |> put_if(slider.default, "default")
         |> put_if(slider.width, "width")
         |> put_if(slider.height, "height")
+        |> put_if(slider.rail_color, "rail_color")
+        |> put_if(slider.rail_width, "rail_width")
         |> put_if(slider.style, "style")
         |> put_if(slider.a11y, "a11y")
 

@@ -19,6 +19,7 @@ defmodule Julep.Iced.Widget.PaneGrid do
   """
 
   alias Julep.Iced.A11y
+  alias Julep.Iced.Color
   alias Julep.Iced.Widget.Build
 
   @type option ::
@@ -26,6 +27,8 @@ defmodule Julep.Iced.Widget.PaneGrid do
           | {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
           | {:min_size, number()}
+          | {:divider_color, Julep.Iced.Color.t()}
+          | {:divider_width, number()}
           | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -34,11 +37,13 @@ defmodule Julep.Iced.Widget.PaneGrid do
           width: Julep.Iced.Length.t() | nil,
           height: Julep.Iced.Length.t() | nil,
           min_size: number() | nil,
+          divider_color: Julep.Iced.Color.t() | nil,
+          divider_width: number() | nil,
           a11y: Julep.Iced.A11y.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
 
-  defstruct [:id, :spacing, :width, :height, :min_size, :a11y, children: []]
+  defstruct [:id, :spacing, :width, :height, :min_size, :divider_color, :divider_width, :a11y, children: []]
 
   @doc "Creates a new pane grid struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
@@ -56,6 +61,8 @@ defmodule Julep.Iced.Widget.PaneGrid do
       {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
       {:min_size, v}, acc -> min_size(acc, v)
+      {:divider_color, v}, acc -> divider_color(acc, v)
+      {:divider_width, v}, acc -> divider_width(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -76,6 +83,15 @@ defmodule Julep.Iced.Widget.PaneGrid do
   @doc "Sets the minimum pane size in pixels."
   @spec min_size(pane_grid :: t(), min_size :: number()) :: t()
   def min_size(%__MODULE__{} = pg, min_size), do: %{pg | min_size: min_size}
+
+  @doc "Sets the divider color."
+  @spec divider_color(pane_grid :: t(), divider_color :: Julep.Iced.Color.t()) :: t()
+  def divider_color(%__MODULE__{} = pg, divider_color),
+    do: %{pg | divider_color: Color.cast(divider_color)}
+
+  @doc "Sets the divider width in pixels."
+  @spec divider_width(pane_grid :: t(), divider_width :: number()) :: t()
+  def divider_width(%__MODULE__{} = pg, divider_width), do: %{pg | divider_width: divider_width}
 
   @doc "Appends a child pane to the grid."
   @spec push(pane_grid :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
@@ -104,6 +120,8 @@ defmodule Julep.Iced.Widget.PaneGrid do
         |> put_if(pg.width, "width")
         |> put_if(pg.height, "height")
         |> put_if(pg.min_size, "min_size")
+        |> put_if(pg.divider_color, "divider_color")
+        |> put_if(pg.divider_width, "divider_width")
         |> put_if(pg.a11y, "a11y")
 
       %{

@@ -22,6 +22,7 @@ defmodule Julep.Iced.Widget.Scrollable do
   """
 
   alias Julep.Iced.A11y
+  alias Julep.Iced.Color
   alias Julep.Iced.Widget.Build
 
   @type option ::
@@ -35,6 +36,8 @@ defmodule Julep.Iced.Widget.Scrollable do
           | {:anchor, Julep.Iced.Anchor.t()}
           | {:on_scroll, boolean()}
           | {:auto_scroll, boolean()}
+          | {:scrollbar_color, Julep.Iced.Color.t()}
+          | {:scroller_color, Julep.Iced.Color.t()}
           | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -49,6 +52,8 @@ defmodule Julep.Iced.Widget.Scrollable do
           anchor: Julep.Iced.Anchor.t() | nil,
           on_scroll: boolean() | nil,
           auto_scroll: boolean() | nil,
+          scrollbar_color: Julep.Iced.Color.t() | nil,
+          scroller_color: Julep.Iced.Color.t() | nil,
           a11y: Julep.Iced.A11y.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
@@ -65,6 +70,8 @@ defmodule Julep.Iced.Widget.Scrollable do
     :anchor,
     :on_scroll,
     :auto_scroll,
+    :scrollbar_color,
+    :scroller_color,
     :a11y,
     children: []
   ]
@@ -91,6 +98,8 @@ defmodule Julep.Iced.Widget.Scrollable do
       {:anchor, v}, acc -> anchor(acc, v)
       {:on_scroll, v}, acc -> on_scroll(acc, v)
       {:auto_scroll, v}, acc -> auto_scroll(acc, v)
+      {:scrollbar_color, v}, acc -> scrollbar_color(acc, v)
+      {:scroller_color, v}, acc -> scroller_color(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -138,6 +147,16 @@ defmodule Julep.Iced.Widget.Scrollable do
   @spec auto_scroll(scrollable :: t(), auto_scroll :: boolean()) :: t()
   def auto_scroll(%__MODULE__{} = s, auto_scroll), do: %{s | auto_scroll: auto_scroll}
 
+  @doc "Sets the scrollbar track color."
+  @spec scrollbar_color(scrollable :: t(), scrollbar_color :: Julep.Iced.Color.t()) :: t()
+  def scrollbar_color(%__MODULE__{} = s, scrollbar_color),
+    do: %{s | scrollbar_color: Color.cast(scrollbar_color)}
+
+  @doc "Sets the scroller handle color."
+  @spec scroller_color(scrollable :: t(), scroller_color :: Julep.Iced.Color.t()) :: t()
+  def scroller_color(%__MODULE__{} = s, scroller_color),
+    do: %{s | scroller_color: Color.cast(scroller_color)}
+
   @doc "Appends a child to the scrollable."
   @spec push(scrollable :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
   def push(%__MODULE__{} = s, child), do: %{s | children: [child | s.children]}
@@ -171,6 +190,8 @@ defmodule Julep.Iced.Widget.Scrollable do
         |> put_if(s.anchor, "anchor")
         |> put_if(s.on_scroll, "on_scroll")
         |> put_if(s.auto_scroll, "auto_scroll")
+        |> put_if(s.scrollbar_color, "scrollbar_color")
+        |> put_if(s.scroller_color, "scroller_color")
         |> put_if(s.a11y, "a11y")
 
       %{

@@ -22,6 +22,7 @@ defmodule Julep.Iced.Widget.Slider do
   """
 
   alias Julep.Iced.A11y
+  alias Julep.Iced.Color
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
@@ -34,6 +35,8 @@ defmodule Julep.Iced.Widget.Slider do
           | {:width, Julep.Iced.Length.t()}
           | {:height, number()}
           | {:circular_handle, boolean()}
+          | {:rail_color, Julep.Iced.Color.t()}
+          | {:rail_width, number()}
           | {:style, style()}
           | {:a11y, Julep.Iced.A11y.t()}
 
@@ -47,6 +50,8 @@ defmodule Julep.Iced.Widget.Slider do
           width: Julep.Iced.Length.t() | nil,
           height: number() | nil,
           circular_handle: boolean() | nil,
+          rail_color: Julep.Iced.Color.t() | nil,
+          rail_width: number() | nil,
           style: style() | nil,
           a11y: Julep.Iced.A11y.t() | nil
         }
@@ -61,6 +66,8 @@ defmodule Julep.Iced.Widget.Slider do
     :width,
     :height,
     :circular_handle,
+    :rail_color,
+    :rail_width,
     :style,
     :a11y
   ]
@@ -89,6 +96,8 @@ defmodule Julep.Iced.Widget.Slider do
       {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
       {:circular_handle, v}, acc -> circular_handle(acc, v)
+      {:rail_color, v}, acc -> rail_color(acc, v)
+      {:rail_width, v}, acc -> rail_width(acc, v)
       {:style, v}, acc -> style(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
@@ -120,6 +129,15 @@ defmodule Julep.Iced.Widget.Slider do
   def circular_handle(%__MODULE__{} = slider, circular_handle),
     do: %{slider | circular_handle: circular_handle}
 
+  @doc "Sets the rail color."
+  @spec rail_color(slider :: t(), rail_color :: Julep.Iced.Color.t()) :: t()
+  def rail_color(%__MODULE__{} = slider, rail_color),
+    do: %{slider | rail_color: Color.cast(rail_color)}
+
+  @doc "Sets the rail width in pixels."
+  @spec rail_width(slider :: t(), rail_width :: number()) :: t()
+  def rail_width(%__MODULE__{} = slider, rail_width), do: %{slider | rail_width: rail_width}
+
   @doc "Sets the slider style."
   @spec style(slider :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = slider, style), do: %{slider | style: style}
@@ -146,6 +164,8 @@ defmodule Julep.Iced.Widget.Slider do
         |> put_if(slider.width, "width")
         |> put_if(slider.height, "height")
         |> put_if(slider.circular_handle, "circular_handle")
+        |> put_if(slider.rail_color, "rail_color")
+        |> put_if(slider.rail_width, "rail_width")
         |> put_if(slider.style, "style")
         |> put_if(slider.a11y, "a11y")
 

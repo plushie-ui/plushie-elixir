@@ -36,6 +36,8 @@ defmodule Julep.Iced.Widget.Table do
           | {:padding, Julep.Iced.Padding.t()}
           | {:sort_by, String.t()}
           | {:sort_order, sort_order()}
+          | {:header_text_size, number()}
+          | {:row_text_size, number()}
           | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -48,6 +50,8 @@ defmodule Julep.Iced.Widget.Table do
           padding: Julep.Iced.Padding.t() | nil,
           sort_by: String.t() | nil,
           sort_order: sort_order() | nil,
+          header_text_size: number() | nil,
+          row_text_size: number() | nil,
           a11y: Julep.Iced.A11y.t() | nil
         }
 
@@ -61,6 +65,8 @@ defmodule Julep.Iced.Widget.Table do
     :padding,
     :sort_by,
     :sort_order,
+    :header_text_size,
+    :row_text_size,
     :a11y
   ]
 
@@ -84,6 +90,8 @@ defmodule Julep.Iced.Widget.Table do
       {:padding, v}, acc -> padding(acc, v)
       {:sort_by, v}, acc -> sort_by(acc, v)
       {:sort_order, v}, acc -> sort_order(acc, v)
+      {:header_text_size, v}, acc -> header_text_size(acc, v)
+      {:row_text_size, v}, acc -> row_text_size(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -121,6 +129,16 @@ defmodule Julep.Iced.Widget.Table do
   @spec sort_order(table :: t(), sort_order :: sort_order()) :: t()
   def sort_order(%__MODULE__{} = tbl, sort_order), do: %{tbl | sort_order: sort_order}
 
+  @doc "Sets the header text size in pixels."
+  @spec header_text_size(table :: t(), header_text_size :: number()) :: t()
+  def header_text_size(%__MODULE__{} = tbl, header_text_size),
+    do: %{tbl | header_text_size: header_text_size}
+
+  @doc "Sets the row text size in pixels."
+  @spec row_text_size(table :: t(), row_text_size :: number()) :: t()
+  def row_text_size(%__MODULE__{} = tbl, row_text_size),
+    do: %{tbl | row_text_size: row_text_size}
+
   @doc "Sets accessibility annotations."
   @spec a11y(table :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
   def a11y(%__MODULE__{} = tbl, a11y), do: %{tbl | a11y: A11y.cast(a11y)}
@@ -143,6 +161,8 @@ defmodule Julep.Iced.Widget.Table do
         |> put_if(tbl.padding, "padding")
         |> put_if(tbl.sort_by, "sort_by")
         |> put_if(tbl.sort_order, "sort_order")
+        |> put_if(tbl.header_text_size, "header_text_size")
+        |> put_if(tbl.row_text_size, "row_text_size")
         |> put_if(tbl.a11y, "a11y")
 
       %{id: tbl.id, type: "table", props: props, children: []}

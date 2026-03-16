@@ -51,6 +51,7 @@ defmodule Julep.Iced.StyleMap do
         }
 
   @type t :: %__MODULE__{
+          base: atom() | nil,
           background: Color.t() | Gradient.t() | nil,
           text_color: Color.t() | nil,
           border: Julep.Iced.Border.t() | nil,
@@ -61,11 +62,17 @@ defmodule Julep.Iced.StyleMap do
           focused: status_override() | nil
         }
 
-  defstruct [:background, :text_color, :border, :shadow, :hovered, :pressed, :disabled, :focused]
+  defstruct [:base, :background, :text_color, :border, :shadow, :hovered, :pressed, :disabled, :focused]
 
   @doc "Creates an empty style map."
   @spec new() :: t()
   def new, do: %__MODULE__{}
+
+  @doc "Sets the base preset to extend from instead of starting from the widget default."
+  @spec base(style_map :: t(), preset :: atom()) :: t()
+  def base(%__MODULE__{} = style_map, preset) when is_atom(preset) do
+    %{style_map | base: preset}
+  end
 
   @doc "Sets the background. Accepts a color (any form `Color.cast/1` supports) or a `Gradient`."
   @spec background(style_map :: t(), background :: Color.t() | Gradient.t() | atom()) :: t()
@@ -140,6 +147,7 @@ end
 defimpl Julep.Iced.Encode, for: Julep.Iced.StyleMap do
   def encode(style_map) do
     %{}
+    |> put_field("base", encode_base(style_map.base))
     |> put_field("background", style_map.background)
     |> put_field("text_color", style_map.text_color)
     |> put_field("border", style_map.border)
@@ -152,6 +160,9 @@ defimpl Julep.Iced.Encode, for: Julep.Iced.StyleMap do
 
   defp put_field(map, _key, nil), do: map
   defp put_field(map, key, value), do: Map.put(map, key, Julep.Iced.Encode.encode(value))
+
+  defp encode_base(nil), do: nil
+  defp encode_base(atom) when is_atom(atom), do: Atom.to_string(atom)
 
   defp encode_override(nil), do: nil
 
