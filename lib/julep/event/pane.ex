@@ -6,25 +6,32 @@ defmodule Julep.Event.Pane do
 
   ## Fields
 
-    * `type` - `:resized`, `:dragged`, or `:clicked`
+    * `type` - `:resized`, `:dragged`, `:clicked`, or `:focus_cycle`
     * `id` - the pane_grid node ID
     * `pane` - identifier of the affected pane
     * `split` - identifier of the split being resized (resized events)
     * `ratio` - new split ratio after resize (0.0 to 1.0)
     * `target` - drop target pane when dragging
+    * `action` - drag action: `"picked"`, `"dropped"`, or `"canceled"`
+    * `region` - drop region: `"center"`, `"top"`, `"bottom"`, `"left"`, `"right"`
+    * `edge` - edge drop target: `"top"`, `"bottom"`, `"left"`, `"right"`
 
   ## Pattern matching
 
-      def update(model, %Pane{type: :resized, id: "editor", split: split, ratio: ratio}) do
+      def update(model, %Pane{type: :resized, split: split, ratio: ratio}) do
         update_split_ratio(model, split, ratio)
       end
 
-      def update(model, %Pane{type: :clicked, id: "editor", pane: pane}) do
+      def update(model, %Pane{type: :clicked, pane: pane}) do
         %{model | active_pane: pane}
       end
 
-      def update(model, %Pane{type: :dragged, pane: pane, target: target}) do
+      def update(model, %Pane{type: :dragged, action: "dropped", pane: pane, target: target}) do
         swap_panes(model, pane, target)
+      end
+
+      def update(model, %Pane{type: :focus_cycle, pane: pane}) do
+        %{model | focused_pane: pane}
       end
   """
 

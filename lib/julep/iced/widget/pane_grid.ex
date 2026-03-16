@@ -10,14 +10,23 @@ defmodule Julep.Iced.Widget.PaneGrid do
   - `spacing` (number) -- space between panes in pixels. Default: 2.
   - `width` (length) -- grid width. Default: fill. See `Julep.Iced.Length`.
   - `height` (length) -- grid height. Default: fill.
+  - `min_size` (number) -- minimum pane size in pixels. Default: 10.
+  - `leeway` (number) -- grabbable area around dividers. Defaults to min_size.
   - `divider_color` (hex color) -- color for the split divider.
   - `divider_width` (number) -- divider thickness in pixels.
 
+  ## Child pane props
+
+  Each child node can have a `title` prop (string). If present, the pane
+  renders a title bar with that text. If absent, no title bar is shown.
+
   ## Events
 
-  - `{:pane_clicked, id, pane}` -- emitted when a pane is clicked.
-  - `{:pane_resized, id, split, ratio}` -- emitted when a split is resized.
-  - `{:pane_dragged, id, pane, target}` -- emitted when a pane is dragged.
+  - `%Pane{type: :clicked}` -- pane selected.
+  - `%Pane{type: :resized}` -- split divider moved (split, ratio).
+  - `%Pane{type: :dragged}` -- pane drag (action: picked/dropped/canceled,
+    with optional target, region, edge).
+  - `%Pane{type: :focus_cycle}` -- F6/Shift+F6 focus cycling.
   """
 
   alias Julep.Iced.A11y
