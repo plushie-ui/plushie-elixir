@@ -207,7 +207,11 @@ defmodule Julep.Tree do
     new_ids = Enum.map(new_children, & &1.id)
 
     if length(new_ids) != map_size(new_by_id) do
-      Logger.warning("julep tree: duplicate child IDs detected: #{inspect(new_ids)}")
+      dupes = new_ids -- Enum.uniq(new_ids)
+
+      Logger.error(
+        "julep tree: duplicate child IDs will cause rendering errors: #{inspect(Enum.uniq(dupes))}"
+      )
     end
 
     # Reorder detection uses the maps we already built, avoiding duplicate

@@ -110,25 +110,29 @@ defmodule Julep.Runtime do
     app_opts = Keyword.get(opts, :app_opts, Keyword.drop(opts, [:app, :bridge, :name, :app_opts]))
 
     # 1. Initialize app model.
-    {model, commands} = unwrap_result(app.init(app_opts))
+    case safe_init(app, app_opts) do
+      {:ok, model, commands} ->
+        state = %{
+          app: app,
+          model: model,
+          bridge: bridge,
+          tree: nil,
+          init_commands: commands,
+          subscriptions: %{},
+          windows: MapSet.new(),
+          async_tasks: %{},
+          pending_effects: %{},
+          pending_timers: %{},
+          consecutive_errors: 0
+        }
 
-    state = %{
-      app: app,
-      model: model,
-      bridge: bridge,
-      tree: nil,
-      init_commands: commands,
-      subscriptions: %{},
-      windows: MapSet.new(),
-      async_tasks: %{},
-      pending_effects: %{},
-      pending_timers: %{},
-      consecutive_errors: 0
-    }
+        # Defer rendering to handle_continue. Bridge is already started (it's
+        # the first child in the supervisor tree), so it's safe to cast to it.
+        {:ok, state, {:continue, :initial_render}}
 
-    # Defer rendering to handle_continue. Bridge is already started (it's
-    # the first child in the supervisor tree), so it's safe to cast to it.
-    {:ok, state, {:continue, :initial_render}}
+      {:error, reason} ->
+        {:stop, reason}
+    end
   end
 
   @impl true
@@ -442,6 +446,19 @@ defmodule Julep.Runtime do
     end
   end
 
+  defp safe_init(app, app_opts) do
+    {model, commands} = unwrap_result(app.init(app_opts))
+    {:ok, model, commands}
+  rescue
+    e ->
+      Logger.error("""
+      julep runtime: app.init/1 raised: #{Exception.message(e)}
+      #{Exception.format_stacktrace(__STACKTRACE__)}
+      """)
+
+      {:error, {:init_crashed, e}}
+  end
+
   defp safe_view(app, model) do
     raw_tree =
       :telemetry.span([:julep, :view], %{app: app}, fn ->
@@ -731,6 +748,17 @@ defmodule Julep.Runtime do
     state
   end
 
+  defp execute_command(
+         %Julep.Command{type: :advance_frame, payload: %{timestamp: timestamp}},
+         state
+       ) do
+    if state.bridge do
+      Julep.Bridge.send_advance_frame(state.bridge, timestamp)
+    end
+
+    state
+  end
+
   defp execute_command(%Julep.Command{type: :batch, payload: %{commands: cmds}}, state) do
     execute_commands(cmds, state)
   end
@@ -746,7 +774,18 @@ defmodule Julep.Runtime do
 
   @spec sync_subscriptions(map(), term()) :: map()
   defp sync_subscriptions(state, new_model) do
-    new_specs = state.app.subscribe(new_model)
+    new_specs =
+      try do
+        state.app.subscribe(new_model)
+      rescue
+        e ->
+          Logger.error("""
+          julep runtime: subscribe/1 raised: #{Exception.message(e)}
+          #{Exception.format_stacktrace(__STACKTRACE__)}
+          """)
+
+          []
+      end
     new_by_key = Map.new(new_specs, fn spec -> {Julep.Subscription.key(spec), spec} end)
     old_key_set = state.subscriptions |> Map.keys() |> MapSet.new()
     new_key_set = new_by_key |> Map.keys() |> MapSet.new()
@@ -981,7 +1020,9 @@ defmodule Julep.Runtime do
   defp flush_pending_effects(state, reason) do
     state =
       Enum.reduce(state.pending_effects, state, fn {id, timer_ref}, acc ->
-        Process.cancel_timer(timer_ref)
+        # Cancel the timer first to prevent double dispatch (the timeout
+        # handler checks pending_effects, but better safe than racy).
+        if timer_ref, do: Process.cancel_timer(timer_ref)
         run_update(acc, %Effect{request_id: id, result: {:error, reason}})
       end)
 

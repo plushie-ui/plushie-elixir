@@ -279,6 +279,12 @@ defmodule Julep.Protocol do
     serialize(%{type: "window_op", op: op, window_id: window_id, settings: settings}, format)
   end
 
+  @doc "Encodes an advance_frame message for headless/test mode."
+  @spec encode_advance_frame(timestamp :: non_neg_integer(), format :: format()) :: binary()
+  def encode_advance_frame(timestamp, format \\ :msgpack) do
+    serialize(%{type: "advance_frame", timestamp: timestamp}, format)
+  end
+
   # ---------------------------------------------------------------------------
   # Decoding
   # ---------------------------------------------------------------------------

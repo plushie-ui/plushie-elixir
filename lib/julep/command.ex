@@ -860,6 +860,28 @@ defmodule Julep.Command do
   end
 
   @doc """
+  Advance the animation clock by one frame in headless/test mode.
+
+  Sends an `advance_frame` message to the renderer with the given
+  `timestamp` (monotonic milliseconds). If `on_animation_frame` is
+  subscribed, the renderer emits an `animation_frame` event back.
+
+  This is a test/headless-only command. In normal daemon mode the
+  renderer drives animation frames from the display vsync.
+
+  ## Example
+
+      Julep.Command.advance_frame(16)
+  """
+  @spec advance_frame(timestamp :: non_neg_integer()) :: %__MODULE__{}
+  def advance_frame(timestamp) when is_integer(timestamp) and timestamp >= 0 do
+    %__MODULE__{
+      type: :advance_frame,
+      payload: %{timestamp: timestamp}
+    }
+  end
+
+  @doc """
   Issue multiple commands. Commands in the batch execute concurrently.
 
   Accepts a single command, a list of commands, or a nested list -- anything

@@ -146,6 +146,12 @@ defmodule Julep.Bridge do
     GenServer.cast(bridge, {:send_extension_commands, commands})
   end
 
+  @doc "Sends an advance_frame message to the renderer (headless/test mode)."
+  @spec send_advance_frame(bridge :: GenServer.server(), timestamp :: non_neg_integer()) :: :ok
+  def send_advance_frame(bridge, timestamp) do
+    GenServer.cast(bridge, {:send_advance_frame, timestamp})
+  end
+
   @doc "Stops the bridge GenServer."
   @spec stop(bridge :: GenServer.server()) :: :ok
   def stop(bridge) do
@@ -261,6 +267,12 @@ defmodule Julep.Bridge do
 
   def handle_cast({:send_extension_commands, commands}, state) do
     data = Julep.Protocol.encode_extension_commands(commands, state.format)
+    send_to_port(state.port, data)
+    {:noreply, state}
+  end
+
+  def handle_cast({:send_advance_frame, timestamp}, state) do
+    data = Julep.Protocol.encode_advance_frame(timestamp, state.format)
     send_to_port(state.port, data)
     {:noreply, state}
   end
