@@ -46,7 +46,7 @@ defmodule MyApp do
 
   def init(_opts), do: %{count: 0}
 
-  def update(model, {:click, "inc"}), do: %{model | count: model.count + 1}
+  def update(model, %Widget{type: :click, id: "inc"}), do: %{model | count: model.count + 1}
   def update(model, _event), do: model
 
   def view(model) do
@@ -81,7 +81,7 @@ Builds (if needed) and launches the renderer with your app.
 mix julep.gui MyApp                # debug build, auto-build renderer
 mix julep.gui MyApp --release      # release build
 mix julep.gui MyApp --no-build     # skip cargo build, use existing binary
-mix julep.gui MyApp --renderer /path/to/julep-renderer  # explicit binary path
+mix julep.gui MyApp --renderer /path/to/julep  # explicit binary path
 ```
 
 ### mix julep.build
@@ -123,7 +123,7 @@ Julep.tree(pid)
 Julep.tree(pid) |> Jason.encode!(pretty: true) |> IO.puts()
 
 # Dispatch events manually
-Julep.dispatch(pid, {:click, "inc"})
+Julep.dispatch(pid, %Widget{type: :click, id: "inc"})
 
 # Stop
 Julep.stop(pid)
@@ -145,7 +145,7 @@ defmodule MyAppTest do
 
   test "increment" do
     model = MyApp.init([])
-    model = MyApp.update(model, {:click, "inc"})
+    model = MyApp.update(model, %Widget{type: :click, id: "inc"})
     assert model.count == 1
   end
 

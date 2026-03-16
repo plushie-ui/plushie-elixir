@@ -1,8 +1,8 @@
 # Renderer
 
-`julep-renderer` is a standalone Rust binary (in the sibling `julep-renderer`
+`julep` is a standalone Rust binary (in the sibling `julep`
 repository) that renders julep UI trees using the
-[iced](https://github.com/iced-rs/iced) toolkit (currently v0.14).
+[julep-iced](https://github.com/julep-ui/julep-iced) toolkit (v0.6.0).
 
 ## What it does
 
@@ -135,7 +135,7 @@ palette prop.
 
 ## Multi-window
 
-Iced 0.14 supports multiple windows natively. The renderer can manage
+Iced supports multiple windows natively. The renderer can manage
 multiple windows, each driven by a separate window node in the tree.
 Window open/close/configure operations are driven by the tree: if a window
 node appears in the tree, it opens; if it disappears, it closes.
@@ -173,25 +173,24 @@ for that widget type. Platform features (`dialogs`, `clipboard`,
 `notifications`) are always included in the default build.
 
 On the Elixir side, `Julep.Features` resolves the configured feature set
-from `Application.get_env(:julep, :iced_features, :all)` and the build
-tasks (`mix julep.build`, auto-compiler) pass the corresponding
-`--features` flags to Cargo.
+from the renderer's Cargo feature flags. Widget features are controlled
+at compile time via the Cargo.toml `[features]` table.
 
 ## Building
 
 ```bash
 # Debug build (all features)
-cd ../julep-renderer && cargo build
+cd ../julep && cargo build
 
 # Release build
-cd ../julep-renderer && cargo build --release
+cd ../julep && cargo build --release
 
 # Minimal build (no optional widgets)
-cd ../julep-renderer && cargo build \
+cd ../julep && cargo build \
   --no-default-features --features "dialogs,clipboard,notifications"
 
 # Single widget only
-cd ../julep-renderer && cargo build \
+cd ../julep && cargo build \
   --no-default-features --features "dialogs,clipboard,notifications,widget-qr-code"
 ```
 
@@ -202,7 +201,7 @@ The binary can also be built automatically by `mix julep.gui --build`.
 Since the renderer speaks MessagePack (or JSONL), it can be tested without Elixir:
 
 ```bash
-echo '{"type":"snapshot","tree":{"id":"root","type":"column","props":{},"children":[{"id":"hello","type":"text","props":{"content":"Hello, world!"},"children":[]}]}}' | ./julep-renderer
+echo '{"type":"snapshot","tree":{"id":"root","type":"column","props":{},"children":[{"id":"hello","type":"text","props":{"content":"Hello, world!"},"children":[]}]}}' | ./julep
 ```
 
 Pipe JSON fixtures in, observe the window. Useful for visual regression
@@ -217,20 +216,20 @@ option). The renderer's own built-in default is `warn`.
 
 ### RUST_LOG environment variable
 
-Set `RUST_LOG` to control verbosity. The renderer's crate name is `julep_renderer`:
+Set `RUST_LOG` to control verbosity. The renderer's crate name is `julep`:
 
 ```bash
 # Show everything at debug level and above
-RUST_LOG=julep_renderer=debug mix julep.gui MyApp
+RUST_LOG=julep=debug mix julep.gui MyApp
 
 # Show only errors
-RUST_LOG=julep_renderer=error mix julep.gui MyApp
+RUST_LOG=julep=error mix julep.gui MyApp
 
 # Per-module filtering
 RUST_LOG=julep_core::widgets=debug,julep_core::engine=debug mix julep.gui MyApp
 
 # Trace level (most verbose -- future use)
-RUST_LOG=julep_renderer=trace mix julep.gui MyApp
+RUST_LOG=julep=trace mix julep.gui MyApp
 ```
 
 ### Elixir :log_level option
@@ -262,8 +261,8 @@ precedence.
 Log lines include a UTC timestamp, level, and module target:
 
 ```
-[2026-02-28T12:34:56Z INFO  julep_renderer] wire codec: MsgPack
-[2026-02-28T12:34:56Z INFO  julep_renderer] initial settings received
+[2026-02-28T12:34:56Z INFO  julep] wire codec: MsgPack
+[2026-02-28T12:34:56Z INFO  julep] initial settings received
 [2026-02-28T12:34:56Z DEBUG julep_core::engine] snapshot received (root id=main)
 ```
 

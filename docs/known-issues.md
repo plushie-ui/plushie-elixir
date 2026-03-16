@@ -7,7 +7,7 @@ clean workaround becomes available.
 
 ## Canvas LineDash segment leak
 
-**Location:** `julep-renderer/julep-core/src/widgets.rs`, `parse_canvas_stroke`
+**Location:** `julep/julep-core/src/widgets.rs`, `parse_canvas_stroke`
 
 **Issue:** iced's `canvas::LineDash` borrows its `segments` slice as
 `&'static [f32]`. Because the segments come from user-supplied JSON, we
@@ -29,7 +29,7 @@ justified given the low impact.
 
 ## DefaultHasher is not stable across Rust versions
 
-**Location:** `julep-renderer/julep-core/src/widgets.rs`, `hash_json_str`
+**Location:** `julep/julep-core/src/widgets.rs`, `hash_json_str`
 
 **Issue:** Canvas layer cache invalidation uses `std::collections::hash_map::DefaultHasher`
 to hash layer content. The Rust docs state that `DefaultHasher` output is
@@ -47,7 +47,7 @@ for the current use case.
 
 ## set_icon uses base64 in both wire formats
 
-**Location:** `lib/julep/command.ex` (`set_icon/4`), `julep-renderer/julep-renderer/src/main.rs`
+**Location:** `lib/julep/command.ex` (`set_icon/4`), `julep/julep/src/main.rs`
 
 **Issue:** `set_icon` embeds RGBA pixel data as a base64 string inside
 the generic `WindowOp { settings: Value }` map. Unlike `ImageOp` (which
@@ -65,7 +65,7 @@ binary path. Deferred because the impact is negligible.
 
 ## progress_bar text_color maps to bar fill color
 
-**Location:** `julep-renderer/julep-core/src/widgets.rs`, `apply_progress_bar_fields`
+**Location:** `julep/julep-core/src/widgets.rs`, `apply_progress_bar_fields`
 
 **Issue:** When using a `StyleMap` on a `progress_bar`, the `text_color`
 field is mapped to the bar fill color (`style.bar`), not to any text.
@@ -83,7 +83,7 @@ change.
 
 ## ensure_caches O(n) on every apply
 
-**Location:** `julep-renderer/julep-core/src/widgets.rs`, `ensure_caches`
+**Location:** `julep/julep-core/src/widgets.rs`, `ensure_caches`
 
 **Issue:** The `ensure_caches()` function walks all nodes on every
 `apply()` call to maintain widget caches (text_editor Content, combo_box
@@ -124,7 +124,7 @@ shows reorder patches as a bottleneck.
 
 ## Only one subscription tag per kind on the renderer
 
-**Location:** `julep-renderer/julep-core/src/engine.rs` (`active_subscriptions`),
+**Location:** `julep/julep-core/src/engine.rs` (`active_subscriptions`),
 `lib/julep/runtime.ex` (`sync_subscriptions`)
 
 **Issue:** The Rust renderer stores active subscriptions in a

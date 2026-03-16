@@ -73,7 +73,7 @@ end
 ```
 
 The palette map is passed to iced's `Theme::custom()` with Oklch-based
-palette generation (iced 0.14). Only the colors you specify are overridden;
+palette generation (julep-iced). Only the colors you specify are overridden;
 the rest are derived automatically.
 
 ## Extended palette shade overrides
@@ -285,7 +285,7 @@ def subscribe(_model) do
   [Julep.Subscription.on_theme_change(:theme_changed)]
 end
 
-def update(model, {:theme_changed, mode}) do
+def update(model, %System{type: :theme_changed, data: mode}) do
   # mode is "light" or "dark"
   %{model | preferred_theme: mode}
 end

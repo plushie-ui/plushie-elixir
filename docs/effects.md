@@ -20,7 +20,7 @@ renderer (decide whether to execute it). Keep the renderer dumb.
 ### Elixir side
 
 ```elixir
-def update(model, {:click, "open_file"}) do
+def update(model, %Widget{type: :click, id: "open_file"}) do
   cmd = Julep.Effects.file_open(
     title: "Choose a file",
     filters: [{"Text files", "*.txt"}, {"All files", "*"}]
@@ -28,11 +28,11 @@ def update(model, {:click, "open_file"}) do
   {model, cmd}
 end
 
-def update(model, {:effect_result, _id, {:ok, %{"path" => path}}}) do
+def update(model, %Effect{result: {:ok, %{"path" => path}}}) do
   %{model | file_path: path}
 end
 
-def update(model, {:effect_result, _id, {:error, "cancelled"}}) do
+def update(model, %Effect{result: {:error, "cancelled"}}) do
   model
 end
 ```
@@ -46,7 +46,7 @@ and embedded in the command payload. You can extract it via
 Result keys come from the renderer as string keys, not atoms (e.g.
 `%{"path" => path}`, not `%{path: path}`).
 
-The result arrives as an `{:effect_result, id, result}` event in a
+The result arrives as an `%Effect{request_id: id, result: result}` event in a
 subsequent `update` call. Effects are asynchronous -- the model is not
 blocked waiting for the result.
 

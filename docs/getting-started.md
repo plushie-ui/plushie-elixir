@@ -64,12 +64,14 @@ Create `lib/my_app/counter.ex`:
 defmodule MyApp.Counter do
   use Julep.App
 
+  alias Julep.Event.Widget
+
   # Initial state
   def init(_opts), do: %{count: 0}
 
   # Handle events
-  def update(model, {:click, "increment"}), do: %{model | count: model.count + 1}
-  def update(model, {:click, "decrement"}), do: %{model | count: model.count - 1}
+  def update(model, %Widget{type: :click, id: "increment"}), do: %{model | count: model.count + 1}
+  def update(model, %Widget{type: :click, id: "decrement"}), do: %{model | count: model.count - 1}
   def update(model, _event), do: model
 
   # Describe the UI
@@ -118,7 +120,9 @@ Takes the current model and an event, returns the new model. Pure function,
 no side effects. Pattern match on events to decide what changes.
 
 ```elixir
-def update(model, {:click, "increment"}), do: %{model | count: model.count + 1}
+alias Julep.Event.Widget
+
+def update(model, %Widget{type: :click, id: "increment"}), do: %{model | count: model.count + 1}
 def update(model, _event), do: model
 ```
 
@@ -143,19 +147,19 @@ end
 
 ## Event types
 
-Events are tuples. The first element is the event kind, followed by the
-widget ID and any payload:
+Events are structs under `Julep.Event.*`. The struct type identifies the
+event family:
 
 | Event | Meaning |
 |---|---|
-| `{:click, id}` | Button click |
-| `{:input, id, value}` | Text input change |
-| `{:submit, id, value}` | Text input submitted (Enter) |
-| `{:toggle, id, checked}` | Checkbox or toggler toggled |
-| `{:slide, id, value}` | Slider moved |
-| `{:select, id, value}` | Pick list, combo box, or radio selected |
-| `{:tick, timestamp}` | Timer subscription fired |
-| `{:key_press, key_event}` | Keyboard subscription fired |
+| `%Widget{type: :click, id: id}` | Button click |
+| `%Widget{type: :input, id: id, value: val}` | Text input change |
+| `%Widget{type: :submit, id: id, value: val}` | Text input submitted (Enter) |
+| `%Widget{type: :toggle, id: id, value: checked}` | Checkbox or toggler toggled |
+| `%Widget{type: :slide, id: id, value: val}` | Slider moved |
+| `%Widget{type: :select, id: id, value: val}` | Pick list, combo box, or radio selected |
+| `%Timer{tag: :tick, timestamp: ts}` | Timer subscription fired |
+| `%Key{type: :press, ...}` | Keyboard subscription fired |
 
 See `docs/events.md` for the full taxonomy.
 
@@ -177,7 +181,7 @@ mix julep.gui --json MyApp.Counter
 Enable verbose renderer logging:
 
 ```sh
-RUST_LOG=julep_renderer=debug mix julep.gui MyApp.Counter
+RUST_LOG=julep=debug mix julep.gui MyApp.Counter
 ```
 
 ## Next steps

@@ -136,7 +136,7 @@ end
 ```
 
 Props: `spacing`, `padding`, `width`, `height`, `align_y`, `wrap` (new
-in iced 0.14 -- wraps children to next line when they overflow).
+in julep-iced -- wraps children to next line when they overflow).
 
 ### container
 
@@ -199,7 +199,7 @@ end
 
 ### grid
 
-Arranges children in a grid layout (new in iced 0.14).
+Arranges children in a grid layout (new in julep-iced).
 
 ```elixir
 grid "gallery", columns: 3, spacing: 8 do

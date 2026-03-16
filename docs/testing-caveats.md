@@ -26,8 +26,8 @@ Key strings support modifier prefixes: `"ctrl+s"`, `"shift+enter"`,
 `"escape"` -> `:escape`, etc.
 
 All three backends support these operations:
-- **sim:** Dispatches `{:key_press, %KeyEvent{}}` / `{:key_release, ...}` /
-  `{:cursor_moved, x, y}` directly through `update/2`.
+- **sim:** Dispatches `%Key{type: :press, ...}` / `%Key{type: :release, ...}` /
+  `%Mouse{type: :moved, x: x, y: y}` directly through `update/2`.
 - **headless/full:** Sends interact messages over the wire protocol. Rust
   side parses the key string and emits event JSON.
 
@@ -144,7 +144,7 @@ asynchronously.
 **Workaround:** For timing-sensitive or concurrency-sensitive behaviour,
 use the headless or full backends. The headless backend does not require a
 display server and can be enabled via `JULEP_TEST_BACKEND=headless` after
-building the renderer with `cargo build --features headless`.
+building the renderer with `cargo build`.
 
 For unit tests that verify async result dispatch (not timing), the sim
 backend's synchronous execution is a feature, not a bug -- tests run in
@@ -156,7 +156,7 @@ milliseconds without flakiness.
 **What:** The sim backend does not perform layout. Widgets have no
 position or size. This means:
 
-- `move_to/2` dispatches a `{:cursor_moved, x, y}` event, but mouse area
+- `move_to/2` dispatches a `%Mouse{type: :moved, x: x, y: y}` event, but mouse area
   enter/exit events will not fire because there is no hit testing.
 - `find/1` locates elements by ID or text content, not by visual position.
 - Screenshot assertions always pass with an empty hash on sim.

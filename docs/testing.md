@@ -18,7 +18,7 @@ needed.
 ```elixir
 test "adding a todo appends to list and clears input" do
   model = %{todos: [], input: "Buy milk"}
-  model = MyApp.update(model, {:click, "add_todo"})
+  model = MyApp.update(model, %Widget{type: :click, id: "add_todo"})
 
   assert [%{text: "Buy milk", done: false}] = model.todos
   assert model.input == ""
@@ -34,7 +34,7 @@ executing anything.
 ```elixir
 test "submitting todo refocuses the input" do
   model = %{todos: [], input: "Buy milk"}
-  {model, cmd} = MyApp.update(model, {:submit, "todo_input", "Buy milk"})
+  {model, cmd} = MyApp.update(model, %Widget{type: :submit, id: "todo_input", value: "Buy milk"})
 
   assert [%{text: "Buy milk"}] = model.todos
   assert %Julep.Command{type: :focus, payload: %{target: "todo_input"}} = cmd
@@ -42,7 +42,7 @@ end
 
 test "save triggers an async task" do
   model = %{data: "unsaved"}
-  {_model, cmd} = MyApp.update(model, {:click, "save"})
+  {_model, cmd} = MyApp.update(model, %Widget{type: :click, id: "save"})
 
   assert %Julep.Command{type: :async, payload: %{tag: :save_result}} = cmd
 end
@@ -197,12 +197,12 @@ automatically by `Julep.Test.Case`.
 
 | Function | Widget types | Event produced |
 |---|---|---|
-| `click(selector)` | `button` | `{:click, id}` |
-| `type_text(selector, text)` | `text_input`, `text_editor` | `{:input, id, text}` |
-| `submit(selector)` | `text_input` | `{:submit, id, value}` |
-| `toggle(selector)` | `checkbox`, `toggler` | `{:toggle, id, !current}` |
-| `select(selector, value)` | `pick_list`, `combo_box`, `radio` | `{:select, id_or_group, value}` |
-| `slide(selector, value)` | `slider`, `vertical_slider` | `{:slide, id, value}` |
+| `click(selector)` | `button` | `%Widget{type: :click, id: id}` |
+| `type_text(selector, text)` | `text_input`, `text_editor` | `%Widget{type: :input, id: id, value: text}` |
+| `submit(selector)` | `text_input` | `%Widget{type: :submit, id: id, value: val}` |
+| `toggle(selector)` | `checkbox`, `toggler` | `%Widget{type: :toggle, id: id, value: !current}` |
+| `select(selector, value)` | `pick_list`, `combo_box`, `radio` | `%Widget{type: :select, id: id, value: val}` |
+| `slide(selector, value)` | `slider`, `vertical_slider` | `%Widget{type: :slide, id: id, value: val}` |
 
 Interacting with the wrong widget type raises with an actionable hint:
 
@@ -296,11 +296,11 @@ changing assertions.
 - **`:headless`** -- real Rust renderer with `iced_test` Simulator (no
   display server). Proves the wire protocol works end-to-end (msgpack by
   default). Tree-hash snapshots detect structural drift. Build with
-  `cargo build --features headless`.
+  the `--headless` runtime flag.
 
 - **`:full`** -- real `iced::daemon` with GPU rendering. Effects work,
   subscriptions fire, pixel screenshots capture exactly what a user sees.
-  Build with `cargo build --features test-mode`. Needs a display server
+  Uses the `--test` runtime flag. Needs a display server
   (Xvfb or headless Weston).
 
 ### Backend selection
@@ -510,7 +510,7 @@ level instead:
 ```elixir
 test "clicking fetch starts async load" do
   model = %{loading: false, data: nil}
-  {model, cmd} = MyApp.update(model, {:click, "fetch"})
+  {model, cmd} = MyApp.update(model, %Widget{type: :click, id: "fetch"})
 
   assert model.loading == true
   assert %Julep.Command{type: :async, payload: %{tag: :data_loaded}} = cmd
@@ -559,7 +559,7 @@ Use the correct interaction function for the widget type. See the
 Build the renderer with the headless feature:
 
 ```bash
-cd ../julep-renderer && cargo build --features headless
+cd ../julep && cargo build
 ```
 
 ### Inspecting state when a test fails
@@ -594,8 +594,8 @@ Requires the Rust toolchain and the headless feature build.
 
 ```yaml
 - run: |
-    cd ../julep-renderer
-    cargo build --features headless
+    cd ../julep
+    cargo build
 - run: JULEP_TEST_BACKEND=headless mix test
 ```
 
@@ -608,8 +608,8 @@ Requires a display server and GPU/software rendering. Two options:
 ```yaml
 - run: |
     sudo apt-get install -y xvfb mesa-vulkan-drivers
-    cd ../julep-renderer
-    cargo build --features test-mode
+    cd ../julep
+    cargo build
 - run: |
     Xvfb :99 -screen 0 1024x768x24 &
     export DISPLAY=:99
@@ -626,8 +626,8 @@ runs the full rendering pipeline on CPU.
 ```yaml
 - run: |
     sudo apt-get install -y weston mesa-vulkan-drivers
-    cd ../julep-renderer
-    cargo build --features test-mode
+    cd ../julep
+    cargo build
 - run: |
     export XDG_RUNTIME_DIR=/tmp/julep-xdg-runtime
     mkdir -p "$XDG_RUNTIME_DIR" && chmod 0700 "$XDG_RUNTIME_DIR"
@@ -649,7 +649,7 @@ Run sim tests fast, then promote to higher-fidelity backends for subsets:
 
 # Full suite on headless for protocol verification
 - run: |
-    cd ../julep-renderer && cargo build --features headless
+    cd ../julep && cargo build
     JULEP_TEST_BACKEND=headless mix test
 
 # Full for pixel regression (tagged subset)
@@ -702,7 +702,7 @@ each limitation.
 
 - Script instruction `move` (move cursor to a widget by selector) is a
   no-op. It requires widget bounds from layout, which only the renderer knows.
-- `move_to` on the sim backend dispatches `{:cursor_moved, x, y}` but has
+- `move_to` on the sim backend dispatches `%Mouse{type: :moved, x: x, y: y}` but has
   no spatial layout info. Mouse area enter/exit events won't fire.
 - Pixel screenshots are only available on the headless and full backends (sim returns stubs).
 - Headless screenshots use software rendering (tiny-skia) and may not match

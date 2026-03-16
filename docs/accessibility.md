@@ -9,7 +9,7 @@ AT-SPI/Orca on Linux, and UI Automation/NVDA/JAWS on Windows.
 Screen reader users, keyboard-only users, and other AT users interact with
 the same widgets and receive the same events as mouse users. No special
 event handling is needed in your `update/2` -- AT actions produce the same
-`{:click, id}`, `{:input, id, value}`, etc. events as direct interaction.
+`%Widget{type: :click, id: id}`, `%Widget{type: :input, id: id, value: val}`, etc. events as direct interaction.
 
 
 ## How it works
@@ -40,14 +40,14 @@ Elixir app                Renderer (iced)               Platform AT
    |                         |                              |
    |                         |<-- AT Action (Click) --------|
    |                         |   (native iced event)        |
-   |<-- {:click, id} --------|                              |
+   |<-- %Widget{:click} -----|                              |
 ```
 
 ### julep's role
 
 julep does not build its own accesskit tree. Iced handles tree building,
 AT actions, and platform integration natively. julep's contribution is the
-`A11yOverride` wrapper widget (`a11y_widget.rs` in julep-renderer) that
+`A11yOverride` wrapper widget (`a11y_widget.rs` in julep) that
 intercepts `operate()` to apply Elixir-side overrides from the `a11y` prop.
 
 This means:
@@ -546,12 +546,12 @@ renderer maps it to a standard julep event:
 
 | AT action | Julep event | Notes |
 |---|---|---|
-| Click | `{:click, id}` | Screen reader activate, switch press |
-| SetValue | `{:input, id, value}` | AT sets an input value directly |
+| Click | `%Widget{type: :click, id: id}` | Screen reader activate, switch press |
+| SetValue | `%Widget{type: :input, id: id, value: val}` | AT sets an input value directly |
 | Focus | (internal) | Focus tracking, no event emitted |
 | Other | `{:a11y_action, id, action_name}` | Scroll, dismiss, etc. |
 
-Your `update/2` already handles `{:click, ...}` and `{:input, ...}` --
+Your `update/2` already handles `%Widget{type: :click, ...}` and `%Widget{type: :input, ...}` --
 AT actions produce identical events. The `{:a11y_action, ...}` event is
 a catch-all for actions without a direct widget equivalent:
 
@@ -656,7 +656,7 @@ end
 Accessibility is enabled by default. A standard `cargo build` includes it:
 
 ```bash
-cd ../julep-renderer
+cd ../julep
 cargo build --release
 ```
 
@@ -676,7 +676,7 @@ The `a11y` feature flag controls:
 | Component | What it enables |
 |---|---|
 | iced fork (`v0.14.0-a11y-accesskit`) | accesskit + accesskit_winit, TreeBuilder, per-window adapter management |
-| `julep-renderer` | `A11yOverride` wrapper widget, `HiddenInterceptor`, AT action handling |
+| `julep` | `A11yOverride` wrapper widget, `HiddenInterceptor`, AT action handling |
 
 Without the feature, the `a11y` prop is still accepted in UI trees (it's
 just a map in props) but has no effect.
@@ -702,7 +702,7 @@ To manually verify accessibility with a real screen reader:
 
 ```bash
 # Build the renderer (a11y is included by default)
-cd ../julep-renderer && cargo build
+cd ../julep && cargo build
 
 # Start Orca (usually Super+Alt+S, or from accessibility settings)
 orca &
@@ -718,7 +718,7 @@ Activate buttons with Enter or Space.
 
 ```bash
 # Build the renderer (a11y is included by default)
-cd ../julep-renderer && cargo build
+cd ../julep && cargo build
 
 # Toggle VoiceOver: Cmd+F5
 # Run your app
@@ -732,7 +732,7 @@ should announce each widget's role and label.
 
 ```bash
 # Build the renderer (a11y is included by default)
-cd ../julep-renderer && cargo build
+cd ../julep && cargo build
 
 # Start NVDA
 # Run your app
@@ -749,7 +749,7 @@ For contributors working on the accessibility internals:
 
 ### iced fork (`v0.14.0-a11y-accesskit` branch)
 
-The iced fork adds native accessibility support to iced 0.14. Key additions:
+The iced fork adds native accessibility support. Key additions:
 
 - **`Accessible` trait** -- widgets implement this to report their role,
   label, and state to accesskit. Most built-in widgets already implement it.
@@ -767,7 +767,7 @@ behind switching to this approach.
 
 ### A11yOverride wrapper widget
 
-`a11y_widget.rs` in julep-renderer contains two wrapper widgets:
+`a11y_widget.rs` in julep contains two wrapper widgets:
 
 - **`A11yOverride`** -- wraps any iced `Element` and intercepts `operate()`
   to apply Elixir-side overrides from the `a11y` prop (role, label,

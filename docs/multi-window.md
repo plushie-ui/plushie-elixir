@@ -85,7 +85,7 @@ Properties are set when the window first appears. To change properties
 after creation, use window commands:
 
 ```elixir
-def update(model, {:click, "go_fullscreen"}) do
+def update(model, %Widget{type: :click, id: "go_fullscreen"}) do
   {model, Julep.Command.set_window_mode("main", :fullscreen)}
 end
 ```
@@ -96,11 +96,11 @@ Window events include the window ID so your app knows which window they
 came from:
 
 ```elixir
-def update(model, {:window_close_requested, "inspector"}) do
+def update(model, %Window{type: :close_requested, window_id: "inspector"}) do
   %{model | inspector_open: false}
 end
 
-def update(model, {:window_close_requested, "main"}) do
+def update(model, %Window{type: :close_requested, window_id: "main"}) do
   if model.unsaved_changes do
     %{model | confirm_exit: true}
   else
@@ -108,11 +108,11 @@ def update(model, {:window_close_requested, "main"}) do
   end
 end
 
-def update(model, {:window_resized, "main", width, height}) do
+def update(model, %Window{type: :resized, window_id: "main", width: width, height: height}) do
   %{model | window_size: {width, height}}
 end
 
-def update(model, {:window_focused, window_id}) do
+def update(model, %Window{type: :focused, window_id: window_id}) do
   %{model | active_window: window_id}
 end
 ```
@@ -120,17 +120,17 @@ end
 ## Window close behaviour
 
 By default, when the user clicks the close button on a window, the
-renderer sends a `{:window_close_requested, window_id}` event instead
+renderer sends a `%Window{type: :close_requested, window_id: window_id}` event instead
 of closing immediately. Your app decides what to do:
 
 ```elixir
 # Let it close (remove it from view):
-def update(model, {:window_close_requested, "settings"}) do
+def update(model, %Window{type: :close_requested, window_id: "settings"}) do
   %{model | settings_open: false}
 end
 
 # Block the close:
-def update(model, {:window_close_requested, "main"}) do
+def update(model, %Window{type: :close_requested, window_id: "main"}) do
   %{model | show_save_dialog: true}
 end
 ```
@@ -147,7 +147,7 @@ Windows are opened by adding window nodes to the tree returned by
 flag in your model and include the window node conditionally:
 
 ```elixir
-def update(model, {:click, "open_settings"}) do
+def update(model, %Widget{type: :click, id: "open_settings"}) do
   %{model | settings_open: true}
 end
 
@@ -189,8 +189,8 @@ The renderer tracks which window has OS focus. Window focus/unfocus events
 are delivered as:
 
 ```elixir
-{:window_focused, window_id}
-{:window_unfocused, window_id}
+%Window{type: :focused, window_id: window_id}
+%Window{type: :unfocused, window_id: window_id}
 ```
 
 The app can use these to adjust behaviour (e.g., pause animations in

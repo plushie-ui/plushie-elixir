@@ -36,7 +36,7 @@ are building an app with julep, see [testing.md](testing.md) instead.
            |            |  |(GenServer) |  |(GenServer) |
            +-----+------+  +-----+-----+  +-----+-----+
                  |                |              |
-           pure Elixir      Port: julep-renderer  Port: julep-renderer
+           pure Elixir      Port: julep           Port: julep
            EventMap         --headless       --test
            process_commands  wire protocol    wire protocol
                                               real iced windows
@@ -56,9 +56,9 @@ are building an app with julep, see [testing.md](testing.md) instead.
    and handles interactions differently:
    - **Sim** runs `init/update/view` locally, uses `EventMap` to infer
      events, and executes commands synchronously.
-   - **Headless** spawns `julep-renderer --headless` via Port, sends wire protocol
+   - **Headless** spawns `julep --headless` via Port, sends wire protocol
      queries, and processes responses asynchronously via correlation IDs.
-   - **Full** spawns `julep-renderer --test` via Port, same wire protocol as
+   - **Full** spawns `julep --test` via Port, same wire protocol as
      headless but with real iced windows and GPU rendering.
 
 
@@ -211,16 +211,16 @@ renderer's actual event generation.
 
 | Widget | `click` | `input` | `submit` | `toggle` | `select` | `slide` |
 |---|---|---|---|---|---|---|
-| `button` | `{:click, id}` | error | error | error | error | error |
-| `checkbox` | error (use toggle) | error | error | `{:toggle, id, !is_checked}` | error | error |
-| `toggler` | error (use toggle) | error | error | `{:toggle, id, !is_toggled}` | error | error |
-| `radio` | error | error | error | error | `{:select, group, value}` | error |
-| `text_input` | error | `{:input, id, text}` | `{:submit, id, typed \|\| props["value"]}` | error | error | error |
-| `text_editor` | error | `{:input, id, text}` | error | error | error | error |
-| `slider` | error | error | error | error | error | `{:slide, id, value}` |
-| `vertical_slider` | error | error | error | error | error | `{:slide, id, value}` |
-| `pick_list` | error | error | error | error | `{:select, id, value}` | error |
-| `combo_box` | error | error | error | error | `{:select, id, value}` | error |
+| `button` | `%Widget{type: :click}` | error | error | error | error | error |
+| `checkbox` | error (use toggle) | error | error | `%Widget{type: :toggle}` | error | error |
+| `toggler` | error (use toggle) | error | error | `%Widget{type: :toggle}` | error | error |
+| `radio` | error | error | error | error | `%Widget{type: :select}` | error |
+| `text_input` | error | `%Widget{type: :input}` | `%Widget{type: :submit}` | error | error | error |
+| `text_editor` | error | `%Widget{type: :input}` | error | error | error | error |
+| `slider` | error | error | error | error | error | `%Widget{type: :slide}` |
+| `vertical_slider` | error | error | error | error | error | `%Widget{type: :slide}` |
+| `pick_list` | error | error | error | error | `%Widget{type: :select}` | error |
+| `combo_box` | error | error | error | error | `%Widget{type: :select}` | error |
 
 "error" means the function returns `{:error, message}` with an actionable
 hint about which function to use instead (when applicable).
@@ -275,7 +275,7 @@ Two search strategies:
 ## Headless backend internals
 
 The headless backend (`lib/julep/test/backend/headless.ex`) spawns
-`julep-renderer --headless` as a Port.
+`julep --headless` as a Port.
 
 ### Protocol
 
@@ -313,7 +313,7 @@ map from ID to `{type, from}` or `{type, from, extra}` tuples.
 
 When an `interact_response` includes events, the headless backend decodes
 each event (e.g., `{"event": "click", "id": "my_btn"}` becomes
-`{:click, "my_btn"}`), dispatches it through `app.update/2`, re-renders the
+`%Widget{type: :click, id: "my_btn"}`), dispatches it through `app.update/2`, re-renders the
 tree, and sends the updated tree back to the renderer.
 
 ### Screenshot behaviour
@@ -332,7 +332,7 @@ for the full rendering flow.
 ## Full backend internals
 
 The full backend (`lib/julep/test/backend/full.ex`) is structurally
-identical to the headless backend but spawns `julep-renderer --test` instead of
+identical to the headless backend but spawns `julep --test` instead of
 `--headless`. The Rust renderer runs a real `iced::daemon` with GPU
 rendering alongside the test protocol message handler.
 
@@ -463,8 +463,8 @@ backend, making it a natural choice for headless screenshot rendering.
 | `lib/julep/test/event_map.ex` | Widget type to event inference for sim backend |
 | `lib/julep/test/script.ex` | `.julep` script parser |
 | `lib/julep/test/script/runner.ex` | Script execution engine |
-| `julep-renderer/julep-core/src/engine.rs` | Core struct (tree, caches, subscriptions) |
-| `julep-renderer/julep-renderer/src/headless.rs` | `--headless` mode: Core + wire protocol, no iced runtime |
-| `julep-renderer/julep-renderer/src/test_mode.rs` | `--test` mode: real iced::daemon + test protocol |
+| `julep/julep-core/src/engine.rs` | Core struct (tree, caches, subscriptions) |
+| `julep/julep/src/headless.rs` | `--headless` mode: Core + wire protocol, no iced runtime |
+| `julep/julep/src/test_mode.rs` | `--test` mode: real iced::daemon + test protocol |
 | `test/support/mock_bridge.ex` | Test double tracking bridge calls |
 | `test/support/integration_case.ex` | ExUnit case template for integration tests |

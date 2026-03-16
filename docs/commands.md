@@ -16,10 +16,10 @@ schedule a delayed event. These are commands.
 
 ```elixir
 # No commands -- just return the model:
-def update(model, {:click, "simple"}), do: model
+def update(model, %Widget{type: :click, id: "simple"}), do: model
 
 # With commands -- return a tuple:
-def update(model, {:click, "save"}) do
+def update(model, %Widget{type: :click, id: "save"}) do
   {model, Julep.Command.async(fn -> save_to_disk(model) end, :save_result)}
 end
 
@@ -45,7 +45,7 @@ Julep.Command.async(fun, event_tag)
 ```
 
 ```elixir
-def update(model, {:click, "fetch"}) do
+def update(model, %Widget{type: :click, id: "fetch"}) do
   cmd = Julep.Command.async(fn ->
     {:ok, resp} = HTTP.get("https://api.example.com/data")
     resp.body
@@ -76,7 +76,7 @@ Julep.Command.stream(fun, event_tag)
 ```
 
 ```elixir
-def update(model, {:click, "import"}) do
+def update(model, %Widget{type: :click, id: "import"}) do
   cmd = Julep.Command.stream(fn emit ->
     rows =
       "big.csv"
@@ -117,7 +117,7 @@ Julep.Command.cancel(event_tag)
 ```
 
 ```elixir
-def update(model, {:click, "cancel_import"}) do
+def update(model, %Widget{type: :click, id: "cancel_import"}) do
   {%{model | importing: false}, Julep.Command.cancel(:file_import)}
 end
 ```
@@ -133,7 +133,7 @@ Julep.Command.done(value, msg_fn)
 ```
 
 ```elixir
-def update(model, {:click, "reset"}) do
+def update(model, %Widget{type: :click, id: "reset"}) do
   {model, Julep.Command.done(:defaults, fn v -> {:config_loaded, v} end)}
 end
 ```
@@ -159,7 +159,7 @@ Julep.Command.focus_previous()           # Focus previous focusable widget
 Example:
 
 ```elixir
-def update(model, {:click, "new_todo"}) do
+def update(model, %Widget{type: :click, id: "new_todo"}) do
   {%{model | input: ""}, Julep.Command.focus("todo_input")}
 end
 ```
@@ -177,7 +177,7 @@ Julep.Command.select_range(widget_id, start_pos, end_pos) # Select character ran
 Example:
 
 ```elixir
-def update(model, {:click, "select_word"}) do
+def update(model, %Widget{type: :click, id: "select_word"}) do
   {model, Julep.Command.select_range("editor", 5, 10)}
 end
 ```
@@ -194,7 +194,7 @@ Julep.Command.scroll_by(widget_id, x, y)     # Scroll by relative delta
 Example:
 
 ```elixir
-def update(model, {:click, "scroll_bottom"}) do
+def update(model, %Widget{type: :click, id: "scroll_bottom"}) do
   {model, Julep.Command.snap_to_end("chat_log")}
 end
 ```
@@ -237,11 +237,11 @@ Julep.Command.allow_automatic_tabbing(enabled)               # Enable/disable ma
 Example:
 
 ```elixir
-def update(model, {:click, "go_fullscreen"}) do
+def update(model, %Widget{type: :click, id: "go_fullscreen"}) do
   {model, Julep.Command.set_window_mode("main", :fullscreen)}
 end
 
-def update(model, {:click, "pin_on_top"}) do
+def update(model, %Widget{type: :click, id: "pin_on_top"}) do
   {model, Julep.Command.set_window_level("main", :always_on_top)}
 end
 ```
@@ -253,7 +253,7 @@ The `rgba_data` must be a binary of `width * height * 4` bytes.
 
 Window queries are commands whose results arrive as events in `update/2`.
 Despite accepting a `tag` parameter, window property queries use the
-**effect response** transport -- results arrive as `{:effect_result, id, result}`
+**effect response** transport -- results arrive as `%Effect{request_id: id, result: result}`
 tuples where `id` is the **window_id string** (the `tag` is currently
 unused for these queries). System queries use a separate path where the
 tag is used.
@@ -261,46 +261,46 @@ tag is used.
 ##### Window property queries
 
 These go through the effect/window_op system. Results arrive in `update/2`
-as `{:effect_result, window_id, {:ok, data}}` where `window_id` is the
+as `%Effect{request_id: window_id, result: {:ok, data}}` where `window_id` is the
 string ID of the window and `data` varies by query type.
 
 ```elixir
 Julep.Command.get_window_size(window_id, tag)
-# Result: {:effect_result, window_id, {:ok, %{"width" => w, "height" => h}}}
+# Result: %Effect{request_id: window_id, result: {:ok, %{"width" => w, "height" => h}}}
 
 Julep.Command.get_window_position(window_id, tag)
-# Result: {:effect_result, window_id, {:ok, %{"x" => x, "y" => y}}}
+# Result: %Effect{request_id: window_id, result: {:ok, %{"x" => x, "y" => y}}}
 # (nil if position is unavailable)
 
 Julep.Command.get_mode(window_id, tag)
-# Result: {:effect_result, window_id, {:ok, mode}}
+# Result: %Effect{request_id: window_id, result: {:ok, mode}}
 # mode is "windowed", "fullscreen", or "hidden"
 
 Julep.Command.get_scale_factor(window_id, tag)
-# Result: {:effect_result, window_id, {:ok, factor}}
+# Result: %Effect{request_id: window_id, result: {:ok, factor}}
 
 Julep.Command.is_maximized(window_id, tag)
-# Result: {:effect_result, window_id, {:ok, boolean}}
+# Result: %Effect{request_id: window_id, result: {:ok, boolean}}
 
 Julep.Command.is_minimized(window_id, tag)
-# Result: {:effect_result, window_id, {:ok, boolean}}
+# Result: %Effect{request_id: window_id, result: {:ok, boolean}}
 
 Julep.Command.raw_id(window_id, tag)
-# Result: {:effect_result, window_id, {:ok, platform_id}}
+# Result: %Effect{request_id: window_id, result: {:ok, platform_id}}
 
 Julep.Command.monitor_size(window_id, tag)
-# Result: {:effect_result, window_id, {:ok, %{"width" => w, "height" => h}}}
+# Result: %Effect{request_id: window_id, result: {:ok, %{"width" => w, "height" => h}}}
 # (nil if monitor cannot be determined)
 ```
 
 Example:
 
 ```elixir
-def update(model, {:click, "check_size"}) do
+def update(model, %Widget{type: :click, id: "check_size"}) do
   {model, Julep.Command.get_window_size("main", :got_size)}
 end
 
-def update(model, {:effect_result, "main", {:ok, %{"width" => w, "height" => h}}}) do
+def update(model, %Effect{request_id: "main", result: {:ok, %{"width" => w, "height" => h}}}) do
   %{model | window_width: w, window_height: h}
 end
 ```
@@ -335,7 +335,7 @@ pass an atom. `Julep.Command.get_system_theme(:theme_detected)` produces
 atom.
 
 ```elixir
-def update(model, {:click, "detect_theme"}) do
+def update(model, %Widget{type: :click, id: "detect_theme"}) do
   {model, Julep.Command.get_system_theme(:theme_detected)}
 end
 
@@ -360,7 +360,7 @@ Julep.Command.delete_image(handle)                           # Remove in-memory 
 Example:
 
 ```elixir
-def update(model, {:click, "load_preview"}) do
+def update(model, %Widget{type: :click, id: "load_preview"}) do
   cmd = Julep.Command.async(fn ->
     File.read!("preview.png")
   end, :preview_loaded)
@@ -387,7 +387,7 @@ Julep.Command.pane_restore(widget_id)                         # Restore from max
 Example:
 
 ```elixir
-def update(model, {:click, "split_editor"}) do
+def update(model, %Widget{type: :click, id: "split_editor"}) do
   cmd = Julep.Command.pane_split("pane_grid", "editor", :horizontal, "new_editor")
   {model, cmd}
 end
@@ -400,7 +400,7 @@ Julep.Command.send_after(delay_ms, event)  # Send event after delay
 ```
 
 ```elixir
-def update(model, {:click, "flash_message"}) do
+def update(model, %Widget{type: :click, id: "flash_message"}) do
   model = %{model | message: "Saved!"}
   cmd = Julep.Command.send_after(3000, :clear_message)
   {model, cmd}
@@ -465,7 +465,7 @@ updates and UI refreshes at every link in the chain, not just at the end.
 
 ```elixir
 # Step 1: user clicks "deploy" -- validate first
-def update(model, {:click, "deploy"}) do
+def update(model, %Widget{type: :click, id: "deploy"}) do
   cmd = Julep.Command.async(fn -> validate_config(model.config) end, :validated)
   {%{model | status: :validating}, cmd}
 end
@@ -508,7 +508,7 @@ The runtime is a `GenServer`. You can send messages to it directly from
 any process, and they arrive as events in `update/2`:
 
 ```elixir
-def update(model, {:click, "import"}) do
+def update(model, %Widget{type: :click, id: "import"}) do
   runtime = self()
 
   pid = spawn_link(fn ->
@@ -540,7 +540,7 @@ end
 If you track the PID yourself, cancellation is just `Process.exit/2`:
 
 ```elixir
-def update(model, {:click, "cancel_import"}) do
+def update(model, %Widget{type: :click, id: "cancel_import"}) do
   if model.import_pid, do: Process.exit(model.import_pid, :kill)
   %{model | importing: false, import_pid: nil}
 end
@@ -579,7 +579,7 @@ effects that the runtime executes after `update` returns. This keeps
 
 ```elixir
 test "clicking fetch returns async command" do
-  {model, cmd} = MyApp.update(%{loading: false}, {:click, "fetch"})
+  {model, cmd} = MyApp.update(%{loading: false}, %Widget{type: :click, id: "fetch"})
   assert model.loading == true
   assert %Julep.Command{type: :async} = cmd
 end
@@ -595,7 +595,7 @@ subscriptions (`every/2`), the tag becomes the event wrapper -- `update/2`
 receives `{tag, timestamp}`. For all renderer subscriptions (keyboard,
 mouse, window, etc.), the tag is management-only and does NOT appear in
 the event tuple. Renderer events arrive as fixed tuples like
-`{:key_press, %Julep.KeyEvent{}}` regardless of what tag you chose.
+`%Key{type: :press, ...}` regardless of what tag you chose.
 
 ### The subscribe callback
 
@@ -640,18 +640,18 @@ Julep.Subscription.every(interval_ms, event_tag)
 
 ```elixir
 Julep.Subscription.on_key_press(event_tag)
-# Delivers: {:key_press, %Julep.KeyEvent{}}
+# Delivers: %Key{type: :press, ...}
 
 Julep.Subscription.on_key_release(event_tag)
-# Delivers: {:key_release, %Julep.KeyEvent{}}
+# Delivers: %Key{type: :release, ...}
 
 Julep.Subscription.on_modifiers_changed(event_tag)
-# Delivers: {:modifiers_changed, %Julep.KeyModifiers{}}
+# Delivers: %Modifiers{shift: bool, ctrl: bool, ...}
 
 # The event_tag is used by the runtime to register/unregister the
 # subscription with the renderer. It is NOT included in the event
 # tuple delivered to update/2. See docs/events.md for the full
-# KeyEvent and KeyModifiers struct definitions.
+# Key and KeyModifiers struct definitions.
 ```
 
 #### Window lifecycle
@@ -661,32 +661,32 @@ Julep.Subscription.on_window_close(event_tag)
 # Delivers: {event_tag, window_id}
 
 Julep.Subscription.on_window_open(event_tag)
-# Delivers: {:window_opened, window_id, position, {width, height}}
+# Delivers: %Window{type: :opened, window_id: wid, position: pos, width: w, height: h}
 
 Julep.Subscription.on_window_resize(event_tag)
-# Delivers: {:window_resized, window_id, width, height}
+# Delivers: %Window{type: :resized, window_id: wid, width: w, height: h}
 
 Julep.Subscription.on_window_focus(event_tag)
-# Delivers: {:window_focused, window_id}
+# Delivers: %Window{type: :focused, window_id: wid}
 
 Julep.Subscription.on_window_unfocus(event_tag)
-# Delivers: {:window_unfocused, window_id}
+# Delivers: %Window{type: :unfocused, window_id: wid}
 
 Julep.Subscription.on_window_move(event_tag)
-# Delivers: {:window_moved, window_id, x, y}
+# Delivers: %Window{type: :moved, window_id: wid, x: x, y: y}
 
 Julep.Subscription.on_window_event(event_tag)
-# Delivers: various {:window_*, ...} tuples (catch-all for window events)
+# Delivers: various %Window{type: ..., ...} structs (catch-all for window events)
 ```
 
 #### Mouse
 
 ```elixir
 Julep.Subscription.on_mouse_move(event_tag)
-# Delivers: {:cursor_moved, x, y}
+# Delivers: %Mouse{type: :moved, x: x, y: y}
 
 Julep.Subscription.on_mouse_button(event_tag)
-# Delivers: {:button_pressed, button} or {:button_released, button}
+# Delivers: %Mouse{type: :button_pressed, button: btn} or %Mouse{type: :button_released, button: btn}
 
 Julep.Subscription.on_mouse_scroll(event_tag)
 # Delivers: {:wheel_scrolled, delta_x, delta_y, unit}
@@ -696,35 +696,35 @@ Julep.Subscription.on_mouse_scroll(event_tag)
 
 ```elixir
 Julep.Subscription.on_touch(event_tag)
-# Delivers: {:finger_pressed, finger_id, x, y}
-#           {:finger_moved, finger_id, x, y}
-#           {:finger_lifted, finger_id, x, y}
-#           {:finger_lost, finger_id, x, y}
+# Delivers: %Touch{type: :pressed, finger_id: fid, x: x, y: y}
+#           %Touch{type: :moved, ...}
+#           %Touch{type: :lifted, ...}
+#           %Touch{type: :lost, ...}
 ```
 
 #### IME (Input Method Editor)
 
 ```elixir
 Julep.Subscription.on_ime(event_tag)
-# Delivers: {:ime_opened}
-#           {:ime_preedit, text, {start, end} | nil}
-#           {:ime_commit, text}
-#           {:ime_closed}
+# Delivers: %Ime{type: :opened}
+#           %Ime{type: :preedit, text: text, cursor: {start, end_pos} | nil}
+#           %Ime{type: :commit, text: text}
+#           %Ime{type: :closed}
 ```
 
 #### System
 
 ```elixir
 Julep.Subscription.on_theme_change(event_tag)
-# Delivers: {:theme_changed, mode}  (mode is "light" or "dark")
+# Delivers: %System{type: :theme_changed, data: mode}  (mode is "light" or "dark")
 
 Julep.Subscription.on_animation_frame(event_tag)
-# Delivers: {:animation_frame, timestamp}
+# Delivers: %System{type: :animation_frame, data: timestamp}
 
 Julep.Subscription.on_file_drop(event_tag)
-# Delivers: {:file_dropped, window_id, path}
-#           {:file_hovered, window_id, path}
-#           {:files_hovered_left, window_id}
+# Delivers: %Window{type: :file_dropped, window_id: wid, path: path}
+#           %Window{type: :file_hovered, window_id: wid, path: path}
+#           %Window{type: :files_hovered_left, window_id: wid}
 ```
 
 #### Catch-all
@@ -755,11 +755,11 @@ def subscribe(model) do
   end
 end
 
-def update(model, {:click, "start_polling"}) do
+def update(model, %Widget{type: :click, id: "start_polling"}) do
   %{model | polling: true}
 end
 
-def update(model, {:click, "stop_polling"}) do
+def update(model, %Widget{type: :click, id: "stop_polling"}) do
   %{model | polling: false}
 end
 
@@ -805,42 +805,6 @@ def settings do
   ]
 end
 ```
-
-## Feature flags
-
-The `iced_features` application config controls which widget features are
-compiled into the renderer binary. By default all built-in widgets are
-enabled.
-
-```elixir
-# config/config.exs
-
-# Default: all built-in widgets enabled
-config :julep, :iced_features, :all
-
-# Explicit list: only include what you need (smaller binary)
-config :julep, :iced_features, [:image, :svg, :canvas]
-```
-
-Available features: `:image`, `:svg`, `:canvas`, `:markdown`,
-`:highlighter`, `:sysinfo`, `:qr_code`.
-
-When set to an explicit list, `mix julep.build` and the auto-compiler pass
-the corresponding `--features` flags to Cargo. Platform features (dialogs,
-clipboard, notifications) are always included regardless of this setting.
-
-`Julep.Features` provides runtime queries:
-
-```elixir
-Julep.Features.iced_features()           # :all or list of atoms
-Julep.Features.iced_feature_enabled?(:svg)  # true or false
-Julep.Features.all_iced_features()       # list of all known features
-```
-
-When a feature is disabled, the renderer renders a placeholder error text
-for that widget type rather than crashing.
-
-See [renderer.md](renderer.md#feature-flags) for Cargo-level details.
 
 ## Commands vs. effects
 

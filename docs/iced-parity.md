@@ -28,8 +28,8 @@ know julep. This doc maps iced Rust code to its julep Elixir equivalent.
 | `iced::Task` | `Julep.Command` |
 | `iced::Subscription` | `Julep.Subscription` |
 | `iced::window` | `Julep.Command` (window_open, window_close, resize_window, etc.) |
-| `iced::keyboard` | Events delivered as `%Julep.KeyEvent{}` / `%Julep.KeyModifiers{}` structs |
-| `iced::keyboard::Event` | `Julep.KeyEvent` (key, modified_key, physical_key, location, modifiers, text, repeat) |
+| `iced::keyboard` | Events delivered as `%Julep.Event.Key{}` / `%Julep.KeyModifiers{}` structs |
+| `iced::keyboard::Event` | `Julep.Event.Key` (key, modified_key, physical_key, location, modifiers, text, repeat) |
 | `iced::keyboard::Modifiers` | `Julep.KeyModifiers` (ctrl, shift, alt, logo, command; query functions like `ctrl?/1`) |
 | -- | `Julep.Features` (feature flag resolution for iced widget features) |
 
@@ -322,43 +322,43 @@ in `update`. In julep, events are tuples received by `update/2`:
 
 | Iced pattern | Julep event |
 |---|---|
-| `Message::ButtonPressed` via `.on_press()` | `{:click, button_id}` |
-| `Message::InputChanged(s)` via `.on_input()` | `{:input, field_id, value}` |
-| `Message::InputSubmitted` via `.on_submit()` | `{:submit, field_id, value}` |
-| `Message::Toggled(b)` via `.on_toggle()` | `{:toggle, id, value}` |
-| `Message::Selected(v)` via `pick_list`/`combo_box` | `{:select, id, value}` |
-| `Message::SliderChanged(v)` via `.on_change()` | `{:slide, id, value}` |
-| `Message::SliderReleased` via `.on_release()` | `{:slide_release, id, value}` |
-| Key press via subscription | `{:key_press, %Julep.KeyEvent{}}` |
-| Key release via subscription | `{:key_release, %Julep.KeyEvent{}}` |
-| Modifiers changed via subscription | `{:modifiers_changed, %Julep.KeyModifiers{}}` |
-| Cursor moved via subscription | `{:cursor_moved, x, y}` |
-| Mouse button pressed via subscription | `{:button_pressed, button}` |
-| Mouse button released via subscription | `{:button_released, button}` |
-| Wheel scrolled via subscription | `{:wheel_scrolled, dx, dy, unit}` |
-| Finger pressed via subscription | `{:finger_pressed, finger_id, x, y}` |
-| Window close request | `{:window_close_requested, window_id}` |
-| Window opened | `{:window_opened, window_id, position, size}` |
-| Window closed | `{:window_closed, window_id}` |
-| Window moved | `{:window_moved, window_id, x, y}` |
-| Window resized | `{:window_resized, window_id, width, height}` |
-| Window focused / unfocused | `{:window_focused, window_id}` / `{:window_unfocused, window_id}` |
-| File dropped | `{:file_dropped, window_id, path}` |
-| Canvas press | `{:canvas_press, id, x, y, button}` |
-| Canvas move | `{:canvas_move, id, x, y}` |
-| Scrollable on_scroll | `{:scroll, id, %{absolute_x, absolute_y, relative_x, relative_y, bounds, content_bounds}}` |
-| TextInput on_paste | `{:paste, id, text}` |
-| ComboBox on_option_hovered | `{:option_hovered, id, value}` |
-| Sensor resize | `{:sensor_resize, id, width, height}` |
-| PaneGrid click | `{:pane_clicked, id, pane}` |
-| PaneGrid resize | `{:pane_resized, id, split, ratio}` |
-| Animation frame | `{:animation_frame, timestamp}` |
-| Theme changed | `{:theme_changed, mode}` |
-| Timer tick | `{:tick, timestamp}` |
-| IME opened | `{:ime_opened}` |
-| IME preedit | `{:ime_preedit, text, {start, end} \| nil}` |
-| IME commit | `{:ime_commit, text}` |
-| IME closed | `{:ime_closed}` |
+| `Message::ButtonPressed` via `.on_press()` | `%Widget{type: :click, id: id}` |
+| `Message::InputChanged(s)` via `.on_input()` | `%Widget{type: :input, id: id, value: val}` |
+| `Message::InputSubmitted` via `.on_submit()` | `%Widget{type: :submit, id: id, value: val}` |
+| `Message::Toggled(b)` via `.on_toggle()` | `%Widget{type: :toggle, id: id, value: val}` |
+| `Message::Selected(v)` via `pick_list`/`combo_box` | `%Widget{type: :select, id: id, value: val}` |
+| `Message::SliderChanged(v)` via `.on_change()` | `%Widget{type: :slide, id: id, value: val}` |
+| `Message::SliderReleased` via `.on_release()` | `%Widget{type: :slide_release, id: id, value: val}` |
+| Key press via subscription | `%Key{type: :press, ...}` |
+| Key release via subscription | `%Key{type: :release, ...}` |
+| Modifiers changed via subscription | `%Modifiers{shift: bool, ctrl: bool, ...}` |
+| Cursor moved via subscription | `%Mouse{type: :moved, x: x, y: y}` |
+| Mouse button pressed via subscription | `%Mouse{type: :button_pressed, button: btn}` |
+| Mouse button released via subscription | `%Mouse{type: :button_released, button: btn}` |
+| Wheel scrolled via subscription | `%Mouse{type: :wheel_scrolled, delta_x: dx, delta_y: dy, unit: u}` |
+| Finger pressed via subscription | `%Touch{type: :pressed, finger_id: fid, x: x, y: y}` |
+| Window close request | `%Window{type: :close_requested, window_id: wid}` |
+| Window opened | `%Window{type: :opened, window_id: wid, position: pos, width: w, height: h}` |
+| Window closed | `%Window{type: :closed, window_id: wid}` |
+| Window moved | `%Window{type: :moved, window_id: wid, x: x, y: y}` |
+| Window resized | `%Window{type: :resized, window_id: wid, width: w, height: h}` |
+| Window focused / unfocused | `%Window{type: :focused, window_id: wid}` / `%Window{type: :unfocused, window_id: wid}` |
+| File dropped | `%Window{type: :file_dropped, window_id: wid, path: p}` |
+| Canvas press | `%Canvas{type: :press, id: id, x: x, y: y, button: btn}` |
+| Canvas move | `%Canvas{type: :move, id: id, x: x, y: y}` |
+| Scrollable on_scroll | `%Widget{type: :scroll, id: id, data: %{...}}` |
+| TextInput on_paste | `%Widget{type: :paste, id: id, value: text}` |
+| ComboBox on_option_hovered | `%Widget{type: :option_hovered, id: id, value: val}` |
+| Sensor resize | `%Sensor{type: :resize, id: id, width: w, height: h}` |
+| PaneGrid click | `%Pane{type: :clicked, id: id, pane: pane}` |
+| PaneGrid resize | `%Pane{type: :resized, id: id, split: split, ratio: ratio}` |
+| Animation frame | `%System{type: :animation_frame, data: timestamp}` |
+| Theme changed | `%System{type: :theme_changed, data: mode}` |
+| Timer tick | `%Timer{tag: :tick, timestamp: ts}` |
+| IME opened | `%Ime{type: :opened}` |
+| IME preedit | `%Ime{type: :preedit, text: text, cursor: cursor}` |
+| IME commit | `%Ime{type: :commit, text: text}` |
+| IME closed | `%Ime{type: :closed}` |
 
 Custom events are strings. The renderer maps widget interactions to event
 tuples using the node's `id` and the interaction type.
@@ -544,7 +544,7 @@ adapts them to the cross-process architecture.
 
 | iced_test concept | Julep equivalent |
 |---|---|
-| `Simulator` (in-process headless) | `Julep.Test.Backend.Headless` (cross-process via `julep-renderer --headless`) |
+| `Simulator` (in-process headless) | `Julep.Test.Backend.Headless` (cross-process via `julep --headless`) |
 | `Simulator::click(id)` | `click("#id")` via test protocol |
 | `Simulator::find(id)` | `find!("#id")` via query protocol |
 | `Simulator::snapshot()` | `snapshot("name")` structural tree snapshot via snapshot_capture protocol |
@@ -566,7 +566,7 @@ test protocol queries.
 ### Core extraction for testability
 
 To support headless testing without an `iced::daemon`, julep extracts
-renderer state into a `Core` struct (`julep-renderer/julep-core/src/engine.rs`).
+renderer state into a `Core` struct (`julep/julep-core/src/engine.rs`).
 Core holds the tree, widget caches, and subscription state. It processes
 `IncomingMessage`s and returns `CoreEffect`s that the host (App or
 headless loop) can handle.
@@ -652,26 +652,22 @@ Text.new("greeting", "Hello", shaping: :advanced)
 
 Values: `:basic`, `:advanced`, `:auto`.
 
-### Keyboard events (KeyEvent and KeyModifiers structs)
+### Keyboard events (Key and KeyModifiers structs)
 
-**BREAKING CHANGE.** Keyboard events now use typed structs.
+Keyboard events use the `%Julep.Event.Key{}` struct:
 
-Old format:
 ```elixir
-{:key_press, key, %{ctrl: bool, shift: bool, ...}}
-```
-
-New format:
-```elixir
-{:key_press, %Julep.KeyEvent{
+%Julep.Event.Key{
+  type: :press | :release,
   key: key,
   modified_key: key,
   physical_key: atom,
   location: :standard | :left | :right | :numpad,
   modifiers: %Julep.KeyModifiers{shift: bool, ctrl: bool, alt: bool, logo: bool, command: bool},
   text: string | nil,
-  repeat: bool
-}}
+  repeat: bool,
+  captured: bool
+}
 ```
 
 All fields from iced's keyboard event are now captured: `physical_key`,

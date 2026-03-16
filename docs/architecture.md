@@ -21,7 +21,7 @@ startup before the first snapshot.
 
 This is the only piece app developers interact with directly.
 
-### 2. julep-renderer (Rust binary)
+### 2. julep (Rust binary)
 
 A standalone executable that:
 
@@ -44,7 +44,7 @@ The demo app (`julep_demo`) is one such consumer.
 ```
 +------------------+  msgpack/stdio (default) +------------------+
 |                  |  --- snapshots/patches ->|                  |
-|  Elixir runtime  |                         |  julep-renderer  |
+|  Elixir runtime  |                         |  julep            |
 |  (Julep.App)     |  <--- events ---------- |  (iced renderer) |
 |                  |                         |                  |
 +------------------+                         +------------------+

@@ -58,7 +58,7 @@ the renderer binary directly. The `JulepAppBuilder` chains `.extension()` calls
 in the generated `main.rs`:
 
 ```rust
-julep_renderer::run(
+julep::run(
     JulepAppBuilder::new()
         .extension(Box::new(my_sparkline::SparklineExtension::new()))
 )
@@ -526,18 +526,18 @@ raw bytes?). The counter approach is the recommended pattern.
 call `.bump()` to increment, and `.get()` to read the current value.
 
 
-## iced 0.14 Widget trait guide
+## julep-iced Widget trait guide
 
 Extensions implementing `iced::advanced::Widget` directly (Tier C) need to
-be aware of the iced 0.14 API. Several methods changed names and signatures
+be aware of the julep-iced API. Several methods changed names and signatures
 from earlier versions.
 
-### Key changes from iced 0.13
+### Key changes
 
 **`on_event` is now `update`:**
 
 ```rust
-// iced 0.14
+// julep-iced
 fn update(
     &mut self,
     tree: &mut widget::Tree,
@@ -843,7 +843,7 @@ defmodule MySparkline.Extension do
 
   @impl true
   def sim_events(:click, %{type: "sparkline", id: id}, _args) do
-    {:ok, {:click, id}}
+    {:ok, %Widget{type: :click, id: id}}
   end
 
   def sim_events(_verb, _element, _args), do: :not_handled

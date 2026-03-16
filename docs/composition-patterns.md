@@ -36,7 +36,7 @@ defmodule TabApp do
 
   def init(_opts), do: %{active_tab: :overview}
 
-  def update(model, {:click, "tab:" <> name}) do
+  def update(model, %Widget{type: :click, id: "tab:" <> name}) do
     %{model | active_tab: String.to_existing_atom(name)}
   end
 
@@ -134,7 +134,7 @@ defmodule SidebarApp do
 
   def init(_opts), do: %{page: :inbox}
 
-  def update(model, {:click, "nav:" <> name}) do
+  def update(model, %Widget{type: :click, id: "nav:" <> name}) do
     %{model | page: String.to_existing_atom(name)}
   end
 
@@ -225,9 +225,9 @@ defmodule ToolbarApp do
 
   def init(_opts), do: %{bold: false, italic: false, underline: false}
 
-  def update(model, {:click, "tool:bold"}), do: %{model | bold: !model.bold}
-  def update(model, {:click, "tool:italic"}), do: %{model | italic: !model.italic}
-  def update(model, {:click, "tool:underline"}), do: %{model | underline: !model.underline}
+  def update(model, %Widget{type: :click, id: "tool:bold"}), do: %{model | bold: !model.bold}
+  def update(model, %Widget{type: :click, id: "tool:italic"}), do: %{model | italic: !model.italic}
+  def update(model, %Widget{type: :click, id: "tool:underline"}), do: %{model | underline: !model.underline}
   def update(model, _event), do: model
 
   def view(model) do
@@ -327,9 +327,9 @@ defmodule ModalApp do
 
   def init(_opts), do: %{show_modal: false, confirmed: false}
 
-  def update(model, {:click, "open_modal"}), do: %{model | show_modal: true}
-  def update(model, {:click, "confirm"}), do: %{model | show_modal: false, confirmed: true}
-  def update(model, {:click, "cancel"}), do: %{model | show_modal: false}
+  def update(model, %Widget{type: :click, id: "open_modal"}), do: %{model | show_modal: true}
+  def update(model, %Widget{type: :click, id: "confirm"}), do: %{model | show_modal: false, confirmed: true}
+  def update(model, %Widget{type: :click, id: "cancel"}), do: %{model | show_modal: false}
   def update(model, _event), do: model
 
   def view(model) do
@@ -535,7 +535,7 @@ defmodule SplitApp do
 
   # In a real app, you would track mouse drag events to resize.
   # This example shows the static layout and cursor feedback.
-  def update(model, {:click, "divider"}), do: model
+  def update(model, %Widget{type: :click, id: "divider"}), do: model
   def update(model, _event), do: model
 
   def view(model) do
@@ -592,8 +592,8 @@ The divider is a `mouse_area` wrapping a thin container. The `cursor:
 horizontal resize indicator when the user hovers over the divider, giving
 clear affordance that it is draggable.
 
-In a production app you would handle `{:click, "divider"}` (press) and
-`{:click, "divider:release"}` (release) events along with mouse move
+In a production app you would handle `%Widget{type: :click, id: "divider"}` (press) and
+`%Widget{type: :click, id: "divider:release"}` (release) events along with mouse move
 tracking to update `left_width` dynamically. The static layout pattern is
 the same regardless.
 
@@ -620,7 +620,7 @@ defmodule BreadcrumbApp do
 
   def init(_opts), do: %{path: ["Home", "Projects", "Julep", "Docs"]}
 
-  def update(model, {:click, "crumb:" <> index_str}) do
+  def update(model, %Widget{type: :click, id: "crumb:" <> index_str}) do
     index = String.to_integer(index_str)
     %{model | path: Enum.take(model.path, index + 1)}
   end
@@ -711,7 +711,7 @@ defmodule BadgeApp do
 
   def init(_opts), do: %{selected: MapSet.new(["elixir"])}
 
-  def update(model, {:click, "tag:" <> name}) do
+  def update(model, %Widget{type: :click, id: "tag:" <> name}) do
     selected =
       if MapSet.member?(model.selected, name) do
         MapSet.delete(model.selected, name)

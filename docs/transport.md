@@ -184,7 +184,7 @@ reading any messages from stdin. The Elixir bridge validates the
 protocol version to ensure compatibility.
 
 ```json
-{"type": "hello", "protocol": 1, "version": "0.1.0", "name": "julep-renderer"}
+{"type": "hello", "protocol": 1, "version": "0.1.0", "name": "julep"}
 ```
 
 Fields:

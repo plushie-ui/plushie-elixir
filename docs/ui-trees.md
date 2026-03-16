@@ -143,7 +143,7 @@ as a required positional first argument. Widgets that are purely structural
 and auto-generate one from the call site if omitted.
 
 The rationale: if a widget emits events, the `id` appears in every event
-tuple your `update/2` receives (e.g. `{:click, "save"}`). Making it
+event your `update/2` receives (e.g. `%Widget{type: :click, id: "save"}`). Making it
 positional forces you to choose a meaningful, stable ID up front. Layout
 containers rarely need explicit IDs -- the auto-generated ones work fine
 for diffing.
@@ -215,7 +215,7 @@ generated from the call site (`"auto:ModuleName:42"`).
 #### Why the split matters
 
 ```elixir
-# GOOD: button emits {:click, "save"} -- positional id is clear
+# GOOD: button emits %Widget{type: :click, id: "save"} -- positional id is clear
 button("save", "Save")
 
 # GOOD: column is structural -- auto-id is fine
@@ -622,14 +622,14 @@ Interactive widgets emit events. The event is specified in the props:
 
 ```elixir
 button("my_btn", "Click")
-# Emits: {:click, "my_btn"}
+# Emits: %Widget{type: :click, id: "my_btn"}
 
 text_input("name", model.name, on_submit: "save_name")
-# On typing: {:input, "name", "typed value"}
-# On enter:  {:submit, "name", "final value"}
+# On typing: %Widget{type: :input, id: "name", value: "typed value"}
+# On enter:  %Widget{type: :submit, id: "name", value: "final value"}
 
 checkbox("agree", model.agreed)
-# Emits: {:toggle, "agree", true/false}
+# Emits: %Widget{type: :toggle, id: "agree", value: true/false}
 ```
 
 Event routing uses the node's `id` by default. Custom events can be

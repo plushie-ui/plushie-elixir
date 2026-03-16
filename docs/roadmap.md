@@ -25,7 +25,7 @@ julep/
       bridge.ex                 # Port-based renderer bridge
       protocol.ex               # wire protocol encode/decode
       tree.ex                   # Tree normalization and diffing
-  # Rust renderer lives in sibling repo julep-renderer/
+  # Rust renderer lives in sibling repo julep/
   mix.exs
   test/
     ...
@@ -40,7 +40,7 @@ Checklist:
       events, calls view, sends trees to bridge.
 - [x] `Julep.Bridge`: spawns renderer via Port, sends/receives MessagePack (or JSONL).
 - [x] `Julep.Protocol`: encode snapshots, decode events.
-- [x] Rust binary (`julep-renderer`) that reads a snapshot from stdin, renders
+- [x] Rust binary (`julep`) that reads a snapshot from stdin, renders
       a basic tree (column, text, button), and writes click events to stdout.
 - [x] `mix julep.gui` task that builds the renderer and runs an app.
 - [x] One trivial app (counter) that compiles, runs, and renders.

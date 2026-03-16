@@ -50,17 +50,19 @@ Receives the current model and an event, returns the next model -- optionally
 with commands.
 
 ```elixir
-def update(model, {:click, "add_todo"}) do
+alias Julep.Event.Widget
+
+def update(model, %Widget{type: :click, id: "add_todo"}) do
   new_todo = %{id: System.unique_integer(), text: model.input, done: false}
   %{model | todos: [new_todo | model.todos], input: ""}
 end
 
-def update(model, {:input, "todo_field", value}) do
+def update(model, %Widget{type: :input, id: "todo_field", value: value}) do
   %{model | input: value}
 end
 
 # Returning commands:
-def update(model, {:submit, "todo_field", _value}) do
+def update(model, %Widget{type: :submit, id: "todo_field"}) do
   new_todo = %{id: System.unique_integer(), text: model.input, done: false}
   model = %{model | todos: [new_todo | model.todos], input: ""}
   {model, Julep.Command.focus("todo_field")}
@@ -73,22 +75,21 @@ Return a bare model when no side effects are needed. Return `{model, command}`
 when you need async work, widget operations, window management, or timers.
 See [commands.md](commands.md) for the full command API.
 
-Events are tuples. The first element is the event family (atom), the rest
-is event-specific data. See [events.md](events.md) for the full event
-taxonomy. Common families:
+Events are structs under `Julep.Event.*`. See [events.md](events.md) for
+the full event taxonomy. Common families:
 
-- `{:click, button_id}` -- button press
-- `{:input, field_id, value}` -- text input change
-- `{:select, field_id, value}` -- selection change
-- `{:toggle, field_id, value}` -- checkbox/toggler change
-- `{:submit, field_id, value}` -- form field submission
-- `{:key_press, %Julep.KeyEvent{}}` -- keyboard event (via subscription)
-- `{:key_release, %Julep.KeyEvent{}}` -- keyboard release (via subscription)
-- `{:window_close_requested, window_id}` -- window close requested
-- `{:window_resized, window_id, width, height}` -- window resized
-- `{:canvas_press, id, x, y, button}` -- canvas interaction
-- `{:sensor_resize, id, width, height}` -- sensor size change
-- `{:pane_clicked, id, pane}` -- pane grid click
+- `%Widget{type: :click, id: id}` -- button press
+- `%Widget{type: :input, id: id, value: val}` -- text input change
+- `%Widget{type: :select, id: id, value: val}` -- selection change
+- `%Widget{type: :toggle, id: id, value: val}` -- checkbox/toggler change
+- `%Widget{type: :submit, id: id, value: val}` -- form field submission
+- `%Key{type: :press, ...}` -- keyboard event (via subscription)
+- `%Key{type: :release, ...}` -- keyboard release (via subscription)
+- `%Window{type: :close_requested, window_id: id}` -- window close requested
+- `%Window{type: :resized, window_id: id, width: w, height: h}` -- window resized
+- `%Canvas{type: :press, id: id, x: x, y: y, button: btn}` -- canvas interaction
+- `%Sensor{type: :resize, id: id, width: w, height: h}` -- sensor size change
+- `%Pane{type: :clicked, id: id, pane: pane}` -- pane grid click
 
 ### view/1
 
@@ -241,7 +242,7 @@ Default: `[]` (renderer uses its own defaults).
 ```elixir
 # From IEx or application code:
 {:ok, pid} = Julep.start(MyApp)
-{:ok, pid} = Julep.start(MyApp, name: :my_app, renderer: "/path/to/julep-renderer")
+{:ok, pid} = Julep.start(MyApp, name: :my_app, renderer: "/path/to/julep")
 
 # Under a supervisor:
 children = [
@@ -260,8 +261,8 @@ Apps can be tested without a renderer:
 ```elixir
 test "adding a todo" do
   model = MyApp.init([])
-  model = MyApp.update(model, {:input, "todo_field", "Buy milk"})
-  model = MyApp.update(model, {:click, "add_todo"})
+  model = MyApp.update(model, %Widget{type: :input, id: "todo_field", value: "Buy milk"})
+  model = MyApp.update(model, %Widget{type: :click, id: "add_todo"})
 
   assert [%{text: "Buy milk"}] = model.todos
   assert model.input == ""
@@ -288,4 +289,3 @@ your `config.exs` (or per-environment config files).
 | `:test_backend` | `:sim \| :headless \| :full` | `:sim` | Test backend used by `Julep.Test.Case`. Override per-run with `JULEP_TEST_BACKEND` env var. |
 | `:test_format` | `:json \| :msgpack` | `:msgpack` | Wire format for test sessions. Set to `:json` for easier debugging. |
 | `:extension_config` | `map()` | `%{}` | Configuration map passed to widget extensions at runtime. |
-| `:iced_features` | `:all \| [atom()]` | `:all` | Cargo feature flags for the renderer build. Controls which iced widgets and capabilities are compiled in. |

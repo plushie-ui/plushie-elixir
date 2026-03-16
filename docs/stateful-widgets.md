@@ -37,11 +37,11 @@ text_editor("notes",
 ```
 
 When the user types, the renderer applies the edit action internally,
-then sends the entire text back as an `{:input, id, text}` event --
+then sends the entire text back as a `%Widget{type: :input, id: id, value: text}` event --
 the same family as `text_input`:
 
 ```elixir
-def update(model, {:input, "notes", text}) do
+def update(model, %Widget{type: :input, id: "notes", value: text}) do
   %{model | notes_text: text}
 end
 ```
@@ -73,12 +73,12 @@ combo_box("language",
 Elixir provides the full option list and the selected value. The renderer
 handles filtering as the user types. Two event families fire:
 
-- `{:input, "language", filter_text}` -- as the user types in the search
+- `%Widget{type: :input, id: "language", value: filter_text}` -- as the user types in the search
   field (only if the renderer wires `on_input`, which it does by default).
-- `{:select, "language", value}` -- when an option is selected.
+- `%Widget{type: :select, id: "language", value: value}` -- when an option is selected.
 
 ```elixir
-def update(model, {:select, "language", value}) do
+def update(model, %Widget{type: :select, id: "language", value: value}) do
   %{model | language: value}
 end
 ```
@@ -173,7 +173,7 @@ scrollable "list" do ... end
 
 # Preserved: track scroll position in model via a future on_scroll callback.
 # For now, use commands to restore position:
-def update(model, {:click, "back_to_list"}) do
+def update(model, %Widget{type: :click, id: "back_to_list"}) do
   {%{model | screen: :list},
    Julep.Command.scroll_to("list", model.list_scroll)}
 end
