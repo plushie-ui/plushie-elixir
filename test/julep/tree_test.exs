@@ -414,9 +414,9 @@ defmodule Julep.TreeTest do
       assert result["outer"]["inner"] == "value"
     end
 
-    test "does not recurse into list values" do
+    test "converts atoms inside list values to strings" do
       result = Tree.stringify_keys(%{colors: [:red, :green, :blue]})
-      assert result["colors"] == [:red, :green, :blue]
+      assert result["colors"] == ["red", "green", "blue"]
     end
 
     test "preserves non-map scalar values" do

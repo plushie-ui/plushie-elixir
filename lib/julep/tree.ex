@@ -244,6 +244,12 @@ defmodule Julep.Tree do
     remove_ops ++ update_ops ++ insert_ops
   end
 
+  # Reorder detection uses set comparison of common child IDs, not LCS
+  # (Longest Common Subsequence). LCS would produce minimal move operations
+  # but is O(n^2) and complex to implement. Set comparison is O(n) and
+  # catches all reorders, at the cost of producing a full replace_node
+  # instead of individual moves. This is a deliberate
+  # simplicity-over-optimality tradeoff.
   defp children_reordered?(old_children, new_children) do
     old_ids = Enum.map(old_children, & &1.id)
     new_ids = Enum.map(new_children, & &1.id)
@@ -313,6 +319,19 @@ defmodule Julep.Tree do
     tuple |> Tuple.to_list() |> Enum.map(&stringify_value/1)
   end
 
+  # Atoms that leak through from manually-constructed nodes (not via the
+  # builder layer) must be converted to strings for the wire format.
+  # true/false/nil are JSON-native and pass through as-is.
+  defp stringify_value(true), do: true
+  defp stringify_value(false), do: false
+  defp stringify_value(nil), do: nil
+  defp stringify_value(v) when is_atom(v), do: Atom.to_string(v)
+
+  # Strings, numbers, and booleans are already JSON-safe primitives.
+  # Props are processed twice: once in the builder (put_if encodes values)
+  # and once in Tree.normalize (stringify_keys converts atom keys to
+  # strings). The value encoding in normalize is a no-op for
+  # already-encoded values -- no protocol dispatch overhead.
   defp stringify_value(v), do: v
 
   # Fetches a field by atom key first, then string key, returning nil if absent.
