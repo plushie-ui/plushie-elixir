@@ -1378,6 +1378,14 @@ defmodule Julep.Protocol do
   defp dispatch(%{
          "type" => "effect_response",
          "id" => id,
+         "status" => "cancelled"
+       }) do
+    %Effect{request_id: id, result: :cancelled}
+  end
+
+  defp dispatch(%{
+         "type" => "effect_response",
+         "id" => id,
          "status" => "error",
          "error" => reason
        }) do

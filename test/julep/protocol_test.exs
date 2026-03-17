@@ -446,6 +446,20 @@ defmodule Julep.ProtocolTest do
     end
   end
 
+  describe "decode_message/1 -- effect_response cancelled" do
+    test "decodes a cancelled effect response to :cancelled" do
+      json =
+        Jason.encode!(%{
+          type: "effect_response",
+          id: "req_3",
+          status: "cancelled"
+        })
+
+      assert Protocol.decode_message(json, :json) ==
+               %Effect{request_id: "req_3", result: :cancelled}
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # decode_message/1 -- error cases
   # ---------------------------------------------------------------------------

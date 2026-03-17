@@ -8,18 +8,22 @@ defmodule Julep.Event.Effect do
   ## Fields
 
     * `request_id` - the effect identifier from the originating command
-    * `result` - `{:ok, value}` on success or `{:error, reason}` on failure.
-      For file dialogs, the ok value is a file path or list of paths.
-      For clipboard reads, it is the clipboard text.
+    * `result` - one of:
+      * `{:ok, value}` -- success. For file dialogs, the value is a map
+        with a file path or list of paths. For clipboard reads, it contains
+        the clipboard text.
+      * `:cancelled` -- the user dismissed a dialog without selecting.
+        This is a normal outcome, not an error.
+      * `{:error, reason}` -- a platform error (e.g. clipboard unavailable).
 
   ## Pattern matching
 
-      def update(model, %Effect{request_id: "open-file", result: {:ok, path}}) do
+      def update(model, %Effect{request_id: "open-file", result: {:ok, %{"path" => path}}}) do
         load_file(model, path)
       end
 
-      def update(model, %Effect{request_id: "paste", result: {:ok, text}}) do
-        insert_clipboard(model, text)
+      def update(model, %Effect{request_id: "open-file", result: :cancelled}) do
+        model  # user changed their mind, nothing to do
       end
 
       def update(model, %Effect{request_id: _id, result: {:error, reason}}) do
@@ -29,7 +33,7 @@ defmodule Julep.Event.Effect do
 
   @type t :: %__MODULE__{
           request_id: String.t(),
-          result: {:ok, term()} | {:error, term()}
+          result: {:ok, term()} | :cancelled | {:error, term()}
         }
 
   @enforce_keys [:request_id, :result]
