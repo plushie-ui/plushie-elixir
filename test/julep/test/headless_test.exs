@@ -2,7 +2,7 @@ defmodule Julep.Test.HeadlessTest do
   @moduledoc """
   Tests for the Headless test backend.
 
-  Requires `cargo build --features headless`.
+  Requires `cargo build` (all modes are compiled unconditionally).
   Enabled by setting JULEP_HEADLESS=1 or JULEP_TEST_BACKEND=headless.
   """
 

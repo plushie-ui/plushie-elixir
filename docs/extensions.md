@@ -9,28 +9,36 @@ in Elixir.
 
 An extension has two halves:
 
-1. **Elixir side:** implement the `Julep.Extension` behaviour. This tells the
-   build system where the Rust crate lives, how to construct it, and what node
-   type strings it handles.
+1. **Elixir side:** use the `Julep.Extension` macro. This declares the widget's
+   props, commands, and (for native widgets) the Rust crate and constructor.
 
 2. **Rust side:** implement the `WidgetExtension` trait from `julep-core`. This
    receives tree nodes from Elixir and returns `iced::Element`s for rendering.
 
 ```elixir
 # lib/my_sparkline/extension.ex
-defmodule MySparkline.Extension do
-  @behaviour Julep.Extension
+defmodule MySparkline do
+  use Julep.Extension, :native_widget
 
-  @impl true
-  def native_crate, do: "native/my_sparkline"
+  widget :sparkline
 
-  @impl true
-  def rust_constructor, do: "my_sparkline::SparklineExtension::new()"
+  rust_crate "native/my_sparkline"
+  rust_constructor "my_sparkline::SparklineExtension::new()"
 
-  @impl true
-  def type_names, do: ["sparkline"]
+  prop :data, {:list, :number}, doc: "Sample values to plot"
+  prop :color, :color, default: "#4CAF50", doc: "Line color"
+  prop :capacity, :number, default: 100, doc: "Max samples in the ring buffer"
+
+  command :push, value: :number
 end
 ```
+
+This generates:
+
+- `MySparkline.new(id, opts)` -- builds a widget node with typed props
+- `MySparkline.push(widget, value:)` -- sends a command to the Rust extension
+- `MySparkline.type_names/0`, `native_crate/0`, `rust_constructor/0` callbacks
+- Compile-time validation of prop types, required declarations, and duplicates
 
 ```rust
 // native/my_sparkline/src/lib.rs
@@ -67,6 +75,73 @@ julep::run(
 Reference the 5 example packages from the dogfooding exercise for complete
 working examples: julep_sparkline (Tier C), julep_hex_view (Tier A),
 julep_code_view (Tier A), julep_plot (Tier B), julep_timeline (Tier C).
+
+
+## Extension kinds
+
+The macro supports two kinds:
+
+### `:native_widget` -- Rust-backed extensions
+
+Use `use Julep.Extension, :native_widget` for widgets rendered by a Rust
+crate. Requires `rust_crate` and `rust_constructor` declarations.
+
+```elixir
+defmodule MyApp.HexView do
+  use Julep.Extension, :native_widget
+
+  widget :hex_view
+  rust_crate "native/hex_view"
+  rust_constructor "hex_view::HexViewExtension::new()"
+
+  prop :data, :string, doc: "Binary data (base64)"
+  prop :columns, :number, default: 16
+end
+```
+
+### `:widget` -- Pure Elixir composite widgets
+
+Use `use Julep.Extension, :widget` for widgets composed entirely from
+existing Julep widgets. No Rust code needed. Must define a `render/2`
+(or `render/3` if the widget accepts children) callback.
+
+```elixir
+defmodule MyApp.Card do
+  use Julep.Extension, :widget
+
+  widget :card, container: true
+
+  prop :title, :string
+  prop :subtitle, :string, default: nil
+
+  def render(props, children) do
+    import Julep.UI
+
+    column padding: 16, spacing: 8 do
+      text(props.title, size: 20)
+      if props.subtitle, do: text(props.subtitle, size: 14)
+      children
+    end
+  end
+end
+```
+
+## DSL reference
+
+| Macro | Required | Description |
+|---|---|---|
+| `widget :name` | yes | Declares the widget type name (atom) |
+| `widget :name, container: true` | -- | Marks the widget as accepting children |
+| `prop :name, :type` | no | Declares a prop with type |
+| `prop :name, :type, opts` | no | Options: `default:`, `doc:` |
+| `command :name, params` | no | Declares a command (native widgets only) |
+| `rust_crate "path"` | native only | Path to the Rust crate |
+| `rust_constructor "expr"` | native only | Rust constructor expression |
+
+### Supported prop types
+
+`:number`, `:string`, `:boolean`, `:color`, `:length`, `:padding`,
+`:alignment`, `:font`, `:style`, `:atom`, `:map`, `:any`, `{:list, inner}`
 
 
 ## Extension tiers
@@ -729,38 +804,25 @@ manually traversing `serde_json::Value`:
 
 ### Elixir-side tests
 
-Test your Elixir module's callbacks and any struct builders or Widget
-protocol implementations:
+Test your extension's generated functions and callbacks:
 
 ```elixir
-defmodule MySparkline.ExtensionTest do
+defmodule MySparklineTest do
   use ExUnit.Case
 
   test "type_names returns expected types" do
-    assert MySparkline.Extension.type_names() == ["sparkline"]
+    assert MySparkline.type_names() == [:sparkline]
+  end
+
+  test "new/2 builds a widget node" do
+    widget = MySparkline.new("spark-1", color: "#ff0000")
+    assert widget.id == "spark-1"
+    assert widget.props["color"] == "#ff0000"
   end
 
   test "native_crate path exists" do
-    assert File.dir?(MySparkline.Extension.native_crate())
+    assert File.dir?(MySparkline.native_crate())
   end
-
-  test "rust_constructor is valid expression" do
-    expr = MySparkline.Extension.rust_constructor()
-    assert is_binary(expr)
-    assert String.contains?(expr, "SparklineExtension")
-  end
-end
-```
-
-If your extension provides Elixir-side widget structs with the
-`Julep.Iced.Widget` protocol, test the struct builders and `to_node`
-conversion:
-
-```elixir
-test "sparkline widget builds correct node" do
-  node = Sparkline.new("spark-1") |> Sparkline.build()
-  assert node.type == "sparkline"
-  assert node.id == "spark-1"
 end
 ```
 
@@ -834,15 +896,15 @@ fn render_does_not_panic() {
 ### Sim backend testing
 
 For the Elixir sim test backend to interact with your custom widget types,
-implement the optional `sim_events/3` callback on your `Julep.Extension`
-module:
+implement the optional `sim_events/3` callback on your extension module:
 
 ```elixir
-defmodule MySparkline.Extension do
-  @behaviour Julep.Extension
-  # ... other callbacks ...
+defmodule MySparkline do
+  use Julep.Extension, :native_widget
 
-  @impl true
+  widget :sparkline
+  # ... props, commands ...
+
   def sim_events(:click, %{type: "sparkline", id: id}, _args) do
     {:ok, %Widget{type: :click, id: id}}
   end
@@ -855,13 +917,13 @@ Register the extension for sim dispatch in your test setup:
 
 ```elixir
 setup do
-  Julep.Test.ExtensionEvents.register(MySparkline.Extension)
+  Julep.Test.ExtensionEvents.register(MySparkline)
   on_exit(fn -> Julep.Test.ExtensionEvents.clear() end)
 end
 ```
 
 Or call `Julep.Test.ExtensionEvents.register_all/0` to auto-discover all
-loaded extensions implementing `Julep.Extension`.
+loaded extensions.
 
 This lets standard test helpers like `click/1`, `type_text/2`, etc. work
 with your extension's widget types in the sim backend.

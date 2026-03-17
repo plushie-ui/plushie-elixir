@@ -8,9 +8,9 @@ defmodule Julep.Test.Backend.Full do
 
   ## Requirements
 
-  Build the renderer with test-mode support:
+  Build the renderer:
 
-      cd ../julep && cargo build --features test-mode
+      cd ../julep && cargo build
 
   For CI (headless environment), use Xvfb:
 

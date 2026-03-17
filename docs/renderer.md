@@ -185,13 +185,6 @@ cd ../julep && cargo build
 # Release build
 cd ../julep && cargo build --release
 
-# Minimal build (no optional widgets)
-cd ../julep && cargo build \
-  --no-default-features --features "dialogs,clipboard,notifications"
-
-# Single widget only
-cd ../julep && cargo build \
-  --no-default-features --features "dialogs,clipboard,notifications,widget-qr-code"
 ```
 
 The binary can also be built automatically by `mix julep.gui --build`.

@@ -61,8 +61,8 @@ This means:
 - **`HiddenInterceptor`** is a companion wrapper that excludes widgets from
   the AT tree when `hidden: true` is set.
 
-The `a11y` feature is included in the default build. It can be disabled for
-a smaller binary, but all functionality works identically either way.
+Accessibility is compiled unconditionally -- there are no feature flags to
+toggle it.
 
 
 ## Auto-inference
@@ -665,21 +665,12 @@ native accessibility support. The fork is referenced via `[patch.crates-io]`
 in the renderer's `Cargo.toml`. No vendored crates or local path overrides
 are needed.
 
-To build _without_ accessibility (smaller binary, no accesskit dependency):
+Accessibility support is provided by:
 
-```bash
-cargo build --release --no-default-features --features builtin-all,dialogs,clipboard,notifications
-```
-
-The `a11y` feature flag controls:
-
-| Component | What it enables |
+| Component | What it provides |
 |---|---|
-| iced fork (`v0.14.0-a11y-accesskit`) | accesskit + accesskit_winit, TreeBuilder, per-window adapter management |
-| `julep` | `A11yOverride` wrapper widget, `HiddenInterceptor`, AT action handling |
-
-Without the feature, the `a11y` prop is still accepted in UI trees (it's
-just a map in props) but has no effect.
+| julep-iced fork | accesskit + accesskit_winit, TreeBuilder, per-window adapter management |
+| `julep-core` | `A11yOverride` wrapper widget, `HiddenInterceptor`, AT action handling |
 
 
 ## Platform support

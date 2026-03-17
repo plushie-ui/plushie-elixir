@@ -9,9 +9,9 @@ defmodule Julep.Test.Backend.Headless do
 
   ## Requirements
 
-  Build the renderer with headless support:
+  Build the renderer:
 
-      cd ../julep && cargo build --features headless
+      cd ../julep && cargo build
 
   ## Limitations
 
@@ -63,10 +63,10 @@ defmodule Julep.Test.Backend.Headless do
     e in RuntimeError ->
       if String.contains?(e.message, "julep binary not found") do
         reraise """
-                julep headless binary not found.
+                julep binary not found.
 
-                The headless backend requires a renderer built with the headless feature.
-                Run: cd ../julep && cargo build --features headless
+                The headless backend requires the julep renderer binary.
+                Run: cd ../julep && cargo build
                 """,
                 __STACKTRACE__
       else

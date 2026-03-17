@@ -184,9 +184,8 @@ failing to propagate IDs would break the entire test framework.
   `--test`. The Core extraction mitigates this by sharing state logic,
   but the message handling still has three entry points.
 
-- **Feature flags** in the Rust build (`--features headless`,
-  `--features test-mode`). Not compiled by default to keep the normal
-  build lean.
+- **Three runtime modes** in the Rust binary (`--headless`, `--test`).
+  All modes are compiled unconditionally -- no feature flags.
 
 - **Protocol surface area** increases. Four new message types
   (Query, Interact, SnapshotCapture, Reset) and their responses.

@@ -25,7 +25,7 @@ defmodule Julep do
   - `:dev`        -- enable live code reloading (default: `false`)
   - `:dev_opts`   -- options forwarded to `Julep.DevServer` (default: `[]`)
   - `:format`      -- wire format, `:msgpack` (default) or `:json`
-  - `:log_level`   -- renderer log level (`:error`, `:warning`, `:info`, `:debug`).
+  - `:log_level`   -- renderer log level (`:off`, `:error`, `:warning`, `:info`, `:debug`).
                       Default: `:error`.
   """
 

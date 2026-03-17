@@ -8,7 +8,7 @@ defmodule Julep.Test.FullTest do
     @moduletag :skip
   end
 
-  # These tests require Xvfb and `cargo build --features test-mode`.
+  # These tests require Xvfb and `cargo build`.
   # Enabled by setting JULEP_FULL=1 or JULEP_TEST_BACKEND=full.
 
   test "placeholder - full backend starts" do

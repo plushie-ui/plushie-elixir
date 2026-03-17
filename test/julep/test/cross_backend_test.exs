@@ -4,7 +4,7 @@ defmodule Julep.Test.CrossBackendTest do
 
   Defines shared assertions and runs them against the Sim backend by default.
   To run against Headless, set JULEP_TEST_BACKEND=headless (requires
-  `cargo build --features headless`).
+  `cargo build`).
 
   These tests verify that core app lifecycle, event handling, and tree
   structure behave identically regardless of which backend executes them.
