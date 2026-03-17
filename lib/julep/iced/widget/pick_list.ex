@@ -21,6 +21,10 @@ defmodule Julep.Iced.Widget.PickList do
     - `%{type: "dynamic", closed: icon_map, open: icon_map}` -- state-dependent icons.
     - `%{type: "none"}` -- no handle.
     Icon maps: `%{code_point: "char", size: n, font: font, spacing: n, line_height: n}`.
+  - `ellipsis` (string) -- text ellipsis strategy: `"none"`, `"start"`, `"middle"`, or `"end"`.
+    Default: `"end"`.
+  - `menu_style` (map) -- inline style for the dropdown menu. Map with optional keys:
+    `background`, `text_color`, `selected_text_color`, `selected_background`, `border`, `shadow`.
   - `style` (string) -- named style. Currently only `"default"`.
 
   ## Events
@@ -47,6 +51,8 @@ defmodule Julep.Iced.Widget.PickList do
           | {:menu_height, number()}
           | {:text_shaping, Julep.Iced.Shaping.t()}
           | {:handle, map()}
+          | {:ellipsis, String.t()}
+          | {:menu_style, map()}
           | {:style, style()}
           | {:on_open, boolean()}
           | {:on_close, boolean()}
@@ -65,6 +71,8 @@ defmodule Julep.Iced.Widget.PickList do
           menu_height: number() | nil,
           text_shaping: Julep.Iced.Shaping.t() | nil,
           handle: map() | nil,
+          ellipsis: String.t() | nil,
+          menu_style: map() | nil,
           style: style() | nil,
           on_open: boolean() | nil,
           on_close: boolean() | nil,
@@ -84,6 +92,8 @@ defmodule Julep.Iced.Widget.PickList do
     :menu_height,
     :text_shaping,
     :handle,
+    :ellipsis,
+    :menu_style,
     :style,
     :on_open,
     :on_close,
@@ -112,6 +122,8 @@ defmodule Julep.Iced.Widget.PickList do
       {:menu_height, v}, acc -> menu_height(acc, v)
       {:text_shaping, v}, acc -> text_shaping(acc, v)
       {:handle, v}, acc -> handle(acc, v)
+      {:ellipsis, v}, acc -> ellipsis(acc, v)
+      {:menu_style, v}, acc -> menu_style(acc, v)
       {:style, v}, acc -> style(acc, v)
       {:on_open, v}, acc -> on_open(acc, v)
       {:on_close, v}, acc -> on_close(acc, v)
@@ -160,6 +172,15 @@ defmodule Julep.Iced.Widget.PickList do
   @spec handle(pick_list :: t(), handle :: map()) :: t()
   def handle(%__MODULE__{} = pl, handle) when is_map(handle), do: %{pl | handle: handle}
 
+  @doc "Sets the text ellipsis strategy."
+  @spec ellipsis(pick_list :: t(), ellipsis :: String.t()) :: t()
+  def ellipsis(%__MODULE__{} = pl, ellipsis), do: %{pl | ellipsis: ellipsis}
+
+  @doc "Sets the dropdown menu style overrides."
+  @spec menu_style(pick_list :: t(), menu_style :: map()) :: t()
+  def menu_style(%__MODULE__{} = pl, menu_style) when is_map(menu_style),
+    do: %{pl | menu_style: menu_style}
+
   @doc "Sets the pick list style."
   @spec style(pick_list :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = pl, style), do: %{pl | style: style}
@@ -197,6 +218,8 @@ defmodule Julep.Iced.Widget.PickList do
         |> put_if(pl.menu_height, "menu_height")
         |> put_if(pl.text_shaping, "text_shaping")
         |> put_if(pl.handle, "handle")
+        |> put_if(pl.ellipsis, "ellipsis")
+        |> put_if(pl.menu_style, "menu_style")
         |> put_if(pl.style, "style")
         |> put_if(pl.on_open, "on_open")
         |> put_if(pl.on_close, "on_close")

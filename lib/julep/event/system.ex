@@ -36,7 +36,9 @@ defmodule Julep.Event.System do
             | :animation_frame
             | :theme_changed
             | :all_windows_closed
-            | :image_list,
+            | :image_list
+            | :tree_hash
+            | :find_focused,
           tag: String.t() | nil,
           data: term()
         }

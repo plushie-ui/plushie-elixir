@@ -676,8 +676,7 @@ defmodule Julep.Runtime do
     state
   end
 
-  defp execute_command(%Julep.Command{type: :widget_op, payload: %{op: op} = payload}, state)
-       when op in ["pane_split", "pane_close", "pane_swap", "pane_maximize", "pane_restore"] do
+  defp execute_command(%Julep.Command{type: :widget_op, payload: %{op: op} = payload}, state) do
     if state.bridge do
       Julep.Bridge.send_widget_op(state.bridge, op, Map.delete(payload, :op))
     end

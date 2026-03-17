@@ -21,6 +21,10 @@ defmodule Julep.Iced.Widget.ComboBox do
   - `on_option_hovered` (boolean) -- when true, emits `%Widget{type: :option_hovered, id: id, value: value}`
     when hovering over a dropdown option. Default: false.
   - `shaping` -- text shaping strategy. See `Julep.Iced.Shaping`.
+  - `ellipsis` (string) -- text ellipsis strategy: `"none"`, `"start"`, `"middle"`, or `"end"`.
+    Default: `"end"`.
+  - `menu_style` (map) -- inline style for the dropdown menu. Map with optional keys:
+    `background`, `text_color`, `selected_text_color`, `selected_background`, `border`, `shadow`.
   - `style` -- named preset atom (`:default`) or `StyleMap.t()` for custom styling.
     See `Julep.Iced.StyleMap`.
 
@@ -53,6 +57,8 @@ defmodule Julep.Iced.Widget.ComboBox do
           | {:on_open, boolean()}
           | {:on_close, boolean()}
           | {:shaping, Julep.Iced.Shaping.t()}
+          | {:ellipsis, String.t()}
+          | {:menu_style, map()}
           | {:style, style()}
           | {:a11y, Julep.Iced.A11y.t()}
 
@@ -72,6 +78,8 @@ defmodule Julep.Iced.Widget.ComboBox do
           on_open: boolean() | nil,
           on_close: boolean() | nil,
           shaping: Julep.Iced.Shaping.t() | nil,
+          ellipsis: String.t() | nil,
+          menu_style: map() | nil,
           style: style() | nil,
           a11y: Julep.Iced.A11y.t() | nil
         }
@@ -92,6 +100,8 @@ defmodule Julep.Iced.Widget.ComboBox do
     :on_open,
     :on_close,
     :shaping,
+    :ellipsis,
+    :menu_style,
     :style,
     :a11y
   ]
@@ -121,6 +131,8 @@ defmodule Julep.Iced.Widget.ComboBox do
       {:on_open, v}, acc -> on_open(acc, v)
       {:on_close, v}, acc -> on_close(acc, v)
       {:shaping, v}, acc -> shaping(acc, v)
+      {:ellipsis, v}, acc -> ellipsis(acc, v)
+      {:menu_style, v}, acc -> menu_style(acc, v)
       {:style, v}, acc -> style(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
@@ -180,6 +192,15 @@ defmodule Julep.Iced.Widget.ComboBox do
   @spec shaping(combo_box :: t(), shaping :: Julep.Iced.Shaping.t()) :: t()
   def shaping(%__MODULE__{} = cb, shaping), do: %{cb | shaping: shaping}
 
+  @doc "Sets the text ellipsis strategy."
+  @spec ellipsis(combo_box :: t(), ellipsis :: String.t()) :: t()
+  def ellipsis(%__MODULE__{} = cb, ellipsis), do: %{cb | ellipsis: ellipsis}
+
+  @doc "Sets the dropdown menu style overrides."
+  @spec menu_style(combo_box :: t(), menu_style :: map()) :: t()
+  def menu_style(%__MODULE__{} = cb, menu_style) when is_map(menu_style),
+    do: %{cb | menu_style: menu_style}
+
   @doc "Sets the combo box style. Accepts a named preset atom or a `StyleMap`."
   @spec style(combo_box :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = cb, style), do: %{cb | style: style}
@@ -212,6 +233,8 @@ defmodule Julep.Iced.Widget.ComboBox do
         |> put_if(cb.on_open, "on_open")
         |> put_if(cb.on_close, "on_close")
         |> put_if(cb.shaping, "shaping")
+        |> put_if(cb.ellipsis, "ellipsis")
+        |> put_if(cb.menu_style, "menu_style")
         |> put_if(cb.style, "style")
         |> put_if(cb.a11y, "a11y")
 

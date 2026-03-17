@@ -829,6 +829,56 @@ defmodule Julep.Command do
     }
   end
 
+  @doc """
+  Computes a SHA-256 hash of the renderer's current tree state.
+
+  The result arrives in `update/2` as
+  `%System{type: :tree_hash, tag: tag, data: %{"hash" => "..."}}`.
+  """
+  @spec tree_hash(tag :: atom()) :: %__MODULE__{}
+  def tree_hash(tag) when is_atom(tag) do
+    %__MODULE__{
+      type: :widget_op,
+      payload: %{op: "tree_hash", tag: Atom.to_string(tag)}
+    }
+  end
+
+  @doc """
+  Queries which widget currently has focus.
+
+  The result arrives in `update/2` as
+  `%System{type: :find_focused, tag: tag, data: %{"focused" => "..." | nil}}`.
+
+  Note: if no widget is focused, the `"focused"` field may be `nil`.
+  """
+  @spec find_focused(tag :: atom()) :: %__MODULE__{}
+  def find_focused(tag) when is_atom(tag) do
+    %__MODULE__{
+      type: :widget_op,
+      payload: %{op: "find_focused", tag: Atom.to_string(tag)}
+    }
+  end
+
+  @doc """
+  Loads a font at runtime from binary data.
+
+  The font data should be the raw bytes of a TrueType (.ttf) or OpenType
+  (.otf) font file. Once loaded, the font can be referenced by name in
+  widget `font` props.
+
+  ## Example
+
+      font_data = File.read!("path/to/CustomFont.ttf")
+      Julep.Command.load_font(font_data)
+  """
+  @spec load_font(data :: binary()) :: %__MODULE__{}
+  def load_font(data) when is_binary(data) do
+    %__MODULE__{
+      type: :widget_op,
+      payload: %{op: "load_font", data: data}
+    }
+  end
+
   # ---------------------------------------------------------------------------
   # Extension commands
   # ---------------------------------------------------------------------------

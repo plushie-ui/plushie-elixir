@@ -129,6 +129,7 @@ defmodule Julep.Protocol do
   """
   @spec encode_widget_op(op :: String.t(), payload :: map(), format :: format()) :: binary()
   def encode_widget_op(op, payload, format \\ :msgpack) do
+    payload = encode_binary_fields(payload, format, [:data])
     serialize(%{type: "widget_op", op: op, payload: payload}, format)
   end
 
@@ -1358,6 +1359,24 @@ defmodule Julep.Protocol do
          "data" => data
        }) do
     %System{type: :image_list, tag: tag, data: data}
+  end
+
+  defp dispatch(%{
+         "type" => "query_response",
+         "kind" => "tree_hash",
+         "tag" => tag,
+         "data" => data
+       }) do
+    %System{type: :tree_hash, tag: tag, data: data}
+  end
+
+  defp dispatch(%{
+         "type" => "query_response",
+         "kind" => "find_focused",
+         "tag" => tag,
+         "data" => data
+       }) do
+    %System{type: :find_focused, tag: tag, data: data}
   end
 
   # -- All windows closed --
