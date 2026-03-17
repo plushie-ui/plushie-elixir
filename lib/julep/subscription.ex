@@ -262,8 +262,8 @@ defmodule Julep.Subscription do
   @doc """
   Fires on mouse scroll events.
 
-  Delivers `%Mouse{type: :wheel_scrolled, delta_x: num, delta_y: num, unit: str, captured: bool}`
-  to `update/2`.
+  Delivers `%Mouse{type: :wheel_scrolled, delta_x: num, delta_y: num, unit: atom, captured: bool}`
+  to `update/2`. The `unit` field is `:line` or `:pixel`.
   The `event_tag` is for subscription management only.
   """
   @spec on_mouse_scroll(event_tag :: atom()) :: t()

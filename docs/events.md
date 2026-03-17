@@ -500,13 +500,13 @@ alias Julep.Event.Mouse
 %Mouse{type: :moved, x: x, y: y}
 %Mouse{type: :entered}
 %Mouse{type: :left}
-%Mouse{type: :button_pressed, button: "left"}
-%Mouse{type: :button_released, button: "right"}
-%Mouse{type: :wheel_scrolled, delta_x: dx, delta_y: dy, unit: "line"}
+%Mouse{type: :button_pressed, button: :left}
+%Mouse{type: :button_released, button: :right}
+%Mouse{type: :wheel_scrolled, delta_x: dx, delta_y: dy, unit: :line}
 ```
 
-The `button` field is a string (`"left"`, `"right"`, `"middle"`).
-The `unit` field indicates scroll units (`"line"` or `"pixel"`).
+The `button` field is an atom (`:left`, `:right`, `:middle`, `:back`, `:forward`).
+The `unit` field indicates scroll units (`:line` or `:pixel`).
 
 ```elixir
 alias Julep.Event.Mouse
@@ -515,7 +515,7 @@ def update(model, %Mouse{type: :moved, x: x, y: y}) do
   %{model | cursor: {x, y}}
 end
 
-def update(model, %Mouse{type: :button_pressed, button: "left"}) do
+def update(model, %Mouse{type: :button_pressed, button: :left}) do
   %{model | mouse_down: true}
 end
 ```

@@ -772,7 +772,8 @@ behind switching to this approach.
 - **`A11yOverride`** -- wraps any iced `Element` and intercepts `operate()`
   to apply Elixir-side overrides from the `a11y` prop (role, label,
   description, live, expanded, required, level, busy, invalid, modal,
-  read_only, mnemonic).
+  read_only, mnemonic, toggled, selected, value, orientation, labelled_by,
+  described_by, error_message).
 - **`HiddenInterceptor`** -- wraps an `Element` and suppresses it from the
   accessibility tree when `hidden: true` is set.
 

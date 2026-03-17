@@ -27,8 +27,12 @@ defmodule Julep.Command do
   - **PaneGrid ops**: `pane_split/4`, `pane_close/2`, `pane_swap/3`,
     `pane_maximize/2`, `pane_restore/1`
   - **Image ops**: `create_image/2`, `create_image/4`, `update_image/2`,
-    `update_image/4`, `delete_image/1`
+    `update_image/4`, `delete_image/1`, `list_images/1`, `clear_images/0`
+  - **Queries**: `tree_hash/1`, `find_focused/1`
+  - **Font**: `load_font/1`
   - **Accessibility**: `announce/1`
+  - **Extension**: `extension_command/3`, `extension_commands/1`
+  - **Test/Headless**: `advance_frame/1`
   - **Batch**: `batch/1`
 
   ## Usage

@@ -68,13 +68,18 @@ automatically.
 | Kind | Description | Payload | Result |
 |---|---|---|---|
 | `file_open` | Open file dialog | `title`, `filters`, `directory` | `{path}` or error |
+| `file_open_multiple` | Multi-file open dialog | `title`, `filters`, `directory` | `{paths}` or error |
 | `file_save` | Save file dialog | `title`, `filters`, `default_name` | `{path}` or error |
 | `directory_select` | Directory picker | `title` | `{path}` or error |
+| `directory_select_multiple` | Multi-directory picker | `title` | `{paths}` or error |
 | `clipboard_read` | Read clipboard | -- | `{text}` or error |
 | `clipboard_write` | Write to clipboard | `text` | ok or error |
+| `clipboard_read_html` | Read HTML from clipboard | -- | `{html}` or error |
+| `clipboard_write_html` | Write HTML to clipboard | `html`, `alt_text` | ok or error |
+| `clipboard_clear` | Clear the clipboard | -- | ok or error |
 | `clipboard_read_primary` | Read primary selection (Linux) | -- | `{text}` or error |
 | `clipboard_write_primary` | Write to primary selection (Linux) | `text` | ok or error |
-| `notification` | Show OS notification | `title`, `body` | ok |
+| `notification` | Show OS notification | `title`, `body`, `icon`, `timeout`, `urgency`, `sound` | ok |
 
 All effects can return `{"status": "error", "error": "unsupported"}` if the
 renderer is running on a platform that does not support the operation.
