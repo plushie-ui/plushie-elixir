@@ -72,8 +72,10 @@ defmodule Julep.Iced.ShadowTest do
     end
 
     test "builder functions require struct" do
+      bare_map = %{color: "#000000", offset_x: 0, offset_y: 0, blur_radius: 0}
+
       assert_raise FunctionClauseError, fn ->
-        Shadow.color(%{color: "#000000", offset_x: 0, offset_y: 0, blur_radius: 0}, "#ff0000")
+        apply(Shadow, :color, [bare_map, "#ff0000"])
       end
     end
   end

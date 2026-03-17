@@ -48,8 +48,9 @@ defmodule Julep.Bridge do
   Optional opts:
     - `:name`          - registration name passed to `GenServer.start_link/3`
     - `:format`        - wire format, `:msgpack` (default) or `:json`
-    - `:log_level`     - renderer log level (`:error`, `:warning`, `:info`, `:debug`).
+    - `:log_level`     - renderer log level (`:off`, `:error`, `:warning`, `:info`, `:debug`).
                          Default: `:error`. Ignored when `RUST_LOG` is set in the environment.
+    - `:renderer_args` - extra CLI args prepended to the renderer command (e.g. `["--headless"]`)
     - `:max_restarts`  - max restart attempts before giving up (default: 5)
     - `:restart_delay` - base delay in ms for exponential back-off (default: 100)
   """
@@ -169,6 +170,7 @@ defmodule Julep.Bridge do
     :buffer,
     :format,
     :log_level,
+    :renderer_args,
     :max_restarts,
     :restart_count,
     :restart_delay
@@ -193,6 +195,7 @@ defmodule Julep.Bridge do
       buffer: "",
       format: format,
       log_level: log_level,
+      renderer_args: Keyword.get(opts, :renderer_args, []),
       max_restarts: Keyword.get(opts, :max_restarts, 5),
       restart_count: 0,
       restart_delay: Keyword.get(opts, :restart_delay, 100)
@@ -369,8 +372,9 @@ defmodule Julep.Bridge do
           :json -> [:binary, :exit_status, :use_stdio, {:line, 65_536}]
         end
 
-      args = if state.format == :json, do: ["--json"], else: []
-      env = renderer_env(state.log_level)
+      format_args = if state.format == :json, do: ["--json"], else: []
+      args = state.renderer_args ++ format_args
+      env = Julep.RendererEnv.build(rust_log: rust_log_value(state.log_level))
 
       port =
         Port.open({:spawn_executable, path}, [{:args, args}, {:env, env} | port_opts])
@@ -381,22 +385,22 @@ defmodule Julep.Bridge do
     end
   end
 
-  # Build the environment variables for the renderer Port. Sets RUST_LOG
-  # when an explicit :log_level was configured, but only when the system
-  # environment doesn't already have RUST_LOG set (env var always wins).
-  defp renderer_env(log_level) do
-    if System.get_env("RUST_LOG") do
-      []
-    else
-      rust_log =
-        case log_level do
-          :error -> "julep=error"
-          :warning -> "julep=warn"
-          :info -> "julep=info"
-          :debug -> "julep=debug"
-        end
+  @typep log_level :: :off | :error | :warning | :info | :debug
 
-      [{~c"RUST_LOG", String.to_charlist(rust_log)}]
+  # Translate log_level atom to RUST_LOG filter string. Returns nil when
+  # the system RUST_LOG env var is already set (env var always wins).
+  @spec rust_log_value(log_level()) :: String.t() | nil
+  defp rust_log_value(level) do
+    if System.get_env("RUST_LOG") do
+      nil
+    else
+      case level do
+        :off -> "off"
+        :error -> "julep=error"
+        :warning -> "julep=warn"
+        :info -> "julep=info"
+        :debug -> "julep=debug"
+      end
     end
   end
 

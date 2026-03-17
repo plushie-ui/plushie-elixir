@@ -1,6 +1,8 @@
 defmodule Julep.Examples.ExtensionsDemoTest do
   use ExUnit.Case, async: false
 
+  import ExUnit.CaptureLog
+
   # Skip all tests when extension packages aren't compiled into the project.
   # The demo module references JulepSparkline, JulepHexView, etc. which live
   # in separate repos (julep_sparkline, julep_hex_view, ...).
@@ -147,7 +149,7 @@ defmodule Julep.Examples.ExtensionsDemoTest do
 
     describe "extension discovery" do
       test "register_all finds all 5 extensions" do
-        Julep.Test.ExtensionEvents.register_all()
+        capture_log(fn -> Julep.Test.ExtensionEvents.register_all() end)
 
         for type <- ["sparkline", "hex_view", "code_view", "plot", "timeline"] do
           assert :persistent_term.get({Julep.Test.ExtensionEvents, type}, :missing) != :missing,

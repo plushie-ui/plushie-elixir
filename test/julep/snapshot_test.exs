@@ -12,12 +12,8 @@ defmodule Julep.SnapshotTest do
   # Helpers
   # ---------------------------------------------------------------------------
 
-  defp tmp_snapshot_path(name) do
-    Path.join([
-      System.tmp_dir!(),
-      "julep_snapshot_test_#{System.unique_integer([:positive])}",
-      name
-    ])
+  defp tmp_snapshot_path(context, name) do
+    Path.join(context.tmp_dir, name)
   end
 
   defp simple_tree do
@@ -65,6 +61,8 @@ defmodule Julep.SnapshotTest do
     }
   end
 
+  @moduletag :tmp_dir
+
   setup do
     # Clean the env var before each test to prevent bleed-over
     System.delete_env("JULEP_UPDATE_SNAPSHOTS")
@@ -76,8 +74,8 @@ defmodule Julep.SnapshotTest do
   # ---------------------------------------------------------------------------
 
   describe "first run (no existing snapshot)" do
-    test "creates the snapshot file and returns :ok" do
-      path = tmp_snapshot_path("first_run.json")
+    test "creates the snapshot file and returns :ok", ctx do
+      path = tmp_snapshot_path(ctx, "first_run.json")
       refute File.exists?(path)
 
       result = Julep.Test.assert_tree_snapshot(simple_tree(), path)
@@ -86,8 +84,8 @@ defmodule Julep.SnapshotTest do
       assert File.exists?(path)
     end
 
-    test "creates parent directories if they don't exist" do
-      path = tmp_snapshot_path("deeply/nested/dir/snap.json")
+    test "creates parent directories if they don't exist", ctx do
+      path = tmp_snapshot_path(ctx, "deeply/nested/dir/snap.json")
       refute File.exists?(Path.dirname(path))
 
       assert :ok = Julep.Test.assert_tree_snapshot(simple_tree(), path)
@@ -100,8 +98,8 @@ defmodule Julep.SnapshotTest do
   # ---------------------------------------------------------------------------
 
   describe "matching snapshot" do
-    test "returns :ok when tree matches stored snapshot" do
-      path = tmp_snapshot_path("match.json")
+    test "returns :ok when tree matches stored snapshot", ctx do
+      path = tmp_snapshot_path(ctx, "match.json")
       tree = simple_tree()
 
       # First run -- writes
@@ -110,8 +108,8 @@ defmodule Julep.SnapshotTest do
       assert :ok = Julep.Test.assert_tree_snapshot(tree, path)
     end
 
-    test "passes on identical nested trees" do
-      path = tmp_snapshot_path("match_nested.json")
+    test "passes on identical nested trees", ctx do
+      path = tmp_snapshot_path(ctx, "match_nested.json")
       tree = nested_tree()
 
       assert :ok = Julep.Test.assert_tree_snapshot(tree, path)
@@ -124,8 +122,8 @@ defmodule Julep.SnapshotTest do
   # ---------------------------------------------------------------------------
 
   describe "mismatched snapshot" do
-    test "raises ExUnit.AssertionError on mismatch" do
-      path = tmp_snapshot_path("mismatch.json")
+    test "raises ExUnit.AssertionError on mismatch", ctx do
+      path = tmp_snapshot_path(ctx, "mismatch.json")
       original = simple_tree()
       changed = put_in(original, [:props, "title"], "Changed Title")
 
@@ -143,8 +141,8 @@ defmodule Julep.SnapshotTest do
       assert error.message =~ "JULEP_UPDATE_SNAPSHOTS=1"
     end
 
-    test "error message includes both stored and current representations" do
-      path = tmp_snapshot_path("mismatch_diff.json")
+    test "error message includes both stored and current representations", ctx do
+      path = tmp_snapshot_path(ctx, "mismatch_diff.json")
       original = simple_tree()
       changed = put_in(original, [:props, "title"], "New Title")
 
@@ -169,8 +167,8 @@ defmodule Julep.SnapshotTest do
   # ---------------------------------------------------------------------------
 
   describe "JULEP_UPDATE_SNAPSHOTS=1" do
-    test "overwrites an existing snapshot instead of failing" do
-      path = tmp_snapshot_path("update.json")
+    test "overwrites an existing snapshot instead of failing", ctx do
+      path = tmp_snapshot_path(ctx, "update.json")
       original = simple_tree()
       changed = put_in(original, [:props, "title"], "Updated Title")
 
@@ -189,8 +187,8 @@ defmodule Julep.SnapshotTest do
       assert updated_contents =~ "Updated Title"
     end
 
-    test "subsequent comparison without update mode passes against new snapshot" do
-      path = tmp_snapshot_path("update_then_compare.json")
+    test "subsequent comparison without update mode passes against new snapshot", ctx do
+      path = tmp_snapshot_path(ctx, "update_then_compare.json")
       original = simple_tree()
       changed = put_in(original, [:props, "title"], "V2 Title")
 
@@ -206,8 +204,8 @@ defmodule Julep.SnapshotTest do
       assert :ok = Julep.Test.assert_tree_snapshot(changed, path)
     end
 
-    test "does not overwrite when env var is set to something other than 1" do
-      path = tmp_snapshot_path("update_not_1.json")
+    test "does not overwrite when env var is set to something other than 1", ctx do
+      path = tmp_snapshot_path(ctx, "update_not_1.json")
       original = simple_tree()
       changed = put_in(original, [:props, "title"], "Nope")
 
@@ -226,16 +224,16 @@ defmodule Julep.SnapshotTest do
   # ---------------------------------------------------------------------------
 
   describe "nested tree snapshots" do
-    test "deeply nested tree round-trips through snapshot" do
-      path = tmp_snapshot_path("nested_roundtrip.json")
+    test "deeply nested tree round-trips through snapshot", ctx do
+      path = tmp_snapshot_path(ctx, "nested_roundtrip.json")
       tree = nested_tree()
 
       assert :ok = Julep.Test.assert_tree_snapshot(tree, path)
       assert :ok = Julep.Test.assert_tree_snapshot(tree, path)
     end
 
-    test "nested tree snapshot preserves all node types and props" do
-      path = tmp_snapshot_path("nested_contents.json")
+    test "nested tree snapshot preserves all node types and props", ctx do
+      path = tmp_snapshot_path(ctx, "nested_contents.json")
       tree = nested_tree()
 
       assert :ok = Julep.Test.assert_tree_snapshot(tree, path)
@@ -273,8 +271,8 @@ defmodule Julep.SnapshotTest do
       assert dark["props"]["label"] == "Dark mode"
     end
 
-    test "detects changes in deeply nested children" do
-      path = tmp_snapshot_path("nested_change.json")
+    test "detects changes in deeply nested children", ctx do
+      path = tmp_snapshot_path(ctx, "nested_change.json")
       tree = nested_tree()
 
       assert :ok = Julep.Test.assert_tree_snapshot(tree, path)
@@ -296,8 +294,8 @@ defmodule Julep.SnapshotTest do
   # ---------------------------------------------------------------------------
 
   describe "snapshot file format" do
-    test "output is valid JSON" do
-      path = tmp_snapshot_path("valid_json.json")
+    test "output is valid JSON", ctx do
+      path = tmp_snapshot_path(ctx, "valid_json.json")
       tree = simple_tree()
 
       assert :ok = Julep.Test.assert_tree_snapshot(tree, path)
@@ -307,8 +305,8 @@ defmodule Julep.SnapshotTest do
       assert {:ok, _decoded} = Jason.decode(contents)
     end
 
-    test "output is pretty-printed (contains newlines and indentation)" do
-      path = tmp_snapshot_path("pretty.json")
+    test "output is pretty-printed (contains newlines and indentation)", ctx do
+      path = tmp_snapshot_path(ctx, "pretty.json")
 
       assert :ok = Julep.Test.assert_tree_snapshot(simple_tree(), path)
       contents = File.read!(path)
@@ -317,9 +315,9 @@ defmodule Julep.SnapshotTest do
       assert String.contains?(contents, "  ")
     end
 
-    test "output is deterministic across multiple writes" do
-      path_a = tmp_snapshot_path("deterministic_a.json")
-      path_b = tmp_snapshot_path("deterministic_b.json")
+    test "output is deterministic across multiple writes", ctx do
+      path_a = tmp_snapshot_path(ctx, "deterministic_a.json")
+      path_b = tmp_snapshot_path(ctx, "deterministic_b.json")
       tree = nested_tree()
 
       assert :ok = Julep.Test.assert_tree_snapshot(tree, path_a)
@@ -328,8 +326,8 @@ defmodule Julep.SnapshotTest do
       assert File.read!(path_a) == File.read!(path_b)
     end
 
-    test "keys are sorted inside props maps too" do
-      path = tmp_snapshot_path("sorted_props.json")
+    test "keys are sorted inside props maps too", ctx do
+      path = tmp_snapshot_path(ctx, "sorted_props.json")
 
       # Build a tree with multiple props to verify ordering
       tree = %{
@@ -346,8 +344,8 @@ defmodule Julep.SnapshotTest do
       assert contents =~ ~r/"alpha".*"middle".*"zebra"/s
     end
 
-    test "atom keys are converted to strings in JSON output" do
-      path = tmp_snapshot_path("atom_keys.json")
+    test "atom keys are converted to strings in JSON output", ctx do
+      path = tmp_snapshot_path(ctx, "atom_keys.json")
 
       assert :ok = Julep.Test.assert_tree_snapshot(simple_tree(), path)
       contents = File.read!(path)

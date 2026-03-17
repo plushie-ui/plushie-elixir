@@ -1,6 +1,8 @@
 defmodule Julep.RuntimeRerenderTest do
   use ExUnit.Case, async: true
 
+  import ExUnit.CaptureLog
+
   alias Julep.Event.Widget
 
   # ---------------------------------------------------------------------------
@@ -87,80 +89,88 @@ defmodule Julep.RuntimeRerenderTest do
 
   describe "force_rerender" do
     test "re-renders view with existing model, no update/2 call" do
-      {runtime, bridge} = start_runtime(CounterApp)
+      capture_log(fn ->
+        {runtime, bridge} = start_runtime(CounterApp)
 
-      # Mutate model via normal event first.
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
+        # Mutate model via normal event first.
+        dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
+        dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
 
-      state = :sys.get_state(runtime)
-      assert state.model.count == 2
+        state = :sys.get_state(runtime)
+        assert state.model.count == 2
 
-      patches_before = length(Julep.Test.MockBridge.get_patches(bridge))
+        patches_before = length(Julep.Test.MockBridge.get_patches(bridge))
 
-      # Force re-render -- model should not change (no update/2 called).
-      force_rerender_and_wait(runtime)
+        # Force re-render -- model should not change (no update/2 called).
+        force_rerender_and_wait(runtime)
 
-      state = :sys.get_state(runtime)
-      assert state.model.count == 2
+        state = :sys.get_state(runtime)
+        assert state.model.count == 2
 
-      # Since the model didn't change and the module code is the same,
-      # the tree is identical -- no new patch should be sent.
-      patches_after = length(Julep.Test.MockBridge.get_patches(bridge))
-      assert patches_after == patches_before
+        # Since the model didn't change and the module code is the same,
+        # the tree is identical -- no new patch should be sent.
+        patches_after = length(Julep.Test.MockBridge.get_patches(bridge))
+        assert patches_after == patches_before
+      end)
     end
 
     test "model is preserved across force_rerender" do
-      {runtime, _bridge} = start_runtime(CounterApp)
+      capture_log(fn ->
+        {runtime, _bridge} = start_runtime(CounterApp)
 
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
+        dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
+        dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
+        dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
 
-      model_before = :sys.get_state(runtime).model
+        model_before = :sys.get_state(runtime).model
 
-      force_rerender_and_wait(runtime)
+        force_rerender_and_wait(runtime)
 
-      model_after = :sys.get_state(runtime).model
-      assert model_before == model_after
+        model_after = :sys.get_state(runtime).model
+        assert model_before == model_after
+      end)
     end
 
     test "runtime stays alive when view/1 raises during force_rerender" do
-      {runtime, _bridge} = start_runtime(CrashyViewApp)
+      capture_log(fn ->
+        {runtime, _bridge} = start_runtime(CrashyViewApp)
 
-      # Arm the crash.
-      dispatch_and_wait(runtime, :arm)
+        # Arm the crash.
+        dispatch_and_wait(runtime, :arm)
 
-      # Force re-render with a crashing view -- should not kill the runtime.
-      force_rerender_and_wait(runtime)
-      assert Process.alive?(runtime)
+        # Force re-render with a crashing view -- should not kill the runtime.
+        force_rerender_and_wait(runtime)
+        assert Process.alive?(runtime)
 
-      # Old tree should be preserved.
-      state = :sys.get_state(runtime)
-      text_node = find_by_type(state.tree, "text")
-      assert text_node.props["content"] == "all good"
+        # Old tree should be preserved.
+        state = :sys.get_state(runtime)
+        text_node = find_by_type(state.tree, "text")
+        assert text_node.props["content"] == "all good"
 
-      # Disarm and verify the runtime recovers.
-      dispatch_and_wait(runtime, :disarm)
-      force_rerender_and_wait(runtime)
+        # Disarm and verify the runtime recovers.
+        dispatch_and_wait(runtime, :disarm)
+        force_rerender_and_wait(runtime)
 
-      state = :sys.get_state(runtime)
-      text_node = find_by_type(state.tree, "text")
-      assert text_node.props["content"] == "all good"
+        state = :sys.get_state(runtime)
+        text_node = find_by_type(state.tree, "text")
+        assert text_node.props["content"] == "all good"
+      end)
     end
 
     test "runtime continues processing events after force_rerender" do
-      {runtime, _bridge} = start_runtime(CounterApp)
+      capture_log(fn ->
+        {runtime, _bridge} = start_runtime(CounterApp)
 
-      force_rerender_and_wait(runtime)
+        force_rerender_and_wait(runtime)
 
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
+        dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
 
-      state = :sys.get_state(runtime)
-      assert state.model.count == 1
+        state = :sys.get_state(runtime)
+        assert state.model.count == 1
 
-      text_node = find_by_type(state.tree, "text")
-      assert text_node.props["content"] == "count:1"
+        text_node = find_by_type(state.tree, "text")
+        assert text_node.props["content"] == "count:1"
+      end)
     end
   end
 end

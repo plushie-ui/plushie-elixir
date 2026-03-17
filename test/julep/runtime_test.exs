@@ -1,6 +1,8 @@
 defmodule Julep.RuntimeTest do
   use ExUnit.Case, async: true
 
+  import ExUnit.CaptureLog
+
   alias Julep.Event.Effect
   alias Julep.Event.Widget
 
@@ -326,37 +328,41 @@ defmodule Julep.RuntimeTest do
         def handle_renderer_exit(model, _reason), do: %{model | status: :crashed}
       end
 
-      {runtime, bridge} = start_runtime(ExitApp)
-      await_initial_render(runtime)
+      capture_log(fn ->
+        {runtime, bridge} = start_runtime(ExitApp)
+        await_initial_render(runtime)
 
-      send(runtime, {:renderer_exit, :port_closed})
-      :sys.get_state(runtime)
+        send(runtime, {:renderer_exit, :port_closed})
+        :sys.get_state(runtime)
 
-      state = :sys.get_state(runtime)
-      assert state.model.status == :crashed
+        state = :sys.get_state(runtime)
+        assert state.model.status == :crashed
 
-      # renderer_exit does NOT produce a new snapshot -- it only updates the model
-      # so it is ready when the renderer restarts.
-      snapshots = Julep.Test.MockBridge.get_snapshots(bridge)
-      assert length(snapshots) == 1
+        # renderer_exit does NOT produce a new snapshot -- it only updates the model
+        # so it is ready when the renderer restarts.
+        snapshots = Julep.Test.MockBridge.get_snapshots(bridge)
+        assert length(snapshots) == 1
+      end)
     end
 
     test ":renderer_restarted re-sends the current tree to the bridge" do
-      {runtime, bridge} = start_runtime(SimpleApp)
-      await_initial_render(runtime)
+      capture_log(fn ->
+        {runtime, bridge} = start_runtime(SimpleApp)
+        await_initial_render(runtime)
 
-      initial_snapshots = Julep.Test.MockBridge.get_snapshots(bridge)
-      assert length(initial_snapshots) == 1
+        initial_snapshots = Julep.Test.MockBridge.get_snapshots(bridge)
+        assert length(initial_snapshots) == 1
 
-      send(runtime, :renderer_restarted)
-      :sys.get_state(runtime)
+        send(runtime, :renderer_restarted)
+        :sys.get_state(runtime)
 
-      snapshots = Julep.Test.MockBridge.get_snapshots(bridge)
-      # Should have sent the same tree a second time.
-      assert length(snapshots) == 2
+        snapshots = Julep.Test.MockBridge.get_snapshots(bridge)
+        # Should have sent the same tree a second time.
+        assert length(snapshots) == 2
 
-      [first, second] = snapshots
-      assert first == second
+        [first, second] = snapshots
+        assert first == second
+      end)
     end
   end
 
@@ -513,21 +519,23 @@ defmodule Julep.RuntimeTest do
         end
       end
 
-      {runtime, _bridge} = start_runtime(CrashUpdateApp)
-      await_initial_render(runtime)
+      capture_log(fn ->
+        {runtime, _bridge} = start_runtime(CrashUpdateApp)
+        await_initial_render(runtime)
 
-      # This should not crash the runtime.
-      dispatch_and_wait(runtime, :crash)
+        # This should not crash the runtime.
+        dispatch_and_wait(runtime, :crash)
 
-      # Runtime is still alive and model unchanged.
-      assert Process.alive?(runtime)
-      state = :sys.get_state(runtime)
-      assert state.model.value == 0
+        # Runtime is still alive and model unchanged.
+        assert Process.alive?(runtime)
+        state = :sys.get_state(runtime)
+        assert state.model.value == 0
 
-      # Can still process normal events after the crash.
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
-      state = :sys.get_state(runtime)
-      assert state.model.value == 1
+        # Can still process normal events after the crash.
+        dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
+        state = :sys.get_state(runtime)
+        assert state.model.value == 1
+      end)
     end
 
     test "view/1 exception does not crash the runtime" do
@@ -550,17 +558,19 @@ defmodule Julep.RuntimeTest do
         end
       end
 
-      {runtime, _bridge} = start_runtime(CrashViewApp)
-      await_initial_render(runtime)
+      capture_log(fn ->
+        {runtime, _bridge} = start_runtime(CrashViewApp)
+        await_initial_render(runtime)
 
-      # Trigger the crashing view -- runtime should survive.
-      dispatch_and_wait(runtime, :crash_view)
-      assert Process.alive?(runtime)
+        # Trigger the crashing view -- runtime should survive.
+        dispatch_and_wait(runtime, :crash_view)
+        assert Process.alive?(runtime)
 
-      # Fix the view and confirm the runtime continues normally.
-      dispatch_and_wait(runtime, :fix_view)
-      state = :sys.get_state(runtime)
-      assert state.model.crash_view == false
+        # Fix the view and confirm the runtime continues normally.
+        dispatch_and_wait(runtime, :fix_view)
+        state = :sys.get_state(runtime)
+        assert state.model.crash_view == false
+      end)
     end
   end
 
@@ -943,29 +953,31 @@ defmodule Julep.RuntimeTest do
         end
       end
 
-      {runtime, _bridge} = start_runtime(CancelStreamApp)
-      await_initial_render(runtime)
+      capture_log(fn ->
+        {runtime, _bridge} = start_runtime(CancelStreamApp)
+        await_initial_render(runtime)
 
-      # Start the stream
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "start"})
+        # Start the stream
+        dispatch_and_wait(runtime, %Widget{type: :click, id: "start"})
 
-      # Wait for the first emit to arrive
-      state = await_condition(runtime, fn s -> s.model.chunks == ["first"] end)
-      assert Map.has_key?(state.async_tasks, :import)
+        # Wait for the first emit to arrive
+        state = await_condition(runtime, fn s -> s.model.chunks == ["first"] end)
+        assert Map.has_key?(state.async_tasks, :import)
 
-      # Cancel the stream
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "cancel"})
+        # Cancel the stream
+        dispatch_and_wait(runtime, %Widget{type: :click, id: "cancel"})
 
-      state = :sys.get_state(runtime)
-      assert state.model.cancelled == true
-      assert state.async_tasks == %{}
+        state = :sys.get_state(runtime)
+        assert state.model.cancelled == true
+        assert state.async_tasks == %{}
 
-      # Wait and confirm no more chunks arrive
-      Process.sleep(100)
-      :sys.get_state(runtime)
+        # Wait and confirm no more chunks arrive
+        Process.sleep(100)
+        :sys.get_state(runtime)
 
-      state = :sys.get_state(runtime)
-      assert state.model.chunks == ["first"]
+        state = :sys.get_state(runtime)
+        assert state.model.chunks == ["first"]
+      end)
     end
 
     test "cancel is a no-op when no task is running for the tag" do

@@ -30,13 +30,15 @@ defmodule Julep.Test.Case do
     app = Keyword.fetch!(opts, :app)
 
     quote do
+      import ExUnit.CaptureLog
       import Julep.Test.Helpers
 
       setup _context do
         backend_mod = Julep.Test.Case.resolve_backend()
 
-        # Register extension sim events so custom widget types can be tested
-        Julep.Test.ExtensionEvents.register_all()
+        # Register extension sim events so custom widget types can be tested.
+        # capture_log suppresses collision warnings from test-only extensions.
+        capture_log(fn -> Julep.Test.ExtensionEvents.register_all() end)
 
         session = Session.start(unquote(app), backend: backend_mod)
         Process.put(:julep_test_session, session)

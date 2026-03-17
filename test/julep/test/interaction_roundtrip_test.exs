@@ -1,6 +1,8 @@
 defmodule Julep.Test.InteractionRoundtripTest do
   use ExUnit.Case, async: true
 
+  import ExUnit.CaptureLog
+
   alias Julep.Event.Widget
 
   alias Julep.Test.Backend.Sim
@@ -247,33 +249,43 @@ defmodule Julep.Test.InteractionRoundtripTest do
 
   describe "interaction errors" do
     test "click on non-button exits with cannot-click error" do
-      {:ok, pid} = Sim.start(TrackingApp)
-      result = catch_exit(Sim.click(pid, "#name_input"))
-      assert exit_message(result) =~ "cannot click"
+      capture_log(fn ->
+        {:ok, pid} = Sim.start(TrackingApp)
+        result = catch_exit(Sim.click(pid, "#name_input"))
+        assert exit_message(result) =~ "cannot click"
+      end)
     end
 
     test "type_text on non-input exits with cannot-type error" do
-      {:ok, pid} = Sim.start(TrackingApp)
-      result = catch_exit(Sim.type_text(pid, "#submit_btn", "text"))
-      assert exit_message(result) =~ "cannot type"
+      capture_log(fn ->
+        {:ok, pid} = Sim.start(TrackingApp)
+        result = catch_exit(Sim.type_text(pid, "#submit_btn", "text"))
+        assert exit_message(result) =~ "cannot type"
+      end)
     end
 
     test "toggle on non-toggleable exits with cannot-toggle error" do
-      {:ok, pid} = Sim.start(TrackingApp)
-      result = catch_exit(Sim.toggle(pid, "#volume"))
-      assert exit_message(result) =~ "cannot toggle"
+      capture_log(fn ->
+        {:ok, pid} = Sim.start(TrackingApp)
+        result = catch_exit(Sim.toggle(pid, "#volume"))
+        assert exit_message(result) =~ "cannot toggle"
+      end)
     end
 
     test "slide on non-slider exits with cannot-slide error" do
-      {:ok, pid} = Sim.start(TrackingApp)
-      result = catch_exit(Sim.slide(pid, "#submit_btn", 50))
-      assert exit_message(result) =~ "cannot slide"
+      capture_log(fn ->
+        {:ok, pid} = Sim.start(TrackingApp)
+        result = catch_exit(Sim.slide(pid, "#submit_btn", 50))
+        assert exit_message(result) =~ "cannot slide"
+      end)
     end
 
     test "interacting with missing element exits with not-found error" do
-      {:ok, pid} = Sim.start(TrackingApp)
-      result = catch_exit(Sim.click(pid, "#ghost"))
-      assert exit_message(result) =~ "not found"
+      capture_log(fn ->
+        {:ok, pid} = Sim.start(TrackingApp)
+        result = catch_exit(Sim.click(pid, "#ghost"))
+        assert exit_message(result) =~ "not found"
+      end)
     end
   end
 end

@@ -406,7 +406,7 @@ defmodule Julep.ProtocolParityTest do
 
       assert %Mouse{
                type: :wheel_scrolled,
-               delta_x: 0.0,
+               delta_x: +0.0,
                delta_y: -3.0,
                unit: :line,
                captured: false

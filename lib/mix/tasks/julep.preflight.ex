@@ -23,21 +23,24 @@ defmodule Mix.Tasks.Julep.Preflight do
 
   @shortdoc "Run all CI checks locally"
 
+  @typep step_result :: :ok | :skip | {:error, pos_integer()}
+
   @impl Mix.Task
   def run(_args) do
     renderer_source = Mix.JulepHelpers.renderer_source_path()
-    has_renderer_source? = File.dir?(renderer_source)
 
     steps = [
-      {"mix format --check-formatted", fn -> mix_format() end},
+      {"mix format --check-formatted", fn -> mix_cmd(["format", "--check-formatted"]) end},
       {"mix compile --warnings-as-errors", fn -> mix_compile() end},
-      {"mix credo --strict", fn -> mix_credo() end},
-      {"mix test", fn -> mix_test() end},
-      {"mix dialyzer", fn -> mix_dialyzer() end},
-      {"cargo build", fn -> cargo(["build"], renderer_source, has_renderer_source?) end},
-      {"cargo test", fn -> cargo(["test"], renderer_source, has_renderer_source?) end},
-      {"cargo fmt --check", fn -> cargo_fmt(renderer_source, has_renderer_source?) end},
-      {"cargo clippy -D warnings", fn -> cargo_clippy(renderer_source, has_renderer_source?) end}
+      {"mix credo --strict", fn -> mix_cmd(["credo", "--strict"]) end},
+      {"mix test", fn -> mix_cmd(["test"]) end},
+      {"mix dialyzer", fn -> mix_cmd(["dialyzer"]) end},
+      {"cargo build", fn -> cargo_cmd(["build"], renderer_source) end},
+      {"cargo test", fn -> cargo_cmd(["test"], renderer_source) end},
+      {"cargo fmt --check",
+       fn -> cargo_cmd(["fmt", "--all", "--", "--check"], renderer_source) end},
+      {"cargo clippy -D warnings",
+       fn -> cargo_cmd(["clippy", "--", "-D", "warnings"], renderer_source) end}
     ]
 
     Enum.each(steps, fn {label, fun} ->
@@ -64,13 +67,9 @@ defmodule Mix.Tasks.Julep.Preflight do
     Mix.shell().info([:green, "\nAll checks passed.", :reset])
   end
 
-  defp mix_format do
-    case cmd("mix", ["format", "--check-formatted"]) do
-      0 -> :ok
-      code -> {:error, code}
-    end
-  end
+  # -- Mix steps ---------------------------------------------------------------
 
+  @spec mix_compile() :: step_result()
   defp mix_compile do
     case Mix.Task.run("compile", ["--warnings-as-errors"]) do
       {:error, _} -> {:error, 1}
@@ -78,58 +77,59 @@ defmodule Mix.Tasks.Julep.Preflight do
     end
   end
 
-  defp mix_credo do
-    case cmd("mix", ["credo", "--strict"]) do
-      0 -> :ok
-      code -> {:error, code}
+  @spec mix_cmd([String.t()]) :: step_result()
+  defp mix_cmd(args), do: exit_code_to_result(stream_cmd("mix", args))
+
+  # -- Cargo steps -------------------------------------------------------------
+
+  @spec cargo_cmd([String.t()], String.t()) :: step_result()
+  defp cargo_cmd(args, source_dir) do
+    if File.dir?(source_dir) do
+      exit_code_to_result(stream_cmd("cargo", args, cd: source_dir))
+    else
+      :skip
     end
   end
 
-  defp mix_dialyzer do
-    case cmd("mix", ["dialyzer"]) do
-      0 -> :ok
-      code -> {:error, code}
+  # -- Subprocess streaming ----------------------------------------------------
+
+  # Streams a subprocess to the terminal, returning its exit code.
+  #
+  # Uses Port directly instead of System.cmd because cargo test output
+  # can contain raw MessagePack bytes (non-UTF-8). System.cmd pipes
+  # through Erlang's IO system which rejects non-UTF-8 data.
+  # :file.write/2 bypasses encoding validation.
+  @spec stream_cmd(String.t(), [String.t()], keyword()) :: non_neg_integer()
+  defp stream_cmd(command, args, opts \\ []) do
+    executable =
+      System.find_executable(command) ||
+        raise "#{command} not found in PATH"
+
+    port_opts = [:binary, :exit_status, :stderr_to_stdout, {:args, args}]
+
+    port_opts =
+      case opts[:cd] do
+        nil -> port_opts
+        dir -> [{:cd, String.to_charlist(dir)} | port_opts]
+      end
+
+    port = Port.open({:spawn_executable, executable}, port_opts)
+    drain_port(port)
+  end
+
+  @spec drain_port(port()) :: non_neg_integer()
+  defp drain_port(port) do
+    receive do
+      {^port, {:data, data}} ->
+        :file.write(:standard_io, data)
+        drain_port(port)
+
+      {^port, {:exit_status, code}} ->
+        code
     end
   end
 
-  defp mix_test do
-    case cmd("mix", ["test"]) do
-      0 -> :ok
-      code -> {:error, code}
-    end
-  end
-
-  defp cargo(_args, _source_dir, false), do: :skip
-
-  defp cargo(args, source_dir, true) do
-    case cmd("cargo", args, cd: source_dir) do
-      0 -> :ok
-      code -> {:error, code}
-    end
-  end
-
-  defp cargo_fmt(_source_dir, false), do: :skip
-
-  defp cargo_fmt(source_dir, true) do
-    case cmd("cargo", ["fmt", "--all", "--", "--check"], cd: source_dir) do
-      0 -> :ok
-      code -> {:error, code}
-    end
-  end
-
-  defp cargo_clippy(_source_dir, false), do: :skip
-
-  defp cargo_clippy(source_dir, true) do
-    case cmd("cargo", ["clippy", "--", "-D", "warnings"], cd: source_dir) do
-      0 -> :ok
-      code -> {:error, code}
-    end
-  end
-
-  defp cmd(command, args, opts \\ []) do
-    {_, code} =
-      System.cmd(command, args, [stderr_to_stdout: true, into: IO.stream(:stdio, :line)] ++ opts)
-
-    code
-  end
+  @spec exit_code_to_result(non_neg_integer()) :: step_result()
+  defp exit_code_to_result(0), do: :ok
+  defp exit_code_to_result(code), do: {:error, code}
 end

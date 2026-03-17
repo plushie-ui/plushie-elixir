@@ -1,6 +1,8 @@
 defmodule Julep.TelemetryTest do
   use ExUnit.Case, async: true
 
+  import ExUnit.CaptureLog
+
   alias Julep.Event.Widget
 
   # ---------------------------------------------------------------------------
@@ -68,73 +70,72 @@ defmodule Julep.TelemetryTest do
 
   describe "[:julep, :view] span" do
     test "fires start and stop events on initial render" do
-      stop_id = attach([:julep, :view, :stop], self())
+      capture_log(fn ->
+        stop_id = attach([:julep, :view, :stop], self())
 
-      {runtime, _bridge} = start_runtime(TelemetryApp)
-      await_initial_render(runtime)
+        {runtime, _bridge} = start_runtime(TelemetryApp)
+        await_initial_render(runtime)
 
-      assert_receive {:telemetry_event, [:julep, :view, :stop], measurements, _metadata}
-      assert is_integer(measurements.duration)
-      assert measurements.duration >= 0
+        assert_receive {:telemetry_event, [:julep, :view, :stop], measurements, _metadata}
+        assert is_integer(measurements.duration)
+        assert measurements.duration >= 0
 
-      :telemetry.detach(stop_id)
-      GenServer.stop(runtime)
+        :telemetry.detach(stop_id)
+        GenServer.stop(runtime)
+      end)
     end
   end
 
   describe "[:julep, :update] span" do
     test "fires start and stop events when dispatching an event" do
-      {runtime, _bridge} = start_runtime(TelemetryApp)
-      await_initial_render(runtime)
+      capture_log(fn ->
+        {runtime, _bridge} = start_runtime(TelemetryApp)
+        await_initial_render(runtime)
 
-      stop_id = attach([:julep, :update, :stop], self())
+        stop_id = attach([:julep, :update, :stop], self())
 
-      Julep.Runtime.dispatch(runtime, %Widget{type: :click, id: "inc"})
-      # Synchronise -- ensures the event has been processed.
-      :sys.get_state(runtime)
+        Julep.Runtime.dispatch(runtime, %Widget{type: :click, id: "inc"})
+        # Synchronise -- ensures the event has been processed.
+        :sys.get_state(runtime)
 
-      assert_receive {:telemetry_event, [:julep, :update, :stop], measurements, _metadata}
-      assert is_integer(measurements.duration)
-      assert measurements.duration >= 0
+        assert_receive {:telemetry_event, [:julep, :update, :stop], measurements, _metadata}
+        assert is_integer(measurements.duration)
+        assert measurements.duration >= 0
 
-      :telemetry.detach(stop_id)
-      GenServer.stop(runtime)
+        :telemetry.detach(stop_id)
+        GenServer.stop(runtime)
+      end)
     end
   end
 
   describe "[:julep, :bridge, :send]" do
     test "fires when sending data to the port" do
-      handler_id = attach([:julep, :bridge, :send], self())
+      capture_log(fn ->
+        handler_id = attach([:julep, :bridge, :send], self())
 
-      tag = System.unique_integer([:positive])
-      _bridge_name = :"telemetry_send_bridge_#{tag}"
-
-      # We can't easily send to a real port without a renderer, but MockBridge
-      # is a GenServer, not a port. Instead, test the telemetry event by
-      # verifying it fires during a runtime cycle (the runtime casts to bridge,
-      # which calls send_to_port internally). Since MockBridge doesn't use a
-      # real port, send_to_port won't fire. We verify the event name is
-      # attached without error and detach cleanly.
-      #
-      # A full integration test would require a renderer binary. We verify
-      # the handler attachment works and the code compiles correctly.
-      :telemetry.detach(handler_id)
+        # We can't easily send to a real port without a renderer, but MockBridge
+        # is a GenServer, not a port. We verify the handler attaches and
+        # detaches cleanly. A full integration test lives in bridge_msgpack_test.
+        :telemetry.detach(handler_id)
+      end)
     end
   end
 
   describe "[:julep, :bridge, :receive]" do
     test "handler can be attached for receive events" do
-      handler_id = attach([:julep, :bridge, :receive], self())
-      # Verify handler was attached without error.
-      :telemetry.detach(handler_id)
+      capture_log(fn ->
+        handler_id = attach([:julep, :bridge, :receive], self())
+        :telemetry.detach(handler_id)
+      end)
     end
   end
 
   describe "[:julep, :bridge, :restart]" do
     test "handler can be attached for restart events" do
-      handler_id = attach([:julep, :bridge, :restart], self())
-      # Verify handler was attached without error.
-      :telemetry.detach(handler_id)
+      capture_log(fn ->
+        handler_id = attach([:julep, :bridge, :restart], self())
+        :telemetry.detach(handler_id)
+      end)
     end
   end
 end

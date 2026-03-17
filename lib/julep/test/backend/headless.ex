@@ -32,12 +32,14 @@ defmodule Julep.Test.Backend.Headless do
     format = Keyword.get(opts, :format, :msgpack)
     renderer_path = resolve_renderer_path()
 
+    env = Julep.RendererEnv.build()
+
     port =
       Port.open({:spawn_executable, renderer_path}, [
         :binary,
         :exit_status,
         :use_stdio
-        | port_opts(format) ++ [{:args, port_args(format)}]
+        | port_opts(format) ++ [{:args, port_args(format)}, {:env, env}]
       ])
 
     {state, tree} = build_state(port, format, app, opts)

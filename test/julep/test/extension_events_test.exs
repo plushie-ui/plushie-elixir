@@ -1,6 +1,8 @@
 defmodule Julep.Test.ExtensionEventsTest do
   use ExUnit.Case, async: false
 
+  import ExUnit.CaptureLog
+
   alias Julep.Event.Widget
 
   alias Julep.Test.Element
@@ -194,8 +196,9 @@ defmodule Julep.Test.ExtensionEventsTest do
   describe "register_all/0" do
     test "discovers and registers loaded extensions" do
       # Our test modules above implement Julep.Extension, so register_all
-      # should pick them up.
-      ExtensionEvents.register_all()
+      # should pick them up. capture_log suppresses collision warnings from
+      # test-only ConflictExtension in extension_test.exs.
+      capture_log(fn -> ExtensionEvents.register_all() end)
 
       assert {:ok, {:terminal_focus, "t"}} =
                ExtensionEvents.dispatch(:click, el("t", "terminal"), [])

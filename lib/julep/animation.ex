@@ -119,7 +119,7 @@ defmodule Julep.Animation do
   before settling. Uses a single-period damped sine approximation.
   """
   @spec spring(t :: float()) :: float()
-  def spring(t) when t == 0.0, do: 0.0
+  def spring(t) when t == +0.0, do: +0.0
   def spring(t) when t == 1.0, do: 1.0
 
   def spring(t) do
@@ -196,7 +196,7 @@ defmodule Julep.Animation do
     current = interpolate(anim.from, anim.to, t, anim.easing)
 
     if t >= 1.0 do
-      {anim.to + 0.0, :finished}
+      {anim.to, :finished}
     else
       updated = %{anim | value: current}
       {current, updated}
@@ -217,7 +217,7 @@ defmodule Julep.Animation do
 
   # -- Private ----------------------------------------------------------------
 
-  defp clamp(t) when t < 0.0, do: 0.0
+  defp clamp(t) when t < 0, do: 0.0
   defp clamp(t) when t > 1.0, do: 1.0
-  defp clamp(t), do: t + 0.0
+  defp clamp(t), do: t
 end
