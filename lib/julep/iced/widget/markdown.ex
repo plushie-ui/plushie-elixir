@@ -15,6 +15,9 @@ defmodule Julep.Iced.Widget.Markdown do
   - `code_size` (number) -- code block text size in pixels.
   - `spacing` (number) -- spacing between markdown elements in pixels.
   - `link_color` (hex color) -- color to override the default link color.
+  - `code_theme` (string) -- syntax highlighting theme for code blocks. One of
+    `"solarized_dark"`, `"base16_mocha"`, `"base16_ocean"`, `"base16_eighties"`,
+    `"inspired_github"`. Default: `"base16_ocean"`.
 
   ## Events
 
@@ -34,6 +37,7 @@ defmodule Julep.Iced.Widget.Markdown do
           | {:code_size, number()}
           | {:spacing, number()}
           | {:link_color, Julep.Iced.Color.t()}
+          | {:code_theme, String.t()}
           | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -47,6 +51,7 @@ defmodule Julep.Iced.Widget.Markdown do
           code_size: number() | nil,
           spacing: number() | nil,
           link_color: Julep.Iced.Color.t() | nil,
+          code_theme: String.t() | nil,
           a11y: Julep.Iced.A11y.t() | nil
         }
 
@@ -61,6 +66,7 @@ defmodule Julep.Iced.Widget.Markdown do
     :code_size,
     :spacing,
     :link_color,
+    :code_theme,
     :a11y
   ]
 
@@ -84,6 +90,7 @@ defmodule Julep.Iced.Widget.Markdown do
       {:code_size, v}, acc -> code_size(acc, v)
       {:spacing, v}, acc -> spacing(acc, v)
       {:link_color, v}, acc -> link_color(acc, v)
+      {:code_theme, v}, acc -> code_theme(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -122,6 +129,12 @@ defmodule Julep.Iced.Widget.Markdown do
   def link_color(%__MODULE__{} = md, link_color),
     do: %{md | link_color: Color.cast(link_color)}
 
+  @doc "Sets the syntax highlighting theme for code blocks."
+  @spec code_theme(markdown :: t(), code_theme :: String.t()) :: t()
+  def code_theme(%__MODULE__{} = md, code_theme)
+      when code_theme in ~w(solarized_dark base16_mocha base16_ocean base16_eighties inspired_github),
+      do: %{md | code_theme: code_theme}
+
   @doc "Sets accessibility annotations."
   @spec a11y(markdown :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
   def a11y(%__MODULE__{} = md, a11y), do: %{md | a11y: A11y.cast(a11y)}
@@ -145,6 +158,7 @@ defmodule Julep.Iced.Widget.Markdown do
         |> put_if(md.code_size, "code_size")
         |> put_if(md.spacing, "spacing")
         |> put_if(md.link_color, "link_color")
+        |> put_if(md.code_theme, "code_theme")
         |> put_if(md.a11y, "a11y")
 
       %{id: md.id, type: "markdown", props: props, children: []}

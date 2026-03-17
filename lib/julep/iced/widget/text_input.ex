@@ -28,6 +28,8 @@ defmodule Julep.Iced.Widget.TextInput do
   - `on_paste` (boolean) -- when true, emits `%Widget{type: :paste, id: id, value: text}` when user
     pastes text. Default: false.
   - `secure` (boolean) -- mask input as password dots. Default: false.
+  - `ime_purpose` (string) -- IME input purpose hint: `"normal"`, `"secure"`, `"terminal"`.
+    Overrides the default derived from `secure`. Default: nil (auto from `secure`).
   - `placeholder_color` (string) -- hex color for the placeholder text.
   - `selection_color` (string) -- hex color for the text selection highlight.
 
@@ -57,6 +59,7 @@ defmodule Julep.Iced.Widget.TextInput do
           | {:on_submit, boolean()}
           | {:on_paste, boolean()}
           | {:secure, boolean()}
+          | {:ime_purpose, String.t()}
           | {:style, style()}
           | {:placeholder_color, Julep.Iced.Color.t()}
           | {:selection_color, Julep.Iced.Color.t()}
@@ -76,6 +79,7 @@ defmodule Julep.Iced.Widget.TextInput do
           on_submit: boolean() | nil,
           on_paste: boolean() | nil,
           secure: boolean() | nil,
+          ime_purpose: String.t() | nil,
           style: style() | nil,
           placeholder_color: Julep.Iced.Color.t() | nil,
           selection_color: Julep.Iced.Color.t() | nil,
@@ -96,6 +100,7 @@ defmodule Julep.Iced.Widget.TextInput do
     :on_submit,
     :on_paste,
     :secure,
+    :ime_purpose,
     :style,
     :placeholder_color,
     :selection_color,
@@ -125,6 +130,7 @@ defmodule Julep.Iced.Widget.TextInput do
       {:on_submit, v}, acc -> on_submit(acc, v)
       {:on_paste, v}, acc -> on_paste(acc, v)
       {:secure, v}, acc -> secure(acc, v)
+      {:ime_purpose, v}, acc -> ime_purpose(acc, v)
       {:style, v}, acc -> style(acc, v)
       {:placeholder_color, v}, acc -> placeholder_color(acc, v)
       {:selection_color, v}, acc -> selection_color(acc, v)
@@ -177,6 +183,11 @@ defmodule Julep.Iced.Widget.TextInput do
   @spec secure(text_input :: t(), secure :: boolean()) :: t()
   def secure(%__MODULE__{} = ti, secure), do: %{ti | secure: secure}
 
+  @doc "Sets the IME input purpose hint. Overrides the default derived from `secure`."
+  @spec ime_purpose(text_input :: t(), ime_purpose :: String.t()) :: t()
+  def ime_purpose(%__MODULE__{} = ti, ime_purpose) when ime_purpose in ~w(normal secure terminal),
+    do: %{ti | ime_purpose: ime_purpose}
+
   @doc "Sets the input style."
   @spec style(text_input :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = ti, style), do: %{ti | style: style}
@@ -217,6 +228,7 @@ defmodule Julep.Iced.Widget.TextInput do
         |> put_if(ti.on_submit, "on_submit")
         |> put_if(ti.on_paste, "on_paste")
         |> put_if(ti.secure, "secure")
+        |> put_if(ti.ime_purpose, "ime_purpose")
         |> put_if(ti.style, "style")
         |> put_if(ti.placeholder_color, "placeholder_color")
         |> put_if(ti.selection_color, "selection_color")
