@@ -15,6 +15,8 @@ defmodule Julep.Iced.Widget.Text do
   - `align_x` (string) -- horizontal text alignment: `"left"`, `"center"`, `"right"`.
   - `align_y` (string) -- vertical text alignment: `"top"`, `"center"`, `"bottom"`.
   - `wrapping` (string) -- text wrapping: `"none"`, `"word"`, `"glyph"`, `"word_or_glyph"`.
+  - `ellipsis` (string) -- text ellipsis mode: `"none"`, `"start"`, `"middle"`, `"end"`.
+    Truncates text that overflows and inserts an ellipsis character at the given position.
   - `style` (string) -- named style. One of: `"default"`, `"primary"`, `"secondary"`,
     `"success"`, `"danger"`, `"warning"`.
   - `shaping` (string) -- text shaping strategy: `"basic"` or `"advanced"`. See `Julep.Iced.Shaping`.
@@ -35,6 +37,7 @@ defmodule Julep.Iced.Widget.Text do
           | {:align_x, Julep.Iced.Alignment.t()}
           | {:align_y, Julep.Iced.Alignment.t()}
           | {:wrapping, Julep.Iced.Wrapping.t()}
+          | {:ellipsis, String.t()}
           | {:shaping, Julep.Iced.Shaping.t()}
           | {:style, style()}
           | {:a11y, Julep.Iced.A11y.t()}
@@ -51,6 +54,7 @@ defmodule Julep.Iced.Widget.Text do
           align_x: Julep.Iced.Alignment.t() | nil,
           align_y: Julep.Iced.Alignment.t() | nil,
           wrapping: Julep.Iced.Wrapping.t() | nil,
+          ellipsis: String.t() | nil,
           shaping: Julep.Iced.Shaping.t() | nil,
           style: style() | nil,
           a11y: Julep.Iced.A11y.t() | nil
@@ -68,6 +72,7 @@ defmodule Julep.Iced.Widget.Text do
     :align_x,
     :align_y,
     :wrapping,
+    :ellipsis,
     :shaping,
     :style,
     :a11y
@@ -94,6 +99,7 @@ defmodule Julep.Iced.Widget.Text do
       {:align_x, v}, acc -> align_x(acc, v)
       {:align_y, v}, acc -> align_y(acc, v)
       {:wrapping, v}, acc -> wrapping(acc, v)
+      {:ellipsis, v}, acc -> ellipsis(acc, v)
       {:shaping, v}, acc -> shaping(acc, v)
       {:style, v}, acc -> style(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
@@ -137,6 +143,10 @@ defmodule Julep.Iced.Widget.Text do
   @spec wrapping(text :: t(), wrapping :: Julep.Iced.Wrapping.t()) :: t()
   def wrapping(%__MODULE__{} = txt, wrapping), do: %{txt | wrapping: wrapping}
 
+  @doc "Sets the text ellipsis mode. One of: `\"none\"`, `\"start\"`, `\"middle\"`, `\"end\"`."
+  @spec ellipsis(text :: t(), ellipsis :: String.t()) :: t()
+  def ellipsis(%__MODULE__{} = txt, ellipsis), do: %{txt | ellipsis: ellipsis}
+
   @doc "Sets the text shaping strategy."
   @spec shaping(text :: t(), shaping :: Julep.Iced.Shaping.t()) :: t()
   def shaping(%__MODULE__{} = txt, shaping), do: %{txt | shaping: shaping}
@@ -169,6 +179,7 @@ defmodule Julep.Iced.Widget.Text do
         |> put_if(txt.align_x, "align_x")
         |> put_if(txt.align_y, "align_y")
         |> put_if(txt.wrapping, "wrapping")
+        |> put_if(txt.ellipsis, "ellipsis")
         |> put_if(txt.shaping, "text_shaping")
         |> put_if(txt.style, "style")
         |> put_if(txt.a11y, "a11y")

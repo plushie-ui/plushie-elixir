@@ -12,6 +12,8 @@ defmodule Julep.Iced.Widget.Grid do
     `{:fill_portion, n}`, or a fixed pixel number.
   - `row_height` (Length) -- height of each row. Accepts `:fill`, `:shrink`,
     `{:fill_portion, n}`, or a fixed pixel number.
+  - `fluid` (number) -- enables fluid grid mode. The value is the max cell width
+    in pixels; columns auto-wrap to fit the available width.
   """
 
   alias Julep.Iced.A11y
@@ -24,6 +26,7 @@ defmodule Julep.Iced.Widget.Grid do
           | {:height, number()}
           | {:column_width, Julep.Iced.Length.t()}
           | {:row_height, Julep.Iced.Length.t()}
+          | {:fluid, number()}
           | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -34,6 +37,7 @@ defmodule Julep.Iced.Widget.Grid do
           height: number() | nil,
           column_width: Julep.Iced.Length.t() | nil,
           row_height: Julep.Iced.Length.t() | nil,
+          fluid: number() | nil,
           a11y: Julep.Iced.A11y.t() | nil,
           children: [Julep.Iced.ui_node() | struct()]
         }
@@ -46,6 +50,7 @@ defmodule Julep.Iced.Widget.Grid do
     :height,
     :column_width,
     :row_height,
+    :fluid,
     :a11y,
     children: []
   ]
@@ -68,6 +73,7 @@ defmodule Julep.Iced.Widget.Grid do
       {:height, v}, acc -> height(acc, v)
       {:column_width, v}, acc -> column_width(acc, v)
       {:row_height, v}, acc -> row_height(acc, v)
+      {:fluid, v}, acc -> fluid(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -96,6 +102,10 @@ defmodule Julep.Iced.Widget.Grid do
   @doc "Sets the row height using a Length value (fill/shrink/fixed/fill_portion)."
   @spec row_height(grid :: t(), row_height :: Julep.Iced.Length.t()) :: t()
   def row_height(%__MODULE__{} = grid, row_height), do: %{grid | row_height: row_height}
+
+  @doc "Enables fluid grid mode. The value is the max cell width in pixels; columns auto-wrap."
+  @spec fluid(grid :: t(), max_width :: number()) :: t()
+  def fluid(%__MODULE__{} = grid, max_width), do: %{grid | fluid: max_width}
 
   @doc "Appends a child to the grid."
   @spec push(grid :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()
@@ -126,6 +136,7 @@ defmodule Julep.Iced.Widget.Grid do
         |> put_if(grid.height, "height")
         |> put_if(grid.column_width, "column_width")
         |> put_if(grid.row_height, "row_height")
+        |> put_if(grid.fluid, "fluid")
         |> put_if(grid.a11y, "a11y")
 
       %{

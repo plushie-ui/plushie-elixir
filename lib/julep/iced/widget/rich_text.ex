@@ -25,6 +25,9 @@ defmodule Julep.Iced.Widget.RichText do
   - `font` (string | map) -- default font for all spans.
   - `color` (color) -- default text color for all spans.
   - `line_height` (number | map) -- line height.
+  - `wrapping` (string) -- text wrapping: `"none"`, `"word"`, `"glyph"`, `"word_or_glyph"`.
+  - `ellipsis` (string) -- text ellipsis mode: `"none"`, `"start"`, `"middle"`, `"end"`.
+    Truncates text that overflows and inserts an ellipsis character at the given position.
 
   ## Events
 
@@ -42,6 +45,8 @@ defmodule Julep.Iced.Widget.RichText do
           | {:font, Julep.Iced.Font.t()}
           | {:color, Julep.Iced.Color.t()}
           | {:line_height, number() | map()}
+          | {:wrapping, Julep.Iced.Wrapping.t()}
+          | {:ellipsis, String.t()}
           | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -53,10 +58,12 @@ defmodule Julep.Iced.Widget.RichText do
           font: Julep.Iced.Font.t() | nil,
           color: Julep.Iced.Color.t() | nil,
           line_height: number() | map() | nil,
+          wrapping: Julep.Iced.Wrapping.t() | nil,
+          ellipsis: String.t() | nil,
           a11y: Julep.Iced.A11y.t() | nil
         }
 
-  defstruct [:id, :spans, :width, :height, :size, :font, :color, :line_height, :a11y]
+  defstruct [:id, :spans, :width, :height, :size, :font, :color, :line_height, :wrapping, :ellipsis, :a11y]
 
   @doc "Creates a new rich text struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
@@ -77,6 +84,8 @@ defmodule Julep.Iced.Widget.RichText do
       {:font, v}, acc -> font(acc, v)
       {:color, v}, acc -> color(acc, v)
       {:line_height, v}, acc -> line_height(acc, v)
+      {:wrapping, v}, acc -> wrapping(acc, v)
+      {:ellipsis, v}, acc -> ellipsis(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -110,6 +119,14 @@ defmodule Julep.Iced.Widget.RichText do
   @spec line_height(rich_text :: t(), line_height :: number() | map()) :: t()
   def line_height(%__MODULE__{} = rt, line_height), do: %{rt | line_height: line_height}
 
+  @doc "Sets the text wrapping mode."
+  @spec wrapping(rich_text :: t(), wrapping :: Julep.Iced.Wrapping.t()) :: t()
+  def wrapping(%__MODULE__{} = rt, wrapping), do: %{rt | wrapping: wrapping}
+
+  @doc "Sets the text ellipsis mode. One of: `\"none\"`, `\"start\"`, `\"middle\"`, `\"end\"`."
+  @spec ellipsis(rich_text :: t(), ellipsis :: String.t()) :: t()
+  def ellipsis(%__MODULE__{} = rt, ellipsis), do: %{rt | ellipsis: ellipsis}
+
   @doc "Sets accessibility annotations."
   @spec a11y(rich_text :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
   def a11y(%__MODULE__{} = rt, a11y), do: %{rt | a11y: A11y.cast(a11y)}
@@ -131,6 +148,8 @@ defmodule Julep.Iced.Widget.RichText do
         |> put_if(rt.font, "font")
         |> put_if(rt.color, "color")
         |> put_if(rt.line_height, "line_height")
+        |> put_if(rt.wrapping, "wrapping")
+        |> put_if(rt.ellipsis, "ellipsis")
         |> put_if(rt.a11y, "a11y")
 
       %{id: rt.id, type: "rich_text", props: props, children: []}
