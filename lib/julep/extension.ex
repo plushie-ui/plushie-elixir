@@ -131,7 +131,7 @@ defmodule Julep.Extension do
 
   defmacro __using__(kind) when kind not in [:native_widget, :widget] do
     raise ArgumentError,
-      "Julep.Extension kind must be :native_widget or :widget, got: #{inspect(kind)}"
+          "Julep.Extension kind must be :native_widget or :widget, got: #{inspect(kind)}"
   end
 
   defmacro __using__(kind) when kind in [:native_widget, :widget] do
@@ -247,6 +247,34 @@ defmodule Julep.Extension do
     props = Module.get_attribute(env.module, :_extension_props) |> Enum.reverse()
     commands = Module.get_attribute(env.module, :_extension_commands) |> Enum.reverse()
 
+    validate_declarations!(env, kind, widget_type)
+    validate_prop_types!(env, props)
+    validate_command_types!(commands)
+    warn_duplicate_props(env, props)
+    validate_render_arity!(env, container)
+
+    rust_crate_val = Module.get_attribute(env.module, :_rust_crate)
+    rust_constructor_val = Module.get_attribute(env.module, :_rust_constructor)
+    has_render_3 = Module.defines?(env.module, {:render, 3})
+    is_composite = Module.defines?(env.module, {:render, 2}) or has_render_3
+    type_string = Atom.to_string(widget_type)
+
+    behaviour_fns =
+      generate_behaviour_fns(kind, widget_type, rust_crate_val, rust_constructor_val)
+
+    new_fn = generate_new(type_string, container, props, is_composite, has_render_3)
+    command_fns = generate_commands(commands)
+    prop_names_fn = generate_prop_names(props)
+
+    quote do
+      unquote(behaviour_fns)
+      unquote(new_fn)
+      unquote(command_fns)
+      unquote(prop_names_fn)
+    end
+  end
+
+  defp validate_declarations!(env, kind, widget_type) do
     unless widget_type do
       raise CompileError,
         file: env.file,
@@ -269,17 +297,11 @@ defmodule Julep.Extension do
           description: "missing `rust_constructor \"expr\"` in #{inspect(env.module)}"
       end
     end
+  end
 
-    # Validate prop types
+  defp validate_prop_types!(env, props) do
     for {name, type, _opts} <- props do
-      valid =
-        case type do
-          t when t in @known_prop_types -> true
-          {:list, inner} when inner in @known_prop_types -> true
-          _ -> false
-        end
-
-      unless valid do
+      unless valid_type?(type) do
         raise CompileError,
           file: env.file,
           line: 0,
@@ -287,41 +309,31 @@ defmodule Julep.Extension do
             "unsupported prop type #{inspect(type)} for prop #{inspect(name)} in #{inspect(env.module)}. Supported: #{inspect(@known_prop_types)}"
       end
     end
+  end
 
-    # Validate command param types
+  defp validate_command_types!(commands) do
     for {cmd_name, params} <- commands, {param_name, type} <- params do
-      valid =
-        case type do
-          t when t in @known_prop_types -> true
-          {:list, inner} when inner in @known_prop_types -> true
-          _ -> false
-        end
-
-      unless valid do
+      unless valid_type?(type) do
         raise CompileError,
-          file: env.file,
-          line: 0,
           description:
             "unsupported command param type #{inspect(type)} for param #{inspect(param_name)} in command #{inspect(cmd_name)}"
       end
     end
+  end
 
-    # Warn on duplicate prop names
+  defp warn_duplicate_props(env, props) do
     prop_names = Enum.map(props, fn {name, _, _} -> name end)
     dupes = prop_names -- Enum.uniq(prop_names)
 
     if dupes != [] do
       IO.warn("duplicate prop names in #{inspect(env.module)}: #{inspect(Enum.uniq(dupes))}")
     end
+  end
 
-    rust_crate_val = Module.get_attribute(env.module, :_rust_crate)
-    rust_constructor_val = Module.get_attribute(env.module, :_rust_constructor)
+  defp validate_render_arity!(env, container) do
     has_render_2 = Module.defines?(env.module, {:render, 2})
     has_render_3 = Module.defines?(env.module, {:render, 3})
-    is_composite = has_render_2 or has_render_3
-    type_string = Atom.to_string(widget_type)
 
-    # Validate container: true requires render/3, not render/2
     if container and has_render_2 and not has_render_3 do
       raise CompileError,
         file: env.file,
@@ -329,19 +341,11 @@ defmodule Julep.Extension do
         description:
           "#{inspect(env.module)} declares container: true but defines render/2 instead of render/3. Container widgets must accept children via render/3."
     end
-
-    behaviour_fns = generate_behaviour_fns(kind, widget_type, rust_crate_val, rust_constructor_val)
-    new_fn = generate_new(type_string, container, props, is_composite, has_render_3)
-    command_fns = generate_commands(commands)
-    prop_names_fn = generate_prop_names(props)
-
-    quote do
-      unquote(behaviour_fns)
-      unquote(new_fn)
-      unquote(command_fns)
-      unquote(prop_names_fn)
-    end
   end
+
+  defp valid_type?(type) when type in @known_prop_types, do: true
+  defp valid_type?({:list, inner}) when inner in @known_prop_types, do: true
+  defp valid_type?(_), do: false
 
   # -- Code generation helpers (called at compile time) ----------------------
 

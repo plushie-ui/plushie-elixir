@@ -28,7 +28,15 @@ defmodule Julep.Iced.Widget.Button do
   alias Julep.Iced.Widget.Build
 
   @type style ::
-          :primary | :secondary | :success | :warning | :danger | :text | :background | :subtle | StyleMap.t()
+          :primary
+          | :secondary
+          | :success
+          | :warning
+          | :danger
+          | :text
+          | :background
+          | :subtle
+          | StyleMap.t()
 
   @type option ::
           {:width, Julep.Iced.Length.t()}

@@ -80,7 +80,7 @@ defmodule Julep.IntegrationCaseTest do
   end
 
   # ---------------------------------------------------------------------------
-  # todo app integration
+  # to-do app integration
   # ---------------------------------------------------------------------------
 
   describe "todo app integration" do

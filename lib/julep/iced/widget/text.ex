@@ -143,7 +143,7 @@ defmodule Julep.Iced.Widget.Text do
   @spec wrapping(text :: t(), wrapping :: Julep.Iced.Wrapping.t()) :: t()
   def wrapping(%__MODULE__{} = txt, wrapping), do: %{txt | wrapping: wrapping}
 
-  @doc "Sets the text ellipsis mode. One of: `\"none\"`, `\"start\"`, `\"middle\"`, `\"end\"`."
+  @doc ~S'Sets the text ellipsis mode. One of: `"none"`, `"start"`, `"middle"`, `"end"`.'
   @spec ellipsis(text :: t(), ellipsis :: String.t()) :: t()
   def ellipsis(%__MODULE__{} = txt, ellipsis), do: %{txt | ellipsis: ellipsis}
 

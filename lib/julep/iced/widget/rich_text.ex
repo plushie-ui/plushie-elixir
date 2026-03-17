@@ -63,7 +63,19 @@ defmodule Julep.Iced.Widget.RichText do
           a11y: Julep.Iced.A11y.t() | nil
         }
 
-  defstruct [:id, :spans, :width, :height, :size, :font, :color, :line_height, :wrapping, :ellipsis, :a11y]
+  defstruct [
+    :id,
+    :spans,
+    :width,
+    :height,
+    :size,
+    :font,
+    :color,
+    :line_height,
+    :wrapping,
+    :ellipsis,
+    :a11y
+  ]
 
   @doc "Creates a new rich text struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
@@ -123,7 +135,7 @@ defmodule Julep.Iced.Widget.RichText do
   @spec wrapping(rich_text :: t(), wrapping :: Julep.Iced.Wrapping.t()) :: t()
   def wrapping(%__MODULE__{} = rt, wrapping), do: %{rt | wrapping: wrapping}
 
-  @doc "Sets the text ellipsis mode. One of: `\"none\"`, `\"start\"`, `\"middle\"`, `\"end\"`."
+  @doc ~S'Sets the text ellipsis mode. One of: `"none"`, `"start"`, `"middle"`, `"end"`.'
   @spec ellipsis(rich_text :: t(), ellipsis :: String.t()) :: t()
   def ellipsis(%__MODULE__{} = rt, ellipsis), do: %{rt | ellipsis: ellipsis}
 

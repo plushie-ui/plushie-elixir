@@ -1,12 +1,12 @@
 defmodule Julep.ProtocolTest do
   use ExUnit.Case, async: true
 
-  alias Julep.Event.Widget
+  alias Julep.Event.Effect
+  alias Julep.Event.Ime
   alias Julep.Event.Key
   alias Julep.Event.Modifiers
   alias Julep.Event.MouseArea
-  alias Julep.Event.Effect
-  alias Julep.Event.Ime
+  alias Julep.Event.Widget
 
   alias Julep.Protocol
 
@@ -121,7 +121,12 @@ defmodule Julep.ProtocolTest do
   describe "decode_message/1 -- input events" do
     test "decodes an input event to {:input, id, value}" do
       json = Jason.encode!(%{type: "event", family: "input", id: "search", value: "elixir"})
-      assert Protocol.decode_message(json, :json) == %Widget{type: :input, id: "search", value: "elixir"}
+
+      assert Protocol.decode_message(json, :json) == %Widget{
+               type: :input,
+               id: "search",
+               value: "elixir"
+             }
     end
 
     test "preserves an empty string value" do
@@ -133,33 +138,55 @@ defmodule Julep.ProtocolTest do
   describe "decode_message/1 -- submit events" do
     test "decodes a submit event to {:submit, id, value}" do
       json = Jason.encode!(%{type: "event", family: "submit", id: "login_form", value: "admin"})
-      assert Protocol.decode_message(json, :json) == %Widget{type: :submit, id: "login_form", value: "admin"}
+
+      assert Protocol.decode_message(json, :json) == %Widget{
+               type: :submit,
+               id: "login_form",
+               value: "admin"
+             }
     end
   end
 
   describe "decode_message/1 -- toggle events" do
     test "decodes a toggle event to {:toggle, id, value}" do
       json = Jason.encode!(%{type: "event", family: "toggle", id: "dark_mode", value: true})
-      assert Protocol.decode_message(json, :json) == %Widget{type: :toggle, id: "dark_mode", value: true}
+
+      assert Protocol.decode_message(json, :json) == %Widget{
+               type: :toggle,
+               id: "dark_mode",
+               value: true
+             }
     end
 
     test "decodes a toggle-off correctly" do
       json = Jason.encode!(%{type: "event", family: "toggle", id: "dark_mode", value: false})
-      assert %Widget{type: :toggle, id: "dark_mode", value: false} = Protocol.decode_message(json, :json)
+
+      assert %Widget{type: :toggle, id: "dark_mode", value: false} =
+               Protocol.decode_message(json, :json)
     end
   end
 
   describe "decode_message/1 -- select events" do
     test "decodes a select event to {:select, id, value}" do
       json = Jason.encode!(%{type: "event", family: "select", id: "lang_picker", value: "fr"})
-      assert Protocol.decode_message(json, :json) == %Widget{type: :select, id: "lang_picker", value: "fr"}
+
+      assert Protocol.decode_message(json, :json) == %Widget{
+               type: :select,
+               id: "lang_picker",
+               value: "fr"
+             }
     end
   end
 
   describe "decode_message/1 -- slide events" do
     test "decodes a slide event to {:slide, id, value}" do
       json = Jason.encode!(%{type: "event", family: "slide", id: "volume", value: 0.75})
-      assert Protocol.decode_message(json, :json) == %Widget{type: :slide, id: "volume", value: 0.75}
+
+      assert Protocol.decode_message(json, :json) == %Widget{
+               type: :slide,
+               id: "volume",
+               value: 0.75
+             }
     end
 
     test "value can be an integer" do
@@ -171,7 +198,12 @@ defmodule Julep.ProtocolTest do
   describe "decode_message/1 -- slide_release events" do
     test "decodes a slide_release event to {:slide_release, id, value}" do
       json = Jason.encode!(%{type: "event", family: "slide_release", id: "scrubber", value: 42.0})
-      assert Protocol.decode_message(json, :json) == %Widget{type: :slide_release, id: "scrubber", value: 42.0}
+
+      assert Protocol.decode_message(json, :json) == %Widget{
+               type: :slide_release,
+               id: "scrubber",
+               value: 42.0
+             }
     end
   end
 
@@ -334,7 +366,8 @@ defmodule Julep.ProtocolTest do
           data: %{kind: "preedit", text: "hello", cursor: %{start: 2, end: 5}}
         })
 
-      assert %Ime{type: :preedit, text: "hello", cursor: {2, 5}, captured: false} = Protocol.decode_message(json, :json)
+      assert %Ime{type: :preedit, text: "hello", cursor: {2, 5}, captured: false} =
+               Protocol.decode_message(json, :json)
     end
 
     test "decodes ime preedit without cursor" do
@@ -346,7 +379,8 @@ defmodule Julep.ProtocolTest do
           data: %{kind: "preedit", text: "hi", cursor: nil}
         })
 
-      assert %Ime{type: :preedit, text: "hi", cursor: nil, captured: false} = Protocol.decode_message(json, :json)
+      assert %Ime{type: :preedit, text: "hi", cursor: nil, captured: false} =
+               Protocol.decode_message(json, :json)
     end
 
     test "decodes ime commit" do
@@ -358,7 +392,8 @@ defmodule Julep.ProtocolTest do
           data: %{kind: "commit", text: "final"}
         })
 
-      assert %Ime{type: :commit, text: "final", captured: false} = Protocol.decode_message(json, :json)
+      assert %Ime{type: :commit, text: "final", captured: false} =
+               Protocol.decode_message(json, :json)
     end
 
     test "decodes ime closed" do
@@ -384,7 +419,9 @@ defmodule Julep.ProtocolTest do
           result: %{body: "hello"}
         })
 
-      assert %Effect{request_id: "req_1", result: {:ok, result}} = Protocol.decode_message(json, :json)
+      assert %Effect{request_id: "req_1", result: {:ok, result}} =
+               Protocol.decode_message(json, :json)
+
       assert result["body"] == "hello"
     end
 
@@ -429,7 +466,9 @@ defmodule Julep.ProtocolTest do
 
     test "unknown event family dispatches as generic Widget event" do
       json = Jason.encode!(%{type: "event", family: "levitate", id: "wizard"})
-      assert %Julep.Event.Widget{type: "levitate", id: "wizard"} = Protocol.decode_message(json, :json)
+
+      assert %Julep.Event.Widget{type: "levitate", id: "wizard"} =
+               Protocol.decode_message(json, :json)
     end
 
     test "the unknown_message tuple carries the decoded map" do
@@ -685,21 +724,25 @@ defmodule Julep.ProtocolTest do
 
     test "input event survives JSON roundtrip" do
       json = Jason.encode!(%{type: "event", family: "input", id: "field", value: "hello"})
-      assert %Widget{type: :input, id: "field", value: "hello"} = Protocol.decode_message(json, :json)
+
+      assert %Widget{type: :input, id: "field", value: "hello"} =
+               Protocol.decode_message(json, :json)
     end
 
     test "effect_response ok survives JSON roundtrip" do
       json =
         Jason.encode!(%{type: "effect_response", id: "r1", status: "ok", result: %{data: 42}})
 
-      assert %Effect{request_id: "r1", result: {:ok, %{"data" => 42}}} = Protocol.decode_message(json, :json)
+      assert %Effect{request_id: "r1", result: {:ok, %{"data" => 42}}} =
+               Protocol.decode_message(json, :json)
     end
 
     test "effect_response error survives JSON roundtrip" do
       json =
         Jason.encode!(%{type: "effect_response", id: "r2", status: "error", error: "timeout"})
 
-      assert %Effect{request_id: "r2", result: {:error, "timeout"}} = Protocol.decode_message(json, :json)
+      assert %Effect{request_id: "r2", result: {:error, "timeout"}} =
+               Protocol.decode_message(json, :json)
     end
   end
 
@@ -716,7 +759,9 @@ defmodule Julep.ProtocolTest do
     test "decodes mouse_middle_press from msgpack" do
       event = %{"type" => "event", "family" => "mouse_middle_press", "id" => "zone"}
       packed = Msgpax.pack!(event, iodata: false)
-      assert %MouseArea{type: :middle_press, id: "zone"} = Protocol.decode_message(packed, :msgpack)
+
+      assert %MouseArea{type: :middle_press, id: "zone"} =
+               Protocol.decode_message(packed, :msgpack)
     end
   end
 
@@ -829,7 +874,9 @@ defmodule Julep.ProtocolTest do
     test "input event decode from msgpack" do
       event = %{"type" => "event", "family" => "input", "id" => "field", "value" => "hello"}
       packed = Msgpax.pack!(event, iodata: false)
-      assert %Widget{type: :input, id: "field", value: "hello"} = Protocol.decode_message(packed, :msgpack)
+
+      assert %Widget{type: :input, id: "field", value: "hello"} =
+               Protocol.decode_message(packed, :msgpack)
     end
 
     test "effect_response ok decode from msgpack" do

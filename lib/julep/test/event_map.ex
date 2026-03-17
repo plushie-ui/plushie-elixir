@@ -67,9 +67,13 @@ defmodule Julep.Test.EventMap do
   end
 
   @doc "Infers the event produced by typing text into a widget."
-  @spec input(element :: Element.t(), text :: String.t()) :: {:ok, struct()} | {:error, String.t()}
-  def input(%Element{type: "text_input", id: id}, text), do: {:ok, %WidgetEvent{type: :input, id: id, value: text}}
-  def input(%Element{type: "text_editor", id: id}, text), do: {:ok, %WidgetEvent{type: :input, id: id, value: text}}
+  @spec input(element :: Element.t(), text :: String.t()) ::
+          {:ok, struct()} | {:error, String.t()}
+  def input(%Element{type: "text_input", id: id}, text),
+    do: {:ok, %WidgetEvent{type: :input, id: id, value: text}}
+
+  def input(%Element{type: "text_editor", id: id}, text),
+    do: {:ok, %WidgetEvent{type: :input, id: id, value: text}}
 
   def input(%Element{type: type} = el, text) do
     case Julep.Test.ExtensionEvents.dispatch(:input, el, [text]) do
@@ -120,8 +124,11 @@ defmodule Julep.Test.EventMap do
     {:ok, %WidgetEvent{type: :select, id: group, value: value}}
   end
 
-  def select(%Element{type: "pick_list", id: id}, value), do: {:ok, %WidgetEvent{type: :select, id: id, value: value}}
-  def select(%Element{type: "combo_box", id: id}, value), do: {:ok, %WidgetEvent{type: :select, id: id, value: value}}
+  def select(%Element{type: "pick_list", id: id}, value),
+    do: {:ok, %WidgetEvent{type: :select, id: id, value: value}}
+
+  def select(%Element{type: "combo_box", id: id}, value),
+    do: {:ok, %WidgetEvent{type: :select, id: id, value: value}}
 
   def select(%Element{type: type} = el, value) do
     case Julep.Test.ExtensionEvents.dispatch(:select, el, [value]) do
@@ -132,8 +139,11 @@ defmodule Julep.Test.EventMap do
 
   @doc "Infers the event produced by sliding a widget to a value."
   @spec slide(element :: Element.t(), value :: number()) :: {:ok, struct()} | {:error, String.t()}
-  def slide(%Element{type: "slider", id: id}, value), do: {:ok, %WidgetEvent{type: :slide, id: id, value: value}}
-  def slide(%Element{type: "vertical_slider", id: id}, value), do: {:ok, %WidgetEvent{type: :slide, id: id, value: value}}
+  def slide(%Element{type: "slider", id: id}, value),
+    do: {:ok, %WidgetEvent{type: :slide, id: id, value: value}}
+
+  def slide(%Element{type: "vertical_slider", id: id}, value),
+    do: {:ok, %WidgetEvent{type: :slide, id: id, value: value}}
 
   def slide(%Element{type: type} = el, value) do
     case Julep.Test.ExtensionEvents.dispatch(:slide, el, [value]) do
@@ -146,28 +156,32 @@ defmodule Julep.Test.EventMap do
 
   @doc "Produces an open event for a pick_list widget."
   @spec pick_list_open(element :: Element.t()) :: {:ok, struct()} | {:error, String.t()}
-  def pick_list_open(%Element{type: "pick_list", id: id}), do: {:ok, %WidgetEvent{type: :open, id: id}}
+  def pick_list_open(%Element{type: "pick_list", id: id}),
+    do: {:ok, %WidgetEvent{type: :open, id: id}}
 
   def pick_list_open(%Element{type: type}),
     do: {:error, "cannot produce open event for a #{type} widget"}
 
   @doc "Produces a close event for a pick_list widget."
   @spec pick_list_close(element :: Element.t()) :: {:ok, struct()} | {:error, String.t()}
-  def pick_list_close(%Element{type: "pick_list", id: id}), do: {:ok, %WidgetEvent{type: :close, id: id}}
+  def pick_list_close(%Element{type: "pick_list", id: id}),
+    do: {:ok, %WidgetEvent{type: :close, id: id}}
 
   def pick_list_close(%Element{type: type}),
     do: {:error, "cannot produce close event for a #{type} widget"}
 
   @doc "Produces an open event for a combo_box widget."
   @spec combo_box_open(element :: Element.t()) :: {:ok, struct()} | {:error, String.t()}
-  def combo_box_open(%Element{type: "combo_box", id: id}), do: {:ok, %WidgetEvent{type: :open, id: id}}
+  def combo_box_open(%Element{type: "combo_box", id: id}),
+    do: {:ok, %WidgetEvent{type: :open, id: id}}
 
   def combo_box_open(%Element{type: type}),
     do: {:error, "cannot produce open event for a #{type} widget"}
 
   @doc "Produces a close event for a combo_box widget."
   @spec combo_box_close(element :: Element.t()) :: {:ok, struct()} | {:error, String.t()}
-  def combo_box_close(%Element{type: "combo_box", id: id}), do: {:ok, %WidgetEvent{type: :close, id: id}}
+  def combo_box_close(%Element{type: "combo_box", id: id}),
+    do: {:ok, %WidgetEvent{type: :close, id: id}}
 
   def combo_box_close(%Element{type: type}),
     do: {:error, "cannot produce close event for a #{type} widget"}
@@ -269,14 +283,16 @@ defmodule Julep.Test.EventMap do
 
   @doc "Produces a mouse enter event for a mouse_area widget."
   @spec mouse_enter(element :: Element.t()) :: {:ok, struct()} | {:error, String.t()}
-  def mouse_enter(%Element{type: "mouse_area", id: id}), do: {:ok, %MouseAreaEvent{type: :enter, id: id}}
+  def mouse_enter(%Element{type: "mouse_area", id: id}),
+    do: {:ok, %MouseAreaEvent{type: :enter, id: id}}
 
   def mouse_enter(%Element{type: type}),
     do: {:error, "cannot mouse_enter a #{type} widget"}
 
   @doc "Produces a mouse exit event for a mouse_area widget."
   @spec mouse_exit(element :: Element.t()) :: {:ok, struct()} | {:error, String.t()}
-  def mouse_exit(%Element{type: "mouse_area", id: id}), do: {:ok, %MouseAreaEvent{type: :exit, id: id}}
+  def mouse_exit(%Element{type: "mouse_area", id: id}),
+    do: {:ok, %MouseAreaEvent{type: :exit, id: id}}
 
   def mouse_exit(%Element{type: type}),
     do: {:error, "cannot mouse_exit a #{type} widget"}

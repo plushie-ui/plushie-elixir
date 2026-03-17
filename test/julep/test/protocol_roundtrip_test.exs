@@ -13,8 +13,12 @@ defmodule Julep.Test.ProtocolRoundtripTest do
 
     def init(_opts), do: %{text_value: "", selected: nil}
 
-    def update(model, %Widget{type: :input, id: "search", value: text}), do: %{model | text_value: text}
-    def update(model, %Widget{type: :select, id: "country", value: value}), do: %{model | selected: value}
+    def update(model, %Widget{type: :input, id: "search", value: text}),
+      do: %{model | text_value: text}
+
+    def update(model, %Widget{type: :select, id: "country", value: value}),
+      do: %{model | selected: value}
+
     def update(model, _event), do: model
 
     def view(model) do

@@ -367,11 +367,21 @@ defmodule Julep.Test.Backend.RendererBase do
       defp dispatch_event(_event, state), do: state
 
       defp decode_event("click", id, _event), do: %WidgetEvent{type: :click, id: id}
-      defp decode_event("input", id, event), do: %WidgetEvent{type: :input, id: id, value: event["value"] || ""}
-      defp decode_event("submit", id, event), do: %WidgetEvent{type: :submit, id: id, value: event["value"] || ""}
-      defp decode_event("toggle", id, event), do: %WidgetEvent{type: :toggle, id: id, value: event["value"] || false}
-      defp decode_event("select", id, event), do: %WidgetEvent{type: :select, id: id, value: event["value"] || ""}
-      defp decode_event("slide", id, event), do: %WidgetEvent{type: :slide, id: id, value: event["value"] || 0}
+
+      defp decode_event("input", id, event),
+        do: %WidgetEvent{type: :input, id: id, value: event["value"] || ""}
+
+      defp decode_event("submit", id, event),
+        do: %WidgetEvent{type: :submit, id: id, value: event["value"] || ""}
+
+      defp decode_event("toggle", id, event),
+        do: %WidgetEvent{type: :toggle, id: id, value: event["value"] || false}
+
+      defp decode_event("select", id, event),
+        do: %WidgetEvent{type: :select, id: id, value: event["value"] || ""}
+
+      defp decode_event("slide", id, event),
+        do: %WidgetEvent{type: :slide, id: id, value: event["value"] || 0}
 
       defp decode_event("key_press", _id, event) do
         decode_key_event(:press, event)
@@ -484,8 +494,13 @@ defmodule Julep.Test.Backend.RendererBase do
 
       defp encode_selector(nil), do: %{}
       defp encode_selector("#" <> id), do: %{"by" => "id", "value" => id}
-      defp encode_selector({:role, role}) when is_binary(role), do: %{"by" => "role", "value" => role}
-      defp encode_selector({:label, label}) when is_binary(label), do: %{"by" => "label", "value" => label}
+
+      defp encode_selector({:role, role}) when is_binary(role),
+        do: %{"by" => "role", "value" => role}
+
+      defp encode_selector({:label, label}) when is_binary(label),
+        do: %{"by" => "label", "value" => label}
+
       defp encode_selector(:focused), do: %{"by" => "focused"}
       defp encode_selector(text) when is_binary(text), do: %{"by" => "text", "value" => text}
 

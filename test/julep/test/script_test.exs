@@ -1,8 +1,6 @@
 defmodule Julep.Test.ScriptTest do
   use ExUnit.Case, async: true
 
-
-
   alias Julep.Test.Script
 
   describe "parse/1" do

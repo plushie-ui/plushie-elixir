@@ -51,7 +51,8 @@ defmodule Julep.Test.CrossBackendTest do
 
     def init(_opts), do: %{items: [], input: ""}
 
-    def update(model, %Widget{type: :input, id: "task", value: value}), do: %{model | input: value}
+    def update(model, %Widget{type: :input, id: "task", value: value}),
+      do: %{model | input: value}
 
     def update(model, %Widget{type: :submit, id: "task", value: _value}) do
       if model.input != "" do

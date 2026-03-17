@@ -241,7 +241,9 @@ defmodule Julep.Test.ExtensionEventsTest do
 
     test "built-in widgets still work normally" do
       assert {:ok, %Widget{type: :click, id: "btn"}} = EventMap.click(el("btn", "button"))
-      assert {:ok, %Widget{type: :input, id: "ti", value: "x"}} = EventMap.input(el("ti", "text_input"), "x")
+
+      assert {:ok, %Widget{type: :input, id: "ti", value: "x"}} =
+               EventMap.input(el("ti", "text_input"), "x")
     end
 
     test "helpful error messages preserved for mismatched verbs" do

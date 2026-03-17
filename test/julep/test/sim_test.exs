@@ -14,8 +14,12 @@ defmodule Julep.Test.SimTest do
 
     def init(_opts), do: %{count: 0}
 
-    def update(model, %Widget{type: :click, id: "increment"}), do: %{model | count: model.count + 1}
-    def update(model, %Widget{type: :click, id: "decrement"}), do: %{model | count: model.count - 1}
+    def update(model, %Widget{type: :click, id: "increment"}),
+      do: %{model | count: model.count + 1}
+
+    def update(model, %Widget{type: :click, id: "decrement"}),
+      do: %{model | count: model.count - 1}
+
     def update(model, _event), do: model
 
     def view(model) do
@@ -206,7 +210,9 @@ defmodule Julep.Test.SimTest do
         {model, cmd}
       end
 
-      def update(model, %Julep.Event.Async{tag: :fetched, result: result}), do: %{model | value: result}
+      def update(model, %Julep.Event.Async{tag: :fetched, result: result}),
+        do: %{model | value: result}
+
       def update(model, _event), do: model
 
       def view(model) do
@@ -475,7 +481,9 @@ defmodule Julep.Test.SimTest do
         {%{data: nil}, cmd}
       end
 
-      def update(model, %Julep.Event.Async{tag: :init_data, result: val}), do: %{model | data: val}
+      def update(model, %Julep.Event.Async{tag: :init_data, result: val}),
+        do: %{model | data: val}
+
       def update(model, _event), do: model
 
       def view(model) do

@@ -776,7 +776,9 @@ defmodule Julep.Runtime do
     new_specs =
       try do
         case state.app.subscribe(new_model) do
-          specs when is_list(specs) -> specs
+          specs when is_list(specs) ->
+            specs
+
           other ->
             Logger.error("julep runtime: subscribe/1 must return a list, got: #{inspect(other)}")
             []
@@ -790,6 +792,7 @@ defmodule Julep.Runtime do
 
           []
       end
+
     new_by_key = Map.new(new_specs, fn spec -> {Julep.Subscription.key(spec), spec} end)
     old_key_set = state.subscriptions |> Map.keys() |> MapSet.new()
     new_key_set = new_by_key |> Map.keys() |> MapSet.new()

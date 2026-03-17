@@ -104,7 +104,10 @@ defmodule Julep.Examples.NotesTest do
       assert length(notes) == 2
 
       first_id = hd(notes).id |> to_string()
-      model = Notes.update(model, %Widget{type: :toggle, id: "note_select:#{first_id}", value: true})
+
+      model =
+        Notes.update(model, %Widget{type: :toggle, id: "note_select:#{first_id}", value: true})
+
       model = Notes.update(model, %Widget{type: :click, id: "delete_selected"})
 
       notes = Julep.State.get(model.state, [:notes])

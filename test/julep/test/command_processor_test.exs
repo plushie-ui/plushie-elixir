@@ -17,7 +17,9 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
       {model, cmd}
     end
 
-    def update(model, %Julep.Event.Async{tag: :data_loaded, result: result}), do: %{model | status: :done, data: result}
+    def update(model, %Julep.Event.Async{tag: :data_loaded, result: result}),
+      do: %{model | status: :done, data: result}
+
     def update(model, _event), do: model
 
     def view(model) do
@@ -52,8 +54,12 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
       {model, cmd}
     end
 
-    def update(model, %Julep.Event.Async{tag: :streamed, result: :done}), do: %{model | items: model.items ++ [:final]}
-    def update(model, %Julep.Event.Stream{tag: :streamed, value: item}), do: %{model | items: model.items ++ [item]}
+    def update(model, %Julep.Event.Async{tag: :streamed, result: :done}),
+      do: %{model | items: model.items ++ [:final]}
+
+    def update(model, %Julep.Event.Stream{tag: :streamed, value: item}),
+      do: %{model | items: model.items ++ [item]}
+
     def update(model, _event), do: model
 
     def view(model) do
@@ -123,7 +129,9 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
       {%{data: nil}, cmd}
     end
 
-    def update(model, %Julep.Event.Async{tag: :init_data, result: data}), do: %{model | data: data}
+    def update(model, %Julep.Event.Async{tag: :init_data, result: data}),
+      do: %{model | data: data}
+
     def update(model, _event), do: model
 
     def view(model) do
@@ -150,7 +158,10 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
   describe "process/3" do
     test "processes async commands synchronously" do
       {model, _commands} = AsyncApp.init([])
-      {model, commands} = CommandProcessor.dispatch_update(AsyncApp, model, %Widget{type: :click, id: "fetch"})
+
+      {model, commands} =
+        CommandProcessor.dispatch_update(AsyncApp, model, %Widget{type: :click, id: "fetch"})
+
       model = CommandProcessor.process(AsyncApp, model, commands)
 
       assert model.status == :done
@@ -159,7 +170,10 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
 
     test "processes stream commands with intermediate values" do
       {model, _commands} = StreamApp.init([])
-      {model, commands} = CommandProcessor.dispatch_update(StreamApp, model, %Widget{type: :click, id: "stream"})
+
+      {model, commands} =
+        CommandProcessor.dispatch_update(StreamApp, model, %Widget{type: :click, id: "stream"})
+
       model = CommandProcessor.process(StreamApp, model, commands)
 
       assert model.items == [:a, :b, :final]
@@ -167,7 +181,10 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
 
     test "processes batch commands" do
       {model, _commands} = BatchApp.init([])
-      {model, commands} = CommandProcessor.dispatch_update(BatchApp, model, %Widget{type: :click, id: "both"})
+
+      {model, commands} =
+        CommandProcessor.dispatch_update(BatchApp, model, %Widget{type: :click, id: "both"})
+
       model = CommandProcessor.process(BatchApp, model, commands)
 
       assert model.a == true
@@ -176,7 +193,10 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
 
     test "processes done commands" do
       {model, _commands} = DoneApp.init([])
-      {model, commands} = CommandProcessor.dispatch_update(DoneApp, model, %Widget{type: :click, id: "go"})
+
+      {model, commands} =
+        CommandProcessor.dispatch_update(DoneApp, model, %Widget{type: :click, id: "go"})
+
       model = CommandProcessor.process(DoneApp, model, commands)
 
       assert model.result == 84
@@ -238,7 +258,10 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
 
     test "normalizes {model, commands} list return" do
       {model, commands} =
-        CommandProcessor.dispatch_update(AsyncApp, %{status: :idle, data: nil}, %Widget{type: :click, id: "fetch"})
+        CommandProcessor.dispatch_update(AsyncApp, %{status: :idle, data: nil}, %Widget{
+          type: :click,
+          id: "fetch"
+        })
 
       assert model.status == :idle
       assert [%Julep.Command{type: :async}] = commands

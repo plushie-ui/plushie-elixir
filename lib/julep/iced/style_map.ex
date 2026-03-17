@@ -62,7 +62,17 @@ defmodule Julep.Iced.StyleMap do
           focused: status_override() | nil
         }
 
-  defstruct [:base, :background, :text_color, :border, :shadow, :hovered, :pressed, :disabled, :focused]
+  defstruct [
+    :base,
+    :background,
+    :text_color,
+    :border,
+    :shadow,
+    :hovered,
+    :pressed,
+    :disabled,
+    :focused
+  ]
 
   @doc "Creates an empty style map."
   @spec new() :: t()

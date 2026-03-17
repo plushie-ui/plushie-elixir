@@ -36,10 +36,8 @@ defmodule Mix.Tasks.Julep.Preflight do
       {"mix dialyzer", fn -> mix_dialyzer() end},
       {"cargo build", fn -> cargo(["build"], renderer_source, has_renderer_source?) end},
       {"cargo test", fn -> cargo(["test"], renderer_source, has_renderer_source?) end},
-      {"cargo fmt --check",
-       fn -> cargo_fmt(renderer_source, has_renderer_source?) end},
-      {"cargo clippy -D warnings",
-       fn -> cargo_clippy(renderer_source, has_renderer_source?) end}
+      {"cargo fmt --check", fn -> cargo_fmt(renderer_source, has_renderer_source?) end},
+      {"cargo clippy -D warnings", fn -> cargo_clippy(renderer_source, has_renderer_source?) end}
     ]
 
     Enum.each(steps, fn {label, fun} ->
@@ -50,7 +48,12 @@ defmodule Mix.Tasks.Julep.Preflight do
           Mix.shell().info([:green, "    PASS", :reset])
 
         :skip ->
-          Mix.shell().info([:yellow, "    SKIP", :reset, " (renderer source not found at #{renderer_source})"])
+          Mix.shell().info([
+            :yellow,
+            "    SKIP",
+            :reset,
+            " (renderer source not found at #{renderer_source})"
+          ])
 
         {:error, code} ->
           Mix.shell().error("    FAIL (exit code #{code})")
@@ -125,9 +128,7 @@ defmodule Mix.Tasks.Julep.Preflight do
 
   defp cmd(command, args, opts \\ []) do
     {_, code} =
-      System.cmd(command, args,
-        [stderr_to_stdout: true, into: IO.stream(:stdio, :line)] ++ opts
-      )
+      System.cmd(command, args, [stderr_to_stdout: true, into: IO.stream(:stdio, :line)] ++ opts)
 
     code
   end

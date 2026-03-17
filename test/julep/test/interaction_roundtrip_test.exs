@@ -216,7 +216,12 @@ defmodule Julep.Test.InteractionRoundtripTest do
       # First type something so there's a value in the model and view prop.
       Sim.type_text(pid, "#name_input", "Marvin")
       Sim.submit(pid, "#name_input")
-      assert Sim.model(pid).last_event == %Widget{type: :submit, id: "name_input", value: "Marvin"}
+
+      assert Sim.model(pid).last_event == %Widget{
+               type: :submit,
+               id: "name_input",
+               value: "Marvin"
+             }
     end
 
     test "submit with no value dispatches empty string", %{pid: pid} do

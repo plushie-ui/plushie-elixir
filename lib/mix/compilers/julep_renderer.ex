@@ -16,29 +16,27 @@ defmodule Mix.Tasks.Compile.JulepRenderer do
 
   @impl true
   def run(_args) do
-    try do
-      _path = Julep.Binary.renderer_path()
-      {:noop, []}
-    rescue
-      _ ->
-        diagnostic = %Mix.Task.Compiler.Diagnostic{
-          file: "julep",
-          severity: :warning,
-          message: """
-          julep binary not found.
+    _path = Julep.Binary.renderer_path()
+    {:noop, []}
+  rescue
+    _ ->
+      diagnostic = %Mix.Task.Compiler.Diagnostic{
+        file: "julep",
+        severity: :warning,
+        message: """
+        julep binary not found.
 
-          The renderer is now a separate repository. To build it:
-            cd ../julep && cargo build
+        The renderer is now a separate repository. To build it:
+          cd ../julep && cargo build
 
-          Or set JULEP_RENDERER_PATH to an existing binary.
-          Or run: mix julep.download
-          """,
-          position: nil,
-          compiler_name: "julep_renderer"
-        }
+        Or set JULEP_RENDERER_PATH to an existing binary.
+        Or run: mix julep.download
+        """,
+        position: nil,
+        compiler_name: "julep_renderer"
+      }
 
-        {:noop, [diagnostic]}
-    end
+      {:noop, [diagnostic]}
   end
 
   defp manifest_path do

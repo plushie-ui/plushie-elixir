@@ -87,11 +87,13 @@ defmodule Julep do
   def init(opts) do
     name = opts[:instance_name]
     app = Keyword.fetch!(opts, :app)
+
     renderer_path =
       case Keyword.get(opts, :renderer, @default_renderer_path) do
         :auto -> Julep.Binary.renderer_path()
         path -> path
       end
+
     dev? = Keyword.get(opts, :dev, false)
     format = Keyword.get(opts, :format, :msgpack)
     log_level = Keyword.get(opts, :log_level, :error)

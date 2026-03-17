@@ -1,6 +1,6 @@
 defmodule Julep.Examples.Todo do
   @moduledoc """
-  Todo list application demonstrating text_input, checkbox, button, and scrollable widgets.
+  To-do list application demonstrating text_input, checkbox, button, and scrollable widgets.
 
   Phase 1 gate app -- proves the full update cycle works with interactive widgets.
   """

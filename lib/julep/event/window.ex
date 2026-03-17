@@ -9,9 +9,17 @@ defmodule Julep.Event.Window do
   """
 
   @type event_type ::
-          :opened | :closed | :close_requested | :moved | :resized
-          | :focused | :unfocused | :rescaled
-          | :file_hovered | :file_dropped | :files_hovered_left
+          :opened
+          | :closed
+          | :close_requested
+          | :moved
+          | :resized
+          | :focused
+          | :unfocused
+          | :rescaled
+          | :file_hovered
+          | :file_dropped
+          | :files_hovered_left
 
   @type t :: %__MODULE__{
           type: event_type(),

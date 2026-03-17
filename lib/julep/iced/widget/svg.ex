@@ -45,7 +45,19 @@ defmodule Julep.Iced.Widget.Svg do
           a11y: Julep.Iced.A11y.t() | nil
         }
 
-  defstruct [:id, :source, :width, :height, :content_fit, :rotation, :opacity, :color, :alt, :description, :a11y]
+  defstruct [
+    :id,
+    :source,
+    :width,
+    :height,
+    :content_fit,
+    :rotation,
+    :opacity,
+    :color,
+    :alt,
+    :description,
+    :a11y
+  ]
 
   @doc "Creates a new SVG struct with the given source path and optional keyword opts."
   @spec new(id :: String.t(), source :: String.t(), opts :: [option()]) :: t()

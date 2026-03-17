@@ -140,7 +140,10 @@ defmodule Julep.CompositionPatternsTest do
     def init(_opts), do: %{bold: false, italic: false}
 
     def update(model, %Widget{type: :click, id: "tool:bold"}), do: %{model | bold: !model.bold}
-    def update(model, %Widget{type: :click, id: "tool:italic"}), do: %{model | italic: !model.italic}
+
+    def update(model, %Widget{type: :click, id: "tool:italic"}),
+      do: %{model | italic: !model.italic}
+
     def update(model, _event), do: model
 
     def view(model) do
@@ -194,7 +197,10 @@ defmodule Julep.CompositionPatternsTest do
     def init(_opts), do: %{show_modal: false, confirmed: false}
 
     def update(model, %Widget{type: :click, id: "open_modal"}), do: %{model | show_modal: true}
-    def update(model, %Widget{type: :click, id: "confirm"}), do: %{model | show_modal: false, confirmed: true}
+
+    def update(model, %Widget{type: :click, id: "confirm"}),
+      do: %{model | show_modal: false, confirmed: true}
+
     def update(model, %Widget{type: :click, id: "cancel"}), do: %{model | show_modal: false}
     def update(model, _event), do: model
 

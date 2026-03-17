@@ -35,10 +35,28 @@ defmodule Julep.Iced.A11y do
   - `error_message` -- ID of the widget showing the error message for this one
   """
 
-  defstruct [:role, :label, :description, :live, :hidden, :expanded,
-             :required, :level, :busy, :invalid, :modal, :read_only,
-             :mnemonic, :toggled, :selected, :value, :orientation,
-             :labelled_by, :described_by, :error_message]
+  defstruct [
+    :role,
+    :label,
+    :description,
+    :live,
+    :hidden,
+    :expanded,
+    :required,
+    :level,
+    :busy,
+    :invalid,
+    :modal,
+    :read_only,
+    :mnemonic,
+    :toggled,
+    :selected,
+    :value,
+    :orientation,
+    :labelled_by,
+    :described_by,
+    :error_message
+  ]
 
   @type role ::
           :alert

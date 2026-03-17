@@ -8,8 +8,12 @@ defmodule Julep.Test.SessionTest do
 
     def init(_opts), do: %{count: 0}
 
-    def update(model, %Widget{type: :click, id: "increment"}), do: %{model | count: model.count + 1}
-    def update(model, %Widget{type: :click, id: "decrement"}), do: %{model | count: model.count - 1}
+    def update(model, %Widget{type: :click, id: "increment"}),
+      do: %{model | count: model.count + 1}
+
+    def update(model, %Widget{type: :click, id: "decrement"}),
+      do: %{model | count: model.count - 1}
+
     def update(model, _event), do: model
 
     def view(model) do

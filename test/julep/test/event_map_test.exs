@@ -1,9 +1,9 @@
 defmodule Julep.Test.EventMapTest do
   use ExUnit.Case, async: true
 
-  alias Julep.Event.Widget
   alias Julep.Event.Canvas
   alias Julep.Event.MouseArea
+  alias Julep.Event.Widget
 
   alias Julep.Test.Element
   alias Julep.Test.EventMap
@@ -54,7 +54,9 @@ defmodule Julep.Test.EventMapTest do
   describe "submit/1" do
     test "returns submit event for text_input with value" do
       element = el("search", "text_input", %{"value" => "query"})
-      assert {:ok, %Widget{type: :submit, id: "search", value: "query"}} = EventMap.submit(element)
+
+      assert {:ok, %Widget{type: :submit, id: "search", value: "query"}} =
+               EventMap.submit(element)
     end
 
     test "returns submit event with empty string when no value" do
@@ -88,12 +90,16 @@ defmodule Julep.Test.EventMapTest do
 
     test "flips toggler from off to on" do
       element = el("dark_mode", "toggler", %{"is_toggled" => false})
-      assert {:ok, %Widget{type: :toggle, id: "dark_mode", value: true}} = EventMap.toggle(element)
+
+      assert {:ok, %Widget{type: :toggle, id: "dark_mode", value: true}} =
+               EventMap.toggle(element)
     end
 
     test "flips toggler from on to off" do
       element = el("dark_mode", "toggler", %{"is_toggled" => true})
-      assert {:ok, %Widget{type: :toggle, id: "dark_mode", value: false}} = EventMap.toggle(element)
+
+      assert {:ok, %Widget{type: :toggle, id: "dark_mode", value: false}} =
+               EventMap.toggle(element)
     end
 
     test "returns error for non-togglable widget" do
@@ -107,22 +113,30 @@ defmodule Julep.Test.EventMapTest do
   describe "select/2" do
     test "returns select event for radio with group" do
       element = el("opt-a", "radio", %{"group" => "size"})
-      assert {:ok, %Widget{type: :select, id: "size", value: "large"}} = EventMap.select(element, "large")
+
+      assert {:ok, %Widget{type: :select, id: "size", value: "large"}} =
+               EventMap.select(element, "large")
     end
 
     test "falls back to name prop for radio group" do
       element = el("opt-b", "radio", %{"name" => "colour"})
-      assert {:ok, %Widget{type: :select, id: "colour", value: "red"}} = EventMap.select(element, "red")
+
+      assert {:ok, %Widget{type: :select, id: "colour", value: "red"}} =
+               EventMap.select(element, "red")
     end
 
     test "returns select event for pick_list" do
       element = el("country", "pick_list")
-      assert {:ok, %Widget{type: :select, id: "country", value: "NZ"}} = EventMap.select(element, "NZ")
+
+      assert {:ok, %Widget{type: :select, id: "country", value: "NZ"}} =
+               EventMap.select(element, "NZ")
     end
 
     test "returns select event for combo_box" do
       element = el("lang", "combo_box")
-      assert {:ok, %Widget{type: :select, id: "lang", value: "Elixir"}} = EventMap.select(element, "Elixir")
+
+      assert {:ok, %Widget{type: :select, id: "lang", value: "Elixir"}} =
+               EventMap.select(element, "Elixir")
     end
 
     test "returns error for non-selectable widget" do
@@ -135,7 +149,8 @@ defmodule Julep.Test.EventMapTest do
 
   describe "slide/2" do
     test "returns slide event for slider" do
-      assert {:ok, %Widget{type: :slide, id: "volume", value: 75}} = EventMap.slide(el("volume", "slider"), 75)
+      assert {:ok, %Widget{type: :slide, id: "volume", value: 75}} =
+               EventMap.slide(el("volume", "slider"), 75)
     end
 
     test "returns slide event for vertical_slider" do
@@ -205,12 +220,14 @@ defmodule Julep.Test.EventMapTest do
 
   describe "canvas_scroll/5" do
     test "returns canvas_scroll event with default deltas" do
-      assert {:ok, %Canvas{type: :scroll, id: "drawing", x: 5.0, y: 5.0, delta_x: 0.0, delta_y: 1.0}} =
+      assert {:ok,
+              %Canvas{type: :scroll, id: "drawing", x: 5.0, y: 5.0, delta_x: 0.0, delta_y: 1.0}} =
                EventMap.canvas_scroll(el("drawing", "canvas"), 5.0, 5.0)
     end
 
     test "returns canvas_scroll event with custom deltas" do
-      assert {:ok, %Canvas{type: :scroll, id: "drawing", x: 5.0, y: 5.0, delta_x: 2.0, delta_y: -3.0}} =
+      assert {:ok,
+              %Canvas{type: :scroll, id: "drawing", x: 5.0, y: 5.0, delta_x: 2.0, delta_y: -3.0}} =
                EventMap.canvas_scroll(el("drawing", "canvas"), 5.0, 5.0, 2.0, -3.0)
     end
 

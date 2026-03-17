@@ -29,7 +29,10 @@ defmodule Julep.Test.Backend.CommandProcessor do
     Enum.reduce(commands, model, fn
       %Julep.Command{type: :async, payload: %{fun: fun, tag: tag}}, acc ->
         result = fun.()
-        {new_model, new_commands} = dispatch_update(app, acc, %Julep.Event.Async{tag: tag, result: result})
+
+        {new_model, new_commands} =
+          dispatch_update(app, acc, %Julep.Event.Async{tag: tag, result: result})
+
         do_process(app, new_model, new_commands, depth + 1)
 
       %Julep.Command{type: :stream, payload: %{fun: fun, tag: tag}}, acc ->
@@ -40,7 +43,9 @@ defmodule Julep.Test.Backend.CommandProcessor do
 
         acc = drain_stream(app, acc, tag, ref, depth)
 
-        {new_model, new_commands} = dispatch_update(app, acc, %Julep.Event.Async{tag: tag, result: final})
+        {new_model, new_commands} =
+          dispatch_update(app, acc, %Julep.Event.Async{tag: tag, result: final})
+
         do_process(app, new_model, new_commands, depth + 1)
 
       %Julep.Command{type: :done, payload: %{value: value, mapper: mapper}}, acc ->
@@ -63,7 +68,9 @@ defmodule Julep.Test.Backend.CommandProcessor do
   defp drain_stream(app, model, tag, ref, depth) do
     receive do
       {:cp_stream, ^ref, value} ->
-        {new_model, new_commands} = dispatch_update(app, model, %Julep.Event.Stream{tag: tag, value: value})
+        {new_model, new_commands} =
+          dispatch_update(app, model, %Julep.Event.Stream{tag: tag, value: value})
+
         new_model = do_process(app, new_model, new_commands, depth + 1)
         drain_stream(app, new_model, tag, ref, depth)
     after

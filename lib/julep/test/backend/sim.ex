@@ -146,7 +146,11 @@ defmodule Julep.Test.Backend.Sim do
         {:reply, :ok, state}
 
       text ->
-        state = interact(state, selector, fn _el -> {:ok, %WidgetEvent{type: :submit, id: element.id, value: text}} end)
+        state =
+          interact(state, selector, fn _el ->
+            {:ok, %WidgetEvent{type: :submit, id: element.id, value: text}}
+          end)
+
         state = %{state | typed_text: Map.delete(state.typed_text, element.id)}
         {:reply, :ok, state}
     end

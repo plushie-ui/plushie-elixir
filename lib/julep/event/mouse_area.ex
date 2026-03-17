@@ -31,8 +31,15 @@ defmodule Julep.Event.MouseArea do
   """
 
   @type event_type ::
-          :right_press | :right_release | :middle_press | :middle_release
-          | :double_click | :enter | :exit | :move | :scroll
+          :right_press
+          | :right_release
+          | :middle_press
+          | :middle_release
+          | :double_click
+          | :enter
+          | :exit
+          | :move
+          | :scroll
 
   @type t :: %__MODULE__{
           type: event_type(),

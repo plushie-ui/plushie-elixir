@@ -56,7 +56,18 @@ defmodule Julep.Iced.Widget.PaneGrid do
           children: [Julep.Iced.ui_node() | struct()]
         }
 
-  defstruct [:id, :spacing, :width, :height, :min_size, :divider_color, :divider_width, :leeway, :a11y, children: []]
+  defstruct [
+    :id,
+    :spacing,
+    :width,
+    :height,
+    :min_size,
+    :divider_color,
+    :divider_width,
+    :leeway,
+    :a11y,
+    children: []
+  ]
 
   @doc "Creates a new pane grid struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()

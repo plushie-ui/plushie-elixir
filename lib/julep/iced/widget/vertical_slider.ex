@@ -53,7 +53,20 @@ defmodule Julep.Iced.Widget.VerticalSlider do
           a11y: Julep.Iced.A11y.t() | nil
         }
 
-  defstruct [:id, :range, :value, :step, :shift_step, :default, :width, :height, :rail_color, :rail_width, :style, :a11y]
+  defstruct [
+    :id,
+    :range,
+    :value,
+    :step,
+    :shift_step,
+    :default,
+    :width,
+    :height,
+    :rail_color,
+    :rail_width,
+    :style,
+    :a11y
+  ]
 
   @doc "Creates a new vertical slider struct with the given range, value, and optional keyword opts."
   @spec new(

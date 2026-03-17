@@ -243,7 +243,7 @@ defmodule Julep.BridgeMsgpackTest do
 
       # The renderer should either process the message or exit cleanly.
       # It must not hang indefinitely.
-      assert length(messages) >= 1
+      assert messages != []
     end
 
     test "malformed msgpack data causes error, not crash" do

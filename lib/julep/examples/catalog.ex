@@ -40,7 +40,7 @@ defmodule Julep.Examples.Catalog do
 
   use Julep.App
 
-  alias Julep.Event.{Widget, MouseArea, Sensor}
+  alias Julep.Event.{MouseArea, Sensor, Widget}
 
   # -- init ------------------------------------------------------------------
 

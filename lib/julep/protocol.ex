@@ -14,7 +14,21 @@ defmodule Julep.Protocol do
   event struct (see `Julep.Event.*`) or an internal tuple.
   """
 
-  alias Julep.Event.{Widget, Key, Modifiers, Mouse, Touch, Ime, Window, Canvas, MouseArea, Pane, Sensor, Effect, System}
+  alias Julep.Event.{
+    Canvas,
+    Effect,
+    Ime,
+    Key,
+    Modifiers,
+    Mouse,
+    MouseArea,
+    Pane,
+    Sensor,
+    System,
+    Touch,
+    Widget,
+    Window
+  }
 
   @protocol_version 1
 
@@ -964,11 +978,19 @@ defmodule Julep.Protocol do
   end
 
   defp dispatch(%{"type" => "event", "family" => "button_pressed", "value" => button} = msg) do
-    %Mouse{type: :button_pressed, button: parse_mouse_button(button), captured: msg["captured"] || false}
+    %Mouse{
+      type: :button_pressed,
+      button: parse_mouse_button(button),
+      captured: msg["captured"] || false
+    }
   end
 
   defp dispatch(%{"type" => "event", "family" => "button_released", "value" => button} = msg) do
-    %Mouse{type: :button_released, button: parse_mouse_button(button), captured: msg["captured"] || false}
+    %Mouse{
+      type: :button_released,
+      button: parse_mouse_button(button),
+      captured: msg["captured"] || false
+    }
   end
 
   defp dispatch(
@@ -1003,7 +1025,11 @@ defmodule Julep.Protocol do
          %{
            "type" => "event",
            "family" => "ime",
-           "data" => %{"kind" => "preedit", "text" => text, "cursor" => %{"start" => s, "end" => e}}
+           "data" => %{
+             "kind" => "preedit",
+             "text" => text,
+             "cursor" => %{"start" => s, "end" => e}
+           }
          } = msg
        ) do
     %Ime{type: :preedit, text: text, cursor: {s, e}, captured: msg["captured"] || false}
@@ -1246,11 +1272,23 @@ defmodule Julep.Protocol do
   # -- Canvas events --
 
   defp dispatch(%{"type" => "event", "family" => "canvas_press", "id" => id, "data" => data}) do
-    %Canvas{type: :press, id: id, x: data["x"], y: data["y"], button: Map.get(data, "button", "left")}
+    %Canvas{
+      type: :press,
+      id: id,
+      x: data["x"],
+      y: data["y"],
+      button: Map.get(data, "button", "left")
+    }
   end
 
   defp dispatch(%{"type" => "event", "family" => "canvas_release", "id" => id, "data" => data}) do
-    %Canvas{type: :release, id: id, x: data["x"], y: data["y"], button: Map.get(data, "button", "left")}
+    %Canvas{
+      type: :release,
+      id: id,
+      x: data["x"],
+      y: data["y"],
+      button: Map.get(data, "button", "left")
+    }
   end
 
   defp dispatch(%{"type" => "event", "family" => "canvas_move", "id" => id, "data" => data}) do
@@ -1258,7 +1296,14 @@ defmodule Julep.Protocol do
   end
 
   defp dispatch(%{"type" => "event", "family" => "canvas_scroll", "id" => id, "data" => data}) do
-    %Canvas{type: :scroll, id: id, x: data["x"], y: data["y"], delta_x: data["delta_x"], delta_y: data["delta_y"]}
+    %Canvas{
+      type: :scroll,
+      id: id,
+      x: data["x"],
+      y: data["y"],
+      delta_x: data["delta_x"],
+      delta_y: data["delta_y"]
+    }
   end
 
   # -- Sensor events --

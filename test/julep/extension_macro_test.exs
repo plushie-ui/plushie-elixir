@@ -8,34 +8,34 @@ defmodule Julep.ExtensionMacroTest do
   defmodule GaugeExtension do
     use Julep.Extension, :native_widget
 
-    widget :gauge
+    widget(:gauge)
 
-    prop :value, :number
-    prop :min, :number, default: 0
-    prop :max, :number, default: 100
-    prop :color, :color, default: :blue
-    prop :width, :length
-    prop :height, :length
-    prop :label, :string
+    prop(:value, :number)
+    prop(:min, :number, default: 0)
+    prop(:max, :number, default: 100)
+    prop(:color, :color, default: :blue)
+    prop(:width, :length)
+    prop(:height, :length)
+    prop(:label, :string)
 
-    rust_crate "native/my_gauge"
-    rust_constructor "my_gauge::GaugeExtension::new()"
+    rust_crate("native/my_gauge")
+    rust_constructor("my_gauge::GaugeExtension::new()")
 
-    command :set_value, value: :number
-    command :reset
+    command(:set_value, value: :number)
+    command(:reset)
   end
 
   defmodule ContainerNative do
     use Julep.Extension, :native_widget
 
-    widget :native_panel, container: true
+    widget(:native_panel, container: true)
 
-    prop :title, :string
-    prop :padding, :padding
-    prop :align, :alignment, default: :center
+    prop(:title, :string)
+    prop(:padding, :padding)
+    prop(:align, :alignment, default: :center)
 
-    rust_crate "native/panel"
-    rust_constructor "panel::PanelExtension::new()"
+    rust_crate("native/panel")
+    rust_constructor("panel::PanelExtension::new()")
   end
 
   # ---------------------------------------------------------------------------
@@ -45,11 +45,11 @@ defmodule Julep.ExtensionMacroTest do
   defmodule BadgeWidget do
     use Julep.Extension, :widget
 
-    widget :badge
+    widget(:badge)
 
-    prop :label, :string
-    prop :color, :color, default: :red
-    prop :size, :number, default: 14
+    prop(:label, :string)
+    prop(:color, :color, default: :red)
+    prop(:size, :number, default: 14)
   end
 
   # ---------------------------------------------------------------------------
@@ -59,10 +59,10 @@ defmodule Julep.ExtensionMacroTest do
   defmodule CardWidget do
     use Julep.Extension, :widget
 
-    widget :card, container: true
+    widget(:card, container: true)
 
-    prop :title, :string
-    prop :style, :style, default: :primary
+    prop(:title, :string)
+    prop(:style, :style, default: :primary)
   end
 
   # ---------------------------------------------------------------------------
@@ -72,10 +72,10 @@ defmodule Julep.ExtensionMacroTest do
   defmodule StatusIndicator do
     use Julep.Extension, :widget
 
-    widget :status_indicator
+    widget(:status_indicator)
 
-    prop :status, :atom
-    prop :label, :string
+    prop(:status, :atom)
+    prop(:label, :string)
 
     def render(id, props) do
       status_str = Map.get(props, :status, "unknown")
@@ -91,9 +91,9 @@ defmodule Julep.ExtensionMacroTest do
   defmodule Wrapper do
     use Julep.Extension, :widget
 
-    widget :wrapper, container: true
+    widget(:wrapper, container: true)
 
-    prop :border, :boolean, default: false
+    prop(:border, :boolean, default: false)
 
     def render(id, props, children) do
       border_val = Map.get(props, :border, false)
@@ -114,21 +114,21 @@ defmodule Julep.ExtensionMacroTest do
   defmodule TypeKitchen do
     use Julep.Extension, :widget
 
-    widget :type_kitchen
+    widget(:type_kitchen)
 
-    prop :a_number, :number
-    prop :a_string, :string
-    prop :a_bool, :boolean
-    prop :a_color, :color
-    prop :a_length, :length
-    prop :a_padding, :padding
-    prop :an_alignment, :alignment
-    prop :an_atom, :atom
-    prop :a_map, :map
-    prop :a_list, {:list, :string}
-    prop :any_val, :any
-    prop :a_style, :style
-    prop :a_font, :font
+    prop(:a_number, :number)
+    prop(:a_string, :string)
+    prop(:a_bool, :boolean)
+    prop(:a_color, :color)
+    prop(:a_length, :length)
+    prop(:a_padding, :padding)
+    prop(:an_alignment, :alignment)
+    prop(:an_atom, :atom)
+    prop(:a_map, :map)
+    prop(:a_list, {:list, :string})
+    prop(:any_val, :any)
+    prop(:a_style, :style)
+    prop(:a_font, :font)
   end
 
   # =========================================================================
