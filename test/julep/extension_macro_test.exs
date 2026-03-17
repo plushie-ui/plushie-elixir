@@ -153,9 +153,9 @@ defmodule Julep.ExtensionMacroTest do
 
   # --- 2. widget new/2 produces correct tree nodes --------------------------
 
-  describe "widget new/2 produces correct tree nodes" do
+  describe "widget new/2 produces correct tree nodes (via build)" do
     test "leaf widget builds node with type and props" do
-      node = BadgeWidget.new("b1", label: "New")
+      node = BadgeWidget.new("b1", label: "New") |> BadgeWidget.build()
       assert node.id == "b1"
       assert node.type == "badge"
       assert node.props["label"] == "New"
@@ -163,7 +163,7 @@ defmodule Julep.ExtensionMacroTest do
     end
 
     test "native widget builds node with type and props" do
-      node = GaugeExtension.new("g1", value: 42)
+      node = GaugeExtension.new("g1", value: 42) |> GaugeExtension.build()
       assert node.id == "g1"
       assert node.type == "gauge"
       assert node.props["value"] == 42
@@ -174,7 +174,7 @@ defmodule Julep.ExtensionMacroTest do
 
     test "container widget accepts children via :do" do
       child = %{id: "c", type: "text", props: %{}, children: []}
-      node = CardWidget.new("card1", title: "Hello", do: [child])
+      node = CardWidget.new("card1", title: "Hello", do: [child]) |> CardWidget.build()
       assert node.id == "card1"
       assert node.type == "card"
       assert node.props["title"] == "Hello"
@@ -202,19 +202,19 @@ defmodule Julep.ExtensionMacroTest do
 
   describe "prop defaults are applied" do
     test "color default is cast and applied" do
-      node = BadgeWidget.new("b1")
+      node = BadgeWidget.new("b1") |> BadgeWidget.build()
       assert node.props["color"] == Julep.Iced.Color.cast(:red)
       assert node.props["size"] == 14
     end
 
     test "number defaults applied for native" do
-      node = GaugeExtension.new("g1", value: 50)
+      node = GaugeExtension.new("g1", value: 50) |> GaugeExtension.build()
       assert node.props["min"] == 0
       assert node.props["max"] == 100
     end
 
     test "props without defaults are omitted when not provided" do
-      node = GaugeExtension.new("g1", value: 50)
+      node = GaugeExtension.new("g1", value: 50) |> GaugeExtension.build()
       refute Map.has_key?(node.props, "width")
       refute Map.has_key?(node.props, "height")
       refute Map.has_key?(node.props, "label")
@@ -225,52 +225,52 @@ defmodule Julep.ExtensionMacroTest do
 
   describe "prop type encoding" do
     test "color cast normalizes named atoms" do
-      node = BadgeWidget.new("b1", color: :cornflowerblue)
+      node = BadgeWidget.new("b1", color: :cornflowerblue) |> BadgeWidget.build()
       assert node.props["color"] == "#6495ed"
     end
 
     test "color cast normalizes hex strings" do
-      node = BadgeWidget.new("b1", color: "#FF0000")
+      node = BadgeWidget.new("b1", color: "#FF0000") |> BadgeWidget.build()
       assert node.props["color"] == "#ff0000"
     end
 
     test "length values are encoded" do
-      node = GaugeExtension.new("g1", value: 0, width: :fill)
+      node = GaugeExtension.new("g1", value: 0, width: :fill) |> GaugeExtension.build()
       assert node.props["width"] == "fill"
     end
 
     test "alignment values are encoded" do
-      node = ContainerNative.new("p1")
+      node = ContainerNative.new("p1") |> ContainerNative.build()
       assert node.props["align"] == "center"
     end
 
     test "atom values are converted to strings" do
-      node = TypeKitchen.new("tk", an_atom: :hello)
+      node = TypeKitchen.new("tk", an_atom: :hello) |> TypeKitchen.build()
       assert node.props["an_atom"] == "hello"
     end
 
     test "number passes through" do
-      node = TypeKitchen.new("tk", a_number: 42)
+      node = TypeKitchen.new("tk", a_number: 42) |> TypeKitchen.build()
       assert node.props["a_number"] == 42
     end
 
     test "string passes through" do
-      node = TypeKitchen.new("tk", a_string: "hi")
+      node = TypeKitchen.new("tk", a_string: "hi") |> TypeKitchen.build()
       assert node.props["a_string"] == "hi"
     end
 
     test "boolean passes through" do
-      node = TypeKitchen.new("tk", a_bool: true)
+      node = TypeKitchen.new("tk", a_bool: true) |> TypeKitchen.build()
       assert node.props["a_bool"] == true
     end
 
     test "map passes through" do
-      node = TypeKitchen.new("tk", a_map: %{x: 1})
+      node = TypeKitchen.new("tk", a_map: %{x: 1}) |> TypeKitchen.build()
       assert node.props["a_map"] == %{x: 1}
     end
 
     test "list passes through" do
-      node = TypeKitchen.new("tk", a_list: ["a", "b"])
+      node = TypeKitchen.new("tk", a_list: ["a", "b"]) |> TypeKitchen.build()
       assert node.props["a_list"] == ["a", "b"]
     end
   end
@@ -313,19 +313,19 @@ defmodule Julep.ExtensionMacroTest do
     test "card container captures children" do
       child1 = %{id: "t1", type: "text", props: %{}, children: []}
       child2 = %{id: "t2", type: "text", props: %{}, children: []}
-      node = CardWidget.new("c1", title: "Test", do: [child1, child2])
+      node = CardWidget.new("c1", title: "Test", do: [child1, child2]) |> CardWidget.build()
       assert length(node.children) == 2
     end
 
     test "native container captures children" do
       child = %{id: "inner", type: "text", props: %{}, children: []}
-      node = ContainerNative.new("p1", title: "Panel", do: [child])
+      node = ContainerNative.new("p1", title: "Panel", do: [child]) |> ContainerNative.build()
       assert length(node.children) == 1
       assert node.type == "native_panel"
     end
 
     test "container with no children defaults to empty list" do
-      node = CardWidget.new("c1", title: "Empty")
+      node = CardWidget.new("c1", title: "Empty") |> CardWidget.build()
       assert node.children == []
     end
   end
@@ -396,19 +396,19 @@ defmodule Julep.ExtensionMacroTest do
 
   describe "a11y prop" do
     test "a11y prop is encoded on leaf widget" do
-      node = BadgeWidget.new("b1", a11y: %{role: :alert, label: "New items"})
+      node = BadgeWidget.new("b1", a11y: %{role: :alert, label: "New items"}) |> BadgeWidget.build()
       assert node.props["a11y"]["role"] == "alert"
       assert node.props["a11y"]["label"] == "New items"
     end
 
     test "a11y prop is encoded on native widget" do
-      node = GaugeExtension.new("g1", value: 50, a11y: %{role: :meter, label: "CPU"})
+      node = GaugeExtension.new("g1", value: 50, a11y: %{role: :meter, label: "CPU"}) |> GaugeExtension.build()
       assert node.props["a11y"]["role"] == "meter"
       assert node.props["a11y"]["label"] == "CPU"
     end
 
     test "without a11y prop, no a11y key in props" do
-      node = BadgeWidget.new("b1")
+      node = BadgeWidget.new("b1") |> BadgeWidget.build()
       refute Map.has_key?(node.props, "a11y")
     end
   end
@@ -553,6 +553,147 @@ defmodule Julep.ExtensionMacroTest do
 
       assert warnings =~ "widget type already declared"
       assert warnings =~ "first_name"
+    end
+  end
+
+  describe "reserved prop names" do
+    test "raises on prop named :id" do
+      assert_raise CompileError, ~r/prop name :id is reserved/, fn ->
+        Code.compile_string("""
+        defmodule TestReservedId do
+          use Julep.Extension, :widget
+          widget :bad
+          prop :id, :string
+        end
+        """)
+      end
+    end
+
+    test "raises on prop named :type" do
+      assert_raise CompileError, ~r/prop name :type is reserved/, fn ->
+        Code.compile_string("""
+        defmodule TestReservedType do
+          use Julep.Extension, :widget
+          widget :bad
+          prop :type, :string
+        end
+        """)
+      end
+    end
+
+    test "raises on prop named :children" do
+      assert_raise CompileError, ~r/prop name :children is reserved/, fn ->
+        Code.compile_string("""
+        defmodule TestReservedChildren do
+          use Julep.Extension, :widget
+          widget :bad
+          prop :children, :any
+        end
+        """)
+      end
+    end
+
+    test "raises on prop named :a11y" do
+      assert_raise CompileError, ~r/prop name :a11y is reserved/, fn ->
+        Code.compile_string("""
+        defmodule TestReservedA11y do
+          use Julep.Extension, :widget
+          widget :bad
+          prop :a11y, :map
+        end
+        """)
+      end
+    end
+  end
+
+  # --- struct API for non-composite widgets ---------------------------------
+
+  describe "struct API for non-composite widgets" do
+    test "new/2 returns a struct for leaf widget" do
+      widget = BadgeWidget.new("b1")
+      assert %BadgeWidget{} = widget
+      assert widget.id == "b1"
+    end
+
+    test "new/2 returns a struct for native widget" do
+      widget = GaugeExtension.new("g1", value: 42)
+      assert %GaugeExtension{} = widget
+      assert widget.id == "g1"
+    end
+
+    test "new/2 returns a struct for container widget" do
+      widget = CardWidget.new("c1", title: "Hello")
+      assert %CardWidget{} = widget
+      assert widget.id == "c1"
+    end
+
+    test "setter functions return updated struct" do
+      widget = BadgeWidget.new("b1") |> BadgeWidget.color("#ff0000")
+      assert %BadgeWidget{} = widget
+      assert widget.color == "#ff0000"
+    end
+
+    test "setter functions chain" do
+      widget =
+        BadgeWidget.new("b1")
+        |> BadgeWidget.label("Hello")
+        |> BadgeWidget.size(18)
+        |> BadgeWidget.color(:green)
+
+      assert widget.label == "Hello"
+      assert widget.size == 18
+      assert widget.color == Julep.Iced.Color.cast(:green)
+    end
+
+    test "with_options/2 applies multiple options" do
+      widget = BadgeWidget.new("b1") |> BadgeWidget.with_options(label: "X", size: 20)
+      assert widget.label == "X"
+      assert widget.size == 20
+    end
+
+    test "build/1 converts struct to node map" do
+      node = BadgeWidget.new("b1", label: "Test", color: "#00ff00") |> BadgeWidget.build()
+      assert is_map(node)
+      assert node.id == "b1"
+      assert node.type == "badge"
+      assert node.props["label"] == "Test"
+      assert node.props["color"] == "#00ff00"
+      assert node.children == []
+    end
+
+    test "build/1 on native widget converts struct to node map" do
+      node = GaugeExtension.new("g1", value: 75, width: :fill) |> GaugeExtension.build()
+      assert node.id == "g1"
+      assert node.type == "gauge"
+      assert node.props["value"] == 75
+      assert node.props["width"] == "fill"
+    end
+
+    test "build/1 on container includes children" do
+      child = %{id: "c", type: "text", props: %{}, children: []}
+      node = CardWidget.new("c1", title: "Hi", do: [child]) |> CardWidget.build()
+      assert node.type == "card"
+      assert length(node.children) == 1
+    end
+
+    test "a11y setter works on struct" do
+      widget = BadgeWidget.new("b1") |> BadgeWidget.a11y(%{role: :alert, label: "Alert"})
+      assert %BadgeWidget{} = widget
+      node = BadgeWidget.build(widget)
+      assert node.props["a11y"]["role"] == "alert"
+      assert node.props["a11y"]["label"] == "Alert"
+    end
+
+    test "defaults are applied via setter encoding in build" do
+      node = BadgeWidget.new("b1") |> BadgeWidget.build()
+      assert node.props["color"] == Julep.Iced.Color.cast(:red)
+      assert node.props["size"] == 14
+    end
+
+    test "struct fields without defaults are nil" do
+      widget = BadgeWidget.new("b1")
+      assert widget.label == nil
+      assert widget.a11y == nil
     end
   end
 end

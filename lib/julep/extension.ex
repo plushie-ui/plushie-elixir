@@ -37,7 +37,12 @@ defmodule Julep.Extension do
   - `type_names/0` -- returns `[:gauge]` (from the `widget` declaration)
   - `native_crate/0` -- returns the `rust_crate` path (native_widget only)
   - `rust_constructor/0` -- returns the Rust expression (native_widget only)
-  - `new/2` -- builds a `%{id, type, props, children}` node map
+  - `new/2` -- creates a `%Module{}` struct (or a node map for composites)
+  - Setter functions per prop for pipeline composition
+  - `with_options/2` -- applies keyword options via setters
+  - `build/1` -- converts the struct to a `ui_node()` map
+  - `@type t`, `@type option` -- typespecs for dialyzer
+  - `Julep.Iced.Widget` protocol implementation
   - Command functions (native_widget only) that wrap
     `Julep.Command.extension_command/3`
 
@@ -251,6 +256,7 @@ defmodule Julep.Extension do
     validate_prop_types!(env, props)
     validate_command_types!(commands)
     warn_duplicate_props(env, props)
+    validate_reserved_names!(env, props)
     validate_render_arity!(env, container)
 
     rust_crate_val = Module.get_attribute(env.module, :_rust_crate)
@@ -262,13 +268,20 @@ defmodule Julep.Extension do
     behaviour_fns =
       generate_behaviour_fns(kind, widget_type, rust_crate_val, rust_constructor_val)
 
-    new_fn = generate_new(type_string, container, props, is_composite, has_render_3)
+    widget_code =
+      if is_composite do
+        prop_validation = generate_prop_validation(props)
+        generate_composite_new(type_string, container, props, prop_validation, has_render_3)
+      else
+        generate_struct_widget(env.module, type_string, container, props)
+      end
+
     command_fns = generate_commands(commands)
     prop_names_fn = generate_prop_names(props)
 
     quote do
       unquote(behaviour_fns)
-      unquote(new_fn)
+      unquote(widget_code)
       unquote(command_fns)
       unquote(prop_names_fn)
     end
@@ -330,6 +343,19 @@ defmodule Julep.Extension do
     end
   end
 
+  @reserved_prop_names [:id, :type, :children, :a11y, :do]
+
+  defp validate_reserved_names!(env, props) do
+    for {name, _type, _opts} <- props, name in @reserved_prop_names do
+      raise CompileError,
+        file: env.file,
+        line: 0,
+        description:
+          "prop name #{inspect(name)} is reserved in #{inspect(env.module)}. " <>
+            "Reserved names: #{inspect(@reserved_prop_names)}"
+    end
+  end
+
   defp validate_render_arity!(env, container) do
     has_render_2 = Module.defines?(env.module, {:render, 2})
     has_render_3 = Module.defines?(env.module, {:render, 3})
@@ -385,13 +411,21 @@ defmodule Julep.Extension do
   end
 
   @doc false
-  def generate_new(type_string, container, props, is_composite, has_render_3) do
-    if is_composite do
-      prop_validation = generate_prop_validation(props)
-      generate_composite_new(type_string, container, props, prop_validation, has_render_3)
-    else
-      prop_extract = generate_prop_extraction(props)
-      generate_node_new(type_string, container, prop_extract)
+  def generate_struct_widget(module, type_string, container, props) do
+    struct_def = generate_struct_and_types(props, container)
+    new_fn = generate_struct_new(container)
+    with_options_fn = generate_with_options(props)
+    setters = generate_setters(props)
+    build_fn = generate_build()
+    protocol_impl = generate_widget_protocol(module, type_string, container, props)
+
+    quote do
+      unquote(struct_def)
+      unquote(new_fn)
+      unquote(with_options_fn)
+      unquote_splicing(setters)
+      unquote(build_fn)
+      unquote(protocol_impl)
     end
   end
 
@@ -453,62 +487,263 @@ defmodule Julep.Extension do
     end
   end
 
-  defp generate_node_new(type_string, container, prop_extract) do
+  # -- Struct-based widget generation -----------------------------------------
+  #
+  # For non-composite widgets (no render/2 or render/3), we generate:
+  # - defstruct with all props + :id + :a11y
+  # - @type t with proper field types
+  # - @type option union of keyword tuples
+  # - new/2 that creates a struct and applies keyword options
+  # - with_options/2 that reduces options through setter functions
+  # - A setter function per prop with encoding and guards
+  # - a11y/2 setter for accessibility overrides
+  # - build/1 convenience that calls the protocol
+  # - Julep.Iced.Widget protocol implementation (to_node)
+
+  defp generate_struct_and_types(props, container) do
+    prop_fields =
+      Enum.map(props, fn {name, _type, opts} -> {name, Keyword.get(opts, :default)} end)
+
+    struct_fields =
+      [{:id, nil} | prop_fields] ++
+        if(container, do: [{:children, []}], else: []) ++
+        [{:a11y, nil}]
+
+    prop_type_fields = Enum.map(props, &prop_type_ast/1)
+
+    type_fields =
+      [{:id, quote(do: String.t())} | prop_type_fields] ++
+        if(container, do: [{:children, quote(do: [Julep.Iced.ui_node()])}], else: []) ++
+        [{:a11y, quote(do: Julep.Iced.A11y.t() | nil)}]
+
+    option_variants =
+      Enum.map(props, fn {name, type, _opts} ->
+        quote(do: {unquote(name), unquote(elixir_type_for(type))})
+      end) ++ [quote(do: {:a11y, Julep.Iced.A11y.t()})]
+
+    quote do
+      defstruct unquote(struct_fields)
+
+      @type t :: %__MODULE__{unquote_splicing(type_fields)}
+
+      @type option :: unquote(union_type(option_variants))
+    end
+  end
+
+  defp prop_type_ast({name, type, _opts}) do
+    {name, quote(do: unquote(elixir_type_for(type)) | nil)}
+  end
+
+  defp elixir_type_for(:number), do: quote(do: number())
+  defp elixir_type_for(:string), do: quote(do: String.t())
+  defp elixir_type_for(:boolean), do: quote(do: boolean())
+  defp elixir_type_for(:color), do: quote(do: Julep.Iced.Color.t())
+  defp elixir_type_for(:length), do: quote(do: Julep.Iced.Length.t())
+  defp elixir_type_for(:padding), do: quote(do: Julep.Iced.Padding.t())
+  defp elixir_type_for(:alignment), do: quote(do: Julep.Iced.Alignment.t())
+  defp elixir_type_for(:font), do: quote(do: Julep.Iced.Font.t())
+  defp elixir_type_for(:style), do: quote(do: atom() | Julep.Iced.StyleMap.t())
+  defp elixir_type_for(:atom), do: quote(do: atom())
+  defp elixir_type_for(:map), do: quote(do: map())
+  defp elixir_type_for(:any), do: quote(do: term())
+  defp elixir_type_for({:list, inner}), do: quote(do: [unquote(elixir_type_for(inner))])
+
+  defp union_type([single]), do: single
+
+  defp union_type([head | tail]) do
+    Enum.reduce(tail, head, fn variant, acc ->
+      quote(do: unquote(acc) | unquote(variant))
+    end)
+  end
+
+  defp generate_struct_new(container) do
     if container do
       quote do
-        @spec new(id :: String.t(), opts :: keyword()) :: Julep.Iced.ui_node()
+        @doc "Creates a new widget struct with the given ID and keyword options."
+        @spec new(id :: String.t(), opts :: [option()]) :: t()
         def new(id, opts \\ []) when is_binary(id) do
           {children, opts} = Keyword.pop(opts, :do, [])
-          children = List.wrap(children)
-          {a11y_val, opts} = Keyword.pop(opts, :a11y)
-
-          unquote(prop_extract)
-
-          node = %{
-            id: id,
-            type: unquote(type_string),
-            props: props,
-            children: children
-          }
-
-          if a11y_val do
-            put_in(
-              node,
-              [:props, "a11y"],
-              Julep.Iced.Encode.encode(Julep.Iced.A11y.cast(a11y_val))
-            )
-          else
-            node
-          end
+          widget = %__MODULE__{id: id} |> with_options(opts)
+          %{widget | children: List.wrap(children)}
         end
       end
     else
       quote do
-        @spec new(id :: String.t(), opts :: keyword()) :: Julep.Iced.ui_node()
+        @doc "Creates a new widget struct with the given ID and keyword options."
+        @spec new(id :: String.t(), opts :: [option()]) :: t()
         def new(id, opts \\ []) when is_binary(id) do
-          {a11y_val, opts} = Keyword.pop(opts, :a11y)
-
-          unquote(prop_extract)
-
-          node = %{
-            id: id,
-            type: unquote(type_string),
-            props: props,
-            children: []
-          }
-
-          if a11y_val do
-            put_in(
-              node,
-              [:props, "a11y"],
-              Julep.Iced.Encode.encode(Julep.Iced.A11y.cast(a11y_val))
-            )
-          else
-            node
-          end
+          %__MODULE__{id: id} |> with_options(opts)
         end
       end
     end
+  end
+
+  defp generate_with_options(props) do
+    v = Macro.var(:v, __MODULE__)
+    acc = Macro.var(:acc, __MODULE__)
+    key = Macro.var(:key, __MODULE__)
+
+    prop_clauses =
+      Enum.map(props, fn {name, _type, _opts} ->
+        {:->, [],
+         [
+           [{:{}, [], [name, v]}, acc],
+           quote(do: __MODULE__.unquote(name)(unquote(acc), unquote(v)))
+         ]}
+      end)
+
+    a11y_clause =
+      {:->, [],
+       [
+         [{:{}, [], [:a11y, v]}, acc],
+         quote(do: __MODULE__.a11y(unquote(acc), unquote(v)))
+       ]}
+
+    unknown_v = Macro.var(:_, __MODULE__)
+    unknown_acc = Macro.var(:_, __MODULE__)
+
+    unknown_clause =
+      {:->, [],
+       [
+         [{:{}, [], [key, unknown_v]}, unknown_acc],
+         quote do
+           raise ArgumentError,
+                 "unknown option #{inspect(unquote(key))} for #{inspect(__MODULE__)}.new"
+         end
+       ]}
+
+    all_clauses = prop_clauses ++ [a11y_clause, unknown_clause]
+    reducer_fn = {:fn, [], all_clauses}
+
+    quote do
+      @doc "Applies keyword options to an existing widget struct."
+      @spec with_options(widget :: t(), opts :: [option()]) :: t()
+      def with_options(%__MODULE__{} = widget, []), do: widget
+
+      def with_options(%__MODULE__{} = widget, opts) do
+        Enum.reduce(opts, widget, unquote(reducer_fn))
+      end
+    end
+  end
+
+  defp generate_setters(props) do
+    prop_setters =
+      Enum.map(props, fn {name, type, opts} ->
+        doc = Keyword.get(opts, :doc, "Sets the `#{name}` prop.")
+        encoder = encoder_for_type(type)
+        value_type = elixir_type_for(type)
+
+        case setter_guard(type) do
+          nil ->
+            quote do
+              @doc unquote(doc)
+              @spec unquote(name)(widget :: t(), value :: unquote(value_type)) :: t()
+              def unquote(name)(%__MODULE__{} = widget, value) do
+                %{widget | unquote(name) => unquote(encoder).(value)}
+              end
+            end
+
+          guard ->
+            quote do
+              @doc unquote(doc)
+              @spec unquote(name)(widget :: t(), value :: unquote(value_type)) :: t()
+              def unquote(name)(%__MODULE__{} = widget, value) when unquote(guard) do
+                %{widget | unquote(name) => unquote(encoder).(value)}
+              end
+            end
+        end
+      end)
+
+    a11y_setter =
+      quote do
+        @doc "Sets accessibility annotations."
+        @spec a11y(widget :: t(), a11y :: Julep.Iced.A11y.t()) :: t()
+        def a11y(%__MODULE__{} = widget, a11y) do
+          %{widget | a11y: Julep.Iced.A11y.cast(a11y)}
+        end
+      end
+
+    prop_setters ++ [a11y_setter]
+  end
+
+  defp setter_guard(:number), do: quote(do: is_number(value))
+  defp setter_guard(:string), do: quote(do: is_binary(value))
+  defp setter_guard(:boolean), do: quote(do: is_boolean(value))
+  defp setter_guard(:atom), do: quote(do: is_atom(value))
+  defp setter_guard(:map), do: quote(do: is_map(value))
+  defp setter_guard({:list, _}), do: quote(do: is_list(value))
+  defp setter_guard(_), do: nil
+
+  defp generate_build do
+    quote do
+      @doc "Converts this widget struct to a `ui_node()` map."
+      @spec build(widget :: t()) :: Julep.Iced.ui_node()
+      def build(%__MODULE__{} = widget), do: Julep.Iced.Widget.to_node(widget)
+    end
+  end
+
+  defp generate_widget_protocol(_module, type_string, container, props) do
+    put_calls =
+      Enum.map(props, fn {name, type, _opts} ->
+        key_string = Atom.to_string(name)
+        encoder = protocol_encoder_for_type(type)
+
+        quote do
+          props = Julep.Iced.Widget.Build.put_if(props, widget.unquote(name), unquote(key_string), unquote(encoder))
+        end
+      end)
+
+    a11y_put =
+      quote do
+        props = Julep.Iced.Widget.Build.put_if(props, widget.a11y, "a11y")
+      end
+
+    children =
+      if container do
+        quote(do: Julep.Iced.Widget.Build.children_to_nodes(widget.children))
+      else
+        quote(do: [])
+      end
+
+    # defimpl must be defined at the top level of the module, not inside a
+    # function. We generate the AST here; it's injected via __before_compile__.
+    quote do
+      defimpl Julep.Iced.Widget do
+        def to_node(widget) do
+          props = %{}
+          unquote_splicing(put_calls)
+          unquote(a11y_put)
+
+          %{
+            id: widget.id,
+            type: unquote(type_string),
+            props: props,
+            children: unquote(children)
+          }
+        end
+      end
+    end
+  end
+
+  # Encoder for the protocol (to_node) -- uses the Build.put_if transform pattern.
+  # Returns a function AST that encodes the value for the wire.
+  defp protocol_encoder_for_type(:color) do
+    quote(do: fn val -> Julep.Iced.Color.cast(val) end)
+  end
+
+  defp protocol_encoder_for_type(type) when type in [:length, :padding, :alignment, :style] do
+    quote(do: fn val -> Julep.Iced.Encode.encode(val) end)
+  end
+
+  defp protocol_encoder_for_type(:atom) do
+    quote(do: fn
+      val when is_atom(val) -> Atom.to_string(val)
+      val when is_binary(val) -> val
+    end)
+  end
+
+  defp protocol_encoder_for_type(_type) do
+    quote(do: fn val -> val end)
   end
 
   @doc false
@@ -522,46 +757,6 @@ defmodule Julep.Extension do
         raise ArgumentError,
               "unknown option(s) #{inspect(unknown_keys)} for #{inspect(__MODULE__)}.new"
       end
-    end
-  end
-
-  @doc false
-  def generate_prop_extraction(props) do
-    put_calls =
-      Enum.map(props, fn {name, type, opts} ->
-        key_string = Atom.to_string(name)
-        default = Keyword.get(opts, :default)
-        encoder = encoder_for_type(type)
-
-        quote do
-          props =
-            case Keyword.get(opts, unquote(name), unquote(Macro.escape(default))) do
-              nil ->
-                props
-
-              val ->
-                Map.put(props, unquote(key_string), unquote(encoder).(val))
-            end
-        end
-      end)
-
-    # Validation: reject unknown keys
-    known_names = Enum.map(props, fn {name, _type, _opts} -> name end) ++ [:a11y, :do]
-
-    validation =
-      quote do
-        unknown_keys = Keyword.keys(opts) -- unquote(known_names)
-
-        if unknown_keys != [] do
-          raise ArgumentError,
-                "unknown option(s) #{inspect(unknown_keys)} for #{inspect(__MODULE__)}.new"
-        end
-      end
-
-    quote do
-      props = %{}
-      unquote_splicing(put_calls)
-      unquote(validation)
     end
   end
 

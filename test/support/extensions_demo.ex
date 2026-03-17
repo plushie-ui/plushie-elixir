@@ -13,6 +13,7 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
 
     use Julep.App
 
+    alias Julep.Event.Timer
     alias Julep.Event.Widget
     import Julep.UI
 
@@ -31,23 +32,14 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
     @impl true
     def update(model, message) do
       case message do
-        :tick ->
+        %Timer{tag: :tick} ->
           if model.paused do
             model
           else
             tick = model.tick + 1
             value = :math.sin(tick * 0.1) * 50 + 50
-            {%{model | tick: tick}, [JulepSparkline.Command.push("spark", value)]}
+            {%{model | tick: tick}, [JulepSparkline.push("spark", value)]}
           end
-
-        :toggle_pause ->
-          %{model | paused: not model.paused}
-
-        {:hex_input, text} ->
-          %{model | hex_text: text}
-
-        {:code_input, text} ->
-          %{model | code: text}
 
         %Widget{type: :click, id: "timeline"} ->
           %{model | selected_interval: "clicked"}
@@ -68,20 +60,20 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
             column spacing: 5 do
               text("Sparkline", size: 16)
 
-              JulepSparkline.Sparkline.new("spark")
-              |> JulepSparkline.Sparkline.color("#4FC3F7")
-              |> JulepSparkline.Sparkline.width(200)
-              |> JulepSparkline.Sparkline.height(60)
-              |> JulepSparkline.Sparkline.build()
+              JulepSparkline.new("spark")
+              |> JulepSparkline.color("#4FC3F7")
+              |> JulepSparkline.width(200)
+              |> JulepSparkline.height(60)
             end
 
             column spacing: 5 do
               text("Hex View", size: 16)
 
-              JulepHexView.HexView.new("hex", model.hex_text)
-              |> JulepHexView.HexView.bytes_per_row(8)
-              |> JulepHexView.HexView.height(80)
-              |> JulepHexView.HexView.build()
+              JulepHexView.new("hex",
+                data: model.hex_text,
+                bytes_per_row: 8,
+                height: 80
+              )
             end
           end
 
@@ -89,19 +81,19 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
           column spacing: 5 do
             text("Code View", size: 16)
 
-            JulepCodeView.CodeView.new("code", model.code,
+            JulepCodeView.new("code",
+              code: model.code,
               language: model.language,
-              line_numbers: true
+              line_numbers: true,
+              height: 120
             )
-            |> JulepCodeView.CodeView.height(120)
-            |> JulepCodeView.CodeView.build()
           end
 
           # Row 3: Plot
           column spacing: 5 do
             text("Plot", size: 16)
 
-            JulepPlot.Plot.new("plot",
+            JulepPlot.new("plot",
               series: [
                 %{
                   name: "sine",
@@ -113,36 +105,34 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
                   data: for(i <- 0..20, do: {i, :math.cos(i * 0.3) * 50 + 50}),
                   color: "#FF7043"
                 }
-              ]
+              ],
+              width: :fill,
+              height: 150
             )
-            |> JulepPlot.Plot.width("fill")
-            |> JulepPlot.Plot.height(150)
-            |> JulepPlot.Plot.build()
           end
 
           # Row 4: Timeline
           column spacing: 5 do
             text("Timeline", size: 16)
 
-            JulepTimeline.Timeline.new("timeline",
+            JulepTimeline.new("timeline",
               intervals: [
-                JulepTimeline.Timeline.interval("req-1", "GET /api", 0, 150,
+                JulepTimeline.interval("req-1", "GET /api", 0, 150,
                   lane: 0,
                   color: "#4FC3F7"
                 ),
-                JulepTimeline.Timeline.interval("db-1", "SELECT users", 20, 80,
+                JulepTimeline.interval("db-1", "SELECT users", 20, 80,
                   lane: 1,
                   color: "#66BB6A"
                 ),
-                JulepTimeline.Timeline.interval("job-1", "SendEmail", 100, 300,
+                JulepTimeline.interval("job-1", "SendEmail", 100, 300,
                   lane: 2,
                   color: "#FF7043"
                 )
-              ]
+              ],
+              width: :fill,
+              height: 120
             )
-            |> JulepTimeline.Timeline.width("fill")
-            |> JulepTimeline.Timeline.height(120)
-            |> JulepTimeline.Timeline.build()
           end
         end
       end
