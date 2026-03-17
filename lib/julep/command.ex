@@ -57,8 +57,8 @@ defmodule Julep.Command do
   @typedoc "Stable string identifier for a window node in the UI tree."
   @type window_id :: term()
 
-  @typedoc "Tag atom or string used to identify async results in `update/2`."
-  @type event_tag :: atom() | String.t()
+  @typedoc "Tag atom used to identify async results in `update/2`."
+  @type event_tag :: atom()
 
   @typedoc """
   A command to be dispatched by the runtime.

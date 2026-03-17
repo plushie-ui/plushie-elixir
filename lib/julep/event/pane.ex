@@ -12,9 +12,9 @@ defmodule Julep.Event.Pane do
     * `split` - identifier of the split being resized (resized events)
     * `ratio` - new split ratio after resize (0.0 to 1.0)
     * `target` - drop target pane when dragging
-    * `action` - drag action: `"picked"`, `"dropped"`, or `"canceled"`
-    * `region` - drop region: `"center"`, `"top"`, `"bottom"`, `"left"`, `"right"`
-    * `edge` - edge drop target: `"top"`, `"bottom"`, `"left"`, `"right"`
+    * `action` - drag action: `:picked`, `:dropped`, or `:canceled`
+    * `region` - drop region: `:center`, `:top`, `:bottom`, `:left`, `:right`
+    * `edge` - edge drop target: `:top`, `:bottom`, `:left`, `:right`
 
   ## Pattern matching
 
@@ -26,7 +26,7 @@ defmodule Julep.Event.Pane do
         %{model | active_pane: pane}
       end
 
-      def update(model, %Pane{type: :dragged, action: "dropped", pane: pane, target: target}) do
+      def update(model, %Pane{type: :dragged, action: :dropped, pane: pane, target: target}) do
         swap_panes(model, pane, target)
       end
 
@@ -35,6 +35,9 @@ defmodule Julep.Event.Pane do
       end
   """
 
+  @type action :: :picked | :dropped | :canceled
+  @type region :: :center | :top | :bottom | :left | :right
+
   @type t :: %__MODULE__{
           type: :resized | :dragged | :clicked | :focus_cycle,
           id: String.t(),
@@ -42,9 +45,9 @@ defmodule Julep.Event.Pane do
           split: term(),
           ratio: number() | nil,
           target: term(),
-          action: String.t() | nil,
-          region: String.t() | nil,
-          edge: String.t() | nil
+          action: action() | nil,
+          region: region() | nil,
+          edge: :top | :bottom | :left | :right | nil
         }
 
   @enforce_keys [:type, :id]

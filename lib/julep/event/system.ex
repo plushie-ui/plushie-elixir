@@ -40,7 +40,7 @@ defmodule Julep.Event.System do
             | :tree_hash
             | :find_focused,
           tag: String.t() | nil,
-          data: term()
+          data: map() | String.t() | number() | nil
         }
 
   @enforce_keys [:type]

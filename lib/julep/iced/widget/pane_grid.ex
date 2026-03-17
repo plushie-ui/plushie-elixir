@@ -24,7 +24,7 @@ defmodule Julep.Iced.Widget.PaneGrid do
 
   - `%Pane{type: :clicked}` -- pane selected.
   - `%Pane{type: :resized}` -- split divider moved (split, ratio).
-  - `%Pane{type: :dragged}` -- pane drag (action: picked/dropped/canceled,
+  - `%Pane{type: :dragged}` -- pane drag (action: :picked/:dropped/:canceled,
     with optional target, region, edge).
   - `%Pane{type: :focus_cycle}` -- F6/Shift+F6 focus cycling.
   """

@@ -964,11 +964,11 @@ defmodule Julep.Protocol do
   end
 
   defp dispatch(%{"type" => "event", "family" => "button_pressed", "value" => button} = msg) do
-    %Mouse{type: :button_pressed, button: button, captured: msg["captured"] || false}
+    %Mouse{type: :button_pressed, button: parse_mouse_button(button), captured: msg["captured"] || false}
   end
 
   defp dispatch(%{"type" => "event", "family" => "button_released", "value" => button} = msg) do
-    %Mouse{type: :button_released, button: button, captured: msg["captured"] || false}
+    %Mouse{type: :button_released, button: parse_mouse_button(button), captured: msg["captured"] || false}
   end
 
   defp dispatch(
@@ -982,7 +982,7 @@ defmodule Julep.Protocol do
       type: :wheel_scrolled,
       delta_x: dx,
       delta_y: dy,
-      unit: unit,
+      unit: parse_scroll_unit(unit),
       captured: msg["captured"] || false
     }
   end
@@ -1279,9 +1279,9 @@ defmodule Julep.Protocol do
       id: id,
       pane: data["pane"],
       target: data["target"],
-      action: data["action"],
-      region: data["region"],
-      edge: data["edge"]
+      action: parse_pane_action(data["action"]),
+      region: parse_pane_region(data["region"]),
+      edge: parse_pane_region(data["edge"])
     }
   end
 
@@ -1399,10 +1399,49 @@ defmodule Julep.Protocol do
   # -- Generic/extension events (unrecognized families) --
 
   defp dispatch(%{"type" => "event", "family" => family, "id" => id} = msg) do
-    %Widget{type: family, id: id, data: msg["data"], value: msg["value"]}
+    %Widget{type: safe_event_type(family), id: id, data: msg["data"], value: msg["value"]}
   end
 
   defp dispatch(msg) do
     {:error, {:unknown_message, msg}}
+  end
+
+  # ---------------------------------------------------------------------------
+  # String-to-atom parsers for wire protocol fields
+  # ---------------------------------------------------------------------------
+
+  defp parse_pane_action(nil), do: nil
+  defp parse_pane_action("picked"), do: :picked
+  defp parse_pane_action("dropped"), do: :dropped
+  defp parse_pane_action("canceled"), do: :canceled
+  defp parse_pane_action(_), do: nil
+
+  defp parse_pane_region(nil), do: nil
+  defp parse_pane_region("center"), do: :center
+  defp parse_pane_region("top"), do: :top
+  defp parse_pane_region("bottom"), do: :bottom
+  defp parse_pane_region("left"), do: :left
+  defp parse_pane_region("right"), do: :right
+  defp parse_pane_region(_), do: nil
+
+  defp parse_mouse_button(nil), do: nil
+  defp parse_mouse_button("left"), do: :left
+  defp parse_mouse_button("right"), do: :right
+  defp parse_mouse_button("middle"), do: :middle
+  defp parse_mouse_button("back"), do: :back
+  defp parse_mouse_button("forward"), do: :forward
+  defp parse_mouse_button(other) when is_binary(other), do: String.to_atom(other)
+
+  defp parse_scroll_unit(nil), do: nil
+  defp parse_scroll_unit("line"), do: :line
+  defp parse_scroll_unit("lines"), do: :line
+  defp parse_scroll_unit("pixel"), do: :pixel
+  defp parse_scroll_unit("pixels"), do: :pixel
+  defp parse_scroll_unit(_), do: nil
+
+  defp safe_event_type(family) do
+    String.to_existing_atom(family)
+  rescue
+    ArgumentError -> family
   end
 end

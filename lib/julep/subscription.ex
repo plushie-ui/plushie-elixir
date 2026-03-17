@@ -249,9 +249,9 @@ defmodule Julep.Subscription do
   @doc """
   Fires on mouse button press/release.
 
-  Delivers `%Mouse{type: :button_pressed, button: str, captured: bool}` or
-  `%Mouse{type: :button_released, button: str, captured: bool}` to `update/2`.
-  `button` is `"left"`, `"right"`, or `"middle"`.
+  Delivers `%Mouse{type: :button_pressed, button: atom, captured: bool}` or
+  `%Mouse{type: :button_released, button: atom, captured: bool}` to `update/2`.
+  `button` is `:left`, `:right`, or `:middle`.
   The `event_tag` is for subscription management only.
   """
   @spec on_mouse_button(event_tag :: atom()) :: t()

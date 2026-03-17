@@ -5,20 +5,23 @@ defmodule Julep.Event.Mouse do
   ## Pattern matching
 
       def update(model, %Mouse{type: :moved, x: x, y: y}), do: ...
-      def update(model, %Mouse{type: :button_pressed, button: "left", captured: false}), do: ...
+      def update(model, %Mouse{type: :button_pressed, button: :left, captured: false}), do: ...
   """
 
   @type event_type ::
           :moved | :entered | :left | :button_pressed | :button_released | :wheel_scrolled
 
+  @type button :: :left | :right | :middle | :back | :forward | atom()
+  @type scroll_unit :: :line | :pixel
+
   @type t :: %__MODULE__{
           type: event_type(),
           x: number() | nil,
           y: number() | nil,
-          button: String.t() | nil,
+          button: button() | nil,
           delta_x: number() | nil,
           delta_y: number() | nil,
-          unit: String.t() | nil,
+          unit: scroll_unit() | nil,
           captured: boolean()
         }
 
