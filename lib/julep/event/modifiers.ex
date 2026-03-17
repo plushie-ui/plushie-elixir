@@ -9,7 +9,7 @@ defmodule Julep.Event.Modifiers do
   ## Fields
 
     * `modifiers` - a `Julep.KeyModifiers` struct with boolean fields for
-      `shift`, `control`, `alt`, `command`, and `logo`
+      `shift`, `ctrl`, `alt`, `command`, and `logo`
     * `captured` - whether a subscription captured this event
 
   ## Pattern matching
