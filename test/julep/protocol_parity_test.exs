@@ -496,12 +496,18 @@ defmodule Julep.ProtocolParityTest do
   # ---------------------------------------------------------------------------
 
   describe "window_opened event" do
-    test "decodes window opened with position and size" do
+    test "decodes window opened with position, size, and scale_factor" do
       json =
         Jason.encode!(%{
           type: "event",
           family: "window_opened",
-          data: %{window_id: "main", position: %{x: 100, y: 200}, width: 800, height: 600}
+          data: %{
+            window_id: "main",
+            position: %{x: 100, y: 200},
+            width: 800,
+            height: 600,
+            scale_factor: 2.0
+          }
         })
 
       assert %Window{
@@ -509,7 +515,8 @@ defmodule Julep.ProtocolParityTest do
                window_id: "main",
                position: {100, 200},
                width: 800,
-               height: 600
+               height: 600,
+               scale_factor: 2.0
              } =
                Protocol.decode_message(json, :json)
     end
@@ -519,10 +526,17 @@ defmodule Julep.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "window_opened",
-          data: %{window_id: "main", position: nil, width: 1024, height: 768}
+          data: %{window_id: "main", position: nil, width: 1024, height: 768, scale_factor: 1.0}
         })
 
-      assert %Window{type: :opened, window_id: "main", position: nil, width: 1024, height: 768} =
+      assert %Window{
+               type: :opened,
+               window_id: "main",
+               position: nil,
+               width: 1024,
+               height: 768,
+               scale_factor: 1.0
+             } =
                Protocol.decode_message(json, :json)
     end
   end

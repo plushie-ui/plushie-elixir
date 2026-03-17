@@ -1120,7 +1120,14 @@ defmodule Julep.Protocol do
         _ -> nil
       end
 
-    %Window{type: :opened, window_id: window_id, position: pos, width: width, height: height}
+    %Window{
+      type: :opened,
+      window_id: window_id,
+      position: pos,
+      width: width,
+      height: height,
+      scale_factor: data["scale_factor"]
+    }
   end
 
   defp dispatch(%{
