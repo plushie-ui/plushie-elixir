@@ -68,6 +68,10 @@ defmodule Julep.Effects do
   @spec file_open(opts :: keyword()) :: Julep.Command.t()
   def file_open(opts \\ []), do: request(:file_open, opts)
 
+  @doc "Multi-file open dialog. Returns a command."
+  @spec file_open_multiple(opts :: keyword()) :: Julep.Command.t()
+  def file_open_multiple(opts \\ []), do: request(:file_open_multiple, opts)
+
   @doc "Save-file dialog. Returns a command."
   @spec file_save(opts :: keyword()) :: Julep.Command.t()
   def file_save(opts \\ []), do: request(:file_save, opts)
@@ -76,6 +80,10 @@ defmodule Julep.Effects do
   @spec directory_select(opts :: keyword()) :: Julep.Command.t()
   def directory_select(opts \\ []), do: request(:directory_select, opts)
 
+  @doc "Multi-directory picker. Returns a command."
+  @spec directory_select_multiple(opts :: keyword()) :: Julep.Command.t()
+  def directory_select_multiple(opts \\ []), do: request(:directory_select_multiple, opts)
+
   @doc "Read clipboard contents. Returns a command."
   @spec clipboard_read() :: Julep.Command.t()
   def clipboard_read, do: request(:clipboard_read)
@@ -83,6 +91,22 @@ defmodule Julep.Effects do
   @doc "Write `text` to the clipboard. Returns a command."
   @spec clipboard_write(text :: String.t()) :: Julep.Command.t()
   def clipboard_write(text), do: request(:clipboard_write, text: text)
+
+  @doc "Read HTML content from the clipboard. Returns a command."
+  @spec clipboard_read_html() :: Julep.Command.t()
+  def clipboard_read_html, do: request(:clipboard_read_html)
+
+  @doc "Write HTML content to the clipboard. Returns a command."
+  @spec clipboard_write_html(html :: String.t(), alt_text :: String.t()) :: Julep.Command.t()
+  def clipboard_write_html(html, alt_text \\ nil) do
+    opts = [html: html]
+    opts = if alt_text, do: Keyword.put(opts, :alt_text, alt_text), else: opts
+    request(:clipboard_write_html, opts)
+  end
+
+  @doc "Clear the clipboard. Returns a command."
+  @spec clipboard_clear() :: Julep.Command.t()
+  def clipboard_clear, do: request(:clipboard_clear)
 
   @doc "Read primary clipboard (middle-click paste on Linux). Returns a command."
   @spec clipboard_read_primary() :: Julep.Command.t()
@@ -97,22 +121,51 @@ defmodule Julep.Effects do
 
   On macOS, notifications may require the app to be bundled (.app) or have
   notification entitlements to display.
+
+  ## Options
+
+    * `:icon` - Icon name or path (string).
+    * `:timeout` - Auto-dismiss timeout in milliseconds (integer).
+    * `:urgency` - `:low`, `:normal`, or `:critical` (atom).
+    * `:sound` - Sound name to play (string).
   """
-  @spec notification(title :: String.t(), body :: String.t()) :: Julep.Command.t()
-  def notification(title, body), do: request(:notification, title: title, body: body)
+  @spec notification(title :: String.t(), body :: String.t(), opts :: keyword()) ::
+          Julep.Command.t()
+  def notification(title, body, opts \\ []) do
+    payload = [title: title, body: body]
+
+    payload =
+      if opts[:icon], do: Keyword.put(payload, :icon, opts[:icon]), else: payload
+
+    payload =
+      if opts[:timeout], do: Keyword.put(payload, :timeout, opts[:timeout]), else: payload
+
+    payload =
+      if opts[:urgency],
+        do: Keyword.put(payload, :urgency, Atom.to_string(opts[:urgency])),
+        else: payload
+
+    payload =
+      if opts[:sound], do: Keyword.put(payload, :sound, opts[:sound]), else: payload
+
+    request(:notification, payload)
+  end
 
   # Default timeouts per effect kind (milliseconds). File dialogs get longer
   # because users interact with them; clipboard/notification ops are fast.
   @default_timeouts %{
     "clipboard_read" => 5_000,
     "clipboard_write" => 5_000,
+    "clipboard_read_html" => 5_000,
+    "clipboard_write_html" => 5_000,
+    "clipboard_clear" => 5_000,
     "clipboard_read_primary" => 5_000,
     "clipboard_write_primary" => 5_000,
     "file_open" => 120_000,
     "file_open_multiple" => 120_000,
     "file_save" => 120_000,
-    "folder_open" => 120_000,
     "directory_select" => 120_000,
+    "directory_select_multiple" => 120_000,
     "notification" => 5_000
   }
 
