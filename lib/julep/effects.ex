@@ -97,7 +97,7 @@ defmodule Julep.Effects do
   def clipboard_read_html, do: request(:clipboard_read_html)
 
   @doc "Write HTML content to the clipboard. Returns a command."
-  @spec clipboard_write_html(html :: String.t(), alt_text :: String.t()) :: Julep.Command.t()
+  @spec clipboard_write_html(html :: String.t(), alt_text :: String.t() | nil) :: Julep.Command.t()
   def clipboard_write_html(html, alt_text \\ nil) do
     opts = [html: html]
     opts = if alt_text, do: Keyword.put(opts, :alt_text, alt_text), else: opts
