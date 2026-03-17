@@ -11,7 +11,7 @@ defmodule Julep.ExtensionTest do
     def rust_constructor, do: "mock_ext::MockExt::new()"
 
     @impl true
-    def type_names, do: ["mock_widget"]
+    def type_names, do: [:mock_widget]
   end
 
   defmodule ConflictExtension do
@@ -24,7 +24,7 @@ defmodule Julep.ExtensionTest do
     def rust_constructor, do: "conflict_ext::ConflictExt::new()"
 
     @impl true
-    def type_names, do: ["mock_widget"]
+    def type_names, do: [:mock_widget]
   end
 
   test "configured_extensions reads from application config" do

@@ -34,7 +34,7 @@ defmodule Julep.Extension do
 
   The macro generates:
 
-  - `type_names/0` -- returns `["gauge"]` (from the `widget` declaration)
+  - `type_names/0` -- returns `[:gauge]` (from the `widget` declaration)
   - `native_crate/0` -- returns the `rust_crate` path (native_widget only)
   - `rust_constructor/0` -- returns the Rust expression (native_widget only)
   - `new/2` -- builds a `%{id, type, props, children}` node map
@@ -102,8 +102,8 @@ defmodule Julep.Extension do
 
   # -- Behaviour callbacks ---------------------------------------------------
 
-  @doc "Node type strings this extension handles."
-  @callback type_names() :: [String.t()]
+  @doc "Node type atoms this extension handles."
+  @callback type_names() :: [atom()]
 
   @doc "Path to the Rust crate relative to the package root."
   @callback native_crate() :: String.t()
@@ -167,6 +167,7 @@ defmodule Julep.Extension do
       else
         quote do
           import Julep.Extension, only: [widget: 1, widget: 2, prop: 2, prop: 3]
+          import Julep.UI
         end
       end
 
@@ -329,7 +330,7 @@ defmodule Julep.Extension do
           "#{inspect(env.module)} declares container: true but defines render/2 instead of render/3. Container widgets must accept children via render/3."
     end
 
-    behaviour_fns = generate_behaviour_fns(kind, type_string, rust_crate_val, rust_constructor_val)
+    behaviour_fns = generate_behaviour_fns(kind, widget_type, rust_crate_val, rust_constructor_val)
     new_fn = generate_new(type_string, container, props, is_composite, has_render_3)
     command_fns = generate_commands(commands)
     prop_names_fn = generate_prop_names(props)
@@ -345,11 +346,11 @@ defmodule Julep.Extension do
   # -- Code generation helpers (called at compile time) ----------------------
 
   @doc false
-  def generate_behaviour_fns(kind, type_string, rust_crate_val, rust_constructor_val) do
+  def generate_behaviour_fns(kind, widget_type, rust_crate_val, rust_constructor_val) do
     base =
       quote do
         @impl Julep.Extension
-        def type_names, do: [unquote(type_string)]
+        def type_names, do: [unquote(widget_type)]
       end
 
     if kind == :native_widget do
@@ -381,11 +382,11 @@ defmodule Julep.Extension do
 
   @doc false
   def generate_new(type_string, container, props, is_composite, has_render_3) do
-    prop_extract = generate_prop_extraction(props)
-
     if is_composite do
-      generate_composite_new(type_string, container, props, prop_extract, has_render_3)
+      prop_validation = generate_prop_validation(props)
+      generate_composite_new(type_string, container, props, prop_validation, has_render_3)
     else
+      prop_extract = generate_prop_extraction(props)
       generate_node_new(type_string, container, prop_extract)
     end
   end
@@ -403,7 +404,7 @@ defmodule Julep.Extension do
         def new(id, opts \\ []) when is_binary(id) do
           {children, opts} = Keyword.pop(opts, :do, [])
           children = List.wrap(children)
-          {_a11y_val, opts} = Keyword.pop(opts, :a11y)
+          {a11y_val, opts} = Keyword.pop(opts, :a11y)
 
           prop_defaults = unquote(Macro.escape(prop_struct_fields))
           unquote(prop_extract)
@@ -415,6 +416,9 @@ defmodule Julep.Extension do
             end)
             |> Enum.reject(fn {_name, val} -> is_nil(val) end)
             |> Map.new()
+
+          props_map =
+            if a11y_val, do: Map.put(props_map, :a11y, a11y_val), else: props_map
 
           render(id, props_map, children)
         end
@@ -423,7 +427,7 @@ defmodule Julep.Extension do
       quote do
         @spec new(id :: String.t(), opts :: keyword()) :: Julep.Iced.ui_node()
         def new(id, opts \\ []) when is_binary(id) do
-          {_a11y_val, opts} = Keyword.pop(opts, :a11y)
+          {a11y_val, opts} = Keyword.pop(opts, :a11y)
 
           prop_defaults = unquote(Macro.escape(prop_struct_fields))
           unquote(prop_extract)
@@ -435,6 +439,9 @@ defmodule Julep.Extension do
             end)
             |> Enum.reject(fn {_name, val} -> is_nil(val) end)
             |> Map.new()
+
+          props_map =
+            if a11y_val, do: Map.put(props_map, :a11y, a11y_val), else: props_map
 
           render(id, props_map)
         end
@@ -496,6 +503,20 @@ defmodule Julep.Extension do
             node
           end
         end
+      end
+    end
+  end
+
+  @doc false
+  def generate_prop_validation(props) do
+    known_names = Enum.map(props, fn {name, _type, _opts} -> name end) ++ [:a11y, :do]
+
+    quote do
+      unknown_keys = Keyword.keys(opts) -- unquote(known_names)
+
+      if unknown_keys != [] do
+        raise ArgumentError,
+              "unknown option(s) #{inspect(unknown_keys)} for #{inspect(__MODULE__)}.new"
       end
     end
   end
@@ -650,6 +671,7 @@ defmodule Julep.Extension do
   defp guard_for_type(var, :atom), do: quote(do: is_atom(unquote(var)))
   defp guard_for_type(var, :map), do: quote(do: is_map(unquote(var)))
   defp guard_for_type(var, :list), do: quote(do: is_list(unquote(var)))
+  defp guard_for_type(var, {:list, _}), do: quote(do: is_list(unquote(var)))
   defp guard_for_type(_var, _), do: quote(do: true)
 
   # Build a simple AST variable reference from an atom name.

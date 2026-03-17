@@ -7,7 +7,8 @@ defmodule Julep.Test.ExtensionEvents do
   the optional `Julep.Extension.sim_events/3` callback can register here
   so their custom widget types participate in sim testing.
 
-  Registration is keyed by type name (string) in `:persistent_term`.
+  Registration is keyed by type name string in `:persistent_term`.
+  Type names returned by extensions as atoms are converted to strings for lookup.
   """
 
   require Logger
@@ -25,7 +26,7 @@ defmodule Julep.Test.ExtensionEvents do
   """
   @spec register(module :: module()) :: :ok
   def register(module) do
-    for type_name <- module.type_names() do
+    for type_name <- Enum.map(module.type_names(), &to_string/1) do
       case :persistent_term.get({__MODULE__, type_name}, :not_found) do
         :not_found ->
           :persistent_term.put({__MODULE__, type_name}, module)

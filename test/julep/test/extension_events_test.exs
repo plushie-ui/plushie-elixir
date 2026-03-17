@@ -24,7 +24,7 @@ defmodule Julep.Test.ExtensionEventsTest do
     def rust_constructor, do: "terminal::Extension::new()"
 
     @impl true
-    def type_names, do: ["terminal"]
+    def type_names, do: [:terminal]
 
     @impl true
     def sim_events(:click, %Element{id: id}, []),
@@ -47,7 +47,7 @@ defmodule Julep.Test.ExtensionEventsTest do
     def rust_constructor, do: "chart::Extension::new()"
 
     @impl true
-    def type_names, do: ["bar_chart", "line_chart"]
+    def type_names, do: [:bar_chart, :line_chart]
 
     @impl true
     def sim_events(:click, %Element{id: id, props: props}, []) do
@@ -70,7 +70,7 @@ defmodule Julep.Test.ExtensionEventsTest do
     def rust_constructor, do: "minimal::Extension::new()"
 
     @impl true
-    def type_names, do: ["minimal_widget"]
+    def type_names, do: [:minimal_widget]
   end
 
   # -- Helpers ----------------------------------------------------------------
@@ -113,7 +113,7 @@ defmodule Julep.Test.ExtensionEventsTest do
       # Fake module that claims the same type name as TerminalExtension.
       # Deliberately omits @behaviour so register_all won't discover it.
       defmodule ConflictingTerminal do
-        def type_names, do: ["terminal"]
+        def type_names, do: [:terminal]
       end
 
       assert_raise RuntimeError, ~r/collision/i, fn ->

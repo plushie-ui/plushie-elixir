@@ -138,8 +138,8 @@ defmodule Julep.ExtensionMacroTest do
   # --- 1. native_widget behaviour callbacks ---------------------------------
 
   describe "native_widget behaviour callbacks" do
-    test "type_names/0 returns the widget type as a string list" do
-      assert GaugeExtension.type_names() == ["gauge"]
+    test "type_names/0 returns the widget type as an atom list" do
+      assert GaugeExtension.type_names() == [:gauge]
     end
 
     test "native_crate/0 returns the crate path" do
