@@ -76,6 +76,28 @@ defmodule Julep.Extension do
           end
         end
       end
+
+  ### render/2 vs render/3
+
+  Use `render/2` for leaf composites that do not accept children:
+
+      def render(id, props) do
+        %{id: id, type: "text", props: %{"content" => props.label}, children: []}
+      end
+
+  Use `render/3` for container composites that accept children. When
+  `container: true` is set on the `widget` declaration, you must define
+  `render/3` (not `render/2`):
+
+      def render(id, props, children) do
+        %{id: id, type: "column", props: %{}, children: children}
+      end
+
+  ## Special options
+
+  All widgets automatically support the `:a11y` option for accessibility
+  overrides (see `Julep.Iced.A11y`). It does not need to be declared via
+  `prop` -- it is always available on `new/2`.
   """
 
   # -- Behaviour callbacks ---------------------------------------------------
@@ -106,6 +128,11 @@ defmodule Julep.Extension do
   @optional_callbacks [sim_events: 3, native_crate: 0, rust_constructor: 0]
 
   # -- __using__ -------------------------------------------------------------
+
+  defmacro __using__(kind) when kind not in [:native_widget, :widget] do
+    raise ArgumentError,
+      "Julep.Extension kind must be :native_widget or :widget, got: #{inspect(kind)}"
+  end
 
   defmacro __using__(kind) when kind in [:native_widget, :widget] do
     common =
@@ -156,6 +183,12 @@ defmodule Julep.Extension do
   @doc "Declares the widget type name. Pass `container: true` for container widgets."
   defmacro widget(type_name, opts \\ []) do
     quote do
+      if @_extension_widget do
+        IO.warn(
+          "widget type already declared as #{inspect(@_extension_widget)}, overwriting with #{inspect(unquote(type_name))}"
+        )
+      end
+
       @_extension_widget unquote(type_name)
       @_extension_container unquote(Keyword.get(opts, :container, false))
     end
@@ -191,6 +224,21 @@ defmodule Julep.Extension do
 
   # -- __before_compile__ ----------------------------------------------------
 
+  @known_prop_types [
+    :number,
+    :string,
+    :boolean,
+    :color,
+    :length,
+    :padding,
+    :alignment,
+    :style,
+    :font,
+    :atom,
+    :map,
+    :any
+  ]
+
   defmacro __before_compile__(env) do
     kind = Module.get_attribute(env.module, :_extension_kind)
     widget_type = Module.get_attribute(env.module, :_extension_widget)
@@ -221,12 +269,65 @@ defmodule Julep.Extension do
       end
     end
 
+    # Validate prop types
+    for {name, type, _opts} <- props do
+      valid =
+        case type do
+          t when t in @known_prop_types -> true
+          {:list, inner} when inner in @known_prop_types -> true
+          _ -> false
+        end
+
+      unless valid do
+        raise CompileError,
+          file: env.file,
+          line: 0,
+          description:
+            "unsupported prop type #{inspect(type)} for prop #{inspect(name)} in #{inspect(env.module)}. Supported: #{inspect(@known_prop_types)}"
+      end
+    end
+
+    # Validate command param types
+    for {cmd_name, params} <- commands, {param_name, type} <- params do
+      valid =
+        case type do
+          t when t in @known_prop_types -> true
+          {:list, inner} when inner in @known_prop_types -> true
+          _ -> false
+        end
+
+      unless valid do
+        raise CompileError,
+          file: env.file,
+          line: 0,
+          description:
+            "unsupported command param type #{inspect(type)} for param #{inspect(param_name)} in command #{inspect(cmd_name)}"
+      end
+    end
+
+    # Warn on duplicate prop names
+    prop_names = Enum.map(props, fn {name, _, _} -> name end)
+    dupes = prop_names -- Enum.uniq(prop_names)
+
+    if dupes != [] do
+      IO.warn("duplicate prop names in #{inspect(env.module)}: #{inspect(Enum.uniq(dupes))}")
+    end
+
     rust_crate_val = Module.get_attribute(env.module, :_rust_crate)
     rust_constructor_val = Module.get_attribute(env.module, :_rust_constructor)
     has_render_2 = Module.defines?(env.module, {:render, 2})
     has_render_3 = Module.defines?(env.module, {:render, 3})
     is_composite = has_render_2 or has_render_3
     type_string = Atom.to_string(widget_type)
+
+    # Validate container: true requires render/3, not render/2
+    if container and has_render_2 and not has_render_3 do
+      raise CompileError,
+        file: env.file,
+        line: 0,
+        description:
+          "#{inspect(env.module)} declares container: true but defines render/2 instead of render/3. Container widgets must accept children via render/3."
+    end
 
     behaviour_fns = generate_behaviour_fns(kind, type_string, rust_crate_val, rust_constructor_val)
     new_fn = generate_new(type_string, container, props, is_composite, has_render_3)

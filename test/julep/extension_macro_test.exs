@@ -436,4 +436,123 @@ defmodule Julep.ExtensionMacroTest do
       refute function_exported?(BadgeWidget, :rust_constructor, 0)
     end
   end
+
+  # --- compile-time validation ------------------------------------------------
+
+  describe "compile-time validation" do
+    test "raises on invalid kind" do
+      assert_raise ArgumentError, ~r/must be :native_widget or :widget/, fn ->
+        Code.compile_string("""
+        defmodule TestInvalidKind do
+          use Julep.Extension, :invalid
+        end
+        """)
+      end
+    end
+
+    test "raises on unknown prop type" do
+      assert_raise CompileError, ~r/unsupported prop type.*:bogus_type/, fn ->
+        Code.compile_string("""
+        defmodule TestBadPropType do
+          use Julep.Extension, :widget
+
+          widget :bad_prop
+          prop :foo, :bogus_type
+        end
+        """)
+      end
+    end
+
+    test "raises on unknown command param type" do
+      assert_raise CompileError, ~r/unsupported command param type.*:widget_ref/, fn ->
+        Code.compile_string("""
+        defmodule TestBadCmdType do
+          use Julep.Extension, :native_widget
+
+          widget :bad_cmd
+          rust_crate "native/bad"
+          rust_constructor "bad::Bad::new()"
+          command :do_thing, target: :widget_ref
+        end
+        """)
+      end
+    end
+
+    test "allows {:list, inner} prop type" do
+      Code.compile_string("""
+      defmodule TestListPropType do
+        use Julep.Extension, :widget
+
+        widget :list_prop
+        prop :items, {:list, :string}
+      end
+      """)
+    end
+
+    test "rejects {:list, bad_inner} prop type" do
+      assert_raise CompileError, ~r/unsupported prop type.*\{:list, :widget_ref\}/, fn ->
+        Code.compile_string("""
+        defmodule TestBadListPropType do
+          use Julep.Extension, :widget
+
+          widget :bad_list_prop
+          prop :items, {:list, :widget_ref}
+        end
+        """)
+      end
+    end
+
+    test "warns on duplicate prop names" do
+      warnings =
+        ExUnit.CaptureIO.capture_io(:stderr, fn ->
+          Code.compile_string("""
+          defmodule TestDuplicateProps do
+            use Julep.Extension, :widget
+
+            widget :dup_props
+            prop :foo, :string
+            prop :foo, :number
+          end
+          """)
+        end)
+
+      assert warnings =~ "duplicate prop names"
+      assert warnings =~ "foo"
+    end
+
+    test "container: true with render/2 raises CompileError" do
+      assert_raise CompileError, ~r/container: true but defines render\/2/, fn ->
+        Code.compile_string("""
+        defmodule TestContainerRender2 do
+          use Julep.Extension, :widget
+
+          widget :bad_container, container: true
+
+          prop :label, :string
+
+          def render(id, props) do
+            %{id: id, type: "text", props: props, children: []}
+          end
+        end
+        """)
+      end
+    end
+
+    test "duplicate widget declaration warns" do
+      warnings =
+        ExUnit.CaptureIO.capture_io(:stderr, fn ->
+          Code.compile_string("""
+          defmodule TestDuplicateWidget do
+            use Julep.Extension, :widget
+
+            widget :first_name
+            widget :second_name
+          end
+          """)
+        end)
+
+      assert warnings =~ "widget type already declared"
+      assert warnings =~ "first_name"
+    end
+  end
 end
