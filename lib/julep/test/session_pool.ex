@@ -88,6 +88,25 @@ defmodule Julep.Test.SessionPool do
     end
   end
 
+  @doc """
+  Send an interact message that may produce intermediate steps.
+
+  Unlike `send_message/4`, this does NOT block for the response.
+  Instead, `interact_step` and `interact_response` messages are
+  forwarded to the session owner via `{:julep_pool_event, ...}`.
+  The caller is responsible for handling them in `handle_info`.
+
+  Returns the request ID assigned to this interact.
+  """
+  @spec send_interact(
+          pool :: GenServer.server(),
+          session_id(),
+          msg :: map()
+        ) :: String.t()
+  def send_interact(pool, session_id, msg) do
+    GenServer.call(pool, {:send_interact, session_id, msg})
+  end
+
   # -- GenServer Implementation -----------------------------------------------
 
   defmodule State do
@@ -164,6 +183,16 @@ defmodule Julep.Test.SessionPool do
     {:noreply, %{state | pending: pending, next_id: state.next_id + 1}}
   end
 
+  def handle_call({:send_interact, session_id, msg}, _from, state) do
+    req_id = "req_#{state.next_id}"
+    msg = msg |> Map.put(:session, session_id) |> Map.put(:id, req_id)
+    send_to_port(state.port, state.format, msg)
+
+    # Don't add to pending -- interact_step and interact_response
+    # will be forwarded to the session owner via forward_to_session.
+    {:reply, req_id, %{state | next_id: state.next_id + 1}}
+  end
+
   @impl GenServer
   def handle_cast({:send, session_id, msg}, state) do
     msg = Map.put(msg, :session, session_id)
@@ -224,6 +253,17 @@ defmodule Julep.Test.SessionPool do
   end
 
   defp dispatch_response(%{"type" => "hello"}, state), do: state
+
+  # Interact step: an intermediate event batch during iterative
+  # interact. Forward to the session owner for processing (the owner
+  # will send back a snapshot). Do NOT consume the pending entry --
+  # more steps or the final interact_response may follow.
+  defp dispatch_response(
+         %{"type" => "interact_step", "session" => session_id} = msg,
+         state
+       ) do
+    forward_to_session(session_id, msg, state)
+  end
 
   defp dispatch_response(%{"type" => _type, "session" => session_id, "id" => req_id} = msg, state) do
     key = {session_id, req_id}

@@ -119,7 +119,7 @@ defmodule Julep.Test.Backend.Pooled do
 
   defmodule State do
     @moduledoc false
-    defstruct [:pool, :session_id, :app, :opts, :model, :tree]
+    defstruct [:pool, :session_id, :app, :opts, :model, :tree, :interact_from]
   end
 
   @impl GenServer
@@ -208,25 +208,22 @@ defmodule Julep.Test.Backend.Pooled do
     handle_call({:interact, "submit", selector, %{value: value}}, from, state)
   end
 
-  def handle_call({:interact, action, selector, payload}, _from, state) do
+  def handle_call({:interact, action, selector, payload}, from, state) do
     sel = if selector, do: encode_selector(selector), else: %{}
 
-    case SessionPool.send_message(
-           state.pool,
-           state.session_id,
-           %{type: "interact", action: action, selector: sel, payload: payload},
-           "interact_response"
-         ) do
-      {:ok, %{"events" => events}} ->
-        state = dispatch_events(events, state)
-        {:reply, :ok, state}
+    # Send the interact via send_interact (non-blocking). The
+    # renderer will send back zero or more interact_step messages
+    # (each triggering a snapshot round-trip) followed by a final
+    # interact_response. All arrive via handle_info. We store
+    # `from` to reply when the final interact_response arrives.
+    _req_id =
+      SessionPool.send_interact(
+        state.pool,
+        state.session_id,
+        %{type: "interact", action: action, selector: sel, payload: payload}
+      )
 
-      {:ok, _} ->
-        {:reply, :ok, state}
-
-      {:error, reason} ->
-        raise "renderer error during interact(#{action}): #{inspect(reason)}"
-    end
+    {:noreply, %{state | interact_from: from}}
   end
 
   def handle_call({:snapshot, name}, _from, state) do
@@ -299,6 +296,35 @@ defmodule Julep.Test.Backend.Pooled do
   end
 
   @impl GenServer
+  def handle_info(
+        {:julep_pool_event, _session_id, %{"type" => "interact_step", "events" => events}},
+        state
+      ) do
+    # Iterative interact: the renderer emitted an intermediate batch
+    # of events and is waiting for us to process them and send back
+    # an updated tree. dispatch_events processes each event through
+    # app.update, re-renders, and sends a snapshot -- completing the
+    # round-trip so the renderer can continue to the next iced event.
+    state = dispatch_events(events, state)
+    {:noreply, state}
+  end
+
+  def handle_info(
+        {:julep_pool_event, _session_id, %{"type" => "interact_response", "events" => events}},
+        state
+      ) do
+    # Final interact response. Process any remaining events (for
+    # synthetic-only actions that don't use interact_step), then
+    # reply to the blocked caller.
+    state = dispatch_events(events, state)
+
+    if state.interact_from do
+      GenServer.reply(state.interact_from, :ok)
+    end
+
+    {:noreply, %{state | interact_from: nil}}
+  end
+
   def handle_info({:julep_pool_event, _session_id, event}, state) do
     state = dispatch_event_map(event, state)
     {:noreply, state}
