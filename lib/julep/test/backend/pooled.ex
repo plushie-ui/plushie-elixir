@@ -36,6 +36,7 @@ defmodule Julep.Test.Backend.Pooled do
   use GenServer
 
   alias Julep.Test.Backend.CommandProcessor
+  alias Julep.Test.Backend.EventDecoder
   alias Julep.Test.SessionPool
 
   # -- Backend callbacks (delegate to GenServer) --------------------------------
@@ -329,7 +330,7 @@ defmodule Julep.Test.Backend.Pooled do
   end
 
   defp dispatch_event_map(%{"family" => family, "id" => id} = event, state) do
-    elixir_event = decode_event(family, id, event)
+    elixir_event = EventDecoder.decode(family, id, event)
 
     if elixir_event do
       {model, commands} = CommandProcessor.dispatch_update(state.app, state.model, elixir_event)
@@ -343,32 +344,6 @@ defmodule Julep.Test.Backend.Pooled do
   end
 
   defp dispatch_event_map(_event, state), do: state
-
-  defp decode_event("click", id, _event),
-    do: %Julep.Event.Widget{type: :click, id: id}
-
-  defp decode_event("input", id, %{"value" => value}),
-    do: %Julep.Event.Widget{type: :input, id: id, value: value}
-
-  defp decode_event("submit", id, %{"value" => value}),
-    do: %Julep.Event.Widget{type: :submit, id: id, value: value}
-
-  defp decode_event("toggle", id, %{"value" => value}),
-    do: %Julep.Event.Widget{type: :toggle, id: id, value: value}
-
-  defp decode_event("select", id, %{"value" => value}),
-    do: %Julep.Event.Widget{type: :select, id: id, value: value}
-
-  defp decode_event("slide", id, %{"value" => value}),
-    do: %Julep.Event.Widget{type: :slide, id: id, value: value}
-
-  defp decode_event("slide_release", id, %{"value" => value}),
-    do: %Julep.Event.Widget{type: :slide_release, id: id, value: value}
-
-  defp decode_event("paste", id, %{"value" => value}),
-    do: %Julep.Event.Widget{type: :paste, id: id, value: value}
-
-  defp decode_event(_family, _id, _event), do: nil
 
   defp encode_selector(nil), do: %{}
   defp encode_selector("#" <> id), do: %{"by" => "id", "value" => id}

@@ -19,9 +19,7 @@ defmodule Julep.Test.Backend.RendererBase do
 
       require Logger
 
-      alias Julep.Event.Key, as: KeyEvent
-      alias Julep.Event.Mouse, as: MouseEvent
-      alias Julep.Event.Widget, as: WidgetEvent
+      # Event decoding is handled by Julep.Test.Backend.EventDecoder.
       alias Julep.Test.Backend.CommandProcessor
       alias Julep.Test.Element
       alias Julep.Test.Screenshot
@@ -351,7 +349,7 @@ defmodule Julep.Test.Backend.RendererBase do
       end
 
       defp dispatch_event(%{"family" => type, "id" => id} = event, state) do
-        elixir_event = decode_event(type, id, event)
+        elixir_event = Julep.Test.Backend.EventDecoder.decode(type, id, event)
 
         {model, commands} =
           CommandProcessor.dispatch_update(state.app, state.model, elixir_event)
@@ -365,158 +363,6 @@ defmodule Julep.Test.Backend.RendererBase do
       end
 
       defp dispatch_event(_event, state), do: state
-
-      defp decode_event("click", id, _event), do: %WidgetEvent{type: :click, id: id}
-
-      defp decode_event("input", id, event),
-        do: %WidgetEvent{type: :input, id: id, value: event["value"] || ""}
-
-      defp decode_event("submit", id, event),
-        do: %WidgetEvent{type: :submit, id: id, value: event["value"] || ""}
-
-      defp decode_event("toggle", id, event),
-        do: %WidgetEvent{type: :toggle, id: id, value: event["value"] || false}
-
-      defp decode_event("select", id, event),
-        do: %WidgetEvent{type: :select, id: id, value: event["value"] || ""}
-
-      defp decode_event("slide", id, event),
-        do: %WidgetEvent{type: :slide, id: id, value: event["value"] || 0}
-
-      defp decode_event("key_press", _id, event) do
-        decode_key_event(:press, event)
-      end
-
-      defp decode_event("key_release", _id, event) do
-        decode_key_event(:release, event)
-      end
-
-      defp decode_event("cursor_moved", _id, event) do
-        data = event["data"] || %{}
-        x = data["x"] || 0
-        y = data["y"] || 0
-        %MouseEvent{type: :moved, x: x, y: y}
-      end
-
-      defp decode_event("sort", id, event) do
-        data = event["data"] || %{}
-        %WidgetEvent{type: :sort, id: id, data: data["column"]}
-      end
-
-      defp decode_event("scroll", _id, event) do
-        data = event["data"] || %{}
-        %MouseEvent{type: :scroll, delta_x: data["delta_x"] || 0, delta_y: data["delta_y"] || 0}
-      end
-
-      defp decode_event("paste", id, event),
-        do: %WidgetEvent{type: :paste, id: id, value: event["value"] || ""}
-
-      defp decode_event("pane_focus_cycle", id, _event),
-        do: %WidgetEvent{type: :pane_focus_cycle, id: id}
-
-      defp decode_event("canvas_press", id, event) do
-        data = event["data"] || %{}
-        %WidgetEvent{type: :canvas_press, id: id, data: data}
-      end
-
-      defp decode_event("canvas_release", id, event) do
-        data = event["data"] || %{}
-        %WidgetEvent{type: :canvas_release, id: id, data: data}
-      end
-
-      defp decode_event("canvas_move", id, event) do
-        data = event["data"] || %{}
-        %WidgetEvent{type: :canvas_move, id: id, data: data}
-      end
-
-      @known_extension_events ~w(extension_event extension_error)a
-
-      defp decode_event(type, id, _event) do
-        case Enum.find(@known_extension_events, fn a -> Atom.to_string(a) == type end) do
-          nil ->
-            Logger.warning("unknown event type #{inspect(type)} for widget #{inspect(id)}")
-
-            {:unknown_event, id, type}
-
-          atom ->
-            {atom, id}
-        end
-      end
-
-      defp decode_key_event(type, event) do
-        # OutgoingEvent format: key is in "value", modifiers may be in
-        # "data"."modifiers" (scripting) or top-level "modifiers" (daemon).
-        key_str = event["value"] || ""
-
-        modifiers_map =
-          cond do
-            is_map(event["modifiers"]) ->
-              event["modifiers"]
-
-            is_map(event["data"]) and is_map(event["data"]["modifiers"]) ->
-              event["data"]["modifiers"]
-
-            true ->
-              %{}
-          end
-
-        key = parse_wire_key_name(key_str)
-
-        modifiers = %Julep.KeyModifiers{
-          ctrl: modifiers_map["ctrl"] || false,
-          shift: modifiers_map["shift"] || false,
-          alt: modifiers_map["alt"] || false,
-          logo: modifiers_map["logo"] || false,
-          command: modifiers_map["ctrl"] || false
-        }
-
-        text =
-          if is_binary(key) and byte_size(key) == 1,
-            do: key,
-            else: nil
-
-        %KeyEvent{
-          type: type,
-          key: key,
-          modified_key: key,
-          physical_key: nil,
-          location: :standard,
-          modifiers: modifiers,
-          text: text,
-          repeat: false
-        }
-      end
-
-      @wire_key_names %{
-        "enter" => :enter,
-        "escape" => :escape,
-        "tab" => :tab,
-        "backspace" => :backspace,
-        "space" => :space,
-        "delete" => :delete,
-        "up" => :up,
-        "down" => :down,
-        "left" => :left,
-        "right" => :right,
-        "home" => :home,
-        "end" => :end,
-        "page_up" => :page_up,
-        "page_down" => :page_down,
-        "f1" => :f1,
-        "f2" => :f2,
-        "f3" => :f3,
-        "f4" => :f4,
-        "f5" => :f5,
-        "f6" => :f6,
-        "f7" => :f7,
-        "f8" => :f8,
-        "f9" => :f9,
-        "f10" => :f10,
-        "f11" => :f11,
-        "f12" => :f12
-      }
-
-      defp parse_wire_key_name(name), do: Map.get(@wire_key_names, name, name)
 
       # -- Helpers --
 

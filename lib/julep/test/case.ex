@@ -17,9 +17,14 @@ defmodule Julep.Test.Case do
 
   The backend is resolved from environment or application config:
 
-  - `JULEP_TEST_BACKEND` env var (e.g. `headless`, `full`, `pooled_mock`, `pooled_headless`)
+  - `JULEP_TEST_BACKEND` env var (e.g. `pooled_mock`, `headless`, `full`)
   - `config :julep, :test_backend, :pooled_mock` application config
   - Default: `:pooled_mock` (pooled backend with mock renderer)
+
+  The pooled backend shares a single renderer process across tests
+  via `Julep.Test.SessionPool`. The renderer mode (mock vs headless)
+  is set when the pool is started, not per-backend. See
+  `Julep.Test.SessionPool` for details.
   """
 
   use ExUnit.CaseTemplate
@@ -53,7 +58,6 @@ defmodule Julep.Test.Case do
 
   @backend_map %{
     pooled_mock: Julep.Test.Backend.Pooled,
-    pooled_headless: Julep.Test.Backend.Pooled,
     headless: Julep.Test.Backend.Headless,
     full: Julep.Test.Backend.Full
   }
