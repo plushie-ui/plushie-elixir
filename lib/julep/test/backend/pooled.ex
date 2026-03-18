@@ -70,10 +70,10 @@ defmodule Julep.Test.Backend.Pooled do
     do: GenServer.call(pid, {:interact, "type_text", selector, %{text: text}})
 
   @impl Julep.Test.Backend
-  def submit(pid, selector), do: GenServer.call(pid, {:interact, "submit", selector, %{}})
+  def submit(pid, selector), do: GenServer.call(pid, {:submit, selector})
 
   @impl Julep.Test.Backend
-  def toggle(pid, selector), do: GenServer.call(pid, {:interact, "toggle", selector, %{}})
+  def toggle(pid, selector), do: GenServer.call(pid, {:toggle, selector})
 
   @impl Julep.Test.Backend
   def select(pid, selector, value),
@@ -172,6 +172,35 @@ defmodule Julep.Test.Backend.Pooled do
       {:ok, %{"data" => data}} -> {:reply, data, state}
       _ -> {:reply, nil, state}
     end
+  end
+
+  def handle_call({:toggle, selector}, from, state) do
+    # Toggle needs the current value from the tree to invert it.
+    # The --mock renderer doesn't track widget state, so we compute
+    # the correct value from our local tree.
+    element = find_in_tree(state.tree, selector)
+
+    value =
+      case element do
+        %{type: "checkbox", props: props} -> !(props["is_checked"] || false)
+        %{type: "toggler", props: props} -> !(props["is_toggled"] || false)
+        _ -> true
+      end
+
+    handle_call({:interact, "toggle", selector, %{value: value}}, from, state)
+  end
+
+  def handle_call({:submit, selector}, from, state) do
+    # Submit needs the current text value from the tree.
+    element = find_in_tree(state.tree, selector)
+
+    value =
+      case element do
+        %{props: props} -> props["value"] || ""
+        _ -> ""
+      end
+
+    handle_call({:interact, "submit", selector, %{value: value}}, from, state)
   end
 
   def handle_call({:interact, action, selector, payload}, _from, state) do
@@ -276,6 +305,24 @@ defmodule Julep.Test.Backend.Pooled do
   defp render_tree(app, model) do
     app.view(model) |> Julep.Tree.normalize()
   end
+
+  # Walk the local tree to find a node by selector. Used by toggle/submit
+  # to read the current widget state before sending the interact message.
+  defp find_in_tree(tree, selector) do
+    case selector do
+      "#" <> id -> find_node_by_id(tree, id)
+      _ -> nil
+    end
+  end
+
+  defp find_node_by_id(nil, _id), do: nil
+  defp find_node_by_id(%{id: id} = node, target_id) when id == target_id, do: node
+
+  defp find_node_by_id(%{children: children}, target_id) when is_list(children) do
+    Enum.find_value(children, fn child -> find_node_by_id(child, target_id) end)
+  end
+
+  defp find_node_by_id(_, _), do: nil
 
   defp dispatch_events(events, state) when is_list(events) do
     Enum.reduce(events, state, &dispatch_event_map(&1, &2))

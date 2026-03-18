@@ -281,37 +281,37 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
     end
   end
 
-  describe "integration with mock backend" do
-    test "mock backend processes init commands" do
-      alias Julep.Test.Backend.Mock
+  describe "integration with pooled backend" do
+    test "pooled backend processes init commands" do
+      alias Julep.Test.Backend.Pooled
 
-      {:ok, pid} = Mock.start(InitCommandApp)
-      model = Mock.model(pid)
+      {:ok, pid} = Pooled.start(InitCommandApp, pool: Julep.TestPool)
+      model = Pooled.model(pid)
 
       assert model.data == "loaded"
-      Mock.stop(pid)
+      Pooled.stop(pid)
     end
 
-    test "mock backend processes single command from init" do
-      alias Julep.Test.Backend.Mock
+    test "pooled backend processes single command from init" do
+      alias Julep.Test.Backend.Pooled
 
-      {:ok, pid} = Mock.start(SingleCommandApp)
-      model = Mock.model(pid)
+      {:ok, pid} = Pooled.start(SingleCommandApp, pool: Julep.TestPool)
+      model = Pooled.model(pid)
 
       assert model.initialized == true
-      Mock.stop(pid)
+      Pooled.stop(pid)
     end
 
-    test "mock backend processes commands from interactions" do
-      alias Julep.Test.Backend.Mock
+    test "pooled backend processes commands from interactions" do
+      alias Julep.Test.Backend.Pooled
 
-      {:ok, pid} = Mock.start(AsyncApp)
-      Mock.click(pid, "#fetch")
-      model = Mock.model(pid)
+      {:ok, pid} = Pooled.start(AsyncApp, pool: Julep.TestPool)
+      Pooled.click(pid, "#fetch")
+      model = Pooled.model(pid)
 
       assert model.status == :done
       assert model.data == {:ok, "fetched"}
-      Mock.stop(pid)
+      Pooled.stop(pid)
     end
   end
 end

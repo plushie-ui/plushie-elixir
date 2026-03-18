@@ -10,4 +10,12 @@ for ext <- ~w(julep_sparkline julep_hex_view julep_code_view julep_plot julep_ti
   end
 end
 
+# Start the shared session pool for pooled test backends.
+{:ok, _} =
+  Julep.Test.SessionPool.start_link(
+    name: Julep.TestPool,
+    mode: :mock,
+    max_sessions: System.schedulers_online() * 2
+  )
+
 ExUnit.start()

@@ -2,9 +2,9 @@ defmodule Julep.Test.CrossBackendTest do
   @moduledoc """
   Cross-backend equivalence tests.
 
-  Defines shared assertions and runs them against the Mock backend by default.
-  To run against Headless, set JULEP_TEST_BACKEND=headless (requires
-  `cargo build`).
+  Defines shared assertions and runs them against the Pooled backend by
+  default. To run against Headless, set JULEP_TEST_BACKEND=headless
+  (requires `cargo build`).
 
   These tests verify that core app lifecycle, event handling, and tree
   structure behave identically regardless of which backend executes them.
@@ -14,7 +14,7 @@ defmodule Julep.Test.CrossBackendTest do
 
   alias Julep.Event.Widget
 
-  alias Julep.Test.Backend.Mock
+  alias Julep.Test.Backend.Pooled
 
   # -- Test apps -----------------------------------------------------------
 
@@ -91,7 +91,7 @@ defmodule Julep.Test.CrossBackendTest do
 
   defp start_backend(app) do
     backend = resolve_backend()
-    {:ok, pid} = backend.start(app)
+    {:ok, pid} = backend.start(app, pool: Julep.TestPool)
 
     on_exit(fn ->
       if Process.alive?(pid), do: backend.stop(pid)
@@ -104,7 +104,7 @@ defmodule Julep.Test.CrossBackendTest do
     case System.get_env("JULEP_TEST_BACKEND") do
       "headless" -> Julep.Test.Backend.Headless
       "full" -> Julep.Test.Backend.Full
-      _ -> Mock
+      _ -> Pooled
     end
   end
 

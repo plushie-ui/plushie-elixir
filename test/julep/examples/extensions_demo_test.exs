@@ -1,8 +1,6 @@
 defmodule Julep.Examples.ExtensionsDemoTest do
   use ExUnit.Case, async: false
 
-  import ExUnit.CaptureLog
-
   # Skip all tests when extension packages aren't compiled into the project.
   # The demo module references JulepSparkline, JulepHexView, etc. which live
   # in separate repos (julep_sparkline, julep_hex_view, ...).
@@ -136,37 +134,6 @@ defmodule Julep.Examples.ExtensionsDemoTest do
 
         assert length(all_types) == length(Enum.uniq(all_types)),
                "type name collision: #{inspect(all_types)}"
-      end
-    end
-
-    # ---------------------------------------------------------------------------
-    # Extension discovery
-    # ---------------------------------------------------------------------------
-
-    describe "extension discovery" do
-      test "register_all finds all 5 extensions" do
-        capture_log(fn -> Julep.Test.ExtensionEvents.register_all() end)
-
-        for type <- ["sparkline", "hex_view", "code_view", "plot", "timeline"] do
-          assert :persistent_term.get({Julep.Test.ExtensionEvents, type}, :missing) != :missing,
-                 "extension type #{type} not registered"
-        end
-      end
-    end
-
-    # ---------------------------------------------------------------------------
-    # sim_events dispatch
-    # ---------------------------------------------------------------------------
-
-    describe "sim_events" do
-      test "plot click produces click event matching real protocol" do
-        element = %Julep.Test.Element{type: "plot", id: "p1", props: %{}, children: []}
-        assert {:ok, {:click, "p1"}} = JulepPlot.sim_events(:click, element, [])
-      end
-
-      test "timeline click produces click event matching real protocol" do
-        element = %Julep.Test.Element{type: "timeline", id: "t1", props: %{}, children: []}
-        assert {:ok, {:click, "t1"}} = JulepTimeline.sim_events(:click, element, [])
       end
     end
 

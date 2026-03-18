@@ -3,31 +3,6 @@ defmodule Julep.Test.ScreenshotTest do
 
   alias Julep.Test.Screenshot
 
-  defmodule TestApp do
-    @behaviour Julep.App
-
-    def init(_opts), do: %{count: 0}
-    def update(model, _event), do: model
-
-    def view(_model),
-      do: %{id: "main", type: "window", props: %{"title" => "Test"}, children: []}
-  end
-
-  describe "mock backend screenshot" do
-    test "returns empty stub" do
-      {:ok, pid} = Julep.Test.Backend.Mock.start(TestApp)
-
-      screenshot = Julep.Test.Backend.Mock.screenshot(pid, "test_shot")
-
-      assert %Screenshot{} = screenshot
-      assert screenshot.hash == ""
-      assert screenshot.size == {0, 0}
-      assert screenshot.rgba_data == nil
-
-      Julep.Test.Backend.Mock.stop(pid)
-    end
-  end
-
   describe "save_png/2" do
     test "writes valid PNG for known RGBA data" do
       # 2x2 red square (RGBA: 255,0,0,255 for each pixel)

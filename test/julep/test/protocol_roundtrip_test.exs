@@ -3,7 +3,7 @@ defmodule Julep.Test.ProtocolRoundtripTest do
 
   alias Julep.Event.Widget
 
-  alias Julep.Test.Backend.Mock
+  alias Julep.Test.Backend.Pooled
   alias Julep.Test.Element
 
   # A test app that renders one of every major widget type so we can verify
@@ -74,10 +74,10 @@ defmodule Julep.Test.ProtocolRoundtripTest do
   end
 
   setup do
-    {:ok, pid} = Mock.start(WidgetApp)
+    {:ok, pid} = Pooled.start(WidgetApp, pool: Julep.TestPool)
 
     on_exit(fn ->
-      if Process.alive?(pid), do: Mock.stop(pid)
+      if Process.alive?(pid), do: Pooled.stop(pid)
     end)
 
     {:ok, pid: pid}
@@ -87,16 +87,16 @@ defmodule Julep.Test.ProtocolRoundtripTest do
 
   describe "button" do
     test "renders with correct type", %{pid: pid} do
-      element = Mock.find(pid, "#save")
+      element = Pooled.find(pid, "#save")
       assert %Element{} = element
       assert element.type == "button"
     end
 
     test "click dispatches event and updates model state", %{pid: pid} do
-      # The app ignores click events but the Mock must dispatch without error.
-      Mock.click(pid, "#save")
+      # The app ignores click events but the backend must dispatch without error.
+      Pooled.click(pid, "#save")
       # No crash means the round-trip worked.
-      assert Mock.model(pid).text_value == ""
+      assert Pooled.model(pid).text_value == ""
     end
   end
 
@@ -104,13 +104,13 @@ defmodule Julep.Test.ProtocolRoundtripTest do
 
   describe "text" do
     test "renders with correct type and content prop", %{pid: pid} do
-      element = Mock.find(pid, "#title")
+      element = Pooled.find(pid, "#title")
       assert element.type == "text"
       assert element.props["content"] == "Widget Gallery"
     end
 
     test "findable by text content", %{pid: pid} do
-      element = Mock.find(pid, "Widget Gallery")
+      element = Pooled.find(pid, "Widget Gallery")
       assert %Element{id: "title"} = element
     end
   end
@@ -119,23 +119,23 @@ defmodule Julep.Test.ProtocolRoundtripTest do
 
   describe "text_input" do
     test "renders with correct type", %{pid: pid} do
-      element = Mock.find(pid, "#search")
+      element = Pooled.find(pid, "#search")
       assert element.type == "text_input"
     end
 
     test "value prop reflects model", %{pid: pid} do
-      element = Mock.find(pid, "#search")
+      element = Pooled.find(pid, "#search")
       assert element.props["value"] == ""
     end
 
     test "type_text dispatches input event and model updates", %{pid: pid} do
-      Mock.type_text(pid, "#search", "hello")
-      assert Mock.model(pid).text_value == "hello"
+      Pooled.type_text(pid, "#search", "hello")
+      assert Pooled.model(pid).text_value == "hello"
     end
 
     test "tree reflects updated value after input", %{pid: pid} do
-      Mock.type_text(pid, "#search", "julep")
-      element = Mock.find(pid, "#search")
+      Pooled.type_text(pid, "#search", "julep")
+      element = Pooled.find(pid, "#search")
       assert element.props["value"] == "julep"
     end
   end
@@ -144,14 +144,14 @@ defmodule Julep.Test.ProtocolRoundtripTest do
 
   describe "checkbox" do
     test "renders with correct type", %{pid: pid} do
-      element = Mock.find(pid, "#agree")
+      element = Pooled.find(pid, "#agree")
       assert element.type == "checkbox"
     end
 
     test "toggle dispatches event without error", %{pid: pid} do
-      Mock.toggle(pid, "#agree")
+      Pooled.toggle(pid, "#agree")
       # App ignores toggle but the round-trip must complete cleanly.
-      assert is_map(Mock.model(pid))
+      assert is_map(Pooled.model(pid))
     end
   end
 
@@ -159,18 +159,18 @@ defmodule Julep.Test.ProtocolRoundtripTest do
 
   describe "slider" do
     test "renders with correct type", %{pid: pid} do
-      element = Mock.find(pid, "#volume")
+      element = Pooled.find(pid, "#volume")
       assert element.type == "slider"
     end
 
     test "value prop present in tree", %{pid: pid} do
-      element = Mock.find(pid, "#volume")
+      element = Pooled.find(pid, "#volume")
       assert element.props["value"] == 50
     end
 
     test "slide dispatches event without error", %{pid: pid} do
-      Mock.slide(pid, "#volume", 75)
-      assert is_map(Mock.model(pid))
+      Pooled.slide(pid, "#volume", 75)
+      assert is_map(Pooled.model(pid))
     end
   end
 
@@ -178,18 +178,18 @@ defmodule Julep.Test.ProtocolRoundtripTest do
 
   describe "pick_list" do
     test "renders with correct type", %{pid: pid} do
-      element = Mock.find(pid, "#country")
+      element = Pooled.find(pid, "#country")
       assert element.type == "pick_list"
     end
 
     test "options prop present in tree", %{pid: pid} do
-      element = Mock.find(pid, "#country")
+      element = Pooled.find(pid, "#country")
       assert element.props["options"] == ["NZ", "AU", "GB"]
     end
 
     test "select dispatches event and model updates", %{pid: pid} do
-      Mock.select(pid, "#country", "NZ")
-      assert Mock.model(pid).selected == "NZ"
+      Pooled.select(pid, "#country", "NZ")
+      assert Pooled.model(pid).selected == "NZ"
     end
   end
 
@@ -197,22 +197,22 @@ defmodule Julep.Test.ProtocolRoundtripTest do
 
   describe "layout nesting" do
     test "row renders with correct type", %{pid: pid} do
-      element = Mock.find(pid, "#layout")
+      element = Pooled.find(pid, "#layout")
       assert element.type == "row"
     end
 
     test "nested container is findable", %{pid: pid} do
-      element = Mock.find(pid, "#inner")
+      element = Pooled.find(pid, "#inner")
       assert element.type == "container"
     end
 
     test "deeply nested text is findable", %{pid: pid} do
-      element = Mock.find(pid, "#nested")
+      element = Pooled.find(pid, "#nested")
       assert element.type == "text"
     end
 
     test "find by text traverses nested children", %{pid: pid} do
-      element = Mock.find(pid, "nested")
+      element = Pooled.find(pid, "nested")
       assert %Element{id: "nested"} = element
     end
   end

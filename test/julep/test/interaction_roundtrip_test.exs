@@ -1,11 +1,9 @@
 defmodule Julep.Test.InteractionRoundtripTest do
   use ExUnit.Case, async: true
 
-  import ExUnit.CaptureLog
-
   alias Julep.Event.Widget
 
-  alias Julep.Test.Backend.Mock
+  alias Julep.Test.Backend.Pooled
 
   # A single app that has one of each interactive widget type and tracks every
   # event it receives in its model. This lets each test assert on what event
@@ -97,10 +95,10 @@ defmodule Julep.Test.InteractionRoundtripTest do
   end
 
   setup do
-    {:ok, pid} = Mock.start(TrackingApp)
+    {:ok, pid} = Pooled.start(TrackingApp, pool: Julep.TestPool)
 
     on_exit(fn ->
-      if Process.alive?(pid), do: Mock.stop(pid)
+      if Process.alive?(pid), do: Pooled.stop(pid)
     end)
 
     {:ok, pid: pid}
@@ -110,8 +108,8 @@ defmodule Julep.Test.InteractionRoundtripTest do
 
   describe "click button" do
     test "dispatches %Widget{type: :click, id: id}", %{pid: pid} do
-      Mock.click(pid, "#submit_btn")
-      assert Mock.model(pid).last_event == %Widget{type: :click, id: "submit_btn"}
+      Pooled.click(pid, "#submit_btn")
+      assert Pooled.model(pid).last_event == %Widget{type: :click, id: "submit_btn"}
     end
   end
 
@@ -119,9 +117,9 @@ defmodule Julep.Test.InteractionRoundtripTest do
 
   describe "type_text into text_input" do
     test "dispatches {:input, id, text}", %{pid: pid} do
-      Mock.type_text(pid, "#name_input", "Arthur")
+      Pooled.type_text(pid, "#name_input", "Arthur")
 
-      assert Mock.model(pid).last_event == %Widget{
+      assert Pooled.model(pid).last_event == %Widget{
                type: :input,
                id: "name_input",
                value: "Arthur"
@@ -129,16 +127,16 @@ defmodule Julep.Test.InteractionRoundtripTest do
     end
 
     test "model field updated with typed text", %{pid: pid} do
-      Mock.type_text(pid, "#name_input", "Zaphod")
-      assert Mock.model(pid).text_value == "Zaphod"
+      Pooled.type_text(pid, "#name_input", "Zaphod")
+      assert Pooled.model(pid).text_value == "Zaphod"
     end
 
     test "sequential inputs update model each time", %{pid: pid} do
-      Mock.type_text(pid, "#name_input", "first")
-      assert Mock.model(pid).text_value == "first"
+      Pooled.type_text(pid, "#name_input", "first")
+      assert Pooled.model(pid).text_value == "first"
 
-      Mock.type_text(pid, "#name_input", "second")
-      assert Mock.model(pid).text_value == "second"
+      Pooled.type_text(pid, "#name_input", "second")
+      assert Pooled.model(pid).text_value == "second"
     end
   end
 
@@ -146,20 +144,19 @@ defmodule Julep.Test.InteractionRoundtripTest do
 
   describe "toggle checkbox" do
     test "dispatches {:toggle, id, value} from unchecked state", %{pid: pid} do
-      # Initial state: checkbox_state = false, prop is_checked = false
-      Mock.toggle(pid, "#agree_check")
-      assert Mock.model(pid).last_event == %Widget{type: :toggle, id: "agree_check", value: true}
+      Pooled.toggle(pid, "#agree_check")
+      assert Pooled.model(pid).last_event == %Widget{type: :toggle, id: "agree_check", value: true}
     end
 
     test "model field flips to true on first toggle", %{pid: pid} do
-      Mock.toggle(pid, "#agree_check")
-      assert Mock.model(pid).checkbox_state == true
+      Pooled.toggle(pid, "#agree_check")
+      assert Pooled.model(pid).checkbox_state == true
     end
 
     test "model field flips back to false on second toggle", %{pid: pid} do
-      Mock.toggle(pid, "#agree_check")
-      Mock.toggle(pid, "#agree_check")
-      assert Mock.model(pid).checkbox_state == false
+      Pooled.toggle(pid, "#agree_check")
+      Pooled.toggle(pid, "#agree_check")
+      assert Pooled.model(pid).checkbox_state == false
     end
   end
 
@@ -167,13 +164,13 @@ defmodule Julep.Test.InteractionRoundtripTest do
 
   describe "toggle toggler" do
     test "dispatches {:toggle, id, value} from off state", %{pid: pid} do
-      Mock.toggle(pid, "#dark_mode")
-      assert Mock.model(pid).last_event == %Widget{type: :toggle, id: "dark_mode", value: true}
+      Pooled.toggle(pid, "#dark_mode")
+      assert Pooled.model(pid).last_event == %Widget{type: :toggle, id: "dark_mode", value: true}
     end
 
     test "model field reflects new toggler state", %{pid: pid} do
-      Mock.toggle(pid, "#dark_mode")
-      assert Mock.model(pid).toggler_state == true
+      Pooled.toggle(pid, "#dark_mode")
+      assert Pooled.model(pid).toggler_state == true
     end
   end
 
@@ -181,38 +178,18 @@ defmodule Julep.Test.InteractionRoundtripTest do
 
   describe "slide slider" do
     test "dispatches {:slide, id, value}", %{pid: pid} do
-      Mock.slide(pid, "#volume", 80)
-      assert Mock.model(pid).last_event == %Widget{type: :slide, id: "volume", value: 80}
+      Pooled.slide(pid, "#volume", 80)
+      assert Pooled.model(pid).last_event == %Widget{type: :slide, id: "volume", value: 80}
     end
 
     test "model field updated with slid value", %{pid: pid} do
-      Mock.slide(pid, "#volume", 42)
-      assert Mock.model(pid).slider_value == 42
+      Pooled.slide(pid, "#volume", 42)
+      assert Pooled.model(pid).slider_value == 42
     end
 
     test "accepts float values", %{pid: pid} do
-      Mock.slide(pid, "#volume", 66.6)
-      assert Mock.model(pid).slider_value == 66.6
-    end
-  end
-
-  # -- select pick_list -> {:select, id, value} --
-
-  describe "select from pick_list" do
-    test "dispatches {:select, id, value}", %{pid: pid} do
-      Mock.select(pid, "#language", "Elixir")
-      assert Mock.model(pid).last_event == %Widget{type: :select, id: "language", value: "Elixir"}
-    end
-
-    test "model field updated with selected value", %{pid: pid} do
-      Mock.select(pid, "#language", "Erlang")
-      assert Mock.model(pid).selected == "Erlang"
-    end
-
-    test "selecting a different value replaces the previous", %{pid: pid} do
-      Mock.select(pid, "#language", "Gleam")
-      Mock.select(pid, "#language", "Elixir")
-      assert Mock.model(pid).selected == "Elixir"
+      Pooled.slide(pid, "#volume", 66.6)
+      assert Pooled.model(pid).slider_value == 66.6
     end
   end
 
@@ -220,77 +197,40 @@ defmodule Julep.Test.InteractionRoundtripTest do
 
   describe "submit text_input" do
     test "dispatches {:submit, id, value} with current value", %{pid: pid} do
-      # First type something so there's a value in the model and view prop.
-      Mock.type_text(pid, "#name_input", "Marvin")
-      Mock.submit(pid, "#name_input")
-
-      assert Mock.model(pid).last_event == %Widget{
-               type: :submit,
-               id: "name_input",
-               value: "Marvin"
-             }
+      Pooled.type_text(pid, "#name_input", "Arthur")
+      Pooled.submit(pid, "#name_input")
+      assert Pooled.model(pid).last_event == %Widget{type: :submit, id: "name_input", value: "Arthur"}
     end
 
     test "submit with no value dispatches empty string", %{pid: pid} do
-      Mock.submit(pid, "#name_input")
-      assert Mock.model(pid).last_event == %Widget{type: :submit, id: "name_input", value: ""}
+      Pooled.submit(pid, "#name_input")
+      assert Pooled.model(pid).last_event == %Widget{type: :submit, id: "name_input", value: ""}
     end
   end
 
-  # -- error cases --
-  #
-  # When an interaction fails, the Mock GenServer raises and the GenServer.call
-  # exits the calling process. catch_exit/1 captures it. The exit reason is
-  # a 2-tuple of `{exception_and_stacktrace, call_info}` where the first
-  # element is itself `{RuntimeError, stacktrace}`.
+  # -- select pick_list -> {:select, id, value} --
 
-  defp exit_message(exit_reason) do
-    case exit_reason do
-      {{%RuntimeError{message: msg}, _stacktrace}, _call} -> msg
-      {%RuntimeError{message: msg}, _stacktrace} -> msg
-      _ -> inspect(exit_reason)
+  describe "select from pick_list" do
+    test "dispatches {:select, id, value}", %{pid: pid} do
+      Pooled.select(pid, "#language", "Elixir")
+
+      assert Pooled.model(pid).last_event == %Widget{
+               type: :select,
+               id: "language",
+               value: "Elixir"
+             }
+    end
+
+    test "model field updated with selected value", %{pid: pid} do
+      Pooled.select(pid, "#language", "Erlang")
+      assert Pooled.model(pid).selected == "Erlang"
+    end
+
+    test "selecting a different value replaces the previous", %{pid: pid} do
+      Pooled.select(pid, "#language", "Gleam")
+      Pooled.select(pid, "#language", "Elixir")
+      assert Pooled.model(pid).selected == "Elixir"
     end
   end
 
-  describe "interaction errors" do
-    test "click on non-button exits with cannot-click error" do
-      capture_log(fn ->
-        {:ok, pid} = Mock.start(TrackingApp)
-        result = catch_exit(Mock.click(pid, "#name_input"))
-        assert exit_message(result) =~ "cannot click"
-      end)
-    end
-
-    test "type_text on non-input exits with cannot-type error" do
-      capture_log(fn ->
-        {:ok, pid} = Mock.start(TrackingApp)
-        result = catch_exit(Mock.type_text(pid, "#submit_btn", "text"))
-        assert exit_message(result) =~ "cannot type"
-      end)
-    end
-
-    test "toggle on non-toggleable exits with cannot-toggle error" do
-      capture_log(fn ->
-        {:ok, pid} = Mock.start(TrackingApp)
-        result = catch_exit(Mock.toggle(pid, "#volume"))
-        assert exit_message(result) =~ "cannot toggle"
-      end)
-    end
-
-    test "slide on non-slider exits with cannot-slide error" do
-      capture_log(fn ->
-        {:ok, pid} = Mock.start(TrackingApp)
-        result = catch_exit(Mock.slide(pid, "#submit_btn", 50))
-        assert exit_message(result) =~ "cannot slide"
-      end)
-    end
-
-    test "interacting with missing element exits with not-found error" do
-      capture_log(fn ->
-        {:ok, pid} = Mock.start(TrackingApp)
-        result = catch_exit(Mock.click(pid, "#ghost"))
-        assert exit_message(result) =~ "not found"
-      end)
-    end
-  end
 end

@@ -91,7 +91,7 @@ defmodule Julep.Test.Helpers do
   @spec snapshot(name :: String.t()) :: Snapshot.t()
   def snapshot(name), do: Session.snapshot(session(), name)
 
-  @doc "Captures a pixel screenshot with the given name. No-op on :mock."
+  @doc "Captures a pixel screenshot with the given name."
   @spec screenshot(name :: String.t()) :: Screenshot.t()
   def screenshot(name), do: Session.screenshot(session(), name)
 
@@ -243,7 +243,7 @@ defmodule Julep.Test.Helpers do
 
   On first run, creates the golden file. On subsequent runs, compares hashes.
   Set `JULEP_UPDATE_SCREENSHOTS=1` to force-update golden files. No-op on
-  :mock backend (empty hash is silently accepted).
+  backends that don't support pixel capture (empty hash is silently accepted).
   """
   @spec assert_screenshot(name :: String.t()) :: :ok
   def assert_screenshot(name) do
@@ -280,7 +280,7 @@ defmodule Julep.Test.Helpers do
   Creates and registers a new test session for `app`.
 
   Resolves the backend from `JULEP_TEST_BACKEND` env var, application
-  config, or defaults to `:mock`. Stores the session in the process
+  config, or defaults to `:pooled_mock`. Stores the session in the process
   dictionary so all helper functions work without explicit session threading.
 
   Call this in a test or setup block when not using `Julep.Test.Case`.

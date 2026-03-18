@@ -116,21 +116,7 @@ defmodule Julep.Extension do
   @doc "Full Rust constructor expression for the extension."
   @callback rust_constructor() :: String.t()
 
-  @doc """
-  Infers the mock event produced by a verb applied to an extension widget.
-
-  Called by the mock test backend when the built-in `EventMap` does not
-  recognize the widget type. Return `{:ok, event_tuple}` to handle,
-  `{:error, reason}` for a known-bad interaction, or `:not_handled`
-  to fall through to the default error.
-
-  Optional -- extensions that don't implement this callback will behave
-  as if they returned `:not_handled` for every verb.
-  """
-  @callback sim_events(verb :: atom(), element :: Julep.Test.Element.t(), args :: list()) ::
-              {:ok, tuple()} | {:error, String.t()} | :not_handled
-
-  @optional_callbacks [sim_events: 3, native_crate: 0, rust_constructor: 0]
+  @optional_callbacks [native_crate: 0, rust_constructor: 0]
 
   # -- __using__ -------------------------------------------------------------
 
