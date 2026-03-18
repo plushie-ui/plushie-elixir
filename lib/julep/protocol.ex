@@ -1410,7 +1410,7 @@ defmodule Julep.Protocol do
   # -- System query responses --
 
   defp dispatch(%{
-         "type" => "query_response",
+         "type" => "widget_query_response",
          "kind" => "system_info",
          "tag" => tag,
          "data" => data
@@ -1419,7 +1419,7 @@ defmodule Julep.Protocol do
   end
 
   defp dispatch(%{
-         "type" => "query_response",
+         "type" => "widget_query_response",
          "kind" => "system_theme",
          "tag" => tag,
          "data" => data
@@ -1428,7 +1428,7 @@ defmodule Julep.Protocol do
   end
 
   defp dispatch(%{
-         "type" => "query_response",
+         "type" => "widget_query_response",
          "kind" => "image_list",
          "tag" => tag,
          "data" => data
@@ -1437,7 +1437,7 @@ defmodule Julep.Protocol do
   end
 
   defp dispatch(%{
-         "type" => "query_response",
+         "type" => "widget_query_response",
          "kind" => "tree_hash",
          "tag" => tag,
          "data" => data
@@ -1446,7 +1446,7 @@ defmodule Julep.Protocol do
   end
 
   defp dispatch(%{
-         "type" => "query_response",
+         "type" => "widget_query_response",
          "kind" => "find_focused",
          "tag" => tag,
          "data" => data

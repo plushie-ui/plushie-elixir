@@ -145,7 +145,12 @@ defmodule Julep.Test.InteractionRoundtripTest do
   describe "toggle checkbox" do
     test "dispatches {:toggle, id, value} from unchecked state", %{pid: pid} do
       Pooled.toggle(pid, "#agree_check")
-      assert Pooled.model(pid).last_event == %Widget{type: :toggle, id: "agree_check", value: true}
+
+      assert Pooled.model(pid).last_event == %Widget{
+               type: :toggle,
+               id: "agree_check",
+               value: true
+             }
     end
 
     test "model field flips to true on first toggle", %{pid: pid} do
@@ -199,7 +204,12 @@ defmodule Julep.Test.InteractionRoundtripTest do
     test "dispatches {:submit, id, value} with current value", %{pid: pid} do
       Pooled.type_text(pid, "#name_input", "Arthur")
       Pooled.submit(pid, "#name_input")
-      assert Pooled.model(pid).last_event == %Widget{type: :submit, id: "name_input", value: "Arthur"}
+
+      assert Pooled.model(pid).last_event == %Widget{
+               type: :submit,
+               id: "name_input",
+               value: "Arthur"
+             }
     end
 
     test "submit with no value dispatches empty string", %{pid: pid} do
@@ -232,5 +242,4 @@ defmodule Julep.Test.InteractionRoundtripTest do
       assert Pooled.model(pid).selected == "Elixir"
     end
   end
-
 end

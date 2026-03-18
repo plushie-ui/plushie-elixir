@@ -219,7 +219,7 @@ defmodule Julep.Test.Backend.RendererBase do
         {id, state} = next_id(state)
 
         send_message(state.port, state.format, %{
-          type: "snapshot_capture",
+          type: "tree_hash",
           id: id,
           name: name,
           theme: %{},
@@ -290,7 +290,7 @@ defmodule Julep.Test.Backend.RendererBase do
         end
       end
 
-      defp handle_response(%{"type" => "snapshot_response", "id" => id} = resp, state) do
+      defp handle_response(%{"type" => "tree_hash_response", "id" => id} = resp, state) do
         case Map.pop(state.pending, id) do
           {nil, _} ->
             state
