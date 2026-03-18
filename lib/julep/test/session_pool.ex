@@ -79,7 +79,7 @@ defmodule Julep.Test.SessionPool do
           session_id(),
           msg :: map(),
           expect_response :: String.t() | nil
-        ) :: {:ok, map()} | :ok
+        ) :: {:ok, map()} | {:error, term()} | :ok
   def send_message(pool, session_id, msg, expect_response \\ nil) do
     if expect_response do
       GenServer.call(pool, {:send, session_id, msg, expect_response}, 30_000)
@@ -225,15 +225,15 @@ defmodule Julep.Test.SessionPool do
 
   defp dispatch_response(%{"type" => "hello"}, state), do: state
 
-  defp dispatch_response(%{"type" => type, "session" => session_id, "id" => req_id} = msg, state) do
+  defp dispatch_response(%{"type" => _type, "session" => session_id, "id" => req_id} = msg, state) do
     key = {session_id, req_id}
 
-    case Map.pop(state.pending, key) do
-      {{^type, from}, pending} ->
+    case Map.fetch(state.pending, key) do
+      {:ok, {_expected_type, from}} ->
         GenServer.reply(from, {:ok, msg})
-        %{state | pending: pending}
+        %{state | pending: Map.delete(state.pending, key)}
 
-      {nil, _} ->
+      :error ->
         # Not a pending response -- might be an event. Forward to session owner.
         forward_to_session(session_id, msg, state)
     end

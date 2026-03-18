@@ -75,15 +75,25 @@ defmodule Julep.Test.Backend.EventDecoder do
     %MouseEvent{type: :scroll, delta_x: data["delta_x"] || 0, delta_y: data["delta_y"] || 0}
   end
 
+  # Extension event families. Using ~w()a ensures these atoms exist
+  # at compile time so String.to_existing_atom won't raise at runtime.
+  @extension_families MapSet.new(~w(extension_event extension_error)a)
+
   def decode(type, id, _event) do
-    # Check for known extension event families.
-    known = ~w(extension_event extension_error)
-    if type in known do
-      %WidgetEvent{type: String.to_existing_atom(type), id: id}
+    atom = try_existing_atom(type)
+
+    if atom && MapSet.member?(@extension_families, atom) do
+      %WidgetEvent{type: atom, id: id}
     else
       Logger.debug("unhandled event family #{inspect(type)} for widget #{inspect(id)}")
       nil
     end
+  end
+
+  defp try_existing_atom(str) do
+    String.to_existing_atom(str)
+  rescue
+    ArgumentError -> nil
   end
 
   # -- Key event decoding ------------------------------------------------------
