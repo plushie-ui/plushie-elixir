@@ -63,8 +63,23 @@ defmodule Julep.Protocol do
   @spec decode(data :: binary(), format :: format()) :: {:ok, map()} | {:error, term()}
   def decode(data, format \\ :msgpack), do: deserialize(data, format)
 
-  defp serialize(map, :json), do: Jason.encode!(map) <> "\n"
-  defp serialize(map, :msgpack), do: Msgpax.pack!(map, iodata: false)
+  defp serialize(map, format) do
+    # Every wire message carries a session field. Default to empty
+    # string (single-session mode). Multiplexed callers set the
+    # session before encoding. Use the key style that matches the map
+    # (atom keys for most messages, string keys for extension commands).
+    map =
+      if Map.has_key?(map, "type") do
+        Map.put_new(map, "session", "")
+      else
+        Map.put_new(map, :session, "")
+      end
+
+    case format do
+      :json -> Jason.encode!(map) <> "\n"
+      :msgpack -> Msgpax.pack!(map, iodata: false)
+    end
+  end
 
   defp deserialize(data, :json), do: Jason.decode(data)
   defp deserialize(data, :msgpack), do: Msgpax.unpack(data)
@@ -79,7 +94,7 @@ defmodule Julep.Protocol do
   ## Example
 
       iex> Julep.Protocol.encode_settings(%{antialiasing: true, default_text_size: 16}, :json)
-      ~s({"settings":{"antialiasing":true,"default_text_size":16,"protocol_version":1},"type":"settings"}) <> "\\n"
+      ~s({"session":"","settings":{"antialiasing":true,"default_text_size":16,"protocol_version":1},"type":"settings"}) <> "\\n"
   """
   @spec encode_settings(settings :: map(), format :: format()) :: binary()
   def encode_settings(settings, format \\ :msgpack) when is_map(settings) do
@@ -93,7 +108,7 @@ defmodule Julep.Protocol do
   ## Example
 
       iex> Julep.Protocol.encode_snapshot(%{tag: "text", value: "hello"}, :json)
-      ~s({"tree":{"tag":"text","value":"hello"},"type":"snapshot"}) <> "\\n"
+      ~s({"session":"","tree":{"tag":"text","value":"hello"},"type":"snapshot"}) <> "\\n"
   """
   @spec encode_snapshot(tree :: term(), format :: format()) :: binary()
   def encode_snapshot(tree, format \\ :msgpack) do
@@ -108,7 +123,7 @@ defmodule Julep.Protocol do
   ## Example
 
       iex> Julep.Protocol.encode_patch([], :json)
-      ~s({"ops":[],"type":"patch"}) <> "\\n"
+      ~s({"ops":[],"session":"","type":"patch"}) <> "\\n"
   """
   @spec encode_patch(ops :: list(), format :: format()) :: binary()
   def encode_patch(ops, format \\ :msgpack) do
@@ -121,7 +136,7 @@ defmodule Julep.Protocol do
   ## Example
 
       iex> Julep.Protocol.encode_effect_request("req_1", "http", %{url: "https://example.com"})
-      ~s({"id":"req_1","kind":"http","payload":{"url":"https://example.com"},"type":"effect_request"}) <> "\\n"
+      ~s({"id":"req_1","kind":"http","payload":{"url":"https://example.com"},"session":"","type":"effect_request"}) <> "\\n"
   """
   @spec encode_effect_request(
           id :: String.t(),
@@ -139,7 +154,7 @@ defmodule Julep.Protocol do
   ## Example
 
       iex> Julep.Protocol.encode_widget_op("focus", %{target: "username"})
-      ~s({"op":"focus","payload":{"target":"username"},"type":"widget_op"}) <> "\\n"
+      ~s({"op":"focus","payload":{"target":"username"},"session":"","type":"widget_op"}) <> "\\n"
   """
   @spec encode_widget_op(op :: String.t(), payload :: map(), format :: format()) :: binary()
   def encode_widget_op(op, payload, format \\ :msgpack) do
@@ -153,7 +168,7 @@ defmodule Julep.Protocol do
   ## Example
 
       iex> Julep.Protocol.encode_subscription_register("on_key_press", "keys")
-      ~s({"kind":"on_key_press","tag":"keys","type":"subscription_register"}) <> "\\n"
+      ~s({"kind":"on_key_press","session":"","tag":"keys","type":"subscription_register"}) <> "\\n"
   """
   @spec encode_subscription_register(kind :: String.t(), tag :: String.t(), format :: format()) ::
           binary()
@@ -167,7 +182,7 @@ defmodule Julep.Protocol do
   ## Example
 
       iex> Julep.Protocol.encode_subscription_unregister("on_key_press")
-      ~s({"kind":"on_key_press","type":"subscription_unregister"}) <> "\\n"
+      ~s({"kind":"on_key_press","session":"","type":"subscription_unregister"}) <> "\\n"
   """
   @spec encode_subscription_unregister(kind :: String.t(), format :: format()) :: binary()
   def encode_subscription_unregister(kind, format \\ :msgpack) do
@@ -187,7 +202,7 @@ defmodule Julep.Protocol do
   ## Example
 
       iex> Julep.Protocol.encode_image_op("create_image", %{handle: "logo", data: <<1, 2, 3>>}, :json)
-      ~s({"data":"AQID","handle":"logo","op":"create_image","type":"image_op"}) <> "\\n"
+      ~s({"data":"AQID","handle":"logo","op":"create_image","session":"","type":"image_op"}) <> "\\n"
   """
   @spec encode_image_op(op :: String.t(), payload :: map(), format :: format()) :: binary()
   def encode_image_op(op, payload, format \\ :msgpack) do
@@ -279,7 +294,7 @@ defmodule Julep.Protocol do
   ## Example
 
       iex> Julep.Protocol.encode_window_op("open", "main", %{title: "My App"})
-      ~s({"op":"open","settings":{"title":"My App"},"type":"window_op","window_id":"main"}) <> "\\n"
+      ~s({"op":"open","session":"","settings":{"title":"My App"},"type":"window_op","window_id":"main"}) <> "\\n"
   """
   @spec encode_window_op(
           op :: String.t(),
