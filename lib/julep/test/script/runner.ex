@@ -9,7 +9,7 @@ defmodule Julep.Test.Script.Runner do
   alias Julep.Test.{Screenshot, Script, Session, Snapshot}
 
   @backend_map %{
-    sim: Julep.Test.Backend.Sim,
+    mock: Julep.Test.Backend.Mock,
     headless: Julep.Test.Backend.Headless,
     full: Julep.Test.Backend.Full
   }
@@ -24,7 +24,7 @@ defmodule Julep.Test.Script.Runner do
           :ok | {:error, [{Script.instruction(), String.t()}]}
   def run(%{header: header, instructions: instructions}, opts \\ []) do
     replay? = Keyword.get(opts, :replay, false)
-    backend_mod = Map.get(@backend_map, header.backend, Julep.Test.Backend.Sim)
+    backend_mod = Map.get(@backend_map, header.backend, Julep.Test.Backend.Mock)
     session = Session.start(header.app, backend: backend_mod)
 
     try do

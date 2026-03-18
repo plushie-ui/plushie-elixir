@@ -83,13 +83,13 @@ defmodule Julep.Test.SnapshotTest do
     end
 
     test "uses backend-scoped golden file when backend is set", %{golden_dir: dir} do
-      snap = %Snapshot{name: "scoped", hash: "sim_hash", size: {0, 0}, backend: :sim}
-      golden_path = Path.join(dir, "scoped.sim.sha256")
+      snap = %Snapshot{name: "scoped", hash: "mock_hash", size: {0, 0}, backend: :mock}
+      golden_path = Path.join(dir, "scoped.mock.sha256")
 
       refute File.exists?(golden_path)
       assert :ok = Snapshot.assert_match(snap, dir)
       assert File.exists?(golden_path)
-      assert File.read!(golden_path) == "sim_hash"
+      assert File.read!(golden_path) == "mock_hash"
 
       # Different backend creates a separate golden file
       snap2 = %Snapshot{name: "scoped", hash: "headless_hash", size: {0, 0}, backend: :headless}

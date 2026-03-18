@@ -16,7 +16,7 @@ defmodule Julep.Test.HeadlessTest do
   end
 
   # These tests are run via the standard test suite with JULEP_TEST_BACKEND=headless.
-  # The headless backend implements the same Backend behaviour as Sim, so the
+  # The headless backend implements the same Backend behaviour as Mock, so the
   # entire test suite (examples, widget tests, etc.) runs against it unchanged.
   #
   # This file exists as a marker. Individual headless-specific tests can be

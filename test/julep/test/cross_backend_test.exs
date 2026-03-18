@@ -2,7 +2,7 @@ defmodule Julep.Test.CrossBackendTest do
   @moduledoc """
   Cross-backend equivalence tests.
 
-  Defines shared assertions and runs them against the Sim backend by default.
+  Defines shared assertions and runs them against the Mock backend by default.
   To run against Headless, set JULEP_TEST_BACKEND=headless (requires
   `cargo build`).
 
@@ -14,7 +14,7 @@ defmodule Julep.Test.CrossBackendTest do
 
   alias Julep.Event.Widget
 
-  alias Julep.Test.Backend.Sim
+  alias Julep.Test.Backend.Mock
 
   # -- Test apps -----------------------------------------------------------
 
@@ -104,7 +104,7 @@ defmodule Julep.Test.CrossBackendTest do
     case System.get_env("JULEP_TEST_BACKEND") do
       "headless" -> Julep.Test.Backend.Headless
       "full" -> Julep.Test.Backend.Full
-      _ -> Sim
+      _ -> Mock
     end
   end
 

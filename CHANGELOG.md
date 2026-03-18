@@ -67,7 +67,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - `mix julep.inspect` for headless tree output
 - Snapshot testing helpers (`assert_tree_snapshot`)
 - Screenshot testing (pixel capture with golden file comparison)
-- Three-backend test framework: Sim (pure Elixir), Headless (Rust + iced_test),
+- Three-backend test framework: Mock (pure Elixir), Headless (Rust + iced_test),
   Full (real iced::daemon windows)
 - `Julep.Test.Case` ExUnit template with backend resolution
 - `Julep.Test.Helpers` -- find, click, assert_text, assert_snapshot

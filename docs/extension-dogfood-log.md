@@ -21,7 +21,7 @@ extension system.
   Replaced with working code that chains `.extension()` calls and
   delegates to `julep_bin::run()`.
 
-- **Sim backend couldn't test extension widgets.** `EventMap` returned
+- **Mock backend couldn't test extension widgets.** `EventMap` returned
   errors for unknown types with no extension fallback. Added optional
   `sim_events/3` callback to `Julep.Extension`, created
   `Julep.Test.ExtensionEvents` registry, and updated all catch-all
@@ -200,7 +200,7 @@ packages. All have been fixed.
 
 ### Additional fixes from second audit
 
-- **Sim vs real event shape mismatch.** `sim_events/3` in julep_plot and
+- **Mock vs real event shape mismatch.** `sim_events/3` in julep_plot and
   julep_timeline returned custom event tuples (`{:plot_click, id, ...}`,
   `{:timeline_click, id, ...}`) that don't match the real protocol
   dispatch. The Rust renderer emits `Message::Event(id, data, "click")`
@@ -244,6 +244,6 @@ resolved. `docs/extensions.md` covers:
 - `canvas::Cache` and `GenerationCounter` pattern
 - iced 0.14 Widget trait migration guide
 - Prop helpers reference
-- Testing guidance (Elixir, Rust, render smoke tests, sim backend)
+- Testing guidance (Elixir, Rust, render smoke tests, mock backend)
 - `ExtensionCaches` API reference
 - Panic isolation behavior

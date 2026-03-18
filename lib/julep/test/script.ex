@@ -10,7 +10,7 @@ defmodule Julep.Test.Script do
       app: MyApp.Counter
       viewport: 800x600
       theme: dark
-      backend: sim
+      backend: mock
       -----
       click "#increment"
       expect "Count: 1"
@@ -88,7 +88,7 @@ defmodule Julep.Test.Script do
         app = Module.concat([app_str])
         viewport = parse_viewport(Map.get(fields, "viewport", "800x600"))
         theme = Map.get(fields, "theme", "dark")
-        backend = parse_backend(Map.get(fields, "backend", "sim"))
+        backend = parse_backend(Map.get(fields, "backend", "mock"))
         {:ok, %{app: app, viewport: viewport, theme: theme, backend: backend}}
 
       :error ->
@@ -103,10 +103,10 @@ defmodule Julep.Test.Script do
     end
   end
 
-  defp parse_backend("sim"), do: :sim
+  defp parse_backend("mock"), do: :mock
   defp parse_backend("headless"), do: :headless
   defp parse_backend("full"), do: :full
-  defp parse_backend(_), do: :sim
+  defp parse_backend(_), do: :mock
 
   defp parse_instructions(text) do
     instructions =

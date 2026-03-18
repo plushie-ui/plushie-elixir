@@ -2,7 +2,7 @@
 
 ## Philosophy
 
-Progressive fidelity: test your app's logic with fast, pure-Elixir sim tests;
+Progressive fidelity: test your app's logic with fast, pure-Elixir mock tests;
 promote to headless or full backends when you need wire-protocol verification
 or pixel-accurate screenshots. See
 [ADR-0008](decisions/0008-test-framework-architecture.md) for design rationale.
@@ -133,7 +133,7 @@ end
 ```
 
 `Julep.Test.Case` starts a session, imports all helper functions, and tears
-down on exit. The default backend is `:sim` -- no Rust binary, no display
+down on exit. The default backend is `:mock` -- no Rust binary, no display
 server, no setup.
 
 
@@ -251,7 +251,7 @@ All of the following are imported by `use Julep.Test.Case`:
 | `tree()` | Returns the current normalized UI tree |
 | `text(element)` | Extract text content from an Element struct |
 | `snapshot(name)` | Capture a structural tree snapshot |
-| `screenshot(name)` | Capture a pixel screenshot (no-op on sim) |
+| `screenshot(name)` | Capture a pixel screenshot (no-op on mock) |
 | `save_screenshot(name)` | Capture screenshot and save as PNG to `test/screenshots/` |
 | `assert_text(selector, expected)` | Assert widget contains expected text |
 | `assert_exists(selector)` | Assert widget exists in the tree |
@@ -276,7 +276,7 @@ changing assertions.
 
 ### Three backends
 
-| | `:sim` | `:headless` | `:full` |
+| | `:mock` | `:headless` | `:full` |
 |---|---|---|---|
 | **Speed** | ~ms | ~100ms | ~seconds |
 | **Rust binary** | No | Yes (`--headless`) | Yes (`--test`) |
@@ -290,7 +290,7 @@ changing assertions.
 | **Subscriptions** | Not active | Not active | Active |
 | **Real windows** | No | No | Yes |
 
-- **`:sim`** -- pure Elixir. Tests app logic and tree structure. No Rust, no
+- **`:mock`** -- pure Elixir. Tests app logic and tree structure. No Rust, no
   display, sub-millisecond. The right default for 90% of tests.
 
 - **`:headless`** -- real Rust renderer with `iced_test` Simulator (no
@@ -312,11 +312,11 @@ Tests are portable across all three.
 | Priority | Source | Example |
 |---|---|---|
 | 1 | Environment variable | `JULEP_TEST_BACKEND=headless mix test` |
-| 2 | Application config | `config :julep, :test_backend, :sim` |
-| 3 | Default | `:sim` |
+| 2 | Application config | `config :julep, :test_backend, :mock` |
+| 3 | Default | `:mock` |
 
-Atom shorthands (`:sim`, `:headless`, `:full`) and full module names
-(`Julep.Test.Backend.Sim`, etc.) both work in application config.
+Atom shorthands (`:mock`, `:headless`, `:full`) and full module names
+(`Julep.Test.Backend.Mock`, etc.) both work in application config.
 
 
 ## Snapshots and screenshots
@@ -356,7 +356,7 @@ JULEP_UPDATE_SNAPSHOTS=1 mix test
 `assert_screenshot/1` captures real RGBA pixel data and compares it against
 a golden file. It produces meaningful data on both the `:full` backend (GPU
 rendering via wgpu) and the `:headless` backend (software rendering via
-tiny-skia). On `:sim`, it silently succeeds as a no-op (returns an empty
+tiny-skia). On `:mock`, it silently succeeds as a no-op (returns an empty
 hash, which is accepted without creating or checking a golden file).
 
 Note that headless screenshots use software rendering, so pixels will not
@@ -377,7 +377,7 @@ workflow is the same as structural snapshots but uses a separate env var:
 JULEP_UPDATE_SCREENSHOTS=1 mix test
 ```
 
-Because screenshots silently no-op on sim, you can include
+Because screenshots silently no-op on mock, you can include
 `assert_screenshot` calls in any test without conditional logic. They will
 produce assertions when run on the headless or full backends.
 
@@ -419,7 +419,7 @@ A `.julep` file has a header and an instruction section separated by
 app: MyApp.Counter
 viewport: 800x600
 theme: dark
-backend: sim
+backend: mock
 -----
 click "#increment"
 click "#increment"
@@ -437,20 +437,20 @@ wait 500
 | `app` | Yes | -- | Module implementing `Julep.App` |
 | `viewport` | No | `800x600` | Viewport size as `WxH` |
 | `theme` | No | `dark` | Theme name |
-| `backend` | No | `sim` | Backend: `sim`, `headless`, or `full` |
+| `backend` | No | `mock` | Backend: `mock`, `headless`, or `full` |
 
 Lines starting with `#` are comments (in both header and body sections).
 
 #### Instructions
 
-| Instruction | Syntax | Sim support | Description |
+| Instruction | Syntax | Mock support | Description |
 |---|---|---|---|
 | `click` | `click "selector"` | Yes | Click a widget |
 | `type` | `type "selector" "text"` | Yes | Type text into a widget |
 | `type` (key) | `type enter` | Yes | Send a special key (press + release). Supports modifiers: `type ctrl+s` |
 | `expect` | `expect "text"` | Yes | Assert text appears somewhere in the tree |
 | `snapshot` | `snapshot "name"` | Yes | Capture and assert a structural snapshot |
-| `screenshot` | `screenshot "name"` | No-op on sim | Capture and assert a pixel screenshot |
+| `screenshot` | `screenshot "name"` | No-op on mock | Capture and assert a pixel screenshot |
 | `assert_text` | `assert_text "selector" "text"` | Yes | Assert widget has specific text |
 | `assert_model` | `assert_model "expression"` | Yes | Assert expression appears in inspected model (substring match) |
 | `press` | `press key` | Yes | Press a key down. Supports modifiers: `press ctrl+s` |
@@ -482,11 +482,11 @@ visual issues, demos, and onboarding.
 
 ## Testing async workflows
 
-### On the sim backend
+### On the mock backend
 
-The sim backend executes `async`, `stream`, and `done` commands
+The mock backend executes `async`, `stream`, and `done` commands
 synchronously. When `update/2` returns a command like
-`Command.async(fn -> fetch_data() end, :data_loaded)`, the sim backend
+`Command.async(fn -> fetch_data() end, :data_loaded)`, the mock backend
 immediately calls the function, gets the result, and dispatches
 `{:data_loaded, result}` through `update/2` -- all within the same call.
 
@@ -496,7 +496,7 @@ done):
 ```elixir
 test "fetching data loads results" do
   click("#fetch")
-  # On sim, the async command already executed synchronously.
+  # On mock, the async command already executed synchronously.
   # await_async is a no-op -- the model is already updated.
   await_async(:data_loaded)
   assert length(model().results) > 0
@@ -504,7 +504,7 @@ end
 ```
 
 Widget ops (focus, scroll), window ops, and timers are silently skipped on
-sim because they require a renderer. Test the command shape at the unit test
+mock because they require a renderer. Test the command shape at the unit test
 level instead:
 
 ```elixir
@@ -580,7 +580,7 @@ end
 
 ## CI configuration
 
-### Sim-only CI (simplest)
+### Mock-only CI (simplest)
 
 No special setup. Works anywhere Elixir runs.
 
@@ -641,10 +641,10 @@ On Arch Linux, `weston` and `vulkan-swrast` are available via pacman.
 
 ### Progressive CI
 
-Run sim tests fast, then promote to higher-fidelity backends for subsets:
+Run mock tests fast, then promote to higher-fidelity backends for subsets:
 
 ```yaml
-# All tests on sim (fast, catches logic bugs)
+# All tests on mock (fast, catches logic bugs)
 - run: mix test
 
 # Full suite on headless for protocol verification
@@ -691,7 +691,7 @@ Or pass `format: :json` in backend opts when starting a session manually:
 session = Session.start(MyApp, backend: Julep.Test.Backend.Headless, format: :json)
 ```
 
-The sim backend does not use a wire protocol (pure Elixir, no renderer
+The mock backend does not use a wire protocol (pure Elixir, no renderer
 process), so the format option has no effect on it.
 
 
@@ -702,9 +702,9 @@ each limitation.
 
 - Script instruction `move` (move cursor to a widget by selector) is a
   no-op. It requires widget bounds from layout, which only the renderer knows.
-- `move_to` on the sim backend dispatches `%Mouse{type: :moved, x: x, y: y}` but has
+- `move_to` on the mock backend dispatches `%Mouse{type: :moved, x: x, y: y}` but has
   no spatial layout info. Mouse area enter/exit events won't fire.
-- Pixel screenshots are only available on the headless and full backends (sim returns stubs).
+- Pixel screenshots are only available on the headless and full backends (mock returns stubs).
 - Headless screenshots use software rendering (tiny-skia) and may not match
   GPU output pixel-for-pixel.
 - Script `assert_model` uses substring matching against the inspected model.

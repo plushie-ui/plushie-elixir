@@ -3,7 +3,7 @@ defmodule Julep.Test.Snapshot do
   Structural tree snapshot for regression testing.
 
   Captures a hash of the serialized UI tree structure and compares against
-  golden files using SHA-256 hashes. Works on all backends (:sim, :headless,
+  golden files using SHA-256 hashes. Works on all backends (:mock, :headless,
   :full).
 
   ## Golden file workflow

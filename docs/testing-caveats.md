@@ -13,8 +13,8 @@ by `init/1` and `update/2` are processed immediately, so `await_async`
 correctly returns `:ok` -- the commands have already completed by the time
 it is called.
 
-The `CommandProcessor` was extracted from the sim backend's private
-implementation and is shared by sim, headless, and full backends.
+The `CommandProcessor` was extracted from the mock backend's private
+implementation and is shared by mock, headless, and full backends.
 
 
 ## ~~Script instructions `press`, `release`, `move`, `move_to` are no-ops~~ (mostly resolved)
@@ -26,7 +26,7 @@ Key strings support modifier prefixes: `"ctrl+s"`, `"shift+enter"`,
 `"escape"` -> `:escape`, etc.
 
 All three backends support these operations:
-- **sim:** Dispatches `%Key{type: :press, ...}` / `%Key{type: :release, ...}` /
+- **mock:** Dispatches `%Key{type: :press, ...}` / `%Key{type: :release, ...}` /
   `%Mouse{type: :moved, x: x, y: y}` directly through `update/2`.
 - **headless/full:** Sends interact messages over the wire protocol. Rust
   side parses the key string and emits event JSON.
@@ -34,7 +34,7 @@ All three backends support these operations:
 **Remaining limitation:** `move` (move cursor to a widget by selector)
 remains a no-op. It requires widget bounds from layout, which only the
 renderer knows. `move_to/2` (move to absolute coordinates) works on all
-backends, but on sim it has no spatial layout info -- mouse area enter/exit
+backends, but on mock it has no spatial layout info -- mouse area enter/exit
 events won't fire because there's no hit testing against widget bounds.
 
 
@@ -45,10 +45,10 @@ event. Supports modifier prefixes like `"ctrl+c"` and named keys like
 `"enter"`, `"escape"`, `"tab"`.
 
 
-## ~~Screenshots are stubs on sim and headless backends~~ (partially resolved)
+## ~~Screenshots are stubs on mock and headless backends~~ (partially resolved)
 
 **What:** `screenshot/1` and `assert_screenshot/1` now return real RGBA pixel
-data on both the `:full` and `:headless` backends. Only the `:sim` backend
+data on both the `:full` and `:headless` backends. Only the `:mock` backend
 returns a stub (empty hash, no pixel data).
 
 **Why this changed:** The headless backend now uses tiny-skia software
@@ -62,7 +62,7 @@ headless screenshots for catching layout regressions and verifying the
 rendering pipeline; use full screenshots for pixel-perfect visual regression
 against GPU output.
 
-The sim backend still returns an empty `Screenshot` struct because it has no
+The mock backend still returns an empty `Screenshot` struct because it has no
 renderer at all. `assert_match` silently accepts empty hashes.
 
 `save_png/2` and the `save_screenshot/1` helper can write RGBA data to disk
@@ -104,9 +104,9 @@ restricted expression parser that supports basic patterns (e.g.,
 `field: value` pairs) without full `Code.eval_string`.
 
 
-## ~~`submit/1` in sim uses tree props, not typed text~~ (resolved)
+## ~~`submit/1` in mock uses tree props, not typed text~~ (resolved)
 
-**Fixed.** The sim backend now tracks text typed via `type_text/2` per
+**Fixed.** The mock backend now tracks text typed via `type_text/2` per
 widget and uses it as the submit value. `type_text("#name", "Alice")`
 followed by `submit("#name")` submits `"Alice"` regardless of whether
 `view/1` echoes the value back into the text_input's `value` prop.
@@ -120,15 +120,15 @@ widget. `reset/0` clears the typed text tracking.
 
 **What:** The shared `CommandProcessor` module
 (`Julep.Test.Backend.CommandProcessor`) executes all async, stream, done,
-and batch commands synchronously in all three test backends (sim, headless,
+and batch commands synchronously in all three test backends (mock, headless,
 full). When `update/2` returns an async command, the function is called
 immediately and its result is dispatched through `update/2` before control
 returns to the test.
 
 **Why this matters:** Timing and concurrency bugs will not surface in tests
-that use the sim backend. Code that depends on ordering of concurrent
+that use the mock backend. Code that depends on ordering of concurrent
 operations, race conditions between async tasks, or specific timing of
-intermediate results will appear to work correctly in sim tests but may
+intermediate results will appear to work correctly in mock tests but may
 fail in production where `Task.async` and `Process.send_after` execute
 asynchronously.
 
@@ -138,7 +138,7 @@ asynchronously.
 - Tests that depend on ordering when multiple async commands race.
 - Tests for debouncing or throttling logic driven by command timing.
 - Tests for cancellation of in-flight async work (cancel executes
-  instantly in sim, but in production the task may have already emitted
+  instantly in mock, but in production the task may have already emitted
   intermediate results before receiving the cancel signal).
 
 **Workaround:** For timing-sensitive or concurrency-sensitive behaviour,
@@ -146,20 +146,20 @@ use the headless or full backends. The headless backend does not require a
 display server and can be enabled via `JULEP_TEST_BACKEND=headless` after
 building the renderer with `cargo build`.
 
-For unit tests that verify async result dispatch (not timing), the sim
+For unit tests that verify async result dispatch (not timing), the mock
 backend's synchronous execution is a feature, not a bug -- tests run in
 milliseconds without flakiness.
 
 
-## Sim backend has no spatial layout
+## Mock backend has no spatial layout
 
-**What:** The sim backend does not perform layout. Widgets have no
+**What:** The mock backend does not perform layout. Widgets have no
 position or size. This means:
 
 - `move_to/2` dispatches a `%Mouse{type: :moved, x: x, y: y}` event, but mouse area
   enter/exit events will not fire because there is no hit testing.
 - `find/1` locates elements by ID or text content, not by visual position.
-- Screenshot assertions always pass with an empty hash on sim.
+- Screenshot assertions always pass with an empty hash on mock.
 
 **Workaround:** Use the headless backend for tests that depend on spatial
 layout. Use the full backend for tests that depend on real window

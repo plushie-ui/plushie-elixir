@@ -1,6 +1,6 @@
-defmodule Julep.Test.Backend.Sim do
+defmodule Julep.Test.Backend.Mock do
   @moduledoc """
-  Simulated test backend. Pure Elixir, no Rust.
+  Mock test backend. Pure Elixir, no Rust.
 
   Runs the app's `init/update/view` loop in-process. Interactions are
   simulated by inferring events from widget types via `Julep.Test.EventMap`.
@@ -367,7 +367,7 @@ defmodule Julep.Test.Backend.Sim do
     }
   end
 
-  # NOTE: Sim key parsing is Linux-centric. "command" maps to ctrl
+  # NOTE: Mock key parsing is Linux-centric. "command" maps to ctrl
   # (not logo/super on macOS). This matches the headless backend
   # behaviour but may differ from native macOS key handling.
   @modifier_names ~w(ctrl shift alt logo command)

@@ -13,18 +13,18 @@ defmodule Julep.Test.ScreenshotTest do
       do: %{id: "main", type: "window", props: %{"title" => "Test"}, children: []}
   end
 
-  describe "sim backend screenshot" do
+  describe "mock backend screenshot" do
     test "returns empty stub" do
-      {:ok, pid} = Julep.Test.Backend.Sim.start(TestApp)
+      {:ok, pid} = Julep.Test.Backend.Mock.start(TestApp)
 
-      screenshot = Julep.Test.Backend.Sim.screenshot(pid, "test_shot")
+      screenshot = Julep.Test.Backend.Mock.screenshot(pid, "test_shot")
 
       assert %Screenshot{} = screenshot
       assert screenshot.hash == ""
       assert screenshot.size == {0, 0}
       assert screenshot.rgba_data == nil
 
-      Julep.Test.Backend.Sim.stop(pid)
+      Julep.Test.Backend.Mock.stop(pid)
     end
   end
 

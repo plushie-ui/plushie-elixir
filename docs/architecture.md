@@ -114,4 +114,4 @@ packaging concern, not an architectural change.
 - **event_tag** -- An atom or string identifier embedded in commands and returned in result events, used to correlate requests with responses.
 - **widget_op** -- A command targeting a specific widget instance (focus, scroll_to, select_all) identified by widget ID.
 - **session** -- A `Julep.Test.Session` struct wrapping a test backend module and process, providing the unified test interaction API.
-- **backend** -- One of three `Julep.Test.Backend` implementations (sim, headless, full) that execute test interactions at different fidelity levels.
+- **backend** -- One of three `Julep.Test.Backend` implementations (mock, headless, full) that execute test interactions at different fidelity levels.

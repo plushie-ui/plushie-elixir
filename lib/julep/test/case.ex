@@ -17,9 +17,9 @@ defmodule Julep.Test.Case do
 
   The backend is resolved from environment or application config:
 
-  - `JULEP_TEST_BACKEND` env var (e.g. `headless`, `full`, `sim`)
-  - `config :julep, :test_backend, :sim` application config
-  - Default: `:sim`
+  - `JULEP_TEST_BACKEND` env var (e.g. `headless`, `full`, `mock`)
+  - `config :julep, :test_backend, :mock` application config
+  - Default: `:mock`
   """
 
   use ExUnit.CaseTemplate
@@ -36,7 +36,7 @@ defmodule Julep.Test.Case do
       setup _context do
         backend_mod = Julep.Test.Case.resolve_backend()
 
-        # Register extension sim events so custom widget types can be tested.
+        # Register extension mock events so custom widget types can be tested.
         # capture_log suppresses collision warnings from test-only extensions.
         capture_log(fn -> Julep.Test.ExtensionEvents.register_all() end)
 
@@ -53,7 +53,7 @@ defmodule Julep.Test.Case do
   end
 
   @backend_map %{
-    sim: Julep.Test.Backend.Sim,
+    mock: Julep.Test.Backend.Mock,
     headless: Julep.Test.Backend.Headless,
     full: Julep.Test.Backend.Full
   }
@@ -63,13 +63,13 @@ defmodule Julep.Test.Case do
   def resolve_backend do
     cond do
       env = System.get_env("JULEP_TEST_BACKEND") ->
-        Map.get(@backend_map, String.to_existing_atom(env), Julep.Test.Backend.Sim)
+        Map.get(@backend_map, String.to_existing_atom(env), Julep.Test.Backend.Mock)
 
       config = Application.get_env(:julep, :test_backend) ->
         Map.get(@backend_map, config, config)
 
       true ->
-        Julep.Test.Backend.Sim
+        Julep.Test.Backend.Mock
     end
   end
 end

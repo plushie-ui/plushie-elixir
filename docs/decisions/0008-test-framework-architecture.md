@@ -38,7 +38,7 @@ Existing solutions (plain ExUnit tests on pure functions, and the old
 Introduce a three-backend test framework behind a unified API:
 
 - **`Julep.Test.Backend`** -- behaviour defining the test interface.
-- **`Julep.Test.Backend.Sim`** -- pure Elixir, no Rust.
+- **`Julep.Test.Backend.Mock`** -- pure Elixir, no Rust.
 - **`Julep.Test.Backend.Headless`** -- Rust renderer via `julep-renderer --headless`.
 - **`Julep.Test.Backend.Full`** -- real iced windows via `julep-renderer --test`.
 - **`Julep.Test.Session`** -- facade wrapping a backend + process pair.
@@ -47,7 +47,7 @@ Introduce a three-backend test framework behind a unified API:
 - **`Julep.Test.Element`** -- struct representing a found widget.
 - **`Julep.Test.Snapshot`** -- structural tree snapshot with golden-file comparison.
 - **`Julep.Test.Screenshot`** -- pixel screenshot with golden-file comparison.
-- **`Julep.Test.EventMap`** -- widget-type-to-event inference for sim.
+- **`Julep.Test.EventMap`** -- widget-type-to-event inference for mock.
 - **`Julep.Test.Script`** -- parser for `.julep` test scripts.
 - **`Julep.Test.Script.Runner`** -- executor for parsed scripts.
 
@@ -73,7 +73,7 @@ Mix tasks:
 Progressive fidelity. Different levels of trust require different levels
 of infrastructure:
 
-- **Sim** tests the Elixir layer in isolation. Zero dependencies, sub-ms
+- **Mock** tests the Elixir layer in isolation. Zero dependencies, sub-ms
   execution, runs in any CI. Covers app logic, tree structure, and event
   flow. This is the right default for 90% of tests.
 
@@ -88,7 +88,7 @@ of infrastructure:
   wrong on screen" class of bugs.
 
 A test written against the unified API (`click`, `find!`, `assert_text`)
-can be promoted from sim to headless to full by changing a single option.
+can be promoted from mock to headless to full by changing a single option.
 No test rewriting.
 
 ### Why Core extraction
@@ -121,16 +121,16 @@ echoes the same `id` in its response. The GenServer maintains a
 `pending` map from ID to `{type, from}` tuple and replies to the
 correct caller when the response arrives.
 
-### Why `:sim` is the default
+### Why `:mock` is the default
 
-Speed and accessibility. Sim tests run in milliseconds with zero external
+Speed and accessibility. Mock tests run in milliseconds with zero external
 dependencies. No Rust toolchain, no compiled binary, no display server.
 This makes the test framework immediately useful to anyone who depends on
 julep, even if they never build the renderer themselves.
 
-The sim backend handles the vast majority of app testing because the Elm
-architecture concentrates logic in `update/2` (which sim exercises fully)
-and structure in `view/1` (which sim renders and queries). The wire
+The mock backend handles the vast majority of app testing because the Elm
+architecture concentrates logic in `update/2` (which mock exercises fully)
+and structure in `view/1` (which mock renders and queries). The wire
 protocol and rendering are julep's responsibility, not the app's.
 
 ### Why extend `.ice` rather than invent from scratch
@@ -162,14 +162,14 @@ failing to propagate IDs would break the entire test framework.
 
 ### What this enables
 
-- **App developers** can write fast sim tests for all their logic and
+- **App developers** can write fast mock tests for all their logic and
   tree structure, with the option to add headless/full tests for
   critical paths.
 
 - **Julep maintainers** can run headless tests to catch protocol
   regressions when modifying the wire format or renderer.
 
-- **CI pipelines** can be configured at any fidelity level, from sim-only
+- **CI pipelines** can be configured at any fidelity level, from mock-only
   (seconds) to full (minutes with Xvfb).
 
 - **Script-based testing** provides a language-agnostic way to describe
@@ -190,8 +190,8 @@ failing to propagate IDs would break the entire test framework.
 - **Protocol surface area** increases. Four new message types
   (Query, Interact, SnapshotCapture, Reset) and their responses.
 
-- **EventMap maintenance.** The sim backend's event inference table
+- **EventMap maintenance.** The mock backend's event inference table
   must be kept in sync with the renderer's actual event generation.
-  A mismatch means a test passes in sim but fails in headless/full
+  A mismatch means a test passes in mock but fails in headless/full
   (or vice versa). This is a feature, not a bug -- it is exactly the
   kind of discrepancy the multi-backend approach is designed to surface.

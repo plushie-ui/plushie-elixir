@@ -7,7 +7,7 @@ defmodule Julep.Test.Screenshot do
   RGBA pixel data through `iced::window::screenshot()`. The `:headless`
   backend uses tiny-skia software rendering to produce real RGBA pixel data
   without a display server. The wire protocol uses native msgpack binary
-  for pixel data (no base64 overhead) or base64 for JSON mode. The `:sim`
+  for pixel data (no base64 overhead) or base64 for JSON mode. The `:mock`
   backend returns empty stubs (hash `""`, no pixel data) because it has
   no renderer.
 
@@ -19,7 +19,7 @@ defmodule Julep.Test.Screenshot do
 
   `assert_match/2` silently accepts empty hashes, so tests using
   `assert_screenshot` work on all backends without conditional logic --
-  the assertion simply skips on sim.
+  the assertion simply skips on mock.
 
   `save_png/2` writes raw RGBA data as a minimal valid PNG file using
   pure Elixir (`:zlib` for deflate, `:erlang.crc32` for chunk CRCs).
@@ -30,7 +30,7 @@ defmodule Julep.Test.Screenshot do
   runs, compares the current hash against the stored one. Set
   `JULEP_UPDATE_SCREENSHOTS=1` to force-update golden files.
 
-  Screenshots with an empty hash (from sim backend) are silently accepted --
+  Screenshots with an empty hash (from mock backend) are silently accepted --
   no golden file is created or compared.
   """
 
@@ -47,7 +47,7 @@ defmodule Julep.Test.Screenshot do
   Save the screenshot as a PNG file.
 
   Writes a minimal but valid PNG with 8-bit RGBA color. Returns `:ok`.
-  No-op when `rgba_data` is nil (sim backend stubs).
+  No-op when `rgba_data` is nil (mock backend stubs).
   """
   @spec save_png(screenshot :: t(), path :: String.t()) :: :ok
   def save_png(%__MODULE__{rgba_data: nil}, _path), do: :ok
@@ -90,7 +90,7 @@ defmodule Julep.Test.Screenshot do
   @doc """
   Asserts that a screenshot matches its golden file.
 
-  Screenshots with an empty hash (from sim backend) are silently accepted.
+  Screenshots with an empty hash (from mock backend) are silently accepted.
   Otherwise, creates or compares golden files in `golden_dir`.
   Set `JULEP_UPDATE_SCREENSHOTS=1` to force-update golden files.
   """

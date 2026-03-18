@@ -5,7 +5,7 @@ defmodule Julep.Test.InteractionRoundtripTest do
 
   alias Julep.Event.Widget
 
-  alias Julep.Test.Backend.Sim
+  alias Julep.Test.Backend.Mock
 
   # A single app that has one of each interactive widget type and tracks every
   # event it receives in its model. This lets each test assert on what event
@@ -97,10 +97,10 @@ defmodule Julep.Test.InteractionRoundtripTest do
   end
 
   setup do
-    {:ok, pid} = Sim.start(TrackingApp)
+    {:ok, pid} = Mock.start(TrackingApp)
 
     on_exit(fn ->
-      if Process.alive?(pid), do: Sim.stop(pid)
+      if Process.alive?(pid), do: Mock.stop(pid)
     end)
 
     {:ok, pid: pid}
@@ -110,8 +110,8 @@ defmodule Julep.Test.InteractionRoundtripTest do
 
   describe "click button" do
     test "dispatches %Widget{type: :click, id: id}", %{pid: pid} do
-      Sim.click(pid, "#submit_btn")
-      assert Sim.model(pid).last_event == %Widget{type: :click, id: "submit_btn"}
+      Mock.click(pid, "#submit_btn")
+      assert Mock.model(pid).last_event == %Widget{type: :click, id: "submit_btn"}
     end
   end
 
@@ -119,21 +119,21 @@ defmodule Julep.Test.InteractionRoundtripTest do
 
   describe "type_text into text_input" do
     test "dispatches {:input, id, text}", %{pid: pid} do
-      Sim.type_text(pid, "#name_input", "Arthur")
-      assert Sim.model(pid).last_event == %Widget{type: :input, id: "name_input", value: "Arthur"}
+      Mock.type_text(pid, "#name_input", "Arthur")
+      assert Mock.model(pid).last_event == %Widget{type: :input, id: "name_input", value: "Arthur"}
     end
 
     test "model field updated with typed text", %{pid: pid} do
-      Sim.type_text(pid, "#name_input", "Zaphod")
-      assert Sim.model(pid).text_value == "Zaphod"
+      Mock.type_text(pid, "#name_input", "Zaphod")
+      assert Mock.model(pid).text_value == "Zaphod"
     end
 
     test "sequential inputs update model each time", %{pid: pid} do
-      Sim.type_text(pid, "#name_input", "first")
-      assert Sim.model(pid).text_value == "first"
+      Mock.type_text(pid, "#name_input", "first")
+      assert Mock.model(pid).text_value == "first"
 
-      Sim.type_text(pid, "#name_input", "second")
-      assert Sim.model(pid).text_value == "second"
+      Mock.type_text(pid, "#name_input", "second")
+      assert Mock.model(pid).text_value == "second"
     end
   end
 
@@ -142,19 +142,19 @@ defmodule Julep.Test.InteractionRoundtripTest do
   describe "toggle checkbox" do
     test "dispatches {:toggle, id, value} from unchecked state", %{pid: pid} do
       # Initial state: checkbox_state = false, prop is_checked = false
-      Sim.toggle(pid, "#agree_check")
-      assert Sim.model(pid).last_event == %Widget{type: :toggle, id: "agree_check", value: true}
+      Mock.toggle(pid, "#agree_check")
+      assert Mock.model(pid).last_event == %Widget{type: :toggle, id: "agree_check", value: true}
     end
 
     test "model field flips to true on first toggle", %{pid: pid} do
-      Sim.toggle(pid, "#agree_check")
-      assert Sim.model(pid).checkbox_state == true
+      Mock.toggle(pid, "#agree_check")
+      assert Mock.model(pid).checkbox_state == true
     end
 
     test "model field flips back to false on second toggle", %{pid: pid} do
-      Sim.toggle(pid, "#agree_check")
-      Sim.toggle(pid, "#agree_check")
-      assert Sim.model(pid).checkbox_state == false
+      Mock.toggle(pid, "#agree_check")
+      Mock.toggle(pid, "#agree_check")
+      assert Mock.model(pid).checkbox_state == false
     end
   end
 
@@ -162,13 +162,13 @@ defmodule Julep.Test.InteractionRoundtripTest do
 
   describe "toggle toggler" do
     test "dispatches {:toggle, id, value} from off state", %{pid: pid} do
-      Sim.toggle(pid, "#dark_mode")
-      assert Sim.model(pid).last_event == %Widget{type: :toggle, id: "dark_mode", value: true}
+      Mock.toggle(pid, "#dark_mode")
+      assert Mock.model(pid).last_event == %Widget{type: :toggle, id: "dark_mode", value: true}
     end
 
     test "model field reflects new toggler state", %{pid: pid} do
-      Sim.toggle(pid, "#dark_mode")
-      assert Sim.model(pid).toggler_state == true
+      Mock.toggle(pid, "#dark_mode")
+      assert Mock.model(pid).toggler_state == true
     end
   end
 
@@ -176,18 +176,18 @@ defmodule Julep.Test.InteractionRoundtripTest do
 
   describe "slide slider" do
     test "dispatches {:slide, id, value}", %{pid: pid} do
-      Sim.slide(pid, "#volume", 80)
-      assert Sim.model(pid).last_event == %Widget{type: :slide, id: "volume", value: 80}
+      Mock.slide(pid, "#volume", 80)
+      assert Mock.model(pid).last_event == %Widget{type: :slide, id: "volume", value: 80}
     end
 
     test "model field updated with slid value", %{pid: pid} do
-      Sim.slide(pid, "#volume", 42)
-      assert Sim.model(pid).slider_value == 42
+      Mock.slide(pid, "#volume", 42)
+      assert Mock.model(pid).slider_value == 42
     end
 
     test "accepts float values", %{pid: pid} do
-      Sim.slide(pid, "#volume", 66.6)
-      assert Sim.model(pid).slider_value == 66.6
+      Mock.slide(pid, "#volume", 66.6)
+      assert Mock.model(pid).slider_value == 66.6
     end
   end
 
@@ -195,19 +195,19 @@ defmodule Julep.Test.InteractionRoundtripTest do
 
   describe "select from pick_list" do
     test "dispatches {:select, id, value}", %{pid: pid} do
-      Sim.select(pid, "#language", "Elixir")
-      assert Sim.model(pid).last_event == %Widget{type: :select, id: "language", value: "Elixir"}
+      Mock.select(pid, "#language", "Elixir")
+      assert Mock.model(pid).last_event == %Widget{type: :select, id: "language", value: "Elixir"}
     end
 
     test "model field updated with selected value", %{pid: pid} do
-      Sim.select(pid, "#language", "Erlang")
-      assert Sim.model(pid).selected == "Erlang"
+      Mock.select(pid, "#language", "Erlang")
+      assert Mock.model(pid).selected == "Erlang"
     end
 
     test "selecting a different value replaces the previous", %{pid: pid} do
-      Sim.select(pid, "#language", "Gleam")
-      Sim.select(pid, "#language", "Elixir")
-      assert Sim.model(pid).selected == "Elixir"
+      Mock.select(pid, "#language", "Gleam")
+      Mock.select(pid, "#language", "Elixir")
+      assert Mock.model(pid).selected == "Elixir"
     end
   end
 
@@ -216,10 +216,10 @@ defmodule Julep.Test.InteractionRoundtripTest do
   describe "submit text_input" do
     test "dispatches {:submit, id, value} with current value", %{pid: pid} do
       # First type something so there's a value in the model and view prop.
-      Sim.type_text(pid, "#name_input", "Marvin")
-      Sim.submit(pid, "#name_input")
+      Mock.type_text(pid, "#name_input", "Marvin")
+      Mock.submit(pid, "#name_input")
 
-      assert Sim.model(pid).last_event == %Widget{
+      assert Mock.model(pid).last_event == %Widget{
                type: :submit,
                id: "name_input",
                value: "Marvin"
@@ -227,14 +227,14 @@ defmodule Julep.Test.InteractionRoundtripTest do
     end
 
     test "submit with no value dispatches empty string", %{pid: pid} do
-      Sim.submit(pid, "#name_input")
-      assert Sim.model(pid).last_event == %Widget{type: :submit, id: "name_input", value: ""}
+      Mock.submit(pid, "#name_input")
+      assert Mock.model(pid).last_event == %Widget{type: :submit, id: "name_input", value: ""}
     end
   end
 
   # -- error cases --
   #
-  # When an interaction fails, the Sim GenServer raises and the GenServer.call
+  # When an interaction fails, the Mock GenServer raises and the GenServer.call
   # exits the calling process. catch_exit/1 captures it. The exit reason is
   # a 2-tuple of `{exception_and_stacktrace, call_info}` where the first
   # element is itself `{RuntimeError, stacktrace}`.
@@ -250,40 +250,40 @@ defmodule Julep.Test.InteractionRoundtripTest do
   describe "interaction errors" do
     test "click on non-button exits with cannot-click error" do
       capture_log(fn ->
-        {:ok, pid} = Sim.start(TrackingApp)
-        result = catch_exit(Sim.click(pid, "#name_input"))
+        {:ok, pid} = Mock.start(TrackingApp)
+        result = catch_exit(Mock.click(pid, "#name_input"))
         assert exit_message(result) =~ "cannot click"
       end)
     end
 
     test "type_text on non-input exits with cannot-type error" do
       capture_log(fn ->
-        {:ok, pid} = Sim.start(TrackingApp)
-        result = catch_exit(Sim.type_text(pid, "#submit_btn", "text"))
+        {:ok, pid} = Mock.start(TrackingApp)
+        result = catch_exit(Mock.type_text(pid, "#submit_btn", "text"))
         assert exit_message(result) =~ "cannot type"
       end)
     end
 
     test "toggle on non-toggleable exits with cannot-toggle error" do
       capture_log(fn ->
-        {:ok, pid} = Sim.start(TrackingApp)
-        result = catch_exit(Sim.toggle(pid, "#volume"))
+        {:ok, pid} = Mock.start(TrackingApp)
+        result = catch_exit(Mock.toggle(pid, "#volume"))
         assert exit_message(result) =~ "cannot toggle"
       end)
     end
 
     test "slide on non-slider exits with cannot-slide error" do
       capture_log(fn ->
-        {:ok, pid} = Sim.start(TrackingApp)
-        result = catch_exit(Sim.slide(pid, "#submit_btn", 50))
+        {:ok, pid} = Mock.start(TrackingApp)
+        result = catch_exit(Mock.slide(pid, "#submit_btn", 50))
         assert exit_message(result) =~ "cannot slide"
       end)
     end
 
     test "interacting with missing element exits with not-found error" do
       capture_log(fn ->
-        {:ok, pid} = Sim.start(TrackingApp)
-        result = catch_exit(Sim.click(pid, "#ghost"))
+        {:ok, pid} = Mock.start(TrackingApp)
+        result = catch_exit(Mock.click(pid, "#ghost"))
         assert exit_message(result) =~ "not found"
       end)
     end

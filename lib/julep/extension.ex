@@ -117,9 +117,9 @@ defmodule Julep.Extension do
   @callback rust_constructor() :: String.t()
 
   @doc """
-  Infers the sim event produced by a verb applied to an extension widget.
+  Infers the mock event produced by a verb applied to an extension widget.
 
-  Called by the sim test backend when the built-in `EventMap` does not
+  Called by the mock test backend when the built-in `EventMap` does not
   recognize the widget type. Return `{:ok, event_tuple}` to handle,
   `{:error, reason}` for a known-bad interaction, or `:not_handled`
   to fall through to the default error.

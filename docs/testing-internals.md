@@ -31,7 +31,7 @@ are building an app with julep, see [testing.md](testing.md) instead.
                     +-------------+-------------+
                     |             |              |
            +--------+--+  +------+-----+  +-----+------+
-           | Backend.Sim|  |Backend.    |  |Backend.    |
+           |Backend.Mock|  |Backend.    |  |Backend.    |
            | (GenServer)|  |Headless    |  |Full        |
            |            |  |(GenServer) |  |(GenServer) |
            +-----+------+  +-----+-----+  +-----+-----+
@@ -54,7 +54,7 @@ are building an app with julep, see [testing.md](testing.md) instead.
 
 4. Each backend is a `GenServer` that manages app state (`model`, `tree`)
    and handles interactions differently:
-   - **Sim** runs `init/update/view` locally, uses `EventMap` to infer
+   - **Mock** runs `init/update/view` locally, uses `EventMap` to infer
      events, and executes commands synchronously.
    - **Headless** spawns `julep --headless` via Port, sends wire protocol
      queries, and processes responses asynchronously via correlation IDs.
@@ -93,7 +93,7 @@ are building an app with julep, see [testing.md](testing.md) instead.
 ## How to add a new widget to EventMap
 
 When a new widget type is added to julep that should support interactions
-in the sim backend:
+in the mock backend:
 
 1. Add clauses to the appropriate function in
    `lib/julep/test/event_map.ex`. Each interaction type (`click`, `input`,
@@ -134,7 +134,7 @@ toggle, select, slide):
    from the process dictionary and delegates.
 
 4. Implement the callback in all three backends:
-   - **Sim:** Add an `EventMap` function and a `handle_call` clause.
+   - **Mock:** Add an `EventMap` function and a `handle_call` clause.
    - **Headless:** Add a `handle_call` clause that sends an `interact`
      wire protocol message with the new action name.
    - **Full:** Same as headless.
@@ -187,7 +187,7 @@ Both patterns should return `:ok` on success and raise
    `{:error, reason}`.
 
 4. Document the instruction in `docs/testing.md` in the instructions table,
-   including whether it works on the sim backend.
+   including whether it works on the mock backend.
 
 
 ## How to add a new backend
@@ -205,7 +205,7 @@ Both patterns should return `:ok` on success and raise
 
 ## EventMap inference table
 
-The sim backend uses `Julep.Test.EventMap` to infer what event a widget
+The mock backend uses `Julep.Test.EventMap` to infer what event a widget
 interaction should produce. This table must stay in sync with the Rust
 renderer's actual event generation.
 
@@ -226,9 +226,9 @@ renderer's actual event generation.
 hint about which function to use instead (when applicable).
 
 
-## Sim backend internals
+## Mock backend internals
 
-The sim backend (`lib/julep/test/backend/sim.ex`) is a GenServer that
+The mock backend (`lib/julep/test/backend/mock.ex`) is a GenServer that
 manages the app lifecycle entirely in Elixir.
 
 ### Initialization
@@ -357,7 +357,7 @@ Key differences from headless:
 5. Subsequent runs: reads the golden file and compares hashes.
 6. `JULEP_UPDATE_SNAPSHOTS=1`: overwrites the golden file.
 
-The sim backend hashes the tree JSON directly. The headless and full
+The mock backend hashes the tree JSON directly. The headless and full
 backends send a `snapshot_capture` message to the renderer and receive the
 hash in the response.
 
@@ -370,12 +370,12 @@ hash in the response.
 2. SHA-256 hash of the pixel data produces the screenshot hash.
 3. `Screenshot.assert_match/2` works the same as `Snapshot.assert_match/2`
    but uses `test/screenshots/` and `JULEP_UPDATE_SCREENSHOTS`.
-4. The sim backend returns an empty `Screenshot` struct (hash `""`, size
+4. The mock backend returns an empty `Screenshot` struct (hash `""`, size
    `{0, 0}`, nil pixel data) because there is no renderer.
 5. The headless backend sends `screenshot_capture` with viewport dimensions
    to the renderer. The Rust headless renderer software-renders via tiny-skia
    and returns real RGBA pixel data with a SHA-256 hash.
-6. Empty hashes (from sim) are silently accepted without creating or
+6. Empty hashes (from mock) are silently accepted without creating or
    checking golden files.
 
 ### JSON tree snapshots (`Julep.Test.assert_tree_snapshot/2`)
@@ -451,7 +451,7 @@ backend, making it a natural choice for headless screenshot rendering.
 |---|---|
 | `lib/julep/test.ex` | `assert_tree_snapshot/2` for unit-level JSON tree comparison |
 | `lib/julep/test/backend.ex` | `Backend` behaviour (20 callbacks) |
-| `lib/julep/test/backend/sim.ex` | Pure Elixir backend, EventMap-based event inference |
+| `lib/julep/test/backend/mock.ex` | Pure Elixir backend, EventMap-based event inference |
 | `lib/julep/test/backend/headless.ex` | Rust renderer via `--headless` Port, wire protocol |
 | `lib/julep/test/backend/full.ex` | Real iced windows via `--test` Port, wire protocol |
 | `lib/julep/test/case.ex` | ExUnit case template, backend resolution, setup/teardown |
@@ -460,7 +460,7 @@ backend, making it a natural choice for headless screenshot rendering.
 | `lib/julep/test/element.ex` | Element struct (id, type, props, children), text extraction |
 | `lib/julep/test/snapshot.ex` | Structural snapshot struct, golden file comparison |
 | `lib/julep/test/screenshot.ex` | Pixel screenshot struct, golden file comparison |
-| `lib/julep/test/event_map.ex` | Widget type to event inference for sim backend |
+| `lib/julep/test/event_map.ex` | Widget type to event inference for mock backend |
 | `lib/julep/test/script.ex` | `.julep` script parser |
 | `lib/julep/test/script/runner.ex` | Script execution engine |
 | `julep/julep-core/src/engine.rs` | Core struct (tree, caches, subscriptions) |

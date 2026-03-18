@@ -21,7 +21,7 @@ defmodule Julep.Test.Session do
   @doc "Creates a new session by starting the given backend."
   @spec start(app :: module(), opts :: keyword()) :: t()
   def start(app, opts \\ []) do
-    backend = Keyword.get(opts, :backend, Julep.Test.Backend.Sim)
+    backend = Keyword.get(opts, :backend, Julep.Test.Backend.Mock)
     {:ok, pid} = backend.start(app, opts)
     %__MODULE__{backend: backend, pid: pid}
   end
@@ -75,7 +75,7 @@ defmodule Julep.Test.Session do
   @spec snapshot(session :: t(), name :: String.t()) :: Snapshot.t()
   def snapshot(%__MODULE__{backend: b, pid: p}, name), do: b.snapshot(p, name)
 
-  @doc "Captures a pixel screenshot. No-op on :sim."
+  @doc "Captures a pixel screenshot. No-op on :mock."
   @spec screenshot(session :: t(), name :: String.t()) :: Screenshot.t()
   def screenshot(%__MODULE__{backend: b, pid: p}, name), do: b.screenshot(p, name)
 

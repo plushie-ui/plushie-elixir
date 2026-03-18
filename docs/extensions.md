@@ -893,9 +893,9 @@ fn render_does_not_panic() {
 }
 ```
 
-### Sim backend testing
+### Mock backend testing
 
-For the Elixir sim test backend to interact with your custom widget types,
+For the Elixir mock test backend to interact with your custom widget types,
 implement the optional `sim_events/3` callback on your extension module:
 
 ```elixir
@@ -913,7 +913,7 @@ defmodule MySparkline do
 end
 ```
 
-Register the extension for sim dispatch in your test setup:
+Register the extension for mock dispatch in your test setup:
 
 ```elixir
 setup do
@@ -926,7 +926,7 @@ Or call `Julep.Test.ExtensionEvents.register_all/0` to auto-discover all
 loaded extensions.
 
 This lets standard test helpers like `click/1`, `type_text/2`, etc. work
-with your extension's widget types in the sim backend.
+with your extension's widget types in the mock backend.
 
 
 ## ExtensionCaches

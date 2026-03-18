@@ -950,7 +950,7 @@ The external audit (394 concepts, 8 rounds) also flagged:
 - **Embedded tester/devtools** (17 concepts) -- iced's embedded test
   recorder, devtools panel, Comet launcher, and time-travel debugging.
   These are iced's internal developer tooling, not app-level API. Julep's
-  sim/headless/script test backends serve the same purpose differently.
+  mock/headless/script test backends serve the same purpose differently.
   Not planned.
 
 - **Feature flag model** (16 concepts) -- iced exposes compile-time Cargo

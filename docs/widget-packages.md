@@ -289,10 +289,10 @@ defmodule MyWidget.DonutChartTest do
 end
 ```
 
-### Integration tests with sim backend
+### Integration tests with mock backend
 
 For testing widget behaviour in a running app (event handling, view
-updates), use julep's sim backend. It runs pure Elixir -- no renderer
+updates), use julep's mock backend. It runs pure Elixir -- no renderer
 binary:
 
 ```elixir

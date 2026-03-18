@@ -1,11 +1,11 @@
 defmodule Julep.Test.ExtensionEvents do
   @moduledoc """
-  Registry for extension sim event dispatch.
+  Registry for extension mock event dispatch.
 
-  When the sim test backend encounters a widget type not handled by the
+  When the mock test backend encounters a widget type not handled by the
   built-in `EventMap`, it consults this registry. Extensions that implement
   the optional `Julep.Extension.sim_events/3` callback can register here
-  so their custom widget types participate in sim testing.
+  so their custom widget types participate in mock testing.
 
   Registration is keyed by type name string in `:persistent_term`.
   Type names returned by extensions as atoms are converted to strings for lookup.
@@ -16,7 +16,7 @@ defmodule Julep.Test.ExtensionEvents do
   alias Julep.Test.Element
 
   @doc """
-  Registers an extension module for sim event dispatch.
+  Registers an extension module for mock event dispatch.
 
   Stores the module in `:persistent_term` keyed by each type name
   returned by `module.type_names/0`.
@@ -45,7 +45,7 @@ defmodule Julep.Test.ExtensionEvents do
   end
 
   @doc """
-  Dispatches a sim verb to the extension registered for the element's type.
+  Dispatches a mock verb to the extension registered for the element's type.
 
   Returns `:not_handled` when no extension is registered for the type or
   when the registered module does not implement `sim_events/3`.

@@ -175,7 +175,7 @@ unit test level -- no backend or session needed.
 
 For framework-level structural snapshots (SHA-256 hash comparison via a
 test session), use `assert_snapshot("name")`. For pixel-level screenshots
-(full backend only, no-op on sim/headless), use `assert_screenshot("name")`
+(full backend only, no-op on mock/headless), use `assert_screenshot("name")`
 with `JULEP_UPDATE_SCREENSHOTS=1` to update golden files. See
 [testing.md](testing.md) for full details.
 
@@ -195,7 +195,7 @@ defmodule MyAppIntegrationTest do
 end
 ```
 
-The default backend is `:sim` (pure Elixir, no renderer needed). Set
+The default backend is `:mock` (pure Elixir, no renderer needed). Set
 `JULEP_TEST_BACKEND=headless` or `JULEP_TEST_BACKEND=full` for higher
 fidelity. See [testing.md](testing.md) for the full guide.
 

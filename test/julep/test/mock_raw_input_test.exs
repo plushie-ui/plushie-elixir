@@ -1,9 +1,9 @@
-defmodule Julep.Test.SimRawInputTest do
+defmodule Julep.Test.MockRawInputTest do
   use ExUnit.Case, async: true
 
   alias Julep.Event.Mouse
 
-  alias Julep.Test.Backend.Sim
+  alias Julep.Test.Backend.Mock
 
   defmodule KeyApp do
     use Julep.App
@@ -37,22 +37,22 @@ defmodule Julep.Test.SimRawInputTest do
   end
 
   setup do
-    {:ok, pid} = Sim.start(KeyApp)
-    on_exit(fn -> if Process.alive?(pid), do: Sim.stop(pid) end)
+    {:ok, pid} = Mock.start(KeyApp)
+    on_exit(fn -> if Process.alive?(pid), do: Mock.stop(pid) end)
     {:ok, pid: pid}
   end
 
   describe "press/2" do
     test "dispatches key_press event", %{pid: pid} do
-      Sim.press(pid, "a")
-      model = Sim.model(pid)
+      Mock.press(pid, "a")
+      model = Mock.model(pid)
 
       assert [{:press, "a", %Julep.KeyModifiers{ctrl: false, shift: false}}] = model.events
     end
 
     test "parses modifier keys", %{pid: pid} do
-      Sim.press(pid, "ctrl+s")
-      model = Sim.model(pid)
+      Mock.press(pid, "ctrl+s")
+      model = Mock.model(pid)
 
       [{:press, key, mods}] = model.events
       assert key == "s"
@@ -62,8 +62,8 @@ defmodule Julep.Test.SimRawInputTest do
     end
 
     test "parses shift+enter", %{pid: pid} do
-      Sim.press(pid, "shift+enter")
-      model = Sim.model(pid)
+      Mock.press(pid, "shift+enter")
+      model = Mock.model(pid)
 
       [{:press, key, mods}] = model.events
       assert key == :enter
@@ -72,8 +72,8 @@ defmodule Julep.Test.SimRawInputTest do
     end
 
     test "parses multiple modifiers", %{pid: pid} do
-      Sim.press(pid, "ctrl+shift+z")
-      model = Sim.model(pid)
+      Mock.press(pid, "ctrl+shift+z")
+      model = Mock.model(pid)
 
       [{:press, key, mods}] = model.events
       assert key == "z"
@@ -84,8 +84,8 @@ defmodule Julep.Test.SimRawInputTest do
 
   describe "release/2" do
     test "dispatches key_release event", %{pid: pid} do
-      Sim.release(pid, "escape")
-      model = Sim.model(pid)
+      Mock.release(pid, "escape")
+      model = Mock.model(pid)
 
       assert [{:release, :escape, _mods}] = model.events
     end
@@ -93,8 +93,8 @@ defmodule Julep.Test.SimRawInputTest do
 
   describe "type_key/2" do
     test "dispatches both press and release events", %{pid: pid} do
-      Sim.type_key(pid, "enter")
-      model = Sim.model(pid)
+      Mock.type_key(pid, "enter")
+      model = Mock.model(pid)
 
       assert [
                {:press, :enter, _},
@@ -103,8 +103,8 @@ defmodule Julep.Test.SimRawInputTest do
     end
 
     test "preserves modifiers across press and release", %{pid: pid} do
-      Sim.type_key(pid, "ctrl+c")
-      model = Sim.model(pid)
+      Mock.type_key(pid, "ctrl+c")
+      model = Mock.model(pid)
 
       assert [
                {:press, "c", press_mods},
@@ -118,8 +118,8 @@ defmodule Julep.Test.SimRawInputTest do
 
   describe "move_to/3" do
     test "dispatches cursor_moved event", %{pid: pid} do
-      Sim.move_to(pid, 100, 200)
-      model = Sim.model(pid)
+      Mock.move_to(pid, 100, 200)
+      model = Mock.model(pid)
 
       assert model.cursor == {100, 200}
     end
@@ -143,16 +143,16 @@ defmodule Julep.Test.SimRawInputTest do
             {"f1", :f1},
             {"f12", :f12}
           ] do
-        Sim.press(pid, name)
-        model = Sim.model(pid)
+        Mock.press(pid, name)
+        model = Mock.model(pid)
         {_, key, _} = List.last(model.events)
         assert key == expected, "Expected #{inspect(expected)} for #{name}, got #{inspect(key)}"
       end
     end
 
     test "single characters pass through as strings", %{pid: pid} do
-      Sim.press(pid, "x")
-      model = Sim.model(pid)
+      Mock.press(pid, "x")
+      model = Mock.model(pid)
 
       [{:press, key, _}] = model.events
       assert key == "x"
@@ -174,21 +174,21 @@ defmodule Julep.Test.SimRawInputTest do
         end
       end
 
-      {:ok, pid2} = Sim.start(DetailKeyApp)
-      Sim.press(pid2, "a")
-      model = Sim.model(pid2)
+      {:ok, pid2} = Mock.start(DetailKeyApp)
+      Mock.press(pid2, "a")
+      model = Mock.model(pid2)
 
       assert model.event.key == "a"
       assert model.event.text == "a"
       assert model.event.repeat == false
       assert model.event.location == :standard
 
-      Sim.press(pid2, "enter")
-      model = Sim.model(pid2)
+      Mock.press(pid2, "enter")
+      model = Mock.model(pid2)
       assert model.event.key == :enter
       assert model.event.text == nil
 
-      Sim.stop(pid2)
+      Mock.stop(pid2)
     end
   end
 end

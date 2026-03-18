@@ -281,37 +281,37 @@ defmodule Julep.Test.Backend.CommandProcessorTest do
     end
   end
 
-  describe "integration with sim backend" do
-    test "sim backend processes init commands" do
-      alias Julep.Test.Backend.Sim
+  describe "integration with mock backend" do
+    test "mock backend processes init commands" do
+      alias Julep.Test.Backend.Mock
 
-      {:ok, pid} = Sim.start(InitCommandApp)
-      model = Sim.model(pid)
+      {:ok, pid} = Mock.start(InitCommandApp)
+      model = Mock.model(pid)
 
       assert model.data == "loaded"
-      Sim.stop(pid)
+      Mock.stop(pid)
     end
 
-    test "sim backend processes single command from init" do
-      alias Julep.Test.Backend.Sim
+    test "mock backend processes single command from init" do
+      alias Julep.Test.Backend.Mock
 
-      {:ok, pid} = Sim.start(SingleCommandApp)
-      model = Sim.model(pid)
+      {:ok, pid} = Mock.start(SingleCommandApp)
+      model = Mock.model(pid)
 
       assert model.initialized == true
-      Sim.stop(pid)
+      Mock.stop(pid)
     end
 
-    test "sim backend processes commands from interactions" do
-      alias Julep.Test.Backend.Sim
+    test "mock backend processes commands from interactions" do
+      alias Julep.Test.Backend.Mock
 
-      {:ok, pid} = Sim.start(AsyncApp)
-      Sim.click(pid, "#fetch")
-      model = Sim.model(pid)
+      {:ok, pid} = Mock.start(AsyncApp)
+      Mock.click(pid, "#fetch")
+      model = Mock.model(pid)
 
       assert model.status == :done
       assert model.data == {:ok, "fetched"}
-      Sim.stop(pid)
+      Mock.stop(pid)
     end
   end
 end
