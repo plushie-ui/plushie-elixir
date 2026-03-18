@@ -301,12 +301,37 @@ defmodule Julep.Test.Backend.Pooled do
         state
       ) do
     # Iterative interact: the renderer emitted an intermediate batch
-    # of events and is waiting for us to process them and send back
-    # an updated tree. dispatch_events processes each event through
-    # app.update, re-renders, and sends a snapshot -- completing the
-    # round-trip so the renderer can continue to the next iced event.
-    state = dispatch_events(events, state)
-    {:noreply, state}
+    # of events from a single iced event injection and is waiting for
+    # us to send back ONE snapshot with the updated tree.
+    #
+    # Process all events in the step through app.update (updating the
+    # model), then re-render and send a single snapshot. This differs
+    # from dispatch_events which sends a snapshot per event -- that
+    # behavior is correct for inter-step processing but within a
+    # single step, all events came from one atomic iced event and
+    # the renderer expects exactly one snapshot response.
+    state =
+      Enum.reduce(events, state, fn event_map, acc ->
+        case EventDecoder.decode(
+               event_map["family"] || "",
+               event_map["id"] || "",
+               event_map
+             ) do
+          nil ->
+            acc
+
+          elixir_event ->
+            {model, commands} =
+              CommandProcessor.dispatch_update(acc.app, acc.model, elixir_event)
+
+            model = CommandProcessor.process(acc.app, model, commands)
+            %{acc | model: model}
+        end
+      end)
+
+    tree = render_tree(state.app, state.model)
+    SessionPool.send_message(state.pool, state.session_id, %{type: "snapshot", tree: tree})
+    {:noreply, %{state | tree: tree}}
   end
 
   def handle_info(
