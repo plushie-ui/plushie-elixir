@@ -39,8 +39,8 @@ Introduce a three-backend test framework behind a unified API:
 
 - **`Julep.Test.Backend`** -- behaviour defining the test interface.
 - **`Julep.Test.Backend.Mock`** -- pure Elixir, no Rust.
-- **`Julep.Test.Backend.Headless`** -- Rust renderer via `julep-renderer --headless`.
-- **`Julep.Test.Backend.Full`** -- real iced windows via `julep-renderer --test`.
+- **`Julep.Test.Backend.Headless`** -- Rust renderer via `julep --headless` (software rendering, persistent widget state).
+- **`Julep.Test.Backend.Full`** -- real iced windows via `julep` (no special flag).
 - **`Julep.Test.Session`** -- facade wrapping a backend + process pair.
 - **`Julep.Test.Case`** -- ExUnit case template with automatic setup/teardown.
 - **`Julep.Test.Helpers`** -- convenience functions imported by Case.
@@ -56,10 +56,9 @@ On the Rust side:
 - **`engine.rs`** -- `Core` struct extracted from `App`, holding tree
   state, caches, and subscriptions. Processes `IncomingMessage`s and
   returns `CoreEffect`s. Decoupled from `iced::daemon`.
-- **`headless.rs`** -- `--headless` mode: reads JSONL from stdin, processes
-  through `Core`, writes responses to stdout. No iced runtime.
-- **`test_mode.rs`** -- `--test` mode helpers: real `iced::daemon` runs
-  alongside test protocol message handling.
+- **`headless.rs`** -- `--headless` mode: software rendering, persistent widget state.
+- **`mock.rs`** -- `--mock` mode: protocol-only, no rendering.
+- **`scripting.rs`** -- scripting message handling, accepted in all modes.
 
 Mix tasks:
 
@@ -103,8 +102,8 @@ gain:
 - **Reduced coupling.** `Core::apply()` takes an `IncomingMessage` and
   returns `Vec<CoreEffect>`. The host (App or headless loop) decides
   what to do with the effects.
-- **Reuse.** Both `--headless` and `--test` modes share the same Core
-  for tree management and cache handling.
+- **Reuse.** All three modes (default, `--headless`, `--mock`) share the
+  same Core for tree management and cache handling.
 
 ### Why correlation-ID protocol
 
@@ -114,7 +113,7 @@ messages, not as return values). The correlation-ID protocol allows:
 
 - Multiple in-flight requests without ambiguity.
 - Matching responses to the GenServer caller that made the request.
-- Interleaving test protocol messages with normal snapshot/patch messages.
+- Interleaving scripting messages with normal snapshot/patch messages.
 
 Each request includes an `id` field (e.g., `"req_1"`). The renderer
 echoes the same `id` in its response. The GenServer maintains a
@@ -148,7 +147,7 @@ treating the absence of a header as defaults.
 
 ### Why widget IDs must propagate to iced widgets
 
-The test protocol needs to find widgets by ID in the rendered tree.
+The scripting protocol needs to find widgets by ID in the rendered tree.
 This requires that the `id` field from Elixir's `ui_node()` map is
 propagated all the way through to the iced widget in `widgets.rs`.
 Without this, the headless and full backends cannot implement `find`
@@ -180,11 +179,13 @@ failing to propagate IDs would break the entire test framework.
 
 ### What this costs
 
-- **Three code paths** for the renderer: normal mode, `--headless`, and
-  `--test`. The Core extraction mitigates this by sharing state logic,
-  but the message handling still has three entry points.
+- **Three code paths** for the renderer: default (full daemon),
+  `--headless` (software rendering), and `--mock` (protocol-only). The
+  Core extraction mitigates this by sharing state logic, but the message
+  handling still has three entry points. Scripting messages are accepted
+  in all modes, so there is no separate "test protocol" code path.
 
-- **Three runtime modes** in the Rust binary (`--headless`, `--test`).
+- **Three runtime modes** in the Rust binary (`--headless`, `--mock`).
   All modes are compiled unconditionally -- no feature flags.
 
 - **Protocol surface area** increases. Four new message types

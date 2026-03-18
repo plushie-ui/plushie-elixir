@@ -37,7 +37,7 @@ are building an app with julep, see [testing.md](testing.md) instead.
            +-----+------+  +-----+-----+  +-----+-----+
                  |                |              |
            pure Elixir      Port: julep           Port: julep
-           EventMap         --headless       --test
+           EventMap         --mock           (no flag)
            process_commands  wire protocol    wire protocol
                                               real iced windows
 ```
@@ -58,8 +58,8 @@ are building an app with julep, see [testing.md](testing.md) instead.
      events, and executes commands synchronously.
    - **Headless** spawns `julep --headless` via Port, sends wire protocol
      queries, and processes responses asynchronously via correlation IDs.
-   - **Full** spawns `julep --test` via Port, same wire protocol as
-     headless but with real iced windows and GPU rendering.
+   - **Full** spawns `julep` (no special flag) via Port, same wire protocol
+     as headless but with real iced windows and GPU rendering.
 
 
 ## Backend behaviour
@@ -115,7 +115,7 @@ in the mock backend:
 5. The headless and full backends do not use EventMap -- they inject
    interactions via the wire protocol and the Rust renderer generates the
    real events. Ensure the Rust side handles the new widget type in
-   `headless.rs` and `test_mode.rs`.
+   `headless.rs` and `scripting.rs`.
 
 
 ## How to add a new interaction type
@@ -140,7 +140,7 @@ toggle, select, slide):
    - **Full:** Same as headless.
 
 5. On the Rust side, handle the new action in the interact message
-   handler in `headless.rs` and `test_mode.rs`.
+   handler in `headless.rs` and `scripting.rs`.
 
 6. Add a script instruction if it makes sense (see below).
 
@@ -332,9 +332,9 @@ for the full rendering flow.
 ## Full backend internals
 
 The full backend (`lib/julep/test/backend/full.ex`) is structurally
-identical to the headless backend but spawns `julep --test` instead of
-`--headless`. The Rust renderer runs a real `iced::daemon` with GPU
-rendering alongside the test protocol message handler.
+identical to the headless backend but spawns `julep` with no special flag
+instead of `--headless`. The Rust renderer runs a real `iced::daemon` with GPU
+rendering. Scripting messages are accepted in all modes.
 
 Key differences from headless:
 
@@ -453,7 +453,7 @@ backend, making it a natural choice for headless screenshot rendering.
 | `lib/julep/test/backend.ex` | `Backend` behaviour (20 callbacks) |
 | `lib/julep/test/backend/mock.ex` | Pure Elixir backend, EventMap-based event inference |
 | `lib/julep/test/backend/headless.ex` | Rust renderer via `--headless` Port, wire protocol |
-| `lib/julep/test/backend/full.ex` | Real iced windows via `--test` Port, wire protocol |
+| `lib/julep/test/backend/full.ex` | Real iced windows via `julep` (no flag) Port, wire protocol |
 | `lib/julep/test/case.ex` | ExUnit case template, backend resolution, setup/teardown |
 | `lib/julep/test/helpers.ex` | Imported helper functions (find, click, assert_text, ...) |
 | `lib/julep/test/session.ex` | Session facade wrapping backend module + pid |
@@ -464,7 +464,8 @@ backend, making it a natural choice for headless screenshot rendering.
 | `lib/julep/test/script.ex` | `.julep` script parser |
 | `lib/julep/test/script/runner.ex` | Script execution engine |
 | `julep/julep-core/src/engine.rs` | Core struct (tree, caches, subscriptions) |
-| `julep/julep/src/headless.rs` | `--headless` mode: Core + wire protocol, no iced runtime |
-| `julep/julep/src/test_mode.rs` | `--test` mode: real iced::daemon + test protocol |
+| `julep/julep/src/headless.rs` | `--headless` mode: software rendering, persistent widget state |
+| `julep/julep/src/mock.rs` | `--mock` mode: protocol-only, no rendering |
+| `julep/julep/src/scripting.rs` | Scripting message handling (accepted in all modes) |
 | `test/support/mock_bridge.ex` | Test double tracking bridge calls |
 | `test/support/integration_case.ex` | ExUnit case template for integration tests |

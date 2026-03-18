@@ -279,7 +279,7 @@ changing assertions.
 | | `:mock` | `:headless` | `:full` |
 |---|---|---|---|
 | **Speed** | ~ms | ~100ms | ~seconds |
-| **Rust binary** | No | Yes (`--headless`) | Yes (`--test`) |
+| **Rust binary** | No | Yes (`--headless`) | Yes (no flag) |
 | **Display server** | No | No | Yes (Xvfb in CI) |
 | **Tests logic** | Yes | Yes | Yes |
 | **Tests tree structure** | Yes | Yes | Yes |
@@ -293,14 +293,15 @@ changing assertions.
 - **`:mock`** -- pure Elixir. Tests app logic and tree structure. No Rust, no
   display, sub-millisecond. The right default for 90% of tests.
 
-- **`:headless`** -- real Rust renderer with `iced_test` Simulator (no
+- **`:headless`** -- real Rust renderer with software rendering (no
   display server). Proves the wire protocol works end-to-end (msgpack by
-  default). Tree-hash snapshots detect structural drift. Build with
-  the `--headless` runtime flag.
+  default). Tree-hash snapshots detect structural drift. Pixel screenshots
+  capture accurately rendered UI via tiny-skia. Uses the `--headless`
+  runtime flag.
 
 - **`:full`** -- real `iced::daemon` with GPU rendering. Effects work,
   subscriptions fire, pixel screenshots capture exactly what a user sees.
-  Uses the `--test` runtime flag. Needs a display server
+  Spawns `julep` with no special flag. Needs a display server
   (Xvfb or headless Weston).
 
 ### Backend selection

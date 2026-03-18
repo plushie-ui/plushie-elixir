@@ -2,9 +2,9 @@ defmodule Julep.Test.Backend.Full do
   @moduledoc """
   Full test backend with real iced windows.
 
-  Spawns `julep --test` which runs a real `iced::daemon` with GPU
-  rendering, but also accepts test protocol messages (Query, Interact,
-  SnapshotCapture, Reset) on stdin alongside normal Snapshot/Patch messages.
+  Spawns `julep` which runs a real `iced::daemon` with GPU
+  rendering. All protocol messages including scripting messages (Query,
+  Interact, ScreenshotCapture, Reset) are accepted in every mode.
 
   ## Requirements
 
@@ -67,8 +67,8 @@ defmodule Julep.Test.Backend.Full do
     {:ok, state}
   end
 
-  defp port_args(:json), do: ["--test", "--json"]
-  defp port_args(:msgpack), do: ["--test"]
+  defp port_args(:json), do: ["--json"]
+  defp port_args(:msgpack), do: []
 
   defp screenshot_payload(name) do
     %{type: "screenshot_capture", name: name}
