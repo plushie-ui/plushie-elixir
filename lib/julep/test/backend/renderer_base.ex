@@ -350,7 +350,7 @@ defmodule Julep.Test.Backend.RendererBase do
         Enum.reduce(events, state, fn event, acc -> dispatch_event(event, acc) end)
       end
 
-      defp dispatch_event(%{"event" => type, "id" => id} = event, state) do
+      defp dispatch_event(%{"family" => type, "id" => id} = event, state) do
         elixir_event = decode_event(type, id, event)
 
         {model, commands} =
@@ -392,9 +392,41 @@ defmodule Julep.Test.Backend.RendererBase do
       end
 
       defp decode_event("cursor_moved", _id, event) do
-        x = event["x"] || 0
-        y = event["y"] || 0
+        data = event["data"] || %{}
+        x = data["x"] || 0
+        y = data["y"] || 0
         %MouseEvent{type: :moved, x: x, y: y}
+      end
+
+      defp decode_event("sort", id, event) do
+        data = event["data"] || %{}
+        %WidgetEvent{type: :sort, id: id, data: data["column"]}
+      end
+
+      defp decode_event("scroll", _id, event) do
+        data = event["data"] || %{}
+        %MouseEvent{type: :scroll, delta_x: data["delta_x"] || 0, delta_y: data["delta_y"] || 0}
+      end
+
+      defp decode_event("paste", id, event),
+        do: %WidgetEvent{type: :paste, id: id, value: event["value"] || ""}
+
+      defp decode_event("pane_focus_cycle", id, _event),
+        do: %WidgetEvent{type: :pane_focus_cycle, id: id}
+
+      defp decode_event("canvas_press", id, event) do
+        data = event["data"] || %{}
+        %WidgetEvent{type: :canvas_press, id: id, data: data}
+      end
+
+      defp decode_event("canvas_release", id, event) do
+        data = event["data"] || %{}
+        %WidgetEvent{type: :canvas_release, id: id, data: data}
+      end
+
+      defp decode_event("canvas_move", id, event) do
+        data = event["data"] || %{}
+        %WidgetEvent{type: :canvas_move, id: id, data: data}
       end
 
       @known_extension_events ~w(extension_event extension_error)a
@@ -412,8 +444,15 @@ defmodule Julep.Test.Backend.RendererBase do
       end
 
       defp decode_key_event(type, event) do
-        key_str = event["key"] || ""
-        modifiers_map = event["modifiers"] || %{}
+        # OutgoingEvent format: key is in "value", modifiers may be in
+        # "data"."modifiers" (scripting) or top-level "modifiers" (daemon).
+        key_str = event["value"] || ""
+        modifiers_map =
+          cond do
+            is_map(event["modifiers"]) -> event["modifiers"]
+            is_map(event["data"]) and is_map(event["data"]["modifiers"]) -> event["data"]["modifiers"]
+            true -> %{}
+          end
 
         key = parse_wire_key_name(key_str)
 
