@@ -156,8 +156,11 @@ defmodule Julep.Test.Backend.Pooled do
       {:ok, %{"data" => data}} when data != nil and data != %{} ->
         {:reply, Julep.Test.Element.from_node(data), state}
 
-      _ ->
+      {:ok, _} ->
         {:reply, nil, state}
+
+      {:error, reason} ->
+        raise "renderer error during find: #{inspect(reason)}"
     end
   end
 
@@ -171,7 +174,8 @@ defmodule Julep.Test.Backend.Pooled do
            "query_response"
          ) do
       {:ok, %{"data" => data}} -> {:reply, data, state}
-      _ -> {:reply, nil, state}
+      {:ok, _} -> {:reply, nil, state}
+      {:error, reason} -> raise "renderer error during tree query: #{inspect(reason)}"
     end
   end
 
@@ -217,8 +221,11 @@ defmodule Julep.Test.Backend.Pooled do
         state = dispatch_events(events, state)
         {:reply, :ok, state}
 
-      _ ->
+      {:ok, _} ->
         {:reply, :ok, state}
+
+      {:error, reason} ->
+        raise "renderer error during interact(#{action}): #{inspect(reason)}"
     end
   end
 
@@ -238,8 +245,8 @@ defmodule Julep.Test.Backend.Pooled do
 
         {:reply, snapshot, state}
 
-      _ ->
-        {:reply, %Julep.Test.Snapshot{name: name, hash: "", size: {0, 0}}, state}
+      {:error, reason} ->
+        raise "renderer error during snapshot: #{inspect(reason)}"
     end
   end
 
@@ -260,9 +267,8 @@ defmodule Julep.Test.Backend.Pooled do
 
         {:reply, screenshot, state}
 
-      _ ->
-        {:reply, %Julep.Test.Screenshot{name: name, hash: "", size: {0, 0}, rgba_data: nil},
-         state}
+      {:error, reason} ->
+        raise "renderer error during screenshot: #{inspect(reason)}"
     end
   end
 
@@ -272,7 +278,16 @@ defmodule Julep.Test.Backend.Pooled do
     tree = render_tree(state.app, model)
 
     # Reset the renderer session, then send fresh snapshot.
-    SessionPool.send_message(state.pool, state.session_id, %{type: "reset"}, "reset_response")
+    case SessionPool.send_message(
+           state.pool,
+           state.session_id,
+           %{type: "reset"},
+           "reset_response"
+         ) do
+      {:ok, _} -> :ok
+      {:error, reason} -> raise "renderer error during reset: #{inspect(reason)}"
+    end
+
     SessionPool.send_message(state.pool, state.session_id, %{type: "snapshot", tree: tree})
 
     {:reply, :ok, %{state | model: model, tree: tree}}
@@ -309,6 +324,12 @@ defmodule Julep.Test.Backend.Pooled do
 
   # Walk the local tree to find a node by selector. Used by toggle/submit
   # to read the current widget state before sending the interact message.
+  #
+  # Only supports ID selectors (#id). Text, role, label, and focused
+  # selectors fall back to nil, causing toggle to default to true and
+  # submit to default to "". In practice toggle/submit are always
+  # called with ID selectors. If this becomes a problem, extend this
+  # to walk the tree for other selector types.
   defp find_in_tree(tree, selector) do
     case selector do
       "#" <> id -> find_node_by_id(tree, id)
@@ -325,6 +346,11 @@ defmodule Julep.Test.Backend.Pooled do
 
   defp find_node_by_id(_, _), do: nil
 
+  # Process each event individually with its own update/render/snapshot
+  # cycle. This matches production behaviour where each renderer event
+  # triggers a full host round-trip. Batching would skip intermediate
+  # tree states that extensions (prepare) and the renderer (settle_ui)
+  # observe in production. The overhead is one cast per event -- negligible.
   defp dispatch_events(events, state) when is_list(events) do
     Enum.reduce(events, state, &dispatch_event_map(&1, &2))
   end
