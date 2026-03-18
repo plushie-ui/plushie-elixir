@@ -230,14 +230,14 @@ defmodule Julep.Test.Backend.Pooled do
     case SessionPool.send_message(
            state.pool,
            state.session_id,
-           %{type: "tree_hash", name: name, theme: %{}, viewport: %{}},
+           %{type: "tree_hash", name: name},
            "tree_hash_response"
          ) do
       {:ok, resp} ->
         snapshot = %Julep.Test.Snapshot{
           name: resp["name"],
           hash: resp["hash"],
-          size: {resp["width"] || 0, resp["height"] || 0}
+          size: {0, 0}
         }
 
         {:reply, snapshot, state}

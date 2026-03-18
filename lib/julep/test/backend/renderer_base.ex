@@ -221,9 +221,7 @@ defmodule Julep.Test.Backend.RendererBase do
         send_message(state.port, state.format, %{
           type: "tree_hash",
           id: id,
-          name: name,
-          theme: %{},
-          viewport: %{}
+          name: name
         })
 
         {:noreply, put_in(state, [:pending, id], {:snapshot, from, name})}
@@ -299,7 +297,7 @@ defmodule Julep.Test.Backend.RendererBase do
             snapshot = %Snapshot{
               name: resp["name"],
               hash: resp["hash"],
-              size: {resp["width"] || 0, resp["height"] || 0}
+              size: {0, 0}
             }
 
             GenServer.reply(from, snapshot)
