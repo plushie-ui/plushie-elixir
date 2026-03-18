@@ -55,7 +55,9 @@ defmodule Julep.Test.Case do
   @backend_map %{
     mock: Julep.Test.Backend.Mock,
     headless: Julep.Test.Backend.Headless,
-    full: Julep.Test.Backend.Full
+    full: Julep.Test.Backend.Full,
+    pooled_mock: Julep.Test.Backend.Pooled,
+    pooled_headless: Julep.Test.Backend.Pooled
   }
 
   @doc false
