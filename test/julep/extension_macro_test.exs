@@ -396,13 +396,18 @@ defmodule Julep.ExtensionMacroTest do
 
   describe "a11y prop" do
     test "a11y prop is encoded on leaf widget" do
-      node = BadgeWidget.new("b1", a11y: %{role: :alert, label: "New items"}) |> BadgeWidget.build()
+      node =
+        BadgeWidget.new("b1", a11y: %{role: :alert, label: "New items"}) |> BadgeWidget.build()
+
       assert node.props["a11y"]["role"] == "alert"
       assert node.props["a11y"]["label"] == "New items"
     end
 
     test "a11y prop is encoded on native widget" do
-      node = GaugeExtension.new("g1", value: 50, a11y: %{role: :meter, label: "CPU"}) |> GaugeExtension.build()
+      node =
+        GaugeExtension.new("g1", value: 50, a11y: %{role: :meter, label: "CPU"})
+        |> GaugeExtension.build()
+
       assert node.props["a11y"]["role"] == "meter"
       assert node.props["a11y"]["label"] == "CPU"
     end

@@ -120,7 +120,12 @@ defmodule Julep.Test.InteractionRoundtripTest do
   describe "type_text into text_input" do
     test "dispatches {:input, id, text}", %{pid: pid} do
       Mock.type_text(pid, "#name_input", "Arthur")
-      assert Mock.model(pid).last_event == %Widget{type: :input, id: "name_input", value: "Arthur"}
+
+      assert Mock.model(pid).last_event == %Widget{
+               type: :input,
+               id: "name_input",
+               value: "Arthur"
+             }
     end
 
     test "model field updated with typed text", %{pid: pid} do

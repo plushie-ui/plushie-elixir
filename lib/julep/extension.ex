@@ -689,7 +689,13 @@ defmodule Julep.Extension do
         encoder = protocol_encoder_for_type(type)
 
         quote do
-          props = Julep.Iced.Widget.Build.put_if(props, widget.unquote(name), unquote(key_string), unquote(encoder))
+          props =
+            Julep.Iced.Widget.Build.put_if(
+              props,
+              widget.unquote(name),
+              unquote(key_string),
+              unquote(encoder)
+            )
         end
       end)
 
@@ -736,10 +742,12 @@ defmodule Julep.Extension do
   end
 
   defp protocol_encoder_for_type(:atom) do
-    quote(do: fn
-      val when is_atom(val) -> Atom.to_string(val)
-      val when is_binary(val) -> val
-    end)
+    quote(
+      do: fn
+        val when is_atom(val) -> Atom.to_string(val)
+        val when is_binary(val) -> val
+      end
+    )
   end
 
   defp protocol_encoder_for_type(_type) do

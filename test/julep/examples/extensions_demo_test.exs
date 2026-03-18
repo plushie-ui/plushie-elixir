@@ -7,8 +7,8 @@ defmodule Julep.Examples.ExtensionsDemoTest do
   # The demo module references JulepSparkline, JulepHexView, etc. which live
   # in separate repos (julep_sparkline, julep_hex_view, ...).
   if Code.ensure_loaded?(Julep.Examples.ExtensionsDemo) do
-    alias Julep.Examples.ExtensionsDemo
     alias Julep.Event.Timer
+    alias Julep.Examples.ExtensionsDemo
 
     # ---------------------------------------------------------------------------
     # init/1

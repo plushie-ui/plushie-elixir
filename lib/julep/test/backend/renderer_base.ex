@@ -447,11 +447,17 @@ defmodule Julep.Test.Backend.RendererBase do
         # OutgoingEvent format: key is in "value", modifiers may be in
         # "data"."modifiers" (scripting) or top-level "modifiers" (daemon).
         key_str = event["value"] || ""
+
         modifiers_map =
           cond do
-            is_map(event["modifiers"]) -> event["modifiers"]
-            is_map(event["data"]) and is_map(event["data"]["modifiers"]) -> event["data"]["modifiers"]
-            true -> %{}
+            is_map(event["modifiers"]) ->
+              event["modifiers"]
+
+            is_map(event["data"]) and is_map(event["data"]["modifiers"]) ->
+              event["data"]["modifiers"]
+
+            true ->
+              %{}
           end
 
         key = parse_wire_key_name(key_str)
