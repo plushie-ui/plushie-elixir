@@ -183,7 +183,7 @@ code. See `Toddy.DevServer` for configuration options.
 ## Next steps
 
 - [Tutorial: building a todo app](tutorial.md) -- step-by-step guide
-- Browse the [examples](../lib/toddy/examples/) for patterns
+- Browse the [examples](../examples/) for patterns
 - [App behaviour](app-behaviour.md) -- full callback API
 - [Layout](layout.md) -- sizing and positioning widgets
 - [Commands](commands.md) -- async work, file dialogs, effects
