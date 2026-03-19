@@ -1,35 +1,16 @@
 defmodule Toddy.MixProject do
   use Mix.Project
 
-  # Load extension beam files so Code.ensure_loaded? guards evaluate correctly.
-  # Each extension depends on :toddy (circular path dep), so we can't use Mix
-  # deps. Instead, we add their compiled ebin dirs to the code path and
-  # pre-load all their modules.
-  if Mix.env() in [:dev, :test] do
-    for ext <- ~w(toddy_sparkline toddy_hex_view toddy_code_view toddy_plot toddy_timeline) do
-      ebin = Path.expand("../#{ext}/_build/dev/lib/#{ext}/ebin")
-
-      if File.dir?(ebin) do
-        Code.append_path(ebin)
-
-        ebin
-        |> File.ls!()
-        |> Enum.filter(&String.ends_with?(&1, ".beam"))
-        |> Enum.each(fn beam ->
-          mod = beam |> String.trim_trailing(".beam") |> String.to_atom()
-          Code.ensure_loaded(mod)
-        end)
-      end
-    end
-  end
+  @binary_version "0.3.0"
 
   def project do
     [
       app: :toddy,
       version: "0.1.0",
+      binary_version: @binary_version,
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
-      compilers: Mix.compilers() ++ [:toddy_renderer],
+      compilers: Mix.compilers() ++ [:toddy_binary],
       elixirc_options: [warnings_as_errors: true],
       consolidate_protocols: Mix.env() != :test,
       start_permanent: Mix.env() == :prod,
@@ -163,14 +144,12 @@ defmodule Toddy.MixProject do
         LICENSE
         .formatter.exs
       ),
-      exclude_patterns: [~r/toddy\.preflight\.ex$/]
+      exclude_patterns: [~r/preflight\.ex$/]
     ]
   end
 
   defp aliases do
-    [
-      preflight: "toddy.preflight"
-    ]
+    []
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
@@ -185,8 +164,6 @@ defmodule Toddy.MixProject do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.31", only: :dev, runtime: false}
-      # Extension packages are loaded via Code.append_path in mix.exs (above)
-      # to avoid circular path deps (each extension depends on :toddy).
     ]
   end
 end

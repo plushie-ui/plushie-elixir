@@ -72,11 +72,6 @@ toddy::run(
 )
 ```
 
-Reference the 5 example packages from the dogfooding exercise for complete
-working examples: toddy_sparkline (Tier C), toddy_hex_view (Tier A),
-toddy_code_view (Tier A), toddy_plot (Tier B), toddy_timeline (Tier C).
-
-
 ## Extension kinds
 
 The macro supports two kinds:
@@ -153,12 +148,9 @@ sensible defaults for all methods except `type_names`, `config_key`, and
 ### Tier A: render-only (~200 lines)
 
 Implement `type_names`, `config_key`, and `render`. Everything else uses
-defaults. Good for widgets that compose existing iced widgets with no
-Rust-side interaction state.
-
-**Example:** toddy_hex_view -- renders binary data as a hex dump using
-`column`, `row`, `text`, `scrollable`, and `container` from iced's standard
-widget set.
+defaults. Good for widgets that compose existing iced widgets (e.g.
+`column`, `row`, `text`, `scrollable`, `container`) with no Rust-side
+interaction state.
 
 ```rust
 impl WidgetExtension for HexViewExtension {
@@ -179,10 +171,9 @@ impl WidgetExtension for HexViewExtension {
 Add `handle_event` to intercept events from your widgets before they reach
 Elixir. Use this when the extension needs to process mouse/keyboard input
 internally (pan, zoom, hover tracking) or transform events before forwarding.
-
-**Example:** toddy_plot -- canvas-based plotting with pan/zoom handled
-entirely in Rust, while click events are forwarded to Elixir as semantic
-`plot_click` events.
+For example, a canvas-based plotting widget might handle pan/zoom entirely
+in Rust while forwarding click events to Elixir as semantic `plot_click`
+events.
 
 ```rust
 fn handle_event(
@@ -217,15 +208,11 @@ fn handle_event(
 
 Add `prepare` for mutable state synchronization before each render pass,
 `handle_command` for commands sent from Elixir to the extension, and
-`cleanup` for resource teardown when nodes are removed.
-
-**Example:** toddy_sparkline -- ring buffer of data samples pushed via
-extension commands, canvas rendering with generation-tracked cache
-invalidation, timer-driven animation state.
-
-**Example:** toddy_timeline -- custom `iced::advanced::Widget` implementation
-with viewport state, hit testing, pan/zoom, all persisted in
-`ExtensionCaches`.
+`cleanup` for resource teardown when nodes are removed. Typical uses
+include ring buffers fed by extension commands with canvas rendering,
+generation-tracked cache invalidation, and custom `iced::advanced::Widget`
+implementations with viewport state, hit testing, and pan/zoom persisted
+in `ExtensionCaches`.
 
 ```rust
 fn prepare(&mut self, node: &TreeNode, caches: &mut ExtensionCaches, theme: &Theme) {
