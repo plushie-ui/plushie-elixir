@@ -8,12 +8,9 @@ Two tiers of widget packages exist:
    etc.) into higher-level widgets. Works today. Works with prebuilt
    renderer binaries. No Rust toolchain needed.
 2. **Elixir + Rust** -- custom native rendering via a `WidgetExtension`
-   trait. Infrastructure implemented (see
-   [ADR 0012](decisions/0012-widget-extension-architecture.md)). Requires
-   a Rust toolchain to compile a custom renderer binary.
+   trait. Requires a Rust toolchain to compile a custom renderer binary.
 
-This guide covers Tier 1 -- pure Elixir packages. For Tier 2 architecture,
-read the ADR.
+This guide covers Tier 1 -- pure Elixir packages.
 
 ## When pure Elixir is enough
 
@@ -371,8 +368,6 @@ If your widget needs any of these, pure Elixir composition is insufficient:
   caching provides)
 - Custom hit testing or gesture recognition at the rendering layer
 
-Tier 2 (Elixir + Rust packages) is designed for these cases. See
-[ADR 0012](decisions/0012-widget-extension-architecture.md) for the
-architecture. The `WidgetExtension` trait, `Julep.Extension` behaviour,
-extension discovery, and build integration are implemented. Dogfooding
-extensions (terminal emulator, etc.) are future work.
+Tier 2 (Elixir + Rust packages) is designed for these cases. The
+`WidgetExtension` trait, `Julep.Extension` behaviour, extension
+discovery, and build integration are implemented.

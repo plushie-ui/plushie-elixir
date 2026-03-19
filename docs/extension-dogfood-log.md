@@ -42,7 +42,7 @@ extension system.
 - `canvas::Cache` is `!Send + !Sync` -- cannot be stored in
   `ExtensionCaches`. Extensions using canvas must let iced manage caches
   internally and redraw each frame, or use generation counters. This is
-  a fundamental constraint, not a bug. Documented in ADR 0012.
+  a fundamental constraint, not a bug.
 
 - `prop_helpers` module didn't have a `prop_u64` or `prop_usize` helper.
   Had to use `prop_f32().map(|v| v as usize)` for integer props like

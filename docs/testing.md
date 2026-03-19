@@ -4,8 +4,7 @@
 
 Progressive fidelity: test your app's logic with fast, pure-Elixir mock tests;
 promote to headless or windowed backends when you need wire-protocol verification
-or pixel-accurate screenshots. See
-[ADR-0008](decisions/0008-test-framework-architecture.md) for design rationale.
+or pixel-accurate screenshots.
 
 
 ## Unit testing

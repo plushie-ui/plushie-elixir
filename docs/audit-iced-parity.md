@@ -880,7 +880,7 @@ These were identified as gaps and have since been implemented:
 32. **`allow_automatic_tabbing`** -- SHIPPED. `Command.allow_automatic_tabbing/1` window op with `"_global"` id.
 33. **Overlay node type** -- SHIPPED. Custom `OverlayWrapper` Rust widget implementing `iced::advanced::Widget` with overlay support. First child = anchor (normal flow), second child = overlay content (iced overlay layer). Props: position, gap, offset_x, offset_y, width.
 34. **`iced_features` config** -- SHIPPED. Compile-time `config :julep, iced_features: :all | [atoms]`. Cargo.toml restructured with individual widget features. `Julep.Features` module. Build task/compiler feature integration.
-35. **Widget extension architecture** -- SHIPPED. ADR 0012 documents pure Elixir and Elixir+Rust widget extension packages.
+35. **Widget extension architecture** -- SHIPPED. Pure Elixir and Elixir+Rust widget extension packages.
 
 ### Remaining gaps
 
@@ -905,7 +905,7 @@ Cross-referenced with external source-level audit (julep-iced-audit,
    `shader::Program` trait in Rust. Fundamentally incompatible with Julep's
    IPC model: state lives in Rust, not Elixir; shader code is WGSL/GLSL,
    not serializable. Would require users to write custom Rust and rebuild
-   the renderer binary. Deferred (ADR 0007).
+   the renderer binary. Deferred.
 
 3. **Task combinators** (`map`, `then`, `chain`, `collect`, `discard`) --
    iced's `Task<T>` type supports monadic composition for chaining async

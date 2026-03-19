@@ -15,7 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - ExtensionCommand wire protocol for high-frequency data push to extensions
 - Split `julep_gui` into `julep-core` library crate and `julep-bin` binary crate
 - Moved Rust renderer into separate `julep-renderer` repo; renamed binary
-  from `julep_gui` to `julep-renderer` (see ADR 0014)
+  from `julep_gui` to `julep-renderer`
 - Protocol version handshake: renderer emits `hello` on startup, bridge
   validates protocol compatibility
 

@@ -752,9 +752,7 @@ The iced fork adds native accessibility support. Key additions:
   which the renderer maps to julep wire events.
 
 The fork is referenced via `[patch.crates-io]` in the renderer's
-`Cargo.toml`. See
-[ADR-0015](decisions/0015-iced-native-accessibility.md) for the rationale
-behind switching to this approach.
+`Cargo.toml`.
 
 ### A11yOverride wrapper widget
 

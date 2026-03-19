@@ -192,21 +192,6 @@ Core:
 - [Roadmap](docs/roadmap.md) -- phased build plan
 - [Iced parity audit](docs/audit-iced-parity.md) -- detailed coverage matrix against iced 0.14
 
-Decisions:
-
-- [0001: Clean break from icing](docs/decisions/0001-clean-break-from-icing.md)
-- [0002: Elixir-first process model](docs/decisions/0002-elixir-first-process-model.md)
-- [0003: JSONL over stdio transport](docs/decisions/0003-jsonl-over-stdio-transport.md)
-- [0004: Interactive canvas via Program trait](docs/decisions/0004-interactive-canvas.md)
-- [0005: PaneGrid as a stateful widget](docs/decisions/0005-pane-grid-stateful-widget.md)
-- [0006: Responsive layout via sensor](docs/decisions/0006-responsive-via-sensor.md)
-- [0007: Two-tier custom widget strategy](docs/decisions/0007-custom-widget-extension.md)
-- [0008: Test framework architecture](docs/decisions/0008-test-framework-architecture.md)
-- [0009: Style maps](docs/decisions/0009-style-maps.md)
-- [0010: Canvas drawing primitives](docs/decisions/0010-canvas-drawing-primitives.md)
-- [0011: Composition patterns](docs/decisions/0011-composition-patterns.md)
-- [0012: Widget extension architecture](docs/decisions/0012-widget-extension-architecture.md)
-
 ## License
 
 MIT
