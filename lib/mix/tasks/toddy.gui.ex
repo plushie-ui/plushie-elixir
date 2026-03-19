@@ -61,7 +61,7 @@ defmodule Mix.Tasks.Toddy.Gui do
     start_opts = if opts[:json], do: Keyword.put(start_opts, :format, :json), else: start_opts
     start_opts = if watch?, do: Keyword.merge(start_opts, dev_opts(opts)), else: start_opts
 
-    case Toddy.start(app_module, start_opts) do
+    case Toddy.start_link(app_module, start_opts) do
       {:ok, pid} ->
         if watch? do
           Mix.shell().info(

@@ -4,11 +4,11 @@ defmodule Toddy do
 
   ## Quick start
 
-      {:ok, pid} = Toddy.start(MyApp)
+      {:ok, pid} = Toddy.start_link(MyApp)
 
   ## Dev mode (live code reloading)
 
-      {:ok, pid} = Toddy.start(MyApp, dev: true)
+      {:ok, pid} = Toddy.start_link(MyApp, dev: true)
 
   ## Under a supervisor
 
@@ -45,8 +45,8 @@ defmodule Toddy do
 
   Returns `{:ok, pid}` on success.
   """
-  @spec start(module(), keyword()) :: Supervisor.on_start()
-  def start(app_module, opts \\ []) do
+  @spec start_link(module(), keyword()) :: Supervisor.on_start()
+  def start_link(app_module, opts \\ []) do
     opts =
       opts
       |> Keyword.put(:app, app_module)
@@ -58,7 +58,7 @@ defmodule Toddy do
   @doc """
   Stops a running Toddy supervisor.
 
-  Accepts a pid or the instance name passed as `:name` to `start/2`
+  Accepts a pid or the instance name passed as `:name` to `start_link/2`
   (defaults to `Toddy`, matching the default registration).
   """
   @spec stop(pid() | atom()) :: :ok
@@ -82,7 +82,7 @@ defmodule Toddy do
 
     %{
       id: name,
-      start: {__MODULE__, :start, [opts[:app], opts]},
+      start: {__MODULE__, :start_link, [opts[:app], opts]},
       type: :supervisor
     }
   end

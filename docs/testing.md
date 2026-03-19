@@ -592,12 +592,10 @@ No special setup. Works anywhere Elixir runs.
 
 ### Headless CI
 
-Requires the Rust toolchain and the headless feature build.
+Requires the toddy binary (download or build from source).
 
 ```yaml
-- run: |
-    # build the renderer
-    cargo build
+- run: mix toddy.download
 - run: TODDY_TEST_BACKEND=headless mix test
 ```
 
@@ -608,10 +606,8 @@ Requires a display server and GPU/software rendering. Two options:
 **Option A: Xvfb (X11)**
 
 ```yaml
-- run: |
-    sudo apt-get install -y xvfb mesa-vulkan-drivers
-    # build the renderer
-    cargo build
+- run: mix toddy.download
+- run: sudo apt-get install -y xvfb mesa-vulkan-drivers
 - run: |
     Xvfb :99 -screen 0 1024x768x24 &
     export DISPLAY=:99
@@ -626,10 +622,8 @@ display. Combined with `vulkan-swrast` (Mesa software rasterizer), this
 runs the full rendering pipeline on CPU.
 
 ```yaml
-- run: |
-    sudo apt-get install -y weston mesa-vulkan-drivers
-    # build the renderer
-    cargo build
+- run: mix toddy.download
+- run: sudo apt-get install -y weston mesa-vulkan-drivers
 - run: |
     export XDG_RUNTIME_DIR=/tmp/toddy-xdg-runtime
     mkdir -p "$XDG_RUNTIME_DIR" && chmod 0700 "$XDG_RUNTIME_DIR"
@@ -650,9 +644,7 @@ Run pooled_mock tests fast, then promote to higher-fidelity backends for subsets
 - run: mix test
 
 # Full suite on headless for protocol verification
-- run: |
-    mix toddy.build
-    TODDY_TEST_BACKEND=headless mix test
+- run: TODDY_TEST_BACKEND=headless mix test
 
 # Windowed for pixel regression (tagged subset)
 - run: |

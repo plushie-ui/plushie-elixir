@@ -653,12 +653,8 @@ end
 
 ## Building
 
-Accessibility is enabled by default. A standard `cargo build` includes it:
-
-```bash
-# build the renderer
-cargo build --release
-```
+Accessibility is included by default in both precompiled binaries
+(`mix toddy.download`) and source builds (`mix toddy.build`).
 
 The renderer uses an iced fork (`v0.14.0-a11y-accesskit` branch) that adds
 native accessibility support. The fork is referenced via `[patch.crates-io]`

@@ -45,7 +45,7 @@ mix toddy.gui Counter
 Or from IEx:
 
 ```elixir
-iex> Toddy.start(Counter)
+iex> Toddy.start_link(Counter)
 ```
 
 ## Getting started
