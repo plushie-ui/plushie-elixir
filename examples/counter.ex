@@ -1,4 +1,4 @@
-defmodule Toddy.Examples.Counter do
+defmodule Counter do
   @moduledoc """
   Minimal counter example.
 

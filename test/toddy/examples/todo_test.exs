@@ -1,8 +1,8 @@
-defmodule Toddy.Examples.TodoTest do
+defmodule TodoTest do
   use ExUnit.Case, async: true
 
   alias Toddy.Event.Widget
-  alias Toddy.Examples.Todo
+  alias Todo
 
   describe "init/1" do
     test "returns empty todo list" do

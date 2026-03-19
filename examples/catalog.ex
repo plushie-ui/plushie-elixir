@@ -1,4 +1,4 @@
-defmodule Toddy.Examples.Catalog do
+defmodule Catalog do
   @moduledoc """
   Comprehensive widget catalog exercising every real iced widget type in Toddy.
 

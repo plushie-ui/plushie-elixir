@@ -1,4 +1,4 @@
-defmodule Toddy.Examples.Clock do
+defmodule Clock do
   @moduledoc """
   Clock example showing the current time, updated every second.
 

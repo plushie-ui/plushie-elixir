@@ -5,7 +5,7 @@ defmodule Toddy.MixTasksTest do
     test "prints the initial tree for a known app as JSON" do
       output =
         ExUnit.CaptureIO.capture_io(fn ->
-          Mix.Tasks.Toddy.Inspect.run(["Toddy.Examples.Counter"])
+          Mix.Tasks.Toddy.Inspect.run(["Counter"])
         end)
 
       # Should be valid JSON

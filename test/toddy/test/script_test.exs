@@ -6,7 +6,7 @@ defmodule Toddy.Test.ScriptTest do
   describe "parse/1" do
     test "parses a valid script with header and instructions" do
       input = """
-      app: Toddy.Examples.Counter
+      app: Counter
       viewport: 1024x768
       theme: light
       backend: pooled_mock
@@ -16,7 +16,7 @@ defmodule Toddy.Test.ScriptTest do
       """
 
       assert {:ok, script} = Script.parse(input)
-      assert script.header.app == Toddy.Examples.Counter
+      assert script.header.app == Counter
       assert script.header.viewport == {1024, 768}
       assert script.header.theme == "light"
       assert script.header.backend == :pooled_mock
@@ -26,7 +26,7 @@ defmodule Toddy.Test.ScriptTest do
 
     test "uses defaults for missing optional header fields" do
       input = """
-      app: Toddy.Examples.Counter
+      app: Counter
       -----
       click "#btn"
       """
@@ -50,7 +50,7 @@ defmodule Toddy.Test.ScriptTest do
 
     test "returns error for missing separator" do
       input = """
-      app: Toddy.Examples.Counter
+      app: Counter
       click "#increment"
       """
 
@@ -60,7 +60,7 @@ defmodule Toddy.Test.ScriptTest do
 
     test "parses all instruction types" do
       input = """
-      app: Toddy.Examples.Counter
+      app: Counter
       -----
       click "#btn"
       type "#input" "hello world"
@@ -85,7 +85,7 @@ defmodule Toddy.Test.ScriptTest do
 
     test "ignores comments and blank lines" do
       input = """
-      app: Toddy.Examples.Counter
+      app: Counter
       # this is a header comment
       -----
       # this is a body comment
@@ -102,7 +102,7 @@ defmodule Toddy.Test.ScriptTest do
 
     test "handles quoted strings in instructions" do
       input = """
-      app: Toddy.Examples.Counter
+      app: Counter
       -----
       type "#search" "hello world with spaces"
       assert_text "#label" "Count: 42"
@@ -115,7 +115,7 @@ defmodule Toddy.Test.ScriptTest do
 
     test "returns error for unknown instruction" do
       input = """
-      app: Toddy.Examples.Counter
+      app: Counter
       -----
       flurble "#wat"
       """
@@ -138,7 +138,7 @@ defmodule Toddy.Test.ScriptTest do
     test "parses headless and windowed backend values" do
       for {backend_str, expected} <- [{"headless", :headless}, {"windowed", :windowed}] do
         input = """
-        app: Toddy.Examples.Counter
+        app: Counter
         backend: #{backend_str}
         -----
         click "#btn"

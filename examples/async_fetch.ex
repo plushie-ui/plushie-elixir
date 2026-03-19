@@ -1,4 +1,4 @@
-defmodule Toddy.Examples.AsyncFetch do
+defmodule AsyncFetch do
   @moduledoc """
   Async command example -- a button that triggers background work.
 

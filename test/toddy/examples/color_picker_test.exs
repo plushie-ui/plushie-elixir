@@ -1,10 +1,10 @@
-defmodule Toddy.Examples.ColorPickerTest do
+defmodule ColorPickerTest do
   use ExUnit.Case, async: true
 
   alias Toddy.Event.Canvas
   alias Toddy.Event.Widget
 
-  alias Toddy.Examples.ColorPicker
+  alias ColorPicker
 
   # ---------------------------------------------------------------------------
   # init/1

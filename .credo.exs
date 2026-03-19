@@ -93,7 +93,7 @@
           # set this value to 0 (zero).
           #
           # CHANGED: exit_status 0 -- "Todo" appears as a product name
-          # (Toddy.Examples.Todo), not a task marker.
+          # (Todo), not a task marker.
           {Credo.Check.Design.TagTODO, [exit_status: 0]},
 
           #

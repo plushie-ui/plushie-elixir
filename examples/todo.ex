@@ -1,4 +1,4 @@
-defmodule Toddy.Examples.Todo do
+defmodule Todo do
   @moduledoc """
   To-do list with add, toggle, delete, and filter.
 

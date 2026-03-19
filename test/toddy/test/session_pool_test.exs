@@ -101,7 +101,7 @@ defmodule Toddy.Test.SessionPoolTest do
     end
 
     test "start and basic interaction", %{pool: pool} do
-      {:ok, pid} = Pooled.start(Toddy.Examples.Counter, pool: pool)
+      {:ok, pid} = Pooled.start(Counter, pool: pool)
       assert Pooled.model(pid).count == 0
 
       Pooled.click(pid, "#increment")
@@ -114,8 +114,8 @@ defmodule Toddy.Test.SessionPoolTest do
     end
 
     test "concurrent sessions are isolated", %{pool: pool} do
-      {:ok, p1} = Pooled.start(Toddy.Examples.Counter, pool: pool)
-      {:ok, p2} = Pooled.start(Toddy.Examples.Counter, pool: pool)
+      {:ok, p1} = Pooled.start(Counter, pool: pool)
+      {:ok, p2} = Pooled.start(Counter, pool: pool)
 
       Pooled.click(p1, "#increment")
       Pooled.click(p1, "#increment")
@@ -129,7 +129,7 @@ defmodule Toddy.Test.SessionPoolTest do
     end
 
     test "reset restores initial state", %{pool: pool} do
-      {:ok, pid} = Pooled.start(Toddy.Examples.Counter, pool: pool)
+      {:ok, pid} = Pooled.start(Counter, pool: pool)
       Pooled.click(pid, "#increment")
       assert Pooled.model(pid).count == 1
 

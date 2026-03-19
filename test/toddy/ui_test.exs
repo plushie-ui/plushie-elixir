@@ -1002,13 +1002,13 @@ defmodule Toddy.UITest do
 
   describe "Counter example view shape" do
     test "root node is a window" do
-      tree = Toddy.Examples.Counter.view(%{count: 0})
+      tree = Counter.view(%{count: 0})
       assert tree.type == "window"
       assert tree.id == "main"
     end
 
     test "contains increment and decrement buttons" do
-      tree = Toddy.Examples.Counter.view(%{count: 0})
+      tree = Counter.view(%{count: 0})
       inc = Toddy.UI.find(tree, "increment")
       dec = Toddy.UI.find(tree, "decrement")
       assert inc != nil
@@ -1018,7 +1018,7 @@ defmodule Toddy.UITest do
     end
 
     test "contains a text node with the current count" do
-      tree = Toddy.Examples.Counter.view(%{count: 0})
+      tree = Counter.view(%{count: 0})
 
       text_nodes = Toddy.Tree.find_all(tree, fn node -> node.type == "text" end)
       count_node = Enum.find(text_nodes, fn n -> n.props["content"] == "Count: 0" end)

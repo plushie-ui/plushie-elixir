@@ -1,9 +1,9 @@
-defmodule Toddy.Examples.NotesTest do
+defmodule NotesTest do
   use ExUnit.Case, async: true
 
   alias Toddy.Event.Widget
 
-  alias Toddy.Examples.Notes
+  alias Notes
 
   describe "init/1" do
     test "starts with empty notes and list route" do

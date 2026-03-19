@@ -1,9 +1,9 @@
-defmodule Toddy.Examples.CatalogTest do
+defmodule CatalogTest do
   use ExUnit.Case, async: true
 
   alias Toddy.Event.Widget
 
-  alias Toddy.Examples.Catalog
+  alias Catalog
 
   test "init returns expected model" do
     model = Catalog.init([])

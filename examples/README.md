@@ -4,7 +4,7 @@ Eight example apps demonstrating Toddy's features from minimal to complex.
 Run any example with:
 
 ```sh
-mix toddy.gui Toddy.Examples.<Name>
+mix toddy.gui <Name>
 ```
 
 ## Examples
@@ -17,7 +17,7 @@ Minimal Elm-architecture example. Two buttons increment and decrement a count.
 Start here to understand `init/1`, `update/2`, and `view/1`.
 
 ```sh
-mix toddy.gui Toddy.Examples.Counter
+mix toddy.gui Counter
 ```
 
 ### Todo
@@ -30,7 +30,7 @@ IDs, `scrollable` layout, and pattern matching on parameterized event IDs
 like `"todo:#{id}"`.
 
 ```sh
-mix toddy.gui Toddy.Examples.Todo
+mix toddy.gui Todo
 ```
 
 ### Notes
@@ -44,7 +44,7 @@ navigation), and `Toddy.Data` (search/query across note fields). Shows how
 to compose multiple state helpers in a single model.
 
 ```sh
-mix toddy.gui Toddy.Examples.Notes
+mix toddy.gui Notes
 ```
 
 ### Clock
@@ -56,7 +56,7 @@ Displays the current UTC time, updated every second. Demonstrates
 callback returns a timer that delivers `{:tick, timestamp}` events.
 
 ```sh
-mix toddy.gui Toddy.Examples.Clock
+mix toddy.gui Clock
 ```
 
 ### Shortcuts
@@ -69,7 +69,7 @@ modifier key detection (Ctrl, Alt, Shift, Super) and the `Toddy.Event.Key`
 struct.
 
 ```sh
-mix toddy.gui Toddy.Examples.Shortcuts
+mix toddy.gui Shortcuts
 ```
 
 ### AsyncFetch
@@ -82,7 +82,7 @@ loop. Shows the `{model, command}` return form from `update/2` and how async
 results are delivered back as events.
 
 ```sh
-mix toddy.gui Toddy.Examples.AsyncFetch
+mix toddy.gui AsyncFetch
 ```
 
 ### ColorPicker
@@ -97,7 +97,7 @@ different invalidation patterns), and interactive canvas events
 and coordinate math for hit testing.
 
 ```sh
-mix toddy.gui Toddy.Examples.ColorPicker
+mix toddy.gui ColorPicker
 ```
 
 ### Catalog
@@ -119,5 +119,5 @@ tabbed sections:
 Use this as a reference for widget props and event patterns.
 
 ```sh
-mix toddy.gui Toddy.Examples.Catalog
+mix toddy.gui Catalog
 ```

@@ -1,4 +1,4 @@
-defmodule Toddy.Examples.Shortcuts do
+defmodule Shortcuts do
   @moduledoc """
   Keyboard shortcuts example showing a scrollable log of key presses.
 

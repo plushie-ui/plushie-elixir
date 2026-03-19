@@ -1,4 +1,4 @@
-defmodule Toddy.Examples.Notes do
+defmodule Notes do
   @moduledoc """
   Notes application demonstrating all 5 state helpers working together.
 

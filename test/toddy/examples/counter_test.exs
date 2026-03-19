@@ -1,9 +1,9 @@
-defmodule Toddy.Examples.CounterTest do
+defmodule CounterTest do
   use ExUnit.Case, async: true
 
   alias Toddy.Event.Widget
 
-  alias Toddy.Examples.Counter
+  alias Counter
 
   # ---------------------------------------------------------------------------
   # init/1

@@ -3,8 +3,8 @@ defmodule Toddy.IntegrationCaseTest do
 
   alias Toddy.Event.Widget
 
-  alias Toddy.Examples.Counter
-  alias Toddy.Examples.Todo
+  alias Counter
+  alias Todo
 
   # ---------------------------------------------------------------------------
   # start_app/1

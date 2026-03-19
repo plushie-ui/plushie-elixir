@@ -1,4 +1,4 @@
-defmodule Toddy.Examples.ColorPicker do
+defmodule ColorPicker do
   @moduledoc """
   HSV color picker using the canvas widget as a custom interactive control.
 
