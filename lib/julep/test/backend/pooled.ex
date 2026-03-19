@@ -64,25 +64,25 @@ defmodule Julep.Test.Backend.Pooled do
   end
 
   @impl Julep.Test.Backend
-  def click(pid, selector), do: GenServer.call(pid, {:interact, "click", selector, %{}})
+  def click(pid, selector), do: interact!(pid, {:interact, "click", selector, %{}})
 
   @impl Julep.Test.Backend
   def type_text(pid, selector, text),
-    do: GenServer.call(pid, {:interact, "type_text", selector, %{text: text}})
+    do: interact!(pid, {:interact, "type_text", selector, %{text: text}})
 
   @impl Julep.Test.Backend
-  def submit(pid, selector), do: GenServer.call(pid, {:submit, selector})
+  def submit(pid, selector), do: interact!(pid, {:submit, selector})
 
   @impl Julep.Test.Backend
-  def toggle(pid, selector), do: GenServer.call(pid, {:toggle, selector})
+  def toggle(pid, selector), do: interact!(pid, {:toggle, selector})
 
   @impl Julep.Test.Backend
   def select(pid, selector, value),
-    do: GenServer.call(pid, {:interact, "select", selector, %{value: value}})
+    do: interact!(pid, {:interact, "select", selector, %{value: value}})
 
   @impl Julep.Test.Backend
   def slide(pid, selector, value),
-    do: GenServer.call(pid, {:interact, "slide", selector, %{value: value}})
+    do: interact!(pid, {:interact, "slide", selector, %{value: value}})
 
   @impl Julep.Test.Backend
   def model(pid), do: GenServer.call(pid, :model)
@@ -104,16 +104,29 @@ defmodule Julep.Test.Backend.Pooled do
     do: GenServer.call(pid, {:await_async, tag, timeout}, timeout + 1000)
 
   @impl Julep.Test.Backend
-  def press(pid, key), do: GenServer.call(pid, {:interact, "press", nil, parse_key(key)})
+  def press(pid, key), do: interact!(pid, {:interact, "press", nil, parse_key(key)})
 
   @impl Julep.Test.Backend
-  def release(pid, key), do: GenServer.call(pid, {:interact, "release", nil, parse_key(key)})
+  def release(pid, key), do: interact!(pid, {:interact, "release", nil, parse_key(key)})
 
   @impl Julep.Test.Backend
-  def move_to(pid, x, y), do: GenServer.call(pid, {:interact, "move_to", nil, %{x: x, y: y}})
+  def move_to(pid, x, y), do: interact!(pid, {:interact, "move_to", nil, %{x: x, y: y}})
 
   @impl Julep.Test.Backend
-  def type_key(pid, key), do: GenServer.call(pid, {:interact, "type_key", nil, parse_key(key)})
+  def type_key(pid, key), do: interact!(pid, {:interact, "type_key", nil, parse_key(key)})
+
+  # All interact-like callbacks route through this wrapper.
+  # Handles both the normal error reply (from :DOWN handler) and
+  # the edge case where the GenServer exits before replying.
+  defp interact!(pid, msg) do
+    case GenServer.call(pid, msg) do
+      :ok -> :ok
+      {:error, reason} -> raise "renderer error during interaction: #{inspect(reason)}"
+    end
+  catch
+    :exit, reason ->
+      raise "renderer crashed during interaction: #{inspect(reason)}"
+  end
 
   # -- GenServer Implementation -----------------------------------------------
 
@@ -125,6 +138,7 @@ defmodule Julep.Test.Backend.Pooled do
   @impl GenServer
   def init({app, opts}) do
     pool = Keyword.get(opts, :pool, Julep.TestPool)
+    Process.monitor(pool)
     session_id = SessionPool.register(pool)
 
     {model, commands} = init_app(app, opts)
@@ -352,6 +366,17 @@ defmodule Julep.Test.Backend.Pooled do
   def handle_info({:julep_pool_event, _session_id, event}, state) do
     state = dispatch_event_map(event, state)
     {:noreply, state}
+  end
+
+  def handle_info({:DOWN, _ref, :process, pool, reason}, %{pool: pool} = state) do
+    # The SessionPool crashed (renderer exited). If we're mid-interact,
+    # reply with an error so the caller gets a clear crash message
+    # instead of a GenServer timeout.
+    if state.interact_from do
+      GenServer.reply(state.interact_from, {:error, {:renderer_crashed, reason}})
+    end
+
+    {:stop, {:renderer_crashed, reason}, %{state | interact_from: nil}}
   end
 
   def handle_info(_msg, state), do: {:noreply, state}
