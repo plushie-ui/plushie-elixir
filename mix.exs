@@ -3,7 +3,7 @@ defmodule Toddy.MixProject do
 
   @version "0.3.0"
   @source_url "https://github.com/toddy-ui/toddy-elixir"
-  @binary_version "0.3.0"
+  @binary_version "0.3.1"
 
   def project do
     [
