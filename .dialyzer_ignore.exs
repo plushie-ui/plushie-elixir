@@ -9,8 +9,8 @@
   # known dialyzer limitation with opaque types inside structs. The code
   # is correct -- it only uses MapSet API functions, never inspects internals.
   {"lib/toddy/selection.ex", :contract_with_opaque},
-  {"lib/toddy/runtime.ex", :contract_with_opaque},
-  {"lib/toddy/runtime.ex", :call_without_opaque},
+  {"lib/toddy/runtime/windows.ex", :contract_with_opaque},
+  {"lib/toddy/runtime/windows.ex", :call_without_opaque},
 
   # Convenience alignment builders return t() which is correct, but dialyzer
   # infers a more specific success type (e.g. align_x: :left). The spec is
