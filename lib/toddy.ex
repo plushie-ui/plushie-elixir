@@ -22,6 +22,9 @@ defmodule Toddy do
   - `:app_opts`   -- opts forwarded to `app.init/1` (default: `[]`)
   - `:binary`     -- path to the toddy binary (default: auto-resolved)
   - `:name`       -- supervisor registration name (default: `Toddy`)
+  - `:daemon`     -- if `true`, keep running after the last window closes
+                      (default: `false`). In daemon mode, `all_windows_closed`
+                      is delivered to `update/2` instead of triggering shutdown.
   - `:dev`        -- enable live code reloading (default: `false`)
   - `:dev_opts`   -- options forwarded to `Toddy.DevServer` (default: `[]`)
   - `:format`      -- wire format, `:msgpack` (default) or `:json`
@@ -100,6 +103,7 @@ defmodule Toddy do
         path -> path
       end
 
+    daemon? = Keyword.get(opts, :daemon, false)
     dev? = Keyword.get(opts, :dev, false)
     format = Keyword.get(opts, :format, :msgpack)
     log_level = Keyword.get(opts, :log_level, :error)
@@ -130,6 +134,7 @@ defmodule Toddy do
            app: app,
            bridge: bridge_name(name),
            name: runtime_name(name),
+           daemon: daemon?,
            app_opts: Keyword.get(opts, :app_opts, [])
          ]},
         restart: :transient,

@@ -103,9 +103,11 @@ defmodule Toddy.Runtime do
 
     app = Keyword.fetch!(opts, :app)
     bridge = Keyword.fetch!(opts, :bridge)
+    daemon? = Keyword.get(opts, :daemon, false)
 
     # App opts can be passed explicitly via :app_opts, or as remaining keys.
-    app_opts = Keyword.get(opts, :app_opts, Keyword.drop(opts, [:app, :bridge, :name, :app_opts]))
+    app_opts =
+      Keyword.get(opts, :app_opts, Keyword.drop(opts, [:app, :bridge, :name, :daemon, :app_opts]))
 
     # 1. Initialize app model.
     case safe_init(app, app_opts) do
@@ -114,6 +116,7 @@ defmodule Toddy.Runtime do
           app: app,
           model: model,
           bridge: bridge,
+          daemon: daemon?,
           tree: nil,
           init_commands: commands,
           subscriptions: %{},
@@ -166,6 +169,15 @@ defmodule Toddy.Runtime do
     {:noreply, state}
   end
 
+  def handle_info(
+        {:renderer_event, %Toddy.Event.System{type: :all_windows_closed}},
+        %{daemon: false} = state
+      ) do
+    # Non-daemon mode: last window closed, shut down cleanly.
+    Logger.info("toddy runtime: all windows closed -- shutting down")
+    {:stop, :normal, state}
+  end
+
   def handle_info({:renderer_event, event}, state) do
     state = run_update(state, event)
     {:noreply, state}
@@ -176,7 +188,7 @@ defmodule Toddy.Runtime do
   # ---------------------------------------------------------------------------
 
   def handle_info({:renderer_exit, :normal}, state) do
-    # Clean exit (user closed window). Shut down the runtime.
+    # Clean exit (renderer process ended). Shut down the runtime.
     Logger.info("toddy runtime: renderer exited normally -- shutting down")
     {:stop, :normal, state}
   end
@@ -410,11 +422,13 @@ defmodule Toddy.Runtime do
   @spec unwrap_result(term()) :: {term(), [Toddy.Command.t()]}
   defp unwrap_result({model, commands}) when is_list(commands) do
     Enum.each(commands, fn
-      %Toddy.Command{} -> :ok
+      %Toddy.Command{} ->
+        :ok
+
       invalid ->
         raise ArgumentError,
-          "init/1 or update/2 returned {model, commands} but the command " <>
-            "list contains #{inspect(invalid)}, expected %Toddy.Command{}"
+              "init/1 or update/2 returned {model, commands} but the command " <>
+                "list contains #{inspect(invalid)}, expected %Toddy.Command{}"
     end)
 
     {model, commands}
@@ -426,14 +440,14 @@ defmodule Toddy.Runtime do
 
   defp unwrap_result({_model, invalid}) do
     raise ArgumentError,
-      "init/1 or update/2 returned {model, commands} but commands is " <>
-        "#{inspect(invalid)}, expected a %Toddy.Command{} or a list of them"
+          "init/1 or update/2 returned {model, commands} but commands is " <>
+            "#{inspect(invalid)}, expected a %Toddy.Command{} or a list of them"
   end
 
   defp unwrap_result(model) when is_tuple(model) do
     raise ArgumentError,
-      "init/1 or update/2 returned a #{tuple_size(model)}-element tuple, " <>
-        "expected a bare model or {model, command}"
+          "init/1 or update/2 returned a #{tuple_size(model)}-element tuple, " <>
+            "expected a bare model or {model, command}"
   end
 
   defp unwrap_result(model) do
