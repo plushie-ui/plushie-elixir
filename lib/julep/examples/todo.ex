@@ -1,133 +1,103 @@
 defmodule Julep.Examples.Todo do
   @moduledoc """
-  To-do list application with add, check off, delete, and filter.
+  To-do list with add, toggle, delete, and filter.
 
   Demonstrates:
   - `text_input` with `on_submit` for keyboard-driven entry
-  - Dynamic list rendering with scoped IDs (`todo:N`, `delete:N`)
-  - `checkbox` toggle events with `value` payload
-  - Filter buttons and conditional list filtering
-  - `scrollable` for overflow content
+  - Scoped IDs via named rows for dynamic list items
+  - Scope binding in `update/2` for item-level events
+  - `Command.focus/1` with scoped paths for refocusing
+  - Filter buttons with conditional list rendering
+  - View helper extraction (`todo_row/1`, `filtered/1`)
   """
 
   use Julep.App
 
+  import Julep.UI
+
+  alias Julep.Command
   alias Julep.Event.Widget
 
-  # -- init ------------------------------------------------------------------
+  # -- Init -----------------------------------------------------------------
 
   def init(_opts) do
-    %{
-      todos: [],
-      input: "",
-      next_id: 1,
-      filter: :all
-    }
+    %{todos: [], input: "", filter: :all, next_id: 1}
   end
 
-  # -- update ----------------------------------------------------------------
+  # -- Update ---------------------------------------------------------------
 
-  def update(model, %Widget{type: :input, id: "todo_input", value: value}) do
-    %{model | input: value}
+  def update(model, %Widget{type: :input, id: "new_todo", value: val}) do
+    %{model | input: val}
   end
 
-  def update(model, %Widget{type: :submit, id: "todo_input"}) do
-    add_todo(model)
+  def update(model, %Widget{type: :submit, id: "new_todo"}) do
+    if String.trim(model.input) != "" do
+      todo = %{id: "todo_#{model.next_id}", text: model.input, done: false}
+      model = %{model | todos: [todo | model.todos], input: "", next_id: model.next_id + 1}
+      {model, Command.focus("app/new_todo")}
+    else
+      model
+    end
   end
 
-  def update(model, %Widget{type: :click, id: "add_todo"}) do
-    add_todo(model)
-  end
-
-  def update(model, %Widget{type: :toggle, id: "todo:" <> id_str, value: checked}) do
-    id = String.to_integer(id_str)
-
+  def update(model, %Widget{type: :toggle, id: "toggle", scope: [todo_id | _]}) do
     todos =
       Enum.map(model.todos, fn
-        %{id: ^id} = todo -> %{todo | done: checked}
-        todo -> todo
+        %{id: ^todo_id} = t -> %{t | done: !t.done}
+        t -> t
       end)
 
     %{model | todos: todos}
   end
 
-  def update(model, %Widget{type: :click, id: "delete:" <> id_str}) do
-    id = String.to_integer(id_str)
-    todos = Enum.reject(model.todos, fn todo -> todo.id == id end)
-    %{model | todos: todos}
+  def update(model, %Widget{type: :click, id: "delete", scope: [todo_id | _]}) do
+    %{model | todos: Enum.reject(model.todos, &(&1.id == todo_id))}
   end
 
   def update(model, %Widget{type: :click, id: "filter_all"}), do: %{model | filter: :all}
   def update(model, %Widget{type: :click, id: "filter_active"}), do: %{model | filter: :active}
-
-  def update(model, %Widget{type: :click, id: "filter_completed"}),
-    do: %{model | filter: :completed}
-
-  def update(model, %Widget{type: :click, id: "clear_completed"}) do
-    todos = Enum.reject(model.todos, fn todo -> todo.done end)
-    %{model | todos: todos}
-  end
+  def update(model, %Widget{type: :click, id: "filter_done"}), do: %{model | filter: :done}
 
   def update(model, _event), do: model
 
-  # -- view ------------------------------------------------------------------
+  # -- View -----------------------------------------------------------------
 
   def view(model) do
-    import Julep.UI
+    window "main", title: "Todos" do
+      column id: "app", padding: 20, spacing: 12, width: :fill do
+        text("title", "My Todos", size: 24)
 
-    filtered_todos = filter_todos(model.todos, model.filter)
-    active_count = Enum.count(model.todos, fn t -> not t.done end)
-
-    window "main", title: "Todo" do
-      column padding: 16, spacing: 12, width: :fill do
-        text("title", "Todos", size: 24)
-
-        row spacing: 8, width: :fill do
-          text_input("todo_input", model.input,
-            placeholder: "What needs to be done?",
-            on_submit: true,
-            width: :fill
-          )
-
-          button("add_todo", "Add")
-        end
-
-        scrollable "todo_list", height: :fill do
-          column spacing: 4, width: :fill do
-            for todo <- filtered_todos do
-              row spacing: 8, width: :fill, id: "todo_row:#{todo.id}" do
-                checkbox("todo:#{todo.id}", todo.done, label: todo.text)
-                button("delete:#{todo.id}", "x")
-              end
-            end
-          end
-        end
+        text_input("new_todo", model.input,
+          placeholder: "What needs doing?",
+          on_submit: true
+        )
 
         row spacing: 8 do
-          text(
-            "todo_count",
-            "#{active_count} item#{if active_count != 1, do: "s", else: ""} left"
-          )
-
           button("filter_all", "All")
           button("filter_active", "Active")
-          button("filter_completed", "Completed")
-          button("clear_completed", "Clear completed")
+          button("filter_done", "Done")
+        end
+
+        column id: "list", spacing: 4 do
+          for todo <- filtered(model) do
+            todo_row(todo)
+          end
         end
       end
     end
   end
 
-  # -- private ---------------------------------------------------------------
+  defp filtered(%{filter: :all, todos: todos}), do: todos
+  defp filtered(%{filter: :active, todos: todos}), do: Enum.reject(todos, & &1.done)
+  defp filtered(%{filter: :done, todos: todos}), do: Enum.filter(todos, & &1.done)
 
-  defp add_todo(%{input: ""} = model), do: model
-
-  defp add_todo(%{input: input} = model) do
-    todo = %{id: model.next_id, text: String.trim(input), done: false}
-    %{model | todos: model.todos ++ [todo], input: "", next_id: model.next_id + 1}
+  defp todo_row(todo) do
+    container todo.id do
+      row spacing: 8 do
+        checkbox("toggle", todo.done)
+        text(todo.text)
+        button("delete", "x")
+      end
+    end
   end
-
-  defp filter_todos(todos, :all), do: todos
-  defp filter_todos(todos, :active), do: Enum.filter(todos, fn t -> not t.done end)
-  defp filter_todos(todos, :completed), do: Enum.filter(todos, fn t -> t.done end)
 end

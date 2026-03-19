@@ -13,6 +13,8 @@ defmodule Julep.Examples.Notes do
 
   use Julep.App
 
+  import Julep.UI
+
   alias Julep.{Data, Route, Selection, State, Undo}
   alias Julep.Event.Widget
 
@@ -138,7 +140,6 @@ defmodule Julep.Examples.Notes do
   # -- view ------------------------------------------------------------------
 
   def view(model) do
-    import Julep.UI
 
     case Route.current(model.route) do
       "/list" -> view_list(model)
@@ -147,7 +148,6 @@ defmodule Julep.Examples.Notes do
   end
 
   defp view_list(model) do
-    import Julep.UI
 
     search_query = State.get(model.state, [:search_query])
     notes = State.get(model.state, [:notes])
@@ -191,7 +191,6 @@ defmodule Julep.Examples.Notes do
   end
 
   defp view_edit(model) do
-    import Julep.UI
 
     current = Undo.current(model.undo)
 

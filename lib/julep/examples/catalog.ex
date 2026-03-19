@@ -42,6 +42,8 @@ defmodule Julep.Examples.Catalog do
 
   alias Julep.Event.{MouseArea, Sensor, Widget}
 
+  import Julep.UI
+
   # -- init ------------------------------------------------------------------
 
   def init(_opts) do
@@ -152,7 +154,6 @@ defmodule Julep.Examples.Catalog do
   # -- view ------------------------------------------------------------------
 
   def view(model) do
-    import Julep.UI
 
     window "catalog", title: "Widget Catalog" do
       column spacing: 12, padding: 16 do
@@ -181,7 +182,6 @@ defmodule Julep.Examples.Catalog do
   # -- tab views (private) ---------------------------------------------------
 
   defp layout_tab do
-    import Julep.UI
 
     column spacing: 8 do
       text("layout_heading", "Layout Widgets", size: 18)
@@ -272,7 +272,6 @@ defmodule Julep.Examples.Catalog do
   end
 
   defp input_tab(model) do
-    import Julep.UI
 
     column spacing: 8 do
       text("input_heading", "Input Widgets", size: 18)
@@ -319,7 +318,6 @@ defmodule Julep.Examples.Catalog do
   end
 
   defp display_tab(model) do
-    import Julep.UI
 
     column spacing: 8 do
       text("display_heading", "Display Widgets", size: 18)
@@ -386,7 +384,6 @@ defmodule Julep.Examples.Catalog do
   end
 
   defp composite_tab(model) do
-    import Julep.UI
 
     column spacing: 8 do
       text("composite_heading", "Interactive & Composite Widgets", size: 18)

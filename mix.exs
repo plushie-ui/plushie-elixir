@@ -38,7 +38,7 @@ defmodule Julep.MixProject do
       description: "Native desktop GUIs from Elixir, powered by iced",
       package: package(),
       source_url: "https://github.com/julep-ui/julep-elixir",
-      docs: [main: "Julep", extras: ["README.md"]],
+      docs: docs(),
       aliases: aliases(),
       dialyzer: [plt_add_apps: [:mix, :ex_unit, :inets, :ssl]]
     ]
@@ -47,6 +47,106 @@ defmodule Julep.MixProject do
   def application do
     [
       extra_applications: [:logger]
+    ]
+  end
+
+  defp docs do
+    [
+      main: "getting-started",
+      source_url: "https://github.com/julep-ui/julep-elixir",
+      extras: [
+        "docs/getting-started.md",
+        "docs/tutorial.md",
+        "docs/app-behaviour.md",
+        "docs/layout.md",
+        "docs/events.md",
+        "docs/commands.md",
+        "docs/effects.md",
+        "docs/scoped-ids.md",
+        "docs/theming.md",
+        "docs/testing.md",
+        "docs/composition-patterns.md",
+        "docs/accessibility.md",
+        "docs/extensions.md"
+      ],
+      groups_for_extras: [
+        Guides: [
+          "docs/getting-started.md",
+          "docs/tutorial.md",
+          "docs/app-behaviour.md",
+          "docs/layout.md",
+          "docs/events.md",
+          "docs/commands.md",
+          "docs/effects.md",
+          "docs/scoped-ids.md",
+          "docs/theming.md",
+          "docs/testing.md"
+        ],
+        Advanced: [
+          "docs/composition-patterns.md",
+          "docs/accessibility.md",
+          "docs/extensions.md"
+        ]
+      ],
+      groups_for_modules: [
+        "App Framework": [
+          Julep,
+          Julep.App,
+          Julep.Runtime,
+          Julep.Bridge,
+          Julep.Binary,
+          Julep.DevServer
+        ],
+        "UI Builder": [
+          Julep.UI,
+          Julep.Iced,
+          Julep.Iced.Widget,
+          Julep.Iced.Encode,
+          Julep.Tree
+        ],
+        Widgets: ~r/Julep\.Iced\.Widget\..*/,
+        "Widget Types": [
+          Julep.Iced.Alignment,
+          Julep.Iced.Anchor,
+          Julep.Iced.Border,
+          Julep.Iced.Color,
+          Julep.Iced.ContentFit,
+          Julep.Iced.Direction,
+          Julep.Iced.FilterMethod,
+          Julep.Iced.Font,
+          Julep.Iced.Gradient,
+          Julep.Iced.Length,
+          Julep.Iced.Padding,
+          Julep.Iced.Position,
+          Julep.Iced.Shadow,
+          Julep.Iced.Shaping,
+          Julep.Iced.StyleMap,
+          Julep.Iced.Theme,
+          Julep.Iced.Wrapping,
+          Julep.Iced.A11y
+        ],
+        Events: ~r/Julep\.Event.*/,
+        Commands: [
+          Julep.Command,
+          Julep.Subscription,
+          Julep.Effects
+        ],
+        "State Helpers": [
+          Julep.Animation,
+          Julep.Data,
+          Julep.KeyModifiers,
+          Julep.Route,
+          Julep.Selection,
+          Julep.State,
+          Julep.Undo
+        ],
+        Testing: ~r/Julep\.Test.*/,
+        Extensions: [
+          Julep.Extension,
+          Julep.Canvas.Shape
+        ],
+        Protocol: ~r/Julep\.Protocol.*/
+      ]
     ]
   end
 

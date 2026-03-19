@@ -2,12 +2,7 @@ defmodule Julep.Examples.TodoTest do
   use ExUnit.Case, async: true
 
   alias Julep.Event.Widget
-
   alias Julep.Examples.Todo
-
-  # ---------------------------------------------------------------------------
-  # init/1
-  # ---------------------------------------------------------------------------
 
   describe "init/1" do
     test "returns empty todo list" do
@@ -19,151 +14,102 @@ defmodule Julep.Examples.TodoTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # update/2 -- adding todos
-  # ---------------------------------------------------------------------------
-
-  describe "update/2 -- adding todos" do
+  describe "adding todos" do
     test "submit adds todo and clears input" do
       model = %{todos: [], input: "Buy milk", next_id: 1, filter: :all}
-      model = Todo.update(model, %Widget{type: :submit, id: "todo_input", value: "Buy milk"})
+      {model, _cmd} = Todo.update(model, %Widget{type: :submit, id: "new_todo"})
 
-      assert [%{id: 1, text: "Buy milk", done: false}] = model.todos
+      assert [%{id: "todo_1", text: "Buy milk", done: false}] = model.todos
       assert model.input == ""
       assert model.next_id == 2
     end
 
-    test "click add_todo adds todo" do
+    test "submit returns focus command" do
       model = %{todos: [], input: "Buy milk", next_id: 1, filter: :all}
-      model = Todo.update(model, %Widget{type: :click, id: "add_todo"})
+      {_model, cmd} = Todo.update(model, %Widget{type: :submit, id: "new_todo"})
 
-      assert [%{id: 1, text: "Buy milk", done: false}] = model.todos
+      assert %Julep.Command{type: :focus} = cmd
     end
 
-    test "empty input does nothing" do
+    test "empty input does nothing on submit" do
       model = %{todos: [], input: "", next_id: 1, filter: :all}
-      model = Todo.update(model, %Widget{type: :click, id: "add_todo"})
-      assert model.todos == []
+      result = Todo.update(model, %Widget{type: :submit, id: "new_todo"})
+      assert result == model
     end
 
-    test "increments next_id" do
-      model = %{todos: [], input: "First", next_id: 1, filter: :all}
-      model = Todo.update(model, %Widget{type: :click, id: "add_todo"})
-      model = %{model | input: "Second"}
-      model = Todo.update(model, %Widget{type: :click, id: "add_todo"})
-      assert [%{id: 1}, %{id: 2}] = model.todos
-      assert model.next_id == 3
+    test "whitespace-only input does nothing" do
+      model = %{todos: [], input: "   ", next_id: 1, filter: :all}
+      result = Todo.update(model, %Widget{type: :submit, id: "new_todo"})
+      assert result == model
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # update/2 -- toggling
-  # ---------------------------------------------------------------------------
-
-  describe "update/2 -- toggling" do
-    test "toggle marks todo done" do
+  describe "toggling" do
+    test "toggle flips done state via scoped id" do
       model = %{
-        todos: [%{id: 1, text: "Buy milk", done: false}],
+        todos: [%{id: "todo_1", text: "Buy milk", done: false}],
         input: "",
         next_id: 2,
         filter: :all
       }
 
-      model = Todo.update(model, %Widget{type: :toggle, id: "todo:1", value: true})
-      assert [%{id: 1, done: true}] = model.todos
+      model = Todo.update(model, %Widget{
+        type: :toggle, id: "toggle", scope: ["todo_1", "list", "app"]
+      })
+
+      assert [%{id: "todo_1", done: true}] = model.todos
     end
 
-    test "toggle marks todo undone" do
+    test "toggle back to undone" do
       model = %{
-        todos: [%{id: 1, text: "Buy milk", done: true}],
+        todos: [%{id: "todo_1", text: "Buy milk", done: true}],
         input: "",
         next_id: 2,
         filter: :all
       }
 
-      model = Todo.update(model, %Widget{type: :toggle, id: "todo:1", value: false})
-      assert [%{id: 1, done: false}] = model.todos
+      model = Todo.update(model, %Widget{
+        type: :toggle, id: "toggle", scope: ["todo_1"]
+      })
+
+      assert [%{id: "todo_1", done: false}] = model.todos
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # update/2 -- deleting
-  # ---------------------------------------------------------------------------
-
-  describe "update/2 -- deleting" do
-    test "delete removes todo" do
+  describe "deleting" do
+    test "delete removes todo via scoped id" do
       model = %{
-        todos: [%{id: 1, text: "A", done: false}, %{id: 2, text: "B", done: false}],
+        todos: [
+          %{id: "todo_1", text: "A", done: false},
+          %{id: "todo_2", text: "B", done: false}
+        ],
         input: "",
         next_id: 3,
         filter: :all
       }
 
-      model = Todo.update(model, %Widget{type: :click, id: "delete:1"})
-      assert [%{id: 2, text: "B"}] = model.todos
+      model = Todo.update(model, %Widget{
+        type: :click, id: "delete", scope: ["todo_1", "list", "app"]
+      })
+
+      assert [%{id: "todo_2", text: "B"}] = model.todos
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # update/2 -- filtering
-  # ---------------------------------------------------------------------------
+  describe "filtering" do
+    test "filter buttons update filter" do
+      model = Todo.init([])
 
-  describe "update/2 -- filtering" do
-    test "filter_all sets filter to :all" do
-      model = %{todos: [], input: "", next_id: 1, filter: :active}
+      model = Todo.update(model, %Widget{type: :click, id: "filter_active"})
+      assert model.filter == :active
+
+      model = Todo.update(model, %Widget{type: :click, id: "filter_done"})
+      assert model.filter == :done
+
       model = Todo.update(model, %Widget{type: :click, id: "filter_all"})
       assert model.filter == :all
     end
-
-    test "filter_active sets filter to :active" do
-      model = %{todos: [], input: "", next_id: 1, filter: :all}
-      model = Todo.update(model, %Widget{type: :click, id: "filter_active"})
-      assert model.filter == :active
-    end
-
-    test "filter_completed sets filter to :completed" do
-      model = %{todos: [], input: "", next_id: 1, filter: :all}
-      model = Todo.update(model, %Widget{type: :click, id: "filter_completed"})
-      assert model.filter == :completed
-    end
   end
-
-  # ---------------------------------------------------------------------------
-  # update/2 -- clear completed
-  # ---------------------------------------------------------------------------
-
-  describe "update/2 -- clear completed" do
-    test "removes all done todos" do
-      model = %{
-        todos: [
-          %{id: 1, text: "Done", done: true},
-          %{id: 2, text: "Open", done: false},
-          %{id: 3, text: "Also done", done: true}
-        ],
-        input: "",
-        next_id: 4,
-        filter: :all
-      }
-
-      model = Todo.update(model, %Widget{type: :click, id: "clear_completed"})
-      assert [%{id: 2, text: "Open"}] = model.todos
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # update/2 -- unknown events
-  # ---------------------------------------------------------------------------
-
-  describe "update/2 -- unknown events" do
-    test "returns model unchanged" do
-      model = Todo.init([])
-      assert Todo.update(model, %Widget{type: :click, id: "nonexistent"}) == model
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # view/1 -- tree structure
-  # ---------------------------------------------------------------------------
 
   describe "view/1" do
     test "contains expected structure" do
@@ -171,37 +117,33 @@ defmodule Julep.Examples.TodoTest do
       tree = Julep.Tree.normalize(Todo.view(model))
 
       assert Julep.Tree.exists?(tree, "main")
-      assert Julep.Tree.exists?(tree, "title")
-      assert Julep.Tree.exists?(tree, "todo_input")
-      assert Julep.Tree.exists?(tree, "add_todo")
-      assert Julep.Tree.exists?(tree, "todo_count")
-      assert Julep.Tree.exists?(tree, "filter_all")
-      assert Julep.Tree.exists?(tree, "filter_active")
-      assert Julep.Tree.exists?(tree, "filter_completed")
+      assert Julep.Tree.find(tree, "title")
+      assert Julep.Tree.find(tree, "new_todo")
+      assert Julep.Tree.find(tree, "filter_all")
+      assert Julep.Tree.find(tree, "filter_active")
+      assert Julep.Tree.find(tree, "filter_done")
     end
 
-    test "shows correct active count" do
+    test "renders todo items with scoped IDs" do
       model = %{
-        todos: [
-          %{id: 1, text: "Done", done: true},
-          %{id: 2, text: "Open", done: false}
-        ],
+        todos: [%{id: "todo_1", text: "Buy milk", done: false}],
         input: "",
-        next_id: 3,
+        next_id: 2,
         filter: :all
       }
 
       tree = Julep.Tree.normalize(Todo.view(model))
-      count_node = Julep.Tree.find(tree, "todo_count")
-      assert count_node
-      assert count_node.props["content"] =~ "1 item left"
+
+      # The toggle checkbox is scoped under the todo row
+      assert Julep.Tree.find(tree, "app/list/todo_1/toggle")
+      assert Julep.Tree.find(tree, "app/list/todo_1/delete")
     end
 
     test "filters todos in view" do
       model = %{
         todos: [
-          %{id: 1, text: "Done", done: true},
-          %{id: 2, text: "Open", done: false}
+          %{id: "todo_1", text: "Done", done: true},
+          %{id: "todo_2", text: "Open", done: false}
         ],
         input: "",
         next_id: 3,
@@ -210,45 +152,16 @@ defmodule Julep.Examples.TodoTest do
 
       tree = Julep.Tree.normalize(Todo.view(model))
 
-      assert Julep.Tree.exists?(tree, "todo:2")
-      refute Julep.Tree.exists?(tree, "todo:1")
+      # Only the active todo should be visible
+      assert Julep.Tree.exists?(tree, "app/list/todo_2/toggle")
+      refute Julep.Tree.exists?(tree, "app/list/todo_1/toggle")
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Full scenario
-  # ---------------------------------------------------------------------------
-
-  describe "full scenario" do
-    test "add, toggle, filter cycle" do
+  describe "unknown events" do
+    test "returns model unchanged" do
       model = Todo.init([])
-
-      # Add a todo via input + submit
-      model = Todo.update(model, %Widget{type: :input, id: "todo_input", value: "Buy milk"})
-      model = Todo.update(model, %Widget{type: :submit, id: "todo_input", value: "Buy milk"})
-      assert length(model.todos) == 1
-
-      # Add another via click
-      model = %{model | input: "Walk dog"}
-      model = Todo.update(model, %Widget{type: :click, id: "add_todo"})
-      assert length(model.todos) == 2
-
-      # Toggle first
-      model = Todo.update(model, %Widget{type: :toggle, id: "todo:1", value: true})
-      assert hd(model.todos).done == true
-
-      # Filter to active
-      model = Todo.update(model, %Widget{type: :click, id: "filter_active"})
-      tree = Julep.Tree.normalize(Todo.view(model))
-
-      # Only "Walk dog" should be visible
-      refute Julep.Tree.exists?(tree, "todo:1")
-      assert Julep.Tree.exists?(tree, "todo:2")
-
-      # Clear completed
-      model = Todo.update(model, %Widget{type: :click, id: "clear_completed"})
-      assert length(model.todos) == 1
-      assert hd(model.todos).text == "Walk dog"
+      assert Todo.update(model, %Widget{type: :click, id: "nonexistent"}) == model
     end
   end
 end

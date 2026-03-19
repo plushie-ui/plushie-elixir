@@ -10,6 +10,8 @@ defmodule Julep.Examples.Clock do
 
   use Julep.App
 
+  import Julep.UI
+
   alias Julep.Event.Timer
   alias Julep.Subscription
 
@@ -36,7 +38,6 @@ defmodule Julep.Examples.Clock do
   # -- view ------------------------------------------------------------------
 
   def view(model) do
-    import Julep.UI
 
     window "main", title: "Clock" do
       column padding: 24, spacing: 16, width: :fill, align_x: :center do

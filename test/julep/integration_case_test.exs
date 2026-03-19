@@ -88,10 +88,10 @@ defmodule Julep.IntegrationCaseTest do
       {runtime, _bridge} = start_app(Todo)
 
       # Type in the input
-      send_event(runtime, %Widget{type: :input, id: "todo_input", value: "Buy milk"})
+      send_event(runtime, %Widget{type: :input, id: "new_todo", value: "Buy milk"})
 
       # Submit
-      send_event(runtime, %Widget{type: :submit, id: "todo_input", value: "Buy milk"})
+      send_event(runtime, %Widget{type: :submit, id: "new_todo"})
 
       model = get_model(runtime)
       assert length(model.todos) == 1

@@ -64,6 +64,8 @@ Create `lib/my_app/counter.ex`:
 defmodule MyApp.Counter do
   use Julep.App
 
+  import Julep.UI
+
   alias Julep.Event.Widget
 
   def init(_opts), do: %{count: 0}
@@ -77,8 +79,6 @@ defmodule MyApp.Counter do
   def update(model, _event), do: model
 
   def view(model) do
-    import Julep.UI
-
     window "main", title: "Counter" do
       column padding: 16, spacing: 8 do
         text("count", "Count: #{model.count}", size: 20)
@@ -186,6 +186,7 @@ code. See `Julep.DevServer` for configuration options.
 
 ## Next steps
 
+- [Tutorial: building a todo app](tutorial.md) -- step-by-step guide
 - Browse the [examples](../lib/julep/examples/) for patterns
 - [App behaviour](app-behaviour.md) -- full callback API
 - [Layout](layout.md) -- sizing and positioning widgets

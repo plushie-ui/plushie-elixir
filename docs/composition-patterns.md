@@ -43,8 +43,6 @@ defmodule TabApp do
   def update(model, _event), do: model
 
   def view(model) do
-    import Julep.UI
-
     tabs = [:overview, :details, :settings]
 
     window "main", title: "Tab Demo" do
@@ -141,8 +139,6 @@ defmodule SidebarApp do
   def update(model, _event), do: model
 
   def view(model) do
-    import Julep.UI
-
     window "main", title: "Sidebar Demo" do
       row width: :fill, height: :fill do
         # Sidebar
@@ -231,8 +227,6 @@ defmodule ToolbarApp do
   def update(model, _event), do: model
 
   def view(model) do
-    import Julep.UI
-
     window "main", title: "Toolbar Demo" do
       column width: :fill do
         # Toolbar
@@ -333,8 +327,6 @@ defmodule ModalApp do
   def update(model, _event), do: model
 
   def view(model) do
-    import Julep.UI
-
     window "main", title: "Modal Demo" do
       stack width: :fill, height: :fill do
         # Layer 0: main content (always visible)
@@ -427,8 +419,6 @@ defmodule CardApp do
   def update(model, _event), do: model
 
   def view(model) do
-    import Julep.UI
-
     window "main", title: "Card Demo" do
       column padding: 24, spacing: 16, width: :fill do
         # Simple card
@@ -468,8 +458,6 @@ defmodule CardApp do
 
   # Reusable card helper. Returns a container node.
   defp card(id, title, body_fn) do
-    import Julep.UI
-
     border = Border.new() |> Border.color("#e0e0e0") |> Border.width(1) |> Border.rounded(8)
     shadow = Shadow.new() |> Shadow.color("#00000020") |> Shadow.offset(0, 2) |> Shadow.blur_radius(8)
 
@@ -539,8 +527,6 @@ defmodule SplitApp do
   def update(model, _event), do: model
 
   def view(model) do
-    import Julep.UI
-
     window "main", title: "Split Panel Demo" do
       row width: :fill, height: :fill do
         # Left panel
@@ -628,8 +614,6 @@ defmodule BreadcrumbApp do
   def update(model, _event), do: model
 
   def view(model) do
-    import Julep.UI
-
     window "main", title: "Breadcrumb Demo" do
       column padding: 16, spacing: 16, width: :fill do
         row spacing: 4, align_y: :center do
@@ -725,8 +709,6 @@ defmodule BadgeApp do
   def update(model, _event), do: model
 
   def view(model) do
-    import Julep.UI
-
     window "main", title: "Badge Demo" do
       column padding: 24, spacing: 16, width: :fill do
         # Status badges (display only)
@@ -759,8 +741,6 @@ defmodule BadgeApp do
 
   # Display-only badge: a small container with pill shape.
   defp badge(id, label, bg_color, text_color) do
-    import Julep.UI
-
     container id,
       padding: %{top: 2, bottom: 2, left: 8, right: 8},
       background: bg_color,

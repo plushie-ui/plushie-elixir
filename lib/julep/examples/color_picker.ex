@@ -16,6 +16,8 @@ defmodule Julep.Examples.ColorPicker do
 
   use Julep.App
 
+  import Julep.UI
+
   alias Julep.Canvas.Shape
   alias Julep.Event.Canvas
 
@@ -70,7 +72,6 @@ defmodule Julep.Examples.ColorPicker do
   def update(model, _event), do: model
 
   def view(model) do
-    import Julep.UI
 
     hex = hsv_to_hex(model.hue, model.saturation, model.value)
     h_int = round(model.hue)

@@ -15,6 +15,7 @@ defmodule Julep.Examples.Shortcuts do
   alias Julep.KeyModifiers
   alias Julep.Subscription
 
+  import Julep.UI
   @max_log_entries 50
 
   # -- init ------------------------------------------------------------------
@@ -46,7 +47,6 @@ defmodule Julep.Examples.Shortcuts do
   # -- view ------------------------------------------------------------------
 
   def view(model) do
-    import Julep.UI
 
     window "main", title: "Keyboard Shortcuts" do
       column padding: 16, spacing: 12, width: :fill do
