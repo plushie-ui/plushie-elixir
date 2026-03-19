@@ -16,6 +16,7 @@ defmodule Mix.Tasks.Toddy.Gui do
   - `--watch` -- Enable file watching and live reload (default in dev)
   - `--no-watch` -- Disable file watching
   - `--debounce` -- File watch debounce interval in ms (default: 100)
+  - `--daemon` -- Keep running after the last window closes
 
   ## File watching
 
@@ -40,7 +41,8 @@ defmodule Mix.Tasks.Toddy.Gui do
           release: :boolean,
           json: :boolean,
           watch: :boolean,
-          debounce: :integer
+          debounce: :integer,
+          daemon: :boolean
         ]
       )
 
@@ -59,6 +61,7 @@ defmodule Mix.Tasks.Toddy.Gui do
 
     start_opts = [binary: binary_path]
     start_opts = if opts[:json], do: Keyword.put(start_opts, :format, :json), else: start_opts
+    start_opts = if opts[:daemon], do: Keyword.put(start_opts, :daemon, true), else: start_opts
     start_opts = if watch?, do: Keyword.merge(start_opts, dev_opts(opts)), else: start_opts
 
     case Toddy.start_link(app_module, start_opts) do
