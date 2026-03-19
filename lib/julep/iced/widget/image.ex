@@ -8,17 +8,17 @@ defmodule Julep.Iced.Widget.Image do
     `%{handle: name}` for an in-memory image created via `Julep.Command.create_image/2`.
   - `width` (length) -- image width. Default: shrink. See `Julep.Iced.Length`.
   - `height` (length) -- image height. Default: shrink.
-  - `content_fit` (string) -- how the image fits its bounds: `"contain"`,
-    `"cover"`, `"fill"`, `"none"`, `"scale_down"`.
+  - `content_fit` -- how the image fits its bounds. See `Julep.Iced.ContentFit`.
   - `rotation` (number) -- rotation angle in degrees.
   - `opacity` (number) -- opacity from 0.0 (transparent) to 1.0 (opaque).
   - `border_radius` (number) -- corner radius in pixels.
-  - `filter_method` (string) -- image filtering: `"linear"` (default) or `"nearest"`.
+  - `filter_method` -- image interpolation mode. See `Julep.Iced.FilterMethod`.
   - `expand` (boolean) -- expand image to fill available space.
   - `scale` (number) -- scale factor for the image.
   - `crop` (map) -- crop rectangle: `%{x, y, width, height}` (integer pixel values).
   - `alt` (string) -- alt text for the image (accessibility).
   - `description` (string) -- longer description for the image (accessibility).
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y
@@ -133,15 +133,18 @@ defmodule Julep.Iced.Widget.Image do
 
   @doc "Sets the rotation angle in degrees."
   @spec rotation(image :: t(), rotation :: number()) :: t()
-  def rotation(%__MODULE__{} = img, rotation), do: %{img | rotation: rotation}
+  def rotation(%__MODULE__{} = img, rotation) when is_number(rotation),
+    do: %{img | rotation: rotation}
 
-  @doc "Sets the image opacity."
+  @doc "Sets the image opacity (0.0 to 1.0)."
   @spec opacity(image :: t(), opacity :: number()) :: t()
-  def opacity(%__MODULE__{} = img, opacity), do: %{img | opacity: opacity}
+  def opacity(%__MODULE__{} = img, opacity) when is_number(opacity),
+    do: %{img | opacity: opacity}
 
-  @doc "Sets the border radius."
+  @doc "Sets the border radius in pixels."
   @spec border_radius(image :: t(), border_radius :: number()) :: t()
-  def border_radius(%__MODULE__{} = img, border_radius), do: %{img | border_radius: border_radius}
+  def border_radius(%__MODULE__{} = img, border_radius) when is_number(border_radius),
+    do: %{img | border_radius: border_radius}
 
   @doc "Sets the image filter method."
   @spec filter_method(image :: t(), filter_method :: Julep.Iced.FilterMethod.t()) :: t()
@@ -149,11 +152,11 @@ defmodule Julep.Iced.Widget.Image do
 
   @doc "Sets whether the image expands to fill available space."
   @spec expand(image :: t(), expand :: boolean()) :: t()
-  def expand(%__MODULE__{} = img, expand), do: %{img | expand: expand}
+  def expand(%__MODULE__{} = img, expand) when is_boolean(expand), do: %{img | expand: expand}
 
   @doc "Sets the image scale factor."
   @spec scale(image :: t(), scale :: number()) :: t()
-  def scale(%__MODULE__{} = img, scale), do: %{img | scale: scale}
+  def scale(%__MODULE__{} = img, scale) when is_number(scale), do: %{img | scale: scale}
 
   @doc "Sets the crop rectangle."
   @spec crop(image :: t(), crop :: map()) :: t()

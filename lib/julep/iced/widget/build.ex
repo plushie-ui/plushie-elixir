@@ -1,5 +1,5 @@
 defmodule Julep.Iced.Widget.Build do
-  @moduledoc false
+  @moduledoc "Internal helpers for widget `to_node/1` implementations."
 
   @doc "Adds `key => value` to props if value is not nil."
   @spec put_if(props :: map(), value :: term(), key :: String.t()) :: map()

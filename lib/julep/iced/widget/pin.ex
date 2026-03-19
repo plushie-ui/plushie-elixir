@@ -8,6 +8,7 @@ defmodule Julep.Iced.Widget.Pin do
   - `y` (number) -- y position in pixels. Default: 0.
   - `width` (length) -- pin container width. Default: shrink. See `Julep.Iced.Length`.
   - `height` (length) -- pin container height. Default: shrink.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y
@@ -63,11 +64,11 @@ defmodule Julep.Iced.Widget.Pin do
 
   @doc "Sets the x position in pixels."
   @spec x(pin :: t(), x :: number()) :: t()
-  def x(%__MODULE__{} = pin, x), do: %{pin | x: x}
+  def x(%__MODULE__{} = pin, x) when is_number(x), do: %{pin | x: x}
 
   @doc "Sets the y position in pixels."
   @spec y(pin :: t(), y :: number()) :: t()
-  def y(%__MODULE__{} = pin, y), do: %{pin | y: y}
+  def y(%__MODULE__{} = pin, y) when is_number(y), do: %{pin | y: y}
 
   @doc "Sets the pin container width."
   @spec width(pin :: t(), width :: Julep.Iced.Length.t()) :: t()

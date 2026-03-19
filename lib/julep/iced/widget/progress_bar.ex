@@ -12,13 +12,17 @@ defmodule Julep.Iced.Widget.ProgressBar do
     `:danger`, `:warning`) or `StyleMap.t()` for custom styling.
     See `Julep.Iced.StyleMap`.
   - `vertical` (boolean) -- when `true`, renders the progress bar vertically.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
-  @type style :: :primary | :secondary | :success | :danger | :warning | StyleMap.t()
+  @presets [:primary, :secondary, :success, :danger, :warning]
+
+  @type preset :: unquote(Enum.reduce(@presets, &{:|, [], [&1, &2]}))
+  @type style :: preset() | StyleMap.t()
 
   @type option ::
           {:width, Julep.Iced.Length.t()}
@@ -48,7 +52,8 @@ defmodule Julep.Iced.Widget.ProgressBar do
           opts :: [option()]
         ) ::
           t()
-  def new(id, range, value, opts \\ []) when is_binary(id) and is_tuple(range) do
+  def new(id, {min, max} = range, value, opts \\ [])
+      when is_binary(id) and is_number(min) and is_number(max) and is_number(value) do
     %__MODULE__{id: id, range: range, value: value} |> with_options(opts)
   end
 
@@ -77,11 +82,12 @@ defmodule Julep.Iced.Widget.ProgressBar do
 
   @doc "Sets the progress bar style."
   @spec style(progress_bar :: t(), style :: style()) :: t()
-  def style(%__MODULE__{} = bar, style), do: %{bar | style: style}
+  def style(%__MODULE__{} = bar, %StyleMap{} = style), do: %{bar | style: style}
+  def style(%__MODULE__{} = bar, style) when style in @presets, do: %{bar | style: style}
 
   @doc "Renders the progress bar vertically."
   @spec vertical(progress_bar :: t(), vertical :: boolean()) :: t()
-  def vertical(%__MODULE__{} = bar, vertical), do: %{bar | vertical: vertical}
+  def vertical(%__MODULE__{} = bar, vertical) when is_boolean(vertical), do: %{bar | vertical: vertical}
 
   @doc "Sets accessibility annotations."
   @spec a11y(progress_bar :: t(), a11y :: Julep.Iced.A11y.t()) :: t()

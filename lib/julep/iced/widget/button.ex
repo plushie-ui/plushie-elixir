@@ -17,6 +17,7 @@ defmodule Julep.Iced.Widget.Button do
   - `clip` (boolean) -- clip child content that overflows. Default: false.
   - `disabled` (boolean) -- disable the button (no click events). Default: false.
   - `enabled` (boolean) -- inverse of disabled. Default: true.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
 
   ## Events
 
@@ -27,16 +28,10 @@ defmodule Julep.Iced.Widget.Button do
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
-  @type style ::
-          :primary
-          | :secondary
-          | :success
-          | :warning
-          | :danger
-          | :text
-          | :background
-          | :subtle
-          | StyleMap.t()
+  @presets [:primary, :secondary, :success, :warning, :danger, :text, :background, :subtle]
+
+  @type preset :: unquote(Enum.reduce(@presets, &{:|, [], [&1, &2]}))
+  @type style :: preset() | StyleMap.t()
 
   @type option ::
           {:width, Julep.Iced.Length.t()}
@@ -64,7 +59,7 @@ defmodule Julep.Iced.Widget.Button do
 
   @doc "Creates a new button struct with the given label and optional keyword opts."
   @spec new(id :: String.t(), label :: String.t(), opts :: [option()]) :: t()
-  def new(id, label, opts \\ []) when is_binary(label) do
+  def new(id, label, opts \\ []) when is_binary(id) and is_binary(label) do
     %__MODULE__{id: id, label: label} |> with_options(opts)
   end
 
@@ -100,15 +95,17 @@ defmodule Julep.Iced.Widget.Button do
 
   @doc "Sets whether child content is clipped on overflow."
   @spec clip(button :: t(), clip :: boolean()) :: t()
-  def clip(%__MODULE__{} = btn, clip), do: %{btn | clip: clip}
+  def clip(%__MODULE__{} = btn, clip) when is_boolean(clip), do: %{btn | clip: clip}
 
-  @doc "Sets the button style."
+  @doc "Sets the button style. Accepts a preset atom or `StyleMap`."
   @spec style(button :: t(), style :: style()) :: t()
-  def style(%__MODULE__{} = btn, style), do: %{btn | style: style}
+  def style(%__MODULE__{} = btn, %StyleMap{} = style), do: %{btn | style: style}
+  def style(%__MODULE__{} = btn, style) when style in @presets, do: %{btn | style: style}
 
   @doc "Sets whether the button is disabled."
   @spec disabled(button :: t(), disabled :: boolean()) :: t()
-  def disabled(%__MODULE__{} = btn, disabled), do: %{btn | disabled: disabled}
+  def disabled(%__MODULE__{} = btn, disabled) when is_boolean(disabled),
+    do: %{btn | disabled: disabled}
 
   @doc "Sets accessibility annotations."
   @spec a11y(button :: t(), a11y :: Julep.Iced.A11y.t()) :: t()

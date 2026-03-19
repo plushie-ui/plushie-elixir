@@ -8,10 +8,11 @@ defmodule Julep.Iced.Widget.Row do
   - `padding` (number | map) -- padding inside the row. See `Julep.Iced.Padding`.
   - `width` (length) -- width of the row. Default: shrink. See `Julep.Iced.Length`.
   - `height` (length) -- height of the row. Default: shrink.
-  - `align_y` (string) -- vertical alignment of children: `"top"`, `"center"`, `"bottom"`.
+  - `align_y` -- vertical alignment of children: `:top`, `:center`, `:bottom`. See `Julep.Iced.Alignment`.
   - `max_width` (number) -- maximum width of the row in pixels.
   - `clip` (boolean) -- clip children that overflow. Default: false.
   - `wrap` (boolean) -- wrap children to next row when they overflow. Default: false.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y
@@ -83,7 +84,7 @@ defmodule Julep.Iced.Widget.Row do
 
   @doc "Sets the spacing between children in pixels."
   @spec spacing(row :: t(), spacing :: number()) :: t()
-  def spacing(%__MODULE__{} = row, spacing), do: %{row | spacing: spacing}
+  def spacing(%__MODULE__{} = row, spacing) when is_number(spacing), do: %{row | spacing: spacing}
 
   @doc "Sets the padding inside the row."
   @spec padding(row :: t(), padding :: Julep.Iced.Padding.t()) :: t()
@@ -103,15 +104,15 @@ defmodule Julep.Iced.Widget.Row do
 
   @doc "Sets the maximum width of the row in pixels."
   @spec max_width(row :: t(), max_width :: number()) :: t()
-  def max_width(%__MODULE__{} = row, max_width), do: %{row | max_width: max_width}
+  def max_width(%__MODULE__{} = row, max_width) when is_number(max_width), do: %{row | max_width: max_width}
 
   @doc "Sets whether children that overflow are clipped."
   @spec clip(row :: t(), clip :: boolean()) :: t()
-  def clip(%__MODULE__{} = row, clip), do: %{row | clip: clip}
+  def clip(%__MODULE__{} = row, clip) when is_boolean(clip), do: %{row | clip: clip}
 
   @doc "Sets whether children wrap to the next row on overflow."
   @spec wrap(row :: t(), wrap :: boolean()) :: t()
-  def wrap(%__MODULE__{} = row, wrap), do: %{row | wrap: wrap}
+  def wrap(%__MODULE__{} = row, wrap) when is_boolean(wrap), do: %{row | wrap: wrap}
 
   @doc "Appends a child to the row."
   @spec push(row :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()

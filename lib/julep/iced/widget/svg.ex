@@ -7,13 +7,13 @@ defmodule Julep.Iced.Widget.Svg do
   - `source` (string) -- path to the SVG file.
   - `width` (length) -- SVG width. Default: shrink. See `Julep.Iced.Length`.
   - `height` (length) -- SVG height. Default: shrink.
-  - `content_fit` (string) -- how the SVG fits its bounds: `"contain"`,
-    `"cover"`, `"fill"`, `"none"`, `"scale_down"`.
+  - `content_fit` -- how the SVG fits its bounds. See `Julep.Iced.ContentFit`.
   - `rotation` (number) -- rotation angle in degrees.
   - `opacity` (number) -- opacity from 0.0 (transparent) to 1.0 (opaque).
   - `color` (color) -- color tint applied to the SVG. See `Julep.Iced.Color`.
   - `alt` (string) -- alt text for the SVG (accessibility).
   - `description` (string) -- longer description for the SVG (accessibility).
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y
@@ -26,7 +26,7 @@ defmodule Julep.Iced.Widget.Svg do
           | {:content_fit, Julep.Iced.ContentFit.t()}
           | {:rotation, number()}
           | {:opacity, number()}
-          | {:color, Julep.Iced.Color.t()}
+          | {:color, Julep.Iced.Color.input()}
           | {:alt, String.t()}
           | {:description, String.t()}
           | {:a11y, Julep.Iced.A11y.t()}
@@ -98,14 +98,14 @@ defmodule Julep.Iced.Widget.Svg do
 
   @doc "Sets the rotation angle in degrees."
   @spec rotation(svg :: t(), rotation :: number()) :: t()
-  def rotation(%__MODULE__{} = svg, rotation), do: %{svg | rotation: rotation}
+  def rotation(%__MODULE__{} = svg, rotation) when is_number(rotation), do: %{svg | rotation: rotation}
 
   @doc "Sets the SVG opacity."
   @spec opacity(svg :: t(), opacity :: number()) :: t()
-  def opacity(%__MODULE__{} = svg, opacity), do: %{svg | opacity: opacity}
+  def opacity(%__MODULE__{} = svg, opacity) when is_number(opacity), do: %{svg | opacity: opacity}
 
   @doc "Sets the color tint applied to the SVG."
-  @spec color(svg :: t(), color :: Julep.Iced.Color.t()) :: t()
+  @spec color(svg :: t(), color :: Julep.Iced.Color.input()) :: t()
   def color(%__MODULE__{} = svg, color), do: %{svg | color: Color.cast(color)}
 
   @doc "Sets the alt text for the SVG."

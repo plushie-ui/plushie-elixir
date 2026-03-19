@@ -17,19 +17,20 @@ defmodule Julep.Iced.Widget.TextEditor do
   - `size` (number) -- font size in pixels.
   - `line_height` (number | map) -- line height.
   - `padding` (number) -- uniform padding in pixels.
-  - `wrapping` (string) -- text wrapping: `"none"`, `"word"`, `"glyph"`, `"word_or_glyph"`.
+  - `wrapping` -- text wrapping mode. See `Julep.Iced.Wrapping`.
   - `ime_purpose` (string) -- IME input purpose hint: `"normal"`, `"secure"`, `"terminal"`.
     Default: `"normal"`.
   - `highlight_syntax` (string) -- language extension for syntax highlighting (e.g. "rs", "py", "ex").
   - `highlight_theme` (string) -- highlighter theme. One of `"solarized_dark"`, `"base16_mocha"`,
     `"base16_ocean"`, `"base16_eighties"`, `"inspired_github"`. Defaults to `"solarized_dark"`.
-  - `style` (string) -- named style. Currently only `"default"`.
+  - `style` -- `:default` or `StyleMap.t()` for custom styling. See `Julep.Iced.StyleMap`.
   - `key_bindings` (list of maps) -- declarative key binding rules for the editor.
     Each rule is a map with optional `key` (character), `named` (named key string),
     `modifiers` (list of modifier strings), and `binding` (the action to take).
     See `key_bindings/2` for details.
-  - `placeholder_color` (string) -- hex color for the placeholder text.
-  - `selection_color` (string) -- hex color for the text selection highlight.
+  - `placeholder_color` (color) -- placeholder text color. See `Julep.Iced.Color`.
+  - `selection_color` (color) -- text selection highlight color. See `Julep.Iced.Color`.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
 
   ## Events
 
@@ -61,8 +62,8 @@ defmodule Julep.Iced.Widget.TextEditor do
           | {:highlight_theme, String.t()}
           | {:style, style()}
           | {:key_bindings, [map()]}
-          | {:placeholder_color, Julep.Iced.Color.t()}
-          | {:selection_color, Julep.Iced.Color.t()}
+          | {:placeholder_color, Julep.Iced.Color.input()}
+          | {:selection_color, Julep.Iced.Color.input()}
           | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -113,7 +114,7 @@ defmodule Julep.Iced.Widget.TextEditor do
 
   @doc "Creates a new text editor struct with the given id and optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
-  def new(id, opts \\ []) do
+  def new(id, opts \\ []) when is_binary(id) do
     %__MODULE__{id: id} |> with_options(opts)
   end
 
@@ -148,15 +149,15 @@ defmodule Julep.Iced.Widget.TextEditor do
 
   @doc "Sets the initial text content."
   @spec content(text_editor :: t(), content :: String.t()) :: t()
-  def content(%__MODULE__{} = ed, content), do: %{ed | content: content}
+  def content(%__MODULE__{} = ed, content) when is_binary(content), do: %{ed | content: content}
 
   @doc "Sets the placeholder text."
   @spec placeholder(text_editor :: t(), placeholder :: String.t()) :: t()
-  def placeholder(%__MODULE__{} = ed, placeholder), do: %{ed | placeholder: placeholder}
+  def placeholder(%__MODULE__{} = ed, placeholder) when is_binary(placeholder), do: %{ed | placeholder: placeholder}
 
   @doc "Sets the editor width in pixels."
   @spec width(text_editor :: t(), width :: number()) :: t()
-  def width(%__MODULE__{} = ed, width), do: %{ed | width: width}
+  def width(%__MODULE__{} = ed, width) when is_number(width), do: %{ed | width: width}
 
   @doc "Sets the editor height."
   @spec height(text_editor :: t(), height :: Julep.Iced.Length.t()) :: t()
@@ -164,11 +165,11 @@ defmodule Julep.Iced.Widget.TextEditor do
 
   @doc "Sets the minimum height in pixels."
   @spec min_height(text_editor :: t(), min_height :: number()) :: t()
-  def min_height(%__MODULE__{} = ed, min_height), do: %{ed | min_height: min_height}
+  def min_height(%__MODULE__{} = ed, min_height) when is_number(min_height), do: %{ed | min_height: min_height}
 
   @doc "Sets the maximum height in pixels."
   @spec max_height(text_editor :: t(), max_height :: number()) :: t()
-  def max_height(%__MODULE__{} = ed, max_height), do: %{ed | max_height: max_height}
+  def max_height(%__MODULE__{} = ed, max_height) when is_number(max_height), do: %{ed | max_height: max_height}
 
   @doc "Sets the font."
   @spec font(text_editor :: t(), font :: Julep.Iced.Font.t()) :: t()
@@ -176,7 +177,7 @@ defmodule Julep.Iced.Widget.TextEditor do
 
   @doc "Sets the font size in pixels."
   @spec size(text_editor :: t(), size :: number()) :: t()
-  def size(%__MODULE__{} = ed, size), do: %{ed | size: size}
+  def size(%__MODULE__{} = ed, size) when is_number(size), do: %{ed | size: size}
 
   @doc "Sets the line height."
   @spec line_height(text_editor :: t(), line_height :: number() | map()) :: t()
@@ -184,7 +185,7 @@ defmodule Julep.Iced.Widget.TextEditor do
 
   @doc "Sets the uniform padding in pixels."
   @spec padding(text_editor :: t(), padding :: number()) :: t()
-  def padding(%__MODULE__{} = ed, padding), do: %{ed | padding: padding}
+  def padding(%__MODULE__{} = ed, padding) when is_number(padding), do: %{ed | padding: padding}
 
   @doc "Sets the text wrapping mode."
   @spec wrapping(text_editor :: t(), wrapping :: Julep.Iced.Wrapping.t()) :: t()
@@ -197,17 +198,18 @@ defmodule Julep.Iced.Widget.TextEditor do
 
   @doc ~S[Sets the syntax language for highlighting (e.g. "rs", "py", "ex").]
   @spec highlight_syntax(text_editor :: t(), highlight_syntax :: String.t()) :: t()
-  def highlight_syntax(%__MODULE__{} = ed, highlight_syntax),
+  def highlight_syntax(%__MODULE__{} = ed, highlight_syntax) when is_binary(highlight_syntax),
     do: %{ed | highlight_syntax: highlight_syntax}
 
   @doc "Sets the highlighter color theme."
   @spec highlight_theme(text_editor :: t(), highlight_theme :: String.t()) :: t()
-  def highlight_theme(%__MODULE__{} = ed, highlight_theme),
+  def highlight_theme(%__MODULE__{} = ed, highlight_theme) when is_binary(highlight_theme),
     do: %{ed | highlight_theme: highlight_theme}
 
   @doc "Sets the text editor style."
   @spec style(text_editor :: t(), style :: style()) :: t()
-  def style(%__MODULE__{} = ed, style), do: %{ed | style: style}
+  def style(%__MODULE__{} = ed, %StyleMap{} = style), do: %{ed | style: style}
+  def style(%__MODULE__{} = ed, :default), do: %{ed | style: :default}
 
   @doc """
   Sets declarative key binding rules for the editor.
@@ -233,12 +235,12 @@ defmodule Julep.Iced.Widget.TextEditor do
   def key_bindings(%__MODULE__{} = ed, key_bindings), do: %{ed | key_bindings: key_bindings}
 
   @doc "Sets the placeholder text color. Accepts any form `Color.cast/1` supports."
-  @spec placeholder_color(text_editor :: t(), color :: Julep.Iced.Color.t() | atom()) :: t()
+  @spec placeholder_color(text_editor :: t(), color :: Julep.Iced.Color.input()) :: t()
   def placeholder_color(%__MODULE__{} = ed, color),
     do: %{ed | placeholder_color: Color.cast(color)}
 
   @doc "Sets the text selection highlight color. Accepts any form `Color.cast/1` supports."
-  @spec selection_color(text_editor :: t(), color :: Julep.Iced.Color.t() | atom()) :: t()
+  @spec selection_color(text_editor :: t(), color :: Julep.Iced.Color.input()) :: t()
   def selection_color(%__MODULE__{} = ed, color),
     do: %{ed | selection_color: Color.cast(color)}
 

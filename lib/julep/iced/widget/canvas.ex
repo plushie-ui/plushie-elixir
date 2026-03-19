@@ -23,6 +23,7 @@ defmodule Julep.Iced.Widget.Canvas do
   - `on_release` (boolean) -- enable mouse release events. Default: false.
   - `on_move` (boolean) -- enable mouse move events. Default: false.
   - `on_scroll` (boolean) -- enable mouse scroll events. Default: false.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
 
   ## Shape types
 
@@ -40,10 +41,10 @@ defmodule Julep.Iced.Widget.Canvas do
 
   ## Events
 
-  - `{:canvas_press, id, x, y, button}` -- mouse button pressed on canvas.
-  - `{:canvas_release, id, x, y, button}` -- mouse button released on canvas.
-  - `{:canvas_move, id, x, y}` -- mouse moved over canvas.
-  - `{:canvas_scroll, id, x, y, delta_x, delta_y}` -- mouse scrolled on canvas.
+  - `%Canvas{type: :press, id: id, x: x, y: y, button: button}`
+  - `%Canvas{type: :release, id: id, x: x, y: y, button: button}`
+  - `%Canvas{type: :move, id: id, x: x, y: y}`
+  - `%Canvas{type: :scroll, id: id, x: x, y: y, delta_x: dx, delta_y: dy}`
   """
 
   alias Julep.Iced.A11y
@@ -53,7 +54,7 @@ defmodule Julep.Iced.Widget.Canvas do
           {:layers, %{String.t() => [map()]}}
           | {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
-          | {:background, Julep.Iced.Color.t()}
+          | {:background, Julep.Iced.Color.input()}
           | {:interactive, boolean()}
           | {:on_press, boolean()}
           | {:on_release, boolean()}
@@ -134,30 +135,30 @@ defmodule Julep.Iced.Widget.Canvas do
   @spec height(canvas :: t(), height :: Julep.Iced.Length.t()) :: t()
   def height(%__MODULE__{} = canvas, height), do: %{canvas | height: height}
 
-  @doc "Sets the canvas background color."
-  @spec background(canvas :: t(), background :: Julep.Iced.Color.t()) :: t()
+  @doc "Sets the canvas background color. Accepts a hex string or named color atom."
+  @spec background(canvas :: t(), background :: Julep.Iced.Color.input()) :: t()
   def background(%__MODULE__{} = canvas, background),
     do: %{canvas | background: Julep.Iced.Color.cast(background)}
 
   @doc "Sets whether all mouse event handlers are enabled."
   @spec interactive(canvas :: t(), interactive :: boolean()) :: t()
-  def interactive(%__MODULE__{} = canvas, interactive), do: %{canvas | interactive: interactive}
+  def interactive(%__MODULE__{} = canvas, v) when is_boolean(v), do: %{canvas | interactive: v}
 
   @doc "Sets whether mouse press events are enabled."
   @spec on_press(canvas :: t(), on_press :: boolean()) :: t()
-  def on_press(%__MODULE__{} = canvas, on_press), do: %{canvas | on_press: on_press}
+  def on_press(%__MODULE__{} = canvas, v) when is_boolean(v), do: %{canvas | on_press: v}
 
   @doc "Sets whether mouse release events are enabled."
   @spec on_release(canvas :: t(), on_release :: boolean()) :: t()
-  def on_release(%__MODULE__{} = canvas, on_release), do: %{canvas | on_release: on_release}
+  def on_release(%__MODULE__{} = canvas, v) when is_boolean(v), do: %{canvas | on_release: v}
 
   @doc "Sets whether mouse move events are enabled."
   @spec on_move(canvas :: t(), on_move :: boolean()) :: t()
-  def on_move(%__MODULE__{} = canvas, on_move), do: %{canvas | on_move: on_move}
+  def on_move(%__MODULE__{} = canvas, v) when is_boolean(v), do: %{canvas | on_move: v}
 
   @doc "Sets whether mouse scroll events are enabled."
   @spec on_scroll(canvas :: t(), on_scroll :: boolean()) :: t()
-  def on_scroll(%__MODULE__{} = canvas, on_scroll), do: %{canvas | on_scroll: on_scroll}
+  def on_scroll(%__MODULE__{} = canvas, v) when is_boolean(v), do: %{canvas | on_scroll: v}
 
   @doc "Sets accessibility annotations."
   @spec a11y(canvas :: t(), a11y :: Julep.Iced.A11y.t()) :: t()

@@ -20,13 +20,22 @@ defmodule Julep.Iced.Widget.Table do
   - `padding` (number | map) -- table padding. See `Julep.Iced.Padding`.
   - `sort_by` (string | nil) -- key of the currently sorted column.
   - `sort_order` (`:asc` | `:desc` | nil) -- current sort direction.
+  - `header_text_size` (number) -- header row text size in pixels.
+  - `row_text_size` (number) -- body row text size in pixels.
+  - `cell_spacing` (number) -- horizontal spacing between cells in pixels.
+  - `row_spacing` (number) -- vertical spacing between rows in pixels.
+  - `separator_thickness` (number) -- separator line thickness in pixels.
+  - `separator_color` (color) -- separator line color. See `Julep.Iced.Color`.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y
   alias Julep.Iced.Color
   alias Julep.Iced.Widget.Build
 
-  @type sort_order :: :asc | :desc
+  @sort_orders [:asc, :desc]
+
+  @type sort_order :: unquote(Enum.reduce([:asc, :desc], &{:|, [], [&1, &2]}))
 
   @type option ::
           {:columns, [map()]}
@@ -42,7 +51,7 @@ defmodule Julep.Iced.Widget.Table do
           | {:cell_spacing, number()}
           | {:row_spacing, number()}
           | {:separator_thickness, number()}
-          | {:separator_color, Julep.Iced.Color.t()}
+          | {:separator_color, Julep.Iced.Color.input()}
           | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -124,11 +133,11 @@ defmodule Julep.Iced.Widget.Table do
 
   @doc "Sets whether the header row is shown."
   @spec header(table :: t(), header :: boolean()) :: t()
-  def header(%__MODULE__{} = tbl, header), do: %{tbl | header: header}
+  def header(%__MODULE__{} = tbl, header) when is_boolean(header), do: %{tbl | header: header}
 
   @doc "Sets whether the separator line is shown."
   @spec separator(table :: t(), separator :: boolean()) :: t()
-  def separator(%__MODULE__{} = tbl, separator), do: %{tbl | separator: separator}
+  def separator(%__MODULE__{} = tbl, separator) when is_boolean(separator), do: %{tbl | separator: separator}
 
   @doc "Sets the table width."
   @spec width(table :: t(), width :: Julep.Iced.Length.t()) :: t()
@@ -140,39 +149,40 @@ defmodule Julep.Iced.Widget.Table do
 
   @doc "Sets the currently sorted column key."
   @spec sort_by(table :: t(), sort_by :: String.t()) :: t()
-  def sort_by(%__MODULE__{} = tbl, sort_by), do: %{tbl | sort_by: sort_by}
+  def sort_by(%__MODULE__{} = tbl, sort_by) when is_binary(sort_by), do: %{tbl | sort_by: sort_by}
 
   @doc "Sets the current sort direction."
   @spec sort_order(table :: t(), sort_order :: sort_order()) :: t()
-  def sort_order(%__MODULE__{} = tbl, sort_order), do: %{tbl | sort_order: sort_order}
+  def sort_order(%__MODULE__{} = tbl, sort_order) when sort_order in @sort_orders,
+    do: %{tbl | sort_order: sort_order}
 
   @doc "Sets the header text size in pixels."
   @spec header_text_size(table :: t(), header_text_size :: number()) :: t()
-  def header_text_size(%__MODULE__{} = tbl, header_text_size),
+  def header_text_size(%__MODULE__{} = tbl, header_text_size) when is_number(header_text_size),
     do: %{tbl | header_text_size: header_text_size}
 
   @doc "Sets the row text size in pixels."
   @spec row_text_size(table :: t(), row_text_size :: number()) :: t()
-  def row_text_size(%__MODULE__{} = tbl, row_text_size),
+  def row_text_size(%__MODULE__{} = tbl, row_text_size) when is_number(row_text_size),
     do: %{tbl | row_text_size: row_text_size}
 
   @doc "Sets the horizontal spacing between cells in pixels."
   @spec cell_spacing(table :: t(), cell_spacing :: number()) :: t()
-  def cell_spacing(%__MODULE__{} = tbl, cell_spacing),
+  def cell_spacing(%__MODULE__{} = tbl, cell_spacing) when is_number(cell_spacing),
     do: %{tbl | cell_spacing: cell_spacing}
 
   @doc "Sets the vertical spacing between rows in pixels."
   @spec row_spacing(table :: t(), row_spacing :: number()) :: t()
-  def row_spacing(%__MODULE__{} = tbl, row_spacing),
+  def row_spacing(%__MODULE__{} = tbl, row_spacing) when is_number(row_spacing),
     do: %{tbl | row_spacing: row_spacing}
 
   @doc "Sets the separator line thickness in pixels."
   @spec separator_thickness(table :: t(), separator_thickness :: number()) :: t()
-  def separator_thickness(%__MODULE__{} = tbl, separator_thickness),
+  def separator_thickness(%__MODULE__{} = tbl, separator_thickness) when is_number(separator_thickness),
     do: %{tbl | separator_thickness: separator_thickness}
 
   @doc "Sets the separator line color."
-  @spec separator_color(table :: t(), separator_color :: Julep.Iced.Color.t()) :: t()
+  @spec separator_color(table :: t(), separator_color :: Julep.Iced.Color.input()) :: t()
   def separator_color(%__MODULE__{} = tbl, separator_color),
     do: %{tbl | separator_color: Color.cast(separator_color)}
 

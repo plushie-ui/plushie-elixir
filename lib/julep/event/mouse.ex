@@ -11,7 +11,7 @@ defmodule Julep.Event.Mouse do
   @type event_type ::
           :moved | :entered | :left | :button_pressed | :button_released | :wheel_scrolled
 
-  @type button :: :left | :right | :middle | :back | :forward | atom()
+  @type button :: :left | :right | :middle | :back | :forward | String.t()
   @type scroll_unit :: :line | :pixel
 
   @type t :: %__MODULE__{

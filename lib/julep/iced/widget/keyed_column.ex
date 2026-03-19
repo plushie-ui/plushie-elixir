@@ -1,8 +1,10 @@
 defmodule Julep.Iced.Widget.KeyedColumn do
   @moduledoc """
-  Keyed column -- like `column/3` but uses child IDs as keys for efficient
-  list diffing by the iced runtime. Use for dynamic lists where items are
-  added, removed, or reordered.
+  Keyed column layout -- arranges children vertically with stable identity keys.
+
+  Like `Column`, but uses each child's `id` as a key for iced's internal
+  widget diffing. This avoids unnecessary rebuilds when items are added,
+  removed, or reordered in dynamic lists.
 
   ## Props
 
@@ -11,6 +13,7 @@ defmodule Julep.Iced.Widget.KeyedColumn do
   - `width` (length) -- column width. Default: shrink. See `Julep.Iced.Length`.
   - `height` (length) -- column height. Default: shrink.
   - `max_width` (number) -- maximum width in pixels.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y
@@ -70,7 +73,8 @@ defmodule Julep.Iced.Widget.KeyedColumn do
 
   @doc "Sets the spacing between children in pixels."
   @spec spacing(keyed_column :: t(), spacing :: number()) :: t()
-  def spacing(%__MODULE__{} = kc, spacing), do: %{kc | spacing: spacing}
+  def spacing(%__MODULE__{} = kc, spacing) when is_number(spacing),
+    do: %{kc | spacing: spacing}
 
   @doc "Sets the padding inside the column."
   @spec padding(keyed_column :: t(), padding :: Julep.Iced.Padding.t()) :: t()
@@ -86,7 +90,8 @@ defmodule Julep.Iced.Widget.KeyedColumn do
 
   @doc "Sets the maximum width in pixels."
   @spec max_width(keyed_column :: t(), max_width :: number()) :: t()
-  def max_width(%__MODULE__{} = kc, max_width), do: %{kc | max_width: max_width}
+  def max_width(%__MODULE__{} = kc, max_width) when is_number(max_width),
+    do: %{kc | max_width: max_width}
 
   @doc "Appends a child to the keyed column."
   @spec push(keyed_column :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()

@@ -12,11 +12,15 @@ defmodule Julep.Iced.Widget.Toggler do
   - `text_size` (number) -- label text size in pixels.
   - `font` (string | map) -- label font. See `Julep.Iced.Font`.
   - `line_height` (number | map) -- label line height.
-  - `text_shaping` (string) -- text shaping: `"basic"`, `"advanced"`, or `"auto"`.
-  - `wrapping` (string) -- text wrapping: `"none"`, `"word"`, `"glyph"`, `"word_or_glyph"`.
-  - `text_alignment` (string) -- horizontal label alignment: `"left"`, `"center"`, `"right"`.
-  - `style` (string) -- named style. Currently only `"default"`.
+  - `text_shaping` (atom) -- text shaping: `:basic`, `:advanced`, or `:auto`.
+    See `Julep.Iced.Shaping`.
+  - `wrapping` (atom) -- text wrapping: `:none`, `:word`, `:glyph`, `:word_or_glyph`.
+    See `Julep.Iced.Wrapping`.
+  - `text_alignment` (atom) -- horizontal label alignment: `:left`, `:center`, `:right`.
+    See `Julep.Iced.Alignment`.
+  - `style` (atom) -- named style. Currently only `:default`.
   - `disabled` (boolean) -- when true, the toggler cannot be toggled. Default: false.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
 
   ## Events
 
@@ -82,7 +86,7 @@ defmodule Julep.Iced.Widget.Toggler do
 
   @doc "Creates a new toggler struct with the given toggle state and optional keyword opts."
   @spec new(id :: String.t(), is_toggled :: boolean(), opts :: [option()]) :: t()
-  def new(id, is_toggled, opts \\ []) when is_boolean(is_toggled) do
+  def new(id, is_toggled, opts \\ []) when is_binary(id) and is_boolean(is_toggled) do
     %__MODULE__{id: id, is_toggled: is_toggled} |> with_options(opts)
   end
 
@@ -111,11 +115,11 @@ defmodule Julep.Iced.Widget.Toggler do
 
   @doc "Sets the toggler label."
   @spec label(toggler :: t(), label :: String.t()) :: t()
-  def label(%__MODULE__{} = tg, label), do: %{tg | label: label}
+  def label(%__MODULE__{} = tg, label) when is_binary(label), do: %{tg | label: label}
 
   @doc "Sets the spacing between toggler and label."
   @spec spacing(toggler :: t(), spacing :: number()) :: t()
-  def spacing(%__MODULE__{} = tg, spacing), do: %{tg | spacing: spacing}
+  def spacing(%__MODULE__{} = tg, spacing) when is_number(spacing), do: %{tg | spacing: spacing}
 
   @doc "Sets the toggler width."
   @spec width(toggler :: t(), width :: Julep.Iced.Length.t()) :: t()
@@ -123,11 +127,11 @@ defmodule Julep.Iced.Widget.Toggler do
 
   @doc "Sets the toggler size in pixels."
   @spec size(toggler :: t(), size :: number()) :: t()
-  def size(%__MODULE__{} = tg, size), do: %{tg | size: size}
+  def size(%__MODULE__{} = tg, size) when is_number(size), do: %{tg | size: size}
 
   @doc "Sets the label text size in pixels."
   @spec text_size(toggler :: t(), text_size :: number()) :: t()
-  def text_size(%__MODULE__{} = tg, text_size), do: %{tg | text_size: text_size}
+  def text_size(%__MODULE__{} = tg, text_size) when is_number(text_size), do: %{tg | text_size: text_size}
 
   @doc "Sets the label font."
   @spec font(toggler :: t(), font :: Julep.Iced.Font.t()) :: t()
@@ -152,11 +156,12 @@ defmodule Julep.Iced.Widget.Toggler do
 
   @doc "Sets the toggler style."
   @spec style(toggler :: t(), style :: style()) :: t()
-  def style(%__MODULE__{} = tg, style), do: %{tg | style: style}
+  def style(%__MODULE__{} = tg, %StyleMap{} = style), do: %{tg | style: style}
+  def style(%__MODULE__{} = tg, :default), do: %{tg | style: :default}
 
   @doc "Sets whether the toggler is disabled."
   @spec disabled(toggler :: t(), disabled :: boolean()) :: t()
-  def disabled(%__MODULE__{} = tg, disabled), do: %{tg | disabled: disabled}
+  def disabled(%__MODULE__{} = tg, disabled) when is_boolean(disabled), do: %{tg | disabled: disabled}
 
   @doc "Sets accessibility annotations."
   @spec a11y(toggler :: t(), a11y :: Julep.Iced.A11y.t()) :: t()

@@ -19,9 +19,10 @@ defmodule Julep.Iced.Widget.Radio do
   - `text_size` (number) -- label text size in pixels.
   - `font` (string | map) -- label font. See `Julep.Iced.Font`.
   - `line_height` (number | map) -- label line height.
-  - `text_shaping` (string) -- text shaping: `"basic"`, `"advanced"`, or `"auto"`.
-  - `wrapping` (string) -- text wrapping: `"none"`, `"word"`, `"glyph"`, `"word_or_glyph"`.
-  - `style` (string) -- named style. Currently only `"default"`.
+  - `text_shaping` -- text shaping strategy. See `Julep.Iced.Shaping`.
+  - `wrapping` -- text wrapping mode. See `Julep.Iced.Wrapping`.
+  - `style` -- `:default` or `StyleMap.t()` for custom styling. See `Julep.Iced.StyleMap`.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
 
   ## Events
 
@@ -92,7 +93,8 @@ defmodule Julep.Iced.Widget.Radio do
           selected :: String.t(),
           opts :: [option()]
         ) :: t()
-  def new(id, value, selected, opts \\ []) when is_binary(value) and is_binary(selected) do
+  def new(id, value, selected, opts \\ [])
+      when is_binary(id) and is_binary(value) and is_binary(selected) do
     %__MODULE__{id: id, value: value, selected: selected} |> with_options(opts)
   end
 
@@ -120,15 +122,15 @@ defmodule Julep.Iced.Widget.Radio do
 
   @doc "Sets the radio label text."
   @spec label(radio :: t(), label :: String.t()) :: t()
-  def label(%__MODULE__{} = r, label), do: %{r | label: label}
+  def label(%__MODULE__{} = r, label) when is_binary(label), do: %{r | label: label}
 
   @doc "Sets the radio group identifier."
   @spec group(radio :: t(), group :: String.t()) :: t()
-  def group(%__MODULE__{} = r, group), do: %{r | group: group}
+  def group(%__MODULE__{} = r, group) when is_binary(group), do: %{r | group: group}
 
   @doc "Sets the spacing between radio and label."
   @spec spacing(radio :: t(), spacing :: number()) :: t()
-  def spacing(%__MODULE__{} = r, spacing), do: %{r | spacing: spacing}
+  def spacing(%__MODULE__{} = r, spacing) when is_number(spacing), do: %{r | spacing: spacing}
 
   @doc "Sets the radio width."
   @spec width(radio :: t(), width :: Julep.Iced.Length.t()) :: t()
@@ -136,11 +138,11 @@ defmodule Julep.Iced.Widget.Radio do
 
   @doc "Sets the radio button size in pixels."
   @spec size(radio :: t(), size :: number()) :: t()
-  def size(%__MODULE__{} = r, size), do: %{r | size: size}
+  def size(%__MODULE__{} = r, size) when is_number(size), do: %{r | size: size}
 
   @doc "Sets the label text size in pixels."
   @spec text_size(radio :: t(), text_size :: number()) :: t()
-  def text_size(%__MODULE__{} = r, text_size), do: %{r | text_size: text_size}
+  def text_size(%__MODULE__{} = r, text_size) when is_number(text_size), do: %{r | text_size: text_size}
 
   @doc "Sets the label font."
   @spec font(radio :: t(), font :: Julep.Iced.Font.t()) :: t()
@@ -160,7 +162,8 @@ defmodule Julep.Iced.Widget.Radio do
 
   @doc "Sets the radio style."
   @spec style(radio :: t(), style :: style()) :: t()
-  def style(%__MODULE__{} = r, style), do: %{r | style: style}
+  def style(%__MODULE__{} = r, %StyleMap{} = style), do: %{r | style: style}
+  def style(%__MODULE__{} = r, :default), do: %{r | style: :default}
 
   @doc "Sets accessibility annotations."
   @spec a11y(radio :: t(), a11y :: Julep.Iced.A11y.t()) :: t()

@@ -13,7 +13,7 @@ defmodule Julep.Iced.Widget.PickList do
   - `font` (string | map) -- font specification. See `Julep.Iced.Font`.
   - `line_height` (number | map) -- text line height.
   - `menu_height` (number) -- maximum height of the dropdown menu in pixels.
-  - `text_shaping` (string) -- text shaping: `"basic"`, `"advanced"`, or `"auto"`.
+  - `text_shaping` -- text shaping strategy. See `Julep.Iced.Shaping`.
   - `handle` (map) -- customise the dropdown handle indicator. Map with a `type` key:
     - `%{type: "arrow"}` -- default arrow (optional `size` in pixels).
     - `%{type: "arrow", size: 12}` -- arrow with explicit size.
@@ -25,7 +25,8 @@ defmodule Julep.Iced.Widget.PickList do
     Default: `"end"`.
   - `menu_style` (map) -- inline style for the dropdown menu. Map with optional keys:
     `background`, `text_color`, `selected_text_color`, `selected_background`, `border`, `shadow`.
-  - `style` (string) -- named style. Currently only `"default"`.
+  - `style` -- `:default` or `StyleMap.t()` for custom styling. See `Julep.Iced.StyleMap`.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
 
   ## Events
 
@@ -102,7 +103,7 @@ defmodule Julep.Iced.Widget.PickList do
 
   @doc "Creates a new pick list struct with the given options and optional keyword opts."
   @spec new(id :: String.t(), options :: [String.t()], opts :: [option()]) :: t()
-  def new(id, options, opts \\ []) when is_list(options) do
+  def new(id, options, opts \\ []) when is_binary(id) and is_list(options) do
     %__MODULE__{id: id, options: options} |> with_options(opts)
   end
 
@@ -134,11 +135,11 @@ defmodule Julep.Iced.Widget.PickList do
 
   @doc "Sets the currently selected value."
   @spec selected(pick_list :: t(), selected :: String.t()) :: t()
-  def selected(%__MODULE__{} = pl, selected), do: %{pl | selected: selected}
+  def selected(%__MODULE__{} = pl, selected) when is_binary(selected), do: %{pl | selected: selected}
 
   @doc "Sets the placeholder text."
   @spec placeholder(pick_list :: t(), placeholder :: String.t()) :: t()
-  def placeholder(%__MODULE__{} = pl, placeholder), do: %{pl | placeholder: placeholder}
+  def placeholder(%__MODULE__{} = pl, placeholder) when is_binary(placeholder), do: %{pl | placeholder: placeholder}
 
   @doc "Sets the pick list width."
   @spec width(pick_list :: t(), width :: Julep.Iced.Length.t()) :: t()
@@ -150,7 +151,7 @@ defmodule Julep.Iced.Widget.PickList do
 
   @doc "Sets the text size in pixels."
   @spec text_size(pick_list :: t(), text_size :: number()) :: t()
-  def text_size(%__MODULE__{} = pl, text_size), do: %{pl | text_size: text_size}
+  def text_size(%__MODULE__{} = pl, text_size) when is_number(text_size), do: %{pl | text_size: text_size}
 
   @doc "Sets the font."
   @spec font(pick_list :: t(), font :: Julep.Iced.Font.t()) :: t()
@@ -162,7 +163,7 @@ defmodule Julep.Iced.Widget.PickList do
 
   @doc "Sets the maximum dropdown menu height in pixels."
   @spec menu_height(pick_list :: t(), menu_height :: number()) :: t()
-  def menu_height(%__MODULE__{} = pl, menu_height), do: %{pl | menu_height: menu_height}
+  def menu_height(%__MODULE__{} = pl, menu_height) when is_number(menu_height), do: %{pl | menu_height: menu_height}
 
   @doc "Sets the text shaping strategy."
   @spec text_shaping(pick_list :: t(), text_shaping :: Julep.Iced.Shaping.t()) :: t()
@@ -174,24 +175,25 @@ defmodule Julep.Iced.Widget.PickList do
 
   @doc "Sets the text ellipsis strategy."
   @spec ellipsis(pick_list :: t(), ellipsis :: String.t()) :: t()
-  def ellipsis(%__MODULE__{} = pl, ellipsis), do: %{pl | ellipsis: ellipsis}
+  def ellipsis(%__MODULE__{} = pl, ellipsis) when is_binary(ellipsis), do: %{pl | ellipsis: ellipsis}
 
   @doc "Sets the dropdown menu style overrides."
   @spec menu_style(pick_list :: t(), menu_style :: map()) :: t()
   def menu_style(%__MODULE__{} = pl, menu_style) when is_map(menu_style),
     do: %{pl | menu_style: menu_style}
 
-  @doc "Sets the pick list style."
+  @doc "Sets the pick list style. Accepts `:default` or a `StyleMap`."
   @spec style(pick_list :: t(), style :: style()) :: t()
-  def style(%__MODULE__{} = pl, style), do: %{pl | style: style}
+  def style(%__MODULE__{} = pl, %StyleMap{} = style), do: %{pl | style: style}
+  def style(%__MODULE__{} = pl, :default), do: %{pl | style: :default}
 
   @doc "Enables or disables the open event when the dropdown menu opens."
   @spec on_open(pick_list :: t(), on_open :: boolean()) :: t()
-  def on_open(%__MODULE__{} = pl, on_open), do: %{pl | on_open: on_open}
+  def on_open(%__MODULE__{} = pl, on_open) when is_boolean(on_open), do: %{pl | on_open: on_open}
 
   @doc "Enables or disables the close event when the dropdown menu closes."
   @spec on_close(pick_list :: t(), on_close :: boolean()) :: t()
-  def on_close(%__MODULE__{} = pl, on_close), do: %{pl | on_close: on_close}
+  def on_close(%__MODULE__{} = pl, on_close) when is_boolean(on_close), do: %{pl | on_close: on_close}
 
   @doc "Sets accessibility annotations."
   @spec a11y(pick_list :: t(), a11y :: Julep.Iced.A11y.t()) :: t()

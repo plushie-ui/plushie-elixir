@@ -14,6 +14,7 @@ defmodule Julep.Iced.Widget.PaneGrid do
   - `leeway` (number) -- grabbable area around dividers. Defaults to min_size.
   - `divider_color` (hex color) -- color for the split divider.
   - `divider_width` (number) -- divider thickness in pixels.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
 
   ## Child pane props
 
@@ -38,7 +39,7 @@ defmodule Julep.Iced.Widget.PaneGrid do
           | {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
           | {:min_size, number()}
-          | {:divider_color, Julep.Iced.Color.t()}
+          | {:divider_color, Julep.Iced.Color.input()}
           | {:divider_width, number()}
           | {:leeway, number()}
           | {:a11y, Julep.Iced.A11y.t()}
@@ -95,7 +96,7 @@ defmodule Julep.Iced.Widget.PaneGrid do
 
   @doc "Sets the spacing between panes."
   @spec spacing(pane_grid :: t(), spacing :: number()) :: t()
-  def spacing(%__MODULE__{} = pg, spacing), do: %{pg | spacing: spacing}
+  def spacing(%__MODULE__{} = pg, spacing) when is_number(spacing), do: %{pg | spacing: spacing}
 
   @doc "Sets the pane grid width."
   @spec width(pane_grid :: t(), width :: Julep.Iced.Length.t()) :: t()
@@ -107,20 +108,20 @@ defmodule Julep.Iced.Widget.PaneGrid do
 
   @doc "Sets the minimum pane size in pixels."
   @spec min_size(pane_grid :: t(), min_size :: number()) :: t()
-  def min_size(%__MODULE__{} = pg, min_size), do: %{pg | min_size: min_size}
+  def min_size(%__MODULE__{} = pg, min_size) when is_number(min_size), do: %{pg | min_size: min_size}
 
   @doc "Sets the divider color."
-  @spec divider_color(pane_grid :: t(), divider_color :: Julep.Iced.Color.t()) :: t()
+  @spec divider_color(pane_grid :: t(), divider_color :: Julep.Iced.Color.input()) :: t()
   def divider_color(%__MODULE__{} = pg, divider_color),
     do: %{pg | divider_color: Color.cast(divider_color)}
 
   @doc "Sets the divider width in pixels."
   @spec divider_width(pane_grid :: t(), divider_width :: number()) :: t()
-  def divider_width(%__MODULE__{} = pg, divider_width), do: %{pg | divider_width: divider_width}
+  def divider_width(%__MODULE__{} = pg, divider_width) when is_number(divider_width), do: %{pg | divider_width: divider_width}
 
   @doc "Sets the drag leeway in pixels (how far a pane must be dragged before it detaches)."
   @spec leeway(pane_grid :: t(), leeway :: number()) :: t()
-  def leeway(%__MODULE__{} = pg, leeway), do: %{pg | leeway: leeway}
+  def leeway(%__MODULE__{} = pg, leeway) when is_number(leeway), do: %{pg | leeway: leeway}
 
   @doc "Appends a child pane to the grid."
   @spec push(pane_grid :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()

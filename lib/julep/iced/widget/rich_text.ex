@@ -25,9 +25,10 @@ defmodule Julep.Iced.Widget.RichText do
   - `font` (string | map) -- default font for all spans.
   - `color` (color) -- default text color for all spans.
   - `line_height` (number | map) -- line height.
-  - `wrapping` (string) -- text wrapping: `"none"`, `"word"`, `"glyph"`, `"word_or_glyph"`.
+  - `wrapping` -- text wrapping mode. See `Julep.Iced.Wrapping`.
   - `ellipsis` (string) -- text ellipsis mode: `"none"`, `"start"`, `"middle"`, `"end"`.
     Truncates text that overflows and inserts an ellipsis character at the given position.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
 
   ## Events
 
@@ -43,7 +44,7 @@ defmodule Julep.Iced.Widget.RichText do
           | {:height, Julep.Iced.Length.t()}
           | {:size, number()}
           | {:font, Julep.Iced.Font.t()}
-          | {:color, Julep.Iced.Color.t()}
+          | {:color, Julep.Iced.Color.input()}
           | {:line_height, number() | map()}
           | {:wrapping, Julep.Iced.Wrapping.t()}
           | {:ellipsis, String.t()}
@@ -117,14 +118,14 @@ defmodule Julep.Iced.Widget.RichText do
 
   @doc "Sets the default font size for all spans."
   @spec size(rich_text :: t(), size :: number()) :: t()
-  def size(%__MODULE__{} = rt, size), do: %{rt | size: size}
+  def size(%__MODULE__{} = rt, size) when is_number(size), do: %{rt | size: size}
 
   @doc "Sets the default font for all spans."
   @spec font(rich_text :: t(), font :: Julep.Iced.Font.t()) :: t()
   def font(%__MODULE__{} = rt, font), do: %{rt | font: font}
 
   @doc "Sets the default text color for all spans."
-  @spec color(rich_text :: t(), color :: Julep.Iced.Color.t() | atom()) :: t()
+  @spec color(rich_text :: t(), color :: Julep.Iced.Color.input()) :: t()
   def color(%__MODULE__{} = rt, color), do: %{rt | color: Julep.Iced.Color.cast(color)}
 
   @doc "Sets the line height."
@@ -137,7 +138,7 @@ defmodule Julep.Iced.Widget.RichText do
 
   @doc ~S'Sets the text ellipsis mode. One of: `"none"`, `"start"`, `"middle"`, `"end"`.'
   @spec ellipsis(rich_text :: t(), ellipsis :: String.t()) :: t()
-  def ellipsis(%__MODULE__{} = rt, ellipsis), do: %{rt | ellipsis: ellipsis}
+  def ellipsis(%__MODULE__{} = rt, ellipsis) when is_binary(ellipsis), do: %{rt | ellipsis: ellipsis}
 
   @doc "Sets accessibility annotations."
   @spec a11y(rich_text :: t(), a11y :: Julep.Iced.A11y.t()) :: t()

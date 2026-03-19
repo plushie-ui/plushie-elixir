@@ -15,7 +15,8 @@ defmodule Julep.Iced.Widget.Slider do
     default rectangular one. Default: false.
   - `rail_color` (hex color) -- color for the slider rail (both active and inactive portions).
   - `rail_width` (number) -- rail thickness in pixels.
-  - `style` (string) -- named style. Currently only `"default"`.
+  - `style` -- `:default` or `StyleMap.t()` for custom styling. See `Julep.Iced.StyleMap`.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
 
   ## Events
 
@@ -37,7 +38,7 @@ defmodule Julep.Iced.Widget.Slider do
           | {:width, Julep.Iced.Length.t()}
           | {:height, number()}
           | {:circular_handle, boolean()}
-          | {:rail_color, Julep.Iced.Color.t()}
+          | {:rail_color, Julep.Iced.Color.input()}
           | {:rail_width, number()}
           | {:style, style()}
           | {:a11y, Julep.Iced.A11y.t()}
@@ -82,7 +83,8 @@ defmodule Julep.Iced.Widget.Slider do
           opts :: [option()]
         ) ::
           t()
-  def new(id, {_min, _max} = range, value, opts \\ []) do
+  def new(id, {min, max} = range, value, opts \\ [])
+      when is_binary(id) and is_number(min) and is_number(max) and is_number(value) do
     %__MODULE__{id: id, range: range, value: value} |> with_options(opts)
   end
 
@@ -108,15 +110,15 @@ defmodule Julep.Iced.Widget.Slider do
 
   @doc "Sets the step increment."
   @spec step(slider :: t(), step :: number()) :: t()
-  def step(%__MODULE__{} = slider, step), do: %{slider | step: step}
+  def step(%__MODULE__{} = slider, step) when is_number(step), do: %{slider | step: step}
 
   @doc "Sets the step increment when Shift is held."
   @spec shift_step(slider :: t(), shift_step :: number()) :: t()
-  def shift_step(%__MODULE__{} = slider, shift_step), do: %{slider | shift_step: shift_step}
+  def shift_step(%__MODULE__{} = slider, shift_step) when is_number(shift_step), do: %{slider | shift_step: shift_step}
 
   @doc "Sets the default value (double-click resets to this)."
   @spec default(slider :: t(), default :: number()) :: t()
-  def default(%__MODULE__{} = slider, default), do: %{slider | default: default}
+  def default(%__MODULE__{} = slider, default) when is_number(default), do: %{slider | default: default}
 
   @doc "Sets the slider width."
   @spec width(slider :: t(), width :: Julep.Iced.Length.t()) :: t()
@@ -124,25 +126,26 @@ defmodule Julep.Iced.Widget.Slider do
 
   @doc "Sets the slider track height in pixels."
   @spec height(slider :: t(), height :: number()) :: t()
-  def height(%__MODULE__{} = slider, height), do: %{slider | height: height}
+  def height(%__MODULE__{} = slider, height) when is_number(height), do: %{slider | height: height}
 
   @doc "Sets whether the slider handle is circular."
   @spec circular_handle(slider :: t(), circular_handle :: boolean()) :: t()
-  def circular_handle(%__MODULE__{} = slider, circular_handle),
+  def circular_handle(%__MODULE__{} = slider, circular_handle) when is_boolean(circular_handle),
     do: %{slider | circular_handle: circular_handle}
 
   @doc "Sets the rail color."
-  @spec rail_color(slider :: t(), rail_color :: Julep.Iced.Color.t()) :: t()
+  @spec rail_color(slider :: t(), rail_color :: Julep.Iced.Color.input()) :: t()
   def rail_color(%__MODULE__{} = slider, rail_color),
     do: %{slider | rail_color: Color.cast(rail_color)}
 
   @doc "Sets the rail width in pixels."
   @spec rail_width(slider :: t(), rail_width :: number()) :: t()
-  def rail_width(%__MODULE__{} = slider, rail_width), do: %{slider | rail_width: rail_width}
+  def rail_width(%__MODULE__{} = slider, rail_width) when is_number(rail_width), do: %{slider | rail_width: rail_width}
 
   @doc "Sets the slider style."
   @spec style(slider :: t(), style :: style()) :: t()
-  def style(%__MODULE__{} = slider, style), do: %{slider | style: style}
+  def style(%__MODULE__{} = slider, %StyleMap{} = style), do: %{slider | style: style}
+  def style(%__MODULE__{} = slider, :default), do: %{slider | style: :default}
 
   @doc "Sets accessibility annotations."
   @spec a11y(slider :: t(), a11y :: Julep.Iced.A11y.t()) :: t()

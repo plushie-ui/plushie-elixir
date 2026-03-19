@@ -11,33 +11,30 @@ defmodule Julep.Iced.Widget.Container do
   - `max_height` (number) -- maximum height in pixels.
   - `center` (boolean) -- center child in both axes. Default: false.
   - `clip` (boolean) -- clip child that overflows. Default: false.
-  - `align_x` (string) -- horizontal alignment: `"left"`, `"center"`, `"right"`.
-  - `align_y` (string) -- vertical alignment: `"top"`, `"center"`, `"bottom"`.
+  - `align_x` -- horizontal alignment: `:left`, `:center`, `:right`. See `Julep.Iced.Alignment`.
+  - `align_y` -- vertical alignment: `:top`, `:center`, `:bottom`. See `Julep.Iced.Alignment`.
   - `background` (color | gradient) -- background fill. Accepts a hex color string,
     `%{r, g, b, a}` map, or a gradient map. See `Julep.Iced.Color`, `Julep.Iced.Gradient`.
   - `color` (color) -- text color override. See `Julep.Iced.Color`.
   - `border` (map) -- border specification: `%{color, width, radius}`. See `Julep.Iced.Border`.
   - `shadow` (map) -- shadow specification: `%{color, offset, blur_radius}`. See `Julep.Iced.Shadow`.
-  - `style` (string) -- named style. One of: `"transparent"`, `"rounded_box"`,
-    `"bordered_box"`, `"dark"`, `"primary"`, `"secondary"`, `"success"`,
-    `"danger"`, `"warning"`. Overrides inline style props if both are set.
+  - `style` -- named preset (`:transparent`, `:rounded_box`, `:bordered_box`,
+    `:dark`, `:primary`, `:secondary`, `:success`, `:danger`, `:warning`)
+    or `StyleMap.t()`. Overrides inline style props if both are set.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
-  @type style ::
-          :transparent
-          | :rounded_box
-          | :bordered_box
-          | :dark
-          | :primary
-          | :secondary
-          | :success
-          | :danger
-          | :warning
-          | StyleMap.t()
+  @presets [:transparent, :rounded_box, :bordered_box, :dark, :primary, :secondary, :success, :danger, :warning]
+
+  @doc false
+  def style_presets, do: @presets
+
+  @type preset :: unquote(Enum.reduce(@presets, &{:|, [], [&1, &2]}))
+  @type style :: preset() | StyleMap.t()
 
   @type option ::
           {:padding, Julep.Iced.Padding.t()}
@@ -49,8 +46,8 @@ defmodule Julep.Iced.Widget.Container do
           | {:clip, boolean()}
           | {:align_x, Julep.Iced.Alignment.t()}
           | {:align_y, Julep.Iced.Alignment.t()}
-          | {:background, Julep.Iced.Color.t() | Julep.Iced.Gradient.t()}
-          | {:color, Julep.Iced.Color.t()}
+          | {:background, Julep.Iced.Color.input() | Julep.Iced.Gradient.t()}
+          | {:color, Julep.Iced.Color.input()}
           | {:border, Julep.Iced.Border.t()}
           | {:shadow, Julep.Iced.Shadow.t()}
           | {:style, style()}
@@ -141,19 +138,22 @@ defmodule Julep.Iced.Widget.Container do
 
   @doc "Sets the maximum width in pixels."
   @spec max_width(container :: t(), max_width :: number()) :: t()
-  def max_width(%__MODULE__{} = c, max_width), do: %{c | max_width: max_width}
+  def max_width(%__MODULE__{} = c, max_width) when is_number(max_width),
+    do: %{c | max_width: max_width}
 
   @doc "Sets the maximum height in pixels."
   @spec max_height(container :: t(), max_height :: number()) :: t()
-  def max_height(%__MODULE__{} = c, max_height), do: %{c | max_height: max_height}
+  def max_height(%__MODULE__{} = c, max_height) when is_number(max_height),
+    do: %{c | max_height: max_height}
 
   @doc "Centers the child in both axes."
   @spec center(container :: t(), center :: boolean()) :: t()
-  def center(%__MODULE__{} = c, center \\ true), do: %{c | center: center}
+  def center(%__MODULE__{} = c, center \\ true) when is_boolean(center),
+    do: %{c | center: center}
 
   @doc "Sets whether the child is clipped on overflow."
   @spec clip(container :: t(), clip :: boolean()) :: t()
-  def clip(%__MODULE__{} = c, clip), do: %{c | clip: clip}
+  def clip(%__MODULE__{} = c, clip) when is_boolean(clip), do: %{c | clip: clip}
 
   @doc "Sets the horizontal alignment of the child."
   @spec align_x(container :: t(), align_x :: Julep.Iced.Alignment.t()) :: t()
@@ -194,12 +194,16 @@ defmodule Julep.Iced.Widget.Container do
     do: %{container | height: height, align_y: :bottom}
 
   @doc "Sets the background fill (color or gradient)."
-  @spec background(container :: t(), background :: Julep.Iced.Color.t() | Julep.Iced.Gradient.t()) ::
+  @spec background(container :: t(), background :: Julep.Iced.Color.input() | Julep.Iced.Gradient.t()) ::
           t()
-  def background(%__MODULE__{} = c, background), do: %{c | background: background}
+  def background(%__MODULE__{} = c, %{type: "linear"} = gradient),
+    do: %{c | background: gradient}
+
+  def background(%__MODULE__{} = c, background),
+    do: %{c | background: Julep.Iced.Color.cast(background)}
 
   @doc "Sets the text color override."
-  @spec color(container :: t(), color :: Julep.Iced.Color.t() | atom()) :: t()
+  @spec color(container :: t(), color :: Julep.Iced.Color.input()) :: t()
   def color(%__MODULE__{} = c, color), do: %{c | color: Julep.Iced.Color.cast(color)}
 
   @doc "Sets the border specification."
@@ -212,7 +216,8 @@ defmodule Julep.Iced.Widget.Container do
 
   @doc "Sets the named style."
   @spec style(container :: t(), style :: style()) :: t()
-  def style(%__MODULE__{} = c, style), do: %{c | style: style}
+  def style(%__MODULE__{} = c, %StyleMap{} = style), do: %{c | style: style}
+  def style(%__MODULE__{} = c, style) when style in @presets, do: %{c | style: style}
 
   @doc "Appends a child to the container."
   @spec push(container :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()

@@ -27,6 +27,7 @@ defmodule Julep.Iced.Widget.ComboBox do
     `background`, `text_color`, `selected_text_color`, `selected_background`, `border`, `shadow`.
   - `style` -- named preset atom (`:default`) or `StyleMap.t()` for custom styling.
     See `Julep.Iced.StyleMap`.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
 
   ## Events
 
@@ -108,7 +109,7 @@ defmodule Julep.Iced.Widget.ComboBox do
 
   @doc "Creates a new combo box struct with the given options and optional keyword opts."
   @spec new(id :: String.t(), options :: [String.t()], opts :: [option()]) :: t()
-  def new(id, options, opts \\ []) when is_list(options) do
+  def new(id, options, opts \\ []) when is_binary(id) and is_list(options) do
     %__MODULE__{id: id, options: options} |> with_options(opts)
   end
 
@@ -157,7 +158,7 @@ defmodule Julep.Iced.Widget.ComboBox do
 
   @doc "Sets the text size in pixels."
   @spec size(combo_box :: t(), size :: number()) :: t()
-  def size(%__MODULE__{} = cb, size), do: %{cb | size: size}
+  def size(%__MODULE__{} = cb, size) when is_number(size), do: %{cb | size: size}
 
   @doc "Sets the font."
   @spec font(combo_box :: t(), font :: Julep.Iced.Font.t()) :: t()
@@ -169,7 +170,8 @@ defmodule Julep.Iced.Widget.ComboBox do
 
   @doc "Sets the maximum dropdown menu height in pixels."
   @spec menu_height(combo_box :: t(), menu_height :: number()) :: t()
-  def menu_height(%__MODULE__{} = cb, menu_height), do: %{cb | menu_height: menu_height}
+  def menu_height(%__MODULE__{} = cb, menu_height) when is_number(menu_height),
+    do: %{cb | menu_height: menu_height}
 
   @doc "Sets the icon displayed inside the text input."
   @spec icon(combo_box :: t(), icon :: map()) :: t()
@@ -177,16 +179,16 @@ defmodule Julep.Iced.Widget.ComboBox do
 
   @doc "Enables or disables option hover event emission."
   @spec on_option_hovered(combo_box :: t(), on_option_hovered :: boolean()) :: t()
-  def on_option_hovered(%__MODULE__{} = cb, on_option_hovered),
-    do: %{cb | on_option_hovered: on_option_hovered}
+  def on_option_hovered(%__MODULE__{} = cb, v) when is_boolean(v),
+    do: %{cb | on_option_hovered: v}
 
   @doc "Enables or disables the open event when the dropdown menu opens."
   @spec on_open(combo_box :: t(), on_open :: boolean()) :: t()
-  def on_open(%__MODULE__{} = cb, on_open), do: %{cb | on_open: on_open}
+  def on_open(%__MODULE__{} = cb, v) when is_boolean(v), do: %{cb | on_open: v}
 
   @doc "Enables or disables the close event when the dropdown menu closes."
   @spec on_close(combo_box :: t(), on_close :: boolean()) :: t()
-  def on_close(%__MODULE__{} = cb, on_close), do: %{cb | on_close: on_close}
+  def on_close(%__MODULE__{} = cb, v) when is_boolean(v), do: %{cb | on_close: v}
 
   @doc "Sets the text shaping strategy."
   @spec shaping(combo_box :: t(), shaping :: Julep.Iced.Shaping.t()) :: t()
@@ -201,9 +203,10 @@ defmodule Julep.Iced.Widget.ComboBox do
   def menu_style(%__MODULE__{} = cb, menu_style) when is_map(menu_style),
     do: %{cb | menu_style: menu_style}
 
-  @doc "Sets the combo box style. Accepts a named preset atom or a `StyleMap`."
+  @doc "Sets the combo box style. Accepts `:default` or a `StyleMap`."
   @spec style(combo_box :: t(), style :: style()) :: t()
-  def style(%__MODULE__{} = cb, style), do: %{cb | style: style}
+  def style(%__MODULE__{} = cb, %StyleMap{} = style), do: %{cb | style: style}
+  def style(%__MODULE__{} = cb, :default), do: %{cb | style: :default}
 
   @doc "Sets accessibility annotations."
   @spec a11y(combo_box :: t(), a11y :: Julep.Iced.A11y.t()) :: t()

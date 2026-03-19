@@ -11,6 +11,7 @@ defmodule Julep.Iced.Widget.Overlay do
   - `offset_x` (number) -- horizontal offset in pixels applied after positioning.
   - `offset_y` (number) -- vertical offset in pixels applied after positioning.
   - `width` (length) -- width of the overlay node. See `Julep.Iced.Length`.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
 
   ## Children
 
@@ -22,7 +23,9 @@ defmodule Julep.Iced.Widget.Overlay do
   alias Julep.Iced.A11y
   alias Julep.Iced.Widget.Build
 
-  @type position :: :below | :above | :left | :right
+  @positions [:below, :above, :left, :right]
+
+  @type position :: unquote(Enum.reduce([:below, :above, :left, :right], &{:|, [], [&1, &2]}))
 
   @type option ::
           {:position, position()}
@@ -78,19 +81,20 @@ defmodule Julep.Iced.Widget.Overlay do
 
   @doc "Sets the overlay position relative to the anchor."
   @spec position(overlay :: t(), position :: position()) :: t()
-  def position(%__MODULE__{} = overlay, position), do: %{overlay | position: position}
+  def position(%__MODULE__{} = overlay, position) when position in @positions,
+    do: %{overlay | position: position}
 
   @doc "Sets the gap between anchor and overlay in pixels."
   @spec gap(overlay :: t(), gap :: number()) :: t()
-  def gap(%__MODULE__{} = overlay, gap), do: %{overlay | gap: gap}
+  def gap(%__MODULE__{} = overlay, gap) when is_number(gap), do: %{overlay | gap: gap}
 
   @doc "Sets the horizontal offset in pixels."
   @spec offset_x(overlay :: t(), offset_x :: number()) :: t()
-  def offset_x(%__MODULE__{} = overlay, offset_x), do: %{overlay | offset_x: offset_x}
+  def offset_x(%__MODULE__{} = overlay, offset_x) when is_number(offset_x), do: %{overlay | offset_x: offset_x}
 
   @doc "Sets the vertical offset in pixels."
   @spec offset_y(overlay :: t(), offset_y :: number()) :: t()
-  def offset_y(%__MODULE__{} = overlay, offset_y), do: %{overlay | offset_y: offset_y}
+  def offset_y(%__MODULE__{} = overlay, offset_y) when is_number(offset_y), do: %{overlay | offset_y: offset_y}
 
   @doc "Sets the width of the overlay node."
   @spec width(overlay :: t(), width :: Julep.Iced.Length.t()) :: t()

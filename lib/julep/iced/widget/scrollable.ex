@@ -6,9 +6,10 @@ defmodule Julep.Iced.Widget.Scrollable do
 
   - `width` (length) -- width of the scrollable area. Default: shrink. See `Julep.Iced.Length`.
   - `height` (length) -- height of the scrollable area. Default: shrink.
-  - `direction` (string) -- scroll direction: `"vertical"` (default), `"horizontal"`, or `"both"`.
-    Setting `:both` enables bidirectional scrolling, but per-axis scrollbar
-    customization (independent widths, margins per axis) is not yet supported.
+  - `direction` (atom) -- scroll direction: `:vertical` (default), `:horizontal`, or `:both`.
+    See `Julep.Iced.Direction`. Setting `:both` enables bidirectional scrolling,
+    but per-axis scrollbar customization (independent widths, margins per axis)
+    is not yet supported.
   - `spacing` (number) -- spacing between scrollbar and content.
   - `scrollbar_width` (number) -- width of the scrollbar track in pixels.
   - `scrollbar_margin` (number) -- margin around the scrollbar in pixels.
@@ -16,11 +17,13 @@ defmodule Julep.Iced.Widget.Scrollable do
   - `scrollbar_color` (hex color) -- color for the scrollbar track background.
   - `scroller_color` (hex color) -- color for the scroller thumb.
   - `id` (string) -- widget ID for programmatic scroll control via `Julep.Command`.
-  - `anchor` (string) -- scroll anchor: `"start"` (default) or `"end"` / `"bottom"` / `"right"`.
+  - `anchor` (atom) -- scroll anchor: `:start` (default) or `:end` / `:bottom` / `:right`.
+    See `Julep.Iced.Anchor`.
   - `on_scroll` (boolean) -- when `true`, emits `%Widget{type: :scroll, id: id, data: viewport}` events on scroll.
     The viewport map contains `absolute_x`, `absolute_y`, `relative_x`, `relative_y`,
     `bounds` (as `{width, height}`), and `content_bounds` (as `{width, height}`).
   - `auto_scroll` (boolean) -- when `true`, automatically scrolls to show new content.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y
@@ -38,8 +41,8 @@ defmodule Julep.Iced.Widget.Scrollable do
           | {:anchor, Julep.Iced.Anchor.t()}
           | {:on_scroll, boolean()}
           | {:auto_scroll, boolean()}
-          | {:scrollbar_color, Julep.Iced.Color.t()}
-          | {:scroller_color, Julep.Iced.Color.t()}
+          | {:scrollbar_color, Julep.Iced.Color.input()}
+          | {:scroller_color, Julep.Iced.Color.input()}
           | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -121,21 +124,21 @@ defmodule Julep.Iced.Widget.Scrollable do
 
   @doc "Sets the spacing between scrollbar and content."
   @spec spacing(scrollable :: t(), spacing :: number()) :: t()
-  def spacing(%__MODULE__{} = s, spacing), do: %{s | spacing: spacing}
+  def spacing(%__MODULE__{} = s, spacing) when is_number(spacing), do: %{s | spacing: spacing}
 
   @doc "Sets the scrollbar track width in pixels."
   @spec scrollbar_width(scrollable :: t(), scrollbar_width :: number()) :: t()
-  def scrollbar_width(%__MODULE__{} = s, scrollbar_width),
+  def scrollbar_width(%__MODULE__{} = s, scrollbar_width) when is_number(scrollbar_width),
     do: %{s | scrollbar_width: scrollbar_width}
 
   @doc "Sets the scrollbar margin in pixels."
   @spec scrollbar_margin(scrollable :: t(), scrollbar_margin :: number()) :: t()
-  def scrollbar_margin(%__MODULE__{} = s, scrollbar_margin),
+  def scrollbar_margin(%__MODULE__{} = s, scrollbar_margin) when is_number(scrollbar_margin),
     do: %{s | scrollbar_margin: scrollbar_margin}
 
   @doc "Sets the scroller handle width in pixels."
   @spec scroller_width(scrollable :: t(), scroller_width :: number()) :: t()
-  def scroller_width(%__MODULE__{} = s, scroller_width), do: %{s | scroller_width: scroller_width}
+  def scroller_width(%__MODULE__{} = s, scroller_width) when is_number(scroller_width), do: %{s | scroller_width: scroller_width}
 
   @doc "Sets the scroll anchor."
   @spec anchor(scrollable :: t(), anchor :: Julep.Iced.Anchor.t()) :: t()
@@ -143,19 +146,19 @@ defmodule Julep.Iced.Widget.Scrollable do
 
   @doc "Enables scroll position change events."
   @spec on_scroll(scrollable :: t(), on_scroll :: boolean()) :: t()
-  def on_scroll(%__MODULE__{} = s, on_scroll), do: %{s | on_scroll: on_scroll}
+  def on_scroll(%__MODULE__{} = s, on_scroll) when is_boolean(on_scroll), do: %{s | on_scroll: on_scroll}
 
   @doc "Enables automatic scrolling to show new content."
   @spec auto_scroll(scrollable :: t(), auto_scroll :: boolean()) :: t()
-  def auto_scroll(%__MODULE__{} = s, auto_scroll), do: %{s | auto_scroll: auto_scroll}
+  def auto_scroll(%__MODULE__{} = s, auto_scroll) when is_boolean(auto_scroll), do: %{s | auto_scroll: auto_scroll}
 
   @doc "Sets the scrollbar track color."
-  @spec scrollbar_color(scrollable :: t(), scrollbar_color :: Julep.Iced.Color.t()) :: t()
+  @spec scrollbar_color(scrollable :: t(), scrollbar_color :: Julep.Iced.Color.input()) :: t()
   def scrollbar_color(%__MODULE__{} = s, scrollbar_color),
     do: %{s | scrollbar_color: Color.cast(scrollbar_color)}
 
   @doc "Sets the scroller handle color."
-  @spec scroller_color(scrollable :: t(), scroller_color :: Julep.Iced.Color.t()) :: t()
+  @spec scroller_color(scrollable :: t(), scroller_color :: Julep.Iced.Color.input()) :: t()
   def scroller_color(%__MODULE__{} = s, scroller_color),
     do: %{s | scroller_color: Color.cast(scroller_color)}
 

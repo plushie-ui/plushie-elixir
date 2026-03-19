@@ -7,6 +7,7 @@ defmodule Julep.Iced.Widget.Float do
   - `translate_x` (number) -- horizontal translation in pixels. Default: 0.
   - `translate_y` (number) -- vertical translation in pixels. Default: 0.
   - `scale` (number) -- scale factor for the child content.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y
@@ -58,15 +59,15 @@ defmodule Julep.Iced.Widget.Float do
 
   @doc "Sets the horizontal translation in pixels."
   @spec translate_x(float_widget :: t(), translate_x :: number()) :: t()
-  def translate_x(%__MODULE__{} = fw, translate_x), do: %{fw | translate_x: translate_x}
+  def translate_x(%__MODULE__{} = fw, v) when is_number(v), do: %{fw | translate_x: v}
 
   @doc "Sets the vertical translation in pixels."
   @spec translate_y(float_widget :: t(), translate_y :: number()) :: t()
-  def translate_y(%__MODULE__{} = fw, translate_y), do: %{fw | translate_y: translate_y}
+  def translate_y(%__MODULE__{} = fw, v) when is_number(v), do: %{fw | translate_y: v}
 
   @doc "Sets the scale factor."
   @spec scale(float_widget :: t(), scale :: number()) :: t()
-  def scale(%__MODULE__{} = fw, scale), do: %{fw | scale: scale}
+  def scale(%__MODULE__{} = fw, v) when is_number(v), do: %{fw | scale: v}
 
   @doc "Appends a child to the float."
   @spec push(float_widget :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()

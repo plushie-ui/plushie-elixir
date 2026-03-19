@@ -15,9 +15,10 @@ defmodule Julep.Iced.Widget.Markdown do
   - `code_size` (number) -- code block text size in pixels.
   - `spacing` (number) -- spacing between markdown elements in pixels.
   - `link_color` (hex color) -- color to override the default link color.
-  - `code_theme` (string) -- syntax highlighting theme for code blocks. One of
-    `"solarized_dark"`, `"base16_mocha"`, `"base16_ocean"`, `"base16_eighties"`,
-    `"inspired_github"`. Default: `"base16_ocean"`.
+  - `code_theme` -- syntax highlighting theme for code blocks:
+    `"solarized_dark"`, `"base16_mocha"`, `"base16_ocean"` (default),
+    `"base16_eighties"`, `"inspired_github"`.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
 
   ## Events
 
@@ -28,6 +29,8 @@ defmodule Julep.Iced.Widget.Markdown do
   alias Julep.Iced.Color
   alias Julep.Iced.Widget.Build
 
+  @code_themes ~w(solarized_dark base16_mocha base16_ocean base16_eighties inspired_github)
+
   @type option ::
           {:width, Julep.Iced.Length.t()}
           | {:text_size, number()}
@@ -36,7 +39,7 @@ defmodule Julep.Iced.Widget.Markdown do
           | {:h3_size, number()}
           | {:code_size, number()}
           | {:spacing, number()}
-          | {:link_color, Julep.Iced.Color.t()}
+          | {:link_color, Julep.Iced.Color.input()}
           | {:code_theme, String.t()}
           | {:a11y, Julep.Iced.A11y.t()}
 
@@ -102,38 +105,37 @@ defmodule Julep.Iced.Widget.Markdown do
 
   @doc "Sets the base text size."
   @spec text_size(markdown :: t(), text_size :: number()) :: t()
-  def text_size(%__MODULE__{} = md, text_size), do: %{md | text_size: text_size}
+  def text_size(%__MODULE__{} = md, text_size) when is_number(text_size), do: %{md | text_size: text_size}
 
   @doc "Sets the heading 1 size."
   @spec h1_size(markdown :: t(), h1_size :: number()) :: t()
-  def h1_size(%__MODULE__{} = md, h1_size), do: %{md | h1_size: h1_size}
+  def h1_size(%__MODULE__{} = md, h1_size) when is_number(h1_size), do: %{md | h1_size: h1_size}
 
   @doc "Sets the heading 2 size."
   @spec h2_size(markdown :: t(), h2_size :: number()) :: t()
-  def h2_size(%__MODULE__{} = md, h2_size), do: %{md | h2_size: h2_size}
+  def h2_size(%__MODULE__{} = md, h2_size) when is_number(h2_size), do: %{md | h2_size: h2_size}
 
   @doc "Sets the heading 3 size."
   @spec h3_size(markdown :: t(), h3_size :: number()) :: t()
-  def h3_size(%__MODULE__{} = md, h3_size), do: %{md | h3_size: h3_size}
+  def h3_size(%__MODULE__{} = md, h3_size) when is_number(h3_size), do: %{md | h3_size: h3_size}
 
   @doc "Sets the code block text size."
   @spec code_size(markdown :: t(), code_size :: number()) :: t()
-  def code_size(%__MODULE__{} = md, code_size), do: %{md | code_size: code_size}
+  def code_size(%__MODULE__{} = md, code_size) when is_number(code_size), do: %{md | code_size: code_size}
 
   @doc "Sets the spacing between markdown elements."
   @spec spacing(markdown :: t(), spacing :: number()) :: t()
-  def spacing(%__MODULE__{} = md, spacing), do: %{md | spacing: spacing}
+  def spacing(%__MODULE__{} = md, spacing) when is_number(spacing), do: %{md | spacing: spacing}
 
   @doc "Sets the link text color."
-  @spec link_color(markdown :: t(), link_color :: Julep.Iced.Color.t()) :: t()
+  @spec link_color(markdown :: t(), link_color :: Julep.Iced.Color.input()) :: t()
   def link_color(%__MODULE__{} = md, link_color),
     do: %{md | link_color: Color.cast(link_color)}
 
   @doc "Sets the syntax highlighting theme for code blocks."
   @spec code_theme(markdown :: t(), code_theme :: String.t()) :: t()
-  def code_theme(%__MODULE__{} = md, code_theme)
-      when code_theme in ~w(solarized_dark base16_mocha base16_ocean base16_eighties inspired_github),
-      do: %{md | code_theme: code_theme}
+  def code_theme(%__MODULE__{} = md, code_theme) when code_theme in @code_themes,
+    do: %{md | code_theme: code_theme}
 
   @doc "Sets accessibility annotations."
   @spec a11y(markdown :: t(), a11y :: Julep.Iced.A11y.t()) :: t()

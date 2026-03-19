@@ -6,6 +6,7 @@ defmodule Julep.Iced.Widget.Space do
 
   - `width` (length) -- space width. Default: shrink. See `Julep.Iced.Length`.
   - `height` (length) -- space height. Default: shrink.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y

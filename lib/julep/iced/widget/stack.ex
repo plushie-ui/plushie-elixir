@@ -7,6 +7,7 @@ defmodule Julep.Iced.Widget.Stack do
   - `width` (length) -- stack width. Default: shrink. See `Julep.Iced.Length`.
   - `height` (length) -- stack height. Default: shrink.
   - `clip` (boolean) -- clip children that overflow. Default: false.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y
@@ -66,7 +67,7 @@ defmodule Julep.Iced.Widget.Stack do
 
   @doc "Sets whether children that overflow are clipped."
   @spec clip(stack :: t(), clip :: boolean()) :: t()
-  def clip(%__MODULE__{} = stack, clip), do: %{stack | clip: clip}
+  def clip(%__MODULE__{} = stack, clip) when is_boolean(clip), do: %{stack | clip: clip}
 
   @doc "Appends a child to the stack."
   @spec push(stack :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()

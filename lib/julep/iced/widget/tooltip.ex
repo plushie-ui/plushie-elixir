@@ -7,31 +7,27 @@ defmodule Julep.Iced.Widget.Tooltip do
   ## Props
 
   - `tip` (string) -- tooltip text (set automatically from the `tip` argument).
-  - `position` (string) -- tooltip position: `"top"` (default), `"bottom"`,
-    `"left"`, `"right"`, `"follow_cursor"` / `"follow"`.
+  - `position` (atom) -- tooltip position: `:top` (default), `:bottom`,
+    `:left`, `:right`, `:follow_cursor` / `:follow`. See `Julep.Iced.Position`.
   - `gap` (number) -- gap between tooltip and content in pixels.
   - `padding` (number) -- tooltip padding in pixels (uniform, not per-side).
   - `snap_within_viewport` (boolean) -- keep tooltip within viewport. Default: true.
-  - `style` (string) -- named style (uses container styles). One of:
-    `"transparent"`, `"rounded_box"`, `"bordered_box"`, `"dark"`, `"primary"`,
-    `"secondary"`, `"success"`, `"danger"`, `"warning"`.
+  - `delay` (non_neg_integer) -- delay in milliseconds before showing the tooltip.
+  - `style` (atom) -- named style (uses container styles). One of:
+    `:transparent`, `:rounded_box`, `:bordered_box`, `:dark`, `:primary`,
+    `:secondary`, `:success`, `:danger`, `:warning`.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y
   alias Julep.Iced.StyleMap
-  alias Julep.Iced.Widget.Build
+  alias Julep.Iced.Widget.{Build, Container}
 
-  @type style ::
-          :transparent
-          | :rounded_box
-          | :bordered_box
-          | :dark
-          | :primary
-          | :secondary
-          | :success
-          | :danger
-          | :warning
-          | StyleMap.t()
+  # Tooltip uses the same container style presets.
+  @presets Container.style_presets()
+
+  @type preset :: Container.preset()
+  @type style :: preset() | StyleMap.t()
 
   @type option ::
           {:position, Julep.Iced.Position.t()}
@@ -97,23 +93,24 @@ defmodule Julep.Iced.Widget.Tooltip do
 
   @doc "Sets the gap between tooltip and content."
   @spec gap(tooltip :: t(), gap :: number()) :: t()
-  def gap(%__MODULE__{} = tt, gap), do: %{tt | gap: gap}
+  def gap(%__MODULE__{} = tt, gap) when is_number(gap), do: %{tt | gap: gap}
 
   @doc "Sets the tooltip padding."
   @spec padding(tooltip :: t(), padding :: number()) :: t()
-  def padding(%__MODULE__{} = tt, padding), do: %{tt | padding: padding}
+  def padding(%__MODULE__{} = tt, padding) when is_number(padding), do: %{tt | padding: padding}
 
   @doc "Sets whether the tooltip snaps within the viewport."
   @spec snap_within_viewport(tooltip :: t(), snap :: boolean()) :: t()
-  def snap_within_viewport(%__MODULE__{} = tt, snap), do: %{tt | snap_within_viewport: snap}
+  def snap_within_viewport(%__MODULE__{} = tt, snap) when is_boolean(snap), do: %{tt | snap_within_viewport: snap}
 
   @doc "Sets the tooltip delay in milliseconds before showing."
   @spec delay(tooltip :: t(), delay :: non_neg_integer()) :: t()
-  def delay(%__MODULE__{} = tt, delay), do: %{tt | delay: delay}
+  def delay(%__MODULE__{} = tt, delay) when is_integer(delay) and delay >= 0, do: %{tt | delay: delay}
 
   @doc "Sets the tooltip style."
   @spec style(tooltip :: t(), style :: style()) :: t()
-  def style(%__MODULE__{} = tt, style), do: %{tt | style: style}
+  def style(%__MODULE__{} = tt, %StyleMap{} = style), do: %{tt | style: style}
+  def style(%__MODULE__{} = tt, style) when style in @presets, do: %{tt | style: style}
 
   @doc "Appends a child to the tooltip."
   @spec push(tooltip :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()

@@ -3,8 +3,6 @@ defmodule Julep.Iced.Widget.QrCode do
   QR Code -- renders a QR code from a data string.
 
   Uses the iced canvas to draw a grid of cells representing the encoded data.
-  Requires the `widget-qr-code` Cargo feature (enabled by default via
-  `builtin-all`).
 
   ## Props
 
@@ -14,18 +12,21 @@ defmodule Julep.Iced.Widget.QrCode do
   - `background_color` (color) -- color of light modules. Default: white.
   - `error_correction` (atom) -- error correction level. One of `:low`,
     `:medium` (default), `:quartile`, `:high`.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y
   alias Julep.Iced.Color
   alias Julep.Iced.Widget.Build
 
-  @type error_correction :: :low | :medium | :quartile | :high
+  @error_corrections [:low, :medium, :quartile, :high]
+
+  @type error_correction :: unquote(Enum.reduce([:low, :medium, :quartile, :high], &{:|, [], [&1, &2]}))
 
   @type option ::
           {:cell_size, number()}
-          | {:cell_color, Julep.Iced.Color.t()}
-          | {:background_color, Julep.Iced.Color.t()}
+          | {:cell_color, Julep.Iced.Color.input()}
+          | {:background_color, Julep.Iced.Color.input()}
           | {:error_correction, error_correction()}
           | {:a11y, Julep.Iced.A11y.t()}
 
@@ -43,7 +44,7 @@ defmodule Julep.Iced.Widget.QrCode do
 
   @doc "Creates a new QR code struct with the given data string and optional keyword opts."
   @spec new(id :: String.t(), data :: String.t(), opts :: [option()]) :: t()
-  def new(id, data, opts \\ []) when is_binary(data) do
+  def new(id, data, opts \\ []) when is_binary(id) and is_binary(data) do
     %__MODULE__{id: id, data: data} |> with_options(opts)
   end
 
@@ -64,21 +65,21 @@ defmodule Julep.Iced.Widget.QrCode do
 
   @doc "Sets the cell size (pixels per QR module)."
   @spec cell_size(qr_code :: t(), cell_size :: number()) :: t()
-  def cell_size(%__MODULE__{} = qr, cell_size), do: %{qr | cell_size: cell_size}
+  def cell_size(%__MODULE__{} = qr, cell_size) when is_number(cell_size), do: %{qr | cell_size: cell_size}
 
   @doc "Sets the color of dark modules."
-  @spec cell_color(qr_code :: t(), cell_color :: Julep.Iced.Color.t()) :: t()
+  @spec cell_color(qr_code :: t(), cell_color :: Julep.Iced.Color.input()) :: t()
   def cell_color(%__MODULE__{} = qr, cell_color), do: %{qr | cell_color: Color.cast(cell_color)}
 
   @doc "Sets the background color (light modules)."
-  @spec background_color(qr_code :: t(), background_color :: Julep.Iced.Color.t()) :: t()
+  @spec background_color(qr_code :: t(), background_color :: Julep.Iced.Color.input()) :: t()
   def background_color(%__MODULE__{} = qr, background_color),
     do: %{qr | background_color: Color.cast(background_color)}
 
   @doc "Sets the error correction level."
   @spec error_correction(qr_code :: t(), error_correction :: error_correction()) :: t()
-  def error_correction(%__MODULE__{} = qr, error_correction),
-    do: %{qr | error_correction: error_correction}
+  def error_correction(%__MODULE__{} = qr, ec) when ec in @error_corrections,
+    do: %{qr | error_correction: ec}
 
   @doc "Sets accessibility annotations."
   @spec a11y(qr_code :: t(), a11y :: Julep.Iced.A11y.t()) :: t()

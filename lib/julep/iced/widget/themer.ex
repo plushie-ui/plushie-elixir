@@ -4,8 +4,9 @@ defmodule Julep.Iced.Widget.Themer do
 
   ## Props
 
-  - `theme` (string | map) -- a built-in theme name string (e.g. `"Dark"`, `"Nord"`)
-    or a custom palette map. See `Julep.Iced.Theme`.
+  - `theme` -- a built-in theme atom (e.g. `:dark`, `:nord`) or a custom
+    palette map. See `Julep.Iced.Theme`.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y

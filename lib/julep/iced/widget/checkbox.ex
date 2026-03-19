@@ -12,13 +12,14 @@ defmodule Julep.Iced.Widget.Checkbox do
   - `text_size` (number) -- label text size in pixels.
   - `font` (string | map) -- label font. See `Julep.Iced.Font`.
   - `line_height` (number | map) -- label line height.
-  - `text_shaping` (string) -- text shaping: `"basic"`, `"advanced"`, or `"auto"`.
-  - `wrapping` (string) -- text wrapping: `"none"`, `"word"`, `"glyph"`, `"word_or_glyph"`.
-  - `style` (string) -- named style. One of: `"primary"` (default), `"secondary"`,
-    `"success"`, `"danger"`.
+  - `text_shaping` -- text shaping strategy. See `Julep.Iced.Shaping`.
+  - `wrapping` -- text wrapping mode. See `Julep.Iced.Wrapping`.
+  - `style` -- named preset (`:primary` (default), `:secondary`, `:success`,
+    `:danger`) or `StyleMap.t()`. See `Julep.Iced.StyleMap`.
   - `icon` (map) -- custom icon for the check mark. Map with `:code_point` (required),
     and optional `:size`, `:line_height`, `:font`, `:shaping`.
   - `disabled` (boolean) -- when true, the checkbox cannot be toggled. Default: false.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
 
   ## Events
 
@@ -29,7 +30,10 @@ defmodule Julep.Iced.Widget.Checkbox do
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
-  @type style :: :primary | :secondary | :success | :danger | StyleMap.t()
+  @presets [:primary, :secondary, :success, :danger]
+
+  @type preset :: unquote(Enum.reduce(@presets, &{:|, [], [&1, &2]}))
+  @type style :: preset() | StyleMap.t()
 
   @type option ::
           {:spacing, number()}
@@ -84,7 +88,8 @@ defmodule Julep.Iced.Widget.Checkbox do
   @doc "Creates a new checkbox struct with the given label, toggle state, and optional keyword opts."
   @spec new(id :: String.t(), label :: String.t(), is_toggled :: boolean(), opts :: [option()]) ::
           t()
-  def new(id, label, is_toggled, opts \\ []) when is_binary(label) and is_boolean(is_toggled) do
+  def new(id, label, is_toggled, opts \\ [])
+      when is_binary(id) and is_binary(label) and is_boolean(is_toggled) do
     %__MODULE__{id: id, label: label, is_toggled: is_toggled} |> with_options(opts)
   end
 
@@ -112,7 +117,7 @@ defmodule Julep.Iced.Widget.Checkbox do
 
   @doc "Sets the spacing between checkbox and label."
   @spec spacing(checkbox :: t(), spacing :: number()) :: t()
-  def spacing(%__MODULE__{} = cb, spacing), do: %{cb | spacing: spacing}
+  def spacing(%__MODULE__{} = cb, spacing) when is_number(spacing), do: %{cb | spacing: spacing}
 
   @doc "Sets the checkbox width."
   @spec width(checkbox :: t(), width :: Julep.Iced.Length.t()) :: t()
@@ -120,11 +125,11 @@ defmodule Julep.Iced.Widget.Checkbox do
 
   @doc "Sets the checkbox size in pixels."
   @spec size(checkbox :: t(), size :: number()) :: t()
-  def size(%__MODULE__{} = cb, size), do: %{cb | size: size}
+  def size(%__MODULE__{} = cb, size) when is_number(size), do: %{cb | size: size}
 
   @doc "Sets the label text size in pixels."
   @spec text_size(checkbox :: t(), text_size :: number()) :: t()
-  def text_size(%__MODULE__{} = cb, text_size), do: %{cb | text_size: text_size}
+  def text_size(%__MODULE__{} = cb, text_size) when is_number(text_size), do: %{cb | text_size: text_size}
 
   @doc "Sets the label font."
   @spec font(checkbox :: t(), font :: Julep.Iced.Font.t()) :: t()
@@ -144,7 +149,8 @@ defmodule Julep.Iced.Widget.Checkbox do
 
   @doc "Sets the checkbox style."
   @spec style(checkbox :: t(), style :: style()) :: t()
-  def style(%__MODULE__{} = cb, style), do: %{cb | style: style}
+  def style(%__MODULE__{} = cb, %StyleMap{} = style), do: %{cb | style: style}
+  def style(%__MODULE__{} = cb, style) when style in @presets, do: %{cb | style: style}
 
   @doc "Sets a custom icon for the check mark."
   @spec icon(checkbox :: t(), icon :: map()) :: t()
@@ -152,7 +158,7 @@ defmodule Julep.Iced.Widget.Checkbox do
 
   @doc "Sets whether the checkbox is disabled."
   @spec disabled(checkbox :: t(), disabled :: boolean()) :: t()
-  def disabled(%__MODULE__{} = cb, disabled), do: %{cb | disabled: disabled}
+  def disabled(%__MODULE__{} = cb, disabled) when is_boolean(disabled), do: %{cb | disabled: disabled}
 
   @doc "Sets accessibility annotations."
   @spec a11y(checkbox :: t(), a11y :: Julep.Iced.A11y.t()) :: t()

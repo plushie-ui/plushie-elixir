@@ -6,16 +6,20 @@ defmodule Julep.Iced.Widget.Rule do
 
   - `height` (number) -- line thickness in pixels (for horizontal rules). Default: 1.
   - `width` (number) -- line thickness in pixels (for vertical rules). Also accepts `thickness`.
-  - `direction` (string) -- `"horizontal"` (default) or `"vertical"`.
+  - `direction` -- `:horizontal` (default) or `:vertical`. See `Julep.Iced.Direction`.
   - `style` -- named preset atom (`:default`, `:weak`) or `StyleMap.t()` for
     custom styling. See `Julep.Iced.StyleMap`.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y
   alias Julep.Iced.StyleMap
   alias Julep.Iced.Widget.Build
 
-  @type style :: :default | :weak | StyleMap.t()
+  @presets [:default, :weak]
+
+  @type preset :: unquote(Enum.reduce(@presets, &{:|, [], [&1, &2]}))
+  @type style :: preset() | StyleMap.t()
 
   @type option ::
           {:height, number()}
@@ -58,11 +62,11 @@ defmodule Julep.Iced.Widget.Rule do
 
   @doc "Sets the rule height (thickness for horizontal rules)."
   @spec height(rule :: t(), height :: number()) :: t()
-  def height(%__MODULE__{} = rule, height), do: %{rule | height: height}
+  def height(%__MODULE__{} = rule, height) when is_number(height), do: %{rule | height: height}
 
   @doc "Sets the rule width (thickness for vertical rules)."
   @spec width(rule :: t(), width :: number()) :: t()
-  def width(%__MODULE__{} = rule, width), do: %{rule | width: width}
+  def width(%__MODULE__{} = rule, width) when is_number(width), do: %{rule | width: width}
 
   @doc "Sets the rule direction."
   @spec direction(rule :: t(), direction :: Julep.Iced.Direction.t()) :: t()
@@ -70,7 +74,8 @@ defmodule Julep.Iced.Widget.Rule do
 
   @doc "Sets the rule style."
   @spec style(rule :: t(), style :: style()) :: t()
-  def style(%__MODULE__{} = rule, style), do: %{rule | style: style}
+  def style(%__MODULE__{} = rule, %StyleMap{} = style), do: %{rule | style: style}
+  def style(%__MODULE__{} = rule, style) when style in @presets, do: %{rule | style: style}
 
   @doc "Sets accessibility annotations."
   @spec a11y(rule :: t(), a11y :: Julep.Iced.A11y.t()) :: t()

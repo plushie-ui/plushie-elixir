@@ -14,13 +14,14 @@ defmodule Julep.Iced.Widget.Grid do
     `{:fill_portion, n}`, or a fixed pixel number.
   - `fluid` (number) -- enables fluid grid mode. The value is the max cell width
     in pixels; columns auto-wrap to fit the available width.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y
   alias Julep.Iced.Widget.Build
 
   @type option ::
-          {:columns, integer()}
+          {:columns, pos_integer()}
           | {:spacing, number()}
           | {:width, number()}
           | {:height, number()}
@@ -31,7 +32,7 @@ defmodule Julep.Iced.Widget.Grid do
 
   @type t :: %__MODULE__{
           id: String.t(),
-          columns: integer() | nil,
+          columns: pos_integer() | nil,
           spacing: number() | nil,
           width: number() | nil,
           height: number() | nil,
@@ -80,20 +81,22 @@ defmodule Julep.Iced.Widget.Grid do
   end
 
   @doc "Sets the number of columns."
-  @spec columns(grid :: t(), columns :: integer()) :: t()
-  def columns(%__MODULE__{} = grid, columns), do: %{grid | columns: columns}
+  @spec columns(grid :: t(), columns :: pos_integer()) :: t()
+  def columns(%__MODULE__{} = grid, columns) when is_integer(columns) and columns > 0,
+    do: %{grid | columns: columns}
 
   @doc "Sets the spacing between grid cells in pixels."
   @spec spacing(grid :: t(), spacing :: number()) :: t()
-  def spacing(%__MODULE__{} = grid, spacing), do: %{grid | spacing: spacing}
+  def spacing(%__MODULE__{} = grid, spacing) when is_number(spacing),
+    do: %{grid | spacing: spacing}
 
-  @doc "Sets the grid width."
+  @doc "Sets the grid width in pixels."
   @spec width(grid :: t(), width :: number()) :: t()
-  def width(%__MODULE__{} = grid, width), do: %{grid | width: width}
+  def width(%__MODULE__{} = grid, width) when is_number(width), do: %{grid | width: width}
 
-  @doc "Sets the grid height."
+  @doc "Sets the grid height in pixels."
   @spec height(grid :: t(), height :: number()) :: t()
-  def height(%__MODULE__{} = grid, height), do: %{grid | height: height}
+  def height(%__MODULE__{} = grid, height) when is_number(height), do: %{grid | height: height}
 
   @doc "Sets the column width using a Length value (fill/shrink/fixed/fill_portion)."
   @spec column_width(grid :: t(), column_width :: Julep.Iced.Length.t()) :: t()
@@ -105,7 +108,8 @@ defmodule Julep.Iced.Widget.Grid do
 
   @doc "Enables fluid grid mode. The value is the max cell width in pixels; columns auto-wrap."
   @spec fluid(grid :: t(), max_width :: number()) :: t()
-  def fluid(%__MODULE__{} = grid, max_width), do: %{grid | fluid: max_width}
+  def fluid(%__MODULE__{} = grid, max_width) when is_number(max_width),
+    do: %{grid | fluid: max_width}
 
   @doc "Appends a child to the grid."
   @spec push(grid :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()

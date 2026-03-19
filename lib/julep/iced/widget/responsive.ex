@@ -10,6 +10,7 @@ defmodule Julep.Iced.Widget.Responsive do
 
   - `width` (length) -- container width. Default: fill. See `Julep.Iced.Length`.
   - `height` (length) -- container height. Default: fill.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y

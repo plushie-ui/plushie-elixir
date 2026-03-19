@@ -10,9 +10,10 @@ defmodule Julep.Iced.Widget.Column do
   - `width` (length) -- width of the column. Default: shrink. See `Julep.Iced.Length`.
   - `height` (length) -- height of the column. Default: shrink.
   - `max_width` (number) -- maximum width in pixels.
-  - `align_x` (string) -- horizontal alignment of children: `"left"`, `"center"`, `"right"`.
+  - `align_x` -- horizontal alignment of children: `:start`, `:center`, `:end`. See `Julep.Iced.Alignment`.
   - `clip` (boolean) -- clip children that overflow. Default: false.
   - `wrap` (boolean) -- wrap children to next column when they overflow. Default: false.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y
@@ -84,7 +85,8 @@ defmodule Julep.Iced.Widget.Column do
 
   @doc "Sets the spacing between children in pixels."
   @spec spacing(column :: t(), spacing :: number()) :: t()
-  def spacing(%__MODULE__{} = col, spacing), do: %{col | spacing: spacing}
+  def spacing(%__MODULE__{} = col, spacing) when is_number(spacing),
+    do: %{col | spacing: spacing}
 
   @doc "Sets the padding inside the column."
   @spec padding(column :: t(), padding :: Julep.Iced.Padding.t()) :: t()
@@ -100,7 +102,8 @@ defmodule Julep.Iced.Widget.Column do
 
   @doc "Sets the maximum width in pixels."
   @spec max_width(column :: t(), max_width :: number()) :: t()
-  def max_width(%__MODULE__{} = col, max_width), do: %{col | max_width: max_width}
+  def max_width(%__MODULE__{} = col, max_width) when is_number(max_width),
+    do: %{col | max_width: max_width}
 
   @doc "Sets the horizontal alignment of children."
   @spec align_x(column :: t(), align_x :: Julep.Iced.Alignment.t()) :: t()
@@ -108,11 +111,11 @@ defmodule Julep.Iced.Widget.Column do
 
   @doc "Sets whether children that overflow are clipped."
   @spec clip(column :: t(), clip :: boolean()) :: t()
-  def clip(%__MODULE__{} = col, clip), do: %{col | clip: clip}
+  def clip(%__MODULE__{} = col, clip) when is_boolean(clip), do: %{col | clip: clip}
 
   @doc "Sets whether children wrap to the next column on overflow."
   @spec wrap(column :: t(), wrap :: boolean()) :: t()
-  def wrap(%__MODULE__{} = col, wrap), do: %{col | wrap: wrap}
+  def wrap(%__MODULE__{} = col, wrap) when is_boolean(wrap), do: %{col | wrap: wrap}
 
   @doc "Appends a child to the column."
   @spec push(column :: t(), child :: Julep.Iced.ui_node() | struct()) :: t()

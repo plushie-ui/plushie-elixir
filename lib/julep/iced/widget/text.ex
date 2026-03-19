@@ -12,24 +12,32 @@ defmodule Julep.Iced.Widget.Text do
   - `height` (length) -- text widget height.
   - `line_height` (number | map) -- line height. Number is a relative multiplier;
     map with `%{relative: n}` or `%{absolute: n}` for explicit control.
-  - `align_x` (string) -- horizontal text alignment: `"left"`, `"center"`, `"right"`.
-  - `align_y` (string) -- vertical text alignment: `"top"`, `"center"`, `"bottom"`.
-  - `wrapping` (string) -- text wrapping: `"none"`, `"word"`, `"glyph"`, `"word_or_glyph"`.
+  - `align_x` (atom) -- horizontal text alignment: `:left`, `:center`, `:right`.
+    See `Julep.Iced.Alignment`.
+  - `align_y` (atom) -- vertical text alignment: `:top`, `:center`, `:bottom`.
+    See `Julep.Iced.Alignment`.
+  - `wrapping` (atom) -- text wrapping: `:none`, `:word`, `:glyph`, `:word_or_glyph`.
+    See `Julep.Iced.Wrapping`.
   - `ellipsis` (string) -- text ellipsis mode: `"none"`, `"start"`, `"middle"`, `"end"`.
     Truncates text that overflows and inserts an ellipsis character at the given position.
-  - `style` (string) -- named style. One of: `"default"`, `"primary"`, `"secondary"`,
-    `"success"`, `"danger"`, `"warning"`.
-  - `shaping` (string) -- text shaping strategy: `"basic"` or `"advanced"`. See `Julep.Iced.Shaping`.
+  - `style` (atom) -- named style. One of: `:default`, `:primary`, `:secondary`,
+    `:success`, `:danger`, `:warning`.
+  - `shaping` (atom) -- text shaping strategy: `:basic` or `:advanced`.
+    See `Julep.Iced.Shaping`.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
   """
 
   alias Julep.Iced.A11y
   alias Julep.Iced.Widget.Build
 
-  @type style :: :default | :primary | :secondary | :success | :danger | :warning
+  @presets [:default, :primary, :secondary, :success, :danger, :warning]
+
+  @type preset :: unquote(Enum.reduce(@presets, &{:|, [], [&1, &2]}))
+  @type style :: preset()
 
   @type option ::
           {:size, number()}
-          | {:color, Julep.Iced.Color.t()}
+          | {:color, Julep.Iced.Color.input()}
           | {:font, Julep.Iced.Font.t()}
           | {:width, Julep.Iced.Length.t()}
           | {:height, Julep.Iced.Length.t()}
@@ -80,7 +88,7 @@ defmodule Julep.Iced.Widget.Text do
 
   @doc "Creates a new text widget struct with the given content and optional keyword opts."
   @spec new(id :: String.t(), content :: String.t(), opts :: [option()]) :: t()
-  def new(id, content, opts \\ []) when is_binary(content) do
+  def new(id, content, opts \\ []) when is_binary(id) and is_binary(content) do
     %__MODULE__{id: id, content: content} |> with_options(opts)
   end
 
@@ -109,10 +117,10 @@ defmodule Julep.Iced.Widget.Text do
 
   @doc "Sets the font size in pixels."
   @spec size(text :: t(), size :: number()) :: t()
-  def size(%__MODULE__{} = txt, size), do: %{txt | size: size}
+  def size(%__MODULE__{} = txt, size) when is_number(size), do: %{txt | size: size}
 
   @doc "Sets the text color."
-  @spec color(text :: t(), color :: Julep.Iced.Color.t() | atom()) :: t()
+  @spec color(text :: t(), color :: Julep.Iced.Color.input()) :: t()
   def color(%__MODULE__{} = txt, color), do: %{txt | color: Julep.Iced.Color.cast(color)}
 
   @doc "Sets the font."
@@ -145,7 +153,7 @@ defmodule Julep.Iced.Widget.Text do
 
   @doc ~S'Sets the text ellipsis mode. One of: `"none"`, `"start"`, `"middle"`, `"end"`.'
   @spec ellipsis(text :: t(), ellipsis :: String.t()) :: t()
-  def ellipsis(%__MODULE__{} = txt, ellipsis), do: %{txt | ellipsis: ellipsis}
+  def ellipsis(%__MODULE__{} = txt, ellipsis) when is_binary(ellipsis), do: %{txt | ellipsis: ellipsis}
 
   @doc "Sets the text shaping strategy."
   @spec shaping(text :: t(), shaping :: Julep.Iced.Shaping.t()) :: t()
@@ -153,7 +161,7 @@ defmodule Julep.Iced.Widget.Text do
 
   @doc "Sets the text style."
   @spec style(text :: t(), style :: style()) :: t()
-  def style(%__MODULE__{} = txt, style), do: %{txt | style: style}
+  def style(%__MODULE__{} = txt, style) when style in @presets, do: %{txt | style: style}
 
   @doc "Sets accessibility annotations."
   @spec a11y(text :: t(), a11y :: Julep.Iced.A11y.t()) :: t()

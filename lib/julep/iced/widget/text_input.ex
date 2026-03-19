@@ -14,11 +14,12 @@ defmodule Julep.Iced.Widget.TextInput do
   - `font` (string | map) -- font specification. See `Julep.Iced.Font`.
   - `line_height` (number | map) -- line height. Number is a relative multiplier;
     map with `%{relative: n}` or `%{absolute: n}` for explicit control.
-  - `align_x` (string) -- text horizontal alignment: `"left"`, `"center"`, `"right"`.
+  - `align_x` (atom) -- text horizontal alignment: `:left`, `:center`, `:right`.
+    See `Julep.Iced.Alignment`.
   - `on_submit` (any) -- when present (any truthy value), enables submit on Enter.
     Emits `%Widget{type: :submit, id: id, value: value}`.
   - `id` (string) -- widget ID for programmatic focus via `Julep.Command.focus/1`.
-  - `style` (string) -- named style. Currently only `"default"`.
+  - `style` (atom) -- named style. Currently only `:default`.
   - `icon` (map) -- display an icon inside the input field. Map with keys:
     - `code_point` (string) -- single character to render as the icon. Required.
     - `size` (number) -- icon font size in pixels. Optional.
@@ -30,8 +31,9 @@ defmodule Julep.Iced.Widget.TextInput do
   - `secure` (boolean) -- mask input as password dots. Default: false.
   - `ime_purpose` (string) -- IME input purpose hint: `"normal"`, `"secure"`, `"terminal"`.
     Overrides the default derived from `secure`. Default: nil (auto from `secure`).
-  - `placeholder_color` (string) -- hex color for the placeholder text.
-  - `selection_color` (string) -- hex color for the text selection highlight.
+  - `placeholder_color` (color) -- placeholder text color. See `Julep.Iced.Color`.
+  - `selection_color` (color) -- text selection highlight color. See `Julep.Iced.Color`.
+  - `a11y` (map) -- accessibility overrides. See `Julep.Iced.A11y`.
 
   ## Events
 
@@ -61,8 +63,8 @@ defmodule Julep.Iced.Widget.TextInput do
           | {:secure, boolean()}
           | {:ime_purpose, String.t()}
           | {:style, style()}
-          | {:placeholder_color, Julep.Iced.Color.t()}
-          | {:selection_color, Julep.Iced.Color.t()}
+          | {:placeholder_color, Julep.Iced.Color.input()}
+          | {:selection_color, Julep.Iced.Color.input()}
           | {:a11y, Julep.Iced.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -109,7 +111,7 @@ defmodule Julep.Iced.Widget.TextInput do
 
   @doc "Creates a new text input struct with the given value and optional keyword opts."
   @spec new(id :: String.t(), value :: String.t(), opts :: [option()]) :: t()
-  def new(id, value, opts \\ []) when is_binary(value) do
+  def new(id, value, opts \\ []) when is_binary(id) and is_binary(value) do
     %__MODULE__{id: id, value: value} |> with_options(opts)
   end
 
@@ -141,7 +143,7 @@ defmodule Julep.Iced.Widget.TextInput do
 
   @doc "Sets the placeholder text."
   @spec placeholder(text_input :: t(), placeholder :: String.t()) :: t()
-  def placeholder(%__MODULE__{} = ti, placeholder), do: %{ti | placeholder: placeholder}
+  def placeholder(%__MODULE__{} = ti, placeholder) when is_binary(placeholder), do: %{ti | placeholder: placeholder}
 
   @doc "Sets the internal padding."
   @spec padding(text_input :: t(), padding :: Julep.Iced.Padding.t()) :: t()
@@ -153,7 +155,7 @@ defmodule Julep.Iced.Widget.TextInput do
 
   @doc "Sets the font size in pixels."
   @spec size(text_input :: t(), size :: number()) :: t()
-  def size(%__MODULE__{} = ti, size), do: %{ti | size: size}
+  def size(%__MODULE__{} = ti, size) when is_number(size), do: %{ti | size: size}
 
   @doc "Sets the font."
   @spec font(text_input :: t(), font :: Julep.Iced.Font.t()) :: t()
@@ -173,15 +175,15 @@ defmodule Julep.Iced.Widget.TextInput do
 
   @doc "Enables or disables submit on Enter."
   @spec on_submit(text_input :: t(), on_submit :: boolean()) :: t()
-  def on_submit(%__MODULE__{} = ti, on_submit), do: %{ti | on_submit: on_submit}
+  def on_submit(%__MODULE__{} = ti, on_submit) when is_boolean(on_submit), do: %{ti | on_submit: on_submit}
 
   @doc "Enables or disables paste event emission."
   @spec on_paste(text_input :: t(), on_paste :: boolean()) :: t()
-  def on_paste(%__MODULE__{} = ti, on_paste), do: %{ti | on_paste: on_paste}
+  def on_paste(%__MODULE__{} = ti, on_paste) when is_boolean(on_paste), do: %{ti | on_paste: on_paste}
 
   @doc "Sets whether input is masked as a password."
   @spec secure(text_input :: t(), secure :: boolean()) :: t()
-  def secure(%__MODULE__{} = ti, secure), do: %{ti | secure: secure}
+  def secure(%__MODULE__{} = ti, secure) when is_boolean(secure), do: %{ti | secure: secure}
 
   @doc "Sets the IME input purpose hint. Overrides the default derived from `secure`."
   @spec ime_purpose(text_input :: t(), ime_purpose :: String.t()) :: t()
@@ -190,15 +192,16 @@ defmodule Julep.Iced.Widget.TextInput do
 
   @doc "Sets the input style."
   @spec style(text_input :: t(), style :: style()) :: t()
-  def style(%__MODULE__{} = ti, style), do: %{ti | style: style}
+  def style(%__MODULE__{} = ti, %StyleMap{} = style), do: %{ti | style: style}
+  def style(%__MODULE__{} = ti, :default), do: %{ti | style: :default}
 
   @doc "Sets the placeholder text color. Accepts any form `Color.cast/1` supports."
-  @spec placeholder_color(text_input :: t(), color :: Julep.Iced.Color.t() | atom()) :: t()
+  @spec placeholder_color(text_input :: t(), color :: Julep.Iced.Color.input()) :: t()
   def placeholder_color(%__MODULE__{} = ti, color),
     do: %{ti | placeholder_color: Color.cast(color)}
 
   @doc "Sets the text selection highlight color. Accepts any form `Color.cast/1` supports."
-  @spec selection_color(text_input :: t(), color :: Julep.Iced.Color.t() | atom()) :: t()
+  @spec selection_color(text_input :: t(), color :: Julep.Iced.Color.input()) :: t()
   def selection_color(%__MODULE__{} = ti, color),
     do: %{ti | selection_color: Color.cast(color)}
 
