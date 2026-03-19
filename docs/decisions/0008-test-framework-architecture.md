@@ -40,7 +40,7 @@ Introduce a three-backend test framework behind a unified API:
 - **`Julep.Test.Backend`** -- behaviour defining the test interface.
 - **`Julep.Test.Backend.Mock`** -- pure Elixir, no Rust.
 - **`Julep.Test.Backend.Headless`** -- Rust renderer via `julep --headless` (software rendering, persistent widget state).
-- **`Julep.Test.Backend.Full`** -- real iced windows via `julep` (no special flag).
+- **`Julep.Test.Backend.Windowed`** -- real iced windows via `julep` (no special flag).
 - **`Julep.Test.Session`** -- facade wrapping a backend + process pair.
 - **`Julep.Test.Case`** -- ExUnit case template with automatic setup/teardown.
 - **`Julep.Test.Helpers`** -- convenience functions imported by Case.

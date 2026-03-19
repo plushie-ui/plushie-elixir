@@ -103,7 +103,7 @@ defmodule Julep.Test.CrossBackendTest do
   defp resolve_backend do
     case System.get_env("JULEP_TEST_BACKEND") do
       "headless" -> Julep.Test.Backend.Headless
-      "full" -> Julep.Test.Backend.Full
+      "windowed" -> Julep.Test.Backend.Windowed
       _ -> Pooled
     end
   end

@@ -3,7 +3,7 @@
 ## Philosophy
 
 Progressive fidelity: test your app's logic with fast, pure-Elixir mock tests;
-promote to headless or full backends when you need wire-protocol verification
+promote to headless or windowed backends when you need wire-protocol verification
 or pixel-accurate screenshots. See
 [ADR-0008](decisions/0008-test-framework-architecture.md) for design rationale.
 
@@ -276,7 +276,7 @@ changing assertions.
 
 ### Three backends
 
-| | `:mock` | `:headless` | `:full` |
+| | `:mock` | `:headless` | `:windowed` |
 |---|---|---|---|
 | **Speed** | ~ms | ~100ms | ~seconds |
 | **Rust binary** | No | Yes (`--headless`) | Yes (no flag) |
@@ -299,7 +299,7 @@ changing assertions.
   capture accurately rendered UI via tiny-skia. Uses the `--headless`
   runtime flag.
 
-- **`:full`** -- real `iced::daemon` with GPU rendering. Effects work,
+- **`:windowed`** -- real `iced::daemon` with GPU rendering. Effects work,
   subscriptions fire, pixel screenshots capture exactly what a user sees.
   Spawns `julep` with no special flag. Needs a display server
   (Xvfb or headless Weston).
@@ -316,7 +316,7 @@ Tests are portable across all three.
 | 2 | Application config | `config :julep, :test_backend, :mock` |
 | 3 | Default | `:mock` |
 
-Atom shorthands (`:mock`, `:headless`, `:full`) and full module names
+Atom shorthands (`:mock`, `:headless`, `:windowed`) and full module names
 (`Julep.Test.Backend.Mock`, etc.) both work in application config.
 
 
@@ -355,7 +355,7 @@ JULEP_UPDATE_SNAPSHOTS=1 mix test
 ### Pixel screenshots (`assert_screenshot`)
 
 `assert_screenshot/1` captures real RGBA pixel data and compares it against
-a golden file. It produces meaningful data on both the `:full` backend (GPU
+a golden file. It produces meaningful data on both the `:windowed` backend (GPU
 rendering via wgpu) and the `:headless` backend (software rendering via
 tiny-skia). On `:mock`, it silently succeeds as a no-op (returns an empty
 hash, which is accepted without creating or checking a golden file).
@@ -380,7 +380,7 @@ JULEP_UPDATE_SCREENSHOTS=1 mix test
 
 Because screenshots silently no-op on mock, you can include
 `assert_screenshot` calls in any test without conditional logic. They will
-produce assertions when run on the headless or full backends.
+produce assertions when run on the headless or windowed backends.
 
 ### JSON tree snapshots (`assert_tree_snapshot`)
 
@@ -396,7 +396,7 @@ See the [Unit testing](#json-tree-snapshots) section above.
 
 - **`assert_screenshot`** -- after bumping iced, changing the renderer,
   modifying themes, or any change that affects visual output. Only meaningful
-  on the full backend. Include alongside `assert_snapshot` for critical views.
+  on the windowed backend. Include alongside `assert_snapshot` for critical views.
 
 - **`assert_tree_snapshot`** -- for unit tests of `view/1` output. No
   framework overhead. Good for documenting what a view produces for a given
@@ -438,7 +438,7 @@ wait 500
 | `app` | Yes | -- | Module implementing `Julep.App` |
 | `viewport` | No | `800x600` | Viewport size as `WxH` |
 | `theme` | No | `dark` | Theme name |
-| `backend` | No | `mock` | Backend: `mock`, `headless`, or `full` |
+| `backend` | No | `mock` | Backend: `mock`, `headless`, or `windowed` |
 
 Lines starting with `#` are comments (in both header and body sections).
 
@@ -476,7 +476,7 @@ mix julep.script test/scripts/counter.julep test/scripts/todo.julep
 mix julep.replay test/scripts/counter.julep
 ```
 
-Replay mode forces the `:full` backend and respects `wait` timings, so you
+Replay mode forces the `:windowed` backend and respects `wait` timings, so you
 see interactions happen in real time with real windows. Useful for debugging
 visual issues, demos, and onboarding.
 
@@ -518,7 +518,7 @@ test "clicking fetch starts async load" do
 end
 ```
 
-### On headless and full backends
+### On headless and windowed backends
 
 All three backends now use the shared `CommandProcessor` to execute async
 commands synchronously. `await_async/2` returns `:ok` immediately on all
@@ -600,7 +600,7 @@ Requires the Rust toolchain and the headless feature build.
 - run: JULEP_TEST_BACKEND=headless mix test
 ```
 
-### Full CI
+### Windowed CI
 
 Requires a display server and GPU/software rendering. Two options:
 
@@ -615,7 +615,7 @@ Requires a display server and GPU/software rendering. Two options:
     Xvfb :99 -screen 0 1024x768x24 &
     export DISPLAY=:99
     export WINIT_UNIX_BACKEND=x11
-    JULEP_TEST_BACKEND=full mix test
+    JULEP_TEST_BACKEND=windowed mix test
 ```
 
 **Option B: Weston (Wayland)**
@@ -635,7 +635,7 @@ runs the full rendering pipeline on CPU.
     weston --backend=headless --width=1024 --height=768 --socket=julep-test &
     sleep 1
     export WAYLAND_DISPLAY=julep-test
-    JULEP_TEST_BACKEND=full mix test
+    JULEP_TEST_BACKEND=windowed mix test
 ```
 
 On Arch Linux, `weston` and `vulkan-swrast` are available via pacman.
@@ -653,11 +653,11 @@ Run mock tests fast, then promote to higher-fidelity backends for subsets:
     cd ../julep && cargo build
     JULEP_TEST_BACKEND=headless mix test
 
-# Full for pixel regression (tagged subset)
+# Windowed for pixel regression (tagged subset)
 - run: |
     Xvfb :99 -screen 0 1024x768x24 &
     export DISPLAY=:99
-    JULEP_TEST_BACKEND=full mix test --only full
+    JULEP_TEST_BACKEND=windowed mix test --only windowed
 ```
 
 Tag tests that need a specific backend:
@@ -668,7 +668,7 @@ test "protocol round-trip" do
   # ...
 end
 
-@tag :full
+@tag :windowed
 test "window opens and renders" do
   # ...
 end
@@ -677,7 +677,7 @@ end
 
 ## Wire format in test backends
 
-The headless and full backends communicate with the renderer using the same
+The headless and windowed backends communicate with the renderer using the same
 wire protocol as the production Bridge. By default, both use MessagePack
 (`{:packet, 4}` framing). JSON is available for debugging:
 
@@ -705,7 +705,7 @@ each limitation.
   no-op. It requires widget bounds from layout, which only the renderer knows.
 - `move_to` on the mock backend dispatches `%Mouse{type: :moved, x: x, y: y}` but has
   no spatial layout info. Mouse area enter/exit events won't fire.
-- Pixel screenshots are only available on the headless and full backends (mock returns stubs).
+- Pixel screenshots are only available on the headless and windowed backends (mock returns stubs).
 - Headless screenshots use software rendering (tiny-skia) and may not match
   GPU output pixel-for-pixel.
 - Script `assert_model` uses substring matching against the inspected model.

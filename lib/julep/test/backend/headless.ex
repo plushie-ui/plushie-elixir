@@ -15,7 +15,7 @@ defmodule Julep.Test.Backend.Headless do
 
   ## Limitations
 
-  - No real windows or GPU rendering (use `:full` for that).
+  - No real windows or GPU rendering (use `:windowed` for that).
   - Effects (file dialogs, clipboard) are not executed.
   - Subscriptions are not active.
 

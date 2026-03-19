@@ -12,7 +12,7 @@ defmodule Julep.Test.Script.Runner do
     pooled_mock: Julep.Test.Backend.Pooled,
     pooled_headless: Julep.Test.Backend.Pooled,
     headless: Julep.Test.Backend.Headless,
-    full: Julep.Test.Backend.Full
+    windowed: Julep.Test.Backend.Windowed
   }
 
   @doc """

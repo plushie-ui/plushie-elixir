@@ -4,7 +4,7 @@ defmodule Julep.Test.Snapshot do
 
   Captures a hash of the serialized UI tree structure and compares against
   golden files using SHA-256 hashes. Works on all backends (:mock, :headless,
-  :full).
+  :windowed).
 
   ## Golden file workflow
 

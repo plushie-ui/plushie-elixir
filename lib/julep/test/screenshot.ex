@@ -3,7 +3,7 @@ defmodule Julep.Test.Screenshot do
   Pixel screenshot for visual regression testing.
 
   Captures pixel-level rendering data for visual regression testing.
-  The `:full` backend uses GPU rendering via iced/wgpu and captures real
+  The `:windowed` backend uses GPU rendering via iced/wgpu and captures real
   RGBA pixel data through `iced::window::screenshot()`. The `:headless`
   backend uses tiny-skia software rendering to produce real RGBA pixel data
   without a display server. The wire protocol uses native msgpack binary
@@ -12,7 +12,7 @@ defmodule Julep.Test.Screenshot do
   no renderer.
 
   Note that headless screenshots use software rendering (tiny-skia), so
-  pixels will not match GPU-rendered output (`:full` backend) exactly.
+  pixels will not match GPU-rendered output (`:windowed` backend) exactly.
   Use headless screenshots for catching layout regressions and verifying
   rendering pipeline correctness; use full screenshots for pixel-perfect
   visual regression against GPU output.

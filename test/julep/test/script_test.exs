@@ -135,8 +135,8 @@ defmodule Julep.Test.ScriptTest do
       assert script.instructions == [{:screenshot, "home-screen"}]
     end
 
-    test "parses headless and full backend values" do
-      for {backend_str, expected} <- [{"headless", :headless}, {"full", :full}] do
+    test "parses headless and windowed backend values" do
+      for {backend_str, expected} <- [{"headless", :headless}, {"windowed", :windowed}] do
         input = """
         app: Julep.Examples.Counter
         backend: #{backend_str}

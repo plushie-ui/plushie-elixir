@@ -4,7 +4,7 @@ defmodule Mix.Tasks.Julep.Replay do
 
       mix julep.replay path.julep
 
-  Uses the `:full` backend, shows real windows, and respects `wait` timings.
+  Uses the `:windowed` backend, shows real windows, and respects `wait` timings.
   Useful for demos and debugging.
   """
 
@@ -18,8 +18,8 @@ defmodule Mix.Tasks.Julep.Replay do
 
     case Julep.Test.Script.parse_file(path) do
       {:ok, script} ->
-        # Force full backend for replay
-        script = put_in(script, [:header, :backend], :full)
+        # Force windowed backend for replay
+        script = put_in(script, [:header, :backend], :windowed)
 
         case Julep.Test.Script.Runner.run(script, replay: true) do
           :ok ->

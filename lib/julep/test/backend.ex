@@ -6,7 +6,7 @@ defmodule Julep.Test.Backend do
 
   - `:mock` -- pure Elixir, no Rust. Fastest. Tests logic and tree structure.
   - `:headless` -- real Rust renderer with iced_test Simulator. Structural snapshots.
-  - `:full` -- real iced windows (Xvfb in CI). Effects, subscriptions, GPU rendering.
+  - `:windowed` -- real iced windows (Xvfb in CI). Effects, subscriptions, GPU rendering.
 
   All backends return the same types (`Element`, `Snapshot`, `Screenshot`,
   etc.) so tests can switch backends without changing assertions.

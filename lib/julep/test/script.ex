@@ -105,7 +105,7 @@ defmodule Julep.Test.Script do
 
   defp parse_backend("mock"), do: :mock
   defp parse_backend("headless"), do: :headless
-  defp parse_backend("full"), do: :full
+  defp parse_backend("windowed"), do: :windowed
   defp parse_backend(_), do: :mock
 
   defp parse_instructions(text) do

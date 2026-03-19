@@ -1,6 +1,6 @@
-defmodule Julep.Test.Backend.Full do
+defmodule Julep.Test.Backend.Windowed do
   @moduledoc """
-  Full test backend with real iced windows.
+  Windowed test backend with real iced windows.
 
   Spawns `julep` which runs a real `iced::daemon` with GPU
   rendering. All protocol messages including scripting messages (Query,
@@ -39,7 +39,7 @@ defmodule Julep.Test.Backend.Full do
   @impl GenServer
   def init({app, opts}) do
     unless System.get_env("DISPLAY") || System.get_env("WAYLAND_DISPLAY") do
-      raise "Full backend requires DISPLAY or WAYLAND_DISPLAY env var (use Xvfb in CI)"
+      raise "Windowed backend requires DISPLAY or WAYLAND_DISPLAY env var (use Xvfb in CI)"
     end
 
     format = Keyword.get(opts, :format, :msgpack)
@@ -55,7 +55,7 @@ defmodule Julep.Test.Backend.Full do
         | port_opts(format) ++ [{:args, port_args(format)}, {:env, env}]
       ])
 
-    # Full backend sends settings first (required by the daemon's
+    # Windowed backend sends settings first (required by the daemon's
     # read_initial_settings), then the initial snapshot.
     send_message(port, format, %{type: "settings", settings: %{}})
 
