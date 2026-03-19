@@ -1,13 +1,13 @@
 defmodule Julep.Iced.Direction do
   @moduledoc """
-  Direction values matching iced's horizontal and vertical orientation.
+  Orientation for the scrollable `direction` prop and rule widget.
 
-  Supported atoms: `:horizontal`, `:vertical`.
+  Maps to iced's horizontal/vertical axis variants.
   """
 
-  @type t :: :horizontal | :vertical
+  @type t :: :horizontal | :vertical | :both
 
-  @valid [:horizontal, :vertical]
+  @valid [:horizontal, :vertical, :both]
 
   @doc """
   Encodes a direction value to the wire format.
@@ -19,6 +19,9 @@ defmodule Julep.Iced.Direction do
 
       iex> Julep.Iced.Direction.encode(:vertical)
       "vertical"
+
+      iex> Julep.Iced.Direction.encode(:both)
+      "both"
   """
   @spec encode(direction :: t()) :: String.t()
   def encode(value) when value in @valid, do: Atom.to_string(value)

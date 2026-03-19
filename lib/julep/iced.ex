@@ -37,7 +37,7 @@ defmodule Julep.Iced do
   - `Julep.Iced.Padding` -- uniform number, `{v, h}` tuple, or per-side map
   - `Julep.Iced.Color` -- hex string `"#rrggbb"` / `"#rrggbbaa"`, or `%{r, g, b, a}` map (0.0-1.0 floats)
   - `Julep.Iced.Font` -- `:default`, `:monospace`, or `%{family, weight, style, stretch}` map
-  - `Julep.Iced.Alignment` -- `:start` / `:center` / `:end` (encoded as strings)
+  - `Julep.Iced.Alignment` -- `:left` / `:center` / `:right` / `:top` / `:bottom` (with `:start` / `:end` aliases)
   - `Julep.Iced.Border` -- `%{color, width, radius}` map
   - `Julep.Iced.Shadow` -- `%{color, offset, blur_radius}` map
   - `Julep.Iced.Theme` -- built-in theme atom or custom palette map
@@ -45,9 +45,9 @@ defmodule Julep.Iced do
 
   ## Named styles
 
-  Many widgets accept a `style` prop (string). The available style names
-  vary by widget and map to iced's built-in style functions. See each
-  widget's documentation for the list of accepted values.
+  Many widgets accept a `style` prop (atom preset or `StyleMap`). The
+  available preset names vary by widget and map to iced's built-in style
+  functions. See each widget's documentation for the list of accepted values.
   """
 
   alias Julep.Iced.Widget.Node

@@ -1,24 +1,39 @@
 defmodule Julep.Iced.Alignment do
   @moduledoc """
-  Alignment values matching iced's horizontal and vertical alignment enums.
+  Alignment values for `align_x` and `align_y` widget props.
 
-  Supported atoms: `:start`, `:center`, `:end`.
+  Horizontal: `:left`, `:center`, `:right` (aliases: `:start` = `:left`, `:end` = `:right`).
+  Vertical: `:top`, `:center`, `:bottom` (aliases: `:start` = `:top`, `:end` = `:bottom`).
   """
 
-  @type t :: :start | :center | :end
+  @valid [:left, :center, :right, :top, :bottom, :start, :end]
 
-  @valid [:start, :center, :end]
+  @type horizontal :: :left | :center | :right | :start | :end
+  @type vertical :: :top | :center | :bottom | :start | :end
+  @type t :: horizontal() | vertical()
 
   @doc """
   Encodes an alignment value to the wire format.
 
   ## Examples
 
-      iex> Julep.Iced.Alignment.encode(:start)
-      "start"
+      iex> Julep.Iced.Alignment.encode(:left)
+      "left"
 
       iex> Julep.Iced.Alignment.encode(:center)
       "center"
+
+      iex> Julep.Iced.Alignment.encode(:right)
+      "right"
+
+      iex> Julep.Iced.Alignment.encode(:top)
+      "top"
+
+      iex> Julep.Iced.Alignment.encode(:bottom)
+      "bottom"
+
+      iex> Julep.Iced.Alignment.encode(:start)
+      "start"
 
       iex> Julep.Iced.Alignment.encode(:end)
       "end"

@@ -1,16 +1,9 @@
 defmodule Julep.Iced.Font do
   @moduledoc """
-  Font values matching iced's `Font` type.
+  Font descriptor for the text widget `font` prop and Settings `default_font`.
 
-  Supported forms:
-
-  - `:default` -- the platform default font
-  - `:monospace` -- the platform monospace font
-  - `"FontName"` -- a named font family
-  - `%{family: family, weight: weight, style: style}` -- full descriptor
-    where weight is one of `:thin`, `:extra_light`, `:light`, `:normal`,
-    `:medium`, `:semi_bold`, `:bold`, `:extra_bold`, `:black` and style
-    is one of `:normal`, `:italic`, `:oblique`.
+  Maps to iced's `Font` struct. Accepts `:default`, `:monospace`, a family
+  name string, or a map with `:family`, `:weight`, `:style`, and `:stretch`.
   """
 
   @weights [:thin, :extra_light, :light, :normal, :medium, :semi_bold, :bold, :extra_bold, :black]
@@ -27,7 +20,18 @@ defmodule Julep.Iced.Font do
     :ultra_expanded
   ]
 
-  @type t :: :default | :monospace | String.t() | map()
+  @type weight :: unquote(Enum.reduce(@weights, &{:|, [], [&1, &2]}))
+  @type style :: unquote(Enum.reduce(@styles, &{:|, [], [&1, &2]}))
+  @type stretch :: unquote(Enum.reduce(@stretches, &{:|, [], [&1, &2]}))
+
+  @type font_map :: %{
+          optional(:family) => String.t(),
+          optional(:weight) => weight(),
+          optional(:style) => style(),
+          optional(:stretch) => stretch()
+        }
+
+  @type t :: :default | :monospace | String.t() | font_map()
 
   @doc """
   Encodes a font value to the wire format.

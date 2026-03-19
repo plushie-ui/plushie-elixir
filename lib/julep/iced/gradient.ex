@@ -27,21 +27,37 @@ defmodule Julep.Iced.Gradient do
       ])
   """
 
-  @typedoc "A gradient color stop with offset (0.0-1.0) and color."
-  @type stop :: %{offset: float(), color: String.t()}
+  @typedoc "A gradient color stop with offset (0.0-1.0) and color (hex string or float RGBA map)."
+  @type stop :: %{offset: float(), color: String.t() | map()}
 
   @typedoc "Gradient specification with type, angle, and color stops."
   @type t :: %{type: String.t(), angle: number(), stops: [stop()]}
 
-  @doc "Creates a linear gradient with an angle (degrees) and a list of `{offset, color}` stops."
-  @spec linear(angle :: number(), stops :: [{number(), String.t()}]) :: t()
+  @typedoc "Color input for gradient stops: any `Color.input()` form, or a float RGBA map."
+  @type stop_color :: Julep.Iced.Color.input() | %{r: float(), g: float(), b: float(), a: float()}
+
+  @doc """
+  Creates a linear gradient with an angle (degrees) and a list of
+  `{offset, color}` stops. Colors accept any form `Color.cast/1`
+  supports (hex strings or named atoms).
+  """
+  @spec linear(angle :: number(), stops :: [{number(), stop_color()}]) :: t()
   def linear(angle, stops) when is_number(angle) and is_list(stops) do
     %{
       type: "linear",
       angle: angle,
-      stops: Enum.map(stops, fn {offset, color} -> %{offset: offset, color: color} end)
+      stops:
+        Enum.map(stops, fn {offset, color} when is_number(offset) ->
+          %{offset: offset, color: cast_stop_color(color)}
+        end)
     }
   end
+
+  # Hex strings and named atoms are normalized via Color.cast.
+  # Float maps (%{r, g, b, a}) are passed through as-is -- the
+  # renderer accepts both formats.
+  defp cast_stop_color(%{r: _, g: _, b: _} = rgba), do: rgba
+  defp cast_stop_color(color), do: Julep.Iced.Color.cast(color)
 
   @doc "Encodes a gradient to the wire format."
   @spec encode(gradient :: t()) :: t()

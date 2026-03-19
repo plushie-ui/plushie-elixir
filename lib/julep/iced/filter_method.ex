@@ -1,8 +1,8 @@
 defmodule Julep.Iced.FilterMethod do
   @moduledoc """
-  Image filter methods matching iced's image filtering options.
+  Interpolation mode for the image `filter_method` prop.
 
-  Supported atoms: `:nearest`, `:linear`.
+  Maps to iced's `image::FilterMethod` enum.
   """
 
   @type t :: :nearest | :linear

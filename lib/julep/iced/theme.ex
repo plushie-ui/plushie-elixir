@@ -71,31 +71,9 @@ defmodule Julep.Iced.Theme do
     :ferra
   ]
 
-  @type builtin ::
-          :light
-          | :dark
-          | :dracula
-          | :nord
-          | :solarized_light
-          | :solarized_dark
-          | :gruvbox_light
-          | :gruvbox_dark
-          | :catppuccin_latte
-          | :catppuccin_frappe
-          | :catppuccin_macchiato
-          | :catppuccin_mocha
-          | :tokyo_night
-          | :tokyo_night_storm
-          | :tokyo_night_light
-          | :kanagawa_wave
-          | :kanagawa_dragon
-          | :kanagawa_lotus
-          | :moonfly
-          | :nightfly
-          | :oxocarbon
-          | :ferra
+  @type builtin :: unquote(Enum.reduce(@themes, &{:|, [], [&1, &2]}))
 
-  @type t :: builtin() | String.t() | map()
+  @type t :: builtin() | :system | map()
 
   @doc """
   Returns the list of all known built-in theme atoms.
@@ -111,12 +89,18 @@ defmodule Julep.Iced.Theme do
 
   ## Options
 
-    * `:base`       - built-in theme name to use as the palette starting point
-    * `:background` - hex color string, e.g. "#1a1b26"
-    * `:text`       - hex color string
-    * `:primary`    - hex color string
-    * `:success`    - hex color string
-    * `:danger`     - hex color string
+    * `:base`       - built-in theme atom to use as the palette starting point
+    * `:background` - page background color
+    * `:text`       - default text color
+    * `:primary`    - primary accent color
+    * `:success`    - success color
+    * `:danger`     - danger color
+    * `:warning`    - warning color
+
+  All color values accept any form `Color.cast/1` supports (hex
+  strings or named atoms). Shade override keys (e.g. `primary_strong`,
+  `background_weakest`, `primary_strong_text`) are also accepted and
+  cast as colors.
 
   ## Examples
 
@@ -128,14 +112,16 @@ defmodule Julep.Iced.Theme do
   """
   @spec custom(name :: String.t(), opts :: keyword()) :: map()
   def custom(name, opts \\ []) when is_binary(name) and is_list(opts) do
-    %{"name" => name}
-    |> maybe_put("base", encode_base(opts[:base]))
-    |> maybe_put("background", opts[:background])
-    |> maybe_put("text", opts[:text])
-    |> maybe_put("primary", opts[:primary])
-    |> maybe_put("success", opts[:success])
-    |> maybe_put("danger", opts[:danger])
-    |> maybe_put("warning", opts[:warning])
+    {base, opts} = Keyword.pop(opts, :base)
+
+    result = %{"name" => name}
+    result = maybe_put(result, "base", encode_base(base))
+
+    # Every remaining key is a color (core palette, shade overrides,
+    # or text overrides). All are cast to canonical hex.
+    Enum.reduce(opts, result, fn {key, value}, acc ->
+      Map.put(acc, Atom.to_string(key), Julep.Iced.Color.cast(value))
+    end)
   end
 
   # -- Private ----------------------------------------------------------------
@@ -144,6 +130,6 @@ defmodule Julep.Iced.Theme do
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp encode_base(nil), do: nil
-  defp encode_base(atom) when is_atom(atom), do: Atom.to_string(atom)
+  defp encode_base(theme) when theme in @themes, do: Atom.to_string(theme)
   defp encode_base(str) when is_binary(str), do: str
 end

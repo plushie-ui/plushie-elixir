@@ -1,8 +1,8 @@
 defmodule Julep.Iced.Shaping do
   @moduledoc """
-  Text shaping modes matching iced's text shaping options.
+  Text shaping strategy for the text `shaping` prop.
 
-  Supported atoms: `:basic`, `:advanced`, `:auto`.
+  Maps to iced's `text::Shaping` enum.
   """
 
   @type t :: :basic | :advanced | :auto

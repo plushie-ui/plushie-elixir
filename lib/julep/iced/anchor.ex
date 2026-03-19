@@ -1,8 +1,8 @@
 defmodule Julep.Iced.Anchor do
   @moduledoc """
-  Anchor positions for scrollbar placement.
+  Anchor values for the scrollbar `alignment` prop.
 
-  Supported atoms: `:start`, `:end`.
+  Maps to iced's `scrollable::Anchor` enum.
   """
 
   @type t :: :start | :end

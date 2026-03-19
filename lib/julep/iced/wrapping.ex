@@ -1,8 +1,8 @@
 defmodule Julep.Iced.Wrapping do
   @moduledoc """
-  Text wrapping modes matching iced's text wrapping options.
+  Line-break strategy for the text `wrapping` prop.
 
-  Supported atoms: `:none`, `:word`, `:glyph`, `:word_or_glyph`.
+  Maps to iced's `text::Wrapping` enum.
   """
 
   @type t :: :none | :word | :glyph | :word_or_glyph

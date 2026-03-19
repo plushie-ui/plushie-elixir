@@ -48,17 +48,18 @@ defmodule Julep.Iced.Border do
   @spec new() :: t()
   def new, do: %__MODULE__{}
 
-  @doc "Sets the border color."
-  @spec color(border :: t(), color :: Julep.Iced.Color.t()) :: t()
-  def color(%__MODULE__{} = border, color), do: %{border | color: color}
+  @doc "Sets the border color. Accepts a hex string or named color atom."
+  @spec color(border :: t(), color :: Julep.Iced.Color.input()) :: t()
+  def color(%__MODULE__{} = border, color), do: %{border | color: Julep.Iced.Color.cast(color)}
 
-  @doc "Sets the border width."
+  @doc "Sets the border width in pixels."
   @spec width(border :: t(), width :: number()) :: t()
-  def width(%__MODULE__{} = border, width), do: %{border | width: width}
+  def width(%__MODULE__{} = border, width) when is_number(width), do: %{border | width: width}
 
-  @doc "Sets a uniform corner radius."
+  @doc "Sets a uniform corner radius in pixels."
   @spec rounded(border :: t(), radius :: number()) :: t()
-  def rounded(%__MODULE__{} = border, radius), do: %{border | radius: radius}
+  def rounded(%__MODULE__{} = border, radius) when is_number(radius),
+    do: %{border | radius: radius}
 
   @doc "Creates a per-corner radius map."
   @spec radius(
@@ -67,7 +68,9 @@ defmodule Julep.Iced.Border do
           bottom_right :: number(),
           bottom_left :: number()
         ) :: radius_map()
-  def radius(top_left, top_right, bottom_right, bottom_left) do
+  def radius(top_left, top_right, bottom_right, bottom_left)
+      when is_number(top_left) and is_number(top_right) and
+             is_number(bottom_right) and is_number(bottom_left) do
     %{
       top_left: top_left,
       top_right: top_right,

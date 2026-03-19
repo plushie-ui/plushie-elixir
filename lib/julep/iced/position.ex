@@ -1,8 +1,8 @@
 defmodule Julep.Iced.Position do
   @moduledoc """
-  Tooltip position values matching iced's tooltip positioning options.
+  Placement value for the tooltip `position` prop.
 
-  Supported atoms: `:top`, `:bottom`, `:left`, `:right`, `:follow_cursor`.
+  Maps to iced's `tooltip::Position` enum.
   """
 
   @type t :: :top | :bottom | :left | :right | :follow_cursor

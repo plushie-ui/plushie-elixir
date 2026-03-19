@@ -1,13 +1,9 @@
 defmodule Julep.Iced.Padding do
   @moduledoc """
-  Padding values matching iced's `Padding` struct.
+  Spacing value for the `padding` prop on containers, buttons, and text inputs.
 
-  Accepted input forms:
-
-  - integer -- uniform padding on all sides
-  - `{vertical, horizontal}` -- symmetric padding
-  - `%{top: t, right: r, bottom: b, left: l}` -- explicit per-side
-
+  Maps to iced's `Padding` struct. Accepts a uniform number,
+  a `{vertical, horizontal}` tuple, or an explicit four-side map.
   `encode/1` always normalises to the full four-side map.
   """
 
@@ -39,7 +35,8 @@ defmodule Julep.Iced.Padding do
     %{"top" => vertical, "right" => horizontal, "bottom" => vertical, "left" => horizontal}
   end
 
-  def encode(%{top: t, right: r, bottom: b, left: l}) do
+  def encode(%{top: t, right: r, bottom: b, left: l})
+      when is_number(t) and is_number(r) and is_number(b) and is_number(l) do
     %{"top" => t, "right" => r, "bottom" => b, "left" => l}
   end
 end

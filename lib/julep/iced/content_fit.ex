@@ -1,8 +1,8 @@
 defmodule Julep.Iced.ContentFit do
   @moduledoc """
-  Content fit modes matching iced's image and SVG content fit options.
+  Scaling mode for the `content_fit` prop on image and SVG widgets.
 
-  Supported atoms: `:contain`, `:cover`, `:fill`, `:none`, `:scale_down`.
+  Maps to iced's `ContentFit` enum.
   """
 
   @type t :: :contain | :cover | :fill | :none | :scale_down

@@ -6,7 +6,7 @@ defprotocol Julep.Iced.Encode do
   `Encode.encode/1` automatically. Widget authors don't need to apply
   manual transforms for atoms, tuples, or custom types.
 
-  ## Built-in implementations
+  ## Primitive implementations
 
   - **Atom**: `true`/`false`/`nil` pass through; other atoms become strings
   - **BitString**: pass through
@@ -16,6 +16,13 @@ defprotocol Julep.Iced.Encode do
   - **Map**: values recursively encoded
   - **List**: elements recursively encoded
   - **Any**: raises `Protocol.UndefinedError` (no silent passthrough)
+
+  ## Struct implementations
+
+  - `Julep.Iced.A11y` -- strips nil fields, converts atom keys to strings
+  - `Julep.Iced.Border` -- encodes per-corner radius to string-keyed map
+  - `Julep.Iced.Shadow` -- encodes offset as `[x, y]` list
+  - `Julep.Iced.StyleMap` -- encodes status overrides and nested structs
   """
 
   @fallback_to_any true

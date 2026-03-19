@@ -32,17 +32,19 @@ defmodule Julep.Iced.Shadow do
   @spec new() :: t()
   def new, do: %__MODULE__{}
 
-  @doc "Sets the shadow color. Accepts any form `Color.cast/1` supports."
-  @spec color(shadow :: t(), color :: Julep.Iced.Color.t() | atom()) :: t()
+  @doc "Sets the shadow color. Accepts a hex string or named color atom."
+  @spec color(shadow :: t(), color :: Julep.Iced.Color.input()) :: t()
   def color(%__MODULE__{} = shadow, color) do
     %{shadow | color: Julep.Iced.Color.cast(color)}
   end
 
-  @doc "Sets the shadow offset."
+  @doc "Sets the shadow offset in pixels."
   @spec offset(shadow :: t(), x :: number(), y :: number()) :: t()
-  def offset(%__MODULE__{} = shadow, x, y), do: %{shadow | offset_x: x, offset_y: y}
+  def offset(%__MODULE__{} = shadow, x, y) when is_number(x) and is_number(y),
+    do: %{shadow | offset_x: x, offset_y: y}
 
-  @doc "Sets the shadow blur radius."
+  @doc "Sets the shadow blur radius in pixels."
   @spec blur_radius(shadow :: t(), r :: number()) :: t()
-  def blur_radius(%__MODULE__{} = shadow, r), do: %{shadow | blur_radius: r}
+  def blur_radius(%__MODULE__{} = shadow, r) when is_number(r),
+    do: %{shadow | blur_radius: r}
 end

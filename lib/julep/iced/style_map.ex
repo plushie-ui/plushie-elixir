@@ -85,7 +85,7 @@ defmodule Julep.Iced.StyleMap do
   end
 
   @doc "Sets the background. Accepts a color (any form `Color.cast/1` supports) or a `Gradient`."
-  @spec background(style_map :: t(), background :: Color.t() | Gradient.t() | atom()) :: t()
+  @spec background(style_map :: t(), background :: Color.input() | Gradient.t()) :: t()
   def background(%__MODULE__{} = style_map, %{type: "linear"} = gradient) do
     %{style_map | background: gradient}
   end
@@ -94,8 +94,8 @@ defmodule Julep.Iced.StyleMap do
     %{style_map | background: Color.cast(background)}
   end
 
-  @doc "Sets the text color. Accepts any form `Color.cast/1` supports."
-  @spec text_color(style_map :: t(), text_color :: Color.t() | atom()) :: t()
+  @doc "Sets the text color. Accepts a hex string or named color atom."
+  @spec text_color(style_map :: t(), text_color :: Color.input()) :: t()
   def text_color(%__MODULE__{} = style_map, text_color) do
     %{style_map | text_color: Color.cast(text_color)}
   end
@@ -149,6 +149,8 @@ defmodule Julep.Iced.StyleMap do
   defp cast_color_field(map, key) do
     case Map.get(map, key) do
       nil -> map
+      # Gradients pass through as-is (already a wire-format map).
+      %{type: "linear"} = gradient -> Map.put(map, key, gradient)
       val -> Map.put(map, key, Color.cast(val))
     end
   end

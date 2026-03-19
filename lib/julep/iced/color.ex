@@ -26,6 +26,7 @@ defmodule Julep.Iced.Color do
       "#6495ed"
   """
 
+  @typedoc "Canonical hex color string (`\"#rrggbb\"` or `\"#rrggbbaa\"`)."
   @type t :: String.t()
 
   # All 148 CSS Color Module Level 4 named colors plus transparent.
@@ -182,6 +183,12 @@ defmodule Julep.Iced.Color do
     yellowgreen: "#9acd32"
   }
 
+  @typedoc "Named CSS color atom (148 CSS Color Module Level 4 colors plus `:transparent`)."
+  @type named :: unquote(Enum.reduce(Map.keys(@named_colors), &{:|, [], [&1, &2]}))
+
+  @typedoc "Any value accepted by `cast/1`: hex string, short hex, or named color atom."
+  @type input :: named() | String.t()
+
   @doc """
   Creates a hex color string from 0-255 RGB integer values.
 
@@ -249,10 +256,12 @@ defmodule Julep.Iced.Color do
   end
 
   def from_hex(hex) when byte_size(hex) == 6 do
+    validate_hex_digits!(hex)
     "#" <> String.downcase(hex)
   end
 
   def from_hex(hex) when byte_size(hex) == 8 do
+    validate_hex_digits!(hex)
     "#" <> String.downcase(hex)
   end
 
@@ -275,7 +284,8 @@ defmodule Julep.Iced.Color do
 
   - Named atoms: all 148 CSS Color Module Level 4 named colors (e.g. `:red`,
     `:cornflowerblue`, `:rebeccapurple`) plus `:transparent`
-  - Hex strings: `"#rrggbb"` or `"#rrggbbaa"` (passed through, downcased)
+  - Hex strings: `"#rrggbb"`, `"#rrggbbaa"`, `"#rgb"`, `"#rgba"` (normalized
+    to canonical 6/8-char lowercase hex)
 
   Raises `ArgumentError` for unsupported atoms.
 
@@ -293,7 +303,7 @@ defmodule Julep.Iced.Color do
       iex> Julep.Iced.Color.cast(:cornflowerblue)
       "#6495ed"
   """
-  @spec cast(color :: atom() | String.t()) :: t()
+  @spec cast(color :: input()) :: t()
   def cast(name) when is_atom(name) do
     case Map.fetch(@named_colors, name) do
       {:ok, hex} -> hex
@@ -330,5 +340,11 @@ defmodule Julep.Iced.Color do
     |> Integer.to_string(16)
     |> String.downcase()
     |> String.pad_leading(2, "0")
+  end
+
+  defp validate_hex_digits!(hex) do
+    unless Regex.match?(~r/\A[0-9a-fA-F]+\z/, hex) do
+      raise ArgumentError, "invalid hex color digits: #{inspect(hex)}"
+    end
   end
 end

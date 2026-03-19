@@ -1,13 +1,9 @@
 defmodule Julep.Iced.Length do
   @moduledoc """
-  Length values matching iced's `Length` enum.
+  Size value for the `width` and `height` props on most widgets.
 
-  Supported forms:
-
-  - `:fill` -- fill available space
-  - `:shrink` -- use minimum required space
-  - `{:fill_portion, n}` -- fill a weighted portion of available space
-  - numeric (integer or float) -- fixed pixel value
+  Maps to iced's `Length` enum. Accepts `:fill`, `:shrink`,
+  `{:fill_portion, n}`, or a numeric pixel value.
   """
 
   @type t :: :fill | :shrink | {:fill_portion, pos_integer()} | number()
