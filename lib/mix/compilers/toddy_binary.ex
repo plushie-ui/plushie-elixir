@@ -1,10 +1,10 @@
-defmodule Mix.Tasks.Compile.ToddyRenderer do
+defmodule Mix.Tasks.Compile.ToddyBinary do
   @moduledoc "Mix compiler that checks for the toddy binary."
   @shortdoc "Check toddy availability"
 
   use Mix.Task.Compiler
 
-  @manifest "compile.toddy_renderer"
+  @manifest "compile.toddy_binary"
 
   @impl true
   def manifests, do: [manifest_path()]
@@ -16,24 +16,16 @@ defmodule Mix.Tasks.Compile.ToddyRenderer do
 
   @impl true
   def run(_args) do
-    _path = Toddy.Binary.renderer_path()
+    _path = Toddy.Binary.path!()
     {:noop, []}
   rescue
     _ ->
       diagnostic = %Mix.Task.Compiler.Diagnostic{
         file: "toddy",
         severity: :warning,
-        message: """
-        toddy binary not found.
-
-        The renderer is now a separate repository. To build it:
-          cd ../toddy && cargo build
-
-        Or set TODDY_RENDERER_PATH to an existing binary.
-        Or run: mix toddy.download
-        """,
+        message: Toddy.Binary.not_found_message(),
         position: nil,
-        compiler_name: "toddy_renderer"
+        compiler_name: "toddy_binary"
       }
 
       {:noop, [diagnostic]}

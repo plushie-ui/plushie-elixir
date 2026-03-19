@@ -20,18 +20,18 @@ defmodule Toddy do
 
   - `:app`        -- (required) the app module implementing `Toddy.App`
   - `:app_opts`   -- opts forwarded to `app.init/1` (default: `[]`)
-  - `:renderer`   -- path to the toddy binary (default: auto-resolved)
+  - `:binary`     -- path to the toddy binary (default: auto-resolved)
   - `:name`       -- supervisor registration name (default: `Toddy`)
   - `:dev`        -- enable live code reloading (default: `false`)
   - `:dev_opts`   -- options forwarded to `Toddy.DevServer` (default: `[]`)
   - `:format`      -- wire format, `:msgpack` (default) or `:json`
-  - `:log_level`   -- renderer log level (`:off`, `:error`, `:warning`, `:info`, `:debug`).
+  - `:log_level`   -- toddy binary log level (`:off`, `:error`, `:warning`, `:info`, `:debug`).
                       Default: `:error`.
   """
 
   use Supervisor
 
-  @default_renderer_path :auto
+  @default_binary_path :auto
 
   # ---------------------------------------------------------------------------
   # Public API
@@ -94,9 +94,9 @@ defmodule Toddy do
     name = opts[:instance_name]
     app = Keyword.fetch!(opts, :app)
 
-    renderer_path =
-      case Keyword.get(opts, :renderer, @default_renderer_path) do
-        :auto -> Toddy.Binary.renderer_path()
+    binary_path =
+      case Keyword.get(opts, :binary, @default_binary_path) do
+        :auto -> Toddy.Binary.path!()
         path -> path
       end
 
@@ -113,7 +113,7 @@ defmodule Toddy do
       Supervisor.child_spec(
         {Toddy.Bridge,
          [
-           renderer_path: Path.expand(renderer_path),
+           renderer_path: Path.expand(binary_path),
            runtime: runtime_name(name),
            name: bridge_name(name),
            format: format,

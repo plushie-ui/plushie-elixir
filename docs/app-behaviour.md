@@ -242,7 +242,7 @@ Default: `[]` (renderer uses its own defaults).
 ```elixir
 # From IEx or application code:
 {:ok, pid} = Toddy.start(MyApp)
-{:ok, pid} = Toddy.start(MyApp, name: :my_app, renderer: "/path/to/toddy")
+{:ok, pid} = Toddy.start(MyApp, name: :my_app, binary: "/path/to/toddy")
 
 # Under a supervisor:
 children = [
