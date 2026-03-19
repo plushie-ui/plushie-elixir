@@ -16,8 +16,8 @@ defmodule Toddy.Test.Backend.Headless do
   ## Limitations
 
   - No real windows or GPU rendering (use `:windowed` for that).
-  - Effects (file dialogs, clipboard) are not executed.
-  - Subscriptions are not active.
+  - Effects (file dialogs, clipboard) return `:cancelled`.
+  - Subscriptions are tracked but not fired (no event loop).
 
   ## When to use
 

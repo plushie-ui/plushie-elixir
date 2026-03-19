@@ -279,31 +279,28 @@ changing assertions.
 | | `:pooled_mock` | `:headless` | `:windowed` |
 |---|---|---|---|
 | **Speed** | ~ms | ~100ms | ~seconds |
-| **Rust binary** | No | Yes (`--headless`) | Yes (no flag) |
+| **Rust binary** | Yes (`--mock`) | Yes (`--headless`) | Yes |
 | **Display server** | No | No | Yes (Xvfb in CI) |
-| **Tests logic** | Yes | Yes | Yes |
-| **Tests tree structure** | Yes | Yes | Yes |
-| **Protocol round-trip** | No | Yes | Yes |
+| **Protocol round-trip** | Yes | Yes | Yes |
 | **Structural tree hashes** | Yes | Yes | Yes |
 | **Pixel screenshots** | No | Yes (software) | Yes |
-| **Effects** | Collected, not executed | Not executed | Executed |
-| **Subscriptions** | Not active | Not active | Active |
+| **Effects** | Cancelled | Cancelled | Executed |
+| **Subscriptions** | Tracked, not fired | Tracked, not fired | Active |
+| **Real rendering** | No | Yes (tiny-skia) | Yes (GPU) |
 | **Real windows** | No | No | Yes |
 
-- **`:pooled_mock`** -- pure Elixir via `Backend.Pooled` with a shared
-  renderer process. Tests app logic and tree structure. No Rust, no
-  display, sub-millisecond. The right default for 90% of tests.
+- **`:pooled_mock`** -- shared `toddy --mock` process with session
+  multiplexing. Tests app logic, tree structure, and wire protocol.
+  No rendering, no display, sub-millisecond. The right default for
+  90% of tests.
 
-- **`:headless`** -- real Rust renderer with software rendering (no
-  display server). Proves the wire protocol works end-to-end (msgpack by
-  default). Tree hashes detect structural drift. Pixel screenshots
-  capture accurately rendered UI via tiny-skia. Uses the `--headless`
-  runtime flag.
+- **`:headless`** -- `toddy --headless` with software rendering via
+  tiny-skia (no display server). Pixel screenshots for visual
+  regression. Catches rendering bugs that mock mode can't.
 
-- **`:windowed`** -- real `iced::daemon` with GPU rendering. Effects work,
-  subscriptions fire, pixel screenshots capture exactly what a user sees.
-  Spawns `toddy` with no special flag. Needs a display server
-  (Xvfb or headless Weston).
+- **`:windowed`** -- `toddy` with real iced windows and GPU rendering.
+  Effects execute, subscriptions fire, screenshots capture exactly
+  what a user sees. Needs a display server (Xvfb or headless Weston).
 
 ### Backend selection
 
