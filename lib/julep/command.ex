@@ -56,10 +56,10 @@ defmodule Julep.Command do
   defstruct [:type, :payload]
 
   @typedoc "Stable string identifier for a widget node in the UI tree."
-  @type widget_id :: term()
+  @type widget_id :: String.t()
 
   @typedoc "Stable string identifier for a window node in the UI tree."
-  @type window_id :: term()
+  @type window_id :: String.t()
 
   @typedoc "Tag atom used to identify async results in `update/2`."
   @type event_tag :: atom()
@@ -559,8 +559,8 @@ defmodule Julep.Command do
   `"system_short_version"`, `"cpu_brand"`, `"cpu_cores"`, `"memory_total"`,
   `"memory_used"`, `"graphics_backend"`, `"graphics_adapter"`.
 
-  Requires the renderer to be built with the `sysinfo` iced feature. Without
-  it, the result map will contain `%{"error" => "sysinfo feature not enabled"}`.
+  System info is always available (the `sysinfo` iced feature is enabled
+  unconditionally).
 
   ## Example
 
@@ -941,7 +941,7 @@ defmodule Julep.Command do
   Accepts a single command, a list of commands, or a nested list -- anything
   `List.wrap/1` can normalize.
   """
-  @spec batch(commands :: t()) :: %__MODULE__{}
+  @spec batch(commands :: t() | [t()]) :: %__MODULE__{}
   def batch(commands) do
     %__MODULE__{type: :batch, payload: %{commands: List.wrap(commands)}}
   end

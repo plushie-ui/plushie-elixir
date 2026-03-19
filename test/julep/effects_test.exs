@@ -6,27 +6,33 @@ defmodule Julep.EffectsTest do
 
   describe "request/2" do
     test "returns command with correct type and payload" do
-      cmd = Effects.request(:http, url: "https://example.com")
+      cmd = Effects.request(:file_open, title: "Pick a file")
 
       assert %Command{type: :effect, payload: payload} = cmd
       assert is_binary(payload.id)
-      assert payload.kind == "http"
-      assert payload.opts == %{url: "https://example.com"}
+      assert payload.kind == "file_open"
+      assert payload.opts == %{title: "Pick a file"}
     end
 
     test "IDs start with ef_ prefix" do
-      cmd = Effects.request(:test)
+      cmd = Effects.request(:clipboard_read)
       assert String.starts_with?(cmd.payload.id, "ef_")
     end
 
     test "IDs are unique across calls" do
-      ids = for _ <- 1..100, do: Effects.request(:test).payload.id
+      ids = for _ <- 1..100, do: Effects.request(:clipboard_read).payload.id
       assert length(Enum.uniq(ids)) == 100
     end
 
     test "opts default to empty map" do
-      cmd = Effects.request(:noop)
+      cmd = Effects.request(:clipboard_read)
       assert cmd.payload.opts == %{}
+    end
+
+    test "rejects invalid effect kind" do
+      assert_raise FunctionClauseError, fn ->
+        Effects.request(:http)
+      end
     end
   end
 

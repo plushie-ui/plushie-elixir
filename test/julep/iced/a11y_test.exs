@@ -12,7 +12,7 @@ defmodule Julep.Iced.A11yTest do
     end
 
     test "Column carries a11y prop through to_node" do
-      col = Column.new("col", a11y: %{role: "navigation"})
+      col = Column.new("col", a11y: %{role: :navigation})
       node = Tree.normalize(Julep.Iced.Widget.to_node(col))
       assert node.props["a11y"]["role"] == "navigation"
     end
@@ -30,7 +30,7 @@ defmodule Julep.Iced.A11yTest do
     end
 
     test "Text with heading role and level" do
-      t = Text.new("h1", "Title") |> Text.a11y(%{role: "heading", level: 1})
+      t = Text.new("h1", "Title") |> Text.a11y(%{role: :heading, level: 1})
       node = Tree.normalize(Julep.Iced.Widget.to_node(t))
       assert node.props["a11y"]["role"] == "heading"
       assert node.props["a11y"]["level"] == 1
@@ -144,8 +144,8 @@ defmodule Julep.Iced.A11yTest do
       assert a.mnemonic == "\u00E9"
     end
 
-    test "multi-character string raises ArgumentError" do
-      assert_raise ArgumentError, ~r/single character/, fn ->
+    test "multi-character string raises FunctionClauseError" do
+      assert_raise FunctionClauseError, fn ->
         A11y.cast(%{mnemonic: "AB"})
       end
     end

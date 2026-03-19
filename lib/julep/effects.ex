@@ -15,19 +15,6 @@ defmodule Julep.Effects do
 
   The result is `{:ok, value}` on success or `{:error, reason}` on failure.
 
-  ## Cargo feature gates
-
-  Effect support in the Rust renderer is gated behind Cargo features.
-  By default, all features are enabled. To build a minimal renderer
-  without OS-level features, disable them at build time:
-
-  - `dialogs` -- file open/save/directory dialogs (uses `rfd` crate).
-  - `clipboard` -- clipboard read/write (uses `arboard` crate).
-  - `notifications` -- OS notifications (uses `notify-rust` crate).
-
-  If a feature is disabled, the renderer returns `{:error, "unsupported"}`
-  for the corresponding effect requests.
-
   ## Example
 
       def update(model, %Julep.Event.Widget{type: :click, id: "open"}) do
@@ -40,15 +27,23 @@ defmodule Julep.Effects do
       end
   """
 
+  @valid_kinds ~w(
+    file_open file_open_multiple file_save
+    directory_select directory_select_multiple
+    clipboard_read clipboard_write clipboard_read_html clipboard_write_html
+    clipboard_clear clipboard_read_primary clipboard_write_primary
+    notification
+  )a
+
   @doc """
   Generic effect request. Returns a command struct.
 
-  `kind` is an atom identifying the effect type. `opts` is a keyword list
-  of parameters sent as the effect payload. The effect ID is auto-generated
-  and stored in the command's payload as `:id`.
+  `kind` must be one of the supported effect types. `opts` is a keyword
+  list of parameters sent as the effect payload. The effect ID is
+  auto-generated and stored in the command's payload as `:id`.
   """
   @spec request(kind :: atom(), opts :: keyword()) :: Julep.Command.t()
-  def request(kind, opts \\ []) do
+  def request(kind, opts \\ []) when kind in @valid_kinds do
     id = generate_id()
     payload = Map.new(opts)
 
@@ -178,8 +173,6 @@ defmodule Julep.Effects do
   def default_timeout(kind) when is_binary(kind) do
     Map.get(@default_timeouts, kind)
   end
-
-  def default_timeout(_), do: nil
 
   # Generates a unique, monotonically increasing effect ID.
   defp generate_id do

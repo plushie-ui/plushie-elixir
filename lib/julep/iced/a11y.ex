@@ -16,7 +16,7 @@ defmodule Julep.Iced.A11y do
   - `role` -- overrides the inferred accesskit role (e.g. `:heading`, `:alert`)
   - `label` -- accessible name announced by screen readers
   - `description` -- longer description (maps to accesskit description)
-  - `live` -- live region semantics: `:off`, `:polite`, or `:assertive`
+  - `live` -- live region semantics: `:polite` or `:assertive`
   - `hidden` -- if true, node is excluded from the accessibility tree
   - `expanded` -- expanded/collapsed state for disclosure widgets
   - `required` -- marks a form field as required
@@ -58,51 +58,22 @@ defmodule Julep.Iced.A11y do
     :error_message
   ]
 
-  @type role ::
-          :alert
-          | :alert_dialog
-          | :button
-          | :canvas
-          | :check_box
-          | :combo_box
-          | :dialog
-          | :document
-          | :generic_container
-          | :group
-          | :heading
-          | :image
-          | :label
-          | :link
-          | :list
-          | :list_item
-          | :menu
-          | :menu_bar
-          | :menu_item
-          | :meter
-          | :multiline_text_input
-          | :navigation
-          | :progress_indicator
-          | :radio_button
-          | :region
-          | :scroll_bar
-          | :scroll_view
-          | :search
-          | :separator
-          | :slider
-          | :status
-          | :switch
-          | :tab
-          | :tab_list
-          | :tab_panel
-          | :table
-          | :text_input
-          | :toolbar
-          | :tooltip
-          | :tree
-          | :tree_item
-          | :window
+  @roles ~w(
+    alert alert_dialog button canvas check_box combo_box dialog document
+    generic_container group heading image label link list list_item
+    menu menu_bar menu_item meter multiline_text_input navigation
+    progress_indicator radio_button region scroll_bar scroll_view
+    search separator slider static_text status switch tab tab_list
+    tab_panel table text_input toolbar tooltip tree tree_item window
+  )a
 
-  @type live :: :off | :polite | :assertive
+  @live_values ~w(polite assertive)a
+
+  @orientations ~w(horizontal vertical)a
+
+  @type role :: unquote(Enum.reduce(@roles, &{:|, [], [&1, &2]}))
+
+  @type live :: :polite | :assertive
 
   @type orientation :: :horizontal | :vertical
 
@@ -149,14 +120,14 @@ defmodule Julep.Iced.A11y do
 
   def cast(map) when is_map(map) do
     %__MODULE__{
-      role: map[:role],
+      role: validate_role(map[:role]),
       label: map[:label],
       description: map[:description],
-      live: map[:live],
+      live: validate_live(map[:live]),
       hidden: map[:hidden],
       expanded: map[:expanded],
       required: map[:required],
-      level: map[:level],
+      level: validate_level(map[:level]),
       busy: map[:busy],
       invalid: map[:invalid],
       modal: map[:modal],
@@ -165,17 +136,25 @@ defmodule Julep.Iced.A11y do
       toggled: map[:toggled],
       selected: map[:selected],
       value: map[:value],
-      orientation: map[:orientation],
+      orientation: validate_orientation(map[:orientation]),
       labelled_by: map[:labelled_by],
       described_by: map[:described_by],
       error_message: map[:error_message]
     }
   end
 
+  defp validate_role(nil), do: nil
+  defp validate_role(role) when role in @roles, do: role
+
+  defp validate_live(nil), do: nil
+  defp validate_live(live) when live in @live_values, do: live
+
+  defp validate_orientation(nil), do: nil
+  defp validate_orientation(o) when o in @orientations, do: o
+
+  defp validate_level(nil), do: nil
+  defp validate_level(n) when is_integer(n) and n >= 1 and n <= 6, do: n
+
   defp validate_mnemonic(nil), do: nil
   defp validate_mnemonic(<<_::utf8>> = char), do: char
-
-  defp validate_mnemonic(other) do
-    raise ArgumentError, "a11y mnemonic must be a single character, got: #{inspect(other)}"
-  end
 end
