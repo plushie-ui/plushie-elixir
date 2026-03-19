@@ -12,12 +12,12 @@ defmodule Toddy.Protocol do
   The decode function accepts a binary in either format and returns an
   event struct (see `Toddy.Event.*`) or an internal tuple.
 
-  Implementation is split across submodules:
+  Implementation is split across internal submodules:
 
-  * `Toddy.Protocol.Encode` -- all `encode_*` functions and serialization
-  * `Toddy.Protocol.Decode` -- `decode/2`, `decode_message/2`, and dispatch
-  * `Toddy.Protocol.Keys` -- named/physical key maps and `parse_key/1`
-  * `Toddy.Protocol.Parsers` -- shared string-to-atom parsers
+  * `Protocol.Encode` -- all `encode_*` functions and serialization
+  * `Protocol.Decode` -- `decode/2`, `decode_message/2`, and dispatch
+  * `Protocol.Keys` -- named/physical key maps and `parse_key/1`
+  * `Protocol.Parsers` -- shared string-to-atom parsers
   """
 
   @protocol_version 1

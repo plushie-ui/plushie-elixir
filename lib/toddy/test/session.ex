@@ -2,7 +2,7 @@ defmodule Toddy.Test.Session do
   @moduledoc """
   A test session wrapping a backend module and its process.
 
-  Created by `Toddy.Test.Case` setup or `Toddy.Test.Helpers.start/2`.
+  Created by `Toddy.Test.Case` setup or `Toddy.Test.Helpers.start/1`.
   All interaction functions delegate to the backend.
   """
 
