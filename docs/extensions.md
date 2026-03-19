@@ -68,7 +68,7 @@ in the generated `main.rs`:
 ```rust
 julep::run(
     JulepAppBuilder::new()
-        .extension(Box::new(my_sparkline::SparklineExtension::new()))
+        .extension(my_sparkline::SparklineExtension::new())
 )
 ```
 
@@ -814,10 +814,10 @@ defmodule MySparklineTest do
     assert MySparkline.type_names() == [:sparkline]
   end
 
-  test "new/2 builds a widget node" do
+  test "new/2 creates a widget struct" do
     widget = MySparkline.new("spark-1", color: "#ff0000")
     assert widget.id == "spark-1"
-    assert widget.props["color"] == "#ff0000"
+    assert widget.color == "#ff0000"
   end
 
   test "native_crate path exists" do
@@ -901,7 +901,10 @@ shared renderer process. Standard test helpers like `click/1`,
 the pooled backend infers events for known widget interaction patterns.
 
 For integration tests that exercise the full wire protocol round-trip
-(including extension commands), use the `:headless` backend.
+(including extension commands), build a custom renderer with
+`mix julep.build` and use the `:headless` backend. See the
+[Testing extensions](testing.md#testing-extensions) section in the
+testing guide for the full workflow.
 
 
 ## ExtensionCaches

@@ -317,7 +317,7 @@ defmodule Mix.Tasks.Julep.Build do
     ext_registrations =
       Enum.map_join(extensions, "\n        ", fn mod ->
         constructor = mod.rust_constructor()
-        ".extension(Box::new(#{constructor}))"
+        ".extension(#{constructor})"
       end)
 
     """

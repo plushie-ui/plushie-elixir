@@ -697,6 +697,121 @@ The pooled_mock backend does not use a wire protocol (pure Elixir, no
 renderer process), so the format option has no effect on it.
 
 
+## Testing extensions
+
+Extension widgets have two testing layers: Elixir-side logic (struct
+building, command generation, demo app behavior) and Rust-side
+rendering (the widget actually renders, handles events, etc.).
+
+### Elixir-side: unit tests (no renderer)
+
+Extension macros generate structs, setters, and protocol
+implementations. Test these directly:
+
+```elixir
+defmodule MyGauge.MacroTest do
+  use ExUnit.Case, async: true
+
+  test "new/2 creates struct with defaults" do
+    gauge = MyGauge.new("g1", value: 50)
+    assert gauge.id == "g1"
+    assert gauge.value == 50
+  end
+
+  test "build/1 produces correct node" do
+    node = MyGauge.new("g1", value: 75) |> MyGauge.build()
+    assert node.type == "gauge"
+    assert node.props["value"] == 75
+  end
+
+  test "push command" do
+    cmd = MyGauge.push("g1", 42.0)
+    assert %Julep.Command{type: :extension_command} = cmd
+  end
+end
+```
+
+Demo apps test the extension in context:
+
+```elixir
+defmodule MyGauge.DemoTest do
+  use ExUnit.Case, async: true
+
+  test "view produces a gauge widget" do
+    model = MyGauge.Demo.init([])
+    tree = MyGauge.Demo.view(model) |> Julep.Tree.normalize()
+    gauge = Julep.Tree.find(tree, "my-gauge")
+    assert gauge.type == "gauge"
+  end
+end
+```
+
+### Rust-side: unit tests (no Elixir)
+
+The `julep_core::testing` module provides `TestEnv` and node factories
+for testing `WidgetExtension::render()` in isolation:
+
+```rust
+use julep_core::testing::*;
+use julep_core::prelude::*;
+
+#[test]
+fn gauge_renders_without_panic() {
+    let ext = MyGaugeExtension::new();
+    let test = TestEnv::default();
+    let node = node_with_props("g1", "gauge", json!({"value": 75}));
+    let env = test.env();
+    let _element = ext.render(&node, &env);
+}
+```
+
+### End-to-end: through the renderer
+
+To verify extension widgets survive the wire protocol round-trip and
+render correctly, build a custom renderer binary that includes the
+extension's Rust crate:
+
+```bash
+# Build the custom renderer with your extension compiled in
+mix julep.build
+
+# Run tests through the real renderer (headless, no display server)
+JULEP_TEST_BACKEND=headless mix test
+```
+
+`mix julep.build` reads extensions from application config:
+
+```elixir
+# config/config.exs
+config :julep, extensions: [MyGauge]
+```
+
+The custom binary is placed at `_build/<env>/julep/target/debug/<project>-julep`.
+`Julep.Binary.renderer_path/0` finds it automatically, so the headless
+and windowed test backends use it without additional configuration.
+
+Write end-to-end tests with `Julep.Test.Case`:
+
+```elixir
+defmodule MyGauge.EndToEndTest do
+  use Julep.Test.Case, app: MyGauge.Demo
+
+  test "gauge appears in rendered tree" do
+    assert_exists "#my-gauge"
+  end
+
+  test "gauge responds to push command" do
+    click("#push-value")
+    assert_text "#value-display", "42"
+  end
+end
+```
+
+These tests run on `:pooled_mock` by default (fast, logic-only). Set
+`JULEP_TEST_BACKEND=headless` to exercise the full Rust rendering path
+with the extension compiled in.
+
+
 ## Known limitations
 
 Workarounds and details for each limitation are noted inline below.

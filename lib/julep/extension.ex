@@ -516,6 +516,10 @@ defmodule Julep.Extension do
     end
   end
 
+  defp prop_type_ast({name, :color, _opts}) do
+    {name, quote(do: Julep.Iced.Color.t() | nil)}
+  end
+
   defp prop_type_ast({name, type, _opts}) do
     {name, quote(do: unquote(elixir_type_for(type)) | nil)}
   end
@@ -523,7 +527,7 @@ defmodule Julep.Extension do
   defp elixir_type_for(:number), do: quote(do: number())
   defp elixir_type_for(:string), do: quote(do: String.t())
   defp elixir_type_for(:boolean), do: quote(do: boolean())
-  defp elixir_type_for(:color), do: quote(do: Julep.Iced.Color.t())
+  defp elixir_type_for(:color), do: quote(do: Julep.Iced.Color.input())
   defp elixir_type_for(:length), do: quote(do: Julep.Iced.Length.t())
   defp elixir_type_for(:padding), do: quote(do: Julep.Iced.Padding.t())
   defp elixir_type_for(:alignment), do: quote(do: Julep.Iced.Alignment.t())
