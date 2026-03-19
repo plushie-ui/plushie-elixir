@@ -1,8 +1,8 @@
 # Load extension packages' compiled beam files so coexistence tests work.
-# These are path deps of julep, but we can't add them as Mix deps because
-# they depend on :julep (circular). Instead, we load their compiled beam
+# These are path deps of toddy, but we can't add them as Mix deps because
+# they depend on :toddy (circular). Instead, we load their compiled beam
 # files directly. Each extension must be compiled in its own directory first.
-for ext <- ~w(julep_sparkline julep_hex_view julep_code_view julep_plot julep_timeline) do
+for ext <- ~w(toddy_sparkline toddy_hex_view toddy_code_view toddy_plot toddy_timeline) do
   ebin = Path.expand("../../#{ext}/_build/dev/lib/#{ext}/ebin", __DIR__)
 
   if File.dir?(ebin) do
@@ -12,8 +12,8 @@ end
 
 # Start the shared session pool for pooled test backends.
 {:ok, _} =
-  Julep.Test.SessionPool.start_link(
-    name: Julep.TestPool,
+  Toddy.Test.SessionPool.start_link(
+    name: Toddy.TestPool,
     mode: :mock,
     max_sessions: System.schedulers_online() * 2
   )

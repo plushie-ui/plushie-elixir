@@ -1,8 +1,8 @@
-# julep
+# toddy
 
 Native desktop GUIs from Elixir, powered by [iced](https://github.com/iced-rs/iced).
 
-Julep is an Elixir library for building native cross-platform desktop applications.
+Toddy is an Elixir library for building native cross-platform desktop applications.
 You write your app logic, state management, and UI trees entirely in Elixir. A thin
 Rust binary handles rendering via the iced GUI toolkit and sends user events back
 over a MessagePack-over-stdio transport (JSONL available for debugging).
@@ -12,7 +12,7 @@ over a MessagePack-over-stdio transport (JSONL available for debugging).
 - **Elixir-first.** App teams write Elixir, not Rust. The Rust renderer is a
   dependency, not a framework.
 - **Simple.** Elm architecture: model, update, view. No ceremony.
-- **Pragmatic.** Start a GUI from `mix julep.gui`, from IEx, or embed it as a
+- **Pragmatic.** Start a GUI from `mix toddy.gui`, from IEx, or embed it as a
   library in a larger OTP application.
 - **Powerful.** Full access to iced's widget catalog, theming, multi-window,
   and native platform features -- without writing Rust.
@@ -27,7 +27,7 @@ All five roadmap phases complete. Approaching first Hex release.
 
 ```elixir
 defmodule MyApp do
-  use Julep.App
+  use Toddy.App
 
   def init(_opts), do: %{count: 0}
 
@@ -36,7 +36,7 @@ defmodule MyApp do
   def update(model, _event), do: model
 
   def view(model) do
-    import Julep.UI
+    import Toddy.UI
 
     window "main", title: "Counter" do
       column do
@@ -52,13 +52,13 @@ end
 ```
 
 ```bash
-mix julep.gui MyApp
+mix toddy.gui MyApp
 ```
 
 ### Dev mode
 
 ```bash
-mix julep.dev MyApp
+mix toddy.dev MyApp
 ```
 
 Edit your source files and watch the GUI update in place. See the [dev mode section](docs/getting-started.md#dev-mode-live-code-reloading) in the getting started guide.
@@ -93,9 +93,9 @@ with the "Desktop development with C++" workload.
 
 ```bash
 mix deps.get                          # fetch Elixir deps
-mix julep.build                       # build the Rust renderer (requires cargo)
-mix julep.gui Counter                 # run an example app
-mix julep.gui Catalog                 # run the full widget catalog
+mix toddy.build                       # build the Rust renderer (requires cargo)
+mix toddy.gui Counter                 # run an example app
+mix toddy.gui Catalog                 # run the full widget catalog
 ```
 
 ## Development
@@ -119,7 +119,7 @@ the full CI pipeline locally and stops on first failure:
 
 ## Testing
 
-Write your tests once, then run them at whatever fidelity you need. Julep
+Write your tests once, then run them at whatever fidelity you need. Toddy
 ships a test framework with three interchangeable backends:
 
 - **Simulated** -- millisecond tests with zero setup. No Rust binary, no
@@ -136,7 +136,7 @@ or let CI run all three.
 
 ```elixir
 defmodule TodoTest do
-  use Julep.Test.Case, app: MyApp.Todo
+  use Toddy.Test.Case, app: MyApp.Todo
 
   test "complete todo flow" do
     type_text("#new_todo", "Buy milk")
@@ -155,7 +155,7 @@ end
 ```
 
 Write test scenarios in Elixir with the full power of ExUnit, or use
-declarative `.julep` scripts -- a superset of iced's
+declarative `.toddy` scripts -- a superset of iced's
 [`.ice` format](https://docs.rs/iced_test/latest/iced_test/ice/) --
 for acceptance tests and visual demos. Capture golden-file screenshots for
 pixel regression, or just test your logic fast and move on.

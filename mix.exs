@@ -1,12 +1,12 @@
-defmodule Julep.MixProject do
+defmodule Toddy.MixProject do
   use Mix.Project
 
   # Load extension beam files so Code.ensure_loaded? guards evaluate correctly.
-  # Each extension depends on :julep (circular path dep), so we can't use Mix
+  # Each extension depends on :toddy (circular path dep), so we can't use Mix
   # deps. Instead, we add their compiled ebin dirs to the code path and
   # pre-load all their modules.
   if Mix.env() in [:dev, :test] do
-    for ext <- ~w(julep_sparkline julep_hex_view julep_code_view julep_plot julep_timeline) do
+    for ext <- ~w(toddy_sparkline toddy_hex_view toddy_code_view toddy_plot toddy_timeline) do
       ebin = Path.expand("../#{ext}/_build/dev/lib/#{ext}/ebin")
 
       if File.dir?(ebin) do
@@ -25,19 +25,19 @@ defmodule Julep.MixProject do
 
   def project do
     [
-      app: :julep,
+      app: :toddy,
       version: "0.1.0",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
-      compilers: Mix.compilers() ++ [:julep_renderer],
+      compilers: Mix.compilers() ++ [:toddy_renderer],
       elixirc_options: [warnings_as_errors: true],
       consolidate_protocols: Mix.env() != :test,
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      name: "Julep",
+      name: "Toddy",
       description: "Native desktop GUIs from Elixir, powered by iced",
       package: package(),
-      source_url: "https://github.com/julep-ui/julep-elixir",
+      source_url: "https://github.com/toddy/toddy-elixir",
       docs: docs(),
       aliases: aliases(),
       dialyzer: [plt_add_apps: [:mix, :ex_unit, :inets, :ssl]]
@@ -53,7 +53,7 @@ defmodule Julep.MixProject do
   defp docs do
     [
       main: "getting-started",
-      source_url: "https://github.com/julep-ui/julep-elixir",
+      source_url: "https://github.com/toddy/toddy-elixir",
       extras: [
         "docs/getting-started.md",
         "docs/tutorial.md",
@@ -90,62 +90,62 @@ defmodule Julep.MixProject do
       ],
       groups_for_modules: [
         "App Framework": [
-          Julep,
-          Julep.App,
-          Julep.Runtime,
-          Julep.Bridge,
-          Julep.Binary,
-          Julep.DevServer
+          Toddy,
+          Toddy.App,
+          Toddy.Runtime,
+          Toddy.Bridge,
+          Toddy.Binary,
+          Toddy.DevServer
         ],
         "UI Builder": [
-          Julep.UI,
-          Julep.Iced,
-          Julep.Iced.Widget,
-          Julep.Iced.Encode,
-          Julep.Tree
+          Toddy.UI,
+          Toddy.Iced,
+          Toddy.Iced.Widget,
+          Toddy.Iced.Encode,
+          Toddy.Tree
         ],
-        Widgets: ~r/Julep\.Iced\.Widget\..*/,
+        Widgets: ~r/Toddy\.Iced\.Widget\..*/,
         "Widget Types": [
-          Julep.Iced.Alignment,
-          Julep.Iced.Anchor,
-          Julep.Iced.Border,
-          Julep.Iced.Color,
-          Julep.Iced.ContentFit,
-          Julep.Iced.Direction,
-          Julep.Iced.FilterMethod,
-          Julep.Iced.Font,
-          Julep.Iced.Gradient,
-          Julep.Iced.Length,
-          Julep.Iced.Padding,
-          Julep.Iced.Position,
-          Julep.Iced.Shadow,
-          Julep.Iced.Shaping,
-          Julep.Iced.StyleMap,
-          Julep.Iced.Theme,
-          Julep.Iced.Wrapping,
-          Julep.Iced.A11y
+          Toddy.Iced.Alignment,
+          Toddy.Iced.Anchor,
+          Toddy.Iced.Border,
+          Toddy.Iced.Color,
+          Toddy.Iced.ContentFit,
+          Toddy.Iced.Direction,
+          Toddy.Iced.FilterMethod,
+          Toddy.Iced.Font,
+          Toddy.Iced.Gradient,
+          Toddy.Iced.Length,
+          Toddy.Iced.Padding,
+          Toddy.Iced.Position,
+          Toddy.Iced.Shadow,
+          Toddy.Iced.Shaping,
+          Toddy.Iced.StyleMap,
+          Toddy.Iced.Theme,
+          Toddy.Iced.Wrapping,
+          Toddy.Iced.A11y
         ],
-        Events: ~r/Julep\.Event.*/,
+        Events: ~r/Toddy\.Event.*/,
         Commands: [
-          Julep.Command,
-          Julep.Subscription,
-          Julep.Effects
+          Toddy.Command,
+          Toddy.Subscription,
+          Toddy.Effects
         ],
         "State Helpers": [
-          Julep.Animation,
-          Julep.Data,
-          Julep.KeyModifiers,
-          Julep.Route,
-          Julep.Selection,
-          Julep.State,
-          Julep.Undo
+          Toddy.Animation,
+          Toddy.Data,
+          Toddy.KeyModifiers,
+          Toddy.Route,
+          Toddy.Selection,
+          Toddy.State,
+          Toddy.Undo
         ],
-        Testing: ~r/Julep\.Test.*/,
+        Testing: ~r/Toddy\.Test.*/,
         Extensions: [
-          Julep.Extension,
-          Julep.Canvas.Shape
+          Toddy.Extension,
+          Toddy.Canvas.Shape
         ],
-        Protocol: ~r/Julep\.Protocol.*/
+        Protocol: ~r/Toddy\.Protocol.*/
       ]
     ]
   end
@@ -154,7 +154,7 @@ defmodule Julep.MixProject do
     [
       licenses: ["MIT"],
       links: %{
-        "GitHub" => "https://github.com/julep-ui/julep-elixir"
+        "GitHub" => "https://github.com/toddy/toddy-elixir"
       },
       files: ~w(
         lib
@@ -163,13 +163,13 @@ defmodule Julep.MixProject do
         LICENSE
         .formatter.exs
       ),
-      exclude_patterns: [~r/julep\.preflight\.ex$/]
+      exclude_patterns: [~r/toddy\.preflight\.ex$/]
     ]
   end
 
   defp aliases do
     [
-      preflight: "julep.preflight"
+      preflight: "toddy.preflight"
     ]
   end
 
@@ -186,7 +186,7 @@ defmodule Julep.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.31", only: :dev, runtime: false}
       # Extension packages are loaded via Code.append_path in mix.exs (above)
-      # to avoid circular path deps (each extension depends on :julep).
+      # to avoid circular path deps (each extension depends on :toddy).
     ]
   end
 end

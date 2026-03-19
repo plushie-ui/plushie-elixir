@@ -1,6 +1,6 @@
 # Getting started
 
-Build native desktop GUIs from Elixir. Julep handles rendering via
+Build native desktop GUIs from Elixir. Toddy handles rendering via
 iced (Rust) while you own state, logic, and UI trees in pure Elixir.
 
 ## Prerequisites
@@ -22,27 +22,27 @@ mix new my_app
 cd my_app
 ```
 
-### 2. Add julep as a dependency
+### 2. Add toddy as a dependency
 
 ```elixir
 # mix.exs
 defp deps do
   [
-    {:julep, "~> 0.1"}
+    {:toddy, "~> 0.1"}
   ]
 end
 ```
 
 ### 3. Formatter config
 
-Add `:julep` to `import_deps` in your `.formatter.exs` so `mix format`
+Add `:toddy` to `import_deps` in your `.formatter.exs` so `mix format`
 keeps layout blocks paren-free:
 
 ```elixir
 # .formatter.exs
 [
   inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"],
-  import_deps: [:julep]
+  import_deps: [:toddy]
 ]
 ```
 
@@ -50,7 +50,7 @@ keeps layout blocks paren-free:
 
 ```sh
 mix deps.get
-mix julep.build
+mix toddy.build
 ```
 
 The build step compiles the Rust renderer binary. First build takes a
@@ -62,11 +62,11 @@ Create `lib/my_app/counter.ex`:
 
 ```elixir
 defmodule MyApp.Counter do
-  use Julep.App
+  use Toddy.App
 
-  import Julep.UI
+  import Toddy.UI
 
-  alias Julep.Event.Widget
+  alias Toddy.Event.Widget
 
   def init(_opts), do: %{count: 0}
 
@@ -96,21 +96,21 @@ end
 Run it:
 
 ```sh
-mix julep.gui MyApp.Counter
+mix toddy.gui MyApp.Counter
 ```
 
 A native window appears with the count and two buttons.
 
 ## The Elm architecture
 
-Julep follows the Elm architecture. Your app module implements
-callbacks via `Julep.App`:
+Toddy follows the Elm architecture. Your app module implements
+callbacks via `Toddy.App`:
 
 - **`init/1`** -- returns the initial model (any Elixir term).
 - **`update/2`** -- takes the current model and an event, returns
   the new model. Pure function. To run side effects, return
   `{model, command}` instead. See [Commands](commands.md).
-- **`view/1`** -- takes the model and returns a UI tree. Julep diffs
+- **`view/1`** -- takes the model and returns a UI tree. Toddy diffs
   trees and sends only patches to the renderer.
 - **`subscribe/1`** (optional) -- returns a list of active
   subscriptions (timers, keyboard events).
@@ -119,7 +119,7 @@ See [App behaviour](app-behaviour.md) for the full callback API.
 
 ## Event types
 
-Events are structs under `Julep.Event.*`. Pattern match in `update/2`:
+Events are structs under `Toddy.Event.*`. Pattern match in `update/2`:
 
 | Event | Meaning |
 |---|---|
@@ -136,13 +136,13 @@ See [Events](events.md) for the full taxonomy.
 ## Mix tasks
 
 ```bash
-mix julep.gui MyApp              # build and run
-mix julep.gui MyApp --build      # rebuild renderer first
-mix julep.gui MyApp --release    # use release build
-mix julep.build                  # build renderer only
-mix julep.build --release        # release build
-mix julep.dev MyApp              # dev mode with live reload
-mix julep.inspect MyApp          # print UI tree as JSON
+mix toddy.gui MyApp              # build and run
+mix toddy.gui MyApp --build      # rebuild renderer first
+mix toddy.gui MyApp --release    # use release build
+mix toddy.build                  # build renderer only
+mix toddy.build --release        # release build
+mix toddy.dev MyApp              # dev mode with live reload
+mix toddy.inspect MyApp          # print UI tree as JSON
 ```
 
 ## Debugging
@@ -150,13 +150,13 @@ mix julep.inspect MyApp          # print UI tree as JSON
 Use JSON wire format to see messages between Elixir and the renderer:
 
 ```sh
-mix julep.gui MyApp --json
+mix toddy.gui MyApp --json
 ```
 
 Enable verbose renderer logging:
 
 ```sh
-RUST_LOG=julep=debug mix julep.gui MyApp
+RUST_LOG=toddy=debug mix toddy.gui MyApp
 ```
 
 ## Error handling
@@ -177,17 +177,17 @@ Live code reloading without losing application state. Add
 Then run:
 
 ```bash
-mix julep.dev MyApp
+mix toddy.dev MyApp
 ```
 
 Edit any `.ex` file under `lib/`, save, and the GUI updates in place.
 The model is preserved -- only `view/1` is re-evaluated with the new
-code. See `Julep.DevServer` for configuration options.
+code. See `Toddy.DevServer` for configuration options.
 
 ## Next steps
 
 - [Tutorial: building a todo app](tutorial.md) -- step-by-step guide
-- Browse the [examples](../lib/julep/examples/) for patterns
+- Browse the [examples](../lib/toddy/examples/) for patterns
 - [App behaviour](app-behaviour.md) -- full callback API
 - [Layout](layout.md) -- sizing and positioning widgets
 - [Commands](commands.md) -- async work, file dialogs, effects

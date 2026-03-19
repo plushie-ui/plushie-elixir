@@ -21,7 +21,7 @@ renderer (decide whether to execute it). Keep the renderer dumb.
 
 ```elixir
 def update(model, %Widget{type: :click, id: "open_file"}) do
-  cmd = Julep.Effects.file_open(
+  cmd = Toddy.Effects.file_open(
     title: "Choose a file",
     filters: [{"Text files", "*.txt"}, {"All files", "*"}]
   )
@@ -37,7 +37,7 @@ def update(model, %Effect{result: {:error, "cancelled"}}) do
 end
 ```
 
-Every effect function returns a `Julep.Command` struct. The command must be
+Every effect function returns a `Toddy.Command` struct. The command must be
 returned from `update` as part of a `{model, command}` tuple -- discarding
 it silently does nothing. The effect ID is auto-generated (e.g. `"ef_1"`)
 and embedded in the command payload. You can extract it via
@@ -90,7 +90,7 @@ Adding an effect requires changes in two places:
 
 1. **Renderer:** handle the new `kind` in the effect dispatch, execute the
    platform operation, return the result.
-2. **Elixir:** add a convenience function in `Julep.Effects` (optional, apps
+2. **Elixir:** add a convenience function in `Toddy.Effects` (optional, apps
    can always send raw requests).
 
 The transport does not need to change. Unknown effect kinds return
@@ -99,7 +99,7 @@ The transport does not need to change. Unknown effect kinds return
 ## Effects are not commands
 
 Some frameworks conflate effects (I/O operations) with commands (internal
-state mutations). In julep, `update` handles state mutations synchronously.
+state mutations). In toddy, `update` handles state mutations synchronously.
 Effects handle I/O asynchronously. They are separate concerns with separate
 code paths.
 

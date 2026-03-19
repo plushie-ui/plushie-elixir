@@ -11,11 +11,11 @@ text.
 
 ```elixir
 defmodule MyApp.Todo do
-  use Julep.App
+  use Toddy.App
 
-  import Julep.UI
+  import Toddy.UI
 
-  alias Julep.Event.Widget
+  alias Toddy.Event.Widget
 
   def init(_opts) do
     %{
@@ -39,7 +39,7 @@ defmodule MyApp.Todo do
 end
 ```
 
-Run it with `mix julep.gui MyApp.Todo`. You'll see a title and a
+Run it with `mix toddy.gui MyApp.Todo`. You'll see a title and a
 placeholder message. Not much yet, but the structure is in place:
 `init` sets up state, `view` renders it.
 
@@ -152,10 +152,10 @@ later move the list into a sidebar or tab, the pattern still works.
 ## Step 5: refocusing with a command
 
 After submitting a todo, the text input loses focus. Let's refocus
-it automatically using `Julep.Command.focus/1`:
+it automatically using `Toddy.Command.focus/1`:
 
 ```elixir
-alias Julep.Command
+alias Toddy.Command
 
 def update(model, %Widget{type: :submit, id: "new_todo"}) do
   if String.trim(model.input) != "" do
@@ -232,23 +232,23 @@ end
 ```
 
 Notice `todo_row/1` is extracted as a view helper. Each helper
-imports `Julep.UI` independently (the import is lexically scoped).
+imports `Toddy.UI` independently (the import is lexically scoped).
 
 ## The complete app
 
 The full source is in
-[`lib/julep/examples/todo.ex`](https://github.com/julep-ui/julep-elixir/blob/main/lib/julep/examples/todo.ex)
+[`lib/toddy/examples/todo.ex`](https://github.com/toddy/toddy-elixir/blob/main/lib/toddy/examples/todo.ex)
 with tests in
-[`test/julep/examples/todo_test.exs`](https://github.com/julep-ui/julep-elixir/blob/main/test/julep/examples/todo_test.exs).
+[`test/toddy/examples/todo_test.exs`](https://github.com/toddy/toddy-elixir/blob/main/test/toddy/examples/todo_test.exs).
 
 ```elixir
 defmodule MyApp.Todo do
-  use Julep.App
+  use Toddy.App
 
-  import Julep.UI
+  import Toddy.UI
 
-  alias Julep.Command
-  alias Julep.Event.Widget
+  alias Toddy.Command
+  alias Toddy.Event.Widget
 
   # -- Init -----------------------------------------------------------------
 

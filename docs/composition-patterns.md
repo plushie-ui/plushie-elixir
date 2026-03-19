@@ -1,20 +1,20 @@
 # Composition patterns
 
-Julep provides primitives, not pre-built composites. There is no `TabBar`
+Toddy provides primitives, not pre-built composites. There is no `TabBar`
 widget, no `Modal` widget, no `Card` widget. Instead, you compose the same
 building blocks -- `row`, `column`, `container`, `stack`, `button`, `text`,
 `rule`, `mouse_area`, `space` -- with `StyleMap` to build any UI pattern you
 need.
 
 This guide shows how. Every pattern is copy-pasteable and produces a polished
-result. All examples use `Julep.UI` macros and assume you have the following
+result. All examples use `Toddy.UI` macros and assume you have the following
 at the top of your view function:
 
 ```elixir
-import Julep.UI
-alias Julep.Iced.StyleMap
-alias Julep.Iced.Border
-alias Julep.Iced.Shadow
+import Toddy.UI
+alias Toddy.Iced.StyleMap
+alias Toddy.Iced.Border
+alias Toddy.Iced.Shadow
 ```
 
 ---
@@ -29,10 +29,10 @@ views.
 
 ```elixir
 defmodule TabApp do
-  @behaviour Julep.App
+  @behaviour Toddy.App
 
-  alias Julep.Iced.StyleMap
-  alias Julep.Iced.Border
+  alias Toddy.Iced.StyleMap
+  alias Toddy.Iced.Border
 
   def init(_opts), do: %{active_tab: :overview}
 
@@ -119,9 +119,9 @@ that highlight on hover. The selected item has an accent background.
 
 ```elixir
 defmodule SidebarApp do
-  @behaviour Julep.App
+  @behaviour Toddy.App
 
-  alias Julep.Iced.StyleMap
+  alias Toddy.Iced.StyleMap
 
   @nav_items [
     {:inbox, "Inbox"},
@@ -214,10 +214,10 @@ view.
 
 ```elixir
 defmodule ToolbarApp do
-  @behaviour Julep.App
+  @behaviour Toddy.App
 
-  alias Julep.Iced.StyleMap
-  alias Julep.Iced.Border
+  alias Toddy.Iced.StyleMap
+  alias Toddy.Iced.Border
 
   def init(_opts), do: %{bold: false, italic: false, underline: false}
 
@@ -313,11 +313,11 @@ container that dims the background.
 
 ```elixir
 defmodule ModalApp do
-  @behaviour Julep.App
+  @behaviour Toddy.App
 
-  alias Julep.Iced.StyleMap
-  alias Julep.Iced.Border
-  alias Julep.Iced.Shadow
+  alias Toddy.Iced.StyleMap
+  alias Toddy.Iced.Border
+  alias Toddy.Iced.Shadow
 
   def init(_opts), do: %{show_modal: false, confirmed: false}
 
@@ -410,10 +410,10 @@ styled container.
 
 ```elixir
 defmodule CardApp do
-  @behaviour Julep.App
+  @behaviour Toddy.App
 
-  alias Julep.Iced.Border
-  alias Julep.Iced.Shadow
+  alias Toddy.Iced.Border
+  alias Toddy.Iced.Shadow
 
   def init(_opts), do: %{}
   def update(model, _event), do: model
@@ -515,9 +515,9 @@ cursor to a horizontal resize indicator.
 
 ```elixir
 defmodule SplitApp do
-  @behaviour Julep.App
+  @behaviour Toddy.App
 
-  alias Julep.Iced.Border
+  alias Toddy.Iced.Border
 
   def init(_opts), do: %{left_width: 300}
 
@@ -600,11 +600,11 @@ location.
 
 ```elixir
 defmodule BreadcrumbApp do
-  @behaviour Julep.App
+  @behaviour Toddy.App
 
-  alias Julep.Iced.StyleMap
+  alias Toddy.Iced.StyleMap
 
-  def init(_opts), do: %{path: ["Home", "Projects", "Julep", "Docs"]}
+  def init(_opts), do: %{path: ["Home", "Projects", "Toddy", "Docs"]}
 
   def update(model, %Widget{type: :click, id: "crumb:" <> index_str}) do
     index = String.to_integer(index_str)
@@ -671,7 +671,7 @@ Clicking a breadcrumb truncates the path to that index, navigating "up".
 
 ### What it looks like
 
-A horizontal line of text: "Home > Projects > Julep > Docs". Everything
+A horizontal line of text: "Home > Projects > Toddy > Docs". Everything
 except "Docs" is blue and clickable. Hovering over a segment highlights it
 with a light blue background. "Docs" is plain dark text.
 
@@ -686,10 +686,10 @@ for tags, counts, status indicators, or filter chips.
 
 ```elixir
 defmodule BadgeApp do
-  @behaviour Julep.App
+  @behaviour Toddy.App
 
-  alias Julep.Iced.StyleMap
-  alias Julep.Iced.Border
+  alias Toddy.Iced.StyleMap
+  alias Toddy.Iced.Border
 
   @tags ["elixir", "rust", "iced", "desktop"]
 
@@ -833,78 +833,78 @@ functions returning plain maps -- no macros needed.
 
 ## State helpers
 
-Julep provides optional state management modules for common UI patterns.
+Toddy provides optional state management modules for common UI patterns.
 None of these are required -- your model can be any term. They exist because
 these patterns come up repeatedly in desktop apps and getting them right from
 scratch is tedious.
 
 All helpers are pure data structures with no processes or side effects.
 
-### Julep.State
+### Toddy.State
 
 Path-based access to nested model data with revision tracking and
 transactions.
 
 ```elixir
-state = Julep.State.new(%{user: %{name: "Alice", prefs: %{theme: "dark"}}})
+state = Toddy.State.new(%{user: %{name: "Alice", prefs: %{theme: "dark"}}})
 
 # Read
-Julep.State.get(state, [:user, :name])
+Toddy.State.get(state, [:user, :name])
 # => "Alice"
 
 # Write
-state = Julep.State.put(state, [:user, :prefs, :theme], "light")
-Julep.State.revision(state)
+state = Toddy.State.put(state, [:user, :prefs, :theme], "light")
+Toddy.State.revision(state)
 # => 1
 
 # Transaction (atomic multi-step update with rollback)
-state = Julep.State.begin_transaction(state)
-state = Julep.State.put(state, [:user, :name], "Bob")
-state = Julep.State.put(state, [:user, :prefs, :theme], "dark")
-state = Julep.State.commit_transaction(state)
+state = Toddy.State.begin_transaction(state)
+state = Toddy.State.put(state, [:user, :name], "Bob")
+state = Toddy.State.put(state, [:user, :prefs, :theme], "dark")
+state = Toddy.State.commit_transaction(state)
 # Both changes applied atomically. Revision incremented once.
 
 # Or roll back:
-state = Julep.State.rollback_transaction(state)
+state = Toddy.State.rollback_transaction(state)
 # All changes since begin_transaction discarded.
 ```
 
 The revision counter is useful for determining whether a re-render is
 needed. If the revision has not changed, the tree has not changed.
 
-Use `Julep.State` when your model has deeply nested data that you update
+Use `Toddy.State` when your model has deeply nested data that you update
 from multiple event handlers. Skip it when your model is flat or simple
 enough that plain map updates read clearly.
 
-### Julep.Undo
+### Toddy.Undo
 
 Undo/redo stack for commands.
 
 ```elixir
-undo = Julep.Undo.new(model)
+undo = Toddy.Undo.new(model)
 
 # Apply a command (records it for undo)
-undo = Julep.Undo.apply(undo, %{
+undo = Toddy.Undo.apply(undo, %{
   apply: fn m -> %{m | name: "Bob"} end,
   undo: fn m -> %{m | name: "Alice"} end,
   label: "Rename to Bob"
 })
 
-Julep.Undo.current(undo).name
+Toddy.Undo.current(undo).name
 # => "Bob"
 
 # Undo
-undo = Julep.Undo.undo(undo)
-Julep.Undo.current(undo).name
+undo = Toddy.Undo.undo(undo)
+Toddy.Undo.current(undo).name
 # => "Alice"
 
 # Redo
-undo = Julep.Undo.redo(undo)
-Julep.Undo.current(undo).name
+undo = Toddy.Undo.redo(undo)
+Toddy.Undo.current(undo).name
 # => "Bob"
 
 # Coalescing (group rapid changes, like typing)
-undo = Julep.Undo.apply(undo, %{
+undo = Toddy.Undo.apply(undo, %{
   apply: fn m -> %{m | text: m.text <> "a"} end,
   undo: fn m -> %{m | text: String.slice(m.text, 0..-2//1)} end,
   coalesce: {:typing, "editor"},
@@ -914,55 +914,55 @@ undo = Julep.Undo.apply(undo, %{
 # are merged into a single undo entry.
 ```
 
-Use `Julep.Undo` when your app has user actions that should be reversible
+Use `Toddy.Undo` when your app has user actions that should be reversible
 (text editing, form filling, drawing, configuration changes). Skip it for
 apps where undo does not make sense (dashboards, monitoring).
 
-### Julep.Selection
+### Toddy.Selection
 
 Selection state for lists and tables.
 
 ```elixir
-sel = Julep.Selection.new(mode: :multi)
+sel = Toddy.Selection.new(mode: :multi)
 
-sel = Julep.Selection.select(sel, "item_1")
-sel = Julep.Selection.select(sel, "item_3", extend: true)
+sel = Toddy.Selection.select(sel, "item_1")
+sel = Toddy.Selection.select(sel, "item_3", extend: true)
 
-Julep.Selection.selected(sel)
+Toddy.Selection.selected(sel)
 # => MapSet.new(["item_1", "item_3"])
 
-sel = Julep.Selection.toggle(sel, "item_1")
-Julep.Selection.selected(sel)
+sel = Toddy.Selection.toggle(sel, "item_1")
+Toddy.Selection.selected(sel)
 # => MapSet.new(["item_3"])
 
 # Range select (shift-click pattern)
-sel = Julep.Selection.new(mode: :range, order: ["a", "b", "c", "d", "e"])
-sel = Julep.Selection.select(sel, "b")
-sel = Julep.Selection.range_select(sel, "d")
-Julep.Selection.selected(sel)
+sel = Toddy.Selection.new(mode: :range, order: ["a", "b", "c", "d", "e"])
+sel = Toddy.Selection.select(sel, "b")
+sel = Toddy.Selection.range_select(sel, "d")
+Toddy.Selection.selected(sel)
 # => MapSet.new(["b", "c", "d"])
 ```
 
-Use `Julep.Selection` when you have selectable lists, tables, or tree
+Use `Toddy.Selection` when you have selectable lists, tables, or tree
 views. It handles single, multi (ctrl-click), and range (shift-click)
 selection modes correctly. Skip it for simple cases where a single
 `selected_id` in your model is sufficient.
 
-### Julep.Route
+### Toddy.Route
 
 Client-side routing for multi-view apps.
 
 ```elixir
-route = Julep.Route.new("/dashboard")
+route = Toddy.Route.new("/dashboard")
 
-route = Julep.Route.push(route, "/settings", %{tab: "general"})
-Julep.Route.current(route)
+route = Toddy.Route.push(route, "/settings", %{tab: "general"})
+Toddy.Route.current(route)
 # => "/settings"
-Julep.Route.params(route)
+Toddy.Route.params(route)
 # => %{tab: "general"}
 
-route = Julep.Route.pop(route)
-Julep.Route.current(route)
+route = Toddy.Route.pop(route)
+Toddy.Route.current(route)
 # => "/dashboard"
 ```
 
@@ -971,7 +971,7 @@ is for apps that have multiple "screens" and want back/forward navigation
 with history tracking. Use it for apps with distinct screens (settings,
 detail views, wizards). Skip it for single-screen apps.
 
-### Julep.Data
+### Toddy.Data
 
 Query pipeline for in-memory record collections.
 
@@ -982,7 +982,7 @@ records = [
   %{id: 3, name: "Carol", role: "admin", active: true}
 ]
 
-Julep.Data.query(records,
+Toddy.Data.query(records,
   filter: fn r -> r.active end,
   sort: {:asc, :name},
   page: 1,
@@ -996,7 +996,7 @@ Julep.Data.query(records,
 # }
 ```
 
-Use `Julep.Data` when you have tabular data that needs filtering, sorting,
+Use `Toddy.Data` when you have tabular data that needs filtering, sorting,
 grouping, or pagination in the UI. It is a query pipeline over lists, not a
 database -- keep data sets small enough to fit in memory.
 
@@ -1014,10 +1014,10 @@ These helpers share a few properties:
 ```elixir
 def init(_opts) do
   %{
-    state: Julep.State.new(%{...}),
-    undo: Julep.Undo.new(%{...}),
-    selection: Julep.Selection.new(mode: :single),
-    route: Julep.Route.new("/home"),
+    state: Toddy.State.new(%{...}),
+    undo: Toddy.Undo.new(%{...}),
+    selection: Toddy.Selection.new(mode: :single),
+    route: Toddy.Route.new("/home"),
     todos: []
   }
 end

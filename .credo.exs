@@ -84,7 +84,7 @@
           # Priority values are: `low, normal, high, higher`
           #
           # CHANGED: disabled -- widget build/1 and to_node impls use full paths
-          # like Julep.Iced.Widget.Build once per function. Aliasing them would
+          # like Toddy.Iced.Widget.Build once per function. Aliasing them would
           # hide the origin and hurt readability in this codebase.
           {Credo.Check.Design.AliasUsage, false},
           {Credo.Check.Design.TagFIXME, []},
@@ -93,7 +93,7 @@
           # set this value to 0 (zero).
           #
           # CHANGED: exit_status 0 -- "Todo" appears as a product name
-          # (Julep.Examples.Todo), not a task marker.
+          # (Toddy.Examples.Todo), not a task marker.
           {Credo.Check.Design.TagTODO, [exit_status: 0]},
 
           #

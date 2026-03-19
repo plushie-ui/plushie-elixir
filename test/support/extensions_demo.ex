@@ -1,7 +1,7 @@
-if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
-     Code.ensure_loaded?(JulepCodeView) and Code.ensure_loaded?(JulepPlot) and
-     Code.ensure_loaded?(JulepTimeline) do
-  defmodule Julep.Examples.ExtensionsDemo do
+if Code.ensure_loaded?(ToddySparkline) and Code.ensure_loaded?(ToddyHexView) and
+     Code.ensure_loaded?(ToddyCodeView) and Code.ensure_loaded?(ToddyPlot) and
+     Code.ensure_loaded?(ToddyTimeline) do
+  defmodule Toddy.Examples.ExtensionsDemo do
     @moduledoc """
     Demo app using all 5 extension widgets simultaneously.
 
@@ -11,18 +11,18 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
     Only compiled when extension deps are available (dev/test).
     """
 
-    use Julep.App
+    use Toddy.App
 
-    alias Julep.Event.Timer
-    alias Julep.Event.Widget
-    import Julep.UI
+    alias Toddy.Event.Timer
+    alias Toddy.Event.Widget
+    import Toddy.UI
 
     @impl true
     def init(_flags) do
       %{
         tick: 0,
         paused: false,
-        hex_text: "Hello, Julep!",
+        hex_text: "Hello, Toddy!",
         code: "fn main() {\n    println!(\"Hello!\");\n}",
         language: "rust",
         selected_interval: nil
@@ -38,7 +38,7 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
           else
             tick = model.tick + 1
             value = :math.sin(tick * 0.1) * 50 + 50
-            {%{model | tick: tick}, [JulepSparkline.push("spark", value)]}
+            {%{model | tick: tick}, [ToddySparkline.push("spark", value)]}
           end
 
         %Widget{type: :click, id: "timeline"} ->
@@ -60,16 +60,16 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
             column spacing: 5 do
               text("sparkline_label", "Sparkline", size: 16)
 
-              JulepSparkline.new("spark")
-              |> JulepSparkline.color("#4FC3F7")
-              |> JulepSparkline.width(200)
-              |> JulepSparkline.height(60)
+              ToddySparkline.new("spark")
+              |> ToddySparkline.color("#4FC3F7")
+              |> ToddySparkline.width(200)
+              |> ToddySparkline.height(60)
             end
 
             column spacing: 5 do
               text("hex_label", "Hex View", size: 16)
 
-              JulepHexView.new("hex",
+              ToddyHexView.new("hex",
                 data: model.hex_text,
                 bytes_per_row: 8,
                 height: 80
@@ -81,7 +81,7 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
           column spacing: 5 do
             text("code_label", "Code View", size: 16)
 
-            JulepCodeView.new("code",
+            ToddyCodeView.new("code",
               code: model.code,
               language: model.language,
               line_numbers: true,
@@ -93,7 +93,7 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
           column spacing: 5 do
             text("plot_label", "Plot", size: 16)
 
-            JulepPlot.new("plot",
+            ToddyPlot.new("plot",
               series: [
                 %{
                   name: "sine",
@@ -115,17 +115,17 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
           column spacing: 5 do
             text("timeline_label", "Timeline", size: 16)
 
-            JulepTimeline.new("timeline",
+            ToddyTimeline.new("timeline",
               intervals: [
-                JulepTimeline.interval("req-1", "GET /api", 0, 150,
+                ToddyTimeline.interval("req-1", "GET /api", 0, 150,
                   lane: 0,
                   color: "#4FC3F7"
                 ),
-                JulepTimeline.interval("db-1", "SELECT users", 20, 80,
+                ToddyTimeline.interval("db-1", "SELECT users", 20, 80,
                   lane: 1,
                   color: "#66BB6A"
                 ),
-                JulepTimeline.interval("job-1", "SendEmail", 100, 300,
+                ToddyTimeline.interval("job-1", "SendEmail", 100, 300,
                   lane: 2,
                   color: "#FF7043"
                 )
@@ -143,7 +143,7 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
       if model.paused do
         []
       else
-        [Julep.Subscription.every(100, :tick)]
+        [Toddy.Subscription.every(100, :tick)]
       end
     end
   end

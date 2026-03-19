@@ -1,0 +1,608 @@
+defmodule Toddy.Runtime do
+  @moduledoc """
+  Core lifecycle GenServer for Toddy applications.
+
+  The runtime is the heartbeat of a Toddy app. It owns the Elm-style
+  update loop: event in -> model out -> view out -> snapshot to bridge.
+
+  ## Startup
+
+  On `init/1` the runtime:
+    1. Calls `app.init(app_opts)` to get the initial model (and optional commands).
+    2. Calls `app.view(model)` to produce the initial UI tree.
+    3. Normalizes the tree via `Toddy.Tree.normalize/1`.
+    4. Sends a full snapshot to the bridge via `Toddy.Bridge.send_snapshot/2`.
+    5. Executes any commands returned from `init/1`.
+
+  ## Event loop
+
+  On every `{:renderer_event, event}`:
+    1. Calls `app.update(model, event)`.
+    2. Executes returned commands.
+    3. Calls `app.view(model)` on the new model.
+    4. Diffs against the previous tree; sends a patch if changed, or a
+       full snapshot on first render / after renderer restart.
+
+  ## State shape
+
+      %{
+        app:             module,          # the Toddy.App implementation
+        model:           term(),          # current application model
+        bridge:          pid() | atom(),  # Toddy.Bridge pid or registered name
+        tree:            map() | nil,     # last normalized tree (for re-send on restart)
+        async_tasks:     map(),           # %{tag => {pid, nonce}} for running async/stream tasks
+        pending_effects: map(),           # %{id => timer_ref} for in-flight effect requests
+        pending_timers:  map()            # %{event => timer_ref} for send_after dedup/cancel
+      }
+
+  ## Exit trapping
+
+  The runtime traps exits so a bridge crash does not silently kill it.
+  """
+
+  use GenServer
+
+  require Logger
+
+  alias Toddy.Event.{Async, Effect, Stream, Timer}
+  alias Toddy.Runtime.{Commands, Subscriptions, Windows}
+
+  @typep state :: %{
+           app: module(),
+           model: term(),
+           bridge: pid() | atom(),
+           tree: map() | nil,
+           subscriptions: map(),
+           windows: MapSet.t(),
+           async_tasks: map(),
+           pending_effects: map(),
+           pending_timers: map(),
+           consecutive_errors: non_neg_integer()
+         }
+
+  # ---------------------------------------------------------------------------
+  # Public API
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Starts the runtime linked to the calling process.
+
+  Required opts:
+    - `:app`    - module implementing `Toddy.App`
+    - `:bridge` - pid or registered name of the `Toddy.Bridge` GenServer
+
+  Optional opts:
+    - `:name` - registration name passed to `GenServer.start_link/3`
+
+  Any other opts are forwarded to `app.init/1` as the app opts keyword list.
+  """
+  @spec start_link(keyword()) :: GenServer.on_start()
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, opts, name: opts[:name])
+  end
+
+  @doc """
+  Dispatches `event` through `app.update/2`, then re-renders and snapshots.
+
+  Fire-and-forget from the caller's perspective. The runtime processes the
+  event asynchronously from its mailbox.
+  """
+  @spec dispatch(GenServer.server(), term()) :: :ok
+  def dispatch(runtime, event) do
+    send(runtime, {:renderer_event, event})
+    :ok
+  end
+
+  # ---------------------------------------------------------------------------
+  # GenServer callbacks
+  # ---------------------------------------------------------------------------
+
+  @impl true
+  def init(opts) do
+    Process.flag(:trap_exit, true)
+
+    app = Keyword.fetch!(opts, :app)
+    bridge = Keyword.fetch!(opts, :bridge)
+
+    # App opts can be passed explicitly via :app_opts, or as remaining keys.
+    app_opts = Keyword.get(opts, :app_opts, Keyword.drop(opts, [:app, :bridge, :name, :app_opts]))
+
+    # 1. Initialize app model.
+    case safe_init(app, app_opts) do
+      {:ok, model, commands} ->
+        state = %{
+          app: app,
+          model: model,
+          bridge: bridge,
+          tree: nil,
+          init_commands: commands,
+          subscriptions: %{},
+          windows: MapSet.new(),
+          async_tasks: %{},
+          pending_effects: %{},
+          pending_timers: %{},
+          consecutive_errors: 0
+        }
+
+        # Defer rendering to handle_continue. Bridge is already started (it's
+        # the first child in the supervisor tree), so it's safe to cast to it.
+        {:ok, state, {:continue, :initial_render}}
+
+      {:error, reason} ->
+        {:stop, reason}
+    end
+  end
+
+  @impl true
+  def handle_continue(:initial_render, state) do
+    # Send app-level settings to the renderer before the first snapshot.
+    send_settings(state.app, state.bridge)
+
+    # 2-4. Render initial tree and push snapshot (old_tree is nil -> full snapshot).
+    tree = render_and_sync(state.app, state.model, state.bridge, nil)
+
+    # 5. Execute initial commands.
+    state = %{state | tree: tree}
+    state = Commands.execute_commands(Map.get(state, :init_commands, []), state)
+    state = Map.delete(state, :init_commands)
+    state = Subscriptions.sync_subscriptions(state, state.model)
+    state = Windows.sync_windows(state, tree)
+    {:noreply, state}
+  end
+
+  # ---------------------------------------------------------------------------
+  # Renderer events (the main update loop)
+  # ---------------------------------------------------------------------------
+
+  @impl true
+  def handle_info({:renderer_event, %Effect{request_id: id} = event}, state) do
+    state = cancel_pending_effect(state, id)
+    state = run_update(state, event)
+    {:noreply, state}
+  end
+
+  def handle_info({:renderer_event, {:hello, _protocol, version, name}}, state) do
+    Logger.info("toddy runtime: renderer connected -- #{name} v#{version}")
+    {:noreply, state}
+  end
+
+  def handle_info({:renderer_event, event}, state) do
+    state = run_update(state, event)
+    {:noreply, state}
+  end
+
+  # ---------------------------------------------------------------------------
+  # Renderer lifecycle
+  # ---------------------------------------------------------------------------
+
+  def handle_info({:renderer_exit, :normal}, state) do
+    # Clean exit (user closed window). Shut down the runtime.
+    Logger.info("toddy runtime: renderer exited normally -- shutting down")
+    {:stop, :normal, state}
+  end
+
+  def handle_info({:renderer_exit, reason}, state) do
+    Logger.warning("toddy runtime: renderer exited: #{inspect(reason)}")
+
+    model = state.app.handle_renderer_exit(state.model, reason)
+    {:noreply, %{state | model: model}}
+  end
+
+  def handle_info(:renderer_restarted, state) do
+    Logger.info("toddy runtime: renderer restarted -- re-sending settings and snapshot")
+
+    # Flush all pending effect requests -- the renderer that would have
+    # responded is gone.
+    state = flush_pending_effects(state, :renderer_restarted)
+
+    # The new renderer process expects Settings as the first message.
+    send_settings(state.app, state.bridge)
+
+    # Re-run view/1 to get a fresh tree rather than relying on a stale cache.
+    tree =
+      case safe_view(state.app, state.model) do
+        {:ok, new_tree} -> new_tree
+        :error -> state.tree
+      end
+
+    if tree do
+      Toddy.Bridge.send_snapshot(state.bridge, tree)
+    end
+
+    # Re-sync subscriptions with the new renderer.
+    state = Subscriptions.sync_subscriptions(state, state.model)
+
+    # Re-open all known windows (renderer lost its window map on restart).
+    Enum.each(state.windows, fn window_id ->
+      settings = state.app.window_config(state.model)
+      Toddy.Bridge.send_window_op(state.bridge, "open", window_id, settings)
+    end)
+
+    {:noreply, %{state | tree: tree}}
+  end
+
+  # ---------------------------------------------------------------------------
+  # Async task completions
+  # ---------------------------------------------------------------------------
+
+  def handle_info({:async_result, tag, nonce, result}, state) do
+    case Map.get(state.async_tasks, tag) do
+      {_pid, ^nonce} ->
+        # Nonce matches -- this is from the current task.
+        state = run_update(state, %Async{tag: tag, result: result})
+        {:noreply, state}
+
+      _ ->
+        # Stale or unknown -- discard.
+        {:noreply, state}
+    end
+  end
+
+  def handle_info({:stream_value, tag, nonce, value}, state) do
+    case Map.get(state.async_tasks, tag) do
+      {_pid, ^nonce} ->
+        # Nonce matches -- this is from the current stream task.
+        state = run_update(state, %Stream{tag: tag, value: value})
+        {:noreply, state}
+
+      _ ->
+        # Stale or unknown -- discard.
+        {:noreply, state}
+    end
+  end
+
+  def handle_info({:DOWN, _ref, :process, _pid, _reason}, state) do
+    # Safety net -- monitors are no longer placed on async tasks, but handle
+    # gracefully in case external code monitors something linked to us.
+    {:noreply, state}
+  end
+
+  # ---------------------------------------------------------------------------
+  # Timer-driven events
+  # ---------------------------------------------------------------------------
+
+  def handle_info({:send_after_event, event}, state) do
+    state = %{state | pending_timers: Map.delete(state.pending_timers, event)}
+    state = run_update(state, event)
+    {:noreply, state}
+  end
+
+  # ---------------------------------------------------------------------------
+  # Effect request timeouts
+  # ---------------------------------------------------------------------------
+
+  def handle_info({:effect_timeout, id}, state) do
+    case Map.pop(state.pending_effects, id) do
+      {nil, _} ->
+        # Already resolved or flushed -- ignore.
+        {:noreply, state}
+
+      {_timer_ref, pending_effects} ->
+        :telemetry.execute([:toddy, :runtime, :effect_timeout], %{count: 1}, %{id: id})
+        state = %{state | pending_effects: pending_effects}
+        state = run_update(state, %Effect{request_id: id, result: {:error, :timeout}})
+        {:noreply, state}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Exit trapping -- bridge or linked process crashes
+  # ---------------------------------------------------------------------------
+
+  def handle_info({:EXIT, pid, reason}, state) do
+    # Clean up async_tasks entry if this was an async task process.
+    tag =
+      Enum.find_value(state.async_tasks, fn
+        {tag, {^pid, _nonce}} -> tag
+        _ -> nil
+      end)
+
+    if tag do
+      {:noreply, %{state | async_tasks: Map.delete(state.async_tasks, tag)}}
+    else
+      Logger.warning("toddy runtime: linked process #{inspect(pid)} exited: #{inspect(reason)}")
+      {:noreply, state}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Subscription ticks
+  # ---------------------------------------------------------------------------
+
+  def handle_info({:subscription_tick, tag, interval}, state) do
+    key = {:every, interval, tag}
+
+    if Map.has_key?(state.subscriptions, key) do
+      # Drain any queued ticks for the same key to coalesce frames.
+      drain_matching_ticks(tag, interval)
+
+      # Re-arm the timer.
+      ref = Process.send_after(self(), {:subscription_tick, tag, interval}, interval)
+      state = put_in(state.subscriptions[key], {:timer, ref})
+
+      # Dispatch the event.
+      now = System.monotonic_time(:millisecond)
+      state = run_update(state, %Timer{tag: tag, timestamp: now})
+      {:noreply, state}
+    else
+      # Subscription was cancelled -- discard stale tick.
+      {:noreply, state}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Dev-mode live reload
+  # ---------------------------------------------------------------------------
+
+  def handle_info(:force_rerender, state) do
+    Logger.info("toddy runtime: force re-render (code reload)")
+    new_tree = render_and_sync(state.app, state.model, state.bridge, state.tree)
+    state = %{state | tree: new_tree}
+    state = Subscriptions.sync_subscriptions(state, state.model)
+    state = Windows.sync_windows(state, new_tree)
+    {:noreply, state}
+  end
+
+  # Ignore anything else -- stray messages, etc.
+  def handle_info(msg, state) do
+    Logger.warning("toddy runtime: unhandled message: #{inspect(msg)}")
+    {:noreply, state}
+  end
+
+  @impl true
+  def terminate(_reason, state) do
+    # Cancel all pending send_after timers so they don't fire into the void.
+    Enum.each(state.pending_timers, fn {_event, ref} ->
+      Process.cancel_timer(ref)
+    end)
+
+    # Cancel subscription timers.
+    Enum.each(state.subscriptions, fn
+      {_key, {:timer, ref}} -> Process.cancel_timer(ref)
+      _ -> :ok
+    end)
+
+    # Cancel effect timeout timers.
+    Enum.each(state.pending_effects, fn {_id, ref} ->
+      Process.cancel_timer(ref)
+    end)
+
+    :ok
+  end
+
+  # ---------------------------------------------------------------------------
+  # Private helpers
+  # ---------------------------------------------------------------------------
+
+  # Sends app-level settings to the bridge. The renderer expects a Settings
+  # message as the very first message on stdin (before any snapshot), so this
+  # must always send something, even if the app doesn't define settings/0.
+  defp send_settings(app, bridge) do
+    settings =
+      if function_exported?(app, :settings, 0) do
+        case app.settings() do
+          s when is_list(s) and s != [] -> Map.new(s)
+          _ -> %{}
+        end
+      else
+        %{}
+      end
+
+    extension_config = Application.get_env(:toddy, :extension_config, %{})
+
+    settings =
+      if extension_config != %{} do
+        Map.put(settings, "extension_config", extension_config)
+      else
+        settings
+      end
+
+    if bridge, do: Toddy.Bridge.send_settings(bridge, settings)
+  end
+
+  # Unwraps `app.init/1` or `app.update/2` return values into a
+  # `{model, commands}` tuple. Commands are always a flat list of
+  # `%Toddy.Command{}` structs.
+  #
+  # Raises on structurally invalid returns (e.g. `{model, :not_a_command}`)
+  # so the error surfaces immediately rather than silently corrupting
+  # the model.
+  @spec unwrap_result(term()) :: {term(), [Toddy.Command.t()]}
+  defp unwrap_result({model, commands}) when is_list(commands) do
+    Enum.each(commands, fn
+      %Toddy.Command{} -> :ok
+      invalid ->
+        raise ArgumentError,
+          "init/1 or update/2 returned {model, commands} but the command " <>
+            "list contains #{inspect(invalid)}, expected %Toddy.Command{}"
+    end)
+
+    {model, commands}
+  end
+
+  defp unwrap_result({model, %Toddy.Command{} = cmd}) do
+    {model, [cmd]}
+  end
+
+  defp unwrap_result({_model, invalid}) do
+    raise ArgumentError,
+      "init/1 or update/2 returned {model, commands} but commands is " <>
+        "#{inspect(invalid)}, expected a %Toddy.Command{} or a list of them"
+  end
+
+  defp unwrap_result(model) when is_tuple(model) do
+    raise ArgumentError,
+      "init/1 or update/2 returned a #{tuple_size(model)}-element tuple, " <>
+        "expected a bare model or {model, command}"
+  end
+
+  defp unwrap_result(model) do
+    {model, []}
+  end
+
+  # Renders the view and sends either a full snapshot (first render or after
+  # restart) or a patch (incremental diff) to the bridge.
+  # If view/1 raises, returns old_tree unchanged.
+  @spec render_and_sync(module(), term(), pid() | atom(), map() | nil) :: map() | nil
+  defp render_and_sync(app, model, bridge, old_tree) do
+    case safe_view(app, model) do
+      {:ok, new_tree} ->
+        if is_nil(old_tree) do
+          # First render or after restart -- send full snapshot.
+          Toddy.Bridge.send_snapshot(bridge, new_tree)
+        else
+          # Incremental update -- diff produces an empty list for identical
+          # trees, so the previous O(n) equality pre-check is unnecessary.
+          ops = Toddy.Tree.diff(old_tree, new_tree)
+
+          if ops != [] do
+            Toddy.Bridge.send_patch(bridge, ops)
+          end
+        end
+
+        new_tree
+
+      :error ->
+        # Return old tree unchanged.
+        old_tree
+    end
+  end
+
+  defp safe_init(app, app_opts) do
+    {model, commands} = unwrap_result(app.init(app_opts))
+    {:ok, model, commands}
+  rescue
+    e ->
+      Logger.error("""
+      toddy runtime: app.init/1 raised: #{Exception.message(e)}
+      #{Exception.format_stacktrace(__STACKTRACE__)}
+      """)
+
+      {:error, {:init_crashed, e}}
+  end
+
+  defp safe_view(app, model) do
+    raw_tree =
+      :telemetry.span([:toddy, :view], %{app: app}, fn ->
+        {app.view(model), %{}}
+      end)
+
+    {:ok, Toddy.Tree.normalize(raw_tree)}
+  rescue
+    e ->
+      :telemetry.execute([:toddy, :runtime, :view_error], %{count: 1}, %{app: app})
+
+      Logger.error("""
+      toddy runtime: view/1 raised: #{Exception.message(e)}
+      #{Exception.format_stacktrace(__STACKTRACE__)}
+      """)
+
+      :error
+  end
+
+  # Full update cycle: update model, execute commands, re-render, sync subs.
+  # Wraps update/2 and view/1 in try/rescue so app exceptions do not crash
+  # the runtime process.
+  @spec run_update(state(), term()) :: state()
+  defp run_update(%{app: app, model: model, bridge: bridge} = state, event) do
+    case safe_update(app, model, event, state.consecutive_errors) do
+      {:ok, new_model, commands} ->
+        state = %{state | model: new_model, consecutive_errors: 0}
+        state = Commands.execute_commands(commands, state)
+        new_tree = render_and_sync(app, new_model, bridge, state.tree)
+        state = %{state | tree: new_tree}
+        state = Subscriptions.sync_subscriptions(state, new_model)
+        Windows.sync_windows(state, new_tree)
+
+      :error ->
+        count = state.consecutive_errors + 1
+
+        if count == 100 do
+          Logger.warning(
+            "toddy runtime: 100 consecutive update errors -- suppressing further logs"
+          )
+        end
+
+        %{state | consecutive_errors: count}
+    end
+  end
+
+  defp safe_update(app, model, event, consecutive_errors) do
+    {new_model, commands} =
+      :telemetry.span([:toddy, :update], %{app: app, event: event}, fn ->
+        {unwrap_result(app.update(model, event)), %{}}
+      end)
+
+    {:ok, new_model, commands}
+  rescue
+    e ->
+      :telemetry.execute([:toddy, :runtime, :update_error], %{count: 1}, %{
+        app: app,
+        event: event
+      })
+
+      # Rate-limit logging: normal up to 10, debug up to 100, then suppress.
+      cond do
+        consecutive_errors < 10 ->
+          Logger.error("""
+          toddy runtime: update/2 raised: #{Exception.message(e)}
+          #{Exception.format_stacktrace(__STACKTRACE__)}
+          """)
+
+        consecutive_errors < 100 ->
+          Logger.debug("""
+          toddy runtime: update/2 raised (repeated): #{Exception.message(e)}
+          #{Exception.format_stacktrace(__STACKTRACE__)}
+          """)
+
+        true ->
+          :ok
+      end
+
+      :error
+  end
+
+  # ---------------------------------------------------------------------------
+  # Effect request tracking
+  # ---------------------------------------------------------------------------
+
+  # Cancels the timeout timer for a resolved effect request.
+  @spec cancel_pending_effect(map(), String.t()) :: map()
+  defp cancel_pending_effect(state, id) do
+    case Map.pop(state.pending_effects, id) do
+      {nil, _} ->
+        state
+
+      {timer_ref, pending_effects} ->
+        Process.cancel_timer(timer_ref)
+        %{state | pending_effects: pending_effects}
+    end
+  end
+
+  # Flushes all pending effect requests, dispatching error results through
+  # update/2 and cancelling their timers.
+  @spec flush_pending_effects(map(), atom()) :: map()
+  defp flush_pending_effects(state, reason) do
+    state =
+      Enum.reduce(state.pending_effects, state, fn {id, timer_ref}, acc ->
+        # Cancel the timer first to prevent double dispatch (the timeout
+        # handler checks pending_effects, but better safe than racy).
+        if timer_ref, do: Process.cancel_timer(timer_ref)
+        run_update(acc, %Effect{request_id: id, result: {:error, reason}})
+      end)
+
+    %{state | pending_effects: %{}}
+  end
+
+  # Drains queued subscription ticks for the same tag/interval from the
+  # mailbox. This coalesces rapid-fire animation or timer ticks so the
+  # runtime only processes the latest one, avoiding redundant update cycles.
+  @spec drain_matching_ticks(term(), non_neg_integer()) :: :ok
+  defp drain_matching_ticks(tag, interval) do
+    receive do
+      {:subscription_tick, ^tag, ^interval} -> drain_matching_ticks(tag, interval)
+    after
+      0 -> :ok
+    end
+  end
+end

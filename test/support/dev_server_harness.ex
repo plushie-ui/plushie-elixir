@@ -1,4 +1,4 @@
-defmodule Julep.DevServer.TestHarness do
+defmodule Toddy.DevServer.TestHarness do
   @moduledoc false
 
   # A GenServer with the same message handling as DevServer but without

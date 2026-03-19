@@ -1,6 +1,6 @@
 # Theming
 
-Julep exposes iced's theming system directly. No additional abstraction
+Toddy exposes iced's theming system directly. No additional abstraction
 layer, no token system, no design system framework. If you need those,
 build them in your app.
 
@@ -10,7 +10,7 @@ Themes are set at the window level:
 
 ```elixir
 def view(model) do
-  import Julep.UI
+  import Toddy.UI
 
   window "main", title: "My App", theme: :catppuccin_mocha do
     column do
@@ -22,7 +22,7 @@ end
 
 ## Built-in themes
 
-Iced 0.14 ships with 22 built-in themes. Julep passes the theme name
+Iced 0.14 ships with 22 built-in themes. Toddy passes the theme name
 string directly to the renderer, which resolves it to an iced `Theme`
 variant.
 
@@ -73,7 +73,7 @@ end
 ```
 
 The palette map is passed to iced's `Theme::custom()` with Oklch-based
-palette generation (julep-iced). Only the colors you specify are overridden;
+palette generation (toddy-iced). Only the colors you specify are overridden;
 the rest are derived automatically.
 
 ## Extended palette shade overrides
@@ -167,7 +167,7 @@ visual treatment.
 ## Widget-level styling
 
 Individual widgets accept a `style` prop. This can be a named preset atom
-or a `Julep.Iced.StyleMap` struct for per-instance visual customization.
+or a `Toddy.Iced.StyleMap` struct for per-instance visual customization.
 
 ### Named presets
 
@@ -188,15 +188,15 @@ text_input, text_editor, checkbox, radio, toggler, pick_list, progress_bar,
 rule, slider, vertical_slider, and tooltip.
 
 ```elixir
-alias Julep.Iced.StyleMap
+alias Toddy.Iced.StyleMap
 
 # Build a style map with the builder pattern
 card_style =
   StyleMap.new()
   |> StyleMap.background("#ffffff")
   |> StyleMap.text_color("#1a1a1a")
-  |> StyleMap.border(Julep.Iced.Border.new() |> Julep.Iced.Border.rounded(8) |> Julep.Iced.Border.width(1) |> Julep.Iced.Border.color("#e0e0e0"))
-  |> StyleMap.shadow(Julep.Iced.Shadow.new() |> Julep.Iced.Shadow.color("#00000020") |> Julep.Iced.Shadow.offset(0, 2) |> Julep.Iced.Shadow.blur_radius(8))
+  |> StyleMap.border(Toddy.Iced.Border.new() |> Toddy.Iced.Border.rounded(8) |> Toddy.Iced.Border.width(1) |> Toddy.Iced.Border.color("#e0e0e0"))
+  |> StyleMap.shadow(Toddy.Iced.Shadow.new() |> Toddy.Iced.Shadow.color("#00000020") |> Toddy.Iced.Shadow.offset(0, 2) |> Toddy.Iced.Shadow.blur_radius(8))
 
 container "card", style: card_style do
   text("Card content")
@@ -207,8 +207,8 @@ end
 
 - `background` -- hex color for the widget background
 - `text_color` -- hex color for text
-- `border` -- a `Julep.Iced.Border` struct (color, width, radius)
-- `shadow` -- a `Julep.Iced.Shadow` struct (color, offset, blur_radius)
+- `border` -- a `Toddy.Iced.Border` struct (color, width, radius)
+- `shadow` -- a `Toddy.Iced.Shadow` struct (color, offset, blur_radius)
 
 ### Status overrides
 
@@ -252,7 +252,7 @@ button("cta", "Get Started", style:
   StyleMap.new()
   |> StyleMap.background("#7c3aed")
   |> StyleMap.text_color("#ffffff")
-  |> StyleMap.border(Julep.Iced.Border.new() |> Julep.Iced.Border.rounded(24))
+  |> StyleMap.border(Toddy.Iced.Border.new() |> Toddy.Iced.Border.rounded(24))
 )
 ```
 
@@ -278,11 +278,11 @@ def settings, do: [theme: :system]
 ```
 
 For manual control, subscribe to theme change events with
-`Julep.Subscription.on_theme_change/1`:
+`Toddy.Subscription.on_theme_change/1`:
 
 ```elixir
 def subscribe(_model) do
-  [Julep.Subscription.on_theme_change(:theme_changed)]
+  [Toddy.Subscription.on_theme_change(:theme_changed)]
 end
 
 def update(model, %System{type: :theme_changed, data: mode}) do

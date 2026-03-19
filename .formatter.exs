@@ -10,9 +10,9 @@
 # Leaf widgets (button, text, checkbox, etc.) keep parens for clarity
 # and visual consistency with each other.
 #
-# Consumers pull this in via `import_deps: [:julep]` in their .formatter.exs.
+# Consumers pull this in via `import_deps: [:toddy]` in their .formatter.exs.
 
-julep_ui_locals = [
+toddy_ui_locals = [
   column: :*,
   container: 1,
   container: 2,
@@ -59,8 +59,8 @@ julep_ui_locals = [
 
 [
   inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"],
-  locals_without_parens: julep_ui_locals,
+  locals_without_parens: toddy_ui_locals,
   export: [
-    locals_without_parens: julep_ui_locals
+    locals_without_parens: toddy_ui_locals
   ]
 ]

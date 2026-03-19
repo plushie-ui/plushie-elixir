@@ -1,13 +1,13 @@
 # Layout
 
-Julep's layout model mirrors iced's. Understanding it is essential for
+Toddy's layout model mirrors iced's. Understanding it is essential for
 building UIs that size and position correctly.
 
 ## Length
 
 Length controls how a widget claims space along an axis.
 
-| Julep value | Iced equivalent | Meaning |
+| Toddy value | Iced equivalent | Meaning |
 |---|---|---|
 | `:fill` | `Length::Fill` | Take all remaining space |
 | `{:fill_portion, n}` | `Length::FillPortion(n)` | Proportional share of remaining space |
@@ -41,7 +41,7 @@ accommodate their children.
 
 Padding is the space between a widget's boundary and its content.
 
-| Julep value | Meaning |
+| Toddy value | Meaning |
 |---|---|
 | `10` | Uniform: 10px on all sides |
 | `{10, 20}` | Axis: 10px vertical, 20px horizontal |
@@ -136,7 +136,7 @@ end
 ```
 
 Props: `spacing`, `padding`, `width`, `height`, `align_y`, `wrap` (new
-in julep-iced -- wraps children to next line when they overflow).
+in toddy-iced -- wraps children to next line when they overflow).
 
 ### container
 
@@ -199,7 +199,7 @@ end
 
 ### grid
 
-Arranges children in a grid layout (new in julep-iced).
+Arranges children in a grid layout (new in toddy-iced).
 
 ```elixir
 grid "gallery", columns: 3, spacing: 8 do

@@ -26,7 +26,7 @@ end
 
 ### Testing commands from `update/2`
 
-Commands are plain `%Julep.Command{}` structs. Pattern-match on `type` and
+Commands are plain `%Toddy.Command{}` structs. Pattern-match on `type` and
 `payload` to verify what `update/2` asked the runtime to do, without
 executing anything.
 
@@ -36,14 +36,14 @@ test "submitting todo refocuses the input" do
   {model, cmd} = MyApp.update(model, %Widget{type: :submit, id: "todo_input", value: "Buy milk"})
 
   assert [%{text: "Buy milk"}] = model.todos
-  assert %Julep.Command{type: :focus, payload: %{target: "todo_input"}} = cmd
+  assert %Toddy.Command{type: :focus, payload: %{target: "todo_input"}} = cmd
 end
 
 test "save triggers an async task" do
   model = %{data: "unsaved"}
   {_model, cmd} = MyApp.update(model, %Widget{type: :click, id: "save"})
 
-  assert %Julep.Command{type: :async, payload: %{tag: :save_result}} = cmd
+  assert %Toddy.Command{type: :async, payload: %{tag: :save_result}} = cmd
 end
 ```
 
@@ -54,7 +54,7 @@ test "view shows todo count" do
   model = %{todos: [%{id: 1, text: "Buy milk", done: false}], input: "", filter: :all}
   tree = MyApp.view(model)
 
-  counter = Julep.Tree.find(tree, "todo_count")
+  counter = Toddy.Tree.find(tree, "todo_count")
   assert counter.props["content"] =~ "1"
 end
 ```
@@ -72,13 +72,13 @@ end
 
 ### Tree query helpers
 
-`Julep.Tree` provides helpers for querying view trees directly:
+`Toddy.Tree` provides helpers for querying view trees directly:
 
 ```elixir
-Julep.Tree.find(tree, "my_button")            # find node by ID
-Julep.Tree.exists?(tree, "my_button")         # check existence
-Julep.Tree.ids(tree)                          # all IDs (depth-first)
-Julep.Tree.find_all(tree, fn node ->          # find by predicate
+Toddy.Tree.find(tree, "my_button")            # find node by ID
+Toddy.Tree.exists?(tree, "my_button")         # check existence
+Toddy.Tree.ids(tree)                          # all IDs (depth-first)
+Toddy.Tree.find_all(tree, fn node ->          # find by predicate
   node.type == "button"
 end)
 ```
@@ -89,7 +89,7 @@ session or backend required.
 ### JSON tree snapshots
 
 For complex views, snapshot the entire tree as JSON to catch unintended
-structural changes. `Julep.Test.assert_tree_snapshot/2` compares a tree
+structural changes. `Toddy.Test.assert_tree_snapshot/2` compares a tree
 against a stored JSON file at the unit test level -- no backend needed.
 
 ```elixir
@@ -97,7 +97,7 @@ test "initial view snapshot" do
   model = MyApp.init([])
   tree = MyApp.view(model)
 
-  Julep.Test.assert_tree_snapshot(tree, "test/snapshots/initial_view.json")
+  Toddy.Test.assert_tree_snapshot(tree, "test/snapshots/initial_view.json")
 end
 ```
 
@@ -105,7 +105,7 @@ First run writes the file. Subsequent runs compare and fail with a diff on
 mismatch. Update after intentional changes:
 
 ```bash
-JULEP_UPDATE_SNAPSHOTS=1 mix test
+TODDY_UPDATE_SNAPSHOTS=1 mix test
 ```
 
 This is a pure JSON comparison -- it normalizes map key ordering for stable
@@ -122,7 +122,7 @@ iced. That is what the test framework is for.
 
 ```elixir
 defmodule MyApp.CounterTest do
-  use Julep.Test.Case, app: MyApp.Counter
+  use Toddy.Test.Case, app: MyApp.Counter
 
   test "clicking increment updates counter" do
     click("#increment")
@@ -131,7 +131,7 @@ defmodule MyApp.CounterTest do
 end
 ```
 
-`Julep.Test.Case` starts a session, imports all helper functions, and tears
+`Toddy.Test.Case` starts a session, imports all helper functions, and tears
 down on exit. The default backend is `:pooled_mock` -- a pooled backend
 using a shared renderer process. No Rust binary, no display server, no
 setup.
@@ -141,9 +141,9 @@ setup.
 
 ### Where do widget IDs come from?
 
-Every widget in julep gets an ID from the first argument to its builder or
+Every widget in toddy gets an ID from the first argument to its builder or
 constructor. For example, `Button.new("save_btn", "Save")` creates a button
-with ID `"save_btn"`. In `Julep.UI`, `button("save_btn", "Save")` does the
+with ID `"save_btn"`. In `Toddy.UI`, `button("save_btn", "Save")` does the
 same thing.
 
 When using selectors in tests, prefix the ID with `#`:
@@ -193,7 +193,7 @@ Returns `nil` if no text prop is found.
 ### Interaction functions
 
 All interaction functions accept a selector string. They are imported
-automatically by `Julep.Test.Case`.
+automatically by `Toddy.Test.Case`.
 
 | Function | Widget types | Event produced |
 |---|---|---|
@@ -235,7 +235,7 @@ assert element.type == "text"
 
 ## API reference
 
-All of the following are imported by `use Julep.Test.Case`:
+All of the following are imported by `use Toddy.Test.Case`:
 
 | Function | Description |
 |---|---|
@@ -302,7 +302,7 @@ changing assertions.
 
 - **`:windowed`** -- real `iced::daemon` with GPU rendering. Effects work,
   subscriptions fire, pixel screenshots capture exactly what a user sees.
-  Spawns `julep` with no special flag. Needs a display server
+  Spawns `toddy` with no special flag. Needs a display server
   (Xvfb or headless Weston).
 
 ### Backend selection
@@ -313,17 +313,17 @@ Tests are portable across all three.
 
 | Priority | Source | Example |
 |---|---|---|
-| 1 | Environment variable | `JULEP_TEST_BACKEND=headless mix test` |
-| 2 | Application config | `config :julep, :test_backend, :pooled_mock` |
+| 1 | Environment variable | `TODDY_TEST_BACKEND=headless mix test` |
+| 2 | Application config | `config :toddy, :test_backend, :pooled_mock` |
 | 3 | Default | `:pooled_mock` |
 
 Atom shorthands (`:pooled_mock`, `:headless`, `:windowed`) and full module
-names (`Julep.Test.Backend.Pooled`, etc.) both work in application config.
+names (`Toddy.Test.Backend.Pooled`, etc.) both work in application config.
 
 
 ## Snapshots and screenshots
 
-Julep has three distinct regression testing mechanisms. Understanding the
+Toddy has three distinct regression testing mechanisms. Understanding the
 difference is important.
 
 ### Structural tree hashes (`assert_tree_hash`)
@@ -350,7 +350,7 @@ is compared and the test fails on mismatch.
 To update golden files after intentional changes:
 
 ```bash
-JULEP_UPDATE_SNAPSHOTS=1 mix test
+TODDY_UPDATE_SNAPSHOTS=1 mix test
 ```
 
 ### Pixel screenshots (`assert_screenshot`)
@@ -376,7 +376,7 @@ Golden files are stored in `test/screenshots/` as `.sha256` files. The
 workflow is the same as structural snapshots but uses a separate env var:
 
 ```bash
-JULEP_UPDATE_SCREENSHOTS=1 mix test
+TODDY_UPDATE_SCREENSHOTS=1 mix test
 ```
 
 Because screenshots silently no-op on pooled_mock, you can include
@@ -385,7 +385,7 @@ produce assertions when run on the headless or windowed backends.
 
 ### JSON tree snapshots (`assert_tree_snapshot`)
 
-`Julep.Test.assert_tree_snapshot/2` is a unit-test-level tool that compares
+`Toddy.Test.assert_tree_snapshot/2` is a unit-test-level tool that compares
 a raw tree map against a stored JSON file. No backend or session needed.
 See the [Unit testing](#json-tree-snapshots) section above.
 
@@ -406,15 +406,15 @@ See the [Unit testing](#json-tree-snapshots) section above.
 
 ## Script-based testing
 
-`.julep` scripts provide a declarative format for describing interaction
+`.toddy` scripts provide a declarative format for describing interaction
 sequences. The format is a superset of iced's `.ice` test scripts -- the
 core instructions (`click`, `type`, `expect`, `snapshot`) use the same
-syntax. Julep adds `assert_text`, `assert_model`, `screenshot`, `wait`, and
+syntax. Toddy adds `assert_text`, `assert_model`, `screenshot`, `wait`, and
 a header section for app configuration.
 
-### The `.julep` format
+### The `.toddy` format
 
-A `.julep` file has a header and an instruction section separated by
+A `.toddy` file has a header and an instruction section separated by
 `-----`:
 
 ```
@@ -436,7 +436,7 @@ wait 500
 
 | Field | Required | Default | Description |
 |---|---|---|---|
-| `app` | Yes | -- | Module implementing `Julep.App` |
+| `app` | Yes | -- | Module implementing `Toddy.App` |
 | `viewport` | No | `800x600` | Viewport size as `WxH` |
 | `theme` | No | `dark` | Theme name |
 | `backend` | No | `pooled_mock` | Backend: `pooled_mock`, `headless`, or `windowed` |
@@ -465,16 +465,16 @@ Lines starting with `#` are comments (in both header and body sections).
 
 ```bash
 # Run all scripts in test/scripts/
-mix julep.script
+mix toddy.script
 
 # Run specific scripts
-mix julep.script test/scripts/counter.julep test/scripts/todo.julep
+mix toddy.script test/scripts/counter.toddy test/scripts/todo.toddy
 ```
 
 ### Replaying scripts
 
 ```bash
-mix julep.replay test/scripts/counter.julep
+mix toddy.replay test/scripts/counter.toddy
 ```
 
 Replay mode forces the `:windowed` backend and respects `wait` timings, so you
@@ -515,7 +515,7 @@ test "clicking fetch starts async load" do
   {model, cmd} = MyApp.update(model, %Widget{type: :click, id: "fetch"})
 
   assert model.loading == true
-  assert %Julep.Command{type: :async, payload: %{tag: :data_loaded}} = cmd
+  assert %Toddy.Command{type: :async, payload: %{tag: :data_loaded}} = cmd
 end
 ```
 
@@ -561,7 +561,7 @@ Use the correct interaction function for the widget type. See the
 Build the renderer with the headless feature:
 
 ```bash
-cd ../julep && cargo build
+cd ../toddy && cargo build
 ```
 
 ### Inspecting state when a test fails
@@ -596,9 +596,9 @@ Requires the Rust toolchain and the headless feature build.
 
 ```yaml
 - run: |
-    cd ../julep
+    cd ../toddy
     cargo build
-- run: JULEP_TEST_BACKEND=headless mix test
+- run: TODDY_TEST_BACKEND=headless mix test
 ```
 
 ### Windowed CI
@@ -610,13 +610,13 @@ Requires a display server and GPU/software rendering. Two options:
 ```yaml
 - run: |
     sudo apt-get install -y xvfb mesa-vulkan-drivers
-    cd ../julep
+    cd ../toddy
     cargo build
 - run: |
     Xvfb :99 -screen 0 1024x768x24 &
     export DISPLAY=:99
     export WINIT_UNIX_BACKEND=x11
-    JULEP_TEST_BACKEND=windowed mix test
+    TODDY_TEST_BACKEND=windowed mix test
 ```
 
 **Option B: Weston (Wayland)**
@@ -628,15 +628,15 @@ runs the full rendering pipeline on CPU.
 ```yaml
 - run: |
     sudo apt-get install -y weston mesa-vulkan-drivers
-    cd ../julep
+    cd ../toddy
     cargo build
 - run: |
-    export XDG_RUNTIME_DIR=/tmp/julep-xdg-runtime
+    export XDG_RUNTIME_DIR=/tmp/toddy-xdg-runtime
     mkdir -p "$XDG_RUNTIME_DIR" && chmod 0700 "$XDG_RUNTIME_DIR"
-    weston --backend=headless --width=1024 --height=768 --socket=julep-test &
+    weston --backend=headless --width=1024 --height=768 --socket=toddy-test &
     sleep 1
-    export WAYLAND_DISPLAY=julep-test
-    JULEP_TEST_BACKEND=windowed mix test
+    export WAYLAND_DISPLAY=toddy-test
+    TODDY_TEST_BACKEND=windowed mix test
 ```
 
 On Arch Linux, `weston` and `vulkan-swrast` are available via pacman.
@@ -651,14 +651,14 @@ Run pooled_mock tests fast, then promote to higher-fidelity backends for subsets
 
 # Full suite on headless for protocol verification
 - run: |
-    cd ../julep && cargo build
-    JULEP_TEST_BACKEND=headless mix test
+    cd ../toddy && cargo build
+    TODDY_TEST_BACKEND=headless mix test
 
 # Windowed for pixel regression (tagged subset)
 - run: |
     Xvfb :99 -screen 0 1024x768x24 &
     export DISPLAY=:99
-    JULEP_TEST_BACKEND=windowed mix test --only windowed
+    TODDY_TEST_BACKEND=windowed mix test --only windowed
 ```
 
 Tag tests that need a specific backend:
@@ -684,13 +684,13 @@ wire protocol as the production Bridge. By default, both use MessagePack
 
 ```elixir
 # In test setup or application config
-config :julep, :test_format, :json
+config :toddy, :test_format, :json
 ```
 
 Or pass `format: :json` in backend opts when starting a session manually:
 
 ```elixir
-session = Session.start(MyApp, backend: Julep.Test.Backend.Headless, format: :json)
+session = Session.start(MyApp, backend: Toddy.Test.Backend.Headless, format: :json)
 ```
 
 The pooled_mock backend does not use a wire protocol (pure Elixir, no
@@ -726,7 +726,7 @@ defmodule MyGauge.MacroTest do
 
   test "push command" do
     cmd = MyGauge.push("g1", 42.0)
-    assert %Julep.Command{type: :extension_command} = cmd
+    assert %Toddy.Command{type: :extension_command} = cmd
   end
 end
 ```
@@ -739,8 +739,8 @@ defmodule MyGauge.DemoTest do
 
   test "view produces a gauge widget" do
     model = MyGauge.Demo.init([])
-    tree = MyGauge.Demo.view(model) |> Julep.Tree.normalize()
-    gauge = Julep.Tree.find(tree, "my-gauge")
+    tree = MyGauge.Demo.view(model) |> Toddy.Tree.normalize()
+    gauge = Toddy.Tree.find(tree, "my-gauge")
     assert gauge.type == "gauge"
   end
 end
@@ -748,12 +748,12 @@ end
 
 ### Rust-side: unit tests (no Elixir)
 
-The `julep_core::testing` module provides `TestEnv` and node factories
+The `toddy_core::testing` module provides `TestEnv` and node factories
 for testing `WidgetExtension::render()` in isolation:
 
 ```rust
-use julep_core::testing::*;
-use julep_core::prelude::*;
+use toddy_core::testing::*;
+use toddy_core::prelude::*;
 
 #[test]
 fn gauge_renders_without_panic() {
@@ -773,28 +773,28 @@ extension's Rust crate:
 
 ```bash
 # Build the custom renderer with your extension compiled in
-mix julep.build
+mix toddy.build
 
 # Run tests through the real renderer (headless, no display server)
-JULEP_TEST_BACKEND=headless mix test
+TODDY_TEST_BACKEND=headless mix test
 ```
 
-`mix julep.build` reads extensions from application config:
+`mix toddy.build` reads extensions from application config:
 
 ```elixir
 # config/config.exs
-config :julep, extensions: [MyGauge]
+config :toddy, extensions: [MyGauge]
 ```
 
-The custom binary is placed at `_build/<env>/julep/target/debug/<project>-julep`.
-`Julep.Binary.renderer_path/0` finds it automatically, so the headless
+The custom binary is placed at `_build/<env>/toddy/target/debug/<project>-toddy`.
+`Toddy.Binary.renderer_path/0` finds it automatically, so the headless
 and windowed test backends use it without additional configuration.
 
-Write end-to-end tests with `Julep.Test.Case`:
+Write end-to-end tests with `Toddy.Test.Case`:
 
 ```elixir
 defmodule MyGauge.EndToEndTest do
-  use Julep.Test.Case, app: MyGauge.Demo
+  use Toddy.Test.Case, app: MyGauge.Demo
 
   test "gauge appears in rendered tree" do
     assert_exists "#my-gauge"
@@ -808,7 +808,7 @@ end
 ```
 
 These tests run on `:pooled_mock` by default (fast, logic-only). Set
-`JULEP_TEST_BACKEND=headless` to exercise the full Rust rendering path
+`TODDY_TEST_BACKEND=headless` to exercise the full Rust rendering path
 with the extension compiled in.
 
 

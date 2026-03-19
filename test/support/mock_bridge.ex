@@ -1,6 +1,6 @@
-defmodule Julep.Test.MockBridge do
+defmodule Toddy.Test.MockBridge do
   @moduledoc """
-  A minimal stand-in for Julep.Bridge used in unit tests.
+  A minimal stand-in for Toddy.Bridge used in unit tests.
 
   Records every cast sent by the Runtime so tests can assert on
   the sequence of messages that were sent without touching a real renderer

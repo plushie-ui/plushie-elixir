@@ -1,6 +1,6 @@
 # Writing Widget Extensions
 
-Guide for building custom widget extensions for Julep. Extensions let you
+Guide for building custom widget extensions for Toddy. Extensions let you
 render arbitrary Rust-native widgets (iced widgets, custom `iced::advanced::Widget`
 implementations, third-party crates) while keeping your app's state and logic
 in Elixir.
@@ -9,16 +9,16 @@ in Elixir.
 
 An extension has two halves:
 
-1. **Elixir side:** use the `Julep.Extension` macro. This declares the widget's
+1. **Elixir side:** use the `Toddy.Extension` macro. This declares the widget's
    props, commands, and (for native widgets) the Rust crate and constructor.
 
-2. **Rust side:** implement the `WidgetExtension` trait from `julep-core`. This
+2. **Rust side:** implement the `WidgetExtension` trait from `toddy-core`. This
    receives tree nodes from Elixir and returns `iced::Element`s for rendering.
 
 ```elixir
 # lib/my_sparkline/extension.ex
 defmodule MySparkline do
-  use Julep.Extension, :native_widget
+  use Toddy.Extension, :native_widget
 
   widget :sparkline
 
@@ -42,7 +42,7 @@ This generates:
 
 ```rust
 // native/my_sparkline/src/lib.rs
-use julep_core::prelude::*;
+use toddy_core::prelude::*;
 
 pub struct SparklineExtension;
 
@@ -61,20 +61,20 @@ impl WidgetExtension for SparklineExtension {
 }
 ```
 
-Build with `mix julep.build` (discovers extensions via the behaviour) or run
-the renderer binary directly. The `JulepAppBuilder` chains `.extension()` calls
+Build with `mix toddy.build` (discovers extensions via the behaviour) or run
+the renderer binary directly. The `ToddyAppBuilder` chains `.extension()` calls
 in the generated `main.rs`:
 
 ```rust
-julep::run(
-    JulepAppBuilder::new()
+toddy::run(
+    ToddyAppBuilder::new()
         .extension(my_sparkline::SparklineExtension::new())
 )
 ```
 
 Reference the 5 example packages from the dogfooding exercise for complete
-working examples: julep_sparkline (Tier C), julep_hex_view (Tier A),
-julep_code_view (Tier A), julep_plot (Tier B), julep_timeline (Tier C).
+working examples: toddy_sparkline (Tier C), toddy_hex_view (Tier A),
+toddy_code_view (Tier A), toddy_plot (Tier B), toddy_timeline (Tier C).
 
 
 ## Extension kinds
@@ -83,12 +83,12 @@ The macro supports two kinds:
 
 ### `:native_widget` -- Rust-backed extensions
 
-Use `use Julep.Extension, :native_widget` for widgets rendered by a Rust
+Use `use Toddy.Extension, :native_widget` for widgets rendered by a Rust
 crate. Requires `rust_crate` and `rust_constructor` declarations.
 
 ```elixir
 defmodule MyApp.HexView do
-  use Julep.Extension, :native_widget
+  use Toddy.Extension, :native_widget
 
   widget :hex_view
   rust_crate "native/hex_view"
@@ -101,13 +101,13 @@ end
 
 ### `:widget` -- Pure Elixir composite widgets
 
-Use `use Julep.Extension, :widget` for widgets composed entirely from
-existing Julep widgets. No Rust code needed. Must define a `render/2`
+Use `use Toddy.Extension, :widget` for widgets composed entirely from
+existing Toddy widgets. No Rust code needed. Must define a `render/2`
 (or `render/3` if the widget accepts children) callback.
 
 ```elixir
 defmodule MyApp.Card do
-  use Julep.Extension, :widget
+  use Toddy.Extension, :widget
 
   widget :card, container: true
 
@@ -115,7 +115,7 @@ defmodule MyApp.Card do
   prop :subtitle, :string, default: nil
 
   def render(props, children) do
-    import Julep.UI
+    import Toddy.UI
 
     column padding: 16, spacing: 8 do
       text("ext_title", props.title, size: 20)
@@ -156,7 +156,7 @@ Implement `type_names`, `config_key`, and `render`. Everything else uses
 defaults. Good for widgets that compose existing iced widgets with no
 Rust-side interaction state.
 
-**Example:** julep_hex_view -- renders binary data as a hex dump using
+**Example:** toddy_hex_view -- renders binary data as a hex dump using
 `column`, `row`, `text`, `scrollable`, and `container` from iced's standard
 widget set.
 
@@ -180,7 +180,7 @@ Add `handle_event` to intercept events from your widgets before they reach
 Elixir. Use this when the extension needs to process mouse/keyboard input
 internally (pan, zoom, hover tracking) or transform events before forwarding.
 
-**Example:** julep_plot -- canvas-based plotting with pan/zoom handled
+**Example:** toddy_plot -- canvas-based plotting with pan/zoom handled
 entirely in Rust, while click events are forwarded to Elixir as semantic
 `plot_click` events.
 
@@ -219,11 +219,11 @@ Add `prepare` for mutable state synchronization before each render pass,
 `handle_command` for commands sent from Elixir to the extension, and
 `cleanup` for resource teardown when nodes are removed.
 
-**Example:** julep_sparkline -- ring buffer of data samples pushed via
+**Example:** toddy_sparkline -- ring buffer of data samples pushed via
 extension commands, canvas rendering with generation-tracked cache
 invalidation, timer-driven animation state.
 
-**Example:** julep_timeline -- custom `iced::advanced::Widget` implementation
+**Example:** toddy_timeline -- custom `iced::advanced::Widget` implementation
 with viewport state, hit testing, pan/zoom, all persisted in
 `ExtensionCaches`.
 
@@ -285,7 +285,7 @@ publish events back through the extension system. Use the `Message::Event`
 variant:
 
 ```rust
-use julep_core::message::Message;
+use toddy_core::message::Message;
 use serde_json::json;
 
 // In your Widget::update() method:
@@ -531,7 +531,7 @@ via `Widget::state()` or `canvas::Program`), and a `GenerationCounter` in
 `ExtensionCaches` tracks when your data changes.
 
 ```rust
-use julep_core::prelude::*;
+use toddy_core::prelude::*;
 use iced::widget::canvas;
 
 /// Stored in ExtensionCaches (Send + Sync).
@@ -602,10 +602,10 @@ raw bytes?). The counter approach is the recommended pattern.
 call `.bump()` to increment, and `.get()` to read the current value.
 
 
-## julep-iced Widget trait guide
+## toddy-iced Widget trait guide
 
 Extensions implementing `iced::advanced::Widget` directly (Tier C) need to
-be aware of the julep-iced API. Several methods changed names and signatures
+be aware of the toddy-iced API. Several methods changed names and signatures
 from earlier versions.
 
 ### Key changes
@@ -613,7 +613,7 @@ from earlier versions.
 **`on_event` is now `update`:**
 
 ```rust
-// julep-iced
+// toddy-iced
 fn update(
     &mut self,
     tree: &mut widget::Tree,
@@ -684,7 +684,7 @@ fn tag(&self) -> widget::tree::Tag {
 
 Use `shell.publish(Message::Event(...))` as described in the Message::Event
 construction section above. The `Message` type is re-exported from
-`julep_core::prelude`.
+`toddy_core::prelude`.
 
 ### Full Widget skeleton
 
@@ -693,7 +693,7 @@ use iced::advanced::widget::{self, Widget};
 use iced::advanced::{layout, mouse, renderer, Clipboard, Layout, Shell};
 use iced::event;
 use iced::{Element, Length, Rectangle, Size, Theme};
-use julep_core::prelude::*;
+use toddy_core::prelude::*;
 
 struct MyWidget<'a> {
     node_id: String,
@@ -775,7 +775,7 @@ impl<'a> From<MyWidget<'a>> for Element<'a, Message> {
 
 ## Prop helpers reference
 
-The `julep_core::prop_helpers` module (re-exported via `prelude::*`) provides
+The `toddy_core::prop_helpers` module (re-exported via `prelude::*`) provides
 typed accessors for reading props from `TreeNode`. Use these instead of
 manually traversing `serde_json::Value`:
 
@@ -829,12 +829,12 @@ end
 ### Rust-side tests
 
 Test pure logic functions, `handle_command`, and `prepare`/`cleanup` using
-the helpers from `julep_core::testing`:
+the helpers from `toddy_core::testing`:
 
 ```rust
 #[cfg(test)]
 mod tests {
-    use julep_core::testing::*;
+    use toddy_core::testing::*;
     use super::*;
 
     #[test]
@@ -871,7 +871,7 @@ mod tests {
 
 ### Render smoke testing
 
-Use `widget_env_with()` from `julep_core::testing` to construct a
+Use `widget_env_with()` from `toddy_core::testing` to construct a
 `WidgetEnv` for smoke-testing your `render()` method. This verifies the
 method doesn't panic and returns a valid `Element`:
 
@@ -902,7 +902,7 @@ the pooled backend infers events for known widget interaction patterns.
 
 For integration tests that exercise the full wire protocol round-trip
 (including extension commands), build a custom renderer with
-`mix julep.build` and use the `:headless` backend. See the
+`mix toddy.build` and use the `:headless` backend. See the
 [Testing extensions](testing.md#testing-extensions) section in the
 testing guide for the full workflow.
 
@@ -989,7 +989,7 @@ performance-critical rendering that canvas can't handle efficiently.
 
 ### Package structure
 
-A julep widget package is a standard Mix project:
+A toddy widget package is a standard Mix project:
 
 ```
 my_widget/
@@ -1020,19 +1020,19 @@ defmodule MyWidget.MixProject do
 
   defp deps do
     [
-      {:julep, "~> 0.1"}
+      {:toddy, "~> 0.1"}
     ]
   end
 end
 ```
 
-julep is a compile-time dependency. Your package does not need the renderer
-binary -- it only uses julep's Elixir modules (`Julep.Iced.Widget`,
-`Julep.Iced.Widget.Build`, `Julep.Iced.Encode`, type modules).
+toddy is a compile-time dependency. Your package does not need the renderer
+binary -- it only uses toddy's Elixir modules (`Toddy.Iced.Widget`,
+`Toddy.Iced.Widget.Build`, `Toddy.Iced.Encode`, type modules).
 
 ### Building a widget
 
-Implement the `Julep.Iced.Widget` protocol on your struct. The `to_node/1`
+Implement the `Toddy.Iced.Widget` protocol on your struct. The `to_node/1`
 implementation composes existing built-in node types. The renderer handles
 them without modification.
 
@@ -1055,22 +1055,22 @@ defmodule MyWidget.DonutChart do
       |> DonutChart.build()
   """
 
-  alias Julep.Iced.Widget.Build
-  alias Julep.Canvas.Shape
+  alias Toddy.Iced.Widget.Build
+  alias Toddy.Canvas.Shape
 
   @type segment :: {label :: String.t(), value :: number(), color :: String.t()}
 
   @type option ::
           {:size, number()}
           | {:thickness, number()}
-          | {:background, Julep.Iced.Color.t()}
+          | {:background, Toddy.Iced.Color.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
           segments: [segment()],
           size: number(),
           thickness: number(),
-          background: Julep.Iced.Color.t() | nil
+          background: Toddy.Iced.Color.t() | nil
         }
 
   defstruct [:id, :segments, size: 200, thickness: 40, background: nil]
@@ -1086,9 +1086,9 @@ defmodule MyWidget.DonutChart do
   @spec thickness(donut_chart :: t(), thickness :: number()) :: t()
   def thickness(%__MODULE__{} = chart, thickness), do: %{chart | thickness: thickness}
 
-  @spec background(donut_chart :: t(), color :: Julep.Iced.Color.t()) :: t()
+  @spec background(donut_chart :: t(), color :: Toddy.Iced.Color.t()) :: t()
   def background(%__MODULE__{} = chart, color) do
-    %{chart | background: Julep.Iced.Color.cast(color)}
+    %{chart | background: Toddy.Iced.Color.cast(color)}
   end
 
   @spec with_options(donut_chart :: t(), opts :: [option()]) :: t()
@@ -1103,18 +1103,18 @@ defmodule MyWidget.DonutChart do
     end)
   end
 
-  @spec build(donut_chart :: t()) :: Julep.Iced.ui_node()
-  def build(%__MODULE__{} = chart), do: Julep.Iced.Widget.to_node(chart)
+  @spec build(donut_chart :: t()) :: Toddy.Iced.ui_node()
+  def build(%__MODULE__{} = chart), do: Toddy.Iced.Widget.to_node(chart)
 
   # -- Widget protocol --
 
-  defimpl Julep.Iced.Widget do
+  defimpl Toddy.Iced.Widget do
     def to_node(chart) do
       layers = %{"arcs" => build_arc_shapes(chart)}
 
       props =
         %{"layers" => layers, "width" => chart.size, "height" => chart.size}
-        |> Julep.Iced.Widget.Build.put_if(chart.background, "background")
+        |> Toddy.Iced.Widget.Build.put_if(chart.background, "background")
 
       %{id: chart.id, type: "canvas", props: props, children: []}
     end
@@ -1158,7 +1158,7 @@ end
 
 Key points:
 
-- The struct follows julep's builder pattern.
+- The struct follows toddy's builder pattern.
 - `to_node/1` emits a `"canvas"` node with `"layers"` -- a type the stock
   renderer already handles.
 - No Rust code. No custom node types. The renderer sees a canvas widget.
@@ -1167,7 +1167,7 @@ Key points:
 #### Convenience constructors
 
 For consumer ergonomics, add a top-level module with functions that mirror
-the `Julep.UI` / `Julep.Iced` calling conventions:
+the `Toddy.UI` / `Toddy.Iced` calling conventions:
 
 ```elixir
 defmodule MyWidget do
@@ -1175,7 +1175,7 @@ defmodule MyWidget do
 
   @doc "Creates a donut chart node."
   @spec donut_chart(id :: String.t(), segments :: [DonutChart.segment()], opts :: Keyword.t()) ::
-          Julep.Iced.ui_node()
+          Toddy.Iced.ui_node()
   def donut_chart(id, segments, opts \\ []) do
     DonutChart.new(id, segments, opts) |> DonutChart.build()
   end
@@ -1185,7 +1185,7 @@ end
 Consumers use it like any other widget:
 
 ```elixir
-import Julep.UI
+import Toddy.UI
 
 column do
   text("Revenue breakdown")
@@ -1194,7 +1194,7 @@ end
 ```
 
 The result of `donut_chart/3` is a plain `ui_node()` map. It composes
-naturally with `Julep.UI` do-blocks, `Column.push/2`, or any other tree
+naturally with `Toddy.UI` do-blocks, `Column.push/2`, or any other tree
 builder.
 
 ### Testing widget packages
@@ -1227,21 +1227,21 @@ end
 
 #### Integration tests with pooled_mock backend
 
-For testing widget behaviour in a running app, use julep's pooled_mock
+For testing widget behaviour in a running app, use toddy's pooled_mock
 backend:
 
 ```elixir
 defmodule MyWidget.IntegrationTest do
-  use Julep.Test.Case, async: true
+  use Toddy.Test.Case, async: true
 
   defmodule ChartApp do
-    @behaviour Julep.App
+    @behaviour Toddy.App
 
     def init(_opts), do: %{segments: [{"A", 50, "#ff0000"}, {"B", 50, "#0000ff"}]}
     def update(model, _event), do: model
 
     def view(model) do
-      import Julep.UI
+      import Toddy.UI
       window "main" do
         MyWidget.donut_chart("chart", model.segments, size: 200)
       end
@@ -1260,10 +1260,10 @@ end
 
 Document these in your package README:
 
-1. **Minimum julep version.** Your package depends on julep; specify the
+1. **Minimum toddy version.** Your package depends on toddy; specify the
    compatible range.
 2. **No renderer changes needed.** Pure Elixir packages work with the stock
-   julep binary. Consumers do not need to rebuild anything.
+   toddy binary. Consumers do not need to rebuild anything.
 3. **Which built-in features are required.** If your widget uses canvas,
    consumers need the feature enabled (it is by default). Document this if
    it matters.
