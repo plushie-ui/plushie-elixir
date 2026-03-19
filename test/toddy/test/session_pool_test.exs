@@ -12,7 +12,13 @@ defmodule Toddy.Test.SessionPoolTest do
       binary = Application.fetch_env!(:toddy, :test_binary_path)
 
       {:ok, pool} =
-        SessionPool.start_link(renderer: binary, mode: :mock, format: :json, max_sessions: 4)
+        SessionPool.start_link(
+          renderer: binary,
+          mode: :mock,
+          format: :json,
+          max_sessions: 4,
+          rust_log: "off"
+        )
 
       %{pool: pool}
     end
@@ -103,7 +109,13 @@ defmodule Toddy.Test.SessionPoolTest do
       binary = Application.fetch_env!(:toddy, :test_binary_path)
 
       {:ok, pool} =
-        SessionPool.start_link(renderer: binary, mode: :mock, format: :json, max_sessions: 4)
+        SessionPool.start_link(
+          renderer: binary,
+          mode: :mock,
+          format: :json,
+          max_sessions: 4,
+          rust_log: "off"
+        )
 
       %{pool: pool}
     end

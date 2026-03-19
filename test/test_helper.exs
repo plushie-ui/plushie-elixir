@@ -11,7 +11,7 @@ Application.put_env(:toddy, :test_binary_path, binary)
     name: Toddy.TestPool,
     renderer: binary,
     mode: :mock,
-    max_sessions: System.schedulers_online() * 2
+    max_sessions: max(System.schedulers_online() * 8, 128)
   )
 
 ExUnit.start()

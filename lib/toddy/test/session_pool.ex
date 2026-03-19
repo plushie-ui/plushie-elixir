@@ -56,7 +56,19 @@ defmodule Toddy.Test.SessionPool do
   @doc "Register a new session. Returns a unique session ID."
   @spec register(pool :: GenServer.server()) :: session_id()
   def register(pool) do
-    GenServer.call(pool, :register)
+    case GenServer.call(pool, :register) do
+      {:error, {:max_sessions_reached, max}} ->
+        raise """
+        Session pool is full (#{max} sessions).
+
+        This usually means tests are creating sessions faster than they're
+        being released. Increase :max_sessions in your SessionPool config
+        or check for tests that don't properly stop their sessions.
+        """
+
+      session_id when is_binary(session_id) ->
+        session_id
+    end
   end
 
   @doc "Unregister a session. Sends Reset to the renderer to free resources."
@@ -115,6 +127,7 @@ defmodule Toddy.Test.SessionPool do
     defstruct [
       :port,
       :format,
+      :max_sessions,
       # session_id -> owner_pid
       sessions: %{},
       # {session_id, request_id} -> {response_type, from}
@@ -132,7 +145,14 @@ defmodule Toddy.Test.SessionPool do
     max_sessions = Keyword.get(opts, :max_sessions, 8)
 
     renderer_path = Keyword.fetch!(opts, :renderer)
-    env = Toddy.RendererEnv.build()
+
+    env_opts =
+      case Keyword.fetch(opts, :rust_log) do
+        {:ok, level} -> [rust_log: level]
+        :error -> []
+      end
+
+    env = Toddy.RendererEnv.build(env_opts)
 
     mode_flag = if mode == :headless, do: "--headless", else: "--mock"
 
@@ -151,16 +171,21 @@ defmodule Toddy.Test.SessionPool do
       )
 
     # Send initial settings to trigger the hello handshake.
-    send_to_port(port, format, %{session: "", type: "settings", settings: %{}})
+    settings = %{protocol_version: Toddy.Protocol.protocol_version()}
+    send_to_port(port, format, %{session: "", type: "settings", settings: settings})
 
-    {:ok, %State{port: port, format: format}}
+    {:ok, %State{port: port, format: format, max_sessions: max_sessions}}
   end
 
   @impl GenServer
   def handle_call(:register, {caller_pid, _}, state) do
-    session_id = "pool_#{state.next_session}"
-    sessions = Map.put(state.sessions, session_id, caller_pid)
-    {:reply, session_id, %{state | sessions: sessions, next_session: state.next_session + 1}}
+    if map_size(state.sessions) >= state.max_sessions do
+      {:reply, {:error, {:max_sessions_reached, state.max_sessions}}, state}
+    else
+      session_id = "pool_#{state.next_session}"
+      sessions = Map.put(state.sessions, session_id, caller_pid)
+      {:reply, session_id, %{state | sessions: sessions, next_session: state.next_session + 1}}
+    end
   end
 
   def handle_call({:unregister, session_id}, from, state) do
