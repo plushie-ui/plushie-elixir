@@ -236,8 +236,8 @@ defmodule Julep.Examples.Catalog do
         text("Pinned content")
       end
 
-      # Float - floating overlay element
-      float_widget "demo_float", anchor: :top_right do
+      # Float - floating overlay element with translation
+      float_widget "demo_float", translate_x: 100, translate_y: 10 do
         text("Floating element")
       end
 
@@ -391,7 +391,7 @@ defmodule Julep.Examples.Catalog do
       text("Interactive & Composite Widgets", size: 18)
 
       # Mouse area wrapping content -- detects hover enter/exit
-      mouse_area "demo_mouse_area", on_enter: "demo_mouse_area", on_exit: "demo_mouse_area" do
+      mouse_area "demo_mouse_area", on_enter: true, on_exit: true do
         container "mouse_area_box", padding: 12 do
           text("Mouse area: #{model.mouse_area_status}")
         end
@@ -406,7 +406,7 @@ defmodule Julep.Examples.Catalog do
 
       # Simulated tab switching using buttons and conditional content
       # Wrapped in a container with the "demo_tabs" id so tests can find it
-      container "demo_tabs", active: model.demo_tabs_active do
+      container "demo_tabs" do
         column spacing: 4 do
           row spacing: 4 do
             button("tab_one", "Tab One")
@@ -424,8 +424,8 @@ defmodule Julep.Examples.Catalog do
       # Modal simulation using container with visible prop
       button("show_modal", "Show Modal")
 
-      container "demo_modal", visible: model.modal_visible do
-        if model.modal_visible do
+      if model.modal_visible do
+        container "demo_modal", padding: 16 do
           column spacing: 8 do
             text("Modal Content")
             button("hide_modal", "Close")
