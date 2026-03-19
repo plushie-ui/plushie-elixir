@@ -283,7 +283,7 @@ defmodule Mix.Tasks.Toddy.Build do
     """
     [package]
     name = "#{package_name}"
-    version = "0.1.0"
+    version = "#{Mix.Project.config()[:version]}"
     edition = "2024"
 
     [[bin]]

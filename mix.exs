@@ -1,12 +1,14 @@
 defmodule Toddy.MixProject do
   use Mix.Project
 
+  @version "0.3.0"
+  @source_url "https://github.com/toddy-ui/toddy-elixir"
   @binary_version "0.3.0"
 
   def project do
     [
       app: :toddy,
-      version: "0.1.0",
+      version: @version,
       binary_version: @binary_version,
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -18,9 +20,9 @@ defmodule Toddy.MixProject do
       name: "Toddy",
       description: "Native desktop GUIs from Elixir, powered by iced",
       package: package(),
-      source_url: "https://github.com/toddy/toddy-elixir",
+      source_url: @source_url,
+      homepage_url: @source_url,
       docs: docs(),
-      aliases: aliases(),
       dialyzer: [plt_add_apps: [:mix, :ex_unit, :inets, :ssl]]
     ]
   end
@@ -34,7 +36,8 @@ defmodule Toddy.MixProject do
   defp docs do
     [
       main: "getting-started",
-      source_url: "https://github.com/toddy/toddy-elixir",
+      source_url: @source_url,
+      source_ref: "v#{@version}",
       extras: [
         "docs/getting-started.md",
         "docs/tutorial.md",
@@ -48,7 +51,8 @@ defmodule Toddy.MixProject do
         "docs/testing.md",
         "docs/composition-patterns.md",
         "docs/accessibility.md",
-        "docs/extensions.md"
+        "docs/extensions.md",
+        "CHANGELOG.md"
       ],
       groups_for_extras: [
         Guides: [
@@ -67,6 +71,9 @@ defmodule Toddy.MixProject do
           "docs/composition-patterns.md",
           "docs/accessibility.md",
           "docs/extensions.md"
+        ],
+        About: [
+          "CHANGELOG.md"
         ]
       ],
       groups_for_modules: [
@@ -133,25 +140,24 @@ defmodule Toddy.MixProject do
 
   defp package do
     [
+      maintainers: ["Daniel Hedlund"],
       licenses: ["MIT"],
       links: %{
-        "GitHub" => "https://github.com/toddy/toddy-elixir",
+        "GitHub" => @source_url,
         "Rust binary" => "https://github.com/toddy-ui/toddy",
-        "Changelog" => "https://github.com/toddy/toddy-elixir/blob/main/CHANGELOG.md"
+        "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md"
       },
       files: ~w(
         lib
+        docs
         mix.exs
         README.md
+        CHANGELOG.md
         LICENSE
         .formatter.exs
       ),
       exclude_patterns: [~r/preflight\.ex$/]
     ]
-  end
-
-  defp aliases do
-    []
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]

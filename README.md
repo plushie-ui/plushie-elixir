@@ -54,7 +54,7 @@ Add toddy to your dependencies:
 
 ```elixir
 # mix.exs
-{:toddy, "== 0.1.0"}
+{:toddy, "== 0.3.0"}
 ```
 
 Then:
@@ -65,7 +65,7 @@ mix toddy.download                    # download precompiled binary
 mix toddy.gui Counter                 # run the counter example
 ```
 
-Pin to an exact version (`== 0.1.0`, not `~> 0.1`) and read the
+Pin to an exact version (`==`, not `~>`) and read the
 [CHANGELOG](CHANGELOG.md) carefully when upgrading.
 
 The precompiled binary requires no Rust toolchain. To build from
@@ -211,7 +211,7 @@ dependencies. To build from source, install a Rust toolchain via
 
 | | |
 |---|---|
-| Elixir SDK | [github.com/toddy/toddy-elixir](https://github.com/toddy/toddy-elixir) |
+| Elixir SDK | [github.com/toddy-ui/toddy-elixir](https://github.com/toddy-ui/toddy-elixir) |
 | Rust binary | [github.com/toddy-ui/toddy](https://github.com/toddy-ui/toddy) |
 | Rust crate | [crates.io/crates/toddy](https://crates.io/crates/toddy) |
 

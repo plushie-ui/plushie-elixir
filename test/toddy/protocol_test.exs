@@ -963,11 +963,11 @@ defmodule Toddy.ProtocolTest do
         Jason.encode!(%{
           type: "hello",
           protocol: 1,
-          version: "0.1.0",
+          version: "0.3.0",
           name: "toddy"
         })
 
-      assert {:hello, 1, "0.1.0", "toddy"} = Protocol.decode_message(json, :json)
+      assert {:hello, 1, "0.3.0", "toddy"} = Protocol.decode_message(json, :json)
     end
 
     test "decodes hello from msgpack" do

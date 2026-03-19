@@ -1007,7 +1007,7 @@ defmodule MyWidget.MixProject do
 
   defp deps do
     [
-      {:toddy, "~> 0.1"}
+      {:toddy, "~> 0.3"}
     ]
   end
 end

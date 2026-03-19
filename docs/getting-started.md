@@ -28,7 +28,7 @@ cd my_app
 # mix.exs
 defp deps do
   [
-    {:toddy, "~> 0.1"}
+    {:toddy, "~> 0.3"}
   ]
 end
 ```

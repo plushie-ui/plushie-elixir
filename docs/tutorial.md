@@ -237,9 +237,9 @@ imports `Toddy.UI` independently (the import is lexically scoped).
 ## The complete app
 
 The full source is in
-[`lib/toddy/examples/todo.ex`](https://github.com/toddy/toddy-elixir/blob/main/lib/toddy/examples/todo.ex)
+[`lib/toddy/examples/todo.ex`](https://github.com/toddy-ui/toddy-elixir/blob/main/lib/toddy/examples/todo.ex)
 with tests in
-[`test/toddy/examples/todo_test.exs`](https://github.com/toddy/toddy-elixir/blob/main/test/toddy/examples/todo_test.exs).
+[`test/toddy/examples/todo_test.exs`](https://github.com/toddy-ui/toddy-elixir/blob/main/test/toddy/examples/todo_test.exs).
 
 ```elixir
 defmodule MyApp.Todo do
