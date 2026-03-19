@@ -52,11 +52,16 @@ defmodule Julep do
     Supervisor.start_link(__MODULE__, opts, name: sup_name(opts[:instance_name]))
   end
 
-  @doc "Stops the Julep supervisor."
-  @spec stop(Supervisor.supervisor()) :: :ok
-  def stop(pid \\ __MODULE__) do
-    Supervisor.stop(pid)
-  end
+  @doc """
+  Stops a running Julep supervisor.
+
+  Accepts a pid or the instance name passed as `:name` to `start/2`
+  (defaults to `Julep`, matching the default registration).
+  """
+  @spec stop(pid() | atom()) :: :ok
+  def stop(pid_or_name \\ __MODULE__)
+  def stop(pid) when is_pid(pid), do: Supervisor.stop(pid)
+  def stop(name) when is_atom(name), do: Supervisor.stop(sup_name(name))
 
   @doc """
   Child spec for embedding Julep under an existing supervisor.
@@ -83,6 +88,7 @@ defmodule Julep do
   # Supervisor callbacks
   # ---------------------------------------------------------------------------
 
+  @doc false
   @impl true
   def init(opts) do
     name = opts[:instance_name]
@@ -102,9 +108,8 @@ defmodule Julep do
     # fires immediately and casts Settings + Snapshot to Bridge. If Bridge hasn't
     # started yet, those casts are lost and the renderer hangs.
     children = [
-      # Bridge starts first: opens the Port and spawns the renderer process,
-      # which blocks on stdin waiting for a Settings message. Bridge registers
-      # under bridge_name(name) so Runtime can cast to it immediately.
+      # Bridge opens the Port and spawns the renderer process, which blocks
+      # on stdin waiting for a Settings message.
       Supervisor.child_spec(
         {Julep.Bridge,
          [
@@ -117,9 +122,8 @@ defmodule Julep do
         restart: :transient,
         significant: true
       ),
-      # Runtime starts second. Its handle_continue sends Settings then
-      # Snapshot to the already-registered Bridge. Bridge forwards renderer
-      # events to the registered runtime_name, which is alive by this point.
+      # Runtime sends Settings then Snapshot to the already-registered Bridge.
+      # Bridge forwards renderer events back to Runtime.
       Supervisor.child_spec(
         {Julep.Runtime,
          [
