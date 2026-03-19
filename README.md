@@ -165,32 +165,29 @@ and CI configuration.
 
 ## Documentation
 
-Core:
-
-- [Charter](docs/charter.md) -- what and why
+- [Getting started](docs/getting-started.md) -- setup, first app, mix tasks, debugging
 - [Architecture](docs/architecture.md) -- the three pieces
 - [App behaviour](docs/app-behaviour.md) -- the Elixir API contract
-- [Iced parity guide](docs/iced-parity.md) -- Rust-to-Elixir mapping for iced users
 - [UI trees](docs/ui-trees.md) -- node format and widget catalog
 - [Layout](docs/layout.md) -- length, padding, alignment, spacing
 - [Events](docs/events.md) -- full event taxonomy
 - [Commands and subscriptions](docs/commands.md) -- async work, timers, widget ops
-- [Transport](docs/transport.md) -- MessagePack wire protocol (JSONL for debugging)
-- [Renderer](docs/renderer.md) -- what the Rust binary does
-- [Multi-window](docs/multi-window.md) -- declarative multi-window model
 - [Effects](docs/effects.md) -- native platform features
 - [Theming](docs/theming.md) -- themes, custom palettes, styling
+- [Multi-window](docs/multi-window.md) -- declarative multi-window model
 - [Stateful widgets](docs/stateful-widgets.md) -- text_editor, combo_box, pane_grid
 - [State helpers](docs/state-helpers.md) -- optional state management modules
-- [Testing](docs/testing.md) -- three-backend test framework and pixel regression
-- [Accessibility](docs/accessibility.md) -- planned approach and roadmap
-- [Developer experience](docs/developer-experience.md) -- mix tasks, IEx, project structure
 - [Composition patterns](docs/composition-patterns.md) -- tabs, sidebars, modals, cards
-- [Widget authoring](docs/widget-authoring.md) -- how to build typed widgets
-- [Widget packages](docs/widget-packages.md) -- publishing reusable widget packages
-- [Known issues](docs/known-issues.md) -- tracked limitations and workarounds
-- [Roadmap](docs/roadmap.md) -- phased build plan
-- [Iced parity audit](docs/audit-iced-parity.md) -- detailed coverage matrix against iced 0.14
+- [Testing](docs/testing.md) -- three-backend test framework and pixel regression
+- [Accessibility](docs/accessibility.md) -- accesskit integration, a11y props
+- [Iced parity guide](docs/iced-parity.md) -- Rust-to-Elixir mapping for iced users
+- [Renderer](docs/renderer.md) -- what the Rust binary does
+- [Transport](docs/transport.md) -- MessagePack wire protocol
+- [Dev mode](docs/dev-mode.md) -- live code reloading
+- [Extensions](docs/extensions.md) -- writing native widget extensions
+- [Widget authoring](docs/widget-authoring.md) -- adding widgets to the typed layer
+- [Widget packages](docs/widget-packages.md) -- publishing reusable packages
+- [Testing internals](docs/testing-internals.md) -- contributing to the test framework
 
 ## License
 

@@ -699,8 +699,7 @@ renderer process), so the format option has no effect on it.
 
 ## Known limitations
 
-See [testing-caveats.md](testing-caveats.md) for detailed workarounds for
-each limitation.
+Workarounds and details for each limitation are noted inline below.
 
 - Script instruction `move` (move cursor to a widget by selector) is a
   no-op. It requires widget bounds from layout, which only the renderer knows.
@@ -710,3 +709,11 @@ each limitation.
 - Headless screenshots use software rendering (tiny-skia) and may not match
   GPU output pixel-for-pixel.
 - Script `assert_model` uses substring matching against the inspected model.
+  Use specific substrings (`"count: 5"`) or use ExUnit assertions for precise
+  model checks.
+- The `CommandProcessor` executes async/stream/batch commands synchronously
+  in all test backends. Timing and concurrency bugs will not surface in mock
+  tests. Use headless or windowed backends for concurrency-sensitive tests.
+- Headless and windowed backends spawn a renderer via `Port`. The `on_exit`
+  cleanup handles normal teardown; if a test crashes without triggering it,
+  the BEAM's process exit propagation kills the port.

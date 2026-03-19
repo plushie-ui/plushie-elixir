@@ -1,6 +1,6 @@
-# Getting Started with Julep
+# Getting started
 
-Build native desktop GUIs from Elixir. Julep handles rendering via iced (Rust)
+Build native desktop GUIs from Elixir. julep handles rendering via iced (Rust)
 while you own state, logic, and UI trees in pure Elixir.
 
 ## Prerequisites
@@ -29,23 +29,34 @@ mix new my_app
 cd my_app
 ```
 
-### 2. Add Julep as a dependency
-
-In `mix.exs`, add julep to your deps. Until julep is published on Hex,
-use a git or path dependency:
+### 2. Add julep as a dependency
 
 ```elixir
+# mix.exs
 defp deps do
   [
-    # From git:
-    {:julep, git: "https://github.com/julep-ui/julep.git"},
-    # Or from a local checkout:
-    # {:julep, path: "../julep"},
+    {:julep, "~> 0.1"}
   ]
 end
 ```
 
-### 3. Fetch dependencies and build the renderer
+### 3. Formatter config
+
+julep exports formatter settings so `mix format` won't add parentheses
+to `Julep.UI` widget definitions. Add `:julep` to `import_deps` in
+your `.formatter.exs`:
+
+```elixir
+# .formatter.exs
+[
+  inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"],
+  import_deps: [:julep]
+]
+```
+
+This keeps layout blocks paren-free so they read like declarative markup.
+
+### 4. Fetch dependencies and build the renderer
 
 ```sh
 mix deps.get
@@ -103,7 +114,7 @@ the count updates.
 
 ## How it works: the Elm architecture
 
-Julep follows the Elm architecture. Your app module implements four callbacks
+julep follows the Elm architecture. Your app module implements four callbacks
 via the `Julep.App` behaviour:
 
 ### `init/1` -- initial state
@@ -127,11 +138,11 @@ def update(model, _event), do: model
 ```
 
 To run side effects (async work, file dialogs, clipboard), return a
-`{model, command}` tuple instead. See `docs/commands.md`.
+`{model, command}` tuple instead. See [commands.md](commands.md).
 
 ### `view/1` -- describe the UI
 
-Takes the model and returns a UI tree. Julep diffs consecutive trees and
+Takes the model and returns a UI tree. julep diffs consecutive trees and
 sends only patches to the renderer. The tree is plain Elixir data -- maps
 with `:id`, `:type`, `:props`, and `:children` keys.
 
@@ -161,14 +172,64 @@ event family:
 | `%Timer{tag: :tick, timestamp: ts}` | Timer subscription fired |
 | `%Key{type: :press, ...}` | Keyboard subscription fired |
 
-See `docs/events.md` for the full taxonomy.
+See [events.md](events.md) for the full taxonomy.
 
-## State helpers
+## Mix tasks
 
-Julep includes pure-data modules for common UI state patterns:
-`Julep.State` (change tracking), `Julep.Undo` (undo/redo),
-`Julep.Selection` (single/multi select), `Julep.Route` (navigation),
-and `Julep.Data` (in-memory queries). Plain structs, no processes.
+### mix julep.gui
+
+Builds (if needed) and launches the renderer with your app.
+
+```bash
+mix julep.gui MyApp                # debug build, auto-build renderer
+mix julep.gui MyApp --release      # release build
+mix julep.gui MyApp --no-build     # skip cargo build, use existing binary
+mix julep.gui MyApp --renderer /path/to/julep  # explicit binary path
+```
+
+### mix julep.build
+
+Builds the renderer binary without running it.
+
+```bash
+mix julep.build              # debug
+mix julep.build --release    # release
+```
+
+### mix julep.inspect
+
+Runs your app without the renderer and prints the UI tree as JSON.
+
+```bash
+mix julep.inspect MyApp
+mix julep.inspect MyApp --events '["click:inc", "click:inc"]'
+mix julep.inspect MyApp --pretty
+```
+
+## IEx workflow
+
+```elixir
+iex -S mix
+
+# Start the GUI
+{:ok, pid} = Julep.start(MyApp)
+
+# Or start without the renderer (headless, for inspection)
+{:ok, pid} = Julep.start(MyApp, renderer: false)
+
+# Inspect current state
+Julep.snapshot(pid)
+
+# Inspect current UI tree
+Julep.tree(pid)
+Julep.tree(pid) |> Jason.encode!(pretty: true) |> IO.puts()
+
+# Dispatch events manually
+Julep.dispatch(pid, %Widget{type: :click, id: "inc"})
+
+# Stop
+Julep.stop(pid)
+```
 
 ## Debugging
 
@@ -183,6 +244,54 @@ Enable verbose renderer logging:
 ```sh
 RUST_LOG=julep=debug mix julep.gui MyApp.Counter
 ```
+
+## Error handling
+
+If `update/2` raises, the runtime catches the exception, logs it, and
+continues with the previous model. The app does not crash. If `view/1`
+raises, the runtime logs the error and sends the previous tree. A bug
+in your event handler or view function does not crash the GUI -- you see
+the error in the console, fix it, and the next event works.
+
+## Project structure
+
+A minimal julep app:
+
+```
+my_app/
+  lib/
+    my_app.ex          # Julep.App implementation
+  mix.exs
+```
+
+A larger app might organize by feature:
+
+```
+my_app/
+  lib/
+    my_app.ex              # Julep.App, delegates to feature modules
+    my_app/
+      views/
+        sidebar.ex         # view helper functions
+        main_content.ex
+      models/
+        todo.ex            # domain structs
+      events.ex            # event handling, delegates per feature
+  test/
+    my_app_test.exs
+    snapshots/             # UI tree snapshots
+  mix.exs
+```
+
+There is no prescribed structure. A julep app is a normal Elixir project.
+Organize it however makes sense for your domain.
+
+## State helpers
+
+julep includes pure-data modules for common UI state patterns:
+`Julep.State` (change tracking), `Julep.Undo` (undo/redo),
+`Julep.Selection` (single/multi select), `Julep.Route` (navigation),
+and `Julep.Data` (in-memory queries). Plain structs, no processes.
 
 ## Next steps
 

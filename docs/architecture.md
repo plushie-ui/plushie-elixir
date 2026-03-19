@@ -95,14 +95,6 @@ Julep includes live code reloading. `Julep.DevServer` watches `lib/` via
 and sends `:force_rerender` to the Runtime. The model is preserved; only
 `view/1` is re-evaluated with the new code. See `docs/dev-mode.md`.
 
-## Future: Rust-first packaging
-
-For distribution scenarios where having a native binary as the entrypoint
-is preferable (app stores, double-click launchers), a future option could
-have the Rust binary spawn the BEAM as a child instead. The protocol and
-UI model stay identical; only the process hierarchy inverts. This is a
-packaging concern, not an architectural change.
-
 ## Glossary
 
 - **ui_node** -- A plain map with keys `id`, `type`, `props`, and `children` representing a single widget in the UI tree.

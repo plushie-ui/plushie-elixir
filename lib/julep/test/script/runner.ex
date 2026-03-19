@@ -86,7 +86,7 @@ defmodule Julep.Test.Script.Runner do
 
   defp execute(_session, {:move, _selector}, _replay?) do
     # No-op: moving cursor to a widget by selector requires widget bounds
-    # from layout, which only the renderer knows. See docs/testing-caveats.md.
+    # from layout, which only the renderer knows.
     :ok
   end
 
