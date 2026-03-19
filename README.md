@@ -1,49 +1,36 @@
 # toddy
 
-Native desktop GUIs from Elixir, powered by [iced](https://github.com/iced-rs/iced).
+Build native desktop apps in Elixir. **[Pre-1.0](#status)**
 
-Toddy is an Elixir library for building native cross-platform desktop applications.
-You write your app logic, state management, and UI trees entirely in Elixir. A thin
-Rust binary handles rendering via the iced GUI toolkit and sends user events back
-over a MessagePack-over-stdio transport (JSONL available for debugging).
-
-## Goals
-
-- **Elixir-first.** App teams write Elixir, not Rust. The Rust renderer is a
-  dependency, not a framework.
-- **Simple.** Elm architecture: model, update, view. No ceremony.
-- **Pragmatic.** Start a GUI from `mix toddy.gui`, from IEx, or embed it as a
-  library in a larger OTP application.
-- **Powerful.** Full access to iced's widget catalog, theming, multi-window,
-  and native platform features -- without writing Rust.
-- **Accessible.** Optional accesskit integration for screen reader support
-  on macOS, Linux, and Windows. See [docs/accessibility.md](docs/accessibility.md).
-
-## Status
-
-All five roadmap phases complete. Approaching first Hex release.
-
-## Quick taste
+Toddy is a desktop GUI framework that allows you to write your entire
+application in Elixir -- state, events, UI -- and get native windows
+on Linux, macOS, and Windows. Rendering is powered by
+[iced](https://github.com/iced-rs/iced), a cross-platform GUI library
+for Rust, which toddy drives as a precompiled binary behind the scenes.
 
 ```elixir
-defmodule MyApp do
+defmodule Counter do
   use Toddy.App
+  alias Toddy.Event.Widget
+  import Toddy.UI
 
   def init(_opts), do: %{count: 0}
 
-  def update(model, {:click, "increment"}), do: %{model | count: model.count + 1}
-  def update(model, {:click, "decrement"}), do: %{model | count: model.count - 1}
+  def update(model, %Widget{type: :click, id: "inc"}),
+    do: %{model | count: model.count + 1}
+
+  def update(model, %Widget{type: :click, id: "dec"}),
+    do: %{model | count: model.count - 1}
+
   def update(model, _event), do: model
 
   def view(model) do
-    import Toddy.UI
-
     window "main", title: "Counter" do
-      column do
-        text("Count: #{model.count}")
-        row do
-          button("increment", "+" )
-          button("decrement", "-")
+      column padding: 16, spacing: 8 do
+        text("count", "Count: #{model.count}")
+        row spacing: 8 do
+          button("inc", "+")
+          button("dec", "-")
         end
       end
     end
@@ -52,90 +39,87 @@ end
 ```
 
 ```bash
-mix toddy.gui MyApp
+mix toddy.gui Counter
 ```
 
-In dev mode, file watching is enabled by default -- edit your source files
-and the GUI updates in place. Pass `--no-watch` to disable. See the
-[dev mode section](docs/getting-started.md#dev-mode-live-code-reloading)
-in the getting started guide.
+Or from IEx:
 
-## System Requirements
-
-Building the Rust renderer requires a working Rust toolchain (`cargo`). Install
-via [rustup](https://rustup.rs/). Platform-specific dependencies:
-
-**Linux**
-
-```bash
-# Debian/Ubuntu
-sudo apt-get install libxkbcommon-dev libwayland-dev libx11-dev cmake fontconfig pkg-config
-
-# Arch Linux
-sudo pacman -S libxkbcommon wayland libx11 cmake fontconfig pkgconf
+```elixir
+iex> Toddy.start(Counter)
 ```
-
-**macOS**
-
-```bash
-xcode-select --install
-```
-
-**Windows**
-
-Install [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-with the "Desktop development with C++" workload.
 
 ## Getting started
 
-```bash
-mix deps.get                          # fetch Elixir deps
-mix toddy.build                       # build the Rust renderer (requires cargo)
-mix toddy.gui Counter                 # run an example app
-mix toddy.gui Catalog                 # run the full widget catalog
+Add toddy to your dependencies:
+
+```elixir
+# mix.exs
+{:toddy, "== 0.1.0"}
 ```
 
-## Development
+Then:
 
 ```bash
-mix preflight                         # run all CI checks locally
+mix deps.get
+mix toddy.download                    # download precompiled binary
+mix toddy.gui Counter                 # run the counter example
 ```
 
-This is the single command to verify everything before pushing. It runs
-the full CI pipeline locally and stops on first failure:
+Pin to an exact version (`== 0.1.0`, not `~> 0.1`) and read the
+[CHANGELOG](CHANGELOG.md) carefully when upgrading.
 
-1. `mix format --check-formatted`
-2. `mix compile --warnings-as-errors`
-3. `mix credo --strict`
-4. `mix test`
-5. `mix dialyzer`
-6. `cargo build` (renderer)
-7. `cargo test` (renderer)
-8. `cargo fmt --check` (renderer)
-9. `cargo clippy -D warnings` (renderer)
+The precompiled binary requires no Rust toolchain. To build from
+source instead, install [rustup](https://rustup.rs/) and run
+`mix toddy.build`. See the
+[getting started guide](docs/getting-started.md) for the full
+walkthrough.
+
+## Features
+
+- **37 built-in widget types** -- buttons, text inputs, sliders,
+  tables, markdown, canvas, and more. Easy to build your own.
+  [Layout guide](docs/layout.md)
+- **22 built-in themes** -- light, dark, dracula, nord, solarized,
+  gruvbox, catppuccin, tokyo night, kanagawa, and more. Custom
+  palettes and per-widget style overrides.
+  [Theming guide](docs/theming.md)
+- **Multi-window** -- declare window nodes in your widget tree;
+  the framework opens, closes, and manages them automatically.
+  [App behaviour guide](docs/app-behaviour.md)
+- **Platform effects** -- native file dialogs, clipboard, OS
+  notifications. [Effects guide](docs/effects.md)
+- **Accessibility** -- screen reader support via
+  [accesskit](https://accesskit.dev) on all platforms.
+  [Accessibility guide](docs/accessibility.md)
+- **Live reload** -- edit code, see changes instantly. Enabled by
+  default in dev mode.
+- **Extensions** -- multiple paths to custom widgets:
+  - **Compose** existing widgets into higher-level components with
+    pure Elixir. No Rust, no binary rebuild.
+  - **Draw** on the canvas with shape primitives for charts, gauges,
+    diagrams, and other custom 2D rendering.
+  - **Native** -- implement `WidgetExtension` in Rust for full
+    control over rendering, state, and event handling.
+  - [Extensions guide](docs/extensions.md)
 
 ## Testing
 
-Write your tests once, then run them at whatever fidelity you need. Toddy
-ships a test framework with three interchangeable backends:
+Toddy ships a test framework with three interchangeable backends.
+Write your tests once, run them at whatever fidelity you need:
 
-- **Simulated** -- millisecond tests with zero setup. No Rust binary, no
-  display server. Click buttons, type text, assert on results.
-- **Headless** -- real Rust rendering powered by iced's
-  [iced_test](https://docs.rs/iced_test) and
-  [tiny-skia](https://github.com/linebender/tiny-skia), no display server
-  needed. Catches protocol bugs and structural regressions across upgrades.
-- **Full** -- real iced windows with GPU rendering. Pixel-accurate
-  screenshot regression, platform effects, the works.
-
-All three use the same API. Swap between them with a single line change --
-or let CI run all three.
+- **Mocked** -- millisecond tests, no display server. Uses a shared
+  mock process for fast logic and interaction testing.
+- **Headless** -- real rendering via
+  [tiny-skia](https://github.com/linebender/tiny-skia), no display
+  server needed. Supports screenshots for pixel regression in CI.
+- **Windowed** -- real windows with GPU rendering. Platform effects,
+  real input, the works.
 
 ```elixir
 defmodule TodoTest do
-  use Toddy.Test.Case, app: MyApp.Todo
+  use Toddy.Test.Case, app: Todo
 
-  test "complete todo flow" do
+  test "add and complete a todo" do
     type_text("#new_todo", "Buy milk")
     submit("#new_todo")
 
@@ -151,18 +135,42 @@ defmodule TodoTest do
 end
 ```
 
-Write test scenarios in Elixir with the full power of ExUnit, or use
-declarative `.toddy` scripts -- a superset of iced's
-[`.ice` format](https://docs.rs/iced_test/latest/iced_test/ice/) --
-for acceptance tests and visual demos. Capture golden-file screenshots for
-pixel regression, or just test your logic fast and move on.
+See the [testing guide](docs/testing.md) for the full API, backend
+details, and CI configuration.
 
-See the [Testing guide](docs/testing.md) for the full API, backend details,
-and CI configuration.
+## How it works
+
+Under the hood, a Rust binary built on
+[iced](https://github.com/iced-rs/iced) handles rendering and
+platform integration. Your Elixir app sends widget trees to the
+binary over stdin; the binary renders native windows and sends user
+events back over stdout.
+
+You don't need Rust to use toddy. The binary is a precompiled
+dependency, similar to how your app talks to a database without you
+writing C. If you ever need custom native rendering, the
+[extension system](docs/extensions.md) lets you write Rust for just
+those parts.
+
+## Status
+
+Pre-1.0. The core works -- 37 widget types, event system, 22 themes,
+multi-window, testing framework, accessibility -- but the API is
+still evolving:
+
+- Pin to an exact version and read the
+  [CHANGELOG](CHANGELOG.md) when upgrading.
+- Mix releases are not yet supported.
+- The extension macro DSL (`Toddy.Extension`) is the least stable
+  part of the API.
 
 ## Documentation
 
+Guides are in [`docs/`](docs/) and will be on
+[hexdocs](https://hexdocs.pm/toddy) once published:
+
 - [Getting started](docs/getting-started.md) -- setup, first app, mix tasks, dev mode
+- [Tutorial](docs/tutorial.md) -- build a todo app step by step
 - [App behaviour](docs/app-behaviour.md) -- the Elixir API contract, multi-window
 - [Layout](docs/layout.md) -- length, padding, alignment, spacing
 - [Events](docs/events.md) -- full event taxonomy
@@ -173,7 +181,39 @@ and CI configuration.
 - [Scoped IDs](docs/scoped-ids.md) -- hierarchical ID namespacing
 - [Testing](docs/testing.md) -- three-backend test framework and pixel regression
 - [Accessibility](docs/accessibility.md) -- accesskit integration, a11y props
-- [Extensions](docs/extensions.md) -- native widget extensions, publishing widget packages
+- [Extensions](docs/extensions.md) -- custom widgets, publishing packages
+
+## Development
+
+```bash
+mix preflight                         # run all CI checks locally
+```
+
+Mirrors CI and stops on first failure: format, compile (warnings as
+errors), credo, test, dialyzer.
+
+## System requirements
+
+The precompiled binary (`mix toddy.download`) has no additional
+dependencies. To build from source, install a Rust toolchain via
+[rustup](https://rustup.rs/) and the platform-specific libraries:
+
+- **Linux (Debian/Ubuntu):**
+  `sudo apt-get install libxkbcommon-dev libwayland-dev libx11-dev cmake fontconfig pkg-config`
+- **Linux (Arch):**
+  `sudo pacman -S libxkbcommon wayland libx11 cmake fontconfig pkgconf`
+- **macOS:** `xcode-select --install`
+- **Windows:**
+  [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+  with "Desktop development with C++"
+
+## Links
+
+| | |
+|---|---|
+| Elixir SDK | [github.com/toddy/toddy-elixir](https://github.com/toddy/toddy-elixir) |
+| Rust binary | [github.com/toddy-ui/toddy](https://github.com/toddy-ui/toddy) |
+| Rust crate | [crates.io/crates/toddy](https://crates.io/crates/toddy) |
 
 ## License
 

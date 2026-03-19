@@ -135,7 +135,9 @@ defmodule Toddy.MixProject do
     [
       licenses: ["MIT"],
       links: %{
-        "GitHub" => "https://github.com/toddy/toddy-elixir"
+        "GitHub" => "https://github.com/toddy/toddy-elixir",
+        "Rust binary" => "https://github.com/toddy-ui/toddy",
+        "Changelog" => "https://github.com/toddy/toddy-elixir/blob/main/CHANGELOG.md"
       },
       files: ~w(
         lib
