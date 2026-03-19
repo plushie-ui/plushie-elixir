@@ -14,7 +14,7 @@ correctly returns `:ok` -- the commands have already completed by the time
 it is called.
 
 The `CommandProcessor` was extracted from the mock backend's private
-implementation and is shared by mock, headless, and windowed backends.
+implementation and is shared by pooled_mock, headless, and windowed backends.
 
 
 ## ~~Script instructions `press`, `release`, `move`, `move_to` are no-ops~~ (mostly resolved)
@@ -26,7 +26,7 @@ Key strings support modifier prefixes: `"ctrl+s"`, `"shift+enter"`,
 `"escape"` -> `:escape`, etc.
 
 All three backends support these operations:
-- **mock:** Dispatches `%Key{type: :press, ...}` / `%Key{type: :release, ...}` /
+- **pooled_mock:** Dispatches `%Key{type: :press, ...}` / `%Key{type: :release, ...}` /
   `%Mouse{type: :moved, x: x, y: y}` directly through `update/2`.
 - **headless/windowed:** Sends interact messages over the wire protocol. Rust
   side parses the key string and emits event JSON.
@@ -34,8 +34,9 @@ All three backends support these operations:
 **Remaining limitation:** `move` (move cursor to a widget by selector)
 remains a no-op. It requires widget bounds from layout, which only the
 renderer knows. `move_to/2` (move to absolute coordinates) works on all
-backends, but on mock it has no spatial layout info -- mouse area enter/exit
-events won't fire because there's no hit testing against widget bounds.
+backends, but on pooled_mock it has no spatial layout info -- mouse area
+enter/exit events won't fire because there's no hit testing against widget
+bounds.
 
 
 ## ~~`type_key` is a no-op on all backends~~ (resolved)
@@ -71,7 +72,7 @@ as valid PNG files for manual inspection or archival:
 ```elixir
 test "renders correctly" do
   click("#increment")
-  assert_snapshot("counter-at-1")       # always works
+  assert_tree_hash("counter-at-1")      # always works
   assert_screenshot("counter-pixels")   # checks on :headless and :windowed
   save_screenshot("counter-debug")      # writes PNG to test/screenshots/
 end
@@ -111,17 +112,16 @@ widget and uses it as the submit value. `type_text("#name", "Alice")`
 followed by `submit("#name")` submits `"Alice"` regardless of whether
 `view/1` echoes the value back into the text_input's `value` prop.
 
-The fallback to `EventMap.submit/1` (which reads the tree prop) still
-applies when `submit` is called without a prior `type_text` for that
-widget. `reset/0` clears the typed text tracking.
+The fallback reads the tree prop when `submit` is called without a prior
+`type_text` for that widget. `reset/0` clears the typed text tracking.
 
 
 ## CommandProcessor executes async commands synchronously
 
 **What:** The shared `CommandProcessor` module
 (`Julep.Test.Backend.CommandProcessor`) executes all async, stream, done,
-and batch commands synchronously in all three test backends (mock, headless,
-windowed). When `update/2` returns an async command, the function is called
+and batch commands synchronously in all three test backends (pooled_mock,
+headless, windowed). When `update/2` returns an async command, the function is called
 immediately and its result is dispatched through `update/2` before control
 returns to the test.
 
@@ -138,28 +138,28 @@ asynchronously.
 - Tests that depend on ordering when multiple async commands race.
 - Tests for debouncing or throttling logic driven by command timing.
 - Tests for cancellation of in-flight async work (cancel executes
-  instantly in mock, but in production the task may have already emitted
-  intermediate results before receiving the cancel signal).
+  instantly in pooled_mock, but in production the task may have already
+  emitted intermediate results before receiving the cancel signal).
 
 **Workaround:** For timing-sensitive or concurrency-sensitive behaviour,
 use the headless or windowed backends. The headless backend does not require a
 display server and can be enabled via `JULEP_TEST_BACKEND=headless` after
 building the renderer with `cargo build`.
 
-For unit tests that verify async result dispatch (not timing), the mock
-backend's synchronous execution is a feature, not a bug -- tests run in
-milliseconds without flakiness.
+For unit tests that verify async result dispatch (not timing), the
+pooled_mock backend's synchronous execution is a feature, not a bug --
+tests run in milliseconds without flakiness.
 
 
-## Mock backend has no spatial layout
+## Pooled mock backend has no spatial layout
 
-**What:** The mock backend does not perform layout. Widgets have no
+**What:** The pooled_mock backend does not perform layout. Widgets have no
 position or size. This means:
 
 - `move_to/2` dispatches a `%Mouse{type: :moved, x: x, y: y}` event, but mouse area
   enter/exit events will not fire because there is no hit testing.
 - `find/1` locates elements by ID or text content, not by visual position.
-- Screenshot assertions always pass with an empty hash on mock.
+- Screenshot assertions always pass with an empty hash on pooled_mock.
 
 **Workaround:** Use the headless backend for tests that depend on spatial
 layout. Use the windowed backend for tests that depend on real window

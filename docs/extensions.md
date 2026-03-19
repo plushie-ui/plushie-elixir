@@ -893,40 +893,15 @@ fn render_does_not_panic() {
 }
 ```
 
-### Mock backend testing
+### Testing with the pooled_mock backend
 
-For the Elixir mock test backend to interact with your custom widget types,
-implement the optional `sim_events/3` callback on your extension module:
+The pooled_mock backend (`:pooled_mock`) uses `Backend.Pooled` with a
+shared renderer process. Standard test helpers like `click/1`,
+`type_text/2`, etc. work with extension widget types out of the box --
+the pooled backend infers events for known widget interaction patterns.
 
-```elixir
-defmodule MySparkline do
-  use Julep.Extension, :native_widget
-
-  widget :sparkline
-  # ... props, commands ...
-
-  def sim_events(:click, %{type: "sparkline", id: id}, _args) do
-    {:ok, %Widget{type: :click, id: id}}
-  end
-
-  def sim_events(_verb, _element, _args), do: :not_handled
-end
-```
-
-Register the extension for mock dispatch in your test setup:
-
-```elixir
-setup do
-  Julep.Test.ExtensionEvents.register(MySparkline)
-  on_exit(fn -> Julep.Test.ExtensionEvents.clear() end)
-end
-```
-
-Or call `Julep.Test.ExtensionEvents.register_all/0` to auto-discover all
-loaded extensions.
-
-This lets standard test helpers like `click/1`, `type_text/2`, etc. work
-with your extension's widget types in the mock backend.
+For integration tests that exercise the full wire protocol round-trip
+(including extension commands), use the `:headless` backend.
 
 
 ## ExtensionCaches

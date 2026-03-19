@@ -289,11 +289,11 @@ defmodule MyWidget.DonutChartTest do
 end
 ```
 
-### Integration tests with mock backend
+### Integration tests with pooled_mock backend
 
 For testing widget behaviour in a running app (event handling, view
-updates), use julep's mock backend. It runs pure Elixir -- no renderer
-binary:
+updates), use julep's pooled_mock backend. It runs pure Elixir -- no
+renderer binary:
 
 ```elixir
 defmodule MyWidget.IntegrationTest do
@@ -321,11 +321,11 @@ defmodule MyWidget.IntegrationTest do
 end
 ```
 
-### Visual testing with headless or full backend
+### Visual testing with headless or windowed backend
 
-For pixel-level validation, use the headless or full test backend. These
-require the julep binary. Typically only needed for the package author's
-CI, not for consumers:
+For pixel-level validation, use the headless or windowed test backend.
+These require the julep binary. Typically only needed for the package
+author's CI, not for consumers:
 
 ```elixir
 # In test/test_helper.exs or a tagged test module:

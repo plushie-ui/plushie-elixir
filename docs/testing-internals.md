@@ -30,14 +30,14 @@ are building an app with julep, see [testing.md](testing.md) instead.
                                   v
                     +-------------+-------------+
                     |             |              |
-           +--------+--+  +------+-----+  +-----+------+
-           |Backend.Mock|  |Backend.    |  |Backend.    |
-           | (GenServer)|  |Headless    |  |Full        |
-           |            |  |(GenServer) |  |(GenServer) |
-           +-----+------+  +-----+-----+  +-----+-----+
+           +--------+----+  +------+-----+  +-----+------+
+           |Backend.     |  |Backend.    |  |Backend.    |
+           |Pooled       |  |Headless    |  |Windowed    |
+           |(GenServer)  |  |(GenServer) |  |(GenServer) |
+           +-----+-------+  +-----+-----+  +-----+-----+
                  |                |              |
            pure Elixir      Port: julep           Port: julep
-           EventMap         --mock           (no flag)
+           shared renderer  --headless       (no flag)
            process_commands  wire protocol    wire protocol
                                               real iced windows
 ```
@@ -54,12 +54,12 @@ are building an app with julep, see [testing.md](testing.md) instead.
 
 4. Each backend is a `GenServer` that manages app state (`model`, `tree`)
    and handles interactions differently:
-   - **Mock** runs `init/update/view` locally, uses `EventMap` to infer
-     events, and executes commands synchronously.
+   - **Pooled** runs `init/update/view` locally via a shared renderer
+     process, infers events, and executes commands synchronously.
    - **Headless** spawns `julep --headless` via Port, sends wire protocol
      queries, and processes responses asynchronously via correlation IDs.
-   - **Full** spawns `julep` (no special flag) via Port, same wire protocol
-     as headless but with real iced windows and GPU rendering.
+   - **Windowed** spawns `julep` (no special flag) via Port, same wire
+     protocol as headless but with real iced windows and GPU rendering.
 
 
 ## Backend behaviour
@@ -80,7 +80,7 @@ are building an app with julep, see [testing.md](testing.md) instead.
 | `slide/3` | `(pid, selector, value) -> :ok` | Slide a slider to a value |
 | `model/1` | `(pid) -> term` | Get current model |
 | `tree/1` | `(pid) -> map` | Get current normalized tree |
-| `snapshot/2` | `(pid, name) -> Snapshot.t` | Capture structural snapshot |
+| `tree_hash/2` | `(pid, name) -> TreeHash.t` | Capture structural tree hash |
 | `screenshot/2` | `(pid, name) -> Screenshot.t` | Capture pixel screenshot |
 | `reset/1` | `(pid) -> :ok` | Reset to initial state |
 | `await_async/3` | `(pid, tag, timeout) -> :ok` | Wait for async task |
@@ -90,17 +90,17 @@ are building an app with julep, see [testing.md](testing.md) instead.
 | `type_key/2` | `(pid, key) -> :ok` | Type a key (press + release) |
 
 
-## How to add a new widget to EventMap
+## How to add a new widget to interaction inference
 
 When a new widget type is added to julep that should support interactions
-in the mock backend:
+in the pooled_mock backend:
 
-1. Add clauses to the appropriate function in
-   `lib/julep/test/event_map.ex`. Each interaction type (`click`, `input`,
-   `submit`, `toggle`, `select`, `slide`) is a separate function.
+1. Add clauses to the appropriate interaction function in the pooled
+   backend. Each interaction type (`click`, `input`, `submit`, `toggle`,
+   `select`, `slide`) is handled separately.
 
 2. The clause should pattern-match on the element's `type` field and
-   return `{:ok, event_tuple}` or `{:error, reason}`.
+   return `{:ok, event_struct}` or `{:error, reason}`.
 
 3. For widgets that do not support an interaction, add an error clause
    with a helpful message:
@@ -110,12 +110,10 @@ in the mock backend:
      do: {:error, "cannot click a my_widget -- use toggle/1 instead"}
    ```
 
-4. Update the EventMap inference table in the module's `@moduledoc`.
-
-5. The headless and full backends do not use EventMap -- they inject
-   interactions via the wire protocol and the Rust renderer generates the
-   real events. Ensure the Rust side handles the new widget type in
-   `headless.rs` and `scripting.rs`.
+4. The headless and windowed backends do not use Elixir-side event
+   inference -- they inject interactions via the wire protocol and the
+   Rust renderer generates the real events. Ensure the Rust side handles
+   the new widget type in `headless.rs` and `scripting.rs`.
 
 
 ## How to add a new interaction type
@@ -134,10 +132,11 @@ toggle, select, slide):
    from the process dictionary and delegates.
 
 4. Implement the callback in all three backends:
-   - **Mock:** Add an `EventMap` function and a `handle_call` clause.
+   - **Pooled:** Add an interaction inference clause and a `handle_call`
+     clause.
    - **Headless:** Add a `handle_call` clause that sends an `interact`
      wire protocol message with the new action name.
-   - **Full:** Same as headless.
+   - **Windowed:** Same as headless.
 
 5. On the Rust side, handle the new action in the interact message
    handler in `headless.rs` and `scripting.rs`.
@@ -203,11 +202,11 @@ Both patterns should return `:ok` on success and raise
    behaviour specification needs updating.
 
 
-## EventMap inference table
+## Interaction inference table
 
-The mock backend uses `Julep.Test.EventMap` to infer what event a widget
-interaction should produce. This table must stay in sync with the Rust
-renderer's actual event generation.
+The pooled_mock backend infers what event a widget interaction should
+produce. This table must stay in sync with the Rust renderer's actual
+event generation.
 
 | Widget | `click` | `input` | `submit` | `toggle` | `select` | `slide` |
 |---|---|---|---|---|---|---|
@@ -226,10 +225,11 @@ renderer's actual event generation.
 hint about which function to use instead (when applicable).
 
 
-## Mock backend internals
+## Pooled backend internals
 
-The mock backend (`lib/julep/test/backend/mock.ex`) is a GenServer that
-manages the app lifecycle entirely in Elixir.
+The pooled backend (`lib/julep/test/backend/pooled.ex`) is a GenServer that
+manages the app lifecycle entirely in Elixir, using a shared renderer
+process via `SessionPool`.
 
 ### Initialization
 
@@ -240,7 +240,7 @@ manages the app lifecycle entirely in Elixir.
 ### Interaction flow
 
 1. `find_in_tree/2` locates the target element by selector (ID or text).
-2. The appropriate `EventMap` function infers the event tuple.
+2. The appropriate interaction inference function determines the event struct.
 3. `dispatch_update/3` calls `app.update(model, event)` and normalizes the
    return value (bare model or `{model, commands}`).
 4. `process_commands/4` executes any returned commands:
@@ -294,7 +294,7 @@ map from ID to `{type, from}` or `{type, from, extra}` tuples.
 | `query` (target: `find`) | Find an element by selector |
 | `query` (target: `tree`) | Get the full rendered tree |
 | `interact` | Simulate a user interaction |
-| `snapshot_capture` | Capture a structural snapshot |
+| `tree_hash` | Capture a structural tree hash |
 | `screenshot` | Capture a pixel screenshot |
 | `reset` | Reset renderer state |
 
@@ -304,7 +304,7 @@ map from ID to `{type, from}` or `{type, from, extra}` tuples.
 |---|---|
 | `query_response` | Response to a query |
 | `interact_response` | Response with generated events |
-| `snapshot_response` | Structural snapshot hash |
+| `tree_hash_response` | Structural tree hash |
 | `screenshot_response` | Screenshot hash and RGBA pixel data |
 | `reset_response` | Acknowledgement of reset |
 | `event` | Asynchronous event from the renderer |
@@ -329,9 +329,9 @@ See [Headless screenshot pipeline](#headless-screenshot-pipeline) below
 for the full rendering flow.
 
 
-## Full backend internals
+## Windowed backend internals
 
-The full backend (`lib/julep/test/backend/full.ex`) is structurally
+The windowed backend (`lib/julep/test/backend/windowed.ex`) is structurally
 identical to the headless backend but spawns `julep` with no special flag
 instead of `--headless`. The Rust renderer runs a real `iced::daemon` with GPU
 rendering. Scripting messages are accepted in all modes.
@@ -347,36 +347,36 @@ Key differences from headless:
 
 ## How snapshots work
 
-### Structural snapshots (`Snapshot`)
+### Structural tree hashes (`TreeHash`)
 
 1. The backend serializes the current tree to JSON.
-2. SHA-256 hash of the JSON bytes produces the snapshot hash.
-3. `Snapshot.assert_match/2` compares against a golden `.sha256` file in
+2. SHA-256 hash of the JSON bytes produces the tree hash.
+3. `TreeHash.assert_match/2` compares against a golden `.sha256` file in
    `test/snapshots/`.
 4. First run: writes the golden file.
 5. Subsequent runs: reads the golden file and compares hashes.
 6. `JULEP_UPDATE_SNAPSHOTS=1`: overwrites the golden file.
 
-The mock backend hashes the tree JSON directly. The headless and full
-backends send a `snapshot_capture` message to the renderer and receive the
-hash in the response.
+The pooled_mock backend hashes the tree JSON directly. The headless and
+windowed backends send a `tree_hash` message to the renderer and receive
+the hash in the response.
 
 ### Pixel screenshots (`Screenshot`)
 
-1. The full backend sends a `screenshot` message to the renderer and
+1. The windowed backend sends a `screenshot` message to the renderer and
    receives a `screenshot_response` containing a SHA-256 hash of the pixel
    data plus the raw RGBA bytes. The wire format uses native msgpack binary
    for the RGBA data (no base64 overhead) or base64 encoding in JSON mode.
 2. SHA-256 hash of the pixel data produces the screenshot hash.
-3. `Screenshot.assert_match/2` works the same as `Snapshot.assert_match/2`
+3. `Screenshot.assert_match/2` works the same as `TreeHash.assert_match/2`
    but uses `test/screenshots/` and `JULEP_UPDATE_SCREENSHOTS`.
-4. The mock backend returns an empty `Screenshot` struct (hash `""`, size
-   `{0, 0}`, nil pixel data) because there is no renderer.
+4. The pooled_mock backend returns an empty `Screenshot` struct (hash `""`,
+   size `{0, 0}`, nil pixel data) because there is no renderer.
 5. The headless backend sends `screenshot` with viewport dimensions
    to the renderer. The Rust headless renderer software-renders via tiny-skia
    and returns real RGBA pixel data with a SHA-256 hash.
-6. Empty hashes (from mock) are silently accepted without creating or
-   checking golden files.
+6. Empty hashes (from pooled_mock) are silently accepted without creating
+   or checking golden files.
 
 ### JSON tree snapshots (`Julep.Test.assert_tree_snapshot/2`)
 
@@ -451,21 +451,20 @@ backend, making it a natural choice for headless screenshot rendering.
 |---|---|
 | `lib/julep/test.ex` | `assert_tree_snapshot/2` for unit-level JSON tree comparison |
 | `lib/julep/test/backend.ex` | `Backend` behaviour (20 callbacks) |
-| `lib/julep/test/backend/mock.ex` | Pure Elixir backend, EventMap-based event inference |
+| `lib/julep/test/backend/pooled.ex` | Pure Elixir backend with shared renderer process |
 | `lib/julep/test/backend/headless.ex` | Rust renderer via `--headless` Port, wire protocol |
-| `lib/julep/test/backend/full.ex` | Real iced windows via `julep` (no flag) Port, wire protocol |
+| `lib/julep/test/backend/windowed.ex` | Real iced windows via `julep` (no flag) Port, wire protocol |
 | `lib/julep/test/case.ex` | ExUnit case template, backend resolution, setup/teardown |
 | `lib/julep/test/helpers.ex` | Imported helper functions (find, click, assert_text, ...) |
 | `lib/julep/test/session.ex` | Session facade wrapping backend module + pid |
 | `lib/julep/test/element.ex` | Element struct (id, type, props, children), text extraction |
-| `lib/julep/test/snapshot.ex` | Structural snapshot struct, golden file comparison |
+| `lib/julep/test/tree_hash.ex` | Structural tree hash struct, golden file comparison |
 | `lib/julep/test/screenshot.ex` | Pixel screenshot struct, golden file comparison |
-| `lib/julep/test/event_map.ex` | Widget type to event inference for mock backend |
+| `lib/julep/test/backend/command_processor.ex` | Shared synchronous command execution |
 | `lib/julep/test/script.ex` | `.julep` script parser |
 | `lib/julep/test/script/runner.ex` | Script execution engine |
 | `julep/julep-core/src/engine.rs` | Core struct (tree, caches, subscriptions) |
-| `julep/julep/src/headless.rs` | `--headless` mode: software rendering, persistent widget state |
-| `julep/julep/src/mock.rs` | `--mock` mode: protocol-only, no rendering |
+| `julep/julep/src/headless.rs` | `--headless` and `--mock` modes: software rendering, persistent widget state |
 | `julep/julep/src/scripting.rs` | Scripting message handling (accepted in all modes) |
 | `test/support/mock_bridge.ex` | Test double tracking bridge calls |
 | `test/support/integration_case.ex` | ExUnit case template for integration tests |

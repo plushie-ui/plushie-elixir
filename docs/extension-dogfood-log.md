@@ -21,11 +21,11 @@ extension system.
   Replaced with working code that chains `.extension()` calls and
   delegates to `julep_bin::run()`.
 
-- **Mock backend couldn't test extension widgets.** `EventMap` returned
-  errors for unknown types with no extension fallback. Added optional
-  `sim_events/3` callback to `Julep.Extension`, created
-  `Julep.Test.ExtensionEvents` registry, and updated all catch-all
-  clauses to consult registered extensions.
+- **Mock backend couldn't test extension widgets.** The previous mock
+  backend returned errors for unknown widget types with no extension
+  fallback. Resolved by moving to the pooled backend (`Backend.Pooled`)
+  which uses a shared renderer process and handles extension widget
+  types through the standard interaction inference.
 
 ### What went well
 
@@ -117,7 +117,7 @@ extension system.
   the event (pan/zoom stays Rust-side), Observed forwards AND emits
   (click produces both original and plot_click), PassThrough lets
   unknown events flow to Elixir.
-- `sim_events/3` callback integrates cleanly with the test framework.
+- Test framework interaction inference works cleanly with extension widgets.
 - Canvas-based interactive widgets are a natural fit for the extension
   system.
 
@@ -156,7 +156,7 @@ extension system.
 - All 5 extensions coexist in a single app with no type name collisions.
 - Config routing, command routing, and event routing all work correctly.
 - The discovery mechanism finds all loaded extensions.
-- sim_events callbacks work for extensions that implement them.
+- Extension interaction inference works for all extension widget types.
 
 ## Post-build Audit
 
@@ -183,7 +183,7 @@ packages. All have been fixed.
   swallowed silently, `DefaultHasher` not stable across Rust versions.
 - **plot:** Canvas cache created and thrown away every frame, pan/zoom
   non-functional (`Consumed(vec![])` suppressed events but published no
-  Message for iced to re-render), `sim_events` matched bare map instead
+  Message for iced to re-render), event inference matched bare map instead
   of Element struct, no clipping of series to plot area.
 - **timeline:** Hit test returned first-in-list instead of topmost visual
   match, inverted intervals rendered backwards, `ms_to_x` divide-by-zero
@@ -200,12 +200,11 @@ packages. All have been fixed.
 
 ### Additional fixes from second audit
 
-- **Mock vs real event shape mismatch.** `sim_events/3` in julep_plot and
-  julep_timeline returned custom event tuples (`{:plot_click, id, ...}`,
-  `{:timeline_click, id, ...}`) that don't match the real protocol
-  dispatch. The Rust renderer emits `Message::Event(id, data, "click")`
-  which the Elixir protocol decodes as `{:click, id}`. Fixed sim_events
-  to return `{:ok, {:click, id}}` and updated demo update handlers.
+- **Mock vs real event shape mismatch.** The previous mock backend's event
+  simulation in julep_plot and julep_timeline returned custom event tuples
+  that didn't match the real protocol dispatch. This mismatch is no longer
+  an issue with the pooled backend, which uses the same event inference as
+  the production path.
 - **Plot interactive prop fix.** Canvas events only reach `handle_event`
   when the plot node has `interactive: true`. Without it, pan/zoom/click
   events pass through as raw canvas events.
