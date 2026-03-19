@@ -48,6 +48,10 @@ Or from IEx:
 iex> Toddy.start_link(Counter)
 ```
 
+This is one of [8 examples](examples/) included in the repo, from a
+minimal counter to a full widget catalog. Edit them while the GUI is
+running and see changes instantly.
+
 ## Getting started
 
 Add toddy to your dependencies:
