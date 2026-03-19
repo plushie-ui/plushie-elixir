@@ -111,6 +111,11 @@ defmodule Toddy.DevServer do
     count = MapSet.size(paths)
     Logger.info("toddy dev: recompiling #{count} file(s)...")
 
+    # Suppress "redefining module" warnings -- we're intentionally
+    # reloading modules that are already loaded from _build.
+    prev = Code.get_compiler_option(:ignore_module_conflict)
+    Code.put_compiler_option(:ignore_module_conflict, true)
+
     errors =
       paths
       |> Enum.sort()
@@ -124,6 +129,8 @@ defmodule Toddy.DevServer do
             [path | errs]
         end
       end)
+
+    Code.put_compiler_option(:ignore_module_conflict, prev)
 
     if errors == [] do
       send(runtime, :force_rerender)
