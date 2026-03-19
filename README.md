@@ -61,7 +61,7 @@ mix julep.gui MyApp
 mix julep.dev MyApp
 ```
 
-Edit your source files and watch the GUI update in place. See [dev mode docs](docs/dev-mode.md).
+Edit your source files and watch the GUI update in place. See the [dev mode section](docs/getting-started.md#dev-mode-live-code-reloading) in the getting started guide.
 
 ## System Requirements
 
@@ -165,29 +165,18 @@ and CI configuration.
 
 ## Documentation
 
-- [Getting started](docs/getting-started.md) -- setup, first app, mix tasks, debugging
-- [Architecture](docs/architecture.md) -- the three pieces
-- [App behaviour](docs/app-behaviour.md) -- the Elixir API contract
-- [UI trees](docs/ui-trees.md) -- node format and widget catalog
+- [Getting started](docs/getting-started.md) -- setup, first app, mix tasks, dev mode
+- [App behaviour](docs/app-behaviour.md) -- the Elixir API contract, multi-window
 - [Layout](docs/layout.md) -- length, padding, alignment, spacing
 - [Events](docs/events.md) -- full event taxonomy
 - [Commands and subscriptions](docs/commands.md) -- async work, timers, widget ops
 - [Effects](docs/effects.md) -- native platform features
 - [Theming](docs/theming.md) -- themes, custom palettes, styling
-- [Multi-window](docs/multi-window.md) -- declarative multi-window model
-- [Stateful widgets](docs/stateful-widgets.md) -- text_editor, combo_box, pane_grid
-- [State helpers](docs/state-helpers.md) -- optional state management modules
-- [Composition patterns](docs/composition-patterns.md) -- tabs, sidebars, modals, cards
+- [Composition patterns](docs/composition-patterns.md) -- tabs, sidebars, modals, cards, state helpers
+- [Scoped IDs](docs/scoped-ids.md) -- hierarchical ID namespacing
 - [Testing](docs/testing.md) -- three-backend test framework and pixel regression
 - [Accessibility](docs/accessibility.md) -- accesskit integration, a11y props
-- [Iced parity guide](docs/iced-parity.md) -- Rust-to-Elixir mapping for iced users
-- [Renderer](docs/renderer.md) -- what the Rust binary does
-- [Transport](docs/transport.md) -- MessagePack wire protocol
-- [Dev mode](docs/dev-mode.md) -- live code reloading
-- [Extensions](docs/extensions.md) -- writing native widget extensions
-- [Widget authoring](docs/widget-authoring.md) -- adding widgets to the typed layer
-- [Widget packages](docs/widget-packages.md) -- publishing reusable packages
-- [Testing internals](docs/testing-internals.md) -- contributing to the test framework
+- [Extensions](docs/extensions.md) -- native widget extensions, publishing widget packages
 
 ## License
 
