@@ -174,11 +174,15 @@ Live code reloading without losing application state. Add
 {:file_system, "~> 1.0"}
 ```
 
-In dev mode, `mix toddy.gui` watches `lib/` by default. Edit any
-`.ex` file, save, and the GUI updates in place. Pass `--no-watch`
-to disable.
-The model is preserved -- only `view/1` is re-evaluated with the new
-code. See `Toddy.DevServer` for configuration options.
+In dev mode, `mix toddy.gui` watches all compilation directories
+(`lib/`, `examples/`, etc.). Edit any `.ex` file, save, and the
+GUI updates in place. The model is preserved -- only `view/1` is
+re-evaluated with the new code. Pass `--no-watch` to disable.
+
+Try it with an example -- run `mix toddy.gui Counter`, then edit
+`examples/counter.ex` and save. The window updates instantly.
+
+See `Toddy.DevServer` for configuration options.
 
 ## Next steps
 

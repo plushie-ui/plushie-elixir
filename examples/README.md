@@ -7,6 +7,10 @@ Run any example with:
 mix toddy.gui <Name>
 ```
 
+In dev mode, file watching is enabled by default. Edit an example
+while the GUI is running and the window updates instantly -- a good
+way to experiment with the API.
+
 ## Examples
 
 ### Counter
