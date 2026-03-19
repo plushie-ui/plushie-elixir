@@ -1,18 +1,17 @@
 defmodule Julep.Examples.ColorPicker do
   @moduledoc """
-  HSV color picker demonstrating the canvas widget as a custom interactive
-  control.
+  HSV color picker using the canvas widget as a custom interactive control.
 
   A hue ring surrounds a saturation/value square. Drag the ring to select
   a hue; drag the square to adjust saturation and value. The selected color
   is displayed as a swatch and hex string below the canvas.
 
-  Canvas features exercised: path commands (ring segments), linear gradients
-  with alpha (SV square), layer caching (4 layers with different invalidation
-  patterns), interactive mouse events (press/move/release for drag), and
-  coordinate math for hit testing.
-
-  Run with: `mix julep.gui Julep.Examples.ColorPicker`
+  Demonstrates:
+  - Canvas with multiple layers and per-layer invalidation
+  - Path commands (ring segments) and linear gradients with alpha
+  - Interactive mouse events (press/move/release) for drag tracking
+  - Coordinate math for hit testing (ring vs. square regions)
+  - HSV-to-hex color conversion
   """
 
   use Julep.App

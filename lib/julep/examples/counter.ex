@@ -1,5 +1,12 @@
 defmodule Julep.Examples.Counter do
-  @moduledoc "Minimal counter example. Increment and decrement buttons."
+  @moduledoc """
+  Minimal counter example.
+
+  Demonstrates:
+  - Button click handling via `%Widget{type: :click}`
+  - Model updates from events
+  - Basic column/row layout
+  """
 
   use Julep.App
 
@@ -16,7 +23,7 @@ defmodule Julep.Examples.Counter do
 
     window "main", title: "Counter" do
       column padding: 16, spacing: 8 do
-        text("Count: #{model.count}")
+        text("count", "Count: #{model.count}")
 
         row spacing: 8 do
           button("increment", "+")

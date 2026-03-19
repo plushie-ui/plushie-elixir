@@ -337,7 +337,7 @@ defmodule Julep.Examples.Catalog do
       end
 
       # Tooltip wrapping a button
-      tooltip "demo_tooltip", tip: "This is a tooltip", position: :top do
+      tooltip "demo_tooltip", "This is a tooltip", position: :top do
         button("tooltip_target", "Hover me for tooltip")
       end
 

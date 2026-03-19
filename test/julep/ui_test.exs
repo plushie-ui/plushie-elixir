@@ -824,33 +824,25 @@ defmodule Julep.UITest do
   # tooltip macro
   # ---------------------------------------------------------------------------
 
-  describe "tooltip/1" do
-    test "produces a tooltip node with given id" do
-      node = tooltip("tip1")
-      assert node.id == "tip1"
-      assert node.type == "tooltip"
-      assert node.children == []
-    end
-  end
-
-  describe "tooltip id do...end" do
-    test "collects children" do
+  describe "tooltip id, tip do...end" do
+    test "collects children with tip" do
       node =
-        tooltip "tip1" do
+        tooltip "tip1", "Help text" do
           button("save", "Save")
         end
 
       assert node.id == "tip1"
       assert node.type == "tooltip"
+      assert node.props["tip"] == "Help text"
       assert length(node.children) == 1
       assert hd(node.children).id == "save"
     end
   end
 
-  describe "tooltip id, opts do...end" do
-    test "has both props and children" do
+  describe "tooltip id, tip, opts do...end" do
+    test "has tip, options, and children" do
       node =
-        tooltip "tip1", tip: "Save your work", position: :top do
+        tooltip "tip1", "Save your work", position: :top do
           button("save", "Save")
         end
 

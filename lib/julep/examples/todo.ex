@@ -1,8 +1,13 @@
 defmodule Julep.Examples.Todo do
   @moduledoc """
-  To-do list application demonstrating text_input, checkbox, button, and scrollable widgets.
+  To-do list application with add, check off, delete, and filter.
 
-  Phase 1 gate app -- proves the full update cycle works with interactive widgets.
+  Demonstrates:
+  - `text_input` with `on_submit` for keyboard-driven entry
+  - Dynamic list rendering with scoped IDs (`todo:N`, `delete:N`)
+  - `checkbox` toggle events with `value` payload
+  - Filter buttons and conditional list filtering
+  - `scrollable` for overflow content
   """
 
   use Julep.App

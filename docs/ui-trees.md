@@ -713,6 +713,6 @@ module and `Julep.UI` builder function.
 | `"text_input"` | `Julep.Iced.Widget.TextInput` | `Julep.UI.text_input/3` |
 | `"themer"` | `Julep.Iced.Widget.Themer` | `Julep.UI.themer/2` |
 | `"toggler"` | `Julep.Iced.Widget.Toggler` | `Julep.UI.toggler/3` |
-| `"tooltip"` | `Julep.Iced.Widget.Tooltip` | `Julep.UI.tooltip/2` |
+| `"tooltip"` | `Julep.Iced.Widget.Tooltip` | `Julep.UI.tooltip/3` |
 | `"vertical_slider"` | `Julep.Iced.Widget.VerticalSlider` | `Julep.UI.vertical_slider/4` |
 | `"window"` | -- | `Julep.UI.window/2` |

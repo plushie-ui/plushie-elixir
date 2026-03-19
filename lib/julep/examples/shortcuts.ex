@@ -1,14 +1,19 @@
 defmodule Julep.Examples.Shortcuts do
   @moduledoc """
-  Keyboard shortcuts example showing a log of key presses.
+  Keyboard shortcuts example showing a scrollable log of key presses.
 
-  Demonstrates `Julep.Subscription.on_key_press/1` for global keyboard
-  event handling. Each key press is appended to a visible log.
+  Demonstrates:
+  - `Julep.Subscription.on_key_press/1` for global keyboard events
+  - Pattern matching on `%Key{type: :press}` with modifier inspection
+  - `scrollable` for overflow content with dynamic list items
+  - Capped log buffer (`@max_log_entries`)
   """
 
   use Julep.App
 
   alias Julep.Event.Key
+  alias Julep.KeyModifiers
+  alias Julep.Subscription
 
   @max_log_entries 50
 
@@ -35,7 +40,7 @@ defmodule Julep.Examples.Shortcuts do
   # -- subscribe -------------------------------------------------------------
 
   def subscribe(_model) do
-    [Julep.Subscription.on_key_press(:keys)]
+    [Subscription.on_key_press(:keys)]
   end
 
   # -- view ------------------------------------------------------------------
@@ -70,7 +75,7 @@ defmodule Julep.Examples.Shortcuts do
     "##{n}: #{prefix}#{key}"
   end
 
-  defp format_modifiers(%Julep.KeyModifiers{} = m) do
+  defp format_modifiers(%KeyModifiers{} = m) do
     []
     |> then(fn acc -> if m.ctrl, do: ["Ctrl" | acc], else: acc end)
     |> then(fn acc -> if m.alt, do: ["Alt" | acc], else: acc end)

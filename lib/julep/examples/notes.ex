@@ -1,14 +1,19 @@
 defmodule Julep.Examples.Notes do
   @moduledoc """
-  Notes application demonstrating all 5 state helpers working together:
-  State, Undo, Selection, Route, and Data.
+  Notes application demonstrating all 5 state helpers working together.
 
-  A simple notes app with a list view (search, multi-select, delete) and
-  an edit view (title/body editing with undo/redo).
+  Demonstrates:
+  - `Julep.State` for nested state management
+  - `Julep.Undo` for reversible edits with labels
+  - `Julep.Selection` for multi-select with toggle
+  - `Julep.Route` for stack-based view navigation
+  - `Julep.Data.query/2` for full-text search across fields
+  - View helper extraction (`view_list/1`, `view_edit/1`)
   """
 
   use Julep.App
 
+  alias Julep.{Data, Route, Selection, State, Undo}
   alias Julep.Event.Widget
 
   # -- init ------------------------------------------------------------------
@@ -16,15 +21,15 @@ defmodule Julep.Examples.Notes do
   def init(_opts) do
     %{
       state:
-        Julep.State.new(%{
+        State.new(%{
           notes: [],
           next_id: 1,
           search_query: "",
           editing_id: nil
         }),
-      selection: Julep.Selection.new(mode: :multi),
-      undo: Julep.Undo.new(%{text: "", title: ""}),
-      route: Julep.Route.new("/list")
+      selection: Selection.new(mode: :multi),
+      undo: Undo.new(%{text: "", title: ""}),
+      route: Route.new("/list")
     }
   end
 
@@ -32,37 +37,37 @@ defmodule Julep.Examples.Notes do
 
   def update(model, %Widget{type: :click, id: "new_note"}) do
     state = model.state
-    id = Julep.State.get(state, [:next_id])
+    id = State.get(state, [:next_id])
 
     note = %{id: id, title: "", body: ""}
 
     state =
       state
-      |> Julep.State.update([:notes], fn notes -> notes ++ [note] end)
-      |> Julep.State.put([:next_id], id + 1)
-      |> Julep.State.put([:editing_id], id)
+      |> State.update([:notes], fn notes -> notes ++ [note] end)
+      |> State.put([:next_id], id + 1)
+      |> State.put([:editing_id], id)
 
     %{
       model
       | state: state,
-        undo: Julep.Undo.new(%{title: "", text: ""}),
-        route: Julep.Route.push(model.route, "/edit")
+        undo: Undo.new(%{title: "", text: ""}),
+        route: Route.push(model.route, "/edit")
     }
   end
 
   def update(model, %Widget{type: :click, id: "note:" <> id_str}) do
     id = String.to_integer(id_str)
-    notes = Julep.State.get(model.state, [:notes])
+    notes = State.get(model.state, [:notes])
     note = Enum.find(notes, fn n -> n.id == id end)
 
     if note do
-      state = Julep.State.put(model.state, [:editing_id], id)
+      state = State.put(model.state, [:editing_id], id)
 
       %{
         model
         | state: state,
-          undo: Julep.Undo.new(%{title: note.title, text: note.body}),
-          route: Julep.Route.push(model.route, "/edit")
+          undo: Undo.new(%{title: note.title, text: note.body}),
+          route: Route.push(model.route, "/edit")
       }
     else
       model
@@ -71,28 +76,28 @@ defmodule Julep.Examples.Notes do
 
   def update(model, %Widget{type: :click, id: "back"}) do
     model = save_current_edit(model)
-    state = Julep.State.put(model.state, [:editing_id], nil)
+    state = State.put(model.state, [:editing_id], nil)
 
-    %{model | state: state, route: Julep.Route.pop(model.route)}
+    %{model | state: state, route: Route.pop(model.route)}
   end
 
   def update(model, %Widget{type: :click, id: "delete_selected"}) do
-    selected = Julep.Selection.selected(model.selection)
+    selected = Selection.selected(model.selection)
 
     state =
-      Julep.State.update(model.state, [:notes], fn notes ->
+      State.update(model.state, [:notes], fn notes ->
         Enum.reject(notes, fn n -> MapSet.member?(selected, n.id) end)
       end)
 
-    %{model | state: state, selection: Julep.Selection.clear(model.selection)}
+    %{model | state: state, selection: Selection.clear(model.selection)}
   end
 
   def update(model, %Widget{type: :input, id: "search", value: query}) do
-    %{model | state: Julep.State.put(model.state, [:search_query], query)}
+    %{model | state: State.put(model.state, [:search_query], query)}
   end
 
   def update(model, %Widget{type: :input, id: "title", value: value}) do
-    old_title = Julep.Undo.current(model.undo).title
+    old_title = Undo.current(model.undo).title
 
     cmd = %{
       apply: fn current -> %{current | title: value} end,
@@ -100,11 +105,11 @@ defmodule Julep.Examples.Notes do
       label: "edit title"
     }
 
-    %{model | undo: Julep.Undo.apply(model.undo, cmd)}
+    %{model | undo: Undo.apply(model.undo, cmd)}
   end
 
   def update(model, %Widget{type: :input, id: "body", value: value}) do
-    old_text = Julep.Undo.current(model.undo).text
+    old_text = Undo.current(model.undo).text
 
     cmd = %{
       apply: fn current -> %{current | text: value} end,
@@ -112,20 +117,20 @@ defmodule Julep.Examples.Notes do
       label: "edit body"
     }
 
-    %{model | undo: Julep.Undo.apply(model.undo, cmd)}
+    %{model | undo: Undo.apply(model.undo, cmd)}
   end
 
   def update(model, %Widget{type: :click, id: "undo"}) do
-    %{model | undo: Julep.Undo.undo(model.undo)}
+    %{model | undo: Undo.undo(model.undo)}
   end
 
   def update(model, %Widget{type: :click, id: "redo"}) do
-    %{model | undo: Julep.Undo.redo(model.undo)}
+    %{model | undo: Undo.redo(model.undo)}
   end
 
   def update(model, %Widget{type: :toggle, id: "note_select:" <> id_str}) do
     id = String.to_integer(id_str)
-    %{model | selection: Julep.Selection.toggle(model.selection, id)}
+    %{model | selection: Selection.toggle(model.selection, id)}
   end
 
   def update(model, _event), do: model
@@ -135,7 +140,7 @@ defmodule Julep.Examples.Notes do
   def view(model) do
     import Julep.UI
 
-    case Julep.Route.current(model.route) do
+    case Route.current(model.route) do
       "/list" -> view_list(model)
       "/edit" -> view_edit(model)
     end
@@ -144,14 +149,14 @@ defmodule Julep.Examples.Notes do
   defp view_list(model) do
     import Julep.UI
 
-    search_query = Julep.State.get(model.state, [:search_query])
-    notes = Julep.State.get(model.state, [:notes])
+    search_query = State.get(model.state, [:search_query])
+    notes = State.get(model.state, [:notes])
 
     filtered =
       if search_query == "" do
         notes
       else
-        result = Julep.Data.query(notes, search: {[:title, :body], search_query})
+        result = Data.query(notes, search: {[:title, :body], search_query})
         result.entries
       end
 
@@ -167,7 +172,7 @@ defmodule Julep.Examples.Notes do
               row spacing: 8, width: :fill, id: "note_row:#{note.id}" do
                 checkbox(
                   "note_select:#{note.id}",
-                  Julep.Selection.selected?(model.selection, note.id),
+                  Selection.selected?(model.selection, note.id),
                   label: note.title
                 )
 
@@ -188,7 +193,7 @@ defmodule Julep.Examples.Notes do
   defp view_edit(model) do
     import Julep.UI
 
-    current = Julep.Undo.current(model.undo)
+    current = Undo.current(model.undo)
 
     window "main", title: "Edit Note" do
       column padding: 16, spacing: 12, width: :fill do
@@ -207,13 +212,13 @@ defmodule Julep.Examples.Notes do
   # -- private ---------------------------------------------------------------
 
   defp save_current_edit(model) do
-    editing_id = Julep.State.get(model.state, [:editing_id])
+    editing_id = State.get(model.state, [:editing_id])
 
     if editing_id do
-      current = Julep.Undo.current(model.undo)
+      current = Undo.current(model.undo)
 
       state =
-        Julep.State.update(model.state, [:notes], fn notes ->
+        State.update(model.state, [:notes], fn notes ->
           Enum.map(notes, fn
             %{id: ^editing_id} = note ->
               %{note | title: current.title, body: current.text}

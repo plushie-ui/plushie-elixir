@@ -1553,24 +1553,24 @@ defmodule Julep.UI do
   # Additional layout widgets (macros with do block support)
   # ---------------------------------------------------------------------------
 
-  # -- tooltip(id, opts) ------------------------------------------------------
+  # -- tooltip(id, tip, opts) --------------------------------------------------
 
   @doc """
   Tooltip wrapper. Children are the content being tooltipped.
 
-  ## Options
+  ## Forms
 
-  - `:tip` -- tooltip text
-  - `:position` -- `:top`, `:bottom`, `:left`, `:right`
+  - `tooltip(id, tip, do: block)` -- with children
+  - `tooltip(id, tip, opts, do: block)` -- with children and options
 
   ## Example
 
-      tooltip "save_tip", tip: "Save your work", position: :top do
+      tooltip "save_tip", "Save your work", position: :top do
         button("save", "Save")
       end
   """
-  defmacro tooltip(id, opts_or_do \\ []) do
-    case opts_or_do do
+  defmacro tooltip(id, tip_or_do) do
+    case tip_or_do do
       [do: block] ->
         exprs = block_to_exprs(block)
 
@@ -1579,20 +1579,49 @@ defmodule Julep.UI do
           Julep.UI.__build_fixed_node__("tooltip", unquote(id), [], children)
         end
 
-      opts ->
+      tip when is_binary(tip) ->
         quote do
-          Julep.UI.__build_fixed_node__("tooltip", unquote(id), unquote(opts), [])
+          Julep.UI.__build_fixed_node__("tooltip", unquote(id), [tip: unquote(tip)], [])
         end
     end
   end
 
   @doc false
-  defmacro tooltip(id, opts, do: block) do
+  defmacro tooltip(id, tip, opts_or_do) do
+    case opts_or_do do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Julep.UI.__build_fixed_node__("tooltip", unquote(id), [tip: unquote(tip)], children)
+        end
+
+      opts ->
+        quote do
+          Julep.UI.__build_fixed_node__(
+            "tooltip",
+            unquote(id),
+            [tip: unquote(tip)] ++ unquote(opts),
+            []
+          )
+        end
+    end
+  end
+
+  @doc false
+  defmacro tooltip(id, tip, opts, do: block) do
     exprs = block_to_exprs(block)
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Julep.UI.__build_fixed_node__("tooltip", unquote(id), unquote(opts), children)
+
+      Julep.UI.__build_fixed_node__(
+        "tooltip",
+        unquote(id),
+        [tip: unquote(tip)] ++ unquote(opts),
+        children
+      )
     end
   end
 
