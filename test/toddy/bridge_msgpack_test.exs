@@ -3,8 +3,7 @@ defmodule Toddy.BridgeMsgpackTest do
   Integration test verifying msgpack protocol works end-to-end between
   Elixir and the toddy binary.
 
-  Requires the debug binary at ../toddy/target/debug/toddy.
-  Build it with `cd ../toddy && cargo build` before running these tests.
+  Requires the toddy binary (downloaded or built from source).
 
   All tests use `--headless` mode so they work without a display server.
   Renderer log output is suppressed via RUST_LOG=off since error/warn
@@ -14,7 +13,7 @@ defmodule Toddy.BridgeMsgpackTest do
 
   import ExUnit.CaptureLog
 
-  @renderer_path Path.expand("../toddy/target/debug/toddy")
+  @renderer_path Toddy.Binary.renderer_path()
 
   # Environment for tests: whitelisted renderer env with log output suppressed.
   defp test_env do

@@ -277,13 +277,22 @@ defmodule Mix.Tasks.Toddy.Build do
     File.write!(Path.join(src_dir, "main.rs"), main_rs)
   end
 
+  @renderer_version "0.3.0"
+
   defp generate_cargo_toml(bin_name, extensions, crate_paths, build_dir) do
     source_path = Mix.ToddyHelpers.renderer_source_path()
-    toddy_core_path = Path.join(source_path, "toddy-core")
-    toddy_core_rel = Path.relative_to(toddy_core_path, build_dir)
 
-    toddy_bin_path = Path.join(source_path, "toddy")
-    toddy_bin_rel = Path.relative_to(toddy_bin_path, build_dir)
+    # Use local source paths if available, otherwise pull from crates.io
+    {toddy_core_dep, toddy_bin_dep} =
+      if File.dir?(source_path) do
+        toddy_core_rel = Path.relative_to(Path.join(source_path, "toddy-core"), build_dir)
+        toddy_bin_rel = Path.relative_to(Path.join(source_path, "toddy"), build_dir)
+        {~s(toddy-core = { path = "#{toddy_core_rel}" }),
+         ~s(toddy = { path = "#{toddy_bin_rel}" })}
+      else
+        {~s(toddy-core = "#{@renderer_version}"),
+         ~s(toddy = "#{@renderer_version}")}
+      end
 
     ext_deps =
       Enum.map_join(extensions, "\n", fn mod ->
@@ -307,8 +316,8 @@ defmodule Mix.Tasks.Toddy.Build do
     path = "src/main.rs"
 
     [dependencies]
-    toddy-core = { path = "#{toddy_core_rel}" }
-    toddy = { path = "#{toddy_bin_rel}" }
+    #{toddy_core_dep}
+    #{toddy_bin_dep}
     #{ext_deps}
     """
   end

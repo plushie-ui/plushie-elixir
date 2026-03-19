@@ -4,15 +4,15 @@ defmodule Mix.Tasks.Toddy.Download do
 
   use Mix.Task
 
-  @base_url "https://github.com/toddy/toddy/releases/download"
+  @base_url "https://github.com/toddy-ui/toddy/releases/download"
+  @renderer_version "0.3.0"
 
   @impl true
   def run(args) do
     Mix.Task.run("app.config")
 
-    version = Mix.Project.config()[:version]
     binary_name = Toddy.Binary.binary_name()
-    url = "#{@base_url}/v#{version}/#{binary_name}"
+    url = "#{@base_url}/v#{@renderer_version}/#{binary_name}"
 
     dest_dir = Path.join([Mix.Project.app_path(), "priv", "bin"])
     dest_path = Path.join(dest_dir, binary_name)
