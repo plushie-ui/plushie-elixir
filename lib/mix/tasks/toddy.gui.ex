@@ -6,13 +6,25 @@ defmodule Mix.Tasks.Toddy.Gui do
 
       mix toddy.gui MyApp
       mix toddy.gui MyApp --build
-      mix toddy.gui MyApp --release
+      mix toddy.gui MyApp --no-watch
 
   ## Options
 
-  - `--build` -- Build the renderer binary before starting (cargo build)
-  - `--release` -- Use the release build of the renderer
-  - `--json` -- Use JSON instead of MessagePack for wire protocol (opt-in for debugging)
+  - `--build` -- Build the toddy binary before starting
+  - `--release` -- Use the release build
+  - `--json` -- Use JSON wire protocol (debugging)
+  - `--watch` -- Enable file watching and live reload (default in dev)
+  - `--no-watch` -- Disable file watching
+  - `--debounce` -- File watch debounce interval in ms (default: 100)
+
+  ## File watching
+
+  In `MIX_ENV=dev`, file watching is enabled by default. Edit any
+  `.ex` file under `lib/` and the GUI updates in place, preserving
+  application state.
+
+  In other environments, watching is disabled. Passing `--watch`
+  outside of dev will raise an error.
   """
 
   use Mix.Task
@@ -23,62 +35,42 @@ defmodule Mix.Tasks.Toddy.Gui do
   def run(args) do
     {opts, args, _} =
       OptionParser.parse(args,
-        strict: [build: :boolean, release: :boolean, json: :boolean]
+        strict: [
+          build: :boolean,
+          release: :boolean,
+          json: :boolean,
+          watch: :boolean,
+          debounce: :integer
+        ]
       )
 
     app_module =
       case args do
-        [mod_str | _] ->
-          Module.concat([mod_str])
-
-        [] ->
-          Mix.raise("Usage: mix toddy.gui ModuleName")
+        [mod_str | _] -> Module.concat([mod_str])
+        [] -> Mix.raise("Usage: mix toddy.gui ModuleName")
       end
 
-    # Ensure the project is compiled
+    watch? = resolve_watch_flag(opts)
+
     Mix.Task.run("compile")
 
-    # Build renderer if requested
-    if opts[:build] do
-      build_renderer(opts[:release] || false)
-    end
-
-    renderer_path =
-      if opts[:build] do
-        # We just built it; use the known cargo output path
-        local_build_path(opts[:release] || false)
-      else
-        # Try the smart resolver (env var, priv/bin/, dev build) first.
-        # If --release was passed without --build, prefer the release dev build.
-        if opts[:release] do
-          release_path = local_build_path(true)
-          if File.exists?(release_path), do: release_path, else: Toddy.Binary.renderer_path()
-        else
-          Toddy.Binary.renderer_path()
-        end
-      end
-
-    unless File.exists?(renderer_path) do
-      Mix.raise("""
-      Renderer binary not found at #{renderer_path}.
-      Run `mix toddy.gui #{inspect(app_module)} --build` to build it,
-      or build manually with: cd ../toddy && cargo build
-      """)
-    end
-
-    # Start the application (ensures Logger etc are running)
+    binary_path = Mix.ToddyHelpers.resolve_binary!(opts)
     Mix.Task.run("app.start")
 
-    # Start Toddy with the given app module
-    start_opts = [renderer: renderer_path]
-
-    start_opts =
-      if opts[:json], do: Keyword.put(start_opts, :format, :json), else: start_opts
+    start_opts = [binary: binary_path]
+    start_opts = if opts[:json], do: Keyword.put(start_opts, :format, :json), else: start_opts
+    start_opts = if watch?, do: Keyword.merge(start_opts, dev_opts(opts)), else: start_opts
 
     case Toddy.start(app_module, start_opts) do
       {:ok, pid} ->
-        Mix.shell().info("Toddy started with #{inspect(app_module)}")
-        # Block until the supervisor exits
+        if watch? do
+          Mix.shell().info(
+            "Toddy started with #{inspect(app_module)} (watching lib/ for changes)"
+          )
+        else
+          Mix.shell().info("Toddy started with #{inspect(app_module)}")
+        end
+
         ref = Process.monitor(pid)
 
         receive do
@@ -93,24 +85,34 @@ defmodule Mix.Tasks.Toddy.Gui do
     end
   end
 
-  defp build_renderer(release?) do
-    source_dir = Mix.ToddyHelpers.renderer_source_path()
-    args = ["build"]
-    args = if release?, do: args ++ ["--release"], else: args
+  defp resolve_watch_flag(opts) do
+    explicit = Keyword.get(opts, :watch)
 
-    Mix.shell().info("Building renderer...")
+    case {explicit, Mix.env()} do
+      {true, :dev} ->
+        true
 
-    case System.cmd("cargo", args,
-           stderr_to_stdout: true,
-           into: IO.stream(:stdio, :line),
-           cd: source_dir
-         ) do
-      {_, 0} -> :ok
-      {_, code} -> Mix.raise("cargo build failed with exit code #{code}")
+      {true, _} ->
+        Mix.raise("--watch is only available in MIX_ENV=dev")
+
+      {false, _} ->
+        false
+
+      {nil, :dev} ->
+        true
+
+      {nil, _} ->
+        false
     end
   end
 
-  defp local_build_path(release?) do
-    Mix.ToddyHelpers.renderer_binary_path(release?)
+  defp dev_opts(opts) do
+    dev_opts =
+      case opts[:debounce] do
+        nil -> []
+        ms -> [debounce_ms: ms]
+      end
+
+    [dev: true, dev_opts: dev_opts]
   end
 end

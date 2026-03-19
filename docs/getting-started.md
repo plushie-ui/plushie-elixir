@@ -141,7 +141,7 @@ mix toddy.gui MyApp --build      # rebuild renderer first
 mix toddy.gui MyApp --release    # use release build
 mix toddy.build                  # build renderer only
 mix toddy.build --release        # release build
-mix toddy.dev MyApp              # dev mode with live reload
+mix toddy.gui MyApp --no-watch   # run without file watching
 mix toddy.inspect MyApp          # print UI tree as JSON
 ```
 
@@ -174,13 +174,9 @@ Live code reloading without losing application state. Add
 {:file_system, "~> 1.0"}
 ```
 
-Then run:
-
-```bash
-mix toddy.dev MyApp
-```
-
-Edit any `.ex` file under `lib/`, save, and the GUI updates in place.
+In dev mode, `mix toddy.gui` watches `lib/` by default. Edit any
+`.ex` file, save, and the GUI updates in place. Pass `--no-watch`
+to disable.
 The model is preserved -- only `view/1` is re-evaluated with the new
 code. See `Toddy.DevServer` for configuration options.
 

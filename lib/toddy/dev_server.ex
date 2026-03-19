@@ -5,7 +5,8 @@ defmodule Toddy.DevServer do
   Watches `lib/` for `.ex` and `.exs` changes, recompiles, and tells the
   runtime to re-render. The UI updates without losing application state.
 
-  Requires the `:file_system` package. Start via `mix toddy.dev` or manually:
+  Requires the `:file_system` package. Started automatically by
+  `mix toddy.gui` in dev mode, or manually:
 
       Toddy.DevServer.start_link(runtime: runtime_pid, dirs: ["lib"])
   """

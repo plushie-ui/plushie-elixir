@@ -55,13 +55,10 @@ end
 mix toddy.gui MyApp
 ```
 
-### Dev mode
-
-```bash
-mix toddy.dev MyApp
-```
-
-Edit your source files and watch the GUI update in place. See the [dev mode section](docs/getting-started.md#dev-mode-live-code-reloading) in the getting started guide.
+In dev mode, file watching is enabled by default -- edit your source files
+and the GUI updates in place. Pass `--no-watch` to disable. See the
+[dev mode section](docs/getting-started.md#dev-mode-live-code-reloading)
+in the getting started guide.
 
 ## System Requirements
 
