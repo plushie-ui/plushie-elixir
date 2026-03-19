@@ -45,6 +45,7 @@ defmodule Julep.Runtime do
   require Logger
 
   alias Julep.Event.{Async, Effect, Stream, Timer}
+  alias Julep.Runtime.{Commands, Subscriptions, Windows}
 
   @typep state :: %{
            app: module(),
@@ -58,9 +59,6 @@ defmodule Julep.Runtime do
            pending_timers: map(),
            consecutive_errors: non_neg_integer()
          }
-
-  # Default timeout for effect requests (30 seconds).
-  @effect_timeout_ms 30_000
 
   # ---------------------------------------------------------------------------
   # Public API
@@ -145,10 +143,10 @@ defmodule Julep.Runtime do
 
     # 5. Execute initial commands.
     state = %{state | tree: tree}
-    state = execute_commands(Map.get(state, :init_commands, []), state)
+    state = Commands.execute_commands(Map.get(state, :init_commands, []), state)
     state = Map.delete(state, :init_commands)
-    state = sync_subscriptions(state, state.model)
-    state = sync_windows(state, tree)
+    state = Subscriptions.sync_subscriptions(state, state.model)
+    state = Windows.sync_windows(state, tree)
     {:noreply, state}
   end
 
@@ -212,7 +210,7 @@ defmodule Julep.Runtime do
     end
 
     # Re-sync subscriptions with the new renderer.
-    state = sync_subscriptions(state, state.model)
+    state = Subscriptions.sync_subscriptions(state, state.model)
 
     # Re-open all known windows (renderer lost its window map on restart).
     Enum.each(state.windows, fn window_id ->
@@ -340,8 +338,8 @@ defmodule Julep.Runtime do
     Logger.info("julep runtime: force re-render (code reload)")
     new_tree = render_and_sync(state.app, state.model, state.bridge, state.tree)
     state = %{state | tree: new_tree}
-    state = sync_subscriptions(state, state.model)
-    state = sync_windows(state, new_tree)
+    state = Subscriptions.sync_subscriptions(state, state.model)
+    state = Windows.sync_windows(state, new_tree)
     {:noreply, state}
   end
 
@@ -405,13 +403,37 @@ defmodule Julep.Runtime do
   # Unwraps `app.init/1` or `app.update/2` return values into a
   # `{model, commands}` tuple. Commands are always a flat list of
   # `%Julep.Command{}` structs.
+  #
+  # Raises on structurally invalid returns (e.g. `{model, :not_a_command}`)
+  # so the error surfaces immediately rather than silently corrupting
+  # the model.
   @spec unwrap_result(term()) :: {term(), [Julep.Command.t()]}
   defp unwrap_result({model, commands}) when is_list(commands) do
+    Enum.each(commands, fn
+      %Julep.Command{} -> :ok
+      invalid ->
+        raise ArgumentError,
+          "init/1 or update/2 returned {model, commands} but the command " <>
+            "list contains #{inspect(invalid)}, expected %Julep.Command{}"
+    end)
+
     {model, commands}
   end
 
   defp unwrap_result({model, %Julep.Command{} = cmd}) do
     {model, [cmd]}
+  end
+
+  defp unwrap_result({_model, invalid}) do
+    raise ArgumentError,
+      "init/1 or update/2 returned {model, commands} but commands is " <>
+        "#{inspect(invalid)}, expected a %Julep.Command{} or a list of them"
+  end
+
+  defp unwrap_result(model) when is_tuple(model) do
+    raise ArgumentError,
+      "init/1 or update/2 returned a #{tuple_size(model)}-element tuple, " <>
+        "expected a bare model or {model, command}"
   end
 
   defp unwrap_result(model) do
@@ -486,11 +508,11 @@ defmodule Julep.Runtime do
     case safe_update(app, model, event, state.consecutive_errors) do
       {:ok, new_model, commands} ->
         state = %{state | model: new_model, consecutive_errors: 0}
-        state = execute_commands(commands, state)
+        state = Commands.execute_commands(commands, state)
         new_tree = render_and_sync(app, new_model, bridge, state.tree)
         state = %{state | tree: new_tree}
-        state = sync_subscriptions(state, new_model)
-        sync_windows(state, new_tree)
+        state = Subscriptions.sync_subscriptions(state, new_model)
+        Windows.sync_windows(state, new_tree)
 
       :error ->
         count = state.consecutive_errors + 1
@@ -540,470 +562,6 @@ defmodule Julep.Runtime do
       :error
   end
 
-  # Executes a list of commands. Batch commands are flattened recursively.
-  # State is threaded through so commands can read/write async_tasks and bridge.
-  @spec execute_commands([Julep.Command.t()] | Julep.Command.t() | term(), map()) :: map()
-  defp execute_commands(commands, state) when is_list(commands) do
-    Enum.reduce(commands, state, &execute_command/2)
-  end
-
-  defp execute_commands(%Julep.Command{} = cmd, state) do
-    execute_command(cmd, state)
-  end
-
-  defp execute_commands(_, state), do: state
-
-  @spec execute_command(Julep.Command.t(), map()) :: map()
-  defp execute_command(%Julep.Command{type: :none}, state), do: state
-
-  defp execute_command(
-         %Julep.Command{type: :done, payload: %{value: value, mapper: mapper}},
-         state
-       ) do
-    event = mapper.(value)
-    send(self(), {:renderer_event, event})
-    state
-  end
-
-  defp execute_command(%Julep.Command{type: :async, payload: %{fun: fun, tag: tag}}, state) do
-    # Kill any existing task with the same tag before starting a new one.
-    state = cancel_existing_task(state, tag)
-
-    runtime = self()
-    nonce = make_ref()
-
-    {:ok, pid} =
-      Task.start_link(fn ->
-        result = fun.()
-        send(runtime, {:async_result, tag, nonce, result})
-      end)
-
-    put_in(state.async_tasks[tag], {pid, nonce})
-  end
-
-  defp execute_command(
-         %Julep.Command{type: :stream, payload: %{fun: fun, tag: tag}},
-         state
-       ) do
-    # Kill any existing task with the same tag before starting a new one.
-    state = cancel_existing_task(state, tag)
-
-    runtime = self()
-    nonce = make_ref()
-    emit = fn value -> send(runtime, {:stream_value, tag, nonce, value}) end
-
-    {:ok, pid} =
-      Task.start_link(fn ->
-        result = fun.(emit)
-        send(runtime, {:async_result, tag, nonce, result})
-      end)
-
-    put_in(state.async_tasks[tag], {pid, nonce})
-  end
-
-  defp execute_command(%Julep.Command{type: :cancel, payload: %{tag: tag}}, state) do
-    case Map.get(state.async_tasks, tag) do
-      {pid, _nonce} when is_pid(pid) ->
-        Process.exit(pid, :kill)
-        %{state | async_tasks: Map.delete(state.async_tasks, tag)}
-
-      nil ->
-        state
-    end
-  end
-
-  defp execute_command(
-         %Julep.Command{type: :send_after, payload: %{delay: delay, event: event}},
-         state
-       ) do
-    # Cancel any existing timer for the same event key to prevent duplicates.
-    case Map.get(state.pending_timers, event) do
-      nil -> :ok
-      old_ref -> Process.cancel_timer(old_ref)
-    end
-
-    ref = Process.send_after(self(), {:send_after_event, event}, delay)
-    pending_timers = Map.put(state.pending_timers, event, ref)
-    %{state | pending_timers: pending_timers}
-  end
-
-  defp execute_command(
-         %Julep.Command{type: :effect, payload: %{id: id, kind: kind, opts: opts}},
-         state
-       ) do
-    bridge = state.bridge
-
-    if bridge do
-      Julep.Bridge.send_effect(bridge, id, kind, opts)
-    else
-      Logger.warning("julep runtime: effect #{kind} (#{id}) without bridge")
-    end
-
-    # Start a timeout timer for this effect request, using a per-effect default
-    # if one is configured.
-    timeout = Julep.Effects.default_timeout(kind) || @effect_timeout_ms
-    ref = Process.send_after(self(), {:effect_timeout, id}, timeout)
-    put_in(state.pending_effects[id], ref)
-  end
-
-  defp execute_command(%Julep.Command{type: type, payload: payload}, state)
-       when type in [
-              :focus,
-              :focus_next,
-              :focus_previous,
-              :select_all,
-              :scroll_to,
-              :snap_to,
-              :snap_to_end,
-              :scroll_by,
-              :move_cursor_to_front,
-              :move_cursor_to_end,
-              :move_cursor_to,
-              :select_range
-            ] do
-    if state.bridge do
-      Julep.Bridge.send_widget_op(state.bridge, Atom.to_string(type), payload)
-    end
-
-    state
-  end
-
-  defp execute_command(%Julep.Command{type: :close_window, payload: payload}, state) do
-    if state.bridge do
-      Julep.Bridge.send_widget_op(state.bridge, "close_window", payload)
-    end
-
-    state
-  end
-
-  defp execute_command(%Julep.Command{type: :widget_op, payload: %{op: op} = payload}, state) do
-    if state.bridge do
-      Julep.Bridge.send_widget_op(state.bridge, op, Map.delete(payload, :op))
-    end
-
-    state
-  end
-
-  defp execute_command(%Julep.Command{type: :exit, payload: _payload}, state) do
-    Logger.info("julep runtime: exit command received -- stopping")
-    send(self(), {:renderer_exit, :normal})
-    state
-  end
-
-  defp execute_command(
-         %Julep.Command{type: :window_op, payload: %{op: op, window_id: window_id} = payload},
-         state
-       ) do
-    if state.bridge do
-      settings = Map.drop(payload, [:op, :window_id])
-      Julep.Bridge.send_window_op(state.bridge, op, window_id, settings)
-    end
-
-    state
-  end
-
-  defp execute_command(
-         %Julep.Command{type: :window_query, payload: %{op: op, window_id: window_id} = payload},
-         state
-       ) do
-    if state.bridge do
-      settings = Map.drop(payload, [:op, :window_id])
-      Julep.Bridge.send_window_op(state.bridge, op, window_id, settings)
-    end
-
-    state
-  end
-
-  defp execute_command(%Julep.Command{type: :image_op, payload: %{op: op} = payload}, state) do
-    if state.bridge do
-      Julep.Bridge.send_image_op(state.bridge, op, Map.delete(payload, :op))
-    end
-
-    state
-  end
-
-  defp execute_command(
-         %Julep.Command{
-           type: :extension_command,
-           payload: %{node_id: node_id, op: op, payload: payload}
-         },
-         state
-       ) do
-    if state.bridge do
-      Julep.Bridge.send_extension_command(state.bridge, node_id, op, payload)
-    end
-
-    state
-  end
-
-  defp execute_command(
-         %Julep.Command{type: :extension_commands, payload: %{commands: commands}},
-         state
-       ) do
-    if state.bridge do
-      Julep.Bridge.send_extension_commands(state.bridge, commands)
-    end
-
-    state
-  end
-
-  defp execute_command(
-         %Julep.Command{type: :advance_frame, payload: %{timestamp: timestamp}},
-         state
-       ) do
-    if state.bridge do
-      Julep.Bridge.send_advance_frame(state.bridge, timestamp)
-    end
-
-    state
-  end
-
-  defp execute_command(%Julep.Command{type: :batch, payload: %{commands: cmds}}, state) do
-    execute_commands(cmds, state)
-  end
-
-  defp execute_command(cmd, state) do
-    Logger.warning("julep runtime: unknown command: #{inspect(cmd)}")
-    state
-  end
-
-  # ---------------------------------------------------------------------------
-  # Subscription lifecycle
-  # ---------------------------------------------------------------------------
-
-  @spec sync_subscriptions(map(), term()) :: map()
-  defp sync_subscriptions(state, new_model) do
-    new_specs =
-      try do
-        case state.app.subscribe(new_model) do
-          specs when is_list(specs) ->
-            specs
-
-          other ->
-            Logger.error("julep runtime: subscribe/1 must return a list, got: #{inspect(other)}")
-            []
-        end
-      rescue
-        e ->
-          Logger.error("""
-          julep runtime: subscribe/1 raised: #{Exception.message(e)}
-          #{Exception.format_stacktrace(__STACKTRACE__)}
-          """)
-
-          []
-      end
-
-    new_by_key = Map.new(new_specs, fn spec -> {Julep.Subscription.key(spec), spec} end)
-    old_key_set = state.subscriptions |> Map.keys() |> MapSet.new()
-    new_key_set = new_by_key |> Map.keys() |> MapSet.new()
-
-    # Stop removed subscriptions
-    to_stop = MapSet.difference(old_key_set, new_key_set)
-
-    Enum.each(to_stop, fn key ->
-      case Map.get(state.subscriptions, key) do
-        {:timer, ref} ->
-          Process.cancel_timer(ref)
-
-        {:renderer, type} ->
-          if state.bridge do
-            Julep.Bridge.send_unsubscribe(state.bridge, Atom.to_string(type))
-          end
-
-        _ ->
-          :ok
-      end
-    end)
-
-    # Start new subscriptions
-    to_start = MapSet.difference(new_key_set, old_key_set)
-
-    new_entries =
-      Map.new(to_start, fn key ->
-        spec = Map.fetch!(new_by_key, key)
-        {key, start_subscription(spec, state.bridge)}
-      end)
-
-    # Keep existing (unchanged) subscriptions
-    kept_keys = MapSet.difference(new_key_set, to_start) |> MapSet.to_list()
-    kept = Map.take(state.subscriptions, kept_keys)
-
-    %{state | subscriptions: Map.merge(kept, new_entries)}
-  end
-
-  defp start_subscription(%{type: :every, interval: interval, tag: tag}, _bridge) do
-    ref = Process.send_after(self(), {:subscription_tick, tag, interval}, interval)
-    {:timer, ref}
-  end
-
-  defp start_subscription(%{type: type, tag: tag}, bridge)
-       when type in [
-              :on_key_press,
-              :on_key_release,
-              :on_window_close,
-              :on_window_event,
-              :on_window_open,
-              :on_window_resize,
-              :on_window_focus,
-              :on_window_unfocus,
-              :on_window_move,
-              :on_mouse_move,
-              :on_mouse_button,
-              :on_mouse_scroll,
-              :on_touch,
-              :on_ime,
-              :on_theme_change,
-              :on_animation_frame,
-              :on_file_drop,
-              :on_event,
-              :on_modifiers_changed
-            ] do
-    if bridge do
-      Julep.Bridge.send_subscribe(bridge, Atom.to_string(type), Atom.to_string(tag))
-    end
-
-    {:renderer, type}
-  end
-
-  # ---------------------------------------------------------------------------
-  # Window lifecycle
-  # ---------------------------------------------------------------------------
-
-  # Window nodes are only recognized at root level or as direct children of
-  # the root node. This matches the Rust renderer's find_window_nodes / window_ids
-  # which also only checks root + direct children. Deeply nested window nodes
-  # are not supported and will be ignored by both sides.
-  @spec detect_windows(map() | nil) :: MapSet.t()
-  defp detect_windows(nil), do: MapSet.new()
-
-  defp detect_windows(%{type: "window", id: id}) do
-    MapSet.new([id])
-  end
-
-  defp detect_windows(%{children: children}) when is_list(children) do
-    children
-    |> Enum.filter(fn node -> node.type == "window" end)
-    |> Enum.map(& &1.id)
-    |> MapSet.new()
-  end
-
-  defp detect_windows(_), do: MapSet.new()
-
-  # Window setting keys that can be specified as node props on window elements.
-  @window_prop_keys ~w(
-    size width height position min_size max_size maximized fullscreen
-    visible resizable closeable minimizable decorations transparent blur level
-    exit_on_close_request
-  )
-
-  @spec extract_window_props(tree :: map() | nil, window_id :: String.t()) :: map()
-  defp extract_window_props(nil, _window_id), do: %{}
-
-  defp extract_window_props(tree, window_id) do
-    props =
-      case find_window_node(tree, window_id) do
-        %{props: props} when is_map(props) ->
-          Map.take(props, @window_prop_keys)
-
-        _ ->
-          %{}
-      end
-
-    decompose_size_tuples(props)
-  end
-
-  # Find a window node at root level or as a direct child (matching Rust depth).
-  defp find_window_node(%{type: "window", id: id} = node, id), do: node
-
-  defp find_window_node(%{children: children}, window_id) when is_list(children) do
-    Enum.find(children, fn node -> node.type == "window" and node.id == window_id end)
-  end
-
-  defp find_window_node(_, _), do: nil
-
-  # Decompose size tuples into separate width/height keys that Rust expects.
-  # size: {w, h}     -> width: w, height: h  (and remove size key)
-  # min_size: {w, h} -> min_size: %{"width" => w, "height" => h}
-  # max_size: {w, h} -> max_size: %{"width" => w, "height" => h}
-  # Also handles lists (which is what the Encode protocol produces from tuples).
-  @spec decompose_size_tuples(map()) :: map()
-  defp decompose_size_tuples(props) do
-    props
-    |> decompose_size()
-    |> decompose_nested_size("min_size")
-    |> decompose_nested_size("max_size")
-  end
-
-  defp decompose_size(props) do
-    case Map.get(props, "size") do
-      {w, h} ->
-        props
-        |> Map.delete("size")
-        |> Map.put_new("width", w)
-        |> Map.put_new("height", h)
-
-      [w, h] ->
-        props
-        |> Map.delete("size")
-        |> Map.put_new("width", w)
-        |> Map.put_new("height", h)
-
-      _ ->
-        props
-    end
-  end
-
-  defp decompose_nested_size(props, key) do
-    case Map.get(props, key) do
-      {w, h} -> Map.put(props, key, %{"width" => w, "height" => h})
-      [w, h] -> Map.put(props, key, %{"width" => w, "height" => h})
-      _ -> props
-    end
-  end
-
-  @spec sync_windows(map(), map() | nil) :: map()
-  defp sync_windows(state, tree) do
-    new_windows = detect_windows(tree)
-    current_windows = state.windows
-
-    # Open new windows
-    opened = MapSet.difference(new_windows, current_windows)
-
-    Enum.each(opened, fn window_id ->
-      base_settings = state.app.window_config(state.model)
-      per_window_props = extract_window_props(tree, window_id)
-      settings = Map.merge(base_settings, per_window_props)
-
-      if state.bridge do
-        Julep.Bridge.send_window_op(state.bridge, "open", window_id, settings)
-      end
-    end)
-
-    # Close removed windows
-    closed = MapSet.difference(current_windows, new_windows)
-
-    Enum.each(closed, fn window_id ->
-      if state.bridge do
-        Julep.Bridge.send_window_op(state.bridge, "close", window_id)
-      end
-    end)
-
-    # Diff window props for windows that are still open -- send update ops
-    # for any changed props (title, size, position, etc.).
-    surviving = MapSet.intersection(current_windows, new_windows)
-
-    Enum.each(surviving, fn window_id ->
-      old_props = extract_window_props(state.tree, window_id)
-      new_props = extract_window_props(tree, window_id)
-
-      if old_props != new_props and state.bridge do
-        Julep.Bridge.send_window_op(state.bridge, "update", window_id, new_props)
-      end
-    end)
-
-    %{state | windows: new_windows}
-  end
-
   # ---------------------------------------------------------------------------
   # Effect request tracking
   # ---------------------------------------------------------------------------
@@ -1034,20 +592,6 @@ defmodule Julep.Runtime do
       end)
 
     %{state | pending_effects: %{}}
-  end
-
-  # Kills an existing async task with the given tag, if one is running.
-  # Used before starting a replacement task to avoid orphaned processes.
-  @spec cancel_existing_task(map(), term()) :: map()
-  defp cancel_existing_task(state, tag) do
-    case Map.get(state.async_tasks, tag) do
-      {old_pid, _nonce} ->
-        Process.exit(old_pid, :kill)
-        %{state | async_tasks: Map.delete(state.async_tasks, tag)}
-
-      nil ->
-        state
-    end
   end
 
   # Drains queued subscription ticks for the same tag/interval from the
