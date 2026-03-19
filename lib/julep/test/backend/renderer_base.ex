@@ -23,7 +23,7 @@ defmodule Julep.Test.Backend.RendererBase do
       alias Julep.Test.Backend.CommandProcessor
       alias Julep.Test.Element
       alias Julep.Test.Screenshot
-      alias Julep.Test.Snapshot
+      alias Julep.Test.TreeHash
 
       @call_timeout unquote(opts[:call_timeout] || 10_000)
 
@@ -85,7 +85,7 @@ defmodule Julep.Test.Backend.RendererBase do
       def tree(pid), do: GenServer.call(pid, :tree, @call_timeout)
 
       @impl Julep.Test.Backend
-      def snapshot(pid, name), do: GenServer.call(pid, {:snapshot, name}, 30_000)
+      def tree_hash(pid, name), do: GenServer.call(pid, {:tree_hash, name}, 30_000)
 
       @impl Julep.Test.Backend
       def screenshot(pid, name), do: GenServer.call(pid, {:screenshot, name}, 30_000)
@@ -215,7 +215,7 @@ defmodule Julep.Test.Backend.RendererBase do
         {:noreply, put_in(state, [:pending, id], {:interact, from, action})}
       end
 
-      defp do_handle_call({:snapshot, name}, from, state) do
+      defp do_handle_call({:tree_hash, name}, from, state) do
         {id, state} = next_id(state)
 
         send_message(state.port, state.format, %{
@@ -224,7 +224,7 @@ defmodule Julep.Test.Backend.RendererBase do
           name: name
         })
 
-        {:noreply, put_in(state, [:pending, id], {:snapshot, from, name})}
+        {:noreply, put_in(state, [:pending, id], {:tree_hash, from, name})}
       end
 
       defp do_handle_call({:screenshot, name}, from, state) do
@@ -293,14 +293,13 @@ defmodule Julep.Test.Backend.RendererBase do
           {nil, _} ->
             state
 
-          {{:snapshot, from, _name}, pending} ->
-            snapshot = %Snapshot{
+          {{:tree_hash, from, _name}, pending} ->
+            tree_hash = %TreeHash{
               name: resp["name"],
-              hash: resp["hash"],
-              size: {0, 0}
+              hash: resp["hash"]
             }
 
-            GenServer.reply(from, snapshot)
+            GenServer.reply(from, tree_hash)
             %{state | pending: pending}
         end
       end

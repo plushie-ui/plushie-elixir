@@ -9,7 +9,7 @@ defmodule Julep.Test.Session do
   alias Julep.Test.Backend
   alias Julep.Test.Element
   alias Julep.Test.Screenshot
-  alias Julep.Test.Snapshot
+  alias Julep.Test.TreeHash
 
   @type t :: %__MODULE__{
           backend: module(),
@@ -71,9 +71,9 @@ defmodule Julep.Test.Session do
   @spec tree(session :: t()) :: map()
   def tree(%__MODULE__{backend: b, pid: p}), do: b.tree(p)
 
-  @doc "Captures a structural tree snapshot. Works on all backends."
-  @spec snapshot(session :: t(), name :: String.t()) :: Snapshot.t()
-  def snapshot(%__MODULE__{backend: b, pid: p}, name), do: b.snapshot(p, name)
+  @doc "Captures a structural tree hash. Works on all backends."
+  @spec tree_hash(session :: t(), name :: String.t()) :: TreeHash.t()
+  def tree_hash(%__MODULE__{backend: b, pid: p}, name), do: b.tree_hash(p, name)
 
   @doc "Captures a pixel screenshot."
   @spec screenshot(session :: t(), name :: String.t()) :: Screenshot.t()

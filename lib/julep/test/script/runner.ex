@@ -6,7 +6,7 @@ defmodule Julep.Test.Script.Runner do
   and collects results.
   """
 
-  alias Julep.Test.{Screenshot, Script, Session, Snapshot}
+  alias Julep.Test.{Screenshot, Script, Session, TreeHash}
 
   @backend_map %{
     pooled_mock: Julep.Test.Backend.Pooled,
@@ -120,10 +120,10 @@ defmodule Julep.Test.Script.Runner do
     end
   end
 
-  defp execute(session, {:snapshot, name}, _replay?) do
-    snap = Session.snapshot(session, name)
+  defp execute(session, {:tree_hash, name}, _replay?) do
+    snap = Session.tree_hash(session, name)
     golden_dir = Path.join(["test", "snapshots"])
-    Snapshot.assert_match(snap, golden_dir)
+    TreeHash.assert_match(snap, golden_dir)
     :ok
   rescue
     e -> {:error, Exception.message(e)}

@@ -66,7 +66,7 @@ defmodule Julep.Test.ScriptTest do
       type "#input" "hello world"
       type enter
       expect "some text"
-      snapshot "my-snap"
+      tree_hash "my-snap"
       assert_text "#label" "Count: 0"
       wait 500
       """
@@ -78,7 +78,7 @@ defmodule Julep.Test.ScriptTest do
       assert {:type_text, "#input", "hello world"} = Enum.at(instructions, 1)
       assert {:type_key, "enter"} = Enum.at(instructions, 2)
       assert {:expect, "some text"} = Enum.at(instructions, 3)
-      assert {:snapshot, "my-snap"} = Enum.at(instructions, 4)
+      assert {:tree_hash, "my-snap"} = Enum.at(instructions, 4)
       assert {:assert_text, "#label", "Count: 0"} = Enum.at(instructions, 5)
       assert {:wait, 500} = Enum.at(instructions, 6)
     end

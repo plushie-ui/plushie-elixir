@@ -25,7 +25,7 @@ defmodule Julep.Test.Helpers do
   alias Julep.Test.Element
   alias Julep.Test.Screenshot
   alias Julep.Test.Session
-  alias Julep.Test.Snapshot
+  alias Julep.Test.TreeHash
 
   @doc "Returns the current test session from the process dictionary."
   @spec session() :: Session.t()
@@ -87,9 +87,9 @@ defmodule Julep.Test.Helpers do
   @spec tree() :: map()
   def tree, do: Session.tree(session())
 
-  @doc "Captures a structural tree snapshot with the given name."
-  @spec snapshot(name :: String.t()) :: Snapshot.t()
-  def snapshot(name), do: Session.snapshot(session(), name)
+  @doc "Captures a structural tree hash with the given name."
+  @spec tree_hash(name :: String.t()) :: TreeHash.t()
+  def tree_hash(name), do: Session.tree_hash(session(), name)
 
   @doc "Captures a pixel screenshot with the given name."
   @spec screenshot(name :: String.t()) :: Screenshot.t()
@@ -226,16 +226,16 @@ defmodule Julep.Test.Helpers do
   end
 
   @doc """
-  Captures a structural tree snapshot and asserts it matches the golden file.
+  Captures a structural tree hash and asserts it matches the golden file.
 
   On first run, creates the golden file. On subsequent runs, compares hashes.
   Set `JULEP_UPDATE_SNAPSHOTS=1` to force-update golden files.
   """
-  @spec assert_snapshot(name :: String.t()) :: :ok
-  def assert_snapshot(name) do
-    snap = snapshot(name)
+  @spec assert_tree_hash(name :: String.t()) :: :ok
+  def assert_tree_hash(name) do
+    snap = tree_hash(name)
     golden_dir = Path.join(["test", "snapshots"])
-    Snapshot.assert_match(snap, golden_dir)
+    TreeHash.assert_match(snap, golden_dir)
   end
 
   @doc """

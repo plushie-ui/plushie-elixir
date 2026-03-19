@@ -91,7 +91,7 @@ defmodule Julep.Test.Backend.Pooled do
   def tree(pid), do: GenServer.call(pid, :tree)
 
   @impl Julep.Test.Backend
-  def snapshot(pid, name), do: GenServer.call(pid, {:snapshot, name})
+  def tree_hash(pid, name), do: GenServer.call(pid, {:tree_hash, name})
 
   @impl Julep.Test.Backend
   def screenshot(pid, name), do: GenServer.call(pid, {:screenshot, name})
@@ -226,7 +226,7 @@ defmodule Julep.Test.Backend.Pooled do
     {:noreply, %{state | interact_from: from}}
   end
 
-  def handle_call({:snapshot, name}, _from, state) do
+  def handle_call({:tree_hash, name}, _from, state) do
     case SessionPool.send_message(
            state.pool,
            state.session_id,
@@ -234,16 +234,15 @@ defmodule Julep.Test.Backend.Pooled do
            "tree_hash_response"
          ) do
       {:ok, resp} ->
-        snapshot = %Julep.Test.Snapshot{
+        tree_hash = %Julep.Test.TreeHash{
           name: resp["name"],
-          hash: resp["hash"],
-          size: {0, 0}
+          hash: resp["hash"]
         }
 
-        {:reply, snapshot, state}
+        {:reply, tree_hash, state}
 
       {:error, reason} ->
-        raise "renderer error during snapshot: #{inspect(reason)}"
+        raise "renderer error during tree_hash: #{inspect(reason)}"
     end
   end
 

@@ -14,7 +14,7 @@ defmodule Julep.Test.Script do
       -----
       click "#increment"
       expect "Count: 1"
-      snapshot "counter-at-1"
+      tree_hash "counter-at-1"
 
   See `Julep.Test.Script.Runner` for execution.
   """
@@ -38,7 +38,7 @@ defmodule Julep.Test.Script do
           | {:select, String.t(), String.t()}
           | {:slide, String.t(), number()}
           | {:expect, String.t()}
-          | {:snapshot, String.t()}
+          | {:tree_hash, String.t()}
           | {:screenshot, String.t()}
           | {:assert_text, String.t(), String.t()}
           | {:assert_model, String.t()}
@@ -151,7 +151,7 @@ defmodule Julep.Test.Script do
 
   # Assertions and captures
   defp parse_assertion(["expect", text]), do: {:ok, {:expect, text}}
-  defp parse_assertion(["snapshot", name]), do: {:ok, {:snapshot, name}}
+  defp parse_assertion(["tree_hash", name]), do: {:ok, {:tree_hash, name}}
   defp parse_assertion(["screenshot", name]), do: {:ok, {:screenshot, name}}
   defp parse_assertion(["assert_text", selector, text]), do: {:ok, {:assert_text, selector, text}}
   defp parse_assertion(["assert_model", expr]), do: {:ok, {:assert_model, expr}}
