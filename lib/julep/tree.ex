@@ -53,11 +53,12 @@ defmodule Julep.Tree do
   def normalize([single]), do: normalize(single)
 
   def normalize([_ | _] = nodes) do
+    # Synthetic root wrapper -- does not create a scope boundary
     %{
       id: "root",
       type: "container",
       props: %{},
-      children: Enum.map(nodes, &normalize/1)
+      children: Enum.map(nodes, &normalize_with_scope(&1, ""))
     }
   end
 
@@ -66,40 +67,157 @@ defmodule Julep.Tree do
   end
 
   def normalize(%{} = node) do
-    id = fetch_field(node, :id, "id") || "unknown_#{:erlang.unique_integer([:positive])}"
+    normalize_with_scope(node, "")
+  end
+
+  # Private scope-aware normalize. `scope` is the prefix string to prepend
+  # to children's IDs (e.g. "sidebar/form"). Empty string means no scope.
+  defp normalize_with_scope(%module{} = widget, scope) when is_atom(module) do
+    normalize_with_scope(Julep.Iced.Widget.to_node(widget), scope)
+  end
+
+  defp normalize_with_scope(%{} = node, scope) do
+    raw_id = fetch_field(node, :id, "id") || "unknown_#{:erlang.unique_integer([:positive])}"
     type = fetch_field(node, :type, "type") || "container"
     props = fetch_field(node, :props, "props") || %{}
     children = fetch_field(node, :children, "children") || []
 
+    id = to_string(raw_id)
+    type_str = to_string(type)
+
+    # Validate: user-provided IDs must not contain "/"
+    if not auto_id?(id) and String.contains?(id, "/") do
+      raise ArgumentError,
+            "widget ID #{inspect(id)} cannot contain \"/\" -- " <>
+              "scoped paths are built automatically by named containers"
+    end
+
+    # Apply scope prefix to this node's ID
+    scoped_id =
+      if scope != "" and not auto_id?(id) do
+        "#{scope}/#{id}"
+      else
+        id
+      end
+
+    # Determine scope for children: named (non-auto) non-window nodes
+    # propagate their scoped ID as the child scope
+    child_scope =
+      if auto_id?(id) or type_str == "window" do
+        scope
+      else
+        scoped_id
+      end
+
+    normalized_props =
+      props
+      |> stringify_keys()
+      |> resolve_a11y_id_refs(scope)
+
     %{
-      id: to_string(id),
-      type: to_string(type),
-      props: stringify_keys(props),
-      children: normalize_children(children)
+      id: scoped_id,
+      type: type_str,
+      props: normalized_props,
+      children: normalize_children_with_scope(children, child_scope)
     }
   end
+
+  # Resolve a11y ID references (labelled_by, described_by, error_message)
+  # relative to the current scope. These fields reference sibling widgets
+  # by local ID; the renderer needs the full scoped path to find them.
+  @a11y_id_ref_keys ["labelled_by", "described_by", "error_message"]
+
+  defp resolve_a11y_id_refs(props, scope) do
+    case Map.get(props, "a11y") do
+      nil ->
+        props
+
+      a11y when is_map(a11y) ->
+        resolved =
+          Enum.reduce(@a11y_id_ref_keys, a11y, fn key, acc ->
+            case Map.get(acc, key) do
+              nil -> acc
+              ref when is_binary(ref) -> Map.put(acc, key, scope_ref(ref, scope))
+              _ -> acc
+            end
+          end)
+
+        Map.put(props, "a11y", resolved)
+
+      _ ->
+        props
+    end
+  end
+
+  # Prefix an ID reference with the current scope, unless it already
+  # contains "/" (already a full path) or the scope is empty.
+  defp scope_ref(ref, ""), do: ref
+  defp scope_ref(ref, _scope) when ref == "", do: ref
+
+  defp scope_ref(ref, scope) do
+    if String.contains?(ref, "/") do
+      ref
+    else
+      "#{scope}/#{ref}"
+    end
+  end
+
+  defp auto_id?(id), do: String.starts_with?(id, "auto:")
 
   @doc """
   Finds the first node in a tree whose `:id` matches the given `id`.
 
+  Matches against the full scoped ID first. If no match is found and
+  the target does not contain "/", falls back to matching the local
+  segment (the part after the last "/") of each node's scoped ID.
+
   Returns the node map, or `nil` if not found. Searches depth-first.
   """
   @spec find(tree :: tree_node(), id :: String.t()) :: tree_node() | nil
-  def find(%{id: id} = node, id), do: node
-
-  def find(%{children: children}, target_id) when is_list(children) do
-    Enum.find_value(children, &find(&1, target_id))
+  def find(tree, target_id) do
+    find_exact(tree, target_id) ||
+      if not String.contains?(target_id, "/") do
+        find_by_local(tree, target_id)
+      end
   end
 
-  def find(%{"id" => id} = node, id), do: node
+  defp find_exact(%{id: id} = node, id), do: node
 
-  def find(%{"children" => children}, target_id) when is_list(children) do
-    Enum.find_value(children, &find(&1, target_id))
+  defp find_exact(%{children: children}, target_id) when is_list(children) do
+    Enum.find_value(children, &find_exact(&1, target_id))
   end
 
-  def find(_node, _target_id), do: nil
+  defp find_exact(%{"id" => id} = node, id), do: node
 
-  @doc "Returns true if a node with the given `id` exists in the tree."
+  defp find_exact(%{"children" => children}, target_id) when is_list(children) do
+    Enum.find_value(children, &find_exact(&1, target_id))
+  end
+
+  defp find_exact(_node, _target_id), do: nil
+
+  defp find_by_local(%{id: node_id} = node, target_id) do
+    local = node_id |> String.split("/") |> List.last()
+
+    if local == target_id do
+      node
+    else
+      case node do
+        %{children: children} when is_list(children) ->
+          Enum.find_value(children, &find_by_local(&1, target_id))
+
+        _ ->
+          nil
+      end
+    end
+  end
+
+  defp find_by_local(_, _), do: nil
+
+  @doc """
+  Returns true if a node with the given `id` exists in the tree.
+
+  Supports both full scoped IDs and local IDs (see `find/2`).
+  """
   @spec exists?(tree :: map() | nil, id :: String.t()) :: boolean()
   def exists?(nil, _id), do: false
 
@@ -282,11 +400,11 @@ defmodule Julep.Tree do
 
   # Private
 
-  defp normalize_children(children) when is_list(children) do
-    Enum.map(children, &normalize/1)
+  defp normalize_children_with_scope(children, scope) when is_list(children) do
+    Enum.map(children, &normalize_with_scope(&1, scope))
   end
 
-  defp normalize_children(_), do: []
+  defp normalize_children_with_scope(_, _scope), do: []
 
   defp do_find_all(%{children: children} = node, fun, acc) do
     acc = if fun.(node), do: [node | acc], else: acc

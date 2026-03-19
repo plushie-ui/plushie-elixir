@@ -18,7 +18,7 @@ defmodule Julep.Test.SessionTest do
 
     def view(model) do
       %{
-        id: "root",
+        id: "auto:CounterApp:root",
         type: "column",
         props: %{},
         children: [

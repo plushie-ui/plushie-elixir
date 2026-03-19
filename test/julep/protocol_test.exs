@@ -114,9 +114,11 @@ defmodule Julep.ProtocolTest do
       assert Protocol.decode_message(json, :json) == %Widget{type: :click, id: "btn_save"}
     end
 
-    test "widget id is preserved exactly" do
+    test "scoped widget id is split into local id and scope" do
       json = Jason.encode!(%{type: "event", family: "click", id: "panel/submit"})
-      assert %Widget{type: :click, id: "panel/submit"} = Protocol.decode_message(json, :json)
+
+      assert %Widget{type: :click, id: "submit", scope: ["panel"]} =
+               Protocol.decode_message(json, :json)
     end
   end
 

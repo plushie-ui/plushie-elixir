@@ -363,15 +363,27 @@ defmodule Julep.Test.WidgetCatalogTest do
       assert result.type == "column"
     end
 
-    test "finds direct child by id", %{tree: tree} do
-      result = Tree.find(tree, "save")
+    test "finds direct child by scoped id", %{tree: tree} do
+      result = Tree.find(tree, "col/save")
       assert result.type == "button"
     end
 
-    test "finds deeply nested node by id", %{tree: tree} do
-      result = Tree.find(tree, "msg")
+    test "finds direct child by local id", %{tree: tree} do
+      result = Tree.find(tree, "save")
+      assert result.type == "button"
+      assert result.id == "col/save"
+    end
+
+    test "finds deeply nested node by scoped id", %{tree: tree} do
+      result = Tree.find(tree, "col/wrapper/msg")
       assert result.type == "text"
       assert result.props["content"] == "Done"
+    end
+
+    test "finds deeply nested node by local id", %{tree: tree} do
+      result = Tree.find(tree, "msg")
+      assert result.type == "text"
+      assert result.id == "col/wrapper/msg"
     end
 
     test "returns nil for missing id", %{tree: tree} do
@@ -379,7 +391,7 @@ defmodule Julep.Test.WidgetCatalogTest do
     end
 
     test "Tree.exists?/2 returns true for present node", %{tree: tree} do
-      assert Tree.exists?(tree, "save")
+      assert Tree.exists?(tree, "col/save")
     end
 
     test "Tree.exists?/2 returns false for absent node", %{tree: tree} do
@@ -389,9 +401,9 @@ defmodule Julep.Test.WidgetCatalogTest do
     test "Tree.ids/1 lists all node ids depth-first", %{tree: tree} do
       ids = Tree.ids(tree)
       assert "col" in ids
-      assert "save" in ids
-      assert "wrapper" in ids
-      assert "msg" in ids
+      assert "col/save" in ids
+      assert "col/wrapper" in ids
+      assert "col/wrapper/msg" in ids
     end
   end
 

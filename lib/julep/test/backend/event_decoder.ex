@@ -19,48 +19,81 @@ defmodule Julep.Test.Backend.EventDecoder do
   Returns `nil` for unrecognised event families (caller should skip).
   """
   @spec decode(family :: String.t(), id :: String.t(), event :: map()) :: struct() | nil
-  def decode("click", id, _event), do: %WidgetEvent{type: :click, id: id}
-
-  def decode("input", id, event),
-    do: %WidgetEvent{type: :input, id: id, value: event["value"] || ""}
-
-  def decode("submit", id, event),
-    do: %WidgetEvent{type: :submit, id: id, value: event["value"] || ""}
-
-  def decode("toggle", id, event),
-    do: %WidgetEvent{type: :toggle, id: id, value: event["value"] || false}
-
-  def decode("select", id, event),
-    do: %WidgetEvent{type: :select, id: id, value: event["value"] || ""}
-
-  def decode("slide", id, event),
-    do: %WidgetEvent{type: :slide, id: id, value: event["value"] || 0}
-
-  def decode("slide_release", id, event),
-    do: %WidgetEvent{type: :slide_release, id: id, value: event["value"] || 0}
-
-  def decode("paste", id, event),
-    do: %WidgetEvent{type: :paste, id: id, value: event["value"] || ""}
-
-  def decode("sort", id, event) do
-    data = event["data"] || %{}
-    %WidgetEvent{type: :sort, id: id, data: data["column"]}
+  def decode("click", id, _event) do
+    {local, scope} = split_scoped_id(id)
+    %WidgetEvent{type: :click, id: local, scope: scope}
   end
 
-  def decode("open", id, _event), do: %WidgetEvent{type: :open, id: id}
-  def decode("close", id, _event), do: %WidgetEvent{type: :close, id: id}
+  def decode("input", id, event) do
+    {local, scope} = split_scoped_id(id)
+    %WidgetEvent{type: :input, id: local, scope: scope, value: event["value"] || ""}
+  end
 
-  def decode("pane_focus_cycle", id, _event),
-    do: %WidgetEvent{type: :pane_focus_cycle, id: id}
+  def decode("submit", id, event) do
+    {local, scope} = split_scoped_id(id)
+    %WidgetEvent{type: :submit, id: local, scope: scope, value: event["value"] || ""}
+  end
 
-  def decode("canvas_press", id, event),
-    do: %WidgetEvent{type: :canvas_press, id: id, data: event["data"] || %{}}
+  def decode("toggle", id, event) do
+    {local, scope} = split_scoped_id(id)
+    %WidgetEvent{type: :toggle, id: local, scope: scope, value: event["value"] || false}
+  end
 
-  def decode("canvas_release", id, event),
-    do: %WidgetEvent{type: :canvas_release, id: id, data: event["data"] || %{}}
+  def decode("select", id, event) do
+    {local, scope} = split_scoped_id(id)
+    %WidgetEvent{type: :select, id: local, scope: scope, value: event["value"] || ""}
+  end
 
-  def decode("canvas_move", id, event),
-    do: %WidgetEvent{type: :canvas_move, id: id, data: event["data"] || %{}}
+  def decode("slide", id, event) do
+    {local, scope} = split_scoped_id(id)
+    %WidgetEvent{type: :slide, id: local, scope: scope, value: event["value"] || 0}
+  end
+
+  def decode("slide_release", id, event) do
+    {local, scope} = split_scoped_id(id)
+    %WidgetEvent{type: :slide_release, id: local, scope: scope, value: event["value"] || 0}
+  end
+
+  def decode("paste", id, event) do
+    {local, scope} = split_scoped_id(id)
+    %WidgetEvent{type: :paste, id: local, scope: scope, value: event["value"] || ""}
+  end
+
+  def decode("sort", id, event) do
+    {local, scope} = split_scoped_id(id)
+    data = event["data"] || %{}
+    %WidgetEvent{type: :sort, id: local, scope: scope, data: data["column"]}
+  end
+
+  def decode("open", id, _event) do
+    {local, scope} = split_scoped_id(id)
+    %WidgetEvent{type: :open, id: local, scope: scope}
+  end
+
+  def decode("close", id, _event) do
+    {local, scope} = split_scoped_id(id)
+    %WidgetEvent{type: :close, id: local, scope: scope}
+  end
+
+  def decode("pane_focus_cycle", id, _event) do
+    {local, scope} = split_scoped_id(id)
+    %WidgetEvent{type: :pane_focus_cycle, id: local, scope: scope}
+  end
+
+  def decode("canvas_press", id, event) do
+    {local, scope} = split_scoped_id(id)
+    %WidgetEvent{type: :canvas_press, id: local, scope: scope, data: event["data"] || %{}}
+  end
+
+  def decode("canvas_release", id, event) do
+    {local, scope} = split_scoped_id(id)
+    %WidgetEvent{type: :canvas_release, id: local, scope: scope, data: event["data"] || %{}}
+  end
+
+  def decode("canvas_move", id, event) do
+    {local, scope} = split_scoped_id(id)
+    %WidgetEvent{type: :canvas_move, id: local, scope: scope, data: event["data"] || %{}}
+  end
 
   def decode("key_press", _id, event), do: decode_key_event(:press, event)
   def decode("key_release", _id, event), do: decode_key_event(:release, event)
@@ -83,7 +116,8 @@ defmodule Julep.Test.Backend.EventDecoder do
     atom = try_existing_atom(type)
 
     if atom && MapSet.member?(@extension_families, atom) do
-      %WidgetEvent{type: atom, id: id}
+      {local, scope} = split_scoped_id(id)
+      %WidgetEvent{type: atom, id: local, scope: scope}
     else
       Logger.debug("unhandled event family #{inspect(type)} for widget #{inspect(id)}")
       nil
@@ -95,6 +129,22 @@ defmodule Julep.Test.Backend.EventDecoder do
   rescue
     ArgumentError -> nil
   end
+
+  # -- Scoped ID splitting ----------------------------------------------------
+
+  defp split_scoped_id(id) when is_binary(id) do
+    case String.split(id, "/") do
+      [local] ->
+        {local, []}
+
+      parts ->
+        local = List.last(parts)
+        scope = parts |> List.delete_at(-1) |> Enum.reverse()
+        {local, scope}
+    end
+  end
+
+  defp split_scoped_id(id), do: {id, []}
 
   # -- Key event decoding ------------------------------------------------------
 

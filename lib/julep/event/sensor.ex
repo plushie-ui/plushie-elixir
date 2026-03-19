@@ -6,10 +6,15 @@ defmodule Julep.Event.Sensor do
   changed. Useful for responsive layouts that need to know their actual
   rendered size.
 
+  The `scope` field contains the ancestor scope chain in reverse order
+  (nearest parent first). Use `Julep.Event.target/1` to reconstruct the
+  full forward-order scoped path.
+
   ## Fields
 
     * `type` - always `:resize`
     * `id` - the sensor node ID
+    * `scope` - ancestor scope chain (nearest parent first), default `[]`
     * `width` - measured width in logical pixels
     * `height` - measured height in logical pixels
 
@@ -27,10 +32,18 @@ defmodule Julep.Event.Sensor do
   @type t :: %__MODULE__{
           type: :resize,
           id: String.t(),
+          scope: [String.t()],
           width: number(),
           height: number()
         }
 
   @enforce_keys [:type, :id, :width, :height]
-  defstruct [:type, :id, :width, :height]
+  defstruct [:type, :id, :width, :height, scope: []]
+
+  defimpl Inspect do
+    def inspect(event, _opts) do
+      target = Julep.Event.target(event)
+      "#Sensor<#{Kernel.inspect(event.type)} #{Kernel.inspect(target)} #{event.width}x#{event.height}>"
+    end
+  end
 end

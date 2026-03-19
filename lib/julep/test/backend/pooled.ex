@@ -159,7 +159,7 @@ defmodule Julep.Test.Backend.Pooled do
   end
 
   def handle_call({:find, selector}, _from, state) do
-    sel = encode_selector(selector)
+    sel = encode_selector(selector, state.tree)
 
     case SessionPool.send_message(
            state.pool,
@@ -223,7 +223,7 @@ defmodule Julep.Test.Backend.Pooled do
   end
 
   def handle_call({:interact, action, selector, payload}, from, state) do
-    sel = if selector, do: encode_selector(selector), else: %{}
+    sel = if selector, do: encode_selector(selector, state.tree), else: %{}
 
     # Send the interact via send_interact (non-blocking). The
     # renderer will send back zero or more interact_step messages
@@ -407,8 +407,15 @@ defmodule Julep.Test.Backend.Pooled do
   # to walk the tree for other selector types.
   defp find_in_tree(tree, selector) do
     case selector do
-      "#" <> id -> find_node_by_id(tree, id)
-      _ -> nil
+      "#" <> id ->
+        if String.contains?(id, "/") do
+          find_node_by_id(tree, id)
+        else
+          find_node_by_local_id(tree, id)
+        end
+
+      _ ->
+        nil
     end
   end
 
@@ -420,6 +427,34 @@ defmodule Julep.Test.Backend.Pooled do
   end
 
   defp find_node_by_id(_, _), do: nil
+
+  # Find a node whose local ID (last segment after "/") matches
+  defp find_node_by_local_id(nil, _id), do: nil
+
+  defp find_node_by_local_id(%{id: node_id} = node, target_id) do
+    local = local_id(node_id)
+
+    if local == target_id do
+      node
+    else
+      case node do
+        %{children: children} when is_list(children) ->
+          Enum.find_value(children, fn child -> find_node_by_local_id(child, target_id) end)
+
+        _ ->
+          nil
+      end
+    end
+  end
+
+  defp find_node_by_local_id(_, _), do: nil
+
+  defp local_id(id) do
+    case String.split(id, "/") do
+      [local] -> local
+      parts -> List.last(parts)
+    end
+  end
 
   # Process each event individually with its own update/render/snapshot
   # cycle. This matches production behaviour where each renderer event
@@ -446,15 +481,30 @@ defmodule Julep.Test.Backend.Pooled do
 
   defp dispatch_event_map(_event, state), do: state
 
-  defp encode_selector(nil), do: %{}
-  defp encode_selector("#" <> id), do: %{"by" => "id", "value" => id}
-  defp encode_selector({:role, role}) when is_binary(role), do: %{"by" => "role", "value" => role}
+  defp encode_selector(nil, _tree), do: %{}
 
-  defp encode_selector({:label, label}) when is_binary(label),
+  defp encode_selector("#" <> id, tree) do
+    resolved =
+      if String.contains?(id, "/") do
+        id
+      else
+        case find_node_by_local_id(tree, id) do
+          %{id: scoped_id} -> scoped_id
+          nil -> id
+        end
+      end
+
+    %{"by" => "id", "value" => resolved}
+  end
+
+  defp encode_selector({:role, role}, _tree) when is_binary(role),
+    do: %{"by" => "role", "value" => role}
+
+  defp encode_selector({:label, label}, _tree) when is_binary(label),
     do: %{"by" => "label", "value" => label}
 
-  defp encode_selector(:focused), do: %{"by" => "focused"}
-  defp encode_selector(text) when is_binary(text), do: %{"by" => "text", "value" => text}
+  defp encode_selector(:focused, _tree), do: %{"by" => "focused"}
+  defp encode_selector(text, _tree) when is_binary(text), do: %{"by" => "text", "value" => text}
 
   defp parse_key(key) when is_binary(key) do
     parts = String.split(key, "+")

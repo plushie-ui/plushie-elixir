@@ -54,7 +54,7 @@ defmodule Julep.Test.InteractionRoundtripTest do
 
     def view(model) do
       %{
-        id: "root",
+        id: "auto:TrackingApp:root",
         type: "column",
         props: %{},
         children: [

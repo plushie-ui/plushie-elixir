@@ -147,7 +147,7 @@ defmodule Julep.TreeTest do
 
       result = Tree.normalize(node)
       [child] = result.children
-      assert child.id == "child"
+      assert child.id == "parent/child"
       assert child.props["content"] == "hello"
       assert Map.has_key?(child, :children)
     end
@@ -172,7 +172,7 @@ defmodule Julep.TreeTest do
       result = Tree.normalize(node)
       [mid] = result.children
       [leaf] = mid.children
-      assert leaf.id == "leaf"
+      assert leaf.id == "root/mid/leaf"
       assert leaf.props["label"] == "Go"
     end
   end

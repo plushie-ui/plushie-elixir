@@ -175,7 +175,7 @@ defmodule Julep.Test.Backend.RendererBase do
 
       defp do_handle_call({:find, selector}, from, state) do
         {id, state} = next_id(state)
-        sel = encode_selector(selector)
+        sel = encode_selector(selector, state.tree)
 
         send_message(state.port, state.format, %{
           type: "query",
@@ -202,7 +202,7 @@ defmodule Julep.Test.Backend.RendererBase do
 
       defp do_handle_call({:interact, action, selector, payload}, from, state) do
         {id, state} = next_id(state)
-        sel = encode_selector(selector)
+        sel = encode_selector(selector, state.tree)
 
         send_message(state.port, state.format, %{
           type: "interact",
@@ -380,17 +380,57 @@ defmodule Julep.Test.Backend.RendererBase do
         {id, %{state | next_id: state.next_id + 1}}
       end
 
-      defp encode_selector(nil), do: %{}
-      defp encode_selector("#" <> id), do: %{"by" => "id", "value" => id}
+      defp encode_selector(nil, _tree), do: %{}
 
-      defp encode_selector({:role, role}) when is_binary(role),
+      defp encode_selector("#" <> id, tree) do
+        resolved =
+          if String.contains?(id, "/") do
+            id
+          else
+            case resolve_local_id(tree, id) do
+              nil -> id
+              scoped_id -> scoped_id
+            end
+          end
+
+        %{"by" => "id", "value" => resolved}
+      end
+
+      defp encode_selector({:role, role}, _tree) when is_binary(role),
         do: %{"by" => "role", "value" => role}
 
-      defp encode_selector({:label, label}) when is_binary(label),
+      defp encode_selector({:label, label}, _tree) when is_binary(label),
         do: %{"by" => "label", "value" => label}
 
-      defp encode_selector(:focused), do: %{"by" => "focused"}
-      defp encode_selector(text) when is_binary(text), do: %{"by" => "text", "value" => text}
+      defp encode_selector(:focused, _tree), do: %{"by" => "focused"}
+
+      defp encode_selector(text, _tree) when is_binary(text),
+        do: %{"by" => "text", "value" => text}
+
+      # Walk tree to find a node by its local ID (last segment of scoped path)
+      defp resolve_local_id(nil, _id), do: nil
+
+      defp resolve_local_id(%{id: node_id} = node, target_id) do
+        local =
+          case String.split(node_id, "/") do
+            [single] -> single
+            parts -> List.last(parts)
+          end
+
+        if local == target_id do
+          node_id
+        else
+          case node do
+            %{children: children} when is_list(children) ->
+              Enum.find_value(children, fn child -> resolve_local_id(child, target_id) end)
+
+            _ ->
+              nil
+          end
+        end
+      end
+
+      defp resolve_local_id(_, _), do: nil
 
       defp send_message(port, format, msg) do
         data = Julep.Protocol.encode(msg, format)

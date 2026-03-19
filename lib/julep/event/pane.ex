@@ -4,10 +4,15 @@ defmodule Julep.Event.Pane do
 
   Emitted by pane_grid widgets when panes are resized, dragged, or clicked.
 
+  The `scope` field contains the ancestor scope chain in reverse order
+  (nearest parent first). Use `Julep.Event.target/1` to reconstruct the
+  full forward-order scoped path.
+
   ## Fields
 
     * `type` - `:resized`, `:dragged`, `:clicked`, or `:focus_cycle`
     * `id` - the pane_grid node ID
+    * `scope` - ancestor scope chain (nearest parent first), default `[]`
     * `pane` - identifier of the affected pane
     * `split` - identifier of the split being resized (resized events)
     * `ratio` - new split ratio after resize (0.0 to 1.0)
@@ -41,6 +46,7 @@ defmodule Julep.Event.Pane do
   @type t :: %__MODULE__{
           type: :resized | :dragged | :clicked | :focus_cycle,
           id: String.t(),
+          scope: [String.t()],
           pane: term(),
           split: term(),
           ratio: number() | nil,
@@ -51,5 +57,12 @@ defmodule Julep.Event.Pane do
         }
 
   @enforce_keys [:type, :id]
-  defstruct [:type, :id, :pane, :split, :ratio, :target, :action, :region, :edge]
+  defstruct [:type, :id, :pane, :split, :ratio, :target, :action, :region, :edge, scope: []]
+
+  defimpl Inspect do
+    def inspect(event, _opts) do
+      target = Julep.Event.target(event)
+      "#Pane<#{Kernel.inspect(event.type)} #{Kernel.inspect(target)}>"
+    end
+  end
 end

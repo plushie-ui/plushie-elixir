@@ -62,6 +62,22 @@ defmodule Julep.Protocol.Decode do
   defp deserialize(data, :msgpack), do: Msgpax.unpack(data)
 
   # ---------------------------------------------------------------------------
+  # Scoped ID splitting
+  # ---------------------------------------------------------------------------
+
+  defp split_scoped_id(id) when is_binary(id) do
+    case String.split(id, "/") do
+      [local] ->
+        {local, []}
+
+      parts ->
+        local = List.last(parts)
+        scope = parts |> List.delete_at(-1) |> Enum.reverse()
+        {local, scope}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Modifier parsing helper
   # ---------------------------------------------------------------------------
 
@@ -128,35 +144,43 @@ defmodule Julep.Protocol.Decode do
   # -- Widget events --
 
   defp dispatch(%{"type" => "event", "family" => "click", "id" => id}) do
-    %Widget{type: :click, id: id}
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :click, id: local, scope: scope}
   end
 
   defp dispatch(%{"type" => "event", "family" => "input", "id" => id, "value" => value}) do
-    %Widget{type: :input, id: id, value: value}
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :input, id: local, scope: scope, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "submit", "id" => id, "value" => value}) do
-    %Widget{type: :submit, id: id, value: value}
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :submit, id: local, scope: scope, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "toggle", "id" => id, "value" => value}) do
-    %Widget{type: :toggle, id: id, value: value}
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :toggle, id: local, scope: scope, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "select", "id" => id, "value" => value}) do
-    %Widget{type: :select, id: id, value: value}
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :select, id: local, scope: scope, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "slide", "id" => id, "value" => value}) do
-    %Widget{type: :slide, id: id, value: value}
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :slide, id: local, scope: scope, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "slide_release", "id" => id, "value" => value}) do
-    %Widget{type: :slide_release, id: id, value: value}
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :slide_release, id: local, scope: scope, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "paste", "id" => id, "value" => text}) do
-    %Widget{type: :paste, id: id, value: text}
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :paste, id: local, scope: scope, value: text}
   end
 
   defp dispatch(%{
@@ -165,17 +189,24 @@ defmodule Julep.Protocol.Decode do
          "id" => id,
          "value" => value
        }) do
-    %Widget{type: :option_hovered, id: id, value: value}
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :option_hovered, id: local, scope: scope, value: value}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "open", "id" => id}),
-    do: %Widget{type: :open, id: id}
+  defp dispatch(%{"type" => "event", "family" => "open", "id" => id}) do
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :open, id: local, scope: scope}
+  end
 
-  defp dispatch(%{"type" => "event", "family" => "close", "id" => id}),
-    do: %Widget{type: :close, id: id}
+  defp dispatch(%{"type" => "event", "family" => "close", "id" => id}) do
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :close, id: local, scope: scope}
+  end
 
-  defp dispatch(%{"type" => "event", "family" => "key_binding", "id" => id, "data" => data}),
-    do: %Widget{type: :key_binding, id: id, data: data}
+  defp dispatch(%{"type" => "event", "family" => "key_binding", "id" => id, "data" => data}) do
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :key_binding, id: local, scope: scope, data: data}
+  end
 
   # -- Keyboard events --
   # Rust emits family "key_press" with the key in "value", modifiers in "modifiers",
@@ -507,31 +538,38 @@ defmodule Julep.Protocol.Decode do
   # -- MouseArea events --
 
   defp dispatch(%{"type" => "event", "family" => "mouse_right_press", "id" => id}) do
-    %MouseArea{type: :right_press, id: id}
+    {local, scope} = split_scoped_id(id)
+    %MouseArea{type: :right_press, id: local, scope: scope}
   end
 
   defp dispatch(%{"type" => "event", "family" => "mouse_right_release", "id" => id}) do
-    %MouseArea{type: :right_release, id: id}
+    {local, scope} = split_scoped_id(id)
+    %MouseArea{type: :right_release, id: local, scope: scope}
   end
 
   defp dispatch(%{"type" => "event", "family" => "mouse_middle_press", "id" => id}) do
-    %MouseArea{type: :middle_press, id: id}
+    {local, scope} = split_scoped_id(id)
+    %MouseArea{type: :middle_press, id: local, scope: scope}
   end
 
   defp dispatch(%{"type" => "event", "family" => "mouse_middle_release", "id" => id}) do
-    %MouseArea{type: :middle_release, id: id}
+    {local, scope} = split_scoped_id(id)
+    %MouseArea{type: :middle_release, id: local, scope: scope}
   end
 
   defp dispatch(%{"type" => "event", "family" => "mouse_double_click", "id" => id}) do
-    %MouseArea{type: :double_click, id: id}
+    {local, scope} = split_scoped_id(id)
+    %MouseArea{type: :double_click, id: local, scope: scope}
   end
 
   defp dispatch(%{"type" => "event", "family" => "mouse_enter", "id" => id}) do
-    %MouseArea{type: :enter, id: id}
+    {local, scope} = split_scoped_id(id)
+    %MouseArea{type: :enter, id: local, scope: scope}
   end
 
   defp dispatch(%{"type" => "event", "family" => "mouse_exit", "id" => id}) do
-    %MouseArea{type: :exit, id: id}
+    {local, scope} = split_scoped_id(id)
+    %MouseArea{type: :exit, id: local, scope: scope}
   end
 
   defp dispatch(%{
@@ -540,7 +578,8 @@ defmodule Julep.Protocol.Decode do
          "id" => id,
          "data" => %{"x" => x, "y" => y}
        }) do
-    %MouseArea{type: :move, id: id, x: x, y: y}
+    {local, scope} = split_scoped_id(id)
+    %MouseArea{type: :move, id: local, scope: scope, x: x, y: y}
   end
 
   defp dispatch(%{
@@ -549,15 +588,19 @@ defmodule Julep.Protocol.Decode do
          "id" => id,
          "data" => %{"delta_x" => dx, "delta_y" => dy}
        }) do
-    %MouseArea{type: :scroll, id: id, delta_x: dx, delta_y: dy}
+    {local, scope} = split_scoped_id(id)
+    %MouseArea{type: :scroll, id: local, scope: scope, delta_x: dx, delta_y: dy}
   end
 
   # -- Canvas events --
 
   defp dispatch(%{"type" => "event", "family" => "canvas_press", "id" => id, "data" => data}) do
+    {local, scope} = split_scoped_id(id)
+
     %Canvas{
       type: :press,
-      id: id,
+      id: local,
+      scope: scope,
       x: data["x"],
       y: data["y"],
       button: Map.get(data, "button", "left")
@@ -565,9 +608,12 @@ defmodule Julep.Protocol.Decode do
   end
 
   defp dispatch(%{"type" => "event", "family" => "canvas_release", "id" => id, "data" => data}) do
+    {local, scope} = split_scoped_id(id)
+
     %Canvas{
       type: :release,
-      id: id,
+      id: local,
+      scope: scope,
       x: data["x"],
       y: data["y"],
       button: Map.get(data, "button", "left")
@@ -575,13 +621,17 @@ defmodule Julep.Protocol.Decode do
   end
 
   defp dispatch(%{"type" => "event", "family" => "canvas_move", "id" => id, "data" => data}) do
-    %Canvas{type: :move, id: id, x: data["x"], y: data["y"]}
+    {local, scope} = split_scoped_id(id)
+    %Canvas{type: :move, id: local, scope: scope, x: data["x"], y: data["y"]}
   end
 
   defp dispatch(%{"type" => "event", "family" => "canvas_scroll", "id" => id, "data" => data}) do
+    {local, scope} = split_scoped_id(id)
+
     %Canvas{
       type: :scroll,
-      id: id,
+      id: local,
+      scope: scope,
       x: data["x"],
       y: data["y"],
       delta_x: data["delta_x"],
@@ -592,19 +642,24 @@ defmodule Julep.Protocol.Decode do
   # -- Sensor events --
 
   defp dispatch(%{"type" => "event", "family" => "sensor_resize", "id" => id, "data" => data}) do
-    %Sensor{type: :resize, id: id, width: data["width"], height: data["height"]}
+    {local, scope} = split_scoped_id(id)
+    %Sensor{type: :resize, id: local, scope: scope, width: data["width"], height: data["height"]}
   end
 
   # -- PaneGrid events --
 
   defp dispatch(%{"type" => "event", "family" => "pane_resized", "id" => id, "data" => data}) do
-    %Pane{type: :resized, id: id, split: data["split"], ratio: data["ratio"]}
+    {local, scope} = split_scoped_id(id)
+    %Pane{type: :resized, id: local, scope: scope, split: data["split"], ratio: data["ratio"]}
   end
 
   defp dispatch(%{"type" => "event", "family" => "pane_dragged", "id" => id, "data" => data}) do
+    {local, scope} = split_scoped_id(id)
+
     %Pane{
       type: :dragged,
-      id: id,
+      id: local,
+      scope: scope,
       pane: data["pane"],
       target: data["target"],
       action: Parsers.parse_pane_action(data["action"]),
@@ -614,21 +669,27 @@ defmodule Julep.Protocol.Decode do
   end
 
   defp dispatch(%{"type" => "event", "family" => "pane_clicked", "id" => id, "data" => data}) do
-    %Pane{type: :clicked, id: id, pane: data["pane"]}
+    {local, scope} = split_scoped_id(id)
+    %Pane{type: :clicked, id: local, scope: scope, pane: data["pane"]}
   end
 
   defp dispatch(%{"type" => "event", "family" => "pane_focus_cycle", "id" => id, "data" => data}) do
-    %Pane{type: :focus_cycle, id: id, pane: data["pane"]}
+    {local, scope} = split_scoped_id(id)
+    %Pane{type: :focus_cycle, id: local, scope: scope, pane: data["pane"]}
   end
 
   defp dispatch(%{"type" => "event", "family" => "sort", "id" => id, "data" => data}) do
-    %Widget{type: :sort, id: id, data: data["column"]}
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :sort, id: local, scope: scope, data: data["column"]}
   end
 
   defp dispatch(%{"type" => "event", "family" => "scroll", "id" => id, "data" => data}) do
+    {local, scope} = split_scoped_id(id)
+
     %Widget{
       type: :scroll,
-      id: id,
+      id: local,
+      scope: scope,
       data: %{
         absolute_x: data["absolute_x"],
         absolute_y: data["absolute_y"],
@@ -735,7 +796,15 @@ defmodule Julep.Protocol.Decode do
   # -- Generic/extension events (unrecognized families) --
 
   defp dispatch(%{"type" => "event", "family" => family, "id" => id} = msg) do
-    %Widget{type: Parsers.safe_event_type(family), id: id, data: msg["data"], value: msg["value"]}
+    {local, scope} = split_scoped_id(id)
+
+    %Widget{
+      type: Parsers.safe_event_type(family),
+      id: local,
+      scope: scope,
+      data: msg["data"],
+      value: msg["value"]
+    }
   end
 
   defp dispatch(msg) do

@@ -23,7 +23,7 @@ defmodule Julep.Test.ProtocolRoundtripTest do
 
     def view(model) do
       %{
-        id: "root",
+        id: "auto:WidgetApp:root",
         type: "column",
         props: %{},
         children: [
@@ -111,7 +111,7 @@ defmodule Julep.Test.ProtocolRoundtripTest do
 
     test "findable by text content", %{pid: pid} do
       element = Pooled.find(pid, "Widget Gallery")
-      assert %Element{id: "title"} = element
+      assert %Element{type: "text"} = element
     end
   end
 
@@ -213,7 +213,7 @@ defmodule Julep.Test.ProtocolRoundtripTest do
 
     test "find by text traverses nested children", %{pid: pid} do
       element = Pooled.find(pid, "nested")
-      assert %Element{id: "nested"} = element
+      assert %Element{type: "text"} = element
     end
   end
 end

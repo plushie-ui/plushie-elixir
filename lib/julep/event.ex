@@ -37,4 +37,21 @@ defmodule Julep.Event do
           | Timer.t()
           | Async.t()
           | Stream.t()
+
+  @doc """
+  Returns the full scoped path as a forward-order string.
+
+  Works with any event struct that has `id` and `scope` fields.
+
+  ## Examples
+
+      iex> Julep.Event.target(%Julep.Event.Widget{type: :click, id: "save", scope: []})
+      "save"
+
+      iex> Julep.Event.target(%Julep.Event.Widget{type: :click, id: "save", scope: ["form", "sidebar"]})
+      "sidebar/form/save"
+  """
+  @spec target(event :: struct()) :: String.t()
+  def target(%{id: id, scope: []}), do: id
+  def target(%{id: id, scope: scope}), do: Enum.join(Enum.reverse([id | scope]), "/")
 end
