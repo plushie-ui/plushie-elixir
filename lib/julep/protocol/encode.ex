@@ -21,8 +21,8 @@ defmodule Julep.Protocol.Encode do
 
   ## Example
 
-      iex> Julep.Protocol.Encode.encode_settings(%{antialiasing: true, default_text_size: 16}, :json)
-      ~s({"session":"","settings":{"antialiasing":true,"default_text_size":16,"protocol_version":1},"type":"settings"}) <> "\\n"
+      Julep.Protocol.Encode.encode_settings(%{antialiasing: true, default_text_size: 16}, :json)
+      #=> ~s({"session":"","settings":{"antialiasing":true,"default_text_size":16,"protocol_version":1},"type":"settings"}) <> "\\n"
   """
   @spec encode_settings(settings :: map(), format :: Julep.Protocol.format()) :: binary()
   def encode_settings(settings, format \\ :msgpack) when is_map(settings) do
@@ -35,8 +35,8 @@ defmodule Julep.Protocol.Encode do
 
   ## Example
 
-      iex> Julep.Protocol.Encode.encode_snapshot(%{tag: "text", value: "hello"}, :json)
-      ~s({"session":"","tree":{"tag":"text","value":"hello"},"type":"snapshot"}) <> "\\n"
+      Julep.Protocol.Encode.encode_snapshot(%{tag: "text", value: "hello"}, :json)
+      #=> ~s({"session":"","tree":{"tag":"text","value":"hello"},"type":"snapshot"}) <> "\\n"
   """
   @spec encode_snapshot(tree :: term(), format :: Julep.Protocol.format()) :: binary()
   def encode_snapshot(tree, format \\ :msgpack) do
@@ -50,8 +50,8 @@ defmodule Julep.Protocol.Encode do
 
   ## Example
 
-      iex> Julep.Protocol.Encode.encode_patch([], :json)
-      ~s({"ops":[],"session":"","type":"patch"}) <> "\\n"
+      Julep.Protocol.Encode.encode_patch([], :json)
+      #=> ~s({"ops":[],"session":"","type":"patch"}) <> "\\n"
   """
   @spec encode_patch(ops :: list(), format :: Julep.Protocol.format()) :: binary()
   def encode_patch(ops, format \\ :msgpack) do
@@ -63,8 +63,8 @@ defmodule Julep.Protocol.Encode do
 
   ## Example
 
-      iex> Julep.Protocol.Encode.encode_effect("req_1", "http", %{url: "https://example.com"})
-      ~s({"id":"req_1","kind":"http","payload":{"url":"https://example.com"},"session":"","type":"effect"}) <> "\\n"
+      Julep.Protocol.Encode.encode_effect("req_1", "file_open", %{title: "Pick a file"}, :json)
+      #=> ~s({"id":"req_1","kind":"file_open","payload":{"title":"Pick a file"},"session":"","type":"effect"}) <> "\\n"
   """
   @spec encode_effect(
           id :: String.t(),
@@ -81,8 +81,8 @@ defmodule Julep.Protocol.Encode do
 
   ## Example
 
-      iex> Julep.Protocol.Encode.encode_widget_op("focus", %{target: "username"})
-      ~s({"op":"focus","payload":{"target":"username"},"session":"","type":"widget_op"}) <> "\\n"
+      Julep.Protocol.Encode.encode_widget_op("focus", %{target: "username"})
+      #=> ~s({"op":"focus","payload":{"target":"username"},"session":"","type":"widget_op"}) <> "\\n"
   """
   @spec encode_widget_op(op :: String.t(), payload :: map(), format :: Julep.Protocol.format()) ::
           binary()
@@ -96,8 +96,8 @@ defmodule Julep.Protocol.Encode do
 
   ## Example
 
-      iex> Julep.Protocol.Encode.encode_subscribe("on_key_press", "keys")
-      ~s({"kind":"on_key_press","session":"","tag":"keys","type":"subscribe"}) <> "\\n"
+      Julep.Protocol.Encode.encode_subscribe("on_key_press", "keys")
+      #=> ~s({"kind":"on_key_press","session":"","tag":"keys","type":"subscribe"}) <> "\\n"
   """
   @spec encode_subscribe(
           kind :: String.t(),
@@ -113,8 +113,8 @@ defmodule Julep.Protocol.Encode do
 
   ## Example
 
-      iex> Julep.Protocol.Encode.encode_unsubscribe("on_key_press")
-      ~s({"kind":"on_key_press","session":"","type":"unsubscribe"}) <> "\\n"
+      Julep.Protocol.Encode.encode_unsubscribe("on_key_press")
+      #=> ~s({"kind":"on_key_press","session":"","type":"unsubscribe"}) <> "\\n"
   """
   @spec encode_unsubscribe(kind :: String.t(), format :: Julep.Protocol.format()) :: binary()
   def encode_unsubscribe(kind, format \\ :msgpack) do
@@ -133,8 +133,8 @@ defmodule Julep.Protocol.Encode do
 
   ## Example
 
-      iex> Julep.Protocol.Encode.encode_image_op("create_image", %{handle: "logo", data: <<1, 2, 3>>}, :json)
-      ~s({"data":"AQID","handle":"logo","op":"create_image","session":"","type":"image_op"}) <> "\\n"
+      Julep.Protocol.Encode.encode_image_op("create_image", %{handle: "logo", data: <<1, 2, 3>>}, :json)
+      #=> ~s({"data":"AQID","handle":"logo","op":"create_image","session":"","type":"image_op"}) <> "\\n"
   """
   @spec encode_image_op(
           op :: String.t(),
@@ -194,8 +194,8 @@ defmodule Julep.Protocol.Encode do
 
   ## Example
 
-      iex> Julep.Protocol.Encode.encode_window_op("open", "main", %{title: "My App"})
-      ~s({"op":"open","session":"","settings":{"title":"My App"},"type":"window_op","window_id":"main"}) <> "\\n"
+      Julep.Protocol.Encode.encode_window_op("open", "main", %{title: "My App"})
+      #=> ~s({"op":"open","session":"","settings":{"title":"My App"},"type":"window_op","window_id":"main"}) <> "\\n"
   """
   @spec encode_window_op(
           op :: String.t(),

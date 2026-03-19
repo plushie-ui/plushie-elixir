@@ -60,15 +60,7 @@ defmodule Julep.Selection do
     %{sel | selected: MapSet.new([id]), anchor: id}
   end
 
-  def select(%__MODULE__{mode: :multi} = sel, id, opts) do
-    if Keyword.get(opts, :extend, false) do
-      %{sel | selected: MapSet.put(sel.selected, id), anchor: id}
-    else
-      %{sel | selected: MapSet.new([id]), anchor: id}
-    end
-  end
-
-  def select(%__MODULE__{mode: :range} = sel, id, opts) do
+  def select(%__MODULE__{} = sel, id, opts) do
     if Keyword.get(opts, :extend, false) do
       %{sel | selected: MapSet.put(sel.selected, id), anchor: id}
     else

@@ -110,11 +110,13 @@ defmodule Julep.Undo do
 
   @doc "Return `true` if there are entries on the undo stack."
   @spec can_undo?(undo :: t()) :: boolean()
-  def can_undo?(%__MODULE__{undo_stack: s}), do: s != []
+  def can_undo?(%__MODULE__{undo_stack: [_ | _]}), do: true
+  def can_undo?(%__MODULE__{}), do: false
 
   @doc "Return `true` if there are entries on the redo stack."
   @spec can_redo?(undo :: t()) :: boolean()
-  def can_redo?(%__MODULE__{redo_stack: s}), do: s != []
+  def can_redo?(%__MODULE__{redo_stack: [_ | _]}), do: true
+  def can_redo?(%__MODULE__{}), do: false
 
   @doc "Return the labels from the undo stack, most recent first."
   @spec history(undo :: t()) :: [String.t() | nil]

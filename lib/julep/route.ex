@@ -66,7 +66,8 @@ defmodule Julep.Route do
 
   @doc "Returns `true` if there is more than one entry on the stack."
   @spec can_go_back?(route :: t()) :: boolean()
-  def can_go_back?(%__MODULE__{stack: stack}), do: length(stack) > 1
+  def can_go_back?(%__MODULE__{stack: [_, _ | _]}), do: true
+  def can_go_back?(%__MODULE__{}), do: false
 
   @doc "Returns a list of all paths in the stack, most recent first."
   @spec history(route :: t()) :: [term()]

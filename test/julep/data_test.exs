@@ -119,10 +119,10 @@ defmodule Julep.DataTest do
       assert length(result.groups["executive"]) == 1
     end
 
-    test "no group key when group not specified" do
+    test "groups is nil when group not specified" do
       result = Data.query(@records)
 
-      refute Map.has_key?(result, :groups)
+      assert result.groups == nil
     end
   end
 

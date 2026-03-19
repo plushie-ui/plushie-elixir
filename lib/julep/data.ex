@@ -83,13 +83,12 @@ defmodule Julep.Data do
 
     entries = Enum.reverse(entries)
 
-    base = %{entries: entries, total: total, page: page, page_size: page_size}
+    groups =
+      if group_field,
+        do: Enum.group_by(entries, &Map.get(&1, group_field)),
+        else: nil
 
-    if group_field do
-      Map.put(base, :groups, Enum.group_by(entries, &Map.get(&1, group_field)))
-    else
-      base
-    end
+    %{entries: entries, total: total, page: page, page_size: page_size, groups: groups}
   end
 
   defp maybe_filter(records, nil), do: records

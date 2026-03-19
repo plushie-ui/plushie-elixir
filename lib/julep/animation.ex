@@ -136,7 +136,8 @@ defmodule Julep.Animation do
   `t` is clamped to `0.0..1.0` before easing is applied.
   """
   @spec interpolate(from :: number(), to :: number(), t :: float(), easing :: easing()) :: float()
-  def interpolate(from, to, t, easing \\ &linear/1) do
+  def interpolate(from, to, t, easing \\ &linear/1)
+      when is_number(from) and is_number(to) and is_number(t) and is_function(easing, 1) do
     clamped = clamp(t)
     eased = easing.(clamped)
     from + (to - from) * eased
@@ -153,7 +154,8 @@ defmodule Julep.Animation do
   """
   @spec new(from :: number(), to :: number(), duration_ms :: pos_integer(), opts :: keyword()) ::
           t()
-  def new(from, to, duration_ms, opts \\ []) do
+  def new(from, to, duration_ms, opts \\ [])
+      when is_number(from) and is_number(to) and is_integer(duration_ms) and duration_ms > 0 do
     easing = Keyword.get(opts, :easing, &linear/1)
 
     %__MODULE__{
@@ -171,7 +173,7 @@ defmodule Julep.Animation do
   Resets the current value to `from`.
   """
   @spec start(animation :: t(), timestamp :: integer()) :: t()
-  def start(%__MODULE__{} = anim, timestamp) do
+  def start(%__MODULE__{} = anim, timestamp) when is_integer(timestamp) do
     %{anim | started_at: timestamp, value: anim.from}
   end
 
@@ -203,7 +205,13 @@ defmodule Julep.Animation do
     end
   end
 
-  @doc "Returns `true` if the animation has run to completion."
+  @doc """
+  Returns `true` if the animation has run to completion.
+
+  Note: once `advance/2` returns `{value, :finished}`, the animation
+  struct is no longer updated. Use the `:finished` return value from
+  `advance/2` as the primary completion signal.
+  """
   @spec finished?(animation :: t()) :: boolean()
   def finished?(%__MODULE__{started_at: nil}), do: false
 

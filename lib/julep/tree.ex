@@ -14,9 +14,8 @@ defmodule Julep.Tree do
       }
 
   This module provides normalization (ensuring the canonical shape),
-  tree search by ID, and predicate-based search.
-
-  Includes tree diffing that produces minimal patch operations.
+  tree search (by ID and by predicate), and diffing that produces
+  minimal patch operations for incremental renderer updates.
   """
 
   @type tree_node :: %{

@@ -84,25 +84,23 @@ defmodule Julep.Binary do
     "julep-#{os}-#{arch}#{ext}"
   end
 
-  @spec detect_arch(file_output :: String.t()) :: :x86_64 | :aarch64 | nil
+  @spec detect_arch(output :: String.t()) :: :x86_64 | :aarch64 | nil
   defp detect_arch(output) do
     cond do
-      String.contains?(output, "x86-64") or String.contains?(output, "x86_64") -> :x86_64
-      String.contains?(output, "aarch64") or String.contains?(output, "arm64") -> :aarch64
-      true -> nil
+      String.contains?(output, "x86-64") or String.contains?(output, "x86_64") or
+          String.contains?(output, "amd64") ->
+        :x86_64
+
+      String.contains?(output, "aarch64") or String.contains?(output, "arm64") ->
+        :aarch64
+
+      true ->
+        nil
     end
   end
 
   @spec system_arch() :: :x86_64 | :aarch64 | nil
-  defp system_arch do
-    arch = :erlang.system_info(:system_architecture) |> to_string()
-
-    cond do
-      String.contains?(arch, "x86_64") or String.contains?(arch, "amd64") -> :x86_64
-      String.contains?(arch, "aarch64") or String.contains?(arch, "arm64") -> :aarch64
-      true -> nil
-    end
-  end
+  defp system_arch, do: detect_arch(:erlang.system_info(:system_architecture) |> to_string())
 
   defp app_config_path do
     case Application.get_env(:julep, :binary_path) do
@@ -176,13 +174,10 @@ defmodule Julep.Binary do
   end
 
   defp arch_name do
-    arch = :erlang.system_info(:system_architecture) |> to_string()
-
-    cond do
-      String.contains?(arch, "x86_64") or String.contains?(arch, "amd64") -> "x86_64"
-      String.contains?(arch, "aarch64") or String.contains?(arch, "arm64") -> "aarch64"
-      String.contains?(arch, "arm") -> "arm"
-      true -> "unknown"
+    case system_arch() do
+      :x86_64 -> "x86_64"
+      :aarch64 -> "aarch64"
+      nil -> "unknown"
     end
   end
 end
