@@ -12,7 +12,8 @@ defmodule Mix.Tasks.Preflight do
   2. `mix compile --warnings-as-errors`
   3. `mix credo --strict`
   4. `mix test`
-  5. `mix dialyzer`
+  5. `mix docs --warnings-as-errors`
+  6. `mix dialyzer`
   """
 
   use Mix.Task
@@ -28,6 +29,7 @@ defmodule Mix.Tasks.Preflight do
       {"mix compile --warnings-as-errors", fn -> mix_compile() end},
       {"mix credo --strict", fn -> mix_cmd(["credo", "--strict"]) end},
       {"mix test", fn -> mix_cmd(["test"]) end},
+      {"mix docs --warnings-as-errors", fn -> mix_docs() end},
       {"mix dialyzer", fn -> mix_cmd(["dialyzer"]) end}
     ]
 
@@ -57,6 +59,13 @@ defmodule Mix.Tasks.Preflight do
     end
   end
 
+  @spec mix_docs() :: step_result()
+  defp mix_docs do
+    exit_code_to_result(
+      stream_cmd("mix", ["docs", "--warnings-as-errors"], env: [{"MIX_ENV", "dev"}])
+    )
+  end
+
   @spec mix_cmd([String.t()]) :: step_result()
   defp mix_cmd(args), do: exit_code_to_result(stream_cmd("mix", args))
 
@@ -66,13 +75,26 @@ defmodule Mix.Tasks.Preflight do
   # Uses Port directly instead of System.cmd because some test output
   # can contain raw bytes (non-UTF-8). :file.write/2 bypasses encoding
   # validation.
-  @spec stream_cmd(String.t(), [String.t()]) :: non_neg_integer()
-  defp stream_cmd(command, args) do
+  @spec stream_cmd(String.t(), [String.t()], keyword()) :: non_neg_integer()
+  defp stream_cmd(command, args, opts \\ []) do
     executable =
       System.find_executable(command) ||
         raise "#{command} not found in PATH"
 
     port_opts = [:binary, :exit_status, :stderr_to_stdout, {:args, args}]
+
+    port_opts =
+      case opts[:env] do
+        nil ->
+          port_opts
+
+        env ->
+          [
+            {:env, Enum.map(env, fn {k, v} -> {String.to_charlist(k), String.to_charlist(v)} end)}
+            | port_opts
+          ]
+      end
+
     port = Port.open({:spawn_executable, executable}, port_opts)
     drain_port(port)
   end
