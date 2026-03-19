@@ -52,6 +52,7 @@ defmodule Toddy.MixProject do
         "docs/composition-patterns.md",
         "docs/accessibility.md",
         "docs/extensions.md",
+        "examples/README.md",
         "CHANGELOG.md"
       ],
       groups_for_extras: [
@@ -73,6 +74,7 @@ defmodule Toddy.MixProject do
           "docs/extensions.md"
         ],
         About: [
+          "examples/README.md",
           "CHANGELOG.md"
         ]
       ],
@@ -150,6 +152,7 @@ defmodule Toddy.MixProject do
       files: ~w(
         lib
         docs
+        examples
         mix.exs
         README.md
         CHANGELOG.md
