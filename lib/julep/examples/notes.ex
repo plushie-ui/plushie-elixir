@@ -157,7 +157,7 @@ defmodule Julep.Examples.Notes do
 
     window "main", title: "Notes" do
       column padding: 16, spacing: 12, width: :fill do
-        text("Notes", size: 24, id: "heading")
+        text("heading", "Notes", size: 24)
 
         text_input("search", search_query, placeholder: "Search notes...")
 

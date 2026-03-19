@@ -45,15 +45,15 @@ defmodule Julep.Examples.Shortcuts do
 
     window "main", title: "Keyboard Shortcuts" do
       column padding: 16, spacing: 12, width: :fill do
-        text("Press any key", size: 20, id: "header")
-        text("#{model.count} key events captured", size: 12, color: "#888888", id: "count")
+        text("header", "Press any key", size: 20)
+        text("count", "#{model.count} key events captured", size: 12, color: "#888888")
 
         rule()
 
         scrollable "log", height: :fill do
           column spacing: 2, width: :fill do
             for {entry, index} <- Enum.with_index(model.log) do
-              text(entry, size: 13, id: "log_#{index}")
+              text("log_#{index}", entry, size: 13)
             end
           end
         end

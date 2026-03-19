@@ -75,7 +75,7 @@ defmodule Julep.Examples.Todo do
 
     window "main", title: "Todo" do
       column padding: 16, spacing: 12, width: :fill do
-        text("Todos", size: 24, id: "title")
+        text("title", "Todos", size: 24)
 
         row spacing: 8, width: :fill do
           text_input("todo_input", model.input,
@@ -100,8 +100,8 @@ defmodule Julep.Examples.Todo do
 
         row spacing: 8 do
           text(
-            "#{active_count} item#{if active_count != 1, do: "s", else: ""} left",
-            id: "todo_count"
+            "todo_count",
+            "#{active_count} item#{if active_count != 1, do: "s", else: ""} left"
           )
 
           button("filter_all", "All")

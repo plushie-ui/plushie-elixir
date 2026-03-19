@@ -94,8 +94,8 @@ defmodule Julep.Examples.ColorPicker do
           end
 
           column spacing: 4 do
-            text(hex, size: 18, id: "hex_display")
-            text("H: #{h_int}  S: #{s_pct}%  V: #{v_pct}%", id: "hsv_display")
+            text("hex_display", hex, size: 18)
+            text("hsv_display", "H: #{h_int}  S: #{s_pct}%  V: #{v_pct}%")
           end
         end
       end

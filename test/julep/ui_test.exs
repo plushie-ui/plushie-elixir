@@ -139,7 +139,7 @@ defmodule Julep.UITest do
   end
 
   # ---------------------------------------------------------------------------
-  # text/1,2 macro
+  # text/1,2,3 macro
   # ---------------------------------------------------------------------------
 
   describe "text/1" do
@@ -162,20 +162,23 @@ defmodule Julep.UITest do
     end
   end
 
-  describe "text/2 with opts" do
-    test "explicit id overrides auto-generated id" do
-      node = text("hello", id: "my-label")
+  describe "text/2 with explicit id" do
+    test "sets explicit id" do
+      node = text("my-label", "hello")
       assert node.id == "my-label"
+      assert node.props["content"] == "hello"
     end
+  end
 
+  describe "text/3 with id and opts" do
     test "extra opts become string-keyed props" do
-      node = text("hello", size: 18, color: "red")
+      node = text("my-label", "hello", size: 18, color: "red")
       assert node.props["size"] == 18
       assert node.props["color"] == "red"
     end
 
     test "content prop is always present alongside extra props" do
-      node = text("world", size: 12)
+      node = text("my-label", "world", size: 12)
       assert node.props["content"] == "world"
     end
   end
@@ -783,7 +786,7 @@ defmodule Julep.UITest do
   end
 
   # ---------------------------------------------------------------------------
-  # markdown/1,2 macro
+  # markdown/1,2,3 macro
   # ---------------------------------------------------------------------------
 
   describe "markdown/1" do
@@ -801,14 +804,17 @@ defmodule Julep.UITest do
     end
   end
 
-  describe "markdown/2 with opts" do
-    test "explicit id overrides auto-generated id" do
-      node = markdown("# Hello", id: "my-md")
+  describe "markdown/2 with explicit id" do
+    test "sets explicit id" do
+      node = markdown("my-md", "# Hello")
       assert node.id == "my-md"
+      assert node.props["content"] == "# Hello"
     end
+  end
 
+  describe "markdown/3 with id and opts" do
     test "extra opts become string-keyed props" do
-      node = markdown("# Hello", size: 14)
+      node = markdown("my-md", "# Hello", size: 14)
       assert node.props["size"] == 14
       assert node.props["content"] == "# Hello"
     end

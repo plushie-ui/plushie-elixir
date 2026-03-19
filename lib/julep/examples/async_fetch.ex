@@ -50,7 +50,7 @@ defmodule Julep.Examples.AsyncFetch do
 
     window "main", title: "Async Fetch" do
       column padding: 24, spacing: 16, width: :fill do
-        text("Async Command Demo", size: 20, id: "header")
+        text("header", "Async Command Demo", size: 20)
         button("fetch", "Fetch Data")
         status_message(model)
       end
@@ -59,25 +59,25 @@ defmodule Julep.Examples.AsyncFetch do
 
   defp status_message(%{status: :idle}) do
     import Julep.UI
-    text("Press the button to start", color: "#888888", id: "status")
+    text("status", "Press the button to start", color: "#888888")
   end
 
   defp status_message(%{status: :loading}) do
     import Julep.UI
-    text("Loading...", color: "#cc8800", id: "status")
+    text("status", "Loading...", color: "#cc8800")
   end
 
   defp status_message(%{status: :done, result: result}) do
     import Julep.UI
 
     column spacing: 4 do
-      text("Result:", size: 14, id: "label")
-      text(result, color: "#22aa44", id: "result")
+      text("label", "Result:", size: 14)
+      text("result", result, color: "#22aa44")
     end
   end
 
   defp status_message(%{status: :error, error: error}) do
     import Julep.UI
-    text("Error: #{error}", color: "#cc2222", id: "error")
+    text("error", "Error: #{error}", color: "#cc2222")
   end
 end

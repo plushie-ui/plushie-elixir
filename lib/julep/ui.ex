@@ -77,7 +77,7 @@ defmodule Julep.UI do
   Layout blocks stay paren-free; leaf widgets keep parens for clarity:
 
       column padding: 8 do
-        text("Count: \#{model.count}", size: 24)
+        text("count", "Count: \#{model.count}", size: 24)
         button("inc", "+1")
       end
 
@@ -659,7 +659,7 @@ defmodule Julep.UI do
 
       keyed_column spacing: 8 do
         for item <- items do
-          text(item.name, id: item.id)
+          text(item.id, item.name)
         end
       end
   """
@@ -1095,17 +1095,47 @@ defmodule Julep.UI do
   @doc """
   Text label.
 
-  Auto-generates an ID from the call site unless `:id` is given in opts.
+  ## Forms
+
+  - `text(content)` -- auto-generated ID (sugar for quick labels)
+  - `text(id, content)` -- explicit ID
+  - `text(id, content, opts)` -- explicit ID with options
 
   ## Example
 
-      text("Hello, world!", size: 18)
+      text("Hello, world!")
+      text("greeting", "Hello, world!", size: 18)
   """
-  defmacro text(content, opts \\ []) do
+  defmacro text(content) do
     caller_mod = __CALLER__.module
     caller_line = __CALLER__.line
 
     quote do
+      %{
+        id: unquote(compile_auto_id(caller_mod, caller_line)),
+        type: "text",
+        props: %{"content" => unquote(content)},
+        children: []
+      }
+    end
+  end
+
+  @doc false
+  defmacro text(id, content) do
+    quote do
+      %{
+        id: unquote(id),
+        type: "text",
+        props: %{"content" => unquote(content)},
+        children: []
+      }
+    end
+  end
+
+  @doc false
+  defmacro text(id, content, opts) do
+    quote do
+      id = unquote(id)
       content = unquote(content)
       opts = unquote(opts)
       base_props = %{"content" => content}
@@ -1114,9 +1144,6 @@ defmodule Julep.UI do
         opts
         |> Keyword.drop([:children, :id, :do])
         |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
-
-      id =
-        Keyword.get(opts, :id) || unquote(compile_auto_id(caller_mod, caller_line))
 
       %{id: id, type: "text", props: Map.merge(base_props, extra_props), children: []}
     end
@@ -1151,6 +1178,12 @@ defmodule Julep.UI do
   @doc """
   Progress indicator.
 
+  ## Forms
+
+  - `progress_bar(range, value)` -- auto-generated ID (sugar)
+  - `progress_bar(id, range, value)` -- explicit ID
+  - `progress_bar(id, range, value, opts)` -- explicit ID with options
+
   ## Arguments
 
   - `range` -- `{min, max}` tuple defining the full range
@@ -1159,12 +1192,44 @@ defmodule Julep.UI do
   ## Example
 
       progress_bar({0, 100}, model.progress)
+      progress_bar("dl_progress", {0, 100}, model.progress, height: 8)
   """
-  defmacro progress_bar(range, value, opts \\ []) do
+  defmacro progress_bar(range, value) do
     caller_mod = __CALLER__.module
     caller_line = __CALLER__.line
 
     quote do
+      range = unquote(range)
+      value = unquote(value)
+
+      %{
+        id: unquote(compile_auto_id(caller_mod, caller_line)),
+        type: "progress_bar",
+        props: %{"range" => Tuple.to_list(range), "value" => value},
+        children: []
+      }
+    end
+  end
+
+  @doc false
+  defmacro progress_bar(id, range, value) do
+    quote do
+      range = unquote(range)
+      value = unquote(value)
+
+      %{
+        id: unquote(id),
+        type: "progress_bar",
+        props: %{"range" => Tuple.to_list(range), "value" => value},
+        children: []
+      }
+    end
+  end
+
+  @doc false
+  defmacro progress_bar(id, range, value, opts) do
+    quote do
+      id = unquote(id)
       range = unquote(range)
       value = unquote(value)
       opts = unquote(opts)
@@ -1174,9 +1239,6 @@ defmodule Julep.UI do
         opts
         |> Keyword.drop([:children, :id, :do])
         |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
-
-      id =
-        Keyword.get(opts, :id) || unquote(compile_auto_id(caller_mod, caller_line))
 
       %{id: id, type: "progress_bar", props: Map.merge(base_props, extra_props), children: []}
     end
@@ -1433,17 +1495,47 @@ defmodule Julep.UI do
   @doc """
   Markdown content renderer.
 
-  Auto-generates an ID from the call site unless `:id` is given in opts.
+  ## Forms
+
+  - `markdown(content)` -- auto-generated ID
+  - `markdown(id, content)` -- explicit ID
+  - `markdown(id, content, opts)` -- explicit ID with options
 
   ## Example
 
       markdown("# Hello\\n\\nSome **bold** text")
+      markdown("my_md", "# Hello", code_theme: "dracula")
   """
-  defmacro markdown(content, opts \\ []) do
+  defmacro markdown(content) do
     caller_mod = __CALLER__.module
     caller_line = __CALLER__.line
 
     quote do
+      %{
+        id: unquote(compile_auto_id(caller_mod, caller_line)),
+        type: "markdown",
+        props: %{"content" => unquote(content)},
+        children: []
+      }
+    end
+  end
+
+  @doc false
+  defmacro markdown(id, content) do
+    quote do
+      %{
+        id: unquote(id),
+        type: "markdown",
+        props: %{"content" => unquote(content)},
+        children: []
+      }
+    end
+  end
+
+  @doc false
+  defmacro markdown(id, content, opts) do
+    quote do
+      id = unquote(id)
       content = unquote(content)
       opts = unquote(opts)
       base_props = %{"content" => content}
@@ -1452,9 +1544,6 @@ defmodule Julep.UI do
         opts
         |> Keyword.drop([:children, :id, :do])
         |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Julep.Iced.Encode.encode(v)} end)
-
-      id =
-        Keyword.get(opts, :id) || unquote(compile_auto_id(caller_mod, caller_line))
 
       %{id: id, type: "markdown", props: Map.merge(base_props, extra_props), children: []}
     end

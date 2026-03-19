@@ -35,8 +35,8 @@ defmodule Julep.Examples.Clock do
 
     window "main", title: "Clock" do
       column padding: 24, spacing: 16, width: :fill, align_x: :center do
-        text(model.time, size: 48, id: "clock_display")
-        text("Updates every second", size: 12, color: "#888888")
+        text("clock_display", model.time, size: 48)
+        text("subtitle", "Updates every second", size: 12, color: "#888888")
       end
     end
   end

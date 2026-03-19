@@ -148,7 +148,7 @@ defmodule SidebarApp do
         # Sidebar
         container "sidebar", width: 200, height: :fill, background: "#1e1e2e", padding: 8 do
           column spacing: 4, width: :fill do
-            text("Navigation", size: 12, color: "#888888")
+            text("nav_label", "Navigation", size: 12, color: "#888888")
             space(height: 8)
 
             for {id, label} <- @nav_items do
@@ -165,7 +165,7 @@ defmodule SidebarApp do
 
         # Main content
         container "main", width: :fill, height: :fill, padding: 24 do
-          text("#{model.page |> Atom.to_string() |> String.capitalize()} page", size: 20)
+          text("page_title", "#{model.page |> Atom.to_string() |> String.capitalize()} page", size: 20)
         end
       end
     end
@@ -340,10 +340,10 @@ defmodule ModalApp do
         # Layer 0: main content (always visible)
         container "main", width: :fill, height: :fill, padding: 24, center: true do
           column spacing: 12, align_x: :center do
-            text("Main application content", size: 20)
+            text("main_content", "Main application content", size: 20)
 
             if model.confirmed do
-              text("Action confirmed.", color: "#22aa44")
+              text("confirmed_msg", "Action confirmed.", color: "#22aa44")
             end
 
             button("open_modal", "Open Dialog", style: :primary)
@@ -362,8 +362,8 @@ defmodule ModalApp do
               border: Border.new() |> Border.color("#dddddd") |> Border.width(1) |> Border.rounded(8),
               shadow: Shadow.new() |> Shadow.color("#00000040") |> Shadow.offset(0, 4) |> Shadow.blur_radius(16) do
               column spacing: 16 do
-                text("Confirm action", size: 18, color: "#1a1a1a")
-                text("Are you sure you want to proceed? This cannot be undone.",
+                text("dialog_title", "Confirm action", size: 18, color: "#1a1a1a")
+                text("dialog_body", "Are you sure you want to proceed? This cannot be undone.",
                   color: "#555555",
                   wrapping: :word
                 )
@@ -434,8 +434,8 @@ defmodule CardApp do
         # Simple card
         card("info", "System status", fn ->
           [
-            text("All services operational", color: "#22aa44"),
-            text("Last checked: 2 minutes ago", size: 12, color: "#888888")
+            text("status_msg", "All services operational", color: "#22aa44"),
+            text("last_checked", "Last checked: 2 minutes ago", size: 12, color: "#888888")
           ]
         end)
 
@@ -450,7 +450,7 @@ defmodule CardApp do
           column width: :fill do
             # Header band
             container "promo_header", width: :fill, padding: 12, background: "#3366ff" do
-              text("Upgrade available", size: 14, color: "#ffffff")
+              text("promo_title", "Upgrade available", size: 14, color: "#ffffff")
             end
 
             # Body
@@ -480,7 +480,7 @@ defmodule CardApp do
       border: border,
       shadow: shadow do
       column spacing: 8 do
-        text(title, size: 16, color: "#1a1a1a")
+        text("card_title", title, size: 16, color: "#1a1a1a")
         rule()
 
         for node <- body_fn.() do
@@ -550,8 +550,8 @@ defmodule SplitApp do
           padding: 16,
           background: "#fafafa" do
           column spacing: 8 do
-            text("Left panel", size: 16)
-            text("File browser, outline, or any sidebar content.", color: "#666666")
+            text("left_title", "Left panel", size: 16)
+            text("left_desc", "File browser, outline, or any sidebar content.", color: "#666666")
           end
         end
 
@@ -571,8 +571,8 @@ defmodule SplitApp do
           height: :fill,
           padding: 16 do
           column spacing: 8 do
-            text("Right panel", size: 16)
-            text("Main editor or content area.", color: "#666666")
+            text("right_title", "Right panel", size: 16)
+            text("right_desc", "Main editor or content area.", color: "#666666")
           end
         end
       end
@@ -638,14 +638,14 @@ defmodule BreadcrumbApp do
 
             if last? do
               # Current location: plain text, not clickable
-              text(segment, size: 14, color: "#1a1a1a")
+              text("crumb_current", segment, size: 14, color: "#1a1a1a")
             else
               [
                 button("crumb:#{index}", segment,
                   style: crumb_style(),
                   padding: %{top: 2, bottom: 2, left: 4, right: 4}
                 ),
-                text(">", size: 14, color: "#999999")
+                text("sep:#{index}", ">", size: 14, color: "#999999")
               ]
             end
           end
@@ -653,7 +653,7 @@ defmodule BreadcrumbApp do
 
         rule()
 
-        text("Viewing: #{List.last(model.path)}", size: 18)
+        text("viewing", "Viewing: #{List.last(model.path)}", size: 18)
       end
     end
   end
@@ -731,7 +731,7 @@ defmodule BadgeApp do
       column padding: 24, spacing: 16, width: :fill do
         # Status badges (display only)
         row spacing: 8, align_y: :center do
-          text("Status:", size: 14)
+          text("status_label", "Status:", size: 14)
           badge("online", "Online", "#22aa44", "#ffffff")
           badge("count", "3 new", "#3366ff", "#ffffff")
           badge("warn", "Deprecated", "#ff8800", "#ffffff")
@@ -740,7 +740,7 @@ defmodule BadgeApp do
         rule()
 
         # Filter chips (clickable)
-        text("Filter by tag:", size: 14)
+        text("filter_label", "Filter by tag:", size: 14)
         row spacing: 6 do
           for tag <- @tags do
             selected? = MapSet.member?(model.selected, tag)
@@ -765,7 +765,7 @@ defmodule BadgeApp do
       padding: %{top: 2, bottom: 2, left: 8, right: 8},
       background: bg_color,
       border: Border.new() |> Border.rounded(999) do
-      text(label, size: 11, color: text_color)
+      text("badge_text", label, size: 11, color: text_color)
     end
   end
 

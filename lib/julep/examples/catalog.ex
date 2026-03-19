@@ -156,7 +156,7 @@ defmodule Julep.Examples.Catalog do
 
     window "catalog", title: "Widget Catalog" do
       column spacing: 12, padding: 16 do
-        text("Julep Widget Catalog", size: 24)
+        text("catalog_title", "Julep Widget Catalog", size: 24)
         rule()
 
         row spacing: 8 do
@@ -184,7 +184,7 @@ defmodule Julep.Examples.Catalog do
     import Julep.UI
 
     column spacing: 8 do
-      text("Layout Widgets", size: 18)
+      text("layout_heading", "Layout Widgets", size: 18)
 
       # Row
       row spacing: 8 do
@@ -250,9 +250,9 @@ defmodule Julep.Examples.Catalog do
 
       # Keyed column - stable identity for children
       keyed_column spacing: 4 do
-        text("Keyed item A", id: "key_a")
-        text("Keyed item B", id: "key_b")
-        text("Keyed item C", id: "key_c")
+        text("key_a", "Keyed item A")
+        text("key_b", "Keyed item B")
+        text("key_c", "Keyed item C")
       end
 
       # Themer - overrides the theme for its subtree
@@ -275,7 +275,7 @@ defmodule Julep.Examples.Catalog do
     import Julep.UI
 
     column spacing: 8 do
-      text("Input Widgets", size: 18)
+      text("input_heading", "Input Widgets", size: 18)
 
       # Text input
       text_input("demo_input", model.text_value, placeholder: "Type here...")
@@ -322,7 +322,7 @@ defmodule Julep.Examples.Catalog do
     import Julep.UI
 
     column spacing: 8 do
-      text("Display Widgets", size: 18)
+      text("display_heading", "Display Widgets", size: 18)
 
       # Plain text
       text("Plain text label")
@@ -348,8 +348,9 @@ defmodule Julep.Examples.Catalog do
       svg("demo_svg", "/assets/icon.svg", width: 24, height: 24)
 
       # Markdown with settings
-      markdown("## Markdown\n\nSome **bold** and *italic* text.\n\n- Item one\n- Item two",
-        id: "demo_markdown"
+      markdown(
+        "demo_markdown",
+        "## Markdown\n\nSome **bold** and *italic* text.\n\n- Item one\n- Item two"
       )
 
       # Rich text with styled spans
@@ -388,7 +389,7 @@ defmodule Julep.Examples.Catalog do
     import Julep.UI
 
     column spacing: 8 do
-      text("Interactive & Composite Widgets", size: 18)
+      text("composite_heading", "Interactive & Composite Widgets", size: 18)
 
       # Mouse area wrapping content -- detects hover enter/exit
       mouse_area "demo_mouse_area", on_enter: true, on_exit: true do

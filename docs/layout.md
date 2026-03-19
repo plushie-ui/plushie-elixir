@@ -116,8 +116,8 @@ Arranges children vertically (top to bottom).
 
 ```elixir
 column id: "main", spacing: 16, padding: 20, width: :fill, align_x: :center do
-  text("Title", size: 24)
-  text("Subtitle", size: 14)
+  text("title", "Title", size: 24)
+  text("subtitle", "Subtitle", size: 14)
 end
 ```
 
@@ -162,7 +162,7 @@ Wraps content in a scrollable region.
 scrollable "list", height: 400, width: :fill do
   column spacing: 4 do
     for item <- items do
-      text(item.name, id: "item:#{item.id}")
+      text("item:#{item.id}", item.name)
     end
   end
 end
@@ -180,7 +180,7 @@ are on top.
 stack do
   image("bg", "background.png", width: :fill, height: :fill)
   container "overlay", center: :fill do
-    text("Overlaid text", size: 48)
+    text("overlay_text", "Overlaid text", size: 48)
   end
 end
 ```
@@ -216,7 +216,7 @@ end
 ```elixir
 container "page", width: :fill, height: :fill, center: :fill do
   column spacing: 16, align_x: :center do
-    text("Welcome", size: 32)
+    text("welcome", "Welcome", size: 32)
     button("start", "Get Started")
   end
 end

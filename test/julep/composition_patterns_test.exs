@@ -308,7 +308,7 @@ defmodule Julep.CompositionPatternsTest do
         background: "#ffffff",
         border: border do
         column spacing: 8 do
-          text(title, size: 16)
+          text("card_title", title, size: 16)
           rule()
 
           for node <- body_fn.() do
@@ -355,11 +355,11 @@ defmodule Julep.CompositionPatternsTest do
               last? = index == length(model.path) - 1
 
               if last? do
-                text(segment, size: 14)
+                text("crumb_current", segment, size: 14)
               else
                 [
                   button("crumb:#{index}", segment, padding: 4),
-                  text(">", size: 14, color: "#999999")
+                  text("sep:#{index}", ">", size: 14, color: "#999999")
                 ]
               end
             end

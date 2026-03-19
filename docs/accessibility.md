@@ -174,8 +174,8 @@ With `Julep.UI` (do-block syntax):
 import Julep.UI
 
 # Headings
-text("Welcome to MyApp", id: "title", a11y: %A11y{role: :heading, level: 1})
-text("Settings", id: "settings_heading", a11y: %A11y{role: :heading, level: 2})
+text("title", "Welcome to MyApp", a11y: %A11y{role: :heading, level: 1})
+text("settings_heading", "Settings", a11y: %A11y{role: :heading, level: 2})
 
 # Icon buttons that need a label for screen readers
 button("close", "X", a11y: %A11y{label: "Close dialog"})
@@ -186,7 +186,7 @@ container "search_results", a11y: %A11y{role: :region, label: "Search results"} 
 end
 
 # Live regions -- AT announces changes automatically
-text("#{model.saved_count} items saved", a11y: %A11y{live: :polite})
+text("save_status", "#{model.saved_count} items saved", a11y: %A11y{live: :polite})
 
 # Decorative elements hidden from AT
 rule(a11y: %A11y{hidden: true})
@@ -293,12 +293,12 @@ section titles:
 def view(model) do
   window "main", title: "MyApp" do
     column do
-      text("Dashboard", id: "page_title", a11y: %A11y{role: :heading, level: 1})
+      text("page_title", "Dashboard", a11y: %A11y{role: :heading, level: 1})
 
-      text("Recent activity", id: "h_recent", a11y: %A11y{role: :heading, level: 2})
+      text("h_recent", "Recent activity", a11y: %A11y{role: :heading, level: 2})
       # ... activity list ...
 
-      text("Quick actions", id: "h_actions", a11y: %A11y{role: :heading, level: 2})
+      text("h_actions", "Quick actions", a11y: %A11y{role: :heading, level: 2})
       # ... action buttons ...
     end
   end
@@ -342,17 +342,17 @@ without the user navigating to it, use live regions:
 
 ```elixir
 # Status bar that announces changes
-text(model.status_message, id: "status", a11y: %A11y{live: :polite})
+text("status", model.status_message, a11y: %A11y{live: :polite})
 
 # Error message that interrupts
 if model.error do
-  text(model.error, id: "error",
+  text("error", model.error,
     a11y: %A11y{live: :assertive, role: :alert}
   )
 end
 
 # Counter value announced on change
-text("Count: #{model.count}", id: "counter", a11y: %A11y{live: :polite})
+text("counter", "Count: #{model.count}", a11y: %A11y{live: :polite})
 ```
 
 **Tip:** Only mark the element that changes as live, not its parent
@@ -365,7 +365,7 @@ Label your inputs, mark required fields, and provide clear error feedback:
 
 ```elixir
 column spacing: 12 do
-  text("Create account", id: "form_heading", a11y: %A11y{role: :heading, level: 1})
+  text("form_heading", "Create account", a11y: %A11y{role: :heading, level: 1})
 
   column spacing: 4 do
     text("Username")
@@ -380,7 +380,7 @@ column spacing: 12 do
       a11y: %A11y{required: true, label: "Email address"}
     )
     if model.email_error do
-      text(model.email_error, id: "email_error",
+      text("email_error", model.email_error,
         a11y: %A11y{live: :assertive, role: :alert}
       )
     end
@@ -404,11 +404,11 @@ references so the screen reader follows the relationship automatically.
 
 ```elixir
 column spacing: 12 do
-  text("Create account", id: "form_heading", a11y: %A11y{role: :heading, level: 1})
+  text("form_heading", "Create account", a11y: %A11y{role: :heading, level: 1})
 
   column spacing: 4 do
-    text("Email", id: "email-label")
-    text("We'll send a confirmation link", id: "email-help")
+    text("email-label", "Email")
+    text("email-help", "We'll send a confirmation link")
     text_input("email", model.email,
       a11y: %A11y{
         labelled_by: "email-label",
@@ -417,7 +417,7 @@ column spacing: 12 do
       }
     )
     if model.email_error do
-      text(model.email_error, id: "email-error",
+      text("email-error", model.email_error,
         a11y: %A11y{role: :alert, live: :assertive}
       )
     end

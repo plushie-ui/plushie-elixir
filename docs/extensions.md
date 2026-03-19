@@ -118,8 +118,8 @@ defmodule MyApp.Card do
     import Julep.UI
 
     column padding: 16, spacing: 8 do
-      text(props.title, size: 20)
-      if props.subtitle, do: text(props.subtitle, size: 14)
+      text("ext_title", props.title, size: 20)
+      if props.subtitle, do: text("ext_subtitle", props.subtitle, size: 14)
       children
     end
   end

@@ -91,7 +91,7 @@ Iced.column("main_col", %{spacing: 16, padding: 20}, [
 import Julep.UI
 
 column spacing: 16, padding: 20 do
-  text("Hello, world!", size: 24)
+  text("greeting", "Hello, world!", size: 24)
   row spacing: 8 do
     button("inc", "Increment")
     button("dec", "Decrement")
@@ -282,7 +282,7 @@ scrollable(column(items))
 scrollable "item_scroll", width: :fill, height: 400 do
   column do
     for item <- items do
-      text(item.name, id: "item:#{item.id}")
+      text("item:#{item.id}", item.name)
     end
   end
 end

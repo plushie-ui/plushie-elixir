@@ -53,12 +53,12 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
     def view(model) do
       window "extensions-demo", title: "Extensions Demo" do
         column padding: 10, spacing: 10 do
-          text("All 5 Extension Widgets", size: 24)
+          text("demo_title", "All 5 Extension Widgets", size: 24)
 
           # Row 1: Sparkline + Hex View
           row spacing: 20 do
             column spacing: 5 do
-              text("Sparkline", size: 16)
+              text("sparkline_label", "Sparkline", size: 16)
 
               JulepSparkline.new("spark")
               |> JulepSparkline.color("#4FC3F7")
@@ -67,7 +67,7 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
             end
 
             column spacing: 5 do
-              text("Hex View", size: 16)
+              text("hex_label", "Hex View", size: 16)
 
               JulepHexView.new("hex",
                 data: model.hex_text,
@@ -79,7 +79,7 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
 
           # Row 2: Code View
           column spacing: 5 do
-            text("Code View", size: 16)
+            text("code_label", "Code View", size: 16)
 
             JulepCodeView.new("code",
               code: model.code,
@@ -91,7 +91,7 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
 
           # Row 3: Plot
           column spacing: 5 do
-            text("Plot", size: 16)
+            text("plot_label", "Plot", size: 16)
 
             JulepPlot.new("plot",
               series: [
@@ -113,7 +113,7 @@ if Code.ensure_loaded?(JulepSparkline) and Code.ensure_loaded?(JulepHexView) and
 
           # Row 4: Timeline
           column spacing: 5 do
-            text("Timeline", size: 16)
+            text("timeline_label", "Timeline", size: 16)
 
             JulepTimeline.new("timeline",
               intervals: [
