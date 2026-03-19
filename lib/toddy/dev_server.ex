@@ -2,13 +2,17 @@ defmodule Toddy.DevServer do
   @moduledoc """
   File watcher and recompiler for dev-mode live reload.
 
-  Watches `lib/` for `.ex` and `.exs` changes, recompiles, and tells the
-  runtime to re-render. The UI updates without losing application state.
+  Watches compilation directories for `.ex` and `.exs` changes,
+  recompiles, and tells the runtime to re-render. The UI updates
+  without losing application state.
+
+  By default, watches all directories in `elixirc_paths` (e.g.
+  `lib/` and `examples/` in dev). Override with the `:dirs` option.
 
   Requires the `:file_system` package. Started automatically by
   `mix toddy.gui` in dev mode, or manually:
 
-      Toddy.DevServer.start_link(runtime: runtime_pid, dirs: ["lib"])
+      Toddy.DevServer.start_link(runtime: runtime_pid)
   """
 
   use GenServer
@@ -16,7 +20,7 @@ defmodule Toddy.DevServer do
   require Logger
 
   @default_debounce_ms 100
-  @default_dirs ["lib"]
+  @fallback_dirs ["lib"]
   @elixir_extensions ~w(.ex .exs)
 
   # ---------------------------------------------------------------------------
@@ -37,7 +41,14 @@ defmodule Toddy.DevServer do
     ensure_file_system!()
 
     runtime = Keyword.fetch!(opts, :runtime)
-    dirs = Keyword.get(opts, :dirs, @default_dirs) |> Enum.map(&Path.expand/1)
+    default_dirs =
+      if Code.ensure_loaded?(Mix.Project) and function_exported?(Mix.Project, :config, 0) do
+        Mix.Project.config()[:elixirc_paths] || @fallback_dirs
+      else
+        @fallback_dirs
+      end
+
+    dirs = Keyword.get(opts, :dirs, default_dirs) |> Enum.map(&Path.expand/1)
     debounce_ms = Keyword.get(opts, :debounce_ms, @default_debounce_ms)
 
     {:ok, watcher} = apply(FileSystem, :start_link, [[dirs: dirs]])
