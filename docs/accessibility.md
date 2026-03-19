@@ -656,7 +656,7 @@ end
 Accessibility is enabled by default. A standard `cargo build` includes it:
 
 ```bash
-cd ../toddy
+# build the renderer
 cargo build --release
 ```
 
@@ -693,7 +693,7 @@ To manually verify accessibility with a real screen reader:
 
 ```bash
 # Build the renderer (a11y is included by default)
-cd ../toddy && cargo build
+mix toddy.build
 
 # Start Orca (usually Super+Alt+S, or from accessibility settings)
 orca &
@@ -709,7 +709,7 @@ Activate buttons with Enter or Space.
 
 ```bash
 # Build the renderer (a11y is included by default)
-cd ../toddy && cargo build
+mix toddy.build
 
 # Toggle VoiceOver: Cmd+F5
 # Run your app
@@ -723,7 +723,7 @@ should announce each widget's role and label.
 
 ```bash
 # Build the renderer (a11y is included by default)
-cd ../toddy && cargo build
+mix toddy.build
 
 # Start NVDA
 # Run your app

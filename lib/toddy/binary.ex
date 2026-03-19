@@ -1,38 +1,57 @@
 defmodule Toddy.Binary do
-  @moduledoc "Resolves the path to the toddy binary."
+  @moduledoc """
+  Resolves the path to the toddy binary.
+
+  Resolution order for `path!/0`:
+
+  1. `TODDY_BINARY_PATH` environment variable
+  2. Application config `:binary_path`
+  3. Custom extension build in `_build/<env>/toddy/target/`
+  4. Precompiled binary in `priv/bin/`
+
+  Steps 1 and 2 are explicit configuration -- if set but pointing to a
+  missing file, they raise immediately rather than falling through. Steps
+  3 and 4 are implicit discovery and silently try the next option.
+  """
+
+  @doc """
+  Standard instructions for resolving a missing toddy binary.
+
+  Used by the compiler, test helper, and error messages to provide
+  consistent guidance.
+  """
+  @spec not_found_message() :: String.t()
+  def not_found_message do
+    """
+    toddy binary not found.
+
+    To download a precompiled binary:
+      mix toddy.download
+
+    To build from source:
+      mix toddy.build
+
+    To use an existing binary:
+      export TODDY_BINARY_PATH=/path/to/toddy
+
+    See the project README for setup instructions.\
+    """
+  end
 
   @doc """
   Returns the path to the toddy binary.
 
-  Resolution order:
-  1. TODDY_RENDERER_PATH environment variable
-  2. Application config `:binary_path`
-  3. Custom extension build in _build/<env>/toddy/target/
-  4. Precompiled binary in priv/
-  5. Sibling repo at ../toddy/target/
+  Raises with `not_found_message/0` if no binary can be resolved, or
+  with a specific message if an explicitly configured path doesn't exist.
   """
-  @spec renderer_path() :: String.t()
-  def renderer_path do
+  @spec path!() :: String.t()
+  def path! do
     path =
-      System.get_env("TODDY_RENDERER_PATH") ||
+      env_path() ||
         app_config_path() ||
         custom_build_path() ||
         precompiled_path() ||
-        sibling_repo_path() ||
-        raise """
-        toddy binary not found. Searched:
-          - $TODDY_RENDERER_PATH (not set)
-          - Application config :binary_path (not set)
-          - Custom build in _build/
-          - Precompiled in priv/bin/
-          - Sibling repo at ../toddy/target/
-
-        To build from source:
-          cd ../toddy && cargo build
-
-        To download a precompiled binary:
-          mix toddy.download
-        """
+        raise not_found_message()
 
     validate_architecture!(path)
     path
@@ -60,7 +79,7 @@ defmodule Toddy.Binary do
 
           Binary: #{path}
 
-          Rebuild for the correct architecture or set TODDY_RENDERER_PATH \
+          Rebuild for the correct architecture or set TODDY_BINARY_PATH \
           to the right binary.
           """
         end
@@ -68,21 +87,121 @@ defmodule Toddy.Binary do
         :ok
 
       _ ->
-        # `file` command unavailable or failed -- skip check
         :ok
     end
   rescue
+    # `file` command not found on this system
     ErlangError -> :ok
   end
 
-  @doc "Returns the platform-specific binary name."
-  @spec binary_name() :: String.t()
-  def binary_name do
+  @doc """
+  Returns the platform-specific binary name for downloads.
+
+  Format: `toddy-{os}-{arch}` (e.g. `toddy-linux-x86_64`).
+  """
+  @spec download_name() :: String.t()
+  def download_name do
     os = os_name()
     arch = arch_name()
     ext = if os == "windows", do: ".exe", else: ""
     "toddy-#{os}-#{arch}#{ext}"
   end
+
+  @doc """
+  Returns the binary name for custom extension builds.
+
+  Derived from the Mix project app name by default, overridable via config:
+
+      config :toddy, :build_name, "my-custom-toddy"
+
+  For a project named `:my_dashboard`, the default is `my-dashboard-toddy`.
+  """
+  @spec build_name() :: String.t()
+  def build_name do
+    case Application.get_env(:toddy, :build_name) do
+      nil ->
+        app = Mix.Project.config()[:app] |> Atom.to_string() |> String.replace("_", "-")
+        "#{app}-toddy"
+
+      name when is_binary(name) ->
+        name
+
+      other ->
+        raise "config :toddy, :build_name must be a string, got: #{inspect(other)}"
+    end
+  end
+
+  # -- Resolution steps --------------------------------------------------------
+
+  @spec env_path() :: String.t() | nil
+  defp env_path do
+    case System.get_env("TODDY_BINARY_PATH") do
+      nil ->
+        nil
+
+      path ->
+        unless File.exists?(path) do
+          raise """
+          TODDY_BINARY_PATH is set to #{path} but the file does not exist.
+
+          Check the path or unset the variable to use automatic resolution.
+          """
+        end
+
+        path
+    end
+  end
+
+  @spec app_config_path() :: String.t() | nil
+  defp app_config_path do
+    case Application.get_env(:toddy, :binary_path) do
+      nil ->
+        nil
+
+      path when is_binary(path) ->
+        unless File.exists?(path) do
+          raise """
+          config :toddy, :binary_path is set to #{inspect(path)} but the file does not exist.
+
+          Check the path in your config or remove it to use automatic resolution.
+          """
+        end
+
+        path
+
+      other ->
+        raise "config :toddy, :binary_path must be a string, got: #{inspect(other)}"
+    end
+  end
+
+  @spec custom_build_path() :: String.t() | nil
+  defp custom_build_path do
+    bin_name = build_name()
+
+    for profile <- ["release", "debug"] do
+      ext = if os_name() == "windows", do: ".exe", else: ""
+
+      path =
+        Path.join([
+          Mix.Project.build_path(),
+          "toddy",
+          "target",
+          profile,
+          "#{bin_name}#{ext}"
+        ])
+
+      if File.exists?(path), do: path
+    end
+    |> Enum.find(& &1)
+  end
+
+  @spec precompiled_path() :: String.t() | nil
+  defp precompiled_path do
+    path = Path.join([:code.priv_dir(:toddy) |> to_string(), "bin", download_name()])
+    if File.exists?(path), do: path
+  end
+
+  # -- Platform detection ------------------------------------------------------
 
   @spec detect_arch(output :: String.t()) :: :x86_64 | :aarch64 | nil
   defp detect_arch(output) do
@@ -102,68 +221,7 @@ defmodule Toddy.Binary do
   @spec system_arch() :: :x86_64 | :aarch64 | nil
   defp system_arch, do: detect_arch(:erlang.system_info(:system_architecture) |> to_string())
 
-  defp app_config_path do
-    case Application.get_env(:toddy, :binary_path) do
-      nil -> nil
-      path when is_binary(path) -> if File.exists?(path), do: path
-    end
-  rescue
-    _ -> nil
-  end
-
-  defp custom_build_path do
-    bin_name = custom_binary_name()
-
-    for profile <- ["release", "debug"] do
-      ext = if os_name() == "windows", do: ".exe", else: ""
-
-      path =
-        Path.join([
-          Mix.Project.build_path(),
-          "toddy",
-          "target",
-          profile,
-          "#{bin_name}#{ext}"
-        ])
-
-      if File.exists?(path), do: path
-    end
-    |> Enum.find(& &1)
-  rescue
-    _ -> nil
-  end
-
-  defp custom_binary_name do
-    case Application.get_env(:toddy, :binary_name) do
-      nil ->
-        app = Mix.Project.config()[:app] |> Atom.to_string() |> String.replace("_", "-")
-        "#{app}-toddy"
-
-      name when is_binary(name) ->
-        name
-    end
-  rescue
-    # Mix.Project may not be available at runtime
-    _ -> "toddy"
-  end
-
-  defp precompiled_path do
-    path = Path.join([:code.priv_dir(:toddy) |> to_string(), "bin", binary_name()])
-    if File.exists?(path), do: path
-  rescue
-    _ -> nil
-  end
-
-  defp sibling_repo_path do
-    for release? <- [true, false] do
-      path = Mix.ToddyHelpers.renderer_binary_path(release?)
-      if File.exists?(path), do: path
-    end
-    |> Enum.find(& &1)
-  rescue
-    _ -> nil
-  end
-
+  @spec os_name() :: String.t()
   defp os_name do
     case :os.type() do
       {:unix, :linux} -> "linux"
@@ -173,6 +231,7 @@ defmodule Toddy.Binary do
     end
   end
 
+  @spec arch_name() :: String.t()
   defp arch_name do
     case system_arch() do
       :x86_64 -> "x86_64"

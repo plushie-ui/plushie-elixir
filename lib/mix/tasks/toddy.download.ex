@@ -5,24 +5,25 @@ defmodule Mix.Tasks.Toddy.Download do
   use Mix.Task
 
   @base_url "https://github.com/toddy-ui/toddy/releases/download"
-  @renderer_version "0.3.0"
+  @binary_version Mix.Project.config()[:binary_version] ||
+                    raise("missing :binary_version in project config (mix.exs)")
 
   @impl true
   def run(args) do
     Mix.Task.run("app.config")
 
-    binary_name = Toddy.Binary.binary_name()
-    url = "#{@base_url}/v#{@renderer_version}/#{binary_name}"
+    name = Toddy.Binary.download_name()
+    url = "#{@base_url}/v#{@binary_version}/#{name}"
 
     dest_dir = Path.join([Mix.Project.app_path(), "priv", "bin"])
-    dest_path = Path.join(dest_dir, binary_name)
+    dest_path = Path.join(dest_dir, name)
 
     if File.exists?(dest_path) and "--force" not in args do
       Mix.shell().info("Binary already exists at #{dest_path}. Use --force to re-download.")
       :ok
     else
       File.mkdir_p!(dest_dir)
-      Mix.shell().info("Downloading #{binary_name} from #{url}...")
+      Mix.shell().info("Downloading #{name} from #{url}...")
 
       case download(url, dest_path) do
         :ok ->
@@ -34,9 +35,15 @@ defmodule Mix.Tasks.Toddy.Download do
           verify_checksum(dest_path, checksum_url)
 
         {:error, reason} ->
-          Mix.shell().error("Download failed: #{inspect(reason)}")
-          Mix.shell().info("Falling back to source build...")
-          Mix.Task.run("toddy.build", args)
+          Mix.raise("""
+          Download failed: #{inspect(reason)}
+
+          To build from source instead:
+            mix toddy.build
+
+          To use an existing binary:
+            export TODDY_BINARY_PATH=/path/to/toddy
+          """)
       end
     end
   end

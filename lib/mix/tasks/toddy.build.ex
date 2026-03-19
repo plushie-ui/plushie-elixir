@@ -23,28 +23,6 @@ defmodule Mix.Tasks.Toddy.Build do
     end
   end
 
-  @doc """
-  Returns the binary name for custom builds.
-
-  Derived from the Mix project app name by default, overridable via config:
-
-      config :toddy, :binary_name, "my-custom-renderer"
-
-  For a project named `:my_dashboard`, the default binary name is
-  `my-dashboard-toddy`.
-  """
-  @spec binary_name() :: String.t()
-  def binary_name do
-    case Application.get_env(:toddy, :binary_name) do
-      nil ->
-        app = Mix.Project.config()[:app] |> Atom.to_string() |> String.replace("_", "-")
-        "#{app}-toddy"
-
-      name when is_binary(name) ->
-        name
-    end
-  end
-
   defp check_rust_toolchain do
     {min_major, min_minor, min_patch} = @min_rust_version
     min_str = "#{min_major}.#{min_minor}.#{min_patch}"
@@ -82,16 +60,14 @@ defmodule Mix.Tasks.Toddy.Build do
   end
 
   defp build_stock(args) do
-    source_dir = Mix.ToddyHelpers.renderer_source_path()
+    source_dir = Mix.ToddyHelpers.source_path!()
 
     unless File.dir?(source_dir) do
       Mix.raise("""
       toddy source not found at #{source_dir}.
 
-      Clone the renderer repo:
-        git clone <renderer-repo-url> ../toddy
-
-      Or set TODDY_RENDERER_SOURCE to the correct path.
+      Check that TODDY_SOURCE_PATH or config :toddy, :source_path
+      points to a valid checkout of the toddy repo.
       """)
     end
 
@@ -169,8 +145,6 @@ defmodule Mix.Tasks.Toddy.Build do
     else
       []
     end
-  rescue
-    _ -> []
   end
 
   # -- Collision detection ----------------------------------------------------
@@ -214,14 +188,14 @@ defmodule Mix.Tasks.Toddy.Build do
     build_dir = Path.join(Mix.Project.build_path(), "toddy")
     File.mkdir_p!(build_dir)
 
-    bin_name = binary_name()
+    bin_name = Toddy.Binary.build_name()
     crate_paths = resolve_crate_paths(extensions)
     generate_workspace(build_dir, bin_name, extensions, crate_paths)
 
     ext_names = Enum.map_join(extensions, ", ", &inspect/1)
 
     Mix.shell().info(
-      "Generated custom renderer workspace at #{build_dir} " <>
+      "Generated custom build workspace at #{build_dir} " <>
         "with #{length(extensions)} extension(s): #{ext_names}"
     )
 
@@ -245,7 +219,7 @@ defmodule Mix.Tasks.Toddy.Build do
       {output, status} ->
         Mix.shell().error("Build failed (exit code #{status}):")
         Mix.shell().error(output)
-        Mix.raise("cargo build failed for custom renderer workspace")
+        Mix.raise("cargo build failed for custom build workspace")
     end
   end
 
@@ -277,21 +251,22 @@ defmodule Mix.Tasks.Toddy.Build do
     File.write!(Path.join(src_dir, "main.rs"), main_rs)
   end
 
-  @renderer_version "0.3.0"
+  @binary_version Mix.Project.config()[:binary_version] ||
+                    raise("missing :binary_version in project config (mix.exs)")
 
   defp generate_cargo_toml(bin_name, extensions, crate_paths, build_dir) do
-    source_path = Mix.ToddyHelpers.renderer_source_path()
+    source_path = Mix.ToddyHelpers.source_path()
 
     # Use local source paths if available, otherwise pull from crates.io
     {toddy_core_dep, toddy_bin_dep} =
-      if File.dir?(source_path) do
+      if source_path && File.dir?(source_path) do
         toddy_core_rel = Path.relative_to(Path.join(source_path, "toddy-core"), build_dir)
         toddy_bin_rel = Path.relative_to(Path.join(source_path, "toddy"), build_dir)
+
         {~s(toddy-core = { path = "#{toddy_core_rel}" }),
          ~s(toddy = { path = "#{toddy_bin_rel}" })}
       else
-        {~s(toddy-core = "#{@renderer_version}"),
-         ~s(toddy = "#{@renderer_version}")}
+        {~s(toddy-core = "#{@binary_version}"), ~s(toddy = "#{@binary_version}")}
       end
 
     ext_deps =

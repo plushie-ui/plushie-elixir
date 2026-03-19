@@ -11,7 +11,7 @@ defmodule Toddy.Test.Backend.Headless do
 
   Build the renderer:
 
-      cd ../toddy && cargo build
+      mix toddy.build
 
   ## Limitations
 
@@ -30,7 +30,7 @@ defmodule Toddy.Test.Backend.Headless do
   @impl GenServer
   def init({app, opts}) do
     format = Keyword.get(opts, :format, :msgpack)
-    renderer_path = resolve_renderer_path()
+    renderer_path = Keyword.fetch!(opts, :renderer)
 
     env = Toddy.RendererEnv.build()
 
@@ -55,22 +55,5 @@ defmodule Toddy.Test.Backend.Headless do
 
   defp screenshot_payload(name) do
     %{type: "screenshot", name: name, width: 1024, height: 768}
-  end
-
-  defp resolve_renderer_path do
-    Toddy.Binary.renderer_path()
-  rescue
-    e in RuntimeError ->
-      if String.contains?(e.message, "toddy binary not found") do
-        reraise """
-                toddy binary not found.
-
-                The headless backend requires the toddy renderer binary.
-                Run: cd ../toddy && cargo build
-                """,
-                __STACKTRACE__
-      else
-        reraise e, __STACKTRACE__
-      end
   end
 end

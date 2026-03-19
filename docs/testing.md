@@ -561,7 +561,7 @@ Use the correct interaction function for the widget type. See the
 Build the renderer with the headless feature:
 
 ```bash
-cd ../toddy && cargo build
+mix toddy.build
 ```
 
 ### Inspecting state when a test fails
@@ -596,7 +596,7 @@ Requires the Rust toolchain and the headless feature build.
 
 ```yaml
 - run: |
-    cd ../toddy
+    # build the renderer
     cargo build
 - run: TODDY_TEST_BACKEND=headless mix test
 ```
@@ -610,7 +610,7 @@ Requires a display server and GPU/software rendering. Two options:
 ```yaml
 - run: |
     sudo apt-get install -y xvfb mesa-vulkan-drivers
-    cd ../toddy
+    # build the renderer
     cargo build
 - run: |
     Xvfb :99 -screen 0 1024x768x24 &
@@ -628,7 +628,7 @@ runs the full rendering pipeline on CPU.
 ```yaml
 - run: |
     sudo apt-get install -y weston mesa-vulkan-drivers
-    cd ../toddy
+    # build the renderer
     cargo build
 - run: |
     export XDG_RUNTIME_DIR=/tmp/toddy-xdg-runtime
@@ -651,7 +651,7 @@ Run pooled_mock tests fast, then promote to higher-fidelity backends for subsets
 
 # Full suite on headless for protocol verification
 - run: |
-    cd ../toddy && cargo build
+    mix toddy.build
     TODDY_TEST_BACKEND=headless mix test
 
 # Windowed for pixel regression (tagged subset)
@@ -787,7 +787,7 @@ config :toddy, extensions: [MyGauge]
 ```
 
 The custom binary is placed at `_build/<env>/toddy/target/debug/<project>-toddy`.
-`Toddy.Binary.renderer_path/0` finds it automatically, so the headless
+`Toddy.Binary.path!/0` finds it automatically, so the headless
 and windowed test backends use it without additional configuration.
 
 Write end-to-end tests with `Toddy.Test.Case`:

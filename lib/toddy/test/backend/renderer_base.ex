@@ -5,7 +5,7 @@ defmodule Toddy.Test.Backend.RendererBase do
   Provides the `__using__` macro that injects all 20 backend callbacks,
   GenServer plumbing, response handling, event dispatching, and wire helpers.
   Backends configure themselves via opts and override `init/1`, `port_args/1`,
-  `resolve_renderer_path/0`, and `screenshot_payload/2`.
+  and `screenshot_payload/1`.
   """
 
   # The entire module is one macro -- the long quote block is intentional.
@@ -467,7 +467,6 @@ defmodule Toddy.Test.Backend.RendererBase do
       end
 
       # Backends must define: init/1, port_args/1, screenshot_payload/1
-      # and optionally resolve_renderer_path/0
     end
   end
 end

@@ -10,7 +10,7 @@ defmodule Toddy.Test.Backend.Windowed do
 
   Build the renderer:
 
-      cd ../toddy && cargo build
+      mix toddy.build
 
   For CI (headless environment), use Xvfb:
 
@@ -43,7 +43,7 @@ defmodule Toddy.Test.Backend.Windowed do
     end
 
     format = Keyword.get(opts, :format, :msgpack)
-    renderer_path = Toddy.Binary.renderer_path()
+    renderer_path = Keyword.fetch!(opts, :renderer)
 
     env = Toddy.RendererEnv.build()
 

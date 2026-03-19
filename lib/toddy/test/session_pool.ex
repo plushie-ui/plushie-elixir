@@ -41,6 +41,7 @@ defmodule Toddy.Test.SessionPool do
 
   ## Options
 
+  - `:renderer` -- path to the toddy binary (required)
   - `:mode` -- `:mock` (default) or `:headless`
   - `:format` -- `:msgpack` (default) or `:json`
   - `:max_sessions` -- maximum concurrent sessions (default 8)
@@ -130,7 +131,7 @@ defmodule Toddy.Test.SessionPool do
     format = Keyword.get(opts, :format, :msgpack)
     max_sessions = Keyword.get(opts, :max_sessions, 8)
 
-    renderer_path = Toddy.Binary.renderer_path()
+    renderer_path = Keyword.fetch!(opts, :renderer)
     env = Toddy.RendererEnv.build()
 
     mode_flag = if mode == :headless, do: "--headless", else: "--mock"

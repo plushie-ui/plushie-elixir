@@ -13,7 +13,7 @@ defmodule Toddy.BridgeMsgpackTest do
 
   import ExUnit.CaptureLog
 
-  @renderer_path Toddy.Binary.renderer_path()
+  defp binary_path, do: Application.fetch_env!(:toddy, :test_binary_path)
 
   # Environment for tests: whitelisted renderer env with log output suppressed.
   defp test_env do
@@ -24,7 +24,7 @@ defmodule Toddy.BridgeMsgpackTest do
   defp open_headless_port(extra_args) do
     args = ["--headless" | extra_args]
 
-    Port.open({:spawn_executable, @renderer_path}, [
+    Port.open({:spawn_executable, binary_path()}, [
       :binary,
       :exit_status,
       :use_stdio,
@@ -148,7 +148,7 @@ defmodule Toddy.BridgeMsgpackTest do
 
         {:ok, bridge} =
           Toddy.Bridge.start_link(
-            renderer_path: @renderer_path,
+            renderer_path: binary_path(),
             format: :msgpack,
             runtime: self(),
             renderer_args: ["--headless"],
