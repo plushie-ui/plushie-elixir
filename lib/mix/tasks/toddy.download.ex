@@ -15,7 +15,7 @@ defmodule Mix.Tasks.Toddy.Download do
     name = Toddy.Binary.download_name()
     url = "#{@base_url}/v#{@binary_version}/#{name}"
 
-    dest_dir = Path.join([Mix.Project.app_path(), "priv", "bin"])
+    dest_dir = Path.join(["priv", "bin"])
     dest_path = Path.join(dest_dir, name)
 
     if File.exists?(dest_path) and "--force" not in args do

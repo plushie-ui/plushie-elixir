@@ -9,7 +9,11 @@ defmodule Toddy.Test.SessionPoolTest do
 
   describe "SessionPool" do
     setup do
-      {:ok, pool} = SessionPool.start_link(mode: :mock, format: :json, max_sessions: 4)
+      binary = Application.fetch_env!(:toddy, :test_binary_path)
+
+      {:ok, pool} =
+        SessionPool.start_link(renderer: binary, mode: :mock, format: :json, max_sessions: 4)
+
       %{pool: pool}
     end
 
@@ -96,7 +100,11 @@ defmodule Toddy.Test.SessionPoolTest do
 
   describe "Pooled backend" do
     setup do
-      {:ok, pool} = SessionPool.start_link(mode: :mock, format: :json, max_sessions: 4)
+      binary = Application.fetch_env!(:toddy, :test_binary_path)
+
+      {:ok, pool} =
+        SessionPool.start_link(renderer: binary, mode: :mock, format: :json, max_sessions: 4)
+
       %{pool: pool}
     end
 

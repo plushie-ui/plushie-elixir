@@ -82,13 +82,33 @@ defmodule Mix.Tasks.Toddy.Build do
       {output, 0} ->
         Mix.shell().info("Build succeeded.")
         if "--verbose" in args, do: Mix.shell().info(output)
-        :ok
+        install_binary(source_dir, release?)
 
       {output, status} ->
         Mix.shell().error("Build failed (exit code #{status}):")
         Mix.shell().error(output)
         Mix.raise("cargo build failed")
     end
+  end
+
+  # Copy the built binary into priv/bin/ so the resolution chain finds it
+  # without needing TODDY_BINARY_PATH or TODDY_SOURCE_PATH at runtime.
+  defp install_binary(source_dir, release?) do
+    profile = if release?, do: "release", else: "debug"
+    src = Path.join([source_dir, "target", profile, "toddy"])
+
+    unless File.exists?(src) do
+      Mix.raise("Build succeeded but binary not found at #{src}")
+    end
+
+    dest_dir = Path.join(["priv", "bin"])
+    dest = Path.join(dest_dir, Toddy.Binary.download_name())
+
+    File.mkdir_p!(dest_dir)
+    File.cp!(src, dest)
+    File.chmod!(dest, 0o755)
+
+    Mix.shell().info("Installed to #{dest}")
   end
 
   # -- Extension registration -------------------------------------------------
