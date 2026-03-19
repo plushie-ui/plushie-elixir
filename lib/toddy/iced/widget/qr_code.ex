@@ -21,7 +21,8 @@ defmodule Toddy.Iced.Widget.QrCode do
 
   @error_corrections [:low, :medium, :quartile, :high]
 
-  @type error_correction :: unquote(Enum.reduce([:low, :medium, :quartile, :high], &{:|, [], [&1, &2]}))
+  @type error_correction ::
+          unquote(Enum.reduce([:low, :medium, :quartile, :high], &{:|, [], [&1, &2]}))
 
   @type option ::
           {:cell_size, number()}
@@ -65,7 +66,8 @@ defmodule Toddy.Iced.Widget.QrCode do
 
   @doc "Sets the cell size (pixels per QR module)."
   @spec cell_size(qr_code :: t(), cell_size :: number()) :: t()
-  def cell_size(%__MODULE__{} = qr, cell_size) when is_number(cell_size), do: %{qr | cell_size: cell_size}
+  def cell_size(%__MODULE__{} = qr, cell_size) when is_number(cell_size),
+    do: %{qr | cell_size: cell_size}
 
   @doc "Sets the color of dark modules."
   @spec cell_color(qr_code :: t(), cell_color :: Toddy.Iced.Color.input()) :: t()

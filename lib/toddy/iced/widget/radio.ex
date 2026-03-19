@@ -142,7 +142,8 @@ defmodule Toddy.Iced.Widget.Radio do
 
   @doc "Sets the label text size in pixels."
   @spec text_size(radio :: t(), text_size :: number()) :: t()
-  def text_size(%__MODULE__{} = r, text_size) when is_number(text_size), do: %{r | text_size: text_size}
+  def text_size(%__MODULE__{} = r, text_size) when is_number(text_size),
+    do: %{r | text_size: text_size}
 
   @doc "Sets the label font."
   @spec font(radio :: t(), font :: Toddy.Iced.Font.t()) :: t()

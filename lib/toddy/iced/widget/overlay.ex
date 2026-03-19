@@ -90,11 +90,13 @@ defmodule Toddy.Iced.Widget.Overlay do
 
   @doc "Sets the horizontal offset in pixels."
   @spec offset_x(overlay :: t(), offset_x :: number()) :: t()
-  def offset_x(%__MODULE__{} = overlay, offset_x) when is_number(offset_x), do: %{overlay | offset_x: offset_x}
+  def offset_x(%__MODULE__{} = overlay, offset_x) when is_number(offset_x),
+    do: %{overlay | offset_x: offset_x}
 
   @doc "Sets the vertical offset in pixels."
   @spec offset_y(overlay :: t(), offset_y :: number()) :: t()
-  def offset_y(%__MODULE__{} = overlay, offset_y) when is_number(offset_y), do: %{overlay | offset_y: offset_y}
+  def offset_y(%__MODULE__{} = overlay, offset_y) when is_number(offset_y),
+    do: %{overlay | offset_y: offset_y}
 
   @doc "Sets the width of the overlay node."
   @spec width(overlay :: t(), width :: Toddy.Iced.Length.t()) :: t()

@@ -135,11 +135,13 @@ defmodule Toddy.Iced.Widget.PickList do
 
   @doc "Sets the currently selected value."
   @spec selected(pick_list :: t(), selected :: String.t()) :: t()
-  def selected(%__MODULE__{} = pl, selected) when is_binary(selected), do: %{pl | selected: selected}
+  def selected(%__MODULE__{} = pl, selected) when is_binary(selected),
+    do: %{pl | selected: selected}
 
   @doc "Sets the placeholder text."
   @spec placeholder(pick_list :: t(), placeholder :: String.t()) :: t()
-  def placeholder(%__MODULE__{} = pl, placeholder) when is_binary(placeholder), do: %{pl | placeholder: placeholder}
+  def placeholder(%__MODULE__{} = pl, placeholder) when is_binary(placeholder),
+    do: %{pl | placeholder: placeholder}
 
   @doc "Sets the pick list width."
   @spec width(pick_list :: t(), width :: Toddy.Iced.Length.t()) :: t()
@@ -151,7 +153,8 @@ defmodule Toddy.Iced.Widget.PickList do
 
   @doc "Sets the text size in pixels."
   @spec text_size(pick_list :: t(), text_size :: number()) :: t()
-  def text_size(%__MODULE__{} = pl, text_size) when is_number(text_size), do: %{pl | text_size: text_size}
+  def text_size(%__MODULE__{} = pl, text_size) when is_number(text_size),
+    do: %{pl | text_size: text_size}
 
   @doc "Sets the font."
   @spec font(pick_list :: t(), font :: Toddy.Iced.Font.t()) :: t()
@@ -163,7 +166,8 @@ defmodule Toddy.Iced.Widget.PickList do
 
   @doc "Sets the maximum dropdown menu height in pixels."
   @spec menu_height(pick_list :: t(), menu_height :: number()) :: t()
-  def menu_height(%__MODULE__{} = pl, menu_height) when is_number(menu_height), do: %{pl | menu_height: menu_height}
+  def menu_height(%__MODULE__{} = pl, menu_height) when is_number(menu_height),
+    do: %{pl | menu_height: menu_height}
 
   @doc "Sets the text shaping strategy."
   @spec text_shaping(pick_list :: t(), text_shaping :: Toddy.Iced.Shaping.t()) :: t()
@@ -175,7 +179,8 @@ defmodule Toddy.Iced.Widget.PickList do
 
   @doc "Sets the text ellipsis strategy."
   @spec ellipsis(pick_list :: t(), ellipsis :: String.t()) :: t()
-  def ellipsis(%__MODULE__{} = pl, ellipsis) when is_binary(ellipsis), do: %{pl | ellipsis: ellipsis}
+  def ellipsis(%__MODULE__{} = pl, ellipsis) when is_binary(ellipsis),
+    do: %{pl | ellipsis: ellipsis}
 
   @doc "Sets the dropdown menu style overrides."
   @spec menu_style(pick_list :: t(), menu_style :: map()) :: t()
@@ -193,7 +198,8 @@ defmodule Toddy.Iced.Widget.PickList do
 
   @doc "Enables or disables the close event when the dropdown menu closes."
   @spec on_close(pick_list :: t(), on_close :: boolean()) :: t()
-  def on_close(%__MODULE__{} = pl, on_close) when is_boolean(on_close), do: %{pl | on_close: on_close}
+  def on_close(%__MODULE__{} = pl, on_close) when is_boolean(on_close),
+    do: %{pl | on_close: on_close}
 
   @doc "Sets accessibility annotations."
   @spec a11y(pick_list :: t(), a11y :: Toddy.Iced.A11y.t()) :: t()

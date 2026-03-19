@@ -41,6 +41,7 @@ defmodule Toddy.DevServer do
     ensure_file_system!()
 
     runtime = Keyword.fetch!(opts, :runtime)
+
     default_dirs =
       if Code.ensure_loaded?(Mix.Project) and function_exported?(Mix.Project, :config, 0) do
         Mix.Project.config()[:elixirc_paths] || @fallback_dirs

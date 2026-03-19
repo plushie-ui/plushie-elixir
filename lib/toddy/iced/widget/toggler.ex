@@ -131,7 +131,8 @@ defmodule Toddy.Iced.Widget.Toggler do
 
   @doc "Sets the label text size in pixels."
   @spec text_size(toggler :: t(), text_size :: number()) :: t()
-  def text_size(%__MODULE__{} = tg, text_size) when is_number(text_size), do: %{tg | text_size: text_size}
+  def text_size(%__MODULE__{} = tg, text_size) when is_number(text_size),
+    do: %{tg | text_size: text_size}
 
   @doc "Sets the label font."
   @spec font(toggler :: t(), font :: Toddy.Iced.Font.t()) :: t()
@@ -161,7 +162,8 @@ defmodule Toddy.Iced.Widget.Toggler do
 
   @doc "Sets whether the toggler is disabled."
   @spec disabled(toggler :: t(), disabled :: boolean()) :: t()
-  def disabled(%__MODULE__{} = tg, disabled) when is_boolean(disabled), do: %{tg | disabled: disabled}
+  def disabled(%__MODULE__{} = tg, disabled) when is_boolean(disabled),
+    do: %{tg | disabled: disabled}
 
   @doc "Sets accessibility annotations."
   @spec a11y(toggler :: t(), a11y :: Toddy.Iced.A11y.t()) :: t()

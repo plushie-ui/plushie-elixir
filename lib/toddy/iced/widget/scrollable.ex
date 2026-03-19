@@ -138,7 +138,8 @@ defmodule Toddy.Iced.Widget.Scrollable do
 
   @doc "Sets the scroller handle width in pixels."
   @spec scroller_width(scrollable :: t(), scroller_width :: number()) :: t()
-  def scroller_width(%__MODULE__{} = s, scroller_width) when is_number(scroller_width), do: %{s | scroller_width: scroller_width}
+  def scroller_width(%__MODULE__{} = s, scroller_width) when is_number(scroller_width),
+    do: %{s | scroller_width: scroller_width}
 
   @doc "Sets the scroll anchor."
   @spec anchor(scrollable :: t(), anchor :: Toddy.Iced.Anchor.t()) :: t()
@@ -146,11 +147,13 @@ defmodule Toddy.Iced.Widget.Scrollable do
 
   @doc "Enables scroll position change events."
   @spec on_scroll(scrollable :: t(), on_scroll :: boolean()) :: t()
-  def on_scroll(%__MODULE__{} = s, on_scroll) when is_boolean(on_scroll), do: %{s | on_scroll: on_scroll}
+  def on_scroll(%__MODULE__{} = s, on_scroll) when is_boolean(on_scroll),
+    do: %{s | on_scroll: on_scroll}
 
   @doc "Enables automatic scrolling to show new content."
   @spec auto_scroll(scrollable :: t(), auto_scroll :: boolean()) :: t()
-  def auto_scroll(%__MODULE__{} = s, auto_scroll) when is_boolean(auto_scroll), do: %{s | auto_scroll: auto_scroll}
+  def auto_scroll(%__MODULE__{} = s, auto_scroll) when is_boolean(auto_scroll),
+    do: %{s | auto_scroll: auto_scroll}
 
   @doc "Sets the scrollbar track color."
   @spec scrollbar_color(scrollable :: t(), scrollbar_color :: Toddy.Iced.Color.input()) :: t()

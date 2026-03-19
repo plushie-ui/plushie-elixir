@@ -53,9 +53,12 @@ defmodule TodoTest do
         filter: :all
       }
 
-      model = Todo.update(model, %Widget{
-        type: :toggle, id: "toggle", scope: ["todo_1", "list", "app"]
-      })
+      model =
+        Todo.update(model, %Widget{
+          type: :toggle,
+          id: "toggle",
+          scope: ["todo_1", "list", "app"]
+        })
 
       assert [%{id: "todo_1", done: true}] = model.todos
     end
@@ -68,9 +71,12 @@ defmodule TodoTest do
         filter: :all
       }
 
-      model = Todo.update(model, %Widget{
-        type: :toggle, id: "toggle", scope: ["todo_1"]
-      })
+      model =
+        Todo.update(model, %Widget{
+          type: :toggle,
+          id: "toggle",
+          scope: ["todo_1"]
+        })
 
       assert [%{id: "todo_1", done: false}] = model.todos
     end
@@ -88,9 +94,12 @@ defmodule TodoTest do
         filter: :all
       }
 
-      model = Todo.update(model, %Widget{
-        type: :click, id: "delete", scope: ["todo_1", "list", "app"]
-      })
+      model =
+        Todo.update(model, %Widget{
+          type: :click,
+          id: "delete",
+          scope: ["todo_1", "list", "app"]
+        })
 
       assert [%{id: "todo_2", text: "B"}] = model.todos
     end

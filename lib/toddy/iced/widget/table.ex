@@ -137,7 +137,8 @@ defmodule Toddy.Iced.Widget.Table do
 
   @doc "Sets whether the separator line is shown."
   @spec separator(table :: t(), separator :: boolean()) :: t()
-  def separator(%__MODULE__{} = tbl, separator) when is_boolean(separator), do: %{tbl | separator: separator}
+  def separator(%__MODULE__{} = tbl, separator) when is_boolean(separator),
+    do: %{tbl | separator: separator}
 
   @doc "Sets the table width."
   @spec width(table :: t(), width :: Toddy.Iced.Length.t()) :: t()
@@ -178,8 +179,9 @@ defmodule Toddy.Iced.Widget.Table do
 
   @doc "Sets the separator line thickness in pixels."
   @spec separator_thickness(table :: t(), separator_thickness :: number()) :: t()
-  def separator_thickness(%__MODULE__{} = tbl, separator_thickness) when is_number(separator_thickness),
-    do: %{tbl | separator_thickness: separator_thickness}
+  def separator_thickness(%__MODULE__{} = tbl, separator_thickness)
+      when is_number(separator_thickness),
+      do: %{tbl | separator_thickness: separator_thickness}
 
   @doc "Sets the separator line color."
   @spec separator_color(table :: t(), separator_color :: Toddy.Iced.Color.input()) :: t()

@@ -98,7 +98,8 @@ defmodule Toddy.Iced.Widget.Svg do
 
   @doc "Sets the rotation angle in degrees."
   @spec rotation(svg :: t(), rotation :: number()) :: t()
-  def rotation(%__MODULE__{} = svg, rotation) when is_number(rotation), do: %{svg | rotation: rotation}
+  def rotation(%__MODULE__{} = svg, rotation) when is_number(rotation),
+    do: %{svg | rotation: rotation}
 
   @doc "Sets the SVG opacity."
   @spec opacity(svg :: t(), opacity :: number()) :: t()

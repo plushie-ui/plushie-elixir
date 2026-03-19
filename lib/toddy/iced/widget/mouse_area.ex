@@ -50,11 +50,30 @@ defmodule Toddy.Iced.Widget.MouseArea do
   alias Toddy.Iced.Widget.Build
 
   @cursors [
-    :pointer, :grab, :grabbing, :crosshair, :text, :move, :not_allowed,
-    :progress, :wait, :help, :cell, :copy, :alias, :no_drop, :all_scroll,
-    :zoom_in, :zoom_out, :context_menu, :resizing_horizontally,
-    :resizing_vertically, :resizing_diagonally_up, :resizing_diagonally_down,
-    :resizing_column, :resizing_row
+    :pointer,
+    :grab,
+    :grabbing,
+    :crosshair,
+    :text,
+    :move,
+    :not_allowed,
+    :progress,
+    :wait,
+    :help,
+    :cell,
+    :copy,
+    :alias,
+    :no_drop,
+    :all_scroll,
+    :zoom_in,
+    :zoom_out,
+    :context_menu,
+    :resizing_horizontally,
+    :resizing_vertically,
+    :resizing_diagonally_up,
+    :resizing_diagonally_down,
+    :resizing_column,
+    :resizing_row
   ]
 
   @type cursor :: unquote(Enum.reduce(@cursors, &{:|, [], [&1, &2]}))
@@ -135,27 +154,33 @@ defmodule Toddy.Iced.Widget.MouseArea do
 
   @doc "Enables or disables right mouse button press events."
   @spec on_right_press(mouse_area :: t(), enabled :: boolean()) :: t()
-  def on_right_press(%__MODULE__{} = ma, enabled) when is_boolean(enabled), do: %{ma | on_right_press: enabled}
+  def on_right_press(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
+    do: %{ma | on_right_press: enabled}
 
   @doc "Enables or disables right mouse button release events."
   @spec on_right_release(mouse_area :: t(), enabled :: boolean()) :: t()
-  def on_right_release(%__MODULE__{} = ma, enabled) when is_boolean(enabled), do: %{ma | on_right_release: enabled}
+  def on_right_release(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
+    do: %{ma | on_right_release: enabled}
 
   @doc "Enables or disables middle mouse button press events."
   @spec on_middle_press(mouse_area :: t(), enabled :: boolean()) :: t()
-  def on_middle_press(%__MODULE__{} = ma, enabled) when is_boolean(enabled), do: %{ma | on_middle_press: enabled}
+  def on_middle_press(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
+    do: %{ma | on_middle_press: enabled}
 
   @doc "Enables or disables middle mouse button release events."
   @spec on_middle_release(mouse_area :: t(), enabled :: boolean()) :: t()
-  def on_middle_release(%__MODULE__{} = ma, enabled) when is_boolean(enabled), do: %{ma | on_middle_release: enabled}
+  def on_middle_release(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
+    do: %{ma | on_middle_release: enabled}
 
   @doc "Enables or disables double-click events."
   @spec on_double_click(mouse_area :: t(), enabled :: boolean()) :: t()
-  def on_double_click(%__MODULE__{} = ma, enabled) when is_boolean(enabled), do: %{ma | on_double_click: enabled}
+  def on_double_click(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
+    do: %{ma | on_double_click: enabled}
 
   @doc "Enables or disables cursor enter events."
   @spec on_enter(mouse_area :: t(), enabled :: boolean()) :: t()
-  def on_enter(%__MODULE__{} = ma, enabled) when is_boolean(enabled), do: %{ma | on_enter: enabled}
+  def on_enter(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
+    do: %{ma | on_enter: enabled}
 
   @doc "Enables or disables cursor exit events."
   @spec on_exit(mouse_area :: t(), enabled :: boolean()) :: t()
@@ -167,7 +192,8 @@ defmodule Toddy.Iced.Widget.MouseArea do
 
   @doc "Enables or disables scroll wheel events."
   @spec on_scroll(mouse_area :: t(), enabled :: boolean()) :: t()
-  def on_scroll(%__MODULE__{} = ma, enabled) when is_boolean(enabled), do: %{ma | on_scroll: enabled}
+  def on_scroll(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
+    do: %{ma | on_scroll: enabled}
 
   @doc "Appends a child to the mouse area."
   @spec push(mouse_area :: t(), child :: Toddy.Iced.ui_node() | struct()) :: t()

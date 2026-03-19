@@ -153,7 +153,8 @@ defmodule Toddy.Iced.Widget.Text do
 
   @doc ~S'Sets the text ellipsis mode. One of: `"none"`, `"start"`, `"middle"`, `"end"`.'
   @spec ellipsis(text :: t(), ellipsis :: String.t()) :: t()
-  def ellipsis(%__MODULE__{} = txt, ellipsis) when is_binary(ellipsis), do: %{txt | ellipsis: ellipsis}
+  def ellipsis(%__MODULE__{} = txt, ellipsis) when is_binary(ellipsis),
+    do: %{txt | ellipsis: ellipsis}
 
   @doc "Sets the text shaping strategy."
   @spec shaping(text :: t(), shaping :: Toddy.Iced.Shaping.t()) :: t()

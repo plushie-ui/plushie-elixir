@@ -114,11 +114,13 @@ defmodule Toddy.Iced.Widget.Slider do
 
   @doc "Sets the step increment when Shift is held."
   @spec shift_step(slider :: t(), shift_step :: number()) :: t()
-  def shift_step(%__MODULE__{} = slider, shift_step) when is_number(shift_step), do: %{slider | shift_step: shift_step}
+  def shift_step(%__MODULE__{} = slider, shift_step) when is_number(shift_step),
+    do: %{slider | shift_step: shift_step}
 
   @doc "Sets the default value (double-click resets to this)."
   @spec default(slider :: t(), default :: number()) :: t()
-  def default(%__MODULE__{} = slider, default) when is_number(default), do: %{slider | default: default}
+  def default(%__MODULE__{} = slider, default) when is_number(default),
+    do: %{slider | default: default}
 
   @doc "Sets the slider width."
   @spec width(slider :: t(), width :: Toddy.Iced.Length.t()) :: t()
@@ -126,7 +128,8 @@ defmodule Toddy.Iced.Widget.Slider do
 
   @doc "Sets the slider track height in pixels."
   @spec height(slider :: t(), height :: number()) :: t()
-  def height(%__MODULE__{} = slider, height) when is_number(height), do: %{slider | height: height}
+  def height(%__MODULE__{} = slider, height) when is_number(height),
+    do: %{slider | height: height}
 
   @doc "Sets whether the slider handle is circular."
   @spec circular_handle(slider :: t(), circular_handle :: boolean()) :: t()
@@ -140,7 +143,8 @@ defmodule Toddy.Iced.Widget.Slider do
 
   @doc "Sets the rail width in pixels."
   @spec rail_width(slider :: t(), rail_width :: number()) :: t()
-  def rail_width(%__MODULE__{} = slider, rail_width) when is_number(rail_width), do: %{slider | rail_width: rail_width}
+  def rail_width(%__MODULE__{} = slider, rail_width) when is_number(rail_width),
+    do: %{slider | rail_width: rail_width}
 
   @doc "Sets the slider style."
   @spec style(slider :: t(), style :: style()) :: t()

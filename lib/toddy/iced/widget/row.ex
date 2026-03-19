@@ -104,7 +104,8 @@ defmodule Toddy.Iced.Widget.Row do
 
   @doc "Sets the maximum width of the row in pixels."
   @spec max_width(row :: t(), max_width :: number()) :: t()
-  def max_width(%__MODULE__{} = row, max_width) when is_number(max_width), do: %{row | max_width: max_width}
+  def max_width(%__MODULE__{} = row, max_width) when is_number(max_width),
+    do: %{row | max_width: max_width}
 
   @doc "Sets whether children that overflow are clipped."
   @spec clip(row :: t(), clip :: boolean()) :: t()

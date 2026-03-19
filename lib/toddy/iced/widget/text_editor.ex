@@ -153,7 +153,8 @@ defmodule Toddy.Iced.Widget.TextEditor do
 
   @doc "Sets the placeholder text."
   @spec placeholder(text_editor :: t(), placeholder :: String.t()) :: t()
-  def placeholder(%__MODULE__{} = ed, placeholder) when is_binary(placeholder), do: %{ed | placeholder: placeholder}
+  def placeholder(%__MODULE__{} = ed, placeholder) when is_binary(placeholder),
+    do: %{ed | placeholder: placeholder}
 
   @doc "Sets the editor width in pixels."
   @spec width(text_editor :: t(), width :: number()) :: t()
@@ -165,11 +166,13 @@ defmodule Toddy.Iced.Widget.TextEditor do
 
   @doc "Sets the minimum height in pixels."
   @spec min_height(text_editor :: t(), min_height :: number()) :: t()
-  def min_height(%__MODULE__{} = ed, min_height) when is_number(min_height), do: %{ed | min_height: min_height}
+  def min_height(%__MODULE__{} = ed, min_height) when is_number(min_height),
+    do: %{ed | min_height: min_height}
 
   @doc "Sets the maximum height in pixels."
   @spec max_height(text_editor :: t(), max_height :: number()) :: t()
-  def max_height(%__MODULE__{} = ed, max_height) when is_number(max_height), do: %{ed | max_height: max_height}
+  def max_height(%__MODULE__{} = ed, max_height) when is_number(max_height),
+    do: %{ed | max_height: max_height}
 
   @doc "Sets the font."
   @spec font(text_editor :: t(), font :: Toddy.Iced.Font.t()) :: t()

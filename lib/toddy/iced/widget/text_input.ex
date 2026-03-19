@@ -143,7 +143,8 @@ defmodule Toddy.Iced.Widget.TextInput do
 
   @doc "Sets the placeholder text."
   @spec placeholder(text_input :: t(), placeholder :: String.t()) :: t()
-  def placeholder(%__MODULE__{} = ti, placeholder) when is_binary(placeholder), do: %{ti | placeholder: placeholder}
+  def placeholder(%__MODULE__{} = ti, placeholder) when is_binary(placeholder),
+    do: %{ti | placeholder: placeholder}
 
   @doc "Sets the internal padding."
   @spec padding(text_input :: t(), padding :: Toddy.Iced.Padding.t()) :: t()
@@ -175,11 +176,13 @@ defmodule Toddy.Iced.Widget.TextInput do
 
   @doc "Enables or disables submit on Enter."
   @spec on_submit(text_input :: t(), on_submit :: boolean()) :: t()
-  def on_submit(%__MODULE__{} = ti, on_submit) when is_boolean(on_submit), do: %{ti | on_submit: on_submit}
+  def on_submit(%__MODULE__{} = ti, on_submit) when is_boolean(on_submit),
+    do: %{ti | on_submit: on_submit}
 
   @doc "Enables or disables paste event emission."
   @spec on_paste(text_input :: t(), on_paste :: boolean()) :: t()
-  def on_paste(%__MODULE__{} = ti, on_paste) when is_boolean(on_paste), do: %{ti | on_paste: on_paste}
+  def on_paste(%__MODULE__{} = ti, on_paste) when is_boolean(on_paste),
+    do: %{ti | on_paste: on_paste}
 
   @doc "Sets whether input is masked as a password."
   @spec secure(text_input :: t(), secure :: boolean()) :: t()

@@ -138,7 +138,8 @@ defmodule Toddy.Iced.Widget.RichText do
 
   @doc ~S'Sets the text ellipsis mode. One of: `"none"`, `"start"`, `"middle"`, `"end"`.'
   @spec ellipsis(rich_text :: t(), ellipsis :: String.t()) :: t()
-  def ellipsis(%__MODULE__{} = rt, ellipsis) when is_binary(ellipsis), do: %{rt | ellipsis: ellipsis}
+  def ellipsis(%__MODULE__{} = rt, ellipsis) when is_binary(ellipsis),
+    do: %{rt | ellipsis: ellipsis}
 
   @doc "Sets accessibility annotations."
   @spec a11y(rich_text :: t(), a11y :: Toddy.Iced.A11y.t()) :: t()

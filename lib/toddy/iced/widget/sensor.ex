@@ -53,11 +53,13 @@ defmodule Toddy.Iced.Widget.Sensor do
 
   @doc "Sets the sensor delay in milliseconds."
   @spec delay(sensor :: t(), delay :: non_neg_integer()) :: t()
-  def delay(%__MODULE__{} = sensor, delay) when is_integer(delay) and delay >= 0, do: %{sensor | delay: delay}
+  def delay(%__MODULE__{} = sensor, delay) when is_integer(delay) and delay >= 0,
+    do: %{sensor | delay: delay}
 
   @doc "Sets the anticipation distance in pixels."
   @spec anticipate(sensor :: t(), anticipate :: number()) :: t()
-  def anticipate(%__MODULE__{} = sensor, anticipate) when is_number(anticipate), do: %{sensor | anticipate: anticipate}
+  def anticipate(%__MODULE__{} = sensor, anticipate) when is_number(anticipate),
+    do: %{sensor | anticipate: anticipate}
 
   @doc "Appends a child to the sensor."
   @spec push(sensor :: t(), child :: Toddy.Iced.ui_node() | struct()) :: t()

@@ -105,7 +105,8 @@ defmodule Toddy.Iced.Widget.Markdown do
 
   @doc "Sets the base text size."
   @spec text_size(markdown :: t(), text_size :: number()) :: t()
-  def text_size(%__MODULE__{} = md, text_size) when is_number(text_size), do: %{md | text_size: text_size}
+  def text_size(%__MODULE__{} = md, text_size) when is_number(text_size),
+    do: %{md | text_size: text_size}
 
   @doc "Sets the heading 1 size."
   @spec h1_size(markdown :: t(), h1_size :: number()) :: t()
@@ -121,7 +122,8 @@ defmodule Toddy.Iced.Widget.Markdown do
 
   @doc "Sets the code block text size."
   @spec code_size(markdown :: t(), code_size :: number()) :: t()
-  def code_size(%__MODULE__{} = md, code_size) when is_number(code_size), do: %{md | code_size: code_size}
+  def code_size(%__MODULE__{} = md, code_size) when is_number(code_size),
+    do: %{md | code_size: code_size}
 
   @doc "Sets the spacing between markdown elements."
   @spec spacing(markdown :: t(), spacing :: number()) :: t()

@@ -43,6 +43,7 @@ defmodule Toddy.Event.Sensor do
   defimpl Inspect do
     def inspect(event, _opts) do
       target = Toddy.Event.target(event)
+
       "#Sensor<#{Kernel.inspect(event.type)} #{Kernel.inspect(target)} #{event.width}x#{event.height}>"
     end
   end

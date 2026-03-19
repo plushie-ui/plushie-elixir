@@ -101,11 +101,13 @@ defmodule Toddy.Iced.Widget.Tooltip do
 
   @doc "Sets whether the tooltip snaps within the viewport."
   @spec snap_within_viewport(tooltip :: t(), snap :: boolean()) :: t()
-  def snap_within_viewport(%__MODULE__{} = tt, snap) when is_boolean(snap), do: %{tt | snap_within_viewport: snap}
+  def snap_within_viewport(%__MODULE__{} = tt, snap) when is_boolean(snap),
+    do: %{tt | snap_within_viewport: snap}
 
   @doc "Sets the tooltip delay in milliseconds before showing."
   @spec delay(tooltip :: t(), delay :: non_neg_integer()) :: t()
-  def delay(%__MODULE__{} = tt, delay) when is_integer(delay) and delay >= 0, do: %{tt | delay: delay}
+  def delay(%__MODULE__{} = tt, delay) when is_integer(delay) and delay >= 0,
+    do: %{tt | delay: delay}
 
   @doc "Sets the tooltip style."
   @spec style(tooltip :: t(), style :: style()) :: t()

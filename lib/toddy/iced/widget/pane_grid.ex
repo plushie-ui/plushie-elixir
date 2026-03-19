@@ -108,7 +108,8 @@ defmodule Toddy.Iced.Widget.PaneGrid do
 
   @doc "Sets the minimum pane size in pixels."
   @spec min_size(pane_grid :: t(), min_size :: number()) :: t()
-  def min_size(%__MODULE__{} = pg, min_size) when is_number(min_size), do: %{pg | min_size: min_size}
+  def min_size(%__MODULE__{} = pg, min_size) when is_number(min_size),
+    do: %{pg | min_size: min_size}
 
   @doc "Sets the divider color."
   @spec divider_color(pane_grid :: t(), divider_color :: Toddy.Iced.Color.input()) :: t()
@@ -117,7 +118,8 @@ defmodule Toddy.Iced.Widget.PaneGrid do
 
   @doc "Sets the divider width in pixels."
   @spec divider_width(pane_grid :: t(), divider_width :: number()) :: t()
-  def divider_width(%__MODULE__{} = pg, divider_width) when is_number(divider_width), do: %{pg | divider_width: divider_width}
+  def divider_width(%__MODULE__{} = pg, divider_width) when is_number(divider_width),
+    do: %{pg | divider_width: divider_width}
 
   @doc "Sets the drag leeway in pixels (how far a pane must be dragged before it detaches)."
   @spec leeway(pane_grid :: t(), leeway :: number()) :: t()

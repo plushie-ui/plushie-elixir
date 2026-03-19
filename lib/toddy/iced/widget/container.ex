@@ -28,7 +28,17 @@ defmodule Toddy.Iced.Widget.Container do
   alias Toddy.Iced.StyleMap
   alias Toddy.Iced.Widget.Build
 
-  @presets [:transparent, :rounded_box, :bordered_box, :dark, :primary, :secondary, :success, :danger, :warning]
+  @presets [
+    :transparent,
+    :rounded_box,
+    :bordered_box,
+    :dark,
+    :primary,
+    :secondary,
+    :success,
+    :danger,
+    :warning
+  ]
 
   @doc false
   def style_presets, do: @presets
@@ -194,7 +204,10 @@ defmodule Toddy.Iced.Widget.Container do
     do: %{container | height: height, align_y: :bottom}
 
   @doc "Sets the background fill (color or gradient)."
-  @spec background(container :: t(), background :: Toddy.Iced.Color.input() | Toddy.Iced.Gradient.t()) ::
+  @spec background(
+          container :: t(),
+          background :: Toddy.Iced.Color.input() | Toddy.Iced.Gradient.t()
+        ) ::
           t()
   def background(%__MODULE__{} = c, %{type: "linear"} = gradient),
     do: %{c | background: gradient}

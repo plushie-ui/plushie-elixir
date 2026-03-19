@@ -87,7 +87,8 @@ defmodule Toddy.Iced.Widget.ProgressBar do
 
   @doc "Renders the progress bar vertically."
   @spec vertical(progress_bar :: t(), vertical :: boolean()) :: t()
-  def vertical(%__MODULE__{} = bar, vertical) when is_boolean(vertical), do: %{bar | vertical: vertical}
+  def vertical(%__MODULE__{} = bar, vertical) when is_boolean(vertical),
+    do: %{bar | vertical: vertical}
 
   @doc "Sets accessibility annotations."
   @spec a11y(progress_bar :: t(), a11y :: Toddy.Iced.A11y.t()) :: t()

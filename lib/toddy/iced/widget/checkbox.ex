@@ -129,7 +129,8 @@ defmodule Toddy.Iced.Widget.Checkbox do
 
   @doc "Sets the label text size in pixels."
   @spec text_size(checkbox :: t(), text_size :: number()) :: t()
-  def text_size(%__MODULE__{} = cb, text_size) when is_number(text_size), do: %{cb | text_size: text_size}
+  def text_size(%__MODULE__{} = cb, text_size) when is_number(text_size),
+    do: %{cb | text_size: text_size}
 
   @doc "Sets the label font."
   @spec font(checkbox :: t(), font :: Toddy.Iced.Font.t()) :: t()
@@ -158,7 +159,8 @@ defmodule Toddy.Iced.Widget.Checkbox do
 
   @doc "Sets whether the checkbox is disabled."
   @spec disabled(checkbox :: t(), disabled :: boolean()) :: t()
-  def disabled(%__MODULE__{} = cb, disabled) when is_boolean(disabled), do: %{cb | disabled: disabled}
+  def disabled(%__MODULE__{} = cb, disabled) when is_boolean(disabled),
+    do: %{cb | disabled: disabled}
 
   @doc "Sets accessibility annotations."
   @spec a11y(checkbox :: t(), a11y :: Toddy.Iced.A11y.t()) :: t()
