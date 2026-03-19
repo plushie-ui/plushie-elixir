@@ -174,7 +174,7 @@ subsequent runs, it asserts equality. This is a pure JSON comparison at the
 unit test level -- no backend or session needed.
 
 For framework-level structural snapshots (SHA-256 hash comparison via a
-test session), use `assert_snapshot("name")`. For pixel-level screenshots
+test session), use `assert_tree_hash("name")`. For pixel-level screenshots
 (full backend only, no-op on mock/headless), use `assert_screenshot("name")`
 with `JULEP_UPDATE_SCREENSHOTS=1` to update golden files. See
 [testing.md](testing.md) for full details.
@@ -195,8 +195,8 @@ defmodule MyAppIntegrationTest do
 end
 ```
 
-The default backend is `:mock` (pure Elixir, no renderer needed). Set
-`JULEP_TEST_BACKEND=headless` or `JULEP_TEST_BACKEND=full` for higher
+The default backend is `:pooled_mock` (pure Elixir, no renderer needed). Set
+`JULEP_TEST_BACKEND=headless` or `JULEP_TEST_BACKEND=windowed` for higher
 fidelity. See [testing.md](testing.md) for the full guide.
 
 ## Project structure

@@ -9,7 +9,7 @@ defmodule Julep.Test.ScriptTest do
       app: Julep.Examples.Counter
       viewport: 1024x768
       theme: light
-      backend: mock
+      backend: pooled_mock
       -----
       click "#increment"
       expect "Count: 1"
@@ -19,7 +19,7 @@ defmodule Julep.Test.ScriptTest do
       assert script.header.app == Julep.Examples.Counter
       assert script.header.viewport == {1024, 768}
       assert script.header.theme == "light"
-      assert script.header.backend == :mock
+      assert script.header.backend == :pooled_mock
       assert length(script.instructions) == 2
       assert {:click, "#increment"} = hd(script.instructions)
     end
@@ -34,7 +34,7 @@ defmodule Julep.Test.ScriptTest do
       assert {:ok, script} = Script.parse(input)
       assert script.header.viewport == {800, 600}
       assert script.header.theme == "dark"
-      assert script.header.backend == :mock
+      assert script.header.backend == :pooled_mock
     end
 
     test "returns error for missing app field" do

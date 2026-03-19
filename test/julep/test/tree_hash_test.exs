@@ -83,8 +83,8 @@ defmodule Julep.Test.TreeHashTest do
     end
 
     test "uses backend-scoped golden file when backend is set", %{golden_dir: dir} do
-      snap = %TreeHash{name: "scoped", hash: "mock_hash", backend: :mock}
-      golden_path = Path.join(dir, "scoped.mock.sha256")
+      snap = %TreeHash{name: "scoped", hash: "mock_hash", backend: :pooled_mock}
+      golden_path = Path.join(dir, "scoped.pooled_mock.sha256")
 
       refute File.exists?(golden_path)
       assert :ok = TreeHash.assert_match(snap, dir)

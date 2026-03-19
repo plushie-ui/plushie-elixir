@@ -4,7 +4,7 @@ defmodule Julep.Test.Backend do
 
   Three backends provide different fidelity levels:
 
-  - `:mock` -- pure Elixir, no Rust. Fastest. Tests logic and tree structure.
+  - `:pooled_mock` -- pure Elixir, no Rust. Fastest. Tests logic and tree structure.
   - `:headless` -- real Rust renderer with iced_test Simulator. Structural snapshots.
   - `:windowed` -- real iced windows (Xvfb in CI). Effects, subscriptions, GPU rendering.
 

@@ -3,7 +3,7 @@ defmodule Julep.Test.TreeHash do
   Structural tree hash for regression testing.
 
   Captures a SHA-256 hash of the serialized UI tree structure and compares
-  against golden files. Works on all backends (:mock, :headless, :windowed).
+  against golden files. Works on all backends (:pooled_mock, :headless, :windowed).
 
   ## Golden file workflow
 

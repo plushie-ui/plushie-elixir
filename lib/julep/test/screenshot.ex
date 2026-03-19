@@ -7,7 +7,7 @@ defmodule Julep.Test.Screenshot do
   RGBA pixel data through `iced::window::screenshot()`. The `:headless`
   backend uses tiny-skia software rendering to produce real RGBA pixel data
   without a display server. The wire protocol uses native msgpack binary
-  for pixel data (no base64 overhead) or base64 for JSON mode. The `:mock`
+  for pixel data (no base64 overhead) or base64 for JSON mode. The `:pooled_mock`
   backend returns empty stubs (hash `""`, no pixel data) because it has
   no renderer.
 

@@ -49,8 +49,8 @@ event. Supports modifier prefixes like `"ctrl+c"` and named keys like
 ## ~~Screenshots are stubs on mock and headless backends~~ (partially resolved)
 
 **What:** `screenshot/1` and `assert_screenshot/1` now return real RGBA pixel
-data on both the `:windowed` and `:headless` backends. Only the `:mock` backend
-returns a stub (empty hash, no pixel data).
+data on both the `:windowed` and `:headless` backends. Only the `:pooled_mock`
+backend (which has no renderer) returns a stub (empty hash, no pixel data).
 
 **Why this changed:** The headless backend now uses tiny-skia software
 rendering to produce real RGBA screenshots without a display server. The
