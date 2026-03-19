@@ -54,7 +54,7 @@ defmodule Julep.Test.Backend.Headless do
   defp port_args(:msgpack), do: ["--headless"]
 
   defp screenshot_payload(name) do
-    %{type: "screenshot_capture", name: name, width: 1024, height: 768}
+    %{type: "screenshot", name: name, width: 1024, height: 768}
   end
 
   defp resolve_renderer_path do

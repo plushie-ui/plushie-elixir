@@ -251,7 +251,7 @@ defmodule Julep.Test.Backend.Pooled do
     case SessionPool.send_message(
            state.pool,
            state.session_id,
-           %{type: "screenshot_capture", name: name, width: 1024, height: 768},
+           %{type: "screenshot", name: name, width: 1024, height: 768},
            "screenshot_response"
          ) do
       {:ok, resp} ->

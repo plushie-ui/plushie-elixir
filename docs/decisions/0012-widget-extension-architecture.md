@@ -141,7 +141,7 @@ for macro recording or accessibility.
 
 ### Data push pattern
 
-ExtensionCommand and extension_command_batch wire messages bypass the
+ExtensionCommand and extension_commands wire messages bypass the
 Elixir view/diff/patch cycle. The renderer routes commands to extensions
 by node ID. Batch messages trigger one view cycle for all commands.
 Essential for real-time monitoring widgets (sparklines, log viewers).

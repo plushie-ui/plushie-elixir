@@ -295,7 +295,7 @@ map from ID to `{type, from}` or `{type, from, extra}` tuples.
 | `query` (target: `tree`) | Get the full rendered tree |
 | `interact` | Simulate a user interaction |
 | `snapshot_capture` | Capture a structural snapshot |
-| `screenshot_capture` | Capture a pixel screenshot |
+| `screenshot` | Capture a pixel screenshot |
 | `reset` | Reset renderer state |
 
 **Incoming (Rust to Elixir):**
@@ -318,7 +318,7 @@ tree, and sends the updated tree back to the renderer.
 
 ### Screenshot behaviour
 
-The headless backend sends a `screenshot_capture` message with viewport
+The headless backend sends a `screenshot` message with viewport
 dimensions (`width: 1024`, `height: 768`) to the renderer. The Rust
 headless renderer uses tiny-skia to software-render the current UI tree
 into an RGBA pixel buffer at the requested viewport size, computes a
@@ -363,7 +363,7 @@ hash in the response.
 
 ### Pixel screenshots (`Screenshot`)
 
-1. The full backend sends a `screenshot_capture` message to the renderer and
+1. The full backend sends a `screenshot` message to the renderer and
    receives a `screenshot_response` containing a SHA-256 hash of the pixel
    data plus the raw RGBA bytes. The wire format uses native msgpack binary
    for the RGBA data (no base64 overhead) or base64 encoding in JSON mode.
@@ -372,7 +372,7 @@ hash in the response.
    but uses `test/screenshots/` and `JULEP_UPDATE_SCREENSHOTS`.
 4. The mock backend returns an empty `Screenshot` struct (hash `""`, size
    `{0, 0}`, nil pixel data) because there is no renderer.
-5. The headless backend sends `screenshot_capture` with viewport dimensions
+5. The headless backend sends `screenshot` with viewport dimensions
    to the renderer. The Rust headless renderer software-renders via tiny-skia
    and returns real RGBA pixel data with a SHA-256 hash.
 6. Empty hashes (from mock) are silently accepted without creating or
@@ -396,7 +396,7 @@ sessions, or the test framework at all.
 The headless backend produces real pixel screenshots via tiny-skia software
 rendering, without a display server or GPU. The flow:
 
-1. **Elixir sends `screenshot_capture`** with `name`, `width`, and `height`
+1. **Elixir sends `screenshot`** with `name`, `width`, and `height`
    fields. The viewport dimensions (default 1024x768) tell the renderer what
    surface size to use.
 

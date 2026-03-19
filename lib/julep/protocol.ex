@@ -135,17 +135,17 @@ defmodule Julep.Protocol do
 
   ## Example
 
-      iex> Julep.Protocol.encode_effect_request("req_1", "http", %{url: "https://example.com"})
-      ~s({"id":"req_1","kind":"http","payload":{"url":"https://example.com"},"session":"","type":"effect_request"}) <> "\\n"
+      iex> Julep.Protocol.encode_effect("req_1", "http", %{url: "https://example.com"})
+      ~s({"id":"req_1","kind":"http","payload":{"url":"https://example.com"},"session":"","type":"effect"}) <> "\\n"
   """
-  @spec encode_effect_request(
+  @spec encode_effect(
           id :: String.t(),
           kind :: String.t(),
           payload :: term(),
           format :: format()
         ) :: binary()
-  def encode_effect_request(id, kind, payload, format \\ :msgpack) do
-    serialize(%{type: "effect_request", id: id, kind: kind, payload: payload}, format)
+  def encode_effect(id, kind, payload, format \\ :msgpack) do
+    serialize(%{type: "effect", id: id, kind: kind, payload: payload}, format)
   end
 
   @doc """
@@ -163,30 +163,30 @@ defmodule Julep.Protocol do
   end
 
   @doc """
-  Encodes a subscription register message as a protocol message.
+  Encodes a subscribe message as a protocol message.
 
   ## Example
 
-      iex> Julep.Protocol.encode_subscription_register("on_key_press", "keys")
-      ~s({"kind":"on_key_press","session":"","tag":"keys","type":"subscription_register"}) <> "\\n"
+      iex> Julep.Protocol.encode_subscribe("on_key_press", "keys")
+      ~s({"kind":"on_key_press","session":"","tag":"keys","type":"subscribe"}) <> "\\n"
   """
-  @spec encode_subscription_register(kind :: String.t(), tag :: String.t(), format :: format()) ::
+  @spec encode_subscribe(kind :: String.t(), tag :: String.t(), format :: format()) ::
           binary()
-  def encode_subscription_register(kind, tag, format \\ :msgpack) do
-    serialize(%{type: "subscription_register", kind: kind, tag: tag}, format)
+  def encode_subscribe(kind, tag, format \\ :msgpack) do
+    serialize(%{type: "subscribe", kind: kind, tag: tag}, format)
   end
 
   @doc """
-  Encodes a subscription unregister message as a protocol message.
+  Encodes an unsubscribe message as a protocol message.
 
   ## Example
 
-      iex> Julep.Protocol.encode_subscription_unregister("on_key_press")
-      ~s({"kind":"on_key_press","session":"","type":"subscription_unregister"}) <> "\\n"
+      iex> Julep.Protocol.encode_unsubscribe("on_key_press")
+      ~s({"kind":"on_key_press","session":"","type":"unsubscribe"}) <> "\\n"
   """
-  @spec encode_subscription_unregister(kind :: String.t(), format :: format()) :: binary()
-  def encode_subscription_unregister(kind, format \\ :msgpack) do
-    serialize(%{type: "subscription_unregister", kind: kind}, format)
+  @spec encode_unsubscribe(kind :: String.t(), format :: format()) :: binary()
+  def encode_unsubscribe(kind, format \\ :msgpack) do
+    serialize(%{type: "unsubscribe", kind: kind}, format)
   end
 
   @doc """
@@ -285,7 +285,7 @@ defmodule Julep.Protocol do
         %{"node_id" => node_id, "op" => op, "payload" => payload}
       end)
 
-    serialize(%{"type" => "extension_command_batch", "commands" => items}, format)
+    serialize(%{"type" => "extension_commands", "commands" => items}, format)
   end
 
   @doc """
@@ -835,24 +835,24 @@ defmodule Julep.Protocol do
   end
 
   defp dispatch(%{
-         "type" => "effect_request",
+         "type" => "effect",
          "id" => id,
          "kind" => kind,
          "payload" => payload
        }) do
-    {:effect_request, id, kind, payload}
+    {:effect, id, kind, payload}
   end
 
   defp dispatch(%{"type" => "widget_op", "op" => op, "payload" => payload}) do
     {:widget_op, op, payload}
   end
 
-  defp dispatch(%{"type" => "subscription_register", "kind" => kind, "tag" => tag}) do
-    {:subscription_register, kind, tag}
+  defp dispatch(%{"type" => "subscribe", "kind" => kind, "tag" => tag}) do
+    {:subscribe, kind, tag}
   end
 
-  defp dispatch(%{"type" => "subscription_unregister", "kind" => kind}) do
-    {:subscription_unregister, kind}
+  defp dispatch(%{"type" => "unsubscribe", "kind" => kind}) do
+    {:unsubscribe, kind}
   end
 
   defp dispatch(%{
@@ -1410,7 +1410,7 @@ defmodule Julep.Protocol do
   # -- System query responses --
 
   defp dispatch(%{
-         "type" => "widget_query_response",
+         "type" => "op_query_response",
          "kind" => "system_info",
          "tag" => tag,
          "data" => data
@@ -1419,7 +1419,7 @@ defmodule Julep.Protocol do
   end
 
   defp dispatch(%{
-         "type" => "widget_query_response",
+         "type" => "op_query_response",
          "kind" => "system_theme",
          "tag" => tag,
          "data" => data
@@ -1428,7 +1428,7 @@ defmodule Julep.Protocol do
   end
 
   defp dispatch(%{
-         "type" => "widget_query_response",
+         "type" => "op_query_response",
          "kind" => "image_list",
          "tag" => tag,
          "data" => data
@@ -1437,7 +1437,7 @@ defmodule Julep.Protocol do
   end
 
   defp dispatch(%{
-         "type" => "widget_query_response",
+         "type" => "op_query_response",
          "kind" => "tree_hash",
          "tag" => tag,
          "data" => data
@@ -1446,7 +1446,7 @@ defmodule Julep.Protocol do
   end
 
   defp dispatch(%{
-         "type" => "widget_query_response",
+         "type" => "op_query_response",
          "kind" => "find_focused",
          "tag" => tag,
          "data" => data

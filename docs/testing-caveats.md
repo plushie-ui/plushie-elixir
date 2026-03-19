@@ -53,7 +53,7 @@ returns a stub (empty hash, no pixel data).
 
 **Why this changed:** The headless backend now uses tiny-skia software
 rendering to produce real RGBA screenshots without a display server. The
-`screenshot_capture` message includes viewport dimensions (`width`, `height`)
+`screenshot` message includes viewport dimensions (`width`, `height`)
 which the Rust headless renderer uses to size the tiny-skia surface.
 
 **Remaining caveat:** Headless screenshots use software rendering (tiny-skia),

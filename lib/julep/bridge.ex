@@ -78,14 +78,14 @@ defmodule Julep.Bridge do
   end
 
   @doc "Sends an effect request to the renderer."
-  @spec send_effect_request(
+  @spec send_effect(
           bridge :: GenServer.server(),
           id :: String.t(),
           kind :: String.t(),
           payload :: map()
         ) :: :ok
-  def send_effect_request(bridge, id, kind, payload) do
-    GenServer.cast(bridge, {:send_effect_request, id, kind, payload})
+  def send_effect(bridge, id, kind, payload) do
+    GenServer.cast(bridge, {:send_effect, id, kind, payload})
   end
 
   @doc "Sends a widget operation to the renderer."
@@ -94,20 +94,20 @@ defmodule Julep.Bridge do
     GenServer.cast(bridge, {:send_widget_op, op, payload})
   end
 
-  @doc "Registers a renderer-side subscription."
-  @spec send_subscription_register(
+  @doc "Subscribes to a renderer-side event source."
+  @spec send_subscribe(
           bridge :: GenServer.server(),
           kind :: String.t(),
           tag :: String.t()
         ) :: :ok
-  def send_subscription_register(bridge, kind, tag) do
-    GenServer.cast(bridge, {:send_subscription_register, kind, tag})
+  def send_subscribe(bridge, kind, tag) do
+    GenServer.cast(bridge, {:send_subscribe, kind, tag})
   end
 
-  @doc "Unregisters a renderer-side subscription."
-  @spec send_subscription_unregister(bridge :: GenServer.server(), kind :: String.t()) :: :ok
-  def send_subscription_unregister(bridge, kind) do
-    GenServer.cast(bridge, {:send_subscription_unregister, kind})
+  @doc "Unsubscribes from a renderer-side event source."
+  @spec send_unsubscribe(bridge :: GenServer.server(), kind :: String.t()) :: :ok
+  def send_unsubscribe(bridge, kind) do
+    GenServer.cast(bridge, {:send_unsubscribe, kind})
   end
 
   @doc "Sends a window lifecycle operation to the renderer."
@@ -226,8 +226,8 @@ defmodule Julep.Bridge do
     {:noreply, state}
   end
 
-  def handle_cast({:send_effect_request, id, kind, payload}, state) do
-    data = Julep.Protocol.encode_effect_request(id, kind, payload, state.format)
+  def handle_cast({:send_effect, id, kind, payload}, state) do
+    data = Julep.Protocol.encode_effect(id, kind, payload, state.format)
     send_to_port(state.port, data)
     {:noreply, state}
   end
@@ -238,14 +238,14 @@ defmodule Julep.Bridge do
     {:noreply, state}
   end
 
-  def handle_cast({:send_subscription_register, kind, tag}, state) do
-    data = Julep.Protocol.encode_subscription_register(kind, tag, state.format)
+  def handle_cast({:send_subscribe, kind, tag}, state) do
+    data = Julep.Protocol.encode_subscribe(kind, tag, state.format)
     send_to_port(state.port, data)
     {:noreply, state}
   end
 
-  def handle_cast({:send_subscription_unregister, kind}, state) do
-    data = Julep.Protocol.encode_subscription_unregister(kind, state.format)
+  def handle_cast({:send_unsubscribe, kind}, state) do
+    data = Julep.Protocol.encode_unsubscribe(kind, state.format)
     send_to_port(state.port, data)
     {:noreply, state}
   end

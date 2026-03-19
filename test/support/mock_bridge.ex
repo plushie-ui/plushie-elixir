@@ -22,9 +22,9 @@ defmodule Julep.Test.MockBridge do
     GenServer.call(bridge, :get_patches)
   end
 
-  @doc "Returns all effect requests received so far, in order."
-  def get_effect_requests(bridge) do
-    GenServer.call(bridge, :get_effect_requests)
+  @doc "Returns all effects received so far, in order."
+  def get_effects(bridge) do
+    GenServer.call(bridge, :get_effects)
   end
 
   @doc "Returns all widget ops received so far, in order."
@@ -32,14 +32,14 @@ defmodule Julep.Test.MockBridge do
     GenServer.call(bridge, :get_widget_ops)
   end
 
-  @doc "Returns all subscription register messages received so far, in order."
-  def get_subscription_registers(bridge) do
-    GenServer.call(bridge, :get_subscription_registers)
+  @doc "Returns all subscribe messages received so far, in order."
+  def get_subscribes(bridge) do
+    GenServer.call(bridge, :get_subscribes)
   end
 
-  @doc "Returns all subscription unregister messages received so far, in order."
-  def get_subscription_unregisters(bridge) do
-    GenServer.call(bridge, :get_subscription_unregisters)
+  @doc "Returns all unsubscribe messages received so far, in order."
+  def get_unsubscribes(bridge) do
+    GenServer.call(bridge, :get_unsubscribes)
   end
 
   @doc "Returns all window ops received so far, in order."
@@ -58,10 +58,10 @@ defmodule Julep.Test.MockBridge do
      %{
        snapshots: [],
        patches: [],
-       effect_requests: [],
+       effects: [],
        widget_ops: [],
-       subscription_registers: [],
-       subscription_unregisters: [],
+       subscribes: [],
+       unsubscribes: [],
        window_ops: [],
        settings: []
      }}
@@ -76,9 +76,9 @@ defmodule Julep.Test.MockBridge do
     {:noreply, %{state | patches: state.patches ++ [ops]}}
   end
 
-  def handle_cast({:send_effect_request, id, kind, payload}, state) do
+  def handle_cast({:send_effect, id, kind, payload}, state) do
     entry = %{id: id, kind: kind, payload: payload}
-    {:noreply, %{state | effect_requests: state.effect_requests ++ [entry]}}
+    {:noreply, %{state | effects: state.effects ++ [entry]}}
   end
 
   def handle_cast({:send_widget_op, op, payload}, state) do
@@ -86,14 +86,14 @@ defmodule Julep.Test.MockBridge do
     {:noreply, %{state | widget_ops: state.widget_ops ++ [entry]}}
   end
 
-  def handle_cast({:send_subscription_register, kind, tag}, state) do
+  def handle_cast({:send_subscribe, kind, tag}, state) do
     entry = %{kind: kind, tag: tag}
-    {:noreply, %{state | subscription_registers: state.subscription_registers ++ [entry]}}
+    {:noreply, %{state | subscribes: state.subscribes ++ [entry]}}
   end
 
-  def handle_cast({:send_subscription_unregister, kind}, state) do
+  def handle_cast({:send_unsubscribe, kind}, state) do
     entry = %{kind: kind}
-    {:noreply, %{state | subscription_unregisters: state.subscription_unregisters ++ [entry]}}
+    {:noreply, %{state | unsubscribes: state.unsubscribes ++ [entry]}}
   end
 
   def handle_cast({:send_settings, settings}, state) do
@@ -114,20 +114,20 @@ defmodule Julep.Test.MockBridge do
     {:reply, state.patches, state}
   end
 
-  def handle_call(:get_effect_requests, _from, state) do
-    {:reply, state.effect_requests, state}
+  def handle_call(:get_effects, _from, state) do
+    {:reply, state.effects, state}
   end
 
   def handle_call(:get_widget_ops, _from, state) do
     {:reply, state.widget_ops, state}
   end
 
-  def handle_call(:get_subscription_registers, _from, state) do
-    {:reply, state.subscription_registers, state}
+  def handle_call(:get_subscribes, _from, state) do
+    {:reply, state.subscribes, state}
   end
 
-  def handle_call(:get_subscription_unregisters, _from, state) do
-    {:reply, state.subscription_unregisters, state}
+  def handle_call(:get_unsubscribes, _from, state) do
+    {:reply, state.unsubscribes, state}
   end
 
   def handle_call(:get_window_ops, _from, state) do

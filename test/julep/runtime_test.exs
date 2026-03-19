@@ -579,7 +579,7 @@ defmodule Julep.RuntimeTest do
   # ---------------------------------------------------------------------------
 
   describe "effects" do
-    test "effect_request command is forwarded to the bridge" do
+    test "effect command is forwarded to the bridge" do
       defmodule EffectApp do
         use Julep.App
         alias Julep.Event.Effect
@@ -611,10 +611,10 @@ defmodule Julep.RuntimeTest do
 
       dispatch_and_wait(runtime, %Widget{type: :click, id: "open"})
 
-      effect_requests = Julep.Test.MockBridge.get_effect_requests(bridge)
-      assert length(effect_requests) == 1
+      effects = Julep.Test.MockBridge.get_effects(bridge)
+      assert length(effects) == 1
 
-      [req] = effect_requests
+      [req] = effects
       assert req.kind == "file_open"
       assert req.payload == %{title: "Pick a file"}
     end
@@ -690,7 +690,7 @@ defmodule Julep.RuntimeTest do
       # Allow cast to be processed by the mock bridge.
       :sys.get_state(bridge)
 
-      registers = Julep.Test.MockBridge.get_subscription_registers(bridge)
+      registers = Julep.Test.MockBridge.get_subscribes(bridge)
       assert length(registers) == 1
       assert hd(registers) == %{kind: "on_key_press", tag: "keys"}
     end
@@ -725,14 +725,14 @@ defmodule Julep.RuntimeTest do
       :sys.get_state(bridge)
 
       # Verify register was sent
-      registers = Julep.Test.MockBridge.get_subscription_registers(bridge)
+      registers = Julep.Test.MockBridge.get_subscribes(bridge)
       assert length(registers) == 1
 
       # Now remove the subscription
       dispatch_and_wait(runtime, :stop_listening)
       :sys.get_state(bridge)
 
-      unregisters = Julep.Test.MockBridge.get_subscription_unregisters(bridge)
+      unregisters = Julep.Test.MockBridge.get_unsubscribes(bridge)
       assert length(unregisters) == 1
       assert hd(unregisters) == %{kind: "on_key_press"}
     end

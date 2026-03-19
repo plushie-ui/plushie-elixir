@@ -53,7 +53,7 @@ defmodule Julep.Effects do
     payload = Map.new(opts)
 
     %Julep.Command{
-      type: :effect_request,
+      type: :effect,
       payload: %{id: id, kind: to_string(kind), opts: payload}
     }
   end

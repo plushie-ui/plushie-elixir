@@ -76,20 +76,20 @@ defmodule Julep.ProtocolTest do
   end
 
   # ---------------------------------------------------------------------------
-  # encode_effect_request/3
+  # encode_effect/3
   # ---------------------------------------------------------------------------
 
-  describe "encode_effect_request/3" do
-    test "produces a JSON object with type 'effect_request'" do
+  describe "encode_effect/3" do
+    test "produces a JSON object with type 'effect'" do
       result =
-        Protocol.encode_effect_request("req_1", "http", %{url: "https://example.com"}, :json)
+        Protocol.encode_effect("req_1", "http", %{url: "https://example.com"}, :json)
 
       parsed = decode_json!(result)
-      assert parsed["type"] == "effect_request"
+      assert parsed["type"] == "effect"
     end
 
     test "includes the id, kind, and payload fields" do
-      result = Protocol.encode_effect_request("req_42", "shell", %{cmd: "ls"}, :json)
+      result = Protocol.encode_effect("req_42", "shell", %{cmd: "ls"}, :json)
       parsed = decode_json!(result)
       assert parsed["id"] == "req_42"
       assert parsed["kind"] == "shell"
@@ -97,7 +97,7 @@ defmodule Julep.ProtocolTest do
     end
 
     test "output ends with a trailing newline" do
-      result = Protocol.encode_effect_request("r", "k", %{}, :json)
+      result = Protocol.encode_effect("r", "k", %{}, :json)
       assert String.ends_with?(result, "\n")
     end
   end
@@ -673,54 +673,54 @@ defmodule Julep.ProtocolTest do
   end
 
   # ---------------------------------------------------------------------------
-  # encode_subscription_register/2
+  # encode_subscribe/2
   # ---------------------------------------------------------------------------
 
-  describe "encode_subscription_register/2" do
-    test "produces a JSON object with type 'subscription_register'" do
-      result = Protocol.encode_subscription_register("on_key_press", "keys", :json)
+  describe "encode_subscribe/2" do
+    test "produces a JSON object with type 'subscribe'" do
+      result = Protocol.encode_subscribe("on_key_press", "keys", :json)
       parsed = decode_json!(result)
-      assert parsed["type"] == "subscription_register"
+      assert parsed["type"] == "subscribe"
     end
 
     test "includes kind and tag fields" do
-      result = Protocol.encode_subscription_register("every", "timer_tick", :json)
+      result = Protocol.encode_subscribe("every", "timer_tick", :json)
       parsed = decode_json!(result)
       assert parsed["kind"] == "every"
       assert parsed["tag"] == "timer_tick"
     end
 
     test "output ends with a trailing newline" do
-      result = Protocol.encode_subscription_register("on_window_close", "close", :json)
+      result = Protocol.encode_subscribe("on_window_close", "close", :json)
       assert String.ends_with?(result, "\n")
     end
   end
 
   # ---------------------------------------------------------------------------
-  # encode_subscription_unregister/1
+  # encode_unsubscribe/1
   # ---------------------------------------------------------------------------
 
-  describe "encode_subscription_unregister/1" do
-    test "produces a JSON object with type 'subscription_unregister'" do
-      result = Protocol.encode_subscription_unregister("on_key_press", :json)
+  describe "encode_unsubscribe/1" do
+    test "produces a JSON object with type 'unsubscribe'" do
+      result = Protocol.encode_unsubscribe("on_key_press", :json)
       parsed = decode_json!(result)
-      assert parsed["type"] == "subscription_unregister"
+      assert parsed["type"] == "unsubscribe"
     end
 
     test "includes the kind field" do
-      result = Protocol.encode_subscription_unregister("every", :json)
+      result = Protocol.encode_unsubscribe("every", :json)
       parsed = decode_json!(result)
       assert parsed["kind"] == "every"
     end
 
     test "does not include a tag field" do
-      result = Protocol.encode_subscription_unregister("on_window_event", :json)
+      result = Protocol.encode_unsubscribe("on_window_event", :json)
       parsed = decode_json!(result)
       refute Map.has_key?(parsed, "tag")
     end
 
     test "output ends with a trailing newline" do
-      result = Protocol.encode_subscription_unregister("every", :json)
+      result = Protocol.encode_unsubscribe("every", :json)
       assert String.ends_with?(result, "\n")
     end
   end
@@ -838,16 +838,16 @@ defmodule Julep.ProtocolTest do
       assert {:patch, ^ops} = Protocol.decode_message(encoded, :msgpack)
     end
 
-    test "effect_request roundtrip" do
+    test "effect roundtrip" do
       encoded =
-        Protocol.encode_effect_request(
+        Protocol.encode_effect(
           "req_1",
           "http",
           %{"url" => "https://example.com"},
           :msgpack
         )
 
-      assert {:effect_request, "req_1", "http", %{"url" => "https://example.com"}} =
+      assert {:effect, "req_1", "http", %{"url" => "https://example.com"}} =
                Protocol.decode_message(encoded, :msgpack)
     end
 
@@ -858,17 +858,17 @@ defmodule Julep.ProtocolTest do
                Protocol.decode_message(encoded, :msgpack)
     end
 
-    test "subscription_register roundtrip" do
-      encoded = Protocol.encode_subscription_register("on_key_press", "keys", :msgpack)
+    test "subscribe roundtrip" do
+      encoded = Protocol.encode_subscribe("on_key_press", "keys", :msgpack)
 
-      assert {:subscription_register, "on_key_press", "keys"} =
+      assert {:subscribe, "on_key_press", "keys"} =
                Protocol.decode_message(encoded, :msgpack)
     end
 
-    test "subscription_unregister roundtrip" do
-      encoded = Protocol.encode_subscription_unregister("on_key_press", :msgpack)
+    test "unsubscribe roundtrip" do
+      encoded = Protocol.encode_unsubscribe("on_key_press", :msgpack)
 
-      assert {:subscription_unregister, "on_key_press"} =
+      assert {:unsubscribe, "on_key_press"} =
                Protocol.decode_message(encoded, :msgpack)
     end
 
@@ -1004,7 +1004,7 @@ defmodule Julep.ProtocolTest do
 
       result = Protocol.encode_extension_commands(commands, :json)
       decoded = decode_json!(result)
-      assert decoded["type"] == "extension_command_batch"
+      assert decoded["type"] == "extension_commands"
       assert length(decoded["commands"]) == 2
       assert Enum.at(decoded["commands"], 0)["node_id"] == "term-1"
       assert Enum.at(decoded["commands"], 1)["op"] == "append"
@@ -1014,7 +1014,7 @@ defmodule Julep.ProtocolTest do
       commands = [{"n1", "op1", %{"k" => "v"}}]
       result = Protocol.encode_extension_commands(commands, :msgpack)
       {:ok, decoded} = Msgpax.unpack(result)
-      assert decoded["type"] == "extension_command_batch"
+      assert decoded["type"] == "extension_commands"
       assert length(decoded["commands"]) == 1
     end
   end

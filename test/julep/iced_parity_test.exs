@@ -287,7 +287,7 @@ defmodule Julep.IcedParityTest do
   describe "Effects.clipboard_read_primary/0" do
     test "returns command and effect id" do
       cmd = Julep.Effects.clipboard_read_primary()
-      assert %Julep.Command{type: :effect_request} = cmd
+      assert %Julep.Command{type: :effect} = cmd
       assert cmd.payload.kind == "clipboard_read_primary"
       assert is_binary(cmd.payload.id)
       assert String.starts_with?(cmd.payload.id, "ef_")
@@ -297,7 +297,7 @@ defmodule Julep.IcedParityTest do
   describe "Effects.clipboard_write_primary/1" do
     test "returns command with text payload" do
       cmd = Julep.Effects.clipboard_write_primary("hello")
-      assert %Julep.Command{type: :effect_request} = cmd
+      assert %Julep.Command{type: :effect} = cmd
       assert cmd.payload.kind == "clipboard_write_primary"
       assert cmd.payload.opts.text == "hello"
       assert is_binary(cmd.payload.id)

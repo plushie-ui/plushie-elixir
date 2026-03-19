@@ -63,7 +63,7 @@ family, and any relevant data (input value, toggle state, etc.).
 ### effect handler
 
 Native platform operations (file dialogs, clipboard, notifications) are
-triggered by `effect_request` messages from Elixir. The renderer executes
+triggered by `effect` messages from Elixir. The renderer executes
 them using platform APIs and sends `effect_response` messages back.
 
 ## Widget type mapping

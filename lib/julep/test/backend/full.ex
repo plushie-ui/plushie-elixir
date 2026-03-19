@@ -71,6 +71,6 @@ defmodule Julep.Test.Backend.Full do
   defp port_args(:msgpack), do: []
 
   defp screenshot_payload(name) do
-    %{type: "screenshot_capture", name: name}
+    %{type: "screenshot", name: name}
   end
 end

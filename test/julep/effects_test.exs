@@ -8,7 +8,7 @@ defmodule Julep.EffectsTest do
     test "returns command with correct type and payload" do
       cmd = Effects.request(:http, url: "https://example.com")
 
-      assert %Command{type: :effect_request, payload: payload} = cmd
+      assert %Command{type: :effect, payload: payload} = cmd
       assert is_binary(payload.id)
       assert payload.kind == "http"
       assert payload.opts == %{url: "https://example.com"}

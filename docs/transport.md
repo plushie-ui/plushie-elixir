@@ -128,12 +128,12 @@ Patch operations:
 | `remove` | `path` | Remove node at position |
 | `replace` | `path`, `node` | Replace node entirely (type/id change) |
 
-#### effect_request
+#### effect
 
 Request the renderer to perform a native effect.
 
 ```json
-{"type": "effect_request", "id": "req_1", "kind": "file_open", "payload": {"title": "Open File", "filters": ["*.txt"]}}
+{"type": "effect", "id": "req_1", "kind": "file_open", "payload": {"title": "Open File", "filters": ["*.txt"]}}
 ```
 
 See [effects.md](effects.md) for details.
@@ -148,13 +148,13 @@ streaming log lines, real-time plot data).
 {"type": "extension_command", "node_id": "term-1", "op": "write", "payload": {"data": "hello"}}
 ```
 
-#### extension_command_batch
+#### extension_commands
 
 Multiple extension commands processed in one cycle. The renderer handles
 all commands before triggering a single view update.
 
 ```json
-{"type": "extension_command_batch", "commands": [
+{"type": "extension_commands", "commands": [
   {"node_id": "term-1", "op": "write", "payload": {"data": "line 1"}},
   {"node_id": "log-1", "op": "append", "payload": {"line": "entry"}}
 ]}

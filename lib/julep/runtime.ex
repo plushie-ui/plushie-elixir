@@ -628,15 +628,15 @@ defmodule Julep.Runtime do
   end
 
   defp execute_command(
-         %Julep.Command{type: :effect_request, payload: %{id: id, kind: kind, opts: opts}},
+         %Julep.Command{type: :effect, payload: %{id: id, kind: kind, opts: opts}},
          state
        ) do
     bridge = state.bridge
 
     if bridge do
-      Julep.Bridge.send_effect_request(bridge, id, kind, opts)
+      Julep.Bridge.send_effect(bridge, id, kind, opts)
     else
-      Logger.warning("julep runtime: effect_request #{kind} (#{id}) without bridge")
+      Logger.warning("julep runtime: effect #{kind} (#{id}) without bridge")
     end
 
     # Start a timeout timer for this effect request, using a per-effect default
@@ -807,7 +807,7 @@ defmodule Julep.Runtime do
 
         {:renderer, type} ->
           if state.bridge do
-            Julep.Bridge.send_subscription_unregister(state.bridge, Atom.to_string(type))
+            Julep.Bridge.send_unsubscribe(state.bridge, Atom.to_string(type))
           end
 
         _ ->
@@ -859,7 +859,7 @@ defmodule Julep.Runtime do
               :on_modifiers_changed
             ] do
     if bridge do
-      Julep.Bridge.send_subscription_register(bridge, Atom.to_string(type), Atom.to_string(tag))
+      Julep.Bridge.send_subscribe(bridge, Atom.to_string(type), Atom.to_string(tag))
     end
 
     {:renderer, type}

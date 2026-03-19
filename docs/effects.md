@@ -56,7 +56,7 @@ MessagePack is the default wire format. JSON shown here for readability
 (use `--json` flag for JSONL mode).
 
 ```json
--> {"type": "effect_request", "id": "ef_1", "kind": "file_open", "payload": {"title": "Choose a file", "filters": [["Text files", "*.txt"], ["All files", "*"]]}}
+-> {"type": "effect", "id": "ef_1", "kind": "file_open", "payload": {"title": "Choose a file", "filters": [["Text files", "*.txt"], ["All files", "*"]]}}
 <- {"type": "effect_response", "id": "ef_1", "status": "ok", "result": {"path": "/home/user/notes.txt"}}
 ```
 
