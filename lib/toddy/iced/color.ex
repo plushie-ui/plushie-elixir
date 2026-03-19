@@ -26,7 +26,7 @@ defmodule Toddy.Iced.Color do
       "#6495ed"
   """
 
-  @typedoc "Canonical hex color string (`\"#rrggbb\"` or `\"#rrggbbaa\"`)."
+  @typedoc ~S'Canonical hex color string (`"#rrggbb"` or `"#rrggbbaa"`).'
   @type t :: String.t()
 
   # All 148 CSS Color Module Level 4 named colors plus transparent.
