@@ -107,8 +107,8 @@ def view(model) do
       end
 
       for todo <- filtered_todos(model) do
-        row id: "todo:#{todo.id}", spacing: 8 do
-          checkbox("toggle:#{todo.id}", todo.done)
+        row todo.id, spacing: 8 do
+          checkbox("toggle", todo.done)
           text(todo.text)
         end
       end
@@ -200,7 +200,7 @@ def window_config(_model) do
     height: 600,
     min_size: %{width: 400, height: 300},
     resizable: true,
-    theme: "dark"
+    theme: :dark
   }
 end
 ```
@@ -232,7 +232,7 @@ Supported keys:
   to all windows.
 
 To follow the OS light/dark preference automatically, set the window
-`theme` prop to `"system"`. The renderer detects the current OS theme
+`theme` prop to `:system`. The renderer detects the current OS theme
 and applies the matching built-in light or dark theme.
 
 Default: `[]` (renderer uses its own defaults).
@@ -352,7 +352,7 @@ window "main",
   decorations: true,
   transparent: false,
   visible: true,
-  theme: "dark",       # or "system" to follow OS preference
+  theme: :dark,        # or :system to follow OS preference
   level: :normal,      # :normal | :always_on_top | :always_on_bottom
   scale_factor: 1.5    # per-window UI scale (overrides global setting)
 do
@@ -472,35 +472,7 @@ are delivered as:
 The app can use these to adjust behaviour (e.g., pause animations in
 unfocused windows, track the active window for keyboard shortcuts).
 
-### Common multi-window patterns
-
-#### Detachable panel
-
-```elixir
-def view(model) do
-  import Julep.UI
-
-  main = window "main", title: "Editor" do
-    column do
-      editor_content(model)
-      unless model.panel_detached do
-        panel_content(model)
-      end
-    end
-  end
-
-  if model.panel_detached do
-    panel = window "panel", title: "Panel", size: {300, 500} do
-      panel_content(model)
-    end
-    [main, panel]
-  else
-    main
-  end
-end
-```
-
-#### Dialog window
+### Example: dialog window
 
 ```elixir
 def view(model) do
@@ -512,10 +484,10 @@ def view(model) do
 
   if model.confirm_dialog do
     dialog = window "confirm", title: "Confirm",
-             size: {300, 150}, resizable: false, minimizable: false,
+             size: {300, 150}, resizable: false,
              level: :always_on_top do
       column padding: 16, spacing: 12 do
-        text("Are you sure?")
+        text("prompt", "Are you sure?")
         row spacing: 8 do
           button("confirm_yes", "Yes")
           button("confirm_no", "No")

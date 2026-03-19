@@ -12,7 +12,7 @@ Themes are set at the window level:
 def view(model) do
   import Julep.UI
 
-  window "main", title: "My App", theme: "catppuccin_mocha" do
+  window "main", title: "My App", theme: :catppuccin_mocha do
     column do
       text("Themed content")
     end
@@ -155,7 +155,7 @@ Themes can be overridden for a subtree:
 ```elixir
 column do
   text("Uses window theme")
-  container "sidebar", theme: "nord" do
+  container "sidebar", theme: :nord do
     text("Uses Nord theme")
   end
 end

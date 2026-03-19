@@ -100,13 +100,13 @@ column align_x: :center do
 end
 
 # Center a single child in a container
-container "page", width: :fill, height: :fill, center: :fill do
+container "page", width: :fill, height: :fill, center: true do
   text("Dead center")
 end
 ```
 
-The `center` shorthand on `container` sets both `align_x: :center` and
-`align_y: :center` and fills the given length.
+The `center: true` shorthand on `container` sets both `align_x: :center`
+and `align_y: :center`.
 
 ## Layout containers
 
@@ -179,7 +179,7 @@ are on top.
 ```elixir
 stack do
   image("bg", "background.png", width: :fill, height: :fill)
-  container "overlay", center: :fill do
+  container "overlay", width: :fill, height: :fill, center: true do
     text("overlay_text", "Overlaid text", size: 48)
   end
 end
@@ -214,7 +214,7 @@ end
 ### Centered page
 
 ```elixir
-container "page", width: :fill, height: :fill, center: :fill do
+container "page", width: :fill, height: :fill, center: true do
   column spacing: 16, align_x: :center do
     text("welcome", "Welcome", size: 32)
     button("start", "Get Started")
