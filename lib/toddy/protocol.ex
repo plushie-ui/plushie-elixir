@@ -223,7 +223,15 @@ defmodule Toddy.Protocol do
   """
   @spec decode_message(data :: binary(), format :: format()) ::
           Toddy.Event.t()
-          | {:hello, pos_integer(), String.t(), String.t(), String.t(), [String.t()]}
+          | {:hello,
+             %{
+               protocol: pos_integer(),
+               version: String.t(),
+               name: String.t(),
+               backend: String.t(),
+               extensions: [String.t()],
+               transport: String.t()
+             }}
           | {:settings, map()}
           | {:snapshot, map()}
           | {:patch, list()}

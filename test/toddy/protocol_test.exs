@@ -970,11 +970,18 @@ defmodule Toddy.ProtocolTest do
           extensions: ["charts"]
         })
 
-      assert {:hello, 1, "0.3.2", "toddy", "tiny-skia", ["charts"]} =
-               Protocol.decode_message(json, :json)
+      assert {:hello,
+              %{
+                protocol: 1,
+                version: "0.3.2",
+                name: "toddy",
+                backend: "tiny-skia",
+                extensions: ["charts"],
+                transport: "stdio"
+              }} = Protocol.decode_message(json, :json)
     end
 
-    test "hello defaults backend and extensions when absent" do
+    test "hello defaults backend, extensions, and transport when absent" do
       json =
         Jason.encode!(%{
           type: "hello",
@@ -983,8 +990,28 @@ defmodule Toddy.ProtocolTest do
           name: "toddy"
         })
 
-      assert {:hello, 1, "0.3.0", "toddy", "unknown", []} =
-               Protocol.decode_message(json, :json)
+      assert {:hello,
+              %{
+                protocol: 1,
+                version: "0.3.0",
+                name: "toddy",
+                backend: "unknown",
+                extensions: [],
+                transport: "stdio"
+              }} = Protocol.decode_message(json, :json)
+    end
+
+    test "hello preserves explicit transport value" do
+      json =
+        Jason.encode!(%{
+          type: "hello",
+          protocol: 1,
+          version: "0.3.2",
+          name: "toddy",
+          transport: "spawn"
+        })
+
+      assert {:hello, %{transport: "spawn"}} = Protocol.decode_message(json, :json)
     end
 
     test "decodes hello from msgpack" do
@@ -999,8 +1026,15 @@ defmodule Toddy.ProtocolTest do
 
       packed = Msgpax.pack!(msg, iodata: false)
 
-      assert {:hello, 1, "0.3.2", "toddy", "wgpu", []} =
-               Protocol.decode_message(packed, :msgpack)
+      assert {:hello,
+              %{
+                protocol: 1,
+                version: "0.3.2",
+                name: "toddy",
+                backend: "wgpu",
+                extensions: [],
+                transport: "stdio"
+              }} = Protocol.decode_message(packed, :msgpack)
     end
   end
 

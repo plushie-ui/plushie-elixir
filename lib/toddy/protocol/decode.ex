@@ -47,7 +47,15 @@ defmodule Toddy.Protocol.Decode do
   """
   @spec decode_message(data :: binary(), format :: Toddy.Protocol.format()) ::
           Toddy.Event.t()
-          | {:hello, pos_integer(), String.t(), String.t(), String.t(), [String.t()]}
+          | {:hello,
+             %{
+               protocol: pos_integer(),
+               version: String.t(),
+               name: String.t(),
+               backend: String.t(),
+               extensions: [String.t()],
+               transport: String.t()
+             }}
           | {:settings, map()}
           | {:snapshot, map()}
           | {:patch, list()}
@@ -826,9 +834,15 @@ defmodule Toddy.Protocol.Decode do
            "name" => name
          } = msg
        ) do
-    backend = Map.get(msg, "backend", "unknown")
-    extensions = Map.get(msg, "extensions", [])
-    {:hello, protocol, version, name, backend, extensions}
+    {:hello,
+     %{
+       protocol: protocol,
+       version: version,
+       name: name,
+       backend: Map.get(msg, "backend", "unknown"),
+       extensions: Map.get(msg, "extensions", []),
+       transport: Map.get(msg, "transport", "stdio")
+     }}
   end
 
   # -- Generic/extension events (unrecognized families) --
