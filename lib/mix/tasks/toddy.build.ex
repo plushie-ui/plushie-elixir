@@ -257,7 +257,17 @@ defmodule Mix.Tasks.Toddy.Build do
           File.cwd!()
         end
 
-      {mod, Path.join(base, crate_rel)}
+      resolved = Path.expand(Path.join(base, crate_rel))
+      allowed_root = Path.expand(base)
+
+      unless String.starts_with?(resolved, allowed_root) do
+        Mix.raise(
+          "Extension #{inspect(mod)} native_crate path #{inspect(crate_rel)} " <>
+            "resolves to #{resolved}, which is outside the allowed directory #{allowed_root}"
+        )
+      end
+
+      {mod, resolved}
     end)
   end
 
@@ -317,10 +327,23 @@ defmodule Mix.Tasks.Toddy.Build do
     """
   end
 
+  @rust_constructor_pattern ~r/^[A-Za-z_][A-Za-z0-9_:]*(\([^)]*\))?$/
+
+  defp validate_rust_constructor!(mod, constructor) do
+    unless Regex.match?(@rust_constructor_pattern, constructor) do
+      Mix.raise(
+        "Extension #{inspect(mod)} rust_constructor #{inspect(constructor)} " <>
+          "contains invalid characters. Expected a Rust identifier, path (::), " <>
+          "or simple invocation (e.g. \"MyExt::new()\")"
+      )
+    end
+  end
+
   defp generate_main_rs(extensions) do
     ext_registrations =
       Enum.map_join(extensions, "\n        ", fn mod ->
         constructor = mod.rust_constructor()
+        validate_rust_constructor!(mod, constructor)
         ".extension(#{constructor})"
       end)
 
