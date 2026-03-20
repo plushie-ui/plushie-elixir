@@ -159,15 +159,7 @@ defmodule Toddy.Protocol.Encode do
           format :: Toddy.Protocol.format()
         ) :: iodata()
   def encode_extension_command(node_id, op, payload, format \\ :msgpack) do
-    serialize(
-      %{
-        "type" => "extension_command",
-        "node_id" => node_id,
-        "op" => op,
-        "payload" => payload
-      },
-      format
-    )
+    serialize(%{type: "extension_command", node_id: node_id, op: op, payload: payload}, format)
   end
 
   @doc """
@@ -183,10 +175,10 @@ defmodule Toddy.Protocol.Encode do
   def encode_extension_commands(commands, format \\ :msgpack) when is_list(commands) do
     items =
       Enum.map(commands, fn {node_id, op, payload} ->
-        %{"node_id" => node_id, "op" => op, "payload" => payload}
+        %{node_id: node_id, op: op, payload: payload}
       end)
 
-    serialize(%{"type" => "extension_commands", "commands" => items}, format)
+    serialize(%{type: "extension_commands", commands: items}, format)
   end
 
   @doc """
@@ -227,14 +219,8 @@ defmodule Toddy.Protocol.Encode do
   def serialize(map, format) do
     # Every wire message carries a session field. Default to empty
     # string (single-session mode). Multiplexed callers set the
-    # session before encoding. Use the key style that matches the map
-    # (atom keys for most messages, string keys for extension commands).
-    map =
-      if Map.has_key?(map, "type") do
-        Map.put_new(map, "session", "")
-      else
-        Map.put_new(map, :session, "")
-      end
+    # session before encoding.
+    map = Map.put_new(map, :session, "")
 
     case format do
       :json -> Jason.encode!(map) <> "\n"
