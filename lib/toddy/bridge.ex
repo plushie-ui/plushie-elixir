@@ -342,7 +342,10 @@ defmodule Toddy.Bridge do
     {:stop, {:protocol_mismatch, got, expected}, state}
   end
 
-  def handle_info(_msg, state), do: {:noreply, state}
+  def handle_info(msg, state) do
+    Logger.debug("toddy bridge: unhandled message: #{inspect(msg)}")
+    {:noreply, state}
+  end
 
   @impl true
   def terminate(_reason, %{port: port} = _state) when is_port(port) do

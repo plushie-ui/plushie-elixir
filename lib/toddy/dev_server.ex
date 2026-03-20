@@ -100,7 +100,10 @@ defmodule Toddy.DevServer do
     end
   end
 
-  def handle_info(_msg, state), do: {:noreply, state}
+  def handle_info(msg, state) do
+    Logger.debug("toddy dev: unhandled message: #{inspect(msg)}")
+    {:noreply, state}
+  end
 
   # ---------------------------------------------------------------------------
   # Private helpers

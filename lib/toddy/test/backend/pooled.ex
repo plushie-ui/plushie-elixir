@@ -47,7 +47,7 @@ defmodule Toddy.Test.Backend.Pooled do
   end
 
   @impl Toddy.Test.Backend
-  def stop(pid), do: GenServer.call(pid, :stop)
+  def stop(pid), do: GenServer.stop(pid, :normal, 10_000)
 
   @impl Toddy.Test.Backend
   def find(pid, selector), do: GenServer.call(pid, {:find, selector})
@@ -153,11 +153,6 @@ defmodule Toddy.Test.Backend.Pooled do
   end
 
   @impl GenServer
-  def handle_call(:stop, _from, state) do
-    SessionPool.unregister(state.pool, state.session_id)
-    {:stop, :normal, :ok, state}
-  end
-
   def handle_call({:find, selector}, _from, state) do
     sel = encode_selector(selector, state.tree)
 
@@ -380,6 +375,15 @@ defmodule Toddy.Test.Backend.Pooled do
   end
 
   def handle_info(_msg, state), do: {:noreply, state}
+
+  @impl GenServer
+  def terminate(_reason, state) do
+    if state.pool && state.session_id do
+      SessionPool.unregister(state.pool, state.session_id)
+    end
+
+    :ok
+  end
 
   # -- Internal helpers --------------------------------------------------------
 
