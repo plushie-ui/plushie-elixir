@@ -12,13 +12,13 @@ Initial public release.
 
 - **Elm architecture** -- `init/1`, `update/2`, `view/1`, optional
   `subscribe/1` callbacks via the `Toddy.App` behaviour.
-- **37 built-in widget types** -- layout (column, row, container,
+- **38 built-in widget types** -- layout (column, row, container,
   scrollable, stack, grid, pane_grid), display (text, rich_text,
   markdown, image, svg, progress_bar, qr_code, rule, canvas),
   input (button, text_input, text_editor, checkbox, radio, toggler,
   slider, vertical_slider, pick_list, combo_box, table), and
   wrappers (tooltip, mouse_area, sensor, overlay, responsive, themer,
-  keyed_column, space, float, pin).
+  keyed_column, space, floating, pin, window).
 - **22 built-in themes** -- light, dark, dracula, nord, solarized,
   gruvbox, catppuccin, tokyo night, kanagawa, moonfly, nightfly,
   oxocarbon, ferra. Custom palettes and per-widget style overrides

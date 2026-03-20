@@ -11,8 +11,6 @@ defmodule AsyncFetch do
 
   use Toddy.App
 
-  import Toddy.UI
-
   alias Toddy.Command
   alias Toddy.Event.{Async, Widget}
 
@@ -48,6 +46,7 @@ defmodule AsyncFetch do
   # -- View -------------------------------------------------------------------
 
   def view(model) do
+    import Toddy.UI
 
     window "main", title: "Async Fetch" do
       column padding: 24, spacing: 16, width: :fill do
@@ -59,14 +58,17 @@ defmodule AsyncFetch do
   end
 
   defp status_message(%{status: :idle}) do
+    import Toddy.UI
     text("status", "Press the button to start", color: "#888888")
   end
 
   defp status_message(%{status: :loading}) do
+    import Toddy.UI
     text("status", "Loading...", color: "#cc8800")
   end
 
   defp status_message(%{status: :done, result: result}) do
+    import Toddy.UI
 
     column spacing: 4 do
       text("label", "Result:", size: 14)
@@ -75,6 +77,7 @@ defmodule AsyncFetch do
   end
 
   defp status_message(%{status: :error, error: error}) do
+    import Toddy.UI
     text("error", "Error: #{error}", color: "#cc2222")
   end
 end

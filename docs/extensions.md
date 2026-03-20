@@ -109,7 +109,7 @@ defmodule MyApp.Card do
   prop :title, :string
   prop :subtitle, :string, default: nil
 
-  def render(props, children) do
+  def render(id, props, children) do
     import Toddy.UI
 
     column padding: 16, spacing: 8 do

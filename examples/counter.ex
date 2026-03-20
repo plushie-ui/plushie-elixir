@@ -12,7 +12,6 @@ defmodule Counter do
 
   alias Toddy.Event.Widget
 
-  import Toddy.UI
   def init(_opts), do: %{count: 0}
 
   def update(model, %Widget{type: :click, id: "increment"}), do: %{model | count: model.count + 1}
@@ -20,6 +19,7 @@ defmodule Counter do
   def update(model, _event), do: model
 
   def view(model) do
+    import Toddy.UI
 
     window "main", title: "Counter" do
       column padding: 16, spacing: 8 do

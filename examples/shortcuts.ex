@@ -15,7 +15,6 @@ defmodule Shortcuts do
   alias Toddy.KeyModifiers
   alias Toddy.Subscription
 
-  import Toddy.UI
   @max_log_entries 50
 
   # -- init ------------------------------------------------------------------
@@ -47,6 +46,7 @@ defmodule Shortcuts do
   # -- view ------------------------------------------------------------------
 
   def view(model) do
+    import Toddy.UI
 
     window "main", title: "Keyboard Shortcuts" do
       column padding: 16, spacing: 12, width: :fill do

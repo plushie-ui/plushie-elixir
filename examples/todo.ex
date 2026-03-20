@@ -13,8 +13,6 @@ defmodule Todo do
 
   use Toddy.App
 
-  import Toddy.UI
-
   alias Toddy.Command
   alias Toddy.Event.Widget
 
@@ -63,6 +61,8 @@ defmodule Todo do
   # -- View -----------------------------------------------------------------
 
   def view(model) do
+    import Toddy.UI
+
     window "main", title: "Todos" do
       column id: "app", padding: 20, spacing: 12, width: :fill do
         text("title", "My Todos", size: 24)
@@ -92,6 +92,8 @@ defmodule Todo do
   defp filtered(%{filter: :done, todos: todos}), do: Enum.filter(todos, & &1.done)
 
   defp todo_row(todo) do
+    import Toddy.UI
+
     container todo.id do
       row spacing: 8 do
         checkbox("toggle", todo.done)

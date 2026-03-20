@@ -10,8 +10,6 @@ defmodule Clock do
 
   use Toddy.App
 
-  import Toddy.UI
-
   alias Toddy.Event.Timer
   alias Toddy.Subscription
 
@@ -38,6 +36,7 @@ defmodule Clock do
   # -- view ------------------------------------------------------------------
 
   def view(model) do
+    import Toddy.UI
 
     window "main", title: "Clock" do
       column padding: 24, spacing: 16, width: :fill, align_x: :center do

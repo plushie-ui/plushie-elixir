@@ -16,8 +16,6 @@ defmodule ColorPicker do
 
   use Toddy.App
 
-  import Toddy.UI
-
   alias Toddy.Canvas.Shape
   alias Toddy.Event.Canvas
 
@@ -72,6 +70,7 @@ defmodule ColorPicker do
   def update(model, _event), do: model
 
   def view(model) do
+    import Toddy.UI
 
     hex = hsv_to_hex(model.hue, model.saturation, model.value)
     h_int = round(model.hue)

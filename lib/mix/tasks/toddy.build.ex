@@ -1,10 +1,45 @@
 defmodule Mix.Tasks.Toddy.Build do
-  @moduledoc "Build the toddy binary."
+  @min_rust_version {1, 92, 0}
+
+  @moduledoc """
+  Build the toddy binary from source, optionally with widget extensions.
+
+  Without extensions configured, builds the stock toddy binary from the Rust
+  source checkout. With extensions, generates a custom Cargo workspace that
+  registers each extension crate and builds a combined binary.
+
+  ## Prerequisites
+
+  - **Rust toolchain** #{elem(@min_rust_version, 0)}.#{elem(@min_rust_version, 1)}+ (install via https://rustup.rs)
+  - **Toddy Rust source** -- set `TODDY_SOURCE_PATH` or `config :toddy, :source_path`
+
+  ## Usage
+
+      mix toddy.build              # debug build
+      mix toddy.build --release    # optimized release build
+      mix toddy.build --verbose    # print cargo output on success
+
+  ## Options
+
+  - `--release` -- Build with optimizations (also implied by `MIX_ENV=prod`)
+  - `--verbose` -- Print full cargo output on successful builds
+
+  ## Extensions
+
+  Register extensions in your config to build a custom binary:
+
+      config :toddy, extensions: [MyApp.SparklineExtension]
+
+  The task validates that each module implements the `Toddy.Extension`
+  behaviour and that no two extensions claim the same widget type name.
+  A Cargo workspace is generated under the Mix build directory with a
+  `main.rs` that registers all extensions.
+
+  The built binary is installed to `priv/bin/` for runtime resolution.
+  """
   @shortdoc "Build the toddy binary"
 
   use Mix.Task
-
-  @min_rust_version {1, 92, 0}
 
   @impl true
   def run(args) do

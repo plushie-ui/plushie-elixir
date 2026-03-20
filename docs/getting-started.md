@@ -64,8 +64,6 @@ Create `lib/my_app/counter.ex`:
 defmodule MyApp.Counter do
   use Toddy.App
 
-  import Toddy.UI
-
   alias Toddy.Event.Widget
 
   def init(_opts), do: %{count: 0}
@@ -79,6 +77,8 @@ defmodule MyApp.Counter do
   def update(model, _event), do: model
 
   def view(model) do
+    import Toddy.UI
+
     window "main", title: "Counter" do
       column padding: 16, spacing: 8 do
         text("count", "Count: #{model.count}", size: 20)

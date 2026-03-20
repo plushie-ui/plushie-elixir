@@ -13,8 +13,6 @@ defmodule Notes do
 
   use Toddy.App
 
-  import Toddy.UI
-
   alias Toddy.{Data, Route, Selection, State, Undo}
   alias Toddy.Event.Widget
 
@@ -148,6 +146,7 @@ defmodule Notes do
   end
 
   defp view_list(model) do
+    import Toddy.UI
 
     search_query = State.get(model.state, [:search_query])
     notes = State.get(model.state, [:notes])
@@ -191,6 +190,7 @@ defmodule Notes do
   end
 
   defp view_edit(model) do
+    import Toddy.UI
 
     current = Undo.current(model.undo)
 
