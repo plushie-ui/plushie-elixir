@@ -10,91 +10,91 @@ defmodule Toddy.SubscriptionParityTest do
   describe "on_window_open/1" do
     test "returns correct subscription spec" do
       sub = Subscription.on_window_open(:win_open)
-      assert sub == %{type: :on_window_open, tag: :win_open}
+      assert sub == %Subscription{type: :on_window_open, tag: :win_open}
     end
   end
 
   describe "on_window_resize/1" do
     test "returns correct subscription spec" do
       sub = Subscription.on_window_resize(:win_resize)
-      assert sub == %{type: :on_window_resize, tag: :win_resize}
+      assert sub == %Subscription{type: :on_window_resize, tag: :win_resize}
     end
   end
 
   describe "on_window_focus/1" do
     test "returns correct subscription spec" do
       sub = Subscription.on_window_focus(:win_focus)
-      assert sub == %{type: :on_window_focus, tag: :win_focus}
+      assert sub == %Subscription{type: :on_window_focus, tag: :win_focus}
     end
   end
 
   describe "on_window_unfocus/1" do
     test "returns correct subscription spec" do
       sub = Subscription.on_window_unfocus(:win_unfocus)
-      assert sub == %{type: :on_window_unfocus, tag: :win_unfocus}
+      assert sub == %Subscription{type: :on_window_unfocus, tag: :win_unfocus}
     end
   end
 
   describe "on_window_move/1" do
     test "returns correct subscription spec" do
       sub = Subscription.on_window_move(:win_move)
-      assert sub == %{type: :on_window_move, tag: :win_move}
+      assert sub == %Subscription{type: :on_window_move, tag: :win_move}
     end
   end
 
   describe "on_mouse_move/1" do
     test "returns correct subscription spec" do
       sub = Subscription.on_mouse_move(:mouse)
-      assert sub == %{type: :on_mouse_move, tag: :mouse}
+      assert sub == %Subscription{type: :on_mouse_move, tag: :mouse}
     end
   end
 
   describe "on_mouse_button/1" do
     test "returns correct subscription spec" do
       sub = Subscription.on_mouse_button(:btn)
-      assert sub == %{type: :on_mouse_button, tag: :btn}
+      assert sub == %Subscription{type: :on_mouse_button, tag: :btn}
     end
   end
 
   describe "on_mouse_scroll/1" do
     test "returns correct subscription spec" do
       sub = Subscription.on_mouse_scroll(:scroll)
-      assert sub == %{type: :on_mouse_scroll, tag: :scroll}
+      assert sub == %Subscription{type: :on_mouse_scroll, tag: :scroll}
     end
   end
 
   describe "on_touch/1" do
     test "returns correct subscription spec" do
       sub = Subscription.on_touch(:touch)
-      assert sub == %{type: :on_touch, tag: :touch}
+      assert sub == %Subscription{type: :on_touch, tag: :touch}
     end
   end
 
   describe "on_theme_change/1" do
     test "returns correct subscription spec" do
       sub = Subscription.on_theme_change(:theme)
-      assert sub == %{type: :on_theme_change, tag: :theme}
+      assert sub == %Subscription{type: :on_theme_change, tag: :theme}
     end
   end
 
   describe "on_animation_frame/1" do
     test "returns correct subscription spec" do
       sub = Subscription.on_animation_frame(:frame)
-      assert sub == %{type: :on_animation_frame, tag: :frame}
+      assert sub == %Subscription{type: :on_animation_frame, tag: :frame}
     end
   end
 
   describe "on_file_drop/1" do
     test "returns correct subscription spec" do
       sub = Subscription.on_file_drop(:drop)
-      assert sub == %{type: :on_file_drop, tag: :drop}
+      assert sub == %Subscription{type: :on_file_drop, tag: :drop}
     end
   end
 
   describe "on_event/1" do
     test "returns correct subscription spec" do
       sub = Subscription.on_event(:any)
-      assert sub == %{type: :on_event, tag: :any}
+      assert sub == %Subscription{type: :on_event, tag: :any}
     end
   end
 

@@ -91,12 +91,15 @@ defmodule Toddy.Runtime.Subscriptions do
     end)
   end
 
-  defp start_subscription(%{type: :every, interval: interval, tag: tag}, _bridge) do
+  defp start_subscription(
+         %Toddy.Subscription{type: :every, interval: interval, tag: tag},
+         _bridge
+       ) do
     ref = Process.send_after(self(), {:subscription_tick, tag, interval}, interval)
     {:timer, ref}
   end
 
-  defp start_subscription(%{type: type, tag: tag}, bridge)
+  defp start_subscription(%Toddy.Subscription{type: type, tag: tag}, bridge)
        when type in [
               :on_key_press,
               :on_key_release,

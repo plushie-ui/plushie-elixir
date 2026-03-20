@@ -2,8 +2,9 @@ defmodule Toddy.Canvas.Shape do
   @moduledoc """
   Convenience builders for canvas shape descriptors.
 
-  Every function produces a plain map with string keys, ready for the wire
-  protocol. These are optional helpers -- raw maps work identically.
+  Every function produces a plain map with atom keys. The `Protocol.Encode`
+  wire boundary handles key stringification before serialization. These are
+  optional helpers -- raw maps work identically.
 
   ## Basic shapes
 

@@ -10,7 +10,7 @@ defmodule Toddy.SubscriptionTest do
   describe "every/2" do
     test "returns a map with type, interval, and tag" do
       spec = Subscription.every(1000, :tick)
-      assert spec == %{type: :every, interval: 1000, tag: :tick}
+      assert spec == %Subscription{type: :every, interval: 1000, tag: :tick}
     end
 
     test "rejects non-positive interval" do
@@ -30,7 +30,7 @@ defmodule Toddy.SubscriptionTest do
   describe "on_key_press/1" do
     test "returns a map with type and tag" do
       spec = Subscription.on_key_press(:key_down)
-      assert spec == %{type: :on_key_press, tag: :key_down}
+      assert spec == %Subscription{type: :on_key_press, tag: :key_down}
     end
 
     test "rejects non-atom tag" do
@@ -41,7 +41,7 @@ defmodule Toddy.SubscriptionTest do
   describe "on_key_release/1" do
     test "returns a map with type and tag" do
       spec = Subscription.on_key_release(:key_up)
-      assert spec == %{type: :on_key_release, tag: :key_up}
+      assert spec == %Subscription{type: :on_key_release, tag: :key_up}
     end
 
     test "rejects non-atom tag" do
@@ -52,7 +52,7 @@ defmodule Toddy.SubscriptionTest do
   describe "on_window_close/1" do
     test "returns a map with type and tag" do
       spec = Subscription.on_window_close(:closing)
-      assert spec == %{type: :on_window_close, tag: :closing}
+      assert spec == %Subscription{type: :on_window_close, tag: :closing}
     end
 
     test "rejects non-atom tag" do
@@ -63,7 +63,7 @@ defmodule Toddy.SubscriptionTest do
   describe "on_window_event/1" do
     test "returns a map with type and tag" do
       spec = Subscription.on_window_event(:resized)
-      assert spec == %{type: :on_window_event, tag: :resized}
+      assert spec == %Subscription{type: :on_window_event, tag: :resized}
     end
 
     test "rejects non-atom tag" do
@@ -74,7 +74,7 @@ defmodule Toddy.SubscriptionTest do
   describe "on_ime/1" do
     test "returns a map with type and tag" do
       spec = Subscription.on_ime(:ime_input)
-      assert spec == %{type: :on_ime, tag: :ime_input}
+      assert spec == %Subscription{type: :on_ime, tag: :ime_input}
     end
 
     test "rejects non-atom tag" do
@@ -88,7 +88,7 @@ defmodule Toddy.SubscriptionTest do
 
   describe "key/1" do
     test "every specs include interval in key" do
-      key = Subscription.key(%{type: :every, interval: 1000, tag: :tick})
+      key = Subscription.key(%Subscription{type: :every, interval: 1000, tag: :tick})
       assert key == {:every, 1000, :tick}
     end
 

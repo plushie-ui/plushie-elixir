@@ -66,7 +66,14 @@ defmodule Toddy.Subscription do
   not included in the event struct -- those use typed event structs like
   `%Toddy.Event.Key{}`, `%Toddy.Event.Window{}`, etc.
   """
-  @type t :: %{optional(atom()) => term(), type: atom(), tag: atom()}
+  @type t :: %__MODULE__{
+          type: atom(),
+          tag: atom(),
+          interval: pos_integer() | nil
+        }
+
+  @enforce_keys [:type, :tag]
+  defstruct [:type, :tag, :interval]
 
   @doc """
   Timer that fires every `interval_ms` milliseconds.
@@ -85,7 +92,7 @@ defmodule Toddy.Subscription do
   @spec every(interval_ms :: pos_integer(), event_tag :: atom()) :: t()
   def every(interval_ms, event_tag)
       when is_integer(interval_ms) and interval_ms > 0 and is_atom(event_tag) do
-    %{type: :every, interval: interval_ms, tag: event_tag}
+    %__MODULE__{type: :every, interval: interval_ms, tag: event_tag}
   end
 
   @doc """
@@ -106,7 +113,7 @@ defmodule Toddy.Subscription do
   """
   @spec on_key_press(event_tag :: atom()) :: t()
   def on_key_press(event_tag) when is_atom(event_tag) do
-    %{type: :on_key_press, tag: event_tag}
+    %__MODULE__{type: :on_key_press, tag: event_tag}
   end
 
   @doc """
@@ -125,7 +132,7 @@ defmodule Toddy.Subscription do
   """
   @spec on_key_release(event_tag :: atom()) :: t()
   def on_key_release(event_tag) when is_atom(event_tag) do
-    %{type: :on_key_release, tag: event_tag}
+    %__MODULE__{type: :on_key_release, tag: event_tag}
   end
 
   @doc """
@@ -142,7 +149,7 @@ defmodule Toddy.Subscription do
   """
   @spec on_modifiers_changed(event_tag :: atom()) :: t()
   def on_modifiers_changed(event_tag) when is_atom(event_tag) do
-    %{type: :on_modifiers_changed, tag: event_tag}
+    %__MODULE__{type: :on_modifiers_changed, tag: event_tag}
   end
 
   @doc """
@@ -160,7 +167,7 @@ defmodule Toddy.Subscription do
   """
   @spec on_window_close(event_tag :: atom()) :: t()
   def on_window_close(event_tag) when is_atom(event_tag) do
-    %{type: :on_window_close, tag: event_tag}
+    %__MODULE__{type: :on_window_close, tag: event_tag}
   end
 
   @doc """
@@ -176,7 +183,7 @@ defmodule Toddy.Subscription do
   """
   @spec on_window_event(event_tag :: atom()) :: t()
   def on_window_event(event_tag) when is_atom(event_tag) do
-    %{type: :on_window_event, tag: event_tag}
+    %__MODULE__{type: :on_window_event, tag: event_tag}
   end
 
   @doc """
@@ -187,7 +194,7 @@ defmodule Toddy.Subscription do
   """
   @spec on_window_open(event_tag :: atom()) :: t()
   def on_window_open(event_tag) when is_atom(event_tag) do
-    %{type: :on_window_open, tag: event_tag}
+    %__MODULE__{type: :on_window_open, tag: event_tag}
   end
 
   @doc """
@@ -198,7 +205,7 @@ defmodule Toddy.Subscription do
   """
   @spec on_window_resize(event_tag :: atom()) :: t()
   def on_window_resize(event_tag) when is_atom(event_tag) do
-    %{type: :on_window_resize, tag: event_tag}
+    %__MODULE__{type: :on_window_resize, tag: event_tag}
   end
 
   @doc """
@@ -209,7 +216,7 @@ defmodule Toddy.Subscription do
   """
   @spec on_window_focus(event_tag :: atom()) :: t()
   def on_window_focus(event_tag) when is_atom(event_tag) do
-    %{type: :on_window_focus, tag: event_tag}
+    %__MODULE__{type: :on_window_focus, tag: event_tag}
   end
 
   @doc """
@@ -220,7 +227,7 @@ defmodule Toddy.Subscription do
   """
   @spec on_window_unfocus(event_tag :: atom()) :: t()
   def on_window_unfocus(event_tag) when is_atom(event_tag) do
-    %{type: :on_window_unfocus, tag: event_tag}
+    %__MODULE__{type: :on_window_unfocus, tag: event_tag}
   end
 
   @doc """
@@ -231,7 +238,7 @@ defmodule Toddy.Subscription do
   """
   @spec on_window_move(event_tag :: atom()) :: t()
   def on_window_move(event_tag) when is_atom(event_tag) do
-    %{type: :on_window_move, tag: event_tag}
+    %__MODULE__{type: :on_window_move, tag: event_tag}
   end
 
   @doc """
@@ -243,7 +250,7 @@ defmodule Toddy.Subscription do
   """
   @spec on_mouse_move(event_tag :: atom()) :: t()
   def on_mouse_move(event_tag) when is_atom(event_tag) do
-    %{type: :on_mouse_move, tag: event_tag}
+    %__MODULE__{type: :on_mouse_move, tag: event_tag}
   end
 
   @doc """
@@ -256,7 +263,7 @@ defmodule Toddy.Subscription do
   """
   @spec on_mouse_button(event_tag :: atom()) :: t()
   def on_mouse_button(event_tag) when is_atom(event_tag) do
-    %{type: :on_mouse_button, tag: event_tag}
+    %__MODULE__{type: :on_mouse_button, tag: event_tag}
   end
 
   @doc """
@@ -268,7 +275,7 @@ defmodule Toddy.Subscription do
   """
   @spec on_mouse_scroll(event_tag :: atom()) :: t()
   def on_mouse_scroll(event_tag) when is_atom(event_tag) do
-    %{type: :on_mouse_scroll, tag: event_tag}
+    %__MODULE__{type: :on_mouse_scroll, tag: event_tag}
   end
 
   @doc """
@@ -285,7 +292,7 @@ defmodule Toddy.Subscription do
   """
   @spec on_ime(event_tag :: atom()) :: t()
   def on_ime(event_tag) when is_atom(event_tag) do
-    %{type: :on_ime, tag: event_tag}
+    %__MODULE__{type: :on_ime, tag: event_tag}
   end
 
   @doc """
@@ -298,7 +305,7 @@ defmodule Toddy.Subscription do
   """
   @spec on_touch(event_tag :: atom()) :: t()
   def on_touch(event_tag) when is_atom(event_tag) do
-    %{type: :on_touch, tag: event_tag}
+    %__MODULE__{type: :on_touch, tag: event_tag}
   end
 
   @doc """
@@ -310,7 +317,7 @@ defmodule Toddy.Subscription do
   """
   @spec on_theme_change(event_tag :: atom()) :: t()
   def on_theme_change(event_tag) when is_atom(event_tag) do
-    %{type: :on_theme_change, tag: event_tag}
+    %__MODULE__{type: :on_theme_change, tag: event_tag}
   end
 
   @doc """
@@ -321,7 +328,7 @@ defmodule Toddy.Subscription do
   """
   @spec on_animation_frame(event_tag :: atom()) :: t()
   def on_animation_frame(event_tag) when is_atom(event_tag) do
-    %{type: :on_animation_frame, tag: event_tag}
+    %__MODULE__{type: :on_animation_frame, tag: event_tag}
   end
 
   @doc """
@@ -334,7 +341,7 @@ defmodule Toddy.Subscription do
   """
   @spec on_file_drop(event_tag :: atom()) :: t()
   def on_file_drop(event_tag) when is_atom(event_tag) do
-    %{type: :on_file_drop, tag: event_tag}
+    %__MODULE__{type: :on_file_drop, tag: event_tag}
   end
 
   @doc """
@@ -346,22 +353,33 @@ defmodule Toddy.Subscription do
   """
   @spec on_event(event_tag :: atom()) :: t()
   def on_event(event_tag) when is_atom(event_tag) do
-    %{type: :on_event, tag: event_tag}
+    %__MODULE__{type: :on_event, tag: event_tag}
   end
 
-  @doc "Combines a list of subscriptions. Identity function -- returns the list as-is."
+  @doc """
+  Combines a list of subscriptions. Validates that all elements are
+  `%Subscription{}` structs and returns the list.
+  """
   @spec batch(subscriptions :: [t()]) :: [t()]
-  def batch(subscriptions) when is_list(subscriptions), do: subscriptions
+  def batch(subscriptions) when is_list(subscriptions) do
+    Enum.each(subscriptions, fn
+      %__MODULE__{} -> :ok
+      other -> raise ArgumentError, "expected %Toddy.Subscription{}, got: #{inspect(other)}"
+    end)
+
+    subscriptions
+  end
 
   @doc """
   Returns a key that uniquely identifies this subscription spec.
   Two specs with the same key are considered the same subscription.
   """
   @spec key(sub :: t()) :: {:every, pos_integer(), atom()} | {atom(), atom()}
-  def key(%{type: type, tag: tag} = sub) do
-    case type do
-      :every -> {:every, Map.get(sub, :interval), tag}
-      other -> {other, tag}
-    end
+  def key(%__MODULE__{type: :every, tag: tag, interval: interval}) do
+    {:every, interval, tag}
+  end
+
+  def key(%__MODULE__{type: type, tag: tag}) do
+    {type, tag}
   end
 end
