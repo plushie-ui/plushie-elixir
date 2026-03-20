@@ -114,7 +114,7 @@ defmodule Toddy.Widget.TableTest do
       assert node.props[:rows] == @rows
       assert node.props[:header] == true
       assert node.props[:sort_by] == "age"
-      assert node.props[:sort_order] == "desc"
+      assert node.props[:sort_order] == :desc
     end
 
     test "omits nil props" do

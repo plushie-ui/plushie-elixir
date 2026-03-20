@@ -98,7 +98,7 @@ defmodule Toddy.Widget.RichTextTest do
 
       assert node.props[:spans] == spans
       assert node.props[:size] == 14
-      assert node.props[:width] == "fill"
+      assert node.props[:width] == :fill
     end
 
     test "omits nil props" do

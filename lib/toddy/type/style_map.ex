@@ -159,15 +159,15 @@ end
 defimpl Toddy.Encode, for: Toddy.Type.StyleMap do
   def encode(style_map) do
     %{}
-    |> put_field("base", encode_base(style_map.base))
-    |> put_field("background", style_map.background)
-    |> put_field("text_color", style_map.text_color)
-    |> put_field("border", style_map.border)
-    |> put_field("shadow", style_map.shadow)
-    |> put_field("hovered", encode_override(style_map.hovered))
-    |> put_field("pressed", encode_override(style_map.pressed))
-    |> put_field("disabled", encode_override(style_map.disabled))
-    |> put_field("focused", encode_override(style_map.focused))
+    |> put_field(:base, encode_base(style_map.base))
+    |> put_field(:background, style_map.background)
+    |> put_field(:text_color, style_map.text_color)
+    |> put_field(:border, style_map.border)
+    |> put_field(:shadow, style_map.shadow)
+    |> put_field(:hovered, encode_override(style_map.hovered))
+    |> put_field(:pressed, encode_override(style_map.pressed))
+    |> put_field(:disabled, encode_override(style_map.disabled))
+    |> put_field(:focused, encode_override(style_map.focused))
   end
 
   defp put_field(map, _key, nil), do: map
@@ -180,9 +180,9 @@ defimpl Toddy.Encode, for: Toddy.Type.StyleMap do
 
   defp encode_override(override) when is_map(override) do
     %{}
-    |> put_field("background", Map.get(override, :background))
-    |> put_field("text_color", Map.get(override, :text_color))
-    |> put_field("border", Map.get(override, :border))
-    |> put_field("shadow", Map.get(override, :shadow))
+    |> put_field(:background, Map.get(override, :background))
+    |> put_field(:text_color, Map.get(override, :text_color))
+    |> put_field(:border, Map.get(override, :border))
+    |> put_field(:shadow, Map.get(override, :shadow))
   end
 end

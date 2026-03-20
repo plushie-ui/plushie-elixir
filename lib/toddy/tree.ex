@@ -384,24 +384,6 @@ defmodule Toddy.Tree do
     old_idx - Enum.count(removed_indices, &(&1 < old_idx))
   end
 
-  @doc """
-  Converts atom keys in a map to string keys.
-
-  Recursively stringifies nested map values. Does NOT recurse into
-  lists (child nodes are not prop values and must not be treated as such).
-
-  This is the public API used by the protocol encoding boundary to
-  stringify prop keys just before wire serialization.
-  """
-  @spec stringify_keys(map :: map()) :: %{String.t() => term()}
-  def stringify_keys(%{} = map) do
-    Map.new(map, fn
-      {k, v} when is_atom(k) -> {Atom.to_string(k), stringify_value(v)}
-      {k, v} when is_binary(k) -> {k, stringify_value(v)}
-      {k, v} -> {inspect(k), stringify_value(v)}
-    end)
-  end
-
   # Ensures all keys in the map are atoms. String keys from manually
   # constructed node maps are converted; atom keys pass through.
   defp atomize_keys(%{} = map) do
@@ -453,41 +435,6 @@ defmodule Toddy.Tree do
   defp do_find_all(node, fun, acc) do
     if fun.(node), do: [node | acc], else: acc
   end
-
-  # Structs must be encoded before key stringification -- otherwise they
-  # match the bare map clause and get destructured into raw struct fields.
-  defp stringify_value(%_{} = v), do: Toddy.Encode.encode(v)
-
-  # Recurse into nested maps for stringify_keys, but not lists.
-  # Lists in props are treated as scalar sequences (e.g. color tuples, ranges),
-  # not as child node collections.
-  defp stringify_value(%{} = v), do: stringify_keys(v)
-
-  defp stringify_value(list) when is_list(list) do
-    Enum.map(list, &stringify_value/1)
-  end
-
-  # Tuples can leak into props from incorrect function calls (e.g. keyword
-  # opts passed as positional args). Convert to list for wire-format compat
-  # -- matches the behaviour of Toddy.Encode.Tuple.
-  defp stringify_value(tuple) when is_tuple(tuple) do
-    tuple |> Tuple.to_list() |> Enum.map(&stringify_value/1)
-  end
-
-  # Atoms that leak through from manually-constructed nodes (not via the
-  # builder layer) must be converted to strings for the wire format.
-  # true/false/nil are JSON-native and pass through as-is.
-  defp stringify_value(true), do: true
-  defp stringify_value(false), do: false
-  defp stringify_value(nil), do: nil
-  defp stringify_value(v) when is_atom(v), do: Atom.to_string(v)
-
-  # Strings, numbers, and booleans are already JSON-safe primitives.
-  # Props are processed twice: once in the builder (put_if encodes values)
-  # and once in Tree.normalize (stringify_keys converts atom keys to
-  # strings). The value encoding in normalize is a no-op for
-  # already-encoded values -- no protocol dispatch overhead.
-  defp stringify_value(v), do: v
 
   # Fetches a field by atom key first, then string key, returning nil if absent.
   defp fetch_field(map, atom_key, string_key) do

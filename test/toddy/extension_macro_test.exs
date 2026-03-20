@@ -234,19 +234,19 @@ defmodule Toddy.ExtensionMacroTest do
       assert node.props[:color] == "#ff0000"
     end
 
-    test "length values are encoded" do
+    test "length values are stored raw" do
       node = GaugeExtension.new("g1", value: 0, width: :fill) |> GaugeExtension.build()
-      assert node.props[:width] == "fill"
+      assert node.props[:width] == :fill
     end
 
-    test "alignment values are encoded" do
+    test "alignment values are stored raw" do
       node = ContainerNative.new("p1") |> ContainerNative.build()
-      assert node.props[:align] == "center"
+      assert node.props[:align] == :center
     end
 
-    test "atom values are converted to strings" do
+    test "atom values are stored raw" do
       node = TypeKitchen.new("tk", an_atom: :hello) |> TypeKitchen.build()
-      assert node.props[:an_atom] == "hello"
+      assert node.props[:an_atom] == :hello
     end
 
     test "number passes through" do
@@ -395,26 +395,30 @@ defmodule Toddy.ExtensionMacroTest do
   # --- a11y prop support ----------------------------------------------------
 
   describe "a11y prop" do
-    test "a11y prop is encoded on leaf widget" do
-      node =
-        BadgeWidget.new("b1", a11y: %{role: :alert, label: "New items"}) |> BadgeWidget.build()
+    test "a11y prop is raw struct on leaf widget" do
+      a11y = %{role: :alert, label: "New items"}
+      node = BadgeWidget.new("b1", a11y: a11y) |> BadgeWidget.build()
 
-      assert node.props[:a11y]["role"] == "alert"
-      assert node.props[:a11y]["label"] == "New items"
+      assert %Toddy.Type.A11y{} = node.props[:a11y]
+      assert node.props[:a11y].role == :alert
+      assert node.props[:a11y].label == "New items"
     end
 
-    test "a11y prop is encoded on native widget" do
+    test "a11y prop is raw struct on native widget" do
+      a11y = %{role: :meter, label: "CPU"}
+
       node =
-        GaugeExtension.new("g1", value: 50, a11y: %{role: :meter, label: "CPU"})
+        GaugeExtension.new("g1", value: 50, a11y: a11y)
         |> GaugeExtension.build()
 
-      assert node.props[:a11y]["role"] == "meter"
-      assert node.props[:a11y]["label"] == "CPU"
+      assert %Toddy.Type.A11y{} = node.props[:a11y]
+      assert node.props[:a11y].role == :meter
+      assert node.props[:a11y].label == "CPU"
     end
 
     test "without a11y prop, no a11y key in props" do
       node = BadgeWidget.new("b1") |> BadgeWidget.build()
-      refute Map.has_key?(node.props, "a11y")
+      refute Map.has_key?(node.props, :a11y)
     end
   end
 
@@ -671,7 +675,7 @@ defmodule Toddy.ExtensionMacroTest do
       assert node.id == "g1"
       assert node.type == "gauge"
       assert node.props[:value] == 75
-      assert node.props[:width] == "fill"
+      assert node.props[:width] == :fill
     end
 
     test "build/1 on container includes children" do
@@ -685,8 +689,9 @@ defmodule Toddy.ExtensionMacroTest do
       widget = BadgeWidget.new("b1") |> BadgeWidget.a11y(%{role: :alert, label: "Alert"})
       assert %BadgeWidget{} = widget
       node = BadgeWidget.build(widget)
-      assert node.props[:a11y]["role"] == "alert"
-      assert node.props[:a11y]["label"] == "Alert"
+      assert %Toddy.Type.A11y{} = node.props[:a11y]
+      assert node.props[:a11y].role == :alert
+      assert node.props[:a11y].label == "Alert"
     end
 
     test "defaults are applied via setter encoding in build" do

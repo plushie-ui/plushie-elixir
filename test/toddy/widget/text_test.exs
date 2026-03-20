@@ -138,13 +138,13 @@ defmodule Toddy.Widget.TextTest do
         |> Text.build()
 
       assert node.props[:size] == 20
-      assert node.props[:wrapping] == "word"
-      assert node.props[:align_x] == "center"
+      assert node.props[:wrapping] == :word
+      assert node.props[:align_x] == :center
     end
 
     test "shaping encodes as text_shaping in props" do
       node = Text.new("t1", "Hi") |> Text.shaping(:advanced) |> Text.build()
-      assert node.props[:text_shaping] == "advanced"
+      assert node.props[:text_shaping] == :advanced
       refute Map.has_key?(node.props, "shaping")
     end
 

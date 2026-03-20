@@ -84,7 +84,7 @@ defmodule Toddy.Widget.QrCodeTest do
         |> QrCode.build()
 
       assert node.props[:cell_size] == 8
-      assert node.props[:error_correction] == "high"
+      assert node.props[:error_correction] == :high
       refute Map.has_key?(node.props, "cell_color")
       refute Map.has_key?(node.props, "background_color")
     end

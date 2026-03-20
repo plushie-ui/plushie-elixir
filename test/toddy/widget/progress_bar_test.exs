@@ -63,9 +63,9 @@ defmodule Toddy.Widget.ProgressBarTest do
       assert node.children == []
     end
 
-    test "includes range as two-element list in props" do
+    test "includes range as tuple in props" do
       node = ProgressBar.new("pb1", {0, 200}, 75) |> ProgressBar.build()
-      assert node.props[:range] == [0, 200]
+      assert node.props[:range] == {0, 200}
     end
 
     test "includes value in props" do
@@ -81,8 +81,8 @@ defmodule Toddy.Widget.ProgressBarTest do
         |> ProgressBar.vertical(true)
         |> ProgressBar.build()
 
-      assert node.props[:width] == "fill"
-      assert node.props[:style] == "warning"
+      assert node.props[:width] == :fill
+      assert node.props[:style] == :warning
       assert node.props[:vertical] == true
     end
 

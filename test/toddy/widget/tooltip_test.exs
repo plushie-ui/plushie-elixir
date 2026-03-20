@@ -89,9 +89,9 @@ defmodule Toddy.Widget.TooltipTest do
         Tooltip.new("tt1", "Tip", position: :top, gap: 5, style: :primary)
         |> Tooltip.build()
 
-      assert node.props[:position] == "top"
+      assert node.props[:position] == :top
       assert node.props[:gap] == 5
-      assert node.props[:style] == "primary"
+      assert node.props[:style] == :primary
     end
 
     test "includes delay in props when set" do

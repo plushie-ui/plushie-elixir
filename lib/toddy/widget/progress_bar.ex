@@ -102,11 +102,9 @@ defmodule Toddy.Widget.ProgressBar do
     import Toddy.Widget.Build
 
     def to_node(bar) do
-      {min, max} = bar.range
-
       props =
         %{}
-        |> put_if([min, max], :range)
+        |> put_if(bar.range, :range)
         |> put_if(bar.value, :value)
         |> put_if(bar.width, :width)
         |> put_if(bar.height, :height)

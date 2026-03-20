@@ -48,16 +48,17 @@ defmodule Toddy.Extension do
 
   ## Prop types
 
-  Supported prop types and their encoding:
+  Supported prop types. Values are stored raw; `Tree.normalize/1`
+  handles wire encoding in a single pass.
 
   - `:number`, `:string`, `:boolean` -- pass through
-  - `:color` -- normalized via `Toddy.Type.Color.cast/1`
-  - `:length` -- encoded via `Toddy.Encode.encode/1`
-  - `:padding` -- encoded via `Toddy.Encode.encode/1`
-  - `:alignment` -- encoded via `Toddy.Encode.encode/1`
+  - `:color` -- normalized via `Toddy.Type.Color.cast/1` (input casting)
+  - `:length` -- pass through (encoded by `Tree.normalize`)
+  - `:padding` -- pass through (encoded by `Tree.normalize`)
+  - `:alignment` -- pass through (encoded by `Tree.normalize`)
   - `:font` -- pass through
   - `:style` -- pass through (atom or StyleMap)
-  - `:atom` -- converted to string via `Atom.to_string/1`
+  - `:atom` -- pass through (encoded by `Tree.normalize`)
   - `:map`, `:any` -- pass through
   - `{:list, _}` -- pass through
 
@@ -675,16 +676,27 @@ defmodule Toddy.Extension do
   defp generate_widget_protocol(_module, type_string, container, props) do
     put_calls =
       Enum.map(props, fn {name, type, _opts} ->
-        encoder = protocol_encoder_for_type(type)
-
-        quote do
-          props =
-            Toddy.Widget.Build.put_if(
-              props,
-              widget.unquote(name),
-              unquote(name),
-              unquote(encoder)
-            )
+        # Color needs casting in to_node because struct defaults bypass setters.
+        # All other types store raw values -- Tree.normalize handles encoding.
+        if type == :color do
+          quote do
+            props =
+              Toddy.Widget.Build.put_if(
+                props,
+                widget.unquote(name),
+                unquote(name),
+                fn val -> Toddy.Type.Color.cast(val) end
+              )
+          end
+        else
+          quote do
+            props =
+              Toddy.Widget.Build.put_if(
+                props,
+                widget.unquote(name),
+                unquote(name)
+              )
+          end
         end
       end)
 
@@ -720,29 +732,6 @@ defmodule Toddy.Extension do
     end
   end
 
-  # Encoder for the protocol (to_node) -- uses the Build.put_if transform pattern.
-  # Returns a function AST that encodes the value for the wire.
-  defp protocol_encoder_for_type(:color) do
-    quote(do: fn val -> Toddy.Type.Color.cast(val) end)
-  end
-
-  defp protocol_encoder_for_type(type) when type in [:length, :padding, :alignment, :style] do
-    quote(do: fn val -> Toddy.Encode.encode(val) end)
-  end
-
-  defp protocol_encoder_for_type(:atom) do
-    quote(
-      do: fn
-        val when is_atom(val) -> Atom.to_string(val)
-        val when is_binary(val) -> val
-      end
-    )
-  end
-
-  defp protocol_encoder_for_type(_type) do
-    quote(do: fn val -> val end)
-  end
-
   @doc false
   def generate_prop_validation(props) do
     known_names = Enum.map(props, fn {name, _type, _opts} -> name end) ++ [:a11y, :do]
@@ -763,38 +752,8 @@ defmodule Toddy.Extension do
     end
   end
 
-  defp encoder_for_type(:length) do
-    quote do
-      fn val -> Toddy.Encode.encode(val) end
-    end
-  end
-
-  defp encoder_for_type(:padding) do
-    quote do
-      fn val -> Toddy.Encode.encode(val) end
-    end
-  end
-
-  defp encoder_for_type(:alignment) do
-    quote do
-      fn val -> Toddy.Encode.encode(val) end
-    end
-  end
-
-  defp encoder_for_type(:atom) do
-    quote do
-      fn val -> Atom.to_string(val) end
-    end
-  end
-
-  defp encoder_for_type(:style) do
-    quote do
-      fn val -> Toddy.Encode.encode(val) end
-    end
-  end
-
   defp encoder_for_type(_type) do
-    # :number, :string, :boolean, :font, :map, :any, {:list, _}
+    # All other types store raw values. Tree.normalize handles wire encoding.
     quote do
       fn val -> val end
     end

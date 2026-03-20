@@ -354,7 +354,7 @@ defmodule Toddy.UIParityTest do
 
     test "rich_text with spans" do
       node = H.rich_text_with_spans()
-      assert node.props[:spans] == [%{text: "hello", weight: "bold"}]
+      assert node.props[:spans] == [%{text: "hello", weight: :bold}]
     end
   end
 

@@ -85,16 +85,16 @@ defmodule Toddy.Type.BorderTest do
       assert encoded == %{color: "#ffffff", width: 1, radius: 0}
     end
 
-    test "encodes per-corner radius to string keys" do
+    test "encodes per-corner radius to atom keys" do
       border = Border.new() |> Border.rounded(0)
       border = %{border | radius: Border.radius(4, 4, 0, 0)}
       encoded = Border.encode(border)
 
       assert encoded.radius == %{
-               "top_left" => 4,
-               "top_right" => 4,
-               "bottom_right" => 0,
-               "bottom_left" => 0
+               top_left: 4,
+               top_right: 4,
+               bottom_right: 0,
+               bottom_left: 0
              }
     end
   end

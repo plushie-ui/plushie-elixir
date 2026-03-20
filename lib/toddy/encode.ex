@@ -1,10 +1,20 @@
 defprotocol Toddy.Encode do
   @moduledoc """
-  Protocol for encoding Elixir values to wire-format representations.
+  Protocol for encoding Elixir values to wire-safe representations.
 
-  Widget `to_node/1` implementations use `Build.put_if/3` which calls
-  `Encode.encode/1` automatically. Widget authors don't need to apply
-  manual transforms for atoms, tuples, or custom types.
+  This protocol is called during `Tree.normalize/1`, the single value
+  encoding pass that converts raw Elixir values into wire-compatible
+  forms. Widget builders (`Build.put_if/3`) do NOT call this protocol --
+  values stay as raw Elixir terms (atoms, tuples, structs) until
+  normalization.
+
+  Key stringification (atom keys to string keys) is NOT handled here.
+  That happens at the wire boundary in `Protocol.Encode.stringify_keys/1`,
+  which runs just before serialization.
+
+  Extension authors should implement this protocol for custom value
+  types that need special wire encoding (e.g. a struct that should
+  become a specific map shape on the wire).
 
   ## Primitive implementations
 
@@ -87,9 +97,9 @@ end
 defimpl Toddy.Encode, for: Toddy.Type.Shadow do
   def encode(shadow) do
     %{
-      "color" => shadow.color,
-      "offset" => [shadow.offset_x, shadow.offset_y],
-      "blur_radius" => shadow.blur_radius
+      color: shadow.color,
+      offset: [shadow.offset_x, shadow.offset_y],
+      blur_radius: shadow.blur_radius
     }
   end
 end
@@ -99,6 +109,6 @@ defimpl Toddy.Encode, for: Toddy.Type.A11y do
     a11y
     |> Map.from_struct()
     |> Enum.reject(fn {_, v} -> is_nil(v) end)
-    |> Map.new(fn {k, v} -> {to_string(k), Toddy.Encode.encode(v)} end)
+    |> Map.new(fn {k, v} -> {k, Toddy.Encode.encode(v)} end)
   end
 end

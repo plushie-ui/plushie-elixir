@@ -130,9 +130,9 @@ defmodule Toddy.TreeTest do
       node = %{id: "c", type: "container", props: %{style: style}, children: []}
       result = Tree.normalize(node)
 
-      # StyleMap is encoded to a string-keyed map by encode_prop_values
-      assert result.props[:style]["background"] == "#1b2435"
-      assert result.props[:style]["text_color"] == "#eaf0fb"
+      # StyleMap is encoded to an atom-keyed map by encode_prop_values
+      assert result.props[:style][:background] == "#1b2435"
+      assert result.props[:style][:text_color] == "#eaf0fb"
     end
   end
 
@@ -396,40 +396,40 @@ defmodule Toddy.TreeTest do
 
   describe "stringify_keys/1" do
     test "converts atom keys to string keys" do
-      result = Tree.stringify_keys(%{foo: 1, bar: 2})
+      result = Toddy.Protocol.Encode.stringify_keys(%{foo: 1, bar: 2})
       assert result == %{"foo" => 1, "bar" => 2}
     end
 
     test "leaves string keys unchanged" do
-      result = Tree.stringify_keys(%{"foo" => 1, "bar" => 2})
+      result = Toddy.Protocol.Encode.stringify_keys(%{"foo" => 1, "bar" => 2})
       assert result == %{"foo" => 1, "bar" => 2}
     end
 
     test "handles mixed atom and string keys" do
-      result = Tree.stringify_keys(%{:atom_key => "a", "string_key" => "b"})
+      result = Toddy.Protocol.Encode.stringify_keys(%{:atom_key => "a", "string_key" => "b"})
       assert result["atom_key"] == "a"
       assert result["string_key"] == "b"
     end
 
     test "recurses into nested maps" do
-      result = Tree.stringify_keys(%{outer: %{inner: "value"}})
+      result = Toddy.Protocol.Encode.stringify_keys(%{outer: %{inner: "value"}})
       assert result["outer"]["inner"] == "value"
     end
 
     test "converts atoms inside list values to strings" do
-      result = Tree.stringify_keys(%{colors: [:red, :green, :blue]})
+      result = Toddy.Protocol.Encode.stringify_keys(%{colors: [:red, :green, :blue]})
       assert result["colors"] == ["red", "green", "blue"]
     end
 
     test "preserves non-map scalar values" do
-      result = Tree.stringify_keys(%{n: 42, b: true, s: "text"})
+      result = Toddy.Protocol.Encode.stringify_keys(%{n: 42, b: true, s: "text"})
       assert result["n"] == 42
       assert result["b"] == true
       assert result["s"] == "text"
     end
 
     test "returns empty map for empty input" do
-      assert Tree.stringify_keys(%{}) == %{}
+      assert Toddy.Protocol.Encode.stringify_keys(%{}) == %{}
     end
   end
 

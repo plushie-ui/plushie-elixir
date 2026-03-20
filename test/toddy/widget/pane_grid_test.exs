@@ -91,7 +91,7 @@ defmodule Toddy.Widget.PaneGridTest do
     test "includes non-nil props" do
       node = PaneGrid.new("pg1", spacing: 5, width: :fill) |> PaneGrid.build()
       assert node.props[:spacing] == 5
-      assert node.props[:width] == "fill"
+      assert node.props[:width] == :fill
     end
 
     test "includes min_size in props when set" do

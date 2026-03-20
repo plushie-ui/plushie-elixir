@@ -71,7 +71,7 @@ defmodule Toddy.UITest do
   describe "button/3 with opts" do
     test "extra opts become atom-keyed props" do
       node = button("save", "Save", style: :primary, disabled: true)
-      assert node.props[:style] == "primary"
+      assert node.props[:style] == :primary
       assert node.props[:disabled] == true
     end
 
@@ -444,7 +444,7 @@ defmodule Toddy.UITest do
   describe "space/1 with opts" do
     test "opts become props" do
       node = space(width: :fill)
-      assert node.props[:width] == "fill"
+      assert node.props[:width] == :fill
     end
   end
 
@@ -627,7 +627,7 @@ defmodule Toddy.UITest do
       node = slider("volume", {0, 100}, 50)
       assert node.id == "volume"
       assert node.type == "slider"
-      assert node.props[:range] == [0, 100]
+      assert node.props[:range] == {0, 100}
       assert node.props[:value] == 50
       assert node.children == []
     end
@@ -637,8 +637,8 @@ defmodule Toddy.UITest do
     test "extra opts become atom-keyed props" do
       node = slider("volume", {0, 100}, 50, step: 5, width: :fill)
       assert node.props[:step] == 5
-      assert node.props[:width] == "fill"
-      assert node.props[:range] == [0, 100]
+      assert node.props[:width] == :fill
+      assert node.props[:range] == {0, 100}
     end
   end
 
@@ -651,7 +651,7 @@ defmodule Toddy.UITest do
       node = vertical_slider("brightness", {0, 255}, 128)
       assert node.id == "brightness"
       assert node.type == "vertical_slider"
-      assert node.props[:range] == [0, 255]
+      assert node.props[:range] == {0, 255}
       assert node.props[:value] == 128
       assert node.children == []
     end
@@ -689,7 +689,7 @@ defmodule Toddy.UITest do
     test "extra opts become atom-keyed props" do
       node = pick_list("country", ["UK", "US"], "UK", placeholder: "Choose...", width: :fill)
       assert node.props[:placeholder] == "Choose..."
-      assert node.props[:width] == "fill"
+      assert node.props[:width] == :fill
     end
   end
 
@@ -733,7 +733,7 @@ defmodule Toddy.UITest do
   describe "text_editor/3 with opts" do
     test "extra opts become atom-keyed props" do
       node = text_editor("notes", "Hello", width: :fill, height: 200)
-      assert node.props[:width] == "fill"
+      assert node.props[:width] == :fill
       assert node.props[:height] == 200
       assert node.props[:content] == "Hello"
     end
@@ -758,7 +758,7 @@ defmodule Toddy.UITest do
       node = image("logo", "/assets/logo.png", width: 200, height: 100, content_fit: :cover)
       assert node.props[:width] == 200
       assert node.props[:height] == 100
-      assert node.props[:content_fit] == "cover"
+      assert node.props[:content_fit] == :cover
     end
   end
 
@@ -781,7 +781,7 @@ defmodule Toddy.UITest do
       node = svg("icon", "/assets/icon.svg", width: 24, height: 24, content_fit: :contain)
       assert node.props[:width] == 24
       assert node.props[:height] == 24
-      assert node.props[:content_fit] == "contain"
+      assert node.props[:content_fit] == :contain
     end
   end
 
@@ -847,7 +847,7 @@ defmodule Toddy.UITest do
         end
 
       assert node.props[:tip] == "Save your work"
-      assert node.props[:position] == "top"
+      assert node.props[:position] == :top
       assert length(node.children) == 1
     end
   end

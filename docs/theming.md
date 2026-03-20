@@ -131,15 +131,15 @@ Each background key also supports a `_text` suffix (e.g.
 
 ```elixir
 window "main", theme: %{
-  "name" => "branded",
-  "background" => "#1a1a2e",
-  "text" => "#e0e0e0",
-  "primary" => "#0f3460",
+  name: "branded",
+  background: "#1a1a2e",
+  text: "#e0e0e0",
+  primary: "#0f3460",
   # Override the strong primary shade and its text color
-  "primary_strong" => "#1a5276",
-  "primary_strong_text" => "#ffffff",
+  primary_strong: "#1a5276",
+  primary_strong_text: "#ffffff",
   # Pin the weakest background for sidebar panels
-  "background_weakest" => "#0d0d1a"
+  background_weakest: "#0d0d1a"
 } do
   # ...
 end

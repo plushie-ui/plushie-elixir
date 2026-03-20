@@ -8,44 +8,44 @@ defmodule Toddy.Type.A11yTest do
     test "Button carries a11y prop through to_node" do
       btn = Button.new("b1", "Go", a11y: %{label: "Go forward"})
       node = Tree.normalize(Toddy.Widget.to_node(btn))
-      assert node.props[:a11y]["label"] == "Go forward"
+      assert node.props[:a11y][:label] == "Go forward"
     end
 
     test "Column carries a11y prop through to_node" do
       col = Column.new("col", a11y: %{role: :navigation})
       node = Tree.normalize(Toddy.Widget.to_node(col))
-      assert node.props[:a11y]["role"] == "navigation"
+      assert node.props[:a11y][:role] == "navigation"
     end
 
     test "Slider carries a11y prop through to_node" do
       sl = Slider.new("sl", {0, 100}, 50, a11y: %{label: "Volume"})
       node = Tree.normalize(Toddy.Widget.to_node(sl))
-      assert node.props[:a11y]["label"] == "Volume"
+      assert node.props[:a11y][:label] == "Volume"
     end
 
     test "Container with hidden a11y prop" do
       c = Container.new("c1", a11y: %{hidden: true})
       node = Tree.normalize(Toddy.Widget.to_node(c))
-      assert node.props[:a11y]["hidden"] == true
+      assert node.props[:a11y][:hidden] == true
     end
 
     test "Text with heading role and level" do
       t = Text.new("h1", "Title") |> Text.a11y(%{role: :heading, level: 1})
       node = Tree.normalize(Toddy.Widget.to_node(t))
-      assert node.props[:a11y]["role"] == "heading"
-      assert node.props[:a11y]["level"] == 1
+      assert node.props[:a11y][:role] == "heading"
+      assert node.props[:a11y][:level] == 1
     end
 
     test "a11y prop is nil by default" do
       btn = Button.new("b1", "Go")
       node = Tree.normalize(Toddy.Widget.to_node(btn))
-      refute Map.has_key?(node.props, "a11y")
+      refute Map.has_key?(node.props, :a11y)
     end
 
     test "a11y builder function works" do
       btn = Button.new("b1", "X") |> Button.a11y(%{label: "Close"})
       node = Tree.normalize(Toddy.Widget.to_node(btn))
-      assert node.props[:a11y]["label"] == "Close"
+      assert node.props[:a11y][:label] == "Close"
     end
   end
 
@@ -230,25 +230,25 @@ defmodule Toddy.Type.A11yTest do
     test "nil state fields are omitted from encoding" do
       a = %A11y{label: "test"}
       encoded = Toddy.Encode.encode(a)
-      refute Map.has_key?(encoded, "toggled")
-      refute Map.has_key?(encoded, "selected")
-      refute Map.has_key?(encoded, "value")
-      refute Map.has_key?(encoded, "orientation")
+      refute Map.has_key?(encoded, :toggled)
+      refute Map.has_key?(encoded, :selected)
+      refute Map.has_key?(encoded, :value)
+      refute Map.has_key?(encoded, :orientation)
     end
 
     test "present state fields are included in encoding" do
       a = %A11y{toggled: true, selected: false, value: "75%", orientation: :horizontal}
       encoded = Toddy.Encode.encode(a)
-      assert encoded["toggled"] == true
-      assert encoded["selected"] == false
-      assert encoded["value"] == "75%"
-      assert encoded["orientation"] == "horizontal"
+      assert encoded[:toggled] == true
+      assert encoded[:selected] == false
+      assert encoded[:value] == "75%"
+      assert encoded[:orientation] == "horizontal"
     end
 
     test "false toggled is preserved in encoding" do
       a = %A11y{toggled: false}
       encoded = Toddy.Encode.encode(a)
-      assert encoded["toggled"] == false
+      assert encoded[:toggled] == false
     end
   end
 
@@ -307,44 +307,44 @@ defmodule Toddy.Type.A11yTest do
     test "nil new fields are omitted from encoding" do
       a = %A11y{label: "test"}
       encoded = Toddy.Encode.encode(a)
-      refute Map.has_key?(encoded, "busy")
-      refute Map.has_key?(encoded, "invalid")
-      refute Map.has_key?(encoded, "modal")
-      refute Map.has_key?(encoded, "read_only")
-      refute Map.has_key?(encoded, "mnemonic")
+      refute Map.has_key?(encoded, :busy)
+      refute Map.has_key?(encoded, :invalid)
+      refute Map.has_key?(encoded, :modal)
+      refute Map.has_key?(encoded, :read_only)
+      refute Map.has_key?(encoded, :mnemonic)
     end
 
     test "present new fields are included in encoding" do
       a = %A11y{busy: true, invalid: true, modal: true, read_only: true, mnemonic: "S"}
       encoded = Toddy.Encode.encode(a)
-      assert encoded["busy"] == true
-      assert encoded["invalid"] == true
-      assert encoded["modal"] == true
-      assert encoded["read_only"] == true
-      assert encoded["mnemonic"] == "S"
+      assert encoded[:busy] == true
+      assert encoded[:invalid] == true
+      assert encoded[:modal] == true
+      assert encoded[:read_only] == true
+      assert encoded[:mnemonic] == "S"
     end
 
     test "false values are preserved in encoding" do
       a = %A11y{busy: false, invalid: false}
       encoded = Toddy.Encode.encode(a)
-      assert encoded["busy"] == false
-      assert encoded["invalid"] == false
+      assert encoded[:busy] == false
+      assert encoded[:invalid] == false
     end
 
     test "nil relationship fields are omitted from encoding" do
       a = %A11y{label: "test"}
       encoded = Toddy.Encode.encode(a)
-      refute Map.has_key?(encoded, "labelled_by")
-      refute Map.has_key?(encoded, "described_by")
-      refute Map.has_key?(encoded, "error_message")
+      refute Map.has_key?(encoded, :labelled_by)
+      refute Map.has_key?(encoded, :described_by)
+      refute Map.has_key?(encoded, :error_message)
     end
 
     test "present relationship fields are included in encoding" do
       a = %A11y{labelled_by: "lb", described_by: "db", error_message: "em"}
       encoded = Toddy.Encode.encode(a)
-      assert encoded["labelled_by"] == "lb"
-      assert encoded["described_by"] == "db"
-      assert encoded["error_message"] == "em"
+      assert encoded[:labelled_by] == "lb"
+      assert encoded[:described_by] == "db"
+      assert encoded[:error_message] == "em"
     end
   end
 end

@@ -108,7 +108,7 @@ defmodule Toddy.Widget.ScrollableTest do
         Scrollable.new("scr1", direction: :both, spacing: 4, on_scroll: true)
         |> Scrollable.build()
 
-      assert node.props[:direction] == "both"
+      assert node.props[:direction] == :both
       assert node.props[:spacing] == 4
       assert node.props[:on_scroll] == true
     end

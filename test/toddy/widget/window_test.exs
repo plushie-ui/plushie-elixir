@@ -134,8 +134,8 @@ defmodule Toddy.Widget.WindowTest do
 
       assert node.props[:title] == "App"
       assert node.props[:resizable] == false
-      # size is encoded via Toddy.Encode -- tuples become lists on the wire
-      assert node.props[:size] == [800, 600]
+      # size stays as a raw tuple; encoding happens in Tree.normalize
+      assert node.props[:size] == {800, 600}
     end
 
     test "omits nil props" do

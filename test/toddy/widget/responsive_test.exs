@@ -74,7 +74,7 @@ defmodule Toddy.Widget.ResponsiveTest do
 
     test "includes non-nil props" do
       node = Responsive.new("r1", width: :fill, height: 100) |> Responsive.build()
-      assert node.props[:width] == "fill"
+      assert node.props[:width] == :fill
       assert node.props[:height] == 100
     end
 

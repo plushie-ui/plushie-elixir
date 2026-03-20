@@ -149,8 +149,8 @@ defmodule Toddy.Widget.ImageTest do
 
       assert node.props[:width] == 320
       assert node.props[:height] == 240
-      assert node.props[:content_fit] == "contain"
-      assert node.props[:filter_method] == "nearest"
+      assert node.props[:content_fit] == :contain
+      assert node.props[:filter_method] == :nearest
       assert node.props[:rotation] == 90
       assert node.props[:opacity] == 0.8
       assert node.props[:border_radius] == 4

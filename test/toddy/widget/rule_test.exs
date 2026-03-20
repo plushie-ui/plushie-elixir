@@ -70,8 +70,8 @@ defmodule Toddy.Widget.RuleTest do
         |> Rule.build()
 
       assert node.props[:height] == 2
-      assert node.props[:direction] == "horizontal"
-      assert node.props[:style] == "default"
+      assert node.props[:direction] == :horizontal
+      assert node.props[:style] == :default
     end
 
     test "omits nil props" do

@@ -101,7 +101,7 @@ defmodule Toddy.Widget.SvgTest do
 
       assert node.props[:width] == 32
       assert node.props[:height] == 32
-      assert node.props[:content_fit] == "contain"
+      assert node.props[:content_fit] == :contain
       assert node.props[:rotation] == 90
       assert node.props[:opacity] == 0.75
       assert node.props[:color] == "#00ff00"

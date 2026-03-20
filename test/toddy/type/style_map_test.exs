@@ -121,7 +121,7 @@ defmodule Toddy.Type.StyleMapTest do
   # -- Encode protocol --------------------------------------------------------
 
   describe "Encode protocol" do
-    test "encodes a fully-populated style map to string-keyed wire map" do
+    test "encodes a fully-populated style map to atom-keyed wire map" do
       border = Border.new() |> Border.color("#000000") |> Border.width(1) |> Border.rounded(4)
 
       shadow =
@@ -136,30 +136,30 @@ defmodule Toddy.Type.StyleMapTest do
 
       encoded = Encode.encode(style)
 
-      assert encoded["background"] == "#ff0000"
-      assert encoded["text_color"] == "#ffffff"
-      assert is_map(encoded["border"])
-      assert is_map(encoded["shadow"])
-      assert encoded["shadow"]["color"] == "#00000040"
-      assert encoded["shadow"]["offset"] == [2, 2]
-      assert encoded["shadow"]["blur_radius"] == 6
+      assert encoded[:background] == "#ff0000"
+      assert encoded[:text_color] == "#ffffff"
+      assert is_map(encoded[:border])
+      assert is_map(encoded[:shadow])
+      assert encoded[:shadow][:color] == "#00000040"
+      assert encoded[:shadow][:offset] == [2, 2]
+      assert encoded[:shadow][:blur_radius] == 6
     end
 
     test "omits nil fields from the wire map" do
       style = StyleMap.new() |> StyleMap.background("#336699")
       encoded = Encode.encode(style)
 
-      assert encoded["background"] == "#336699"
-      refute Map.has_key?(encoded, "text_color")
-      refute Map.has_key?(encoded, "border")
-      refute Map.has_key?(encoded, "shadow")
-      refute Map.has_key?(encoded, "hovered")
-      refute Map.has_key?(encoded, "pressed")
-      refute Map.has_key?(encoded, "disabled")
-      refute Map.has_key?(encoded, "focused")
+      assert encoded[:background] == "#336699"
+      refute Map.has_key?(encoded, :text_color)
+      refute Map.has_key?(encoded, :border)
+      refute Map.has_key?(encoded, :shadow)
+      refute Map.has_key?(encoded, :hovered)
+      refute Map.has_key?(encoded, :pressed)
+      refute Map.has_key?(encoded, :disabled)
+      refute Map.has_key?(encoded, :focused)
     end
 
-    test "includes status overrides as nested maps with string keys" do
+    test "includes status overrides as nested maps with atom keys" do
       style =
         StyleMap.new()
         |> StyleMap.hovered(%{background: "#aaaaaa"})
@@ -167,9 +167,9 @@ defmodule Toddy.Type.StyleMapTest do
 
       encoded = Encode.encode(style)
 
-      assert encoded["hovered"]["background"] == "#aaaaaa"
-      assert encoded["pressed"]["background"] == "#555555"
-      assert encoded["pressed"]["text_color"] == "#ffffff"
+      assert encoded[:hovered][:background] == "#aaaaaa"
+      assert encoded[:pressed][:background] == "#555555"
+      assert encoded[:pressed][:text_color] == "#ffffff"
     end
 
     test "full builder chain produces expected encoded output" do
@@ -187,23 +187,23 @@ defmodule Toddy.Type.StyleMapTest do
       encoded = Encode.encode(style)
 
       # Base properties
-      assert encoded["background"] == "#ff6600"
-      assert encoded["text_color"] == "#ffffff"
+      assert encoded[:background] == "#ff6600"
+      assert encoded[:text_color] == "#ffffff"
 
       # Border encoded as map
-      assert encoded["border"][:color] == "#333333"
-      assert encoded["border"][:width] == 2
-      assert encoded["border"][:radius] == 8
+      assert encoded[:border][:color] == "#333333"
+      assert encoded[:border][:width] == 2
+      assert encoded[:border][:radius] == 8
 
       # Status overrides
-      assert encoded["hovered"]["background"] == "#ff8833"
-      assert encoded["pressed"]["background"] == "#ff0000"
-      assert encoded["disabled"]["background"] == "#cccccc"
-      assert encoded["disabled"]["text_color"] == "#999999"
+      assert encoded[:hovered][:background] == "#ff8833"
+      assert encoded[:pressed][:background] == "#ff0000"
+      assert encoded[:disabled][:background] == "#cccccc"
+      assert encoded[:disabled][:text_color] == "#999999"
 
       # Not set
-      refute Map.has_key?(encoded, "focused")
-      refute Map.has_key?(encoded, "shadow")
+      refute Map.has_key?(encoded, :focused)
+      refute Map.has_key?(encoded, :shadow)
     end
   end
 end

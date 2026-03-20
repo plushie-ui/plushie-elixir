@@ -106,7 +106,7 @@ defmodule Toddy.EncodeTest do
   end
 
   describe "Shadow" do
-    test "encodes to wire format with string keys" do
+    test "encodes to wire format with atom keys" do
       shadow =
         Shadow.new()
         |> Shadow.color("#333333")
@@ -114,17 +114,17 @@ defmodule Toddy.EncodeTest do
         |> Shadow.blur_radius(6.0)
 
       assert Encode.encode(shadow) == %{
-               "color" => "#333333",
-               "offset" => [4, 8],
-               "blur_radius" => 6.0
+               color: "#333333",
+               offset: [4, 8],
+               blur_radius: 6.0
              }
     end
 
     test "encodes default shadow" do
       assert Encode.encode(Shadow.new()) == %{
-               "color" => "#000000",
-               "offset" => [0, 0],
-               "blur_radius" => 0
+               color: "#000000",
+               offset: [0, 0],
+               blur_radius: 0
              }
     end
   end

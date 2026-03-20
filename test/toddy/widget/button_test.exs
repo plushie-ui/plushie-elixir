@@ -91,8 +91,8 @@ defmodule Toddy.Widget.ButtonTest do
         |> Button.disabled(true)
         |> Button.build()
 
-      assert node.props[:width] == "fill"
-      assert node.props[:style] == "secondary"
+      assert node.props[:width] == :fill
+      assert node.props[:style] == :secondary
       assert node.props[:disabled] == true
     end
 

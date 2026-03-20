@@ -86,7 +86,7 @@ defmodule Toddy.Type.Border do
   end
 
   defp encode_radius(%{top_left: tl, top_right: tr, bottom_right: br, bottom_left: bl}) do
-    %{"top_left" => tl, "top_right" => tr, "bottom_right" => br, "bottom_left" => bl}
+    %{top_left: tl, top_right: tr, bottom_right: br, bottom_left: bl}
   end
 
   defp encode_radius(radius), do: radius

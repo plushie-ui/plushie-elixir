@@ -71,7 +71,7 @@ defmodule Toddy.Widget.MouseAreaTest do
 
       assert node.id == "ma1"
       assert node.type == "mouse_area"
-      assert node.props[:cursor] == "pointer"
+      assert node.props[:cursor] == :pointer
     end
 
     test "omits cursor from props when nil" do

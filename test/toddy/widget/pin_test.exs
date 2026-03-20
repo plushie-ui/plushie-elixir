@@ -82,7 +82,7 @@ defmodule Toddy.Widget.PinTest do
       node = Pin.new("p1", x: 10, y: 20, width: :fill, height: 100) |> Pin.build()
       assert node.props[:x] == 10
       assert node.props[:y] == 20
-      assert node.props[:width] == "fill"
+      assert node.props[:width] == :fill
       assert node.props[:height] == 100
     end
 

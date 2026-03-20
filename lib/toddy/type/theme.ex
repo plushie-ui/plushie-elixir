@@ -34,13 +34,13 @@ defmodule Toddy.Type.Theme do
 
       # Custom theme with shade overrides
       theme = %{
-        "name" => "my-theme",
-        "background" => "#1a1a2e",
-        "text" => "#e0e0e0",
-        "primary" => "#0f3460",
-        "primary_strong" => "#1a5276",
-        "primary_strong_text" => "#ffffff",
-        "background_weakest" => "#0d0d1a"
+        name: "my-theme",
+        background: "#1a1a2e",
+        text: "#e0e0e0",
+        primary: "#0f3460",
+        primary_strong: "#1a5276",
+        primary_strong_text: "#ffffff",
+        background_weakest: "#0d0d1a"
       }
 
   Any shade key you omit keeps the auto-generated value.
@@ -105,22 +105,22 @@ defmodule Toddy.Type.Theme do
   ## Examples
 
       iex> Toddy.Type.Theme.custom("Tokyo Remix", primary: "#7aa2f7", danger: "#f7768e")
-      %{"name" => "Tokyo Remix", "primary" => "#7aa2f7", "danger" => "#f7768e"}
+      %{name: "Tokyo Remix", primary: "#7aa2f7", danger: "#f7768e"}
 
       iex> Toddy.Type.Theme.custom("Nord+", base: :nord, primary: "#88c0d0")
-      %{"name" => "Nord+", "base" => "nord", "primary" => "#88c0d0"}
+      %{name: "Nord+", base: "nord", primary: "#88c0d0"}
   """
   @spec custom(name :: String.t(), opts :: keyword()) :: map()
   def custom(name, opts \\ []) when is_binary(name) and is_list(opts) do
     {base, opts} = Keyword.pop(opts, :base)
 
-    result = %{"name" => name}
-    result = maybe_put(result, "base", encode_base(base))
+    result = %{name: name}
+    result = maybe_put(result, :base, encode_base(base))
 
     # Every remaining key is a color (core palette, shade overrides,
     # or text overrides). All are cast to canonical hex.
     Enum.reduce(opts, result, fn {key, value}, acc ->
-      Map.put(acc, Atom.to_string(key), Toddy.Type.Color.cast(value))
+      Map.put(acc, key, Toddy.Type.Color.cast(value))
     end)
   end
 

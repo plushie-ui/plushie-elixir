@@ -47,7 +47,7 @@ defmodule Toddy.Widget.SpaceTest do
 
     test "includes non-nil props" do
       node = Space.new("s1") |> Space.width(:fill) |> Space.height(30) |> Space.build()
-      assert node.props[:width] == "fill"
+      assert node.props[:width] == :fill
       assert node.props[:height] == 30
     end
 

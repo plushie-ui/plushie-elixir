@@ -4,7 +4,7 @@ defmodule Toddy.Widget.Build do
   @doc "Adds `key => value` to props if value is not nil."
   @spec put_if(props :: map(), value :: term(), key :: atom()) :: map()
   def put_if(props, nil, _key), do: props
-  def put_if(props, value, key), do: Map.put(props, key, Toddy.Encode.encode(value))
+  def put_if(props, value, key), do: Map.put(props, key, value)
 
   @doc "Adds `key => transform.(value)` to props if value is not nil."
   @spec put_if(
