@@ -1,11 +1,14 @@
 defmodule Toddy.ProtocolTest do
   use ExUnit.Case, async: true
 
+  alias Toddy.Event.Canvas
   alias Toddy.Event.Effect
   alias Toddy.Event.Ime
   alias Toddy.Event.Key
   alias Toddy.Event.Modifiers
   alias Toddy.Event.MouseArea
+  alias Toddy.Event.System, as: SystemEvent
+  alias Toddy.Event.Touch
   alias Toddy.Event.Widget
 
   alias Toddy.Protocol
@@ -211,16 +214,14 @@ defmodule Toddy.ProtocolTest do
     end
   end
 
-  describe "decode_message/1 -- key events" do
-    test "decodes a named key to %Key{type: :press, }" do
+  describe "decode_message/1 -- key events (key in data.key)" do
+    test "decodes a named key to %Key{type: :press}" do
       json =
         Jason.encode!(%{
           type: "event",
           family: "key_press",
-          id: "",
-          value: "Escape",
-          tag: "keys",
-          modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
+          modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false},
+          data: %{key: "Escape"}
         })
 
       assert %Key{type: :press, key: :escape} = Protocol.decode_message(json, :json)
@@ -231,10 +232,8 @@ defmodule Toddy.ProtocolTest do
         Jason.encode!(%{
           type: "event",
           family: "key_press",
-          id: "",
-          value: "a",
-          tag: "keys",
-          modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
+          modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false},
+          data: %{key: "a"}
         })
 
       assert %Key{type: :press, key: "a"} = Protocol.decode_message(json, :json)
@@ -245,10 +244,8 @@ defmodule Toddy.ProtocolTest do
         Jason.encode!(%{
           type: "event",
           family: "key_press",
-          id: "",
-          value: "s",
-          tag: "keys",
-          modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false}
+          modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false},
+          data: %{key: "s"}
         })
 
       %Key{type: :press, modifiers: mods} = Protocol.decode_message(json, :json)
@@ -265,10 +262,8 @@ defmodule Toddy.ProtocolTest do
         Jason.encode!(%{
           type: "event",
           family: "key_press",
-          id: "",
-          value: "c",
-          tag: "keys",
-          modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false}
+          modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false},
+          data: %{key: "c"}
         })
 
       %Key{type: :press, modifiers: mods} = Protocol.decode_message(json, :json)
@@ -281,10 +276,8 @@ defmodule Toddy.ProtocolTest do
         Jason.encode!(%{
           type: "event",
           family: "key_press",
-          id: "",
-          value: "z",
-          tag: "keys",
-          modifiers: %{}
+          modifiers: %{},
+          data: %{key: "z"}
         })
 
       %Key{type: :press, modifiers: mods} = Protocol.decode_message(json, :json)
@@ -297,10 +290,8 @@ defmodule Toddy.ProtocolTest do
         Jason.encode!(%{
           type: "event",
           family: "key_release",
-          id: "",
-          value: "Enter",
-          tag: "keys",
-          modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
+          modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false},
+          data: %{key: "Enter"}
         })
 
       assert %Key{type: :release, key: :enter} = Protocol.decode_message(json, :json)
@@ -311,11 +302,9 @@ defmodule Toddy.ProtocolTest do
         Jason.encode!(%{
           type: "event",
           family: "key_press",
-          id: "",
-          value: "a",
-          tag: "keys",
           modifiers: %{ctrl: false, shift: true, alt: false, logo: false, command: false},
           data: %{
+            key: "a",
             modified_key: "A",
             physical_key: "KeyA",
             location: "standard",
@@ -348,68 +337,80 @@ defmodule Toddy.ProtocolTest do
     end
   end
 
-  describe "decode_message/1 -- IME events" do
-    test "decodes ime opened" do
+  describe "decode_message/1 -- IME events (separate families)" do
+    test "decodes ime_opened" do
       json =
         Jason.encode!(%{
           type: "event",
-          family: "ime",
-          tag: "ime_tag",
-          data: %{kind: "opened"}
+          family: "ime_opened",
+          id: "editor"
         })
 
-      assert %Ime{type: :opened, captured: false} = Protocol.decode_message(json, :json)
-    end
-
-    test "decodes ime preedit with cursor" do
-      json =
-        Jason.encode!(%{
-          type: "event",
-          family: "ime",
-          tag: "ime_tag",
-          data: %{kind: "preedit", text: "hello", cursor: %{start: 2, end: 5}}
-        })
-
-      assert %Ime{type: :preedit, text: "hello", cursor: {2, 5}, captured: false} =
+      assert %Ime{type: :opened, id: "editor", scope: [], captured: false} =
                Protocol.decode_message(json, :json)
     end
 
-    test "decodes ime preedit without cursor" do
+    test "decodes ime_preedit with cursor" do
       json =
         Jason.encode!(%{
           type: "event",
-          family: "ime",
-          tag: "ime_tag",
-          data: %{kind: "preedit", text: "hi", cursor: nil}
+          family: "ime_preedit",
+          id: "editor",
+          data: %{text: "hello", cursor: %{start: 2, end: 5}}
         })
 
-      assert %Ime{type: :preedit, text: "hi", cursor: nil, captured: false} =
+      assert %Ime{type: :preedit, id: "editor", text: "hello", cursor: {2, 5}, captured: false} =
                Protocol.decode_message(json, :json)
     end
 
-    test "decodes ime commit" do
+    test "decodes ime_preedit without cursor" do
       json =
         Jason.encode!(%{
           type: "event",
-          family: "ime",
-          tag: "ime_tag",
-          data: %{kind: "commit", text: "final"}
+          family: "ime_preedit",
+          id: "editor",
+          data: %{text: "hi"}
         })
 
-      assert %Ime{type: :commit, text: "final", captured: false} =
+      assert %Ime{type: :preedit, id: "editor", text: "hi", cursor: nil, captured: false} =
                Protocol.decode_message(json, :json)
     end
 
-    test "decodes ime closed" do
+    test "decodes ime_commit" do
       json =
         Jason.encode!(%{
           type: "event",
-          family: "ime",
-          tag: "ime_tag",
-          data: %{kind: "closed"}
+          family: "ime_commit",
+          id: "editor",
+          data: %{text: "final"}
         })
 
-      assert %Ime{type: :closed, captured: false} = Protocol.decode_message(json, :json)
+      assert %Ime{type: :commit, id: "editor", text: "final", captured: false} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "decodes ime_closed" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "ime_closed",
+          id: "editor"
+        })
+
+      assert %Ime{type: :closed, id: "editor", captured: false} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "scoped ime event splits id and scope" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "ime_opened",
+          id: "form/editor"
+        })
+
+      assert %Ime{type: :opened, id: "editor", scope: ["form"]} =
+               Protocol.decode_message(json, :json)
     end
   end
 
@@ -958,7 +959,22 @@ defmodule Toddy.ProtocolTest do
   # ---------------------------------------------------------------------------
 
   describe "decode_message/1 -- hello" do
-    test "decodes a hello message to {:hello, protocol, version, name}" do
+    test "decodes a hello message with backend and extensions" do
+      json =
+        Jason.encode!(%{
+          type: "hello",
+          protocol: 1,
+          version: "0.3.2",
+          name: "toddy",
+          backend: "tiny-skia",
+          extensions: ["charts"]
+        })
+
+      assert {:hello, 1, "0.3.2", "toddy", "tiny-skia", ["charts"]} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "hello defaults backend and extensions when absent" do
       json =
         Jason.encode!(%{
           type: "hello",
@@ -967,19 +983,24 @@ defmodule Toddy.ProtocolTest do
           name: "toddy"
         })
 
-      assert {:hello, 1, "0.3.0", "toddy"} = Protocol.decode_message(json, :json)
+      assert {:hello, 1, "0.3.0", "toddy", "unknown", []} =
+               Protocol.decode_message(json, :json)
     end
 
     test "decodes hello from msgpack" do
       msg = %{
         "type" => "hello",
         "protocol" => 1,
-        "version" => "0.2.0",
-        "name" => "toddy"
+        "version" => "0.3.2",
+        "name" => "toddy",
+        "backend" => "wgpu",
+        "extensions" => []
       }
 
       packed = Msgpax.pack!(msg, iodata: false)
-      assert {:hello, 1, "0.2.0", "toddy"} = Protocol.decode_message(packed, :msgpack)
+
+      assert {:hello, 1, "0.3.2", "toddy", "wgpu", []} =
+               Protocol.decode_message(packed, :msgpack)
     end
   end
 
@@ -1020,6 +1041,127 @@ defmodule Toddy.ProtocolTest do
       {:ok, decoded} = Msgpax.unpack(result)
       assert decoded["type"] == "extension_commands"
       assert length(decoded["commands"]) == 1
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # decode_message/1 -- touch events (id field rename)
+  # ---------------------------------------------------------------------------
+
+  describe "decode_message/1 -- touch events (wire id field)" do
+    test "decodes finger_pressed with data.id" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "finger_pressed",
+          data: %{id: 0, x: 50.0, y: 75.0}
+        })
+
+      assert %Touch{type: :pressed, finger_id: 0, x: 50.0, y: 75.0} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "decodes finger_moved with data.id" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "finger_moved",
+          data: %{id: 1, x: 60.0, y: 80.0}
+        })
+
+      assert %Touch{type: :moved, finger_id: 1, x: 60.0, y: 80.0} =
+               Protocol.decode_message(json, :json)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # decode_message/1 -- canvas scroll (cursor_x/cursor_y)
+  # ---------------------------------------------------------------------------
+
+  describe "decode_message/1 -- canvas_scroll field rename" do
+    test "reads cursor_x/cursor_y into x/y struct fields" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "canvas_scroll",
+          id: "viewport",
+          data: %{cursor_x: 5.0, cursor_y: 10.0, delta_x: 0.0, delta_y: -1.0}
+        })
+
+      assert %Canvas{type: :scroll, id: "viewport", x: 5.0, y: 10.0, delta_x: +0.0, delta_y: -1.0} =
+               Protocol.decode_message(json, :json)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # decode_message/1 -- session events
+  # ---------------------------------------------------------------------------
+
+  describe "decode_message/1 -- session events" do
+    test "decodes session_error" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "session_error",
+          session: "s1",
+          id: "",
+          data: %{error: "session panicked"}
+        })
+
+      assert {:session_error, "s1", "session panicked"} = Protocol.decode_message(json, :json)
+    end
+
+    test "decodes session_closed" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "session_closed",
+          session: "s2",
+          id: "",
+          data: %{reason: "reset"}
+        })
+
+      assert {:session_closed, "s2", "reset"} = Protocol.decode_message(json, :json)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # decode_message/1 -- announce event
+  # ---------------------------------------------------------------------------
+
+  describe "decode_message/1 -- announce event" do
+    test "decodes announce as System event" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "announce",
+          id: "",
+          data: %{text: "Item saved"}
+        })
+
+      assert %SystemEvent{type: :announce, data: "Item saved"} =
+               Protocol.decode_message(json, :json)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # decode_message/1 -- duplicate_node_ids error
+  # ---------------------------------------------------------------------------
+
+  describe "decode_message/1 -- duplicate_node_ids error" do
+    test "decodes duplicate_node_ids error as System event" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "error",
+          id: "duplicate_node_ids",
+          data: %{error: "duplicate IDs found", duplicates: ["btn1 (button)", "btn1 (text)"]}
+        })
+
+      assert %SystemEvent{type: :error, data: %{error: "duplicate_node_ids", details: details}} =
+               Protocol.decode_message(json, :json)
+
+      assert details["duplicates"] == ["btn1 (button)", "btn1 (text)"]
     end
   end
 end

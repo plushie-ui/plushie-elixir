@@ -19,13 +19,13 @@ defmodule Toddy.ProtocolParityTest do
   # ---------------------------------------------------------------------------
 
   describe "key_press event decoding" do
-    test "decodes named key with modifiers" do
+    test "decodes named key with modifiers (key in data)" do
       json =
         Jason.encode!(%{
           type: "event",
           family: "key_press",
-          value: "Escape",
-          modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
+          modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false},
+          data: %{key: "Escape"}
         })
 
       assert %Key{type: :press, key: :escape, modifiers: %Toddy.KeyModifiers{ctrl: false}} =
@@ -37,8 +37,8 @@ defmodule Toddy.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "key_press",
-          value: "a",
-          modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false}
+          modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false},
+          data: %{key: "a"}
         })
 
       assert %Key{type: :press, key: "a", modifiers: %Toddy.KeyModifiers{ctrl: true}} =
@@ -50,8 +50,8 @@ defmodule Toddy.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "key_press",
-          value: "Tab",
-          modifiers: %{ctrl: true, shift: true, alt: false, logo: false, command: false}
+          modifiers: %{ctrl: true, shift: true, alt: false, logo: false, command: false},
+          data: %{key: "Tab"}
         })
 
       assert %Key{
@@ -63,13 +63,13 @@ defmodule Toddy.ProtocolParityTest do
   end
 
   describe "key_release event decoding" do
-    test "decodes named key release" do
+    test "decodes named key release (key in data)" do
       json =
         Jason.encode!(%{
           type: "event",
           family: "key_release",
-          value: "Control",
-          modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
+          modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false},
+          data: %{key: "Control"}
         })
 
       assert %Key{type: :release, key: :control} = Protocol.decode_message(json, :json)
@@ -436,12 +436,12 @@ defmodule Toddy.ProtocolParityTest do
   # ---------------------------------------------------------------------------
 
   describe "finger_pressed event" do
-    test "decodes finger press with id and position" do
+    test "decodes finger press with data.id and position" do
       json =
         Jason.encode!(%{
           type: "event",
           family: "finger_pressed",
-          data: %{finger_id: 0, x: 50.0, y: 75.0}
+          data: %{id: 0, x: 50.0, y: 75.0}
         })
 
       assert %Touch{type: :pressed, finger_id: 0, x: 50.0, y: 75.0, captured: false} =
@@ -455,7 +455,7 @@ defmodule Toddy.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "finger_moved",
-          data: %{finger_id: 1, x: 60.0, y: 80.0}
+          data: %{id: 1, x: 60.0, y: 80.0}
         })
 
       assert %Touch{type: :moved, finger_id: 1, x: 60.0, y: 80.0, captured: false} =
@@ -469,7 +469,7 @@ defmodule Toddy.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "finger_lifted",
-          data: %{finger_id: 0, x: 55.0, y: 70.0}
+          data: %{id: 0, x: 55.0, y: 70.0}
         })
 
       assert %Touch{type: :lifted, finger_id: 0, x: 55.0, y: 70.0, captured: false} =
@@ -483,7 +483,7 @@ defmodule Toddy.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "finger_lost",
-          data: %{finger_id: 2, x: 30.0, y: 40.0}
+          data: %{id: 2, x: 30.0, y: 40.0}
         })
 
       assert %Touch{type: :lost, finger_id: 2, x: 30.0, y: 40.0, captured: false} =
