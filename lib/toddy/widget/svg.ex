@@ -11,8 +11,13 @@ defmodule Toddy.Widget.Svg do
   - `rotation` (number) -- rotation angle in degrees.
   - `opacity` (number) -- opacity from 0.0 (transparent) to 1.0 (opaque).
   - `color` (color) -- color tint applied to the SVG. See `Toddy.Type.Color`.
-  - `alt` (string) -- alt text for the SVG (accessibility).
-  - `description` (string) -- longer description for the SVG (accessibility).
+  - `alt` (string) -- accessible label for the SVG. Auto-populates the
+    accessibility label outside the `a11y` object. See "Widget-specific
+    accessibility props" in `docs/accessibility.md`.
+  - `description` (string) -- extended accessible description for the SVG.
+    Sits outside the `a11y` object.
+  - `decorative` (boolean) -- when true, hides the SVG from assistive
+    technology. Sits outside the `a11y` object.
   - `a11y` (map) -- accessibility overrides. See `Toddy.Type.A11y`.
   """
 
@@ -29,6 +34,7 @@ defmodule Toddy.Widget.Svg do
           | {:color, Toddy.Type.Color.input()}
           | {:alt, String.t()}
           | {:description, String.t()}
+          | {:decorative, boolean()}
           | {:a11y, Toddy.Type.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -42,6 +48,7 @@ defmodule Toddy.Widget.Svg do
           color: Toddy.Type.Color.t() | nil,
           alt: String.t() | nil,
           description: String.t() | nil,
+          decorative: boolean() | nil,
           a11y: Toddy.Type.A11y.t() | nil
         }
 
@@ -56,6 +63,7 @@ defmodule Toddy.Widget.Svg do
     :color,
     :alt,
     :description,
+    :decorative,
     :a11y
   ]
 
@@ -79,6 +87,7 @@ defmodule Toddy.Widget.Svg do
       {:color, v}, acc -> color(acc, v)
       {:alt, v}, acc -> alt(acc, v)
       {:description, v}, acc -> description(acc, v)
+      {:decorative, v}, acc -> decorative(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -118,6 +127,11 @@ defmodule Toddy.Widget.Svg do
   def description(%__MODULE__{} = svg, description) when is_binary(description),
     do: %{svg | description: description}
 
+  @doc "Sets whether the SVG is decorative (hidden from assistive technology)."
+  @spec decorative(svg :: t(), decorative :: boolean()) :: t()
+  def decorative(%__MODULE__{} = svg, decorative) when is_boolean(decorative),
+    do: %{svg | decorative: decorative}
+
   @doc "Sets accessibility annotations."
   @spec a11y(svg :: t(), a11y :: Toddy.Type.A11y.t()) :: t()
   def a11y(%__MODULE__{} = svg, a11y), do: %{svg | a11y: A11y.cast(a11y)}
@@ -141,6 +155,7 @@ defmodule Toddy.Widget.Svg do
         |> put_if(svg.color, :color)
         |> put_if(svg.alt, :alt)
         |> put_if(svg.description, :description)
+        |> put_if(svg.decorative, :decorative)
         |> put_if(svg.a11y, :a11y)
 
       %{id: svg.id, type: "svg", props: props, children: []}

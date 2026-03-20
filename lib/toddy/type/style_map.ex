@@ -171,7 +171,7 @@ defimpl Toddy.Encode, for: Toddy.Type.StyleMap do
   end
 
   defp put_field(map, _key, nil), do: map
-  defp put_field(map, key, value), do: Map.put(map, key, Toddy.Encode.encode(value))
+  defp put_field(map, key, value), do: Map.put(map, key, value)
 
   defp encode_base(nil), do: nil
   defp encode_base(atom) when is_atom(atom), do: Atom.to_string(atom)

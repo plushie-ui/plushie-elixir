@@ -16,8 +16,13 @@ defmodule Toddy.Widget.Image do
   - `expand` (boolean) -- expand image to fill available space.
   - `scale` (number) -- scale factor for the image.
   - `crop` (map) -- crop rectangle: `%{x, y, width, height}` (integer pixel values).
-  - `alt` (string) -- alt text for the image (accessibility).
-  - `description` (string) -- longer description for the image (accessibility).
+  - `alt` (string) -- accessible label for the image. Auto-populates the
+    accessibility label outside the `a11y` object. See "Widget-specific
+    accessibility props" in `docs/accessibility.md`.
+  - `description` (string) -- extended accessible description for the image.
+    Sits outside the `a11y` object.
+  - `decorative` (boolean) -- when true, hides the image from assistive
+    technology. Sits outside the `a11y` object.
   - `a11y` (map) -- accessibility overrides. See `Toddy.Type.A11y`.
   """
 
@@ -40,6 +45,7 @@ defmodule Toddy.Widget.Image do
           | {:crop, map()}
           | {:alt, String.t()}
           | {:description, String.t()}
+          | {:decorative, boolean()}
           | {:a11y, Toddy.Type.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -57,6 +63,7 @@ defmodule Toddy.Widget.Image do
           crop: map() | nil,
           alt: String.t() | nil,
           description: String.t() | nil,
+          decorative: boolean() | nil,
           a11y: Toddy.Type.A11y.t() | nil
         }
 
@@ -75,6 +82,7 @@ defmodule Toddy.Widget.Image do
     :crop,
     :alt,
     :description,
+    :decorative,
     :a11y
   ]
 
@@ -114,6 +122,7 @@ defmodule Toddy.Widget.Image do
       {:crop, v}, acc -> crop(acc, v)
       {:alt, v}, acc -> alt(acc, v)
       {:description, v}, acc -> description(acc, v)
+      {:decorative, v}, acc -> decorative(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -171,6 +180,11 @@ defmodule Toddy.Widget.Image do
   def description(%__MODULE__{} = img, description) when is_binary(description),
     do: %{img | description: description}
 
+  @doc "Sets whether the image is decorative (hidden from assistive technology)."
+  @spec decorative(image :: t(), decorative :: boolean()) :: t()
+  def decorative(%__MODULE__{} = img, decorative) when is_boolean(decorative),
+    do: %{img | decorative: decorative}
+
   @doc "Sets accessibility annotations."
   @spec a11y(image :: t(), a11y :: Toddy.Type.A11y.t()) :: t()
   def a11y(%__MODULE__{} = img, a11y), do: %{img | a11y: A11y.cast(a11y)}
@@ -198,6 +212,7 @@ defmodule Toddy.Widget.Image do
         |> put_if(img.crop, :crop)
         |> put_if(img.alt, :alt)
         |> put_if(img.description, :description)
+        |> put_if(img.decorative, :decorative)
         |> put_if(img.a11y, :a11y)
 
       %{id: img.id, type: "image", props: props, children: []}

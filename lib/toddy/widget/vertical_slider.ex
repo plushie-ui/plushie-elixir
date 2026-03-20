@@ -13,6 +13,9 @@ defmodule Toddy.Widget.VerticalSlider do
   - `rail_color` (hex color) -- color for the slider rail (both active and inactive portions).
   - `rail_width` (number) -- rail thickness in pixels.
   - `style` -- `:default` or `StyleMap.t()` for custom styling. See `Toddy.Type.StyleMap`.
+  - `label` (string) -- accessible label for the slider (e.g. "Volume").
+    Sits outside the `a11y` object. See "Widget-specific accessibility props"
+    in `docs/accessibility.md`.
   - `a11y` (map) -- accessibility overrides. See `Toddy.Type.A11y`.
 
   ## Events
@@ -37,6 +40,7 @@ defmodule Toddy.Widget.VerticalSlider do
           | {:rail_color, Toddy.Type.Color.input()}
           | {:rail_width, number()}
           | {:style, style()}
+          | {:label, String.t()}
           | {:a11y, Toddy.Type.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -51,6 +55,7 @@ defmodule Toddy.Widget.VerticalSlider do
           rail_color: Toddy.Type.Color.t() | nil,
           rail_width: number() | nil,
           style: style() | nil,
+          label: String.t() | nil,
           a11y: Toddy.Type.A11y.t() | nil
         }
 
@@ -66,6 +71,7 @@ defmodule Toddy.Widget.VerticalSlider do
     :rail_color,
     :rail_width,
     :style,
+    :label,
     :a11y
   ]
 
@@ -95,6 +101,7 @@ defmodule Toddy.Widget.VerticalSlider do
       {:rail_color, v}, acc -> rail_color(acc, v)
       {:rail_width, v}, acc -> rail_width(acc, v)
       {:style, v}, acc -> style(acc, v)
+      {:label, v}, acc -> label(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -132,6 +139,11 @@ defmodule Toddy.Widget.VerticalSlider do
   def rail_width(%__MODULE__{} = slider, rail_width) when is_number(rail_width),
     do: %{slider | rail_width: rail_width}
 
+  @doc "Sets the accessible label for the vertical slider."
+  @spec label(vertical_slider :: t(), label :: String.t()) :: t()
+  def label(%__MODULE__{} = slider, label) when is_binary(label),
+    do: %{slider | label: label}
+
   @doc "Sets the slider style."
   @spec style(vertical_slider :: t(), style :: style()) :: t()
   def style(%__MODULE__{} = slider, %StyleMap{} = style), do: %{slider | style: style}
@@ -161,6 +173,7 @@ defmodule Toddy.Widget.VerticalSlider do
         |> put_if(slider.rail_color, :rail_color)
         |> put_if(slider.rail_width, :rail_width)
         |> put_if(slider.style, :style)
+        |> put_if(slider.label, :label)
         |> put_if(slider.a11y, :a11y)
 
       %{id: slider.id, type: "vertical_slider", props: props, children: []}

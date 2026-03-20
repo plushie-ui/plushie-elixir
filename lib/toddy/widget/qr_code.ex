@@ -12,6 +12,11 @@ defmodule Toddy.Widget.QrCode do
   - `background_color` (color) -- color of light modules. Default: white.
   - `error_correction` (atom) -- error correction level. One of `:low`,
     `:medium` (default), `:quartile`, `:high`.
+  - `alt` (string) -- accessible label for the QR code. Sits outside the
+    `a11y` object. See "Widget-specific accessibility props" in
+    `docs/accessibility.md`.
+  - `description` (string) -- extended accessible description for the QR
+    code. Sits outside the `a11y` object.
   - `a11y` (map) -- accessibility overrides. See `Toddy.Type.A11y`.
   """
 
@@ -29,6 +34,8 @@ defmodule Toddy.Widget.QrCode do
           | {:cell_color, Toddy.Type.Color.input()}
           | {:background_color, Toddy.Type.Color.input()}
           | {:error_correction, error_correction()}
+          | {:alt, String.t()}
+          | {:description, String.t()}
           | {:a11y, Toddy.Type.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -38,10 +45,22 @@ defmodule Toddy.Widget.QrCode do
           cell_color: Toddy.Type.Color.t() | nil,
           background_color: Toddy.Type.Color.t() | nil,
           error_correction: error_correction() | nil,
+          alt: String.t() | nil,
+          description: String.t() | nil,
           a11y: Toddy.Type.A11y.t() | nil
         }
 
-  defstruct [:id, :data, :cell_size, :cell_color, :background_color, :error_correction, :a11y]
+  defstruct [
+    :id,
+    :data,
+    :cell_size,
+    :cell_color,
+    :background_color,
+    :error_correction,
+    :alt,
+    :description,
+    :a11y
+  ]
 
   @doc "Creates a new QR code struct with the given data string and optional keyword opts."
   @spec new(id :: String.t(), data :: String.t(), opts :: [option()]) :: t()
@@ -59,6 +78,8 @@ defmodule Toddy.Widget.QrCode do
       {:cell_color, v}, acc -> cell_color(acc, v)
       {:background_color, v}, acc -> background_color(acc, v)
       {:error_correction, v}, acc -> error_correction(acc, v)
+      {:alt, v}, acc -> alt(acc, v)
+      {:description, v}, acc -> description(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -83,6 +104,15 @@ defmodule Toddy.Widget.QrCode do
   def error_correction(%__MODULE__{} = qr, ec) when ec in @error_corrections,
     do: %{qr | error_correction: ec}
 
+  @doc "Sets the accessible label for the QR code."
+  @spec alt(qr_code :: t(), alt :: String.t()) :: t()
+  def alt(%__MODULE__{} = qr, alt) when is_binary(alt), do: %{qr | alt: alt}
+
+  @doc "Sets an extended accessible description for the QR code."
+  @spec description(qr_code :: t(), description :: String.t()) :: t()
+  def description(%__MODULE__{} = qr, description) when is_binary(description),
+    do: %{qr | description: description}
+
   @doc "Sets accessibility annotations."
   @spec a11y(qr_code :: t(), a11y :: Toddy.Type.A11y.t()) :: t()
   def a11y(%__MODULE__{} = qr, a11y), do: %{qr | a11y: A11y.cast(a11y)}
@@ -102,6 +132,8 @@ defmodule Toddy.Widget.QrCode do
         |> put_if(qr.cell_color, :cell_color)
         |> put_if(qr.background_color, :background_color)
         |> put_if(qr.error_correction, :error_correction)
+        |> put_if(qr.alt, :alt)
+        |> put_if(qr.description, :description)
         |> put_if(qr.a11y, :a11y)
 
       %{id: qr.id, type: "qr_code", props: props, children: []}

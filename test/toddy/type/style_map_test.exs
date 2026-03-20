@@ -138,11 +138,11 @@ defmodule Toddy.Type.StyleMapTest do
 
       assert encoded[:background] == "#ff0000"
       assert encoded[:text_color] == "#ffffff"
-      assert is_map(encoded[:border])
-      assert is_map(encoded[:shadow])
-      assert encoded[:shadow][:color] == "#00000040"
-      assert encoded[:shadow][:offset] == [2, 2]
-      assert encoded[:shadow][:blur_radius] == 6
+      assert %Shadow{} = encoded[:shadow]
+      assert encoded[:shadow].color == "#00000040"
+      assert encoded[:shadow].offset_x == 2
+      assert encoded[:shadow].offset_y == 2
+      assert encoded[:shadow].blur_radius == 6
     end
 
     test "omits nil fields from the wire map" do
@@ -190,10 +190,11 @@ defmodule Toddy.Type.StyleMapTest do
       assert encoded[:background] == "#ff6600"
       assert encoded[:text_color] == "#ffffff"
 
-      # Border encoded as map
-      assert encoded[:border][:color] == "#333333"
-      assert encoded[:border][:width] == 2
-      assert encoded[:border][:radius] == 8
+      # Border preserved as struct
+      assert %Border{} = encoded[:border]
+      assert encoded[:border].color == "#333333"
+      assert encoded[:border].width == 2
+      assert encoded[:border].radius == 8
 
       # Status overrides
       assert encoded[:hovered][:background] == "#ff8833"

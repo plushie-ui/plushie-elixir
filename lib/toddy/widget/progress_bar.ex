@@ -12,6 +12,9 @@ defmodule Toddy.Widget.ProgressBar do
     `:danger`, `:warning`) or `StyleMap.t()` for custom styling.
     See `Toddy.Type.StyleMap`.
   - `vertical` (boolean) -- when `true`, renders the progress bar vertically.
+  - `label` (string) -- accessible label for the progress bar (e.g.
+    "Upload progress"). Sits outside the `a11y` object. See "Widget-specific
+    accessibility props" in `docs/accessibility.md`.
   - `a11y` (map) -- accessibility overrides. See `Toddy.Type.A11y`.
   """
 
@@ -29,6 +32,7 @@ defmodule Toddy.Widget.ProgressBar do
           | {:height, Toddy.Type.Length.t()}
           | {:style, style()}
           | {:vertical, boolean()}
+          | {:label, String.t()}
           | {:a11y, Toddy.Type.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -39,10 +43,11 @@ defmodule Toddy.Widget.ProgressBar do
           height: Toddy.Type.Length.t() | nil,
           style: style() | nil,
           vertical: boolean() | nil,
+          label: String.t() | nil,
           a11y: Toddy.Type.A11y.t() | nil
         }
 
-  defstruct [:id, :range, :value, :width, :height, :style, :vertical, :a11y]
+  defstruct [:id, :range, :value, :width, :height, :style, :vertical, :label, :a11y]
 
   @doc "Creates a new progress bar struct with the given range, value, and optional keyword opts."
   @spec new(
@@ -67,6 +72,7 @@ defmodule Toddy.Widget.ProgressBar do
       {:height, v}, acc -> height(acc, v)
       {:style, v}, acc -> style(acc, v)
       {:vertical, v}, acc -> vertical(acc, v)
+      {:label, v}, acc -> label(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -90,6 +96,11 @@ defmodule Toddy.Widget.ProgressBar do
   def vertical(%__MODULE__{} = bar, vertical) when is_boolean(vertical),
     do: %{bar | vertical: vertical}
 
+  @doc "Sets the accessible label for the progress bar."
+  @spec label(progress_bar :: t(), label :: String.t()) :: t()
+  def label(%__MODULE__{} = bar, label) when is_binary(label),
+    do: %{bar | label: label}
+
   @doc "Sets accessibility annotations."
   @spec a11y(progress_bar :: t(), a11y :: Toddy.Type.A11y.t()) :: t()
   def a11y(%__MODULE__{} = bar, a11y), do: %{bar | a11y: A11y.cast(a11y)}
@@ -110,6 +121,7 @@ defmodule Toddy.Widget.ProgressBar do
         |> put_if(bar.height, :height)
         |> put_if(bar.style, :style)
         |> put_if(bar.vertical, :vertical)
+        |> put_if(bar.label, :label)
         |> put_if(bar.a11y, :a11y)
 
       %{id: bar.id, type: "progress_bar", props: props, children: []}

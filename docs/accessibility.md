@@ -602,6 +602,98 @@ expanded or collapsed, so screen readers can announce "Show details,
 button, collapsed" or "Hide details, button, expanded".
 
 
+## Widget-specific accessibility props
+
+Some widgets accept accessibility props directly as top-level fields,
+outside the `a11y` object. The Rust renderer reads these and maps them
+to the appropriate accesskit node properties. They are simpler to use
+than the full `a11y` struct for common cases.
+
+### alt
+
+An accessible label string. Used on visual content widgets where the
+content itself is not textual. The renderer auto-populates the
+accesskit label from this prop.
+
+| Widget | Prop | Type |
+|---|---|---|
+| `image` | `alt` | `String.t()` |
+| `svg` | `alt` | `String.t()` |
+| `qr_code` | `alt` | `String.t()` |
+| `canvas` | `alt` | `String.t()` |
+
+```elixir
+image("logo", "/images/logo.png", alt: "Company logo")
+svg("icon", "/icons/search.svg", alt: "Search")
+qr_code("invite", invite_url, alt: "QR code for invite link")
+canvas("chart", layers: %{"data" => shapes}, alt: "Revenue chart")
+```
+
+### label
+
+An accessible label string for interactive widgets that don't have a
+visible text label prop. The renderer auto-populates the accesskit
+label from this prop.
+
+| Widget | Prop | Type |
+|---|---|---|
+| `slider` | `label` | `String.t()` |
+| `vertical_slider` | `label` | `String.t()` |
+| `progress_bar` | `label` | `String.t()` |
+
+```elixir
+slider("volume", {0, 100}, model.volume, label: "Volume")
+vertical_slider("brightness", {0, 100}, model.brightness, label: "Brightness")
+progress_bar("upload", {0, 100}, model.progress, label: "Upload progress")
+```
+
+### description
+
+An extended accessible description string. Announced as secondary
+information after the label. Useful for providing additional context
+that doesn't fit in a short label.
+
+| Widget | Prop | Type |
+|---|---|---|
+| `image` | `description` | `String.t()` |
+| `svg` | `description` | `String.t()` |
+| `qr_code` | `description` | `String.t()` |
+| `canvas` | `description` | `String.t()` |
+
+```elixir
+image("photo", path, alt: "Team photo", description: "The engineering team at the 2025 offsite")
+canvas("chart", layers: layers, alt: "Sales chart", description: "Q1 up 15%, Q2 flat, Q3 down 8%")
+```
+
+### decorative
+
+A boolean that hides visual content from assistive technology entirely.
+Use this for images and SVGs that are purely decorative and convey no
+information. This is a shorthand -- the equivalent using the `a11y`
+prop would be `a11y: %A11y{hidden: true}`.
+
+| Widget | Prop | Type |
+|---|---|---|
+| `image` | `decorative` | `boolean()` |
+| `svg` | `decorative` | `boolean()` |
+
+```elixir
+image("divider", "/images/decorative-line.png", decorative: true)
+svg("flourish", "/icons/flourish.svg", decorative: true)
+```
+
+### Relationship to the a11y prop
+
+These widget-specific props and the `a11y` prop are complementary. The
+widget-specific props are read directly by the Rust renderer as
+top-level node properties. The `a11y` prop provides the full set of
+accesskit overrides via the `A11yOverride` wrapper widget.
+
+If both are set (e.g. `alt: "Photo"` and `a11y: %A11y{label: "Team photo"}`),
+the `a11y` override takes precedence for the accesskit label since
+`A11yOverride` runs after the widget's own `Accessible` implementation.
+
+
 ## Action handling
 
 When an AT triggers an action, iced translates it to a native event. The

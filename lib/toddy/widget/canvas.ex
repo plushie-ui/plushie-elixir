@@ -25,6 +25,11 @@ defmodule Toddy.Widget.Canvas do
   - `on_release` (boolean) -- enable mouse release events. Default: false.
   - `on_move` (boolean) -- enable mouse move events. Default: false.
   - `on_scroll` (boolean) -- enable mouse scroll events. Default: false.
+  - `alt` (string) -- accessible label for the canvas. Sits outside the
+    `a11y` object. See "Widget-specific accessibility props" in
+    `docs/accessibility.md`.
+  - `description` (string) -- extended accessible description for the
+    canvas. Sits outside the `a11y` object.
   - `a11y` (map) -- accessibility overrides. See `Toddy.Type.A11y`.
 
   ## Shape types
@@ -63,6 +68,8 @@ defmodule Toddy.Widget.Canvas do
           | {:on_release, boolean()}
           | {:on_move, boolean()}
           | {:on_scroll, boolean()}
+          | {:alt, String.t()}
+          | {:description, String.t()}
           | {:a11y, Toddy.Type.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -77,6 +84,8 @@ defmodule Toddy.Widget.Canvas do
           on_release: boolean() | nil,
           on_move: boolean() | nil,
           on_scroll: boolean() | nil,
+          alt: String.t() | nil,
+          description: String.t() | nil,
           a11y: Toddy.Type.A11y.t() | nil
         }
 
@@ -92,6 +101,8 @@ defmodule Toddy.Widget.Canvas do
     :on_release,
     :on_move,
     :on_scroll,
+    :alt,
+    :description,
     :a11y
   ]
 
@@ -117,6 +128,8 @@ defmodule Toddy.Widget.Canvas do
       {:on_release, v}, acc -> on_release(acc, v)
       {:on_move, v}, acc -> on_move(acc, v)
       {:on_scroll, v}, acc -> on_scroll(acc, v)
+      {:alt, v}, acc -> alt(acc, v)
+      {:description, v}, acc -> description(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -170,6 +183,15 @@ defmodule Toddy.Widget.Canvas do
   @spec on_scroll(canvas :: t(), on_scroll :: boolean()) :: t()
   def on_scroll(%__MODULE__{} = canvas, v) when is_boolean(v), do: %{canvas | on_scroll: v}
 
+  @doc "Sets the accessible label for the canvas."
+  @spec alt(canvas :: t(), alt :: String.t()) :: t()
+  def alt(%__MODULE__{} = canvas, alt) when is_binary(alt), do: %{canvas | alt: alt}
+
+  @doc "Sets an extended accessible description for the canvas."
+  @spec description(canvas :: t(), description :: String.t()) :: t()
+  def description(%__MODULE__{} = canvas, description) when is_binary(description),
+    do: %{canvas | description: description}
+
   @doc "Sets accessibility annotations."
   @spec a11y(canvas :: t(), a11y :: Toddy.Type.A11y.t()) :: t()
   def a11y(%__MODULE__{} = canvas, a11y), do: %{canvas | a11y: A11y.cast(a11y)}
@@ -194,6 +216,8 @@ defmodule Toddy.Widget.Canvas do
         |> put_if(canvas.on_release, :on_release)
         |> put_if(canvas.on_move, :on_move)
         |> put_if(canvas.on_scroll, :on_scroll)
+        |> put_if(canvas.alt, :alt)
+        |> put_if(canvas.description, :description)
         |> put_if(canvas.a11y, :a11y)
 
       %{id: canvas.id, type: "canvas", props: props, children: []}
