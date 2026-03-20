@@ -7,7 +7,7 @@ defmodule Toddy.Type.Shadow do
 
   ## Wire format
 
-      %{"color" => "#00000080", "offset" => [4, 4], "blur_radius" => 8.0}
+      %{color: "#00000080", offset: [4, 4], blur_radius: 8.0}
 
   The `offset` is an `[x, y]` list. `color` is a hex string (see `Toddy.Type.Color`).
 

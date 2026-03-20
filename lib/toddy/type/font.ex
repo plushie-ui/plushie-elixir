@@ -45,16 +45,16 @@ defmodule Toddy.Type.Font do
       "monospace"
 
       iex> Toddy.Type.Font.encode("Fira Code")
-      %{"family" => "Fira Code"}
+      %{family: "Fira Code"}
 
       iex> Toddy.Type.Font.encode(%{family: "Inter", weight: :bold, style: :italic})
-      %{"family" => "Inter", "weight" => "Bold", "style" => "Italic"}
+      %{family: "Inter", weight: "Bold", style: "Italic"}
   """
   @spec encode(font :: t()) :: String.t() | map()
   def encode(:default), do: "default"
   def encode(:monospace), do: "monospace"
 
-  def encode(name) when is_binary(name), do: %{"family" => name}
+  def encode(name) when is_binary(name), do: %{family: name}
 
   def encode(%{} = font) do
     result = %{}
@@ -62,25 +62,25 @@ defmodule Toddy.Type.Font do
     result =
       case Map.get(font, :family) do
         nil -> result
-        family -> Map.put(result, "family", family)
+        family -> Map.put(result, :family, family)
       end
 
     result =
       case Map.get(font, :weight) do
         nil -> result
-        weight when weight in @weights -> Map.put(result, "weight", encode_segment(weight))
+        weight when weight in @weights -> Map.put(result, :weight, encode_segment(weight))
       end
 
     result =
       case Map.get(font, :style) do
         nil -> result
-        style when style in @styles -> Map.put(result, "style", encode_segment(style))
+        style when style in @styles -> Map.put(result, :style, encode_segment(style))
       end
 
     result =
       case Map.get(font, :stretch) do
         nil -> result
-        stretch when stretch in @stretches -> Map.put(result, "stretch", encode_segment(stretch))
+        stretch when stretch in @stretches -> Map.put(result, :stretch, encode_segment(stretch))
       end
 
     result

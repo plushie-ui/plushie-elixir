@@ -13,11 +13,11 @@ defmodule Toddy.Type.Border do
 
   The encoded border is a map:
 
-      %{"color" => "#ff0000", "width" => 2, "radius" => 8}
+      %{color: "#ff0000", width: 2, radius: 8}
 
   Radius can be a uniform number or a per-corner map:
 
-      %{"top_left" => 8, "top_right" => 8, "bottom_right" => 0, "bottom_left" => 0}
+      %{top_left: 8, top_right: 8, bottom_right: 0, bottom_left: 0}
 
   ## Example
 
@@ -79,7 +79,7 @@ defmodule Toddy.Type.Border do
     }
   end
 
-  @doc "Encodes a border to the wire format. Per-corner radius maps are converted to string keys."
+  @doc "Encodes a border to the wire format."
   @spec encode(border :: t()) :: map()
   def encode(%__MODULE__{} = border) do
     %{color: border.color, width: border.width, radius: encode_radius(border.radius)}

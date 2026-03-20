@@ -20,7 +20,7 @@ defmodule Toddy.Type.Length do
       "shrink"
 
       iex> Toddy.Type.Length.encode({:fill_portion, 3})
-      %{"fill_portion" => 3}
+      %{fill_portion: 3}
 
       iex> Toddy.Type.Length.encode(200)
       200
@@ -28,7 +28,7 @@ defmodule Toddy.Type.Length do
   @spec encode(length :: t()) :: String.t() | number() | map()
   def encode(:fill), do: "fill"
   def encode(:shrink), do: "shrink"
-  def encode({:fill_portion, n}) when is_integer(n) and n > 0, do: %{"fill_portion" => n}
+  def encode({:fill_portion, n}) when is_integer(n) and n > 0, do: %{fill_portion: n}
 
   def encode(n) when is_number(n) and n < 0 do
     raise ArgumentError, "length must be non-negative, got: #{n}"

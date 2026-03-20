@@ -13,11 +13,11 @@ defmodule Toddy.Type.StyleMap do
   ## Wire format
 
       %{
-        "background" => "#ff0000",
-        "text_color" => "#ffffff",
-        "border" => %{"color" => "#000000", "width" => 1, "radius" => 4},
-        "hovered" => %{"background" => "#cc0000"},
-        "pressed" => %{"background" => "#990000"}
+        background: "#ff0000",
+        text_color: "#ffffff",
+        border: %{color: "#000000", width: 1, radius: 4},
+        hovered: %{background: "#cc0000"},
+        pressed: %{background: "#990000"}
       }
 
   ## Example
