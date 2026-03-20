@@ -102,6 +102,109 @@ defmodule Toddy.Test.SessionPoolTest do
 
       assert :ok = SessionPool.unregister(pool, session_id)
     end
+
+    test "theme_changed subscription emits event on theme change" do
+      binary = Application.fetch_env!(:toddy, :test_binary_path)
+
+      {:ok, pool} =
+        SessionPool.start_link(
+          renderer: binary,
+          mode: :mock,
+          format: :json,
+          max_sessions: 4,
+          rust_log: "off"
+        )
+
+      session_id = SessionPool.register(pool)
+
+      # Send initial snapshot with default (dark) theme
+      SessionPool.send_message(pool, session_id, %{
+        type: "snapshot",
+        tree: %{
+          id: "main",
+          type: "window",
+          props: %{theme: "dark"},
+          children: [%{id: "t", type: "text", props: %{content: "x"}, children: []}]
+        }
+      })
+
+      Process.sleep(50)
+
+      # Subscribe to theme changes
+      SessionPool.send_message(pool, session_id, %{
+        type: "subscribe",
+        kind: "on_theme_change",
+        tag: "theme_sub"
+      })
+
+      Process.sleep(50)
+
+      # Change the theme via a new snapshot with a different theme
+      SessionPool.send_message(pool, session_id, %{
+        type: "snapshot",
+        tree: %{
+          id: "main",
+          type: "window",
+          props: %{theme: "nord"},
+          children: [%{id: "t", type: "text", props: %{content: "x"}, children: []}]
+        }
+      })
+
+      # The renderer should emit a theme_changed event
+      assert_receive {:toddy_pool_event, ^session_id, msg}, 1000
+      assert msg["type"] == "event"
+      assert msg["family"] == "theme_changed"
+    end
+
+    test "register raises when pool is full" do
+      binary = Application.fetch_env!(:toddy, :test_binary_path)
+
+      {:ok, pool} =
+        SessionPool.start_link(
+          renderer: binary,
+          mode: :mock,
+          format: :json,
+          max_sessions: 2,
+          rust_log: "off"
+        )
+
+      # Fill the pool
+      _s1 = SessionPool.register(pool)
+      _s2 = SessionPool.register(pool)
+
+      # Third registration should raise
+      assert_raise RuntimeError, ~r/Session pool is full \(2 sessions\)/, fn ->
+        SessionPool.register(pool)
+      end
+    end
+
+    test "register succeeds after unregister frees a slot" do
+      binary = Application.fetch_env!(:toddy, :test_binary_path)
+
+      {:ok, pool} =
+        SessionPool.start_link(
+          renderer: binary,
+          mode: :mock,
+          format: :json,
+          max_sessions: 2,
+          rust_log: "off"
+        )
+
+      s1 = SessionPool.register(pool)
+      _s2 = SessionPool.register(pool)
+
+      # Pool is full, but unregistering frees a slot
+      SessionPool.send_message(pool, s1, %{
+        type: "snapshot",
+        tree: %{id: "root", type: "text", props: %{content: "x"}, children: []}
+      })
+
+      SessionPool.unregister(pool, s1)
+
+      # Should succeed now
+      s3 = SessionPool.register(pool)
+      assert is_binary(s3)
+    end
   end
 
   describe "Pooled backend" do

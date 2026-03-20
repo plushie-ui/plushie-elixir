@@ -80,6 +80,46 @@ defmodule Toddy.IntegrationCaseTest do
   end
 
   # ---------------------------------------------------------------------------
+  # daemon mode
+  # ---------------------------------------------------------------------------
+
+  describe "daemon mode" do
+    test "non-daemon runtime stops on all_windows_closed" do
+      {runtime, _bridge} = start_app(Counter)
+      ref = Process.monitor(runtime)
+
+      # Send directly -- don't use send_event/2 which calls
+      # :sys.get_state after dispatch (the runtime will be dead).
+      Toddy.Runtime.dispatch(runtime, %Toddy.Event.System{type: :all_windows_closed})
+
+      assert_receive {:DOWN, ^ref, :process, ^runtime, :normal}, 1000
+    end
+
+    test "daemon runtime stays alive on all_windows_closed" do
+      {runtime, _bridge} = start_app(Counter, daemon: true)
+      ref = Process.monitor(runtime)
+
+      send_event(runtime, %Toddy.Event.System{type: :all_windows_closed})
+
+      # Should NOT receive a DOWN message -- runtime stays alive
+      refute_receive {:DOWN, ^ref, :process, ^runtime, _}, 200
+      assert Process.alive?(runtime)
+    end
+
+    test "daemon runtime delivers all_windows_closed to update/2" do
+      # Counter's catch-all update/2 returns the model unchanged,
+      # which is fine -- the point is the runtime didn't stop.
+      {runtime, _bridge} = start_app(Counter, daemon: true)
+
+      send_event(runtime, %Toddy.Event.System{type: :all_windows_closed})
+
+      # Runtime is still alive and responsive
+      model = get_model(runtime)
+      assert model.count == 0
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # to-do app integration
   # ---------------------------------------------------------------------------
 
