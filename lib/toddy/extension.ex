@@ -776,10 +776,12 @@ defmodule Toddy.Extension do
 
         guards = build_command_guards(params)
         op_string = Atom.to_string(name)
+        spec_ast = build_command_spec(name, params)
 
         if param_names == [] do
           quote do
             @doc "Sends the `#{unquote(op_string)}` command to the extension widget."
+            @spec unquote(spec_ast)
             def unquote(name)(widget_id) when is_binary(widget_id) do
               Toddy.Command.extension_command(widget_id, unquote(op_string), %{})
             end
@@ -787,6 +789,7 @@ defmodule Toddy.Extension do
         else
           quote do
             @doc "Sends the `#{unquote(op_string)}` command to the extension widget."
+            @spec unquote(spec_ast)
             def unquote(name)(unquote_splicing(args))
                 when is_binary(widget_id) and unquote(guards) do
               Toddy.Command.extension_command(
@@ -801,6 +804,15 @@ defmodule Toddy.Extension do
 
     quote do
       (unquote_splicing(fns))
+    end
+  end
+
+  defp build_command_spec(name, params) do
+    param_types = [quote(do: String.t()) | Enum.map(params, fn {_n, t} -> elixir_type_for(t) end)]
+    return_type = quote(do: Toddy.Command.t())
+
+    quote do
+      unquote(name)(unquote_splicing(param_types)) :: unquote(return_type)
     end
   end
 
