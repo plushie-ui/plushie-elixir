@@ -357,7 +357,7 @@ defmodule Toddy.Subscription do
   Returns a key that uniquely identifies this subscription spec.
   Two specs with the same key are considered the same subscription.
   """
-  @spec key(sub :: t()) :: term()
+  @spec key(sub :: t()) :: {:every, pos_integer(), atom()} | {atom(), atom()}
   def key(%{type: type, tag: tag} = sub) do
     case type do
       :every -> {:every, Map.get(sub, :interval), tag}

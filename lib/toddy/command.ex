@@ -597,7 +597,7 @@ defmodule Toddy.Command do
       Command.announce("File saved successfully")
       Command.announce("3 search results found")
   """
-  @spec announce(text :: String.t()) :: t()
+  @spec announce(text :: String.t()) :: %__MODULE__{}
   def announce(text) when is_binary(text) do
     %__MODULE__{type: :widget_op, payload: %{op: "announce", text: text}}
   end

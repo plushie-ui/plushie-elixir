@@ -135,7 +135,8 @@ defmodule Toddy.Animation do
 
   `t` is clamped to `0.0..1.0` before easing is applied.
   """
-  @spec interpolate(from :: number(), to :: number(), t :: float(), easing :: easing()) :: float()
+  @spec interpolate(from :: number(), to :: number(), t :: number(), easing :: easing()) ::
+          float()
   def interpolate(from, to, t, easing \\ &linear/1)
       when is_number(from) and is_number(to) and is_number(t) and is_function(easing, 1) do
     clamped = clamp(t)
@@ -187,7 +188,7 @@ defmodule Toddy.Animation do
   unchanged.
   """
   @spec advance(animation :: t(), timestamp :: integer()) ::
-          {float(), t()} | {float(), :finished}
+          {number(), t()} | {number(), :finished}
   def advance(%__MODULE__{started_at: nil} = anim, _timestamp) do
     {anim.value, anim}
   end

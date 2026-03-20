@@ -43,7 +43,7 @@ defmodule Toddy.App do
   """
 
   @type model :: term()
-  @type event :: Toddy.Event.t()
+  @type event :: Toddy.Event.t() | term()
   @type command :: Toddy.Command.t() | [Toddy.Command.t()]
 
   @doc """
@@ -53,6 +53,10 @@ defmodule Toddy.App do
 
   @doc """
   Called on every event. Returns the next model, optionally with commands.
+
+  In addition to `Toddy.Event` structs from the renderer and subscriptions,
+  `update/2` may receive internal tuple events (e.g. async results, stream
+  chunks, effect responses). Pattern match broadly or include a catch-all clause.
   """
   @callback update(model, event) :: model | {model, command}
 

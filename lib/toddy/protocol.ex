@@ -221,7 +221,8 @@ defmodule Toddy.Protocol do
       iex> Toddy.Protocol.decode_message("not json")
       {:error, :decode_failed}
   """
-  @spec decode_message(data :: binary(), format :: format()) :: tuple() | {:error, term()}
+  @spec decode_message(data :: binary(), format :: format()) ::
+          Toddy.Event.t() | {:hello, pos_integer(), String.t(), String.t()} | {:error, term()}
   defdelegate decode_message(data, format \\ :msgpack), to: Toddy.Protocol.Decode
 
   # ---------------------------------------------------------------------------
