@@ -128,7 +128,7 @@ defmodule Toddy.Test.SessionPool do
       :port,
       :format,
       :max_sessions,
-      # session_id -> owner_pid
+      # session_id -> {owner_pid, monitor_ref}
       sessions: %{},
       # {session_id, request_id} -> {response_type, from}
       pending: %{},
@@ -183,12 +183,19 @@ defmodule Toddy.Test.SessionPool do
       {:reply, {:error, {:max_sessions_reached, state.max_sessions}}, state}
     else
       session_id = "pool_#{state.next_session}"
-      sessions = Map.put(state.sessions, session_id, caller_pid)
+      monitor_ref = Process.monitor(caller_pid)
+      sessions = Map.put(state.sessions, session_id, {caller_pid, monitor_ref})
       {:reply, session_id, %{state | sessions: sessions, next_session: state.next_session + 1}}
     end
   end
 
   def handle_call({:unregister, session_id}, from, state) do
+    # Demonitor the session owner -- we're cleaning up explicitly.
+    case Map.get(state.sessions, session_id) do
+      {_pid, monitor_ref} -> Process.demonitor(monitor_ref, [:flush])
+      _ -> :ok
+    end
+
     # Send Reset to free renderer resources.
     req_id = "unreg_#{state.next_id}"
     msg = %{session: session_id, type: "reset", id: req_id}
@@ -240,6 +247,19 @@ defmodule Toddy.Test.SessionPool do
     end
 
     {:stop, {:renderer_exited, code}, %{state | pending: %{}}}
+  end
+
+  def handle_info({:DOWN, ref, :process, pid, _reason}, state) do
+    # Session owner died -- clean up without sending a reset to the renderer
+    # (the test process is gone, no point waiting for a response).
+    case Enum.find(state.sessions, fn {_id, {p, r}} -> p == pid and r == ref end) do
+      {session_id, _} ->
+        sessions = Map.delete(state.sessions, session_id)
+        {:noreply, %{state | sessions: sessions}}
+
+      nil ->
+        {:noreply, state}
+    end
   end
 
   def handle_info(_msg, state), do: {:noreply, state}
@@ -314,7 +334,7 @@ defmodule Toddy.Test.SessionPool do
   defp forward_to_session(session_id, msg, state) do
     case Map.get(state.sessions, session_id) do
       nil -> state
-      pid -> send(pid, {:toddy_pool_event, session_id, msg})
+      {pid, _ref} -> send(pid, {:toddy_pool_event, session_id, msg})
     end
 
     state
