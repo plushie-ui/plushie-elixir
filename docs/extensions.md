@@ -61,7 +61,8 @@ impl WidgetExtension for SparklineExtension {
 }
 ```
 
-Build with `mix toddy.build` (discovers extensions via the behaviour) or run
+Build with `mix toddy.build` (extensions are registered explicitly via
+`config :toddy, extensions: [MySparkline]` in your config) or run
 the renderer binary directly. The `ToddyAppBuilder` chains `.extension()` calls
 in the generated `main.rs`:
 

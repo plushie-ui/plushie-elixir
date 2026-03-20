@@ -54,6 +54,7 @@ defmodule Mix.Tasks.Toddy.Build do
       build_stock(args)
     else
       check_collisions!(extensions)
+      check_crate_name_collisions!(extensions)
       build_with_extensions(extensions, args)
     end
   end
@@ -132,6 +133,24 @@ defmodule Mix.Tasks.Toddy.Build do
     profile = if release?, do: "release", else: "debug"
     src = Path.join([source_dir, "target", profile, "toddy"])
 
+    unless File.exists?(src) do
+      Mix.raise("Build succeeded but binary not found at #{src}")
+    end
+
+    dest_dir = Path.join(["priv", "bin"])
+    dest = Path.join(dest_dir, Toddy.Binary.download_name())
+
+    File.mkdir_p!(dest_dir)
+    File.cp!(src, dest)
+    File.chmod!(dest, 0o755)
+
+    Mix.shell().info("Installed to #{dest}")
+  end
+
+  # Copy an extension binary into priv/bin/ so the resolution chain finds it
+  # at runtime. Uses the platform download name so `Toddy.Binary.path!/0`
+  # resolves it the same way it resolves the stock binary.
+  defp install_extension_binary(src) do
     unless File.exists?(src) do
       Mix.raise("Build succeeded but binary not found at #{src}")
     end
@@ -237,6 +256,45 @@ defmodule Mix.Tasks.Toddy.Build do
     :ok
   end
 
+  @doc """
+  Raises `Mix.Error` if any two extensions produce the same Cargo crate name.
+
+  The crate name is `Path.basename/1` of each extension's `native_crate/0`
+  path. Two extensions at `native/widget/` and `other/widget/` would both
+  produce `widget`, causing a Cargo dependency conflict.
+  """
+  @spec check_crate_name_collisions!(extensions :: [module()]) :: :ok
+  def check_crate_name_collisions!(extensions) do
+    all_crates =
+      Enum.map(extensions, fn mod ->
+        crate_name = Path.basename(mod.native_crate())
+        {crate_name, mod}
+      end)
+
+    duplicates =
+      all_crates
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+      |> Enum.filter(fn {_name, mods} -> length(mods) > 1 end)
+
+    if duplicates != [] do
+      messages =
+        Enum.map(duplicates, fn {name, mods} ->
+          mod_names = Enum.map_join(mods, ", ", &inspect/1)
+          "  #{name}: #{mod_names}"
+        end)
+
+      Mix.raise("""
+      Extension crate name collision detected:
+      #{Enum.join(messages, "\n")}
+
+      Each extension's native_crate path must have a unique basename.
+      Rename one of the crate directories to resolve the conflict.\
+      """)
+    end
+
+    :ok
+  end
+
   # -- Extension build --------------------------------------------------------
 
   defp build_with_extensions(extensions, args) do
@@ -269,6 +327,7 @@ defmodule Mix.Tasks.Toddy.Build do
         if "--verbose" in args, do: Mix.shell().info(output)
         binary = Path.join([build_dir, "target", profile, bin_name])
         Mix.shell().info("Binary: #{binary}")
+        install_extension_binary(binary)
         :ok
 
       {output, status} ->
