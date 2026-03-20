@@ -12,5 +12,7 @@
   {"lib/toddy/runtime/windows.ex", :contract_with_opaque},
   {"lib/toddy/runtime/windows.ex", :call_without_opaque},
 
-
+  # Same MapSet opaque issue -- renderer_restarted handler resets windows
+  # to MapSet.new() before calling sync_windows, which dialyzer flags.
+  {"lib/toddy/runtime.ex", :call_without_opaque},
 ]

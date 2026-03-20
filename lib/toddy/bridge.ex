@@ -407,7 +407,10 @@ defmodule Toddy.Bridge do
     end
   end
 
-  defp send_to_port(nil, _data), do: :ok
+  defp send_to_port(nil, _data) do
+    Logger.debug("toddy bridge: message dropped (port not open)")
+    :ok
+  end
 
   defp send_to_port(port, data) when is_port(port) do
     Port.command(port, data)

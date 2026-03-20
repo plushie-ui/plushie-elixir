@@ -222,8 +222,20 @@ defmodule Toddy.Runtime do
   def handle_info({:renderer_exit, reason}, state) do
     Logger.warning("toddy runtime: renderer exited: #{inspect(reason)}")
 
-    model = state.app.handle_renderer_exit(state.model, reason)
-    {:noreply, %{state | model: model}}
+    new_model =
+      try do
+        state.app.handle_renderer_exit(state.model, reason)
+      rescue
+        e ->
+          Logger.error("""
+          toddy runtime: handle_renderer_exit raised: #{Exception.message(e)}
+          #{Exception.format_stacktrace(__STACKTRACE__)}
+          """)
+
+          state.model
+      end
+
+    {:noreply, %{state | model: new_model}}
   end
 
   def handle_info(:renderer_restarted, state) do
@@ -254,13 +266,12 @@ defmodule Toddy.Runtime do
     # Re-sync subscriptions with the new renderer.
     state = Subscriptions.sync_subscriptions(state, state.model)
 
-    # Re-open all known windows (renderer lost its window map on restart).
-    Enum.each(state.windows, fn window_id ->
-      settings = state.app.window_config(state.model)
-      Toddy.Bridge.send_window_op(state.bridge, "open", window_id, settings)
-    end)
+    # Re-open all known windows with merged per-window props from the tree.
+    # Reset tracked windows first so sync_windows sees them all as new.
+    state = %{state | tree: tree, windows: MapSet.new()}
+    state = Windows.sync_windows(state, tree)
 
-    {:noreply, %{state | tree: tree}}
+    {:noreply, state}
   end
 
   # ---------------------------------------------------------------------------
@@ -348,7 +359,16 @@ defmodule Toddy.Runtime do
       end)
 
     if tag do
-      {:noreply, %{state | async_tasks: Map.delete(state.async_tasks, tag)}}
+      state = %{state | async_tasks: Map.delete(state.async_tasks, tag)}
+
+      if reason != :normal do
+        Logger.warning("toddy runtime: async task #{inspect(tag)} crashed: #{inspect(reason)}")
+
+        state = run_update(state, %Async{tag: tag, result: {:error, {:crashed, reason}}})
+        {:noreply, state}
+      else
+        {:noreply, state}
+      end
     else
       Logger.warning("toddy runtime: linked process #{inspect(pid)} exited: #{inspect(reason)}")
       {:noreply, state}
@@ -577,15 +597,7 @@ defmodule Toddy.Runtime do
         Windows.sync_windows(state, new_tree)
 
       :error ->
-        count = state.consecutive_errors + 1
-
-        if count == 100 do
-          Logger.warning(
-            "toddy runtime: 100 consecutive update errors -- suppressing further logs"
-          )
-        end
-
-        %{state | consecutive_errors: count}
+        %{state | consecutive_errors: state.consecutive_errors + 1}
     end
   end
 
@@ -603,19 +615,32 @@ defmodule Toddy.Runtime do
         event: event
       })
 
-      # Rate-limit logging: normal up to 10, debug up to 100, then suppress.
+      # Rate-limit logging: normal up to 10, debug up to 100, suppress with
+      # periodic reminders every 1000 errors thereafter. Note: consecutive_errors
+      # is the pre-increment count (before this error), so thresholds are offset
+      # by one (e.g., < 9 means the first 10 errors log at :error level).
+      count = consecutive_errors + 1
+
       cond do
-        consecutive_errors < 10 ->
+        count <= 10 ->
           Logger.error("""
           toddy runtime: update/2 raised: #{Exception.message(e)}
           #{Exception.format_stacktrace(__STACKTRACE__)}
           """)
 
-        consecutive_errors < 100 ->
+        count <= 100 ->
           Logger.debug("""
           toddy runtime: update/2 raised (repeated): #{Exception.message(e)}
           #{Exception.format_stacktrace(__STACKTRACE__)}
           """)
+
+        count == 101 ->
+          Logger.warning(
+            "toddy runtime: 100 consecutive update errors -- suppressing further logs"
+          )
+
+        rem(count, 1000) == 0 ->
+          Logger.warning("toddy runtime: #{count} consecutive errors")
 
         true ->
           :ok
