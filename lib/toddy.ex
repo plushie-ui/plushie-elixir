@@ -27,9 +27,15 @@ defmodule Toddy do
                       is delivered to `update/2` instead of triggering shutdown.
   - `:dev`        -- enable live code reloading (default: `false`)
   - `:dev_opts`   -- options forwarded to `Toddy.DevServer` (default: `[]`)
+  - `:transport`   -- `:spawn` (default, spawns the renderer as a child
+                      process) or `:stdio` (reads/writes the BEAM's own
+                      stdin/stdout, for use with `toddy --exec`)
   - `:format`      -- wire format, `:msgpack` (default) or `:json`
   - `:log_level`   -- toddy binary log level (`:off`, `:error`, `:warning`, `:info`, `:debug`).
                       Default: `:error`.
+
+  When `:transport` is `:stdio`, the `:binary` option is ignored (no
+  renderer subprocess is spawned).
   """
 
   use Supervisor
@@ -96,11 +102,16 @@ defmodule Toddy do
   def init(opts) do
     name = opts[:instance_name]
     app = Keyword.fetch!(opts, :app)
+    transport = Keyword.get(opts, :transport, :spawn)
 
     binary_path =
-      case Keyword.get(opts, :binary, @default_binary_path) do
-        :auto -> Toddy.Binary.path!()
-        path -> path
+      if transport == :stdio do
+        nil
+      else
+        case Keyword.get(opts, :binary, @default_binary_path) do
+          :auto -> Toddy.Binary.path!()
+          path -> path
+        end
       end
 
     daemon? = Keyword.get(opts, :daemon, false)
@@ -108,21 +119,31 @@ defmodule Toddy do
     format = Keyword.get(opts, :format, :msgpack)
     log_level = Keyword.get(opts, :log_level, :error)
 
+    bridge_opts =
+      [
+        runtime: runtime_name(name),
+        name: bridge_name(name),
+        transport: transport,
+        format: format,
+        log_level: log_level
+      ]
+      |> then(fn opts ->
+        if binary_path do
+          Keyword.put(opts, :renderer_path, Path.expand(binary_path))
+        else
+          opts
+        end
+      end)
+
     # Bridge MUST start before Runtime. Runtime's handle_continue(:initial_render)
     # fires immediately and casts Settings + Snapshot to Bridge. If Bridge hasn't
     # started yet, those casts are lost and the renderer hangs.
     children = [
-      # Bridge opens the Port and spawns the renderer process, which blocks
-      # on stdin waiting for a Settings message.
+      # Bridge opens the Port and spawns the renderer process (spawn mode)
+      # or attaches to stdin/stdout (stdio mode). In spawn mode the renderer
+      # blocks on stdin waiting for a Settings message.
       Supervisor.child_spec(
-        {Toddy.Bridge,
-         [
-           renderer_path: Path.expand(binary_path),
-           runtime: runtime_name(name),
-           name: bridge_name(name),
-           format: format,
-           log_level: log_level
-         ]},
+        {Toddy.Bridge, bridge_opts},
         restart: :transient,
         significant: true
       ),

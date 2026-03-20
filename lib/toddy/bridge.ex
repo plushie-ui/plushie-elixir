@@ -42,11 +42,15 @@ defmodule Toddy.Bridge do
   Starts the bridge linked to the calling process.
 
   Required opts:
-    - `:renderer_path` - filesystem path to the toddy binary
     - `:runtime`       - pid to receive `{:renderer_event, event}` messages
+
+  Required for `:spawn` transport (default):
+    - `:renderer_path` - filesystem path to the toddy binary
 
   Optional opts:
     - `:name`          - registration name passed to `GenServer.start_link/3`
+    - `:transport`     - `:spawn` (default, spawns renderer as child process)
+                         or `:stdio` (reads/writes the BEAM's own stdin/stdout)
     - `:format`        - wire format, `:msgpack` (default) or `:json`
     - `:log_level`     - renderer log level (`:off`, `:error`, `:warning`, `:info`, `:debug`).
                          Default: `:error`. Ignored when `RUST_LOG` is set in the environment.
@@ -169,6 +173,7 @@ defmodule Toddy.Bridge do
     :renderer_path,
     :buffer,
     :format,
+    :transport,
     :log_level,
     :renderer_args,
     :max_restarts,
@@ -182,11 +187,17 @@ defmodule Toddy.Bridge do
 
   @impl true
   def init(opts) do
-    renderer_path = Keyword.fetch!(opts, :renderer_path)
     runtime = Keyword.fetch!(opts, :runtime)
+    transport = Keyword.get(opts, :transport, :spawn)
     format = Keyword.get(opts, :format, :msgpack)
-
     log_level = Keyword.get(opts, :log_level, :error)
+
+    renderer_path =
+      if transport == :spawn do
+        Keyword.fetch!(opts, :renderer_path)
+      else
+        Keyword.get(opts, :renderer_path)
+      end
 
     state = %__MODULE__{
       port: nil,
@@ -194,6 +205,7 @@ defmodule Toddy.Bridge do
       renderer_path: renderer_path,
       buffer: "",
       format: format,
+      transport: transport,
       log_level: log_level,
       renderer_args: Keyword.get(opts, :renderer_args, []),
       max_restarts: Keyword.get(opts, :max_restarts, 5),
@@ -310,6 +322,13 @@ defmodule Toddy.Bridge do
     end
   end
 
+  # Stdio transport: stdin closed (renderer exited or pipe broken).
+  def handle_info({port, :eof}, %{port: port, transport: :stdio} = state) do
+    Logger.info("toddy bridge: stdin closed (renderer exited) -- shutting down")
+    send(state.runtime, {:renderer_exit, :normal})
+    {:stop, :normal, %{state | port: nil}}
+  end
+
   def handle_info({port, {:exit_status, 0}}, %{port: port} = state) do
     # Clean exit (user closed window). Stop normally -- don't restart.
     Logger.info("toddy bridge: renderer exited cleanly (status 0)")
@@ -359,6 +378,17 @@ defmodule Toddy.Bridge do
   # ---------------------------------------------------------------------------
   # Private helpers
   # ---------------------------------------------------------------------------
+
+  defp open_port(%{transport: :stdio} = state) do
+    port_opts =
+      case state.format do
+        :msgpack -> [:binary, :eof, {:packet, 4}]
+        :json -> [:binary, :eof, {:line, 65_536}]
+      end
+
+    port = Port.open({:fd, 0, 1}, port_opts)
+    {:ok, %{state | port: port, buffer: ""}}
+  end
 
   defp open_port(state) do
     path = state.renderer_path
@@ -433,7 +463,7 @@ defmodule Toddy.Bridge do
         :telemetry.execute([:toddy, :bridge, :decode_error], %{}, %{reason: reason})
         state
 
-      {:hello, protocol, version, name, backend, extensions} ->
+      {:hello, %{protocol: protocol} = hello} ->
         expected = Toddy.Protocol.protocol_version()
 
         if protocol != expected do
@@ -445,14 +475,11 @@ defmodule Toddy.Bridge do
           send(self(), {:stop_protocol_mismatch, protocol, expected})
         else
           Logger.info(
-            "toddy bridge: renderer hello -- #{name} v#{version} (protocol #{protocol}, backend #{backend})"
+            "toddy bridge: renderer hello -- #{hello.name} v#{hello.version} (protocol #{protocol}, backend #{hello.backend})"
           )
         end
 
-        send(
-          state.runtime,
-          {:renderer_event, {:hello, protocol, version, name, backend, extensions}}
-        )
+        send(state.runtime, {:renderer_event, {:hello, hello}})
 
         %{state | restart_count: 0}
 
@@ -461,6 +488,12 @@ defmodule Toddy.Bridge do
         # Reset restart count on first successful message from the renderer.
         %{state | restart_count: 0}
     end
+  end
+
+  defp handle_port_exit(%{transport: :stdio} = state, _reason) do
+    Logger.info("toddy bridge: stdio port closed -- shutting down")
+    send(state.runtime, {:renderer_exit, :normal})
+    {:stop, :normal, %{state | port: nil}}
   end
 
   defp handle_port_exit(state, reason) do

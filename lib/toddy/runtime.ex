@@ -178,11 +178,11 @@ defmodule Toddy.Runtime do
     {:noreply, state}
   end
 
-  def handle_info(
-        {:renderer_event, {:hello, _protocol, version, name, backend, _extensions}},
-        state
-      ) do
-    Logger.info("toddy runtime: renderer connected -- #{name} v#{version} (#{backend})")
+  def handle_info({:renderer_event, {:hello, hello}}, state) do
+    Logger.info(
+      "toddy runtime: renderer connected -- #{hello.name} v#{hello.version} (#{hello.backend}, #{hello.transport})"
+    )
+
     {:noreply, state}
   end
 
@@ -270,7 +270,7 @@ defmodule Toddy.Runtime do
       end
 
     if tree do
-      Toddy.Bridge.send_snapshot(state.bridge, tree)
+      notify_bridge(state, &Toddy.Bridge.send_snapshot(&1, tree))
     end
 
     # Re-sync subscriptions with the new renderer.
@@ -457,6 +457,13 @@ defmodule Toddy.Runtime do
   # Private helpers
   # ---------------------------------------------------------------------------
 
+  # Send to the active bridge. In a future multi-renderer mode, this will
+  # fan out to all connected bridges. Commands.ex, subscriptions.ex, and
+  # windows.ex still access state.bridge directly -- they'll be updated
+  # when multi-renderer support is actually needed.
+  defp notify_bridge(%{bridge: nil}, _fun), do: :ok
+  defp notify_bridge(%{bridge: bridge}, fun), do: fun.(bridge)
+
   # Sends app-level settings to the bridge. The renderer expects a Settings
   # message as the very first message on stdin (before any snapshot), so this
   # must always send something, even if the app doesn't define settings/0.
@@ -480,7 +487,7 @@ defmodule Toddy.Runtime do
         settings
       end
 
-    if bridge, do: Toddy.Bridge.send_settings(bridge, settings)
+    notify_bridge(%{bridge: bridge}, &Toddy.Bridge.send_settings(&1, settings))
   end
 
   # Unwraps `app.init/1` or `app.update/2` return values into a
@@ -534,14 +541,14 @@ defmodule Toddy.Runtime do
       {:ok, new_tree} ->
         if is_nil(old_tree) do
           # First render or after restart -- send full snapshot.
-          Toddy.Bridge.send_snapshot(bridge, new_tree)
+          notify_bridge(%{bridge: bridge}, &Toddy.Bridge.send_snapshot(&1, new_tree))
         else
           # Incremental update -- diff produces an empty list for identical
           # trees, so the previous O(n) equality pre-check is unnecessary.
           ops = Toddy.Tree.diff(old_tree, new_tree)
 
           if ops != [] do
-            Toddy.Bridge.send_patch(bridge, ops)
+            notify_bridge(%{bridge: bridge}, &Toddy.Bridge.send_patch(&1, ops))
           end
         end
 
