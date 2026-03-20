@@ -1177,10 +1177,13 @@ defmodule Toddy.UI do
     caller_line = __CALLER__.line
 
     quote do
-      opts = unquote(opts)
-      id = Keyword.get(opts, :id) || unquote(compile_auto_id(caller_mod, caller_line))
-      clean_opts = Keyword.drop(opts, [:id, :do])
-      Toddy.Widget.Rule.new(id, clean_opts) |> Toddy.Widget.Rule.build()
+      Toddy.UI.__build_container__(
+        Toddy.Widget.Rule,
+        nil,
+        unquote(opts),
+        [],
+        unquote(compile_auto_id(caller_mod, caller_line))
+      )
     end
   end
 

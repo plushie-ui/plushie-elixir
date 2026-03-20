@@ -326,7 +326,10 @@ defmodule Toddy.Extension do
     dupes = prop_names -- Enum.uniq(prop_names)
 
     if dupes != [] do
-      IO.warn("duplicate prop names in #{inspect(env.module)}: #{inspect(Enum.uniq(dupes))}")
+      IO.warn(
+        "duplicate prop names in #{inspect(env.module)}: #{inspect(Enum.uniq(dupes))}",
+        Macro.Env.stacktrace(env)
+      )
     end
   end
 
@@ -509,6 +512,7 @@ defmodule Toddy.Extension do
       end) ++ [quote(do: {:a11y, Toddy.Type.A11y.t()})]
 
     quote do
+      @enforce_keys [:id]
       defstruct unquote(struct_fields)
 
       @type t :: %__MODULE__{unquote_splicing(type_fields)}
@@ -831,8 +835,6 @@ defmodule Toddy.Extension do
   end
 
   defp guard_for_type(var, :number), do: quote(do: is_number(unquote(var)))
-  defp guard_for_type(var, :integer), do: quote(do: is_integer(unquote(var)))
-  defp guard_for_type(var, :float), do: quote(do: is_float(unquote(var)))
   defp guard_for_type(var, :string), do: quote(do: is_binary(unquote(var)))
   defp guard_for_type(var, :boolean), do: quote(do: is_boolean(unquote(var)))
   defp guard_for_type(var, :atom), do: quote(do: is_atom(unquote(var)))
