@@ -26,15 +26,20 @@ defmodule Toddy.Runtime do
   ## State shape
 
       %{
-        app:              module,          # the Toddy.App implementation
-        model:            term(),          # current application model
-        bridge:           pid() | atom(),  # Toddy.Bridge pid or registered name
-        tree:             map() | nil,     # last normalized tree (for re-send on restart)
-        async_tasks:      map(),           # %{tag => {pid, nonce}} for running async/stream tasks
-        pending_effects:  map(),           # %{id => timer_ref} for in-flight effect requests
-        pending_timers:   map(),           # %{event => timer_ref} for send_after dedup/cancel
-        pending_coalesce: map(),           # %{key => event} latest coalescable event per source
-        coalesce_timer:   ref | nil        # timer ref for the flush message
+        app:                module(),
+        model:              term(),
+        bridge:             pid() | atom(),
+        daemon:             boolean(),
+        tree:               map() | nil,
+        subscriptions:      %{term() => {:timer, reference()} | {:renderer, atom()}},
+        subscription_keys:  [term()],
+        windows:            MapSet.t(),
+        async_tasks:        %{atom() => {pid(), reference()}},
+        pending_effects:    %{String.t() => reference()},
+        pending_timers:     %{term() => reference()},
+        pending_coalesce:   %{term() => Toddy.Event.t()},
+        coalesce_timer:     reference() | nil,
+        consecutive_errors: non_neg_integer()
       }
 
   ## Exit trapping
@@ -56,6 +61,7 @@ defmodule Toddy.Runtime do
            daemon: boolean(),
            tree: map() | nil,
            subscriptions: %{term() => {:timer, reference()} | {:renderer, atom()}},
+           subscription_keys: [term()],
            windows: MapSet.t(),
            async_tasks: %{atom() => {pid(), reference()}},
            pending_effects: %{String.t() => reference()},
@@ -125,6 +131,7 @@ defmodule Toddy.Runtime do
           tree: nil,
           init_commands: commands,
           subscriptions: %{},
+          subscription_keys: [],
           windows: MapSet.new(),
           async_tasks: %{},
           pending_effects: %{},
@@ -654,7 +661,7 @@ defmodule Toddy.Runtime do
   # ---------------------------------------------------------------------------
 
   # Cancels the timeout timer for a resolved effect request.
-  @spec cancel_pending_effect(map(), String.t()) :: map()
+  @spec cancel_pending_effect(state(), String.t()) :: state()
   defp cancel_pending_effect(state, id) do
     case Map.pop(state.pending_effects, id) do
       {nil, _} ->
@@ -668,7 +675,7 @@ defmodule Toddy.Runtime do
 
   # Flushes all pending effect requests, dispatching error results through
   # update/2 and cancelling their timers.
-  @spec flush_pending_effects(map(), atom()) :: map()
+  @spec flush_pending_effects(state(), atom()) :: state()
   defp flush_pending_effects(state, reason) do
     state =
       Enum.reduce(state.pending_effects, state, fn {id, timer_ref}, acc ->

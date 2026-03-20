@@ -6,7 +6,7 @@ defmodule Toddy.Protocol do
 
   * `:json` -- newline-delimited JSON. Opt-in for debugging and observability.
     Each encode function returns a JSON string with a trailing newline.
-  * `:msgpack` -- MessagePack via `Msgpax` (default). Returns raw binary with no
+  * `:msgpack` -- MessagePack via `Msgpax` (default). Returns iodata with no
     length prefix (Erlang's `{:packet, 4}` Port driver handles framing).
 
   The decode function accepts a binary in either format and returns an
@@ -34,13 +34,13 @@ defmodule Toddy.Protocol do
   # ---------------------------------------------------------------------------
 
   @doc """
-  Encodes an arbitrary map as a wire-format binary.
+  Encodes an arbitrary map as wire-format iodata.
 
   For `:json`, returns a JSON string with a trailing newline.
-  For `:msgpack`, returns raw msgpack bytes (no length prefix -- the Erlang
+  For `:msgpack`, returns msgpack iodata (no length prefix -- the Erlang
   `{:packet, 4}` Port driver handles framing).
   """
-  @spec encode(message :: map(), format :: format()) :: binary()
+  @spec encode(message :: map(), format :: format()) :: iodata()
   defdelegate encode(map, format \\ :msgpack), to: Toddy.Protocol.Encode
 
   @doc """
@@ -51,7 +51,7 @@ defmodule Toddy.Protocol do
       Toddy.Protocol.encode_settings(%{antialiasing: true, default_text_size: 16}, :json)
       #=> ~s({"session":"","settings":{"antialiasing":true,"default_text_size":16,"protocol_version":1},"type":"settings"}) <> "\\n"
   """
-  @spec encode_settings(settings :: map(), format :: format()) :: binary()
+  @spec encode_settings(settings :: map(), format :: format()) :: iodata()
   defdelegate encode_settings(settings, format \\ :msgpack), to: Toddy.Protocol.Encode
 
   @doc """
@@ -62,7 +62,7 @@ defmodule Toddy.Protocol do
       Toddy.Protocol.encode_snapshot(%{tag: "text", value: "hello"}, :json)
       #=> ~s({"session":"","tree":{"tag":"text","value":"hello"},"type":"snapshot"}) <> "\\n"
   """
-  @spec encode_snapshot(tree :: term(), format :: format()) :: binary()
+  @spec encode_snapshot(tree :: term(), format :: format()) :: iodata()
   defdelegate encode_snapshot(tree, format \\ :msgpack), to: Toddy.Protocol.Encode
 
   @doc """
@@ -75,7 +75,7 @@ defmodule Toddy.Protocol do
       Toddy.Protocol.encode_patch([], :json)
       #=> ~s({"ops":[],"session":"","type":"patch"}) <> "\\n"
   """
-  @spec encode_patch(ops :: list(), format :: format()) :: binary()
+  @spec encode_patch(ops :: list(), format :: format()) :: iodata()
   defdelegate encode_patch(ops, format \\ :msgpack), to: Toddy.Protocol.Encode
 
   @doc """
@@ -91,7 +91,7 @@ defmodule Toddy.Protocol do
           kind :: String.t(),
           payload :: term(),
           format :: format()
-        ) :: binary()
+        ) :: iodata()
   defdelegate encode_effect(id, kind, payload, format \\ :msgpack), to: Toddy.Protocol.Encode
 
   @doc """
@@ -102,7 +102,7 @@ defmodule Toddy.Protocol do
       Toddy.Protocol.encode_widget_op("focus", %{target: "username"}, :json)
       #=> ~s({"op":"focus","payload":{"target":"username"},"session":"","type":"widget_op"}) <> "\\n"
   """
-  @spec encode_widget_op(op :: String.t(), payload :: map(), format :: format()) :: binary()
+  @spec encode_widget_op(op :: String.t(), payload :: map(), format :: format()) :: iodata()
   defdelegate encode_widget_op(op, payload, format \\ :msgpack), to: Toddy.Protocol.Encode
 
   @doc """
@@ -114,7 +114,7 @@ defmodule Toddy.Protocol do
       #=> ~s({"kind":"on_key_press","session":"","tag":"keys","type":"subscribe"}) <> "\\n"
   """
   @spec encode_subscribe(kind :: String.t(), tag :: String.t(), format :: format()) ::
-          binary()
+          iodata()
   defdelegate encode_subscribe(kind, tag, format \\ :msgpack), to: Toddy.Protocol.Encode
 
   @doc """
@@ -125,7 +125,7 @@ defmodule Toddy.Protocol do
       Toddy.Protocol.encode_unsubscribe("on_key_press", :json)
       #=> ~s({"kind":"on_key_press","session":"","type":"unsubscribe"}) <> "\\n"
   """
-  @spec encode_unsubscribe(kind :: String.t(), format :: format()) :: binary()
+  @spec encode_unsubscribe(kind :: String.t(), format :: format()) :: iodata()
   defdelegate encode_unsubscribe(kind, format \\ :msgpack), to: Toddy.Protocol.Encode
 
   @doc """
@@ -143,7 +143,7 @@ defmodule Toddy.Protocol do
       Toddy.Protocol.encode_image_op("create_image", %{handle: "logo", data: <<1, 2, 3>>}, :json)
       #=> ~s({"data":"AQID","handle":"logo","op":"create_image","session":"","type":"image_op"}) <> "\\n"
   """
-  @spec encode_image_op(op :: String.t(), payload :: map(), format :: format()) :: binary()
+  @spec encode_image_op(op :: String.t(), payload :: map(), format :: format()) :: iodata()
   defdelegate encode_image_op(op, payload, format \\ :msgpack), to: Toddy.Protocol.Encode
 
   @doc """
@@ -157,7 +157,7 @@ defmodule Toddy.Protocol do
           op :: String.t(),
           payload :: map(),
           format :: format()
-        ) :: binary()
+        ) :: iodata()
   defdelegate encode_extension_command(node_id, op, payload, format \\ :msgpack),
     to: Toddy.Protocol.Encode
 
@@ -170,7 +170,7 @@ defmodule Toddy.Protocol do
   @spec encode_extension_commands(
           commands :: [{String.t(), String.t(), map()}],
           format :: format()
-        ) :: binary()
+        ) :: iodata()
   defdelegate encode_extension_commands(commands, format \\ :msgpack), to: Toddy.Protocol.Encode
 
   @doc """
@@ -186,12 +186,12 @@ defmodule Toddy.Protocol do
           window_id :: String.t(),
           settings :: map(),
           format :: format()
-        ) :: binary()
+        ) :: iodata()
   defdelegate encode_window_op(op, window_id, settings, format \\ :msgpack),
     to: Toddy.Protocol.Encode
 
   @doc "Encodes an advance_frame message for headless/test mode."
-  @spec encode_advance_frame(timestamp :: non_neg_integer(), format :: format()) :: binary()
+  @spec encode_advance_frame(timestamp :: non_neg_integer(), format :: format()) :: iodata()
   defdelegate encode_advance_frame(timestamp, format \\ :msgpack), to: Toddy.Protocol.Encode
 
   # ---------------------------------------------------------------------------

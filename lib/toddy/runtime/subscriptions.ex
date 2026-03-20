@@ -39,26 +39,26 @@ defmodule Toddy.Runtime.Subscriptions do
       end
 
     new_by_key = Map.new(new_specs, fn spec -> {Toddy.Subscription.key(spec), spec} end)
+    new_sorted_keys = new_by_key |> Map.keys() |> Enum.sort()
+
+    # Short-circuit: if the sorted key list hasn't changed, the subscription
+    # set is identical and we can skip the full diff entirely.
+    if new_sorted_keys == state.subscription_keys do
+      state
+    else
+      diff_subscriptions(state, new_by_key, new_sorted_keys)
+    end
+  end
+
+  # -- Private helpers --------------------------------------------------------
+
+  defp diff_subscriptions(state, new_by_key, new_sorted_keys) do
     old_key_set = state.subscriptions |> Map.keys() |> MapSet.new()
     new_key_set = new_by_key |> Map.keys() |> MapSet.new()
 
     # Stop removed subscriptions
     to_stop = MapSet.difference(old_key_set, new_key_set)
-
-    Enum.each(to_stop, fn key ->
-      case Map.get(state.subscriptions, key) do
-        {:timer, ref} ->
-          Process.cancel_timer(ref)
-
-        {:renderer, type} ->
-          if state.bridge do
-            Toddy.Bridge.send_unsubscribe(state.bridge, Atom.to_string(type))
-          end
-
-        _ ->
-          :ok
-      end
-    end)
+    stop_subscriptions(to_stop, state.subscriptions, state.bridge)
 
     # Start new subscriptions
     to_start = MapSet.difference(new_key_set, old_key_set)
@@ -73,10 +73,23 @@ defmodule Toddy.Runtime.Subscriptions do
     kept_keys = MapSet.difference(new_key_set, to_start) |> MapSet.to_list()
     kept = Map.take(state.subscriptions, kept_keys)
 
-    %{state | subscriptions: Map.merge(kept, new_entries)}
+    %{state | subscriptions: Map.merge(kept, new_entries), subscription_keys: new_sorted_keys}
   end
 
-  # -- Private helpers --------------------------------------------------------
+  defp stop_subscriptions(keys, subscriptions, bridge) do
+    Enum.each(keys, fn key ->
+      case Map.get(subscriptions, key) do
+        {:timer, ref} ->
+          Process.cancel_timer(ref)
+
+        {:renderer, type} ->
+          if bridge, do: Toddy.Bridge.send_unsubscribe(bridge, Atom.to_string(type))
+
+        _ ->
+          :ok
+      end
+    end)
+  end
 
   defp start_subscription(%{type: :every, interval: interval, tag: tag}, _bridge) do
     ref = Process.send_after(self(), {:subscription_tick, tag, interval}, interval)

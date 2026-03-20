@@ -388,17 +388,21 @@ defmodule Toddy.Tree do
   # Ensures all keys in the map are atoms. String keys from manually
   # constructed node maps are converted; atom keys pass through.
   defp atomize_keys(%{} = map) do
-    Map.new(map, fn
-      {k, v} when is_binary(k) ->
-        try do
-          {String.to_existing_atom(k), v}
-        rescue
-          ArgumentError -> {k, v}
-        end
+    if Enum.all?(map, fn {k, _} -> is_atom(k) end) do
+      map
+    else
+      Map.new(map, fn
+        {k, v} when is_binary(k) ->
+          try do
+            {String.to_existing_atom(k), v}
+          rescue
+            ArgumentError -> {k, v}
+          end
 
-      {k, v} ->
-        {k, v}
-    end)
+        {k, v} ->
+          {k, v}
+      end)
+    end
   end
 
   # Atomize string keys inside the :a11y sub-map so resolve_a11y_id_refs

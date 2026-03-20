@@ -1,19 +1,19 @@
 defmodule Toddy.Protocol.Encode do
   @moduledoc false
 
-  # All protocol encoding functions. Each returns a wire-format binary
-  # (JSON with trailing newline, or raw msgpack bytes).
+  # All protocol encoding functions. Each returns wire-format iodata
+  # (JSON binary with trailing newline, or msgpack iodata).
 
   @protocol_version Toddy.Protocol.protocol_version()
 
   @doc """
-  Encodes an arbitrary map as a wire-format binary.
+  Encodes an arbitrary map as wire-format iodata.
 
   For `:json`, returns a JSON string with a trailing newline.
-  For `:msgpack`, returns raw msgpack bytes (no length prefix -- the Erlang
+  For `:msgpack`, returns msgpack iodata (no length prefix -- the Erlang
   `{:packet, 4}` Port driver handles framing).
   """
-  @spec encode(message :: map(), format :: Toddy.Protocol.format()) :: binary()
+  @spec encode(message :: map(), format :: Toddy.Protocol.format()) :: iodata()
   def encode(map, format \\ :msgpack), do: serialize(map, format)
 
   @doc """
@@ -24,7 +24,7 @@ defmodule Toddy.Protocol.Encode do
       Toddy.Protocol.Encode.encode_settings(%{antialiasing: true, default_text_size: 16}, :json)
       #=> ~s({"session":"","settings":{"antialiasing":true,"default_text_size":16,"protocol_version":1},"type":"settings"}) <> "\\n"
   """
-  @spec encode_settings(settings :: map(), format :: Toddy.Protocol.format()) :: binary()
+  @spec encode_settings(settings :: map(), format :: Toddy.Protocol.format()) :: iodata()
   def encode_settings(settings, format \\ :msgpack) when is_map(settings) do
     settings = Map.put_new(settings, :protocol_version, @protocol_version)
     serialize(%{type: "settings", settings: settings}, format)
@@ -38,7 +38,7 @@ defmodule Toddy.Protocol.Encode do
       Toddy.Protocol.Encode.encode_snapshot(%{tag: "text", value: "hello"}, :json)
       #=> ~s({"session":"","tree":{"tag":"text","value":"hello"},"type":"snapshot"}) <> "\\n"
   """
-  @spec encode_snapshot(tree :: term(), format :: Toddy.Protocol.format()) :: binary()
+  @spec encode_snapshot(tree :: term(), format :: Toddy.Protocol.format()) :: iodata()
   def encode_snapshot(tree, format \\ :msgpack) do
     serialize(%{type: "snapshot", tree: stringify_tree(tree)}, format)
   end
@@ -53,7 +53,7 @@ defmodule Toddy.Protocol.Encode do
       Toddy.Protocol.Encode.encode_patch([], :json)
       #=> ~s({"ops":[],"session":"","type":"patch"}) <> "\\n"
   """
-  @spec encode_patch(ops :: list(), format :: Toddy.Protocol.format()) :: binary()
+  @spec encode_patch(ops :: list(), format :: Toddy.Protocol.format()) :: iodata()
   def encode_patch(ops, format \\ :msgpack) do
     serialize(%{type: "patch", ops: stringify_patch_ops(ops)}, format)
   end
@@ -71,7 +71,7 @@ defmodule Toddy.Protocol.Encode do
           kind :: String.t(),
           payload :: term(),
           format :: Toddy.Protocol.format()
-        ) :: binary()
+        ) :: iodata()
   def encode_effect(id, kind, payload, format \\ :msgpack) do
     serialize(%{type: "effect", id: id, kind: kind, payload: payload}, format)
   end
@@ -85,7 +85,7 @@ defmodule Toddy.Protocol.Encode do
       #=> ~s({"op":"focus","payload":{"target":"username"},"session":"","type":"widget_op"}) <> "\\n"
   """
   @spec encode_widget_op(op :: String.t(), payload :: map(), format :: Toddy.Protocol.format()) ::
-          binary()
+          iodata()
   def encode_widget_op(op, payload, format \\ :msgpack) do
     payload = encode_binary_fields(payload, format, [:data])
     serialize(%{type: "widget_op", op: op, payload: payload}, format)
@@ -103,7 +103,7 @@ defmodule Toddy.Protocol.Encode do
           kind :: String.t(),
           tag :: String.t(),
           format :: Toddy.Protocol.format()
-        ) :: binary()
+        ) :: iodata()
   def encode_subscribe(kind, tag, format \\ :msgpack) do
     serialize(%{type: "subscribe", kind: kind, tag: tag}, format)
   end
@@ -116,7 +116,7 @@ defmodule Toddy.Protocol.Encode do
       Toddy.Protocol.Encode.encode_unsubscribe("on_key_press")
       #=> ~s({"kind":"on_key_press","session":"","type":"unsubscribe"}) <> "\\n"
   """
-  @spec encode_unsubscribe(kind :: String.t(), format :: Toddy.Protocol.format()) :: binary()
+  @spec encode_unsubscribe(kind :: String.t(), format :: Toddy.Protocol.format()) :: iodata()
   def encode_unsubscribe(kind, format \\ :msgpack) do
     serialize(%{type: "unsubscribe", kind: kind}, format)
   end
@@ -140,7 +140,7 @@ defmodule Toddy.Protocol.Encode do
           op :: String.t(),
           payload :: map(),
           format :: Toddy.Protocol.format()
-        ) :: binary()
+        ) :: iodata()
   def encode_image_op(op, payload, format \\ :msgpack) do
     payload = encode_binary_fields(payload, format)
     serialize(Map.merge(%{type: "image_op", op: op}, payload), format)
@@ -157,7 +157,7 @@ defmodule Toddy.Protocol.Encode do
           op :: String.t(),
           payload :: map(),
           format :: Toddy.Protocol.format()
-        ) :: binary()
+        ) :: iodata()
   def encode_extension_command(node_id, op, payload, format \\ :msgpack) do
     serialize(
       %{
@@ -179,7 +179,7 @@ defmodule Toddy.Protocol.Encode do
   @spec encode_extension_commands(
           commands :: [{String.t(), String.t(), map()}],
           format :: Toddy.Protocol.format()
-        ) :: binary()
+        ) :: iodata()
   def encode_extension_commands(commands, format \\ :msgpack) when is_list(commands) do
     items =
       Enum.map(commands, fn {node_id, op, payload} ->
@@ -202,7 +202,7 @@ defmodule Toddy.Protocol.Encode do
           window_id :: String.t(),
           settings :: map(),
           format :: Toddy.Protocol.format()
-        ) :: binary()
+        ) :: iodata()
   def encode_window_op(op, window_id, settings, format \\ :msgpack) do
     # Binary fields in window op settings (e.g. icon_data for set_icon) need
     # format-specific encoding, same as image ops.
@@ -214,7 +214,7 @@ defmodule Toddy.Protocol.Encode do
   @spec encode_advance_frame(
           timestamp :: non_neg_integer(),
           format :: Toddy.Protocol.format()
-        ) :: binary()
+        ) :: iodata()
   def encode_advance_frame(timestamp, format \\ :msgpack) do
     serialize(%{type: "advance_frame", timestamp: timestamp}, format)
   end
@@ -238,7 +238,7 @@ defmodule Toddy.Protocol.Encode do
 
     case format do
       :json -> Jason.encode!(map) <> "\n"
-      :msgpack -> Msgpax.pack!(map, iodata: false)
+      :msgpack -> Msgpax.pack!(map)
     end
   end
 
