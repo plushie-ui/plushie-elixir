@@ -47,6 +47,35 @@ defmodule Toddy.CommandTest do
   end
 
   # ---------------------------------------------------------------------------
+  # done/2
+  # ---------------------------------------------------------------------------
+
+  describe "done/2" do
+    test "returns a Command with type :done" do
+      cmd = Command.done(:hello, fn val -> {:got, val} end)
+      assert cmd.type == :done
+    end
+
+    test "stores the value and mapper in the payload" do
+      mapper = fn val -> {:wrapped, val} end
+      cmd = Command.done(42, mapper)
+      assert cmd.payload.value == 42
+      assert cmd.payload.mapper == mapper
+    end
+
+    test "mapper is called with the provided value" do
+      cmd = Command.done(:input, fn val -> {:mapped, val} end)
+      assert cmd.payload.mapper.(cmd.payload.value) == {:mapped, :input}
+    end
+
+    test "raises when mapper is not a 1-arity function" do
+      assert_raise FunctionClauseError, fn ->
+        Command.done(:val, fn _a, _b -> :nope end)
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # async/2
   # ---------------------------------------------------------------------------
 

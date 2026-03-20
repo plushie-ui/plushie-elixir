@@ -57,6 +57,9 @@ jobs:
       - name: Test
         run: mix test
 
+      - name: Test (headless backend)
+        run: TODDY_TEST_BACKEND=headless mix test
+
       - name: Docs
         run: MIX_ENV=dev mix docs --warnings-as-errors
 

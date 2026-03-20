@@ -107,6 +107,54 @@ defmodule Toddy.AnimationTest do
     end
   end
 
+  # -- Out-of-range t values ---------------------------------------------------
+
+  describe "easing functions with out-of-range t" do
+    # Verify that easing functions don't crash or produce non-numeric results
+    # when given t values outside the expected 0.0..1.0 range.
+
+    test "linear handles t < 0 and t > 1" do
+      assert is_number(Animation.linear(-0.5))
+      assert is_number(Animation.linear(1.5))
+      assert Animation.linear(-0.5) == -0.5
+      assert Animation.linear(1.5) == 1.5
+    end
+
+    test "ease_in handles t < 0 and t > 1" do
+      assert is_number(Animation.ease_in(-0.5))
+      assert is_number(Animation.ease_in(1.5))
+      # ease_in is cubic: t^3, so -0.5^3 = -0.125
+      assert_in_delta Animation.ease_in(-0.5), -0.125, 1.0e-10
+    end
+
+    test "ease_out handles t < 0 and t > 1" do
+      assert is_number(Animation.ease_out(-0.5))
+      assert is_number(Animation.ease_out(1.5))
+    end
+
+    test "ease_in_out handles t < 0 and t > 1" do
+      assert is_number(Animation.ease_in_out(-0.5))
+      assert is_number(Animation.ease_in_out(1.5))
+    end
+
+    test "ease_in_quad handles t < 0 and t > 1" do
+      assert is_number(Animation.ease_in_quad(-0.5))
+      assert is_number(Animation.ease_in_quad(1.5))
+      # ease_in_quad is t^2, so (-0.5)^2 = 0.25
+      assert_in_delta Animation.ease_in_quad(-0.5), 0.25, 1.0e-10
+    end
+
+    test "ease_out_quad handles t < 0 and t > 1" do
+      assert is_number(Animation.ease_out_quad(-0.5))
+      assert is_number(Animation.ease_out_quad(1.5))
+    end
+
+    test "spring handles t < 0 and t > 1" do
+      assert is_number(Animation.spring(-0.5))
+      assert is_number(Animation.spring(1.5))
+    end
+  end
+
   # -- Interpolation ----------------------------------------------------------
 
   describe "interpolate/4" do

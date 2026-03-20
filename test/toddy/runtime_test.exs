@@ -291,6 +291,39 @@ defmodule Toddy.RuntimeTest do
       assert text_node.props[:content] == "ticks:2"
     end
 
+    test "done/2 dispatches the mapped value through update" do
+      defmodule DoneApp do
+        use Toddy.App
+
+        def init(_opts), do: %{result: nil}
+
+        def update(model, %Widget{type: :click, id: "go"}) do
+          cmd = Toddy.Command.done(:raw_value, fn val -> {:transformed, val} end)
+          {model, cmd}
+        end
+
+        def update(model, {:transformed, val}), do: %{model | result: val}
+        def update(model, _event), do: model
+
+        def view(model) do
+          import Toddy.UI
+
+          column do
+            text(inspect(model.result))
+          end
+        end
+      end
+
+      {runtime, _bridge} = start_runtime(DoneApp)
+      await_initial_render(runtime)
+
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "go"})
+
+      # done/2 uses send_to_self, so the event arrives in the next message.
+      state = await_condition(runtime, fn s -> s.model.result == :raw_value end)
+      assert state.model.result == :raw_value
+    end
+
     test "init with commands executes them" do
       {runtime, _bridge} = start_runtime(CommandApp)
       await_initial_render(runtime)
@@ -449,6 +482,62 @@ defmodule Toddy.RuntimeTest do
       ticks_after = :sys.get_state(runtime).model.ticks
       # Ticks should not have increased after stopping.
       assert ticks_after == ticks_before
+    end
+
+    test "rapid toggle of timer subscription settles correctly" do
+      defmodule RapidToggleApp do
+        use Toddy.App
+
+        def init(_opts), do: %{timer_on: true, ticks: 0}
+
+        def update(model, %Toddy.Event.Timer{tag: :tick}), do: %{model | ticks: model.ticks + 1}
+        def update(model, :toggle), do: %{model | timer_on: not model.timer_on}
+        def update(model, _event), do: model
+
+        def subscribe(model) do
+          if model.timer_on do
+            [Toddy.Subscription.every(15, :tick)]
+          else
+            []
+          end
+        end
+
+        def view(model) do
+          import Toddy.UI
+
+          column do
+            text("ticks:#{model.ticks}")
+          end
+        end
+      end
+
+      {runtime, _bridge} = start_runtime(RapidToggleApp)
+      await_initial_render(runtime)
+
+      # Rapid toggle: on -> off -> on (3 updates in quick succession).
+      dispatch_and_wait(runtime, :toggle)
+      dispatch_and_wait(runtime, :toggle)
+      dispatch_and_wait(runtime, :toggle)
+
+      # Final state: timer_on = false (started true, toggled 3 times).
+      state = :sys.get_state(runtime)
+      refute state.model.timer_on
+      assert map_size(state.subscriptions) == 0
+
+      # Toggle back on and verify the timer runs.
+      dispatch_and_wait(runtime, :toggle)
+      state = :sys.get_state(runtime)
+      assert state.model.timer_on
+      assert map_size(state.subscriptions) == 1
+
+      # Wait for at least one tick to confirm the timer is actually running.
+      Process.sleep(60)
+      :sys.get_state(runtime)
+      state = :sys.get_state(runtime)
+      assert state.model.ticks >= 1
+
+      # Verify exactly one subscription entry (no leaks).
+      assert map_size(state.subscriptions) == 1
     end
 
     test "multiple subscriptions can coexist" do
@@ -652,6 +741,59 @@ defmodule Toddy.RuntimeTest do
 
       state = :sys.get_state(runtime)
       assert state.model.path == "/tmp/test.txt"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # describe "effect timeout"
+  # ---------------------------------------------------------------------------
+
+  describe "effect timeout" do
+    test "effect command registers a pending timeout and cleans up on timeout" do
+      defmodule EffectTimeoutApp do
+        use Toddy.App
+        alias Toddy.Event.Effect
+
+        def init(_opts), do: %{effect_id: nil, timeout_result: nil}
+
+        def update(model, %Widget{type: :click, id: "trigger"}) do
+          cmd = Toddy.Effects.clipboard_read()
+          {%{model | effect_id: cmd.payload.id}, cmd}
+        end
+
+        def update(model, %Effect{request_id: id, result: {:error, :timeout}}) do
+          %{model | timeout_result: {:timed_out, id}}
+        end
+
+        def update(model, _event), do: model
+
+        def view(model) do
+          import Toddy.UI
+
+          column do
+            text(inspect(model.timeout_result))
+          end
+        end
+      end
+
+      {runtime, _bridge} = start_runtime(EffectTimeoutApp)
+      await_initial_render(runtime)
+
+      dispatch_and_wait(runtime, %Widget{type: :click, id: "trigger"})
+
+      # After dispatching the effect, pending_effects should have an entry.
+      state = :sys.get_state(runtime)
+      effect_id = state.model.effect_id
+      assert is_binary(effect_id)
+      assert Map.has_key?(state.pending_effects, effect_id)
+
+      # Simulate the timeout firing (avoids waiting for the real 5s timeout).
+      send(runtime, {:effect_timeout, effect_id})
+      :sys.get_state(runtime)
+
+      state = :sys.get_state(runtime)
+      assert state.model.timeout_result == {:timed_out, effect_id}
+      assert state.pending_effects == %{}
     end
   end
 
