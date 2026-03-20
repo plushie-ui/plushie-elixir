@@ -666,7 +666,7 @@ defmodule Toddy.Runtime do
   # ensures the flush fires at the next message boundary -- consecutive
   # coalescable events for the same key overwrite each other so only the
   # latest survives.
-  @spec store_coalescable(state(), term(), term()) :: state()
+  @spec store_coalescable(state(), term(), Toddy.Event.t()) :: state()
   defp store_coalescable(state, key, event) do
     state =
       if state.coalesce_timer == nil do

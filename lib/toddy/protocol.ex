@@ -222,7 +222,17 @@ defmodule Toddy.Protocol do
       {:error, :decode_failed}
   """
   @spec decode_message(data :: binary(), format :: format()) ::
-          Toddy.Event.t() | {:hello, pos_integer(), String.t(), String.t()} | {:error, term()}
+          Toddy.Event.t()
+          | {:hello, pos_integer(), String.t(), String.t()}
+          | {:settings, map()}
+          | {:snapshot, map()}
+          | {:patch, list()}
+          | {:effect, String.t(), String.t(), map()}
+          | {:widget_op, String.t(), map()}
+          | {:subscribe, String.t(), String.t()}
+          | {:unsubscribe, String.t()}
+          | {:window_op, String.t(), String.t(), map()}
+          | {:error, term()}
   defdelegate decode_message(data, format \\ :msgpack), to: Toddy.Protocol.Decode
 
   # ---------------------------------------------------------------------------

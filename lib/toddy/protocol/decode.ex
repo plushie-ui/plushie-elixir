@@ -46,7 +46,17 @@ defmodule Toddy.Protocol.Decode do
       {:error, :decode_failed}
   """
   @spec decode_message(data :: binary(), format :: Toddy.Protocol.format()) ::
-          Toddy.Event.t() | {:hello, pos_integer(), String.t(), String.t()} | {:error, term()}
+          Toddy.Event.t()
+          | {:hello, pos_integer(), String.t(), String.t()}
+          | {:settings, map()}
+          | {:snapshot, map()}
+          | {:patch, list()}
+          | {:effect, String.t(), String.t(), map()}
+          | {:widget_op, String.t(), map()}
+          | {:subscribe, String.t(), String.t()}
+          | {:unsubscribe, String.t()}
+          | {:window_op, String.t(), String.t(), map()}
+          | {:error, term()}
   def decode_message(data, format \\ :msgpack) do
     case deserialize(data, format) do
       {:ok, msg} -> dispatch(msg)
