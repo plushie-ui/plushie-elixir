@@ -500,3 +500,25 @@ def view(model) do
   end
 end
 ```
+
+
+## Renderer limits
+
+The renderer enforces hard limits on various resources. Exceeding them
+results in rejection, truncation, or clamping (depending on the
+resource). Design your app to stay within these bounds.
+
+| Resource | Limit | Behavior when exceeded |
+|---|---|---|
+| Font data (`load_font`) | 16 MiB decoded | Rejected with warning |
+| Runtime font loads | 256 per process | Rejected with warning |
+| Image handles | 4096 | Error response |
+| Total image bytes | 1 GiB | Error response |
+| Markdown content | 1 MiB | Truncated at UTF-8 boundary with warning |
+| Text editor content | 10 MiB | Truncated at UTF-8 boundary with warning |
+| Window size | 1..16384 px | Clamped with warning |
+| Window position | -32768..32768 | Clamped with warning |
+| Tree depth | 256 levels | Rendering/caching stops descending |
+
+Image and font limits are per-process and survive Reset. Content limits
+truncate at a UTF-8 character boundary.

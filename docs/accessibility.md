@@ -161,6 +161,10 @@ override or augment the inferred semantics.
 | `labelled_by` | `String.t()` | ID of the widget that labels this one |
 | `described_by` | `String.t()` | ID of the widget that describes this one |
 | `error_message` | `String.t()` | ID of the widget showing the error message |
+| `disabled` | `boolean()` | Override disabled state for AT (e.g., mark a custom widget as unavailable) |
+| `position_in_set` | `non_neg_integer()` | 1-based position in a set ("Item 3 of 7") |
+| `size_of_set` | `non_neg_integer()` | Total items in the set |
+| `has_popup` | `String.t()` | Popup type: `"listbox"`, `"menu"`, `"dialog"`, `"tree"`, `"grid"` |
 
 The type is defined in `Toddy.Type.A11y`. All fields are optional -- only
 include what you need. Both structs and bare maps are accepted; bare maps
@@ -512,6 +516,65 @@ canvas("cpu-gauge", layers: [...],
 `value` is a string describing the current value in human-readable form.
 `orientation` tells AT users whether a control is horizontal or vertical,
 which affects how they navigate it.
+
+### Set position and popup hints
+
+Use `position_in_set` / `size_of_set` when building composite widgets
+from primitives (custom lists, tab bars, radio groups). Without these,
+screen readers cannot announce position context like "Item 3 of 7".
+
+```elixir
+# Radio group with position context
+container "colors", a11y: %A11y{role: :group, label: "Favorite color"} do
+  for {color, idx} <- Enum.with_index(colors, 1) do
+    radio("color_#{color}", color, model.selected_color,
+      a11y: %A11y{
+        position_in_set: idx,
+        size_of_set: length(colors)
+      }
+    )
+  end
+end
+
+# Custom tab bar
+row do
+  for {tab, idx} <- Enum.with_index(model.tabs, 1) do
+    button("tab_#{tab.id}", tab.label,
+      a11y: %A11y{
+        role: :tab,
+        selected: tab.id == model.active_tab,
+        position_in_set: idx,
+        size_of_set: length(model.tabs)
+      }
+    )
+  end
+end
+```
+
+Use `has_popup` to tell screen readers that activating a widget opens
+a popup of a specific type:
+
+```elixir
+# Dropdown button
+button("menu_btn", "Options",
+  a11y: %A11y{has_popup: "menu", expanded: model.menu_open}
+)
+
+# Combo box with listbox popup
+text_input("search", model.query,
+  a11y: %A11y{has_popup: "listbox", expanded: model.suggestions_visible}
+)
+```
+
+Use `disabled` to override the disabled state for AT when a widget
+is visually disabled via custom styling but doesn't use the standard
+`disabled` prop:
+
+```elixir
+button("submit", "Submit",
+  a11y: %A11y{disabled: !model.form_valid}
+)
+```
 
 ### Expanded/collapsed state
 

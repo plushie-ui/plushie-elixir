@@ -258,12 +258,29 @@ The full list of trait methods:
 |---|---|---|---|---|
 | `type_names` | yes | registration | -- | `&[&str]` |
 | `config_key` | yes | registration | -- | `&str` |
-| `init` | no | startup | `&Value` (config) | -- |
+| `init` | no | startup | `&InitCtx<'_>` (ctx.config, ctx.theme, ctx.default_text_size, ctx.default_font) | -- |
 | `prepare` | no | mutable (pre-view) | `&TreeNode`, `&mut ExtensionCaches`, `&Theme` | -- |
 | `render` | yes | immutable (view) | `&TreeNode`, `&WidgetEnv` | `Element<Message>` |
 | `handle_event` | no | update | node_id, family, data, `&mut ExtensionCaches` | `EventResult` |
 | `handle_command` | no | update | node_id, op, payload, `&mut ExtensionCaches` | `Vec<OutgoingEvent>` |
 | `cleanup` | no | tree diff | node_id, `&mut ExtensionCaches` | -- |
+
+### WidgetEnv / RenderCtx fields
+
+`WidgetEnv` (and the underlying `RenderCtx`) provides access to:
+
+- `env.theme` -- the current iced `Theme`
+- `env.window_id` -- the window ID (`&str`) this render pass is for
+- `env.scale_factor` -- DPI scale factor (`f32`) for the current window
+
+Extensions doing DPI-aware rendering or per-window adaptation can use
+`window_id` and `scale_factor` directly.
+
+### Prelude additions
+
+The `toddy_core::prelude` now re-exports `alignment`, `Point`, and `Size`,
+so you no longer need to reach into `toddy_core::iced::alignment` for
+alignment types.
 
 
 ## Message::Event construction
@@ -360,7 +377,7 @@ Emitted by canvas widgets via `Message::CanvasEvent` and `Message::CanvasScroll`
 | `canvas_press` | `data.x`, `data.y`, `data.button` |
 | `canvas_release` | `data.x`, `data.y`, `data.button` |
 | `canvas_move` | `data.x`, `data.y` |
-| `canvas_scroll` | `data.x`, `data.y`, `data.delta_x`, `data.delta_y` |
+| `canvas_scroll` | `data.cursor_x`, `data.cursor_y`, `data.delta_x`, `data.delta_y` |
 
 ### MouseArea events (node ID in `id` field)
 
@@ -400,8 +417,8 @@ Listed here for completeness.
 
 | Family | Data fields |
 |---|---|
-| `key_press` | `value`: key name, `modifiers`, `data`: modified_key, physical_key, location, text, repeat |
-| `key_release` | `value`: key name, `modifiers`, `data`: same as key_press |
+| `key_press` | `modifiers`, `data.key`: key name, `data.modified_key`, `data.physical_key`, `data.location`, `data.text`, `data.repeat` |
+| `key_release` | `modifiers`, `data.key`: key name, `data.modified_key`, `data.physical_key`, `data.location` |
 | `modifiers_changed` | `data.shift`, `data.ctrl`, `data.alt`, `data.logo`, `data.command` |
 | `cursor_moved` | `data.x`, `data.y` |
 | `cursor_entered` | -- |
@@ -409,11 +426,14 @@ Listed here for completeness.
 | `button_pressed` | `data.button` |
 | `button_released` | `data.button` |
 | `wheel_scrolled` | `data.delta_x`, `data.delta_y`, `data.unit` |
-| `finger_pressed` | `data.finger_id`, `data.x`, `data.y` |
-| `finger_moved` | `data.finger_id`, `data.x`, `data.y` |
-| `finger_lifted` | `data.finger_id`, `data.x`, `data.y` |
-| `finger_lost` | `data.finger_id`, `data.x`, `data.y` |
-| `ime` | `data.kind` (opened/preedit/commit/closed), `data.text`, `data.cursor` |
+| `finger_pressed` | `data.id`, `data.x`, `data.y` |
+| `finger_moved` | `data.id`, `data.x`, `data.y` |
+| `finger_lifted` | `data.id`, `data.x`, `data.y` |
+| `finger_lost` | `data.id`, `data.x`, `data.y` |
+| `ime_opened` | -- |
+| `ime_preedit` | `data.text`, `data.cursor` |
+| `ime_commit` | `data.text` |
+| `ime_closed` | -- |
 | `animation_frame` | `data.timestamp_millis` |
 | `theme_changed` | `data.mode` |
 
@@ -786,6 +806,16 @@ manually traversing `serde_json::Value`:
 | `prop_horizontal_alignment(node, key)` | `alignment::Horizontal` | "left"/"center"/"right", defaults Left |
 | `prop_vertical_alignment(node, key)` | `alignment::Vertical` | "top"/"center"/"bottom", defaults Top |
 | `prop_content_fit(node)` | `Option<ContentFit>` | Reads `content_fit` prop |
+| `node.prop_str(key)` | `Option<String>` | Method on `TreeNode` (same as `prop_str`) |
+| `node.prop_f32(key)` | `Option<f32>` | Method on `TreeNode` (same as `prop_f32`) |
+| `node.prop_bool(key)` | `Option<bool>` | Method on `TreeNode` (same as `prop_bool`) |
+| `node.prop_color(key)` | `Option<Color>` | Method on `TreeNode` (same as `prop_color`) |
+| `node.prop_padding(key)` | `Padding` | Method on `TreeNode` (same as `prop_padding`) |
+| `node.props()` | `Option<&Map>` | Access the props object directly |
+| `OutgoingEvent::with_value(value)` | `OutgoingEvent` | Set the `value` field on extension events |
+| `ToddyAppBuilder::extension_boxed(ext)` | `ToddyAppBuilder` | Register pre-boxed extensions |
+| `f64_to_f32(v)` | `f32` | Clamping f64-to-f32 conversion |
+| `prop_padding(node, key)` | `Padding` | Public padding prop helper |
 
 
 ## Testing extensions
