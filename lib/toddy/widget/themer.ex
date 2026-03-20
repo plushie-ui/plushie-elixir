@@ -75,8 +75,8 @@ defmodule Toddy.Widget.Themer do
     def to_node(t) do
       props =
         %{}
-        |> put_if(t.theme, "theme")
-        |> put_if(t.a11y, "a11y")
+        |> put_if(t.theme, :theme)
+        |> put_if(t.a11y, :a11y)
 
       %{
         id: t.id,

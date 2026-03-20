@@ -157,15 +157,15 @@ defmodule Toddy.Widget.PaneGrid do
     def to_node(pg) do
       props =
         %{}
-        |> put_if(pg.panes, "panes")
-        |> put_if(pg.spacing, "spacing")
-        |> put_if(pg.width, "width")
-        |> put_if(pg.height, "height")
-        |> put_if(pg.min_size, "min_size")
-        |> put_if(pg.divider_color, "divider_color")
-        |> put_if(pg.divider_width, "divider_width")
-        |> put_if(pg.leeway, "leeway")
-        |> put_if(pg.a11y, "a11y")
+        |> put_if(pg.panes, :panes)
+        |> put_if(pg.spacing, :spacing)
+        |> put_if(pg.width, :width)
+        |> put_if(pg.height, :height)
+        |> put_if(pg.min_size, :min_size)
+        |> put_if(pg.divider_color, :divider_color)
+        |> put_if(pg.divider_width, :divider_width)
+        |> put_if(pg.leeway, :leeway)
+        |> put_if(pg.a11y, :a11y)
 
       %{
         id: pg.id,

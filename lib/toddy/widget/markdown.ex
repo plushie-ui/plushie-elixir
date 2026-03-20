@@ -153,17 +153,17 @@ defmodule Toddy.Widget.Markdown do
     def to_node(md) do
       props =
         %{}
-        |> put_if(md.content, "content")
-        |> put_if(md.width, "width")
-        |> put_if(md.text_size, "text_size")
-        |> put_if(md.h1_size, "h1_size")
-        |> put_if(md.h2_size, "h2_size")
-        |> put_if(md.h3_size, "h3_size")
-        |> put_if(md.code_size, "code_size")
-        |> put_if(md.spacing, "spacing")
-        |> put_if(md.link_color, "link_color")
-        |> put_if(md.code_theme, "code_theme")
-        |> put_if(md.a11y, "a11y")
+        |> put_if(md.content, :content)
+        |> put_if(md.width, :width)
+        |> put_if(md.text_size, :text_size)
+        |> put_if(md.h1_size, :h1_size)
+        |> put_if(md.h2_size, :h2_size)
+        |> put_if(md.h3_size, :h3_size)
+        |> put_if(md.code_size, :code_size)
+        |> put_if(md.spacing, :spacing)
+        |> put_if(md.link_color, :link_color)
+        |> put_if(md.code_theme, :code_theme)
+        |> put_if(md.a11y, :a11y)
 
       %{id: md.id, type: "markdown", props: props, children: []}
     end

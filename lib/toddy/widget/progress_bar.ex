@@ -106,13 +106,13 @@ defmodule Toddy.Widget.ProgressBar do
 
       props =
         %{}
-        |> put_if([min, max], "range")
-        |> put_if(bar.value, "value")
-        |> put_if(bar.width, "width")
-        |> put_if(bar.height, "height")
-        |> put_if(bar.style, "style")
-        |> put_if(bar.vertical, "vertical")
-        |> put_if(bar.a11y, "a11y")
+        |> put_if([min, max], :range)
+        |> put_if(bar.value, :value)
+        |> put_if(bar.width, :width)
+        |> put_if(bar.height, :height)
+        |> put_if(bar.style, :style)
+        |> put_if(bar.vertical, :vertical)
+        |> put_if(bar.a11y, :a11y)
 
       %{id: bar.id, type: "progress_bar", props: props, children: []}
     end

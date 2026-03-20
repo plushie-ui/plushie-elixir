@@ -101,11 +101,11 @@ defmodule Toddy.Widget.Pin do
     def to_node(pin) do
       props =
         %{}
-        |> put_if(pin.x, "x")
-        |> put_if(pin.y, "y")
-        |> put_if(pin.width, "width")
-        |> put_if(pin.height, "height")
-        |> put_if(pin.a11y, "a11y")
+        |> put_if(pin.x, :x)
+        |> put_if(pin.y, :y)
+        |> put_if(pin.width, :width)
+        |> put_if(pin.height, :height)
+        |> put_if(pin.a11y, :a11y)
 
       %{
         id: pin.id,

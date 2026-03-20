@@ -87,7 +87,7 @@ defmodule Toddy.Extension do
   Use `render/2` for leaf composites that do not accept children:
 
       def render(id, props) do
-        %{id: id, type: "text", props: %{"content" => props.label}, children: []}
+        %{id: id, type: "text", props: %{content: props.label}, children: []}
       end
 
   Use `render/3` for container composites that accept children. When
@@ -675,7 +675,6 @@ defmodule Toddy.Extension do
   defp generate_widget_protocol(_module, type_string, container, props) do
     put_calls =
       Enum.map(props, fn {name, type, _opts} ->
-        key_string = Atom.to_string(name)
         encoder = protocol_encoder_for_type(type)
 
         quote do
@@ -683,7 +682,7 @@ defmodule Toddy.Extension do
             Toddy.Widget.Build.put_if(
               props,
               widget.unquote(name),
-              unquote(key_string),
+              unquote(name),
               unquote(encoder)
             )
         end
@@ -691,7 +690,7 @@ defmodule Toddy.Extension do
 
     a11y_put =
       quote do
-        props = Toddy.Widget.Build.put_if(props, widget.a11y, "a11y")
+        props = Toddy.Widget.Build.put_if(props, widget.a11y, :a11y)
       end
 
     children =

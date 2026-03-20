@@ -72,9 +72,9 @@ defmodule Toddy.Widget.Space do
     def to_node(space) do
       props =
         %{}
-        |> put_if(space.width, "width")
-        |> put_if(space.height, "height")
-        |> put_if(space.a11y, "a11y")
+        |> put_if(space.width, :width)
+        |> put_if(space.height, :height)
+        |> put_if(space.a11y, :a11y)
 
       %{id: space.id, type: "space", props: props, children: []}
     end

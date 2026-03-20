@@ -242,19 +242,19 @@ defmodule Toddy.Widget.MouseArea do
     def to_node(ma) do
       props =
         %{}
-        |> put_if(ma.cursor, "cursor")
-        |> put_if(ma.on_press, "on_press")
-        |> put_if(ma.on_release, "on_release")
-        |> put_if(ma.on_right_press, "on_right_press")
-        |> put_if(ma.on_right_release, "on_right_release")
-        |> put_if(ma.on_middle_press, "on_middle_press")
-        |> put_if(ma.on_middle_release, "on_middle_release")
-        |> put_if(ma.on_double_click, "on_double_click")
-        |> put_if(ma.on_enter, "on_enter")
-        |> put_if(ma.on_exit, "on_exit")
-        |> put_if(ma.on_move, "on_move")
-        |> put_if(ma.on_scroll, "on_scroll")
-        |> put_if(ma.a11y, "a11y")
+        |> put_if(ma.cursor, :cursor)
+        |> put_if(ma.on_press, :on_press)
+        |> put_if(ma.on_release, :on_release)
+        |> put_if(ma.on_right_press, :on_right_press)
+        |> put_if(ma.on_right_release, :on_right_release)
+        |> put_if(ma.on_middle_press, :on_middle_press)
+        |> put_if(ma.on_middle_release, :on_middle_release)
+        |> put_if(ma.on_double_click, :on_double_click)
+        |> put_if(ma.on_enter, :on_enter)
+        |> put_if(ma.on_exit, :on_exit)
+        |> put_if(ma.on_move, :on_move)
+        |> put_if(ma.on_scroll, :on_scroll)
+        |> put_if(ma.a11y, :a11y)
 
       %{
         id: ma.id,

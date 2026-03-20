@@ -18,12 +18,12 @@ defmodule Toddy.Widget.CheckboxTest do
   describe "build/1 with disabled" do
     test "includes disabled in props when true" do
       node = Checkbox.new("cb1", "Accept", false) |> Checkbox.disabled(true) |> Checkbox.build()
-      assert node.props["disabled"] == true
+      assert node.props[:disabled] == true
     end
 
     test "includes disabled false in props" do
       node = Checkbox.new("cb1", "Accept", false) |> Checkbox.disabled(false) |> Checkbox.build()
-      assert node.props["disabled"] == false
+      assert node.props[:disabled] == false
     end
 
     test "omits disabled from props when nil" do

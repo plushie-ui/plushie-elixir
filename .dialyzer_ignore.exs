@@ -12,9 +12,5 @@
   {"lib/toddy/runtime/windows.ex", :contract_with_opaque},
   {"lib/toddy/runtime/windows.ex", :call_without_opaque},
 
-  # Convenience alignment builders return t() which is correct, but dialyzer
-  # infers a more specific success type (e.g. align_x: :left). The spec is
-  # accurate -- t() subsumes the specific field values.
-  {"lib/toddy/iced/widget/container.ex", :invalid_contract},
 
 ]

@@ -27,8 +27,8 @@ defmodule Toddy.UI do
 
       %{id: string, type: string, props: %{}, children: []}
 
-  Props use string keys. Reserved opts keys (`:children`, `:id`, `:do`) are
-  not treated as props.
+  Props use atom keys internally; string keys are used only at the wire encoding
+  boundary. Reserved opts keys (`:children`, `:id`, `:do`) are not treated as props.
 
   ## Two equivalent forms
 

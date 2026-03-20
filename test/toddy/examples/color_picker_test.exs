@@ -318,15 +318,15 @@ defmodule ColorPickerTest do
       picker = Toddy.UI.find(tree, "picker")
       assert picker != nil
       assert picker.type == "canvas"
-      assert picker.props["on_press"] == true
-      assert picker.props["on_release"] == true
-      assert picker.props["on_move"] == true
+      assert picker.props[:on_press] == true
+      assert picker.props[:on_release] == true
+      assert picker.props[:on_move] == true
     end
 
     test "canvas has 4 layers" do
       tree = ColorPicker.view(ColorPicker.init([]))
       picker = Toddy.UI.find(tree, "picker")
-      layers = picker.props["layers"]
+      layers = picker.props[:layers]
       assert map_size(layers) == 4
       assert Map.has_key?(layers, "a_ring")
       assert Map.has_key?(layers, "b_sv_hue")
@@ -337,20 +337,20 @@ defmodule ColorPickerTest do
     test "ring layer has 72 shapes" do
       tree = ColorPicker.view(ColorPicker.init([]))
       picker = Toddy.UI.find(tree, "picker")
-      assert length(picker.props["layers"]["a_ring"]) == 72
+      assert length(picker.props[:layers]["a_ring"]) == 72
     end
 
     test "sv layers have 1 shape each" do
       tree = ColorPicker.view(ColorPicker.init([]))
       picker = Toddy.UI.find(tree, "picker")
-      assert length(picker.props["layers"]["b_sv_hue"]) == 1
-      assert length(picker.props["layers"]["c_sv_dark"]) == 1
+      assert length(picker.props[:layers]["b_sv_hue"]) == 1
+      assert length(picker.props[:layers]["c_sv_dark"]) == 1
     end
 
     test "cursors layer has 2 shapes" do
       tree = ColorPicker.view(ColorPicker.init([]))
       picker = Toddy.UI.find(tree, "picker")
-      assert length(picker.props["layers"]["d_cursors"]) == 2
+      assert length(picker.props[:layers]["d_cursors"]) == 2
     end
 
     test "swatch container is present" do
@@ -369,45 +369,45 @@ defmodule ColorPickerTest do
     test "initial model shows red (#ff0000)" do
       tree = ColorPicker.view(ColorPicker.init([]))
       swatch = Toddy.UI.find(tree, "swatch")
-      assert swatch.props["background"] == "#ff0000"
+      assert swatch.props[:background] == "#ff0000"
 
       hex_text = Toddy.UI.find(tree, "hex_display")
-      assert hex_text.props["content"] == "#ff0000"
+      assert hex_text.props[:content] == "#ff0000"
     end
 
     test "pure green at hue=120" do
       model = %{hue: 120.0, saturation: 1.0, value: 1.0, drag: :none}
       tree = ColorPicker.view(model)
       swatch = Toddy.UI.find(tree, "swatch")
-      assert swatch.props["background"] == "#00ff00"
+      assert swatch.props[:background] == "#00ff00"
     end
 
     test "pure blue at hue=240" do
       model = %{hue: 240.0, saturation: 1.0, value: 1.0, drag: :none}
       tree = ColorPicker.view(model)
       swatch = Toddy.UI.find(tree, "swatch")
-      assert swatch.props["background"] == "#0000ff"
+      assert swatch.props[:background] == "#0000ff"
     end
 
     test "white at s=0, v=1" do
       model = %{hue: 0.0, saturation: 0.0, value: 1.0, drag: :none}
       tree = ColorPicker.view(model)
       swatch = Toddy.UI.find(tree, "swatch")
-      assert swatch.props["background"] == "#ffffff"
+      assert swatch.props[:background] == "#ffffff"
     end
 
     test "black at s=0, v=0" do
       model = %{hue: 0.0, saturation: 0.0, value: 0.0, drag: :none}
       tree = ColorPicker.view(model)
       swatch = Toddy.UI.find(tree, "swatch")
-      assert swatch.props["background"] == "#000000"
+      assert swatch.props[:background] == "#000000"
     end
 
     test "HSV display text shows correct values" do
       model = %{hue: 210.0, saturation: 0.85, value: 0.92, drag: :none}
       tree = ColorPicker.view(model)
       hsv_text = Toddy.UI.find(tree, "hsv_display")
-      content = hsv_text.props["content"]
+      content = hsv_text.props[:content]
       assert content =~ "H: 210"
       assert content =~ "S: 85%"
       assert content =~ "V: 92%"
@@ -479,8 +479,8 @@ defmodule ColorPickerTest do
       # View reflects the selection
       tree = ColorPicker.view(model)
       swatch = Toddy.UI.find(tree, "swatch")
-      assert is_binary(swatch.props["background"])
-      assert String.starts_with?(swatch.props["background"], "#")
+      assert is_binary(swatch.props[:background])
+      assert String.starts_with?(swatch.props[:background], "#")
     end
   end
 end

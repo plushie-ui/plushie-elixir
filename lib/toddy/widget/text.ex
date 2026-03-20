@@ -178,20 +178,20 @@ defmodule Toddy.Widget.Text do
     def to_node(txt) do
       props =
         %{}
-        |> put_if(txt.content, "content")
-        |> put_if(txt.size, "size")
-        |> put_if(txt.color, "color")
-        |> put_if(txt.font, "font")
-        |> put_if(txt.width, "width")
-        |> put_if(txt.height, "height")
-        |> put_if(txt.line_height, "line_height")
-        |> put_if(txt.align_x, "align_x")
-        |> put_if(txt.align_y, "align_y")
-        |> put_if(txt.wrapping, "wrapping")
-        |> put_if(txt.ellipsis, "ellipsis")
-        |> put_if(txt.shaping, "text_shaping")
-        |> put_if(txt.style, "style")
-        |> put_if(txt.a11y, "a11y")
+        |> put_if(txt.content, :content)
+        |> put_if(txt.size, :size)
+        |> put_if(txt.color, :color)
+        |> put_if(txt.font, :font)
+        |> put_if(txt.width, :width)
+        |> put_if(txt.height, :height)
+        |> put_if(txt.line_height, :line_height)
+        |> put_if(txt.align_x, :align_x)
+        |> put_if(txt.align_y, :align_y)
+        |> put_if(txt.wrapping, :wrapping)
+        |> put_if(txt.ellipsis, :ellipsis)
+        |> put_if(txt.shaping, :text_shaping)
+        |> put_if(txt.style, :style)
+        |> put_if(txt.a11y, :a11y)
 
       %{id: txt.id, type: "text", props: props, children: []}
     end

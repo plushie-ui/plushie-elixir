@@ -81,7 +81,7 @@ defmodule Toddy.Widget.TooltipTest do
 
     test "always includes the tip prop" do
       node = Tooltip.new("tt1", "Help text") |> Tooltip.build()
-      assert node.props["tip"] == "Help text"
+      assert node.props[:tip] == "Help text"
     end
 
     test "includes non-nil props" do
@@ -89,14 +89,14 @@ defmodule Toddy.Widget.TooltipTest do
         Tooltip.new("tt1", "Tip", position: :top, gap: 5, style: :primary)
         |> Tooltip.build()
 
-      assert node.props["position"] == "top"
-      assert node.props["gap"] == 5
-      assert node.props["style"] == "primary"
+      assert node.props[:position] == "top"
+      assert node.props[:gap] == 5
+      assert node.props[:style] == "primary"
     end
 
     test "includes delay in props when set" do
       node = Tooltip.new("tt1", "Tip") |> Tooltip.delay(300) |> Tooltip.build()
-      assert node.props["delay"] == 300
+      assert node.props[:delay] == 300
     end
 
     test "omits nil props" do
@@ -115,7 +115,7 @@ defmodule Toddy.Widget.TooltipTest do
         |> Tooltip.snap_within_viewport(false)
         |> Tooltip.build()
 
-      assert node.props["snap_within_viewport"] == false
+      assert node.props[:snap_within_viewport] == false
     end
   end
 

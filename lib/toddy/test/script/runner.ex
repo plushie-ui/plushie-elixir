@@ -165,7 +165,13 @@ defmodule Toddy.Test.Script.Runner do
 
   defp tree_contains_text?(%{} = node, text) do
     props = node[:props] || node["props"] || %{}
-    values = [props["content"], props["label"], props["value"], props["placeholder"]]
+
+    values = [
+      props[:content] || props["content"],
+      props[:label] || props["label"],
+      props[:value] || props["value"],
+      props[:placeholder] || props["placeholder"]
+    ]
 
     if Enum.any?(values, &(&1 == text)) do
       true

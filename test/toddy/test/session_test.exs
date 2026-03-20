@@ -25,11 +25,11 @@ defmodule Toddy.Test.SessionTest do
           %{
             id: "count",
             type: "text",
-            props: %{"content" => "Count: #{model.count}"},
+            props: %{content: "Count: #{model.count}"},
             children: []
           },
-          %{id: "increment", type: "button", props: %{"label" => "+"}, children: []},
-          %{id: "decrement", type: "button", props: %{"label" => "-"}, children: []}
+          %{id: "increment", type: "button", props: %{label: "+"}, children: []},
+          %{id: "decrement", type: "button", props: %{label: "-"}, children: []}
         ]
       }
     end

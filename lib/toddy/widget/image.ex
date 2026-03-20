@@ -185,20 +185,20 @@ defmodule Toddy.Widget.Image do
     def to_node(img) do
       props =
         %{}
-        |> put_if(img.source, "source")
-        |> put_if(img.width, "width")
-        |> put_if(img.height, "height")
-        |> put_if(img.content_fit, "content_fit")
-        |> put_if(img.rotation, "rotation")
-        |> put_if(img.opacity, "opacity")
-        |> put_if(img.border_radius, "border_radius")
-        |> put_if(img.filter_method, "filter_method")
-        |> put_if(img.expand, "expand")
-        |> put_if(img.scale, "scale")
-        |> put_if(img.crop, "crop")
-        |> put_if(img.alt, "alt")
-        |> put_if(img.description, "description")
-        |> put_if(img.a11y, "a11y")
+        |> put_if(img.source, :source)
+        |> put_if(img.width, :width)
+        |> put_if(img.height, :height)
+        |> put_if(img.content_fit, :content_fit)
+        |> put_if(img.rotation, :rotation)
+        |> put_if(img.opacity, :opacity)
+        |> put_if(img.border_radius, :border_radius)
+        |> put_if(img.filter_method, :filter_method)
+        |> put_if(img.expand, :expand)
+        |> put_if(img.scale, :scale)
+        |> put_if(img.crop, :crop)
+        |> put_if(img.alt, :alt)
+        |> put_if(img.description, :description)
+        |> put_if(img.a11y, :a11y)
 
       %{id: img.id, type: "image", props: props, children: []}
     end

@@ -45,7 +45,7 @@ defmodule Toddy.Widget.MouseAreaTest do
 
   describe "push/2 and extend/2" do
     test "push appends a child node" do
-      child = %{id: "inner", type: "text", props: %{"content" => "hi"}, children: []}
+      child = %{id: "inner", type: "text", props: %{content: "hi"}, children: []}
       ma = MouseArea.new("ma1") |> MouseArea.push(child)
 
       assert length(ma.children) == 1
@@ -71,7 +71,7 @@ defmodule Toddy.Widget.MouseAreaTest do
 
       assert node.id == "ma1"
       assert node.type == "mouse_area"
-      assert node.props["cursor"] == "pointer"
+      assert node.props[:cursor] == "pointer"
     end
 
     test "omits cursor from props when nil" do
@@ -81,7 +81,7 @@ defmodule Toddy.Widget.MouseAreaTest do
     end
 
     test "converts children through the Widget protocol" do
-      child = %{id: "child", type: "text", props: %{"content" => "hello"}, children: []}
+      child = %{id: "child", type: "text", props: %{content: "hello"}, children: []}
       node = MouseArea.new("ma1") |> MouseArea.push(child) |> MouseArea.build()
 
       assert length(node.children) == 1
@@ -153,9 +153,9 @@ defmodule Toddy.Widget.MouseAreaTest do
         |> MouseArea.on_scroll(true)
         |> MouseArea.build()
 
-      assert node.props["on_right_press"] == true
-      assert node.props["on_move"] == true
-      assert node.props["on_scroll"] == true
+      assert node.props[:on_right_press] == true
+      assert node.props[:on_move] == true
+      assert node.props[:on_scroll] == true
     end
 
     test "omits event props when nil" do

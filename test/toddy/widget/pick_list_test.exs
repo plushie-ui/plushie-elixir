@@ -100,7 +100,7 @@ defmodule Toddy.Widget.PickListTest do
 
     test "includes options in props" do
       node = PickList.new("color", @options) |> PickList.build()
-      assert node.props["options"] == @options
+      assert node.props[:options] == @options
     end
 
     test "includes on_open and on_close in props when set" do
@@ -110,8 +110,8 @@ defmodule Toddy.Widget.PickListTest do
         |> PickList.on_close(true)
         |> PickList.build()
 
-      assert node.props["on_open"] == true
-      assert node.props["on_close"] == true
+      assert node.props[:on_open] == true
+      assert node.props[:on_close] == true
     end
 
     test "omits nil props" do
@@ -125,7 +125,7 @@ defmodule Toddy.Widget.PickListTest do
 
     test "includes false values in props" do
       node = PickList.new("color", @options) |> PickList.on_open(false) |> PickList.build()
-      assert node.props["on_open"] == false
+      assert node.props[:on_open] == false
     end
   end
 

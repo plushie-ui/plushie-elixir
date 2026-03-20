@@ -88,9 +88,9 @@ defmodule Toddy.Widget.KeyedColumnTest do
         KeyedColumn.new("kc1", spacing: 5, padding: 10, max_width: 600)
         |> KeyedColumn.build()
 
-      assert node.props["spacing"] == 5
-      assert node.props["padding"] == 10
-      assert node.props["max_width"] == 600
+      assert node.props[:spacing] == 5
+      assert node.props[:padding] == 10
+      assert node.props[:max_width] == 600
     end
 
     test "omits nil props" do
@@ -103,7 +103,7 @@ defmodule Toddy.Widget.KeyedColumnTest do
     end
 
     test "converts children through the widget protocol" do
-      child = %{id: "item1", type: "text", props: %{"content" => "hello"}, children: []}
+      child = %{id: "item1", type: "text", props: %{content: "hello"}, children: []}
       node = KeyedColumn.new("kc1") |> KeyedColumn.push(child) |> KeyedColumn.build()
       assert length(node.children) == 1
     end

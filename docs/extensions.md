@@ -1097,11 +1097,11 @@ defmodule MyWidget.DonutChart do
 
   defimpl Toddy.Widget do
     def to_node(chart) do
-      layers = %{"arcs" => build_arc_shapes(chart)}
+      layers = %{arcs: build_arc_shapes(chart)}
 
       props =
-        %{"layers" => layers, "width" => chart.size, "height" => chart.size}
-        |> Toddy.Widget.Build.put_if(chart.background, "background")
+        %{layers: layers, width: chart.size, height: chart.size}
+        |> Toddy.Widget.Build.put_if(chart.background, :background)
 
       %{id: chart.id, type: "canvas", props: props, children: []}
     end
@@ -1207,7 +1207,7 @@ defmodule MyWidget.DonutChartTest do
     node = DonutChart.new("c1", [{"A", 50, "#ff0000"}]) |> DonutChart.build()
     assert node.type == "canvas"
     assert node.id == "c1"
-    assert is_map(node.props["layers"])
+    assert is_map(node.props[:layers])
   end
 end
 ```

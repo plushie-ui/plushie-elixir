@@ -80,7 +80,7 @@ defmodule Toddy.Widget.ButtonTest do
 
     test "includes label in props" do
       node = Button.new("btn1", "Submit") |> Button.build()
-      assert node.props["label"] == "Submit"
+      assert node.props[:label] == "Submit"
     end
 
     test "includes non-nil props" do
@@ -91,9 +91,9 @@ defmodule Toddy.Widget.ButtonTest do
         |> Button.disabled(true)
         |> Button.build()
 
-      assert node.props["width"] == "fill"
-      assert node.props["style"] == "secondary"
-      assert node.props["disabled"] == true
+      assert node.props[:width] == "fill"
+      assert node.props[:style] == "secondary"
+      assert node.props[:disabled] == true
     end
 
     test "omits nil props" do
@@ -108,7 +108,7 @@ defmodule Toddy.Widget.ButtonTest do
 
     test "includes disabled false in props" do
       node = Button.new("btn1", "Go") |> Button.disabled(false) |> Button.build()
-      assert node.props["disabled"] == false
+      assert node.props[:disabled] == false
     end
   end
 

@@ -80,7 +80,7 @@ defmodule Toddy.ExtensionMacroTest do
     def render(id, props) do
       status_str = Map.get(props, :status, "unknown")
       label = Map.get(props, :label, "Status")
-      %{id: id, type: "text", props: %{"content" => "#{label}: #{status_str}"}, children: []}
+      %{id: id, type: "text", props: %{content: "#{label}: #{status_str}"}, children: []}
     end
   end
 
@@ -101,7 +101,7 @@ defmodule Toddy.ExtensionMacroTest do
       %{
         id: id,
         type: "container",
-        props: %{"border" => border_val},
+        props: %{border: border_val},
         children: children
       }
     end
@@ -158,7 +158,7 @@ defmodule Toddy.ExtensionMacroTest do
       node = BadgeWidget.new("b1", label: "New") |> BadgeWidget.build()
       assert node.id == "b1"
       assert node.type == "badge"
-      assert node.props["label"] == "New"
+      assert node.props[:label] == "New"
       assert node.children == []
     end
 
@@ -166,9 +166,9 @@ defmodule Toddy.ExtensionMacroTest do
       node = GaugeExtension.new("g1", value: 42) |> GaugeExtension.build()
       assert node.id == "g1"
       assert node.type == "gauge"
-      assert node.props["value"] == 42
-      assert node.props["min"] == 0
-      assert node.props["max"] == 100
+      assert node.props[:value] == 42
+      assert node.props[:min] == 0
+      assert node.props[:max] == 100
       assert node.children == []
     end
 
@@ -177,7 +177,7 @@ defmodule Toddy.ExtensionMacroTest do
       node = CardWidget.new("card1", title: "Hello", do: [child]) |> CardWidget.build()
       assert node.id == "card1"
       assert node.type == "card"
-      assert node.props["title"] == "Hello"
+      assert node.props[:title] == "Hello"
       assert length(node.children) == 1
     end
   end
@@ -203,14 +203,14 @@ defmodule Toddy.ExtensionMacroTest do
   describe "prop defaults are applied" do
     test "color default is cast and applied" do
       node = BadgeWidget.new("b1") |> BadgeWidget.build()
-      assert node.props["color"] == Toddy.Type.Color.cast(:red)
-      assert node.props["size"] == 14
+      assert node.props[:color] == Toddy.Type.Color.cast(:red)
+      assert node.props[:size] == 14
     end
 
     test "number defaults applied for native" do
       node = GaugeExtension.new("g1", value: 50) |> GaugeExtension.build()
-      assert node.props["min"] == 0
-      assert node.props["max"] == 100
+      assert node.props[:min] == 0
+      assert node.props[:max] == 100
     end
 
     test "props without defaults are omitted when not provided" do
@@ -226,52 +226,52 @@ defmodule Toddy.ExtensionMacroTest do
   describe "prop type encoding" do
     test "color cast normalizes named atoms" do
       node = BadgeWidget.new("b1", color: :cornflowerblue) |> BadgeWidget.build()
-      assert node.props["color"] == "#6495ed"
+      assert node.props[:color] == "#6495ed"
     end
 
     test "color cast normalizes hex strings" do
       node = BadgeWidget.new("b1", color: "#FF0000") |> BadgeWidget.build()
-      assert node.props["color"] == "#ff0000"
+      assert node.props[:color] == "#ff0000"
     end
 
     test "length values are encoded" do
       node = GaugeExtension.new("g1", value: 0, width: :fill) |> GaugeExtension.build()
-      assert node.props["width"] == "fill"
+      assert node.props[:width] == "fill"
     end
 
     test "alignment values are encoded" do
       node = ContainerNative.new("p1") |> ContainerNative.build()
-      assert node.props["align"] == "center"
+      assert node.props[:align] == "center"
     end
 
     test "atom values are converted to strings" do
       node = TypeKitchen.new("tk", an_atom: :hello) |> TypeKitchen.build()
-      assert node.props["an_atom"] == "hello"
+      assert node.props[:an_atom] == "hello"
     end
 
     test "number passes through" do
       node = TypeKitchen.new("tk", a_number: 42) |> TypeKitchen.build()
-      assert node.props["a_number"] == 42
+      assert node.props[:a_number] == 42
     end
 
     test "string passes through" do
       node = TypeKitchen.new("tk", a_string: "hi") |> TypeKitchen.build()
-      assert node.props["a_string"] == "hi"
+      assert node.props[:a_string] == "hi"
     end
 
     test "boolean passes through" do
       node = TypeKitchen.new("tk", a_bool: true) |> TypeKitchen.build()
-      assert node.props["a_bool"] == true
+      assert node.props[:a_bool] == true
     end
 
     test "map passes through" do
       node = TypeKitchen.new("tk", a_map: %{x: 1}) |> TypeKitchen.build()
-      assert node.props["a_map"] == %{x: 1}
+      assert node.props[:a_map] == %{x: 1}
     end
 
     test "list passes through" do
       node = TypeKitchen.new("tk", a_list: ["a", "b"]) |> TypeKitchen.build()
-      assert node.props["a_list"] == ["a", "b"]
+      assert node.props[:a_list] == ["a", "b"]
     end
   end
 
@@ -336,14 +336,14 @@ defmodule Toddy.ExtensionMacroTest do
     test "render/2 composite produces custom output" do
       node = StatusIndicator.new("si1", status: :ok, label: "Health")
       assert node.type == "text"
-      assert node.props["content"] == "Health: ok"
+      assert node.props[:content] == "Health: ok"
     end
 
     test "render/3 composite receives children" do
       child = %{id: "x", type: "text", props: %{}, children: []}
       node = Wrapper.new("w1", border: true, do: [child])
       assert node.type == "container"
-      assert node.props["border"] == true
+      assert node.props[:border] == true
       assert length(node.children) == 1
     end
   end
@@ -399,8 +399,8 @@ defmodule Toddy.ExtensionMacroTest do
       node =
         BadgeWidget.new("b1", a11y: %{role: :alert, label: "New items"}) |> BadgeWidget.build()
 
-      assert node.props["a11y"]["role"] == "alert"
-      assert node.props["a11y"]["label"] == "New items"
+      assert node.props[:a11y]["role"] == "alert"
+      assert node.props[:a11y]["label"] == "New items"
     end
 
     test "a11y prop is encoded on native widget" do
@@ -408,8 +408,8 @@ defmodule Toddy.ExtensionMacroTest do
         GaugeExtension.new("g1", value: 50, a11y: %{role: :meter, label: "CPU"})
         |> GaugeExtension.build()
 
-      assert node.props["a11y"]["role"] == "meter"
-      assert node.props["a11y"]["label"] == "CPU"
+      assert node.props[:a11y]["role"] == "meter"
+      assert node.props[:a11y]["label"] == "CPU"
     end
 
     test "without a11y prop, no a11y key in props" do
@@ -661,8 +661,8 @@ defmodule Toddy.ExtensionMacroTest do
       assert is_map(node)
       assert node.id == "b1"
       assert node.type == "badge"
-      assert node.props["label"] == "Test"
-      assert node.props["color"] == "#00ff00"
+      assert node.props[:label] == "Test"
+      assert node.props[:color] == "#00ff00"
       assert node.children == []
     end
 
@@ -670,8 +670,8 @@ defmodule Toddy.ExtensionMacroTest do
       node = GaugeExtension.new("g1", value: 75, width: :fill) |> GaugeExtension.build()
       assert node.id == "g1"
       assert node.type == "gauge"
-      assert node.props["value"] == 75
-      assert node.props["width"] == "fill"
+      assert node.props[:value] == 75
+      assert node.props[:width] == "fill"
     end
 
     test "build/1 on container includes children" do
@@ -685,14 +685,14 @@ defmodule Toddy.ExtensionMacroTest do
       widget = BadgeWidget.new("b1") |> BadgeWidget.a11y(%{role: :alert, label: "Alert"})
       assert %BadgeWidget{} = widget
       node = BadgeWidget.build(widget)
-      assert node.props["a11y"]["role"] == "alert"
-      assert node.props["a11y"]["label"] == "Alert"
+      assert node.props[:a11y]["role"] == "alert"
+      assert node.props[:a11y]["label"] == "Alert"
     end
 
     test "defaults are applied via setter encoding in build" do
       node = BadgeWidget.new("b1") |> BadgeWidget.build()
-      assert node.props["color"] == Toddy.Type.Color.cast(:red)
-      assert node.props["size"] == 14
+      assert node.props[:color] == Toddy.Type.Color.cast(:red)
+      assert node.props[:size] == 14
     end
 
     test "struct fields without defaults are nil" do

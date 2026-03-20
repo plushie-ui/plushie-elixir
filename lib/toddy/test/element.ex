@@ -21,9 +21,19 @@ defmodule Toddy.Test.Element do
     %__MODULE__{
       id: node[:id] || node["id"],
       type: node[:type] || node["type"],
-      props: node[:props] || node["props"] || %{},
+      props: atomize_keys(node[:props] || node["props"] || %{}),
       children: (node[:children] || node["children"] || []) |> Enum.map(&from_node/1)
     }
+  end
+
+  # Converts string keys in a props map to atoms. Wire-format data
+  # from the renderer uses string keys; the internal tree uses atoms.
+  # Normalizing here ensures Element props are always atom-keyed.
+  defp atomize_keys(map) when is_map(map) do
+    Map.new(map, fn
+      {k, v} when is_binary(k) -> {String.to_atom(k), v}
+      {k, v} -> {k, v}
+    end)
   end
 
   @doc """
@@ -34,13 +44,13 @@ defmodule Toddy.Test.Element do
   """
   @spec text(element :: t()) :: String.t() | nil
   def text(%__MODULE__{props: props}) do
-    props["content"] || props["label"] || props["value"] || props["placeholder"]
+    props[:content] || props[:label] || props[:value] || props[:placeholder]
   end
 
   @doc "Returns the a11y props map from the element, or nil if not set."
   @spec a11y(element :: t()) :: map() | nil
   def a11y(%__MODULE__{props: props}) do
-    props["a11y"]
+    props[:a11y]
   end
 
   @doc """
@@ -51,7 +61,7 @@ defmodule Toddy.Test.Element do
   """
   @spec inferred_role(element :: t()) :: String.t()
   def inferred_role(%__MODULE__{} = element) do
-    case get_in(element.props, ["a11y", "role"]) do
+    case get_in(element.props, [:a11y, :role]) do
       role when is_binary(role) -> role
       _ -> role_for_type(element.type)
     end

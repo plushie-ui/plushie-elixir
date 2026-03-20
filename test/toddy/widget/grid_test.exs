@@ -80,9 +80,9 @@ defmodule Toddy.Widget.GridTest do
 
     test "includes non-nil props" do
       node = Grid.new("g1", columns: 2, spacing: 5, width: 300) |> Grid.build()
-      assert node.props["columns"] == 2
-      assert node.props["spacing"] == 5
-      assert node.props["width"] == 300
+      assert node.props[:columns] == 2
+      assert node.props[:spacing] == 5
+      assert node.props[:width] == 300
     end
 
     test "omits nil props" do
@@ -94,7 +94,7 @@ defmodule Toddy.Widget.GridTest do
     end
 
     test "converts children through the widget protocol" do
-      child = %{id: "c1", type: "text", props: %{"content" => "hi"}, children: []}
+      child = %{id: "c1", type: "text", props: %{content: "hi"}, children: []}
       node = Grid.new("g1") |> Grid.push(child) |> Grid.build()
       assert length(node.children) == 1
     end

@@ -57,11 +57,12 @@ defmodule Toddy.Test.WidgetCatalogTest do
       assert length(result.children) == 2
     end
 
-    test "atom keys are normalized to string keys" do
+    test "atom keys are preserved as atoms" do
       raw = %{id: "btn", type: "button", props: %{label: "Go"}, children: []}
       result = Tree.normalize(raw)
-      assert result.props["label"] == "Go"
-      refute Map.has_key?(result.props, :label)
+      assert result.props[:label] == "Go"
+      assert Map.has_key?(result.props, :label)
+      refute Map.has_key?(result.props, "label")
     end
 
     test "children are normalized recursively" do
@@ -76,7 +77,7 @@ defmodule Toddy.Test.WidgetCatalogTest do
 
       result = Tree.normalize(raw)
       [child] = result.children
-      assert child.props["content"] == "hi"
+      assert child.props[:content] == "hi"
     end
 
     test "missing props defaults to empty map" do
@@ -110,17 +111,17 @@ defmodule Toddy.Test.WidgetCatalogTest do
 
     test "label prop present" do
       result = normalize(Button.new("b1", "OK"))
-      assert result.props["label"] == "OK"
+      assert result.props[:label] == "OK"
     end
 
     test "style prop included when set" do
       result = normalize(Button.new("b1", "Go", style: :danger))
-      assert result.props["style"] == "danger"
+      assert result.props[:style] == "danger"
     end
 
     test "disabled prop included when set" do
       result = normalize(Button.new("b1", "Go", disabled: true))
-      assert result.props["disabled"] == true
+      assert result.props[:disabled] == true
     end
 
     test "no children" do
@@ -139,17 +140,17 @@ defmodule Toddy.Test.WidgetCatalogTest do
 
     test "value prop reflects constructor arg" do
       result = normalize(TextInput.new("ti", "world"))
-      assert result.props["value"] == "world"
+      assert result.props[:value] == "world"
     end
 
     test "placeholder prop included when set" do
       result = normalize(TextInput.new("ti", "", placeholder: "Enter text"))
-      assert result.props["placeholder"] == "Enter text"
+      assert result.props[:placeholder] == "Enter text"
     end
 
     test "on_submit prop included when set" do
       result = normalize(TextInput.new("ti", "", on_submit: true))
-      assert result.props["on_submit"] == true
+      assert result.props[:on_submit] == true
     end
 
     test "no children" do
@@ -168,18 +169,18 @@ defmodule Toddy.Test.WidgetCatalogTest do
 
     test "label prop present" do
       result = normalize(Checkbox.new("cb", "Accept", false))
-      assert result.props["label"] == "Accept"
+      assert result.props[:label] == "Accept"
     end
 
     test "checked prop reflects is_toggled false" do
       result = normalize(Checkbox.new("cb", "Accept", false))
       # put_if skips nil but not false; false is a valid prop value
-      refute result.props["checked"]
+      refute result.props[:checked]
     end
 
     test "checked prop reflects is_toggled true" do
       result = normalize(Checkbox.new("cb", "Accept", true))
-      assert result.props["checked"] == true
+      assert result.props[:checked] == true
     end
 
     test "no children" do
@@ -198,12 +199,12 @@ defmodule Toddy.Test.WidgetCatalogTest do
 
     test "is_toggled prop emitted for true state" do
       result = normalize(Toggler.new("tg", true))
-      assert result.props["is_toggled"] == true
+      assert result.props[:is_toggled] == true
     end
 
     test "label prop included when set" do
       result = normalize(Toggler.new("tg", false, label: "Dark mode"))
-      assert result.props["label"] == "Dark mode"
+      assert result.props[:label] == "Dark mode"
     end
   end
 
@@ -217,18 +218,18 @@ defmodule Toddy.Test.WidgetCatalogTest do
 
     test "value prop reflects constructor arg" do
       result = normalize(Slider.new("sl", {0, 100}, 42))
-      assert result.props["value"] == 42
+      assert result.props[:value] == 42
     end
 
     test "range prop present as list" do
       result = normalize(Slider.new("sl", {0, 100}, 0))
       # Tuples are encoded by the Encode protocol as lists
-      assert result.props["range"] == [0, 100]
+      assert result.props[:range] == [0, 100]
     end
 
     test "step prop included when set" do
       result = normalize(Slider.new("sl", {0, 100}, 0, step: 5))
-      assert result.props["step"] == 5
+      assert result.props[:step] == 5
     end
   end
 
@@ -242,17 +243,17 @@ defmodule Toddy.Test.WidgetCatalogTest do
 
     test "options prop reflects list" do
       result = normalize(PickList.new("pl", ["NZ", "AU", "GB"]))
-      assert result.props["options"] == ["NZ", "AU", "GB"]
+      assert result.props[:options] == ["NZ", "AU", "GB"]
     end
 
     test "selected prop present when set" do
       result = normalize(PickList.new("pl", ["NZ", "AU"], selected: "NZ"))
-      assert result.props["selected"] == "NZ"
+      assert result.props[:selected] == "NZ"
     end
 
     test "placeholder prop present when set" do
       result = normalize(PickList.new("pl", [], placeholder: "Choose..."))
-      assert result.props["placeholder"] == "Choose..."
+      assert result.props[:placeholder] == "Choose..."
     end
   end
 
@@ -266,7 +267,7 @@ defmodule Toddy.Test.WidgetCatalogTest do
 
     test "content prop reflects constructor arg" do
       result = normalize(Text.new("t1", "Goodbye"))
-      assert result.props["content"] == "Goodbye"
+      assert result.props[:content] == "Goodbye"
     end
   end
 
@@ -298,7 +299,7 @@ defmodule Toddy.Test.WidgetCatalogTest do
 
     test "spacing prop included when set" do
       result = normalize(Column.new("col", spacing: 8))
-      assert result.props["spacing"] == 8
+      assert result.props[:spacing] == 8
     end
   end
 
@@ -339,7 +340,7 @@ defmodule Toddy.Test.WidgetCatalogTest do
 
     test "padding prop included when set" do
       result = normalize(Container.new("c1", padding: 16))
-      assert result.props["padding"] == 16
+      assert result.props[:padding] == 16
     end
   end
 
@@ -377,7 +378,7 @@ defmodule Toddy.Test.WidgetCatalogTest do
     test "finds deeply nested node by scoped id", %{tree: tree} do
       result = Tree.find(tree, "col/wrapper/msg")
       assert result.type == "text"
-      assert result.props["content"] == "Done"
+      assert result.props[:content] == "Done"
     end
 
     test "finds deeply nested node by local id", %{tree: tree} do

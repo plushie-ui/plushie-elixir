@@ -49,12 +49,15 @@ defmodule Toddy.Test do
     :ok
   end
 
-  # Normalize tree for stable JSON output: sort map keys recursively.
+  # Normalize tree for stable JSON output: stringify atom keys and sort
+  # them so the JSON representation is deterministic across Erlang/OTP
+  # versions (small atom-keyed maps use a different internal order than
+  # string-keyed maps in some OTP releases).
   defp normalize_for_tree_snapshot(data) when is_map(data) do
     data
     |> Enum.sort_by(fn {k, _v} -> to_string(k) end)
-    |> Enum.map(fn {k, v} -> {k, normalize_for_tree_snapshot(v)} end)
-    |> Map.new()
+    |> Enum.map(fn {k, v} -> {to_string(k), normalize_for_tree_snapshot(v)} end)
+    |> Jason.OrderedObject.new()
   end
 
   defp normalize_for_tree_snapshot(data) when is_list(data) do

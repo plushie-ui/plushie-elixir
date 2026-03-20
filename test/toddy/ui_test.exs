@@ -57,22 +57,22 @@ defmodule Toddy.UITest do
       node = button("save", "Save")
       assert node.id == "save"
       assert node.type == "button"
-      assert node.props["label"] == "Save"
+      assert node.props[:label] == "Save"
       assert node.children == []
     end
 
-    test "props contains label as string key" do
+    test "props contains label as atom key" do
       node = button("b", "Label")
-      assert Map.has_key?(node.props, "label")
-      refute Map.has_key?(node.props, :label)
+      assert Map.has_key?(node.props, :label)
+      refute Map.has_key?(node.props, "label")
     end
   end
 
   describe "button/3 with opts" do
-    test "extra opts become string-keyed props" do
+    test "extra opts become atom-keyed props" do
       node = button("save", "Save", style: :primary, disabled: true)
-      assert node.props["style"] == "primary"
-      assert node.props["disabled"] == true
+      assert node.props[:style] == "primary"
+      assert node.props[:disabled] == true
     end
 
     test "reserved keys are not included in props" do
@@ -84,8 +84,8 @@ defmodule Toddy.UITest do
 
     test "label is still present alongside extra props" do
       node = button("b", "Click", width: 120)
-      assert node.props["label"] == "Click"
-      assert node.props["width"] == 120
+      assert node.props[:label] == "Click"
+      assert node.props[:width] == 120
     end
   end
 
@@ -98,16 +98,16 @@ defmodule Toddy.UITest do
       node = text_input("name", "Alice")
       assert node.id == "name"
       assert node.type == "text_input"
-      assert node.props["value"] == "Alice"
+      assert node.props[:value] == "Alice"
       assert node.children == []
     end
   end
 
   describe "text_input/3 with opts" do
-    test "extra opts become string-keyed props" do
+    test "extra opts become atom-keyed props" do
       node = text_input("name", "Alice", placeholder: "Enter name")
-      assert node.props["placeholder"] == "Enter name"
-      assert node.props["value"] == "Alice"
+      assert node.props[:placeholder] == "Enter name"
+      assert node.props[:value] == "Alice"
     end
   end
 
@@ -120,21 +120,21 @@ defmodule Toddy.UITest do
       node = checkbox("agree", true)
       assert node.id == "agree"
       assert node.type == "checkbox"
-      assert node.props["checked"] == true
+      assert node.props[:checked] == true
       assert node.children == []
     end
 
     test "produces correct node shape with checked: false" do
       node = checkbox("agree", false)
-      assert node.props["checked"] == false
+      assert node.props[:checked] == false
     end
   end
 
   describe "checkbox/3 with opts" do
-    test "extra opts become string-keyed props" do
+    test "extra opts become atom-keyed props" do
       node = checkbox("agree", true, label: "I agree")
-      assert node.props["label"] == "I agree"
-      assert node.props["checked"] == true
+      assert node.props[:label] == "I agree"
+      assert node.props[:checked] == true
     end
   end
 
@@ -146,7 +146,7 @@ defmodule Toddy.UITest do
     test "produces a text node with content prop" do
       node = text("hello")
       assert node.type == "text"
-      assert node.props["content"] == "hello"
+      assert node.props[:content] == "hello"
       assert node.children == []
     end
 
@@ -166,20 +166,20 @@ defmodule Toddy.UITest do
     test "sets explicit id" do
       node = text("my-label", "hello")
       assert node.id == "my-label"
-      assert node.props["content"] == "hello"
+      assert node.props[:content] == "hello"
     end
   end
 
   describe "text/3 with id and opts" do
-    test "extra opts become string-keyed props" do
+    test "extra opts become atom-keyed props" do
       node = text("my-label", "hello", size: 18, color: :red)
-      assert node.props["size"] == 18
-      assert node.props["color"] == "#ff0000"
+      assert node.props[:size] == 18
+      assert node.props[:color] == "#ff0000"
     end
 
     test "content prop is always present alongside extra props" do
       node = text("my-label", "world", size: 12)
-      assert node.props["content"] == "world"
+      assert node.props[:content] == "world"
     end
   end
 
@@ -207,10 +207,10 @@ defmodule Toddy.UITest do
   end
 
   describe "column/1 with opts" do
-    test "opts become string-keyed props" do
+    test "opts become atom-keyed props" do
       node = column(padding: 8, spacing: 4)
-      assert node.props["padding"] == 8
-      assert node.props["spacing"] == 4
+      assert node.props[:padding] == 8
+      assert node.props[:spacing] == 4
     end
 
     test "children opt is not included in props" do
@@ -227,8 +227,8 @@ defmodule Toddy.UITest do
       assert node.type == "column"
       assert length(node.children) == 2
       [first, second] = node.children
-      assert first.props["content"] == "hello"
-      assert second.props["content"] == "world"
+      assert first.props[:content] == "hello"
+      assert second.props[:content] == "world"
     end
   end
 
@@ -239,8 +239,8 @@ defmodule Toddy.UITest do
           button("b", "Go")
         end
 
-      assert node.props["padding"] == 16
-      assert node.props["spacing"] == 8
+      assert node.props[:padding] == 16
+      assert node.props[:spacing] == 8
       assert length(node.children) == 1
       assert hd(node.children).id == "b"
     end
@@ -280,7 +280,7 @@ defmodule Toddy.UITest do
           button("ok", "OK")
         end
 
-      assert node.props["spacing"] == 4
+      assert node.props[:spacing] == 4
       assert length(node.children) == 1
     end
   end
@@ -300,10 +300,10 @@ defmodule Toddy.UITest do
   end
 
   describe "window/2 with opts" do
-    test "opts become string-keyed props" do
+    test "opts become atom-keyed props" do
       node = window("app", title: "My App")
       assert node.id == "app"
-      assert node.props["title"] == "My App"
+      assert node.props[:title] == "My App"
     end
   end
 
@@ -329,7 +329,7 @@ defmodule Toddy.UITest do
         end
 
       assert node.id == "app"
-      assert node.props["title"] == "Test"
+      assert node.props[:title] == "Test"
       assert length(node.children) == 1
     end
   end
@@ -356,7 +356,7 @@ defmodule Toddy.UITest do
 
       assert node.id == "hero"
       assert length(node.children) == 1
-      assert hd(node.children).props["content"] == "Welcome"
+      assert hd(node.children).props[:content] == "Welcome"
     end
   end
 
@@ -367,7 +367,7 @@ defmodule Toddy.UITest do
           text("Hello")
         end
 
-      assert node.props["padding"] == 16
+      assert node.props[:padding] == 16
       assert length(node.children) == 1
     end
   end
@@ -444,7 +444,7 @@ defmodule Toddy.UITest do
   describe "space/1 with opts" do
     test "opts become props" do
       node = space(width: :fill)
-      assert node.props["width"] == "fill"
+      assert node.props[:width] == "fill"
     end
   end
 
@@ -482,7 +482,7 @@ defmodule Toddy.UITest do
       node = ToddyUITestHelper.column_with_for()
       assert node.type == "column"
       assert length(node.children) == 3
-      contents = Enum.map(node.children, & &1.props["content"])
+      contents = Enum.map(node.children, & &1.props[:content])
       assert contents == ["a", "b", "c"]
     end
   end
@@ -496,13 +496,13 @@ defmodule Toddy.UITest do
       node = ToddyUITestHelper.column_with_if(false)
       assert node.type == "column"
       assert length(node.children) == 1
-      assert hd(node.children).props["content"] == "always"
+      assert hd(node.children).props[:content] == "always"
     end
 
     test "non-nil children are included (show? = true)" do
       node = ToddyUITestHelper.column_with_if(true)
       assert length(node.children) == 2
-      contents = Enum.map(node.children, & &1.props["content"])
+      contents = Enum.map(node.children, & &1.props[:content])
       assert "always" in contents
       assert "sometimes" in contents
     end
@@ -518,18 +518,18 @@ defmodule Toddy.UITest do
 
       assert node.id == "main"
       assert node.type == "window"
-      assert node.props["title"] == "Test"
+      assert node.props[:title] == "Test"
 
       assert length(node.children) == 1
       col = hd(node.children)
       assert col.type == "column"
-      assert col.props["padding"] == 16
+      assert col.props[:padding] == 16
 
       # column has text + row
       assert length(col.children) == 2
       [txt, row_node] = col.children
       assert txt.type == "text"
-      assert txt.props["content"] == "hello"
+      assert txt.props[:content] == "hello"
 
       assert row_node.type == "row"
       assert length(row_node.children) == 2
@@ -571,22 +571,22 @@ defmodule Toddy.UITest do
       node = toggler("dark_mode", true)
       assert node.id == "dark_mode"
       assert node.type == "toggler"
-      assert node.props["is_toggled"] == true
+      assert node.props[:is_toggled] == true
       assert node.children == []
     end
 
     test "works with false value" do
       node = toggler("dark_mode", false)
-      assert node.props["is_toggled"] == false
+      assert node.props[:is_toggled] == false
     end
   end
 
   describe "toggler/3 with opts" do
-    test "extra opts become string-keyed props" do
+    test "extra opts become atom-keyed props" do
       node = toggler("dark_mode", true, label: "Dark mode", spacing: 8)
-      assert node.props["label"] == "Dark mode"
-      assert node.props["spacing"] == 8
-      assert node.props["is_toggled"] == true
+      assert node.props[:label] == "Dark mode"
+      assert node.props[:spacing] == 8
+      assert node.props[:is_toggled] == true
     end
   end
 
@@ -599,22 +599,22 @@ defmodule Toddy.UITest do
       node = radio("size_large", "large", "small")
       assert node.id == "size_large"
       assert node.type == "radio"
-      assert node.props["value"] == "large"
-      assert node.props["selected"] == "small"
+      assert node.props[:value] == "large"
+      assert node.props[:selected] == "small"
       assert node.children == []
     end
 
     test "selected can be nil" do
       node = radio("size_large", "large", nil)
-      assert node.props["selected"] == nil
+      assert node.props[:selected] == nil
     end
   end
 
   describe "radio/4 with opts" do
-    test "extra opts become string-keyed props" do
+    test "extra opts become atom-keyed props" do
       node = radio("size_large", "large", "large", label: "Large", spacing: 4)
-      assert node.props["label"] == "Large"
-      assert node.props["spacing"] == 4
+      assert node.props[:label] == "Large"
+      assert node.props[:spacing] == 4
     end
   end
 
@@ -627,18 +627,18 @@ defmodule Toddy.UITest do
       node = slider("volume", {0, 100}, 50)
       assert node.id == "volume"
       assert node.type == "slider"
-      assert node.props["range"] == [0, 100]
-      assert node.props["value"] == 50
+      assert node.props[:range] == [0, 100]
+      assert node.props[:value] == 50
       assert node.children == []
     end
   end
 
   describe "slider/4 with opts" do
-    test "extra opts become string-keyed props" do
+    test "extra opts become atom-keyed props" do
       node = slider("volume", {0, 100}, 50, step: 5, width: :fill)
-      assert node.props["step"] == 5
-      assert node.props["width"] == "fill"
-      assert node.props["range"] == [0, 100]
+      assert node.props[:step] == 5
+      assert node.props[:width] == "fill"
+      assert node.props[:range] == [0, 100]
     end
   end
 
@@ -651,17 +651,17 @@ defmodule Toddy.UITest do
       node = vertical_slider("brightness", {0, 255}, 128)
       assert node.id == "brightness"
       assert node.type == "vertical_slider"
-      assert node.props["range"] == [0, 255]
-      assert node.props["value"] == 128
+      assert node.props[:range] == [0, 255]
+      assert node.props[:value] == 128
       assert node.children == []
     end
   end
 
   describe "vertical_slider/4 with opts" do
-    test "extra opts become string-keyed props" do
+    test "extra opts become atom-keyed props" do
       node = vertical_slider("brightness", {0, 255}, 128, step: 1, width: 20)
-      assert node.props["step"] == 1
-      assert node.props["width"] == 20
+      assert node.props[:step] == 1
+      assert node.props[:width] == 20
     end
   end
 
@@ -674,22 +674,22 @@ defmodule Toddy.UITest do
       node = pick_list("country", ["UK", "US", "DE"], "UK")
       assert node.id == "country"
       assert node.type == "pick_list"
-      assert node.props["options"] == ["UK", "US", "DE"]
-      assert node.props["selected"] == "UK"
+      assert node.props[:options] == ["UK", "US", "DE"]
+      assert node.props[:selected] == "UK"
       assert node.children == []
     end
 
     test "selected can be nil" do
       node = pick_list("country", ["UK", "US"], nil)
-      assert node.props["selected"] == nil
+      assert node.props[:selected] == nil
     end
   end
 
   describe "pick_list/4 with opts" do
-    test "extra opts become string-keyed props" do
+    test "extra opts become atom-keyed props" do
       node = pick_list("country", ["UK", "US"], "UK", placeholder: "Choose...", width: :fill)
-      assert node.props["placeholder"] == "Choose..."
-      assert node.props["width"] == "fill"
+      assert node.props[:placeholder] == "Choose..."
+      assert node.props[:width] == "fill"
     end
   end
 
@@ -702,17 +702,17 @@ defmodule Toddy.UITest do
       node = combo_box("lang", ["Elixir", "Rust", "Go"], "Elixir")
       assert node.id == "lang"
       assert node.type == "combo_box"
-      assert node.props["options"] == ["Elixir", "Rust", "Go"]
-      assert node.props["selected"] == "Elixir"
+      assert node.props[:options] == ["Elixir", "Rust", "Go"]
+      assert node.props[:selected] == "Elixir"
       assert node.children == []
     end
   end
 
   describe "combo_box/4 with opts" do
-    test "extra opts become string-keyed props" do
+    test "extra opts become atom-keyed props" do
       node = combo_box("lang", ["Elixir", "Rust"], "Elixir", placeholder: "Type...", width: 200)
-      assert node.props["placeholder"] == "Type..."
-      assert node.props["width"] == 200
+      assert node.props[:placeholder] == "Type..."
+      assert node.props[:width] == 200
     end
   end
 
@@ -725,17 +725,17 @@ defmodule Toddy.UITest do
       node = text_editor("notes", "Hello world")
       assert node.id == "notes"
       assert node.type == "text_editor"
-      assert node.props["content"] == "Hello world"
+      assert node.props[:content] == "Hello world"
       assert node.children == []
     end
   end
 
   describe "text_editor/3 with opts" do
-    test "extra opts become string-keyed props" do
+    test "extra opts become atom-keyed props" do
       node = text_editor("notes", "Hello", width: :fill, height: 200)
-      assert node.props["width"] == "fill"
-      assert node.props["height"] == 200
-      assert node.props["content"] == "Hello"
+      assert node.props[:width] == "fill"
+      assert node.props[:height] == 200
+      assert node.props[:content] == "Hello"
     end
   end
 
@@ -748,17 +748,17 @@ defmodule Toddy.UITest do
       node = image("logo", "/assets/logo.png")
       assert node.id == "logo"
       assert node.type == "image"
-      assert node.props["source"] == "/assets/logo.png"
+      assert node.props[:source] == "/assets/logo.png"
       assert node.children == []
     end
   end
 
   describe "image/3 with opts" do
-    test "extra opts become string-keyed props" do
+    test "extra opts become atom-keyed props" do
       node = image("logo", "/assets/logo.png", width: 200, height: 100, content_fit: :cover)
-      assert node.props["width"] == 200
-      assert node.props["height"] == 100
-      assert node.props["content_fit"] == "cover"
+      assert node.props[:width] == 200
+      assert node.props[:height] == 100
+      assert node.props[:content_fit] == "cover"
     end
   end
 
@@ -771,17 +771,17 @@ defmodule Toddy.UITest do
       node = svg("icon", "/assets/icon.svg")
       assert node.id == "icon"
       assert node.type == "svg"
-      assert node.props["source"] == "/assets/icon.svg"
+      assert node.props[:source] == "/assets/icon.svg"
       assert node.children == []
     end
   end
 
   describe "svg/3 with opts" do
-    test "extra opts become string-keyed props" do
+    test "extra opts become atom-keyed props" do
       node = svg("icon", "/assets/icon.svg", width: 24, height: 24, content_fit: :contain)
-      assert node.props["width"] == 24
-      assert node.props["height"] == 24
-      assert node.props["content_fit"] == "contain"
+      assert node.props[:width] == 24
+      assert node.props[:height] == 24
+      assert node.props[:content_fit] == "contain"
     end
   end
 
@@ -793,7 +793,7 @@ defmodule Toddy.UITest do
     test "produces a markdown node with content prop" do
       node = markdown("# Hello")
       assert node.type == "markdown"
-      assert node.props["content"] == "# Hello"
+      assert node.props[:content] == "# Hello"
       assert node.children == []
     end
 
@@ -808,15 +808,15 @@ defmodule Toddy.UITest do
     test "sets explicit id" do
       node = markdown("my-md", "# Hello")
       assert node.id == "my-md"
-      assert node.props["content"] == "# Hello"
+      assert node.props[:content] == "# Hello"
     end
   end
 
   describe "markdown/3 with id and opts" do
-    test "extra opts become string-keyed props" do
+    test "extra opts become atom-keyed props" do
       node = markdown("my-md", "# Hello", text_size: 14)
-      assert node.props["text_size"] == 14
-      assert node.props["content"] == "# Hello"
+      assert node.props[:text_size] == 14
+      assert node.props[:content] == "# Hello"
     end
   end
 
@@ -833,7 +833,7 @@ defmodule Toddy.UITest do
 
       assert node.id == "tip1"
       assert node.type == "tooltip"
-      assert node.props["tip"] == "Help text"
+      assert node.props[:tip] == "Help text"
       assert length(node.children) == 1
       assert hd(node.children).id == "save"
     end
@@ -846,8 +846,8 @@ defmodule Toddy.UITest do
           button("save", "Save")
         end
 
-      assert node.props["tip"] == "Save your work"
-      assert node.props["position"] == "top"
+      assert node.props[:tip] == "Save your work"
+      assert node.props[:position] == "top"
       assert length(node.children) == 1
     end
   end
@@ -867,14 +867,14 @@ defmodule Toddy.UITest do
   end
 
   describe "canvas/2 with opts" do
-    test "opts become string-keyed props" do
+    test "opts become atom-keyed props" do
       shapes = [%{type: "rect", x: 0, y: 0, w: 100, h: 50}]
       node = canvas("drawing", shapes: shapes, width: 800, height: 600, background: "#000")
 
-      assert node.props["shapes"] == shapes
-      assert node.props["width"] == 800
-      assert node.props["height"] == 600
-      assert node.props["background"] == "#000000"
+      assert node.props[:shapes] == shapes
+      assert node.props[:width] == 800
+      assert node.props[:height] == 600
+      assert node.props[:background] == "#000000"
       assert node.children == []
     end
   end
@@ -893,13 +893,13 @@ defmodule Toddy.UITest do
   end
 
   describe "table/2 with opts" do
-    test "columns and rows become string-keyed props" do
+    test "columns and rows become atom-keyed props" do
       cols = [%{key: "name", label: "Name", width: 200}]
       rows = [%{name: "Alice"}, %{name: "Bob"}]
       node = table("users", columns: cols, rows: rows)
 
-      assert node.props["columns"] == cols
-      assert node.props["rows"] == rows
+      assert node.props[:columns] == cols
+      assert node.props[:rows] == rows
       assert node.children == []
     end
   end
@@ -914,7 +914,7 @@ defmodule Toddy.UITest do
       assert node.id == "users"
       assert node.type == "table"
       assert length(node.children) == 1
-      assert hd(node.children).props["content"] == "custom footer"
+      assert hd(node.children).props[:content] == "custom footer"
     end
   end
 
@@ -928,10 +928,10 @@ defmodule Toddy.UITest do
           text("row template")
         end
 
-      assert node.props["columns"] == cols
-      assert node.props["rows"] == rows
+      assert node.props[:columns] == cols
+      assert node.props[:rows] == rows
       assert length(node.children) == 1
-      assert hd(node.children).props["content"] == "row template"
+      assert hd(node.children).props[:content] == "row template"
     end
   end
 
@@ -943,7 +943,7 @@ defmodule Toddy.UITest do
     test "canvas with explicit empty shapes list" do
       node = canvas("cv", shapes: [])
       assert node.type == "canvas"
-      assert node.props["shapes"] == []
+      assert node.props[:shapes] == []
     end
 
     test "canvas with no shapes prop at all" do
@@ -960,8 +960,8 @@ defmodule Toddy.UITest do
       ]
 
       node = canvas("cv", shapes: shapes, width: 800, height: 600)
-      assert length(node.props["shapes"]) == 4
-      types = Enum.map(node.props["shapes"], & &1.type)
+      assert length(node.props[:shapes]) == 4
+      types = Enum.map(node.props[:shapes], & &1.type)
       assert types == ["rect", "circle", "line", "text"]
     end
   end
@@ -974,8 +974,8 @@ defmodule Toddy.UITest do
     test "table with columns but empty rows list" do
       cols = [%{key: "name", label: "Name", width: 200}]
       node = table("t", columns: cols, rows: [])
-      assert node.props["columns"] == cols
-      assert node.props["rows"] == []
+      assert node.props[:columns] == cols
+      assert node.props[:rows] == []
     end
   end
 
@@ -983,8 +983,8 @@ defmodule Toddy.UITest do
     test "table with rows but empty columns list" do
       rows = [%{name: "Alice"}]
       node = table("t", columns: [], rows: rows)
-      assert node.props["columns"] == []
-      assert node.props["rows"] == rows
+      assert node.props[:columns] == []
+      assert node.props[:rows] == rows
     end
   end
 
@@ -1021,7 +1021,7 @@ defmodule Toddy.UITest do
       tree = Counter.view(%{count: 0})
 
       text_nodes = Toddy.Tree.find_all(tree, fn node -> node.type == "text" end)
-      count_node = Enum.find(text_nodes, fn n -> n.props["content"] == "Count: 0" end)
+      count_node = Enum.find(text_nodes, fn n -> n.props[:content] == "Count: 0" end)
       assert count_node != nil
     end
   end

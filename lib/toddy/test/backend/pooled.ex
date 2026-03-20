@@ -201,8 +201,8 @@ defmodule Toddy.Test.Backend.Pooled do
 
     value =
       case element do
-        %{type: "checkbox", props: props} -> !(props["is_checked"] || false)
-        %{type: "toggler", props: props} -> !(props["is_toggled"] || false)
+        %{type: "checkbox", props: props} -> !(props[:is_checked] || false)
+        %{type: "toggler", props: props} -> !(props[:is_toggled] || false)
         _ -> true
       end
 
@@ -215,7 +215,7 @@ defmodule Toddy.Test.Backend.Pooled do
 
     value =
       case element do
-        %{props: props} -> props["value"] || ""
+        %{props: props} -> props[:value] || ""
         _ -> ""
       end
 

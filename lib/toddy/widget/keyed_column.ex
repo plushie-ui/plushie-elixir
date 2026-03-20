@@ -116,12 +116,12 @@ defmodule Toddy.Widget.KeyedColumn do
     def to_node(kc) do
       props =
         %{}
-        |> put_if(kc.spacing, "spacing")
-        |> put_if(kc.padding, "padding")
-        |> put_if(kc.width, "width")
-        |> put_if(kc.height, "height")
-        |> put_if(kc.max_width, "max_width")
-        |> put_if(kc.a11y, "a11y")
+        |> put_if(kc.spacing, :spacing)
+        |> put_if(kc.padding, :padding)
+        |> put_if(kc.width, :width)
+        |> put_if(kc.height, :height)
+        |> put_if(kc.max_width, :max_width)
+        |> put_if(kc.a11y, :a11y)
 
       %{
         id: kc.id,

@@ -18,7 +18,7 @@ defmodule Toddy.Widget.StackTest do
   describe "build/1 with clip" do
     test "includes clip in props when set" do
       node = Stack.new("s1") |> Stack.clip(true) |> Stack.build()
-      assert node.props["clip"] == true
+      assert node.props[:clip] == true
     end
 
     test "omits clip from props when nil" do
@@ -28,7 +28,7 @@ defmodule Toddy.Widget.StackTest do
 
     test "includes clip false in props" do
       node = Stack.new("s1") |> Stack.clip(false) |> Stack.build()
-      assert node.props["clip"] == false
+      assert node.props[:clip] == false
     end
   end
 

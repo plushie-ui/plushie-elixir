@@ -332,18 +332,18 @@ defmodule Toddy.ScopedIdTest do
           type: "container",
           props: %{},
           children: [
-            %{id: "name_label", type: "text", props: %{"content" => "Name"}, children: []},
+            %{id: "name_label", type: "text", props: %{content: "Name"}, children: []},
             %{
               id: "name_input",
               type: "text_input",
-              props: %{"a11y" => %{"labelled_by" => "name_label"}},
+              props: %{a11y: %{labelled_by: "name_label"}},
               children: []
             }
           ]
         })
 
       input = Enum.find(tree.children, &(&1.id == "form/name_input"))
-      assert input.props["a11y"]["labelled_by"] == "form/name_label"
+      assert input.props[:a11y][:labelled_by] == "form/name_label"
     end
 
     test "described_by is scoped" do
@@ -356,14 +356,14 @@ defmodule Toddy.ScopedIdTest do
             %{
               id: "slider",
               type: "slider",
-              props: %{"a11y" => %{"described_by" => "help_text"}},
+              props: %{a11y: %{described_by: "help_text"}},
               children: []
             }
           ]
         })
 
       slider = hd(tree.children)
-      assert slider.props["a11y"]["described_by"] == "panel/help_text"
+      assert slider.props[:a11y][:described_by] == "panel/help_text"
     end
 
     test "error_message is scoped" do
@@ -376,14 +376,14 @@ defmodule Toddy.ScopedIdTest do
             %{
               id: "email",
               type: "text_input",
-              props: %{"a11y" => %{"error_message" => "email_error"}},
+              props: %{a11y: %{error_message: "email_error"}},
               children: []
             }
           ]
         })
 
       email = hd(tree.children)
-      assert email.props["a11y"]["error_message"] == "form/email_error"
+      assert email.props[:a11y][:error_message] == "form/email_error"
     end
 
     test "already-scoped references (containing /) pass through" do
@@ -396,14 +396,14 @@ defmodule Toddy.ScopedIdTest do
             %{
               id: "input",
               type: "text_input",
-              props: %{"a11y" => %{"labelled_by" => "other_section/label"}},
+              props: %{a11y: %{labelled_by: "other_section/label"}},
               children: []
             }
           ]
         })
 
       input = hd(tree.children)
-      assert input.props["a11y"]["labelled_by"] == "other_section/label"
+      assert input.props[:a11y][:labelled_by] == "other_section/label"
     end
 
     test "no scope leaves references unchanged" do
@@ -416,14 +416,14 @@ defmodule Toddy.ScopedIdTest do
             %{
               id: "input",
               type: "text_input",
-              props: %{"a11y" => %{"labelled_by" => "label"}},
+              props: %{a11y: %{labelled_by: "label"}},
               children: []
             }
           ]
         })
 
       input = hd(tree.children)
-      assert input.props["a11y"]["labelled_by"] == "label"
+      assert input.props[:a11y][:labelled_by] == "label"
     end
 
     test "non-ref a11y props are not modified" do
@@ -436,16 +436,16 @@ defmodule Toddy.ScopedIdTest do
             %{
               id: "heading",
               type: "text",
-              props: %{"a11y" => %{"role" => "heading", "level" => 1, "labelled_by" => "title"}},
+              props: %{a11y: %{role: "heading", level: 1, labelled_by: "title"}},
               children: []
             }
           ]
         })
 
       heading = hd(tree.children)
-      assert heading.props["a11y"]["role"] == "heading"
-      assert heading.props["a11y"]["level"] == 1
-      assert heading.props["a11y"]["labelled_by"] == "form/title"
+      assert heading.props[:a11y][:role] == "heading"
+      assert heading.props[:a11y][:level] == 1
+      assert heading.props[:a11y][:labelled_by] == "form/title"
     end
   end
 
@@ -461,8 +461,8 @@ defmodule Toddy.ScopedIdTest do
           type: "keyed_column",
           props: %{},
           children: [
-            %{id: "a", type: "text", props: %{"content" => "A"}, children: []},
-            %{id: "b", type: "text", props: %{"content" => "B"}, children: []}
+            %{id: "a", type: "text", props: %{content: "A"}, children: []},
+            %{id: "b", type: "text", props: %{content: "B"}, children: []}
           ]
         })
 
@@ -472,8 +472,8 @@ defmodule Toddy.ScopedIdTest do
           type: "keyed_column",
           props: %{},
           children: [
-            %{id: "b", type: "text", props: %{"content" => "B"}, children: []},
-            %{id: "a", type: "text", props: %{"content" => "A"}, children: []}
+            %{id: "b", type: "text", props: %{content: "B"}, children: []},
+            %{id: "a", type: "text", props: %{content: "A"}, children: []}
           ]
         })
 
@@ -488,7 +488,7 @@ defmodule Toddy.ScopedIdTest do
           type: "container",
           props: %{},
           children: [
-            %{id: "label", type: "text", props: %{"content" => "Hello"}, children: []}
+            %{id: "label", type: "text", props: %{content: "Hello"}, children: []}
           ]
         })
 
@@ -498,7 +498,7 @@ defmodule Toddy.ScopedIdTest do
           type: "container",
           props: %{},
           children: [
-            %{id: "label", type: "text", props: %{"content" => "World"}, children: []}
+            %{id: "label", type: "text", props: %{content: "World"}, children: []}
           ]
         })
 

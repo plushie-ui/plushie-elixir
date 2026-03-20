@@ -20,7 +20,7 @@ defmodule Toddy.SnapshotTest do
     %{
       id: "main",
       type: "window",
-      props: %{"title" => "Test App"},
+      props: %{title: "Test App"},
       children: [
         button("ok", "OK")
       ]
@@ -31,23 +31,23 @@ defmodule Toddy.SnapshotTest do
     %{
       id: "main",
       type: "window",
-      props: %{"title" => "Counter"},
+      props: %{title: "Counter"},
       children: [
         %{
           id: "col",
           type: "column",
-          props: %{"padding" => 16, "spacing" => 8},
+          props: %{padding: 16, spacing: 8},
           children: [
             %{
               id: "label",
               type: "text",
-              props: %{"content" => "Count: 42"},
+              props: %{content: "Count: 42"},
               children: []
             },
             %{
               id: "controls",
               type: "row",
-              props: %{"spacing" => 4},
+              props: %{spacing: 4},
               children: [
                 button("increment", "+", style: :primary),
                 button("decrement", "-"),
@@ -333,7 +333,7 @@ defmodule Toddy.SnapshotTest do
       tree = %{
         id: "test",
         type: "widget",
-        props: %{"zebra" => 1, "alpha" => 2, "middle" => 3},
+        props: %{zebra: 1, alpha: 2, middle: 3},
         children: []
       }
 

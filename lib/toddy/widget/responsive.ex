@@ -87,9 +87,9 @@ defmodule Toddy.Widget.Responsive do
     def to_node(r) do
       props =
         %{}
-        |> put_if(r.width, "width")
-        |> put_if(r.height, "height")
-        |> put_if(r.a11y, "a11y")
+        |> put_if(r.width, :width)
+        |> put_if(r.height, :height)
+        |> put_if(r.a11y, :a11y)
 
       %{
         id: r.id,

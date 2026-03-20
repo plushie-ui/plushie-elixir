@@ -125,12 +125,12 @@ defmodule Toddy.Widget.Overlay do
     def to_node(overlay) do
       props =
         %{}
-        |> put_if(overlay.position, "position")
-        |> put_if(overlay.gap, "gap")
-        |> put_if(overlay.offset_x, "offset_x")
-        |> put_if(overlay.offset_y, "offset_y")
-        |> put_if(overlay.width, "width")
-        |> put_if(overlay.a11y, "a11y")
+        |> put_if(overlay.position, :position)
+        |> put_if(overlay.gap, :gap)
+        |> put_if(overlay.offset_x, :offset_x)
+        |> put_if(overlay.offset_y, :offset_y)
+        |> put_if(overlay.width, :width)
+        |> put_if(overlay.a11y, :a11y)
 
       %{
         id: overlay.id,

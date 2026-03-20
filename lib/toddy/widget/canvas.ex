@@ -31,13 +31,13 @@ defmodule Toddy.Widget.Canvas do
 
   Shapes are plain maps. See `Toddy.Canvas.Shape` for builder functions.
 
-  - `%{"type" => "rect", "x" => x, "y" => y, "w" => w, "h" => h}` -- rectangle.
-  - `%{"type" => "circle", "x" => x, "y" => y, "r" => r}` -- circle.
-  - `%{"type" => "line", "x1" => x1, "y1" => y1, "x2" => x2, "y2" => y2}` -- line.
-  - `%{"type" => "text", "x" => x, "y" => y, "content" => text}` -- text.
-  - `%{"type" => "path", "commands" => [...]}` -- arbitrary path.
-  - `%{"type" => "image", "source" => path, "x" => x, "y" => y, "w" => w, "h" => h}` -- image.
-  - `%{"type" => "svg", "source" => path, "x" => x, "y" => y, "w" => w, "h" => h}` -- SVG.
+  - `%{type: "rect", x: x, y: y, w: w, h: h}` -- rectangle.
+  - `%{type: "circle", x: x, y: y, r: r}` -- circle.
+  - `%{type: "line", x1: x1, y1: y1, x2: x2, y2: y2}` -- line.
+  - `%{type: "text", x: x, y: y, content: text}` -- text.
+  - `%{type: "path", commands: [...]}` -- arbitrary path.
+  - `%{type: "image", source: path, x: x, y: y, w: w, h: h}` -- image.
+  - `%{type: "svg", source: path, x: x, y: y, w: w, h: h}` -- SVG.
 
   All shapes accept optional `fill` (hex color or gradient) and `stroke` fields.
 
@@ -184,17 +184,17 @@ defmodule Toddy.Widget.Canvas do
     def to_node(canvas) do
       props =
         %{}
-        |> put_if(canvas.layers, "layers")
-        |> put_if(canvas.shapes, "shapes")
-        |> put_if(canvas.width, "width")
-        |> put_if(canvas.height, "height")
-        |> put_if(canvas.background, "background")
-        |> put_if(canvas.interactive, "interactive")
-        |> put_if(canvas.on_press, "on_press")
-        |> put_if(canvas.on_release, "on_release")
-        |> put_if(canvas.on_move, "on_move")
-        |> put_if(canvas.on_scroll, "on_scroll")
-        |> put_if(canvas.a11y, "a11y")
+        |> put_if(canvas.layers, :layers)
+        |> put_if(canvas.shapes, :shapes)
+        |> put_if(canvas.width, :width)
+        |> put_if(canvas.height, :height)
+        |> put_if(canvas.background, :background)
+        |> put_if(canvas.interactive, :interactive)
+        |> put_if(canvas.on_press, :on_press)
+        |> put_if(canvas.on_release, :on_release)
+        |> put_if(canvas.on_move, :on_move)
+        |> put_if(canvas.on_scroll, :on_scroll)
+        |> put_if(canvas.a11y, :a11y)
 
       %{id: canvas.id, type: "canvas", props: props, children: []}
     end

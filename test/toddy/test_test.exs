@@ -4,7 +4,7 @@ defmodule Toddy.TestTest do
   describe "assert_tree_snapshot/2" do
     @tag :tmp_dir
     test "creates snapshot on first run", %{tmp_dir: tmp_dir} do
-      tree = %{id: "root", type: "text", props: %{"content" => "hello"}, children: []}
+      tree = %{id: "root", type: "text", props: %{content: "hello"}, children: []}
       path = Path.join(tmp_dir, "snapshot.json")
 
       Toddy.Test.assert_tree_snapshot(tree, path)
@@ -15,7 +15,7 @@ defmodule Toddy.TestTest do
 
     @tag :tmp_dir
     test "passes when snapshot matches", %{tmp_dir: tmp_dir} do
-      tree = %{id: "root", type: "text", props: %{"content" => "hello"}, children: []}
+      tree = %{id: "root", type: "text", props: %{content: "hello"}, children: []}
       path = Path.join(tmp_dir, "snapshot.json")
 
       Toddy.Test.assert_tree_snapshot(tree, path)
@@ -25,8 +25,8 @@ defmodule Toddy.TestTest do
 
     @tag :tmp_dir
     test "fails when snapshot differs", %{tmp_dir: tmp_dir} do
-      tree1 = %{id: "root", type: "text", props: %{"content" => "hello"}, children: []}
-      tree2 = %{id: "root", type: "text", props: %{"content" => "world"}, children: []}
+      tree1 = %{id: "root", type: "text", props: %{content: "hello"}, children: []}
+      tree2 = %{id: "root", type: "text", props: %{content: "world"}, children: []}
       path = Path.join(tmp_dir, "snapshot.json")
 
       Toddy.Test.assert_tree_snapshot(tree1, path)

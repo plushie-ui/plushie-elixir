@@ -74,9 +74,9 @@ defmodule Toddy.Widget.FloatTest do
 
     test "includes non-nil props" do
       node = Float.new("f1", translate_x: 10, translate_y: 20, scale: 0.5) |> Float.build()
-      assert node.props["translate_x"] == 10
-      assert node.props["translate_y"] == 20
-      assert node.props["scale"] == 0.5
+      assert node.props[:translate_x] == 10
+      assert node.props[:translate_y] == 20
+      assert node.props[:scale] == 0.5
     end
 
     test "omits nil props" do

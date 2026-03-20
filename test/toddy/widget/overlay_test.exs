@@ -102,8 +102,8 @@ defmodule Toddy.Widget.OverlayTest do
 
       assert node.type == "overlay"
       assert node.id == "ol1"
-      assert node.props["position"] == "below"
-      assert node.props["gap"] == 8
+      assert node.props[:position] == "below"
+      assert node.props[:gap] == 8
       assert length(node.children) == 2
     end
 
@@ -121,13 +121,13 @@ defmodule Toddy.Widget.OverlayTest do
         Overlay.new("ol1", offset_x: 10, offset_y: -5)
         |> Overlay.build()
 
-      assert node.props["offset_x"] == 10
-      assert node.props["offset_y"] == -5
+      assert node.props[:offset_x] == 10
+      assert node.props[:offset_y] == -5
     end
 
     test "includes width when set" do
       node = Overlay.new("ol1", width: :fill) |> Overlay.build()
-      assert node.props["width"] == "fill"
+      assert node.props[:width] == "fill"
     end
   end
 

@@ -156,7 +156,7 @@ defmodule Toddy.RuntimeTest do
       # The text child should reflect the initial model value of 0.
       text_node = find_by_type(snapshot, "text")
       assert text_node != nil
-      assert text_node.props["content"] == "Value: 0"
+      assert text_node.props[:content] == "Value: 0"
     end
 
     test "dispatching an event updates the model and sends a patch" do
@@ -175,7 +175,7 @@ defmodule Toddy.RuntimeTest do
       # Verify the runtime's current tree reflects the update.
       state = :sys.get_state(runtime)
       text_node = find_by_type(state.tree, "text")
-      assert text_node.props["content"] == "Value: 1"
+      assert text_node.props[:content] == "Value: 1"
     end
 
     test "multiple events produce patches and update model correctly" do
@@ -190,7 +190,7 @@ defmodule Toddy.RuntimeTest do
       assert state.model.value == 1
 
       text_node = find_by_type(state.tree, "text")
-      assert text_node.props["content"] == "Value: 1"
+      assert text_node.props[:content] == "Value: 1"
     end
 
     test "unknown events are handled and model remains unchanged" do
@@ -226,7 +226,7 @@ defmodule Toddy.RuntimeTest do
       assert state.model.value == 1
 
       text_node = find_by_type(state.tree, "text")
-      assert text_node.props["content"] == "1"
+      assert text_node.props[:content] == "1"
     end
 
     test "async command delivers its result through update" do
@@ -239,7 +239,7 @@ defmodule Toddy.RuntimeTest do
       state = await_condition(runtime, fn s -> s.model.value == 42 end)
 
       text_node = find_by_type(state.tree, "text")
-      assert text_node.props["content"] == "42"
+      assert text_node.props[:content] == "42"
     end
 
     test "batch commands are all executed" do
@@ -288,7 +288,7 @@ defmodule Toddy.RuntimeTest do
       assert state.model.ticks == 2
 
       text_node = find_by_type(state.tree, "text")
-      assert text_node.props["content"] == "ticks:2"
+      assert text_node.props[:content] == "ticks:2"
     end
 
     test "init with commands executes them" do

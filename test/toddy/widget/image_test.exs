@@ -107,14 +107,14 @@ defmodule Toddy.Widget.ImageTest do
 
       assert node.id == "photo"
       assert node.type == "image"
-      assert node.props["source"] == "/images/logo.png"
+      assert node.props[:source] == "/images/logo.png"
       assert node.children == []
     end
 
     test "produces correct node with handle source" do
       node = Image.new("dyn", %{handle: "generated"}) |> Image.build()
 
-      assert node.props["source"] == %{handle: "generated"}
+      assert node.props[:source] == %{handle: "generated"}
     end
 
     test "omits nil props" do
@@ -147,16 +147,16 @@ defmodule Toddy.Widget.ImageTest do
         )
         |> Image.build()
 
-      assert node.props["width"] == 320
-      assert node.props["height"] == 240
-      assert node.props["content_fit"] == "contain"
-      assert node.props["filter_method"] == "nearest"
-      assert node.props["rotation"] == 90
-      assert node.props["opacity"] == 0.8
-      assert node.props["border_radius"] == 4
-      assert node.props["expand"] == true
-      assert node.props["scale"] == 1.5
-      assert node.props["crop"] == crop
+      assert node.props[:width] == 320
+      assert node.props[:height] == 240
+      assert node.props[:content_fit] == "contain"
+      assert node.props[:filter_method] == "nearest"
+      assert node.props[:rotation] == 90
+      assert node.props[:opacity] == 0.8
+      assert node.props[:border_radius] == 4
+      assert node.props[:expand] == true
+      assert node.props[:scale] == 1.5
+      assert node.props[:crop] == crop
     end
   end
 

@@ -179,20 +179,20 @@ defmodule Toddy.Widget.Toggler do
     def to_node(tg) do
       props =
         %{}
-        |> put_if(tg.is_toggled, "is_toggled")
-        |> put_if(tg.label, "label")
-        |> put_if(tg.spacing, "spacing")
-        |> put_if(tg.width, "width")
-        |> put_if(tg.size, "size")
-        |> put_if(tg.text_size, "text_size")
-        |> put_if(tg.font, "font")
-        |> put_if(tg.line_height, "line_height")
-        |> put_if(tg.text_shaping, "text_shaping")
-        |> put_if(tg.wrapping, "wrapping")
-        |> put_if(tg.text_alignment, "text_alignment")
-        |> put_if(tg.style, "style")
-        |> put_if(tg.disabled, "disabled")
-        |> put_if(tg.a11y, "a11y")
+        |> put_if(tg.is_toggled, :is_toggled)
+        |> put_if(tg.label, :label)
+        |> put_if(tg.spacing, :spacing)
+        |> put_if(tg.width, :width)
+        |> put_if(tg.size, :size)
+        |> put_if(tg.text_size, :text_size)
+        |> put_if(tg.font, :font)
+        |> put_if(tg.line_height, :line_height)
+        |> put_if(tg.text_shaping, :text_shaping)
+        |> put_if(tg.wrapping, :wrapping)
+        |> put_if(tg.text_alignment, :text_alignment)
+        |> put_if(tg.style, :style)
+        |> put_if(tg.disabled, :disabled)
+        |> put_if(tg.a11y, :a11y)
 
       %{id: tg.id, type: "toggler", props: props, children: []}
     end

@@ -36,11 +36,11 @@ defmodule Toddy.Test.CrossBackendTest do
           %{
             id: "label",
             type: "text",
-            props: %{"content" => "Count: #{model.count}"},
+            props: %{content: "Count: #{model.count}"},
             children: []
           },
-          %{id: "inc", type: "button", props: %{"label" => "+"}, children: []},
-          %{id: "dec", type: "button", props: %{"label" => "-"}, children: []}
+          %{id: "inc", type: "button", props: %{label: "+"}, children: []},
+          %{id: "dec", type: "button", props: %{label: "-"}, children: []}
         ]
       }
     end
@@ -67,7 +67,7 @@ defmodule Toddy.Test.CrossBackendTest do
     def view(model) do
       item_nodes =
         Enum.with_index(model.items, fn item, i ->
-          %{id: "item_#{i}", type: "text", props: %{"content" => item}, children: []}
+          %{id: "item_#{i}", type: "text", props: %{content: item}, children: []}
         end)
 
       %{
@@ -79,7 +79,7 @@ defmodule Toddy.Test.CrossBackendTest do
             %{
               id: "task",
               type: "text_input",
-              props: %{"placeholder" => "Add task", "value" => model.input},
+              props: %{placeholder: "Add task", value: model.input},
               children: []
             }
           ] ++ item_nodes
@@ -141,7 +141,7 @@ defmodule Toddy.Test.CrossBackendTest do
       element = backend.find(pid, "#label")
       assert element != nil
       assert element.type == "text"
-      assert element.props["content"] == "Count: 2"
+      assert element.props[:content] == "Count: 2"
     end
   end
 

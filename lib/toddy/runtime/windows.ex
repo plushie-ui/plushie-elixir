@@ -8,14 +8,11 @@ defmodule Toddy.Runtime.Windows do
   """
 
   # Window setting keys that can be specified as node props on window elements.
-  # Atoms are the source of truth; string form is derived for Map.take on
-  # string-keyed node props.
   @window_prop_keys ~w(
     title size width height position min_size max_size maximized fullscreen
     visible resizable closeable minimizable decorations transparent blur level
     exit_on_close_request
   )a
-  @window_prop_string_keys Enum.map(@window_prop_keys, &Atom.to_string/1)
 
   @doc """
   Synchronizes the runtime's tracked windows with the current tree.
@@ -97,18 +94,13 @@ defmodule Toddy.Runtime.Windows do
     props =
       case find_window_node(tree, window_id) do
         %{props: props} when is_map(props) ->
-          Map.take(props, @window_prop_string_keys)
+          Map.take(props, @window_prop_keys)
 
         _ ->
           %{}
       end
 
-    # Atomize keys so per-window props merge cleanly with the atom-keyed
-    # map returned by App.window_config/1. Safe because the keys come
-    # from @window_prop_keys, which are compiled as atoms above.
-    props
-    |> Map.new(fn {k, v} -> {String.to_existing_atom(k), v} end)
-    |> decompose_size_tuples()
+    decompose_size_tuples(props)
   end
 
   # Find a window node at root level or as a direct child (matching Rust depth).
@@ -122,30 +114,30 @@ defmodule Toddy.Runtime.Windows do
 
   # Decompose size tuples into separate width/height keys that Rust expects.
   # size: {w, h}     -> width: w, height: h  (and remove size key)
-  # min_size: {w, h} -> min_size: %{"width" => w, "height" => h}
-  # max_size: {w, h} -> max_size: %{"width" => w, "height" => h}
+  # min_size: {w, h} -> min_size: %{width: w, height: h}
+  # max_size: {w, h} -> max_size: %{width: w, height: h}
   # Also handles lists (which is what the Encode protocol produces from tuples).
   @spec decompose_size_tuples(map()) :: map()
   defp decompose_size_tuples(props) do
     props
     |> decompose_size()
-    |> decompose_nested_size("min_size")
-    |> decompose_nested_size("max_size")
+    |> decompose_nested_size(:min_size)
+    |> decompose_nested_size(:max_size)
   end
 
   defp decompose_size(props) do
-    case Map.get(props, "size") do
+    case Map.get(props, :size) do
       {w, h} ->
         props
-        |> Map.delete("size")
-        |> Map.put_new("width", w)
-        |> Map.put_new("height", h)
+        |> Map.delete(:size)
+        |> Map.put_new(:width, w)
+        |> Map.put_new(:height, h)
 
       [w, h] ->
         props
-        |> Map.delete("size")
-        |> Map.put_new("width", w)
-        |> Map.put_new("height", h)
+        |> Map.delete(:size)
+        |> Map.put_new(:width, w)
+        |> Map.put_new(:height, h)
 
       _ ->
         props
@@ -154,8 +146,8 @@ defmodule Toddy.Runtime.Windows do
 
   defp decompose_nested_size(props, key) do
     case Map.get(props, key) do
-      {w, h} -> Map.put(props, key, %{"width" => w, "height" => h})
-      [w, h] -> Map.put(props, key, %{"width" => w, "height" => h})
+      {w, h} -> Map.put(props, key, %{width: w, height: h})
+      [w, h] -> Map.put(props, key, %{width: w, height: h})
       _ -> props
     end
   end

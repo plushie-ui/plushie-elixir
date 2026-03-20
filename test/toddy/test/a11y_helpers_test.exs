@@ -8,15 +8,15 @@ defmodule Toddy.Test.A11yHelpersTest do
       el = %Element{
         id: "btn",
         type: "button",
-        props: %{"label" => "Go", "a11y" => %{"label" => "Go forward"}},
+        props: %{label: "Go", a11y: %{label: "Go forward"}},
         children: []
       }
 
-      assert Element.a11y(el) == %{"label" => "Go forward"}
+      assert Element.a11y(el) == %{label: "Go forward"}
     end
 
     test "returns nil when a11y not set" do
-      el = %Element{id: "btn", type: "button", props: %{"label" => "Go"}, children: []}
+      el = %Element{id: "btn", type: "button", props: %{label: "Go"}, children: []}
       assert Element.a11y(el) == nil
     end
   end
@@ -51,7 +51,7 @@ defmodule Toddy.Test.A11yHelpersTest do
       el = %Element{
         id: "h",
         type: "text",
-        props: %{"a11y" => %{"role" => "heading"}},
+        props: %{a11y: %{role: "heading"}},
         children: []
       }
 

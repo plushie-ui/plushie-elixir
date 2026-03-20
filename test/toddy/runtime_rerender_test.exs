@@ -145,7 +145,7 @@ defmodule Toddy.RuntimeRerenderTest do
         # Old tree should be preserved.
         state = :sys.get_state(runtime)
         text_node = find_by_type(state.tree, "text")
-        assert text_node.props["content"] == "all good"
+        assert text_node.props[:content] == "all good"
 
         # Disarm and verify the runtime recovers.
         dispatch_and_wait(runtime, :disarm)
@@ -153,7 +153,7 @@ defmodule Toddy.RuntimeRerenderTest do
 
         state = :sys.get_state(runtime)
         text_node = find_by_type(state.tree, "text")
-        assert text_node.props["content"] == "all good"
+        assert text_node.props[:content] == "all good"
       end)
     end
 
@@ -169,7 +169,7 @@ defmodule Toddy.RuntimeRerenderTest do
         assert state.model.count == 1
 
         text_node = find_by_type(state.tree, "text")
-        assert text_node.props["content"] == "count:1"
+        assert text_node.props[:content] == "count:1"
       end)
     end
   end

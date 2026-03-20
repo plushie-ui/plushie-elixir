@@ -74,7 +74,7 @@ defmodule Toddy.Widget.MarkdownTest do
 
     test "includes content in props" do
       node = Markdown.new("md1", "# Title") |> Markdown.build()
-      assert node.props["content"] == "# Title"
+      assert node.props[:content] == "# Title"
     end
 
     test "includes non-nil props" do
@@ -82,9 +82,9 @@ defmodule Toddy.Widget.MarkdownTest do
         Markdown.new("md1", "text", text_size: 14, h1_size: 28, spacing: 6)
         |> Markdown.build()
 
-      assert node.props["text_size"] == 14
-      assert node.props["h1_size"] == 28
-      assert node.props["spacing"] == 6
+      assert node.props[:text_size] == 14
+      assert node.props[:h1_size] == 28
+      assert node.props[:spacing] == 6
     end
 
     test "omits nil props" do

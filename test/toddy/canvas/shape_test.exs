@@ -8,19 +8,19 @@ defmodule Toddy.Canvas.ShapeTest do
   describe "rect/5" do
     test "produces a rect descriptor with position and size" do
       result = Shape.rect(10, 20, 100, 50)
-      assert result == %{"type" => "rect", "x" => 10, "y" => 20, "w" => 100, "h" => 50}
+      assert result == %{type: "rect", x: 10, y: 20, w: 100, h: 50}
     end
 
     test "with fill option" do
       result = Shape.rect(0, 0, 80, 40, fill: "#ff0000")
-      assert result["type"] == "rect"
-      assert result["fill"] == "#ff0000"
+      assert result[:type] == "rect"
+      assert result[:fill] == "#ff0000"
     end
 
     test "with stroke option" do
       s = Shape.stroke("#000", 2)
       result = Shape.rect(0, 0, 80, 40, stroke: s)
-      assert result["stroke"] == %{"color" => "#000", "width" => 2}
+      assert result[:stroke] == %{color: "#000", width: 2}
     end
   end
 
@@ -28,48 +28,48 @@ defmodule Toddy.Canvas.ShapeTest do
     test "produces a circle descriptor with center and radius" do
       result = Shape.circle(50, 50, 25)
 
-      assert result == %{"type" => "circle", "x" => 50, "y" => 50, "r" => 25}
+      assert result == %{type: "circle", x: 50, y: 50, r: 25}
     end
 
     test "accepts fill and stroke options" do
       s = Shape.stroke("#333", 1)
       result = Shape.circle(50, 50, 25, fill: "#0088ff", stroke: s)
 
-      assert result["fill"] == "#0088ff"
-      assert result["stroke"]["color"] == "#333"
+      assert result[:fill] == "#0088ff"
+      assert result[:stroke][:color] == "#333"
     end
   end
 
   describe "line/5" do
     test "produces a line descriptor between two points" do
       result = Shape.line(0, 0, 100, 100)
-      assert result == %{"type" => "line", "x1" => 0, "y1" => 0, "x2" => 100, "y2" => 100}
+      assert result == %{type: "line", x1: 0, y1: 0, x2: 100, y2: 100}
     end
 
     test "accepts stroke option (no fill -- lines have no interior)" do
       s = Shape.stroke("#333", 1, cap: "round")
       result = Shape.line(0, 0, 50, 50, stroke: s)
 
-      assert result["stroke"]["cap"] == "round"
-      refute Map.has_key?(result, "fill")
+      assert result[:stroke][:cap] == "round"
+      refute Map.has_key?(result, :fill)
     end
   end
 
   describe "text/4" do
     test "produces a text descriptor with content" do
       result = Shape.text(10, 10, "Hello")
-      assert result == %{"type" => "text", "x" => 10, "y" => 10, "content" => "Hello"}
+      assert result == %{type: "text", x: 10, y: 10, content: "Hello"}
     end
 
     test "with size and font options" do
       result = Shape.text(10, 10, "Hello", size: 16, font: "monospace")
-      assert result["size"] == 16
-      assert result["font"] == "monospace"
+      assert result[:size] == 16
+      assert result[:font] == "monospace"
     end
 
     test "with fill option" do
       result = Shape.text(5, 5, "Colored", fill: "#000000")
-      assert result["fill"] == "#000000"
+      assert result[:fill] == "#000000"
     end
   end
 
@@ -80,15 +80,15 @@ defmodule Toddy.Canvas.ShapeTest do
       commands = [Shape.move_to(0, 0), Shape.line_to(100, 0), Shape.close()]
       result = Shape.path(commands)
 
-      assert result["type"] == "path"
-      assert result["commands"] == [["move_to", 0, 0], ["line_to", 100, 0], "close"]
+      assert result[:type] == "path"
+      assert result[:commands] == [["move_to", 0, 0], ["line_to", 100, 0], "close"]
     end
 
     test "accepts fill and stroke options" do
       result = Shape.path([Shape.move_to(0, 0)], fill: "#0088ff", stroke: Shape.stroke("#000", 2))
 
-      assert result["fill"] == "#0088ff"
-      assert result["stroke"]["color"] == "#000"
+      assert result[:fill] == "#0088ff"
+      assert result[:stroke][:color] == "#000"
     end
   end
 
@@ -142,30 +142,30 @@ defmodule Toddy.Canvas.ShapeTest do
 
   describe "transform commands" do
     test "push_transform/0 produces a push_transform map" do
-      assert Shape.push_transform() == %{"type" => "push_transform"}
+      assert Shape.push_transform() == %{type: "push_transform"}
     end
 
     test "pop_transform/0 produces a pop_transform map" do
-      assert Shape.pop_transform() == %{"type" => "pop_transform"}
+      assert Shape.pop_transform() == %{type: "pop_transform"}
     end
 
     test "translate/2 produces a translate map with offsets" do
-      assert Shape.translate(100, 200) == %{"type" => "translate", "x" => 100, "y" => 200}
+      assert Shape.translate(100, 200) == %{type: "translate", x: 100, y: 200}
     end
 
     test "rotate/1 produces a rotate map with angle in radians" do
       angle = :math.pi() / 4
-      assert Shape.rotate(angle) == %{"type" => "rotate", "angle" => angle}
+      assert Shape.rotate(angle) == %{type: "rotate", angle: angle}
     end
 
     test "scale/2 produces a scale map with per-axis factors" do
-      assert Shape.scale(2, 3) == %{"type" => "scale", "x" => 2, "y" => 3}
+      assert Shape.scale(2, 3) == %{type: "scale", x: 2, y: 3}
     end
 
     test "scale/2 supports uniform scaling via same values" do
       result = Shape.scale(1.5, 1.5)
-      assert result["x"] == 1.5
-      assert result["y"] == 1.5
+      assert result[:x] == 1.5
+      assert result[:y] == 1.5
     end
   end
 
@@ -176,10 +176,10 @@ defmodule Toddy.Canvas.ShapeTest do
       result = Shape.linear_gradient({0, 0}, {200, 0}, [{0.0, "#ff0000"}, {1.0, "#0000ff"}])
 
       assert result == %{
-               "type" => "linear",
-               "start" => [0, 0],
-               "end" => [200, 0],
-               "stops" => [[0.0, "#ff0000"], [1.0, "#0000ff"]]
+               type: "linear",
+               start: [0, 0],
+               end: [200, 0],
+               stops: [[0.0, "#ff0000"], [1.0, "#0000ff"]]
              }
     end
 
@@ -187,8 +187,8 @@ defmodule Toddy.Canvas.ShapeTest do
       gradient = Shape.linear_gradient({0, 0}, {100, 0}, [{0.0, "#000"}, {1.0, "#fff"}])
       rect = Shape.rect(0, 0, 100, 50, fill: gradient)
 
-      assert rect["fill"]["type"] == "linear"
-      assert rect["fill"]["stops"] == [[0.0, "#000"], [1.0, "#fff"]]
+      assert rect[:fill][:type] == "linear"
+      assert rect[:fill][:stops] == [[0.0, "#000"], [1.0, "#fff"]]
     end
   end
 
@@ -197,23 +197,23 @@ defmodule Toddy.Canvas.ShapeTest do
   describe "fill_rule option" do
     test "fill_rule :even_odd adds fill_rule to shape map" do
       result = Shape.rect(0, 0, 100, 50, fill: "#ff0000", fill_rule: :even_odd)
-      assert result["fill_rule"] == "even_odd"
+      assert result[:fill_rule] == "even_odd"
     end
 
     test "fill_rule :non_zero adds explicit fill_rule to shape map" do
       result = Shape.circle(50, 50, 25, fill: "#00ff00", fill_rule: :non_zero)
-      assert result["fill_rule"] == "non_zero"
+      assert result[:fill_rule] == "non_zero"
     end
 
     test "fill_rule is omitted when not set" do
       result = Shape.rect(0, 0, 100, 50, fill: "#ff0000")
-      refute Map.has_key?(result, "fill_rule")
+      refute Map.has_key?(result, :fill_rule)
     end
 
     test "fill_rule works on path shapes" do
       commands = [Shape.move_to(0, 0), Shape.line_to(100, 0), Shape.close()]
       result = Shape.path(commands, fill: "#0088ff", fill_rule: :even_odd)
-      assert result["fill_rule"] == "even_odd"
+      assert result[:fill_rule] == "even_odd"
     end
   end
 
@@ -222,32 +222,32 @@ defmodule Toddy.Canvas.ShapeTest do
   describe "stroke/3" do
     test "produces a basic stroke descriptor with color and width" do
       result = Shape.stroke("#000", 2)
-      assert result == %{"color" => "#000", "width" => 2}
+      assert result == %{color: "#000", width: 2}
     end
 
     test "with cap option" do
       result = Shape.stroke("#000", 1, cap: "round")
-      assert result["cap"] == "round"
+      assert result[:cap] == "round"
     end
 
     test "with join option" do
       result = Shape.stroke("#000", 1, join: "bevel")
-      assert result["join"] == "bevel"
+      assert result[:join] == "bevel"
     end
 
     test "with dash option" do
       result = Shape.stroke("#000", 1, dash: {[5, 3], 0})
-      assert result["dash"] == %{"segments" => [5, 3], "offset" => 0}
+      assert result[:dash] == %{segments: [5, 3], offset: 0}
     end
 
     test "with all options combined" do
       result = Shape.stroke("#ff0000", 3, cap: "square", join: "miter", dash: {[10, 5], 2})
 
-      assert result["color"] == "#ff0000"
-      assert result["width"] == 3
-      assert result["cap"] == "square"
-      assert result["join"] == "miter"
-      assert result["dash"] == %{"segments" => [10, 5], "offset" => 2}
+      assert result[:color] == "#ff0000"
+      assert result[:width] == 3
+      assert result[:cap] == "square"
+      assert result[:join] == "miter"
+      assert result[:dash] == %{segments: [10, 5], offset: 2}
     end
   end
 
@@ -258,12 +258,12 @@ defmodule Toddy.Canvas.ShapeTest do
       result = Shape.image("assets/logo.png", 10, 20, 100, 50)
 
       assert result == %{
-               "type" => "image",
-               "source" => "assets/logo.png",
-               "x" => 10,
-               "y" => 20,
-               "w" => 100,
-               "h" => 50
+               type: "image",
+               source: "assets/logo.png",
+               x: 10,
+               y: 20,
+               w: 100,
+               h: 50
              }
     end
   end
@@ -273,12 +273,12 @@ defmodule Toddy.Canvas.ShapeTest do
       result = Shape.svg("icons/arrow.svg", 0, 0, 24, 24)
 
       assert result == %{
-               "type" => "svg",
-               "source" => "icons/arrow.svg",
-               "x" => 0,
-               "y" => 0,
-               "w" => 24,
-               "h" => 24
+               type: "svg",
+               source: "icons/arrow.svg",
+               x: 0,
+               y: 0,
+               w: 24,
+               h: 24
              }
     end
   end
@@ -289,19 +289,19 @@ defmodule Toddy.Canvas.ShapeTest do
     test "produces a push_clip descriptor with position and size" do
       result = Shape.push_clip(10, 20, 100, 80)
 
-      assert result == %{"type" => "push_clip", "x" => 10, "y" => 20, "w" => 100, "h" => 80}
+      assert result == %{type: "push_clip", x: 10, y: 20, w: 100, h: 80}
     end
 
     test "accepts float coordinates" do
       result = Shape.push_clip(10.5, 20.5, 100.0, 80.0)
-      assert result["x"] == 10.5
-      assert result["y"] == 20.5
+      assert result[:x] == 10.5
+      assert result[:y] == 20.5
     end
   end
 
   describe "pop_clip/0" do
     test "produces a pop_clip descriptor" do
-      assert Shape.pop_clip() == %{"type" => "pop_clip"}
+      assert Shape.pop_clip() == %{type: "pop_clip"}
     end
   end
 
@@ -315,12 +315,12 @@ defmodule Toddy.Canvas.ShapeTest do
       ]
 
       assert length(shapes) == 4
-      assert hd(shapes)["type"] == "push_clip"
-      assert List.last(shapes)["type"] == "pop_clip"
+      assert hd(shapes)[:type] == "push_clip"
+      assert List.last(shapes)[:type] == "pop_clip"
 
       # Interior shapes are unchanged
-      assert Enum.at(shapes, 1)["type"] == "rect"
-      assert Enum.at(shapes, 2)["type"] == "circle"
+      assert Enum.at(shapes, 1)[:type] == "rect"
+      assert Enum.at(shapes, 2)[:type] == "circle"
     end
 
     test "nested clip regions produce valid sequences" do
@@ -334,7 +334,7 @@ defmodule Toddy.Canvas.ShapeTest do
       ]
 
       assert length(shapes) == 6
-      types = Enum.map(shapes, & &1["type"])
+      types = Enum.map(shapes, & &1[:type])
       assert types == ["push_clip", "push_clip", "rect", "pop_clip", "rect", "pop_clip"]
     end
   end
@@ -344,32 +344,32 @@ defmodule Toddy.Canvas.ShapeTest do
   describe "opacity option" do
     test "rect accepts opacity" do
       result = Shape.rect(0, 0, 100, 50, fill: "#ff0000", opacity: 0.5)
-      assert result["opacity"] == 0.5
+      assert result[:opacity] == 0.5
     end
 
     test "circle accepts opacity" do
       result = Shape.circle(50, 50, 25, fill: "#00ff00", opacity: 0.3)
-      assert result["opacity"] == 0.3
+      assert result[:opacity] == 0.3
     end
 
     test "line accepts opacity" do
       result = Shape.line(0, 0, 100, 100, stroke: Shape.stroke("#000", 1), opacity: 0.8)
-      assert result["opacity"] == 0.8
+      assert result[:opacity] == 0.8
     end
 
     test "text accepts opacity" do
       result = Shape.text(10, 10, "Faded", fill: "#000", opacity: 0.25)
-      assert result["opacity"] == 0.25
+      assert result[:opacity] == 0.25
     end
 
     test "path accepts opacity" do
       result = Shape.path([Shape.move_to(0, 0)], fill: "#fff", opacity: 0.1)
-      assert result["opacity"] == 0.1
+      assert result[:opacity] == 0.1
     end
 
     test "opacity is omitted when not set" do
       result = Shape.rect(0, 0, 100, 50, fill: "#ff0000")
-      refute Map.has_key?(result, "opacity")
+      refute Map.has_key?(result, :opacity)
     end
   end
 
@@ -378,24 +378,24 @@ defmodule Toddy.Canvas.ShapeTest do
   describe "text alignment options" do
     test "text accepts align_x" do
       result = Shape.text(100, 50, "Centered", fill: "#000", align_x: "center")
-      assert result["align_x"] == "center"
+      assert result[:align_x] == "center"
     end
 
     test "text accepts align_y" do
       result = Shape.text(100, 50, "Middle", fill: "#000", align_y: "center")
-      assert result["align_y"] == "center"
+      assert result[:align_y] == "center"
     end
 
     test "text accepts both align_x and align_y" do
       result = Shape.text(100, 50, "Both", fill: "#000", align_x: "right", align_y: "bottom")
-      assert result["align_x"] == "right"
-      assert result["align_y"] == "bottom"
+      assert result[:align_x] == "right"
+      assert result[:align_y] == "bottom"
     end
 
     test "alignment keys are omitted when not set" do
       result = Shape.text(10, 10, "Default")
-      refute Map.has_key?(result, "align_x")
-      refute Map.has_key?(result, "align_y")
+      refute Map.has_key?(result, :align_x)
+      refute Map.has_key?(result, :align_y)
     end
   end
 end

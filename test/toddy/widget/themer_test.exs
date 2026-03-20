@@ -58,17 +58,17 @@ defmodule Toddy.Widget.ThemerTest do
 
     test "always includes theme in props" do
       node = Themer.new("th1", "Nord") |> Themer.build()
-      assert node.props["theme"] == "Nord"
+      assert node.props[:theme] == "Nord"
     end
 
     test "includes custom palette map in props" do
       palette = %{"background" => "#000", "text" => "#fff"}
       node = Themer.new("th1", palette) |> Themer.build()
-      assert node.props["theme"] == palette
+      assert node.props[:theme] == palette
     end
 
     test "converts children to nodes" do
-      child = %{id: "c1", type: "text", props: %{"content" => "hi"}, children: []}
+      child = %{id: "c1", type: "text", props: %{content: "hi"}, children: []}
       node = Themer.new("th1", "Dark") |> Themer.push(child) |> Themer.build()
       assert length(node.children) == 1
       assert hd(node.children).id == "c1"

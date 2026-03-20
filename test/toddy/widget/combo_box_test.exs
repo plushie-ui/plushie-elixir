@@ -99,7 +99,7 @@ defmodule Toddy.Widget.ComboBoxTest do
 
     test "includes options in props" do
       node = ComboBox.new("fruit", @options) |> ComboBox.build()
-      assert node.props["options"] == @options
+      assert node.props[:options] == @options
     end
 
     test "includes on_open and on_close in props when set" do
@@ -109,8 +109,8 @@ defmodule Toddy.Widget.ComboBoxTest do
         |> ComboBox.on_close(true)
         |> ComboBox.build()
 
-      assert node.props["on_open"] == true
-      assert node.props["on_close"] == true
+      assert node.props[:on_open] == true
+      assert node.props[:on_close] == true
     end
 
     test "omits nil props" do
@@ -128,7 +128,7 @@ defmodule Toddy.Widget.ComboBoxTest do
         |> ComboBox.on_option_hovered(false)
         |> ComboBox.build()
 
-      assert node.props["on_option_hovered"] == false
+      assert node.props[:on_option_hovered] == false
     end
   end
 

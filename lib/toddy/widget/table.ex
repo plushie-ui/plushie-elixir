@@ -213,21 +213,21 @@ defmodule Toddy.Widget.Table do
     def to_node(tbl) do
       props =
         %{}
-        |> put_if(tbl.columns, "columns")
-        |> put_if(tbl.rows, "rows")
-        |> put_if(tbl.header, "header")
-        |> put_if(tbl.separator, "separator")
-        |> put_if(tbl.width, "width")
-        |> put_if(tbl.padding, "padding")
-        |> put_if(tbl.sort_by, "sort_by")
-        |> put_if(tbl.sort_order, "sort_order")
-        |> put_if(tbl.header_text_size, "header_text_size")
-        |> put_if(tbl.row_text_size, "row_text_size")
-        |> put_if(tbl.cell_spacing, "cell_spacing")
-        |> put_if(tbl.row_spacing, "row_spacing")
-        |> put_if(tbl.separator_thickness, "separator_thickness")
-        |> put_if(tbl.separator_color, "separator_color")
-        |> put_if(tbl.a11y, "a11y")
+        |> put_if(tbl.columns, :columns)
+        |> put_if(tbl.rows, :rows)
+        |> put_if(tbl.header, :header)
+        |> put_if(tbl.separator, :separator)
+        |> put_if(tbl.width, :width)
+        |> put_if(tbl.padding, :padding)
+        |> put_if(tbl.sort_by, :sort_by)
+        |> put_if(tbl.sort_order, :sort_order)
+        |> put_if(tbl.header_text_size, :header_text_size)
+        |> put_if(tbl.row_text_size, :row_text_size)
+        |> put_if(tbl.cell_spacing, :cell_spacing)
+        |> put_if(tbl.row_spacing, :row_spacing)
+        |> put_if(tbl.separator_thickness, :separator_thickness)
+        |> put_if(tbl.separator_color, :separator_color)
+        |> put_if(tbl.a11y, :a11y)
 
       %{
         id: tbl.id,

@@ -6,7 +6,7 @@ defmodule Toddy.ThemerTest do
       node = Toddy.Widget.Node.build("t1", "themer", %{theme: "CatppuccinMocha"})
       assert node.id == "t1"
       assert node.type == "themer"
-      assert node.props["theme"] == "CatppuccinMocha"
+      assert node.props[:theme] == "CatppuccinMocha"
       assert node.children == []
     end
 
@@ -20,7 +20,7 @@ defmodule Toddy.ThemerTest do
     test "creates themer with custom palette" do
       palette = %{background: "#1e1e2e", text: "#cdd6f4", primary: "#89b4fa"}
       node = Toddy.Widget.Node.build("t1", "themer", %{theme: palette})
-      assert is_map(node.props["theme"])
+      assert is_map(node.props[:theme])
     end
 
     test "creates themer with no props" do
@@ -53,7 +53,7 @@ defmodule Toddy.ThemerTest do
       }
 
       node = Toddy.Widget.Node.build("t1", "themer", %{theme: palette})
-      theme = node.props["theme"]
+      theme = node.props[:theme]
       assert theme.background == "#1e1e2e"
       assert theme.text == "#cdd6f4"
       assert theme.primary == "#89b4fa"

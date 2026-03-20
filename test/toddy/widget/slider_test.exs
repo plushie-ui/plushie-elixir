@@ -77,15 +77,15 @@ defmodule Toddy.Widget.SliderTest do
 
     test "includes value and range in props" do
       node = Slider.new("vol", {0, 100}, 75) |> Slider.build()
-      assert node.props["value"] == 75
+      assert node.props[:value] == 75
       # range is a tuple, Encode protocol converts it
-      assert node.props["range"] != nil
+      assert node.props[:range] != nil
     end
 
     test "includes non-nil optional props" do
       node = Slider.new("s", {0, 10}, 5, step: 1, height: 20) |> Slider.build()
-      assert node.props["step"] == 1
-      assert node.props["height"] == 20
+      assert node.props[:step] == 1
+      assert node.props[:height] == 20
     end
 
     test "omits nil props" do
@@ -99,7 +99,7 @@ defmodule Toddy.Widget.SliderTest do
 
     test "includes false values in props" do
       node = Slider.new("s", {0, 10}, 5) |> Slider.circular_handle(false) |> Slider.build()
-      assert node.props["circular_handle"] == false
+      assert node.props[:circular_handle] == false
     end
   end
 

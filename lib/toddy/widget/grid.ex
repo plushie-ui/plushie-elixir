@@ -145,15 +145,15 @@ defmodule Toddy.Widget.Grid do
     def to_node(grid) do
       props =
         %{}
-        |> put_if(grid.columns, "columns")
-        |> put_if(grid.column_count, "column_count")
-        |> put_if(grid.spacing, "spacing")
-        |> put_if(grid.width, "width")
-        |> put_if(grid.height, "height")
-        |> put_if(grid.column_width, "column_width")
-        |> put_if(grid.row_height, "row_height")
-        |> put_if(grid.fluid, "fluid")
-        |> put_if(grid.a11y, "a11y")
+        |> put_if(grid.columns, :columns)
+        |> put_if(grid.column_count, :column_count)
+        |> put_if(grid.spacing, :spacing)
+        |> put_if(grid.width, :width)
+        |> put_if(grid.height, :height)
+        |> put_if(grid.column_width, :column_width)
+        |> put_if(grid.row_height, :row_height)
+        |> put_if(grid.fluid, :fluid)
+        |> put_if(grid.a11y, :a11y)
 
       %{
         id: grid.id,

@@ -155,16 +155,16 @@ defmodule Toddy.Widget.RichText do
     def to_node(rt) do
       props =
         %{}
-        |> put_if(rt.spans, "spans")
-        |> put_if(rt.width, "width")
-        |> put_if(rt.height, "height")
-        |> put_if(rt.size, "size")
-        |> put_if(rt.font, "font")
-        |> put_if(rt.color, "color")
-        |> put_if(rt.line_height, "line_height")
-        |> put_if(rt.wrapping, "wrapping")
-        |> put_if(rt.ellipsis, "ellipsis")
-        |> put_if(rt.a11y, "a11y")
+        |> put_if(rt.spans, :spans)
+        |> put_if(rt.width, :width)
+        |> put_if(rt.height, :height)
+        |> put_if(rt.size, :size)
+        |> put_if(rt.font, :font)
+        |> put_if(rt.color, :color)
+        |> put_if(rt.line_height, :line_height)
+        |> put_if(rt.wrapping, :wrapping)
+        |> put_if(rt.ellipsis, :ellipsis)
+        |> put_if(rt.a11y, :a11y)
 
       %{id: rt.id, type: "rich_text", props: props, children: []}
     end

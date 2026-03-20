@@ -100,8 +100,8 @@ defmodule Toddy.Widget.ColumnTest do
 
     test "includes non-nil props" do
       node = Column.new("col1", spacing: 10, clip: true) |> Column.build()
-      assert node.props["spacing"] == 10
-      assert node.props["clip"] == true
+      assert node.props[:spacing] == 10
+      assert node.props[:clip] == true
     end
 
     test "omits nil props" do
@@ -116,7 +116,7 @@ defmodule Toddy.Widget.ColumnTest do
 
     test "preserves false values in props" do
       node = Column.new("col1") |> Column.clip(false) |> Column.build()
-      assert node.props["clip"] == false
+      assert node.props[:clip] == false
     end
   end
 

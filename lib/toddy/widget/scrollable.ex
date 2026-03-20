@@ -188,19 +188,19 @@ defmodule Toddy.Widget.Scrollable do
     def to_node(s) do
       props =
         %{}
-        |> put_if(s.width, "width")
-        |> put_if(s.height, "height")
-        |> put_if(s.direction, "direction")
-        |> put_if(s.spacing, "spacing")
-        |> put_if(s.scrollbar_width, "scrollbar_width")
-        |> put_if(s.scrollbar_margin, "scrollbar_margin")
-        |> put_if(s.scroller_width, "scroller_width")
-        |> put_if(s.anchor, "anchor")
-        |> put_if(s.on_scroll, "on_scroll")
-        |> put_if(s.auto_scroll, "auto_scroll")
-        |> put_if(s.scrollbar_color, "scrollbar_color")
-        |> put_if(s.scroller_color, "scroller_color")
-        |> put_if(s.a11y, "a11y")
+        |> put_if(s.width, :width)
+        |> put_if(s.height, :height)
+        |> put_if(s.direction, :direction)
+        |> put_if(s.spacing, :spacing)
+        |> put_if(s.scrollbar_width, :scrollbar_width)
+        |> put_if(s.scrollbar_margin, :scrollbar_margin)
+        |> put_if(s.scroller_width, :scroller_width)
+        |> put_if(s.anchor, :anchor)
+        |> put_if(s.on_scroll, :on_scroll)
+        |> put_if(s.auto_scroll, :auto_scroll)
+        |> put_if(s.scrollbar_color, :scrollbar_color)
+        |> put_if(s.scroller_color, :scroller_color)
+        |> put_if(s.a11y, :a11y)
 
       %{
         id: s.id,

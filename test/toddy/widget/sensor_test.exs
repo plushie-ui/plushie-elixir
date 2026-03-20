@@ -100,7 +100,7 @@ defmodule Toddy.Widget.SensorTest do
 
     test "includes delay in props when set" do
       node = Sensor.new("s1", delay: 500) |> Sensor.build()
-      assert node.props["delay"] == 500
+      assert node.props[:delay] == 500
     end
 
     test "omits delay from props when nil" do
@@ -109,7 +109,7 @@ defmodule Toddy.Widget.SensorTest do
     end
 
     test "converts children to nodes" do
-      child = %{id: "c1", type: "text", props: %{"content" => "hi"}, children: []}
+      child = %{id: "c1", type: "text", props: %{content: "hi"}, children: []}
       node = Sensor.new("s1") |> Sensor.push(child) |> Sensor.build()
       assert length(node.children) == 1
       assert hd(node.children).id == "c1"

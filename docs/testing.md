@@ -55,7 +55,7 @@ test "view shows todo count" do
   tree = MyApp.view(model)
 
   counter = Toddy.Tree.find(tree, "todo_count")
-  assert counter.props["content"] =~ "1"
+  assert counter.props[:content] =~ "1"
 end
 ```
 
@@ -710,7 +710,7 @@ defmodule MyGauge.MacroTest do
   test "build/1 produces correct node" do
     node = MyGauge.new("g1", value: 75) |> MyGauge.build()
     assert node.type == "gauge"
-    assert node.props["value"] == 75
+    assert node.props[:value] == 75
   end
 
   test "push command" do

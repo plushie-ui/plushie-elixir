@@ -75,7 +75,7 @@ defmodule Toddy.Canvas.Shape do
   @spec rect(x :: number(), y :: number(), w :: number(), h :: number(), opts :: keyword()) ::
           map()
   def rect(x, y, w, h, opts \\ []) do
-    %{"type" => "rect", "x" => x, "y" => y, "w" => w, "h" => h}
+    %{type: "rect", x: x, y: y, w: w, h: h}
     |> apply_fill(opts)
     |> apply_stroke(opts)
     |> apply_opacity(opts)
@@ -84,7 +84,7 @@ defmodule Toddy.Canvas.Shape do
   @doc "Builds a circle shape descriptor."
   @spec circle(x :: number(), y :: number(), r :: number(), opts :: keyword()) :: map()
   def circle(x, y, r, opts \\ []) do
-    %{"type" => "circle", "x" => x, "y" => y, "r" => r}
+    %{type: "circle", x: x, y: y, r: r}
     |> apply_fill(opts)
     |> apply_stroke(opts)
     |> apply_opacity(opts)
@@ -99,7 +99,7 @@ defmodule Toddy.Canvas.Shape do
           opts :: keyword()
         ) :: map()
   def line(x1, y1, x2, y2, opts \\ []) do
-    %{"type" => "line", "x1" => x1, "y1" => y1, "x2" => x2, "y2" => y2}
+    %{type: "line", x1: x1, y1: y1, x2: x2, y2: y2}
     |> apply_stroke(opts)
     |> apply_opacity(opts)
   end
@@ -107,12 +107,12 @@ defmodule Toddy.Canvas.Shape do
   @doc "Builds a text shape descriptor."
   @spec text(x :: number(), y :: number(), content :: String.t(), opts :: keyword()) :: map()
   def text(x, y, content, opts \\ []) do
-    %{"type" => "text", "x" => x, "y" => y, "content" => content}
+    %{type: "text", x: x, y: y, content: content}
     |> apply_fill(opts)
-    |> maybe_put(opts, :size, "size")
-    |> maybe_put(opts, :font, "font")
-    |> maybe_put(opts, :align_x, "align_x")
-    |> maybe_put(opts, :align_y, "align_y")
+    |> maybe_put(opts, :size, :size)
+    |> maybe_put(opts, :font, :font)
+    |> maybe_put(opts, :align_x, :align_x)
+    |> maybe_put(opts, :align_y, :align_y)
     |> apply_opacity(opts)
   end
 
@@ -127,7 +127,7 @@ defmodule Toddy.Canvas.Shape do
   """
   @spec path(commands :: [map() | list() | String.t()], opts :: keyword()) :: map()
   def path(commands, opts \\ []) do
-    %{"type" => "path", "commands" => commands}
+    %{type: "path", commands: commands}
     |> apply_fill(opts)
     |> apply_stroke(opts)
     |> apply_opacity(opts)
@@ -210,36 +210,36 @@ defmodule Toddy.Canvas.Shape do
 
   @doc "Push (save) the current transform state onto the stack."
   @spec push_transform() :: map()
-  def push_transform, do: %{"type" => "push_transform"}
+  def push_transform, do: %{type: "push_transform"}
 
   @doc "Pop (restore) the previously saved transform state from the stack."
   @spec pop_transform() :: map()
-  def pop_transform, do: %{"type" => "pop_transform"}
+  def pop_transform, do: %{type: "pop_transform"}
 
   @doc "Translate the coordinate origin."
   @spec translate(x :: number(), y :: number()) :: map()
-  def translate(x, y), do: %{"type" => "translate", "x" => x, "y" => y}
+  def translate(x, y), do: %{type: "translate", x: x, y: y}
 
   @doc "Rotate the coordinate system (angle in radians)."
   @spec rotate(angle :: number()) :: map()
-  def rotate(angle), do: %{"type" => "rotate", "angle" => angle}
+  def rotate(angle), do: %{type: "rotate", angle: angle}
 
   @doc "Scale the coordinate system."
   @spec scale(x :: number(), y :: number()) :: map()
-  def scale(x, y), do: %{"type" => "scale", "x" => x, "y" => y}
+  def scale(x, y), do: %{type: "scale", x: x, y: y}
 
   # -- Clipping commands ------------------------------------------------------
 
   @doc "Pushes a clipping rectangle. All shapes until the matching pop_clip are clipped to this region."
   @spec push_clip(x :: number(), y :: number(), w :: number(), h :: number()) :: map()
   def push_clip(x, y, w, h) do
-    %{"type" => "push_clip", "x" => x, "y" => y, "w" => w, "h" => h}
+    %{type: "push_clip", x: x, y: y, w: w, h: h}
   end
 
   @doc "Pops the most recent clipping rectangle."
   @spec pop_clip() :: map()
   def pop_clip do
-    %{"type" => "pop_clip"}
+    %{type: "pop_clip"}
   end
 
   # -- Gradient builder -------------------------------------------------------
@@ -256,10 +256,10 @@ defmodule Toddy.Canvas.Shape do
         ) :: map()
   def linear_gradient({fx, fy}, {tx, ty}, stops) do
     %{
-      "type" => "linear",
-      "start" => [fx, fy],
-      "end" => [tx, ty],
-      "stops" => Enum.map(stops, fn {offset, color} -> [offset, color] end)
+      type: "linear",
+      start: [fx, fy],
+      end: [tx, ty],
+      stops: Enum.map(stops, fn {offset, color} -> [offset, color] end)
     }
   end
 
@@ -282,8 +282,8 @@ defmodule Toddy.Canvas.Shape do
           opts :: keyword()
         ) :: map()
   def image(source, x, y, w, h, opts \\ []) do
-    %{"type" => "image", "source" => source, "x" => x, "y" => y, "w" => w, "h" => h}
-    |> maybe_put(opts, :rotation, "rotation")
+    %{type: "image", source: source, x: x, y: y, w: w, h: h}
+    |> maybe_put(opts, :rotation, :rotation)
     |> apply_opacity(opts)
   end
 
@@ -296,7 +296,7 @@ defmodule Toddy.Canvas.Shape do
           h :: number()
         ) :: map()
   def svg(source, x, y, w, h),
-    do: %{"type" => "svg", "source" => source, "x" => x, "y" => y, "w" => w, "h" => h}
+    do: %{type: "svg", source: source, x: x, y: y, w: w, h: h}
 
   # -- Stroke helper ----------------------------------------------------------
 
@@ -312,11 +312,11 @@ defmodule Toddy.Canvas.Shape do
   """
   @spec stroke(color :: String.t(), width :: number(), opts :: keyword()) :: map()
   def stroke(color, width, opts \\ []) do
-    base = %{"color" => color, "width" => width}
+    base = %{color: color, width: width}
 
     base
-    |> maybe_put(opts, :cap, "cap")
-    |> maybe_put(opts, :join, "join")
+    |> maybe_put(opts, :cap, :cap)
+    |> maybe_put(opts, :join, :join)
     |> maybe_put_dash(opts)
   end
 
@@ -326,41 +326,41 @@ defmodule Toddy.Canvas.Shape do
     shape =
       case Keyword.get(opts, :fill) do
         nil -> shape
-        fill -> Map.put(shape, "fill", fill)
+        fill -> Map.put(shape, :fill, fill)
       end
 
     case Keyword.get(opts, :fill_rule) do
       nil -> shape
-      :non_zero -> Map.put(shape, "fill_rule", "non_zero")
-      :even_odd -> Map.put(shape, "fill_rule", "even_odd")
+      :non_zero -> Map.put(shape, :fill_rule, "non_zero")
+      :even_odd -> Map.put(shape, :fill_rule, "even_odd")
     end
   end
 
   defp apply_stroke(shape, opts) do
     case Keyword.get(opts, :stroke) do
       nil -> shape
-      stroke_val -> Map.put(shape, "stroke", stroke_val)
+      stroke_val -> Map.put(shape, :stroke, stroke_val)
     end
   end
 
-  defp maybe_put(map, opts, key, wire_key) do
+  defp maybe_put(map, opts, key, atom_key) do
     case Keyword.get(opts, key) do
       nil -> map
-      val -> Map.put(map, wire_key, val)
+      val -> Map.put(map, atom_key, val)
     end
   end
 
   defp maybe_put_dash(map, opts) do
     case Keyword.get(opts, :dash) do
       nil -> map
-      {segments, offset} -> Map.put(map, "dash", %{"segments" => segments, "offset" => offset})
+      {segments, offset} -> Map.put(map, :dash, %{segments: segments, offset: offset})
     end
   end
 
   defp apply_opacity(shape, opts) do
     case Keyword.get(opts, :opacity) do
       nil -> shape
-      opacity -> Map.put(shape, "opacity", opacity)
+      opacity -> Map.put(shape, :opacity, opacity)
     end
   end
 end

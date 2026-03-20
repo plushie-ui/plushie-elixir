@@ -18,12 +18,12 @@ defmodule Toddy.Widget.TogglerTest do
   describe "build/1 with disabled" do
     test "includes disabled in props when true" do
       node = Toggler.new("tg1", false) |> Toggler.disabled(true) |> Toggler.build()
-      assert node.props["disabled"] == true
+      assert node.props[:disabled] == true
     end
 
     test "includes disabled false in props" do
       node = Toggler.new("tg1", false) |> Toggler.disabled(false) |> Toggler.build()
-      assert node.props["disabled"] == false
+      assert node.props[:disabled] == false
     end
 
     test "omits disabled from props when nil" do

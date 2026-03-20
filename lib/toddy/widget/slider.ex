@@ -165,18 +165,18 @@ defmodule Toddy.Widget.Slider do
     def to_node(slider) do
       props =
         %{}
-        |> put_if(slider.value, "value")
-        |> put_if(slider.range, "range")
-        |> put_if(slider.step, "step")
-        |> put_if(slider.shift_step, "shift_step")
-        |> put_if(slider.default, "default")
-        |> put_if(slider.width, "width")
-        |> put_if(slider.height, "height")
-        |> put_if(slider.circular_handle, "circular_handle")
-        |> put_if(slider.rail_color, "rail_color")
-        |> put_if(slider.rail_width, "rail_width")
-        |> put_if(slider.style, "style")
-        |> put_if(slider.a11y, "a11y")
+        |> put_if(slider.value, :value)
+        |> put_if(slider.range, :range)
+        |> put_if(slider.step, :step)
+        |> put_if(slider.shift_step, :shift_step)
+        |> put_if(slider.default, :default)
+        |> put_if(slider.width, :width)
+        |> put_if(slider.height, :height)
+        |> put_if(slider.circular_handle, :circular_handle)
+        |> put_if(slider.rail_color, :rail_color)
+        |> put_if(slider.rail_width, :rail_width)
+        |> put_if(slider.style, :style)
+        |> put_if(slider.a11y, :a11y)
 
       %{id: slider.id, type: "slider", props: props, children: []}
     end

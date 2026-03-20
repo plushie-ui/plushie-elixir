@@ -126,7 +126,7 @@ defmodule Toddy.Widget.TextTest do
 
     test "includes content in props" do
       node = Text.new("t1", "Hello world") |> Text.build()
-      assert node.props["content"] == "Hello world"
+      assert node.props[:content] == "Hello world"
     end
 
     test "includes non-nil props" do
@@ -137,14 +137,14 @@ defmodule Toddy.Widget.TextTest do
         |> Text.align_x(:center)
         |> Text.build()
 
-      assert node.props["size"] == 20
-      assert node.props["wrapping"] == "word"
-      assert node.props["align_x"] == "center"
+      assert node.props[:size] == 20
+      assert node.props[:wrapping] == "word"
+      assert node.props[:align_x] == "center"
     end
 
     test "shaping encodes as text_shaping in props" do
       node = Text.new("t1", "Hi") |> Text.shaping(:advanced) |> Text.build()
-      assert node.props["text_shaping"] == "advanced"
+      assert node.props[:text_shaping] == "advanced"
       refute Map.has_key?(node.props, "shaping")
     end
 

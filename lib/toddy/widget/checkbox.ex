@@ -176,20 +176,20 @@ defmodule Toddy.Widget.Checkbox do
     def to_node(cb) do
       props =
         %{}
-        |> put_if(cb.label, "label")
-        |> put_if(cb.is_toggled, "checked")
-        |> put_if(cb.spacing, "spacing")
-        |> put_if(cb.width, "width")
-        |> put_if(cb.size, "size")
-        |> put_if(cb.text_size, "text_size")
-        |> put_if(cb.font, "font")
-        |> put_if(cb.line_height, "line_height")
-        |> put_if(cb.text_shaping, "text_shaping")
-        |> put_if(cb.wrapping, "wrapping")
-        |> put_if(cb.style, "style")
-        |> put_if(cb.icon, "icon")
-        |> put_if(cb.disabled, "disabled")
-        |> put_if(cb.a11y, "a11y")
+        |> put_if(cb.label, :label)
+        |> put_if(cb.is_toggled, :checked)
+        |> put_if(cb.spacing, :spacing)
+        |> put_if(cb.width, :width)
+        |> put_if(cb.size, :size)
+        |> put_if(cb.text_size, :text_size)
+        |> put_if(cb.font, :font)
+        |> put_if(cb.line_height, :line_height)
+        |> put_if(cb.text_shaping, :text_shaping)
+        |> put_if(cb.wrapping, :wrapping)
+        |> put_if(cb.style, :style)
+        |> put_if(cb.icon, :icon)
+        |> put_if(cb.disabled, :disabled)
+        |> put_if(cb.a11y, :a11y)
 
       %{id: cb.id, type: "checkbox", props: props, children: []}
     end

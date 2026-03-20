@@ -96,10 +96,10 @@ defmodule Toddy.Widget.Sensor do
     def to_node(sensor) do
       props =
         %{}
-        |> put_if(sensor.delay, "delay")
-        |> put_if(sensor.anticipate, "anticipate")
-        |> put_if(sensor.on_resize, "on_resize")
-        |> put_if(sensor.a11y, "a11y")
+        |> put_if(sensor.delay, :delay)
+        |> put_if(sensor.anticipate, :anticipate)
+        |> put_if(sensor.on_resize, :on_resize)
+        |> put_if(sensor.a11y, :a11y)
 
       %{
         id: sensor.id,

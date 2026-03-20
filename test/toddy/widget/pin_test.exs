@@ -80,10 +80,10 @@ defmodule Toddy.Widget.PinTest do
 
     test "includes non-nil props" do
       node = Pin.new("p1", x: 10, y: 20, width: :fill, height: 100) |> Pin.build()
-      assert node.props["x"] == 10
-      assert node.props["y"] == 20
-      assert node.props["width"] == "fill"
-      assert node.props["height"] == 100
+      assert node.props[:x] == 10
+      assert node.props[:y] == 20
+      assert node.props[:width] == "fill"
+      assert node.props[:height] == 100
     end
 
     test "omits nil props" do

@@ -138,15 +138,15 @@ defmodule Toddy.Widget.Row do
     def to_node(row) do
       props =
         %{}
-        |> put_if(row.spacing, "spacing")
-        |> put_if(row.padding, "padding")
-        |> put_if(row.width, "width")
-        |> put_if(row.height, "height")
-        |> put_if(row.align_y, "align_y")
-        |> put_if(row.max_width, "max_width")
-        |> put_if(row.clip, "clip")
-        |> put_if(row.wrap, "wrap")
-        |> put_if(row.a11y, "a11y")
+        |> put_if(row.spacing, :spacing)
+        |> put_if(row.padding, :padding)
+        |> put_if(row.width, :width)
+        |> put_if(row.height, :height)
+        |> put_if(row.align_y, :align_y)
+        |> put_if(row.max_width, :max_width)
+        |> put_if(row.clip, :clip)
+        |> put_if(row.wrap, :wrap)
+        |> put_if(row.a11y, :a11y)
 
       %{
         id: row.id,

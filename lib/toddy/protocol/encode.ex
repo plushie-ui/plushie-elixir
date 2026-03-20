@@ -40,7 +40,7 @@ defmodule Toddy.Protocol.Encode do
   """
   @spec encode_snapshot(tree :: term(), format :: Toddy.Protocol.format()) :: binary()
   def encode_snapshot(tree, format \\ :msgpack) do
-    serialize(%{type: "snapshot", tree: tree}, format)
+    serialize(%{type: "snapshot", tree: stringify_tree(tree)}, format)
   end
 
   @doc """
@@ -55,7 +55,7 @@ defmodule Toddy.Protocol.Encode do
   """
   @spec encode_patch(ops :: list(), format :: Toddy.Protocol.format()) :: binary()
   def encode_patch(ops, format \\ :msgpack) do
-    serialize(%{type: "patch", ops: ops}, format)
+    serialize(%{type: "patch", ops: stringify_patch_ops(ops)}, format)
   end
 
   @doc """
@@ -279,4 +279,41 @@ defmodule Toddy.Protocol.Encode do
       _other -> payload
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # Tree/prop key stringification at the wire boundary
+  # ---------------------------------------------------------------------------
+
+  # Recursively converts atom keys in tree node props to string keys
+  # for wire serialization. The internal tree uses atom-keyed props;
+  # the wire format requires string keys.
+  defp stringify_tree(%{props: props, children: children} = node) do
+    %{
+      node
+      | props: Toddy.Tree.stringify_keys(props),
+        children: Enum.map(children, &stringify_tree/1)
+    }
+  end
+
+  defp stringify_tree(other), do: other
+
+  # Converts atom prop keys to strings in patch operations that carry
+  # prop data (update_props, replace_node, insert_child).
+  defp stringify_patch_ops(ops) when is_list(ops) do
+    Enum.map(ops, &stringify_patch_op/1)
+  end
+
+  defp stringify_patch_op(%{op: "update_props", props: props} = op) do
+    %{op | props: Toddy.Tree.stringify_keys(props)}
+  end
+
+  defp stringify_patch_op(%{op: "replace_node", node: node} = op) do
+    %{op | node: stringify_tree(node)}
+  end
+
+  defp stringify_patch_op(%{op: "insert_child", node: node} = op) do
+    %{op | node: stringify_tree(node)}
+  end
+
+  defp stringify_patch_op(op), do: op
 end

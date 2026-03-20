@@ -85,7 +85,7 @@ defmodule Toddy.Widget.SvgTest do
 
     test "includes source in props" do
       node = Svg.new("icon1", "/icons/star.svg") |> Svg.build()
-      assert node.props["source"] == "/icons/star.svg"
+      assert node.props[:source] == "/icons/star.svg"
     end
 
     test "includes non-nil optional props" do
@@ -99,12 +99,12 @@ defmodule Toddy.Widget.SvgTest do
         |> Svg.color("#00ff00")
         |> Svg.build()
 
-      assert node.props["width"] == 32
-      assert node.props["height"] == 32
-      assert node.props["content_fit"] == "contain"
-      assert node.props["rotation"] == 90
-      assert node.props["opacity"] == 0.75
-      assert node.props["color"] == "#00ff00"
+      assert node.props[:width] == 32
+      assert node.props[:height] == 32
+      assert node.props[:content_fit] == "contain"
+      assert node.props[:rotation] == 90
+      assert node.props[:opacity] == 0.75
+      assert node.props[:color] == "#00ff00"
     end
 
     test "omits nil optional props" do

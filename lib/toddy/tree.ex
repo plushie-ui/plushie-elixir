@@ -9,7 +9,7 @@ defmodule Toddy.Tree do
       %{
         id: "unique-id",
         type: "button",
-        props: %{"label" => "Click me"},
+        props: %{label: "Click me"},
         children: [...]
       }
 
@@ -21,7 +21,7 @@ defmodule Toddy.Tree do
   @type tree_node :: %{
           required(:id) => String.t(),
           required(:type) => String.t(),
-          required(:props) => %{String.t() => term()},
+          required(:props) => %{atom() => term()},
           required(:children) => [tree_node()]
         }
 
@@ -42,8 +42,8 @@ defmodule Toddy.Tree do
     (single-window; multi-window support is Phase 1)
 
   Every node is guaranteed to have `:id`, `:type`, `:props`, and
-  `:children`. Props are normalized to string keys. Children are
-  always a list, normalized recursively.
+  `:children`. Prop values are encoded for the wire format. Children
+  are always a list, normalized recursively.
   """
   @spec normalize(tree :: nil | tree_node() | [tree_node()] | struct()) :: tree_node()
   def normalize(nil), do: @empty_container
@@ -111,8 +111,9 @@ defmodule Toddy.Tree do
 
     normalized_props =
       props
-      |> stringify_keys()
+      |> atomize_keys()
       |> resolve_a11y_id_refs(scope)
+      |> encode_prop_values()
 
     %{
       id: scoped_id,
@@ -125,10 +126,10 @@ defmodule Toddy.Tree do
   # Resolve a11y ID references (labelled_by, described_by, error_message)
   # relative to the current scope. These fields reference sibling widgets
   # by local ID; the renderer needs the full scoped path to find them.
-  @a11y_id_ref_keys ["labelled_by", "described_by", "error_message"]
+  @a11y_id_ref_keys [:labelled_by, :described_by, :error_message]
 
   defp resolve_a11y_id_refs(props, scope) do
-    case Map.get(props, "a11y") do
+    case Map.get(props, :a11y) do
       nil ->
         props
 
@@ -142,7 +143,7 @@ defmodule Toddy.Tree do
             end
           end)
 
-        Map.put(props, "a11y", resolved)
+        Map.put(props, :a11y, resolved)
 
       _ ->
         props
@@ -388,6 +389,9 @@ defmodule Toddy.Tree do
 
   Recursively stringifies nested map values. Does NOT recurse into
   lists (child nodes are not prop values and must not be treated as such).
+
+  This is the public API used by the protocol encoding boundary to
+  stringify prop keys just before wire serialization.
   """
   @spec stringify_keys(map :: map()) :: %{String.t() => term()}
   def stringify_keys(%{} = map) do
@@ -397,6 +401,41 @@ defmodule Toddy.Tree do
       {k, v} -> {inspect(k), stringify_value(v)}
     end)
   end
+
+  # Ensures all keys in the map are atoms. String keys from manually
+  # constructed node maps are converted; atom keys pass through.
+  defp atomize_keys(%{} = map) do
+    Map.new(map, fn
+      {k, v} when is_binary(k) -> {String.to_atom(k), v}
+      {k, v} -> {k, v}
+    end)
+  end
+
+  # Encodes prop values (atoms -> strings, structs via Encode protocol,
+  # tuples -> lists) while keeping map keys as atoms. Key stringification
+  # happens at the wire encoding boundary in Protocol.Encode.
+  defp encode_prop_values(%{} = map) do
+    Map.new(map, fn {k, v} -> {k, encode_value(v)} end)
+  end
+
+  # Like stringify_value but preserves atom keys in nested maps.
+  defp encode_value(%_{} = v), do: Toddy.Encode.encode(v)
+
+  defp encode_value(%{} = v) do
+    Map.new(v, fn {k, val} -> {k, encode_value(val)} end)
+  end
+
+  defp encode_value(list) when is_list(list), do: Enum.map(list, &encode_value/1)
+
+  defp encode_value(tuple) when is_tuple(tuple) do
+    tuple |> Tuple.to_list() |> Enum.map(&encode_value/1)
+  end
+
+  defp encode_value(true), do: true
+  defp encode_value(false), do: false
+  defp encode_value(nil), do: nil
+  defp encode_value(v) when is_atom(v), do: Atom.to_string(v)
+  defp encode_value(v), do: v
 
   # Private
 

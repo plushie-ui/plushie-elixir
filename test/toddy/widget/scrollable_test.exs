@@ -108,9 +108,9 @@ defmodule Toddy.Widget.ScrollableTest do
         Scrollable.new("scr1", direction: :both, spacing: 4, on_scroll: true)
         |> Scrollable.build()
 
-      assert node.props["direction"] == "both"
-      assert node.props["spacing"] == 4
-      assert node.props["on_scroll"] == true
+      assert node.props[:direction] == "both"
+      assert node.props[:spacing] == 4
+      assert node.props[:on_scroll] == true
     end
 
     test "omits nil props" do
@@ -124,7 +124,7 @@ defmodule Toddy.Widget.ScrollableTest do
 
     test "preserves false values in props" do
       node = Scrollable.new("scr1") |> Scrollable.on_scroll(false) |> Scrollable.build()
-      assert node.props["on_scroll"] == false
+      assert node.props[:on_scroll] == false
     end
   end
 

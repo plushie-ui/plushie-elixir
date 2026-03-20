@@ -92,10 +92,10 @@ defmodule Toddy.Widget.Stack do
     def to_node(stack) do
       props =
         %{}
-        |> put_if(stack.width, "width")
-        |> put_if(stack.height, "height")
-        |> put_if(stack.clip, "clip")
-        |> put_if(stack.a11y, "a11y")
+        |> put_if(stack.width, :width)
+        |> put_if(stack.height, :height)
+        |> put_if(stack.clip, :clip)
+        |> put_if(stack.a11y, :a11y)
 
       %{
         id: stack.id,

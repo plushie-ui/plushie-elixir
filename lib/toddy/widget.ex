@@ -24,14 +24,14 @@ defprotocol Toddy.Widget do
       Button.new("btn", "Click me")
       |> Button.style(:primary)
       |> Button.build()
-      #=> %{id: "btn", type: "button", props: %{"label" => "Click me", "style" => "primary"}, children: []}
+      #=> %{id: "btn", type: "button", props: %{label: "Click me", style: "primary"}, children: []}
   """
 
   @typedoc "A UI tree node map. Every widget builder returns this shape."
   @type ui_node :: %{
           id: String.t(),
           type: String.t(),
-          props: %{optional(String.t()) => term()},
+          props: %{optional(atom()) => term()},
           children: [ui_node()]
         }
 

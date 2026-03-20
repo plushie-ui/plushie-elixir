@@ -74,7 +74,7 @@ defmodule Toddy.Widget.QrCodeTest do
       node = QrCode.new("qr", "test data") |> QrCode.build()
       assert node.id == "qr"
       assert node.type == "qr_code"
-      assert node.props["data"] == "test data"
+      assert node.props[:data] == "test data"
       assert node.children == []
     end
 
@@ -83,8 +83,8 @@ defmodule Toddy.Widget.QrCodeTest do
         QrCode.new("qr", "data", cell_size: 8, error_correction: :high)
         |> QrCode.build()
 
-      assert node.props["cell_size"] == 8
-      assert node.props["error_correction"] == "high"
+      assert node.props[:cell_size] == 8
+      assert node.props[:error_correction] == "high"
       refute Map.has_key?(node.props, "cell_color")
       refute Map.has_key?(node.props, "background_color")
     end
@@ -96,8 +96,8 @@ defmodule Toddy.Widget.QrCodeTest do
         |> QrCode.background_color("#ffffff")
         |> QrCode.build()
 
-      assert node.props["cell_color"] == "#112233"
-      assert node.props["background_color"] == "#ffffff"
+      assert node.props[:cell_color] == "#112233"
+      assert node.props[:background_color] == "#ffffff"
     end
   end
 end

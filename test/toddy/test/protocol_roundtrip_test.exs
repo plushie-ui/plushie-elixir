@@ -27,30 +27,30 @@ defmodule Toddy.Test.ProtocolRoundtripTest do
         type: "column",
         props: %{},
         children: [
-          %{id: "title", type: "text", props: %{"content" => "Widget Gallery"}, children: []},
-          %{id: "save", type: "button", props: %{"label" => "Save"}, children: []},
+          %{id: "title", type: "text", props: %{content: "Widget Gallery"}, children: []},
+          %{id: "save", type: "button", props: %{label: "Save"}, children: []},
           %{
             id: "search",
             type: "text_input",
-            props: %{"value" => model.text_value, "placeholder" => "Search..."},
+            props: %{value: model.text_value, placeholder: "Search..."},
             children: []
           },
           %{
             id: "agree",
             type: "checkbox",
-            props: %{"label" => "I agree", "checked" => false},
+            props: %{label: "I agree", checked: false},
             children: []
           },
           %{
             id: "volume",
             type: "slider",
-            props: %{"value" => 50, "range" => [0, 100]},
+            props: %{value: 50, range: [0, 100]},
             children: []
           },
           %{
             id: "country",
             type: "pick_list",
-            props: %{"options" => ["NZ", "AU", "GB"], "selected" => model.selected},
+            props: %{options: ["NZ", "AU", "GB"], selected: model.selected},
             children: []
           },
           %{
@@ -63,7 +63,7 @@ defmodule Toddy.Test.ProtocolRoundtripTest do
                 type: "container",
                 props: %{},
                 children: [
-                  %{id: "nested", type: "text", props: %{"content" => "nested"}, children: []}
+                  %{id: "nested", type: "text", props: %{content: "nested"}, children: []}
                 ]
               }
             ]
@@ -106,7 +106,7 @@ defmodule Toddy.Test.ProtocolRoundtripTest do
     test "renders with correct type and content prop", %{pid: pid} do
       element = Pooled.find(pid, "#title")
       assert element.type == "text"
-      assert element.props["content"] == "Widget Gallery"
+      assert element.props[:content] == "Widget Gallery"
     end
 
     test "findable by text content", %{pid: pid} do
@@ -125,7 +125,7 @@ defmodule Toddy.Test.ProtocolRoundtripTest do
 
     test "value prop reflects model", %{pid: pid} do
       element = Pooled.find(pid, "#search")
-      assert element.props["value"] == ""
+      assert element.props[:value] == ""
     end
 
     test "type_text dispatches input event and model updates", %{pid: pid} do
@@ -136,7 +136,7 @@ defmodule Toddy.Test.ProtocolRoundtripTest do
     test "tree reflects updated value after input", %{pid: pid} do
       Pooled.type_text(pid, "#search", "toddy")
       element = Pooled.find(pid, "#search")
-      assert element.props["value"] == "toddy"
+      assert element.props[:value] == "toddy"
     end
   end
 
@@ -165,7 +165,7 @@ defmodule Toddy.Test.ProtocolRoundtripTest do
 
     test "value prop present in tree", %{pid: pid} do
       element = Pooled.find(pid, "#volume")
-      assert element.props["value"] == 50
+      assert element.props[:value] == 50
     end
 
     test "slide dispatches event without error", %{pid: pid} do
@@ -184,7 +184,7 @@ defmodule Toddy.Test.ProtocolRoundtripTest do
 
     test "options prop present in tree", %{pid: pid} do
       element = Pooled.find(pid, "#country")
-      assert element.props["options"] == ["NZ", "AU", "GB"]
+      assert element.props[:options] == ["NZ", "AU", "GB"]
     end
 
     test "select dispatches event and model updates", %{pid: pid} do

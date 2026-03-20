@@ -84,7 +84,7 @@ defmodule CounterTest do
 
     test "window has a title prop" do
       tree = Counter.view(%{count: 0})
-      assert is_binary(tree.props["title"])
+      assert is_binary(tree.props[:title])
     end
 
     test "window contains a column as direct child" do
@@ -97,8 +97,8 @@ defmodule CounterTest do
     test "column has padding and spacing props" do
       tree = Counter.view(%{count: 0})
       col = hd(tree.children)
-      assert is_integer(col.props["padding"]) or col.props["padding"] != nil
-      assert is_integer(col.props["spacing"]) or col.props["spacing"] != nil
+      assert is_integer(col.props[:padding]) or col.props[:padding] != nil
+      assert is_integer(col.props[:spacing]) or col.props[:spacing] != nil
     end
 
     test "increment button is present in the tree" do
@@ -120,21 +120,21 @@ defmodule CounterTest do
     test "view with count 0 contains \"Count: 0\" text node" do
       tree = Counter.view(%{count: 0})
       text_nodes = Toddy.Tree.find_all(tree, fn n -> n.type == "text" end)
-      match = Enum.find(text_nodes, fn n -> n.props["content"] == "Count: 0" end)
+      match = Enum.find(text_nodes, fn n -> n.props[:content] == "Count: 0" end)
       assert match != nil
     end
 
     test "view with count 5 contains \"Count: 5\" text node" do
       tree = Counter.view(%{count: 5})
       text_nodes = Toddy.Tree.find_all(tree, fn n -> n.type == "text" end)
-      match = Enum.find(text_nodes, fn n -> n.props["content"] == "Count: 5" end)
+      match = Enum.find(text_nodes, fn n -> n.props[:content] == "Count: 5" end)
       assert match != nil
     end
 
     test "view with negative count displays correctly" do
       tree = Counter.view(%{count: -3})
       text_nodes = Toddy.Tree.find_all(tree, fn n -> n.type == "text" end)
-      match = Enum.find(text_nodes, fn n -> n.props["content"] == "Count: -3" end)
+      match = Enum.find(text_nodes, fn n -> n.props[:content] == "Count: -3" end)
       assert match != nil
     end
   end
@@ -156,7 +156,7 @@ defmodule CounterTest do
 
       tree = Counter.view(model)
       text_nodes = Toddy.Tree.find_all(tree, fn n -> n.type == "text" end)
-      match = Enum.find(text_nodes, fn n -> n.props["content"] == "Count: 2" end)
+      match = Enum.find(text_nodes, fn n -> n.props[:content] == "Count: 2" end)
       assert match != nil
     end
   end

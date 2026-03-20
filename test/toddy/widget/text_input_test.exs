@@ -110,10 +110,10 @@ defmodule Toddy.Widget.TextInputTest do
         TextInput.new("search", "hello", placeholder: "type here", size: 14, secure: true)
         |> TextInput.build()
 
-      assert node.props["value"] == "hello"
-      assert node.props["placeholder"] == "type here"
-      assert node.props["size"] == 14
-      assert node.props["secure"] == true
+      assert node.props[:value] == "hello"
+      assert node.props[:placeholder] == "type here"
+      assert node.props[:size] == 14
+      assert node.props[:secure] == true
     end
 
     test "omits nil props" do
@@ -127,7 +127,7 @@ defmodule Toddy.Widget.TextInputTest do
 
     test "includes false values in props" do
       node = TextInput.new("id", "") |> TextInput.secure(false) |> TextInput.build()
-      assert node.props["secure"] == false
+      assert node.props[:secure] == false
     end
   end
 

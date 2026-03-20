@@ -97,27 +97,28 @@ defmodule Toddy.TreeTest do
     end
   end
 
-  describe "normalize/1 -- prop key stringification" do
-    test "converts atom keys in props to string keys" do
+  describe "normalize/1 -- prop key handling" do
+    test "keeps atom keys in props as atoms" do
       node = %{id: "btn", type: "button", props: %{label: "Click", style: :primary}, children: []}
       result = Tree.normalize(node)
-      assert Map.has_key?(result.props, "label")
-      assert Map.has_key?(result.props, "style")
-      refute Map.has_key?(result.props, :label)
+      assert Map.has_key?(result.props, :label)
+      assert Map.has_key?(result.props, :style)
+      refute Map.has_key?(result.props, "label")
     end
 
-    test "string keys in props are preserved as-is" do
+    test "converts string keys in props to atoms" do
       node = %{id: "t", type: "text", props: %{"content" => "hello"}, children: []}
       result = Tree.normalize(node)
-      assert result.props["content"] == "hello"
+      assert result.props[:content] == "hello"
+      refute Map.has_key?(result.props, "content")
     end
 
     test "handles mixed atom and string keys in props" do
       node = %{id: "m", type: "text", props: %{:color => "red", "size" => 14}, children: []}
       result = Tree.normalize(node)
-      assert result.props["color"] == "red"
-      assert result.props["size"] == 14
-      refute Map.has_key?(result.props, :color)
+      assert result.props[:color] == "red"
+      assert result.props[:size] == 14
+      refute Map.has_key?(result.props, "size")
     end
 
     test "encodes struct-valued props (StyleMap) without raising" do
@@ -129,8 +130,9 @@ defmodule Toddy.TreeTest do
       node = %{id: "c", type: "container", props: %{style: style}, children: []}
       result = Tree.normalize(node)
 
-      assert result.props["style"]["background"] == "#1b2435"
-      assert result.props["style"]["text_color"] == "#eaf0fb"
+      # StyleMap is encoded to a string-keyed map by encode_prop_values
+      assert result.props[:style]["background"] == "#1b2435"
+      assert result.props[:style]["text_color"] == "#eaf0fb"
     end
   end
 
@@ -148,7 +150,7 @@ defmodule Toddy.TreeTest do
       result = Tree.normalize(node)
       [child] = result.children
       assert child.id == "parent/child"
-      assert child.props["content"] == "hello"
+      assert child.props[:content] == "hello"
       assert Map.has_key?(child, :children)
     end
 
@@ -173,7 +175,7 @@ defmodule Toddy.TreeTest do
       [mid] = result.children
       [leaf] = mid.children
       assert leaf.id == "root/mid/leaf"
-      assert leaf.props["label"] == "Go"
+      assert leaf.props[:label] == "Go"
     end
   end
 
@@ -193,8 +195,8 @@ defmodule Toddy.TreeTest do
             type: "column",
             props: %{},
             children: [
-              %{id: "btn", type: "button", props: %{"label" => "Save"}, children: []},
-              %{id: "txt", type: "text", props: %{"content" => "hello"}, children: []}
+              %{id: "btn", type: "button", props: %{label: "Save"}, children: []},
+              %{id: "txt", type: "text", props: %{content: "hello"}, children: []}
             ]
           }
         ]
@@ -218,7 +220,7 @@ defmodule Toddy.TreeTest do
       btn = Tree.find(tree, "btn")
       assert btn != nil
       assert btn.id == "btn"
-      assert btn.props["label"] == "Save"
+      assert btn.props[:label] == "Save"
     end
 
     test "find returns nil when id is not found", %{tree: tree} do
@@ -456,9 +458,9 @@ defmodule Toddy.TreeTest do
       tree = %{
         id: "root",
         type: "container",
-        props: %{"padding" => 10},
+        props: %{padding: 10},
         children: [
-          %{id: "btn", type: "button", props: %{"label" => "OK"}, children: []}
+          %{id: "btn", type: "button", props: %{label: "OK"}, children: []}
         ]
       }
 
@@ -479,42 +481,42 @@ defmodule Toddy.TreeTest do
       old = %{
         id: "root",
         type: "container",
-        props: %{"color" => "red", "size" => 14},
+        props: %{color: "red", size: 14},
         children: []
       }
 
       new = %{
         id: "root",
         type: "container",
-        props: %{"color" => "blue", "size" => 14},
+        props: %{color: "blue", size: 14},
         children: []
       }
 
       ops = Tree.diff(old, new)
-      assert ops == [%{op: "update_props", path: [], props: %{"color" => "blue"}}]
+      assert ops == [%{op: "update_props", path: [], props: %{color: "blue"}}]
     end
 
     test "added prop emits update_props" do
       old = %{id: "root", type: "container", props: %{}, children: []}
-      new = %{id: "root", type: "container", props: %{"visible" => true}, children: []}
+      new = %{id: "root", type: "container", props: %{visible: true}, children: []}
 
       ops = Tree.diff(old, new)
-      assert ops == [%{op: "update_props", path: [], props: %{"visible" => true}}]
+      assert ops == [%{op: "update_props", path: [], props: %{visible: true}}]
     end
 
     test "removed prop emits update_props with nil value" do
-      old = %{id: "root", type: "container", props: %{"color" => "red"}, children: []}
+      old = %{id: "root", type: "container", props: %{color: "red"}, children: []}
       new = %{id: "root", type: "container", props: %{}, children: []}
 
       ops = Tree.diff(old, new)
-      assert ops == [%{op: "update_props", path: [], props: %{"color" => nil}}]
+      assert ops == [%{op: "update_props", path: [], props: %{color: nil}}]
     end
   end
 
   describe "diff/2 -- added child" do
     test "new child emits insert_child" do
       old = %{id: "root", type: "container", props: %{}, children: []}
-      child = %{id: "btn", type: "button", props: %{"label" => "Go"}, children: []}
+      child = %{id: "btn", type: "button", props: %{label: "Go"}, children: []}
       new = %{id: "root", type: "container", props: %{}, children: [child]}
 
       ops = Tree.diff(old, new)
@@ -524,7 +526,7 @@ defmodule Toddy.TreeTest do
 
   describe "diff/2 -- removed child" do
     test "missing child emits remove_child" do
-      child = %{id: "btn", type: "button", props: %{"label" => "Go"}, children: []}
+      child = %{id: "btn", type: "button", props: %{label: "Go"}, children: []}
       old = %{id: "root", type: "container", props: %{}, children: [child]}
       new = %{id: "root", type: "container", props: %{}, children: []}
 
@@ -535,10 +537,10 @@ defmodule Toddy.TreeTest do
 
   describe "diff/2 -- multiple changes" do
     test "remove + insert + update in a single diff" do
-      old_child_a = %{id: "a", type: "text", props: %{"content" => "hello"}, children: []}
-      old_child_b = %{id: "b", type: "text", props: %{"content" => "world"}, children: []}
-      new_child_a = %{id: "a", type: "text", props: %{"content" => "hi"}, children: []}
-      new_child_c = %{id: "c", type: "button", props: %{"label" => "New"}, children: []}
+      old_child_a = %{id: "a", type: "text", props: %{content: "hello"}, children: []}
+      old_child_b = %{id: "b", type: "text", props: %{content: "world"}, children: []}
+      new_child_a = %{id: "a", type: "text", props: %{content: "hi"}, children: []}
+      new_child_c = %{id: "c", type: "button", props: %{label: "New"}, children: []}
 
       old = %{id: "root", type: "container", props: %{}, children: [old_child_a, old_child_b]}
       new = %{id: "root", type: "container", props: %{}, children: [new_child_a, new_child_c]}
@@ -548,7 +550,7 @@ defmodule Toddy.TreeTest do
       # b removed at index 1, a updated at index 0, c inserted at index 1
       assert [remove, update, insert] = ops
       assert remove == %{op: "remove_child", path: [], index: 1}
-      assert update == %{op: "update_props", path: [0], props: %{"content" => "hi"}}
+      assert update == %{op: "update_props", path: [0], props: %{content: "hi"}}
       assert insert == %{op: "insert_child", path: [], index: 1, node: new_child_c}
     end
 
@@ -569,12 +571,12 @@ defmodule Toddy.TreeTest do
     end
 
     test "insert before existing sibling keeps update path on original child" do
-      old_child_a = %{id: "a", type: "text", props: %{"content" => "old"}, children: []}
-      old_child_b = %{id: "b", type: "text", props: %{"content" => "b"}, children: []}
+      old_child_a = %{id: "a", type: "text", props: %{content: "old"}, children: []}
+      old_child_b = %{id: "b", type: "text", props: %{content: "b"}, children: []}
       old = %{id: "root", type: "container", props: %{}, children: [old_child_a, old_child_b]}
 
-      new_child_x = %{id: "x", type: "text", props: %{"content" => "x"}, children: []}
-      new_child_a = %{id: "a", type: "text", props: %{"content" => "new"}, children: []}
+      new_child_x = %{id: "x", type: "text", props: %{content: "x"}, children: []}
+      new_child_a = %{id: "a", type: "text", props: %{content: "new"}, children: []}
 
       new = %{
         id: "root",
@@ -586,14 +588,14 @@ defmodule Toddy.TreeTest do
       ops = Tree.diff(old, new)
 
       assert [update, insert] = ops
-      assert update == %{op: "update_props", path: [0], props: %{"content" => "new"}}
+      assert update == %{op: "update_props", path: [0], props: %{content: "new"}}
       assert insert == %{op: "insert_child", path: [], index: 0, node: new_child_x}
     end
 
     test "reordered children emit replace_node to preserve correct order" do
-      child_a = %{id: "a", type: "text", props: %{"content" => "A"}, children: []}
-      child_b = %{id: "b", type: "text", props: %{"content" => "B"}, children: []}
-      child_c = %{id: "c", type: "text", props: %{"content" => "C"}, children: []}
+      child_a = %{id: "a", type: "text", props: %{content: "A"}, children: []}
+      child_b = %{id: "b", type: "text", props: %{content: "B"}, children: []}
+      child_c = %{id: "c", type: "text", props: %{content: "C"}, children: []}
 
       old = %{id: "root", type: "container", props: %{}, children: [child_a, child_b, child_c]}
       new = %{id: "root", type: "container", props: %{}, children: [child_c, child_b, child_a]}
@@ -604,16 +606,16 @@ defmodule Toddy.TreeTest do
 
   describe "diff/2 -- nested changes" do
     test "changed prop on nested child has correct path" do
-      inner = %{id: "inner", type: "text", props: %{"content" => "old"}, children: []}
+      inner = %{id: "inner", type: "text", props: %{content: "old"}, children: []}
       outer = %{id: "outer", type: "column", props: %{}, children: [inner]}
       old = %{id: "root", type: "container", props: %{}, children: [outer]}
 
-      inner_new = %{id: "inner", type: "text", props: %{"content" => "new"}, children: []}
+      inner_new = %{id: "inner", type: "text", props: %{content: "new"}, children: []}
       outer_new = %{id: "outer", type: "column", props: %{}, children: [inner_new]}
       new = %{id: "root", type: "container", props: %{}, children: [outer_new]}
 
       ops = Tree.diff(old, new)
-      assert ops == [%{op: "update_props", path: [0, 0], props: %{"content" => "new"}}]
+      assert ops == [%{op: "update_props", path: [0, 0], props: %{content: "new"}}]
     end
 
     test "insert deep in the tree has correct path" do

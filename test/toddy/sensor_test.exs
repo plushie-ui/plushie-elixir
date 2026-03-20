@@ -39,7 +39,7 @@ defmodule Toddy.SensorTest do
     test "sensor node with children" do
       child = Toddy.Widget.Node.build("inner", "text", %{content: "content"})
       node = Toddy.Widget.Node.build("s1", "sensor", %{on_resize: true}, [child])
-      assert node.props["on_resize"] == true
+      assert node.props[:on_resize] == true
       assert length(node.children) == 1
       assert hd(node.children).type == "text"
     end

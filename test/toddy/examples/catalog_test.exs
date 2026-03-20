@@ -58,7 +58,7 @@ defmodule CatalogTest do
     tree = Catalog.view(model)
     radios = Toddy.UI.find_all(tree, fn node -> node.type == "radio" end)
     assert length(radios) == 3
-    assert Enum.all?(radios, fn r -> r.props["group"] == "demo_radio" end)
+    assert Enum.all?(radios, fn r -> r.props[:group] == "demo_radio" end)
   end
 
   test "pick list select" do
@@ -140,8 +140,8 @@ defmodule CatalogTest do
     assert Toddy.UI.exists?(tree, "demo_canvas")
     canvas_node = Toddy.UI.find(tree, "demo_canvas")
     assert canvas_node.type == "canvas"
-    assert is_map(canvas_node.props["layers"])
-    assert map_size(canvas_node.props["layers"]) > 0
+    assert is_map(canvas_node.props[:layers])
+    assert map_size(canvas_node.props[:layers]) > 0
   end
 
   test "table node exists in composite tab" do
@@ -150,8 +150,8 @@ defmodule CatalogTest do
     assert Toddy.UI.exists?(tree, "demo_table")
     table_node = Toddy.UI.find(tree, "demo_table")
     assert table_node.type == "table"
-    assert length(table_node.props["columns"]) == 3
-    assert length(table_node.props["rows"]) == 3
+    assert length(table_node.props[:columns]) == 3
+    assert length(table_node.props[:rows]) == 3
   end
 
   test "unknown events are handled gracefully" do

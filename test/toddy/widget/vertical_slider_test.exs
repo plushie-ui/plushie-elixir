@@ -71,8 +71,8 @@ defmodule Toddy.Widget.VerticalSliderTest do
 
     test "includes value and range in props" do
       node = VerticalSlider.new("vs", {0, 100}, 75) |> VerticalSlider.build()
-      assert node.props["value"] == 75
-      assert node.props["range"] != nil
+      assert node.props[:value] == 75
+      assert node.props[:range] != nil
     end
 
     test "includes non-nil optional props" do
@@ -80,9 +80,9 @@ defmodule Toddy.Widget.VerticalSliderTest do
         VerticalSlider.new("vs", {0, 10}, 5, step: 2, width: 40, height: 300)
         |> VerticalSlider.build()
 
-      assert node.props["step"] == 2
-      assert node.props["width"] == 40
-      assert node.props["height"] == 300
+      assert node.props[:step] == 2
+      assert node.props[:width] == 40
+      assert node.props[:height] == 300
     end
 
     test "omits nil props" do

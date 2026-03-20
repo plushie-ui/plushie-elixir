@@ -144,49 +144,49 @@ defmodule Toddy.MultiWindowTest do
 
   describe "size tuple decomposition" do
     test "size: {w, h} decomposes into width and height" do
-      props = decompose_test(%{"size" => {800, 600}})
-      assert props["width"] == 800
-      assert props["height"] == 600
-      refute Map.has_key?(props, "size")
+      props = decompose_test(%{size: {800, 600}})
+      assert props[:width] == 800
+      assert props[:height] == 600
+      refute Map.has_key?(props, :size)
     end
 
     test "size as list decomposes into width and height" do
-      props = decompose_test(%{"size" => [1024, 768]})
-      assert props["width"] == 1024
-      assert props["height"] == 768
-      refute Map.has_key?(props, "size")
+      props = decompose_test(%{size: [1024, 768]})
+      assert props[:width] == 1024
+      assert props[:height] == 768
+      refute Map.has_key?(props, :size)
     end
 
     test "existing width/height not overwritten by size tuple" do
-      props = decompose_test(%{"size" => {800, 600}, "width" => 1920, "height" => 1080})
-      assert props["width"] == 1920
-      assert props["height"] == 1080
+      props = decompose_test(%{size: {800, 600}, width: 1920, height: 1080})
+      assert props[:width] == 1920
+      assert props[:height] == 1080
     end
 
     test "min_size tuple becomes map with width/height" do
-      props = decompose_test(%{"min_size" => {400, 300}})
-      assert props["min_size"] == %{"width" => 400, "height" => 300}
+      props = decompose_test(%{min_size: {400, 300}})
+      assert props[:min_size] == %{width: 400, height: 300}
     end
 
     test "max_size tuple becomes map with width/height" do
-      props = decompose_test(%{"max_size" => {1920, 1080}})
-      assert props["max_size"] == %{"width" => 1920, "height" => 1080}
+      props = decompose_test(%{max_size: {1920, 1080}})
+      assert props[:max_size] == %{width: 1920, height: 1080}
     end
 
     test "min_size as list becomes map with width/height" do
-      props = decompose_test(%{"min_size" => [320, 240]})
-      assert props["min_size"] == %{"width" => 320, "height" => 240}
+      props = decompose_test(%{min_size: [320, 240]})
+      assert props[:min_size] == %{width: 320, height: 240}
     end
 
     test "max_size as map passes through unchanged" do
-      original = %{"width" => 1920, "height" => 1080}
-      props = decompose_test(%{"max_size" => original})
-      assert props["max_size"] == original
+      original = %{width: 1920, height: 1080}
+      props = decompose_test(%{max_size: original})
+      assert props[:max_size] == original
     end
 
     test "props without size keys pass through unchanged" do
-      props = decompose_test(%{"resizable" => true, "visible" => false})
-      assert props == %{"resizable" => true, "visible" => false}
+      props = decompose_test(%{resizable: true, visible: false})
+      assert props == %{resizable: true, visible: false}
     end
   end
 
@@ -215,17 +215,17 @@ defmodule Toddy.MultiWindowTest do
   defp decompose_test(props) do
     props
     |> decompose_size()
-    |> decompose_nested("min_size")
-    |> decompose_nested("max_size")
+    |> decompose_nested(:min_size)
+    |> decompose_nested(:max_size)
   end
 
   defp decompose_size(props) do
-    case Map.get(props, "size") do
+    case Map.get(props, :size) do
       {w, h} ->
-        props |> Map.delete("size") |> Map.put_new("width", w) |> Map.put_new("height", h)
+        props |> Map.delete(:size) |> Map.put_new(:width, w) |> Map.put_new(:height, h)
 
       [w, h] ->
-        props |> Map.delete("size") |> Map.put_new("width", w) |> Map.put_new("height", h)
+        props |> Map.delete(:size) |> Map.put_new(:width, w) |> Map.put_new(:height, h)
 
       _ ->
         props
@@ -234,8 +234,8 @@ defmodule Toddy.MultiWindowTest do
 
   defp decompose_nested(props, key) do
     case Map.get(props, key) do
-      {w, h} -> Map.put(props, key, %{"width" => w, "height" => h})
-      [w, h] -> Map.put(props, key, %{"width" => w, "height" => h})
+      {w, h} -> Map.put(props, key, %{width: w, height: h})
+      [w, h] -> Map.put(props, key, %{width: w, height: h})
       _ -> props
     end
   end

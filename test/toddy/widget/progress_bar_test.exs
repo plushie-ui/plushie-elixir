@@ -65,12 +65,12 @@ defmodule Toddy.Widget.ProgressBarTest do
 
     test "includes range as two-element list in props" do
       node = ProgressBar.new("pb1", {0, 200}, 75) |> ProgressBar.build()
-      assert node.props["range"] == [0, 200]
+      assert node.props[:range] == [0, 200]
     end
 
     test "includes value in props" do
       node = ProgressBar.new("pb1", {0, 100}, 42) |> ProgressBar.build()
-      assert node.props["value"] == 42
+      assert node.props[:value] == 42
     end
 
     test "includes non-nil optional props" do
@@ -81,9 +81,9 @@ defmodule Toddy.Widget.ProgressBarTest do
         |> ProgressBar.vertical(true)
         |> ProgressBar.build()
 
-      assert node.props["width"] == "fill"
-      assert node.props["style"] == "warning"
-      assert node.props["vertical"] == true
+      assert node.props[:width] == "fill"
+      assert node.props[:style] == "warning"
+      assert node.props[:vertical] == true
     end
 
     test "omits nil optional props" do
@@ -96,7 +96,7 @@ defmodule Toddy.Widget.ProgressBarTest do
 
     test "value of zero is included in props" do
       node = ProgressBar.new("pb1", {0, 100}, 0) |> ProgressBar.build()
-      assert node.props["value"] == 0
+      assert node.props[:value] == 0
     end
   end
 

@@ -58,35 +58,35 @@ defmodule Toddy.Test.InteractionRoundtripTest do
         type: "column",
         props: %{},
         children: [
-          %{id: "submit_btn", type: "button", props: %{"label" => "Submit"}, children: []},
+          %{id: "submit_btn", type: "button", props: %{label: "Submit"}, children: []},
           %{
             id: "name_input",
             type: "text_input",
-            props: %{"value" => model.text_value, "on_submit" => true},
+            props: %{value: model.text_value, on_submit: true},
             children: []
           },
           %{
             id: "agree_check",
             type: "checkbox",
-            props: %{"label" => "Agree", "is_checked" => model.checkbox_state},
+            props: %{label: "Agree", is_checked: model.checkbox_state},
             children: []
           },
           %{
             id: "dark_mode",
             type: "toggler",
-            props: %{"label" => "Dark mode", "is_toggled" => model.toggler_state},
+            props: %{label: "Dark mode", is_toggled: model.toggler_state},
             children: []
           },
           %{
             id: "volume",
             type: "slider",
-            props: %{"value" => model.slider_value, "range" => [0, 100]},
+            props: %{value: model.slider_value, range: [0, 100]},
             children: []
           },
           %{
             id: "language",
             type: "pick_list",
-            props: %{"options" => ["Elixir", "Erlang", "Gleam"], "selected" => model.selected},
+            props: %{options: ["Elixir", "Erlang", "Gleam"], selected: model.selected},
             children: []
           }
         ]

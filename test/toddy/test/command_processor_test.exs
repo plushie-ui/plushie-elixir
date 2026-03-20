@@ -28,8 +28,8 @@ defmodule Toddy.Test.Backend.CommandProcessorTest do
         type: "column",
         props: %{},
         children: [
-          %{id: "status", type: "text", props: %{"content" => "#{model.status}"}, children: []},
-          %{id: "fetch", type: "button", props: %{"label" => "Fetch"}, children: []}
+          %{id: "status", type: "text", props: %{content: "#{model.status}"}, children: []},
+          %{id: "fetch", type: "button", props: %{label: "Fetch"}, children: []}
         ]
       }
     end
@@ -63,7 +63,7 @@ defmodule Toddy.Test.Backend.CommandProcessorTest do
     def update(model, _event), do: model
 
     def view(model) do
-      %{id: "root", type: "text", props: %{"content" => inspect(model.items)}, children: []}
+      %{id: "root", type: "text", props: %{content: inspect(model.items)}, children: []}
     end
   end
 
@@ -87,7 +87,7 @@ defmodule Toddy.Test.Backend.CommandProcessorTest do
     def update(model, _event), do: model
 
     def view(model) do
-      %{id: "root", type: "text", props: %{"content" => inspect(model)}, children: []}
+      %{id: "root", type: "text", props: %{content: inspect(model)}, children: []}
     end
   end
 
@@ -105,7 +105,7 @@ defmodule Toddy.Test.Backend.CommandProcessorTest do
     def update(model, _event), do: model
 
     def view(model) do
-      %{id: "root", type: "text", props: %{"content" => inspect(model.result)}, children: []}
+      %{id: "root", type: "text", props: %{content: inspect(model.result)}, children: []}
     end
   end
 
@@ -117,7 +117,7 @@ defmodule Toddy.Test.Backend.CommandProcessorTest do
     def update(model, _event), do: model
 
     def view(model) do
-      %{id: "root", type: "text", props: %{"content" => "#{model.count}"}, children: []}
+      %{id: "root", type: "text", props: %{content: "#{model.count}"}, children: []}
     end
   end
 
@@ -135,7 +135,7 @@ defmodule Toddy.Test.Backend.CommandProcessorTest do
     def update(model, _event), do: model
 
     def view(model) do
-      %{id: "root", type: "text", props: %{"content" => inspect(model.data)}, children: []}
+      %{id: "root", type: "text", props: %{content: inspect(model.data)}, children: []}
     end
   end
 
@@ -151,7 +151,7 @@ defmodule Toddy.Test.Backend.CommandProcessorTest do
     def update(model, _event), do: model
 
     def view(model) do
-      %{id: "root", type: "text", props: %{"content" => "#{model.initialized}"}, children: []}
+      %{id: "root", type: "text", props: %{content: "#{model.initialized}"}, children: []}
     end
   end
 
@@ -237,7 +237,7 @@ defmodule Toddy.Test.Backend.CommandProcessorTest do
         def update(model, _), do: model
 
         def view(model),
-          do: %{id: "r", type: "text", props: %{"content" => "#{model.depth}"}, children: []}
+          do: %{id: "r", type: "text", props: %{content: "#{model.depth}"}, children: []}
       end
 
       cmd = Toddy.Command.done(:start, fn _ -> {:go, :first} end)

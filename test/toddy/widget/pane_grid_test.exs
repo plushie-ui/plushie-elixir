@@ -90,13 +90,13 @@ defmodule Toddy.Widget.PaneGridTest do
 
     test "includes non-nil props" do
       node = PaneGrid.new("pg1", spacing: 5, width: :fill) |> PaneGrid.build()
-      assert node.props["spacing"] == 5
-      assert node.props["width"] == "fill"
+      assert node.props[:spacing] == 5
+      assert node.props[:width] == "fill"
     end
 
     test "includes min_size in props when set" do
       node = PaneGrid.new("pg1", min_size: 30) |> PaneGrid.build()
-      assert node.props["min_size"] == 30
+      assert node.props[:min_size] == 30
     end
 
     test "omits nil props" do
@@ -108,7 +108,7 @@ defmodule Toddy.Widget.PaneGridTest do
     end
 
     test "converts children to nodes" do
-      child = %{id: "c1", type: "text", props: %{"content" => "hi"}, children: []}
+      child = %{id: "c1", type: "text", props: %{content: "hi"}, children: []}
       node = PaneGrid.new("pg1") |> PaneGrid.push(child) |> PaneGrid.build()
       assert length(node.children) == 1
       assert hd(node.children).id == "c1"

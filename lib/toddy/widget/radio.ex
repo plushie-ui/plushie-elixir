@@ -180,20 +180,20 @@ defmodule Toddy.Widget.Radio do
     def to_node(r) do
       props =
         %{}
-        |> put_if(r.value, "value")
-        |> put_if(r.selected, "selected")
-        |> put_if(r.label, "label")
-        |> put_if(r.group, "group")
-        |> put_if(r.spacing, "spacing")
-        |> put_if(r.width, "width")
-        |> put_if(r.size, "size")
-        |> put_if(r.text_size, "text_size")
-        |> put_if(r.font, "font")
-        |> put_if(r.line_height, "line_height")
-        |> put_if(r.text_shaping, "text_shaping")
-        |> put_if(r.wrapping, "wrapping")
-        |> put_if(r.style, "style")
-        |> put_if(r.a11y, "a11y")
+        |> put_if(r.value, :value)
+        |> put_if(r.selected, :selected)
+        |> put_if(r.label, :label)
+        |> put_if(r.group, :group)
+        |> put_if(r.spacing, :spacing)
+        |> put_if(r.width, :width)
+        |> put_if(r.size, :size)
+        |> put_if(r.text_size, :text_size)
+        |> put_if(r.font, :font)
+        |> put_if(r.line_height, :line_height)
+        |> put_if(r.text_shaping, :text_shaping)
+        |> put_if(r.wrapping, :wrapping)
+        |> put_if(r.style, :style)
+        |> put_if(r.a11y, :a11y)
 
       %{id: r.id, type: "radio", props: props, children: []}
     end

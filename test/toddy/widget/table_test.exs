@@ -110,23 +110,23 @@ defmodule Toddy.Widget.TableTest do
         |> Table.sort_order(:desc)
         |> Table.build()
 
-      assert node.props["columns"] == @columns
-      assert node.props["rows"] == @rows
-      assert node.props["header"] == true
-      assert node.props["sort_by"] == "age"
-      assert node.props["sort_order"] == "desc"
+      assert node.props[:columns] == @columns
+      assert node.props[:rows] == @rows
+      assert node.props[:header] == true
+      assert node.props[:sort_by] == "age"
+      assert node.props[:sort_order] == "desc"
     end
 
     test "omits nil props" do
       node = Table.new("tbl1") |> Table.build()
-      refute Map.has_key?(node.props, "columns")
-      refute Map.has_key?(node.props, "rows")
-      refute Map.has_key?(node.props, "header")
-      refute Map.has_key?(node.props, "separator")
-      refute Map.has_key?(node.props, "width")
-      refute Map.has_key?(node.props, "padding")
-      refute Map.has_key?(node.props, "sort_by")
-      refute Map.has_key?(node.props, "sort_order")
+      refute Map.has_key?(node.props, :columns)
+      refute Map.has_key?(node.props, :rows)
+      refute Map.has_key?(node.props, :header)
+      refute Map.has_key?(node.props, :separator)
+      refute Map.has_key?(node.props, :width)
+      refute Map.has_key?(node.props, :padding)
+      refute Map.has_key?(node.props, :sort_by)
+      refute Map.has_key?(node.props, :sort_order)
     end
 
     test "includes false values in props (put_if skips nil not false)" do
@@ -136,8 +136,8 @@ defmodule Toddy.Widget.TableTest do
         |> Table.separator(false)
         |> Table.build()
 
-      assert node.props["header"] == false
-      assert node.props["separator"] == false
+      assert node.props[:header] == false
+      assert node.props[:separator] == false
     end
   end
 

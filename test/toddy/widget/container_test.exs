@@ -206,9 +206,9 @@ defmodule Toddy.Widget.ContainerTest do
 
     test "includes non-nil props" do
       node = Container.new("c1", padding: 10, center: true, style: :dark) |> Container.build()
-      assert node.props["padding"] == 10
-      assert node.props["center"] == true
-      assert node.props["style"] == "dark"
+      assert node.props[:padding] == 10
+      assert node.props[:center] == true
+      assert node.props[:style] == "dark"
     end
 
     test "omits nil props" do

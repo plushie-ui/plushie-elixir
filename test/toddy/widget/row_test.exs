@@ -18,7 +18,7 @@ defmodule Toddy.Widget.RowTest do
   describe "build/1 with max_width" do
     test "includes max_width in props when set" do
       node = Row.new("r1") |> Row.max_width(500) |> Row.build()
-      assert node.props["max_width"] == 500
+      assert node.props[:max_width] == 500
     end
 
     test "omits max_width from props when nil" do

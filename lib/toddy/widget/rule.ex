@@ -91,11 +91,11 @@ defmodule Toddy.Widget.Rule do
     def to_node(rule) do
       props =
         %{}
-        |> put_if(rule.height, "height")
-        |> put_if(rule.width, "width")
-        |> put_if(rule.direction, "direction")
-        |> put_if(rule.style, "style")
-        |> put_if(rule.a11y, "a11y")
+        |> put_if(rule.height, :height)
+        |> put_if(rule.width, :width)
+        |> put_if(rule.direction, :direction)
+        |> put_if(rule.style, :style)
+        |> put_if(rule.a11y, :a11y)
 
       %{id: rule.id, type: "rule", props: props, children: []}
     end

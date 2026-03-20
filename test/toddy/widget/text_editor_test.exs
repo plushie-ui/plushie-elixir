@@ -124,19 +124,19 @@ defmodule Toddy.Widget.TextEditorTest do
         )
         |> TextEditor.build()
 
-      assert node.props["content"] == "code"
-      assert node.props["highlight_syntax"] == "rs"
-      assert node.props["highlight_theme"] == "solarized_dark"
+      assert node.props[:content] == "code"
+      assert node.props[:highlight_syntax] == "rs"
+      assert node.props[:highlight_theme] == "solarized_dark"
     end
 
     test "omits nil props" do
       node = TextEditor.new("editor") |> TextEditor.build()
-      refute Map.has_key?(node.props, "content")
-      refute Map.has_key?(node.props, "placeholder")
-      refute Map.has_key?(node.props, "highlight_syntax")
-      refute Map.has_key?(node.props, "highlight_theme")
-      refute Map.has_key?(node.props, "style")
-      refute Map.has_key?(node.props, "key_bindings")
+      refute Map.has_key?(node.props, :content)
+      refute Map.has_key?(node.props, :placeholder)
+      refute Map.has_key?(node.props, :highlight_syntax)
+      refute Map.has_key?(node.props, :highlight_theme)
+      refute Map.has_key?(node.props, :style)
+      refute Map.has_key?(node.props, :key_bindings)
     end
 
     test "includes key_bindings in props when set" do
@@ -151,7 +151,7 @@ defmodule Toddy.Widget.TextEditorTest do
         |> TextEditor.key_bindings(bindings)
         |> TextEditor.build()
 
-      assert node.props["key_bindings"] == bindings
+      assert node.props[:key_bindings] == bindings
     end
 
     test "includes highlight fields alongside content" do
@@ -162,9 +162,9 @@ defmodule Toddy.Widget.TextEditorTest do
         |> TextEditor.highlight_theme("inspired_github")
         |> TextEditor.build()
 
-      assert node.props["content"] == "defmodule Foo do\nend"
-      assert node.props["highlight_syntax"] == "ex"
-      assert node.props["highlight_theme"] == "inspired_github"
+      assert node.props[:content] == "defmodule Foo do\nend"
+      assert node.props[:highlight_syntax] == "ex"
+      assert node.props[:highlight_theme] == "inspired_github"
     end
   end
 

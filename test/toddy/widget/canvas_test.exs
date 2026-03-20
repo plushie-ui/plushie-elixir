@@ -175,11 +175,11 @@ defmodule Toddy.Widget.CanvasTest do
     test "omits nil props from the output" do
       node = Canvas.new("c1") |> Canvas.build()
 
-      refute Map.has_key?(node.props, "layers")
-      refute Map.has_key?(node.props, "width")
-      refute Map.has_key?(node.props, "height")
-      refute Map.has_key?(node.props, "background")
-      refute Map.has_key?(node.props, "interactive")
+      refute Map.has_key?(node.props, :layers)
+      refute Map.has_key?(node.props, :width)
+      refute Map.has_key?(node.props, :height)
+      refute Map.has_key?(node.props, :background)
+      refute Map.has_key?(node.props, :interactive)
     end
 
     test "includes layers in props" do
@@ -190,7 +190,7 @@ defmodule Toddy.Widget.CanvasTest do
         |> Canvas.layer("dots", shapes)
         |> Canvas.build()
 
-      assert node.props["layers"] == %{"dots" => shapes}
+      assert node.props[:layers] == %{"dots" => shapes}
     end
 
     test "includes all set props" do
@@ -203,10 +203,10 @@ defmodule Toddy.Widget.CanvasTest do
         )
         |> Canvas.build()
 
-      assert node.props["width"] == 800
-      assert node.props["height"] == 600
-      assert node.props["background"] == "#000000"
-      assert node.props["interactive"] == true
+      assert node.props[:width] == 800
+      assert node.props[:height] == 600
+      assert node.props[:background] == "#000000"
+      assert node.props[:interactive] == true
     end
 
     test "boolean false is preserved in props (not stripped like nil)" do
@@ -216,8 +216,8 @@ defmodule Toddy.Widget.CanvasTest do
         |> Canvas.on_press(false)
         |> Canvas.build()
 
-      assert node.props["interactive"] == false
-      assert node.props["on_press"] == false
+      assert node.props[:interactive] == false
+      assert node.props[:on_press] == false
     end
   end
 

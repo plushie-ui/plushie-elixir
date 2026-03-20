@@ -140,15 +140,15 @@ defmodule Toddy.Widget.Column do
     def to_node(col) do
       props =
         %{}
-        |> put_if(col.spacing, "spacing")
-        |> put_if(col.padding, "padding")
-        |> put_if(col.width, "width")
-        |> put_if(col.height, "height")
-        |> put_if(col.max_width, "max_width")
-        |> put_if(col.align_x, "align_x")
-        |> put_if(col.clip, "clip")
-        |> put_if(col.wrap, "wrap")
-        |> put_if(col.a11y, "a11y")
+        |> put_if(col.spacing, :spacing)
+        |> put_if(col.padding, :padding)
+        |> put_if(col.width, :width)
+        |> put_if(col.height, :height)
+        |> put_if(col.max_width, :max_width)
+        |> put_if(col.align_x, :align_x)
+        |> put_if(col.clip, :clip)
+        |> put_if(col.wrap, :wrap)
+        |> put_if(col.a11y, :a11y)
 
       %{
         id: col.id,

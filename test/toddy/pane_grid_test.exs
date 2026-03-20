@@ -10,7 +10,7 @@ defmodule Toddy.PaneGridTest do
       node = Toddy.Widget.Node.build("pg1", "pane_grid", %{spacing: 4}, [left, right])
       assert node.id == "pg1"
       assert node.type == "pane_grid"
-      assert node.props["spacing"] == 4
+      assert node.props[:spacing] == 4
       assert length(node.children) == 2
     end
 

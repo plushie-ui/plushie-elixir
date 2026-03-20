@@ -255,21 +255,21 @@ defmodule Toddy.Widget.Container do
     def to_node(c) do
       props =
         %{}
-        |> put_if(c.padding, "padding")
-        |> put_if(c.width, "width")
-        |> put_if(c.height, "height")
-        |> put_if(c.max_width, "max_width")
-        |> put_if(c.max_height, "max_height")
-        |> put_if(c.center, "center")
-        |> put_if(c.clip, "clip")
-        |> put_if(c.align_x, "align_x")
-        |> put_if(c.align_y, "align_y")
-        |> put_if(c.background, "background")
-        |> put_if(c.color, "color")
-        |> put_if(c.border, "border")
-        |> put_if(c.shadow, "shadow")
-        |> put_if(c.style, "style")
-        |> put_if(c.a11y, "a11y")
+        |> put_if(c.padding, :padding)
+        |> put_if(c.width, :width)
+        |> put_if(c.height, :height)
+        |> put_if(c.max_width, :max_width)
+        |> put_if(c.max_height, :max_height)
+        |> put_if(c.center, :center)
+        |> put_if(c.clip, :clip)
+        |> put_if(c.align_x, :align_x)
+        |> put_if(c.align_y, :align_y)
+        |> put_if(c.background, :background)
+        |> put_if(c.color, :color)
+        |> put_if(c.border, :border)
+        |> put_if(c.shadow, :shadow)
+        |> put_if(c.style, :style)
+        |> put_if(c.a11y, :a11y)
 
       %{
         id: c.id,

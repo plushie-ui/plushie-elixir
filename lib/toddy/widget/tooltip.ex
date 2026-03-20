@@ -150,14 +150,14 @@ defmodule Toddy.Widget.Tooltip do
     def to_node(tt) do
       props =
         %{}
-        |> put_if(tt.tip, "tip")
-        |> put_if(tt.position, "position")
-        |> put_if(tt.gap, "gap")
-        |> put_if(tt.padding, "padding")
-        |> put_if(tt.snap_within_viewport, "snap_within_viewport")
-        |> put_if(tt.delay, "delay")
-        |> put_if(tt.style, "style")
-        |> put_if(tt.a11y, "a11y")
+        |> put_if(tt.tip, :tip)
+        |> put_if(tt.position, :position)
+        |> put_if(tt.gap, :gap)
+        |> put_if(tt.padding, :padding)
+        |> put_if(tt.snap_within_viewport, :snap_within_viewport)
+        |> put_if(tt.delay, :delay)
+        |> put_if(tt.style, :style)
+        |> put_if(tt.a11y, :a11y)
 
       %{
         id: tt.id,

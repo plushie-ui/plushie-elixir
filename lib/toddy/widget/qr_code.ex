@@ -97,12 +97,12 @@ defmodule Toddy.Widget.QrCode do
     def to_node(qr) do
       props =
         %{}
-        |> put_if(qr.data, "data")
-        |> put_if(qr.cell_size, "cell_size")
-        |> put_if(qr.cell_color, "cell_color")
-        |> put_if(qr.background_color, "background_color")
-        |> put_if(qr.error_correction, "error_correction")
-        |> put_if(qr.a11y, "a11y")
+        |> put_if(qr.data, :data)
+        |> put_if(qr.cell_size, :cell_size)
+        |> put_if(qr.cell_color, :cell_color)
+        |> put_if(qr.background_color, :background_color)
+        |> put_if(qr.error_correction, :error_correction)
+        |> put_if(qr.a11y, :a11y)
 
       %{id: qr.id, type: "qr_code", props: props, children: []}
     end

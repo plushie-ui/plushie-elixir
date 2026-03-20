@@ -164,8 +164,8 @@ defmodule Toddy.UIParityTest do
 
     test "grid with opts sets props" do
       node = H.grid_with_opts()
-      assert node.props["column_count"] == 3
-      assert node.props["spacing"] == 4
+      assert node.props[:column_count] == 3
+      assert node.props[:spacing] == 4
     end
 
     test "grid with do block collects children" do
@@ -176,7 +176,7 @@ defmodule Toddy.UIParityTest do
 
     test "grid with opts and do block" do
       node = H.grid_with_opts_and_do()
-      assert node.props["column_count"] == 2
+      assert node.props[:column_count] == 2
       assert length(node.children) == 1
     end
 
@@ -204,7 +204,7 @@ defmodule Toddy.UIParityTest do
 
     test "keyed_column with opts and do block" do
       node = H.keyed_column_with_do()
-      assert node.props["spacing"] == 8
+      assert node.props[:spacing] == 8
       assert length(node.children) == 2
     end
   end
@@ -245,7 +245,7 @@ defmodule Toddy.UIParityTest do
 
     test "pin with opts and do block" do
       node = H.pin_with_opts_and_do()
-      assert node.props["width"] == 200
+      assert node.props[:width] == 200
       assert length(node.children) == 1
     end
   end
@@ -269,7 +269,7 @@ defmodule Toddy.UIParityTest do
 
     test "float with opts and do block" do
       node = H.float_with_opts_and_do()
-      assert node.props["width"] == 300
+      assert node.props[:width] == 300
       assert length(node.children) == 1
     end
   end
@@ -288,14 +288,14 @@ defmodule Toddy.UIParityTest do
 
     test "mouse_area with event props and do block" do
       node = H.mouse_area_with_do()
-      assert node.props["on_press"] == "clicked"
+      assert node.props[:on_press] == "clicked"
       assert length(node.children) == 1
     end
 
     test "mouse_area with multiple event props" do
       node = H.mouse_area_with_opts_and_do()
-      assert node.props["on_press"] == "p"
-      assert node.props["on_release"] == "r"
+      assert node.props[:on_press] == "p"
+      assert node.props[:on_release] == "r"
       assert length(node.children) == 1
     end
   end
@@ -314,7 +314,7 @@ defmodule Toddy.UIParityTest do
 
     test "sensor with event props and do block" do
       node = H.sensor_with_do()
-      assert node.props["on_resize"] == "resized"
+      assert node.props[:on_resize] == "resized"
       assert length(node.children) == 1
     end
   end
@@ -334,8 +334,8 @@ defmodule Toddy.UIParityTest do
 
     test "pane_grid with options" do
       node = H.pane_grid_with_opts()
-      assert node.props["panes"] == ["a", "b"]
-      assert node.props["spacing"] == 2
+      assert node.props[:panes] == ["a", "b"]
+      assert node.props[:spacing] == 2
     end
   end
 
@@ -354,7 +354,7 @@ defmodule Toddy.UIParityTest do
 
     test "rich_text with spans" do
       node = H.rich_text_with_spans()
-      assert node.props["spans"] == [%{text: "hello", weight: "bold"}]
+      assert node.props[:spans] == [%{text: "hello", weight: "bold"}]
     end
   end
 
@@ -388,7 +388,7 @@ defmodule Toddy.UIParityTest do
       end
     end
 
-    test "all new widget prop keys are strings" do
+    test "all new widget prop keys are atoms" do
       nodes = [
         H.grid_with_opts(),
         H.keyed_column_with_do(),
@@ -402,8 +402,8 @@ defmodule Toddy.UIParityTest do
 
       for node <- nodes do
         for key <- Map.keys(node.props) do
-          assert is_binary(key),
-                 "#{node.type} has non-string prop key: #{inspect(key)}"
+          assert is_atom(key),
+                 "#{node.type} has non-atom prop key: #{inspect(key)}"
         end
       end
     end

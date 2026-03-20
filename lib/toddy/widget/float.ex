@@ -110,12 +110,12 @@ defmodule Toddy.Widget.Float do
     def to_node(fw) do
       props =
         %{}
-        |> put_if(fw.translate_x, "translate_x")
-        |> put_if(fw.translate_y, "translate_y")
-        |> put_if(fw.scale, "scale")
-        |> put_if(fw.width, "width")
-        |> put_if(fw.height, "height")
-        |> put_if(fw.a11y, "a11y")
+        |> put_if(fw.translate_x, :translate_x)
+        |> put_if(fw.translate_y, :translate_y)
+        |> put_if(fw.scale, :scale)
+        |> put_if(fw.width, :width)
+        |> put_if(fw.height, :height)
+        |> put_if(fw.a11y, :a11y)
 
       %{
         id: fw.id,

@@ -91,13 +91,13 @@ defmodule Toddy.Widget.RadioTest do
 
     test "includes value and selected in props" do
       node = Radio.new("r1", "a", "b") |> Radio.build()
-      assert node.props["value"] == "a"
-      assert node.props["selected"] == "b"
+      assert node.props[:value] == "a"
+      assert node.props[:selected] == "b"
     end
 
     test "includes group in props when set" do
       node = Radio.new("r1", "a", "b") |> Radio.group("grp") |> Radio.build()
-      assert node.props["group"] == "grp"
+      assert node.props[:group] == "grp"
     end
 
     test "omits nil props" do

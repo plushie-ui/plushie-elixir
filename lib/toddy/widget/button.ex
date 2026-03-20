@@ -121,14 +121,14 @@ defmodule Toddy.Widget.Button do
     def to_node(btn) do
       props =
         %{}
-        |> put_if(btn.label, "label")
-        |> put_if(btn.width, "width")
-        |> put_if(btn.height, "height")
-        |> put_if(btn.padding, "padding")
-        |> put_if(btn.clip, "clip")
-        |> put_if(btn.style, "style")
-        |> put_if(btn.disabled, "disabled")
-        |> put_if(btn.a11y, "a11y")
+        |> put_if(btn.label, :label)
+        |> put_if(btn.width, :width)
+        |> put_if(btn.height, :height)
+        |> put_if(btn.padding, :padding)
+        |> put_if(btn.clip, :clip)
+        |> put_if(btn.style, :style)
+        |> put_if(btn.disabled, :disabled)
+        |> put_if(btn.a11y, :a11y)
 
       %{id: btn.id, type: "button", props: props, children: []}
     end

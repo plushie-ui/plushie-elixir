@@ -132,16 +132,16 @@ defmodule Toddy.Widget.Svg do
     def to_node(svg) do
       props =
         %{}
-        |> put_if(svg.source, "source")
-        |> put_if(svg.width, "width")
-        |> put_if(svg.height, "height")
-        |> put_if(svg.content_fit, "content_fit")
-        |> put_if(svg.rotation, "rotation")
-        |> put_if(svg.opacity, "opacity")
-        |> put_if(svg.color, "color")
-        |> put_if(svg.alt, "alt")
-        |> put_if(svg.description, "description")
-        |> put_if(svg.a11y, "a11y")
+        |> put_if(svg.source, :source)
+        |> put_if(svg.width, :width)
+        |> put_if(svg.height, :height)
+        |> put_if(svg.content_fit, :content_fit)
+        |> put_if(svg.rotation, :rotation)
+        |> put_if(svg.opacity, :opacity)
+        |> put_if(svg.color, :color)
+        |> put_if(svg.alt, :alt)
+        |> put_if(svg.description, :description)
+        |> put_if(svg.a11y, :a11y)
 
       %{id: svg.id, type: "svg", props: props, children: []}
     end
