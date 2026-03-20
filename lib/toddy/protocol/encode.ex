@@ -264,19 +264,28 @@ defmodule Toddy.Protocol.Encode do
     Enum.reduce(keys, payload, &maybe_base64_encode(&2, &1))
   end
 
-  defp maybe_wrap_binary(payload, key) do
+  # Looks up a field by atom key first, then string key, to handle both
+  # atom-keyed and string-keyed payload maps defensively.
+  defp get_binary_field(payload, key) when is_atom(key) do
     case Map.get(payload, key) do
-      nil -> payload
-      bin when is_binary(bin) -> Map.put(payload, key, Msgpax.Bin.new(bin))
-      _other -> payload
+      nil -> {Map.get(payload, Atom.to_string(key)), Atom.to_string(key)}
+      val -> {val, key}
+    end
+  end
+
+  defp maybe_wrap_binary(payload, key) do
+    case get_binary_field(payload, key) do
+      {nil, _} -> payload
+      {bin, actual_key} when is_binary(bin) -> Map.put(payload, actual_key, Msgpax.Bin.new(bin))
+      _ -> payload
     end
   end
 
   defp maybe_base64_encode(payload, key) do
-    case Map.get(payload, key) do
-      nil -> payload
-      bin when is_binary(bin) -> Map.put(payload, key, Base.encode64(bin))
-      _other -> payload
+    case get_binary_field(payload, key) do
+      {nil, _} -> payload
+      {bin, actual_key} when is_binary(bin) -> Map.put(payload, actual_key, Base.encode64(bin))
+      _ -> payload
     end
   end
 

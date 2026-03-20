@@ -290,14 +290,14 @@ defmodule Toddy.Bridge do
 
   # Complete line -- flush any buffered prefix and dispatch.
   def handle_info({port, {:data, {:eol, chunk}}}, %{port: port} = state) do
-    line = state.buffer <> to_string(chunk)
+    line = state.buffer <> chunk
     state = dispatch_message(line, :json, %{state | buffer: ""})
     {:noreply, state}
   end
 
   # Partial line exceeding {:line, N} -- accumulate.
   def handle_info({port, {:data, {:noeol, chunk}}}, %{port: port} = state) do
-    new_buffer = state.buffer <> to_string(chunk)
+    new_buffer = state.buffer <> chunk
 
     if byte_size(new_buffer) > @max_buffer_size do
       Logger.error(

@@ -1046,7 +1046,7 @@ defmodule Toddy.RuntimeTest do
 
       # The first settings message should contain the extension_config.
       settings = hd(settings_list)
-      assert settings["extension_config"] == %{"terminal" => %{"shell" => "/bin/bash"}}
+      assert settings[:extension_config] == %{"terminal" => %{"shell" => "/bin/bash"}}
     after
       Application.delete_env(:toddy, :extension_config)
     end
@@ -1061,7 +1061,7 @@ defmodule Toddy.RuntimeTest do
       assert settings_list != []
 
       settings = hd(settings_list)
-      refute Map.has_key?(settings, "extension_config")
+      refute Map.has_key?(settings, :extension_config)
     end
   end
 
