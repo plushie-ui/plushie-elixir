@@ -134,7 +134,9 @@ defmodule Toddy.Widget.PickList do
   end
 
   @doc "Sets the currently selected value."
-  @spec selected(pick_list :: t(), selected :: String.t()) :: t()
+  @spec selected(pick_list :: t(), selected :: String.t() | nil) :: t()
+  def selected(%__MODULE__{} = pl, nil), do: %{pl | selected: nil}
+
   def selected(%__MODULE__{} = pl, selected) when is_binary(selected),
     do: %{pl | selected: selected}
 

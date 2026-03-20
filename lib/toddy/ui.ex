@@ -89,34 +89,48 @@ defmodule Toddy.UI do
   """
 
   # ---------------------------------------------------------------------------
-  # Core build function (public -- macro-generated code calls it at runtime)
+  # Core build helpers (public -- macro-generated code calls these at runtime)
   # ---------------------------------------------------------------------------
 
-  @doc """
-  Builds a UI node map. Public so macro-generated code can call it after
-  the `do` block has been evaluated at runtime.
-
-  - `type`     -- string widget type
-  - `id`       -- explicit id string, or nil to auto-generate
-  - `opts`     -- keyword list; may include `:children` and `:id`
-  - `children` -- already-evaluated child list (wins over `:children` opt)
-  - `auto_id`  -- pre-computed fallback ID string (computed at compile time)
-
-  All opts keys except `:children`, `:id`, and `:do` become string-keyed props.
-  """
-  @spec __build_node__(
-          type :: String.t(),
+  @doc false
+  @spec __build_container__(
+          widget_mod :: module(),
           id :: String.t() | nil,
           opts :: keyword(),
           children :: [Toddy.Widget.ui_node()],
-          auto_id :: String.t()
+          auto_id :: String.t() | nil
         ) :: Toddy.Widget.ui_node()
-  def __build_node__(type, id, opts, children, auto_id) do
-    resolved_id =
-      id ||
-        Keyword.get(opts, :id) ||
-        auto_id
+  def __build_container__(widget_mod, id, opts, children, auto_id) do
+    resolved_id = id || Keyword.get(opts, :id) || auto_id
 
+    resolved_children =
+      if children != [] do
+        children
+      else
+        Keyword.get(opts, :children, [])
+      end
+
+    clean_opts = Keyword.drop(opts, [:children, :id, :do])
+
+    widget = widget_mod.new(resolved_id, clean_opts)
+
+    widget =
+      if resolved_children != [] do
+        widget_mod.extend(widget, resolved_children)
+      else
+        widget
+      end
+
+    widget_mod.build(widget)
+  end
+
+  @doc false
+  @spec __build_window__(
+          id :: String.t(),
+          opts :: keyword(),
+          children :: [Toddy.Widget.ui_node()]
+        ) :: Toddy.Widget.ui_node()
+  def __build_window__(id, opts, children) do
     resolved_children =
       if children != [] do
         children
@@ -129,12 +143,7 @@ defmodule Toddy.UI do
       |> Keyword.drop([:children, :id, :do])
       |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
-    %{
-      id: resolved_id,
-      type: type,
-      props: props,
-      children: resolved_children
-    }
+    %{id: id, type: "window", props: props, children: resolved_children}
   end
 
   # Kept for external callers. Internal macros use compile_auto_id/2 to
@@ -212,12 +221,12 @@ defmodule Toddy.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_fixed_node__("window", unquote(id), [], children)
+          Toddy.UI.__build_window__(unquote(id), [], children)
         end
 
       opts ->
         quote do
-          Toddy.UI.__build_fixed_node__("window", unquote(id), unquote(opts), [])
+          Toddy.UI.__build_window__(unquote(id), unquote(opts), [])
         end
     end
   end
@@ -228,7 +237,7 @@ defmodule Toddy.UI do
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Toddy.UI.__build_fixed_node__("window", unquote(id), unquote(opts), children)
+      Toddy.UI.__build_window__(unquote(id), unquote(opts), children)
     end
   end
 
@@ -270,8 +279,8 @@ defmodule Toddy.UI do
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
-          Toddy.UI.__build_node__(
-            "column",
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Column,
             nil,
             [],
             children,
@@ -281,8 +290,8 @@ defmodule Toddy.UI do
 
       opts ->
         quote do
-          Toddy.UI.__build_node__(
-            "column",
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Column,
             nil,
             unquote(opts),
             [],
@@ -301,8 +310,8 @@ defmodule Toddy.UI do
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
-      Toddy.UI.__build_node__(
-        "column",
+      Toddy.UI.__build_container__(
+        Toddy.Widget.Column,
         nil,
         unquote(opts),
         children,
@@ -338,8 +347,8 @@ defmodule Toddy.UI do
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
-          Toddy.UI.__build_node__(
-            "row",
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Row,
             nil,
             [],
             children,
@@ -349,8 +358,8 @@ defmodule Toddy.UI do
 
       opts ->
         quote do
-          Toddy.UI.__build_node__(
-            "row",
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Row,
             nil,
             unquote(opts),
             [],
@@ -369,8 +378,8 @@ defmodule Toddy.UI do
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
-      Toddy.UI.__build_node__(
-        "row",
+      Toddy.UI.__build_container__(
+        Toddy.Widget.Row,
         nil,
         unquote(opts),
         children,
@@ -397,12 +406,18 @@ defmodule Toddy.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_fixed_node__("container", unquote(id), [], children)
+          Toddy.UI.__build_container__(Toddy.Widget.Container, unquote(id), [], children, nil)
         end
 
       opts ->
         quote do
-          Toddy.UI.__build_fixed_node__("container", unquote(id), unquote(opts), [])
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Container,
+            unquote(id),
+            unquote(opts),
+            [],
+            nil
+          )
         end
     end
   end
@@ -413,7 +428,14 @@ defmodule Toddy.UI do
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Toddy.UI.__build_fixed_node__("container", unquote(id), unquote(opts), children)
+
+      Toddy.UI.__build_container__(
+        Toddy.Widget.Container,
+        unquote(id),
+        unquote(opts),
+        children,
+        nil
+      )
     end
   end
 
@@ -445,12 +467,12 @@ defmodule Toddy.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_fixed_node__("overlay", unquote(id), [], children)
+          Toddy.UI.__build_container__(Toddy.Widget.Overlay, unquote(id), [], children, nil)
         end
 
       opts ->
         quote do
-          Toddy.UI.__build_fixed_node__("overlay", unquote(id), unquote(opts), [])
+          Toddy.UI.__build_container__(Toddy.Widget.Overlay, unquote(id), unquote(opts), [], nil)
         end
     end
   end
@@ -461,7 +483,14 @@ defmodule Toddy.UI do
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Toddy.UI.__build_fixed_node__("overlay", unquote(id), unquote(opts), children)
+
+      Toddy.UI.__build_container__(
+        Toddy.Widget.Overlay,
+        unquote(id),
+        unquote(opts),
+        children,
+        nil
+      )
     end
   end
 
@@ -485,12 +514,18 @@ defmodule Toddy.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_fixed_node__("scrollable", unquote(id), [], children)
+          Toddy.UI.__build_container__(Toddy.Widget.Scrollable, unquote(id), [], children, nil)
         end
 
       opts ->
         quote do
-          Toddy.UI.__build_fixed_node__("scrollable", unquote(id), unquote(opts), [])
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Scrollable,
+            unquote(id),
+            unquote(opts),
+            [],
+            nil
+          )
         end
     end
   end
@@ -501,7 +536,14 @@ defmodule Toddy.UI do
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Toddy.UI.__build_fixed_node__("scrollable", unquote(id), unquote(opts), children)
+
+      Toddy.UI.__build_container__(
+        Toddy.Widget.Scrollable,
+        unquote(id),
+        unquote(opts),
+        children,
+        nil
+      )
     end
   end
 
@@ -530,8 +572,8 @@ defmodule Toddy.UI do
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
-          Toddy.UI.__build_node__(
-            "stack",
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Stack,
             nil,
             [],
             children,
@@ -541,8 +583,8 @@ defmodule Toddy.UI do
 
       opts ->
         quote do
-          Toddy.UI.__build_node__(
-            "stack",
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Stack,
             nil,
             unquote(opts),
             [],
@@ -561,8 +603,8 @@ defmodule Toddy.UI do
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
-      Toddy.UI.__build_node__(
-        "stack",
+      Toddy.UI.__build_container__(
+        Toddy.Widget.Stack,
         nil,
         unquote(opts),
         children,
@@ -605,8 +647,8 @@ defmodule Toddy.UI do
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
-          Toddy.UI.__build_node__(
-            "grid",
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Grid,
             nil,
             [],
             children,
@@ -616,8 +658,8 @@ defmodule Toddy.UI do
 
       opts ->
         quote do
-          Toddy.UI.__build_node__(
-            "grid",
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Grid,
             nil,
             unquote(opts),
             [],
@@ -636,8 +678,8 @@ defmodule Toddy.UI do
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
-      Toddy.UI.__build_node__(
-        "grid",
+      Toddy.UI.__build_container__(
+        Toddy.Widget.Grid,
         nil,
         unquote(opts),
         children,
@@ -674,8 +716,8 @@ defmodule Toddy.UI do
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
-          Toddy.UI.__build_node__(
-            "keyed_column",
+          Toddy.UI.__build_container__(
+            Toddy.Widget.KeyedColumn,
             nil,
             [],
             children,
@@ -685,8 +727,8 @@ defmodule Toddy.UI do
 
       opts ->
         quote do
-          Toddy.UI.__build_node__(
-            "keyed_column",
+          Toddy.UI.__build_container__(
+            Toddy.Widget.KeyedColumn,
             nil,
             unquote(opts),
             [],
@@ -705,8 +747,8 @@ defmodule Toddy.UI do
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
-      Toddy.UI.__build_node__(
-        "keyed_column",
+      Toddy.UI.__build_container__(
+        Toddy.Widget.KeyedColumn,
         nil,
         unquote(opts),
         children,
@@ -744,8 +786,8 @@ defmodule Toddy.UI do
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
-          Toddy.UI.__build_node__(
-            "responsive",
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Responsive,
             nil,
             [],
             children,
@@ -755,8 +797,8 @@ defmodule Toddy.UI do
 
       opts ->
         quote do
-          Toddy.UI.__build_node__(
-            "responsive",
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Responsive,
             nil,
             unquote(opts),
             [],
@@ -775,8 +817,8 @@ defmodule Toddy.UI do
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
-      Toddy.UI.__build_node__(
-        "responsive",
+      Toddy.UI.__build_container__(
+        Toddy.Widget.Responsive,
         nil,
         unquote(opts),
         children,
@@ -803,12 +845,12 @@ defmodule Toddy.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_fixed_node__("pin", unquote(id), [], children)
+          Toddy.UI.__build_container__(Toddy.Widget.Pin, unquote(id), [], children, nil)
         end
 
       opts ->
         quote do
-          Toddy.UI.__build_fixed_node__("pin", unquote(id), unquote(opts), [])
+          Toddy.UI.__build_container__(Toddy.Widget.Pin, unquote(id), unquote(opts), [], nil)
         end
     end
   end
@@ -819,7 +861,7 @@ defmodule Toddy.UI do
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Toddy.UI.__build_fixed_node__("pin", unquote(id), unquote(opts), children)
+      Toddy.UI.__build_container__(Toddy.Widget.Pin, unquote(id), unquote(opts), children, nil)
     end
   end
 
@@ -841,12 +883,12 @@ defmodule Toddy.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_fixed_node__("float", unquote(id), [], children)
+          Toddy.UI.__build_container__(Toddy.Widget.Float, unquote(id), [], children, nil)
         end
 
       opts ->
         quote do
-          Toddy.UI.__build_fixed_node__("float", unquote(id), unquote(opts), [])
+          Toddy.UI.__build_container__(Toddy.Widget.Float, unquote(id), unquote(opts), [], nil)
         end
     end
   end
@@ -857,7 +899,7 @@ defmodule Toddy.UI do
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Toddy.UI.__build_fixed_node__("float", unquote(id), unquote(opts), children)
+      Toddy.UI.__build_container__(Toddy.Widget.Float, unquote(id), unquote(opts), children, nil)
     end
   end
 
@@ -884,12 +926,18 @@ defmodule Toddy.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_fixed_node__("mouse_area", unquote(id), [], children)
+          Toddy.UI.__build_container__(Toddy.Widget.MouseArea, unquote(id), [], children, nil)
         end
 
       opts ->
         quote do
-          Toddy.UI.__build_fixed_node__("mouse_area", unquote(id), unquote(opts), [])
+          Toddy.UI.__build_container__(
+            Toddy.Widget.MouseArea,
+            unquote(id),
+            unquote(opts),
+            [],
+            nil
+          )
         end
     end
   end
@@ -900,7 +948,14 @@ defmodule Toddy.UI do
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Toddy.UI.__build_fixed_node__("mouse_area", unquote(id), unquote(opts), children)
+
+      Toddy.UI.__build_container__(
+        Toddy.Widget.MouseArea,
+        unquote(id),
+        unquote(opts),
+        children,
+        nil
+      )
     end
   end
 
@@ -926,12 +981,12 @@ defmodule Toddy.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_fixed_node__("sensor", unquote(id), [], children)
+          Toddy.UI.__build_container__(Toddy.Widget.Sensor, unquote(id), [], children, nil)
         end
 
       opts ->
         quote do
-          Toddy.UI.__build_fixed_node__("sensor", unquote(id), unquote(opts), [])
+          Toddy.UI.__build_container__(Toddy.Widget.Sensor, unquote(id), unquote(opts), [], nil)
         end
     end
   end
@@ -942,7 +997,7 @@ defmodule Toddy.UI do
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Toddy.UI.__build_fixed_node__("sensor", unquote(id), unquote(opts), children)
+      Toddy.UI.__build_container__(Toddy.Widget.Sensor, unquote(id), unquote(opts), children, nil)
     end
   end
 
@@ -970,12 +1025,12 @@ defmodule Toddy.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_fixed_node__("themer", unquote(id), [], children)
+          Toddy.UI.__build_container__(Toddy.Widget.Themer, unquote(id), [], children, nil)
         end
 
       opts ->
         quote do
-          Toddy.UI.__build_fixed_node__("themer", unquote(id), unquote(opts), [])
+          Toddy.UI.__build_container__(Toddy.Widget.Themer, unquote(id), unquote(opts), [], nil)
         end
     end
   end
@@ -986,7 +1041,7 @@ defmodule Toddy.UI do
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Toddy.UI.__build_fixed_node__("themer", unquote(id), unquote(opts), children)
+      Toddy.UI.__build_container__(Toddy.Widget.Themer, unquote(id), unquote(opts), children, nil)
     end
   end
 
@@ -1005,8 +1060,8 @@ defmodule Toddy.UI do
     caller_line = __CALLER__.line
 
     quote do
-      Toddy.UI.__build_node__(
-        "space",
+      Toddy.UI.__build_container__(
+        Toddy.Widget.Space,
         nil,
         unquote(opts),
         [],
@@ -1030,14 +1085,7 @@ defmodule Toddy.UI do
   """
   @spec button(id :: String.t(), label :: String.t(), opts :: keyword()) :: Toddy.Widget.ui_node()
   def button(id, label, opts \\ []) do
-    base_props = %{"label" => label}
-
-    extra_props =
-      opts
-      |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-    %{id: id, type: "button", props: Map.merge(base_props, extra_props), children: []}
+    Toddy.Widget.Button.new(id, label, clean_opts(opts)) |> Toddy.Widget.Button.build()
   end
 
   @doc """
@@ -1054,14 +1102,7 @@ defmodule Toddy.UI do
   def text_input(id, value, opts \\ [])
 
   def text_input(id, value, opts) when not is_keyword(value) do
-    base_props = %{"value" => value}
-
-    extra_props =
-      opts
-      |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-    %{id: id, type: "text_input", props: Map.merge(base_props, extra_props), children: []}
+    Toddy.Widget.TextInput.new(id, value, clean_opts(opts)) |> Toddy.Widget.TextInput.build()
   end
 
   @doc """
@@ -1078,14 +1119,9 @@ defmodule Toddy.UI do
   def checkbox(id, checked, opts \\ [])
 
   def checkbox(id, checked, opts) when not is_keyword(checked) do
-    base_props = %{"checked" => checked}
-
-    extra_props =
-      opts
-      |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-    %{id: id, type: "checkbox", props: Map.merge(base_props, extra_props), children: []}
+    clean = clean_opts(opts)
+    {label, remaining} = Keyword.pop(clean, :label, "")
+    Toddy.Widget.Checkbox.new(id, label, checked, remaining) |> Toddy.Widget.Checkbox.build()
   end
 
   # ---------------------------------------------------------------------------
@@ -1111,41 +1147,23 @@ defmodule Toddy.UI do
     caller_line = __CALLER__.line
 
     quote do
-      %{
-        id: unquote(compile_auto_id(caller_mod, caller_line)),
-        type: "text",
-        props: %{"content" => unquote(content)},
-        children: []
-      }
+      Toddy.Widget.Text.new(unquote(compile_auto_id(caller_mod, caller_line)), unquote(content))
+      |> Toddy.Widget.Text.build()
     end
   end
 
   @doc false
   defmacro text(id, content) do
     quote do
-      %{
-        id: unquote(id),
-        type: "text",
-        props: %{"content" => unquote(content)},
-        children: []
-      }
+      Toddy.Widget.Text.new(unquote(id), unquote(content)) |> Toddy.Widget.Text.build()
     end
   end
 
   @doc false
   defmacro text(id, content, opts) do
     quote do
-      id = unquote(id)
-      content = unquote(content)
-      opts = unquote(opts)
-      base_props = %{"content" => content}
-
-      extra_props =
-        opts
-        |> Keyword.drop([:children, :id, :do])
-        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-      %{id: id, type: "text", props: Map.merge(base_props, extra_props), children: []}
+      Toddy.Widget.Text.new(unquote(id), unquote(content), unquote(opts))
+      |> Toddy.Widget.Text.build()
     end
   end
 
@@ -1162,16 +1180,9 @@ defmodule Toddy.UI do
 
     quote do
       opts = unquote(opts)
-
-      props =
-        opts
-        |> Keyword.drop([:children, :id, :do])
-        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-      id =
-        Keyword.get(opts, :id) || unquote(compile_auto_id(caller_mod, caller_line))
-
-      %{id: id, type: "rule", props: props, children: []}
+      id = Keyword.get(opts, :id) || unquote(compile_auto_id(caller_mod, caller_line))
+      clean_opts = Keyword.drop(opts, [:id, :do])
+      Toddy.Widget.Rule.new(id, clean_opts) |> Toddy.Widget.Rule.build()
     end
   end
 
@@ -1199,48 +1210,28 @@ defmodule Toddy.UI do
     caller_line = __CALLER__.line
 
     quote do
-      range = unquote(range)
-      value = unquote(value)
-
-      %{
-        id: unquote(compile_auto_id(caller_mod, caller_line)),
-        type: "progress_bar",
-        props: %{"range" => Tuple.to_list(range), "value" => value},
-        children: []
-      }
+      Toddy.Widget.ProgressBar.new(
+        unquote(compile_auto_id(caller_mod, caller_line)),
+        unquote(range),
+        unquote(value)
+      )
+      |> Toddy.Widget.ProgressBar.build()
     end
   end
 
   @doc false
   defmacro progress_bar(id, range, value) do
     quote do
-      range = unquote(range)
-      value = unquote(value)
-
-      %{
-        id: unquote(id),
-        type: "progress_bar",
-        props: %{"range" => Tuple.to_list(range), "value" => value},
-        children: []
-      }
+      Toddy.Widget.ProgressBar.new(unquote(id), unquote(range), unquote(value))
+      |> Toddy.Widget.ProgressBar.build()
     end
   end
 
   @doc false
   defmacro progress_bar(id, range, value, opts) do
     quote do
-      id = unquote(id)
-      range = unquote(range)
-      value = unquote(value)
-      opts = unquote(opts)
-      base_props = %{"range" => Tuple.to_list(range), "value" => value}
-
-      extra_props =
-        opts
-        |> Keyword.drop([:children, :id, :do])
-        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-      %{id: id, type: "progress_bar", props: Map.merge(base_props, extra_props), children: []}
+      Toddy.Widget.ProgressBar.new(unquote(id), unquote(range), unquote(value), unquote(opts))
+      |> Toddy.Widget.ProgressBar.build()
     end
   end
 
@@ -1262,14 +1253,7 @@ defmodule Toddy.UI do
   def toggler(id, is_toggled, opts \\ [])
 
   def toggler(id, is_toggled, opts) when not is_keyword(is_toggled) do
-    base_props = %{"is_toggled" => is_toggled}
-
-    extra_props =
-      opts
-      |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-    %{id: id, type: "toggler", props: Map.merge(base_props, extra_props), children: []}
+    Toddy.Widget.Toggler.new(id, is_toggled, clean_opts(opts)) |> Toddy.Widget.Toggler.build()
   end
 
   @doc """
@@ -1293,14 +1277,7 @@ defmodule Toddy.UI do
   def radio(id, value, selected, opts \\ [])
 
   def radio(id, value, selected, opts) when not is_keyword(value) and not is_keyword(selected) do
-    base_props = %{"value" => value, "selected" => selected}
-
-    extra_props =
-      opts
-      |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-    %{id: id, type: "radio", props: Map.merge(base_props, extra_props), children: []}
+    Toddy.Widget.Radio.new(id, value, selected, clean_opts(opts)) |> Toddy.Widget.Radio.build()
   end
 
   @doc """
@@ -1326,15 +1303,8 @@ defmodule Toddy.UI do
   def slider(id, range, value, opts \\ [])
 
   def slider(id, range, value, opts) when not is_keyword(range) and not is_keyword(value) do
-    {range_min, range_max} = normalize_range(range)
-    base_props = %{"range" => [range_min, range_max], "value" => value}
-
-    extra_props =
-      opts
-      |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-    %{id: id, type: "slider", props: Map.merge(base_props, extra_props), children: []}
+    Toddy.Widget.Slider.new(id, normalize_range(range), value, clean_opts(opts))
+    |> Toddy.Widget.Slider.build()
   end
 
   @doc """
@@ -1358,15 +1328,8 @@ defmodule Toddy.UI do
 
   def vertical_slider(id, range, value, opts)
       when not is_keyword(range) and not is_keyword(value) do
-    {range_min, range_max} = normalize_range(range)
-    base_props = %{"range" => [range_min, range_max], "value" => value}
-
-    extra_props =
-      opts
-      |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-    %{id: id, type: "vertical_slider", props: Map.merge(base_props, extra_props), children: []}
+    Toddy.Widget.VerticalSlider.new(id, normalize_range(range), value, clean_opts(opts))
+    |> Toddy.Widget.VerticalSlider.build()
   end
 
   @doc """
@@ -1386,14 +1349,8 @@ defmodule Toddy.UI do
 
   def pick_list(id, options, selected, opts)
       when not is_keyword(options) and not is_keyword(selected) do
-    base_props = %{"options" => options, "selected" => selected}
-
-    extra_props =
-      opts
-      |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-    %{id: id, type: "pick_list", props: Map.merge(base_props, extra_props), children: []}
+    Toddy.Widget.PickList.new(id, options, [{:selected, selected} | clean_opts(opts)])
+    |> Toddy.Widget.PickList.build()
   end
 
   @doc """
@@ -1414,14 +1371,8 @@ defmodule Toddy.UI do
 
   def combo_box(id, options, value, opts)
       when not is_keyword(options) and not is_keyword(value) do
-    base_props = %{"options" => options, "value" => value}
-
-    extra_props =
-      opts
-      |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-    %{id: id, type: "combo_box", props: Map.merge(base_props, extra_props), children: []}
+    Toddy.Widget.ComboBox.new(id, options, [{:value, value} | clean_opts(opts)])
+    |> Toddy.Widget.ComboBox.build()
   end
 
   @doc """
@@ -1436,14 +1387,8 @@ defmodule Toddy.UI do
   def text_editor(id, content, opts \\ [])
 
   def text_editor(id, content, opts) when not is_keyword(content) do
-    base_props = %{"content" => content}
-
-    extra_props =
-      opts
-      |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-    %{id: id, type: "text_editor", props: Map.merge(base_props, extra_props), children: []}
+    Toddy.Widget.TextEditor.new(id, [{:content, content} | clean_opts(opts)])
+    |> Toddy.Widget.TextEditor.build()
   end
 
   # ---------------------------------------------------------------------------
@@ -1461,14 +1406,7 @@ defmodule Toddy.UI do
   def image(id, source, opts \\ [])
 
   def image(id, source, opts) when not is_keyword(source) do
-    base_props = %{"source" => source}
-
-    extra_props =
-      opts
-      |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-    %{id: id, type: "image", props: Map.merge(base_props, extra_props), children: []}
+    Toddy.Widget.Image.new(id, source, clean_opts(opts)) |> Toddy.Widget.Image.build()
   end
 
   @doc """
@@ -1482,14 +1420,7 @@ defmodule Toddy.UI do
   def svg(id, source, opts \\ [])
 
   def svg(id, source, opts) when not is_keyword(source) do
-    base_props = %{"source" => source}
-
-    extra_props =
-      opts
-      |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-    %{id: id, type: "svg", props: Map.merge(base_props, extra_props), children: []}
+    Toddy.Widget.Svg.new(id, source, clean_opts(opts)) |> Toddy.Widget.Svg.build()
   end
 
   @doc """
@@ -1511,41 +1442,26 @@ defmodule Toddy.UI do
     caller_line = __CALLER__.line
 
     quote do
-      %{
-        id: unquote(compile_auto_id(caller_mod, caller_line)),
-        type: "markdown",
-        props: %{"content" => unquote(content)},
-        children: []
-      }
+      Toddy.Widget.Markdown.new(
+        unquote(compile_auto_id(caller_mod, caller_line)),
+        unquote(content)
+      )
+      |> Toddy.Widget.Markdown.build()
     end
   end
 
   @doc false
   defmacro markdown(id, content) do
     quote do
-      %{
-        id: unquote(id),
-        type: "markdown",
-        props: %{"content" => unquote(content)},
-        children: []
-      }
+      Toddy.Widget.Markdown.new(unquote(id), unquote(content)) |> Toddy.Widget.Markdown.build()
     end
   end
 
   @doc false
   defmacro markdown(id, content, opts) do
     quote do
-      id = unquote(id)
-      content = unquote(content)
-      opts = unquote(opts)
-      base_props = %{"content" => content}
-
-      extra_props =
-        opts
-        |> Keyword.drop([:children, :id, :do])
-        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-      %{id: id, type: "markdown", props: Map.merge(base_props, extra_props), children: []}
+      Toddy.Widget.Markdown.new(unquote(id), unquote(content), unquote(opts))
+      |> Toddy.Widget.Markdown.build()
     end
   end
 
@@ -1576,12 +1492,18 @@ defmodule Toddy.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_fixed_node__("tooltip", unquote(id), [], children)
+          Toddy.UI.__build_container__(Toddy.Widget.Tooltip, unquote(id), [], children, nil)
         end
 
       tip when is_binary(tip) ->
         quote do
-          Toddy.UI.__build_fixed_node__("tooltip", unquote(id), [tip: unquote(tip)], [])
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Tooltip,
+            unquote(id),
+            [tip: unquote(tip)],
+            [],
+            nil
+          )
         end
     end
   end
@@ -1594,16 +1516,24 @@ defmodule Toddy.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_fixed_node__("tooltip", unquote(id), [tip: unquote(tip)], children)
+
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Tooltip,
+            unquote(id),
+            [tip: unquote(tip)],
+            children,
+            nil
+          )
         end
 
       opts ->
         quote do
-          Toddy.UI.__build_fixed_node__(
-            "tooltip",
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Tooltip,
             unquote(id),
             [tip: unquote(tip)] ++ unquote(opts),
-            []
+            [],
+            nil
           )
         end
     end
@@ -1616,11 +1546,12 @@ defmodule Toddy.UI do
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
-      Toddy.UI.__build_fixed_node__(
-        "tooltip",
+      Toddy.UI.__build_container__(
+        Toddy.Widget.Tooltip,
         unquote(id),
         [tip: unquote(tip)] ++ unquote(opts),
-        children
+        children,
+        nil
       )
     end
   end
@@ -1648,12 +1579,7 @@ defmodule Toddy.UI do
   """
   @spec canvas(id :: String.t(), opts :: keyword()) :: Toddy.Widget.ui_node()
   def canvas(id, opts \\ []) do
-    props =
-      opts
-      |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-    %{id: id, type: "canvas", props: props, children: []}
+    Toddy.Widget.Canvas.new(id, clean_opts(opts)) |> Toddy.Widget.Canvas.build()
   end
 
   # -- pane_grid(id, opts) ----------------------------------------------------
@@ -1689,12 +1615,12 @@ defmodule Toddy.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_fixed_node__("pane_grid", unquote(id), [], children)
+          Toddy.UI.__build_container__(Toddy.Widget.PaneGrid, unquote(id), [], children, nil)
         end
 
       opts ->
         quote do
-          Toddy.UI.__build_fixed_node__("pane_grid", unquote(id), unquote(opts), [])
+          Toddy.UI.__build_container__(Toddy.Widget.PaneGrid, unquote(id), unquote(opts), [], nil)
         end
     end
   end
@@ -1705,7 +1631,14 @@ defmodule Toddy.UI do
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Toddy.UI.__build_fixed_node__("pane_grid", unquote(id), unquote(opts), children)
+
+      Toddy.UI.__build_container__(
+        Toddy.Widget.PaneGrid,
+        unquote(id),
+        unquote(opts),
+        children,
+        nil
+      )
     end
   end
 
@@ -1725,12 +1658,7 @@ defmodule Toddy.UI do
   """
   @spec rich_text(id :: String.t(), opts :: keyword()) :: Toddy.Widget.ui_node()
   def rich_text(id, opts \\ []) do
-    props =
-      opts
-      |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-    %{id: id, type: "rich_text", props: props, children: []}
+    Toddy.Widget.RichText.new(id, clean_opts(opts)) |> Toddy.Widget.RichText.build()
   end
 
   # -- table(id, opts) --------------------------------------------------------
@@ -1761,12 +1689,12 @@ defmodule Toddy.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_fixed_node__("table", unquote(id), [], children)
+          Toddy.UI.__build_container__(Toddy.Widget.Table, unquote(id), [], children, nil)
         end
 
       opts ->
         quote do
-          Toddy.UI.__build_fixed_node__("table", unquote(id), unquote(opts), [])
+          Toddy.UI.__build_container__(Toddy.Widget.Table, unquote(id), unquote(opts), [], nil)
         end
     end
   end
@@ -1777,37 +1705,11 @@ defmodule Toddy.UI do
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Toddy.UI.__build_fixed_node__("table", unquote(id), unquote(opts), children)
+      Toddy.UI.__build_container__(Toddy.Widget.Table, unquote(id), unquote(opts), children, nil)
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Public runtime helpers called from macro-generated code
-  # ---------------------------------------------------------------------------
-
-  @doc false
-  @spec __build_fixed_node__(
-          type :: String.t(),
-          id :: String.t(),
-          opts :: keyword(),
-          children :: [Toddy.Widget.ui_node()]
-        ) ::
-          Toddy.Widget.ui_node()
-  def __build_fixed_node__(type, id, opts, children) do
-    resolved_children =
-      if children != [] do
-        children
-      else
-        Keyword.get(opts, :children, [])
-      end
-
-    props =
-      opts
-      |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-    %{id: id, type: type, props: props, children: resolved_children}
-  end
+  # __build_fixed_node__ removed -- use __build_container__ or __build_window__
 
   # ---------------------------------------------------------------------------
   # Tree query
@@ -1867,19 +1769,16 @@ defmodule Toddy.UI do
   """
   @spec qr_code(id :: String.t(), data :: String.t(), opts :: keyword()) :: Toddy.Widget.ui_node()
   def qr_code(id, data, opts \\ []) do
-    base_props = %{"data" => data}
-
-    extra_props =
-      opts
-      |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-    %{id: id, type: "qr_code", props: Map.merge(base_props, extra_props), children: []}
+    Toddy.Widget.QrCode.new(id, data, clean_opts(opts)) |> Toddy.Widget.QrCode.build()
   end
 
   # ---------------------------------------------------------------------------
   # Private helpers
   # ---------------------------------------------------------------------------
+
+  @reserved_keys [:children, :id, :do]
+
+  defp clean_opts(opts), do: Keyword.drop(opts, @reserved_keys)
 
   defp normalize_range({min, max}), do: {min, max}
   defp normalize_range(first..last//_), do: {first, last}

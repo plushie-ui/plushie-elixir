@@ -35,7 +35,8 @@ defmodule Toddy.Widget.PaneGrid do
   alias Toddy.Widget.Build
 
   @type option ::
-          {:spacing, number()}
+          {:panes, [atom() | String.t()]}
+          | {:spacing, number()}
           | {:width, Toddy.Type.Length.t()}
           | {:height, Toddy.Type.Length.t()}
           | {:min_size, number()}
@@ -46,6 +47,7 @@ defmodule Toddy.Widget.PaneGrid do
 
   @type t :: %__MODULE__{
           id: String.t(),
+          panes: [String.t()] | nil,
           spacing: number() | nil,
           width: Toddy.Type.Length.t() | nil,
           height: Toddy.Type.Length.t() | nil,
@@ -59,6 +61,7 @@ defmodule Toddy.Widget.PaneGrid do
 
   defstruct [
     :id,
+    :panes,
     :spacing,
     :width,
     :height,
@@ -82,6 +85,7 @@ defmodule Toddy.Widget.PaneGrid do
 
   def with_options(%__MODULE__{} = pg, opts) do
     Enum.reduce(opts, pg, fn
+      {:panes, v}, acc -> panes(acc, v)
       {:spacing, v}, acc -> spacing(acc, v)
       {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
@@ -93,6 +97,11 @@ defmodule Toddy.Widget.PaneGrid do
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
+
+  @doc "Sets the list of pane identifiers."
+  @spec panes(pane_grid :: t(), panes :: [atom() | String.t()]) :: t()
+  def panes(%__MODULE__{} = pg, panes) when is_list(panes),
+    do: %{pg | panes: Enum.map(panes, &to_string/1)}
 
   @doc "Sets the spacing between panes."
   @spec spacing(pane_grid :: t(), spacing :: number()) :: t()
@@ -148,6 +157,7 @@ defmodule Toddy.Widget.PaneGrid do
     def to_node(pg) do
       props =
         %{}
+        |> put_if(pg.panes, "panes")
         |> put_if(pg.spacing, "spacing")
         |> put_if(pg.width, "width")
         |> put_if(pg.height, "height")

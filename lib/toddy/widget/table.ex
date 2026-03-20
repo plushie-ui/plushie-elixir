@@ -70,7 +70,8 @@ defmodule Toddy.Widget.Table do
           row_spacing: number() | nil,
           separator_thickness: number() | nil,
           separator_color: Toddy.Type.Color.t() | nil,
-          a11y: Toddy.Type.A11y.t() | nil
+          a11y: Toddy.Type.A11y.t() | nil,
+          children: [Toddy.Widget.ui_node() | struct()]
         }
 
   defstruct [
@@ -89,7 +90,8 @@ defmodule Toddy.Widget.Table do
     :row_spacing,
     :separator_thickness,
     :separator_color,
-    :a11y
+    :a11y,
+    children: []
   ]
 
   @doc "Creates a new table struct with optional keyword opts."
@@ -188,6 +190,15 @@ defmodule Toddy.Widget.Table do
   def separator_color(%__MODULE__{} = tbl, separator_color),
     do: %{tbl | separator_color: Color.cast(separator_color)}
 
+  @doc "Appends a child to the table."
+  @spec push(table :: t(), child :: Toddy.Widget.ui_node() | struct()) :: t()
+  def push(%__MODULE__{} = tbl, child), do: %{tbl | children: [child | tbl.children]}
+
+  @doc "Appends multiple children to the table."
+  @spec extend(table :: t(), children :: [Toddy.Widget.ui_node() | struct()]) :: t()
+  def extend(%__MODULE__{} = tbl, children),
+    do: %{tbl | children: Enum.reverse(children) ++ tbl.children}
+
   @doc "Sets accessibility annotations."
   @spec a11y(table :: t(), a11y :: Toddy.Type.A11y.t()) :: t()
   def a11y(%__MODULE__{} = tbl, a11y), do: %{tbl | a11y: A11y.cast(a11y)}
@@ -218,7 +229,12 @@ defmodule Toddy.Widget.Table do
         |> put_if(tbl.separator_color, "separator_color")
         |> put_if(tbl.a11y, "a11y")
 
-      %{id: tbl.id, type: "table", props: props, children: []}
+      %{
+        id: tbl.id,
+        type: "table",
+        props: props,
+        children: children_to_nodes(Enum.reverse(tbl.children))
+      }
     end
   end
 end

@@ -80,6 +80,8 @@ defmodule Toddy.Widget.MouseArea do
 
   @type option ::
           {:cursor, cursor()}
+          | {:on_press, atom() | String.t()}
+          | {:on_release, atom() | String.t()}
           | {:on_right_press, boolean()}
           | {:on_right_release, boolean()}
           | {:on_middle_press, boolean()}
@@ -94,6 +96,8 @@ defmodule Toddy.Widget.MouseArea do
   @type t :: %__MODULE__{
           id: String.t(),
           cursor: cursor() | nil,
+          on_press: String.t() | nil,
+          on_release: String.t() | nil,
           on_right_press: boolean() | nil,
           on_right_release: boolean() | nil,
           on_middle_press: boolean() | nil,
@@ -110,6 +114,8 @@ defmodule Toddy.Widget.MouseArea do
   defstruct [
     :id,
     :cursor,
+    :on_press,
+    :on_release,
     :on_right_press,
     :on_right_release,
     :on_middle_press,
@@ -134,6 +140,8 @@ defmodule Toddy.Widget.MouseArea do
   def with_options(%__MODULE__{} = ma, opts) do
     Enum.reduce(opts, ma, fn
       {:cursor, v}, acc -> cursor(acc, v)
+      {:on_press, v}, acc -> on_press(acc, v)
+      {:on_release, v}, acc -> on_release(acc, v)
       {:on_right_press, v}, acc -> on_right_press(acc, v)
       {:on_right_release, v}, acc -> on_right_release(acc, v)
       {:on_middle_press, v}, acc -> on_middle_press(acc, v)
@@ -151,6 +159,20 @@ defmodule Toddy.Widget.MouseArea do
   @doc "Sets the mouse cursor shown on hover."
   @spec cursor(mouse_area :: t(), cursor :: cursor()) :: t()
   def cursor(%__MODULE__{} = ma, cursor) when cursor in @cursors, do: %{ma | cursor: cursor}
+
+  @doc "Sets the event tag for left mouse button press events."
+  @spec on_press(mouse_area :: t(), tag :: atom() | String.t()) :: t()
+  def on_press(%__MODULE__{} = ma, tag) when is_atom(tag),
+    do: %{ma | on_press: Atom.to_string(tag)}
+
+  def on_press(%__MODULE__{} = ma, tag) when is_binary(tag), do: %{ma | on_press: tag}
+
+  @doc "Sets the event tag for left mouse button release events."
+  @spec on_release(mouse_area :: t(), tag :: atom() | String.t()) :: t()
+  def on_release(%__MODULE__{} = ma, tag) when is_atom(tag),
+    do: %{ma | on_release: Atom.to_string(tag)}
+
+  def on_release(%__MODULE__{} = ma, tag) when is_binary(tag), do: %{ma | on_release: tag}
 
   @doc "Enables or disables right mouse button press events."
   @spec on_right_press(mouse_area :: t(), enabled :: boolean()) :: t()
@@ -219,6 +241,8 @@ defmodule Toddy.Widget.MouseArea do
       props =
         %{}
         |> put_if(ma.cursor, "cursor")
+        |> put_if(ma.on_press, "on_press")
+        |> put_if(ma.on_release, "on_release")
         |> put_if(ma.on_right_press, "on_right_press")
         |> put_if(ma.on_right_release, "on_right_release")
         |> put_if(ma.on_middle_press, "on_middle_press")

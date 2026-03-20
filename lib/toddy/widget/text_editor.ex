@@ -9,7 +9,7 @@ defmodule Toddy.Widget.TextEditor do
 
   - `content` (string) -- initial text content (used to seed the editor cache).
   - `placeholder` (string) -- placeholder text shown when editor is empty.
-  - `width` (number) -- editor width in pixels (note: takes pixels, not length).
+  - `width` (length) -- editor width. Default: shrink. See `Toddy.Type.Length`.
   - `height` (length) -- editor height. Default: shrink. See `Toddy.Type.Length`.
   - `min_height` (number) -- minimum height in pixels.
   - `max_height` (number) -- maximum height in pixels.
@@ -48,7 +48,7 @@ defmodule Toddy.Widget.TextEditor do
   @type option ::
           {:content, String.t()}
           | {:placeholder, String.t()}
-          | {:width, number()}
+          | {:width, Toddy.Type.Length.t()}
           | {:height, Toddy.Type.Length.t()}
           | {:min_height, number()}
           | {:max_height, number()}
@@ -70,7 +70,7 @@ defmodule Toddy.Widget.TextEditor do
           id: String.t(),
           content: String.t() | nil,
           placeholder: String.t() | nil,
-          width: number() | nil,
+          width: Toddy.Type.Length.t() | nil,
           height: Toddy.Type.Length.t() | nil,
           min_height: number() | nil,
           max_height: number() | nil,
@@ -156,9 +156,9 @@ defmodule Toddy.Widget.TextEditor do
   def placeholder(%__MODULE__{} = ed, placeholder) when is_binary(placeholder),
     do: %{ed | placeholder: placeholder}
 
-  @doc "Sets the editor width in pixels."
-  @spec width(text_editor :: t(), width :: number()) :: t()
-  def width(%__MODULE__{} = ed, width) when is_number(width), do: %{ed | width: width}
+  @doc "Sets the editor width."
+  @spec width(text_editor :: t(), width :: Toddy.Type.Length.t()) :: t()
+  def width(%__MODULE__{} = ed, width), do: %{ed | width: width}
 
   @doc "Sets the editor height."
   @spec height(text_editor :: t(), height :: Toddy.Type.Length.t()) :: t()

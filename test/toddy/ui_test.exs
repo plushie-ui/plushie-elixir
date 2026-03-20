@@ -83,9 +83,9 @@ defmodule Toddy.UITest do
     end
 
     test "label is still present alongside extra props" do
-      node = button("b", "Click", size: 14)
+      node = button("b", "Click", width: 120)
       assert node.props["label"] == "Click"
-      assert node.props["size"] == 14
+      assert node.props["width"] == 120
     end
   end
 
@@ -172,9 +172,9 @@ defmodule Toddy.UITest do
 
   describe "text/3 with id and opts" do
     test "extra opts become string-keyed props" do
-      node = text("my-label", "hello", size: 18, color: "red")
+      node = text("my-label", "hello", size: 18, color: :red)
       assert node.props["size"] == 18
-      assert node.props["color"] == "red"
+      assert node.props["color"] == "#ff0000"
     end
 
     test "content prop is always present alongside extra props" do
@@ -703,7 +703,7 @@ defmodule Toddy.UITest do
       assert node.id == "lang"
       assert node.type == "combo_box"
       assert node.props["options"] == ["Elixir", "Rust", "Go"]
-      assert node.props["value"] == "Elixir"
+      assert node.props["selected"] == "Elixir"
       assert node.children == []
     end
   end
@@ -814,8 +814,8 @@ defmodule Toddy.UITest do
 
   describe "markdown/3 with id and opts" do
     test "extra opts become string-keyed props" do
-      node = markdown("my-md", "# Hello", size: 14)
-      assert node.props["size"] == 14
+      node = markdown("my-md", "# Hello", text_size: 14)
+      assert node.props["text_size"] == 14
       assert node.props["content"] == "# Hello"
     end
   end
@@ -874,7 +874,7 @@ defmodule Toddy.UITest do
       assert node.props["shapes"] == shapes
       assert node.props["width"] == 800
       assert node.props["height"] == 600
-      assert node.props["background"] == "#000"
+      assert node.props["background"] == "#000000"
       assert node.children == []
     end
   end

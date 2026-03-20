@@ -22,6 +22,7 @@ defmodule Toddy.Widget.Grid do
 
   @type option ::
           {:columns, pos_integer()}
+          | {:column_count, pos_integer()}
           | {:spacing, number()}
           | {:width, number()}
           | {:height, number()}
@@ -33,6 +34,7 @@ defmodule Toddy.Widget.Grid do
   @type t :: %__MODULE__{
           id: String.t(),
           columns: pos_integer() | nil,
+          column_count: pos_integer() | nil,
           spacing: number() | nil,
           width: number() | nil,
           height: number() | nil,
@@ -46,6 +48,7 @@ defmodule Toddy.Widget.Grid do
   defstruct [
     :id,
     :columns,
+    :column_count,
     :spacing,
     :width,
     :height,
@@ -69,6 +72,7 @@ defmodule Toddy.Widget.Grid do
   def with_options(%__MODULE__{} = grid, opts) do
     Enum.reduce(opts, grid, fn
       {:columns, v}, acc -> columns(acc, v)
+      {:column_count, v}, acc -> column_count(acc, v)
       {:spacing, v}, acc -> spacing(acc, v)
       {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
@@ -84,6 +88,12 @@ defmodule Toddy.Widget.Grid do
   @spec columns(grid :: t(), columns :: pos_integer()) :: t()
   def columns(%__MODULE__{} = grid, columns) when is_integer(columns) and columns > 0,
     do: %{grid | columns: columns}
+
+  @doc "Sets the column count (alias for the UI macro's `:column_count` option)."
+  @spec column_count(grid :: t(), column_count :: pos_integer()) :: t()
+  def column_count(%__MODULE__{} = grid, column_count)
+      when is_integer(column_count) and column_count > 0,
+      do: %{grid | column_count: column_count}
 
   @doc "Sets the spacing between grid cells in pixels."
   @spec spacing(grid :: t(), spacing :: number()) :: t()
@@ -135,6 +145,7 @@ defmodule Toddy.Widget.Grid do
       props =
         %{}
         |> put_if(grid.columns, "columns")
+        |> put_if(grid.column_count, "column_count")
         |> put_if(grid.spacing, "spacing")
         |> put_if(grid.width, "width")
         |> put_if(grid.height, "height")

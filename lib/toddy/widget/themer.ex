@@ -10,6 +10,11 @@ defmodule Toddy.Widget.Themer do
   """
 
   alias Toddy.Type.A11y
+  alias Toddy.Widget.Build
+
+  @type option ::
+          {:theme, Toddy.Type.Theme.t()}
+          | {:a11y, Toddy.Type.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -26,9 +31,25 @@ defmodule Toddy.Widget.Themer do
   ]
 
   @doc "Creates a new themer struct with the given theme."
-  @spec new(id :: String.t(), theme :: Toddy.Type.Theme.t()) :: t()
+  @spec new(id :: String.t(), theme_or_opts :: Toddy.Type.Theme.t() | [option()]) :: t()
+  def new(id, opts) when is_binary(id) and is_list(opts) do
+    %__MODULE__{id: id} |> with_options(opts)
+  end
+
   def new(id, theme) when is_binary(id) do
     %__MODULE__{id: id, theme: theme}
+  end
+
+  @doc "Applies keyword options to an existing themer struct."
+  @spec with_options(themer :: t(), opts :: [option()]) :: t()
+  def with_options(%__MODULE__{} = t, []), do: t
+
+  def with_options(%__MODULE__{} = t, opts) do
+    Enum.reduce(opts, t, fn
+      {:theme, v}, acc -> %{acc | theme: v}
+      {:a11y, v}, acc -> a11y(acc, v)
+      {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
+    end)
   end
 
   @doc "Appends a child to the themer."

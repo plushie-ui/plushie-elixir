@@ -94,7 +94,7 @@ defmodule Toddy.Widget.Radio do
           opts :: [option()]
         ) :: t()
   def new(id, value, selected, opts \\ [])
-      when is_binary(id) and is_binary(value) and is_binary(selected) do
+      when is_binary(id) and is_binary(value) and (is_binary(selected) or is_nil(selected)) do
     %__MODULE__{id: id, value: value, selected: selected} |> with_options(opts)
   end
 

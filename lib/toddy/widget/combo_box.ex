@@ -120,6 +120,7 @@ defmodule Toddy.Widget.ComboBox do
   def with_options(%__MODULE__{} = cb, opts) do
     Enum.reduce(opts, cb, fn
       {:selected, v}, acc -> selected(acc, v)
+      {:value, v}, acc -> selected(acc, v)
       {:placeholder, v}, acc -> placeholder(acc, v)
       {:width, v}, acc -> width(acc, v)
       {:padding, v}, acc -> padding(acc, v)

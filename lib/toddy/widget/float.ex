@@ -17,6 +17,8 @@ defmodule Toddy.Widget.Float do
           {:translate_x, number()}
           | {:translate_y, number()}
           | {:scale, number()}
+          | {:width, Toddy.Type.Length.t()}
+          | {:height, Toddy.Type.Length.t()}
           | {:a11y, Toddy.Type.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -24,6 +26,8 @@ defmodule Toddy.Widget.Float do
           translate_x: number() | nil,
           translate_y: number() | nil,
           scale: number() | nil,
+          width: Toddy.Type.Length.t() | nil,
+          height: Toddy.Type.Length.t() | nil,
           a11y: Toddy.Type.A11y.t() | nil,
           children: [Toddy.Widget.ui_node() | struct()]
         }
@@ -33,6 +37,8 @@ defmodule Toddy.Widget.Float do
     :translate_x,
     :translate_y,
     :scale,
+    :width,
+    :height,
     :a11y,
     children: []
   ]
@@ -52,6 +58,8 @@ defmodule Toddy.Widget.Float do
       {:translate_x, v}, acc -> translate_x(acc, v)
       {:translate_y, v}, acc -> translate_y(acc, v)
       {:scale, v}, acc -> scale(acc, v)
+      {:width, v}, acc -> width(acc, v)
+      {:height, v}, acc -> height(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -68,6 +76,14 @@ defmodule Toddy.Widget.Float do
   @doc "Sets the scale factor."
   @spec scale(float_widget :: t(), scale :: number()) :: t()
   def scale(%__MODULE__{} = fw, v) when is_number(v), do: %{fw | scale: v}
+
+  @doc "Sets the float width."
+  @spec width(float_widget :: t(), width :: Toddy.Type.Length.t()) :: t()
+  def width(%__MODULE__{} = fw, width), do: %{fw | width: width}
+
+  @doc "Sets the float height."
+  @spec height(float_widget :: t(), height :: Toddy.Type.Length.t()) :: t()
+  def height(%__MODULE__{} = fw, height), do: %{fw | height: height}
 
   @doc "Appends a child to the float."
   @spec push(float_widget :: t(), child :: Toddy.Widget.ui_node() | struct()) :: t()
@@ -95,6 +111,8 @@ defmodule Toddy.Widget.Float do
         |> put_if(fw.translate_x, "translate_x")
         |> put_if(fw.translate_y, "translate_y")
         |> put_if(fw.scale, "scale")
+        |> put_if(fw.width, "width")
+        |> put_if(fw.height, "height")
         |> put_if(fw.a11y, "a11y")
 
       %{

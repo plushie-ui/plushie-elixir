@@ -22,17 +22,19 @@ defmodule Toddy.Widget.Sensor do
   @type option ::
           {:delay, non_neg_integer()}
           | {:anticipate, number()}
+          | {:on_resize, atom() | String.t()}
           | {:a11y, Toddy.Type.A11y.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
           delay: non_neg_integer() | nil,
           anticipate: number() | nil,
+          on_resize: String.t() | nil,
           a11y: Toddy.Type.A11y.t() | nil,
           children: [Toddy.Widget.ui_node() | struct()]
         }
 
-  defstruct [:id, :delay, :anticipate, :a11y, children: []]
+  defstruct [:id, :delay, :anticipate, :on_resize, :a11y, children: []]
 
   @doc "Creates a new sensor struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
@@ -46,6 +48,7 @@ defmodule Toddy.Widget.Sensor do
     Enum.reduce(opts, sensor, fn
       {:delay, v}, acc -> delay(acc, v)
       {:anticipate, v}, acc -> anticipate(acc, v)
+      {:on_resize, v}, acc -> on_resize(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -60,6 +63,14 @@ defmodule Toddy.Widget.Sensor do
   @spec anticipate(sensor :: t(), anticipate :: number()) :: t()
   def anticipate(%__MODULE__{} = sensor, anticipate) when is_number(anticipate),
     do: %{sensor | anticipate: anticipate}
+
+  @doc "Sets the event tag for resize events."
+  @spec on_resize(sensor :: t(), tag :: atom() | String.t()) :: t()
+  def on_resize(%__MODULE__{} = sensor, tag) when is_atom(tag),
+    do: %{sensor | on_resize: Atom.to_string(tag)}
+
+  def on_resize(%__MODULE__{} = sensor, tag) when is_binary(tag),
+    do: %{sensor | on_resize: tag}
 
   @doc "Appends a child to the sensor."
   @spec push(sensor :: t(), child :: Toddy.Widget.ui_node() | struct()) :: t()
@@ -86,6 +97,7 @@ defmodule Toddy.Widget.Sensor do
         %{}
         |> put_if(sensor.delay, "delay")
         |> put_if(sensor.anticipate, "anticipate")
+        |> put_if(sensor.on_resize, "on_resize")
         |> put_if(sensor.a11y, "a11y")
 
       %{

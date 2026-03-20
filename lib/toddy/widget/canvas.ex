@@ -52,6 +52,7 @@ defmodule Toddy.Widget.Canvas do
 
   @type option ::
           {:layers, %{String.t() => [map()]}}
+          | {:shapes, [map()]}
           | {:width, Toddy.Type.Length.t()}
           | {:height, Toddy.Type.Length.t()}
           | {:background, Toddy.Type.Color.input()}
@@ -65,6 +66,7 @@ defmodule Toddy.Widget.Canvas do
   @type t :: %__MODULE__{
           id: String.t(),
           layers: %{String.t() => [map()]} | nil,
+          shapes: [map()] | nil,
           width: Toddy.Type.Length.t() | nil,
           height: Toddy.Type.Length.t() | nil,
           background: Toddy.Type.Color.t() | nil,
@@ -79,6 +81,7 @@ defmodule Toddy.Widget.Canvas do
   defstruct [
     :id,
     :layers,
+    :shapes,
     :width,
     :height,
     :background,
@@ -103,6 +106,7 @@ defmodule Toddy.Widget.Canvas do
   def with_options(%__MODULE__{} = canvas, opts) do
     Enum.reduce(opts, canvas, fn
       {:layers, v}, acc -> layers(acc, v)
+      {:shapes, v}, acc -> shapes(acc, v)
       {:width, v}, acc -> width(acc, v)
       {:height, v}, acc -> height(acc, v)
       {:background, v}, acc -> background(acc, v)
@@ -119,6 +123,10 @@ defmodule Toddy.Widget.Canvas do
   @doc "Sets the layers map (layer name => list of shape descriptors)."
   @spec layers(canvas :: t(), layers :: %{String.t() => [map()]}) :: t()
   def layers(%__MODULE__{} = canvas, layers), do: %{canvas | layers: layers}
+
+  @doc "Sets a flat list of shapes (convenience shorthand for unlayered canvases)."
+  @spec shapes(canvas :: t(), shapes :: [map()]) :: t()
+  def shapes(%__MODULE__{} = canvas, shapes) when is_list(shapes), do: %{canvas | shapes: shapes}
 
   @doc "Adds a single named layer to the canvas. Merges with existing layers."
   @spec layer(canvas :: t(), name :: String.t(), shapes :: [map()]) :: t()
@@ -175,6 +183,7 @@ defmodule Toddy.Widget.Canvas do
       props =
         %{}
         |> put_if(canvas.layers, "layers")
+        |> put_if(canvas.shapes, "shapes")
         |> put_if(canvas.width, "width")
         |> put_if(canvas.height, "height")
         |> put_if(canvas.background, "background")
