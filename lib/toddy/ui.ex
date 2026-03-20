@@ -863,41 +863,48 @@ defmodule Toddy.UI do
     end
   end
 
-  # -- float_widget(id, opts) -------------------------------------------------
+  # -- floating(id, opts) -----------------------------------------------------
 
   @doc """
   Floating overlay layout.
 
   ## Example
 
-      float_widget "popup" do
+      floating "popup" do
         text("Floating content")
       end
   """
-  defmacro float_widget(id, opts_or_do \\ []) do
+  defmacro floating(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
         exprs = block_to_exprs(block)
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_container__(Toddy.Widget.Float, unquote(id), [], children, nil)
+          Toddy.UI.__build_container__(Toddy.Widget.Floating, unquote(id), [], children, nil)
         end
 
       opts ->
         quote do
-          Toddy.UI.__build_container__(Toddy.Widget.Float, unquote(id), unquote(opts), [], nil)
+          Toddy.UI.__build_container__(Toddy.Widget.Floating, unquote(id), unquote(opts), [], nil)
         end
     end
   end
 
   @doc false
-  defmacro float_widget(id, opts, do: block) do
+  defmacro floating(id, opts, do: block) do
     exprs = block_to_exprs(block)
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Toddy.UI.__build_container__(Toddy.Widget.Float, unquote(id), unquote(opts), children, nil)
+
+      Toddy.UI.__build_container__(
+        Toddy.Widget.Floating,
+        unquote(id),
+        unquote(opts),
+        children,
+        nil
+      )
     end
   end
 

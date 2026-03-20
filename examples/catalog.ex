@@ -42,8 +42,6 @@ defmodule Catalog do
 
   alias Toddy.Event.{MouseArea, Sensor, Widget}
 
-  import Toddy.UI
-
   # -- init ------------------------------------------------------------------
 
   def init(_opts) do
@@ -154,6 +152,7 @@ defmodule Catalog do
   # -- view ------------------------------------------------------------------
 
   def view(model) do
+    import Toddy.UI
 
     window "catalog", title: "Widget Catalog" do
       column spacing: 12, padding: 16 do
@@ -182,6 +181,7 @@ defmodule Catalog do
   # -- tab views (private) ---------------------------------------------------
 
   defp layout_tab do
+    import Toddy.UI
 
     column spacing: 8 do
       text("layout_heading", "Layout Widgets", size: 18)
@@ -237,7 +237,7 @@ defmodule Catalog do
       end
 
       # Float - floating overlay element with translation
-      float_widget "demo_float", translate_x: 100, translate_y: 10 do
+      floating "demo_float", translate_x: 100, translate_y: 10 do
         text("Floating element")
       end
 
@@ -272,6 +272,7 @@ defmodule Catalog do
   end
 
   defp input_tab(model) do
+    import Toddy.UI
 
     column spacing: 8 do
       text("input_heading", "Input Widgets", size: 18)
@@ -318,6 +319,7 @@ defmodule Catalog do
   end
 
   defp display_tab(model) do
+    import Toddy.UI
 
     column spacing: 8 do
       text("display_heading", "Display Widgets", size: 18)
@@ -384,6 +386,7 @@ defmodule Catalog do
   end
 
   defp composite_tab(model) do
+    import Toddy.UI
 
     column spacing: 8 do
       text("composite_heading", "Interactive & Composite Widgets", size: 18)

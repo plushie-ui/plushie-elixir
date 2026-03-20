@@ -1,7 +1,7 @@
-defmodule Toddy.Widget.FloatTest do
+defmodule Toddy.Widget.FloatingTest do
   use ExUnit.Case, async: true
 
-  alias Toddy.Widget.Float
+  alias Toddy.Widget.Floating, as: Float
 
   describe "new/2" do
     test "creates a float with the given id and nil defaults" do

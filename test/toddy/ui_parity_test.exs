@@ -72,20 +72,20 @@ defmodule ToddyUIParityTestHelper do
     end
   end
 
-  # -- float_widget --
+  # -- floating --
 
   def float_empty do
-    float_widget("f1")
+    floating("f1")
   end
 
   def float_with_do do
-    float_widget "f1" do
+    floating "f1" do
       text("overlay")
     end
   end
 
   def float_with_opts_and_do do
-    float_widget "f1", width: 300 do
+    floating "f1", width: 300 do
       text("popup")
     end
   end
@@ -251,10 +251,10 @@ defmodule Toddy.UIParityTest do
   end
 
   # ---------------------------------------------------------------------------
-  # float_widget
+  # floating
   # ---------------------------------------------------------------------------
 
-  describe "float_widget macro" do
+  describe "floating macro" do
     test "empty float has correct type" do
       node = H.float_empty()
       assert node.type == "float"
