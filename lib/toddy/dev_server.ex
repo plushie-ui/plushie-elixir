@@ -60,7 +60,6 @@ defmodule Toddy.DevServer do
       watcher: watcher,
       debounce_ms: debounce_ms,
       debounce_ref: nil,
-      recompiling: false,
       changed_paths: MapSet.new()
     }
 
@@ -93,10 +92,9 @@ defmodule Toddy.DevServer do
     paths = state.changed_paths
     state = %{state | changed_paths: MapSet.new()}
 
-    if not state.recompiling and MapSet.size(paths) > 0 do
-      state = %{state | recompiling: true}
+    if MapSet.size(paths) > 0 do
       do_recompile(state.runtime, paths)
-      {:noreply, %{state | recompiling: false}}
+      {:noreply, state}
     else
       {:noreply, state}
     end

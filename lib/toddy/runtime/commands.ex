@@ -243,6 +243,20 @@ defmodule Toddy.Runtime.Commands do
 
   # Kills an existing async task with the given tag, if one is running.
   # Used before starting a replacement task to avoid orphaned processes.
+  #
+  # Uses `:kill` for immediate, guaranteed cancellation -- the task process
+  # terminates unconditionally regardless of what it's doing. The trade-off
+  # is that `:kill` bypasses both normal cleanup logic and trapped exits in
+  # the user's async function, so external resources (HTTP connections, DB
+  # handles, file descriptors) won't be released gracefully.
+  #
+  # If cleanup is needed, users should handle it outside the async function
+  # (e.g. in update/2 when receiving the cancellation event). Note that
+  # trapping exits does NOT help here -- `:kill` cannot be trapped.
+  #
+  # The alternative `:shutdown` signal would allow cleanup via trapped exits,
+  # but isn't guaranteed to terminate misbehaving or blocked tasks, which
+  # could leave orphaned processes and leak the nonce/tag mapping.
   @spec cancel_existing_task(map(), term()) :: map()
   defp cancel_existing_task(state, tag) do
     case Map.get(state.async_tasks, tag) do
