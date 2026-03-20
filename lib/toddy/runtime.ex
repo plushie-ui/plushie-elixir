@@ -177,11 +177,14 @@ defmodule Toddy.Runtime do
   end
 
   def handle_info(
-        {:renderer_event, %Toddy.Event.System{type: :all_windows_closed}},
+        {:renderer_event, %Toddy.Event.System{type: :all_windows_closed} = event},
         %{daemon: false} = state
       ) do
-    # Non-daemon mode: last window closed, shut down cleanly.
-    Logger.info("toddy runtime: all windows closed -- shutting down")
+    # Non-daemon mode: dispatch through update/2 so the app can perform
+    # cleanup (save drafts, persist state, etc.), then shut down. Commands
+    # from update are executed synchronously; async tasks may not complete
+    # since the process is stopping.
+    state = run_update(state, event)
     {:stop, :normal, state}
   end
 
@@ -552,7 +555,14 @@ defmodule Toddy.Runtime do
       :error
   end
 
-  # Full update cycle: update model, execute commands, re-render, sync subs.
+  # Full update cycle: update -> commands -> view -> diff -> patch.
+  #
+  # Note on sequencing: commands execute BEFORE view/1 is called. This means
+  # a fast async completion would queue its result for the NEXT cycle, not
+  # the current one. This is intentional -- commands are side effects that
+  # happen between the model update and the re-render. Their results arrive
+  # as separate events in subsequent cycles.
+  #
   # Wraps update/2 and view/1 in try/rescue so app exceptions do not crash
   # the runtime process.
   @spec run_update(state(), term()) :: state()
