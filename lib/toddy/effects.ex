@@ -25,6 +25,39 @@ defmodule Toddy.Effects do
       def update(model, %Toddy.Event.Effect{result: {:ok, result}}) do
         %{model | file: result}
       end
+
+  ## Correlating concurrent requests
+
+  When multiple effects of the same type are in flight, use the `request_id`
+  to match results to requests. The auto-generated ID is in `cmd.payload.id`:
+
+      # In update/2 -- store the request ID:
+      cmd = Toddy.Effects.file_open(title: "Pick a file")
+      model = %{model | pending_open: cmd.payload.id}
+      {model, cmd}
+
+      # Handle result -- match on the stored ID:
+      def update(model, %Effect{request_id: id, result: {:ok, path}})
+          when id == model.pending_open do
+        %{model | file: path, pending_open: nil}
+      end
+
+  ## Timeouts
+
+  Each effect has a default timeout. If the renderer does not respond in time,
+  `%Toddy.Event.Effect{request_id: id, result: {:error, :timeout}}` arrives
+  in `update/2`.
+
+  Default timeouts:
+
+  - File dialogs (`file_open`, `file_open_multiple`, `file_save`,
+    `directory_select`, `directory_select_multiple`): 120 seconds
+  - Clipboard operations: 5 seconds
+  - Notifications: 5 seconds
+
+  Override the default by passing a `:timeout` option (milliseconds):
+
+      Toddy.Effects.file_open(title: "Pick a file", timeout: 300_000)
   """
 
   @valid_kinds ~w(

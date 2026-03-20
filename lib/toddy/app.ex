@@ -36,6 +36,23 @@ defmodule Toddy.App do
     operations, window management, or timers. See `Toddy.Command` for the full
     command API.
 
+  ## Returning commands
+
+  `update/2` can return a `{model, command}` tuple to schedule side effects:
+
+      def update(model, %Widget{type: :click, id: "save"}) do
+        {model, Command.async(fn -> save_to_disk(model) end, :save_result)}
+      end
+
+  See `Toddy.Command` for the full command API and result delivery mechanisms.
+
+  ## Error handling
+
+  Exceptions in `update/2` and `view/1` are caught by the runtime and logged;
+  the model reverts to its pre-exception state. You do not need to wrap your
+  callbacks in try/rescue. After 100 consecutive errors, the runtime suppresses
+  further log messages to prevent log flooding.
+
   ## Optional callbacks
 
   `subscribe/1` and `handle_renderer_exit/2` are optional. `use Toddy.App`
@@ -79,8 +96,26 @@ defmodule Toddy.App do
   @callback handle_renderer_exit(model, reason :: term()) :: model
 
   @doc """
-  Called on runtime startup to configure window properties. Default:
-  empty config (the renderer uses its own defaults).
+  Called on runtime startup to configure window properties. Also called
+  on renderer restart whenever windows need re-opening. Per-window props
+  set in the view tree override these defaults.
+
+  ## Supported keys
+
+  `title`, `size`, `width`, `height`, `position`, `min_size`, `max_size`,
+  `maximized`, `fullscreen`, `visible`, `resizable`, `closeable`,
+  `minimizable`, `decorations`, `transparent`, `blur`, `level`,
+  `exit_on_close_request`.
+
+  See `Toddy.Widget.Window` for details on each property.
+
+  ## Example
+
+      def window_config(_model) do
+        %{title: "My App", width: 800, height: 600, min_size: {400, 300}}
+      end
+
+  Default: empty config (the renderer uses its own defaults).
   """
   @callback window_config(model) :: map()
 

@@ -1570,7 +1570,7 @@ defmodule Toddy.UI do
   ## Example
 
       canvas("drawing",
-        layers: %{"main" => [%{"type" => "circle", "x" => 50, "y" => 50, "r" => 20}]},
+        layers: %{"main" => [%{type: "circle", x: 50, y: 50, r: 20}]},
         width: 400,
         height: 300
       )
