@@ -8,7 +8,8 @@ defmodule Toddy.Widget.ComboBox do
   ## Props
 
   - `options` (list of strings) -- the available choices.
-  - `selected` (string | nil) -- the currently selected value.
+  - `selected` (string | nil) -- the currently selected value. Also accepts
+    `:value` as an alias.
   - `placeholder` (string) -- placeholder text.
   - `width` (length) -- widget width. Default: fill. See `Toddy.Type.Length`.
   - `padding` (number | map) -- internal padding. See `Toddy.Type.Padding`.
@@ -46,6 +47,7 @@ defmodule Toddy.Widget.ComboBox do
 
   @type option ::
           {:selected, String.t()}
+          | {:value, String.t()}
           | {:placeholder, String.t()}
           | {:width, Toddy.Type.Length.t()}
           | {:padding, Toddy.Type.Padding.t()}

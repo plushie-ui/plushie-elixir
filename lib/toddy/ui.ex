@@ -110,7 +110,7 @@ defmodule Toddy.UI do
         Keyword.get(opts, :children, [])
       end
 
-    clean_opts = Keyword.drop(opts, [:children, :id, :do])
+    clean_opts = clean_opts(opts)
 
     widget = widget_mod.new(resolved_id, clean_opts)
 
@@ -122,28 +122,6 @@ defmodule Toddy.UI do
       end
 
     widget_mod.build(widget)
-  end
-
-  @doc false
-  @spec __build_window__(
-          id :: String.t(),
-          opts :: keyword(),
-          children :: [Toddy.Widget.ui_node()]
-        ) :: Toddy.Widget.ui_node()
-  def __build_window__(id, opts, children) do
-    resolved_children =
-      if children != [] do
-        children
-      else
-        Keyword.get(opts, :children, [])
-      end
-
-    props =
-      opts
-      |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
-
-    %{id: id, type: "window", props: props, children: resolved_children}
   end
 
   # Kept for external callers. Internal macros use compile_auto_id/2 to
@@ -221,12 +199,25 @@ defmodule Toddy.UI do
 
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_window__(unquote(id), [], children)
+
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Window,
+            unquote(id),
+            [],
+            children,
+            nil
+          )
         end
 
       opts ->
         quote do
-          Toddy.UI.__build_window__(unquote(id), unquote(opts), [])
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Window,
+            unquote(id),
+            unquote(opts),
+            [],
+            nil
+          )
         end
     end
   end
@@ -237,7 +228,14 @@ defmodule Toddy.UI do
 
     quote do
       children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Toddy.UI.__build_window__(unquote(id), unquote(opts), children)
+
+      Toddy.UI.__build_container__(
+        Toddy.Widget.Window,
+        unquote(id),
+        unquote(opts),
+        children,
+        nil
+      )
     end
   end
 
@@ -1709,7 +1707,7 @@ defmodule Toddy.UI do
     end
   end
 
-  # __build_fixed_node__ removed -- use __build_container__ or __build_window__
+  # __build_fixed_node__ removed -- use __build_container__
 
   # ---------------------------------------------------------------------------
   # Tree query

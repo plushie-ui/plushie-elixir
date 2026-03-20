@@ -789,7 +789,7 @@ defmodule Toddy.RuntimeTest do
       assert length(window_ops) == 1
       assert hd(window_ops).op == "open"
       assert hd(window_ops).window_id == "main"
-      assert hd(window_ops).settings == %{title: "App Window"}
+      assert hd(window_ops).settings == %{title: "Main"}
 
       # Open the secondary window
       dispatch_and_wait(runtime, :open_secondary)

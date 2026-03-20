@@ -64,13 +64,21 @@ defmodule Toddy.Widget.Tooltip do
     children: []
   ]
 
-  @doc "Creates a new tooltip struct with the given tip text and optional keyword opts."
-  @spec new(id :: String.t(), tip_or_opts :: String.t() | [option()], opts :: [option()]) :: t()
+  @doc """
+  Creates a new tooltip struct.
+
+  Accepts either keyword opts (with `:tip` key) or a positional tip string:
+
+      Tooltip.new("tt", tip: "Help", position: :top)
+      Tooltip.new("tt", "Help", position: :top)
+  """
+  @spec new(id :: String.t(), opts :: [option()]) :: t()
   def new(id, opts) when is_binary(id) and is_list(opts) do
     {tip, remaining} = Keyword.pop(opts, :tip, "")
     new(id, tip, remaining)
   end
 
+  @spec new(id :: String.t(), tip :: String.t(), opts :: [option()]) :: t()
   def new(id, tip, opts \\ []) when is_binary(id) and is_binary(tip) do
     %__MODULE__{id: id, tip: tip} |> with_options(opts)
   end

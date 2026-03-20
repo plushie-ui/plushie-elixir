@@ -8,11 +8,14 @@ defmodule Toddy.Runtime.Windows do
   """
 
   # Window setting keys that can be specified as node props on window elements.
+  # Atoms are the source of truth; string form is derived for Map.take on
+  # string-keyed node props.
   @window_prop_keys ~w(
-    size width height position min_size max_size maximized fullscreen
+    title size width height position min_size max_size maximized fullscreen
     visible resizable closeable minimizable decorations transparent blur level
     exit_on_close_request
-  )
+  )a
+  @window_prop_string_keys Enum.map(@window_prop_keys, &Atom.to_string/1)
 
   @doc """
   Synchronizes the runtime's tracked windows with the current tree.
@@ -94,13 +97,18 @@ defmodule Toddy.Runtime.Windows do
     props =
       case find_window_node(tree, window_id) do
         %{props: props} when is_map(props) ->
-          Map.take(props, @window_prop_keys)
+          Map.take(props, @window_prop_string_keys)
 
         _ ->
           %{}
       end
 
-    decompose_size_tuples(props)
+    # Atomize keys so per-window props merge cleanly with the atom-keyed
+    # map returned by App.window_config/1. Safe because the keys come
+    # from @window_prop_keys, which are compiled as atoms above.
+    props
+    |> Map.new(fn {k, v} -> {String.to_existing_atom(k), v} end)
+    |> decompose_size_tuples()
   end
 
   # Find a window node at root level or as a direct child (matching Rust depth).

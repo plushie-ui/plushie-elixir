@@ -7,6 +7,7 @@ defmodule Toddy.Widget.Sensor do
   - `delay` (non_neg_integer) -- delay in milliseconds before emitting events.
   - `anticipate` (number) -- distance in pixels to anticipate visibility (triggers events before
     the widget is fully in view).
+  - `on_resize` (atom | string) -- event tag for resize events.
   - `a11y` (map) -- accessibility overrides. See `Toddy.Type.A11y`.
 
   ## Events

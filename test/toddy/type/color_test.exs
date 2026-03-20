@@ -109,6 +109,26 @@ defmodule Toddy.Type.ColorTest do
         Color.cast(:nonexistent_color)
       end
     end
+
+    test "casts named string \"red\"" do
+      assert Color.cast("red") == "#ff0000"
+    end
+
+    test "casts named string case-insensitively" do
+      assert Color.cast("Blue") == "#0000ff"
+      assert Color.cast("CORAL") == "#ff7f50"
+      assert Color.cast("CornflowerBlue") == "#6495ed"
+    end
+
+    test "casts named string \"transparent\"" do
+      assert Color.cast("transparent") == "#00000000"
+    end
+
+    test "non-color string falls through to hex parsing" do
+      assert_raise ArgumentError, ~r/invalid hex color digits/, fn ->
+        Color.cast("banana")
+      end
+    end
   end
 
   describe "encode/1" do

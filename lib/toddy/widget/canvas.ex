@@ -15,6 +15,8 @@ defmodule Toddy.Widget.Canvas do
   - `layers` (map of string => list of maps) -- named layers of shape
     descriptors. Each layer is independently cached. Shapes within a layer
     are drawn in order. Layers are drawn in alphabetical order by name.
+  - `shapes` (list of maps) -- flat list of shape descriptors. Convenience
+    alternative to `layers` for canvases that don't need named layers.
   - `width` (length) -- canvas width. Default: fill. See `Toddy.Type.Length`.
   - `height` (length) -- canvas height. Default: 200px.
   - `background` (color) -- canvas background color. See `Toddy.Type.Color`.

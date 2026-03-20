@@ -7,6 +7,8 @@ defmodule Toddy.Widget.Float do
   - `translate_x` (number) -- horizontal translation in pixels. Default: 0.
   - `translate_y` (number) -- vertical translation in pixels. Default: 0.
   - `scale` (number) -- scale factor for the child content.
+  - `width` (length) -- float width. See `Toddy.Type.Length`.
+  - `height` (length) -- float height. See `Toddy.Type.Length`.
   - `a11y` (map) -- accessibility overrides. See `Toddy.Type.A11y`.
   """
 

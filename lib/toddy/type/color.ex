@@ -5,8 +5,8 @@ defmodule Toddy.Type.Color do
   All colors are canonical hex strings: `"#rrggbb"` or `"#rrggbbaa"`.
 
   Use the constructors `from_rgb/3`, `from_rgba/4`, and `from_hex/1` to build
-  colors. Use `cast/1` to normalize any supported input form (named atoms
-  or hex strings) into a canonical hex string.
+  colors. Use `cast/1` to normalize any supported input form (named atoms,
+  named strings, or hex strings) into a canonical hex string.
 
   All 148 CSS Color Module Level 4 named colors are supported, plus
   `:transparent`.
@@ -183,6 +183,9 @@ defmodule Toddy.Type.Color do
     yellowgreen: "#9acd32"
   }
 
+  # Downcased string -> hex lookup for cast/1 string support.
+  @named_colors_by_string Map.new(@named_colors, fn {k, v} -> {Atom.to_string(k), v} end)
+
   @typedoc "Named CSS color atom (148 CSS Color Module Level 4 colors plus `:transparent`)."
   @type named :: unquote(Enum.reduce(Map.keys(@named_colors), &{:|, [], [&1, &2]}))
 
@@ -284,6 +287,8 @@ defmodule Toddy.Type.Color do
 
   - Named atoms: all 148 CSS Color Module Level 4 named colors (e.g. `:red`,
     `:cornflowerblue`, `:rebeccapurple`) plus `:transparent`
+  - Named strings: same names as atoms, case-insensitive (e.g. `"red"`,
+    `"CornflowerBlue"`)
   - Hex strings: `"#rrggbb"`, `"#rrggbbaa"`, `"#rgb"`, `"#rgba"` (normalized
     to canonical 6/8-char lowercase hex)
 
@@ -302,6 +307,12 @@ defmodule Toddy.Type.Color do
 
       iex> Toddy.Type.Color.cast(:cornflowerblue)
       "#6495ed"
+
+      iex> Toddy.Type.Color.cast("red")
+      "#ff0000"
+
+      iex> Toddy.Type.Color.cast("CornflowerBlue")
+      "#6495ed"
   """
   @spec cast(color :: input()) :: t()
   def cast(name) when is_atom(name) do
@@ -312,7 +323,13 @@ defmodule Toddy.Type.Color do
   end
 
   def cast("#" <> _ = hex), do: from_hex(hex)
-  def cast(hex) when is_binary(hex), do: from_hex(hex)
+
+  def cast(str) when is_binary(str) do
+    case Map.fetch(@named_colors_by_string, String.downcase(str)) do
+      {:ok, hex} -> hex
+      :error -> from_hex(str)
+    end
+  end
 
   @doc """
   Returns the map of all supported named colors.

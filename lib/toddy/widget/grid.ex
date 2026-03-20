@@ -5,6 +5,7 @@ defmodule Toddy.Widget.Grid do
   ## Props
 
   - `columns` (integer) -- number of columns. Default: 1.
+  - `column_count` (integer) -- alias for `columns`, used by the UI macro.
   - `spacing` (number) -- spacing between grid cells in pixels. Default: 0.
   - `width` (number) -- grid width in pixels.
   - `height` (number) -- grid height in pixels.

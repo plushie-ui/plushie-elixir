@@ -15,6 +15,8 @@ defmodule Toddy.Widget.MouseArea do
     `:resizing_horizontally`, `:resizing_vertically`,
     `:resizing_diagonally_up`, `:resizing_diagonally_down`,
     `:resizing_column`, `:resizing_row`.
+  - `on_press` (atom | string) -- event tag for left mouse button press events.
+  - `on_release` (atom | string) -- event tag for left mouse button release events.
   - `on_right_press` (boolean) -- enable right mouse button press events.
   - `on_right_release` (boolean) -- enable right mouse button release events.
   - `on_middle_press` (boolean) -- enable middle mouse button press events.
