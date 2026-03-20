@@ -26,13 +26,15 @@ defmodule Toddy.Runtime do
   ## State shape
 
       %{
-        app:             module,          # the Toddy.App implementation
-        model:           term(),          # current application model
-        bridge:          pid() | atom(),  # Toddy.Bridge pid or registered name
-        tree:            map() | nil,     # last normalized tree (for re-send on restart)
-        async_tasks:     map(),           # %{tag => {pid, nonce}} for running async/stream tasks
-        pending_effects: map(),           # %{id => timer_ref} for in-flight effect requests
-        pending_timers:  map()            # %{event => timer_ref} for send_after dedup/cancel
+        app:              module,          # the Toddy.App implementation
+        model:            term(),          # current application model
+        bridge:           pid() | atom(),  # Toddy.Bridge pid or registered name
+        tree:             map() | nil,     # last normalized tree (for re-send on restart)
+        async_tasks:      map(),           # %{tag => {pid, nonce}} for running async/stream tasks
+        pending_effects:  map(),           # %{id => timer_ref} for in-flight effect requests
+        pending_timers:   map(),           # %{event => timer_ref} for send_after dedup/cancel
+        pending_coalesce: map(),           # %{key => event} latest coalescable event per source
+        coalesce_timer:   ref | nil        # timer ref for the flush message
       }
 
   ## Exit trapping
@@ -44,7 +46,7 @@ defmodule Toddy.Runtime do
 
   require Logger
 
-  alias Toddy.Event.{Async, Effect, Stream, Timer}
+  alias Toddy.Event.{Async, Effect, Mouse, Sensor, Stream, Timer}
   alias Toddy.Runtime.{Commands, Subscriptions, Windows}
 
   @typep state :: %{
@@ -57,6 +59,8 @@ defmodule Toddy.Runtime do
            async_tasks: map(),
            pending_effects: map(),
            pending_timers: map(),
+           pending_coalesce: map(),
+           coalesce_timer: reference() | nil,
            consecutive_errors: non_neg_integer()
          }
 
@@ -124,6 +128,8 @@ defmodule Toddy.Runtime do
           async_tasks: %{},
           pending_effects: %{},
           pending_timers: %{},
+          pending_coalesce: %{},
+          coalesce_timer: nil,
           consecutive_errors: 0
         }
 
@@ -178,7 +184,23 @@ defmodule Toddy.Runtime do
     {:stop, :normal, state}
   end
 
+  # Coalescable events -- high-frequency events (mouse moves, sensor resizes)
+  # are stored and deferred until the next message boundary. A zero-delay timer
+  # ensures they flush before the GenServer processes non-coalescable messages,
+  # while consecutive coalescable events for the same source collapse into the
+  # latest value. This preserves ordering relative to other event types (a
+  # non-coalescable event always flushes pending coalescables first) and avoids
+  # redundant update cycles during bursts.
+  def handle_info({:renderer_event, %Mouse{type: :moved} = event}, state) do
+    {:noreply, store_coalescable(state, :mouse_move, event)}
+  end
+
+  def handle_info({:renderer_event, %Sensor{type: :resize} = event}, state) do
+    {:noreply, store_coalescable(state, {:sensor_resize, event.id}, event)}
+  end
+
   def handle_info({:renderer_event, event}, state) do
+    state = flush_coalescables(state)
     state = run_update(state, event)
     {:noreply, state}
   end
@@ -202,6 +224,10 @@ defmodule Toddy.Runtime do
 
   def handle_info(:renderer_restarted, state) do
     Logger.info("toddy runtime: renderer restarted -- re-sending settings and snapshot")
+
+    # Discard stale coalescable events from the old renderer.
+    if state.coalesce_timer, do: Process.cancel_timer(state.coalesce_timer)
+    state = %{state | pending_coalesce: %{}, coalesce_timer: nil}
 
     # Flush all pending effect requests -- the renderer that would have
     # responded is gone.
@@ -231,6 +257,14 @@ defmodule Toddy.Runtime do
     end)
 
     {:noreply, %{state | tree: tree}}
+  end
+
+  # ---------------------------------------------------------------------------
+  # Coalescable event flush
+  # ---------------------------------------------------------------------------
+
+  def handle_info(:flush_coalescables, state) do
+    {:noreply, flush_coalescables(%{state | coalesce_timer: nil})}
   end
 
   # ---------------------------------------------------------------------------
@@ -363,6 +397,9 @@ defmodule Toddy.Runtime do
 
   @impl true
   def terminate(_reason, state) do
+    # Cancel coalesce timer if pending.
+    if state.coalesce_timer, do: Process.cancel_timer(state.coalesce_timer)
+
     # Cancel all pending send_after timers so they don't fire into the void.
     Enum.each(state.pending_timers, fn {_event, ref} ->
       Process.cancel_timer(ref)
@@ -404,7 +441,7 @@ defmodule Toddy.Runtime do
 
     settings =
       if extension_config != %{} do
-        Map.put(settings, "extension_config", extension_config)
+        Map.put(settings, :extension_config, extension_config)
       else
         settings
       end
@@ -618,5 +655,43 @@ defmodule Toddy.Runtime do
     after
       0 -> :ok
     end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Coalescable event helpers
+  # ---------------------------------------------------------------------------
+
+  # Stores a high-frequency event for deferred processing. A zero-delay timer
+  # ensures the flush fires at the next message boundary -- consecutive
+  # coalescable events for the same key overwrite each other so only the
+  # latest survives.
+  @spec store_coalescable(state(), term(), term()) :: state()
+  defp store_coalescable(state, key, event) do
+    state =
+      if state.coalesce_timer == nil do
+        ref = Process.send_after(self(), :flush_coalescables, 0)
+        %{state | coalesce_timer: ref}
+      else
+        state
+      end
+
+    %{state | pending_coalesce: Map.put(state.pending_coalesce, key, event)}
+  end
+
+  @spec flush_coalescables(state()) :: state()
+  defp flush_coalescables(%{pending_coalesce: pending} = state)
+       when map_size(pending) == 0 do
+    state
+  end
+
+  defp flush_coalescables(state) do
+    if state.coalesce_timer, do: Process.cancel_timer(state.coalesce_timer)
+
+    state =
+      Enum.reduce(state.pending_coalesce, state, fn {_key, event}, acc ->
+        run_update(acc, event)
+      end)
+
+    %{state | pending_coalesce: %{}, coalesce_timer: nil}
   end
 end
