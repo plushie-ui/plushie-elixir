@@ -112,6 +112,7 @@ defmodule Toddy.Tree do
     normalized_props =
       props
       |> atomize_keys()
+      |> atomize_a11y()
       |> resolve_a11y_id_refs(scope)
       |> encode_prop_values()
 
@@ -393,6 +394,12 @@ defmodule Toddy.Tree do
     end)
   end
 
+  # Atomize string keys inside the :a11y sub-map so resolve_a11y_id_refs
+  # can always match on atom keys like :labelled_by, :described_by, etc.
+  defp atomize_a11y(%{a11y: %_{}} = props), do: props
+  defp atomize_a11y(%{a11y: %{} = a11y} = props), do: %{props | a11y: atomize_keys(a11y)}
+  defp atomize_a11y(props), do: props
+
   # Encodes prop values (atoms -> strings, structs via Encode protocol,
   # tuples -> lists) while keeping map keys as atoms. Key stringification
   # happens at the wire encoding boundary in Protocol.Encode.
@@ -422,10 +429,24 @@ defmodule Toddy.Tree do
   # Private
 
   defp normalize_children_with_scope(children, scope) when is_list(children) do
-    Enum.map(children, &normalize_with_scope(&1, scope))
+    normalized = Enum.map(children, &normalize_with_scope(&1, scope))
+    check_duplicate_ids(normalized)
+    normalized
   end
 
   defp normalize_children_with_scope(_, _scope), do: []
+
+  defp check_duplicate_ids(children) do
+    ids = Enum.map(children, & &1.id)
+
+    if length(ids) != length(Enum.uniq(ids)) do
+      dupes = ids -- Enum.uniq(ids)
+
+      Logger.error(
+        "Duplicate sibling IDs detected during normalize: #{inspect(Enum.uniq(dupes))}"
+      )
+    end
+  end
 
   defp do_find_all(%{children: children} = node, fun, acc) do
     acc = if fun.(node), do: [node | acc], else: acc
