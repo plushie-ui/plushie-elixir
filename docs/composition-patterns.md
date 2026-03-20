@@ -12,9 +12,9 @@ at the top of your view function:
 
 ```elixir
 import Toddy.UI
-alias Toddy.Iced.StyleMap
-alias Toddy.Iced.Border
-alias Toddy.Iced.Shadow
+alias Toddy.Type.StyleMap
+alias Toddy.Type.Border
+alias Toddy.Type.Shadow
 ```
 
 ---
@@ -31,8 +31,8 @@ views.
 defmodule TabApp do
   @behaviour Toddy.App
 
-  alias Toddy.Iced.StyleMap
-  alias Toddy.Iced.Border
+  alias Toddy.Type.StyleMap
+  alias Toddy.Type.Border
 
   def init(_opts), do: %{active_tab: :overview}
 
@@ -121,7 +121,7 @@ that highlight on hover. The selected item has an accent background.
 defmodule SidebarApp do
   @behaviour Toddy.App
 
-  alias Toddy.Iced.StyleMap
+  alias Toddy.Type.StyleMap
 
   @nav_items [
     {:inbox, "Inbox"},
@@ -216,8 +216,8 @@ view.
 defmodule ToolbarApp do
   @behaviour Toddy.App
 
-  alias Toddy.Iced.StyleMap
-  alias Toddy.Iced.Border
+  alias Toddy.Type.StyleMap
+  alias Toddy.Type.Border
 
   def init(_opts), do: %{bold: false, italic: false, underline: false}
 
@@ -315,9 +315,9 @@ container that dims the background.
 defmodule ModalApp do
   @behaviour Toddy.App
 
-  alias Toddy.Iced.StyleMap
-  alias Toddy.Iced.Border
-  alias Toddy.Iced.Shadow
+  alias Toddy.Type.StyleMap
+  alias Toddy.Type.Border
+  alias Toddy.Type.Shadow
 
   def init(_opts), do: %{show_modal: false, confirmed: false}
 
@@ -412,8 +412,8 @@ styled container.
 defmodule CardApp do
   @behaviour Toddy.App
 
-  alias Toddy.Iced.Border
-  alias Toddy.Iced.Shadow
+  alias Toddy.Type.Border
+  alias Toddy.Type.Shadow
 
   def init(_opts), do: %{}
   def update(model, _event), do: model
@@ -517,7 +517,7 @@ cursor to a horizontal resize indicator.
 defmodule SplitApp do
   @behaviour Toddy.App
 
-  alias Toddy.Iced.Border
+  alias Toddy.Type.Border
 
   def init(_opts), do: %{left_width: 300}
 
@@ -602,7 +602,7 @@ location.
 defmodule BreadcrumbApp do
   @behaviour Toddy.App
 
-  alias Toddy.Iced.StyleMap
+  alias Toddy.Type.StyleMap
 
   def init(_opts), do: %{path: ["Home", "Projects", "Toddy", "Docs"]}
 
@@ -688,8 +688,8 @@ for tags, counts, status indicators, or filter chips.
 defmodule BadgeApp do
   @behaviour Toddy.App
 
-  alias Toddy.Iced.StyleMap
-  alias Toddy.Iced.Border
+  alias Toddy.Type.StyleMap
+  alias Toddy.Type.Border
 
   @tags ["elixir", "rust", "iced", "desktop"]
 

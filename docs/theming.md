@@ -167,7 +167,7 @@ visual treatment.
 ## Widget-level styling
 
 Individual widgets accept a `style` prop. This can be a named preset atom
-or a `Toddy.Iced.StyleMap` struct for per-instance visual customization.
+or a `Toddy.Type.StyleMap` struct for per-instance visual customization.
 
 ### Named presets
 
@@ -188,15 +188,15 @@ text_input, text_editor, checkbox, radio, toggler, pick_list, progress_bar,
 rule, slider, vertical_slider, and tooltip.
 
 ```elixir
-alias Toddy.Iced.StyleMap
+alias Toddy.Type.StyleMap
 
 # Build a style map with the builder pattern
 card_style =
   StyleMap.new()
   |> StyleMap.background("#ffffff")
   |> StyleMap.text_color("#1a1a1a")
-  |> StyleMap.border(Toddy.Iced.Border.new() |> Toddy.Iced.Border.rounded(8) |> Toddy.Iced.Border.width(1) |> Toddy.Iced.Border.color("#e0e0e0"))
-  |> StyleMap.shadow(Toddy.Iced.Shadow.new() |> Toddy.Iced.Shadow.color("#00000020") |> Toddy.Iced.Shadow.offset(0, 2) |> Toddy.Iced.Shadow.blur_radius(8))
+  |> StyleMap.border(Toddy.Type.Border.new() |> Toddy.Type.Border.rounded(8) |> Toddy.Type.Border.width(1) |> Toddy.Type.Border.color("#e0e0e0"))
+  |> StyleMap.shadow(Toddy.Type.Shadow.new() |> Toddy.Type.Shadow.color("#00000020") |> Toddy.Type.Shadow.offset(0, 2) |> Toddy.Type.Shadow.blur_radius(8))
 
 container "card", style: card_style do
   text("Card content")
@@ -207,8 +207,8 @@ end
 
 - `background` -- hex color for the widget background
 - `text_color` -- hex color for text
-- `border` -- a `Toddy.Iced.Border` struct (color, width, radius)
-- `shadow` -- a `Toddy.Iced.Shadow` struct (color, offset, blur_radius)
+- `border` -- a `Toddy.Type.Border` struct (color, width, radius)
+- `shadow` -- a `Toddy.Type.Shadow` struct (color, offset, blur_radius)
 
 ### Status overrides
 
@@ -252,7 +252,7 @@ button("cta", "Get Started", style:
   StyleMap.new()
   |> StyleMap.background("#7c3aed")
   |> StyleMap.text_color("#ffffff")
-  |> StyleMap.border(Toddy.Iced.Border.new() |> Toddy.Iced.Border.rounded(24))
+  |> StyleMap.border(Toddy.Type.Border.new() |> Toddy.Type.Border.rounded(24))
 )
 ```
 

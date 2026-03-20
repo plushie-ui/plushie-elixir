@@ -63,7 +63,7 @@ defmodule Toddy.Tree do
   end
 
   def normalize(%module{} = widget) when is_atom(module) do
-    normalize(Toddy.Iced.Widget.to_node(widget))
+    normalize(Toddy.Widget.to_node(widget))
   end
 
   def normalize(%{} = node) do
@@ -73,7 +73,7 @@ defmodule Toddy.Tree do
   # Private scope-aware normalize. `scope` is the prefix string to prepend
   # to children's IDs (e.g. "sidebar/form"). Empty string means no scope.
   defp normalize_with_scope(%module{} = widget, scope) when is_atom(module) do
-    normalize_with_scope(Toddy.Iced.Widget.to_node(widget), scope)
+    normalize_with_scope(Toddy.Widget.to_node(widget), scope)
   end
 
   defp normalize_with_scope(%{} = node, scope) do
@@ -417,7 +417,7 @@ defmodule Toddy.Tree do
 
   # Structs must be encoded before key stringification -- otherwise they
   # match the bare map clause and get destructured into raw struct fields.
-  defp stringify_value(%_{} = v), do: Toddy.Iced.Encode.encode(v)
+  defp stringify_value(%_{} = v), do: Toddy.Encode.encode(v)
 
   # Recurse into nested maps for stringify_keys, but not lists.
   # Lists in props are treated as scalar sequences (e.g. color tuples, ranges),
@@ -430,7 +430,7 @@ defmodule Toddy.Tree do
 
   # Tuples can leak into props from incorrect function calls (e.g. keyword
   # opts passed as positional args). Convert to list for wire-format compat
-  # -- matches the behaviour of Toddy.Iced.Encode.Tuple.
+  # -- matches the behaviour of Toddy.Encode.Tuple.
   defp stringify_value(tuple) when is_tuple(tuple) do
     tuple |> Tuple.to_list() |> Enum.map(&stringify_value/1)
   end

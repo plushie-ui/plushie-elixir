@@ -42,7 +42,7 @@ defmodule Toddy.Extension do
   - `with_options/2` -- applies keyword options via setters
   - `build/1` -- converts the struct to a `ui_node()` map
   - `@type t`, `@type option` -- typespecs for dialyzer
-  - `Toddy.Iced.Widget` protocol implementation
+  - `Toddy.Widget` protocol implementation
   - Command functions (native_widget only) that wrap
     `Toddy.Command.extension_command/3`
 
@@ -51,10 +51,10 @@ defmodule Toddy.Extension do
   Supported prop types and their encoding:
 
   - `:number`, `:string`, `:boolean` -- pass through
-  - `:color` -- normalized via `Toddy.Iced.Color.cast/1`
-  - `:length` -- encoded via `Toddy.Iced.Encode.encode/1`
-  - `:padding` -- encoded via `Toddy.Iced.Encode.encode/1`
-  - `:alignment` -- encoded via `Toddy.Iced.Encode.encode/1`
+  - `:color` -- normalized via `Toddy.Type.Color.cast/1`
+  - `:length` -- encoded via `Toddy.Encode.encode/1`
+  - `:padding` -- encoded via `Toddy.Encode.encode/1`
+  - `:alignment` -- encoded via `Toddy.Encode.encode/1`
   - `:font` -- pass through
   - `:style` -- pass through (atom or StyleMap)
   - `:atom` -- converted to string via `Atom.to_string/1`
@@ -101,7 +101,7 @@ defmodule Toddy.Extension do
   ## Special options
 
   All widgets automatically support the `:a11y` option for accessibility
-  overrides (see `Toddy.Iced.A11y`). It does not need to be declared via
+  overrides (see `Toddy.Type.A11y`). It does not need to be declared via
   `prop` -- it is always available on `new/2`.
   """
 
@@ -424,7 +424,7 @@ defmodule Toddy.Extension do
 
     if container or has_render_3 do
       quote do
-        @spec new(id :: String.t(), opts :: keyword()) :: Toddy.Iced.ui_node()
+        @spec new(id :: String.t(), opts :: keyword()) :: Toddy.Widget.ui_node()
         def new(id, opts \\ []) when is_binary(id) do
           {children, opts} = Keyword.pop(opts, :do, [])
           children = List.wrap(children)
@@ -449,7 +449,7 @@ defmodule Toddy.Extension do
       end
     else
       quote do
-        @spec new(id :: String.t(), opts :: keyword()) :: Toddy.Iced.ui_node()
+        @spec new(id :: String.t(), opts :: keyword()) :: Toddy.Widget.ui_node()
         def new(id, opts \\ []) when is_binary(id) do
           {a11y_val, opts} = Keyword.pop(opts, :a11y)
 
@@ -484,7 +484,7 @@ defmodule Toddy.Extension do
   # - A setter function per prop with encoding and guards
   # - a11y/2 setter for accessibility overrides
   # - build/1 convenience that calls the protocol
-  # - Toddy.Iced.Widget protocol implementation (to_node)
+  # - Toddy.Widget protocol implementation (to_node)
 
   defp generate_struct_and_types(props, container) do
     prop_fields =
@@ -499,13 +499,13 @@ defmodule Toddy.Extension do
 
     type_fields =
       [{:id, quote(do: String.t())} | prop_type_fields] ++
-        if(container, do: [{:children, quote(do: [Toddy.Iced.ui_node()])}], else: []) ++
-        [{:a11y, quote(do: Toddy.Iced.A11y.t() | nil)}]
+        if(container, do: [{:children, quote(do: [Toddy.Widget.ui_node()])}], else: []) ++
+        [{:a11y, quote(do: Toddy.Type.A11y.t() | nil)}]
 
     option_variants =
       Enum.map(props, fn {name, type, _opts} ->
         quote(do: {unquote(name), unquote(elixir_type_for(type))})
-      end) ++ [quote(do: {:a11y, Toddy.Iced.A11y.t()})]
+      end) ++ [quote(do: {:a11y, Toddy.Type.A11y.t()})]
 
     quote do
       defstruct unquote(struct_fields)
@@ -517,7 +517,7 @@ defmodule Toddy.Extension do
   end
 
   defp prop_type_ast({name, :color, _opts}) do
-    {name, quote(do: Toddy.Iced.Color.t() | nil)}
+    {name, quote(do: Toddy.Type.Color.t() | nil)}
   end
 
   defp prop_type_ast({name, type, _opts}) do
@@ -527,12 +527,12 @@ defmodule Toddy.Extension do
   defp elixir_type_for(:number), do: quote(do: number())
   defp elixir_type_for(:string), do: quote(do: String.t())
   defp elixir_type_for(:boolean), do: quote(do: boolean())
-  defp elixir_type_for(:color), do: quote(do: Toddy.Iced.Color.input())
-  defp elixir_type_for(:length), do: quote(do: Toddy.Iced.Length.t())
-  defp elixir_type_for(:padding), do: quote(do: Toddy.Iced.Padding.t())
-  defp elixir_type_for(:alignment), do: quote(do: Toddy.Iced.Alignment.t())
-  defp elixir_type_for(:font), do: quote(do: Toddy.Iced.Font.t())
-  defp elixir_type_for(:style), do: quote(do: atom() | Toddy.Iced.StyleMap.t())
+  defp elixir_type_for(:color), do: quote(do: Toddy.Type.Color.input())
+  defp elixir_type_for(:length), do: quote(do: Toddy.Type.Length.t())
+  defp elixir_type_for(:padding), do: quote(do: Toddy.Type.Padding.t())
+  defp elixir_type_for(:alignment), do: quote(do: Toddy.Type.Alignment.t())
+  defp elixir_type_for(:font), do: quote(do: Toddy.Type.Font.t())
+  defp elixir_type_for(:style), do: quote(do: atom() | Toddy.Type.StyleMap.t())
   defp elixir_type_for(:atom), do: quote(do: atom())
   defp elixir_type_for(:map), do: quote(do: map())
   defp elixir_type_for(:any), do: quote(do: term())
@@ -647,9 +647,9 @@ defmodule Toddy.Extension do
     a11y_setter =
       quote do
         @doc "Sets accessibility annotations."
-        @spec a11y(widget :: t(), a11y :: Toddy.Iced.A11y.t()) :: t()
+        @spec a11y(widget :: t(), a11y :: Toddy.Type.A11y.t()) :: t()
         def a11y(%__MODULE__{} = widget, a11y) do
-          %{widget | a11y: Toddy.Iced.A11y.cast(a11y)}
+          %{widget | a11y: Toddy.Type.A11y.cast(a11y)}
         end
       end
 
@@ -667,8 +667,8 @@ defmodule Toddy.Extension do
   defp generate_build do
     quote do
       @doc "Converts this widget struct to a `ui_node()` map."
-      @spec build(widget :: t()) :: Toddy.Iced.ui_node()
-      def build(%__MODULE__{} = widget), do: Toddy.Iced.Widget.to_node(widget)
+      @spec build(widget :: t()) :: Toddy.Widget.ui_node()
+      def build(%__MODULE__{} = widget), do: Toddy.Widget.to_node(widget)
     end
   end
 
@@ -680,7 +680,7 @@ defmodule Toddy.Extension do
 
         quote do
           props =
-            Toddy.Iced.Widget.Build.put_if(
+            Toddy.Widget.Build.put_if(
               props,
               widget.unquote(name),
               unquote(key_string),
@@ -691,12 +691,12 @@ defmodule Toddy.Extension do
 
     a11y_put =
       quote do
-        props = Toddy.Iced.Widget.Build.put_if(props, widget.a11y, "a11y")
+        props = Toddy.Widget.Build.put_if(props, widget.a11y, "a11y")
       end
 
     children =
       if container do
-        quote(do: Toddy.Iced.Widget.Build.children_to_nodes(widget.children))
+        quote(do: Toddy.Widget.Build.children_to_nodes(widget.children))
       else
         quote(do: [])
       end
@@ -704,7 +704,7 @@ defmodule Toddy.Extension do
     # defimpl must be defined at the top level of the module, not inside a
     # function. We generate the AST here; it's injected via __before_compile__.
     quote do
-      defimpl Toddy.Iced.Widget do
+      defimpl Toddy.Widget do
         def to_node(widget) do
           props = %{}
           unquote_splicing(put_calls)
@@ -724,11 +724,11 @@ defmodule Toddy.Extension do
   # Encoder for the protocol (to_node) -- uses the Build.put_if transform pattern.
   # Returns a function AST that encodes the value for the wire.
   defp protocol_encoder_for_type(:color) do
-    quote(do: fn val -> Toddy.Iced.Color.cast(val) end)
+    quote(do: fn val -> Toddy.Type.Color.cast(val) end)
   end
 
   defp protocol_encoder_for_type(type) when type in [:length, :padding, :alignment, :style] do
-    quote(do: fn val -> Toddy.Iced.Encode.encode(val) end)
+    quote(do: fn val -> Toddy.Encode.encode(val) end)
   end
 
   defp protocol_encoder_for_type(:atom) do
@@ -760,25 +760,25 @@ defmodule Toddy.Extension do
 
   defp encoder_for_type(:color) do
     quote do
-      fn val -> Toddy.Iced.Color.cast(val) end
+      fn val -> Toddy.Type.Color.cast(val) end
     end
   end
 
   defp encoder_for_type(:length) do
     quote do
-      fn val -> Toddy.Iced.Encode.encode(val) end
+      fn val -> Toddy.Encode.encode(val) end
     end
   end
 
   defp encoder_for_type(:padding) do
     quote do
-      fn val -> Toddy.Iced.Encode.encode(val) end
+      fn val -> Toddy.Encode.encode(val) end
     end
   end
 
   defp encoder_for_type(:alignment) do
     quote do
-      fn val -> Toddy.Iced.Encode.encode(val) end
+      fn val -> Toddy.Encode.encode(val) end
     end
   end
 
@@ -790,7 +790,7 @@ defmodule Toddy.Extension do
 
   defp encoder_for_type(:style) do
     quote do
-      fn val -> Toddy.Iced.Encode.encode(val) end
+      fn val -> Toddy.Encode.encode(val) end
     end
   end
 

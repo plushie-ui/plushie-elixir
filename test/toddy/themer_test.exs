@@ -1,9 +1,9 @@
 defmodule Toddy.ThemerTest do
   use ExUnit.Case, async: true
 
-  describe "Toddy.Iced.themer/3" do
+  describe "themer widget construction" do
     test "creates themer node with theme prop" do
-      node = Toddy.Iced.themer("t1", %{theme: "CatppuccinMocha"})
+      node = Toddy.Widget.Node.build("t1", "themer", %{theme: "CatppuccinMocha"})
       assert node.id == "t1"
       assert node.type == "themer"
       assert node.props["theme"] == "CatppuccinMocha"
@@ -11,20 +11,20 @@ defmodule Toddy.ThemerTest do
     end
 
     test "creates themer with children" do
-      child = Toddy.Iced.text("txt", %{content: "hello"})
-      node = Toddy.Iced.themer("t1", %{theme: "Light"}, [child])
+      child = Toddy.Widget.Node.build("txt", "text", %{content: "hello"})
+      node = Toddy.Widget.Node.build("t1", "themer", %{theme: "Light"}, [child])
       assert length(node.children) == 1
       assert hd(node.children).type == "text"
     end
 
     test "creates themer with custom palette" do
       palette = %{background: "#1e1e2e", text: "#cdd6f4", primary: "#89b4fa"}
-      node = Toddy.Iced.themer("t1", %{theme: palette})
+      node = Toddy.Widget.Node.build("t1", "themer", %{theme: palette})
       assert is_map(node.props["theme"])
     end
 
     test "creates themer with no props" do
-      node = Toddy.Iced.themer("t1")
+      node = Toddy.Widget.Node.build("t1", "themer", %{})
       assert node.id == "t1"
       assert node.type == "themer"
       assert node.props == %{}
@@ -33,12 +33,12 @@ defmodule Toddy.ThemerTest do
 
     test "creates themer with multiple children" do
       children = [
-        Toddy.Iced.text("a", %{content: "first"}),
-        Toddy.Iced.text("b", %{content: "second"}),
-        Toddy.Iced.button("c", %{label: "click"})
+        Toddy.Widget.Node.build("a", "text", %{content: "first"}),
+        Toddy.Widget.Node.build("b", "text", %{content: "second"}),
+        Toddy.Widget.Node.build("c", "button", %{label: "click"})
       ]
 
-      node = Toddy.Iced.themer("t1", %{theme: "Dark"}, children)
+      node = Toddy.Widget.Node.build("t1", "themer", %{theme: "Dark"}, children)
       assert length(node.children) == 3
       assert Enum.map(node.children, & &1.type) == ["text", "text", "button"]
     end
@@ -52,7 +52,7 @@ defmodule Toddy.ThemerTest do
         danger: "#f38ba8"
       }
 
-      node = Toddy.Iced.themer("t1", %{theme: palette})
+      node = Toddy.Widget.Node.build("t1", "themer", %{theme: palette})
       theme = node.props["theme"]
       assert theme.background == "#1e1e2e"
       assert theme.text == "#cdd6f4"

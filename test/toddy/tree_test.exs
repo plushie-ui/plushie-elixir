@@ -122,9 +122,9 @@ defmodule Toddy.TreeTest do
 
     test "encodes struct-valued props (StyleMap) without raising" do
       style =
-        Toddy.Iced.StyleMap.new()
-        |> Toddy.Iced.StyleMap.background("#1b2435")
-        |> Toddy.Iced.StyleMap.text_color("#eaf0fb")
+        Toddy.Type.StyleMap.new()
+        |> Toddy.Type.StyleMap.background("#1b2435")
+        |> Toddy.Type.StyleMap.text_color("#eaf0fb")
 
       node = %{id: "c", type: "container", props: %{style: style}, children: []}
       result = Tree.normalize(node)

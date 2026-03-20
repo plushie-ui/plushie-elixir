@@ -3,11 +3,11 @@ defmodule Toddy.PaneGridTest do
 
   alias Toddy.Event.Pane
 
-  describe "Toddy.Iced.pane_grid/3" do
+  describe "pane_grid widget construction" do
     test "creates pane_grid node with children" do
-      left = Toddy.Iced.text("left", %{content: "Left"})
-      right = Toddy.Iced.text("right", %{content: "Right"})
-      node = Toddy.Iced.pane_grid("pg1", %{spacing: 4}, [left, right])
+      left = Toddy.Widget.Node.build("left", "text", %{content: "Left"})
+      right = Toddy.Widget.Node.build("right", "text", %{content: "Right"})
+      node = Toddy.Widget.Node.build("pg1", "pane_grid", %{spacing: 4}, [left, right])
       assert node.id == "pg1"
       assert node.type == "pane_grid"
       assert node.props["spacing"] == 4
@@ -15,7 +15,7 @@ defmodule Toddy.PaneGridTest do
     end
 
     test "creates pane_grid with default props" do
-      node = Toddy.Iced.pane_grid("pg1")
+      node = Toddy.Widget.Node.build("pg1", "pane_grid", %{})
       assert node.props == %{}
       assert node.children == []
     end

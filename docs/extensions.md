@@ -1014,12 +1014,12 @@ end
 ```
 
 toddy is a compile-time dependency. Your package does not need the renderer
-binary -- it only uses toddy's Elixir modules (`Toddy.Iced.Widget`,
-`Toddy.Iced.Widget.Build`, `Toddy.Iced.Encode`, type modules).
+binary -- it only uses toddy's Elixir modules (`Toddy.Widget`,
+`Toddy.Widget.Build`, `Toddy.Encode`, type modules).
 
 ### Building a widget
 
-Implement the `Toddy.Iced.Widget` protocol on your struct. The `to_node/1`
+Implement the `Toddy.Widget` protocol on your struct. The `to_node/1`
 implementation composes existing built-in node types. The renderer handles
 them without modification.
 
@@ -1042,7 +1042,7 @@ defmodule MyWidget.DonutChart do
       |> DonutChart.build()
   """
 
-  alias Toddy.Iced.Widget.Build
+  alias Toddy.Widget.Build
   alias Toddy.Canvas.Shape
 
   @type segment :: {label :: String.t(), value :: number(), color :: String.t()}
@@ -1050,14 +1050,14 @@ defmodule MyWidget.DonutChart do
   @type option ::
           {:size, number()}
           | {:thickness, number()}
-          | {:background, Toddy.Iced.Color.t()}
+          | {:background, Toddy.Type.Color.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
           segments: [segment()],
           size: number(),
           thickness: number(),
-          background: Toddy.Iced.Color.t() | nil
+          background: Toddy.Type.Color.t() | nil
         }
 
   defstruct [:id, :segments, size: 200, thickness: 40, background: nil]
@@ -1073,9 +1073,9 @@ defmodule MyWidget.DonutChart do
   @spec thickness(donut_chart :: t(), thickness :: number()) :: t()
   def thickness(%__MODULE__{} = chart, thickness), do: %{chart | thickness: thickness}
 
-  @spec background(donut_chart :: t(), color :: Toddy.Iced.Color.t()) :: t()
+  @spec background(donut_chart :: t(), color :: Toddy.Type.Color.t()) :: t()
   def background(%__MODULE__{} = chart, color) do
-    %{chart | background: Toddy.Iced.Color.cast(color)}
+    %{chart | background: Toddy.Type.Color.cast(color)}
   end
 
   @spec with_options(donut_chart :: t(), opts :: [option()]) :: t()
@@ -1090,18 +1090,18 @@ defmodule MyWidget.DonutChart do
     end)
   end
 
-  @spec build(donut_chart :: t()) :: Toddy.Iced.ui_node()
-  def build(%__MODULE__{} = chart), do: Toddy.Iced.Widget.to_node(chart)
+  @spec build(donut_chart :: t()) :: Toddy.Widget.ui_node()
+  def build(%__MODULE__{} = chart), do: Toddy.Widget.to_node(chart)
 
   # -- Widget protocol --
 
-  defimpl Toddy.Iced.Widget do
+  defimpl Toddy.Widget do
     def to_node(chart) do
       layers = %{"arcs" => build_arc_shapes(chart)}
 
       props =
         %{"layers" => layers, "width" => chart.size, "height" => chart.size}
-        |> Toddy.Iced.Widget.Build.put_if(chart.background, "background")
+        |> Toddy.Widget.Build.put_if(chart.background, "background")
 
       %{id: chart.id, type: "canvas", props: props, children: []}
     end
@@ -1154,7 +1154,7 @@ Key points:
 #### Convenience constructors
 
 For consumer ergonomics, add a top-level module with functions that mirror
-the `Toddy.UI` / `Toddy.Iced` calling conventions:
+the `Toddy.UI` / `Toddy.Widget` calling conventions:
 
 ```elixir
 defmodule MyWidget do
@@ -1162,7 +1162,7 @@ defmodule MyWidget do
 
   @doc "Creates a donut chart node."
   @spec donut_chart(id :: String.t(), segments :: [DonutChart.segment()], opts :: Keyword.t()) ::
-          Toddy.Iced.ui_node()
+          Toddy.Widget.ui_node()
   def donut_chart(id, segments, opts \\ []) do
     DonutChart.new(id, segments, opts) |> DonutChart.build()
   end

@@ -31,21 +31,21 @@ defmodule Toddy.SensorTest do
 
   describe "sensor widget construction" do
     test "sensor node with default props" do
-      node = Toddy.Iced.sensor("s1", %{}, [])
+      node = Toddy.Widget.Node.build("s1", "sensor", %{}, [])
       assert node.id == "s1"
       assert node.type == "sensor"
     end
 
     test "sensor node with children" do
-      child = Toddy.Iced.text("inner", %{content: "content"})
-      node = Toddy.Iced.sensor("s1", %{on_resize: true}, [child])
+      child = Toddy.Widget.Node.build("inner", "text", %{content: "content"})
+      node = Toddy.Widget.Node.build("s1", "sensor", %{on_resize: true}, [child])
       assert node.props["on_resize"] == true
       assert length(node.children) == 1
       assert hd(node.children).type == "text"
     end
 
     test "sensor node with no args" do
-      node = Toddy.Iced.sensor("s1")
+      node = Toddy.Widget.Node.build("s1", "sensor", %{})
       assert node.id == "s1"
       assert node.type == "sensor"
       assert node.props == %{}

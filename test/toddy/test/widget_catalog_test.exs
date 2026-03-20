@@ -1,9 +1,9 @@
 defmodule Toddy.Test.WidgetCatalogTest do
   use ExUnit.Case, async: true
 
-  alias Toddy.Iced.Widget
+  alias Toddy.Widget
 
-  alias Toddy.Iced.Widget.{
+  alias Toddy.Widget.{
     Button,
     Checkbox,
     Column,
@@ -409,7 +409,7 @@ defmodule Toddy.Test.WidgetCatalogTest do
 
   # -- Widget protocol dispatch --
 
-  describe "Toddy.Iced.Widget protocol" do
+  describe "Toddy.Widget protocol" do
     test "to_node dispatches through protocol for each struct type" do
       for widget <- [
             Button.new("b", "Go"),

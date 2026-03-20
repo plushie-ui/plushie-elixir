@@ -79,24 +79,26 @@ defmodule Toddy.CanvasEventsTest do
 
   describe "canvas interactive props" do
     test "canvas node with interactive prop" do
-      node = Toddy.Iced.canvas("c1", %{interactive: true, layers: %{}})
+      node = Toddy.Widget.Node.build("c1", "canvas", %{interactive: true, layers: %{}})
       assert node.props["interactive"] == true
     end
 
     test "canvas node with individual event props" do
-      node = Toddy.Iced.canvas("c1", %{on_press: true, on_move: true, layers: %{}})
+      node =
+        Toddy.Widget.Node.build("c1", "canvas", %{on_press: true, on_move: true, layers: %{}})
+
       assert node.props["on_press"] == true
       assert node.props["on_move"] == true
     end
 
     test "canvas node has correct type" do
-      node = Toddy.Iced.canvas("c1", %{layers: %{}})
+      node = Toddy.Widget.Node.build("c1", "canvas", %{layers: %{}})
       assert node.id == "c1"
       assert node.type == "canvas"
     end
 
     test "canvas node has no children" do
-      node = Toddy.Iced.canvas("c1")
+      node = Toddy.Widget.Node.build("c1", "canvas", %{})
       assert node.children == []
     end
   end

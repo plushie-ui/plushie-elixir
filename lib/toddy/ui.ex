@@ -108,9 +108,9 @@ defmodule Toddy.UI do
           type :: String.t(),
           id :: String.t() | nil,
           opts :: keyword(),
-          children :: [Toddy.Iced.ui_node()],
+          children :: [Toddy.Widget.ui_node()],
           auto_id :: String.t()
-        ) :: Toddy.Iced.ui_node()
+        ) :: Toddy.Widget.ui_node()
   def __build_node__(type, id, opts, children, auto_id) do
     resolved_id =
       id ||
@@ -127,7 +127,7 @@ defmodule Toddy.UI do
     props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
     %{
       id: resolved_id,
@@ -1028,14 +1028,14 @@ defmodule Toddy.UI do
 
       button("save", "Save", style: :primary)
   """
-  @spec button(id :: String.t(), label :: String.t(), opts :: keyword()) :: Toddy.Iced.ui_node()
+  @spec button(id :: String.t(), label :: String.t(), opts :: keyword()) :: Toddy.Widget.ui_node()
   def button(id, label, opts \\ []) do
     base_props = %{"label" => label}
 
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
     %{id: id, type: "button", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1050,7 +1050,7 @@ defmodule Toddy.UI do
       text_input("name", model.name, placeholder: "Your name")
   """
   @spec text_input(id :: String.t(), value :: String.t(), opts :: keyword()) ::
-          Toddy.Iced.ui_node()
+          Toddy.Widget.ui_node()
   def text_input(id, value, opts \\ [])
 
   def text_input(id, value, opts) when not is_keyword(value) do
@@ -1059,7 +1059,7 @@ defmodule Toddy.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
     %{id: id, type: "text_input", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1074,7 +1074,7 @@ defmodule Toddy.UI do
       checkbox("agree", model.agreed, label: "I agree")
   """
   @spec checkbox(id :: String.t(), checked :: boolean(), opts :: keyword()) ::
-          Toddy.Iced.ui_node()
+          Toddy.Widget.ui_node()
   def checkbox(id, checked, opts \\ [])
 
   def checkbox(id, checked, opts) when not is_keyword(checked) do
@@ -1083,7 +1083,7 @@ defmodule Toddy.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
     %{id: id, type: "checkbox", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1143,7 +1143,7 @@ defmodule Toddy.UI do
       extra_props =
         opts
         |> Keyword.drop([:children, :id, :do])
-        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
       %{id: id, type: "text", props: Map.merge(base_props, extra_props), children: []}
     end
@@ -1166,7 +1166,7 @@ defmodule Toddy.UI do
       props =
         opts
         |> Keyword.drop([:children, :id, :do])
-        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
       id =
         Keyword.get(opts, :id) || unquote(compile_auto_id(caller_mod, caller_line))
@@ -1238,7 +1238,7 @@ defmodule Toddy.UI do
       extra_props =
         opts
         |> Keyword.drop([:children, :id, :do])
-        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
       %{id: id, type: "progress_bar", props: Map.merge(base_props, extra_props), children: []}
     end
@@ -1258,7 +1258,7 @@ defmodule Toddy.UI do
       toggler("dark_mode", model.dark_mode, label: "Dark mode")
   """
   @spec toggler(id :: String.t(), is_toggled :: boolean(), opts :: keyword()) ::
-          Toddy.Iced.ui_node()
+          Toddy.Widget.ui_node()
   def toggler(id, is_toggled, opts \\ [])
 
   def toggler(id, is_toggled, opts) when not is_keyword(is_toggled) do
@@ -1267,7 +1267,7 @@ defmodule Toddy.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
     %{id: id, type: "toggler", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1289,7 +1289,7 @@ defmodule Toddy.UI do
           selected :: String.t() | nil,
           opts :: keyword()
         ) ::
-          Toddy.Iced.ui_node()
+          Toddy.Widget.ui_node()
   def radio(id, value, selected, opts \\ [])
 
   def radio(id, value, selected, opts) when not is_keyword(value) and not is_keyword(selected) do
@@ -1298,7 +1298,7 @@ defmodule Toddy.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
     %{id: id, type: "radio", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1322,7 +1322,7 @@ defmodule Toddy.UI do
           value :: number(),
           opts :: keyword()
         ) ::
-          Toddy.Iced.ui_node()
+          Toddy.Widget.ui_node()
   def slider(id, range, value, opts \\ [])
 
   def slider(id, range, value, opts) when not is_keyword(range) and not is_keyword(value) do
@@ -1332,7 +1332,7 @@ defmodule Toddy.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
     %{id: id, type: "slider", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1353,7 +1353,7 @@ defmodule Toddy.UI do
           value :: number(),
           opts :: keyword()
         ) ::
-          Toddy.Iced.ui_node()
+          Toddy.Widget.ui_node()
   def vertical_slider(id, range, value, opts \\ [])
 
   def vertical_slider(id, range, value, opts)
@@ -1364,7 +1364,7 @@ defmodule Toddy.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
     %{id: id, type: "vertical_slider", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1381,7 +1381,7 @@ defmodule Toddy.UI do
           options :: [String.t()],
           selected :: String.t() | nil,
           opts :: keyword()
-        ) :: Toddy.Iced.ui_node()
+        ) :: Toddy.Widget.ui_node()
   def pick_list(id, options, selected, opts \\ [])
 
   def pick_list(id, options, selected, opts)
@@ -1391,7 +1391,7 @@ defmodule Toddy.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
     %{id: id, type: "pick_list", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1409,7 +1409,7 @@ defmodule Toddy.UI do
           value :: String.t(),
           opts :: keyword()
         ) ::
-          Toddy.Iced.ui_node()
+          Toddy.Widget.ui_node()
   def combo_box(id, options, value, opts \\ [])
 
   def combo_box(id, options, value, opts)
@@ -1419,7 +1419,7 @@ defmodule Toddy.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
     %{id: id, type: "combo_box", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1432,7 +1432,7 @@ defmodule Toddy.UI do
       text_editor("notes", model.notes, width: :fill, height: 200)
   """
   @spec text_editor(id :: String.t(), content :: String.t(), opts :: keyword()) ::
-          Toddy.Iced.ui_node()
+          Toddy.Widget.ui_node()
   def text_editor(id, content, opts \\ [])
 
   def text_editor(id, content, opts) when not is_keyword(content) do
@@ -1441,7 +1441,7 @@ defmodule Toddy.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
     %{id: id, type: "text_editor", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1457,7 +1457,7 @@ defmodule Toddy.UI do
 
       image("logo", "/assets/logo.png", width: 200, content_fit: :cover)
   """
-  @spec image(id :: String.t(), source :: String.t(), opts :: keyword()) :: Toddy.Iced.ui_node()
+  @spec image(id :: String.t(), source :: String.t(), opts :: keyword()) :: Toddy.Widget.ui_node()
   def image(id, source, opts \\ [])
 
   def image(id, source, opts) when not is_keyword(source) do
@@ -1466,7 +1466,7 @@ defmodule Toddy.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
     %{id: id, type: "image", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1478,7 +1478,7 @@ defmodule Toddy.UI do
 
       svg("icon", "/assets/icon.svg", width: 24, height: 24)
   """
-  @spec svg(id :: String.t(), source :: String.t(), opts :: keyword()) :: Toddy.Iced.ui_node()
+  @spec svg(id :: String.t(), source :: String.t(), opts :: keyword()) :: Toddy.Widget.ui_node()
   def svg(id, source, opts \\ [])
 
   def svg(id, source, opts) when not is_keyword(source) do
@@ -1487,7 +1487,7 @@ defmodule Toddy.UI do
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
     %{id: id, type: "svg", props: Map.merge(base_props, extra_props), children: []}
   end
@@ -1543,7 +1543,7 @@ defmodule Toddy.UI do
       extra_props =
         opts
         |> Keyword.drop([:children, :id, :do])
-        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+        |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
       %{id: id, type: "markdown", props: Map.merge(base_props, extra_props), children: []}
     end
@@ -1646,12 +1646,12 @@ defmodule Toddy.UI do
         height: 300
       )
   """
-  @spec canvas(id :: String.t(), opts :: keyword()) :: Toddy.Iced.ui_node()
+  @spec canvas(id :: String.t(), opts :: keyword()) :: Toddy.Widget.ui_node()
   def canvas(id, opts \\ []) do
     props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
     %{id: id, type: "canvas", props: props, children: []}
   end
@@ -1723,12 +1723,12 @@ defmodule Toddy.UI do
 
       rich_text("styled", spans: [%{text: "bold", weight: :bold}, %{text: " normal"}])
   """
-  @spec rich_text(id :: String.t(), opts :: keyword()) :: Toddy.Iced.ui_node()
+  @spec rich_text(id :: String.t(), opts :: keyword()) :: Toddy.Widget.ui_node()
   def rich_text(id, opts \\ []) do
     props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
     %{id: id, type: "rich_text", props: props, children: []}
   end
@@ -1790,9 +1790,9 @@ defmodule Toddy.UI do
           type :: String.t(),
           id :: String.t(),
           opts :: keyword(),
-          children :: [Toddy.Iced.ui_node()]
+          children :: [Toddy.Widget.ui_node()]
         ) ::
-          Toddy.Iced.ui_node()
+          Toddy.Widget.ui_node()
   def __build_fixed_node__(type, id, opts, children) do
     resolved_children =
       if children != [] do
@@ -1804,7 +1804,7 @@ defmodule Toddy.UI do
     props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
     %{id: id, type: type, props: props, children: resolved_children}
   end
@@ -1823,23 +1823,23 @@ defmodule Toddy.UI do
       tree = MyApp.view(model)
       Toddy.UI.find(tree, "save_button")
   """
-  @spec find(tree :: Toddy.Iced.ui_node(), id :: String.t()) :: Toddy.Iced.ui_node() | nil
+  @spec find(tree :: Toddy.Widget.ui_node(), id :: String.t()) :: Toddy.Widget.ui_node() | nil
   defdelegate find(tree, id), to: Toddy.Tree
 
   @doc "Returns true if a node with `id` exists in the tree."
-  @spec exists?(tree :: Toddy.Iced.ui_node() | nil, id :: String.t()) :: boolean()
+  @spec exists?(tree :: Toddy.Widget.ui_node() | nil, id :: String.t()) :: boolean()
   defdelegate exists?(tree, id), to: Toddy.Tree
 
   @doc "Returns all node IDs in the tree."
-  @spec ids(tree :: Toddy.Iced.ui_node() | nil) :: [String.t()]
+  @spec ids(tree :: Toddy.Widget.ui_node() | nil) :: [String.t()]
   defdelegate ids(tree), to: Toddy.Tree
 
   @doc "Finds all nodes matching a predicate."
   @spec find_all(
-          tree :: Toddy.Iced.ui_node() | nil,
-          id_or_pred :: String.t() | (Toddy.Iced.ui_node() -> boolean())
+          tree :: Toddy.Widget.ui_node() | nil,
+          id_or_pred :: String.t() | (Toddy.Widget.ui_node() -> boolean())
         ) ::
-          [Toddy.Iced.ui_node()]
+          [Toddy.Widget.ui_node()]
   defdelegate find_all(tree, id_or_pred), to: Toddy.Tree
 
   # ---------------------------------------------------------------------------
@@ -1865,14 +1865,14 @@ defmodule Toddy.UI do
 
       qr_code("my_qr", "https://example.com", cell_size: 6)
   """
-  @spec qr_code(id :: String.t(), data :: String.t(), opts :: keyword()) :: Toddy.Iced.ui_node()
+  @spec qr_code(id :: String.t(), data :: String.t(), opts :: keyword()) :: Toddy.Widget.ui_node()
   def qr_code(id, data, opts \\ []) do
     base_props = %{"data" => data}
 
     extra_props =
       opts
       |> Keyword.drop([:children, :id, :do])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Iced.Encode.encode(v)} end)
+      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), Toddy.Encode.encode(v)} end)
 
     %{id: id, type: "qr_code", props: Map.merge(base_props, extra_props), children: []}
   end

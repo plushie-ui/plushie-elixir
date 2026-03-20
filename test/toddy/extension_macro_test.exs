@@ -203,7 +203,7 @@ defmodule Toddy.ExtensionMacroTest do
   describe "prop defaults are applied" do
     test "color default is cast and applied" do
       node = BadgeWidget.new("b1") |> BadgeWidget.build()
-      assert node.props["color"] == Toddy.Iced.Color.cast(:red)
+      assert node.props["color"] == Toddy.Type.Color.cast(:red)
       assert node.props["size"] == 14
     end
 
@@ -647,7 +647,7 @@ defmodule Toddy.ExtensionMacroTest do
 
       assert widget.label == "Hello"
       assert widget.size == 18
-      assert widget.color == Toddy.Iced.Color.cast(:green)
+      assert widget.color == Toddy.Type.Color.cast(:green)
     end
 
     test "with_options/2 applies multiple options" do
@@ -691,7 +691,7 @@ defmodule Toddy.ExtensionMacroTest do
 
     test "defaults are applied via setter encoding in build" do
       node = BadgeWidget.new("b1") |> BadgeWidget.build()
-      assert node.props["color"] == Toddy.Iced.Color.cast(:red)
+      assert node.props["color"] == Toddy.Type.Color.cast(:red)
       assert node.props["size"] == 14
     end
 

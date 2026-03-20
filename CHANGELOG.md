@@ -22,7 +22,7 @@ Initial public release.
 - **22 built-in themes** -- light, dark, dracula, nord, solarized,
   gruvbox, catppuccin, tokyo night, kanagawa, moonfly, nightfly,
   oxocarbon, ferra. Custom palettes and per-widget style overrides
-  via `Toddy.Iced.StyleMap`.
+  via `Toddy.Type.StyleMap`.
 - **Multi-window** -- declare window nodes in the widget tree; the
   framework manages open/close/update automatically.
 - **Platform effects** -- native file dialogs, clipboard (text, HTML,

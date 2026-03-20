@@ -59,7 +59,7 @@ defmodule Toddy.App do
   @doc """
   Called after every update. Returns a UI tree as a plain map.
   """
-  @callback view(model) :: Toddy.Iced.ui_node()
+  @callback view(model) :: Toddy.Widget.ui_node()
 
   @doc """
   Called after every update. Returns the list of active subscriptions.
@@ -96,7 +96,7 @@ defmodule Toddy.App do
     `scale_factor` prop on window nodes.
   - `theme` -- built-in theme atom (e.g. `:dark`, `:nord`), `:system` to
     follow the OS light/dark preference, or a custom palette map.
-    See `Toddy.Iced.Theme`.
+    See `Toddy.Type.Theme`.
   - `fonts` -- list of font paths to load
 
   Default: `[]` (renderer uses its own defaults).

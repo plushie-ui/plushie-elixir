@@ -134,7 +134,7 @@ Widget state is extracted from existing props automatically:
 ## The a11y prop
 
 For cases where auto-inference is insufficient, every widget accepts an
-`a11y` prop -- a `Toddy.Iced.A11y` struct (or bare map) of fields that
+`a11y` prop -- a `Toddy.Type.A11y` struct (or bare map) of fields that
 override or augment the inferred semantics.
 
 ### Fields
@@ -162,7 +162,7 @@ override or augment the inferred semantics.
 | `described_by` | `String.t()` | ID of the widget that describes this one |
 | `error_message` | `String.t()` | ID of the widget showing the error message |
 
-The type is defined in `Toddy.Iced.A11y`. All fields are optional -- only
+The type is defined in `Toddy.Type.A11y`. All fields are optional -- only
 include what you need. Both structs and bare maps are accepted; bare maps
 are normalized via `A11y.cast/1`.
 
@@ -211,11 +211,11 @@ button("close", "X", a11y: %A11y{label: "Close dialog"})
 button("close", "X", a11y: %{label: "Close dialog"})
 ```
 
-With the typed widget builder API (`Toddy.Iced.Widget.*`):
+With the typed widget builder API (`Toddy.Widget.*`):
 
 ```elixir
-alias Toddy.Iced.A11y
-alias Toddy.Iced.Widget.{Button, Text, TextInput}
+alias Toddy.Type.A11y
+alias Toddy.Widget.{Button, Text, TextInput}
 
 Button.new("close", "X")
 |> Button.a11y(%A11y{label: "Close dialog"})

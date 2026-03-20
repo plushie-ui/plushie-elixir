@@ -280,7 +280,7 @@ defmodule Toddy.CompositionPatternsTest do
   defmodule CardApp do
     @behaviour Toddy.App
 
-    alias Toddy.Iced.Border
+    alias Toddy.Type.Border
 
     def init(_opts), do: %{}
     def update(model, _event), do: model

@@ -8,7 +8,7 @@ Elm architecture: model, update, view.
 ```elixir
 @callback init(opts :: keyword()) :: model | {model, Toddy.Command.t()}
 @callback update(model, event) :: model | {model, Toddy.Command.t()}
-@callback view(model) :: Toddy.Iced.ui_node()
+@callback view(model) :: Toddy.Widget.ui_node()
 
 # Optional:
 @callback subscribe(model) :: [Toddy.Subscription.t()]
