@@ -223,7 +223,7 @@ defmodule Toddy.Protocol do
   """
   @spec decode_message(data :: binary(), format :: format()) ::
           Toddy.Event.t()
-          | {:hello, pos_integer(), String.t(), String.t()}
+          | {:hello, pos_integer(), String.t(), String.t(), String.t(), [String.t()]}
           | {:settings, map()}
           | {:snapshot, map()}
           | {:patch, list()}

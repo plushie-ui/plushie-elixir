@@ -178,8 +178,11 @@ defmodule Toddy.Runtime do
     {:noreply, state}
   end
 
-  def handle_info({:renderer_event, {:hello, _protocol, version, name}}, state) do
-    Logger.info("toddy runtime: renderer connected -- #{name} v#{version}")
+  def handle_info(
+        {:renderer_event, {:hello, _protocol, version, name, backend, _extensions}},
+        state
+      ) do
+    Logger.info("toddy runtime: renderer connected -- #{name} v#{version} (#{backend})")
     {:noreply, state}
   end
 

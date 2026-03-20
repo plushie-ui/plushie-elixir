@@ -39,7 +39,9 @@ defmodule Toddy.Event.System do
             | :all_windows_closed
             | :image_list
             | :tree_hash
-            | :find_focused,
+            | :find_focused
+            | :announce
+            | :error,
           tag: String.t() | nil,
           data: map() | String.t() | number() | nil
         }

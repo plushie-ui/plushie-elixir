@@ -433,7 +433,7 @@ defmodule Toddy.Bridge do
         :telemetry.execute([:toddy, :bridge, :decode_error], %{}, %{reason: reason})
         state
 
-      {:hello, protocol, version, name} ->
+      {:hello, protocol, version, name, backend, extensions} ->
         expected = Toddy.Protocol.protocol_version()
 
         if protocol != expected do
@@ -445,11 +445,15 @@ defmodule Toddy.Bridge do
           send(self(), {:stop_protocol_mismatch, protocol, expected})
         else
           Logger.info(
-            "toddy bridge: renderer hello -- #{name} v#{version} (protocol #{protocol})"
+            "toddy bridge: renderer hello -- #{name} v#{version} (protocol #{protocol}, backend #{backend})"
           )
         end
 
-        send(state.runtime, {:renderer_event, {:hello, protocol, version, name}})
+        send(
+          state.runtime,
+          {:renderer_event, {:hello, protocol, version, name, backend, extensions}}
+        )
+
         %{state | restart_count: 0}
 
       event ->

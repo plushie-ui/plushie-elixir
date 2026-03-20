@@ -33,6 +33,10 @@ defmodule Toddy.Type.A11y do
   - `labelled_by` -- ID of the widget that labels this one
   - `described_by` -- ID of the widget that describes this one
   - `error_message` -- ID of the widget showing the error message for this one
+  - `disabled` -- override disabled state for AT
+  - `position_in_set` -- 1-based position within a set (lists, radio groups, tabs)
+  - `size_of_set` -- total items in the set
+  - `has_popup` -- popup type: `"listbox"`, `"menu"`, `"dialog"`, `"tree"`, `"grid"`
   """
 
   defstruct [
@@ -55,7 +59,11 @@ defmodule Toddy.Type.A11y do
     :orientation,
     :labelled_by,
     :described_by,
-    :error_message
+    :error_message,
+    :disabled,
+    :position_in_set,
+    :size_of_set,
+    :has_popup
   ]
 
   @roles ~w(
@@ -77,6 +85,10 @@ defmodule Toddy.Type.A11y do
 
   @type orientation :: :horizontal | :vertical
 
+  @has_popup_values ~w(listbox menu dialog tree grid)
+
+  @type has_popup :: String.t() | nil
+
   @type t :: %__MODULE__{
           role: role() | nil,
           label: String.t() | nil,
@@ -97,7 +109,11 @@ defmodule Toddy.Type.A11y do
           orientation: orientation() | nil,
           labelled_by: String.t() | nil,
           described_by: String.t() | nil,
-          error_message: String.t() | nil
+          error_message: String.t() | nil,
+          disabled: boolean() | nil,
+          position_in_set: non_neg_integer() | nil,
+          size_of_set: non_neg_integer() | nil,
+          has_popup: has_popup()
         }
 
   @doc """
@@ -139,7 +155,11 @@ defmodule Toddy.Type.A11y do
       orientation: validate_orientation(map[:orientation]),
       labelled_by: map[:labelled_by],
       described_by: map[:described_by],
-      error_message: map[:error_message]
+      error_message: map[:error_message],
+      disabled: map[:disabled],
+      position_in_set: validate_non_neg_integer(map[:position_in_set]),
+      size_of_set: validate_non_neg_integer(map[:size_of_set]),
+      has_popup: validate_has_popup(map[:has_popup])
     }
   end
 
@@ -157,4 +177,10 @@ defmodule Toddy.Type.A11y do
 
   defp validate_mnemonic(nil), do: nil
   defp validate_mnemonic(<<_::utf8>> = char), do: char
+
+  defp validate_non_neg_integer(nil), do: nil
+  defp validate_non_neg_integer(n) when is_integer(n) and n >= 0, do: n
+
+  defp validate_has_popup(nil), do: nil
+  defp validate_has_popup(v) when v in @has_popup_values, do: v
 end

@@ -25,11 +25,13 @@ defmodule Toddy.Event.Ime do
 
   @type t :: %__MODULE__{
           type: :opened | :preedit | :commit | :closed,
+          id: String.t() | nil,
+          scope: [String.t()],
           text: String.t() | nil,
           cursor: {non_neg_integer(), non_neg_integer()} | nil,
           captured: boolean()
         }
 
   @enforce_keys [:type]
-  defstruct [:type, :text, :cursor, captured: false]
+  defstruct [:type, :id, :text, :cursor, scope: [], captured: false]
 end

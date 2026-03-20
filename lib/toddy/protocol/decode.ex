@@ -47,7 +47,7 @@ defmodule Toddy.Protocol.Decode do
   """
   @spec decode_message(data :: binary(), format :: Toddy.Protocol.format()) ::
           Toddy.Event.t()
-          | {:hello, pos_integer(), String.t(), String.t()}
+          | {:hello, pos_integer(), String.t(), String.t(), String.t(), [String.t()]}
           | {:settings, map()}
           | {:snapshot, map()}
           | {:patch, list()}
@@ -102,6 +102,10 @@ defmodule Toddy.Protocol.Decode do
   end
 
   defp parse_modifiers(_), do: %Toddy.KeyModifiers{}
+
+  # IME cursor: {start, end} tuple from map, or nil when absent/null.
+  defp parse_ime_cursor(%{"start" => s, "end" => e}), do: {s, e}
+  defp parse_ime_cursor(_), do: nil
 
   # ---------------------------------------------------------------------------
   # Dispatch
@@ -219,18 +223,18 @@ defmodule Toddy.Protocol.Decode do
   end
 
   # -- Keyboard events --
-  # Rust emits family "key_press" with the key in "value", modifiers in "modifiers",
-  # and extra fields (modified_key, physical_key, location, text, repeat) in "data".
+  # Rust emits family "key_press"/"key_release" with the logical key in "data.key",
+  # modifiers at top level in "modifiers", and extra fields in "data".
 
   defp dispatch(
          %{
            "type" => "event",
            "family" => "key_press",
-           "value" => key,
            "modifiers" => mods
          } = msg
        ) do
     data = msg["data"] || %{}
+    key = data["key"] || ""
 
     %Key{
       type: :press,
@@ -249,11 +253,11 @@ defmodule Toddy.Protocol.Decode do
          %{
            "type" => "event",
            "family" => "key_release",
-           "value" => key,
            "modifiers" => mods
          } = msg
        ) do
     data = msg["data"] || %{}
+    key = data["key"] || ""
 
     %Key{
       type: :release,
@@ -327,59 +331,42 @@ defmodule Toddy.Protocol.Decode do
   end
 
   # -- IME events --
+  # Each IME lifecycle step is now its own family (no more kind discriminator in data).
 
-  defp dispatch(
-         %{
-           "type" => "event",
-           "family" => "ime",
-           "data" => %{"kind" => "opened"}
-         } = msg
-       ) do
-    %Ime{type: :opened, captured: msg["captured"] || false}
+  defp dispatch(%{"type" => "event", "family" => "ime_opened", "id" => id} = msg) do
+    {local_id, scope} = split_scoped_id(id)
+    %Ime{type: :opened, id: local_id, scope: scope, captured: msg["captured"] || false}
   end
 
-  defp dispatch(
-         %{
-           "type" => "event",
-           "family" => "ime",
-           "data" => %{
-             "kind" => "preedit",
-             "text" => text,
-             "cursor" => %{"start" => s, "end" => e}
-           }
-         } = msg
-       ) do
-    %Ime{type: :preedit, text: text, cursor: {s, e}, captured: msg["captured"] || false}
+  defp dispatch(%{"type" => "event", "family" => "ime_preedit", "id" => id, "data" => data} = msg) do
+    {local_id, scope} = split_scoped_id(id)
+    cursor = parse_ime_cursor(data["cursor"])
+
+    %Ime{
+      type: :preedit,
+      id: local_id,
+      scope: scope,
+      text: data["text"],
+      cursor: cursor,
+      captured: msg["captured"] || false
+    }
   end
 
-  defp dispatch(
-         %{
-           "type" => "event",
-           "family" => "ime",
-           "data" => %{"kind" => "preedit", "text" => text}
-         } = msg
-       ) do
-    %Ime{type: :preedit, text: text, cursor: nil, captured: msg["captured"] || false}
+  defp dispatch(%{"type" => "event", "family" => "ime_commit", "id" => id, "data" => data} = msg) do
+    {local_id, scope} = split_scoped_id(id)
+
+    %Ime{
+      type: :commit,
+      id: local_id,
+      scope: scope,
+      text: data["text"],
+      captured: msg["captured"] || false
+    }
   end
 
-  defp dispatch(
-         %{
-           "type" => "event",
-           "family" => "ime",
-           "data" => %{"kind" => "commit", "text" => text}
-         } = msg
-       ) do
-    %Ime{type: :commit, text: text, captured: msg["captured"] || false}
-  end
-
-  defp dispatch(
-         %{
-           "type" => "event",
-           "family" => "ime",
-           "data" => %{"kind" => "closed"}
-         } = msg
-       ) do
-    %Ime{type: :closed, captured: msg["captured"] || false}
+  defp dispatch(%{"type" => "event", "family" => "ime_closed", "id" => id} = msg) do
+    {local_id, scope} = split_scoped_id(id)
+    %Ime{type: :closed, id: local_id, scope: scope, captured: msg["captured"] || false}
   end
 
   # -- Touch events --
@@ -388,7 +375,7 @@ defmodule Toddy.Protocol.Decode do
          %{
            "type" => "event",
            "family" => "finger_pressed",
-           "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
+           "data" => %{"id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
     %Touch{type: :pressed, finger_id: finger_id, x: x, y: y, captured: msg["captured"] || false}
@@ -398,7 +385,7 @@ defmodule Toddy.Protocol.Decode do
          %{
            "type" => "event",
            "family" => "finger_moved",
-           "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
+           "data" => %{"id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
     %Touch{type: :moved, finger_id: finger_id, x: x, y: y, captured: msg["captured"] || false}
@@ -408,7 +395,7 @@ defmodule Toddy.Protocol.Decode do
          %{
            "type" => "event",
            "family" => "finger_lifted",
-           "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
+           "data" => %{"id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
     %Touch{type: :lifted, finger_id: finger_id, x: x, y: y, captured: msg["captured"] || false}
@@ -418,7 +405,7 @@ defmodule Toddy.Protocol.Decode do
          %{
            "type" => "event",
            "family" => "finger_lost",
-           "data" => %{"finger_id" => finger_id, "x" => x, "y" => y}
+           "data" => %{"id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
     %Touch{type: :lost, finger_id: finger_id, x: x, y: y, captured: msg["captured"] || false}
@@ -642,8 +629,8 @@ defmodule Toddy.Protocol.Decode do
       type: :scroll,
       id: local,
       scope: scope,
-      x: data["x"],
-      y: data["y"],
+      x: data["cursor_x"],
+      y: data["cursor_y"],
       delta_x: data["delta_x"],
       delta_y: data["delta_y"]
     }
@@ -761,7 +748,7 @@ defmodule Toddy.Protocol.Decode do
 
   defp dispatch(%{
          "type" => "op_query_response",
-         "kind" => "image_list",
+         "kind" => "list_images",
          "tag" => tag,
          "data" => data
        }) do
@@ -786,6 +773,43 @@ defmodule Toddy.Protocol.Decode do
     %System{type: :find_focused, tag: tag, data: data}
   end
 
+  # -- Session events (multiplexed mode) --
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "session_error",
+         "session" => session,
+         "data" => data
+       }) do
+    {:session_error, session, data["error"]}
+  end
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "session_closed",
+         "session" => session,
+         "data" => data
+       }) do
+    {:session_closed, session, data["reason"]}
+  end
+
+  # -- Announce event (headless/mock: screen reader announcements surface as events) --
+
+  defp dispatch(%{"type" => "event", "family" => "announce", "data" => data}) do
+    %System{type: :announce, data: data["text"]}
+  end
+
+  # -- Duplicate node ID error --
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "error",
+         "id" => "duplicate_node_ids",
+         "data" => data
+       }) do
+    %System{type: :error, data: %{error: "duplicate_node_ids", details: data}}
+  end
+
   # -- All windows closed --
 
   defp dispatch(%{"type" => "event", "family" => "all_windows_closed"}) do
@@ -794,13 +818,17 @@ defmodule Toddy.Protocol.Decode do
 
   # -- Hello (internal, never reaches update/2) --
 
-  defp dispatch(%{
-         "type" => "hello",
-         "protocol" => protocol,
-         "version" => version,
-         "name" => name
-       }) do
-    {:hello, protocol, version, name}
+  defp dispatch(
+         %{
+           "type" => "hello",
+           "protocol" => protocol,
+           "version" => version,
+           "name" => name
+         } = msg
+       ) do
+    backend = Map.get(msg, "backend", "unknown")
+    extensions = Map.get(msg, "extensions", [])
+    {:hello, protocol, version, name, backend, extensions}
   end
 
   # -- Generic/extension events (unrecognized families) --

@@ -132,6 +132,8 @@ defmodule Toddy.Test.SessionPool do
       sessions: %{},
       # {session_id, request_id} -> {response_type, from}
       pending: %{},
+      # session_id -> from (callers waiting for session_closed after reset)
+      pending_close: %{},
       next_id: 1,
       next_session: 1,
       buffer: ""
@@ -196,15 +198,26 @@ defmodule Toddy.Test.SessionPool do
       _ -> :ok
     end
 
-    # Send Reset to free renderer resources.
+    # Send Reset to free renderer resources. We block on reset_response
+    # for backward compatibility with older renderers. If the renderer
+    # also sends session_closed (v0.3.2+), we handle it gracefully.
     req_id = "unreg_#{state.next_id}"
     msg = %{session: session_id, type: "reset", id: req_id}
     send_to_port(state.port, state.format, msg)
 
     pending = Map.put(state.pending, {session_id, req_id}, {"reset_response", from})
     sessions = Map.delete(state.sessions, session_id)
+    # Track session_id so we can absorb the session_closed event if it arrives.
+    pending_close = Map.put(state.pending_close, session_id, :awaiting)
 
-    {:noreply, %{state | pending: pending, sessions: sessions, next_id: state.next_id + 1}}
+    {:noreply,
+     %{
+       state
+       | pending: pending,
+         sessions: sessions,
+         pending_close: pending_close,
+         next_id: state.next_id + 1
+     }}
   end
 
   def handle_call({:send, session_id, msg, response_type}, from, state) do
@@ -246,7 +259,7 @@ defmodule Toddy.Test.SessionPool do
       GenServer.reply(from, {:error, :renderer_exited})
     end
 
-    {:stop, {:renderer_exited, code}, %{state | pending: %{}}}
+    {:stop, {:renderer_exited, code}, %{state | pending: %{}, pending_close: %{}}}
   end
 
   def handle_info({:DOWN, ref, :process, pid, _reason}, state) do
@@ -299,6 +312,34 @@ defmodule Toddy.Test.SessionPool do
   end
 
   defp dispatch_response(%{"type" => "hello"}, state), do: state
+
+  # Session closed: absorb if we're tracking this session's teardown,
+  # otherwise forward to the session owner.
+  defp dispatch_response(
+         %{"type" => "event", "family" => "session_closed", "session" => session_id},
+         state
+       ) do
+    case Map.pop(state.pending_close, session_id) do
+      {nil, _} ->
+        forward_to_session(
+          session_id,
+          %{"type" => "session_closed", "session" => session_id},
+          state
+        )
+
+      {:awaiting, pending_close} ->
+        # Reset already replied via reset_response; just clean up.
+        %{state | pending_close: pending_close}
+    end
+  end
+
+  # Session error: forward to session owner if registered, otherwise log.
+  defp dispatch_response(
+         %{"type" => "event", "family" => "session_error", "session" => session_id} = msg,
+         state
+       ) do
+    forward_to_session(session_id, msg, state)
+  end
 
   # Interact step: an intermediate event batch during iterative
   # interact. Forward to the session owner for processing (the owner
