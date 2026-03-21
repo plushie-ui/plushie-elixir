@@ -27,8 +27,8 @@ defmodule Toddy.Type.Gradient do
       ])
   """
 
-  @typedoc "A gradient color stop with offset (0.0-1.0) and color (hex string or float RGBA map)."
-  @type stop :: %{offset: float(), color: String.t() | map()}
+  @typedoc "A gradient color stop with offset (0.0-1.0) and color (canonical hex string)."
+  @type stop :: %{offset: float(), color: String.t()}
 
   @typedoc "Gradient specification with type, angle, and color stops."
   @type t :: %{type: String.t(), angle: number(), stops: [stop()]}
@@ -53,10 +53,8 @@ defmodule Toddy.Type.Gradient do
     }
   end
 
-  # Hex strings and named atoms are normalized via Color.cast.
-  # Float maps (%{r, g, b, a}) are passed through as-is -- the
-  # renderer accepts both formats.
-  defp cast_stop_color(%{r: _, g: _, b: _} = rgba), do: rgba
+  # All stop colors are normalized to canonical hex strings via Color.cast.
+  # This covers hex strings, named atoms, and float RGBA maps.
   defp cast_stop_color(color), do: Toddy.Type.Color.cast(color)
 
   @doc "Encodes a gradient to the wire format."

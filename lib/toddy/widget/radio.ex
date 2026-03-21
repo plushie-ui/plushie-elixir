@@ -19,7 +19,7 @@ defmodule Toddy.Widget.Radio do
   - `text_size` (number) -- label text size in pixels.
   - `font` (string | map) -- label font. See `Toddy.Type.Font`.
   - `line_height` (number | map) -- label line height.
-  - `text_shaping` -- text shaping strategy. See `Toddy.Type.Shaping`.
+  - `shaping` -- text shaping strategy. See `Toddy.Type.Shaping`.
   - `wrapping` -- text wrapping mode. See `Toddy.Type.Wrapping`.
   - `style` -- `:default` or `StyleMap.t()` for custom styling. See `Toddy.Type.StyleMap`.
   - `a11y` (map) -- accessibility overrides. See `Toddy.Type.A11y`.
@@ -45,7 +45,7 @@ defmodule Toddy.Widget.Radio do
           | {:text_size, number()}
           | {:font, Toddy.Type.Font.t()}
           | {:line_height, number() | map()}
-          | {:text_shaping, Toddy.Type.Shaping.t()}
+          | {:shaping, Toddy.Type.Shaping.t()}
           | {:wrapping, Toddy.Type.Wrapping.t()}
           | {:style, style()}
           | {:a11y, Toddy.Type.A11y.t()}
@@ -62,7 +62,7 @@ defmodule Toddy.Widget.Radio do
           text_size: number() | nil,
           font: Toddy.Type.Font.t() | nil,
           line_height: number() | map() | nil,
-          text_shaping: Toddy.Type.Shaping.t() | nil,
+          shaping: Toddy.Type.Shaping.t() | nil,
           wrapping: Toddy.Type.Wrapping.t() | nil,
           style: style() | nil,
           a11y: Toddy.Type.A11y.t() | nil
@@ -80,7 +80,7 @@ defmodule Toddy.Widget.Radio do
     :text_size,
     :font,
     :line_height,
-    :text_shaping,
+    :shaping,
     :wrapping,
     :style,
     :a11y
@@ -112,7 +112,7 @@ defmodule Toddy.Widget.Radio do
       {:text_size, v}, acc -> text_size(acc, v)
       {:font, v}, acc -> font(acc, v)
       {:line_height, v}, acc -> line_height(acc, v)
-      {:text_shaping, v}, acc -> text_shaping(acc, v)
+      {:shaping, v}, acc -> shaping(acc, v)
       {:wrapping, v}, acc -> wrapping(acc, v)
       {:style, v}, acc -> style(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
@@ -154,8 +154,8 @@ defmodule Toddy.Widget.Radio do
   def line_height(%__MODULE__{} = r, line_height), do: %{r | line_height: line_height}
 
   @doc "Sets the text shaping strategy."
-  @spec text_shaping(radio :: t(), text_shaping :: Toddy.Type.Shaping.t()) :: t()
-  def text_shaping(%__MODULE__{} = r, text_shaping), do: %{r | text_shaping: text_shaping}
+  @spec shaping(radio :: t(), shaping :: Toddy.Type.Shaping.t()) :: t()
+  def shaping(%__MODULE__{} = r, shaping), do: %{r | shaping: shaping}
 
   @doc "Sets the text wrapping mode."
   @spec wrapping(radio :: t(), wrapping :: Toddy.Type.Wrapping.t()) :: t()
@@ -190,7 +190,7 @@ defmodule Toddy.Widget.Radio do
         |> put_if(r.text_size, :text_size)
         |> put_if(r.font, :font)
         |> put_if(r.line_height, :line_height)
-        |> put_if(r.text_shaping, :text_shaping)
+        |> put_if(r.shaping, :shaping)
         |> put_if(r.wrapping, :wrapping)
         |> put_if(r.style, :style)
         |> put_if(r.a11y, :a11y)

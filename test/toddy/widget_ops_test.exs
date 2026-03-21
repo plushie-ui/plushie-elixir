@@ -19,11 +19,11 @@ defmodule Toddy.WidgetOpsTest do
     end
 
     test "includes the op and payload fields" do
-      result = Protocol.encode_widget_op("scroll_to", %{target: "log", offset: 100}, :json)
+      result = Protocol.encode_widget_op("scroll_to", %{target: "log", offset_y: 100}, :json)
       parsed = decode_json!(result)
       assert parsed["op"] == "scroll_to"
       assert parsed["payload"]["target"] == "log"
-      assert parsed["payload"]["offset"] == 100
+      assert parsed["payload"]["offset_y"] == 100
     end
 
     test "output ends with a trailing newline" do
@@ -68,9 +68,9 @@ defmodule Toddy.WidgetOpsTest do
       assert %Command{type: :select_all, payload: %{target: "editor"}} = cmd
     end
 
-    test "scroll_to/2 returns a Command with type :scroll_to, target, and offset in payload" do
+    test "scroll_to/2 returns a Command with type :scroll_to, target, and offset_y in payload" do
       cmd = Command.scroll_to("feed", 250)
-      assert %Command{type: :scroll_to, payload: %{target: "feed", offset: 250}} = cmd
+      assert %Command{type: :scroll_to, payload: %{target: "feed", offset_y: 250}} = cmd
     end
 
     test "close_window/1 returns a Command with type :close_window and window_id in payload" do
@@ -194,7 +194,7 @@ defmodule Toddy.WidgetOpsTest do
       ops = Toddy.Test.MockBridge.get_widget_ops(bridge)
       assert length(ops) == 1
       assert hd(ops).op == "scroll_to"
-      assert hd(ops).payload == %{target: "log_view", offset: 999}
+      assert hd(ops).payload == %{target: "log_view", offset_y: 999}
     end
 
     test "close_window command sends widget_op with op 'close_window'" do

@@ -189,8 +189,8 @@ defmodule Toddy.Type.Color do
   @typedoc "Named CSS color atom (148 CSS Color Module Level 4 colors plus `:transparent`)."
   @type named :: unquote(Enum.reduce(Map.keys(@named_colors), &{:|, [], [&1, &2]}))
 
-  @typedoc "Any value accepted by `cast/1`: hex string, short hex, or named color atom."
-  @type input :: named() | String.t()
+  @typedoc "Any value accepted by `cast/1`: hex string, short hex, named color atom, or float RGBA map."
+  @type input :: named() | String.t() | %{r: float(), g: float(), b: float(), a: float()}
 
   @doc """
   Creates a hex color string from 0-255 RGB integer values.
@@ -315,6 +315,16 @@ defmodule Toddy.Type.Color do
       "#6495ed"
   """
   @spec cast(color :: input()) :: t()
+  def cast(%{r: r, g: g, b: b, a: a})
+      when is_number(r) and is_number(g) and is_number(b) and is_number(a) do
+    from_rgba(round(r * 255), round(g * 255), round(b * 255), a)
+  end
+
+  def cast(%{r: r, g: g, b: b})
+      when is_number(r) and is_number(g) and is_number(b) do
+    from_rgb(round(r * 255), round(g * 255), round(b * 255))
+  end
+
   def cast(name) when is_atom(name) do
     case Map.fetch(@named_colors, name) do
       {:ok, hex} -> hex

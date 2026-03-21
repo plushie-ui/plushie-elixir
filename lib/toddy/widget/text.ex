@@ -189,7 +189,7 @@ defmodule Toddy.Widget.Text do
         |> put_if(txt.align_y, :align_y)
         |> put_if(txt.wrapping, :wrapping)
         |> put_if(txt.ellipsis, :ellipsis)
-        |> put_if(txt.shaping, :text_shaping)
+        |> put_if(txt.shaping, :shaping)
         |> put_if(txt.style, :style)
         |> put_if(txt.a11y, :a11y)
 

@@ -12,7 +12,7 @@ defmodule Toddy.Widget.Toggler do
   - `text_size` (number) -- label text size in pixels.
   - `font` (string | map) -- label font. See `Toddy.Type.Font`.
   - `line_height` (number | map) -- label line height.
-  - `text_shaping` (atom) -- text shaping: `:basic`, `:advanced`, or `:auto`.
+  - `shaping` (atom) -- text shaping: `:basic`, `:advanced`, or `:auto`.
     See `Toddy.Type.Shaping`.
   - `wrapping` (atom) -- text wrapping: `:none`, `:word`, `:glyph`, `:word_or_glyph`.
     See `Toddy.Type.Wrapping`.
@@ -41,7 +41,7 @@ defmodule Toddy.Widget.Toggler do
           | {:text_size, number()}
           | {:font, Toddy.Type.Font.t()}
           | {:line_height, number() | map()}
-          | {:text_shaping, Toddy.Type.Shaping.t()}
+          | {:shaping, Toddy.Type.Shaping.t()}
           | {:wrapping, Toddy.Type.Wrapping.t()}
           | {:text_alignment, Toddy.Type.Alignment.t()}
           | {:style, style()}
@@ -58,7 +58,7 @@ defmodule Toddy.Widget.Toggler do
           text_size: number() | nil,
           font: Toddy.Type.Font.t() | nil,
           line_height: number() | map() | nil,
-          text_shaping: Toddy.Type.Shaping.t() | nil,
+          shaping: Toddy.Type.Shaping.t() | nil,
           wrapping: Toddy.Type.Wrapping.t() | nil,
           text_alignment: Toddy.Type.Alignment.t() | nil,
           style: style() | nil,
@@ -76,7 +76,7 @@ defmodule Toddy.Widget.Toggler do
     :text_size,
     :font,
     :line_height,
-    :text_shaping,
+    :shaping,
     :wrapping,
     :text_alignment,
     :style,
@@ -103,7 +103,7 @@ defmodule Toddy.Widget.Toggler do
       {:text_size, v}, acc -> text_size(acc, v)
       {:font, v}, acc -> font(acc, v)
       {:line_height, v}, acc -> line_height(acc, v)
-      {:text_shaping, v}, acc -> text_shaping(acc, v)
+      {:shaping, v}, acc -> shaping(acc, v)
       {:wrapping, v}, acc -> wrapping(acc, v)
       {:text_alignment, v}, acc -> text_alignment(acc, v)
       {:style, v}, acc -> style(acc, v)
@@ -143,8 +143,8 @@ defmodule Toddy.Widget.Toggler do
   def line_height(%__MODULE__{} = tg, line_height), do: %{tg | line_height: line_height}
 
   @doc "Sets the text shaping strategy."
-  @spec text_shaping(toggler :: t(), text_shaping :: Toddy.Type.Shaping.t()) :: t()
-  def text_shaping(%__MODULE__{} = tg, text_shaping), do: %{tg | text_shaping: text_shaping}
+  @spec shaping(toggler :: t(), shaping :: Toddy.Type.Shaping.t()) :: t()
+  def shaping(%__MODULE__{} = tg, shaping), do: %{tg | shaping: shaping}
 
   @doc "Sets the text wrapping mode."
   @spec wrapping(toggler :: t(), wrapping :: Toddy.Type.Wrapping.t()) :: t()
@@ -187,7 +187,7 @@ defmodule Toddy.Widget.Toggler do
         |> put_if(tg.text_size, :text_size)
         |> put_if(tg.font, :font)
         |> put_if(tg.line_height, :line_height)
-        |> put_if(tg.text_shaping, :text_shaping)
+        |> put_if(tg.shaping, :shaping)
         |> put_if(tg.wrapping, :wrapping)
         |> put_if(tg.text_alignment, :text_alignment)
         |> put_if(tg.style, :style)

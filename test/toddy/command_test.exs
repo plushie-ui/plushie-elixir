@@ -177,15 +177,15 @@ defmodule Toddy.CommandTest do
       assert %Command{type: :scroll_to} = Command.scroll_to("log_view", 0)
     end
 
-    test "stores the widget id under :target and the offset under :offset" do
+    test "stores the widget id under :target and the offset under :offset_y" do
       cmd = Command.scroll_to("log_view", 500)
       assert cmd.payload.target == "log_view"
-      assert cmd.payload.offset == 500
+      assert cmd.payload.offset_y == 500
     end
 
     test "offset can be any term" do
       cmd = Command.scroll_to("feed", :bottom)
-      assert cmd.payload.offset == :bottom
+      assert cmd.payload.offset_y == :bottom
     end
   end
 

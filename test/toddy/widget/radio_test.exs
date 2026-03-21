@@ -22,7 +22,7 @@ defmodule Toddy.Widget.RadioTest do
       assert r.text_size == nil
       assert r.font == nil
       assert r.line_height == nil
-      assert r.text_shaping == nil
+      assert r.shaping == nil
       assert r.wrapping == nil
       assert r.style == nil
     end
@@ -65,9 +65,9 @@ defmodule Toddy.Widget.RadioTest do
       assert r.text_size == 14
     end
 
-    test "text_shaping/2 sets text_shaping" do
-      r = Radio.new("id", "a", "b") |> Radio.text_shaping(:advanced)
-      assert r.text_shaping == :advanced
+    test "shaping/2 sets shaping" do
+      r = Radio.new("id", "a", "b") |> Radio.shaping(:advanced)
+      assert r.shaping == :advanced
     end
 
     test "wrapping/2 sets wrapping" do

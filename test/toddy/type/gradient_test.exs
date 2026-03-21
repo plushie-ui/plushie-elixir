@@ -32,10 +32,10 @@ defmodule Toddy.Type.GradientTest do
       assert_in_delta grad.angle, 3.14159, 0.00001
     end
 
-    test "accepts RGBA map colors in stops" do
+    test "converts RGBA map colors to hex strings" do
       color = %{r: 1.0, g: 0.0, b: 0.0, a: 0.5}
       grad = Gradient.linear(0, [{0.0, color}])
-      assert hd(grad.stops).color == color
+      assert hd(grad.stops).color == "#ff000080"
     end
   end
 

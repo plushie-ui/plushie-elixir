@@ -136,7 +136,7 @@ defmodule Toddy.Command do
   @doc "Scroll the widget identified by `widget_id` to `offset`."
   @spec scroll_to(widget_id :: widget_id(), offset :: term()) :: %__MODULE__{}
   def scroll_to(widget_id, offset) do
-    %__MODULE__{type: :scroll_to, payload: %{target: widget_id, offset: offset}}
+    %__MODULE__{type: :scroll_to, payload: %{target: widget_id, offset_y: offset}}
   end
 
   @doc "Send `event` through `update/2` after `delay_ms` milliseconds."

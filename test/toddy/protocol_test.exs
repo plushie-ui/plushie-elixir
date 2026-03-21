@@ -590,11 +590,11 @@ defmodule Toddy.ProtocolTest do
     end
 
     test "includes the op and payload fields" do
-      result = Protocol.encode_widget_op("scroll_to", %{target: "feed", offset: 42}, :json)
+      result = Protocol.encode_widget_op("scroll_to", %{target: "feed", offset_y: 42}, :json)
       parsed = decode_json!(result)
       assert parsed["op"] == "scroll_to"
       assert parsed["payload"]["target"] == "feed"
-      assert parsed["payload"]["offset"] == 42
+      assert parsed["payload"]["offset_y"] == 42
     end
 
     test "output ends with a trailing newline" do

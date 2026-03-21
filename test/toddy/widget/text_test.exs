@@ -142,10 +142,9 @@ defmodule Toddy.Widget.TextTest do
       assert node.props[:align_x] == :center
     end
 
-    test "shaping encodes as text_shaping in props" do
+    test "shaping encodes as shaping in props" do
       node = Text.new("t1", "Hi") |> Text.shaping(:advanced) |> Text.build()
-      assert node.props[:text_shaping] == :advanced
-      refute Map.has_key?(node.props, "shaping")
+      assert node.props[:shaping] == :advanced
     end
 
     test "omits nil props" do
@@ -159,7 +158,7 @@ defmodule Toddy.Widget.TextTest do
       refute Map.has_key?(node.props, "align_x")
       refute Map.has_key?(node.props, "align_y")
       refute Map.has_key?(node.props, "wrapping")
-      refute Map.has_key?(node.props, "text_shaping")
+      refute Map.has_key?(node.props, "shaping")
       refute Map.has_key?(node.props, "style")
     end
   end

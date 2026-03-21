@@ -23,7 +23,7 @@ defmodule Toddy.Widget.PickListTest do
       assert pl.font == nil
       assert pl.line_height == nil
       assert pl.menu_height == nil
-      assert pl.text_shaping == nil
+      assert pl.shaping == nil
       assert pl.handle == nil
       assert pl.style == nil
       assert pl.on_open == nil

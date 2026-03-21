@@ -12,7 +12,7 @@ defmodule Toddy.Widget.Checkbox do
   - `text_size` (number) -- label text size in pixels.
   - `font` (string | map) -- label font. See `Toddy.Type.Font`.
   - `line_height` (number | map) -- label line height.
-  - `text_shaping` -- text shaping strategy. See `Toddy.Type.Shaping`.
+  - `shaping` -- text shaping strategy. See `Toddy.Type.Shaping`.
   - `wrapping` -- text wrapping mode. See `Toddy.Type.Wrapping`.
   - `style` -- named preset (`:primary` (default), `:secondary`, `:success`,
     `:danger`) or `StyleMap.t()`. See `Toddy.Type.StyleMap`.
@@ -42,7 +42,7 @@ defmodule Toddy.Widget.Checkbox do
           | {:text_size, number()}
           | {:font, Toddy.Type.Font.t()}
           | {:line_height, number() | map()}
-          | {:text_shaping, Toddy.Type.Shaping.t()}
+          | {:shaping, Toddy.Type.Shaping.t()}
           | {:wrapping, Toddy.Type.Wrapping.t()}
           | {:style, style()}
           | {:icon, map()}
@@ -59,7 +59,7 @@ defmodule Toddy.Widget.Checkbox do
           text_size: number() | nil,
           font: Toddy.Type.Font.t() | nil,
           line_height: number() | map() | nil,
-          text_shaping: Toddy.Type.Shaping.t() | nil,
+          shaping: Toddy.Type.Shaping.t() | nil,
           wrapping: Toddy.Type.Wrapping.t() | nil,
           style: style() | nil,
           icon: map() | nil,
@@ -77,7 +77,7 @@ defmodule Toddy.Widget.Checkbox do
     :text_size,
     :font,
     :line_height,
-    :text_shaping,
+    :shaping,
     :wrapping,
     :style,
     :icon,
@@ -105,7 +105,7 @@ defmodule Toddy.Widget.Checkbox do
       {:text_size, v}, acc -> text_size(acc, v)
       {:font, v}, acc -> font(acc, v)
       {:line_height, v}, acc -> line_height(acc, v)
-      {:text_shaping, v}, acc -> text_shaping(acc, v)
+      {:shaping, v}, acc -> shaping(acc, v)
       {:wrapping, v}, acc -> wrapping(acc, v)
       {:style, v}, acc -> style(acc, v)
       {:icon, v}, acc -> icon(acc, v)
@@ -141,8 +141,8 @@ defmodule Toddy.Widget.Checkbox do
   def line_height(%__MODULE__{} = cb, line_height), do: %{cb | line_height: line_height}
 
   @doc "Sets the text shaping strategy."
-  @spec text_shaping(checkbox :: t(), text_shaping :: Toddy.Type.Shaping.t()) :: t()
-  def text_shaping(%__MODULE__{} = cb, text_shaping), do: %{cb | text_shaping: text_shaping}
+  @spec shaping(checkbox :: t(), shaping :: Toddy.Type.Shaping.t()) :: t()
+  def shaping(%__MODULE__{} = cb, shaping), do: %{cb | shaping: shaping}
 
   @doc "Sets the text wrapping mode."
   @spec wrapping(checkbox :: t(), wrapping :: Toddy.Type.Wrapping.t()) :: t()
@@ -184,7 +184,7 @@ defmodule Toddy.Widget.Checkbox do
         |> put_if(cb.text_size, :text_size)
         |> put_if(cb.font, :font)
         |> put_if(cb.line_height, :line_height)
-        |> put_if(cb.text_shaping, :text_shaping)
+        |> put_if(cb.shaping, :shaping)
         |> put_if(cb.wrapping, :wrapping)
         |> put_if(cb.style, :style)
         |> put_if(cb.icon, :icon)

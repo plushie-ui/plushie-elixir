@@ -13,7 +13,7 @@ defmodule Toddy.Widget.PickList do
   - `font` (string | map) -- font specification. See `Toddy.Type.Font`.
   - `line_height` (number | map) -- text line height.
   - `menu_height` (number) -- maximum height of the dropdown menu in pixels.
-  - `text_shaping` -- text shaping strategy. See `Toddy.Type.Shaping`.
+  - `shaping` -- text shaping strategy. See `Toddy.Type.Shaping`.
   - `handle` (map) -- customise the dropdown handle indicator. Map with a `type` key:
     - `%{type: "arrow"}` -- default arrow (optional `size` in pixels).
     - `%{type: "arrow", size: 12}` -- arrow with explicit size.
@@ -50,7 +50,7 @@ defmodule Toddy.Widget.PickList do
           | {:font, Toddy.Type.Font.t()}
           | {:line_height, number() | map()}
           | {:menu_height, number()}
-          | {:text_shaping, Toddy.Type.Shaping.t()}
+          | {:shaping, Toddy.Type.Shaping.t()}
           | {:handle, map()}
           | {:ellipsis, String.t()}
           | {:menu_style, map()}
@@ -70,7 +70,7 @@ defmodule Toddy.Widget.PickList do
           font: Toddy.Type.Font.t() | nil,
           line_height: number() | map() | nil,
           menu_height: number() | nil,
-          text_shaping: Toddy.Type.Shaping.t() | nil,
+          shaping: Toddy.Type.Shaping.t() | nil,
           handle: map() | nil,
           ellipsis: String.t() | nil,
           menu_style: map() | nil,
@@ -91,7 +91,7 @@ defmodule Toddy.Widget.PickList do
     :font,
     :line_height,
     :menu_height,
-    :text_shaping,
+    :shaping,
     :handle,
     :ellipsis,
     :menu_style,
@@ -121,7 +121,7 @@ defmodule Toddy.Widget.PickList do
       {:font, v}, acc -> font(acc, v)
       {:line_height, v}, acc -> line_height(acc, v)
       {:menu_height, v}, acc -> menu_height(acc, v)
-      {:text_shaping, v}, acc -> text_shaping(acc, v)
+      {:shaping, v}, acc -> shaping(acc, v)
       {:handle, v}, acc -> handle(acc, v)
       {:ellipsis, v}, acc -> ellipsis(acc, v)
       {:menu_style, v}, acc -> menu_style(acc, v)
@@ -172,8 +172,8 @@ defmodule Toddy.Widget.PickList do
     do: %{pl | menu_height: menu_height}
 
   @doc "Sets the text shaping strategy."
-  @spec text_shaping(pick_list :: t(), text_shaping :: Toddy.Type.Shaping.t()) :: t()
-  def text_shaping(%__MODULE__{} = pl, text_shaping), do: %{pl | text_shaping: text_shaping}
+  @spec shaping(pick_list :: t(), shaping :: Toddy.Type.Shaping.t()) :: t()
+  def shaping(%__MODULE__{} = pl, shaping), do: %{pl | shaping: shaping}
 
   @doc "Sets the dropdown handle style."
   @spec handle(pick_list :: t(), handle :: map()) :: t()
@@ -226,7 +226,7 @@ defmodule Toddy.Widget.PickList do
         |> put_if(pl.font, :font)
         |> put_if(pl.line_height, :line_height)
         |> put_if(pl.menu_height, :menu_height)
-        |> put_if(pl.text_shaping, :text_shaping)
+        |> put_if(pl.shaping, :shaping)
         |> put_if(pl.handle, :handle)
         |> put_if(pl.ellipsis, :ellipsis)
         |> put_if(pl.menu_style, :menu_style)
