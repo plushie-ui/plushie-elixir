@@ -20,6 +20,36 @@ defmodule Toddy.Canvas.Shape do
         stroke: stroke("#000", 2)
       )
 
+  ## Groups
+
+  Groups nest shapes with optional positioning and interactivity.
+  The `group` macro supports do-blocks for ergonomic nesting:
+
+      group x: 4, y: 4, interactive: [id: "bold", on_click: true] do
+        rect(0, 0, 32, 32, radius: 4)
+        text(8, 22, "B", fill: "#333")
+      end
+
+  Or the list form:
+
+      group([rect(0, 0, 32, 32), text(8, 22, "B")], x: 4, y: 4)
+
+  ## Layers
+
+  The `layer` macro collects shapes into a named layer for use inside
+  a `canvas` do-block:
+
+      canvas "chart", width: 400, height: 300 do
+        layer "grid" do
+          rect(0, 0, 400, 300, stroke: "#eee")
+        end
+        layer "data" do
+          for bar <- bars do
+            rect(bar.x, bar.y, bar.w, bar.h, fill: bar.color)
+          end
+        end
+      end
+
   ## Transforms
 
   Transform commands are interleaved with shapes in a layer's shape list:
@@ -124,31 +154,102 @@ defmodule Toddy.Canvas.Shape do
   and interaction.
 
   Groups are the primary way to build interactive canvas components.
-  The `x` and `y` options offset all child shapes. The `interactive`
-  option (via `Shape.interactive/2`) makes the group clickable,
-  hoverable, or draggable as a single unit.
+  The `:x` and `:y` options offset all child shapes. The `:interactive`
+  option attaches click/hover/drag behavior via `Shape.interactive/2`.
 
-  ## Options
+  ## Do-block form
 
-    * `:x` -- horizontal offset (default 0)
-    * `:y` -- vertical offset (default 0)
+      group x: 4, y: 4, interactive: [id: "btn", on_click: true] do
+        rect(0, 0, 32, 32, radius: 4)
+        text(8, 22, "B", fill: "#333")
+      end
 
-  ## Example
+  ## List form
 
       group([
         rect(0, 0, 100, 40, fill: "#3498db"),
         text(50, 25, "Click me", align_x: :center)
       ], x: 10, y: 50)
-      |> interactive(id: "my-button", on_click: true, cursor: :pointer,
-           hover_style: %{fill: "#2980b9"},
-           a11y: %{role: :button, label: "Click me"})
+
+  ## Options
+
+    * `:x` -- horizontal offset (default 0)
+    * `:y` -- vertical offset (default 0)
+    * `:interactive` -- keyword list passed to `interactive/2`
   """
-  @spec group(children :: [map()], opts :: keyword()) :: map()
-  def group(children, opts \\ []) when is_list(children) do
+  defmacro group(opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Toddy.Canvas.Shape.__build_group__(children, [])
+        end
+
+      other ->
+        quote do
+          Toddy.Canvas.Shape.__build_group__(unquote(other), [])
+        end
+    end
+  end
+
+  defmacro group(first, second) do
+    case second do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Toddy.Canvas.Shape.__build_group__(children, unquote(first))
+        end
+
+      opts ->
+        quote do
+          Toddy.Canvas.Shape.__build_group__(unquote(first), unquote(opts))
+        end
+    end
+  end
+
+  @doc false
+  @spec __build_group__(children :: [map()], opts :: keyword()) :: map()
+  def __build_group__(children, opts) when is_list(children) and is_list(opts) do
     shape = %{type: "group", children: children}
     shape = if opts[:x], do: Map.put(shape, :x, opts[:x]), else: shape
     shape = if opts[:y], do: Map.put(shape, :y, opts[:y]), else: shape
-    shape
+
+    case Keyword.get(opts, :interactive) do
+      nil -> shape
+      interactive_opts -> interactive(shape, interactive_opts)
+    end
+  end
+
+  # -- Layer helper -----------------------------------------------------------
+
+  @doc """
+  Collects shapes into a named layer tuple.
+
+  Use inside a `canvas` do-block. Each layer is cached independently
+  by the renderer -- put static content (grids, labels) in one layer
+  and dynamic content (data, interactive shapes) in another.
+
+      canvas "chart", width: 400, height: 300 do
+        layer "grid" do
+          rect(0, 0, 400, 300, stroke: "#eee")
+        end
+        layer "data" do
+          for bar <- bars do
+            rect(bar.x, bar.y, bar.w, bar.h, fill: bar.color)
+          end
+        end
+      end
+  """
+  defmacro layer(name, do: block) do
+    exprs = block_to_exprs(block)
+
+    quote do
+      {unquote(name), [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)}
+    end
   end
 
   # -- Path shape -------------------------------------------------------------
@@ -444,4 +545,9 @@ defmodule Toddy.Canvas.Shape do
       opacity -> Map.put(shape, :opacity, opacity)
     end
   end
+
+  # -- Private macro helpers --------------------------------------------------
+
+  defp block_to_exprs({:__block__, _, exprs}), do: exprs
+  defp block_to_exprs(single_expr), do: [single_expr]
 end

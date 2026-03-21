@@ -1565,28 +1565,77 @@ defmodule Toddy.UI do
   end
 
   # ---------------------------------------------------------------------------
-  # Canvas (function -- no children)
+  # Canvas (macro -- supports do-block with layers)
   # ---------------------------------------------------------------------------
 
   @doc """
-  Canvas for drawing shapes organized into named layers. No children.
+  Canvas for drawing shapes organized into named layers.
 
-  ## Options
-
-  - `:layers` -- map of layer names to shape descriptor lists
-  - `:width` / `:height` -- dimensions
-  - `:background` -- background color
-
-  ## Example
+  ## Keyword form
 
       canvas("drawing",
         layers: %{"main" => [%{type: "circle", x: 50, y: 50, r: 20}]},
         width: 400,
         height: 300
       )
+
+  ## Do-block form
+
+  Use with `Toddy.Canvas.Shape.layer/2` to collect layers declaratively:
+
+      import Toddy.Canvas.Shape
+
+      canvas "chart", width: 400, height: 300 do
+        layer "grid" do
+          rect(0, 0, 400, 300, stroke: "#eee")
+        end
+        layer "data" do
+          for bar <- bars do
+            rect(bar.x, bar.y, bar.w, bar.h, fill: bar.color)
+          end
+        end
+      end
+
+  ## Options
+
+  - `:layers` -- map of layer names to shape descriptor lists
+  - `:width` / `:height` -- dimensions
+  - `:background` -- background color
   """
-  @spec canvas(id :: String.t(), opts :: keyword()) :: Toddy.Widget.ui_node()
-  def canvas(id, opts \\ []) do
+  defmacro canvas(id, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        exprs = block_to_exprs(block)
+
+        quote do
+          layers =
+            [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1) |> Map.new()
+
+          Toddy.UI.__build_canvas__(unquote(id), layers: layers)
+        end
+
+      opts ->
+        quote do
+          Toddy.UI.__build_canvas__(unquote(id), unquote(opts))
+        end
+    end
+  end
+
+  @doc false
+  defmacro canvas(id, opts, do: block) do
+    exprs = block_to_exprs(block)
+
+    quote do
+      layers =
+        [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1) |> Map.new()
+
+      opts = [{:layers, layers} | Keyword.delete(unquote(opts), :layers)]
+      Toddy.UI.__build_canvas__(unquote(id), opts)
+    end
+  end
+
+  @doc false
+  def __build_canvas__(id, opts) do
     Toddy.Widget.Canvas.new(id, clean_opts(opts)) |> Toddy.Widget.Canvas.build()
   end
 

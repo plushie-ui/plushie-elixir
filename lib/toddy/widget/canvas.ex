@@ -10,6 +10,25 @@ defmodule Toddy.Widget.Canvas do
   Shape descriptors are plain maps with string keys. Use `Toddy.Canvas.Shape`
   for convenience builders, or construct maps directly.
 
+  ## Do-block form
+
+  The `canvas` macro in `Toddy.UI` supports a do-block form that collects
+  layers declaratively using `Toddy.Canvas.Shape.layer/2`:
+
+      import Toddy.UI
+      import Toddy.Canvas.Shape
+
+      canvas "chart", width: 400, height: 300 do
+        layer "grid" do
+          rect(0, 0, 400, 300, stroke: "#eee")
+        end
+        layer "data" do
+          for bar <- bars do
+            rect(bar.x, bar.y, bar.w, bar.h, fill: bar.color)
+          end
+        end
+      end
+
   ## Props
 
   - `layers` (map of string => list of maps) -- named layers of shape

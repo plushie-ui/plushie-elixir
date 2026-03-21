@@ -1,7 +1,70 @@
+defmodule Toddy.Canvas.ShapeTestHelper do
+  @moduledoc false
+  import Toddy.Canvas.Shape
+
+  def group_do_block do
+    group do
+      rect(0, 0, 32, 32, fill: "#ccc")
+      text(8, 22, "B", fill: "#333")
+    end
+  end
+
+  def group_with_opts do
+    group x: 4, y: 4 do
+      rect(0, 0, 32, 32)
+      text(8, 22, "B")
+    end
+  end
+
+  def group_with_interactive do
+    group x: 10, interactive: [id: "btn", on_click: true] do
+      rect(0, 0, 100, 40, fill: "#3498db")
+    end
+  end
+
+  def group_with_for do
+    items = [{0, "#f00"}, {40, "#0f0"}, {80, "#00f"}]
+
+    group do
+      for {x, color} <- items do
+        rect(x, 0, 30, 30, fill: color)
+      end
+    end
+  end
+
+  def group_with_if(show_label?) do
+    group do
+      rect(0, 0, 50, 50, fill: "#ccc")
+
+      if show_label? do
+        text(10, 30, "Label", fill: "#000")
+      end
+    end
+  end
+
+  def layer_basic do
+    layer "grid" do
+      rect(0, 0, 400, 300, fill: "#eee")
+      line(0, 150, 400, 150, stroke: stroke("#ccc", 1))
+    end
+  end
+
+  def layer_with_for do
+    items = [10, 20, 30]
+
+    layer "bars" do
+      for x <- items do
+        rect(x, 0, 8, 50, fill: "#3498db")
+      end
+    end
+  end
+end
+
 defmodule Toddy.Canvas.ShapeTest do
   use ExUnit.Case, async: true
 
   alias Toddy.Canvas.Shape
+  import Toddy.Canvas.Shape, only: [group: 1, group: 2]
 
   # -- Basic shapes -----------------------------------------------------------
 
@@ -396,6 +459,95 @@ defmodule Toddy.Canvas.ShapeTest do
       result = Shape.text(10, 10, "Default")
       refute Map.has_key?(result, :align_x)
       refute Map.has_key?(result, :align_y)
+    end
+  end
+
+  # -- Group macro ------------------------------------------------------------
+
+  describe "group do...end" do
+    test "collects children from do block" do
+      result = Toddy.Canvas.ShapeTestHelper.group_do_block()
+      assert result[:type] == "group"
+      assert length(result[:children]) == 2
+      [rect, text] = result[:children]
+      assert rect[:type] == "rect"
+      assert text[:type] == "text"
+    end
+
+    test "with x and y options" do
+      result = Toddy.Canvas.ShapeTestHelper.group_with_opts()
+      assert result[:type] == "group"
+      assert result[:x] == 4
+      assert result[:y] == 4
+      assert length(result[:children]) == 2
+    end
+
+    test "with interactive option" do
+      result = Toddy.Canvas.ShapeTestHelper.group_with_interactive()
+      assert result[:type] == "group"
+      assert result[:x] == 10
+      assert result[:interactive][:id] == "btn"
+      assert result[:interactive][:on_click] == true
+    end
+
+    test "with for comprehension" do
+      result = Toddy.Canvas.ShapeTestHelper.group_with_for()
+      assert result[:type] == "group"
+      assert length(result[:children]) == 3
+      assert Enum.all?(result[:children], fn c -> c[:type] == "rect" end)
+    end
+
+    test "with if conditional" do
+      with_label = Toddy.Canvas.ShapeTestHelper.group_with_if(true)
+      assert length(with_label[:children]) == 2
+
+      without_label = Toddy.Canvas.ShapeTestHelper.group_with_if(false)
+      assert length(without_label[:children]) == 1
+    end
+  end
+
+  describe "group/2 list form" do
+    test "list of children with opts" do
+      children = [Shape.rect(0, 0, 100, 40), Shape.text(10, 20, "hi")]
+      result = group(children, x: 10, y: 50)
+      assert result[:type] == "group"
+      assert result[:x] == 10
+      assert result[:y] == 50
+      assert length(result[:children]) == 2
+    end
+
+    test "list of children without opts" do
+      children = [Shape.rect(0, 0, 50, 50)]
+      result = group(children)
+      assert result[:type] == "group"
+      assert length(result[:children]) == 1
+      refute Map.has_key?(result, :x)
+      refute Map.has_key?(result, :y)
+    end
+
+    test "list form with interactive option" do
+      children = [Shape.rect(0, 0, 50, 50, fill: "#3498db")]
+      result = group(children, x: 5, interactive: [id: "shape", on_click: true])
+      assert result[:interactive][:id] == "shape"
+      assert result[:x] == 5
+    end
+  end
+
+  # -- Layer macro ------------------------------------------------------------
+
+  describe "layer/2" do
+    test "returns a name-shapes tuple" do
+      {name, shapes} = Toddy.Canvas.ShapeTestHelper.layer_basic()
+      assert name == "grid"
+      assert length(shapes) == 2
+      assert hd(shapes)[:type] == "rect"
+    end
+
+    test "with for comprehension" do
+      {name, shapes} = Toddy.Canvas.ShapeTestHelper.layer_with_for()
+      assert name == "bars"
+      assert length(shapes) == 3
+      assert Enum.all?(shapes, fn s -> s[:type] == "rect" end)
     end
   end
 end

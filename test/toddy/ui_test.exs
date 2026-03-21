@@ -43,6 +43,47 @@ defmodule ToddyUITestHelper do
   end
 end
 
+defmodule ToddyUICanvasTestHelper do
+  @moduledoc false
+  import Toddy.UI
+  import Toddy.Canvas.Shape
+
+  def canvas_do_block do
+    canvas "chart" do
+      layer "grid" do
+        rect(0, 0, 400, 300, fill: "#eee")
+      end
+
+      layer "data" do
+        rect(10, 10, 50, 200, fill: "#3498db")
+      end
+    end
+  end
+
+  def canvas_opts_do_block do
+    canvas "chart", width: 400, height: 300 do
+      layer "main" do
+        circle(50, 50, 25, fill: "#f00")
+      end
+    end
+  end
+
+  def canvas_with_for(bars) do
+    canvas "chart", width: 400, height: 300 do
+      layer "bars" do
+        for bar <- bars do
+          rect(bar.x, bar.y, bar.w, bar.h, fill: bar.color)
+        end
+      end
+    end
+  end
+
+  def canvas_empty_do_block do
+    canvas "empty" do
+    end
+  end
+end
+
 defmodule Toddy.UITest do
   use ExUnit.Case, async: true
 
@@ -993,6 +1034,50 @@ defmodule Toddy.UITest do
       node = table("t")
       refute Map.has_key?(node.props, "columns")
       refute Map.has_key?(node.props, "rows")
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # canvas do-block form
+  # ---------------------------------------------------------------------------
+
+  describe "canvas id do...end" do
+    test "collects layers from do block" do
+      node = ToddyUICanvasTestHelper.canvas_do_block()
+      assert node.id == "chart"
+      assert node.type == "canvas"
+      assert is_map(node.props[:layers])
+      assert Map.has_key?(node.props[:layers], "grid")
+      assert Map.has_key?(node.props[:layers], "data")
+      assert length(node.props[:layers]["grid"]) == 1
+      assert length(node.props[:layers]["data"]) == 1
+    end
+
+    test "merges opts with layers from do block" do
+      node = ToddyUICanvasTestHelper.canvas_opts_do_block()
+      assert node.id == "chart"
+      assert node.props[:width] == 400
+      assert node.props[:height] == 300
+      assert is_map(node.props[:layers])
+      assert length(node.props[:layers]["main"]) == 1
+    end
+
+    test "layer with for comprehension" do
+      bars = [
+        %{x: 0, y: 0, w: 30, h: 100, color: "#f00"},
+        %{x: 40, y: 0, w: 30, h: 80, color: "#0f0"},
+        %{x: 80, y: 0, w: 30, h: 60, color: "#00f"}
+      ]
+
+      node = ToddyUICanvasTestHelper.canvas_with_for(bars)
+      assert length(node.props[:layers]["bars"]) == 3
+    end
+
+    test "empty do block produces empty layers" do
+      node = ToddyUICanvasTestHelper.canvas_empty_do_block()
+      assert node.id == "empty"
+      assert node.type == "canvas"
+      assert node.props[:layers] == %{}
     end
   end
 

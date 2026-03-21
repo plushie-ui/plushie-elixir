@@ -13,6 +13,9 @@
 # Consumers pull this in via `import_deps: [:toddy]` in their .formatter.exs.
 
 toddy_ui_locals = [
+  canvas: 1,
+  canvas: 2,
+  canvas: 3,
   column: :*,
   container: 1,
   container: 2,
@@ -21,7 +24,9 @@ toddy_ui_locals = [
   floating: 2,
   floating: 3,
   grid: :*,
+  group: :*,
   keyed_column: :*,
+  layer: 2,
   mouse_area: 1,
   mouse_area: 2,
   mouse_area: 3,

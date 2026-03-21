@@ -826,22 +826,15 @@ defmodule ToggleApp do
 
     window "main", title: "Toggle Demo" do
       column padding: 24, spacing: 16 do
-        canvas("toggle", width: 52, height: 28,
-          layers: %{"switch" => [
-            group(0, 0, [
+        canvas "toggle", width: 52, height: 28 do
+          layer "switch" do
+            group interactive: [id: "switch", on_click: true, cursor: :pointer,
+                    a11y: %{role: :switch, label: "Dark mode", toggled: on}] do
               rect(0, 0, 52, 28, fill: if(on, do: "#4CAF50", else: "#ccc"), radius: 14)
-              |> hover_style(%{fill: if(on, do: "#45a049", else: "#bbb")}),
               circle(knob_x, 14, 10, fill: "#fff")
-              |> hover_style(%{fill: "#f5f5f5"})
-            ])
-            |> interactive(
-              id: "switch",
-              on_click: true,
-              cursor: :pointer,
-              a11y: %{role: :switch, label: "Dark mode", toggled: on}
-            )
-          ]}
-        )
+            end
+          end
+        end
       end
     end
   end
@@ -850,8 +843,9 @@ end
 
 #### How it works
 
-The canvas contains a single group with two shapes: a rounded rect
-background and a circle knob. The `interactive` field on the group
+The canvas do-block collects `layer` declarations into a layers map.
+Each layer contains shapes -- here a single `group` with a rounded rect
+background and a circle knob. The `interactive` option on the group
 enables click events, sets the pointer cursor, and provides a11y
 metadata. On click, the host toggles `dark_mode` and the view
 re-renders with new positions and colours.
@@ -895,36 +889,33 @@ defmodule ChartApp do
 
     window "main", title: "Chart Demo" do
       column padding: 24, spacing: 16 do
-        canvas("chart", width: count * (bar_w + 20), height: chart_h, event_rate: 30,
-          layers: %{
-            "bars" => @data |> Enum.with_index() |> Enum.map(fn {bar, i} ->
+        canvas "chart", width: count * (bar_w + 20), height: chart_h, event_rate: 30 do
+          layer "bars" do
+            for {bar, i} <- Enum.with_index(@data) do
               bar_h = bar.value
               bar_x = i * (bar_w + 20)
               bar_y = chart_h - bar_h
 
-              hover_color = String.slice(bar.color, 0, 7) <> "cc"
-
-              group(bar_x, bar_y, [
+              group x: bar_x, y: bar_y,
+                    interactive: [
+                      id: "bar-#{i}",
+                      on_click: true,
+                      on_hover: true,
+                      cursor: :pointer,
+                      tooltip: "#{bar.month}: #{bar.value} units",
+                      a11y: %{
+                        role: :button,
+                        label: "#{bar.month}: #{bar.value} units",
+                        position_in_set: i + 1,
+                        size_of_set: count
+                      }
+                    ] do
                 rect(0, 0, bar_w, bar_h, fill: bar.color)
-                |> hover_style(%{fill: hover_color}),
                 text(bar_w / 2, -12, "#{bar.value}", fill: "#666", align_x: :center)
-              ])
-              |> interactive(
-                id: "bar-#{i}",
-                on_click: true,
-                on_hover: true,
-                cursor: :pointer,
-                tooltip: "#{bar.month}: #{bar.value} units",
-                a11y: %{
-                  role: :button,
-                  label: "#{bar.month}: #{bar.value} units",
-                  position_in_set: i + 1,
-                  size_of_set: count
-                }
-              )
-            end)
-          }
-        )
+              end
+            end
+          end
+        end
 
         if model.selected do
           text("selection", "Selected: #{model.selected}")
