@@ -142,6 +142,10 @@ defmodule Toddy.Runtime.Commands do
     state
   end
 
+  # close_window is routed through widget_op (not window_op) because the
+  # Rust renderer dispatches it alongside other widget operations like
+  # focus, scroll, and pane management. This matches the protocol spec
+  # where close_window is listed under widget_op operations.
   defp execute_command(%Toddy.Command{type: :close_window, payload: payload}, state) do
     if state.bridge do
       Toddy.Bridge.send_widget_op(state.bridge, "close_window", payload)

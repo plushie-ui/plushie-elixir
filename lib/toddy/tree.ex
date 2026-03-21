@@ -374,9 +374,12 @@ defmodule Toddy.Tree do
           end
         end)
 
-      # Ordering is load-bearing: removals descending (highest index first to
-      # avoid index shift), then updates (on adjusted indices), then inserts
-      # ascending (lowest index first to build correctly).
+      # Patch ops MUST be applied sequentially in the order they appear.
+      # The ordering is: removals (descending index), then updates (adjusted
+      # indices), then inserts (ascending index). The Rust renderer applies
+      # ops sequentially per the protocol spec ("Operations are applied
+      # sequentially"). The index calculations in update ops depend on
+      # removals having been applied first.
       remove_ops ++ update_ops ++ insert_ops
     end
   end

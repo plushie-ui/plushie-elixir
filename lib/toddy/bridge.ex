@@ -454,6 +454,11 @@ defmodule Toddy.Bridge do
       :error
   end
 
+  # Protocol-level errors (decode failures, unknown message types) are
+  # logged and emitted as telemetry events but NOT forwarded to the app.
+  # To monitor these, attach a telemetry handler for
+  # [:toddy, :bridge, :decode_error]. The app only receives structured
+  # events (Toddy.Event.* structs) and known tuples.
   defp dispatch_message(data, format, state) do
     :telemetry.execute([:toddy, :bridge, :receive], %{byte_size: byte_size(data)}, %{})
 

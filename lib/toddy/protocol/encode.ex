@@ -86,6 +86,12 @@ defmodule Toddy.Protocol.Encode do
   """
   @spec encode_widget_op(op :: String.t(), payload :: map(), format :: Toddy.Protocol.format()) ::
           iodata()
+  # Widget op payloads use atom keys (e.g., %{target: "widget_id"}).
+  # Both Jason (JSON) and Msgpax (MessagePack) serialize atom keys as
+  # strings, so the Rust side receives string-keyed maps. This is an
+  # implicit reliance on serializer behavior rather than explicit key
+  # conversion, but it's consistent across all message types in this
+  # module (all use atom keys and rely on the serializer).
   def encode_widget_op(op, payload, format \\ :msgpack) do
     payload = encode_binary_fields(payload, format, [:data])
     serialize(%{type: "widget_op", op: op, payload: payload}, format)
