@@ -1,9 +1,9 @@
 defmodule Plushie.MixProject do
   use Mix.Project
 
-  @version "0.3.0"
+  @version "0.4.0"
   @source_url "https://github.com/plushie-ui/plushie-elixir"
-  @binary_version "0.3.2"
+  @binary_version "0.4.0"
 
   def project do
     [
@@ -18,7 +18,7 @@ defmodule Plushie.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       name: "Plushie",
-      description: "Native desktop GUIs from Elixir, powered by iced",
+      description: "Native desktop GUI framework for Elixir, powered by Iced",
       package: package(),
       source_url: @source_url,
       homepage_url: @source_url,
@@ -134,12 +134,33 @@ defmodule Plushie.MixProject do
           Plushie.Undo
         ],
         Testing: ~r/Plushie\.Test.*/,
+        Canvas: [
+          Plushie.Canvas.Shape,
+          ~r/Plushie\.Canvas\.Shape\..*/
+        ],
+        DSL: [
+          Plushie.DSL.Buildable
+        ],
         Extensions: [
-          Plushie.Extension,
-          Plushie.Canvas.Shape
+          Plushie.Extension
         ],
         Protocol: ~r/Plushie\.Protocol.*/
-      ]
+      ],
+      filter_modules: fn mod, _meta ->
+        # Exclude example app modules from docs
+        mod_str = Atom.to_string(mod)
+
+        not String.starts_with?(mod_str, "Elixir.Counter") and
+          not String.starts_with?(mod_str, "Elixir.Clock") and
+          not String.starts_with?(mod_str, "Elixir.Todo") and
+          not String.starts_with?(mod_str, "Elixir.Notes") and
+          not String.starts_with?(mod_str, "Elixir.Shortcuts") and
+          not String.starts_with?(mod_str, "Elixir.AsyncFetch") and
+          not String.starts_with?(mod_str, "Elixir.ColorPicker") and
+          not String.starts_with?(mod_str, "Elixir.Catalog") and
+          not String.starts_with?(mod_str, "Elixir.TabApp") and
+          not String.starts_with?(mod_str, "Elixir.ModalApp")
+      end
     ]
   end
 

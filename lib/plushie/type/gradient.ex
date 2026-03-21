@@ -34,7 +34,8 @@ defmodule Plushie.Type.Gradient do
   @type t :: %{type: String.t(), angle: number(), stops: [stop()]}
 
   @typedoc "Color input for gradient stops: any `Color.input()` form, or a float RGBA map."
-  @type stop_color :: Plushie.Type.Color.input() | %{r: float(), g: float(), b: float(), a: float()}
+  @type stop_color ::
+          Plushie.Type.Color.input() | %{r: float(), g: float(), b: float(), a: float()}
 
   @doc """
   Creates a linear gradient with an angle (degrees) and a list of

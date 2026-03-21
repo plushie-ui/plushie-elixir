@@ -25,7 +25,10 @@ defmodule Plushie.Runtime.Subscriptions do
             specs
 
           other ->
-            Logger.error("plushie runtime: subscribe/1 must return a list, got: #{inspect(other)}")
+            Logger.error(
+              "plushie runtime: subscribe/1 must return a list, got: #{inspect(other)}"
+            )
+
             []
         end
       rescue

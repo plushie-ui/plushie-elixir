@@ -646,7 +646,13 @@ defmodule Plushie.UI do
 
       opts ->
         quote do
-          Plushie.UI.__build_container__(Plushie.Widget.Overlay, unquote(id), unquote(opts), [], nil)
+          Plushie.UI.__build_container__(
+            Plushie.Widget.Overlay,
+            unquote(id),
+            unquote(opts),
+            [],
+            nil
+          )
         end
     end
   end
@@ -1104,7 +1110,13 @@ defmodule Plushie.UI do
 
       opts ->
         quote do
-          Plushie.UI.__build_container__(Plushie.Widget.Floating, unquote(id), unquote(opts), [], nil)
+          Plushie.UI.__build_container__(
+            Plushie.Widget.Floating,
+            unquote(id),
+            unquote(opts),
+            [],
+            nil
+          )
         end
     end
   end
@@ -1221,7 +1233,13 @@ defmodule Plushie.UI do
 
       opts ->
         quote do
-          Plushie.UI.__build_container__(Plushie.Widget.Sensor, unquote(id), unquote(opts), [], nil)
+          Plushie.UI.__build_container__(
+            Plushie.Widget.Sensor,
+            unquote(id),
+            unquote(opts),
+            [],
+            nil
+          )
         end
     end
   end
@@ -1235,7 +1253,14 @@ defmodule Plushie.UI do
 
     quote do
       items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Plushie.UI.__build_container__(Plushie.Widget.Sensor, unquote(id), unquote(opts), items, nil)
+
+      Plushie.UI.__build_container__(
+        Plushie.Widget.Sensor,
+        unquote(id),
+        unquote(opts),
+        items,
+        nil
+      )
     end
   end
 
@@ -1271,7 +1296,13 @@ defmodule Plushie.UI do
 
       opts ->
         quote do
-          Plushie.UI.__build_container__(Plushie.Widget.Themer, unquote(id), unquote(opts), [], nil)
+          Plushie.UI.__build_container__(
+            Plushie.Widget.Themer,
+            unquote(id),
+            unquote(opts),
+            [],
+            nil
+          )
         end
     end
   end
@@ -1285,7 +1316,14 @@ defmodule Plushie.UI do
 
     quote do
       items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Plushie.UI.__build_container__(Plushie.Widget.Themer, unquote(id), unquote(opts), items, nil)
+
+      Plushie.UI.__build_container__(
+        Plushie.Widget.Themer,
+        unquote(id),
+        unquote(opts),
+        items,
+        nil
+      )
     end
   end
 
@@ -1632,7 +1670,12 @@ defmodule Plushie.UI do
 
       opts ->
         quote do
-          Plushie.Widget.ProgressBar.new(unquote(id), unquote(range), unquote(value), unquote(opts))
+          Plushie.Widget.ProgressBar.new(
+            unquote(id),
+            unquote(range),
+            unquote(value),
+            unquote(opts)
+          )
           |> Plushie.Widget.ProgressBar.build()
         end
     end
@@ -1663,7 +1706,9 @@ defmodule Plushie.UI do
         pairs = interpret_block(block, option_types)
         validate_option_keys!(pairs, option_keys, "toggler", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
-        quote do: Plushie.UI.__build_toggler__(unquote(id), unquote(is_toggled), unquote(opts_ast))
+
+        quote do:
+                Plushie.UI.__build_toggler__(unquote(id), unquote(is_toggled), unquote(opts_ast))
 
       opts ->
         quote do: Plushie.UI.__build_toggler__(unquote(id), unquote(is_toggled), unquote(opts))
@@ -1726,7 +1771,8 @@ defmodule Plushie.UI do
   @spec __build_radio__(String.t(), term(), term(), keyword()) :: Plushie.Widget.ui_node()
   def __build_radio__(id, value, selected, opts)
       when not is_keyword(value) and not is_keyword(selected) do
-    Plushie.Widget.Radio.new(id, value, selected, clean_opts(opts)) |> Plushie.Widget.Radio.build()
+    Plushie.Widget.Radio.new(id, value, selected, clean_opts(opts))
+    |> Plushie.Widget.Radio.build()
   end
 
   @doc """
@@ -1958,7 +2004,9 @@ defmodule Plushie.UI do
         pairs = interpret_block(block, option_types)
         validate_option_keys!(pairs, option_keys, "text_editor", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
-        quote do: Plushie.UI.__build_text_editor__(unquote(id), unquote(content), unquote(opts_ast))
+
+        quote do:
+                Plushie.UI.__build_text_editor__(unquote(id), unquote(content), unquote(opts_ast))
 
       opts ->
         quote do: Plushie.UI.__build_text_editor__(unquote(id), unquote(content), unquote(opts))
@@ -2072,7 +2120,8 @@ defmodule Plushie.UI do
   @doc false
   defmacro markdown(id, content) do
     quote do
-      Plushie.Widget.Markdown.new(unquote(id), unquote(content)) |> Plushie.Widget.Markdown.build()
+      Plushie.Widget.Markdown.new(unquote(id), unquote(content))
+      |> Plushie.Widget.Markdown.build()
     end
   end
 
@@ -2318,7 +2367,13 @@ defmodule Plushie.UI do
 
       opts ->
         quote do
-          Plushie.UI.__build_container__(Plushie.Widget.PaneGrid, unquote(id), unquote(opts), [], nil)
+          Plushie.UI.__build_container__(
+            Plushie.Widget.PaneGrid,
+            unquote(id),
+            unquote(opts),
+            [],
+            nil
+          )
         end
     end
   end
@@ -2418,7 +2473,13 @@ defmodule Plushie.UI do
 
       opts ->
         quote do
-          Plushie.UI.__build_container__(Plushie.Widget.Table, unquote(id), unquote(opts), [], nil)
+          Plushie.UI.__build_container__(
+            Plushie.Widget.Table,
+            unquote(id),
+            unquote(opts),
+            [],
+            nil
+          )
         end
     end
   end
@@ -2632,7 +2693,9 @@ defmodule Plushie.UI do
       [do: block] ->
         pairs = interpret_block(block)
         opts_ast = pairs_to_keyword_ast(pairs)
-        quote do: Plushie.Canvas.Shape.circle(unquote(x), unquote(y), unquote(r), unquote(opts_ast))
+
+        quote do:
+                Plushie.Canvas.Shape.circle(unquote(x), unquote(y), unquote(r), unquote(opts_ast))
 
       opts ->
         quote do: Plushie.Canvas.Shape.circle(unquote(x), unquote(y), unquote(r), unquote(opts))

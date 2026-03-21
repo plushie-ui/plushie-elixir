@@ -181,7 +181,10 @@ defmodule Plushie.Runtime.Commands do
   end
 
   defp execute_command(
-         %Plushie.Command{type: :window_query, payload: %{op: op, window_id: window_id} = payload},
+         %Plushie.Command{
+           type: :window_query,
+           payload: %{op: op, window_id: window_id} = payload
+         },
          state
        ) do
     if state.bridge do

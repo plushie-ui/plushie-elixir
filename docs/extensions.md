@@ -1123,7 +1123,7 @@ defmodule MyWidget.MixProject do
 
   defp deps do
     [
-      {:plushie, "~> 0.3"}
+      {:plushie, "~> 0.4"}
     ]
   end
 end

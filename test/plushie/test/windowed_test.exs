@@ -4,7 +4,8 @@ defmodule Plushie.Test.WindowedTest do
   @moduletag :windowed
 
   # Skip unless windowed backend is available (opt-in via env var).
-  unless System.get_env("PLUSHIE_WINDOWED") || System.get_env("PLUSHIE_TEST_BACKEND") == "windowed" do
+  unless System.get_env("PLUSHIE_WINDOWED") ||
+           System.get_env("PLUSHIE_TEST_BACKEND") == "windowed" do
     @moduletag :skip
   end
 

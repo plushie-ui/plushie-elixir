@@ -11,7 +11,8 @@ defmodule Plushie.Test.HeadlessTest do
   @moduletag :headless
 
   # Skip unless headless binary is available (opt-in via env var).
-  unless System.get_env("PLUSHIE_HEADLESS") || System.get_env("PLUSHIE_TEST_BACKEND") == "headless" do
+  unless System.get_env("PLUSHIE_HEADLESS") ||
+           System.get_env("PLUSHIE_TEST_BACKEND") == "headless" do
     @moduletag :skip
   end
 

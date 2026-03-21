@@ -28,7 +28,7 @@ cd my_app
 # mix.exs
 defp deps do
   [
-    {:plushie, "~> 0.3"}
+    {:plushie, "~> 0.4"}
   ]
 end
 ```

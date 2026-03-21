@@ -76,9 +76,6 @@ defmodule Plushie.Type.Padding do
   """
   @spec cast(padding :: t()) :: map()
 
-  @doc deprecated: "Use cast/1 instead"
-  defdelegate encode(padding), to: __MODULE__, as: :cast
-
   def cast(n) when is_number(n) do
     %{top: n, right: n, bottom: n, left: n}
   end

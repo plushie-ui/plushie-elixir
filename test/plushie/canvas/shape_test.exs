@@ -518,7 +518,9 @@ defmodule Plushie.Canvas.ShapeTest do
   describe "interactive with nested structs" do
     test "new/1 converts keyword hover_style to ShapeStyle struct" do
       interactive = Interactive.new(id: "btn", hover_style: [fill: "#ddd", opacity: 0.8])
-      assert %Plushie.Canvas.Shape.ShapeStyle{fill: "#ddd", opacity: 0.8} = interactive.hover_style
+
+      assert %Plushie.Canvas.Shape.ShapeStyle{fill: "#ddd", opacity: 0.8} =
+               interactive.hover_style
     end
 
     test "new/1 converts keyword drag_bounds to DragBounds struct" do
