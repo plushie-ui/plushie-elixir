@@ -447,6 +447,22 @@ defmodule Toddy.Canvas.ShapeTest do
     end
   end
 
+  # -- Tree normalizer leak detection -----------------------------------------
+
+  describe "tree normalizer leak detection" do
+    test "widget prop tuple in tree raises" do
+      assert_raise ArgumentError, ~r/DSL prop declaration/, fn ->
+        Toddy.Tree.normalize({:__widget_prop__, :spacing, 8})
+      end
+    end
+
+    test "canvas meta tuple in tree raises" do
+      assert_raise ArgumentError, ~r/canvas metadata declaration/, fn ->
+        Toddy.Tree.normalize({:__canvas_meta__, :interactive, %{}})
+      end
+    end
+  end
+
   # -- Value structs ----------------------------------------------------------
 
   describe "ShapeStyle" do

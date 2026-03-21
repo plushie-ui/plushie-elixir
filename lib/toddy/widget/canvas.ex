@@ -89,9 +89,28 @@ defmodule Toddy.Widget.Canvas do
   alias Toddy.Type.A11y
   alias Toddy.Widget.Build
 
+  @typedoc "A canvas shape descriptor (struct or plain map)."
+  @type canvas_shape ::
+          Toddy.Canvas.Shape.Rect.t()
+          | Toddy.Canvas.Shape.Circle.t()
+          | Toddy.Canvas.Shape.Line.t()
+          | Toddy.Canvas.Shape.CanvasText.t()
+          | Toddy.Canvas.Shape.Path.t()
+          | Toddy.Canvas.Shape.CanvasImage.t()
+          | Toddy.Canvas.Shape.CanvasSvg.t()
+          | Toddy.Canvas.Shape.Group.t()
+          | Toddy.Canvas.Shape.PushTransform.t()
+          | Toddy.Canvas.Shape.PopTransform.t()
+          | Toddy.Canvas.Shape.Translate.t()
+          | Toddy.Canvas.Shape.Rotate.t()
+          | Toddy.Canvas.Shape.Scale.t()
+          | Toddy.Canvas.Shape.PushClip.t()
+          | Toddy.Canvas.Shape.PopClip.t()
+          | map()
+
   @type option ::
-          {:layers, %{String.t() => [map()]}}
-          | {:shapes, [map()]}
+          {:layers, %{String.t() => [canvas_shape()]}}
+          | {:shapes, [canvas_shape()]}
           | {:width, Toddy.Type.Length.t()}
           | {:height, Toddy.Type.Length.t()}
           | {:background, Toddy.Type.Color.input()}
@@ -107,8 +126,8 @@ defmodule Toddy.Widget.Canvas do
 
   @type t :: %__MODULE__{
           id: String.t(),
-          layers: %{String.t() => [map()]} | nil,
-          shapes: [map()] | nil,
+          layers: %{String.t() => [canvas_shape()]} | nil,
+          shapes: [canvas_shape()] | nil,
           width: Toddy.Type.Length.t() | nil,
           height: Toddy.Type.Length.t() | nil,
           background: Toddy.Type.Color.t() | nil,
@@ -172,15 +191,15 @@ defmodule Toddy.Widget.Canvas do
   end
 
   @doc "Sets the layers map (layer name => list of shape descriptors)."
-  @spec layers(canvas :: t(), layers :: %{String.t() => [map()]}) :: t()
+  @spec layers(canvas :: t(), layers :: %{String.t() => [canvas_shape()]}) :: t()
   def layers(%__MODULE__{} = canvas, layers), do: %{canvas | layers: layers}
 
   @doc "Sets a flat list of shapes (convenience shorthand for unlayered canvases)."
-  @spec shapes(canvas :: t(), shapes :: [map()]) :: t()
+  @spec shapes(canvas :: t(), shapes :: [canvas_shape()]) :: t()
   def shapes(%__MODULE__{} = canvas, shapes) when is_list(shapes), do: %{canvas | shapes: shapes}
 
   @doc "Adds a single named layer to the canvas. Merges with existing layers."
-  @spec layer(canvas :: t(), name :: String.t(), shapes :: [map()]) :: t()
+  @spec layer(canvas :: t(), name :: String.t(), shapes :: [canvas_shape()]) :: t()
   def layer(%__MODULE__{} = canvas, name, shapes) do
     current = canvas.layers || %{}
     %{canvas | layers: Map.put(current, name, shapes)}

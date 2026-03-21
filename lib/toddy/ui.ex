@@ -163,11 +163,35 @@ defmodule Toddy.UI do
   Import `Toddy.Canvas.Shape` directly only when building shapes in
   helper functions outside canvas blocks.
 
+  ## Prop override semantics
+
+  When both the keyword argument on the call line and a block
+  declaration specify the same option, the block value wins:
+
+      column spacing: 8 do
+        spacing 16         # overrides -- spacing is 16
+        text("hello")
+      end
+
+  This applies to all container and leaf widget do-blocks.
+
+  ## Control flow preservation
+
+  All DSL blocks preserve every expression from control flow forms.
+  Multi-expression `if`/`for`/`case`/`cond`/`with` bodies contribute
+  all their expressions to the parent's children list, not just the
+  last one.
+
   ## Tree query
 
   `find/2` is re-exported from `Toddy.Tree` for convenience:
 
       Toddy.UI.find(tree, "my_button")
+
+  ## Internals
+
+  For maintainer and extension author details on the macro architecture,
+  see `docs/dsl-internals.md`.
   """
 
   # Container widget modules and their display names, used to build the
@@ -1352,6 +1376,7 @@ defmodule Toddy.UI do
   end
 
   @doc false
+  @spec __build_button__(String.t(), String.t(), keyword()) :: Toddy.Widget.ui_node()
   def __build_button__(id, label, opts) do
     Toddy.Widget.Button.new(id, label, clean_opts(opts)) |> Toddy.Widget.Button.build()
   end
@@ -1385,6 +1410,7 @@ defmodule Toddy.UI do
   end
 
   @doc false
+  @spec __build_text_input__(String.t(), String.t(), keyword()) :: Toddy.Widget.ui_node()
   def __build_text_input__(id, value, opts) when not is_keyword(value) do
     Toddy.Widget.TextInput.new(id, value, clean_opts(opts)) |> Toddy.Widget.TextInput.build()
   end
@@ -1418,6 +1444,7 @@ defmodule Toddy.UI do
   end
 
   @doc false
+  @spec __build_checkbox__(String.t(), boolean(), keyword()) :: Toddy.Widget.ui_node()
   def __build_checkbox__(id, checked, opts) when not is_keyword(checked) do
     clean = clean_opts(opts)
     {label, remaining} = Keyword.pop(clean, :label, "")
@@ -1644,6 +1671,7 @@ defmodule Toddy.UI do
   end
 
   @doc false
+  @spec __build_toggler__(String.t(), boolean(), keyword()) :: Toddy.Widget.ui_node()
   def __build_toggler__(id, is_toggled, opts) when not is_keyword(is_toggled) do
     Toddy.Widget.Toggler.new(id, is_toggled, clean_opts(opts)) |> Toddy.Widget.Toggler.build()
   end
@@ -1695,6 +1723,7 @@ defmodule Toddy.UI do
   end
 
   @doc false
+  @spec __build_radio__(String.t(), term(), term(), keyword()) :: Toddy.Widget.ui_node()
   def __build_radio__(id, value, selected, opts)
       when not is_keyword(value) and not is_keyword(selected) do
     Toddy.Widget.Radio.new(id, value, selected, clean_opts(opts)) |> Toddy.Widget.Radio.build()
@@ -1748,6 +1777,8 @@ defmodule Toddy.UI do
   end
 
   @doc false
+  @spec __build_slider__(String.t(), {number(), number()}, number(), keyword()) ::
+          Toddy.Widget.ui_node()
   def __build_slider__(id, range, value, opts)
       when not is_keyword(range) and not is_keyword(value) do
     Toddy.Widget.Slider.new(id, normalize_range(range), value, clean_opts(opts))
@@ -1799,6 +1830,8 @@ defmodule Toddy.UI do
   end
 
   @doc false
+  @spec __build_vertical_slider__(String.t(), {number(), number()}, number(), keyword()) ::
+          Toddy.Widget.ui_node()
   def __build_vertical_slider__(id, range, value, opts)
       when not is_keyword(range) and not is_keyword(value) do
     Toddy.Widget.VerticalSlider.new(id, normalize_range(range), value, clean_opts(opts))
@@ -1847,6 +1880,8 @@ defmodule Toddy.UI do
   end
 
   @doc false
+  @spec __build_pick_list__(String.t(), [String.t()], String.t() | nil, keyword()) ::
+          Toddy.Widget.ui_node()
   def __build_pick_list__(id, options, selected, opts)
       when not is_keyword(options) and not is_keyword(selected) do
     Toddy.Widget.PickList.new(id, options, [{:selected, selected} | clean_opts(opts)])
@@ -1895,6 +1930,8 @@ defmodule Toddy.UI do
   end
 
   @doc false
+  @spec __build_combo_box__(String.t(), [String.t()], String.t(), keyword()) ::
+          Toddy.Widget.ui_node()
   def __build_combo_box__(id, options, value, opts)
       when not is_keyword(options) and not is_keyword(value) do
     Toddy.Widget.ComboBox.new(id, options, [{:value, value} | clean_opts(opts)])
@@ -1929,6 +1966,7 @@ defmodule Toddy.UI do
   end
 
   @doc false
+  @spec __build_text_editor__(String.t(), String.t(), keyword()) :: Toddy.Widget.ui_node()
   def __build_text_editor__(id, content, opts) when not is_keyword(content) do
     Toddy.Widget.TextEditor.new(id, [{:content, content} | clean_opts(opts)])
     |> Toddy.Widget.TextEditor.build()
@@ -1966,6 +2004,7 @@ defmodule Toddy.UI do
   end
 
   @doc false
+  @spec __build_image__(String.t(), String.t(), keyword()) :: Toddy.Widget.ui_node()
   def __build_image__(id, source, opts) when not is_keyword(source) do
     Toddy.Widget.Image.new(id, source, clean_opts(opts)) |> Toddy.Widget.Image.build()
   end
@@ -1998,6 +2037,7 @@ defmodule Toddy.UI do
   end
 
   @doc false
+  @spec __build_svg__(String.t(), String.t(), keyword()) :: Toddy.Widget.ui_node()
   def __build_svg__(id, source, opts) when not is_keyword(source) do
     Toddy.Widget.Svg.new(id, source, clean_opts(opts)) |> Toddy.Widget.Svg.build()
   end
@@ -2232,6 +2272,7 @@ defmodule Toddy.UI do
   end
 
   @doc false
+  @spec __build_canvas__(String.t(), keyword()) :: Toddy.Widget.ui_node()
   def __build_canvas__(id, opts) do
     Toddy.Widget.Canvas.new(id, clean_opts(opts)) |> Toddy.Widget.Canvas.build()
   end
@@ -2336,6 +2377,7 @@ defmodule Toddy.UI do
   end
 
   @doc false
+  @spec __build_rich_text__(String.t(), keyword()) :: Toddy.Widget.ui_node()
   def __build_rich_text__(id, opts) do
     Toddy.Widget.RichText.new(id, clean_opts(opts)) |> Toddy.Widget.RichText.build()
   end
@@ -2542,6 +2584,8 @@ defmodule Toddy.UI do
   end
 
   @doc false
+  @spec __build_interactive__(String.t() | map(), keyword()) ::
+          {:__canvas_meta__, :interactive, Toddy.Canvas.Shape.Interactive.t()} | map()
   def __build_interactive__(id, opts) when is_binary(id) do
     {:__canvas_meta__, :interactive, Toddy.Canvas.Shape.Interactive.new([{:id, id} | opts])}
   end
@@ -2754,6 +2798,7 @@ defmodule Toddy.UI do
   end
 
   @doc false
+  @spec __build_qr_code__(String.t(), String.t(), keyword()) :: Toddy.Widget.ui_node()
   def __build_qr_code__(id, data, opts) do
     Toddy.Widget.QrCode.new(id, data, clean_opts(opts)) |> Toddy.Widget.QrCode.build()
   end
@@ -2774,7 +2819,8 @@ defmodule Toddy.UI do
 
   @container_widget_names Enum.map(@container_modules, fn {_mod, name} -> String.to_atom(name) end)
 
-  @widget_calls @leaf_widget_names ++ @display_widget_names ++ @container_widget_names ++ [:canvas]
+  @widget_calls @leaf_widget_names ++
+                  @display_widget_names ++ @container_widget_names ++ [:canvas]
 
   for key <- @all_container_option_names, key in @widget_calls do
     raise CompileError,

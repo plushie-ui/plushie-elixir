@@ -134,6 +134,44 @@ end
 | `rust_crate "path"` | native only | Path to the Rust crate |
 | `rust_constructor "expr"` | native only | Rust constructor expression |
 
+### Automatic DSL integration
+
+`prop` declarations automatically generate `Toddy.DSL.Buildable`
+callbacks (`from_opts/1`, `__field_keys__/0`, `__field_types__/0`) and
+the `__option_keys__/0` / `__option_types__/0` functions that the DSL
+macros use for compile-time validation. Extension widgets work with
+block-form options out of the box -- no extra boilerplate needed.
+
+When a prop's type maps to a `Buildable` struct (e.g. `:padding` maps
+to `Toddy.Type.Padding`), the extension widget automatically supports
+nested do-block construction for that prop:
+
+```elixir
+defmodule MyApp.Card do
+  use Toddy.Extension, :widget
+
+  widget :card, container: true
+
+  prop :title, :string
+  prop :padding, :padding, default: 0
+  prop :border, :border, default: nil
+end
+
+# In a view:
+import Toddy.UI
+
+my_card "info", title: "Details" do
+  border do
+    width 1
+    color "#ddd"
+    rounded 4
+  end
+  padding 16
+
+  text("Card content here")
+end
+```
+
 ### Supported prop types
 
 `:number`, `:string`, `:boolean`, `:color`, `:length`, `:padding`,

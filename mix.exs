@@ -53,6 +53,7 @@ defmodule Toddy.MixProject do
         "docs/composition-patterns.md",
         "docs/accessibility.md",
         "docs/extensions.md",
+        "docs/dsl-internals.md",
         "examples/README.md",
         "CHANGELOG.md"
       ],
@@ -73,7 +74,8 @@ defmodule Toddy.MixProject do
           "docs/running.md",
           "docs/composition-patterns.md",
           "docs/accessibility.md",
-          "docs/extensions.md"
+          "docs/extensions.md",
+          "docs/dsl-internals.md"
         ],
         About: [
           "examples/README.md",

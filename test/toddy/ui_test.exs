@@ -342,6 +342,117 @@ defmodule ToddyUIContainerPropsHelper do
   end
 end
 
+defmodule ToddyUIEdgeCaseHelper do
+  @moduledoc false
+  import Toddy.UI
+
+  # Empty do-blocks
+  def empty_column_block do
+    column do
+    end
+  end
+
+  # Same key in keyword AND block (block wins)
+  def mixed_key_override do
+    column spacing: 8 do
+      spacing(16)
+      text("Hello")
+    end
+  end
+
+  # Boolean bare-name props
+  def boolean_bare_prop do
+    column do
+      clip
+      text("Clipped")
+    end
+  end
+
+  # Props interleaved with children
+  def interleaved_props do
+    column do
+      text("First")
+      spacing(8)
+      text("Second")
+      padding(16)
+    end
+  end
+
+  # Multi-expression if with props (control flow bug fix)
+  def multi_expr_if_props do
+    column do
+      if true do
+        spacing(4)
+        padding(8)
+      end
+
+      text("Hello")
+    end
+  end
+
+  # Multi-expression if with children in layer
+  def multi_expr_if_children do
+    canvas "chart" do
+      layer "main" do
+        if true do
+          rect(0, 0, 50, 50, fill: "#f00")
+          rect(50, 50, 50, 50, fill: "#0f0")
+        end
+      end
+    end
+  end
+
+  # Window with inline props
+  def window_inline_props do
+    window "main" do
+      title("My App")
+      resizable
+
+      column do
+        text("Hello")
+      end
+    end
+  end
+
+  # Space with do-block
+  def space_block do
+    space do
+      width(:fill)
+      height(20)
+    end
+  end
+
+  # Rule with do-block
+  def rule_block do
+    rule do
+      width(200)
+    end
+  end
+
+  # Variable values in block props
+  def variable_prop_value(spacing_val) do
+    column do
+      spacing(spacing_val)
+      text("Dynamic")
+    end
+  end
+
+  # For comprehension in container with multiple shapes per iteration
+  # (explicit list wrapping required since for returns the last expression)
+  def for_with_shapes_in_layer do
+    canvas "chart" do
+      layer "data" do
+        for i <- [1, 2, 3] do
+          [
+            rect(i * 40, 0, 30, 100, fill: "#3498db"),
+            circle(i * 40 + 15, 50, 10, fill: "#fff")
+          ]
+        end
+      end
+    end
+  end
+end
+
 defmodule Toddy.UITest do
   use ExUnit.Case, async: true
 
@@ -1728,6 +1839,140 @@ defmodule Toddy.UITest do
         column do
           direction(:horizontal)
           text("Hello")
+        end
+        """)
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Edge cases: empty blocks
+  # ---------------------------------------------------------------------------
+
+  describe "edge cases: empty blocks" do
+    test "empty column do-block" do
+      node = ToddyUIEdgeCaseHelper.empty_column_block()
+      assert node.type == "column"
+      assert node.children == []
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Edge cases: prop override
+  # ---------------------------------------------------------------------------
+
+  describe "edge cases: prop override" do
+    test "block prop overrides keyword prop" do
+      node = ToddyUIEdgeCaseHelper.mixed_key_override()
+      assert node.props.spacing == 16
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Edge cases: boolean bare props
+  # ---------------------------------------------------------------------------
+
+  describe "edge cases: boolean bare props" do
+    test "bare name in container sets true" do
+      node = ToddyUIEdgeCaseHelper.boolean_bare_prop()
+      assert node.props.clip == true
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Edge cases: interleaved props and children
+  # ---------------------------------------------------------------------------
+
+  describe "edge cases: interleaved props and children" do
+    test "props and children order preserved" do
+      node = ToddyUIEdgeCaseHelper.interleaved_props()
+      assert node.props.spacing == 8
+      assert node.props.padding == 16
+      assert length(node.children) == 2
+      assert hd(node.children).props.content == "First"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Edge cases: multi-expression control flow
+  # ---------------------------------------------------------------------------
+
+  describe "edge cases: multi-expression control flow" do
+    test "multiple props in if body all take effect" do
+      node = ToddyUIEdgeCaseHelper.multi_expr_if_props()
+      assert node.props.spacing == 4
+      assert node.props.padding == 8
+    end
+
+    test "multiple children in if body in canvas layer" do
+      node = ToddyUIEdgeCaseHelper.multi_expr_if_children()
+      shapes = node.props.layers["main"]
+      assert length(shapes) == 2
+      assert Enum.all?(shapes, &match?(%Toddy.Canvas.Shape.Rect{}, &1))
+    end
+
+    test "for with multiple shapes per iteration" do
+      node = ToddyUIEdgeCaseHelper.for_with_shapes_in_layer()
+      shapes = node.props.layers["data"]
+      assert length(shapes) == 6
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Edge cases: window inline props
+  # ---------------------------------------------------------------------------
+
+  describe "edge cases: window inline props" do
+    test "window with inline title and resizable" do
+      node = ToddyUIEdgeCaseHelper.window_inline_props()
+      assert node.type == "window"
+      assert node.props.title == "My App"
+      assert node.props.resizable == true
+      assert length(node.children) == 1
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Edge cases: space and rule do-blocks
+  # ---------------------------------------------------------------------------
+
+  describe "edge cases: space and rule do-blocks" do
+    test "space with do-block options" do
+      node = ToddyUIEdgeCaseHelper.space_block()
+      assert node.type == "space"
+      assert node.props.width == :fill
+      assert node.props.height == 20
+    end
+
+    test "rule with do-block options" do
+      node = ToddyUIEdgeCaseHelper.rule_block()
+      assert node.type == "rule"
+      assert node.props.width == 200
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Edge cases: variable values
+  # ---------------------------------------------------------------------------
+
+  describe "edge cases: variable values" do
+    test "variable in block prop" do
+      node = ToddyUIEdgeCaseHelper.variable_prop_value(42)
+      assert node.props.spacing == 42
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Edge cases: leaf widget compile errors
+  # ---------------------------------------------------------------------------
+
+  describe "edge cases: leaf widget compile errors" do
+    test "unknown option in button block" do
+      assert_raise CompileError, ~r/unknwn is not a valid option for button/, fn ->
+        Code.compile_string("""
+        import Toddy.UI
+        button "save", "Save" do
+          unknwn("value")
         end
         """)
       end
