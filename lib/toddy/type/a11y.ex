@@ -206,3 +206,12 @@ defmodule Toddy.Type.A11y do
     cast(Map.new(opts))
   end
 end
+
+defimpl Toddy.Encode, for: Toddy.Type.A11y do
+  def encode(%Toddy.Type.A11y{} = a11y) do
+    a11y
+    |> Map.from_struct()
+    |> Enum.reject(fn {_, v} -> is_nil(v) end)
+    |> Map.new(fn {k, v} -> {k, Toddy.Encode.encode(v)} end)
+  end
+end

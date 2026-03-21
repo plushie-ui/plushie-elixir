@@ -76,3 +76,13 @@ defmodule Toddy.Type.Shadow do
     end)
   end
 end
+
+defimpl Toddy.Encode, for: Toddy.Type.Shadow do
+  def encode(shadow) do
+    %{
+      color: shadow.color,
+      offset: [shadow.offset_x, shadow.offset_y],
+      blur_radius: shadow.blur_radius
+    }
+  end
+end

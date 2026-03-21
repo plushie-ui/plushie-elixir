@@ -29,6 +29,8 @@ defprotocol Toddy.Encode do
 
   ## Struct implementations
 
+  Struct implementations live alongside their struct definitions:
+
   - `Toddy.Type.A11y` -- strips nil fields, converts atom keys to strings
   - `Toddy.Type.Border` -- encodes per-corner radius to string-keyed map
   - `Toddy.Type.Shadow` -- encodes offset as `[x, y]` list
@@ -93,24 +95,5 @@ defimpl Toddy.Encode, for: Any do
     raise Protocol.UndefinedError,
       protocol: Toddy.Encode,
       value: value
-  end
-end
-
-defimpl Toddy.Encode, for: Toddy.Type.Shadow do
-  def encode(shadow) do
-    %{
-      color: shadow.color,
-      offset: [shadow.offset_x, shadow.offset_y],
-      blur_radius: shadow.blur_radius
-    }
-  end
-end
-
-defimpl Toddy.Encode, for: Toddy.Type.A11y do
-  def encode(%Toddy.Type.A11y{} = a11y) do
-    a11y
-    |> Map.from_struct()
-    |> Enum.reject(fn {_, v} -> is_nil(v) end)
-    |> Map.new(fn {k, v} -> {k, Toddy.Encode.encode(v)} end)
   end
 end

@@ -6,7 +6,7 @@ defmodule Toddy.Type.Padding do
   a `{vertical, horizontal}` tuple, an explicit four-side map,
   or a `%Padding{}` struct with per-side overrides.
 
-  `encode/1` always normalises to the full four-side map.
+  `cast/1` always normalises to the full four-side map.
 
   ## Struct form
 
@@ -65,32 +65,36 @@ defmodule Toddy.Type.Padding do
 
   ## Examples
 
-      iex> Toddy.Type.Padding.encode(8)
+      iex> Toddy.Type.Padding.cast(8)
       %{top: 8, right: 8, bottom: 8, left: 8}
 
-      iex> Toddy.Type.Padding.encode({4, 12})
+      iex> Toddy.Type.Padding.cast({4, 12})
       %{top: 4, right: 12, bottom: 4, left: 12}
 
-      iex> Toddy.Type.Padding.encode(%{top: 1, right: 2, bottom: 3, left: 4})
+      iex> Toddy.Type.Padding.cast(%{top: 1, right: 2, bottom: 3, left: 4})
       %{top: 1, right: 2, bottom: 3, left: 4}
   """
-  @spec encode(padding :: t()) :: map()
-  def encode(n) when is_number(n) do
+  @spec cast(padding :: t()) :: map()
+
+  @doc deprecated: "Use cast/1 instead"
+  defdelegate encode(padding), to: __MODULE__, as: :cast
+
+  def cast(n) when is_number(n) do
     %{top: n, right: n, bottom: n, left: n}
   end
 
-  def encode({vertical, horizontal}) when is_number(vertical) and is_number(horizontal) do
+  def cast({vertical, horizontal}) when is_number(vertical) and is_number(horizontal) do
     %{top: vertical, right: horizontal, bottom: vertical, left: horizontal}
   end
 
-  def encode(%__MODULE__{} = padding) do
+  def cast(%__MODULE__{} = padding) do
     padding
     |> Map.from_struct()
     |> Enum.reject(fn {_, v} -> is_nil(v) end)
     |> Map.new()
   end
 
-  def encode(%{top: t, right: r, bottom: b, left: l})
+  def cast(%{top: t, right: r, bottom: b, left: l})
       when is_number(t) and is_number(r) and is_number(b) and is_number(l) do
     %{top: t, right: r, bottom: b, left: l}
   end
@@ -98,6 +102,6 @@ end
 
 defimpl Toddy.Encode, for: Toddy.Type.Padding do
   def encode(%Toddy.Type.Padding{} = padding) do
-    Toddy.Type.Padding.encode(padding)
+    Toddy.Type.Padding.cast(padding)
   end
 end

@@ -172,7 +172,7 @@ defmodule Toddy.UI do
 
   # Struct modules for option keys shared across leaf widget do-blocks.
   # When a do-block key matches one of these, and the value is itself a
-  # do-block, interpret_struct_opts/2 will recursively interpret the inner
+  # do-block, interpret_block/2 will recursively interpret the inner
   # block and emit a Module.from_opts(...) call in the generated AST.
   @option_type_mapping %{
     padding: Toddy.Type.Padding,
@@ -1318,7 +1318,7 @@ defmodule Toddy.UI do
   defmacro button(id, label, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_struct_opts(block, @option_type_mapping)
+        pairs = interpret_block(block, @option_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.UI.__build_button__(unquote(id), unquote(label), unquote(opts_ast))
 
@@ -1348,7 +1348,7 @@ defmodule Toddy.UI do
   defmacro text_input(id, value, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_struct_opts(block, @option_type_mapping)
+        pairs = interpret_block(block, @option_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.UI.__build_text_input__(unquote(id), unquote(value), unquote(opts_ast))
 
@@ -1378,7 +1378,7 @@ defmodule Toddy.UI do
   defmacro checkbox(id, checked, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_struct_opts(block, @option_type_mapping)
+        pairs = interpret_block(block, @option_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.UI.__build_checkbox__(unquote(id), unquote(checked), unquote(opts_ast))
 
@@ -1445,7 +1445,7 @@ defmodule Toddy.UI do
 
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_struct_opts(block, @option_type_mapping)
+        pairs = interpret_block(block, @option_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
@@ -1528,7 +1528,7 @@ defmodule Toddy.UI do
   defmacro progress_bar(id, range, value, opts_or_do) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_struct_opts(block, @option_type_mapping)
+        pairs = interpret_block(block, @option_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
@@ -1569,7 +1569,7 @@ defmodule Toddy.UI do
   defmacro toggler(id, is_toggled, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_struct_opts(block, @option_type_mapping)
+        pairs = interpret_block(block, @option_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.UI.__build_toggler__(unquote(id), unquote(is_toggled), unquote(opts_ast))
 
@@ -1602,7 +1602,7 @@ defmodule Toddy.UI do
   defmacro radio(id, value, selected, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_struct_opts(block, @option_type_mapping)
+        pairs = interpret_block(block, @option_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
@@ -1652,7 +1652,7 @@ defmodule Toddy.UI do
   defmacro slider(id, range, value, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_struct_opts(block, @option_type_mapping)
+        pairs = interpret_block(block, @option_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
@@ -1700,7 +1700,7 @@ defmodule Toddy.UI do
   defmacro vertical_slider(id, range, value, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_struct_opts(block, @option_type_mapping)
+        pairs = interpret_block(block, @option_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
@@ -1745,7 +1745,7 @@ defmodule Toddy.UI do
   defmacro pick_list(id, options, selected, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_struct_opts(block, @option_type_mapping)
+        pairs = interpret_block(block, @option_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
@@ -1790,7 +1790,7 @@ defmodule Toddy.UI do
   defmacro combo_box(id, options, value, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_struct_opts(block, @option_type_mapping)
+        pairs = interpret_block(block, @option_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
@@ -1836,7 +1836,7 @@ defmodule Toddy.UI do
   defmacro text_editor(id, content, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_struct_opts(block, @option_type_mapping)
+        pairs = interpret_block(block, @option_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.UI.__build_text_editor__(unquote(id), unquote(content), unquote(opts_ast))
 
@@ -1870,7 +1870,7 @@ defmodule Toddy.UI do
   defmacro image(id, source, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_struct_opts(block, @option_type_mapping)
+        pairs = interpret_block(block, @option_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.UI.__build_image__(unquote(id), unquote(source), unquote(opts_ast))
 
@@ -1899,7 +1899,7 @@ defmodule Toddy.UI do
   defmacro svg(id, source, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_struct_opts(block, @option_type_mapping)
+        pairs = interpret_block(block, @option_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.UI.__build_svg__(unquote(id), unquote(source), unquote(opts_ast))
 
@@ -1951,7 +1951,7 @@ defmodule Toddy.UI do
   defmacro markdown(id, content, opts_or_do) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_struct_opts(block, @option_type_mapping)
+        pairs = interpret_block(block, @option_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
@@ -2220,7 +2220,7 @@ defmodule Toddy.UI do
   defmacro rich_text(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_struct_opts(block, @option_type_mapping)
+        pairs = interpret_block(block, @option_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.UI.__build_rich_text__(unquote(id), unquote(opts_ast))
 
@@ -2394,7 +2394,7 @@ defmodule Toddy.UI do
   # Form 1: Block directive with id
   defmacro interactive(id, do: block) do
     field_types = Toddy.Canvas.Shape.Interactive.__field_types__()
-    pairs = interpret_struct_opts(block, field_types)
+    pairs = interpret_block(block, field_types)
     validate_interactive_keys!(pairs, __CALLER__)
     opts_ast = pairs_to_keyword_ast(pairs)
 
@@ -2452,7 +2452,7 @@ defmodule Toddy.UI do
   defmacro rect(x, y, w, h, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_opts_block(block)
+        pairs = interpret_block(block)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do:
@@ -2480,7 +2480,7 @@ defmodule Toddy.UI do
   defmacro circle(x, y, r, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_opts_block(block)
+        pairs = interpret_block(block)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.Canvas.Shape.circle(unquote(x), unquote(y), unquote(r), unquote(opts_ast))
 
@@ -2493,7 +2493,7 @@ defmodule Toddy.UI do
   defmacro line(x1, y1, x2, y2, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_opts_block(block)
+        pairs = interpret_block(block)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do:
@@ -2521,7 +2521,7 @@ defmodule Toddy.UI do
   defmacro path(commands, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_opts_block(block)
+        pairs = interpret_block(block)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.Canvas.Shape.path(unquote(commands), unquote(opts_ast))
 
@@ -2534,7 +2534,7 @@ defmodule Toddy.UI do
   defmacro stroke(color, width, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_opts_block(block)
+        pairs = interpret_block(block)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.Canvas.Shape.stroke(unquote(color), unquote(width), unquote(opts_ast))
 
@@ -2635,7 +2635,7 @@ defmodule Toddy.UI do
   defmacro qr_code(id, data, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_struct_opts(block, @option_type_mapping)
+        pairs = interpret_block(block, @option_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.UI.__build_qr_code__(unquote(id), unquote(data), unquote(opts_ast))
 
@@ -2684,21 +2684,46 @@ defmodule Toddy.UI do
   # Block-form option interpretation
   # ---------------------------------------------------------------------------
 
-  defp interpret_opts_block({:__block__, _, exprs}) do
-    Enum.map(exprs, &interpret_opts_expr/1)
+  # Interprets a do-block AST as keyword pairs.
+  # When type_mapping is provided, fields with do-block values get recursive
+  # struct construction via Module.from_opts(pairs).
+  defp interpret_block(block, type_mapping \\ %{})
+
+  defp interpret_block({:__block__, _, exprs}, type_mapping) do
+    Enum.map(exprs, &interpret_block_expr(&1, type_mapping))
   end
 
-  defp interpret_opts_block(single_expr) do
-    [interpret_opts_expr(single_expr)]
+  defp interpret_block(single_expr, type_mapping) do
+    [interpret_block_expr(single_expr, type_mapping)]
   end
 
-  defp interpret_opts_expr({name, _meta, [value]}) when is_atom(name), do: {name, value}
-  defp interpret_opts_expr({name, _meta, nil}) when is_atom(name), do: {name, true}
+  defp interpret_block_expr({name, _meta, [value]}, type_mapping) when is_atom(name) do
+    case {Map.get(type_mapping, name), value} do
+      {nil, _} ->
+        {name, value}
 
-  defp interpret_opts_expr({name, _meta, context}) when is_atom(name) and is_atom(context),
-    do: {name, true}
+      {struct_mod, [{:do, inner_block}]} ->
+        nested_types = struct_mod.__field_types__()
+        nested_pairs = interpret_block(inner_block, nested_types)
+        nested_ast = pairs_to_keyword_ast(nested_pairs)
+        value_ast = quote do: unquote(struct_mod).from_opts(unquote(nested_ast))
+        {name, value_ast}
 
-  defp interpret_opts_expr(other) do
+      {_struct_mod, _} ->
+        {name, value}
+    end
+  end
+
+  defp interpret_block_expr({name, _meta, nil}, _type_mapping) when is_atom(name) do
+    {name, true}
+  end
+
+  defp interpret_block_expr({name, _meta, context}, _type_mapping)
+       when is_atom(name) and is_atom(context) do
+    {name, true}
+  end
+
+  defp interpret_block_expr(other, _type_mapping) do
     raise ArgumentError,
           "not valid here, expected `key value` declaration, got: #{Macro.to_string(other)}"
   end
@@ -2707,42 +2732,6 @@ defmodule Toddy.UI do
     for {key, val} <- pairs do
       {:{}, [], [key, val]}
     end
-  end
-
-  # Interprets a do-block AST as keyword pairs, with struct-aware nesting.
-  # When a field maps to a struct module (via field_types), and its value
-  # is a do-block, recursively interprets the block and generates
-  # Module.from_opts(pairs) in the output AST.
-  defp interpret_struct_opts(block, field_types) when is_map(field_types) do
-    pairs = interpret_opts_block(block)
-
-    Enum.map(pairs, fn {key, value} ->
-      case {Map.get(field_types, key), value} do
-        {nil, _} ->
-          # No struct mapping -- pass value through as-is
-          {key, value}
-
-        {struct_mod, [{:do, inner_block}]} ->
-          # Value is a do-block, and key maps to a struct module.
-          # Recursively interpret the inner block.
-          nested_field_types = struct_mod.__field_types__()
-          nested_pairs = interpret_struct_opts(inner_block, nested_field_types)
-          nested_ast = pairs_to_keyword_ast(nested_pairs)
-
-          # Generate: StructModule.from_opts([key1: val1, key2: val2])
-          from_opts_call =
-            quote do
-              unquote(struct_mod).from_opts(unquote(nested_ast))
-            end
-
-          {key, from_opts_call}
-
-        {_struct_mod, _} ->
-          # Key maps to a struct, but value is not a do-block.
-          # Pass through -- could be a variable, a pre-built struct, etc.
-          {key, value}
-      end
-    end)
   end
 
   # ---------------------------------------------------------------------------
@@ -2769,6 +2758,18 @@ defmodule Toddy.UI do
       end
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # Control flow block wrapping
+  # ---------------------------------------------------------------------------
+
+  # Wraps multi-expression blocks in a list so all values contribute
+  # to the parent's items list (instead of just the last expression).
+  defp wrap_block_in_list({:__block__, _meta, exprs}) when length(exprs) > 1 do
+    exprs
+  end
+
+  defp wrap_block_in_list(single), do: single
 
   # ---------------------------------------------------------------------------
   # Context-aware container AST walker
@@ -2811,8 +2812,8 @@ defmodule Toddy.UI do
   defp container_scope({:for, meta, args}, ok, ot, wn) do
     {:for, meta,
      Enum.map(args, fn
-       {:do, body} -> {:do, container_scope(body, ok, ot, wn)}
-       {:else, body} -> {:else, container_scope(body, ok, ot, wn)}
+       {:do, body} -> {:do, wrap_block_in_list(container_scope(body, ok, ot, wn))}
+       {:else, body} -> {:else, wrap_block_in_list(container_scope(body, ok, ot, wn))}
        other -> other
      end)}
   end
@@ -2822,8 +2823,8 @@ defmodule Toddy.UI do
      [
        condition,
        Enum.map(clauses, fn
-         {:do, body} -> {:do, container_scope(body, ok, ot, wn)}
-         {:else, body} -> {:else, container_scope(body, ok, ot, wn)}
+         {:do, body} -> {:do, wrap_block_in_list(container_scope(body, ok, ot, wn))}
+         {:else, body} -> {:else, wrap_block_in_list(container_scope(body, ok, ot, wn))}
          other -> other
        end)
      ]}
@@ -2834,8 +2835,8 @@ defmodule Toddy.UI do
      [
        condition,
        Enum.map(clauses, fn
-         {:do, body} -> {:do, container_scope(body, ok, ot, wn)}
-         {:else, body} -> {:else, container_scope(body, ok, ot, wn)}
+         {:do, body} -> {:do, wrap_block_in_list(container_scope(body, ok, ot, wn))}
+         {:else, body} -> {:else, wrap_block_in_list(container_scope(body, ok, ot, wn))}
          other -> other
        end)
      ]}
@@ -2849,7 +2850,7 @@ defmodule Toddy.UI do
          do:
            Enum.map(clauses, fn
              {:->, m, [pattern, body]} ->
-               {:->, m, [pattern, container_scope(body, ok, ot, wn)]}
+               {:->, m, [pattern, wrap_block_in_list(container_scope(body, ok, ot, wn))]}
 
              other ->
                other
@@ -2865,7 +2866,7 @@ defmodule Toddy.UI do
          do:
            Enum.map(clauses, fn
              {:->, m, [pattern, body]} ->
-               {:->, m, [pattern, container_scope(body, ok, ot, wn)]}
+               {:->, m, [pattern, wrap_block_in_list(container_scope(body, ok, ot, wn))]}
 
              other ->
                other
@@ -2878,13 +2879,13 @@ defmodule Toddy.UI do
     {:with, meta,
      Enum.map(args, fn
        {:do, body} ->
-         {:do, container_scope(body, ok, ot, wn)}
+         {:do, wrap_block_in_list(container_scope(body, ok, ot, wn))}
 
        {:else, clauses} ->
          {:else,
           Enum.map(clauses, fn
             {:->, m, [pattern, body]} ->
-              {:->, m, [pattern, container_scope(body, ok, ot, wn)]}
+              {:->, m, [pattern, wrap_block_in_list(container_scope(body, ok, ot, wn))]}
 
             other ->
               other
@@ -2898,8 +2899,11 @@ defmodule Toddy.UI do
   defp container_scope({:fn, meta, clauses}, ok, ot, wn) do
     {:fn, meta,
      Enum.map(clauses, fn
-       {:->, m, [pattern, body]} -> {:->, m, [pattern, container_scope(body, ok, ot, wn)]}
-       other -> other
+       {:->, m, [pattern, body]} ->
+         {:->, m, [pattern, wrap_block_in_list(container_scope(body, ok, ot, wn))]}
+
+       other ->
+         other
      end)}
   end
 
@@ -2910,7 +2914,18 @@ defmodule Toddy.UI do
       name in option_keys ->
         case args do
           [[{:do, block}]] ->
-            value_ast = interpret_prop_do_block(block, Map.get(option_types, name))
+            struct_mod = Map.get(option_types, name)
+            type_mapping = if struct_mod, do: struct_mod.__field_types__(), else: %{}
+            nested_pairs = interpret_block(block, type_mapping)
+
+            value_ast =
+              if struct_mod do
+                nested_ast = pairs_to_keyword_ast(nested_pairs)
+                quote do: unquote(struct_mod).from_opts(unquote(nested_ast))
+              else
+                {:%{}, [], nested_pairs}
+              end
+
             quote_prop_tuple(name, value_ast, meta)
 
           [value] ->
@@ -2933,22 +2948,6 @@ defmodule Toddy.UI do
 
   # Default -- pass through
   defp container_scope(other, _ok, _ot, _wn), do: other
-
-  # Interpret a do-block as a struct (if type mapping exists) or plain map
-  defp interpret_prop_do_block(block, nil) do
-    pairs = interpret_opts_block(block)
-    {:%{}, [], pairs}
-  end
-
-  defp interpret_prop_do_block(block, struct_mod) do
-    nested_field_types = struct_mod.__field_types__()
-    nested_pairs = interpret_struct_opts(block, nested_field_types)
-    nested_ast = pairs_to_keyword_ast(nested_pairs)
-
-    quote do
-      unquote(struct_mod).from_opts(unquote(nested_ast))
-    end
-  end
 
   # Helper to build {:__widget_prop__, name, value} AST
   defp quote_prop_tuple(name, value, _meta) do
@@ -3199,7 +3198,7 @@ defmodule Toddy.UI do
   defp canvas_scope_rewrite_do_block(args) do
     case List.last(args) do
       [{:do, block}] ->
-        pairs = interpret_opts_block(block)
+        pairs = interpret_block(block)
         opts_ast = pairs_to_keyword_ast(pairs)
         List.replace_at(args, -1, opts_ast)
 
@@ -3211,8 +3210,8 @@ defmodule Toddy.UI do
   # For comprehension: recurse into the do/else bodies
   defp canvas_scope_for_args(args, ctx) do
     Enum.map(args, fn
-      {:do, body} -> {:do, canvas_scope(body, ctx)}
-      {:else, body} -> {:else, canvas_scope(body, ctx)}
+      {:do, body} -> {:do, wrap_block_in_list(canvas_scope(body, ctx))}
+      {:else, body} -> {:else, wrap_block_in_list(canvas_scope(body, ctx))}
       other -> other
     end)
   end
@@ -3220,8 +3219,8 @@ defmodule Toddy.UI do
   # if/unless clauses
   defp canvas_scope_clauses(clauses, ctx) do
     Enum.map(clauses, fn
-      {:do, body} -> {:do, canvas_scope(body, ctx)}
-      {:else, body} -> {:else, canvas_scope(body, ctx)}
+      {:do, body} -> {:do, wrap_block_in_list(canvas_scope(body, ctx))}
+      {:else, body} -> {:else, wrap_block_in_list(canvas_scope(body, ctx))}
       other -> other
     end)
   end
@@ -3229,15 +3228,18 @@ defmodule Toddy.UI do
   # case/cond/fn clauses (list of {:->, meta, [pattern, body]})
   defp canvas_scope_match_clauses(clauses, ctx) do
     Enum.map(clauses, fn
-      {:->, meta, [pattern, body]} -> {:->, meta, [pattern, canvas_scope(body, ctx)]}
-      other -> other
+      {:->, meta, [pattern, body]} ->
+        {:->, meta, [pattern, wrap_block_in_list(canvas_scope(body, ctx))]}
+
+      other ->
+        other
     end)
   end
 
   # with args: generators + do/else
   defp canvas_scope_with_args(args, ctx) do
     Enum.map(args, fn
-      {:do, body} -> {:do, canvas_scope(body, ctx)}
+      {:do, body} -> {:do, wrap_block_in_list(canvas_scope(body, ctx))}
       {:else, clauses} -> {:else, canvas_scope_match_clauses(clauses, ctx)}
       other -> other
     end)
