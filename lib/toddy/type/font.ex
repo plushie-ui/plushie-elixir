@@ -1,9 +1,9 @@
 defmodule Toddy.Type.Font do
   @moduledoc """
-  Font descriptor for the text widget `font` prop and Settings `default_font`.
+  Font specification with family, weight, style, and stretch.
 
   Maps to iced's `Font` struct. Accepts `:default`, `:monospace`, a family
-  name string, or a map with `:family`, `:weight`, `:style`, and `:stretch`.
+  name string, or a `%Font{}` struct with detailed font properties.
   """
 
   @weights [:thin, :extra_light, :light, :normal, :medium, :semi_bold, :bold, :extra_bold, :black]
@@ -24,14 +24,46 @@ defmodule Toddy.Type.Font do
   @type style :: unquote(Enum.reduce(@styles, &{:|, [], [&1, &2]}))
   @type stretch :: unquote(Enum.reduce(@stretches, &{:|, [], [&1, &2]}))
 
-  @type font_map :: %{
-          optional(:family) => String.t(),
-          optional(:weight) => weight(),
-          optional(:style) => style(),
-          optional(:stretch) => stretch()
-        }
+  @type t ::
+          :default
+          | :monospace
+          | String.t()
+          | %__MODULE__{
+              family: String.t() | nil,
+              weight: weight() | nil,
+              style: style() | nil,
+              stretch: stretch() | nil
+            }
 
-  @type t :: :default | :monospace | String.t() | font_map()
+  defstruct [:family, :weight, :style, :stretch]
+
+  @known_keys ~w(family weight style stretch)a
+
+  @doc false
+  def __field_keys__, do: @known_keys
+
+  @doc false
+  def __field_types__, do: %{}
+
+  @doc """
+  Constructs a font from a keyword list.
+
+  Raises `ArgumentError` if any key is not a valid font field.
+  """
+  @spec from_opts(Keyword.t()) :: %__MODULE__{}
+  def from_opts(opts) when is_list(opts) do
+    for {key, _} <- opts, key not in @known_keys do
+      raise ArgumentError,
+            "unknown font field #{inspect(key)}. Valid fields: #{inspect(@known_keys)}"
+    end
+
+    %__MODULE__{
+      family: Keyword.get(opts, :family),
+      weight: Keyword.get(opts, :weight),
+      style: Keyword.get(opts, :style),
+      stretch: Keyword.get(opts, :stretch)
+    }
+  end
 
   @doc """
   Encodes a font value to the wire format.
@@ -56,7 +88,17 @@ defmodule Toddy.Type.Font do
 
   def encode(name) when is_binary(name), do: %{family: name}
 
+  def encode(%__MODULE__{} = font) do
+    font
+    |> Map.from_struct()
+    |> encode_map()
+  end
+
   def encode(%{} = font) do
+    encode_map(font)
+  end
+
+  defp encode_map(font) do
     result = %{}
 
     result =
@@ -91,5 +133,11 @@ defmodule Toddy.Type.Font do
     |> Atom.to_string()
     |> String.split("_")
     |> Enum.map_join(&String.capitalize/1)
+  end
+end
+
+defimpl Toddy.Encode, for: Toddy.Type.Font do
+  def encode(%Toddy.Type.Font{} = font) do
+    Toddy.Type.Font.encode(font)
   end
 end
