@@ -138,6 +138,37 @@ defmodule Toddy.UI do
     font: Toddy.Type.Font
   }
 
+  # Container widget modules and their display names, used to build the
+  # reverse map from option key -> owning containers for compile-time
+  # validation in container_scope.
+  @container_modules [
+    {Toddy.Widget.Column, "column"},
+    {Toddy.Widget.Row, "row"},
+    {Toddy.Widget.Container, "container"},
+    {Toddy.Widget.Overlay, "overlay"},
+    {Toddy.Widget.Scrollable, "scrollable"},
+    {Toddy.Widget.Stack, "stack"},
+    {Toddy.Widget.Grid, "grid"},
+    {Toddy.Widget.KeyedColumn, "keyed_column"},
+    {Toddy.Widget.Responsive, "responsive"},
+    {Toddy.Widget.Pin, "pin"},
+    {Toddy.Widget.Floating, "floating"},
+    {Toddy.Widget.MouseArea, "mouse_area"},
+    {Toddy.Widget.Sensor, "sensor"},
+    {Toddy.Widget.Themer, "themer"},
+    {Toddy.Widget.PaneGrid, "pane_grid"},
+    {Toddy.Widget.Table, "table"},
+    {Toddy.Widget.Window, "window"}
+  ]
+
+  @all_container_option_owners (for {mod, name} <- @container_modules,
+                                    key <- mod.__option_keys__(),
+                                    reduce: %{} do
+                                  acc -> Map.update(acc, key, [name], &[name | &1])
+                                end)
+
+  @all_container_option_names Map.keys(@all_container_option_owners)
+
   # ---------------------------------------------------------------------------
   # Core build helpers (public -- macro-generated code calls these at runtime)
   # ---------------------------------------------------------------------------
@@ -147,11 +178,20 @@ defmodule Toddy.UI do
           widget_mod :: module(),
           id :: String.t() | nil,
           opts :: keyword(),
-          children :: [Toddy.Widget.ui_node()],
+          items :: [Toddy.Widget.ui_node() | {:__widget_prop__, atom(), term()}],
           auto_id :: String.t() | nil
         ) :: Toddy.Widget.ui_node()
-  def __build_container__(widget_mod, id, opts, children, auto_id) do
+  def __build_container__(widget_mod, id, opts, items, auto_id) do
     resolved_id = id || Keyword.get(opts, :id) || auto_id
+
+    # Partition block items into props and children
+    {prop_tuples, children} =
+      Enum.split_with(items, &match?({:__widget_prop__, _, _}, &1))
+
+    block_opts = Enum.map(prop_tuples, fn {:__widget_prop__, k, v} -> {k, v} end)
+
+    # Merge: keyword opts from call line + block opts (block wins on conflict)
+    merged_opts = Keyword.merge(clean_opts(opts), block_opts)
 
     resolved_children =
       if children != [] do
@@ -160,9 +200,7 @@ defmodule Toddy.UI do
         Keyword.get(opts, :children, [])
       end
 
-    clean_opts = clean_opts(opts)
-
-    widget = widget_mod.new(resolved_id, clean_opts)
+    widget = widget_mod.new(resolved_id, merged_opts)
 
     widget =
       if resolved_children != [] do
@@ -245,16 +283,19 @@ defmodule Toddy.UI do
   defmacro window(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
+        option_keys = Toddy.Widget.Window.__option_keys__()
+        option_types = Toddy.Widget.Window.__option_types__()
+        block = container_scope(block, option_keys, option_types, "window")
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
           Toddy.UI.__build_container__(
             Toddy.Widget.Window,
             unquote(id),
             [],
-            children,
+            items,
             nil
           )
         end
@@ -274,16 +315,19 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro window(id, opts, do: block) do
+    option_keys = Toddy.Widget.Window.__option_keys__()
+    option_types = Toddy.Widget.Window.__option_types__()
+    block = container_scope(block, option_keys, option_types, "window")
     exprs = block_to_exprs(block)
 
     quote do
-      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
       Toddy.UI.__build_container__(
         Toddy.Widget.Window,
         unquote(id),
         unquote(opts),
-        children,
+        items,
         nil
       )
     end
@@ -322,16 +366,19 @@ defmodule Toddy.UI do
 
     case opts_or_block do
       [do: block] ->
+        option_keys = Toddy.Widget.Column.__option_keys__()
+        option_types = Toddy.Widget.Column.__option_types__()
+        block = container_scope(block, option_keys, option_types, "column")
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
           Toddy.UI.__build_container__(
             Toddy.Widget.Column,
             nil,
             [],
-            children,
+            items,
             unquote(compile_auto_id(caller_mod, caller_line))
           )
         end
@@ -351,18 +398,21 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro column(opts, do: block) do
+    option_keys = Toddy.Widget.Column.__option_keys__()
+    option_types = Toddy.Widget.Column.__option_types__()
+    block = container_scope(block, option_keys, option_types, "column")
     exprs = block_to_exprs(block)
     caller_mod = __CALLER__.module
     caller_line = __CALLER__.line
 
     quote do
-      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
       Toddy.UI.__build_container__(
         Toddy.Widget.Column,
         nil,
         unquote(opts),
-        children,
+        items,
         unquote(compile_auto_id(caller_mod, caller_line))
       )
     end
@@ -390,16 +440,19 @@ defmodule Toddy.UI do
 
     case opts_or_block do
       [do: block] ->
+        option_keys = Toddy.Widget.Row.__option_keys__()
+        option_types = Toddy.Widget.Row.__option_types__()
+        block = container_scope(block, option_keys, option_types, "row")
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
           Toddy.UI.__build_container__(
             Toddy.Widget.Row,
             nil,
             [],
-            children,
+            items,
             unquote(compile_auto_id(caller_mod, caller_line))
           )
         end
@@ -419,18 +472,21 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro row(opts, do: block) do
+    option_keys = Toddy.Widget.Row.__option_keys__()
+    option_types = Toddy.Widget.Row.__option_types__()
+    block = container_scope(block, option_keys, option_types, "row")
     exprs = block_to_exprs(block)
     caller_mod = __CALLER__.module
     caller_line = __CALLER__.line
 
     quote do
-      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
       Toddy.UI.__build_container__(
         Toddy.Widget.Row,
         nil,
         unquote(opts),
-        children,
+        items,
         unquote(compile_auto_id(caller_mod, caller_line))
       )
     end
@@ -450,11 +506,14 @@ defmodule Toddy.UI do
   defmacro container(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
+        option_keys = Toddy.Widget.Container.__option_keys__()
+        option_types = Toddy.Widget.Container.__option_types__()
+        block = container_scope(block, option_keys, option_types, "container")
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_container__(Toddy.Widget.Container, unquote(id), [], children, nil)
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Toddy.UI.__build_container__(Toddy.Widget.Container, unquote(id), [], items, nil)
         end
 
       opts ->
@@ -472,16 +531,19 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro container(id, opts, do: block) do
+    option_keys = Toddy.Widget.Container.__option_keys__()
+    option_types = Toddy.Widget.Container.__option_types__()
+    block = container_scope(block, option_keys, option_types, "container")
     exprs = block_to_exprs(block)
 
     quote do
-      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
       Toddy.UI.__build_container__(
         Toddy.Widget.Container,
         unquote(id),
         unquote(opts),
-        children,
+        items,
         nil
       )
     end
@@ -511,11 +573,14 @@ defmodule Toddy.UI do
   defmacro overlay(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
+        option_keys = Toddy.Widget.Overlay.__option_keys__()
+        option_types = Toddy.Widget.Overlay.__option_types__()
+        block = container_scope(block, option_keys, option_types, "overlay")
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_container__(Toddy.Widget.Overlay, unquote(id), [], children, nil)
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Toddy.UI.__build_container__(Toddy.Widget.Overlay, unquote(id), [], items, nil)
         end
 
       opts ->
@@ -527,16 +592,19 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro overlay(id, opts, do: block) do
+    option_keys = Toddy.Widget.Overlay.__option_keys__()
+    option_types = Toddy.Widget.Overlay.__option_types__()
+    block = container_scope(block, option_keys, option_types, "overlay")
     exprs = block_to_exprs(block)
 
     quote do
-      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
       Toddy.UI.__build_container__(
         Toddy.Widget.Overlay,
         unquote(id),
         unquote(opts),
-        children,
+        items,
         nil
       )
     end
@@ -558,11 +626,14 @@ defmodule Toddy.UI do
   defmacro scrollable(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
+        option_keys = Toddy.Widget.Scrollable.__option_keys__()
+        option_types = Toddy.Widget.Scrollable.__option_types__()
+        block = container_scope(block, option_keys, option_types, "scrollable")
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_container__(Toddy.Widget.Scrollable, unquote(id), [], children, nil)
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Toddy.UI.__build_container__(Toddy.Widget.Scrollable, unquote(id), [], items, nil)
         end
 
       opts ->
@@ -580,16 +651,19 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro scrollable(id, opts, do: block) do
+    option_keys = Toddy.Widget.Scrollable.__option_keys__()
+    option_types = Toddy.Widget.Scrollable.__option_types__()
+    block = container_scope(block, option_keys, option_types, "scrollable")
     exprs = block_to_exprs(block)
 
     quote do
-      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
       Toddy.UI.__build_container__(
         Toddy.Widget.Scrollable,
         unquote(id),
         unquote(opts),
-        children,
+        items,
         nil
       )
     end
@@ -615,16 +689,19 @@ defmodule Toddy.UI do
 
     case opts_or_block do
       [do: block] ->
+        option_keys = Toddy.Widget.Stack.__option_keys__()
+        option_types = Toddy.Widget.Stack.__option_types__()
+        block = container_scope(block, option_keys, option_types, "stack")
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
           Toddy.UI.__build_container__(
             Toddy.Widget.Stack,
             nil,
             [],
-            children,
+            items,
             unquote(compile_auto_id(caller_mod, caller_line))
           )
         end
@@ -644,18 +721,21 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro stack(opts, do: block) do
+    option_keys = Toddy.Widget.Stack.__option_keys__()
+    option_types = Toddy.Widget.Stack.__option_types__()
+    block = container_scope(block, option_keys, option_types, "stack")
     exprs = block_to_exprs(block)
     caller_mod = __CALLER__.module
     caller_line = __CALLER__.line
 
     quote do
-      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
       Toddy.UI.__build_container__(
         Toddy.Widget.Stack,
         nil,
         unquote(opts),
-        children,
+        items,
         unquote(compile_auto_id(caller_mod, caller_line))
       )
     end
@@ -690,16 +770,19 @@ defmodule Toddy.UI do
 
     case opts_or_block do
       [do: block] ->
+        option_keys = Toddy.Widget.Grid.__option_keys__()
+        option_types = Toddy.Widget.Grid.__option_types__()
+        block = container_scope(block, option_keys, option_types, "grid")
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
           Toddy.UI.__build_container__(
             Toddy.Widget.Grid,
             nil,
             [],
-            children,
+            items,
             unquote(compile_auto_id(caller_mod, caller_line))
           )
         end
@@ -719,18 +802,21 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro grid(opts, do: block) do
+    option_keys = Toddy.Widget.Grid.__option_keys__()
+    option_types = Toddy.Widget.Grid.__option_types__()
+    block = container_scope(block, option_keys, option_types, "grid")
     exprs = block_to_exprs(block)
     caller_mod = __CALLER__.module
     caller_line = __CALLER__.line
 
     quote do
-      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
       Toddy.UI.__build_container__(
         Toddy.Widget.Grid,
         nil,
         unquote(opts),
-        children,
+        items,
         unquote(compile_auto_id(caller_mod, caller_line))
       )
     end
@@ -759,16 +845,19 @@ defmodule Toddy.UI do
 
     case opts_or_block do
       [do: block] ->
+        option_keys = Toddy.Widget.KeyedColumn.__option_keys__()
+        option_types = Toddy.Widget.KeyedColumn.__option_types__()
+        block = container_scope(block, option_keys, option_types, "keyed_column")
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
           Toddy.UI.__build_container__(
             Toddy.Widget.KeyedColumn,
             nil,
             [],
-            children,
+            items,
             unquote(compile_auto_id(caller_mod, caller_line))
           )
         end
@@ -788,18 +877,21 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro keyed_column(opts, do: block) do
+    option_keys = Toddy.Widget.KeyedColumn.__option_keys__()
+    option_types = Toddy.Widget.KeyedColumn.__option_types__()
+    block = container_scope(block, option_keys, option_types, "keyed_column")
     exprs = block_to_exprs(block)
     caller_mod = __CALLER__.module
     caller_line = __CALLER__.line
 
     quote do
-      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
       Toddy.UI.__build_container__(
         Toddy.Widget.KeyedColumn,
         nil,
         unquote(opts),
-        children,
+        items,
         unquote(compile_auto_id(caller_mod, caller_line))
       )
     end
@@ -829,16 +921,19 @@ defmodule Toddy.UI do
 
     case opts_or_block do
       [do: block] ->
+        option_keys = Toddy.Widget.Responsive.__option_keys__()
+        option_types = Toddy.Widget.Responsive.__option_types__()
+        block = container_scope(block, option_keys, option_types, "responsive")
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
           Toddy.UI.__build_container__(
             Toddy.Widget.Responsive,
             nil,
             [],
-            children,
+            items,
             unquote(compile_auto_id(caller_mod, caller_line))
           )
         end
@@ -858,18 +953,21 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro responsive(opts, do: block) do
+    option_keys = Toddy.Widget.Responsive.__option_keys__()
+    option_types = Toddy.Widget.Responsive.__option_types__()
+    block = container_scope(block, option_keys, option_types, "responsive")
     exprs = block_to_exprs(block)
     caller_mod = __CALLER__.module
     caller_line = __CALLER__.line
 
     quote do
-      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
       Toddy.UI.__build_container__(
         Toddy.Widget.Responsive,
         nil,
         unquote(opts),
-        children,
+        items,
         unquote(compile_auto_id(caller_mod, caller_line))
       )
     end
@@ -889,11 +987,14 @@ defmodule Toddy.UI do
   defmacro pin(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
+        option_keys = Toddy.Widget.Pin.__option_keys__()
+        option_types = Toddy.Widget.Pin.__option_types__()
+        block = container_scope(block, option_keys, option_types, "pin")
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_container__(Toddy.Widget.Pin, unquote(id), [], children, nil)
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Toddy.UI.__build_container__(Toddy.Widget.Pin, unquote(id), [], items, nil)
         end
 
       opts ->
@@ -905,11 +1006,14 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro pin(id, opts, do: block) do
+    option_keys = Toddy.Widget.Pin.__option_keys__()
+    option_types = Toddy.Widget.Pin.__option_types__()
+    block = container_scope(block, option_keys, option_types, "pin")
     exprs = block_to_exprs(block)
 
     quote do
-      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Toddy.UI.__build_container__(Toddy.Widget.Pin, unquote(id), unquote(opts), children, nil)
+      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Toddy.UI.__build_container__(Toddy.Widget.Pin, unquote(id), unquote(opts), items, nil)
     end
   end
 
@@ -927,11 +1031,14 @@ defmodule Toddy.UI do
   defmacro floating(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
+        option_keys = Toddy.Widget.Floating.__option_keys__()
+        option_types = Toddy.Widget.Floating.__option_types__()
+        block = container_scope(block, option_keys, option_types, "floating")
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_container__(Toddy.Widget.Floating, unquote(id), [], children, nil)
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Toddy.UI.__build_container__(Toddy.Widget.Floating, unquote(id), [], items, nil)
         end
 
       opts ->
@@ -943,16 +1050,19 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro floating(id, opts, do: block) do
+    option_keys = Toddy.Widget.Floating.__option_keys__()
+    option_types = Toddy.Widget.Floating.__option_types__()
+    block = container_scope(block, option_keys, option_types, "floating")
     exprs = block_to_exprs(block)
 
     quote do
-      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
       Toddy.UI.__build_container__(
         Toddy.Widget.Floating,
         unquote(id),
         unquote(opts),
-        children,
+        items,
         nil
       )
     end
@@ -977,11 +1087,14 @@ defmodule Toddy.UI do
   defmacro mouse_area(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
+        option_keys = Toddy.Widget.MouseArea.__option_keys__()
+        option_types = Toddy.Widget.MouseArea.__option_types__()
+        block = container_scope(block, option_keys, option_types, "mouse_area")
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_container__(Toddy.Widget.MouseArea, unquote(id), [], children, nil)
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Toddy.UI.__build_container__(Toddy.Widget.MouseArea, unquote(id), [], items, nil)
         end
 
       opts ->
@@ -999,16 +1112,19 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro mouse_area(id, opts, do: block) do
+    option_keys = Toddy.Widget.MouseArea.__option_keys__()
+    option_types = Toddy.Widget.MouseArea.__option_types__()
+    block = container_scope(block, option_keys, option_types, "mouse_area")
     exprs = block_to_exprs(block)
 
     quote do
-      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
       Toddy.UI.__build_container__(
         Toddy.Widget.MouseArea,
         unquote(id),
         unquote(opts),
-        children,
+        items,
         nil
       )
     end
@@ -1032,11 +1148,14 @@ defmodule Toddy.UI do
   defmacro sensor(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
+        option_keys = Toddy.Widget.Sensor.__option_keys__()
+        option_types = Toddy.Widget.Sensor.__option_types__()
+        block = container_scope(block, option_keys, option_types, "sensor")
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_container__(Toddy.Widget.Sensor, unquote(id), [], children, nil)
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Toddy.UI.__build_container__(Toddy.Widget.Sensor, unquote(id), [], items, nil)
         end
 
       opts ->
@@ -1048,11 +1167,14 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro sensor(id, opts, do: block) do
+    option_keys = Toddy.Widget.Sensor.__option_keys__()
+    option_types = Toddy.Widget.Sensor.__option_types__()
+    block = container_scope(block, option_keys, option_types, "sensor")
     exprs = block_to_exprs(block)
 
     quote do
-      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Toddy.UI.__build_container__(Toddy.Widget.Sensor, unquote(id), unquote(opts), children, nil)
+      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Toddy.UI.__build_container__(Toddy.Widget.Sensor, unquote(id), unquote(opts), items, nil)
     end
   end
 
@@ -1076,11 +1198,14 @@ defmodule Toddy.UI do
   defmacro themer(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
+        option_keys = Toddy.Widget.Themer.__option_keys__()
+        option_types = Toddy.Widget.Themer.__option_types__()
+        block = container_scope(block, option_keys, option_types, "themer")
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_container__(Toddy.Widget.Themer, unquote(id), [], children, nil)
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Toddy.UI.__build_container__(Toddy.Widget.Themer, unquote(id), [], items, nil)
         end
 
       opts ->
@@ -1092,11 +1217,14 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro themer(id, opts, do: block) do
+    option_keys = Toddy.Widget.Themer.__option_keys__()
+    option_types = Toddy.Widget.Themer.__option_types__()
+    block = container_scope(block, option_keys, option_types, "themer")
     exprs = block_to_exprs(block)
 
     quote do
-      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Toddy.UI.__build_container__(Toddy.Widget.Themer, unquote(id), unquote(opts), children, nil)
+      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Toddy.UI.__build_container__(Toddy.Widget.Themer, unquote(id), unquote(opts), items, nil)
     end
   end
 
@@ -1989,11 +2117,14 @@ defmodule Toddy.UI do
   defmacro pane_grid(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
+        option_keys = Toddy.Widget.PaneGrid.__option_keys__()
+        option_types = Toddy.Widget.PaneGrid.__option_types__()
+        block = container_scope(block, option_keys, option_types, "pane_grid")
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_container__(Toddy.Widget.PaneGrid, unquote(id), [], children, nil)
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Toddy.UI.__build_container__(Toddy.Widget.PaneGrid, unquote(id), [], items, nil)
         end
 
       opts ->
@@ -2005,16 +2136,19 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro pane_grid(id, opts, do: block) do
+    option_keys = Toddy.Widget.PaneGrid.__option_keys__()
+    option_types = Toddy.Widget.PaneGrid.__option_types__()
+    block = container_scope(block, option_keys, option_types, "pane_grid")
     exprs = block_to_exprs(block)
 
     quote do
-      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
       Toddy.UI.__build_container__(
         Toddy.Widget.PaneGrid,
         unquote(id),
         unquote(opts),
-        children,
+        items,
         nil
       )
     end
@@ -2079,11 +2213,14 @@ defmodule Toddy.UI do
   defmacro table(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
+        option_keys = Toddy.Widget.Table.__option_keys__()
+        option_types = Toddy.Widget.Table.__option_types__()
+        block = container_scope(block, option_keys, option_types, "table")
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_container__(Toddy.Widget.Table, unquote(id), [], children, nil)
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Toddy.UI.__build_container__(Toddy.Widget.Table, unquote(id), [], items, nil)
         end
 
       opts ->
@@ -2095,11 +2232,14 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro table(id, opts, do: block) do
+    option_keys = Toddy.Widget.Table.__option_keys__()
+    option_types = Toddy.Widget.Table.__option_types__()
+    block = container_scope(block, option_keys, option_types, "table")
     exprs = block_to_exprs(block)
 
     quote do
-      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Toddy.UI.__build_container__(Toddy.Widget.Table, unquote(id), unquote(opts), children, nil)
+      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Toddy.UI.__build_container__(Toddy.Widget.Table, unquote(id), unquote(opts), items, nil)
     end
   end
 
@@ -2587,6 +2727,208 @@ defmodule Toddy.UI do
               "Valid options: #{inspect(@interactive_keys)}"
       end
     end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Context-aware container AST walker
+  # ---------------------------------------------------------------------------
+  #
+  # Walks container do-block ASTs, rewriting bare option calls to
+  # {:__widget_prop__, name, value} tuples that __build_container__/5
+  # partitions from children at runtime. Compile-time errors for options
+  # that belong to a different container.
+
+  defp container_scope({:__block__, meta, exprs}, option_keys, option_types, widget_name) do
+    {:__block__, meta,
+     Enum.map(exprs, &container_scope(&1, option_keys, option_types, widget_name))}
+  end
+
+  defp container_scope(expr, _ok, _ot, _wn) when not is_tuple(expr), do: expr
+  defp container_scope(expr, _ok, _ot, _wn) when tuple_size(expr) != 3, do: expr
+
+  # Fully qualified calls -- skip
+  defp container_scope({{:., _, _}, _, _} = node, _ok, _ot, _wn), do: node
+
+  # Bare name (no args) -- could be a boolean option or wrong-container error
+  defp container_scope({name, meta, context} = node, option_keys, _option_types, widget_name)
+       when is_atom(name) and (context == nil or is_atom(context)) do
+    cond do
+      name in option_keys ->
+        quote_prop_tuple(name, true, meta)
+
+      name in @all_container_option_names ->
+        owners = Map.get(@all_container_option_owners, name, [])
+        container_scope_error!(meta, name, widget_name, owners)
+
+      true ->
+        node
+    end
+  end
+
+  # Control flow -- recurse (must be before the general {name, meta, args} clause)
+
+  defp container_scope({:for, meta, args}, ok, ot, wn) do
+    {:for, meta,
+     Enum.map(args, fn
+       {:do, body} -> {:do, container_scope(body, ok, ot, wn)}
+       {:else, body} -> {:else, container_scope(body, ok, ot, wn)}
+       other -> other
+     end)}
+  end
+
+  defp container_scope({:if, meta, [condition, clauses]}, ok, ot, wn) do
+    {:if, meta,
+     [
+       condition,
+       Enum.map(clauses, fn
+         {:do, body} -> {:do, container_scope(body, ok, ot, wn)}
+         {:else, body} -> {:else, container_scope(body, ok, ot, wn)}
+         other -> other
+       end)
+     ]}
+  end
+
+  defp container_scope({:unless, meta, [condition, clauses]}, ok, ot, wn) do
+    {:unless, meta,
+     [
+       condition,
+       Enum.map(clauses, fn
+         {:do, body} -> {:do, container_scope(body, ok, ot, wn)}
+         {:else, body} -> {:else, container_scope(body, ok, ot, wn)}
+         other -> other
+       end)
+     ]}
+  end
+
+  defp container_scope({:case, meta, [subject, [do: clauses]]}, ok, ot, wn) do
+    {:case, meta,
+     [
+       subject,
+       [
+         do:
+           Enum.map(clauses, fn
+             {:->, m, [pattern, body]} ->
+               {:->, m, [pattern, container_scope(body, ok, ot, wn)]}
+
+             other ->
+               other
+           end)
+       ]
+     ]}
+  end
+
+  defp container_scope({:cond, meta, [[do: clauses]]}, ok, ot, wn) do
+    {:cond, meta,
+     [
+       [
+         do:
+           Enum.map(clauses, fn
+             {:->, m, [pattern, body]} ->
+               {:->, m, [pattern, container_scope(body, ok, ot, wn)]}
+
+             other ->
+               other
+           end)
+       ]
+     ]}
+  end
+
+  defp container_scope({:with, meta, args}, ok, ot, wn) do
+    {:with, meta,
+     Enum.map(args, fn
+       {:do, body} ->
+         {:do, container_scope(body, ok, ot, wn)}
+
+       {:else, clauses} ->
+         {:else,
+          Enum.map(clauses, fn
+            {:->, m, [pattern, body]} ->
+              {:->, m, [pattern, container_scope(body, ok, ot, wn)]}
+
+            other ->
+              other
+          end)}
+
+       other ->
+         other
+     end)}
+  end
+
+  defp container_scope({:fn, meta, clauses}, ok, ot, wn) do
+    {:fn, meta,
+     Enum.map(clauses, fn
+       {:->, m, [pattern, body]} -> {:->, m, [pattern, container_scope(body, ok, ot, wn)]}
+       other -> other
+     end)}
+  end
+
+  # Name with args -- could be an option key, wrong-container, or child
+  defp container_scope({name, meta, args} = node, option_keys, option_types, widget_name)
+       when is_atom(name) and is_list(args) do
+    cond do
+      name in option_keys ->
+        case args do
+          [{:do, block}] ->
+            # Do-block form: interpret as struct if type mapping exists
+            struct_mod = Map.get(option_types, name)
+
+            if struct_mod do
+              nested_field_types =
+                if function_exported?(struct_mod, :__field_types__, 0),
+                  do: struct_mod.__field_types__(),
+                  else: %{}
+
+              nested_pairs = interpret_struct_opts(block, nested_field_types)
+              nested_ast = pairs_to_keyword_ast(nested_pairs)
+
+              value_ast =
+                quote do
+                  unquote(struct_mod).from_opts(unquote(nested_ast))
+                end
+
+              quote_prop_tuple(name, value_ast, meta)
+            else
+              # No struct mapping -- interpret as plain keyword opts -> map
+              pairs = interpret_opts_block(block)
+              map_ast = {:%{}, [], pairs}
+              quote_prop_tuple(name, map_ast, meta)
+            end
+
+          [value] ->
+            # Single arg: name(value)
+            quote_prop_tuple(name, value, meta)
+
+          _ ->
+            # Multiple args -- likely not an option, pass through as child
+            node
+        end
+
+      length(args) == 1 and name in @all_container_option_names ->
+        owners = Map.get(@all_container_option_owners, name, [])
+        container_scope_error!(meta, name, widget_name, owners)
+
+      true ->
+        node
+    end
+  end
+
+  # Default -- pass through
+  defp container_scope(other, _ok, _ot, _wn), do: other
+
+  # Helper to build {:__widget_prop__, name, value} AST
+  defp quote_prop_tuple(name, value, _meta) do
+    {:{}, [], [:__widget_prop__, name, value]}
+  end
+
+  # Error helper for wrong-container options
+  defp container_scope_error!(meta, option_name, widget_name, owners) do
+    owners_str = Enum.sort(owners) |> Enum.join(", ")
+
+    raise CompileError,
+      line: Keyword.get(meta, :line, 0),
+      description:
+        "#{option_name} is not a valid option for #{widget_name}.\n" <>
+          "Supported by: #{owners_str}"
   end
 
   # ---------------------------------------------------------------------------
