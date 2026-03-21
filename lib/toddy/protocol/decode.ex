@@ -637,8 +637,8 @@ defmodule Toddy.Protocol.Decode do
       type: :scroll,
       id: local,
       scope: scope,
-      x: data["cursor_x"],
-      y: data["cursor_y"],
+      x: data["x"],
+      y: data["y"],
       delta_x: data["delta_x"],
       delta_y: data["delta_y"]
     }
@@ -843,6 +843,63 @@ defmodule Toddy.Protocol.Decode do
        extensions: Map.get(msg, "extensions", []),
        transport: Map.get(msg, "transport", "stdio")
      }}
+  end
+
+  # -- Canvas shape events --
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "canvas_shape_enter",
+         "id" => id,
+         "data" => data
+       }) do
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :canvas_shape_enter, id: local, scope: scope, data: data}
+  end
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "canvas_shape_leave",
+         "id" => id,
+         "data" => data
+       }) do
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :canvas_shape_leave, id: local, scope: scope, data: data}
+  end
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "canvas_shape_click",
+         "id" => id,
+         "data" => data
+       }) do
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :canvas_shape_click, id: local, scope: scope, data: data}
+  end
+
+  defp dispatch(%{"type" => "event", "family" => "canvas_shape_drag", "id" => id, "data" => data}) do
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :canvas_shape_drag, id: local, scope: scope, data: data}
+  end
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "canvas_shape_drag_end",
+         "id" => id,
+         "data" => data
+       }) do
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :canvas_shape_drag_end, id: local, scope: scope, data: data}
+  end
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "canvas_shape_focused",
+         "id" => id,
+         "data" => data
+       }) do
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :canvas_shape_focused, id: local, scope: scope, data: data}
   end
 
   # -- Generic/extension events (unrecognized families) --

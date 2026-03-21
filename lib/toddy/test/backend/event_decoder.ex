@@ -103,7 +103,7 @@ defmodule Toddy.Test.Backend.EventDecoder do
     %MouseEvent{type: :moved, x: data["x"] || 0, y: data["y"] || 0}
   end
 
-  def decode("scroll", _id, event) do
+  def decode("wheel_scrolled", _id, event) do
     data = event["data"] || %{}
     %MouseEvent{type: :scroll, delta_x: data["delta_x"] || 0, delta_y: data["delta_y"] || 0}
   end

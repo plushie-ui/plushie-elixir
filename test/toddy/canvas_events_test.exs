@@ -45,7 +45,7 @@ defmodule Toddy.CanvasEventsTest do
         "type" => "event",
         "family" => "canvas_scroll",
         "id" => "c1",
-        "data" => %{"cursor_x" => 1.5, "cursor_y" => 2.5, "delta_x" => 0.5, "delta_y" => -3.0}
+        "data" => %{"x" => 1.5, "y" => 2.5, "delta_x" => 0.5, "delta_y" => -3.0}
       }
 
       assert %Canvas{type: :scroll, id: "c1", x: 1.5, y: 2.5, delta_x: 0.5, delta_y: -3.0} =
