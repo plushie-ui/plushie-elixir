@@ -1076,7 +1076,7 @@ defmodule Toddy.UI do
   end
 
   # ---------------------------------------------------------------------------
-  # Input widgets (require explicit id; no do-block form needed)
+  # Input widgets (require explicit id; support keyword and do-block opts)
   # ---------------------------------------------------------------------------
 
   @doc """
@@ -1087,9 +1087,25 @@ defmodule Toddy.UI do
   ## Example
 
       button("save", "Save", style: :primary)
+
+      button "save", "Save" do
+        style :primary
+      end
   """
-  @spec button(id :: String.t(), label :: String.t(), opts :: keyword()) :: Toddy.Widget.ui_node()
-  def button(id, label, opts \\ []) do
+  defmacro button(id, label, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+        quote do: Toddy.UI.__build_button__(unquote(id), unquote(label), unquote(opts_ast))
+
+      opts ->
+        quote do: Toddy.UI.__build_button__(unquote(id), unquote(label), unquote(opts))
+    end
+  end
+
+  @doc false
+  def __build_button__(id, label, opts) do
     Toddy.Widget.Button.new(id, label, clean_opts(opts)) |> Toddy.Widget.Button.build()
   end
 
@@ -1101,12 +1117,25 @@ defmodule Toddy.UI do
   ## Example
 
       text_input("name", model.name, placeholder: "Your name")
-  """
-  @spec text_input(id :: String.t(), value :: String.t(), opts :: keyword()) ::
-          Toddy.Widget.ui_node()
-  def text_input(id, value, opts \\ [])
 
-  def text_input(id, value, opts) when not is_keyword(value) do
+      text_input "name", model.name do
+        placeholder "Your name"
+      end
+  """
+  defmacro text_input(id, value, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+        quote do: Toddy.UI.__build_text_input__(unquote(id), unquote(value), unquote(opts_ast))
+
+      opts ->
+        quote do: Toddy.UI.__build_text_input__(unquote(id), unquote(value), unquote(opts))
+    end
+  end
+
+  @doc false
+  def __build_text_input__(id, value, opts) when not is_keyword(value) do
     Toddy.Widget.TextInput.new(id, value, clean_opts(opts)) |> Toddy.Widget.TextInput.build()
   end
 
@@ -1118,12 +1147,25 @@ defmodule Toddy.UI do
   ## Example
 
       checkbox("agree", model.agreed, label: "I agree")
-  """
-  @spec checkbox(id :: String.t(), checked :: boolean(), opts :: keyword()) ::
-          Toddy.Widget.ui_node()
-  def checkbox(id, checked, opts \\ [])
 
-  def checkbox(id, checked, opts) when not is_keyword(checked) do
+      checkbox "agree", model.agreed do
+        label "I agree"
+      end
+  """
+  defmacro checkbox(id, checked, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+        quote do: Toddy.UI.__build_checkbox__(unquote(id), unquote(checked), unquote(opts_ast))
+
+      opts ->
+        quote do: Toddy.UI.__build_checkbox__(unquote(id), unquote(checked), unquote(opts))
+    end
+  end
+
+  @doc false
+  def __build_checkbox__(id, checked, opts) when not is_keyword(checked) do
     clean = clean_opts(opts)
     {label, remaining} = Keyword.pop(clean, :label, "")
     Toddy.Widget.Checkbox.new(id, label, checked, remaining) |> Toddy.Widget.Checkbox.build()
@@ -1165,10 +1207,34 @@ defmodule Toddy.UI do
   end
 
   @doc false
-  defmacro text(id, content, opts) do
-    quote do
-      Toddy.Widget.Text.new(unquote(id), unquote(content), unquote(opts))
-      |> Toddy.Widget.Text.build()
+  defmacro text(id, content, opts_or_do) do
+    if numeric_literal?(id) and numeric_literal?(content) do
+      raise CompileError,
+        line: __CALLER__.line,
+        description: """
+        text/3 is not valid here. Expected:
+
+            text("content")
+            text("id", "content")
+            text("id", "content", size: 18)
+        """
+    end
+
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+
+        quote do
+          Toddy.Widget.Text.new(unquote(id), unquote(content), unquote(opts_ast))
+          |> Toddy.Widget.Text.build()
+        end
+
+      opts ->
+        quote do
+          Toddy.Widget.Text.new(unquote(id), unquote(content), unquote(opts))
+          |> Toddy.Widget.Text.build()
+        end
     end
   end
 
@@ -1236,10 +1302,27 @@ defmodule Toddy.UI do
   end
 
   @doc false
-  defmacro progress_bar(id, range, value, opts) do
-    quote do
-      Toddy.Widget.ProgressBar.new(unquote(id), unquote(range), unquote(value), unquote(opts))
-      |> Toddy.Widget.ProgressBar.build()
+  defmacro progress_bar(id, range, value, opts_or_do) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+
+        quote do
+          Toddy.Widget.ProgressBar.new(
+            unquote(id),
+            unquote(range),
+            unquote(value),
+            unquote(opts_ast)
+          )
+          |> Toddy.Widget.ProgressBar.build()
+        end
+
+      opts ->
+        quote do
+          Toddy.Widget.ProgressBar.new(unquote(id), unquote(range), unquote(value), unquote(opts))
+          |> Toddy.Widget.ProgressBar.build()
+        end
     end
   end
 
@@ -1255,12 +1338,25 @@ defmodule Toddy.UI do
   ## Example
 
       toggler("dark_mode", model.dark_mode, label: "Dark mode")
-  """
-  @spec toggler(id :: String.t(), is_toggled :: boolean(), opts :: keyword()) ::
-          Toddy.Widget.ui_node()
-  def toggler(id, is_toggled, opts \\ [])
 
-  def toggler(id, is_toggled, opts) when not is_keyword(is_toggled) do
+      toggler "dark_mode", model.dark_mode do
+        label "Dark mode"
+      end
+  """
+  defmacro toggler(id, is_toggled, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+        quote do: Toddy.UI.__build_toggler__(unquote(id), unquote(is_toggled), unquote(opts_ast))
+
+      opts ->
+        quote do: Toddy.UI.__build_toggler__(unquote(id), unquote(is_toggled), unquote(opts))
+    end
+  end
+
+  @doc false
+  def __build_toggler__(id, is_toggled, opts) when not is_keyword(is_toggled) do
     Toddy.Widget.Toggler.new(id, is_toggled, clean_opts(opts)) |> Toddy.Widget.Toggler.build()
   end
 
@@ -1274,17 +1370,42 @@ defmodule Toddy.UI do
 
       radio("size_sm", "small", model.size, label: "Small", group: "size")
       radio("size_lg", "large", model.size, label: "Large", group: "size")
-  """
-  @spec radio(
-          id :: String.t(),
-          value :: String.t(),
-          selected :: String.t() | nil,
-          opts :: keyword()
-        ) ::
-          Toddy.Widget.ui_node()
-  def radio(id, value, selected, opts \\ [])
 
-  def radio(id, value, selected, opts) when not is_keyword(value) and not is_keyword(selected) do
+      radio "size_sm", "small", model.size do
+        label "Small"
+        group "size"
+      end
+  """
+  defmacro radio(id, value, selected, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+
+        quote do
+          Toddy.UI.__build_radio__(
+            unquote(id),
+            unquote(value),
+            unquote(selected),
+            unquote(opts_ast)
+          )
+        end
+
+      opts ->
+        quote do
+          Toddy.UI.__build_radio__(
+            unquote(id),
+            unquote(value),
+            unquote(selected),
+            unquote(opts)
+          )
+        end
+    end
+  end
+
+  @doc false
+  def __build_radio__(id, value, selected, opts)
+      when not is_keyword(value) and not is_keyword(selected) do
     Toddy.Widget.Radio.new(id, value, selected, clean_opts(opts)) |> Toddy.Widget.Radio.build()
   end
 
@@ -1300,17 +1421,41 @@ defmodule Toddy.UI do
 
       slider("volume", {0, 100}, model.volume, step: 5)
       slider("volume", 0..100, model.volume, step: 5)
-  """
-  @spec slider(
-          id :: String.t(),
-          range :: {number(), number()} | Range.t(),
-          value :: number(),
-          opts :: keyword()
-        ) ::
-          Toddy.Widget.ui_node()
-  def slider(id, range, value, opts \\ [])
 
-  def slider(id, range, value, opts) when not is_keyword(range) and not is_keyword(value) do
+      slider "volume", {0, 100}, model.volume do
+        step 5
+      end
+  """
+  defmacro slider(id, range, value, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+
+        quote do
+          Toddy.UI.__build_slider__(
+            unquote(id),
+            unquote(range),
+            unquote(value),
+            unquote(opts_ast)
+          )
+        end
+
+      opts ->
+        quote do
+          Toddy.UI.__build_slider__(
+            unquote(id),
+            unquote(range),
+            unquote(value),
+            unquote(opts)
+          )
+        end
+    end
+  end
+
+  @doc false
+  def __build_slider__(id, range, value, opts)
+      when not is_keyword(range) and not is_keyword(value) do
     Toddy.Widget.Slider.new(id, normalize_range(range), value, clean_opts(opts))
     |> Toddy.Widget.Slider.build()
   end
@@ -1324,17 +1469,40 @@ defmodule Toddy.UI do
 
       vertical_slider("brightness", {0, 100}, model.brightness)
       vertical_slider("brightness", 0..100, model.brightness)
-  """
-  @spec vertical_slider(
-          id :: String.t(),
-          range :: {number(), number()} | Range.t(),
-          value :: number(),
-          opts :: keyword()
-        ) ::
-          Toddy.Widget.ui_node()
-  def vertical_slider(id, range, value, opts \\ [])
 
-  def vertical_slider(id, range, value, opts)
+      vertical_slider "brightness", {0, 100}, model.brightness do
+        step 1
+      end
+  """
+  defmacro vertical_slider(id, range, value, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+
+        quote do
+          Toddy.UI.__build_vertical_slider__(
+            unquote(id),
+            unquote(range),
+            unquote(value),
+            unquote(opts_ast)
+          )
+        end
+
+      opts ->
+        quote do
+          Toddy.UI.__build_vertical_slider__(
+            unquote(id),
+            unquote(range),
+            unquote(value),
+            unquote(opts)
+          )
+        end
+    end
+  end
+
+  @doc false
+  def __build_vertical_slider__(id, range, value, opts)
       when not is_keyword(range) and not is_keyword(value) do
     Toddy.Widget.VerticalSlider.new(id, normalize_range(range), value, clean_opts(opts))
     |> Toddy.Widget.VerticalSlider.build()
@@ -1346,16 +1514,40 @@ defmodule Toddy.UI do
   ## Example
 
       pick_list("country", ["UK", "US", "DE"], model.country, placeholder: "Choose...")
-  """
-  @spec pick_list(
-          id :: String.t(),
-          options :: [String.t()],
-          selected :: String.t() | nil,
-          opts :: keyword()
-        ) :: Toddy.Widget.ui_node()
-  def pick_list(id, options, selected, opts \\ [])
 
-  def pick_list(id, options, selected, opts)
+      pick_list "country", ["UK", "US", "DE"], model.country do
+        placeholder "Choose..."
+      end
+  """
+  defmacro pick_list(id, options, selected, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+
+        quote do
+          Toddy.UI.__build_pick_list__(
+            unquote(id),
+            unquote(options),
+            unquote(selected),
+            unquote(opts_ast)
+          )
+        end
+
+      opts ->
+        quote do
+          Toddy.UI.__build_pick_list__(
+            unquote(id),
+            unquote(options),
+            unquote(selected),
+            unquote(opts)
+          )
+        end
+    end
+  end
+
+  @doc false
+  def __build_pick_list__(id, options, selected, opts)
       when not is_keyword(options) and not is_keyword(selected) do
     Toddy.Widget.PickList.new(id, options, [{:selected, selected} | clean_opts(opts)])
     |> Toddy.Widget.PickList.build()
@@ -1367,17 +1559,40 @@ defmodule Toddy.UI do
   ## Example
 
       combo_box("lang", ["Elixir", "Rust", "Go"], model.lang, placeholder: "Type...")
-  """
-  @spec combo_box(
-          id :: String.t(),
-          options :: [String.t()],
-          value :: String.t(),
-          opts :: keyword()
-        ) ::
-          Toddy.Widget.ui_node()
-  def combo_box(id, options, value, opts \\ [])
 
-  def combo_box(id, options, value, opts)
+      combo_box "lang", ["Elixir", "Rust", "Go"], model.lang do
+        placeholder "Type..."
+      end
+  """
+  defmacro combo_box(id, options, value, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+
+        quote do
+          Toddy.UI.__build_combo_box__(
+            unquote(id),
+            unquote(options),
+            unquote(value),
+            unquote(opts_ast)
+          )
+        end
+
+      opts ->
+        quote do
+          Toddy.UI.__build_combo_box__(
+            unquote(id),
+            unquote(options),
+            unquote(value),
+            unquote(opts)
+          )
+        end
+    end
+  end
+
+  @doc false
+  def __build_combo_box__(id, options, value, opts)
       when not is_keyword(options) and not is_keyword(value) do
     Toddy.Widget.ComboBox.new(id, options, [{:value, value} | clean_opts(opts)])
     |> Toddy.Widget.ComboBox.build()
@@ -1389,12 +1604,26 @@ defmodule Toddy.UI do
   ## Example
 
       text_editor("notes", model.notes, width: :fill, height: 200)
-  """
-  @spec text_editor(id :: String.t(), content :: String.t(), opts :: keyword()) ::
-          Toddy.Widget.ui_node()
-  def text_editor(id, content, opts \\ [])
 
-  def text_editor(id, content, opts) when not is_keyword(content) do
+      text_editor "notes", model.notes do
+        width :fill
+        height 200
+      end
+  """
+  defmacro text_editor(id, content, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+        quote do: Toddy.UI.__build_text_editor__(unquote(id), unquote(content), unquote(opts_ast))
+
+      opts ->
+        quote do: Toddy.UI.__build_text_editor__(unquote(id), unquote(content), unquote(opts))
+    end
+  end
+
+  @doc false
+  def __build_text_editor__(id, content, opts) when not is_keyword(content) do
     Toddy.Widget.TextEditor.new(id, [{:content, content} | clean_opts(opts)])
     |> Toddy.Widget.TextEditor.build()
   end
@@ -1409,11 +1638,26 @@ defmodule Toddy.UI do
   ## Example
 
       image("logo", "/assets/logo.png", width: 200, content_fit: :cover)
-  """
-  @spec image(id :: String.t(), source :: String.t(), opts :: keyword()) :: Toddy.Widget.ui_node()
-  def image(id, source, opts \\ [])
 
-  def image(id, source, opts) when not is_keyword(source) do
+      image "logo", "/assets/logo.png" do
+        width 200
+        content_fit :cover
+      end
+  """
+  defmacro image(id, source, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+        quote do: Toddy.UI.__build_image__(unquote(id), unquote(source), unquote(opts_ast))
+
+      opts ->
+        quote do: Toddy.UI.__build_image__(unquote(id), unquote(source), unquote(opts))
+    end
+  end
+
+  @doc false
+  def __build_image__(id, source, opts) when not is_keyword(source) do
     Toddy.Widget.Image.new(id, source, clean_opts(opts)) |> Toddy.Widget.Image.build()
   end
 
@@ -1423,11 +1667,26 @@ defmodule Toddy.UI do
   ## Example
 
       svg("icon", "/assets/icon.svg", width: 24, height: 24)
-  """
-  @spec svg(id :: String.t(), source :: String.t(), opts :: keyword()) :: Toddy.Widget.ui_node()
-  def svg(id, source, opts \\ [])
 
-  def svg(id, source, opts) when not is_keyword(source) do
+      svg "icon", "/assets/icon.svg" do
+        width 24
+        height 24
+      end
+  """
+  defmacro svg(id, source, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+        quote do: Toddy.UI.__build_svg__(unquote(id), unquote(source), unquote(opts_ast))
+
+      opts ->
+        quote do: Toddy.UI.__build_svg__(unquote(id), unquote(source), unquote(opts))
+    end
+  end
+
+  @doc false
+  def __build_svg__(id, source, opts) when not is_keyword(source) do
     Toddy.Widget.Svg.new(id, source, clean_opts(opts)) |> Toddy.Widget.Svg.build()
   end
 
@@ -1466,10 +1725,22 @@ defmodule Toddy.UI do
   end
 
   @doc false
-  defmacro markdown(id, content, opts) do
-    quote do
-      Toddy.Widget.Markdown.new(unquote(id), unquote(content), unquote(opts))
-      |> Toddy.Widget.Markdown.build()
+  defmacro markdown(id, content, opts_or_do) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+
+        quote do
+          Toddy.Widget.Markdown.new(unquote(id), unquote(content), unquote(opts_ast))
+          |> Toddy.Widget.Markdown.build()
+        end
+
+      opts ->
+        quote do
+          Toddy.Widget.Markdown.new(unquote(id), unquote(content), unquote(opts))
+          |> Toddy.Widget.Markdown.build()
+        end
     end
   end
 
@@ -1712,9 +1983,25 @@ defmodule Toddy.UI do
   ## Example
 
       rich_text("styled", spans: [%{text: "bold", weight: :bold}, %{text: " normal"}])
+
+      rich_text "styled" do
+        spans [%{text: "bold", weight: :bold}, %{text: " normal"}]
+      end
   """
-  @spec rich_text(id :: String.t(), opts :: keyword()) :: Toddy.Widget.ui_node()
-  def rich_text(id, opts \\ []) do
+  defmacro rich_text(id, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+        quote do: Toddy.UI.__build_rich_text__(unquote(id), unquote(opts_ast))
+
+      opts ->
+        quote do: Toddy.UI.__build_rich_text__(unquote(id), unquote(opts))
+    end
+  end
+
+  @doc false
+  def __build_rich_text__(id, opts) do
     Toddy.Widget.RichText.new(id, clean_opts(opts)) |> Toddy.Widget.RichText.build()
   end
 
@@ -1823,9 +2110,25 @@ defmodule Toddy.UI do
   ## Example
 
       qr_code("my_qr", "https://example.com", cell_size: 6)
+
+      qr_code "my_qr", "https://example.com" do
+        cell_size 6
+      end
   """
-  @spec qr_code(id :: String.t(), data :: String.t(), opts :: keyword()) :: Toddy.Widget.ui_node()
-  def qr_code(id, data, opts \\ []) do
+  defmacro qr_code(id, data, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+        quote do: Toddy.UI.__build_qr_code__(unquote(id), unquote(data), unquote(opts_ast))
+
+      opts ->
+        quote do: Toddy.UI.__build_qr_code__(unquote(id), unquote(data), unquote(opts))
+    end
+  end
+
+  @doc false
+  def __build_qr_code__(id, data, opts) do
     Toddy.Widget.QrCode.new(id, data, clean_opts(opts)) |> Toddy.Widget.QrCode.build()
   end
 
@@ -1862,33 +2165,7 @@ defmodule Toddy.UI do
 
   # ---------------------------------------------------------------------------
   # Block-form option interpretation
-  #
-  # Infrastructure for Steps 3-5: leaf widget macros, canvas_scope
-  # application, and interactive directive. These are private helpers
-  # that will be called from defmacro bodies when callers land.
-  # The __ensure_compiled__ function below keeps them reachable to
-  # satisfy warnings_as_errors; remove it once callers exist.
   # ---------------------------------------------------------------------------
-
-  @doc false
-  def __ensure_compiled__ do
-    funs = [
-      &interpret_opts_block/1,
-      &interpret_opts_expr/1,
-      &pairs_to_keyword_ast/1,
-      &numeric_literal?/1,
-      &validate_interactive_keys!/2,
-      &canvas_scope/2,
-      &canvas_scope_error!/2,
-      &canvas_scope_rewrite_do_block/1,
-      &canvas_scope_for_args/2,
-      &canvas_scope_clauses/2,
-      &canvas_scope_match_clauses/2,
-      &canvas_scope_with_args/2
-    ]
-
-    length(funs)
-  end
 
   defp interpret_opts_block({:__block__, _, exprs}) do
     Enum.map(exprs, &interpret_opts_expr/1)
@@ -1924,8 +2201,27 @@ defmodule Toddy.UI do
   defp numeric_literal?(_), do: false
 
   # ---------------------------------------------------------------------------
-  # Interactive key validation
+  # Interactive key validation (used by Step 4: interactive directive)
   # ---------------------------------------------------------------------------
+
+  # Temporary reference to keep unused-function warnings at bay until
+  # the interactive directive and canvas_scope macros land (Steps 4-5).
+  # Remove once callers exist.
+  @doc false
+  def __ensure_compiled__ do
+    funs = [
+      &validate_interactive_keys!/2,
+      &canvas_scope/2,
+      &canvas_scope_error!/2,
+      &canvas_scope_rewrite_do_block/1,
+      &canvas_scope_for_args/2,
+      &canvas_scope_clauses/2,
+      &canvas_scope_match_clauses/2,
+      &canvas_scope_with_args/2
+    ]
+
+    length(funs)
+  end
 
   defp validate_interactive_keys!(pairs, caller) do
     for {key, _val} <- pairs do
