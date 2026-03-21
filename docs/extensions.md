@@ -205,6 +205,41 @@ fn handle_event(
 }
 ```
 
+#### Throttling high-frequency extension events
+
+If your extension emits events on every mouse move or at frame rate,
+the host receives far more events than it needs, and over SSH or
+slow connections the unthrottled traffic can stall the UI entirely.
+The renderer can buffer these and deliver only the latest value (or
+accumulated deltas) at a controlled rate. Mark events with a
+`CoalesceHint` to opt in. Events without a hint are always delivered
+immediately -- the right default for clicks, selections, and other
+discrete actions.
+
+```rust
+// Latest value wins -- position tracking, state snapshots
+let event = OutgoingEvent::extension_event("cursor_pos", node_id, data)
+    .with_coalesce(CoalesceHint::Replace);
+
+// Deltas sum -- scroll, velocity, counters
+let event = OutgoingEvent::extension_event("pan_scroll", node_id, data)
+    .with_coalesce(CoalesceHint::Accumulate(
+        vec!["delta_x".into(), "delta_y".into()]
+    ));
+
+// No hint -- discrete actions are never coalesced
+let event = OutgoingEvent::extension_event("node_selected", node_id, data);
+```
+
+The hint declares how to coalesce; `event_rate` on the widget node
+controls frequency. Set `event_rate` from Elixir:
+
+```elixir
+MyPlot.new("plot1", data: chart_data, event_rate: 30)
+```
+
+Both are in the prelude (`CoalesceHint`, `OutgoingEvent`).
+
 ### Tier C: full lifecycle (+prepare, handle_command, cleanup)
 
 Add `prepare` for mutable state synchronization before each render pass,
