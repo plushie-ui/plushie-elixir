@@ -43,6 +43,7 @@ defmodule Toddy.Widget.PaneGrid do
           | {:divider_color, Toddy.Type.Color.input()}
           | {:divider_width, number()}
           | {:leeway, number()}
+          | {:event_rate, pos_integer()}
           | {:a11y, Toddy.Type.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -55,6 +56,7 @@ defmodule Toddy.Widget.PaneGrid do
           divider_color: Toddy.Type.Color.t() | nil,
           divider_width: number() | nil,
           leeway: number() | nil,
+          event_rate: pos_integer() | nil,
           a11y: Toddy.Type.A11y.t() | nil,
           children: [Toddy.Widget.ui_node() | struct()]
         }
@@ -69,6 +71,7 @@ defmodule Toddy.Widget.PaneGrid do
     :divider_color,
     :divider_width,
     :leeway,
+    :event_rate,
     :a11y,
     children: []
   ]
@@ -93,6 +96,7 @@ defmodule Toddy.Widget.PaneGrid do
       {:divider_color, v}, acc -> divider_color(acc, v)
       {:divider_width, v}, acc -> divider_width(acc, v)
       {:leeway, v}, acc -> leeway(acc, v)
+      {:event_rate, v}, acc -> event_rate(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -143,6 +147,11 @@ defmodule Toddy.Widget.PaneGrid do
   def extend(%__MODULE__{} = pg, children),
     do: %{pg | children: Enum.reverse(children) ++ pg.children}
 
+  @doc "Sets the maximum event rate (events per second) for this widget's coalescable events."
+  @spec event_rate(pane_grid :: t(), rate :: pos_integer()) :: t()
+  def event_rate(%__MODULE__{} = pg, rate) when is_integer(rate) and rate >= 0,
+    do: %{pg | event_rate: rate}
+
   @doc "Sets accessibility annotations."
   @spec a11y(pane_grid :: t(), a11y :: Toddy.Type.A11y.t()) :: t()
   def a11y(%__MODULE__{} = pg, a11y), do: %{pg | a11y: A11y.cast(a11y)}
@@ -165,6 +174,7 @@ defmodule Toddy.Widget.PaneGrid do
         |> put_if(pg.divider_color, :divider_color)
         |> put_if(pg.divider_width, :divider_width)
         |> put_if(pg.leeway, :leeway)
+        |> put_if(pg.event_rate, :event_rate)
         |> put_if(pg.a11y, :a11y)
 
       %{

@@ -70,6 +70,7 @@ defmodule Toddy.Widget.Canvas do
           | {:on_scroll, boolean()}
           | {:alt, String.t()}
           | {:description, String.t()}
+          | {:event_rate, pos_integer()}
           | {:a11y, Toddy.Type.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -86,6 +87,7 @@ defmodule Toddy.Widget.Canvas do
           on_scroll: boolean() | nil,
           alt: String.t() | nil,
           description: String.t() | nil,
+          event_rate: pos_integer() | nil,
           a11y: Toddy.Type.A11y.t() | nil
         }
 
@@ -103,6 +105,7 @@ defmodule Toddy.Widget.Canvas do
     :on_scroll,
     :alt,
     :description,
+    :event_rate,
     :a11y
   ]
 
@@ -130,6 +133,7 @@ defmodule Toddy.Widget.Canvas do
       {:on_scroll, v}, acc -> on_scroll(acc, v)
       {:alt, v}, acc -> alt(acc, v)
       {:description, v}, acc -> description(acc, v)
+      {:event_rate, v}, acc -> event_rate(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -192,6 +196,11 @@ defmodule Toddy.Widget.Canvas do
   def description(%__MODULE__{} = canvas, description) when is_binary(description),
     do: %{canvas | description: description}
 
+  @doc "Sets the maximum event rate (events per second) for this widget's coalescable events."
+  @spec event_rate(canvas :: t(), rate :: pos_integer()) :: t()
+  def event_rate(%__MODULE__{} = canvas, rate) when is_integer(rate) and rate >= 0,
+    do: %{canvas | event_rate: rate}
+
   @doc "Sets accessibility annotations."
   @spec a11y(canvas :: t(), a11y :: Toddy.Type.A11y.t()) :: t()
   def a11y(%__MODULE__{} = canvas, a11y), do: %{canvas | a11y: A11y.cast(a11y)}
@@ -218,6 +227,7 @@ defmodule Toddy.Widget.Canvas do
         |> put_if(canvas.on_scroll, :on_scroll)
         |> put_if(canvas.alt, :alt)
         |> put_if(canvas.description, :description)
+        |> put_if(canvas.event_rate, :event_rate)
         |> put_if(canvas.a11y, :a11y)
 
       %{id: canvas.id, type: "canvas", props: props, children: []}

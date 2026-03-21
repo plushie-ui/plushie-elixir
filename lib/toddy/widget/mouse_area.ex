@@ -93,6 +93,7 @@ defmodule Toddy.Widget.MouseArea do
           | {:on_exit, boolean()}
           | {:on_move, boolean()}
           | {:on_scroll, boolean()}
+          | {:event_rate, pos_integer()}
           | {:a11y, Toddy.Type.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -109,6 +110,7 @@ defmodule Toddy.Widget.MouseArea do
           on_exit: boolean() | nil,
           on_move: boolean() | nil,
           on_scroll: boolean() | nil,
+          event_rate: pos_integer() | nil,
           a11y: Toddy.Type.A11y.t() | nil,
           children: [Toddy.Widget.ui_node() | struct()]
         }
@@ -127,6 +129,7 @@ defmodule Toddy.Widget.MouseArea do
     :on_exit,
     :on_move,
     :on_scroll,
+    :event_rate,
     :a11y,
     children: []
   ]
@@ -153,6 +156,7 @@ defmodule Toddy.Widget.MouseArea do
       {:on_exit, v}, acc -> on_exit(acc, v)
       {:on_move, v}, acc -> on_move(acc, v)
       {:on_scroll, v}, acc -> on_scroll(acc, v)
+      {:event_rate, v}, acc -> event_rate(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -228,6 +232,11 @@ defmodule Toddy.Widget.MouseArea do
   def extend(%__MODULE__{} = ma, children),
     do: %{ma | children: Enum.reverse(children) ++ ma.children}
 
+  @doc "Sets the maximum event rate (events per second) for this widget's coalescable events."
+  @spec event_rate(mouse_area :: t(), rate :: pos_integer()) :: t()
+  def event_rate(%__MODULE__{} = ma, rate) when is_integer(rate) and rate >= 0,
+    do: %{ma | event_rate: rate}
+
   @doc "Sets accessibility annotations."
   @spec a11y(mouse_area :: t(), a11y :: Toddy.Type.A11y.t()) :: t()
   def a11y(%__MODULE__{} = ma, a11y), do: %{ma | a11y: A11y.cast(a11y)}
@@ -254,6 +263,7 @@ defmodule Toddy.Widget.MouseArea do
         |> put_if(ma.on_exit, :on_exit)
         |> put_if(ma.on_move, :on_move)
         |> put_if(ma.on_scroll, :on_scroll)
+        |> put_if(ma.event_rate, :event_rate)
         |> put_if(ma.a11y, :a11y)
 
       %{

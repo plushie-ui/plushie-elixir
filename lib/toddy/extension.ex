@@ -101,9 +101,14 @@ defmodule Toddy.Extension do
 
   ## Special options
 
-  All widgets automatically support the `:a11y` option for accessibility
-  overrides (see `Toddy.Type.A11y`). It does not need to be declared via
-  `prop` -- it is always available on `new/2`.
+  All widgets automatically support:
+
+  - `:a11y` -- accessibility overrides (see `Toddy.Type.A11y`)
+  - `:event_rate` -- maximum events per second for coalescable events
+    from this widget (see the event throttling design doc)
+
+  These do not need to be declared via `prop` -- they are always
+  available on `new/2`.
   """
 
   # -- Behaviour callbacks ---------------------------------------------------
@@ -333,7 +338,7 @@ defmodule Toddy.Extension do
     end
   end
 
-  @reserved_prop_names [:id, :type, :children, :a11y, :do]
+  @reserved_prop_names [:id, :type, :children, :a11y, :event_rate, :do]
 
   defp validate_reserved_names!(env, props) do
     for {name, _type, _opts} <- props, name in @reserved_prop_names do
@@ -392,7 +397,7 @@ defmodule Toddy.Extension do
   def generate_prop_names(props) do
     known =
       Enum.map(props, fn {name, _type, _opts} -> name end)
-      |> Kernel.++([:a11y])
+      |> Kernel.++([:event_rate, :a11y])
 
     quote do
       @doc false
@@ -432,6 +437,7 @@ defmodule Toddy.Extension do
         def new(id, opts \\ []) when is_binary(id) do
           {children, opts} = Keyword.pop(opts, :do, [])
           children = List.wrap(children)
+          {event_rate_val, opts} = Keyword.pop(opts, :event_rate)
           {a11y_val, opts} = Keyword.pop(opts, :a11y)
 
           prop_defaults = unquote(Macro.escape(prop_struct_fields))
@@ -444,6 +450,11 @@ defmodule Toddy.Extension do
             end)
             |> Enum.reject(fn {_name, val} -> is_nil(val) end)
             |> Map.new()
+
+          props_map =
+            if event_rate_val,
+              do: Map.put(props_map, :event_rate, event_rate_val),
+              else: props_map
 
           props_map =
             if a11y_val, do: Map.put(props_map, :a11y, a11y_val), else: props_map
@@ -455,6 +466,7 @@ defmodule Toddy.Extension do
       quote do
         @spec new(id :: String.t(), opts :: keyword()) :: Toddy.Widget.ui_node()
         def new(id, opts \\ []) when is_binary(id) do
+          {event_rate_val, opts} = Keyword.pop(opts, :event_rate)
           {a11y_val, opts} = Keyword.pop(opts, :a11y)
 
           prop_defaults = unquote(Macro.escape(prop_struct_fields))
@@ -467,6 +479,11 @@ defmodule Toddy.Extension do
             end)
             |> Enum.reject(fn {_name, val} -> is_nil(val) end)
             |> Map.new()
+
+          props_map =
+            if event_rate_val,
+              do: Map.put(props_map, :event_rate, event_rate_val),
+              else: props_map
 
           props_map =
             if a11y_val, do: Map.put(props_map, :a11y, a11y_val), else: props_map
@@ -480,7 +497,7 @@ defmodule Toddy.Extension do
   # -- Struct-based widget generation -----------------------------------------
   #
   # For non-composite widgets (no render/2 or render/3), we generate:
-  # - defstruct with all props + :id + :a11y
+  # - defstruct with all props + :id + :event_rate + :a11y
   # - @type t with proper field types
   # - @type option union of keyword tuples
   # - new/2 that creates a struct and applies keyword options
@@ -497,19 +514,26 @@ defmodule Toddy.Extension do
     struct_fields =
       [{:id, nil} | prop_fields] ++
         if(container, do: [{:children, []}], else: []) ++
-        [{:a11y, nil}]
+        [{:event_rate, nil}, {:a11y, nil}]
 
     prop_type_fields = Enum.map(props, &prop_type_ast/1)
 
     type_fields =
       [{:id, quote(do: String.t())} | prop_type_fields] ++
         if(container, do: [{:children, quote(do: [Toddy.Widget.ui_node()])}], else: []) ++
-        [{:a11y, quote(do: Toddy.Type.A11y.t() | nil)}]
+        [
+          {:event_rate, quote(do: pos_integer() | nil)},
+          {:a11y, quote(do: Toddy.Type.A11y.t() | nil)}
+        ]
 
     option_variants =
       Enum.map(props, fn {name, type, _opts} ->
         quote(do: {unquote(name), unquote(elixir_type_for(type))})
-      end) ++ [quote(do: {:a11y, Toddy.Type.A11y.t()})]
+      end) ++
+        [
+          quote(do: {:event_rate, pos_integer()}),
+          quote(do: {:a11y, Toddy.Type.A11y.t()})
+        ]
 
     quote do
       @enforce_keys [:id]
@@ -587,6 +611,13 @@ defmodule Toddy.Extension do
          ]}
       end)
 
+    event_rate_clause =
+      {:->, [],
+       [
+         [{:{}, [], [:event_rate, v]}, acc],
+         quote(do: __MODULE__.event_rate(unquote(acc), unquote(v)))
+       ]}
+
     a11y_clause =
       {:->, [],
        [
@@ -607,7 +638,7 @@ defmodule Toddy.Extension do
          end
        ]}
 
-    all_clauses = prop_clauses ++ [a11y_clause, unknown_clause]
+    all_clauses = prop_clauses ++ [event_rate_clause, a11y_clause, unknown_clause]
     reducer_fn = {:fn, [], all_clauses}
 
     quote do
@@ -649,6 +680,16 @@ defmodule Toddy.Extension do
         end
       end)
 
+    event_rate_setter =
+      quote do
+        @doc "Sets the maximum event rate (events per second) for this widget's coalescable events."
+        @spec event_rate(widget :: t(), rate :: pos_integer()) :: t()
+        def event_rate(%__MODULE__{} = widget, rate)
+            when is_integer(rate) and rate >= 0 do
+          %{widget | event_rate: rate}
+        end
+      end
+
     a11y_setter =
       quote do
         @doc "Sets accessibility annotations."
@@ -658,7 +699,7 @@ defmodule Toddy.Extension do
         end
       end
 
-    prop_setters ++ [a11y_setter]
+    prop_setters ++ [event_rate_setter, a11y_setter]
   end
 
   defp setter_guard(:number), do: quote(do: is_number(value))
@@ -704,6 +745,11 @@ defmodule Toddy.Extension do
         end
       end)
 
+    event_rate_put =
+      quote do
+        props = Toddy.Widget.Build.put_if(props, widget.event_rate, :event_rate)
+      end
+
     a11y_put =
       quote do
         props = Toddy.Widget.Build.put_if(props, widget.a11y, :a11y)
@@ -723,6 +769,7 @@ defmodule Toddy.Extension do
         def to_node(widget) do
           props = %{}
           unquote_splicing(put_calls)
+          unquote(event_rate_put)
           unquote(a11y_put)
 
           %{
@@ -738,7 +785,8 @@ defmodule Toddy.Extension do
 
   @doc false
   def generate_prop_validation(props) do
-    known_names = Enum.map(props, fn {name, _type, _opts} -> name end) ++ [:a11y, :do]
+    known_names =
+      Enum.map(props, fn {name, _type, _opts} -> name end) ++ [:event_rate, :a11y, :do]
 
     quote do
       unknown_keys = Keyword.keys(opts) -- unquote(known_names)

@@ -41,6 +41,7 @@ defmodule Toddy.Widget.VerticalSlider do
           | {:rail_width, number()}
           | {:style, style()}
           | {:label, String.t()}
+          | {:event_rate, pos_integer()}
           | {:a11y, Toddy.Type.A11y.t()}
 
   @type t :: %__MODULE__{
@@ -56,6 +57,7 @@ defmodule Toddy.Widget.VerticalSlider do
           rail_width: number() | nil,
           style: style() | nil,
           label: String.t() | nil,
+          event_rate: pos_integer() | nil,
           a11y: Toddy.Type.A11y.t() | nil
         }
 
@@ -72,6 +74,7 @@ defmodule Toddy.Widget.VerticalSlider do
     :rail_width,
     :style,
     :label,
+    :event_rate,
     :a11y
   ]
 
@@ -102,6 +105,7 @@ defmodule Toddy.Widget.VerticalSlider do
       {:rail_width, v}, acc -> rail_width(acc, v)
       {:style, v}, acc -> style(acc, v)
       {:label, v}, acc -> label(acc, v)
+      {:event_rate, v}, acc -> event_rate(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
@@ -149,6 +153,11 @@ defmodule Toddy.Widget.VerticalSlider do
   def style(%__MODULE__{} = slider, %StyleMap{} = style), do: %{slider | style: style}
   def style(%__MODULE__{} = slider, :default), do: %{slider | style: :default}
 
+  @doc "Sets the maximum event rate (events per second) for this widget's coalescable events."
+  @spec event_rate(vertical_slider :: t(), rate :: pos_integer()) :: t()
+  def event_rate(%__MODULE__{} = slider, rate) when is_integer(rate) and rate >= 0,
+    do: %{slider | event_rate: rate}
+
   @doc "Sets accessibility annotations."
   @spec a11y(vertical_slider :: t(), a11y :: Toddy.Type.A11y.t()) :: t()
   def a11y(%__MODULE__{} = slider, a11y), do: %{slider | a11y: A11y.cast(a11y)}
@@ -174,6 +183,7 @@ defmodule Toddy.Widget.VerticalSlider do
         |> put_if(slider.rail_width, :rail_width)
         |> put_if(slider.style, :style)
         |> put_if(slider.label, :label)
+        |> put_if(slider.event_rate, :event_rate)
         |> put_if(slider.a11y, :a11y)
 
       %{id: slider.id, type: "vertical_slider", props: props, children: []}
