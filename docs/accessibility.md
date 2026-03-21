@@ -498,7 +498,7 @@ primitives. Without interactive shapes, a canvas is a single opaque
 "image" node to screen readers.
 
 ```elixir
-import Toddy.Canvas.Shape
+import Toddy.Canvas.Shape  # needed here: shapes built in a helper outside canvas blocks
 
 canvas("color-picker", width: 200, height: 100,
   layers: %{"options" => Enum.map(Enum.with_index(colors), fn {color, i} ->

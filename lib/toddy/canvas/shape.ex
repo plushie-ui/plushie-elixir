@@ -1,16 +1,35 @@
 defmodule Toddy.Canvas.Shape do
   @moduledoc """
-  Pure builder functions for canvas shape structs.
+  Pure builder functions returning typed canvas shape structs.
 
-  Every function returns a typed struct from `Toddy.Canvas.Shape.*`.
+  Every function returns a struct from `Toddy.Canvas.Shape.*`.
   The `Toddy.Encode` protocol implementations on each struct handle
-  wire-format conversion. These are optional helpers -- you can also
-  construct the structs directly.
+  wire-format conversion. These are plain functions, not macros --
+  they can be called anywhere.
 
-  Inside `canvas`, `layer`, and `group` blocks in `Toddy.UI`, the
-  `text`, `image`, and `svg` names resolve automatically to their
-  canvas variants. For helper functions outside those blocks, import
-  this module directly.
+  Structure macros (`group`, `layer`, `interactive` directive) live
+  in `Toddy.UI` and are available inside canvas do-blocks. Inside
+  those blocks, `text`, `image`, and `svg` calls resolve
+  automatically to their canvas shape variants. For helper functions
+  outside canvas blocks, import this module directly.
+
+  ## When to import this module
+
+  Import `Toddy.Canvas.Shape` when you build shapes in standalone
+  helper functions (defp) outside a `Toddy.UI` canvas block:
+
+      import Toddy.Canvas.Shape
+
+      defp draw_indicator(x, y, color) do
+        [
+          circle(x, y, 6, fill: color),
+          circle(x, y, 3, fill: "#fff")
+        ]
+      end
+
+  Inside `Toddy.UI` canvas/layer/group blocks, all shape functions
+  are already in scope via `import Toddy.UI` -- no extra import
+  needed.
 
   ## Basic shapes
 
@@ -83,28 +102,28 @@ defmodule Toddy.Canvas.Shape do
       |> interactive(id: "btn", on_click: true, cursor: "pointer")
 
   Inside `Toddy.UI` group blocks, the `interactive` directive provides
-  ergonomic do-block and keyword forms.
+  ergonomic do-block and keyword forms -- see `Toddy.UI` moduledoc.
   """
 
   alias Toddy.Canvas.Shape.{
-    Rect,
-    Circle,
-    Line,
-    CanvasText,
-    Path,
     CanvasImage,
     CanvasSvg,
+    CanvasText,
+    Circle,
     Group,
-    Stroke,
-    LinearGradient,
     Interactive,
-    PushTransform,
+    Line,
+    LinearGradient,
+    Path,
+    PopClip,
     PopTransform,
-    Translate,
+    PushClip,
+    PushTransform,
+    Rect,
     Rotate,
     Scale,
-    PushClip,
-    PopClip
+    Stroke,
+    Translate
   }
 
   # -- Basic shapes -----------------------------------------------------------

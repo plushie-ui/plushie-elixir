@@ -45,6 +45,24 @@ defmodule Toddy.Tree do
   `:children`. Prop values are encoded for the wire format. Children
   are always a list, normalized recursively.
   """
+  @canvas_shape_structs [
+    Toddy.Canvas.Shape.Rect,
+    Toddy.Canvas.Shape.Circle,
+    Toddy.Canvas.Shape.Line,
+    Toddy.Canvas.Shape.CanvasText,
+    Toddy.Canvas.Shape.Path,
+    Toddy.Canvas.Shape.CanvasImage,
+    Toddy.Canvas.Shape.CanvasSvg,
+    Toddy.Canvas.Shape.Group,
+    Toddy.Canvas.Shape.PushTransform,
+    Toddy.Canvas.Shape.PopTransform,
+    Toddy.Canvas.Shape.Translate,
+    Toddy.Canvas.Shape.Rotate,
+    Toddy.Canvas.Shape.Scale,
+    Toddy.Canvas.Shape.PushClip,
+    Toddy.Canvas.Shape.PopClip
+  ]
+
   @spec normalize(tree :: nil | tree_node() | [tree_node()] | struct()) :: tree_node()
   def normalize(nil), do: @empty_container
 
@@ -62,6 +80,14 @@ defmodule Toddy.Tree do
     }
   end
 
+  def normalize(%module{}) when module in @canvas_shape_structs do
+    short_name = module |> Module.split() |> List.last()
+
+    raise ArgumentError,
+          "found canvas shape (#{short_name}) where a widget node was expected. " <>
+            "Canvas shapes belong inside canvas layers, not in the widget tree."
+  end
+
   def normalize(%module{} = widget) when is_atom(module) do
     normalize(Toddy.Widget.to_node(widget))
   end
@@ -72,6 +98,14 @@ defmodule Toddy.Tree do
 
   # Private scope-aware normalize. `scope` is the prefix string to prepend
   # to children's IDs (e.g. "sidebar/form"). Empty string means no scope.
+  defp normalize_with_scope(%module{}, _scope) when module in @canvas_shape_structs do
+    short_name = module |> Module.split() |> List.last()
+
+    raise ArgumentError,
+          "found canvas shape (#{short_name}) where a widget node was expected. " <>
+            "Canvas shapes belong inside canvas layers, not in the widget tree."
+  end
+
   defp normalize_with_scope(%module{} = widget, scope) when is_atom(module) do
     normalize_with_scope(Toddy.Widget.to_node(widget), scope)
   end

@@ -81,6 +81,43 @@ defmodule Toddy.UI do
         button("inc", "+1")
       end
 
+  ## Block-form options
+
+  Leaf widgets accept an optional `do` block for setting props when the
+  keyword list gets long:
+
+      button "save", "Save" do
+        style(:primary)
+      end
+
+  The keyword form is still valid and preferred for short option lists.
+
+  ## Canvas shapes
+
+  Canvas shape functions (`rect`, `circle`, `line`, `path`, `stroke`,
+  `linear_gradient`, `move_to`, `line_to`, etc.) and canvas structure
+  macros (`group`, `layer`) are available directly via `import Toddy.UI`.
+  No separate `import Toddy.Canvas.Shape` is needed inside canvas blocks.
+
+  Inside `canvas`, `layer`, and `group` blocks, `text`, `image`, and
+  `svg` calls resolve automatically to their canvas shape variants.
+
+  The `interactive` directive inside a `group` block attaches hit-test
+  and accessibility metadata:
+
+      canvas "toggle", width: 52, height: 28 do
+        layer "bg" do
+          group do
+            interactive "switch", on_click: true, cursor: :pointer
+            rect(0, 0, 52, 28, fill: "#4CAF50", radius: 14)
+            circle(36, 14, 10, fill: "#fff")
+          end
+        end
+      end
+
+  Import `Toddy.Canvas.Shape` directly only when building shapes in
+  helper functions outside canvas blocks.
+
   ## Tree query
 
   `find/2` is re-exported from `Toddy.Tree` for convenience:
@@ -1852,9 +1889,7 @@ defmodule Toddy.UI do
 
   ## Do-block form
 
-  Use with `Toddy.Canvas.Shape.layer/2` to collect layers declaratively:
-
-      import Toddy.Canvas.Shape
+  Use `layer/2` to collect layers declaratively:
 
       canvas "chart", width: 400, height: 300 do
         layer "grid" do

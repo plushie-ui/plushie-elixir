@@ -4,23 +4,23 @@ defmodule Toddy.Canvas.ShapeTest do
   alias Toddy.Canvas.Shape
 
   alias Toddy.Canvas.Shape.{
-    Rect,
-    Circle,
-    Line,
-    CanvasText,
-    Path,
     CanvasImage,
     CanvasSvg,
-    Stroke,
-    LinearGradient,
+    CanvasText,
+    Circle,
     Interactive,
-    PushTransform,
+    Line,
+    LinearGradient,
+    Path,
+    PopClip,
     PopTransform,
-    Translate,
+    PushClip,
+    PushTransform,
+    Rect,
     Rotate,
     Scale,
-    PushClip,
-    PopClip
+    Stroke,
+    Translate
   }
 
   # -- Basic shapes -----------------------------------------------------------

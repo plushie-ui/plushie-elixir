@@ -810,7 +810,6 @@ defmodule ToggleApp do
   @behaviour Toddy.App
 
   import Toddy.UI
-  import Toddy.Canvas.Shape
 
   def init(_opts), do: %{dark_mode: false}
 
@@ -828,8 +827,12 @@ defmodule ToggleApp do
       column padding: 24, spacing: 16 do
         canvas "toggle", width: 52, height: 28 do
           layer "switch" do
-            group interactive: [id: "switch", on_click: true, cursor: :pointer,
-                    a11y: %{role: :switch, label: "Dark mode", toggled: on}] do
+            group do
+              interactive "switch",
+                on_click: true,
+                cursor: :pointer,
+                a11y: %{role: :switch, label: "Dark mode", toggled: on}
+
               rect(0, 0, 52, 28, fill: if(on, do: "#4CAF50", else: "#ccc"), radius: 14)
               circle(knob_x, 14, 10, fill: "#fff")
             end
@@ -845,10 +848,14 @@ end
 
 The canvas do-block collects `layer` declarations into a layers map.
 Each layer contains shapes -- here a single `group` with a rounded rect
-background and a circle knob. The `interactive` option on the group
-enables click events, sets the pointer cursor, and provides a11y
+background and a circle knob. The `interactive` directive inside the
+group enables click events, sets the pointer cursor, and provides a11y
 metadata. On click, the host toggles `dark_mode` and the view
 re-renders with new positions and colours.
+
+Canvas shape functions (`rect`, `circle`, `line`, `path`, `stroke`,
+`linear_gradient`, etc.) are available directly via `import Toddy.UI`
+-- no separate `import Toddy.Canvas.Shape` needed inside canvas blocks.
 
 Screen reader: "Dark mode, switch, on." Keyboard: Tab focuses the
 canvas, Enter/Space toggles.
@@ -865,7 +872,6 @@ defmodule ChartApp do
   @behaviour Toddy.App
 
   import Toddy.UI
-  import Toddy.Canvas.Shape
 
   @data [
     %{month: "Jan", value: 120, color: "#3498db"},
@@ -896,20 +902,19 @@ defmodule ChartApp do
               bar_x = i * (bar_w + 20)
               bar_y = chart_h - bar_h
 
-              group x: bar_x, y: bar_y,
-                    interactive: [
-                      id: "bar-#{i}",
-                      on_click: true,
-                      on_hover: true,
-                      cursor: :pointer,
-                      tooltip: "#{bar.month}: #{bar.value} units",
-                      a11y: %{
-                        role: :button,
-                        label: "#{bar.month}: #{bar.value} units",
-                        position_in_set: i + 1,
-                        size_of_set: count
-                      }
-                    ] do
+              group x: bar_x, y: bar_y do
+                interactive "bar-#{i}",
+                  on_click: true,
+                  on_hover: true,
+                  cursor: :pointer,
+                  tooltip: "#{bar.month}: #{bar.value} units",
+                  a11y: %{
+                    role: :button,
+                    label: "#{bar.month}: #{bar.value} units",
+                    position_in_set: i + 1,
+                    size_of_set: count
+                  }
+
                 rect(0, 0, bar_w, bar_h, fill: bar.color)
                 text(bar_w / 2, -12, "#{bar.value}", fill: "#666", align_x: :center)
               end
@@ -948,7 +953,7 @@ defmodule SearchApp do
   @behaviour Toddy.App
 
   import Toddy.UI
-  import Toddy.Canvas.Shape
+  import Toddy.Canvas.Shape  # needed for shape calls in inline layers: map
 
   def init(_opts), do: %{query: ""}
 
@@ -1001,7 +1006,7 @@ defmodule ComboApp do
   @behaviour Toddy.App
 
   import Toddy.UI
-  import Toddy.Canvas.Shape
+  import Toddy.Canvas.Shape  # needed for shape calls in inline layers: map
   alias Toddy.Type.Border
 
   @options ["Elixir", "Rust", "Python", "TypeScript", "Go", "Haskell", "OCaml", "Zig"]

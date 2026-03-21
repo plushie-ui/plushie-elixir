@@ -13,10 +13,9 @@ defmodule Toddy.Widget.Canvas do
   ## Do-block form
 
   The `canvas` macro in `Toddy.UI` supports a do-block form that collects
-  layers declaratively using `Toddy.Canvas.Shape.layer/2`:
+  layers declaratively:
 
       import Toddy.UI
-      import Toddy.Canvas.Shape
 
       canvas "chart", width: 400, height: 300 do
         layer "grid" do

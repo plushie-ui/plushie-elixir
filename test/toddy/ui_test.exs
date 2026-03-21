@@ -46,7 +46,6 @@ end
 defmodule ToddyUICanvasTestHelper do
   @moduledoc false
   import Toddy.UI
-  import Toddy.Canvas.Shape
 
   def canvas_do_block do
     canvas "chart" do
@@ -80,6 +79,135 @@ defmodule ToddyUICanvasTestHelper do
 
   def canvas_empty_do_block do
     canvas "empty" do
+    end
+  end
+end
+
+defmodule ToddyUIBlockFormHelper do
+  @moduledoc false
+  import Toddy.UI
+
+  def button_block_form do
+    button "save", "Save" do
+      style(:primary)
+      padding(%{top: 10, bottom: 10, left: 20, right: 20})
+    end
+  end
+
+  def button_keyword_form do
+    button("save", "Save", style: :primary)
+  end
+
+  def text_input_block_form do
+    text_input "email", "test@example.com" do
+      placeholder("you@example.com")
+      width(:fill)
+    end
+  end
+
+  def checkbox_block_form do
+    checkbox "agree", true do
+      label("I agree")
+    end
+  end
+
+  def slider_block_form do
+    slider "vol", {0, 100}, 50 do
+      step(5)
+      width(:fill)
+    end
+  end
+
+  def text_block_form do
+    text "greeting", "Hello" do
+      size(18)
+      color("#333")
+    end
+  end
+end
+
+defmodule ToddyUICanvasShapeHelper do
+  @moduledoc false
+  import Toddy.UI
+
+  def rect_block_form do
+    rect 0, 0, 100, 50 do
+      fill("#ff0000")
+      opacity(0.5)
+    end
+  end
+
+  def circle_keyword do
+    circle(50, 50, 25, fill: "#00ff00")
+  end
+
+  def canvas_with_group_interactive do
+    canvas "chart" do
+      layer "main" do
+        group x: 4, y: 4 do
+          interactive "btn" do
+            on_click(true)
+            hover_style(%{fill: "#ddd"})
+          end
+
+          rect(0, 0, 32, 32, fill: "#ccc")
+        end
+      end
+    end
+  end
+
+  def canvas_with_text_rewrite do
+    canvas "chart" do
+      layer "labels" do
+        text(10, 20, "Hello", fill: "#000")
+      end
+    end
+  end
+
+  def group_standalone do
+    group do
+      rect(0, 0, 50, 50, fill: "#f00")
+      circle(25, 25, 10, fill: "#0f0")
+    end
+  end
+
+  def layer_standalone do
+    layer "grid" do
+      rect(0, 0, 400, 300, fill: "#eee")
+    end
+  end
+
+  def interactive_keyword_directive do
+    group do
+      interactive "btn", on_click: true, hover_style: %{fill: "#ddd"}
+      rect(0, 0, 100, 40)
+    end
+  end
+
+  def interactive_pipe_form do
+    rect(0, 0, 100, 40, fill: "#3498db")
+    |> Toddy.Canvas.Shape.interactive(id: "btn", on_click: true)
+  end
+
+  def canvas_with_for do
+    canvas "chart" do
+      layer "bars" do
+        for x <- [10, 20, 30] do
+          rect(x, 0, 8, 50, fill: "#3498db")
+        end
+      end
+    end
+  end
+
+  def canvas_with_if(show?) do
+    canvas "chart" do
+      layer "main" do
+        rect(0, 0, 100, 100, fill: "#eee")
+
+        if show? do
+          circle(50, 50, 20, fill: "#f00")
+        end
+      end
     end
   end
 end
@@ -1108,6 +1236,252 @@ defmodule Toddy.UITest do
       text_nodes = Toddy.Tree.find_all(tree, fn node -> node.type == "text" end)
       count_node = Enum.find(text_nodes, fn n -> n.props[:content] == "Count: 0" end)
       assert count_node != nil
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Block-form leaf widgets
+  # ---------------------------------------------------------------------------
+
+  describe "block-form leaf widgets" do
+    test "button with do-block produces same node as keyword form for shared props" do
+      block_node = ToddyUIBlockFormHelper.button_block_form()
+      keyword_node = ToddyUIBlockFormHelper.button_keyword_form()
+      assert block_node.id == keyword_node.id
+      assert block_node.type == keyword_node.type
+      assert block_node.props.label == keyword_node.props.label
+      assert block_node.props.style == keyword_node.props.style
+      # block form also includes padding from the do-block
+      assert block_node.props.padding == %{top: 10, bottom: 10, left: 20, right: 20}
+    end
+
+    test "text_input with do-block" do
+      node = ToddyUIBlockFormHelper.text_input_block_form()
+      assert node.id == "email"
+      assert node.props.placeholder == "you@example.com"
+    end
+
+    test "checkbox with do-block" do
+      node = ToddyUIBlockFormHelper.checkbox_block_form()
+      assert node.id == "agree"
+      assert node.props.label == "I agree"
+    end
+
+    test "slider with do-block" do
+      node = ToddyUIBlockFormHelper.slider_block_form()
+      assert node.id == "vol"
+      assert node.props.step == 5
+    end
+
+    test "text display macro with do-block" do
+      node = ToddyUIBlockFormHelper.text_block_form()
+      assert node.id == "greeting"
+      assert node.props.size == 18
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Canvas shape macros
+  # ---------------------------------------------------------------------------
+
+  describe "canvas shape macros" do
+    test "rect with do-block" do
+      result = ToddyUICanvasShapeHelper.rect_block_form()
+      assert %Toddy.Canvas.Shape.Rect{fill: "#ff0000", opacity: 0.5} = result
+    end
+
+    test "circle with keyword opts" do
+      result = ToddyUICanvasShapeHelper.circle_keyword()
+      assert %Toddy.Canvas.Shape.Circle{fill: "#00ff00"} = result
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Group macro
+  # ---------------------------------------------------------------------------
+
+  describe "group macro" do
+    test "group with do-block produces Group struct" do
+      result = ToddyUICanvasShapeHelper.group_standalone()
+      assert %Toddy.Canvas.Shape.Group{} = result
+      assert length(result.children) == 2
+    end
+
+    test "group with interactive directive" do
+      node = ToddyUICanvasShapeHelper.canvas_with_group_interactive()
+      assert node.type == "canvas"
+      shapes = node.props[:layers]["main"]
+      [group] = shapes
+      assert %Toddy.Canvas.Shape.Group{} = group
+      assert %Toddy.Canvas.Shape.Interactive{id: "btn", on_click: true} = group.interactive
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Layer macro
+  # ---------------------------------------------------------------------------
+
+  describe "layer macro" do
+    test "layer produces {name, shapes} tuple" do
+      {name, shapes} = ToddyUICanvasShapeHelper.layer_standalone()
+      assert name == "grid"
+      assert [%Toddy.Canvas.Shape.Rect{}] = shapes
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Interactive directive
+  # ---------------------------------------------------------------------------
+
+  describe "interactive directive" do
+    test "keyword form in group" do
+      result = ToddyUICanvasShapeHelper.interactive_keyword_directive()
+      assert %Toddy.Canvas.Shape.Group{} = result
+      assert result.interactive.id == "btn"
+      assert result.interactive.on_click == true
+    end
+
+    test "pipe form on shape" do
+      result = ToddyUICanvasShapeHelper.interactive_pipe_form()
+      assert %Toddy.Canvas.Shape.Rect{} = result
+      assert result.interactive.id == "btn"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Canvas scope text rewriting
+  # ---------------------------------------------------------------------------
+
+  describe "canvas_scope text rewriting" do
+    test "text/4 inside canvas layer is rewritten to canvas shape" do
+      node = ToddyUICanvasShapeHelper.canvas_with_text_rewrite()
+      assert node.type == "canvas"
+      shapes = node.props[:layers]["labels"]
+      assert [%Toddy.Canvas.Shape.CanvasText{x: 10, y: 20, content: "Hello"}] = shapes
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Canvas scope control flow
+  # ---------------------------------------------------------------------------
+
+  describe "canvas_scope control flow" do
+    test "for inside canvas layer" do
+      node = ToddyUICanvasShapeHelper.canvas_with_for()
+      shapes = node.props[:layers]["bars"]
+      assert length(shapes) == 3
+      assert Enum.all?(shapes, &match?(%Toddy.Canvas.Shape.Rect{}, &1))
+    end
+
+    test "if inside canvas layer" do
+      node = ToddyUICanvasShapeHelper.canvas_with_if(true)
+      shapes = node.props[:layers]["main"]
+      assert length(shapes) == 2
+
+      node = ToddyUICanvasShapeHelper.canvas_with_if(false)
+      shapes = node.props[:layers]["main"]
+      assert length(shapes) == 1
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Canvas scope compile errors
+  # ---------------------------------------------------------------------------
+
+  describe "canvas_scope compile errors" do
+    test "text/1 in canvas raises" do
+      assert_raise CompileError, ~r/text\/1 is not valid here/, fn ->
+        Code.compile_string("""
+        import Toddy.UI
+        canvas "x" do
+          layer "l" do
+            text("Hello")
+          end
+        end
+        """)
+      end
+    end
+
+    test "button in canvas raises" do
+      assert_raise CompileError, ~r/button is not valid here/, fn ->
+        Code.compile_string("""
+        import Toddy.UI
+        canvas "x" do
+          layer "l" do
+            button("save", "Save")
+          end
+        end
+        """)
+      end
+    end
+
+    test "rect directly in canvas (not in layer) raises" do
+      assert_raise CompileError, ~r/rect is not valid here/, fn ->
+        Code.compile_string("""
+        import Toddy.UI
+        canvas "x" do
+          rect(0, 0, 100, 50)
+        end
+        """)
+      end
+    end
+
+    test "interactive in layer (not group) raises" do
+      assert_raise CompileError, ~r/interactive is not valid here/, fn ->
+        Code.compile_string("""
+        import Toddy.UI
+        canvas "x" do
+          layer "l" do
+            interactive "btn" do
+              on_click true
+            end
+          end
+        end
+        """)
+      end
+    end
+
+    test "layer inside layer raises" do
+      assert_raise CompileError, ~r/layer is not valid here/, fn ->
+        Code.compile_string("""
+        import Toddy.UI
+        canvas "x" do
+          layer "outer" do
+            layer "inner" do
+              rect(0, 0, 50, 50)
+            end
+          end
+        end
+        """)
+      end
+    end
+
+    test "interactive do-block without id raises" do
+      assert_raise CompileError, ~r/interactive requires an id/, fn ->
+        Code.compile_string("""
+        import Toddy.UI
+        group do
+          interactive do
+            on_click true
+          end
+        end
+        """)
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # text/3 numeric literal guard
+  # ---------------------------------------------------------------------------
+
+  describe "text/3 numeric literal guard" do
+    test "text with numeric first args outside canvas raises" do
+      assert_raise CompileError, ~r/text\/3 is not valid here/, fn ->
+        Code.compile_string("""
+        import Toddy.UI
+        text(10, 20, "Hello")
+        """)
+      end
     end
   end
 end
