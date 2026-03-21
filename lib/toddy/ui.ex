@@ -81,6 +81,51 @@ defmodule Toddy.UI do
         button("inc", "+1")
       end
 
+  ## Container inline props
+
+  Container widgets (`column`, `row`, `container`, etc.) support option
+  declarations directly inside their do-blocks, mixed with children:
+
+      column do
+        spacing 8
+        padding do
+          top 16
+          bottom 16
+        end
+        width :fill
+
+        text("Hello")
+        button("save", "Save")
+      end
+
+  Options and children can be freely mixed. Options are validated at
+  compile time -- using an option that doesn't belong to the container
+  produces a helpful error.
+
+  Struct-typed options support nested do-blocks:
+
+      container "hero" do
+        border do
+          width 1
+          color "#ddd"
+          rounded 4
+        end
+        shadow do
+          color "#00000022"
+          offset_y 2
+          blur_radius 4
+        end
+        padding 20
+
+        text("Welcome")
+      end
+
+  All three forms are equivalent and can be mixed:
+
+      column spacing: 8, padding: 16 do ... end    # keyword on call line
+      column do spacing 8; padding 16; ... end      # inline in block
+      column do padding do top 16 end; ... end      # nested do-block
+
   ## Block-form options
 
   Leaf widgets accept an optional `do` block for setting props when the
@@ -2868,31 +2913,9 @@ defmodule Toddy.UI do
     cond do
       name in option_keys ->
         case args do
-          [{:do, block}] ->
-            # Do-block form: interpret as struct if type mapping exists
-            struct_mod = Map.get(option_types, name)
-
-            if struct_mod do
-              nested_field_types =
-                if function_exported?(struct_mod, :__field_types__, 0),
-                  do: struct_mod.__field_types__(),
-                  else: %{}
-
-              nested_pairs = interpret_struct_opts(block, nested_field_types)
-              nested_ast = pairs_to_keyword_ast(nested_pairs)
-
-              value_ast =
-                quote do
-                  unquote(struct_mod).from_opts(unquote(nested_ast))
-                end
-
-              quote_prop_tuple(name, value_ast, meta)
-            else
-              # No struct mapping -- interpret as plain keyword opts -> map
-              pairs = interpret_opts_block(block)
-              map_ast = {:%{}, [], pairs}
-              quote_prop_tuple(name, map_ast, meta)
-            end
+          [[{:do, block}]] ->
+            value_ast = interpret_prop_do_block(block, Map.get(option_types, name))
+            quote_prop_tuple(name, value_ast, meta)
 
           [value] ->
             # Single arg: name(value)
@@ -2914,6 +2937,26 @@ defmodule Toddy.UI do
 
   # Default -- pass through
   defp container_scope(other, _ok, _ot, _wn), do: other
+
+  # Interpret a do-block as a struct (if type mapping exists) or plain map
+  defp interpret_prop_do_block(block, nil) do
+    pairs = interpret_opts_block(block)
+    {:%{}, [], pairs}
+  end
+
+  defp interpret_prop_do_block(block, struct_mod) do
+    nested_field_types =
+      if function_exported?(struct_mod, :__field_types__, 0),
+        do: struct_mod.__field_types__(),
+        else: %{}
+
+    nested_pairs = interpret_struct_opts(block, nested_field_types)
+    nested_ast = pairs_to_keyword_ast(nested_pairs)
+
+    quote do
+      unquote(struct_mod).from_opts(unquote(nested_ast))
+    end
+  end
 
   # Helper to build {:__widget_prop__, name, value} AST
   defp quote_prop_tuple(name, value, _meta) do

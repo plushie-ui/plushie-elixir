@@ -197,7 +197,7 @@ defmodule Toddy.Type.A11y do
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do
       raise ArgumentError,
-        "unknown a11y field #{inspect(key)}. Valid fields: #{inspect(@known_keys)}"
+            "unknown a11y field #{inspect(key)}. Valid fields: #{inspect(@known_keys)}"
     end
 
     cast(Map.new(opts))

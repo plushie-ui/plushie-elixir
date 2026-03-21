@@ -346,13 +346,21 @@ defmodule ModalApp do
         if model.show_modal do
           # Semi-transparent backdrop
           container "overlay", width: :fill, height: :fill, background: "#00000088", center: true do
-            # Dialog card
-            container "dialog",
-              max_width: 400,
-              padding: 24,
-              background: "#ffffff",
-              border: Border.new() |> Border.color("#dddddd") |> Border.width(1) |> Border.rounded(8),
-              shadow: Shadow.new() |> Shadow.color("#00000040") |> Shadow.offset(0, 4) |> Shadow.blur_radius(16) do
+            # Dialog card -- inline props keep border/shadow readable
+            container "dialog" do
+              max_width 400
+              padding 24
+              background "#ffffff"
+              border do
+                color "#dddddd"
+                width 1
+                rounded 8
+              end
+              shadow do
+                color "#00000040"
+                offset_y 4
+                blur_radius 16
+              end
               column spacing: 16 do
                 text("dialog_title", "Confirm action", size: 18, color: "#1a1a1a")
                 text("dialog_body", "Are you sure you want to proceed? This cannot be undone.",
@@ -429,14 +437,22 @@ defmodule CardApp do
           ]
         end)
 
-        # Card with action
-        container "promo",
-          width: :fill,
-          padding: 0,
-          border: Border.new() |> Border.color("#e0e0e0") |> Border.width(1) |> Border.rounded(8),
-          shadow: Shadow.new() |> Shadow.color("#00000020") |> Shadow.offset(0, 2) |> Shadow.blur_radius(8),
-          background: "#ffffff",
-          clip: true do
+        # Card with action -- inline props for complex border/shadow
+        container "promo" do
+          width :fill
+          padding 0
+          border do
+            color "#e0e0e0"
+            width 1
+            rounded 8
+          end
+          shadow do
+            color "#00000020"
+            offset_y 2
+            blur_radius 8
+          end
+          background "#ffffff"
+          clip true
           column width: :fill do
             # Header band
             container "promo_header", width: :fill, padding: 12, background: "#3366ff" do
@@ -1127,6 +1143,56 @@ Each piece does what it is good at:
 
 Closing the dropdown: on `canvas_shape_click` for an option, the host
 sets `open: false` and removes the overlay content from the tree.
+
+---
+
+## Nested option blocks
+
+Complex option values support do-block syntax at any nesting depth.
+This is especially useful for accessibility, styling, and interactive
+configuration:
+
+```elixir
+container "card" do
+  padding do
+    top 20
+    bottom 20
+    left 16
+    right 16
+  end
+  border do
+    width 1
+    color "#e0e0e0"
+    rounded 8
+  end
+  shadow do
+    color "#0000001a"
+    offset_y 2
+    blur_radius 8
+  end
+  a11y do
+    role :article
+    label "Card"
+  end
+
+  column spacing: 12 do
+    text("title", "Card Title", size: 18)
+    text("body", "Card content goes here.")
+  end
+end
+```
+
+The keyword form is always available as an alternative:
+
+```elixir
+container("card",
+  padding: %{top: 20, bottom: 20, left: 16, right: 16},
+  border: Border.new() |> Border.width(1) |> Border.color("#e0e0e0") |> Border.rounded(8),
+  shadow: Shadow.new() |> Shadow.color("#0000001a") |> Shadow.offset(0, 2) |> Shadow.blur_radius(8),
+  a11y: %{role: :article, label: "Card"},
+  children: [...]
+)
+```
 
 ---
 

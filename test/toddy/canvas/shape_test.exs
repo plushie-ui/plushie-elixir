@@ -446,4 +446,68 @@ defmodule Toddy.Canvas.ShapeTest do
       end
     end
   end
+
+  # -- Value structs ----------------------------------------------------------
+
+  describe "ShapeStyle" do
+    alias Toddy.Canvas.Shape.ShapeStyle
+
+    test "from_opts builds struct" do
+      style = ShapeStyle.from_opts(fill: "#ddd", opacity: 0.8)
+      assert %ShapeStyle{fill: "#ddd", opacity: 0.8} = style
+    end
+
+    test "from_opts validates unknown keys" do
+      assert_raise ArgumentError, ~r/unknown shape style field/, fn ->
+        ShapeStyle.from_opts(fll: "#ddd")
+      end
+    end
+  end
+
+  describe "DragBounds" do
+    alias Toddy.Canvas.Shape.DragBounds
+
+    test "from_opts builds struct" do
+      bounds = DragBounds.from_opts(min_x: 0, max_x: 400)
+      assert %DragBounds{min_x: 0, max_x: 400} = bounds
+    end
+
+    test "from_opts validates unknown keys" do
+      assert_raise ArgumentError, ~r/unknown drag bounds field/, fn ->
+        DragBounds.from_opts(min_xx: 0)
+      end
+    end
+  end
+
+  describe "HitRect" do
+    alias Toddy.Canvas.Shape.HitRect
+
+    test "from_opts builds struct" do
+      rect = HitRect.from_opts(x: 0, y: 0, w: 100, h: 50)
+      assert %HitRect{x: 0, y: 0, w: 100, h: 50} = rect
+    end
+  end
+
+  describe "Dash" do
+    alias Toddy.Canvas.Shape.Dash
+
+    test "from_opts builds struct" do
+      dash = Dash.from_opts(segments: [5, 3], offset: 0)
+      assert %Dash{segments: [5, 3], offset: 0} = dash
+    end
+  end
+
+  # -- Interactive with nested structs ----------------------------------------
+
+  describe "interactive with nested structs" do
+    test "new/1 converts keyword hover_style to ShapeStyle struct" do
+      interactive = Interactive.new(id: "btn", hover_style: [fill: "#ddd", opacity: 0.8])
+      assert %Toddy.Canvas.Shape.ShapeStyle{fill: "#ddd", opacity: 0.8} = interactive.hover_style
+    end
+
+    test "new/1 converts keyword drag_bounds to DragBounds struct" do
+      interactive = Interactive.new(id: "btn", drag_bounds: [min_x: 0, max_x: 400])
+      assert %Toddy.Canvas.Shape.DragBounds{min_x: 0, max_x: 400} = interactive.drag_bounds
+    end
+  end
 end

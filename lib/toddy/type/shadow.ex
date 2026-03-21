@@ -61,7 +61,7 @@ defmodule Toddy.Type.Shadow do
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do
       raise ArgumentError,
-        "unknown shadow field #{inspect(key)}. Valid fields: #{inspect(@known_keys)}"
+            "unknown shadow field #{inspect(key)}. Valid fields: #{inspect(@known_keys)}"
     end
 
     Enum.reduce(opts, new(), fn

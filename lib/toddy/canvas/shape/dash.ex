@@ -18,6 +18,7 @@ defmodule Toddy.Canvas.Shape.Dash do
   def __field_types__, do: %{}
 
   @doc "Constructs a dash pattern from a keyword list."
+  @spec from_opts(keyword()) :: t()
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do
       raise ArgumentError,

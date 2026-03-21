@@ -212,6 +212,136 @@ defmodule ToddyUICanvasShapeHelper do
   end
 end
 
+defmodule ToddyUIContainerPropsHelper do
+  @moduledoc false
+  import Toddy.UI
+
+  def column_inline_props do
+    column do
+      spacing(8)
+      padding(16)
+      width(:fill)
+
+      text("Hello")
+      button("save", "Save")
+    end
+  end
+
+  def column_mixed_opts do
+    column spacing: 8 do
+      padding(16)
+      text("Hello")
+    end
+  end
+
+  def container_with_border_shadow do
+    container "styled" do
+      background("#fff")
+
+      border do
+        width(1)
+        color("#ddd")
+        rounded(4)
+      end
+
+      shadow do
+        color("#00000022")
+        offset_y(2)
+        blur_radius(4)
+      end
+
+      text("Styled content")
+    end
+  end
+
+  def column_with_padding_block do
+    column do
+      padding do
+        top(16)
+        bottom(16)
+        left(20)
+        right(20)
+      end
+
+      text("Padded")
+    end
+  end
+
+  def column_with_a11y_block do
+    column do
+      a11y do
+        role(:list)
+        label("Item list")
+      end
+
+      text("Item 1")
+    end
+  end
+
+  def button_with_style_block do
+    button "save", "Save" do
+      style do
+        background("#0066ff")
+        text_color("#ffffff")
+
+        border do
+          rounded(4)
+        end
+      end
+
+      padding do
+        top(10)
+        bottom(10)
+        left(20)
+        right(20)
+      end
+    end
+  end
+
+  def column_with_conditional_props(compact?) do
+    column do
+      if compact? do
+        spacing(4)
+      else
+        spacing(16)
+      end
+
+      if compact? do
+        padding(8)
+      else
+        padding(24)
+      end
+
+      text("Content")
+    end
+  end
+
+  def interactive_with_nested_blocks do
+    group do
+      interactive "btn" do
+        on_click
+
+        hover_style do
+          fill("#ddd")
+          opacity(0.8)
+        end
+
+        drag_bounds do
+          min_x(0)
+          max_x(400)
+        end
+
+        a11y do
+          role(:button)
+          label("Click me")
+        end
+      end
+
+      rect(0, 0, 100, 40, fill: "#3498db")
+    end
+  end
+end
+
 defmodule Toddy.UITest do
   use ExUnit.Case, async: true
 
@@ -1480,6 +1610,125 @@ defmodule Toddy.UITest do
         Code.compile_string("""
         import Toddy.UI
         text(10, 20, "Hello")
+        """)
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Container inline props
+  # ---------------------------------------------------------------------------
+
+  describe "container inline props" do
+    test "column with inline spacing/padding/width" do
+      node = ToddyUIContainerPropsHelper.column_inline_props()
+      assert node.type == "column"
+      assert node.props.spacing == 8
+      assert node.props.padding == 16
+      assert node.props.width == :fill
+      assert length(node.children) == 2
+    end
+
+    test "mixed keyword and inline opts" do
+      node = ToddyUIContainerPropsHelper.column_mixed_opts()
+      assert node.type == "column"
+      assert node.props.spacing == 8
+      assert node.props.padding == 16
+      assert length(node.children) == 1
+    end
+
+    test "conditional inline props" do
+      compact = ToddyUIContainerPropsHelper.column_with_conditional_props(true)
+      assert compact.props.spacing == 4
+      assert compact.props.padding == 8
+
+      spacious = ToddyUIContainerPropsHelper.column_with_conditional_props(false)
+      assert spacious.props.spacing == 16
+      assert spacious.props.padding == 24
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Nested struct do-blocks
+  # ---------------------------------------------------------------------------
+
+  describe "nested struct do-blocks" do
+    test "padding with do-block" do
+      node = ToddyUIContainerPropsHelper.column_with_padding_block()
+      assert node.type == "column"
+      padding = node.props.padding
+      assert padding.top == 16
+      assert padding.bottom == 16
+      assert padding.left == 20
+      assert padding.right == 20
+    end
+
+    test "a11y with do-block" do
+      node = ToddyUIContainerPropsHelper.column_with_a11y_block()
+      a11y = node.props.a11y
+      assert a11y.role == :list
+      assert a11y.label == "Item list"
+    end
+
+    test "container with border and shadow do-blocks" do
+      node = ToddyUIContainerPropsHelper.container_with_border_shadow()
+      assert node.props.background == "#ffffff"
+      border = node.props.border
+      assert border.width == 1
+      assert border.color == "#dddddd"
+      shadow = node.props.shadow
+      assert shadow.color == "#00000022"
+      assert shadow.blur_radius == 4
+    end
+
+    test "button with nested style do-block" do
+      node = ToddyUIContainerPropsHelper.button_with_style_block()
+      style = node.props.style
+      assert style.background == "#0066ff"
+      assert style.text_color == "#ffffff"
+      padding = node.props.padding
+      assert padding.top == 10
+    end
+
+    test "interactive with nested hover_style and drag_bounds do-blocks" do
+      result = ToddyUIContainerPropsHelper.interactive_with_nested_blocks()
+      assert %Toddy.Canvas.Shape.Group{} = result
+      interactive = result.interactive
+      assert interactive.id == "btn"
+      assert interactive.on_click == true
+      assert interactive.hover_style.fill == "#ddd"
+      assert interactive.hover_style.opacity == 0.8
+      assert interactive.drag_bounds.min_x == 0
+      assert interactive.drag_bounds.max_x == 400
+      assert interactive.a11y.role == :button
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Container scope compile errors
+  # ---------------------------------------------------------------------------
+
+  describe "container_scope compile errors" do
+    test "spacing in container (wrong container) raises" do
+      assert_raise CompileError, ~r/spacing is not a valid option for container/, fn ->
+        Code.compile_string("""
+        import Toddy.UI
+        container "x" do
+          spacing(8)
+          text("Hello")
+        end
+        """)
+      end
+    end
+
+    test "direction in column (wrong container) raises" do
+      assert_raise CompileError, ~r/direction is not a valid option for column/, fn ->
+        Code.compile_string("""
+        import Toddy.UI
+        column do
+          direction(:horizontal)
+          text("Hello")
+        end
         """)
       end
     end

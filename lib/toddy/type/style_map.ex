@@ -154,7 +154,7 @@ defmodule Toddy.Type.StyleMap do
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do
       raise ArgumentError,
-        "unknown style field #{inspect(key)}. Valid fields: #{inspect(@known_keys)}"
+            "unknown style field #{inspect(key)}. Valid fields: #{inspect(@known_keys)}"
     end
 
     Enum.reduce(opts, new(), fn

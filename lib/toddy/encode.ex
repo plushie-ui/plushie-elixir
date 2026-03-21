@@ -32,6 +32,8 @@ defprotocol Toddy.Encode do
   - `Toddy.Type.A11y` -- strips nil fields, converts atom keys to strings
   - `Toddy.Type.Border` -- encodes per-corner radius to string-keyed map
   - `Toddy.Type.Shadow` -- encodes offset as `[x, y]` list
+  - `Toddy.Type.Font` -- encodes struct to wire font map (strips nils)
+  - `Toddy.Type.Padding` -- encodes struct to per-side map (strips nils)
   - `Toddy.Type.StyleMap` -- encodes status overrides and nested structs
   """
 

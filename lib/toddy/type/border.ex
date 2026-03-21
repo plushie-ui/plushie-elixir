@@ -92,7 +92,7 @@ defmodule Toddy.Type.Border do
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do
       raise ArgumentError,
-        "unknown border field #{inspect(key)}. Valid fields: #{inspect(@known_keys)}"
+            "unknown border field #{inspect(key)}. Valid fields: #{inspect(@known_keys)}"
     end
 
     Enum.reduce(opts, new(), fn
