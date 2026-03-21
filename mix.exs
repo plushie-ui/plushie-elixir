@@ -49,6 +49,7 @@ defmodule Toddy.MixProject do
         "docs/scoped-ids.md",
         "docs/theming.md",
         "docs/testing.md",
+        "docs/running.md",
         "docs/composition-patterns.md",
         "docs/accessibility.md",
         "docs/extensions.md",
@@ -69,6 +70,7 @@ defmodule Toddy.MixProject do
           "docs/testing.md"
         ],
         Advanced: [
+          "docs/running.md",
           "docs/composition-patterns.md",
           "docs/accessibility.md",
           "docs/extensions.md"

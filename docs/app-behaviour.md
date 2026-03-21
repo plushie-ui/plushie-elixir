@@ -502,6 +502,38 @@ end
 ```
 
 
+## How props reach the renderer
+
+Values returned by `view/1` go through several transformation stages
+before reaching the wire. Understanding this pipeline helps when
+debugging unexpected behaviour or writing custom extensions.
+
+1. **Widget builders** (`Toddy.UI` macros, `Toddy.Iced` functions)
+   return structs with raw Elixir values -- atoms, tuples, structs.
+   No encoding happens here.
+
+2. **`Toddy.Widget` protocol** (`to_node/1`) converts typed widget
+   structs into plain `%{id, type, props, children}` maps. Values
+   remain as raw Elixir terms.
+
+3. **`Toddy.Tree.normalize/1`** walks the tree and applies the
+   `Toddy.Encode` protocol to each prop value. Atoms become strings
+   (except `true`/`false`/`nil`), tuples become lists, and custom
+   structs encode via their `Toddy.Encode` implementation. Scoped IDs
+   are prefixed at this stage.
+
+4. **Protocol encoding** stringifies atom keys to string keys, then
+   serializes with Jason (JSON mode) or Msgpax (MessagePack mode) to
+   produce wire bytes.
+
+Each stage has a single responsibility. Widget builders don't worry
+about wire encoding, the Encode protocol doesn't worry about
+serialization format, and the Protocol layer doesn't know about widget
+types.
+
+See [running.md](running.md) for more detail on the encoding pipeline
+and transport modes.
+
 ## Renderer limits
 
 The renderer enforces hard limits on various resources. Exceeding them
