@@ -137,6 +137,11 @@ defmodule Toddy.App do
     follow the OS light/dark preference, or a custom palette map.
     See `Toddy.Type.Theme`.
   - `fonts` -- list of font paths to load
+  - `default_event_rate` -- integer, maximum events per second for
+    coalescable event types. Omit for unlimited (default). Affects mouse
+    moves, scroll, animation frames, slider drags, etc. Set to 60 for
+    most apps, lower for dashboards or remote rendering. Per-subscription
+    `max_rate` and per-widget `event_rate` override this default.
 
   Default: `[]` (renderer uses its own defaults).
   """

@@ -741,6 +741,55 @@ Toddy.Subscription.batch(subscriptions)
 # Combines multiple subscriptions into a flat list. Identity function.
 ```
 
+### Event rate limiting
+
+The renderer supports rate limiting for high-frequency events (mouse moves,
+scroll, animation frames, slider drags, etc.). This reduces wire traffic
+and host CPU usage. Three configuration levels, in order of priority:
+
+#### Per-widget `event_rate` prop
+
+Widgets that emit high-frequency events accept an `event_rate` option:
+
+```elixir
+# Volume slider limited to 15 events/sec, seek bar at 60:
+slider("volume", {0, 100}, model.volume, event_rate: 15)
+slider("seek", {0, model.duration}, model.position, event_rate: 60)
+```
+
+Supported on: `Slider`, `VerticalSlider`, `Canvas`, `MouseArea`, `Sensor`,
+`PaneGrid`, and all extension widgets.
+
+#### Per-subscription `max_rate`
+
+Renderer subscriptions accept a `max_rate` option:
+
+```elixir
+# Rate-limit mouse moves to 30 events per second:
+Subscription.on_mouse_move(:mouse, max_rate: 30)
+
+# Animation frames at 60fps:
+Subscription.on_animation_frame(:frame, max_rate: 60)
+
+# Subscribe but never emit (capture tracking only):
+Subscription.on_mouse_move(:mouse, max_rate: 0)
+```
+
+Timer subscriptions (`every/2`) do not support `max_rate`.
+
+#### Global `default_event_rate` setting
+
+A global default applied to all coalescable event types:
+
+```elixir
+def settings do
+  [default_event_rate: 60]
+end
+```
+
+Set to 60 for most apps. Lower for dashboards or remote rendering.
+Omit for unlimited (current default behavior).
+
 ### Subscription lifecycle
 
 Subscriptions are declarative. You do not start or stop them imperatively.
@@ -795,13 +844,16 @@ commands and rendering:
 - `scale_factor` -- number (default `1.0`). Global UI scale factor applied
   to all windows. Values greater than 1.0 make the UI larger; less than 1.0
   makes it smaller.
+- `default_event_rate` -- integer. Maximum events per second for coalescable
+  event types. Omit for unlimited (default). See [Event rate limiting](#event-rate-limiting).
 
 ```elixir
 def settings do
   [
     antialiasing: true,
     vsync: false,
-    scale_factor: 1.5
+    scale_factor: 1.5,
+    default_event_rate: 60
   ]
 end
 ```
