@@ -114,5 +114,79 @@ defmodule Toddy.SubscriptionTest do
       k2 = Subscription.key(Subscription.on_key_release(:input))
       assert k1 != k2
     end
+
+    test "max_rate is NOT part of the subscription key" do
+      a = Subscription.on_mouse_move(:mouse, max_rate: 30)
+      b = Subscription.on_mouse_move(:mouse, max_rate: 60)
+      c = Subscription.on_mouse_move(:mouse)
+      assert Subscription.key(a) == Subscription.key(b)
+      assert Subscription.key(a) == Subscription.key(c)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # describe "max_rate"
+  # ---------------------------------------------------------------------------
+
+  describe "max_rate" do
+    test "constructors store max_rate from opts" do
+      spec = Subscription.on_mouse_move(:mouse, max_rate: 30)
+      assert spec.max_rate == 30
+    end
+
+    test "constructors default max_rate to nil when omitted" do
+      spec = Subscription.on_mouse_move(:mouse)
+      assert spec.max_rate == nil
+    end
+
+    test "max_rate/2 setter applies rate to existing subscription" do
+      spec =
+        Subscription.on_animation_frame(:frame)
+        |> Subscription.max_rate(60)
+
+      assert spec.max_rate == 60
+      assert spec.type == :on_animation_frame
+      assert spec.tag == :frame
+    end
+
+    test "max_rate of 0 is accepted (subscribe but never emit)" do
+      spec = Subscription.on_mouse_move(:mouse, max_rate: 0)
+      assert spec.max_rate == 0
+    end
+
+    test "max_rate rejects negative values" do
+      assert_raise FunctionClauseError, fn ->
+        Subscription.max_rate(Subscription.on_mouse_move(:m), -1)
+      end
+    end
+
+    test "all renderer constructors accept max_rate" do
+      constructors = [
+        {:on_key_press, :k},
+        {:on_key_release, :k},
+        {:on_mouse_move, :m},
+        {:on_mouse_button, :m},
+        {:on_mouse_scroll, :m},
+        {:on_window_event, :w},
+        {:on_window_close, :w},
+        {:on_window_open, :w},
+        {:on_window_resize, :w},
+        {:on_window_focus, :w},
+        {:on_window_unfocus, :w},
+        {:on_window_move, :w},
+        {:on_animation_frame, :f},
+        {:on_theme_change, :t},
+        {:on_ime, :i},
+        {:on_touch, :t},
+        {:on_file_drop, :f},
+        {:on_event, :e},
+        {:on_modifiers_changed, :m}
+      ]
+
+      for {func, tag} <- constructors do
+        spec = apply(Subscription, func, [tag, [max_rate: 42]])
+        assert spec.max_rate == 42, "#{func} should store max_rate"
+      end
+    end
   end
 end

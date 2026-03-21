@@ -34,6 +34,28 @@ defmodule Toddy.Subscription do
       Toddy.Subscription.on_window_resize(:win_resize)
       # update/2 receives: %Toddy.Event.Window{type: :resized, ...}
 
+  ## Rate limiting
+
+  Renderer subscriptions accept a `:max_rate` option that tells the
+  renderer to coalesce events beyond the given rate (events per second).
+  This reduces wire traffic and host CPU usage for high-frequency events.
+
+      # Rate-limit mouse moves to 30 events per second:
+      Subscription.on_mouse_move(:mouse, max_rate: 30)
+
+      # Animation frames at 60fps (matches display refresh):
+      Subscription.on_animation_frame(:frame, max_rate: 60)
+
+      # Subscribe but never emit (capture tracking only):
+      Subscription.on_mouse_move(:mouse, max_rate: 0)
+
+  The rate can also be set via the `max_rate/2` setter for pipeline style:
+
+      Subscription.on_mouse_move(:mouse) |> Subscription.max_rate(30)
+
+  Timer subscriptions (`every/2`) do not support max_rate -- they are
+  host-side timers, not renderer events.
+
   ## Example
 
       def subscribe(model) do
@@ -69,11 +91,12 @@ defmodule Toddy.Subscription do
   @type t :: %__MODULE__{
           type: atom(),
           tag: atom(),
-          interval: pos_integer() | nil
+          interval: pos_integer() | nil,
+          max_rate: pos_integer() | nil
         }
 
   @enforce_keys [:type, :tag]
-  defstruct [:type, :tag, :interval]
+  defstruct [:type, :tag, :interval, :max_rate]
 
   @doc """
   Timer that fires every `interval_ms` milliseconds.
@@ -111,9 +134,9 @@ defmodule Toddy.Subscription do
       # In update/2 -- match on the struct, NOT the tag:
       def update(model, %Toddy.Event.Key{type: :press, key: :enter}), do: ...
   """
-  @spec on_key_press(event_tag :: atom()) :: t()
-  def on_key_press(event_tag) when is_atom(event_tag) do
-    %__MODULE__{type: :on_key_press, tag: event_tag}
+  @spec on_key_press(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_key_press(event_tag, opts \\ []) when is_atom(event_tag) do
+    %__MODULE__{type: :on_key_press, tag: event_tag, max_rate: opts[:max_rate]}
   end
 
   @doc """
@@ -130,9 +153,9 @@ defmodule Toddy.Subscription do
       # In update/2:
       def update(model, %Toddy.Event.Key{type: :release, key: key}), do: ...
   """
-  @spec on_key_release(event_tag :: atom()) :: t()
-  def on_key_release(event_tag) when is_atom(event_tag) do
-    %__MODULE__{type: :on_key_release, tag: event_tag}
+  @spec on_key_release(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_key_release(event_tag, opts \\ []) when is_atom(event_tag) do
+    %__MODULE__{type: :on_key_release, tag: event_tag, max_rate: opts[:max_rate]}
   end
 
   @doc """
@@ -147,9 +170,9 @@ defmodule Toddy.Subscription do
 
       def update(model, %Toddy.Event.Modifiers{modifiers: %{shift: true}}), do: ...
   """
-  @spec on_modifiers_changed(event_tag :: atom()) :: t()
-  def on_modifiers_changed(event_tag) when is_atom(event_tag) do
-    %__MODULE__{type: :on_modifiers_changed, tag: event_tag}
+  @spec on_modifiers_changed(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_modifiers_changed(event_tag, opts \\ []) when is_atom(event_tag) do
+    %__MODULE__{type: :on_modifiers_changed, tag: event_tag, max_rate: opts[:max_rate]}
   end
 
   @doc """
@@ -165,9 +188,9 @@ defmodule Toddy.Subscription do
       # In update/2:
       def update(model, %Toddy.Event.Window{type: :close_requested, window_id: wid}), do: ...
   """
-  @spec on_window_close(event_tag :: atom()) :: t()
-  def on_window_close(event_tag) when is_atom(event_tag) do
-    %__MODULE__{type: :on_window_close, tag: event_tag}
+  @spec on_window_close(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_window_close(event_tag, opts \\ []) when is_atom(event_tag) do
+    %__MODULE__{type: :on_window_close, tag: event_tag, max_rate: opts[:max_rate]}
   end
 
   @doc """
@@ -181,9 +204,9 @@ defmodule Toddy.Subscription do
   delivered twice -- once from each subscription. Use either the
   aggregate or specific subscriptions, not both.
   """
-  @spec on_window_event(event_tag :: atom()) :: t()
-  def on_window_event(event_tag) when is_atom(event_tag) do
-    %__MODULE__{type: :on_window_event, tag: event_tag}
+  @spec on_window_event(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_window_event(event_tag, opts \\ []) when is_atom(event_tag) do
+    %__MODULE__{type: :on_window_event, tag: event_tag, max_rate: opts[:max_rate]}
   end
 
   @doc """
@@ -192,9 +215,9 @@ defmodule Toddy.Subscription do
   Delivers `%Toddy.Event.Window{type: :opened, window_id: id, ...}` to
   `update/2`. The `event_tag` is for subscription management only.
   """
-  @spec on_window_open(event_tag :: atom()) :: t()
-  def on_window_open(event_tag) when is_atom(event_tag) do
-    %__MODULE__{type: :on_window_open, tag: event_tag}
+  @spec on_window_open(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_window_open(event_tag, opts \\ []) when is_atom(event_tag) do
+    %__MODULE__{type: :on_window_open, tag: event_tag, max_rate: opts[:max_rate]}
   end
 
   @doc """
@@ -203,9 +226,9 @@ defmodule Toddy.Subscription do
   Delivers `%Toddy.Event.Window{type: :resized, window_id: id, width: w, height: h}` to `update/2`.
   The `event_tag` is for subscription management only.
   """
-  @spec on_window_resize(event_tag :: atom()) :: t()
-  def on_window_resize(event_tag) when is_atom(event_tag) do
-    %__MODULE__{type: :on_window_resize, tag: event_tag}
+  @spec on_window_resize(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_window_resize(event_tag, opts \\ []) when is_atom(event_tag) do
+    %__MODULE__{type: :on_window_resize, tag: event_tag, max_rate: opts[:max_rate]}
   end
 
   @doc """
@@ -214,9 +237,9 @@ defmodule Toddy.Subscription do
   Delivers `%Toddy.Event.Window{type: :focused, window_id: id}` to `update/2`.
   The `event_tag` is for subscription management only.
   """
-  @spec on_window_focus(event_tag :: atom()) :: t()
-  def on_window_focus(event_tag) when is_atom(event_tag) do
-    %__MODULE__{type: :on_window_focus, tag: event_tag}
+  @spec on_window_focus(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_window_focus(event_tag, opts \\ []) when is_atom(event_tag) do
+    %__MODULE__{type: :on_window_focus, tag: event_tag, max_rate: opts[:max_rate]}
   end
 
   @doc """
@@ -225,9 +248,9 @@ defmodule Toddy.Subscription do
   Delivers `%Toddy.Event.Window{type: :unfocused, window_id: id}` to `update/2`.
   The `event_tag` is for subscription management only.
   """
-  @spec on_window_unfocus(event_tag :: atom()) :: t()
-  def on_window_unfocus(event_tag) when is_atom(event_tag) do
-    %__MODULE__{type: :on_window_unfocus, tag: event_tag}
+  @spec on_window_unfocus(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_window_unfocus(event_tag, opts \\ []) when is_atom(event_tag) do
+    %__MODULE__{type: :on_window_unfocus, tag: event_tag, max_rate: opts[:max_rate]}
   end
 
   @doc """
@@ -236,9 +259,9 @@ defmodule Toddy.Subscription do
   Delivers `%Toddy.Event.Window{type: :moved, window_id: id, x: x, y: y}` to `update/2`.
   The `event_tag` is for subscription management only.
   """
-  @spec on_window_move(event_tag :: atom()) :: t()
-  def on_window_move(event_tag) when is_atom(event_tag) do
-    %__MODULE__{type: :on_window_move, tag: event_tag}
+  @spec on_window_move(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_window_move(event_tag, opts \\ []) when is_atom(event_tag) do
+    %__MODULE__{type: :on_window_move, tag: event_tag, max_rate: opts[:max_rate]}
   end
 
   @doc """
@@ -248,9 +271,9 @@ defmodule Toddy.Subscription do
   Also delivers `%Mouse{type: :entered, ...}` and `%Mouse{type: :left, ...}`.
   The `event_tag` is for subscription management only.
   """
-  @spec on_mouse_move(event_tag :: atom()) :: t()
-  def on_mouse_move(event_tag) when is_atom(event_tag) do
-    %__MODULE__{type: :on_mouse_move, tag: event_tag}
+  @spec on_mouse_move(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_mouse_move(event_tag, opts \\ []) when is_atom(event_tag) do
+    %__MODULE__{type: :on_mouse_move, tag: event_tag, max_rate: opts[:max_rate]}
   end
 
   @doc """
@@ -261,9 +284,9 @@ defmodule Toddy.Subscription do
   `button` is `:left`, `:right`, or `:middle`.
   The `event_tag` is for subscription management only.
   """
-  @spec on_mouse_button(event_tag :: atom()) :: t()
-  def on_mouse_button(event_tag) when is_atom(event_tag) do
-    %__MODULE__{type: :on_mouse_button, tag: event_tag}
+  @spec on_mouse_button(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_mouse_button(event_tag, opts \\ []) when is_atom(event_tag) do
+    %__MODULE__{type: :on_mouse_button, tag: event_tag, max_rate: opts[:max_rate]}
   end
 
   @doc """
@@ -273,9 +296,9 @@ defmodule Toddy.Subscription do
   to `update/2`. The `unit` field is `:line` or `:pixel`.
   The `event_tag` is for subscription management only.
   """
-  @spec on_mouse_scroll(event_tag :: atom()) :: t()
-  def on_mouse_scroll(event_tag) when is_atom(event_tag) do
-    %__MODULE__{type: :on_mouse_scroll, tag: event_tag}
+  @spec on_mouse_scroll(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_mouse_scroll(event_tag, opts \\ []) when is_atom(event_tag) do
+    %__MODULE__{type: :on_mouse_scroll, tag: event_tag, max_rate: opts[:max_rate]}
   end
 
   @doc """
@@ -290,9 +313,9 @@ defmodule Toddy.Subscription do
 
   The `event_tag` is for subscription management only.
   """
-  @spec on_ime(event_tag :: atom()) :: t()
-  def on_ime(event_tag) when is_atom(event_tag) do
-    %__MODULE__{type: :on_ime, tag: event_tag}
+  @spec on_ime(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_ime(event_tag, opts \\ []) when is_atom(event_tag) do
+    %__MODULE__{type: :on_ime, tag: event_tag, max_rate: opts[:max_rate]}
   end
 
   @doc """
@@ -303,9 +326,9 @@ defmodule Toddy.Subscription do
   to `update/2`.
   The `event_tag` is for subscription management only.
   """
-  @spec on_touch(event_tag :: atom()) :: t()
-  def on_touch(event_tag) when is_atom(event_tag) do
-    %__MODULE__{type: :on_touch, tag: event_tag}
+  @spec on_touch(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_touch(event_tag, opts \\ []) when is_atom(event_tag) do
+    %__MODULE__{type: :on_touch, tag: event_tag, max_rate: opts[:max_rate]}
   end
 
   @doc """
@@ -315,9 +338,9 @@ defmodule Toddy.Subscription do
   a string like `"light"` or `"dark"`. The `event_tag` is for subscription
   management only.
   """
-  @spec on_theme_change(event_tag :: atom()) :: t()
-  def on_theme_change(event_tag) when is_atom(event_tag) do
-    %__MODULE__{type: :on_theme_change, tag: event_tag}
+  @spec on_theme_change(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_theme_change(event_tag, opts \\ []) when is_atom(event_tag) do
+    %__MODULE__{type: :on_theme_change, tag: event_tag, max_rate: opts[:max_rate]}
   end
 
   @doc """
@@ -326,9 +349,9 @@ defmodule Toddy.Subscription do
   Delivers `%System{type: :animation_frame, data: timestamp}` to `update/2`.
   The `event_tag` is for subscription management only.
   """
-  @spec on_animation_frame(event_tag :: atom()) :: t()
-  def on_animation_frame(event_tag) when is_atom(event_tag) do
-    %__MODULE__{type: :on_animation_frame, tag: event_tag}
+  @spec on_animation_frame(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_animation_frame(event_tag, opts \\ []) when is_atom(event_tag) do
+    %__MODULE__{type: :on_animation_frame, tag: event_tag, max_rate: opts[:max_rate]}
   end
 
   @doc """
@@ -339,9 +362,9 @@ defmodule Toddy.Subscription do
   and `%Window{type: :files_hovered_left, ...}` when the hover exits.
   The `event_tag` is for subscription management only.
   """
-  @spec on_file_drop(event_tag :: atom()) :: t()
-  def on_file_drop(event_tag) when is_atom(event_tag) do
-    %__MODULE__{type: :on_file_drop, tag: event_tag}
+  @spec on_file_drop(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_file_drop(event_tag, opts \\ []) when is_atom(event_tag) do
+    %__MODULE__{type: :on_file_drop, tag: event_tag, max_rate: opts[:max_rate]}
   end
 
   @doc """
@@ -351,9 +374,32 @@ defmodule Toddy.Subscription do
   The event struct type varies by event family. The `event_tag` is for
   subscription management only.
   """
-  @spec on_event(event_tag :: atom()) :: t()
-  def on_event(event_tag) when is_atom(event_tag) do
-    %__MODULE__{type: :on_event, tag: event_tag}
+  @spec on_event(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_event(event_tag, opts \\ []) when is_atom(event_tag) do
+    %__MODULE__{type: :on_event, tag: event_tag, max_rate: opts[:max_rate]}
+  end
+
+  @doc """
+  Sets the maximum event rate (events per second) for a renderer subscription.
+
+  The renderer coalesces events beyond this rate, delivering at most `rate`
+  events per second. A rate of 0 means "subscribe but never emit" -- the
+  subscription is active (affects capture tracking) but no events are sent.
+
+  Timer subscriptions (`:every`) do not support max_rate (they are host-side
+  timers, not renderer events).
+
+  ## Examples
+
+      # Rate-limit mouse moves to 30 events per second:
+      Subscription.on_mouse_move(:mouse) |> Subscription.max_rate(30)
+
+      # Animation frames at 60fps:
+      Subscription.on_animation_frame(:frame, max_rate: 60)
+  """
+  @spec max_rate(sub :: t(), rate :: non_neg_integer()) :: t()
+  def max_rate(%__MODULE__{} = sub, rate) when is_integer(rate) and rate >= 0 do
+    %{sub | max_rate: rate}
   end
 
   @doc """

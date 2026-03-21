@@ -834,7 +834,7 @@ defmodule Toddy.RuntimeTest do
 
       registers = Toddy.Test.MockBridge.get_subscribes(bridge)
       assert length(registers) == 1
-      assert hd(registers) == %{kind: "on_key_press", tag: "keys"}
+      assert hd(registers) == %{kind: "on_key_press", tag: "keys", max_rate: nil}
     end
 
     test "removing a renderer subscription sends unregister message to bridge" do

@@ -701,6 +701,51 @@ defmodule Toddy.ProtocolTest do
     end
   end
 
+  describe "encode_subscribe with max_rate" do
+    test "includes max_rate field in JSON when set" do
+      result = Protocol.encode_subscribe("on_mouse_move", "mouse", :json, 30)
+      parsed = decode_json!(result)
+      assert parsed["type"] == "subscribe"
+      assert parsed["kind"] == "on_mouse_move"
+      assert parsed["tag"] == "mouse"
+      assert parsed["max_rate"] == 30
+    end
+
+    test "omits max_rate field in JSON when nil" do
+      result = Protocol.encode_subscribe("on_key_press", "keys", :json, nil)
+      parsed = decode_json!(result)
+      assert parsed["type"] == "subscribe"
+      refute Map.has_key?(parsed, "max_rate")
+    end
+
+    test "omits max_rate when using default (no 4th arg)" do
+      result = Protocol.encode_subscribe("on_key_press", "keys", :json)
+      parsed = decode_json!(result)
+      refute Map.has_key?(parsed, "max_rate")
+    end
+
+    test "includes max_rate of 0 in JSON (subscribe but never emit)" do
+      result = Protocol.encode_subscribe("on_mouse_move", "mouse", :json, 0)
+      parsed = decode_json!(result)
+      assert parsed["max_rate"] == 0
+    end
+
+    test "max_rate roundtrips through msgpack" do
+      encoded = Protocol.encode_subscribe("on_mouse_move", "mouse", :msgpack, 30)
+      {:ok, decoded} = Msgpax.unpack(encoded)
+      assert decoded["type"] == "subscribe"
+      assert decoded["kind"] == "on_mouse_move"
+      assert decoded["tag"] == "mouse"
+      assert decoded["max_rate"] == 30
+    end
+
+    test "msgpack omits max_rate when nil" do
+      encoded = Protocol.encode_subscribe("on_key_press", "keys", :msgpack, nil)
+      {:ok, decoded} = Msgpax.unpack(encoded)
+      refute Map.has_key?(decoded, "max_rate")
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # encode_unsubscribe/1
   # ---------------------------------------------------------------------------

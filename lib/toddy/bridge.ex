@@ -102,10 +102,11 @@ defmodule Toddy.Bridge do
   @spec send_subscribe(
           bridge :: GenServer.server(),
           kind :: String.t(),
-          tag :: String.t()
+          tag :: String.t(),
+          max_rate :: non_neg_integer() | nil
         ) :: :ok
-  def send_subscribe(bridge, kind, tag) do
-    GenServer.cast(bridge, {:send_subscribe, kind, tag})
+  def send_subscribe(bridge, kind, tag, max_rate \\ nil) do
+    GenServer.cast(bridge, {:send_subscribe, kind, tag, max_rate})
   end
 
   @doc "Unsubscribes from a renderer-side event source."
@@ -250,8 +251,8 @@ defmodule Toddy.Bridge do
     {:noreply, state}
   end
 
-  def handle_cast({:send_subscribe, kind, tag}, state) do
-    data = Toddy.Protocol.encode_subscribe(kind, tag, state.format)
+  def handle_cast({:send_subscribe, kind, tag, max_rate}, state) do
+    data = Toddy.Protocol.encode_subscribe(kind, tag, state.format, max_rate)
     send_to_port(state.port, data)
     {:noreply, state}
   end

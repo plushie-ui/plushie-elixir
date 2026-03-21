@@ -31,7 +31,7 @@ defmodule Toddy.Runtime do
         bridge:             pid() | atom(),
         daemon:             boolean(),
         tree:               map() | nil,
-        subscriptions:      %{term() => {:timer, reference()} | {:renderer, atom()}},
+        subscriptions:      %{term() => {:timer, reference()} | {:renderer, atom(), non_neg_integer() | nil}},
         subscription_keys:  [term()],
         windows:            MapSet.t(),
         async_tasks:        %{atom() => {pid(), reference()}},
@@ -60,7 +60,9 @@ defmodule Toddy.Runtime do
            bridge: pid() | atom(),
            daemon: boolean(),
            tree: map() | nil,
-           subscriptions: %{term() => {:timer, reference()} | {:renderer, atom()}},
+           subscriptions: %{
+             term() => {:timer, reference()} | {:renderer, atom(), non_neg_integer() | nil}
+           },
            subscription_keys: [term()],
            windows: MapSet.t(),
            async_tasks: %{atom() => {pid(), reference()}},

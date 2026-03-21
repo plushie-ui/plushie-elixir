@@ -86,8 +86,8 @@ defmodule Toddy.Test.MockBridge do
     {:noreply, %{state | widget_ops: state.widget_ops ++ [entry]}}
   end
 
-  def handle_cast({:send_subscribe, kind, tag}, state) do
-    entry = %{kind: kind, tag: tag}
+  def handle_cast({:send_subscribe, kind, tag, max_rate}, state) do
+    entry = %{kind: kind, tag: tag, max_rate: max_rate}
     {:noreply, %{state | subscribes: state.subscribes ++ [entry]}}
   end
 

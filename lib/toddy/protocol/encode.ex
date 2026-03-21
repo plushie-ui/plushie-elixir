@@ -100,18 +100,33 @@ defmodule Toddy.Protocol.Encode do
   @doc """
   Encodes a subscribe message as a protocol message.
 
+  An optional `max_rate` (events per second) can be included to enable
+  renderer-side event coalescing for this subscription.
+
   ## Example
 
       Toddy.Protocol.Encode.encode_subscribe("on_key_press", "keys")
       #=> ~s({"kind":"on_key_press","session":"","tag":"keys","type":"subscribe"}) <> "\\n"
+
+      Toddy.Protocol.Encode.encode_subscribe("on_mouse_move", "mouse", :json, 30)
+      #=> ~s({"kind":"on_mouse_move","max_rate":30,"session":"","tag":"mouse","type":"subscribe"}) <> "\\n"
   """
   @spec encode_subscribe(
           kind :: String.t(),
           tag :: String.t(),
-          format :: Toddy.Protocol.format()
+          format :: Toddy.Protocol.format(),
+          max_rate :: non_neg_integer() | nil
         ) :: iodata()
-  def encode_subscribe(kind, tag, format \\ :msgpack) do
-    serialize(%{type: "subscribe", kind: kind, tag: tag}, format)
+  def encode_subscribe(kind, tag, format \\ :msgpack, max_rate \\ nil) do
+    msg = %{type: "subscribe", kind: kind, tag: tag}
+
+    msg =
+      case max_rate do
+        nil -> msg
+        rate -> Map.put(msg, :max_rate, rate)
+      end
+
+    serialize(msg, format)
   end
 
   @doc """
