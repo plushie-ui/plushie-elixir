@@ -28,14 +28,16 @@ defmodule Toddy do
   - `:dev`        -- enable live code reloading (default: `false`)
   - `:dev_opts`   -- options forwarded to `Toddy.DevServer` (default: `[]`)
   - `:transport`   -- `:spawn` (default, spawns the renderer as a child
-                      process) or `:stdio` (reads/writes the BEAM's own
-                      stdin/stdout, for use with `toddy --exec`)
+                      process), `:stdio` (reads/writes the BEAM's own
+                      stdin/stdout, for use with `toddy --exec`), or
+                      `{:iostream, pid}` (custom transport via iostream
+                      adapter -- see `Toddy.Bridge` for the protocol)
   - `:format`      -- wire format, `:msgpack` (default) or `:json`
   - `:log_level`   -- toddy binary log level (`:off`, `:error`, `:warning`, `:info`, `:debug`).
                       Default: `:error`.
 
-  When `:transport` is `:stdio`, the `:binary` option is ignored (no
-  renderer subprocess is spawned).
+  When `:transport` is `:stdio` or `{:iostream, pid}`, the `:binary`
+  option is ignored (no renderer subprocess is spawned).
   """
 
   use Supervisor
@@ -105,7 +107,7 @@ defmodule Toddy do
     transport = Keyword.get(opts, :transport, :spawn)
 
     binary_path =
-      if transport == :stdio do
+      if transport == :stdio or match?({:iostream, _}, transport) do
         nil
       else
         case Keyword.get(opts, :binary, @default_binary_path) do

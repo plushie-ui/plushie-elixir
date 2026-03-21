@@ -1,16 +1,42 @@
 defmodule Toddy.Bridge do
   @moduledoc """
-  Port-based bridge to the toddy renderer process.
+  Bridge to the toddy renderer process.
 
-  Manages the stdio Port, buffers partial JSONL lines (JSON mode) or receives
-  length-prefixed frames (MessagePack mode), and forwards decoded events to
-  the runtime process.
+  Manages the connection to the renderer, buffers partial JSONL lines (JSON
+  mode) or receives length-prefixed frames (MessagePack mode), and forwards
+  decoded events to the runtime process.
 
-  Supports two wire formats controlled by the `:format` option:
+  ## Transport modes
 
-  - `:json` -- JSONL over stdio. Opt-in for debugging and observability. The Port is opened with
-    `{:line, 65_536}`, which causes the driver to deliver data as
-    `{port, {:data, {:eol, line}}}` for complete lines and
+  Controlled by the `:transport` option:
+
+  - `:spawn` (default) -- spawns the renderer binary as a child process
+    using an Erlang Port. The Port handles stdio framing automatically.
+
+  - `:stdio` -- reads/writes the BEAM's own stdin/stdout. Used when the
+    renderer spawns the Elixir process (e.g. `toddy --exec`).
+
+  - `{:iostream, pid}` -- sends and receives protocol messages via an
+    external process (the iostream adapter). Used for custom transports
+    like SSH channels, TCP sockets, or WebSockets where the adapter
+    process handles the underlying I/O and framing.
+
+    The iostream adapter must:
+    1. Receive `{:iostream_bridge, bridge_pid}` on startup (Bridge sends
+       this during init).
+    2. Send `{:iostream_data, binary}` to the bridge when protocol data
+       arrives (one complete protocol message per delivery).
+    3. Handle `{:iostream_send, iodata}` messages from the bridge by
+       writing the data to the underlying transport.
+    4. Send `{:iostream_closed, reason}` when the transport is closed.
+
+  ## Wire formats
+
+  Controlled by the `:format` option:
+
+  - `:json` -- JSONL over stdio. Opt-in for debugging and observability.
+    The Port is opened with `{:line, 65_536}`, which causes the driver to
+    deliver data as `{port, {:data, {:eol, line}}}` for complete lines and
     `{port, {:data, {:noeol, chunk}}}` for partial lines that exceed the
     line buffer. Partial chunks are accumulated in `buffer` and flushed when
     the matching `:eol` chunk arrives.
@@ -49,8 +75,9 @@ defmodule Toddy.Bridge do
 
   Optional opts:
     - `:name`          - registration name passed to `GenServer.start_link/3`
-    - `:transport`     - `:spawn` (default, spawns renderer as child process)
-                         or `:stdio` (reads/writes the BEAM's own stdin/stdout)
+    - `:transport`     - `:spawn` (default, spawns renderer as child process),
+                         `:stdio` (reads/writes the BEAM's own stdin/stdout),
+                         or `{:iostream, pid}` (custom transport via iostream adapter)
     - `:format`        - wire format, `:msgpack` (default) or `:json`
     - `:log_level`     - renderer log level (`:off`, `:error`, `:warning`, `:info`, `:debug`).
                          Default: `:error`. Ignored when `RUST_LOG` is set in the environment.
@@ -179,7 +206,8 @@ defmodule Toddy.Bridge do
     :renderer_args,
     :max_restarts,
     :restart_count,
-    :restart_delay
+    :restart_delay,
+    :iostream_ref
   ]
 
   # ---------------------------------------------------------------------------
@@ -194,10 +222,10 @@ defmodule Toddy.Bridge do
     log_level = Keyword.get(opts, :log_level, :error)
 
     renderer_path =
-      if transport == :spawn do
-        Keyword.fetch!(opts, :renderer_path)
-      else
-        Keyword.get(opts, :renderer_path)
+      case transport do
+        :spawn -> Keyword.fetch!(opts, :renderer_path)
+        :stdio -> Keyword.get(opts, :renderer_path)
+        {:iostream, _} -> Keyword.get(opts, :renderer_path)
       end
 
     state = %__MODULE__{
@@ -223,73 +251,73 @@ defmodule Toddy.Bridge do
   @impl true
   def handle_cast({:send_settings, settings}, state) do
     data = Toddy.Protocol.encode_settings(settings, state.format)
-    send_to_port(state.port, data)
+    send_data(state, data)
     {:noreply, state}
   end
 
   def handle_cast({:send_snapshot, tree}, state) do
     data = Toddy.Protocol.encode_snapshot(tree, state.format)
-    send_to_port(state.port, data)
+    send_data(state, data)
     {:noreply, state}
   end
 
   def handle_cast({:send_patch, ops}, state) do
     data = Toddy.Protocol.encode_patch(ops, state.format)
-    send_to_port(state.port, data)
+    send_data(state, data)
     {:noreply, state}
   end
 
   def handle_cast({:send_effect, id, kind, payload}, state) do
     data = Toddy.Protocol.encode_effect(id, kind, payload, state.format)
-    send_to_port(state.port, data)
+    send_data(state, data)
     {:noreply, state}
   end
 
   def handle_cast({:send_widget_op, op, payload}, state) do
     data = Toddy.Protocol.encode_widget_op(op, payload, state.format)
-    send_to_port(state.port, data)
+    send_data(state, data)
     {:noreply, state}
   end
 
   def handle_cast({:send_subscribe, kind, tag, max_rate}, state) do
     data = Toddy.Protocol.encode_subscribe(kind, tag, state.format, max_rate)
-    send_to_port(state.port, data)
+    send_data(state, data)
     {:noreply, state}
   end
 
   def handle_cast({:send_unsubscribe, kind}, state) do
     data = Toddy.Protocol.encode_unsubscribe(kind, state.format)
-    send_to_port(state.port, data)
+    send_data(state, data)
     {:noreply, state}
   end
 
   def handle_cast({:send_window_op, op, window_id, settings}, state) do
     data = Toddy.Protocol.encode_window_op(op, window_id, settings, state.format)
-    send_to_port(state.port, data)
+    send_data(state, data)
     {:noreply, state}
   end
 
   def handle_cast({:send_image_op, op, payload}, state) do
     data = Toddy.Protocol.encode_image_op(op, payload, state.format)
-    send_to_port(state.port, data)
+    send_data(state, data)
     {:noreply, state}
   end
 
   def handle_cast({:send_extension_command, node_id, op, payload}, state) do
     data = Toddy.Protocol.encode_extension_command(node_id, op, payload, state.format)
-    send_to_port(state.port, data)
+    send_data(state, data)
     {:noreply, state}
   end
 
   def handle_cast({:send_extension_commands, commands}, state) do
     data = Toddy.Protocol.encode_extension_commands(commands, state.format)
-    send_to_port(state.port, data)
+    send_data(state, data)
     {:noreply, state}
   end
 
   def handle_cast({:send_advance_frame, timestamp}, state) do
     data = Toddy.Protocol.encode_advance_frame(timestamp, state.format)
-    send_to_port(state.port, data)
+    send_data(state, data)
     {:noreply, state}
   end
 
@@ -362,6 +390,30 @@ defmodule Toddy.Bridge do
     {:stop, {:protocol_mismatch, got, expected}, state}
   end
 
+  # iostream adapter sends us a complete protocol message.
+  def handle_info({:iostream_data, data}, %{transport: {:iostream, _}} = state) do
+    state = dispatch_message(data, state.format, state)
+    {:noreply, state}
+  end
+
+  # iostream adapter reports the transport is closed.
+  def handle_info({:iostream_closed, reason}, %{transport: {:iostream, _}} = state) do
+    Logger.info("toddy bridge: iostream closed: #{inspect(reason)}")
+    send(state.runtime, {:renderer_exit, reason})
+    {:stop, :normal, %{state | port: nil}}
+  end
+
+  # iostream adapter process exited.
+  def handle_info(
+        {:DOWN, ref, :process, _pid, reason},
+        %{iostream_ref: ref} = state
+      )
+      when is_reference(ref) do
+    Logger.info("toddy bridge: iostream process exited: #{inspect(reason)}")
+    send(state.runtime, {:renderer_exit, reason})
+    {:stop, :normal, state}
+  end
+
   def handle_info(msg, state) do
     Logger.debug("toddy bridge: unhandled message: #{inspect(msg)}")
     {:noreply, state}
@@ -379,6 +431,12 @@ defmodule Toddy.Bridge do
   # ---------------------------------------------------------------------------
   # Private helpers
   # ---------------------------------------------------------------------------
+
+  defp open_port(%{transport: {:iostream, io_pid}} = state) do
+    ref = Process.monitor(io_pid)
+    send(io_pid, {:iostream_bridge, self()})
+    {:ok, %{state | iostream_ref: ref}}
+  end
 
   defp open_port(%{transport: :stdio} = state) do
     port_opts =
@@ -438,12 +496,21 @@ defmodule Toddy.Bridge do
     end
   end
 
-  defp send_to_port(nil, _data) do
+  defp send_data(%{transport: {:iostream, io_pid}}, data) do
+    send(io_pid, {:iostream_send, data})
+    :telemetry.execute([:toddy, :bridge, :send], %{byte_size: IO.iodata_length(data)}, %{})
+  rescue
+    ArgumentError ->
+      Logger.warning("toddy bridge: iostream process unreachable during send")
+      :error
+  end
+
+  defp send_data(%{port: nil}, _data) do
     Logger.debug("toddy bridge: message dropped (port not open)")
     :ok
   end
 
-  defp send_to_port(port, data) when is_port(port) do
+  defp send_data(%{port: port}, data) when is_port(port) do
     Port.command(port, data)
     # byte_size measures payload size (excludes framing overhead in both
     # JSON and msgpack modes). This is intentionally consistent across
@@ -494,6 +561,12 @@ defmodule Toddy.Bridge do
         # Reset restart count on first successful message from the renderer.
         %{state | restart_count: 0}
     end
+  end
+
+  defp handle_port_exit(%{transport: {:iostream, _}} = state, _reason) do
+    Logger.info("toddy bridge: iostream transport closed -- shutting down")
+    send(state.runtime, {:renderer_exit, :normal})
+    {:stop, :normal, %{state | port: nil}}
   end
 
   defp handle_port_exit(%{transport: :stdio} = state, _reason) do
