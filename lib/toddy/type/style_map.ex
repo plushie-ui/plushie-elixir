@@ -62,6 +62,8 @@ defmodule Toddy.Type.StyleMap do
           focused: status_override() | nil
         }
 
+  @known_keys ~w(base background text_color border shadow hovered pressed disabled focused)a
+
   defstruct [
     :base,
     :background,
@@ -134,6 +136,38 @@ defmodule Toddy.Type.StyleMap do
   @spec focused(style_map :: t(), focused :: status_override() | keyword()) :: t()
   def focused(%__MODULE__{} = style_map, focused) do
     %{style_map | focused: normalize_override(focused)}
+  end
+
+  @doc false
+  def __field_keys__, do: @known_keys
+
+  @doc false
+  def __field_types__ do
+    %{
+      border: Toddy.Type.Border,
+      shadow: Toddy.Type.Shadow
+    }
+  end
+
+  @doc "Constructs a `StyleMap` from a keyword list."
+  @spec from_opts(opts :: keyword()) :: t()
+  def from_opts(opts) when is_list(opts) do
+    for {key, _} <- opts, key not in @known_keys do
+      raise ArgumentError,
+        "unknown style field #{inspect(key)}. Valid fields: #{inspect(@known_keys)}"
+    end
+
+    Enum.reduce(opts, new(), fn
+      {:base, v}, acc -> base(acc, v)
+      {:background, v}, acc -> background(acc, v)
+      {:text_color, v}, acc -> text_color(acc, v)
+      {:border, v}, acc -> border(acc, v)
+      {:shadow, v}, acc -> shadow(acc, v)
+      {:hovered, v}, acc -> hovered(acc, v)
+      {:pressed, v}, acc -> pressed(acc, v)
+      {:disabled, v}, acc -> disabled(acc, v)
+      {:focused, v}, acc -> focused(acc, v)
+    end)
   end
 
   @spec normalize_override(override :: status_override() | keyword()) :: status_override()

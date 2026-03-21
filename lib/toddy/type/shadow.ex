@@ -26,6 +26,8 @@ defmodule Toddy.Type.Shadow do
           blur_radius: number()
         }
 
+  @known_keys ~w(color offset offset_x offset_y blur_radius)a
+
   defstruct color: "#000000", offset_x: 0, offset_y: 0, blur_radius: 0
 
   @doc "Creates a new shadow with default values."
@@ -47,4 +49,27 @@ defmodule Toddy.Type.Shadow do
   @spec blur_radius(shadow :: t(), r :: number()) :: t()
   def blur_radius(%__MODULE__{} = shadow, r) when is_number(r),
     do: %{shadow | blur_radius: r}
+
+  @doc false
+  def __field_keys__, do: @known_keys
+
+  @doc false
+  def __field_types__, do: %{}
+
+  @doc "Constructs a `Shadow` from a keyword list."
+  @spec from_opts(opts :: keyword()) :: t()
+  def from_opts(opts) when is_list(opts) do
+    for {key, _} <- opts, key not in @known_keys do
+      raise ArgumentError,
+        "unknown shadow field #{inspect(key)}. Valid fields: #{inspect(@known_keys)}"
+    end
+
+    Enum.reduce(opts, new(), fn
+      {:color, v}, acc -> color(acc, v)
+      {:offset, {x, y}}, acc -> offset(acc, x, y)
+      {:offset_x, v}, acc -> %{acc | offset_x: v}
+      {:offset_y, v}, acc -> %{acc | offset_y: v}
+      {:blur_radius, v}, acc -> blur_radius(acc, v)
+    end)
+  end
 end

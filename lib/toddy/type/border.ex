@@ -42,6 +42,8 @@ defmodule Toddy.Type.Border do
           radius: number() | radius_map()
         }
 
+  @known_keys ~w(color width rounded radius)a
+
   defstruct color: nil, width: 0, radius: 0
 
   @doc "Creates a new border with default values (no color, zero width, zero radius)."
@@ -77,6 +79,28 @@ defmodule Toddy.Type.Border do
       bottom_right: bottom_right,
       bottom_left: bottom_left
     }
+  end
+
+  @doc false
+  def __field_keys__, do: @known_keys
+
+  @doc false
+  def __field_types__, do: %{}
+
+  @doc "Constructs a `Border` from a keyword list."
+  @spec from_opts(opts :: keyword()) :: t()
+  def from_opts(opts) when is_list(opts) do
+    for {key, _} <- opts, key not in @known_keys do
+      raise ArgumentError,
+        "unknown border field #{inspect(key)}. Valid fields: #{inspect(@known_keys)}"
+    end
+
+    Enum.reduce(opts, new(), fn
+      {:color, v}, acc -> color(acc, v)
+      {:width, v}, acc -> width(acc, v)
+      {:rounded, v}, acc -> rounded(acc, v)
+      {:radius, v}, acc -> %{acc | radius: v}
+    end)
   end
 
   @doc "Encodes a border to the wire format."
