@@ -117,6 +117,40 @@ defmodule Toddy.Canvas.Shape do
     |> apply_opacity(opts)
   end
 
+  # -- Group shape ------------------------------------------------------------
+
+  @doc """
+  Groups child shapes into a logical unit with optional positioning
+  and interaction.
+
+  Groups are the primary way to build interactive canvas components.
+  The `x` and `y` options offset all child shapes. The `interactive`
+  option (via `Shape.interactive/2`) makes the group clickable,
+  hoverable, or draggable as a single unit.
+
+  ## Options
+
+    * `:x` -- horizontal offset (default 0)
+    * `:y` -- vertical offset (default 0)
+
+  ## Example
+
+      group([
+        rect(0, 0, 100, 40, fill: "#3498db"),
+        text(50, 25, "Click me", align_x: :center)
+      ], x: 10, y: 50)
+      |> interactive(id: "my-button", on_click: true, cursor: :pointer,
+           hover_style: %{fill: "#2980b9"},
+           a11y: %{role: :button, label: "Click me"})
+  """
+  @spec group(children :: [map()], opts :: keyword()) :: map()
+  def group(children, opts \\ []) when is_list(children) do
+    shape = %{type: "group", children: children}
+    shape = if opts[:x], do: Map.put(shape, :x, opts[:x]), else: shape
+    shape = if opts[:y], do: Map.put(shape, :y, opts[:y]), else: shape
+    shape
+  end
+
   # -- Path shape -------------------------------------------------------------
 
   @doc """
