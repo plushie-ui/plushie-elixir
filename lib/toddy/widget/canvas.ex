@@ -48,10 +48,24 @@ defmodule Toddy.Widget.Canvas do
 
   ## Events
 
+  Raw canvas events (coordinate-level):
+
   - `%Canvas{type: :press, id: id, x: x, y: y, button: button}`
   - `%Canvas{type: :release, id: id, x: x, y: y, button: button}`
   - `%Canvas{type: :move, id: id, x: x, y: y}`
   - `%Canvas{type: :scroll, id: id, x: x, y: y, delta_x: dx, delta_y: dy}`
+
+  Interactive shape events (semantic, from shapes with `interactive` field):
+
+  - `%Widget{type: :canvas_shape_enter, id: id, data: %{"shape_id" => shape_id, ...}}`
+  - `%Widget{type: :canvas_shape_leave, id: id, data: %{"shape_id" => shape_id}}`
+  - `%Widget{type: :canvas_shape_click, id: id, data: %{"shape_id" => shape_id, ...}}`
+  - `%Widget{type: :canvas_shape_drag, id: id, data: %{"shape_id" => shape_id, ...}}`
+  - `%Widget{type: :canvas_shape_drag_end, id: id, data: %{"shape_id" => shape_id, ...}}`
+  - `%Widget{type: :canvas_shape_focused, id: id, data: %{"shape_id" => shape_id}}`
+
+  Shape events are delivered as `%Widget{}` structs (not `%Canvas{}`). The `id`
+  field is the canvas widget ID; `data.shape_id` identifies which shape.
   """
 
   alias Toddy.Type.A11y
