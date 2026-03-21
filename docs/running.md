@@ -1,148 +1,332 @@
 # Running toddy
 
-## Overview
-
-Toddy separates the **Elixir runtime** (your app logic: init/update/view)
-from the **renderer** (the Rust binary that draws windows). They
-communicate over a wire protocol using stdin/stdout, SSH channels, or
-any custom transport.
-
-This separation enables several deployment modes:
-
-| Mode | Description | Latency | Use case |
-|---|---|---|---|
-| Local spawn | Elixir spawns the renderer binary | ~0ms | Development, desktop apps |
-| Exec (stdio) | Renderer spawns the Elixir process | ~0ms | Release binaries, launcher integration |
-| External SSH | Renderer pipes through `ssh` | Network RTT | Remote apps, thin clients |
-| In-BEAM SSH | Renderer connects to Erlang SSH daemon | Network RTT | Existing server, no new BEAM startup |
-| Custom iostream | Any adapter process bridges the gap | Varies | TCP, WebSocket, custom protocols |
+Toddy's **renderer** draws windows and handles input. Your Elixir
+code (the **host**) manages state and builds the UI tree. They talk
+over a wire protocol -- locally through a pipe, remotely over SSH,
+or through any transport you provide. This guide covers all the ways
+to connect them.
 
 ## Local desktop
 
-### Standard (Elixir spawns renderer)
+The simplest setup: the host spawns the renderer as a child process.
 
-The default mode. Elixir starts the renderer binary as a child process:
-
-```elixir
-# From mix:
+```sh
 mix toddy.gui MyApp
-
-# From code:
-{:ok, pid} = Toddy.start_link(MyApp)
-
-# Under a supervisor:
-children = [{Toddy, app: MyApp}]
-```
-
-The renderer binary must be available. Toddy resolves it in order:
-
-1. `TODDY_BINARY_PATH` environment variable
-2. `config :toddy, :binary_path` application config
-3. `mix toddy.download` precompiled binary in `_build`
-4. `mix toddy.build` custom binary in `_build`
-
-### Exec mode (renderer spawns Elixir)
-
-The renderer launches the Elixir process and connects via stdin/stdout:
-
-```sh
-toddy --exec "mix toddy.stdio MyApp"
-```
-
-The Elixir side uses `:stdio` transport:
-
-```elixir
-Toddy.start_link(MyApp, transport: :stdio)
-```
-
-The `:binary` option is ignored in this mode -- no subprocess is spawned.
-
-### Dev mode
-
-File watching with live code reloading:
-
-```sh
-mix toddy.gui MyApp          # watches lib/, recompiles and re-renders on change
-mix toddy.gui MyApp --no-watch  # disable watching
 ```
 
 Or from code:
 
 ```elixir
-Toddy.start_link(MyApp, dev: true)
+{:ok, pid} = Toddy.start_link(MyApp)
 ```
 
-## Binary distribution
+The renderer is resolved automatically. For most projects,
+`mix toddy.download` fetches a precompiled renderer and you're done.
+If you have native Rust extensions, `mix toddy.build` compiles a
+custom renderer. You can also set `TODDY_BINARY_PATH` or
+`config :toddy, :binary_path` explicitly.
 
-| Extension type | Binary needed | How to get it |
-|---|---|---|
-| None (pure Elixir app) | Precompiled | `mix toddy.download` |
-| Pure Elixir widget extensions | Precompiled | `mix toddy.download` |
-| Native widget extensions | Custom build | `mix toddy.build` |
+### Dev mode
 
-`mix toddy.download` fetches a precompiled binary matching your platform
-and the `binary_version` in `mix.exs`. `mix toddy.build` compiles from
-the Rust source (requires `TODDY_SOURCE_PATH` or `config :toddy, :source_path`).
+`mix toddy.gui` watches your source files and reloads on change.
+Edit code, save, see the result instantly. The model state is preserved
+across reloads.
+
+```sh
+mix toddy.gui MyApp              # live reload enabled
+mix toddy.gui MyApp --no-watch   # disable file watching
+```
+
+### Exec mode
+
+The renderer can spawn the host instead of the other way around. This
+is useful when toddy is the entry point (a release binary or launcher)
+and it's the foundation for remote rendering over SSH.
+
+```sh
+toddy --exec "mix toddy.stdio MyApp"
+```
+
+The renderer controls the lifecycle. When the user closes the window,
+the renderer closes stdin, and the toddy process exits cleanly.
 
 ## Remote rendering
 
-The key insight: the **renderer runs where the display is** (the local
-machine), while the **Elixir app runs where the data is** (the server).
-The wire protocol connects them.
-
-### Architecture
+Your host runs on a server. You want to see its UI on your laptop.
+The renderer runs locally (where your display is), the host runs
+remotely (where the data is), and SSH connects them:
 
 ```
-[Local machine]              [Remote server]
-toddy renderer  <-- SSH -->  Elixir app (MyApp)
-  draws windows               init/update/view
-  handles input                business logic
+[your laptop]                    [server]
+renderer        <--- SSH --->    host
+  draws windows                    init/update/view
+  handles input                    business logic
 ```
 
-### External SSH
+Your `init/update/view` code doesn't change at all.
 
-The renderer pipes stdio through an SSH connection:
+### Prerequisites
+
+- **Your laptop**: the `toddy` renderer installed and on your PATH.
+  Download from the GitHub releases page, or build with
+  `cargo install toddy` if you have a Rust toolchain.
+- **The server**: your Elixir project deployed with its dependencies.
+  The server does NOT need the renderer or a display server.
+- **SSH access**: you can `ssh user@server` from your laptop.
+
+### Quick start
 
 ```sh
 toddy --exec "ssh user@server 'cd /app && mix toddy.stdio MyApp'"
 ```
 
-This starts a new BEAM on the remote server for each connection. Simple
-to set up, but has BEAM startup overhead (~1-2s).
+The renderer on your laptop spawns an SSH session, which starts the
+host on the server. The wire protocol flows through the SSH tunnel.
+Each connection starts a fresh BEAM on the server, so there's a 1-2
+second startup overhead.
 
 ### In-BEAM Erlang SSH
 
-For apps already running on a server (Phoenix, embedded systems), you
-can skip the BEAM startup entirely. The renderer connects to an Erlang
-SSH daemon running inside the existing BEAM. The toddy app starts
-directly in the server's VM using the iostream transport.
+If your server already runs a BEAM (a Phoenix service, a data
+pipeline, an embedded device), you can skip that startup entirely.
+OTP includes a built-in SSH server. Start it in your supervisor, and
+the renderer connects directly to the running VM. No new process, no
+compilation, instant startup.
 
-This means:
+This gives you access to everything in the running VM: ETS tables,
+GenServers, PubSub, your database pool. It's the path to building
+dashboards for live server state, admin tools backed by real data,
+and diagnostic UIs for embedded devices.
 
-- No new OS process or BEAM startup
-- App modules are already compiled and loaded
-- Access to existing ETS tables, GenServers, and application state
-- Sub-second connection time
+Setting this up requires familiarity with OTP's `:ssh` application.
+The [custom transports](#example-erlang-ssh-channel-adapter) section
+has a full SSH channel adapter example with commentary.
 
-### Setting up Erlang SSH
+### Binary distribution
 
-Start an SSH daemon in your application supervisor:
+The renderer always runs on the **display machine** (your laptop,
+not the server). How you get it there depends on your project:
+
+| Your project uses | Renderer needed | How to get it |
+|---|---|---|
+| Built-in widgets only | Precompiled | `mix toddy.download` or GitHub release |
+| Pure Elixir extensions | Precompiled | Same -- composites don't need a custom build |
+| Native Rust extensions | Custom build | `mix toddy.build` targeting your laptop's architecture |
+
+The server doesn't need the renderer at all. It only needs your
+Elixir project and its dependencies.
+
+## Resiliency
+
+Things go wrong. Renderers crash, code has bugs, networks drop.
+Toddy handles these without losing your model state.
+
+### Renderer crashes
+
+If the renderer crashes (segfault, GPU error, out of memory), the
+host detects it and restarts automatically with exponential backoff.
+Your model state is preserved -- the new renderer receives fresh
+settings, a full snapshot of the current UI, and re-synced
+subscriptions and windows. The user sees a brief flicker, then the
+UI is back.
+
+The host retries up to 5 times (100ms, 200ms, 400ms, 800ms, 1.6s).
+If all retries fail, it logs troubleshooting steps and the toddy
+supervisor stops. The rest of your application is unaffected -- only
+the toddy process tree exits. A successful connection resets the
+retry counter, so intermittent crashes get a fresh budget each time.
+
+### Exceptions in your code
+
+If `update/2` or `view/1` raises, the runtime catches it, logs the
+error with a full stacktrace, and keeps the previous model state.
+The window stays open and continues responding to events. You don't
+need try/rescue in your callbacks.
+
+After 100 consecutive errors, log output is suppressed to prevent
+flooding, with periodic reminders every 1000 errors. Telemetry
+events continue firing for monitoring.
+
+### Network drops
+
+When an SSH connection drops, both sides detect the broken pipe:
+
+- **The renderer** sees the host's stdout close. It can display an
+  error or retry the connection.
+- **The host** sees stdin close. Without daemon mode, the toddy
+  process exits (the rest of your service is unaffected). With
+  daemon mode, toddy keeps running with the model preserved.
+
+When a new renderer connects (another SSH session), the host sends a
+snapshot of the current state. No restart, no state loss, no cold
+start.
 
 ```elixir
-# In your application.ex or supervisor:
-:ssh.daemon(2022, [
-  system_dir: ~c"/etc/toddy_ssh",
-  user_dir: ~c"~/.ssh",
-  ssh_cli: {MyApp.SSH.CLI, []},
-  # Or for channel-based handling:
-  subsystems: [
-    {~c"toddy", {MyApp.SSH.Channel, []}}
-  ]
-])
+Toddy.start_link(MyApp, transport: :stdio, daemon: true)
 ```
 
-The SSH channel handler bridges the SSH channel to a toddy iostream
-transport:
+### Window close
+
+When the user closes the last window, your `update/2` receives the
+event. You can save state, persist data, or show a confirmation
+dialog. In non-daemon mode, the toddy process exits. In daemon mode,
+toddy keeps running and waits for a new renderer to connect.
+
+## Event rate limiting
+
+Over a network, continuous events like mouse moves, scroll, and
+slider drags can overwhelm the connection. A standard mouse generates
+60+ events per second; a gaming mouse can hit 1000. Rate limiting
+tells the renderer to buffer these and deliver at a controlled
+frequency. Discrete events like clicks and key presses are never
+rate-limited.
+
+Rate limiting is useful locally too -- a dashboard doesn't need 1000
+mouse move updates per second even on a fast machine.
+
+### Global default
+
+Set `default_event_rate` in your module's `settings/0` callback:
+
+```elixir
+def settings do
+  [default_event_rate: 60]   # 60 events/sec -- good for most cases
+end
+```
+
+For a monitoring dashboard:
+
+```elixir
+def settings do
+  [default_event_rate: 15]
+end
+```
+
+### Per-subscription
+
+Override the global rate for specific event sources:
+
+```elixir
+def subscribe(model) do
+  [
+    Subscription.on_mouse_move(:mouse, max_rate: 30),
+    Subscription.on_animation_frame(:frame, max_rate: 60),
+    Subscription.on_mouse_move(:capture, max_rate: 0)   # capture only, no events
+  ]
+end
+```
+
+### Per-widget
+
+Override the rate on individual widgets:
+
+```elixir
+slider("volume", {0, 100}, model.volume, event_rate: 15)
+slider("seek", {0, model.duration}, model.position, event_rate: 60)
+```
+
+### Latency and animations
+
+| Transport | Localhost | LAN | WAN |
+|---|---|---|---|
+| Port (local) | < 1ms | -- | -- |
+| SSH | -- | 1-5ms | 20-150ms |
+
+On a LAN, animations are smooth and interactions feel instant. Over a
+WAN (50ms+), user interactions have a visible round-trip delay. Design
+for this by keeping UI responsive to local input (hover effects, focus
+states) and accepting that model updates lag by the round-trip time.
+
+## Custom transports
+
+For advanced use cases, the iostream transport lets you bridge any
+I/O mechanism to toddy. Write an adapter process that speaks a simple
+four-message protocol, and toddy handles the rest. Most projects
+don't need this -- the built-in local and SSH transports cover the
+common cases.
+
+### The protocol
+
+| Direction | Message | Purpose |
+|---|---|---|
+| Bridge -> Adapter | `{:iostream_bridge, bridge_pid}` | Init handshake. Adapter stores the pid. |
+| Adapter -> Bridge | `{:iostream_data, binary}` | One complete protocol message. |
+| Bridge -> Adapter | `{:iostream_send, iodata}` | Protocol message to send. |
+| Adapter -> Bridge | `{:iostream_closed, reason}` | Transport closed. Bridge shuts down. |
+
+The Bridge monitors the adapter process. If it exits, the Bridge
+shuts down and notifies the runtime.
+
+### Example: TCP adapter
+
+A minimal adapter for TCP sockets:
+
+```elixir
+defmodule MyApp.TCPAdapter do
+  use GenServer
+
+  def start_link(socket), do: GenServer.start_link(__MODULE__, socket)
+
+  def init(socket) do
+    # Active mode: TCP data arrives as messages
+    :inet.setopts(socket, active: true)
+    {:ok, %{socket: socket, bridge: nil, buffer: <<>>}}
+  end
+
+  # Bridge registered itself on init
+  def handle_info({:iostream_bridge, bridge_pid}, state) do
+    {:noreply, %{state | bridge: bridge_pid}}
+  end
+
+  # Bridge wants to send data to the renderer
+  def handle_info({:iostream_send, iodata}, state) do
+    :gen_tcp.send(state.socket, Toddy.Transport.Framing.encode_packet(iodata))
+    {:noreply, state}
+  end
+
+  # TCP data arrived -- decode frames and forward complete messages
+  def handle_info({:tcp, _socket, data}, state) do
+    {messages, buffer} =
+      Toddy.Transport.Framing.decode_packets(state.buffer <> data)
+
+    for msg <- messages, do: send(state.bridge, {:iostream_data, msg})
+    {:noreply, %{state | buffer: buffer}}
+  end
+
+  # TCP closed -- tell the Bridge
+  def handle_info({:tcp_closed, _socket}, state) do
+    if state.bridge, do: send(state.bridge, {:iostream_closed, :tcp_closed})
+    {:stop, :normal, state}
+  end
+end
+```
+
+### Example: Erlang SSH channel adapter
+
+This adapter uses OTP's built-in `:ssh` server to accept renderer
+connections directly into a running BEAM. It requires familiarity with
+the `:ssh_server_channel` behaviour.
+
+First, start an SSH daemon in your supervisor:
+
+```elixir
+:ssh.daemon(2022,
+  system_dir: ~c"/etc/toddy_ssh",
+  user_dir: ~c"~/.ssh",
+  subsystems: [{~c"toddy", {MyApp.SSH.Channel, []}}]
+)
+```
+
+Then implement the channel handler. The key callbacks:
+
+- `handle_msg({:ssh_channel_up, ...})` fires when the SSH channel
+  opens. This is where you start the host with iostream transport.
+- `handle_ssh_msg({:ssh_cm, _, {:data, ...}})` fires when bytes
+  arrive from the renderer. Decode frames and forward to the Bridge.
+- `handle_msg({:iostream_send, ...})` fires when the Bridge has
+  data for the renderer. Encode and write to the SSH channel.
+- `handle_msg({:iostream_bridge, pid})` fires during startup.
+  Store the Bridge pid for forwarding.
 
 ```elixir
 defmodule MyApp.SSH.Channel do
@@ -153,33 +337,31 @@ defmodule MyApp.SSH.Channel do
     {:ok, %{bridge: nil, conn: nil, channel: nil, buffer: <<>>}}
   end
 
+  # Renderer data arrived over SSH -- decode and forward to Bridge
   @impl true
-  def handle_ssh_msg({:ssh_cm, conn, {:data, channel, 0, data}}, state) do
-    # Incoming data from the renderer -- decode frames and forward.
+  def handle_ssh_msg({:ssh_cm, _conn, {:data, _channel, 0, data}}, state) do
     {messages, buffer} =
       Toddy.Transport.Framing.decode_packets(state.buffer <> data)
 
-    for msg <- messages do
-      send(state.bridge, {:iostream_data, msg})
-    end
-
+    for msg <- messages, do: send(state.bridge, {:iostream_data, msg})
     {:ok, %{state | buffer: buffer}}
   end
 
+  # Bridge registered itself during Toddy.start_link
   @impl true
   def handle_msg({:iostream_bridge, bridge_pid}, state) do
     {:ok, %{state | bridge: bridge_pid}}
   end
 
+  # Bridge wants to send data to the renderer
   def handle_msg({:iostream_send, iodata}, %{conn: conn, channel: ch} = state) do
-    # Outgoing data to the renderer -- frame and send over SSH.
     framed = Toddy.Transport.Framing.encode_packet(iodata)
     :ssh_connection.send(conn, ch, IO.iodata_to_binary(framed))
     {:ok, state}
   end
 
+  # SSH channel is ready -- start the host
   def handle_msg({:ssh_channel_up, channel, conn}, state) do
-    # Channel is open -- start the toddy app with iostream transport.
     {:ok, _pid} =
       Toddy.start_link(MyApp,
         transport: {:iostream, self()},
@@ -191,176 +373,68 @@ defmodule MyApp.SSH.Channel do
 end
 ```
 
-## Performance tuning
-
-### Event rate limiting
-
-Toddy provides rate limiting at several levels to prevent flooding:
-
-- **`default_event_rate`** in settings -- global rate limit for all
-  widget events (events per second). Set via `settings/0` callback.
-- **`max_rate`** per subscription -- limits events from a specific
-  subscription (e.g., mouse move at 60fps instead of unlimited).
-- **`event_rate`** per widget -- set on individual widgets to override
-  the global default (e.g., a slider that needs high-frequency updates).
-
-The renderer coalesces events at the configured rate, dropping
-intermediate values and delivering only the latest. The Elixir side
-processes events serially -- if `update/2` is slow, events naturally
-queue in the mailbox.
-
-### Latency characteristics
-
-| Transport | Localhost RTT | LAN RTT | WAN RTT |
-|---|---|---|---|
-| Port (spawn) | < 1ms | -- | -- |
-| stdio (exec) | < 1ms | -- | -- |
-| SSH (LAN) | -- | 1-5ms | -- |
-| SSH (WAN) | -- | -- | 20-150ms |
-| Custom TCP | < 1ms | 1-5ms | 20-150ms |
-
-### Animation behaviour over latency
-
-- **Local / LAN**: Smooth. Animations play at full frame rate with
-  imperceptible lag.
-- **WAN (50-150ms)**: Animations play on the renderer side but user
-  interactions (clicks, typing) have visible round-trip delay. Design
-  for this by keeping animations renderer-side (CSS-like transitions in
-  widget props) and avoiding animations that depend on rapid model updates.
-
-## Custom transports (iostream)
-
-The iostream transport lets you bridge any I/O mechanism to toddy.
-Write an adapter process that speaks the iostream protocol, and toddy
-handles the rest.
-
-### The iostream protocol
-
-Four messages define the contract between the Bridge and the adapter:
-
-| Direction | Message | Purpose |
-|---|---|---|
-| Bridge -> Adapter | `{:iostream_bridge, bridge_pid}` | Sent during init. Adapter stores the bridge pid. |
-| Adapter -> Bridge | `{:iostream_data, binary}` | One complete protocol message from the renderer. |
-| Bridge -> Adapter | `{:iostream_send, iodata}` | Protocol message to send to the renderer. |
-| Adapter -> Bridge | `{:iostream_closed, reason}` | Transport is closed. Bridge shuts down. |
-
-The Bridge also monitors the adapter process. If it exits, the Bridge
-shuts down and notifies the runtime.
-
-### Writing an adapter
-
-An adapter is any process that:
-
-1. Receives `{:iostream_bridge, bridge_pid}` and stores the pid
-2. Reads from its transport, delivers complete messages as
-   `{:iostream_data, binary}`
-3. Handles `{:iostream_send, iodata}` by writing to its transport
-4. Sends `{:iostream_closed, reason}` when the transport closes
-
-For raw byte streams (TCP sockets, SSH channels), use
-`Toddy.Transport.Framing` to handle message boundaries:
-
-```elixir
-defmodule MyApp.TCPAdapter do
-  use GenServer
-
-  def start_link(socket) do
-    GenServer.start_link(__MODULE__, socket)
-  end
-
-  def init(socket) do
-    :inet.setopts(socket, active: true)
-    {:ok, %{socket: socket, bridge: nil, buffer: <<>>}}
-  end
-
-  # Bridge registered itself
-  def handle_info({:iostream_bridge, bridge_pid}, state) do
-    {:noreply, %{state | bridge: bridge_pid}}
-  end
-
-  # Bridge wants to send data to the renderer
-  def handle_info({:iostream_send, iodata}, state) do
-    framed = Toddy.Transport.Framing.encode_packet(iodata)
-    :gen_tcp.send(state.socket, framed)
-    {:noreply, state}
-  end
-
-  # TCP data arrived -- decode frames and forward complete messages
-  def handle_info({:tcp, _socket, data}, state) do
-    {messages, buffer} =
-      Toddy.Transport.Framing.decode_packets(state.buffer <> data)
-
-    for msg <- messages do
-      send(state.bridge, {:iostream_data, msg})
-    end
-
-    {:noreply, %{state | buffer: buffer}}
-  end
-
-  # TCP closed
-  def handle_info({:tcp_closed, _socket}, state) do
-    if state.bridge, do: send(state.bridge, {:iostream_closed, :tcp_closed})
-    {:stop, :normal, state}
-  end
-end
-```
-
 ### Framing
 
-`Toddy.Transport.Framing` provides frame encoding/decoding for raw byte
-streams. Transports with built-in framing (Erlang Ports, `:gen_tcp` with
-`{:packet, 4}`) don't need it.
+Raw byte streams (SSH channels, raw sockets) need message boundaries.
+`Toddy.Transport.Framing` handles this. Transports with built-in
+framing (Erlang Ports, `:gen_tcp` with `{:packet, 4}`) don't need it.
 
-- **MessagePack mode**: 4-byte big-endian length prefix per message.
-  Use `encode_packet/1` and `decode_packets/1`.
-- **JSON mode**: newline-delimited. Use `encode_line/1` and
-  `decode_lines/1`.
+```elixir
+# MessagePack: 4-byte length prefix
+encoded = Framing.encode_packet(data)
+{messages, remaining} = Framing.decode_packets(buffer <> chunk)
+
+# JSON: newline-delimited
+encoded = Framing.encode_line(data)
+{lines, remaining} = Framing.decode_lines(buffer <> chunk)
+```
 
 ## Testing
 
-See [testing.md](testing.md) for the full testing guide. Three backends
-at different fidelity levels:
-
-- **`:pooled_mock`** (default) -- fast, no renderer, pure Elixir
-- **`:headless`** -- real rendering, no display server
-- **`:windowed`** -- real windows, needs Xvfb or a display
+See [Testing](testing.md) for the full guide. Quick summary:
 
 ```sh
-mix test                                      # pooled_mock
-TODDY_TEST_BACKEND=headless mix test          # headless
-TODDY_TEST_BACKEND=windowed mix test          # windowed (needs display)
+mix test                                      # pooled mock (fast, no display)
+TODDY_TEST_BACKEND=headless mix test          # real rendering, no display
+TODDY_TEST_BACKEND=windowed mix test          # real windows (needs display)
 ```
 
-## The prop encoding pipeline
+## How props reach the renderer
 
-Understanding how values flow from `view/1` to the wire helps when
-debugging unexpected renderer behaviour or writing extensions.
+You don't need to understand this to use toddy. It's here for when
+you're debugging wire format issues or writing extensions.
 
-```
-view/1
-  |  Widget builders (Toddy.UI macros, Toddy.Iced functions)
-  |  return structs with raw Elixir values: atoms, tuples, structs
-  v
-Toddy.Widget protocol (to_node/1)
-  |  Converts typed widget structs to plain %{id, type, props, children} maps
-  |  Values stay as raw Elixir terms at this stage
-  v
-Toddy.Tree.normalize/1
-  |  Walks the tree, applying the Toddy.Encode protocol to each prop value:
-  |    atoms -> strings (except true/false/nil)
-  |    tuples -> lists
-  |    structs -> via their Toddy.Encode implementation
-  |  Also handles scoped ID prefixing
-  v
-Toddy.Protocol.Encode
-  |  stringify_keys/1 converts atom keys to string keys
-  |  Serializes with Jason (JSON) or Msgpax (MessagePack)
-  v
-Wire bytes (sent to renderer via Port, stdio, or iostream)
-```
+When you return a tree from `view/1`, it passes through four stages
+before reaching the wire:
 
-Each stage has a single responsibility. Widget builders don't worry
-about wire encoding. The Encode protocol doesn't worry about
-serialization format. And the Protocol layer doesn't know about widget
-types.
+1. **Widget builders** (`Toddy.UI` macros, `Toddy.Widget.*` modules)
+   return structs with raw Elixir values -- atoms, tuples, structs.
+
+2. **Widget protocol** (`Toddy.Widget.to_node/1`) converts typed
+   widget structs to plain `%{id, type, props, children}` maps.
+   Values stay as raw Elixir terms.
+
+3. **Tree normalization** (`Toddy.Tree.normalize/1`) walks the tree
+   and encodes each prop value via the `Toddy.Encode` protocol:
+   atoms become strings, tuples become lists, structs become maps.
+   Scoped IDs are also resolved here.
+
+4. **Protocol encoding** stringifies atom map keys to strings,
+   then serializes to MessagePack or JSON.
+
+Each stage has one job. Widget builders don't worry about wire format.
+The Encode protocol doesn't know about serialization. And the Protocol
+layer doesn't know about widget types.
+
+If you call `build()` on a widget directly (e.g., in tests), you get
+the raw stage-2 output -- atom keys, raw values. After `normalize`,
+values are encoded. After Protocol encoding, keys are strings. This
+matters when writing assertions: `build()` output has `:fill`, the
+wire has `"fill"`.
+
+## Next steps
+
+- [Getting started](getting-started.md) -- setup, first app
+- [Commands and subscriptions](commands.md) -- event rate limiting details
+- [Testing](testing.md) -- three-backend test framework
+- [Extensions](extensions.md) -- custom widgets, CoalesceHint for throttling
