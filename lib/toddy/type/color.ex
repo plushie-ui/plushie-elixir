@@ -189,8 +189,12 @@ defmodule Toddy.Type.Color do
   @typedoc "Named CSS color atom (148 CSS Color Module Level 4 colors plus `:transparent`)."
   @type named :: unquote(Enum.reduce(Map.keys(@named_colors), &{:|, [], [&1, &2]}))
 
-  @typedoc "Any value accepted by `cast/1`: hex string, short hex, named color atom, or float RGBA map."
-  @type input :: named() | String.t() | %{r: float(), g: float(), b: float(), a: float()}
+  @typedoc "Any value accepted by `cast/1`: hex string, short hex, named color atom, named color string, or float RGB/RGBA map."
+  @type input ::
+          named()
+          | String.t()
+          | %{r: float(), g: float(), b: float(), a: float()}
+          | %{r: float(), g: float(), b: float()}
 
   @doc """
   Creates a hex color string from 0-255 RGB integer values.
@@ -317,12 +321,12 @@ defmodule Toddy.Type.Color do
   @spec cast(color :: input()) :: t()
   def cast(%{r: r, g: g, b: b, a: a})
       when is_number(r) and is_number(g) and is_number(b) and is_number(a) do
-    from_rgba(round(r * 255), round(g * 255), round(b * 255), a)
+    from_rgba(float_to_byte(r), float_to_byte(g), float_to_byte(b), clamp_float(a))
   end
 
   def cast(%{r: r, g: g, b: b})
       when is_number(r) and is_number(g) and is_number(b) do
-    from_rgb(round(r * 255), round(g * 255), round(b * 255))
+    from_rgb(float_to_byte(r), float_to_byte(g), float_to_byte(b))
   end
 
   def cast(name) when is_atom(name) do
@@ -359,6 +363,14 @@ defmodule Toddy.Type.Color do
   """
   @spec encode(color :: t()) :: t()
   def encode(color) when is_binary(color), do: color
+
+  # Converts a float 0.0-1.0 to an integer 0-255, clamping out-of-range values.
+  defp float_to_byte(f), do: f |> clamp_float() |> Kernel.*(255) |> round()
+
+  # Clamps a float to the 0.0-1.0 range.
+  defp clamp_float(f) when f < 0.0, do: 0.0
+  defp clamp_float(f) when f > 1.0, do: 1.0
+  defp clamp_float(f), do: f
 
   # Converts an integer 0-255 to a zero-padded two-character lowercase hex string.
   @spec hex_byte(value :: integer()) :: String.t()

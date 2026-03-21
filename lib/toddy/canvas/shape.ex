@@ -321,6 +321,52 @@ defmodule Toddy.Canvas.Shape do
     |> maybe_put_dash(opts)
   end
 
+  # -- Interactive shapes -----------------------------------------------------
+
+  @doc """
+  Marks a shape as interactive by adding an `interactive` field.
+
+  The canvas renderer uses this field for hit testing, hover/press
+  style overrides, drag constraints, cursor changes, tooltips, and
+  accessibility annotations.
+
+  ## Required option
+
+  - `:id` -- unique identifier for this interactive shape (used in events).
+
+  ## Optional fields
+
+  - `:on_click` (boolean) -- emit click events for this shape.
+  - `:on_hover` (boolean) -- emit hover events for this shape.
+  - `:draggable` (boolean) -- allow dragging this shape.
+  - `:drag_axis` (string) -- constrain drag to `"x"`, `"y"`, or `"both"`.
+  - `:drag_bounds` (map) -- clamp drag to `%{min_x, max_x, min_y, max_y}`.
+  - `:cursor` (string) -- CSS cursor name shown on hover.
+  - `:hover_style` (map) -- style overrides applied on hover (fill, stroke, opacity).
+  - `:pressed_style` (map) -- style overrides applied on press.
+  - `:tooltip` (string) -- tooltip text shown on hover.
+  - `:a11y` (map) -- accessibility overrides (role, label, etc.).
+  - `:hit_rect` (map) -- explicit hit test rectangle `%{x, y, w, h}` override.
+  """
+  @spec interactive(shape :: map(), opts :: keyword()) :: map()
+  def interactive(shape, opts) when is_map(shape) do
+    interactive_map =
+      %{id: Keyword.fetch!(opts, :id)}
+      |> maybe_put(opts, :on_click, :on_click)
+      |> maybe_put(opts, :on_hover, :on_hover)
+      |> maybe_put(opts, :draggable, :draggable)
+      |> maybe_put(opts, :drag_axis, :drag_axis)
+      |> maybe_put(opts, :drag_bounds, :drag_bounds)
+      |> maybe_put(opts, :cursor, :cursor)
+      |> maybe_put(opts, :hover_style, :hover_style)
+      |> maybe_put(opts, :pressed_style, :pressed_style)
+      |> maybe_put(opts, :tooltip, :tooltip)
+      |> maybe_put(opts, :a11y, :a11y)
+      |> maybe_put(opts, :hit_rect, :hit_rect)
+
+    Map.put(shape, :interactive, interactive_map)
+  end
+
   # -- Private helpers --------------------------------------------------------
 
   defp apply_fill(shape, opts) do

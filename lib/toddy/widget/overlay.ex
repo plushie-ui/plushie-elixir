@@ -10,6 +10,10 @@ defmodule Toddy.Widget.Overlay do
   - `gap` (number) -- space in pixels between anchor and overlay. Default: 0.
   - `offset_x` (number) -- horizontal offset in pixels applied after positioning.
   - `offset_y` (number) -- vertical offset in pixels applied after positioning.
+  - `flip` (boolean) -- when true, auto-flip the position when the content would
+    overflow the viewport. Default: false.
+  - `align` (atom) -- cross-axis alignment relative to the anchor: `:start`,
+    `:center`, `:end`. Default: `:center`.
   - `width` (length) -- width of the overlay node. See `Toddy.Type.Length`.
   - `a11y` (map) -- accessibility overrides. See `Toddy.Type.A11y`.
 
@@ -24,14 +28,18 @@ defmodule Toddy.Widget.Overlay do
   alias Toddy.Widget.Build
 
   @positions [:below, :above, :left, :right]
+  @alignments [:start, :center, :end]
 
   @type position :: unquote(Enum.reduce([:below, :above, :left, :right], &{:|, [], [&1, &2]}))
+  @type align :: :start | :center | :end
 
   @type option ::
           {:position, position()}
           | {:gap, number()}
           | {:offset_x, number()}
           | {:offset_y, number()}
+          | {:flip, boolean()}
+          | {:align, align()}
           | {:width, Toddy.Type.Length.t()}
           | {:a11y, Toddy.Type.A11y.t()}
 
@@ -41,6 +49,8 @@ defmodule Toddy.Widget.Overlay do
           gap: number() | nil,
           offset_x: number() | nil,
           offset_y: number() | nil,
+          flip: boolean() | nil,
+          align: align() | nil,
           width: Toddy.Type.Length.t() | nil,
           a11y: Toddy.Type.A11y.t() | nil,
           children: [Toddy.Widget.ui_node() | struct()]
@@ -52,6 +62,8 @@ defmodule Toddy.Widget.Overlay do
     :gap,
     :offset_x,
     :offset_y,
+    :flip,
+    :align,
     :width,
     :a11y,
     children: []
@@ -73,6 +85,8 @@ defmodule Toddy.Widget.Overlay do
       {:gap, v}, acc -> gap(acc, v)
       {:offset_x, v}, acc -> offset_x(acc, v)
       {:offset_y, v}, acc -> offset_y(acc, v)
+      {:flip, v}, acc -> flip(acc, v)
+      {:align, v}, acc -> align(acc, v)
       {:width, v}, acc -> width(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
@@ -97,6 +111,16 @@ defmodule Toddy.Widget.Overlay do
   @spec offset_y(overlay :: t(), offset_y :: number()) :: t()
   def offset_y(%__MODULE__{} = overlay, offset_y) when is_number(offset_y),
     do: %{overlay | offset_y: offset_y}
+
+  @doc "Enables auto-flip when the overlay would overflow the viewport."
+  @spec flip(overlay :: t(), flip :: boolean()) :: t()
+  def flip(%__MODULE__{} = overlay, flip) when is_boolean(flip),
+    do: %{overlay | flip: flip}
+
+  @doc "Sets the cross-axis alignment relative to the anchor."
+  @spec align(overlay :: t(), align :: align()) :: t()
+  def align(%__MODULE__{} = overlay, align) when align in @alignments,
+    do: %{overlay | align: align}
 
   @doc "Sets the width of the overlay node."
   @spec width(overlay :: t(), width :: Toddy.Type.Length.t()) :: t()
@@ -129,6 +153,8 @@ defmodule Toddy.Widget.Overlay do
         |> put_if(overlay.gap, :gap)
         |> put_if(overlay.offset_x, :offset_x)
         |> put_if(overlay.offset_y, :offset_y)
+        |> put_if(overlay.flip, :flip)
+        |> put_if(overlay.align, :align)
         |> put_if(overlay.width, :width)
         |> put_if(overlay.a11y, :a11y)
 
