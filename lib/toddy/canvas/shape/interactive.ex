@@ -1,6 +1,8 @@
 defmodule Toddy.Canvas.Shape.Interactive do
   @moduledoc "Interactive shape descriptor for canvas hit testing and event handling."
 
+  @behaviour Toddy.DSL.Buildable
+
   alias Toddy.Canvas.Shape.{DragBounds, HitRect, ShapeStyle}
 
   @type t :: %__MODULE__{
@@ -36,7 +38,10 @@ defmodule Toddy.Canvas.Shape.Interactive do
 
   @known_keys ~w(id on_click on_hover draggable drag_axis drag_bounds cursor hover_style pressed_style tooltip a11y hit_rect)a
 
-  @doc false
+  @impl Toddy.DSL.Buildable
+  def __field_keys__, do: @known_keys
+
+  @impl Toddy.DSL.Buildable
   def __field_types__ do
     %{
       hover_style: ShapeStyle,
@@ -46,6 +51,9 @@ defmodule Toddy.Canvas.Shape.Interactive do
       a11y: Toddy.Type.A11y
     }
   end
+
+  @impl Toddy.DSL.Buildable
+  def from_opts(opts), do: new(opts)
 
   def new(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do

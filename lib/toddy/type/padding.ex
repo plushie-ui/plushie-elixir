@@ -29,12 +29,14 @@ defmodule Toddy.Type.Padding do
 
   defstruct [:top, :right, :bottom, :left]
 
+  @behaviour Toddy.DSL.Buildable
+
   @known_keys ~w(top right bottom left)a
 
-  @doc false
+  @impl Toddy.DSL.Buildable
   def __field_keys__, do: @known_keys
 
-  @doc false
+  @impl Toddy.DSL.Buildable
   def __field_types__, do: %{}
 
   @doc """
@@ -42,6 +44,7 @@ defmodule Toddy.Type.Padding do
 
   Raises `ArgumentError` if any key is not a valid padding field.
   """
+  @impl Toddy.DSL.Buildable
   @spec from_opts(Keyword.t()) :: %__MODULE__{}
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do

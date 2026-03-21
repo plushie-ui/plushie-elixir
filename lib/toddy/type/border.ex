@@ -42,6 +42,8 @@ defmodule Toddy.Type.Border do
           radius: number() | radius_map()
         }
 
+  @behaviour Toddy.DSL.Buildable
+
   @known_keys ~w(color width rounded radius)a
 
   defstruct color: nil, width: 0, radius: 0
@@ -81,13 +83,14 @@ defmodule Toddy.Type.Border do
     }
   end
 
-  @doc false
+  @impl Toddy.DSL.Buildable
   def __field_keys__, do: @known_keys
 
-  @doc false
+  @impl Toddy.DSL.Buildable
   def __field_types__, do: %{}
 
   @doc "Constructs a `Border` from a keyword list."
+  @impl Toddy.DSL.Buildable
   @spec from_opts(opts :: keyword()) :: t()
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do

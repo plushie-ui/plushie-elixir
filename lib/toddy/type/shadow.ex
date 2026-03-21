@@ -26,6 +26,8 @@ defmodule Toddy.Type.Shadow do
           blur_radius: number()
         }
 
+  @behaviour Toddy.DSL.Buildable
+
   @known_keys ~w(color offset offset_x offset_y blur_radius)a
 
   defstruct color: "#000000", offset_x: 0, offset_y: 0, blur_radius: 0
@@ -50,13 +52,14 @@ defmodule Toddy.Type.Shadow do
   def blur_radius(%__MODULE__{} = shadow, r) when is_number(r),
     do: %{shadow | blur_radius: r}
 
-  @doc false
+  @impl Toddy.DSL.Buildable
   def __field_keys__, do: @known_keys
 
-  @doc false
+  @impl Toddy.DSL.Buildable
   def __field_types__, do: %{}
 
   @doc "Constructs a `Shadow` from a keyword list."
+  @impl Toddy.DSL.Buildable
   @spec from_opts(opts :: keyword()) :: t()
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do

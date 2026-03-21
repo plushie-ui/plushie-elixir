@@ -2725,11 +2725,7 @@ defmodule Toddy.UI do
         {struct_mod, [{:do, inner_block}]} ->
           # Value is a do-block, and key maps to a struct module.
           # Recursively interpret the inner block.
-          nested_field_types =
-            if function_exported?(struct_mod, :__field_types__, 0),
-              do: struct_mod.__field_types__(),
-              else: %{}
-
+          nested_field_types = struct_mod.__field_types__()
           nested_pairs = interpret_struct_opts(inner_block, nested_field_types)
           nested_ast = pairs_to_keyword_ast(nested_pairs)
 
@@ -2945,11 +2941,7 @@ defmodule Toddy.UI do
   end
 
   defp interpret_prop_do_block(block, struct_mod) do
-    nested_field_types =
-      if function_exported?(struct_mod, :__field_types__, 0),
-        do: struct_mod.__field_types__(),
-        else: %{}
-
+    nested_field_types = struct_mod.__field_types__()
     nested_pairs = interpret_struct_opts(block, nested_field_types)
     nested_ast = pairs_to_keyword_ast(nested_pairs)
 

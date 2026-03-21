@@ -14,17 +14,20 @@ defmodule Toddy.Canvas.Shape.Stroke do
   @enforce_keys [:color, :width]
   defstruct [:color, :width, :cap, :join, :dash]
 
+  @behaviour Toddy.DSL.Buildable
+
   @known_keys ~w(color width cap join dash)a
 
-  @doc false
+  @impl Toddy.DSL.Buildable
   def __field_keys__, do: @known_keys
 
-  @doc false
+  @impl Toddy.DSL.Buildable
   def __field_types__ do
     %{dash: Dash}
   end
 
   @doc "Constructs a stroke from a keyword list."
+  @impl Toddy.DSL.Buildable
   @spec from_opts(keyword()) :: t()
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do

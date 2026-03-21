@@ -11,15 +11,18 @@ defmodule Toddy.Canvas.Shape.HitRect do
   @enforce_keys [:x, :y, :w, :h]
   defstruct [:x, :y, :w, :h]
 
+  @behaviour Toddy.DSL.Buildable
+
   @known_keys ~w(x y w h)a
 
-  @doc false
+  @impl Toddy.DSL.Buildable
   def __field_keys__, do: @known_keys
 
-  @doc false
+  @impl Toddy.DSL.Buildable
   def __field_types__, do: %{}
 
   @doc "Constructs a hit rect from a keyword list."
+  @impl Toddy.DSL.Buildable
   @spec from_opts(keyword()) :: t()
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do

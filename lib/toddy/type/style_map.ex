@@ -62,6 +62,8 @@ defmodule Toddy.Type.StyleMap do
           focused: status_override() | nil
         }
 
+  @behaviour Toddy.DSL.Buildable
+
   @known_keys ~w(base background text_color border shadow hovered pressed disabled focused)a
 
   defstruct [
@@ -138,10 +140,10 @@ defmodule Toddy.Type.StyleMap do
     %{style_map | focused: normalize_override(focused)}
   end
 
-  @doc false
+  @impl Toddy.DSL.Buildable
   def __field_keys__, do: @known_keys
 
-  @doc false
+  @impl Toddy.DSL.Buildable
   def __field_types__ do
     %{
       border: Toddy.Type.Border,
@@ -150,6 +152,7 @@ defmodule Toddy.Type.StyleMap do
   end
 
   @doc "Constructs a `StyleMap` from a keyword list."
+  @impl Toddy.DSL.Buildable
   @spec from_opts(opts :: keyword()) :: t()
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do

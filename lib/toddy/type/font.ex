@@ -37,12 +37,14 @@ defmodule Toddy.Type.Font do
 
   defstruct [:family, :weight, :style, :stretch]
 
+  @behaviour Toddy.DSL.Buildable
+
   @known_keys ~w(family weight style stretch)a
 
-  @doc false
+  @impl Toddy.DSL.Buildable
   def __field_keys__, do: @known_keys
 
-  @doc false
+  @impl Toddy.DSL.Buildable
   def __field_types__, do: %{}
 
   @doc """
@@ -50,6 +52,7 @@ defmodule Toddy.Type.Font do
 
   Raises `ArgumentError` if any key is not a valid font field.
   """
+  @impl Toddy.DSL.Buildable
   @spec from_opts(Keyword.t()) :: %__MODULE__{}
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do

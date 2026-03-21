@@ -39,6 +39,8 @@ defmodule Toddy.Type.A11y do
   - `has_popup` -- popup type: `"listbox"`, `"menu"`, `"dialog"`, `"tree"`, `"grid"`
   """
 
+  @behaviour Toddy.DSL.Buildable
+
   @known_keys ~w(role label description live hidden expanded required level busy invalid modal read_only mnemonic toggled selected value orientation labelled_by described_by error_message disabled position_in_set size_of_set has_popup)a
 
   defstruct [
@@ -186,13 +188,14 @@ defmodule Toddy.Type.A11y do
   defp validate_has_popup(nil), do: nil
   defp validate_has_popup(v) when v in @has_popup_values, do: v
 
-  @doc false
+  @impl Toddy.DSL.Buildable
   def __field_keys__, do: @known_keys
 
-  @doc false
+  @impl Toddy.DSL.Buildable
   def __field_types__, do: %{}
 
   @doc "Constructs an `A11y` struct from a keyword list."
+  @impl Toddy.DSL.Buildable
   @spec from_opts(opts :: keyword()) :: t()
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do
