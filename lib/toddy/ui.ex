@@ -1835,6 +1835,19 @@ defmodule Toddy.UI do
 
   @reserved_keys [:children, :id, :do]
 
+  @interactive_keys ~w(on_click on_hover draggable drag_axis drag_bounds cursor hover_style pressed_style tooltip a11y hit_rect)a
+
+  @widget_calls ~w(button text_input checkbox toggler radio slider
+    vertical_slider pick_list combo_box text_editor markdown
+    progress_bar rich_text qr_code column row container window
+    scrollable stack grid keyed_column responsive pin floating
+    mouse_area sensor themer pane_grid table tooltip space rule
+    overlay canvas)a
+
+  @canvas_shape_calls ~w(rect circle line path group)a
+
+  @canvas_transform_calls ~w(push_transform pop_transform translate rotate scale push_clip pop_clip)a
+
   defp clean_opts(opts), do: Keyword.drop(opts, @reserved_keys)
 
   defp normalize_range({min, max}), do: {min, max}
@@ -1846,4 +1859,361 @@ defmodule Toddy.UI do
 
   defp block_to_exprs({:__block__, _, exprs}), do: exprs
   defp block_to_exprs(single_expr), do: [single_expr]
+
+  # ---------------------------------------------------------------------------
+  # Block-form option interpretation
+  #
+  # Infrastructure for Steps 3-5: leaf widget macros, canvas_scope
+  # application, and interactive directive. These are private helpers
+  # that will be called from defmacro bodies when callers land.
+  # The __ensure_compiled__ function below keeps them reachable to
+  # satisfy warnings_as_errors; remove it once callers exist.
+  # ---------------------------------------------------------------------------
+
+  @doc false
+  def __ensure_compiled__ do
+    funs = [
+      &interpret_opts_block/1,
+      &interpret_opts_expr/1,
+      &pairs_to_keyword_ast/1,
+      &numeric_literal?/1,
+      &validate_interactive_keys!/2,
+      &canvas_scope/2,
+      &canvas_scope_error!/2,
+      &canvas_scope_rewrite_do_block/1,
+      &canvas_scope_for_args/2,
+      &canvas_scope_clauses/2,
+      &canvas_scope_match_clauses/2,
+      &canvas_scope_with_args/2
+    ]
+
+    length(funs)
+  end
+
+  defp interpret_opts_block({:__block__, _, exprs}) do
+    Enum.map(exprs, &interpret_opts_expr/1)
+  end
+
+  defp interpret_opts_block(single_expr) do
+    [interpret_opts_expr(single_expr)]
+  end
+
+  defp interpret_opts_expr({name, _meta, [value]}) when is_atom(name), do: {name, value}
+  defp interpret_opts_expr({name, _meta, nil}) when is_atom(name), do: {name, true}
+
+  defp interpret_opts_expr({name, _meta, context}) when is_atom(name) and is_atom(context),
+    do: {name, true}
+
+  defp interpret_opts_expr(other) do
+    raise ArgumentError,
+          "not valid here, expected `key value` declaration, got: #{Macro.to_string(other)}"
+  end
+
+  defp pairs_to_keyword_ast(pairs) do
+    for {key, val} <- pairs do
+      {:{}, [], [key, val]}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # AST guards
+  # ---------------------------------------------------------------------------
+
+  defp numeric_literal?(n) when is_integer(n) or is_float(n), do: true
+  defp numeric_literal?({:-, _, [n]}) when is_number(n), do: true
+  defp numeric_literal?(_), do: false
+
+  # ---------------------------------------------------------------------------
+  # Interactive key validation
+  # ---------------------------------------------------------------------------
+
+  defp validate_interactive_keys!(pairs, caller) do
+    for {key, _val} <- pairs do
+      unless key in @interactive_keys do
+        raise CompileError,
+          line: caller.line,
+          file: caller.file,
+          description:
+            "unknown interactive option: #{inspect(key)}. " <>
+              "Valid options: #{inspect(@interactive_keys)}"
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Context-aware canvas AST walker
+  # ---------------------------------------------------------------------------
+
+  # Entry point: walk a block AST with context
+  defp canvas_scope({:__block__, meta, exprs}, context) do
+    {:__block__, meta, Enum.map(exprs, &canvas_scope(&1, context))}
+  end
+
+  defp canvas_scope(expr, _context) when not is_tuple(expr), do: expr
+  defp canvas_scope(expr, _context) when tuple_size(expr) != 3, do: expr
+
+  # Fully qualified calls -- skip
+  defp canvas_scope({{:., _, _}, _, _} = node, _context), do: node
+
+  # --- Canvas container calls (don't recurse into their blocks) ---
+
+  # layer: valid in :canvas only
+  defp canvas_scope({:layer, _, _} = node, :canvas), do: node
+
+  defp canvas_scope({:layer, meta, _}, _ctx) do
+    canvas_scope_error!(meta, "layer is not valid here. Layers belong inside a canvas block.")
+  end
+
+  # group: valid in :layer and :group
+  defp canvas_scope({:group, _, _} = node, ctx) when ctx in [:layer, :group], do: node
+
+  defp canvas_scope({:group, meta, _}, :canvas) do
+    canvas_scope_error!(meta, """
+    group is not valid here. Put groups inside a layer:
+
+        layer "main" do
+          group do
+            ...
+          end
+        end
+    """)
+  end
+
+  # interactive: valid in :group only
+  defp canvas_scope({:interactive, _, _} = node, :group), do: node
+
+  defp canvas_scope({:interactive, meta, _}, _ctx) do
+    canvas_scope_error!(meta, """
+    interactive is not valid here. Use it inside a group:
+
+        group do
+          interactive "btn" do
+            on_click
+          end
+          rect(0, 0, 100, 40)
+        end
+    """)
+  end
+
+  # --- Ambiguous name rewrites (text, image, svg) ---
+
+  # text/1,2: always error in canvas context
+  defp canvas_scope({:text, meta, args}, _ctx) when is_list(args) and length(args) in [1, 2] do
+    canvas_scope_error!(meta, """
+    text/#{length(args)} is not valid here. Expected:
+
+        text(x, y, "content")
+        text(x, y, "content", fill: "#000")
+    """)
+  end
+
+  # text/3+: rewrite to Shape.__build_text__ in :layer/:group, error in :canvas
+  defp canvas_scope({:text, meta, args}, ctx) when is_list(args) and length(args) >= 3 do
+    if ctx == :canvas do
+      canvas_scope_error!(meta, """
+      text is not valid here. Shapes go inside layers:
+
+          layer "main" do
+            text(10, 20, "Hello", fill: "#000")
+          end
+      """)
+    else
+      args = canvas_scope_rewrite_do_block(args)
+      {{:., meta, [Toddy.Canvas.Shape, :__build_text__]}, meta, args}
+    end
+  end
+
+  # image/1,2,3: always error in canvas context
+  defp canvas_scope({:image, meta, args}, _ctx)
+       when is_list(args) and length(args) in [1, 2, 3] do
+    canvas_scope_error!(meta, """
+    image/#{length(args)} is not valid here. Expected:
+
+        image("source", x, y, w, h)
+        image("source", x, y, w, h, rotation: 0.5)
+    """)
+  end
+
+  # image/5+: rewrite in :layer/:group, error in :canvas
+  defp canvas_scope({:image, meta, args}, ctx) when is_list(args) and length(args) >= 5 do
+    if ctx == :canvas do
+      canvas_scope_error!(meta, """
+      image is not valid here. Shapes go inside layers:
+
+          layer "main" do
+            image("source", x, y, w, h)
+          end
+      """)
+    else
+      args = canvas_scope_rewrite_do_block(args)
+      {{:., meta, [Toddy.Canvas.Shape, :__build_image__]}, meta, args}
+    end
+  end
+
+  # svg/1,2,3: always error in canvas context
+  defp canvas_scope({:svg, meta, args}, _ctx)
+       when is_list(args) and length(args) in [1, 2, 3] do
+    canvas_scope_error!(meta, """
+    svg/#{length(args)} is not valid here. Expected:
+
+        svg("source", x, y, w, h)
+    """)
+  end
+
+  # svg/5+: rewrite in :layer/:group, error in :canvas
+  defp canvas_scope({:svg, meta, args}, ctx) when is_list(args) and length(args) >= 5 do
+    if ctx == :canvas do
+      canvas_scope_error!(meta, """
+      svg is not valid here. Shapes go inside layers:
+
+          layer "main" do
+            svg("source", x, y, w, h)
+          end
+      """)
+    else
+      args = canvas_scope_rewrite_do_block(args)
+      {{:., meta, [Toddy.Canvas.Shape, :__build_svg__]}, meta, args}
+    end
+  end
+
+  # --- Shape calls (rect, circle, line, path) ---
+
+  defp canvas_scope({name, _, _} = node, ctx)
+       when is_atom(name) and name in @canvas_shape_calls do
+    case ctx do
+      :canvas ->
+        {_, meta, _} = node
+
+        canvas_scope_error!(meta, """
+        #{name} is not valid here. Shapes go inside layers:
+
+            layer "main" do
+              #{name}(...)
+            end
+        """)
+
+      _other ->
+        node
+    end
+  end
+
+  # --- Transform/clip calls ---
+
+  defp canvas_scope({name, _, _} = node, ctx)
+       when is_atom(name) and name in @canvas_transform_calls do
+    case ctx do
+      :canvas ->
+        {_, meta, _} = node
+
+        canvas_scope_error!(meta, """
+        #{name} is not valid here. Transforms go inside layers:
+
+            layer "main" do
+              #{name}(...)
+            end
+        """)
+
+      _other ->
+        node
+    end
+  end
+
+  # --- Widget calls (always error in canvas context) ---
+
+  defp canvas_scope({name, meta, args}, _ctx)
+       when is_atom(name) and is_list(args) and name in @widget_calls do
+    canvas_scope_error!(meta, """
+    #{name} is not valid here. Expected canvas shapes:
+    rect, circle, line, text, path, image, svg, group
+    """)
+  end
+
+  # --- Control flow: recurse into bodies ---
+
+  defp canvas_scope({:for, meta, args}, ctx) do
+    {:for, meta, canvas_scope_for_args(args, ctx)}
+  end
+
+  defp canvas_scope({:if, meta, [condition, clauses]}, ctx) do
+    {:if, meta, [condition, canvas_scope_clauses(clauses, ctx)]}
+  end
+
+  defp canvas_scope({:unless, meta, [condition, clauses]}, ctx) do
+    {:unless, meta, [condition, canvas_scope_clauses(clauses, ctx)]}
+  end
+
+  defp canvas_scope({:case, meta, [subject, [do: clauses]]}, ctx) do
+    {:case, meta, [subject, [do: canvas_scope_match_clauses(clauses, ctx)]]}
+  end
+
+  defp canvas_scope({:cond, meta, [[do: clauses]]}, ctx) do
+    {:cond, meta, [[do: canvas_scope_match_clauses(clauses, ctx)]]}
+  end
+
+  defp canvas_scope({:with, meta, args}, ctx) do
+    {:with, meta, canvas_scope_with_args(args, ctx)}
+  end
+
+  defp canvas_scope({:fn, meta, clauses}, ctx) do
+    {:fn, meta, canvas_scope_match_clauses(clauses, ctx)}
+  end
+
+  # --- Default: pass through ---
+  defp canvas_scope(other, _ctx), do: other
+
+  # --- Helper functions ---
+
+  defp canvas_scope_error!(meta, message) do
+    raise CompileError,
+      line: Keyword.get(meta, :line, 0),
+      description: String.trim(message)
+  end
+
+  # Rewrite [do: block] in the last arg to interpreted opts
+  defp canvas_scope_rewrite_do_block(args) do
+    case List.last(args) do
+      [{:do, block}] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+        List.replace_at(args, -1, opts_ast)
+
+      _ ->
+        args
+    end
+  end
+
+  # For comprehension: recurse into the do/else bodies
+  defp canvas_scope_for_args(args, ctx) do
+    Enum.map(args, fn
+      {:do, body} -> {:do, canvas_scope(body, ctx)}
+      {:else, body} -> {:else, canvas_scope(body, ctx)}
+      other -> other
+    end)
+  end
+
+  # if/unless clauses
+  defp canvas_scope_clauses(clauses, ctx) do
+    Enum.map(clauses, fn
+      {:do, body} -> {:do, canvas_scope(body, ctx)}
+      {:else, body} -> {:else, canvas_scope(body, ctx)}
+      other -> other
+    end)
+  end
+
+  # case/cond/fn clauses (list of {:->, meta, [pattern, body]})
+  defp canvas_scope_match_clauses(clauses, ctx) do
+    Enum.map(clauses, fn
+      {:->, meta, [pattern, body]} -> {:->, meta, [pattern, canvas_scope(body, ctx)]}
+      other -> other
+    end)
+  end
+
+  # with args: generators + do/else
+  defp canvas_scope_with_args(args, ctx) do
+    Enum.map(args, fn
+      {:do, body} -> {:do, canvas_scope(body, ctx)}
+      {:else, clauses} -> {:else, canvas_scope_match_clauses(clauses, ctx)}
+      other -> other
+    end)
+  end
 end
