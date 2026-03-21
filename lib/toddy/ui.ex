@@ -1876,6 +1876,7 @@ defmodule Toddy.UI do
   defmacro canvas(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
+        block = canvas_scope(block, :canvas)
         exprs = block_to_exprs(block)
 
         quote do
@@ -1894,6 +1895,7 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro canvas(id, opts, do: block) do
+    block = canvas_scope(block, :canvas)
     exprs = block_to_exprs(block)
 
     quote do
@@ -2056,6 +2058,287 @@ defmodule Toddy.UI do
   # __build_fixed_node__ removed -- use __build_container__
 
   # ---------------------------------------------------------------------------
+  # Canvas group, layer, and interactive macros
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Groups child shapes with optional positioning and interaction.
+
+  ## Do-block form
+
+      group x: 4, y: 4 do
+        interactive "btn" do
+          on_click
+        end
+        rect(0, 0, 32, 32, radius: 4)
+      end
+
+  ## List form
+
+      group([rect(0, 0, 100, 40)], x: 10, y: 50)
+  """
+  defmacro group(opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        block = canvas_scope(block, :group)
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Toddy.Canvas.Shape.__build_group__(children, [])
+        end
+
+      other ->
+        quote do
+          Toddy.Canvas.Shape.__build_group__(unquote(other), [])
+        end
+    end
+  end
+
+  @doc false
+  defmacro group(first, second) do
+    case second do
+      [do: block] ->
+        block = canvas_scope(block, :group)
+        exprs = block_to_exprs(block)
+
+        quote do
+          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Toddy.Canvas.Shape.__build_group__(children, unquote(first))
+        end
+
+      opts ->
+        quote do
+          Toddy.Canvas.Shape.__build_group__(unquote(first), unquote(opts))
+        end
+    end
+  end
+
+  @doc """
+  Collects shapes into a named layer for use inside canvas blocks.
+
+      canvas "chart", width: 400 do
+        layer "grid" do
+          rect(0, 0, 400, 300, stroke: "#eee")
+        end
+      end
+  """
+  defmacro layer(name, do: block) do
+    block = canvas_scope(block, :layer)
+    exprs = block_to_exprs(block)
+
+    quote do
+      {unquote(name), [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)}
+    end
+  end
+
+  @doc """
+  Marks a shape or group as interactive.
+
+  ## Block form (inside group)
+
+      group do
+        interactive "bold" do
+          on_click
+          hover_style %{fill: "#ddd"}
+          cursor "pointer"
+        end
+        rect(0, 0, 32, 32, radius: 4)
+      end
+
+  ## Keyword form (inside group)
+
+      group do
+        interactive "bold", on_click: true
+        rect(0, 0, 32, 32)
+      end
+
+  ## Pipe form (on any shape)
+
+      rect(0, 0, 100, 40) |> interactive(id: "btn", on_click: true)
+  """
+
+  # Form 1: Block directive with id
+  defmacro interactive(id, do: block) do
+    pairs = interpret_opts_block(block)
+    validate_interactive_keys!(pairs, __CALLER__)
+    opts_ast = pairs_to_keyword_ast(pairs)
+
+    quote do
+      {:__canvas_meta__, :interactive,
+       Toddy.Canvas.Shape.Interactive.new([{:id, unquote(id)} | unquote(opts_ast)])}
+    end
+  end
+
+  # Form 2/3: Keyword directive (id first) or pipe modifier (shape first)
+  @doc false
+  defmacro interactive(first, opts) do
+    quote do
+      Toddy.UI.__build_interactive__(unquote(first), unquote(opts))
+    end
+  end
+
+  # Form 4: Arity 1 -- keyword without id positional, or error on bare do-block
+  @doc false
+  defmacro interactive(opts_or_do) do
+    case opts_or_do do
+      [do: _block] ->
+        raise CompileError,
+          line: __CALLER__.line,
+          description: """
+          interactive requires an id as the first argument. Expected:
+
+              interactive "my_id" do
+                on_click
+                hover_style %{fill: "#ddd"}
+              end
+          """
+
+      opts ->
+        quote do
+          {:__canvas_meta__, :interactive, Toddy.Canvas.Shape.Interactive.new(unquote(opts))}
+        end
+    end
+  end
+
+  @doc false
+  def __build_interactive__(id, opts) when is_binary(id) do
+    {:__canvas_meta__, :interactive, Toddy.Canvas.Shape.Interactive.new([{:id, id} | opts])}
+  end
+
+  def __build_interactive__(shape, opts) when is_map(shape) do
+    Toddy.Canvas.Shape.interactive(shape, opts)
+  end
+
+  # ---------------------------------------------------------------------------
+  # Canvas shape macros (block-form support)
+  # ---------------------------------------------------------------------------
+
+  @doc "Builds a rectangle shape. See `Toddy.Canvas.Shape.rect/5`."
+  defmacro rect(x, y, w, h, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+
+        quote do:
+                Toddy.Canvas.Shape.rect(
+                  unquote(x),
+                  unquote(y),
+                  unquote(w),
+                  unquote(h),
+                  unquote(opts_ast)
+                )
+
+      opts ->
+        quote do:
+                Toddy.Canvas.Shape.rect(
+                  unquote(x),
+                  unquote(y),
+                  unquote(w),
+                  unquote(h),
+                  unquote(opts)
+                )
+    end
+  end
+
+  @doc "Builds a circle shape. See `Toddy.Canvas.Shape.circle/4`."
+  defmacro circle(x, y, r, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+        quote do: Toddy.Canvas.Shape.circle(unquote(x), unquote(y), unquote(r), unquote(opts_ast))
+
+      opts ->
+        quote do: Toddy.Canvas.Shape.circle(unquote(x), unquote(y), unquote(r), unquote(opts))
+    end
+  end
+
+  @doc "Builds a line shape. See `Toddy.Canvas.Shape.line/5`."
+  defmacro line(x1, y1, x2, y2, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+
+        quote do:
+                Toddy.Canvas.Shape.line(
+                  unquote(x1),
+                  unquote(y1),
+                  unquote(x2),
+                  unquote(y2),
+                  unquote(opts_ast)
+                )
+
+      opts ->
+        quote do:
+                Toddy.Canvas.Shape.line(
+                  unquote(x1),
+                  unquote(y1),
+                  unquote(x2),
+                  unquote(y2),
+                  unquote(opts)
+                )
+    end
+  end
+
+  @doc "Builds a path shape. See `Toddy.Canvas.Shape.path/2`."
+  defmacro path(commands, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+        quote do: Toddy.Canvas.Shape.path(unquote(commands), unquote(opts_ast))
+
+      opts ->
+        quote do: Toddy.Canvas.Shape.path(unquote(commands), unquote(opts))
+    end
+  end
+
+  @doc "Builds a stroke descriptor. See `Toddy.Canvas.Shape.stroke/3`."
+  defmacro stroke(color, width, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        pairs = interpret_opts_block(block)
+        opts_ast = pairs_to_keyword_ast(pairs)
+        quote do: Toddy.Canvas.Shape.stroke(unquote(color), unquote(width), unquote(opts_ast))
+
+      opts ->
+        quote do: Toddy.Canvas.Shape.stroke(unquote(color), unquote(width), unquote(opts))
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Canvas shape re-exports (no block form needed)
+  # ---------------------------------------------------------------------------
+
+  # Path commands
+  defdelegate move_to(x, y), to: Toddy.Canvas.Shape
+  defdelegate line_to(x, y), to: Toddy.Canvas.Shape
+  defdelegate bezier_to(cp1x, cp1y, cp2x, cp2y, x, y), to: Toddy.Canvas.Shape
+  defdelegate quadratic_to(cpx, cpy, x, y), to: Toddy.Canvas.Shape
+  defdelegate arc(cx, cy, r, start_angle, end_angle), to: Toddy.Canvas.Shape
+  defdelegate arc_to(x1, y1, x2, y2, radius), to: Toddy.Canvas.Shape
+  defdelegate ellipse(cx, cy, rx, ry, rotation, start_angle, end_angle), to: Toddy.Canvas.Shape
+  defdelegate rounded_rect(x, y, w, h, radius), to: Toddy.Canvas.Shape
+  defdelegate close(), to: Toddy.Canvas.Shape
+
+  # Transforms
+  defdelegate push_transform(), to: Toddy.Canvas.Shape
+  defdelegate pop_transform(), to: Toddy.Canvas.Shape
+  defdelegate translate(x, y), to: Toddy.Canvas.Shape
+  defdelegate rotate(angle), to: Toddy.Canvas.Shape
+  defdelegate scale(x, y), to: Toddy.Canvas.Shape
+
+  # Clips
+  defdelegate push_clip(x, y, w, h), to: Toddy.Canvas.Shape
+  defdelegate pop_clip(), to: Toddy.Canvas.Shape
+
+  # Gradients
+  defdelegate linear_gradient(from, to, stops), to: Toddy.Canvas.Shape
+
+  # ---------------------------------------------------------------------------
   # Tree query
   # ---------------------------------------------------------------------------
 
@@ -2203,25 +2486,6 @@ defmodule Toddy.UI do
   # ---------------------------------------------------------------------------
   # Interactive key validation (used by Step 4: interactive directive)
   # ---------------------------------------------------------------------------
-
-  # Temporary reference to keep unused-function warnings at bay until
-  # the interactive directive and canvas_scope macros land (Steps 4-5).
-  # Remove once callers exist.
-  @doc false
-  def __ensure_compiled__ do
-    funs = [
-      &validate_interactive_keys!/2,
-      &canvas_scope/2,
-      &canvas_scope_error!/2,
-      &canvas_scope_rewrite_do_block/1,
-      &canvas_scope_for_args/2,
-      &canvas_scope_clauses/2,
-      &canvas_scope_match_clauses/2,
-      &canvas_scope_with_args/2
-    ]
-
-    length(funs)
-  end
 
   defp validate_interactive_keys!(pairs, caller) do
     for {key, _val} <- pairs do
