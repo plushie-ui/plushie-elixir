@@ -1,7 +1,7 @@
 # Effects
 
 Effects are native platform operations that require the renderer to interact
-with the OS on behalf of the Elixir app. File dialogs, clipboard access,
+with the OS on behalf of the host. File dialogs, clipboard access,
 notifications, and similar features are effects.
 
 ## Design principle

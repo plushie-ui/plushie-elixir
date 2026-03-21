@@ -133,7 +133,7 @@ end
 
 `Toddy.Test.Case` starts a session, imports all helper functions, and tears
 down on exit. The default backend is `:pooled_mock` -- a pooled backend
-using a shared renderer process. No Rust binary, no display server, no
+using a shared renderer process. No renderer binary, no display server, no
 setup.
 
 
@@ -279,7 +279,7 @@ changing assertions.
 | | `:pooled_mock` | `:headless` | `:windowed` |
 |---|---|---|---|
 | **Speed** | ~ms | ~100ms | ~seconds |
-| **Rust binary** | Yes (`--mock`) | Yes (`--headless`) | Yes |
+| **Renderer** | Yes (`--mock`) | Yes (`--headless`) | Yes |
 | **Display server** | No | No | Yes (Xvfb in CI) |
 | **Protocol round-trip** | Yes | Yes | Yes |
 | **Structural tree hashes** | Yes | Yes | Yes |

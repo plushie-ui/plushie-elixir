@@ -148,20 +148,20 @@ details, and CI configuration.
 
 ## How it works
 
-Under the hood, a Rust binary built on
-[iced](https://github.com/iced-rs/iced) handles rendering and
-platform integration. Your Elixir app sends widget trees to the
-binary over stdin; the binary renders native windows and sends user
-events back over stdout.
+Under the hood, a renderer built on
+[iced](https://github.com/iced-rs/iced) handles window drawing and
+platform integration. Your Elixir code sends widget trees to the
+renderer over stdin; the renderer draws native windows and sends
+user events back over stdout.
 
-You don't need Rust to use toddy. The binary is a precompiled
-dependency, similar to how your app talks to a database without you
+You don't need Rust to use toddy. The renderer is a precompiled
+binary, similar to how your app talks to a database without you
 writing C. If you ever need custom native rendering, the
 [extension system](docs/extensions.md) lets you write Rust for just
 those parts.
 
 The same protocol works over a local pipe, an SSH connection, or
-any bidirectional byte stream -- your app doesn't need to change.
+any bidirectional byte stream -- your code doesn't need to change.
 See the [running guide](docs/running.md) for deployment options.
 
 ## Status
@@ -224,7 +224,7 @@ dependencies. To build from source, install a Rust toolchain via
 | | |
 |---|---|
 | Elixir SDK | [github.com/toddy-ui/toddy-elixir](https://github.com/toddy-ui/toddy-elixir) |
-| Rust binary | [github.com/toddy-ui/toddy](https://github.com/toddy-ui/toddy) |
+| Renderer | [github.com/toddy-ui/toddy](https://github.com/toddy-ui/toddy) |
 | Rust crate | [crates.io/crates/toddy](https://crates.io/crates/toddy) |
 
 ## License

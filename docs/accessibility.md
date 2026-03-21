@@ -32,7 +32,7 @@ support. Three pieces work together:
    to Elixir over the wire protocol.
 
 ```
-Elixir app                Renderer (iced)               Platform AT
+Host (Elixir)             Renderer (iced)               Platform AT
    |                         |                              |
    |--- UI tree (a11y) ----->|                              |
    |                         |-- operate() + TreeBuilder -->|
