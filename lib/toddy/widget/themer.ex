@@ -30,6 +30,16 @@ defmodule Toddy.Widget.Themer do
     children: []
   ]
 
+  @valid_option_keys ~w(theme a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new themer struct with the given theme."
   @spec new(id :: String.t(), theme_or_opts :: Toddy.Type.Theme.t() | [option()]) :: t()
   def new(id, opts) when is_binary(id) and is_list(opts) do

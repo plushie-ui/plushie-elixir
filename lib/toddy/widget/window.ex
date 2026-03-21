@@ -97,6 +97,14 @@ defmodule Toddy.Widget.Window do
     children: []
   ]
 
+  @valid_option_keys ~w(title size width height position min_size max_size maximized fullscreen visible resizable closeable minimizable decorations transparent blur level exit_on_close_request)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__, do: %{}
+
   @doc "Creates a new window struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
   def new(id, opts \\ []) when is_binary(id) do

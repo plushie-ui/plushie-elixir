@@ -69,6 +69,16 @@ defmodule Toddy.Widget.Overlay do
     children: []
   ]
 
+  @valid_option_keys ~w(position gap offset_x offset_y flip align width a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new overlay struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
   def new(id, opts \\ []) when is_binary(id) do

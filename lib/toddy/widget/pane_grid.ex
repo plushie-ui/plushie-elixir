@@ -76,6 +76,16 @@ defmodule Toddy.Widget.PaneGrid do
     children: []
   ]
 
+  @valid_option_keys ~w(panes spacing width height min_size divider_color divider_width leeway event_rate a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new pane grid struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
   def new(id, opts \\ []) when is_binary(id) do

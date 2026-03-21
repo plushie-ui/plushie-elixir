@@ -45,6 +45,16 @@ defmodule Toddy.Widget.Floating do
     children: []
   ]
 
+  @valid_option_keys ~w(translate_x translate_y scale width height a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new float struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
   def new(id, opts \\ []) when is_binary(id) do

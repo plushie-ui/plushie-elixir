@@ -103,6 +103,22 @@ defmodule Toddy.Widget.Container do
     children: []
   ]
 
+  @valid_option_keys ~w(padding width height max_width max_height center clip align_x align_y background color border shadow style a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{
+      padding: Toddy.Type.Padding,
+      border: Toddy.Type.Border,
+      shadow: Toddy.Type.Shadow,
+      style: Toddy.Type.StyleMap,
+      a11y: Toddy.Type.A11y
+    }
+  end
+
   @doc "Creates a new container struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
   def new(id, opts \\ []) when is_binary(id) do

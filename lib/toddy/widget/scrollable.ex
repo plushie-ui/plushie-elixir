@@ -81,6 +81,16 @@ defmodule Toddy.Widget.Scrollable do
     children: []
   ]
 
+  @valid_option_keys ~w(width height direction spacing scrollbar_width scrollbar_margin scroller_width anchor on_scroll auto_scroll scrollbar_color scroller_color a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new scrollable struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
   def new(id, opts \\ []) when is_binary(id) do

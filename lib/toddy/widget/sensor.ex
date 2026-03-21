@@ -39,6 +39,16 @@ defmodule Toddy.Widget.Sensor do
 
   defstruct [:id, :delay, :anticipate, :on_resize, :event_rate, :a11y, children: []]
 
+  @valid_option_keys ~w(delay anticipate on_resize event_rate a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new sensor struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
   def new(id, opts \\ []) when is_binary(id), do: %__MODULE__{id: id} |> with_options(opts)

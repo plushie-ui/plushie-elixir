@@ -134,6 +134,16 @@ defmodule Toddy.Widget.MouseArea do
     children: []
   ]
 
+  @valid_option_keys ~w(cursor on_press on_release on_right_press on_right_release on_middle_press on_middle_release on_double_click on_enter on_exit on_move on_scroll event_rate a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new mouse area struct."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
   def new(id, opts \\ []) when is_binary(id), do: %__MODULE__{id: id} |> with_options(opts)
