@@ -86,6 +86,16 @@ defmodule Toddy.Widget.Radio do
     :a11y
   ]
 
+  @valid_option_keys ~w(label group spacing width size text_size font line_height shaping wrapping style a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{font: Toddy.Type.Font, a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new radio struct with the given value, selected state, and optional keyword opts."
   @spec new(
           id :: String.t(),

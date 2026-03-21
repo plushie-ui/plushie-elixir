@@ -57,6 +57,16 @@ defmodule Toddy.Widget.Button do
 
   defstruct [:id, :label, :width, :height, :padding, :clip, :style, :disabled, :a11y]
 
+  @valid_option_keys ~w(width height padding clip style disabled enabled a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{padding: Toddy.Type.Padding, style: Toddy.Type.StyleMap, a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new button struct with the given label and optional keyword opts."
   @spec new(id :: String.t(), label :: String.t(), opts :: [option()]) :: t()
   def new(id, label, opts \\ []) when is_binary(id) and is_binary(label) do

@@ -112,6 +112,16 @@ defmodule Toddy.Widget.TextEditor do
     :a11y
   ]
 
+  @valid_option_keys ~w(content placeholder width height min_height max_height font size line_height padding wrapping ime_purpose highlight_syntax highlight_theme style key_bindings placeholder_color selection_color a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{font: Toddy.Type.Font, a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new text editor struct with the given id and optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
   def new(id, opts \\ []) when is_binary(id) do

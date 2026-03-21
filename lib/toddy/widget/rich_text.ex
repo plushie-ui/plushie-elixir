@@ -78,6 +78,16 @@ defmodule Toddy.Widget.RichText do
     :a11y
   ]
 
+  @valid_option_keys ~w(spans width height size font color line_height wrapping ellipsis a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{font: Toddy.Type.Font, a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new rich text struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
   def new(id, opts \\ []) when is_binary(id) do

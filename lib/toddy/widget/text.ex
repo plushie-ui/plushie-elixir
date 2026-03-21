@@ -86,6 +86,16 @@ defmodule Toddy.Widget.Text do
     :a11y
   ]
 
+  @valid_option_keys ~w(size color font width height line_height align_x align_y wrapping ellipsis shaping style a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{font: Toddy.Type.Font, a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new text widget struct with the given content and optional keyword opts."
   @spec new(id :: String.t(), content :: String.t(), opts :: [option()]) :: t()
   def new(id, content, opts \\ []) when is_binary(id) and is_binary(content) do

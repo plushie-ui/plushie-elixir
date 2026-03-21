@@ -62,6 +62,16 @@ defmodule Toddy.Widget.QrCode do
     :a11y
   ]
 
+  @valid_option_keys ~w(cell_size cell_color background_color error_correction alt description a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new QR code struct with the given data string and optional keyword opts."
   @spec new(id :: String.t(), data :: String.t(), opts :: [option()]) :: t()
   def new(id, data, opts \\ []) when is_binary(id) and is_binary(data) do

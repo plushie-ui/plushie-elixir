@@ -64,6 +64,16 @@ defmodule Toddy.Widget.Tooltip do
     children: []
   ]
 
+  @valid_option_keys ~w(position gap padding snap_within_viewport delay style a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{style: Toddy.Type.StyleMap, a11y: Toddy.Type.A11y}
+  end
+
   @doc """
   Creates a new tooltip struct.
 

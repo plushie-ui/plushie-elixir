@@ -84,6 +84,16 @@ defmodule Toddy.Widget.Toggler do
     :a11y
   ]
 
+  @valid_option_keys ~w(label spacing width size text_size font line_height shaping wrapping text_alignment style disabled a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{font: Toddy.Type.Font, a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new toggler struct with the given toggle state and optional keyword opts."
   @spec new(id :: String.t(), is_toggled :: boolean(), opts :: [option()]) :: t()
   def new(id, is_toggled, opts \\ []) when is_binary(id) and is_boolean(is_toggled) do

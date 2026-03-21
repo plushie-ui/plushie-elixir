@@ -67,6 +67,16 @@ defmodule Toddy.Widget.Svg do
     :a11y
   ]
 
+  @valid_option_keys ~w(width height content_fit rotation opacity color alt description decorative a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new SVG struct with the given source path and optional keyword opts."
   @spec new(id :: String.t(), source :: String.t(), opts :: [option()]) :: t()
   def new(id, source, opts \\ []) when is_binary(id) and is_binary(source) do

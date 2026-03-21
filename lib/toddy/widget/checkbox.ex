@@ -85,6 +85,16 @@ defmodule Toddy.Widget.Checkbox do
     :a11y
   ]
 
+  @valid_option_keys ~w(label spacing width size text_size font line_height shaping wrapping style icon disabled a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{font: Toddy.Type.Font, style: Toddy.Type.StyleMap, a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new checkbox struct with the given label, toggle state, and optional keyword opts."
   @spec new(id :: String.t(), label :: String.t(), is_toggled :: boolean(), opts :: [option()]) ::
           t()

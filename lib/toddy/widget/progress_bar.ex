@@ -49,6 +49,16 @@ defmodule Toddy.Widget.ProgressBar do
 
   defstruct [:id, :range, :value, :width, :height, :style, :vertical, :label, :a11y]
 
+  @valid_option_keys ~w(width height style vertical label a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{style: Toddy.Type.StyleMap, a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new progress bar struct with the given range, value, and optional keyword opts."
   @spec new(
           id :: String.t(),

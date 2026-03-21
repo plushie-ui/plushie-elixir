@@ -84,6 +84,16 @@ defmodule Toddy.Widget.Slider do
     :a11y
   ]
 
+  @valid_option_keys ~w(step shift_step default width height circular_handle rail_color rail_width style label event_rate a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new slider struct with the given range, value, and optional keyword opts."
   @spec new(
           id :: String.t(),

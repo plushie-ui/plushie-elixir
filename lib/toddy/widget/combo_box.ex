@@ -109,6 +109,16 @@ defmodule Toddy.Widget.ComboBox do
     :a11y
   ]
 
+  @valid_option_keys ~w(selected value placeholder width padding size font line_height menu_height icon on_option_hovered on_open on_close shaping ellipsis menu_style style a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{padding: Toddy.Type.Padding, font: Toddy.Type.Font, a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new combo box struct with the given options and optional keyword opts."
   @spec new(id :: String.t(), options :: [String.t()], opts :: [option()]) :: t()
   def new(id, options, opts \\ []) when is_binary(id) and is_list(options) do

@@ -39,6 +39,16 @@ defmodule Toddy.Widget.Rule do
 
   defstruct [:id, :height, :width, :direction, :style, :a11y]
 
+  @valid_option_keys ~w(height width direction style a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{style: Toddy.Type.StyleMap, a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new rule struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
   def new(id, opts \\ []) when is_binary(id) do

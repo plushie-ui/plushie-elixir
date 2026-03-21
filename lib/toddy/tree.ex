@@ -80,6 +80,18 @@ defmodule Toddy.Tree do
     }
   end
 
+  def normalize({:__widget_prop__, key, _value}) do
+    raise ArgumentError,
+          "found a DSL prop declaration (#{inspect(key)}) in the widget tree. " <>
+            "Props should be declared inside a container's do-block, not passed as children."
+  end
+
+  def normalize({:__canvas_meta__, type, _value}) do
+    raise ArgumentError,
+          "found a canvas metadata declaration (#{inspect(type)}) in the widget tree. " <>
+            "Canvas metadata (like interactive) should be inside a group block."
+  end
+
   def normalize(%module{}) when module in @canvas_shape_structs do
     short_name = module |> Module.split() |> List.last()
 
@@ -98,6 +110,18 @@ defmodule Toddy.Tree do
 
   # Private scope-aware normalize. `scope` is the prefix string to prepend
   # to children's IDs (e.g. "sidebar/form"). Empty string means no scope.
+  defp normalize_with_scope({:__widget_prop__, key, _value}, _scope) do
+    raise ArgumentError,
+          "found a DSL prop declaration (#{inspect(key)}) in the widget tree. " <>
+            "Props should be declared inside a container's do-block, not passed as children."
+  end
+
+  defp normalize_with_scope({:__canvas_meta__, type, _value}, _scope) do
+    raise ArgumentError,
+          "found a canvas metadata declaration (#{inspect(type)}) in the widget tree. " <>
+            "Canvas metadata (like interactive) should be inside a group block."
+  end
+
   defp normalize_with_scope(%module{}, _scope) when module in @canvas_shape_structs do
     short_name = module |> Module.split() |> List.last()
 

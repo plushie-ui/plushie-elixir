@@ -73,6 +73,16 @@ defmodule Toddy.Widget.Markdown do
     :a11y
   ]
 
+  @valid_option_keys ~w(width text_size h1_size h2_size h3_size code_size spacing link_color code_theme a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new markdown struct with the given content and optional keyword opts."
   @spec new(id :: String.t(), content :: String.t(), opts :: [option()]) :: t()
   def new(id, content, opts \\ []) when is_binary(id) and is_binary(content) do

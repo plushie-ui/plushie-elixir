@@ -109,6 +109,16 @@ defmodule Toddy.Widget.TextInput do
     :a11y
   ]
 
+  @valid_option_keys ~w(placeholder padding width size font line_height align_x icon on_submit on_paste secure ime_purpose style placeholder_color selection_color a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{padding: Toddy.Type.Padding, font: Toddy.Type.Font, a11y: Toddy.Type.A11y}
+  end
+
   @doc "Creates a new text input struct with the given value and optional keyword opts."
   @spec new(id :: String.t(), value :: String.t(), opts :: [option()]) :: t()
   def new(id, value, opts \\ []) when is_binary(id) and is_binary(value) do

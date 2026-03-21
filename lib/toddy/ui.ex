@@ -170,19 +170,6 @@ defmodule Toddy.UI do
       Toddy.UI.find(tree, "my_button")
   """
 
-  # Struct modules for option keys shared across leaf widget do-blocks.
-  # When a do-block key matches one of these, and the value is itself a
-  # do-block, interpret_block/2 will recursively interpret the inner
-  # block and emit a Module.from_opts(...) call in the generated AST.
-  @option_type_mapping %{
-    padding: Toddy.Type.Padding,
-    a11y: Toddy.Type.A11y,
-    style: Toddy.Type.StyleMap,
-    border: Toddy.Type.Border,
-    shadow: Toddy.Type.Shadow,
-    font: Toddy.Type.Font
-  }
-
   # Container widget modules and their display names, used to build the
   # reverse map from option key -> owning containers for compile-time
   # validation in container_scope.
@@ -203,10 +190,15 @@ defmodule Toddy.UI do
     {Toddy.Widget.Themer, "themer"},
     {Toddy.Widget.PaneGrid, "pane_grid"},
     {Toddy.Widget.Table, "table"},
+    {Toddy.Widget.Tooltip, "tooltip"},
+    {Toddy.Widget.Space, "space"},
+    {Toddy.Widget.Rule, "rule"},
     {Toddy.Widget.Window, "window"}
   ]
 
   @all_container_option_owners (for {mod, name} <- @container_modules,
+                                    Code.ensure_loaded?(mod) and
+                                      function_exported?(mod, :__option_keys__, 0),
                                     key <- mod.__option_keys__(),
                                     reduce: %{} do
                                   acc -> Map.update(acc, key, [name], &[name | &1])
@@ -1282,19 +1274,48 @@ defmodule Toddy.UI do
 
   - `:width` -- `:fill`, `:shrink`, or number
   - `:height` -- `:fill`, `:shrink`, or number
+
+  ## Example
+
+      space(width: :fill)
+
+      space do
+        width :fill
+      end
   """
-  defmacro space(opts \\ []) do
+  defmacro space(opts_or_do \\ []) do
     caller_mod = __CALLER__.module
     caller_line = __CALLER__.line
+    option_keys = Toddy.Widget.Space.__option_keys__()
+    option_types = Toddy.Widget.Space.__option_types__()
 
-    quote do
-      Toddy.UI.__build_container__(
-        Toddy.Widget.Space,
-        nil,
-        unquote(opts),
-        [],
-        unquote(compile_auto_id(caller_mod, caller_line))
-      )
+    case opts_or_do do
+      [do: block] ->
+        block = container_scope(block, option_keys, option_types, "space")
+        exprs = block_to_exprs(block)
+
+        quote do
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Space,
+            nil,
+            [],
+            items,
+            unquote(compile_auto_id(caller_mod, caller_line))
+          )
+        end
+
+      opts ->
+        quote do
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Space,
+            nil,
+            unquote(opts),
+            [],
+            unquote(compile_auto_id(caller_mod, caller_line))
+          )
+        end
     end
   end
 
@@ -1318,7 +1339,10 @@ defmodule Toddy.UI do
   defmacro button(id, label, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block, @option_type_mapping)
+        option_keys = Toddy.Widget.Button.__option_keys__()
+        option_types = Toddy.Widget.Button.__option_types__()
+        pairs = interpret_block(block, option_types)
+        validate_option_keys!(pairs, option_keys, "button", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.UI.__build_button__(unquote(id), unquote(label), unquote(opts_ast))
 
@@ -1348,7 +1372,10 @@ defmodule Toddy.UI do
   defmacro text_input(id, value, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block, @option_type_mapping)
+        option_keys = Toddy.Widget.TextInput.__option_keys__()
+        option_types = Toddy.Widget.TextInput.__option_types__()
+        pairs = interpret_block(block, option_types)
+        validate_option_keys!(pairs, option_keys, "text_input", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.UI.__build_text_input__(unquote(id), unquote(value), unquote(opts_ast))
 
@@ -1378,7 +1405,10 @@ defmodule Toddy.UI do
   defmacro checkbox(id, checked, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block, @option_type_mapping)
+        option_keys = Toddy.Widget.Checkbox.__option_keys__()
+        option_types = Toddy.Widget.Checkbox.__option_types__()
+        pairs = interpret_block(block, option_types)
+        validate_option_keys!(pairs, option_keys, "checkbox", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.UI.__build_checkbox__(unquote(id), unquote(checked), unquote(opts_ast))
 
@@ -1445,7 +1475,10 @@ defmodule Toddy.UI do
 
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block, @option_type_mapping)
+        option_keys = Toddy.Widget.Text.__option_keys__()
+        option_types = Toddy.Widget.Text.__option_types__()
+        pairs = interpret_block(block, option_types)
+        validate_option_keys!(pairs, option_keys, "text", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
@@ -1467,19 +1500,45 @@ defmodule Toddy.UI do
   ## Example
 
       rule(width: :fill)
+
+      rule do
+        direction :vertical
+        style :weak
+      end
   """
-  defmacro rule(opts \\ []) do
+  defmacro rule(opts_or_do \\ []) do
     caller_mod = __CALLER__.module
     caller_line = __CALLER__.line
+    option_keys = Toddy.Widget.Rule.__option_keys__()
+    option_types = Toddy.Widget.Rule.__option_types__()
 
-    quote do
-      Toddy.UI.__build_container__(
-        Toddy.Widget.Rule,
-        nil,
-        unquote(opts),
-        [],
-        unquote(compile_auto_id(caller_mod, caller_line))
-      )
+    case opts_or_do do
+      [do: block] ->
+        block = container_scope(block, option_keys, option_types, "rule")
+        exprs = block_to_exprs(block)
+
+        quote do
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Rule,
+            nil,
+            [],
+            items,
+            unquote(compile_auto_id(caller_mod, caller_line))
+          )
+        end
+
+      opts ->
+        quote do
+          Toddy.UI.__build_container__(
+            Toddy.Widget.Rule,
+            nil,
+            unquote(opts),
+            [],
+            unquote(compile_auto_id(caller_mod, caller_line))
+          )
+        end
     end
   end
 
@@ -1528,7 +1587,10 @@ defmodule Toddy.UI do
   defmacro progress_bar(id, range, value, opts_or_do) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block, @option_type_mapping)
+        option_keys = Toddy.Widget.ProgressBar.__option_keys__()
+        option_types = Toddy.Widget.ProgressBar.__option_types__()
+        pairs = interpret_block(block, option_types)
+        validate_option_keys!(pairs, option_keys, "progress_bar", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
@@ -1569,7 +1631,10 @@ defmodule Toddy.UI do
   defmacro toggler(id, is_toggled, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block, @option_type_mapping)
+        option_keys = Toddy.Widget.Toggler.__option_keys__()
+        option_types = Toddy.Widget.Toggler.__option_types__()
+        pairs = interpret_block(block, option_types)
+        validate_option_keys!(pairs, option_keys, "toggler", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.UI.__build_toggler__(unquote(id), unquote(is_toggled), unquote(opts_ast))
 
@@ -1602,7 +1667,10 @@ defmodule Toddy.UI do
   defmacro radio(id, value, selected, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block, @option_type_mapping)
+        option_keys = Toddy.Widget.Radio.__option_keys__()
+        option_types = Toddy.Widget.Radio.__option_types__()
+        pairs = interpret_block(block, option_types)
+        validate_option_keys!(pairs, option_keys, "radio", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
@@ -1652,7 +1720,10 @@ defmodule Toddy.UI do
   defmacro slider(id, range, value, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block, @option_type_mapping)
+        option_keys = Toddy.Widget.Slider.__option_keys__()
+        option_types = Toddy.Widget.Slider.__option_types__()
+        pairs = interpret_block(block, option_types)
+        validate_option_keys!(pairs, option_keys, "slider", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
@@ -1700,7 +1771,10 @@ defmodule Toddy.UI do
   defmacro vertical_slider(id, range, value, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block, @option_type_mapping)
+        option_keys = Toddy.Widget.VerticalSlider.__option_keys__()
+        option_types = Toddy.Widget.VerticalSlider.__option_types__()
+        pairs = interpret_block(block, option_types)
+        validate_option_keys!(pairs, option_keys, "vertical_slider", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
@@ -1745,7 +1819,10 @@ defmodule Toddy.UI do
   defmacro pick_list(id, options, selected, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block, @option_type_mapping)
+        option_keys = Toddy.Widget.PickList.__option_keys__()
+        option_types = Toddy.Widget.PickList.__option_types__()
+        pairs = interpret_block(block, option_types)
+        validate_option_keys!(pairs, option_keys, "pick_list", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
@@ -1790,7 +1867,10 @@ defmodule Toddy.UI do
   defmacro combo_box(id, options, value, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block, @option_type_mapping)
+        option_keys = Toddy.Widget.ComboBox.__option_keys__()
+        option_types = Toddy.Widget.ComboBox.__option_types__()
+        pairs = interpret_block(block, option_types)
+        validate_option_keys!(pairs, option_keys, "combo_box", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
@@ -1836,7 +1916,10 @@ defmodule Toddy.UI do
   defmacro text_editor(id, content, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block, @option_type_mapping)
+        option_keys = Toddy.Widget.TextEditor.__option_keys__()
+        option_types = Toddy.Widget.TextEditor.__option_types__()
+        pairs = interpret_block(block, option_types)
+        validate_option_keys!(pairs, option_keys, "text_editor", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.UI.__build_text_editor__(unquote(id), unquote(content), unquote(opts_ast))
 
@@ -1870,7 +1953,10 @@ defmodule Toddy.UI do
   defmacro image(id, source, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block, @option_type_mapping)
+        option_keys = Toddy.Widget.Image.__option_keys__()
+        option_types = Toddy.Widget.Image.__option_types__()
+        pairs = interpret_block(block, option_types)
+        validate_option_keys!(pairs, option_keys, "image", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.UI.__build_image__(unquote(id), unquote(source), unquote(opts_ast))
 
@@ -1899,7 +1985,10 @@ defmodule Toddy.UI do
   defmacro svg(id, source, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block, @option_type_mapping)
+        option_keys = Toddy.Widget.Svg.__option_keys__()
+        option_types = Toddy.Widget.Svg.__option_types__()
+        pairs = interpret_block(block, option_types)
+        validate_option_keys!(pairs, option_keys, "svg", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.UI.__build_svg__(unquote(id), unquote(source), unquote(opts_ast))
 
@@ -1951,7 +2040,10 @@ defmodule Toddy.UI do
   defmacro markdown(id, content, opts_or_do) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block, @option_type_mapping)
+        option_keys = Toddy.Widget.Markdown.__option_keys__()
+        option_types = Toddy.Widget.Markdown.__option_types__()
+        pairs = interpret_block(block, option_types)
+        validate_option_keys!(pairs, option_keys, "markdown", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
@@ -1988,13 +2080,17 @@ defmodule Toddy.UI do
       end
   """
   defmacro tooltip(id, tip_or_do) do
+    option_keys = Toddy.Widget.Tooltip.__option_keys__()
+    option_types = Toddy.Widget.Tooltip.__option_types__()
+
     case tip_or_do do
       [do: block] ->
+        block = container_scope(block, option_keys, option_types, "tooltip")
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Toddy.UI.__build_container__(Toddy.Widget.Tooltip, unquote(id), [], children, nil)
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Toddy.UI.__build_container__(Toddy.Widget.Tooltip, unquote(id), [], items, nil)
         end
 
       tip when is_binary(tip) ->
@@ -2012,18 +2108,22 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro tooltip(id, tip, opts_or_do) do
+    option_keys = Toddy.Widget.Tooltip.__option_keys__()
+    option_types = Toddy.Widget.Tooltip.__option_types__()
+
     case opts_or_do do
       [do: block] ->
+        block = container_scope(block, option_keys, option_types, "tooltip")
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
           Toddy.UI.__build_container__(
             Toddy.Widget.Tooltip,
             unquote(id),
             [tip: unquote(tip)],
-            children,
+            items,
             nil
           )
         end
@@ -2043,16 +2143,19 @@ defmodule Toddy.UI do
 
   @doc false
   defmacro tooltip(id, tip, opts, do: block) do
+    option_keys = Toddy.Widget.Tooltip.__option_keys__()
+    option_types = Toddy.Widget.Tooltip.__option_types__()
+    block = container_scope(block, option_keys, option_types, "tooltip")
     exprs = block_to_exprs(block)
 
     quote do
-      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
       Toddy.UI.__build_container__(
         Toddy.Widget.Tooltip,
         unquote(id),
         [tip: unquote(tip)] ++ unquote(opts),
-        children,
+        items,
         nil
       )
     end
@@ -2220,7 +2323,10 @@ defmodule Toddy.UI do
   defmacro rich_text(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block, @option_type_mapping)
+        option_keys = Toddy.Widget.RichText.__option_keys__()
+        option_types = Toddy.Widget.RichText.__option_types__()
+        pairs = interpret_block(block, option_types)
+        validate_option_keys!(pairs, option_keys, "rich_text", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.UI.__build_rich_text__(unquote(id), unquote(opts_ast))
 
@@ -2635,7 +2741,10 @@ defmodule Toddy.UI do
   defmacro qr_code(id, data, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block, @option_type_mapping)
+        option_keys = Toddy.Widget.QrCode.__option_keys__()
+        option_types = Toddy.Widget.QrCode.__option_types__()
+        pairs = interpret_block(block, option_types)
+        validate_option_keys!(pairs, option_keys, "qr_code", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Toddy.UI.__build_qr_code__(unquote(id), unquote(data), unquote(opts_ast))
 
@@ -2657,12 +2766,20 @@ defmodule Toddy.UI do
 
   @interactive_keys ~w(on_click on_hover draggable drag_axis drag_bounds cursor hover_style pressed_style tooltip a11y hit_rect)a
 
-  @widget_calls ~w(button text_input checkbox toggler radio slider
-    vertical_slider pick_list combo_box text_editor markdown
-    progress_bar rich_text qr_code column row container window
-    scrollable stack grid keyed_column responsive pin floating
-    mouse_area sensor themer pane_grid table tooltip space rule
-    overlay canvas)a
+  @leaf_widget_names ~w(button text_input checkbox toggler radio slider
+    vertical_slider pick_list combo_box text_editor image svg rich_text
+    qr_code)a
+
+  @display_widget_names ~w(text markdown progress_bar)a
+
+  @container_widget_names Enum.map(@container_modules, fn {_mod, name} -> String.to_atom(name) end)
+
+  @widget_calls @leaf_widget_names ++ @display_widget_names ++ @container_widget_names ++ [:canvas]
+
+  for key <- @all_container_option_names, key in @widget_calls do
+    raise CompileError,
+      description: "option key #{inspect(key)} collides with widget macro name"
+  end
 
   @canvas_shape_calls ~w(rect circle line path group)a
 
@@ -2952,6 +3069,18 @@ defmodule Toddy.UI do
   # Helper to build {:__widget_prop__, name, value} AST
   defp quote_prop_tuple(name, value, _meta) do
     {:{}, [], [:__widget_prop__, name, value]}
+  end
+
+  # Compile-time validation: check that all do-block keys belong to the widget.
+  defp validate_option_keys!(pairs, option_keys, widget_name, caller) do
+    for {key, _} <- pairs, key not in option_keys do
+      raise CompileError,
+        line: caller.line,
+        file: caller.file,
+        description:
+          "#{key} is not a valid option for #{widget_name}. " <>
+            "Valid options: #{inspect(option_keys)}"
+    end
   end
 
   # Error helper for wrong-container options

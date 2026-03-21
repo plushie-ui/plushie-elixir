@@ -405,12 +405,22 @@ defmodule Toddy.Extension do
     end
   end
 
+  @known_type_mappings %{
+    a11y: Toddy.Type.A11y,
+    padding: Toddy.Type.Padding,
+    style: Toddy.Type.StyleMap,
+    border: Toddy.Type.Border,
+    shadow: Toddy.Type.Shadow,
+    font: Toddy.Type.Font
+  }
+
   @doc false
   def generate_struct_widget(module, type_string, container, props) do
     struct_def = generate_struct_and_types(props, container)
     new_fn = generate_struct_new(container)
     with_options_fn = generate_with_options(props)
     setters = generate_setters(props)
+    dsl_fns = generate_dsl_buildable(props)
     build_fn = generate_build()
     protocol_impl = generate_widget_protocol(module, type_string, container, props)
 
@@ -419,6 +429,7 @@ defmodule Toddy.Extension do
       unquote(new_fn)
       unquote(with_options_fn)
       unquote_splicing(setters)
+      unquote(dsl_fns)
       unquote(build_fn)
       unquote(protocol_impl)
     end
@@ -649,6 +660,32 @@ defmodule Toddy.Extension do
       def with_options(%__MODULE__{} = widget, opts) do
         Enum.reduce(opts, widget, unquote(reducer_fn))
       end
+    end
+  end
+
+  defp generate_dsl_buildable(props) do
+    prop_names = Enum.map(props, fn {name, _type, _opts} -> name end)
+
+    field_types_map =
+      for {name, _type, _opts} <- props,
+          mod = Map.get(@known_type_mappings, name),
+          into: %{},
+          do: {name, mod}
+
+    quote do
+      @behaviour Toddy.DSL.Buildable
+
+      @impl Toddy.DSL.Buildable
+      def from_opts(opts), do: with_options(%__MODULE__{id: Keyword.fetch!(opts, :id)}, opts)
+
+      @impl Toddy.DSL.Buildable
+      def __field_keys__, do: unquote(prop_names)
+
+      @impl Toddy.DSL.Buildable
+      def __field_types__, do: unquote(Macro.escape(field_types_map))
+
+      def __option_keys__, do: unquote(prop_names)
+      def __option_types__, do: unquote(Macro.escape(field_types_map))
     end
   end
 

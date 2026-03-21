@@ -86,6 +86,16 @@ defmodule Toddy.Widget.Image do
     :a11y
   ]
 
+  @valid_option_keys ~w(width height content_fit rotation opacity border_radius filter_method expand scale crop alt description decorative a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{a11y: Toddy.Type.A11y}
+  end
+
   @doc """
   Creates a new image struct with the given source and optional keyword opts.
 
