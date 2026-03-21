@@ -11,7 +11,7 @@ Initial public release.
 ### Added
 
 - **Elm architecture** -- `init/1`, `update/2`, `view/1`, optional
-  `subscribe/1` callbacks via the `Toddy.App` behaviour.
+  `subscribe/1` callbacks via the `Plushie.App` behaviour.
 - **38 built-in widget types** -- layout (column, row, container,
   scrollable, stack, grid, pane_grid), display (text, rich_text,
   markdown, image, svg, progress_bar, qr_code, rule, canvas),
@@ -22,7 +22,7 @@ Initial public release.
 - **22 built-in themes** -- light, dark, dracula, nord, solarized,
   gruvbox, catppuccin, tokyo night, kanagawa, moonfly, nightfly,
   oxocarbon, ferra. Custom palettes and per-widget style overrides
-  via `Toddy.Type.StyleMap`.
+  via `Plushie.Type.StyleMap`.
 - **Multi-window** -- declare window nodes in the widget tree; the
   framework manages open/close/update automatically.
 - **Platform effects** -- native file dialogs, clipboard (text, HTML,
@@ -43,19 +43,19 @@ Initial public release.
   headless (real rendering via tiny-skia, screenshots), windowed
   (real GPU windows). Same API across all three.
 - **Extension system** -- pure Elixir composite widgets or Rust-backed
-  native widgets via `Toddy.Extension` macro DSL.
+  native widgets via `Plushie.Extension` macro DSL.
 - **Live reload** -- file watching in dev mode, enabled by default
-  via `mix toddy.gui`. State preserved across reloads.
-- **Daemon mode** -- `Toddy.start_link(MyApp, daemon: true)` keeps
+  via `mix plushie.gui`. State preserved across reloads.
+- **Daemon mode** -- `Plushie.start_link(MyApp, daemon: true)` keeps
   the process running after the last window closes.
-- **Precompiled binaries** -- `mix toddy.download` fetches
+- **Precompiled binaries** -- `mix plushie.download` fetches
   platform-specific binaries with mandatory SHA256 verification.
-- **Build from source** -- `mix toddy.build` compiles the toddy
+- **Build from source** -- `mix plushie.build` compiles the plushie
   binary, with optional extension workspace generation.
-- **State helpers** -- `Toddy.State` (revision tracking),
-  `Toddy.Undo` (undo/redo), `Toddy.Selection` (single/multi/range),
-  `Toddy.Route` (navigation), `Toddy.Data` (query pipeline),
-  `Toddy.Animation` (easing functions).
+- **State helpers** -- `Plushie.State` (revision tracking),
+  `Plushie.Undo` (undo/redo), `Plushie.Selection` (single/multi/range),
+  `Plushie.Route` (navigation), `Plushie.Data` (query pipeline),
+  `Plushie.Animation` (easing functions).
 - **Canvas drawing** -- shape primitives (rect, circle, arc, path,
   text, image) with layers, gradients, opacity, and caching.
 - **8 example apps** -- Counter, Todo, Notes, Clock, Shortcuts,

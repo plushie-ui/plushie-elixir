@@ -1,13 +1,13 @@
 # Layout
 
-Toddy's layout model mirrors iced's. Understanding it is essential for
+Plushie's layout model mirrors iced's. Understanding it is essential for
 building UIs that size and position correctly.
 
 ## Length
 
 Length controls how a widget claims space along an axis.
 
-| Toddy value | Iced equivalent | Meaning |
+| Plushie value | Iced equivalent | Meaning |
 |---|---|---|
 | `:fill` | `Length::Fill` | Take all remaining space |
 | `{:fill_portion, n}` | `Length::FillPortion(n)` | Proportional share of remaining space |
@@ -41,7 +41,7 @@ accommodate their children.
 
 Padding is the space between a widget's boundary and its content.
 
-| Toddy value | Meaning |
+| Plushie value | Meaning |
 |---|---|
 | `10` | Uniform: 10px on all sides |
 | `{10, 20}` | Axis: 10px vertical, 20px horizontal |
@@ -136,7 +136,7 @@ end
 ```
 
 Props: `spacing`, `padding`, `width`, `height`, `align_y`, `wrap` (new
-in toddy-iced -- wraps children to next line when they overflow).
+in plushie-iced -- wraps children to next line when they overflow).
 
 ### container
 
@@ -199,7 +199,7 @@ end
 
 ### grid
 
-Arranges children in a grid layout (new in toddy-iced).
+Arranges children in a grid layout (new in plushie-iced).
 
 ```elixir
 grid "gallery", columns: 3, spacing: 8 do

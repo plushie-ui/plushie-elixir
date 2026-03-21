@@ -1,17 +1,17 @@
 # App behaviour
 
-`Toddy.App` is the only behaviour an app developer implements. It follows the
+`Plushie.App` is the only behaviour an app developer implements. It follows the
 Elm architecture: model, update, view.
 
 ## Callbacks
 
 ```elixir
-@callback init(opts :: keyword()) :: model | {model, Toddy.Command.t()}
-@callback update(model, event) :: model | {model, Toddy.Command.t()}
-@callback view(model) :: Toddy.Widget.ui_node()
+@callback init(opts :: keyword()) :: model | {model, Plushie.Command.t()}
+@callback update(model, event) :: model | {model, Plushie.Command.t()}
+@callback view(model) :: Plushie.Widget.ui_node()
 
 # Optional:
-@callback subscribe(model) :: [Toddy.Subscription.t()]
+@callback subscribe(model) :: [Plushie.Subscription.t()]
 @callback handle_renderer_exit(model, exit_reason) :: model
 @callback window_config(model) :: map()
 @callback settings() :: keyword()
@@ -34,7 +34,7 @@ end
 # Or with a command:
 def init(_opts) do
   model = %{todos: [], loading: true}
-  {model, Toddy.Command.async(fn -> load_todos_from_disk() end, :todos_loaded)}
+  {model, Plushie.Command.async(fn -> load_todos_from_disk() end, :todos_loaded)}
 end
 ```
 
@@ -50,7 +50,7 @@ Receives the current model and an event, returns the next model -- optionally
 with commands.
 
 ```elixir
-alias Toddy.Event.Widget
+alias Plushie.Event.Widget
 
 def update(model, %Widget{type: :click, id: "add_todo"}) do
   new_todo = %{id: System.unique_integer(), text: model.input, done: false}
@@ -65,7 +65,7 @@ end
 def update(model, %Widget{type: :submit, id: "todo_field"}) do
   new_todo = %{id: System.unique_integer(), text: model.input, done: false}
   model = %{model | todos: [new_todo | model.todos], input: ""}
-  {model, Toddy.Command.focus("todo_field")}
+  {model, Plushie.Command.focus("todo_field")}
 end
 
 def update(model, _event), do: model
@@ -75,7 +75,7 @@ Return a bare model when no side effects are needed. Return `{model, command}`
 when you need async work, widget operations, window management, or timers.
 See [commands.md](commands.md) for the full command API.
 
-Events are structs under `Toddy.Event.*`. See [events.md](events.md) for
+Events are structs under `Plushie.Event.*`. See [events.md](events.md) for
 the full event taxonomy. Common families:
 
 - `%Widget{type: :click, id: id}` -- button press
@@ -97,7 +97,7 @@ Receives the current model, returns a UI tree.
 
 ```elixir
 def view(model) do
-  import Toddy.UI
+  import Plushie.UI
 
   window "main", title: "Todos" do
     column padding: 16, spacing: 8 do
@@ -121,7 +121,7 @@ The view function is called after every update. It must be a pure function
 of the model. The runtime diffs the returned tree against the previous one
 and sends only the changes to the renderer.
 
-UI trees are plain maps. The `Toddy.UI`
+UI trees are plain maps. The `Plushie.UI`
 module provides builder functions and a `do` block syntax for composition,
 but you can also build maps directly if preferred.
 
@@ -163,10 +163,10 @@ subscriptions automatically.
 
 ```elixir
 def subscribe(model) do
-  subs = [Toddy.Subscription.on_key_press(:key_event)]
+  subs = [Plushie.Subscription.on_key_press(:key_event)]
 
   if model.auto_refresh do
-    [Toddy.Subscription.every(5000, :refresh) | subs]
+    [Plushie.Subscription.every(5000, :refresh) | subs]
   else
     subs
   end
@@ -241,17 +241,17 @@ Default: `[]` (renderer uses its own defaults).
 
 ```elixir
 # From IEx or application code:
-{:ok, pid} = Toddy.start_link(MyApp)
-{:ok, pid} = Toddy.start_link(MyApp, name: :my_app, binary: "/path/to/toddy")
+{:ok, pid} = Plushie.start_link(MyApp)
+{:ok, pid} = Plushie.start_link(MyApp, name: :my_app, binary: "/path/to/plushie")
 
 # Under a supervisor:
 children = [
-  {Toddy, app: MyApp, name: :my_app}
+  {Plushie, app: MyApp, name: :my_app}
 ]
 
 # From mix:
-# mix toddy.gui MyApp
-# mix toddy.gui MyApp --release
+# mix plushie.gui MyApp
+# mix plushie.gui MyApp --release
 ```
 
 ## Testing
@@ -272,7 +272,7 @@ test "view renders todo list" do
   model = %{todos: [%{id: 1, text: "Buy milk", done: false}], input: "", filter: :all}
   tree = MyApp.view(model)
 
-  assert Toddy.Tree.find(tree, "todo:1")
+  assert Plushie.Tree.find(tree, "todo:1")
 end
 ```
 
@@ -281,18 +281,18 @@ test infrastructure is needed. The renderer is not involved.
 
 ## Configuration
 
-Application-level configuration is set via `config :toddy, key, value` in
+Application-level configuration is set via `config :plushie, key, value` in
 your `config.exs` (or per-environment config files).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `:test_backend` | `:pooled_mock \| :headless \| :windowed` | `:pooled_mock` | Test backend used by `Toddy.Test.Case`. Override per-run with `TODDY_TEST_BACKEND` env var. |
+| `:test_backend` | `:pooled_mock \| :headless \| :windowed` | `:pooled_mock` | Test backend used by `Plushie.Test.Case`. Override per-run with `PLUSHIE_TEST_BACKEND` env var. |
 | `:test_format` | `:json \| :msgpack` | `:msgpack` | Wire format for test sessions. Set to `:json` for easier debugging. |
 | `:extension_config` | `map()` | `%{}` | Configuration map passed to widget extensions at runtime. |
 
 ## Multi-window
 
-Toddy supports multiple windows driven declaratively from `view/1`. Windows
+Plushie supports multiple windows driven declaratively from `view/1`. Windows
 are nodes in the tree -- if a window node is present, the window is open; if
 it disappears, the window closes.
 
@@ -303,7 +303,7 @@ single-window apps):
 
 ```elixir
 def view(model) do
-  import Toddy.UI
+  import Plushie.UI
 
   windows = [
     window "main", title: "My App" do
@@ -365,7 +365,7 @@ after creation, use window commands:
 
 ```elixir
 def update(model, %Widget{type: :click, id: "go_fullscreen"}) do
-  {model, Toddy.Command.set_window_mode("main", :fullscreen)}
+  {model, Plushie.Command.set_window_mode("main", :fullscreen)}
 end
 ```
 
@@ -383,7 +383,7 @@ def update(model, %Window{type: :close_requested, window_id: "main"}) do
   if model.unsaved_changes do
     %{model | confirm_exit: true}
   else
-    {model, Toddy.Command.close_window("main")}
+    {model, Plushie.Command.close_window("main")}
   end
 end
 
@@ -417,7 +417,7 @@ end
 If `close_requested` is not handled (falls through to the catch-all), the
 window stays open. This prevents accidental closes. To close a window
 programmatically, remove it from the tree (return `view/1` without it) or
-use `Toddy.Command.close_window(id)`.
+use `Plushie.Command.close_window(id)`.
 
 ### Opening windows declaratively
 
@@ -431,7 +431,7 @@ def update(model, %Widget{type: :click, id: "open_settings"}) do
 end
 
 def view(model) do
-  import Toddy.UI
+  import Plushie.UI
 
   windows = [
     window "main", title: "My App" do
@@ -476,7 +476,7 @@ unfocused windows, track the active window for keyboard shortcuts).
 
 ```elixir
 def view(model) do
-  import Toddy.UI
+  import Plushie.UI
 
   main = window "main", title: "App" do
     main_content(model)
@@ -508,18 +508,18 @@ Values returned by `view/1` go through several transformation stages
 before reaching the wire. Understanding this pipeline helps when
 debugging unexpected behaviour or writing custom extensions.
 
-1. **Widget builders** (`Toddy.UI` macros, `Toddy.Iced` functions)
+1. **Widget builders** (`Plushie.UI` macros, `Plushie.Iced` functions)
    return structs with raw Elixir values -- atoms, tuples, structs.
    No encoding happens here.
 
-2. **`Toddy.Widget` protocol** (`to_node/1`) converts typed widget
+2. **`Plushie.Widget` protocol** (`to_node/1`) converts typed widget
    structs into plain `%{id, type, props, children}` maps. Values
    remain as raw Elixir terms.
 
-3. **`Toddy.Tree.normalize/1`** walks the tree and applies the
-   `Toddy.Encode` protocol to each prop value. Atoms become strings
+3. **`Plushie.Tree.normalize/1`** walks the tree and applies the
+   `Plushie.Encode` protocol to each prop value. Atoms become strings
    (except `true`/`false`/`nil`), tuples become lists, and custom
-   structs encode via their `Toddy.Encode` implementation. Scoped IDs
+   structs encode via their `Plushie.Encode` implementation. Scoped IDs
    are prefixed at this stage.
 
 4. **Protocol encoding** stringifies atom keys to string keys, then

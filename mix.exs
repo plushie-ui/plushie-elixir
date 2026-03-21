@@ -1,23 +1,23 @@
-defmodule Toddy.MixProject do
+defmodule Plushie.MixProject do
   use Mix.Project
 
   @version "0.3.0"
-  @source_url "https://github.com/toddy-ui/toddy-elixir"
+  @source_url "https://github.com/plushie-ui/plushie-elixir"
   @binary_version "0.3.2"
 
   def project do
     [
-      app: :toddy,
+      app: :plushie,
       version: @version,
       binary_version: @binary_version,
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
-      compilers: Mix.compilers() ++ [:toddy_binary],
+      compilers: Mix.compilers() ++ [:plushie_binary],
       elixirc_options: [warnings_as_errors: true],
       consolidate_protocols: Mix.env() != :test,
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      name: "Toddy",
+      name: "Plushie",
       description: "Native desktop GUIs from Elixir, powered by iced",
       package: package(),
       source_url: @source_url,
@@ -84,61 +84,61 @@ defmodule Toddy.MixProject do
       ],
       groups_for_modules: [
         "App Framework": [
-          Toddy,
-          Toddy.App,
-          Toddy.Runtime,
-          Toddy.Bridge,
-          Toddy.Binary,
-          Toddy.DevServer
+          Plushie,
+          Plushie.App,
+          Plushie.Runtime,
+          Plushie.Bridge,
+          Plushie.Binary,
+          Plushie.DevServer
         ],
         "UI Builder": [
-          Toddy.UI,
-          Toddy.Widget,
-          Toddy.Encode,
-          Toddy.Tree
+          Plushie.UI,
+          Plushie.Widget,
+          Plushie.Encode,
+          Plushie.Tree
         ],
-        Widgets: ~r/Toddy\.Widget\..*/,
+        Widgets: ~r/Plushie\.Widget\..*/,
         "Widget Types": [
-          Toddy.Type.Alignment,
-          Toddy.Type.Anchor,
-          Toddy.Type.Border,
-          Toddy.Type.Color,
-          Toddy.Type.ContentFit,
-          Toddy.Type.Direction,
-          Toddy.Type.FilterMethod,
-          Toddy.Type.Font,
-          Toddy.Type.Gradient,
-          Toddy.Type.Length,
-          Toddy.Type.Padding,
-          Toddy.Type.Position,
-          Toddy.Type.Shadow,
-          Toddy.Type.Shaping,
-          Toddy.Type.StyleMap,
-          Toddy.Type.Theme,
-          Toddy.Type.Wrapping,
-          Toddy.Type.A11y
+          Plushie.Type.Alignment,
+          Plushie.Type.Anchor,
+          Plushie.Type.Border,
+          Plushie.Type.Color,
+          Plushie.Type.ContentFit,
+          Plushie.Type.Direction,
+          Plushie.Type.FilterMethod,
+          Plushie.Type.Font,
+          Plushie.Type.Gradient,
+          Plushie.Type.Length,
+          Plushie.Type.Padding,
+          Plushie.Type.Position,
+          Plushie.Type.Shadow,
+          Plushie.Type.Shaping,
+          Plushie.Type.StyleMap,
+          Plushie.Type.Theme,
+          Plushie.Type.Wrapping,
+          Plushie.Type.A11y
         ],
-        Events: ~r/Toddy\.Event.*/,
+        Events: ~r/Plushie\.Event.*/,
         Commands: [
-          Toddy.Command,
-          Toddy.Subscription,
-          Toddy.Effects
+          Plushie.Command,
+          Plushie.Subscription,
+          Plushie.Effects
         ],
         "State Helpers": [
-          Toddy.Animation,
-          Toddy.Data,
-          Toddy.KeyModifiers,
-          Toddy.Route,
-          Toddy.Selection,
-          Toddy.State,
-          Toddy.Undo
+          Plushie.Animation,
+          Plushie.Data,
+          Plushie.KeyModifiers,
+          Plushie.Route,
+          Plushie.Selection,
+          Plushie.State,
+          Plushie.Undo
         ],
-        Testing: ~r/Toddy\.Test.*/,
+        Testing: ~r/Plushie\.Test.*/,
         Extensions: [
-          Toddy.Extension,
-          Toddy.Canvas.Shape
+          Plushie.Extension,
+          Plushie.Canvas.Shape
         ],
-        Protocol: ~r/Toddy\.Protocol.*/
+        Protocol: ~r/Plushie\.Protocol.*/
       ]
     ]
   end
@@ -149,7 +149,7 @@ defmodule Toddy.MixProject do
       licenses: ["MIT"],
       links: %{
         "GitHub" => @source_url,
-        "Rust binary" => "https://github.com/toddy-ui/toddy",
+        "Rust binary" => "https://github.com/plushie-ui/plushie",
         "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md"
       },
       files: ~w(

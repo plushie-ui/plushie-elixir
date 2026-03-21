@@ -1,0 +1,34 @@
+defmodule Plushie.Canvas.Shape.Rect do
+  @moduledoc "Canvas rectangle shape with position, size, and optional styling."
+
+  @type t :: %__MODULE__{
+          x: number(),
+          y: number(),
+          w: number(),
+          h: number(),
+          fill: term(),
+          stroke: term(),
+          opacity: number() | nil,
+          fill_rule: String.t() | nil,
+          radius: number() | nil,
+          interactive: Plushie.Canvas.Shape.Interactive.t() | nil
+        }
+
+  @enforce_keys [:x, :y, :w, :h]
+  defstruct [:x, :y, :w, :h, :fill, :stroke, :opacity, :fill_rule, :radius, :interactive]
+end
+
+defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Rect do
+  def encode(rect) do
+    %{type: "rect", x: rect.x, y: rect.y, w: rect.w, h: rect.h}
+    |> put_if(:fill, rect.fill)
+    |> put_if(:stroke, rect.stroke)
+    |> put_if(:opacity, rect.opacity)
+    |> put_if(:fill_rule, rect.fill_rule)
+    |> put_if(:radius, rect.radius)
+    |> put_if(:interactive, rect.interactive)
+  end
+
+  defp put_if(map, _key, nil), do: map
+  defp put_if(map, key, val), do: Map.put(map, key, Plushie.Encode.encode(val))
+end

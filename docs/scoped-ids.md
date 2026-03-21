@@ -64,21 +64,21 @@ end
 
 ### Reconstructing the full path
 
-Use `Toddy.Event.target/1` to get the full forward-order path:
+Use `Plushie.Event.target/1` to get the full forward-order path:
 
 ```elixir
 event = %Widget{type: :click, id: "save", scope: ["form", "sidebar"]}
-Toddy.Event.target(event)
+Plushie.Event.target(event)
 # => "sidebar/form/save"
 ```
 
 ## Which event structs carry scope
 
-- `Toddy.Event.Widget`
-- `Toddy.Event.Canvas`
-- `Toddy.Event.MouseArea`
-- `Toddy.Event.Pane`
-- `Toddy.Event.Sensor`
+- `Plushie.Event.Widget`
+- `Plushie.Event.Canvas`
+- `Plushie.Event.MouseArea`
+- `Plushie.Event.Pane`
+- `Plushie.Event.Sensor`
 
 Subscription events (Key, Mouse, Touch, IME, Modifiers) are global and
 do not carry scope.
@@ -196,4 +196,4 @@ the full path in debug output:
 #Sensor<:resize "content/measure" 800x600>
 ```
 
-Use `Toddy.Event.target/1` to get the same string programmatically.
+Use `Plushie.Event.target/1` to get the same string programmatically.

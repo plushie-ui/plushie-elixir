@@ -3,15 +3,15 @@ defmodule Clock do
   Clock example showing the current time, updated every second.
 
   Demonstrates:
-  - `Toddy.Subscription.every/2` for timer-based updates
+  - `Plushie.Subscription.every/2` for timer-based updates
   - Pattern matching on `%Timer{tag: :tick}` in `update/2`
   - Simple model with derived display value
   """
 
-  use Toddy.App
+  use Plushie.App
 
-  alias Toddy.Event.Timer
-  alias Toddy.Subscription
+  alias Plushie.Event.Timer
+  alias Plushie.Subscription
 
   # -- init ------------------------------------------------------------------
 
@@ -36,7 +36,7 @@ defmodule Clock do
   # -- view ------------------------------------------------------------------
 
   def view(model) do
-    import Toddy.UI
+    import Plushie.UI
 
     window "main", title: "Clock" do
       column padding: 24, spacing: 16, width: :fill, align_x: :center do

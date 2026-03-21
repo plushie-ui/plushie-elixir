@@ -1,4 +1,4 @@
-defmodule Toddy.DevServer.TestHarness do
+defmodule Plushie.DevServer.TestHarness do
   @moduledoc false
 
   # A GenServer with the same message handling as DevServer but without

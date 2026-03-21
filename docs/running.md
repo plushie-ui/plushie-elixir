@@ -1,6 +1,6 @@
-# Running toddy
+# Running plushie
 
-Toddy's **renderer** draws windows and handles input. Your Elixir
+Plushie's **renderer** draws windows and handles input. Your Elixir
 code (the **host**) manages state and builds the UI tree. They talk
 over a wire protocol -- locally through a pipe, remotely over SSH,
 or through any transport you provide. This guide covers all the ways
@@ -11,44 +11,44 @@ to connect them.
 The simplest setup: the host spawns the renderer as a child process.
 
 ```sh
-mix toddy.gui MyApp
+mix plushie.gui MyApp
 ```
 
 Or from code:
 
 ```elixir
-{:ok, pid} = Toddy.start_link(MyApp)
+{:ok, pid} = Plushie.start_link(MyApp)
 ```
 
 The renderer is resolved automatically. For most projects,
-`mix toddy.download` fetches a precompiled renderer and you're done.
-If you have native Rust extensions, `mix toddy.build` compiles a
-custom renderer. You can also set `TODDY_BINARY_PATH` or
-`config :toddy, :binary_path` explicitly.
+`mix plushie.download` fetches a precompiled renderer and you're done.
+If you have native Rust extensions, `mix plushie.build` compiles a
+custom renderer. You can also set `PLUSHIE_BINARY_PATH` or
+`config :plushie, :binary_path` explicitly.
 
 ### Dev mode
 
-`mix toddy.gui` watches your source files and reloads on change.
+`mix plushie.gui` watches your source files and reloads on change.
 Edit code, save, see the result instantly. The model state is preserved
 across reloads.
 
 ```sh
-mix toddy.gui MyApp              # live reload enabled
-mix toddy.gui MyApp --no-watch   # disable file watching
+mix plushie.gui MyApp              # live reload enabled
+mix plushie.gui MyApp --no-watch   # disable file watching
 ```
 
 ### Exec mode
 
 The renderer can spawn the host instead of the other way around. This
-is useful when toddy is the entry point (a release binary or launcher)
+is useful when plushie is the entry point (a release binary or launcher)
 and it's the foundation for remote rendering over SSH.
 
 ```sh
-toddy --exec "mix toddy.stdio MyApp"
+plushie --exec "mix plushie.stdio MyApp"
 ```
 
 The renderer controls the lifecycle. When the user closes the window,
-the renderer closes stdin, and the toddy process exits cleanly.
+the renderer closes stdin, and the plushie process exits cleanly.
 
 ## Remote rendering
 
@@ -67,9 +67,9 @@ Your `init/update/view` code doesn't change at all.
 
 ### Prerequisites
 
-- **Your laptop**: the `toddy` renderer installed and on your PATH.
+- **Your laptop**: the `plushie` renderer installed and on your PATH.
   Download from the GitHub releases page, or build with
-  `cargo install toddy` if you have a Rust toolchain.
+  `cargo install plushie` if you have a Rust toolchain.
 - **The server**: your Elixir project deployed with its dependencies.
   The server does NOT need the renderer or a display server.
 - **SSH access**: you can `ssh user@server` from your laptop.
@@ -77,7 +77,7 @@ Your `init/update/view` code doesn't change at all.
 ### Quick start
 
 ```sh
-toddy --exec "ssh user@server 'cd /app && mix toddy.stdio MyApp'"
+plushie --exec "ssh user@server 'cd /app && mix plushie.stdio MyApp'"
 ```
 
 The renderer on your laptop spawns an SSH session, which starts the
@@ -109,9 +109,9 @@ not the server). How you get it there depends on your project:
 
 | Your project uses | Renderer needed | How to get it |
 |---|---|---|
-| Built-in widgets only | Precompiled | `mix toddy.download` or GitHub release |
+| Built-in widgets only | Precompiled | `mix plushie.download` or GitHub release |
 | Pure Elixir extensions | Precompiled | Same -- composites don't need a custom build |
-| Native Rust extensions | Custom build | `mix toddy.build` targeting your laptop's architecture |
+| Native Rust extensions | Custom build | `mix plushie.build` targeting your laptop's architecture |
 
 The server doesn't need the renderer at all. It only needs your
 Elixir project and its dependencies.
@@ -119,7 +119,7 @@ Elixir project and its dependencies.
 ## Resiliency
 
 Things go wrong. Renderers crash, code has bugs, networks drop.
-Toddy handles these without losing your model state.
+Plushie handles these without losing your model state.
 
 ### Renderer crashes
 
@@ -131,9 +131,9 @@ subscriptions and windows. The user sees a brief flicker, then the
 UI is back.
 
 The host retries up to 5 times (100ms, 200ms, 400ms, 800ms, 1.6s).
-If all retries fail, it logs troubleshooting steps and the toddy
+If all retries fail, it logs troubleshooting steps and the plushie
 supervisor stops. The rest of your application is unaffected -- only
-the toddy process tree exits. A successful connection resets the
+the plushie process tree exits. A successful connection resets the
 retry counter, so intermittent crashes get a fresh budget each time.
 
 ### Exceptions in your code
@@ -153,24 +153,24 @@ When an SSH connection drops, both sides detect the broken pipe:
 
 - **The renderer** sees the host's stdout close. It can display an
   error or retry the connection.
-- **The host** sees stdin close. Without daemon mode, the toddy
+- **The host** sees stdin close. Without daemon mode, the plushie
   process exits (the rest of your service is unaffected). With
-  daemon mode, toddy keeps running with the model preserved.
+  daemon mode, plushie keeps running with the model preserved.
 
 When a new renderer connects (another SSH session), the host sends a
 snapshot of the current state. No restart, no state loss, no cold
 start.
 
 ```elixir
-Toddy.start_link(MyApp, transport: :stdio, daemon: true)
+Plushie.start_link(MyApp, transport: :stdio, daemon: true)
 ```
 
 ### Window close
 
 When the user closes the last window, your `update/2` receives the
 event. You can save state, persist data, or show a confirmation
-dialog. In non-daemon mode, the toddy process exits. In daemon mode,
-toddy keeps running and waits for a new renderer to connect.
+dialog. In non-daemon mode, the plushie process exits. In daemon mode,
+plushie keeps running and waits for a new renderer to connect.
 
 ## Event rate limiting
 
@@ -240,8 +240,8 @@ states) and accepting that model updates lag by the round-trip time.
 ## Custom transports
 
 For advanced use cases, the iostream transport lets you bridge any
-I/O mechanism to toddy. Write an adapter process that speaks a simple
-four-message protocol, and toddy handles the rest. Most projects
+I/O mechanism to plushie. Write an adapter process that speaks a simple
+four-message protocol, and plushie handles the rest. Most projects
 don't need this -- the built-in local and SSH transports cover the
 common cases.
 
@@ -280,14 +280,14 @@ defmodule MyApp.TCPAdapter do
 
   # Bridge wants to send data to the renderer
   def handle_info({:iostream_send, iodata}, state) do
-    :gen_tcp.send(state.socket, Toddy.Transport.Framing.encode_packet(iodata))
+    :gen_tcp.send(state.socket, Plushie.Transport.Framing.encode_packet(iodata))
     {:noreply, state}
   end
 
   # TCP data arrived -- decode frames and forward complete messages
   def handle_info({:tcp, _socket, data}, state) do
     {messages, buffer} =
-      Toddy.Transport.Framing.decode_packets(state.buffer <> data)
+      Plushie.Transport.Framing.decode_packets(state.buffer <> data)
 
     for msg <- messages, do: send(state.bridge, {:iostream_data, msg})
     {:noreply, %{state | buffer: buffer}}
@@ -311,9 +311,9 @@ First, start an SSH daemon in your supervisor:
 
 ```elixir
 :ssh.daemon(2022,
-  system_dir: ~c"/etc/toddy_ssh",
+  system_dir: ~c"/etc/plushie_ssh",
   user_dir: ~c"~/.ssh",
-  subsystems: [{~c"toddy", {MyApp.SSH.Channel, []}}]
+  subsystems: [{~c"plushie", {MyApp.SSH.Channel, []}}]
 )
 ```
 
@@ -341,13 +341,13 @@ defmodule MyApp.SSH.Channel do
   @impl true
   def handle_ssh_msg({:ssh_cm, _conn, {:data, _channel, 0, data}}, state) do
     {messages, buffer} =
-      Toddy.Transport.Framing.decode_packets(state.buffer <> data)
+      Plushie.Transport.Framing.decode_packets(state.buffer <> data)
 
     for msg <- messages, do: send(state.bridge, {:iostream_data, msg})
     {:ok, %{state | buffer: buffer}}
   end
 
-  # Bridge registered itself during Toddy.start_link
+  # Bridge registered itself during Plushie.start_link
   @impl true
   def handle_msg({:iostream_bridge, bridge_pid}, state) do
     {:ok, %{state | bridge: bridge_pid}}
@@ -355,7 +355,7 @@ defmodule MyApp.SSH.Channel do
 
   # Bridge wants to send data to the renderer
   def handle_msg({:iostream_send, iodata}, %{conn: conn, channel: ch} = state) do
-    framed = Toddy.Transport.Framing.encode_packet(iodata)
+    framed = Plushie.Transport.Framing.encode_packet(iodata)
     :ssh_connection.send(conn, ch, IO.iodata_to_binary(framed))
     {:ok, state}
   end
@@ -363,7 +363,7 @@ defmodule MyApp.SSH.Channel do
   # SSH channel is ready -- start the host
   def handle_msg({:ssh_channel_up, channel, conn}, state) do
     {:ok, _pid} =
-      Toddy.start_link(MyApp,
+      Plushie.start_link(MyApp,
         transport: {:iostream, self()},
         format: :msgpack
       )
@@ -376,7 +376,7 @@ end
 ### Framing
 
 Raw byte streams (SSH channels, raw sockets) need message boundaries.
-`Toddy.Transport.Framing` handles this. Transports with built-in
+`Plushie.Transport.Framing` handles this. Transports with built-in
 framing (Erlang Ports, `:gen_tcp` with `{:packet, 4}`) don't need it.
 
 ```elixir
@@ -395,27 +395,27 @@ See [Testing](testing.md) for the full guide. Quick summary:
 
 ```sh
 mix test                                      # pooled mock (fast, no display)
-TODDY_TEST_BACKEND=headless mix test          # real rendering, no display
-TODDY_TEST_BACKEND=windowed mix test          # real windows (needs display)
+PLUSHIE_TEST_BACKEND=headless mix test          # real rendering, no display
+PLUSHIE_TEST_BACKEND=windowed mix test          # real windows (needs display)
 ```
 
 ## How props reach the renderer
 
-You don't need to understand this to use toddy. It's here for when
+You don't need to understand this to use plushie. It's here for when
 you're debugging wire format issues or writing extensions.
 
 When you return a tree from `view/1`, it passes through four stages
 before reaching the wire:
 
-1. **Widget builders** (`Toddy.UI` macros, `Toddy.Widget.*` modules)
+1. **Widget builders** (`Plushie.UI` macros, `Plushie.Widget.*` modules)
    return structs with raw Elixir values -- atoms, tuples, structs.
 
-2. **Widget protocol** (`Toddy.Widget.to_node/1`) converts typed
+2. **Widget protocol** (`Plushie.Widget.to_node/1`) converts typed
    widget structs to plain `%{id, type, props, children}` maps.
    Values stay as raw Elixir terms.
 
-3. **Tree normalization** (`Toddy.Tree.normalize/1`) walks the tree
-   and encodes each prop value via the `Toddy.Encode` protocol:
+3. **Tree normalization** (`Plushie.Tree.normalize/1`) walks the tree
+   and encodes each prop value via the `Plushie.Encode` protocol:
    atoms become strings, tuples become lists, structs become maps.
    Scoped IDs are also resolved here.
 

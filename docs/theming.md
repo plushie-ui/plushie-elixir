@@ -1,6 +1,6 @@
 # Theming
 
-Toddy exposes iced's theming system directly. No additional abstraction
+Plushie exposes iced's theming system directly. No additional abstraction
 layer, no token system, no design system framework. If you need those,
 build them in your app.
 
@@ -10,7 +10,7 @@ Themes are set at the window level:
 
 ```elixir
 def view(model) do
-  import Toddy.UI
+  import Plushie.UI
 
   window "main", title: "My App", theme: :catppuccin_mocha do
     column do
@@ -22,7 +22,7 @@ end
 
 ## Built-in themes
 
-Iced 0.14 ships with 22 built-in themes. Toddy passes the theme name
+Iced 0.14 ships with 22 built-in themes. Plushie passes the theme name
 string directly to the renderer, which resolves it to an iced `Theme`
 variant.
 
@@ -73,7 +73,7 @@ end
 ```
 
 The palette map is passed to iced's `Theme::custom()` with Oklch-based
-palette generation (toddy-iced). Only the colors you specify are overridden;
+palette generation (plushie-iced). Only the colors you specify are overridden;
 the rest are derived automatically.
 
 ## Extended palette shade overrides
@@ -167,7 +167,7 @@ visual treatment.
 ## Widget-level styling
 
 Individual widgets accept a `style` prop. This can be a named preset atom
-or a `Toddy.Type.StyleMap` struct for per-instance visual customization.
+or a `Plushie.Type.StyleMap` struct for per-instance visual customization.
 
 ### Named presets
 
@@ -188,15 +188,15 @@ text_input, text_editor, checkbox, radio, toggler, pick_list, progress_bar,
 rule, slider, vertical_slider, and tooltip.
 
 ```elixir
-alias Toddy.Type.StyleMap
+alias Plushie.Type.StyleMap
 
 # Build a style map with the builder pattern
 card_style =
   StyleMap.new()
   |> StyleMap.background("#ffffff")
   |> StyleMap.text_color("#1a1a1a")
-  |> StyleMap.border(Toddy.Type.Border.new() |> Toddy.Type.Border.rounded(8) |> Toddy.Type.Border.width(1) |> Toddy.Type.Border.color("#e0e0e0"))
-  |> StyleMap.shadow(Toddy.Type.Shadow.new() |> Toddy.Type.Shadow.color("#00000020") |> Toddy.Type.Shadow.offset(0, 2) |> Toddy.Type.Shadow.blur_radius(8))
+  |> StyleMap.border(Plushie.Type.Border.new() |> Plushie.Type.Border.rounded(8) |> Plushie.Type.Border.width(1) |> Plushie.Type.Border.color("#e0e0e0"))
+  |> StyleMap.shadow(Plushie.Type.Shadow.new() |> Plushie.Type.Shadow.color("#00000020") |> Plushie.Type.Shadow.offset(0, 2) |> Plushie.Type.Shadow.blur_radius(8))
 
 container "card", style: card_style do
   text("Card content")
@@ -207,8 +207,8 @@ end
 
 - `background` -- hex color for the widget background
 - `text_color` -- hex color for text
-- `border` -- a `Toddy.Type.Border` struct (color, width, radius)
-- `shadow` -- a `Toddy.Type.Shadow` struct (color, offset, blur_radius)
+- `border` -- a `Plushie.Type.Border` struct (color, width, radius)
+- `shadow` -- a `Plushie.Type.Shadow` struct (color, offset, blur_radius)
 
 ### Status overrides
 
@@ -252,7 +252,7 @@ button("cta", "Get Started", style:
   StyleMap.new()
   |> StyleMap.background("#7c3aed")
   |> StyleMap.text_color("#ffffff")
-  |> StyleMap.border(Toddy.Type.Border.new() |> Toddy.Type.Border.rounded(24))
+  |> StyleMap.border(Plushie.Type.Border.new() |> Plushie.Type.Border.rounded(24))
 )
 ```
 
@@ -278,11 +278,11 @@ def settings, do: [theme: :system]
 ```
 
 For manual control, subscribe to theme change events with
-`Toddy.Subscription.on_theme_change/1`:
+`Plushie.Subscription.on_theme_change/1`:
 
 ```elixir
 def subscribe(_model) do
-  [Toddy.Subscription.on_theme_change(:theme_changed)]
+  [Plushie.Subscription.on_theme_change(:theme_changed)]
 end
 
 def update(model, %System{type: :theme_changed, data: mode}) do

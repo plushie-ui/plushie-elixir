@@ -14,10 +14,10 @@ defmodule ColorPicker do
   - HSV-to-hex color conversion
   """
 
-  use Toddy.App
+  use Plushie.App
 
-  alias Toddy.Canvas.Shape
-  alias Toddy.Event.Canvas
+  alias Plushie.Canvas.Shape
+  alias Plushie.Event.Canvas
 
   # -- Geometry constants ------------------------------------------------------
 
@@ -70,7 +70,7 @@ defmodule ColorPicker do
   def update(model, _event), do: model
 
   def view(model) do
-    import Toddy.UI
+    import Plushie.UI
 
     hex = hsv_to_hex(model.hue, model.saturation, model.value)
     h_int = round(model.hue)

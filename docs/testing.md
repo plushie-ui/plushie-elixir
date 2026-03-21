@@ -26,7 +26,7 @@ end
 
 ### Testing commands from `update/2`
 
-Commands are plain `%Toddy.Command{}` structs. Pattern-match on `type` and
+Commands are plain `%Plushie.Command{}` structs. Pattern-match on `type` and
 `payload` to verify what `update/2` asked the runtime to do, without
 executing anything.
 
@@ -36,14 +36,14 @@ test "submitting todo refocuses the input" do
   {model, cmd} = MyApp.update(model, %Widget{type: :submit, id: "todo_input", value: "Buy milk"})
 
   assert [%{text: "Buy milk"}] = model.todos
-  assert %Toddy.Command{type: :focus, payload: %{target: "todo_input"}} = cmd
+  assert %Plushie.Command{type: :focus, payload: %{target: "todo_input"}} = cmd
 end
 
 test "save triggers an async task" do
   model = %{data: "unsaved"}
   {_model, cmd} = MyApp.update(model, %Widget{type: :click, id: "save"})
 
-  assert %Toddy.Command{type: :async, payload: %{tag: :save_result}} = cmd
+  assert %Plushie.Command{type: :async, payload: %{tag: :save_result}} = cmd
 end
 ```
 
@@ -54,7 +54,7 @@ test "view shows todo count" do
   model = %{todos: [%{id: 1, text: "Buy milk", done: false}], input: "", filter: :all}
   tree = MyApp.view(model)
 
-  counter = Toddy.Tree.find(tree, "todo_count")
+  counter = Plushie.Tree.find(tree, "todo_count")
   assert counter.props[:content] =~ "1"
 end
 ```
@@ -72,13 +72,13 @@ end
 
 ### Tree query helpers
 
-`Toddy.Tree` provides helpers for querying view trees directly:
+`Plushie.Tree` provides helpers for querying view trees directly:
 
 ```elixir
-Toddy.Tree.find(tree, "my_button")            # find node by ID
-Toddy.Tree.exists?(tree, "my_button")         # check existence
-Toddy.Tree.ids(tree)                          # all IDs (depth-first)
-Toddy.Tree.find_all(tree, fn node ->          # find by predicate
+Plushie.Tree.find(tree, "my_button")            # find node by ID
+Plushie.Tree.exists?(tree, "my_button")         # check existence
+Plushie.Tree.ids(tree)                          # all IDs (depth-first)
+Plushie.Tree.find_all(tree, fn node ->          # find by predicate
   node.type == "button"
 end)
 ```
@@ -89,7 +89,7 @@ session or backend required.
 ### JSON tree snapshots
 
 For complex views, snapshot the entire tree as JSON to catch unintended
-structural changes. `Toddy.Test.assert_tree_snapshot/2` compares a tree
+structural changes. `Plushie.Test.assert_tree_snapshot/2` compares a tree
 against a stored JSON file at the unit test level -- no backend needed.
 
 ```elixir
@@ -97,7 +97,7 @@ test "initial view snapshot" do
   model = MyApp.init([])
   tree = MyApp.view(model)
 
-  Toddy.Test.assert_tree_snapshot(tree, "test/snapshots/initial_view.json")
+  Plushie.Test.assert_tree_snapshot(tree, "test/snapshots/initial_view.json")
 end
 ```
 
@@ -105,7 +105,7 @@ First run writes the file. Subsequent runs compare and fail with a diff on
 mismatch. Update after intentional changes:
 
 ```bash
-TODDY_UPDATE_SNAPSHOTS=1 mix test
+PLUSHIE_UPDATE_SNAPSHOTS=1 mix test
 ```
 
 This is a pure JSON comparison -- it normalizes map key ordering for stable
@@ -122,7 +122,7 @@ iced. That is what the test framework is for.
 
 ```elixir
 defmodule MyApp.CounterTest do
-  use Toddy.Test.Case, app: MyApp.Counter
+  use Plushie.Test.Case, app: MyApp.Counter
 
   test "clicking increment updates counter" do
     click("#increment")
@@ -131,7 +131,7 @@ defmodule MyApp.CounterTest do
 end
 ```
 
-`Toddy.Test.Case` starts a session, imports all helper functions, and tears
+`Plushie.Test.Case` starts a session, imports all helper functions, and tears
 down on exit. The default backend is `:pooled_mock` -- a pooled backend
 using a shared renderer process. No renderer binary, no display server, no
 setup.
@@ -141,9 +141,9 @@ setup.
 
 ### Where do widget IDs come from?
 
-Every widget in toddy gets an ID from the first argument to its builder or
+Every widget in plushie gets an ID from the first argument to its builder or
 constructor. For example, `Button.new("save_btn", "Save")` creates a button
-with ID `"save_btn"`. In `Toddy.UI`, `button("save_btn", "Save")` does the
+with ID `"save_btn"`. In `Plushie.UI`, `button("save_btn", "Save")` does the
 same thing.
 
 When using selectors in tests, prefix the ID with `#`:
@@ -193,7 +193,7 @@ Returns `nil` if no text prop is found.
 ### Interaction functions
 
 All interaction functions accept a selector string. They are imported
-automatically by `Toddy.Test.Case`.
+automatically by `Plushie.Test.Case`.
 
 | Function | Widget types | Event produced |
 |---|---|---|
@@ -235,7 +235,7 @@ assert element.type == "text"
 
 ## API reference
 
-All of the following are imported by `use Toddy.Test.Case`:
+All of the following are imported by `use Plushie.Test.Case`:
 
 | Function | Description |
 |---|---|
@@ -289,16 +289,16 @@ changing assertions.
 | **Real rendering** | No | Yes (tiny-skia) | Yes (GPU) |
 | **Real windows** | No | No | Yes |
 
-- **`:pooled_mock`** -- shared `toddy --mock` process with session
+- **`:pooled_mock`** -- shared `plushie --mock` process with session
   multiplexing. Tests app logic, tree structure, and wire protocol.
   No rendering, no display, sub-millisecond. The right default for
   90% of tests.
 
-- **`:headless`** -- `toddy --headless` with software rendering via
+- **`:headless`** -- `plushie --headless` with software rendering via
   tiny-skia (no display server). Pixel screenshots for visual
   regression. Catches rendering bugs that mock mode can't.
 
-- **`:windowed`** -- `toddy` with real iced windows and GPU rendering.
+- **`:windowed`** -- `plushie` with real iced windows and GPU rendering.
   Effects execute, subscriptions fire, screenshots capture exactly
   what a user sees. Needs a display server (Xvfb or headless Weston).
 
@@ -310,17 +310,17 @@ Tests are portable across all three.
 
 | Priority | Source | Example |
 |---|---|---|
-| 1 | Environment variable | `TODDY_TEST_BACKEND=headless mix test` |
-| 2 | Application config | `config :toddy, :test_backend, :pooled_mock` |
+| 1 | Environment variable | `PLUSHIE_TEST_BACKEND=headless mix test` |
+| 2 | Application config | `config :plushie, :test_backend, :pooled_mock` |
 | 3 | Default | `:pooled_mock` |
 
 Atom shorthands (`:pooled_mock`, `:headless`, `:windowed`) and full module
-names (`Toddy.Test.Backend.Pooled`, etc.) both work in application config.
+names (`Plushie.Test.Backend.Pooled`, etc.) both work in application config.
 
 
 ## Snapshots and screenshots
 
-Toddy has three distinct regression testing mechanisms. Understanding the
+Plushie has three distinct regression testing mechanisms. Understanding the
 difference is important.
 
 ### Structural tree hashes (`assert_tree_hash`)
@@ -347,7 +347,7 @@ is compared and the test fails on mismatch.
 To update golden files after intentional changes:
 
 ```bash
-TODDY_UPDATE_SNAPSHOTS=1 mix test
+PLUSHIE_UPDATE_SNAPSHOTS=1 mix test
 ```
 
 ### Pixel screenshots (`assert_screenshot`)
@@ -373,7 +373,7 @@ Golden files are stored in `test/screenshots/` as `.sha256` files. The
 workflow is the same as structural snapshots but uses a separate env var:
 
 ```bash
-TODDY_UPDATE_SCREENSHOTS=1 mix test
+PLUSHIE_UPDATE_SCREENSHOTS=1 mix test
 ```
 
 Because screenshots silently no-op on pooled_mock, you can include
@@ -382,7 +382,7 @@ produce assertions when run on the headless or windowed backends.
 
 ### JSON tree snapshots (`assert_tree_snapshot`)
 
-`Toddy.Test.assert_tree_snapshot/2` is a unit-test-level tool that compares
+`Plushie.Test.assert_tree_snapshot/2` is a unit-test-level tool that compares
 a raw tree map against a stored JSON file. No backend or session needed.
 See the [Unit testing](#json-tree-snapshots) section above.
 
@@ -403,15 +403,15 @@ See the [Unit testing](#json-tree-snapshots) section above.
 
 ## Script-based testing
 
-`.toddy` scripts provide a declarative format for describing interaction
+`.plushie` scripts provide a declarative format for describing interaction
 sequences. The format is a superset of iced's `.ice` test scripts -- the
 core instructions (`click`, `type`, `expect`, `snapshot`) use the same
-syntax. Toddy adds `assert_text`, `assert_model`, `screenshot`, `wait`, and
+syntax. Plushie adds `assert_text`, `assert_model`, `screenshot`, `wait`, and
 a header section for app configuration.
 
-### The `.toddy` format
+### The `.plushie` format
 
-A `.toddy` file has a header and an instruction section separated by
+A `.plushie` file has a header and an instruction section separated by
 `-----`:
 
 ```
@@ -433,7 +433,7 @@ wait 500
 
 | Field | Required | Default | Description |
 |---|---|---|---|
-| `app` | Yes | -- | Module implementing `Toddy.App` |
+| `app` | Yes | -- | Module implementing `Plushie.App` |
 | `viewport` | No | `800x600` | Viewport size as `WxH` |
 | `theme` | No | `dark` | Theme name |
 | `backend` | No | `pooled_mock` | Backend: `pooled_mock`, `headless`, or `windowed` |
@@ -462,16 +462,16 @@ Lines starting with `#` are comments (in both header and body sections).
 
 ```bash
 # Run all scripts in test/scripts/
-mix toddy.script
+mix plushie.script
 
 # Run specific scripts
-mix toddy.script test/scripts/counter.toddy test/scripts/todo.toddy
+mix plushie.script test/scripts/counter.plushie test/scripts/todo.plushie
 ```
 
 ### Replaying scripts
 
 ```bash
-mix toddy.replay test/scripts/counter.toddy
+mix plushie.replay test/scripts/counter.plushie
 ```
 
 Replay mode forces the `:windowed` backend and respects `wait` timings, so you
@@ -512,7 +512,7 @@ test "clicking fetch starts async load" do
   {model, cmd} = MyApp.update(model, %Widget{type: :click, id: "fetch"})
 
   assert model.loading == true
-  assert %Toddy.Command{type: :async, payload: %{tag: :data_loaded}} = cmd
+  assert %Plushie.Command{type: :async, payload: %{tag: :data_loaded}} = cmd
 end
 ```
 
@@ -558,7 +558,7 @@ Use the correct interaction function for the widget type. See the
 Build the renderer with the headless feature:
 
 ```bash
-mix toddy.build
+mix plushie.build
 ```
 
 ### Inspecting state when a test fails
@@ -589,11 +589,11 @@ No special setup. Works anywhere Elixir runs.
 
 ### Headless CI
 
-Requires the toddy binary (download or build from source).
+Requires the plushie binary (download or build from source).
 
 ```yaml
-- run: mix toddy.download
-- run: TODDY_TEST_BACKEND=headless mix test
+- run: mix plushie.download
+- run: PLUSHIE_TEST_BACKEND=headless mix test
 ```
 
 ### Windowed CI
@@ -603,13 +603,13 @@ Requires a display server and GPU/software rendering. Two options:
 **Option A: Xvfb (X11)**
 
 ```yaml
-- run: mix toddy.download
+- run: mix plushie.download
 - run: sudo apt-get install -y xvfb mesa-vulkan-drivers
 - run: |
     Xvfb :99 -screen 0 1024x768x24 &
     export DISPLAY=:99
     export WINIT_UNIX_BACKEND=x11
-    TODDY_TEST_BACKEND=windowed mix test
+    PLUSHIE_TEST_BACKEND=windowed mix test
 ```
 
 **Option B: Weston (Wayland)**
@@ -619,15 +619,15 @@ display. Combined with `vulkan-swrast` (Mesa software rasterizer), this
 runs the full rendering pipeline on CPU.
 
 ```yaml
-- run: mix toddy.download
+- run: mix plushie.download
 - run: sudo apt-get install -y weston mesa-vulkan-drivers
 - run: |
-    export XDG_RUNTIME_DIR=/tmp/toddy-xdg-runtime
+    export XDG_RUNTIME_DIR=/tmp/plushie-xdg-runtime
     mkdir -p "$XDG_RUNTIME_DIR" && chmod 0700 "$XDG_RUNTIME_DIR"
-    weston --backend=headless --width=1024 --height=768 --socket=toddy-test &
+    weston --backend=headless --width=1024 --height=768 --socket=plushie-test &
     sleep 1
-    export WAYLAND_DISPLAY=toddy-test
-    TODDY_TEST_BACKEND=windowed mix test
+    export WAYLAND_DISPLAY=plushie-test
+    PLUSHIE_TEST_BACKEND=windowed mix test
 ```
 
 On Arch Linux, `weston` and `vulkan-swrast` are available via pacman.
@@ -641,13 +641,13 @@ Run pooled_mock tests fast, then promote to higher-fidelity backends for subsets
 - run: mix test
 
 # Full suite on headless for protocol verification
-- run: TODDY_TEST_BACKEND=headless mix test
+- run: PLUSHIE_TEST_BACKEND=headless mix test
 
 # Windowed for pixel regression (tagged subset)
 - run: |
     Xvfb :99 -screen 0 1024x768x24 &
     export DISPLAY=:99
-    TODDY_TEST_BACKEND=windowed mix test --only windowed
+    PLUSHIE_TEST_BACKEND=windowed mix test --only windowed
 ```
 
 Tag tests that need a specific backend:
@@ -673,13 +673,13 @@ wire protocol as the production Bridge. By default, both use MessagePack
 
 ```elixir
 # In test setup or application config
-config :toddy, :test_format, :json
+config :plushie, :test_format, :json
 ```
 
 Or pass `format: :json` in backend opts when starting a session manually:
 
 ```elixir
-session = Session.start(MyApp, backend: Toddy.Test.Backend.Headless, format: :json)
+session = Session.start(MyApp, backend: Plushie.Test.Backend.Headless, format: :json)
 ```
 
 The pooled_mock backend does not use a wire protocol (pure Elixir, no
@@ -715,7 +715,7 @@ defmodule MyGauge.MacroTest do
 
   test "push command" do
     cmd = MyGauge.push("g1", 42.0)
-    assert %Toddy.Command{type: :extension_command} = cmd
+    assert %Plushie.Command{type: :extension_command} = cmd
   end
 end
 ```
@@ -728,8 +728,8 @@ defmodule MyGauge.DemoTest do
 
   test "view produces a gauge widget" do
     model = MyGauge.Demo.init([])
-    tree = MyGauge.Demo.view(model) |> Toddy.Tree.normalize()
-    gauge = Toddy.Tree.find(tree, "my-gauge")
+    tree = MyGauge.Demo.view(model) |> Plushie.Tree.normalize()
+    gauge = Plushie.Tree.find(tree, "my-gauge")
     assert gauge.type == "gauge"
   end
 end
@@ -737,12 +737,12 @@ end
 
 ### Rust-side: unit tests (no Elixir)
 
-The `toddy_core::testing` module provides `TestEnv` and node factories
+The `plushie_core::testing` module provides `TestEnv` and node factories
 for testing `WidgetExtension::render()` in isolation:
 
 ```rust
-use toddy_core::testing::*;
-use toddy_core::prelude::*;
+use plushie_core::testing::*;
+use plushie_core::prelude::*;
 
 #[test]
 fn gauge_renders_without_panic() {
@@ -762,28 +762,28 @@ extension's Rust crate:
 
 ```bash
 # Build the custom renderer with your extension compiled in
-mix toddy.build
+mix plushie.build
 
 # Run tests through the real renderer (headless, no display server)
-TODDY_TEST_BACKEND=headless mix test
+PLUSHIE_TEST_BACKEND=headless mix test
 ```
 
-`mix toddy.build` reads extensions from application config:
+`mix plushie.build` reads extensions from application config:
 
 ```elixir
 # config/config.exs
-config :toddy, extensions: [MyGauge]
+config :plushie, extensions: [MyGauge]
 ```
 
-The custom binary is placed at `_build/<env>/toddy/target/debug/<project>-toddy`.
-`Toddy.Binary.path!/0` finds it automatically, so the headless
+The custom binary is placed at `_build/<env>/plushie/target/debug/<project>-plushie`.
+`Plushie.Binary.path!/0` finds it automatically, so the headless
 and windowed test backends use it without additional configuration.
 
-Write end-to-end tests with `Toddy.Test.Case`:
+Write end-to-end tests with `Plushie.Test.Case`:
 
 ```elixir
 defmodule MyGauge.EndToEndTest do
-  use Toddy.Test.Case, app: MyGauge.Demo
+  use Plushie.Test.Case, app: MyGauge.Demo
 
   test "gauge appears in rendered tree" do
     assert_exists "#my-gauge"
@@ -797,7 +797,7 @@ end
 ```
 
 These tests run on `:pooled_mock` by default (fast, logic-only). Set
-`TODDY_TEST_BACKEND=headless` to exercise the full Rust rendering path
+`PLUSHIE_TEST_BACKEND=headless` to exercise the full Rust rendering path
 with the extension compiled in.
 
 

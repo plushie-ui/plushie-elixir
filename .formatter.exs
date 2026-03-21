@@ -10,9 +10,9 @@
 # Leaf widgets (button, text, checkbox, etc.) keep parens for clarity
 # and visual consistency with each other.
 #
-# Consumers pull this in via `import_deps: [:toddy]` in their .formatter.exs.
+# Consumers pull this in via `import_deps: [:plushie]` in their .formatter.exs.
 
-toddy_ui_locals = [
+plushie_ui_locals = [
   button: 2,
   button: 3,
   canvas: 1,
@@ -105,8 +105,8 @@ toddy_ui_locals = [
 
 [
   inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"],
-  locals_without_parens: toddy_ui_locals,
+  locals_without_parens: plushie_ui_locals,
   export: [
-    locals_without_parens: toddy_ui_locals
+    locals_without_parens: plushie_ui_locals
   ]
 ]

@@ -3,16 +3,16 @@ defmodule AsyncFetch do
   Async command example -- a button that triggers background work.
 
   Demonstrates:
-  - `Toddy.Command.async/2` for off-thread work
+  - `Plushie.Command.async/2` for off-thread work
   - Pattern matching on `%Async{tag: ..., result: ...}` for success/error
   - Loading state management
   - Extracting view helpers for reuse
   """
 
-  use Toddy.App
+  use Plushie.App
 
-  alias Toddy.Command
-  alias Toddy.Event.{Async, Widget}
+  alias Plushie.Command
+  alias Plushie.Event.{Async, Widget}
 
   # -- Init -------------------------------------------------------------------
 
@@ -46,7 +46,7 @@ defmodule AsyncFetch do
   # -- View -------------------------------------------------------------------
 
   def view(model) do
-    import Toddy.UI
+    import Plushie.UI
 
     window "main", title: "Async Fetch" do
       column padding: 24, spacing: 16, width: :fill do
@@ -58,17 +58,17 @@ defmodule AsyncFetch do
   end
 
   defp status_message(%{status: :idle}) do
-    import Toddy.UI
+    import Plushie.UI
     text("status", "Press the button to start", color: "#888888")
   end
 
   defp status_message(%{status: :loading}) do
-    import Toddy.UI
+    import Plushie.UI
     text("status", "Loading...", color: "#cc8800")
   end
 
   defp status_message(%{status: :done, result: result}) do
-    import Toddy.UI
+    import Plushie.UI
 
     column spacing: 4 do
       text("label", "Result:", size: 14)
@@ -77,7 +77,7 @@ defmodule AsyncFetch do
   end
 
   defp status_message(%{status: :error, error: error}) do
-    import Toddy.UI
+    import Plushie.UI
     text("error", "Error: #{error}", color: "#cc2222")
   end
 end

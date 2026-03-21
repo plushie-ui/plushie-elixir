@@ -3,17 +3,17 @@ defmodule Shortcuts do
   Keyboard shortcuts example showing a scrollable log of key presses.
 
   Demonstrates:
-  - `Toddy.Subscription.on_key_press/1` for global keyboard events
+  - `Plushie.Subscription.on_key_press/1` for global keyboard events
   - Pattern matching on `%Key{type: :press}` with modifier inspection
   - `scrollable` for overflow content with dynamic list items
   - Capped log buffer (`@max_log_entries`)
   """
 
-  use Toddy.App
+  use Plushie.App
 
-  alias Toddy.Event.Key
-  alias Toddy.KeyModifiers
-  alias Toddy.Subscription
+  alias Plushie.Event.Key
+  alias Plushie.KeyModifiers
+  alias Plushie.Subscription
 
   @max_log_entries 50
 
@@ -46,7 +46,7 @@ defmodule Shortcuts do
   # -- view ------------------------------------------------------------------
 
   def view(model) do
-    import Toddy.UI
+    import Plushie.UI
 
     window "main", title: "Keyboard Shortcuts" do
       column padding: 16, spacing: 12, width: :fill do

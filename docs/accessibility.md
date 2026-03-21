@@ -1,6 +1,6 @@
 # Accessibility
 
-Toddy provides built-in accessibility support via
+Plushie provides built-in accessibility support via
 [accesskit](https://github.com/AccessKit/accesskit), a cross-platform
 accessibility toolkit. The default renderer build includes accessibility,
 activating native platform APIs automatically: VoiceOver on macOS,
@@ -24,11 +24,11 @@ support. Three pieces work together:
 2. **TreeBuilder assembles the accesskit tree** -- `iced_winit::a11y`
    contains a `TreeBuilder` that walks the widget tree during `operate()`,
    collecting `Accessible` metadata and building an accesskit `TreeUpdate`.
-   This happens natively inside iced -- toddy does not build the tree.
+   This happens natively inside iced -- plushie does not build the tree.
 
 3. **AT actions become native iced events** -- when an AT triggers an action
    (e.g. a screen reader user activates a button), iced translates it to a
-   native event. The renderer maps it to a standard toddy event and sends it
+   native event. The renderer maps it to a standard plushie event and sends it
    to Elixir over the wire protocol.
 
 ```
@@ -43,11 +43,11 @@ Host (Elixir)             Renderer (iced)               Platform AT
    |<-- %Widget{:click} -----|                              |
 ```
 
-### toddy's role
+### plushie's role
 
-toddy does not build its own accesskit tree. Iced handles tree building,
-AT actions, and platform integration natively. toddy's contribution is the
-`A11yOverride` wrapper widget (`a11y_widget.rs` in toddy) that
+plushie does not build its own accesskit tree. Iced handles tree building,
+AT actions, and platform integration natively. plushie's contribution is the
+`A11yOverride` wrapper widget (`a11y_widget.rs` in plushie) that
 intercepts `operate()` to apply Elixir-side overrides from the `a11y` prop.
 
 This means:
@@ -134,7 +134,7 @@ Widget state is extracted from existing props automatically:
 ## The a11y prop
 
 For cases where auto-inference is insufficient, every widget accepts an
-`a11y` prop -- a `Toddy.Type.A11y` struct (or bare map) of fields that
+`a11y` prop -- a `Plushie.Type.A11y` struct (or bare map) of fields that
 override or augment the inferred semantics.
 
 ### Fields
@@ -166,16 +166,16 @@ override or augment the inferred semantics.
 | `size_of_set` | `non_neg_integer()` | Total items in the set |
 | `has_popup` | `String.t()` | Popup type: `"listbox"`, `"menu"`, `"dialog"`, `"tree"`, `"grid"` |
 
-The type is defined in `Toddy.Type.A11y`. All fields are optional -- only
+The type is defined in `Plushie.Type.A11y`. All fields are optional -- only
 include what you need. Both structs and bare maps are accepted; bare maps
 are normalized via `A11y.cast/1`.
 
 ### Using the a11y prop
 
-With `Toddy.UI` (do-block syntax):
+With `Plushie.UI` (do-block syntax):
 
 ```elixir
-import Toddy.UI
+import Plushie.UI
 
 # Headings
 text("title", "Welcome to MyApp", a11y: %A11y{role: :heading, level: 1})
@@ -215,11 +215,11 @@ button("close", "X", a11y: %A11y{label: "Close dialog"})
 button("close", "X", a11y: %{label: "Close dialog"})
 ```
 
-With the typed widget builder API (`Toddy.Widget.*`):
+With the typed widget builder API (`Plushie.Widget.*`):
 
 ```elixir
-alias Toddy.Type.A11y
-alias Toddy.Widget.{Button, Text, TextInput}
+alias Plushie.Type.A11y
+alias Plushie.Widget.{Button, Text, TextInput}
 
 Button.new("close", "X")
 |> Button.a11y(%A11y{label: "Close dialog"})
@@ -395,7 +395,7 @@ end
 ```
 
 **Why the explicit `a11y: %A11y{label: "Username"}` when there's a visible
-`text("Username")` above?** Because toddy doesn't automatically associate
+`text("Username")` above?** Because plushie doesn't automatically associate
 a text label with the input below it. The visible text and the input are
 separate widgets in the tree. The `a11y` label connects them for AT users.
 
@@ -498,7 +498,7 @@ primitives. Without interactive shapes, a canvas is a single opaque
 "image" node to screen readers.
 
 ```elixir
-import Toddy.Canvas.Shape  # needed here: shapes built in a helper outside canvas blocks
+import Plushie.Canvas.Shape  # needed here: shapes built in a helper outside canvas blocks
 
 canvas("color-picker", width: 200, height: 100,
   layers: %{"options" => Enum.map(Enum.with_index(colors), fn {color, i} ->
@@ -737,9 +737,9 @@ the `a11y` override takes precedence for the accesskit label since
 ## Action handling
 
 When an AT triggers an action, iced translates it to a native event. The
-renderer maps it to a standard toddy event:
+renderer maps it to a standard plushie event:
 
-| AT action | Toddy event | Notes |
+| AT action | Plushie event | Notes |
 |---|---|---|
 | Click | `%Widget{type: :click, id: id}` | Screen reader activate, switch press |
 | SetValue | `%Widget{type: :input, id: id, value: val}` | AT sets an input value directly |
@@ -768,7 +768,7 @@ Checks the inferred role for an element. This mirrors the role mapping,
 so it catches mismatches between your widget type and the intended role:
 
 ```elixir
-use Toddy.Test.Case, app: MyApp
+use Plushie.Test.Case, app: MyApp
 
 test "heading has correct role" do
   assert_role("#page_title", "heading")
@@ -807,7 +807,7 @@ clear message.
 
 ### Element helpers
 
-`Toddy.Test.Element` provides lower-level accessors:
+`Plushie.Test.Element` provides lower-level accessors:
 
 ```elixir
 test "element accessors" do
@@ -849,7 +849,7 @@ end
 ## Building
 
 Accessibility is included by default in both precompiled binaries
-(`mix toddy.download`) and source builds (`mix toddy.build`).
+(`mix plushie.download`) and source builds (`mix plushie.build`).
 
 The renderer uses an iced fork (`v0.14.0-a11y-accesskit` branch) that adds
 native accessibility support. The fork is referenced via `[patch.crates-io]`
@@ -860,8 +860,8 @@ Accessibility support is provided by:
 
 | Component | What it provides |
 |---|---|
-| toddy-iced fork | accesskit + accesskit_winit, TreeBuilder, per-window adapter management |
-| `toddy-core` | `A11yOverride` wrapper widget, `HiddenInterceptor`, AT action handling |
+| plushie-iced fork | accesskit + accesskit_winit, TreeBuilder, per-window adapter management |
+| `plushie-core` | `A11yOverride` wrapper widget, `HiddenInterceptor`, AT action handling |
 
 
 ## Platform support
@@ -884,13 +884,13 @@ To manually verify accessibility with a real screen reader:
 
 ```bash
 # Build the renderer (a11y is included by default)
-mix toddy.build
+mix plushie.build
 
 # Start Orca (usually Super+Alt+S, or from accessibility settings)
 orca &
 
 # Run your app
-mix toddy.gui MyApp
+mix plushie.gui MyApp
 ```
 
 Orca should announce widget roles and labels as you navigate with Tab.
@@ -900,11 +900,11 @@ Activate buttons with Enter or Space.
 
 ```bash
 # Build the renderer (a11y is included by default)
-mix toddy.build
+mix plushie.build
 
 # Toggle VoiceOver: Cmd+F5
 # Run your app
-mix toddy.gui MyApp
+mix plushie.gui MyApp
 ```
 
 Use VoiceOver keys (Ctrl+Option + arrow keys) to navigate. VoiceOver
@@ -914,11 +914,11 @@ should announce each widget's role and label.
 
 ```bash
 # Build the renderer (a11y is included by default)
-mix toddy.build
+mix plushie.build
 
 # Start NVDA
 # Run your app
-mix toddy.gui MyApp
+mix plushie.gui MyApp
 ```
 
 Tab between widgets. NVDA should announce roles, labels, and state
@@ -940,14 +940,14 @@ The iced fork adds native accessibility support. Key additions:
 - **Per-window adapters** -- each window gets an accesskit adapter connecting
   to the platform's AT layer.
 - **AT action routing** -- AT actions are translated to native iced events,
-  which the renderer maps to toddy wire events.
+  which the renderer maps to plushie wire events.
 
 The fork is referenced via `[patch.crates-io]` in the renderer's
 `Cargo.toml`.
 
 ### A11yOverride wrapper widget
 
-`a11y_widget.rs` in toddy contains two wrapper widgets:
+`a11y_widget.rs` in plushie contains two wrapper widgets:
 
 - **`A11yOverride`** -- wraps any iced `Element` and intercepts `operate()`
   to apply Elixir-side overrides from the `a11y` prop (role, label,
@@ -958,12 +958,12 @@ The fork is referenced via `[patch.crates-io]` in the renderer's
   accessibility tree when `hidden: true` is set.
 
 These wrappers are applied automatically by the renderer when building the
-iced widget tree from toddy's UI tree. No manual wrapping is needed from
+iced widget tree from plushie's UI tree. No manual wrapping is needed from
 Elixir.
 
 ### Renderer integration
 
-When the renderer builds the iced widget tree from a toddy snapshot or
+When the renderer builds the iced widget tree from a plushie snapshot or
 patch, it checks each node's `a11y` prop. If present (and not just
 `hidden: true`), the rendered widget is wrapped in `A11yOverride`. If
 `hidden: true`, it's wrapped in `HiddenInterceptor`. Nodes without an

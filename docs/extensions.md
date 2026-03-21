@@ -1,6 +1,6 @@
 # Writing Widget Extensions
 
-Guide for building custom widget extensions for Toddy. Extensions let you
+Guide for building custom widget extensions for Plushie. Extensions let you
 render arbitrary Rust-native widgets (iced widgets, custom `iced::advanced::Widget`
 implementations, third-party crates) while keeping your app's state and logic
 in Elixir.
@@ -9,16 +9,16 @@ in Elixir.
 
 An extension has two halves:
 
-1. **Elixir side:** use the `Toddy.Extension` macro. This declares the widget's
+1. **Elixir side:** use the `Plushie.Extension` macro. This declares the widget's
    props, commands, and (for native widgets) the Rust crate and constructor.
 
-2. **Rust side:** implement the `WidgetExtension` trait from `toddy-core`. This
+2. **Rust side:** implement the `WidgetExtension` trait from `plushie-core`. This
    receives tree nodes from Elixir and returns `iced::Element`s for rendering.
 
 ```elixir
 # lib/my_sparkline/extension.ex
 defmodule MySparkline do
-  use Toddy.Extension, :native_widget
+  use Plushie.Extension, :native_widget
 
   widget :sparkline
 
@@ -42,7 +42,7 @@ This generates:
 
 ```rust
 // native/my_sparkline/src/lib.rs
-use toddy_core::prelude::*;
+use plushie_core::prelude::*;
 
 pub struct SparklineExtension;
 
@@ -61,14 +61,14 @@ impl WidgetExtension for SparklineExtension {
 }
 ```
 
-Build with `mix toddy.build` (extensions are registered explicitly via
-`config :toddy, extensions: [MySparkline]` in your config) or run
-the renderer binary directly. The `ToddyAppBuilder` chains `.extension()` calls
+Build with `mix plushie.build` (extensions are registered explicitly via
+`config :plushie, extensions: [MySparkline]` in your config) or run
+the renderer binary directly. The `PlushieAppBuilder` chains `.extension()` calls
 in the generated `main.rs`:
 
 ```rust
-toddy::run(
-    ToddyAppBuilder::new()
+plushie::run(
+    PlushieAppBuilder::new()
         .extension(my_sparkline::SparklineExtension::new())
 )
 ```
@@ -79,12 +79,12 @@ The macro supports two kinds:
 
 ### `:native_widget` -- Rust-backed extensions
 
-Use `use Toddy.Extension, :native_widget` for widgets rendered by a Rust
+Use `use Plushie.Extension, :native_widget` for widgets rendered by a Rust
 crate. Requires `rust_crate` and `rust_constructor` declarations.
 
 ```elixir
 defmodule MyApp.HexView do
-  use Toddy.Extension, :native_widget
+  use Plushie.Extension, :native_widget
 
   widget :hex_view
   rust_crate "native/hex_view"
@@ -97,13 +97,13 @@ end
 
 ### `:widget` -- Pure Elixir composite widgets
 
-Use `use Toddy.Extension, :widget` for widgets composed entirely from
-existing Toddy widgets. No Rust code needed. Must define a `render/2`
+Use `use Plushie.Extension, :widget` for widgets composed entirely from
+existing Plushie widgets. No Rust code needed. Must define a `render/2`
 (or `render/3` if the widget accepts children) callback.
 
 ```elixir
 defmodule MyApp.Card do
-  use Toddy.Extension, :widget
+  use Plushie.Extension, :widget
 
   widget :card, container: true
 
@@ -111,7 +111,7 @@ defmodule MyApp.Card do
   prop :subtitle, :string, default: nil
 
   def render(id, props, children) do
-    import Toddy.UI
+    import Plushie.UI
 
     column padding: 16, spacing: 8 do
       text("ext_title", props.title, size: 20)
@@ -136,19 +136,19 @@ end
 
 ### Automatic DSL integration
 
-`prop` declarations automatically generate `Toddy.DSL.Buildable`
+`prop` declarations automatically generate `Plushie.DSL.Buildable`
 callbacks (`from_opts/1`, `__field_keys__/0`, `__field_types__/0`) and
 the `__option_keys__/0` / `__option_types__/0` functions that the DSL
 macros use for compile-time validation. Extension widgets work with
 block-form options out of the box -- no extra boilerplate needed.
 
 When a prop's type maps to a `Buildable` struct (e.g. `:padding` maps
-to `Toddy.Type.Padding`), the extension widget automatically supports
+to `Plushie.Type.Padding`), the extension widget automatically supports
 nested do-block construction for that prop:
 
 ```elixir
 defmodule MyApp.Card do
-  use Toddy.Extension, :widget
+  use Plushie.Extension, :widget
 
   widget :card, container: true
 
@@ -158,7 +158,7 @@ defmodule MyApp.Card do
 end
 
 # In a view:
-import Toddy.UI
+import Plushie.UI
 
 my_card "info", title: "Details" do
   border do
@@ -357,8 +357,8 @@ Extensions doing DPI-aware rendering or per-window adaptation can use
 
 ### Prelude additions
 
-The `toddy_core::prelude` now re-exports `alignment`, `Point`, and `Size`,
-so you no longer need to reach into `toddy_core::iced::alignment` for
+The `plushie_core::prelude` now re-exports `alignment`, `Point`, and `Size`,
+so you no longer need to reach into `plushie_core::iced::alignment` for
 alignment types.
 
 
@@ -369,7 +369,7 @@ publish events back through the extension system. Use the `Message::Event`
 variant:
 
 ```rust
-use toddy_core::message::Message;
+use plushie_core::message::Message;
 use serde_json::json;
 
 // In your Widget::update() method:
@@ -624,7 +624,7 @@ via `Widget::state()` or `canvas::Program`), and a `GenerationCounter` in
 `ExtensionCaches` tracks when your data changes.
 
 ```rust
-use toddy_core::prelude::*;
+use plushie_core::prelude::*;
 use iced::widget::canvas;
 
 /// Stored in ExtensionCaches (Send + Sync).
@@ -695,10 +695,10 @@ raw bytes?). The counter approach is the recommended pattern.
 call `.bump()` to increment, and `.get()` to read the current value.
 
 
-## toddy-iced Widget trait guide
+## plushie-iced Widget trait guide
 
 Extensions implementing `iced::advanced::Widget` directly (Tier C) need to
-be aware of the toddy-iced API. Several methods changed names and signatures
+be aware of the plushie-iced API. Several methods changed names and signatures
 from earlier versions.
 
 ### Key changes
@@ -706,7 +706,7 @@ from earlier versions.
 **`on_event` is now `update`:**
 
 ```rust
-// toddy-iced
+// plushie-iced
 fn update(
     &mut self,
     tree: &mut widget::Tree,
@@ -777,7 +777,7 @@ fn tag(&self) -> widget::tree::Tag {
 
 Use `shell.publish(Message::Event(...))` as described in the Message::Event
 construction section above. The `Message` type is re-exported from
-`toddy_core::prelude`.
+`plushie_core::prelude`.
 
 ### Full Widget skeleton
 
@@ -786,7 +786,7 @@ use iced::advanced::widget::{self, Widget};
 use iced::advanced::{layout, mouse, renderer, Clipboard, Layout, Shell};
 use iced::event;
 use iced::{Element, Length, Rectangle, Size, Theme};
-use toddy_core::prelude::*;
+use plushie_core::prelude::*;
 
 struct MyWidget<'a> {
     node_id: String,
@@ -868,7 +868,7 @@ impl<'a> From<MyWidget<'a>> for Element<'a, Message> {
 
 ## Prop helpers reference
 
-The `toddy_core::prop_helpers` module (re-exported via `prelude::*`) provides
+The `plushie_core::prop_helpers` module (re-exported via `prelude::*`) provides
 typed accessors for reading props from `TreeNode`. Use these instead of
 manually traversing `serde_json::Value`:
 
@@ -898,7 +898,7 @@ manually traversing `serde_json::Value`:
 | `node.prop_padding(key)` | `Padding` | Method on `TreeNode` (same as `prop_padding`) |
 | `node.props()` | `Option<&Map>` | Access the props object directly |
 | `OutgoingEvent::with_value(value)` | `OutgoingEvent` | Set the `value` field on extension events |
-| `ToddyAppBuilder::extension_boxed(ext)` | `ToddyAppBuilder` | Register pre-boxed extensions |
+| `PlushieAppBuilder::extension_boxed(ext)` | `PlushieAppBuilder` | Register pre-boxed extensions |
 | `f64_to_f32(v)` | `f32` | Clamping f64-to-f32 conversion |
 | `prop_padding(node, key)` | `Padding` | Public padding prop helper |
 
@@ -932,12 +932,12 @@ end
 ### Rust-side tests
 
 Test pure logic functions, `handle_command`, and `prepare`/`cleanup` using
-the helpers from `toddy_core::testing`:
+the helpers from `plushie_core::testing`:
 
 ```rust
 #[cfg(test)]
 mod tests {
-    use toddy_core::testing::*;
+    use plushie_core::testing::*;
     use super::*;
 
     #[test]
@@ -974,7 +974,7 @@ mod tests {
 
 ### Render smoke testing
 
-Use `widget_env_with()` from `toddy_core::testing` to construct a
+Use `widget_env_with()` from `plushie_core::testing` to construct a
 `WidgetEnv` for smoke-testing your `render()` method. This verifies the
 method doesn't panic and returns a valid `Element`:
 
@@ -1005,7 +1005,7 @@ the pooled backend infers events for known widget interaction patterns.
 
 For integration tests that exercise the full wire protocol round-trip
 (including extension commands), build a custom renderer with
-`mix toddy.build` and use the `:headless` backend. See the
+`mix plushie.build` and use the `:headless` backend. See the
 [Testing extensions](testing.md#testing-extensions) section in the
 testing guide for the full workflow.
 
@@ -1092,7 +1092,7 @@ performance-critical rendering that canvas can't handle efficiently.
 
 ### Package structure
 
-A toddy widget package is a standard Mix project:
+A plushie widget package is a standard Mix project:
 
 ```
 my_widget/
@@ -1123,19 +1123,19 @@ defmodule MyWidget.MixProject do
 
   defp deps do
     [
-      {:toddy, "~> 0.3"}
+      {:plushie, "~> 0.3"}
     ]
   end
 end
 ```
 
-toddy is a compile-time dependency. Your package does not need the renderer
-binary -- it only uses toddy's Elixir modules (`Toddy.Widget`,
-`Toddy.Widget.Build`, `Toddy.Encode`, type modules).
+plushie is a compile-time dependency. Your package does not need the renderer
+binary -- it only uses plushie's Elixir modules (`Plushie.Widget`,
+`Plushie.Widget.Build`, `Plushie.Encode`, type modules).
 
 ### Building a widget
 
-Implement the `Toddy.Widget` protocol on your struct. The `to_node/1`
+Implement the `Plushie.Widget` protocol on your struct. The `to_node/1`
 implementation composes existing built-in node types. The renderer handles
 them without modification.
 
@@ -1158,22 +1158,22 @@ defmodule MyWidget.DonutChart do
       |> DonutChart.build()
   """
 
-  alias Toddy.Widget.Build
-  alias Toddy.Canvas.Shape
+  alias Plushie.Widget.Build
+  alias Plushie.Canvas.Shape
 
   @type segment :: {label :: String.t(), value :: number(), color :: String.t()}
 
   @type option ::
           {:size, number()}
           | {:thickness, number()}
-          | {:background, Toddy.Type.Color.t()}
+          | {:background, Plushie.Type.Color.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
           segments: [segment()],
           size: number(),
           thickness: number(),
-          background: Toddy.Type.Color.t() | nil
+          background: Plushie.Type.Color.t() | nil
         }
 
   defstruct [:id, :segments, size: 200, thickness: 40, background: nil]
@@ -1189,9 +1189,9 @@ defmodule MyWidget.DonutChart do
   @spec thickness(donut_chart :: t(), thickness :: number()) :: t()
   def thickness(%__MODULE__{} = chart, thickness), do: %{chart | thickness: thickness}
 
-  @spec background(donut_chart :: t(), color :: Toddy.Type.Color.t()) :: t()
+  @spec background(donut_chart :: t(), color :: Plushie.Type.Color.t()) :: t()
   def background(%__MODULE__{} = chart, color) do
-    %{chart | background: Toddy.Type.Color.cast(color)}
+    %{chart | background: Plushie.Type.Color.cast(color)}
   end
 
   @spec with_options(donut_chart :: t(), opts :: [option()]) :: t()
@@ -1206,18 +1206,18 @@ defmodule MyWidget.DonutChart do
     end)
   end
 
-  @spec build(donut_chart :: t()) :: Toddy.Widget.ui_node()
-  def build(%__MODULE__{} = chart), do: Toddy.Widget.to_node(chart)
+  @spec build(donut_chart :: t()) :: Plushie.Widget.ui_node()
+  def build(%__MODULE__{} = chart), do: Plushie.Widget.to_node(chart)
 
   # -- Widget protocol --
 
-  defimpl Toddy.Widget do
+  defimpl Plushie.Widget do
     def to_node(chart) do
       layers = %{arcs: build_arc_shapes(chart)}
 
       props =
         %{layers: layers, width: chart.size, height: chart.size}
-        |> Toddy.Widget.Build.put_if(chart.background, :background)
+        |> Plushie.Widget.Build.put_if(chart.background, :background)
 
       %{id: chart.id, type: "canvas", props: props, children: []}
     end
@@ -1261,7 +1261,7 @@ end
 
 Key points:
 
-- The struct follows toddy's builder pattern.
+- The struct follows plushie's builder pattern.
 - `to_node/1` emits a `"canvas"` node with `"layers"` -- a type the stock
   renderer already handles.
 - No Rust code. No custom node types. The renderer sees a canvas widget.
@@ -1270,7 +1270,7 @@ Key points:
 #### Convenience constructors
 
 For consumer ergonomics, add a top-level module with functions that mirror
-the `Toddy.UI` / `Toddy.Widget` calling conventions:
+the `Plushie.UI` / `Plushie.Widget` calling conventions:
 
 ```elixir
 defmodule MyWidget do
@@ -1278,7 +1278,7 @@ defmodule MyWidget do
 
   @doc "Creates a donut chart node."
   @spec donut_chart(id :: String.t(), segments :: [DonutChart.segment()], opts :: Keyword.t()) ::
-          Toddy.Widget.ui_node()
+          Plushie.Widget.ui_node()
   def donut_chart(id, segments, opts \\ []) do
     DonutChart.new(id, segments, opts) |> DonutChart.build()
   end
@@ -1288,7 +1288,7 @@ end
 Consumers use it like any other widget:
 
 ```elixir
-import Toddy.UI
+import Plushie.UI
 
 column do
   text("Revenue breakdown")
@@ -1297,7 +1297,7 @@ end
 ```
 
 The result of `donut_chart/3` is a plain `ui_node()` map. It composes
-naturally with `Toddy.UI` do-blocks, `Column.push/2`, or any other tree
+naturally with `Plushie.UI` do-blocks, `Column.push/2`, or any other tree
 builder.
 
 ### Testing widget packages
@@ -1330,21 +1330,21 @@ end
 
 #### Integration tests with pooled_mock backend
 
-For testing widget behaviour in a running app, use toddy's pooled_mock
+For testing widget behaviour in a running app, use plushie's pooled_mock
 backend:
 
 ```elixir
 defmodule MyWidget.IntegrationTest do
-  use Toddy.Test.Case, async: true
+  use Plushie.Test.Case, async: true
 
   defmodule ChartApp do
-    @behaviour Toddy.App
+    @behaviour Plushie.App
 
     def init(_opts), do: %{segments: [{"A", 50, "#ff0000"}, {"B", 50, "#0000ff"}]}
     def update(model, _event), do: model
 
     def view(model) do
-      import Toddy.UI
+      import Plushie.UI
       window "main" do
         MyWidget.donut_chart("chart", model.segments, size: 200)
       end
@@ -1363,10 +1363,10 @@ end
 
 Document these in your package README:
 
-1. **Minimum toddy version.** Your package depends on toddy; specify the
+1. **Minimum plushie version.** Your package depends on plushie; specify the
    compatible range.
 2. **No renderer changes needed.** Pure Elixir packages work with the stock
-   toddy binary. Consumers do not need to rebuild anything.
+   plushie binary. Consumers do not need to rebuild anything.
 3. **Which built-in features are required.** If your widget uses canvas,
    consumers need the feature enabled (it is by default). Document this if
    it matters.

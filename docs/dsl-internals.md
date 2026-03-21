@@ -1,10 +1,10 @@
 # DSL internals
 
-Maintainer and extension author guide to the Toddy UI DSL. This covers
+Maintainer and extension author guide to the Plushie UI DSL. This covers
 the macro architecture, how blocks are compiled, and how to add new
 widgets and type structs that participate in the DSL.
 
-For user-facing DSL documentation, see the `Toddy.UI` moduledoc.
+For user-facing DSL documentation, see the `Plushie.UI` moduledoc.
 
 
 ## How the DSL works
@@ -13,9 +13,9 @@ The DSL is three layers that compose bottom-up:
 
 ### Widget structs (data layer)
 
-`Toddy.Widget.*` modules define typed structs for each widget.
-`Toddy.Type.*` modules define shared property types (padding, border,
-color, font, etc.). `Toddy.Canvas.Shape.*` modules define canvas shape
+`Plushie.Widget.*` modules define typed structs for each widget.
+`Plushie.Type.*` modules define shared property types (padding, border,
+color, font, etc.). `Plushie.Canvas.Shape.*` modules define canvas shape
 structs. Each struct carries its valid fields, default values, and type
 metadata.
 
@@ -30,7 +30,7 @@ anywhere.
 
 ### Macros (DSL layer)
 
-`Toddy.UI` macros provide ergonomic do-block syntax. They compile
+`Plushie.UI` macros provide ergonomic do-block syntax. They compile
 down to calls to the builder functions at expansion time. The macros
 handle:
 
@@ -47,7 +47,7 @@ sugar, not a separate representation.
 
 ## The Buildable behaviour
 
-`Toddy.DSL.Buildable` is the behaviour for types that participate in
+`Plushie.DSL.Buildable` is the behaviour for types that participate in
 the block-form option pattern. When a container's do-block contains a
 nested do-block for a struct-typed option (like `border do ... end`
 inside a `container`), the DSL needs to know how to construct that
@@ -60,7 +60,7 @@ Implement `Buildable` on any struct that:
 1. Appears as a value type in a widget's `__option_types__/0` map
 2. Should support nested do-block construction in the DSL
 
-All `Toddy.Type.*` structs that appear in widget option types implement
+All `Plushie.Type.*` structs that appear in widget option types implement
 it. Canvas shape helper structs (`Stroke`, `Dash`, `Interactive`,
 `HitRect`, `DragBounds`, `ShapeStyle`) implement it. Extension widgets
 get it automatically from `prop` declarations.
@@ -83,11 +83,11 @@ get it automatically from `prop` declarations.
 
 ### 1. Create the struct module
 
-Create `lib/toddy/widget/my_widget.ex`:
+Create `lib/plushie/widget/my_widget.ex`:
 
 ```elixir
-defmodule Toddy.Widget.MyWidget do
-  alias Toddy.Widget.Build
+defmodule Plushie.Widget.MyWidget do
+  alias Plushie.Widget.Build
 
   @valid_option_keys ~w(width height some_prop a11y)a
 
@@ -109,12 +109,12 @@ defmodule Toddy.Widget.MyWidget do
     end)
   end
 
-  def build(%__MODULE__{} = w), do: Toddy.Widget.to_node(w)
+  def build(%__MODULE__{} = w), do: Plushie.Widget.to_node(w)
 
   def __option_keys__, do: @valid_option_keys
 
   def __option_types__ do
-    %{a11y: Toddy.Type.A11y}
+    %{a11y: Plushie.Type.A11y}
   end
 end
 ```
@@ -131,7 +131,7 @@ Key points:
 ### 2. Implement the Widget protocol
 
 ```elixir
-defimpl Toddy.Widget, for: Toddy.Widget.MyWidget do
+defimpl Plushie.Widget, for: Plushie.Widget.MyWidget do
   def to_node(w) do
     props =
       %{}
@@ -144,7 +144,7 @@ defimpl Toddy.Widget, for: Toddy.Widget.MyWidget do
 end
 ```
 
-### 3. Add a macro to Toddy.UI
+### 3. Add a macro to Plushie.UI
 
 For a **leaf widget** (no children):
 
@@ -152,22 +152,22 @@ For a **leaf widget** (no children):
 defmacro my_widget(id, opts_or_do \\ []) do
   case opts_or_do do
     [do: block] ->
-      option_keys = Toddy.Widget.MyWidget.__option_keys__()
-      option_types = Toddy.Widget.MyWidget.__option_types__()
+      option_keys = Plushie.Widget.MyWidget.__option_keys__()
+      option_types = Plushie.Widget.MyWidget.__option_types__()
       pairs = interpret_block(block, option_types)
       validate_option_keys!(pairs, option_keys, "my_widget", __CALLER__)
       opts_ast = pairs_to_keyword_ast(pairs)
-      quote do: Toddy.UI.__build_my_widget__(unquote(id), unquote(opts_ast))
+      quote do: Plushie.UI.__build_my_widget__(unquote(id), unquote(opts_ast))
 
     opts ->
-      quote do: Toddy.UI.__build_my_widget__(unquote(id), unquote(opts))
+      quote do: Plushie.UI.__build_my_widget__(unquote(id), unquote(opts))
   end
 end
 
 @doc false
 def __build_my_widget__(id, opts) do
-  Toddy.Widget.MyWidget.new(id, clean_opts(opts))
-  |> Toddy.Widget.MyWidget.build()
+  Plushie.Widget.MyWidget.new(id, clean_opts(opts))
+  |> Plushie.Widget.MyWidget.build()
 end
 ```
 
@@ -177,8 +177,8 @@ use `container_scope/4` to walk the block AST, then call
 
 ### 4. Add to module lists
 
-- Container widgets: add `{Toddy.Widget.MyWidget, "my_widget"}` to
-  `@container_modules` in `Toddy.UI`.
+- Container widgets: add `{Plushie.Widget.MyWidget, "my_widget"}` to
+  `@container_modules` in `Plushie.UI`.
 - Leaf widgets: add `"my_widget"` to `@leaf_widget_names`.
 - Display widgets (leaf, auto-ID): add to `@display_widget_names`.
 
@@ -188,7 +188,7 @@ These lists drive:
 
 ### 5. Register in .formatter.exs
 
-Add entries to the `toddy_ui_locals` list so the formatter keeps
+Add entries to the `plushie_ui_locals` list so the formatter keeps
 do-block forms paren-free:
 
 ```elixir
@@ -206,8 +206,8 @@ shadow, etc.) that can be constructed via nested do-blocks.
 ### 1. Create the struct with Buildable
 
 ```elixir
-defmodule Toddy.Type.MyType do
-  @behaviour Toddy.DSL.Buildable
+defmodule Plushie.Type.MyType do
+  @behaviour Plushie.DSL.Buildable
 
   defstruct [:field_a, :field_b]
 
@@ -229,11 +229,11 @@ end
 
 ### 2. Add the Encode protocol implementation
 
-Implement `Toddy.Encode` so the struct serializes correctly over the
+Implement `Plushie.Encode` so the struct serializes correctly over the
 wire:
 
 ```elixir
-defimpl Toddy.Encode, for: Toddy.Type.MyType do
+defimpl Plushie.Encode, for: Plushie.Type.MyType do
   def encode(%{field_a: a, field_b: b}) do
     %{"field_a" => a, "field_b" => b}
   end
@@ -246,7 +246,7 @@ Add the mapping in the relevant widget module's `__option_types__/0`:
 
 ```elixir
 def __option_types__ do
-  %{my_type: Toddy.Type.MyType, padding: Toddy.Type.Padding}
+  %{my_type: Plushie.Type.MyType, padding: Plushie.Type.Padding}
 end
 ```
 
@@ -285,7 +285,7 @@ macros and canvas shape builders. Inside canvas scope, `canvas_scope`
 rewrites calls to these names:
 
 - `text(x, y, content, opts)` in canvas scope calls
-  `Toddy.Canvas.Shape.text/4` (shape builder), not `Toddy.UI.text`
+  `Plushie.Canvas.Shape.text/4` (shape builder), not `Plushie.UI.text`
   (widget macro).
 - Short-form `text("hello")` is detected and raises a compile error
   with a hint to use the positional canvas form.
@@ -326,9 +326,9 @@ partition from children at runtime.
    to `{:__widget_prop__, :spacing, 8}`.
 
 2. **Do-block option handling.** A call like `padding do top 16 end`
-   where `padding` maps to `Toddy.Type.Padding` in `__option_types__`
+   where `padding` maps to `Plushie.Type.Padding` in `__option_types__`
    gets rewritten to
-   `{:__widget_prop__, :padding, Toddy.Type.Padding.from_opts(...)}`.
+   `{:__widget_prop__, :padding, Plushie.Type.Padding.from_opts(...)}`.
 
 3. **Wrong-container validation.** A bare call like `spacing 8` inside
    a `container` block (where `spacing` is not valid) checks whether

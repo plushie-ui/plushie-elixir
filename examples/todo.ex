@@ -11,10 +11,10 @@ defmodule Todo do
   - View helper extraction (`todo_row/1`, `filtered/1`)
   """
 
-  use Toddy.App
+  use Plushie.App
 
-  alias Toddy.Command
-  alias Toddy.Event.Widget
+  alias Plushie.Command
+  alias Plushie.Event.Widget
 
   # -- Init -----------------------------------------------------------------
 
@@ -61,7 +61,7 @@ defmodule Todo do
   # -- View -----------------------------------------------------------------
 
   def view(model) do
-    import Toddy.UI
+    import Plushie.UI
 
     window "main", title: "Todos" do
       column id: "app", padding: 20, spacing: 12, width: :fill do
@@ -92,7 +92,7 @@ defmodule Todo do
   defp filtered(%{filter: :done, todos: todos}), do: Enum.filter(todos, & &1.done)
 
   defp todo_row(todo) do
-    import Toddy.UI
+    import Plushie.UI
 
     container todo.id do
       row spacing: 8 do

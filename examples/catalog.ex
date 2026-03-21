@@ -1,6 +1,6 @@
 defmodule Catalog do
   @moduledoc """
-  Comprehensive widget catalog exercising every real iced widget type in Toddy.
+  Comprehensive widget catalog exercising every real iced widget type in Plushie.
 
   Organized as a column layout with tab-like navigation across four sections:
   layout, input, display, and composite. Each section demonstrates a category
@@ -35,12 +35,12 @@ defmodule Catalog do
 
   ## Running
 
-      mix toddy.gui Catalog
+      mix plushie.gui Catalog
   """
 
-  use Toddy.App
+  use Plushie.App
 
-  alias Toddy.Event.{MouseArea, Sensor, Widget}
+  alias Plushie.Event.{MouseArea, Sensor, Widget}
 
   # -- init ------------------------------------------------------------------
 
@@ -152,11 +152,11 @@ defmodule Catalog do
   # -- view ------------------------------------------------------------------
 
   def view(model) do
-    import Toddy.UI
+    import Plushie.UI
 
     window "catalog", title: "Widget Catalog" do
       column spacing: 12, padding: 16 do
-        text("catalog_title", "Toddy Widget Catalog", size: 24)
+        text("catalog_title", "Plushie Widget Catalog", size: 24)
         rule()
 
         row spacing: 8 do
@@ -181,7 +181,7 @@ defmodule Catalog do
   # -- tab views (private) ---------------------------------------------------
 
   defp layout_tab do
-    import Toddy.UI
+    import Plushie.UI
 
     column spacing: 8 do
       text("layout_heading", "Layout Widgets", size: 18)
@@ -272,7 +272,7 @@ defmodule Catalog do
   end
 
   defp input_tab(model) do
-    import Toddy.UI
+    import Plushie.UI
 
     column spacing: 8 do
       text("input_heading", "Input Widgets", size: 18)
@@ -319,7 +319,7 @@ defmodule Catalog do
   end
 
   defp display_tab(model) do
-    import Toddy.UI
+    import Plushie.UI
 
     column spacing: 8 do
       text("display_heading", "Display Widgets", size: 18)
@@ -386,7 +386,7 @@ defmodule Catalog do
   end
 
   defp composite_tab(model) do
-    import Toddy.UI
+    import Plushie.UI
 
     column spacing: 8 do
       text("composite_heading", "Interactive & Composite Widgets", size: 18)

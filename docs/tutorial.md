@@ -11,11 +11,11 @@ text.
 
 ```elixir
 defmodule MyApp.Todo do
-  use Toddy.App
+  use Plushie.App
 
-  import Toddy.UI
+  import Plushie.UI
 
-  alias Toddy.Event.Widget
+  alias Plushie.Event.Widget
 
   def init(_opts) do
     %{
@@ -39,7 +39,7 @@ defmodule MyApp.Todo do
 end
 ```
 
-Run it with `mix toddy.gui MyApp.Todo`. You'll see a title and a
+Run it with `mix plushie.gui MyApp.Todo`. You'll see a title and a
 placeholder message. Not much yet, but the structure is in place:
 `init` sets up state, `view` renders it.
 
@@ -152,10 +152,10 @@ later move the list into a sidebar or tab, the pattern still works.
 ## Step 5: refocusing with a command
 
 After submitting a todo, the text input loses focus. Let's refocus
-it automatically using `Toddy.Command.focus/1`:
+it automatically using `Plushie.Command.focus/1`:
 
 ```elixir
-alias Toddy.Command
+alias Plushie.Command
 
 def update(model, %Widget{type: :submit, id: "new_todo"}) do
   if String.trim(model.input) != "" do
@@ -232,23 +232,23 @@ end
 ```
 
 Notice `todo_row/1` is extracted as a view helper. Each helper
-imports `Toddy.UI` independently (the import is lexically scoped).
+imports `Plushie.UI` independently (the import is lexically scoped).
 
 ## The complete app
 
 The full source is in
-[`examples/todo.ex`](https://github.com/toddy-ui/toddy-elixir/blob/main/examples/todo.ex)
+[`examples/todo.ex`](https://github.com/plushie-ui/plushie-elixir/blob/main/examples/todo.ex)
 with tests in
-[`test/toddy/examples/todo_test.exs`](https://github.com/toddy-ui/toddy-elixir/blob/main/test/toddy/examples/todo_test.exs).
+[`test/plushie/examples/todo_test.exs`](https://github.com/plushie-ui/plushie-elixir/blob/main/test/plushie/examples/todo_test.exs).
 
 ```elixir
 defmodule MyApp.Todo do
-  use Toddy.App
+  use Plushie.App
 
-  import Toddy.UI
+  import Plushie.UI
 
-  alias Toddy.Command
-  alias Toddy.Event.Widget
+  alias Plushie.Command
+  alias Plushie.Event.Widget
 
   # -- Init -----------------------------------------------------------------
 

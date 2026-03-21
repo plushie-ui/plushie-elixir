@@ -3,18 +3,18 @@ defmodule Notes do
   Notes application demonstrating all 5 state helpers working together.
 
   Demonstrates:
-  - `Toddy.State` for nested state management
-  - `Toddy.Undo` for reversible edits with labels
-  - `Toddy.Selection` for multi-select with toggle
-  - `Toddy.Route` for stack-based view navigation
-  - `Toddy.Data.query/2` for full-text search across fields
+  - `Plushie.State` for nested state management
+  - `Plushie.Undo` for reversible edits with labels
+  - `Plushie.Selection` for multi-select with toggle
+  - `Plushie.Route` for stack-based view navigation
+  - `Plushie.Data.query/2` for full-text search across fields
   - View helper extraction (`view_list/1`, `view_edit/1`)
   """
 
-  use Toddy.App
+  use Plushie.App
 
-  alias Toddy.{Data, Route, Selection, State, Undo}
-  alias Toddy.Event.Widget
+  alias Plushie.{Data, Route, Selection, State, Undo}
+  alias Plushie.Event.Widget
 
   # -- init ------------------------------------------------------------------
 
@@ -146,7 +146,7 @@ defmodule Notes do
   end
 
   defp view_list(model) do
-    import Toddy.UI
+    import Plushie.UI
 
     search_query = State.get(model.state, [:search_query])
     notes = State.get(model.state, [:notes])
@@ -190,7 +190,7 @@ defmodule Notes do
   end
 
   defp view_edit(model) do
-    import Toddy.UI
+    import Plushie.UI
 
     current = Undo.current(model.undo)
 

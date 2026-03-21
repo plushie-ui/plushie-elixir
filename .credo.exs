@@ -84,7 +84,7 @@
           # Priority values are: `low, normal, high, higher`
           #
           # CHANGED: disabled -- widget build/1 and to_node impls use full paths
-          # like Toddy.Widget.Build once per function. Aliasing them would
+          # like Plushie.Widget.Build once per function. Aliasing them would
           # hide the origin and hurt readability in this codebase.
           {Credo.Check.Design.AliasUsage, false},
           {Credo.Check.Design.TagFIXME, []},

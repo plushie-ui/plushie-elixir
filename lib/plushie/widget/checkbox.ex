@@ -1,0 +1,207 @@
+defmodule Plushie.Widget.Checkbox do
+  @moduledoc """
+  Checkbox -- toggleable boolean input.
+
+  ## Props
+
+  - `checked` (boolean) -- whether the checkbox is checked. Default: false.
+  - `label` (string) -- text label displayed next to the checkbox.
+  - `spacing` (number) -- space between checkbox and label in pixels.
+  - `width` (length) -- widget width. Default: shrink. See `Plushie.Type.Length`.
+  - `size` (number) -- checkbox size in pixels.
+  - `text_size` (number) -- label text size in pixels.
+  - `font` (string | map) -- label font. See `Plushie.Type.Font`.
+  - `line_height` (number | map) -- label line height.
+  - `shaping` -- text shaping strategy. See `Plushie.Type.Shaping`.
+  - `wrapping` -- text wrapping mode. See `Plushie.Type.Wrapping`.
+  - `style` -- named preset (`:primary` (default), `:secondary`, `:success`,
+    `:danger`) or `StyleMap.t()`. See `Plushie.Type.StyleMap`.
+  - `icon` (map) -- custom icon for the check mark. Map with `:code_point` (required),
+    and optional `:size`, `:line_height`, `:font`, `:shaping`.
+  - `disabled` (boolean) -- when true, the checkbox cannot be toggled. Default: false.
+  - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
+
+  ## Events
+
+  - `%Widget{type: :toggle, id: id, value: bool}` -- emitted on toggle, `value` is the new boolean state.
+  """
+
+  alias Plushie.Type.A11y
+  alias Plushie.Type.StyleMap
+  alias Plushie.Widget.Build
+
+  @presets [:primary, :secondary, :success, :danger]
+
+  @type preset :: unquote(Enum.reduce(@presets, &{:|, [], [&1, &2]}))
+  @type style :: preset() | StyleMap.t()
+
+  @type option ::
+          {:spacing, number()}
+          | {:width, Plushie.Type.Length.t()}
+          | {:size, number()}
+          | {:text_size, number()}
+          | {:font, Plushie.Type.Font.t()}
+          | {:line_height, number() | map()}
+          | {:shaping, Plushie.Type.Shaping.t()}
+          | {:wrapping, Plushie.Type.Wrapping.t()}
+          | {:style, style()}
+          | {:icon, map()}
+          | {:disabled, boolean()}
+          | {:a11y, Plushie.Type.A11y.t()}
+
+  @type t :: %__MODULE__{
+          id: String.t(),
+          label: String.t(),
+          is_toggled: boolean(),
+          spacing: number() | nil,
+          width: Plushie.Type.Length.t() | nil,
+          size: number() | nil,
+          text_size: number() | nil,
+          font: Plushie.Type.Font.t() | nil,
+          line_height: number() | map() | nil,
+          shaping: Plushie.Type.Shaping.t() | nil,
+          wrapping: Plushie.Type.Wrapping.t() | nil,
+          style: style() | nil,
+          icon: map() | nil,
+          disabled: boolean() | nil,
+          a11y: Plushie.Type.A11y.t() | nil
+        }
+
+  defstruct [
+    :id,
+    :label,
+    :is_toggled,
+    :spacing,
+    :width,
+    :size,
+    :text_size,
+    :font,
+    :line_height,
+    :shaping,
+    :wrapping,
+    :style,
+    :icon,
+    :disabled,
+    :a11y
+  ]
+
+  @valid_option_keys ~w(label spacing width size text_size font line_height shaping wrapping style icon disabled a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{font: Plushie.Type.Font, style: Plushie.Type.StyleMap, a11y: Plushie.Type.A11y}
+  end
+
+  @doc "Creates a new checkbox struct with the given label, toggle state, and optional keyword opts."
+  @spec new(id :: String.t(), label :: String.t(), is_toggled :: boolean(), opts :: [option()]) ::
+          t()
+  def new(id, label, is_toggled, opts \\ [])
+      when is_binary(id) and is_binary(label) and is_boolean(is_toggled) do
+    %__MODULE__{id: id, label: label, is_toggled: is_toggled} |> with_options(opts)
+  end
+
+  @doc "Applies keyword options to an existing checkbox struct."
+  @spec with_options(checkbox :: t(), opts :: [option()]) :: t()
+  def with_options(%__MODULE__{} = cb, []), do: cb
+
+  def with_options(%__MODULE__{} = cb, opts) do
+    Enum.reduce(opts, cb, fn
+      {:spacing, v}, acc -> spacing(acc, v)
+      {:width, v}, acc -> width(acc, v)
+      {:size, v}, acc -> size(acc, v)
+      {:text_size, v}, acc -> text_size(acc, v)
+      {:font, v}, acc -> font(acc, v)
+      {:line_height, v}, acc -> line_height(acc, v)
+      {:shaping, v}, acc -> shaping(acc, v)
+      {:wrapping, v}, acc -> wrapping(acc, v)
+      {:style, v}, acc -> style(acc, v)
+      {:icon, v}, acc -> icon(acc, v)
+      {:disabled, v}, acc -> disabled(acc, v)
+      {:a11y, v}, acc -> a11y(acc, v)
+      {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
+    end)
+  end
+
+  @doc "Sets the spacing between checkbox and label."
+  @spec spacing(checkbox :: t(), spacing :: number()) :: t()
+  def spacing(%__MODULE__{} = cb, spacing) when is_number(spacing), do: %{cb | spacing: spacing}
+
+  @doc "Sets the checkbox width."
+  @spec width(checkbox :: t(), width :: Plushie.Type.Length.t()) :: t()
+  def width(%__MODULE__{} = cb, width), do: %{cb | width: width}
+
+  @doc "Sets the checkbox size in pixels."
+  @spec size(checkbox :: t(), size :: number()) :: t()
+  def size(%__MODULE__{} = cb, size) when is_number(size), do: %{cb | size: size}
+
+  @doc "Sets the label text size in pixels."
+  @spec text_size(checkbox :: t(), text_size :: number()) :: t()
+  def text_size(%__MODULE__{} = cb, text_size) when is_number(text_size),
+    do: %{cb | text_size: text_size}
+
+  @doc "Sets the label font."
+  @spec font(checkbox :: t(), font :: Plushie.Type.Font.t()) :: t()
+  def font(%__MODULE__{} = cb, font), do: %{cb | font: font}
+
+  @doc "Sets the label line height."
+  @spec line_height(checkbox :: t(), line_height :: number() | map()) :: t()
+  def line_height(%__MODULE__{} = cb, line_height), do: %{cb | line_height: line_height}
+
+  @doc "Sets the text shaping strategy."
+  @spec shaping(checkbox :: t(), shaping :: Plushie.Type.Shaping.t()) :: t()
+  def shaping(%__MODULE__{} = cb, shaping), do: %{cb | shaping: shaping}
+
+  @doc "Sets the text wrapping mode."
+  @spec wrapping(checkbox :: t(), wrapping :: Plushie.Type.Wrapping.t()) :: t()
+  def wrapping(%__MODULE__{} = cb, wrapping), do: %{cb | wrapping: wrapping}
+
+  @doc "Sets the checkbox style."
+  @spec style(checkbox :: t(), style :: style()) :: t()
+  def style(%__MODULE__{} = cb, %StyleMap{} = style), do: %{cb | style: style}
+  def style(%__MODULE__{} = cb, style) when style in @presets, do: %{cb | style: style}
+
+  @doc "Sets a custom icon for the check mark."
+  @spec icon(checkbox :: t(), icon :: map()) :: t()
+  def icon(%__MODULE__{} = cb, icon) when is_map(icon), do: %{cb | icon: icon}
+
+  @doc "Sets whether the checkbox is disabled."
+  @spec disabled(checkbox :: t(), disabled :: boolean()) :: t()
+  def disabled(%__MODULE__{} = cb, disabled) when is_boolean(disabled),
+    do: %{cb | disabled: disabled}
+
+  @doc "Sets accessibility annotations."
+  @spec a11y(checkbox :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
+  def a11y(%__MODULE__{} = cb, a11y), do: %{cb | a11y: A11y.cast(a11y)}
+
+  @doc "Converts this checkbox struct to a `ui_node()` map via the `Plushie.Widget` protocol."
+  @spec build(checkbox :: t()) :: Plushie.Widget.ui_node()
+  def build(%__MODULE__{} = cb), do: Plushie.Widget.to_node(cb)
+
+  defimpl Plushie.Widget do
+    import Plushie.Widget.Build
+
+    def to_node(cb) do
+      props =
+        %{}
+        |> put_if(cb.label, :label)
+        |> put_if(cb.is_toggled, :checked)
+        |> put_if(cb.spacing, :spacing)
+        |> put_if(cb.width, :width)
+        |> put_if(cb.size, :size)
+        |> put_if(cb.text_size, :text_size)
+        |> put_if(cb.font, :font)
+        |> put_if(cb.line_height, :line_height)
+        |> put_if(cb.shaping, :shaping)
+        |> put_if(cb.wrapping, :wrapping)
+        |> put_if(cb.style, :style)
+        |> put_if(cb.icon, :icon)
+        |> put_if(cb.disabled, :disabled)
+        |> put_if(cb.a11y, :a11y)
+
+      %{id: cb.id, type: "checkbox", props: props, children: []}
+    end
+  end
+end

@@ -8,9 +8,9 @@ defmodule Counter do
   - Basic column/row layout
   """
 
-  use Toddy.App
+  use Plushie.App
 
-  alias Toddy.Event.Widget
+  alias Plushie.Event.Widget
 
   def init(_opts), do: %{count: 0}
 
@@ -19,7 +19,7 @@ defmodule Counter do
   def update(model, _event), do: model
 
   def view(model) do
-    import Toddy.UI
+    import Plushie.UI
 
     window "main", title: "Counter" do
       column padding: 16, spacing: 8 do

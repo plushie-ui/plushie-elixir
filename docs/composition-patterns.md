@@ -1,20 +1,20 @@
 # Composition patterns
 
-Toddy provides primitives, not pre-built composites. There is no `TabBar`
+Plushie provides primitives, not pre-built composites. There is no `TabBar`
 widget, no `Modal` widget, no `Card` widget. Instead, you compose the same
 building blocks -- `row`, `column`, `container`, `stack`, `button`, `text`,
 `rule`, `mouse_area`, `space` -- with `StyleMap` to build any UI pattern you
 need.
 
 This guide shows how. Every pattern is copy-pasteable and produces a polished
-result. All examples use `Toddy.UI` macros and assume you have the following
+result. All examples use `Plushie.UI` macros and assume you have the following
 at the top of your view function:
 
 ```elixir
-import Toddy.UI
-alias Toddy.Type.StyleMap
-alias Toddy.Type.Border
-alias Toddy.Type.Shadow
+import Plushie.UI
+alias Plushie.Type.StyleMap
+alias Plushie.Type.Border
+alias Plushie.Type.Shadow
 ```
 
 ---
@@ -29,10 +29,10 @@ views.
 
 ```elixir
 defmodule TabApp do
-  @behaviour Toddy.App
+  @behaviour Plushie.App
 
-  alias Toddy.Type.StyleMap
-  alias Toddy.Type.Border
+  alias Plushie.Type.StyleMap
+  alias Plushie.Type.Border
 
   def init(_opts), do: %{active_tab: :overview}
 
@@ -119,9 +119,9 @@ that highlight on hover. The selected item has an accent background.
 
 ```elixir
 defmodule SidebarApp do
-  @behaviour Toddy.App
+  @behaviour Plushie.App
 
-  alias Toddy.Type.StyleMap
+  alias Plushie.Type.StyleMap
 
   @nav_items [
     {:inbox, "Inbox"},
@@ -214,10 +214,10 @@ view.
 
 ```elixir
 defmodule ToolbarApp do
-  @behaviour Toddy.App
+  @behaviour Plushie.App
 
-  alias Toddy.Type.StyleMap
-  alias Toddy.Type.Border
+  alias Plushie.Type.StyleMap
+  alias Plushie.Type.Border
 
   def init(_opts), do: %{bold: false, italic: false, underline: false}
 
@@ -313,11 +313,11 @@ container that dims the background.
 
 ```elixir
 defmodule ModalApp do
-  @behaviour Toddy.App
+  @behaviour Plushie.App
 
-  alias Toddy.Type.StyleMap
-  alias Toddy.Type.Border
-  alias Toddy.Type.Shadow
+  alias Plushie.Type.StyleMap
+  alias Plushie.Type.Border
+  alias Plushie.Type.Shadow
 
   def init(_opts), do: %{show_modal: false, confirmed: false}
 
@@ -418,10 +418,10 @@ styled container.
 
 ```elixir
 defmodule CardApp do
-  @behaviour Toddy.App
+  @behaviour Plushie.App
 
-  alias Toddy.Type.Border
-  alias Toddy.Type.Shadow
+  alias Plushie.Type.Border
+  alias Plushie.Type.Shadow
 
   def init(_opts), do: %{}
   def update(model, _event), do: model
@@ -531,9 +531,9 @@ cursor to a horizontal resize indicator.
 
 ```elixir
 defmodule SplitApp do
-  @behaviour Toddy.App
+  @behaviour Plushie.App
 
-  alias Toddy.Type.Border
+  alias Plushie.Type.Border
 
   def init(_opts), do: %{left_width: 300}
 
@@ -616,11 +616,11 @@ location.
 
 ```elixir
 defmodule BreadcrumbApp do
-  @behaviour Toddy.App
+  @behaviour Plushie.App
 
-  alias Toddy.Type.StyleMap
+  alias Plushie.Type.StyleMap
 
-  def init(_opts), do: %{path: ["Home", "Projects", "Toddy", "Docs"]}
+  def init(_opts), do: %{path: ["Home", "Projects", "Plushie", "Docs"]}
 
   def update(model, %Widget{type: :click, id: "crumb:" <> index_str}) do
     index = String.to_integer(index_str)
@@ -687,7 +687,7 @@ Clicking a breadcrumb truncates the path to that index, navigating "up".
 
 ### What it looks like
 
-A horizontal line of text: "Home > Projects > Toddy > Docs". Everything
+A horizontal line of text: "Home > Projects > Plushie > Docs". Everything
 except "Docs" is blue and clickable. Hovering over a segment highlights it
 with a light blue background. "Docs" is plain dark text.
 
@@ -702,10 +702,10 @@ for tags, counts, status indicators, or filter chips.
 
 ```elixir
 defmodule BadgeApp do
-  @behaviour Toddy.App
+  @behaviour Plushie.App
 
-  alias Toddy.Type.StyleMap
-  alias Toddy.Type.Border
+  alias Plushie.Type.StyleMap
+  alias Plushie.Type.Border
 
   @tags ["elixir", "rust", "iced", "desktop"]
 
@@ -823,9 +823,9 @@ feedback and focus ring locally. The host only sees click events.
 
 ```elixir
 defmodule ToggleApp do
-  @behaviour Toddy.App
+  @behaviour Plushie.App
 
-  import Toddy.UI
+  import Plushie.UI
 
   def init(_opts), do: %{dark_mode: false}
 
@@ -870,8 +870,8 @@ metadata. On click, the host toggles `dark_mode` and the view
 re-renders with new positions and colours.
 
 Canvas shape functions (`rect`, `circle`, `line`, `path`, `stroke`,
-`linear_gradient`, etc.) are available directly via `import Toddy.UI`
--- no separate `import Toddy.Canvas.Shape` needed inside canvas blocks.
+`linear_gradient`, etc.) are available directly via `import Plushie.UI`
+-- no separate `import Plushie.Canvas.Shape` needed inside canvas blocks.
 
 Screen reader: "Dark mode, switch, on." Keyboard: Tab focuses the
 canvas, Enter/Space toggles.
@@ -885,9 +885,9 @@ has a tooltip, and announces its position in the set.
 
 ```elixir
 defmodule ChartApp do
-  @behaviour Toddy.App
+  @behaviour Plushie.App
 
-  import Toddy.UI
+  import Plushie.UI
 
   @data [
     %{month: "Jan", value: 120, color: "#3498db"},
@@ -966,10 +966,10 @@ IME, and clipboard.
 
 ```elixir
 defmodule SearchApp do
-  @behaviour Toddy.App
+  @behaviour Plushie.App
 
-  import Toddy.UI
-  import Toddy.Canvas.Shape  # needed for shape calls in inline layers: map
+  import Plushie.UI
+  import Plushie.Canvas.Shape  # needed for shape calls in inline layers: map
 
   def init(_opts), do: %{query: ""}
 
@@ -1019,11 +1019,11 @@ visuals. text_input handles filtering. scrollable handles long lists.
 
 ```elixir
 defmodule ComboApp do
-  @behaviour Toddy.App
+  @behaviour Plushie.App
 
-  import Toddy.UI
-  import Toddy.Canvas.Shape  # needed for shape calls in inline layers: map
-  alias Toddy.Type.Border
+  import Plushie.UI
+  import Plushie.Canvas.Shape  # needed for shape calls in inline layers: map
+  alias Plushie.Type.Border
 
   @options ["Elixir", "Rust", "Python", "TypeScript", "Go", "Haskell", "OCaml", "Zig"]
 
@@ -1238,78 +1238,78 @@ functions returning plain maps -- no macros needed.
 
 ## State helpers
 
-Toddy provides optional state management modules for common UI patterns.
+Plushie provides optional state management modules for common UI patterns.
 None of these are required -- your model can be any term. They exist because
 these patterns come up repeatedly in desktop apps and getting them right from
 scratch is tedious.
 
 All helpers are pure data structures with no processes or side effects.
 
-### Toddy.State
+### Plushie.State
 
 Path-based access to nested model data with revision tracking and
 transactions.
 
 ```elixir
-state = Toddy.State.new(%{user: %{name: "Alice", prefs: %{theme: "dark"}}})
+state = Plushie.State.new(%{user: %{name: "Alice", prefs: %{theme: "dark"}}})
 
 # Read
-Toddy.State.get(state, [:user, :name])
+Plushie.State.get(state, [:user, :name])
 # => "Alice"
 
 # Write
-state = Toddy.State.put(state, [:user, :prefs, :theme], "light")
-Toddy.State.revision(state)
+state = Plushie.State.put(state, [:user, :prefs, :theme], "light")
+Plushie.State.revision(state)
 # => 1
 
 # Transaction (atomic multi-step update with rollback)
-state = Toddy.State.begin_transaction(state)
-state = Toddy.State.put(state, [:user, :name], "Bob")
-state = Toddy.State.put(state, [:user, :prefs, :theme], "dark")
-state = Toddy.State.commit_transaction(state)
+state = Plushie.State.begin_transaction(state)
+state = Plushie.State.put(state, [:user, :name], "Bob")
+state = Plushie.State.put(state, [:user, :prefs, :theme], "dark")
+state = Plushie.State.commit_transaction(state)
 # Both changes applied atomically. Revision incremented once.
 
 # Or roll back:
-state = Toddy.State.rollback_transaction(state)
+state = Plushie.State.rollback_transaction(state)
 # All changes since begin_transaction discarded.
 ```
 
 The revision counter is useful for determining whether a re-render is
 needed. If the revision has not changed, the tree has not changed.
 
-Use `Toddy.State` when your model has deeply nested data that you update
+Use `Plushie.State` when your model has deeply nested data that you update
 from multiple event handlers. Skip it when your model is flat or simple
 enough that plain map updates read clearly.
 
-### Toddy.Undo
+### Plushie.Undo
 
 Undo/redo stack for commands.
 
 ```elixir
-undo = Toddy.Undo.new(model)
+undo = Plushie.Undo.new(model)
 
 # Apply a command (records it for undo)
-undo = Toddy.Undo.apply(undo, %{
+undo = Plushie.Undo.apply(undo, %{
   apply: fn m -> %{m | name: "Bob"} end,
   undo: fn m -> %{m | name: "Alice"} end,
   label: "Rename to Bob"
 })
 
-Toddy.Undo.current(undo).name
+Plushie.Undo.current(undo).name
 # => "Bob"
 
 # Undo
-undo = Toddy.Undo.undo(undo)
-Toddy.Undo.current(undo).name
+undo = Plushie.Undo.undo(undo)
+Plushie.Undo.current(undo).name
 # => "Alice"
 
 # Redo
-undo = Toddy.Undo.redo(undo)
-Toddy.Undo.current(undo).name
+undo = Plushie.Undo.redo(undo)
+Plushie.Undo.current(undo).name
 # => "Bob"
 
 # Coalescing (group rapid changes, like typing)
-undo = Toddy.Undo.apply(undo, %{
+undo = Plushie.Undo.apply(undo, %{
   apply: fn m -> %{m | text: m.text <> "a"} end,
   undo: fn m -> %{m | text: String.slice(m.text, 0..-2//1)} end,
   coalesce: {:typing, "editor"},
@@ -1319,55 +1319,55 @@ undo = Toddy.Undo.apply(undo, %{
 # are merged into a single undo entry.
 ```
 
-Use `Toddy.Undo` when your app has user actions that should be reversible
+Use `Plushie.Undo` when your app has user actions that should be reversible
 (text editing, form filling, drawing, configuration changes). Skip it for
 apps where undo does not make sense (dashboards, monitoring).
 
-### Toddy.Selection
+### Plushie.Selection
 
 Selection state for lists and tables.
 
 ```elixir
-sel = Toddy.Selection.new(mode: :multi)
+sel = Plushie.Selection.new(mode: :multi)
 
-sel = Toddy.Selection.select(sel, "item_1")
-sel = Toddy.Selection.select(sel, "item_3", extend: true)
+sel = Plushie.Selection.select(sel, "item_1")
+sel = Plushie.Selection.select(sel, "item_3", extend: true)
 
-Toddy.Selection.selected(sel)
+Plushie.Selection.selected(sel)
 # => MapSet.new(["item_1", "item_3"])
 
-sel = Toddy.Selection.toggle(sel, "item_1")
-Toddy.Selection.selected(sel)
+sel = Plushie.Selection.toggle(sel, "item_1")
+Plushie.Selection.selected(sel)
 # => MapSet.new(["item_3"])
 
 # Range select (shift-click pattern)
-sel = Toddy.Selection.new(mode: :range, order: ["a", "b", "c", "d", "e"])
-sel = Toddy.Selection.select(sel, "b")
-sel = Toddy.Selection.range_select(sel, "d")
-Toddy.Selection.selected(sel)
+sel = Plushie.Selection.new(mode: :range, order: ["a", "b", "c", "d", "e"])
+sel = Plushie.Selection.select(sel, "b")
+sel = Plushie.Selection.range_select(sel, "d")
+Plushie.Selection.selected(sel)
 # => MapSet.new(["b", "c", "d"])
 ```
 
-Use `Toddy.Selection` when you have selectable lists, tables, or tree
+Use `Plushie.Selection` when you have selectable lists, tables, or tree
 views. It handles single, multi (ctrl-click), and range (shift-click)
 selection modes correctly. Skip it for simple cases where a single
 `selected_id` in your model is sufficient.
 
-### Toddy.Route
+### Plushie.Route
 
 Client-side routing for multi-view apps.
 
 ```elixir
-route = Toddy.Route.new("/dashboard")
+route = Plushie.Route.new("/dashboard")
 
-route = Toddy.Route.push(route, "/settings", %{tab: "general"})
-Toddy.Route.current(route)
+route = Plushie.Route.push(route, "/settings", %{tab: "general"})
+Plushie.Route.current(route)
 # => "/settings"
-Toddy.Route.params(route)
+Plushie.Route.params(route)
 # => %{tab: "general"}
 
-route = Toddy.Route.pop(route)
-Toddy.Route.current(route)
+route = Plushie.Route.pop(route)
+Plushie.Route.current(route)
 # => "/dashboard"
 ```
 
@@ -1376,7 +1376,7 @@ is for apps that have multiple "screens" and want back/forward navigation
 with history tracking. Use it for apps with distinct screens (settings,
 detail views, wizards). Skip it for single-screen apps.
 
-### Toddy.Data
+### Plushie.Data
 
 Query pipeline for in-memory record collections.
 
@@ -1387,7 +1387,7 @@ records = [
   %{id: 3, name: "Carol", role: "admin", active: true}
 ]
 
-Toddy.Data.query(records,
+Plushie.Data.query(records,
   filter: fn r -> r.active end,
   sort: {:asc, :name},
   page: 1,
@@ -1401,7 +1401,7 @@ Toddy.Data.query(records,
 # }
 ```
 
-Use `Toddy.Data` when you have tabular data that needs filtering, sorting,
+Use `Plushie.Data` when you have tabular data that needs filtering, sorting,
 grouping, or pagination in the UI. It is a query pipeline over lists, not a
 database -- keep data sets small enough to fit in memory.
 
@@ -1419,10 +1419,10 @@ These helpers share a few properties:
 ```elixir
 def init(_opts) do
   %{
-    state: Toddy.State.new(%{...}),
-    undo: Toddy.Undo.new(%{...}),
-    selection: Toddy.Selection.new(mode: :single),
-    route: Toddy.Route.new("/home"),
+    state: Plushie.State.new(%{...}),
+    undo: Plushie.Undo.new(%{...}),
+    selection: Plushie.Selection.new(mode: :single),
+    route: Plushie.Route.new("/home"),
     todos: []
   }
 end

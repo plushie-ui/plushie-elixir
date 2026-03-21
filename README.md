@@ -1,18 +1,18 @@
-# toddy
+# plushie
 
 Build native desktop apps in Elixir. **[Pre-1.0](#status)**
 
-Toddy is a desktop GUI framework that allows you to write your entire
+Plushie is a desktop GUI framework that allows you to write your entire
 application in Elixir -- state, events, UI -- and get native windows
 on Linux, macOS, and Windows. Rendering is powered by
 [iced](https://github.com/iced-rs/iced), a cross-platform GUI library
-for Rust, which toddy drives as a precompiled binary behind the scenes.
+for Rust, which plushie drives as a precompiled binary behind the scenes.
 
 ```elixir
 defmodule Counter do
-  use Toddy.App
-  alias Toddy.Event.Widget
-  import Toddy.UI
+  use Plushie.App
+  alias Plushie.Event.Widget
+  import Plushie.UI
 
   def init(_opts), do: %{count: 0}
 
@@ -39,13 +39,13 @@ end
 ```
 
 ```bash
-mix toddy.gui Counter
+mix plushie.gui Counter
 ```
 
 Or from IEx:
 
 ```elixir
-iex> Toddy.start_link(Counter)
+iex> Plushie.start_link(Counter)
 ```
 
 This is one of [8 examples](examples/) included in the repo, from a
@@ -54,19 +54,19 @@ running and see changes instantly.
 
 ## Getting started
 
-Add toddy to your dependencies:
+Add plushie to your dependencies:
 
 ```elixir
 # mix.exs
-{:toddy, "== 0.3.0"}
+{:plushie, "== 0.3.0"}
 ```
 
 Then:
 
 ```bash
 mix deps.get
-mix toddy.download                    # download precompiled binary
-mix toddy.gui Counter                 # run the counter example
+mix plushie.download                    # download precompiled binary
+mix plushie.gui Counter                 # run the counter example
 ```
 
 Pin to an exact version (`==`, not `~>`) and read the
@@ -74,7 +74,7 @@ Pin to an exact version (`==`, not `~>`) and read the
 
 The precompiled binary requires no Rust toolchain. To build from
 source instead, install [rustup](https://rustup.rs/) and run
-`mix toddy.build`. See the
+`mix plushie.build`. See the
 [getting started guide](docs/getting-started.md) for the full
 walkthrough.
 
@@ -112,7 +112,7 @@ walkthrough.
 
 ## Testing
 
-Toddy ships a test framework with three interchangeable backends.
+Plushie ships a test framework with three interchangeable backends.
 Write your tests once, run them at whatever fidelity you need:
 
 - **Mocked** -- millisecond tests, no display server. Uses a shared
@@ -125,7 +125,7 @@ Write your tests once, run them at whatever fidelity you need:
 
 ```elixir
 defmodule TodoTest do
-  use Toddy.Test.Case, app: Todo
+  use Plushie.Test.Case, app: Todo
 
   test "add and complete a todo" do
     type_text("#new_todo", "Buy milk")
@@ -154,7 +154,7 @@ platform integration. Your Elixir code sends widget trees to the
 renderer over stdin; the renderer draws native windows and sends
 user events back over stdout.
 
-You don't need Rust to use toddy. The renderer is a precompiled
+You don't need Rust to use plushie. The renderer is a precompiled
 binary, similar to how your app talks to a database without you
 writing C. If you ever need custom native rendering, the
 [extension system](docs/extensions.md) lets you write Rust for just
@@ -173,13 +173,13 @@ still evolving:
 - Pin to an exact version and read the
   [CHANGELOG](CHANGELOG.md) when upgrading.
 - Mix releases are not yet supported.
-- The extension macro DSL (`Toddy.Extension`) is the least stable
+- The extension macro DSL (`Plushie.Extension`) is the least stable
   part of the API.
 
 ## Documentation
 
 Guides are in [`docs/`](docs/) and will be on
-[hexdocs](https://hexdocs.pm/toddy) once published:
+[hexdocs](https://hexdocs.pm/plushie) once published:
 
 - [Getting started](docs/getting-started.md) -- setup, first app, mix tasks, dev mode
 - [Tutorial](docs/tutorial.md) -- build a todo app step by step
@@ -206,7 +206,7 @@ errors), credo, test, dialyzer.
 
 ## System requirements
 
-The precompiled binary (`mix toddy.download`) has no additional
+The precompiled binary (`mix plushie.download`) has no additional
 dependencies. To build from source, install a Rust toolchain via
 [rustup](https://rustup.rs/) and the platform-specific libraries:
 
@@ -223,9 +223,9 @@ dependencies. To build from source, install a Rust toolchain via
 
 | | |
 |---|---|
-| Elixir SDK | [github.com/toddy-ui/toddy-elixir](https://github.com/toddy-ui/toddy-elixir) |
-| Renderer | [github.com/toddy-ui/toddy](https://github.com/toddy-ui/toddy) |
-| Rust crate | [crates.io/crates/toddy](https://crates.io/crates/toddy) |
+| Elixir SDK | [github.com/plushie-ui/plushie-elixir](https://github.com/plushie-ui/plushie-elixir) |
+| Renderer | [github.com/plushie-ui/plushie](https://github.com/plushie-ui/plushie) |
+| Rust crate | [crates.io/crates/plushie](https://crates.io/crates/plushie) |
 
 ## License
 
