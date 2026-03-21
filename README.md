@@ -80,7 +80,7 @@ walkthrough.
 
 ## Features
 
-- **37 built-in widget types** -- buttons, text inputs, sliders,
+- **38 built-in widget types** -- buttons, text inputs, sliders,
   tables, markdown, canvas, and more. Easy to build your own.
   [Layout guide](docs/layout.md)
 - **22 built-in themes** -- light, dark, dracula, nord, solarized,
@@ -105,6 +105,10 @@ walkthrough.
   - **Native** -- implement `WidgetExtension` in Rust for full
     control over rendering, state, and event handling.
   - [Extensions guide](docs/extensions.md)
+- **Remote rendering** -- native desktop UI for apps running on
+  servers or embedded devices. Dashboards, admin tools, IoT
+  diagnostics -- over SSH with configurable event throttling.
+  [Running guide](docs/running.md)
 
 ## Testing
 
@@ -156,9 +160,13 @@ writing C. If you ever need custom native rendering, the
 [extension system](docs/extensions.md) lets you write Rust for just
 those parts.
 
+The same protocol works over a local pipe, an SSH connection, or
+any bidirectional byte stream -- your app doesn't need to change.
+See the [running guide](docs/running.md) for deployment options.
+
 ## Status
 
-Pre-1.0. The core works -- 37 widget types, event system, 22 themes,
+Pre-1.0. The core works -- 38 widget types, event system, 22 themes,
 multi-window, testing framework, accessibility -- but the API is
 still evolving:
 
