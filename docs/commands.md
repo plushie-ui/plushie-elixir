@@ -185,7 +185,7 @@ end
 ##### Scroll operations
 
 ```elixir
-Toddy.Command.scroll_to(widget_id, offset)   # Scroll to absolute position
+Toddy.Command.scroll_to(widget_id, offset_y)  # Scroll to absolute vertical position
 Toddy.Command.snap_to(widget_id, x, y)       # Snap scroll to absolute offset
 Toddy.Command.snap_to_end(widget_id)          # Snap to end of scrollable content
 Toddy.Command.scroll_by(widget_id, x, y)     # Scroll by relative delta

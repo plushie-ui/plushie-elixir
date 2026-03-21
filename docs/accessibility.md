@@ -485,6 +485,46 @@ For complex interactive canvases, consider whether the canvas is the right
 choice for AT users, or whether an alternative text-based representation
 would work better.
 
+### Interactive canvas shapes
+
+When a canvas contains shapes with the `interactive` field, each
+shape becomes a separate accessible node. The canvas widget itself
+is the container; individual shapes are focusable children. Tab and
+Arrow keys navigate between shapes. Enter/Space activates the focused
+shape.
+
+This is how you build accessible custom widgets from canvas
+primitives. Without interactive shapes, a canvas is a single opaque
+"image" node to screen readers.
+
+```elixir
+import Toddy.Canvas.Shape
+
+canvas("color-picker", width: 200, height: 100,
+  layers: %{"options" => Enum.map(Enum.with_index(colors), fn {color, i} ->
+    rect(0, i * 32, 200, 32, fill: color.hex)
+    |> interactive(
+      id: "color-#{i}",
+      on_click: true,
+      hover_style: %{stroke: "#000", stroke_width: 2},
+      a11y: %{
+        role: :radio,
+        label: color.name,
+        selected: color == model.selected,
+        position_in_set: i + 1,
+        size_of_set: length(colors)
+      }
+    )
+  end)}
+)
+```
+
+Screen reader: "Red, radio button, 1 of 5, selected."
+
+The `position_in_set` and `size_of_set` fields tell screen readers
+where each shape sits in the group. Without them, the reader
+announces each shape individually with no positional context.
+
 ### Custom widgets with state
 
 When building custom widgets with canvas or other primitives, use `toggled`,

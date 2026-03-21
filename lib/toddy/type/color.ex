@@ -295,6 +295,8 @@ defmodule Toddy.Type.Color do
     `"CornflowerBlue"`)
   - Hex strings: `"#rrggbb"`, `"#rrggbbaa"`, `"#rgb"`, `"#rgba"` (normalized
     to canonical 6/8-char lowercase hex)
+  - Float RGBA map: `%{r: 1.0, g: 0.0, b: 0.0, a: 0.5}` (values clamped to 0.0-1.0)
+  - Float RGB map: `%{r: 1.0, g: 0.0, b: 0.0}` (alpha defaults to 1.0)
 
   Raises `ArgumentError` for unsupported atoms.
 

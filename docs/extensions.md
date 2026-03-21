@@ -139,6 +139,12 @@ end
 `:number`, `:string`, `:boolean`, `:color`, `:length`, `:padding`,
 `:alignment`, `:font`, `:style`, `:atom`, `:map`, `:any`, `{:list, inner}`
 
+The `a11y` and `event_rate` options are available on all extension
+widgets automatically. You do not need to declare them with `prop`.
+
+The `a11y` map supports all standard fields including `disabled`,
+`position_in_set`, `size_of_set`, and `has_popup` -- useful when
+building accessible composite widgets from extension primitives.
 
 ## Extension tiers
 

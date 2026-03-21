@@ -791,6 +791,349 @@ selection state.
 
 ---
 
+## 9. Canvas interactive shapes
+
+Canvas handles custom visuals and hit testing. Built-in widgets handle
+text editing, scrolling, and popup positioning. Complex components compose
+both -- the canvas draws what iced's widget set cannot, and built-in widgets
+handle what canvas cannot.
+
+### Canvas-only: custom toggle switch
+
+A single canvas with one interactive group. The renderer handles hover
+feedback and focus ring locally. The host only sees click events.
+
+#### Code
+
+```elixir
+defmodule ToggleApp do
+  @behaviour Toddy.App
+
+  import Toddy.UI
+  import Toddy.Canvas.Shape
+
+  def init(_opts), do: %{dark_mode: false}
+
+  def update(model, %Widget{type: :canvas_shape_click, id: "toggle", data: %{"shape_id" => "switch"}}) do
+    %{model | dark_mode: !model.dark_mode}
+  end
+
+  def update(model, _event), do: model
+
+  def view(model) do
+    on = model.dark_mode
+    knob_x = if on, do: 36, else: 16
+
+    window "main", title: "Toggle Demo" do
+      column padding: 24, spacing: 16 do
+        canvas("toggle", width: 52, height: 28,
+          layers: %{"switch" => [
+            group(0, 0, [
+              rect(0, 0, 52, 28, fill: if(on, do: "#4CAF50", else: "#ccc"), radius: 14)
+              |> hover_style(%{fill: if(on, do: "#45a049", else: "#bbb")}),
+              circle(knob_x, 14, 10, fill: "#fff")
+              |> hover_style(%{fill: "#f5f5f5"})
+            ])
+            |> interactive(
+              id: "switch",
+              on_click: true,
+              cursor: :pointer,
+              a11y: %{role: :switch, label: "Dark mode", toggled: on}
+            )
+          ]}
+        )
+      end
+    end
+  end
+end
+```
+
+#### How it works
+
+The canvas contains a single group with two shapes: a rounded rect
+background and a circle knob. The `interactive` field on the group
+enables click events, sets the pointer cursor, and provides a11y
+metadata. On click, the host toggles `dark_mode` and the view
+re-renders with new positions and colours.
+
+Screen reader: "Dark mode, switch, on." Keyboard: Tab focuses the
+canvas, Enter/Space toggles.
+
+### Canvas-only: chart with clickable data points
+
+Multiple interactive groups inside a canvas. Each bar is focusable,
+has a tooltip, and announces its position in the set.
+
+#### Code
+
+```elixir
+defmodule ChartApp do
+  @behaviour Toddy.App
+
+  import Toddy.UI
+  import Toddy.Canvas.Shape
+
+  @data [
+    %{month: "Jan", value: 120, color: "#3498db"},
+    %{month: "Feb", value: 85, color: "#2ecc71"},
+    %{month: "Mar", value: 200, color: "#e74c3c"},
+    %{month: "Apr", value: 150, color: "#f39c12"}
+  ]
+
+  def init(_opts), do: %{selected: nil}
+
+  def update(model, %Widget{type: :canvas_shape_click, id: "chart", data: %{"shape_id" => id}}) do
+    %{model | selected: id}
+  end
+
+  def update(model, _event), do: model
+
+  def view(model) do
+    bar_w = 60
+    chart_h = 220
+    count = length(@data)
+
+    window "main", title: "Chart Demo" do
+      column padding: 24, spacing: 16 do
+        canvas("chart", width: count * (bar_w + 20), height: chart_h, event_rate: 30,
+          layers: %{
+            "bars" => @data |> Enum.with_index() |> Enum.map(fn {bar, i} ->
+              bar_h = bar.value
+              bar_x = i * (bar_w + 20)
+              bar_y = chart_h - bar_h
+
+              hover_color = String.slice(bar.color, 0, 7) <> "cc"
+
+              group(bar_x, bar_y, [
+                rect(0, 0, bar_w, bar_h, fill: bar.color)
+                |> hover_style(%{fill: hover_color}),
+                text(bar_w / 2, -12, "#{bar.value}", fill: "#666", align_x: :center)
+              ])
+              |> interactive(
+                id: "bar-#{i}",
+                on_click: true,
+                on_hover: true,
+                cursor: :pointer,
+                tooltip: "#{bar.month}: #{bar.value} units",
+                a11y: %{
+                  role: :button,
+                  label: "#{bar.month}: #{bar.value} units",
+                  position_in_set: i + 1,
+                  size_of_set: count
+                }
+              )
+            end)
+          }
+        )
+
+        if model.selected do
+          text("selection", "Selected: #{model.selected}")
+        end
+      end
+    end
+  end
+end
+```
+
+#### How it works
+
+Each bar is a `group` containing a rect and a label. The `interactive`
+field enables click and hover events, sets a pointer cursor, and
+provides a tooltip. The `position_in_set` and `size_of_set` fields
+let screen readers announce "Jan: 120 units, button, 1 of 4." Arrow
+keys navigate between bars. `event_rate: 30` throttles hover events
+to 30fps.
+
+### Canvas + built-in: custom styled text input
+
+Stack a canvas behind a `text_input` to draw a custom background. The
+canvas is purely decorative -- the text_input handles cursor, selection,
+IME, and clipboard.
+
+#### Code
+
+```elixir
+defmodule SearchApp do
+  @behaviour Toddy.App
+
+  import Toddy.UI
+  import Toddy.Canvas.Shape
+
+  def init(_opts), do: %{query: ""}
+
+  def update(model, %Widget{type: :input, id: "search", value: value}) do
+    %{model | query: value}
+  end
+
+  def update(model, _event), do: model
+
+  def view(model) do
+    window "main", title: "Search Demo" do
+      column padding: 24, spacing: 16 do
+        stack width: 300, height: 36 do
+          canvas("search-bg", width: 300, height: 36,
+            layers: %{"bg" => [
+              rect(0, 0, 300, 36, fill: "#f5f5f5", radius: 8, stroke: "#ddd", stroke_width: 1),
+              image("priv/icons/search.svg", 8, 8, 20, 20)
+            ]}
+          )
+
+          container "search-wrap", padding: %{left: 36, top: 0, right: 8, bottom: 0}, height: 36 do
+            text_input("search", model.query, style: :borderless, width: :fill)
+          end
+        end
+      end
+    end
+  end
+end
+```
+
+#### How it works
+
+The `stack` layers the canvas background behind the text_input. The
+canvas draws the rounded rect and search icon -- purely visual, no
+`interactive` field needed. The `text_input` sits on top in a padded
+container so it clears the icon area. Clicks in the text area hit the
+text_input (it is on top in the stack).
+
+Canvas = visuals. text_input = editing and IME.
+
+### Canvas + built-in: custom combo box
+
+Overlay positions the dropdown. Canvas draws the trigger and option
+visuals. text_input handles filtering. scrollable handles long lists.
+
+#### Code
+
+```elixir
+defmodule ComboApp do
+  @behaviour Toddy.App
+
+  import Toddy.UI
+  import Toddy.Canvas.Shape
+  alias Toddy.Type.Border
+
+  @options ["Elixir", "Rust", "Python", "TypeScript", "Go", "Haskell", "OCaml", "Zig"]
+
+  def init(_opts), do: %{open: false, filter: "", selected: nil}
+
+  def update(model, %Widget{type: :click, id: "combo-trigger"}) do
+    %{model | open: !model.open}
+  end
+
+  def update(model, %Widget{type: :input, id: "combo-filter", value: value}) do
+    %{model | filter: value, open: true}
+  end
+
+  def update(model, %Widget{type: :canvas_shape_click, id: "combo-opts", data: %{"shape_id" => "opt-" <> _ = id}}) do
+    index = id |> String.replace_prefix("opt-", "") |> String.to_integer()
+    chosen = filtered_options(model.filter) |> Enum.at(index)
+    %{model | selected: chosen, open: false, filter: ""}
+  end
+
+  def update(model, _event), do: model
+
+  def view(model) do
+    filtered = filtered_options(model.filter)
+    count = length(filtered)
+
+    window "main", title: "Combo Demo" do
+      column padding: 24, spacing: 16, width: :fill do
+        text("label", "Language:", size: 14)
+
+        overlay "combo", position: :below, gap: 4 do
+          anchor do
+            stack width: 250, height: 36 do
+              canvas("combo-bg", width: 250, height: 36,
+                layers: %{"bg" => [
+                  rect(0, 0, 250, 36, fill: "#fff", radius: 8, stroke: "#ddd", stroke_width: 1),
+                  path(220, 12, "M 0 0 L 6 8 L 12 0", fill: "#999")
+                ]}
+              )
+
+              container "combo-input", padding: %{left: 12, top: 0, right: 32, bottom: 0}, height: 36 do
+                text_input("combo-filter",
+                  model.filter,
+                  placeholder: model.selected || "Select...",
+                  style: :borderless,
+                  width: :fill
+                )
+              end
+            end
+          end
+
+          if model.open and count > 0 do
+            content do
+              container "combo-dropdown",
+                width: 250,
+                background: "#fff",
+                border: Border.new() |> Border.color("#ddd") |> Border.width(1) |> Border.rounded(8),
+                clip: true do
+                scrollable "combo-scroll", height: min(count * 32, 200) do
+                  canvas("combo-opts", width: 250, height: count * 32,
+                    layers: %{"opts" => filtered |> Enum.with_index() |> Enum.map(fn {opt, i} ->
+                      group(0, i * 32, [
+                        rect(0, 0, 250, 32, fill: "#fff")
+                        |> hover_style(%{fill: "#e8f0fe"}),
+                        text(12, 22, opt, fill: "#333")
+                      ])
+                      |> interactive(
+                        id: "opt-#{i}",
+                        on_click: true,
+                        on_hover: true,
+                        a11y: %{
+                          role: :option,
+                          label: opt,
+                          selected: opt == model.selected,
+                          position_in_set: i + 1,
+                          size_of_set: count
+                        }
+                      )
+                    end)}
+                  )
+                end
+              end
+            end
+          end
+        end
+
+        if model.selected do
+          text("chosen", "Selected: #{model.selected}", color: "#333")
+        end
+      end
+    end
+  end
+
+  defp filtered_options(filter) do
+    if filter == "" do
+      @options
+    else
+      down = String.downcase(filter)
+      Enum.filter(@options, &String.contains?(String.downcase(&1), down))
+    end
+  end
+end
+```
+
+#### How it works
+
+The `overlay` widget positions the dropdown below the trigger. The
+trigger is a `stack` with a canvas background (border, chevron icon)
+and a borderless text_input for typing. The dropdown is a `scrollable`
+wrapping a canvas whose interactive groups are the options.
+
+Each piece does what it is good at:
+
+- **canvas** -- custom visuals, hover feedback, hit testing
+- **text_input** -- text editing, cursor, IME, clipboard
+- **overlay** -- popup positioning that escapes parent bounds
+- **scrollable** -- scroll container for long option lists
+
+Closing the dropdown: on `canvas_shape_click` for an option, the host
+sets `open: false` and removes the overlay content from the tree.
+
+---
+
 ## General techniques
 
 These patterns share a few recurring techniques worth calling out:
