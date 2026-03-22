@@ -2,7 +2,7 @@ defmodule Mix.Tasks.Plushie.Build do
   @min_rust_version {1, 92, 0}
 
   @moduledoc """
-  Build the plushie binary from source, optionally with widget extensions.
+  Build the plushie binary and/or WASM renderer from source.
 
   Without extensions configured, builds the stock plushie binary from the Rust
   source checkout. With extensions, generates a custom Cargo workspace that
@@ -12,15 +12,20 @@ defmodule Mix.Tasks.Plushie.Build do
 
   - **Rust toolchain** #{elem(@min_rust_version, 0)}.#{elem(@min_rust_version, 1)}+ (install via https://rustup.rs)
   - **Plushie Rust source** -- set `PLUSHIE_SOURCE_PATH` or `config :plushie, :source_path`
+  - **wasm-pack** (for `--wasm` only) -- install via https://rustwasm.github.io/wasm-pack/
 
   ## Usage
 
-      mix plushie.build              # debug build
+      mix plushie.build              # build native binary (default)
       mix plushie.build --release    # optimized release build
+      mix plushie.build --wasm       # build WASM renderer only
+      mix plushie.build --bin --wasm # build both
       mix plushie.build --verbose    # print cargo output on success
 
   ## Options
 
+  - `--bin` -- Build the native binary (default when no target specified)
+  - `--wasm` -- Build the WASM renderer via wasm-pack
   - `--release` -- Build with optimizations (also implied by `MIX_ENV=prod`)
   - `--verbose` -- Print full cargo output on successful builds
 
@@ -35,14 +40,34 @@ defmodule Mix.Tasks.Plushie.Build do
   A Cargo workspace is generated under the Mix build directory with a
   `main.rs` that registers all extensions.
 
-  The built binary is installed to `priv/bin/` for runtime resolution.
+  The built binary is installed to `_build/plushie/bin/` for runtime resolution.
+  WASM files are installed to `_build/plushie/wasm/`.
   """
-  @shortdoc "Build the plushie binary"
+  @shortdoc "Build the plushie binary and/or WASM"
 
   use Mix.Task
 
   @impl true
   def run(args) do
+    {opts, _rest} =
+      OptionParser.parse!(args,
+        strict: [bin: :boolean, wasm: :boolean, release: :boolean, verbose: :boolean]
+      )
+
+    want_bin? = opts[:bin] || false
+    want_wasm? = opts[:wasm] || false
+
+    # No explicit target = bin only (backward compatible)
+    want_bin? = if not want_bin? and not want_wasm?, do: true, else: want_bin?
+
+    release? = opts[:release] || false
+    verbose? = opts[:verbose] || false
+
+    if want_bin?, do: build_bin(release?, verbose?)
+    if want_wasm?, do: build_wasm(release?, verbose?)
+  end
+
+  defp build_bin(release?, verbose?) do
     check_rust_toolchain()
 
     # Ensure the project is compiled so extension modules are available
@@ -51,12 +76,76 @@ defmodule Mix.Tasks.Plushie.Build do
     extensions = configured_extensions()
 
     if extensions == [] do
-      build_stock(args)
+      build_stock(release?, verbose?)
     else
       check_collisions!(extensions)
       check_crate_name_collisions!(extensions)
-      build_with_extensions(extensions, args)
+      build_with_extensions(extensions, release?, verbose?)
     end
+  end
+
+  defp build_wasm(release?, verbose?) do
+    check_wasm_pack()
+
+    source_dir = Mix.PlushieHelpers.source_path!()
+    wasm_crate = Path.join(source_dir, "plushie-wasm")
+
+    unless File.dir?(wasm_crate) do
+      Mix.raise("""
+      plushie-wasm crate not found at #{wasm_crate}.
+
+      The WASM build requires the plushie source checkout to include
+      the plushie-wasm crate directory.
+      """)
+    end
+
+    release? = release? or Mix.env() == :prod
+    profile = if release?, do: "--release", else: "--dev"
+
+    Mix.shell().info("Building plushie-wasm#{if release?, do: " (release)", else: ""}...")
+
+    case System.cmd("wasm-pack", ["build", "--target", "web", profile],
+           cd: wasm_crate,
+           stderr_to_stdout: true
+         ) do
+      {output, 0} ->
+        Mix.shell().info("WASM build succeeded.")
+        if verbose?, do: Mix.shell().info(output)
+        install_wasm(wasm_crate)
+
+      {output, status} ->
+        Mix.shell().error("WASM build failed (exit code #{status}):")
+        Mix.shell().error(output)
+        Mix.raise("wasm-pack build failed")
+    end
+  end
+
+  defp install_wasm(wasm_crate) do
+    pkg_dir = Path.join(wasm_crate, "pkg")
+    dest_dir = Path.join(["_build", "plushie", "wasm"])
+    File.mkdir_p!(dest_dir)
+
+    for name <- ["plushie_wasm.js", "plushie_wasm_bg.wasm"] do
+      src = Path.join(pkg_dir, name)
+
+      if File.exists?(src) do
+        File.cp!(src, Path.join(dest_dir, name))
+      else
+        Mix.shell().error("Warning: expected #{src} not found in wasm-pack output")
+      end
+    end
+
+    Mix.shell().info("Installed WASM files to #{dest_dir}")
+  end
+
+  defp check_wasm_pack do
+    case System.cmd("wasm-pack", ["--version"], stderr_to_stdout: true) do
+      {_output, 0} -> :ok
+      _ -> Mix.raise("wasm-pack not found. Install via https://rustwasm.github.io/wasm-pack/")
+    end
+  rescue
+    ErlangError ->
+      Mix.raise("wasm-pack not found. Install via https://rustwasm.github.io/wasm-pack/")
   end
 
   defp check_rust_toolchain do
@@ -95,7 +184,7 @@ defmodule Mix.Tasks.Plushie.Build do
       Mix.raise("rustc not found. Install Rust #{min_str}+ via https://rustup.rs")
   end
 
-  defp build_stock(args) do
+  defp build_stock(release?, verbose?) do
     source_dir = Mix.PlushieHelpers.source_path!()
 
     unless File.dir?(source_dir) do
@@ -107,7 +196,7 @@ defmodule Mix.Tasks.Plushie.Build do
       """)
     end
 
-    release? = "--release" in args
+    release? = release? or Mix.env() == :prod
 
     cmd_args = ["build", "-p", "plushie"]
     cmd_args = if release?, do: cmd_args ++ ["--release"], else: cmd_args
@@ -117,7 +206,7 @@ defmodule Mix.Tasks.Plushie.Build do
     case System.cmd("cargo", cmd_args, stderr_to_stdout: true, cd: source_dir) do
       {output, 0} ->
         Mix.shell().info("Build succeeded.")
-        if "--verbose" in args, do: Mix.shell().info(output)
+        if verbose?, do: Mix.shell().info(output)
         install_binary(source_dir, release?)
 
       {output, status} ->
@@ -127,8 +216,8 @@ defmodule Mix.Tasks.Plushie.Build do
     end
   end
 
-  # Copy the built binary into priv/bin/ so the resolution chain finds it
-  # without needing PLUSHIE_BINARY_PATH or PLUSHIE_SOURCE_PATH at runtime.
+  # Copy the built binary into _build/plushie/bin/ so the resolution chain
+  # finds it without needing PLUSHIE_BINARY_PATH or PLUSHIE_SOURCE_PATH.
   defp install_binary(source_dir, release?) do
     profile = if release?, do: "release", else: "debug"
     src = Path.join([source_dir, "target", profile, "plushie"])
@@ -137,7 +226,7 @@ defmodule Mix.Tasks.Plushie.Build do
       Mix.raise("Build succeeded but binary not found at #{src}")
     end
 
-    dest_dir = Path.join(["priv", "bin"])
+    dest_dir = Plushie.Binary.download_dir()
     dest = Path.join(dest_dir, Plushie.Binary.download_name())
 
     File.mkdir_p!(dest_dir)
@@ -147,15 +236,15 @@ defmodule Mix.Tasks.Plushie.Build do
     Mix.shell().info("Installed to #{dest}")
   end
 
-  # Copy an extension binary into priv/bin/ so the resolution chain finds it
-  # at runtime. Uses the platform download name so `Plushie.Binary.path!/0`
+  # Copy an extension binary into _build/plushie/bin/ so the resolution chain
+  # finds it. Uses the platform download name so `Plushie.Binary.path!/0`
   # resolves it the same way it resolves the stock binary.
   defp install_extension_binary(src) do
     unless File.exists?(src) do
       Mix.raise("Build succeeded but binary not found at #{src}")
     end
 
-    dest_dir = Path.join(["priv", "bin"])
+    dest_dir = Plushie.Binary.download_dir()
     dest = Path.join(dest_dir, Plushie.Binary.download_name())
 
     File.mkdir_p!(dest_dir)
@@ -297,7 +386,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
   # -- Extension build --------------------------------------------------------
 
-  defp build_with_extensions(extensions, args) do
+  defp build_with_extensions(extensions, release?, verbose?) do
     build_dir = Path.join(Mix.Project.build_path(), "plushie")
     File.mkdir_p!(build_dir)
 
@@ -312,7 +401,7 @@ defmodule Mix.Tasks.Plushie.Build do
         "with #{length(extensions)} extension(s): #{ext_names}"
     )
 
-    release? = "--release" in args or Mix.env() == :prod
+    release? = release? or Mix.env() == :prod
     release_flags = if release?, do: ["--release"], else: []
     profile = if release?, do: "release", else: "debug"
 
@@ -324,7 +413,7 @@ defmodule Mix.Tasks.Plushie.Build do
          ) do
       {output, 0} ->
         Mix.shell().info("Build succeeded.")
-        if "--verbose" in args, do: Mix.shell().info(output)
+        if verbose?, do: Mix.shell().info(output)
         binary = Path.join([build_dir, "target", profile, bin_name])
         Mix.shell().info("Binary: #{binary}")
         install_extension_binary(binary)
