@@ -21,6 +21,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
   or `interactive` in canvas blocks. Use `import Plushie.UI` instead.
   Canvas `text`, `image`, and `svg` calls are automatically resolved
   inside canvas/layer/group blocks.
+- **Test backend renamed**: `:pooled_mock` -> `:mock`,
+  `Plushie.Test.Backend.Pooled` -> `Plushie.Test.Backend.MockRenderer`.
+  The env var value changes: `PLUSHIE_TEST_BACKEND=mock` (was
+  `pooled_mock`). `Plushie.Test.MockBridge` renamed to
+  `Plushie.Test.InternalMockBridge` (`@moduledoc false`).
 - **`Padding.encode/1` renamed to `Padding.cast/1`** (normalization, not
   wire encoding).
 
@@ -110,6 +115,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - Canvas widget type annotations use `canvas_shape()` union type.
 - `@widget_calls` derived from component lists instead of manually
   maintained.
+- Doc code examples use `use Plushie.App` instead of
+  `@behaviour Plushie.App` (the latter misses default implementations
+  of optional callbacks like `window_config/1`).
 
 ## [0.3.0] - 2026-03-19
 
