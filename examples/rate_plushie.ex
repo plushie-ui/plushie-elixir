@@ -11,10 +11,10 @@ defmodule RatePlushie do
 
   use Plushie.App
 
-  @reviews [
+  @initial_reviews [
     %{stars: 5, user: "elixir_fan_42", time: "2d ago",
       text: "Finally, native GUIs that don't make me want to cry."},
-    %{stars: 5, user: "jose_v", time: "3d ago",
+    %{stars: 5, user: "beam_me_up", time: "3d ago",
       text: "The Elm architecture feels right at home here."},
     %{stars: 4, user: "rustacean", time: "5d ago",
       text: "Solid Iced wrapper. Docked a star because I had to write Elixir."},
@@ -23,17 +23,29 @@ defmodule RatePlushie do
     %{stars: 5, user: "otp_enjoyer", time: "1w ago",
       text: "Let it crash, but make it beautiful."},
     %{stars: 1, user: "electron_mass", time: "2w ago",
-      text: "Only uses 12MB of RAM. How am I supposed to justify my hardware?"}
+      text: "No browser engine. No JavaScript runtime. What am I even paying for?"}
   ]
 
+  # -- Init / Update / Subscribe -----------------------------------------------
+
   def init(_opts) do
-    %{rating: 0, hover_star: nil, toggle_progress: 0.0, toggle_target: 0.0}
+    %{
+      rating: 0,
+      hover_star: nil,
+      focused_star: nil,
+      toggle_progress: 0.0,
+      toggle_target: 0.0,
+      reviews: @initial_reviews,
+      review_name: "",
+      review_comment: ""
+    }
   end
 
   def update(model, event) do
-    alias Plushie.Event.{Widget, Timer, Key}
+    alias Plushie.Event.{Widget, Timer}
 
     case event do
+      # Star rating interactions
       %Widget{type: :canvas_shape_click, id: "stars", data: %{"shape_id" => "star-" <> n}} ->
         %{model | rating: String.to_integer(n) + 1}
 
@@ -43,40 +55,59 @@ defmodule RatePlushie do
       %Widget{type: :canvas_shape_leave, id: "stars"} ->
         %{model | hover_star: nil}
 
+      %Widget{type: :canvas_shape_focused, id: "stars", data: %{"shape_id" => "star-" <> n}} ->
+        %{model | focused_star: String.to_integer(n)}
+
+      # Theme toggle
       %Widget{type: :canvas_shape_click, id: "theme-toggle"} ->
         target = if model.toggle_target == 0.0, do: 1.0, else: 0.0
         %{model | toggle_target: target}
 
+      # Review form
+      %Widget{type: :input, id: "review-name", value: v} ->
+        %{model | review_name: v}
+
+      %Widget{type: :input, id: "review-comment", value: v} ->
+        %{model | review_comment: v}
+
+      %Widget{type: :click, id: "submit-review"} -> submit_review(model)
+      %Widget{type: :submit, id: "review-name"} -> submit_review(model)
+
+      # Animation
       %Timer{tag: :animate} ->
-        progress = approach(model.toggle_progress, model.toggle_target, 0.06)
-        %{model | toggle_progress: progress}
+        %{model | toggle_progress: approach(model.toggle_progress, model.toggle_target, 0.06)}
 
-      %Key{key: "ArrowRight"} ->
-        %{model | rating: min(model.rating + 1, 5)}
+      _ -> model
+    end
+  end
 
-      %Key{key: "ArrowLeft"} ->
-        %{model | rating: max(model.rating - 1, 0)}
+  defp submit_review(model) do
+    name = String.trim(model.review_name)
+    comment = String.trim(model.review_comment)
 
-      _ ->
-        model
+    if name != "" and comment != "" and model.rating > 0 do
+      review = %{stars: model.rating, user: name, time: "just now", text: comment}
+      %{model | reviews: [review | model.reviews], review_name: "", review_comment: "", rating: 0}
+    else
+      model
     end
   end
 
   def subscribe(model) do
-    subs = [Plushie.Subscription.on_key_press(:key)]
-
     if model.toggle_progress != model.toggle_target do
-      [Plushie.Subscription.every(16, :animate) | subs]
+      [Plushie.Subscription.every(16, :animate)]
     else
-      subs
+      []
     end
   end
+
+  # -- View (composed from helper functions) -----------------------------------
 
   def view(model) do
     import Plushie.UI
 
-    dark = model.toggle_progress >= 0.5
-    t = theme(dark)
+    p = smoothstep(model.toggle_progress)
+    t = theme(p)
 
     window "main", title: "Rate Plushie" do
       container "page" do
@@ -91,144 +122,138 @@ defmodule RatePlushie do
         width(:fill)
         height(:fill)
 
-        scrollable "scroll" do
-          column do
-            spacing 24
-            width :fill
-            align_x :center
+        column do
+          spacing 24
+          width :fill
 
-            text("heading", "Rate Plushie", size: 28, color: t.text)
-
-            container "rating-card" do
-              padding 24
-              width :fill
-
-              border do
-                width 1
-                color(t.card_border)
-                rounded 12
-              end
-
-              background(t.card_bg)
-
-              column do
-                spacing 20
-
-                text("prompt", "How would you rate Plushie?",
-                  size: 14, color: t.text_secondary
-                )
-
-                StarRating.render("stars", model.rating,
-                  hover: model.hover_star, dark: dark
-                )
-
-                rule()
-
-                row do
-                  align_y :center
-                  text("toggle-label", "Dark humor", color: t.text_secondary)
-                  space(width: :fill)
-                  ThemeToggle.render("theme-toggle", model.toggle_progress)
-                end
-              end
-            end
-
-            text("reviews-heading", "Reviews", size: 20, color: t.text)
-
-            container "reviews" do
-              border do
-                width 1
-                color(t.card_border)
-                rounded 12
-              end
-
-              background(t.card_bg)
-              width :fill
-              clip
-
-              column do
-                for {review, i} <- Enum.with_index(@reviews) do
-                  [
-                    if i > 0 do
-                      container("sep-#{i}",
-                        height: 1, width: :fill, background: t.separator
-                      )
-                    end,
-                    review_row(review, t)
-                  ]
-                end
-              end
-            end
-          end
+          text("heading", "Rate Plushie", size: 28, color: t.text)
+          rating_card(model, p, t)
+          text("reviews-heading", "Reviews", size: 20, color: t.text)
+          reviews_list(model.reviews, p, t)
         end
       end
     end
   end
 
-  defp review_row(review, t) do
+  # -- View: rating card -------------------------------------------------------
+
+  defp rating_card(model, p, t) do
     import Plushie.UI
 
-    container "review-#{review.user}" do
-      padding do
-        top 14
-        bottom 14
-        left 20
-        right 20
-      end
-
+    container "rating-card" do
+      padding 24
       width :fill
+      border do
+        width 1
+        color(t.card_border)
+        rounded 12
+      end
+      background(t.card_bg)
 
-      column id: "#{review.user}-body", spacing: 6 do
-        row id: "#{review.user}-header", spacing: 8 do
-          text("#{review.user}-stars", star_text(review.stars),
-            size: 12, color: "#f59e0b"
-          )
+      column do
+        spacing 20
 
-          text("#{review.user}-name", review.user,
-            size: 12, color: t.text_secondary
-          )
+        text("prompt", "How would you rate Plushie?", size: 14, color: t.text_secondary)
 
-          space(id: "#{review.user}-spacer", width: :fill)
-
-          text("#{review.user}-time", review.time,
-            size: 12, color: t.text_muted
-          )
-        end
-
-        text("#{review.user}-text", "\u{201C}#{review.text}\u{201D}",
-          size: 14, color: t.text
+        StarRating.render("stars", model.rating,
+          hover: model.hover_star,
+          focused: model.focused_star,
+          theme_progress: p
         )
+
+        rule()
+        review_form(model, t)
+        theme_row(model, t)
       end
     end
   end
 
-  defp star_text(n) do
-    String.duplicate("\u{2605}", n) <> String.duplicate("\u{2606}", 5 - n)
+  # -- View: review form -------------------------------------------------------
+
+  defp review_form(model, _t) do
+    import Plushie.UI
+
+    column id: "review-form", spacing: 12, width: :fill do
+      text_input("review-name", model.review_name, placeholder: "Your name")
+
+      text_editor("review-comment", model.review_comment,
+        placeholder: "Write your review...", height: 80
+      )
+
+      button("submit-review", "Submit Review")
+    end
   end
 
-  defp theme(true) do
+  # -- View: theme toggle row --------------------------------------------------
+
+  defp theme_row(model, t) do
+    import Plushie.UI
+
+    row id: "theme-row", align_y: :center do
+      space(id: "theme-spacer", width: :fill)
+      text("toggle-label", "Dark humor", color: t.text_secondary)
+      ThemeToggle.render("theme-toggle", model.toggle_progress)
+    end
+  end
+
+  # -- View: reviews list ------------------------------------------------------
+
+  defp reviews_list(reviews, p, t) do
+    import Plushie.UI
+
+    column id: "reviews", spacing: 0, width: :fill do
+      for {review, i} <- Enum.with_index(reviews) do
+        [
+          if i > 0 do
+            rule(id: "sep-#{i}")
+          end,
+          review_card(review, i, p, t)
+        ]
+      end
+    end
+  end
+
+  defp review_card(review, i, p, t) do
+    import Plushie.UI
+
+    column id: "review-#{i}", spacing: 4, padding: 12, width: :fill do
+      row id: "rhdr-#{i}", spacing: 8, align_y: :center do
+        StarRating.render("rstars-#{i}", review.stars,
+          readonly: true, scale: 0.4, theme_progress: p
+        )
+        text("rname-#{i}", review.user, size: 12, color: t.text_secondary)
+        space(id: "rsp-#{i}", width: :fill)
+        text("rtime-#{i}", review.time, size: 12, color: t.text_muted)
+      end
+
+      text("rtext-#{i}", "\u{201C}#{review.text}\u{201D}", size: 14, color: t.text)
+    end
+  end
+
+  # -- Theme interpolation -----------------------------------------------------
+
+  defp theme(p) do
     %{
-      page_bg: "#13131f",
-      card_bg: "#1c1c32",
-      card_border: "#2a2a4a",
-      separator: "#2a2a4a",
-      text: "#f0f0f5",
-      text_secondary: "#9999bb",
-      text_muted: "#555577"
+      page_bg: fade({248, 248, 250}, {19, 19, 31}, p),
+      card_bg: fade({255, 255, 255}, {28, 28, 50}, p),
+      card_border: fade({224, 224, 224}, {42, 42, 74}, p),
+      text: fade({26, 26, 26}, {240, 240, 245}, p),
+      text_secondary: fade({102, 102, 102}, {153, 153, 187}, p),
+      text_muted: fade({170, 170, 170}, {85, 85, 119}, p)
     }
   end
 
-  defp theme(false) do
-    %{
-      page_bg: "#f8f8fa",
-      card_bg: "#ffffff",
-      card_border: "#e0e0e0",
-      separator: "#eeeeee",
-      text: "#1a1a1a",
-      text_secondary: "#666666",
-      text_muted: "#aaaaaa"
-    }
+  defp fade({r1, g1, b1}, {r2, g2, b2}, t) do
+    r = round(r1 + (r2 - r1) * t)
+    g = round(g1 + (g2 - g1) * t)
+    b = round(b1 + (b2 - b1) * t)
+    "#" <> hex(r) <> hex(g) <> hex(b)
   end
+
+  defp hex(n), do: n |> Integer.to_string(16) |> String.pad_leading(2, "0")
+  defp smoothstep(t) when t <= 0.0, do: 0.0
+  defp smoothstep(t) when t >= 1.0, do: 1.0
+  defp smoothstep(t), do: t * t * (3 - 2 * t)
 
   defp approach(current, target, step) do
     cond do

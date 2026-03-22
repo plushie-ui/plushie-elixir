@@ -2,7 +2,7 @@ defmodule Plushie.Test.CrossBackendTest do
   @moduledoc """
   Cross-backend equivalence tests.
 
-  Defines shared assertions and runs them against the Pooled backend by
+  Defines shared assertions and runs them against the MockRenderer backend by
   default. To run against Headless, set PLUSHIE_TEST_BACKEND=headless
   (requires `cargo build`).
 
@@ -14,7 +14,7 @@ defmodule Plushie.Test.CrossBackendTest do
 
   alias Plushie.Event.Widget
 
-  alias Plushie.Test.Backend.Pooled
+  alias Plushie.Test.Backend.MockRenderer
 
   # -- Test apps -----------------------------------------------------------
 
@@ -104,7 +104,7 @@ defmodule Plushie.Test.CrossBackendTest do
     case System.get_env("PLUSHIE_TEST_BACKEND") do
       "headless" -> Plushie.Test.Backend.Headless
       "windowed" -> Plushie.Test.Backend.Windowed
-      _ -> Pooled
+      _ -> MockRenderer
     end
   end
 

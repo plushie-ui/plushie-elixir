@@ -6,7 +6,7 @@ defmodule Plushie.Test.Backend.CommandProcessor do
   `update/2` side effects resolve immediately in tests. Widget ops, window
   ops, timers, and cancel are silently skipped (they need a renderer).
 
-  Used by all test backends (`:pooled_mock`, `:headless`, `:windowed`). Since execution is
+  Used by all test backends (`:mock`, `:headless`, `:windowed`). Since execution is
   synchronous, `await_async/3` correctly returns `:ok` immediately -- the
   commands have already completed by the time it is called.
   """

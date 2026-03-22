@@ -1,7 +1,7 @@
 defmodule Plushie.Test.SessionPoolTest do
   use ExUnit.Case, async: false
 
-  alias Plushie.Test.Backend.Pooled
+  alias Plushie.Test.Backend.MockRenderer
   alias Plushie.Test.SessionPool
 
   # Use the mock renderer for speed -- no display server needed.
@@ -207,7 +207,7 @@ defmodule Plushie.Test.SessionPoolTest do
     end
   end
 
-  describe "Pooled backend" do
+  describe "Mock backend" do
     setup do
       binary = Application.fetch_env!(:plushie, :test_binary_path)
 
@@ -224,42 +224,42 @@ defmodule Plushie.Test.SessionPoolTest do
     end
 
     test "start and basic interaction", %{pool: pool} do
-      {:ok, pid} = Pooled.start(Counter, pool: pool)
-      assert Pooled.model(pid).count == 0
+      {:ok, pid} = MockRenderer.start(Counter, pool: pool)
+      assert MockRenderer.model(pid).count == 0
 
-      Pooled.click(pid, "#increment")
-      assert Pooled.model(pid).count == 1
+      MockRenderer.click(pid, "#increment")
+      assert MockRenderer.model(pid).count == 1
 
-      Pooled.click(pid, "#increment")
-      assert Pooled.model(pid).count == 2
+      MockRenderer.click(pid, "#increment")
+      assert MockRenderer.model(pid).count == 2
 
-      Pooled.stop(pid)
+      MockRenderer.stop(pid)
     end
 
     test "concurrent sessions are isolated", %{pool: pool} do
-      {:ok, p1} = Pooled.start(Counter, pool: pool)
-      {:ok, p2} = Pooled.start(Counter, pool: pool)
+      {:ok, p1} = MockRenderer.start(Counter, pool: pool)
+      {:ok, p2} = MockRenderer.start(Counter, pool: pool)
 
-      Pooled.click(p1, "#increment")
-      Pooled.click(p1, "#increment")
-      Pooled.click(p2, "#increment")
+      MockRenderer.click(p1, "#increment")
+      MockRenderer.click(p1, "#increment")
+      MockRenderer.click(p2, "#increment")
 
-      assert Pooled.model(p1).count == 2
-      assert Pooled.model(p2).count == 1
+      assert MockRenderer.model(p1).count == 2
+      assert MockRenderer.model(p2).count == 1
 
-      Pooled.stop(p1)
-      Pooled.stop(p2)
+      MockRenderer.stop(p1)
+      MockRenderer.stop(p2)
     end
 
     test "reset restores initial state", %{pool: pool} do
-      {:ok, pid} = Pooled.start(Counter, pool: pool)
-      Pooled.click(pid, "#increment")
-      assert Pooled.model(pid).count == 1
+      {:ok, pid} = MockRenderer.start(Counter, pool: pool)
+      MockRenderer.click(pid, "#increment")
+      assert MockRenderer.model(pid).count == 1
 
-      Pooled.reset(pid)
-      assert Pooled.model(pid).count == 0
+      MockRenderer.reset(pid)
+      assert MockRenderer.model(pid).count == 0
 
-      Pooled.stop(pid)
+      MockRenderer.stop(pid)
     end
   end
 end

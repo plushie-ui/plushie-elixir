@@ -44,7 +44,7 @@ defmodule Plushie.IntegrationCase do
     bridge_name = :"integration_bridge_#{tag}"
     runtime_name = :"integration_runtime_#{tag}"
 
-    {:ok, _bridge} = Plushie.Test.MockBridge.start_link(name: bridge_name)
+    {:ok, _bridge} = Plushie.Test.InternalMockBridge.start_link(name: bridge_name)
 
     runtime_opts =
       [app: app_module, bridge: bridge_name, name: runtime_name]
@@ -95,13 +95,13 @@ defmodule Plushie.IntegrationCase do
   Returns snapshots sent to the bridge.
   """
   def get_snapshots(bridge) do
-    Plushie.Test.MockBridge.get_snapshots(bridge)
+    Plushie.Test.InternalMockBridge.get_snapshots(bridge)
   end
 
   @doc """
   Returns patches sent to the bridge.
   """
   def get_patches(bridge) do
-    Plushie.Test.MockBridge.get_patches(bridge)
+    Plushie.Test.InternalMockBridge.get_patches(bridge)
   end
 end

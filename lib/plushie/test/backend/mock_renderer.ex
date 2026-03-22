@@ -1,10 +1,11 @@
-defmodule Plushie.Test.Backend.Pooled do
+defmodule Plushie.Test.Backend.MockRenderer do
   @moduledoc """
-  Test backend that shares a single renderer process across tests.
+  Test backend that runs the real plushie binary in `--mock` mode.
 
-  Each test gets its own GenServer managing model, tree, and event
-  dispatch, but wire I/O goes through a shared `SessionPool`. This
-  enables concurrent test execution against one renderer process.
+  Lightweight rendering with no display server required. Sessions are
+  pooled for performance: each test gets its own GenServer managing
+  model, tree, and event dispatch, but wire I/O goes through a shared
+  `SessionPool` running a single `plushie --mock` process.
 
   ## Usage
 
@@ -18,11 +19,11 @@ defmodule Plushie.Test.Backend.Pooled do
 
   Configure the backend in `config/test.exs`:
 
-      config :plushie, :test_backend, :pooled_mock
+      config :plushie, :test_backend, :mock
 
   Or per-test:
 
-      use Plushie.Test.Case, app: MyApp, backend: :pooled_mock
+      use Plushie.Test.Case, app: MyApp, backend: :mock
 
   ## Options
 
@@ -299,7 +300,7 @@ defmodule Plushie.Test.Backend.Pooled do
   end
 
   def handle_call({:await_async, _tag, _timeout}, _from, state) do
-    # Pooled backend processes commands synchronously like mock.
+    # Mock backend processes commands synchronously.
     {:reply, :ok, state}
   end
 

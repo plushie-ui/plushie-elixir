@@ -9,7 +9,7 @@ defmodule Plushie.Test.ScriptTest do
       app: Counter
       viewport: 1024x768
       theme: light
-      backend: pooled_mock
+      backend: mock
       -----
       click "#increment"
       expect "Count: 1"
@@ -19,7 +19,7 @@ defmodule Plushie.Test.ScriptTest do
       assert script.header.app == Counter
       assert script.header.viewport == {1024, 768}
       assert script.header.theme == "light"
-      assert script.header.backend == :pooled_mock
+      assert script.header.backend == :mock
       assert length(script.instructions) == 2
       assert {:click, "#increment"} = hd(script.instructions)
     end
@@ -34,7 +34,7 @@ defmodule Plushie.Test.ScriptTest do
       assert {:ok, script} = Script.parse(input)
       assert script.header.viewport == {800, 600}
       assert script.header.theme == "dark"
-      assert script.header.backend == :pooled_mock
+      assert script.header.backend == :mock
     end
 
     test "returns error for missing app field" do

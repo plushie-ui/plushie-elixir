@@ -9,8 +9,8 @@ defmodule Plushie.Test.Script.Runner do
   alias Plushie.Test.{Screenshot, Script, Session, TreeHash}
 
   @backend_map %{
-    pooled_mock: Plushie.Test.Backend.Pooled,
-    pooled_headless: Plushie.Test.Backend.Pooled,
+    mock: Plushie.Test.Backend.MockRenderer,
+    pooled_headless: Plushie.Test.Backend.MockRenderer,
     headless: Plushie.Test.Backend.Headless,
     windowed: Plushie.Test.Backend.Windowed
   }
@@ -25,7 +25,7 @@ defmodule Plushie.Test.Script.Runner do
           :ok | {:error, [{Script.instruction(), String.t()}]}
   def run(%{header: header, instructions: instructions}, opts \\ []) do
     replay? = Keyword.get(opts, :replay, false)
-    backend_mod = Map.get(@backend_map, header.backend, Plushie.Test.Backend.Pooled)
+    backend_mod = Map.get(@backend_map, header.backend, Plushie.Test.Backend.MockRenderer)
     session = Session.start(header.app, backend: backend_mod)
 
     try do

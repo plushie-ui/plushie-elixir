@@ -3,7 +3,7 @@ defmodule Plushie.Test.InteractionRoundtripTest do
 
   alias Plushie.Event.Widget
 
-  alias Plushie.Test.Backend.Pooled
+  alias Plushie.Test.Backend.MockRenderer
 
   # A single app that has one of each interactive widget type and tracks every
   # event it receives in its model. This lets each test assert on what event
@@ -95,10 +95,10 @@ defmodule Plushie.Test.InteractionRoundtripTest do
   end
 
   setup do
-    {:ok, pid} = Pooled.start(TrackingApp, pool: Plushie.TestPool)
+    {:ok, pid} = MockRenderer.start(TrackingApp, pool: Plushie.TestPool)
 
     on_exit(fn ->
-      if Process.alive?(pid), do: Pooled.stop(pid)
+      if Process.alive?(pid), do: MockRenderer.stop(pid)
     end)
 
     {:ok, pid: pid}
@@ -108,8 +108,8 @@ defmodule Plushie.Test.InteractionRoundtripTest do
 
   describe "click button" do
     test "dispatches %Widget{type: :click, id: id}", %{pid: pid} do
-      Pooled.click(pid, "#submit_btn")
-      assert Pooled.model(pid).last_event == %Widget{type: :click, id: "submit_btn"}
+      MockRenderer.click(pid, "#submit_btn")
+      assert MockRenderer.model(pid).last_event == %Widget{type: :click, id: "submit_btn"}
     end
   end
 
@@ -117,9 +117,9 @@ defmodule Plushie.Test.InteractionRoundtripTest do
 
   describe "type_text into text_input" do
     test "dispatches {:input, id, text}", %{pid: pid} do
-      Pooled.type_text(pid, "#name_input", "Arthur")
+      MockRenderer.type_text(pid, "#name_input", "Arthur")
 
-      assert Pooled.model(pid).last_event == %Widget{
+      assert MockRenderer.model(pid).last_event == %Widget{
                type: :input,
                id: "name_input",
                value: "Arthur"
@@ -127,16 +127,16 @@ defmodule Plushie.Test.InteractionRoundtripTest do
     end
 
     test "model field updated with typed text", %{pid: pid} do
-      Pooled.type_text(pid, "#name_input", "Zaphod")
-      assert Pooled.model(pid).text_value == "Zaphod"
+      MockRenderer.type_text(pid, "#name_input", "Zaphod")
+      assert MockRenderer.model(pid).text_value == "Zaphod"
     end
 
     test "sequential inputs update model each time", %{pid: pid} do
-      Pooled.type_text(pid, "#name_input", "first")
-      assert Pooled.model(pid).text_value == "first"
+      MockRenderer.type_text(pid, "#name_input", "first")
+      assert MockRenderer.model(pid).text_value == "first"
 
-      Pooled.type_text(pid, "#name_input", "second")
-      assert Pooled.model(pid).text_value == "second"
+      MockRenderer.type_text(pid, "#name_input", "second")
+      assert MockRenderer.model(pid).text_value == "second"
     end
   end
 
@@ -144,9 +144,9 @@ defmodule Plushie.Test.InteractionRoundtripTest do
 
   describe "toggle checkbox" do
     test "dispatches {:toggle, id, value} from unchecked state", %{pid: pid} do
-      Pooled.toggle(pid, "#agree_check")
+      MockRenderer.toggle(pid, "#agree_check")
 
-      assert Pooled.model(pid).last_event == %Widget{
+      assert MockRenderer.model(pid).last_event == %Widget{
                type: :toggle,
                id: "agree_check",
                value: true
@@ -154,14 +154,14 @@ defmodule Plushie.Test.InteractionRoundtripTest do
     end
 
     test "model field flips to true on first toggle", %{pid: pid} do
-      Pooled.toggle(pid, "#agree_check")
-      assert Pooled.model(pid).checkbox_state == true
+      MockRenderer.toggle(pid, "#agree_check")
+      assert MockRenderer.model(pid).checkbox_state == true
     end
 
     test "model field flips back to false on second toggle", %{pid: pid} do
-      Pooled.toggle(pid, "#agree_check")
-      Pooled.toggle(pid, "#agree_check")
-      assert Pooled.model(pid).checkbox_state == false
+      MockRenderer.toggle(pid, "#agree_check")
+      MockRenderer.toggle(pid, "#agree_check")
+      assert MockRenderer.model(pid).checkbox_state == false
     end
   end
 
@@ -169,13 +169,18 @@ defmodule Plushie.Test.InteractionRoundtripTest do
 
   describe "toggle toggler" do
     test "dispatches {:toggle, id, value} from off state", %{pid: pid} do
-      Pooled.toggle(pid, "#dark_mode")
-      assert Pooled.model(pid).last_event == %Widget{type: :toggle, id: "dark_mode", value: true}
+      MockRenderer.toggle(pid, "#dark_mode")
+
+      assert MockRenderer.model(pid).last_event == %Widget{
+               type: :toggle,
+               id: "dark_mode",
+               value: true
+             }
     end
 
     test "model field reflects new toggler state", %{pid: pid} do
-      Pooled.toggle(pid, "#dark_mode")
-      assert Pooled.model(pid).toggler_state == true
+      MockRenderer.toggle(pid, "#dark_mode")
+      assert MockRenderer.model(pid).toggler_state == true
     end
   end
 
@@ -183,18 +188,18 @@ defmodule Plushie.Test.InteractionRoundtripTest do
 
   describe "slide slider" do
     test "dispatches {:slide, id, value}", %{pid: pid} do
-      Pooled.slide(pid, "#volume", 80)
-      assert Pooled.model(pid).last_event == %Widget{type: :slide, id: "volume", value: 80}
+      MockRenderer.slide(pid, "#volume", 80)
+      assert MockRenderer.model(pid).last_event == %Widget{type: :slide, id: "volume", value: 80}
     end
 
     test "model field updated with slid value", %{pid: pid} do
-      Pooled.slide(pid, "#volume", 42)
-      assert Pooled.model(pid).slider_value == 42
+      MockRenderer.slide(pid, "#volume", 42)
+      assert MockRenderer.model(pid).slider_value == 42
     end
 
     test "accepts float values", %{pid: pid} do
-      Pooled.slide(pid, "#volume", 66.6)
-      assert Pooled.model(pid).slider_value == 66.6
+      MockRenderer.slide(pid, "#volume", 66.6)
+      assert MockRenderer.model(pid).slider_value == 66.6
     end
   end
 
@@ -202,10 +207,10 @@ defmodule Plushie.Test.InteractionRoundtripTest do
 
   describe "submit text_input" do
     test "dispatches {:submit, id, value} with current value", %{pid: pid} do
-      Pooled.type_text(pid, "#name_input", "Arthur")
-      Pooled.submit(pid, "#name_input")
+      MockRenderer.type_text(pid, "#name_input", "Arthur")
+      MockRenderer.submit(pid, "#name_input")
 
-      assert Pooled.model(pid).last_event == %Widget{
+      assert MockRenderer.model(pid).last_event == %Widget{
                type: :submit,
                id: "name_input",
                value: "Arthur"
@@ -213,8 +218,13 @@ defmodule Plushie.Test.InteractionRoundtripTest do
     end
 
     test "submit with no value dispatches empty string", %{pid: pid} do
-      Pooled.submit(pid, "#name_input")
-      assert Pooled.model(pid).last_event == %Widget{type: :submit, id: "name_input", value: ""}
+      MockRenderer.submit(pid, "#name_input")
+
+      assert MockRenderer.model(pid).last_event == %Widget{
+               type: :submit,
+               id: "name_input",
+               value: ""
+             }
     end
   end
 
@@ -222,9 +232,9 @@ defmodule Plushie.Test.InteractionRoundtripTest do
 
   describe "select from pick_list" do
     test "dispatches {:select, id, value}", %{pid: pid} do
-      Pooled.select(pid, "#language", "Elixir")
+      MockRenderer.select(pid, "#language", "Elixir")
 
-      assert Pooled.model(pid).last_event == %Widget{
+      assert MockRenderer.model(pid).last_event == %Widget{
                type: :select,
                id: "language",
                value: "Elixir"
@@ -232,14 +242,14 @@ defmodule Plushie.Test.InteractionRoundtripTest do
     end
 
     test "model field updated with selected value", %{pid: pid} do
-      Pooled.select(pid, "#language", "Erlang")
-      assert Pooled.model(pid).selected == "Erlang"
+      MockRenderer.select(pid, "#language", "Erlang")
+      assert MockRenderer.model(pid).selected == "Erlang"
     end
 
     test "selecting a different value replaces the previous", %{pid: pid} do
-      Pooled.select(pid, "#language", "Gleam")
-      Pooled.select(pid, "#language", "Elixir")
-      assert Pooled.model(pid).selected == "Elixir"
+      MockRenderer.select(pid, "#language", "Gleam")
+      MockRenderer.select(pid, "#language", "Elixir")
+      assert MockRenderer.model(pid).selected == "Elixir"
     end
   end
 end

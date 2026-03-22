@@ -1,11 +1,7 @@
-defmodule Plushie.Test.MockBridge do
-  @moduledoc """
-  A minimal stand-in for Plushie.Bridge used in unit tests.
-
-  Records every cast sent by the Runtime so tests can assert on
-  the sequence of messages that were sent without touching a real renderer
-  or port.
-  """
+# Internal test stub for framework plumbing tests. For testing Plushie
+# apps, use Plushie.Test.Case which runs against the real renderer binary.
+defmodule Plushie.Test.InternalMockBridge do
+  @moduledoc false
   use GenServer
 
   def start_link(opts \\ []) do

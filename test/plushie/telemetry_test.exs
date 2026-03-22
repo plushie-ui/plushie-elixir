@@ -35,7 +35,7 @@ defmodule Plushie.TelemetryTest do
     bridge_name = :"telemetry_bridge_#{tag}"
     runtime_name = :"telemetry_runtime_#{tag}"
 
-    {:ok, _bridge} = Plushie.Test.MockBridge.start_link(name: bridge_name)
+    {:ok, _bridge} = Plushie.Test.InternalMockBridge.start_link(name: bridge_name)
 
     opts =
       [app: app, bridge: bridge_name, name: runtime_name]
@@ -113,7 +113,7 @@ defmodule Plushie.TelemetryTest do
       capture_log(fn ->
         handler_id = attach([:plushie, :bridge, :send], self())
 
-        # We can't easily send to a real port without a renderer, but MockBridge
+        # We can't easily send to a real port without a renderer, but InternalMockBridge
         # is a GenServer, not a port. We verify the handler attaches and
         # detaches cleanly. A full integration test lives in bridge_msgpack_test.
         :telemetry.detach(handler_id)

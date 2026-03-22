@@ -2,7 +2,7 @@ defmodule Plushie.Test.Backend.EventDecoder do
   @moduledoc """
   Decodes wire-format event maps into Elixir event structs.
 
-  Shared between `RendererBase` (headless/full backends) and `Pooled`
+  Shared between `RendererBase` (headless/full backends) and `Mock`
   (session pool backend). Keeps event decoding logic in one place so
   new event families don't need to be added in multiple locations.
   """

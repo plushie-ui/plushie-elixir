@@ -996,12 +996,12 @@ fn render_does_not_panic() {
 }
 ```
 
-### Testing with the pooled_mock backend
+### Testing with the mock backend
 
-The pooled_mock backend (`:pooled_mock`) uses `Backend.Pooled` with a
-shared renderer process. Standard test helpers like `click/1`,
-`type_text/2`, etc. work with extension widget types out of the box --
-the pooled backend infers events for known widget interaction patterns.
+The mock backend (`:mock`) uses `Backend.MockRenderer` with a shared renderer
+process. Standard test helpers like `click/1`, `type_text/2`, etc.
+work with extension widget types out of the box -- the mock backend
+infers events for known widget interaction patterns.
 
 For integration tests that exercise the full wire protocol round-trip
 (including extension commands), build a custom renderer with
@@ -1328,9 +1328,9 @@ defmodule MyWidget.DonutChartTest do
 end
 ```
 
-#### Integration tests with pooled_mock backend
+#### Integration tests with mock backend
 
-For testing widget behaviour in a running app, use plushie's pooled_mock
+For testing widget behaviour in a running app, use plushie's mock
 backend:
 
 ```elixir

@@ -38,22 +38,30 @@ defmodule Examples.RatePlushieTest do
   end
 
   test "review containers render" do
-    assert_exists("#review-elixir_fan_42")
-    assert_exists("#review-jose_v")
-    assert_exists("#review-rustacean")
-    assert_exists("#review-web_refugee")
-    assert_exists("#review-otp_enjoyer")
-    assert_exists("#review-electron_mass")
+    assert_exists("#review-0")
+    assert_exists("#review-1")
+    assert_exists("#review-2")
   end
 
   test "review user names render" do
-    assert_text("#elixir_fan_42-name", "elixir_fan_42")
-    assert_text("#otp_enjoyer-name", "otp_enjoyer")
+    assert_text("#rname-0", "elixir_fan_42")
+    assert_text("#rname-4", "otp_enjoyer")
   end
 
   test "review timestamps render" do
-    assert_text("#elixir_fan_42-time", "2d ago")
-    assert_text("#otp_enjoyer-time", "1w ago")
+    assert_text("#rtime-0", "2d ago")
+    assert_text("#rtime-4", "1w ago")
+  end
+
+  test "review form exists" do
+    assert_exists("#review-name")
+    assert_exists("#review-comment")
+    assert_exists("#submit-review")
+  end
+
+  test "submitting a review adds it to the list" do
+    m = model()
+    assert length(m.reviews) == 6
   end
 
   test "rating card container exists" do

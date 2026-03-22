@@ -280,7 +280,7 @@ defmodule Plushie.Test.Helpers do
   Creates and registers a new test session for `app`.
 
   Resolves the backend from `PLUSHIE_TEST_BACKEND` env var, application
-  config, or defaults to `:pooled_mock`. Stores the session in the process
+  config, or defaults to `:mock`. Stores the session in the process
   dictionary so all helper functions work without explicit session threading.
 
   Call this in a test or setup block when not using `Plushie.Test.Case`.

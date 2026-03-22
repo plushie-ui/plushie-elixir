@@ -1,10 +1,10 @@
 defmodule ThemeToggle do
   @moduledoc """
-  Animated emoji theme toggle.
+  Animated theme toggle with a face on the thumb.
 
-  A toggle switch where the thumb is an emoji face. Light mode shows a
-  smiley; dark mode shows an upside-down imp. The emoji rotates during
-  the transition.
+  A toggle switch where the thumb has a drawn face. Light mode shows a
+  smiley; dark mode shows the face rotated upside down. The face rotates
+  during the transition.
 
       ThemeToggle.render("my-toggle", model.toggle_progress)
 
@@ -12,19 +12,19 @@ defmodule ThemeToggle do
   Drive `progress` from 0.0 (light) to 1.0 (dark) with a timer.
   """
 
-  @track_w 56
-  @track_h 28
-  @thumb_r 11
+  @track_w 64
+  @track_h 32
+  @thumb_r 13
 
   @doc "Renders the theme toggle canvas widget."
   def render(id, progress, _opts \\ []) do
     import Plushie.UI
 
     eased = smoothstep(progress)
-    thumb_x = lerp(14, 42, eased)
+    thumb_x = lerp(@track_h / 2, @track_w - @track_h / 2, eased)
     track_color = lerp_color({253, 230, 138}, {91, 33, 182}, eased)
-    emoji = if progress < 0.5, do: "\u{1F60A}", else: "\u{1F608}"
     rotation = eased * :math.pi()
+    face_color = if progress < 0.5, do: "#665500", else: "#4c1d95"
 
     canvas id, width: @track_w, height: @track_h do
       layer "toggle" do
@@ -32,19 +32,37 @@ defmodule ThemeToggle do
           interactive "switch" do
             on_click
             cursor("pointer")
+            hit_rect(%{x: 0, y: 0, w: @track_w, h: @track_h})
+            a11y(%{role: :switch, label: "Dark humor"})
           end
 
+          # Track
           rect(0, 0, @track_w, @track_h, fill: track_color, radius: @track_h / 2)
+
+          # Thumb circle
           circle(thumb_x, @track_h / 2, @thumb_r, fill: "#ffffff")
 
+          # Face drawn with transforms (rotates during transition)
           push_transform()
           translate(thumb_x, @track_h / 2)
           rotate(rotation)
-          text(0, -1, emoji, size: 14, align_x: "center", align_y: "center")
+
+          # Left eye
+          circle(-3.5, -3, 2, fill: face_color)
+          # Right eye
+          circle(3.5, -3, 2, fill: face_color)
+          # Mouth (smile drawn as a path)
+          path(smile_path(), stroke: Plushie.Canvas.Shape.stroke(face_color, 2))
+
           pop_transform()
         end
       end
     end
+  end
+
+  defp smile_path do
+    alias Plushie.Canvas.Shape, as: S
+    [S.move_to(-5, 1), S.line_to(-3, 5), S.line_to(3, 5), S.line_to(5, 1)]
   end
 
   defp smoothstep(t) when t <= 0.0, do: 0.0

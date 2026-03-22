@@ -13,9 +13,9 @@ defmodule Plushie.Test.SessionPool do
 
       {:ok, pool} = SessionPool.start_link(mode: :mock, max_sessions: 8)
 
-  Then use `Plushie.Test.Backend.Pooled` as the backend, passing the pool:
+  Then use `Plushie.Test.Backend.MockRenderer` as the backend, passing the pool:
 
-      session = Session.start(MyApp, backend: Backend.Pooled, pool: pool)
+      session = Session.start(MyApp, backend: Backend.MockRenderer, pool: pool)
 
   ## Architecture
 

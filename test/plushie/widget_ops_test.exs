@@ -80,7 +80,7 @@ defmodule Plushie.WidgetOpsTest do
   end
 
   # ---------------------------------------------------------------------------
-  # Runtime dispatch via MockBridge
+  # Runtime dispatch via InternalMockBridge
   # ---------------------------------------------------------------------------
 
   # A minimal app that returns widget op commands in response to events.
@@ -123,7 +123,7 @@ defmodule Plushie.WidgetOpsTest do
     bridge_name = :"mock_bridge_wops_#{tag}"
     runtime_name = :"runtime_wops_#{tag}"
 
-    {:ok, _bridge} = Plushie.Test.MockBridge.start_link(name: bridge_name)
+    {:ok, _bridge} = Plushie.Test.InternalMockBridge.start_link(name: bridge_name)
     {:ok, runtime} = Plushie.Runtime.start_link(app: app, bridge: bridge_name, name: runtime_name)
 
     {runtime, bridge_name}
@@ -143,7 +143,7 @@ defmodule Plushie.WidgetOpsTest do
 
       dispatch_and_wait(runtime, {:do, :focus})
 
-      ops = Plushie.Test.MockBridge.get_widget_ops(bridge)
+      ops = Plushie.Test.InternalMockBridge.get_widget_ops(bridge)
       assert length(ops) == 1
       assert hd(ops).op == "focus"
       assert hd(ops).payload == %{target: "target_widget"}
@@ -155,7 +155,7 @@ defmodule Plushie.WidgetOpsTest do
 
       dispatch_and_wait(runtime, {:do, :focus_next})
 
-      ops = Plushie.Test.MockBridge.get_widget_ops(bridge)
+      ops = Plushie.Test.InternalMockBridge.get_widget_ops(bridge)
       assert length(ops) == 1
       assert hd(ops).op == "focus_next"
       assert hd(ops).payload == %{}
@@ -167,7 +167,7 @@ defmodule Plushie.WidgetOpsTest do
 
       dispatch_and_wait(runtime, {:do, :focus_previous})
 
-      ops = Plushie.Test.MockBridge.get_widget_ops(bridge)
+      ops = Plushie.Test.InternalMockBridge.get_widget_ops(bridge)
       assert length(ops) == 1
       assert hd(ops).op == "focus_previous"
       assert hd(ops).payload == %{}
@@ -179,7 +179,7 @@ defmodule Plushie.WidgetOpsTest do
 
       dispatch_and_wait(runtime, {:do, :select_all})
 
-      ops = Plushie.Test.MockBridge.get_widget_ops(bridge)
+      ops = Plushie.Test.InternalMockBridge.get_widget_ops(bridge)
       assert length(ops) == 1
       assert hd(ops).op == "select_all"
       assert hd(ops).payload == %{target: "editor"}
@@ -191,7 +191,7 @@ defmodule Plushie.WidgetOpsTest do
 
       dispatch_and_wait(runtime, {:do, :scroll_to})
 
-      ops = Plushie.Test.MockBridge.get_widget_ops(bridge)
+      ops = Plushie.Test.InternalMockBridge.get_widget_ops(bridge)
       assert length(ops) == 1
       assert hd(ops).op == "scroll_to"
       assert hd(ops).payload == %{target: "log_view", offset_y: 999}
@@ -203,7 +203,7 @@ defmodule Plushie.WidgetOpsTest do
 
       dispatch_and_wait(runtime, {:do, :close_window})
 
-      ops = Plushie.Test.MockBridge.get_widget_ops(bridge)
+      ops = Plushie.Test.InternalMockBridge.get_widget_ops(bridge)
       assert length(ops) == 1
       assert hd(ops).op == "close_window"
       assert hd(ops).payload == %{window_id: "preferences"}
@@ -217,7 +217,7 @@ defmodule Plushie.WidgetOpsTest do
       bridge_name = :"mock_bridge_nil_#{tag}"
       runtime_name = :"runtime_nil_#{tag}"
 
-      {:ok, _bridge} = Plushie.Test.MockBridge.start_link(name: bridge_name)
+      {:ok, _bridge} = Plushie.Test.InternalMockBridge.start_link(name: bridge_name)
 
       {:ok, runtime} =
         Plushie.Runtime.start_link(app: WidgetOpApp, bridge: bridge_name, name: runtime_name)
@@ -263,7 +263,7 @@ defmodule Plushie.WidgetOpsTest do
 
       dispatch_and_wait(runtime, :batch_ops)
 
-      ops = Plushie.Test.MockBridge.get_widget_ops(bridge)
+      ops = Plushie.Test.InternalMockBridge.get_widget_ops(bridge)
       assert length(ops) == 3
 
       assert Enum.at(ops, 0).op == "focus"

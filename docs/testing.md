@@ -132,9 +132,9 @@ end
 ```
 
 `Plushie.Test.Case` starts a session, imports all helper functions, and tears
-down on exit. The default backend is `:pooled_mock` -- a pooled backend
-using a shared renderer process. No renderer binary, no display server, no
-setup.
+down on exit. The default backend is `:mock` -- the plushie binary in
+`--mock` mode (lightweight rendering, no display). Sessions are pooled
+for performance.
 
 
 ## Selectors, interactions, and assertions
@@ -276,7 +276,7 @@ changing assertions.
 
 ### Three backends
 
-| | `:pooled_mock` | `:headless` | `:windowed` |
+| | `:mock` | `:headless` | `:windowed` |
 |---|---|---|---|
 | **Speed** | ~ms | ~100ms | ~seconds |
 | **Renderer** | Yes (`--mock`) | Yes (`--headless`) | Yes |
@@ -289,7 +289,7 @@ changing assertions.
 | **Real rendering** | No | Yes (tiny-skia) | Yes (GPU) |
 | **Real windows** | No | No | Yes |
 
-- **`:pooled_mock`** -- shared `plushie --mock` process with session
+- **`:mock`** -- shared `plushie --mock` process with session
   multiplexing. Tests app logic, tree structure, and wire protocol.
   No rendering, no display, sub-millisecond. The right default for
   90% of tests.
@@ -311,11 +311,11 @@ Tests are portable across all three.
 | Priority | Source | Example |
 |---|---|---|
 | 1 | Environment variable | `PLUSHIE_TEST_BACKEND=headless mix test` |
-| 2 | Application config | `config :plushie, :test_backend, :pooled_mock` |
-| 3 | Default | `:pooled_mock` |
+| 2 | Application config | `config :plushie, :test_backend, :mock` |
+| 3 | Default | `:mock` |
 
-Atom shorthands (`:pooled_mock`, `:headless`, `:windowed`) and full module
-names (`Plushie.Test.Backend.Pooled`, etc.) both work in application config.
+Atom shorthands (`:mock`, `:headless`, `:windowed`) and full module
+names (`Plushie.Test.Backend.MockRenderer`, etc.) both work in application config.
 
 
 ## Snapshots and screenshots
@@ -355,7 +355,7 @@ PLUSHIE_UPDATE_SNAPSHOTS=1 mix test
 `assert_screenshot/1` captures real RGBA pixel data and compares it against
 a golden file. It produces meaningful data on both the `:windowed` backend (GPU
 rendering via wgpu) and the `:headless` backend (software rendering via
-tiny-skia). On `:pooled_mock`, it silently succeeds as a no-op (returns an
+tiny-skia). On `:mock`, it silently succeeds as a no-op (returns an
 empty hash, which is accepted without creating or checking a golden file).
 
 Note that headless screenshots use software rendering, so pixels will not
@@ -376,7 +376,7 @@ workflow is the same as structural snapshots but uses a separate env var:
 PLUSHIE_UPDATE_SCREENSHOTS=1 mix test
 ```
 
-Because screenshots silently no-op on pooled_mock, you can include
+Because screenshots silently no-op on mock, you can include
 `assert_screenshot` calls in any test without conditional logic. They will
 produce assertions when run on the headless or windowed backends.
 
@@ -418,7 +418,7 @@ A `.plushie` file has a header and an instruction section separated by
 app: MyApp.Counter
 viewport: 800x600
 theme: dark
-backend: pooled_mock
+backend: mock
 -----
 click "#increment"
 click "#increment"
@@ -436,7 +436,7 @@ wait 500
 | `app` | Yes | -- | Module implementing `Plushie.App` |
 | `viewport` | No | `800x600` | Viewport size as `WxH` |
 | `theme` | No | `dark` | Theme name |
-| `backend` | No | `pooled_mock` | Backend: `pooled_mock`, `headless`, or `windowed` |
+| `backend` | No | `mock` | Backend: `mock`, `headless`, or `windowed` |
 
 Lines starting with `#` are comments (in both header and body sections).
 
@@ -449,7 +449,7 @@ Lines starting with `#` are comments (in both header and body sections).
 | `type` (key) | `type enter` | Yes | Send a special key (press + release). Supports modifiers: `type ctrl+s` |
 | `expect` | `expect "text"` | Yes | Assert text appears somewhere in the tree |
 | `tree_hash` | `tree_hash "name"` | Yes | Capture and assert a structural tree hash |
-| `screenshot` | `screenshot "name"` | No-op on pooled_mock | Capture and assert a pixel screenshot |
+| `screenshot` | `screenshot "name"` | No-op on mock | Capture and assert a pixel screenshot |
 | `assert_text` | `assert_text "selector" "text"` | Yes | Assert widget has specific text |
 | `assert_model` | `assert_model "expression"` | Yes | Assert expression appears in inspected model (substring match) |
 | `press` | `press key` | Yes | Press a key down. Supports modifiers: `press ctrl+s` |
@@ -481,9 +481,9 @@ visual issues, demos, and onboarding.
 
 ## Testing async workflows
 
-### On the pooled_mock backend
+### On the mock backend
 
-The pooled_mock backend executes `async`, `stream`, and `done` commands
+The mock backend executes `async`, `stream`, and `done` commands
 synchronously. When `update/2` returns a command like
 `Command.async(fn -> fetch_data() end, :data_loaded)`, the backend
 immediately calls the function, gets the result, and dispatches
@@ -495,7 +495,7 @@ done):
 ```elixir
 test "fetching data loads results" do
   click("#fetch")
-  # On pooled_mock, the async command already executed synchronously.
+  # On mock, the async command already executed synchronously.
   # await_async is a no-op -- the model is already updated.
   await_async(:data_loaded)
   assert length(model().results) > 0
@@ -503,7 +503,7 @@ end
 ```
 
 Widget ops (focus, scroll), window ops, and timers are silently skipped on
-pooled_mock because they require a renderer. Test the command shape at the
+mock because they require a renderer. Test the command shape at the
 unit test level instead:
 
 ```elixir
@@ -579,7 +579,7 @@ end
 
 ## CI configuration
 
-### Pooled mock CI (simplest)
+### Mock CI (simplest)
 
 No special setup. Works anywhere Elixir runs.
 
@@ -634,10 +634,10 @@ On Arch Linux, `weston` and `vulkan-swrast` are available via pacman.
 
 ### Progressive CI
 
-Run pooled_mock tests fast, then promote to higher-fidelity backends for subsets:
+Run mock tests fast, then promote to higher-fidelity backends for subsets:
 
 ```yaml
-# All tests on pooled_mock (fast, catches logic bugs)
+# All tests on mock (fast, catches logic bugs)
 - run: mix test
 
 # Full suite on headless for protocol verification
@@ -682,7 +682,7 @@ Or pass `format: :json` in backend opts when starting a session manually:
 session = Session.start(MyApp, backend: Plushie.Test.Backend.Headless, format: :json)
 ```
 
-The pooled_mock backend does not use a wire protocol (pure Elixir, no
+The mock backend does not use a wire protocol (pure Elixir, no
 renderer process), so the format option has no effect on it.
 
 
@@ -796,7 +796,7 @@ defmodule MyGauge.EndToEndTest do
 end
 ```
 
-These tests run on `:pooled_mock` by default (fast, logic-only). Set
+These tests run on `:mock` by default (fast, logic-only). Set
 `PLUSHIE_TEST_BACKEND=headless` to exercise the full Rust rendering path
 with the extension compiled in.
 
@@ -807,9 +807,9 @@ Workarounds and details for each limitation are noted inline below.
 
 - Script instruction `move` (move cursor to a widget by selector) is a
   no-op. It requires widget bounds from layout, which only the renderer knows.
-- `move_to` on the pooled_mock backend dispatches `%Mouse{type: :moved, x: x, y: y}` but has
+- `move_to` on the mock backend dispatches `%Mouse{type: :moved, x: x, y: y}` but has
   no spatial layout info. Mouse area enter/exit events won't fire.
-- Pixel screenshots are only available on the headless and windowed backends (pooled_mock returns stubs).
+- Pixel screenshots are only available on the headless and windowed backends (mock returns stubs).
 - Headless screenshots use software rendering (tiny-skia) and may not match
   GPU output pixel-for-pixel.
 - Script `assert_model` uses substring matching against the inspected model.

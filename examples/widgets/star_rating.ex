@@ -2,58 +2,87 @@ defmodule StarRating do
   @moduledoc """
   Canvas-based star rating widget.
 
-  Renders 5 interactive stars. Click to rate, hover to preview.
+  Renders 5 stars. Interactive by default (click to rate, hover to
+  preview, Tab/arrow keys to navigate, Enter/Space to select).
+  Pass `readonly: true` for a display-only version.
 
+      # Interactive (full size)
       StarRating.render("my-rating", model.rating,
-        hover: model.hover_star, dark: model.dark?)
+        hover: model.hover_star, focused: model.focused_star,
+        theme_progress: p)
 
-  Events: `canvas_shape_click` with shape_id `"star-0"` through `"star-4"`.
-  Hover: `canvas_shape_enter`/`canvas_shape_leave` with the same shape_ids.
+      # Read-only (small, for review display)
+      StarRating.render("review-stars", 4, readonly: true, scale: 0.5)
+
+  Events:
+  - `canvas_shape_click` with shape_id `"star-0"` through `"star-4"`
+  - `canvas_shape_enter`/`canvas_shape_leave` for hover
+  - `canvas_shape_focused` with shape_id for keyboard focus
   """
 
   import Plushie.Canvas.Shape, only: [move_to: 2, line_to: 2, close: 0]
-
-  @outer_r 12
-  @inner_r 5
-  @size 28
-  @gap 8
 
   @doc "Renders a star rating canvas widget."
   def render(id, rating, opts \\ []) do
     import Plushie.UI
 
     hover = Keyword.get(opts, :hover)
-    dark = Keyword.get(opts, :dark, false)
-    display = hover || rating
-    width = 5 * @size + 4 * @gap
+    focused = Keyword.get(opts, :focused)
+    theme_progress = Keyword.get(opts, :theme_progress, 0.0)
+    readonly = Keyword.get(opts, :readonly, false)
+    scale = Keyword.get(opts, :scale, 1.0)
 
-    canvas id, width: width, height: @size do
+    outer_r = 13 * scale
+    inner_r = 5 * scale
+    size = round(30 * scale)
+    gap = round(2 * scale)
+    display = hover || rating
+    width = 5 * size + 4 * gap
+    focus_r = outer_r + 3 * scale
+
+    commands = star_commands(outer_r, inner_r)
+
+    canvas id, width: width, height: size do
       layer "stars" do
         for i <- 0..4 do
-          cx = i * (@size + @gap) + @size / 2
-          cy = @size / 2
+          cx = i * (size + gap) + size / 2
+          cy = size / 2
           filled = i < display
-          preview = hover != nil and i < hover and i >= rating
+          preview = not readonly and hover != nil and i < hover and i >= rating
+          is_focused = not readonly and focused == i
 
-          group x: cx, y: cy do
-            interactive "star-#{i}" do
-              on_click
-              on_hover
-              cursor("pointer")
+          if readonly do
+            group x: cx, y: cy do
+              path(commands, fill: star_color(filled, false, theme_progress))
             end
+          else
+            group x: cx, y: cy do
+              interactive "star-#{i}" do
+                on_click
+                on_hover
+                cursor("pointer")
+                a11y(%{role: :button, label: "#{i + 1} star#{if i == 0, do: "", else: "s"}"})
+              end
 
-            path(star_commands(), fill: star_color(filled, preview, dark))
+              if is_focused do
+                circle(0, 0, focus_r,
+                  stroke: Plushie.Canvas.Shape.stroke("#3b82f6", 2 * scale)
+                )
+              end
+
+              path(commands, fill: star_color(filled, preview, theme_progress))
+            end
           end
         end
       end
     end
   end
 
-  defp star_commands do
+  defp star_commands(outer_r, inner_r) do
     points =
       for i <- 0..9 do
         angle = i * :math.pi() / 5 - :math.pi() / 2
-        r = if rem(i, 2) == 0, do: @outer_r, else: @inner_r
+        r = if rem(i, 2) == 0, do: outer_r, else: inner_r
         {r * :math.cos(angle), r * :math.sin(angle)}
       end
 
@@ -61,8 +90,15 @@ defmodule StarRating do
     [move_to(fx, fy) | Enum.map(rest, fn {x, y} -> line_to(x, y) end)] ++ [close()]
   end
 
-  defp star_color(true, false, _dark), do: "#f59e0b"
-  defp star_color(_, true, _dark), do: "#fcd34d"
-  defp star_color(false, false, false), do: "#d1d5db"
-  defp star_color(false, false, true), do: "#4a4a5e"
+  defp star_color(true, false, _progress), do: "#f59e0b"
+  defp star_color(_, true, _progress), do: "#fcd34d"
+
+  defp star_color(false, false, progress) do
+    r = round(209 + (74 - 209) * progress)
+    g = round(213 + (74 - 213) * progress)
+    b = round(219 + (94 - 219) * progress)
+    "#" <> hex(r) <> hex(g) <> hex(b)
+  end
+
+  defp hex(n), do: n |> Integer.to_string(16) |> String.pad_leading(2, "0")
 end

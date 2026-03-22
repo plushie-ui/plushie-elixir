@@ -3,7 +3,7 @@ defmodule Plushie.Test.ProtocolRoundtripTest do
 
   alias Plushie.Event.Widget
 
-  alias Plushie.Test.Backend.Pooled
+  alias Plushie.Test.Backend.MockRenderer
   alias Plushie.Test.Element
 
   # A test app that renders one of every major widget type so we can verify
@@ -74,10 +74,10 @@ defmodule Plushie.Test.ProtocolRoundtripTest do
   end
 
   setup do
-    {:ok, pid} = Pooled.start(WidgetApp, pool: Plushie.TestPool)
+    {:ok, pid} = MockRenderer.start(WidgetApp, pool: Plushie.TestPool)
 
     on_exit(fn ->
-      if Process.alive?(pid), do: Pooled.stop(pid)
+      if Process.alive?(pid), do: MockRenderer.stop(pid)
     end)
 
     {:ok, pid: pid}
@@ -87,16 +87,16 @@ defmodule Plushie.Test.ProtocolRoundtripTest do
 
   describe "button" do
     test "renders with correct type", %{pid: pid} do
-      element = Pooled.find(pid, "#save")
+      element = MockRenderer.find(pid, "#save")
       assert %Element{} = element
       assert element.type == "button"
     end
 
     test "click dispatches event and updates model state", %{pid: pid} do
       # The app ignores click events but the backend must dispatch without error.
-      Pooled.click(pid, "#save")
+      MockRenderer.click(pid, "#save")
       # No crash means the round-trip worked.
-      assert Pooled.model(pid).text_value == ""
+      assert MockRenderer.model(pid).text_value == ""
     end
   end
 
@@ -104,13 +104,13 @@ defmodule Plushie.Test.ProtocolRoundtripTest do
 
   describe "text" do
     test "renders with correct type and content prop", %{pid: pid} do
-      element = Pooled.find(pid, "#title")
+      element = MockRenderer.find(pid, "#title")
       assert element.type == "text"
       assert element.props[:content] == "Widget Gallery"
     end
 
     test "findable by text content", %{pid: pid} do
-      element = Pooled.find(pid, "Widget Gallery")
+      element = MockRenderer.find(pid, "Widget Gallery")
       assert %Element{type: "text"} = element
     end
   end
@@ -119,23 +119,23 @@ defmodule Plushie.Test.ProtocolRoundtripTest do
 
   describe "text_input" do
     test "renders with correct type", %{pid: pid} do
-      element = Pooled.find(pid, "#search")
+      element = MockRenderer.find(pid, "#search")
       assert element.type == "text_input"
     end
 
     test "value prop reflects model", %{pid: pid} do
-      element = Pooled.find(pid, "#search")
+      element = MockRenderer.find(pid, "#search")
       assert element.props[:value] == ""
     end
 
     test "type_text dispatches input event and model updates", %{pid: pid} do
-      Pooled.type_text(pid, "#search", "hello")
-      assert Pooled.model(pid).text_value == "hello"
+      MockRenderer.type_text(pid, "#search", "hello")
+      assert MockRenderer.model(pid).text_value == "hello"
     end
 
     test "tree reflects updated value after input", %{pid: pid} do
-      Pooled.type_text(pid, "#search", "plushie")
-      element = Pooled.find(pid, "#search")
+      MockRenderer.type_text(pid, "#search", "plushie")
+      element = MockRenderer.find(pid, "#search")
       assert element.props[:value] == "plushie"
     end
   end
@@ -144,14 +144,14 @@ defmodule Plushie.Test.ProtocolRoundtripTest do
 
   describe "checkbox" do
     test "renders with correct type", %{pid: pid} do
-      element = Pooled.find(pid, "#agree")
+      element = MockRenderer.find(pid, "#agree")
       assert element.type == "checkbox"
     end
 
     test "toggle dispatches event without error", %{pid: pid} do
-      Pooled.toggle(pid, "#agree")
+      MockRenderer.toggle(pid, "#agree")
       # App ignores toggle but the round-trip must complete cleanly.
-      assert is_map(Pooled.model(pid))
+      assert is_map(MockRenderer.model(pid))
     end
   end
 
@@ -159,18 +159,18 @@ defmodule Plushie.Test.ProtocolRoundtripTest do
 
   describe "slider" do
     test "renders with correct type", %{pid: pid} do
-      element = Pooled.find(pid, "#volume")
+      element = MockRenderer.find(pid, "#volume")
       assert element.type == "slider"
     end
 
     test "value prop present in tree", %{pid: pid} do
-      element = Pooled.find(pid, "#volume")
+      element = MockRenderer.find(pid, "#volume")
       assert element.props[:value] == 50
     end
 
     test "slide dispatches event without error", %{pid: pid} do
-      Pooled.slide(pid, "#volume", 75)
-      assert is_map(Pooled.model(pid))
+      MockRenderer.slide(pid, "#volume", 75)
+      assert is_map(MockRenderer.model(pid))
     end
   end
 
@@ -178,18 +178,18 @@ defmodule Plushie.Test.ProtocolRoundtripTest do
 
   describe "pick_list" do
     test "renders with correct type", %{pid: pid} do
-      element = Pooled.find(pid, "#country")
+      element = MockRenderer.find(pid, "#country")
       assert element.type == "pick_list"
     end
 
     test "options prop present in tree", %{pid: pid} do
-      element = Pooled.find(pid, "#country")
+      element = MockRenderer.find(pid, "#country")
       assert element.props[:options] == ["NZ", "AU", "GB"]
     end
 
     test "select dispatches event and model updates", %{pid: pid} do
-      Pooled.select(pid, "#country", "NZ")
-      assert Pooled.model(pid).selected == "NZ"
+      MockRenderer.select(pid, "#country", "NZ")
+      assert MockRenderer.model(pid).selected == "NZ"
     end
   end
 
@@ -197,22 +197,22 @@ defmodule Plushie.Test.ProtocolRoundtripTest do
 
   describe "layout nesting" do
     test "row renders with correct type", %{pid: pid} do
-      element = Pooled.find(pid, "#layout")
+      element = MockRenderer.find(pid, "#layout")
       assert element.type == "row"
     end
 
     test "nested container is findable", %{pid: pid} do
-      element = Pooled.find(pid, "#inner")
+      element = MockRenderer.find(pid, "#inner")
       assert element.type == "container"
     end
 
     test "deeply nested text is findable", %{pid: pid} do
-      element = Pooled.find(pid, "#nested")
+      element = MockRenderer.find(pid, "#nested")
       assert element.type == "text"
     end
 
     test "find by text traverses nested children", %{pid: pid} do
-      element = Pooled.find(pid, "nested")
+      element = MockRenderer.find(pid, "nested")
       assert %Element{type: "text"} = element
     end
   end

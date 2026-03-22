@@ -4,7 +4,7 @@ defmodule Plushie.Test.Backend do
 
   Three backends provide different fidelity levels:
 
-  - `:pooled_mock` -- pure Elixir, no Rust. Fastest. Tests logic and tree structure.
+  - `:mock` -- runs the plushie binary in `--mock` mode (lightweight rendering, no display). Sessions are pooled for performance.
   - `:headless` -- real Rust renderer with iced_test Simulator. Structural snapshots.
   - `:windowed` -- real iced windows (Xvfb in CI). Effects, subscriptions, GPU rendering.
 

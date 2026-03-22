@@ -84,7 +84,7 @@ defmodule Plushie.RuntimeTest do
   # Helpers
   # ---------------------------------------------------------------------------
 
-  # Starts a uniquely-named MockBridge and Runtime pair for a single test.
+  # Starts a uniquely-named InternalMockBridge and Runtime pair for a single test.
   # Returns {runtime_pid, bridge_name}.
   defp start_runtime(app, extra_opts \\ []) do
     # Use the test PID to ensure unique names per test (async: true safe).
@@ -92,7 +92,7 @@ defmodule Plushie.RuntimeTest do
     bridge_name = :"mock_bridge_#{tag}"
     runtime_name = :"runtime_#{tag}"
 
-    {:ok, _bridge} = Plushie.Test.MockBridge.start_link(name: bridge_name)
+    {:ok, _bridge} = Plushie.Test.InternalMockBridge.start_link(name: bridge_name)
 
     opts =
       [app: app, bridge: bridge_name, name: runtime_name]
@@ -147,7 +147,7 @@ defmodule Plushie.RuntimeTest do
       {runtime, bridge} = start_runtime(SimpleApp)
       await_initial_render(runtime)
 
-      snapshots = Plushie.Test.MockBridge.get_snapshots(bridge)
+      snapshots = Plushie.Test.InternalMockBridge.get_snapshots(bridge)
       assert length(snapshots) == 1
 
       [snapshot] = snapshots
@@ -166,10 +166,10 @@ defmodule Plushie.RuntimeTest do
       dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
 
       # Initial render sends a snapshot; subsequent updates send patches.
-      snapshots = Plushie.Test.MockBridge.get_snapshots(bridge)
+      snapshots = Plushie.Test.InternalMockBridge.get_snapshots(bridge)
       assert length(snapshots) == 1
 
-      patches = Plushie.Test.MockBridge.get_patches(bridge)
+      patches = Plushie.Test.InternalMockBridge.get_patches(bridge)
       assert length(patches) == 1
 
       # Verify the runtime's current tree reflects the update.
@@ -201,7 +201,7 @@ defmodule Plushie.RuntimeTest do
       dispatch_and_wait(runtime, :mystery_event)
 
       # Unknown events don't change the tree, so no patches are sent.
-      patches = Plushie.Test.MockBridge.get_patches(bridge)
+      patches = Plushie.Test.InternalMockBridge.get_patches(bridge)
       assert patches == []
 
       state = :sys.get_state(runtime)
@@ -373,7 +373,7 @@ defmodule Plushie.RuntimeTest do
 
         # renderer_exit does NOT produce a new snapshot -- it only updates the model
         # so it is ready when the renderer restarts.
-        snapshots = Plushie.Test.MockBridge.get_snapshots(bridge)
+        snapshots = Plushie.Test.InternalMockBridge.get_snapshots(bridge)
         assert length(snapshots) == 1
       end)
     end
@@ -383,13 +383,13 @@ defmodule Plushie.RuntimeTest do
         {runtime, bridge} = start_runtime(SimpleApp)
         await_initial_render(runtime)
 
-        initial_snapshots = Plushie.Test.MockBridge.get_snapshots(bridge)
+        initial_snapshots = Plushie.Test.InternalMockBridge.get_snapshots(bridge)
         assert length(initial_snapshots) == 1
 
         send(runtime, :renderer_restarted)
         :sys.get_state(runtime)
 
-        snapshots = Plushie.Test.MockBridge.get_snapshots(bridge)
+        snapshots = Plushie.Test.InternalMockBridge.get_snapshots(bridge)
         # Should have sent the same tree a second time.
         assert length(snapshots) == 2
 
@@ -700,7 +700,7 @@ defmodule Plushie.RuntimeTest do
 
       dispatch_and_wait(runtime, %Widget{type: :click, id: "open"})
 
-      effects = Plushie.Test.MockBridge.get_effects(bridge)
+      effects = Plushie.Test.InternalMockBridge.get_effects(bridge)
       assert length(effects) == 1
 
       [req] = effects
@@ -832,7 +832,7 @@ defmodule Plushie.RuntimeTest do
       # Allow cast to be processed by the mock bridge.
       :sys.get_state(bridge)
 
-      registers = Plushie.Test.MockBridge.get_subscribes(bridge)
+      registers = Plushie.Test.InternalMockBridge.get_subscribes(bridge)
       assert length(registers) == 1
       assert hd(registers) == %{kind: "on_key_press", tag: "keys", max_rate: nil}
     end
@@ -867,14 +867,14 @@ defmodule Plushie.RuntimeTest do
       :sys.get_state(bridge)
 
       # Verify register was sent
-      registers = Plushie.Test.MockBridge.get_subscribes(bridge)
+      registers = Plushie.Test.InternalMockBridge.get_subscribes(bridge)
       assert length(registers) == 1
 
       # Now remove the subscription
       dispatch_and_wait(runtime, :stop_listening)
       :sys.get_state(bridge)
 
-      unregisters = Plushie.Test.MockBridge.get_unsubscribes(bridge)
+      unregisters = Plushie.Test.InternalMockBridge.get_unsubscribes(bridge)
       assert length(unregisters) == 1
       assert hd(unregisters) == %{kind: "on_key_press"}
     end
@@ -927,7 +927,7 @@ defmodule Plushie.RuntimeTest do
       :sys.get_state(bridge)
 
       # Initial render should detect the "main" window and send open
-      window_ops = Plushie.Test.MockBridge.get_window_ops(bridge)
+      window_ops = Plushie.Test.InternalMockBridge.get_window_ops(bridge)
       assert length(window_ops) == 1
       assert hd(window_ops).op == "open"
       assert hd(window_ops).window_id == "main"
@@ -937,7 +937,7 @@ defmodule Plushie.RuntimeTest do
       dispatch_and_wait(runtime, :open_secondary)
       :sys.get_state(bridge)
 
-      window_ops = Plushie.Test.MockBridge.get_window_ops(bridge)
+      window_ops = Plushie.Test.InternalMockBridge.get_window_ops(bridge)
       assert length(window_ops) == 2
 
       second_op = Enum.at(window_ops, 1)
@@ -977,7 +977,7 @@ defmodule Plushie.RuntimeTest do
       :sys.get_state(bridge)
 
       # Initial render opens the window
-      window_ops = Plushie.Test.MockBridge.get_window_ops(bridge)
+      window_ops = Plushie.Test.InternalMockBridge.get_window_ops(bridge)
       assert length(window_ops) == 1
       assert hd(window_ops).op == "open"
       assert hd(window_ops).window_id == "ephemeral"
@@ -986,7 +986,7 @@ defmodule Plushie.RuntimeTest do
       dispatch_and_wait(runtime, :close_it)
       :sys.get_state(bridge)
 
-      window_ops = Plushie.Test.MockBridge.get_window_ops(bridge)
+      window_ops = Plushie.Test.InternalMockBridge.get_window_ops(bridge)
       assert length(window_ops) == 2
 
       close_op = Enum.at(window_ops, 1)
@@ -1183,7 +1183,7 @@ defmodule Plushie.RuntimeTest do
       {runtime, bridge} = start_runtime(SimpleApp)
       await_initial_render(runtime)
 
-      settings_list = Plushie.Test.MockBridge.get_settings(bridge)
+      settings_list = Plushie.Test.InternalMockBridge.get_settings(bridge)
       assert settings_list != []
 
       # The first settings message should contain the extension_config.
@@ -1199,7 +1199,7 @@ defmodule Plushie.RuntimeTest do
       {runtime, bridge} = start_runtime(SimpleApp)
       await_initial_render(runtime)
 
-      settings_list = Plushie.Test.MockBridge.get_settings(bridge)
+      settings_list = Plushie.Test.InternalMockBridge.get_settings(bridge)
       assert settings_list != []
 
       settings = hd(settings_list)

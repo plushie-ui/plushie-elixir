@@ -281,37 +281,37 @@ defmodule Plushie.Test.Backend.CommandProcessorTest do
     end
   end
 
-  describe "integration with pooled backend" do
-    test "pooled backend processes init commands" do
-      alias Plushie.Test.Backend.Pooled
+  describe "integration with mock backend" do
+    test "mock backend processes init commands" do
+      alias Plushie.Test.Backend.MockRenderer
 
-      {:ok, pid} = Pooled.start(InitCommandApp, pool: Plushie.TestPool)
-      model = Pooled.model(pid)
+      {:ok, pid} = MockRenderer.start(InitCommandApp, pool: Plushie.TestPool)
+      model = MockRenderer.model(pid)
 
       assert model.data == "loaded"
-      Pooled.stop(pid)
+      MockRenderer.stop(pid)
     end
 
-    test "pooled backend processes single command from init" do
-      alias Plushie.Test.Backend.Pooled
+    test "mock backend processes single command from init" do
+      alias Plushie.Test.Backend.MockRenderer
 
-      {:ok, pid} = Pooled.start(SingleCommandApp, pool: Plushie.TestPool)
-      model = Pooled.model(pid)
+      {:ok, pid} = MockRenderer.start(SingleCommandApp, pool: Plushie.TestPool)
+      model = MockRenderer.model(pid)
 
       assert model.initialized == true
-      Pooled.stop(pid)
+      MockRenderer.stop(pid)
     end
 
-    test "pooled backend processes commands from interactions" do
-      alias Plushie.Test.Backend.Pooled
+    test "mock backend processes commands from interactions" do
+      alias Plushie.Test.Backend.MockRenderer
 
-      {:ok, pid} = Pooled.start(AsyncApp, pool: Plushie.TestPool)
-      Pooled.click(pid, "#fetch")
-      model = Pooled.model(pid)
+      {:ok, pid} = MockRenderer.start(AsyncApp, pool: Plushie.TestPool)
+      MockRenderer.click(pid, "#fetch")
+      model = MockRenderer.model(pid)
 
       assert model.status == :done
       assert model.data == {:ok, "fetched"}
-      Pooled.stop(pid)
+      MockRenderer.stop(pid)
     end
   end
 end

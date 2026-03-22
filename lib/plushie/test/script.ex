@@ -10,7 +10,7 @@ defmodule Plushie.Test.Script do
       app: MyApp.Counter
       viewport: 800x600
       theme: dark
-      backend: pooled_mock
+      backend: mock
       -----
       click "#increment"
       expect "Count: 1"
@@ -88,7 +88,7 @@ defmodule Plushie.Test.Script do
         app = Module.concat([app_str])
         viewport = parse_viewport(Map.get(fields, "viewport", "800x600"))
         theme = Map.get(fields, "theme", "dark")
-        backend = parse_backend(Map.get(fields, "backend", "pooled_mock"))
+        backend = parse_backend(Map.get(fields, "backend", "mock"))
         {:ok, %{app: app, viewport: viewport, theme: theme, backend: backend}}
 
       :error ->
@@ -103,11 +103,11 @@ defmodule Plushie.Test.Script do
     end
   end
 
-  defp parse_backend("pooled_mock"), do: :pooled_mock
-  defp parse_backend("mock"), do: :pooled_mock
+  defp parse_backend("pooled_mock"), do: :mock
+  defp parse_backend("mock"), do: :mock
   defp parse_backend("headless"), do: :headless
   defp parse_backend("windowed"), do: :windowed
-  defp parse_backend(_), do: :pooled_mock
+  defp parse_backend(_), do: :mock
 
   defp parse_instructions(text) do
     instructions =

@@ -21,7 +21,7 @@ defmodule Plushie.Test.Session do
   @doc "Creates a new session by starting the given backend."
   @spec start(app :: module(), opts :: keyword()) :: t()
   def start(app, opts \\ []) do
-    backend = Keyword.get(opts, :backend, Plushie.Test.Backend.Pooled)
+    backend = Keyword.get(opts, :backend, Plushie.Test.Backend.MockRenderer)
     {:ok, pid} = backend.start(app, opts)
     %__MODULE__{backend: backend, pid: pid}
   end

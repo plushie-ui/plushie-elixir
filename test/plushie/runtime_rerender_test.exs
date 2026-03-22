@@ -58,7 +58,7 @@ defmodule Plushie.RuntimeRerenderTest do
     bridge_name = :"rerender_bridge_#{tag}"
     runtime_name = :"rerender_runtime_#{tag}"
 
-    {:ok, _bridge} = Plushie.Test.MockBridge.start_link(name: bridge_name)
+    {:ok, _bridge} = Plushie.Test.InternalMockBridge.start_link(name: bridge_name)
     {:ok, runtime} = Plushie.Runtime.start_link(app: app, bridge: bridge_name, name: runtime_name)
     :sys.get_state(runtime)
 
@@ -99,7 +99,7 @@ defmodule Plushie.RuntimeRerenderTest do
         state = :sys.get_state(runtime)
         assert state.model.count == 2
 
-        patches_before = length(Plushie.Test.MockBridge.get_patches(bridge))
+        patches_before = length(Plushie.Test.InternalMockBridge.get_patches(bridge))
 
         # Force re-render -- model should not change (no update/2 called).
         force_rerender_and_wait(runtime)
@@ -109,7 +109,7 @@ defmodule Plushie.RuntimeRerenderTest do
 
         # Since the model didn't change and the module code is the same,
         # the tree is identical -- no new patch should be sent.
-        patches_after = length(Plushie.Test.MockBridge.get_patches(bridge))
+        patches_after = length(Plushie.Test.InternalMockBridge.get_patches(bridge))
         assert patches_after == patches_before
       end)
     end
