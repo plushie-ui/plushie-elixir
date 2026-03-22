@@ -45,7 +45,7 @@ is useful when plushie is the entry point (a release binary or launcher)
 and it's the foundation for remote rendering over SSH.
 
 ```sh
-plushie --exec "mix plushie.stdio MyApp"
+plushie --exec "mix plushie.connect MyApp"
 ```
 
 The renderer controls the lifecycle. When the user closes the window,
@@ -78,7 +78,7 @@ Your `init/update/view` code doesn't change at all.
 ### Quick start
 
 ```sh
-plushie --exec "ssh user@server 'cd /app && mix plushie.stdio MyApp'"
+plushie --exec "ssh user@server 'cd /app && mix plushie.connect MyApp'"
 ```
 
 The renderer on your laptop spawns an SSH session, which starts the

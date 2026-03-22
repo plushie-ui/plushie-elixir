@@ -117,10 +117,15 @@ defmodule Plushie.Runtime do
     app = Keyword.fetch!(opts, :app)
     bridge = Keyword.fetch!(opts, :bridge)
     daemon? = Keyword.get(opts, :daemon, false)
+    token = Keyword.get(opts, :token)
 
     # App opts can be passed explicitly via :app_opts, or as remaining keys.
     app_opts =
-      Keyword.get(opts, :app_opts, Keyword.drop(opts, [:app, :bridge, :name, :daemon, :app_opts]))
+      Keyword.get(
+        opts,
+        :app_opts,
+        Keyword.drop(opts, [:app, :bridge, :name, :daemon, :token, :app_opts])
+      )
 
     # 1. Initialize app model.
     case safe_init(app, app_opts) do
@@ -130,6 +135,7 @@ defmodule Plushie.Runtime do
           model: model,
           bridge: bridge,
           daemon: daemon?,
+          token: token,
           tree: nil,
           init_commands: commands,
           subscriptions: %{},
@@ -155,7 +161,7 @@ defmodule Plushie.Runtime do
   @impl true
   def handle_continue(:initial_render, state) do
     # Send app-level settings to the renderer before the first snapshot.
-    send_settings(state.app, state.bridge)
+    send_settings(state)
 
     # 2-4. Render initial tree and push snapshot (old_tree is nil -> full snapshot).
     tree = render_and_sync(state.app, state.model, state.bridge, nil)
@@ -262,7 +268,7 @@ defmodule Plushie.Runtime do
     state = flush_pending_effects(state, :renderer_restarted)
 
     # The new renderer process expects Settings as the first message.
-    send_settings(state.app, state.bridge)
+    send_settings(state)
 
     # Re-run view/1 to get a fresh tree rather than relying on a stale cache.
     tree =
@@ -469,10 +475,10 @@ defmodule Plushie.Runtime do
   # Sends app-level settings to the bridge. The renderer expects a Settings
   # message as the very first message on stdin (before any snapshot), so this
   # must always send something, even if the app doesn't define settings/0.
-  defp send_settings(app, bridge) do
+  defp send_settings(state) do
     settings =
-      if function_exported?(app, :settings, 0) do
-        case app.settings() do
+      if function_exported?(state.app, :settings, 0) do
+        case state.app.settings() do
           s when is_list(s) and s != [] -> Map.new(s)
           _ -> %{}
         end
@@ -489,7 +495,15 @@ defmodule Plushie.Runtime do
         settings
       end
 
-    notify_bridge(%{bridge: bridge}, &Plushie.Bridge.send_settings(&1, settings))
+    # Include token if one was provided (for --listen socket auth).
+    settings =
+      if state.token do
+        Map.put(settings, :token, state.token)
+      else
+        settings
+      end
+
+    notify_bridge(state, &Plushie.Bridge.send_settings(&1, settings))
   end
 
   # Unwraps `app.init/1` or `app.update/2` return values into a

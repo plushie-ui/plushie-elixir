@@ -158,6 +158,7 @@ defmodule Plushie do
            bridge: bridge_name(name),
            name: runtime_name(name),
            daemon: daemon?,
+           token: Keyword.get(opts, :token),
            app_opts: Keyword.get(opts, :app_opts, [])
          ]},
         restart: :transient,
