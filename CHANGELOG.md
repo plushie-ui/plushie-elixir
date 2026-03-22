@@ -99,8 +99,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
   hover, drag, focus events via the `interactive` field on shapes.
 - **`docs/dsl-internals.md`** -- maintainer guide for the DSL
   architecture, Buildable behaviour, and scope walkers.
+- **`--wasm` flag** for `mix plushie.download` and `mix plushie.build`.
+- **`bin/plushie` symlink** created by `mix plushie.download` for
+  stable path references without the platform-specific name.
+- **`mix plushie.connect`** replaces `mix plushie.stdio`. Connects to
+  the renderer via Unix socket or TCP instead of stdin/stdout. Token
+  auth via Settings message.
+- **Doc-sync tests** linking doc code blocks to test functions via
+  HTML comment markers.
 
 ### Changed
+
+- **Downloaded binaries moved** from `priv/bin/` to `_build/plushie/bin/`.
+  Build artifacts belong in `_build/` where `mix clean` removes them.
+- **`mix plushie.stdio` renamed** to `mix plushie.connect`. The old
+  stdin/stdout transport is still available as a fallback when
+  `PLUSHIE_SOCKET` is not set.
 
 - `Plushie.UI` is now the single macro/DSL layer. All shape macros
   (`rect`, `circle`, `group`, `layer`, etc.), path commands, transforms,
