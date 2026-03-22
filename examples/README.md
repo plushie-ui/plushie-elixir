@@ -1,6 +1,6 @@
 # Plushie Examples
 
-Eight example apps demonstrating Plushie's features from minimal to complex.
+Example apps demonstrating Plushie's features from minimal to complex.
 Run any example with:
 
 ```sh
@@ -124,4 +124,23 @@ Use this as a reference for widget props and event patterns.
 
 ```sh
 mix plushie.gui Catalog
+```
+
+### RatePlushie
+
+**Files:** `rate_plushie.ex`, `widgets/star_rating.ex`, `widgets/theme_toggle.ex`
+
+App rating page with custom canvas-drawn widgets composed into a styled UI.
+Features a 5-star rating built from path-drawn star geometry and an animated
+emoji theme toggle -- a smiley that slides, rotates upside down, and becomes
+a smiling imp when "Dark humor" is enabled. The entire page theme flips at
+the animation midpoint.
+
+Demonstrates: custom canvas widgets as reusable modules, the interactive
+shape directive, canvas transforms for rotation, timer-based animation via
+subscriptions, container inline props with nested do-blocks (border, padding),
+theme-aware rendering, keyboard interaction (arrow keys adjust rating).
+
+```sh
+mix plushie.gui RatePlushie
 ```
