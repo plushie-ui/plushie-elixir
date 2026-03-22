@@ -9,7 +9,7 @@ defmodule RatePlushie do
       mix plushie.gui RatePlushie
   """
 
-  @behaviour Plushie.App
+  use Plushie.App
 
   @reviews [
     %{stars: 5, user: "elixir_fan_42", time: "2d ago",

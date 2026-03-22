@@ -1338,7 +1338,7 @@ defmodule MyWidget.IntegrationTest do
   use Plushie.Test.Case, async: true
 
   defmodule ChartApp do
-    @behaviour Plushie.App
+    use Plushie.App
 
     def init(_opts), do: %{segments: [{"A", 50, "#ff0000"}, {"B", 50, "#0000ff"}]}
     def update(model, _event), do: model

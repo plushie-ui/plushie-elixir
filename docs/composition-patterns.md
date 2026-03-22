@@ -29,7 +29,7 @@ views.
 
 ```elixir
 defmodule TabApp do
-  @behaviour Plushie.App
+  use Plushie.App
 
   alias Plushie.Type.StyleMap
   alias Plushie.Type.Border
@@ -119,7 +119,7 @@ that highlight on hover. The selected item has an accent background.
 
 ```elixir
 defmodule SidebarApp do
-  @behaviour Plushie.App
+  use Plushie.App
 
   alias Plushie.Type.StyleMap
 
@@ -214,7 +214,7 @@ view.
 
 ```elixir
 defmodule ToolbarApp do
-  @behaviour Plushie.App
+  use Plushie.App
 
   alias Plushie.Type.StyleMap
   alias Plushie.Type.Border
@@ -313,7 +313,7 @@ container that dims the background.
 
 ```elixir
 defmodule ModalApp do
-  @behaviour Plushie.App
+  use Plushie.App
 
   alias Plushie.Type.StyleMap
   alias Plushie.Type.Border
@@ -418,7 +418,7 @@ styled container.
 
 ```elixir
 defmodule CardApp do
-  @behaviour Plushie.App
+  use Plushie.App
 
   alias Plushie.Type.Border
   alias Plushie.Type.Shadow
@@ -531,7 +531,7 @@ cursor to a horizontal resize indicator.
 
 ```elixir
 defmodule SplitApp do
-  @behaviour Plushie.App
+  use Plushie.App
 
   alias Plushie.Type.Border
 
@@ -616,7 +616,7 @@ location.
 
 ```elixir
 defmodule BreadcrumbApp do
-  @behaviour Plushie.App
+  use Plushie.App
 
   alias Plushie.Type.StyleMap
 
@@ -702,7 +702,7 @@ for tags, counts, status indicators, or filter chips.
 
 ```elixir
 defmodule BadgeApp do
-  @behaviour Plushie.App
+  use Plushie.App
 
   alias Plushie.Type.StyleMap
   alias Plushie.Type.Border
@@ -823,7 +823,7 @@ feedback and focus ring locally. The host only sees click events.
 
 ```elixir
 defmodule ToggleApp do
-  @behaviour Plushie.App
+  use Plushie.App
 
   import Plushie.UI
 
@@ -885,7 +885,7 @@ has a tooltip, and announces its position in the set.
 
 ```elixir
 defmodule ChartApp do
-  @behaviour Plushie.App
+  use Plushie.App
 
   import Plushie.UI
 
@@ -966,7 +966,7 @@ IME, and clipboard.
 
 ```elixir
 defmodule SearchApp do
-  @behaviour Plushie.App
+  use Plushie.App
 
   import Plushie.UI
   import Plushie.Canvas.Shape  # needed for shape calls in inline layers: map
@@ -1019,7 +1019,7 @@ visuals. text_input handles filtering. scrollable handles long lists.
 
 ```elixir
 defmodule ComboApp do
-  @behaviour Plushie.App
+  use Plushie.App
 
   import Plushie.UI
   import Plushie.Canvas.Shape  # needed for shape calls in inline layers: map

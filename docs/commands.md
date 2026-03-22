@@ -600,7 +600,7 @@ the event tuple. Renderer events arrive as fixed tuples like
 ### The subscribe callback
 
 ```elixir
-@behaviour Plushie.App
+use Plushie.App
 
 # Optional callback. Default: no subscriptions.
 def subscribe(model) do
