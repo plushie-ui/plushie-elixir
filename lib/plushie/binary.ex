@@ -7,7 +7,7 @@ defmodule Plushie.Binary do
   1. `PLUSHIE_BINARY_PATH` environment variable
   2. Application config `:binary_path`
   3. Custom extension build in `_build/<env>/plushie/target/`
-  4. Precompiled binary in `priv/bin/`
+  4. Downloaded binary in `_build/plushie/bin/`
 
   Steps 1 and 2 are explicit configuration -- if set but pointing to a
   missing file, they raise immediately rather than falling through. Steps
@@ -50,11 +50,23 @@ defmodule Plushie.Binary do
       env_path() ||
         app_config_path() ||
         custom_build_path() ||
-        precompiled_path() ||
+        downloaded_path() ||
         raise not_found_message()
 
     validate_architecture!(path)
     path
+  end
+
+  @doc """
+  Returns the directory where downloaded binaries are stored.
+
+  This is `_build/plushie/bin/` relative to the project root, shared
+  across Mix environments (the binary is platform-specific, not
+  env-specific).
+  """
+  @spec download_dir() :: String.t()
+  def download_dir do
+    Path.join(["_build", "plushie", "bin"])
   end
 
   @doc """
@@ -195,10 +207,10 @@ defmodule Plushie.Binary do
     |> Enum.find(& &1)
   end
 
-  @spec precompiled_path() :: String.t() | nil
-  defp precompiled_path do
-    path = Path.join([:code.priv_dir(:plushie) |> to_string(), "bin", download_name()])
-    if File.exists?(path), do: path
+  @spec downloaded_path() :: String.t() | nil
+  defp downloaded_path do
+    path = Path.join(download_dir(), download_name())
+    if File.exists?(path), do: Path.expand(path)
   end
 
   # -- Platform detection ------------------------------------------------------
