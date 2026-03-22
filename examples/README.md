@@ -11,6 +11,21 @@ In dev mode, file watching is enabled by default. Edit an example
 while the GUI is running and the window updates instantly -- a good
 way to experiment with the API.
 
+## DSL styles
+
+The examples deliberately use different DSL styles so you can compare:
+
+- **Keyword opts on the call line** -- `column(spacing: 8, padding: 16, children: [...])`
+  Used by: Counter, Clock, Shortcuts, AsyncFetch, and most widget calls.
+- **Container inline props** -- options declared inside the do-block, mixed with children.
+  Used by: Todo, Notes, Catalog (Layout tab), RatePlushie.
+- **Nested struct do-blocks** -- `border do width 1; rounded 8 end` for complex options.
+  Used by: RatePlushie, ColorPicker app.
+- **Canvas widget modules** -- reusable canvas components in `widgets/`.
+  Used by: ColorPicker (ColorPickerWidget), RatePlushie (StarRating, ThemeToggle).
+
+All styles are interchangeable. Pick whichever reads best for your use case.
+
 ## Examples
 
 ### Counter
@@ -91,14 +106,14 @@ mix plushie.gui AsyncFetch
 
 ### ColorPicker
 
-**File:** `color_picker.ex`
+**Files:** `color_picker.ex`, `widgets/color_picker.ex`
 
-HSV color picker built entirely with the canvas widget. A hue ring surrounds
-a saturation/value square with drag interaction. Demonstrates canvas layers,
-path commands, linear gradients with alpha, layer caching (four layers with
-different invalidation patterns), and interactive canvas events
-(press/move/release for drag). Uses `Plushie.Canvas.Shape` builder functions
-and coordinate math for hit testing.
+HSV color picker using a custom canvas widget. A hue ring surrounds a
+saturation/value square with drag interaction. The canvas drawing is
+extracted into a reusable widget module (`widgets/color_picker.ex`), showing the
+widget composition pattern. Demonstrates canvas layers with the do-block
+DSL, path commands, linear gradients with alpha, layer caching, and
+coordinate-based canvas events (press/move/release for continuous drag).
 
 ```sh
 mix plushie.gui ColorPicker

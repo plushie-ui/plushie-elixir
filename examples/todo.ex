@@ -64,7 +64,11 @@ defmodule Todo do
     import Plushie.UI
 
     window "main", title: "Todos" do
-      column id: "app", padding: 20, spacing: 12, width: :fill do
+      column id: "app" do
+        padding 20
+        spacing 12
+        width :fill
+
         text("title", "My Todos", size: 24)
 
         text_input("new_todo", model.input,
@@ -72,7 +76,9 @@ defmodule Todo do
           on_submit: true
         )
 
-        row spacing: 8 do
+        row do
+          spacing 8
+
           button("filter_all", "All")
           button("filter_active", "Active")
           button("filter_done", "Done")

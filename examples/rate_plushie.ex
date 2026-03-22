@@ -178,12 +178,8 @@ defmodule RatePlushie do
 
       width :fill
 
-      column do
-        spacing 6
-
-        row do
-          spacing 8
-
+      column id: "#{review.user}-body", spacing: 6 do
+        row id: "#{review.user}-header", spacing: 8 do
           text("#{review.user}-stars", star_text(review.stars),
             size: 12, color: "#f59e0b"
           )
@@ -192,7 +188,7 @@ defmodule RatePlushie do
             size: 12, color: t.text_secondary
           )
 
-          space(width: :fill)
+          space(id: "#{review.user}-spacer", width: :fill)
 
           text("#{review.user}-time", review.time,
             size: 12, color: t.text_muted

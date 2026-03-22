@@ -160,7 +160,11 @@ defmodule Notes do
       end
 
     window "main", title: "Notes" do
-      column padding: 16, spacing: 12, width: :fill do
+      column do
+        padding 16
+        spacing 12
+        width :fill
+
         text("heading", "Notes", size: 24)
 
         text_input("search", search_query, placeholder: "Search notes...")
@@ -195,7 +199,11 @@ defmodule Notes do
     current = Undo.current(model.undo)
 
     window "main", title: "Edit Note" do
-      column padding: 16, spacing: 12, width: :fill do
+      column do
+        padding 16
+        spacing 12
+        width :fill
+
         row spacing: 8 do
           button("back", "Back")
           button("undo", "Undo")

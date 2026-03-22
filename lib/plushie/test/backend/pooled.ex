@@ -379,7 +379,12 @@ defmodule Plushie.Test.Backend.Pooled do
   @impl GenServer
   def terminate(_reason, state) do
     if state.pool && state.session_id do
-      SessionPool.unregister(state.pool, state.session_id)
+      # Cast instead of call to avoid blocking terminate on a slow
+      # renderer reset. The pool removes the session from its active
+      # map immediately. If the renderer reset times out, the pool
+      # handles it asynchronously. This prevents session pile-up on
+      # slower systems where many tests finish in quick succession.
+      SessionPool.unregister_async(state.pool, state.session_id)
     end
 
     :ok

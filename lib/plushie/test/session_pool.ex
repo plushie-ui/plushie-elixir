@@ -80,6 +80,18 @@ defmodule Plushie.Test.SessionPool do
   end
 
   @doc """
+  Unregister a session without waiting for the renderer reset.
+
+  The session is removed from the active map immediately. The reset
+  is still sent to the renderer, but the caller doesn't block on the
+  response. Used by terminate/2 to avoid blocking on slow renderers.
+  """
+  @spec unregister_async(pool :: GenServer.server(), session_id()) :: :ok
+  def unregister_async(pool, session_id) do
+    GenServer.cast(pool, {:unregister_async, session_id})
+  end
+
+  @doc """
   Send a message to the renderer for the given session.
 
   The `session` field is injected automatically. Synchronous -- waits
@@ -240,6 +252,18 @@ defmodule Plushie.Test.SessionPool do
   end
 
   @impl GenServer
+  def handle_cast({:unregister_async, session_id}, state) do
+    case Map.get(state.sessions, session_id) do
+      {_pid, monitor_ref} ->
+        Process.demonitor(monitor_ref, [:flush])
+        {:noreply, release_session(state, session_id)}
+
+      nil ->
+        # Already cleaned up by :DOWN handler.
+        {:noreply, state}
+    end
+  end
+
   def handle_cast({:send, session_id, msg}, state) do
     msg = Map.put(msg, :session, session_id)
     send_to_port(state.port, state.format, msg)
@@ -263,12 +287,11 @@ defmodule Plushie.Test.SessionPool do
   end
 
   def handle_info({:DOWN, ref, :process, pid, _reason}, state) do
-    # Session owner died -- clean up without sending a reset to the renderer
-    # (the test process is gone, no point waiting for a response).
+    # Session owner died (test crashed, timed out, etc.). Release the
+    # renderer slot so it doesn't count against max_sessions.
     case Enum.find(state.sessions, fn {_id, {p, r}} -> p == pid and r == ref end) do
       {session_id, _} ->
-        sessions = Map.delete(state.sessions, session_id)
-        {:noreply, %{state | sessions: sessions}}
+        {:noreply, release_session(state, session_id)}
 
       nil ->
         {:noreply, state}
@@ -276,6 +299,23 @@ defmodule Plushie.Test.SessionPool do
   end
 
   def handle_info(_msg, state), do: {:noreply, state}
+
+  # -- Session cleanup ---------------------------------------------------------
+
+  # Shared cleanup: remove session from the active map, send a reset
+  # to the renderer so it frees the slot, and track pending_close to
+  # absorb the session_closed event.
+  defp release_session(state, session_id) do
+    msg = %{session: session_id, type: "reset", id: "rel_#{state.next_id}"}
+    send_to_port(state.port, state.format, msg)
+
+    %{
+      state
+      | sessions: Map.delete(state.sessions, session_id),
+        pending_close: Map.put(state.pending_close, session_id, :awaiting),
+        next_id: state.next_id + 1
+    }
+  end
 
   # -- Port I/O ---------------------------------------------------------------
 

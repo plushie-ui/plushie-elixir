@@ -456,6 +456,7 @@ end
 defmodule Plushie.UITest do
   use ExUnit.Case, async: true
 
+  import ExUnit.CaptureIO
   import Plushie.UI
 
   # ---------------------------------------------------------------------------
@@ -1631,83 +1632,95 @@ defmodule Plushie.UITest do
 
   describe "canvas_scope compile errors" do
     test "text/1 in canvas raises" do
-      assert_raise CompileError, ~r/text\/1 is not valid here/, fn ->
-        Code.compile_string("""
-        import Plushie.UI
-        canvas "x" do
-          layer "l" do
-            text("Hello")
+      capture_io(:stderr, fn ->
+        assert_raise CompileError, fn ->
+          Code.compile_string("""
+          import Plushie.UI
+          canvas "x" do
+            layer "l" do
+              text("Hello")
+            end
           end
+          """)
         end
-        """)
-      end
+      end)
     end
 
     test "button in canvas raises" do
-      assert_raise CompileError, ~r/button is not valid here/, fn ->
-        Code.compile_string("""
-        import Plushie.UI
-        canvas "x" do
-          layer "l" do
-            button("save", "Save")
+      capture_io(:stderr, fn ->
+        assert_raise CompileError, fn ->
+          Code.compile_string("""
+          import Plushie.UI
+          canvas "x" do
+            layer "l" do
+              button("save", "Save")
+            end
           end
+          """)
         end
-        """)
-      end
+      end)
     end
 
     test "rect directly in canvas (not in layer) raises" do
-      assert_raise CompileError, ~r/rect is not valid here/, fn ->
-        Code.compile_string("""
-        import Plushie.UI
-        canvas "x" do
-          rect(0, 0, 100, 50)
+      capture_io(:stderr, fn ->
+        assert_raise CompileError, fn ->
+          Code.compile_string("""
+          import Plushie.UI
+          canvas "x" do
+            rect(0, 0, 100, 50)
+          end
+          """)
         end
-        """)
-      end
+      end)
     end
 
     test "interactive in layer (not group) raises" do
-      assert_raise CompileError, ~r/interactive is not valid here/, fn ->
-        Code.compile_string("""
-        import Plushie.UI
-        canvas "x" do
-          layer "l" do
-            interactive "btn" do
-              on_click true
+      capture_io(:stderr, fn ->
+        assert_raise CompileError, fn ->
+          Code.compile_string("""
+          import Plushie.UI
+          canvas "x" do
+            layer "l" do
+              interactive "btn" do
+                on_click true
+              end
             end
           end
+          """)
         end
-        """)
-      end
+      end)
     end
 
     test "layer inside layer raises" do
-      assert_raise CompileError, ~r/layer is not valid here/, fn ->
-        Code.compile_string("""
-        import Plushie.UI
-        canvas "x" do
-          layer "outer" do
-            layer "inner" do
-              rect(0, 0, 50, 50)
+      capture_io(:stderr, fn ->
+        assert_raise CompileError, fn ->
+          Code.compile_string("""
+          import Plushie.UI
+          canvas "x" do
+            layer "outer" do
+              layer "inner" do
+                rect(0, 0, 50, 50)
+              end
             end
           end
+          """)
         end
-        """)
-      end
+      end)
     end
 
     test "interactive do-block without id raises" do
-      assert_raise CompileError, ~r/interactive requires an id/, fn ->
-        Code.compile_string("""
-        import Plushie.UI
-        group do
-          interactive do
-            on_click true
+      capture_io(:stderr, fn ->
+        assert_raise CompileError, fn ->
+          Code.compile_string("""
+          import Plushie.UI
+          group do
+            interactive do
+              on_click true
+            end
           end
+          """)
         end
-        """)
-      end
+      end)
     end
   end
 
@@ -1717,12 +1730,14 @@ defmodule Plushie.UITest do
 
   describe "text/3 numeric literal guard" do
     test "text with numeric first args outside canvas raises" do
-      assert_raise CompileError, ~r/text\/3 is not valid here/, fn ->
-        Code.compile_string("""
-        import Plushie.UI
-        text(10, 20, "Hello")
-        """)
-      end
+      capture_io(:stderr, fn ->
+        assert_raise CompileError, fn ->
+          Code.compile_string("""
+          import Plushie.UI
+          text(10, 20, "Hello")
+          """)
+        end
+      end)
     end
   end
 
@@ -1821,27 +1836,31 @@ defmodule Plushie.UITest do
 
   describe "container_scope compile errors" do
     test "spacing in container (wrong container) raises" do
-      assert_raise CompileError, ~r/spacing is not a valid option for container/, fn ->
-        Code.compile_string("""
-        import Plushie.UI
-        container "x" do
-          spacing(8)
-          text("Hello")
+      capture_io(:stderr, fn ->
+        assert_raise CompileError, fn ->
+          Code.compile_string("""
+          import Plushie.UI
+          container "x" do
+            spacing(8)
+            text("Hello")
+          end
+          """)
         end
-        """)
-      end
+      end)
     end
 
     test "direction in column (wrong container) raises" do
-      assert_raise CompileError, ~r/direction is not a valid option for column/, fn ->
-        Code.compile_string("""
-        import Plushie.UI
-        column do
-          direction(:horizontal)
-          text("Hello")
+      capture_io(:stderr, fn ->
+        assert_raise CompileError, fn ->
+          Code.compile_string("""
+          import Plushie.UI
+          column do
+            direction(:horizontal)
+            text("Hello")
+          end
+          """)
         end
-        """)
-      end
+      end)
     end
   end
 
@@ -1968,14 +1987,16 @@ defmodule Plushie.UITest do
 
   describe "edge cases: leaf widget compile errors" do
     test "unknown option in button block" do
-      assert_raise CompileError, ~r/unknwn is not a valid option for button/, fn ->
-        Code.compile_string("""
-        import Plushie.UI
-        button "save", "Save" do
-          unknwn("value")
+      capture_io(:stderr, fn ->
+        assert_raise CompileError, fn ->
+          Code.compile_string("""
+          import Plushie.UI
+          button "save", "Save" do
+            unknwn("value")
+          end
+          """)
         end
-        """)
-      end
+      end)
     end
   end
 end

@@ -1,36 +1,17 @@
 defmodule ColorPicker do
   @moduledoc """
-  HSV color picker using the canvas widget as a custom interactive control.
+  HSV color picker using a custom canvas widget.
 
   A hue ring surrounds a saturation/value square. Drag the ring to select
   a hue; drag the square to adjust saturation and value. The selected color
   is displayed as a swatch and hex string below the canvas.
 
-  Demonstrates:
-  - Canvas with multiple layers and per-layer invalidation
-  - Path commands (ring segments) and linear gradients with alpha
-  - Interactive mouse events (press/move/release) for drag tracking
-  - Coordinate math for hit testing (ring vs. square regions)
-  - HSV-to-hex color conversion
+      mix plushie.gui ColorPicker
   """
 
   use Plushie.App
 
-  alias Plushie.Canvas.Shape
   alias Plushie.Event.Canvas
-
-  # -- Geometry constants ------------------------------------------------------
-
-  @canvas_size 400
-  @cx div(@canvas_size, 2)
-  @cy div(@canvas_size, 2)
-  @outer_r 190
-  @inner_r 150
-  @mid_r div(@inner_r + @outer_r, 2)
-  @sq_origin 100
-  @sq_size 200
-  @segments 72
-  @cursor_r 7
 
   # -- App callbacks -----------------------------------------------------------
 
@@ -39,12 +20,12 @@ defmodule ColorPicker do
   end
 
   def update(model, %Canvas{type: :press, id: "picker", x: x, y: y, button: "left"}) do
-    dx = x - @cx
-    dy = y - @cy
+    dx = x - ColorPickerWidget.cx()
+    dy = y - ColorPickerWidget.cy()
     dist = :math.sqrt(dx * dx + dy * dy)
 
     cond do
-      dist >= @inner_r and dist <= @outer_r ->
+      dist >= ColorPickerWidget.inner_r() and dist <= ColorPickerWidget.outer_r() ->
         %{model | drag: :ring, hue: hue_from_point(dx, dy)}
 
       in_square?(x, y) ->
@@ -57,7 +38,7 @@ defmodule ColorPicker do
 
   def update(model, %Canvas{type: :move, id: "picker", x: x, y: y}) do
     case model.drag do
-      :ring -> %{model | hue: hue_from_point(x - @cx, y - @cy)}
+      :ring -> %{model | hue: hue_from_point(x - ColorPickerWidget.cx(), y - ColorPickerWidget.cy())}
       :square -> apply_sv(model, x, y)
       :none -> model
     end
@@ -73,28 +54,35 @@ defmodule ColorPicker do
     import Plushie.UI
 
     hex = hsv_to_hex(model.hue, model.saturation, model.value)
-    h_int = round(model.hue)
-    s_pct = round(model.saturation * 100)
-    v_pct = round(model.value * 100)
 
     window "color_picker", title: "Color Picker" do
-      column padding: 20, spacing: 16, align_x: :center do
-        canvas("picker",
-          width: @canvas_size,
-          height: @canvas_size,
-          on_press: true,
-          on_release: true,
-          on_move: true,
-          layers: build_layers(model)
-        )
+      column do
+        padding 20
+        spacing 16
+        align_x :center
 
-        row spacing: 16, align_y: :center do
-          container "swatch", width: 48, height: 48, background: hex do
+        ColorPickerWidget.render("picker", model.hue, model.saturation, model.value)
+
+        row do
+          spacing 16
+          align_y :center
+
+          container "swatch" do
+            width 48
+            height 48
+            background(hex)
+
+            border do
+              width 1
+              color "#cccccc"
+              rounded 4
+            end
           end
 
-          column spacing: 4 do
+          column do
+            spacing 4
             text("hex_display", hex, size: 18)
-            text("hsv_display", "H: #{h_int}  S: #{s_pct}%  V: #{v_pct}%")
+            text("hsv_display", hsv_label(model))
           end
         end
       end
@@ -104,102 +92,39 @@ defmodule ColorPicker do
   # -- Hit testing -------------------------------------------------------------
 
   defp in_square?(x, y) do
-    x >= @sq_origin and x <= @sq_origin + @sq_size and
-      y >= @sq_origin and y <= @sq_origin + @sq_size
+    origin = ColorPickerWidget.sq_origin()
+    size = ColorPickerWidget.sq_size()
+
+    x >= origin and x <= origin + size and
+      y >= origin and y <= origin + size
   end
 
   # -- Coordinate math ---------------------------------------------------------
 
   defp hue_from_point(dx, dy) do
     angle = :math.atan2(dy, dx)
-    # Shift so hue 0 (red) is at 12 o'clock (top, -pi/2 in screen coords)
     hue = angle + :math.pi() / 2
     hue = if hue < 0, do: hue + 2 * :math.pi(), else: hue
     hue * 180.0 / :math.pi()
   end
 
   defp apply_sv(model, x, y) do
-    s = clamp((x - @sq_origin) / @sq_size, 0.0, 1.0)
-    v = clamp(1.0 - (y - @sq_origin) / @sq_size, 0.0, 1.0)
+    origin = ColorPickerWidget.sq_origin()
+    size = ColorPickerWidget.sq_size()
+    s = clamp((x - origin) / size, 0.0, 1.0)
+    v = clamp(1.0 - (y - origin) / size, 0.0, 1.0)
     %{model | saturation: s, value: v}
   end
 
   defp clamp(val, lo, hi), do: max(lo, min(hi, val))
 
-  # -- Layer builders ----------------------------------------------------------
+  # -- Display helpers ---------------------------------------------------------
 
-  defp build_layers(model) do
-    %{
-      "a_ring" => ring_layer(),
-      "b_sv_hue" => sv_hue_layer(model.hue),
-      "c_sv_dark" => sv_dark_layer(),
-      "d_cursors" => cursors_layer(model)
-    }
-  end
-
-  defp ring_layer do
-    deg_per_segment = 360 / @segments
-
-    for i <- 0..(@segments - 1) do
-      hue_deg = i * deg_per_segment
-      a1 = (hue_deg - 90) * :math.pi() / 180
-      a2 = (hue_deg + deg_per_segment - 90) * :math.pi() / 180
-
-      Shape.path(
-        [
-          Shape.move_to(@cx + @inner_r * :math.cos(a1), @cy + @inner_r * :math.sin(a1)),
-          Shape.line_to(@cx + @outer_r * :math.cos(a1), @cy + @outer_r * :math.sin(a1)),
-          Shape.line_to(@cx + @outer_r * :math.cos(a2), @cy + @outer_r * :math.sin(a2)),
-          Shape.line_to(@cx + @inner_r * :math.cos(a2), @cy + @inner_r * :math.sin(a2)),
-          Shape.close()
-        ],
-        fill: hsv_to_hex(hue_deg, 1.0, 1.0)
-      )
-    end
-  end
-
-  defp sv_hue_layer(hue) do
-    hue_color = hsv_to_hex(hue, 1.0, 1.0)
-
-    [
-      Shape.rect(@sq_origin, @sq_origin, @sq_size, @sq_size,
-        fill:
-          Shape.linear_gradient(
-            {@sq_origin, @sq_origin},
-            {@sq_origin + @sq_size, @sq_origin},
-            [{0.0, "#ffffff"}, {1.0, hue_color}]
-          )
-      )
-    ]
-  end
-
-  defp sv_dark_layer do
-    [
-      Shape.rect(@sq_origin, @sq_origin, @sq_size, @sq_size,
-        fill:
-          Shape.linear_gradient(
-            {@sq_origin, @sq_origin},
-            {@sq_origin, @sq_origin + @sq_size},
-            [{0.0, "#00000000"}, {1.0, "#000000ff"}]
-          )
-      )
-    ]
-  end
-
-  defp cursors_layer(model) do
-    angle = (model.hue - 90) * :math.pi() / 180
-    ring_x = @cx + @mid_r * :math.cos(angle)
-    ring_y = @cy + @mid_r * :math.sin(angle)
-
-    sv_x = @sq_origin + model.saturation * @sq_size
-    sv_y = @sq_origin + (1.0 - model.value) * @sq_size
-
-    cursor_stroke = Shape.stroke("#333333", 2)
-
-    [
-      Shape.circle(ring_x, ring_y, @cursor_r, fill: "#ffffff", stroke: cursor_stroke),
-      Shape.circle(sv_x, sv_y, @cursor_r, fill: "#ffffff", stroke: cursor_stroke)
-    ]
+  defp hsv_label(model) do
+    h_int = round(model.hue)
+    s_pct = round(model.saturation * 100)
+    v_pct = round(model.value * 100)
+    "H: #{h_int}  S: #{s_pct}%  V: #{v_pct}%"
   end
 
   # -- Color conversion --------------------------------------------------------

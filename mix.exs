@@ -13,6 +13,7 @@ defmodule Plushie.MixProject do
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: Mix.compilers() ++ [:plushie_binary],
+      test_paths: ["test", "examples/tests"],
       elixirc_options: [warnings_as_errors: true],
       consolidate_protocols: Mix.env() != :test,
       start_permanent: Mix.env() == :prod,
@@ -158,6 +159,9 @@ defmodule Plushie.MixProject do
           not String.starts_with?(mod_str, "Elixir.AsyncFetch") and
           not String.starts_with?(mod_str, "Elixir.ColorPicker") and
           not String.starts_with?(mod_str, "Elixir.Catalog") and
+          not String.starts_with?(mod_str, "Elixir.RatePlushie") and
+          not String.starts_with?(mod_str, "Elixir.StarRating") and
+          not String.starts_with?(mod_str, "Elixir.ThemeToggle") and
           not String.starts_with?(mod_str, "Elixir.TabApp") and
           not String.starts_with?(mod_str, "Elixir.ModalApp")
       end

@@ -180,10 +180,13 @@ defmodule Catalog do
 
   # -- tab views (private) ---------------------------------------------------
 
+  # Uses inline prop syntax (see also: keyword form in Input section)
   defp layout_tab do
     import Plushie.UI
 
-    column spacing: 8 do
+    column do
+      spacing 8
+
       text("layout_heading", "Layout Widgets", size: 18)
 
       # Row
@@ -200,7 +203,9 @@ defmodule Catalog do
       end
 
       # Container with padding
-      container "demo_container", padding: 12 do
+      container "demo_container" do
+        padding 12
+
         text("Inside a container")
       end
 
@@ -258,7 +263,9 @@ defmodule Catalog do
       # Themer - overrides the theme for its subtree
       themer "demo_themer",
         theme: %{background: "#1a1a2e", text: "#e0e0e0", primary: "#0f3460"} do
-        container "themed_box", padding: 12 do
+        container "themed_box" do
+          padding 12
+
           column spacing: 4 do
             text("Themed section with custom palette")
             button("themed_btn", "Themed Button")
