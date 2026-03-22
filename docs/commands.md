@@ -36,6 +36,7 @@ end
 
 #### Async work
 
+<!-- test: commands_async_construct_test -- keep this code block in sync with the test -->
 ```elixir
 # Run a function asynchronously. Result is delivered as an event.
 Plushie.Command.async(fun, event_tag)
@@ -67,6 +68,7 @@ intermediate results to `update/2` over time. The function receives an
 through the normal update cycle. The function's final return value is also
 delivered as `{event_tag, result}`.
 
+<!-- test: commands_stream_construct_test -- keep this code block in sync with the test -->
 ```elixir
 Plushie.Command.stream(fun, event_tag)
 
@@ -112,6 +114,7 @@ This is convenience sugar. You can achieve the same thing with a bare
 event tag. The runtime tracks running tasks by tag and terminates the
 associated process. If the task has already completed, this is a no-op.
 
+<!-- test: commands_cancel_construct_test -- keep this code block in sync with the test -->
 ```elixir
 Plushie.Command.cancel(event_tag)
 ```
@@ -128,6 +131,7 @@ end
 immediately dispatches `msg_fn.(value)` through `update/2` without spawning
 a task. Useful for lifting a pure value into the command pipeline.
 
+<!-- test: commands_done_construct_test -- keep this code block in sync with the test -->
 ```elixir
 Plushie.Command.done(value, msg_fn)
 ```
@@ -142,6 +146,7 @@ end
 
 `Command.exit/0` terminates the application.
 
+<!-- test: commands_exit_construct_test -- keep this code block in sync with the test -->
 ```elixir
 Plushie.Command.exit()
 ```
@@ -150,6 +155,7 @@ Plushie.Command.exit()
 
 ##### Focus
 
+<!-- test: commands_focus_construct_test, commands_focus_next_construct_test, commands_focus_previous_construct_test -- keep this code block in sync with the test -->
 ```elixir
 Plushie.Command.focus(widget_id)           # Focus a text input
 Plushie.Command.focus_next()               # Focus next focusable widget
@@ -166,6 +172,7 @@ end
 
 ##### Text operations
 
+<!-- test: commands_select_all_construct_test, commands_select_range_construct_test -- keep this code block in sync with the test -->
 ```elixir
 Plushie.Command.select_all(widget_id)                    # Select all text
 Plushie.Command.move_cursor_to_front(widget_id)          # Cursor to start
@@ -184,6 +191,7 @@ end
 
 ##### Scroll operations
 
+<!-- test: commands_snap_to_end_construct_test, commands_snap_to_construct_test, commands_scroll_by_construct_test -- keep this code block in sync with the test -->
 ```elixir
 Plushie.Command.scroll_to(widget_id, offset_y)  # Scroll to absolute vertical position
 Plushie.Command.snap_to(widget_id, x, y)       # Snap scroll to absolute offset
@@ -206,6 +214,7 @@ There is no `open_window` command. To open a window, add a `window` node to
 the tree returned by `view/1`. To close one, remove it or use
 `close_window/1`.
 
+<!-- test: commands_close_window_construct_test, commands_set_window_mode_construct_test, commands_set_window_level_construct_test -- keep this code block in sync with the test -->
 ```elixir
 Plushie.Command.close_window(window_id)                        # Close a window
 Plushie.Command.resize_window(window_id, width, height)        # Resize
@@ -264,6 +273,7 @@ These go through the effect/window_op system. Results arrive in `update/2`
 as `%Effect{request_id: window_id, result: {:ok, data}}` where `window_id` is the
 string ID of the window and `data` varies by query type.
 
+<!-- test: commands_get_window_size_construct_test -- keep this code block in sync with the test -->
 ```elixir
 Plushie.Command.get_window_size(window_id, tag)
 # Result: %Effect{request_id: window_id, result: {:ok, %{"width" => w, "height" => h}}}
@@ -316,6 +326,7 @@ of the `data` map (e.g. `%{"width" => _, "height" => _}` for size vs.
 System-level queries use a different transport path. Results arrive as
 dedicated tuples where the **tag** (stringified) identifies the response.
 
+<!-- test: commands_get_system_theme_construct_test, commands_system_theme_event_match_test -- keep this code block in sync with the test -->
 ```elixir
 Plushie.Command.get_system_theme(tag)
 # Result: {:system_theme, tag_string, mode}
@@ -331,15 +342,17 @@ Plushie.Command.get_system_info(tag)
 
 **Important:** The `tag` arrives as a **string** in `update/2`, even if you
 pass an atom. `Plushie.Command.get_system_theme(:theme_detected)` produces
-`{:system_theme, "theme_detected", mode}` -- match on the string, not the
-atom.
+`%System{type: :system_theme, tag: "theme_detected", data: mode}` -- match
+on the string, not the atom.
 
 ```elixir
+alias Plushie.Event.{Widget, System}
+
 def update(model, %Widget{type: :click, id: "detect_theme"}) do
   {model, Plushie.Command.get_system_theme(:theme_detected)}
 end
 
-def update(model, {:system_theme, "theme_detected", mode}) do
+def update(model, %System{type: :system_theme, tag: "theme_detected", data: mode}) do
   %{model | os_theme: mode}
 end
 ```
@@ -349,6 +362,7 @@ end
 In-memory images can be created, updated, and deleted at runtime. The
 `Image` widget references them via `%{handle: "name"}` as its source.
 
+<!-- test: commands_create_image_construct_test, commands_delete_image_construct_test, commands_clear_images_construct_test -- keep this code block in sync with the test -->
 ```elixir
 Plushie.Command.create_image(handle, data)                     # From PNG/JPEG bytes
 Plushie.Command.create_image(handle, width, height, pixels)    # From raw RGBA pixels
@@ -376,6 +390,7 @@ end
 
 Commands for manipulating panes in a `PaneGrid` widget.
 
+<!-- test: commands_pane_split_construct_test, commands_pane_close_construct_test, commands_pane_restore_construct_test -- keep this code block in sync with the test -->
 ```elixir
 Plushie.Command.pane_split(widget_id, pane, axis, new_pane_id)  # Split a pane
 Plushie.Command.pane_close(widget_id, pane)                     # Close a pane
@@ -395,6 +410,7 @@ end
 
 #### Timers
 
+<!-- test: commands_send_after_construct_test -- keep this code block in sync with the test -->
 ```elixir
 Plushie.Command.send_after(delay_ms, event)  # Send event after delay
 ```
@@ -413,6 +429,7 @@ end
 
 #### Batch
 
+<!-- test: commands_batch_construct_test -- keep this code block in sync with the test -->
 ```elixir
 Plushie.Command.batch([
   Plushie.Command.focus("name_input"),
@@ -430,6 +447,7 @@ Push data directly to a native Rust extension widget without triggering the
 view/diff/patch cycle. Used for high-frequency data like terminal output or
 streaming log lines.
 
+<!-- test: commands_extension_command_construct_test, commands_extension_commands_construct_test -- keep this code block in sync with the test -->
 ```elixir
 # Single command
 Plushie.Command.extension_command("term-1", "write", %{data: output})
@@ -631,6 +649,7 @@ it.
 
 #### Time
 
+<!-- test: subscriptions_every_construct_test -- keep this code block in sync with the test -->
 ```elixir
 Plushie.Subscription.every(interval_ms, event_tag)
 # Delivers: {event_tag, timestamp} every interval_ms
@@ -638,6 +657,7 @@ Plushie.Subscription.every(interval_ms, event_tag)
 
 #### Keyboard
 
+<!-- test: subscriptions_on_key_press_construct_test -- keep this code block in sync with the test -->
 ```elixir
 Plushie.Subscription.on_key_press(event_tag)
 # Delivers: %Key{type: :press, ...}
@@ -764,6 +784,7 @@ Supported on: `Slider`, `VerticalSlider`, `Canvas`, `MouseArea`, `Sensor`,
 
 Renderer subscriptions accept a `max_rate` option:
 
+<!-- test: subscriptions_set_max_rate_test, subscriptions_set_max_rate_zero_test, subscriptions_on_animation_frame_test -- keep this code block in sync with the test -->
 ```elixir
 # Rate-limit mouse moves to 30 events per second:
 Subscription.on_mouse_move(:mouse, max_rate: 30)
@@ -847,6 +868,7 @@ commands and rendering:
 - `default_event_rate` -- integer. Maximum events per second for coalescable
   event types. Omit for unlimited (default). See [Event rate limiting](#event-rate-limiting).
 
+<!-- test: commands_settings_scale_and_vsync_test -- keep this code block in sync with the test -->
 ```elixir
 def settings do
   [

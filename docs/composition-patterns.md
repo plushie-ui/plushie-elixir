@@ -27,6 +27,7 @@ views.
 
 ### Code
 
+<!-- test: composition_patterns_tab_bar_init_test, composition_patterns_tab_bar_click_changes_active_tab_test, composition_patterns_tab_bar_view_has_three_tab_buttons_test -- keep this code block in sync with the test -->
 ```elixir
 defmodule TabApp do
   use Plushie.App
@@ -117,6 +118,7 @@ that highlight on hover. The selected item has an accent background.
 
 ### Code
 
+<!-- test: composition_patterns_sidebar_init_test, composition_patterns_sidebar_click_changes_page_test, composition_patterns_sidebar_view_has_nav_items_test -- keep this code block in sync with the test -->
 ```elixir
 defmodule SidebarApp do
   use Plushie.App
@@ -311,6 +313,7 @@ container that dims the background.
 
 ### Code
 
+<!-- test: composition_patterns_modal_init_test, composition_patterns_modal_open_test, composition_patterns_modal_confirm_test, composition_patterns_modal_view_has_overlay_when_open_test -- keep this code block in sync with the test -->
 ```elixir
 defmodule ModalApp do
   use Plushie.App
@@ -416,6 +419,7 @@ styled container.
 
 ### Code
 
+<!-- test: composition_patterns_card_helper_produces_correct_structure_test -- keep this code block in sync with the test -->
 ```elixir
 defmodule CardApp do
   use Plushie.App
@@ -529,6 +533,7 @@ cursor to a horizontal resize indicator.
 
 ### Code
 
+<!-- test: composition_patterns_split_panel_has_three_sections_test -- keep this code block in sync with the test -->
 ```elixir
 defmodule SplitApp do
   use Plushie.App
@@ -614,6 +619,7 @@ location.
 
 ### Code
 
+<!-- test: composition_patterns_breadcrumb_click_truncates_path_test -- keep this code block in sync with the test -->
 ```elixir
 defmodule BreadcrumbApp do
   use Plushie.App
@@ -700,6 +706,7 @@ for tags, counts, status indicators, or filter chips.
 
 ### Code
 
+<!-- test: composition_patterns_chip_toggle_on_test, composition_patterns_chip_toggle_off_test -- keep this code block in sync with the test -->
 ```elixir
 defmodule BadgeApp do
   use Plushie.App
@@ -1285,6 +1292,7 @@ enough that plain map updates read clearly.
 
 Undo/redo stack for commands.
 
+<!-- test: composition_patterns_state_helper_undo_apply_and_revert_test -- keep this code block in sync with the test -->
 ```elixir
 undo = Plushie.Undo.new(model)
 
@@ -1327,6 +1335,7 @@ apps where undo does not make sense (dashboards, monitoring).
 
 Selection state for lists and tables.
 
+<!-- test: composition_patterns_state_helper_selection_multi_test, composition_patterns_state_helper_selection_range_test -- keep this code block in sync with the test -->
 ```elixir
 sel = Plushie.Selection.new(mode: :multi)
 
@@ -1357,6 +1366,7 @@ selection modes correctly. Skip it for simple cases where a single
 
 Client-side routing for multi-view apps.
 
+<!-- test: composition_patterns_state_helper_route_push_and_pop_test -- keep this code block in sync with the test -->
 ```elixir
 route = Plushie.Route.new("/dashboard")
 
@@ -1380,6 +1390,7 @@ detail views, wizards). Skip it for single-screen apps.
 
 Query pipeline for in-memory record collections.
 
+<!-- test: composition_patterns_state_helper_data_query_filter_test -- keep this code block in sync with the test -->
 ```elixir
 records = [
   %{id: 1, name: "Alice", role: "admin", active: true},

@@ -174,6 +174,7 @@ are normalized via `A11y.cast/1`.
 
 With `Plushie.UI` (do-block syntax):
 
+<!-- test: accessibility_heading_level_1_test, accessibility_icon_button_label_test, accessibility_landmark_region_test -- keep this code block in sync with the test -->
 ```elixir
 import Plushie.UI
 
@@ -217,6 +218,7 @@ button("close", "X", a11y: %{label: "Close dialog"})
 
 With the typed widget builder API (`Plushie.Widget.*`):
 
+<!-- test: accessibility_button_widget_builder_test, accessibility_text_widget_builder_test, accessibility_text_input_widget_builder_test -- keep this code block in sync with the test -->
 ```elixir
 alias Plushie.Type.A11y
 alias Plushie.Widget.{Button, Text, TextInput}
@@ -293,6 +295,7 @@ button("do_thing", "")
 Screen reader users navigate by headings. Use the `a11y` prop to mark
 section titles:
 
+<!-- test: accessibility_heading_structure_test -- keep this code block in sync with the test -->
 ```elixir
 def view(model) do
   window "main", title: "MyApp" do
@@ -314,6 +317,7 @@ end
 Landmarks let screen reader users jump between major sections. Wrap
 significant regions in containers with landmark roles:
 
+<!-- test: accessibility_navigation_landmark_test, accessibility_search_landmark_test -- keep this code block in sync with the test -->
 ```elixir
 column do
   container "nav", a11y: %A11y{role: :navigation, label: "Main navigation"} do
@@ -344,6 +348,7 @@ without the user navigating to it, use live regions:
   messages, save confirmations, non-urgent updates)
 - `:assertive` -- interrupts current speech (errors, urgent alerts)
 
+<!-- test: accessibility_live_polite_test, accessibility_live_assertive_alert_test -- keep this code block in sync with the test -->
 ```elixir
 # Status bar that announces changes
 text("status", model.status_message, a11y: %A11y{live: :polite})
@@ -406,6 +411,7 @@ another widget by ID using `labelled_by`, `described_by`, and
 `error_message`. The renderer resolves these to accesskit node
 references so the screen reader follows the relationship automatically.
 
+<!-- test: accessibility_labelled_by_test -- keep this code block in sync with the test -->
 ```elixir
 column spacing: 12 do
   text("form_heading", "Create account", a11y: %A11y{role: :heading, level: 1})
@@ -444,6 +450,7 @@ label in sync if you change the visible text.
 
 Decorative elements that add no information should be hidden from AT:
 
+<!-- test: accessibility_hidden_rule_test, accessibility_decorative_image_hidden_test, accessibility_space_hidden_test -- keep this code block in sync with the test -->
 ```elixir
 # Decorative dividers
 rule(a11y: %A11y{hidden: true})
@@ -467,6 +474,7 @@ image("status_icon", icon_path, alt: "Status: online")
 Canvas draws arbitrary shapes -- accesskit can't infer anything from raw
 geometry. Always provide alternative text:
 
+<!-- test: accessibility_canvas_a11y_test -- keep this code block in sync with the test -->
 ```elixir
 # Static chart -- describe the content
 canvas("chart",
@@ -532,6 +540,7 @@ When building custom widgets with canvas or other primitives, use `toggled`,
 Without these, screen readers have no way to know the state of a custom
 control drawn with raw shapes.
 
+<!-- test: accessibility_canvas_switch_toggled_test, accessibility_canvas_meter_with_value_test -- keep this code block in sync with the test -->
 ```elixir
 # Custom toggle switch built with canvas
 canvas("dark-mode-switch", layers: [...],
@@ -594,6 +603,7 @@ end
 Use `has_popup` to tell screen readers that activating a widget opens
 a popup of a specific type:
 
+<!-- test: accessibility_has_popup_menu_test, accessibility_has_popup_listbox_test -- keep this code block in sync with the test -->
 ```elixir
 # Dropdown button
 button("menu_btn", "Options",
@@ -610,6 +620,7 @@ Use `disabled` to override the disabled state for AT when a widget
 is visually disabled via custom styling but doesn't use the standard
 `disabled` prop:
 
+<!-- test: accessibility_disabled_override_test -- keep this code block in sync with the test -->
 ```elixir
 button("submit", "Submit",
   a11y: %A11y{disabled: !model.form_valid}
@@ -620,6 +631,7 @@ button("submit", "Submit",
 
 For disclosure widgets, toggleable panels, and dropdown menus:
 
+<!-- test: accessibility_expanded_button_test -- keep this code block in sync with the test -->
 ```elixir
 def view(model) do
   column do
@@ -662,6 +674,7 @@ accesskit label from this prop.
 | `qr_code` | `alt` | `String.t()` |
 | `canvas` | `alt` | `String.t()` |
 
+<!-- test: accessibility_image_alt_prop_test -- keep this code block in sync with the test -->
 ```elixir
 image("logo", "/images/logo.png", alt: "Company logo")
 svg("icon", "/icons/search.svg", alt: "Search")
@@ -681,6 +694,7 @@ label from this prop.
 | `vertical_slider` | `label` | `String.t()` |
 | `progress_bar` | `label` | `String.t()` |
 
+<!-- test: accessibility_slider_label_prop_test, accessibility_progress_bar_label_prop_test -- keep this code block in sync with the test -->
 ```elixir
 slider("volume", {0, 100}, model.volume, label: "Volume")
 vertical_slider("brightness", {0, 100}, model.brightness, label: "Brightness")
@@ -700,6 +714,7 @@ that doesn't fit in a short label.
 | `qr_code` | `description` | `String.t()` |
 | `canvas` | `description` | `String.t()` |
 
+<!-- test: accessibility_image_description_prop_test -- keep this code block in sync with the test -->
 ```elixir
 image("photo", path, alt: "Team photo", description: "The engineering team at the 2025 offsite")
 canvas("chart", layers: layers, alt: "Sales chart", description: "Q1 up 15%, Q2 flat, Q3 down 8%")
@@ -717,6 +732,7 @@ prop would be `a11y: %A11y{hidden: true}`.
 | `image` | `decorative` | `boolean()` |
 | `svg` | `decorative` | `boolean()` |
 
+<!-- test: accessibility_image_decorative_prop_test -- keep this code block in sync with the test -->
 ```elixir
 image("divider", "/images/decorative-line.png", decorative: true)
 svg("flourish", "/icons/flourish.svg", decorative: true)

@@ -14,6 +14,7 @@ needed.
 
 ### Testing `update/2`
 
+<!-- test: testing_doc_adding_a_todo_appends_and_clears_input_test -- keep this code block in sync with the test -->
 ```elixir
 test "adding a todo appends to list and clears input" do
   model = %{todos: [], input: "Buy milk"}
@@ -30,6 +31,7 @@ Commands are plain `%Plushie.Command{}` structs. Pattern-match on `type` and
 `payload` to verify what `update/2` asked the runtime to do, without
 executing anything.
 
+<!-- test: testing_doc_submitting_todo_returns_focus_command_test, testing_doc_save_triggers_async_task_test -- keep this code block in sync with the test -->
 ```elixir
 test "submitting todo refocuses the input" do
   model = %{todos: [], input: "Buy milk"}
@@ -49,18 +51,21 @@ end
 
 ### Testing `view/1`
 
+<!-- test: testing_doc_view_shows_todo_count_test -- keep this code block in sync with the test -->
 ```elixir
 test "view shows todo count" do
-  model = %{todos: [%{id: 1, text: "Buy milk", done: false}], input: "", filter: :all}
-  tree = MyApp.view(model)
+  model = %{todos: [%{id: 1, text: "Buy milk", done: false}], input: ""}
+  tree = Plushie.Tree.normalize(MyApp.view(model))
 
   counter = Plushie.Tree.find(tree, "todo_count")
+  assert counter != nil
   assert counter.props[:content] =~ "1"
 end
 ```
 
 ### Testing `init/1`
 
+<!-- test: testing_doc_init_returns_valid_initial_state_test -- keep this code block in sync with the test -->
 ```elixir
 test "init returns valid initial state" do
   model = MyApp.init([])
@@ -74,6 +79,7 @@ end
 
 `Plushie.Tree` provides helpers for querying view trees directly:
 
+<!-- test: testing_doc_tree_find_test, testing_doc_tree_ids_test, testing_doc_tree_find_all_test -- keep this code block in sync with the test -->
 ```elixir
 Plushie.Tree.find(tree, "my_button")            # find node by ID
 Plushie.Tree.exists?(tree, "my_button")         # check existence
@@ -120,6 +126,7 @@ Unit tests cover logic. But they cannot click a button, verify a widget
 appears after an interaction, or catch a rendering regression when you bump
 iced. That is what the test framework is for.
 
+<!-- test: testing_doc_clicking_increment_updates_counter_test -- keep this code block in sync with the test -->
 ```elixir
 defmodule MyApp.CounterTest do
   use Plushie.Test.Case, app: MyApp.Counter
@@ -173,6 +180,7 @@ assert_exists "#sidebar"    # by ID
 `find/1` returns `nil` if not found. `find!/1` raises with a clear message.
 Both return an `Element` struct:
 
+<!-- test: testing_doc_element_handle_test -- keep this code block in sync with the test -->
 ```elixir
 element = find!("#my-button")
 element.id       # => "my-button"
@@ -212,6 +220,7 @@ cannot click a checkbox widget -- use toggle/1 instead
 
 ### Assertions
 
+<!-- test: testing_doc_text_content_assertion_test, testing_doc_existence_assertion_test, testing_doc_model_assertion_test -- keep this code block in sync with the test -->
 ```elixir
 # Text content
 assert_text "#count", "42"
@@ -527,6 +536,7 @@ backends because the commands have already completed.
 
 ### Element not found
 
+<!-- test: testing_doc_find_nonexistent_returns_none_test -- keep this code block in sync with the test -->
 ```elixir
 find!("#nonexistent")
 # ** (RuntimeError) Element not found: "#nonexistent"

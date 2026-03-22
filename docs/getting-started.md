@@ -60,6 +60,7 @@ few minutes; subsequent builds are fast.
 
 Create `lib/my_app/counter.ex`:
 
+<!-- test: getting_started_counter_init_test, getting_started_counter_increment_test, getting_started_counter_decrement_test, getting_started_counter_unknown_event_test, getting_started_counter_view_test, getting_started_counter_view_after_increments_test -- keep this code block in sync with the test -->
 ```elixir
 defmodule MyApp.Counter do
   use Plushie.App

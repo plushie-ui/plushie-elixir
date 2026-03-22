@@ -49,6 +49,7 @@ splits it into a local `id` and a `scope` list:
 The `scope` list is in **reverse order** -- nearest parent first. This
 design optimises the common case of matching on the immediate parent:
 
+<!-- test: scoped_ids_match_local_id_test, scoped_ids_match_immediate_parent_test, scoped_ids_dynamic_list_bind_parent_test -- keep this code block in sync with the test -->
 ```elixir
 # Match on local ID only (ignores scope entirely)
 def update(model, %Widget{type: :click, id: "save"}), do: ...
@@ -123,6 +124,7 @@ When rendering a list of items, wrap each item in a named container
 a scope for the item's children, giving each instance unique IDs
 without manual prefixing.
 
+<!-- test: scoped_ids_dynamic_list_delete_test -- keep this code block in sync with the test -->
 ```elixir
 # View
 column "todo_list" do
@@ -156,6 +158,7 @@ pattern works if the list is moved to a different part of the tree.
 
 The reversed scope list is designed for ergonomic pattern matching:
 
+<!-- test: scoped_ids_depth_agnostic_test, scoped_ids_exact_depth_test, scoped_ids_no_scope_test -- keep this code block in sync with the test -->
 ```elixir
 # Depth-agnostic: works whether "search" is at root or deeply nested
 def update(model, %Widget{id: "query", scope: ["search" | _]}), do: ...

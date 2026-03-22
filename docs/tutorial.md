@@ -9,6 +9,7 @@ dynamic lists, scoped IDs, commands, and conditional rendering.
 Start with a model that tracks a list of todos and the current input
 text.
 
+<!-- test: tutorial_step1_init_test, tutorial_step1_view_test -- keep this code block in sync with the test -->
 ```elixir
 defmodule MyApp.Todo do
   use Plushie.App
@@ -48,6 +49,7 @@ placeholder message. Not much yet, but the structure is in place:
 Add a text input that updates the model on every keystroke, and a
 submit handler that creates a todo when the user presses Enter.
 
+<!-- test: tutorial_step2_input_updates_model_test, tutorial_step2_submit_creates_todo_test, tutorial_step2_empty_submit_does_nothing_test -- keep this code block in sync with the test -->
 ```elixir
 def update(model, %Widget{type: :input, id: "new_todo", value: val}) do
   %{model | input: val}
@@ -67,6 +69,7 @@ def update(model, _event), do: model
 
 And the view:
 
+<!-- test: tutorial_step2_view_has_text_input_test -- keep this code block in sync with the test -->
 ```elixir
 def view(model) do
   window "main", title: "Todos" do
@@ -93,6 +96,7 @@ We wrap each item in a named row using the todo's ID. This creates
 a **scope** -- children get unique IDs automatically without manual
 prefixing.
 
+<!-- test: tutorial_step3_view_renders_todo_list_test, tutorial_step3_todo_row_structure_test -- keep this code block in sync with the test -->
 ```elixir
 def view(model) do
   window "main", title: "Todos" do
@@ -131,6 +135,7 @@ When the checkbox or delete button is clicked, the event carries the
 local `id` and a `scope` list with the todo's row ID as the
 immediate parent. Pattern match on both:
 
+<!-- test: tutorial_step4_toggle_test, tutorial_step4_delete_test -- keep this code block in sync with the test -->
 ```elixir
 def update(model, %Widget{type: :toggle, id: "toggle", scope: [todo_id | _]}) do
   todos = Enum.map(model.todos, fn
@@ -154,6 +159,7 @@ later move the list into a sidebar or tab, the pattern still works.
 After submitting a todo, the text input loses focus. Let's refocus
 it automatically using `Plushie.Command.focus/1`:
 
+<!-- test: tutorial_step5_submit_returns_focus_command_test -- keep this code block in sync with the test -->
 ```elixir
 alias Plushie.Command
 
@@ -177,6 +183,7 @@ always use the full scoped path.
 Add filter buttons that toggle between all, active, and completed
 todos.
 
+<!-- test: tutorial_step6_filter_all_test, tutorial_step6_filter_done_test -- keep this code block in sync with the test -->
 ```elixir
 def update(model, %Widget{type: :click, id: "filter_all"}),
   do: %{model | filter: :all}
@@ -190,6 +197,7 @@ def update(model, %Widget{type: :click, id: "filter_done"}),
 
 Add the filter buttons and apply the filter in the view:
 
+<!-- test: tutorial_step6_view_has_filter_buttons_test, tutorial_step6_view_filters_todos_test, tutorial_step6_filtered_helper_test -- keep this code block in sync with the test -->
 ```elixir
 def view(model) do
   window "main", title: "Todos" do

@@ -22,6 +22,7 @@ Elm architecture: model, update, view.
 Returns the initial model, optionally with commands. Called once when the
 runtime starts.
 
+<!-- test: app_behaviour_init_bare_model_test, app_behaviour_init_with_command_test -- keep this code block in sync with the test -->
 ```elixir
 def init(_opts) do
   %{
@@ -49,6 +50,7 @@ apps can accept configuration at startup.
 Receives the current model and an event, returns the next model -- optionally
 with commands.
 
+<!-- test: app_behaviour_update_add_todo_test, app_behaviour_update_submit_returns_focus_test, app_behaviour_update_unknown_event_test -- keep this code block in sync with the test -->
 ```elixir
 alias Plushie.Event.Widget
 
@@ -95,6 +97,7 @@ the full event taxonomy. Common families:
 
 Receives the current model, returns a UI tree.
 
+<!-- test: app_behaviour_view_basic_structure_test -- keep this code block in sync with the test -->
 ```elixir
 def view(model) do
   import Plushie.UI
@@ -107,7 +110,7 @@ def view(model) do
       end
 
       for todo <- filtered_todos(model) do
-        row todo.id, spacing: 8 do
+        row id: todo.id, spacing: 8 do
           checkbox("toggle", todo.done)
           text(todo.text)
         end
@@ -161,6 +164,7 @@ Returns a list of active subscriptions based on the current model. Called
 after every `update`. The runtime diffs the list and starts/stops
 subscriptions automatically.
 
+<!-- test: app_behaviour_subscribe_without_auto_refresh_test, app_behaviour_subscribe_with_auto_refresh_test -- keep this code block in sync with the test -->
 ```elixir
 def subscribe(model) do
   subs = [Plushie.Subscription.on_key_press(:key_event)]
@@ -192,6 +196,7 @@ end
 Called when windows are opened, including at startup and after renderer
 restart. Default: single window with app module name as title.
 
+<!-- test: app_behaviour_window_config_returns_map_test -- keep this code block in sync with the test -->
 ```elixir
 def window_config(_model) do
   %{
@@ -210,6 +215,7 @@ end
 Called once at startup to provide application-level settings to the
 renderer. Returns a keyword list.
 
+<!-- test: app_behaviour_settings_test, app_behaviour_default_settings_test -- keep this code block in sync with the test -->
 ```elixir
 def settings do
   [
@@ -363,6 +369,7 @@ end
 Properties are set when the window first appears. To change properties
 after creation, use window commands:
 
+<!-- test: app_behaviour_window_command_set_window_mode_test -- keep this code block in sync with the test -->
 ```elixir
 def update(model, %Widget{type: :click, id: "go_fullscreen"}) do
   {model, Plushie.Command.set_window_mode("main", :fullscreen)}
@@ -374,6 +381,7 @@ end
 Window events include the window ID so your app knows which window they
 came from:
 
+<!-- test: app_behaviour_window_events_close_requested_test, app_behaviour_window_events_resized_test, app_behaviour_window_events_focused_test -- keep this code block in sync with the test -->
 ```elixir
 def update(model, %Window{type: :close_requested, window_id: "inspector"}) do
   %{model | inspector_open: false}
@@ -474,6 +482,7 @@ unfocused windows, track the active window for keyboard shortcuts).
 
 ### Example: dialog window
 
+<!-- test: app_behaviour_dialog_window_test -- keep this code block in sync with the test -->
 ```elixir
 def view(model) do
   import Plushie.UI

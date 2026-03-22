@@ -8,6 +8,7 @@ on Linux, macOS, and Windows. Rendering is powered by
 [iced](https://github.com/iced-rs/iced), a cross-platform GUI library
 for Rust, which plushie drives as a precompiled binary behind the scenes.
 
+<!-- test: readme_counter_init_test, readme_counter_increment_test, readme_counter_decrement_test, readme_counter_unknown_event_test, readme_counter_view_structure_test, readme_counter_view_after_increment_test -- keep this code block in sync with the test -->
 ```elixir
 defmodule Counter do
   use Plushie.App

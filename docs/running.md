@@ -16,6 +16,7 @@ mix plushie.gui MyApp
 
 Or from code:
 
+<!-- test: running_start_link_default_test -- keep this code block in sync with the test -->
 ```elixir
 {:ok, pid} = Plushie.start_link(MyApp)
 ```
@@ -161,6 +162,7 @@ When a new renderer connects (another SSH session), the host sends a
 snapshot of the current state. No restart, no state loss, no cold
 start.
 
+<!-- test: running_start_link_stdio_daemon_test -- keep this code block in sync with the test -->
 ```elixir
 Plushie.start_link(MyApp, transport: :stdio, daemon: true)
 ```
@@ -188,6 +190,7 @@ mouse move updates per second even on a fast machine.
 
 Set `default_event_rate` in your module's `settings/0` callback:
 
+<!-- test: running_settings_default_event_rate_test -- keep this code block in sync with the test -->
 ```elixir
 def settings do
   [default_event_rate: 60]   # 60 events/sec -- good for most cases
@@ -196,6 +199,7 @@ end
 
 For a monitoring dashboard:
 
+<!-- test: running_settings_low_event_rate_test -- keep this code block in sync with the test -->
 ```elixir
 def settings do
   [default_event_rate: 15]
@@ -206,6 +210,7 @@ end
 
 Override the global rate for specific event sources:
 
+<!-- test: running_subscription_mouse_move_with_rate_test -- keep this code block in sync with the test -->
 ```elixir
 def subscribe(model) do
   [
@@ -261,6 +266,7 @@ shuts down and notifies the runtime.
 
 A minimal adapter for TCP sockets:
 
+<!-- test: running_tcp_adapter_compiles_test -- keep this code block in sync with the test -->
 ```elixir
 defmodule MyApp.TCPAdapter do
   use GenServer

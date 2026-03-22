@@ -15,6 +15,7 @@ An extension has two halves:
 2. **Rust side:** implement the `WidgetExtension` trait from `plushie-core`. This
    receives tree nodes from Elixir and returns `iced::Element`s for rendering.
 
+<!-- test: extensions_sparkline_def_test, extensions_sparkline_build_test -- keep this code block in sync with the test -->
 ```elixir
 # lib/my_sparkline/extension.ex
 defmodule MySparkline do
@@ -82,6 +83,7 @@ The macro supports two kinds:
 Use `use Plushie.Extension, :native_widget` for widgets rendered by a Rust
 crate. Requires `rust_crate` and `rust_constructor` declarations.
 
+<!-- test: extensions_hex_view_def_test, extensions_hex_view_build_test -- keep this code block in sync with the test -->
 ```elixir
 defmodule MyApp.HexView do
   use Plushie.Extension, :native_widget
@@ -101,6 +103,7 @@ Use `use Plushie.Extension, :widget` for widgets composed entirely from
 existing Plushie widgets. No Rust code needed. Must define a `render/2`
 (or `render/3` if the widget accepts children) callback.
 
+<!-- test: extensions_composite_card_test -- keep this code block in sync with the test -->
 ```elixir
 defmodule MyApp.Card do
   use Plushie.Extension, :widget

@@ -8,13 +8,16 @@ build them in your app.
 
 Themes are set at the window level:
 
+<!-- test: theming_settings_theme_test -- keep this code block in sync with the test -->
 ```elixir
 def view(model) do
   import Plushie.UI
 
-  window "main", title: "My App", theme: :catppuccin_mocha do
-    column do
-      text("Themed content")
+  window "main", title: "My App" do
+    themer "theme", theme: :catppuccin_mocha do
+      column do
+        text("Themed content")
+      end
     end
   end
 end
@@ -59,20 +62,29 @@ Unknown names fall back to `dark`.
 
 Custom themes are defined by providing a palette:
 
+<!-- test: theming_custom_theme_test -- keep this code block in sync with the test -->
 ```elixir
-window "main", theme: %{
+alias Plushie.Type.Theme
+
+theme = Theme.custom("my_app",
   background: "#1e1e2e",
   text: "#cdd6f4",
   primary: "#89b4fa",
   success: "#a6e3a1",
   danger: "#f38ba8",
   warning: "#f9e2af"
-} do
+)
+```
+
+Then pass it to a `themer` widget:
+
+```elixir
+themer "app_theme", theme: theme do
   # ...
 end
 ```
 
-The palette map is passed to iced's `Theme::custom()` with Oklch-based
+The palette is passed to iced's `Theme::custom()` with Oklch-based
 palette generation (plushie-iced). Only the colors you specify are overridden;
 the rest are derived automatically.
 
@@ -129,9 +141,11 @@ Each background key also supports a `_text` suffix (e.g.
 
 ### Example
 
+<!-- test: theming_custom_theme_shade_overrides_test -- keep this code block in sync with the test -->
 ```elixir
-window "main", theme: %{
-  name: "branded",
+alias Plushie.Type.Theme
+
+theme = Theme.custom("branded",
   background: "#1a1a2e",
   text: "#e0e0e0",
   primary: "#0f3460",
@@ -140,9 +154,7 @@ window "main", theme: %{
   primary_strong_text: "#ffffff",
   # Pin the weakest background for sidebar panels
   background_weakest: "#0d0d1a"
-} do
-  # ...
-end
+)
 ```
 
 Shade overrides only apply to custom themes (map values). Built-in theme
@@ -150,13 +162,15 @@ atoms like `:dark` or `:nord` are not affected.
 
 ## Per-subtree theme override
 
-Themes can be overridden for a subtree:
+Themes can be overridden for a subtree using a `themer` wrapper:
 
 ```elixir
 column do
   text("Uses window theme")
-  container "sidebar", theme: :nord do
-    text("Uses Nord theme")
+  themer "sidebar_theme", theme: :nord do
+    container "sidebar" do
+      text("Uses Nord theme")
+    end
   end
 end
 ```
@@ -187,6 +201,7 @@ writing Rust. They work on all 13 styleable widgets: button, container,
 text_input, text_editor, checkbox, radio, toggler, pick_list, progress_bar,
 rule, slider, vertical_slider, and tooltip.
 
+<!-- test: theming_style_map_basic_test, theming_style_map_with_border_test, theming_style_map_with_shadow_test -- keep this code block in sync with the test -->
 ```elixir
 alias Plushie.Type.StyleMap
 
@@ -216,6 +231,7 @@ Style maps support interaction state overrides. Each override is a
 partial style map that is merged on top of the base when the widget
 enters that state:
 
+<!-- test: theming_style_map_status_overrides_test -- keep this code block in sync with the test -->
 ```elixir
 nav_item_style =
   StyleMap.new()
@@ -264,9 +280,12 @@ polished UI patterns with style maps.
 The simplest way to follow the OS light/dark preference is to set the
 window theme to `:system`:
 
+<!-- test: theming_system_theme_setting_test -- keep this code block in sync with the test -->
 ```elixir
-window "main", title: "My App", theme: :system do
-  # content
+window "main", title: "My App" do
+  themer "sys_theme", theme: :system do
+    # content
+  end
 end
 ```
 

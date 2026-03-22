@@ -19,6 +19,7 @@ renderer (decide whether to execute it). Keep the renderer dumb.
 
 ### Elixir side
 
+<!-- test: effects_file_open_returns_effect_command_test -- keep this code block in sync with the test -->
 ```elixir
 def update(model, %Widget{type: :click, id: "open_file"}) do
   cmd = Plushie.Effects.file_open(
