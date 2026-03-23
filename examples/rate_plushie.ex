@@ -101,38 +101,36 @@ defmodule RatePlushie do
     p = smoothstep(model.toggle_progress)
     t = theme(p)
 
+    page_theme =
+      Plushie.Type.Theme.custom("rate-plushie",
+        background: t.page_bg,
+        text: t.text,
+        primary: fade({59, 130, 246}, {139, 92, 246}, p)
+      )
+
     window "main", title: "Rate Plushie" do
-      container "page" do
-        padding do
-          top 32
-          bottom 32
-          left 24
-          right 24
-        end
-
-        background(t.page_bg)
-        width(:fill)
-        height(:fill)
-
-        column do
-          spacing 24
-          width :fill
-
-          text "heading", "Rate Plushie" do
-            size 28
-            color t.text
-            a11y %{role: :heading, level: 1}
+      themer "page-theme", theme: page_theme do
+        container "page" do
+          padding do
+            top 32
+            bottom 32
+            left 24
+            right 24
           end
 
-          rating_card(model, p, t)
+          background(t.page_bg)
+          width(:fill)
+          height(:fill)
 
-          text "reviews-heading", "Reviews" do
-            size 20
-            color t.text
-            a11y %{role: :heading, level: 2}
+          column do
+            spacing 24
+            width :fill
+
+            text("heading", "Rate Plushie", size: 28, a11y: %{role: :heading, level: 1})
+            rating_card(model, p, t)
+            text("reviews-heading", "Reviews", size: 20, a11y: %{role: :heading, level: 2})
+            reviews_list(model.reviews, p, t)
           end
-
-          reviews_list(model.reviews, p, t)
         end
       end
     end
@@ -172,30 +170,22 @@ defmodule RatePlushie do
 
   # -- Review form -------------------------------------------------------------
 
-  defp review_form(model, t) do
+  defp review_form(model, _t) do
     import Plushie.UI
 
-    # Use a themer to switch input styling between light and dark
-    # based on the toggle progress.
-    input_theme = if model.toggle_progress >= 0.5, do: :dark, else: :light
-
-    themer "review-themer", input_theme do
-      column id: "review-form", spacing: 12, width: :fill do
-        text_input "review-name", model.review_name do
-          placeholder "Your name"
-          a11y %{label: "Your name"}
-        end
-
-        text_editor "review-comment", model.review_comment do
-          placeholder "Write your review..."
-          height 80
-          a11y %{label: "Review text"}
-        end
-
-        button "submit-review", "Submit Review" do
-          style %{background: t.card_border, text_color: t.text}
-        end
+    column id: "review-form", spacing: 12, width: :fill do
+      text_input "review-name", model.review_name do
+        placeholder "Your name"
+        a11y %{label: "Your name"}
       end
+
+      text_editor "review-comment", model.review_comment do
+        placeholder "Write your review..."
+        height 80
+        a11y %{label: "Review text"}
+      end
+
+      button("submit-review", "Submit Review")
     end
   end
 
