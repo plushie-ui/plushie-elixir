@@ -542,7 +542,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
     use plushie_ext::app::PlushieAppBuilder;
 
-    fn main() -> iced::Result {
+    fn main() -> plushie_ext::iced::Result {
         let builder = PlushieAppBuilder::new()
                 #{ext_registrations};
         plushie_renderer::run(builder)
