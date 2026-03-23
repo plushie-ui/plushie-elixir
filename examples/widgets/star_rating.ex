@@ -69,7 +69,7 @@ defmodule StarRating do
               on_click: true,
               on_hover: true,
               cursor: "pointer",
-              focus_style: %{stroke: "#3b82f6", stroke_width: 2 * scale},
+              focus_style: %{stroke: %{color: "#3b82f6", width: 2 * scale}},
               show_focus_ring: false,
               a11y: %{
                 role: :radio,
