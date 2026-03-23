@@ -169,16 +169,16 @@ defmodule Plushie.Docs.EventsTest do
     assert event.y == 10.0
   end
 
-  test "events_canvas_shape_event_match_test" do
+  test "events_canvas_element_event_match_test" do
     event = %Widget{
-      type: :canvas_shape_click,
+      type: :canvas_element_click,
       id: "chart",
       scope: [],
-      data: %{"shape_id" => "bar-jan", "x" => 15.0, "y" => 70.0, "button" => "left"}
+      data: %{"element_id" => "bar-jan", "x" => 15.0, "y" => 70.0, "button" => "left"}
     }
 
-    assert match?(%Widget{type: :canvas_shape_click, id: "chart"}, event)
-    assert event.data["shape_id"] == "bar-jan"
+    assert match?(%Widget{type: :canvas_element_click, id: "chart"}, event)
+    assert event.data["element_id"] == "bar-jan"
   end
 
   # -- Sensor events -----------------------------------------------------------

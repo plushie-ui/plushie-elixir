@@ -346,29 +346,29 @@ When a canvas contains shapes with an `interactive` field (see
 [composition patterns](composition-patterns.md#canvas-interactive-shapes)),
 the renderer handles hit testing locally and emits semantic shape
 events. These arrive as `%Widget{}` structs (not `%Canvas{}`). The
-`id` is the canvas widget ID; `data["shape_id"]` identifies the shape.
+`id` is the canvas widget ID; `data["element_id"]` identifies the shape.
 
-<!-- test: events_canvas_shape_event_match_test -- keep this code block in sync with the test -->
+<!-- test: events_canvas_element_event_match_test -- keep this code block in sync with the test -->
 ```elixir
 alias Plushie.Event.Widget
 
 # Cursor entered a shape's bounds
-%Widget{type: :canvas_shape_enter, id: "chart", data: %{"shape_id" => "bar-jan", "x" => 15.0, "y" => 70.0}}
+%Widget{type: :canvas_element_enter, id: "chart", data: %{"element_id" => "bar-jan", "x" => 15.0, "y" => 70.0}}
 
 # Cursor left a shape's bounds
-%Widget{type: :canvas_shape_leave, id: "chart", data: %{"shape_id" => "bar-jan"}}
+%Widget{type: :canvas_element_leave, id: "chart", data: %{"element_id" => "bar-jan"}}
 
 # Click on a shape
-%Widget{type: :canvas_shape_click, id: "chart", data: %{"shape_id" => "bar-jan", "x" => 15.0, "y" => 70.0, "button" => "left"}}
+%Widget{type: :canvas_element_click, id: "chart", data: %{"element_id" => "bar-jan", "x" => 15.0, "y" => 70.0, "button" => "left"}}
 
 # Drag on a draggable shape (rate-limited by event_rate)
-%Widget{type: :canvas_shape_drag, id: "chart", data: %{"shape_id" => "handle", "x" => 50.0, "y" => 80.0, "delta_x" => 2.0, "delta_y" => -1.0}}
+%Widget{type: :canvas_element_drag, id: "chart", data: %{"element_id" => "handle", "x" => 50.0, "y" => 80.0, "delta_x" => 2.0, "delta_y" => -1.0}}
 
 # Drag ended
-%Widget{type: :canvas_shape_drag_end, id: "chart", data: %{"shape_id" => "handle", "x" => 52.0, "y" => 79.0}}
+%Widget{type: :canvas_element_drag_end, id: "chart", data: %{"element_id" => "handle", "x" => 52.0, "y" => 79.0}}
 
 # Shape received keyboard focus (Tab/Arrow navigation)
-%Widget{type: :canvas_shape_focused, id: "chart", data: %{"shape_id" => "bar-jan"}}
+%Widget{type: :canvas_element_focused, id: "chart", data: %{"element_id" => "bar-jan"}}
 ```
 
 Hover styles, pressed styles, cursors, and tooltips on shapes are
@@ -377,8 +377,8 @@ give the host semantic actions (clicks, drags, focus changes) instead
 of raw coordinates.
 
 ```elixir
-def update(model, %Widget{type: :canvas_shape_click, id: "chart", data: %{"shape_id" => shape_id}}) do
-  %{model | selected_bar: shape_id}
+def update(model, %Widget{type: :canvas_element_click, id: "chart", data: %{"element_id" => element_id}}) do
+  %{model | selected_bar: element_id}
 end
 ```
 

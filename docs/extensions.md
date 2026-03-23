@@ -460,12 +460,12 @@ Emitted by canvas widgets via `Message::CanvasEvent` and `Message::CanvasScroll`
 | `canvas_release` | `data.x`, `data.y`, `data.button` |
 | `canvas_move` | `data.x`, `data.y` |
 | `canvas_scroll` | `data.x`, `data.y`, `data.delta_x`, `data.delta_y` |
-| `canvas_shape_enter` | `data.shape_id`, `data.x`, `data.y` |
-| `canvas_shape_leave` | `data.shape_id` |
-| `canvas_shape_click` | `data.shape_id`, `data.x`, `data.y`, `data.button` |
-| `canvas_shape_drag` | `data.shape_id`, `data.x`, `data.y`, `data.delta_x`, `data.delta_y` |
-| `canvas_shape_drag_end` | `data.shape_id`, `data.x`, `data.y` |
-| `canvas_shape_focused` | `data.shape_id` |
+| `canvas_element_enter` | `data.element_id`, `data.x`, `data.y` |
+| `canvas_element_leave` | `data.element_id` |
+| `canvas_element_click` | `data.element_id`, `data.x`, `data.y`, `data.button` |
+| `canvas_element_drag` | `data.element_id`, `data.x`, `data.y`, `data.delta_x`, `data.delta_y` |
+| `canvas_element_drag_end` | `data.element_id`, `data.x`, `data.y` |
+| `canvas_element_focused` | `data.element_id` |
 
 ### MouseArea events (node ID in `id` field)
 

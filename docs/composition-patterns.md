@@ -836,7 +836,7 @@ defmodule ToggleApp do
 
   def init(_opts), do: %{dark_mode: false}
 
-  def update(model, %Widget{type: :canvas_shape_click, id: "toggle", data: %{"shape_id" => "switch"}}) do
+  def update(model, %Widget{type: :canvas_element_click, id: "toggle", data: %{"element_id" => "switch"}}) do
     %{model | dark_mode: !model.dark_mode}
   end
 
@@ -905,7 +905,7 @@ defmodule ChartApp do
 
   def init(_opts), do: %{selected: nil}
 
-  def update(model, %Widget{type: :canvas_shape_click, id: "chart", data: %{"shape_id" => id}}) do
+  def update(model, %Widget{type: :canvas_element_click, id: "chart", data: %{"element_id" => id}}) do
     %{model | selected: id}
   end
 
@@ -1044,7 +1044,7 @@ defmodule ComboApp do
     %{model | filter: value, open: true}
   end
 
-  def update(model, %Widget{type: :canvas_shape_click, id: "combo-opts", data: %{"shape_id" => "opt-" <> _ = id}}) do
+  def update(model, %Widget{type: :canvas_element_click, id: "combo-opts", data: %{"element_id" => "opt-" <> _ = id}}) do
     index = id |> String.replace_prefix("opt-", "") |> String.to_integer()
     chosen = filtered_options(model.filter) |> Enum.at(index)
     %{model | selected: chosen, open: false, filter: ""}
@@ -1148,7 +1148,7 @@ Each piece does what it is good at:
 - **overlay** -- popup positioning that escapes parent bounds
 - **scrollable** -- scroll container for long option lists
 
-Closing the dropdown: on `canvas_shape_click` for an option, the host
+Closing the dropdown: on `canvas_element_click` for an option, the host
 sets `open: false` and removes the overlay content from the tree.
 
 ---

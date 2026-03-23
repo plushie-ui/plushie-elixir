@@ -493,7 +493,7 @@ For complex interactive canvases, consider whether the canvas is the right
 choice for AT users, or whether an alternative text-based representation
 would work better.
 
-### Interactive canvas shapes
+### Interactive canvas elements
 
 When a canvas contains shapes with the `interactive` field, each
 shape becomes a separate accessible node. The canvas widget itself
