@@ -56,6 +56,14 @@ defmodule Plushie.Route do
 
   def pop(%__MODULE__{} = route), do: route
 
+  @doc """
+  Replaces the top entry with a new `path` and `params`.
+  """
+  @spec replace_top(route :: t(), path :: term(), params :: map()) :: t()
+  def replace_top(%__MODULE__{stack: [_ | rest]} = route, path, params \\ %{}) do
+    %{route | stack: [{path, params} | rest]}
+  end
+
   @doc "Returns the current (top) path."
   @spec current(route :: t()) :: term()
   def current(%__MODULE__{stack: [{path, _} | _]}), do: path

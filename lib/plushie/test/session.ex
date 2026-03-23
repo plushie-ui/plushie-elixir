@@ -103,4 +103,61 @@ defmodule Plushie.Test.Session do
   @doc "Types a key (press + release). Key string may include modifiers, e.g. `\"enter\"`."
   @spec type_key(session :: t(), key :: String.t()) :: :ok
   def type_key(%__MODULE__{backend: b, pid: p}, key), do: b.type_key(p, key)
+
+  @doc "Scrolls a widget by the given deltas."
+  @spec scroll(
+          session :: t(),
+          selector :: Backend.selector(),
+          delta_x :: number(),
+          delta_y :: number()
+        ) :: :ok
+  def scroll(%__MODULE__{backend: b, pid: p}, selector, delta_x \\ 0, delta_y \\ 0),
+    do: b.scroll(p, selector, delta_x, delta_y)
+
+  @doc "Pastes text into a widget."
+  @spec paste(session :: t(), selector :: Backend.selector(), text :: String.t()) :: :ok
+  def paste(%__MODULE__{backend: b, pid: p}, selector, text), do: b.paste(p, selector, text)
+
+  @doc "Sorts a table column."
+  @spec sort(
+          session :: t(),
+          selector :: Backend.selector(),
+          column :: String.t(),
+          direction :: String.t()
+        ) :: :ok
+  def sort(%__MODULE__{backend: b, pid: p}, selector, column, direction \\ "asc"),
+    do: b.sort(p, selector, column, direction)
+
+  @doc "Presses on a canvas at the given coordinates."
+  @spec canvas_press(
+          session :: t(),
+          selector :: Backend.selector(),
+          x :: number(),
+          y :: number(),
+          button :: String.t()
+        ) :: :ok
+  def canvas_press(%__MODULE__{backend: b, pid: p}, selector, x, y, button \\ "left"),
+    do: b.canvas_press(p, selector, x, y, button)
+
+  @doc "Releases on a canvas at the given coordinates."
+  @spec canvas_release(
+          session :: t(),
+          selector :: Backend.selector(),
+          x :: number(),
+          y :: number(),
+          button :: String.t()
+        ) :: :ok
+  def canvas_release(%__MODULE__{backend: b, pid: p}, selector, x, y, button \\ "left"),
+    do: b.canvas_release(p, selector, x, y, button)
+
+  @doc "Moves on a canvas to the given coordinates."
+  @spec canvas_move(session :: t(), selector :: Backend.selector(), x :: number(), y :: number()) ::
+          :ok
+  def canvas_move(%__MODULE__{backend: b, pid: p}, selector, x, y),
+    do: b.canvas_move(p, selector, x, y)
+
+  @doc "Cycles focus in a pane grid."
+  @spec pane_focus_cycle(session :: t(), selector :: Backend.selector()) :: :ok
+  def pane_focus_cycle(%__MODULE__{backend: b, pid: p}, selector),
+    do: b.pane_focus_cycle(p, selector)
 end

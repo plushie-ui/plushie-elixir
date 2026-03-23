@@ -116,6 +116,61 @@ defmodule Plushie.Test.Backend.RendererBase do
         GenServer.call(pid, {:interact, "type_key", nil, %{"key" => key}}, @call_timeout)
       end
 
+      @impl Plushie.Test.Backend
+      def scroll(pid, selector, delta_x, delta_y) do
+        GenServer.call(
+          pid,
+          {:interact, "scroll", selector, %{"delta_x" => delta_x, "delta_y" => delta_y}},
+          @call_timeout
+        )
+      end
+
+      @impl Plushie.Test.Backend
+      def paste(pid, selector, text) do
+        GenServer.call(pid, {:interact, "paste", selector, %{"text" => text}}, @call_timeout)
+      end
+
+      @impl Plushie.Test.Backend
+      def sort(pid, selector, column, direction) do
+        GenServer.call(
+          pid,
+          {:interact, "sort", selector, %{"column" => column, "direction" => direction}},
+          @call_timeout
+        )
+      end
+
+      @impl Plushie.Test.Backend
+      def canvas_press(pid, selector, x, y, button) do
+        GenServer.call(
+          pid,
+          {:interact, "canvas_press", selector, %{"x" => x, "y" => y, "button" => button}},
+          @call_timeout
+        )
+      end
+
+      @impl Plushie.Test.Backend
+      def canvas_release(pid, selector, x, y, button) do
+        GenServer.call(
+          pid,
+          {:interact, "canvas_release", selector, %{"x" => x, "y" => y, "button" => button}},
+          @call_timeout
+        )
+      end
+
+      @impl Plushie.Test.Backend
+      def canvas_move(pid, selector, x, y) do
+        GenServer.call(
+          pid,
+          {:interact, "canvas_move", selector, %{"x" => x, "y" => y}},
+          @call_timeout
+        )
+      end
+
+      @impl Plushie.Test.Backend
+      def pane_focus_cycle(pid, selector) do
+        GenServer.call(pid, {:interact, "pane_focus_cycle", selector, %{}}, @call_timeout)
+      end
+
       # -- GenServer callbacks --
 
       @impl GenServer

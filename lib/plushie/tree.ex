@@ -300,6 +300,18 @@ defmodule Plushie.Tree do
   def ids(_), do: []
 
   @doc """
+  Extracts the display text from a node.
+
+  Returns the `"content"` prop for text-like widgets, or `nil` if
+  no display text is available.
+  """
+  @spec text_of(node :: tree_node()) :: String.t() | nil
+  def text_of(%{props: %{content: c}}) when is_binary(c), do: c
+  def text_of(%{props: %{"content" => c}}) when is_binary(c), do: c
+  def text_of(%{"props" => %{"content" => c}}) when is_binary(c), do: c
+  def text_of(_), do: nil
+
+  @doc """
   Finds all nodes in a tree for which `fun` returns truthy.
 
   Walks the entire tree depth-first and accumulates all matches.

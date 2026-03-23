@@ -96,6 +96,16 @@ defmodule Plushie.Selection do
     %{sel | selected: MapSet.delete(sel.selected, id)}
   end
 
+  @doc """
+  Selects all items in `order`.
+
+  Requires `order` to have been set at creation time via `new/1`.
+  """
+  @spec select_all(sel :: t()) :: t()
+  def select_all(%__MODULE__{order: order} = sel) do
+    %{sel | selected: MapSet.new(order)}
+  end
+
   @doc "Clears all selected items and resets the anchor."
   @spec clear(sel :: t()) :: t()
   def clear(%__MODULE__{} = sel) do

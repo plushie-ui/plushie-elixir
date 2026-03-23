@@ -68,6 +68,18 @@ defmodule Plushie.State do
     %{state | data: new_data, revision: state.revision + 1}
   end
 
+  @doc """
+  Removes the key at the end of `path`, incrementing the revision.
+
+  Uses `Kernel.pop_in/2` to remove the key. If the path doesn't exist,
+  the revision is still incremented for consistency.
+  """
+  @spec delete(state :: t(), path :: list()) :: t()
+  def delete(%__MODULE__{} = state, path) when is_list(path) and path != [] do
+    {_removed, new_data} = pop_in(state.data, path)
+    %{state | data: new_data, revision: state.revision + 1}
+  end
+
   @doc "Returns the current revision number."
   @spec revision(state :: t()) :: non_neg_integer()
   def revision(%__MODULE__{revision: rev}), do: rev

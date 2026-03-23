@@ -116,6 +116,34 @@ defmodule Plushie.Test.Backend.MockRenderer do
   @impl Plushie.Test.Backend
   def type_key(pid, key), do: interact!(pid, {:interact, "type_key", nil, parse_key(key)})
 
+  @impl Plushie.Test.Backend
+  def scroll(pid, selector, delta_x, delta_y),
+    do: interact!(pid, {:interact, "scroll", selector, %{delta_x: delta_x, delta_y: delta_y}})
+
+  @impl Plushie.Test.Backend
+  def paste(pid, selector, text),
+    do: interact!(pid, {:interact, "paste", selector, %{text: text}})
+
+  @impl Plushie.Test.Backend
+  def sort(pid, selector, column, direction),
+    do: interact!(pid, {:interact, "sort", selector, %{column: column, direction: direction}})
+
+  @impl Plushie.Test.Backend
+  def canvas_press(pid, selector, x, y, button),
+    do: interact!(pid, {:interact, "canvas_press", selector, %{x: x, y: y, button: button}})
+
+  @impl Plushie.Test.Backend
+  def canvas_release(pid, selector, x, y, button),
+    do: interact!(pid, {:interact, "canvas_release", selector, %{x: x, y: y, button: button}})
+
+  @impl Plushie.Test.Backend
+  def canvas_move(pid, selector, x, y),
+    do: interact!(pid, {:interact, "canvas_move", selector, %{x: x, y: y}})
+
+  @impl Plushie.Test.Backend
+  def pane_focus_cycle(pid, selector),
+    do: interact!(pid, {:interact, "pane_focus_cycle", selector, %{}})
+
   # All interact-like callbacks route through this wrapper.
   # Handles both the normal error reply (from :DOWN handler) and
   # the edge case where the GenServer exits before replying.

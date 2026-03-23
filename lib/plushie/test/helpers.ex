@@ -272,6 +272,48 @@ defmodule Plushie.Test.Helpers do
   @spec type_key(key :: String.t()) :: :ok
   def type_key(key), do: Session.type_key(session(), key)
 
+  @doc "Scrolls a widget by the given deltas."
+  @spec scroll(selector :: Backend.selector(), delta_x :: number(), delta_y :: number()) :: :ok
+  def scroll(selector, delta_x \\ 0, delta_y \\ 0),
+    do: Session.scroll(session(), selector, delta_x, delta_y)
+
+  @doc "Pastes text into a widget."
+  @spec paste(selector :: Backend.selector(), text :: String.t()) :: :ok
+  def paste(selector, text), do: Session.paste(session(), selector, text)
+
+  @doc "Sorts a table column."
+  @spec sort(selector :: Backend.selector(), column :: String.t(), direction :: String.t()) :: :ok
+  def sort(selector, column, direction \\ "asc"),
+    do: Session.sort(session(), selector, column, direction)
+
+  @doc "Presses on a canvas at the given coordinates."
+  @spec canvas_press(
+          selector :: Backend.selector(),
+          x :: number(),
+          y :: number(),
+          button :: String.t()
+        ) :: :ok
+  def canvas_press(selector, x, y, button \\ "left"),
+    do: Session.canvas_press(session(), selector, x, y, button)
+
+  @doc "Releases on a canvas at the given coordinates."
+  @spec canvas_release(
+          selector :: Backend.selector(),
+          x :: number(),
+          y :: number(),
+          button :: String.t()
+        ) :: :ok
+  def canvas_release(selector, x, y, button \\ "left"),
+    do: Session.canvas_release(session(), selector, x, y, button)
+
+  @doc "Moves on a canvas to the given coordinates."
+  @spec canvas_move(selector :: Backend.selector(), x :: number(), y :: number()) :: :ok
+  def canvas_move(selector, x, y), do: Session.canvas_move(session(), selector, x, y)
+
+  @doc "Cycles focus in a pane grid."
+  @spec pane_focus_cycle(selector :: Backend.selector()) :: :ok
+  def pane_focus_cycle(selector), do: Session.pane_focus_cycle(session(), selector)
+
   @doc "Resets the session to initial state."
   @spec reset() :: :ok
   def reset, do: Session.reset(session())

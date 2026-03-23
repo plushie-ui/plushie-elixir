@@ -38,4 +38,34 @@ defmodule Plushie.Test.Backend do
   @callback release(session :: pid(), key :: String.t()) :: :ok
   @callback move_to(session :: pid(), x :: number(), y :: number()) :: :ok
   @callback type_key(session :: pid(), key :: String.t()) :: :ok
+  @callback scroll(
+              session :: pid(),
+              selector :: selector(),
+              delta_x :: number(),
+              delta_y :: number()
+            ) :: :ok
+  @callback paste(session :: pid(), selector :: selector(), text :: String.t()) :: :ok
+  @callback sort(
+              session :: pid(),
+              selector :: selector(),
+              column :: String.t(),
+              direction :: String.t()
+            ) :: :ok
+  @callback canvas_press(
+              session :: pid(),
+              selector :: selector(),
+              x :: number(),
+              y :: number(),
+              button :: String.t()
+            ) :: :ok
+  @callback canvas_release(
+              session :: pid(),
+              selector :: selector(),
+              x :: number(),
+              y :: number(),
+              button :: String.t()
+            ) :: :ok
+  @callback canvas_move(session :: pid(), selector :: selector(), x :: number(), y :: number()) ::
+              :ok
+  @callback pane_focus_cycle(session :: pid(), selector :: selector()) :: :ok
 end
