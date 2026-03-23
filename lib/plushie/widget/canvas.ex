@@ -75,15 +75,15 @@ defmodule Plushie.Widget.Canvas do
 
   Interactive shape events (semantic, from shapes with `interactive` field):
 
-  - `%Widget{type: :canvas_shape_enter, id: id, data: %{"shape_id" => shape_id, ...}}`
-  - `%Widget{type: :canvas_shape_leave, id: id, data: %{"shape_id" => shape_id}}`
-  - `%Widget{type: :canvas_shape_click, id: id, data: %{"shape_id" => shape_id, ...}}`
-  - `%Widget{type: :canvas_shape_drag, id: id, data: %{"shape_id" => shape_id, ...}}`
-  - `%Widget{type: :canvas_shape_drag_end, id: id, data: %{"shape_id" => shape_id, ...}}`
-  - `%Widget{type: :canvas_shape_focused, id: id, data: %{"shape_id" => shape_id}}`
+  - `%Widget{type: :canvas_element_enter, id: id, data: %{"element_id" => element_id, ...}}`
+  - `%Widget{type: :canvas_element_leave, id: id, data: %{"element_id" => element_id}}`
+  - `%Widget{type: :canvas_element_click, id: id, data: %{"element_id" => element_id, ...}}`
+  - `%Widget{type: :canvas_element_drag, id: id, data: %{"element_id" => element_id, ...}}`
+  - `%Widget{type: :canvas_element_drag_end, id: id, data: %{"element_id" => element_id, ...}}`
+  - `%Widget{type: :canvas_element_focused, id: id, data: %{"element_id" => element_id}}`
 
   Shape events are delivered as `%Widget{}` structs (not `%Canvas{}`). The `id`
-  field is the canvas widget ID; `data.shape_id` identifies which shape.
+  field is the canvas widget ID; `data.element_id` identifies which shape.
   """
 
   alias Plushie.Type.A11y
@@ -99,13 +99,10 @@ defmodule Plushie.Widget.Canvas do
           | Plushie.Canvas.Shape.CanvasImage.t()
           | Plushie.Canvas.Shape.CanvasSvg.t()
           | Plushie.Canvas.Shape.Group.t()
-          | Plushie.Canvas.Shape.PushTransform.t()
-          | Plushie.Canvas.Shape.PopTransform.t()
           | Plushie.Canvas.Shape.Translate.t()
           | Plushie.Canvas.Shape.Rotate.t()
           | Plushie.Canvas.Shape.Scale.t()
-          | Plushie.Canvas.Shape.PushClip.t()
-          | Plushie.Canvas.Shape.PopClip.t()
+          | Plushie.Canvas.Shape.Clip.t()
           | map()
 
   @type option ::
