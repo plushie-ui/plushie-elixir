@@ -157,6 +157,11 @@ After 100 consecutive errors, log output is suppressed to prevent
 flooding, with periodic reminders every 1000 errors. Telemetry
 events continue firing for monitoring.
 
+> The [crash-test](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/crash-test)
+> demo shows all three failure paths in action: Elixir exceptions in
+> update, view, and Rust extension panics -- with a counter that proves
+> the model survives every one.
+
 ### Network drops
 
 When an SSH connection drops, both sides detect the broken pipe:
