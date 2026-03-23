@@ -172,22 +172,30 @@ defmodule RatePlushie do
 
   # -- Review form -------------------------------------------------------------
 
-  defp review_form(model, _t) do
+  defp review_form(model, t) do
     import Plushie.UI
 
-    column id: "review-form", spacing: 12, width: :fill do
-      text_input "review-name", model.review_name do
-        placeholder "Your name"
-        a11y %{label: "Your name"}
-      end
+    # Use a themer to switch input styling between light and dark
+    # based on the toggle progress.
+    input_theme = if model.toggle_progress >= 0.5, do: :dark, else: :light
 
-      text_editor "review-comment", model.review_comment do
-        placeholder "Write your review..."
-        height 80
-        a11y %{label: "Review text"}
-      end
+    themer "review-themer", input_theme do
+      column id: "review-form", spacing: 12, width: :fill do
+        text_input "review-name", model.review_name do
+          placeholder "Your name"
+          a11y %{label: "Your name"}
+        end
 
-      button("submit-review", "Submit Review")
+        text_editor "review-comment", model.review_comment do
+          placeholder "Write your review..."
+          height 80
+          a11y %{label: "Review text"}
+        end
+
+        button "submit-review", "Submit Review" do
+          style %{background: t.card_border, text_color: t.text}
+        end
+      end
     end
   end
 
