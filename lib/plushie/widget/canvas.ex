@@ -288,7 +288,7 @@ defmodule Plushie.Widget.Canvas do
 
   @doc "Converts this canvas struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(canvas :: t()) :: Plushie.Widget.ui_node()
-  def build(%__MODULE__{} = canvas), do: Plushie.Widget.to_node(canvas)
+  def build(%__MODULE__{} = canvas), do: Plushie.Widget.Plushie.Widget.Canvas.to_node(canvas)
 
   defimpl Plushie.Widget do
     import Plushie.Widget.Build
