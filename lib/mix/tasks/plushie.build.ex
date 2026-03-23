@@ -116,9 +116,14 @@ defmodule Mix.Tasks.Plushie.Build do
 
     Mix.shell().info("Building plushie-wasm#{if release?, do: " (release)", else: ""}...")
 
+    # Disable externref to avoid "failed to grow table" errors in browsers
+    # that don't fully support the reference types proposal.
+    env = [{"WASM_BINDGEN_EXTERNREF", "0"}]
+
     case System.cmd("wasm-pack", ["build", "--target", "web", profile],
            cd: wasm_crate,
-           stderr_to_stdout: true
+           stderr_to_stdout: true,
+           env: env
          ) do
       {output, 0} ->
         Mix.shell().info("WASM build succeeded.")
