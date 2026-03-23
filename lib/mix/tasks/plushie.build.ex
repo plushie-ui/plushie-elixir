@@ -37,7 +37,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
       config :plushie,
         artifacts: [:bin, :wasm],       # which artifacts to build
-        bin_file: "priv/bin/plushie",   # binary destination
+        bin_file: "priv/bin/plushie-renderer",  # binary destination
         wasm_dir: "priv/static"         # WASM output directory
 
   CLI flags override config. Default artifacts: `[:bin]`.

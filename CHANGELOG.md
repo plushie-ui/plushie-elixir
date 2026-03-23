@@ -10,8 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 - **Renderer binary renamed** from `plushie` to `plushie-renderer`.
   The binary resolution chain, download task, and build task all use
-  the new name. Existing `bin/plushie` symlinks are re-created on
-  download.
+  the new name. The `bin/plushie-renderer` symlink replaces the old
+  `bin/plushie`.
 - **WASM files renamed** from `plushie_wasm.*` to
   `plushie_renderer_wasm.*`. Update any HTML script tags that reference
   the old names.

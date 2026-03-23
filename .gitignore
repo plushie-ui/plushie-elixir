@@ -1,5 +1,5 @@
 /_build/
-/bin/plushie
+/bin/plushie-renderer
 /deps/
 /doc/
 /.fetch

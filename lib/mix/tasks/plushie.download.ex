@@ -22,7 +22,7 @@ defmodule Mix.Tasks.Plushie.Download do
 
       config :plushie,
         artifacts: [:bin, :wasm],       # which artifacts to install
-        bin_file: "priv/bin/plushie",   # binary destination
+        bin_file: "priv/bin/plushie-renderer",  # binary destination
         wasm_dir: "priv/static"         # WASM output directory
 
   CLI flags override config. Default artifacts: `[:bin]`.
@@ -91,8 +91,8 @@ defmodule Mix.Tasks.Plushie.Download do
     end
   end
 
-  # Create a bin/plushie symlink so scripts can reference a stable path
-  # without the platform-specific name.
+  # Create a bin/plushie-renderer symlink so scripts can reference a
+  # stable path without the platform-specific name.
   defp create_symlink(dest_path) do
     link_dir = "bin"
     link_path = Path.join(link_dir, "plushie-renderer")
@@ -103,10 +103,10 @@ defmodule Mix.Tasks.Plushie.Download do
 
     case File.ln_s(target, link_path) do
       :ok ->
-        Mix.shell().info("Symlinked bin/plushie -> #{target}")
+        Mix.shell().info("Symlinked bin/plushie-renderer -> #{target}")
 
       {:error, reason} ->
-        Mix.shell().info("Could not create symlink bin/plushie: #{inspect(reason)}")
+        Mix.shell().info("Could not create symlink bin/plushie-renderer: #{inspect(reason)}")
     end
   end
 
