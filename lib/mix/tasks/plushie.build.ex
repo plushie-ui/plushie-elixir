@@ -496,6 +496,25 @@ defmodule Mix.Tasks.Plushie.Build do
         "#{crate_name} = { path = \"#{rel_path}\" }"
       end)
 
+    # When using local source paths, add [patch.crates-io] so extension
+    # crates that depend on plushie-ext from crates.io get redirected to
+    # the same local checkout. Without this, Cargo treats the path dep and
+    # the crates.io dep as different crates and trait impls don't match.
+    patch_section =
+      if source_path && File.dir?(source_path) do
+        ext_path = Path.join(source_path, "plushie-ext")
+        renderer_path = Path.join(source_path, "plushie-renderer")
+
+        """
+
+        [patch.crates-io]
+        plushie-ext = { path = "#{ext_path}" }
+        plushie-renderer = { path = "#{renderer_path}" }
+        """
+      else
+        ""
+      end
+
     # Use underscores for the Cargo package name (Cargo convention)
     package_name = String.replace(bin_name, "-", "_")
 
@@ -513,6 +532,7 @@ defmodule Mix.Tasks.Plushie.Build do
     #{plushie_ext_dep}
     #{plushie_renderer_dep}
     #{ext_deps}
+    #{patch_section}\
     """
   end
 
