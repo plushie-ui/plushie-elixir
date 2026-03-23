@@ -2,8 +2,8 @@ defmodule StarRating do
   @moduledoc """
   Canvas-based star rating widget.
 
-  Renders 5 stars. Interactive by default (click to rate, hover to
-  preview, Tab/arrow keys to navigate, Enter/Space to select).
+  Renders 5 stars as a radio group. Interactive by default (click to
+  rate, hover to preview, Tab/arrow to navigate, Enter/Space to select).
   Pass `readonly: true` for a display-only version.
 
       # Interactive (full size)
@@ -40,24 +40,19 @@ defmodule StarRating do
     commands = star_commands(outer_r, inner_r)
 
     if readonly do
-      # Read-only: no interaction, just display with alt text.
       canvas id,
         width: width,
         height: size,
-        alt: "#{rating} out of 5 stars",
-        a11y: %{role: :image} do
+        alt: "#{rating} out of 5 stars" do
         layer "stars" do
           for i <- 0..4 do
-            filled = i < rating
-
             group x: i * (size + gap) + size / 2, y: size / 2 do
-              path(commands, fill: star_color(filled, false, theme_progress))
+              path(commands, fill: star_color(i < rating, false, theme_progress))
             end
           end
         end
       end
     else
-      # Interactive: radio group with per-star keyboard/mouse interaction.
       canvas id,
         width: width,
         height: size,
@@ -65,14 +60,12 @@ defmodule StarRating do
         role: "radiogroup" do
         layer "stars" do
           for i <- 0..4 do
-            cx = i * (size + gap) + size / 2
-            cy = size / 2
             filled = i < display
             preview = hover != nil and i < hover and i >= rating
 
             group "star-#{i}",
-              x: cx,
-              y: cy,
+              x: i * (size + gap) + size / 2,
+              y: size / 2,
               on_click: true,
               on_hover: true,
               cursor: "pointer",

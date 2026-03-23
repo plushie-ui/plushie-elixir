@@ -135,6 +135,8 @@ defmodule Plushie.Widget.Canvas do
           on_scroll: boolean() | nil,
           alt: String.t() | nil,
           description: String.t() | nil,
+          role: String.t() | nil,
+          arrow_mode: String.t() | nil,
           event_rate: pos_integer() | nil,
           a11y: Plushie.Type.A11y.t() | nil
         }
@@ -153,9 +155,22 @@ defmodule Plushie.Widget.Canvas do
     :on_scroll,
     :alt,
     :description,
+    :role,
+    :arrow_mode,
     :event_rate,
     :a11y
   ]
+
+  @valid_option_keys ~w(width height background interactive on_press on_release
+    on_move on_scroll alt description role arrow_mode event_rate a11y)a
+
+  @doc false
+  def __option_keys__, do: @valid_option_keys
+
+  @doc false
+  def __option_types__ do
+    %{a11y: Plushie.Type.A11y}
+  end
 
   @doc "Creates a new canvas struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()
@@ -181,6 +196,8 @@ defmodule Plushie.Widget.Canvas do
       {:on_scroll, v}, acc -> on_scroll(acc, v)
       {:alt, v}, acc -> alt(acc, v)
       {:description, v}, acc -> description(acc, v)
+      {:role, v}, acc -> role(acc, v)
+      {:arrow_mode, v}, acc -> arrow_mode(acc, v)
       {:event_rate, v}, acc -> event_rate(acc, v)
       {:a11y, v}, acc -> a11y(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
@@ -244,6 +261,22 @@ defmodule Plushie.Widget.Canvas do
   def description(%__MODULE__{} = canvas, description) when is_binary(description),
     do: %{canvas | description: description}
 
+  @doc "Sets the accessible role for the canvas (e.g. \"radiogroup\", \"toolbar\")."
+  @spec role(canvas :: t(), role :: String.t()) :: t()
+  def role(%__MODULE__{} = canvas, role) when is_binary(role),
+    do: %{canvas | role: role}
+
+  def role(%__MODULE__{} = canvas, role) when is_atom(role),
+    do: %{canvas | role: Atom.to_string(role)}
+
+  @doc "Sets the arrow key navigation mode (\"wrap\", \"clamp\", \"linear\", \"none\")."
+  @spec arrow_mode(canvas :: t(), mode :: String.t()) :: t()
+  def arrow_mode(%__MODULE__{} = canvas, mode) when is_binary(mode),
+    do: %{canvas | arrow_mode: mode}
+
+  def arrow_mode(%__MODULE__{} = canvas, mode) when is_atom(mode),
+    do: %{canvas | arrow_mode: Atom.to_string(mode)}
+
   @doc "Sets the maximum event rate (events per second) for this widget's coalescable events."
   @spec event_rate(canvas :: t(), rate :: pos_integer()) :: t()
   def event_rate(%__MODULE__{} = canvas, rate) when is_integer(rate) and rate >= 0,
@@ -275,6 +308,8 @@ defmodule Plushie.Widget.Canvas do
         |> put_if(canvas.on_scroll, :on_scroll)
         |> put_if(canvas.alt, :alt)
         |> put_if(canvas.description, :description)
+        |> put_if(canvas.role, :role)
+        |> put_if(canvas.arrow_mode, :arrow_mode)
         |> put_if(canvas.event_rate, :event_rate)
         |> put_if(canvas.a11y, :a11y)
 

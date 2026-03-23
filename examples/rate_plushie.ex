@@ -44,7 +44,6 @@ defmodule RatePlushie do
     alias Plushie.Event.{Widget, Timer}
 
     case event do
-      # Star rating interactions
       %Widget{type: :canvas_element_click, id: "stars", data: %{"element_id" => "star-" <> n}} ->
         %{model | rating: String.to_integer(n) + 1}
 
@@ -54,12 +53,10 @@ defmodule RatePlushie do
       %Widget{type: :canvas_element_leave, id: "stars"} ->
         %{model | hover_star: nil}
 
-      # Theme toggle
       %Widget{type: :canvas_element_click, id: "theme-toggle"} ->
         target = if model.toggle_target == 0.0, do: 1.0, else: 0.0
         %{model | toggle_target: target}
 
-      # Review form
       %Widget{type: :input, id: "review-name", value: v} ->
         %{model | review_name: v}
 
@@ -69,7 +66,6 @@ defmodule RatePlushie do
       %Widget{type: :click, id: "submit-review"} -> submit_review(model)
       %Widget{type: :submit, id: "review-name"} -> submit_review(model)
 
-      # Animation
       %Timer{tag: :animate} ->
         %{model | toggle_progress: approach(model.toggle_progress, model.toggle_target, 0.06)}
 
@@ -97,7 +93,7 @@ defmodule RatePlushie do
     end
   end
 
-  # -- View (composed from helper functions) -----------------------------------
+  # -- View --------------------------------------------------------------------
 
   def view(model) do
     import Plushie.UI
@@ -122,19 +118,19 @@ defmodule RatePlushie do
           spacing 24
           width :fill
 
-          text("heading", "Rate Plushie",
-            size: 28,
-            color: t.text,
-            a11y: %{role: :heading, level: 1}
-          )
+          text "heading", "Rate Plushie" do
+            size 28
+            color t.text
+            a11y %{role: :heading, level: 1}
+          end
 
           rating_card(model, p, t)
 
-          text("reviews-heading", "Reviews",
-            size: 20,
-            color: t.text,
-            a11y: %{role: :heading, level: 2}
-          )
+          text "reviews-heading", "Reviews" do
+            size 20
+            color t.text
+            a11y %{role: :heading, level: 2}
+          end
 
           reviews_list(model.reviews, p, t)
         end
@@ -142,7 +138,7 @@ defmodule RatePlushie do
     end
   end
 
-  # -- View: rating card -------------------------------------------------------
+  # -- Rating card -------------------------------------------------------------
 
   defp rating_card(model, p, t) do
     import Plushie.UI
@@ -152,10 +148,10 @@ defmodule RatePlushie do
       width :fill
       border do
         width 1
-        color(t.card_border)
+        color t.card_border
         rounded 12
       end
-      background(t.card_bg)
+      background t.card_bg
 
       column do
         spacing 20
@@ -174,28 +170,28 @@ defmodule RatePlushie do
     end
   end
 
-  # -- View: review form -------------------------------------------------------
+  # -- Review form -------------------------------------------------------------
 
   defp review_form(model, _t) do
     import Plushie.UI
 
     column id: "review-form", spacing: 12, width: :fill do
-      text_input("review-name", model.review_name,
-        placeholder: "Your name",
-        a11y: %{label: "Your name"}
-      )
+      text_input "review-name", model.review_name do
+        placeholder "Your name"
+        a11y %{label: "Your name"}
+      end
 
-      text_editor("review-comment", model.review_comment,
-        placeholder: "Write your review...",
-        height: 80,
-        a11y: %{label: "Review text"}
-      )
+      text_editor "review-comment", model.review_comment do
+        placeholder "Write your review..."
+        height 80
+        a11y %{label: "Review text"}
+      end
 
       button("submit-review", "Submit Review")
     end
   end
 
-  # -- View: theme toggle row --------------------------------------------------
+  # -- Theme toggle row --------------------------------------------------------
 
   defp theme_row(model, t) do
     import Plushie.UI
@@ -207,7 +203,7 @@ defmodule RatePlushie do
     end
   end
 
-  # -- View: reviews list ------------------------------------------------------
+  # -- Reviews list ------------------------------------------------------------
 
   defp reviews_list(reviews, p, t) do
     import Plushie.UI
@@ -241,7 +237,7 @@ defmodule RatePlushie do
     end
   end
 
-  # -- Theme interpolation -----------------------------------------------------
+  # -- Theme -------------------------------------------------------------------
 
   defp theme(p) do
     %{
