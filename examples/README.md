@@ -172,5 +172,8 @@ and build configuration:
 - [**sparkline-dashboard**](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/sparkline-dashboard)
   -- render-only Rust canvas extension with timer subscriptions and
   multiple widget instances (Tier A)
+- [**notes**](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/notes)
+  -- pure Elixir widgets + state helpers (Route, Selection, Undo, Data)
+  with keyboard shortcuts -- no Rust required
 - [**collab**](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/collab)
   -- collaborative scratchpad over native, WebSocket, and SSH transports
