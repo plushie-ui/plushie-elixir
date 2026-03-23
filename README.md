@@ -62,7 +62,7 @@ Add plushie to your dependencies:
 
 ```elixir
 # mix.exs
-{:plushie, "== 0.4.0"}
+{:plushie, "== 0.5.0"}
 ```
 
 Then:

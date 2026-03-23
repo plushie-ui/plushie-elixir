@@ -3306,6 +3306,7 @@ defmodule Plushie.UI do
         # tuples so __build_group__ can collect them into the transforms
         # list or clip field (instead of treating them as child shapes).
         tag = if name == :clip, do: :clip, else: :transform
+
         quote do
           {:__canvas_meta__, unquote(tag), unquote(node)}
         end

@@ -4,6 +4,58 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.5.0] - 2026-03-23
+
+### Breaking
+
+- **Renderer binary renamed** from `plushie` to `plushie-renderer`.
+  The binary resolution chain, download task, and build task all use
+  the new name. Existing `bin/plushie` symlinks are re-created on
+  download.
+- **WASM files renamed** from `plushie_wasm.*` to
+  `plushie_renderer_wasm.*`. Update any HTML script tags that reference
+  the old names.
+
+### Added
+
+- **`--bin-file PATH` and `--wasm-dir PATH`** options on
+  `mix plushie.build`, matching the existing options on
+  `mix plushie.download`. Override output locations for both stock and
+  extension builds.
+- **Canvas group redesign** -- groups now support `role` and
+  `arrow_mode` props for accessible tree/list patterns in canvas.
+- **Block-form options on Canvas widget** -- `role` and `arrow_mode`
+  can be set via the DSL block form.
+- **Focus ring support** -- `focus_ring_radius` on canvas groups,
+  focus ring padding on interactive canvas widgets.
+- **Expanded test helpers** -- additional utility functions for test
+  sessions.
+- **Demo project links** in docs -- extensions guide, testing guide,
+  running guide, getting-started guide, and examples README all link
+  to the [plushie-demos](https://github.com/plushie-ui/plushie-demos/tree/main/elixir)
+  repo.
+
+### Changed
+
+- **Renderer binary version** bumped to 0.5.0.
+- **Download URL** updated from `plushie-ui/plushie` to
+  `plushie-ui/plushie-renderer` releases.
+- **Rust crate references** updated throughout for the
+  `plushie-renderer` workspace split (`plushie-ext`, `plushie-core`,
+  `plushie-renderer-lib`).
+- Canvas element terminology updated across docs and code.
+
+### Fixed
+
+- Protocol dispatch warning in `Canvas.build/1`.
+- Credo string literal warnings in Canvas doc comments.
+- Star rating `focus_style` uses correct stroke object format.
+- Button style map removed from RatePlushie (uses default theme).
+- Review form theme contrast in RatePlushie.
+- Canvas scope walker wraps transform/clip directives as metadata.
+- Heading text colors restored for contrast.
+- Vestigial `interactive` field removed from leaf shape structs.
+
 ## [0.4.0] - 2026-03-22
 
 ### Breaking
