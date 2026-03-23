@@ -21,7 +21,7 @@ defmodule Mix.Tasks.Compile.PlushieBinary do
   rescue
     _ ->
       diagnostic = %Mix.Task.Compiler.Diagnostic{
-        file: "plushie",
+        file: "plushie-renderer",
         severity: :warning,
         message: Plushie.Binary.not_found_message(),
         position: nil,

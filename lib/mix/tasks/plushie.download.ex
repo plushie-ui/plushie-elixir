@@ -90,7 +90,7 @@ defmodule Mix.Tasks.Plushie.Download do
   # without the platform-specific name.
   defp create_symlink(dest_path) do
     link_dir = "bin"
-    link_path = Path.join(link_dir, "plushie")
+    link_path = Path.join(link_dir, "plushie-renderer")
     target = Path.relative_to(Path.expand(dest_path), Path.expand(link_dir))
 
     File.mkdir_p!(link_dir)

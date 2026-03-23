@@ -196,7 +196,7 @@ defmodule Plushie.Binary do
       path =
         Path.join([
           Mix.Project.build_path(),
-          "plushie",
+          "plushie-renderer",
           "target",
           profile,
           "#{bin_name}#{ext}"

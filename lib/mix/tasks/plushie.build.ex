@@ -122,7 +122,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
   defp install_wasm(wasm_crate) do
     pkg_dir = Path.join(wasm_crate, "pkg")
-    dest_dir = Path.join(["_build", "plushie", "wasm"])
+    dest_dir = Path.join(["_build", "plushie-renderer", "wasm"])
     File.mkdir_p!(dest_dir)
 
     for name <- ["plushie_wasm.js", "plushie_wasm_bg.wasm"] do
@@ -198,7 +198,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
     release? = release? or Mix.env() == :prod
 
-    cmd_args = ["build", "-p", "plushie"]
+    cmd_args = ["build", "-p", "plushie-renderer"]
     cmd_args = if release?, do: cmd_args ++ ["--release"], else: cmd_args
 
     Mix.shell().info("Building plushie#{if release?, do: " (release)", else: ""}...")
@@ -220,7 +220,7 @@ defmodule Mix.Tasks.Plushie.Build do
   # finds it without needing PLUSHIE_BINARY_PATH or PLUSHIE_SOURCE_PATH.
   defp install_binary(source_dir, release?) do
     profile = if release?, do: "release", else: "debug"
-    src = Path.join([source_dir, "target", profile, "plushie"])
+    src = Path.join([source_dir, "target", profile, "plushie-renderer"])
 
     unless File.exists?(src) do
       Mix.raise("Build succeeded but binary not found at #{src}")
@@ -387,7 +387,7 @@ defmodule Mix.Tasks.Plushie.Build do
   # -- Extension build --------------------------------------------------------
 
   defp build_with_extensions(extensions, release?, verbose?) do
-    build_dir = Path.join(Mix.Project.build_path(), "plushie")
+    build_dir = Path.join(Mix.Project.build_path(), "plushie-renderer")
     File.mkdir_p!(build_dir)
 
     bin_name = Plushie.Binary.build_name()

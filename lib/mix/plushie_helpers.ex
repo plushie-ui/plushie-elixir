@@ -33,7 +33,7 @@ defmodule Mix.PlushieHelpers do
   @spec built_binary_path(release? :: boolean()) :: String.t()
   def built_binary_path(release?) do
     profile = if release?, do: "release", else: "debug"
-    Path.join([source_path!(), "target", profile, "plushie"])
+    Path.join([source_path!(), "target", profile, "plushie-renderer"])
   end
 
   @doc """
