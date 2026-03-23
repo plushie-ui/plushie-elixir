@@ -10,12 +10,11 @@ defmodule Plushie.Canvas.Shape.Rect do
           stroke: term(),
           opacity: number() | nil,
           fill_rule: String.t() | nil,
-          radius: number() | nil,
-          interactive: Plushie.Canvas.Shape.Interactive.t() | nil
+          radius: number() | nil
         }
 
   @enforce_keys [:x, :y, :w, :h]
-  defstruct [:x, :y, :w, :h, :fill, :stroke, :opacity, :fill_rule, :radius, :interactive]
+  defstruct [:x, :y, :w, :h, :fill, :stroke, :opacity, :fill_rule, :radius]
 end
 
 defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Rect do
@@ -26,7 +25,6 @@ defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Rect do
     |> put_if(:opacity, rect.opacity)
     |> put_if(:fill_rule, rect.fill_rule)
     |> put_if(:radius, rect.radius)
-    |> put_if(:interactive, rect.interactive)
   end
 
   defp put_if(map, _key, nil), do: map

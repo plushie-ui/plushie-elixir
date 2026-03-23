@@ -7,12 +7,11 @@ defmodule Plushie.Canvas.Shape.Line do
           x2: number(),
           y2: number(),
           stroke: term(),
-          opacity: number() | nil,
-          interactive: Plushie.Canvas.Shape.Interactive.t() | nil
+          opacity: number() | nil
         }
 
   @enforce_keys [:x1, :y1, :x2, :y2]
-  defstruct [:x1, :y1, :x2, :y2, :stroke, :opacity, :interactive]
+  defstruct [:x1, :y1, :x2, :y2, :stroke, :opacity]
 end
 
 defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Line do
@@ -20,7 +19,6 @@ defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Line do
     %{type: "line", x1: line.x1, y1: line.y1, x2: line.x2, y2: line.y2}
     |> put_if(:stroke, line.stroke)
     |> put_if(:opacity, line.opacity)
-    |> put_if(:interactive, line.interactive)
   end
 
   defp put_if(map, _key, nil), do: map

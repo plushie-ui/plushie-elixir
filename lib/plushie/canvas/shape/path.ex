@@ -6,12 +6,11 @@ defmodule Plushie.Canvas.Shape.Path do
           fill: term(),
           stroke: term(),
           opacity: number() | nil,
-          fill_rule: String.t() | nil,
-          interactive: Plushie.Canvas.Shape.Interactive.t() | nil
+          fill_rule: String.t() | nil
         }
 
   @enforce_keys [:commands]
-  defstruct [:commands, :fill, :stroke, :opacity, :fill_rule, :interactive]
+  defstruct [:commands, :fill, :stroke, :opacity, :fill_rule]
 end
 
 defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Path do
@@ -21,7 +20,6 @@ defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Path do
     |> put_if(:stroke, path.stroke)
     |> put_if(:opacity, path.opacity)
     |> put_if(:fill_rule, path.fill_rule)
-    |> put_if(:interactive, path.interactive)
   end
 
   defp put_if(map, _key, nil), do: map

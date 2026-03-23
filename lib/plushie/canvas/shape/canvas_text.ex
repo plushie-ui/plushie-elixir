@@ -10,12 +10,11 @@ defmodule Plushie.Canvas.Shape.CanvasText do
           font: String.t() | nil,
           align_x: String.t() | nil,
           align_y: String.t() | nil,
-          opacity: number() | nil,
-          interactive: Plushie.Canvas.Shape.Interactive.t() | nil
+          opacity: number() | nil
         }
 
   @enforce_keys [:x, :y, :content]
-  defstruct [:x, :y, :content, :fill, :size, :font, :align_x, :align_y, :opacity, :interactive]
+  defstruct [:x, :y, :content, :fill, :size, :font, :align_x, :align_y, :opacity]
 end
 
 defimpl Plushie.Encode, for: Plushie.Canvas.Shape.CanvasText do
@@ -27,7 +26,6 @@ defimpl Plushie.Encode, for: Plushie.Canvas.Shape.CanvasText do
     |> put_if(:align_x, text.align_x)
     |> put_if(:align_y, text.align_y)
     |> put_if(:opacity, text.opacity)
-    |> put_if(:interactive, text.interactive)
   end
 
   defp put_if(map, _key, nil), do: map
