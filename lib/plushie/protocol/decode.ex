@@ -849,57 +849,106 @@ defmodule Plushie.Protocol.Decode do
 
   defp dispatch(%{
          "type" => "event",
-         "family" => "canvas_shape_enter",
+         "family" => "canvas_element_enter",
          "id" => id,
          "data" => data
        }) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :canvas_shape_enter, id: local, scope: scope, data: data}
+    %Widget{type: :canvas_element_enter, id: local, scope: scope, data: data}
   end
 
   defp dispatch(%{
          "type" => "event",
-         "family" => "canvas_shape_leave",
+         "family" => "canvas_element_leave",
          "id" => id,
          "data" => data
        }) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :canvas_shape_leave, id: local, scope: scope, data: data}
+    %Widget{type: :canvas_element_leave, id: local, scope: scope, data: data}
   end
 
   defp dispatch(%{
          "type" => "event",
-         "family" => "canvas_shape_click",
+         "family" => "canvas_element_click",
          "id" => id,
          "data" => data
        }) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :canvas_shape_click, id: local, scope: scope, data: data}
-  end
-
-  defp dispatch(%{"type" => "event", "family" => "canvas_shape_drag", "id" => id, "data" => data}) do
-    {local, scope} = split_scoped_id(id)
-    %Widget{type: :canvas_shape_drag, id: local, scope: scope, data: data}
+    %Widget{type: :canvas_element_click, id: local, scope: scope, data: data}
   end
 
   defp dispatch(%{
          "type" => "event",
-         "family" => "canvas_shape_drag_end",
+         "family" => "canvas_element_drag",
          "id" => id,
          "data" => data
        }) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :canvas_shape_drag_end, id: local, scope: scope, data: data}
+    %Widget{type: :canvas_element_drag, id: local, scope: scope, data: data}
   end
 
   defp dispatch(%{
          "type" => "event",
-         "family" => "canvas_shape_focused",
+         "family" => "canvas_element_drag_end",
          "id" => id,
          "data" => data
        }) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :canvas_shape_focused, id: local, scope: scope, data: data}
+    %Widget{type: :canvas_element_drag_end, id: local, scope: scope, data: data}
+  end
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "canvas_element_focused",
+         "id" => id,
+         "data" => data
+       }) do
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :canvas_element_focused, id: local, scope: scope, data: data}
+  end
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "canvas_element_blurred",
+         "id" => id,
+         "data" => data
+       }) do
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :canvas_element_blurred, id: local, scope: scope, data: data}
+  end
+
+  defp dispatch(%{"type" => "event", "family" => "canvas_focused", "id" => id}) do
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :canvas_focused, id: local, scope: scope}
+  end
+
+  defp dispatch(%{"type" => "event", "family" => "canvas_blurred", "id" => id}) do
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :canvas_blurred, id: local, scope: scope}
+  end
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "canvas_group_focused",
+         "id" => id,
+         "data" => data
+       }) do
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :canvas_group_focused, id: local, scope: scope, data: data}
+  end
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "canvas_group_blurred",
+         "id" => id,
+         "data" => data
+       }) do
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :canvas_group_blurred, id: local, scope: scope, data: data}
+  end
+
+  defp dispatch(%{"type" => "event", "family" => "diagnostic", "data" => data}) do
+    %Plushie.Event.System{type: :diagnostic, data: data}
   end
 
   # -- Generic/extension events (unrecognized families) --

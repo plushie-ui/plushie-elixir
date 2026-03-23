@@ -8,16 +8,15 @@ defmodule StarRating do
 
       # Interactive (full size)
       StarRating.render("my-rating", model.rating,
-        hover: model.hover_star, focused: model.focused_star,
-        theme_progress: p)
+        hover: model.hover_star, theme_progress: p)
 
       # Read-only (small, for review display)
       StarRating.render("review-stars", 4, readonly: true, scale: 0.5)
 
   Events:
-  - `canvas_shape_click` with shape_id `"star-0"` through `"star-4"`
-  - `canvas_shape_enter`/`canvas_shape_leave` for hover
-  - `canvas_shape_focused` with shape_id for keyboard focus
+  - `canvas_element_click` with element_id `"star-0"` through `"star-4"`
+  - `canvas_element_enter`/`canvas_element_leave` for hover
+  - `canvas_element_focused` with element_id for keyboard focus
   """
 
   import Plushie.Canvas.Shape, only: [move_to: 2, line_to: 2, close: 0]
@@ -27,7 +26,6 @@ defmodule StarRating do
     import Plushie.UI
 
     hover = Keyword.get(opts, :hover)
-    focused = Keyword.get(opts, :focused)
     theme_progress = Keyword.get(opts, :theme_progress, 0.0)
     readonly = Keyword.get(opts, :readonly, false)
     scale = Keyword.get(opts, :scale, 1.0)
@@ -38,7 +36,6 @@ defmodule StarRating do
     gap = round(2 * scale)
     display = hover || rating
     width = 5 * size + 4 * gap
-    focus_r = outer_r + 3 * scale
 
     commands = star_commands(outer_r, inner_r)
 
@@ -49,27 +46,27 @@ defmodule StarRating do
           cy = size / 2
           filled = i < display
           preview = not readonly and hover != nil and i < hover and i >= rating
-          is_focused = not readonly and focused == i
 
           if readonly do
             group x: cx, y: cy do
               path(commands, fill: star_color(filled, false, theme_progress))
             end
           else
-            group x: cx, y: cy do
-              interactive "star-#{i}" do
-                on_click
-                on_hover
-                cursor("pointer")
-                a11y(%{role: :button, label: "#{i + 1} star#{if i == 0, do: "", else: "s"}"})
-              end
-
-              if is_focused do
-                circle(0, 0, focus_r,
-                  stroke: Plushie.Canvas.Shape.stroke("#3b82f6", 2 * scale)
-                )
-              end
-
+            group "star-#{i}",
+              x: cx,
+              y: cy,
+              on_click: true,
+              on_hover: true,
+              cursor: "pointer",
+              focus_style: %{stroke: "#3b82f6", stroke_width: 2 * scale},
+              show_focus_ring: false,
+              a11y: %{
+                role: :radio,
+                label: "#{i + 1} star#{if i == 0, do: "", else: "s"}",
+                selected: rating >= i + 1,
+                position_in_set: i + 1,
+                size_of_set: 5
+              } do
               path(commands, fill: star_color(filled, preview, theme_progress))
             end
           end

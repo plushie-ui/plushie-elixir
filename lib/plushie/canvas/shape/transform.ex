@@ -1,29 +1,5 @@
-defmodule Plushie.Canvas.Shape.PushTransform do
-  @moduledoc "Pushes the current transform state onto the stack."
-
-  @type t :: %__MODULE__{}
-
-  defstruct []
-end
-
-defimpl Plushie.Encode, for: Plushie.Canvas.Shape.PushTransform do
-  def encode(_), do: %{type: "push_transform"}
-end
-
-defmodule Plushie.Canvas.Shape.PopTransform do
-  @moduledoc "Pops the previously saved transform state from the stack."
-
-  @type t :: %__MODULE__{}
-
-  defstruct []
-end
-
-defimpl Plushie.Encode, for: Plushie.Canvas.Shape.PopTransform do
-  def encode(_), do: %{type: "pop_transform"}
-end
-
 defmodule Plushie.Canvas.Shape.Translate do
-  @moduledoc "Translates the canvas coordinate origin."
+  @moduledoc "Translation transform for canvas groups."
 
   @type t :: %__MODULE__{x: number(), y: number()}
 
@@ -36,7 +12,7 @@ defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Translate do
 end
 
 defmodule Plushie.Canvas.Shape.Rotate do
-  @moduledoc "Rotates the canvas coordinate system by an angle in radians."
+  @moduledoc "Rotation transform for canvas groups (angle in radians)."
 
   @type t :: %__MODULE__{angle: number()}
 
@@ -49,14 +25,18 @@ defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Rotate do
 end
 
 defmodule Plushie.Canvas.Shape.Scale do
-  @moduledoc "Scales the canvas coordinate system."
+  @moduledoc """
+  Scale transform for canvas groups.
 
-  @type t :: %__MODULE__{x: number(), y: number()}
+  Use `factor` for uniform scaling or `x`/`y` for non-uniform.
+  """
 
-  @enforce_keys [:x, :y]
-  defstruct [:x, :y]
+  @type t :: %__MODULE__{x: number() | nil, y: number() | nil, factor: number() | nil}
+
+  defstruct [:x, :y, :factor]
 end
 
 defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Scale do
-  def encode(s), do: %{type: "scale", x: s.x, y: s.y}
+  def encode(%{factor: f}) when is_number(f), do: %{type: "scale", factor: f}
+  def encode(s), do: %{type: "scale", x: s.x || 1, y: s.y || 1}
 end

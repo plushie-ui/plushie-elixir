@@ -1177,111 +1177,111 @@ defmodule Plushie.ProtocolTest do
   # ---------------------------------------------------------------------------
 
   describe "decode_message/1 -- canvas shape events" do
-    test "decodes canvas_shape_enter" do
+    test "decodes canvas_element_enter" do
       json =
         Jason.encode!(%{
           type: "event",
-          family: "canvas_shape_enter",
+          family: "canvas_element_enter",
           id: "my_canvas",
-          data: %{shape_id: "btn-1", x: 10.0, y: 20.0}
+          data: %{element_id: "btn-1", x: 10.0, y: 20.0}
         })
 
-      assert %Widget{type: :canvas_shape_enter, id: "my_canvas", data: data} =
+      assert %Widget{type: :canvas_element_enter, id: "my_canvas", data: data} =
                Protocol.decode_message(json, :json)
 
-      assert data["shape_id"] == "btn-1"
+      assert data["element_id"] == "btn-1"
     end
 
-    test "decodes canvas_shape_leave" do
+    test "decodes canvas_element_leave" do
       json =
         Jason.encode!(%{
           type: "event",
-          family: "canvas_shape_leave",
+          family: "canvas_element_leave",
           id: "my_canvas",
-          data: %{shape_id: "btn-1"}
+          data: %{element_id: "btn-1"}
         })
 
-      assert %Widget{type: :canvas_shape_leave, id: "my_canvas", data: data} =
+      assert %Widget{type: :canvas_element_leave, id: "my_canvas", data: data} =
                Protocol.decode_message(json, :json)
 
-      assert data["shape_id"] == "btn-1"
+      assert data["element_id"] == "btn-1"
     end
 
-    test "decodes canvas_shape_click" do
+    test "decodes canvas_element_click" do
       json =
         Jason.encode!(%{
           type: "event",
-          family: "canvas_shape_click",
+          family: "canvas_element_click",
           id: "my_canvas",
-          data: %{shape_id: "btn-1", x: 15.0, y: 25.0}
+          data: %{element_id: "btn-1", x: 15.0, y: 25.0}
         })
 
-      assert %Widget{type: :canvas_shape_click, id: "my_canvas", data: data} =
+      assert %Widget{type: :canvas_element_click, id: "my_canvas", data: data} =
                Protocol.decode_message(json, :json)
 
-      assert data["shape_id"] == "btn-1"
+      assert data["element_id"] == "btn-1"
     end
 
-    test "decodes canvas_shape_drag" do
+    test "decodes canvas_element_drag" do
       json =
         Jason.encode!(%{
           type: "event",
-          family: "canvas_shape_drag",
+          family: "canvas_element_drag",
           id: "my_canvas",
-          data: %{shape_id: "handle-1", x: 50.0, y: 60.0, dx: 5.0, dy: -3.0}
+          data: %{element_id: "handle-1", x: 50.0, y: 60.0, dx: 5.0, dy: -3.0}
         })
 
-      assert %Widget{type: :canvas_shape_drag, id: "my_canvas", data: data} =
+      assert %Widget{type: :canvas_element_drag, id: "my_canvas", data: data} =
                Protocol.decode_message(json, :json)
 
-      assert data["shape_id"] == "handle-1"
+      assert data["element_id"] == "handle-1"
       assert data["dx"] == 5.0
     end
 
-    test "decodes canvas_shape_drag_end" do
+    test "decodes canvas_element_drag_end" do
       json =
         Jason.encode!(%{
           type: "event",
-          family: "canvas_shape_drag_end",
+          family: "canvas_element_drag_end",
           id: "my_canvas",
-          data: %{shape_id: "handle-1", x: 55.0, y: 57.0}
+          data: %{element_id: "handle-1", x: 55.0, y: 57.0}
         })
 
-      assert %Widget{type: :canvas_shape_drag_end, id: "my_canvas", data: data} =
+      assert %Widget{type: :canvas_element_drag_end, id: "my_canvas", data: data} =
                Protocol.decode_message(json, :json)
 
-      assert data["shape_id"] == "handle-1"
+      assert data["element_id"] == "handle-1"
     end
 
-    test "decodes canvas_shape_focused" do
+    test "decodes canvas_element_focused" do
       json =
         Jason.encode!(%{
           type: "event",
-          family: "canvas_shape_focused",
+          family: "canvas_element_focused",
           id: "my_canvas",
-          data: %{shape_id: "input-1", focused: true}
+          data: %{element_id: "input-1", focused: true}
         })
 
-      assert %Widget{type: :canvas_shape_focused, id: "my_canvas", data: data} =
+      assert %Widget{type: :canvas_element_focused, id: "my_canvas", data: data} =
                Protocol.decode_message(json, :json)
 
-      assert data["shape_id"] == "input-1"
+      assert data["element_id"] == "input-1"
     end
 
     test "canvas shape event with scoped id splits correctly" do
       json =
         Jason.encode!(%{
           type: "event",
-          family: "canvas_shape_click",
+          family: "canvas_element_click",
           id: "panel/my_canvas",
-          data: %{shape_id: "btn-1"}
+          data: %{element_id: "btn-1"}
         })
 
       assert %Widget{
-               type: :canvas_shape_click,
+               type: :canvas_element_click,
                id: "my_canvas",
                scope: ["panel"],
-               data: %{"shape_id" => "btn-1"}
+               data: %{"element_id" => "btn-1"}
              } = Protocol.decode_message(json, :json)
     end
   end

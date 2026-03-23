@@ -54,13 +54,10 @@ defmodule Plushie.Tree do
     Plushie.Canvas.Shape.CanvasImage,
     Plushie.Canvas.Shape.CanvasSvg,
     Plushie.Canvas.Shape.Group,
-    Plushie.Canvas.Shape.PushTransform,
-    Plushie.Canvas.Shape.PopTransform,
     Plushie.Canvas.Shape.Translate,
     Plushie.Canvas.Shape.Rotate,
     Plushie.Canvas.Shape.Scale,
-    Plushie.Canvas.Shape.PushClip,
-    Plushie.Canvas.Shape.PopClip
+    Plushie.Canvas.Shape.Clip
   ]
 
   @spec normalize(tree :: nil | tree_node() | [tree_node()] | struct()) :: tree_node()

@@ -144,12 +144,7 @@ defmodule PlushieUICanvasShapeHelper do
   def canvas_with_group_interactive do
     canvas "chart" do
       layer "main" do
-        group x: 4, y: 4 do
-          interactive "btn" do
-            on_click(true)
-            hover_style(%{fill: "#ddd"})
-          end
-
+        group "btn", x: 4, y: 4, on_click: true, hover_style: %{fill: "#ddd"} do
           rect(0, 0, 32, 32, fill: "#ccc")
         end
       end
@@ -178,8 +173,7 @@ defmodule PlushieUICanvasShapeHelper do
   end
 
   def interactive_keyword_directive do
-    group do
-      interactive "btn", on_click: true, hover_style: %{fill: "#ddd"}
+    group "btn", on_click: true, hover_style: %{fill: "#ddd"} do
       rect(0, 0, 100, 40)
     end
   end
@@ -317,26 +311,11 @@ defmodule PlushieUIContainerPropsHelper do
   end
 
   def interactive_with_nested_blocks do
-    group do
-      interactive "btn" do
-        on_click
-
-        hover_style do
-          fill("#ddd")
-          opacity(0.8)
-        end
-
-        drag_bounds do
-          min_x(0)
-          max_x(400)
-        end
-
-        a11y do
-          role(:button)
-          label("Click me")
-        end
-      end
-
+    group "btn",
+      on_click: true,
+      hover_style: %{fill: "#ddd", opacity: 0.8},
+      drag_bounds: %{min_x: 0, max_x: 400},
+      a11y: %{role: :button, label: "Click me"} do
       rect(0, 0, 100, 40, fill: "#3498db")
     end
   end
@@ -1555,7 +1534,8 @@ defmodule Plushie.UITest do
       shapes = node.props[:layers]["main"]
       [group] = shapes
       assert %Plushie.Canvas.Shape.Group{} = group
-      assert %Plushie.Canvas.Shape.Interactive{id: "btn", on_click: true} = group.interactive
+      assert group.id == "btn"
+      assert group.on_click == true
     end
   end
 
@@ -1572,21 +1552,21 @@ defmodule Plushie.UITest do
   end
 
   # ---------------------------------------------------------------------------
-  # Interactive directive
+  # Interactive group
   # ---------------------------------------------------------------------------
 
-  describe "interactive directive" do
-    test "keyword form in group" do
+  describe "interactive group" do
+    test "keyword form with id" do
       result = PlushieUICanvasShapeHelper.interactive_keyword_directive()
       assert %Plushie.Canvas.Shape.Group{} = result
-      assert result.interactive.id == "btn"
-      assert result.interactive.on_click == true
+      assert result.id == "btn"
+      assert result.on_click == true
     end
 
-    test "pipe form on shape" do
+    test "pipe form wraps in group" do
       result = PlushieUICanvasShapeHelper.interactive_pipe_form()
-      assert %Plushie.Canvas.Shape.Rect{} = result
-      assert result.interactive.id == "btn"
+      assert %Plushie.Canvas.Shape.Group{} = result
+      assert result.id == "btn"
     end
   end
 
@@ -1816,17 +1796,14 @@ defmodule Plushie.UITest do
       assert padding.top == 10
     end
 
-    test "interactive with nested hover_style and drag_bounds do-blocks" do
+    test "interactive group with nested opts" do
       result = PlushieUIContainerPropsHelper.interactive_with_nested_blocks()
       assert %Plushie.Canvas.Shape.Group{} = result
-      interactive = result.interactive
-      assert interactive.id == "btn"
-      assert interactive.on_click == true
-      assert interactive.hover_style.fill == "#ddd"
-      assert interactive.hover_style.opacity == 0.8
-      assert interactive.drag_bounds.min_x == 0
-      assert interactive.drag_bounds.max_x == 400
-      assert interactive.a11y.role == :button
+      assert result.id == "btn"
+      assert result.on_click == true
+      assert result.hover_style == %{fill: "#ddd", opacity: 0.8}
+      assert result.drag_bounds == %{min_x: 0, max_x: 400}
+      assert result.a11y == %{role: :button, label: "Click me"}
     end
   end
 

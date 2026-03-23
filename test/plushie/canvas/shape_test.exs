@@ -8,14 +8,11 @@ defmodule Plushie.Canvas.ShapeTest do
     CanvasSvg,
     CanvasText,
     Circle,
-    Interactive,
+    Clip,
+    Group,
     Line,
     LinearGradient,
     Path,
-    PopClip,
-    PopTransform,
-    PushClip,
-    PushTransform,
     Rect,
     Rotate,
     Scale,
@@ -160,14 +157,6 @@ defmodule Plushie.Canvas.ShapeTest do
   # -- Transform commands -----------------------------------------------------
 
   describe "transform commands" do
-    test "push_transform/0 produces a PushTransform struct" do
-      assert Shape.push_transform() == %PushTransform{}
-    end
-
-    test "pop_transform/0 produces a PopTransform struct" do
-      assert Shape.pop_transform() == %PopTransform{}
-    end
-
     test "translate/2 produces a Translate struct with offsets" do
       assert Shape.translate(100, 200) == %Translate{x: 100, y: 200}
     end
@@ -301,65 +290,8 @@ defmodule Plushie.Canvas.ShapeTest do
 
   # -- Clipping commands ------------------------------------------------------
 
-  describe "push_clip/4" do
-    test "produces a push_clip descriptor with position and size" do
-      result = Shape.push_clip(10, 20, 100, 80)
-      assert result == %PushClip{x: 10, y: 20, w: 100, h: 80}
-    end
-
-    test "accepts float coordinates" do
-      result = Shape.push_clip(10.5, 20.5, 100.0, 80.0)
-      assert result.x == 10.5
-      assert result.y == 20.5
-    end
-  end
-
-  describe "pop_clip/0" do
-    test "produces a pop_clip descriptor" do
-      assert Shape.pop_clip() == %PopClip{}
-    end
-  end
-
-  describe "clip region sequences" do
-    test "push_clip and pop_clip bracket shapes in a valid sequence" do
-      shapes = [
-        Shape.push_clip(10, 10, 100, 80),
-        Shape.rect(0, 0, 200, 200, fill: "#ff0000"),
-        Shape.circle(50, 50, 25, fill: "#00ff00"),
-        Shape.pop_clip()
-      ]
-
-      assert length(shapes) == 4
-      assert %PushClip{} = hd(shapes)
-      assert %PopClip{} = List.last(shapes)
-
-      # Interior shapes are unchanged
-      assert %Rect{} = Enum.at(shapes, 1)
-      assert %Circle{} = Enum.at(shapes, 2)
-    end
-
-    test "nested clip regions produce valid sequences" do
-      shapes = [
-        Shape.push_clip(0, 0, 200, 200),
-        Shape.push_clip(10, 10, 100, 100),
-        Shape.rect(0, 0, 50, 50, fill: "#f00"),
-        Shape.pop_clip(),
-        Shape.rect(0, 0, 150, 150, fill: "#0f0"),
-        Shape.pop_clip()
-      ]
-
-      assert length(shapes) == 6
-
-      assert [
-               %PushClip{},
-               %PushClip{},
-               %Rect{},
-               %PopClip{},
-               %Rect{},
-               %PopClip{}
-             ] = shapes
-    end
-  end
+  # Standalone push_clip/pop_clip tests removed -- clips are now a
+  # group-level field. See Group struct.
 
   # -- Per-shape opacity ------------------------------------------------------
 
@@ -418,114 +350,6 @@ defmodule Plushie.Canvas.ShapeTest do
       result = Shape.text(10, 10, "Default")
       assert result.align_x == nil
       assert result.align_y == nil
-    end
-  end
-
-  # -- Interactive shapes -----------------------------------------------------
-
-  describe "interactive_descriptor/2" do
-    test "returns metadata tuple with Interactive struct" do
-      {:__canvas_meta__, :interactive, %Interactive{} = interactive} =
-        Shape.interactive_descriptor("btn", on_click: true)
-
-      assert interactive.id == "btn"
-      assert interactive.on_click == true
-    end
-  end
-
-  describe "Interactive.new/1" do
-    test "validates unknown keys" do
-      assert_raise ArgumentError, ~r/unknown interactive option/, fn ->
-        Interactive.new(id: "x", on_clck: true)
-      end
-    end
-
-    test "requires id" do
-      assert_raise KeyError, fn ->
-        Interactive.new(on_click: true)
-      end
-    end
-  end
-
-  # -- Tree normalizer leak detection -----------------------------------------
-
-  describe "tree normalizer leak detection" do
-    test "widget prop tuple in tree raises" do
-      assert_raise ArgumentError, ~r/DSL prop declaration/, fn ->
-        Plushie.Tree.normalize({:__widget_prop__, :spacing, 8})
-      end
-    end
-
-    test "canvas meta tuple in tree raises" do
-      assert_raise ArgumentError, ~r/canvas metadata declaration/, fn ->
-        Plushie.Tree.normalize({:__canvas_meta__, :interactive, %{}})
-      end
-    end
-  end
-
-  # -- Value structs ----------------------------------------------------------
-
-  describe "ShapeStyle" do
-    alias Plushie.Canvas.Shape.ShapeStyle
-
-    test "from_opts builds struct" do
-      style = ShapeStyle.from_opts(fill: "#ddd", opacity: 0.8)
-      assert %ShapeStyle{fill: "#ddd", opacity: 0.8} = style
-    end
-
-    test "from_opts validates unknown keys" do
-      assert_raise ArgumentError, ~r/unknown shape style field/, fn ->
-        ShapeStyle.from_opts(fll: "#ddd")
-      end
-    end
-  end
-
-  describe "DragBounds" do
-    alias Plushie.Canvas.Shape.DragBounds
-
-    test "from_opts builds struct" do
-      bounds = DragBounds.from_opts(min_x: 0, max_x: 400)
-      assert %DragBounds{min_x: 0, max_x: 400} = bounds
-    end
-
-    test "from_opts validates unknown keys" do
-      assert_raise ArgumentError, ~r/unknown drag bounds field/, fn ->
-        DragBounds.from_opts(min_xx: 0)
-      end
-    end
-  end
-
-  describe "HitRect" do
-    alias Plushie.Canvas.Shape.HitRect
-
-    test "from_opts builds struct" do
-      rect = HitRect.from_opts(x: 0, y: 0, w: 100, h: 50)
-      assert %HitRect{x: 0, y: 0, w: 100, h: 50} = rect
-    end
-  end
-
-  describe "Dash" do
-    alias Plushie.Canvas.Shape.Dash
-
-    test "from_opts builds struct" do
-      dash = Dash.from_opts(segments: [5, 3], offset: 0)
-      assert %Dash{segments: [5, 3], offset: 0} = dash
-    end
-  end
-
-  # -- Interactive with nested structs ----------------------------------------
-
-  describe "interactive with nested structs" do
-    test "new/1 converts keyword hover_style to ShapeStyle struct" do
-      interactive = Interactive.new(id: "btn", hover_style: [fill: "#ddd", opacity: 0.8])
-
-      assert %Plushie.Canvas.Shape.ShapeStyle{fill: "#ddd", opacity: 0.8} =
-               interactive.hover_style
-    end
-
-    test "new/1 converts keyword drag_bounds to DragBounds struct" do
-      interactive = Interactive.new(id: "btn", drag_bounds: [min_x: 0, max_x: 400])
-      assert %Plushie.Canvas.Shape.DragBounds{min_x: 0, max_x: 400} = interactive.drag_bounds
     end
   end
 end

@@ -108,6 +108,34 @@ defmodule Plushie.Test.Backend.EventDecoder do
     %MouseEvent{type: :scroll, delta_x: data["delta_x"] || 0, delta_y: data["delta_y"] || 0}
   end
 
+  # Canvas element events.
+  @canvas_element_families ~w(
+    canvas_element_enter canvas_element_leave canvas_element_click
+    canvas_element_drag canvas_element_drag_end
+    canvas_element_focused canvas_element_blurred
+    canvas_group_focused canvas_group_blurred
+  )
+
+  def decode(type, id, event) when type in @canvas_element_families do
+    {local, scope} = split_scoped_id(id)
+    atom = String.to_existing_atom(type)
+    %WidgetEvent{type: atom, id: local, scope: scope, data: event["data"] || %{}}
+  end
+
+  def decode("canvas_focused", id, _event) do
+    {local, scope} = split_scoped_id(id)
+    %WidgetEvent{type: :canvas_focused, id: local, scope: scope, data: %{}}
+  end
+
+  def decode("canvas_blurred", id, _event) do
+    {local, scope} = split_scoped_id(id)
+    %WidgetEvent{type: :canvas_blurred, id: local, scope: scope, data: %{}}
+  end
+
+  def decode("diagnostic", _id, event) do
+    %Plushie.Event.System{type: :diagnostic, data: event["data"] || %{}}
+  end
+
   # Extension event families. Using ~w()a ensures these atoms exist
   # at compile time so String.to_existing_atom won't raise at runtime.
   @extension_families MapSet.new(~w(extension_event extension_error)a)

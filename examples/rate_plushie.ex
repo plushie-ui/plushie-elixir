@@ -32,7 +32,6 @@ defmodule RatePlushie do
     %{
       rating: 0,
       hover_star: nil,
-      focused_star: nil,
       toggle_progress: 0.0,
       toggle_target: 0.0,
       reviews: @initial_reviews,
@@ -46,20 +45,17 @@ defmodule RatePlushie do
 
     case event do
       # Star rating interactions
-      %Widget{type: :canvas_shape_click, id: "stars", data: %{"shape_id" => "star-" <> n}} ->
+      %Widget{type: :canvas_element_click, id: "stars", data: %{"element_id" => "star-" <> n}} ->
         %{model | rating: String.to_integer(n) + 1}
 
-      %Widget{type: :canvas_shape_enter, id: "stars", data: %{"shape_id" => "star-" <> n}} ->
+      %Widget{type: :canvas_element_enter, id: "stars", data: %{"element_id" => "star-" <> n}} ->
         %{model | hover_star: String.to_integer(n) + 1}
 
-      %Widget{type: :canvas_shape_leave, id: "stars"} ->
+      %Widget{type: :canvas_element_leave, id: "stars"} ->
         %{model | hover_star: nil}
 
-      %Widget{type: :canvas_shape_focused, id: "stars", data: %{"shape_id" => "star-" <> n}} ->
-        %{model | focused_star: String.to_integer(n)}
-
       # Theme toggle
-      %Widget{type: :canvas_shape_click, id: "theme-toggle"} ->
+      %Widget{type: :canvas_element_click, id: "theme-toggle"} ->
         target = if model.toggle_target == 0.0, do: 1.0, else: 0.0
         %{model | toggle_target: target}
 
@@ -157,7 +153,6 @@ defmodule RatePlushie do
 
         StarRating.render("stars", model.rating,
           hover: model.hover_star,
-          focused: model.focused_star,
           theme_progress: p
         )
 

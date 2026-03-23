@@ -110,15 +110,11 @@ defmodule Plushie.Canvas.Shape do
     CanvasSvg,
     CanvasText,
     Circle,
+    Clip,
     Group,
-    Interactive,
     Line,
     LinearGradient,
     Path,
-    PopClip,
-    PopTransform,
-    PushClip,
-    PushTransform,
     Rect,
     Rotate,
     Scale,
@@ -182,25 +178,39 @@ defmodule Plushie.Canvas.Shape do
   def __build_group__(items, explicit_opts) when is_list(items) and is_list(explicit_opts) do
     {meta, children} = Enum.split_with(items, &match?({:__canvas_meta__, _, _}, &1))
 
-    opts =
-      Enum.reduce(meta, explicit_opts, fn
-        {:__canvas_meta__, :interactive, v}, acc -> [{:interactive, v} | acc]
+    # Collect transforms and other metadata from DSL directives.
+    transforms =
+      meta
+      |> Enum.filter(&match?({:__canvas_meta__, :transform, _}, &1))
+      |> Enum.map(fn {:__canvas_meta__, :transform, t} -> t end)
+
+    clip =
+      Enum.find_value(meta, fn
+        {:__canvas_meta__, :clip, c} -> c
+        _ -> nil
       end)
 
-    shape = %Group{children: children}
-    shape = if opts[:x], do: %{shape | x: opts[:x]}, else: shape
-    shape = if opts[:y], do: %{shape | y: opts[:y]}, else: shape
+    # Desugar x:/y: keyword opts into a leading translate.
+    {x, opts} = Keyword.pop(explicit_opts, :x)
+    {y, opts} = Keyword.pop(opts, :y)
 
-    case Keyword.get(opts, :interactive) do
-      nil ->
-        shape
+    transforms =
+      if x || y do
+        [%Translate{x: x || 0, y: y || 0} | transforms]
+      else
+        transforms
+      end
 
-      %Interactive{} = i ->
-        %{shape | interactive: i}
+    shape = %Group{
+      children: children,
+      transforms: if(transforms == [], do: nil, else: transforms),
+      clip: clip
+    }
 
-      interactive_opts when is_list(interactive_opts) ->
-        %{shape | interactive: Interactive.new(interactive_opts)}
-    end
+    # Apply remaining keyword opts as group fields.
+    Enum.reduce(opts, shape, fn {key, val}, acc ->
+      if Map.has_key?(acc, key), do: Map.put(acc, key, val), else: acc
+    end)
   end
 
   # -- Path shape -------------------------------------------------------------
@@ -293,37 +303,29 @@ defmodule Plushie.Canvas.Shape do
   @spec close() :: String.t()
   def close, do: "close"
 
-  # -- Transform commands -----------------------------------------------------
+  # -- Transform values -------------------------------------------------------
 
-  @doc "Push (save) the current transform state onto the stack."
-  @spec push_transform() :: PushTransform.t()
-  def push_transform, do: %PushTransform{}
-
-  @doc "Pop (restore) the previously saved transform state from the stack."
-  @spec pop_transform() :: PopTransform.t()
-  def pop_transform, do: %PopTransform{}
-
-  @doc "Translate the coordinate origin."
+  @doc "Create a translation transform."
   @spec translate(x :: number(), y :: number()) :: Translate.t()
   def translate(x, y), do: %Translate{x: x, y: y}
 
-  @doc "Rotate the coordinate system (angle in radians)."
+  @doc "Create a rotation transform (angle in radians)."
   @spec rotate(angle :: number()) :: Rotate.t()
   def rotate(angle), do: %Rotate{angle: angle}
 
-  @doc "Scale the coordinate system."
+  @doc "Create a uniform scale transform."
+  @spec scale(factor :: number()) :: Scale.t()
+  def scale(factor) when is_number(factor), do: %Scale{factor: factor}
+
+  @doc "Create a non-uniform scale transform."
   @spec scale(x :: number(), y :: number()) :: Scale.t()
   def scale(x, y), do: %Scale{x: x, y: y}
 
-  # -- Clipping commands ------------------------------------------------------
+  # -- Clip value -------------------------------------------------------------
 
-  @doc "Pushes a clipping rectangle. All shapes until the matching pop_clip are clipped to this region."
-  @spec push_clip(x :: number(), y :: number(), w :: number(), h :: number()) :: PushClip.t()
-  def push_clip(x, y, w, h), do: %PushClip{x: x, y: y, w: w, h: h}
-
-  @doc "Pops the most recent clipping rectangle."
-  @spec pop_clip() :: PopClip.t()
-  def pop_clip, do: %PopClip{}
+  @doc "Create a clip rectangle for a group."
+  @spec clip(x :: number(), y :: number(), w :: number(), h :: number()) :: Clip.t()
+  def clip(x, y, w, h), do: %Clip{x: x, y: y, w: w, h: h}
 
   # -- Gradient builder -------------------------------------------------------
 
@@ -396,36 +398,23 @@ defmodule Plushie.Canvas.Shape do
     |> maybe_put_dash(opts)
   end
 
-  # -- Interactive shapes -----------------------------------------------------
+  # -- Interactive shapes (pipe sugar) ----------------------------------------
 
   @doc """
-  Marks a shape as interactive by attaching an `%Interactive{}` struct.
+  Wraps a shape in an interactive group.
 
-  The canvas renderer uses this field for hit testing, hover/press
-  style overrides, drag constraints, cursor changes, tooltips, and
-  accessibility annotations.
+  Sugar for `group id do ... end` -- creates a `%Group{}` containing
+  the shape with the specified interactive fields.
 
   ## Required option
 
-  - `:id` -- unique identifier for this interactive shape (used in events).
-
-  ## Optional fields
-
-  - `:on_click` (boolean) -- emit click events for this shape.
-  - `:on_hover` (boolean) -- emit hover events for this shape.
-  - `:draggable` (boolean) -- allow dragging this shape.
-  - `:drag_axis` (string) -- constrain drag to `"x"`, `"y"`, or `"both"`.
-  - `:drag_bounds` (map) -- clamp drag to `%{min_x, max_x, min_y, max_y}`.
-  - `:cursor` (string) -- CSS cursor name shown on hover.
-  - `:hover_style` (map) -- style overrides applied on hover (fill, stroke, opacity).
-  - `:pressed_style` (map) -- style overrides applied on press.
-  - `:tooltip` (string) -- tooltip text shown on hover.
-  - `:a11y` (map) -- accessibility overrides (role, label, etc.).
-  - `:hit_rect` (map) -- explicit hit test rectangle `%{x, y, w, h}` override.
+  - `:id` -- unique identifier for this element (used in events).
   """
-  @spec interactive(shape :: map(), opts :: keyword()) :: map()
+  @spec interactive(shape :: map(), opts :: keyword()) :: Group.t()
   def interactive(shape, opts) when is_map(shape) do
-    %{shape | interactive: Interactive.new(opts)}
+    {id, opts} = Keyword.pop!(opts, :id)
+    group = %Group{id: id, children: [shape]}
+    Enum.reduce(opts, group, fn {k, v}, acc -> Map.put(acc, k, v) end)
   end
 
   # -- Build helpers for canvas_scope rewrites --------------------------------
@@ -443,13 +432,6 @@ defmodule Plushie.Canvas.Shape do
 
   def __build_svg__(source, x, y, w, h, _opts) do
     %CanvasSvg{source: source, x: x, y: y, w: w, h: h}
-  end
-
-  # -- Interactive descriptor for group blocks --------------------------------
-
-  @doc false
-  def interactive_descriptor(id, opts) when is_binary(id) do
-    {:__canvas_meta__, :interactive, Interactive.new([{:id, id} | opts])}
   end
 
   # -- Private helpers --------------------------------------------------------

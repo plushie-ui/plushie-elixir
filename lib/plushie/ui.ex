@@ -2544,15 +2544,36 @@ defmodule Plushie.UI do
         block = canvas_scope(block, :group)
         exprs = block_to_exprs(block)
 
+        # At compile time, check if `first` is a string literal (id).
+        opts_ast =
+          if is_binary(first) do
+            # group "some-id" do ... end
+            [id: first]
+          else
+            # group opts do ... end (keyword list or runtime expression)
+            first
+          end
+
         quote do
           children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Plushie.Canvas.Shape.__build_group__(children, unquote(first))
+          Plushie.Canvas.Shape.__build_group__(children, unquote(opts_ast))
         end
 
       opts ->
         quote do
           Plushie.Canvas.Shape.__build_group__(unquote(first), unquote(opts))
         end
+    end
+  end
+
+  @doc false
+  defmacro group(id, opts, do: block) do
+    block = canvas_scope(block, :group)
+    exprs = block_to_exprs(block)
+
+    quote do
+      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      Plushie.Canvas.Shape.__build_group__(children, [{:id, unquote(id)} | unquote(opts)])
     end
   end
 
@@ -2574,86 +2595,15 @@ defmodule Plushie.UI do
     end
   end
 
-  @doc """
-  Marks a shape or group as interactive.
-
-  ## Block form (inside group)
-
-      group do
-        interactive "bold" do
-          on_click
-          hover_style %{fill: "#ddd"}
-          cursor "pointer"
-        end
-        rect(0, 0, 32, 32, radius: 4)
-      end
-
-  ## Keyword form (inside group)
-
-      group do
-        interactive "bold", on_click: true
-        rect(0, 0, 32, 32)
-      end
-
-  ## Pipe form (on any shape)
-
-      rect(0, 0, 100, 40) |> interactive(id: "btn", on_click: true)
-  """
-
-  # Form 1: Block directive with id
-  defmacro interactive(id, do: block) do
-    field_types = Plushie.Canvas.Shape.Interactive.__field_types__()
-    pairs = interpret_block(block, field_types)
-    validate_interactive_keys!(pairs, __CALLER__)
-    opts_ast = pairs_to_keyword_ast(pairs)
-
-    quote do
-      {:__canvas_meta__, :interactive,
-       Plushie.Canvas.Shape.Interactive.new([{:id, unquote(id)} | unquote(opts_ast)])}
-    end
-  end
-
-  # Form 2/3: Keyword directive (id first) or pipe modifier (shape first)
-  @doc false
-  defmacro interactive(first, opts) do
-    quote do
-      Plushie.UI.__build_interactive__(unquote(first), unquote(opts))
-    end
-  end
-
-  # Form 4: Arity 1 -- keyword without id positional, or error on bare do-block
-  @doc false
-  defmacro interactive(opts_or_do) do
-    case opts_or_do do
-      [do: _block] ->
-        raise CompileError,
-          line: __CALLER__.line,
-          description: """
-          interactive requires an id as the first argument. Expected:
-
-              interactive "my_id" do
-                on_click
-                hover_style %{fill: "#ddd"}
-              end
-          """
-
-      opts ->
-        quote do
-          {:__canvas_meta__, :interactive, Plushie.Canvas.Shape.Interactive.new(unquote(opts))}
-        end
-    end
-  end
-
-  @doc false
-  @spec __build_interactive__(String.t() | map(), keyword()) ::
-          {:__canvas_meta__, :interactive, Plushie.Canvas.Shape.Interactive.t()} | map()
-  def __build_interactive__(id, opts) when is_binary(id) do
-    {:__canvas_meta__, :interactive, Plushie.Canvas.Shape.Interactive.new([{:id, id} | opts])}
-  end
-
-  def __build_interactive__(shape, opts) when is_map(shape) do
-    Plushie.Canvas.Shape.interactive(shape, opts)
-  end
+  # The `interactive` macro has been removed. Interactive fields now go
+  # directly on the group via keyword opts or DSL directives:
+  #
+  #     group "btn-id", on_click: true do
+  #       rect(0, 0, 100, 40)
+  #     end
+  #
+  # For the pipe form, use Plushie.Canvas.Shape.interactive/2 which
+  # auto-wraps a shape in an interactive group.
 
   # ---------------------------------------------------------------------------
   # Canvas shape macros (block-form support)
@@ -2771,16 +2721,14 @@ defmodule Plushie.UI do
   defdelegate rounded_rect(x, y, w, h, radius), to: Plushie.Canvas.Shape
   defdelegate close(), to: Plushie.Canvas.Shape
 
-  # Transforms
-  defdelegate push_transform(), to: Plushie.Canvas.Shape
-  defdelegate pop_transform(), to: Plushie.Canvas.Shape
+  # Transforms (used as directives inside group blocks)
   defdelegate translate(x, y), to: Plushie.Canvas.Shape
   defdelegate rotate(angle), to: Plushie.Canvas.Shape
   defdelegate scale(x, y), to: Plushie.Canvas.Shape
+  defdelegate scale(factor), to: Plushie.Canvas.Shape
 
-  # Clips
-  defdelegate push_clip(x, y, w, h), to: Plushie.Canvas.Shape
-  defdelegate pop_clip(), to: Plushie.Canvas.Shape
+  # Clips (used as directive inside group blocks)
+  defdelegate clip(x, y, w, h), to: Plushie.Canvas.Shape
 
   # Gradients
   defdelegate linear_gradient(from, to, stops), to: Plushie.Canvas.Shape
@@ -2872,8 +2820,6 @@ defmodule Plushie.UI do
 
   @reserved_keys [:children, :id, :do]
 
-  @interactive_keys ~w(on_click on_hover draggable drag_axis drag_bounds cursor hover_style pressed_style tooltip a11y hit_rect)a
-
   @leaf_widget_names ~w(button text_input checkbox toggler radio slider
     vertical_slider pick_list combo_box text_editor image svg rich_text
     qr_code)a
@@ -2892,7 +2838,7 @@ defmodule Plushie.UI do
 
   @canvas_shape_calls ~w(rect circle line path group)a
 
-  @canvas_transform_calls ~w(push_transform pop_transform translate rotate scale push_clip pop_clip)a
+  @canvas_transform_calls ~w(translate rotate scale clip)a
 
   defp clean_opts(opts), do: Keyword.drop(opts, @reserved_keys)
 
@@ -2967,23 +2913,6 @@ defmodule Plushie.UI do
   defp numeric_literal?(n) when is_integer(n) or is_float(n), do: true
   defp numeric_literal?({:-, _, [n]}) when is_number(n), do: true
   defp numeric_literal?(_), do: false
-
-  # ---------------------------------------------------------------------------
-  # Interactive key validation (used by Step 4: interactive directive)
-  # ---------------------------------------------------------------------------
-
-  defp validate_interactive_keys!(pairs, caller) do
-    for {key, _val} <- pairs do
-      unless key in @interactive_keys do
-        raise CompileError,
-          line: caller.line,
-          file: caller.file,
-          description:
-            "unknown interactive option: #{inspect(key)}. " <>
-              "Valid options: #{inspect(@interactive_keys)}"
-      end
-    end
-  end
 
   # ---------------------------------------------------------------------------
   # Control flow block wrapping

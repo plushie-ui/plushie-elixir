@@ -8,7 +8,7 @@ defmodule ThemeToggle do
 
       ThemeToggle.render("my-toggle", model.toggle_progress)
 
-  Events: `canvas_shape_click` with shape_id `"switch"`.
+  Events: `canvas_element_click` with element_id `"switch"`.
   Drive `progress` from 0.0 (light) to 1.0 (dark) with a timer.
   """
 
@@ -28,33 +28,29 @@ defmodule ThemeToggle do
 
     canvas id, width: @track_w, height: @track_h do
       layer "toggle" do
-        group do
-          interactive "switch" do
-            on_click
-            cursor("pointer")
-            hit_rect(%{x: 0, y: 0, w: @track_w, h: @track_h})
-            a11y(%{role: :switch, label: "Dark humor"})
-          end
-
+        group "switch",
+          on_click: true,
+          cursor: "pointer",
+          hit_rect: %{x: 0, y: 0, w: @track_w, h: @track_h},
+          a11y: %{role: :switch, label: "Dark humor", toggled: progress >= 0.5} do
           # Track
           rect(0, 0, @track_w, @track_h, fill: track_color, radius: @track_h / 2)
 
           # Thumb circle
           circle(thumb_x, @track_h / 2, @thumb_r, fill: "#ffffff")
 
-          # Face drawn with transforms (rotates during transition)
-          push_transform()
-          translate(thumb_x, @track_h / 2)
-          rotate(rotation)
+          # Face drawn inside a transform group (rotates during transition)
+          group do
+            translate(thumb_x, @track_h / 2)
+            rotate(rotation)
 
-          # Left eye
-          circle(-3.5, -3, 2, fill: face_color)
-          # Right eye
-          circle(3.5, -3, 2, fill: face_color)
-          # Mouth (smile drawn as a path)
-          path(smile_path(), stroke: Plushie.Canvas.Shape.stroke(face_color, 2))
-
-          pop_transform()
+            # Left eye
+            circle(-3.5, -3, 2, fill: face_color)
+            # Right eye
+            circle(3.5, -3, 2, fill: face_color)
+            # Mouth (smile drawn as a path)
+            path(smile_path(), stroke: Plushie.Canvas.Shape.stroke(face_color, 2))
+          end
         end
       end
     end

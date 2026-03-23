@@ -119,6 +119,15 @@ defmodule Plushie.Command do
     %__MODULE__{type: :focus, payload: %{target: widget_id}}
   end
 
+  @doc "Focus a specific interactive element within a canvas."
+  @spec focus_element(canvas_id :: widget_id(), element_id :: String.t()) :: %__MODULE__{}
+  def focus_element(canvas_id, element_id) do
+    %__MODULE__{
+      type: :widget_op,
+      payload: %{op: "focus_element", target: canvas_id, element_id: element_id}
+    }
+  end
+
   @doc "Move focus to the next focusable widget."
   @spec focus_next() :: %__MODULE__{}
   def focus_next, do: %__MODULE__{type: :focus_next, payload: %{}}
