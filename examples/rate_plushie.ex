@@ -126,9 +126,9 @@ defmodule RatePlushie do
             spacing 24
             width :fill
 
-            text("heading", "Rate Plushie", size: 28, a11y: %{role: :heading, level: 1})
+            text("heading", "Rate Plushie", size: 28, color: t.text, a11y: %{role: :heading, level: 1})
             rating_card(model, p, t)
-            text("reviews-heading", "Reviews", size: 20, a11y: %{role: :heading, level: 2})
+            text("reviews-heading", "Reviews", size: 20, color: t.text, a11y: %{role: :heading, level: 2})
             reviews_list(model.reviews, p, t)
           end
         end
