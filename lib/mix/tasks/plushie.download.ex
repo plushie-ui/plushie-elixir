@@ -10,11 +10,22 @@ defmodule Mix.Tasks.Plushie.Download do
 
   ## Options
 
-  - `--bin` -- Download the native binary (default when no target specified)
-  - `--wasm` -- Download the WASM renderer (plushie_wasm.js + plushie_wasm_bg.wasm)
-  - `--bin-file PATH` -- Override native binary destination (default: `_build/plushie/bin/{platform-name}`)
-  - `--wasm-dir PATH` -- Override WASM output directory (default: `_build/plushie/wasm/`)
+  - `--bin` -- Download the native binary
+  - `--wasm` -- Download the WASM renderer
+  - `--bin-file PATH` -- Override native binary destination
+  - `--wasm-dir PATH` -- Override WASM output directory
   - `--force` -- Re-download even if files already exist
+
+  ## Config
+
+  All options can be set in `config.exs` so commands work without flags:
+
+      config :plushie,
+        artifacts: [:bin, :wasm],       # which artifacts to install
+        bin_file: "priv/bin/plushie",   # binary destination
+        wasm_dir: "priv/static"         # WASM output directory
+
+  CLI flags override config. Default artifacts: `[:bin]`.
   """
   @shortdoc "Download precompiled plushie binary and/or WASM"
 
@@ -40,13 +51,7 @@ defmodule Mix.Tasks.Plushie.Download do
     {opts, _rest} = OptionParser.parse!(args, strict: @switches)
 
     force? = opts[:force] || false
-
-    # Path flags imply their target
-    want_bin? = opts[:bin] || opts[:bin_file] != nil
-    want_wasm? = opts[:wasm] || opts[:wasm_dir] != nil
-
-    # No explicit target = bin only (backward compatible)
-    want_bin? = if not want_bin? and not want_wasm?, do: true, else: want_bin?
+    {want_bin?, want_wasm?} = Mix.PlushieHelpers.resolve_artifacts(opts)
 
     if want_bin?, do: download_bin(opts, force?)
     if want_wasm?, do: download_wasm(opts, force?)
@@ -57,7 +62,7 @@ defmodule Mix.Tasks.Plushie.Download do
   defp download_bin(opts, force?) do
     name = Plushie.Binary.download_name()
     url = release_url(name)
-    dest_path = opts[:bin_file] || Path.join(Plushie.Binary.download_dir(), name)
+    dest_path = Mix.PlushieHelpers.resolve_bin_file(opts)
 
     if File.exists?(dest_path) and not force? do
       Mix.shell().info("Binary already exists at #{dest_path}. Use --force to re-download.")
@@ -109,7 +114,7 @@ defmodule Mix.Tasks.Plushie.Download do
 
   defp download_wasm(opts, force?) do
     url = release_url(@wasm_archive)
-    extract_dir = opts[:wasm_dir] || Path.join(["_build", "plushie", "wasm"])
+    extract_dir = Mix.PlushieHelpers.resolve_wasm_dir(opts)
     tarball_path = Path.join(extract_dir, @wasm_archive)
 
     js_path = Path.join(extract_dir, "plushie_wasm.js")

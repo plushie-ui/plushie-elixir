@@ -24,12 +24,23 @@ defmodule Mix.Tasks.Plushie.Build do
 
   ## Options
 
-  - `--bin` -- Build the native binary (default when no target specified)
+  - `--bin` -- Build the native binary
   - `--wasm` -- Build the WASM renderer via wasm-pack
-  - `--bin-file PATH` -- Override native binary destination (default: `_build/plushie/bin/{platform-name}`)
-  - `--wasm-dir PATH` -- Override WASM output directory (default: `_build/plushie-renderer/wasm/`)
+  - `--bin-file PATH` -- Override native binary destination
+  - `--wasm-dir PATH` -- Override WASM output directory
   - `--release` -- Build with optimizations (also implied by `MIX_ENV=prod`)
   - `--verbose` -- Print full cargo output on successful builds
+
+  ## Config
+
+  Artifact selection and output paths can be set in `config.exs`:
+
+      config :plushie,
+        artifacts: [:bin, :wasm],       # which artifacts to build
+        bin_file: "priv/bin/plushie",   # binary destination
+        wasm_dir: "priv/static"         # WASM output directory
+
+  CLI flags override config. Default artifacts: `[:bin]`.
 
   ## Extensions
 
@@ -41,9 +52,6 @@ defmodule Mix.Tasks.Plushie.Build do
   behaviour and that no two extensions claim the same widget type name.
   A Cargo workspace is generated under the Mix build directory with a
   `main.rs` that registers all extensions.
-
-  The built binary is installed to `_build/plushie/bin/` for runtime resolution.
-  WASM files are installed to `_build/plushie/wasm/`.
   """
   @shortdoc "Build the plushie binary and/or WASM"
 
@@ -63,13 +71,7 @@ defmodule Mix.Tasks.Plushie.Build do
         ]
       )
 
-    # Path flags imply their target
-    want_bin? = opts[:bin] || opts[:bin_file] != nil
-    want_wasm? = opts[:wasm] || opts[:wasm_dir] != nil
-
-    # No explicit target = bin only (backward compatible)
-    want_bin? = if not want_bin? and not want_wasm?, do: true, else: want_bin?
-
+    {want_bin?, want_wasm?} = Mix.PlushieHelpers.resolve_artifacts(opts)
     release? = opts[:release] || false
     verbose? = opts[:verbose] || false
 
@@ -132,7 +134,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
   defp install_wasm(wasm_crate, opts) do
     pkg_dir = Path.join(wasm_crate, "pkg")
-    dest_dir = opts[:wasm_dir] || Path.join(["_build", "plushie-renderer", "wasm"])
+    dest_dir = Mix.PlushieHelpers.resolve_wasm_dir(opts)
     File.mkdir_p!(dest_dir)
 
     for name <- ["plushie_renderer_wasm.js", "plushie_renderer_wasm_bg.wasm"] do
@@ -236,45 +238,22 @@ defmodule Mix.Tasks.Plushie.Build do
       Mix.raise("Build succeeded but binary not found at #{src}")
     end
 
-    dest =
-      case opts[:bin_file] do
-        nil ->
-          dest_dir = Plushie.Binary.download_dir()
-          Path.join(dest_dir, Plushie.Binary.download_name())
-
-        path ->
-          path
-      end
-
-    File.mkdir_p!(Path.dirname(dest))
-    File.cp!(src, dest)
-    File.chmod!(dest, 0o755)
-
-    Mix.shell().info("Installed to #{dest}")
+    install_bin_to(src, opts)
   end
 
-  # Copy an extension binary into _build/plushie/bin/ so the resolution chain
-  # finds it. Uses the platform download name so `Plushie.Binary.path!/0`
-  # resolves it the same way it resolves the stock binary.
   defp install_extension_binary(src, opts) do
     unless File.exists?(src) do
       Mix.raise("Build succeeded but binary not found at #{src}")
     end
 
-    dest =
-      case opts[:bin_file] do
-        nil ->
-          dest_dir = Plushie.Binary.download_dir()
-          Path.join(dest_dir, Plushie.Binary.download_name())
+    install_bin_to(src, opts)
+  end
 
-        path ->
-          path
-      end
-
+  defp install_bin_to(src, opts) do
+    dest = Mix.PlushieHelpers.resolve_bin_file(opts)
     File.mkdir_p!(Path.dirname(dest))
     File.cp!(src, dest)
     File.chmod!(dest, 0o755)
-
     Mix.shell().info("Installed to #{dest}")
   end
 
