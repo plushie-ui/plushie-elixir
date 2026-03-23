@@ -8,8 +8,6 @@ defmodule Plushie.Canvas.ShapeTest do
     CanvasSvg,
     CanvasText,
     Circle,
-    Clip,
-    Group,
     Line,
     LinearGradient,
     Path,

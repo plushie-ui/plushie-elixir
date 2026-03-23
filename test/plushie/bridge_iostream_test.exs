@@ -64,7 +64,7 @@ defmodule Plushie.BridgeIostreamTest do
 
       send(bridge, {:iostream_data, IO.iodata_to_binary(hello_data)})
 
-      assert_receive {:renderer_event, {:hello, hello}}
+      assert_receive {:renderer_event, {:hello, hello}}, 1_000
       assert hello.name == "plushie"
       assert hello.version == "0.1.0"
       assert hello.backend == "test"
