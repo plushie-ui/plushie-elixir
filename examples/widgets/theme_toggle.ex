@@ -26,7 +26,10 @@ defmodule ThemeToggle do
     rotation = eased * :math.pi()
     face_color = if progress < 0.5, do: "#665500", else: "#4c1d95"
 
-    canvas id, width: @track_w, height: @track_h do
+    canvas id,
+      width: @track_w,
+      height: @track_h,
+      alt: "Theme toggle" do
       layer "toggle" do
         group "switch",
           on_click: true,

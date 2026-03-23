@@ -39,19 +39,37 @@ defmodule StarRating do
 
     commands = star_commands(outer_r, inner_r)
 
-    canvas id, width: width, height: size do
-      layer "stars" do
-        for i <- 0..4 do
-          cx = i * (size + gap) + size / 2
-          cy = size / 2
-          filled = i < display
-          preview = not readonly and hover != nil and i < hover and i >= rating
+    if readonly do
+      # Read-only: no interaction, just display with alt text.
+      canvas id,
+        width: width,
+        height: size,
+        alt: "#{rating} out of 5 stars",
+        a11y: %{role: :image} do
+        layer "stars" do
+          for i <- 0..4 do
+            filled = i < rating
 
-          if readonly do
-            group x: cx, y: cy do
+            group x: i * (size + gap) + size / 2, y: size / 2 do
               path(commands, fill: star_color(filled, false, theme_progress))
             end
-          else
+          end
+        end
+      end
+    else
+      # Interactive: radio group with per-star keyboard/mouse interaction.
+      canvas id,
+        width: width,
+        height: size,
+        alt: "Star rating",
+        role: "radiogroup" do
+        layer "stars" do
+          for i <- 0..4 do
+            cx = i * (size + gap) + size / 2
+            cy = size / 2
+            filled = i < display
+            preview = hover != nil and i < hover and i >= rating
+
             group "star-#{i}",
               x: cx,
               y: cy,

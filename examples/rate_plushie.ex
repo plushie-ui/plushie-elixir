@@ -122,9 +122,20 @@ defmodule RatePlushie do
           spacing 24
           width :fill
 
-          text("heading", "Rate Plushie", size: 28, color: t.text)
+          text("heading", "Rate Plushie",
+            size: 28,
+            color: t.text,
+            a11y: %{role: :heading, level: 1}
+          )
+
           rating_card(model, p, t)
-          text("reviews-heading", "Reviews", size: 20, color: t.text)
+
+          text("reviews-heading", "Reviews",
+            size: 20,
+            color: t.text,
+            a11y: %{role: :heading, level: 2}
+          )
+
           reviews_list(model.reviews, p, t)
         end
       end
@@ -169,10 +180,15 @@ defmodule RatePlushie do
     import Plushie.UI
 
     column id: "review-form", spacing: 12, width: :fill do
-      text_input("review-name", model.review_name, placeholder: "Your name")
+      text_input("review-name", model.review_name,
+        placeholder: "Your name",
+        a11y: %{label: "Your name"}
+      )
 
       text_editor("review-comment", model.review_comment,
-        placeholder: "Write your review...", height: 80
+        placeholder: "Write your review...",
+        height: 80,
+        a11y: %{label: "Review text"}
       )
 
       button("submit-review", "Submit Review")
