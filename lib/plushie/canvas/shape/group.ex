@@ -38,6 +38,7 @@ defmodule Plushie.Canvas.Shape.Group do
           pressed_style: ShapeStyle.t() | nil,
           focus_style: ShapeStyle.t() | nil,
           show_focus_ring: boolean() | nil,
+          focus_ring_radius: number() | nil,
           a11y: map() | nil,
           focusable: boolean() | nil
         }
@@ -60,6 +61,7 @@ defmodule Plushie.Canvas.Shape.Group do
     :pressed_style,
     :focus_style,
     :show_focus_ring,
+    :focus_ring_radius,
     :a11y,
     :focusable
   ]
@@ -85,6 +87,7 @@ defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Group do
     |> put_if(:pressed_style, group.pressed_style)
     |> put_if(:focus_style, group.focus_style)
     |> put_if(:show_focus_ring, group.show_focus_ring)
+    |> put_if(:focus_ring_radius, group.focus_ring_radius)
     |> put_if(:a11y, group.a11y)
     |> put_if(:focusable, group.focusable)
   end

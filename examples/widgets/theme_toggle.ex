@@ -40,6 +40,7 @@ defmodule ThemeToggle do
           on_click: true,
           cursor: "pointer",
           hit_rect: %{x: 0, y: 0, w: @track_w, h: @track_h},
+          focus_ring_radius: @track_h / 2 + ring_pad,
           a11y: %{role: :switch, label: "Dark humor", toggled: progress >= 0.5} do
           # Track
           rect(0, 0, @track_w, @track_h, fill: track_color, radius: @track_h / 2)
