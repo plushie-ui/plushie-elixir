@@ -26,12 +26,17 @@ defmodule ThemeToggle do
     rotation = eased * :math.pi()
     face_color = if progress < 0.5, do: "#665500", else: "#4c1d95"
 
+    # Padding for the outset focus ring.
+    ring_pad = 4
+
     canvas id,
-      width: @track_w,
-      height: @track_h,
+      width: @track_w + ring_pad * 2,
+      height: @track_h + ring_pad * 2,
       alt: "Theme toggle" do
       layer "toggle" do
         group "switch",
+          x: ring_pad,
+          y: ring_pad,
           on_click: true,
           cursor: "pointer",
           hit_rect: %{x: 0, y: 0, w: @track_w, h: @track_h},
