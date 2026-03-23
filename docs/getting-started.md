@@ -164,7 +164,10 @@ RUST_LOG=plushie=debug mix plushie.gui MyApp
 
 If `update/2` or `view/1` raises, the runtime catches the exception,
 logs it, and continues with the previous state. The GUI does not
-crash. Fix the code and the next event works normally.
+crash. Fix the code and the next event works normally. See the
+[crash-test](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/crash-test)
+demo for all three failure paths (Elixir exceptions and Rust panics)
+in action.
 
 ## Dev mode
 

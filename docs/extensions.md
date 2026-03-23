@@ -1062,6 +1062,10 @@ The type parameter `T` must be `Send + Sync + 'static`. This is why
 
 ## Panic isolation
 
+> Working example: the
+> [crash-test](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/crash-test)
+> demo deliberately panics an extension and shows the red placeholder.
+
 The `ExtensionDispatcher` wraps all mutable extension calls (`init`,
 `prepare`, `handle_event`, `handle_command`, `cleanup`) in
 `catch_unwind`. If your extension panics:

@@ -123,6 +123,11 @@ Elixir project and its dependencies.
 
 ## Resiliency
 
+> Working example: the
+> [crash-test](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/crash-test)
+> demo deliberately triggers all three failure paths below and shows
+> recovery in action.
+
 Things go wrong. Renderers crash, code has bugs, networks drop.
 Plushie handles these without losing your model state.
 
