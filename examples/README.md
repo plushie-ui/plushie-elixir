@@ -159,3 +159,18 @@ theme-aware rendering, keyboard interaction (arrow keys adjust rating).
 ```sh
 mix plushie.gui RatePlushie
 ```
+
+## Multi-file demos
+
+The [plushie-demos](https://github.com/plushie-ui/plushie-demos/tree/main/elixir)
+repo has larger self-contained projects with their own mix.exs, tests,
+and build configuration:
+
+- [**gauge-demo**](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/gauge-demo)
+  -- native Rust extension with commands, extension events, and
+  optimistic updates (Tier C)
+- [**sparkline-dashboard**](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/sparkline-dashboard)
+  -- render-only Rust canvas extension with timer subscriptions and
+  multiple widget instances (Tier A)
+- [**collab**](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/collab)
+  -- collaborative scratchpad over native, WebSocket, and SSH transports

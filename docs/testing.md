@@ -702,6 +702,12 @@ Extension widgets have two testing layers: Elixir-side logic (struct
 building, command generation, demo app behavior) and Rust-side
 rendering (the widget actually renders, handles events, etc.).
 
+For complete test suites covering both layers, see the
+[gauge-demo](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/gauge-demo)
+(72 tests, Tier C extension) and
+[sparkline-dashboard](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/sparkline-dashboard)
+(58 tests, Tier A extension) in the plushie-demos repo.
+
 ### Elixir-side: unit tests (no renderer)
 
 Extension macros generate structs, setters, and protocol

@@ -51,7 +51,10 @@ iex> Plushie.start_link(Counter)
 
 This is one of [8 examples](examples/) included in the repo, from a
 minimal counter to a full widget catalog. Edit them while the GUI is
-running and see changes instantly.
+running and see changes instantly. For multi-file projects (extensions,
+collaborative transports, real project scaffolding), see the
+[plushie-demos](https://github.com/plushie-ui/plushie-demos/tree/main/elixir)
+repo.
 
 ## Getting started
 
@@ -225,6 +228,7 @@ dependencies. To build from source, install a Rust toolchain via
 | | |
 |---|---|
 | Elixir SDK | [github.com/plushie-ui/plushie-elixir](https://github.com/plushie-ui/plushie-elixir) |
+| Demos | [github.com/plushie-ui/plushie-demos](https://github.com/plushie-ui/plushie-demos/tree/main/elixir) |
 | Renderer | [github.com/plushie-ui/plushie](https://github.com/plushie-ui/plushie) |
 | Rust crate | [crates.io/crates/plushie](https://crates.io/crates/plushie) |
 
