@@ -895,3 +895,9 @@ native platform operations handled by the renderer (see [effects.md](effects.md)
 Widget operations and window commands are a hybrid -- they are initiated
 from the Elixir side but executed by the renderer. They use the command
 mechanism for the API but effect/effect_response for the transport.
+
+## Next steps
+
+- [Extensions](extensions.md) -- native widget extensions with custom commands
+- [Effects](effects.md) -- platform requests (file dialogs, clipboard)
+- [Gauge demo](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/gauge-demo) -- extension commands (`set_value`, `animate_to`) with optimistic updates

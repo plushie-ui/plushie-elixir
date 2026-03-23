@@ -53,6 +53,10 @@ the renderer closes stdin, and the plushie process exits cleanly.
 
 ## Remote rendering
 
+> Working example: the
+> [collab demo](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/collab)
+> runs the same app over native desktop, WebSocket, and SSH transports.
+
 Your host runs on a server. You want to see its UI on your laptop.
 The renderer runs locally (where your display is), the host runs
 remotely (where the data is), and SSH connects them:
@@ -444,3 +448,4 @@ wire has `"fill"`.
 - [Commands and subscriptions](commands.md) -- event rate limiting details
 - [Testing](testing.md) -- three-backend test framework
 - [Extensions](extensions.md) -- custom widgets, CoalesceHint for throttling
+- [Collab demo](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/collab) -- the same app running in 5 transport modes (native, stdio, WebSocket, SSH)

@@ -74,6 +74,15 @@ plushie::run(
 )
 ```
 
+For complete working projects with tests and build configuration, see
+the [plushie-demos](https://github.com/plushie-ui/plushie-demos/tree/main/elixir)
+repo:
+
+- [gauge-demo](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/gauge-demo)
+  -- Tier C extension with commands, events, and optimistic updates
+- [sparkline-dashboard](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/sparkline-dashboard)
+  -- Tier A render-only canvas extension with timer subscriptions
+
 ## Extension kinds
 
 The macro supports two kinds:
@@ -197,6 +206,10 @@ sensible defaults for all methods except `type_names`, `config_key`, and
 
 Implement `type_names`, `config_key`, and `render`. Everything else uses
 defaults. Good for widgets that compose existing iced widgets (e.g.
+
+> Working example:
+> [sparkline-dashboard](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/sparkline-dashboard)
+> -- canvas-based sparkline charts driven by timer subscriptions.
 `column`, `row`, `text`, `scrollable`, `container`) with no Rust-side
 interaction state.
 
@@ -296,6 +309,11 @@ include ring buffers fed by extension commands with canvas rendering,
 generation-tracked cache invalidation, and custom `iced::advanced::Widget`
 implementations with viewport state, hit testing, and pan/zoom persisted
 in `ExtensionCaches`.
+
+> Working example:
+> [gauge-demo](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/gauge-demo)
+> -- extension commands (`set_value`, `animate_to`), extension events
+> (`value_changed`), `GenerationCounter`, and `ExtensionCaches`.
 
 ```rust
 fn prepare(&mut self, node: &TreeNode, caches: &mut ExtensionCaches, theme: &Theme) {
@@ -1384,3 +1402,12 @@ Document these in your package README:
   continuity, keyboard focus, accessibility, or rendering internals.
 - **Overlay requires the overlay node type.** If your widget needs popover
   behaviour, it depends on the `overlay` node type being available.
+
+## Demo projects
+
+Complete working examples of native widget extensions:
+
+- [gauge-demo](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/gauge-demo) -- extension with commands (`set_value`, `animate_to`), optimistic updates, and comprehensive test suite
+- [sparkline-dashboard](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/sparkline-dashboard) -- render-only canvas extension with timer subscriptions and simulated live data
+
+The same demos exist in [Gleam](https://github.com/plushie-ui/plushie-demos/tree/main/gleam), [TypeScript](https://github.com/plushie-ui/plushie-demos/tree/main/typescript), [Ruby](https://github.com/plushie-ui/plushie-demos/tree/main/ruby), and [Python](https://github.com/plushie-ui/plushie-demos/tree/main/python). The Rust extension code is identical across languages.

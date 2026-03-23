@@ -195,3 +195,4 @@ See `Plushie.DevServer` for configuration options.
 - [Events](events.md) -- complete event taxonomy
 - [Testing](testing.md) -- writing tests against your UI
 - [Theming](theming.md) -- custom themes and palettes
+- [Demo apps](https://github.com/plushie-ui/plushie-demos/tree/main/elixir) -- collab scratchpad, gauge extension, sparkline dashboard
