@@ -109,14 +109,14 @@ defmodule Plushie.Binary do
   @doc """
   Returns the platform-specific binary name for downloads.
 
-  Format: `plushie-{os}-{arch}` (e.g. `plushie-linux-x86_64`).
+  Format: `plushie-renderer-{os}-{arch}` (e.g. `plushie-renderer-linux-x86_64`).
   """
   @spec download_name() :: String.t()
   def download_name do
     os = os_name()
     arch = arch_name()
     ext = if os == "windows", do: ".exe", else: ""
-    "plushie-#{os}-#{arch}#{ext}"
+    "plushie-renderer-#{os}-#{arch}#{ext}"
   end
 
   @doc """

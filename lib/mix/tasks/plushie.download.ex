@@ -23,7 +23,7 @@ defmodule Mix.Tasks.Plushie.Download do
   @base_url "https://github.com/plushie-ui/plushie/releases/download"
   @binary_version Mix.Project.config()[:binary_version] ||
                     raise("missing :binary_version in project config (mix.exs)")
-  @wasm_archive "plushie-wasm.tar.gz"
+  @wasm_archive "plushie-renderer-wasm.tar.gz"
 
   @switches [
     bin: :boolean,

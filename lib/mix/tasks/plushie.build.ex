@@ -88,14 +88,14 @@ defmodule Mix.Tasks.Plushie.Build do
     check_wasm_pack()
 
     source_dir = Mix.PlushieHelpers.source_path!()
-    wasm_crate = Path.join(source_dir, "plushie-wasm")
+
+    wasm_crate = Path.join(source_dir, "plushie-renderer-wasm")
 
     unless File.dir?(wasm_crate) do
       Mix.raise("""
-      plushie-wasm crate not found at #{wasm_crate}.
+      plushie-renderer-wasm crate not found at #{wasm_crate}.
 
-      The WASM build requires the plushie source checkout to include
-      the plushie-wasm crate directory.
+      The WASM build requires the plushie-renderer source checkout.
       """)
     end
 
