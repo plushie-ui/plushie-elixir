@@ -12,7 +12,7 @@ An extension has two halves:
 1. **Elixir side:** use the `Plushie.Extension` macro. This declares the widget's
    props, commands, and (for native widgets) the Rust crate and constructor.
 
-2. **Rust side:** implement the `WidgetExtension` trait from `plushie-core`. This
+2. **Rust side:** implement the `WidgetExtension` trait from `plushie-ext`. This
    receives tree nodes from Elixir and returns `iced::Element`s for rendering.
 
 <!-- test: extensions_sparkline_def_test, extensions_sparkline_build_test -- keep this code block in sync with the test -->
@@ -43,7 +43,7 @@ This generates:
 
 ```rust
 // native/my_sparkline/src/lib.rs
-use plushie_core::prelude::*;
+use plushie_ext::prelude::*;
 
 pub struct SparklineExtension;
 
@@ -360,8 +360,8 @@ Extensions doing DPI-aware rendering or per-window adaptation can use
 
 ### Prelude additions
 
-The `plushie_core::prelude` now re-exports `alignment`, `Point`, and `Size`,
-so you no longer need to reach into `plushie_core::iced::alignment` for
+The `plushie_ext::prelude` now re-exports `alignment`, `Point`, and `Size`,
+so you no longer need to reach into `plushie_ext::iced::alignment` for
 alignment types.
 
 
@@ -372,7 +372,7 @@ publish events back through the extension system. Use the `Message::Event`
 variant:
 
 ```rust
-use plushie_core::message::Message;
+use plushie_ext::message::Message;
 use serde_json::json;
 
 // In your Widget::update() method:
@@ -627,7 +627,7 @@ via `Widget::state()` or `canvas::Program`), and a `GenerationCounter` in
 `ExtensionCaches` tracks when your data changes.
 
 ```rust
-use plushie_core::prelude::*;
+use plushie_ext::prelude::*;
 use iced::widget::canvas;
 
 /// Stored in ExtensionCaches (Send + Sync).
@@ -780,7 +780,7 @@ fn tag(&self) -> widget::tree::Tag {
 
 Use `shell.publish(Message::Event(...))` as described in the Message::Event
 construction section above. The `Message` type is re-exported from
-`plushie_core::prelude`.
+`plushie_ext::prelude`.
 
 ### Full Widget skeleton
 
@@ -789,7 +789,7 @@ use iced::advanced::widget::{self, Widget};
 use iced::advanced::{layout, mouse, renderer, Clipboard, Layout, Shell};
 use iced::event;
 use iced::{Element, Length, Rectangle, Size, Theme};
-use plushie_core::prelude::*;
+use plushie_ext::prelude::*;
 
 struct MyWidget<'a> {
     node_id: String,
@@ -871,7 +871,7 @@ impl<'a> From<MyWidget<'a>> for Element<'a, Message> {
 
 ## Prop helpers reference
 
-The `plushie_core::prop_helpers` module (re-exported via `prelude::*`) provides
+The `plushie_ext::prop_helpers` module (re-exported via `prelude::*`) provides
 typed accessors for reading props from `TreeNode`. Use these instead of
 manually traversing `serde_json::Value`:
 
@@ -935,12 +935,12 @@ end
 ### Rust-side tests
 
 Test pure logic functions, `handle_command`, and `prepare`/`cleanup` using
-the helpers from `plushie_core::testing`:
+the helpers from `plushie_ext::testing`:
 
 ```rust
 #[cfg(test)]
 mod tests {
-    use plushie_core::testing::*;
+    use plushie_ext::testing::*;
     use super::*;
 
     #[test]
@@ -977,7 +977,7 @@ mod tests {
 
 ### Render smoke testing
 
-Use `widget_env_with()` from `plushie_core::testing` to construct a
+Use `widget_env_with()` from `plushie_ext::testing` to construct a
 `WidgetEnv` for smoke-testing your `render()` method. This verifies the
 method doesn't panic and returns a valid `Element`:
 

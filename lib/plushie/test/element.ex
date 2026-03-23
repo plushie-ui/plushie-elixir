@@ -63,7 +63,7 @@ defmodule Plushie.Test.Element do
   @doc """
   Returns the inferred accessibility role for this element.
 
-  Mirrors the Rust-side role mapping in plushie_core::accessibility.
+  Mirrors the Rust-side role mapping in plushie_ext::widgets::a11y.
   If the element has an explicit a11y role override, that takes precedence.
   """
   @spec inferred_role(element :: t()) :: String.t()

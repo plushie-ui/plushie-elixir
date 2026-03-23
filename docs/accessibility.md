@@ -877,7 +877,7 @@ Accessibility support is provided by:
 | Component | What it provides |
 |---|---|
 | plushie-iced fork | accesskit + accesskit_winit, TreeBuilder, per-window adapter management |
-| `plushie-core` | `A11yOverride` wrapper widget, `HiddenInterceptor`, AT action handling |
+| `plushie-ext` | `A11yOverride` wrapper widget, `HiddenInterceptor`, AT action handling |
 
 
 ## Platform support
