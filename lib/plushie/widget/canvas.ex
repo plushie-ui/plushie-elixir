@@ -261,7 +261,7 @@ defmodule Plushie.Widget.Canvas do
   def description(%__MODULE__{} = canvas, description) when is_binary(description),
     do: %{canvas | description: description}
 
-  @doc "Sets the accessible role for the canvas (e.g. \"radiogroup\", \"toolbar\")."
+  @doc ~S[Sets the accessible role for the canvas (e.g. "radiogroup", "toolbar").]
   @spec role(canvas :: t(), role :: String.t()) :: t()
   def role(%__MODULE__{} = canvas, role) when is_binary(role),
     do: %{canvas | role: role}
@@ -269,7 +269,7 @@ defmodule Plushie.Widget.Canvas do
   def role(%__MODULE__{} = canvas, role) when is_atom(role),
     do: %{canvas | role: Atom.to_string(role)}
 
-  @doc "Sets the arrow key navigation mode (\"wrap\", \"clamp\", \"linear\", \"none\")."
+  @doc ~S[Sets the arrow key navigation mode ("wrap", "clamp", "linear", "none").]
   @spec arrow_mode(canvas :: t(), mode :: String.t()) :: t()
   def arrow_mode(%__MODULE__{} = canvas, mode) when is_binary(mode),
     do: %{canvas | arrow_mode: mode}
