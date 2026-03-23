@@ -135,7 +135,7 @@ defmodule Mix.Tasks.Plushie.Build do
     dest_dir = opts[:wasm_dir] || Path.join(["_build", "plushie-renderer", "wasm"])
     File.mkdir_p!(dest_dir)
 
-    for name <- ["plushie_wasm.js", "plushie_wasm_bg.wasm"] do
+    for name <- ["plushie_renderer_wasm.js", "plushie_renderer_wasm_bg.wasm"] do
       src = Path.join(pkg_dir, name)
 
       if File.exists?(src) do
