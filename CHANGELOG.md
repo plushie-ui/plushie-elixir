@@ -37,7 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
-- **Renderer binary version** bumped to 0.5.0.
+- **Renderer binary version** bumped to 0.5.1.
 - **Download URL** updated from `plushie-ui/plushie` to
   `plushie-ui/plushie-renderer` releases.
 - **Rust crate references** updated throughout for the

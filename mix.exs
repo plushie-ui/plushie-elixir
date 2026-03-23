@@ -3,7 +3,7 @@ defmodule Plushie.MixProject do
 
   @version "0.5.0"
   @source_url "https://github.com/plushie-ui/plushie-elixir"
-  @binary_version "0.5.0"
+  @binary_version "0.5.1"
 
   def project do
     [
