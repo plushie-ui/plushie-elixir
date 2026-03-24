@@ -2,26 +2,21 @@ defmodule ColorPickerWidget do
   @moduledoc """
   Canvas-based HSV color picker widget.
 
-  Renders a hue ring surrounding a saturation/value square. The ring is built
-  from path segments covering the hue spectrum. The SV square uses overlapping
-  linear gradients (hue-to-white horizontal, transparent-to-black vertical).
-  Focusable cursor groups mark the current hue position on the ring and the
-  current SV position in the square.
+  A hue ring surrounds a saturation/value square. Drag the ring to
+  select a hue; drag the square to adjust saturation and value.
+  Keyboard accessible: Tab to focus cursors, arrow keys to adjust.
 
-      ColorPickerWidget.render("picker", model.hue, model.saturation, model.value)
+      ColorPickerWidget.new("picker")
 
-  Mouse events: `Plushie.Event.Canvas` with `type: :press`, `:move`, `:release`.
-  The canvas reports absolute x/y coordinates so the consuming app can compute
-  hue angles and SV positions from the geometry constants.
-
-  Keyboard events: the cursor groups are focusable interactive elements. The
-  canvas uses `arrow_mode: "none"` so arrow keys propagate to the app via
-  `Subscription.on_key_press/1`. The app tracks focus via
-  `canvas_element_focused`/`canvas_element_blurred` widget events and adjusts
-  hue/saturation/value in response to arrow keys.
+  Events:
+  - `:change` with `%{"hue" => h, "saturation" => s, "value" => v}`
   """
 
-  import Plushie.Canvas.Shape, only: [move_to: 2, line_to: 2, close: 0]
+  use Plushie.Extension, :canvas_widget
+
+  widget :color_picker_widget
+
+  state hue: 0.0, saturation: 1.0, value: 1.0, drag: :none
 
   # -- Geometry constants ------------------------------------------------------
 
@@ -36,13 +31,128 @@ defmodule ColorPickerWidget do
   @segments 72
   @cursor_r 7
 
-  @doc """
-  Renders the color picker canvas.
+  @fine_step 1
+  @coarse_step 15
+  @sv_fine_step 0.01
+  @sv_coarse_step 0.1
 
-  Returns a canvas node with interactive hue ring and SV square.
-  """
-  def render(id, hue, saturation, value, _opts \\ []) do
+  # -- Event transformation ----------------------------------------------------
+
+  def handle_event(%Plushie.Event.Canvas{type: :press, x: x, y: y, button: "left"}, state) do
+    dx = x - @cx
+    dy = y - @cy
+    dist = :math.sqrt(dx * dx + dy * dy)
+
+    cond do
+      dist >= @inner_r and dist <= @outer_r ->
+        new_state = %{state | drag: :ring, hue: hue_from_point(dx, dy)}
+        {:emit, :change, hsv_data(new_state), new_state}
+
+      in_square?(x, y) ->
+        new_state = apply_sv(%{state | drag: :square}, x, y)
+        {:emit, :change, hsv_data(new_state), new_state}
+
+      true ->
+        :consumed
+    end
+  end
+
+  def handle_event(%Plushie.Event.Canvas{type: :move, x: x, y: y}, state) do
+    case state.drag do
+      :ring ->
+        new_state = %{state | hue: hue_from_point(x - @cx, y - @cy)}
+        {:emit, :change, hsv_data(new_state), new_state}
+
+      :square ->
+        new_state = apply_sv(state, x, y)
+        {:emit, :change, hsv_data(new_state), new_state}
+
+      :none ->
+        :consumed
+    end
+  end
+
+  def handle_event(%Plushie.Event.Canvas{type: :release}, state) do
+    {:update_state, %{state | drag: :none}}
+  end
+
+  def handle_event(
+        %Plushie.Event.Widget{
+          type: :canvas_element_key_press,
+          id: element_id,
+          data: %{"key" => key, "modifiers" => mods}
+        },
+        state
+      ) do
+    handle_key(element_id, key, mods, state)
+  end
+
+  def handle_event(_, _state), do: :consumed
+
+  # -- Keyboard ----------------------------------------------------------------
+
+  defp handle_key("hue-cursor", key, mods, state) do
+    shift? = mods["shift"] || false
+    step = if shift?, do: @coarse_step, else: @fine_step
+
+    new_hue =
+      case key do
+        k when k in ~w(ArrowRight ArrowUp) -> fmod(state.hue + step, 360.0)
+        k when k in ~w(ArrowLeft ArrowDown) -> fmod(state.hue - step + 360.0, 360.0)
+        "PageUp" -> fmod(state.hue + @coarse_step, 360.0)
+        "PageDown" -> fmod(state.hue - @coarse_step + 360.0, 360.0)
+        "Home" -> 0.0
+        "End" -> 359.0
+        _ -> state.hue
+      end
+
+    if new_hue != state.hue do
+      new_state = %{state | hue: new_hue}
+      {:emit, :change, hsv_data(new_state), new_state}
+    else
+      :consumed
+    end
+  end
+
+  defp handle_key("sv-cursor", key, mods, state) do
+    shift? = mods["shift"] || false
+    step = if shift?, do: @sv_coarse_step, else: @sv_fine_step
+
+    {new_s, new_v} =
+      case key do
+        "ArrowRight" -> {clamp(state.saturation + step, 0.0, 1.0), state.value}
+        "ArrowLeft" -> {clamp(state.saturation - step, 0.0, 1.0), state.value}
+        "ArrowUp" -> {state.saturation, clamp(state.value + step, 0.0, 1.0)}
+        "ArrowDown" -> {state.saturation, clamp(state.value - step, 0.0, 1.0)}
+        "PageUp" when shift? -> {clamp(state.saturation + @sv_coarse_step, 0.0, 1.0), state.value}
+        "PageDown" when shift? -> {clamp(state.saturation - @sv_coarse_step, 0.0, 1.0), state.value}
+        "PageUp" -> {state.saturation, clamp(state.value + @sv_coarse_step, 0.0, 1.0)}
+        "PageDown" -> {state.saturation, clamp(state.value - @sv_coarse_step, 0.0, 1.0)}
+        "Home" when shift? -> {0.0, state.value}
+        "End" when shift? -> {1.0, state.value}
+        "Home" -> {state.saturation, 1.0}
+        "End" -> {state.saturation, 0.0}
+        _ -> {state.saturation, state.value}
+      end
+
+    if new_s != state.saturation or new_v != state.value do
+      new_state = %{state | saturation: new_s, value: new_v}
+      {:emit, :change, hsv_data(new_state), new_state}
+    else
+      :consumed
+    end
+  end
+
+  defp handle_key(_, _, _, _state), do: :consumed
+
+  # -- Rendering ---------------------------------------------------------------
+
+  def render(id, _props, state) do
     import Plushie.UI
+
+    hue = state.hue
+    saturation = state.saturation
+    value = state.value
 
     canvas id,
       width: @canvas_size,
@@ -71,28 +181,54 @@ defmodule ColorPickerWidget do
     end
   end
 
-  # -- Geometry accessors (for consumers doing hit testing) --------------------
+  # -- Cursors -----------------------------------------------------------------
 
-  @doc "Canvas size in pixels (square)."
-  def canvas_size, do: @canvas_size
+  defp cursor_groups(hue, saturation, value) do
+    import Plushie.UI
 
-  @doc "Centre x coordinate."
-  def cx, do: @cx
+    angle = (hue - 90) * :math.pi() / 180
+    ring_x = @cx + @mid_r * :math.cos(angle)
+    ring_y = @cy + @mid_r * :math.sin(angle)
 
-  @doc "Centre y coordinate."
-  def cy, do: @cy
+    sv_x = @sq_origin + saturation * @sq_size
+    sv_y = @sq_origin + (1.0 - value) * @sq_size
 
-  @doc "Inner radius of the hue ring."
-  def inner_r, do: @inner_r
+    cursor_stroke = Plushie.Canvas.Shape.stroke("#333333", 2)
+    focus_stroke = %{stroke: %{color: "#3b82f6", width: 3}}
 
-  @doc "Outer radius of the hue ring."
-  def outer_r, do: @outer_r
-
-  @doc "Origin (top-left x and y) of the SV square."
-  def sq_origin, do: @sq_origin
-
-  @doc "Side length of the SV square."
-  def sq_size, do: @sq_size
+    [
+      group "hue-cursor",
+        x: ring_x,
+        y: ring_y,
+        focusable: true,
+        on_click: true,
+        focus_style: focus_stroke,
+        show_focus_ring: false,
+        a11y: %{
+          role: :slider,
+          label: "Hue",
+          value: "#{round(hue)} degrees",
+          orientation: :horizontal
+        } do
+        circle(0, 0, @cursor_r, fill: "#ffffff", stroke: cursor_stroke)
+      end,
+      group "sv-cursor",
+        x: sv_x,
+        y: sv_y,
+        focusable: true,
+        on_click: true,
+        focus_style: focus_stroke,
+        show_focus_ring: false,
+        a11y: %{
+          role: :slider,
+          label: "Saturation and brightness",
+          value: "#{round(saturation * 100)}% saturation, #{round(value * 100)}% brightness",
+          orientation: :horizontal
+        } do
+        circle(0, 0, @cursor_r, fill: "#ffffff", stroke: cursor_stroke)
+      end
+    ]
+  end
 
   # -- Ring layer --------------------------------------------------------------
 
@@ -153,53 +289,32 @@ defmodule ColorPickerWidget do
     ]
   end
 
-  # -- Cursors -----------------------------------------------------------------
+  # -- Hit testing -------------------------------------------------------------
 
-  defp cursor_groups(hue, saturation, value) do
-    import Plushie.UI
+  defp in_square?(x, y) do
+    x >= @sq_origin and x <= @sq_origin + @sq_size and
+      y >= @sq_origin and y <= @sq_origin + @sq_size
+  end
 
-    angle = (hue - 90) * :math.pi() / 180
-    ring_x = @cx + @mid_r * :math.cos(angle)
-    ring_y = @cy + @mid_r * :math.sin(angle)
+  # -- Coordinate math ---------------------------------------------------------
 
-    sv_x = @sq_origin + saturation * @sq_size
-    sv_y = @sq_origin + (1.0 - value) * @sq_size
+  defp hue_from_point(dx, dy) do
+    angle = :math.atan2(dy, dx)
+    hue = angle + :math.pi() / 2
+    hue = if hue < 0, do: hue + 2 * :math.pi(), else: hue
+    hue * 180.0 / :math.pi()
+  end
 
-    cursor_stroke = Plushie.Canvas.Shape.stroke("#333333", 2)
-    focus_stroke = %{stroke: %{color: "#3b82f6", width: 3}}
+  defp apply_sv(state, x, y) do
+    s = clamp((x - @sq_origin) / @sq_size, 0.0, 1.0)
+    v = clamp(1.0 - (y - @sq_origin) / @sq_size, 0.0, 1.0)
+    %{state | saturation: s, value: v}
+  end
 
-    [
-      group "hue-cursor",
-        x: ring_x,
-        y: ring_y,
-        focusable: true,
-        on_click: true,
-        focus_style: focus_stroke,
-        show_focus_ring: false,
-        a11y: %{
-          role: :slider,
-          label: "Hue",
-          value: "#{round(hue)} degrees",
-          orientation: :horizontal
-        } do
-        circle(0, 0, @cursor_r, fill: "#ffffff", stroke: cursor_stroke)
-      end,
-      group "sv-cursor",
-        x: sv_x,
-        y: sv_y,
-        focusable: true,
-        on_click: true,
-        focus_style: focus_stroke,
-        show_focus_ring: false,
-        a11y: %{
-          role: :slider,
-          label: "Saturation and brightness",
-          value: "#{round(saturation * 100)}% saturation, #{round(value * 100)}% brightness",
-          orientation: :horizontal
-        } do
-        circle(0, 0, @cursor_r, fill: "#ffffff", stroke: cursor_stroke)
-      end
-    ]
+  defp clamp(val, lo, hi), do: max(lo, min(hi, val))
+
+  defp hsv_data(state) do
+    %{hue: state.hue, saturation: state.saturation, value: state.value}
   end
 
   # -- Color conversion --------------------------------------------------------

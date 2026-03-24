@@ -70,7 +70,16 @@ defmodule Plushie.Extension.CanvasWidget do
   @spec expand(node :: map(), module :: module(), widget_state :: map()) :: map()
   def expand(%{} = node, module, widget_state) do
     id = node[:id] || node["id"]
-    props = Map.get(node[:props] || node["props"] || %{}, @canvas_widget_props_key, %{})
+
+    # After tree normalization, runtime metadata keys (__canvas_widget_props__)
+    # are moved from :props to :meta. Check meta first, fall back to props
+    # for pre-normalization nodes.
+    meta = Map.get(node, :meta, %{})
+    node_props = node[:props] || node["props"] || %{}
+
+    props =
+      Map.get(meta, @canvas_widget_props_key) ||
+        Map.get(node_props, @canvas_widget_props_key, %{})
     rendered = module.render(id, props, widget_state)
 
     # Preserve the canvas_widget tags on the re-rendered output.
@@ -142,9 +151,12 @@ defmodule Plushie.Extension.CanvasWidget do
     end
   end
 
-  # Resolve the ID and scope for emitted events. For widget events,
-  # the canvas widget's ID is the first scope element. For non-widget
-  # events (Timer, etc.), use the explicit widget_id.
+  # Resolve the ID and scope for emitted events. For widget events
+  # (which carry scope), the canvas widget's ID is the first scope
+  # element and the remaining scope becomes the parent scope. For
+  # non-widget events (Timer, etc.) that lack scope, fall back to
+  # splitting the explicit widget_id.
+  @spec resolve_emit_identity(struct() | map(), String.t()) :: {String.t(), [String.t()]}
   defp resolve_emit_identity(%{scope: [canvas_id | parent_scope]}, _widget_id) do
     {canvas_id, parent_scope}
   end
@@ -162,6 +174,9 @@ defmodule Plushie.Extension.CanvasWidget do
     end
   end
 
+  # Ensure emitted data uses string keys (wire-compatible).
+  # Maps get their keys stringified; bare values are wrapped.
+  @spec normalize_emit_data(term()) :: map()
   defp normalize_emit_data(data) when is_map(data) do
     Map.new(data, fn {k, v} -> {to_string(k), v} end)
   end

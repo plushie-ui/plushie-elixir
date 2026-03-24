@@ -234,8 +234,13 @@ defmodule Plushie.Runtime do
     # 2-4. Render initial tree and push snapshot (old_tree is nil -> full snapshot).
     tree = render_and_sync(state.app, state.model, state.bridge, nil)
 
-    # 5. Execute initial commands.
-    state = %{state | tree: tree}
+    # 5. Sync canvas_widget registry so widgets are available for
+    # event interception from the very first interaction.
+    canvas_widgets =
+      Plushie.Runtime.CanvasWidgets.sync_registry(state.canvas_widgets, tree)
+
+    # 6. Execute initial commands.
+    state = %{state | tree: tree, canvas_widgets: canvas_widgets}
     state = Commands.execute_commands(state.init_commands, state)
     state = %{state | init_commands: []}
     state = Subscriptions.sync_subscriptions(state, state.model)
@@ -340,7 +345,8 @@ defmodule Plushie.Runtime do
   def handle_info({:renderer_event, {:interact_response, id, events}}, state) do
     state = flush_coalescables(state)
 
-    # Process any final events from the response.
+    # Process any final events from the response. Each event gets a
+    # full update cycle (intercept + update + re-render).
     state =
       Enum.reduce(events, state, fn event_map, acc ->
         case decode_interact_event(event_map) do
@@ -362,26 +368,8 @@ defmodule Plushie.Runtime do
 
   def handle_info({:renderer_event, event}, state) do
     state = flush_coalescables(state)
-
-    # Canvas widget event interception: if the event's scope matches a
-    # registered canvas_widget, route through its handle_event/2 before
-    # delivering to the app's update/2.
-    case Plushie.Runtime.CanvasWidgets.maybe_intercept(state.canvas_widgets, event) do
-      {:intercepted, nil, new_registry} ->
-        # Event consumed by widget -- no delivery to update/2.
-        {:noreply, %{state | canvas_widgets: new_registry}}
-
-      {:intercepted, transformed_event, new_registry} ->
-        # Event transformed (or passed through) -- deliver to update/2.
-        state = %{state | canvas_widgets: new_registry}
-        state = run_update(state, transformed_event)
-        {:noreply, state}
-
-      :passthrough ->
-        # Not a canvas_widget event -- standard delivery.
-        state = run_update(state, event)
-        {:noreply, state}
-    end
+    state = run_update(state, event)
+    {:noreply, state}
   end
 
   # ---------------------------------------------------------------------------
@@ -567,10 +555,11 @@ defmodule Plushie.Runtime do
       state = put_in(state.subscriptions[key], {:timer, ref})
 
       # Route canvas_widget timer ticks to the widget's handle_event
-      # instead of the app's update/2.
+      # instead of the app's update/2. Timer-triggered emits bubble
+      # through parent canvas_widgets.
       case Plushie.Runtime.CanvasWidgets.maybe_handle_timer(state.canvas_widgets, tag) do
-        {:handled, new_registry} ->
-          # Widget handled the timer internally (state update, re-render).
+        {:handled, nil, new_registry} ->
+          # Widget consumed the timer (state update, re-render only).
           state = %{state | canvas_widgets: new_registry}
 
           new_tree =
@@ -583,6 +572,13 @@ defmodule Plushie.Runtime do
             )
 
           {:noreply, %{state | tree: new_tree}}
+
+        {:handled, emitted_event, new_registry} ->
+          # Widget emitted an event (possibly after bubbling through
+          # parent canvas_widgets). Deliver to app's update/2.
+          state = %{state | canvas_widgets: new_registry}
+          state = run_update(state, emitted_event)
+          {:noreply, state}
 
         :passthrough ->
           # Standard app timer -- dispatch to update/2.
@@ -732,10 +728,10 @@ defmodule Plushie.Runtime do
   @spec render_and_sync(module(), term(), pid() | atom(), map() | nil, map()) :: map() | nil
   defp render_and_sync(app, model, bridge, old_tree, canvas_widgets \\ %{}) do
     case safe_view(app, model) do
-      {:ok, raw_tree} ->
+      {:ok, normalized_tree} ->
         # Re-render canvas_widgets with stored state so they reflect
         # current internal state, not just initial defaults.
-        new_tree = apply_canvas_widget_state(raw_tree, canvas_widgets)
+        new_tree = apply_canvas_widget_state(normalized_tree, canvas_widgets)
 
         if is_nil(old_tree) do
           # First render or after restart -- send full snapshot.
@@ -790,18 +786,65 @@ defmodule Plushie.Runtime do
       :error
   end
 
-  # Full update cycle: update -> commands -> view -> diff -> patch.
+  # ---------------------------------------------------------------------------
+  # Event pipeline
+  #
+  # Every inbound event flows through two stages:
+  #
+  # 1. **Intercept**: canvas_widget routing. Walks the event's scope
+  #    chain to find registered canvas_widgets, dispatches through
+  #    handle_event/2, bubbles emits through parents. Returns the
+  #    (possibly transformed) event to deliver, or nil if consumed.
+  #
+  # 2. **Dispatch**: model update via app.update/2, command execution,
+  #    and optionally re-rendering + tree sync.
+  #
+  # Two dispatch modes:
+  # - `run_update`: full cycle (update + commands + view + diff + patch).
+  #   Used by the normal event loop and interact_response.
+  # - `apply_event`: update + commands only, no re-render. Used by
+  #   interact_step where events are batched and a single snapshot
+  #   is sent after all events are processed.
+  # ---------------------------------------------------------------------------
+
+  # Resolve an event through canvas_widget interception. Returns
+  # `{event_or_nil, updated_state}` where event_or_nil is the event
+  # to deliver to app.update/2 (nil if consumed by a widget).
+  @spec intercept_event(state(), term()) :: {term() | nil, state()}
+  defp intercept_event(state, event) do
+    case Plushie.Runtime.CanvasWidgets.maybe_intercept(state.canvas_widgets, event) do
+      {:intercepted, nil, new_registry} ->
+        {nil, %{state | canvas_widgets: new_registry}}
+
+      {:intercepted, transformed, new_registry} ->
+        {transformed, %{state | canvas_widgets: new_registry}}
+
+      :passthrough ->
+        {event, state}
+    end
+  end
+
+  # Full update cycle: intercept -> update -> commands -> view -> diff -> patch.
   #
   # Note on sequencing: commands execute BEFORE view/1 is called. This means
   # a fast async completion would queue its result for the NEXT cycle, not
   # the current one. This is intentional -- commands are side effects that
   # happen between the model update and the re-render. Their results arrive
   # as separate events in subsequent cycles.
-  #
-  # Wraps update/2 and view/1 in try/rescue so app exceptions do not crash
-  # the runtime process.
   @spec run_update(state(), term()) :: state()
-  defp run_update(%{app: app, model: model, bridge: bridge} = state, event) do
+  defp run_update(state, event) do
+    {resolved_event, state} = intercept_event(state, event)
+
+    if is_nil(resolved_event) do
+      state
+    else
+      dispatch_update(state, resolved_event)
+    end
+  end
+
+  # Update + commands + re-render (the core dispatch path).
+  @spec dispatch_update(state(), term()) :: state()
+  defp dispatch_update(%{app: app, model: model, bridge: bridge} = state, event) do
     case safe_update(app, model, event, state.consecutive_errors) do
       {:ok, new_model, commands} ->
         state = %{state | model: new_model, consecutive_errors: 0}
@@ -822,6 +865,26 @@ defmodule Plushie.Runtime do
 
       :error ->
         %{state | consecutive_errors: state.consecutive_errors + 1}
+    end
+  end
+
+  # Intercept + update + commands, no re-render. Used by interact_step
+  # where events are batched and a single snapshot follows.
+  @spec apply_event(state(), term()) :: state()
+  defp apply_event(state, event) do
+    {resolved_event, state} = intercept_event(state, event)
+
+    if is_nil(resolved_event) do
+      state
+    else
+      case safe_update(state.app, state.model, resolved_event, state.consecutive_errors) do
+        {:ok, new_model, commands} ->
+          state = %{state | model: new_model, consecutive_errors: 0}
+          Commands.execute_commands(commands, state)
+
+        :error ->
+          %{state | consecutive_errors: state.consecutive_errors + 1}
+      end
     end
   end
 
@@ -928,18 +991,8 @@ defmodule Plushie.Runtime do
     state =
       Enum.reduce(events, state, fn event_map, acc ->
         case decode_interact_event(event_map) do
-          nil ->
-            acc
-
-          event ->
-            case safe_update(acc.app, acc.model, event, acc.consecutive_errors) do
-              {:ok, new_model, commands} ->
-                acc = %{acc | model: new_model, consecutive_errors: 0}
-                Commands.execute_commands(commands, acc)
-
-              :error ->
-                %{acc | consecutive_errors: acc.consecutive_errors + 1}
-            end
+          nil -> acc
+          event -> apply_event(acc, event)
         end
       end)
 
@@ -947,7 +1000,11 @@ defmodule Plushie.Runtime do
     case safe_view(state.app, state.model) do
       {:ok, new_tree} ->
         notify_bridge(state, &Plushie.Bridge.send_snapshot(&1, new_tree))
-        state = %{state | tree: new_tree}
+
+        canvas_widgets =
+          Plushie.Runtime.CanvasWidgets.sync_registry(state.canvas_widgets, new_tree)
+
+        state = %{state | tree: new_tree, canvas_widgets: canvas_widgets}
         state = Subscriptions.sync_subscriptions(state, state.model)
         Windows.sync_windows(state, new_tree)
 
@@ -1016,7 +1073,9 @@ defmodule Plushie.Runtime do
 
   # Walk the normalized tree and re-render any canvas_widget nodes using
   # their stored internal state instead of the initial defaults that
-  # new/2 used during view/1.
+  # new/2 used during view/1. The tree must already be normalized
+  # (scoped IDs) since the registry keys are scoped IDs.
+  @spec apply_canvas_widget_state(map() | nil, map()) :: map() | nil
   defp apply_canvas_widget_state(tree, canvas_widgets) when canvas_widgets == %{}, do: tree
   defp apply_canvas_widget_state(nil, _canvas_widgets), do: nil
 
@@ -1029,16 +1088,11 @@ defmodule Plushie.Runtime do
           node
 
         module ->
-          id = to_string(node[:id] || node["id"])
-          # The registry uses scoped IDs (from the normalized tree), but
-          # apply_canvas_widget_state runs on the raw tree where IDs aren't
-          # scoped yet. Look up by raw_id which the registry stores.
-          widget_entry =
-            Enum.find_value(canvas_widgets, fn {_scoped_id, entry} ->
-              if Map.get(entry, :raw_id) == id, do: entry
-            end)
+          # The tree is already normalized (safe_view calls Tree.normalize),
+          # so node IDs are scoped. Look up directly by scoped ID.
+          scoped_id = to_string(node[:id] || node["id"])
 
-          case widget_entry do
+          case Map.get(canvas_widgets, scoped_id) do
             %{state: widget_state} ->
               CanvasWidget.expand(node, module, widget_state)
 

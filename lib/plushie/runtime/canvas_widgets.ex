@@ -6,6 +6,23 @@ defmodule Plushie.Runtime.CanvasWidgets do
   their internal state. Intercepts events whose scope matches a registered
   canvas_widget, routes them through the widget's `handle_event/2`, and
   returns either a transformed event or a suppression signal.
+
+  ## Hierarchical bubbling
+
+  Canvas_widgets compose hierarchically. When a child canvas_widget emits
+  a semantic event, the runtime checks whether the emitted event's scope
+  contains a parent canvas_widget. If so, the parent's `handle_event/2`
+  receives the child's semantic event and can transform, consume, or pass
+  it through. Bubbling continues until no more parent canvas_widgets
+  remain in the scope chain, at which point the final event reaches
+  `app.update/2`.
+
+  ## Scoped ID reconstruction
+
+  Events carry a reversed ancestor scope list (e.g., `["picker", "form"]`
+  for a widget at `form/picker`). Registry keys are forward-order scoped
+  IDs. The interception logic reconstructs scoped IDs from the scope
+  array to find matching registry entries.
   """
 
   alias Plushie.Extension.CanvasWidget
@@ -37,10 +54,14 @@ defmodule Plushie.Runtime.CanvasWidgets do
   @doc """
   Checks if a timer event is for a canvas_widget subscription.
   If so, routes it through the widget's handle_event and returns
-  the updated registry. Otherwise returns :passthrough.
+  the result. Timer-triggered emits bubble through parent canvas_widgets.
+
+  Returns:
+  - `{:handled, event_or_nil, new_registry}` -- timer was for a canvas_widget
+  - `:passthrough` -- not a canvas_widget timer
   """
   @spec maybe_handle_timer(registry :: map(), tag :: term()) ::
-          {:handled, map()} | :passthrough
+          {:handled, struct() | nil, map()} | :passthrough
   def maybe_handle_timer(registry, {:__canvas_widget__, widget_id, inner_tag}) do
     case Map.get(registry, widget_id) do
       %{module: module, state: widget_state} ->
@@ -49,11 +70,21 @@ defmodule Plushie.Runtime.CanvasWidgets do
           timestamp: System.monotonic_time(:millisecond)
         }
 
-        {_action, new_state} =
+        {action, new_state} =
           CanvasWidget.dispatch_event(module, timer_event, widget_state, widget_id)
 
         new_registry = put_in(registry, [widget_id, :state], new_state)
-        {:handled, new_registry}
+
+        case action do
+          {:emit, transformed} ->
+            bubble(new_registry, transformed)
+
+          :consumed ->
+            {:handled, nil, new_registry}
+
+          :passthrough ->
+            {:handled, nil, new_registry}
+        end
 
       nil ->
         :passthrough
@@ -127,32 +158,104 @@ defmodule Plushie.Runtime.CanvasWidgets do
   @doc """
   Checks if an event should be intercepted by a canvas_widget.
 
-  If the event's immediate scope parent is a registered canvas_widget,
-  dispatches through the widget's handle_event/2. Returns:
+  Walks the event's scope from innermost to outermost, looking for
+  the first registered canvas_widget. If found, dispatches through
+  the widget's `handle_event/2`. Emitted events bubble up through
+  parent canvas_widgets in the scope chain.
+
+  Returns:
   - `{:intercepted, transformed_event_or_nil, new_registry}` -- event was handled
-  - `:passthrough` -- event is not for a canvas_widget
+  - `:passthrough` -- no canvas_widget in scope
   """
   @spec maybe_intercept(registry :: map(), event :: struct()) ::
           {:intercepted, struct() | nil, map()} | :passthrough
-  def maybe_intercept(registry, event) do
-    with %{scope: [parent_id | _]} <- event,
-         %{module: module, state: widget_state} <- Map.get(registry, parent_id) do
-      {action, new_state} = CanvasWidget.dispatch_event(module, event, widget_state, parent_id)
+  def maybe_intercept(registry, event) when is_map(event) do
+    case Map.get(event, :scope, []) do
+      [] ->
+        :passthrough
 
-      new_registry = put_in(registry, [parent_id, :state], new_state)
+      scope ->
+        case find_innermost_widget(registry, scope) do
+          nil ->
+            :passthrough
 
-      case action do
-        {:emit, transformed_event} ->
-          {:intercepted, transformed_event, new_registry}
+          {scoped_id, %{module: module, state: widget_state}} ->
+            {action, new_state} =
+              CanvasWidget.dispatch_event(module, event, widget_state, scoped_id)
 
-        :consumed ->
-          {:intercepted, nil, new_registry}
+            new_registry = put_in(registry, [scoped_id, :state], new_state)
 
-        :passthrough ->
-          {:intercepted, event, new_registry}
-      end
-    else
-      _ -> :passthrough
+            case action do
+              {:emit, transformed} ->
+                bubble(new_registry, transformed)
+
+              :consumed ->
+                {:intercepted, nil, new_registry}
+
+              :passthrough ->
+                {:intercepted, event, new_registry}
+            end
+        end
+    end
+  end
+
+  def maybe_intercept(_registry, _event), do: :passthrough
+
+  # Bubble an emitted event up through parent canvas_widgets.
+  # Stops when no more canvas_widgets are found in scope, or when
+  # a parent consumes or passes through. Returns the same shape
+  # as maybe_intercept: {:intercepted, event_or_nil, registry}.
+  @spec bubble(map(), struct()) :: {:intercepted, struct() | nil, map()}
+  defp bubble(registry, event) do
+    case Map.get(event, :scope, []) do
+      [] ->
+        {:intercepted, event, registry}
+
+      scope ->
+        case find_innermost_widget(registry, scope) do
+          nil ->
+            {:intercepted, event, registry}
+
+          {scoped_id, %{module: module, state: widget_state}} ->
+            {action, new_state} =
+              CanvasWidget.dispatch_event(module, event, widget_state, scoped_id)
+
+            new_registry = put_in(registry, [scoped_id, :state], new_state)
+
+            case action do
+              {:emit, transformed} ->
+                bubble(new_registry, transformed)
+
+              :consumed ->
+                {:intercepted, nil, new_registry}
+
+              :passthrough ->
+                {:intercepted, event, new_registry}
+            end
+        end
+    end
+  end
+
+  # Find the innermost canvas_widget in a scope chain.
+  # The scope is a reversed ancestor list: ["picker", "form", "page"].
+  # We reconstruct scoped IDs starting from the innermost ancestor
+  # and work outward until we find one in the registry.
+  #
+  # For scope ["picker", "form", "page"]:
+  #   try "page/form/picker", then "page/form", then "page"
+  defp find_innermost_widget(registry, scope) do
+    forward = Enum.reverse(scope)
+    find_innermost_widget(registry, forward, length(forward))
+  end
+
+  defp find_innermost_widget(_registry, _forward, 0), do: nil
+
+  defp find_innermost_widget(registry, forward, n) do
+    scoped_id = forward |> Enum.take(n) |> Enum.join("/")
+
+    case Map.get(registry, scoped_id) do
+      nil -> find_innermost_widget(registry, forward, n - 1)
+      entry -> {scoped_id, entry}
     end
   end
 
