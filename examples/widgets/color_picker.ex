@@ -5,14 +5,20 @@ defmodule ColorPickerWidget do
   Renders a hue ring surrounding a saturation/value square. The ring is built
   from path segments covering the hue spectrum. The SV square uses overlapping
   linear gradients (hue-to-white horizontal, transparent-to-black vertical).
-  Cursor circles mark the current hue position on the ring and the current
-  SV position in the square.
+  Focusable cursor groups mark the current hue position on the ring and the
+  current SV position in the square.
 
       ColorPickerWidget.render("picker", model.hue, model.saturation, model.value)
 
-  Events: `Plushie.Event.Canvas` with `type: :press`, `:move`, and `:release`.
+  Mouse events: `Plushie.Event.Canvas` with `type: :press`, `:move`, `:release`.
   The canvas reports absolute x/y coordinates so the consuming app can compute
   hue angles and SV positions from the geometry constants.
+
+  Keyboard events: the cursor groups are focusable interactive elements. The
+  canvas uses `arrow_mode: "none"` so arrow keys propagate to the app via
+  `Subscription.on_key_press/1`. The app tracks focus via
+  `canvas_element_focused`/`canvas_element_blurred` widget events and adjusts
+  hue/saturation/value in response to arrow keys.
   """
 
   import Plushie.Canvas.Shape, only: [move_to: 2, line_to: 2, close: 0]
@@ -34,10 +40,6 @@ defmodule ColorPickerWidget do
   Renders the color picker canvas.
 
   Returns a canvas node with interactive hue ring and SV square.
-
-  ## Options
-
-  - No options currently defined; reserved for future use.
   """
   def render(id, hue, saturation, value, _opts \\ []) do
     import Plushie.UI
@@ -47,7 +49,10 @@ defmodule ColorPickerWidget do
       height: @canvas_size,
       on_press: true,
       on_release: true,
-      on_move: true do
+      on_move: true,
+      arrow_mode: "none",
+      alt: "HSV color picker",
+      description: "Drag the ring to select a hue, drag the square to adjust saturation and value. Tab to focus cursors, use arrow keys to adjust." do
       layer "a_ring" do
         ring_shapes()
       end
@@ -61,7 +66,7 @@ defmodule ColorPickerWidget do
       end
 
       layer "d_cursors" do
-        cursor_shapes(hue, saturation, value)
+        cursor_groups(hue, saturation, value)
       end
     end
   end
@@ -150,8 +155,8 @@ defmodule ColorPickerWidget do
 
   # -- Cursors -----------------------------------------------------------------
 
-  defp cursor_shapes(hue, saturation, value) do
-    alias Plushie.Canvas.Shape
+  defp cursor_groups(hue, saturation, value) do
+    import Plushie.UI
 
     angle = (hue - 90) * :math.pi() / 180
     ring_x = @cx + @mid_r * :math.cos(angle)
@@ -160,11 +165,40 @@ defmodule ColorPickerWidget do
     sv_x = @sq_origin + saturation * @sq_size
     sv_y = @sq_origin + (1.0 - value) * @sq_size
 
-    cursor_stroke = Shape.stroke("#333333", 2)
+    cursor_stroke = Plushie.Canvas.Shape.stroke("#333333", 2)
+    focus_stroke = %{stroke: %{color: "#3b82f6", width: 3}}
 
     [
-      Shape.circle(ring_x, ring_y, @cursor_r, fill: "#ffffff", stroke: cursor_stroke),
-      Shape.circle(sv_x, sv_y, @cursor_r, fill: "#ffffff", stroke: cursor_stroke)
+      group "hue-cursor",
+        x: ring_x,
+        y: ring_y,
+        focusable: true,
+        on_click: true,
+        focus_style: focus_stroke,
+        show_focus_ring: false,
+        a11y: %{
+          role: :slider,
+          label: "Hue",
+          value: "#{round(hue)} degrees",
+          orientation: :horizontal
+        } do
+        circle(0, 0, @cursor_r, fill: "#ffffff", stroke: cursor_stroke)
+      end,
+      group "sv-cursor",
+        x: sv_x,
+        y: sv_y,
+        focusable: true,
+        on_click: true,
+        focus_style: focus_stroke,
+        show_focus_ring: false,
+        a11y: %{
+          role: :slider,
+          label: "Saturation and brightness",
+          value: "#{round(saturation * 100)}% saturation, #{round(value * 100)}% brightness",
+          orientation: :horizontal
+        } do
+        circle(0, 0, @cursor_r, fill: "#ffffff", stroke: cursor_stroke)
+      end
     ]
   end
 
