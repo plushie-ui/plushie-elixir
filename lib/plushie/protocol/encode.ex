@@ -223,6 +223,47 @@ defmodule Plushie.Protocol.Encode do
     serialize(%{type: "window_op", op: op, window_id: window_id, settings: settings}, format)
   end
 
+  @doc """
+  Encodes an interact request as a protocol message.
+
+  The renderer will process the interaction (click, type_text, etc.) against
+  its widget tree and respond with `interact_step` / `interact_response`
+  messages containing the resulting events.
+
+  ## Parameters
+
+  - `id` -- unique request identifier for correlating responses.
+  - `action` -- the interaction verb (e.g. `"click"`, `"type_text"`).
+    See `Plushie.Bridge.send_interact/5` for the full list.
+  - `selector` -- target widget lookup map. Example:
+    `%{"by" => "id", "value" => "form/email"}`.
+  - `payload` -- action-specific data map. Example:
+    `%{"text" => "hello"}` for `"type_text"`.
+
+  ## Examples
+
+      iex> iodata = Plushie.Protocol.Encode.encode_interact("req-1", "click", %{"by" => "id", "value" => "btn"}, %{}, :json)
+      iex> Jason.decode!(IO.iodata_to_binary(iodata))["action"]
+      "click"
+
+      iex> iodata = Plushie.Protocol.Encode.encode_interact("req-2", "type_text", %{"by" => "id", "value" => "input"}, %{"text" => "hi"}, :json)
+      iex> Jason.decode!(IO.iodata_to_binary(iodata))["payload"]
+      %{"text" => "hi"}
+  """
+  @spec encode_interact(
+          id :: String.t(),
+          action :: String.t(),
+          selector :: map(),
+          payload :: map(),
+          format :: Plushie.Protocol.format()
+        ) :: iodata()
+  def encode_interact(id, action, selector, payload, format \\ :msgpack) do
+    serialize(
+      %{type: "interact", id: id, action: action, selector: selector, payload: payload},
+      format
+    )
+  end
+
   @doc "Encodes an advance_frame message for headless/test mode."
   @spec encode_advance_frame(
           timestamp :: non_neg_integer(),
@@ -237,11 +278,17 @@ defmodule Plushie.Protocol.Encode do
   # ---------------------------------------------------------------------------
 
   @doc false
-  def serialize(map, format) do
+  def serialize(map, format, session \\ "") do
     # Every wire message carries a session field. Default to empty
     # string (single-session mode). Multiplexed callers set the
-    # session before encoding.
-    map = Map.put_new(map, :session, "")
+    # session before encoding. When an explicit session is given,
+    # it overrides any existing value.
+    map =
+      if session == "" do
+        Map.put_new(map, :session, "")
+      else
+        Map.put(map, :session, session)
+      end
 
     case format do
       :json -> Jason.encode!(map) <> "\n"

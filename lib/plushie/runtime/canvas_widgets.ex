@@ -60,6 +60,15 @@ defmodule Plushie.Runtime.CanvasWidgets do
 
   def maybe_handle_timer(_registry, _tag), do: :passthrough
 
+  # Extract the local (un-scoped) ID from a scoped path.
+  # "page/form/stars" → "stars"
+  defp raw_id(scoped_id) do
+    case String.split(scoped_id, "/") do
+      [local] -> local
+      parts -> List.last(parts)
+    end
+  end
+
   defp namespace_subscription(spec, widget_id) do
     Plushie.Subscription.map_tag(spec, fn tag ->
       {:__canvas_widget__, widget_id, tag}
@@ -100,15 +109,14 @@ defmodule Plushie.Runtime.CanvasWidgets do
     # Initialize state for new widgets
     new_entries =
       for {id, module} <- current, not Map.has_key?(registry, id), into: %{} do
-        {id, %{module: module, state: module.__initial_state__()}}
+        {id, %{module: module, state: module.__initial_state__(), raw_id: raw_id(id)}}
       end
 
     # Preserve state for existing widgets
     kept =
       for {id, module} <- current, Map.has_key?(registry, id), into: %{} do
         existing = Map.get(registry, id)
-        # Module might have changed if widget type swapped (rare)
-        {id, %{existing | module: module}}
+        {id, %{existing | module: module, raw_id: raw_id(id)}}
       end
 
     Map.merge(new_entries, kept)

@@ -167,6 +167,8 @@ defmodule Plushie.Protocol.Decode do
 
   defp dispatch(%{"type" => "event", "family" => "click", "id" => id} = msg) do
     {local, scope} = split_scoped_id(id)
+    # data is nil for standard widget clicks, populated for canvas
+    # element clicks (which carry button, x, y coordinates).
     %Widget{type: :click, id: local, scope: scope, data: msg["data"]}
   end
 
@@ -970,6 +972,20 @@ defmodule Plushie.Protocol.Decode do
       data: msg["data"],
       value: msg["value"]
     }
+  end
+
+  # -- Interact protocol (test/headless mode) --
+
+  # interact_step: intermediate batch of events from a renderer interaction.
+  # The runtime processes these events and sends back an updated snapshot.
+  defp dispatch(%{"type" => "interact_step", "id" => id, "events" => events}) do
+    {:interact_step, id, events}
+  end
+
+  # interact_response: final completion signal for an interaction.
+  # Carries any remaining events produced by the last step.
+  defp dispatch(%{"type" => "interact_response", "id" => id} = msg) do
+    {:interact_response, id, msg["events"] || []}
   end
 
   defp dispatch(msg) do

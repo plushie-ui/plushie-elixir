@@ -121,13 +121,16 @@ defmodule Plushie do
     format = Keyword.get(opts, :format, :msgpack)
     log_level = Keyword.get(opts, :log_level, :error)
 
+    session_id = Keyword.get(opts, :session_id, "")
+
     bridge_opts =
       [
         runtime: runtime_name(name),
         name: bridge_name(name),
         transport: transport,
         format: format,
-        log_level: log_level
+        log_level: log_level,
+        session_id: session_id
       ]
       |> then(fn opts ->
         if binary_path do
@@ -205,6 +208,12 @@ defmodule Plushie do
       :error -> Keyword.put_new(opts, :instance_name, __MODULE__)
     end
   end
+
+  @doc "Returns the registered name of the runtime for the given instance."
+  def runtime_for(instance_name \\ __MODULE__), do: runtime_name(instance_name)
+
+  @doc "Returns the registered name of the bridge for the given instance."
+  def bridge_for(instance_name \\ __MODULE__), do: bridge_name(instance_name)
 
   defp sup_name(instance_name), do: :"#{instance_name}.Supervisor"
   defp runtime_name(instance_name), do: :"#{instance_name}.Runtime"

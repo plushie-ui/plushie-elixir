@@ -39,7 +39,8 @@ defmodule Plushie.Runtime do
         pending_timers:     %{term() => reference()},
         pending_coalesce:   %{term() => Plushie.Event.t()},
         coalesce_timer:     reference() | nil,
-        consecutive_errors: non_neg_integer()
+        consecutive_errors: non_neg_integer(),
+        pending_interact:   {GenServer.from(), String.t()} | nil
       }
 
   ## Exit trapping
@@ -71,7 +72,8 @@ defmodule Plushie.Runtime do
             pending_coalesce: %{},
             coalesce_timer: nil,
             consecutive_errors: 0,
-            canvas_widgets: %{}
+            canvas_widgets: %{},
+            pending_interact: nil
 
   @typep state :: %__MODULE__{
            app: module(),
@@ -94,7 +96,8 @@ defmodule Plushie.Runtime do
            consecutive_errors: non_neg_integer(),
            canvas_widgets: %{
              String.t() => %{module: module(), state: map()}
-           }
+           },
+           pending_interact: {GenServer.from(), String.t()} | nil
          }
 
   # ---------------------------------------------------------------------------
@@ -128,6 +131,43 @@ defmodule Plushie.Runtime do
   def dispatch(runtime, event) do
     send(runtime, {:renderer_event, event})
     :ok
+  end
+
+  @doc "Returns the current app model synchronously."
+  @spec get_model(GenServer.server()) :: term()
+  def get_model(runtime) do
+    GenServer.call(runtime, :get_model)
+  end
+
+  @doc "Returns the current normalized UI tree synchronously."
+  @spec get_tree(GenServer.server()) :: map() | nil
+  def get_tree(runtime) do
+    GenServer.call(runtime, :get_tree)
+  end
+
+  @doc """
+  Performs a synchronous interact via the renderer.
+
+  Sends an interact request (e.g. click, type_text) to the renderer, which
+  processes it against its widget tree and sends back events. The runtime
+  processes those events through `update/2` and re-renders. Blocks until
+  the renderer signals completion.
+  """
+  @spec interact(GenServer.server(), String.t(), map(), map(), timeout()) :: :ok
+  def interact(runtime, action, selector, payload \\ %{}, timeout \\ 10_000) do
+    GenServer.call(runtime, {:interact, action, selector, payload}, timeout)
+  end
+
+  @doc "Finds a node in the current tree by ID."
+  @spec find_node(GenServer.server(), String.t()) :: map() | nil
+  def find_node(runtime, id) do
+    GenServer.call(runtime, {:find_node, id})
+  end
+
+  @doc "Finds a node in the current tree using a predicate function."
+  @spec find_node_by(GenServer.server(), (map() -> boolean())) :: map() | nil
+  def find_node_by(runtime, fun) do
+    GenServer.call(runtime, {:find_node_by, fun})
   end
 
   # ---------------------------------------------------------------------------
@@ -190,6 +230,34 @@ defmodule Plushie.Runtime do
   end
 
   # ---------------------------------------------------------------------------
+  # Synchronous queries
+  # ---------------------------------------------------------------------------
+
+  @impl true
+  def handle_call(:get_model, _from, state) do
+    {:reply, state.model, state}
+  end
+
+  def handle_call(:get_tree, _from, state) do
+    {:reply, state.tree, state}
+  end
+
+  def handle_call({:find_node, id}, _from, state) do
+    {:reply, Plushie.Tree.find(state.tree, id), state}
+  end
+
+  def handle_call({:find_node_by, fun}, _from, state) do
+    result = Plushie.Tree.find_all(state.tree, fun) |> List.first()
+    {:reply, result, state}
+  end
+
+  def handle_call({:interact, action, selector, payload}, from, state) do
+    id = "interact_#{:erlang.unique_integer([:positive])}"
+    Plushie.Bridge.send_interact(state.bridge, id, action, selector, payload)
+    {:noreply, %{state | pending_interact: {from, id}}}
+  end
+
+  # ---------------------------------------------------------------------------
   # Renderer events (the main update loop)
   # ---------------------------------------------------------------------------
 
@@ -233,6 +301,38 @@ defmodule Plushie.Runtime do
 
   def handle_info({:renderer_event, %Sensor{type: :resize} = event}, state) do
     {:noreply, store_coalescable(state, {:sensor_resize, event.id}, event)}
+  end
+
+  # Interact protocol: the renderer sends intermediate event batches during
+  # an interact request. All events in a step came from one atomic iced event
+  # and the renderer expects exactly one snapshot back.
+  def handle_info({:renderer_event, {:interact_step, _id, events}}, state) do
+    state = flush_coalescables(state)
+    state = run_interact_step(state, events)
+    {:noreply, state}
+  end
+
+  def handle_info({:renderer_event, {:interact_response, id, events}}, state) do
+    state = flush_coalescables(state)
+
+    # Process any final events from the response.
+    state =
+      Enum.reduce(events, state, fn event_map, acc ->
+        case decode_interact_event(event_map) do
+          nil -> acc
+          event -> run_update(acc, event)
+        end
+      end)
+
+    # Reply to the blocked caller.
+    case state.pending_interact do
+      {from, ^id} ->
+        GenServer.reply(from, :ok)
+        {:noreply, %{state | pending_interact: nil}}
+
+      _ ->
+        {:noreply, state}
+    end
   end
 
   def handle_info({:renderer_event, event}, state) do
@@ -792,6 +892,54 @@ defmodule Plushie.Runtime do
   end
 
   # ---------------------------------------------------------------------------
+  # Interact protocol helpers
+  # ---------------------------------------------------------------------------
+
+  # Processes an interact_step batch: decode each event, run through update/2
+  # without sending intermediate patches, then send a single full snapshot.
+  # The renderer expects exactly one snapshot per interact_step.
+  defp run_interact_step(state, events) do
+    state =
+      Enum.reduce(events, state, fn event_map, acc ->
+        case decode_interact_event(event_map) do
+          nil ->
+            acc
+
+          event ->
+            case safe_update(acc.app, acc.model, event, acc.consecutive_errors) do
+              {:ok, new_model, commands} ->
+                acc = %{acc | model: new_model, consecutive_errors: 0}
+                Commands.execute_commands(commands, acc)
+
+              :error ->
+                %{acc | consecutive_errors: acc.consecutive_errors + 1}
+            end
+        end
+      end)
+
+    # Re-render and send a full snapshot (not a patch).
+    case safe_view(state.app, state.model) do
+      {:ok, new_tree} ->
+        notify_bridge(state, &Plushie.Bridge.send_snapshot(&1, new_tree))
+        state = %{state | tree: new_tree}
+        state = Subscriptions.sync_subscriptions(state, state.model)
+        Windows.sync_windows(state, new_tree)
+
+      :error ->
+        state
+    end
+  end
+
+  # Decodes a wire-format event map from an interact_step/interact_response
+  # into an Elixir event struct. Uses the test backend's EventDecoder which
+  # handles the same wire format.
+  defp decode_interact_event(%{"family" => family, "id" => id} = event_map) do
+    Plushie.Test.Backend.EventDecoder.decode(family, id, event_map)
+  end
+
+  defp decode_interact_event(_), do: nil
+
+  # ---------------------------------------------------------------------------
   # Coalescable event helpers
   # ---------------------------------------------------------------------------
 
@@ -844,13 +992,14 @@ defmodule Plushie.Runtime do
           node
 
         module ->
-          id = node[:id] || node["id"]
-          # Look up by raw id first, then by any scoped id in the registry.
+          id = to_string(node[:id] || node["id"])
+          # The registry uses scoped IDs (from the normalized tree), but
+          # apply_canvas_widget_state runs on the raw tree where IDs aren't
+          # scoped yet. Look up by raw_id which the registry stores.
           widget_entry =
-            Map.get(canvas_widgets, id) ||
-              Enum.find_value(canvas_widgets, fn {reg_id, entry} ->
-                if String.ends_with?(reg_id, "/#{id}") or reg_id == id, do: entry
-              end)
+            Enum.find_value(canvas_widgets, fn {_scoped_id, entry} ->
+              if Map.get(entry, :raw_id) == id, do: entry
+            end)
 
           case widget_entry do
             %{state: widget_state} ->

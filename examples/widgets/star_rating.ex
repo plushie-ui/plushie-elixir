@@ -28,18 +28,23 @@ defmodule StarRating do
 
   # -- Event transformation ----------------------------------------------------
 
+  # Click on a star -> emit :select with the 1-based star number.
   def handle_event(%Plushie.Event.Widget{type: :click, id: "star-" <> n}, _state) do
     {:emit, :select, String.to_integer(n) + 1}
   end
 
+  # Hover enter on a star -> update internal hover state for preview highlight.
   def handle_event(%Plushie.Event.Widget{type: :canvas_element_enter, id: "star-" <> n}, state) do
     {:update_state, %{state | hover: String.to_integer(n) + 1}}
   end
 
+  # Hover leave -> clear preview highlight.
   def handle_event(%Plushie.Event.Widget{type: :canvas_element_leave}, state) do
     {:update_state, %{state | hover: nil}}
   end
 
+  # All other events (focus, key, etc.) are consumed -- StarRating only
+  # surfaces :select to the parent app.
   def handle_event(_, _state), do: :consumed
 
   # -- Rendering ---------------------------------------------------------------

@@ -24,16 +24,20 @@ defmodule ThemeToggle do
 
   # -- Event transformation ----------------------------------------------------
 
+  # Click on the switch group -> emit :toggle with the new boolean state
+  # and flip the animation target so the thumb starts moving.
   def handle_event(%Plushie.Event.Widget{type: :click, id: "switch"}, state) do
     new_target = if state.target == 0.0, do: 1.0, else: 0.0
     {:emit, :toggle, new_target >= 0.5, %{state | target: new_target}}
   end
 
+  # Animation tick -> step progress toward the target value.
   def handle_event(%Plushie.Event.Timer{tag: :animate}, state) do
     new_progress = approach(state.progress, state.target, 0.06)
     {:update_state, %{state | progress: new_progress}}
   end
 
+  # All other events consumed -- ThemeToggle only surfaces :toggle.
   def handle_event(_, _state), do: :consumed
 
   # -- Widget-scoped subscriptions ---------------------------------------------

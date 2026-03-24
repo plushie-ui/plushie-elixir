@@ -144,8 +144,17 @@ defmodule Plushie.Extension.CanvasWidget do
   # (the scope parent), not the element that triggered the event.
   defp event_source_id(event) do
     case event do
-      %{scope: [canvas_id | _]} -> canvas_id
-      %{id: id} -> id
+      %{scope: [canvas_id | _]} ->
+        canvas_id
+
+      %{scope: []} ->
+        # No scope: the widget is at root level (not inside a named
+        # container), so the event's own ID is the canvas widget ID.
+        event.id
+
+      %{id: id} ->
+        # Non-widget events (Timer, System, etc.) have no scope field.
+        id
     end
   end
 

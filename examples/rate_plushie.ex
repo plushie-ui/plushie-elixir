@@ -50,6 +50,10 @@ defmodule RatePlushie do
   def update(model, event) do
     alias Plushie.Event.Widget
 
+    # StarRating and ThemeToggle are canvas_widgets that emit semantic
+    # events. The widget ID is un-scoped here because they're direct
+    # children of the page container (named containers scope their
+    # children, but the events carry the widget's own ID).
     case event do
       # Star rating emits :select with the number of stars.
       %Widget{type: :select, id: "stars", data: %{"value" => stars}} ->

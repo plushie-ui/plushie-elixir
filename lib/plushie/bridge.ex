@@ -179,6 +179,48 @@ defmodule Plushie.Bridge do
     GenServer.cast(bridge, {:send_extension_commands, commands})
   end
 
+  @doc """
+  Sends an interact request to the renderer.
+
+  The renderer will process the interaction against its widget tree and
+  respond with `interact_step` / `interact_response` messages. These are
+  forwarded to the runtime as `{:interact_step, id, events}` and
+  `{:interact_response, id, events}`.
+
+  ## Parameters
+
+  - `id` -- unique request identifier, used to correlate responses.
+  - `action` -- the interaction verb. One of: `"click"`, `"toggle"`,
+    `"select"`, `"type_text"`, `"submit"`, `"press"`, `"release"`,
+    `"type_key"`, `"slide"`, `"paste"`, `"scroll"`, `"move_to"`,
+    `"sort"`, `"canvas_press"`, `"canvas_release"`, `"canvas_move"`,
+    `"pane_focus_cycle"`.
+  - `selector` -- a map identifying the target widget. Keys are
+    optional and include `"by"` (e.g. `"id"`, `"text"`, `"role"`,
+    `"label"`, `"focused"`) and `"value"` (the lookup value). An
+    empty map targets the focused widget or the window root.
+  - `payload` -- action-specific data. Examples:
+    - `%{text: "hello"}` for `"type_text"` / `"paste"`
+    - `%{value: "option"}` for `"select"`
+    - `%{value: 0.5}` for `"slide"`
+    - `%{key: "Enter", modifiers: %{}}` for `"press"` / `"release"` / `"type_key"`
+    - `%{x: 10, y: 20, button: "left"}` for `"canvas_press"` / `"canvas_release"`
+    - `%{x: 10, y: 20}` for `"canvas_move"` / `"move_to"`
+    - `%{delta_x: 0, delta_y: -3}` for `"scroll"`
+    - `%{column: "name", direction: "asc"}` for `"sort"`
+    - `%{}` for `"click"`, `"toggle"`, `"submit"`, `"pane_focus_cycle"`
+  """
+  @spec send_interact(
+          bridge :: GenServer.server(),
+          id :: String.t(),
+          action :: String.t(),
+          selector :: map(),
+          payload :: map()
+        ) :: :ok
+  def send_interact(bridge, id, action, selector, payload \\ %{}) do
+    GenServer.cast(bridge, {:send_interact, id, action, selector, payload})
+  end
+
   @doc "Sends an advance_frame message to the renderer (headless/test mode)."
   @spec send_advance_frame(bridge :: GenServer.server(), timestamp :: non_neg_integer()) :: :ok
   def send_advance_frame(bridge, timestamp) do
@@ -207,7 +249,8 @@ defmodule Plushie.Bridge do
     :max_restarts,
     :restart_count,
     :restart_delay,
-    :iostream_ref
+    :iostream_ref,
+    session_id: ""
   ]
 
   # ---------------------------------------------------------------------------
@@ -239,7 +282,8 @@ defmodule Plushie.Bridge do
       renderer_args: Keyword.get(opts, :renderer_args, []),
       max_restarts: Keyword.get(opts, :max_restarts, 5),
       restart_count: 0,
-      restart_delay: Keyword.get(opts, :restart_delay, 100)
+      restart_delay: Keyword.get(opts, :restart_delay, 100),
+      session_id: Keyword.get(opts, :session_id, "")
     }
 
     case open_port(state) do
@@ -250,74 +294,82 @@ defmodule Plushie.Bridge do
 
   @impl true
   def handle_cast({:send_settings, settings}, state) do
-    data = Plushie.Protocol.encode_settings(settings, state.format)
-    send_data(state, data)
+    encode_and_send(state, fn fmt -> Plushie.Protocol.encode_settings(settings, fmt) end)
     {:noreply, state}
   end
 
   def handle_cast({:send_snapshot, tree}, state) do
-    data = Plushie.Protocol.encode_snapshot(tree, state.format)
-    send_data(state, data)
+    encode_and_send(state, fn fmt -> Plushie.Protocol.encode_snapshot(tree, fmt) end)
     {:noreply, state}
   end
 
   def handle_cast({:send_patch, ops}, state) do
-    data = Plushie.Protocol.encode_patch(ops, state.format)
-    send_data(state, data)
+    encode_and_send(state, fn fmt -> Plushie.Protocol.encode_patch(ops, fmt) end)
     {:noreply, state}
   end
 
   def handle_cast({:send_effect, id, kind, payload}, state) do
-    data = Plushie.Protocol.encode_effect(id, kind, payload, state.format)
-    send_data(state, data)
+    encode_and_send(state, fn fmt -> Plushie.Protocol.encode_effect(id, kind, payload, fmt) end)
     {:noreply, state}
   end
 
   def handle_cast({:send_widget_op, op, payload}, state) do
-    data = Plushie.Protocol.encode_widget_op(op, payload, state.format)
-    send_data(state, data)
+    encode_and_send(state, fn fmt -> Plushie.Protocol.encode_widget_op(op, payload, fmt) end)
     {:noreply, state}
   end
 
   def handle_cast({:send_subscribe, kind, tag, max_rate}, state) do
-    data = Plushie.Protocol.encode_subscribe(kind, tag, state.format, max_rate)
-    send_data(state, data)
+    encode_and_send(state, fn fmt ->
+      Plushie.Protocol.encode_subscribe(kind, tag, fmt, max_rate)
+    end)
+
     {:noreply, state}
   end
 
   def handle_cast({:send_unsubscribe, kind}, state) do
-    data = Plushie.Protocol.encode_unsubscribe(kind, state.format)
-    send_data(state, data)
+    encode_and_send(state, fn fmt -> Plushie.Protocol.encode_unsubscribe(kind, fmt) end)
     {:noreply, state}
   end
 
   def handle_cast({:send_window_op, op, window_id, settings}, state) do
-    data = Plushie.Protocol.encode_window_op(op, window_id, settings, state.format)
-    send_data(state, data)
+    encode_and_send(state, fn fmt ->
+      Plushie.Protocol.encode_window_op(op, window_id, settings, fmt)
+    end)
+
     {:noreply, state}
   end
 
   def handle_cast({:send_image_op, op, payload}, state) do
-    data = Plushie.Protocol.encode_image_op(op, payload, state.format)
-    send_data(state, data)
+    encode_and_send(state, fn fmt -> Plushie.Protocol.encode_image_op(op, payload, fmt) end)
     {:noreply, state}
   end
 
   def handle_cast({:send_extension_command, node_id, op, payload}, state) do
-    data = Plushie.Protocol.encode_extension_command(node_id, op, payload, state.format)
-    send_data(state, data)
+    encode_and_send(state, fn fmt ->
+      Plushie.Protocol.encode_extension_command(node_id, op, payload, fmt)
+    end)
+
     {:noreply, state}
   end
 
   def handle_cast({:send_extension_commands, commands}, state) do
-    data = Plushie.Protocol.encode_extension_commands(commands, state.format)
-    send_data(state, data)
+    encode_and_send(state, fn fmt ->
+      Plushie.Protocol.encode_extension_commands(commands, fmt)
+    end)
+
+    {:noreply, state}
+  end
+
+  def handle_cast({:send_interact, id, action, selector, payload}, state) do
+    encode_and_send(state, fn fmt ->
+      Plushie.Protocol.encode_interact(id, action, selector, payload, fmt)
+    end)
+
     {:noreply, state}
   end
 
   def handle_cast({:send_advance_frame, timestamp}, state) do
-    data = Plushie.Protocol.encode_advance_frame(timestamp, state.format)
-    send_data(state, data)
+    encode_and_send(state, fn fmt -> Plushie.Protocol.encode_advance_frame(timestamp, fmt) end)
     {:noreply, state}
   end
 
@@ -431,6 +483,40 @@ defmodule Plushie.Bridge do
   # ---------------------------------------------------------------------------
   # Private helpers
   # ---------------------------------------------------------------------------
+
+  # Encodes a protocol message and sends it via the transport. When
+  # session_id is set (multiplexed mode), the message is re-serialized
+  # with the session field injected.
+  defp encode_and_send(%{session_id: ""} = state, encode_fn) do
+    data = encode_fn.(state.format)
+    send_data(state, data)
+  end
+
+  defp encode_and_send(state, encode_fn) do
+    # Multiplexed mode: encode with the default empty session first,
+    # then decode, inject session_id, and re-encode. This is only used
+    # by the test pool adapter where the overhead is negligible.
+    data = encode_fn.(state.format)
+
+    binary = IO.iodata_to_binary(data)
+
+    case deserialize(binary, state.format) do
+      {:ok, map} ->
+        map = Map.put(map, "session", state.session_id)
+        reencoded = reserialize(map, state.format)
+        send_data(state, reencoded)
+
+      {:error, _} ->
+        # Fallback: send without session injection
+        send_data(state, data)
+    end
+  end
+
+  defp deserialize(data, :json), do: Jason.decode(data)
+  defp deserialize(data, :msgpack), do: Msgpax.unpack(data)
+
+  defp reserialize(map, :json), do: Jason.encode!(map) <> "\n"
+  defp reserialize(map, :msgpack), do: Msgpax.pack!(map)
 
   defp open_port(%{transport: {:iostream, io_pid}} = state) do
     ref = Process.monitor(io_pid)

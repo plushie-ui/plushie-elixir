@@ -198,6 +198,22 @@ defmodule Plushie.Protocol do
   defdelegate encode_window_op(op, window_id, settings, format \\ :msgpack),
     to: Plushie.Protocol.Encode
 
+  @doc """
+  Encodes an interact request as a protocol message.
+
+  The renderer will process the interaction and respond with
+  `interact_step` / `interact_response` messages.
+  """
+  @spec encode_interact(
+          id :: String.t(),
+          action :: String.t(),
+          selector :: map(),
+          payload :: map(),
+          format :: format()
+        ) :: iodata()
+  defdelegate encode_interact(id, action, selector, payload, format \\ :msgpack),
+    to: Plushie.Protocol.Encode
+
   @doc "Encodes an advance_frame message for headless/test mode."
   @spec encode_advance_frame(timestamp :: non_neg_integer(), format :: format()) :: iodata()
   defdelegate encode_advance_frame(timestamp, format \\ :msgpack), to: Plushie.Protocol.Encode

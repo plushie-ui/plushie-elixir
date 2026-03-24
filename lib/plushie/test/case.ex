@@ -59,6 +59,7 @@ defmodule Plushie.Test.Case do
 
   @backend_map %{
     mock: Plushie.Test.Backend.MockRenderer,
+    runtime: Plushie.Test.Backend.Runtime,
     headless: Plushie.Test.Backend.Headless,
     windowed: Plushie.Test.Backend.Windowed
   }
@@ -66,6 +67,7 @@ defmodule Plushie.Test.Case do
   @doc false
   @spec backend_opts(module()) :: keyword()
   def backend_opts(Plushie.Test.Backend.MockRenderer), do: []
+  def backend_opts(Plushie.Test.Backend.Runtime), do: []
 
   def backend_opts(_non_pooled) do
     # Non-pooled backends (headless, windowed) need the renderer path
