@@ -138,11 +138,14 @@ defmodule Plushie.Type.StyleMapTest do
 
       assert encoded[:background] == "#ff0000"
       assert encoded[:text_color] == "#ffffff"
-      assert %Shadow{} = encoded[:shadow]
-      assert encoded[:shadow].color == "#00000040"
-      assert encoded[:shadow].offset_x == 2
-      assert encoded[:shadow].offset_y == 2
-      assert encoded[:shadow].blur_radius == 6
+      assert is_map(encoded[:border])
+      assert encoded[:border][:color] == "#000000"
+      assert encoded[:border][:width] == 1
+      assert encoded[:border][:radius] == 4
+      assert is_map(encoded[:shadow])
+      assert encoded[:shadow][:color] == "#00000040"
+      assert encoded[:shadow][:offset] == [2, 2]
+      assert encoded[:shadow][:blur_radius] == 6
     end
 
     test "omits nil fields from the wire map" do
@@ -172,6 +175,29 @@ defmodule Plushie.Type.StyleMapTest do
       assert encoded[:pressed][:text_color] == "#ffffff"
     end
 
+    test "encodes border and shadow structs inside status overrides" do
+      border = Border.new() |> Border.color("#ff0000") |> Border.width(2) |> Border.rounded(6)
+
+      shadow =
+        Shadow.new() |> Shadow.color("#00000080") |> Shadow.offset(1, 1) |> Shadow.blur_radius(4)
+
+      style =
+        StyleMap.new()
+        |> StyleMap.focused(%{border: border, shadow: shadow})
+        |> StyleMap.hovered(%{border: border})
+
+      encoded = Encode.encode(style)
+
+      assert is_map(encoded[:focused][:border])
+      assert encoded[:focused][:border][:color] == "#ff0000"
+      assert encoded[:focused][:border][:width] == 2
+      assert encoded[:focused][:border][:radius] == 6
+      assert encoded[:focused][:shadow][:color] == "#00000080"
+      assert encoded[:focused][:shadow][:offset] == [1, 1]
+      assert encoded[:focused][:shadow][:blur_radius] == 4
+      assert encoded[:hovered][:border][:color] == "#ff0000"
+    end
+
     test "full builder chain produces expected encoded output" do
       border = Border.new() |> Border.color("#333333") |> Border.width(2) |> Border.rounded(8)
 
@@ -190,11 +216,11 @@ defmodule Plushie.Type.StyleMapTest do
       assert encoded[:background] == "#ff6600"
       assert encoded[:text_color] == "#ffffff"
 
-      # Border preserved as struct
-      assert %Border{} = encoded[:border]
-      assert encoded[:border].color == "#333333"
-      assert encoded[:border].width == 2
-      assert encoded[:border].radius == 8
+      # Border encoded to plain map
+      assert is_map(encoded[:border])
+      assert encoded[:border][:color] == "#333333"
+      assert encoded[:border][:width] == 2
+      assert encoded[:border][:radius] == 8
 
       # Status overrides
       assert encoded[:hovered][:background] == "#ff8833"

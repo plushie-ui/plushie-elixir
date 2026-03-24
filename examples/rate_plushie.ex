@@ -6,10 +6,18 @@ defmodule RatePlushie do
   with styled containers using the full DSL. The "Dark humor" toggle
   animates the emoji and flips the entire page theme.
 
+  The review form showcases form validation with:
+  - Per-field error state tracked in the model
+  - Visual error styling via `StyleMap` (border + background tint)
+  - Accessible error wiring via `a11y` (`required`, `invalid`, `error_message`)
+  - Validate-on-submit with clear-on-change for responsive UX
+
       mix plushie.gui RatePlushie
   """
 
   use Plushie.App
+
+  alias Plushie.Type.{Border, StyleMap}
 
   @initial_reviews [
     %{stars: 5, user: "elixir_fan_42", time: "2d ago",
@@ -36,7 +44,8 @@ defmodule RatePlushie do
       toggle_target: 0.0,
       reviews: @initial_reviews,
       review_name: "",
-      review_comment: ""
+      review_comment: "",
+      errors: %{}
     }
   end
 
@@ -45,7 +54,7 @@ defmodule RatePlushie do
 
     case event do
       %Widget{type: :canvas_element_click, id: "stars", data: %{"element_id" => "star-" <> n}} ->
-        %{model | rating: String.to_integer(n) + 1}
+        %{model | rating: String.to_integer(n) + 1, errors: Map.delete(model.errors, :rating)}
 
       %Widget{type: :canvas_element_enter, id: "stars", data: %{"element_id" => "star-" <> n}} ->
         %{model | hover_star: String.to_integer(n) + 1}
@@ -58,10 +67,10 @@ defmodule RatePlushie do
         %{model | toggle_target: target}
 
       %Widget{type: :input, id: "review-name", value: v} ->
-        %{model | review_name: v}
+        %{model | review_name: v, errors: Map.delete(model.errors, :name)}
 
       %Widget{type: :input, id: "review-comment", value: v} ->
-        %{model | review_comment: v}
+        %{model | review_comment: v, errors: Map.delete(model.errors, :comment)}
 
       %Widget{type: :click, id: "submit-review"} -> submit_review(model)
       %Widget{type: :submit, id: "review-name"} -> submit_review(model)
@@ -74,16 +83,32 @@ defmodule RatePlushie do
   end
 
   defp submit_review(model) do
-    name = String.trim(model.review_name)
-    comment = String.trim(model.review_comment)
+    errors = validate_review(model)
 
-    if name != "" and comment != "" and model.rating > 0 do
+    if errors == %{} do
+      name = String.trim(model.review_name)
+      comment = String.trim(model.review_comment)
       review = %{stars: model.rating, user: name, time: "just now", text: comment}
-      %{model | reviews: [review | model.reviews], review_name: "", review_comment: "", rating: 0}
+
+      %{model | reviews: [review | model.reviews], review_name: "", review_comment: "", rating: 0, errors: %{}}
     else
-      model
+      %{model | errors: errors}
     end
   end
+
+  defp validate_review(model) do
+    %{}
+    |> validate_required(:name, model.review_name, "Name is required")
+    |> validate_required(:comment, model.review_comment, "Review text is required")
+    |> validate_rating(model.rating)
+  end
+
+  defp validate_required(errors, key, value, message) do
+    if String.trim(value) == "", do: Map.put(errors, key, message), else: errors
+  end
+
+  defp validate_rating(errors, rating) when rating > 0, do: errors
+  defp validate_rating(errors, _rating), do: Map.put(errors, :rating, "Please select a rating")
 
   def subscribe(model) do
     if model.toggle_progress != model.toggle_target do
@@ -156,10 +181,20 @@ defmodule RatePlushie do
 
         text("prompt", "How would you rate Plushie?", size: 14, color: t.text_secondary)
 
-        StarRating.render("stars", model.rating,
-          hover: model.hover_star,
-          theme_progress: p
-        )
+        column id: "stars-group", spacing: 4 do
+          StarRating.render("stars", model.rating,
+            hover: model.hover_star,
+            theme_progress: p
+          )
+
+          if error = model.errors[:rating] do
+            text("stars-error", error,
+              size: 12,
+              color: t.error_text,
+              a11y: %{role: :alert, live: :polite}
+            )
+          end
+        end
 
         rule()
         review_form(model, t)
@@ -170,23 +205,69 @@ defmodule RatePlushie do
 
   # -- Review form -------------------------------------------------------------
 
-  defp review_form(model, _t) do
+  defp review_form(model, t) do
     import Plushie.UI
 
     column id: "review-form", spacing: 12, width: :fill do
-      text_input "review-name", model.review_name do
-        placeholder "Your name"
-        a11y %{label: "Your name"}
+      column id: "name-field", spacing: 4, width: :fill do
+        text_input "review-name", model.review_name do
+          placeholder "Your name"
+          on_submit true
+          style input_style(model.errors[:name], t)
+
+          a11y %{
+            label: "Your name",
+            required: true,
+            invalid: model.errors[:name] != nil,
+            error_message: if(model.errors[:name], do: "review-name-error")
+          }
+        end
+
+        if error = model.errors[:name] do
+          text("review-name-error", error,
+            size: 12,
+            color: t.error_text,
+            a11y: %{role: :alert, live: :polite}
+          )
+        end
       end
 
-      text_editor "review-comment", model.review_comment do
-        placeholder "Write your review..."
-        height 80
-        a11y %{label: "Review text"}
+      column id: "comment-field", spacing: 4, width: :fill do
+        text_editor "review-comment", model.review_comment do
+          placeholder "Write your review..."
+          height 80
+          style input_style(model.errors[:comment], t)
+
+          a11y %{
+            label: "Review text",
+            required: true,
+            invalid: model.errors[:comment] != nil,
+            error_message: if(model.errors[:comment], do: "review-comment-error")
+          }
+        end
+
+        if error = model.errors[:comment] do
+          text("review-comment-error", error,
+            size: 12,
+            color: t.error_text,
+            a11y: %{role: :alert, live: :polite}
+          )
+        end
       end
 
       button("submit-review", "Submit Review")
     end
+  end
+
+  defp input_style(nil, _t), do: :default
+
+  defp input_style(_error, t) do
+    error_border = Border.new() |> Border.color(t.error_border) |> Border.width(2) |> Border.rounded(4)
+
+    StyleMap.new()
+    |> StyleMap.border(error_border)
+    |> StyleMap.background(t.error_bg)
+    |> StyleMap.focused(%{border: error_border})
   end
 
   # -- Theme toggle row --------------------------------------------------------
@@ -244,7 +325,10 @@ defmodule RatePlushie do
       card_border: fade({224, 224, 224}, {42, 42, 74}, p),
       text: fade({26, 26, 26}, {240, 240, 245}, p),
       text_secondary: fade({102, 102, 102}, {153, 153, 187}, p),
-      text_muted: fade({170, 170, 170}, {85, 85, 119}, p)
+      text_muted: fade({170, 170, 170}, {85, 85, 119}, p),
+      error_text: fade({185, 28, 28}, {255, 100, 100}, p),
+      error_border: fade({220, 38, 38}, {255, 80, 80}, p),
+      error_bg: fade({254, 242, 242}, {50, 20, 20}, p)
     }
   end
 

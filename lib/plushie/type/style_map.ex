@@ -199,8 +199,8 @@ defimpl Plushie.Encode, for: Plushie.Type.StyleMap do
     |> put_field(:base, encode_base(style_map.base))
     |> put_field(:background, style_map.background)
     |> put_field(:text_color, style_map.text_color)
-    |> put_field(:border, style_map.border)
-    |> put_field(:shadow, style_map.shadow)
+    |> put_encoded(:border, style_map.border)
+    |> put_encoded(:shadow, style_map.shadow)
     |> put_field(:hovered, encode_override(style_map.hovered))
     |> put_field(:pressed, encode_override(style_map.pressed))
     |> put_field(:disabled, encode_override(style_map.disabled))
@@ -209,6 +209,9 @@ defimpl Plushie.Encode, for: Plushie.Type.StyleMap do
 
   defp put_field(map, _key, nil), do: map
   defp put_field(map, key, value), do: Map.put(map, key, value)
+
+  defp put_encoded(map, _key, nil), do: map
+  defp put_encoded(map, key, value), do: Map.put(map, key, Plushie.Encode.encode(value))
 
   defp encode_base(nil), do: nil
   defp encode_base(atom) when is_atom(atom), do: Atom.to_string(atom)
@@ -219,7 +222,7 @@ defimpl Plushie.Encode, for: Plushie.Type.StyleMap do
     %{}
     |> put_field(:background, Map.get(override, :background))
     |> put_field(:text_color, Map.get(override, :text_color))
-    |> put_field(:border, Map.get(override, :border))
-    |> put_field(:shadow, Map.get(override, :shadow))
+    |> put_encoded(:border, Map.get(override, :border))
+    |> put_encoded(:shadow, Map.get(override, :shadow))
   end
 end
