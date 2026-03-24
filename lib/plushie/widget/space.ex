@@ -9,13 +9,12 @@ defmodule Plushie.Widget.Space do
   - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Widget.Build
 
   @type option ::
           {:width, Plushie.Type.Length.t()}
           | {:height, Plushie.Type.Length.t()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -69,8 +68,8 @@ defmodule Plushie.Widget.Space do
   def height(%__MODULE__{} = space, height), do: %{space | height: height}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(space :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = space, a11y), do: %{space | a11y: A11y.cast(a11y)}
+  @spec a11y(space :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = space, a11y), do: %{space | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this space struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(space :: t()) :: Plushie.Widget.ui_node()

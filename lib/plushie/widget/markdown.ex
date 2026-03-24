@@ -25,7 +25,6 @@ defmodule Plushie.Widget.Markdown do
   - Link clicks are forwarded as `MarkdownUrl` messages by the renderer.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Type.Color
   alias Plushie.Widget.Build
 
@@ -41,7 +40,7 @@ defmodule Plushie.Widget.Markdown do
           | {:spacing, number()}
           | {:link_color, Plushie.Type.Color.input()}
           | {:code_theme, String.t()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -150,8 +149,8 @@ defmodule Plushie.Widget.Markdown do
     do: %{md | code_theme: code_theme}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(markdown :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = md, a11y), do: %{md | a11y: A11y.cast(a11y)}
+  @spec a11y(markdown :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = md, a11y), do: %{md | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this markdown struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(markdown :: t()) :: Plushie.Widget.ui_node()

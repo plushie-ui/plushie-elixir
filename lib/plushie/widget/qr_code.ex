@@ -20,7 +20,6 @@ defmodule Plushie.Widget.QrCode do
   - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Type.Color
   alias Plushie.Widget.Build
 
@@ -36,7 +35,7 @@ defmodule Plushie.Widget.QrCode do
           | {:error_correction, error_correction()}
           | {:alt, String.t()}
           | {:description, String.t()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -124,8 +123,8 @@ defmodule Plushie.Widget.QrCode do
     do: %{qr | description: description}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(qr_code :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = qr, a11y), do: %{qr | a11y: A11y.cast(a11y)}
+  @spec a11y(qr_code :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = qr, a11y), do: %{qr | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this QR code struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(qr_code :: t()) :: Plushie.Widget.ui_node()

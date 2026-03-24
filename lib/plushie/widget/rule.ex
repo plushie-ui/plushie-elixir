@@ -12,7 +12,6 @@ defmodule Plushie.Widget.Rule do
   - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Type.StyleMap
   alias Plushie.Widget.Build
 
@@ -26,7 +25,7 @@ defmodule Plushie.Widget.Rule do
           | {:width, number()}
           | {:direction, Plushie.Type.Direction.t()}
           | {:style, style()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -88,8 +87,8 @@ defmodule Plushie.Widget.Rule do
   def style(%__MODULE__{} = rule, style) when style in @presets, do: %{rule | style: style}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(rule :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = rule, a11y), do: %{rule | a11y: A11y.cast(a11y)}
+  @spec a11y(rule :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = rule, a11y), do: %{rule | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this rule struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(rule :: t()) :: Plushie.Widget.ui_node()

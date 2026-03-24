@@ -7,9 +7,11 @@ defmodule Plushie.Test.Backend.EventDecoder do
   new event families don't need to be added in multiple locations.
   """
 
+  alias Plushie.Event.Canvas, as: CanvasEvent
   alias Plushie.Event.Key, as: KeyEvent
   alias Plushie.Event.Mouse, as: MouseEvent
   alias Plushie.Event.Widget, as: WidgetEvent
+  alias Plushie.Protocol.Keys
 
   require Logger
 
@@ -82,17 +84,51 @@ defmodule Plushie.Test.Backend.EventDecoder do
 
   def decode("canvas_press", id, event) do
     {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :canvas_press, id: local, scope: scope, data: event["data"] || %{}}
+    data = event["data"] || %{}
+
+    %CanvasEvent{
+      type: :press,
+      id: local,
+      scope: scope,
+      x: data["x"] || 0,
+      y: data["y"] || 0,
+      button: Map.get(data, "button", "left")
+    }
   end
 
   def decode("canvas_release", id, event) do
     {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :canvas_release, id: local, scope: scope, data: event["data"] || %{}}
+    data = event["data"] || %{}
+
+    %CanvasEvent{
+      type: :release,
+      id: local,
+      scope: scope,
+      x: data["x"] || 0,
+      y: data["y"] || 0,
+      button: Map.get(data, "button", "left")
+    }
   end
 
   def decode("canvas_move", id, event) do
     {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :canvas_move, id: local, scope: scope, data: event["data"] || %{}}
+    data = event["data"] || %{}
+    %CanvasEvent{type: :move, id: local, scope: scope, x: data["x"] || 0, y: data["y"] || 0}
+  end
+
+  def decode("canvas_scroll", id, event) do
+    {local, scope} = split_scoped_id(id)
+    data = event["data"] || %{}
+
+    %CanvasEvent{
+      type: :scroll,
+      id: local,
+      scope: scope,
+      x: data["x"] || 0,
+      y: data["y"] || 0,
+      delta_x: data["delta_x"] || 0,
+      delta_y: data["delta_y"] || 0
+    }
   end
 
   def decode("key_press", _id, event), do: decode_key_event(:press, event)
@@ -177,75 +213,37 @@ defmodule Plushie.Test.Backend.EventDecoder do
   # -- Key event decoding ------------------------------------------------------
 
   defp decode_key_event(type, event) do
-    key_str = event["value"] || ""
-
-    modifiers_map =
-      cond do
-        is_map(event["modifiers"]) ->
-          event["modifiers"]
-
-        is_map(event["data"]) and is_map(event["data"]["modifiers"]) ->
-          event["data"]["modifiers"]
-
-        true ->
-          %{}
-      end
-
-    key = parse_wire_key_name(key_str)
-
-    modifiers = %Plushie.KeyModifiers{
-      ctrl: modifiers_map["ctrl"] || false,
-      shift: modifiers_map["shift"] || false,
-      alt: modifiers_map["alt"] || false,
-      logo: modifiers_map["logo"] || false,
-      command: modifiers_map["ctrl"] || false
-    }
-
-    text =
-      if is_binary(key) and byte_size(key) == 1,
-        do: key,
-        else: nil
+    data = event["data"] || %{}
+    key_str = data["key"] || event["value"] || ""
+    key = Keys.parse_key(key_str)
 
     %KeyEvent{
       type: type,
       key: key,
-      modified_key: key,
-      physical_key: nil,
-      location: :standard,
-      modifiers: modifiers,
-      text: text,
-      repeat: false
+      modified_key: Keys.parse_key(data["modified_key"] || key_str),
+      physical_key: Keys.parse_physical_key(data["physical_key"]),
+      location: Keys.parse_location(data["location"]),
+      modifiers: parse_modifiers(event, data),
+      text: if(type == :press, do: data["text"]),
+      repeat: data["repeat"] || false,
+      captured: event["captured"] || false
     }
   end
 
-  @wire_key_names %{
-    "enter" => :enter,
-    "escape" => :escape,
-    "tab" => :tab,
-    "backspace" => :backspace,
-    "space" => :space,
-    "delete" => :delete,
-    "up" => :up,
-    "down" => :down,
-    "left" => :left,
-    "right" => :right,
-    "home" => :home,
-    "end" => :end,
-    "page_up" => :page_up,
-    "page_down" => :page_down,
-    "f1" => :f1,
-    "f2" => :f2,
-    "f3" => :f3,
-    "f4" => :f4,
-    "f5" => :f5,
-    "f6" => :f6,
-    "f7" => :f7,
-    "f8" => :f8,
-    "f9" => :f9,
-    "f10" => :f10,
-    "f11" => :f11,
-    "f12" => :f12
-  }
+  defp parse_modifiers(event, data) do
+    m =
+      cond do
+        is_map(event["modifiers"]) -> event["modifiers"]
+        is_map(data["modifiers"]) -> data["modifiers"]
+        true -> %{}
+      end
 
-  defp parse_wire_key_name(name), do: Map.get(@wire_key_names, name, name)
+    %Plushie.KeyModifiers{
+      ctrl: m["ctrl"] || false,
+      shift: m["shift"] || false,
+      alt: m["alt"] || false,
+      logo: m["logo"] || false,
+      command: m["ctrl"] || false
+    }
+  end
 end

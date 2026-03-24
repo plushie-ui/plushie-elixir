@@ -15,7 +15,6 @@ defmodule Plushie.Widget.Row do
   - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Widget.Build
 
   @type option ::
@@ -27,7 +26,7 @@ defmodule Plushie.Widget.Row do
           | {:max_width, number()}
           | {:clip, boolean()}
           | {:wrap, boolean()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -135,8 +134,8 @@ defmodule Plushie.Widget.Row do
     do: %{row | children: Enum.reverse(children) ++ row.children}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(row :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = row, a11y), do: %{row | a11y: A11y.cast(a11y)}
+  @spec a11y(row :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = row, a11y), do: %{row | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this row struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(row :: t()) :: Plushie.Widget.ui_node()

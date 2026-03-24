@@ -18,7 +18,6 @@ defmodule Plushie.Widget.ProgressBar do
   - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Type.StyleMap
   alias Plushie.Widget.Build
 
@@ -33,7 +32,7 @@ defmodule Plushie.Widget.ProgressBar do
           | {:style, style()}
           | {:vertical, boolean()}
           | {:label, String.t()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -112,8 +111,8 @@ defmodule Plushie.Widget.ProgressBar do
     do: %{bar | label: label}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(progress_bar :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = bar, a11y), do: %{bar | a11y: A11y.cast(a11y)}
+  @spec a11y(progress_bar :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = bar, a11y), do: %{bar | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this progress bar struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(progress_bar :: t()) :: Plushie.Widget.ui_node()

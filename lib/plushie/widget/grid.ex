@@ -18,7 +18,6 @@ defmodule Plushie.Widget.Grid do
   - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Widget.Build
 
   @type option ::
@@ -30,7 +29,7 @@ defmodule Plushie.Widget.Grid do
           | {:column_width, Plushie.Type.Length.t()}
           | {:row_height, Plushie.Type.Length.t()}
           | {:fluid, number()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -142,8 +141,8 @@ defmodule Plushie.Widget.Grid do
     do: %{grid | children: Enum.reverse(children) ++ grid.children}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(grid :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = grid, a11y), do: %{grid | a11y: A11y.cast(a11y)}
+  @spec a11y(grid :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = grid, a11y), do: %{grid | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this grid struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(grid :: t()) :: Plushie.Widget.ui_node()

@@ -13,13 +13,12 @@ defmodule Plushie.Widget.Responsive do
   - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Widget.Build
 
   @type option ::
           {:width, Plushie.Type.Length.t()}
           | {:height, Plushie.Type.Length.t()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -84,8 +83,8 @@ defmodule Plushie.Widget.Responsive do
     do: %{r | children: Enum.reverse(children) ++ r.children}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(responsive :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = r, a11y), do: %{r | a11y: A11y.cast(a11y)}
+  @spec a11y(responsive :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = r, a11y), do: %{r | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this responsive struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(responsive :: t()) :: Plushie.Widget.ui_node()

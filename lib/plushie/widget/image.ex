@@ -26,7 +26,6 @@ defmodule Plushie.Widget.Image do
   - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Widget.Build
 
   @typedoc "Image source: a file path string or a handle reference map."
@@ -46,7 +45,7 @@ defmodule Plushie.Widget.Image do
           | {:alt, String.t()}
           | {:description, String.t()}
           | {:decorative, boolean()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -196,8 +195,8 @@ defmodule Plushie.Widget.Image do
     do: %{img | decorative: decorative}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(image :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = img, a11y), do: %{img | a11y: A11y.cast(a11y)}
+  @spec a11y(image :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = img, a11y), do: %{img | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this image struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(image :: t()) :: Plushie.Widget.ui_node()

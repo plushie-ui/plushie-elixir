@@ -26,7 +26,6 @@ defmodule Plushie.Widget.Scrollable do
   - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Type.Color
   alias Plushie.Widget.Build
 
@@ -43,7 +42,7 @@ defmodule Plushie.Widget.Scrollable do
           | {:auto_scroll, boolean()}
           | {:scrollbar_color, Plushie.Type.Color.input()}
           | {:scroller_color, Plushie.Type.Color.input()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -185,8 +184,8 @@ defmodule Plushie.Widget.Scrollable do
     do: %{s | children: Enum.reverse(children) ++ s.children}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(scrollable :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = s, a11y), do: %{s | a11y: A11y.cast(a11y)}
+  @spec a11y(scrollable :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = s, a11y), do: %{s | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this scrollable struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(scrollable :: t()) :: Plushie.Widget.ui_node()

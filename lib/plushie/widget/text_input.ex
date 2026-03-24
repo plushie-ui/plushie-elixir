@@ -42,7 +42,6 @@ defmodule Plushie.Widget.TextInput do
   - `%Widget{type: :paste, id: id, value: text}` -- emitted on paste (requires `on_paste` prop).
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Type.Color
   alias Plushie.Type.StyleMap
   alias Plushie.Widget.Build
@@ -65,7 +64,7 @@ defmodule Plushie.Widget.TextInput do
           | {:style, style()}
           | {:placeholder_color, Plushie.Type.Color.input()}
           | {:selection_color, Plushie.Type.Color.input()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -219,8 +218,8 @@ defmodule Plushie.Widget.TextInput do
     do: %{ti | selection_color: Color.cast(color)}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(text_input :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = ti, a11y), do: %{ti | a11y: A11y.cast(a11y)}
+  @spec a11y(text_input :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = ti, a11y), do: %{ti | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this text input struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(text_input :: t()) :: Plushie.Widget.ui_node()

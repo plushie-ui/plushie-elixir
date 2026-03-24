@@ -149,7 +149,7 @@ override or augment the inferred semantics.
 | `expanded` | `boolean()` | Expanded/collapsed state (menus, disclosures) |
 | `required` | `boolean()` | Mark form field as required |
 | `level` | `pos_integer()` | Heading level (1-6, only meaningful with `:heading` role) |
-| `busy` | `boolean()` | Loading/processing state (AT announces when done) |
+| `busy` | `boolean()` | Suppresses AT announcements until cleared (auto-managed by sliders during drag; set explicitly for custom continuous interactions) |
 | `invalid` | `boolean()` | Form validation failure |
 | `modal` | `boolean()` | Dialog is modal (AT restricts navigation to this container) |
 | `read_only` | `boolean()` | Can be read but not edited |
@@ -367,6 +367,32 @@ text("counter", "Count: #{model.count}", a11y: %A11y{live: :polite})
 **Tip:** Only mark the element that changes as live, not its parent
 container. Marking a large container as live causes the entire container's
 text to be re-announced on every change.
+
+### Busy state and continuous interactions
+
+When a value changes rapidly (e.g. during a slider drag or canvas
+interaction), setting `busy: true` on the node suppresses AT
+announcements until `busy` clears. AT then announces the final
+value once, avoiding a flood of intermediate announcements. This
+maps to WAI-ARIA `aria-busy`.
+
+**Built-in widgets handle this automatically.** Sliders set
+`busy: true` during drag and clear it on release. No SDK code
+needed.
+
+**For app-managed live regions** that reflect values from a
+continuous interaction (e.g. a text display showing a hex color
+while the user drags a canvas), set `busy` explicitly based on
+whether the interaction is active:
+
+```elixir
+text("hex", hex_value,
+  a11y: %{live: :polite, busy: model.drag != :none}
+)
+```
+
+When the drag ends, `busy` clears and the screen reader announces
+the final hex value.
 
 ### Forms
 

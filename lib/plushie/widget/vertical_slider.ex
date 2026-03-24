@@ -24,7 +24,6 @@ defmodule Plushie.Widget.VerticalSlider do
   - `%Widget{type: :slide_release, id: id, value: value}` -- emitted when drag ends.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Type.Color
   alias Plushie.Type.StyleMap
   alias Plushie.Widget.Build
@@ -42,7 +41,7 @@ defmodule Plushie.Widget.VerticalSlider do
           | {:style, style()}
           | {:label, String.t()}
           | {:event_rate, pos_integer()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -169,8 +168,8 @@ defmodule Plushie.Widget.VerticalSlider do
     do: %{slider | event_rate: rate}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(vertical_slider :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = slider, a11y), do: %{slider | a11y: A11y.cast(a11y)}
+  @spec a11y(vertical_slider :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = slider, a11y), do: %{slider | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this vertical slider struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(vertical_slider :: t()) :: Plushie.Widget.ui_node()

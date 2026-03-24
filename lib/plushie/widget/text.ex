@@ -27,7 +27,6 @@ defmodule Plushie.Widget.Text do
   - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Widget.Build
 
   @presets [:default, :primary, :secondary, :success, :danger, :warning]
@@ -48,7 +47,7 @@ defmodule Plushie.Widget.Text do
           | {:ellipsis, String.t()}
           | {:shaping, Plushie.Type.Shaping.t()}
           | {:style, style()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -175,8 +174,8 @@ defmodule Plushie.Widget.Text do
   def style(%__MODULE__{} = txt, style) when style in @presets, do: %{txt | style: style}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(text :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = txt, a11y), do: %{txt | a11y: A11y.cast(a11y)}
+  @spec a11y(text :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = txt, a11y), do: %{txt | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this text struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(text :: t()) :: Plushie.Widget.ui_node()

@@ -26,7 +26,6 @@ defmodule Plushie.Widget.Checkbox do
   - `%Widget{type: :toggle, id: id, value: bool}` -- emitted on toggle, `value` is the new boolean state.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Type.StyleMap
   alias Plushie.Widget.Build
 
@@ -47,7 +46,7 @@ defmodule Plushie.Widget.Checkbox do
           | {:style, style()}
           | {:icon, map()}
           | {:disabled, boolean()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -173,8 +172,8 @@ defmodule Plushie.Widget.Checkbox do
     do: %{cb | disabled: disabled}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(checkbox :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = cb, a11y), do: %{cb | a11y: A11y.cast(a11y)}
+  @spec a11y(checkbox :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = cb, a11y), do: %{cb | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this checkbox struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(checkbox :: t()) :: Plushie.Widget.ui_node()

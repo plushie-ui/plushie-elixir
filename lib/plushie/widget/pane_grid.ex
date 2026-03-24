@@ -30,7 +30,6 @@ defmodule Plushie.Widget.PaneGrid do
   - `%Pane{type: :focus_cycle}` -- F6/Shift+F6 focus cycling.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Type.Color
   alias Plushie.Widget.Build
 
@@ -44,7 +43,7 @@ defmodule Plushie.Widget.PaneGrid do
           | {:divider_width, number()}
           | {:leeway, number()}
           | {:event_rate, pos_integer()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -163,8 +162,8 @@ defmodule Plushie.Widget.PaneGrid do
     do: %{pg | event_rate: rate}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(pane_grid :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = pg, a11y), do: %{pg | a11y: A11y.cast(a11y)}
+  @spec a11y(pane_grid :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = pg, a11y), do: %{pg | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this pane grid struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(pane_grid :: t()) :: Plushie.Widget.ui_node()

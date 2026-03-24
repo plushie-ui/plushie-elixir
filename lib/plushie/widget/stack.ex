@@ -10,14 +10,13 @@ defmodule Plushie.Widget.Stack do
   - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Widget.Build
 
   @type option ::
           {:width, Plushie.Type.Length.t()}
           | {:height, Plushie.Type.Length.t()}
           | {:clip, boolean()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -89,8 +88,8 @@ defmodule Plushie.Widget.Stack do
     do: %{stack | children: Enum.reverse(children) ++ stack.children}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(stack :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = stack, a11y), do: %{stack | a11y: A11y.cast(a11y)}
+  @spec a11y(stack :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = stack, a11y), do: %{stack | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this stack struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(stack :: t()) :: Plushie.Widget.ui_node()

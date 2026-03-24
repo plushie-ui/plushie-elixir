@@ -9,12 +9,11 @@ defmodule Plushie.Widget.Themer do
   - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Widget.Build
 
   @type option ::
           {:theme, Plushie.Type.Theme.t()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -72,8 +71,8 @@ defmodule Plushie.Widget.Themer do
     do: %{t | children: Enum.reverse(children) ++ t.children}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(themer :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = t, a11y), do: %{t | a11y: A11y.cast(a11y)}
+  @spec a11y(themer :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = t, a11y), do: %{t | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this themer struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(themer :: t()) :: Plushie.Widget.ui_node()

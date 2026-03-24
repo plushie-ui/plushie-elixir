@@ -83,8 +83,12 @@ defmodule ColorPicker do
     end
   end
 
-  def subscribe(_model) do
-    [Plushie.Subscription.on_key_press(:picker_keys)]
+  def subscribe(model) do
+    if model.focus do
+      [Plushie.Subscription.on_key_press(:picker_keys)]
+    else
+      []
+    end
   end
 
   # -- View --------------------------------------------------------------------

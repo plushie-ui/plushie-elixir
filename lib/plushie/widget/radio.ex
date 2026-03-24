@@ -30,7 +30,6 @@ defmodule Plushie.Widget.Radio do
     The `id` is the `group` prop if set, otherwise the node ID.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Type.StyleMap
   alias Plushie.Widget.Build
 
@@ -48,7 +47,7 @@ defmodule Plushie.Widget.Radio do
           | {:shaping, Plushie.Type.Shaping.t()}
           | {:wrapping, Plushie.Type.Wrapping.t()}
           | {:style, style()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -177,8 +176,8 @@ defmodule Plushie.Widget.Radio do
   def style(%__MODULE__{} = r, :default), do: %{r | style: :default}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(radio :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = r, a11y), do: %{r | a11y: A11y.cast(a11y)}
+  @spec a11y(radio :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = r, a11y), do: %{r | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this radio struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(radio :: t()) :: Plushie.Widget.ui_node()

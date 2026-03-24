@@ -38,7 +38,6 @@ defmodule Plushie.Widget.TextEditor do
   Content changes are reported back to Elixir via the protocol.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Type.Color
   alias Plushie.Type.StyleMap
   alias Plushie.Widget.Build
@@ -64,7 +63,7 @@ defmodule Plushie.Widget.TextEditor do
           | {:key_bindings, [map()]}
           | {:placeholder_color, Plushie.Type.Color.input()}
           | {:selection_color, Plushie.Type.Color.input()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -258,8 +257,8 @@ defmodule Plushie.Widget.TextEditor do
     do: %{ed | selection_color: Color.cast(color)}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(text_editor :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = ed, a11y), do: %{ed | a11y: A11y.cast(a11y)}
+  @spec a11y(text_editor :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = ed, a11y), do: %{ed | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this text editor struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(text_editor :: t()) :: Plushie.Widget.ui_node()

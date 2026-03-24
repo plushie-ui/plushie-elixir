@@ -48,7 +48,6 @@ defmodule Plushie.Widget.MouseArea do
   - `%MouseArea{type: :scroll, id: id, delta_x: dx, delta_y: dy}` -- scroll wheel within the area.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Widget.Build
 
   @cursors [
@@ -94,7 +93,7 @@ defmodule Plushie.Widget.MouseArea do
           | {:on_move, boolean()}
           | {:on_scroll, boolean()}
           | {:event_rate, pos_integer()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -248,8 +247,8 @@ defmodule Plushie.Widget.MouseArea do
     do: %{ma | event_rate: rate}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(mouse_area :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = ma, a11y), do: %{ma | a11y: A11y.cast(a11y)}
+  @spec a11y(mouse_area :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = ma, a11y), do: %{ma | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this mouse area struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(mouse_area :: t()) :: Plushie.Widget.ui_node()

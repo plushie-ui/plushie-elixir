@@ -11,7 +11,6 @@ defmodule Plushie.Widget.Pin do
   - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Widget.Build
 
   @type option ::
@@ -19,7 +18,7 @@ defmodule Plushie.Widget.Pin do
           | {:y, number()}
           | {:width, Plushie.Type.Length.t()}
           | {:height, Plushie.Type.Length.t()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -98,8 +97,8 @@ defmodule Plushie.Widget.Pin do
     do: %{pin | children: Enum.reverse(children) ++ pin.children}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(pin :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = pin, a11y), do: %{pin | a11y: A11y.cast(a11y)}
+  @spec a11y(pin :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = pin, a11y), do: %{pin | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this pin struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(pin :: t()) :: Plushie.Widget.ui_node()

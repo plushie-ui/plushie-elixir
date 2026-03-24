@@ -35,7 +35,6 @@ defmodule Plushie.Widget.RichText do
   - `%Widget{type: :click, id: "id:link_value"}` -- emitted when a span link is clicked.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Widget.Build
 
   @type option ::
@@ -48,7 +47,7 @@ defmodule Plushie.Widget.RichText do
           | {:line_height, number() | map()}
           | {:wrapping, Plushie.Type.Wrapping.t()}
           | {:ellipsis, String.t()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -152,8 +151,8 @@ defmodule Plushie.Widget.RichText do
     do: %{rt | ellipsis: ellipsis}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(rich_text :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = rt, a11y), do: %{rt | a11y: A11y.cast(a11y)}
+  @spec a11y(rich_text :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = rt, a11y), do: %{rt | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this rich text struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(rich_text :: t()) :: Plushie.Widget.ui_node()

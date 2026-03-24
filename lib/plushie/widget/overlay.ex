@@ -24,7 +24,6 @@ defmodule Plushie.Widget.Overlay do
   2. The overlay content (rendered as a floating overlay above everything else).
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Widget.Build
 
   @positions [:below, :above, :left, :right]
@@ -41,7 +40,7 @@ defmodule Plushie.Widget.Overlay do
           | {:flip, boolean()}
           | {:align, align()}
           | {:width, Plushie.Type.Length.t()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -146,8 +145,8 @@ defmodule Plushie.Widget.Overlay do
     do: %{overlay | children: Enum.reverse(children) ++ overlay.children}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(overlay :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = overlay, a11y), do: %{overlay | a11y: A11y.cast(a11y)}
+  @spec a11y(overlay :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = overlay, a11y), do: %{overlay | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this overlay struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(overlay :: t()) :: Plushie.Widget.ui_node()

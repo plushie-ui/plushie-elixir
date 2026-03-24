@@ -87,6 +87,92 @@ defmodule Plushie.Type.A11yTest do
     end
   end
 
+  describe "new/0 and setter functions" do
+    test "new returns empty struct" do
+      assert %A11y{} = A11y.new()
+      assert A11y.new().role == nil
+    end
+
+    test "setter chain builds struct" do
+      a = A11y.new() |> A11y.role(:heading) |> A11y.level(1) |> A11y.label("Title")
+      assert a.role == :heading
+      assert a.level == 1
+      assert a.label == "Title"
+    end
+
+    test "all setters work" do
+      a =
+        A11y.new()
+        |> A11y.role(:button)
+        |> A11y.label("Go")
+        |> A11y.description("Navigate forward")
+        |> A11y.live(:polite)
+        |> A11y.hidden(false)
+        |> A11y.expanded(true)
+        |> A11y.required(true)
+        |> A11y.level(2)
+        |> A11y.busy(true)
+        |> A11y.invalid(false)
+        |> A11y.modal(true)
+        |> A11y.read_only(true)
+        |> A11y.mnemonic("G")
+        |> A11y.toggled(true)
+        |> A11y.selected(false)
+        |> A11y.value("50%")
+        |> A11y.orientation(:horizontal)
+        |> A11y.labelled_by("lbl")
+        |> A11y.described_by("desc")
+        |> A11y.error_message("err")
+        |> A11y.disabled(true)
+        |> A11y.position_in_set(3)
+        |> A11y.size_of_set(10)
+        |> A11y.has_popup("menu")
+
+      assert a.role == :button
+      assert a.label == "Go"
+      assert a.description == "Navigate forward"
+      assert a.live == :polite
+      assert a.hidden == false
+      assert a.expanded == true
+      assert a.required == true
+      assert a.level == 2
+      assert a.busy == true
+      assert a.invalid == false
+      assert a.modal == true
+      assert a.read_only == true
+      assert a.mnemonic == "G"
+      assert a.toggled == true
+      assert a.selected == false
+      assert a.value == "50%"
+      assert a.orientation == :horizontal
+      assert a.labelled_by == "lbl"
+      assert a.described_by == "desc"
+      assert a.error_message == "err"
+      assert a.disabled == true
+      assert a.position_in_set == 3
+      assert a.size_of_set == 10
+      assert a.has_popup == "menu"
+    end
+
+    test "error_message setter accepts nil" do
+      a = A11y.new() |> A11y.error_message("err") |> A11y.error_message(nil)
+      assert a.error_message == nil
+    end
+  end
+
+  describe "cast/1 accepts keyword lists" do
+    test "keyword list is cast like a map" do
+      a = A11y.cast(role: :heading, level: 1, label: "Title")
+      assert a.role == :heading
+      assert a.level == 1
+      assert a.label == "Title"
+    end
+
+    test "empty keyword list returns empty struct" do
+      assert %A11y{} = A11y.cast([])
+    end
+  end
+
   describe "cast/1 with new fields" do
     test "cast bare map with busy" do
       a = A11y.cast(%{busy: true, label: "Loading"})
@@ -128,26 +214,25 @@ defmodule Plushie.Type.A11yTest do
     end
   end
 
-  describe "mnemonic validation" do
-    test "nil mnemonic passes validation" do
+  describe "mnemonic field" do
+    test "nil mnemonic" do
       a = A11y.cast(%{mnemonic: nil})
       assert a.mnemonic == nil
     end
 
-    test "single ASCII character passes validation" do
+    test "single ASCII character" do
       a = A11y.cast(%{mnemonic: "F"})
       assert a.mnemonic == "F"
     end
 
-    test "single precomposed Unicode character passes validation" do
+    test "precomposed Unicode character" do
       a = A11y.cast(%{mnemonic: "\u00E9"})
       assert a.mnemonic == "\u00E9"
     end
 
-    test "multi-character string raises FunctionClauseError" do
-      assert_raise FunctionClauseError, fn ->
-        A11y.cast(%{mnemonic: "AB"})
-      end
+    test "setter accepts string" do
+      a = A11y.new() |> A11y.mnemonic("S")
+      assert a.mnemonic == "S"
     end
   end
 

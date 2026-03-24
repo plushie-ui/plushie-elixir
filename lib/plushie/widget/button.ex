@@ -24,7 +24,6 @@ defmodule Plushie.Widget.Button do
   - `%Widget{type: :click, id: id}` -- emitted on press (unless disabled).
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Type.StyleMap
   alias Plushie.Widget.Build
 
@@ -41,7 +40,7 @@ defmodule Plushie.Widget.Button do
           | {:style, style()}
           | {:disabled, boolean()}
           | {:enabled, boolean()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -118,8 +117,8 @@ defmodule Plushie.Widget.Button do
     do: %{btn | disabled: disabled}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(button :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = btn, a11y), do: %{btn | a11y: A11y.cast(a11y)}
+  @spec a11y(button :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = btn, a11y), do: %{btn | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this button struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(button :: t()) :: Plushie.Widget.ui_node()

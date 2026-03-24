@@ -86,7 +86,6 @@ defmodule Plushie.Widget.Canvas do
   field is the canvas widget ID; `data.element_id` identifies which shape.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Widget.Build
 
   @typedoc "A canvas shape descriptor (struct or plain map)."
@@ -119,7 +118,7 @@ defmodule Plushie.Widget.Canvas do
           | {:alt, String.t()}
           | {:description, String.t()}
           | {:event_rate, pos_integer()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -283,8 +282,8 @@ defmodule Plushie.Widget.Canvas do
     do: %{canvas | event_rate: rate}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(canvas :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = canvas, a11y), do: %{canvas | a11y: A11y.cast(a11y)}
+  @spec a11y(canvas :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = canvas, a11y), do: %{canvas | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this canvas struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(canvas :: t()) :: Plushie.Widget.ui_node()

@@ -35,7 +35,6 @@ defmodule Plushie.Widget.PickList do
   - `%Widget{type: :close, id: id}` -- emitted when the dropdown menu is closed (requires `on_close: true`).
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Type.StyleMap
   alias Plushie.Widget.Build
 
@@ -57,7 +56,7 @@ defmodule Plushie.Widget.PickList do
           | {:style, style()}
           | {:on_open, boolean()}
           | {:on_close, boolean()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -214,8 +213,8 @@ defmodule Plushie.Widget.PickList do
     do: %{pl | on_close: on_close}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(pick_list :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = pl, a11y), do: %{pl | a11y: A11y.cast(a11y)}
+  @spec a11y(pick_list :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = pl, a11y), do: %{pl | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this pick list struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(pick_list :: t()) :: Plushie.Widget.ui_node()

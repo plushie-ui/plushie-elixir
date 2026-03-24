@@ -39,7 +39,6 @@ defmodule Plushie.Widget.ComboBox do
   - `%Widget{type: :close, id: id}` -- emitted when the dropdown menu is closed (requires `on_close: true`).
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Type.StyleMap
   alias Plushie.Widget.Build
 
@@ -63,7 +62,7 @@ defmodule Plushie.Widget.ComboBox do
           | {:ellipsis, String.t()}
           | {:menu_style, map()}
           | {:style, style()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -222,8 +221,8 @@ defmodule Plushie.Widget.ComboBox do
   def style(%__MODULE__{} = cb, :default), do: %{cb | style: :default}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(combo_box :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = cb, a11y), do: %{cb | a11y: A11y.cast(a11y)}
+  @spec a11y(combo_box :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = cb, a11y), do: %{cb | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this combo box struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(combo_box :: t()) :: Plushie.Widget.ui_node()

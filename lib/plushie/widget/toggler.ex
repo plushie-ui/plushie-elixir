@@ -27,7 +27,6 @@ defmodule Plushie.Widget.Toggler do
   - `%Widget{type: :toggle, id: id, value: bool}` -- emitted on toggle, `value` is the new boolean state.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Type.StyleMap
   alias Plushie.Widget.Build
 
@@ -46,7 +45,7 @@ defmodule Plushie.Widget.Toggler do
           | {:text_alignment, Plushie.Type.Alignment.t()}
           | {:style, style()}
           | {:disabled, boolean()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -176,8 +175,8 @@ defmodule Plushie.Widget.Toggler do
     do: %{tg | disabled: disabled}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(toggler :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = tg, a11y), do: %{tg | a11y: A11y.cast(a11y)}
+  @spec a11y(toggler :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = tg, a11y), do: %{tg | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this toggler struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(toggler :: t()) :: Plushie.Widget.ui_node()

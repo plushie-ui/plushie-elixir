@@ -29,7 +29,6 @@ defmodule Plushie.Widget.Table do
   - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Type.Color
   alias Plushie.Widget.Build
 
@@ -52,7 +51,7 @@ defmodule Plushie.Widget.Table do
           | {:row_spacing, number()}
           | {:separator_thickness, number()}
           | {:separator_color, Plushie.Type.Color.input()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -210,8 +209,8 @@ defmodule Plushie.Widget.Table do
     do: %{tbl | children: Enum.reverse(children) ++ tbl.children}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(table :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = tbl, a11y), do: %{tbl | a11y: A11y.cast(a11y)}
+  @spec a11y(table :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = tbl, a11y), do: %{tbl | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this table struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(table :: t()) :: Plushie.Widget.ui_node()

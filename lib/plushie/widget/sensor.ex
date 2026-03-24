@@ -17,7 +17,6 @@ defmodule Plushie.Widget.Sensor do
   - `%Widget{type: :click, id: "id:hide"}` -- emitted when child becomes hidden.
   """
 
-  alias Plushie.Type.A11y
   alias Plushie.Widget.Build
 
   @type option ::
@@ -25,7 +24,7 @@ defmodule Plushie.Widget.Sensor do
           | {:anticipate, number()}
           | {:on_resize, atom() | String.t()}
           | {:event_rate, pos_integer()}
-          | {:a11y, Plushie.Type.A11y.t()}
+          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -101,8 +100,8 @@ defmodule Plushie.Widget.Sensor do
     do: %{sensor | event_rate: rate}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(sensor :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-  def a11y(%__MODULE__{} = sensor, a11y), do: %{sensor | a11y: A11y.cast(a11y)}
+  @spec a11y(sensor :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  def a11y(%__MODULE__{} = sensor, a11y), do: %{sensor | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this sensor struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(sensor :: t()) :: Plushie.Widget.ui_node()

@@ -8,8 +8,52 @@ defmodule Plushie.Type.A11y do
   button's label becomes the accessible name), so most widgets need no explicit
   `a11y` annotation. Use this for cases where auto-inference is insufficient.
 
-  Use `cast/1` to normalize a bare map into an `A11y` struct. Bare maps with
-  atom keys are accepted for convenience.
+  ## Construction
+
+  Builder chain (like Border, Shadow, Font):
+
+      A11y.new()
+      |> A11y.role(:heading)
+      |> A11y.level(1)
+      |> A11y.label("Page title")
+
+  Bare map via `cast/1` (convenience for inline props):
+
+      Button.new("btn", "Go", a11y: %{label: "Go forward"})
+
+  DSL do-block via `from_opts/1`:
+
+      button "btn", "Go" do
+        a11y do
+          label "Go forward"
+        end
+      end
+
+  ## Override semantics
+
+  Most fields are optional overrides. When nil (the default), the
+  renderer uses its auto-inferred value. When set, the SDK value wins.
+
+  Some widgets auto-manage certain fields based on their interaction
+  state. For example, sliders set `busy: true` during drag so that
+  assistive technology suppresses rapid value announcements and
+  announces only the final value on release. Setting `busy` explicitly
+  from the SDK overrides this auto-detected state.
+
+  ## Busy and live regions
+
+  `busy` maps to WAI-ARIA `aria-busy`. When true on a node (or a
+  parent of a live region), assistive technology suppresses
+  announcements until busy clears, then announces the final state.
+
+  Widgets that own continuous interactions (sliders) set this
+  automatically. For app-managed live regions that reflect another
+  widget's state (e.g. a text display showing a color value during
+  canvas drag), set `busy` explicitly based on the interaction state:
+
+      text("hex", hex_value,
+        a11y: %{live: :polite, busy: model.drag != :none}
+      )
 
   ## Fields
 
@@ -21,7 +65,9 @@ defmodule Plushie.Type.A11y do
   - `expanded` -- expanded/collapsed state for disclosure widgets
   - `required` -- marks a form field as required
   - `level` -- heading level (1-6)
-  - `busy` -- loading/processing state
+  - `busy` -- suppresses AT announcements until cleared (auto-managed
+    by sliders during drag; set explicitly for custom continuous
+    interactions)
   - `invalid` -- form validation failure
   - `modal` -- dialog is modal
   - `read_only` -- can be read but not edited
@@ -79,17 +125,11 @@ defmodule Plushie.Type.A11y do
     tab_panel table text_input toolbar tooltip tree tree_item window
   )a
 
-  @live_values ~w(polite assertive)a
-
-  @orientations ~w(horizontal vertical)a
-
   @type role :: unquote(Enum.reduce(@roles, &{:|, [], [&1, &2]}))
 
   @type live :: :polite | :assertive
 
   @type orientation :: :horizontal | :vertical
-
-  @has_popup_values ~w(listbox menu dialog tree grid)
 
   @type has_popup :: String.t() | nil
 
@@ -120,73 +160,179 @@ defmodule Plushie.Type.A11y do
           has_popup: has_popup()
         }
 
-  @doc """
-  Normalizes a struct or bare map into an `A11y` struct.
+  # -- Construction -------------------------------------------------------------
 
-  Accepts an `A11y` struct (returned as-is) or a bare map with atom keys.
-  Unknown keys are silently ignored.
+  @doc "Creates an empty A11y struct with all fields nil."
+  @spec new() :: t()
+  def new, do: %__MODULE__{}
+
+  @doc """
+  Normalizes a struct, map, or keyword list into an `A11y` struct.
+
+  Accepts an `A11y` struct (returned as-is), a bare map with atom keys,
+  or a keyword list. Unknown keys are silently ignored.
 
   ## Examples
 
       iex> Plushie.Type.A11y.cast(%{role: :heading, level: 1})
       %Plushie.Type.A11y{role: :heading, level: 1}
 
+      iex> Plushie.Type.A11y.cast(role: :heading, level: 1)
+      %Plushie.Type.A11y{role: :heading, level: 1}
+
       iex> a11y = %Plushie.Type.A11y{label: "Close"}
       iex> Plushie.Type.A11y.cast(a11y)
       %Plushie.Type.A11y{label: "Close"}
   """
-  @spec cast(a11y :: t() | map()) :: t()
+  @spec cast(a11y :: t() | map() | keyword()) :: t()
   def cast(%__MODULE__{} = a11y), do: a11y
+  def cast(kw) when is_list(kw), do: cast(Map.new(kw))
 
   def cast(map) when is_map(map) do
     %__MODULE__{
-      role: validate_role(map[:role]),
+      role: map[:role],
       label: map[:label],
       description: map[:description],
-      live: validate_live(map[:live]),
+      live: map[:live],
       hidden: map[:hidden],
       expanded: map[:expanded],
       required: map[:required],
-      level: validate_level(map[:level]),
+      level: map[:level],
       busy: map[:busy],
       invalid: map[:invalid],
       modal: map[:modal],
       read_only: map[:read_only],
-      mnemonic: validate_mnemonic(map[:mnemonic]),
+      mnemonic: map[:mnemonic],
       toggled: map[:toggled],
       selected: map[:selected],
       value: map[:value],
-      orientation: validate_orientation(map[:orientation]),
+      orientation: map[:orientation],
       labelled_by: map[:labelled_by],
       described_by: map[:described_by],
       error_message: map[:error_message],
       disabled: map[:disabled],
-      position_in_set: validate_non_neg_integer(map[:position_in_set]),
-      size_of_set: validate_non_neg_integer(map[:size_of_set]),
-      has_popup: validate_has_popup(map[:has_popup])
+      position_in_set: map[:position_in_set],
+      size_of_set: map[:size_of_set],
+      has_popup: map[:has_popup]
     }
   end
 
-  defp validate_role(nil), do: nil
-  defp validate_role(role) when role in @roles, do: role
+  # -- Setter functions --------------------------------------------------------
 
-  defp validate_live(nil), do: nil
-  defp validate_live(live) when live in @live_values, do: live
+  @doc "Sets the accessibility role."
+  @spec role(a11y :: t(), role :: role()) :: t()
+  def role(%__MODULE__{} = a, role) when is_atom(role), do: %{a | role: role}
 
-  defp validate_orientation(nil), do: nil
-  defp validate_orientation(o) when o in @orientations, do: o
+  @doc "Sets the accessible label (name announced by screen readers)."
+  @spec label(a11y :: t(), label :: String.t()) :: t()
+  def label(%__MODULE__{} = a, label) when is_binary(label), do: %{a | label: label}
 
-  defp validate_level(nil), do: nil
-  defp validate_level(n) when is_integer(n) and n >= 1 and n <= 6, do: n
+  @doc "Sets the longer accessible description."
+  @spec description(a11y :: t(), description :: String.t()) :: t()
+  def description(%__MODULE__{} = a, desc) when is_binary(desc), do: %{a | description: desc}
 
-  defp validate_mnemonic(nil), do: nil
-  defp validate_mnemonic(<<_::utf8>> = char), do: char
+  @doc "Sets the live region semantics (`:polite` or `:assertive`)."
+  @spec live(a11y :: t(), live :: live()) :: t()
+  def live(%__MODULE__{} = a, live) when is_atom(live), do: %{a | live: live}
 
-  defp validate_non_neg_integer(nil), do: nil
-  defp validate_non_neg_integer(n) when is_integer(n) and n >= 0, do: n
+  @doc "Sets whether the node is hidden from the accessibility tree."
+  @spec hidden(a11y :: t(), hidden :: boolean()) :: t()
+  def hidden(%__MODULE__{} = a, hidden) when is_boolean(hidden), do: %{a | hidden: hidden}
 
-  defp validate_has_popup(nil), do: nil
-  defp validate_has_popup(v) when v in @has_popup_values, do: v
+  @doc "Sets the expanded/collapsed state."
+  @spec expanded(a11y :: t(), expanded :: boolean()) :: t()
+  def expanded(%__MODULE__{} = a, expanded) when is_boolean(expanded),
+    do: %{a | expanded: expanded}
+
+  @doc "Marks a form field as required."
+  @spec required(a11y :: t(), required :: boolean()) :: t()
+  def required(%__MODULE__{} = a, required) when is_boolean(required),
+    do: %{a | required: required}
+
+  @doc "Sets the heading level (1-6)."
+  @spec level(a11y :: t(), level :: pos_integer()) :: t()
+  def level(%__MODULE__{} = a, level) when is_integer(level) and level >= 1 and level <= 6,
+    do: %{a | level: level}
+
+  @doc """
+  Suppresses AT announcements until cleared.
+
+  Sliders set this automatically during drag. For custom continuous
+  interactions, set explicitly to prevent rapid-fire announcements
+  on live regions.
+  """
+  @spec busy(a11y :: t(), busy :: boolean()) :: t()
+  def busy(%__MODULE__{} = a, busy) when is_boolean(busy), do: %{a | busy: busy}
+
+  @doc "Sets the form validation failure state."
+  @spec invalid(a11y :: t(), invalid :: boolean()) :: t()
+  def invalid(%__MODULE__{} = a, invalid) when is_boolean(invalid), do: %{a | invalid: invalid}
+
+  @doc "Sets whether a dialog is modal."
+  @spec modal(a11y :: t(), modal :: boolean()) :: t()
+  def modal(%__MODULE__{} = a, modal) when is_boolean(modal), do: %{a | modal: modal}
+
+  @doc "Sets the read-only state."
+  @spec read_only(a11y :: t(), read_only :: boolean()) :: t()
+  def read_only(%__MODULE__{} = a, read_only) when is_boolean(read_only),
+    do: %{a | read_only: read_only}
+
+  @doc "Sets the Alt+letter keyboard shortcut (single character)."
+  @spec mnemonic(a11y :: t(), mnemonic :: String.t()) :: t()
+  def mnemonic(%__MODULE__{} = a, mnemonic) when is_binary(mnemonic),
+    do: %{a | mnemonic: mnemonic}
+
+  @doc "Sets the toggled/checked state."
+  @spec toggled(a11y :: t(), toggled :: boolean()) :: t()
+  def toggled(%__MODULE__{} = a, toggled) when is_boolean(toggled), do: %{a | toggled: toggled}
+
+  @doc "Sets the selected state."
+  @spec selected(a11y :: t(), selected :: boolean()) :: t()
+  def selected(%__MODULE__{} = a, selected) when is_boolean(selected),
+    do: %{a | selected: selected}
+
+  @doc "Sets the current value as a string."
+  @spec value(a11y :: t(), value :: String.t()) :: t()
+  def value(%__MODULE__{} = a, value) when is_binary(value), do: %{a | value: value}
+
+  @doc "Sets the orientation (`:horizontal` or `:vertical`)."
+  @spec orientation(a11y :: t(), orientation :: orientation()) :: t()
+  def orientation(%__MODULE__{} = a, orientation) when is_atom(orientation),
+    do: %{a | orientation: orientation}
+
+  @doc "Sets the ID of the widget that labels this one."
+  @spec labelled_by(a11y :: t(), id :: String.t()) :: t()
+  def labelled_by(%__MODULE__{} = a, id) when is_binary(id), do: %{a | labelled_by: id}
+
+  @doc "Sets the ID of the widget that describes this one."
+  @spec described_by(a11y :: t(), id :: String.t()) :: t()
+  def described_by(%__MODULE__{} = a, id) when is_binary(id), do: %{a | described_by: id}
+
+  @doc "Sets the ID of the widget showing the error message."
+  @spec error_message(a11y :: t(), id :: String.t() | nil) :: t()
+  def error_message(%__MODULE__{} = a, id) when is_binary(id) or is_nil(id),
+    do: %{a | error_message: id}
+
+  @doc "Overrides the disabled state for assistive technology."
+  @spec disabled(a11y :: t(), disabled :: boolean()) :: t()
+  def disabled(%__MODULE__{} = a, disabled) when is_boolean(disabled),
+    do: %{a | disabled: disabled}
+
+  @doc "Sets the 1-based position within a set."
+  @spec position_in_set(a11y :: t(), pos :: non_neg_integer()) :: t()
+  def position_in_set(%__MODULE__{} = a, pos) when is_integer(pos) and pos >= 0,
+    do: %{a | position_in_set: pos}
+
+  @doc "Sets the total number of items in the set."
+  @spec size_of_set(a11y :: t(), size :: non_neg_integer()) :: t()
+  def size_of_set(%__MODULE__{} = a, size) when is_integer(size) and size >= 0,
+    do: %{a | size_of_set: size}
+
+  @doc ~S[Sets the popup type (`"listbox"`, `"menu"`, `"dialog"`, `"tree"`, `"grid"`).]
+  @spec has_popup(a11y :: t(), popup :: String.t()) :: t()
+  def has_popup(%__MODULE__{} = a, popup) when is_binary(popup), do: %{a | has_popup: popup}
+
+  # -- Buildable ---------------------------------------------------------------
 
   @impl Plushie.DSL.Buildable
   def __field_keys__, do: @known_keys
@@ -203,7 +349,36 @@ defmodule Plushie.Type.A11y do
             "unknown a11y field #{inspect(key)}. Valid fields: #{inspect(@known_keys)}"
     end
 
-    cast(Map.new(opts))
+    # Filter nils so that `label: if(cond, do: "Name")` doesn't crash
+    # the guard when cond is false -- nil means "don't set" (struct default).
+    opts
+    |> Enum.reject(fn {_, v} -> is_nil(v) end)
+    |> Enum.reduce(new(), fn
+      {:role, v}, acc -> role(acc, v)
+      {:label, v}, acc -> label(acc, v)
+      {:description, v}, acc -> description(acc, v)
+      {:live, v}, acc -> live(acc, v)
+      {:hidden, v}, acc -> hidden(acc, v)
+      {:expanded, v}, acc -> expanded(acc, v)
+      {:required, v}, acc -> required(acc, v)
+      {:level, v}, acc -> level(acc, v)
+      {:busy, v}, acc -> busy(acc, v)
+      {:invalid, v}, acc -> invalid(acc, v)
+      {:modal, v}, acc -> modal(acc, v)
+      {:read_only, v}, acc -> read_only(acc, v)
+      {:mnemonic, v}, acc -> mnemonic(acc, v)
+      {:toggled, v}, acc -> toggled(acc, v)
+      {:selected, v}, acc -> selected(acc, v)
+      {:value, v}, acc -> value(acc, v)
+      {:orientation, v}, acc -> orientation(acc, v)
+      {:labelled_by, v}, acc -> labelled_by(acc, v)
+      {:described_by, v}, acc -> described_by(acc, v)
+      {:error_message, v}, acc -> error_message(acc, v)
+      {:disabled, v}, acc -> disabled(acc, v)
+      {:position_in_set, v}, acc -> position_in_set(acc, v)
+      {:size_of_set, v}, acc -> size_of_set(acc, v)
+      {:has_popup, v}, acc -> has_popup(acc, v)
+    end)
   end
 end
 
