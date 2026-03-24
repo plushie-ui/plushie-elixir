@@ -7,33 +7,56 @@ defmodule StarRating do
   Pass `readonly: true` for a display-only version.
 
       # Interactive (full size)
-      StarRating.render("my-rating", model.rating,
-        hover: model.hover_star, theme_progress: p)
+      star_rating("my-rating", rating: model.rating, theme_progress: p)
 
       # Read-only (small, for review display)
-      StarRating.render("review-stars", 4, readonly: true, scale: 0.5)
+      star_rating("review-stars", rating: 4, readonly: true, scale: 0.5)
 
   Events:
-  - `canvas_element_click` with element_id `"star-0"` through `"star-4"`
-  - `canvas_element_enter`/`canvas_element_leave` for hover
-  - `canvas_element_focused` with element_id for keyboard focus
+  - `:select` with `%{"value" => n}` when the user clicks a star
   """
 
-  import Plushie.Canvas.Shape, only: [move_to: 2, line_to: 2, close: 0]
+  use Plushie.Extension, :canvas_widget
 
-  @doc "Renders a star rating canvas widget."
-  def render(id, rating, opts \\ []) do
+  widget :star_rating
+  prop :rating, :number
+  prop :readonly, :boolean, default: false
+  prop :scale, :number, default: 1.0
+  prop :theme_progress, :number, default: 0.0
+
+  state hover: nil
+
+  # -- Event transformation ----------------------------------------------------
+
+  def handle_event(%Plushie.Event.Widget{type: :click, id: "star-" <> n}, _state) do
+    {:emit, :select, String.to_integer(n) + 1}
+  end
+
+  def handle_event(%Plushie.Event.Widget{type: :canvas_element_enter, id: "star-" <> n}, state) do
+    {:update_state, %{state | hover: String.to_integer(n) + 1}}
+  end
+
+  def handle_event(%Plushie.Event.Widget{type: :canvas_element_leave}, state) do
+    {:update_state, %{state | hover: nil}}
+  end
+
+  def handle_event(_, _state), do: :consumed
+
+  # -- Rendering ---------------------------------------------------------------
+
+  def render(id, props, state) do
     import Plushie.UI
 
-    hover = Keyword.get(opts, :hover)
-    theme_progress = Keyword.get(opts, :theme_progress, 0.0)
-    readonly = Keyword.get(opts, :readonly, false)
-    scale = Keyword.get(opts, :scale, 1.0)
+    rating = props.rating || 0
+    readonly = props[:readonly] || false
+    scale = props[:scale] || 1.0
+    theme_progress = props[:theme_progress] || 0.0
 
     outer_r = 13 * scale
     inner_r = 5 * scale
     size = round(30 * scale)
     gap = round(2 * scale)
+    hover = state.hover
     display = hover || rating
     width = 5 * size + 4 * gap
 
@@ -86,25 +109,36 @@ defmodule StarRating do
     end
   end
 
+  # -- Star geometry -----------------------------------------------------------
+
   defp star_commands(outer_r, inner_r) do
     points =
       for i <- 0..9 do
-        angle = i * :math.pi() / 5 - :math.pi() / 2
+        angle = :math.pi() / 2 + i * :math.pi() / 5
         r = if rem(i, 2) == 0, do: outer_r, else: inner_r
-        {r * :math.cos(angle), r * :math.sin(angle)}
+        {r * :math.cos(angle), -r * :math.sin(angle)}
       end
 
-    [{fx, fy} | rest] = points
-    [move_to(fx, fy) | Enum.map(rest, fn {x, y} -> line_to(x, y) end)] ++ [close()]
+    [{x0, y0} | rest] = points
+
+    [
+      move_to(x0, y0)
+      | Enum.map(rest, fn {x, y} -> line_to(x, y) end)
+    ] ++ [close()]
   end
 
-  defp star_color(true, false, _progress), do: "#f59e0b"
-  defp star_color(_, true, _progress), do: "#fcd34d"
+  defp star_color(filled, preview, p) do
+    cond do
+      preview -> fade({255, 200, 50}, {200, 160, 80}, p)
+      filled -> fade({255, 180, 0}, {255, 200, 50}, p)
+      true -> fade({224, 224, 224}, {60, 60, 80}, p)
+    end
+  end
 
-  defp star_color(false, false, progress) do
-    r = round(209 + (74 - 209) * progress)
-    g = round(213 + (74 - 213) * progress)
-    b = round(219 + (94 - 219) * progress)
+  defp fade({r1, g1, b1}, {r2, g2, b2}, t) do
+    r = round(r1 + (r2 - r1) * t)
+    g = round(g1 + (g2 - g1) * t)
+    b = round(b1 + (b2 - b1) * t)
     "#" <> hex(r) <> hex(g) <> hex(b)
   end
 

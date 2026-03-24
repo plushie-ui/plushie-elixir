@@ -323,7 +323,9 @@ defmodule Plushie.Protocol.Encode do
     end)
   end
 
-  defp runtime_metadata?(k) when is_atom(k), do: k |> Atom.to_string() |> String.starts_with?("__")
+  defp runtime_metadata?(k) when is_atom(k),
+    do: k |> Atom.to_string() |> String.starts_with?("__")
+
   defp runtime_metadata?(_), do: false
 
   # Structs must be encoded before key stringification -- otherwise they

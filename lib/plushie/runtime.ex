@@ -54,12 +54,33 @@ defmodule Plushie.Runtime do
   alias Plushie.Event.{Async, Effect, Mouse, Sensor, Stream, Timer}
   alias Plushie.Runtime.{Commands, Subscriptions, Windows}
 
-  @typep state :: %{
+  @enforce_keys [:app, :bridge]
+  defstruct app: nil,
+            model: nil,
+            bridge: nil,
+            daemon: false,
+            token: nil,
+            tree: nil,
+            init_commands: [],
+            subscriptions: %{},
+            subscription_keys: [],
+            windows: MapSet.new(),
+            async_tasks: %{},
+            pending_effects: %{},
+            pending_timers: %{},
+            pending_coalesce: %{},
+            coalesce_timer: nil,
+            consecutive_errors: 0,
+            canvas_widgets: %{}
+
+  @typep state :: %__MODULE__{
            app: module(),
            model: term(),
            bridge: pid() | atom(),
            daemon: boolean(),
+           token: term(),
            tree: map() | nil,
+           init_commands: [Plushie.Command.t()],
            subscriptions: %{
              term() => {:timer, reference()} | {:renderer, atom(), non_neg_integer() | nil}
            },
@@ -70,7 +91,10 @@ defmodule Plushie.Runtime do
            pending_timers: %{term() => reference()},
            pending_coalesce: %{term() => Plushie.Event.t()},
            coalesce_timer: reference() | nil,
-           consecutive_errors: non_neg_integer()
+           consecutive_errors: non_neg_integer(),
+           canvas_widgets: %{
+             String.t() => %{module: module(), state: map()}
+           }
          }
 
   # ---------------------------------------------------------------------------
@@ -130,25 +154,13 @@ defmodule Plushie.Runtime do
     # 1. Initialize app model.
     case safe_init(app, app_opts) do
       {:ok, model, commands} ->
-        state = %{
+        state = %__MODULE__{
           app: app,
           model: model,
           bridge: bridge,
           daemon: daemon?,
           token: token,
-          tree: nil,
-          init_commands: commands,
-          subscriptions: %{},
-          subscription_keys: [],
-          windows: MapSet.new(),
-          async_tasks: %{},
-          pending_effects: %{},
-          pending_timers: %{},
-          pending_coalesce: %{},
-          coalesce_timer: nil,
-          consecutive_errors: 0,
-          # Canvas widget state: %{scoped_id => %{module: Mod, state: map()}}
-          canvas_widgets: %{}
+          init_commands: commands
         }
 
         # Defer rendering to handle_continue. Bridge is already started (it's
@@ -170,8 +182,8 @@ defmodule Plushie.Runtime do
 
     # 5. Execute initial commands.
     state = %{state | tree: tree}
-    state = Commands.execute_commands(Map.get(state, :init_commands, []), state)
-    state = Map.delete(state, :init_commands)
+    state = Commands.execute_commands(state.init_commands, state)
+    state = %{state | init_commands: []}
     state = Subscriptions.sync_subscriptions(state, state.model)
     state = Windows.sync_windows(state, tree)
     {:noreply, state}
@@ -646,7 +658,10 @@ defmodule Plushie.Runtime do
         state = Commands.execute_commands(commands, state)
         new_tree = render_and_sync(app, new_model, bridge, state.tree)
         state = %{state | tree: new_tree}
-        canvas_widgets = Plushie.Runtime.CanvasWidgets.sync_registry(state.canvas_widgets, new_tree)
+
+        canvas_widgets =
+          Plushie.Runtime.CanvasWidgets.sync_registry(state.canvas_widgets, new_tree)
+
         state = %{state | canvas_widgets: canvas_widgets}
         state = Subscriptions.sync_subscriptions(state, new_model)
         Windows.sync_windows(state, new_tree)

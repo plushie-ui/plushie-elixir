@@ -39,7 +39,6 @@ defmodule RatePlushie do
   def init(_opts) do
     %{
       rating: 0,
-      hover_star: nil,
       toggle_progress: 0.0,
       toggle_target: 0.0,
       reviews: @initial_reviews,
@@ -53,14 +52,10 @@ defmodule RatePlushie do
     alias Plushie.Event.{Widget, Timer}
 
     case event do
-      %Widget{type: :click, id: "star-" <> n, scope: ["stars" | _]} ->
-        %{model | rating: String.to_integer(n) + 1, errors: Map.delete(model.errors, :rating)}
-
-      %Widget{type: :canvas_element_enter, id: "star-" <> n, scope: ["stars" | _]} ->
-        %{model | hover_star: String.to_integer(n) + 1}
-
-      %Widget{type: :canvas_element_leave, scope: ["stars" | _]} ->
-        %{model | hover_star: nil}
+      # Star rating emits :select with the number of stars.
+      # Hover state is managed internally by the canvas_widget.
+      %Widget{type: :select, id: "stars", data: %{"value" => stars}} ->
+        %{model | rating: stars, errors: Map.delete(model.errors, :rating)}
 
       %Widget{type: :click, id: "switch", scope: ["theme-toggle" | _]} ->
         target = if model.toggle_target == 0.0, do: 1.0, else: 0.0
@@ -182,10 +177,7 @@ defmodule RatePlushie do
         text("prompt", "How would you rate Plushie?", size: 14, color: t.text_secondary)
 
         column id: "stars-group", spacing: 4 do
-          StarRating.render("stars", model.rating,
-            hover: model.hover_star,
-            theme_progress: p
-          )
+          StarRating.new("stars", rating: model.rating, theme_progress: p)
 
           if error = model.errors[:rating] do
             text("stars-error", error,
@@ -304,9 +296,7 @@ defmodule RatePlushie do
 
     column id: "review-#{i}", spacing: 4, padding: 12, width: :fill do
       row id: "rhdr-#{i}", spacing: 8, align_y: :center do
-        StarRating.render("rstars-#{i}", review.stars,
-          readonly: true, scale: 0.4, theme_progress: p
-        )
+        StarRating.new("rstars-#{i}", rating: review.stars, readonly: true, scale: 0.4, theme_progress: p)
         text("rname-#{i}", review.user, size: 12, color: t.text_secondary)
         space(id: "rsp-#{i}", width: :fill)
         text("rtime-#{i}", review.time, size: 12, color: t.text_muted)
