@@ -67,13 +67,17 @@ defmodule ColorPicker do
 
       # -- Canvas element focus tracking -----------------------------------------
 
-      %Widget{type: :canvas_element_focused, id: "picker", data: %{"element_id" => eid}} ->
+      %Widget{type: :canvas_element_focused, id: eid, scope: ["picker" | _]} ->
         %{model | focus: eid}
 
-      %Widget{type: :canvas_element_blurred, id: "picker", data: %{"element_id" => _}} ->
+      %Widget{type: :canvas_element_blurred, scope: ["picker" | _]} ->
         %{model | focus: nil}
 
       # -- Keyboard adjustment ---------------------------------------------------
+      # TODO: Uses global on_key_press subscription with manual focus tracking
+      # as a workaround. Should use canvas_element_key_press events once canvas
+      # keyboard handling works end-to-end. The renderer emits the event, but
+      # the canvas widget's handle_keyboard isn't triggered in the iced pipeline.
 
       %Key{type: :press, captured: false} ->
         handle_key(model, event)
@@ -83,12 +87,8 @@ defmodule ColorPicker do
     end
   end
 
-  def subscribe(model) do
-    if model.focus do
-      [Plushie.Subscription.on_key_press(:picker_keys)]
-    else
-      []
-    end
+  def subscribe(_model) do
+    [Plushie.Subscription.on_key_press(:picker_keys)]
   end
 
   # -- View --------------------------------------------------------------------

@@ -53,16 +53,16 @@ defmodule RatePlushie do
     alias Plushie.Event.{Widget, Timer}
 
     case event do
-      %Widget{type: :canvas_element_click, id: "stars", data: %{"element_id" => "star-" <> n}} ->
+      %Widget{type: :click, id: "star-" <> n, scope: ["stars" | _]} ->
         %{model | rating: String.to_integer(n) + 1, errors: Map.delete(model.errors, :rating)}
 
-      %Widget{type: :canvas_element_enter, id: "stars", data: %{"element_id" => "star-" <> n}} ->
+      %Widget{type: :canvas_element_enter, id: "star-" <> n, scope: ["stars" | _]} ->
         %{model | hover_star: String.to_integer(n) + 1}
 
-      %Widget{type: :canvas_element_leave, id: "stars"} ->
+      %Widget{type: :canvas_element_leave, scope: ["stars" | _]} ->
         %{model | hover_star: nil}
 
-      %Widget{type: :canvas_element_click, id: "theme-toggle"} ->
+      %Widget{type: :click, id: "switch", scope: ["theme-toggle" | _]} ->
         target = if model.toggle_target == 0.0, do: 1.0, else: 0.0
         %{model | toggle_target: target}
 

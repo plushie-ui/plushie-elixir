@@ -151,9 +151,9 @@ defmodule Examples.ColorPickerTest do
     {m, _} =
       dispatch(m, %Plushie.Event.Widget{
         type: :canvas_element_focused,
-        id: "picker",
-        scope: [],
-        data: %{"element_id" => cursor_id}
+        id: cursor_id,
+        scope: ["picker"],
+        data: nil
       })
 
     m

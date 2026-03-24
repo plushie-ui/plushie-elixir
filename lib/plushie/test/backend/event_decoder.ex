@@ -21,9 +21,9 @@ defmodule Plushie.Test.Backend.EventDecoder do
   Returns `nil` for unrecognised event families (caller should skip).
   """
   @spec decode(family :: String.t(), id :: String.t(), event :: map()) :: struct() | nil
-  def decode("click", id, _event) do
+  def decode("click", id, event) do
     {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :click, id: local, scope: scope}
+    %WidgetEvent{type: :click, id: local, scope: scope, data: event["data"]}
   end
 
   def decode("input", id, event) do
@@ -144,9 +144,20 @@ defmodule Plushie.Test.Backend.EventDecoder do
     %MouseEvent{type: :scroll, delta_x: data["delta_x"] || 0, delta_y: data["delta_y"] || 0}
   end
 
-  # Canvas element events.
+  # TODO: Canvas element events use generic %Widget{} with untyped data
+  # maps (string keys, string values) instead of dedicated event structs
+  # with parsed fields. This is inconsistent with %Key{} and %Canvas{}
+  # which have typed fields and atom key names. When canvas elements are
+  # promoted to first-class widget events, these should get proper structs
+  # and this dynamic atom construction should become explicit decode clauses
+  # like Protocol.Decode uses.
+  # canvas_element_click is now emitted as standard "click" by the
+  # renderer (handled by the "click" decoder above). Remaining
+  # canvas-specific events keep their families but use scoped IDs
+  # (canvas_id/element_id) which split_scoped_id handles.
   @canvas_element_families ~w(
-    canvas_element_enter canvas_element_leave canvas_element_click
+    canvas_element_enter canvas_element_leave
+    canvas_element_key_press
     canvas_element_drag canvas_element_drag_end
     canvas_element_focused canvas_element_blurred
     canvas_group_focused canvas_group_blurred
@@ -154,7 +165,7 @@ defmodule Plushie.Test.Backend.EventDecoder do
 
   def decode(type, id, event) when type in @canvas_element_families do
     {local, scope} = split_scoped_id(id)
-    atom = String.to_existing_atom(type)
+    atom = String.to_atom(type)
     %WidgetEvent{type: atom, id: local, scope: scope, data: event["data"] || %{}}
   end
 

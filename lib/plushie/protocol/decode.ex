@@ -165,9 +165,9 @@ defmodule Plushie.Protocol.Decode do
 
   # -- Widget events --
 
-  defp dispatch(%{"type" => "event", "family" => "click", "id" => id}) do
+  defp dispatch(%{"type" => "event", "family" => "click", "id" => id} = msg) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :click, id: local, scope: scope}
+    %Widget{type: :click, id: local, scope: scope, data: msg["data"]}
   end
 
   defp dispatch(%{"type" => "event", "family" => "input", "id" => id, "value" => value}) do
@@ -867,14 +867,21 @@ defmodule Plushie.Protocol.Decode do
     %Widget{type: :canvas_element_leave, id: local, scope: scope, data: data}
   end
 
+  # canvas_element_click is now emitted as standard "click" with scoped
+  # ID (canvas_id/element_id). Handled by the "click" dispatcher above.
+
+  # TODO: canvas_element_key_press carries key name as a wire string
+  # (e.g. "ArrowRight") and modifiers as a string-keyed map, unlike
+  # %Key{} which uses parsed atoms and %KeyModifiers{}. Should be
+  # unified when canvas elements become first-class widget events.
   defp dispatch(%{
          "type" => "event",
-         "family" => "canvas_element_click",
+         "family" => "canvas_element_key_press",
          "id" => id,
          "data" => data
        }) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :canvas_element_click, id: local, scope: scope, data: data}
+    %Widget{type: :canvas_element_key_press, id: local, scope: scope, data: data}
   end
 
   defp dispatch(%{
