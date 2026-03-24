@@ -7,7 +7,7 @@ defmodule Examples.RatePlushieTest do
 
   test "starts with zero rating in light mode" do
     assert model().rating == 0
-    assert model().toggle_target == 0.0
+    assert model().dark_mode == false
   end
 
   test "heading text exists" do

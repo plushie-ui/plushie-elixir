@@ -74,7 +74,7 @@ defmodule ColorPicker do
         %{model | focus: nil}
 
       # -- Keyboard adjustment ---------------------------------------------------
-      # TODO: Uses global on_key_press subscription with manual focus tracking
+      # NOTE: Uses global on_key_press subscription with manual focus tracking
       # as a workaround. Should use canvas_element_key_press events once canvas
       # keyboard handling works end-to-end. The renderer emits the event, but
       # the canvas widget's handle_keyboard isn't triggered in the iced pipeline.

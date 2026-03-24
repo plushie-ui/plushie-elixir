@@ -446,7 +446,16 @@ defmodule Plushie.Runtime do
         {:handled, new_registry} ->
           # Widget handled the timer internally (state update, re-render).
           state = %{state | canvas_widgets: new_registry}
-          new_tree = render_and_sync(state.app, state.model, state.bridge, state.tree, state.canvas_widgets)
+
+          new_tree =
+            render_and_sync(
+              state.app,
+              state.model,
+              state.bridge,
+              state.tree,
+              state.canvas_widgets
+            )
+
           {:noreply, %{state | tree: new_tree}}
 
         :passthrough ->
@@ -601,6 +610,7 @@ defmodule Plushie.Runtime do
         # Re-render canvas_widgets with stored state so they reflect
         # current internal state, not just initial defaults.
         new_tree = apply_canvas_widget_state(raw_tree, canvas_widgets)
+
         if is_nil(old_tree) do
           # First render or after restart -- send full snapshot.
           notify_bridge(%{bridge: bridge}, &Plushie.Bridge.send_snapshot(&1, new_tree))
@@ -835,13 +845,18 @@ defmodule Plushie.Runtime do
 
         module ->
           id = node[:id] || node["id"]
+          # Look up by raw id first, then by any scoped id in the registry.
+          widget_entry =
+            Map.get(canvas_widgets, id) ||
+              Enum.find_value(canvas_widgets, fn {reg_id, entry} ->
+                if String.ends_with?(reg_id, "/#{id}") or reg_id == id, do: entry
+              end)
 
-          case Map.get(canvas_widgets, id) do
+          case widget_entry do
             %{state: widget_state} ->
               CanvasWidget.expand(node, module, widget_state)
 
             nil ->
-              # Widget not yet registered (first render) -- keep as-is
               node
           end
       end

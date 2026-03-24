@@ -870,7 +870,7 @@ defmodule Plushie.Protocol.Decode do
   # canvas_element_click is now emitted as standard "click" with scoped
   # ID (canvas_id/element_id). Handled by the "click" dispatcher above.
 
-  # TODO: canvas_element_key_press carries key name as a wire string
+  # NOTE: canvas_element_key_press carries key name as a wire string
   # (e.g. "ArrowRight") and modifiers as a string-keyed map, unlike
   # %Key{} which uses parsed atoms and %KeyModifiers{}. Should be
   # unified when canvas elements become first-class widget events.

@@ -144,7 +144,7 @@ defmodule Plushie.Test.Backend.EventDecoder do
     %MouseEvent{type: :scroll, delta_x: data["delta_x"] || 0, delta_y: data["delta_y"] || 0}
   end
 
-  # TODO: Canvas element events use generic %Widget{} with untyped data
+  # NOTE: Canvas element events use generic %Widget{} with untyped data
   # maps (string keys, string values) instead of dedicated event structs
   # with parsed fields. This is inconsistent with %Key{} and %Canvas{}
   # which have typed fields and atom key names. When canvas elements are

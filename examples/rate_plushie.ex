@@ -39,8 +39,7 @@ defmodule RatePlushie do
   def init(_opts) do
     %{
       rating: 0,
-      toggle_progress: 0.0,
-      toggle_target: 0.0,
+      dark_mode: false,
       reviews: @initial_reviews,
       review_name: "",
       review_comment: "",
@@ -49,17 +48,17 @@ defmodule RatePlushie do
   end
 
   def update(model, event) do
-    alias Plushie.Event.{Widget, Timer}
+    alias Plushie.Event.Widget
 
     case event do
       # Star rating emits :select with the number of stars.
-      # Hover state is managed internally by the canvas_widget.
       %Widget{type: :select, id: "stars", data: %{"value" => stars}} ->
         %{model | rating: stars, errors: Map.delete(model.errors, :rating)}
 
-      %Widget{type: :click, id: "switch", scope: ["theme-toggle" | _]} ->
-        target = if model.toggle_target == 0.0, do: 1.0, else: 0.0
-        %{model | toggle_target: target}
+      # Theme toggle emits :toggle with the new state.
+      # Animation is managed internally by the canvas_widget.
+      %Widget{type: :toggle, id: "theme-toggle", data: %{"value" => dark?}} ->
+        %{model | dark_mode: dark?}
 
       %Widget{type: :input, id: "review-name", value: v} ->
         %{model | review_name: v, errors: Map.delete(model.errors, :name)}
@@ -69,9 +68,6 @@ defmodule RatePlushie do
 
       %Widget{type: :click, id: "submit-review"} -> submit_review(model)
       %Widget{type: :submit, id: "review-name"} -> submit_review(model)
-
-      %Timer{tag: :animate} ->
-        %{model | toggle_progress: approach(model.toggle_progress, model.toggle_target, 0.06)}
 
       _ -> model
     end
@@ -105,20 +101,14 @@ defmodule RatePlushie do
   defp validate_rating(errors, rating) when rating > 0, do: errors
   defp validate_rating(errors, _rating), do: Map.put(errors, :rating, "Please select a rating")
 
-  def subscribe(model) do
-    if model.toggle_progress != model.toggle_target do
-      [Plushie.Subscription.every(16, :animate)]
-    else
-      []
-    end
-  end
+  def subscribe(_model), do: []
 
   # -- View --------------------------------------------------------------------
 
   def view(model) do
     import Plushie.UI
 
-    p = smoothstep(model.toggle_progress)
+    p = if model.dark_mode, do: 1.0, else: 0.0
     t = theme(p)
 
     page_theme =
@@ -264,13 +254,13 @@ defmodule RatePlushie do
 
   # -- Theme toggle row --------------------------------------------------------
 
-  defp theme_row(model, t) do
+  defp theme_row(_model, t) do
     import Plushie.UI
 
     row id: "theme-row", align_y: :center do
       space(id: "theme-spacer", width: :fill)
       text("toggle-label", "Dark humor", color: t.text_secondary)
-      ThemeToggle.render("theme-toggle", model.toggle_progress)
+      ThemeToggle.new("theme-toggle")
     end
   end
 
@@ -330,15 +320,4 @@ defmodule RatePlushie do
   end
 
   defp hex(n), do: n |> Integer.to_string(16) |> String.pad_leading(2, "0")
-  defp smoothstep(t) when t <= 0.0, do: 0.0
-  defp smoothstep(t) when t >= 1.0, do: 1.0
-  defp smoothstep(t), do: t * t * (3 - 2 * t)
-
-  defp approach(current, target, step) do
-    cond do
-      current < target -> min(current + step, target)
-      current > target -> max(current - step, target)
-      true -> current
-    end
-  end
 end

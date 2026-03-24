@@ -17,7 +17,9 @@ defmodule Plushie.Runtime.CanvasWidgets do
   props and state. The returned specs are namespaced with the widget
   ID so they don't collide with app subscriptions or other widgets.
   """
-  @spec collect_subscriptions(registry :: map(), tree :: map() | nil) :: [Plushie.Subscription.t()]
+  @spec collect_subscriptions(registry :: map(), tree :: map() | nil) :: [
+          Plushie.Subscription.t()
+        ]
   def collect_subscriptions(registry, tree) do
     Enum.flat_map(registry, fn {widget_id, %{module: module, state: widget_state}} ->
       if function_exported?(module, :subscribe, 2) do
@@ -25,13 +27,7 @@ defmodule Plushie.Runtime.CanvasWidgets do
 
         module.subscribe(props, widget_state)
         |> List.wrap()
-        |> Enum.map(fn spec ->
-          # Namespace the subscription tag so timer events can be
-          # routed back to the right widget.
-          Plushie.Subscription.map_tag(spec, fn tag ->
-            {:__canvas_widget__, widget_id, tag}
-          end)
-        end)
+        |> Enum.map(&namespace_subscription(&1, widget_id))
       else
         []
       end
@@ -48,7 +44,10 @@ defmodule Plushie.Runtime.CanvasWidgets do
   def maybe_handle_timer(registry, {:__canvas_widget__, widget_id, inner_tag}) do
     case Map.get(registry, widget_id) do
       %{module: module, state: widget_state} ->
-        timer_event = %Plushie.Event.Timer{tag: inner_tag, timestamp: System.monotonic_time(:millisecond)}
+        timer_event = %Plushie.Event.Timer{
+          tag: inner_tag,
+          timestamp: System.monotonic_time(:millisecond)
+        }
 
         {_action, new_state} = CanvasWidget.dispatch_event(module, timer_event, widget_state)
         new_registry = put_in(registry, [widget_id, :state], new_state)
@@ -60,6 +59,12 @@ defmodule Plushie.Runtime.CanvasWidgets do
   end
 
   def maybe_handle_timer(_registry, _tag), do: :passthrough
+
+  defp namespace_subscription(spec, widget_id) do
+    Plushie.Subscription.map_tag(spec, fn tag ->
+      {:__canvas_widget__, widget_id, tag}
+    end)
+  end
 
   # Extract props for a widget from the tree by its scoped ID.
   defp extract_props(nil, _widget_id), do: %{}

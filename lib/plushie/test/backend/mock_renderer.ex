@@ -432,8 +432,22 @@ defmodule Plushie.Test.Backend.MockRenderer do
   end
 
   defp render_tree(app, model) do
-    app.view(model) |> Plushie.Tree.normalize()
+    app.view(model) |> Plushie.Tree.normalize() |> strip_runtime_metadata()
   end
+
+  # Strip runtime-only metadata keys (double-underscore prefix) from
+  # props before sending to the renderer. These are used by the runtime
+  # for canvas_widget registration but should not appear on the wire.
+  defp strip_runtime_metadata(%{props: props, children: children} = node) do
+    clean_props = Map.reject(props, fn {k, _} -> runtime_key?(k) end)
+    clean_children = Enum.map(children, &strip_runtime_metadata/1)
+    %{node | props: clean_props, children: clean_children}
+  end
+
+  defp strip_runtime_metadata(other), do: other
+
+  defp runtime_key?(k) when is_atom(k), do: k |> Atom.to_string() |> String.starts_with?("__")
+  defp runtime_key?(_), do: false
 
   # Walk the local tree to find a node by selector. Used by toggle/submit
   # to read the current widget state before sending the interact message.
