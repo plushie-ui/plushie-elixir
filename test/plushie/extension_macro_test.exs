@@ -450,7 +450,7 @@ defmodule Plushie.ExtensionMacroTest do
 
   describe "compile-time validation" do
     test "raises on invalid kind" do
-      assert_raise ArgumentError, ~r/must be :native_widget or :widget/, fn ->
+      assert_raise ArgumentError, ~r/must be one of/, fn ->
         Code.compile_string("""
         defmodule TestInvalidKind do
           use Plushie.Extension, :invalid

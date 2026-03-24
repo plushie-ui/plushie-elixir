@@ -146,7 +146,9 @@ defmodule Plushie.Runtime do
           pending_timers: %{},
           pending_coalesce: %{},
           coalesce_timer: nil,
-          consecutive_errors: 0
+          consecutive_errors: 0,
+          # Canvas widget state: %{scoped_id => %{module: Mod, state: map()}}
+          canvas_widgets: %{}
         }
 
         # Defer rendering to handle_continue. Bridge is already started (it's
@@ -223,8 +225,26 @@ defmodule Plushie.Runtime do
 
   def handle_info({:renderer_event, event}, state) do
     state = flush_coalescables(state)
-    state = run_update(state, event)
-    {:noreply, state}
+
+    # Canvas widget event interception: if the event's scope matches a
+    # registered canvas_widget, route through its handle_event/2 before
+    # delivering to the app's update/2.
+    case Plushie.Runtime.CanvasWidgets.maybe_intercept(state.canvas_widgets, event) do
+      {:intercepted, nil, new_registry} ->
+        # Event consumed by widget -- no delivery to update/2.
+        {:noreply, %{state | canvas_widgets: new_registry}}
+
+      {:intercepted, transformed_event, new_registry} ->
+        # Event transformed (or passed through) -- deliver to update/2.
+        state = %{state | canvas_widgets: new_registry}
+        state = run_update(state, transformed_event)
+        {:noreply, state}
+
+      :passthrough ->
+        # Not a canvas_widget event -- standard delivery.
+        state = run_update(state, event)
+        {:noreply, state}
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -626,6 +646,8 @@ defmodule Plushie.Runtime do
         state = Commands.execute_commands(commands, state)
         new_tree = render_and_sync(app, new_model, bridge, state.tree)
         state = %{state | tree: new_tree}
+        canvas_widgets = Plushie.Runtime.CanvasWidgets.sync_registry(state.canvas_widgets, new_tree)
+        state = %{state | canvas_widgets: canvas_widgets}
         state = Subscriptions.sync_subscriptions(state, new_model)
         Windows.sync_windows(state, new_tree)
 

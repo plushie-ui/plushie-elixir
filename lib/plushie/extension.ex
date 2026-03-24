@@ -2,13 +2,18 @@ defmodule Plushie.Extension do
   @moduledoc """
   Macro-based DSL for declaring Plushie widget extensions.
 
-  Supports two kinds of extension:
+  Supports three kinds of extension:
 
   - `:native_widget` -- backed by a Rust crate implementing the
     `WidgetExtension` trait. Requires `rust_crate` and `rust_constructor`
     declarations.
   - `:widget` -- pure Elixir widget, either a direct node builder or a
     composite that defines `render/2` or `render/3`.
+  - `:canvas_widget` -- pure Elixir canvas-based widget with internal
+    state management and event transformation. Defines `render/3`
+    (id, props, state), `handle_event/2` for event transformation,
+    and optional `state` declarations for runtime-managed internal
+    state. See the canvas_widget section below.
 
   ## Usage
 
@@ -126,12 +131,14 @@ defmodule Plushie.Extension do
 
   # -- __using__ -------------------------------------------------------------
 
-  defmacro __using__(kind) when kind not in [:native_widget, :widget] do
+  @valid_kinds [:native_widget, :widget, :canvas_widget]
+
+  defmacro __using__(kind) when kind not in [:native_widget, :widget, :canvas_widget] do
     raise ArgumentError,
-          "Plushie.Extension kind must be :native_widget or :widget, got: #{inspect(kind)}"
+          "Plushie.Extension kind must be one of #{inspect(@valid_kinds)}, got: #{inspect(kind)}"
   end
 
-  defmacro __using__(kind) when kind in [:native_widget, :widget] do
+  defmacro __using__(kind) when kind in [:native_widget, :widget, :canvas_widget] do
     common =
       quote do
         @behaviour Plushie.Extension
@@ -143,29 +150,46 @@ defmodule Plushie.Extension do
         Module.put_attribute(__MODULE__, :_extension_container, false)
       end
 
-    imports =
-      if kind == :native_widget do
+    canvas_widget_attrs =
+      if kind == :canvas_widget do
         quote do
-          import Plushie.Extension,
-            only: [
-              widget: 1,
-              widget: 2,
-              prop: 2,
-              prop: 3,
-              command: 1,
-              command: 2,
-              rust_crate: 1,
-              rust_constructor: 1
-            ]
+          Module.register_attribute(__MODULE__, :_extension_state_fields, accumulate: true)
+        end
+      end
 
-          Module.put_attribute(__MODULE__, :_rust_crate, nil)
-          Module.put_attribute(__MODULE__, :_rust_constructor, nil)
-        end
-      else
-        quote do
-          import Plushie.Extension, only: [widget: 1, widget: 2, prop: 2, prop: 3]
-          import Plushie.UI
-        end
+    imports =
+      case kind do
+        :native_widget ->
+          quote do
+            import Plushie.Extension,
+              only: [
+                widget: 1,
+                widget: 2,
+                prop: 2,
+                prop: 3,
+                command: 1,
+                command: 2,
+                rust_crate: 1,
+                rust_constructor: 1
+              ]
+
+            Module.put_attribute(__MODULE__, :_rust_crate, nil)
+            Module.put_attribute(__MODULE__, :_rust_constructor, nil)
+          end
+
+        :canvas_widget ->
+          quote do
+            import Plushie.Extension,
+              only: [widget: 1, widget: 2, prop: 2, prop: 3, state: 1]
+
+            import Plushie.UI
+          end
+
+        :widget ->
+          quote do
+            import Plushie.Extension, only: [widget: 1, widget: 2, prop: 2, prop: 3]
+            import Plushie.UI
+          end
       end
 
     before_compile =
@@ -173,7 +197,7 @@ defmodule Plushie.Extension do
         @before_compile Plushie.Extension
       end
 
-    [common, imports, before_compile]
+    [common, canvas_widget_attrs, imports, before_compile]
   end
 
   # -- DSL macros ------------------------------------------------------------
@@ -196,6 +220,23 @@ defmodule Plushie.Extension do
   defmacro prop(name, type, opts \\ []) do
     quote do
       @_extension_props {unquote(name), unquote(type), unquote(opts)}
+    end
+  end
+
+  @doc """
+  Declares internal state fields for a canvas_widget.
+
+  State fields are managed by the runtime, not the app model.
+  They persist across renders and are passed to `render/3` and
+  `handle_event/2`.
+
+      state hover: nil, drag: :none, animation_progress: 0.0
+  """
+  defmacro state(fields) when is_list(fields) do
+    quote do
+      for {name, default} <- unquote(fields) do
+        @_extension_state_fields {name, default}
+      end
     end
   end
 
@@ -249,7 +290,12 @@ defmodule Plushie.Extension do
     validate_command_types!(commands)
     warn_duplicate_props(env, props)
     validate_reserved_names!(env, props)
-    validate_render_arity!(env, container)
+
+    if kind == :canvas_widget do
+      validate_canvas_widget!(env)
+    else
+      validate_render_arity!(env, container)
+    end
 
     rust_crate_val = Module.get_attribute(env.module, :_rust_crate)
     rust_constructor_val = Module.get_attribute(env.module, :_rust_constructor)
@@ -261,11 +307,20 @@ defmodule Plushie.Extension do
       generate_behaviour_fns(kind, widget_type, rust_crate_val, rust_constructor_val)
 
     widget_code =
-      if is_composite do
+      if kind == :canvas_widget do
+        state_fields =
+          (Module.get_attribute(env.module, :_extension_state_fields) || [])
+          |> Enum.reverse()
+
         prop_validation = generate_prop_validation(props)
-        generate_composite_new(type_string, container, props, prop_validation, has_render_3)
+        generate_canvas_widget_new(env.module, type_string, props, state_fields, prop_validation)
       else
-        generate_struct_widget(env.module, type_string, container, props)
+        if is_composite do
+          prop_validation = generate_prop_validation(props)
+          generate_composite_new(type_string, container, props, prop_validation, has_render_3)
+        else
+          generate_struct_widget(env.module, type_string, container, props)
+        end
       end
 
     command_fns = generate_commands(commands)
@@ -361,6 +416,88 @@ defmodule Plushie.Extension do
         line: 0,
         description:
           "#{inspect(env.module)} declares container: true but defines render/2 instead of render/3. Container widgets must accept children via render/3."
+    end
+  end
+
+  defp validate_canvas_widget!(env) do
+    unless Module.defines?(env.module, {:render, 3}) do
+      raise CompileError,
+        file: env.file,
+        line: 0,
+        description:
+          "#{inspect(env.module)} is a :canvas_widget but does not define render/3. " <>
+            "Canvas widgets must define render(id, props, state)."
+    end
+
+    # handle_event/2 is optional. If not defined, a default passthrough
+    # is generated. Read-only canvas widgets (gauges, charts, etc.)
+    # don't need event transformation.
+  end
+
+  defp generate_canvas_widget_new(module, _type_string, props, state_fields, prop_extract) do
+    prop_struct_fields =
+      for {name, _type, opts} <- props do
+        default = Keyword.get(opts, :default)
+        {name, default}
+      end
+
+    state_defaults = Macro.escape(Map.new(state_fields))
+
+    has_handle_event = Module.defines?(module, {:handle_event, 2})
+
+    default_handle_event =
+      unless has_handle_event do
+        quote do
+          @doc "Default event handler -- passes all events through."
+          def handle_event(_event, _state), do: :passthrough
+        end
+      end
+
+    quote do
+      @doc "Returns the initial internal state for this canvas widget."
+      @spec __initial_state__() :: map()
+      def __initial_state__, do: unquote(state_defaults)
+
+      @doc "Returns true for canvas_widget extension modules."
+      @spec __canvas_widget__?() :: true
+      def __canvas_widget__?, do: true
+
+      unquote(default_handle_event)
+
+      @spec new(id :: String.t(), opts :: keyword()) :: Plushie.Widget.ui_node()
+      def new(id, opts \\ []) when is_binary(id) do
+        {event_rate_val, opts} = Keyword.pop(opts, :event_rate)
+        {a11y_val, opts} = Keyword.pop(opts, :a11y)
+
+        prop_defaults = unquote(Macro.escape(prop_struct_fields))
+        unquote(prop_extract)
+
+        props_map =
+          prop_defaults
+          |> Enum.map(fn {name, default} ->
+            {name, Keyword.get(opts, name, default)}
+          end)
+          |> Enum.reject(fn {_name, val} -> is_nil(val) end)
+          |> Map.new()
+
+        props_map =
+          if event_rate_val,
+            do: Map.put(props_map, :event_rate, event_rate_val),
+            else: props_map
+
+        props_map =
+          if a11y_val, do: Map.put(props_map, :a11y, a11y_val), else: props_map
+
+        # Call render with initial state. The runtime will manage
+        # state persistence across renders once the widget is
+        # registered. For the first render, use defaults.
+        state = __initial_state__()
+        node = render(id, props_map, state)
+
+        # Tag the node so the runtime can identify this as a
+        # canvas_widget and route events through handle_event/2.
+        Plushie.Extension.CanvasWidget.tag_node(node, unquote(module), props_map)
+      end
     end
   end
 

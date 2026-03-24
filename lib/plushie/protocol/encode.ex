@@ -312,12 +312,19 @@ defmodule Plushie.Protocol.Encode do
   """
   @spec stringify_keys(map :: map()) :: %{String.t() => term()}
   def stringify_keys(%{} = map) do
-    Map.new(map, fn
+    map
+    # Strip runtime-only metadata keys (double-underscore prefix).
+    # Used by canvas_widget registration, not sent to the renderer.
+    |> Enum.reject(fn {k, _} -> runtime_metadata?(k) end)
+    |> Map.new(fn
       {k, v} when is_atom(k) -> {Atom.to_string(k), stringify_value(v)}
       {k, v} when is_binary(k) -> {k, stringify_value(v)}
       {k, v} -> {inspect(k), stringify_value(v)}
     end)
   end
+
+  defp runtime_metadata?(k) when is_atom(k), do: k |> Atom.to_string() |> String.starts_with?("__")
+  defp runtime_metadata?(_), do: false
 
   # Structs must be encoded before key stringification -- otherwise they
   # match the bare map clause and get destructured into raw struct fields.
