@@ -558,11 +558,11 @@ defmodule Plushie.Runtime do
       state = put_in(state.subscriptions[key], {:timer, ref})
 
       # Route canvas_widget timer ticks to the widget's handle_event
-      # instead of the app's update/2. Timer-triggered emits bubble
-      # through parent canvas_widgets.
+      # instead of the app's update/2. Timer-triggered emits are
+      # dispatched through the scope chain of parent canvas_widgets.
       case Plushie.Runtime.CanvasWidgets.maybe_handle_timer(state.canvas_widgets, tag) do
         {:handled, nil, new_registry} ->
-          # Widget consumed the timer (state update, re-render only).
+          # Widget captured the timer (state update, re-render only).
           state = %{state | canvas_widgets: new_registry}
 
           new_tree =
@@ -580,13 +580,13 @@ defmodule Plushie.Runtime do
           {:noreply, %{state | tree: new_tree, canvas_widgets: canvas_widgets}}
 
         {:handled, emitted_event, new_registry} ->
-          # Widget emitted an event (possibly after bubbling through
+          # Widget emitted an event (possibly dispatched through
           # parent canvas_widgets). Deliver to app's update/2.
           state = %{state | canvas_widgets: new_registry}
           state = run_update(state, emitted_event)
           {:noreply, state}
 
-        :passthrough ->
+        :not_routed ->
           # Standard app timer -- dispatch to update/2.
           now = System.monotonic_time(:millisecond)
           state = run_update(state, %Timer{tag: tag, timestamp: now})
@@ -814,15 +814,15 @@ defmodule Plushie.Runtime do
   #
   # Every inbound event flows through two stages:
   #
-  # 1. **Intercept**: canvas_widget routing. Walks the event's scope
-  #    chain to find registered canvas_widgets, dispatches through
-  #    handle_event/2, bubbles emits through parents. Returns the
-  #    (possibly transformed) event to deliver, or nil if consumed.
+  # 1. **Dispatch through canvas_widgets**: walk the scope chain of
+  #    canvas_widget handlers (innermost to outermost) following iced's
+  #    captured/ignored model. Returns the (possibly transformed) event
+  #    to deliver, or nil if captured with no output.
   #
-  # 2. **Dispatch**: model update via app.update/2, command execution,
+  # 2. **App update**: model update via app.update/2, command execution,
   #    and optionally re-rendering + tree sync.
   #
-  # Two dispatch modes:
+  # Two app update modes:
   # - `run_update`: full cycle (update + commands + view + diff + patch).
   #   Used by the normal event loop and interact_response.
   # - `apply_event`: update + commands only, no re-render. Used by
@@ -830,21 +830,15 @@ defmodule Plushie.Runtime do
   #   is sent after all events are processed.
   # ---------------------------------------------------------------------------
 
-  # Resolve an event through canvas_widget interception. Returns
+  # Dispatch an event through the canvas_widget handler chain. Returns
   # `{event_or_nil, updated_state}` where event_or_nil is the event
-  # to deliver to app.update/2 (nil if consumed by a widget).
-  @spec intercept_event(state(), term()) :: {term() | nil, state()}
-  defp intercept_event(state, event) do
-    case Plushie.Runtime.CanvasWidgets.maybe_intercept(state.canvas_widgets, event) do
-      {:intercepted, nil, new_registry} ->
-        {nil, %{state | canvas_widgets: new_registry}}
+  # to deliver to app.update/2 (nil if captured by a widget).
+  @spec route_through_widgets(state(), term()) :: {term() | nil, state()}
+  defp route_through_widgets(state, event) do
+    {result_event, new_registry} =
+      Plushie.Runtime.CanvasWidgets.dispatch_event(state.canvas_widgets, event)
 
-      {:intercepted, transformed, new_registry} ->
-        {transformed, %{state | canvas_widgets: new_registry}}
-
-      :passthrough ->
-        {event, state}
-    end
+    {result_event, %{state | canvas_widgets: new_registry}}
   end
 
   # Full update cycle: intercept -> update -> commands -> view -> diff -> patch.
@@ -856,7 +850,7 @@ defmodule Plushie.Runtime do
   # as separate events in subsequent cycles.
   @spec run_update(state(), term()) :: state()
   defp run_update(state, event) do
-    {resolved_event, state} = intercept_event(state, event)
+    {resolved_event, state} = route_through_widgets(state, event)
 
     if is_nil(resolved_event) do
       state
@@ -895,7 +889,7 @@ defmodule Plushie.Runtime do
   # where events are batched and a single snapshot follows.
   @spec apply_event(state(), term()) :: state()
   defp apply_event(state, event) do
-    {resolved_event, state} = intercept_event(state, event)
+    {resolved_event, state} = route_through_widgets(state, event)
 
     if is_nil(resolved_event) do
       state

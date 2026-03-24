@@ -20,22 +20,25 @@ defmodule Plushie.Extension.CanvasWidget do
 
   The tree carries widget state in `:meta` (`__canvas_widget_state__`),
   making it the single source of truth. The runtime derives a registry
-  from the tree after each render for O(1) event interception lookups.
+  from the tree after each render for O(1) event dispatch lookups.
 
-  ## Event transformation
+  ## Event dispatch (captured/ignored model)
 
-  `dispatch_event/3` is called by the runtime when an event arrives
+  `dispatch_event/4` is called by the runtime when an event arrives
   for a widget inside a canvas_widget's scope. It calls the module's
-  `handle_event/2` and interprets the return value:
+  `handle_event/2` and interprets the return value using iced's
+  captured/ignored model:
 
-  - `{:emit, family, data}` -- suppress original, emit semantic event
-  - `{:emit, family, data, new_state}` -- emit + update internal state
-  - `{:update_state, new_state}` -- update state, no event
-  - `:passthrough` -- deliver original event to update/2
-  - `:consumed` -- suppress, no event
+  - `{:emit, family, data}` -- captured, emit semantic event
+  - `{:emit, family, data, new_state}` -- captured, emit + update state
+  - `{:update_state, new_state}` -- captured, internal state change only
+  - `:consumed` -- captured, suppress event
+  - `:ignored` -- not captured, continue to next handler in scope chain
 
-  Emitted events bubble hierarchically through parent canvas_widgets
-  in the scope chain before reaching `app.update/2`.
+  Events are dispatched through the scope chain (innermost to outermost).
+  `:ignored` continues to the next canvas_widget in the chain. Captured
+  events stop propagation (or, for `:emit`, replace the event and
+  continue). If no handler captures, the event reaches `app.update/2`.
   """
 
   @doc """
@@ -49,16 +52,16 @@ defmodule Plushie.Extension.CanvasWidget do
   Dispatches an event through a canvas_widget's handle_event/2.
 
   Returns `{action, new_state}` where action is one of:
-  - `{:emit, %Widget{}}` -- deliver transformed event to update/2
-  - `:consumed` -- suppress event
-  - `:passthrough` -- deliver original event to update/2
+  - `{:emit, %Widget{}}` -- captured with transformed event
+  - `:consumed` -- captured, no output
+  - `:ignored` -- not captured, continue to next handler
   """
   @spec dispatch_event(
           module :: module(),
           event :: struct(),
           state :: map(),
           widget_id :: String.t()
-        ) :: {{:emit, struct()} | :consumed | :passthrough, map()}
+        ) :: {{:emit, struct()} | :consumed | :ignored, map()}
   def dispatch_event(module, event, state, widget_id \\ "") do
     case module.handle_event(event, state) do
       {:emit, family, data} ->
@@ -88,8 +91,8 @@ defmodule Plushie.Extension.CanvasWidget do
       {:update_state, new_state} when is_map(new_state) ->
         {:consumed, new_state}
 
-      :passthrough ->
-        {:passthrough, state}
+      :ignored ->
+        {:ignored, state}
 
       :consumed ->
         {:consumed, state}

@@ -451,8 +451,8 @@ defmodule Plushie.Extension do
     default_handle_event =
       unless has_handle_event do
         quote do
-          @doc "Default event handler -- passes all events through to the app's update/2."
-          def handle_event(_event, _state), do: :passthrough
+          @doc "Default event handler -- event not captured, continues to next handler."
+          def handle_event(_event, _state), do: :ignored
         end
       end
 
