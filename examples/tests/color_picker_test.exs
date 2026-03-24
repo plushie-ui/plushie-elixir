@@ -27,12 +27,12 @@ defmodule Examples.ColorPickerTest do
   # -- A11y annotations --------------------------------------------------------
 
   test "swatch announces the selected color" do
-    assert_a11y("#swatch", %{"role" => "image", "label" => "Selected color: #ff0000"})
+    assert_a11y("#swatch", %{role: "image", label: "Selected color: #ff0000"})
   end
 
   test "hex and hsv displays are live regions" do
-    assert_a11y("#hex_display", %{"live" => "polite"})
-    assert_a11y("#hsv_display", %{"live" => "polite"})
+    assert_a11y("#hex_display", %{live: "polite"})
+    assert_a11y("#hsv_display", %{live: "polite"})
   end
 
   # -- Keyboard: update/2 unit tests -------------------------------------------

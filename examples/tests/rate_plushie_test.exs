@@ -63,8 +63,8 @@ defmodule Examples.RatePlushieTest do
   # -- A11y on form fields (initial state) -------------------------------------
 
   test "form fields are marked required and not invalid initially" do
-    assert_a11y("#review-name", %{"required" => true, "invalid" => false})
-    assert_a11y("#review-comment", %{"required" => true, "invalid" => false})
+    assert_a11y("#review-name", %{required: true, invalid: false})
+    assert_a11y("#review-comment", %{required: true, invalid: false})
   end
 
   test "no error text rendered initially" do
@@ -86,16 +86,16 @@ defmodule Examples.RatePlushieTest do
   test "submitting empty form marks inputs as invalid" do
     click("#submit-review")
 
-    assert_a11y("#review-name", %{"invalid" => true})
-    assert_a11y("#review-comment", %{"invalid" => true})
+    assert_a11y("#review-name", %{invalid: true})
+    assert_a11y("#review-comment", %{invalid: true})
   end
 
   test "error messages are announced as alerts" do
     click("#submit-review")
 
-    assert_a11y("#review-name-error", %{"role" => "alert", "live" => "polite"})
-    assert_a11y("#review-comment-error", %{"role" => "alert", "live" => "polite"})
-    assert_a11y("#stars-error", %{"role" => "alert", "live" => "polite"})
+    assert_a11y("#review-name-error", %{role: "alert", live: "polite"})
+    assert_a11y("#review-comment-error", %{role: "alert", live: "polite"})
+    assert_a11y("#stars-error", %{role: "alert", live: "polite"})
   end
 
   # -- Validation on submit (partial fields) -----------------------------------
@@ -141,7 +141,7 @@ defmodule Examples.RatePlushieTest do
     type_text("#review-name", "R")
 
     assert_not_exists("#review-name-error")
-    assert_a11y("#review-name", %{"invalid" => false})
+    assert_a11y("#review-name", %{invalid: false})
   end
 
   test "typing in name field does not clear other errors" do
@@ -159,7 +159,7 @@ defmodule Examples.RatePlushieTest do
     type_text("#review-comment", "R")
 
     assert_not_exists("#review-comment-error")
-    assert_a11y("#review-comment", %{"invalid" => false})
+    assert_a11y("#review-comment", %{invalid: false})
   end
 
   test "typing in comment field does not clear other errors" do

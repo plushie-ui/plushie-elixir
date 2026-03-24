@@ -1,18 +1,12 @@
 defmodule Plushie.Test.Backend.Runtime do
   @moduledoc """
-  Test backend that uses the real Plushie Runtime and Bridge.
+  Test backend that starts a real Plushie app (Runtime + Bridge).
 
-  Unlike the deprecated MockRenderer (which duplicated the Elm cycle in a
-  test GenServer), this backend starts the full Plushie supervisor tree
-  (Bridge + Runtime) connected to the shared SessionPool via a PoolAdapter.
-  All event processing goes through the real Runtime, giving tests
-  production-equivalent behavior.
-
-  Because the real Runtime handles the update loop, all features work
-  out of the box: canvas_widget state and event transformation,
-  subscriptions, effect tracking, window sync, and scoped IDs.
-  MockRenderer required re-implementing each of these in test code;
-  this backend gets them for free.
+  Starts the full Plushie supervisor tree connected to the shared
+  SessionPool via a PoolAdapter. All event processing goes through
+  the real Runtime, giving tests production-equivalent behavior.
+  Canvas widget state, event transformation, subscriptions, effects,
+  and scoped IDs all work identically to production.
 
   ## Architecture
 
@@ -42,8 +36,6 @@ defmodule Plushie.Test.Backend.Runtime do
       Plushie.Test.Backend.Runtime.stop(pid)
   """
 
-  @behaviour Plushie.Test.Backend
-
   use GenServer
 
   alias Plushie.Test.Element
@@ -53,18 +45,14 @@ defmodule Plushie.Test.Backend.Runtime do
 
   # -- Backend callbacks -------------------------------------------------------
 
-  @impl Plushie.Test.Backend
   def start(app, opts) do
     GenServer.start_link(__MODULE__, {app, opts})
   end
 
-  @impl Plushie.Test.Backend
   def stop(pid), do: GenServer.stop(pid, :normal, 10_000)
 
-  @impl Plushie.Test.Backend
   def find(pid, selector), do: GenServer.call(pid, {:find, selector})
 
-  @impl Plushie.Test.Backend
   def find!(pid, selector) do
     case find(pid, selector) do
       nil -> raise "element not found: #{inspect(selector)}"
@@ -72,95 +60,90 @@ defmodule Plushie.Test.Backend.Runtime do
     end
   end
 
-  @impl Plushie.Test.Backend
   def click(pid, selector), do: do_interact(pid, "click", selector, %{})
 
-  @impl Plushie.Test.Backend
   def type_text(pid, selector, text),
     do: do_interact(pid, "type_text", selector, %{text: text})
 
-  @impl Plushie.Test.Backend
-  def submit(pid, selector), do: do_interact(pid, "submit", selector, %{})
+  def submit(pid, selector) do
+    # The renderer's interact path needs the current text value.
+    value = GenServer.call(pid, {:read_prop, selector, :submit_value})
+    do_interact(pid, "submit", selector, %{value: value})
+  end
 
-  @impl Plushie.Test.Backend
-  def toggle(pid, selector), do: do_interact(pid, "toggle", selector, %{})
+  def toggle(pid, selector, value \\ nil) do
+    target =
+      if is_boolean(value) do
+        value
+      else
+        # No explicit value: read current state and negate (.ice compat)
+        current = GenServer.call(pid, {:read_prop, selector, :toggle_value})
+        !current
+      end
 
-  @impl Plushie.Test.Backend
+    do_interact(pid, "toggle", selector, %{value: target})
+  end
+
   def select(pid, selector, value),
     do: do_interact(pid, "select", selector, %{value: value})
 
-  @impl Plushie.Test.Backend
   def slide(pid, selector, value),
     do: do_interact(pid, "slide", selector, %{value: value})
 
-  @impl Plushie.Test.Backend
   def model(pid), do: GenServer.call(pid, :model)
 
-  @impl Plushie.Test.Backend
   def tree(pid), do: GenServer.call(pid, :tree)
 
-  @impl Plushie.Test.Backend
   def tree_hash(_pid, name) do
     %Plushie.Test.TreeHash{name: name, hash: ""}
   end
 
-  @impl Plushie.Test.Backend
   def screenshot(_pid, name) do
     %Plushie.Test.Screenshot{name: name, hash: "", size: {0, 0}, rgba_data: nil}
   end
 
-  @impl Plushie.Test.Backend
   def reset(pid), do: GenServer.call(pid, :reset, 10_000)
 
-  @impl Plushie.Test.Backend
-  def await_async(_pid, _tag, _timeout \\ 5000), do: :ok
+  def await_async(pid, tag, timeout \\ 5000) do
+    runtime = GenServer.call(pid, :runtime)
+    Plushie.Runtime.await_async(runtime, tag, timeout)
+  end
 
-  @impl Plushie.Test.Backend
   def press(pid, key) do
     {key_name, mods} = parse_key(key)
     do_interact(pid, "press", nil, %{key: key_name, modifiers: mods})
   end
 
-  @impl Plushie.Test.Backend
   def release(pid, key) do
     {key_name, mods} = parse_key(key)
     do_interact(pid, "release", nil, %{key: key_name, modifiers: mods})
   end
 
-  @impl Plushie.Test.Backend
   def move_to(pid, x, y), do: do_interact(pid, "move_to", nil, %{x: x, y: y})
 
-  @impl Plushie.Test.Backend
   def type_key(pid, key) do
     {key_name, mods} = parse_key(key)
     do_interact(pid, "type_key", nil, %{key: key_name, modifiers: mods})
   end
 
-  @impl Plushie.Test.Backend
   def scroll(pid, selector, delta_x, delta_y),
     do: do_interact(pid, "scroll", selector, %{delta_x: delta_x, delta_y: delta_y})
 
-  @impl Plushie.Test.Backend
   def paste(pid, selector, text),
     do: do_interact(pid, "paste", selector, %{text: text})
 
-  @impl Plushie.Test.Backend
   def sort(pid, selector, column, direction),
     do: do_interact(pid, "sort", selector, %{column: column, direction: direction})
 
-  @impl Plushie.Test.Backend
   def canvas_press(pid, selector, x, y, button),
     do: do_interact(pid, "canvas_press", selector, %{x: x, y: y, button: button})
 
-  @impl Plushie.Test.Backend
   def canvas_release(pid, selector, x, y, button),
     do: do_interact(pid, "canvas_release", selector, %{x: x, y: y, button: button})
 
-  @impl Plushie.Test.Backend
   def canvas_move(pid, selector, x, y),
     do: do_interact(pid, "canvas_move", selector, %{x: x, y: y})
 
-  @impl Plushie.Test.Backend
   def pane_focus_cycle(pid, selector),
     do: do_interact(pid, "pane_focus_cycle", selector, %{})
 
@@ -215,6 +198,10 @@ defmodule Plushie.Test.Backend.Runtime do
   end
 
   @impl GenServer
+  def handle_call(:runtime, _from, state) do
+    {:reply, state.runtime, state}
+  end
+
   def handle_call(:model, _from, state) do
     model = Plushie.Runtime.get_model(state.runtime)
     {:reply, model, state}
@@ -229,6 +216,26 @@ defmodule Plushie.Test.Backend.Runtime do
     tree = Plushie.Runtime.get_tree(state.runtime)
     element = find_in_tree(tree, selector)
     {:reply, element, state}
+  end
+
+  def handle_call({:read_prop, selector, :toggle_value}, _from, state) do
+    tree = Plushie.Runtime.get_tree(state.runtime)
+    node = find_node_in_tree(tree, selector)
+    props = (node && node[:props]) || %{}
+
+    value =
+      props[:is_toggled] || props["is_toggled"] ||
+        props[:checked] || props["checked"] || false
+
+    {:reply, value, state}
+  end
+
+  def handle_call({:read_prop, selector, :submit_value}, _from, state) do
+    tree = Plushie.Runtime.get_tree(state.runtime)
+    node = find_node_in_tree(tree, selector)
+    props = (node && node[:props]) || %{}
+    value = props[:value] || props["value"] || ""
+    {:reply, value, state}
   end
 
   def handle_call({:interact, action, selector, payload}, _from, state) do
@@ -291,7 +298,7 @@ defmodule Plushie.Test.Backend.Runtime do
   defp find_in_tree(tree, "#" <> id) do
     case Plushie.Tree.find(tree, id) do
       nil -> nil
-      node -> Element.from_node(normalize_node(node))
+      node -> Element.from_node(node)
     end
   end
 
@@ -303,7 +310,7 @@ defmodule Plushie.Test.Backend.Runtime do
       end)
       |> List.first()
 
-    if node, do: Element.from_node(normalize_node(node))
+    if node, do: Element.from_node(node)
   end
 
   defp find_in_tree(tree, {:label, label}) do
@@ -314,7 +321,7 @@ defmodule Plushie.Test.Backend.Runtime do
       end)
       |> List.first()
 
-    if node, do: Element.from_node(normalize_node(node))
+    if node, do: Element.from_node(node)
   end
 
   defp find_in_tree(tree, text) when is_binary(text) do
@@ -326,31 +333,19 @@ defmodule Plushie.Test.Backend.Runtime do
       end)
       |> List.first()
 
-    if node, do: Element.from_node(normalize_node(node))
+    if node, do: Element.from_node(node)
   end
 
   defp find_in_tree(_tree, :focused), do: nil
 
-  # Convert atom-keyed tree nodes to string-keyed maps for Element.from_node.
-  defp normalize_node(%{id: id, type: type, props: props} = node) do
-    children = Map.get(node, :children, [])
+  # Returns the raw tree node (not wrapped in Element) for reading props.
+  defp find_node_in_tree(nil, _selector), do: nil
 
-    string_props =
-      Enum.into(props, %{}, fn
-        {k, v} when is_atom(k) -> {Atom.to_string(k), v}
-        {k, v} -> {k, v}
-      end)
-
-    %{
-      "id" => id,
-      "type" => type,
-      "props" => string_props,
-      "children" => Enum.map(children, &normalize_node/1)
-    }
+  defp find_node_in_tree(tree, "#" <> id) do
+    Plushie.Tree.find(tree, id)
   end
 
-  defp normalize_node(%{"id" => _} = node), do: node
-  defp normalize_node(other), do: other
+  defp find_node_in_tree(_tree, _selector), do: nil
 
   defp encode_selector(nil, _tree), do: %{}
 

@@ -21,7 +21,6 @@ defmodule Plushie.Test.Helpers do
   `Plushie.Test.Session` directly.
   """
 
-  alias Plushie.Test.Backend
   alias Plushie.Test.Element
   alias Plushie.Test.Screenshot
   alias Plushie.Test.Session
@@ -35,11 +34,11 @@ defmodule Plushie.Test.Helpers do
   end
 
   @doc "Finds an element by selector. Returns nil if not found."
-  @spec find(selector :: Backend.selector()) :: Element.t() | nil
+  @spec find(selector :: Session.selector()) :: Element.t() | nil
   def find(selector), do: Session.find(session(), selector)
 
   @doc "Finds an element by selector. Raises if not found."
-  @spec find!(selector :: Backend.selector()) :: Element.t()
+  @spec find!(selector :: Session.selector()) :: Element.t()
   def find!(selector), do: Session.find!(session(), selector)
 
   @doc "Finds an element by its accessibility role. Returns nil if not found."
@@ -56,27 +55,37 @@ defmodule Plushie.Test.Helpers do
   def find_focused, do: Session.find(session(), :focused)
 
   @doc "Clicks a widget identified by selector."
-  @spec click(selector :: Backend.selector()) :: :ok
+  @spec click(selector :: Session.selector()) :: :ok
   def click(selector), do: Session.click(session(), selector)
 
   @doc "Types text into a widget identified by selector."
-  @spec type_text(selector :: Backend.selector(), text :: String.t()) :: :ok
+  @spec type_text(selector :: Session.selector(), text :: String.t()) :: :ok
   def type_text(selector, text), do: Session.type_text(session(), selector, text)
 
   @doc "Submits a text input (simulates pressing enter)."
-  @spec submit(selector :: Backend.selector()) :: :ok
+  @spec submit(selector :: Session.selector()) :: :ok
   def submit(selector), do: Session.submit(session(), selector)
 
-  @doc "Toggles a checkbox or toggler."
-  @spec toggle(selector :: Backend.selector()) :: :ok
-  def toggle(selector), do: Session.toggle(session(), selector)
+  @doc """
+  Toggles a checkbox or toggler.
+
+  Without a value, reads the current state and negates it (upstream
+  `.ice` script compatibility). With an explicit boolean, sets the
+  widget directly without reading current state.
+
+      toggle("#dark_mode")          # flip current state
+      toggle("#agree_check", true)  # check
+      toggle("#agree_check", false) # uncheck
+  """
+  @spec toggle(selector :: Session.selector(), value :: boolean() | nil) :: :ok
+  def toggle(selector, value \\ nil), do: Session.toggle(session(), selector, value)
 
   @doc "Selects a value from a pick_list, combo_box, or radio group."
-  @spec select(selector :: Backend.selector(), value :: term()) :: :ok
+  @spec select(selector :: Session.selector(), value :: term()) :: :ok
   def select(selector, value), do: Session.select(session(), selector, value)
 
   @doc "Slides a slider to the given value."
-  @spec slide(selector :: Backend.selector(), value :: number()) :: :ok
+  @spec slide(selector :: Session.selector(), value :: number()) :: :ok
   def slide(selector, value), do: Session.slide(session(), selector, value)
 
   @doc "Returns the current app model."
@@ -167,7 +176,7 @@ defmodule Plushie.Test.Helpers do
   Finds the widget by selector and checks that its `a11y` prop map
   contains all the expected key-value pairs.
 
-      assert_a11y("#heading", %{"role" => "heading", "level" => 1})
+      assert_a11y("#heading", %{role: :heading, level: 1})
   """
   defmacro assert_a11y(selector, expected) do
     quote do
@@ -273,22 +282,22 @@ defmodule Plushie.Test.Helpers do
   def type_key(key), do: Session.type_key(session(), key)
 
   @doc "Scrolls a widget by the given deltas."
-  @spec scroll(selector :: Backend.selector(), delta_x :: number(), delta_y :: number()) :: :ok
+  @spec scroll(selector :: Session.selector(), delta_x :: number(), delta_y :: number()) :: :ok
   def scroll(selector, delta_x \\ 0, delta_y \\ 0),
     do: Session.scroll(session(), selector, delta_x, delta_y)
 
   @doc "Pastes text into a widget."
-  @spec paste(selector :: Backend.selector(), text :: String.t()) :: :ok
+  @spec paste(selector :: Session.selector(), text :: String.t()) :: :ok
   def paste(selector, text), do: Session.paste(session(), selector, text)
 
   @doc "Sorts a table column."
-  @spec sort(selector :: Backend.selector(), column :: String.t(), direction :: String.t()) :: :ok
+  @spec sort(selector :: Session.selector(), column :: String.t(), direction :: String.t()) :: :ok
   def sort(selector, column, direction \\ "asc"),
     do: Session.sort(session(), selector, column, direction)
 
   @doc "Presses on a canvas at the given coordinates."
   @spec canvas_press(
-          selector :: Backend.selector(),
+          selector :: Session.selector(),
           x :: number(),
           y :: number(),
           button :: String.t()
@@ -298,7 +307,7 @@ defmodule Plushie.Test.Helpers do
 
   @doc "Releases on a canvas at the given coordinates."
   @spec canvas_release(
-          selector :: Backend.selector(),
+          selector :: Session.selector(),
           x :: number(),
           y :: number(),
           button :: String.t()
@@ -307,11 +316,11 @@ defmodule Plushie.Test.Helpers do
     do: Session.canvas_release(session(), selector, x, y, button)
 
   @doc "Moves on a canvas to the given coordinates."
-  @spec canvas_move(selector :: Backend.selector(), x :: number(), y :: number()) :: :ok
+  @spec canvas_move(selector :: Session.selector(), x :: number(), y :: number()) :: :ok
   def canvas_move(selector, x, y), do: Session.canvas_move(session(), selector, x, y)
 
   @doc "Cycles focus in a pane grid."
-  @spec pane_focus_cycle(selector :: Backend.selector()) :: :ok
+  @spec pane_focus_cycle(selector :: Session.selector()) :: :ok
   def pane_focus_cycle(selector), do: Session.pane_focus_cycle(session(), selector)
 
   @doc "Resets the session to initial state."
@@ -329,8 +338,7 @@ defmodule Plushie.Test.Helpers do
   """
   @spec start(app :: module()) :: Session.t()
   def start(app) do
-    backend_mod = Plushie.Test.Case.resolve_backend()
-    session = Session.start(app, backend: backend_mod)
+    session = Session.start(app)
     Process.put(:plushie_test_session, session)
     session
   end

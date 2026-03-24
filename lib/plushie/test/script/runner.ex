@@ -9,10 +9,9 @@ defmodule Plushie.Test.Script.Runner do
   alias Plushie.Test.{Screenshot, Script, Session, TreeHash}
 
   @backend_map %{
-    mock: Plushie.Test.Backend.MockRenderer,
-    pooled_headless: Plushie.Test.Backend.MockRenderer,
-    headless: Plushie.Test.Backend.Headless,
-    windowed: Plushie.Test.Backend.Windowed
+    mock: Plushie.Test.Backend.Runtime,
+    headless: Plushie.Test.Backend.Runtime,
+    windowed: Plushie.Test.Backend.Runtime
   }
 
   @doc """
@@ -25,7 +24,7 @@ defmodule Plushie.Test.Script.Runner do
           :ok | {:error, [{Script.instruction(), String.t()}]}
   def run(%{header: header, instructions: instructions}, opts \\ []) do
     replay? = Keyword.get(opts, :replay, false)
-    backend_mod = Map.get(@backend_map, header.backend, Plushie.Test.Backend.MockRenderer)
+    backend_mod = Map.get(@backend_map, header.backend, Plushie.Test.Backend.Runtime)
     session = Session.start(header.app, backend: backend_mod)
 
     try do
@@ -51,6 +50,13 @@ defmodule Plushie.Test.Script.Runner do
 
   defp execute(session, {:click, selector}, _replay?) do
     Session.click(session, selector)
+    :ok
+  rescue
+    e -> {:error, Exception.message(e)}
+  end
+
+  defp execute(session, {:toggle, selector, value}, _replay?) do
+    Session.toggle(session, selector, value)
     :ok
   rescue
     e -> {:error, Exception.message(e)}

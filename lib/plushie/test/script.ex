@@ -34,7 +34,7 @@ defmodule Plushie.Test.Script do
           | {:release, String.t()}
           | {:move, String.t()}
           | {:move_to, non_neg_integer(), non_neg_integer()}
-          | {:toggle, String.t()}
+          | {:toggle, String.t(), boolean() | nil}
           | {:select, String.t(), String.t()}
           | {:slide, String.t(), number()}
           | {:expect, String.t()}
@@ -133,7 +133,9 @@ defmodule Plushie.Test.Script do
 
   # Actions: interactions and input
   defp parse_action(["click", selector]), do: {:ok, {:click, selector}}
-  defp parse_action(["toggle", selector]), do: {:ok, {:toggle, selector}}
+  defp parse_action(["toggle", selector]), do: {:ok, {:toggle, selector, nil}}
+  defp parse_action(["toggle", selector, "true"]), do: {:ok, {:toggle, selector, true}}
+  defp parse_action(["toggle", selector, "false"]), do: {:ok, {:toggle, selector, false}}
   defp parse_action(["select", selector, value]), do: {:ok, {:select, selector, value}}
 
   defp parse_action(["slide", selector, value]),

@@ -3,7 +3,7 @@ defmodule Plushie.Test.InteractionRoundtripTest do
 
   alias Plushie.Event.Widget
 
-  alias Plushie.Test.Backend.MockRenderer
+  alias Plushie.Test.Backend.Runtime
 
   # A single app that has one of each interactive widget type and tracks every
   # event it receives in its model. This lets each test assert on what event
@@ -68,7 +68,7 @@ defmodule Plushie.Test.InteractionRoundtripTest do
           %{
             id: "agree_check",
             type: "checkbox",
-            props: %{label: "Agree", is_checked: model.checkbox_state},
+            props: %{label: "Agree", checked: model.checkbox_state},
             children: []
           },
           %{
@@ -95,10 +95,10 @@ defmodule Plushie.Test.InteractionRoundtripTest do
   end
 
   setup do
-    {:ok, pid} = MockRenderer.start(TrackingApp, pool: Plushie.TestPool)
+    {:ok, pid} = Runtime.start(TrackingApp, pool: Plushie.TestPool)
 
     on_exit(fn ->
-      if Process.alive?(pid), do: MockRenderer.stop(pid)
+      if Process.alive?(pid), do: Runtime.stop(pid)
     end)
 
     {:ok, pid: pid}
@@ -108,8 +108,8 @@ defmodule Plushie.Test.InteractionRoundtripTest do
 
   describe "click button" do
     test "dispatches %Widget{type: :click, id: id}", %{pid: pid} do
-      MockRenderer.click(pid, "#submit_btn")
-      assert MockRenderer.model(pid).last_event == %Widget{type: :click, id: "submit_btn"}
+      Runtime.click(pid, "#submit_btn")
+      assert Runtime.model(pid).last_event == %Widget{type: :click, id: "submit_btn"}
     end
   end
 
@@ -117,9 +117,9 @@ defmodule Plushie.Test.InteractionRoundtripTest do
 
   describe "type_text into text_input" do
     test "dispatches {:input, id, text}", %{pid: pid} do
-      MockRenderer.type_text(pid, "#name_input", "Arthur")
+      Runtime.type_text(pid, "#name_input", "Arthur")
 
-      assert MockRenderer.model(pid).last_event == %Widget{
+      assert Runtime.model(pid).last_event == %Widget{
                type: :input,
                id: "name_input",
                value: "Arthur"
@@ -127,60 +127,53 @@ defmodule Plushie.Test.InteractionRoundtripTest do
     end
 
     test "model field updated with typed text", %{pid: pid} do
-      MockRenderer.type_text(pid, "#name_input", "Zaphod")
-      assert MockRenderer.model(pid).text_value == "Zaphod"
+      Runtime.type_text(pid, "#name_input", "Zaphod")
+      assert Runtime.model(pid).text_value == "Zaphod"
     end
 
     test "sequential inputs update model each time", %{pid: pid} do
-      MockRenderer.type_text(pid, "#name_input", "first")
-      assert MockRenderer.model(pid).text_value == "first"
+      Runtime.type_text(pid, "#name_input", "first")
+      assert Runtime.model(pid).text_value == "first"
 
-      MockRenderer.type_text(pid, "#name_input", "second")
-      assert MockRenderer.model(pid).text_value == "second"
+      Runtime.type_text(pid, "#name_input", "second")
+      assert Runtime.model(pid).text_value == "second"
     end
   end
 
   # -- toggle checkbox -> {:toggle, id, value} --
 
   describe "toggle checkbox" do
-    test "dispatches {:toggle, id, value} from unchecked state", %{pid: pid} do
-      MockRenderer.toggle(pid, "#agree_check")
-
-      assert MockRenderer.model(pid).last_event == %Widget{
-               type: :toggle,
-               id: "agree_check",
-               value: true
-             }
+    test "sets checkbox to checked with explicit true", %{pid: pid} do
+      Runtime.toggle(pid, "#agree_check", true)
+      assert Runtime.model(pid).checkbox_state == true
     end
 
-    test "model field flips to true on first toggle", %{pid: pid} do
-      MockRenderer.toggle(pid, "#agree_check")
-      assert MockRenderer.model(pid).checkbox_state == true
+    test "sets checkbox to unchecked with explicit false", %{pid: pid} do
+      Runtime.toggle(pid, "#agree_check", true)
+      Runtime.toggle(pid, "#agree_check", false)
+      assert Runtime.model(pid).checkbox_state == false
     end
 
-    test "model field flips back to false on second toggle", %{pid: pid} do
-      MockRenderer.toggle(pid, "#agree_check")
-      MockRenderer.toggle(pid, "#agree_check")
-      assert MockRenderer.model(pid).checkbox_state == false
+    test "toggle without value negates current state", %{pid: pid} do
+      Runtime.toggle(pid, "#agree_check")
+      assert Runtime.model(pid).checkbox_state == true
+      Runtime.toggle(pid, "#agree_check")
+      assert Runtime.model(pid).checkbox_state == false
     end
   end
 
   # -- toggle toggler -> {:toggle, id, value} --
 
   describe "toggle toggler" do
-    test "dispatches {:toggle, id, value} from off state", %{pid: pid} do
-      MockRenderer.toggle(pid, "#dark_mode")
-
-      assert MockRenderer.model(pid).last_event == %Widget{
-               type: :toggle,
-               id: "dark_mode",
-               value: true
-             }
+    test "sets toggler on with explicit true", %{pid: pid} do
+      Runtime.toggle(pid, "#dark_mode", true)
+      assert Runtime.model(pid).toggler_state == true
     end
 
-    test "model field reflects new toggler state", %{pid: pid} do
-      MockRenderer.toggle(pid, "#dark_mode")
-      assert MockRenderer.model(pid).toggler_state == true
+    test "sets toggler off with explicit false", %{pid: pid} do
+      Runtime.toggle(pid, "#dark_mode", true)
+      Runtime.toggle(pid, "#dark_mode", false)
+      assert Runtime.model(pid).toggler_state == false
     end
   end
 
@@ -188,18 +181,18 @@ defmodule Plushie.Test.InteractionRoundtripTest do
 
   describe "slide slider" do
     test "dispatches {:slide, id, value}", %{pid: pid} do
-      MockRenderer.slide(pid, "#volume", 80)
-      assert MockRenderer.model(pid).last_event == %Widget{type: :slide, id: "volume", value: 80}
+      Runtime.slide(pid, "#volume", 80)
+      assert Runtime.model(pid).last_event == %Widget{type: :slide, id: "volume", value: 80}
     end
 
     test "model field updated with slid value", %{pid: pid} do
-      MockRenderer.slide(pid, "#volume", 42)
-      assert MockRenderer.model(pid).slider_value == 42
+      Runtime.slide(pid, "#volume", 42)
+      assert Runtime.model(pid).slider_value == 42
     end
 
     test "accepts float values", %{pid: pid} do
-      MockRenderer.slide(pid, "#volume", 66.6)
-      assert MockRenderer.model(pid).slider_value == 66.6
+      Runtime.slide(pid, "#volume", 66.6)
+      assert Runtime.model(pid).slider_value == 66.6
     end
   end
 
@@ -207,10 +200,10 @@ defmodule Plushie.Test.InteractionRoundtripTest do
 
   describe "submit text_input" do
     test "dispatches {:submit, id, value} with current value", %{pid: pid} do
-      MockRenderer.type_text(pid, "#name_input", "Arthur")
-      MockRenderer.submit(pid, "#name_input")
+      Runtime.type_text(pid, "#name_input", "Arthur")
+      Runtime.submit(pid, "#name_input")
 
-      assert MockRenderer.model(pid).last_event == %Widget{
+      assert Runtime.model(pid).last_event == %Widget{
                type: :submit,
                id: "name_input",
                value: "Arthur"
@@ -218,9 +211,9 @@ defmodule Plushie.Test.InteractionRoundtripTest do
     end
 
     test "submit with no value dispatches empty string", %{pid: pid} do
-      MockRenderer.submit(pid, "#name_input")
+      Runtime.submit(pid, "#name_input")
 
-      assert MockRenderer.model(pid).last_event == %Widget{
+      assert Runtime.model(pid).last_event == %Widget{
                type: :submit,
                id: "name_input",
                value: ""
@@ -232,9 +225,9 @@ defmodule Plushie.Test.InteractionRoundtripTest do
 
   describe "select from pick_list" do
     test "dispatches {:select, id, value}", %{pid: pid} do
-      MockRenderer.select(pid, "#language", "Elixir")
+      Runtime.select(pid, "#language", "Elixir")
 
-      assert MockRenderer.model(pid).last_event == %Widget{
+      assert Runtime.model(pid).last_event == %Widget{
                type: :select,
                id: "language",
                value: "Elixir"
@@ -242,14 +235,14 @@ defmodule Plushie.Test.InteractionRoundtripTest do
     end
 
     test "model field updated with selected value", %{pid: pid} do
-      MockRenderer.select(pid, "#language", "Erlang")
-      assert MockRenderer.model(pid).selected == "Erlang"
+      Runtime.select(pid, "#language", "Erlang")
+      assert Runtime.model(pid).selected == "Erlang"
     end
 
     test "selecting a different value replaces the previous", %{pid: pid} do
-      MockRenderer.select(pid, "#language", "Gleam")
-      MockRenderer.select(pid, "#language", "Elixir")
-      assert MockRenderer.model(pid).selected == "Elixir"
+      Runtime.select(pid, "#language", "Gleam")
+      Runtime.select(pid, "#language", "Elixir")
+      assert Runtime.model(pid).selected == "Elixir"
     end
   end
 end

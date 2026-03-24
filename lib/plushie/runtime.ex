@@ -73,7 +73,8 @@ defmodule Plushie.Runtime do
             coalesce_timer: nil,
             consecutive_errors: 0,
             canvas_widgets: %{},
-            pending_interact: nil
+            pending_interact: nil,
+            pending_await_async: %{}
 
   @typep state :: %__MODULE__{
            app: module(),
@@ -97,7 +98,8 @@ defmodule Plushie.Runtime do
            canvas_widgets: %{
              String.t() => %{module: module(), state: map()}
            },
-           pending_interact: {GenServer.from(), String.t()} | nil
+           pending_interact: {GenServer.from(), String.t()} | nil,
+           pending_await_async: %{atom() => GenServer.from()}
          }
 
   # ---------------------------------------------------------------------------
@@ -156,6 +158,18 @@ defmodule Plushie.Runtime do
   @spec interact(GenServer.server(), String.t(), map(), map(), timeout()) :: :ok
   def interact(runtime, action, selector, payload \\ %{}, timeout \\ 10_000) do
     GenServer.call(runtime, {:interact, action, selector, payload}, timeout)
+  end
+
+  @doc """
+  Waits for an async task with the given tag to complete.
+
+  If the task has already completed, returns immediately. Otherwise
+  blocks until the task finishes and its result has been processed
+  through update/2.
+  """
+  @spec await_async(GenServer.server(), atom(), timeout()) :: :ok
+  def await_async(runtime, tag, timeout \\ 5000) do
+    GenServer.call(runtime, {:await_async, tag}, timeout)
   end
 
   @doc "Finds a node in the current tree by ID."
@@ -255,6 +269,17 @@ defmodule Plushie.Runtime do
     id = "interact_#{:erlang.unique_integer([:positive])}"
     Plushie.Bridge.send_interact(state.bridge, id, action, selector, payload)
     {:noreply, %{state | pending_interact: {from, id}}}
+  end
+
+  def handle_call({:await_async, tag}, from, state) do
+    if Map.has_key?(state.async_tasks, tag) do
+      # Task still running -- store caller and reply when it completes.
+      pending = Map.put(state.pending_await_async, tag, from)
+      {:noreply, %{state | pending_await_async: pending}}
+    else
+      # Task already completed (or never existed).
+      {:reply, :ok, state}
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -510,6 +535,7 @@ defmodule Plushie.Runtime do
 
     if tag do
       state = %{state | async_tasks: Map.delete(state.async_tasks, tag)}
+      state = notify_await_async(state, tag)
 
       if reason != :normal do
         Logger.warning("plushie runtime: async task #{inspect(tag)} crashed: #{inspect(reason)}")
@@ -975,6 +1001,17 @@ defmodule Plushie.Runtime do
       end)
 
     %{state | pending_coalesce: %{}, coalesce_timer: nil}
+  end
+
+  defp notify_await_async(state, tag) do
+    case Map.pop(state.pending_await_async, tag) do
+      {nil, _} ->
+        state
+
+      {from, remaining} ->
+        GenServer.reply(from, :ok)
+        %{state | pending_await_async: remaining}
+    end
   end
 
   # Walk the normalized tree and re-render any canvas_widget nodes using

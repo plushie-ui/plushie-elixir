@@ -32,6 +32,11 @@ defmodule Plushie.Tree do
     children: []
   }
 
+  # Props with these keys are runtime metadata, not wire props.
+  # They're extracted into a separate :meta field during normalization
+  # and never sent to the renderer.
+  @runtime_meta_keys [:__canvas_widget__, :__canvas_widget_props__]
+
   @doc """
   Normalizes a UI tree into the canonical node shape.
 
@@ -164,19 +169,23 @@ defmodule Plushie.Tree do
         scoped_id
       end
 
-    normalized_props =
+    atom_props =
       props
       |> atomize_keys()
       |> atomize_a11y()
       |> resolve_a11y_id_refs(scope)
-      |> encode_prop_values()
 
-    %{
+    {meta, wire_props} = extract_meta(atom_props)
+    normalized_props = encode_prop_values(wire_props)
+
+    node = %{
       id: scoped_id,
       type: type_str,
       props: normalized_props,
       children: normalize_children_with_scope(children, child_scope)
     }
+
+    if meta == %{}, do: node, else: Map.put(node, :meta, meta)
   end
 
   # Resolve a11y ID references (labelled_by, described_by, error_message)
@@ -481,9 +490,10 @@ defmodule Plushie.Tree do
   defp atomize_a11y(%{a11y: %{} = a11y} = props), do: %{props | a11y: atomize_keys(a11y)}
   defp atomize_a11y(props), do: props
 
-  # Encodes prop values (atoms -> strings, structs via Encode protocol,
-  # tuples -> lists) while keeping map keys as atoms. Key stringification
-  # happens at the wire encoding boundary in Protocol.Encode.
+  defp extract_meta(props) do
+    Map.split_with(props, fn {k, _} -> k in @runtime_meta_keys end)
+  end
+
   defp encode_prop_values(%{} = map) do
     Map.new(map, fn {k, v} -> {k, encode_value(v)} end)
   end

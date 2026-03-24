@@ -85,13 +85,10 @@ defmodule Plushie.Extension.CanvasWidget do
   end
 
   @doc """
-  Extracts the canvas_widget module from a node's props, if present.
+  Extracts the canvas_widget module from a node's metadata, if present.
   """
   @spec module_from_node(node :: map()) :: module() | nil
-  def module_from_node(%{props: props}) when is_map(props) do
-    Map.get(props, @canvas_widget_key)
-  end
-
+  def module_from_node(%{meta: %{__canvas_widget__: module}}) when is_atom(module), do: module
   def module_from_node(_), do: nil
 
   @doc """
@@ -105,25 +102,30 @@ defmodule Plushie.Extension.CanvasWidget do
   @spec dispatch_event(
           module :: module(),
           event :: struct(),
-          state :: map()
+          state :: map(),
+          widget_id :: String.t()
         ) :: {{:emit, struct()} | :consumed | :passthrough, map()}
-  def dispatch_event(module, event, state) do
+  def dispatch_event(module, event, state, widget_id \\ "") do
     case module.handle_event(event, state) do
       {:emit, family, data} ->
+        {id, scope} = resolve_emit_identity(event, widget_id)
+
         widget_event = %Plushie.Event.Widget{
           type: family,
-          id: event_source_id(event),
-          scope: event_source_scope(event),
+          id: id,
+          scope: scope,
           data: normalize_emit_data(data)
         }
 
         {{:emit, widget_event}, state}
 
       {:emit, family, data, new_state} when is_map(new_state) ->
+        {id, scope} = resolve_emit_identity(event, widget_id)
+
         widget_event = %Plushie.Event.Widget{
           type: family,
-          id: event_source_id(event),
-          scope: event_source_scope(event),
+          id: id,
+          scope: scope,
           data: normalize_emit_data(data)
         }
 
@@ -140,30 +142,23 @@ defmodule Plushie.Extension.CanvasWidget do
     end
   end
 
-  # For emitted events, the ID should be the canvas_widget's own ID
-  # (the scope parent), not the element that triggered the event.
-  defp event_source_id(event) do
-    case event do
-      %{scope: [canvas_id | _]} ->
-        canvas_id
-
-      %{scope: []} ->
-        # No scope: the widget is at root level (not inside a named
-        # container), so the event's own ID is the canvas widget ID.
-        event.id
-
-      %{id: id} ->
-        # Non-widget events (Timer, System, etc.) have no scope field.
-        id
-    end
+  # Resolve the ID and scope for emitted events. For widget events,
+  # the canvas widget's ID is the first scope element. For non-widget
+  # events (Timer, etc.), use the explicit widget_id.
+  defp resolve_emit_identity(%{scope: [canvas_id | parent_scope]}, _widget_id) do
+    {canvas_id, parent_scope}
   end
 
-  # The scope for emitted events is the canvas_widget's parent scope
-  # (everything above the canvas in the scope chain).
-  defp event_source_scope(event) do
-    case event do
-      %{scope: [_canvas_id | parent_scope]} -> parent_scope
-      _ -> []
+  defp resolve_emit_identity(%{scope: [], id: id}, _widget_id) do
+    {id, []}
+  end
+
+  defp resolve_emit_identity(_event, widget_id) do
+    # Timer or other non-widget event -- use the registered widget ID.
+    # Split scoped ID: "form/stars" -> {id: "stars", scope: ["form"]}
+    case String.split(widget_id, "/") do
+      [single] -> {single, []}
+      parts -> {List.last(parts), parts |> List.delete_at(-1) |> Enum.reverse()}
     end
   end
 

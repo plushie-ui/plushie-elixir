@@ -49,7 +49,9 @@ defmodule Plushie.Runtime.CanvasWidgets do
           timestamp: System.monotonic_time(:millisecond)
         }
 
-        {_action, new_state} = CanvasWidget.dispatch_event(module, timer_event, widget_state)
+        {_action, new_state} =
+          CanvasWidget.dispatch_event(module, timer_event, widget_state, widget_id)
+
         new_registry = put_in(registry, [widget_id, :state], new_state)
         {:handled, new_registry}
 
@@ -135,7 +137,7 @@ defmodule Plushie.Runtime.CanvasWidgets do
   def maybe_intercept(registry, event) do
     with %{scope: [parent_id | _]} <- event,
          %{module: module, state: widget_state} <- Map.get(registry, parent_id) do
-      {action, new_state} = CanvasWidget.dispatch_event(module, event, widget_state)
+      {action, new_state} = CanvasWidget.dispatch_event(module, event, widget_state, parent_id)
 
       new_registry = put_in(registry, [parent_id, :state], new_state)
 
@@ -156,9 +158,11 @@ defmodule Plushie.Runtime.CanvasWidgets do
 
   # -- Tree scanning ----------------------------------------------------------
 
-  defp collect_canvas_widgets(%{id: id, props: props, children: children}, acc) do
+  defp collect_canvas_widgets(%{id: id, children: children} = node, acc) do
+    meta = Map.get(node, :meta, %{})
+
     acc =
-      case Map.get(props, :__canvas_widget__) do
+      case Map.get(meta, :__canvas_widget__) do
         nil -> acc
         module when is_atom(module) -> Map.put(acc, id, module)
       end

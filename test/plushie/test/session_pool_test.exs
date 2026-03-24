@@ -1,10 +1,9 @@
 defmodule Plushie.Test.SessionPoolTest do
   use ExUnit.Case, async: false
 
-  alias Plushie.Test.Backend.MockRenderer
+  alias Plushie.Test.Backend.Runtime
   alias Plushie.Test.SessionPool
 
-  # Use the mock renderer for speed -- no display server needed.
   # These tests verify the multiplexing infrastructure, not rendering.
 
   describe "SessionPool" do
@@ -207,7 +206,7 @@ defmodule Plushie.Test.SessionPoolTest do
     end
   end
 
-  describe "Mock backend" do
+  describe "Runtime backend" do
     setup do
       binary = Application.fetch_env!(:plushie, :test_binary_path)
 
@@ -224,42 +223,42 @@ defmodule Plushie.Test.SessionPoolTest do
     end
 
     test "start and basic interaction", %{pool: pool} do
-      {:ok, pid} = MockRenderer.start(Counter, pool: pool)
-      assert MockRenderer.model(pid).count == 0
+      {:ok, pid} = Runtime.start(Counter, pool: pool)
+      assert Runtime.model(pid).count == 0
 
-      MockRenderer.click(pid, "#increment")
-      assert MockRenderer.model(pid).count == 1
+      Runtime.click(pid, "#increment")
+      assert Runtime.model(pid).count == 1
 
-      MockRenderer.click(pid, "#increment")
-      assert MockRenderer.model(pid).count == 2
+      Runtime.click(pid, "#increment")
+      assert Runtime.model(pid).count == 2
 
-      MockRenderer.stop(pid)
+      Runtime.stop(pid)
     end
 
     test "concurrent sessions are isolated", %{pool: pool} do
-      {:ok, p1} = MockRenderer.start(Counter, pool: pool)
-      {:ok, p2} = MockRenderer.start(Counter, pool: pool)
+      {:ok, p1} = Runtime.start(Counter, pool: pool)
+      {:ok, p2} = Runtime.start(Counter, pool: pool)
 
-      MockRenderer.click(p1, "#increment")
-      MockRenderer.click(p1, "#increment")
-      MockRenderer.click(p2, "#increment")
+      Runtime.click(p1, "#increment")
+      Runtime.click(p1, "#increment")
+      Runtime.click(p2, "#increment")
 
-      assert MockRenderer.model(p1).count == 2
-      assert MockRenderer.model(p2).count == 1
+      assert Runtime.model(p1).count == 2
+      assert Runtime.model(p2).count == 1
 
-      MockRenderer.stop(p1)
-      MockRenderer.stop(p2)
+      Runtime.stop(p1)
+      Runtime.stop(p2)
     end
 
     test "reset restores initial state", %{pool: pool} do
-      {:ok, pid} = MockRenderer.start(Counter, pool: pool)
-      MockRenderer.click(pid, "#increment")
-      assert MockRenderer.model(pid).count == 1
+      {:ok, pid} = Runtime.start(Counter, pool: pool)
+      Runtime.click(pid, "#increment")
+      assert Runtime.model(pid).count == 1
 
-      MockRenderer.reset(pid)
-      assert MockRenderer.model(pid).count == 0
+      Runtime.reset(pid)
+      assert Runtime.model(pid).count == 0
 
-      MockRenderer.stop(pid)
+      Runtime.stop(pid)
     end
   end
 end
