@@ -440,10 +440,21 @@ defmodule Plushie.Runtime do
       ref = Process.send_after(self(), {:subscription_tick, tag, interval}, interval)
       state = put_in(state.subscriptions[key], {:timer, ref})
 
-      # Dispatch the event.
-      now = System.monotonic_time(:millisecond)
-      state = run_update(state, %Timer{tag: tag, timestamp: now})
-      {:noreply, state}
+      # Route canvas_widget timer ticks to the widget's handle_event
+      # instead of the app's update/2.
+      case Plushie.Runtime.CanvasWidgets.maybe_handle_timer(state.canvas_widgets, tag) do
+        {:handled, new_registry} ->
+          # Widget handled the timer internally (state update, re-render).
+          state = %{state | canvas_widgets: new_registry}
+          new_tree = render_and_sync(state.app, state.model, state.bridge, state.tree, state.canvas_widgets)
+          {:noreply, %{state | tree: new_tree}}
+
+        :passthrough ->
+          # Standard app timer -- dispatch to update/2.
+          now = System.monotonic_time(:millisecond)
+          state = run_update(state, %Timer{tag: tag, timestamp: now})
+          {:noreply, state}
+      end
     else
       # Subscription was cancelled -- discard stale tick.
       {:noreply, state}
@@ -583,10 +594,13 @@ defmodule Plushie.Runtime do
   # Renders the view and sends either a full snapshot (first render or after
   # restart) or a patch (incremental diff) to the bridge.
   # If view/1 raises, returns old_tree unchanged.
-  @spec render_and_sync(module(), term(), pid() | atom(), map() | nil) :: map() | nil
-  defp render_and_sync(app, model, bridge, old_tree) do
+  @spec render_and_sync(module(), term(), pid() | atom(), map() | nil, map()) :: map() | nil
+  defp render_and_sync(app, model, bridge, old_tree, canvas_widgets \\ %{}) do
     case safe_view(app, model) do
-      {:ok, new_tree} ->
+      {:ok, raw_tree} ->
+        # Re-render canvas_widgets with stored state so they reflect
+        # current internal state, not just initial defaults.
+        new_tree = apply_canvas_widget_state(raw_tree, canvas_widgets)
         if is_nil(old_tree) do
           # First render or after restart -- send full snapshot.
           notify_bridge(%{bridge: bridge}, &Plushie.Bridge.send_snapshot(&1, new_tree))
@@ -656,14 +670,18 @@ defmodule Plushie.Runtime do
       {:ok, new_model, commands} ->
         state = %{state | model: new_model, consecutive_errors: 0}
         state = Commands.execute_commands(commands, state)
-        new_tree = render_and_sync(app, new_model, bridge, state.tree)
+        new_tree = render_and_sync(app, new_model, bridge, state.tree, state.canvas_widgets)
         state = %{state | tree: new_tree}
 
         canvas_widgets =
           Plushie.Runtime.CanvasWidgets.sync_registry(state.canvas_widgets, new_tree)
 
         state = %{state | canvas_widgets: canvas_widgets}
-        state = Subscriptions.sync_subscriptions(state, new_model)
+
+        widget_subs =
+          Plushie.Runtime.CanvasWidgets.collect_subscriptions(canvas_widgets, new_tree)
+
+        state = Subscriptions.sync_subscriptions(state, new_model, widget_subs)
         Windows.sync_windows(state, new_tree)
 
       :error ->
@@ -800,4 +818,43 @@ defmodule Plushie.Runtime do
 
     %{state | pending_coalesce: %{}, coalesce_timer: nil}
   end
+
+  # Walk the normalized tree and re-render any canvas_widget nodes using
+  # their stored internal state instead of the initial defaults that
+  # new/2 used during view/1.
+  defp apply_canvas_widget_state(tree, canvas_widgets) when canvas_widgets == %{}, do: tree
+  defp apply_canvas_widget_state(nil, _canvas_widgets), do: nil
+
+  defp apply_canvas_widget_state(%{} = node, canvas_widgets) do
+    alias Plushie.Extension.CanvasWidget
+
+    node =
+      case CanvasWidget.module_from_node(node) do
+        nil ->
+          node
+
+        module ->
+          id = node[:id] || node["id"]
+
+          case Map.get(canvas_widgets, id) do
+            %{state: widget_state} ->
+              CanvasWidget.expand(node, module, widget_state)
+
+            nil ->
+              # Widget not yet registered (first render) -- keep as-is
+              node
+          end
+      end
+
+    case node do
+      %{children: children} when is_list(children) ->
+        updated_children = Enum.map(children, &apply_canvas_widget_state(&1, canvas_widgets))
+        %{node | children: updated_children}
+
+      _ ->
+        node
+    end
+  end
+
+  defp apply_canvas_widget_state(other, _canvas_widgets), do: other
 end

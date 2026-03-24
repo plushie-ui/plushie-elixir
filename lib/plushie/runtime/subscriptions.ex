@@ -16,9 +16,9 @@ defmodule Plushie.Runtime.Subscriptions do
   Stops subscriptions that are no longer in the spec list, starts new ones,
   and preserves unchanged ones. Returns the updated state.
   """
-  @spec sync_subscriptions(map(), term()) :: map()
-  def sync_subscriptions(state, new_model) do
-    new_specs =
+  @spec sync_subscriptions(map(), term(), [Plushie.Subscription.t()]) :: map()
+  def sync_subscriptions(state, new_model, extra_specs \\ []) do
+    app_specs =
       try do
         case state.app.subscribe(new_model) do
           specs when is_list(specs) ->
@@ -41,6 +41,7 @@ defmodule Plushie.Runtime.Subscriptions do
           []
       end
 
+    new_specs = app_specs ++ extra_specs
     new_by_key = Map.new(new_specs, fn spec -> {Plushie.Subscription.key(spec), spec} end)
     new_sorted_keys = new_by_key |> Map.keys() |> Enum.sort()
 

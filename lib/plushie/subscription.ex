@@ -428,4 +428,15 @@ defmodule Plushie.Subscription do
   def key(%__MODULE__{type: type, tag: tag}) do
     {type, tag}
   end
+
+  @doc """
+  Transforms the tag of a subscription spec.
+
+  Used by the runtime to namespace canvas_widget subscription tags
+  so timer events can be routed back to the correct widget.
+  """
+  @spec map_tag(sub :: t(), mapper :: (term() -> term())) :: t()
+  def map_tag(%__MODULE__{} = sub, mapper) when is_function(mapper, 1) do
+    %{sub | tag: mapper.(sub.tag)}
+  end
 end

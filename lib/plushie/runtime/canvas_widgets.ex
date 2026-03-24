@@ -11,6 +11,75 @@ defmodule Plushie.Runtime.CanvasWidgets do
   alias Plushie.Extension.CanvasWidget
 
   @doc """
+  Collects subscription specs from all registered canvas_widgets.
+
+  Each widget's `subscribe/2` callback (if defined) is called with
+  props and state. The returned specs are namespaced with the widget
+  ID so they don't collide with app subscriptions or other widgets.
+  """
+  @spec collect_subscriptions(registry :: map(), tree :: map() | nil) :: [Plushie.Subscription.t()]
+  def collect_subscriptions(registry, tree) do
+    Enum.flat_map(registry, fn {widget_id, %{module: module, state: widget_state}} ->
+      if function_exported?(module, :subscribe, 2) do
+        props = extract_props(tree, widget_id)
+
+        module.subscribe(props, widget_state)
+        |> List.wrap()
+        |> Enum.map(fn spec ->
+          # Namespace the subscription tag so timer events can be
+          # routed back to the right widget.
+          Plushie.Subscription.map_tag(spec, fn tag ->
+            {:__canvas_widget__, widget_id, tag}
+          end)
+        end)
+      else
+        []
+      end
+    end)
+  end
+
+  @doc """
+  Checks if a timer event is for a canvas_widget subscription.
+  If so, routes it through the widget's handle_event and returns
+  the updated registry. Otherwise returns :passthrough.
+  """
+  @spec maybe_handle_timer(registry :: map(), tag :: term()) ::
+          {:handled, map()} | :passthrough
+  def maybe_handle_timer(registry, {:__canvas_widget__, widget_id, inner_tag}) do
+    case Map.get(registry, widget_id) do
+      %{module: module, state: widget_state} ->
+        timer_event = %Plushie.Event.Timer{tag: inner_tag, timestamp: System.monotonic_time(:millisecond)}
+
+        {_action, new_state} = CanvasWidget.dispatch_event(module, timer_event, widget_state)
+        new_registry = put_in(registry, [widget_id, :state], new_state)
+        {:handled, new_registry}
+
+      nil ->
+        :passthrough
+    end
+  end
+
+  def maybe_handle_timer(_registry, _tag), do: :passthrough
+
+  # Extract props for a widget from the tree by its scoped ID.
+  defp extract_props(nil, _widget_id), do: %{}
+
+  defp extract_props(tree, widget_id) do
+    case find_node_by_id(tree, widget_id) do
+      %{props: props} -> props
+      _ -> %{}
+    end
+  end
+
+  defp find_node_by_id(%{id: id} = node, target) when id == target, do: node
+
+  defp find_node_by_id(%{children: children}, target) do
+    Enum.find_value(children, fn child -> find_node_by_id(child, target) end)
+  end
+
+  defp find_node_by_id(_, _), do: nil
+
+  @doc """
   Scans a normalized tree for canvas_widget nodes and updates the registry.
 
   Called after each render cycle. Detects new canvas_widgets (initializes

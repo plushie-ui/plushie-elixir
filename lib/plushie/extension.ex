@@ -488,15 +488,12 @@ defmodule Plushie.Extension do
         props_map =
           if a11y_val, do: Map.put(props_map, :a11y, a11y_val), else: props_map
 
-        # Call render with initial state. The runtime will manage
-        # state persistence across renders once the widget is
-        # registered. For the first render, use defaults.
-        state = __initial_state__()
-        node = render(id, props_map, state)
-
-        # Tag the node so the runtime can identify this as a
-        # canvas_widget and route events through handle_event/2.
-        Plushie.Extension.CanvasWidget.tag_node(node, unquote(module), props_map)
+        # Return a marker node that the runtime will expand using
+        # stored state. The runtime calls render(id, props, state)
+        # with the widget's persisted internal state during tree
+        # normalization. For the first render, initial_state defaults
+        # are used.
+        Plushie.Extension.CanvasWidget.marker_node(id, unquote(module), props_map)
       end
     end
   end

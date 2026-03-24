@@ -34,19 +34,54 @@ defmodule Plushie.Extension.CanvasWidget do
   """
 
   @canvas_widget_key :__canvas_widget__
+  @canvas_widget_props_key :__canvas_widget_props__
 
   @doc """
-  Tags a canvas widget node with extension metadata.
+  Creates a marker node that the runtime expands during rendering.
 
-  Adds a `__canvas_widget__` entry to the node's props containing the
-  module reference. The tree normalizer preserves this and the runtime
-  reads it during event dispatch.
+  The marker carries the module and props. During tree normalization
+  or the render cycle, the runtime calls `expand/3` with stored
+  state to produce the actual canvas output.
   """
-  @spec tag_node(node :: map(), module :: module(), props :: map()) :: map()
-  def tag_node(%{} = node, module, _props) when is_atom(module) do
-    props = node[:props] || node["props"] || %{}
-    tagged_props = Map.put(props, @canvas_widget_key, module)
+  @spec marker_node(id :: String.t(), module :: module(), props :: map()) :: map()
+  def marker_node(id, module, props) when is_atom(module) and is_binary(id) do
+    # Render immediately with initial state. The runtime will
+    # re-render with stored state on subsequent cycles.
+    state = module.__initial_state__()
+    node = module.render(id, props, state)
+
+    # Tag the node for runtime detection.
+    node_props = node[:props] || node["props"] || %{}
+
+    tagged_props =
+      node_props
+      |> Map.put(@canvas_widget_key, module)
+      |> Map.put(@canvas_widget_props_key, props)
+
     Map.put(node, :props, tagged_props)
+  end
+
+  @doc """
+  Re-renders a canvas_widget with its current state from the registry.
+
+  Called by the runtime when it detects a canvas_widget node during
+  tree normalization or when widget state has changed.
+  """
+  @spec expand(node :: map(), module :: module(), widget_state :: map()) :: map()
+  def expand(%{} = node, module, widget_state) do
+    id = node[:id] || node["id"]
+    props = Map.get(node[:props] || node["props"] || %{}, @canvas_widget_props_key, %{})
+    rendered = module.render(id, props, widget_state)
+
+    # Preserve the canvas_widget tags on the re-rendered output.
+    rendered_props = rendered[:props] || rendered["props"] || %{}
+
+    tagged_props =
+      rendered_props
+      |> Map.put(@canvas_widget_key, module)
+      |> Map.put(@canvas_widget_props_key, props)
+
+    Map.put(rendered, :props, tagged_props)
   end
 
   @doc """
