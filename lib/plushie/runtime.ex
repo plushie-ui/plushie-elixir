@@ -237,7 +237,7 @@ defmodule Plushie.Runtime do
     # 5. Sync canvas_widget registry so widgets are available for
     # event interception from the very first interaction.
     canvas_widgets =
-      Plushie.Runtime.CanvasWidgets.sync_registry(state.canvas_widgets, tree)
+      Plushie.Runtime.CanvasWidgets.derive_registry(tree)
 
     # 6. Execute initial commands.
     state = %{state | tree: tree, canvas_widgets: canvas_widgets}
@@ -416,8 +416,9 @@ defmodule Plushie.Runtime do
     send_settings(state)
 
     # Re-run view/1 to get a fresh tree rather than relying on a stale cache.
+    # Pass canvas_widget states so widgets render with current internal state.
     tree =
-      case safe_view(state.app, state.model) do
+      case safe_view(state.app, state.model, state.canvas_widgets) do
         {:ok, new_tree} -> new_tree
         :error -> state.tree
       end
@@ -426,12 +427,14 @@ defmodule Plushie.Runtime do
       notify_bridge(state, &Plushie.Bridge.send_snapshot(&1, tree))
     end
 
+    canvas_widgets = Plushie.Runtime.CanvasWidgets.derive_registry(tree)
+
     # Re-sync subscriptions with the new renderer.
     state = Subscriptions.sync_subscriptions(state, state.model)
 
     # Re-open all known windows with merged per-window props from the tree.
     # Reset tracked windows first so sync_windows sees them all as new.
-    state = %{state | tree: tree, windows: MapSet.new()}
+    state = %{state | tree: tree, canvas_widgets: canvas_widgets, windows: MapSet.new()}
     state = Windows.sync_windows(state, tree)
 
     {:noreply, state}
@@ -571,7 +574,10 @@ defmodule Plushie.Runtime do
               state.canvas_widgets
             )
 
-          {:noreply, %{state | tree: new_tree}}
+          canvas_widgets =
+            Plushie.Runtime.CanvasWidgets.derive_registry(new_tree)
+
+          {:noreply, %{state | tree: new_tree, canvas_widgets: canvas_widgets}}
 
         {:handled, emitted_event, new_registry} ->
           # Widget emitted an event (possibly after bubbling through
@@ -598,8 +604,14 @@ defmodule Plushie.Runtime do
 
   def handle_info(:force_rerender, state) do
     Logger.info("plushie runtime: force re-render (code reload)")
-    new_tree = render_and_sync(state.app, state.model, state.bridge, state.tree)
-    state = %{state | tree: new_tree}
+
+    new_tree =
+      render_and_sync(state.app, state.model, state.bridge, state.tree, state.canvas_widgets)
+
+    canvas_widgets =
+      Plushie.Runtime.CanvasWidgets.derive_registry(new_tree)
+
+    state = %{state | tree: new_tree, canvas_widgets: canvas_widgets}
     state = Subscriptions.sync_subscriptions(state, state.model)
     state = Windows.sync_windows(state, new_tree)
     {:noreply, state}
@@ -724,15 +736,12 @@ defmodule Plushie.Runtime do
 
   # Renders the view and sends either a full snapshot (first render or after
   # restart) or a patch (incremental diff) to the bridge.
+  # Canvas widget state is injected during normalization (inside safe_view).
   # If view/1 raises, returns old_tree unchanged.
   @spec render_and_sync(module(), term(), pid() | atom(), map() | nil, map()) :: map() | nil
   defp render_and_sync(app, model, bridge, old_tree, canvas_widgets \\ %{}) do
-    case safe_view(app, model) do
-      {:ok, normalized_tree} ->
-        # Re-render canvas_widgets with stored state so they reflect
-        # current internal state, not just initial defaults.
-        new_tree = apply_canvas_widget_state(normalized_tree, canvas_widgets)
-
+    case safe_view(app, model, canvas_widgets) do
+      {:ok, new_tree} ->
         if is_nil(old_tree) do
           # First render or after restart -- send full snapshot.
           notify_bridge(%{bridge: bridge}, &Plushie.Bridge.send_snapshot(&1, new_tree))
@@ -767,7 +776,19 @@ defmodule Plushie.Runtime do
       {:error, {:init_crashed, e}}
   end
 
-  defp safe_view(app, model) do
+  # Renders the view and normalizes the tree. Canvas widget stored state
+  # is injected during normalization via the process dictionary -- the
+  # normalizer detects canvas_widget nodes and re-renders them with
+  # stored state before normalizing the output. This eliminates the need
+  # for post-processing (the old apply_canvas_widget_state approach).
+  @spec safe_view(module(), term(), map()) :: {:ok, map()} | :error
+  defp safe_view(app, model, canvas_widget_states) do
+    # Stash widget states for Tree.normalize to pick up during the
+    # normalization pass. Cleaned up in the after block.
+    if canvas_widget_states != %{} do
+      Process.put(:__plushie_canvas_widget_states__, canvas_widget_states)
+    end
+
     raw_tree =
       :telemetry.span([:plushie, :view], %{app: app}, fn ->
         {app.view(model), %{}}
@@ -784,6 +805,8 @@ defmodule Plushie.Runtime do
       """)
 
       :error
+  after
+    Process.delete(:__plushie_canvas_widget_states__)
   end
 
   # ---------------------------------------------------------------------------
@@ -853,12 +876,12 @@ defmodule Plushie.Runtime do
         state = %{state | tree: new_tree}
 
         canvas_widgets =
-          Plushie.Runtime.CanvasWidgets.sync_registry(state.canvas_widgets, new_tree)
+          Plushie.Runtime.CanvasWidgets.derive_registry(new_tree)
 
         state = %{state | canvas_widgets: canvas_widgets}
 
         widget_subs =
-          Plushie.Runtime.CanvasWidgets.collect_subscriptions(canvas_widgets, new_tree)
+          Plushie.Runtime.CanvasWidgets.collect_subscriptions(canvas_widgets)
 
         state = Subscriptions.sync_subscriptions(state, new_model, widget_subs)
         Windows.sync_windows(state, new_tree)
@@ -997,12 +1020,13 @@ defmodule Plushie.Runtime do
       end)
 
     # Re-render and send a full snapshot (not a patch).
-    case safe_view(state.app, state.model) do
+    # Pass canvas_widget states so normalization injects stored state.
+    case safe_view(state.app, state.model, state.canvas_widgets) do
       {:ok, new_tree} ->
         notify_bridge(state, &Plushie.Bridge.send_snapshot(&1, new_tree))
 
         canvas_widgets =
-          Plushie.Runtime.CanvasWidgets.sync_registry(state.canvas_widgets, new_tree)
+          Plushie.Runtime.CanvasWidgets.derive_registry(new_tree)
 
         state = %{state | tree: new_tree, canvas_widgets: canvas_widgets}
         state = Subscriptions.sync_subscriptions(state, state.model)
@@ -1070,46 +1094,4 @@ defmodule Plushie.Runtime do
         %{state | pending_await_async: remaining}
     end
   end
-
-  # Walk the normalized tree and re-render any canvas_widget nodes using
-  # their stored internal state instead of the initial defaults that
-  # new/2 used during view/1. The tree must already be normalized
-  # (scoped IDs) since the registry keys are scoped IDs.
-  @spec apply_canvas_widget_state(map() | nil, map()) :: map() | nil
-  defp apply_canvas_widget_state(tree, canvas_widgets) when canvas_widgets == %{}, do: tree
-  defp apply_canvas_widget_state(nil, _canvas_widgets), do: nil
-
-  defp apply_canvas_widget_state(%{} = node, canvas_widgets) do
-    alias Plushie.Extension.CanvasWidget
-
-    node =
-      case CanvasWidget.module_from_node(node) do
-        nil ->
-          node
-
-        module ->
-          # The tree is already normalized (safe_view calls Tree.normalize),
-          # so node IDs are scoped. Look up directly by scoped ID.
-          scoped_id = to_string(node[:id] || node["id"])
-
-          case Map.get(canvas_widgets, scoped_id) do
-            %{state: widget_state} ->
-              CanvasWidget.expand(node, module, widget_state)
-
-            nil ->
-              node
-          end
-      end
-
-    case node do
-      %{children: children} when is_list(children) ->
-        updated_children = Enum.map(children, &apply_canvas_widget_state(&1, canvas_widgets))
-        %{node | children: updated_children}
-
-      _ ->
-        node
-    end
-  end
-
-  defp apply_canvas_widget_state(other, _canvas_widgets), do: other
 end

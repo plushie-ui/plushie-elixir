@@ -31,17 +31,17 @@ defmodule Plushie.Runtime.CanvasWidgets do
   Collects subscription specs from all registered canvas_widgets.
 
   Each widget's `subscribe/2` callback (if defined) is called with
-  props and state. The returned specs are namespaced with the widget
-  ID so they don't collide with app subscriptions or other widgets.
+  props and state from the registry. The returned specs are namespaced
+  with the widget ID so they don't collide with app subscriptions or
+  other widgets.
   """
-  @spec collect_subscriptions(registry :: map(), tree :: map() | nil) :: [
-          Plushie.Subscription.t()
-        ]
-  def collect_subscriptions(registry, tree) do
-    Enum.flat_map(registry, fn {widget_id, %{module: module, state: widget_state}} ->
-      if function_exported?(module, :subscribe, 2) do
-        props = extract_props(tree, widget_id)
+  @spec collect_subscriptions(registry :: map()) :: [Plushie.Subscription.t()]
+  def collect_subscriptions(registry) do
+    Enum.flat_map(registry, fn {widget_id, entry} ->
+      %{module: module, state: widget_state} = entry
+      props = Map.get(entry, :props, %{})
 
+      if function_exported?(module, :subscribe, 2) do
         module.subscribe(props, widget_state)
         |> List.wrap()
         |> Enum.map(&namespace_subscription(&1, widget_id))
@@ -77,7 +77,10 @@ defmodule Plushie.Runtime.CanvasWidgets do
 
         case action do
           {:emit, transformed} ->
-            bubble(new_registry, transformed)
+            # bubble returns {:intercepted, event_or_nil, registry} --
+            # translate to {:handled, ...} for the timer handler contract.
+            {:intercepted, event, registry} = bubble(new_registry, transformed)
+            {:handled, event, registry}
 
           :consumed ->
             {:handled, nil, new_registry}
@@ -93,67 +96,53 @@ defmodule Plushie.Runtime.CanvasWidgets do
 
   def maybe_handle_timer(_registry, _tag), do: :passthrough
 
-  # Extract the local (un-scoped) ID from a scoped path.
-  # "page/form/stars" → "stars"
-  defp raw_id(scoped_id) do
-    case String.split(scoped_id, "/") do
-      [local] -> local
-      parts -> List.last(parts)
-    end
-  end
-
   defp namespace_subscription(spec, widget_id) do
     Plushie.Subscription.map_tag(spec, fn tag ->
       {:__canvas_widget__, widget_id, tag}
     end)
   end
 
-  # Extract props for a widget from the tree by its scoped ID.
-  defp extract_props(nil, _widget_id), do: %{}
-
-  defp extract_props(tree, widget_id) do
-    case find_node_by_id(tree, widget_id) do
-      %{props: props} -> props
-      _ -> %{}
-    end
-  end
-
-  defp find_node_by_id(%{id: id} = node, target) when id == target, do: node
-
-  defp find_node_by_id(%{children: children}, target) do
-    Enum.find_value(children, fn child -> find_node_by_id(child, target) end)
-  end
-
-  defp find_node_by_id(_, _), do: nil
-
   @doc """
-  Scans a normalized tree for canvas_widget nodes and updates the registry.
+  Derives the canvas_widget registry from the normalized tree.
 
-  Called after each render cycle. Detects new canvas_widgets (initializes
-  state), removed canvas_widgets (cleans up state), and preserved ones
-  (keeps state).
+  The tree carries widget metadata (module, state, props) in each
+  canvas_widget node's `:meta` field. This function extracts that
+  metadata into a flat map keyed by scoped ID for O(1) event
+  interception lookups.
+
+  Called after each render. The tree is the single source of truth --
+  new widgets appear with their initial state (set during normalization),
+  existing widgets carry their updated state, and removed widgets are
+  simply absent.
   """
-  @spec sync_registry(registry :: map(), tree :: map() | nil) :: map()
-  def sync_registry(registry, nil), do: registry
+  @spec derive_registry(tree :: map() | nil) :: map()
+  def derive_registry(nil), do: %{}
 
-  def sync_registry(registry, tree) do
-    current = collect_canvas_widgets(tree, %{})
-
-    # Initialize state for new widgets
-    new_entries =
-      for {id, module} <- current, not Map.has_key?(registry, id), into: %{} do
-        {id, %{module: module, state: module.__initial_state__(), raw_id: raw_id(id)}}
-      end
-
-    # Preserve state for existing widgets
-    kept =
-      for {id, module} <- current, Map.has_key?(registry, id), into: %{} do
-        existing = Map.get(registry, id)
-        {id, %{existing | module: module, raw_id: raw_id(id)}}
-      end
-
-    Map.merge(new_entries, kept)
+  def derive_registry(tree) do
+    collect_widget_entries(tree, %{})
   end
+
+  defp collect_widget_entries(%{id: id, children: children} = node, acc) do
+    meta = Map.get(node, :meta, %{})
+
+    acc =
+      case meta do
+        %{__canvas_widget__: module, __canvas_widget_state__: state} when is_atom(module) ->
+          props = Map.get(meta, :__canvas_widget_props__, %{})
+          Map.put(acc, id, %{module: module, state: state, props: props})
+
+        _ ->
+          acc
+      end
+
+    Enum.reduce(children, acc, &collect_widget_entries/2)
+  end
+
+  defp collect_widget_entries(%{children: children}, acc) do
+    Enum.reduce(children, acc, &collect_widget_entries/2)
+  end
+
+  defp collect_widget_entries(_, acc), do: acc
 
   @doc """
   Checks if an event should be intercepted by a canvas_widget.
@@ -258,24 +247,4 @@ defmodule Plushie.Runtime.CanvasWidgets do
       entry -> {scoped_id, entry}
     end
   end
-
-  # -- Tree scanning ----------------------------------------------------------
-
-  defp collect_canvas_widgets(%{id: id, children: children} = node, acc) do
-    meta = Map.get(node, :meta, %{})
-
-    acc =
-      case Map.get(meta, :__canvas_widget__) do
-        nil -> acc
-        module when is_atom(module) -> Map.put(acc, id, module)
-      end
-
-    Enum.reduce(children, acc, &collect_canvas_widgets/2)
-  end
-
-  defp collect_canvas_widgets(%{children: children}, acc) do
-    Enum.reduce(children, acc, &collect_canvas_widgets/2)
-  end
-
-  defp collect_canvas_widgets(_, acc), do: acc
 end

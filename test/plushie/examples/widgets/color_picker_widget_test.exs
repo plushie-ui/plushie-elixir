@@ -42,6 +42,7 @@ defmodule ColorPickerWidgetTest do
 
     test "press at right of ring selects hue near 90" do
       state = ColorPickerWidget.__initial_state__()
+
       {:emit, :change, data, new_state} =
         ColorPickerWidget.handle_event(
           %Canvas{type: :press, id: "picker", x: 370.0, y: 200.0, button: "left"},
@@ -55,6 +56,7 @@ defmodule ColorPickerWidgetTest do
 
     test "press at bottom of ring selects hue near 180" do
       state = ColorPickerWidget.__initial_state__()
+
       {:emit, :change, data, new_state} =
         ColorPickerWidget.handle_event(
           %Canvas{type: :press, id: "picker", x: 200.0, y: 370.0, button: "left"},
@@ -68,6 +70,7 @@ defmodule ColorPickerWidgetTest do
 
     test "press at left of ring selects hue near 270" do
       state = ColorPickerWidget.__initial_state__()
+
       {:emit, :change, data, new_state} =
         ColorPickerWidget.handle_event(
           %Canvas{type: :press, id: "picker", x: 30.0, y: 200.0, button: "left"},
@@ -87,6 +90,7 @@ defmodule ColorPickerWidgetTest do
   describe "handle_event -- square press" do
     test "press at top-left of square sets s=0, v=1" do
       state = ColorPickerWidget.__initial_state__()
+
       {:emit, :change, data, new_state} =
         ColorPickerWidget.handle_event(
           %Canvas{type: :press, id: "picker", x: 100.0, y: 100.0, button: "left"},
@@ -102,6 +106,7 @@ defmodule ColorPickerWidgetTest do
 
     test "press at bottom-right of square sets s=1, v=0" do
       state = ColorPickerWidget.__initial_state__()
+
       {:emit, :change, data, new_state} =
         ColorPickerWidget.handle_event(
           %Canvas{type: :press, id: "picker", x: 300.0, y: 300.0, button: "left"},
@@ -117,6 +122,7 @@ defmodule ColorPickerWidgetTest do
 
     test "press at center of square sets s=0.5, v=0.5" do
       state = ColorPickerWidget.__initial_state__()
+
       {:emit, :change, data, new_state} =
         ColorPickerWidget.handle_event(
           %Canvas{type: :press, id: "picker", x: 200.0, y: 200.0, button: "left"},
@@ -158,6 +164,7 @@ defmodule ColorPickerWidgetTest do
 
     test "right-click is consumed" do
       state = ColorPickerWidget.__initial_state__()
+
       assert :consumed =
                ColorPickerWidget.handle_event(
                  %Canvas{type: :press, id: "picker", x: 200.0, y: 30.0, button: "right"},
@@ -173,6 +180,7 @@ defmodule ColorPickerWidgetTest do
   describe "handle_event -- move" do
     test "move while dragging ring updates hue and emits :change" do
       state = %{ColorPickerWidget.__initial_state__() | drag: :ring}
+
       {:emit, :change, data, new_state} =
         ColorPickerWidget.handle_event(
           %Canvas{type: :move, id: "picker", x: 370.0, y: 200.0},
@@ -186,6 +194,7 @@ defmodule ColorPickerWidgetTest do
 
     test "move while dragging square updates s and v" do
       state = %{ColorPickerWidget.__initial_state__() | drag: :square, saturation: 0.0}
+
       {:emit, :change, data, new_state} =
         ColorPickerWidget.handle_event(
           %Canvas{type: :move, id: "picker", x: 250.0, y: 250.0},
@@ -199,7 +208,13 @@ defmodule ColorPickerWidgetTest do
     end
 
     test "move clamps s/v to 0..1 when outside square" do
-      state = %{ColorPickerWidget.__initial_state__() | drag: :square, saturation: 0.5, value: 0.5}
+      state = %{
+        ColorPickerWidget.__initial_state__()
+        | drag: :square,
+          saturation: 0.5,
+          value: 0.5
+      }
+
       {:emit, :change, _data, new_state} =
         ColorPickerWidget.handle_event(
           %Canvas{type: :move, id: "picker", x: 50.0, y: 350.0},
@@ -212,6 +227,7 @@ defmodule ColorPickerWidgetTest do
 
     test "move while not dragging is consumed" do
       state = ColorPickerWidget.__initial_state__()
+
       assert :consumed =
                ColorPickerWidget.handle_event(
                  %Canvas{type: :move, id: "picker", x: 200.0, y: 200.0},
@@ -227,6 +243,7 @@ defmodule ColorPickerWidgetTest do
   describe "handle_event -- release" do
     test "release clears drag state" do
       state = %{ColorPickerWidget.__initial_state__() | drag: :ring, hue: 90.0}
+
       {:update_state, new_state} =
         ColorPickerWidget.handle_event(
           %Canvas{type: :release, id: "picker", x: 200.0, y: 200.0, button: "left"},
@@ -248,7 +265,11 @@ defmodule ColorPickerWidgetTest do
 
       {:emit, :change, data, new_state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "hue-cursor", data: %{"key" => "ArrowRight", "modifiers" => %{}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "hue-cursor",
+            data: %{"key" => "ArrowRight", "modifiers" => %{}}
+          },
           state
         )
 
@@ -261,7 +282,11 @@ defmodule ColorPickerWidgetTest do
 
       {:emit, :change, data, new_state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "hue-cursor", data: %{"key" => "ArrowLeft", "modifiers" => %{}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "hue-cursor",
+            data: %{"key" => "ArrowLeft", "modifiers" => %{}}
+          },
           state
         )
 
@@ -274,7 +299,11 @@ defmodule ColorPickerWidgetTest do
 
       {:emit, :change, _data, new_state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "hue-cursor", data: %{"key" => "ArrowRight", "modifiers" => %{"shift" => true}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "hue-cursor",
+            data: %{"key" => "ArrowRight", "modifiers" => %{"shift" => true}}
+          },
           state
         )
 
@@ -286,7 +315,11 @@ defmodule ColorPickerWidgetTest do
 
       {:emit, :change, _data, new_state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "hue-cursor", data: %{"key" => "ArrowRight", "modifiers" => %{}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "hue-cursor",
+            data: %{"key" => "ArrowRight", "modifiers" => %{}}
+          },
           state
         )
 
@@ -298,7 +331,11 @@ defmodule ColorPickerWidgetTest do
 
       {:emit, :change, _data, new_state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "hue-cursor", data: %{"key" => "ArrowLeft", "modifiers" => %{}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "hue-cursor",
+            data: %{"key" => "ArrowLeft", "modifiers" => %{}}
+          },
           state
         )
 
@@ -310,7 +347,11 @@ defmodule ColorPickerWidgetTest do
 
       {:emit, :change, _data, new_state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "hue-cursor", data: %{"key" => "Home", "modifiers" => %{}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "hue-cursor",
+            data: %{"key" => "Home", "modifiers" => %{}}
+          },
           state
         )
 
@@ -322,7 +363,11 @@ defmodule ColorPickerWidgetTest do
 
       {:emit, :change, _data, new_state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "hue-cursor", data: %{"key" => "End", "modifiers" => %{}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "hue-cursor",
+            data: %{"key" => "End", "modifiers" => %{}}
+          },
           state
         )
 
@@ -334,7 +379,11 @@ defmodule ColorPickerWidgetTest do
 
       {:emit, :change, _data, new_state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "hue-cursor", data: %{"key" => "PageUp", "modifiers" => %{}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "hue-cursor",
+            data: %{"key" => "PageUp", "modifiers" => %{}}
+          },
           state
         )
 
@@ -346,7 +395,11 @@ defmodule ColorPickerWidgetTest do
 
       assert :consumed =
                ColorPickerWidget.handle_event(
-                 %Widget{type: :canvas_element_key_press, id: "hue-cursor", data: %{"key" => "a", "modifiers" => %{}}},
+                 %Widget{
+                   type: :canvas_element_key_press,
+                   id: "hue-cursor",
+                   data: %{"key" => "a", "modifiers" => %{}}
+                 },
                  state
                )
     end
@@ -362,7 +415,11 @@ defmodule ColorPickerWidgetTest do
 
       {:emit, :change, data, new_state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "sv-cursor", data: %{"key" => "ArrowRight", "modifiers" => %{}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "sv-cursor",
+            data: %{"key" => "ArrowRight", "modifiers" => %{}}
+          },
           state
         )
 
@@ -376,7 +433,11 @@ defmodule ColorPickerWidgetTest do
 
       {:emit, :change, _data, new_state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "sv-cursor", data: %{"key" => "ArrowLeft", "modifiers" => %{}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "sv-cursor",
+            data: %{"key" => "ArrowLeft", "modifiers" => %{}}
+          },
           state
         )
 
@@ -388,7 +449,11 @@ defmodule ColorPickerWidgetTest do
 
       {:emit, :change, _data, new_state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "sv-cursor", data: %{"key" => "ArrowUp", "modifiers" => %{}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "sv-cursor",
+            data: %{"key" => "ArrowUp", "modifiers" => %{}}
+          },
           state
         )
 
@@ -401,7 +466,11 @@ defmodule ColorPickerWidgetTest do
 
       {:emit, :change, _data, new_state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "sv-cursor", data: %{"key" => "ArrowDown", "modifiers" => %{}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "sv-cursor",
+            data: %{"key" => "ArrowDown", "modifiers" => %{}}
+          },
           state
         )
 
@@ -413,7 +482,11 @@ defmodule ColorPickerWidgetTest do
 
       {:emit, :change, _data, new_state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "sv-cursor", data: %{"key" => "ArrowRight", "modifiers" => %{"shift" => true}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "sv-cursor",
+            data: %{"key" => "ArrowRight", "modifiers" => %{"shift" => true}}
+          },
           state
         )
 
@@ -425,7 +498,11 @@ defmodule ColorPickerWidgetTest do
 
       assert :consumed =
                ColorPickerWidget.handle_event(
-                 %Widget{type: :canvas_element_key_press, id: "sv-cursor", data: %{"key" => "ArrowRight", "modifiers" => %{}}},
+                 %Widget{
+                   type: :canvas_element_key_press,
+                   id: "sv-cursor",
+                   data: %{"key" => "ArrowRight", "modifiers" => %{}}
+                 },
                  state
                )
     end
@@ -435,7 +512,11 @@ defmodule ColorPickerWidgetTest do
 
       assert :consumed =
                ColorPickerWidget.handle_event(
-                 %Widget{type: :canvas_element_key_press, id: "sv-cursor", data: %{"key" => "ArrowDown", "modifiers" => %{}}},
+                 %Widget{
+                   type: :canvas_element_key_press,
+                   id: "sv-cursor",
+                   data: %{"key" => "ArrowDown", "modifiers" => %{}}
+                 },
                  state
                )
     end
@@ -445,7 +526,11 @@ defmodule ColorPickerWidgetTest do
 
       {:emit, :change, _data, new_state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "sv-cursor", data: %{"key" => "Home", "modifiers" => %{"shift" => true}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "sv-cursor",
+            data: %{"key" => "Home", "modifiers" => %{"shift" => true}}
+          },
           state
         )
 
@@ -458,7 +543,11 @@ defmodule ColorPickerWidgetTest do
 
       {:emit, :change, _data, new_state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "sv-cursor", data: %{"key" => "End", "modifiers" => %{"shift" => true}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "sv-cursor",
+            data: %{"key" => "End", "modifiers" => %{"shift" => true}}
+          },
           state
         )
 
@@ -471,7 +560,11 @@ defmodule ColorPickerWidgetTest do
 
       {:emit, :change, _data, new_state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "sv-cursor", data: %{"key" => "Home", "modifiers" => %{}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "sv-cursor",
+            data: %{"key" => "Home", "modifiers" => %{}}
+          },
           state
         )
 
@@ -484,7 +577,11 @@ defmodule ColorPickerWidgetTest do
 
       {:emit, :change, _data, new_state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "sv-cursor", data: %{"key" => "End", "modifiers" => %{}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "sv-cursor",
+            data: %{"key" => "End", "modifiers" => %{}}
+          },
           state
         )
 
@@ -497,7 +594,11 @@ defmodule ColorPickerWidgetTest do
 
       {:emit, :change, _data, new_state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "sv-cursor", data: %{"key" => "PageUp", "modifiers" => %{"shift" => true}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "sv-cursor",
+            data: %{"key" => "PageUp", "modifiers" => %{"shift" => true}}
+          },
           state
         )
 
@@ -510,7 +611,11 @@ defmodule ColorPickerWidgetTest do
 
       {:emit, :change, _data, new_state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "sv-cursor", data: %{"key" => "PageUp", "modifiers" => %{}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "sv-cursor",
+            data: %{"key" => "PageUp", "modifiers" => %{}}
+          },
           state
         )
 
@@ -529,7 +634,11 @@ defmodule ColorPickerWidgetTest do
 
       assert :consumed =
                ColorPickerWidget.handle_event(
-                 %Widget{type: :canvas_element_key_press, id: "nonexistent", data: %{"key" => "ArrowRight", "modifiers" => %{}}},
+                 %Widget{
+                   type: :canvas_element_key_press,
+                   id: "nonexistent",
+                   data: %{"key" => "ArrowRight", "modifiers" => %{}}
+                 },
                  state
                )
     end
@@ -674,7 +783,11 @@ defmodule ColorPickerWidgetTest do
       # Now adjust with keyboard
       {:emit, :change, data, state} =
         ColorPickerWidget.handle_event(
-          %Widget{type: :canvas_element_key_press, id: "hue-cursor", data: %{"key" => "ArrowRight", "modifiers" => %{}}},
+          %Widget{
+            type: :canvas_element_key_press,
+            id: "hue-cursor",
+            data: %{"key" => "ArrowRight", "modifiers" => %{}}
+          },
           state
         )
 

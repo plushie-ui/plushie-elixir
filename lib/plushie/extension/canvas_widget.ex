@@ -6,18 +6,27 @@ defmodule Plushie.Extension.CanvasWidget do
   manage internal state (hover, focus, animation), and transform raw
   canvas events into semantic widget events via `handle_event/2`.
 
-  ## Node tagging
+  ## Widget lifecycle
 
-  When a canvas_widget's `new/2` produces a node, `tag_node/3` wraps it
-  in metadata that the runtime can detect during event dispatch. The
-  metadata includes the extension module and the widget's props, which
-  the runtime uses to route events through the module's `handle_event/2`.
+  Canvas widgets follow the standard Widget protocol pipeline:
+
+  1. `new/2` returns a struct (like all other widgets)
+  2. `Widget.to_node/1` produces a placeholder node tagged with the
+     module and props as metadata
+  3. During `Tree.normalize`, the placeholder is detected and rendered
+     with the best available state (stored from a previous cycle, or
+     initial defaults for new widgets)
+  4. The rendered output is normalized in place -- no post-processing
+
+  The tree carries widget state in `:meta` (`__canvas_widget_state__`),
+  making it the single source of truth. The runtime derives a registry
+  from the tree after each render for O(1) event interception lookups.
 
   ## Event transformation
 
-  The `dispatch_event/3` function is called by the runtime when an event
-  arrives for a widget inside a canvas_widget's scope. It calls the
-  module's `handle_event/2` and interprets the return value:
+  `dispatch_event/3` is called by the runtime when an event arrives
+  for a widget inside a canvas_widget's scope. It calls the module's
+  `handle_event/2` and interprets the return value:
 
   - `{:emit, family, data}` -- suppress original, emit semantic event
   - `{:emit, family, data, new_state}` -- emit + update internal state
@@ -25,73 +34,9 @@ defmodule Plushie.Extension.CanvasWidget do
   - `:passthrough` -- deliver original event to update/2
   - `:consumed` -- suppress, no event
 
-  ## State management
-
-  Widget internal state is stored in the runtime's `widget_states` map,
-  keyed by the widget's scoped ID. State persists across renders and is
-  passed to `render/3` and `handle_event/2`. When a canvas_widget leaves
-  the tree, its state is cleaned up.
+  Emitted events bubble hierarchically through parent canvas_widgets
+  in the scope chain before reaching `app.update/2`.
   """
-
-  @canvas_widget_key :__canvas_widget__
-  @canvas_widget_props_key :__canvas_widget_props__
-
-  @doc """
-  Creates a marker node that the runtime expands during rendering.
-
-  The marker carries the module and props. During tree normalization
-  or the render cycle, the runtime calls `expand/3` with stored
-  state to produce the actual canvas output.
-  """
-  @spec marker_node(id :: String.t(), module :: module(), props :: map()) :: map()
-  def marker_node(id, module, props) when is_atom(module) and is_binary(id) do
-    # Render immediately with initial state. The runtime will
-    # re-render with stored state on subsequent cycles.
-    state = module.__initial_state__()
-    node = module.render(id, props, state)
-
-    # Tag the node for runtime detection.
-    node_props = node[:props] || node["props"] || %{}
-
-    tagged_props =
-      node_props
-      |> Map.put(@canvas_widget_key, module)
-      |> Map.put(@canvas_widget_props_key, props)
-
-    Map.put(node, :props, tagged_props)
-  end
-
-  @doc """
-  Re-renders a canvas_widget with its current state from the registry.
-
-  Called by the runtime when it detects a canvas_widget node during
-  tree normalization or when widget state has changed.
-  """
-  @spec expand(node :: map(), module :: module(), widget_state :: map()) :: map()
-  def expand(%{} = node, module, widget_state) do
-    id = node[:id] || node["id"]
-
-    # After tree normalization, runtime metadata keys (__canvas_widget_props__)
-    # are moved from :props to :meta. Check meta first, fall back to props
-    # for pre-normalization nodes.
-    meta = Map.get(node, :meta, %{})
-    node_props = node[:props] || node["props"] || %{}
-
-    props =
-      Map.get(meta, @canvas_widget_props_key) ||
-        Map.get(node_props, @canvas_widget_props_key, %{})
-    rendered = module.render(id, props, widget_state)
-
-    # Preserve the canvas_widget tags on the re-rendered output.
-    rendered_props = rendered[:props] || rendered["props"] || %{}
-
-    tagged_props =
-      rendered_props
-      |> Map.put(@canvas_widget_key, module)
-      |> Map.put(@canvas_widget_props_key, props)
-
-    Map.put(rendered, :props, tagged_props)
-  end
 
   @doc """
   Extracts the canvas_widget module from a node's metadata, if present.

@@ -441,6 +441,9 @@ defmodule Plushie.Extension do
         {name, default}
       end
 
+    # Struct fields: :id + declared props + standard widget options
+    struct_fields = [{:id, nil} | prop_struct_fields] ++ [{:event_rate, nil}, {:a11y, nil}]
+
     state_defaults = Macro.escape(Map.new(state_fields))
 
     has_handle_event = Module.defines?(module, {:handle_event, 2})
@@ -464,7 +467,46 @@ defmodule Plushie.Extension do
 
       unquote(default_handle_event)
 
-      @spec new(id :: String.t(), opts :: keyword()) :: Plushie.Widget.ui_node()
+      defstruct unquote(Macro.escape(struct_fields))
+
+      defimpl Plushie.Widget do
+        @doc """
+        Converts the canvas_widget struct to a placeholder node.
+
+        The placeholder carries the module and props as metadata tags.
+        During tree normalization, the runtime detects these tags and
+        renders the widget with the appropriate internal state (stored
+        from a previous cycle, or initial defaults for new widgets).
+        """
+        def to_node(widget) do
+          props =
+            widget
+            |> Map.from_struct()
+            |> Map.delete(:id)
+            |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+            |> Map.new()
+
+          %{
+            id: widget.id,
+            type: "canvas_widget",
+            props: %{
+              __canvas_widget__: unquote(module),
+              __canvas_widget_props__: props
+            },
+            children: []
+          }
+        end
+      end
+
+      @doc """
+      Creates a new canvas widget instance.
+
+      Returns a struct that participates in the standard Widget protocol
+      pipeline: struct → to_node → normalize. The widget is rendered
+      during tree normalization with stored internal state (or initial
+      defaults on first render).
+      """
+      @spec new(id :: String.t(), opts :: keyword()) :: %__MODULE__{}
       def new(id, opts \\ []) when is_binary(id) do
         {event_rate_val, opts} = Keyword.pop(opts, :event_rate)
         {a11y_val, opts} = Keyword.pop(opts, :a11y)
@@ -488,12 +530,7 @@ defmodule Plushie.Extension do
         props_map =
           if a11y_val, do: Map.put(props_map, :a11y, a11y_val), else: props_map
 
-        # Return a marker node that the runtime will expand using
-        # stored state. The runtime calls render(id, props, state)
-        # with the widget's persisted internal state during tree
-        # normalization. For the first render, initial_state defaults
-        # are used.
-        Plushie.Extension.CanvasWidget.marker_node(id, unquote(module), props_map)
+        struct!(__MODULE__, Map.put(props_map, :id, id))
       end
     end
   end

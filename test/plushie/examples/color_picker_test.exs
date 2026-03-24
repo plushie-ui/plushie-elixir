@@ -116,7 +116,7 @@ defmodule ColorPickerTest do
       tree = ColorPicker.view(ColorPicker.init([]))
       picker = Plushie.UI.find(tree, "picker")
       assert picker != nil
-      assert picker.type == "canvas"
+      assert picker.type == "canvas_widget"
     end
 
     test "swatch container is present" do
