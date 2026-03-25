@@ -297,9 +297,69 @@ defmodule Plushie.CanvasWidgetDispatchTest do
     end
   end
 
+  # -- Direct-target dispatch (canvas events) -----------------------------------
+
+  describe "direct-target dispatch (canvas press/move/release)" do
+    test "canvas event with empty scope targets widget by full ID" do
+      registry = %{
+        "picker" => %{module: ConsumedWidget, state: %{}}
+      }
+
+      # Canvas press: id = "picker", scope = []
+      {event, _registry} =
+        CanvasWidgets.dispatch_event(registry, canvas_event("picker", []))
+
+      assert event == nil
+    end
+
+    test "canvas event with scope reconstructs full scoped ID" do
+      registry = %{
+        "form/picker" => %{module: ConsumedWidget, state: %{}}
+      }
+
+      # Canvas press on "form/picker": id = "picker", scope = ["form"]
+      {event, _registry} =
+        CanvasWidgets.dispatch_event(registry, canvas_event("picker", ["form"]))
+
+      assert event == nil
+    end
+
+    test "does not match wrong widget with same local ID" do
+      # Root-level "submit" and scoped "form/submit" both exist.
+      # A canvas event for "form/submit" must not match root "submit".
+      registry = %{
+        "submit" => %{module: EmitWidget, state: %{}},
+        "form/submit" => %{module: ConsumedWidget, state: %{}}
+      }
+
+      # Event for "form/submit": id = "submit", scope = ["form"]
+      {event, _registry} =
+        CanvasWidgets.dispatch_event(registry, canvas_event("submit", ["form"]))
+
+      # Should match "form/submit" (ConsumedWidget) → nil, NOT "submit" (EmitWidget)
+      assert event == nil
+    end
+
+    test "falls through when no widget matches the full path" do
+      registry = %{
+        "other" => %{module: ConsumedWidget, state: %{}}
+      }
+
+      event = canvas_event("picker", [])
+      {result, _registry} = CanvasWidgets.dispatch_event(registry, event)
+
+      # No match → event passes through unchanged
+      assert result == event
+    end
+  end
+
   # -- Helpers -----------------------------------------------------------------
 
   defp click_event(id, scope \\ []) do
     %Plushie.Event.Widget{type: :click, id: id, scope: scope}
+  end
+
+  defp canvas_event(id, scope) do
+    %Plushie.Event.Canvas{type: :press, id: id, scope: scope, x: 100.0, y: 100.0, button: "left"}
   end
 end

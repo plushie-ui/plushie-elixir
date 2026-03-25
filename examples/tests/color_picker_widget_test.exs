@@ -17,75 +17,75 @@ defmodule Examples.ColorPickerWidgetTest do
   # -- Keyboard: hue cursor ----------------------------------------------------
 
   test "Tab to hue cursor then ArrowRight adjusts hue" do
-    press("tab")
-    press("tab")
-    press("right")
+    press("Tab")
+    press("Tab")
+    press("ArrowRight")
     assert last_event().type == :change
     assert_in_delta model().hue, 1.0, 0.5
   end
 
   test "Shift+ArrowRight gives coarse hue step" do
-    press("tab")
-    press("tab")
-    press("shift+right")
+    press("Tab")
+    press("Tab")
+    press("Shift+ArrowRight")
     assert_in_delta model().hue, 15.0, 0.5
   end
 
   test "Home and End set hue extremes" do
-    press("tab")
-    press("tab")
-    press("end")
+    press("Tab")
+    press("Tab")
+    press("End")
     assert model().hue == 359.0
-    press("home")
+    press("Home")
     assert model().hue == 0.0
   end
 
   test "PageUp increments hue by coarse step" do
-    press("tab")
-    press("tab")
-    press("pageup")
+    press("Tab")
+    press("Tab")
+    press("PageUp")
     assert_in_delta model().hue, 15.0, 0.5
   end
 
   # -- Keyboard: SV cursor -----------------------------------------------------
 
   test "Tab to SV cursor then ArrowLeft decreases saturation" do
-    press("tab")
-    press("tab")
-    press("tab")
-    press("left")
+    press("Tab")
+    press("Tab")
+    press("Tab")
+    press("ArrowLeft")
     assert_in_delta model().saturation, 0.99, 0.005
   end
 
   test "ArrowDown on SV cursor decreases value" do
-    press("tab")
-    press("tab")
-    press("tab")
-    press("down")
+    press("Tab")
+    press("Tab")
+    press("Tab")
+    press("ArrowDown")
     assert_in_delta model().value, 0.99, 0.005
   end
 
   test "Shift+Home on SV cursor sets saturation to 0" do
-    press("tab")
-    press("tab")
-    press("tab")
-    press("shift+home")
+    press("Tab")
+    press("Tab")
+    press("Tab")
+    press("Shift+Home")
     assert model().saturation == 0.0
   end
 
   test "End on SV cursor sets value to 0" do
-    press("tab")
-    press("tab")
-    press("tab")
-    press("end")
+    press("Tab")
+    press("Tab")
+    press("Tab")
+    press("End")
     assert model().value == 0.0
   end
 
   # -- No event for unrecognized keys ------------------------------------------
 
   test "pressing an unrecognized key emits nothing" do
-    press("tab")
-    press("tab")
+    press("Tab")
+    press("Tab")
     press("a")
     assert last_event() == nil
   end

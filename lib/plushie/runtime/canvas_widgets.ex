@@ -166,22 +166,29 @@ defmodule Plushie.Runtime.CanvasWidgets do
           {struct() | nil, map()}
   def dispatch_event(registry, event) when is_map(event) do
     scope = Map.get(event, :scope, [])
+    id = Map.get(event, :id, "")
+
+    # Build the handler chain from the scope (events from INSIDE the
+    # widget -- element clicks, key presses). Then check if the event
+    # targets a canvas_widget directly (Canvas press/move/release) by
+    # reconstructing the full scoped path from scope + id.
     chain = build_handler_chain(registry, scope)
 
-    # If the scope chain is empty but the event's ID directly matches
-    # a registered canvas_widget, include it as a handler. This covers
-    # events directed AT the widget (Canvas press/move/release) vs
-    # events from INSIDE the widget (element clicks, key presses).
     chain =
-      if chain == [] do
-        id = Map.get(event, :id, "")
+      case chain do
+        [] ->
+          # No parent canvas_widgets in scope. Check if the event's
+          # target itself is a canvas_widget. Reconstruct the full
+          # scoped ID: scope (reversed to forward order) + event id.
+          target_id = scope_to_id(scope, id)
 
-        case Map.get(registry, id) do
-          nil -> []
-          entry -> [{id, entry}]
-        end
-      else
-        chain
+          case Map.get(registry, target_id) do
+            nil -> []
+            entry -> [{target_id, entry}]
+          end
+
+        _ ->
+          chain
       end
 
     walk_chain(registry, event, chain)
@@ -211,6 +218,13 @@ defmodule Plushie.Runtime.CanvasWidgets do
       {scoped_id, entry}
     end
   end
+
+  # Reconstruct a full scoped ID from a reversed scope list and a local ID.
+  # scope_to_id(["form"], "submit") => "form/submit"
+  # scope_to_id([], "picker") => "picker"
+  @spec scope_to_id([String.t()], String.t()) :: String.t()
+  defp scope_to_id([], id), do: id
+  defp scope_to_id(scope, id), do: Enum.join(Enum.reverse(scope) ++ [id], "/")
 
   # Walk the handler chain, dispatching the event to each handler
   # until one captures it or the chain is exhausted.

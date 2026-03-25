@@ -431,6 +431,11 @@ defmodule Plushie.Protocol.Keys do
     "ContextMenu" => :context_menu
   }
 
+  @doc false
+  # Exposes the named keys map for compile-time validation (used by
+  # the test backend to validate key names in press/type_key helpers).
+  def __named_keys__, do: @named_keys
+
   @doc """
   Converts a key name string to an atom for named keys, or returns the string
   unchanged for single-character keys.

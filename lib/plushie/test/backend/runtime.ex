@@ -372,19 +372,47 @@ defmodule Plushie.Test.Backend.Runtime do
   defp encode_selector(:focused, _tree), do: %{"by" => "focused"}
   defp encode_selector(text, _tree) when is_binary(text), do: %{"by" => "text", "value" => text}
 
+  # Valid modifier prefixes for key combos (e.g. "Shift+ArrowRight").
+  @valid_modifiers %{
+    "Shift" => :shift,
+    "Ctrl" => :ctrl,
+    "Alt" => :alt,
+    "Logo" => :logo,
+    "Command" => :command
+  }
+
+  # Build a set of valid named key strings from the Protocol.Keys module.
+  # This is the source of truth for what the renderer accepts.
+  @valid_named_keys Plushie.Protocol.Keys.__named_keys__()
+                    |> Map.keys()
+                    |> MapSet.new()
+
   defp parse_key(key) when is_binary(key) do
     parts = String.split(key, "+")
     {mods, [key_name]} = Enum.split(parts, -1)
 
     modifiers =
-      Enum.reduce(mods, %{}, fn
-        "ctrl", acc -> Map.put(acc, :ctrl, true)
-        "shift", acc -> Map.put(acc, :shift, true)
-        "alt", acc -> Map.put(acc, :alt, true)
-        "logo", acc -> Map.put(acc, :logo, true)
-        "command", acc -> Map.put(acc, :command, true)
-        _, acc -> acc
-      end)
+      for mod <- mods, into: %{} do
+        case Map.get(@valid_modifiers, mod) do
+          nil ->
+            raise ArgumentError,
+                  "unknown modifier #{inspect(mod)} in key #{inspect(key)}. " <>
+                    "Valid: Shift, Ctrl, Alt, Logo, Command"
+
+          atom ->
+            {atom, true}
+        end
+      end
+
+    # Single printable characters are valid (sent as Key::Character).
+    # Named keys must be in the set recognized by the renderer.
+    unless String.length(key_name) == 1 or key_name in @valid_named_keys do
+      raise ArgumentError,
+            "unknown key #{inspect(key_name)} in #{inspect(key)}. " <>
+              "Use PascalCase named keys (ArrowRight, PageUp, Tab) " <>
+              "or single characters (a, Z). " <>
+              "See Plushie.Protocol.Keys for the full list"
+    end
 
     {key_name, modifiers}
   end

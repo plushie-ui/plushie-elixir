@@ -29,37 +29,37 @@ defmodule Examples.ColorPickerTest do
   # -- Keyboard: hue cursor ----------------------------------------------------
 
   test "arrow right increases hue" do
-    press("tab")
-    press("tab")
-    press("right")
+    press("Tab")
+    press("Tab")
+    press("ArrowRight")
     assert model().hue == 1.0
   end
 
   test "shift+arrow gives coarse hue step" do
-    press("tab")
-    press("tab")
-    press("shift+right")
+    press("Tab")
+    press("Tab")
+    press("Shift+ArrowRight")
     assert model().hue == 15.0
   end
 
   test "home and end set hue extremes" do
-    press("tab")
-    press("tab")
-    press("end")
+    press("Tab")
+    press("Tab")
+    press("End")
     assert model().hue == 359.0
-    press("home")
+    press("Home")
     assert model().hue == 0.0
   end
 
   # -- Keyboard: SV cursor -----------------------------------------------------
 
   test "arrow keys adjust saturation and value on SV cursor" do
-    press("tab")
-    press("tab")
-    press("tab")
-    press("left")
+    press("Tab")
+    press("Tab")
+    press("Tab")
+    press("ArrowLeft")
     assert_in_delta model().saturation, 0.99, 0.001
-    press("down")
+    press("ArrowDown")
     assert_in_delta model().value, 0.99, 0.001
   end
 end
