@@ -900,17 +900,27 @@ assertions.
 
 ## Key name validation
 
-`press/1`, `type_key/1`, and `release/1` validate key names against
-`Plushie.Protocol.Keys` at call time. Key names use PascalCase
-(`"Enter"`, `"ArrowDown"`, `"Backspace"`). Passing an unrecognized
-key name raises immediately with a suggestion:
+`press/1`, `type_key/1`, and `release/1` validate key names at call
+time. Input is case-insensitive. Named keys use PascalCase matching
+the renderer's wire format (same strings that appear in
+`handle_event` data):
+
+    press("Tab")
+    press("ArrowRight")
+    press("Shift+PageUp")
+    press("a")
+
+Unrecognized key names raise immediately:
 
 ```
-** (ArgumentError) unknown key "enter" -- did you mean "Enter"?
+** (ArgumentError) unknown key "tabb" in "tabb".
+    Examples: Tab, ArrowRight, PageUp, Escape, Enter.
+    See Plushie.Protocol.Keys for the full list
 ```
 
-Modifier combos use `+` separators: `"ctrl+s"`, `"shift+ArrowUp"`.
-Modifier names are lowercase (`ctrl`, `shift`, `alt`, `logo`).
+Single characters are also accepted and lowercased (`"a"`, `"Z"`,
+`"1"`). Modifier combos use `+`: `"Ctrl+s"`, `"Shift+ArrowUp"`.
+Modifiers: `shift`, `ctrl`, `alt`, `logo`, `command`.
 
 
 ## Known limitations

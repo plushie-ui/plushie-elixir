@@ -888,6 +888,16 @@ defmodule Plushie.Protocol.Decode do
 
   defp dispatch(%{
          "type" => "event",
+         "family" => "canvas_element_key_release",
+         "id" => id,
+         "data" => data
+       }) do
+    {local, scope} = split_scoped_id(id)
+    %Widget{type: :canvas_element_key_release, id: local, scope: scope, data: data}
+  end
+
+  defp dispatch(%{
+         "type" => "event",
          "family" => "canvas_element_drag",
          "id" => id,
          "data" => data

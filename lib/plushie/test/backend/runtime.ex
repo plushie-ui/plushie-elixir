@@ -396,14 +396,21 @@ defmodule Plushie.Test.Backend.Runtime do
   defp encode_selector(:focused, _tree), do: %{"by" => "focused"}
   defp encode_selector(text, _tree) when is_binary(text), do: %{"by" => "text", "value" => text}
 
-  # Valid modifier prefixes for key combos (e.g. "Shift+ArrowRight").
   @valid_modifiers %{
-    "Shift" => :shift,
-    "Ctrl" => :ctrl,
-    "Alt" => :alt,
-    "Logo" => :logo,
-    "Command" => :command
+    "shift" => :shift,
+    "ctrl" => :ctrl,
+    "alt" => :alt,
+    "logo" => :logo,
+    "command" => :command
   }
+
+  # Case-insensitive lookup for named keys. Maps downcased input to
+  # PascalCase wire format (matching what the renderer sends back in
+  # events). Built from Protocol.Keys which is the source of truth
+  # for all named key strings.
+  @named_key_lookup Plushie.Protocol.Keys.named_key_names()
+                    |> Enum.map(fn name -> {String.downcase(name), name} end)
+                    |> Map.new()
 
   defp parse_key(key) when is_binary(key) do
     parts = String.split(key, "+")
@@ -411,26 +418,34 @@ defmodule Plushie.Test.Backend.Runtime do
 
     modifiers =
       for mod <- mods, into: %{} do
-        case Map.get(@valid_modifiers, mod) do
+        case Map.get(@valid_modifiers, String.downcase(mod)) do
           nil ->
             raise ArgumentError,
                   "unknown modifier #{inspect(mod)} in key #{inspect(key)}. " <>
-                    "Valid: Shift, Ctrl, Alt, Logo, Command"
+                    "Valid: shift, ctrl, alt, logo, command"
 
           atom ->
             {atom, true}
         end
       end
 
-    # Single printable characters are valid (sent as Key::Character).
-    # Named keys must be in the set recognized by the renderer.
-    unless String.length(key_name) == 1 or Plushie.Protocol.Keys.valid_key?(key_name) do
-      raise ArgumentError,
-            "unknown key #{inspect(key_name)} in #{inspect(key)}. " <>
-              "Use PascalCase named keys (ArrowRight, PageUp, Tab) " <>
-              "or single characters (a, Z). " <>
-              "See Plushie.Protocol.Keys for the full list"
-    end
+    # Single characters are sent as-is (lowercased for iced's logical key).
+    # Named keys are normalized to PascalCase (same format the renderer
+    # sends back in events, so widget handle_event patterns match).
+    key_name =
+      cond do
+        String.length(key_name) == 1 ->
+          String.downcase(key_name)
+
+        resolved = Map.get(@named_key_lookup, String.downcase(key_name)) ->
+          resolved
+
+        true ->
+          raise ArgumentError,
+                "unknown key #{inspect(key_name)} in #{inspect(key)}. " <>
+                  "Examples: Tab, ArrowRight, PageUp, Escape, Enter. " <>
+                  "See Plushie.Protocol.Keys for the full list"
+      end
 
     {key_name, modifiers}
   end

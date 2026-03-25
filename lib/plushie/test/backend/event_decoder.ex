@@ -156,7 +156,7 @@ defmodule Plushie.Test.Backend.EventDecoder do
   # (canvas_id/element_id) which split_scoped_id handles.
   @canvas_element_families ~w(
     canvas_element_enter canvas_element_leave
-    canvas_element_key_press
+    canvas_element_key_press canvas_element_key_release
     canvas_element_drag canvas_element_drag_end
     canvas_element_focused canvas_element_blurred
     canvas_group_focused canvas_group_blurred

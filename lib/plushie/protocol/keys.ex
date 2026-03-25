@@ -1,5 +1,12 @@
 defmodule Plushie.Protocol.Keys do
-  @moduledoc false
+  @moduledoc """
+  Named keyboard key mappings and validation.
+
+  Maps wire-format key name strings (PascalCase, matching iced's
+  `keyboard::key::Named` debug format) to Elixir atoms. Used by
+  the protocol decoder to convert key events and by test helpers
+  to validate key names at call time.
+  """
 
   # Named key and physical key maps, plus the `parse_key/1` public API.
 
@@ -432,8 +439,8 @@ defmodule Plushie.Protocol.Keys do
   }
 
   @doc false
-  @spec valid_key?(String.t()) :: boolean()
-  def valid_key?(key) when is_binary(key), do: Map.has_key?(@named_keys, key)
+  @spec named_key_names() :: [String.t()]
+  def named_key_names, do: Map.keys(@named_keys)
 
   @doc """
   Converts a key name string to an atom for named keys, or returns the string

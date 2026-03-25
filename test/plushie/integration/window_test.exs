@@ -49,7 +49,6 @@ defmodule Plushie.Integration.WindowTest do
     end
   end
 
-  @moduletag :integration
 
   test "app starts with single window" do
     assert model().show_secondary == false

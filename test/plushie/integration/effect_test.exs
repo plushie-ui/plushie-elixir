@@ -35,7 +35,6 @@ defmodule Plushie.Integration.EffectTest do
     end
   end
 
-  @moduletag :integration
 
   test "stubbed effect returns controlled response" do
     register_effect_stub("clipboard_read", "test data")

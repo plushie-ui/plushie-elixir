@@ -3,7 +3,6 @@ defmodule Plushie.Integration.CommandTest do
 
   alias Plushie.Event.{Async, Stream, Timer, Widget}
 
-  @moduletag :integration
 
   # ---------------------------------------------------------------------------
   # send_after: fires from init
