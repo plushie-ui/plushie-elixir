@@ -292,7 +292,7 @@ your `config.exs` (or per-environment config files).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `:test_backend` | `:mock \| :headless \| :windowed` | `:mock` | Test backend used by `Plushie.Test.Case`. Override per-run with `PLUSHIE_TEST_BACKEND` env var. |
+| `:test_backend` | `:mock \| :headless \| :windowed` | `:mock` | Renderer mode used by `Plushie.Test.Case`. Controls which mode the binary runs in (mock/headless/windowed) through a unified Runtime backend. Override per-run with `PLUSHIE_TEST_BACKEND` env var. |
 | `:test_format` | `:json \| :msgpack` | `:msgpack` | Wire format for test sessions. Set to `:json` for easier debugging. |
 | `:extension_config` | `map()` | `%{}` | Configuration map passed to widget extensions at runtime. |
 

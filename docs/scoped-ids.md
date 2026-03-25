@@ -84,6 +84,44 @@ Plushie.Event.target(event)
 Subscription events (Key, Mouse, Touch, IME, Modifiers) are global and
 do not carry scope.
 
+## Canvas element scoped IDs
+
+Canvas elements participate in the same scoping mechanism as regular
+widgets. When a canvas element emits an event, the renderer uses
+`canvas_id/element_id` as the wire ID. The SDK splits this into
+`id: element_id, scope: [canvas_id, ...]`, making canvas elements
+look like regular widgets inside a container from the event
+perspective.
+
+```
+canvas "drawing"                ->  id: "drawing"
+  rect("bg", ...)              ->  id: "drawing/bg"
+  interactive "handle" ...     ->  id: "drawing/handle"
+```
+
+Events from interactive canvas elements follow the same pattern:
+
+```elixir
+# Canvas element click arrives as:
+%Canvas{type: :element_click, id: "handle", scope: ["drawing"]}
+
+# Match exactly like a widget inside a container:
+def update(model, %Canvas{type: :element_click, id: "handle", scope: ["drawing" | _]}) do
+  # ...
+end
+
+# Bind the canvas ID for dynamic canvases:
+def update(model, %Canvas{type: :element_click, id: "handle", scope: [canvas_id | _]}) do
+  handle_click(model, canvas_id)
+end
+```
+
+This means canvas elements, canvas widgets (`:canvas_widget`
+extensions), and regular widgets all use the same scoping and event
+dispatch model. A canvas widget that emits `{:emit, :click, data}`
+produces an event indistinguishable from a button click inside a
+named container.
+
 ## Tree search
 
 `Tree.find/2` and `Tree.exists?/2` support both full scoped paths and

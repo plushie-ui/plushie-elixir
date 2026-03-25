@@ -456,6 +456,6 @@ wire has `"fill"`.
 
 - [Getting started](getting-started.md) -- setup, first app
 - [Commands and subscriptions](commands.md) -- event rate limiting details
-- [Testing](testing.md) -- three-backend test framework
+- [Testing](testing.md) -- test framework (mock/headless/windowed modes)
 - [Extensions](extensions.md) -- custom widgets, CoalesceHint for throttling
 - [Collab demo](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/collab) -- the same app running in 5 transport modes (native, stdio, WebSocket, SSH)

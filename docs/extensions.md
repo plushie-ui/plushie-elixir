@@ -134,6 +134,142 @@ defmodule MyApp.Card do
 end
 ```
 
+### `:canvas_widget` -- Canvas-based widgets with internal state
+
+Use `use Plushie.Extension, :canvas_widget` for widgets that render via
+canvas, manage their own internal state, and transform raw canvas events
+into semantic events. No Rust code needed. This sits between `:widget`
+(pure composition, no state) and `:native_widget` (Rust-backed, full
+control).
+
+Canvas widgets have three capabilities that plain `:widget` extensions
+do not:
+
+- **Internal state** -- declared with `state`, managed by the runtime.
+  The widget tree is the source of truth; state is keyed by scoped
+  widget ID.
+- **Event transformation** -- `handle_event/2` intercepts events at the
+  widget's scope boundary before they reach `update/2`. Raw canvas
+  events become semantic events (`:click`, `:select`, etc.) that are
+  indistinguishable from built-in widget events.
+- **Widget-scoped subscriptions** -- `subscribe/2` returns subscriptions
+  scoped to this widget instance. Timer events route to `handle_event/2`,
+  not the app's `update/2`.
+
+```elixir
+defmodule MyApp.StarRating do
+  use Plushie.Extension, :canvas_widget
+
+  widget :star_rating
+
+  prop :rating, :integer
+  prop :max, :integer, default: 5
+
+  state hover: nil
+
+  @impl true
+  def handle_event(%Canvas{type: :element_enter, id: star_id}, state) do
+    {:update_state, %{state | hover: star_id}}
+  end
+
+  def handle_event(%Canvas{type: :element_leave}, state) do
+    {:update_state, %{state | hover: nil}}
+  end
+
+  def handle_event(%Canvas{type: :element_click, id: star_id}, _state) do
+    {index, _} = Integer.parse(star_id)
+    {:emit, :select, index}
+  end
+
+  def handle_event(_event, _state), do: :ignored
+
+  @impl true
+  def render(id, props, state) do
+    import Plushie.UI
+
+    canvas id do
+      for i <- 1..props.max do
+        filled = i <= props.rating
+        hovered = state.hover == to_string(i)
+        star(to_string(i), filled: filled, hovered: hovered)
+      end
+    end
+  end
+end
+```
+
+#### `handle_event/2` return values
+
+`handle_event/2` receives the raw event and the widget's current
+internal state. It follows iced's captured/ignored model:
+
+| Return value | Effect |
+|---|---|
+| `:ignored` | Event passes through to the app's `update/2` unchanged |
+| `:consumed` | Event is suppressed -- neither the app nor other widgets see it |
+| `{:emit, family, data}` | Suppress the raw event; emit a new event with the given family and data |
+| `{:emit, family, data, new_state}` | Same as above, and update internal state |
+| `{:update_state, new_state}` | Update internal state, suppress the event |
+
+Standard event families (`:click`, `:select`, `:toggle`) emitted via
+`{:emit, ...}` produce events that look identical to built-in widget
+events from the app's perspective.
+
+#### `subscribe/2`
+
+Optional. Returns subscriptions scoped to this widget instance. Timer
+events from these subscriptions route to `handle_event/2`, not the
+app's `update/2`.
+
+```elixir
+@impl true
+def subscribe(props, state) do
+  if state.animating do
+    [Plushie.Subscription.every(16, :animation_tick)]
+  else
+    []
+  end
+end
+```
+
+#### `render/3`
+
+Receives the widget ID, resolved props, and current internal state.
+Returns a UI tree (typically a canvas block).
+
+#### Lifecycle
+
+Internal state is initialized from `state` declarations when the
+widget first appears in the tree. When the widget is removed from the
+tree, its state is cleaned up. Multiple instances of the same canvas
+widget each get independent state, keyed by their scoped widget ID.
+
+#### Testing canvas widgets
+
+Use `Plushie.Test.WidgetCase` for isolated testing of canvas widget
+logic:
+
+```elixir
+defmodule MyApp.StarRatingTest do
+  use Plushie.Test.WidgetCase, widget: MyApp.StarRating
+
+  test "clicking a star emits select event" do
+    render(rating: 3)
+    click("#3")
+    assert_emitted {:select, 3}
+  end
+
+  test "hovering updates internal state" do
+    render(rating: 3)
+    hover("#2")
+    assert widget_state().hover == "2"
+  end
+end
+```
+
+See [Testing canvas widgets](testing.md#testing-canvas-widgets) for
+the full testing guide.
+
 ## DSL reference
 
 | Macro | Required | Description |
@@ -1019,10 +1155,10 @@ fn render_does_not_panic() {
 
 ### Testing with the mock backend
 
-The mock backend (`:mock`) uses `Backend.MockRenderer` with a shared renderer
-process. Standard test helpers like `click/1`, `type_text/2`, etc.
-work with extension widget types out of the box -- the mock backend
-infers events for known widget interaction patterns.
+The mock backend (`:mock`) runs the real Runtime against `plushie --mock`
+with session multiplexing. Standard test helpers like `click/1`,
+`type_text/2`, etc. work with extension widget types out of the box --
+the mock backend infers events for known widget interaction patterns.
 
 For integration tests that exercise the full wire protocol round-trip
 (including extension commands), build a custom renderer with

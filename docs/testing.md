@@ -283,7 +283,7 @@ All of the following are imported by `use Plushie.Test.Case`:
 All tests work on all backends. Write tests once, swap backends without
 changing assertions.
 
-### Three backends
+### Backend modes
 
 | | `:mock` | `:headless` | `:windowed` |
 |---|---|---|---|
@@ -323,8 +323,9 @@ Tests are portable across all three.
 | 2 | Application config | `config :plushie, :test_backend, :mock` |
 | 3 | Default | `:mock` |
 
-Atom shorthands (`:mock`, `:headless`, `:windowed`) and full module
-names (`Plushie.Test.Backend.MockRenderer`, etc.) both work in application config.
+Atom shorthands (`:mock`, `:headless`, `:windowed`) work in application
+config. All modes use a unified Runtime backend -- the shorthand selects
+which renderer mode the binary runs in.
 
 
 ## Snapshots and screenshots
@@ -335,8 +336,8 @@ difference is important.
 ### Structural tree hashes (`assert_tree_hash`)
 
 `assert_tree_hash/1` captures a SHA-256 hash of the serialized UI tree and
-compares it against a golden file. It works on all three backends because
-every backend can produce a tree.
+compares it against a golden file. It works on all backend modes because
+every mode can produce a tree.
 
 ```elixir
 test "counter initial state" do
@@ -527,9 +528,9 @@ end
 
 ### On headless and windowed backends
 
-All three backends now use the shared `CommandProcessor` to execute async
-commands synchronously. `await_async/2` returns `:ok` immediately on all
-backends because the commands have already completed.
+All backend modes execute async commands synchronously through the
+Runtime. `await_async/2` returns `:ok` immediately on all modes
+because the commands have already completed.
 
 
 ## Debugging and error messages
@@ -817,6 +818,101 @@ These tests run on `:mock` by default (fast, logic-only). Set
 with the extension compiled in.
 
 
+## Testing canvas widgets
+
+`Plushie.Test.WidgetCase` provides an isolated test environment for
+`:canvas_widget` extensions. It renders the widget in isolation, routes
+events through `handle_event/2`, and exposes the widget's internal state.
+
+```elixir
+defmodule MyApp.StarRatingTest do
+  use Plushie.Test.WidgetCase, widget: MyApp.StarRating
+
+  test "clicking a star emits select" do
+    render(rating: 3)
+    click("#3")
+    assert_emitted {:select, 3}
+  end
+
+  test "hover updates internal state" do
+    render(rating: 3)
+    hover("#2")
+    assert widget_state().hover == "2"
+  end
+
+  test "leaving clears hover" do
+    render(rating: 3)
+    hover("#2")
+    leave("#2")
+    assert widget_state().hover == nil
+  end
+end
+```
+
+`WidgetCase` imports all standard test helpers (`click/1`, `find!/1`,
+`assert_text/2`, etc.) plus widget-specific helpers:
+
+| Function | Description |
+|---|---|
+| `render(opts)` | Render the widget with the given props |
+| `widget_state()` | Returns the widget's current internal state |
+| `assert_emitted(pattern)` | Assert the widget emitted a matching event |
+| `refute_emitted(pattern)` | Assert no matching event was emitted |
+| `hover(selector)` | Simulate element enter (canvas hover) |
+| `leave(selector)` | Simulate element leave |
+
+For end-to-end tests that exercise the widget inside a real app, use
+`Plushie.Test.Case` as usual.
+
+
+## Effect stubs
+
+`register_effect_stub/2` and `unregister_effect_stub/1` let tests
+intercept effect commands (file dialogs, clipboard, notifications)
+and return controlled responses.
+
+```elixir
+test "save dialog returns a path" do
+  register_effect_stub(:save_file, fn _opts ->
+    {:ok, "/tmp/test-output.txt"}
+  end)
+
+  click("#save")
+  assert model().last_saved_path == "/tmp/test-output.txt"
+
+  unregister_effect_stub(:save_file)
+end
+```
+
+Stubs are scoped to the test process. They are automatically cleaned
+up on test teardown.
+
+
+## Prop validation diagnostics
+
+The test framework performs automatic prop validation on teardown. If
+the app's `view/1` produced any nodes with invalid prop types or
+unknown prop names during the test run, the test fails with a
+diagnostic listing every violation. This catches prop drift (e.g. a
+renamed prop that the view still references) without requiring explicit
+assertions.
+
+
+## Key name validation
+
+`press/1`, `type_key/1`, and `release/1` validate key names against
+`Plushie.Protocol.Keys` at call time. Key names use PascalCase
+(`"Enter"`, `"ArrowDown"`, `"Backspace"`). Passing an unrecognized
+key name raises immediately with a suggestion:
+
+```
+** (ArgumentError) unknown key "enter" -- did you mean "Enter"?
+```
+
+Modifier combos use `+` separators: `"ctrl+s"`, `"shift+ArrowUp"`.
+Modifier names are lowercase (`ctrl`, `shift`, `alt`, `logo`).
+
+
 ## Known limitations
 
 Workarounds and details for each limitation are noted inline below.
@@ -825,15 +921,15 @@ Workarounds and details for each limitation are noted inline below.
   no-op. It requires widget bounds from layout, which only the renderer knows.
 - `move_to` on the mock backend dispatches `%Mouse{type: :moved, x: x, y: y}` but has
   no spatial layout info. Mouse area enter/exit events won't fire.
-- Pixel screenshots are only available on the headless and windowed backends (mock returns stubs).
+- Pixel screenshots are only available in headless and windowed modes (mock returns stubs).
 - Headless screenshots use software rendering (tiny-skia) and may not match
   GPU output pixel-for-pixel.
 - Script `assert_model` uses substring matching against the inspected model.
   Use specific substrings (`"count: 5"`) or use ExUnit assertions for precise
   model checks.
-- The `CommandProcessor` executes async/stream/batch commands synchronously
-  in all test backends. Timing and concurrency bugs will not surface in mock
-  tests. Use headless or windowed backends for concurrency-sensitive tests.
+- The Runtime executes async/stream/batch commands synchronously
+  in all test modes. Timing and concurrency bugs will not surface in mock
+  tests. Use headless or windowed modes for concurrency-sensitive tests.
 - Headless and windowed backends spawn a renderer via `Port`. The `on_exit`
   cleanup handles normal teardown; if a test crashes without triggering it,
   the BEAM's process exit propagation kills the port.
