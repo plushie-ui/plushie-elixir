@@ -33,6 +33,18 @@ defmodule Plushie.Test.Case do
 
         on_exit(fn ->
           try do
+            diagnostics = Session.get_diagnostics(session)
+
+            if diagnostics != [] do
+              details =
+                Enum.map_join(diagnostics, "\n", fn d ->
+                  "  - #{inspect(d.data)}"
+                end)
+
+              raise ExUnit.AssertionError,
+                message: "Prop validation diagnostics detected during test:\n#{details}"
+            end
+
             Session.stop(session)
           catch
             :exit, _ -> :ok

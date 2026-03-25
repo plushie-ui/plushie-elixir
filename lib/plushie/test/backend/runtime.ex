@@ -147,6 +147,15 @@ defmodule Plushie.Test.Backend.Runtime do
   def pane_focus_cycle(pid, selector),
     do: do_interact(pid, "pane_focus_cycle", selector, %{})
 
+  def register_effect_stub(pid, kind, response),
+    do: GenServer.call(pid, {:register_effect_stub, kind, response}, 10_000)
+
+  def unregister_effect_stub(pid, kind),
+    do: GenServer.call(pid, {:unregister_effect_stub, kind}, 10_000)
+
+  def get_diagnostics(pid),
+    do: GenServer.call(pid, :get_diagnostics)
+
   defp do_interact(pid, action, selector, payload) do
     case GenServer.call(pid, {:interact, action, selector, payload}, 10_000) do
       :ok -> :ok
@@ -242,6 +251,21 @@ defmodule Plushie.Test.Backend.Runtime do
     tree = Plushie.Runtime.get_tree(state.runtime)
     sel = encode_selector(selector, tree)
     result = Plushie.Runtime.interact(state.runtime, action, sel, payload)
+    {:reply, result, state}
+  end
+
+  def handle_call({:register_effect_stub, kind, response}, _from, state) do
+    result = Plushie.Runtime.register_effect_stub(state.runtime, kind, response)
+    {:reply, result, state}
+  end
+
+  def handle_call({:unregister_effect_stub, kind}, _from, state) do
+    result = Plushie.Runtime.unregister_effect_stub(state.runtime, kind)
+    {:reply, result, state}
+  end
+
+  def handle_call(:get_diagnostics, _from, state) do
+    result = Plushie.Runtime.get_diagnostics(state.runtime)
     {:reply, result, state}
   end
 

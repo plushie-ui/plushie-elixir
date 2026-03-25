@@ -227,6 +227,22 @@ defmodule Plushie.Bridge do
     GenServer.cast(bridge, {:send_advance_frame, timestamp})
   end
 
+  @doc "Registers an effect stub with the renderer."
+  @spec send_register_effect_stub(
+          bridge :: GenServer.server(),
+          kind :: String.t(),
+          response :: term()
+        ) :: :ok
+  def send_register_effect_stub(bridge, kind, response) do
+    GenServer.cast(bridge, {:send_register_effect_stub, kind, response})
+  end
+
+  @doc "Removes a previously registered effect stub."
+  @spec send_unregister_effect_stub(bridge :: GenServer.server(), kind :: String.t()) :: :ok
+  def send_unregister_effect_stub(bridge, kind) do
+    GenServer.cast(bridge, {:send_unregister_effect_stub, kind})
+  end
+
   @doc "Stops the bridge GenServer."
   @spec stop(bridge :: GenServer.server()) :: :ok
   def stop(bridge) do
@@ -370,6 +386,22 @@ defmodule Plushie.Bridge do
 
   def handle_cast({:send_advance_frame, timestamp}, state) do
     encode_and_send(state, fn fmt -> Plushie.Protocol.encode_advance_frame(timestamp, fmt) end)
+    {:noreply, state}
+  end
+
+  def handle_cast({:send_register_effect_stub, kind, response}, state) do
+    encode_and_send(state, fn fmt ->
+      Plushie.Protocol.encode_register_effect_stub(kind, response, fmt)
+    end)
+
+    {:noreply, state}
+  end
+
+  def handle_cast({:send_unregister_effect_stub, kind}, state) do
+    encode_and_send(state, fn fmt ->
+      Plushie.Protocol.encode_unregister_effect_stub(kind, fmt)
+    end)
+
     {:noreply, state}
   end
 

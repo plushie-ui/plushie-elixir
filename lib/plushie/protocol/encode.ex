@@ -273,6 +273,25 @@ defmodule Plushie.Protocol.Encode do
     serialize(%{type: "advance_frame", timestamp: timestamp}, format)
   end
 
+  @doc "Encodes an effect stub registration message."
+  @spec encode_register_effect_stub(
+          kind :: String.t(),
+          response :: term(),
+          format :: Plushie.Protocol.format()
+        ) :: iodata()
+  def encode_register_effect_stub(kind, response, format \\ :msgpack) do
+    serialize(%{type: "register_effect_stub", kind: kind, response: response}, format)
+  end
+
+  @doc "Encodes an effect stub removal message."
+  @spec encode_unregister_effect_stub(
+          kind :: String.t(),
+          format :: Plushie.Protocol.format()
+        ) :: iodata()
+  def encode_unregister_effect_stub(kind, format \\ :msgpack) do
+    serialize(%{type: "unregister_effect_stub", kind: kind}, format)
+  end
+
   # ---------------------------------------------------------------------------
   # Serialization helper
   # ---------------------------------------------------------------------------

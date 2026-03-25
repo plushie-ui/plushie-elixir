@@ -10,7 +10,7 @@ defmodule Plushie.Event.System do
 
     * `type` - `:system_info`, `:system_theme`, `:animation_frame`,
       `:theme_changed`, `:all_windows_closed`, `:image_list`,
-      `:tree_hash`, or `:find_focused`
+      `:tree_hash`, `:find_focused`, or `:diagnostic`
     * `tag` - caller-supplied correlation tag from the originating query
     * `data` - payload; shape depends on event type (e.g. a map of system
       info fields, a theme name string, or a frame timestamp)
@@ -41,6 +41,7 @@ defmodule Plushie.Event.System do
             | :tree_hash
             | :find_focused
             | :announce
+            | :diagnostic
             | :error,
           tag: String.t() | nil,
           data: map() | String.t() | number() | nil

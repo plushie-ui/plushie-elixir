@@ -73,6 +73,8 @@ defmodule Plushie.Runtime do
             coalesce_timer: nil,
             consecutive_errors: 0,
             canvas_widgets: %{},
+            diagnostics: [],
+            pending_stub_acks: %{},
             pending_interact: nil,
             pending_await_async: %{}
 
@@ -95,6 +97,8 @@ defmodule Plushie.Runtime do
            pending_coalesce: %{term() => Plushie.Event.t()},
            coalesce_timer: reference() | nil,
            consecutive_errors: non_neg_integer(),
+           diagnostics: [Plushie.Event.System.t()],
+           pending_stub_acks: %{String.t() => GenServer.from()},
            canvas_widgets: %{
              String.t() => %{module: module(), state: map()}
            },
@@ -184,6 +188,41 @@ defmodule Plushie.Runtime do
     GenServer.call(runtime, {:find_node_by, fun})
   end
 
+  @doc """
+  Registers an effect stub with the renderer.
+
+  The renderer will return `response` immediately for any effect of
+  the given `kind`, without executing the real effect. Blocks until
+  the renderer confirms the stub is stored.
+  """
+  @spec register_effect_stub(GenServer.server(), String.t(), term(), timeout()) :: :ok
+  def register_effect_stub(runtime, kind, response, timeout \\ 5000) do
+    GenServer.call(runtime, {:register_effect_stub, kind, response}, timeout)
+  end
+
+  @doc """
+  Removes a previously registered effect stub.
+
+  Blocks until the renderer confirms the stub is removed.
+  """
+  @spec unregister_effect_stub(GenServer.server(), String.t(), timeout()) :: :ok
+  def unregister_effect_stub(runtime, kind, timeout \\ 5000) do
+    GenServer.call(runtime, {:unregister_effect_stub, kind}, timeout)
+  end
+
+  @doc """
+  Returns and clears accumulated prop validation diagnostics.
+
+  The renderer emits diagnostic events when `validate_props` is enabled.
+  These are intercepted by the runtime (never delivered to `update/2`)
+  and accumulated in state. This function atomically retrieves and
+  clears the list.
+  """
+  @spec get_diagnostics(GenServer.server()) :: [Plushie.Event.System.t()]
+  def get_diagnostics(runtime) do
+    GenServer.call(runtime, :get_diagnostics)
+  end
+
   # ---------------------------------------------------------------------------
   # GenServer callbacks
   # ---------------------------------------------------------------------------
@@ -270,6 +309,22 @@ defmodule Plushie.Runtime do
     {:reply, result, state}
   end
 
+  def handle_call(:get_diagnostics, _from, state) do
+    {:reply, Enum.reverse(state.diagnostics), %{state | diagnostics: []}}
+  end
+
+  def handle_call({:register_effect_stub, kind, response}, from, state) do
+    Plushie.Bridge.send_register_effect_stub(state.bridge, kind, response)
+    pending = Map.put(state.pending_stub_acks, kind, from)
+    {:noreply, %{state | pending_stub_acks: pending}}
+  end
+
+  def handle_call({:unregister_effect_stub, kind}, from, state) do
+    Plushie.Bridge.send_unregister_effect_stub(state.bridge, kind)
+    pending = Map.put(state.pending_stub_acks, kind, from)
+    {:noreply, %{state | pending_stub_acks: pending}}
+  end
+
   def handle_call({:interact, action, selector, payload}, from, state) do
     id = "interact_#{:erlang.unique_integer([:positive])}"
     Plushie.Bridge.send_interact(state.bridge, id, action, selector, payload)
@@ -292,6 +347,25 @@ defmodule Plushie.Runtime do
   # ---------------------------------------------------------------------------
 
   @impl true
+  def handle_info(
+        {:renderer_event, %Plushie.Event.System{type: :diagnostic} = event},
+        state
+      ) do
+    Logger.warning("plushie runtime: prop validation diagnostic: #{inspect(event.data)}")
+    {:noreply, %{state | diagnostics: [event | state.diagnostics]}}
+  end
+
+  def handle_info({:renderer_event, {:effect_stub_ack, kind}}, state) do
+    case Map.pop(state.pending_stub_acks, kind) do
+      {nil, _} ->
+        {:noreply, state}
+
+      {from, remaining} ->
+        GenServer.reply(from, :ok)
+        {:noreply, %{state | pending_stub_acks: remaining}}
+    end
+  end
+
   def handle_info({:renderer_event, %Effect{request_id: id} = event}, state) do
     state = cancel_pending_effect(state, id)
     state = run_update(state, event)
@@ -411,6 +485,13 @@ defmodule Plushie.Runtime do
     # Flush all pending effect requests -- the renderer that would have
     # responded is gone.
     state = flush_pending_effects(state, :renderer_restarted)
+
+    # Flush pending stub acks (old renderer is gone, stubs lost).
+    Enum.each(state.pending_stub_acks, fn {_kind, from} ->
+      GenServer.reply(from, :ok)
+    end)
+
+    state = %{state | pending_stub_acks: %{}}
 
     # The new renderer process expects Settings as the first message.
     send_settings(state)

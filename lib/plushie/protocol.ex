@@ -218,6 +218,17 @@ defmodule Plushie.Protocol do
   @spec encode_advance_frame(timestamp :: non_neg_integer(), format :: format()) :: iodata()
   defdelegate encode_advance_frame(timestamp, format \\ :msgpack), to: Plushie.Protocol.Encode
 
+  @doc "Encodes an effect stub registration message."
+  @spec encode_register_effect_stub(kind :: String.t(), response :: term(), format :: format()) ::
+          iodata()
+  defdelegate encode_register_effect_stub(kind, response, format \\ :msgpack),
+    to: Plushie.Protocol.Encode
+
+  @doc "Encodes an effect stub removal message."
+  @spec encode_unregister_effect_stub(kind :: String.t(), format :: format()) :: iodata()
+  defdelegate encode_unregister_effect_stub(kind, format \\ :msgpack),
+    to: Plushie.Protocol.Encode
+
   # ---------------------------------------------------------------------------
   # Decoding -- delegated to Protocol.Decode
   # ---------------------------------------------------------------------------

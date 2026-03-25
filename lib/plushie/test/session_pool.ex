@@ -410,6 +410,13 @@ defmodule Plushie.Test.SessionPool do
     forward_to_session(session_id, msg, state)
   end
 
+  # Effect stub ack messages have type "effect_stub_registered" or
+  # "effect_stub_unregistered" with a session field but no id field.
+  defp dispatch_response(%{"type" => type, "session" => session_id} = msg, state)
+       when type in ["effect_stub_registered", "effect_stub_unregistered"] do
+    forward_to_session(session_id, msg, state)
+  end
+
   defp dispatch_response(_msg, state), do: state
 
   defp forward_to_session(session_id, msg, state) do

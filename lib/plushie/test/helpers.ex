@@ -344,6 +344,47 @@ defmodule Plushie.Test.Helpers do
   end
 
   @doc """
+  Registers an effect stub with the renderer for the current session.
+
+  The renderer will return `response` immediately for any effect of
+  the given `kind`, without executing the real effect.
+  """
+  @spec register_effect_stub(kind :: String.t(), response :: term()) :: :ok
+  def register_effect_stub(kind, response),
+    do: Session.register_effect_stub(session(), kind, response)
+
+  @doc """
+  Removes a previously registered effect stub.
+  """
+  @spec unregister_effect_stub(kind :: String.t()) :: :ok
+  def unregister_effect_stub(kind),
+    do: Session.unregister_effect_stub(session(), kind)
+
+  @doc """
+  Asserts that no prop validation diagnostics have been emitted.
+
+  Returns `:ok` if no diagnostics are pending. Raises
+  `ExUnit.AssertionError` with the diagnostic details otherwise.
+  Clears the diagnostic list after checking.
+  """
+  @spec assert_no_diagnostics() :: :ok
+  def assert_no_diagnostics do
+    diagnostics = Session.get_diagnostics(session())
+
+    if diagnostics != [] do
+      details =
+        Enum.map_join(diagnostics, "\n", fn d ->
+          "  - #{inspect(d.data)}"
+        end)
+
+      raise ExUnit.AssertionError,
+        message: "Expected no prop validation diagnostics, but found:\n#{details}"
+    end
+
+    :ok
+  end
+
+  @doc """
   Asserts that the current model equals `expected`.
 
   Uses strict equality (`==`). Raises `ExUnit.AssertionError` with a diff-

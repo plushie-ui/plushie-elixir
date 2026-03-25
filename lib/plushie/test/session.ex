@@ -123,4 +123,15 @@ defmodule Plushie.Test.Session do
 
   @spec pane_focus_cycle(session :: t(), selector :: selector()) :: :ok
   def pane_focus_cycle(%__MODULE__{pid: p}, selector), do: Runtime.pane_focus_cycle(p, selector)
+
+  @spec register_effect_stub(session :: t(), kind :: String.t(), response :: term()) :: :ok
+  def register_effect_stub(%__MODULE__{pid: p}, kind, response),
+    do: Runtime.register_effect_stub(p, kind, response)
+
+  @spec unregister_effect_stub(session :: t(), kind :: String.t()) :: :ok
+  def unregister_effect_stub(%__MODULE__{pid: p}, kind),
+    do: Runtime.unregister_effect_stub(p, kind)
+
+  @spec get_diagnostics(session :: t()) :: [Plushie.Event.System.t()]
+  def get_diagnostics(%__MODULE__{pid: p}), do: Runtime.get_diagnostics(p)
 end

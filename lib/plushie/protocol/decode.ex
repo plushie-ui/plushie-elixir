@@ -960,6 +960,13 @@ defmodule Plushie.Protocol.Decode do
     %Plushie.Event.System{type: :diagnostic, data: data}
   end
 
+  # -- Effect stub ack responses --
+
+  defp dispatch(%{"type" => type, "kind" => kind})
+       when type in ["effect_stub_registered", "effect_stub_unregistered"] do
+    {:effect_stub_ack, kind}
+  end
+
   # -- Generic/extension events (unrecognized families) --
 
   defp dispatch(%{"type" => "event", "family" => family, "id" => id} = msg) do
