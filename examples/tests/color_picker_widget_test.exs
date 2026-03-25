@@ -89,4 +89,43 @@ defmodule Examples.ColorPickerWidgetTest do
     press("a")
     assert last_event() == nil
   end
+
+  # -- Mouse: hue ring ---------------------------------------------------------
+
+  test "press on ring at right side sets hue near 90" do
+    canvas_press("#picker", 370.0, 200.0)
+    assert last_event().type == :change
+    assert_in_delta model().hue, 90.0, 2.0
+  end
+
+  test "press on ring at bottom sets hue near 180" do
+    canvas_press("#picker", 200.0, 370.0)
+    assert_in_delta model().hue, 180.0, 2.0
+  end
+
+  test "press on ring at left sets hue near 270" do
+    canvas_press("#picker", 30.0, 200.0)
+    assert_in_delta model().hue, 270.0, 2.0
+  end
+
+  # -- Mouse: SV square --------------------------------------------------------
+
+  test "press at center of square sets s=0.5, v=0.5" do
+    canvas_press("#picker", 200.0, 200.0)
+    assert_in_delta model().saturation, 0.5, 0.01
+    assert_in_delta model().value, 0.5, 0.01
+  end
+
+  test "press at top-left of square sets s=0, v=1" do
+    canvas_press("#picker", 100.0, 100.0)
+    assert_in_delta model().saturation, 0.0, 0.01
+    assert_in_delta model().value, 1.0, 0.01
+  end
+
+  # -- Mouse: outside ----------------------------------------------------------
+
+  test "press outside ring and square emits no event" do
+    canvas_press("#picker", 5.0, 5.0)
+    assert last_event() == nil
+  end
 end

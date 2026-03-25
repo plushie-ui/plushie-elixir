@@ -167,6 +167,23 @@ defmodule Plushie.Runtime.CanvasWidgets do
   def dispatch_event(registry, event) when is_map(event) do
     scope = Map.get(event, :scope, [])
     chain = build_handler_chain(registry, scope)
+
+    # If the scope chain is empty but the event's ID directly matches
+    # a registered canvas_widget, include it as a handler. This covers
+    # events directed AT the widget (Canvas press/move/release) vs
+    # events from INSIDE the widget (element clicks, key presses).
+    chain =
+      if chain == [] do
+        id = Map.get(event, :id, "")
+
+        case Map.get(registry, id) do
+          nil -> []
+          entry -> [{id, entry}]
+        end
+      else
+        chain
+      end
+
     walk_chain(registry, event, chain)
   end
 
