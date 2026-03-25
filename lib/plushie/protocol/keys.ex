@@ -432,9 +432,8 @@ defmodule Plushie.Protocol.Keys do
   }
 
   @doc false
-  # Exposes the named keys map for compile-time validation (used by
-  # the test backend to validate key names in press/type_key helpers).
-  def __named_keys__, do: @named_keys
+  @spec valid_key?(String.t()) :: boolean()
+  def valid_key?(key) when is_binary(key), do: Map.has_key?(@named_keys, key)
 
   @doc """
   Converts a key name string to an atom for named keys, or returns the string

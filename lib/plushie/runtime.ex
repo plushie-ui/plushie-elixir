@@ -786,7 +786,7 @@ defmodule Plushie.Runtime do
     # Stash widget states for Tree.normalize to pick up during the
     # normalization pass. Cleaned up in the after block.
     if canvas_widget_states != %{} do
-      Process.put(:__plushie_canvas_widget_states__, canvas_widget_states)
+      Process.put(Plushie.Extension.CanvasWidget.widget_states_key(), canvas_widget_states)
     end
 
     raw_tree =
@@ -806,7 +806,7 @@ defmodule Plushie.Runtime do
 
       :error
   after
-    Process.delete(:__plushie_canvas_widget_states__)
+    Process.delete(Plushie.Extension.CanvasWidget.widget_states_key())
   end
 
   # ---------------------------------------------------------------------------

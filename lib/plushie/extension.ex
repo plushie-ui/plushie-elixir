@@ -179,6 +179,8 @@ defmodule Plushie.Extension do
 
         :canvas_widget ->
           quote do
+            @behaviour Plushie.Extension.CanvasWidget
+
             import Plushie.Extension,
               only: [widget: 1, widget: 2, prop: 2, prop: 3, state: 1]
 

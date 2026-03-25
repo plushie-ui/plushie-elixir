@@ -28,6 +28,8 @@ defmodule Plushie.Runtime.CanvasWidgets do
   to build the handler chain.
   """
 
+  require Logger
+
   alias Plushie.Extension.CanvasWidget
 
   @doc """
@@ -75,7 +77,7 @@ defmodule Plushie.Runtime.CanvasWidgets do
         }
 
         {action, new_state} =
-          CanvasWidget.dispatch_event(module, timer_event, widget_state, widget_id)
+          CanvasWidget.invoke_handler(module, timer_event, widget_state, widget_id)
 
         new_registry = put_in(registry, [widget_id, :state], new_state)
 
@@ -236,7 +238,17 @@ defmodule Plushie.Runtime.CanvasWidgets do
 
   defp walk_chain(registry, event, [{scoped_id, %{module: module, state: widget_state}} | rest]) do
     {action, new_state} =
-      CanvasWidget.dispatch_event(module, event, widget_state, scoped_id)
+      try do
+        CanvasWidget.invoke_handler(module, event, widget_state, scoped_id)
+      rescue
+        error ->
+          Logger.warning(
+            "canvas_widget #{inspect(module)} (#{scoped_id}) " <>
+              "raised in handle_event: #{Exception.message(error)}"
+          )
+
+          {:ignored, widget_state}
+      end
 
     new_registry = put_in(registry, [scoped_id, :state], new_state)
 

@@ -248,7 +248,7 @@ defmodule Plushie.Tree do
   # for new widgets or when called outside a runtime context.
   @spec lookup_canvas_widget_state(String.t(), module()) :: map()
   defp lookup_canvas_widget_state(scoped_id, module) do
-    case Process.get(:__plushie_canvas_widget_states__) do
+    case Process.get(Plushie.Extension.CanvasWidget.widget_states_key()) do
       registry when is_map(registry) ->
         case Map.get(registry, scoped_id) do
           %{state: state} -> state

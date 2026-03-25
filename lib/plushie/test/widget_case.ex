@@ -2,7 +2,7 @@ defmodule Plushie.Test.WidgetCase do
   @moduledoc """
   ExUnit case template for testing canvas_widget extensions.
 
-  Generates a harness app that hosts the widget and records emitted
+  Hosts the widget in a parameterized harness app and records emitted
   events. The widget is initialized in a `setup` block via
   `init_widget/2`, which starts a real Plushie session (Runtime +
   Bridge) connected to the renderer binary.
@@ -30,8 +30,8 @@ defmodule Plushie.Test.WidgetCase do
 
   ## How it works
 
-  The case template generates a harness app module scoped to the test
-  module. The harness:
+  The case template uses a static harness app module parameterized
+  via `init_arg`. The harness:
 
   - Hosts a single widget instance in a `window > column` layout
   - Records the most recent `%Widget{}` event in `model().last_event`
@@ -73,94 +73,83 @@ defmodule Plushie.Test.WidgetCase do
           end
       """
       def init_widget(id, opts \\ []) when is_binary(id) do
-        harness = Plushie.Test.WidgetCase.build_harness(@__widget_module__, id, opts)
-        session = Session.start(harness)
-        Process.put(:plushie_test_session, session)
-
-        on_exit(fn ->
-          try do
-            Session.stop(session)
-          catch
-            :exit, _ -> :ok
-          end
-        end)
-
-        {:ok, session: session, widget_id: id}
+        Plushie.Test.WidgetCase.init_widget(@__widget_module__, id, opts)
       end
     end
   end
 
   @doc false
-  def build_harness(widget_module, widget_id, widget_opts) do
-    # Create a unique harness module name per widget + ID to avoid
-    # module name collisions across concurrent test modules.
-    hash = :erlang.phash2({widget_module, widget_id, self()})
+  def init_widget(widget_module, widget_id, widget_opts) do
+    session =
+      Session.start(Plushie.Test.WidgetCase.HarnessApp,
+        init_arg: [widget_module: widget_module, widget_id: widget_id, widget_opts: widget_opts]
+      )
 
-    harness_name =
-      Module.concat([
-        Plushie.Test.WidgetCase.Harness,
-        :"#{inspect(widget_module)}_#{hash}"
-      ])
+    Process.put(:plushie_test_session, session)
 
-    # Define the harness module dynamically. It wraps the widget
-    # in a minimal app that records emitted events.
-    unless Code.ensure_loaded?(harness_name) do
-      defmodule harness_name do
-        use Plushie.App
+    on_exit(fn ->
+      try do
+        Session.stop(session)
+      catch
+        :exit, _ -> :ok
+      end
+    end)
 
-        Module.put_attribute(__MODULE__, :__widget_module__, widget_module)
-        Module.put_attribute(__MODULE__, :__widget_id__, widget_id)
-        Module.put_attribute(__MODULE__, :__widget_opts__, widget_opts)
+    {:ok, session: session, widget_id: widget_id}
+  end
+end
 
-        def init(_opts) do
-          %{events: [], last_event: nil}
-        end
+defmodule Plushie.Test.WidgetCase.HarnessApp do
+  @moduledoc false
+  use Plushie.App
 
-        # Canvas framework event types that are internal to the
-        # renderer/canvas lifecycle -- not semantic widget events.
-        @canvas_framework_types ~w(
-          canvas_focused canvas_blurred
-          canvas_element_focused canvas_element_blurred
-          canvas_group_focused canvas_group_blurred
-          canvas_element_enter canvas_element_leave
-        )a
+  @impl true
+  def init(opts) do
+    widget_module = Keyword.fetch!(opts, :widget_module)
+    widget_id = Keyword.fetch!(opts, :widget_id)
+    widget_opts = Keyword.get(opts, :widget_opts, [])
 
-        def update(model, %Plushie.Event.Widget{type: type} = event)
-            when type not in @canvas_framework_types do
-          data = event.data || %{}
+    %{
+      widget_module: widget_module,
+      widget_id: widget_id,
+      widget_opts: widget_opts,
+      events: [],
+      last_event: nil
+    }
+  end
 
-          model
-          |> Map.merge(atomize_data(data))
-          |> Map.put(:events, [event | model.events])
-          |> Map.put(:last_event, event)
-        end
+  @impl true
+  def update(model, %Plushie.Event.Widget{} = event) do
+    data = event.data || %{}
 
-        def update(model, _event), do: model
+    model
+    |> Map.merge(atomize_data(data))
+    |> Map.put(:events, [event | model.events])
+    |> Map.put(:last_event, event)
+  end
 
-        def view(_model) do
-          import Plushie.UI
+  def update(model, _event), do: model
 
-          wmod = @__widget_module__
-          wid = @__widget_id__
-          wopts = @__widget_opts__
+  @impl true
+  def view(model) do
+    import Plushie.UI
 
-          window "test_harness", title: "Widget Test" do
-            column do
-              wmod.new(wid, wopts)
-            end
-          end
-        end
+    wmod = model.widget_module
+    wid = model.widget_id
+    wopts = model.widget_opts
 
-        defp atomize_data(data) when is_map(data) do
-          Map.new(data, fn
-            {k, v} when is_binary(k) -> {String.to_atom(k), v}
-            {k, v} -> {k, v}
-          end)
-        end
+    window "test_harness", title: "Widget Test" do
+      column do
+        wmod.new(wid, wopts)
       end
     end
+  end
 
-    harness_name
+  defp atomize_data(data) when is_map(data) do
+    Map.new(data, fn
+      {k, v} when is_binary(k) -> {String.to_atom(k), v}
+      {k, v} -> {k, v}
+    end)
   end
 end
 

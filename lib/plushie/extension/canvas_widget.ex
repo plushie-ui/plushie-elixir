@@ -24,7 +24,7 @@ defmodule Plushie.Extension.CanvasWidget do
 
   ## Event dispatch (captured/ignored model)
 
-  `dispatch_event/4` is called by the runtime when an event arrives
+  `invoke_handler/4` is called by the runtime when an event arrives
   for a widget inside a canvas_widget's scope. It calls the module's
   `handle_event/2` and interprets the return value using iced's
   captured/ignored model:
@@ -41,28 +41,46 @@ defmodule Plushie.Extension.CanvasWidget do
   continue). If no handler captures, the event reaches `app.update/2`.
   """
 
-  @doc """
-  Extracts the canvas_widget module from a node's metadata, if present.
-  """
-  @spec module_from_node(node :: map()) :: module() | nil
-  def module_from_node(%{meta: %{__canvas_widget__: module}}) when is_atom(module), do: module
-  def module_from_node(_), do: nil
+  @widget_states_key :__plushie_canvas_widget_states__
+
+  @doc "Process dictionary key used to pass canvas widget states during normalization."
+  @spec widget_states_key() :: atom()
+  def widget_states_key, do: @widget_states_key
+
+  @typedoc "Valid return values from `handle_event/2`."
+  @type handle_event_result ::
+          {:emit, atom(), term()}
+          | {:emit, atom(), term(), map()}
+          | {:update_state, map()}
+          | :consumed
+          | :ignored
+
+  @doc "Transforms a raw event into a semantic widget event (or ignores it)."
+  @callback handle_event(event :: struct(), state :: map()) :: handle_event_result()
+
+  @doc "Renders the canvas widget given its id, resolved props, and internal state."
+  @callback render(id :: String.t(), props :: map(), state :: map()) :: map()
+
+  @doc "Returns subscription specs for this widget (optional)."
+  @callback subscribe(props :: map(), state :: map()) :: [Plushie.Subscription.t()]
+
+  @optional_callbacks [subscribe: 2]
 
   @doc """
-  Dispatches an event through a canvas_widget's handle_event/2.
+  Invokes a canvas_widget's handle_event/2 and interprets the result.
 
   Returns `{action, new_state}` where action is one of:
   - `{:emit, %Widget{}}` -- captured with transformed event
   - `:consumed` -- captured, no output
   - `:ignored` -- not captured, continue to next handler
   """
-  @spec dispatch_event(
+  @spec invoke_handler(
           module :: module(),
           event :: struct(),
           state :: map(),
           widget_id :: String.t()
         ) :: {{:emit, struct()} | :consumed | :ignored, map()}
-  def dispatch_event(module, event, state, widget_id \\ "") do
+  def invoke_handler(module, event, state, widget_id \\ "") do
     case module.handle_event(event, state) do
       {:emit, family, data} ->
         {id, scope} = resolve_emit_identity(event, widget_id)

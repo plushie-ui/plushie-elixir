@@ -381,12 +381,6 @@ defmodule Plushie.Test.Backend.Runtime do
     "Command" => :command
   }
 
-  # Build a set of valid named key strings from the Protocol.Keys module.
-  # This is the source of truth for what the renderer accepts.
-  @valid_named_keys Plushie.Protocol.Keys.__named_keys__()
-                    |> Map.keys()
-                    |> MapSet.new()
-
   defp parse_key(key) when is_binary(key) do
     parts = String.split(key, "+")
     {mods, [key_name]} = Enum.split(parts, -1)
@@ -406,7 +400,7 @@ defmodule Plushie.Test.Backend.Runtime do
 
     # Single printable characters are valid (sent as Key::Character).
     # Named keys must be in the set recognized by the renderer.
-    unless String.length(key_name) == 1 or key_name in @valid_named_keys do
+    unless String.length(key_name) == 1 or Plushie.Protocol.Keys.valid_key?(key_name) do
       raise ArgumentError,
             "unknown key #{inspect(key_name)} in #{inspect(key)}. " <>
               "Use PascalCase named keys (ArrowRight, PageUp, Tab) " <>

@@ -19,8 +19,10 @@ defmodule Plushie.CanvasWidgetDispatchTest do
     use Plushie.Extension, :canvas_widget
     widget(:ignored_widget)
 
+    @impl true
     def handle_event(_event, _state), do: :ignored
 
+    @impl true
     def render(id, _props, _state) do
       import Plushie.UI
 
@@ -34,8 +36,10 @@ defmodule Plushie.CanvasWidgetDispatchTest do
     use Plushie.Extension, :canvas_widget
     widget(:consumed_widget)
 
+    @impl true
     def handle_event(_event, _state), do: :consumed
 
+    @impl true
     def render(id, _props, _state) do
       import Plushie.UI
 
@@ -49,12 +53,14 @@ defmodule Plushie.CanvasWidgetDispatchTest do
     use Plushie.Extension, :canvas_widget
     widget(:emit_widget)
 
+    @impl true
     def handle_event(%{type: :click} = _event, state) do
       {:emit, :activated, %{source: "emit_widget"}, state}
     end
 
     def handle_event(_event, _state), do: :ignored
 
+    @impl true
     def render(id, _props, _state) do
       import Plushie.UI
 
@@ -69,12 +75,14 @@ defmodule Plushie.CanvasWidgetDispatchTest do
     widget(:state_widget)
     state(counter: 0)
 
+    @impl true
     def handle_event(%{type: :click}, state) do
       {:update_state, %{state | counter: state.counter + 1}}
     end
 
     def handle_event(_event, _state), do: :ignored
 
+    @impl true
     def render(id, _props, _state) do
       import Plushie.UI
 
@@ -83,32 +91,32 @@ defmodule Plushie.CanvasWidgetDispatchTest do
     end
   end
 
-  # -- dispatch_event (single widget) ------------------------------------------
+  # -- invoke_handler (single widget) ------------------------------------------
 
-  describe "dispatch_event/4 with :ignored" do
+  describe "invoke_handler/4 with :ignored" do
     test "returns :ignored action and unchanged state" do
       {action, state} =
-        CanvasWidget.dispatch_event(IgnoredWidget, click_event("test"), %{}, "test")
+        CanvasWidget.invoke_handler(IgnoredWidget, click_event("test"), %{}, "test")
 
       assert action == :ignored
       assert state == %{}
     end
   end
 
-  describe "dispatch_event/4 with :consumed" do
+  describe "invoke_handler/4 with :consumed" do
     test "returns :consumed action and unchanged state" do
       {action, state} =
-        CanvasWidget.dispatch_event(ConsumedWidget, click_event("test"), %{}, "test")
+        CanvasWidget.invoke_handler(ConsumedWidget, click_event("test"), %{}, "test")
 
       assert action == :consumed
       assert state == %{}
     end
   end
 
-  describe "dispatch_event/4 with {:emit, ...}" do
+  describe "invoke_handler/4 with {:emit, ...}" do
     test "returns {:emit, widget_event} with transformed event" do
       {{:emit, widget_event}, _state} =
-        CanvasWidget.dispatch_event(EmitWidget, click_event("elem", ["widget"]), %{}, "widget")
+        CanvasWidget.invoke_handler(EmitWidget, click_event("elem", ["widget"]), %{}, "widget")
 
       assert widget_event.type == :activated
       assert widget_event.data["source"] == "emit_widget"
@@ -116,10 +124,10 @@ defmodule Plushie.CanvasWidgetDispatchTest do
     end
   end
 
-  describe "dispatch_event/4 with {:update_state, ...}" do
+  describe "invoke_handler/4 with {:update_state, ...}" do
     test "returns :consumed with updated state" do
       {action, state} =
-        CanvasWidget.dispatch_event(StateWidget, click_event("test"), %{counter: 0}, "test")
+        CanvasWidget.invoke_handler(StateWidget, click_event("test"), %{counter: 0}, "test")
 
       assert action == :consumed
       assert state.counter == 1
@@ -350,6 +358,59 @@ defmodule Plushie.CanvasWidgetDispatchTest do
 
       # No match → event passes through unchanged
       assert result == event
+    end
+  end
+
+  # -- Raising widget for error-handling tests ----------------------------------
+
+  defmodule RaisingWidget do
+    @moduledoc false
+    use Plushie.Extension, :canvas_widget
+    widget(:raising_widget)
+
+    @impl true
+    def handle_event(%{type: :click}, _state) do
+      raise "kaboom from RaisingWidget"
+    end
+
+    def handle_event(_event, _state), do: :ignored
+
+    @impl true
+    def render(id, _props, _state) do
+      import Plushie.UI
+
+      canvas id, width: 10, height: 10 do
+      end
+    end
+  end
+
+  # -- Error handling in dispatch chain ----------------------------------------
+
+  describe "error handling in dispatch chain" do
+    test "raising widget is treated as :ignored and chain continues" do
+      registry = %{
+        "widget" => %{module: RaisingWidget, state: %{}}
+      }
+
+      {event, _registry} =
+        CanvasWidgets.dispatch_event(registry, click_event("elem", ["widget"]))
+
+      # RaisingWidget raises on :click -> treated as :ignored -> event passes through
+      assert event.type == :click
+      assert event.id == "elem"
+    end
+
+    test "raising child is :ignored, parent still captures" do
+      registry = %{
+        "parent/child" => %{module: RaisingWidget, state: %{}},
+        "parent" => %{module: ConsumedWidget, state: %{}}
+      }
+
+      {event, _registry} =
+        CanvasWidgets.dispatch_event(registry, click_event("elem", ["child", "parent"]))
+
+      # Child raises (treated as :ignored) -> parent consumes -> nil
+      assert event == nil
     end
   end
 
