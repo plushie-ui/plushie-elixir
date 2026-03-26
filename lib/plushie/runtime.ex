@@ -161,9 +161,11 @@ defmodule Plushie.Runtime do
   Sends an interact request (e.g. click, type_text) to the renderer, which
   processes it against its widget tree and sends back events. The runtime
   processes those events through `update/2` and re-renders. Blocks until
-  the renderer signals completion.
+  the renderer signals completion. Returns an error if the renderer exits
+  or restarts before the interaction finishes.
   """
-  @spec interact(GenServer.server(), String.t(), map(), map(), timeout()) :: :ok
+  @spec interact(GenServer.server(), String.t(), map(), map(), timeout()) ::
+          :ok | {:error, :renderer_restarted | {:renderer_exit, term()}}
   def interact(runtime, action, selector, payload \\ %{}, timeout \\ 10_000) do
     GenServer.call(runtime, {:interact, action, selector, payload}, timeout)
   end
@@ -460,14 +462,15 @@ defmodule Plushie.Runtime do
 
   def handle_info({:renderer_exit, :normal}, state) do
     # Clean exit (renderer process ended). Shut down the runtime.
-    {:stop, :normal, state}
+    {:stop, :normal, fail_pending_interact(state, {:renderer_exit, :normal})}
   end
 
   def handle_info({:renderer_exit, :shutdown}, state) do
-    {:stop, :normal, state}
+    {:stop, :normal, fail_pending_interact(state, {:renderer_exit, :shutdown})}
   end
 
   def handle_info({:renderer_exit, reason}, state) do
+    state = fail_pending_interact(state, {:renderer_exit, reason})
     Logger.warning("plushie runtime: renderer exited: #{inspect(reason)}")
 
     new_model =
@@ -492,6 +495,7 @@ defmodule Plushie.Runtime do
     # Discard stale coalescable events from the old renderer.
     if state.coalesce_timer, do: Process.cancel_timer(state.coalesce_timer)
     state = %{state | pending_coalesce: %{}, coalesce_timer: nil}
+    state = fail_pending_interact(state, :renderer_restarted)
 
     # Flush all pending effect requests -- the renderer that would have
     # responded is gone.
@@ -768,6 +772,13 @@ defmodule Plushie.Runtime do
   # when multi-renderer support is actually needed.
   defp notify_bridge(%{bridge: nil}, _fun), do: :ok
   defp notify_bridge(%{bridge: bridge}, fun), do: fun.(bridge)
+
+  defp fail_pending_interact(%{pending_interact: nil} = state, _reason), do: state
+
+  defp fail_pending_interact(%{pending_interact: {from, _id}} = state, reason) do
+    GenServer.reply(from, {:error, reason})
+    %{state | pending_interact: nil}
+  end
 
   # Sends app-level settings to the bridge. The renderer expects a Settings
   # message as the very first message on stdin (before any snapshot), so this

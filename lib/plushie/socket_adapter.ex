@@ -11,10 +11,14 @@ defmodule Plushie.SocketAdapter do
   # Protocol:
   #   Bridge sends {:iostream_bridge, pid} on init -> adapter stores it
   #   Bridge sends {:iostream_send, data} -> adapter writes to socket
-  #   Socket sends {:tcp, socket, data} -> adapter forwards as {:iostream_data, data}
+  #   Socket sends {:tcp, socket, data} -> adapter forwards complete protocol messages
   #   Socket closes -> adapter sends {:iostream_closed, reason}
 
   use GenServer
+
+  alias Plushie.Transport.Framing
+
+  @max_buffer_size 64 * 1024 * 1024
 
   @doc """
   Connects to the renderer's socket and returns the adapter pid.
@@ -33,12 +37,12 @@ defmodule Plushie.SocketAdapter do
     socket_opts =
       case format do
         :msgpack -> [:binary, {:packet, 4}, {:active, true}]
-        :json -> [:binary, {:active, true}, {:packet, :line}]
+        :json -> [:binary, {:active, true}]
       end
 
     case connect(addr, socket_opts) do
       {:ok, socket} ->
-        {:ok, %{socket: socket, bridge: nil}}
+        {:ok, %{socket: socket, bridge: nil, format: format, buffer: ""}}
 
       {:error, reason} ->
         {:stop, {:connect_failed, reason}}
@@ -80,15 +84,36 @@ defmodule Plushie.SocketAdapter do
   # Bridge sends protocol data to the renderer.
   def handle_info({:iostream_send, data}, state) do
     case :gen_tcp.send(state.socket, data) do
-      :ok -> {:noreply, state}
-      {:error, _reason} -> {:stop, :normal, state}
+      :ok ->
+        {:noreply, state}
+
+      {:error, reason} ->
+        if state.bridge, do: send(state.bridge, {:iostream_closed, {:send_error, reason}})
+        {:stop, {:send_error, reason}, state}
     end
   end
 
   # Socket received protocol data from the renderer.
-  def handle_info({:tcp, socket, data}, %{socket: socket} = state) do
+  def handle_info({:tcp, socket, data}, %{socket: socket, format: :msgpack} = state) do
     if state.bridge, do: send(state.bridge, {:iostream_data, data})
     {:noreply, state}
+  end
+
+  def handle_info({:tcp, socket, data}, %{socket: socket, format: :json} = state) do
+    new_buffer = state.buffer <> data
+
+    if byte_size(new_buffer) > @max_buffer_size do
+      if state.bridge, do: send(state.bridge, {:iostream_closed, :json_buffer_overflow})
+      {:stop, :json_buffer_overflow, %{state | buffer: ""}}
+    else
+      {lines, buffer} = Framing.decode_lines(new_buffer)
+
+      Enum.each(lines, fn line ->
+        if state.bridge, do: send(state.bridge, {:iostream_data, line})
+      end)
+
+      {:noreply, %{state | buffer: buffer}}
+    end
   end
 
   # Socket closed.

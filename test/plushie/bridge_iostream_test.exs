@@ -145,6 +145,42 @@ defmodule Plushie.BridgeIostreamTest do
       GenServer.stop(bridge)
     end
 
+    test "does not forward hello when the protocol version is wrong" do
+      Process.flag(:trap_exit, true)
+
+      try do
+        {:ok, bridge} =
+          Plushie.Bridge.start_link(
+            transport: {:iostream, self()},
+            format: :json,
+            runtime: self()
+          )
+
+        assert_receive {:iostream_bridge, ^bridge}
+
+        bad_hello =
+          Jason.encode!(%{
+            type: "hello",
+            name: "plushie",
+            version: "0.1.0",
+            protocol: Plushie.Protocol.protocol_version() + 1,
+            backend: "test"
+          })
+
+        log =
+          capture_log(fn ->
+            send(bridge, {:iostream_data, bad_hello})
+
+            refute_receive {:renderer_event, {:hello, _}}, 100
+            assert_receive {:EXIT, ^bridge, {:protocol_mismatch, _, _}}, 1_000
+          end)
+
+        assert log =~ "protocol mismatch"
+      after
+        Process.flag(:trap_exit, false)
+      end
+    end
+
     test "crashes on protocol violations instead of leaking decode errors" do
       Process.flag(:trap_exit, true)
       handler_id = attach([:plushie, :bridge, :protocol_error], self())

@@ -28,6 +28,11 @@ defmodule Plushie.Test.InternalMockBridge do
     GenServer.call(bridge, :get_widget_ops)
   end
 
+  @doc "Returns all interact requests received so far, in order."
+  def get_interacts(bridge) do
+    GenServer.call(bridge, :get_interacts)
+  end
+
   @doc "Returns all subscribe messages received so far, in order."
   def get_subscribes(bridge) do
     GenServer.call(bridge, :get_subscribes)
@@ -56,6 +61,7 @@ defmodule Plushie.Test.InternalMockBridge do
        patches: [],
        effects: [],
        widget_ops: [],
+       interacts: [],
        subscribes: [],
        unsubscribes: [],
        window_ops: [],
@@ -82,6 +88,11 @@ defmodule Plushie.Test.InternalMockBridge do
     {:noreply, %{state | widget_ops: state.widget_ops ++ [entry]}}
   end
 
+  def handle_cast({:send_interact, id, action, selector, payload}, state) do
+    entry = %{id: id, action: action, selector: selector, payload: payload}
+    {:noreply, %{state | interacts: state.interacts ++ [entry]}}
+  end
+
   def handle_cast({:send_subscribe, kind, tag, max_rate}, state) do
     entry = %{kind: kind, tag: tag, max_rate: max_rate}
     {:noreply, %{state | subscribes: state.subscribes ++ [entry]}}
@@ -101,6 +112,10 @@ defmodule Plushie.Test.InternalMockBridge do
     {:noreply, %{state | window_ops: state.window_ops ++ [entry]}}
   end
 
+  def handle_cast(:resync_complete, state) do
+    {:noreply, state}
+  end
+
   @impl true
   def handle_call(:get_snapshots, _from, state) do
     {:reply, state.snapshots, state}
@@ -116,6 +131,10 @@ defmodule Plushie.Test.InternalMockBridge do
 
   def handle_call(:get_widget_ops, _from, state) do
     {:reply, state.widget_ops, state}
+  end
+
+  def handle_call(:get_interacts, _from, state) do
+    {:reply, state.interacts, state}
   end
 
   def handle_call(:get_subscribes, _from, state) do

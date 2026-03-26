@@ -629,10 +629,7 @@ defmodule Plushie.Bridge do
       :error
   end
 
-  defp send_data(%{port: nil}, _data) do
-    Logger.debug("plushie bridge: message dropped (port not open)")
-    :ok
-  end
+  defp send_data(%{port: nil}, _data), do: :error
 
   defp send_data(%{port: port}, data) when is_port(port) do
     Port.command(port, data)
@@ -664,11 +661,11 @@ defmodule Plushie.Bridge do
               )
 
               send(self(), {:stop_protocol_mismatch, protocol, expected})
+              state
+            else
+              send(state.runtime, {:renderer_event, {:hello, hello}})
+              %{state | restart_count: 0}
             end
-
-            send(state.runtime, {:renderer_event, {:hello, hello}})
-
-            %{state | restart_count: 0}
 
           event ->
             send(state.runtime, {:renderer_event, event})

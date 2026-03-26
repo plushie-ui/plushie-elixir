@@ -88,6 +88,29 @@ defmodule Plushie.SocketAdapterTest do
       cleanup(path)
     end
 
+    test "reassembles fragmented json lines before forwarding" do
+      {listener, path} = create_listener(:json)
+
+      {:ok, adapter} = SocketAdapter.start_link(path, :json)
+      {:ok, renderer_socket} = :gen_tcp.accept(listener, 5_000)
+      :gen_tcp.close(listener)
+
+      send(adapter, {:iostream_bridge, self()})
+      Process.sleep(10)
+
+      line = Jason.encode!(%{"type" => "hello", "protocol" => 1})
+      {first, second} = String.split_at(line <> "\n", div(byte_size(line), 2))
+
+      :gen_tcp.send(renderer_socket, first)
+      refute_receive {:iostream_data, _}, 50
+
+      :gen_tcp.send(renderer_socket, second)
+      assert_receive {:iostream_data, ^line}, 1_000
+
+      :gen_tcp.close(renderer_socket)
+      cleanup(path)
+    end
+
     test "returns error when socket path does not exist" do
       Process.flag(:trap_exit, true)
       assert {:error, _} = SocketAdapter.start_link("/tmp/nonexistent.sock", :msgpack)
@@ -96,12 +119,17 @@ defmodule Plushie.SocketAdapterTest do
 
   # -- Helpers ----------------------------------------------------------------
 
-  defp create_listener do
+  defp create_listener(format \\ :msgpack) do
     path = "/tmp/plushie_test_#{:erlang.unique_integer([:positive])}.sock"
     File.rm(path)
 
-    {:ok, listener} =
-      :gen_tcp.listen(0, [:binary, {:packet, 4}, {:active, true}, {:ifaddr, {:local, path}}])
+    socket_opts =
+      case format do
+        :msgpack -> [:binary, {:packet, 4}, {:active, true}, {:ifaddr, {:local, path}}]
+        :json -> [:binary, {:active, true}, {:ifaddr, {:local, path}}]
+      end
+
+    {:ok, listener} = :gen_tcp.listen(0, socket_opts)
 
     {listener, path}
   end
