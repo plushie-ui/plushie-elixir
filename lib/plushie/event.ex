@@ -5,6 +5,7 @@ defmodule Plushie.Event do
     Async,
     Canvas,
     Effect,
+    ExtensionCommandError,
     Ime,
     Key,
     Modifiers,
@@ -33,6 +34,7 @@ defmodule Plushie.Event do
           | Pane.t()
           | Sensor.t()
           | Effect.t()
+          | ExtensionCommandError.t()
           | System.t()
           | Timer.t()
           | Async.t()

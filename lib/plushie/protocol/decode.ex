@@ -8,6 +8,7 @@ defmodule Plushie.Protocol.Decode do
   alias Plushie.Event.{
     Canvas,
     Effect,
+    ExtensionCommandError,
     Ime,
     Key,
     Modifiers,
@@ -811,6 +812,38 @@ defmodule Plushie.Protocol.Decode do
          "data" => data
        }) do
     %System{type: :error, data: %{error: "duplicate_node_ids", details: data}}
+  end
+
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "error",
+         "id" => "extension_command",
+         "data" => %{"reason" => reason} = data
+       }) do
+    %ExtensionCommandError{
+      reason: reason,
+      node_id: data["node_id"],
+      op: data["op"],
+      extension: data["extension"],
+      message: data["message"]
+    }
+  end
+
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "error",
+           "id" => id
+         } = msg
+       ) do
+    data =
+      case Map.get(msg, "data") do
+        data when is_map(data) -> Map.put_new(data, "id", id)
+        nil -> %{"id" => id}
+        other -> %{"id" => id, "details" => other}
+      end
+
+    %System{type: :error, data: data}
   end
 
   # -- All windows closed --

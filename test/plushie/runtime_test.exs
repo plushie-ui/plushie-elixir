@@ -255,6 +255,40 @@ defmodule Plushie.RuntimeTest do
 
       assert Plushie.Runtime.get_model(runtime).selected == 4
     end
+
+    test "runtime stops when renderer is missing a required native extension" do
+      original = Application.get_env(:plushie, :extensions)
+      Application.put_env(:plushie, :extensions, [StarRatingNative])
+      on_exit(fn -> Application.put_env(:plushie, :extensions, original) end)
+
+      Process.flag(:trap_exit, true)
+      {runtime, _bridge} = start_runtime(SimpleApp)
+      await_initial_render(runtime)
+      ref = Process.monitor(runtime)
+
+      log =
+        capture_log(fn ->
+          send(
+            runtime,
+            {:renderer_event,
+             {:hello,
+              %{
+                protocol: 1,
+                version: "0.5.0",
+                name: "plushie",
+                backend: "test",
+                transport: "spawn",
+                extensions: []
+              }}}
+          )
+
+          assert_receive {:DOWN, ^ref, :process, ^runtime, {%ArgumentError{}, _stack}}, 1_000
+        end)
+
+      assert log =~ "renderer is missing required extensions"
+    after
+      Process.flag(:trap_exit, false)
+    end
   end
 
   # ---------------------------------------------------------------------------

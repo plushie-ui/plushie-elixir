@@ -1177,6 +1177,32 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
+  describe "decode_message/1 -- error events" do
+    test "decodes extension command errors as typed events" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "error",
+          id: "extension_command",
+          data: %{
+            kind: "extension_command",
+            reason: "unknown_node",
+            node_id: "g1",
+            op: "set_value",
+            message: "no extension handles node `g1`"
+          }
+        })
+
+      assert %Plushie.Event.ExtensionCommandError{
+               reason: "unknown_node",
+               node_id: "g1",
+               op: "set_value",
+               extension: nil,
+               message: "no extension handles node `g1`"
+             } = Protocol.decode_message(json, :json)
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # protocol_version/0
   # ---------------------------------------------------------------------------

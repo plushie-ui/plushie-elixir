@@ -379,6 +379,8 @@ defmodule Plushie.Runtime do
   end
 
   def handle_info({:renderer_event, {:hello, hello}}, state) do
+    validate_renderer_extensions!(hello)
+
     Logger.info(
       "plushie runtime: renderer connected -- #{hello.name} v#{hello.version} (#{hello.backend}, #{hello.transport})"
     )
@@ -1055,6 +1057,35 @@ defmodule Plushie.Runtime do
       state
     else
       dispatch_update(state, resolved_event)
+    end
+  end
+
+  defp validate_renderer_extensions!(hello) do
+    expected = configured_extension_keys()
+    missing = expected -- hello.extensions
+
+    if missing != [] do
+      raise ArgumentError,
+            "renderer is missing required extensions #{inspect(missing)}. " <>
+              "Renderer reported #{inspect(hello.extensions)}"
+    end
+  end
+
+  defp configured_extension_keys do
+    :plushie
+    |> Application.get_env(:extensions, [])
+    |> Enum.filter(&function_exported?(&1, :native_crate, 0))
+    |> Enum.map(&extension_widget_type/1)
+    |> Enum.uniq()
+  end
+
+  defp extension_widget_type(module) do
+    case module.type_names() do
+      [type | _] ->
+        Atom.to_string(type)
+
+      [] ->
+        raise ArgumentError, "native extension #{inspect(module)} does not declare a widget type"
     end
   end
 

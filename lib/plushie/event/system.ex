@@ -10,10 +10,12 @@ defmodule Plushie.Event.System do
 
     * `type` - `:system_info`, `:system_theme`, `:animation_frame`,
       `:theme_changed`, `:all_windows_closed`, `:image_list`,
-      `:tree_hash`, `:find_focused`, or `:diagnostic`
+      `:tree_hash`, `:find_focused`, `:diagnostic`, `:announce`, or `:error`
     * `tag` - caller-supplied correlation tag from the originating query
     * `data` - payload; shape depends on event type (e.g. a map of system
-      info fields, a theme name string, or a frame timestamp)
+      info fields, a theme name string, a frame timestamp, or a renderer
+      error payload. Native extension command failures decode to
+      `Plushie.Event.ExtensionCommandError` instead.
 
   ## Pattern matching
 

@@ -346,7 +346,13 @@ defmodule Plushie.Extension do
     type_string = Atom.to_string(widget_type)
 
     behaviour_fns =
-      generate_behaviour_fns(kind, widget_type, events, rust_crate_val, rust_constructor_val)
+      generate_behaviour_fns(
+        kind,
+        widget_type,
+        events,
+        rust_crate_val,
+        rust_constructor_val
+      )
 
     widget_code =
       if kind == :canvas_widget do
@@ -622,7 +628,13 @@ defmodule Plushie.Extension do
   # -- Code generation helpers (called at compile time) ----------------------
 
   @doc false
-  def generate_behaviour_fns(kind, widget_type, events, rust_crate_val, rust_constructor_val) do
+  def generate_behaviour_fns(
+        kind,
+        widget_type,
+        events,
+        rust_crate_val,
+        rust_constructor_val
+      ) do
     base =
       quote do
         @impl Plushie.Extension
