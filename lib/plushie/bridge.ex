@@ -49,6 +49,11 @@ defmodule Plushie.Bridge do
   On unexpected exit the bridge applies exponential back-off and attempts
   to restart the renderer up to `max_restarts` times. If the limit is
   exhausted the GenServer stops with `{:max_restarts_reached, reason}`.
+
+  During restart the runtime rebuilds renderer-owned state by re-sending
+  settings, a full snapshot, subscriptions, and windows. Transient commands
+  that cannot be rebuilt from that state are held until the runtime finishes
+  resync, then sent in order.
   """
   use GenServer
 
@@ -243,6 +248,12 @@ defmodule Plushie.Bridge do
     GenServer.cast(bridge, {:send_unregister_effect_stub, kind})
   end
 
+  @doc false
+  @spec send_resync_complete(bridge :: GenServer.server()) :: :ok
+  def send_resync_complete(bridge) do
+    GenServer.cast(bridge, :resync_complete)
+  end
+
   @doc "Stops the bridge GenServer."
   @spec stop(bridge :: GenServer.server()) :: :ok
   def stop(bridge) do
@@ -266,6 +277,8 @@ defmodule Plushie.Bridge do
     :restart_count,
     :restart_delay,
     :iostream_ref,
+    :awaiting_resync,
+    :queued_messages,
     session_id: ""
   ]
 
@@ -299,6 +312,8 @@ defmodule Plushie.Bridge do
       max_restarts: Keyword.get(opts, :max_restarts, 5),
       restart_count: 0,
       restart_delay: Keyword.get(opts, :restart_delay, 100),
+      awaiting_resync: false,
+      queued_messages: [],
       session_id: Keyword.get(opts, :session_id, "")
     }
 
@@ -310,99 +325,108 @@ defmodule Plushie.Bridge do
 
   @impl true
   def handle_cast({:send_settings, settings}, state) do
-    encode_and_send(state, fn fmt -> Plushie.Protocol.encode_settings(settings, fmt) end)
-    {:noreply, state}
+    {:noreply,
+     encode_and_send(state, :settings, fn fmt ->
+       Plushie.Protocol.encode_settings(settings, fmt)
+     end)}
   end
 
   def handle_cast({:send_snapshot, tree}, state) do
-    encode_and_send(state, fn fmt -> Plushie.Protocol.encode_snapshot(tree, fmt) end)
-    {:noreply, state}
+    {:noreply,
+     encode_and_send(state, :snapshot, fn fmt -> Plushie.Protocol.encode_snapshot(tree, fmt) end)}
   end
 
   def handle_cast({:send_patch, ops}, state) do
-    encode_and_send(state, fn fmt -> Plushie.Protocol.encode_patch(ops, fmt) end)
-    {:noreply, state}
+    {:noreply,
+     encode_and_send(state, :patch, fn fmt -> Plushie.Protocol.encode_patch(ops, fmt) end)}
   end
 
   def handle_cast({:send_effect, id, kind, payload}, state) do
-    encode_and_send(state, fn fmt -> Plushie.Protocol.encode_effect(id, kind, payload, fmt) end)
-    {:noreply, state}
+    {:noreply,
+     encode_and_send(state, :effect, fn fmt ->
+       Plushie.Protocol.encode_effect(id, kind, payload, fmt)
+     end)}
   end
 
   def handle_cast({:send_widget_op, op, payload}, state) do
-    encode_and_send(state, fn fmt -> Plushie.Protocol.encode_widget_op(op, payload, fmt) end)
-    {:noreply, state}
+    {:noreply,
+     encode_and_send(state, :widget_op, fn fmt ->
+       Plushie.Protocol.encode_widget_op(op, payload, fmt)
+     end)}
   end
 
   def handle_cast({:send_subscribe, kind, tag, max_rate}, state) do
-    encode_and_send(state, fn fmt ->
-      Plushie.Protocol.encode_subscribe(kind, tag, fmt, max_rate)
-    end)
-
-    {:noreply, state}
+    {:noreply,
+     encode_and_send(state, :subscribe, fn fmt ->
+       Plushie.Protocol.encode_subscribe(kind, tag, fmt, max_rate)
+     end)}
   end
 
   def handle_cast({:send_unsubscribe, kind}, state) do
-    encode_and_send(state, fn fmt -> Plushie.Protocol.encode_unsubscribe(kind, fmt) end)
-    {:noreply, state}
+    {:noreply,
+     encode_and_send(state, :unsubscribe, fn fmt ->
+       Plushie.Protocol.encode_unsubscribe(kind, fmt)
+     end)}
   end
 
   def handle_cast({:send_window_op, op, window_id, settings}, state) do
-    encode_and_send(state, fn fmt ->
-      Plushie.Protocol.encode_window_op(op, window_id, settings, fmt)
-    end)
-
-    {:noreply, state}
+    {:noreply,
+     encode_and_send(state, :window_op, fn fmt ->
+       Plushie.Protocol.encode_window_op(op, window_id, settings, fmt)
+     end)}
   end
 
   def handle_cast({:send_image_op, op, payload}, state) do
-    encode_and_send(state, fn fmt -> Plushie.Protocol.encode_image_op(op, payload, fmt) end)
-    {:noreply, state}
+    {:noreply,
+     encode_and_send(state, :image_op, fn fmt ->
+       Plushie.Protocol.encode_image_op(op, payload, fmt)
+     end)}
   end
 
   def handle_cast({:send_extension_command, node_id, op, payload}, state) do
-    encode_and_send(state, fn fmt ->
-      Plushie.Protocol.encode_extension_command(node_id, op, payload, fmt)
-    end)
-
-    {:noreply, state}
+    {:noreply,
+     encode_and_send(state, :extension_command, fn fmt ->
+       Plushie.Protocol.encode_extension_command(node_id, op, payload, fmt)
+     end)}
   end
 
   def handle_cast({:send_extension_commands, commands}, state) do
-    encode_and_send(state, fn fmt ->
-      Plushie.Protocol.encode_extension_commands(commands, fmt)
-    end)
-
-    {:noreply, state}
+    {:noreply,
+     encode_and_send(state, :extension_commands, fn fmt ->
+       Plushie.Protocol.encode_extension_commands(commands, fmt)
+     end)}
   end
 
   def handle_cast({:send_interact, id, action, selector, payload}, state) do
-    encode_and_send(state, fn fmt ->
-      Plushie.Protocol.encode_interact(id, action, selector, payload, fmt)
-    end)
-
-    {:noreply, state}
+    {:noreply,
+     encode_and_send(state, :interact, fn fmt ->
+       Plushie.Protocol.encode_interact(id, action, selector, payload, fmt)
+     end)}
   end
 
   def handle_cast({:send_advance_frame, timestamp}, state) do
-    encode_and_send(state, fn fmt -> Plushie.Protocol.encode_advance_frame(timestamp, fmt) end)
-    {:noreply, state}
+    {:noreply,
+     encode_and_send(state, :advance_frame, fn fmt ->
+       Plushie.Protocol.encode_advance_frame(timestamp, fmt)
+     end)}
   end
 
   def handle_cast({:send_register_effect_stub, kind, response}, state) do
-    encode_and_send(state, fn fmt ->
-      Plushie.Protocol.encode_register_effect_stub(kind, response, fmt)
-    end)
-
-    {:noreply, state}
+    {:noreply,
+     encode_and_send(state, :register_effect_stub, fn fmt ->
+       Plushie.Protocol.encode_register_effect_stub(kind, response, fmt)
+     end)}
   end
 
   def handle_cast({:send_unregister_effect_stub, kind}, state) do
-    encode_and_send(state, fn fmt ->
-      Plushie.Protocol.encode_unregister_effect_stub(kind, fmt)
-    end)
+    {:noreply,
+     encode_and_send(state, :unregister_effect_stub, fn fmt ->
+       Plushie.Protocol.encode_unregister_effect_stub(kind, fmt)
+     end)}
+  end
 
-    {:noreply, state}
+  def handle_cast(:resync_complete, state) do
+    {:noreply, flush_queued_messages(%{state | awaiting_resync: false})}
   end
 
   # MessagePack frame -- {:packet, 4} driver delivers raw binaries.
@@ -463,7 +487,7 @@ defmodule Plushie.Bridge do
         new_count = state.restart_count + 1
         :telemetry.execute([:plushie, :bridge, :restart], %{count: new_count}, %{})
         send(state.runtime, :renderer_restarted)
-        {:noreply, %{state | restart_count: new_count}}
+        {:noreply, %{state | restart_count: new_count, awaiting_resync: true}}
 
       {:error, reason} ->
         {:stop, {:renderer_restart_failed, reason}, state}
@@ -525,12 +549,12 @@ defmodule Plushie.Bridge do
   # Encodes a protocol message and sends it via the transport. When
   # session_id is set (multiplexed mode), the message is re-serialized
   # with the session field injected.
-  defp encode_and_send(%{session_id: ""} = state, encode_fn) do
+  defp encode_and_send(%{session_id: ""} = state, kind, encode_fn) do
     data = encode_fn.(state.format)
-    send_data(state, data)
+    maybe_send_or_queue(state, kind, data)
   end
 
-  defp encode_and_send(state, encode_fn) do
+  defp encode_and_send(state, kind, encode_fn) do
     # Multiplexed mode: encode with the default empty session first,
     # then decode, inject session_id, and re-encode. This is only used
     # by the test pool adapter where the overhead is negligible.
@@ -542,11 +566,11 @@ defmodule Plushie.Bridge do
       {:ok, map} ->
         map = Map.put(map, "session", state.session_id)
         reencoded = reserialize(map, state.format)
-        send_data(state, reencoded)
+        maybe_send_or_queue(state, kind, reencoded)
 
       {:error, _} ->
         # Fallback: send without session injection
-        send_data(state, data)
+        maybe_send_or_queue(state, kind, data)
     end
   end
 
@@ -702,7 +726,7 @@ defmodule Plushie.Bridge do
     if state.restart_count < state.max_restarts do
       delay = min(round(state.restart_delay * :math.pow(2, state.restart_count)), @max_backoff_ms)
       Process.send_after(self(), :restart_renderer, delay)
-      {:noreply, %{state | port: nil}}
+      {:noreply, %{state | port: nil, awaiting_resync: true}}
     else
       Logger.error("""
       plushie bridge: renderer crashed #{state.max_restarts} times, giving up.
@@ -722,4 +746,63 @@ defmodule Plushie.Bridge do
       {:stop, {:max_restarts_reached, reason}, state}
     end
   end
+
+  defp maybe_send_or_queue(state, kind, data) do
+    cond do
+      send_now?(state, kind) ->
+        case send_data(state, data) do
+          :ok -> state
+          :error -> queue_message(state, kind, data)
+        end
+
+      queue_during_restart?(kind) ->
+        queue_message(state, kind, data)
+
+      true ->
+        state
+    end
+  end
+
+  defp send_now?(%{awaiting_resync: false} = state, _kind), do: transport_ready?(state)
+  defp send_now?(state, kind), do: transport_ready?(state) and not queue_during_restart?(kind)
+
+  # Settings, snapshots, patches, subscriptions, and window ops are rebuilt
+  # by the runtime during resync. These command-like messages are not.
+  defp queue_during_restart?(kind) do
+    kind in [
+      :effect,
+      :widget_op,
+      :image_op,
+      :extension_command,
+      :extension_commands,
+      :interact,
+      :advance_frame,
+      :register_effect_stub,
+      :unregister_effect_stub
+    ]
+  end
+
+  defp queue_message(state, kind, data) do
+    Logger.debug("plushie bridge: queued #{kind} while renderer is unavailable")
+    %{state | queued_messages: state.queued_messages ++ [data]}
+  end
+
+  defp flush_queued_messages(%{queued_messages: []} = state), do: state
+
+  defp flush_queued_messages(state) do
+    do_flush_queued_messages(state, state.queued_messages)
+  end
+
+  defp do_flush_queued_messages(state, []), do: %{state | queued_messages: []}
+
+  defp do_flush_queued_messages(state, [data | rest]) do
+    case send_data(state, data) do
+      :ok -> do_flush_queued_messages(state, rest)
+      :error -> %{state | queued_messages: [data | rest]}
+    end
+  end
+
+  defp transport_ready?(%{transport: {:iostream, _}}), do: true
+  defp transport_ready?(%{port: port}) when is_port(port), do: true
+  defp transport_ready?(_state), do: false
 end

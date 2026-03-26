@@ -300,5 +300,38 @@ defmodule Plushie.BridgeIostreamTest do
       # Should NOT receive a :renderer_restarted message
       refute_receive :renderer_restarted, 200
     end
+
+    test "holds transient outbound messages until resync completes" do
+      {:ok, bridge} =
+        Plushie.Bridge.start_link(
+          transport: {:iostream, self()},
+          format: :json,
+          runtime: self()
+        )
+
+      assert_receive {:iostream_bridge, ^bridge}
+
+      :sys.replace_state(bridge, fn state -> %{state | awaiting_resync: true} end)
+
+      log =
+        capture_log(fn ->
+          Plushie.Bridge.send_widget_op(bridge, "focus", %{id: "save"})
+          refute_receive {:iostream_send, _}, 100
+
+          Plushie.Bridge.send_resync_complete(bridge)
+
+          assert_receive {:iostream_send, data}, 1_000
+          send(self(), {:queued_widget_op, data})
+        end)
+
+      assert log =~ "queued widget_op while renderer is unavailable"
+      assert_receive {:queued_widget_op, data}, 1_000
+      assert {:ok, decoded} = Jason.decode(IO.iodata_to_binary(data))
+      assert decoded["type"] == "widget_op"
+      assert decoded["op"] == "focus"
+      assert decoded["payload"] == %{"id" => "save"}
+
+      GenServer.stop(bridge)
+    end
   end
 end

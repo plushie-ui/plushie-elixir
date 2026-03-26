@@ -540,6 +540,7 @@ defmodule Plushie.Runtime do
     }
 
     state = Windows.sync_windows(state, tree)
+    notify_bridge(state, &Plushie.Bridge.send_resync_complete/1)
 
     {:noreply, state}
   end
