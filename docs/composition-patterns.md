@@ -37,7 +37,7 @@ defmodule TabApp do
 
   def init(_opts), do: %{active_tab: :overview}
 
-  def update(model, %Widget{type: :click, id: "tab:" <> name}) do
+  def update(model, %WidgetEvent{type: :click, id: "tab:" <> name}) do
     %{model | active_tab: String.to_existing_atom(name)}
   end
 
@@ -134,7 +134,7 @@ defmodule SidebarApp do
 
   def init(_opts), do: %{page: :inbox}
 
-  def update(model, %Widget{type: :click, id: "nav:" <> name}) do
+  def update(model, %WidgetEvent{type: :click, id: "nav:" <> name}) do
     %{model | page: String.to_existing_atom(name)}
   end
 
@@ -223,9 +223,9 @@ defmodule ToolbarApp do
 
   def init(_opts), do: %{bold: false, italic: false, underline: false}
 
-  def update(model, %Widget{type: :click, id: "tool:bold"}), do: %{model | bold: !model.bold}
-  def update(model, %Widget{type: :click, id: "tool:italic"}), do: %{model | italic: !model.italic}
-  def update(model, %Widget{type: :click, id: "tool:underline"}), do: %{model | underline: !model.underline}
+  def update(model, %WidgetEvent{type: :click, id: "tool:bold"}), do: %{model | bold: !model.bold}
+  def update(model, %WidgetEvent{type: :click, id: "tool:italic"}), do: %{model | italic: !model.italic}
+  def update(model, %WidgetEvent{type: :click, id: "tool:underline"}), do: %{model | underline: !model.underline}
   def update(model, _event), do: model
 
   def view(model) do
@@ -324,9 +324,9 @@ defmodule ModalApp do
 
   def init(_opts), do: %{show_modal: false, confirmed: false}
 
-  def update(model, %Widget{type: :click, id: "open_modal"}), do: %{model | show_modal: true}
-  def update(model, %Widget{type: :click, id: "confirm"}), do: %{model | show_modal: false, confirmed: true}
-  def update(model, %Widget{type: :click, id: "cancel"}), do: %{model | show_modal: false}
+  def update(model, %WidgetEvent{type: :click, id: "open_modal"}), do: %{model | show_modal: true}
+  def update(model, %WidgetEvent{type: :click, id: "confirm"}), do: %{model | show_modal: false, confirmed: true}
+  def update(model, %WidgetEvent{type: :click, id: "cancel"}), do: %{model | show_modal: false}
   def update(model, _event), do: model
 
   def view(model) do
@@ -544,7 +544,7 @@ defmodule SplitApp do
 
   # In a real app, you would track mouse drag events to resize.
   # This example shows the static layout and cursor feedback.
-  def update(model, %Widget{type: :click, id: "divider"}), do: model
+  def update(model, %WidgetEvent{type: :click, id: "divider"}), do: model
   def update(model, _event), do: model
 
   def view(model) do
@@ -599,8 +599,8 @@ The divider is a `mouse_area` wrapping a thin container. The `cursor:
 horizontal resize indicator when the user hovers over the divider, giving
 clear affordance that it is draggable.
 
-In a production app you would handle `%Widget{type: :click, id: "divider"}` (press) and
-`%Widget{type: :click, id: "divider:release"}` (release) events along with mouse move
+In a production app you would handle `%WidgetEvent{type: :click, id: "divider"}` (press) and
+`%WidgetEvent{type: :click, id: "divider:release"}` (release) events along with mouse move
 tracking to update `left_width` dynamically. The static layout pattern is
 the same regardless.
 
@@ -628,7 +628,7 @@ defmodule BreadcrumbApp do
 
   def init(_opts), do: %{path: ["Home", "Projects", "Plushie", "Docs"]}
 
-  def update(model, %Widget{type: :click, id: "crumb:" <> index_str}) do
+  def update(model, %WidgetEvent{type: :click, id: "crumb:" <> index_str}) do
     index = String.to_integer(index_str)
     %{model | path: Enum.take(model.path, index + 1)}
   end
@@ -718,7 +718,7 @@ defmodule BadgeApp do
 
   def init(_opts), do: %{selected: MapSet.new(["elixir"])}
 
-  def update(model, %Widget{type: :click, id: "tag:" <> name}) do
+  def update(model, %WidgetEvent{type: :click, id: "tag:" <> name}) do
     selected =
       if MapSet.member?(model.selected, name) do
         MapSet.delete(model.selected, name)
@@ -836,7 +836,7 @@ defmodule ToggleApp do
 
   def init(_opts), do: %{dark_mode: false}
 
-  def update(model, %Widget{type: :canvas_element_click, id: "toggle", data: %{"element_id" => "switch"}}) do
+  def update(model, %WidgetEvent{type: :canvas_element_click, id: "toggle", data: %{"element_id" => "switch"}}) do
     %{model | dark_mode: !model.dark_mode}
   end
 
@@ -905,7 +905,7 @@ defmodule ChartApp do
 
   def init(_opts), do: %{selected: nil}
 
-  def update(model, %Widget{type: :canvas_element_click, id: "chart", data: %{"element_id" => id}}) do
+  def update(model, %WidgetEvent{type: :canvas_element_click, id: "chart", data: %{"element_id" => id}}) do
     %{model | selected: id}
   end
 
@@ -980,7 +980,7 @@ defmodule SearchApp do
 
   def init(_opts), do: %{query: ""}
 
-  def update(model, %Widget{type: :input, id: "search", value: value}) do
+  def update(model, %WidgetEvent{type: :input, id: "search", value: value}) do
     %{model | query: value}
   end
 
@@ -1036,15 +1036,15 @@ defmodule ComboApp do
 
   def init(_opts), do: %{open: false, filter: "", selected: nil}
 
-  def update(model, %Widget{type: :click, id: "combo-trigger"}) do
+  def update(model, %WidgetEvent{type: :click, id: "combo-trigger"}) do
     %{model | open: !model.open}
   end
 
-  def update(model, %Widget{type: :input, id: "combo-filter", value: value}) do
+  def update(model, %WidgetEvent{type: :input, id: "combo-filter", value: value}) do
     %{model | filter: value, open: true}
   end
 
-  def update(model, %Widget{type: :canvas_element_click, id: "combo-opts", data: %{"element_id" => "opt-" <> _ = id}}) do
+  def update(model, %WidgetEvent{type: :canvas_element_click, id: "combo-opts", data: %{"element_id" => "opt-" <> _ = id}}) do
     index = id |> String.replace_prefix("opt-", "") |> String.to_integer()
     chosen = filtered_options(model.filter) |> Enum.at(index)
     %{model | selected: chosen, open: false, filter: ""}
@@ -1101,7 +1101,7 @@ defmodule ComboApp do
                         on_click: true,
                         on_hover: true,
                         a11y: %{
-                          role: :option,
+                          role: :radio,
                           label: opt,
                           selected: opt == model.selected,
                           position_in_set: i + 1,
@@ -1178,7 +1178,7 @@ container "card" do
     blur_radius 8
   end
   a11y do
-    role :article
+    role :group
     label "Card"
   end
 
@@ -1196,7 +1196,7 @@ container("card",
   padding: %{top: 20, bottom: 20, left: 16, right: 16},
   border: Border.new() |> Border.width(1) |> Border.color("#e0e0e0") |> Border.rounded(8),
   shadow: Shadow.new() |> Shadow.color("#0000001a") |> Shadow.offset(0, 2) |> Shadow.blur_radius(8),
-  a11y: %{role: :article, label: "Card"},
+  a11y: %{role: :group, label: "Card"},
   children: [...]
 )
 ```

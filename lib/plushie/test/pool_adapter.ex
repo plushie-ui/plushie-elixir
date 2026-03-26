@@ -97,7 +97,10 @@ defmodule Plushie.Test.PoolAdapter do
       send(state.bridge, {:iostream_closed, reason})
     end
 
-    {:stop, {:pool_exited, reason}, state}
+    stop_reason =
+      if reason in [:normal, :shutdown], do: :normal, else: {:pool_exited, reason}
+
+    {:stop, stop_reason, state}
   end
 
   def handle_info(_msg, state), do: {:noreply, state}

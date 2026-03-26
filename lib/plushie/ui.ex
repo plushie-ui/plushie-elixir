@@ -1388,7 +1388,7 @@ defmodule Plushie.UI do
   @doc """
   Clickable button.
 
-  Emits `%Widget{type: :click, id: id}` when clicked.
+  Emits `%WidgetEvent{type: :click, id: id}` when clicked.
 
   ## Example
 
@@ -1422,7 +1422,7 @@ defmodule Plushie.UI do
   @doc """
   Single-line text input.
 
-  Emits `%Widget{type: :input, id: id, value: value}` on change and `%Widget{type: :submit, id: id, value: value}` on Enter.
+  Emits `%WidgetEvent{type: :input, id: id, value: value}` on change and `%WidgetEvent{type: :submit, id: id, value: value}` on Enter.
 
   ## Example
 
@@ -1456,7 +1456,7 @@ defmodule Plushie.UI do
   @doc """
   Boolean checkbox toggle.
 
-  Emits `%Widget{type: :toggle, id: id, value: boolean}` when toggled.
+  Emits `%WidgetEvent{type: :toggle, id: id, value: boolean}` when toggled.
 
   ## Example
 
@@ -1688,7 +1688,7 @@ defmodule Plushie.UI do
   @doc """
   Toggle switch.
 
-  Emits `%Widget{type: :toggle, id: id, value: boolean}` when toggled.
+  Emits `%WidgetEvent{type: :toggle, id: id, value: boolean}` when toggled.
 
   ## Example
 

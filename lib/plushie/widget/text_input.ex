@@ -2,7 +2,7 @@ defmodule Plushie.Widget.TextInput do
   @moduledoc """
   Text input field -- single-line editable text.
 
-  Emits `%Widget{type: :input, id: id, value: value}` on every keystroke.
+  Emits `%WidgetEvent{type: :input, id: id, value: value}` on every keystroke.
 
   ## Props
 
@@ -17,7 +17,7 @@ defmodule Plushie.Widget.TextInput do
   - `align_x` (atom) -- text horizontal alignment: `:left`, `:center`, `:right`.
     See `Plushie.Type.Alignment`.
   - `on_submit` (any) -- when present (any truthy value), enables submit on Enter.
-    Emits `%Widget{type: :submit, id: id, value: value}`.
+    Emits `%WidgetEvent{type: :submit, id: id, value: value}`.
   - `id` (string) -- widget ID for programmatic focus via `Plushie.Command.focus/1`.
   - `style` (atom) -- named style. Currently only `:default`.
   - `icon` (map) -- display an icon inside the input field. Map with keys:
@@ -26,7 +26,7 @@ defmodule Plushie.Widget.TextInput do
     - `spacing` (number) -- pixels between icon and text. Default: 4.0.
     - `side` (string) -- `"left"` or `"right"`. Default: `"left"`.
     - `font` (string | map) -- icon font. Default: system default.
-  - `on_paste` (boolean) -- when true, emits `%Widget{type: :paste, id: id, value: text}` when user
+  - `on_paste` (boolean) -- when true, emits `%WidgetEvent{type: :paste, id: id, value: text}` when user
     pastes text. Default: false.
   - `secure` (boolean) -- mask input as password dots. Default: false.
   - `ime_purpose` (string) -- IME input purpose hint: `"normal"`, `"secure"`, `"terminal"`.
@@ -37,9 +37,9 @@ defmodule Plushie.Widget.TextInput do
 
   ## Events
 
-  - `%Widget{type: :input, id: id, value: value}` -- emitted on every text change.
-  - `%Widget{type: :submit, id: id, value: value}` -- emitted on Enter (requires `on_submit` prop).
-  - `%Widget{type: :paste, id: id, value: text}` -- emitted on paste (requires `on_paste` prop).
+  - `%WidgetEvent{type: :input, id: id, value: value}` -- emitted on every text change.
+  - `%WidgetEvent{type: :submit, id: id, value: value}` -- emitted on Enter (requires `on_submit` prop).
+  - `%WidgetEvent{type: :paste, id: id, value: text}` -- emitted on paste (requires `on_paste` prop).
   """
 
   alias Plushie.Type.Color

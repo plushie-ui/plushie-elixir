@@ -9,6 +9,23 @@ defmodule Plushie.BridgeIostreamTest do
 
   import ExUnit.CaptureLog
 
+  def forward_telemetry(event, measurements, metadata, test_pid) do
+    send(test_pid, {:telemetry_event, event, measurements, metadata})
+  end
+
+  defp attach(event_name, test_pid) do
+    handler_id = "#{inspect(test_pid)}_#{:erlang.unique_integer()}"
+
+    :telemetry.attach(
+      handler_id,
+      event_name,
+      &__MODULE__.forward_telemetry/4,
+      test_pid
+    )
+
+    handler_id
+  end
+
   describe "iostream transport init" do
     test "sends {:iostream_bridge, pid} to the iostream adapter on start" do
       {:ok, bridge} =
@@ -109,6 +126,71 @@ defmodule Plushie.BridgeIostreamTest do
       assert decoded["type"] == "settings"
 
       GenServer.stop(bridge)
+    end
+
+    test "ignores blank json lines" do
+      {:ok, bridge} =
+        Plushie.Bridge.start_link(
+          transport: {:iostream, self()},
+          format: :json,
+          runtime: self()
+        )
+
+      assert_receive {:iostream_bridge, ^bridge}
+
+      send(bridge, {:iostream_data, "\n"})
+
+      refute_receive {:renderer_event, _}, 100
+
+      GenServer.stop(bridge)
+    end
+
+    test "crashes on protocol violations instead of leaking decode errors" do
+      Process.flag(:trap_exit, true)
+      handler_id = attach([:plushie, :bridge, :protocol_error], self())
+
+      try do
+        {:ok, bridge} =
+          Plushie.Bridge.start_link(
+            transport: {:iostream, self()},
+            format: :json,
+            runtime: self()
+          )
+
+        assert_receive {:iostream_bridge, ^bridge}
+
+        bad_json =
+          Jason.encode!(%{
+            type: "event",
+            family: "wheel_scrolled",
+            data: %{delta_x: 1, delta_y: 2, unit: "page"}
+          })
+
+        log =
+          capture_log(fn ->
+            send(bridge, {:iostream_data, bad_json})
+
+            assert_receive {:telemetry_event, [:plushie, :bridge, :protocol_error], %{},
+                            metadata},
+                           1_000
+
+            assert match?(
+                     {:invalid_event_field, "wheel_scrolled", :unit, "page", :unknown, _},
+                     metadata.reason
+                   )
+
+            assert metadata.format == :json
+
+            assert_receive {:EXIT, ^bridge, reason}, 1_000
+            assert inspect(reason) =~ "Plushie.Protocol.Error"
+            refute_receive {:renderer_event, _}, 100
+          end)
+
+        assert log =~ "invalid wheel_scrolled event field unit"
+      after
+        :telemetry.detach(handler_id)
+        Process.flag(:trap_exit, false)
+      end
     end
   end
 

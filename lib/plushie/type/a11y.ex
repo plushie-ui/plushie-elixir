@@ -116,16 +116,32 @@ defmodule Plushie.Type.A11y do
     :has_popup
   ]
 
-  @roles ~w(
+  @canonical_roles ~w(
     alert alert_dialog button canvas check_box combo_box dialog document
     generic_container group heading image label link list list_item
     menu menu_bar menu_item meter multiline_text_input navigation
-    progress_indicator radio_button region scroll_bar scroll_view
+    progress_indicator radio_button radio_group region scroll_bar scroll_view
     search separator slider static_text status switch tab tab_list
-    tab_panel table text_input toolbar tooltip tree tree_item window
+    tab_panel table table_row table_cell column_header text_input toolbar
+    tooltip tree tree_item window
   )a
 
-  @type role :: unquote(Enum.reduce(@roles, &{:|, [], [&1, &2]}))
+  @role_aliases %{
+    cell: :table_cell,
+    checkbox: :check_box,
+    container: :generic_container,
+    generic: :generic_container,
+    progress_bar: :progress_indicator,
+    radio: :radio_button,
+    row: :table_row,
+    text_editor: :multiline_text_input
+  }
+
+  @role_alias_keys ~w(cell checkbox container generic progress_bar radio row text_editor)a
+  @accepted_roles @canonical_roles ++ @role_alias_keys
+
+  @type role :: unquote(Enum.reduce(@canonical_roles, &{:|, [], [&1, &2]}))
+  @type role_input :: role() | unquote(Enum.reduce(@role_alias_keys, &{:|, [], [&1, &2]}))
 
   @type live :: :polite | :assertive
 
@@ -169,8 +185,9 @@ defmodule Plushie.Type.A11y do
   @doc """
   Normalizes a struct, map, or keyword list into an `A11y` struct.
 
-  Accepts an `A11y` struct (returned as-is), a bare map with atom keys,
-  or a keyword list. Unknown keys are silently ignored.
+  Accepts an `A11y` struct, a bare map with atom keys, or a keyword list.
+  Unknown keys are silently ignored. Role aliases like `:checkbox` and
+  `:radio` are normalized to their canonical forms.
 
   ## Examples
 
@@ -185,12 +202,12 @@ defmodule Plushie.Type.A11y do
       %Plushie.Type.A11y{label: "Close"}
   """
   @spec cast(a11y :: t() | map() | keyword()) :: t()
-  def cast(%__MODULE__{} = a11y), do: a11y
+  def cast(%__MODULE__{} = a11y), do: normalize!(a11y)
   def cast(kw) when is_list(kw), do: cast(Map.new(kw))
 
   def cast(map) when is_map(map) do
     %__MODULE__{
-      role: map[:role],
+      role: normalize_optional_role!(map[:role]),
       label: map[:label],
       description: map[:description],
       live: map[:live],
@@ -219,9 +236,17 @@ defmodule Plushie.Type.A11y do
 
   # -- Setter functions --------------------------------------------------------
 
-  @doc "Sets the accessibility role."
-  @spec role(a11y :: t(), role :: role()) :: t()
-  def role(%__MODULE__{} = a, role) when is_atom(role), do: %{a | role: role}
+  @doc """
+  Sets the accessibility role.
+
+  Supported aliases normalize to canonical roles:
+  `:checkbox` -> `:check_box`, `:radio` -> `:radio_button`,
+  `:text_editor` -> `:multiline_text_input`, `:progress_bar` -> `:progress_indicator`,
+  `:generic` / `:container` -> `:generic_container`, `:row` -> `:table_row`,
+  and `:cell` -> `:table_cell`.
+  """
+  @spec role(a11y :: t(), role :: role_input()) :: t()
+  def role(%__MODULE__{} = a, role) when is_atom(role), do: %{a | role: normalize_role!(role)}
 
   @doc "Sets the accessible label (name announced by screen readers)."
   @spec label(a11y :: t(), label :: String.t()) :: t()
@@ -340,6 +365,16 @@ defmodule Plushie.Type.A11y do
   @impl Plushie.DSL.Buildable
   def __field_types__, do: %{}
 
+  @doc false
+  @spec normalize!(t()) :: t()
+  def normalize!(%__MODULE__{} = a11y) do
+    %{a11y | role: normalize_optional_role!(a11y.role)}
+  end
+
+  @doc false
+  @spec accepted_roles() :: [role_input()]
+  def accepted_roles, do: @accepted_roles
+
   @doc "Constructs an `A11y` struct from a keyword list."
   @impl Plushie.DSL.Buildable
   @spec from_opts(opts :: keyword()) :: t()
@@ -380,11 +415,32 @@ defmodule Plushie.Type.A11y do
       {:has_popup, v}, acc -> has_popup(acc, v)
     end)
   end
+
+  defp normalize_optional_role!(nil), do: nil
+  defp normalize_optional_role!(role) when is_atom(role), do: normalize_role!(role)
+
+  defp normalize_optional_role!(role) do
+    raise ArgumentError,
+          "invalid a11y role #{inspect(role)}. Expected an atom, got: #{inspect(role)}"
+  end
+
+  defp normalize_role!(role) do
+    cond do
+      role in @canonical_roles -> role
+      canonical = @role_aliases[role] -> canonical
+      true -> raise ArgumentError, unknown_role_message(role)
+    end
+  end
+
+  defp unknown_role_message(role) do
+    "unknown a11y role #{inspect(role)}. Supported roles: #{inspect(@accepted_roles)}"
+  end
 end
 
 defimpl Plushie.Encode, for: Plushie.Type.A11y do
   def encode(%Plushie.Type.A11y{} = a11y) do
     a11y
+    |> Plushie.Type.A11y.normalize!()
     |> Map.from_struct()
     |> Enum.reject(fn {_, v} -> is_nil(v) end)
     |> Map.new(fn {k, v} -> {k, Plushie.Encode.encode(v)} end)

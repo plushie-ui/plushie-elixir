@@ -17,7 +17,7 @@ defmodule Plushie.Effects do
 
   ## Example
 
-      def update(model, %Plushie.Event.Widget{type: :click, id: "open"}) do
+      def update(model, %Plushie.Event.WidgetEvent{type: :click, id: "open"}) do
         cmd = Plushie.Effects.file_open(title: "Pick a file")
         {model, cmd}
       end

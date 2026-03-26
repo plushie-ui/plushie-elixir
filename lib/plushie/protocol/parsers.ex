@@ -1,7 +1,10 @@
 defmodule Plushie.Protocol.Parsers do
   @moduledoc false
 
-  # Shared string-to-atom parsers used by the decode layer.
+  # Shared strict enum parsers used by the decode layer.
+
+  @type parse_reason :: :unknown | :invalid
+  @type parse_result(value) :: {:ok, value} | {:error, parse_reason()}
 
   @mouse_buttons %{
     "left" => :left,
@@ -11,46 +14,58 @@ defmodule Plushie.Protocol.Parsers do
     "forward" => :forward
   }
 
-  @doc "Parses a mouse button string to an atom."
-  @spec parse_mouse_button(String.t() | nil) :: atom() | String.t() | nil
-  def parse_mouse_button(nil), do: nil
-  def parse_mouse_button(str) when is_binary(str), do: Map.get(@mouse_buttons, str, str)
+  @doc "Parses a required mouse button string to an atom."
+  @spec parse_mouse_button(term()) :: parse_result(:left | :right | :middle | :back | :forward)
+  def parse_mouse_button(str) when is_binary(str) do
+    case Map.fetch(@mouse_buttons, str) do
+      {:ok, button} -> {:ok, button}
+      :error -> {:error, :unknown}
+    end
+  end
 
-  @doc "Parses a scroll unit string to an atom."
-  @spec parse_scroll_unit(String.t() | nil) :: :line | :pixel | nil
-  def parse_scroll_unit(nil), do: nil
-  def parse_scroll_unit("line"), do: :line
-  def parse_scroll_unit("lines"), do: :line
-  def parse_scroll_unit("pixel"), do: :pixel
-  def parse_scroll_unit("pixels"), do: :pixel
-  def parse_scroll_unit(_), do: nil
+  def parse_mouse_button(_), do: {:error, :invalid}
 
-  @doc "Parses a pane action string to an atom."
-  @spec parse_pane_action(String.t() | nil) :: :picked | :dropped | :canceled | nil
-  def parse_pane_action(nil), do: nil
-  def parse_pane_action("picked"), do: :picked
-  def parse_pane_action("dropped"), do: :dropped
-  def parse_pane_action("canceled"), do: :canceled
-  def parse_pane_action(_), do: nil
+  @doc "Parses an optional scroll unit string to an atom."
+  @spec parse_scroll_unit(term()) :: parse_result(:line | :pixel | nil)
+  def parse_scroll_unit(nil), do: {:ok, nil}
+  def parse_scroll_unit("line"), do: {:ok, :line}
+  def parse_scroll_unit("lines"), do: {:ok, :line}
+  def parse_scroll_unit("pixel"), do: {:ok, :pixel}
+  def parse_scroll_unit("pixels"), do: {:ok, :pixel}
+  def parse_scroll_unit(str) when is_binary(str), do: {:error, :unknown}
+  def parse_scroll_unit(_), do: {:error, :invalid}
 
-  @doc "Parses a pane region/edge string to an atom."
-  @spec parse_pane_region(String.t() | nil) :: :center | :top | :bottom | :left | :right | nil
-  def parse_pane_region(nil), do: nil
-  def parse_pane_region("center"), do: :center
-  def parse_pane_region("top"), do: :top
-  def parse_pane_region("bottom"), do: :bottom
-  def parse_pane_region("left"), do: :left
-  def parse_pane_region("right"), do: :right
-  def parse_pane_region(_), do: nil
+  @doc "Parses an optional pane action string to an atom."
+  @spec parse_pane_action(term()) :: parse_result(:picked | :dropped | :canceled | nil)
+  def parse_pane_action(nil), do: {:ok, nil}
+  def parse_pane_action("picked"), do: {:ok, :picked}
+  def parse_pane_action("dropped"), do: {:ok, :dropped}
+  def parse_pane_action("canceled"), do: {:ok, :canceled}
+  def parse_pane_action(str) when is_binary(str), do: {:error, :unknown}
+  def parse_pane_action(_), do: {:error, :invalid}
+
+  @doc "Parses an optional pane region or edge string to an atom."
+  @spec parse_pane_region(term()) :: parse_result(:center | :top | :bottom | :left | :right | nil)
+  def parse_pane_region(nil), do: {:ok, nil}
+  def parse_pane_region("center"), do: {:ok, :center}
+  def parse_pane_region("top"), do: {:ok, :top}
+  def parse_pane_region("bottom"), do: {:ok, :bottom}
+  def parse_pane_region("left"), do: {:ok, :left}
+  def parse_pane_region("right"), do: {:ok, :right}
+  def parse_pane_region(str) when is_binary(str), do: {:error, :unknown}
+  def parse_pane_region(_), do: {:error, :invalid}
 
   @doc """
-  Converts an event family string to an existing atom, falling back to the
-  raw string if the atom doesn't already exist.
+  Returns true when an event family is explicitly namespaced for widget-specific
+  extension use as `widget_type:event_name`.
   """
-  @spec safe_event_type(String.t()) :: atom() | String.t()
-  def safe_event_type(family) do
-    String.to_existing_atom(family)
-  rescue
-    ArgumentError -> family
+  @spec extension_family?(term()) :: boolean()
+  def extension_family?(family) when is_binary(family) do
+    case String.split(family, ":", parts: 2) do
+      [widget_type, event_name] -> widget_type != "" and event_name != ""
+      _ -> false
+    end
   end
+
+  def extension_family?(_), do: false
 end

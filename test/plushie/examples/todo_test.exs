@@ -1,7 +1,7 @@
 defmodule TodoTest do
   use ExUnit.Case, async: true
 
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
   alias Todo
 
   describe "init/1" do
@@ -17,7 +17,7 @@ defmodule TodoTest do
   describe "adding todos" do
     test "submit adds todo and clears input" do
       model = %{todos: [], input: "Buy milk", next_id: 1, filter: :all}
-      {model, _cmd} = Todo.update(model, %Widget{type: :submit, id: "new_todo"})
+      {model, _cmd} = Todo.update(model, %WidgetEvent{type: :submit, id: "new_todo"})
 
       assert [%{id: "todo_1", text: "Buy milk", done: false}] = model.todos
       assert model.input == ""
@@ -26,20 +26,20 @@ defmodule TodoTest do
 
     test "submit returns focus command" do
       model = %{todos: [], input: "Buy milk", next_id: 1, filter: :all}
-      {_model, cmd} = Todo.update(model, %Widget{type: :submit, id: "new_todo"})
+      {_model, cmd} = Todo.update(model, %WidgetEvent{type: :submit, id: "new_todo"})
 
       assert %Plushie.Command{type: :focus} = cmd
     end
 
     test "empty input does nothing on submit" do
       model = %{todos: [], input: "", next_id: 1, filter: :all}
-      result = Todo.update(model, %Widget{type: :submit, id: "new_todo"})
+      result = Todo.update(model, %WidgetEvent{type: :submit, id: "new_todo"})
       assert result == model
     end
 
     test "whitespace-only input does nothing" do
       model = %{todos: [], input: "   ", next_id: 1, filter: :all}
-      result = Todo.update(model, %Widget{type: :submit, id: "new_todo"})
+      result = Todo.update(model, %WidgetEvent{type: :submit, id: "new_todo"})
       assert result == model
     end
   end
@@ -54,7 +54,7 @@ defmodule TodoTest do
       }
 
       model =
-        Todo.update(model, %Widget{
+        Todo.update(model, %WidgetEvent{
           type: :toggle,
           id: "toggle",
           scope: ["todo_1", "list", "app"]
@@ -72,7 +72,7 @@ defmodule TodoTest do
       }
 
       model =
-        Todo.update(model, %Widget{
+        Todo.update(model, %WidgetEvent{
           type: :toggle,
           id: "toggle",
           scope: ["todo_1"]
@@ -95,7 +95,7 @@ defmodule TodoTest do
       }
 
       model =
-        Todo.update(model, %Widget{
+        Todo.update(model, %WidgetEvent{
           type: :click,
           id: "delete",
           scope: ["todo_1", "list", "app"]
@@ -109,13 +109,13 @@ defmodule TodoTest do
     test "filter buttons update filter" do
       model = Todo.init([])
 
-      model = Todo.update(model, %Widget{type: :click, id: "filter_active"})
+      model = Todo.update(model, %WidgetEvent{type: :click, id: "filter_active"})
       assert model.filter == :active
 
-      model = Todo.update(model, %Widget{type: :click, id: "filter_done"})
+      model = Todo.update(model, %WidgetEvent{type: :click, id: "filter_done"})
       assert model.filter == :done
 
-      model = Todo.update(model, %Widget{type: :click, id: "filter_all"})
+      model = Todo.update(model, %WidgetEvent{type: :click, id: "filter_all"})
       assert model.filter == :all
     end
   end
@@ -170,7 +170,7 @@ defmodule TodoTest do
   describe "unknown events" do
     test "returns model unchanged" do
       model = Todo.init([])
-      assert Todo.update(model, %Widget{type: :click, id: "nonexistent"}) == model
+      assert Todo.update(model, %WidgetEvent{type: :click, id: "nonexistent"}) == model
     end
   end
 end

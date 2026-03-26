@@ -2,7 +2,7 @@ defmodule Plushie.Docs.TutorialTest do
   use ExUnit.Case, async: true
 
   alias Plushie.Command
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   # -- Todo app reproduced from tutorial doc --
 
@@ -10,17 +10,17 @@ defmodule Plushie.Docs.TutorialTest do
     use Plushie.App
 
     alias Plushie.Command
-    alias Plushie.Event.Widget
+    alias Plushie.Event.WidgetEvent
 
     def init(_opts) do
       %{todos: [], input: "", filter: :all, next_id: 1}
     end
 
-    def update(model, %Widget{type: :input, id: "new_todo", value: val}) do
+    def update(model, %WidgetEvent{type: :input, id: "new_todo", value: val}) do
       %{model | input: val}
     end
 
-    def update(model, %Widget{type: :submit, id: "new_todo"}) do
+    def update(model, %WidgetEvent{type: :submit, id: "new_todo"}) do
       if String.trim(model.input) != "" do
         todo = %{id: "todo_#{model.next_id}", text: model.input, done: false}
         model = %{model | todos: [todo | model.todos], input: "", next_id: model.next_id + 1}
@@ -30,7 +30,7 @@ defmodule Plushie.Docs.TutorialTest do
       end
     end
 
-    def update(model, %Widget{type: :toggle, id: "toggle", scope: [todo_id | _]}) do
+    def update(model, %WidgetEvent{type: :toggle, id: "toggle", scope: [todo_id | _]}) do
       todos =
         Enum.map(model.todos, fn
           %{id: ^todo_id} = t -> %{t | done: !t.done}
@@ -40,13 +40,16 @@ defmodule Plushie.Docs.TutorialTest do
       %{model | todos: todos}
     end
 
-    def update(model, %Widget{type: :click, id: "delete", scope: [todo_id | _]}) do
+    def update(model, %WidgetEvent{type: :click, id: "delete", scope: [todo_id | _]}) do
       %{model | todos: Enum.reject(model.todos, &(&1.id == todo_id))}
     end
 
-    def update(model, %Widget{type: :click, id: "filter_all"}), do: %{model | filter: :all}
-    def update(model, %Widget{type: :click, id: "filter_active"}), do: %{model | filter: :active}
-    def update(model, %Widget{type: :click, id: "filter_done"}), do: %{model | filter: :done}
+    def update(model, %WidgetEvent{type: :click, id: "filter_all"}), do: %{model | filter: :all}
+
+    def update(model, %WidgetEvent{type: :click, id: "filter_active"}),
+      do: %{model | filter: :active}
+
+    def update(model, %WidgetEvent{type: :click, id: "filter_done"}), do: %{model | filter: :done}
 
     def update(model, _event), do: model
 
@@ -171,14 +174,14 @@ defmodule Plushie.Docs.TutorialTest do
 
   test "tutorial_step2_input_updates_model_test" do
     model = TodoApp.init([])
-    model = TodoApp.update(model, %Widget{type: :input, id: "new_todo", value: "Buy milk"})
+    model = TodoApp.update(model, %WidgetEvent{type: :input, id: "new_todo", value: "Buy milk"})
     assert model.input == "Buy milk"
   end
 
   test "tutorial_step2_submit_creates_todo_test" do
     model = TodoApp.init([])
-    model = TodoApp.update(model, %Widget{type: :input, id: "new_todo", value: "Buy milk"})
-    {model, cmd} = TodoApp.update(model, %Widget{type: :submit, id: "new_todo"})
+    model = TodoApp.update(model, %WidgetEvent{type: :input, id: "new_todo", value: "Buy milk"})
+    {model, cmd} = TodoApp.update(model, %WidgetEvent{type: :submit, id: "new_todo"})
 
     assert model.input == ""
     assert model.next_id == 2
@@ -191,8 +194,8 @@ defmodule Plushie.Docs.TutorialTest do
 
   test "tutorial_step2_empty_submit_does_nothing_test" do
     model = TodoApp.init([])
-    model = TodoApp.update(model, %Widget{type: :input, id: "new_todo", value: "   "})
-    result = TodoApp.update(model, %Widget{type: :submit, id: "new_todo"})
+    model = TodoApp.update(model, %WidgetEvent{type: :input, id: "new_todo", value: "   "})
+    result = TodoApp.update(model, %WidgetEvent{type: :submit, id: "new_todo"})
     assert result == model
     assert result.todos == []
   end
@@ -275,7 +278,7 @@ defmodule Plushie.Docs.TutorialTest do
     }
 
     model =
-      TodoApp.update(model, %Widget{
+      TodoApp.update(model, %WidgetEvent{
         type: :toggle,
         id: "toggle",
         scope: ["todo_1", "list", "app"]
@@ -293,7 +296,7 @@ defmodule Plushie.Docs.TutorialTest do
     }
 
     model =
-      TodoApp.update(model, %Widget{
+      TodoApp.update(model, %WidgetEvent{
         type: :click,
         id: "delete",
         scope: ["todo_1", "list", "app"]
@@ -306,7 +309,7 @@ defmodule Plushie.Docs.TutorialTest do
 
   test "tutorial_step5_submit_returns_focus_command_test" do
     model = %{todos: [], input: "Buy milk", filter: :all, next_id: 1}
-    {_model, cmd} = TodoApp.update(model, %Widget{type: :submit, id: "new_todo"})
+    {_model, cmd} = TodoApp.update(model, %WidgetEvent{type: :submit, id: "new_todo"})
 
     assert %Command{type: :focus, payload: %{target: "app/new_todo"}} = cmd
   end
@@ -315,15 +318,15 @@ defmodule Plushie.Docs.TutorialTest do
 
   test "tutorial_step6_filter_all_test" do
     model = TodoApp.init([])
-    model = TodoApp.update(model, %Widget{type: :click, id: "filter_active"})
+    model = TodoApp.update(model, %WidgetEvent{type: :click, id: "filter_active"})
     assert model.filter == :active
-    model = TodoApp.update(model, %Widget{type: :click, id: "filter_all"})
+    model = TodoApp.update(model, %WidgetEvent{type: :click, id: "filter_all"})
     assert model.filter == :all
   end
 
   test "tutorial_step6_filter_done_test" do
     model = TodoApp.init([])
-    model = TodoApp.update(model, %Widget{type: :click, id: "filter_done"})
+    model = TodoApp.update(model, %WidgetEvent{type: :click, id: "filter_done"})
     assert model.filter == :done
   end
 

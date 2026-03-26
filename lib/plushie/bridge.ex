@@ -482,7 +482,7 @@ defmodule Plushie.Bridge do
 
   # iostream adapter reports the transport is closed.
   def handle_info({:iostream_closed, reason}, %{transport: {:iostream, _}} = state) do
-    Logger.info("plushie bridge: iostream closed: #{inspect(reason)}")
+    log_iostream_exit(reason, "iostream closed")
     send(state.runtime, {:renderer_exit, reason})
     {:stop, :normal, %{state | port: nil}}
   end
@@ -493,7 +493,7 @@ defmodule Plushie.Bridge do
         %{iostream_ref: ref} = state
       )
       when is_reference(ref) do
-    Logger.info("plushie bridge: iostream process exited: #{inspect(reason)}")
+    log_iostream_exit(reason, "iostream process exited")
     send(state.runtime, {:renderer_exit, reason})
     {:stop, :normal, state}
   end
@@ -501,6 +501,12 @@ defmodule Plushie.Bridge do
   def handle_info(msg, state) do
     Logger.debug("plushie bridge: unhandled message: #{inspect(msg)}")
     {:noreply, state}
+  end
+
+  defp log_iostream_exit(reason, _prefix) when reason in [:normal, :shutdown], do: :ok
+
+  defp log_iostream_exit(reason, prefix) do
+    Logger.info("plushie bridge: #{prefix}: #{inspect(reason)}")
   end
 
   @impl true
@@ -640,44 +646,44 @@ defmodule Plushie.Bridge do
       :error
   end
 
-  # Protocol-level errors (decode failures, unknown message types) are
-  # logged and emitted as telemetry events but NOT forwarded to the app.
-  # To monitor these, attach a telemetry handler for
-  # [:plushie, :bridge, :decode_error]. The app only receives structured
-  # events (Plushie.Event.* structs) and known tuples.
   defp dispatch_message(data, format, state) do
-    :telemetry.execute([:plushie, :bridge, :receive], %{byte_size: byte_size(data)}, %{})
+    if format == :json and String.trim(data) == "" do
+      state
+    else
+      :telemetry.execute([:plushie, :bridge, :receive], %{byte_size: byte_size(data)}, %{})
 
-    case Plushie.Protocol.decode_message(data, format) do
-      {:error, reason} ->
-        Logger.warning("plushie bridge: failed to decode message: #{inspect(reason)}")
-        :telemetry.execute([:plushie, :bridge, :decode_error], %{}, %{reason: reason})
-        state
+      try do
+        case Plushie.Protocol.decode_message!(data, format) do
+          {:hello, %{protocol: protocol} = hello} ->
+            expected = Plushie.Protocol.protocol_version()
 
-      {:hello, %{protocol: protocol} = hello} ->
-        expected = Plushie.Protocol.protocol_version()
+            if protocol != expected do
+              Logger.error(
+                "plushie bridge: protocol mismatch -- renderer reports protocol #{protocol}, " <>
+                  "expected #{expected}. Stopping bridge."
+              )
 
-        if protocol != expected do
-          Logger.error(
-            "plushie bridge: protocol mismatch -- renderer reports protocol #{protocol}, " <>
-              "expected #{expected}. Stopping bridge."
-          )
+              send(self(), {:stop_protocol_mismatch, protocol, expected})
+            end
 
-          send(self(), {:stop_protocol_mismatch, protocol, expected})
-        else
-          Logger.info(
-            "plushie bridge: renderer hello -- #{hello.name} v#{hello.version} (protocol #{protocol}, backend #{hello.backend})"
-          )
+            send(state.runtime, {:renderer_event, {:hello, hello}})
+
+            %{state | restart_count: 0}
+
+          event ->
+            send(state.runtime, {:renderer_event, event})
+            # Reset restart count on first successful message from the renderer.
+            %{state | restart_count: 0}
         end
+      rescue
+        error in Plushie.Protocol.Error ->
+          :telemetry.execute([:plushie, :bridge, :protocol_error], %{}, %{
+            reason: error.reason,
+            format: format
+          })
 
-        send(state.runtime, {:renderer_event, {:hello, hello}})
-
-        %{state | restart_count: 0}
-
-      event ->
-        send(state.runtime, {:renderer_event, event})
-        # Reset restart count on first successful message from the renderer.
-        %{state | restart_count: 0}
+          reraise error, __STACKTRACE__
+      end
     end
   end
 

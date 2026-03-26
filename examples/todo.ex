@@ -14,7 +14,7 @@ defmodule Todo do
   use Plushie.App
 
   alias Plushie.Command
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   # -- Init -----------------------------------------------------------------
 
@@ -24,11 +24,11 @@ defmodule Todo do
 
   # -- Update ---------------------------------------------------------------
 
-  def update(model, %Widget{type: :input, id: "new_todo", value: val}) do
+  def update(model, %WidgetEvent{type: :input, id: "new_todo", value: val}) do
     %{model | input: val}
   end
 
-  def update(model, %Widget{type: :submit, id: "new_todo"}) do
+  def update(model, %WidgetEvent{type: :submit, id: "new_todo"}) do
     if String.trim(model.input) != "" do
       todo = %{id: "todo_#{model.next_id}", text: model.input, done: false}
       model = %{model | todos: [todo | model.todos], input: "", next_id: model.next_id + 1}
@@ -38,7 +38,7 @@ defmodule Todo do
     end
   end
 
-  def update(model, %Widget{type: :toggle, id: "toggle", scope: [todo_id | _]}) do
+  def update(model, %WidgetEvent{type: :toggle, id: "toggle", scope: [todo_id | _]}) do
     todos =
       Enum.map(model.todos, fn
         %{id: ^todo_id} = t -> %{t | done: !t.done}
@@ -48,13 +48,13 @@ defmodule Todo do
     %{model | todos: todos}
   end
 
-  def update(model, %Widget{type: :click, id: "delete", scope: [todo_id | _]}) do
+  def update(model, %WidgetEvent{type: :click, id: "delete", scope: [todo_id | _]}) do
     %{model | todos: Enum.reject(model.todos, &(&1.id == todo_id))}
   end
 
-  def update(model, %Widget{type: :click, id: "filter_all"}), do: %{model | filter: :all}
-  def update(model, %Widget{type: :click, id: "filter_active"}), do: %{model | filter: :active}
-  def update(model, %Widget{type: :click, id: "filter_done"}), do: %{model | filter: :done}
+  def update(model, %WidgetEvent{type: :click, id: "filter_all"}), do: %{model | filter: :all}
+  def update(model, %WidgetEvent{type: :click, id: "filter_active"}), do: %{model | filter: :active}
+  def update(model, %WidgetEvent{type: :click, id: "filter_done"}), do: %{model | filter: :done}
 
   def update(model, _event), do: model
 

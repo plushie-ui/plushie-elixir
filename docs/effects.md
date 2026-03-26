@@ -21,7 +21,7 @@ renderer (decide whether to execute it). Keep the renderer dumb.
 
 <!-- test: effects_file_open_returns_effect_command_test -- keep this code block in sync with the test -->
 ```elixir
-def update(model, %Widget{type: :click, id: "open_file"}) do
+def update(model, %WidgetEvent{type: :click, id: "open_file"}) do
   cmd = Plushie.Effects.file_open(
     title: "Choose a file",
     filters: [{"Text files", "*.txt"}, {"All files", "*"}]

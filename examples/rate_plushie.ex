@@ -48,7 +48,7 @@ defmodule RatePlushie do
   end
 
   def update(model, event) do
-    alias Plushie.Event.Widget
+    alias Plushie.Event.WidgetEvent
 
     # StarRating and ThemeToggle are canvas_widgets that emit semantic
     # events. The widget ID is un-scoped here because they're direct
@@ -56,22 +56,22 @@ defmodule RatePlushie do
     # children, but the events carry the widget's own ID).
     case event do
       # Star rating emits :select with the number of stars.
-      %Widget{type: :select, id: "stars", data: %{"value" => stars}} ->
+      %WidgetEvent{type: :select, id: "stars", data: %{"value" => stars}} ->
         %{model | rating: stars, errors: Map.delete(model.errors, :rating)}
 
       # Theme toggle emits :toggle with the new state.
       # Animation is managed internally by the canvas_widget.
-      %Widget{type: :toggle, id: "theme-toggle", data: %{"value" => dark?}} ->
+      %WidgetEvent{type: :toggle, id: "theme-toggle", data: %{"value" => dark?}} ->
         %{model | dark_mode: dark?}
 
-      %Widget{type: :input, id: "review-name", value: v} ->
+      %WidgetEvent{type: :input, id: "review-name", value: v} ->
         %{model | review_name: v, errors: Map.delete(model.errors, :name)}
 
-      %Widget{type: :input, id: "review-comment", value: v} ->
+      %WidgetEvent{type: :input, id: "review-comment", value: v} ->
         %{model | review_comment: v, errors: Map.delete(model.errors, :comment)}
 
-      %Widget{type: :click, id: "submit-review"} -> submit_review(model)
-      %Widget{type: :submit, id: "review-name"} -> submit_review(model)
+      %WidgetEvent{type: :click, id: "submit-review"} -> submit_review(model)
+      %WidgetEvent{type: :submit, id: "review-name"} -> submit_review(model)
 
       _ -> model
     end

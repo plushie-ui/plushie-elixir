@@ -379,9 +379,15 @@ defmodule Plushie.Protocol.Encode do
   @spec stringify_keys(map :: map()) :: %{String.t() => term()}
   def stringify_keys(%{} = map) do
     Map.new(map, fn
-      {k, v} when is_atom(k) -> {Atom.to_string(k), stringify_value(v)}
-      {k, v} when is_binary(k) -> {k, stringify_value(v)}
-      {k, v} -> {inspect(k), stringify_value(v)}
+      {k, v} when is_atom(k) ->
+        {Atom.to_string(k), stringify_value(v)}
+
+      {k, v} when is_binary(k) ->
+        {k, stringify_value(v)}
+
+      {k, _v} ->
+        raise ArgumentError,
+              "protocol payload keys must be atoms or strings, got: #{inspect(k)}"
     end)
   end
 
@@ -398,12 +404,11 @@ defmodule Plushie.Protocol.Encode do
     Enum.map(list, &stringify_value/1)
   end
 
-  # Tuples can leak into props from incorrect function calls (e.g. keyword
-  # opts passed as positional args). Convert to list for wire-format compat
-  # -- matches the behaviour of Plushie.Encode.Tuple.
-  defp stringify_value(tuple) when is_tuple(tuple) do
-    tuple |> Tuple.to_list() |> Enum.map(&stringify_value/1)
-  end
+  # Tuples leaking this far indicate a caller bypassed the builder layer
+  # or supplied malformed payload data. Reject them at the wire boundary
+  # instead of silently changing the shape.
+  defp stringify_value(tuple) when is_tuple(tuple),
+    do: raise(ArgumentError, "protocol payload values must not contain tuples: #{inspect(tuple)}")
 
   # Atoms that leak through from manually-constructed nodes (not via the
   # builder layer) must be converted to strings for the wire format.

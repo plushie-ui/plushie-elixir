@@ -52,19 +52,19 @@ with commands.
 
 <!-- test: app_behaviour_update_add_todo_test, app_behaviour_update_submit_returns_focus_test, app_behaviour_update_unknown_event_test -- keep this code block in sync with the test -->
 ```elixir
-alias Plushie.Event.Widget
+alias Plushie.Event.WidgetEvent
 
-def update(model, %Widget{type: :click, id: "add_todo"}) do
+def update(model, %WidgetEvent{type: :click, id: "add_todo"}) do
   new_todo = %{id: System.unique_integer(), text: model.input, done: false}
   %{model | todos: [new_todo | model.todos], input: ""}
 end
 
-def update(model, %Widget{type: :input, id: "todo_field", value: value}) do
+def update(model, %WidgetEvent{type: :input, id: "todo_field", value: value}) do
   %{model | input: value}
 end
 
 # Returning commands:
-def update(model, %Widget{type: :submit, id: "todo_field"}) do
+def update(model, %WidgetEvent{type: :submit, id: "todo_field"}) do
   new_todo = %{id: System.unique_integer(), text: model.input, done: false}
   model = %{model | todos: [new_todo | model.todos], input: ""}
   {model, Plushie.Command.focus("todo_field")}
@@ -80,11 +80,11 @@ See [commands.md](commands.md) for the full command API.
 Events are structs under `Plushie.Event.*`. See [events.md](events.md) for
 the full event taxonomy. Common families:
 
-- `%Widget{type: :click, id: id}` -- button press
-- `%Widget{type: :input, id: id, value: val}` -- text input change
-- `%Widget{type: :select, id: id, value: val}` -- selection change
-- `%Widget{type: :toggle, id: id, value: val}` -- checkbox/toggler change
-- `%Widget{type: :submit, id: id, value: val}` -- form field submission
+- `%WidgetEvent{type: :click, id: id}` -- button press
+- `%WidgetEvent{type: :input, id: id, value: val}` -- text input change
+- `%WidgetEvent{type: :select, id: id, value: val}` -- selection change
+- `%WidgetEvent{type: :toggle, id: id, value: val}` -- checkbox/toggler change
+- `%WidgetEvent{type: :submit, id: id, value: val}` -- form field submission
 - `%Key{type: :press, ...}` -- keyboard event (via subscription)
 - `%Key{type: :release, ...}` -- keyboard release (via subscription)
 - `%Window{type: :close_requested, window_id: id}` -- window close requested
@@ -267,8 +267,8 @@ Apps can be tested without a renderer:
 ```elixir
 test "adding a todo" do
   model = MyApp.init([])
-  model = MyApp.update(model, %Widget{type: :input, id: "todo_field", value: "Buy milk"})
-  model = MyApp.update(model, %Widget{type: :click, id: "add_todo"})
+  model = MyApp.update(model, %WidgetEvent{type: :input, id: "todo_field", value: "Buy milk"})
+  model = MyApp.update(model, %WidgetEvent{type: :click, id: "add_todo"})
 
   assert [%{text: "Buy milk"}] = model.todos
   assert model.input == ""
@@ -371,7 +371,7 @@ after creation, use window commands:
 
 <!-- test: app_behaviour_window_command_set_window_mode_test -- keep this code block in sync with the test -->
 ```elixir
-def update(model, %Widget{type: :click, id: "go_fullscreen"}) do
+def update(model, %WidgetEvent{type: :click, id: "go_fullscreen"}) do
   {model, Plushie.Command.set_window_mode("main", :fullscreen)}
 end
 ```
@@ -434,7 +434,7 @@ Windows are opened by adding window nodes to the tree returned by
 flag in your model and include the window node conditionally:
 
 ```elixir
-def update(model, %Widget{type: :click, id: "open_settings"}) do
+def update(model, %WidgetEvent{type: :click, id: "open_settings"}) do
   %{model | settings_open: true}
 end
 

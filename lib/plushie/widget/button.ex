@@ -1,6 +1,6 @@
 defmodule Plushie.Widget.Button do
   @moduledoc """
-  Button -- clickable widget that emits `%Widget{type: :click, id: id}` events.
+  Button -- clickable widget that emits `%WidgetEvent{type: :click, id: id}` events.
 
   The button can contain either a text label (via the `label` or `content` prop)
   or arbitrary child content (if children are provided, the first child is rendered).
@@ -21,7 +21,7 @@ defmodule Plushie.Widget.Button do
 
   ## Events
 
-  - `%Widget{type: :click, id: id}` -- emitted on press (unless disabled).
+  - `%WidgetEvent{type: :click, id: id}` -- emitted on press (unless disabled).
   """
 
   alias Plushie.Type.StyleMap

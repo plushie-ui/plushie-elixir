@@ -146,6 +146,7 @@ defmodule Plushie.Extension do
 
         Module.register_attribute(__MODULE__, :_extension_props, accumulate: true)
         Module.register_attribute(__MODULE__, :_extension_commands, accumulate: true)
+        Module.register_attribute(__MODULE__, :_extension_events, accumulate: true)
         Module.put_attribute(__MODULE__, :_extension_widget, nil)
         Module.put_attribute(__MODULE__, :_extension_container, false)
       end
@@ -167,6 +168,7 @@ defmodule Plushie.Extension do
                 widget: 2,
                 prop: 2,
                 prop: 3,
+                events: 1,
                 command: 1,
                 command: 2,
                 rust_crate: 1,
@@ -182,14 +184,14 @@ defmodule Plushie.Extension do
             @behaviour Plushie.Extension.CanvasWidget
 
             import Plushie.Extension,
-              only: [widget: 1, widget: 2, prop: 2, prop: 3, state: 1]
+              only: [widget: 1, widget: 2, prop: 2, prop: 3, state: 1, events: 1]
 
             import Plushie.UI
           end
 
         :widget ->
           quote do
-            import Plushie.Extension, only: [widget: 1, widget: 2, prop: 2, prop: 3]
+            import Plushie.Extension, only: [widget: 1, widget: 2, prop: 2, prop: 3, events: 1]
             import Plushie.UI
           end
       end
@@ -222,6 +224,42 @@ defmodule Plushie.Extension do
   defmacro prop(name, type, opts \\ []) do
     quote do
       @_extension_props {unquote(name), unquote(type), unquote(opts)}
+    end
+  end
+
+  @doc """
+  Declares semantic event names emitted by a native or canvas widget.
+
+  Accepts a list of atoms:
+
+      events [:selected, :hovered, :cleared]
+  """
+  defmacro events(names) do
+    caller = __CALLER__
+
+    normalized =
+      case names do
+        list when is_list(list) ->
+          list
+
+        other ->
+          raise CompileError,
+            file: caller.file,
+            line: caller.line,
+            description: "events/1 expects a list of atoms, got: #{Macro.to_string(other)}"
+      end
+
+    unless Enum.all?(normalized, &is_atom/1) do
+      raise CompileError,
+        file: caller.file,
+        line: caller.line,
+        description: "events/1 expects only atom names, got: #{inspect(normalized)}"
+    end
+
+    quote bind_quoted: [names: normalized] do
+      for name <- names do
+        @_extension_events name
+      end
     end
   end
 
@@ -286,11 +324,13 @@ defmodule Plushie.Extension do
     container = Module.get_attribute(env.module, :_extension_container)
     props = Module.get_attribute(env.module, :_extension_props) |> Enum.reverse()
     commands = Module.get_attribute(env.module, :_extension_commands) |> Enum.reverse()
+    events = Module.get_attribute(env.module, :_extension_events) |> Enum.reverse()
 
-    validate_declarations!(env, kind, widget_type)
+    validate_declarations!(env, kind, widget_type, events)
     validate_prop_types!(env, props)
     validate_command_types!(commands)
     warn_duplicate_props(env, props)
+    warn_duplicate_events(env, events)
     validate_reserved_names!(env, props)
 
     if kind == :canvas_widget do
@@ -306,7 +346,7 @@ defmodule Plushie.Extension do
     type_string = Atom.to_string(widget_type)
 
     behaviour_fns =
-      generate_behaviour_fns(kind, widget_type, rust_crate_val, rust_constructor_val)
+      generate_behaviour_fns(kind, widget_type, events, rust_crate_val, rust_constructor_val)
 
     widget_code =
       if kind == :canvas_widget do
@@ -315,13 +355,22 @@ defmodule Plushie.Extension do
           |> Enum.reverse()
 
         prop_validation = generate_prop_validation(props)
-        generate_canvas_widget_new(env.module, type_string, props, state_fields, prop_validation)
+
+        generate_canvas_widget_new(
+          env.module,
+          widget_type,
+          type_string,
+          events,
+          props,
+          state_fields,
+          prop_validation
+        )
       else
         if is_composite do
           prop_validation = generate_prop_validation(props)
           generate_composite_new(type_string, container, props, prop_validation, has_render_3)
         else
-          generate_struct_widget(env.module, type_string, container, props)
+          generate_struct_widget(env.module, widget_type, type_string, container, props, events)
         end
       end
 
@@ -336,7 +385,7 @@ defmodule Plushie.Extension do
     end
   end
 
-  defp validate_declarations!(env, kind, widget_type) do
+  defp validate_declarations!(env, kind, widget_type, events) do
     unless widget_type do
       raise CompileError,
         file: env.file,
@@ -358,6 +407,14 @@ defmodule Plushie.Extension do
           line: 0,
           description: "missing `rust_constructor \"expr\"` in #{inspect(env.module)}"
       end
+    end
+
+    if kind == :widget and events != [] do
+      raise CompileError,
+        file: env.file,
+        line: 0,
+        description:
+          "#{inspect(env.module)} declares custom events, but `events/1` is only supported for :native_widget and :canvas_widget extensions."
     end
   end
 
@@ -390,6 +447,17 @@ defmodule Plushie.Extension do
     if dupes != [] do
       IO.warn(
         "duplicate prop names in #{inspect(env.module)}: #{inspect(Enum.uniq(dupes))}",
+        Macro.Env.stacktrace(env)
+      )
+    end
+  end
+
+  defp warn_duplicate_events(env, events) do
+    dupes = events -- Enum.uniq(events)
+
+    if dupes != [] do
+      IO.warn(
+        "duplicate event names in #{inspect(env.module)}: #{inspect(Enum.uniq(dupes))}",
         Macro.Env.stacktrace(env)
       )
     end
@@ -436,7 +504,15 @@ defmodule Plushie.Extension do
     # don't need event transformation.
   end
 
-  defp generate_canvas_widget_new(module, _type_string, props, state_fields, prop_extract) do
+  defp generate_canvas_widget_new(
+         module,
+         widget_type,
+         _type_string,
+         events,
+         props,
+         state_fields,
+         prop_extract
+       ) do
     prop_struct_fields =
       for {name, _type, opts} <- props do
         default = Keyword.get(opts, :default)
@@ -493,7 +569,9 @@ defmodule Plushie.Extension do
             type: "canvas_widget",
             props: %{
               __canvas_widget__: unquote(module),
-              __canvas_widget_props__: props
+              __canvas_widget_props__: props,
+              __extension_widget_type__: unquote(widget_type),
+              __extension_widget_events__: unquote(events)
             },
             children: []
           }
@@ -544,11 +622,19 @@ defmodule Plushie.Extension do
   # -- Code generation helpers (called at compile time) ----------------------
 
   @doc false
-  def generate_behaviour_fns(kind, widget_type, rust_crate_val, rust_constructor_val) do
+  def generate_behaviour_fns(kind, widget_type, events, rust_crate_val, rust_constructor_val) do
     base =
       quote do
         @impl Plushie.Extension
         def type_names, do: [unquote(widget_type)]
+
+        @doc false
+        @spec __widget_type__() :: atom()
+        def __widget_type__, do: unquote(widget_type)
+
+        @doc false
+        @spec __events__() :: [atom()]
+        def __events__, do: unquote(events)
       end
 
     if kind == :native_widget do
@@ -588,14 +674,16 @@ defmodule Plushie.Extension do
   }
 
   @doc false
-  def generate_struct_widget(module, type_string, container, props) do
+  def generate_struct_widget(module, widget_type, type_string, container, props, events) do
     struct_def = generate_struct_and_types(props, container)
     new_fn = generate_struct_new(container)
     with_options_fn = generate_with_options(props)
     setters = generate_setters(props)
     dsl_fns = generate_dsl_buildable(props)
     build_fn = generate_build()
-    protocol_impl = generate_widget_protocol(module, type_string, container, props)
+
+    protocol_impl =
+      generate_widget_protocol(module, widget_type, type_string, container, props, events)
 
     quote do
       unquote(struct_def)
@@ -928,7 +1016,7 @@ defmodule Plushie.Extension do
     end
   end
 
-  defp generate_widget_protocol(_module, type_string, container, props) do
+  defp generate_widget_protocol(_module, widget_type, type_string, container, props, events) do
     put_calls =
       Enum.map(props, fn {name, type, _opts} ->
         # Color needs casting in to_node because struct defaults bypass setters.
@@ -981,6 +1069,11 @@ defmodule Plushie.Extension do
           unquote_splicing(put_calls)
           unquote(event_rate_put)
           unquote(a11y_put)
+
+          props =
+            props
+            |> Map.put(:__extension_widget_type__, unquote(widget_type))
+            |> Map.put(:__extension_widget_events__, unquote(events))
 
           %{
             id: widget.id,

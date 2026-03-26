@@ -27,7 +27,7 @@ defmodule ThemeToggle do
   # Click on the switch group -> emit :toggle with the new boolean state
   # and flip the animation target so the thumb starts moving.
   @impl Plushie.Extension.CanvasWidget
-  def handle_event(%Plushie.Event.Widget{type: :click, id: "switch"}, state) do
+  def handle_event(%Plushie.Event.WidgetEvent{type: :click, id: "switch"}, state) do
     new_target = if state.target == 0.0, do: 1.0, else: 0.0
     {:emit, :toggle, new_target >= 0.5, %{state | target: new_target}}
   end

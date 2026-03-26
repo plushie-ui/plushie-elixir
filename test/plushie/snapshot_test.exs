@@ -64,8 +64,17 @@ defmodule Plushie.SnapshotTest do
   @moduletag :tmp_dir
 
   setup do
-    # Clean the env var before each test to prevent bleed-over
+    previous = System.get_env("PLUSHIE_UPDATE_SNAPSHOTS")
     System.delete_env("PLUSHIE_UPDATE_SNAPSHOTS")
+
+    on_exit(fn ->
+      if previous do
+        System.put_env("PLUSHIE_UPDATE_SNAPSHOTS", previous)
+      else
+        System.delete_env("PLUSHIE_UPDATE_SNAPSHOTS")
+      end
+    end)
+
     :ok
   end
 

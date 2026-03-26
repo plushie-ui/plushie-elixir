@@ -9,14 +9,15 @@ defmodule ColorPickerWidget do
       ColorPickerWidget.new("picker")
 
   Events:
-  - `:change` with `%{"hue" => h, "saturation" => s, "value" => v}`
+  - `{:color_picker_widget, :change}` with `%{"hue" => h, "saturation" => s, "value" => v}`
   """
 
   use Plushie.Extension, :canvas_widget
 
-  widget :color_picker_widget
+  widget(:color_picker_widget)
+  events([:change])
 
-  state hue: 0.0, saturation: 1.0, value: 1.0, drag: :none
+  state(hue: 0.0, saturation: 1.0, value: 1.0, drag: :none)
 
   # -- Geometry constants ------------------------------------------------------
 
@@ -78,7 +79,7 @@ defmodule ColorPickerWidget do
   end
 
   def handle_event(
-        %Plushie.Event.Widget{
+        %Plushie.Event.WidgetEvent{
           type: :canvas_element_key_press,
           id: element_id,
           data: %{"key" => key, "modifiers" => mods}
@@ -121,19 +122,44 @@ defmodule ColorPickerWidget do
 
     {new_s, new_v} =
       case key do
-        "ArrowRight" -> {clamp(state.saturation + step, 0.0, 1.0), state.value}
-        "ArrowLeft" -> {clamp(state.saturation - step, 0.0, 1.0), state.value}
-        "ArrowUp" -> {state.saturation, clamp(state.value + step, 0.0, 1.0)}
-        "ArrowDown" -> {state.saturation, clamp(state.value - step, 0.0, 1.0)}
-        "PageUp" when shift? -> {clamp(state.saturation + @sv_coarse_step, 0.0, 1.0), state.value}
-        "PageDown" when shift? -> {clamp(state.saturation - @sv_coarse_step, 0.0, 1.0), state.value}
-        "PageUp" -> {state.saturation, clamp(state.value + @sv_coarse_step, 0.0, 1.0)}
-        "PageDown" -> {state.saturation, clamp(state.value - @sv_coarse_step, 0.0, 1.0)}
-        "Home" when shift? -> {0.0, state.value}
-        "End" when shift? -> {1.0, state.value}
-        "Home" -> {state.saturation, 1.0}
-        "End" -> {state.saturation, 0.0}
-        _ -> {state.saturation, state.value}
+        "ArrowRight" ->
+          {clamp(state.saturation + step, 0.0, 1.0), state.value}
+
+        "ArrowLeft" ->
+          {clamp(state.saturation - step, 0.0, 1.0), state.value}
+
+        "ArrowUp" ->
+          {state.saturation, clamp(state.value + step, 0.0, 1.0)}
+
+        "ArrowDown" ->
+          {state.saturation, clamp(state.value - step, 0.0, 1.0)}
+
+        "PageUp" when shift? ->
+          {clamp(state.saturation + @sv_coarse_step, 0.0, 1.0), state.value}
+
+        "PageDown" when shift? ->
+          {clamp(state.saturation - @sv_coarse_step, 0.0, 1.0), state.value}
+
+        "PageUp" ->
+          {state.saturation, clamp(state.value + @sv_coarse_step, 0.0, 1.0)}
+
+        "PageDown" ->
+          {state.saturation, clamp(state.value - @sv_coarse_step, 0.0, 1.0)}
+
+        "Home" when shift? ->
+          {0.0, state.value}
+
+        "End" when shift? ->
+          {1.0, state.value}
+
+        "Home" ->
+          {state.saturation, 1.0}
+
+        "End" ->
+          {state.saturation, 0.0}
+
+        _ ->
+          {state.saturation, state.value}
       end
 
     if new_s != state.saturation or new_v != state.value do
@@ -164,7 +190,8 @@ defmodule ColorPickerWidget do
       on_move: true,
       arrow_mode: "none",
       alt: "HSV color picker",
-      description: "Drag the ring to select a hue, drag the square to adjust saturation and value. Tab to focus cursors, use arrow keys to adjust." do
+      description:
+        "Drag the ring to select a hue, drag the square to adjust saturation and value. Tab to focus cursors, use arrow keys to adjust." do
       layer "a_ring" do
         ring_shapes()
       end

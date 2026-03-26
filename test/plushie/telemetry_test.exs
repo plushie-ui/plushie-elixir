@@ -3,7 +3,7 @@ defmodule Plushie.TelemetryTest do
 
   import ExUnit.CaptureLog
 
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   # ---------------------------------------------------------------------------
   # Minimal app for driving the update/view loop.
@@ -14,7 +14,9 @@ defmodule Plushie.TelemetryTest do
 
     def init(_opts), do: %{value: 0}
 
-    def update(model, %Widget{type: :click, id: "inc"}), do: %{model | value: model.value + 1}
+    def update(model, %WidgetEvent{type: :click, id: "inc"}),
+      do: %{model | value: model.value + 1}
+
     def update(model, _event), do: model
 
     def view(model) do
@@ -94,7 +96,7 @@ defmodule Plushie.TelemetryTest do
 
         stop_id = attach([:plushie, :update, :stop], self())
 
-        Plushie.Runtime.dispatch(runtime, %Widget{type: :click, id: "inc"})
+        Plushie.Runtime.dispatch(runtime, %WidgetEvent{type: :click, id: "inc"})
         # Synchronise -- ensures the event has been processed.
         :sys.get_state(runtime)
 

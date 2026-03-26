@@ -1,7 +1,7 @@
 defmodule Plushie.ScopedIdTest do
   use ExUnit.Case, async: true
 
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
   alias Plushie.Tree
 
   # ---------------------------------------------------------------------------
@@ -215,17 +215,17 @@ defmodule Plushie.ScopedIdTest do
 
   describe "Plushie.Event.target/1" do
     test "no scope returns bare id" do
-      event = %Widget{type: :click, id: "save", scope: []}
+      event = %WidgetEvent{type: :click, id: "save", scope: []}
       assert Plushie.Event.target(event) == "save"
     end
 
     test "with scope returns forward-order path" do
-      event = %Widget{type: :click, id: "save", scope: ["form", "sidebar"]}
+      event = %WidgetEvent{type: :click, id: "save", scope: ["form", "sidebar"]}
       assert Plushie.Event.target(event) == "sidebar/form/save"
     end
 
     test "single scope level" do
-      event = %Widget{type: :click, id: "save", scope: ["panel"]}
+      event = %WidgetEvent{type: :click, id: "save", scope: ["panel"]}
       assert Plushie.Event.target(event) == "panel/save"
     end
   end
@@ -236,32 +236,32 @@ defmodule Plushie.ScopedIdTest do
 
   describe "pattern matching" do
     test "match on local id only (any scope)" do
-      event = %Widget{type: :click, id: "save", scope: ["form", "sidebar"]}
-      assert match?(%Widget{id: "save"}, event)
+      event = %WidgetEvent{type: :click, id: "save", scope: ["form", "sidebar"]}
+      assert match?(%WidgetEvent{id: "save"}, event)
     end
 
     test "match on id + immediate parent" do
-      event = %Widget{type: :click, id: "save", scope: ["form", "sidebar"]}
-      assert match?(%Widget{id: "save", scope: ["form" | _]}, event)
+      event = %WidgetEvent{type: :click, id: "save", scope: ["form", "sidebar"]}
+      assert match?(%WidgetEvent{id: "save", scope: ["form" | _]}, event)
     end
 
     test "match on id + deep scope" do
-      event = %Widget{type: :click, id: "save", scope: ["form", "settings", "app"]}
-      assert match?(%Widget{id: "save", scope: ["form", "settings" | _]}, event)
+      event = %WidgetEvent{type: :click, id: "save", scope: ["form", "settings", "app"]}
+      assert match?(%WidgetEvent{id: "save", scope: ["form", "settings" | _]}, event)
     end
 
     test "bind parent scope for dynamic lists" do
-      event = %Widget{type: :toggle, id: "done", scope: ["item_3", "todo_list"]}
-      %Widget{id: "done", scope: [item_id | _]} = event
+      event = %WidgetEvent{type: :toggle, id: "done", scope: ["item_3", "todo_list"]}
+      %WidgetEvent{id: "done", scope: [item_id | _]} = event
       assert item_id == "item_3"
     end
 
     test "depth-agnostic matching for reusable components" do
-      shallow = %Widget{type: :input, id: "query", scope: ["search"]}
-      deep = %Widget{type: :input, id: "query", scope: ["search", "sidebar", "app"]}
+      shallow = %WidgetEvent{type: :input, id: "query", scope: ["search"]}
+      deep = %WidgetEvent{type: :input, id: "query", scope: ["search", "sidebar", "app"]}
 
-      assert match?(%Widget{id: "query", scope: ["search" | _]}, shallow)
-      assert match?(%Widget{id: "query", scope: ["search" | _]}, deep)
+      assert match?(%WidgetEvent{id: "query", scope: ["search" | _]}, shallow)
+      assert match?(%WidgetEvent{id: "query", scope: ["search" | _]}, deep)
     end
   end
 
@@ -314,8 +314,8 @@ defmodule Plushie.ScopedIdTest do
     end
 
     test "scope binding extracts item ID in pattern match" do
-      event = %Widget{type: :toggle, id: "done", scope: ["item_3", "todo_list"]}
-      %Widget{id: "done", scope: [item_id | _]} = event
+      event = %WidgetEvent{type: :toggle, id: "done", scope: ["item_3", "todo_list"]}
+      %WidgetEvent{id: "done", scope: [item_id | _]} = event
       assert item_id == "item_3"
     end
   end

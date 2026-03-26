@@ -32,8 +32,8 @@ defmodule Plushie.Widget.MouseArea do
 
   Always emitted (unconditional):
 
-  - `%Widget{type: :click, id: id}` -- left mouse button pressed.
-  - `%Widget{type: :click, id: "id:release"}` -- left mouse button released.
+  - `%WidgetEvent{type: :click, id: id}` -- left mouse button pressed.
+  - `%WidgetEvent{type: :click, id: "id:release"}` -- left mouse button released.
 
   Conditional (opt-in via props, delivered as `%MouseArea{}` structs):
 

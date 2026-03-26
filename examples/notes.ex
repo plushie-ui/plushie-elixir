@@ -14,7 +14,7 @@ defmodule Notes do
   use Plushie.App
 
   alias Plushie.{Data, Route, Selection, State, Undo}
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   # -- init ------------------------------------------------------------------
 
@@ -35,7 +35,7 @@ defmodule Notes do
 
   # -- update ----------------------------------------------------------------
 
-  def update(model, %Widget{type: :click, id: "new_note"}) do
+  def update(model, %WidgetEvent{type: :click, id: "new_note"}) do
     state = model.state
     id = State.get(state, [:next_id])
 
@@ -55,7 +55,7 @@ defmodule Notes do
     }
   end
 
-  def update(model, %Widget{type: :click, id: "note:" <> id_str}) do
+  def update(model, %WidgetEvent{type: :click, id: "note:" <> id_str}) do
     id = String.to_integer(id_str)
     notes = State.get(model.state, [:notes])
     note = Enum.find(notes, fn n -> n.id == id end)
@@ -74,14 +74,14 @@ defmodule Notes do
     end
   end
 
-  def update(model, %Widget{type: :click, id: "back"}) do
+  def update(model, %WidgetEvent{type: :click, id: "back"}) do
     model = save_current_edit(model)
     state = State.put(model.state, [:editing_id], nil)
 
     %{model | state: state, route: Route.pop(model.route)}
   end
 
-  def update(model, %Widget{type: :click, id: "delete_selected"}) do
+  def update(model, %WidgetEvent{type: :click, id: "delete_selected"}) do
     selected = Selection.selected(model.selection)
 
     state =
@@ -92,11 +92,11 @@ defmodule Notes do
     %{model | state: state, selection: Selection.clear(model.selection)}
   end
 
-  def update(model, %Widget{type: :input, id: "search", value: query}) do
+  def update(model, %WidgetEvent{type: :input, id: "search", value: query}) do
     %{model | state: State.put(model.state, [:search_query], query)}
   end
 
-  def update(model, %Widget{type: :input, id: "title", value: value}) do
+  def update(model, %WidgetEvent{type: :input, id: "title", value: value}) do
     old_title = Undo.current(model.undo).title
 
     cmd = %{
@@ -108,7 +108,7 @@ defmodule Notes do
     %{model | undo: Undo.apply(model.undo, cmd)}
   end
 
-  def update(model, %Widget{type: :input, id: "body", value: value}) do
+  def update(model, %WidgetEvent{type: :input, id: "body", value: value}) do
     old_text = Undo.current(model.undo).text
 
     cmd = %{
@@ -120,15 +120,15 @@ defmodule Notes do
     %{model | undo: Undo.apply(model.undo, cmd)}
   end
 
-  def update(model, %Widget{type: :click, id: "undo"}) do
+  def update(model, %WidgetEvent{type: :click, id: "undo"}) do
     %{model | undo: Undo.undo(model.undo)}
   end
 
-  def update(model, %Widget{type: :click, id: "redo"}) do
+  def update(model, %WidgetEvent{type: :click, id: "redo"}) do
     %{model | undo: Undo.redo(model.undo)}
   end
 
-  def update(model, %Widget{type: :toggle, id: "note_select:" <> id_str}) do
+  def update(model, %WidgetEvent{type: :toggle, id: "note_select:" <> id_str}) do
     id = String.to_integer(id_str)
     %{model | selection: Selection.toggle(model.selection, id)}
   end

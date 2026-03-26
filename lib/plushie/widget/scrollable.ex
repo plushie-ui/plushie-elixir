@@ -19,7 +19,7 @@ defmodule Plushie.Widget.Scrollable do
   - `id` (string) -- widget ID for programmatic scroll control via `Plushie.Command`.
   - `anchor` (atom) -- scroll anchor: `:start` (default) or `:end` / `:bottom` / `:right`.
     See `Plushie.Type.Anchor`.
-  - `on_scroll` (boolean) -- when `true`, emits `%Widget{type: :scroll, id: id, data: viewport}` events on scroll.
+  - `on_scroll` (boolean) -- when `true`, emits `%WidgetEvent{type: :scroll, id: id, data: viewport}` events on scroll.
     The viewport map contains `absolute_x`, `absolute_y`, `relative_x`, `relative_y`,
     `bounds` (as `{width, height}`), and `content_bounds` (as `{width, height}`).
   - `auto_scroll` (boolean) -- when `true`, automatically scrolls to show new content.

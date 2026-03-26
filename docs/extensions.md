@@ -150,8 +150,9 @@ do not:
   widget ID.
 - **Event transformation** -- `handle_event/2` intercepts events at the
   widget's scope boundary before they reach `update/2`. Raw canvas
-  events become semantic events (`:click`, `:select`, etc.) that are
-  indistinguishable from built-in widget events.
+  events become semantic widget events. Built-in families stay atoms
+  (`:click`, `:select`, etc.). Custom families declared with `events [...]`
+  arrive as `{widget_type, event}` tuples.
 - **Widget-scoped subscriptions** -- `subscribe/2` returns subscriptions
   scoped to this widget instance. Timer events route to `handle_event/2`,
   not the app's `update/2`.
@@ -161,6 +162,7 @@ defmodule MyApp.StarRating do
   use Plushie.Extension, :canvas_widget
 
   widget :star_rating
+  events [:selected]
 
   prop :rating, :integer
   prop :max, :integer, default: 5
@@ -178,7 +180,7 @@ defmodule MyApp.StarRating do
 
   def handle_event(%Canvas{type: :element_click, id: star_id}, _state) do
     {index, _} = Integer.parse(star_id)
-    {:emit, :select, index}
+    {:emit, :selected, index}
   end
 
   def handle_event(_event, _state), do: :ignored
@@ -213,7 +215,8 @@ internal state. It follows iced's captured/ignored model:
 
 Standard event families (`:click`, `:select`, `:toggle`) emitted via
 `{:emit, ...}` produce events that look identical to built-in widget
-events from the app's perspective.
+events from the app's perspective. Custom families declared with
+`events [...]` arrive as `%WidgetEvent{type: {widget_type, event}}`.
 
 #### `subscribe/2`
 
@@ -414,17 +417,17 @@ discrete actions.
 
 ```rust
 // Latest value wins -- position tracking, state snapshots
-let event = OutgoingEvent::extension_event("cursor_pos", node_id, data)
+let event = OutgoingEvent::extension_event("my_plot:cursor_pos", node_id, data)
     .with_coalesce(CoalesceHint::Replace);
 
 // Deltas sum -- scroll, velocity, counters
-let event = OutgoingEvent::extension_event("pan_scroll", node_id, data)
+let event = OutgoingEvent::extension_event("my_plot:pan_scroll", node_id, data)
     .with_coalesce(CoalesceHint::Accumulate(
         vec!["delta_x".into(), "delta_y".into()]
     ));
 
 // No hint -- discrete actions are never coalesced
-let event = OutgoingEvent::extension_event("node_selected", node_id, data);
+let event = OutgoingEvent::extension_event("my_plot:node_selected", node_id, data);
 ```
 
 The hint declares how to coalesce; `event_rate` on the widget node
@@ -533,9 +536,13 @@ use serde_json::json;
 shell.publish(Message::Event(
     self.node_id.clone(),           // node ID (String)
     json!({"key": "value"}),        // event data (serde_json::Value)
-    "my_event_family".to_string(),  // family string (String)
+    "my_widget:my_event_family".to_string(),  // family string (String)
 ));
 ```
+
+Use `widget_type:event_name` for custom extension families. The Elixir SDK
+validates these against the widget's declared `events [...]` list and
+delivers them to the app as `%WidgetEvent{type: {widget_type, event_name}}`.
 
 The event flows through the system like this:
 
@@ -933,7 +940,9 @@ fn tag(&self) -> widget::tree::Tag {
 ### Publishing events from custom widgets
 
 Use `shell.publish(Message::Event(...))` as described in the Message::Event
-construction section above. The `Message` type is re-exported from
+construction section above. Custom families must use the
+`widget_type:event_name` shape and match the widget's declared `events [...]`.
+The `Message` type is re-exported from
 `plushie_ext::prelude`.
 
 ### Full Widget skeleton
@@ -1005,7 +1014,7 @@ impl<'a> Widget<Message, Theme, iced::Renderer> for MyWidget<'a> {
                 shell.publish(Message::Event(
                     self.node_id.clone(),
                     serde_json::json!({"x": 0, "y": 0}),
-                    "my_widget_click".to_string(),
+                    "my_widget:clicked".to_string(),
                 ));
                 shell.capture_event();
                 return event::Status::Captured;

@@ -26,7 +26,7 @@ defmodule Plushie.Widget.Radio do
 
   ## Events
 
-  - `%Widget{type: :select, id: group_or_id, value: value}` -- emitted when this radio is selected.
+  - `%WidgetEvent{type: :select, id: group_or_id, value: value}` -- emitted when this radio is selected.
     The `id` is the `group` prop if set, otherwise the node ID.
   """
 

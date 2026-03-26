@@ -16,10 +16,10 @@ schedule a delayed event. These are commands.
 
 ```elixir
 # No commands -- just return the model:
-def update(model, %Widget{type: :click, id: "simple"}), do: model
+def update(model, %WidgetEvent{type: :click, id: "simple"}), do: model
 
 # With commands -- return a tuple:
-def update(model, %Widget{type: :click, id: "save"}) do
+def update(model, %WidgetEvent{type: :click, id: "save"}) do
   {model, Plushie.Command.async(fn -> save_to_disk(model) end, :save_result)}
 end
 
@@ -46,7 +46,7 @@ Plushie.Command.async(fun, event_tag)
 ```
 
 ```elixir
-def update(model, %Widget{type: :click, id: "fetch"}) do
+def update(model, %WidgetEvent{type: :click, id: "fetch"}) do
   cmd = Plushie.Command.async(fn ->
     {:ok, resp} = HTTP.get("https://api.example.com/data")
     resp.body
@@ -78,7 +78,7 @@ Plushie.Command.stream(fun, event_tag)
 ```
 
 ```elixir
-def update(model, %Widget{type: :click, id: "import"}) do
+def update(model, %WidgetEvent{type: :click, id: "import"}) do
   cmd = Plushie.Command.stream(fn emit ->
     rows =
       "big.csv"
@@ -120,7 +120,7 @@ Plushie.Command.cancel(event_tag)
 ```
 
 ```elixir
-def update(model, %Widget{type: :click, id: "cancel_import"}) do
+def update(model, %WidgetEvent{type: :click, id: "cancel_import"}) do
   {%{model | importing: false}, Plushie.Command.cancel(:file_import)}
 end
 ```
@@ -137,7 +137,7 @@ Plushie.Command.done(value, msg_fn)
 ```
 
 ```elixir
-def update(model, %Widget{type: :click, id: "reset"}) do
+def update(model, %WidgetEvent{type: :click, id: "reset"}) do
   {model, Plushie.Command.done(:defaults, fn v -> {:config_loaded, v} end)}
 end
 ```
@@ -165,7 +165,7 @@ Plushie.Command.focus_previous()           # Focus previous focusable widget
 Example:
 
 ```elixir
-def update(model, %Widget{type: :click, id: "new_todo"}) do
+def update(model, %WidgetEvent{type: :click, id: "new_todo"}) do
   {%{model | input: ""}, Plushie.Command.focus("todo_input")}
 end
 ```
@@ -184,7 +184,7 @@ Plushie.Command.select_range(widget_id, start_pos, end_pos) # Select character r
 Example:
 
 ```elixir
-def update(model, %Widget{type: :click, id: "select_word"}) do
+def update(model, %WidgetEvent{type: :click, id: "select_word"}) do
   {model, Plushie.Command.select_range("editor", 5, 10)}
 end
 ```
@@ -202,7 +202,7 @@ Plushie.Command.scroll_by(widget_id, x, y)     # Scroll by relative delta
 Example:
 
 ```elixir
-def update(model, %Widget{type: :click, id: "scroll_bottom"}) do
+def update(model, %WidgetEvent{type: :click, id: "scroll_bottom"}) do
   {model, Plushie.Command.snap_to_end("chat_log")}
 end
 ```
@@ -246,11 +246,11 @@ Plushie.Command.allow_automatic_tabbing(enabled)               # Enable/disable 
 Example:
 
 ```elixir
-def update(model, %Widget{type: :click, id: "go_fullscreen"}) do
+def update(model, %WidgetEvent{type: :click, id: "go_fullscreen"}) do
   {model, Plushie.Command.set_window_mode("main", :fullscreen)}
 end
 
-def update(model, %Widget{type: :click, id: "pin_on_top"}) do
+def update(model, %WidgetEvent{type: :click, id: "pin_on_top"}) do
   {model, Plushie.Command.set_window_level("main", :always_on_top)}
 end
 ```
@@ -306,7 +306,7 @@ Plushie.Command.monitor_size(window_id, tag)
 Example:
 
 ```elixir
-def update(model, %Widget{type: :click, id: "check_size"}) do
+def update(model, %WidgetEvent{type: :click, id: "check_size"}) do
   {model, Plushie.Command.get_window_size("main", :got_size)}
 end
 
@@ -346,9 +346,9 @@ pass an atom. `Plushie.Command.get_system_theme(:theme_detected)` produces
 on the string, not the atom.
 
 ```elixir
-alias Plushie.Event.{Widget, System}
+alias Plushie.Event.{WidgetEvent, System}
 
-def update(model, %Widget{type: :click, id: "detect_theme"}) do
+def update(model, %WidgetEvent{type: :click, id: "detect_theme"}) do
   {model, Plushie.Command.get_system_theme(:theme_detected)}
 end
 
@@ -374,7 +374,7 @@ Plushie.Command.delete_image(handle)                           # Remove in-memor
 Example:
 
 ```elixir
-def update(model, %Widget{type: :click, id: "load_preview"}) do
+def update(model, %WidgetEvent{type: :click, id: "load_preview"}) do
   cmd = Plushie.Command.async(fn ->
     File.read!("preview.png")
   end, :preview_loaded)
@@ -402,7 +402,7 @@ Plushie.Command.pane_restore(widget_id)                         # Restore from m
 Example:
 
 ```elixir
-def update(model, %Widget{type: :click, id: "split_editor"}) do
+def update(model, %WidgetEvent{type: :click, id: "split_editor"}) do
   cmd = Plushie.Command.pane_split("pane_grid", "editor", :horizontal, "new_editor")
   {model, cmd}
 end
@@ -416,7 +416,7 @@ Plushie.Command.send_after(delay_ms, event)  # Send event after delay
 ```
 
 ```elixir
-def update(model, %Widget{type: :click, id: "flash_message"}) do
+def update(model, %WidgetEvent{type: :click, id: "flash_message"}) do
   model = %{model | message: "Saved!"}
   cmd = Plushie.Command.send_after(3000, :clear_message)
   {model, cmd}
@@ -483,7 +483,7 @@ updates and UI refreshes at every link in the chain, not just at the end.
 
 ```elixir
 # Step 1: user clicks "deploy" -- validate first
-def update(model, %Widget{type: :click, id: "deploy"}) do
+def update(model, %WidgetEvent{type: :click, id: "deploy"}) do
   cmd = Plushie.Command.async(fn -> validate_config(model.config) end, :validated)
   {%{model | status: :validating}, cmd}
 end
@@ -526,7 +526,7 @@ The runtime is a `GenServer`. You can send messages to it directly from
 any process, and they arrive as events in `update/2`:
 
 ```elixir
-def update(model, %Widget{type: :click, id: "import"}) do
+def update(model, %WidgetEvent{type: :click, id: "import"}) do
   runtime = self()
 
   pid = spawn_link(fn ->
@@ -558,7 +558,7 @@ end
 If you track the PID yourself, cancellation is just `Process.exit/2`:
 
 ```elixir
-def update(model, %Widget{type: :click, id: "cancel_import"}) do
+def update(model, %WidgetEvent{type: :click, id: "cancel_import"}) do
   if model.import_pid, do: Process.exit(model.import_pid, :kill)
   %{model | importing: false, import_pid: nil}
 end
@@ -597,7 +597,7 @@ effects that the runtime executes after `update` returns. This keeps
 
 ```elixir
 test "clicking fetch returns async command" do
-  {model, cmd} = MyApp.update(%{loading: false}, %Widget{type: :click, id: "fetch"})
+  {model, cmd} = MyApp.update(%{loading: false}, %WidgetEvent{type: :click, id: "fetch"})
   assert model.loading == true
   assert %Plushie.Command{type: :async} = cmd
 end
@@ -825,11 +825,11 @@ def subscribe(model) do
   end
 end
 
-def update(model, %Widget{type: :click, id: "start_polling"}) do
+def update(model, %WidgetEvent{type: :click, id: "start_polling"}) do
   %{model | polling: true}
 end
 
-def update(model, %Widget{type: :click, id: "stop_polling"}) do
+def update(model, %WidgetEvent{type: :click, id: "stop_polling"}) do
   %{model | polling: false}
 end
 

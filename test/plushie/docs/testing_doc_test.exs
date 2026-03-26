@@ -8,21 +8,21 @@ defmodule Plushie.Docs.TestingDocTest.TodoApp do
   use Plushie.App
 
   alias Plushie.Docs.TestingDocTest.Todo
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   def init(_opts), do: %{todos: [], input: ""}
 
-  def update(model, %Widget{type: :input, id: "todo_input", value: val}),
+  def update(model, %WidgetEvent{type: :input, id: "todo_input", value: val}),
     do: %{model | input: val}
 
-  def update(model, %Widget{type: :submit, id: "todo_input", value: val}) do
+  def update(model, %WidgetEvent{type: :submit, id: "todo_input", value: val}) do
     {
       %{model | todos: model.todos ++ [%Todo{text: val}], input: ""},
       Plushie.Command.focus("todo_input")
     }
   end
 
-  def update(model, %Widget{type: :click, id: "add_todo"}) do
+  def update(model, %WidgetEvent{type: :click, id: "add_todo"}) do
     %{model | todos: model.todos ++ [%Todo{text: model.input}], input: ""}
   end
 
@@ -44,14 +44,14 @@ end
 defmodule Plushie.Docs.TestingDocTest.CounterApp do
   use Plushie.App
 
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   def init(_opts), do: %{count: 0}
 
-  def update(model, %Widget{type: :click, id: "increment"}),
+  def update(model, %WidgetEvent{type: :click, id: "increment"}),
     do: %{model | count: model.count + 1}
 
-  def update(model, %Widget{type: :click, id: "decrement"}),
+  def update(model, %WidgetEvent{type: :click, id: "decrement"}),
     do: %{model | count: model.count - 1}
 
   def update(model, _event), do: model
@@ -72,11 +72,11 @@ end
 defmodule Plushie.Docs.TestingDocTest.SaveApp do
   use Plushie.App
 
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   def init(_opts), do: %{data: "unsaved"}
 
-  def update(model, %Widget{type: :click, id: "save"}) do
+  def update(model, %WidgetEvent{type: :click, id: "save"}) do
     {model, Plushie.Command.async(fn -> :ok end, :save_result)}
   end
 
@@ -109,7 +109,7 @@ defmodule Plushie.Docs.TestingDocTest do
 
   test "testing_doc_adding_a_todo_appends_and_clears_input_test" do
     model = %{todos: [], input: "Buy milk"}
-    model = TodoApp.update(model, %Plushie.Event.Widget{type: :click, id: "add_todo"})
+    model = TodoApp.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "add_todo"})
 
     assert [%Todo{text: "Buy milk", done: false}] = model.todos
     assert model.input == ""
@@ -121,7 +121,7 @@ defmodule Plushie.Docs.TestingDocTest do
     model = %{todos: [], input: "Buy milk"}
 
     {model, cmd} =
-      TodoApp.update(model, %Plushie.Event.Widget{
+      TodoApp.update(model, %Plushie.Event.WidgetEvent{
         type: :submit,
         id: "todo_input",
         value: "Buy milk"
@@ -133,7 +133,7 @@ defmodule Plushie.Docs.TestingDocTest do
 
   test "testing_doc_save_triggers_async_task_test" do
     model = %{data: "unsaved"}
-    {_model, cmd} = SaveApp.update(model, %Plushie.Event.Widget{type: :click, id: "save"})
+    {_model, cmd} = SaveApp.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "save"})
 
     assert %Plushie.Command{type: :async, payload: %{tag: :save_result}} = cmd
   end

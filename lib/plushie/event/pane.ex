@@ -18,8 +18,8 @@ defmodule Plushie.Event.Pane do
     * `ratio` - new split ratio after resize (0.0 to 1.0)
     * `target` - drop target pane when dragging
     * `action` - drag action: `:picked`, `:dropped`, or `:canceled`
-    * `region` - drop region: `:center`, `:top`, `:bottom`, `:left`, `:right`
-    * `edge` - edge drop target: `:top`, `:bottom`, `:left`, `:right`
+    * `region` - drop region: `:center`, `:top`, `:bottom`, `:left`, or `:right`
+    * `edge` - edge drop target: `:top`, `:bottom`, `:left`, or `:right`
 
   ## Pattern matching
 

@@ -3,19 +3,19 @@ defmodule Counter do
   Minimal counter example.
 
   Demonstrates:
-  - Button click handling via `%Widget{type: :click}`
+  - Button click handling via `%WidgetEvent{type: :click}`
   - Model updates from events
   - Basic column/row layout
   """
 
   use Plushie.App
 
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   def init(_opts), do: %{count: 0}
 
-  def update(model, %Widget{type: :click, id: "increment"}), do: %{model | count: model.count + 1}
-  def update(model, %Widget{type: :click, id: "decrement"}), do: %{model | count: model.count - 1}
+  def update(model, %WidgetEvent{type: :click, id: "increment"}), do: %{model | count: model.count + 1}
+  def update(model, %WidgetEvent{type: :click, id: "decrement"}), do: %{model | count: model.count - 1}
   def update(model, _event), do: model
 
   def view(model) do

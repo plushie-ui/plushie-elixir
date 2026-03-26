@@ -20,7 +20,7 @@ defmodule Examples.ColorPickerWidgetTest do
     press("Tab")
     press("Tab")
     press("ArrowRight")
-    assert last_event().type == :change
+    assert last_event().type == {:color_picker_widget, :change}
     assert_in_delta model().hue, 1.0, 0.5
   end
 
@@ -94,7 +94,7 @@ defmodule Examples.ColorPickerWidgetTest do
 
   test "press on ring at right side sets hue near 90" do
     canvas_press("#picker", 370.0, 200.0)
-    assert last_event().type == :change
+    assert last_event().type == {:color_picker_widget, :change}
     assert_in_delta model().hue, 90.0, 2.0
   end
 

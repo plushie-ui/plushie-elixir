@@ -1,17 +1,17 @@
 defmodule Plushie.Test.SessionTest do
   use Plushie.Test.Case, app: Plushie.Test.SessionTest.CounterApp
 
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   defmodule CounterApp do
     use Plushie.App
 
     def init(_opts), do: %{count: 0}
 
-    def update(model, %Widget{type: :click, id: "increment"}),
+    def update(model, %WidgetEvent{type: :click, id: "increment"}),
       do: %{model | count: model.count + 1}
 
-    def update(model, %Widget{type: :click, id: "decrement"}),
+    def update(model, %WidgetEvent{type: :click, id: "decrement"}),
       do: %{model | count: model.count - 1}
 
     def update(model, _event), do: model

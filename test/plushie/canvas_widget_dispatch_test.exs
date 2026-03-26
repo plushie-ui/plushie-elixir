@@ -9,6 +9,8 @@ defmodule Plushie.CanvasWidgetDispatchTest do
 
   use ExUnit.Case, async: true
 
+  import ExUnit.CaptureLog
+
   alias Plushie.Extension.CanvasWidget
   alias Plushie.Runtime.CanvasWidgets
 
@@ -52,6 +54,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
     @moduledoc false
     use Plushie.Extension, :canvas_widget
     widget(:emit_widget)
+    events([:activated])
 
     @impl true
     def handle_event(%{type: :click} = _event, state) do
@@ -118,7 +121,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
       {{:emit, widget_event}, _state} =
         CanvasWidget.invoke_handler(EmitWidget, click_event("elem", ["widget"]), %{}, "widget")
 
-      assert widget_event.type == :activated
+      assert widget_event.type == {:emit_widget, :activated}
       assert widget_event.data["source"] == "emit_widget"
       assert widget_event.id == "widget"
     end
@@ -184,7 +187,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
       {event, _registry} =
         CanvasWidgets.dispatch_event(registry, click_event("elem", ["widget"]))
 
-      assert event.type == :activated
+      assert event.type == {:emit_widget, :activated}
       assert event.data["source"] == "emit_widget"
     end
   end
@@ -244,8 +247,8 @@ defmodule Plushie.CanvasWidgetDispatchTest do
       {event, _registry} =
         CanvasWidgets.dispatch_event(registry, click_event("elem", ["child", "parent"]))
 
-      # Child emits :activated → parent ignores → event reaches app
-      assert event.type == :activated
+      # Child emits {:emit_widget, :activated} → parent ignores → event reaches app
+      assert event.type == {:emit_widget, :activated}
     end
 
     test "non-widget scope elements are skipped" do
@@ -392,12 +395,17 @@ defmodule Plushie.CanvasWidgetDispatchTest do
         "widget" => %{module: RaisingWidget, state: %{}}
       }
 
-      {event, _registry} =
-        CanvasWidgets.dispatch_event(registry, click_event("elem", ["widget"]))
+      log =
+        capture_log(fn ->
+          {event, _registry} =
+            CanvasWidgets.dispatch_event(registry, click_event("elem", ["widget"]))
 
-      # RaisingWidget raises on :click -> treated as :ignored -> event passes through
-      assert event.type == :click
-      assert event.id == "elem"
+          # RaisingWidget raises on :click -> treated as :ignored -> event passes through
+          assert event.type == :click
+          assert event.id == "elem"
+        end)
+
+      assert log =~ "kaboom from RaisingWidget"
     end
 
     test "raising child is :ignored, parent still captures" do
@@ -406,18 +414,23 @@ defmodule Plushie.CanvasWidgetDispatchTest do
         "parent" => %{module: ConsumedWidget, state: %{}}
       }
 
-      {event, _registry} =
-        CanvasWidgets.dispatch_event(registry, click_event("elem", ["child", "parent"]))
+      log =
+        capture_log(fn ->
+          {event, _registry} =
+            CanvasWidgets.dispatch_event(registry, click_event("elem", ["child", "parent"]))
 
-      # Child raises (treated as :ignored) -> parent consumes -> nil
-      assert event == nil
+          # Child raises (treated as :ignored) -> parent consumes -> nil
+          assert event == nil
+        end)
+
+      assert log =~ "kaboom from RaisingWidget"
     end
   end
 
   # -- Helpers -----------------------------------------------------------------
 
   defp click_event(id, scope \\ []) do
-    %Plushie.Event.Widget{type: :click, id: id, scope: scope}
+    %Plushie.Event.WidgetEvent{type: :click, id: id, scope: scope}
   end
 
   defp canvas_event(id, scope) do

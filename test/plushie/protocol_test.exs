@@ -9,7 +9,7 @@ defmodule Plushie.ProtocolTest do
   alias Plushie.Event.MouseArea
   alias Plushie.Event.System, as: SystemEvent
   alias Plushie.Event.Touch
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   alias Plushie.Protocol
 
@@ -112,15 +112,15 @@ defmodule Plushie.ProtocolTest do
   # ---------------------------------------------------------------------------
 
   describe "decode_message/1 -- click events" do
-    test "decodes a click event to %Widget{type: :click, id: id}" do
+    test "decodes a click event to %WidgetEvent{type: :click, id: id}" do
       json = Jason.encode!(%{type: "event", family: "click", id: "btn_save"})
-      assert Protocol.decode_message(json, :json) == %Widget{type: :click, id: "btn_save"}
+      assert Protocol.decode_message(json, :json) == %WidgetEvent{type: :click, id: "btn_save"}
     end
 
     test "scoped widget id is split into local id and scope" do
       json = Jason.encode!(%{type: "event", family: "click", id: "panel/submit"})
 
-      assert %Widget{type: :click, id: "submit", scope: ["panel"]} =
+      assert %WidgetEvent{type: :click, id: "submit", scope: ["panel"]} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -129,7 +129,7 @@ defmodule Plushie.ProtocolTest do
     test "decodes an input event to {:input, id, value}" do
       json = Jason.encode!(%{type: "event", family: "input", id: "search", value: "elixir"})
 
-      assert Protocol.decode_message(json, :json) == %Widget{
+      assert Protocol.decode_message(json, :json) == %WidgetEvent{
                type: :input,
                id: "search",
                value: "elixir"
@@ -138,7 +138,9 @@ defmodule Plushie.ProtocolTest do
 
     test "preserves an empty string value" do
       json = Jason.encode!(%{type: "event", family: "input", id: "field", value: ""})
-      assert %Widget{type: :input, id: "field", value: ""} = Protocol.decode_message(json, :json)
+
+      assert %WidgetEvent{type: :input, id: "field", value: ""} =
+               Protocol.decode_message(json, :json)
     end
   end
 
@@ -146,7 +148,7 @@ defmodule Plushie.ProtocolTest do
     test "decodes a submit event to {:submit, id, value}" do
       json = Jason.encode!(%{type: "event", family: "submit", id: "login_form", value: "admin"})
 
-      assert Protocol.decode_message(json, :json) == %Widget{
+      assert Protocol.decode_message(json, :json) == %WidgetEvent{
                type: :submit,
                id: "login_form",
                value: "admin"
@@ -158,7 +160,7 @@ defmodule Plushie.ProtocolTest do
     test "decodes a toggle event to {:toggle, id, value}" do
       json = Jason.encode!(%{type: "event", family: "toggle", id: "dark_mode", value: true})
 
-      assert Protocol.decode_message(json, :json) == %Widget{
+      assert Protocol.decode_message(json, :json) == %WidgetEvent{
                type: :toggle,
                id: "dark_mode",
                value: true
@@ -168,7 +170,7 @@ defmodule Plushie.ProtocolTest do
     test "decodes a toggle-off correctly" do
       json = Jason.encode!(%{type: "event", family: "toggle", id: "dark_mode", value: false})
 
-      assert %Widget{type: :toggle, id: "dark_mode", value: false} =
+      assert %WidgetEvent{type: :toggle, id: "dark_mode", value: false} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -177,7 +179,7 @@ defmodule Plushie.ProtocolTest do
     test "decodes a select event to {:select, id, value}" do
       json = Jason.encode!(%{type: "event", family: "select", id: "lang_picker", value: "fr"})
 
-      assert Protocol.decode_message(json, :json) == %Widget{
+      assert Protocol.decode_message(json, :json) == %WidgetEvent{
                type: :select,
                id: "lang_picker",
                value: "fr"
@@ -189,7 +191,7 @@ defmodule Plushie.ProtocolTest do
     test "decodes a slide event to {:slide, id, value}" do
       json = Jason.encode!(%{type: "event", family: "slide", id: "volume", value: 0.75})
 
-      assert Protocol.decode_message(json, :json) == %Widget{
+      assert Protocol.decode_message(json, :json) == %WidgetEvent{
                type: :slide,
                id: "volume",
                value: 0.75
@@ -198,7 +200,9 @@ defmodule Plushie.ProtocolTest do
 
     test "value can be an integer" do
       json = Jason.encode!(%{type: "event", family: "slide", id: "zoom", value: 100})
-      assert %Widget{type: :slide, id: "zoom", value: 100} = Protocol.decode_message(json, :json)
+
+      assert %WidgetEvent{type: :slide, id: "zoom", value: 100} =
+               Protocol.decode_message(json, :json)
     end
   end
 
@@ -206,7 +210,7 @@ defmodule Plushie.ProtocolTest do
     test "decodes a slide_release event to {:slide_release, id, value}" do
       json = Jason.encode!(%{type: "event", family: "slide_release", id: "scrubber", value: 42.0})
 
-      assert Protocol.decode_message(json, :json) == %Widget{
+      assert Protocol.decode_message(json, :json) == %WidgetEvent{
                type: :slide_release,
                id: "scrubber",
                value: 42.0
@@ -295,6 +299,45 @@ defmodule Plushie.ProtocolTest do
         })
 
       assert %Key{type: :release, key: :enter} = Protocol.decode_message(json, :json)
+    end
+
+    test "decodes legacy key payload from top-level value" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "key_press",
+          modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false},
+          value: "Escape"
+        })
+
+      assert %Key{type: :press, key: :escape} = Protocol.decode_message(json, :json)
+    end
+
+    test "decodes modifiers nested under data" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "key_press",
+          data: %{
+            key: "s",
+            modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false}
+          }
+        })
+
+      assert %Key{type: :press, key: "s", modifiers: %Plushie.KeyModifiers{ctrl: true}} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "rejects malformed key event without a key" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "key_press",
+          modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false},
+          data: %{}
+        })
+
+      assert {:error, {:unknown_message, _}} = Protocol.decode_message(json, :json)
     end
 
     test "decodes extra key event fields (nested data from Rust)" do
@@ -470,12 +513,14 @@ defmodule Plushie.ProtocolTest do
   # ---------------------------------------------------------------------------
 
   describe "decode_message/1 -- error cases" do
-    test "returns {:error, :decode_failed} for non-JSON input" do
-      assert Protocol.decode_message("not json", :json) == {:error, :decode_failed}
+    test "returns detailed decode error for non-JSON input" do
+      assert {:error, {:decode_failed, %Jason.DecodeError{}}} =
+               Protocol.decode_message("not json", :json)
     end
 
-    test "returns {:error, :decode_failed} for empty string" do
-      assert Protocol.decode_message("", :json) == {:error, :decode_failed}
+    test "returns detailed decode error for empty string" do
+      assert {:error, {:decode_failed, %Jason.DecodeError{}}} =
+               Protocol.decode_message("", :json)
     end
 
     test "returns {:error, {:unknown_message, _}} for a JSON object with an unrecognised type" do
@@ -483,11 +528,52 @@ defmodule Plushie.ProtocolTest do
       assert {:error, {:unknown_message, _}} = Protocol.decode_message(json, :json)
     end
 
-    test "unknown event family dispatches as generic Widget event" do
+    test "unknown built-in event family returns protocol error" do
       json = Jason.encode!(%{type: "event", family: "levitate", id: "wizard"})
 
-      assert %Plushie.Event.Widget{type: "levitate", id: "wizard"} =
+      assert {:error, {:unknown_event_family, "levitate", _}} =
                Protocol.decode_message(json, :json)
+    end
+
+    test "non-binary event family returns protocol error" do
+      json = Jason.encode!(%{type: "event", family: 123, id: "wizard"})
+
+      assert {:error, {:unknown_event_family, 123, _}} = Protocol.decode_message(json, :json)
+    end
+
+    test "extension event family dispatches as widget event" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "wizard:levitate",
+          id: "wizard",
+          data: %{speed: "fast"}
+        })
+
+      assert %Plushie.Event.WidgetEvent{
+               type: "wizard:levitate",
+               id: "wizard",
+               data: %{"speed" => "fast"}
+             } =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "malformed widget id returns unknown_message instead of crashing" do
+      json = Jason.encode!(%{type: "event", family: "click", id: 123})
+      assert {:error, {:unknown_message, _}} = Protocol.decode_message(json, :json)
+    end
+
+    test "decode_message! raises protocol error for invalid known enum" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "wheel_scrolled",
+          data: %{delta_x: 1, delta_y: 2, unit: "page"}
+        })
+
+      assert_raise Plushie.Protocol.Error, ~r/invalid wheel_scrolled event field unit/, fn ->
+        Protocol.decode_message!(json, :json)
+      end
     end
 
     test "the unknown_message tuple carries the decoded map" do
@@ -783,13 +869,13 @@ defmodule Plushie.ProtocolTest do
     test "click event survives JSON roundtrip" do
       # Simulate what the renderer would send back
       json = Jason.encode!(%{type: "event", family: "click", id: "btn_1"})
-      assert %Widget{type: :click, id: "btn_1"} = Protocol.decode_message(json, :json)
+      assert %WidgetEvent{type: :click, id: "btn_1"} = Protocol.decode_message(json, :json)
     end
 
     test "input event survives JSON roundtrip" do
       json = Jason.encode!(%{type: "event", family: "input", id: "field", value: "hello"})
 
-      assert %Widget{type: :input, id: "field", value: "hello"} =
+      assert %WidgetEvent{type: :input, id: "field", value: "hello"} =
                Protocol.decode_message(json, :json)
     end
 
@@ -932,14 +1018,14 @@ defmodule Plushie.ProtocolTest do
     test "event decode from msgpack" do
       event = %{"type" => "event", "family" => "click", "id" => "btn1"}
       packed = Msgpax.pack!(event, iodata: false)
-      assert %Widget{type: :click, id: "btn1"} = Protocol.decode_message(packed, :msgpack)
+      assert %WidgetEvent{type: :click, id: "btn1"} = Protocol.decode_message(packed, :msgpack)
     end
 
     test "input event decode from msgpack" do
       event = %{"type" => "event", "family" => "input", "id" => "field", "value" => "hello"}
       packed = Msgpax.pack!(event, iodata: false)
 
-      assert %Widget{type: :input, id: "field", value: "hello"} =
+      assert %WidgetEvent{type: :input, id: "field", value: "hello"} =
                Protocol.decode_message(packed, :msgpack)
     end
 
@@ -971,8 +1057,8 @@ defmodule Plushie.ProtocolTest do
                Protocol.decode_message(packed, :msgpack)
     end
 
-    test "invalid msgpack returns {:error, :decode_failed}" do
-      assert {:error, :decode_failed} = Protocol.decode_message(<<0xFF, 0xFF>>, :msgpack)
+    test "invalid msgpack returns detailed decode error" do
+      assert {:error, {:decode_failed, _}} = Protocol.decode_message(<<0xFF, 0xFF>>, :msgpack)
     end
   end
 
@@ -996,6 +1082,14 @@ defmodule Plushie.ProtocolTest do
       assert decoded["type"] == "extension_command"
       assert decoded["node_id"] == "ext-1"
       assert decoded["op"] == "reset"
+    end
+
+    test "round-trips through decode_message" do
+      encoded =
+        Protocol.encode_extension_command("term-1", "write", %{"data" => "hello"}, :msgpack)
+
+      assert {:extension_command, "term-1", "write", %{"data" => "hello"}} =
+               Protocol.decode_message(encoded, :msgpack)
     end
   end
 
@@ -1121,6 +1215,56 @@ defmodule Plushie.ProtocolTest do
       assert decoded["type"] == "extension_commands"
       assert length(decoded["commands"]) == 1
     end
+
+    test "round-trips through decode_message" do
+      commands = [{"n1", "op1", %{"k" => "v"}}]
+      encoded = Protocol.encode_extension_commands(commands, :msgpack)
+
+      assert {:extension_commands,
+              [%{"node_id" => "n1", "op" => "op1", "payload" => %{"k" => "v"}}]} =
+               Protocol.decode_message(encoded, :msgpack)
+    end
+  end
+
+  describe "decode_message/1 -- outbound protocol messages" do
+    test "decodes image_op messages" do
+      encoded = Protocol.encode_image_op("delete_image", %{handle: "logo"}, :msgpack)
+
+      assert {:image_op, "delete_image", %{"handle" => "logo"}} =
+               Protocol.decode_message(encoded, :msgpack)
+    end
+
+    test "decodes interact messages" do
+      encoded =
+        Protocol.encode_interact(
+          "req-1",
+          "click",
+          %{"by" => "id", "value" => "save"},
+          %{"button" => "left"},
+          :msgpack
+        )
+
+      assert {:interact, "req-1", "click", %{"by" => "id", "value" => "save"},
+              %{"button" => "left"}} =
+               Protocol.decode_message(encoded, :msgpack)
+    end
+
+    test "decodes advance_frame messages" do
+      encoded = Protocol.encode_advance_frame(123, :msgpack)
+      assert {:advance_frame, 123} = Protocol.decode_message(encoded, :msgpack)
+    end
+
+    test "decodes effect stub registration messages" do
+      encoded = Protocol.encode_register_effect_stub("clipboard", %{"ok" => true}, :msgpack)
+
+      assert {:register_effect_stub, "clipboard", %{"ok" => true}} =
+               Protocol.decode_message(encoded, :msgpack)
+    end
+
+    test "decodes effect stub removal messages" do
+      encoded = Protocol.encode_unregister_effect_stub("clipboard", :msgpack)
+      assert {:unregister_effect_stub, "clipboard"} = Protocol.decode_message(encoded, :msgpack)
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -1186,7 +1330,7 @@ defmodule Plushie.ProtocolTest do
           data: %{element_id: "btn-1", x: 10.0, y: 20.0}
         })
 
-      assert %Widget{type: :canvas_element_enter, id: "my_canvas", data: data} =
+      assert %WidgetEvent{type: :canvas_element_enter, id: "my_canvas", data: data} =
                Protocol.decode_message(json, :json)
 
       assert data["element_id"] == "btn-1"
@@ -1201,7 +1345,7 @@ defmodule Plushie.ProtocolTest do
           data: %{element_id: "btn-1"}
         })
 
-      assert %Widget{type: :canvas_element_leave, id: "my_canvas", data: data} =
+      assert %WidgetEvent{type: :canvas_element_leave, id: "my_canvas", data: data} =
                Protocol.decode_message(json, :json)
 
       assert data["element_id"] == "btn-1"
@@ -1216,7 +1360,7 @@ defmodule Plushie.ProtocolTest do
           data: %{element_id: "btn-1", x: 15.0, y: 25.0}
         })
 
-      assert %Widget{type: :canvas_element_click, id: "my_canvas", data: data} =
+      assert %WidgetEvent{type: :canvas_element_click, id: "my_canvas", data: data} =
                Protocol.decode_message(json, :json)
 
       assert data["element_id"] == "btn-1"
@@ -1231,7 +1375,7 @@ defmodule Plushie.ProtocolTest do
           data: %{element_id: "handle-1", x: 50.0, y: 60.0, dx: 5.0, dy: -3.0}
         })
 
-      assert %Widget{type: :canvas_element_drag, id: "my_canvas", data: data} =
+      assert %WidgetEvent{type: :canvas_element_drag, id: "my_canvas", data: data} =
                Protocol.decode_message(json, :json)
 
       assert data["element_id"] == "handle-1"
@@ -1247,7 +1391,7 @@ defmodule Plushie.ProtocolTest do
           data: %{element_id: "handle-1", x: 55.0, y: 57.0}
         })
 
-      assert %Widget{type: :canvas_element_drag_end, id: "my_canvas", data: data} =
+      assert %WidgetEvent{type: :canvas_element_drag_end, id: "my_canvas", data: data} =
                Protocol.decode_message(json, :json)
 
       assert data["element_id"] == "handle-1"
@@ -1262,7 +1406,7 @@ defmodule Plushie.ProtocolTest do
           data: %{element_id: "input-1", focused: true}
         })
 
-      assert %Widget{type: :canvas_element_focused, id: "my_canvas", data: data} =
+      assert %WidgetEvent{type: :canvas_element_focused, id: "my_canvas", data: data} =
                Protocol.decode_message(json, :json)
 
       assert data["element_id"] == "input-1"
@@ -1277,7 +1421,7 @@ defmodule Plushie.ProtocolTest do
           data: %{element_id: "btn-1"}
         })
 
-      assert %Widget{
+      assert %WidgetEvent{
                type: :canvas_element_click,
                id: "my_canvas",
                scope: ["panel"],

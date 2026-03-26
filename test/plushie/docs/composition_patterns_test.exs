@@ -8,13 +8,13 @@ defmodule Plushie.Docs.CompositionPatternsTest do
   defmodule TabApp do
     use Plushie.App
 
-    alias Plushie.Event.Widget
+    alias Plushie.Event.WidgetEvent
     alias Plushie.Type.Border
     alias Plushie.Type.StyleMap
 
     def init(_opts), do: %{active_tab: :overview}
 
-    def update(model, %Widget{type: :click, id: "tab:" <> name}) do
+    def update(model, %WidgetEvent{type: :click, id: "tab:" <> name}) do
       %{model | active_tab: String.to_existing_atom(name)}
     end
 
@@ -74,7 +74,7 @@ defmodule Plushie.Docs.CompositionPatternsTest do
 
   test "composition_patterns_tab_bar_click_changes_active_tab_test" do
     model = TabApp.init([])
-    model = TabApp.update(model, %Plushie.Event.Widget{type: :click, id: "tab:settings"})
+    model = TabApp.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "tab:settings"})
     assert model.active_tab == :settings
   end
 
@@ -107,7 +107,7 @@ defmodule Plushie.Docs.CompositionPatternsTest do
   defmodule SidebarApp do
     use Plushie.App
 
-    alias Plushie.Event.Widget
+    alias Plushie.Event.WidgetEvent
     alias Plushie.Type.StyleMap
 
     @nav_items [
@@ -119,7 +119,7 @@ defmodule Plushie.Docs.CompositionPatternsTest do
 
     def init(_opts), do: %{page: :inbox}
 
-    def update(model, %Widget{type: :click, id: "nav:" <> name}) do
+    def update(model, %WidgetEvent{type: :click, id: "nav:" <> name}) do
       %{model | page: String.to_existing_atom(name)}
     end
 
@@ -178,7 +178,7 @@ defmodule Plushie.Docs.CompositionPatternsTest do
 
   test "composition_patterns_sidebar_click_changes_page_test" do
     model = SidebarApp.init([])
-    model = SidebarApp.update(model, %Plushie.Event.Widget{type: :click, id: "nav:sent"})
+    model = SidebarApp.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "nav:sent"})
     assert model.page == :sent
   end
 
@@ -214,20 +214,20 @@ defmodule Plushie.Docs.CompositionPatternsTest do
   defmodule ModalApp do
     use Plushie.App
 
-    alias Plushie.Event.Widget
+    alias Plushie.Event.WidgetEvent
     alias Plushie.Type.Border
     alias Plushie.Type.Shadow
     alias Plushie.Type.StyleMap
 
     def init(_opts), do: %{show_modal: false, confirmed: false}
 
-    def update(model, %Widget{type: :click, id: "open_modal"}),
+    def update(model, %WidgetEvent{type: :click, id: "open_modal"}),
       do: %{model | show_modal: true}
 
-    def update(model, %Widget{type: :click, id: "confirm"}),
+    def update(model, %WidgetEvent{type: :click, id: "confirm"}),
       do: %{model | show_modal: false, confirmed: true}
 
-    def update(model, %Widget{type: :click, id: "cancel"}),
+    def update(model, %WidgetEvent{type: :click, id: "cancel"}),
       do: %{model | show_modal: false}
 
     def update(model, _event), do: model
@@ -303,20 +303,20 @@ defmodule Plushie.Docs.CompositionPatternsTest do
 
   test "composition_patterns_modal_open_test" do
     model = ModalApp.init([])
-    model = ModalApp.update(model, %Plushie.Event.Widget{type: :click, id: "open_modal"})
+    model = ModalApp.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "open_modal"})
     assert model.show_modal == true
   end
 
   test "composition_patterns_modal_confirm_test" do
     model = %{show_modal: true, confirmed: false}
-    model = ModalApp.update(model, %Plushie.Event.Widget{type: :click, id: "confirm"})
+    model = ModalApp.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "confirm"})
     assert model.show_modal == false
     assert model.confirmed == true
   end
 
   test "composition_patterns_modal_cancel_test" do
     model = %{show_modal: true, confirmed: false}
-    model = ModalApp.update(model, %Plushie.Event.Widget{type: :click, id: "cancel"})
+    model = ModalApp.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "cancel"})
     assert model.show_modal == false
     assert model.confirmed == false
   end
@@ -425,7 +425,7 @@ defmodule Plushie.Docs.CompositionPatternsTest do
   defmodule SplitApp do
     use Plushie.App
 
-    alias Plushie.Event.Widget
+    alias Plushie.Event.WidgetEvent
 
     def init(_opts), do: %{left_width: 300}
 
@@ -492,11 +492,11 @@ defmodule Plushie.Docs.CompositionPatternsTest do
   # ============================================================================
 
   defmodule BreadcrumbApp do
-    alias Plushie.Event.Widget
+    alias Plushie.Event.WidgetEvent
 
     def init(_opts), do: %{path: ["Home", "Projects", "Plushie", "Docs"]}
 
-    def update(model, %Widget{type: :click, id: "crumb:" <> index_str}) do
+    def update(model, %WidgetEvent{type: :click, id: "crumb:" <> index_str}) do
       index = String.to_integer(index_str)
       %{model | path: Enum.take(model.path, index + 1)}
     end
@@ -506,13 +506,13 @@ defmodule Plushie.Docs.CompositionPatternsTest do
 
   test "composition_patterns_breadcrumb_click_truncates_path_test" do
     model = BreadcrumbApp.init([])
-    model = BreadcrumbApp.update(model, %Plushie.Event.Widget{type: :click, id: "crumb:1"})
+    model = BreadcrumbApp.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "crumb:1"})
     assert model.path == ["Home", "Projects"]
   end
 
   test "composition_patterns_breadcrumb_click_first_keeps_root_test" do
     model = %{path: ["Home", "Projects", "Plushie"]}
-    model = BreadcrumbApp.update(model, %Plushie.Event.Widget{type: :click, id: "crumb:0"})
+    model = BreadcrumbApp.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "crumb:0"})
     assert model.path == ["Home"]
   end
 
@@ -521,11 +521,11 @@ defmodule Plushie.Docs.CompositionPatternsTest do
   # ============================================================================
 
   defmodule ChipApp do
-    alias Plushie.Event.Widget
+    alias Plushie.Event.WidgetEvent
 
     def init(_opts), do: %{selected: MapSet.new(["elixir"])}
 
-    def update(model, %Widget{type: :click, id: "tag:" <> name}) do
+    def update(model, %WidgetEvent{type: :click, id: "tag:" <> name}) do
       selected =
         if MapSet.member?(model.selected, name) do
           MapSet.delete(model.selected, name)
@@ -541,13 +541,13 @@ defmodule Plushie.Docs.CompositionPatternsTest do
 
   test "composition_patterns_chip_toggle_on_test" do
     model = %{selected: MapSet.new()}
-    model = ChipApp.update(model, %Plushie.Event.Widget{type: :click, id: "tag:rust"})
+    model = ChipApp.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "tag:rust"})
     assert MapSet.member?(model.selected, "rust")
   end
 
   test "composition_patterns_chip_toggle_off_test" do
     model = %{selected: MapSet.new(["rust"])}
-    model = ChipApp.update(model, %Plushie.Event.Widget{type: :click, id: "tag:rust"})
+    model = ChipApp.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "tag:rust"})
     refute MapSet.member?(model.selected, "rust")
   end
 

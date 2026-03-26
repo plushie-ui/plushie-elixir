@@ -1,7 +1,7 @@
 defmodule Plushie.Test.InteractionRoundtripTest do
   use ExUnit.Case, async: true
 
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   alias Plushie.Test.Backend.Runtime
 
@@ -22,31 +22,31 @@ defmodule Plushie.Test.InteractionRoundtripTest do
       }
     end
 
-    def update(model, %Widget{type: :click, id: "submit_btn"} = event) do
+    def update(model, %WidgetEvent{type: :click, id: "submit_btn"} = event) do
       %{model | last_event: event}
     end
 
-    def update(model, %Widget{type: :input, id: "name_input", value: text} = event) do
+    def update(model, %WidgetEvent{type: :input, id: "name_input", value: text} = event) do
       %{model | last_event: event, text_value: text}
     end
 
-    def update(model, %Widget{type: :toggle, id: "agree_check", value: value} = event) do
+    def update(model, %WidgetEvent{type: :toggle, id: "agree_check", value: value} = event) do
       %{model | last_event: event, checkbox_state: value}
     end
 
-    def update(model, %Widget{type: :toggle, id: "dark_mode", value: value} = event) do
+    def update(model, %WidgetEvent{type: :toggle, id: "dark_mode", value: value} = event) do
       %{model | last_event: event, toggler_state: value}
     end
 
-    def update(model, %Widget{type: :slide, id: "volume", value: value} = event) do
+    def update(model, %WidgetEvent{type: :slide, id: "volume", value: value} = event) do
       %{model | last_event: event, slider_value: value}
     end
 
-    def update(model, %Widget{type: :select, id: "language", value: value} = event) do
+    def update(model, %WidgetEvent{type: :select, id: "language", value: value} = event) do
       %{model | last_event: event, selected: value}
     end
 
-    def update(model, %Widget{type: :submit, id: "name_input", value: value} = event) do
+    def update(model, %WidgetEvent{type: :submit, id: "name_input", value: value} = event) do
       %{model | last_event: event, text_value: value}
     end
 
@@ -104,12 +104,12 @@ defmodule Plushie.Test.InteractionRoundtripTest do
     {:ok, pid: pid}
   end
 
-  # -- click -> %Widget{type: :click, id: id} --
+  # -- click -> %WidgetEvent{type: :click, id: id} --
 
   describe "click button" do
-    test "dispatches %Widget{type: :click, id: id}", %{pid: pid} do
+    test "dispatches %WidgetEvent{type: :click, id: id}", %{pid: pid} do
       Runtime.click(pid, "#submit_btn")
-      assert Runtime.model(pid).last_event == %Widget{type: :click, id: "submit_btn"}
+      assert Runtime.model(pid).last_event == %WidgetEvent{type: :click, id: "submit_btn"}
     end
   end
 
@@ -119,7 +119,7 @@ defmodule Plushie.Test.InteractionRoundtripTest do
     test "dispatches {:input, id, text}", %{pid: pid} do
       Runtime.type_text(pid, "#name_input", "Arthur")
 
-      assert Runtime.model(pid).last_event == %Widget{
+      assert Runtime.model(pid).last_event == %WidgetEvent{
                type: :input,
                id: "name_input",
                value: "Arthur"
@@ -182,7 +182,7 @@ defmodule Plushie.Test.InteractionRoundtripTest do
   describe "slide slider" do
     test "dispatches {:slide, id, value}", %{pid: pid} do
       Runtime.slide(pid, "#volume", 80)
-      assert Runtime.model(pid).last_event == %Widget{type: :slide, id: "volume", value: 80}
+      assert Runtime.model(pid).last_event == %WidgetEvent{type: :slide, id: "volume", value: 80}
     end
 
     test "model field updated with slid value", %{pid: pid} do
@@ -203,7 +203,7 @@ defmodule Plushie.Test.InteractionRoundtripTest do
       Runtime.type_text(pid, "#name_input", "Arthur")
       Runtime.submit(pid, "#name_input")
 
-      assert Runtime.model(pid).last_event == %Widget{
+      assert Runtime.model(pid).last_event == %WidgetEvent{
                type: :submit,
                id: "name_input",
                value: "Arthur"
@@ -213,7 +213,7 @@ defmodule Plushie.Test.InteractionRoundtripTest do
     test "submit with no value dispatches empty string", %{pid: pid} do
       Runtime.submit(pid, "#name_input")
 
-      assert Runtime.model(pid).last_event == %Widget{
+      assert Runtime.model(pid).last_event == %WidgetEvent{
                type: :submit,
                id: "name_input",
                value: ""
@@ -227,7 +227,7 @@ defmodule Plushie.Test.InteractionRoundtripTest do
     test "dispatches {:select, id, value}", %{pid: pid} do
       Runtime.select(pid, "#language", "Elixir")
 
-      assert Runtime.model(pid).last_event == %Widget{
+      assert Runtime.model(pid).last_event == %WidgetEvent{
                type: :select,
                id: "language",
                value: "Elixir"

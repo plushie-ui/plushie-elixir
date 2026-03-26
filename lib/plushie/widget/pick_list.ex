@@ -30,9 +30,9 @@ defmodule Plushie.Widget.PickList do
 
   ## Events
 
-  - `%Widget{type: :select, id: id, value: value}` -- emitted when an option is selected.
-  - `%Widget{type: :open, id: id}` -- emitted when the dropdown menu is opened (requires `on_open: true`).
-  - `%Widget{type: :close, id: id}` -- emitted when the dropdown menu is closed (requires `on_close: true`).
+  - `%WidgetEvent{type: :select, id: id, value: value}` -- emitted when an option is selected.
+  - `%WidgetEvent{type: :open, id: id}` -- emitted when the dropdown menu is opened (requires `on_open: true`).
+  - `%WidgetEvent{type: :close, id: id}` -- emitted when the dropdown menu is closed (requires `on_close: true`).
   """
 
   alias Plushie.Type.StyleMap

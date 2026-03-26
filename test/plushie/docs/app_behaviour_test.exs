@@ -4,7 +4,7 @@ defmodule Plushie.Docs.AppBehaviourTest do
   import Plushie.UI
 
   alias Plushie.Command
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
   alias Plushie.Event.Window
   alias Plushie.Subscription
 
@@ -32,7 +32,7 @@ defmodule Plushie.Docs.AppBehaviourTest do
 
   # -- update example ----------------------------------------------------------
 
-  defp update(model, %Widget{type: :click, id: "add_todo"}) do
+  defp update(model, %WidgetEvent{type: :click, id: "add_todo"}) do
     new_todo = %{id: next_id(model), text: model.input, done: false}
 
     %{
@@ -43,11 +43,11 @@ defmodule Plushie.Docs.AppBehaviourTest do
     }
   end
 
-  defp update(model, %Widget{type: :input, id: "todo_field", value: value}) do
+  defp update(model, %WidgetEvent{type: :input, id: "todo_field", value: value}) do
     %{model | input: value}
   end
 
-  defp update(model, %Widget{type: :submit, id: "todo_field"}) do
+  defp update(model, %WidgetEvent{type: :submit, id: "todo_field"}) do
     new_todo = %{id: next_id(model), text: model.input, done: false}
 
     model = %{
@@ -116,10 +116,10 @@ defmodule Plushie.Docs.AppBehaviourTest do
 
   test "app_behaviour_update_add_todo_test" do
     model = new_model()
-    model = update(model, %Widget{type: :input, id: "todo_field", value: "Buy milk"})
+    model = update(model, %WidgetEvent{type: :input, id: "todo_field", value: "Buy milk"})
     assert model.input == "Buy milk"
 
-    model = update(model, %Widget{type: :click, id: "add_todo"})
+    model = update(model, %WidgetEvent{type: :click, id: "add_todo"})
     assert model.input == ""
     assert [item] = model.todos
     assert item.text == "Buy milk"
@@ -128,10 +128,10 @@ defmodule Plushie.Docs.AppBehaviourTest do
 
   test "app_behaviour_update_submit_returns_focus_test" do
     model = new_model()
-    model = update(model, %Widget{type: :input, id: "todo_field", value: "Walk dog"})
+    model = update(model, %WidgetEvent{type: :input, id: "todo_field", value: "Walk dog"})
 
     {model, cmd} =
-      update(model, %Widget{type: :submit, id: "todo_field", value: "Walk dog"})
+      update(model, %WidgetEvent{type: :submit, id: "todo_field", value: "Walk dog"})
 
     assert model.input == ""
     assert [item] = model.todos
@@ -141,7 +141,7 @@ defmodule Plushie.Docs.AppBehaviourTest do
 
   test "app_behaviour_update_unknown_event_test" do
     model = new_model()
-    model = update(model, %Widget{type: :click, id: "unknown"})
+    model = update(model, %WidgetEvent{type: :click, id: "unknown"})
     assert model.todos == []
   end
 

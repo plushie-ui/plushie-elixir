@@ -53,7 +53,7 @@ defmodule Plushie.Command do
 
   ## Usage
 
-      def update(model, %Plushie.Event.Widget{type: :click, id: "save"}) do
+      def update(model, %Plushie.Event.WidgetEvent{type: :click, id: "save"}) do
         cmd = Plushie.Command.async(fn -> save(model) end, :save_result)
         {model, cmd}
       end
@@ -560,7 +560,7 @@ defmodule Plushie.Command do
 
   ## Example
 
-      def update(model, %Plushie.Event.Widget{type: :click, id: "check_theme"}) do
+      def update(model, %Plushie.Event.WidgetEvent{type: :click, id: "check_theme"}) do
         {model, Plushie.Command.get_system_theme(:theme_result)}
       end
 
@@ -591,7 +591,7 @@ defmodule Plushie.Command do
 
   ## Example
 
-      def update(model, %Plushie.Event.Widget{type: :click, id: "sys_info"}) do
+      def update(model, %Plushie.Event.WidgetEvent{type: :click, id: "sys_info"}) do
         {model, Plushie.Command.get_system_info(:sys_info)}
       end
 

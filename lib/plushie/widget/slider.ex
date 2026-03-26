@@ -23,8 +23,8 @@ defmodule Plushie.Widget.Slider do
 
   ## Events
 
-  - `%Widget{type: :slide, id: id, value: value}` -- emitted continuously while dragging.
-  - `%Widget{type: :slide_release, id: id, value: value}` -- emitted when drag ends.
+  - `%WidgetEvent{type: :slide, id: id, value: value}` -- emitted continuously while dragging.
+  - `%WidgetEvent{type: :slide_release, id: id, value: value}` -- emitted when drag ends.
   """
 
   alias Plushie.Type.Color

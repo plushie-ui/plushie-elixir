@@ -3,7 +3,7 @@ defmodule Plushie.Protocol.Decode do
 
   # Protocol decoding: deserialize wire bytes, then dispatch into event structs.
 
-  alias Plushie.Protocol.{Keys, Parsers}
+  alias Plushie.Protocol.{Error, Keys, Parsers}
 
   alias Plushie.Event.{
     Canvas,
@@ -17,7 +17,7 @@ defmodule Plushie.Protocol.Decode do
     Sensor,
     System,
     Touch,
-    Widget,
+    WidgetEvent,
     Window
   }
 
@@ -40,35 +40,32 @@ defmodule Plushie.Protocol.Decode do
   ## Examples
 
       iex> Plushie.Protocol.Decode.decode_message(~s({"type":"event","family":"click","id":"btn_save"}), :json)
-      %Plushie.Event.Widget{type: :click, id: "btn_save", value: nil, data: nil}
+      %Plushie.Event.WidgetEvent{type: :click, id: "btn_save", value: nil, data: nil}
 
-      iex> Plushie.Protocol.Decode.decode_message("not json")
-      {:error, :decode_failed}
+      iex> match?({:error, {:decode_failed, _}}, Plushie.Protocol.Decode.decode_message("not json"))
+      true
   """
   @spec decode_message(data :: binary(), format :: Plushie.Protocol.format()) ::
-          Plushie.Event.t()
-          | {:hello,
-             %{
-               protocol: pos_integer(),
-               version: String.t(),
-               name: String.t(),
-               backend: String.t(),
-               extensions: [String.t()],
-               transport: String.t()
-             }}
-          | {:settings, map()}
-          | {:snapshot, map()}
-          | {:patch, list()}
-          | {:effect, String.t(), String.t(), map()}
-          | {:widget_op, String.t(), map()}
-          | {:subscribe, String.t(), String.t()}
-          | {:unsubscribe, String.t()}
-          | {:window_op, String.t(), String.t(), map()}
-          | {:error, term()}
+          Plushie.Protocol.decode_result()
   def decode_message(data, format \\ :msgpack) do
     case deserialize(data, format) do
-      {:ok, msg} -> dispatch(msg)
-      {:error, _} -> {:error, :decode_failed}
+      {:ok, msg} -> safe_dispatch(msg)
+      {:error, reason} -> {:error, {:decode_failed, reason}}
+    end
+  end
+
+  @doc """
+  Strict variant of `decode_message/2`.
+
+  Raises `Plushie.Protocol.Error` when the payload cannot be decoded into a
+  valid protocol message.
+  """
+  @spec decode_message!(data :: binary(), format :: Plushie.Protocol.format()) ::
+          Plushie.Protocol.decoded_message()
+  def decode_message!(data, format \\ :msgpack) do
+    case decode_message(data, format) do
+      {:error, reason} -> raise Error, reason: reason, format: format, data: data
+      message -> message
     end
   end
 
@@ -169,42 +166,42 @@ defmodule Plushie.Protocol.Decode do
     {local, scope} = split_scoped_id(id)
     # data is nil for standard widget clicks, populated for canvas
     # element clicks (which carry button, x, y coordinates).
-    %Widget{type: :click, id: local, scope: scope, data: msg["data"]}
+    %WidgetEvent{type: :click, id: local, scope: scope, data: msg["data"]}
   end
 
   defp dispatch(%{"type" => "event", "family" => "input", "id" => id, "value" => value}) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :input, id: local, scope: scope, value: value}
+    %WidgetEvent{type: :input, id: local, scope: scope, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "submit", "id" => id, "value" => value}) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :submit, id: local, scope: scope, value: value}
+    %WidgetEvent{type: :submit, id: local, scope: scope, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "toggle", "id" => id, "value" => value}) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :toggle, id: local, scope: scope, value: value}
+    %WidgetEvent{type: :toggle, id: local, scope: scope, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "select", "id" => id, "value" => value}) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :select, id: local, scope: scope, value: value}
+    %WidgetEvent{type: :select, id: local, scope: scope, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "slide", "id" => id, "value" => value}) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :slide, id: local, scope: scope, value: value}
+    %WidgetEvent{type: :slide, id: local, scope: scope, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "slide_release", "id" => id, "value" => value}) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :slide_release, id: local, scope: scope, value: value}
+    %WidgetEvent{type: :slide_release, id: local, scope: scope, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "paste", "id" => id, "value" => text}) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :paste, id: local, scope: scope, value: text}
+    %WidgetEvent{type: :paste, id: local, scope: scope, value: text}
   end
 
   defp dispatch(%{
@@ -214,22 +211,22 @@ defmodule Plushie.Protocol.Decode do
          "value" => value
        }) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :option_hovered, id: local, scope: scope, value: value}
+    %WidgetEvent{type: :option_hovered, id: local, scope: scope, value: value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "open", "id" => id}) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :open, id: local, scope: scope}
+    %WidgetEvent{type: :open, id: local, scope: scope}
   end
 
   defp dispatch(%{"type" => "event", "family" => "close", "id" => id}) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :close, id: local, scope: scope}
+    %WidgetEvent{type: :close, id: local, scope: scope}
   end
 
   defp dispatch(%{"type" => "event", "family" => "key_binding", "id" => id, "data" => data}) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :key_binding, id: local, scope: scope, data: data}
+    %WidgetEvent{type: :key_binding, id: local, scope: scope, data: data}
   end
 
   # -- Keyboard events --
@@ -239,48 +236,18 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(
          %{
            "type" => "event",
-           "family" => "key_press",
-           "modifiers" => mods
+           "family" => "key_press"
          } = msg
-       ) do
-    data = msg["data"] || %{}
-    key = data["key"] || ""
-
-    %Key{
-      type: :press,
-      key: Keys.parse_key(key),
-      modified_key: Keys.parse_key(data["modified_key"] || key),
-      physical_key: Keys.parse_physical_key(data["physical_key"]),
-      location: Keys.parse_location(data["location"]),
-      modifiers: parse_modifiers(mods),
-      text: data["text"],
-      repeat: data["repeat"] || false,
-      captured: msg["captured"] || false
-    }
-  end
+       ),
+       do: decode_key_event(msg, :press)
 
   defp dispatch(
          %{
            "type" => "event",
-           "family" => "key_release",
-           "modifiers" => mods
+           "family" => "key_release"
          } = msg
-       ) do
-    data = msg["data"] || %{}
-    key = data["key"] || ""
-
-    %Key{
-      type: :release,
-      key: Keys.parse_key(key),
-      modified_key: Keys.parse_key(data["modified_key"] || key),
-      physical_key: Keys.parse_physical_key(data["physical_key"]),
-      location: Keys.parse_location(data["location"]),
-      modifiers: parse_modifiers(mods),
-      text: nil,
-      repeat: false,
-      captured: msg["captured"] || false
-    }
-  end
+       ),
+       do: decode_key_event(msg, :release)
 
   defp dispatch(
          %{
@@ -309,19 +276,31 @@ defmodule Plushie.Protocol.Decode do
   end
 
   defp dispatch(%{"type" => "event", "family" => "button_pressed", "value" => button} = msg) do
-    %Mouse{
-      type: :button_pressed,
-      button: Parsers.parse_mouse_button(button),
-      captured: msg["captured"] || false
-    }
+    case Parsers.parse_mouse_button(button) do
+      {:ok, parsed_button} ->
+        %Mouse{
+          type: :button_pressed,
+          button: parsed_button,
+          captured: msg["captured"] || false
+        }
+
+      {:error, reason} ->
+        invalid_event_field("button_pressed", :button, button, reason, msg)
+    end
   end
 
   defp dispatch(%{"type" => "event", "family" => "button_released", "value" => button} = msg) do
-    %Mouse{
-      type: :button_released,
-      button: Parsers.parse_mouse_button(button),
-      captured: msg["captured"] || false
-    }
+    case Parsers.parse_mouse_button(button) do
+      {:ok, parsed_button} ->
+        %Mouse{
+          type: :button_released,
+          button: parsed_button,
+          captured: msg["captured"] || false
+        }
+
+      {:error, reason} ->
+        invalid_event_field("button_released", :button, button, reason, msg)
+    end
   end
 
   defp dispatch(
@@ -331,13 +310,19 @@ defmodule Plushie.Protocol.Decode do
            "data" => %{"delta_x" => dx, "delta_y" => dy, "unit" => unit}
          } = msg
        ) do
-    %Mouse{
-      type: :wheel_scrolled,
-      delta_x: dx,
-      delta_y: dy,
-      unit: Parsers.parse_scroll_unit(unit),
-      captured: msg["captured"] || false
-    }
+    case Parsers.parse_scroll_unit(unit) do
+      {:ok, parsed_unit} ->
+        %Mouse{
+          type: :wheel_scrolled,
+          delta_x: dx,
+          delta_y: dy,
+          unit: parsed_unit,
+          captured: msg["captured"] || false
+        }
+
+      {:error, reason} ->
+        invalid_event_field("wheel_scrolled", :unit, unit, reason, msg)
+    end
   end
 
   # -- IME events --
@@ -660,19 +645,27 @@ defmodule Plushie.Protocol.Decode do
     %Pane{type: :resized, id: local, scope: scope, split: data["split"], ratio: data["ratio"]}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "pane_dragged", "id" => id, "data" => data}) do
+  defp dispatch(
+         %{"type" => "event", "family" => "pane_dragged", "id" => id, "data" => data} = msg
+       ) do
     {local, scope} = split_scoped_id(id)
 
-    %Pane{
-      type: :dragged,
-      id: local,
-      scope: scope,
-      pane: data["pane"],
-      target: data["target"],
-      action: Parsers.parse_pane_action(data["action"]),
-      region: Parsers.parse_pane_region(data["region"]),
-      edge: Parsers.parse_pane_region(data["edge"])
-    }
+    with {:ok, action} <- Parsers.parse_pane_action(data["action"]),
+         {:ok, region} <- Parsers.parse_pane_region(data["region"]),
+         {:ok, edge} <- Parsers.parse_pane_region(data["edge"]) do
+      %Pane{
+        type: :dragged,
+        id: local,
+        scope: scope,
+        pane: data["pane"],
+        target: data["target"],
+        action: action,
+        region: region,
+        edge: edge
+      }
+    else
+      {:error, reason} -> invalid_pane_dragged_field(data, reason, msg)
+    end
   end
 
   defp dispatch(%{"type" => "event", "family" => "pane_clicked", "id" => id, "data" => data}) do
@@ -687,13 +680,13 @@ defmodule Plushie.Protocol.Decode do
 
   defp dispatch(%{"type" => "event", "family" => "sort", "id" => id, "data" => data}) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :sort, id: local, scope: scope, data: data["column"]}
+    %WidgetEvent{type: :sort, id: local, scope: scope, data: data["column"]}
   end
 
   defp dispatch(%{"type" => "event", "family" => "scroll", "id" => id, "data" => data}) do
     {local, scope} = split_scoped_id(id)
 
-    %Widget{
+    %WidgetEvent{
       type: :scroll,
       id: local,
       scope: scope,
@@ -856,7 +849,7 @@ defmodule Plushie.Protocol.Decode do
          "data" => data
        }) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :canvas_element_enter, id: local, scope: scope, data: data}
+    %WidgetEvent{type: :canvas_element_enter, id: local, scope: scope, data: data}
   end
 
   defp dispatch(%{
@@ -866,11 +859,18 @@ defmodule Plushie.Protocol.Decode do
          "data" => data
        }) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :canvas_element_leave, id: local, scope: scope, data: data}
+    %WidgetEvent{type: :canvas_element_leave, id: local, scope: scope, data: data}
   end
 
-  # canvas_element_click is now emitted as standard "click" with scoped
-  # ID (canvas_id/element_id). Handled by the "click" dispatcher above.
+  defp dispatch(%{
+         "type" => "event",
+         "family" => "canvas_element_click",
+         "id" => id,
+         "data" => data
+       }) do
+    {local, scope} = split_scoped_id(id)
+    %WidgetEvent{type: :canvas_element_click, id: local, scope: scope, data: data}
+  end
 
   # NOTE: canvas_element_key_press carries key name as a wire string
   # (e.g. "ArrowRight") and modifiers as a string-keyed map, unlike
@@ -883,7 +883,7 @@ defmodule Plushie.Protocol.Decode do
          "data" => data
        }) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :canvas_element_key_press, id: local, scope: scope, data: data}
+    %WidgetEvent{type: :canvas_element_key_press, id: local, scope: scope, data: data}
   end
 
   defp dispatch(%{
@@ -893,7 +893,7 @@ defmodule Plushie.Protocol.Decode do
          "data" => data
        }) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :canvas_element_key_release, id: local, scope: scope, data: data}
+    %WidgetEvent{type: :canvas_element_key_release, id: local, scope: scope, data: data}
   end
 
   defp dispatch(%{
@@ -903,7 +903,7 @@ defmodule Plushie.Protocol.Decode do
          "data" => data
        }) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :canvas_element_drag, id: local, scope: scope, data: data}
+    %WidgetEvent{type: :canvas_element_drag, id: local, scope: scope, data: data}
   end
 
   defp dispatch(%{
@@ -913,7 +913,7 @@ defmodule Plushie.Protocol.Decode do
          "data" => data
        }) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :canvas_element_drag_end, id: local, scope: scope, data: data}
+    %WidgetEvent{type: :canvas_element_drag_end, id: local, scope: scope, data: data}
   end
 
   defp dispatch(%{
@@ -923,7 +923,7 @@ defmodule Plushie.Protocol.Decode do
          "data" => data
        }) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :canvas_element_focused, id: local, scope: scope, data: data}
+    %WidgetEvent{type: :canvas_element_focused, id: local, scope: scope, data: data}
   end
 
   defp dispatch(%{
@@ -933,17 +933,17 @@ defmodule Plushie.Protocol.Decode do
          "data" => data
        }) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :canvas_element_blurred, id: local, scope: scope, data: data}
+    %WidgetEvent{type: :canvas_element_blurred, id: local, scope: scope, data: data}
   end
 
   defp dispatch(%{"type" => "event", "family" => "canvas_focused", "id" => id}) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :canvas_focused, id: local, scope: scope}
+    %WidgetEvent{type: :canvas_focused, id: local, scope: scope}
   end
 
   defp dispatch(%{"type" => "event", "family" => "canvas_blurred", "id" => id}) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :canvas_blurred, id: local, scope: scope}
+    %WidgetEvent{type: :canvas_blurred, id: local, scope: scope}
   end
 
   defp dispatch(%{
@@ -953,7 +953,7 @@ defmodule Plushie.Protocol.Decode do
          "data" => data
        }) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :canvas_group_focused, id: local, scope: scope, data: data}
+    %WidgetEvent{type: :canvas_group_focused, id: local, scope: scope, data: data}
   end
 
   defp dispatch(%{
@@ -963,7 +963,7 @@ defmodule Plushie.Protocol.Decode do
          "data" => data
        }) do
     {local, scope} = split_scoped_id(id)
-    %Widget{type: :canvas_group_blurred, id: local, scope: scope, data: data}
+    %WidgetEvent{type: :canvas_group_blurred, id: local, scope: scope, data: data}
   end
 
   defp dispatch(%{"type" => "event", "family" => "diagnostic", "data" => data}) do
@@ -977,18 +977,59 @@ defmodule Plushie.Protocol.Decode do
     {:effect_stub_ack, kind}
   end
 
-  # -- Generic/extension events (unrecognized families) --
+  # -- Outbound command messages (for diagnostics / parity tests) --
+
+  defp dispatch(%{"type" => "image_op", "op" => op} = msg) do
+    {:image_op, op, Map.drop(msg, ["type", "op", "session"])}
+  end
+
+  defp dispatch(%{"type" => "extension_command", "node_id" => node_id, "op" => op} = msg) do
+    {:extension_command, node_id, op, msg["payload"] || %{}}
+  end
+
+  defp dispatch(%{"type" => "extension_commands", "commands" => commands})
+       when is_list(commands) do
+    {:extension_commands, commands}
+  end
+
+  defp dispatch(%{
+         "type" => "interact",
+         "id" => id,
+         "action" => action,
+         "selector" => selector,
+         "payload" => payload
+       }) do
+    {:interact, id, action, selector, payload}
+  end
+
+  defp dispatch(%{"type" => "advance_frame", "timestamp" => timestamp}) do
+    {:advance_frame, timestamp}
+  end
+
+  defp dispatch(%{"type" => "register_effect_stub", "kind" => kind} = msg) do
+    {:register_effect_stub, kind, msg["response"]}
+  end
+
+  defp dispatch(%{"type" => "unregister_effect_stub", "kind" => kind}) do
+    {:unregister_effect_stub, kind}
+  end
+
+  # -- Explicit extension events --
 
   defp dispatch(%{"type" => "event", "family" => family, "id" => id} = msg) do
-    {local, scope} = split_scoped_id(id)
+    if Parsers.extension_family?(family) do
+      {local, scope} = split_scoped_id(id)
 
-    %Widget{
-      type: Parsers.safe_event_type(family),
-      id: local,
-      scope: scope,
-      data: msg["data"],
-      value: msg["value"]
-    }
+      %WidgetEvent{
+        type: family,
+        id: local,
+        scope: scope,
+        data: msg["data"],
+        value: msg["value"]
+      }
+    else
+      {:error, {:unknown_event_family, family, msg}}
+    end
   end
 
   # -- Interact protocol (test/headless mode) --
@@ -1007,5 +1048,53 @@ defmodule Plushie.Protocol.Decode do
 
   defp dispatch(msg) do
     {:error, {:unknown_message, msg}}
+  end
+
+  defp decode_key_event(msg, type) do
+    data = normalize_key_data(msg["data"])
+    mods = msg["modifiers"] || data["modifiers"] || %{}
+    key = data["key"] || data["value"] || msg["value"]
+
+    if is_binary(key) do
+      %Key{
+        type: type,
+        key: Keys.parse_key(key),
+        modified_key: Keys.parse_key(data["modified_key"] || key),
+        physical_key: Keys.parse_physical_key(data["physical_key"]),
+        location: Keys.parse_location(data["location"]),
+        modifiers: parse_modifiers(mods),
+        text: if(type == :press, do: data["text"], else: nil),
+        repeat: if(type == :press, do: data["repeat"] || false, else: false),
+        captured: msg["captured"] || false
+      }
+    else
+      {:error, {:unknown_message, msg}}
+    end
+  end
+
+  defp normalize_key_data(%{} = data), do: data
+  defp normalize_key_data(_), do: %{}
+
+  defp invalid_event_field(family, field, value, reason, msg) do
+    {:error, {:invalid_event_field, family, field, value, reason, msg}}
+  end
+
+  defp invalid_pane_dragged_field(data, reason, msg) do
+    cond do
+      match?({:error, _}, Parsers.parse_pane_action(data["action"])) ->
+        invalid_event_field("pane_dragged", :action, data["action"], reason, msg)
+
+      match?({:error, _}, Parsers.parse_pane_region(data["region"])) ->
+        invalid_event_field("pane_dragged", :region, data["region"], reason, msg)
+
+      true ->
+        invalid_event_field("pane_dragged", :edge, data["edge"], reason, msg)
+    end
+  end
+
+  defp safe_dispatch(msg) do
+    dispatch(msg)
+  rescue
+    FunctionClauseError -> {:error, {:unknown_message, msg}}
   end
 end

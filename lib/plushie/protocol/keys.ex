@@ -463,12 +463,14 @@ defmodule Plushie.Protocol.Keys do
   Converts a physical key code string to an atom, or returns the string
   unchanged for unknown codes.
   """
-  @spec parse_physical_key(String.t() | nil) :: atom() | String.t() | nil
+  @spec parse_physical_key(term()) :: atom() | String.t() | nil
   def parse_physical_key(nil), do: nil
 
   def parse_physical_key(str) when is_binary(str) do
     Map.get(@physical_keys, str, str)
   end
+
+  def parse_physical_key(_), do: nil
 
   @doc "Parses a key location string to an atom."
   @spec parse_location(String.t() | nil) :: :left | :right | :numpad | :standard

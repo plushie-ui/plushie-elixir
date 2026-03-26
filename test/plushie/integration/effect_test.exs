@@ -1,14 +1,14 @@
 defmodule Plushie.Integration.EffectTest do
   use Plushie.Test.Case, app: Plushie.Integration.EffectTest.EffectApp
 
-  alias Plushie.Event.{Effect, Widget}
+  alias Plushie.Event.{Effect, WidgetEvent}
 
   defmodule EffectApp do
     use Plushie.App
 
     def init(_opts), do: %{clipboard_text: "", got_unsupported: false}
 
-    def update(model, %Widget{type: :click, id: "read"}) do
+    def update(model, %WidgetEvent{type: :click, id: "read"}) do
       {model, Plushie.Effects.clipboard_read()}
     end
 
@@ -34,7 +34,6 @@ defmodule Plushie.Integration.EffectTest do
       }
     end
   end
-
 
   test "stubbed effect returns controlled response" do
     register_effect_stub("clipboard_read", "test data")

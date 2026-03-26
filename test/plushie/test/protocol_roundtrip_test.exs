@@ -1,7 +1,7 @@
 defmodule Plushie.Test.ProtocolRoundtripTest do
   use ExUnit.Case, async: true
 
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   alias Plushie.Test.Backend.Runtime
   alias Plushie.Test.Element
@@ -13,10 +13,10 @@ defmodule Plushie.Test.ProtocolRoundtripTest do
 
     def init(_opts), do: %{text_value: "", selected: nil}
 
-    def update(model, %Widget{type: :input, id: "search", value: text}),
+    def update(model, %WidgetEvent{type: :input, id: "search", value: text}),
       do: %{model | text_value: text}
 
-    def update(model, %Widget{type: :select, id: "country", value: value}),
+    def update(model, %WidgetEvent{type: :select, id: "country", value: value}),
       do: %{model | selected: value}
 
     def update(model, _event), do: model

@@ -8,7 +8,19 @@ defmodule Plushie.Test.TreeHashTest do
       Path.join(System.tmp_dir!(), "plushie_tree_hash_test_#{System.unique_integer([:positive])}")
 
     File.mkdir_p!(tmp_dir)
-    on_exit(fn -> File.rm_rf!(tmp_dir) end)
+    previous = System.get_env("PLUSHIE_UPDATE_SNAPSHOTS")
+    System.delete_env("PLUSHIE_UPDATE_SNAPSHOTS")
+
+    on_exit(fn ->
+      File.rm_rf!(tmp_dir)
+
+      if previous do
+        System.put_env("PLUSHIE_UPDATE_SNAPSHOTS", previous)
+      else
+        System.delete_env("PLUSHIE_UPDATE_SNAPSHOTS")
+      end
+    end)
+
     {:ok, golden_dir: tmp_dir}
   end
 

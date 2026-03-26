@@ -12,7 +12,7 @@ defmodule Plushie.Test.CrossBackendTest do
 
   use ExUnit.Case, async: true
 
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   alias Plushie.Test.Backend.Runtime
 
@@ -23,8 +23,12 @@ defmodule Plushie.Test.CrossBackendTest do
 
     def init(_opts), do: %{count: 0}
 
-    def update(model, %Widget{type: :click, id: "inc"}), do: %{model | count: model.count + 1}
-    def update(model, %Widget{type: :click, id: "dec"}), do: %{model | count: model.count - 1}
+    def update(model, %WidgetEvent{type: :click, id: "inc"}),
+      do: %{model | count: model.count + 1}
+
+    def update(model, %WidgetEvent{type: :click, id: "dec"}),
+      do: %{model | count: model.count - 1}
+
     def update(model, _event), do: model
 
     def view(model) do
@@ -51,10 +55,10 @@ defmodule Plushie.Test.CrossBackendTest do
 
     def init(_opts), do: %{items: [], input: ""}
 
-    def update(model, %Widget{type: :input, id: "task", value: value}),
+    def update(model, %WidgetEvent{type: :input, id: "task", value: value}),
       do: %{model | input: value}
 
-    def update(model, %Widget{type: :submit, id: "task", value: _value}) do
+    def update(model, %WidgetEvent{type: :submit, id: "task", value: _value}) do
       if model.input != "" do
         %{model | items: model.items ++ [model.input], input: ""}
       else

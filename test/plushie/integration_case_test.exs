@@ -1,7 +1,7 @@
 defmodule Plushie.IntegrationCaseTest do
   use Plushie.IntegrationCase, async: true
 
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   alias Counter
   alias Todo
@@ -28,7 +28,7 @@ defmodule Plushie.IntegrationCaseTest do
     test "dispatches events through the runtime" do
       {runtime, _bridge} = start_app(Counter)
 
-      send_event(runtime, %Widget{type: :click, id: "increment"})
+      send_event(runtime, %WidgetEvent{type: :click, id: "increment"})
 
       model = get_model(runtime)
       assert model.count == 1
@@ -70,9 +70,9 @@ defmodule Plushie.IntegrationCaseTest do
     test "counter app increments and decrements" do
       {runtime, _bridge} = start_app(Counter)
 
-      send_event(runtime, %Widget{type: :click, id: "increment"})
-      send_event(runtime, %Widget{type: :click, id: "increment"})
-      send_event(runtime, %Widget{type: :click, id: "decrement"})
+      send_event(runtime, %WidgetEvent{type: :click, id: "increment"})
+      send_event(runtime, %WidgetEvent{type: :click, id: "increment"})
+      send_event(runtime, %WidgetEvent{type: :click, id: "decrement"})
 
       model = get_model(runtime)
       assert model.count == 1
@@ -128,10 +128,10 @@ defmodule Plushie.IntegrationCaseTest do
       {runtime, _bridge} = start_app(Todo)
 
       # Type in the input
-      send_event(runtime, %Widget{type: :input, id: "new_todo", value: "Buy milk"})
+      send_event(runtime, %WidgetEvent{type: :input, id: "new_todo", value: "Buy milk"})
 
       # Submit
-      send_event(runtime, %Widget{type: :submit, id: "new_todo"})
+      send_event(runtime, %WidgetEvent{type: :submit, id: "new_todo"})
 
       model = get_model(runtime)
       assert length(model.todos) == 1

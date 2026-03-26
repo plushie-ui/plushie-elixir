@@ -9,21 +9,78 @@ defmodule Plushie.Protocol do
   * `:msgpack` -- MessagePack via `Msgpax` (default). Returns iodata with no
     length prefix (Erlang's `{:packet, 4}` Port driver handles framing).
 
-  The decode function accepts a binary in either format and returns an
-  event struct (see `Plushie.Event.*`) or an internal tuple.
+  `decode_message/2` returns a safe tagged result for tests and diagnostics.
+  `decode_message!/2` enforces the protocol contract and raises on malformed
+  or incompatible payloads. The bridge/runtime path uses the strict variant.
 
   Implementation is split across internal submodules:
 
   * `Protocol.Encode` -- all `encode_*` functions and serialization
-  * `Protocol.Decode` -- `decode/2`, `decode_message/2`, and dispatch
+  * `Protocol.Decode` -- `decode/2`, `decode_message/2`, `decode_message!/2`, and dispatch
   * `Protocol.Keys` -- named/physical key maps and `parse_key/1`
-  * `Protocol.Parsers` -- shared string-to-atom parsers
+  * `Protocol.Parsers` -- strict enum parsers and extension-family checks
   """
 
   @protocol_version 1
 
   @typedoc "Wire format for protocol messages."
   @type format :: :json | :msgpack
+
+  @typedoc """
+  Structured message returned by `decode_message!/2`.
+
+  Event payloads decode to `Plushie.Event.*` structs. Non-event protocol
+  messages decode to internal tuples used by the bridge, runtime, and
+  test harness.
+  """
+  @type decoded_message ::
+          Plushie.Event.t()
+          | {:hello,
+             %{
+               protocol: pos_integer(),
+               version: String.t(),
+               name: String.t(),
+               backend: String.t(),
+               extensions: [String.t()],
+               transport: String.t()
+             }}
+          | {:settings, map()}
+          | {:snapshot, map()}
+          | {:patch, list()}
+          | {:effect, String.t(), String.t(), map()}
+          | {:widget_op, String.t(), map()}
+          | {:subscribe, String.t(), String.t()}
+          | {:unsubscribe, String.t()}
+          | {:image_op, String.t(), map()}
+          | {:extension_command, String.t(), String.t(), map()}
+          | {:extension_commands, [map()]}
+          | {:window_op, String.t(), String.t(), map()}
+          | {:interact, String.t(), String.t(), map(), map()}
+          | {:interact_step, String.t(), [map()]}
+          | {:interact_response, String.t(), [map()]}
+          | {:advance_frame, non_neg_integer()}
+          | {:register_effect_stub, String.t(), term()}
+          | {:unregister_effect_stub, String.t()}
+          | {:effect_stub_ack, String.t()}
+          | {:session_error, String.t(), term()}
+          | {:session_closed, String.t(), term()}
+
+  @typedoc """
+  Structured decode error returned by `decode_message/2`.
+
+  These errors are intended for tests and diagnostics. The bridge/runtime path
+  uses `decode_message!/2` and crashes on protocol violations.
+  """
+  @type parse_reason :: :unknown | :invalid
+
+  @type decode_error_reason ::
+          {:decode_failed, term()}
+          | {:unknown_message, map()}
+          | {:unknown_event_family, term(), map()}
+          | {:invalid_event_field, String.t(), atom(), term(), parse_reason(), map()}
+
+  @typedoc "Safe decode result returned by `decode_message/2`."
+  @type decode_result :: decoded_message() | {:error, decode_error_reason()}
 
   @doc "Returns the current protocol version number."
   @spec protocol_version() :: non_neg_integer()
@@ -236,7 +293,8 @@ defmodule Plushie.Protocol do
   @doc """
   Decodes a wire-format binary into a string-keyed map without dispatch.
 
-  Unlike `decode_message/2` which dispatches into Elixir event tuples, this
+  Unlike `decode_message/2` which dispatches into Elixir event structs and
+  internal tuples, this
   returns the raw deserialized map. Used by test backends that handle
   renderer responses (query_response, interact_response, etc.) directly.
   """
@@ -244,39 +302,30 @@ defmodule Plushie.Protocol do
   defdelegate decode(data, format \\ :msgpack), to: Plushie.Protocol.Decode
 
   @doc """
-  Decodes a protocol message into an event tuple.
+  Decodes a protocol message into an event struct or internal tuple.
 
   Returns `{:error, reason}` on parse failure or an unrecognised message shape.
+  Use `decode_message!/2` for the strict runtime path.
 
   ## Examples
 
       iex> Plushie.Protocol.decode_message(~s({"type":"event","family":"click","id":"btn_save"}), :json)
-      %Plushie.Event.Widget{type: :click, id: "btn_save", value: nil, data: nil}
+      %Plushie.Event.WidgetEvent{type: :click, id: "btn_save", value: nil, data: nil}
 
-      iex> Plushie.Protocol.decode_message("not json")
-      {:error, :decode_failed}
+      iex> match?({:error, {:decode_failed, _}}, Plushie.Protocol.decode_message("not json"))
+      true
   """
-  @spec decode_message(data :: binary(), format :: format()) ::
-          Plushie.Event.t()
-          | {:hello,
-             %{
-               protocol: pos_integer(),
-               version: String.t(),
-               name: String.t(),
-               backend: String.t(),
-               extensions: [String.t()],
-               transport: String.t()
-             }}
-          | {:settings, map()}
-          | {:snapshot, map()}
-          | {:patch, list()}
-          | {:effect, String.t(), String.t(), map()}
-          | {:widget_op, String.t(), map()}
-          | {:subscribe, String.t(), String.t()}
-          | {:unsubscribe, String.t()}
-          | {:window_op, String.t(), String.t(), map()}
-          | {:error, term()}
+  @spec decode_message(data :: binary(), format :: format()) :: decode_result()
   defdelegate decode_message(data, format \\ :msgpack), to: Plushie.Protocol.Decode
+
+  @doc """
+  Decodes a protocol message into an event struct or internal tuple.
+
+  Raises `Plushie.Protocol.Error` when the payload is malformed or violates
+  the SDK's protocol contract.
+  """
+  @spec decode_message!(data :: binary(), format :: format()) :: decoded_message()
+  defdelegate decode_message!(data, format \\ :msgpack), to: Plushie.Protocol.Decode
 
   # ---------------------------------------------------------------------------
   # Key name conversion -- delegated to Protocol.Keys

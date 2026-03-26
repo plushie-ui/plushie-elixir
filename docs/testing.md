@@ -18,7 +18,7 @@ needed.
 ```elixir
 test "adding a todo appends to list and clears input" do
   model = %{todos: [], input: "Buy milk"}
-  model = MyApp.update(model, %Widget{type: :click, id: "add_todo"})
+  model = MyApp.update(model, %WidgetEvent{type: :click, id: "add_todo"})
 
   assert [%{text: "Buy milk", done: false}] = model.todos
   assert model.input == ""
@@ -35,7 +35,7 @@ executing anything.
 ```elixir
 test "submitting todo refocuses the input" do
   model = %{todos: [], input: "Buy milk"}
-  {model, cmd} = MyApp.update(model, %Widget{type: :submit, id: "todo_input", value: "Buy milk"})
+  {model, cmd} = MyApp.update(model, %WidgetEvent{type: :submit, id: "todo_input", value: "Buy milk"})
 
   assert [%{text: "Buy milk"}] = model.todos
   assert %Plushie.Command{type: :focus, payload: %{target: "todo_input"}} = cmd
@@ -43,7 +43,7 @@ end
 
 test "save triggers an async task" do
   model = %{data: "unsaved"}
-  {_model, cmd} = MyApp.update(model, %Widget{type: :click, id: "save"})
+  {_model, cmd} = MyApp.update(model, %WidgetEvent{type: :click, id: "save"})
 
   assert %Plushie.Command{type: :async, payload: %{tag: :save_result}} = cmd
 end
@@ -205,12 +205,12 @@ automatically by `Plushie.Test.Case`.
 
 | Function | Widget types | Event produced |
 |---|---|---|
-| `click(selector)` | `button` | `%Widget{type: :click, id: id}` |
-| `type_text(selector, text)` | `text_input`, `text_editor` | `%Widget{type: :input, id: id, value: text}` |
-| `submit(selector)` | `text_input` | `%Widget{type: :submit, id: id, value: val}` |
-| `toggle(selector)` | `checkbox`, `toggler` | `%Widget{type: :toggle, id: id, value: !current}` |
-| `select(selector, value)` | `pick_list`, `combo_box`, `radio` | `%Widget{type: :select, id: id, value: val}` |
-| `slide(selector, value)` | `slider`, `vertical_slider` | `%Widget{type: :slide, id: id, value: val}` |
+| `click(selector)` | `button` | `%WidgetEvent{type: :click, id: id}` |
+| `type_text(selector, text)` | `text_input`, `text_editor` | `%WidgetEvent{type: :input, id: id, value: text}` |
+| `submit(selector)` | `text_input` | `%WidgetEvent{type: :submit, id: id, value: val}` |
+| `toggle(selector)` | `checkbox`, `toggler` | `%WidgetEvent{type: :toggle, id: id, value: !current}` |
+| `select(selector, value)` | `pick_list`, `combo_box`, `radio` | `%WidgetEvent{type: :select, id: id, value: val}` |
+| `slide(selector, value)` | `slider`, `vertical_slider` | `%WidgetEvent{type: :slide, id: id, value: val}` |
 
 Interacting with the wrong widget type raises with an actionable hint:
 
@@ -519,7 +519,7 @@ unit test level instead:
 ```elixir
 test "clicking fetch starts async load" do
   model = %{loading: false, data: nil}
-  {model, cmd} = MyApp.update(model, %Widget{type: :click, id: "fetch"})
+  {model, cmd} = MyApp.update(model, %WidgetEvent{type: :click, id: "fetch"})
 
   assert model.loading == true
   assert %Plushie.Command{type: :async, payload: %{tag: :data_loaded}} = cmd

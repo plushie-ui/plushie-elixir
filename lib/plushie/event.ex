@@ -16,12 +16,12 @@ defmodule Plushie.Event do
     System,
     Timer,
     Touch,
-    Widget,
+    WidgetEvent,
     Window
   }
 
   @type t ::
-          Widget.t()
+          WidgetEvent.t()
           | Key.t()
           | Modifiers.t()
           | Mouse.t()
@@ -45,10 +45,10 @@ defmodule Plushie.Event do
 
   ## Examples
 
-      iex> Plushie.Event.target(%Plushie.Event.Widget{type: :click, id: "save", scope: []})
+      iex> Plushie.Event.target(%Plushie.Event.WidgetEvent{type: :click, id: "save", scope: []})
       "save"
 
-      iex> Plushie.Event.target(%Plushie.Event.Widget{type: :click, id: "save", scope: ["form", "sidebar"]})
+      iex> Plushie.Event.target(%Plushie.Event.WidgetEvent{type: :click, id: "save", scope: ["form", "sidebar"]})
       "sidebar/form/save"
   """
   @spec target(event :: struct()) :: String.t()

@@ -73,6 +73,7 @@ defmodule Plushie.Runtime do
             coalesce_timer: nil,
             consecutive_errors: 0,
             canvas_widgets: %{},
+            widget_events: %{},
             diagnostics: [],
             pending_stub_acks: %{},
             pending_interact: nil,
@@ -101,6 +102,9 @@ defmodule Plushie.Runtime do
            pending_stub_acks: %{String.t() => GenServer.from()},
            canvas_widgets: %{
              String.t() => %{module: module(), state: map()}
+           },
+           widget_events: %{
+             String.t() => %{widget_type: atom(), events: MapSet.t(atom())}
            },
            pending_interact: {GenServer.from(), String.t()} | nil,
            pending_await_async: %{atom() => GenServer.from()}
@@ -278,8 +282,10 @@ defmodule Plushie.Runtime do
     canvas_widgets =
       Plushie.Runtime.CanvasWidgets.derive_registry(tree)
 
+    widget_events = derive_widget_event_registry(tree)
+
     # 6. Execute initial commands.
-    state = %{state | tree: tree, canvas_widgets: canvas_widgets}
+    state = %{state | tree: tree, canvas_widgets: canvas_widgets, widget_events: widget_events}
     state = Commands.execute_commands(state.init_commands, state)
     state = %{state | init_commands: []}
     state = Subscriptions.sync_subscriptions(state, state.model)
@@ -452,7 +458,10 @@ defmodule Plushie.Runtime do
 
   def handle_info({:renderer_exit, :normal}, state) do
     # Clean exit (renderer process ended). Shut down the runtime.
-    Logger.info("plushie runtime: renderer exited normally -- shutting down")
+    {:stop, :normal, state}
+  end
+
+  def handle_info({:renderer_exit, :shutdown}, state) do
     {:stop, :normal, state}
   end
 
@@ -509,13 +518,21 @@ defmodule Plushie.Runtime do
     end
 
     canvas_widgets = Plushie.Runtime.CanvasWidgets.derive_registry(tree)
+    widget_events = derive_widget_event_registry(tree)
 
     # Re-sync subscriptions with the new renderer.
     state = Subscriptions.sync_subscriptions(state, state.model)
 
     # Re-open all known windows with merged per-window props from the tree.
     # Reset tracked windows first so sync_windows sees them all as new.
-    state = %{state | tree: tree, canvas_widgets: canvas_widgets, windows: MapSet.new()}
+    state = %{
+      state
+      | tree: tree,
+        canvas_widgets: canvas_widgets,
+        widget_events: widget_events,
+        windows: MapSet.new()
+    }
+
     state = Windows.sync_windows(state, tree)
 
     {:noreply, state}
@@ -658,7 +675,10 @@ defmodule Plushie.Runtime do
           canvas_widgets =
             Plushie.Runtime.CanvasWidgets.derive_registry(new_tree)
 
-          {:noreply, %{state | tree: new_tree, canvas_widgets: canvas_widgets}}
+          widget_events = derive_widget_event_registry(new_tree)
+
+          {:noreply,
+           %{state | tree: new_tree, canvas_widgets: canvas_widgets, widget_events: widget_events}}
 
         {:handled, emitted_event, new_registry} ->
           # Widget emitted an event (possibly dispatched through
@@ -692,7 +712,15 @@ defmodule Plushie.Runtime do
     canvas_widgets =
       Plushie.Runtime.CanvasWidgets.derive_registry(new_tree)
 
-    state = %{state | tree: new_tree, canvas_widgets: canvas_widgets}
+    widget_events = derive_widget_event_registry(new_tree)
+
+    state = %{
+      state
+      | tree: new_tree,
+        canvas_widgets: canvas_widgets,
+        widget_events: widget_events
+    }
+
     state = Subscriptions.sync_subscriptions(state, state.model)
     state = Windows.sync_windows(state, new_tree)
     {:noreply, state}
@@ -890,6 +918,36 @@ defmodule Plushie.Runtime do
     Process.delete(Plushie.Extension.CanvasWidget.widget_states_key())
   end
 
+  @spec derive_widget_event_registry(map() | nil) ::
+          %{String.t() => %{widget_type: atom(), events: MapSet.t(atom())}}
+  defp derive_widget_event_registry(nil), do: %{}
+
+  defp derive_widget_event_registry(tree) do
+    collect_widget_event_entries(tree, %{})
+  end
+
+  defp collect_widget_event_entries(%{id: id, children: children} = node, acc) do
+    meta = Map.get(node, :meta, %{})
+
+    acc =
+      case meta do
+        %{__extension_widget_type__: widget_type, __extension_widget_events__: events}
+        when is_atom(widget_type) and is_list(events) ->
+          Map.put(acc, id, %{widget_type: widget_type, events: MapSet.new(events)})
+
+        _ ->
+          acc
+      end
+
+    Enum.reduce(children, acc, &collect_widget_event_entries/2)
+  end
+
+  defp collect_widget_event_entries(%{children: children}, acc) do
+    Enum.reduce(children, acc, &collect_widget_event_entries/2)
+  end
+
+  defp collect_widget_event_entries(_, acc), do: acc
+
   # ---------------------------------------------------------------------------
   # Event pipeline
   #
@@ -916,10 +974,70 @@ defmodule Plushie.Runtime do
   # to deliver to app.update/2 (nil if captured by a widget).
   @spec route_through_widgets(state(), term()) :: {term() | nil, state()}
   defp route_through_widgets(state, event) do
+    event = normalize_widget_event!(state, event)
+
     {result_event, new_registry} =
       Plushie.Runtime.CanvasWidgets.dispatch_event(state.canvas_widgets, event)
 
     {result_event, %{state | canvas_widgets: new_registry}}
+  end
+
+  @spec normalize_widget_event!(state(), term()) :: term()
+  defp normalize_widget_event!(state, %Plushie.Event.WidgetEvent{type: family} = event)
+       when is_binary(family) do
+    target = Plushie.Event.target(event)
+
+    case Map.get(state.widget_events, target) do
+      %{widget_type: widget_type, events: events} ->
+        {family_widget_type, event_name} = parse_extension_family!(family)
+
+        cond do
+          family_widget_type != widget_type ->
+            raise Plushie.Protocol.Error,
+              reason: {:unknown_event_family, family, %{"id" => target}},
+              format: :msgpack,
+              data: <<>>
+
+          MapSet.member?(events, event_name) ->
+            %{event | type: {widget_type, event_name}}
+
+          true ->
+            raise Plushie.Protocol.Error,
+              reason: {:unknown_event_family, family, %{"id" => target}},
+              format: :msgpack,
+              data: <<>>
+        end
+
+      nil ->
+        raise Plushie.Protocol.Error,
+          reason: {:unknown_event_family, family, %{"id" => target}},
+          format: :msgpack,
+          data: <<>>
+    end
+  end
+
+  defp normalize_widget_event!(_state, event), do: event
+
+  @spec parse_extension_family!(String.t()) :: {atom(), atom()}
+  defp parse_extension_family!(family) do
+    case String.split(family, ":", parts: 2) do
+      [widget_type, event_name] when widget_type != "" and event_name != "" ->
+        {String.to_existing_atom(widget_type), String.to_existing_atom(event_name)}
+
+      _ ->
+        raise Plushie.Protocol.Error,
+          reason: {:unknown_event_family, family, %{}},
+          format: :msgpack,
+          data: <<>>
+    end
+  rescue
+    ArgumentError ->
+      reraise Plushie.Protocol.Error.exception(
+                reason: {:unknown_event_family, family, %{}},
+                format: :msgpack,
+                data: <<>>
+              ),
+              __STACKTRACE__
   end
 
   # Full update cycle: intercept -> update -> commands -> view -> diff -> patch.
@@ -953,7 +1071,8 @@ defmodule Plushie.Runtime do
         canvas_widgets =
           Plushie.Runtime.CanvasWidgets.derive_registry(new_tree)
 
-        state = %{state | canvas_widgets: canvas_widgets}
+        widget_events = derive_widget_event_registry(new_tree)
+        state = %{state | canvas_widgets: canvas_widgets, widget_events: widget_events}
 
         widget_subs =
           Plushie.Runtime.CanvasWidgets.collect_subscriptions(canvas_widgets)
@@ -1103,7 +1222,15 @@ defmodule Plushie.Runtime do
         canvas_widgets =
           Plushie.Runtime.CanvasWidgets.derive_registry(new_tree)
 
-        state = %{state | tree: new_tree, canvas_widgets: canvas_widgets}
+        widget_events = derive_widget_event_registry(new_tree)
+
+        state = %{
+          state
+          | tree: new_tree,
+            canvas_widgets: canvas_widgets,
+            widget_events: widget_events
+        }
+
         state = Subscriptions.sync_subscriptions(state, state.model)
         Windows.sync_windows(state, new_tree)
 

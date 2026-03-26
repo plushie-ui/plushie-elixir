@@ -1,7 +1,7 @@
 defmodule CounterTest do
   use ExUnit.Case, async: true
 
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   alias Counter
 
@@ -26,13 +26,13 @@ defmodule CounterTest do
   describe "update/2 -- increment" do
     test "increments count by 1" do
       model = %{count: 0}
-      result = Counter.update(model, %Widget{type: :click, id: "increment"})
+      result = Counter.update(model, %WidgetEvent{type: :click, id: "increment"})
       assert result.count == 1
     end
 
     test "increments from a non-zero count" do
       model = %{count: 4}
-      result = Counter.update(model, %Widget{type: :click, id: "increment"})
+      result = Counter.update(model, %WidgetEvent{type: :click, id: "increment"})
       assert result.count == 5
     end
   end
@@ -40,13 +40,13 @@ defmodule CounterTest do
   describe "update/2 -- decrement" do
     test "decrements count by 1" do
       model = %{count: 3}
-      result = Counter.update(model, %Widget{type: :click, id: "decrement"})
+      result = Counter.update(model, %WidgetEvent{type: :click, id: "decrement"})
       assert result.count == 2
     end
 
     test "decrements below zero" do
       model = %{count: 0}
-      result = Counter.update(model, %Widget{type: :click, id: "decrement"})
+      result = Counter.update(model, %WidgetEvent{type: :click, id: "decrement"})
       assert result.count == -1
     end
   end
@@ -54,13 +54,13 @@ defmodule CounterTest do
   describe "update/2 -- unknown event" do
     test "returns model unchanged for unknown event tuple" do
       model = %{count: 7}
-      result = Counter.update(model, %Widget{type: :click, id: "something_else"})
+      result = Counter.update(model, %WidgetEvent{type: :click, id: "something_else"})
       assert result == model
     end
 
     test "returns model unchanged for unrecognized event type" do
       model = %{count: 2}
-      result = Counter.update(model, %Widget{type: :input, id: "name", value: "Alice"})
+      result = Counter.update(model, %WidgetEvent{type: :input, id: "name", value: "Alice"})
       assert result == model
     end
 
@@ -147,10 +147,10 @@ defmodule CounterTest do
     test "init -> increment 3x -> decrement 1x -> view shows Count: 2" do
       model =
         Counter.init([])
-        |> Counter.update(%Widget{type: :click, id: "increment"})
-        |> Counter.update(%Widget{type: :click, id: "increment"})
-        |> Counter.update(%Widget{type: :click, id: "increment"})
-        |> Counter.update(%Widget{type: :click, id: "decrement"})
+        |> Counter.update(%WidgetEvent{type: :click, id: "increment"})
+        |> Counter.update(%WidgetEvent{type: :click, id: "increment"})
+        |> Counter.update(%WidgetEvent{type: :click, id: "increment"})
+        |> Counter.update(%WidgetEvent{type: :click, id: "decrement"})
 
       assert model.count == 2
 

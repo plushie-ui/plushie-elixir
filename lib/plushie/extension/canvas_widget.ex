@@ -70,7 +70,7 @@ defmodule Plushie.Extension.CanvasWidget do
   Invokes a canvas_widget's handle_event/2 and interprets the result.
 
   Returns `{action, new_state}` where action is one of:
-  - `{:emit, %Widget{}}` -- captured with transformed event
+  - `{:emit, %WidgetEvent{}}` -- captured with transformed event
   - `:consumed` -- captured, no output
   - `:ignored` -- not captured, continue to next handler
   """
@@ -85,8 +85,8 @@ defmodule Plushie.Extension.CanvasWidget do
       {:emit, family, data} ->
         {id, scope} = resolve_emit_identity(event, widget_id)
 
-        widget_event = %Plushie.Event.Widget{
-          type: family,
+        widget_event = %Plushie.Event.WidgetEvent{
+          type: normalize_emit_family(module, family),
           id: id,
           scope: scope,
           data: normalize_emit_data(data)
@@ -97,8 +97,8 @@ defmodule Plushie.Extension.CanvasWidget do
       {:emit, family, data, new_state} when is_map(new_state) ->
         {id, scope} = resolve_emit_identity(event, widget_id)
 
-        widget_event = %Plushie.Event.Widget{
-          type: family,
+        widget_event = %Plushie.Event.WidgetEvent{
+          type: normalize_emit_family(module, family),
           id: id,
           scope: scope,
           data: normalize_emit_data(data)
@@ -142,6 +142,22 @@ defmodule Plushie.Extension.CanvasWidget do
 
   # Ensure emitted data uses string keys (wire-compatible).
   # Maps get their keys stringified; bare values are wrapped.
+  @spec normalize_emit_family(module(), atom()) :: Plushie.Event.WidgetEvent.event_type()
+  defp normalize_emit_family(module, family) when is_atom(family) do
+    cond do
+      family in module.__events__() ->
+        {module.__widget_type__(), family}
+
+      Plushie.Event.WidgetEvent.builtin_event_type?(family) ->
+        family
+
+      true ->
+        raise ArgumentError,
+              "#{inspect(module)} emitted undeclared widget event #{inspect(family)}. " <>
+                "Declare it with events/1 or emit a built-in widget family."
+    end
+  end
+
   @spec normalize_emit_data(term()) :: map()
   defp normalize_emit_data(data) when is_map(data) do
     Map.new(data, fn {k, v} -> {to_string(k), v} end)

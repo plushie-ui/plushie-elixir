@@ -9,7 +9,7 @@ defmodule Plushie.Test.Backend.EventDecoder do
   alias Plushie.Event.Canvas, as: CanvasEvent
   alias Plushie.Event.Key, as: KeyEvent
   alias Plushie.Event.Mouse, as: MouseEvent
-  alias Plushie.Event.Widget, as: WidgetEvent
+  alias Plushie.Event.WidgetEvent, as: WidgetEvent
   alias Plushie.Protocol.Keys
 
   require Logger
@@ -143,7 +143,7 @@ defmodule Plushie.Test.Backend.EventDecoder do
     %MouseEvent{type: :scroll, delta_x: data["delta_x"] || 0, delta_y: data["delta_y"] || 0}
   end
 
-  # NOTE: Canvas element events use generic %Widget{} with untyped data
+  # NOTE: Canvas element events use generic %WidgetEvent{} with untyped data
   # maps (string keys, string values) instead of dedicated event structs
   # with parsed fields. This is inconsistent with %Key{} and %Canvas{}
   # which have typed fields and atom key names. When canvas elements are
@@ -182,26 +182,21 @@ defmodule Plushie.Test.Backend.EventDecoder do
     %Plushie.Event.System{type: :diagnostic, data: event["data"] || %{}}
   end
 
-  # Extension event families. Using ~w()a ensures these atoms exist
-  # at compile time so String.to_existing_atom won't raise at runtime.
-  @extension_families MapSet.new(~w(extension_event extension_error)a)
-
-  def decode(type, id, _event) do
-    atom = try_existing_atom(type)
-
-    if atom && MapSet.member?(@extension_families, atom) do
+  def decode(type, id, event) do
+    if Plushie.Protocol.Parsers.extension_family?(type) do
       {local, scope} = split_scoped_id(id)
-      %WidgetEvent{type: atom, id: local, scope: scope}
+
+      %WidgetEvent{
+        type: type,
+        id: local,
+        scope: scope,
+        value: event["value"],
+        data: event["data"]
+      }
     else
       Logger.debug("unhandled event family #{inspect(type)} for widget #{inspect(id)}")
       nil
     end
-  end
-
-  defp try_existing_atom(str) do
-    String.to_existing_atom(str)
-  rescue
-    ArgumentError -> nil
   end
 
   # -- Scoped ID splitting ----------------------------------------------------

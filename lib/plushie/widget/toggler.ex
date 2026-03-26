@@ -24,7 +24,7 @@ defmodule Plushie.Widget.Toggler do
 
   ## Events
 
-  - `%Widget{type: :toggle, id: id, value: bool}` -- emitted on toggle, `value` is the new boolean state.
+  - `%WidgetEvent{type: :toggle, id: id, value: bool}` -- emitted on toggle, `value` is the new boolean state.
   """
 
   alias Plushie.Type.StyleMap

@@ -154,6 +154,22 @@ defmodule Plushie.Type.A11yTest do
       assert a.has_popup == "menu"
     end
 
+    test "role setter accepts radio_group" do
+      a = A11y.new() |> A11y.role(:radio_group)
+      assert a.role == :radio_group
+    end
+
+    test "role setter normalizes aliases to canonical roles" do
+      a = A11y.new() |> A11y.role(:checkbox) |> A11y.role(:radio)
+      assert a.role == :radio_button
+    end
+
+    test "role setter rejects unsupported roles" do
+      assert_raise ArgumentError, ~r/unknown a11y role :option/, fn ->
+        A11y.new() |> A11y.role(:option)
+      end
+    end
+
     test "error_message setter accepts nil" do
       a = A11y.new() |> A11y.error_message("err") |> A11y.error_message(nil)
       assert a.error_message == nil
@@ -211,6 +227,17 @@ defmodule Plushie.Type.A11yTest do
     test "cast passthrough for struct with new fields" do
       a = %A11y{busy: true, modal: true}
       assert A11y.cast(a) == a
+    end
+
+    test "cast normalizes role aliases" do
+      a = A11y.cast(%{role: :checkbox})
+      assert a.role == :check_box
+    end
+
+    test "cast rejects non-atom roles" do
+      assert_raise ArgumentError, ~r/invalid a11y role \"checkbox\"/, fn ->
+        A11y.cast(%{role: "checkbox"})
+      end
     end
   end
 
@@ -312,6 +339,23 @@ defmodule Plushie.Type.A11yTest do
   end
 
   describe "encoding toggled/selected/value/orientation" do
+    test "radio_group role encodes to renderer string" do
+      encoded = A11y.new() |> A11y.role(:radio_group) |> Plushie.Encode.encode()
+      assert encoded[:role] == "radio_group"
+    end
+
+    test "role aliases encode to canonical renderer strings" do
+      encoded = A11y.new() |> A11y.role(:progress_bar) |> Plushie.Encode.encode()
+      assert encoded[:role] == "progress_indicator"
+    end
+
+    test "encoding direct structs still rejects unsupported roles" do
+      assert_raise ArgumentError, ~r/unknown a11y role :option/, fn ->
+        %A11y{role: :option}
+        |> Plushie.Encode.encode()
+      end
+    end
+
     test "nil state fields are omitted from encoding" do
       a = %A11y{label: "test"}
       encoded = Plushie.Encode.encode(a)

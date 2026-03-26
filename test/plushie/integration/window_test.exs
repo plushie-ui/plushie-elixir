@@ -1,14 +1,14 @@
 defmodule Plushie.Integration.WindowTest do
   use Plushie.Test.Case, app: Plushie.Integration.WindowTest.WindowApp
 
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   defmodule WindowApp do
     use Plushie.App
 
     def init(_opts), do: %{show_secondary: false}
 
-    def update(model, %Widget{type: :click, id: "toggle"}) do
+    def update(model, %WidgetEvent{type: :click, id: "toggle"}) do
       %{model | show_secondary: !model.show_secondary}
     end
 
@@ -48,7 +48,6 @@ defmodule Plushie.Integration.WindowTest do
       end
     end
   end
-
 
   test "app starts with single window" do
     assert model().show_secondary == false

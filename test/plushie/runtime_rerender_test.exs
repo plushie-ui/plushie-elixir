@@ -3,7 +3,7 @@ defmodule Plushie.RuntimeRerenderTest do
 
   import ExUnit.CaptureLog
 
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   # ---------------------------------------------------------------------------
   # Test app: counter whose view text changes when the model changes.
@@ -13,7 +13,10 @@ defmodule Plushie.RuntimeRerenderTest do
     use Plushie.App
 
     def init(_opts), do: %{count: 0}
-    def update(model, %Widget{type: :click, id: "inc"}), do: %{model | count: model.count + 1}
+
+    def update(model, %WidgetEvent{type: :click, id: "inc"}),
+      do: %{model | count: model.count + 1}
+
     def update(model, _event), do: model
 
     def view(model) do
@@ -93,8 +96,8 @@ defmodule Plushie.RuntimeRerenderTest do
         {runtime, bridge} = start_runtime(CounterApp)
 
         # Mutate model via normal event first.
-        dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
-        dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
+        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
+        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
 
         state = :sys.get_state(runtime)
         assert state.model.count == 2
@@ -118,9 +121,9 @@ defmodule Plushie.RuntimeRerenderTest do
       capture_log(fn ->
         {runtime, _bridge} = start_runtime(CounterApp)
 
-        dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
-        dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
-        dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
+        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
+        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
+        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
 
         model_before = :sys.get_state(runtime).model
 
@@ -163,7 +166,7 @@ defmodule Plushie.RuntimeRerenderTest do
 
         force_rerender_and_wait(runtime)
 
-        dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
+        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
 
         state = :sys.get_state(runtime)
         assert state.model.count == 1

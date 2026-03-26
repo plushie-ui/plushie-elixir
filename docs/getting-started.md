@@ -65,14 +65,14 @@ Create `lib/my_app/counter.ex`:
 defmodule MyApp.Counter do
   use Plushie.App
 
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   def init(_opts), do: %{count: 0}
 
-  def update(model, %Widget{type: :click, id: "increment"}),
+  def update(model, %WidgetEvent{type: :click, id: "increment"}),
     do: %{model | count: model.count + 1}
 
-  def update(model, %Widget{type: :click, id: "decrement"}),
+  def update(model, %WidgetEvent{type: :click, id: "decrement"}),
     do: %{model | count: model.count - 1}
 
   def update(model, _event), do: model
@@ -124,12 +124,12 @@ Events are structs under `Plushie.Event.*`. Pattern match in `update/2`:
 
 | Event | Meaning |
 |---|---|
-| `%Widget{type: :click, id: id}` | Button click |
-| `%Widget{type: :input, id: id, value: val}` | Text input change |
-| `%Widget{type: :submit, id: id, value: val}` | Text input Enter |
-| `%Widget{type: :toggle, id: id, value: val}` | Checkbox/toggler |
-| `%Widget{type: :slide, id: id, value: val}` | Slider moved |
-| `%Widget{type: :select, id: id, value: val}` | Pick list/radio |
+| `%WidgetEvent{type: :click, id: id}` | Button click |
+| `%WidgetEvent{type: :input, id: id, value: val}` | Text input change |
+| `%WidgetEvent{type: :submit, id: id, value: val}` | Text input Enter |
+| `%WidgetEvent{type: :toggle, id: id, value: val}` | Checkbox/toggler |
+| `%WidgetEvent{type: :slide, id: id, value: val}` | Slider moved |
+| `%WidgetEvent{type: :select, id: id, value: val}` | Pick list/radio |
 | `%Timer{tag: tag, timestamp: ts}` | Timer fired |
 
 See [Events](events.md) for the full taxonomy.

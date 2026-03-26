@@ -32,7 +32,7 @@ defmodule Plushie.Widget.RichText do
 
   ## Events
 
-  - `%Widget{type: :click, id: "id:link_value"}` -- emitted when a span link is clicked.
+  - `%WidgetEvent{type: :click, id: "id:link_value"}` -- emitted when a span link is clicked.
   """
 
   alias Plushie.Widget.Build

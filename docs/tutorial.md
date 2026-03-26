@@ -16,7 +16,7 @@ defmodule MyApp.Todo do
 
   import Plushie.UI
 
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   def init(_opts) do
     %{
@@ -51,11 +51,11 @@ submit handler that creates a todo when the user presses Enter.
 
 <!-- test: tutorial_step2_input_updates_model_test, tutorial_step2_submit_creates_todo_test, tutorial_step2_empty_submit_does_nothing_test -- keep this code block in sync with the test -->
 ```elixir
-def update(model, %Widget{type: :input, id: "new_todo", value: val}) do
+def update(model, %WidgetEvent{type: :input, id: "new_todo", value: val}) do
   %{model | input: val}
 end
 
-def update(model, %Widget{type: :submit, id: "new_todo"}) do
+def update(model, %WidgetEvent{type: :submit, id: "new_todo"}) do
   if String.trim(model.input) != "" do
     todo = %{id: "todo_#{model.next_id}", text: model.input, done: false}
     %{model | todos: [todo | model.todos], input: "", next_id: model.next_id + 1}
@@ -137,7 +137,7 @@ immediate parent. Pattern match on both:
 
 <!-- test: tutorial_step4_toggle_test, tutorial_step4_delete_test -- keep this code block in sync with the test -->
 ```elixir
-def update(model, %Widget{type: :toggle, id: "toggle", scope: [todo_id | _]}) do
+def update(model, %WidgetEvent{type: :toggle, id: "toggle", scope: [todo_id | _]}) do
   todos = Enum.map(model.todos, fn
     %{id: ^todo_id} = t -> %{t | done: !t.done}
     t -> t
@@ -145,7 +145,7 @@ def update(model, %Widget{type: :toggle, id: "toggle", scope: [todo_id | _]}) do
   %{model | todos: todos}
 end
 
-def update(model, %Widget{type: :click, id: "delete", scope: [todo_id | _]}) do
+def update(model, %WidgetEvent{type: :click, id: "delete", scope: [todo_id | _]}) do
   %{model | todos: Enum.reject(model.todos, &(&1.id == todo_id))}
 end
 ```
@@ -163,7 +163,7 @@ it automatically using `Plushie.Command.focus/1`:
 ```elixir
 alias Plushie.Command
 
-def update(model, %Widget{type: :submit, id: "new_todo"}) do
+def update(model, %WidgetEvent{type: :submit, id: "new_todo"}) do
   if String.trim(model.input) != "" do
     todo = %{id: "todo_#{model.next_id}", text: model.input, done: false}
     model = %{model | todos: [todo | model.todos], input: "", next_id: model.next_id + 1}
@@ -185,13 +185,13 @@ todos.
 
 <!-- test: tutorial_step6_filter_all_test, tutorial_step6_filter_done_test -- keep this code block in sync with the test -->
 ```elixir
-def update(model, %Widget{type: :click, id: "filter_all"}),
+def update(model, %WidgetEvent{type: :click, id: "filter_all"}),
   do: %{model | filter: :all}
 
-def update(model, %Widget{type: :click, id: "filter_active"}),
+def update(model, %WidgetEvent{type: :click, id: "filter_active"}),
   do: %{model | filter: :active}
 
-def update(model, %Widget{type: :click, id: "filter_done"}),
+def update(model, %WidgetEvent{type: :click, id: "filter_done"}),
   do: %{model | filter: :done}
 ```
 
@@ -256,7 +256,7 @@ defmodule MyApp.Todo do
   import Plushie.UI
 
   alias Plushie.Command
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   # -- Init -----------------------------------------------------------------
 
@@ -266,11 +266,11 @@ defmodule MyApp.Todo do
 
   # -- Update ---------------------------------------------------------------
 
-  def update(model, %Widget{type: :input, id: "new_todo", value: val}) do
+  def update(model, %WidgetEvent{type: :input, id: "new_todo", value: val}) do
     %{model | input: val}
   end
 
-  def update(model, %Widget{type: :submit, id: "new_todo"}) do
+  def update(model, %WidgetEvent{type: :submit, id: "new_todo"}) do
     if String.trim(model.input) != "" do
       todo = %{id: "todo_#{model.next_id}", text: model.input, done: false}
       model = %{model | todos: [todo | model.todos], input: "", next_id: model.next_id + 1}
@@ -280,7 +280,7 @@ defmodule MyApp.Todo do
     end
   end
 
-  def update(model, %Widget{type: :toggle, id: "toggle", scope: [todo_id | _]}) do
+  def update(model, %WidgetEvent{type: :toggle, id: "toggle", scope: [todo_id | _]}) do
     todos = Enum.map(model.todos, fn
       %{id: ^todo_id} = t -> %{t | done: !t.done}
       t -> t
@@ -288,13 +288,13 @@ defmodule MyApp.Todo do
     %{model | todos: todos}
   end
 
-  def update(model, %Widget{type: :click, id: "delete", scope: [todo_id | _]}) do
+  def update(model, %WidgetEvent{type: :click, id: "delete", scope: [todo_id | _]}) do
     %{model | todos: Enum.reject(model.todos, &(&1.id == todo_id))}
   end
 
-  def update(model, %Widget{type: :click, id: "filter_all"}), do: %{model | filter: :all}
-  def update(model, %Widget{type: :click, id: "filter_active"}), do: %{model | filter: :active}
-  def update(model, %Widget{type: :click, id: "filter_done"}), do: %{model | filter: :done}
+  def update(model, %WidgetEvent{type: :click, id: "filter_all"}), do: %{model | filter: :all}
+  def update(model, %WidgetEvent{type: :click, id: "filter_active"}), do: %{model | filter: :active}
+  def update(model, %WidgetEvent{type: :click, id: "filter_done"}), do: %{model | filter: :done}
 
   def update(model, _event), do: model
 

@@ -3,15 +3,15 @@ defmodule ColorPicker do
   HSV color picker using a canvas_widget.
 
   The color picker widget handles all interaction internally (mouse drag,
-  keyboard adjustment, focus tracking). The app receives `:change` events
-  with the current HSV values.
+  keyboard adjustment, focus tracking). The app receives
+  `{:color_picker_widget, :change}` events with the current HSV values.
 
       mix plushie.gui ColorPicker
   """
 
   use Plushie.App
 
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   def init(_opts) do
     %{hue: 0.0, saturation: 1.0, value: 1.0}
@@ -19,7 +19,7 @@ defmodule ColorPicker do
 
   def update(model, event) do
     case event do
-      %Widget{type: :change, id: "picker", data: data} ->
+      %WidgetEvent{type: {:color_picker_widget, :change}, id: "picker", data: data} ->
         %{model | hue: data["hue"], saturation: data["saturation"], value: data["value"]}
 
       _ ->
@@ -34,41 +34,39 @@ defmodule ColorPicker do
 
     window "color_picker", title: "Color Picker" do
       column do
-        padding 20
-        spacing 16
-        align_x :center
+        padding(20)
+        spacing(16)
+        align_x(:center)
 
         ColorPickerWidget.new("picker")
 
         row do
-          spacing 16
-          align_y :center
+          spacing(16)
+          align_y(:center)
 
           container "swatch" do
-            width 48
-            height 48
+            width(48)
+            height(48)
             background(hex)
 
             border do
-              width 1
-              color "#cccccc"
-              rounded 4
+              width(1)
+              color("#cccccc")
+              rounded(4)
             end
 
-            a11y %{role: :image, label: "Selected color: #{hex}"}
+            a11y(%{role: :image, label: "Selected color: #{hex}"})
           end
 
           column do
-            spacing 4
+            spacing(4)
 
             text("hex_display", hex,
               size: 18,
               a11y: %{live: :polite, busy: model == %{hue: 0.0, saturation: 1.0, value: 1.0}}
             )
 
-            text("hsv_display", hsv_label(model),
-              a11y: %{live: :polite}
-            )
+            text("hsv_display", hsv_label(model), a11y: %{live: :polite})
           end
         end
       end

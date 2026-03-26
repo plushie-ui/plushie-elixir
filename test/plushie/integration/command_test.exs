@@ -1,8 +1,7 @@
 defmodule Plushie.Integration.CommandTest do
   use ExUnit.Case, async: true
 
-  alias Plushie.Event.{Async, Stream, Timer, Widget}
-
+  alias Plushie.Event.{Async, Stream, Timer, WidgetEvent}
 
   # ---------------------------------------------------------------------------
   # send_after: fires from init
@@ -51,7 +50,7 @@ defmodule Plushie.Integration.CommandTest do
 
     def init(_opts), do: %{result: 0}
 
-    def update(model, %Widget{type: :click, id: "go"}) do
+    def update(model, %WidgetEvent{type: :click, id: "go"}) do
       cmd = Plushie.Command.async(fn -> 42 end, :compute)
       {model, cmd}
     end
@@ -135,7 +134,7 @@ defmodule Plushie.Integration.CommandTest do
 
     def init(_opts), do: %{chunks: [], done: false}
 
-    def update(model, %Widget{type: :click, id: "go"}) do
+    def update(model, %WidgetEvent{type: :click, id: "go"}) do
       cmd =
         Plushie.Command.stream(
           fn emit ->

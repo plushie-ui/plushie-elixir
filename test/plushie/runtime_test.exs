@@ -4,7 +4,7 @@ defmodule Plushie.RuntimeTest do
   import ExUnit.CaptureLog
 
   alias Plushie.Event.Effect
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   # ---------------------------------------------------------------------------
   # Test app: simple counter driven by button click events.
@@ -15,8 +15,12 @@ defmodule Plushie.RuntimeTest do
 
     def init(_opts), do: %{value: 0}
 
-    def update(model, %Widget{type: :click, id: "inc"}), do: %{model | value: model.value + 1}
-    def update(model, %Widget{type: :click, id: "dec"}), do: %{model | value: model.value - 1}
+    def update(model, %WidgetEvent{type: :click, id: "inc"}),
+      do: %{model | value: model.value + 1}
+
+    def update(model, %WidgetEvent{type: :click, id: "dec"}),
+      do: %{model | value: model.value - 1}
+
     def update(model, _event), do: model
 
     def view(model) do
@@ -61,7 +65,7 @@ defmodule Plushie.RuntimeTest do
 
     def init(_opts), do: %{value: 0}
 
-    def update(model, %Widget{type: :click, id: "async"}) do
+    def update(model, %WidgetEvent{type: :click, id: "async"}) do
       cmd = Plushie.Command.async(fn -> 42 end, :async_result)
       {model, cmd}
     end
@@ -76,6 +80,37 @@ defmodule Plushie.RuntimeTest do
 
       column do
         text("#{model.value}")
+      end
+    end
+  end
+
+  defmodule StarRatingNative do
+    use Plushie.Extension, :native_widget
+
+    widget(:star_rating)
+    events([:selected])
+    prop(:value, :number)
+
+    rust_crate("native/star_rating")
+    rust_constructor("star_rating::StarRating::new()")
+  end
+
+  defmodule NativeEventApp do
+    use Plushie.App
+
+    def init(_opts), do: %{selected: nil}
+
+    def update(model, %WidgetEvent{type: {:star_rating, :selected}, id: "rating", value: value}) do
+      %{model | selected: value}
+    end
+
+    def update(model, _event), do: model
+
+    def view(_model) do
+      import Plushie.UI
+
+      column do
+        StarRatingNative.new("rating", value: 0)
       end
     end
   end
@@ -163,7 +198,7 @@ defmodule Plushie.RuntimeTest do
       {runtime, bridge} = start_runtime(SimpleApp)
       await_initial_render(runtime)
 
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
 
       # Initial render sends a snapshot; subsequent updates send patches.
       snapshots = Plushie.Test.InternalMockBridge.get_snapshots(bridge)
@@ -182,9 +217,9 @@ defmodule Plushie.RuntimeTest do
       {runtime, _bridge} = start_runtime(SimpleApp)
       await_initial_render(runtime)
 
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "dec"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "dec"})
 
       state = :sys.get_state(runtime)
       assert state.model.value == 1
@@ -197,7 +232,7 @@ defmodule Plushie.RuntimeTest do
       {runtime, bridge} = start_runtime(SimpleApp)
       await_initial_render(runtime)
 
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "nope"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "nope"})
       dispatch_and_wait(runtime, :mystery_event)
 
       # Unknown events don't change the tree, so no patches are sent.
@@ -206,6 +241,19 @@ defmodule Plushie.RuntimeTest do
 
       state = :sys.get_state(runtime)
       assert state.model.value == 0
+    end
+
+    test "widget-specific extension families are normalized before update/2" do
+      {runtime, _bridge} = start_runtime(NativeEventApp)
+      await_initial_render(runtime)
+
+      dispatch_and_wait(runtime, %WidgetEvent{
+        type: "star_rating:selected",
+        id: "rating",
+        value: 4
+      })
+
+      assert Plushie.Runtime.get_model(runtime).selected == 4
     end
   end
 
@@ -233,7 +281,7 @@ defmodule Plushie.RuntimeTest do
       {runtime, _bridge} = start_runtime(AsyncApp)
       await_initial_render(runtime)
 
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "async"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "async"})
 
       # Wait for the spawned Task to complete and the runtime to process it.
       state = await_condition(runtime, fn s -> s.model.value == 42 end)
@@ -253,7 +301,7 @@ defmodule Plushie.RuntimeTest do
         def update(model, :tick_a), do: %{model | ticks: model.ticks + 1}
         def update(model, :tick_b), do: %{model | ticks: model.ticks + 1}
 
-        def update(model, %Widget{type: :click, id: "batch"}) do
+        def update(model, %WidgetEvent{type: :click, id: "batch"}) do
           cmd =
             Plushie.Command.batch([
               Plushie.Command.send_after(10, :tick_a),
@@ -278,7 +326,7 @@ defmodule Plushie.RuntimeTest do
       {runtime, _bridge} = start_runtime(BatchApp)
       await_initial_render(runtime)
 
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "batch"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "batch"})
 
       # Wait for both delayed events to fire.
       Process.sleep(80)
@@ -297,7 +345,7 @@ defmodule Plushie.RuntimeTest do
 
         def init(_opts), do: %{result: nil}
 
-        def update(model, %Widget{type: :click, id: "go"}) do
+        def update(model, %WidgetEvent{type: :click, id: "go"}) do
           cmd = Plushie.Command.done(:raw_value, fn val -> {:transformed, val} end)
           {model, cmd}
         end
@@ -317,7 +365,7 @@ defmodule Plushie.RuntimeTest do
       {runtime, _bridge} = start_runtime(DoneApp)
       await_initial_render(runtime)
 
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "go"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "go"})
 
       # done/2 uses send_to_self, so the event arrives in the next message.
       state = await_condition(runtime, fn s -> s.model.result == :raw_value end)
@@ -596,7 +644,10 @@ defmodule Plushie.RuntimeTest do
 
         def init(_opts), do: %{value: 0}
         def update(_model, :crash), do: raise("boom")
-        def update(model, %Widget{type: :click, id: "inc"}), do: %{model | value: model.value + 1}
+
+        def update(model, %WidgetEvent{type: :click, id: "inc"}),
+          do: %{model | value: model.value + 1}
+
         def update(model, _event), do: model
 
         def view(model) do
@@ -621,7 +672,7 @@ defmodule Plushie.RuntimeTest do
         assert state.model.value == 0
 
         # Can still process normal events after the crash.
-        dispatch_and_wait(runtime, %Widget{type: :click, id: "inc"})
+        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
         state = :sys.get_state(runtime)
         assert state.model.value == 1
       end)
@@ -675,7 +726,7 @@ defmodule Plushie.RuntimeTest do
 
         def init(_opts), do: %{result: nil}
 
-        def update(model, %Widget{type: :click, id: "open"}) do
+        def update(model, %WidgetEvent{type: :click, id: "open"}) do
           cmd = Plushie.Effects.file_open(title: "Pick a file")
           {model, cmd}
         end
@@ -698,7 +749,7 @@ defmodule Plushie.RuntimeTest do
       {runtime, bridge} = start_runtime(EffectApp)
       await_initial_render(runtime)
 
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "open"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "open"})
 
       effects = Plushie.Test.InternalMockBridge.get_effects(bridge)
       assert length(effects) == 1
@@ -756,7 +807,7 @@ defmodule Plushie.RuntimeTest do
 
         def init(_opts), do: %{effect_id: nil, timeout_result: nil}
 
-        def update(model, %Widget{type: :click, id: "trigger"}) do
+        def update(model, %WidgetEvent{type: :click, id: "trigger"}) do
           cmd = Plushie.Effects.clipboard_read()
           {%{model | effect_id: cmd.payload.id}, cmd}
         end
@@ -779,7 +830,7 @@ defmodule Plushie.RuntimeTest do
       {runtime, _bridge} = start_runtime(EffectTimeoutApp)
       await_initial_render(runtime)
 
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "trigger"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "trigger"})
 
       # After dispatching the effect, pending_effects should have an entry.
       state = :sys.get_state(runtime)
@@ -1006,7 +1057,7 @@ defmodule Plushie.RuntimeTest do
 
         def init(_opts), do: %{chunks: [], final: nil}
 
-        def update(model, %Widget{type: :click, id: "start_stream"}) do
+        def update(model, %WidgetEvent{type: :click, id: "start_stream"}) do
           cmd =
             Plushie.Command.stream(
               fn emit ->
@@ -1043,7 +1094,7 @@ defmodule Plushie.RuntimeTest do
       {runtime, _bridge} = start_runtime(StreamApp)
       await_initial_render(runtime)
 
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "start_stream"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "start_stream"})
 
       # Wait for the stream task to emit all values and complete.
       state = await_condition(runtime, fn s -> s.model.final == :done end)
@@ -1056,7 +1107,7 @@ defmodule Plushie.RuntimeTest do
 
         def init(_opts), do: %{chunks: [], cancelled: false}
 
-        def update(model, %Widget{type: :click, id: "start"}) do
+        def update(model, %WidgetEvent{type: :click, id: "start"}) do
           cmd =
             Plushie.Command.stream(
               fn emit ->
@@ -1072,7 +1123,7 @@ defmodule Plushie.RuntimeTest do
           {model, cmd}
         end
 
-        def update(model, %Widget{type: :click, id: "cancel"}) do
+        def update(model, %WidgetEvent{type: :click, id: "cancel"}) do
           {%{model | cancelled: true}, Plushie.Command.cancel(:import)}
         end
 
@@ -1100,14 +1151,14 @@ defmodule Plushie.RuntimeTest do
         await_initial_render(runtime)
 
         # Start the stream
-        dispatch_and_wait(runtime, %Widget{type: :click, id: "start"})
+        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "start"})
 
         # Wait for the first emit to arrive
         state = await_condition(runtime, fn s -> s.model.chunks == ["first"] end)
         assert Map.has_key?(state.async_tasks, :import)
 
         # Cancel the stream
-        dispatch_and_wait(runtime, %Widget{type: :click, id: "cancel"})
+        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "cancel"})
 
         state = :sys.get_state(runtime)
         assert state.model.cancelled == true
@@ -1128,7 +1179,7 @@ defmodule Plushie.RuntimeTest do
 
         def init(_opts), do: %{value: 0}
 
-        def update(model, %Widget{type: :click, id: "cancel"}) do
+        def update(model, %WidgetEvent{type: :click, id: "cancel"}) do
           {%{model | value: model.value + 1}, Plushie.Command.cancel(:nonexistent)}
         end
 
@@ -1147,7 +1198,7 @@ defmodule Plushie.RuntimeTest do
       await_initial_render(runtime)
 
       # Should not crash
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "cancel"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "cancel"})
 
       state = :sys.get_state(runtime)
       assert state.model.value == 1
@@ -1158,7 +1209,7 @@ defmodule Plushie.RuntimeTest do
       {runtime, _bridge} = start_runtime(AsyncApp)
       await_initial_render(runtime)
 
-      dispatch_and_wait(runtime, %Widget{type: :click, id: "async"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "async"})
 
       # Wait for the task to complete, the result to be processed, and the
       # async_tasks map to be cleaned up (all happen in the same handle_info).

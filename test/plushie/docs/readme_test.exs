@@ -6,15 +6,15 @@ defmodule Plushie.Docs.ReadmeTest do
   defmodule Counter do
     use Plushie.App
 
-    alias Plushie.Event.Widget
+    alias Plushie.Event.WidgetEvent
     import Plushie.UI
 
     def init(_opts), do: %{count: 0}
 
-    def update(model, %Widget{type: :click, id: "inc"}),
+    def update(model, %WidgetEvent{type: :click, id: "inc"}),
       do: %{model | count: model.count + 1}
 
-    def update(model, %Widget{type: :click, id: "dec"}),
+    def update(model, %WidgetEvent{type: :click, id: "dec"}),
       do: %{model | count: model.count - 1}
 
     def update(model, _event), do: model
@@ -42,19 +42,19 @@ defmodule Plushie.Docs.ReadmeTest do
 
   test "readme_counter_increment_test" do
     model = Counter.init([])
-    model = Counter.update(model, %Plushie.Event.Widget{type: :click, id: "inc"})
+    model = Counter.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "inc"})
     assert model.count == 1
   end
 
   test "readme_counter_decrement_test" do
     model = Counter.init([])
-    model = Counter.update(model, %Plushie.Event.Widget{type: :click, id: "dec"})
+    model = Counter.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "dec"})
     assert model.count == -1
   end
 
   test "readme_counter_unknown_event_test" do
     model = Counter.init([])
-    model = Counter.update(model, %Plushie.Event.Widget{type: :click, id: "nope"})
+    model = Counter.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "nope"})
     assert model.count == 0
   end
 

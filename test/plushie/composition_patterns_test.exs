@@ -7,7 +7,7 @@ defmodule Plushie.CompositionPatternsTest do
   """
   use ExUnit.Case, async: true
 
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
 
   # ---------------------------------------------------------------------------
   # 1. Tab bar
@@ -15,11 +15,11 @@ defmodule Plushie.CompositionPatternsTest do
 
   defmodule TabApp do
     @behaviour Plushie.App
-    alias Plushie.Event.Widget
+    alias Plushie.Event.WidgetEvent
 
     def init(_opts), do: %{active_tab: :overview}
 
-    def update(model, %Widget{type: :click, id: "tab:" <> name}) do
+    def update(model, %WidgetEvent{type: :click, id: "tab:" <> name}) do
       %{model | active_tab: String.to_existing_atom(name)}
     end
 
@@ -54,7 +54,7 @@ defmodule Plushie.CompositionPatternsTest do
 
     test "clicking a tab updates active_tab" do
       model = TabApp.init([])
-      model = TabApp.update(model, %Widget{type: :click, id: "tab:details"})
+      model = TabApp.update(model, %WidgetEvent{type: :click, id: "tab:details"})
       assert model.active_tab == :details
     end
 
@@ -67,7 +67,7 @@ defmodule Plushie.CompositionPatternsTest do
 
     test "unknown events are ignored" do
       model = TabApp.init([])
-      assert TabApp.update(model, %Widget{type: :click, id: "unknown"}) == model
+      assert TabApp.update(model, %WidgetEvent{type: :click, id: "unknown"}) == model
     end
   end
 
@@ -77,13 +77,13 @@ defmodule Plushie.CompositionPatternsTest do
 
   defmodule SidebarApp do
     @behaviour Plushie.App
-    alias Plushie.Event.Widget
+    alias Plushie.Event.WidgetEvent
 
     @nav_items [{:inbox, "Inbox"}, {:sent, "Sent"}, {:drafts, "Drafts"}]
 
     def init(_opts), do: %{page: :inbox}
 
-    def update(model, %Widget{type: :click, id: "nav:" <> name}) do
+    def update(model, %WidgetEvent{type: :click, id: "nav:" <> name}) do
       %{model | page: String.to_existing_atom(name)}
     end
 
@@ -118,7 +118,7 @@ defmodule Plushie.CompositionPatternsTest do
 
     test "clicking nav item changes page" do
       model = SidebarApp.init([])
-      model = SidebarApp.update(model, %Widget{type: :click, id: "nav:sent"})
+      model = SidebarApp.update(model, %WidgetEvent{type: :click, id: "nav:sent"})
       assert model.page == :sent
     end
 
@@ -139,9 +139,10 @@ defmodule Plushie.CompositionPatternsTest do
 
     def init(_opts), do: %{bold: false, italic: false}
 
-    def update(model, %Widget{type: :click, id: "tool:bold"}), do: %{model | bold: !model.bold}
+    def update(model, %WidgetEvent{type: :click, id: "tool:bold"}),
+      do: %{model | bold: !model.bold}
 
-    def update(model, %Widget{type: :click, id: "tool:italic"}),
+    def update(model, %WidgetEvent{type: :click, id: "tool:italic"}),
       do: %{model | italic: !model.italic}
 
     def update(model, _event), do: model
@@ -174,9 +175,9 @@ defmodule Plushie.CompositionPatternsTest do
 
     test "clicking toggles state on and off" do
       model = ToolbarApp.init([])
-      model = ToolbarApp.update(model, %Widget{type: :click, id: "tool:bold"})
+      model = ToolbarApp.update(model, %WidgetEvent{type: :click, id: "tool:bold"})
       assert model.bold
-      model = ToolbarApp.update(model, %Widget{type: :click, id: "tool:bold"})
+      model = ToolbarApp.update(model, %WidgetEvent{type: :click, id: "tool:bold"})
       refute model.bold
     end
 
@@ -196,12 +197,13 @@ defmodule Plushie.CompositionPatternsTest do
 
     def init(_opts), do: %{show_modal: false, confirmed: false}
 
-    def update(model, %Widget{type: :click, id: "open_modal"}), do: %{model | show_modal: true}
+    def update(model, %WidgetEvent{type: :click, id: "open_modal"}),
+      do: %{model | show_modal: true}
 
-    def update(model, %Widget{type: :click, id: "confirm"}),
+    def update(model, %WidgetEvent{type: :click, id: "confirm"}),
       do: %{model | show_modal: false, confirmed: true}
 
-    def update(model, %Widget{type: :click, id: "cancel"}), do: %{model | show_modal: false}
+    def update(model, %WidgetEvent{type: :click, id: "cancel"}), do: %{model | show_modal: false}
     def update(model, _event), do: model
 
     def view(model) do
@@ -242,20 +244,20 @@ defmodule Plushie.CompositionPatternsTest do
 
     test "open_modal shows the modal" do
       model = ModalApp.init([])
-      model = ModalApp.update(model, %Widget{type: :click, id: "open_modal"})
+      model = ModalApp.update(model, %WidgetEvent{type: :click, id: "open_modal"})
       assert model.show_modal
     end
 
     test "confirm closes modal and sets confirmed" do
       model = %{show_modal: true, confirmed: false}
-      model = ModalApp.update(model, %Widget{type: :click, id: "confirm"})
+      model = ModalApp.update(model, %WidgetEvent{type: :click, id: "confirm"})
       refute model.show_modal
       assert model.confirmed
     end
 
     test "cancel closes modal without confirming" do
       model = %{show_modal: true, confirmed: false}
-      model = ModalApp.update(model, %Widget{type: :click, id: "cancel"})
+      model = ModalApp.update(model, %WidgetEvent{type: :click, id: "cancel"})
       refute model.show_modal
       refute model.confirmed
     end
@@ -334,11 +336,11 @@ defmodule Plushie.CompositionPatternsTest do
 
   defmodule BreadcrumbApp do
     @behaviour Plushie.App
-    alias Plushie.Event.Widget
+    alias Plushie.Event.WidgetEvent
 
     def init(_opts), do: %{path: ["Home", "Projects", "Plushie"]}
 
-    def update(model, %Widget{type: :click, id: "crumb:" <> index_str}) do
+    def update(model, %WidgetEvent{type: :click, id: "crumb:" <> index_str}) do
       index = String.to_integer(index_str)
       %{model | path: Enum.take(model.path, index + 1)}
     end
@@ -374,13 +376,13 @@ defmodule Plushie.CompositionPatternsTest do
       model = BreadcrumbApp.init([])
       assert length(model.path) == 3
 
-      model = BreadcrumbApp.update(model, %Widget{type: :click, id: "crumb:0"})
+      model = BreadcrumbApp.update(model, %WidgetEvent{type: :click, id: "crumb:0"})
       assert model.path == ["Home"]
     end
 
     test "clicking intermediate crumb truncates to that point" do
       model = BreadcrumbApp.init([])
-      model = BreadcrumbApp.update(model, %Widget{type: :click, id: "crumb:1"})
+      model = BreadcrumbApp.update(model, %WidgetEvent{type: :click, id: "crumb:1"})
       assert model.path == ["Home", "Projects"]
     end
 
@@ -397,13 +399,13 @@ defmodule Plushie.CompositionPatternsTest do
 
   defmodule BadgeApp do
     @behaviour Plushie.App
-    alias Plushie.Event.Widget
+    alias Plushie.Event.WidgetEvent
 
     @tags ["elixir", "rust", "iced"]
 
     def init(_opts), do: %{selected: MapSet.new(["elixir"])}
 
-    def update(model, %Widget{type: :click, id: "tag:" <> name}) do
+    def update(model, %WidgetEvent{type: :click, id: "tag:" <> name}) do
       selected =
         if MapSet.member?(model.selected, name) do
           MapSet.delete(model.selected, name)
@@ -441,14 +443,14 @@ defmodule Plushie.CompositionPatternsTest do
 
     test "clicking a tag toggles it on" do
       model = BadgeApp.init([])
-      model = BadgeApp.update(model, %Widget{type: :click, id: "tag:rust"})
+      model = BadgeApp.update(model, %WidgetEvent{type: :click, id: "tag:rust"})
       assert MapSet.member?(model.selected, "rust")
       assert MapSet.member?(model.selected, "elixir")
     end
 
     test "clicking a selected tag toggles it off" do
       model = BadgeApp.init([])
-      model = BadgeApp.update(model, %Widget{type: :click, id: "tag:elixir"})
+      model = BadgeApp.update(model, %WidgetEvent{type: :click, id: "tag:elixir"})
       refute MapSet.member?(model.selected, "elixir")
     end
 

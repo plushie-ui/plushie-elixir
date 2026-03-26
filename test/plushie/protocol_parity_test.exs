@@ -76,6 +76,32 @@ defmodule Plushie.ProtocolParityTest do
     end
   end
 
+  describe "wheel scroll decoding" do
+    test "rejects unknown units as protocol errors" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "wheel_scrolled",
+          data: %{delta_x: 1, delta_y: 2, unit: "page"}
+        })
+
+      assert {:error, {:invalid_event_field, "wheel_scrolled", :unit, "page", :unknown, _}} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "rejects malformed non-string units as protocol errors" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "wheel_scrolled",
+          data: %{delta_x: 1, delta_y: 2, unit: 123}
+        })
+
+      assert {:error, {:invalid_event_field, "wheel_scrolled", :unit, 123, :invalid, _}} =
+               Protocol.decode_message(json, :json)
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # Named key mapping (representative sample)
   # ---------------------------------------------------------------------------

@@ -6,14 +6,14 @@ defmodule Plushie.Docs.GettingStartedTest do
   defmodule Counter do
     use Plushie.App
 
-    alias Plushie.Event.Widget
+    alias Plushie.Event.WidgetEvent
 
     def init(_opts), do: %{count: 0}
 
-    def update(model, %Widget{type: :click, id: "increment"}),
+    def update(model, %WidgetEvent{type: :click, id: "increment"}),
       do: %{model | count: model.count + 1}
 
-    def update(model, %Widget{type: :click, id: "decrement"}),
+    def update(model, %WidgetEvent{type: :click, id: "decrement"}),
       do: %{model | count: model.count - 1}
 
     def update(model, _event), do: model
@@ -43,19 +43,19 @@ defmodule Plushie.Docs.GettingStartedTest do
 
   test "getting_started_counter_increment_test" do
     model = Counter.init([])
-    model = Counter.update(model, %Plushie.Event.Widget{type: :click, id: "increment"})
+    model = Counter.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "increment"})
     assert model.count == 1
   end
 
   test "getting_started_counter_decrement_test" do
     model = Counter.init([])
-    model = Counter.update(model, %Plushie.Event.Widget{type: :click, id: "decrement"})
+    model = Counter.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "decrement"})
     assert model.count == -1
   end
 
   test "getting_started_counter_unknown_event_test" do
     model = Counter.init([])
-    model = Counter.update(model, %Plushie.Event.Widget{type: :click, id: "unknown"})
+    model = Counter.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "unknown"})
     assert model.count == 0
   end
 
@@ -87,8 +87,8 @@ defmodule Plushie.Docs.GettingStartedTest do
 
   test "getting_started_counter_view_after_increments_test" do
     model = Counter.init([])
-    model = Counter.update(model, %Plushie.Event.Widget{type: :click, id: "increment"})
-    model = Counter.update(model, %Plushie.Event.Widget{type: :click, id: "increment"})
+    model = Counter.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "increment"})
+    model = Counter.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "increment"})
     tree = Plushie.Tree.normalize(Counter.view(model))
 
     assert [column] = tree.children

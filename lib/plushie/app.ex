@@ -11,11 +11,11 @@ defmodule Plushie.App do
       defmodule MyApp do
         use Plushie.App
 
-        alias Plushie.Event.Widget
+        alias Plushie.Event.WidgetEvent
 
         def init(_opts), do: %{count: 0}
 
-        def update(model, %Widget{type: :click, id: "increment"}), do: %{model | count: model.count + 1}
+        def update(model, %WidgetEvent{type: :click, id: "increment"}), do: %{model | count: model.count + 1}
         def update(model, _event), do: model
 
         def view(model) do
@@ -40,7 +40,7 @@ defmodule Plushie.App do
 
   `update/2` can return a `{model, command}` tuple to schedule side effects:
 
-      def update(model, %Widget{type: :click, id: "save"}) do
+      def update(model, %WidgetEvent{type: :click, id: "save"}) do
         {model, Command.async(fn -> save_to_disk(model) end, :save_result)}
       end
 

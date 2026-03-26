@@ -103,6 +103,24 @@ defmodule Plushie.PaneGridTest do
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
+    test "rejects unknown pane enum values" do
+      msg = %{
+        "type" => "event",
+        "family" => "pane_dragged",
+        "id" => "pg1",
+        "data" => %{
+          "pane" => "left",
+          "target" => "right",
+          "action" => "hovered",
+          "region" => "outer",
+          "edge" => "far"
+        }
+      }
+
+      assert {:error, {:invalid_event_field, "pane_dragged", :action, "hovered", :unknown, _}} =
+               Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
+    end
+
     test "decodes pane_clicked" do
       msg = %{
         "type" => "event",

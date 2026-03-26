@@ -75,14 +75,14 @@ defmodule Plushie.Widget.Canvas do
 
   Interactive shape events (semantic, from shapes with `interactive` field):
 
-  - `%Widget{type: :canvas_element_enter, id: id, data: %{"element_id" => element_id, ...}}`
-  - `%Widget{type: :canvas_element_leave, id: id, data: %{"element_id" => element_id}}`
-  - `%Widget{type: :canvas_element_click, id: id, data: %{"element_id" => element_id, ...}}`
-  - `%Widget{type: :canvas_element_drag, id: id, data: %{"element_id" => element_id, ...}}`
-  - `%Widget{type: :canvas_element_drag_end, id: id, data: %{"element_id" => element_id, ...}}`
-  - `%Widget{type: :canvas_element_focused, id: id, data: %{"element_id" => element_id}}`
+  - `%WidgetEvent{type: :canvas_element_enter, id: id, data: %{"element_id" => element_id, ...}}`
+  - `%WidgetEvent{type: :canvas_element_leave, id: id, data: %{"element_id" => element_id}}`
+  - `%WidgetEvent{type: :canvas_element_click, id: id, data: %{"element_id" => element_id, ...}}`
+  - `%WidgetEvent{type: :canvas_element_drag, id: id, data: %{"element_id" => element_id, ...}}`
+  - `%WidgetEvent{type: :canvas_element_drag_end, id: id, data: %{"element_id" => element_id, ...}}`
+  - `%WidgetEvent{type: :canvas_element_focused, id: id, data: %{"element_id" => element_id}}`
 
-  Shape events are delivered as `%Widget{}` structs (not `%Canvas{}`). The `id`
+  Shape events are delivered as `%WidgetEvent{}` structs (not `%Canvas{}`). The `id`
   field is the canvas widget ID; `data.element_id` identifies which shape.
   """
 

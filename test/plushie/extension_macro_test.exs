@@ -9,6 +9,7 @@ defmodule Plushie.ExtensionMacroTest do
     use Plushie.Extension, :native_widget
 
     widget(:gauge)
+    events([:calibrated])
 
     prop(:value, :number)
     prop(:min, :number, default: 0)
@@ -142,6 +143,11 @@ defmodule Plushie.ExtensionMacroTest do
       assert GaugeExtension.type_names() == [:gauge]
     end
 
+    test "__widget_type__/0 and __events__/0 expose declared widget event metadata" do
+      assert GaugeExtension.__widget_type__() == :gauge
+      assert GaugeExtension.__events__() == [:calibrated]
+    end
+
     test "native_crate/0 returns the crate path" do
       assert GaugeExtension.native_crate() == "native/my_gauge"
     end
@@ -169,6 +175,8 @@ defmodule Plushie.ExtensionMacroTest do
       assert node.props[:value] == 42
       assert node.props[:min] == 0
       assert node.props[:max] == 100
+      assert node.props[:__extension_widget_type__] == :gauge
+      assert node.props[:__extension_widget_events__] == [:calibrated]
       assert node.children == []
     end
 
@@ -562,6 +570,34 @@ defmodule Plushie.ExtensionMacroTest do
 
       assert warnings =~ "widget type already declared"
       assert warnings =~ "first_name"
+    end
+
+    test "events/1 requires a list of atoms" do
+      assert_raise CompileError, ~r/events\/1 expects a list of atoms/, fn ->
+        Code.compile_string("""
+        defmodule TestScalarEvents do
+          use Plushie.Extension, :canvas_widget
+          widget :bad_events
+          events :selected
+
+          def render(id, _props, _state), do: %{id: id, type: "canvas", props: %{}, children: []}
+        end
+        """)
+      end
+    end
+
+    test "events/1 is rejected for :widget extensions" do
+      assert_raise CompileError,
+                   ~r/events\/1` is only supported for :native_widget and :canvas_widget/,
+                   fn ->
+                     Code.compile_string("""
+                     defmodule TestWidgetEvents do
+                       use Plushie.Extension, :widget
+                       widget :bad_widget
+                       events [:selected]
+                     end
+                     """)
+                   end
     end
   end
 

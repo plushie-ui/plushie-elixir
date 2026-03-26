@@ -9,7 +9,7 @@ AT-SPI/Orca on Linux, and UI Automation/NVDA/JAWS on Windows.
 Screen reader users, keyboard-only users, and other AT users interact with
 the same widgets and receive the same events as mouse users. No special
 event handling is needed in your `update/2` -- AT actions produce the same
-`%Widget{type: :click, id: id}`, `%Widget{type: :input, id: id, value: val}`, etc. events as direct interaction.
+`%WidgetEvent{type: :click, id: id}`, `%WidgetEvent{type: :input, id: id, value: val}`, etc. events as direct interaction.
 
 
 ## How it works
@@ -40,7 +40,7 @@ Host (Elixir)             Renderer (iced)               Platform AT
    |                         |                              |
    |                         |<-- AT Action (Click) --------|
    |                         |   (native iced event)        |
-   |<-- %Widget{:click} -----|                              |
+   |<-- %WidgetEvent{:click} -----|                              |
 ```
 
 ### plushie's role
@@ -243,29 +243,30 @@ when a widget is semantically different from its type (e.g. a `text` that's
 actually a heading, or a `container` that's a navigation landmark).
 
 **Interactive:**
-`:button`, `:checkbox` / `:check_box`, `:combo_box` / `:combobox`,
-`:link`, `:menu_item`, `:radio` / `:radio_button`, `:slider`,
+`:button`, `:checkbox` / `:check_box`, `:combo_box`,
+`:link`, `:menu_item`, `:radio` / `:radio_button`, `:radio_group`, `:slider`,
 `:switch`, `:tab`, `:text_input`, `:multiline_text_input` /
 `:text_editor`, `:tree_item`
 
 **Structure:**
 `:generic_container` / `:generic` / `:container`, `:group`,
-`:heading`, `:label`, `:list`, `:list_item`, `:row`,
-`:cell`, `:column_header`, `:row_header`, `:table`, `:tree`
+`:heading`, `:label`, `:list`, `:list_item`, `:column_header`,
+`:table_row` / `:row`, `:table_cell` / `:cell`,
+`:table`, `:tree`
 
 **Landmarks:**
 `:navigation`, `:region`, `:search`
 
 **Status:**
-`:alert`, `:alert_dialog` / `:alertdialog`, `:dialog`, `:status`,
-`:timer`, `:meter`, `:progress_indicator` / `:progressbar`
+`:alert`, `:alert_dialog`, `:dialog`, `:status`,
+`:meter`, `:progress_indicator` / `:progress_bar`
 
 **Other:**
 `:document`, `:image`, `:menu`, `:menu_bar`, `:scroll_view`,
 `:separator`, `:tab_list`, `:tab_panel`, `:toolbar`, `:tooltip`,
 `:window`
 
-Unknown role atoms are accepted but mapped to `Unknown`.
+Unsupported role atoms raise `ArgumentError` during normalization.
 
 
 ## Patterns and best practices
@@ -783,12 +784,12 @@ renderer maps it to a standard plushie event:
 
 | AT action | Plushie event | Notes |
 |---|---|---|
-| Click | `%Widget{type: :click, id: id}` | Screen reader activate, switch press |
-| SetValue | `%Widget{type: :input, id: id, value: val}` | AT sets an input value directly |
+| Click | `%WidgetEvent{type: :click, id: id}` | Screen reader activate, switch press |
+| SetValue | `%WidgetEvent{type: :input, id: id, value: val}` | AT sets an input value directly |
 | Focus | (internal) | Focus tracking, no event emitted |
 | Other | `{:a11y_action, id, action_name}` | Scroll, dismiss, etc. |
 
-Your `update/2` already handles `%Widget{type: :click, ...}` and `%Widget{type: :input, ...}` --
+Your `update/2` already handles `%WidgetEvent{type: :click, ...}` and `%WidgetEvent{type: :input, ...}` --
 AT actions produce identical events. The `{:a11y_action, ...}` event is
 a catch-all for actions without a direct widget equivalent:
 

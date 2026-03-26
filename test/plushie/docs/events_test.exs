@@ -16,78 +16,78 @@ defmodule Plushie.Docs.EventsTest do
     System,
     Timer,
     Touch,
-    Widget,
+    WidgetEvent,
     Window
   }
 
   # -- Widget events -----------------------------------------------------------
 
   test "events_widget_click_construct_test" do
-    event = %Widget{type: :click, id: "save", scope: []}
+    event = %WidgetEvent{type: :click, id: "save", scope: []}
     assert event.id == "save"
     assert event.scope == []
   end
 
   test "events_widget_click_match_test" do
-    event = %Widget{type: :click, id: "save", scope: []}
-    assert match?(%Widget{type: :click, id: "save"}, event)
+    event = %WidgetEvent{type: :click, id: "save", scope: []}
+    assert match?(%WidgetEvent{type: :click, id: "save"}, event)
   end
 
   test "events_widget_click_scope_test" do
-    event = %Widget{type: :click, id: "save", scope: ["form"]}
-    assert match?(%Widget{type: :click, id: "save", scope: ["form"]}, event)
+    event = %WidgetEvent{type: :click, id: "save", scope: ["form"]}
+    assert match?(%WidgetEvent{type: :click, id: "save", scope: ["form"]}, event)
   end
 
   test "events_widget_input_match_test" do
-    event = %Widget{type: :input, id: "search", scope: [], value: "hello"}
+    event = %WidgetEvent{type: :input, id: "search", scope: [], value: "hello"}
 
-    assert match?(%Widget{type: :input, id: "search"}, event)
+    assert match?(%WidgetEvent{type: :input, id: "search"}, event)
     assert event.value == "hello"
   end
 
   test "events_widget_submit_match_test" do
-    event = %Widget{type: :submit, id: "search", scope: [], value: "query"}
+    event = %WidgetEvent{type: :submit, id: "search", scope: [], value: "query"}
 
-    assert match?(%Widget{type: :submit, id: "search"}, event)
+    assert match?(%WidgetEvent{type: :submit, id: "search"}, event)
     assert event.value == "query"
   end
 
   test "events_widget_toggle_match_test" do
-    event = %Widget{type: :toggle, id: "dark_mode", scope: [], value: true}
+    event = %WidgetEvent{type: :toggle, id: "dark_mode", scope: [], value: true}
 
-    assert match?(%Widget{type: :toggle, id: "dark_mode"}, event)
+    assert match?(%WidgetEvent{type: :toggle, id: "dark_mode"}, event)
     assert event.value == true
   end
 
   test "events_widget_select_match_test" do
-    event = %Widget{type: :select, id: "theme_picker", scope: [], value: "nord"}
+    event = %WidgetEvent{type: :select, id: "theme_picker", scope: [], value: "nord"}
 
-    assert match?(%Widget{type: :select, id: "theme_picker"}, event)
+    assert match?(%WidgetEvent{type: :select, id: "theme_picker"}, event)
     assert event.value == "nord"
   end
 
   test "events_widget_slide_match_test" do
-    event = %Widget{type: :slide, id: "volume", scope: [], value: 75.0}
+    event = %WidgetEvent{type: :slide, id: "volume", scope: [], value: 75.0}
 
-    assert match?(%Widget{type: :slide, id: "volume"}, event)
+    assert match?(%WidgetEvent{type: :slide, id: "volume"}, event)
     assert event.value == 75.0
   end
 
   test "events_widget_slide_release_match_test" do
-    event = %Widget{type: :slide_release, id: "volume", scope: [], value: 75.0}
+    event = %WidgetEvent{type: :slide_release, id: "volume", scope: [], value: 75.0}
 
-    assert match?(%Widget{type: :slide_release, id: "volume"}, event)
+    assert match?(%WidgetEvent{type: :slide_release, id: "volume"}, event)
     assert event.value == 75.0
   end
 
   test "events_widget_key_binding_match_test" do
-    event = %Widget{type: :key_binding, id: "editor", scope: [], value: "save"}
+    event = %WidgetEvent{type: :key_binding, id: "editor", scope: [], value: "save"}
 
-    assert match?(%Widget{type: :key_binding, id: "editor", value: "save"}, event)
+    assert match?(%WidgetEvent{type: :key_binding, id: "editor", value: "save"}, event)
   end
 
   test "events_widget_scroll_match_test" do
-    event = %Widget{
+    event = %WidgetEvent{
       type: :scroll,
       id: "log_view",
       scope: [],
@@ -101,37 +101,37 @@ defmodule Plushie.Docs.EventsTest do
       }
     }
 
-    assert match?(%Widget{type: :scroll, id: "log_view"}, event)
+    assert match?(%WidgetEvent{type: :scroll, id: "log_view"}, event)
     assert event.data["relative_y"] == 0.75
     refute event.data["relative_y"] >= 0.99
   end
 
   test "events_widget_paste_match_test" do
-    event = %Widget{type: :paste, id: "url_input", scope: [], value: " text "}
+    event = %WidgetEvent{type: :paste, id: "url_input", scope: [], value: " text "}
 
-    assert match?(%Widget{type: :paste, id: "url_input"}, event)
+    assert match?(%WidgetEvent{type: :paste, id: "url_input"}, event)
     assert event.value == " text "
   end
 
   test "events_widget_option_hovered_match_test" do
-    event = %Widget{type: :option_hovered, id: "search", scope: [], value: "opt1"}
+    event = %WidgetEvent{type: :option_hovered, id: "search", scope: [], value: "opt1"}
 
-    assert match?(%Widget{type: :option_hovered, id: "search"}, event)
+    assert match?(%WidgetEvent{type: :option_hovered, id: "search"}, event)
     assert event.value == "opt1"
   end
 
   test "events_widget_open_close_match_test" do
-    open = %Widget{type: :open, id: "country_picker", scope: []}
-    close = %Widget{type: :close, id: "country_picker", scope: []}
+    open = %WidgetEvent{type: :open, id: "country_picker", scope: []}
+    close = %WidgetEvent{type: :close, id: "country_picker", scope: []}
 
-    assert match?(%Widget{type: :open, id: "country_picker"}, open)
-    assert match?(%Widget{type: :close, id: "country_picker"}, close)
+    assert match?(%WidgetEvent{type: :open, id: "country_picker"}, open)
+    assert match?(%WidgetEvent{type: :close, id: "country_picker"}, close)
   end
 
   test "events_widget_sort_match_test" do
-    event = %Widget{type: :sort, id: "users", scope: [], value: "name"}
+    event = %WidgetEvent{type: :sort, id: "users", scope: [], value: "name"}
 
-    assert match?(%Widget{type: :sort, id: "users"}, event)
+    assert match?(%WidgetEvent{type: :sort, id: "users"}, event)
     assert event.value == "name"
   end
 
@@ -170,14 +170,14 @@ defmodule Plushie.Docs.EventsTest do
   end
 
   test "events_canvas_element_event_match_test" do
-    event = %Widget{
+    event = %WidgetEvent{
       type: :canvas_element_click,
       id: "chart",
       scope: [],
       data: %{"element_id" => "bar-jan", "x" => 15.0, "y" => 70.0, "button" => "left"}
     }
 
-    assert match?(%Widget{type: :canvas_element_click, id: "chart"}, event)
+    assert match?(%WidgetEvent{type: :canvas_element_click, id: "chart"}, event)
     assert event.data["element_id"] == "bar-jan"
   end
 
@@ -436,18 +436,18 @@ defmodule Plushie.Docs.EventsTest do
   # -- Pattern matching tips ---------------------------------------------------
 
   test "events_pattern_prefix_match_test" do
-    event = %Widget{type: :click, id: "nav:settings", scope: []}
+    event = %WidgetEvent{type: :click, id: "nav:settings", scope: []}
 
-    assert match?(%Widget{type: :click, id: "nav:" <> _}, event)
+    assert match?(%WidgetEvent{type: :click, id: "nav:" <> _}, event)
 
-    %Widget{type: :click, id: "nav:" <> section} = event
+    %WidgetEvent{type: :click, id: "nav:" <> section} = event
     assert section == "settings"
   end
 
   test "events_pattern_toggle_prefix_match_test" do
-    event = %Widget{type: :toggle, id: "setting:theme", scope: [], value: true}
+    event = %WidgetEvent{type: :toggle, id: "setting:theme", scope: [], value: true}
 
-    %Widget{type: :toggle, id: "setting:" <> key, value: value} = event
+    %WidgetEvent{type: :toggle, id: "setting:" <> key, value: value} = event
     assert key == "theme"
     assert value == true
   end
@@ -455,23 +455,23 @@ defmodule Plushie.Docs.EventsTest do
   # -- Scope matching ----------------------------------------------------------
 
   test "events_scope_sidebar_match_test" do
-    event = %Widget{type: :click, id: "save", scope: ["sidebar"]}
+    event = %WidgetEvent{type: :click, id: "save", scope: ["sidebar"]}
 
-    assert match?(%Widget{type: :click, id: "save", scope: ["sidebar" | _]}, event)
+    assert match?(%WidgetEvent{type: :click, id: "save", scope: ["sidebar" | _]}, event)
   end
 
   test "events_scope_main_match_test" do
-    event = %Widget{type: :click, id: "save", scope: ["main"]}
+    event = %WidgetEvent{type: :click, id: "save", scope: ["main"]}
 
-    assert match?(%Widget{type: :click, id: "save", scope: ["main" | _]}, event)
+    assert match?(%WidgetEvent{type: :click, id: "save", scope: ["main" | _]}, event)
   end
 
   test "events_catch_all_test" do
-    event = %Widget{type: :click, id: "unknown", scope: []}
+    event = %WidgetEvent{type: :click, id: "unknown", scope: []}
 
     result =
       case event do
-        %Widget{type: :click, id: "save"} -> "save"
+        %WidgetEvent{type: :click, id: "save"} -> "save"
         _ -> "fallback"
       end
 

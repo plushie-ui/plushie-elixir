@@ -43,7 +43,7 @@ scoped path (e.g. `"sidebar/form/save"`). The protocol decode layer
 splits it into a local `id` and a `scope` list:
 
 ```elixir
-%Widget{type: :click, id: "save", scope: ["form", "sidebar"]}
+%WidgetEvent{type: :click, id: "save", scope: ["form", "sidebar"]}
 ```
 
 The `scope` list is in **reverse order** -- nearest parent first. This
@@ -52,13 +52,13 @@ design optimises the common case of matching on the immediate parent:
 <!-- test: scoped_ids_match_local_id_test, scoped_ids_match_immediate_parent_test, scoped_ids_dynamic_list_bind_parent_test -- keep this code block in sync with the test -->
 ```elixir
 # Match on local ID only (ignores scope entirely)
-def update(model, %Widget{type: :click, id: "save"}), do: ...
+def update(model, %WidgetEvent{type: :click, id: "save"}), do: ...
 
 # Match on ID + immediate parent
-def update(model, %Widget{type: :click, id: "save", scope: ["form" | _]}), do: ...
+def update(model, %WidgetEvent{type: :click, id: "save", scope: ["form" | _]}), do: ...
 
 # Bind the parent for dynamic lists
-def update(model, %Widget{type: :toggle, id: "done", scope: [item_id | _]}) do
+def update(model, %WidgetEvent{type: :toggle, id: "done", scope: [item_id | _]}) do
   toggle_item(model, item_id)
 end
 ```
@@ -68,14 +68,14 @@ end
 Use `Plushie.Event.target/1` to get the full forward-order path:
 
 ```elixir
-event = %Widget{type: :click, id: "save", scope: ["form", "sidebar"]}
+event = %WidgetEvent{type: :click, id: "save", scope: ["form", "sidebar"]}
 Plushie.Event.target(event)
 # => "sidebar/form/save"
 ```
 
 ## Which event structs carry scope
 
-- `Plushie.Event.Widget`
+- `Plushie.Event.WidgetEvent`
 - `Plushie.Event.Canvas`
 - `Plushie.Event.MouseArea`
 - `Plushie.Event.Pane`
@@ -180,11 +180,11 @@ This produces IDs like `"todo_list/item_1/done"` and
 from the scope:
 
 ```elixir
-def update(model, %Widget{type: :toggle, id: "done", scope: [item_id | _]}) do
+def update(model, %WidgetEvent{type: :toggle, id: "done", scope: [item_id | _]}) do
   toggle_item(model, item_id)
 end
 
-def update(model, %Widget{type: :click, id: "delete", scope: [item_id | _]}) do
+def update(model, %WidgetEvent{type: :click, id: "delete", scope: [item_id | _]}) do
   delete_item(model, item_id)
 end
 ```
@@ -199,13 +199,13 @@ The reversed scope list is designed for ergonomic pattern matching:
 <!-- test: scoped_ids_depth_agnostic_test, scoped_ids_exact_depth_test, scoped_ids_no_scope_test -- keep this code block in sync with the test -->
 ```elixir
 # Depth-agnostic: works whether "search" is at root or deeply nested
-def update(model, %Widget{id: "query", scope: ["search" | _]}), do: ...
+def update(model, %WidgetEvent{id: "query", scope: ["search" | _]}), do: ...
 
 # Exact depth: only matches if "search" is the only scope ancestor
-def update(model, %Widget{id: "query", scope: ["search"]}), do: ...
+def update(model, %WidgetEvent{id: "query", scope: ["search"]}), do: ...
 
 # No scope: only matches unscoped widgets
-def update(model, %Widget{id: "save", scope: []}), do: ...
+def update(model, %WidgetEvent{id: "save", scope: []}), do: ...
 ```
 
 ## Accessibility cross-references

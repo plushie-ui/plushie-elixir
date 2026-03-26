@@ -35,7 +35,13 @@ defmodule Plushie.Tree do
   # Props with these keys are runtime metadata, not wire props.
   # They're extracted into a separate :meta field during normalization
   # and never sent to the renderer.
-  @runtime_meta_keys [:__canvas_widget__, :__canvas_widget_props__, :__canvas_widget_state__]
+  @runtime_meta_keys [
+    :__canvas_widget__,
+    :__canvas_widget_props__,
+    :__canvas_widget_state__,
+    :__extension_widget_type__,
+    :__extension_widget_events__
+  ]
 
   @doc """
   Normalizes a UI tree into the canonical node shape.
@@ -231,7 +237,9 @@ defmodule Plushie.Tree do
         widget_meta = %{
           __canvas_widget__: module,
           __canvas_widget_state__: widget_state,
-          __canvas_widget_props__: widget_props
+          __canvas_widget_props__: widget_props,
+          __extension_widget_type__: Map.get(meta, :__extension_widget_type__),
+          __extension_widget_events__: Map.get(meta, :__extension_widget_events__, [])
         }
 
         existing_meta = Map.get(normalized, :meta, %{})

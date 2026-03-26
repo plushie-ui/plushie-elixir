@@ -18,29 +18,32 @@ defmodule StarRating do
 
   use Plushie.Extension, :canvas_widget
 
-  widget :star_rating
-  prop :rating, :number
-  prop :readonly, :boolean, default: false
-  prop :scale, :number, default: 1.0
-  prop :theme_progress, :number, default: 0.0
+  widget(:star_rating)
+  prop(:rating, :number)
+  prop(:readonly, :boolean, default: false)
+  prop(:scale, :number, default: 1.0)
+  prop(:theme_progress, :number, default: 0.0)
 
-  state hover: nil
+  state(hover: nil)
 
   # -- Event transformation ----------------------------------------------------
 
   # Click on a star -> emit :select with the 1-based star number.
   @impl Plushie.Extension.CanvasWidget
-  def handle_event(%Plushie.Event.Widget{type: :click, id: "star-" <> n}, _state) do
+  def handle_event(%Plushie.Event.WidgetEvent{type: :click, id: "star-" <> n}, _state) do
     {:emit, :select, String.to_integer(n) + 1}
   end
 
   # Hover enter on a star -> update internal hover state for preview highlight.
-  def handle_event(%Plushie.Event.Widget{type: :canvas_element_enter, id: "star-" <> n}, state) do
+  def handle_event(
+        %Plushie.Event.WidgetEvent{type: :canvas_element_enter, id: "star-" <> n},
+        state
+      ) do
     {:update_state, %{state | hover: String.to_integer(n) + 1}}
   end
 
   # Hover leave -> clear preview highlight.
-  def handle_event(%Plushie.Event.Widget{type: :canvas_element_leave}, state) do
+  def handle_event(%Plushie.Event.WidgetEvent{type: :canvas_element_leave}, state) do
     {:update_state, %{state | hover: nil}}
   end
 
@@ -87,7 +90,7 @@ defmodule StarRating do
         width: width,
         height: size,
         alt: "Star rating",
-        role: "radiogroup" do
+        role: "radio_group" do
         layer "stars" do
           for i <- 0..4 do
             filled = i < display

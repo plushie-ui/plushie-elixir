@@ -431,6 +431,18 @@ defmodule Plushie.TreeTest do
     test "returns empty map for empty input" do
       assert Plushie.Protocol.Encode.stringify_keys(%{}) == %{}
     end
+
+    test "raises on invalid map keys" do
+      assert_raise ArgumentError, ~r/protocol payload keys must be atoms or strings/, fn ->
+        Plushie.Protocol.Encode.stringify_keys(%{123 => "bad"})
+      end
+    end
+
+    test "raises on tuple values" do
+      assert_raise ArgumentError, ~r/protocol payload values must not contain tuples/, fn ->
+        Plushie.Protocol.Encode.stringify_keys(%{size: {10, 20}})
+      end
+    end
   end
 
   # ---------------------------------------------------------------------------

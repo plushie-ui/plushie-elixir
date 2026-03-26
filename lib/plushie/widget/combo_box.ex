@@ -19,7 +19,7 @@ defmodule Plushie.Widget.ComboBox do
   - `menu_height` (number) -- maximum height of the dropdown menu in pixels.
   - `icon` (map) -- display an icon inside the text input. Same format as
     `Plushie.Widget.TextInput` icon prop.
-  - `on_option_hovered` (boolean) -- when true, emits `%Widget{type: :option_hovered, id: id, value: value}`
+  - `on_option_hovered` (boolean) -- when true, emits `%WidgetEvent{type: :option_hovered, id: id, value: value}`
     when hovering over a dropdown option. Default: false.
   - `shaping` -- text shaping strategy. See `Plushie.Type.Shaping`.
   - `ellipsis` (string) -- text ellipsis strategy: `"none"`, `"start"`, `"middle"`, or `"end"`.
@@ -32,11 +32,11 @@ defmodule Plushie.Widget.ComboBox do
 
   ## Events
 
-  - `%Widget{type: :select, id: id, value: value}` -- emitted when an option is selected.
-  - `%Widget{type: :input, id: id, value: value}` -- emitted on every text input change (for filtering).
-  - `%Widget{type: :option_hovered, id: id, value: value}` -- emitted on hover (requires `on_option_hovered` prop).
-  - `%Widget{type: :open, id: id}` -- emitted when the dropdown menu is opened (requires `on_open: true`).
-  - `%Widget{type: :close, id: id}` -- emitted when the dropdown menu is closed (requires `on_close: true`).
+  - `%WidgetEvent{type: :select, id: id, value: value}` -- emitted when an option is selected.
+  - `%WidgetEvent{type: :input, id: id, value: value}` -- emitted on every text input change (for filtering).
+  - `%WidgetEvent{type: :option_hovered, id: id, value: value}` -- emitted on hover (requires `on_option_hovered` prop).
+  - `%WidgetEvent{type: :open, id: id}` -- emitted when the dropdown menu is opened (requires `on_open: true`).
+  - `%WidgetEvent{type: :close, id: id}` -- emitted when the dropdown menu is closed (requires `on_close: true`).
   """
 
   alias Plushie.Type.StyleMap

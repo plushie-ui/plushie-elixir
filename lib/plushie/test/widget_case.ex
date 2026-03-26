@@ -34,7 +34,7 @@ defmodule Plushie.Test.WidgetCase do
   via `init_arg`. The harness:
 
   - Hosts a single widget instance in a `window > column` layout
-  - Records the most recent `%Widget{}` event in `model().last_event`
+  - Records the most recent `%WidgetEvent{}` event in `model().last_event`
   - Merges emitted event data into the model for direct assertions
 
   The `init_widget/2` function must be called in a `setup` block. It
@@ -44,7 +44,7 @@ defmodule Plushie.Test.WidgetCase do
 
   ## Widget-specific helpers
 
-  - `last_event/0` -- returns the most recent `%Widget{}` event
+  - `last_event/0` -- returns the most recent `%WidgetEvent{}` event
     emitted by the widget, or `nil` if none
   - `events/0` -- returns all emitted events (newest first)
   """
@@ -131,7 +131,7 @@ defmodule Plushie.Test.WidgetCase.HarnessApp do
   end
 
   @impl true
-  def update(model, %Plushie.Event.Widget{} = event) do
+  def update(model, %Plushie.Event.WidgetEvent{} = event) do
     data = event.data || %{}
 
     model
@@ -173,7 +173,7 @@ defmodule Plushie.Test.WidgetCase.Helpers do
 
   Returns `nil` if no events have been emitted yet.
   """
-  @spec last_event() :: Plushie.Event.Widget.t() | nil
+  @spec last_event() :: Plushie.Event.WidgetEvent.t() | nil
   def last_event do
     Plushie.Test.Helpers.model().last_event
   end
@@ -181,7 +181,7 @@ defmodule Plushie.Test.WidgetCase.Helpers do
   @doc """
   Returns all events emitted by the widget (newest first).
   """
-  @spec events() :: [Plushie.Event.Widget.t()]
+  @spec events() :: [Plushie.Event.WidgetEvent.t()]
   def events do
     Plushie.Test.Helpers.model().events
   end

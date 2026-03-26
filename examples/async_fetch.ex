@@ -12,7 +12,7 @@ defmodule AsyncFetch do
   use Plushie.App
 
   alias Plushie.Command
-  alias Plushie.Event.{Async, Widget}
+  alias Plushie.Event.{Async, WidgetEvent}
 
   # -- Init -------------------------------------------------------------------
 
@@ -22,7 +22,7 @@ defmodule AsyncFetch do
 
   # -- Update -----------------------------------------------------------------
 
-  def update(model, %Widget{type: :click, id: "fetch"}) do
+  def update(model, %WidgetEvent{type: :click, id: "fetch"}) do
     cmd =
       Command.async(fn ->
         # Simulate a slow network call
