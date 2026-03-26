@@ -1,6 +1,6 @@
 defmodule Plushie.Test.PoolAdapter do
   @moduledoc """
-  Iostream adapter that connects a Bridge to a SessionPool slot.
+  Iostream adapter that connects a Bridge to one SessionPool session.
 
   Acts as a thin relay between the Bridge's iostream protocol and the
   SessionPool's multiplexed port. The Bridge handles session_id injection
@@ -89,6 +89,14 @@ defmodule Plushie.Test.PoolAdapter do
     end
 
     {:noreply, state}
+  end
+
+  def handle_info({:plushie_pool_renderer_exited, _session_id, code}, state) do
+    if state.bridge do
+      send(state.bridge, {:iostream_closed, {:renderer_exited, code}})
+    end
+
+    {:stop, {:renderer_exited, code}, state}
   end
 
   # Pool process died.

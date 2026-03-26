@@ -5,12 +5,19 @@
 binary = Plushie.Binary.path!()
 Application.put_env(:plushie, :test_binary_path, binary)
 
-# Start the shared session pool for pooled test backends.
+test_backend =
+  case System.get_env("PLUSHIE_TEST_BACKEND") do
+    "headless" -> :headless
+    "windowed" -> :windowed
+    _ -> :mock
+  end
+
+# Start the shared session pool for test sessions.
 {:ok, _} =
   Plushie.Test.SessionPool.start_link(
     name: Plushie.TestPool,
     renderer: binary,
-    mode: :mock,
+    mode: test_backend,
     max_sessions: max(System.schedulers_online() * 8, 128)
   )
 

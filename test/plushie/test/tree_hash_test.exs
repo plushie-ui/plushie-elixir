@@ -136,4 +136,17 @@ defmodule Plushie.Test.TreeHashTest do
       assert error.message =~ "PLUSHIE_UPDATE_SNAPSHOTS=1"
     end
   end
+
+  describe "from_response/1" do
+    test "builds a tree hash from a renderer response" do
+      tree_hash =
+        TreeHash.from_response(%{
+          "type" => "tree_hash_response",
+          "name" => "main",
+          "hash" => "deadbeef"
+        })
+
+      assert tree_hash == %TreeHash{name: "main", hash: "deadbeef", backend: nil}
+    end
+  end
 end

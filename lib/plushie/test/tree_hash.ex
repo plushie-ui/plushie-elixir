@@ -67,4 +67,36 @@ defmodule Plushie.Test.TreeHash do
   def hash(data) when is_binary(data) do
     :crypto.hash(:sha256, data) |> Base.encode16(case: :lower)
   end
+
+  @doc "Builds a tree hash from a normalized UI tree."
+  @spec from_tree(name :: String.t(), tree :: map(), backend :: atom() | nil) :: t()
+  def from_tree(name, tree, backend \\ nil) when is_binary(name) and is_map(tree) do
+    normalized = normalize_tree(tree)
+    encoded = Jason.encode!(normalized)
+    %__MODULE__{name: name, hash: hash(encoded), backend: backend}
+  end
+
+  @doc "Builds a tree hash from a renderer `tree_hash_response` message."
+  @spec from_response(map()) :: t()
+  def from_response(%{"type" => "tree_hash_response", "name" => name, "hash" => hash})
+      when is_binary(name) and is_binary(hash) do
+    %__MODULE__{name: name, hash: hash}
+  end
+
+  def from_response(msg) do
+    raise ArgumentError, "invalid tree_hash_response: #{inspect(msg)}"
+  end
+
+  defp normalize_tree(data) when is_map(data) do
+    data
+    |> Enum.sort_by(fn {k, _v} -> to_string(k) end)
+    |> Enum.map(fn {k, v} -> {to_string(k), normalize_tree(v)} end)
+    |> Jason.OrderedObject.new()
+  end
+
+  defp normalize_tree(data) when is_list(data) do
+    Enum.map(data, &normalize_tree/1)
+  end
+
+  defp normalize_tree(data), do: data
 end

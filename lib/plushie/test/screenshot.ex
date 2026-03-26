@@ -38,10 +38,42 @@ defmodule Plushie.Test.Screenshot do
           name: String.t(),
           hash: String.t(),
           size: {non_neg_integer(), non_neg_integer()},
-          rgba_data: binary() | nil
+          rgba_data: binary() | nil,
+          backend: atom() | nil
         }
 
-  defstruct [:name, :hash, :size, :rgba_data]
+  defstruct [:name, :hash, :size, :rgba_data, :backend]
+
+  @doc "Builds a screenshot from a renderer `screenshot_response` message."
+  @spec from_response(map(), Plushie.Protocol.format(), atom() | nil) :: t()
+  def from_response(msg, format \\ :msgpack, backend \\ nil)
+
+  def from_response(
+        %{
+          "type" => "screenshot_response",
+          "name" => name,
+          "hash" => hash,
+          "width" => width,
+          "height" => height
+        } = msg,
+        format,
+        backend
+      )
+      when is_binary(name) and is_binary(hash) and is_integer(width) and is_integer(height) do
+    rgba =
+      case Map.get(msg, "rgba") do
+        nil -> nil
+        data when is_binary(data) and format == :msgpack -> data
+        data when is_binary(data) and format == :json -> Base.decode64!(data)
+        other -> raise ArgumentError, "invalid screenshot rgba field: #{inspect(other)}"
+      end
+
+    %__MODULE__{name: name, hash: hash, size: {width, height}, rgba_data: rgba, backend: backend}
+  end
+
+  def from_response(msg, _format, _backend) do
+    raise ArgumentError, "invalid screenshot_response: #{inspect(msg)}"
+  end
 
   @doc """
   Save the screenshot as a PNG file.
@@ -99,7 +131,8 @@ defmodule Plushie.Test.Screenshot do
 
   def assert_match(%__MODULE__{} = screenshot, golden_dir) do
     File.mkdir_p!(golden_dir)
-    golden_path = Path.join(golden_dir, "#{screenshot.name}.sha256")
+    suffix = if screenshot.backend, do: ".#{screenshot.backend}", else: ""
+    golden_path = Path.join(golden_dir, "#{screenshot.name}#{suffix}.sha256")
 
     cond do
       System.get_env("PLUSHIE_UPDATE_SCREENSHOTS") == "1" ->

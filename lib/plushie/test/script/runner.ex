@@ -6,7 +6,7 @@ defmodule Plushie.Test.Script.Runner do
   and collects results.
   """
 
-  alias Plushie.Test.{Screenshot, Script, Session, TreeHash}
+  alias Plushie.Test.{Screenshot, Script, Session, SessionPool, TreeHash}
 
   @backend_map %{
     mock: Plushie.Test.Backend.Runtime,
@@ -25,14 +25,25 @@ defmodule Plushie.Test.Script.Runner do
   def run(%{header: header, instructions: instructions}, opts \\ []) do
     replay? = Keyword.get(opts, :replay, false)
     backend_mod = Map.get(@backend_map, header.backend, Plushie.Test.Backend.Runtime)
-    session = Session.start(header.app, backend: backend_mod)
+    pool_name = :"plushie_script_pool_#{System.unique_integer([:positive])}"
+
+    {:ok, pool_pid} =
+      SessionPool.start_link(
+        name: pool_name,
+        renderer: Plushie.Binary.path!(),
+        mode: header.backend,
+        rust_log: "off"
+      )
+
+    session =
+      Session.start(header.app, backend: backend_mod, pool: pool_name, mode: header.backend)
 
     try do
       failures =
         instructions
         |> Enum.with_index(1)
         |> Enum.reduce([], fn {instruction, line_num}, failures ->
-          case execute(session, instruction, replay?) do
+          case execute(session, instruction, header, replay?) do
             :ok -> failures
             {:error, reason} -> [{instruction, "line #{line_num}: #{reason}"} | failures]
           end
@@ -45,65 +56,66 @@ defmodule Plushie.Test.Script.Runner do
       end
     after
       Session.stop(session)
+      GenServer.stop(pool_pid, :normal, 10_000)
     end
   end
 
-  defp execute(session, {:click, selector}, _replay?) do
+  defp execute(session, {:click, selector}, _header, _replay?) do
     Session.click(session, selector)
     :ok
   rescue
     e -> {:error, Exception.message(e)}
   end
 
-  defp execute(session, {:toggle, selector, value}, _replay?) do
+  defp execute(session, {:toggle, selector, value}, _header, _replay?) do
     Session.toggle(session, selector, value)
     :ok
   rescue
     e -> {:error, Exception.message(e)}
   end
 
-  defp execute(session, {:type_text, selector, text}, _replay?) do
+  defp execute(session, {:type_text, selector, text}, _header, _replay?) do
     Session.type_text(session, selector, text)
     :ok
   rescue
     e -> {:error, Exception.message(e)}
   end
 
-  defp execute(session, {:type_key, key}, _replay?) do
+  defp execute(session, {:type_key, key}, _header, _replay?) do
     Session.type_key(session, key)
     :ok
   rescue
     e -> {:error, Exception.message(e)}
   end
 
-  defp execute(session, {:press, key}, _replay?) do
+  defp execute(session, {:press, key}, _header, _replay?) do
     Session.press(session, key)
     :ok
   rescue
     e -> {:error, Exception.message(e)}
   end
 
-  defp execute(session, {:release, key}, _replay?) do
+  defp execute(session, {:release, key}, _header, _replay?) do
     Session.release(session, key)
     :ok
   rescue
     e -> {:error, Exception.message(e)}
   end
 
-  defp execute(_session, {:move, _selector}, _replay?) do
+  defp execute(_session, {:move, _selector}, _header, _replay?) do
     # No-op: moving cursor to a widget by selector requires widget bounds
     # from layout, which only the renderer knows.
     :ok
   end
 
-  defp execute(session, {:move_to, x, y}, _replay?) do
+  defp execute(session, {:move_to, x, y}, _header, _replay?) do
     Session.move_to(session, x, y)
     :ok
   rescue
     e -> {:error, Exception.message(e)}
   end
 
-  defp execute(session, {:assert_model, expression}, _replay?) do
+  defp execute(session, {:assert_model, expression}, _header, _replay?) do
     # Basic string-match assertion against the inspected model.
     # assert_model checks that the expression string appears somewhere in the
     # inspect output of the current model. For exact equality, use `==`.
@@ -116,7 +128,7 @@ defmodule Plushie.Test.Script.Runner do
     end
   end
 
-  defp execute(session, {:expect, text}, _replay?) do
+  defp execute(session, {:expect, text}, _header, _replay?) do
     tree = Session.tree(session)
 
     if tree_contains_text?(tree, text) do
@@ -126,7 +138,7 @@ defmodule Plushie.Test.Script.Runner do
     end
   end
 
-  defp execute(session, {:tree_hash, name}, _replay?) do
+  defp execute(session, {:tree_hash, name}, _header, _replay?) do
     snap = Session.tree_hash(session, name)
     golden_dir = Path.join(["test", "snapshots"])
     TreeHash.assert_match(snap, golden_dir)
@@ -135,8 +147,8 @@ defmodule Plushie.Test.Script.Runner do
     e -> {:error, Exception.message(e)}
   end
 
-  defp execute(session, {:screenshot, name}, _replay?) do
-    screenshot = Session.screenshot(session, name)
+  defp execute(session, {:screenshot, name}, %{viewport: {width, height}}, _replay?) do
+    screenshot = Session.screenshot(session, name, width: width, height: height)
     golden_dir = Path.join(["test", "screenshots"])
     Screenshot.assert_match(screenshot, golden_dir)
     :ok
@@ -144,7 +156,7 @@ defmodule Plushie.Test.Script.Runner do
     e -> {:error, Exception.message(e)}
   end
 
-  defp execute(session, {:assert_text, selector, expected}, _replay?) do
+  defp execute(session, {:assert_text, selector, expected}, _header, _replay?) do
     case Session.find(session, selector) do
       nil ->
         {:error, "element #{inspect(selector)} not found"}
@@ -161,7 +173,7 @@ defmodule Plushie.Test.Script.Runner do
     end
   end
 
-  defp execute(_session, {:wait, ms}, replay?) do
+  defp execute(_session, {:wait, ms}, _header, replay?) do
     if replay?, do: Process.sleep(ms)
     :ok
   end

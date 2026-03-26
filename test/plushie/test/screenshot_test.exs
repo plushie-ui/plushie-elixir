@@ -104,5 +104,83 @@ defmodule Plushie.Test.ScreenshotTest do
         Screenshot.assert_match(screenshot_b, tmp_dir)
       end
     end
+
+    test "uses backend-scoped golden file when backend is set" do
+      tmp_dir =
+        Path.join(
+          System.tmp_dir!(),
+          "plushie_screenshot_scoped_#{System.unique_integer([:positive])}"
+        )
+
+      on_exit(fn -> File.rm_rf!(tmp_dir) end)
+
+      headless = %Screenshot{
+        hash: "headless_hash",
+        name: "shot",
+        size: {100, 100},
+        rgba_data: nil,
+        backend: :headless
+      }
+
+      windowed = %Screenshot{
+        hash: "windowed_hash",
+        name: "shot",
+        size: {100, 100},
+        rgba_data: nil,
+        backend: :windowed
+      }
+
+      assert :ok = Screenshot.assert_match(headless, tmp_dir)
+      assert :ok = Screenshot.assert_match(windowed, tmp_dir)
+      assert File.read!(Path.join(tmp_dir, "shot.headless.sha256")) == "headless_hash"
+      assert File.read!(Path.join(tmp_dir, "shot.windowed.sha256")) == "windowed_hash"
+    end
+  end
+
+  describe "from_response/2" do
+    test "builds a screenshot from a msgpack-style binary response" do
+      rgba = <<255, 0, 0, 255>>
+
+      screenshot =
+        Screenshot.from_response(
+          %{
+            "type" => "screenshot_response",
+            "name" => "shot",
+            "hash" => "abc",
+            "width" => 1,
+            "height" => 1,
+            "rgba" => rgba
+          },
+          :msgpack,
+          :headless
+        )
+
+      assert screenshot == %Screenshot{
+               name: "shot",
+               hash: "abc",
+               size: {1, 1},
+               rgba_data: rgba,
+               backend: :headless
+             }
+    end
+
+    test "decodes a json-style base64 rgba payload" do
+      screenshot =
+        Screenshot.from_response(
+          %{
+            "type" => "screenshot_response",
+            "name" => "shot",
+            "hash" => "abc",
+            "width" => 1,
+            "height" => 1,
+            "rgba" => Base.encode64(<<1, 2, 3, 4>>)
+          },
+          :json,
+          :windowed
+        )
+
+      assert screenshot.rgba_data == <<1, 2, 3, 4>>
+      assert screenshot.backend == :windowed
+    end
   end
 end

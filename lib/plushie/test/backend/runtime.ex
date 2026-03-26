@@ -19,6 +19,10 @@ defmodule Plushie.Test.Backend.Runtime do
         |-- queries go to Runtime.get_model/get_tree
         |-- interactions go to Runtime.interact -> Bridge -> renderer
 
+  Windowed sessions wait after interactions, before the backend asks the
+  renderer for tree hashes. That keeps renderer-backed reads from racing the
+  last update without adding extra startup work to every session.
+
   ## Options
 
   Passed through from `start/2`:
@@ -41,7 +45,19 @@ defmodule Plushie.Test.Backend.Runtime do
   alias Plushie.Test.Element
   alias Plushie.Test.PoolAdapter
 
-  defstruct [:pool, :sup, :instance_name, :runtime, :app, :format]
+  @type mode :: :mock | :headless | :windowed
+  @type t :: %__MODULE__{
+          pool: GenServer.server(),
+          session_id: String.t(),
+          mode: mode(),
+          sup: pid(),
+          instance_name: atom(),
+          runtime: pid(),
+          app: module(),
+          format: :json | :msgpack
+        }
+
+  defstruct [:pool, :session_id, :mode, :sup, :instance_name, :runtime, :app, :format]
 
   # -- Backend callbacks -------------------------------------------------------
 
@@ -94,13 +110,10 @@ defmodule Plushie.Test.Backend.Runtime do
 
   def tree(pid), do: GenServer.call(pid, :tree)
 
-  def tree_hash(_pid, name) do
-    %Plushie.Test.TreeHash{name: name, hash: ""}
-  end
+  def tree_hash(pid, name), do: GenServer.call(pid, {:tree_hash, name}, 30_000)
 
-  def screenshot(_pid, name) do
-    %Plushie.Test.Screenshot{name: name, hash: "", size: {0, 0}, rgba_data: nil}
-  end
+  def screenshot(pid, name, opts \\ []),
+    do: GenServer.call(pid, {:screenshot, name, opts}, 30_000)
 
   def reset(pid), do: GenServer.call(pid, :reset, 10_000)
 
@@ -171,6 +184,7 @@ defmodule Plushie.Test.Backend.Runtime do
   def init({app, opts}) do
     pool = Keyword.get(opts, :pool, Plushie.TestPool)
     format = Keyword.get(opts, :format, :msgpack)
+    mode = Keyword.get(opts, :mode, resolve_test_mode())
 
     # Start pool adapter that connects Bridge <-> SessionPool.
     {:ok, adapter_pid, session_id} = PoolAdapter.start_link(pool: pool, format: format)
@@ -192,12 +206,13 @@ defmodule Plushie.Test.Backend.Runtime do
 
     runtime = Plushie.runtime_for(instance_name)
 
-    # Wait for initial render to complete.
     :sys.get_state(runtime)
 
     {:ok,
      %__MODULE__{
        pool: pool,
+       session_id: session_id,
+       mode: mode,
        sup: sup,
        instance_name: instance_name,
        runtime: runtime,
@@ -219,6 +234,39 @@ defmodule Plushie.Test.Backend.Runtime do
   def handle_call(:tree, _from, state) do
     tree = Plushie.Runtime.get_tree(state.runtime)
     {:reply, tree, state}
+  end
+
+  def handle_call({:tree_hash, name}, _from, state) do
+    {:ok, response} =
+      state
+      |> wait_for_draw()
+      |> then(fn current_state ->
+        Plushie.Test.SessionPool.send_message(
+          current_state.pool,
+          current_state.session_id,
+          %{type: "tree_hash", name: name},
+          "tree_hash_response"
+        )
+      end)
+
+    {:reply, %{Plushie.Test.TreeHash.from_response(response) | backend: state.mode}, state}
+  end
+
+  def handle_call({:screenshot, name, opts}, _from, state) do
+    payload =
+      %{type: "screenshot", name: name}
+      |> maybe_put_dimension(opts, :width)
+      |> maybe_put_dimension(opts, :height)
+
+    {:ok, response} =
+      Plushie.Test.SessionPool.send_message(
+        state.pool,
+        state.session_id,
+        payload,
+        "screenshot_response"
+      )
+
+    {:reply, Plushie.Test.Screenshot.from_response(response, state.format, state.mode), state}
   end
 
   def handle_call({:find, selector}, _from, state) do
@@ -251,6 +299,7 @@ defmodule Plushie.Test.Backend.Runtime do
     tree = Plushie.Runtime.get_tree(state.runtime)
     sel = encode_selector(selector, tree)
     result = Plushie.Runtime.interact(state.runtime, action, sel, payload)
+    wait_for_draw(state)
     {:reply, result, state}
   end
 
@@ -272,6 +321,7 @@ defmodule Plushie.Test.Backend.Runtime do
   def handle_call(:reset, _from, state) do
     # Stop the existing supervisor and start fresh.
     Plushie.stop(state.sup)
+    :ok = Plushie.Test.SessionPool.unregister(state.pool, state.session_id)
 
     {:ok, adapter_pid, session_id} =
       PoolAdapter.start_link(pool: state.pool, format: state.format)
@@ -292,7 +342,8 @@ defmodule Plushie.Test.Backend.Runtime do
     runtime = Plushie.runtime_for(instance_name)
     :sys.get_state(runtime)
 
-    {:reply, :ok, %{state | sup: sup, instance_name: instance_name, runtime: runtime}}
+    {:reply, :ok,
+     %{state | session_id: session_id, sup: sup, instance_name: instance_name, runtime: runtime}}
   end
 
   @impl GenServer
@@ -396,6 +447,19 @@ defmodule Plushie.Test.Backend.Runtime do
   defp encode_selector(:focused, _tree), do: %{"by" => "focused"}
   defp encode_selector(text, _tree) when is_binary(text), do: %{"by" => "text", "value" => text}
 
+  defp maybe_put_dimension(map, opts, key) do
+    case Keyword.get(opts, key) do
+      value when is_integer(value) and value > 0 ->
+        Map.put(map, key, value)
+
+      nil ->
+        map
+
+      other ->
+        raise ArgumentError, "expected #{key} to be a positive integer, got: #{inspect(other)}"
+    end
+  end
+
   @valid_modifiers %{
     "shift" => :shift,
     "ctrl" => :ctrl,
@@ -448,5 +512,39 @@ defmodule Plushie.Test.Backend.Runtime do
       end
 
     {key_name, modifiers}
+  end
+
+  @spec wait_for_draw(t()) :: t()
+  defp wait_for_draw(state) do
+    wait_for_draw(state.pool, state.session_id, state.mode)
+    state
+  end
+
+  @spec wait_for_draw(GenServer.server(), String.t(), mode()) :: :ok
+  defp wait_for_draw(_pool, _session_id, mode) when mode in [:mock, :headless], do: :ok
+
+  defp wait_for_draw(pool, session_id, :windowed) do
+    case Plushie.Test.SessionPool.send_message(
+           pool,
+           session_id,
+           %{type: "screenshot", name: "__sync__", width: 1, height: 1},
+           "screenshot_response"
+         ) do
+      {:ok, _response} ->
+        :ok
+
+      {:error, reason} ->
+        raise RuntimeError,
+              "windowed renderer did not finish drawing for #{session_id}: #{inspect(reason)}"
+    end
+  end
+
+  @spec resolve_test_mode() :: mode()
+  defp resolve_test_mode do
+    case System.get_env("PLUSHIE_TEST_BACKEND") do
+      "headless" -> :headless
+      "windowed" -> :windowed
+      _ -> :mock
+    end
   end
 end

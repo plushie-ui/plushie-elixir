@@ -1,11 +1,11 @@
 defmodule Plushie.Test.SessionPool do
   @moduledoc """
-  Shared renderer process for concurrent test sessions.
+  Session manager for concurrent test renderer sessions.
 
-  Owns a single `plushie --headless --max-sessions N` (or `--mock`)
-  Port and multiplexes messages from multiple test sessions over it.
-  Each session gets a unique session ID; responses are demuxed by the
-  `session` field and forwarded to the owning process.
+  For `:mock` and `:headless`, owns a single renderer Port and multiplexes
+  multiple logical sessions over it. For `:windowed`, each logical session
+  gets its own renderer process because the real iced renderer only supports
+  one live app session per process.
 
   ## Usage
 
@@ -17,21 +17,15 @@ defmodule Plushie.Test.SessionPool do
 
       session = Session.start(MyApp, backend: Backend.Runtime, pool: pool)
 
-  ## Architecture
-
-  The pool is a GenServer that:
-
-  1. Spawns the renderer as a Port with `--max-sessions N`.
-  2. Assigns unique session IDs to each registered caller.
-  3. Injects the `session` field into outgoing messages.
-  4. Demuxes incoming responses by the `session` field and forwards
-     them to the registered owner process.
+  The pool assigns session IDs, sends messages to the right renderer,
+  and forwards replies back to the caller.
   """
 
   use GenServer
 
   require Logger
 
+  @type mode :: :mock | :headless | :windowed
   @type session_id :: String.t()
 
   # -- Public API ------------------------------------------------------------
@@ -42,7 +36,7 @@ defmodule Plushie.Test.SessionPool do
   ## Options
 
   - `:renderer` -- path to the plushie binary (required)
-  - `:mode` -- `:mock` (default) or `:headless`
+  - `:mode` -- `:mock` (default), `:headless`, or `:windowed`
   - `:format` -- `:msgpack` (default) or `:json`
   - `:max_sessions` -- maximum concurrent sessions (default 8)
   - `:name` -- optional registered name for the pool
@@ -56,7 +50,7 @@ defmodule Plushie.Test.SessionPool do
   @doc "Register a new session. Returns a unique session ID."
   @spec register(pool :: GenServer.server()) :: session_id()
   def register(pool) do
-    case GenServer.call(pool, :register) do
+    case GenServer.call(pool, :register, :infinity) do
       {:error, {:max_sessions_reached, max}} ->
         raise """
         Session pool is full (#{max} sessions).
@@ -129,7 +123,13 @@ defmodule Plushie.Test.SessionPool do
           msg :: map()
         ) :: String.t()
   def send_interact(pool, session_id, msg) do
-    GenServer.call(pool, {:send_interact, session_id, msg})
+    case GenServer.call(pool, {:send_interact, session_id, msg}) do
+      req_id when is_binary(req_id) ->
+        req_id
+
+      {:error, reason} ->
+        raise "failed to send interact for #{inspect(session_id)}: #{inspect(reason)}"
+    end
   end
 
   # -- GenServer Implementation -----------------------------------------------
@@ -137,26 +137,36 @@ defmodule Plushie.Test.SessionPool do
   defmodule State do
     @moduledoc false
     defstruct [
+      :mode,
       :port,
+      :renderer,
+      :env,
       :format,
       :max_sessions,
-      # session_id -> {owner_pid, monitor_ref}
+      # session_id -> {owner_pid, monitor_ref} or %WindowedSession{}
       sessions: %{},
       # {session_id, request_id} -> {response_type, from}
       pending: %{},
-      # session_id -> from (callers waiting for session_closed after reset)
+      # session_id -> :awaiting while reset is in flight
       pending_close: %{},
+      # session_id -> {{:sync, from} | :async, port} while a windowed renderer is exiting
+      closing_windowed: %{},
       next_id: 1,
       next_session: 1,
       buffer: ""
     ]
   end
 
+  defmodule WindowedSession do
+    @moduledoc false
+    defstruct [:owner_pid, :owner_ref, :port, pending: %{}, buffer: ""]
+  end
+
   @impl GenServer
   def init(opts) do
     mode = Keyword.get(opts, :mode, :mock)
     format = Keyword.get(opts, :format, :msgpack)
-    max_sessions = Keyword.get(opts, :max_sessions, 8)
+    max_sessions = max_sessions(Keyword.get(opts, :max_sessions))
 
     renderer_path = Keyword.fetch!(opts, :renderer)
 
@@ -168,28 +178,31 @@ defmodule Plushie.Test.SessionPool do
 
     env = Plushie.RendererEnv.build(env_opts)
 
-    mode_flag = if mode == :headless, do: "--headless", else: "--mock"
+    state = %State{
+      mode: mode,
+      renderer: renderer_path,
+      env: env,
+      format: format,
+      max_sessions: max_sessions
+    }
 
-    args =
-      [mode_flag, "--max-sessions", to_string(max_sessions)] ++
-        if(format == :json, do: ["--json"], else: [])
+    case mode do
+      mode when mode in [:mock, :headless] ->
+        args = multiplexed_args(mode, format, max_sessions)
+        port = open_renderer_port(renderer_path, env, format, args)
 
-    port_opts =
-      [:binary, :exit_status, :use_stdio] ++
-        if(format == :json, do: [{:line, 65_536}], else: [{:packet, 4}])
+        send_initial_settings(port, format, "")
+        {:ok, %{state | port: port}}
 
-    port =
-      Port.open(
-        {:spawn_executable, renderer_path},
-        port_opts ++ [{:args, args}, {:env, env}]
-      )
-
-    # Send initial settings to trigger the hello handshake.
-    settings = %{protocol_version: Plushie.Protocol.protocol_version()}
-    send_to_port(port, format, %{session: "", type: "settings", settings: settings})
-
-    {:ok, %State{port: port, format: format, max_sessions: max_sessions}}
+      :windowed ->
+        {:ok, state}
+    end
   end
+
+  @doc false
+  @spec renderer_mode_flag(:mock | :headless) :: String.t()
+  def renderer_mode_flag(:mock), do: "--mock"
+  def renderer_mode_flag(:headless), do: "--headless"
 
   @impl GenServer
   def handle_call(:register, {caller_pid, _}, state) do
@@ -198,87 +211,192 @@ defmodule Plushie.Test.SessionPool do
     else
       session_id = "pool_#{state.next_session}"
       monitor_ref = Process.monitor(caller_pid)
-      sessions = Map.put(state.sessions, session_id, {caller_pid, monitor_ref})
-      {:reply, session_id, %{state | sessions: sessions, next_session: state.next_session + 1}}
+
+      case state.mode do
+        mode when mode in [:mock, :headless] ->
+          sessions = Map.put(state.sessions, session_id, {caller_pid, monitor_ref})
+
+          {:reply, session_id,
+           %{state | sessions: sessions, next_session: state.next_session + 1}}
+
+        :windowed ->
+          state = register_windowed_session(state, caller_pid, monitor_ref, session_id)
+          {:reply, session_id, state}
+      end
     end
   end
 
   def handle_call({:unregister, session_id}, from, state) do
-    # Demonitor the session owner -- we're cleaning up explicitly.
-    case Map.get(state.sessions, session_id) do
-      {_pid, monitor_ref} -> Process.demonitor(monitor_ref, [:flush])
-      _ -> :ok
+    case state.mode do
+      mode when mode in [:mock, :headless] ->
+        # Demonitor the session owner -- we're cleaning up explicitly.
+        case Map.get(state.sessions, session_id) do
+          {_pid, monitor_ref} -> Process.demonitor(monitor_ref, [:flush])
+          _ -> :ok
+        end
+
+        # Send Reset to free renderer resources. We block on reset_response
+        # for backward compatibility with older renderers. If the renderer
+        # also sends session_closed (v0.3.2+), we handle it gracefully.
+        req_id = "unreg_#{state.next_id}"
+        msg = %{session: session_id, type: "reset", id: req_id}
+        send_to_port(state.port, state.format, msg)
+
+        pending = Map.put(state.pending, {session_id, req_id}, {"reset_response", from})
+        sessions = Map.delete(state.sessions, session_id)
+        pending_close = Map.put(state.pending_close, session_id, :awaiting)
+
+        {:noreply,
+         %{
+           state
+           | pending: pending,
+             sessions: sessions,
+             pending_close: pending_close,
+             next_id: state.next_id + 1
+         }}
+
+      :windowed ->
+        case Map.get(state.sessions, session_id) do
+          %WindowedSession{owner_ref: monitor_ref, port: port} ->
+            Process.demonitor(monitor_ref, [:flush])
+            state = request_windowed_exit(state, session_id, port, {:sync, from})
+
+            {:noreply, state}
+
+          nil ->
+            {:reply, :ok, state}
+        end
     end
-
-    # Send Reset to free renderer resources. We block on reset_response
-    # for backward compatibility with older renderers. If the renderer
-    # also sends session_closed (v0.3.2+), we handle it gracefully.
-    req_id = "unreg_#{state.next_id}"
-    msg = %{session: session_id, type: "reset", id: req_id}
-    send_to_port(state.port, state.format, msg)
-
-    pending = Map.put(state.pending, {session_id, req_id}, {"reset_response", from})
-    sessions = Map.delete(state.sessions, session_id)
-    # Track session_id so we can absorb the session_closed event if it arrives.
-    pending_close = Map.put(state.pending_close, session_id, :awaiting)
-
-    {:noreply,
-     %{
-       state
-       | pending: pending,
-         sessions: sessions,
-         pending_close: pending_close,
-         next_id: state.next_id + 1
-     }}
   end
 
   def handle_call({:send, session_id, msg, response_type}, from, state) do
     req_id = "req_#{state.next_id}"
-    msg = msg |> Map.put(:session, session_id) |> Map.put(:id, req_id)
-    send_to_port(state.port, state.format, msg)
 
-    pending = Map.put(state.pending, {session_id, req_id}, {response_type, from})
-    {:noreply, %{state | pending: pending, next_id: state.next_id + 1}}
+    case state.mode do
+      mode when mode in [:mock, :headless] ->
+        case Map.has_key?(state.sessions, session_id) do
+          true ->
+            msg = msg |> Map.put(:session, session_id) |> Map.put(:id, req_id)
+            send_to_port(state.port, state.format, msg)
+
+            pending = Map.put(state.pending, {session_id, req_id}, {response_type, from})
+            {:noreply, %{state | pending: pending, next_id: state.next_id + 1}}
+
+          false ->
+            GenServer.reply(from, {:error, :unknown_session})
+            {:noreply, state}
+        end
+
+      :windowed ->
+        case Map.fetch(state.sessions, session_id) do
+          {:ok, %WindowedSession{} = session} ->
+            msg = Map.put(msg, :id, req_id)
+            send_to_port(session.port, state.format, msg)
+
+            session = %{
+              session
+              | pending: Map.put(session.pending, req_id, {response_type, from})
+            }
+
+            {:noreply,
+             %{
+               state
+               | sessions: Map.put(state.sessions, session_id, session),
+                 next_id: state.next_id + 1
+             }}
+
+          :error ->
+            GenServer.reply(from, {:error, :unknown_session})
+            {:noreply, state}
+        end
+    end
   end
 
   def handle_call({:send_interact, session_id, msg}, _from, state) do
     req_id = "req_#{state.next_id}"
-    msg = msg |> Map.put(:session, session_id) |> Map.put(:id, req_id)
-    send_to_port(state.port, state.format, msg)
 
-    # Don't add to pending -- interact_step and interact_response
-    # will be forwarded to the session owner via forward_to_session.
-    {:reply, req_id, %{state | next_id: state.next_id + 1}}
+    case state.mode do
+      mode when mode in [:mock, :headless] ->
+        case Map.has_key?(state.sessions, session_id) do
+          true ->
+            msg = msg |> Map.put(:session, session_id) |> Map.put(:id, req_id)
+            send_to_port(state.port, state.format, msg)
+            {:reply, req_id, %{state | next_id: state.next_id + 1}}
+
+          false ->
+            {:reply, {:error, :unknown_session}, state}
+        end
+
+      :windowed ->
+        case Map.fetch(state.sessions, session_id) do
+          {:ok, %WindowedSession{} = session} ->
+            msg = Map.put(msg, :id, req_id)
+            send_to_port(session.port, state.format, msg)
+            {:reply, req_id, %{state | next_id: state.next_id + 1}}
+
+          :error ->
+            {:reply, {:error, :unknown_session}, state}
+        end
+    end
   end
 
   @impl GenServer
   def handle_cast({:unregister_async, session_id}, state) do
-    case Map.get(state.sessions, session_id) do
-      {_pid, monitor_ref} ->
-        Process.demonitor(monitor_ref, [:flush])
-        {:noreply, release_session(state, session_id)}
+    case state.mode do
+      mode when mode in [:mock, :headless] ->
+        case Map.get(state.sessions, session_id) do
+          {_pid, monitor_ref} ->
+            Process.demonitor(monitor_ref, [:flush])
+            {:noreply, release_session(state, session_id)}
 
-      nil ->
-        # Already cleaned up by :DOWN handler.
-        {:noreply, state}
+          nil ->
+            {:noreply, state}
+        end
+
+      :windowed ->
+        case Map.get(state.sessions, session_id) do
+          %WindowedSession{owner_ref: monitor_ref, port: port} ->
+            Process.demonitor(monitor_ref, [:flush])
+            state = request_windowed_exit(state, session_id, port, :async)
+
+            {:noreply, state}
+
+          nil ->
+            {:noreply, state}
+        end
     end
   end
 
   def handle_cast({:send, session_id, msg}, state) do
-    msg = Map.put(msg, :session, session_id)
-    send_to_port(state.port, state.format, msg)
-    {:noreply, state}
+    case state.mode do
+      mode when mode in [:mock, :headless] ->
+        msg = Map.put(msg, :session, session_id)
+        send_to_port(state.port, state.format, msg)
+        {:noreply, state}
+
+      :windowed ->
+        case Map.get(state.sessions, session_id) do
+          %WindowedSession{} = session ->
+            send_to_port(session.port, state.format, msg)
+            {:noreply, state}
+
+          nil ->
+            {:noreply, state}
+        end
+    end
   end
 
   @impl GenServer
-  def handle_info({port, {:data, data}}, %{port: port} = state) do
+  def handle_info({port, {:data, data}}, %{mode: mode, port: port} = state)
+      when mode in [:mock, :headless] do
     state = handle_port_data(data, state)
     {:noreply, state}
   end
 
-  def handle_info({port, {:exit_status, code}}, %{port: port} = state) do
+  def handle_info({port, {:exit_status, code}}, %{mode: mode, port: port} = state)
+      when mode in [:mock, :headless] do
     Logger.error("SessionPool: renderer exited with status #{code}")
-    # Reply to all pending callers with an error.
+
     for {_key, {_type, from}} <- state.pending do
       GenServer.reply(from, {:error, :renderer_exited})
     end
@@ -286,14 +404,62 @@ defmodule Plushie.Test.SessionPool do
     {:stop, {:renderer_exited, code}, %{state | pending: %{}, pending_close: %{}}}
   end
 
-  def handle_info({:DOWN, ref, :process, pid, _reason}, state) do
-    # Session owner died (test crashed, timed out, etc.). Release the
-    # renderer slot so it doesn't count against max_sessions.
-    case Enum.find(state.sessions, fn {_id, {p, r}} -> p == pid and r == ref end) do
-      {session_id, _} ->
-        {:noreply, release_session(state, session_id)}
+  def handle_info({port, {:data, data}}, %{mode: :windowed} = state) do
+    case find_windowed_session_by_port(state.sessions, port) do
+      {session_id, %WindowedSession{} = session} ->
+        session = handle_windowed_port_data(data, session_id, session, state.format)
+        {:noreply, %{state | sessions: Map.put(state.sessions, session_id, session)}}
 
       nil ->
+        {:noreply, state}
+    end
+  end
+
+  def handle_info({port, {:exit_status, code}}, %{mode: :windowed} = state) do
+    case find_windowed_session_by_port(state.sessions, port) ||
+           find_windowed_close_by_port(state, port) do
+      {session_id, %WindowedSession{} = session} ->
+        state = finish_windowed_exit(state, session_id, session, code)
+        {:noreply, state}
+
+      nil ->
+        {:noreply, state}
+    end
+  end
+
+  def handle_info({:DOWN, ref, :process, pid, _reason}, state) do
+    case state.mode do
+      mode when mode in [:mock, :headless] ->
+        case Enum.find(state.sessions, fn {_id, {p, r}} -> p == pid and r == ref end) do
+          {session_id, _} ->
+            {:noreply, release_session(state, session_id)}
+
+          nil ->
+            {:noreply, state}
+        end
+
+      :windowed ->
+        case Enum.find(state.sessions, fn {_id, s} ->
+               match?(%WindowedSession{owner_pid: ^pid, owner_ref: ^ref}, s)
+             end) do
+          {session_id, %WindowedSession{port: port}} ->
+            state = request_windowed_exit(state, session_id, port, :async)
+
+            {:noreply, state}
+
+          nil ->
+            {:noreply, state}
+        end
+    end
+  end
+
+  def handle_info({:force_close_windowed, session_id, port}, state) do
+    case Map.fetch(state.closing_windowed, session_id) do
+      {:ok, _close_kind} ->
+        Port.close(port)
+        {:noreply, state}
+
+      :error ->
         {:noreply, state}
     end
   end
@@ -302,9 +468,8 @@ defmodule Plushie.Test.SessionPool do
 
   # -- Session cleanup ---------------------------------------------------------
 
-  # Shared cleanup: remove session from the active map, send a reset
-  # to the renderer so it frees the slot, and track pending_close to
-  # absorb the session_closed event.
+  # Shared cleanup: remove the session, send reset to the renderer,
+  # and absorb the later session_closed event.
   defp release_session(state, session_id) do
     msg = %{session: session_id, type: "reset", id: "rel_#{state.next_id}"}
     send_to_port(state.port, state.format, msg)
@@ -322,6 +487,124 @@ defmodule Plushie.Test.SessionPool do
   defp send_to_port(port, format, msg) do
     data = Plushie.Protocol.encode(msg, format)
     Port.command(port, data)
+  end
+
+  defp send_initial_settings(port, format, session_id) do
+    settings = %{protocol_version: Plushie.Protocol.protocol_version()}
+    send_to_port(port, format, %{session: session_id, type: "settings", settings: settings})
+  end
+
+  defp open_renderer_port(renderer_path, env, format, args) do
+    port_opts =
+      [:binary, :exit_status, :use_stdio] ++
+        if(format == :json, do: [{:line, 65_536}], else: [{:packet, 4}])
+
+    Port.open(
+      {:spawn_executable, renderer_path},
+      port_opts ++ [{:args, args}, {:env, env}]
+    )
+  end
+
+  defp multiplexed_args(mode, format, max_sessions) do
+    [renderer_mode_flag(mode), "--max-sessions", to_string(max_sessions)] ++
+      if(format == :json, do: ["--json"], else: [])
+  end
+
+  defp windowed_args(format) do
+    if format == :json, do: ["--json"], else: ["--msgpack"]
+  end
+
+  defp register_windowed_session(state, caller_pid, monitor_ref, session_id) do
+    port =
+      open_renderer_port(
+        state.renderer,
+        state.env,
+        state.format,
+        windowed_args(state.format)
+      )
+
+    send_initial_settings(port, state.format, session_id)
+
+    session = %WindowedSession{
+      owner_pid: caller_pid,
+      owner_ref: monitor_ref,
+      port: port
+    }
+
+    %{
+      state
+      | sessions: Map.put(state.sessions, session_id, session),
+        next_session: state.next_session + 1
+    }
+  end
+
+  defp max_sessions(nil), do: 8
+  defp max_sessions(requested) when is_integer(requested) and requested > 0, do: requested
+
+  defp request_windowed_exit(state, session_id, port, close_kind) do
+    case Map.has_key?(state.closing_windowed, session_id) do
+      true ->
+        state
+
+      false ->
+        send_to_port(port, state.format, %{type: "widget_op", op: "exit", payload: %{}})
+        Process.send_after(self(), {:force_close_windowed, session_id, port}, 1_000)
+        put_in(state.closing_windowed[session_id], {close_kind, port})
+    end
+  end
+
+  defp finish_windowed_exit(state, session_id, session, code) do
+    case Map.pop(state.closing_windowed, session_id) do
+      {{{:sync, from}, _port}, closing_windowed} ->
+        GenServer.reply(from, :ok)
+
+        %{
+          state
+          | sessions: Map.delete(state.sessions, session_id),
+            closing_windowed: closing_windowed
+        }
+
+      {{:async, _port}, closing_windowed} ->
+        %{
+          state
+          | sessions: Map.delete(state.sessions, session_id),
+            closing_windowed: closing_windowed
+        }
+
+      {nil, _closing_windowed} ->
+        Logger.error(
+          "SessionPool: windowed renderer exited with status #{code} for #{session_id}"
+        )
+
+        for {_req_id, {_type, from}} <- session.pending do
+          GenServer.reply(from, {:error, :renderer_exited})
+        end
+
+        if Process.alive?(session.owner_pid) do
+          send(session.owner_pid, {:plushie_pool_renderer_exited, session_id, code})
+        end
+
+        %{state | sessions: Map.delete(state.sessions, session_id)}
+    end
+  end
+
+  defp find_windowed_close_by_port(state, port) do
+    Enum.find(state.closing_windowed, fn {session_id, _close_kind} ->
+      case Map.get(state.closing_windowed, session_id) do
+        {_close_kind, ^port} -> true
+        _ -> false
+      end
+    end)
+    |> case do
+      {session_id, {_close_kind, ^port}} ->
+        case Map.get(state.sessions, session_id) do
+          %WindowedSession{} = session -> {session_id, session}
+          _ -> nil
+        end
+
+      nil ->
+        nil
+    end
   end
 
   defp handle_port_data(raw_data, %{format: :json} = state) do
@@ -427,4 +710,72 @@ defmodule Plushie.Test.SessionPool do
 
     state
   end
+
+  defp find_windowed_session_by_port(sessions, port) do
+    Enum.find(sessions, fn {_session_id, entry} ->
+      match?(%WindowedSession{port: ^port}, entry)
+    end)
+  end
+
+  defp handle_windowed_port_data(raw_data, session_id, session, format) do
+    case decode_windowed_message(raw_data, session.buffer, format) do
+      {:ok, msg, buffer} ->
+        dispatch_windowed_response(session_id, msg, %{session | buffer: buffer})
+
+      {:cont, buffer} ->
+        %{session | buffer: buffer}
+    end
+  end
+
+  defp decode_windowed_message(raw_data, buffer, :json) do
+    line =
+      case raw_data do
+        {:eol, l} -> l
+        l when is_binary(l) -> l
+      end
+
+    buffer = buffer <> line
+
+    case Jason.decode(buffer) do
+      {:ok, msg} -> {:ok, msg, ""}
+      {:error, _} -> {:cont, buffer}
+    end
+  end
+
+  defp decode_windowed_message(data, _buffer, :msgpack) do
+    case Msgpax.unpack(data) do
+      {:ok, msg} -> {:ok, msg, ""}
+      {:error, _} -> {:cont, ""}
+    end
+  end
+
+  defp dispatch_windowed_response(_session_id, %{"type" => "hello"}, session), do: session
+
+  defp dispatch_windowed_response(session_id, %{"type" => "interact_step"} = msg, session) do
+    send(session.owner_pid, {:plushie_pool_event, session_id, msg})
+    session
+  end
+
+  defp dispatch_windowed_response(session_id, %{"type" => "interact_response"} = msg, session) do
+    send(session.owner_pid, {:plushie_pool_event, session_id, msg})
+    session
+  end
+
+  defp dispatch_windowed_response(session_id, %{"type" => "event"} = msg, session) do
+    send(session.owner_pid, {:plushie_pool_event, session_id, msg})
+    session
+  end
+
+  defp dispatch_windowed_response(_session_id, %{"id" => req_id} = msg, session) do
+    case Map.pop(session.pending, req_id) do
+      {nil, pending} ->
+        %{session | pending: pending}
+
+      {{_expected_type, from}, pending} ->
+        GenServer.reply(from, {:ok, msg})
+        %{session | pending: pending}
+    end
+  end
+
+  defp dispatch_windowed_response(_session_id, _msg, session), do: session
 end

@@ -1,7 +1,7 @@
 defmodule Plushie.Test.ScriptTest do
   use ExUnit.Case, async: true
 
-  alias Plushie.Test.Script
+  alias Plushie.Test.{Script, Script.Runner}
 
   describe "parse/1" do
     test "parses a valid script with header and instructions" do
@@ -147,6 +147,20 @@ defmodule Plushie.Test.ScriptTest do
         assert {:ok, script} = Script.parse(input)
         assert script.header.backend == expected
       end
+    end
+  end
+
+  describe "run/2" do
+    test "starts a temporary pool and executes a simple script" do
+      script = %{
+        header: %{app: Counter, viewport: {800, 600}, theme: "dark", backend: :mock},
+        instructions: [
+          {:click, "#increment"},
+          {:assert_text, "#count", "Count: 1"}
+        ]
+      }
+
+      assert :ok = Runner.run(script)
     end
   end
 end

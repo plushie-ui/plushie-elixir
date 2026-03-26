@@ -101,8 +101,8 @@ defmodule Plushie.Test.Helpers do
   def tree_hash(name), do: Session.tree_hash(session(), name)
 
   @doc "Captures a pixel screenshot with the given name."
-  @spec screenshot(name :: String.t()) :: Screenshot.t()
-  def screenshot(name), do: Session.screenshot(session(), name)
+  @spec screenshot(name :: String.t(), opts :: keyword()) :: Screenshot.t()
+  def screenshot(name, opts \\ []), do: Session.screenshot(session(), name, opts)
 
   @doc """
   Save a screenshot as a PNG file to `test/screenshots/{name}.png`.
@@ -111,9 +111,9 @@ defmodule Plushie.Test.Helpers do
   Creates the `test/screenshots/` directory if it doesn't exist.
   No-op on backends that don't support pixel capture.
   """
-  @spec save_screenshot(name :: String.t()) :: Screenshot.t()
-  def save_screenshot(name) do
-    s = screenshot(name)
+  @spec save_screenshot(name :: String.t(), opts :: keyword()) :: Screenshot.t()
+  def save_screenshot(name, opts \\ []) do
+    s = screenshot(name, opts)
     dir = Path.join("test", "screenshots")
     File.mkdir_p!(dir)
     Screenshot.save_png(s, Path.join(dir, "#{name}.png"))
@@ -254,9 +254,9 @@ defmodule Plushie.Test.Helpers do
   Set `PLUSHIE_UPDATE_SCREENSHOTS=1` to force-update golden files. No-op on
   backends that don't support pixel capture (empty hash is silently accepted).
   """
-  @spec assert_screenshot(name :: String.t()) :: :ok
-  def assert_screenshot(name) do
-    snap = screenshot(name)
+  @spec assert_screenshot(name :: String.t(), opts :: keyword()) :: :ok
+  def assert_screenshot(name, opts \\ []) do
+    snap = screenshot(name, opts)
     golden_dir = Path.join(["test", "screenshots"])
     Screenshot.assert_match(snap, golden_dir)
   end

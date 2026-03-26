@@ -177,7 +177,7 @@ defmodule Plushie.Test.SessionPoolTest do
       end
     end
 
-    test "register succeeds after unregister frees a slot" do
+    test "register succeeds after unregister frees space" do
       binary = Application.fetch_env!(:plushie, :test_binary_path)
 
       {:ok, pool} =
@@ -192,7 +192,7 @@ defmodule Plushie.Test.SessionPoolTest do
       s1 = SessionPool.register(pool)
       _s2 = SessionPool.register(pool)
 
-      # Pool is full, but unregistering frees a slot
+      # Pool is full, but unregistering frees space
       SessionPool.send_message(pool, s1, %{
         type: "snapshot",
         tree: %{id: "root", type: "text", props: %{content: "x"}, children: []}
@@ -203,6 +203,25 @@ defmodule Plushie.Test.SessionPoolTest do
       # Should succeed now
       s3 = SessionPool.register(pool)
       assert is_binary(s3)
+    end
+
+    test "send_interact raises for an unknown session", %{pool: pool} do
+      assert_raise RuntimeError, ~r/failed to send interact/, fn ->
+        SessionPool.send_interact(pool, "missing", %{type: "interact", action: "click"})
+      end
+    end
+  end
+
+  describe "renderer_mode_flag/1" do
+    test "maps multiplexed modes to the correct renderer CLI flag" do
+      assert SessionPool.renderer_mode_flag(:mock) == "--mock"
+      assert SessionPool.renderer_mode_flag(:headless) == "--headless"
+    end
+
+    test "windowed is not a multiplexed renderer mode" do
+      assert_raise FunctionClauseError, fn ->
+        apply(SessionPool, :renderer_mode_flag, [:windowed])
+      end
     end
   end
 

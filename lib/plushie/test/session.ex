@@ -59,8 +59,8 @@ defmodule Plushie.Test.Session do
   @spec tree_hash(session :: t(), name :: String.t()) :: TreeHash.t()
   def tree_hash(%__MODULE__{pid: p}, name), do: Runtime.tree_hash(p, name)
 
-  @spec screenshot(session :: t(), name :: String.t()) :: Screenshot.t()
-  def screenshot(%__MODULE__{pid: p}, name), do: Runtime.screenshot(p, name)
+  @spec screenshot(session :: t(), name :: String.t(), opts :: keyword()) :: Screenshot.t()
+  def screenshot(%__MODULE__{pid: p}, name, opts \\ []), do: Runtime.screenshot(p, name, opts)
 
   @spec reset(session :: t()) :: :ok
   def reset(%__MODULE__{pid: p}), do: Runtime.reset(p)
