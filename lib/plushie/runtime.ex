@@ -1214,26 +1214,6 @@ defmodule Plushie.Runtime do
     end
   end
 
-  # Intercept + update + commands, no re-render. Used by interact_step
-  # where events are batched and a single snapshot follows.
-  @spec apply_event(state(), term()) :: state()
-  defp apply_event(state, event) do
-    {resolved_event, state} = route_through_widgets(state, event)
-
-    if is_nil(resolved_event) do
-      state
-    else
-      case safe_update(state.app, state.model, resolved_event, state.consecutive_errors) do
-        {:ok, new_model, commands} ->
-          state = %{state | model: new_model, consecutive_errors: 0}
-          Commands.execute_commands(commands, state)
-
-        :error ->
-          %{state | consecutive_errors: state.consecutive_errors + 1}
-      end
-    end
-  end
-
   defp safe_update(app, model, event, consecutive_errors) do
     {new_model, commands} =
       :telemetry.span([:plushie, :update], %{app: app, event: event}, fn ->
@@ -1334,11 +1314,15 @@ defmodule Plushie.Runtime do
   # without sending intermediate patches, then send a single full snapshot.
   # The renderer expects exactly one snapshot per interact_step.
   defp run_interact_step(state, events) do
-    state =
-      Enum.reduce(events, state, fn event_map, acc ->
+    {state, deferred_commands} =
+      Enum.reduce(events, {state, []}, fn event_map, {acc, commands_acc} ->
         case decode_interact_event(event_map) do
-          nil -> acc
-          event -> apply_event(acc, event)
+          nil ->
+            {acc, commands_acc}
+
+          event ->
+            {next_state, commands} = apply_event_deferred(acc, event)
+            {next_state, commands_acc ++ commands}
         end
       end)
 
@@ -1361,10 +1345,28 @@ defmodule Plushie.Runtime do
         }
 
         state = sync_runtime_subscriptions(state, state.model, canvas_widgets)
-        Windows.sync_windows(state, new_tree)
+        state = Windows.sync_windows(state, new_tree)
+        Commands.execute_commands(deferred_commands, state)
 
       :error ->
         state
+    end
+  end
+
+  @spec apply_event_deferred(state(), term()) :: {state(), [Plushie.Command.t()]}
+  defp apply_event_deferred(state, event) do
+    {resolved_event, state} = route_through_widgets(state, event)
+
+    if is_nil(resolved_event) do
+      {state, []}
+    else
+      case safe_update(state.app, state.model, resolved_event, state.consecutive_errors) do
+        {:ok, new_model, commands} ->
+          {%{state | model: new_model, consecutive_errors: 0}, List.wrap(commands)}
+
+        :error ->
+          {%{state | consecutive_errors: state.consecutive_errors + 1}, []}
+      end
     end
   end
 
