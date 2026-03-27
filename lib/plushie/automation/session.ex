@@ -54,34 +54,60 @@ defmodule Plushie.Automation.Session do
     end
   end
 
-  @spec click(session :: t(), selector :: selector()) :: :ok
-  def click(%__MODULE__{} = session, selector), do: interact(session, "click", selector, %{})
+  @doc """
+  Clicks a widget. Options: `window:` for multi-window apps.
+  """
+  @spec click(session :: t(), selector :: selector(), opts :: keyword()) :: :ok
+  def click(%__MODULE__{} = session, selector, opts \\ []),
+    do: interact(session, "click", selector, %{}, opts)
 
-  @spec type_text(session :: t(), selector :: selector(), text :: String.t()) :: :ok
-  def type_text(%__MODULE__{} = session, selector, text),
-    do: interact(session, "type_text", selector, %{text: text})
+  @doc """
+  Types text into a text input or editor. Options: `window:` for multi-window apps.
+  """
+  @spec type_text(session :: t(), selector :: selector(), text :: String.t(), opts :: keyword()) ::
+          :ok
+  def type_text(%__MODULE__{} = session, selector, text, opts \\ []),
+    do: interact(session, "type_text", selector, %{text: text}, opts)
 
-  @spec submit(session :: t(), selector :: selector()) :: :ok
-  def submit(%__MODULE__{} = session, selector) do
+  @doc """
+  Submits a text input. Options: `window:` for multi-window apps.
+  """
+  @spec submit(session :: t(), selector :: selector(), opts :: keyword()) :: :ok
+  def submit(%__MODULE__{} = session, selector, opts \\ []) do
     value = read_prop(session, selector, :submit_value)
-    interact(session, "submit", selector, %{value: value})
+    interact(session, "submit", selector, %{value: value}, opts)
   end
 
-  @spec toggle(session :: t(), selector :: selector(), value :: boolean() | nil) :: :ok
-  def toggle(%__MODULE__{} = session, selector, value \\ nil) do
+  @doc """
+  Toggles a checkbox or toggler. Options: `window:` for multi-window apps.
+  """
+  @spec toggle(
+          session :: t(),
+          selector :: selector(),
+          value :: boolean() | nil,
+          opts :: keyword()
+        ) :: :ok
+  def toggle(%__MODULE__{} = session, selector, value \\ nil, opts \\ []) do
     target =
       if is_boolean(value), do: value, else: not read_prop(session, selector, :toggle_value)
 
-    interact(session, "toggle", selector, %{value: target})
+    interact(session, "toggle", selector, %{value: target}, opts)
   end
 
-  @spec select(session :: t(), selector :: selector(), value :: term()) :: :ok
-  def select(%__MODULE__{} = session, selector, value),
-    do: interact(session, "select", selector, %{value: value})
+  @doc """
+  Selects a value from a pick list, combo box, or radio group.
+  Options: `window:` for multi-window apps.
+  """
+  @spec select(session :: t(), selector :: selector(), value :: term(), opts :: keyword()) :: :ok
+  def select(%__MODULE__{} = session, selector, value, opts \\ []),
+    do: interact(session, "select", selector, %{value: value}, opts)
 
-  @spec slide(session :: t(), selector :: selector(), value :: number()) :: :ok
-  def slide(%__MODULE__{} = session, selector, value),
-    do: interact(session, "slide", selector, %{value: value})
+  @doc """
+  Slides a slider to the given value. Options: `window:` for multi-window apps.
+  """
+  @spec slide(session :: t(), selector :: selector(), value :: number(), opts :: keyword()) :: :ok
+  def slide(%__MODULE__{} = session, selector, value, opts \\ []),
+    do: interact(session, "slide", selector, %{value: value}, opts)
 
   @spec model(session :: t()) :: term()
   def model(%__MODULE__{runtime: runtime}), do: Plushie.Runtime.get_model(runtime)
@@ -127,55 +153,87 @@ defmodule Plushie.Automation.Session do
     interact(session, "type_key", nil, %{key: key_name, modifiers: mods})
   end
 
+  @doc """
+  Scrolls a scrollable widget. Options: `window:` for multi-window apps.
+  """
   @spec scroll(
           session :: t(),
           selector :: selector(),
           delta_x :: number(),
-          delta_y :: number()
+          delta_y :: number(),
+          opts :: keyword()
         ) :: :ok
-  def scroll(%__MODULE__{} = session, selector, delta_x \\ 0, delta_y \\ 0),
-    do: interact(session, "scroll", selector, %{delta_x: delta_x, delta_y: delta_y})
+  def scroll(%__MODULE__{} = session, selector, delta_x \\ 0, delta_y \\ 0, opts \\ []),
+    do: interact(session, "scroll", selector, %{delta_x: delta_x, delta_y: delta_y}, opts)
 
-  @spec paste(session :: t(), selector :: selector(), text :: String.t()) :: :ok
-  def paste(%__MODULE__{} = session, selector, text),
-    do: interact(session, "paste", selector, %{text: text})
+  @doc """
+  Pastes text into a widget. Options: `window:` for multi-window apps.
+  """
+  @spec paste(session :: t(), selector :: selector(), text :: String.t(), opts :: keyword()) ::
+          :ok
+  def paste(%__MODULE__{} = session, selector, text, opts \\ []),
+    do: interact(session, "paste", selector, %{text: text}, opts)
 
+  @doc """
+  Sorts a table column. Options: `window:` for multi-window apps.
+  """
   @spec sort(
           session :: t(),
           selector :: selector(),
           column :: String.t(),
-          direction :: String.t()
+          direction :: String.t(),
+          opts :: keyword()
         ) :: :ok
-  def sort(%__MODULE__{} = session, selector, column, direction \\ "asc"),
-    do: interact(session, "sort", selector, %{column: column, direction: direction})
+  def sort(%__MODULE__{} = session, selector, column, direction \\ "asc", opts \\ []),
+    do: interact(session, "sort", selector, %{column: column, direction: direction}, opts)
 
+  @doc """
+  Presses on a canvas. Options: `window:` for multi-window apps.
+  """
   @spec canvas_press(
           session :: t(),
           selector :: selector(),
           x :: number(),
           y :: number(),
-          button :: String.t()
+          button :: String.t(),
+          opts :: keyword()
         ) :: :ok
-  def canvas_press(%__MODULE__{} = session, selector, x, y, button \\ "left"),
-    do: interact(session, "canvas_press", selector, %{x: x, y: y, button: button})
+  def canvas_press(%__MODULE__{} = session, selector, x, y, button \\ "left", opts \\ []),
+    do: interact(session, "canvas_press", selector, %{x: x, y: y, button: button}, opts)
 
+  @doc """
+  Releases on a canvas. Options: `window:` for multi-window apps.
+  """
   @spec canvas_release(
           session :: t(),
           selector :: selector(),
           x :: number(),
           y :: number(),
-          button :: String.t()
+          button :: String.t(),
+          opts :: keyword()
         ) :: :ok
-  def canvas_release(%__MODULE__{} = session, selector, x, y, button \\ "left"),
-    do: interact(session, "canvas_release", selector, %{x: x, y: y, button: button})
+  def canvas_release(%__MODULE__{} = session, selector, x, y, button \\ "left", opts \\ []),
+    do: interact(session, "canvas_release", selector, %{x: x, y: y, button: button}, opts)
 
-  @spec canvas_move(session :: t(), selector :: selector(), x :: number(), y :: number()) :: :ok
-  def canvas_move(%__MODULE__{} = session, selector, x, y),
-    do: interact(session, "canvas_move", selector, %{x: x, y: y})
+  @doc """
+  Moves on a canvas. Options: `window:` for multi-window apps.
+  """
+  @spec canvas_move(
+          session :: t(),
+          selector :: selector(),
+          x :: number(),
+          y :: number(),
+          opts :: keyword()
+        ) :: :ok
+  def canvas_move(%__MODULE__{} = session, selector, x, y, opts \\ []),
+    do: interact(session, "canvas_move", selector, %{x: x, y: y}, opts)
 
-  @spec pane_focus_cycle(session :: t(), selector :: selector()) :: :ok
-  def pane_focus_cycle(%__MODULE__{} = session, selector),
-    do: interact(session, "pane_focus_cycle", selector, %{})
+  @doc """
+  Cycles focus in a pane grid. Options: `window:` for multi-window apps.
+  """
+  @spec pane_focus_cycle(session :: t(), selector :: selector(), opts :: keyword()) :: :ok
+  def pane_focus_cycle(%__MODULE__{} = session, selector, opts \\ []),
+    do: interact(session, "pane_focus_cycle", selector, %{}, opts)
 
   @spec register_effect_stub(session :: t(), kind :: String.t(), response :: term()) :: :ok
   def register_effect_stub(%__MODULE__{runtime: runtime}, kind, response),
@@ -199,9 +257,12 @@ defmodule Plushie.Automation.Session do
     end
   end
 
-  defp interact(%__MODULE__{runtime: runtime}, action, selector, payload) do
+  defp interact(session, action, selector, payload, opts \\ [])
+
+  defp interact(%__MODULE__{runtime: runtime}, action, selector, payload, opts) do
+    window_id = Keyword.get(opts, :window)
     tree = Plushie.Runtime.get_tree(runtime)
-    encoded = Selector.encode(selector, tree)
+    encoded = Selector.encode(selector, tree, window_id)
 
     case Plushie.Runtime.interact(runtime, action, encoded, payload) do
       :ok -> :ok

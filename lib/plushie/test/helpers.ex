@@ -52,39 +52,74 @@ defmodule Plushie.Test.Helpers do
   @spec find_focused() :: Element.t() | nil
   def find_focused, do: Session.find(session(), :focused)
 
-  @doc "Clicks a widget identified by selector."
-  @spec click(selector :: Session.selector()) :: :ok
-  def click(selector), do: Session.click(session(), selector)
+  @doc """
+  Clicks a widget identified by selector.
 
-  @doc "Types text into a widget identified by selector."
-  @spec type_text(selector :: Session.selector(), text :: String.t()) :: :ok
-  def type_text(selector, text), do: Session.type_text(session(), selector, text)
+  ## Options
 
-  @doc "Submits a text input (simulates pressing enter)."
-  @spec submit(selector :: Session.selector()) :: :ok
-  def submit(selector), do: Session.submit(session(), selector)
+  - `window:` -- target window ID for multi-window apps
+  """
+  @spec click(selector :: Session.selector(), opts :: keyword()) :: :ok
+  def click(selector, opts \\ []), do: Session.click(session(), selector, opts)
+
+  @doc """
+  Types text into a widget identified by selector.
+
+  ## Options
+
+  - `window:` -- target window ID for multi-window apps
+  """
+  @spec type_text(selector :: Session.selector(), text :: String.t(), opts :: keyword()) :: :ok
+  def type_text(selector, text, opts \\ []),
+    do: Session.type_text(session(), selector, text, opts)
+
+  @doc """
+  Submits a text input (simulates pressing enter).
+
+  ## Options
+
+  - `window:` -- target window ID for multi-window apps
+  """
+  @spec submit(selector :: Session.selector(), opts :: keyword()) :: :ok
+  def submit(selector, opts \\ []), do: Session.submit(session(), selector, opts)
 
   @doc """
   Toggles a checkbox or toggler.
 
-  Without a value, reads the current state and negates it (upstream
-  `.ice` script compatibility). With an explicit boolean, sets the
-  widget directly without reading current state.
+  Without a value, reads the current state and negates it. With an
+  explicit boolean, sets the widget directly without reading state.
 
       toggle("#dark_mode")          # flip current state
       toggle("#agree_check", true)  # check
       toggle("#agree_check", false) # uncheck
+
+  ## Options
+
+  - `window:` -- target window ID for multi-window apps
   """
-  @spec toggle(selector :: Session.selector(), value :: boolean() | nil) :: :ok
-  def toggle(selector, value \\ nil), do: Session.toggle(session(), selector, value)
+  @spec toggle(selector :: Session.selector(), value :: boolean() | nil, opts :: keyword()) :: :ok
+  def toggle(selector, value \\ nil, opts \\ []),
+    do: Session.toggle(session(), selector, value, opts)
 
-  @doc "Selects a value from a pick_list, combo_box, or radio group."
-  @spec select(selector :: Session.selector(), value :: term()) :: :ok
-  def select(selector, value), do: Session.select(session(), selector, value)
+  @doc """
+  Selects a value from a pick_list, combo_box, or radio group.
 
-  @doc "Slides a slider to the given value."
-  @spec slide(selector :: Session.selector(), value :: number()) :: :ok
-  def slide(selector, value), do: Session.slide(session(), selector, value)
+  ## Options
+
+  - `window:` -- target window ID for multi-window apps
+  """
+  @spec select(selector :: Session.selector(), value :: term(), opts :: keyword()) :: :ok
+  def select(selector, value, opts \\ []), do: Session.select(session(), selector, value, opts)
+
+  @doc """
+  Slides a slider to the given value.
+
+  ## Options
+
+  - `window:` -- target window ID for multi-window apps
+  """
+  @spec slide(selector :: Session.selector(), value :: number(), opts :: keyword()) :: :ok
+  def slide(selector, value, opts \\ []), do: Session.slide(session(), selector, value, opts)
 
   @doc "Returns the current app model."
   @spec model() :: term()
@@ -306,47 +341,108 @@ defmodule Plushie.Test.Helpers do
   @spec type_key(key :: String.t()) :: :ok
   def type_key(key), do: Session.type_key(session(), key)
 
-  @doc "Scrolls a widget by the given deltas."
-  @spec scroll(selector :: Session.selector(), delta_x :: number(), delta_y :: number()) :: :ok
-  def scroll(selector, delta_x \\ 0, delta_y \\ 0),
-    do: Session.scroll(session(), selector, delta_x, delta_y)
+  @doc """
+  Scrolls a widget by the given deltas.
 
-  @doc "Pastes text into a widget."
-  @spec paste(selector :: Session.selector(), text :: String.t()) :: :ok
-  def paste(selector, text), do: Session.paste(session(), selector, text)
+  ## Options
 
-  @doc "Sorts a table column."
-  @spec sort(selector :: Session.selector(), column :: String.t(), direction :: String.t()) :: :ok
-  def sort(selector, column, direction \\ "asc"),
-    do: Session.sort(session(), selector, column, direction)
+  - `window:` -- target window ID for multi-window apps
+  """
+  @spec scroll(
+          selector :: Session.selector(),
+          delta_x :: number(),
+          delta_y :: number(),
+          opts :: keyword()
+        ) :: :ok
+  def scroll(selector, delta_x \\ 0, delta_y \\ 0, opts \\ []),
+    do: Session.scroll(session(), selector, delta_x, delta_y, opts)
 
-  @doc "Presses on a canvas at the given coordinates."
+  @doc """
+  Pastes text into a widget.
+
+  ## Options
+
+  - `window:` -- target window ID for multi-window apps
+  """
+  @spec paste(selector :: Session.selector(), text :: String.t(), opts :: keyword()) :: :ok
+  def paste(selector, text, opts \\ []), do: Session.paste(session(), selector, text, opts)
+
+  @doc """
+  Sorts a table column.
+
+  ## Options
+
+  - `window:` -- target window ID for multi-window apps
+  """
+  @spec sort(
+          selector :: Session.selector(),
+          column :: String.t(),
+          direction :: String.t(),
+          opts :: keyword()
+        ) :: :ok
+  def sort(selector, column, direction \\ "asc", opts \\ []),
+    do: Session.sort(session(), selector, column, direction, opts)
+
+  @doc """
+  Presses on a canvas at the given coordinates.
+
+  ## Options
+
+  - `window:` -- target window ID for multi-window apps
+  """
   @spec canvas_press(
           selector :: Session.selector(),
           x :: number(),
           y :: number(),
-          button :: String.t()
+          button :: String.t(),
+          opts :: keyword()
         ) :: :ok
-  def canvas_press(selector, x, y, button \\ "left"),
-    do: Session.canvas_press(session(), selector, x, y, button)
+  def canvas_press(selector, x, y, button \\ "left", opts \\ []),
+    do: Session.canvas_press(session(), selector, x, y, button, opts)
 
-  @doc "Releases on a canvas at the given coordinates."
+  @doc """
+  Releases on a canvas at the given coordinates.
+
+  ## Options
+
+  - `window:` -- target window ID for multi-window apps
+  """
   @spec canvas_release(
           selector :: Session.selector(),
           x :: number(),
           y :: number(),
-          button :: String.t()
+          button :: String.t(),
+          opts :: keyword()
         ) :: :ok
-  def canvas_release(selector, x, y, button \\ "left"),
-    do: Session.canvas_release(session(), selector, x, y, button)
+  def canvas_release(selector, x, y, button \\ "left", opts \\ []),
+    do: Session.canvas_release(session(), selector, x, y, button, opts)
 
-  @doc "Moves on a canvas to the given coordinates."
-  @spec canvas_move(selector :: Session.selector(), x :: number(), y :: number()) :: :ok
-  def canvas_move(selector, x, y), do: Session.canvas_move(session(), selector, x, y)
+  @doc """
+  Moves on a canvas to the given coordinates.
 
-  @doc "Cycles focus in a pane grid."
-  @spec pane_focus_cycle(selector :: Session.selector()) :: :ok
-  def pane_focus_cycle(selector), do: Session.pane_focus_cycle(session(), selector)
+  ## Options
+
+  - `window:` -- target window ID for multi-window apps
+  """
+  @spec canvas_move(
+          selector :: Session.selector(),
+          x :: number(),
+          y :: number(),
+          opts :: keyword()
+        ) :: :ok
+  def canvas_move(selector, x, y, opts \\ []),
+    do: Session.canvas_move(session(), selector, x, y, opts)
+
+  @doc """
+  Cycles focus in a pane grid.
+
+  ## Options
+
+  - `window:` -- target window ID for multi-window apps
+  """
+  @spec pane_focus_cycle(selector :: Session.selector(), opts :: keyword()) :: :ok
+  def pane_focus_cycle(selector, opts \\ []),
+    do: Session.pane_focus_cycle(session(), selector, opts)
 
   @doc "Resets the session to initial state."
   @spec reset() :: :ok

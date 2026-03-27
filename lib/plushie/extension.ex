@@ -442,12 +442,38 @@ defmodule Plushie.Extension do
 
     command_fns = generate_commands(commands)
     prop_names_fn = generate_prop_names(props)
+    dsl_macro = generate_dsl_macro(widget_type, props)
 
     quote do
       unquote(behaviour_fns)
       unquote(widget_code)
       unquote(command_fns)
       unquote(prop_names_fn)
+      unquote(dsl_macro)
+    end
+  end
+
+  # -- DSL macro generation ----------------------------------------------------
+
+  @doc false
+  def generate_dsl_macro(widget_type, _props) do
+    macro_name = widget_type
+
+    quote do
+      @doc """
+      Creates a `#{inspect(unquote(macro_name))}` widget.
+
+      Shorthand for `new/2`. Import this macro to use the widget name
+      directly in view functions:
+
+          import #{inspect(__MODULE__)}, only: [#{unquote(Atom.to_string(macro_name))}: 2]
+
+          #{unquote(Atom.to_string(macro_name))}("my-id", prop: value)
+      """
+      defmacro unquote(macro_name)(id, opts \\ []) do
+        mod = __MODULE__
+        quote do: unquote(mod).new(unquote(id), unquote(opts))
+      end
     end
   end
 
@@ -587,34 +613,35 @@ defmodule Plushie.Extension do
           name :: atom(),
           spec :: Plushie.Event.BuiltinSpecs.t(),
           caller :: Macro.Env.t()
-        ) ::
-          :ok | [any()]
+        ) :: :ok
   def validate_event_spec!(name, spec, caller) do
     case spec do
       %{carrier: :value, type: type} ->
-        unless Plushie.Event.EventType.valid_type?(type) do
-          raise CompileError,
-            file: caller.file,
-            line: caller.line,
-            description:
-              "event #{inspect(name)} has invalid value type #{inspect(type)}. " <>
-                "Use a built-in type (:number, :string, :boolean, :any) or a module implementing Plushie.Event.EventType."
-        end
+        validate_event_field_type!(name, nil, type, caller)
 
       %{carrier: :data, fields: fields} ->
-        for {field_name, type} <- fields do
-          unless Plushie.Event.EventType.valid_type?(type) do
-            raise CompileError,
-              file: caller.file,
-              line: caller.line,
-              description:
-                "event #{inspect(name)} field #{inspect(field_name)} has invalid type #{inspect(type)}. " <>
-                  "Use a built-in type (:number, :string, :boolean, :any) or a module implementing Plushie.Event.EventType."
-          end
-        end
+        Enum.each(fields, fn {field_name, type} ->
+          validate_event_field_type!(name, field_name, type, caller)
+        end)
 
       %{carrier: :none} ->
         :ok
+    end
+  end
+
+  defp validate_event_field_type!(event_name, field_name, type, caller) do
+    unless Plushie.Event.EventType.valid_type?(type) do
+      context =
+        if field_name,
+          do: "field #{inspect(field_name)} has",
+          else: "has"
+
+      raise CompileError,
+        file: caller.file,
+        line: caller.line,
+        description:
+          "event #{inspect(event_name)} #{context} invalid type #{inspect(type)}. " <>
+            "Use a built-in type (:number, :string, :boolean, :any) or a module implementing Plushie.Event.EventType."
     end
   end
 

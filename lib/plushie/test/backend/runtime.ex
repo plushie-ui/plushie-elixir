@@ -77,35 +77,33 @@ defmodule Plushie.Test.Backend.Runtime do
     end
   end
 
-  def click(pid, selector), do: do_interact(pid, "click", selector, %{})
+  def click(pid, selector, opts \\ []), do: do_interact(pid, "click", selector, %{}, opts)
 
-  def type_text(pid, selector, text),
-    do: do_interact(pid, "type_text", selector, %{text: text})
+  def type_text(pid, selector, text, opts \\ []),
+    do: do_interact(pid, "type_text", selector, %{text: text}, opts)
 
-  def submit(pid, selector) do
-    # The renderer's interact path needs the current text value.
+  def submit(pid, selector, opts \\ []) do
     value = GenServer.call(pid, {:read_prop, selector, :submit_value})
-    do_interact(pid, "submit", selector, %{value: value})
+    do_interact(pid, "submit", selector, %{value: value}, opts)
   end
 
-  def toggle(pid, selector, value \\ nil) do
+  def toggle(pid, selector, value \\ nil, opts \\ []) do
     target =
       if is_boolean(value) do
         value
       else
-        # No explicit value: read current state and negate (.ice compat)
         current = GenServer.call(pid, {:read_prop, selector, :toggle_value})
         !current
       end
 
-    do_interact(pid, "toggle", selector, %{value: target})
+    do_interact(pid, "toggle", selector, %{value: target}, opts)
   end
 
-  def select(pid, selector, value),
-    do: do_interact(pid, "select", selector, %{value: value})
+  def select(pid, selector, value, opts \\ []),
+    do: do_interact(pid, "select", selector, %{value: value}, opts)
 
-  def slide(pid, selector, value),
-    do: do_interact(pid, "slide", selector, %{value: value})
+  def slide(pid, selector, value, opts \\ []),
+    do: do_interact(pid, "slide", selector, %{value: value}, opts)
 
   def model(pid), do: GenServer.call(pid, :model)
 
@@ -140,26 +138,26 @@ defmodule Plushie.Test.Backend.Runtime do
     do_interact(pid, "type_key", nil, %{key: key_name, modifiers: mods})
   end
 
-  def scroll(pid, selector, delta_x, delta_y),
-    do: do_interact(pid, "scroll", selector, %{delta_x: delta_x, delta_y: delta_y})
+  def scroll(pid, selector, delta_x, delta_y, opts \\ []),
+    do: do_interact(pid, "scroll", selector, %{delta_x: delta_x, delta_y: delta_y}, opts)
 
-  def paste(pid, selector, text),
-    do: do_interact(pid, "paste", selector, %{text: text})
+  def paste(pid, selector, text, opts \\ []),
+    do: do_interact(pid, "paste", selector, %{text: text}, opts)
 
-  def sort(pid, selector, column, direction),
-    do: do_interact(pid, "sort", selector, %{column: column, direction: direction})
+  def sort(pid, selector, column, direction, opts \\ []),
+    do: do_interact(pid, "sort", selector, %{column: column, direction: direction}, opts)
 
-  def canvas_press(pid, selector, x, y, button),
-    do: do_interact(pid, "canvas_press", selector, %{x: x, y: y, button: button})
+  def canvas_press(pid, selector, x, y, button, opts \\ []),
+    do: do_interact(pid, "canvas_press", selector, %{x: x, y: y, button: button}, opts)
 
-  def canvas_release(pid, selector, x, y, button),
-    do: do_interact(pid, "canvas_release", selector, %{x: x, y: y, button: button})
+  def canvas_release(pid, selector, x, y, button, opts \\ []),
+    do: do_interact(pid, "canvas_release", selector, %{x: x, y: y, button: button}, opts)
 
-  def canvas_move(pid, selector, x, y),
-    do: do_interact(pid, "canvas_move", selector, %{x: x, y: y})
+  def canvas_move(pid, selector, x, y, opts \\ []),
+    do: do_interact(pid, "canvas_move", selector, %{x: x, y: y}, opts)
 
-  def pane_focus_cycle(pid, selector),
-    do: do_interact(pid, "pane_focus_cycle", selector, %{})
+  def pane_focus_cycle(pid, selector, opts \\ []),
+    do: do_interact(pid, "pane_focus_cycle", selector, %{}, opts)
 
   def register_effect_stub(pid, kind, response),
     do: GenServer.call(pid, {:register_effect_stub, kind, response}, 10_000)
@@ -170,27 +168,38 @@ defmodule Plushie.Test.Backend.Runtime do
   def get_diagnostics(pid),
     do: GenServer.call(pid, :get_diagnostics)
 
-  defp do_interact(pid, action, selector, payload) do
-    # For widget-targeted actions, validate the selector resolves before
-    # sending the interact request. Fail fast with a clear error instead
-    # of silently producing no events.
-    if selector != nil do
-      case GenServer.call(pid, {:find, selector}, 10_000) do
-        nil ->
-          raise "widget not found: #{inspect(selector)}. " <>
-                  "The #{action} action requires a valid widget selector."
+  defp do_interact(pid, action, selector, payload, opts \\ []) do
+    window_id = Keyword.get(opts, :window)
 
-        _element ->
-          :ok
-      end
+    # For widget-targeted actions, validate the selector resolves before
+    # sending the interact request. Fail fast with a clear error.
+    if selector != nil do
+      validate_selector!(pid, action, selector, window_id)
     end
 
-    case GenServer.call(pid, {:interact, action, selector, payload}, 10_000) do
+    case GenServer.call(
+           pid,
+           {:interact, action, selector, payload, window_id},
+           10_000
+         ) do
       :ok -> :ok
       {:error, reason} -> raise "interaction failed: #{inspect(reason)}"
     end
   catch
     :exit, reason -> raise "runtime crashed during interaction: #{inspect(reason)}"
+  end
+
+  defp validate_selector!(pid, action, selector, _window_id) do
+    # Validate the selector resolves before sending the interact request.
+    # Ambiguity detection across windows happens in Selector.encode/3.
+    case GenServer.call(pid, {:find, selector}, 10_000) do
+      nil ->
+        raise "widget not found: #{inspect(selector)}. " <>
+                "The #{action} action requires a valid widget selector."
+
+      _element ->
+        :ok
+    end
   end
 
   # -- GenServer ---------------------------------------------------------------
@@ -289,12 +298,17 @@ defmodule Plushie.Test.Backend.Runtime do
     {:reply, value, state}
   end
 
-  def handle_call({:interact, action, selector, payload}, _from, state) do
+  def handle_call({:interact, action, selector, payload, window_id}, _from, state) do
     tree = Plushie.Runtime.get_tree(state.runtime)
-    sel = Selector.encode(selector, tree)
+    sel = Selector.encode(selector, tree, window_id)
     result = Plushie.Runtime.interact(state.runtime, action, sel, payload)
     wait_for_draw(state)
     {:reply, result, state}
+  end
+
+  # Backwards compat: interact without window_id
+  def handle_call({:interact, action, selector, payload}, from, state) do
+    handle_call({:interact, action, selector, payload, nil}, from, state)
   end
 
   def handle_call({:register_effect_stub, kind, response}, _from, state) do

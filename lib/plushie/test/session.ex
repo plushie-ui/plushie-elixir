@@ -38,23 +38,33 @@ defmodule Plushie.Test.Session do
   @spec find!(session :: t(), selector :: selector()) :: Element.t()
   def find!(%__MODULE__{pid: p}, selector), do: Runtime.find!(p, selector)
 
-  @spec click(session :: t(), selector :: selector()) :: :ok
-  def click(%__MODULE__{pid: p}, selector), do: Runtime.click(p, selector)
+  @spec click(session :: t(), selector :: selector(), opts :: keyword()) :: :ok
+  def click(%__MODULE__{pid: p}, selector, opts \\ []), do: Runtime.click(p, selector, opts)
 
-  @spec type_text(session :: t(), selector :: selector(), text :: String.t()) :: :ok
-  def type_text(%__MODULE__{pid: p}, selector, text), do: Runtime.type_text(p, selector, text)
+  @spec type_text(session :: t(), selector :: selector(), text :: String.t(), opts :: keyword()) ::
+          :ok
+  def type_text(%__MODULE__{pid: p}, selector, text, opts \\ []),
+    do: Runtime.type_text(p, selector, text, opts)
 
-  @spec submit(session :: t(), selector :: selector()) :: :ok
-  def submit(%__MODULE__{pid: p}, selector), do: Runtime.submit(p, selector)
+  @spec submit(session :: t(), selector :: selector(), opts :: keyword()) :: :ok
+  def submit(%__MODULE__{pid: p}, selector, opts \\ []), do: Runtime.submit(p, selector, opts)
 
-  @spec toggle(session :: t(), selector :: selector(), value :: boolean() | nil) :: :ok
-  def toggle(%__MODULE__{pid: p}, selector, value \\ nil), do: Runtime.toggle(p, selector, value)
+  @spec toggle(
+          session :: t(),
+          selector :: selector(),
+          value :: boolean() | nil,
+          opts :: keyword()
+        ) :: :ok
+  def toggle(%__MODULE__{pid: p}, selector, value \\ nil, opts \\ []),
+    do: Runtime.toggle(p, selector, value, opts)
 
-  @spec select(session :: t(), selector :: selector(), value :: term()) :: :ok
-  def select(%__MODULE__{pid: p}, selector, value), do: Runtime.select(p, selector, value)
+  @spec select(session :: t(), selector :: selector(), value :: term(), opts :: keyword()) :: :ok
+  def select(%__MODULE__{pid: p}, selector, value, opts \\ []),
+    do: Runtime.select(p, selector, value, opts)
 
-  @spec slide(session :: t(), selector :: selector(), value :: number()) :: :ok
-  def slide(%__MODULE__{pid: p}, selector, value), do: Runtime.slide(p, selector, value)
+  @spec slide(session :: t(), selector :: selector(), value :: number(), opts :: keyword()) :: :ok
+  def slide(%__MODULE__{pid: p}, selector, value, opts \\ []),
+    do: Runtime.slide(p, selector, value, opts)
 
   @spec model(session :: t()) :: term()
   def model(%__MODULE__{pid: p}), do: Runtime.model(p)
@@ -91,48 +101,62 @@ defmodule Plushie.Test.Session do
           session :: t(),
           selector :: selector(),
           delta_x :: number(),
-          delta_y :: number()
+          delta_y :: number(),
+          opts :: keyword()
         ) :: :ok
-  def scroll(%__MODULE__{pid: p}, selector, delta_x \\ 0, delta_y \\ 0),
-    do: Runtime.scroll(p, selector, delta_x, delta_y)
+  def scroll(%__MODULE__{pid: p}, selector, delta_x \\ 0, delta_y \\ 0, opts \\ []),
+    do: Runtime.scroll(p, selector, delta_x, delta_y, opts)
 
-  @spec paste(session :: t(), selector :: selector(), text :: String.t()) :: :ok
-  def paste(%__MODULE__{pid: p}, selector, text), do: Runtime.paste(p, selector, text)
+  @spec paste(session :: t(), selector :: selector(), text :: String.t(), opts :: keyword()) ::
+          :ok
+  def paste(%__MODULE__{pid: p}, selector, text, opts \\ []),
+    do: Runtime.paste(p, selector, text, opts)
 
   @spec sort(
           session :: t(),
           selector :: selector(),
           column :: String.t(),
-          direction :: String.t()
+          direction :: String.t(),
+          opts :: keyword()
         ) :: :ok
-  def sort(%__MODULE__{pid: p}, selector, column, direction \\ "asc"),
-    do: Runtime.sort(p, selector, column, direction)
+  def sort(%__MODULE__{pid: p}, selector, column, direction \\ "asc", opts \\ []),
+    do: Runtime.sort(p, selector, column, direction, opts)
 
   @spec canvas_press(
           session :: t(),
           selector :: selector(),
           x :: number(),
           y :: number(),
-          button :: String.t()
+          button :: String.t(),
+          opts :: keyword()
         ) :: :ok
-  def canvas_press(%__MODULE__{pid: p}, selector, x, y, button \\ "left"),
-    do: Runtime.canvas_press(p, selector, x, y, button)
+  def canvas_press(%__MODULE__{pid: p}, selector, x, y, button \\ "left", opts \\ []),
+    do: Runtime.canvas_press(p, selector, x, y, button, opts)
 
   @spec canvas_release(
           session :: t(),
           selector :: selector(),
           x :: number(),
           y :: number(),
-          button :: String.t()
+          button :: String.t(),
+          opts :: keyword()
         ) :: :ok
-  def canvas_release(%__MODULE__{pid: p}, selector, x, y, button \\ "left"),
-    do: Runtime.canvas_release(p, selector, x, y, button)
+  def canvas_release(%__MODULE__{pid: p}, selector, x, y, button \\ "left", opts \\ []),
+    do: Runtime.canvas_release(p, selector, x, y, button, opts)
 
-  @spec canvas_move(session :: t(), selector :: selector(), x :: number(), y :: number()) :: :ok
-  def canvas_move(%__MODULE__{pid: p}, selector, x, y), do: Runtime.canvas_move(p, selector, x, y)
+  @spec canvas_move(
+          session :: t(),
+          selector :: selector(),
+          x :: number(),
+          y :: number(),
+          opts :: keyword()
+        ) :: :ok
+  def canvas_move(%__MODULE__{pid: p}, selector, x, y, opts \\ []),
+    do: Runtime.canvas_move(p, selector, x, y, opts)
 
-  @spec pane_focus_cycle(session :: t(), selector :: selector()) :: :ok
-  def pane_focus_cycle(%__MODULE__{pid: p}, selector), do: Runtime.pane_focus_cycle(p, selector)
+  @spec pane_focus_cycle(session :: t(), selector :: selector(), opts :: keyword()) :: :ok
+  def pane_focus_cycle(%__MODULE__{pid: p}, selector, opts \\ []),
+    do: Runtime.pane_focus_cycle(p, selector, opts)
 
   @spec register_effect_stub(session :: t(), kind :: String.t(), response :: term()) :: :ok
   def register_effect_stub(%__MODULE__{pid: p}, kind, response),

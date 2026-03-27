@@ -218,6 +218,47 @@ Interacting with the wrong widget type raises with an actionable hint:
 cannot click a checkbox widget -- use toggle/1 instead
 ```
 
+### Widget targeting vs input simulation
+
+Interaction functions fall into two tiers:
+
+**Widget-targeted** actions take a selector and operate on a specific
+widget. They are stateless -- the result depends only on the widget,
+not cursor position or focus state:
+
+    click("#save")
+    scroll("#list", delta_y: -100)
+    type_text("#name", "Alice")
+
+**Input simulation** actions simulate raw user input. They are
+stateful -- keyboard events go to the focused widget, scroll events
+go to the widget under the cursor:
+
+    press("Tab")           # key to focused widget
+    press("ArrowDown")     # navigate
+    move_to(300, 400)      # position cursor
+    scroll(delta_y: -100)  # wheel at cursor position
+
+Use widget-targeted actions for most tests (deterministic, precise).
+Use input simulation for keyboard navigation and accessibility testing
+(tests real focus management and scroll-into-view behaviour).
+
+### Multi-window apps
+
+For apps with multiple windows, use the `window:` option to scope
+a selector to a specific window:
+
+    click("#save", window: "settings")
+    type_text("#name", "Alice", window: "editor")
+
+Without `window:`, the selector must be unambiguous. If the same
+widget ID exists in multiple windows, the test raises:
+
+```
+ambiguous selector "#save": found in windows ["main", "settings"].
+Use the window: option to disambiguate.
+```
+
 ### Assertions
 
 <!-- test: testing_doc_text_content_assertion_test, testing_doc_existence_assertion_test, testing_doc_model_assertion_test -- keep this code block in sync with the test -->
