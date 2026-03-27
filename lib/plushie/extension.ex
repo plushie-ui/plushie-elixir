@@ -173,7 +173,6 @@ defmodule Plushie.Extension do
                 prop: 3,
                 event: 1,
                 event: 2,
-                events: 1,
                 command: 1,
                 command: 2,
                 rust_crate: 1,
@@ -196,8 +195,7 @@ defmodule Plushie.Extension do
                 prop: 3,
                 state: 1,
                 event: 1,
-                event: 2,
-                events: 1
+                event: 2
               ]
 
             import Plushie.UI
@@ -206,7 +204,7 @@ defmodule Plushie.Extension do
         :widget ->
           quote do
             import Plushie.Extension,
-              only: [widget: 1, widget: 2, prop: 2, prop: 3, event: 1, event: 2, events: 1]
+              only: [widget: 1, widget: 2, prop: 2, prop: 3, event: 1, event: 2]
 
             import Plushie.UI
           end
@@ -299,44 +297,6 @@ defmodule Plushie.Extension do
     quote bind_quoted: [name: name, spec: Macro.escape(spec)] do
       @_extension_events name
       @_extension_event_specs {name, spec}
-    end
-  end
-
-  @doc """
-  Declares semantic event names emitted by a native or canvas widget.
-
-  Accepts a list of atoms. Events declared this way get an implicit
-  `value: :any` spec. Prefer `event/2` for new code.
-
-      events [:selected, :hovered, :cleared]
-  """
-  defmacro events(names) do
-    caller = __CALLER__
-
-    normalized =
-      case names do
-        list when is_list(list) ->
-          list
-
-        other ->
-          raise CompileError,
-            file: caller.file,
-            line: caller.line,
-            description: "events/1 expects a list of atoms, got: #{Macro.to_string(other)}"
-      end
-
-    unless Enum.all?(normalized, &is_atom/1) do
-      raise CompileError,
-        file: caller.file,
-        line: caller.line,
-        description: "events/1 expects only atom names, got: #{inspect(normalized)}"
-    end
-
-    quote bind_quoted: [names: normalized] do
-      for name <- names do
-        @_extension_events name
-        @_extension_event_specs {name, %{carrier: :value, type: :any}}
-      end
     end
   end
 
@@ -646,7 +606,7 @@ defmodule Plushie.Extension do
     end
   end
 
-  defp validate_declarations!(env, kind, widget_type, events) do
+  defp validate_declarations!(env, kind, widget_type, _events) do
     unless widget_type do
       raise CompileError,
         file: env.file,
@@ -670,13 +630,7 @@ defmodule Plushie.Extension do
       end
     end
 
-    if kind == :widget and events != [] do
-      raise CompileError,
-        file: env.file,
-        line: 0,
-        description:
-          "#{inspect(env.module)} declares custom events, but `events/1` is only supported for :native_widget and :canvas_widget extensions."
-    end
+    # All extension kinds can declare events via the event macro.
   end
 
   defp validate_prop_types!(env, props) do
@@ -791,8 +745,8 @@ defmodule Plushie.Extension do
     default_handle_event =
       unless has_handle_event do
         quote do
-          @doc "Default event handler -- event not captured, continues to next handler."
-          def handle_event(_event, _state), do: :ignored
+          @doc "Default event handler -- all events consumed (opaque widget)."
+          def handle_event(_event, _state), do: :consumed
         end
       end
 

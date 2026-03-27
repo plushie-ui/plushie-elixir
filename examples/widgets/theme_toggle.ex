@@ -16,6 +16,9 @@ defmodule ThemeToggle do
 
   widget :theme_toggle
 
+  # Emits built-in :toggle -- no custom event declaration needed.
+  # The BuiltinSpecs registry provides the spec (value: :boolean).
+
   state progress: 0.0, target: 0.0
 
   @track_w 64

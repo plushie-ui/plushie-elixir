@@ -317,9 +317,10 @@ defmodule Plushie.Protocol do
   Decodes a renderer event map into a typed Plushie event struct.
 
   This is the shared event-map decoder used for interact responses and other
-  already-deserialized renderer events.
+  already-deserialized renderer events. Raises on unknown or malformed events.
+  Every event from the renderer must include `window_id`.
   """
-  @spec decode_event(map()) :: Plushie.Event.delivered_t() | nil
+  @spec decode_event(event :: map()) :: Plushie.Event.delivered_t()
   defdelegate decode_event(event), to: Plushie.Protocol.Decode
 
   @doc """

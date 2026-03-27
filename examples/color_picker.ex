@@ -20,7 +20,7 @@ defmodule ColorPicker do
   def update(model, event) do
     case event do
       %WidgetEvent{type: {:color_picker_widget, :change}, id: "picker", data: data} ->
-        %{model | hue: data["hue"], saturation: data["saturation"], value: data["value"]}
+        %{model | hue: data.hue, saturation: data.saturation, value: data.value}
 
       _ ->
         model

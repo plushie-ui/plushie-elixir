@@ -466,10 +466,8 @@ defmodule Plushie.Runtime do
     # full update cycle (intercept + update + re-render).
     state =
       Enum.reduce(events, state, fn event_map, acc ->
-        case decode_interact_event(event_map) do
-          nil -> acc
-          event -> run_update(acc, event)
-        end
+        event = decode_interact_event(event_map)
+        run_update(acc, event)
       end)
 
     # Reply to the blocked caller.
@@ -1032,7 +1030,15 @@ defmodule Plushie.Runtime do
       case meta do
         %{__extension_widget_type__: widget_type, __extension_widget_events__: events}
         when is_atom(widget_type) and is_list(events) ->
-          Map.put(acc, {window_id, id}, %{widget_type: widget_type, events: MapSet.new(events)})
+          event_specs =
+            Map.get(meta, :__extension_widget_event_specs__, [])
+            |> Map.new(fn {name, spec} -> {name, spec} end)
+
+          Map.put(acc, {window_id, id}, %{
+            widget_type: widget_type,
+            events: MapSet.new(events),
+            event_specs: event_specs
+          })
 
         _ ->
           acc
@@ -1078,6 +1084,18 @@ defmodule Plushie.Runtime do
     {result_event, new_registry} =
       Plushie.Runtime.CanvasWidgets.dispatch_event(state.canvas_widgets, event)
 
+    # Auto-consume canvas-internal events that were not intercepted by
+    # any canvas_widget handler. These are implementation details that
+    # should not reach the app's update/2.
+    result_event =
+      case result_event do
+        %Plushie.Event.WidgetEvent{type: type} when is_atom(type) ->
+          if Plushie.Event.BuiltinSpecs.canvas_internal?(type), do: nil, else: result_event
+
+        _ ->
+          result_event
+      end
+
     {result_event, %{state | canvas_widgets: new_registry}}
   end
 
@@ -1088,7 +1106,7 @@ defmodule Plushie.Runtime do
     registry_key = {Map.get(event, :window_id), target}
 
     case Map.get(state.widget_events, registry_key) do
-      %{widget_type: widget_type, events: events} ->
+      %{widget_type: widget_type, events: events, event_specs: event_specs} ->
         {family_widget_type, event_name} = parse_extension_family!(family)
 
         cond do
@@ -1099,7 +1117,8 @@ defmodule Plushie.Runtime do
               data: <<>>
 
           MapSet.member?(events, event_name) ->
-            %{event | type: {widget_type, event_name}}
+            spec = Map.get(event_specs, event_name)
+            apply_extension_event_spec(event, widget_type, event_name, spec)
 
           true ->
             raise Plushie.Protocol.Error,
@@ -1117,6 +1136,75 @@ defmodule Plushie.Runtime do
   end
 
   defp normalize_widget_event!(_state, event), do: event
+
+  # Applies an event spec to a native widget event, setting type tuple
+  # and routing data to value/data fields based on the spec.
+  @spec apply_extension_event_spec(
+          event :: Plushie.Event.WidgetEvent.t(),
+          widget_type :: atom(),
+          event_name :: atom(),
+          spec :: Plushie.Event.BuiltinSpecs.t() | nil
+        ) :: Plushie.Event.WidgetEvent.t()
+  defp apply_extension_event_spec(event, widget_type, event_name, spec) do
+    event = %{event | type: {widget_type, event_name}}
+
+    case spec do
+      %{carrier: :value} ->
+        # Extract value from wire data map, put in value field
+        wire_value = extract_wire_value(event.data)
+        %{event | value: wire_value, data: nil}
+
+      %{carrier: :data, fields: declared_fields} ->
+        # Atomize declared keys from wire data, parse typed fields
+        wire_data = event.data || %{}
+        parsed = atomize_declared_fields(wire_data, declared_fields)
+        %{event | data: parsed}
+
+      %{carrier: :none} ->
+        %{event | data: nil}
+
+      nil ->
+        # No spec -- the extension declared the event name but not a
+        # typed spec. Keep the event as-is with the type tuple set.
+        event
+    end
+  end
+
+  # Extracts a scalar value from wire event data. Wire data from the
+  # renderer is a string-keyed map; value events carry the value under
+  # "value". Falls back to the raw data for pre-parsed or nil values.
+  @spec extract_wire_value(wire_data :: map() | term()) :: term()
+  defp extract_wire_value(%{"value" => v}), do: v
+  defp extract_wire_value(v), do: v
+
+  # Atomizes declared field keys from wire data and parses typed fields.
+  # Undeclared keys are dropped; only declared fields appear in the result.
+  @spec atomize_declared_fields(
+          wire_data :: map(),
+          declared_fields :: [{atom(), Plushie.Event.BuiltinSpecs.field_type()}]
+        ) :: map()
+  defp atomize_declared_fields(wire_data, declared_fields) do
+    Map.new(declared_fields, fn {field_name, type} ->
+      wire_key = Atom.to_string(field_name)
+      raw_value = Map.get(wire_data, wire_key)
+
+      parsed =
+        case Plushie.Event.EventType.parse_field(type, raw_value) do
+          {:ok, v} ->
+            v
+
+          :error ->
+            Logger.warning(
+              "event field #{inspect(field_name)} failed to parse as #{inspect(type)}, " <>
+                "raw value: #{inspect(raw_value)}"
+            )
+
+            raw_value
+        end
+
+      {field_name, parsed}
+    end)
+  end
 
   @spec parse_extension_family!(String.t()) :: {atom(), atom()}
   defp parse_extension_family!(family) do
@@ -1316,14 +1404,9 @@ defmodule Plushie.Runtime do
   defp run_interact_step(state, events) do
     {state, deferred_commands} =
       Enum.reduce(events, {state, []}, fn event_map, {acc, commands_acc} ->
-        case decode_interact_event(event_map) do
-          nil ->
-            {acc, commands_acc}
-
-          event ->
-            {next_state, commands} = apply_event_deferred(acc, event)
-            {next_state, commands_acc ++ commands}
-        end
+        event = decode_interact_event(event_map)
+        {next_state, commands} = apply_event_deferred(acc, event)
+        {next_state, commands_acc ++ commands}
       end)
 
     # Re-render and send a full snapshot (not a patch).
@@ -1374,7 +1457,13 @@ defmodule Plushie.Runtime do
   # the shared protocol decoder so scripted interactions and normal runtime
   # event delivery stay on the same path.
   defp decode_interact_event(%{} = event_map), do: Plushie.Protocol.decode_event(event_map)
-  defp decode_interact_event(_), do: nil
+
+  defp decode_interact_event(other) do
+    raise Plushie.Protocol.Error,
+      reason: {:invalid_event_field, "interact", :event, other, :expected_map, %{}},
+      format: :msgpack,
+      data: <<>>
+  end
 
   # ---------------------------------------------------------------------------
   # Coalescable event helpers

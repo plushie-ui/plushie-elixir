@@ -151,8 +151,10 @@ do not:
 - **Event transformation** -- `handle_event/2` intercepts events at the
   widget's scope boundary before they reach `update/2`. Raw canvas
   events become semantic widget events. Built-in families stay atoms
-  (`:click`, `:select`, etc.). Custom families declared with `events [...]`
-  arrive as `{widget_type, event}` tuples.
+  (`:click`, `:select`, etc.). Custom families declared with `event`
+  arrive as `{widget_type, event}` tuples. Canvas-internal events
+  that are not intercepted by any handler are auto-consumed and never
+  reach `update/2`.
 - **Widget-scoped subscriptions** -- `subscribe/2` returns subscriptions
   scoped to this widget instance. Timer events route to `handle_event/2`,
   not the app's `update/2`.
@@ -162,15 +164,17 @@ defmodule MyApp.StarRating do
   use Plushie.Extension, :canvas_widget
 
   widget :star_rating
-  events [:selected]
 
-  prop :rating, :integer
-  prop :max, :integer, default: 5
+  # Typed event declaration: value goes in WidgetEvent.value
+  event :selected, value: :number
+
+  prop :rating, :number
+  prop :max, :number, default: 5
 
   state hover: nil
 
   @impl true
-  def handle_event(%WidgetEvent{type: :canvas_element_enter, data: %{"element_id" => star_id}}, state) do
+  def handle_event(%WidgetEvent{type: :canvas_element_enter, id: star_id}, state) do
     {:update_state, %{state | hover: star_id}}
   end
 
@@ -178,12 +182,12 @@ defmodule MyApp.StarRating do
     {:update_state, %{state | hover: nil}}
   end
 
-  def handle_event(%WidgetEvent{type: :canvas_element_click, data: %{"element_id" => star_id}}, _state) do
+  def handle_event(%WidgetEvent{type: :canvas_element_click, id: star_id}, _state) do
     {index, _} = Integer.parse(star_id)
     {:emit, :selected, index}
   end
 
-  def handle_event(_event, _state), do: :ignored
+  def handle_event(_event, _state), do: :consumed
 
   @impl true
   def render(id, props, state) do
@@ -200,6 +204,39 @@ defmodule MyApp.StarRating do
 end
 ```
 
+#### Typed event declarations
+
+Events are declared with the `event` macro, which specifies whether
+the event carries a value (scalar) or structured data:
+
+```elixir
+# No payload
+event :cleared
+
+# Scalar value -- goes in WidgetEvent.value
+event :selected, value: :number
+
+# Structured data -- goes in WidgetEvent.data with atom keys
+event :change, data: [hue: :number, saturation: :number]
+
+# Block form for longer declarations
+event :change do
+  data do
+    field :hue, :number
+    field :saturation, :number
+    field :brightness, :number
+  end
+end
+```
+
+Type identifiers can be built-in atoms (`:number`, `:string`,
+`:boolean`, `:any`) or modules implementing `Plushie.Event.EventType`.
+
+When a canvas widget emits a built-in event family (`:click`,
+`:toggle`, `:select`, etc.), the event uses the built-in spec
+automatically. The consumer sees the same event shape whether it
+came from a built-in widget or a canvas widget.
+
 #### `handle_event/2` return values
 
 `handle_event/2` receives the raw event and the widget's current
@@ -207,16 +244,21 @@ internal state. It follows iced's captured/ignored model:
 
 | Return value | Effect |
 |---|---|
-| `:ignored` | Event passes through to the app's `update/2` unchanged |
+| `:ignored` | Event passes through to the next handler or `update/2` |
 | `:consumed` | Event is suppressed -- neither the app nor other widgets see it |
 | `{:emit, family, data}` | Suppress the raw event; emit a new event with the given family and data |
 | `{:emit, family, data, new_state}` | Same as above, and update internal state |
 | `{:update_state, new_state}` | Update internal state, suppress the event |
 
 Standard event families (`:click`, `:select`, `:toggle`) emitted via
-`{:emit, ...}` produce events that look identical to built-in widget
-events from the app's perspective. Custom families declared with
-`events [...]` arrive as `%WidgetEvent{type: {widget_type, event}}`.
+`{:emit, ...}` produce events identical to built-in widget events.
+The event spec determines whether `data` goes in `value` or `data`.
+Custom events declared with `event` arrive as
+`%WidgetEvent{type: {widget_type, event_name}}`.
+
+Canvas-internal events (`:canvas_element_enter`, `:canvas_element_click`,
+etc.) that pass through the entire handler chain without being captured
+are auto-consumed by the runtime. They never reach `update/2`.
 
 #### `subscribe/2`
 

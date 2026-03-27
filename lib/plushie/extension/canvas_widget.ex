@@ -115,7 +115,9 @@ defmodule Plushie.Extension.CanvasWidget do
       resolve_emit_identity(source_event, widget_id, fallback_window_id)
 
     case spec do
-      %{carrier: :value} ->
+      %{carrier: :value, type: value_type} ->
+        validate_emit_value!(family, value_type, data)
+
         %Plushie.Event.WidgetEvent{
           type: event_type,
           id: id,
@@ -127,17 +129,19 @@ defmodule Plushie.Extension.CanvasWidget do
       %{carrier: :data, fields: declared_fields} ->
         unless is_map(data) do
           raise ArgumentError,
-                "event spec declares data fields #{inspect(Keyword.keys(declared_fields))}, " <>
-                  "but emit data is not a map: #{inspect(data)}. " <>
-                  "Use a map with the declared field keys."
+                "event #{inspect(family)} spec declares data fields " <>
+                  "#{inspect(Keyword.keys(declared_fields))}, " <>
+                  "but emit data is not a map: #{inspect(data)}"
         end
+
+        validated = validate_and_coerce_emit_data!(family, data, declared_fields)
 
         %Plushie.Event.WidgetEvent{
           type: event_type,
           id: id,
           scope: scope,
           window_id: emit_window_id,
-          data: coerce_emit_data(data, declared_fields)
+          data: validated
         }
 
       %{carrier: :none} ->
@@ -149,15 +153,9 @@ defmodule Plushie.Extension.CanvasWidget do
         }
 
       nil ->
-        # No spec found -- legacy fallback for events declared via events/1
-        # without typed declarations. Use value: :any convention.
-        %Plushie.Event.WidgetEvent{
-          type: event_type,
-          id: id,
-          scope: scope,
-          window_id: emit_window_id,
-          value: data
-        }
+        raise ArgumentError,
+              "no event spec found for #{inspect(family)}. " <>
+                "Declare it with the `event` macro."
     end
   end
 
@@ -228,16 +226,52 @@ defmodule Plushie.Extension.CanvasWidget do
     end
   end
 
-  # Ensures emit data has atom keys. Canvas widget handle_event/2 produces
-  # Elixir data (never wire data), so keys should already be atoms. String
-  # keys are accepted but raise if the atom doesn't already exist -- this
-  # catches accidental string-keyed maps early rather than silently passing
-  # them through.
-  @spec coerce_emit_data(data :: map(), declared_fields :: [{atom(), term()}]) :: map()
-  defp coerce_emit_data(data, _declared_fields) when is_map(data) do
-    Map.new(data, fn
-      {k, v} when is_atom(k) -> {k, v}
-      {k, v} when is_binary(k) -> {String.to_existing_atom(k), v}
-    end)
+  # Validates the emitted value matches the declared type.
+  @spec validate_emit_value!(family :: atom(), type :: atom(), value :: term()) :: :ok
+  defp validate_emit_value!(_family, :any, _value), do: :ok
+
+  defp validate_emit_value!(family, type, value) do
+    case Plushie.Event.EventType.parse_field(type, value) do
+      {:ok, _} ->
+        :ok
+
+      :error ->
+        raise ArgumentError,
+              "event #{inspect(family)} declares value type #{inspect(type)}, " <>
+                "but got: #{inspect(value)}"
+    end
+  end
+
+  # Validates and coerces emit data: atomizes keys and validates each
+  # declared field's value against its type.
+  @spec validate_and_coerce_emit_data!(
+          family :: atom(),
+          data :: map(),
+          declared_fields :: [{atom(), term()}]
+        ) :: map()
+  defp validate_and_coerce_emit_data!(family, data, declared_fields) do
+    atom_data =
+      Map.new(data, fn
+        {k, v} when is_atom(k) -> {k, v}
+        {k, v} when is_binary(k) -> {String.to_existing_atom(k), v}
+      end)
+
+    for {field_name, type} <- declared_fields do
+      if Map.has_key?(atom_data, field_name) do
+        value = Map.fetch!(atom_data, field_name)
+
+        case Plushie.Event.EventType.parse_field(type, value) do
+          {:ok, _} ->
+            :ok
+
+          :error ->
+            raise ArgumentError,
+                  "event #{inspect(family)} field #{inspect(field_name)} " <>
+                    "declares type #{inspect(type)}, but got: #{inspect(value)}"
+        end
+      end
+    end
+
+    atom_data
   end
 end

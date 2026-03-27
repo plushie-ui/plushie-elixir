@@ -386,7 +386,7 @@ defmodule Plushie.ProtocolTest do
       assert %Key{type: :release, key: :enter} = Protocol.decode_message(json, :json)
     end
 
-    test "decodes legacy key payload from top-level value" do
+    test "rejects key event with top-level value instead of data.key" do
       json =
         Jason.encode!(%{
           type: "event",
@@ -395,7 +395,8 @@ defmodule Plushie.ProtocolTest do
           value: "Escape"
         })
 
-      assert %Key{type: :press, key: :escape} = Protocol.decode_message(json, :json)
+      assert {:error, {:invalid_event_field, "key_press", :data, _, :required, _}} =
+               Protocol.decode_message(json, :json)
     end
 
     test "decodes modifiers nested under data" do
@@ -422,7 +423,8 @@ defmodule Plushie.ProtocolTest do
           data: %{}
         })
 
-      assert {:error, {:unknown_message, _}} = Protocol.decode_message(json, :json)
+      assert {:error, {:invalid_event_field, "key_press", :key, nil, :required, _}} =
+               Protocol.decode_message(json, :json)
     end
 
     test "decodes extra key event fields (nested data from Rust)" do
@@ -1586,8 +1588,8 @@ defmodule Plushie.ProtocolTest do
              } =
                Protocol.decode_message(json, :json)
 
-      assert data["element_id"] == "handle-1"
-      assert data["dx"] == 5.0
+      assert data.x == 50.0
+      assert data.dx == 5.0
     end
 
     test "decodes canvas_element_drag_end" do

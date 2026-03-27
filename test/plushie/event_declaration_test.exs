@@ -65,11 +65,11 @@ defmodule Plushie.EventDeclarationTest do
     end
   end
 
-  defmodule LegacyEventWidget do
+  defmodule UnspecifiedValueWidget do
     @moduledoc false
     use Plushie.Extension, :canvas_widget
-    widget(:legacy_event_widget)
-    events([:changed])
+    widget(:unspecified_value_widget)
+    event(:changed, value: :any)
 
     @impl true
     def handle_event(_event, _state), do: :ignored
@@ -119,8 +119,8 @@ defmodule Plushie.EventDeclarationTest do
       assert %{carrier: :none} = spec
     end
 
-    test "legacy events/1 gets value: :any spec" do
-      spec = LegacyEventWidget.__event_spec__(:changed)
+    test "value: :any allows any value" do
+      spec = UnspecifiedValueWidget.__event_spec__(:changed)
       assert %{carrier: :value, type: :any} = spec
     end
 
@@ -133,7 +133,7 @@ defmodule Plushie.EventDeclarationTest do
       assert [:selected] = ValueEventWidget.__events__()
       assert [:moved] = DataEventWidget.__events__()
       assert [:cleared] = NoPayloadEventWidget.__events__()
-      assert [:changed] = LegacyEventWidget.__events__()
+      assert [:changed] = UnspecifiedValueWidget.__events__()
     end
 
     test "__event_specs__/0 returns all specs" do

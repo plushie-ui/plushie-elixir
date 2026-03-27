@@ -19,7 +19,7 @@ defmodule Plushie.Test.WidgetCase do
         test "drag on hue ring emits :change" do
           canvas_press("#picker", 370.0, 200.0)
           assert last_event().type == :change
-          assert_in_delta last_event().data["hue"], 90.0, 2.0
+          assert_in_delta last_event().data.hue, 90.0, 2.0
         end
 
         test "model reflects emitted data" do

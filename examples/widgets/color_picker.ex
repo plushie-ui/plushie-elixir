@@ -15,7 +15,7 @@ defmodule ColorPickerWidget do
   use Plushie.Extension, :canvas_widget
 
   widget(:color_picker_widget)
-  events([:change])
+  event :change, data: [hue: :number, saturation: :number, value: :number]
 
   state(hue: 0.0, saturation: 1.0, value: 1.0, drag: :none)
 
@@ -40,7 +40,7 @@ defmodule ColorPickerWidget do
   # -- Event transformation ----------------------------------------------------
 
   @impl Plushie.Extension.CanvasWidget
-  def handle_event(%Plushie.Event.CanvasEvent{type: :press, x: x, y: y, button: "left"}, state) do
+  def handle_event(%Plushie.Event.CanvasEvent{type: :press, x: x, y: y, button: :left}, state) do
     dx = x - @cx
     dy = y - @cy
     dist = :math.sqrt(dx * dx + dy * dy)
@@ -82,7 +82,7 @@ defmodule ColorPickerWidget do
         %Plushie.Event.WidgetEvent{
           type: :canvas_element_key_press,
           id: element_id,
-          data: %{"key" => key, "modifiers" => mods}
+          data: %{key: key, modifiers: mods}
         },
         state
       ) do
@@ -94,17 +94,17 @@ defmodule ColorPickerWidget do
   # -- Keyboard ----------------------------------------------------------------
 
   defp handle_key("hue-cursor", key, mods, state) do
-    shift? = mods["shift"] || false
+    shift? = Plushie.KeyModifiers.shift?(mods)
     step = if shift?, do: @coarse_step, else: @fine_step
 
     new_hue =
       case key do
-        k when k in ~w(ArrowRight ArrowUp) -> fmod(state.hue + step, 360.0)
-        k when k in ~w(ArrowLeft ArrowDown) -> fmod(state.hue - step + 360.0, 360.0)
-        "PageUp" -> fmod(state.hue + @coarse_step, 360.0)
-        "PageDown" -> fmod(state.hue - @coarse_step + 360.0, 360.0)
-        "Home" -> 0.0
-        "End" -> 359.0
+        k when k in [:arrow_right, :arrow_up] -> fmod(state.hue + step, 360.0)
+        k when k in [:arrow_left, :arrow_down] -> fmod(state.hue - step + 360.0, 360.0)
+        :page_up -> fmod(state.hue + @coarse_step, 360.0)
+        :page_down -> fmod(state.hue - @coarse_step + 360.0, 360.0)
+        :home -> 0.0
+        :end -> 359.0
         _ -> state.hue
       end
 
@@ -117,45 +117,45 @@ defmodule ColorPickerWidget do
   end
 
   defp handle_key("sv-cursor", key, mods, state) do
-    shift? = mods["shift"] || false
+    shift? = Plushie.KeyModifiers.shift?(mods)
     step = if shift?, do: @sv_coarse_step, else: @sv_fine_step
 
     {new_s, new_v} =
       case key do
-        "ArrowRight" ->
+        :arrow_right ->
           {clamp(state.saturation + step, 0.0, 1.0), state.value}
 
-        "ArrowLeft" ->
+        :arrow_left ->
           {clamp(state.saturation - step, 0.0, 1.0), state.value}
 
-        "ArrowUp" ->
+        :arrow_up ->
           {state.saturation, clamp(state.value + step, 0.0, 1.0)}
 
-        "ArrowDown" ->
+        :arrow_down ->
           {state.saturation, clamp(state.value - step, 0.0, 1.0)}
 
-        "PageUp" when shift? ->
+        :page_up when shift? ->
           {clamp(state.saturation + @sv_coarse_step, 0.0, 1.0), state.value}
 
-        "PageDown" when shift? ->
+        :page_down when shift? ->
           {clamp(state.saturation - @sv_coarse_step, 0.0, 1.0), state.value}
 
-        "PageUp" ->
+        :page_up ->
           {state.saturation, clamp(state.value + @sv_coarse_step, 0.0, 1.0)}
 
-        "PageDown" ->
+        :page_down ->
           {state.saturation, clamp(state.value - @sv_coarse_step, 0.0, 1.0)}
 
-        "Home" when shift? ->
+        :home when shift? ->
           {0.0, state.value}
 
-        "End" when shift? ->
+        :end when shift? ->
           {1.0, state.value}
 
-        "Home" ->
+        :home ->
           {state.saturation, 1.0}
 
-        "End" ->
+        :end ->
           {state.saturation, 0.0}
 
         _ ->

@@ -38,15 +38,17 @@ defmodule Plushie.Protocol.Decode do
 
   Accepts either a raw event payload from `interact_step` / `interact_response`
   or a full protocol event message with `"type" => "event"`.
+
+  Raises on unknown or malformed events. The renderer and SDK are lock-step;
+  an unrecognised event is a protocol bug, not a forward-compatibility concern.
+  Every event from the renderer must include `window_id`.
   """
-  @spec decode_event(map()) :: Plushie.Event.delivered_t() | nil
+  @spec decode_event(event :: map()) :: Plushie.Event.delivered_t()
   def decode_event(%{} = event) do
     event
     |> Map.put_new("type", "event")
     |> safe_dispatch()
     |> case do
-      {:error, {:unknown_message, _}} -> nil
-      {:error, {:unknown_event_family, _, _}} -> nil
       {:error, reason} -> raise Error, reason: reason, format: :msgpack, data: <<>>
       decoded -> decoded
     end
@@ -106,9 +108,8 @@ defmodule Plushie.Protocol.Decode do
         {local, []}
 
       parts ->
-        local = List.last(parts)
-        scope = parts |> List.delete_at(-1) |> Enum.reverse()
-        {local, scope}
+        {scope_fwd, [local]} = Enum.split(parts, -1)
+        {local, Enum.reverse(scope_fwd)}
     end
   end
 
@@ -687,7 +688,7 @@ defmodule Plushie.Protocol.Decode do
       window_id: window_id,
       x: data["x"],
       y: data["y"],
-      button: Map.get(data, "button", "left")
+      button: parse_canvas_button(data["button"])
     }
   end
 
@@ -703,7 +704,7 @@ defmodule Plushie.Protocol.Decode do
       window_id: window_id,
       x: data["x"],
       y: data["y"],
-      button: Map.get(data, "button", "left")
+      button: parse_canvas_button(data["button"])
     }
   end
 
@@ -1013,69 +1014,36 @@ defmodule Plushie.Protocol.Decode do
      }}
   end
 
-  # -- Canvas shape events --
+  # -- Canvas element events --
 
-  defp dispatch(
-         %{
-           "type" => "event",
-           "family" => "canvas_element_enter",
-           "id" => _id,
-           "data" => data
-         } = msg
-       ) do
+  # Uniform canvas element events (no data parsing needed).
+  @canvas_element_passthrough %{
+    "canvas_element_enter" => :canvas_element_enter,
+    "canvas_element_leave" => :canvas_element_leave,
+    "canvas_element_click" => :canvas_element_click,
+    "canvas_element_drag_end" => :canvas_element_drag_end,
+    "canvas_element_focused" => :canvas_element_focused,
+    "canvas_element_blurred" => :canvas_element_blurred,
+    "canvas_focused" => :canvas_focused,
+    "canvas_blurred" => :canvas_blurred,
+    "canvas_group_focused" => :canvas_group_focused,
+    "canvas_group_blurred" => :canvas_group_blurred
+  }
+
+  defp dispatch(%{"type" => "event", "family" => family, "id" => _id} = msg)
+       when is_map_key(@canvas_element_passthrough, family) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
     %WidgetEvent{
-      type: :canvas_element_enter,
+      type: Map.fetch!(@canvas_element_passthrough, family),
       id: local,
       scope: scope,
       window_id: window_id,
-      data: data
+      data: msg["data"]
     }
   end
 
-  defp dispatch(
-         %{
-           "type" => "event",
-           "family" => "canvas_element_leave",
-           "id" => _id,
-           "data" => data
-         } = msg
-       ) do
-    {local, scope, window_id, _family} = event_identity!(msg)
-
-    %WidgetEvent{
-      type: :canvas_element_leave,
-      id: local,
-      scope: scope,
-      window_id: window_id,
-      data: data
-    }
-  end
-
-  defp dispatch(
-         %{
-           "type" => "event",
-           "family" => "canvas_element_click",
-           "id" => _id,
-           "data" => data
-         } = msg
-       ) do
-    {local, scope, window_id, _family} = event_identity!(msg)
-
-    %WidgetEvent{
-      type: :canvas_element_click,
-      id: local,
-      scope: scope,
-      window_id: window_id,
-      data: data
-    }
-  end
-
-  # NOTE: canvas_element_key_press carries key name as a wire string
-  # (e.g. "ArrowRight") and modifiers as a string-keyed map, unlike
-  # %Key{} which uses parsed atoms and %KeyModifiers{}. Should be
-  # unified when canvas elements become first-class widget events.
+  # Canvas element key events -- parse key and modifiers using type modules.
   defp dispatch(
          %{
            "type" => "event",
@@ -1091,7 +1059,7 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      data: data
+      data: parse_canvas_key_data(data, :press)
     }
   end
 
@@ -1110,10 +1078,11 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      data: data
+      data: parse_canvas_key_data(data, :release)
     }
   end
 
+  # Canvas element drag -- parse coordinates.
   defp dispatch(
          %{
            "type" => "event",
@@ -1129,112 +1098,7 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      data: data
-    }
-  end
-
-  defp dispatch(
-         %{
-           "type" => "event",
-           "family" => "canvas_element_drag_end",
-           "id" => _id,
-           "data" => data
-         } = msg
-       ) do
-    {local, scope, window_id, _family} = event_identity!(msg)
-
-    %WidgetEvent{
-      type: :canvas_element_drag_end,
-      id: local,
-      scope: scope,
-      window_id: window_id,
-      data: data
-    }
-  end
-
-  defp dispatch(
-         %{
-           "type" => "event",
-           "family" => "canvas_element_focused",
-           "id" => _id,
-           "data" => data
-         } = msg
-       ) do
-    {local, scope, window_id, _family} = event_identity!(msg)
-
-    %WidgetEvent{
-      type: :canvas_element_focused,
-      id: local,
-      scope: scope,
-      window_id: window_id,
-      data: data
-    }
-  end
-
-  defp dispatch(
-         %{
-           "type" => "event",
-           "family" => "canvas_element_blurred",
-           "id" => _id,
-           "data" => data
-         } = msg
-       ) do
-    {local, scope, window_id, _family} = event_identity!(msg)
-
-    %WidgetEvent{
-      type: :canvas_element_blurred,
-      id: local,
-      scope: scope,
-      window_id: window_id,
-      data: data
-    }
-  end
-
-  defp dispatch(%{"type" => "event", "family" => "canvas_focused", "id" => _id} = msg) do
-    {local, scope, window_id, _family} = event_identity!(msg)
-    %WidgetEvent{type: :canvas_focused, id: local, scope: scope, window_id: window_id}
-  end
-
-  defp dispatch(%{"type" => "event", "family" => "canvas_blurred", "id" => _id} = msg) do
-    {local, scope, window_id, _family} = event_identity!(msg)
-    %WidgetEvent{type: :canvas_blurred, id: local, scope: scope, window_id: window_id}
-  end
-
-  defp dispatch(
-         %{
-           "type" => "event",
-           "family" => "canvas_group_focused",
-           "id" => _id,
-           "data" => data
-         } = msg
-       ) do
-    {local, scope, window_id, _family} = event_identity!(msg)
-
-    %WidgetEvent{
-      type: :canvas_group_focused,
-      id: local,
-      scope: scope,
-      window_id: window_id,
-      data: data
-    }
-  end
-
-  defp dispatch(
-         %{
-           "type" => "event",
-           "family" => "canvas_group_blurred",
-           "id" => _id,
-           "data" => data
-         } = msg
-       ) do
-    {local, scope, window_id, _family} = event_identity!(msg)
-
-    %WidgetEvent{
-      type: :canvas_group_blurred,
-      id: local,
-      scope: scope,
-      window_id: window_id,
-      data: data
+      data: %{x: data["x"], y: data["y"], dx: data["dx"], dy: data["dy"]}
     }
   end
 
@@ -1335,30 +1199,40 @@ defmodule Plushie.Protocol.Decode do
     {:error, {:unknown_message, msg}}
   end
 
-  defp decode_key_event(msg, type) do
-    data = normalize_key_data(msg["data"])
-    mods = msg["modifiers"] || data["modifiers"] || %{}
-    key = data["key"] || data["value"] || msg["value"]
+  defp decode_key_event(%{"data" => %{} = data, "modifiers" => mods} = msg, type) do
+    key = data["key"]
 
-    if is_binary(key) do
-      %Key{
-        type: type,
-        key: Keys.parse_key(key),
-        modified_key: Keys.parse_key(data["modified_key"] || key),
-        physical_key: Keys.parse_physical_key(data["physical_key"]),
-        location: Keys.parse_location(data["location"]),
-        modifiers: parse_modifiers(mods),
-        text: if(type == :press, do: data["text"], else: nil),
-        repeat: if(type == :press, do: data["repeat"] || false, else: false),
-        captured: msg["captured"] || false
-      }
-    else
-      {:error, {:unknown_message, msg}}
+    unless is_binary(key) do
+      raise Error,
+        reason: {:invalid_event_field, "key_#{type}", :key, key, :required, msg},
+        format: :msgpack,
+        data: <<>>
     end
+
+    %Key{
+      type: type,
+      key: Keys.parse_key(key),
+      modified_key: Keys.parse_key(data["modified_key"] || key),
+      physical_key: Keys.parse_physical_key(data["physical_key"]),
+      location: Keys.parse_location(data["location"]),
+      modifiers: parse_modifiers(mods),
+      text: if(type == :press, do: data["text"], else: nil),
+      repeat: if(type == :press, do: data["repeat"] || false, else: false),
+      captured: msg["captured"] || false
+    }
   end
 
-  defp normalize_key_data(%{} = data), do: data
-  defp normalize_key_data(_), do: %{}
+  defp decode_key_event(%{"data" => %{} = data} = msg, type) do
+    # Modifiers at top level missing -- use data-level or empty.
+    decode_key_event(Map.put(msg, "modifiers", data["modifiers"] || %{}), type)
+  end
+
+  defp decode_key_event(msg, type) do
+    raise Error,
+      reason: {:invalid_event_field, "key_#{type}", :data, nil, :required, msg},
+      format: :msgpack,
+      data: <<>>
+  end
 
   defp invalid_event_field(family, field, value, reason, msg) do
     {:error, {:invalid_event_field, family, field, value, reason, msg}}
@@ -1374,6 +1248,46 @@ defmodule Plushie.Protocol.Decode do
 
       true ->
         invalid_event_field("pane_dragged", :edge, data["edge"], reason, msg)
+    end
+  end
+
+  # Parses canvas element key event data into an atom-keyed map with
+  # parsed key names and %KeyModifiers{} structs, matching the shapes
+  # used by top-level %Key{} events for consistency.
+  @spec parse_canvas_key_data(data :: map() | nil, type :: :press | :release) :: map()
+  defp parse_canvas_key_data(%{} = data, type) do
+    key =
+      case Plushie.Type.Key.parse(data["key"]) do
+        {:ok, parsed} -> parsed
+        :error -> data["key"]
+      end
+
+    mods =
+      case Plushie.Type.KeyModifiers.parse(data["modifiers"]) do
+        {:ok, parsed} -> parsed
+        :error -> %Plushie.KeyModifiers{}
+      end
+
+    result = %{key: key, modifiers: mods}
+
+    if type == :press do
+      Map.put(result, :text, data["text"])
+    else
+      result
+    end
+  end
+
+  defp parse_canvas_key_data(_, _type), do: %{key: nil, modifiers: %Plushie.KeyModifiers{}}
+
+  # Parses a canvas button string into an atom. Defaults to :left when
+  # nil (canvas press/release events without an explicit button are left clicks).
+  @spec parse_canvas_button(button :: String.t() | nil) :: atom()
+  defp parse_canvas_button(nil), do: :left
+
+  defp parse_canvas_button(button) when is_binary(button) do
+    case Plushie.Type.MouseButton.parse(button) do
+      {:ok, parsed} -> parsed
+      :error -> :left
     end
   end
 

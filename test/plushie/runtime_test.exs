@@ -94,7 +94,7 @@ defmodule Plushie.RuntimeTest do
     use Plushie.Extension, :native_widget
 
     widget(:star_rating)
-    events([:selected])
+    event(:selected, value: :any)
     prop(:value, :number)
 
     rust_crate("native/star_rating")

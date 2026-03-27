@@ -24,6 +24,8 @@ defmodule StarRating do
   prop(:scale, :number, default: 1.0)
   prop(:theme_progress, :number, default: 0.0)
 
+  event :select, value: :number
+
   state(hover: nil)
 
   # -- Event transformation ----------------------------------------------------

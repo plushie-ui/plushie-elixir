@@ -9,7 +9,7 @@ defmodule Plushie.ExtensionMacroTest do
     use Plushie.Extension, :native_widget
 
     widget(:gauge)
-    events([:calibrated])
+    event(:calibrated, value: :number)
 
     prop(:value, :number)
     prop(:min, :number, default: 0)
@@ -570,34 +570,6 @@ defmodule Plushie.ExtensionMacroTest do
 
       assert warnings =~ "widget type already declared"
       assert warnings =~ "first_name"
-    end
-
-    test "events/1 requires a list of atoms" do
-      assert_raise CompileError, ~r/events\/1 expects a list of atoms/, fn ->
-        Code.compile_string("""
-        defmodule TestScalarEvents do
-          use Plushie.Extension, :canvas_widget
-          widget :bad_events
-          events :selected
-
-          def render(id, _props, _state), do: %{id: id, type: "canvas", props: %{}, children: []}
-        end
-        """)
-      end
-    end
-
-    test "events/1 is rejected for :widget extensions" do
-      assert_raise CompileError,
-                   ~r/events\/1` is only supported for :native_widget and :canvas_widget/,
-                   fn ->
-                     Code.compile_string("""
-                     defmodule TestWidgetEvents do
-                       use Plushie.Extension, :widget
-                       widget :bad_widget
-                       events [:selected]
-                     end
-                     """)
-                   end
     end
   end
 

@@ -56,12 +56,12 @@ defmodule RatePlushie do
     # children, but the events carry the widget's own ID).
     case event do
       # Star rating emits :select with the number of stars.
-      %WidgetEvent{type: :select, id: "stars", data: %{"value" => stars}} ->
+      %WidgetEvent{type: :select, id: "stars", value: stars} ->
         %{model | rating: stars, errors: Map.delete(model.errors, :rating)}
 
-      # Theme toggle emits :toggle with the new state.
+      # Theme toggle emits built-in :toggle with the new state.
       # Animation is managed internally by the canvas_widget.
-      %WidgetEvent{type: :toggle, id: "theme-toggle", data: %{"value" => dark?}} ->
+      %WidgetEvent{type: :toggle, id: "theme-toggle", value: dark?} ->
         %{model | dark_mode: dark?}
 
       %WidgetEvent{type: :input, id: "review-name", value: v} ->

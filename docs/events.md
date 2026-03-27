@@ -348,30 +348,41 @@ end
 When a canvas contains shapes with an `interactive` field (see
 [composition patterns](composition-patterns.md#canvas-interactive-shapes)),
 the renderer handles hit testing locally and emits semantic shape
-events. These arrive as `%WidgetEvent{}` structs (not `%CanvasEvent{}`). The
-`id` is the canvas widget ID; `data["element_id"]` identifies the shape.
+events. These arrive as `%WidgetEvent{}` structs (not `%CanvasEvent{}`).
+The element ID uses scoped IDs (e.g. `"bar-jan"` scoped under the
+canvas widget).
 
-<!-- test: events_canvas_element_event_match_test -- keep this code block in sync with the test -->
+Canvas element events are internal to canvas widgets. When a canvas
+widget's `handle_event/2` intercepts them (via `:emit`, `:consumed`,
+or `:update_state`), the raw event never reaches the app. Unhandled
+canvas-internal events are auto-consumed by the runtime -- they
+never leak to `update/2`.
+
+Inside `handle_event/2`, canvas element events look like:
+
 ```elixir
 alias Plushie.Event.WidgetEvent
 
 # Cursor entered a shape's bounds
-%WidgetEvent{type: :canvas_element_enter, id: "chart", data: %{"element_id" => "bar-jan", "x" => 15.0, "y" => 70.0}}
+%WidgetEvent{type: :canvas_element_enter, id: "bar-jan"}
 
 # Cursor left a shape's bounds
-%WidgetEvent{type: :canvas_element_leave, id: "chart", data: %{"element_id" => "bar-jan"}}
+%WidgetEvent{type: :canvas_element_leave, id: "bar-jan"}
 
 # Click on a shape
-%WidgetEvent{type: :canvas_element_click, id: "chart", data: %{"element_id" => "bar-jan", "x" => 15.0, "y" => 70.0, "button" => "left"}}
+%WidgetEvent{type: :canvas_element_click, id: "bar-jan"}
 
-# Drag on a draggable shape (rate-limited by event_rate)
-%WidgetEvent{type: :canvas_element_drag, id: "chart", data: %{"element_id" => "handle", "x" => 50.0, "y" => 80.0, "delta_x" => 2.0, "delta_y" => -1.0}}
+# Drag on a draggable shape (parsed coordinates)
+%WidgetEvent{type: :canvas_element_drag, id: "handle", data: %{x: 50.0, y: 80.0, dx: 2.0, dy: -1.0}}
 
 # Drag ended
-%WidgetEvent{type: :canvas_element_drag_end, id: "chart", data: %{"element_id" => "handle", "x" => 52.0, "y" => 79.0}}
+%WidgetEvent{type: :canvas_element_drag_end, id: "handle"}
+
+# Key press on a focused shape (parsed key and modifiers)
+%WidgetEvent{type: :canvas_element_key_press, id: "bar-jan", data: %{key: :arrow_right, modifiers: %Plushie.KeyModifiers{}}}
 
 # Shape received keyboard focus (Tab/Arrow navigation)
-%WidgetEvent{type: :canvas_element_focused, id: "chart", data: %{"element_id" => "bar-jan"}}
+%WidgetEvent{type: :canvas_element_focused, id: "bar-jan"}
 ```
 
 Hover styles, pressed styles, cursors, and tooltips on shapes are
@@ -379,9 +390,17 @@ handled by the renderer locally -- no round-trip needed. Shape events
 give the host semantic actions (clicks, drags, focus changes) instead
 of raw coordinates.
 
+Canvas element key events use the same parsed types as top-level
+`%Key{}` events: key names are atoms (`:arrow_right`, `:escape`) and
+modifiers are `%KeyModifiers{}` structs.
+
+Canvas widgets transform these internal events into semantic events
+that the app sees:
+
 ```elixir
-def update(model, %WidgetEvent{type: :canvas_element_click, id: "chart", data: %{"element_id" => element_id}}) do
-  %{model | selected_bar: element_id}
+# Inside a canvas widget's handle_event/2:
+def handle_event(%WidgetEvent{type: :canvas_element_click, id: "bar-" <> month}, _state) do
+  {:emit, :bar_selected, month}
 end
 ```
 
