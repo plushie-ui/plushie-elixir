@@ -32,6 +32,7 @@ defmodule Plushie.Extension do
         rust_crate "native/my_gauge"
         rust_constructor "my_gauge::GaugeExtension::new()"
 
+        event :value_changed, data: [value: :number]
         command :set_value, value: :number
       end
 
@@ -48,6 +49,7 @@ defmodule Plushie.Extension do
   - `build/1` -- converts the struct to a `ui_node()` map
   - `@type t`, `@type option` -- typespecs for dialyzer
   - `Plushie.Widget` protocol implementation
+  - `__event_specs__/0`, `__event_spec__/1` -- typed event metadata
   - Command functions (native_widget only) that wrap
     `Plushie.Command.extension_command/3`
 
@@ -147,6 +149,7 @@ defmodule Plushie.Extension do
         Module.register_attribute(__MODULE__, :_extension_props, accumulate: true)
         Module.register_attribute(__MODULE__, :_extension_commands, accumulate: true)
         Module.register_attribute(__MODULE__, :_extension_events, accumulate: true)
+        Module.register_attribute(__MODULE__, :_extension_event_specs, accumulate: true)
         Module.put_attribute(__MODULE__, :_extension_widget, nil)
         Module.put_attribute(__MODULE__, :_extension_container, false)
       end
@@ -168,6 +171,8 @@ defmodule Plushie.Extension do
                 widget: 2,
                 prop: 2,
                 prop: 3,
+                event: 1,
+                event: 2,
                 events: 1,
                 command: 1,
                 command: 2,
@@ -184,14 +189,25 @@ defmodule Plushie.Extension do
             @behaviour Plushie.Extension.CanvasWidget
 
             import Plushie.Extension,
-              only: [widget: 1, widget: 2, prop: 2, prop: 3, state: 1, events: 1]
+              only: [
+                widget: 1,
+                widget: 2,
+                prop: 2,
+                prop: 3,
+                state: 1,
+                event: 1,
+                event: 2,
+                events: 1
+              ]
 
             import Plushie.UI
           end
 
         :widget ->
           quote do
-            import Plushie.Extension, only: [widget: 1, widget: 2, prop: 2, prop: 3, events: 1]
+            import Plushie.Extension,
+              only: [widget: 1, widget: 2, prop: 2, prop: 3, event: 1, event: 2, events: 1]
+
             import Plushie.UI
           end
       end
@@ -228,9 +244,69 @@ defmodule Plushie.Extension do
   end
 
   @doc """
+  Declares a typed event emitted by a native or canvas widget.
+
+  Supports three forms:
+
+  ## No payload
+
+      event :cleared
+
+  ## Typed value (goes in `WidgetEvent.value`)
+
+      event :select, value: :number
+
+  ## Structured data (goes in `WidgetEvent.data` with atom keys)
+
+      event :change, data: [hue: :number, saturation: :number]
+
+  ## Block form
+
+      event :change do
+        data do
+          field :hue, :number
+          field :saturation, :number
+        end
+      end
+
+  `value:` and `data:` are mutually exclusive.
+
+  Type identifiers can be built-in atoms (`:number`, `:string`,
+  `:boolean`, `:any`) or modules implementing `Plushie.Event.EventType`.
+  """
+  defmacro event(name, opts_or_block \\ [])
+
+  defmacro event(name, do: block) do
+    caller = __CALLER__
+    validate_event_name!(name, caller)
+    block = expand_type_aliases_in_ast(block, caller)
+    spec = parse_event_block(block, caller)
+    validate_event_spec!(name, spec, caller)
+
+    quote bind_quoted: [name: name, spec: Macro.escape(spec)] do
+      @_extension_events name
+      @_extension_event_specs {name, spec}
+    end
+  end
+
+  defmacro event(name, opts) do
+    caller = __CALLER__
+    validate_event_name!(name, caller)
+    opts = expand_type_aliases(opts, caller)
+    spec = parse_event_opts(opts, caller)
+    validate_event_spec!(name, spec, caller)
+
+    quote bind_quoted: [name: name, spec: Macro.escape(spec)] do
+      @_extension_events name
+      @_extension_event_specs {name, spec}
+    end
+  end
+
+  @doc """
   Declares semantic event names emitted by a native or canvas widget.
 
-  Accepts a list of atoms:
+  Accepts a list of atoms. Events declared this way get an implicit
+  `value: :any` spec. Prefer `event/2` for new code.
 
       events [:selected, :hovered, :cleared]
   """
@@ -259,6 +335,7 @@ defmodule Plushie.Extension do
     quote bind_quoted: [names: normalized] do
       for name <- names do
         @_extension_events name
+        @_extension_event_specs {name, %{carrier: :value, type: :any}}
       end
     end
   end
@@ -325,6 +402,7 @@ defmodule Plushie.Extension do
     props = Module.get_attribute(env.module, :_extension_props) |> Enum.reverse()
     commands = Module.get_attribute(env.module, :_extension_commands) |> Enum.reverse()
     events = Module.get_attribute(env.module, :_extension_events) |> Enum.reverse()
+    event_specs = Module.get_attribute(env.module, :_extension_event_specs) |> Enum.reverse()
 
     validate_declarations!(env, kind, widget_type, events)
     validate_prop_types!(env, props)
@@ -350,6 +428,7 @@ defmodule Plushie.Extension do
         kind,
         widget_type,
         events,
+        event_specs,
         rust_crate_val,
         rust_constructor_val
       )
@@ -367,6 +446,7 @@ defmodule Plushie.Extension do
           widget_type,
           type_string,
           events,
+          event_specs,
           props,
           state_fields,
           prop_validation
@@ -376,7 +456,15 @@ defmodule Plushie.Extension do
           prop_validation = generate_prop_validation(props)
           generate_composite_new(type_string, container, props, prop_validation, has_render_3)
         else
-          generate_struct_widget(env.module, widget_type, type_string, container, props, events)
+          generate_struct_widget(
+            env.module,
+            widget_type,
+            type_string,
+            container,
+            props,
+            events,
+            event_specs
+          )
         end
       end
 
@@ -388,6 +476,173 @@ defmodule Plushie.Extension do
       unquote(widget_code)
       unquote(command_fns)
       unquote(prop_names_fn)
+    end
+  end
+
+  # -- Event spec parsing (called at compile time from macros) ----------------
+
+  # Expand module aliases in keyword option values at compile time.
+  @doc false
+  def expand_type_aliases(opts, caller) when is_list(opts) do
+    Enum.map(opts, fn
+      {:value, type} ->
+        {:value, maybe_expand_alias(type, caller)}
+
+      {:data, fields} when is_list(fields) ->
+        {:data, Enum.map(fields, fn {k, v} -> {k, maybe_expand_alias(v, caller)} end)}
+
+      other ->
+        other
+    end)
+  end
+
+  @doc false
+  def expand_type_aliases_in_ast(block, caller) do
+    Macro.prewalk(block, fn
+      {:field, meta, [name, type]} ->
+        {:field, meta, [name, maybe_expand_alias(type, caller)]}
+
+      other ->
+        other
+    end)
+  end
+
+  defp maybe_expand_alias({:__aliases__, _, _} = ast, caller) do
+    Macro.expand(ast, caller)
+  end
+
+  defp maybe_expand_alias(other, _caller), do: other
+
+  @doc false
+  def validate_event_name!(name, caller) do
+    unless is_atom(name) do
+      raise CompileError,
+        file: caller.file,
+        line: caller.line,
+        description: "event name must be an atom, got: #{inspect(name)}"
+    end
+  end
+
+  @doc false
+  def parse_event_opts([], _caller), do: %{carrier: :none}
+
+  def parse_event_opts(opts, caller) when is_list(opts) do
+    has_value = Keyword.has_key?(opts, :value)
+    has_data = Keyword.has_key?(opts, :data)
+
+    if has_value and has_data do
+      raise CompileError,
+        file: caller.file,
+        line: caller.line,
+        description: "event cannot declare both value: and data: -- they are mutually exclusive"
+    end
+
+    cond do
+      has_value ->
+        %{carrier: :value, type: Keyword.fetch!(opts, :value)}
+
+      has_data ->
+        fields = Keyword.fetch!(opts, :data)
+
+        unless is_list(fields) and Keyword.keyword?(fields) do
+          raise CompileError,
+            file: caller.file,
+            line: caller.line,
+            description:
+              "event data: must be a keyword list of [field: type], got: #{inspect(fields)}"
+        end
+
+        %{carrier: :data, fields: fields}
+
+      true ->
+        raise CompileError,
+          file: caller.file,
+          line: caller.line,
+          description: "event options must include value: or data:, got: #{inspect(opts)}"
+    end
+  end
+
+  @doc false
+  @spec parse_event_block(block :: Macro.t(), caller :: Macro.Env.t()) ::
+          Plushie.Event.BuiltinSpecs.t()
+  def parse_event_block(block, caller) do
+    stmts = block_to_list(block)
+
+    Enum.reduce(stmts, %{carrier: :none}, fn
+      {:value, _meta, [type]}, %{carrier: :none} ->
+        %{carrier: :value, type: type}
+
+      {:data, _meta, [[do: inner_block]]}, %{carrier: :none} ->
+        %{carrier: :data, fields: parse_data_fields(inner_block, caller)}
+
+      {:data, _meta, [fields]}, %{carrier: :none} when is_list(fields) ->
+        unless Keyword.keyword?(fields) do
+          raise CompileError,
+            file: caller.file,
+            line: caller.line,
+            description: "event data: must be a keyword list of [field: type]"
+        end
+
+        %{carrier: :data, fields: fields}
+
+      _other, acc ->
+        acc
+    end)
+  end
+
+  defp block_to_list({:__block__, _, stmts}), do: stmts
+  defp block_to_list(stmt), do: [stmt]
+
+  defp parse_data_fields({:__block__, _, stmts}, caller), do: parse_data_stmts(stmts, caller)
+  defp parse_data_fields(stmt, caller), do: parse_data_stmts([stmt], caller)
+
+  defp parse_data_stmts(stmts, caller) do
+    Enum.map(stmts, fn
+      {:field, _meta, [name, type]} when is_atom(name) ->
+        {name, type}
+
+      other ->
+        raise CompileError,
+          file: caller.file,
+          line: caller.line,
+          description:
+            "expected `field :name, :type` inside data block, got: #{Macro.to_string(other)}"
+    end)
+  end
+
+  @doc false
+  @spec validate_event_spec!(
+          name :: atom(),
+          spec :: Plushie.Event.BuiltinSpecs.t(),
+          caller :: Macro.Env.t()
+        ) ::
+          :ok | [any()]
+  def validate_event_spec!(name, spec, caller) do
+    case spec do
+      %{carrier: :value, type: type} ->
+        unless Plushie.Event.EventType.valid_type?(type) do
+          raise CompileError,
+            file: caller.file,
+            line: caller.line,
+            description:
+              "event #{inspect(name)} has invalid value type #{inspect(type)}. " <>
+                "Use a built-in type (:number, :string, :boolean, :any) or a module implementing Plushie.Event.EventType."
+        end
+
+      %{carrier: :data, fields: fields} ->
+        for {field_name, type} <- fields do
+          unless Plushie.Event.EventType.valid_type?(type) do
+            raise CompileError,
+              file: caller.file,
+              line: caller.line,
+              description:
+                "event #{inspect(name)} field #{inspect(field_name)} has invalid type #{inspect(type)}. " <>
+                  "Use a built-in type (:number, :string, :boolean, :any) or a module implementing Plushie.Event.EventType."
+          end
+        end
+
+      %{carrier: :none} ->
+        :ok
     end
   end
 
@@ -515,6 +770,7 @@ defmodule Plushie.Extension do
          widget_type,
          _type_string,
          events,
+         event_specs,
          props,
          state_fields,
          prop_extract
@@ -577,7 +833,8 @@ defmodule Plushie.Extension do
               __canvas_widget__: unquote(module),
               __canvas_widget_props__: props,
               __extension_widget_type__: unquote(widget_type),
-              __extension_widget_events__: unquote(events)
+              __extension_widget_events__: unquote(events),
+              __extension_widget_event_specs__: unquote(Macro.escape(event_specs))
             },
             children: []
           }
@@ -632,9 +889,13 @@ defmodule Plushie.Extension do
         kind,
         widget_type,
         events,
+        event_specs,
         rust_crate_val,
         rust_constructor_val
       ) do
+    # Build a map of event_name => spec for __event_spec__/1 lookups.
+    specs_map = Map.new(event_specs, fn {name, spec} -> {name, spec} end)
+
     base =
       quote do
         @impl Plushie.Extension
@@ -647,6 +908,14 @@ defmodule Plushie.Extension do
         @doc false
         @spec __events__() :: [atom()]
         def __events__, do: unquote(events)
+
+        @doc false
+        @spec __event_specs__() :: [{atom(), Plushie.Event.BuiltinSpecs.t()}]
+        def __event_specs__, do: unquote(Macro.escape(event_specs))
+
+        @doc false
+        @spec __event_spec__(name :: atom()) :: Plushie.Event.BuiltinSpecs.t() | nil
+        def __event_spec__(name), do: Map.get(unquote(Macro.escape(specs_map)), name)
       end
 
     if kind == :native_widget do
@@ -686,7 +955,15 @@ defmodule Plushie.Extension do
   }
 
   @doc false
-  def generate_struct_widget(module, widget_type, type_string, container, props, events) do
+  def generate_struct_widget(
+        module,
+        widget_type,
+        type_string,
+        container,
+        props,
+        events,
+        event_specs \\ []
+      ) do
     struct_def = generate_struct_and_types(props, container)
     new_fn = generate_struct_new(container)
     with_options_fn = generate_with_options(props)
@@ -695,7 +972,15 @@ defmodule Plushie.Extension do
     build_fn = generate_build()
 
     protocol_impl =
-      generate_widget_protocol(module, widget_type, type_string, container, props, events)
+      generate_widget_protocol(
+        module,
+        widget_type,
+        type_string,
+        container,
+        props,
+        events,
+        event_specs
+      )
 
     quote do
       unquote(struct_def)
@@ -1028,7 +1313,15 @@ defmodule Plushie.Extension do
     end
   end
 
-  defp generate_widget_protocol(_module, widget_type, type_string, container, props, events) do
+  defp generate_widget_protocol(
+         _module,
+         widget_type,
+         type_string,
+         container,
+         props,
+         events,
+         event_specs
+       ) do
     put_calls =
       Enum.map(props, fn {name, type, _opts} ->
         # Color needs casting in to_node because struct defaults bypass setters.
@@ -1086,6 +1379,7 @@ defmodule Plushie.Extension do
             props
             |> Map.put(:__extension_widget_type__, unquote(widget_type))
             |> Map.put(:__extension_widget_events__, unquote(events))
+            |> Map.put(:__extension_widget_event_specs__, unquote(Macro.escape(event_specs)))
 
           %{
             id: widget.id,

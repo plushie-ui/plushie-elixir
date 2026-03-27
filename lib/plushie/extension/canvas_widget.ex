@@ -84,30 +84,10 @@ defmodule Plushie.Extension.CanvasWidget do
   def invoke_handler(module, event, state, widget_id \\ "", window_id \\ nil) do
     case module.handle_event(event, state) do
       {:emit, family, data} ->
-        {id, scope, emit_window_id} = resolve_emit_identity(event, widget_id, window_id)
-
-        widget_event = %Plushie.Event.WidgetEvent{
-          type: normalize_emit_family(module, family),
-          id: id,
-          scope: scope,
-          window_id: emit_window_id,
-          data: normalize_emit_data(data)
-        }
-
-        {{:emit, widget_event}, state}
+        {{:emit, build_emit_event(module, family, data, event, widget_id, window_id)}, state}
 
       {:emit, family, data, new_state} when is_map(new_state) ->
-        {id, scope, emit_window_id} = resolve_emit_identity(event, widget_id, window_id)
-
-        widget_event = %Plushie.Event.WidgetEvent{
-          type: normalize_emit_family(module, family),
-          id: id,
-          scope: scope,
-          window_id: emit_window_id,
-          data: normalize_emit_data(data)
-        }
-
-        {{:emit, widget_event}, new_state}
+        {{:emit, build_emit_event(module, family, data, event, widget_id, window_id)}, new_state}
 
       {:update_state, new_state} when is_map(new_state) ->
         {:consumed, new_state}
@@ -117,6 +97,67 @@ defmodule Plushie.Extension.CanvasWidget do
 
       :consumed ->
         {:consumed, state}
+    end
+  end
+
+  @spec build_emit_event(
+          module :: module(),
+          family :: atom(),
+          data :: term(),
+          source_event :: struct(),
+          widget_id :: String.t(),
+          fallback_window_id :: String.t() | nil
+        ) :: Plushie.Event.WidgetEvent.t()
+  defp build_emit_event(module, family, data, source_event, widget_id, fallback_window_id) do
+    {event_type, spec} = resolve_emit_type_and_spec(module, family)
+
+    {id, scope, emit_window_id} =
+      resolve_emit_identity(source_event, widget_id, fallback_window_id)
+
+    case spec do
+      %{carrier: :value} ->
+        %Plushie.Event.WidgetEvent{
+          type: event_type,
+          id: id,
+          scope: scope,
+          window_id: emit_window_id,
+          value: data
+        }
+
+      %{carrier: :data, fields: declared_fields} ->
+        unless is_map(data) do
+          raise ArgumentError,
+                "event spec declares data fields #{inspect(Keyword.keys(declared_fields))}, " <>
+                  "but emit data is not a map: #{inspect(data)}. " <>
+                  "Use a map with the declared field keys."
+        end
+
+        %Plushie.Event.WidgetEvent{
+          type: event_type,
+          id: id,
+          scope: scope,
+          window_id: emit_window_id,
+          data: coerce_emit_data(data, declared_fields)
+        }
+
+      %{carrier: :none} ->
+        %Plushie.Event.WidgetEvent{
+          type: event_type,
+          id: id,
+          scope: scope,
+          window_id: emit_window_id
+        }
+
+      nil ->
+        # No spec found -- legacy fallback for events declared via events/1
+        # without typed declarations. Use value: :any convention.
+        %Plushie.Event.WidgetEvent{
+          type: event_type,
+          id: id,
+          scope: scope,
+          window_id: emit_window_id,
+          value: data
+        }
     end
   end
 
@@ -159,32 +200,44 @@ defmodule Plushie.Extension.CanvasWidget do
         {single, [], fallback_window_id}
 
       parts ->
-        {List.last(parts), parts |> List.delete_at(-1) |> Enum.reverse(), fallback_window_id}
+        {scope_fwd, [local]} = Enum.split(parts, -1)
+        {local, Enum.reverse(scope_fwd), fallback_window_id}
     end
   end
 
-  # Ensure emitted data uses string keys (wire-compatible).
-  # Maps get their keys stringified; bare values are wrapped.
-  @spec normalize_emit_family(module(), atom()) :: Plushie.Event.WidgetEvent.event_type()
-  defp normalize_emit_family(module, family) when is_atom(family) do
+  # Resolves the event type (atom or tuple) and looks up the event spec.
+  # Custom events (declared via event/events) get tuple types.
+  # Built-in events keep bare atoms.
+  @spec resolve_emit_type_and_spec(module :: module(), family :: atom()) ::
+          {Plushie.Event.WidgetEvent.event_type(), Plushie.Event.BuiltinSpecs.t() | nil}
+  defp resolve_emit_type_and_spec(module, family) when is_atom(family) do
     cond do
       family in module.__events__() ->
-        {module.__widget_type__(), family}
+        event_type = {module.__widget_type__(), family}
+        spec = module.__event_spec__(family)
+        {event_type, spec}
 
       Plushie.Event.WidgetEvent.builtin_event_type?(family) ->
-        family
+        spec = Plushie.Event.BuiltinSpecs.spec(family)
+        {family, spec}
 
       true ->
         raise ArgumentError,
               "#{inspect(module)} emitted undeclared widget event #{inspect(family)}. " <>
-                "Declare it with events/1 or emit a built-in widget family."
+                "Declare it with `event` or emit a built-in widget event type."
     end
   end
 
-  @spec normalize_emit_data(term()) :: map()
-  defp normalize_emit_data(data) when is_map(data) do
-    Map.new(data, fn {k, v} -> {to_string(k), v} end)
+  # Ensures emit data has atom keys. Canvas widget handle_event/2 produces
+  # Elixir data (never wire data), so keys should already be atoms. String
+  # keys are accepted but raise if the atom doesn't already exist -- this
+  # catches accidental string-keyed maps early rather than silently passing
+  # them through.
+  @spec coerce_emit_data(data :: map(), declared_fields :: [{atom(), term()}]) :: map()
+  defp coerce_emit_data(data, _declared_fields) when is_map(data) do
+    Map.new(data, fn
+      {k, v} when is_atom(k) -> {k, v}
+      {k, v} when is_binary(k) -> {String.to_existing_atom(k), v}
+    end)
   end
-
-  defp normalize_emit_data(value), do: %{"value" => value}
 end

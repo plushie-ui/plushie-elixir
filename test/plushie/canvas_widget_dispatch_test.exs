@@ -54,7 +54,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
     @moduledoc false
     use Plushie.Extension, :canvas_widget
     widget(:emit_widget)
-    events([:activated])
+    event(:activated, data: [source: :string])
 
     @impl true
     def handle_event(%{type: type} = _event, state) when type in [:click, :press] do
@@ -122,7 +122,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
         CanvasWidget.invoke_handler(EmitWidget, click_event("elem", ["widget"]), %{}, "widget")
 
       assert widget_event.type == {:emit_widget, :activated}
-      assert widget_event.data["source"] == "emit_widget"
+      assert widget_event.data.source == "emit_widget"
       assert widget_event.id == "widget"
     end
   end
@@ -188,7 +188,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
         CanvasWidgets.dispatch_event(registry, click_event("elem", ["widget"]))
 
       assert event.type == {:emit_widget, :activated}
-      assert event.data["source"] == "emit_widget"
+      assert event.data.source == "emit_widget"
     end
   end
 

@@ -444,12 +444,14 @@ defmodule Plushie.Protocol.Encode do
   # Recursively converts atom keys in tree node props to string keys
   # for wire serialization. The internal tree uses atom-keyed props;
   # the wire format requires string keys.
+  # :meta carries runtime-only data (canvas widget state, event specs,
+  # extension metadata) that must never be sent over the wire. Strip it
+  # before serialization.
   defp stringify_tree(%{props: props, children: children} = node) do
-    %{
-      node
-      | props: stringify_keys(props),
-        children: Enum.map(children, &stringify_tree/1)
-    }
+    node
+    |> Map.drop([:meta])
+    |> Map.put(:props, stringify_keys(props))
+    |> Map.put(:children, Enum.map(children, &stringify_tree/1))
   end
 
   defp stringify_tree(other), do: other

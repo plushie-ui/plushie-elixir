@@ -41,7 +41,8 @@ defmodule Plushie.Tree do
     :__canvas_widget_props__,
     :__canvas_widget_state__,
     :__extension_widget_type__,
-    :__extension_widget_events__
+    :__extension_widget_events__,
+    :__extension_widget_event_specs__
   ]
 
   @doc """
@@ -229,7 +230,8 @@ defmodule Plushie.Tree do
           __canvas_widget_state__: widget_state,
           __canvas_widget_props__: widget_props,
           __extension_widget_type__: Map.get(meta, :__extension_widget_type__),
-          __extension_widget_events__: Map.get(meta, :__extension_widget_events__, [])
+          __extension_widget_events__: Map.get(meta, :__extension_widget_events__, []),
+          __extension_widget_event_specs__: Map.get(meta, :__extension_widget_event_specs__, [])
         }
 
         existing_meta = Map.get(normalized, :meta, %{})
