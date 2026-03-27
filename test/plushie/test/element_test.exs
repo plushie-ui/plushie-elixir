@@ -1,7 +1,7 @@
-defmodule Plushie.Test.ElementTest do
+defmodule Plushie.Automation.ElementTest do
   use ExUnit.Case, async: true
 
-  alias Plushie.Test.Element
+  alias Plushie.Automation.Element
 
   describe "from_node/1" do
     test "creates element from atom-keyed map" do

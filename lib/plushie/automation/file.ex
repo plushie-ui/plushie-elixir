@@ -1,6 +1,6 @@
-defmodule Plushie.Test.Script do
+defmodule Plushie.Automation.File do
   @moduledoc """
-  Parser for `.plushie` test scripts.
+  Parser for `.plushie` automation files.
 
   The `.plushie` format is a superset of iced's `.ice` test script format,
   adding Plushie-specific instructions like `assert_text` and `assert_model`.
@@ -14,16 +14,25 @@ defmodule Plushie.Test.Script do
       -----
       click "#increment"
       expect "Count: 1"
-      tree_hash "counter-at-1"
+      screenshot "counter-at-1"
 
-  See `Plushie.Test.Script.Runner` for execution.
+  `backend` selects which renderer mode the runner starts.
+  `viewport` is used as the default capture size for `screenshot`
+  instructions. The full parsed header is also forwarded to `app.init/1`
+  under the `:script` option when run through `Plushie.Automation.Runner`.
+
+  `theme` is script metadata only. It is available to the app through
+  `init(opts[:script])` if the app wants to interpret it, but the runner does
+  not force renderer or widget themes on your behalf.
+
+  See `Plushie.Automation.Runner` for execution.
   """
 
   @type header :: %{
           app: module(),
           viewport: {non_neg_integer(), non_neg_integer()},
           theme: String.t(),
-          backend: atom()
+          backend: Plushie.Automation.backend_mode()
         }
 
   @type instruction ::
@@ -38,7 +47,6 @@ defmodule Plushie.Test.Script do
           | {:select, String.t(), String.t()}
           | {:slide, String.t(), number()}
           | {:expect, String.t()}
-          | {:tree_hash, String.t()}
           | {:screenshot, String.t()}
           | {:assert_text, String.t(), String.t()}
           | {:assert_model, String.t()}
@@ -46,7 +54,7 @@ defmodule Plushie.Test.Script do
 
   @type t :: %{header: header(), instructions: [instruction()]}
 
-  @doc "Parses a .plushie script from a file path."
+  @doc "Parses a `.plushie` automation file from a path."
   @spec parse_file(path :: String.t()) :: {:ok, t()} | {:error, String.t()}
   def parse_file(path) do
     case File.read(path) do
@@ -55,7 +63,7 @@ defmodule Plushie.Test.Script do
     end
   end
 
-  @doc "Parses a .plushie script from a string."
+  @doc "Parses `.plushie` automation source from a string."
   @spec parse(content :: String.t()) :: {:ok, t()} | {:error, String.t()}
   def parse(content) do
     case String.split(content, ~r/^-----\s*$/m, parts: 2) do
@@ -154,7 +162,6 @@ defmodule Plushie.Test.Script do
 
   # Assertions and captures
   defp parse_assertion(["expect", text]), do: {:ok, {:expect, text}}
-  defp parse_assertion(["tree_hash", name]), do: {:ok, {:tree_hash, name}}
   defp parse_assertion(["screenshot", name]), do: {:ok, {:screenshot, name}}
   defp parse_assertion(["assert_text", selector, text]), do: {:ok, {:assert_text, selector, text}}
   defp parse_assertion(["assert_model", expr]), do: {:ok, {:assert_model, expr}}

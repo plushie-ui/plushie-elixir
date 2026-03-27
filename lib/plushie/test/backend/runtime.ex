@@ -42,9 +42,10 @@ defmodule Plushie.Test.Backend.Runtime do
 
   use GenServer
 
-  alias Plushie.Test.Element
-  alias Plushie.Test.PoolAdapter
+  alias Plushie.Automation.Selector
+  alias Plushie.Test.{PoolAdapter, Screenshot, TreeHash}
 
+  @typedoc "Renderer mode used by the test backend."
   @type mode :: :mock | :headless | :windowed
   @type t :: %__MODULE__{
           pool: GenServer.server(),
@@ -59,7 +60,7 @@ defmodule Plushie.Test.Backend.Runtime do
 
   defstruct [:pool, :session_id, :mode, :sup, :instance_name, :runtime, :app, :format]
 
-  # -- Backend callbacks -------------------------------------------------------
+  # -- Public API --------------------------------------------------------------
 
   def start(app, opts) do
     GenServer.start_link(__MODULE__, {app, opts})
@@ -237,47 +238,26 @@ defmodule Plushie.Test.Backend.Runtime do
   end
 
   def handle_call({:tree_hash, name}, _from, state) do
-    {:ok, response} =
-      state
-      |> wait_for_draw()
-      |> then(fn current_state ->
-        Plushie.Test.SessionPool.send_message(
-          current_state.pool,
-          current_state.session_id,
-          %{type: "tree_hash", name: name},
-          "tree_hash_response"
-        )
-      end)
-
-    {:reply, %{Plushie.Test.TreeHash.from_response(response) | backend: state.mode}, state}
+    current_state = wait_for_draw(state)
+    tree = Plushie.Runtime.get_tree(current_state.runtime)
+    {:reply, TreeHash.from_tree(name, tree, current_state.mode), state}
   end
 
   def handle_call({:screenshot, name, opts}, _from, state) do
-    payload =
-      %{type: "screenshot", name: name}
-      |> maybe_put_dimension(opts, :width)
-      |> maybe_put_dimension(opts, :height)
-
-    {:ok, response} =
-      Plushie.Test.SessionPool.send_message(
-        state.pool,
-        state.session_id,
-        payload,
-        "screenshot_response"
-      )
-
-    {:reply, Plushie.Test.Screenshot.from_response(response, state.format, state.mode), state}
+    bridge = Plushie.bridge_for(state.instance_name)
+    response = Plushie.Bridge.screenshot(bridge, name, opts)
+    {:reply, Screenshot.from_response(response, state.format, state.mode), state}
   end
 
   def handle_call({:find, selector}, _from, state) do
     tree = Plushie.Runtime.get_tree(state.runtime)
-    element = find_in_tree(tree, selector)
+    element = Selector.find(tree, selector)
     {:reply, element, state}
   end
 
   def handle_call({:read_prop, selector, :toggle_value}, _from, state) do
     tree = Plushie.Runtime.get_tree(state.runtime)
-    node = find_node_in_tree(tree, selector)
+    node = Selector.find_node(tree, selector)
     props = (node && node[:props]) || %{}
 
     value =
@@ -289,7 +269,7 @@ defmodule Plushie.Test.Backend.Runtime do
 
   def handle_call({:read_prop, selector, :submit_value}, _from, state) do
     tree = Plushie.Runtime.get_tree(state.runtime)
-    node = find_node_in_tree(tree, selector)
+    node = Selector.find_node(tree, selector)
     props = (node && node[:props]) || %{}
     value = props[:value] || props["value"] || ""
     {:reply, value, state}
@@ -297,7 +277,7 @@ defmodule Plushie.Test.Backend.Runtime do
 
   def handle_call({:interact, action, selector, payload}, _from, state) do
     tree = Plushie.Runtime.get_tree(state.runtime)
-    sel = encode_selector(selector, tree)
+    sel = Selector.encode(selector, tree)
     result = Plushie.Runtime.interact(state.runtime, action, sel, payload)
     wait_for_draw(state)
     {:reply, result, state}
@@ -368,106 +348,6 @@ defmodule Plushie.Test.Backend.Runtime do
 
   # -- Helpers -----------------------------------------------------------------
 
-  defp find_in_tree(nil, _selector), do: nil
-
-  defp find_in_tree(tree, "#" <> id) do
-    case find_selector_node(tree, id) do
-      nil -> nil
-      node -> Element.from_node(node)
-    end
-  end
-
-  defp find_in_tree(tree, {:role, role}) do
-    node =
-      Plushie.Tree.find_all(tree, fn n ->
-        a11y = n[:props][:a11y] || n[:props]["a11y"] || %{}
-        (a11y[:role] || a11y["role"]) == role
-      end)
-      |> List.first()
-
-    if node, do: Element.from_node(node)
-  end
-
-  defp find_in_tree(tree, {:label, label}) do
-    node =
-      Plushie.Tree.find_all(tree, fn n ->
-        a11y = n[:props][:a11y] || n[:props]["a11y"] || %{}
-        (a11y[:label] || a11y["label"]) == label
-      end)
-      |> List.first()
-
-    if node, do: Element.from_node(node)
-  end
-
-  defp find_in_tree(tree, text) when is_binary(text) do
-    node =
-      Plushie.Tree.find_all(tree, fn n ->
-        type = n[:type] || n["type"]
-        content = (n[:props] || %{})[:content] || (n[:props] || %{})["content"]
-        type == "text" and content == text
-      end)
-      |> List.first()
-
-    if node, do: Element.from_node(node)
-  end
-
-  defp find_in_tree(_tree, :focused), do: nil
-
-  # Returns the raw tree node (not wrapped in Element) for reading props.
-  defp find_node_in_tree(nil, _selector), do: nil
-
-  defp find_node_in_tree(tree, "#" <> id) do
-    find_selector_node(tree, id)
-  end
-
-  defp find_node_in_tree(_tree, _selector), do: nil
-
-  defp encode_selector(nil, _tree), do: %{}
-
-  defp encode_selector("#" <> id, tree) do
-    resolved =
-      if String.contains?(id, "/") do
-        id
-      else
-        case Plushie.Tree.find_local(tree, id) do
-          %{id: scoped_id} -> scoped_id
-          _ -> id
-        end
-      end
-
-    %{"by" => "id", "value" => resolved}
-  end
-
-  defp encode_selector({:role, role}, _tree) when is_binary(role),
-    do: %{"by" => "role", "value" => role}
-
-  defp encode_selector({:label, label}, _tree) when is_binary(label),
-    do: %{"by" => "label", "value" => label}
-
-  defp encode_selector(:focused, _tree), do: %{"by" => "focused"}
-  defp encode_selector(text, _tree) when is_binary(text), do: %{"by" => "text", "value" => text}
-
-  defp find_selector_node(tree, id) do
-    if String.contains?(id, "/") do
-      Plushie.Tree.find(tree, id)
-    else
-      Plushie.Tree.find_local(tree, id)
-    end
-  end
-
-  defp maybe_put_dimension(map, opts, key) do
-    case Keyword.get(opts, key) do
-      value when is_integer(value) and value > 0 ->
-        Map.put(map, key, value)
-
-      nil ->
-        map
-
-      other ->
-        raise ArgumentError, "expected #{key} to be a positive integer, got: #{inspect(other)}"
-    end
-  end
-
   @valid_modifiers %{
     "shift" => :shift,
     "ctrl" => :ctrl,
@@ -524,26 +404,21 @@ defmodule Plushie.Test.Backend.Runtime do
 
   @spec wait_for_draw(t()) :: t()
   defp wait_for_draw(state) do
-    wait_for_draw(state.pool, state.session_id, state.mode)
+    wait_for_draw(Plushie.bridge_for(state.instance_name), state.mode, state.instance_name)
     state
   end
 
-  @spec wait_for_draw(GenServer.server(), String.t(), mode()) :: :ok
-  defp wait_for_draw(_pool, _session_id, mode) when mode in [:mock, :headless], do: :ok
+  @spec wait_for_draw(GenServer.server(), mode(), atom()) :: :ok
+  defp wait_for_draw(_bridge, mode, _instance_name) when mode in [:mock, :headless], do: :ok
 
-  defp wait_for_draw(pool, session_id, :windowed) do
-    case Plushie.Test.SessionPool.send_message(
-           pool,
-           session_id,
-           %{type: "screenshot", name: "__sync__", width: 1, height: 1},
-           "screenshot_response"
-         ) do
-      {:ok, _response} ->
+  defp wait_for_draw(bridge, :windowed, instance_name) do
+    case Plushie.Bridge.screenshot(bridge, "__sync__", width: 1, height: 1) do
+      %{"type" => "screenshot_response"} ->
         :ok
 
-      {:error, reason} ->
+      other ->
         raise RuntimeError,
-              "windowed renderer did not finish drawing for #{session_id}: #{inspect(reason)}"
+              "windowed renderer returned unexpected sync response for #{inspect(instance_name)}: #{inspect(other)}"
     end
   end
 

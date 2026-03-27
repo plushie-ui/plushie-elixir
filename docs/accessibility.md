@@ -850,7 +850,7 @@ clear message.
 
 ### Element helpers
 
-`Plushie.Test.Element` provides lower-level accessors:
+`Plushie.Automation.Element` provides lower-level accessors:
 
 ```elixir
 test "element accessors" do

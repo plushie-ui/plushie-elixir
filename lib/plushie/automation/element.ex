@@ -1,9 +1,9 @@
-defmodule Plushie.Test.Element do
+defmodule Plushie.Automation.Element do
   @moduledoc """
-  Represents a widget element found in the UI tree during testing.
+  Represents a widget element found in the UI tree during automation.
 
-  Created by `find/2` and used for scoped assertions. Contains the widget's
-  ID, type, props, and children.
+  Created by `find/2` and used for scoped assertions, automation flows, and
+  runtime inspection. Contains the widget's ID, type, props, and children.
   """
 
   @type t :: %__MODULE__{
@@ -63,7 +63,7 @@ defmodule Plushie.Test.Element do
   @doc """
   Returns the inferred accessibility role for this element.
 
-  Mirrors the Rust-side role mapping in plushie_ext::widgets::a11y.
+  Mirrors the renderer-side role mapping in plushie_ext::widgets::a11y.
   If the element has an explicit a11y role override, that takes precedence.
   """
   @spec inferred_role(element :: t()) :: String.t()

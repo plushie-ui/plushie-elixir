@@ -21,10 +21,8 @@ defmodule Plushie.Test.Helpers do
   `Plushie.Test.Session` directly.
   """
 
-  alias Plushie.Test.Element
-  alias Plushie.Test.Screenshot
-  alias Plushie.Test.Session
-  alias Plushie.Test.TreeHash
+  alias Plushie.Automation.Element
+  alias Plushie.Test.{Screenshot, Session, TreeHash}
 
   @doc "Returns the current test session from the process dictionary."
   @spec session() :: Session.t()
@@ -132,7 +130,7 @@ defmodule Plushie.Test.Helpers do
   defmacro assert_text(selector, expected) do
     quote do
       element = Plushie.Test.Helpers.find!(unquote(selector))
-      actual = Plushie.Test.Element.text(element)
+      actual = Plushie.Automation.Element.text(element)
 
       unless actual == unquote(expected) do
         raise ExUnit.AssertionError,
@@ -181,7 +179,7 @@ defmodule Plushie.Test.Helpers do
   defmacro assert_a11y(selector, expected) do
     quote do
       element = Plushie.Test.Helpers.find!(unquote(selector))
-      raw_a11y = Plushie.Test.Element.a11y(element)
+      raw_a11y = Plushie.Automation.Element.a11y(element)
 
       if is_nil(raw_a11y) do
         raise ExUnit.AssertionError,
@@ -220,7 +218,7 @@ defmodule Plushie.Test.Helpers do
   defmacro assert_role(selector, expected_role) do
     quote do
       element = Plushie.Test.Helpers.find!(unquote(selector))
-      actual_role = Plushie.Test.Element.inferred_role(element)
+      actual_role = Plushie.Automation.Element.inferred_role(element)
 
       unless actual_role == unquote(expected_role) do
         raise ExUnit.AssertionError,
@@ -248,6 +246,18 @@ defmodule Plushie.Test.Helpers do
   end
 
   @doc """
+  Asserts that an existing tree hash matches the golden file.
+
+  Use this when you already have a `%Plushie.Test.TreeHash{}` and want the
+  imported helper form instead of calling `Plushie.Test.TreeHash.assert_match/2`
+  directly.
+  """
+  @spec assert_tree_hash_match(tree_hash :: TreeHash.t(), golden_dir :: String.t()) :: :ok
+  def assert_tree_hash_match(tree_hash, golden_dir) do
+    TreeHash.assert_match(tree_hash, golden_dir)
+  end
+
+  @doc """
   Captures a pixel screenshot and asserts it matches the golden file.
 
   On first run, creates the golden file. On subsequent runs, compares hashes.
@@ -259,6 +269,21 @@ defmodule Plushie.Test.Helpers do
     snap = screenshot(name, opts)
     golden_dir = Path.join(["test", "screenshots"])
     Screenshot.assert_match(snap, golden_dir)
+  end
+
+  @doc """
+  Asserts that an existing screenshot matches the golden file.
+
+  Use this when you already have a `%Plushie.Automation.Screenshot{}` and want the
+  imported helper form instead of calling `Plushie.Test.Screenshot.assert_match/2`
+  directly.
+  """
+  @spec assert_screenshot_match(
+          screenshot :: Screenshot.t(),
+          golden_dir :: String.t()
+        ) :: :ok
+  def assert_screenshot_match(screenshot, golden_dir) do
+    Screenshot.assert_match(screenshot, golden_dir)
   end
 
   @doc "Waits for a tagged async task to complete."

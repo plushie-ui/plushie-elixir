@@ -3,8 +3,8 @@ defmodule Plushie.Test.ProtocolRoundtripTest do
 
   alias Plushie.Event.WidgetEvent
 
+  alias Plushie.Automation.Element
   alias Plushie.Test.Backend.Runtime
-  alias Plushie.Test.Element
 
   # A test app that renders one of every major widget type so we can verify
   # the full normalize -> find -> interact cycle for each.

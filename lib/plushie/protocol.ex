@@ -58,6 +58,7 @@ defmodule Plushie.Protocol do
           | {:interact, String.t(), String.t(), map(), map()}
           | {:interact_step, String.t(), [map()]}
           | {:interact_response, String.t(), [map()]}
+          | {:screenshot_response, map()}
           | {:advance_frame, non_neg_integer()}
           | {:register_effect_stub, String.t(), term()}
           | {:unregister_effect_stub, String.t()}
@@ -295,11 +296,20 @@ defmodule Plushie.Protocol do
 
   Unlike `decode_message/2` which dispatches into Elixir event structs and
   internal tuples, this
-  returns the raw deserialized map. Used by test backends that handle
-  renderer responses (query_response, interact_response, etc.) directly.
+  returns the raw deserialized map. Used by script and test helpers that
+  handle renderer responses (query_response, interact_response, etc.) directly.
   """
   @spec decode(data :: binary(), format :: format()) :: {:ok, map()} | {:error, term()}
   defdelegate decode(data, format \\ :msgpack), to: Plushie.Protocol.Decode
+
+  @doc """
+  Decodes a renderer event map into a typed Plushie event struct.
+
+  This is the shared event-map decoder used for interact responses and other
+  already-deserialized renderer events.
+  """
+  @spec decode_event(map()) :: Plushie.Event.delivered_t() | nil
+  defdelegate decode_event(event), to: Plushie.Protocol.Decode
 
   @doc """
   Decodes a protocol message into an event struct or internal tuple.

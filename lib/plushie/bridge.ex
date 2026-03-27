@@ -260,6 +260,25 @@ defmodule Plushie.Bridge do
     GenServer.stop(bridge)
   end
 
+  @doc """
+  Captures a renderer screenshot and returns the raw response map.
+
+  Width and height are optional positive integers. The call blocks until the
+  renderer replies with `screenshot_response`.
+  """
+  @spec screenshot(
+          bridge :: GenServer.server(),
+          name :: String.t(),
+          opts :: keyword(),
+          timeout :: timeout()
+        ) :: map()
+  def screenshot(bridge, name, opts \\ [], timeout \\ 30_000) do
+    case GenServer.call(bridge, {:screenshot, name, opts}, timeout) do
+      %{} = response -> response
+      {:error, reason} -> raise RuntimeError, "screenshot failed: #{inspect(reason)}"
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # State
   # ---------------------------------------------------------------------------
@@ -279,6 +298,7 @@ defmodule Plushie.Bridge do
     :iostream_ref,
     :awaiting_resync,
     :queued_messages,
+    :pending_screenshot,
     session_id: ""
   ]
 
@@ -314,6 +334,7 @@ defmodule Plushie.Bridge do
       restart_delay: Keyword.get(opts, :restart_delay, 100),
       awaiting_resync: false,
       queued_messages: [],
+      pending_screenshot: nil,
       session_id: Keyword.get(opts, :session_id, "")
     }
 
@@ -429,6 +450,25 @@ defmodule Plushie.Bridge do
     {:noreply, flush_queued_messages(%{state | awaiting_resync: false})}
   end
 
+  @impl true
+  def handle_call({:screenshot, name, opts}, from, %{pending_screenshot: nil} = state) do
+    message =
+      %{type: "screenshot", name: name}
+      |> maybe_put_dimension(opts, :width)
+      |> maybe_put_dimension(opts, :height)
+
+    state =
+      encode_and_send(state, :screenshot, fn fmt ->
+        Plushie.Protocol.encode(message, fmt)
+      end)
+
+    {:noreply, %{state | pending_screenshot: from}}
+  end
+
+  def handle_call({:screenshot, _name, _opts}, _from, state) do
+    {:reply, {:error, :screenshot_in_progress}, state}
+  end
+
   # MessagePack frame -- {:packet, 4} driver delivers raw binaries.
   @impl true
   def handle_info({port, {:data, binary}}, %{port: port, format: :msgpack} = state)
@@ -507,6 +547,7 @@ defmodule Plushie.Bridge do
   # iostream adapter reports the transport is closed.
   def handle_info({:iostream_closed, reason}, %{transport: {:iostream, _}} = state) do
     log_iostream_exit(reason, "iostream closed")
+    state = fail_pending_screenshot(state, {:renderer_exit, reason})
     send(state.runtime, {:renderer_exit, reason})
     {:stop, :normal, %{state | port: nil}}
   end
@@ -518,6 +559,7 @@ defmodule Plushie.Bridge do
       )
       when is_reference(ref) do
     log_iostream_exit(reason, "iostream process exited")
+    state = fail_pending_screenshot(state, {:renderer_exit, reason})
     send(state.runtime, {:renderer_exit, reason})
     {:stop, :normal, state}
   end
@@ -691,6 +733,17 @@ defmodule Plushie.Bridge do
               %{state | restart_count: 0}
             end
 
+          {:screenshot_response, response} ->
+            case state.pending_screenshot do
+              nil ->
+                send(state.runtime, {:renderer_event, {:screenshot_response, response}})
+                %{state | restart_count: 0}
+
+              from ->
+                GenServer.reply(from, response)
+                %{state | restart_count: 0, pending_screenshot: nil}
+            end
+
           event ->
             send(state.runtime, {:renderer_event, event})
             # Reset restart count on first successful message from the renderer.
@@ -710,17 +763,20 @@ defmodule Plushie.Bridge do
 
   defp handle_port_exit(%{transport: {:iostream, _}} = state, _reason) do
     Logger.info("plushie bridge: iostream transport closed -- shutting down")
+    state = fail_pending_screenshot(state, {:renderer_exit, :normal})
     send(state.runtime, {:renderer_exit, :normal})
     {:stop, :normal, %{state | port: nil}}
   end
 
   defp handle_port_exit(%{transport: :stdio} = state, _reason) do
     Logger.info("plushie bridge: stdio port closed -- shutting down")
+    state = fail_pending_screenshot(state, {:renderer_exit, :normal})
     send(state.runtime, {:renderer_exit, :normal})
     {:stop, :normal, %{state | port: nil}}
   end
 
   defp handle_port_exit(state, reason) do
+    state = fail_pending_screenshot(state, {:renderer_exit, reason})
     send(state.runtime, {:renderer_exit, reason})
 
     if state.restart_count < state.max_restarts do
@@ -745,6 +801,26 @@ defmodule Plushie.Bridge do
 
       {:stop, {:max_restarts_reached, reason}, state}
     end
+  end
+
+  defp maybe_put_dimension(map, opts, key) do
+    case Keyword.get(opts, key) do
+      value when is_integer(value) and value > 0 ->
+        Map.put(map, key, value)
+
+      nil ->
+        map
+
+      other ->
+        raise ArgumentError, "expected #{key} to be a positive integer, got: #{inspect(other)}"
+    end
+  end
+
+  defp fail_pending_screenshot(%{pending_screenshot: nil} = state, _reason), do: state
+
+  defp fail_pending_screenshot(%{pending_screenshot: from} = state, reason) do
+    GenServer.reply(from, {:error, reason})
+    %{state | pending_screenshot: nil}
   end
 
   defp maybe_send_or_queue(state, kind, data) do

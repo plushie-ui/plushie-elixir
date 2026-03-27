@@ -1,5 +1,5 @@
-defmodule Plushie.Test.SessionTest do
-  use Plushie.Test.Case, app: Plushie.Test.SessionTest.CounterApp
+defmodule Plushie.Automation.SessionTest do
+  use Plushie.Test.Case, app: Plushie.Automation.SessionTest.CounterApp
 
   alias Plushie.Event.WidgetEvent
 

@@ -2,6 +2,7 @@ defmodule Plushie.Test.TreeHashTest do
   use ExUnit.Case, async: false
 
   alias Plushie.Test.TreeHash
+  alias Plushie.Test.TreeHash, as: TreeHashAssertions
 
   setup do
     tmp_dir =
@@ -54,7 +55,7 @@ defmodule Plushie.Test.TreeHashTest do
       golden_path = Path.join(dir, "first-run.sha256")
 
       refute File.exists?(golden_path)
-      assert :ok = TreeHash.assert_match(snap, dir)
+      assert :ok = TreeHashAssertions.assert_match(snap, dir)
       assert File.exists?(golden_path)
       assert File.read!(golden_path) == "abc123"
     end
@@ -64,7 +65,7 @@ defmodule Plushie.Test.TreeHashTest do
       File.write!(Path.join(dir, "matching.sha256"), hash)
 
       snap = %TreeHash{name: "matching", hash: hash}
-      assert :ok = TreeHash.assert_match(snap, dir)
+      assert :ok = TreeHashAssertions.assert_match(snap, dir)
     end
 
     test "raises when hashes differ", %{golden_dir: dir} do
@@ -73,7 +74,7 @@ defmodule Plushie.Test.TreeHashTest do
       snap = %TreeHash{name: "stale", hash: "new_hash"}
 
       assert_raise ExUnit.AssertionError, ~r/Tree hash mismatch/, fn ->
-        TreeHash.assert_match(snap, dir)
+        TreeHashAssertions.assert_match(snap, dir)
       end
     end
 
@@ -87,7 +88,7 @@ defmodule Plushie.Test.TreeHashTest do
       System.put_env("PLUSHIE_UPDATE_SNAPSHOTS", "1")
 
       try do
-        assert :ok = TreeHash.assert_match(snap, dir)
+        assert :ok = TreeHashAssertions.assert_match(snap, dir)
         assert File.read!(golden_path) == "new_hash"
       after
         System.delete_env("PLUSHIE_UPDATE_SNAPSHOTS")
@@ -99,7 +100,7 @@ defmodule Plushie.Test.TreeHashTest do
       golden_path = Path.join(dir, "scoped.mock.sha256")
 
       refute File.exists?(golden_path)
-      assert :ok = TreeHash.assert_match(snap, dir)
+      assert :ok = TreeHashAssertions.assert_match(snap, dir)
       assert File.exists?(golden_path)
       assert File.read!(golden_path) == "mock_hash"
 
@@ -108,7 +109,7 @@ defmodule Plushie.Test.TreeHashTest do
       headless_path = Path.join(dir, "scoped.headless.sha256")
 
       refute File.exists?(headless_path)
-      assert :ok = TreeHash.assert_match(snap2, dir)
+      assert :ok = TreeHashAssertions.assert_match(snap2, dir)
       assert File.exists?(headless_path)
       assert File.read!(headless_path) == "headless_hash"
     end
@@ -117,7 +118,7 @@ defmodule Plushie.Test.TreeHashTest do
       snap = %TreeHash{name: "legacy", hash: "legacy_hash", backend: nil}
       golden_path = Path.join(dir, "legacy.sha256")
 
-      assert :ok = TreeHash.assert_match(snap, dir)
+      assert :ok = TreeHashAssertions.assert_match(snap, dir)
       assert File.exists?(golden_path)
     end
 
@@ -128,7 +129,7 @@ defmodule Plushie.Test.TreeHashTest do
 
       error =
         assert_raise ExUnit.AssertionError, fn ->
-          TreeHash.assert_match(snap, dir)
+          TreeHashAssertions.assert_match(snap, dir)
         end
 
       assert error.message =~ "expected_hash"

@@ -1,7 +1,8 @@
-defmodule Plushie.Test.ScriptTest do
+defmodule Plushie.Automation.FileTest do
   use ExUnit.Case, async: true
 
-  alias Plushie.Test.{Script, Script.Runner}
+  alias Plushie.Automation.File
+  alias Plushie.Automation.Runner
 
   describe "parse/1" do
     test "parses a valid script with header and instructions" do
@@ -15,7 +16,7 @@ defmodule Plushie.Test.ScriptTest do
       expect "Count: 1"
       """
 
-      assert {:ok, script} = Script.parse(input)
+      assert {:ok, script} = File.parse(input)
       assert script.header.app == Counter
       assert script.header.viewport == {1024, 768}
       assert script.header.theme == "light"
@@ -31,7 +32,7 @@ defmodule Plushie.Test.ScriptTest do
       click "#btn"
       """
 
-      assert {:ok, script} = Script.parse(input)
+      assert {:ok, script} = File.parse(input)
       assert script.header.viewport == {800, 600}
       assert script.header.theme == "dark"
       assert script.header.backend == :mock
@@ -44,7 +45,7 @@ defmodule Plushie.Test.ScriptTest do
       click "#btn"
       """
 
-      assert {:error, msg} = Script.parse(input)
+      assert {:error, msg} = File.parse(input)
       assert msg =~ "app"
     end
 
@@ -54,7 +55,7 @@ defmodule Plushie.Test.ScriptTest do
       click "#increment"
       """
 
-      assert {:error, msg} = Script.parse(input)
+      assert {:error, msg} = File.parse(input)
       assert msg =~ "separator"
     end
 
@@ -66,21 +67,19 @@ defmodule Plushie.Test.ScriptTest do
       type "#input" "hello world"
       type enter
       expect "some text"
-      tree_hash "my-snap"
       assert_text "#label" "Count: 0"
       wait 500
       """
 
-      assert {:ok, script} = Script.parse(input)
+      assert {:ok, script} = File.parse(input)
       instructions = script.instructions
 
       assert {:click, "#btn"} = Enum.at(instructions, 0)
       assert {:type_text, "#input", "hello world"} = Enum.at(instructions, 1)
       assert {:type_key, "enter"} = Enum.at(instructions, 2)
       assert {:expect, "some text"} = Enum.at(instructions, 3)
-      assert {:tree_hash, "my-snap"} = Enum.at(instructions, 4)
-      assert {:assert_text, "#label", "Count: 0"} = Enum.at(instructions, 5)
-      assert {:wait, 500} = Enum.at(instructions, 6)
+      assert {:assert_text, "#label", "Count: 0"} = Enum.at(instructions, 4)
+      assert {:wait, 500} = Enum.at(instructions, 5)
     end
 
     test "ignores comments and blank lines" do
@@ -96,7 +95,7 @@ defmodule Plushie.Test.ScriptTest do
       expect "done"
       """
 
-      assert {:ok, script} = Script.parse(input)
+      assert {:ok, script} = File.parse(input)
       assert length(script.instructions) == 2
     end
 
@@ -108,7 +107,7 @@ defmodule Plushie.Test.ScriptTest do
       assert_text "#label" "Count: 42"
       """
 
-      assert {:ok, script} = Script.parse(input)
+      assert {:ok, script} = File.parse(input)
       assert {:type_text, "#search", "hello world with spaces"} = hd(script.instructions)
       assert {:assert_text, "#label", "Count: 42"} = Enum.at(script.instructions, 1)
     end
@@ -120,7 +119,7 @@ defmodule Plushie.Test.ScriptTest do
       flurble "#wat"
       """
 
-      assert {:error, msg} = Script.parse(input)
+      assert {:error, msg} = File.parse(input)
       assert msg =~ "unknown instruction"
     end
 
@@ -131,7 +130,7 @@ defmodule Plushie.Test.ScriptTest do
       screenshot "home-screen"
       """
 
-      assert {:ok, script} = Script.parse(input)
+      assert {:ok, script} = File.parse(input)
       assert script.instructions == [{:screenshot, "home-screen"}]
     end
 
@@ -144,14 +143,14 @@ defmodule Plushie.Test.ScriptTest do
         click "#btn"
         """
 
-        assert {:ok, script} = Script.parse(input)
+        assert {:ok, script} = File.parse(input)
         assert script.header.backend == expected
       end
     end
   end
 
   describe "run/2" do
-    test "starts a temporary pool and executes a simple script" do
+    test "starts a temporary app instance and executes a simple script" do
       script = %{
         header: %{app: Counter, viewport: {800, 600}, theme: "dark", backend: :mock},
         instructions: [
@@ -162,5 +161,53 @@ defmodule Plushie.Test.ScriptTest do
 
       assert :ok = Runner.run(script)
     end
+
+    test "forwards the parsed script header to app init" do
+      script = %{
+        header: %{app: ScriptHeaderApp, viewport: {1024, 768}, theme: "light", backend: :mock},
+        instructions: [
+          {:assert_text, "#theme", "Theme: light"},
+          {:assert_text, "#viewport", "Viewport: 1024x768"}
+        ]
+      }
+
+      assert :ok = Runner.run(script)
+    end
+  end
+end
+
+defmodule ScriptHeaderApp do
+  use Plushie.App
+
+  def init(opts) do
+    %{script: Keyword.fetch!(opts, :script)}
+  end
+
+  def update(model, _event), do: model
+
+  def view(model) do
+    %{theme: theme, viewport: {width, height}} = model.script
+
+    %{
+      id: "main",
+      type: "window",
+      props: %{},
+      children: [
+        %{
+          id: "root",
+          type: "column",
+          props: %{},
+          children: [
+            %{id: "theme", type: "text", props: %{content: "Theme: #{theme}"}, children: []},
+            %{
+              id: "viewport",
+              type: "text",
+              props: %{content: "Viewport: #{width}x#{height}"},
+              children: []
+            }
+          ]
+        }
+      ]
+    }
   end
 end

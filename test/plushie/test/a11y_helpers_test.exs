@@ -1,7 +1,7 @@
 defmodule Plushie.Test.A11yHelpersTest do
   use ExUnit.Case, async: true
 
-  alias Plushie.Test.Element
+  alias Plushie.Automation.Element
 
   describe "Element.a11y/1" do
     test "returns a11y map when present" do

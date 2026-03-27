@@ -1,7 +1,8 @@
 defmodule Plushie.Test.ScreenshotTest do
   use ExUnit.Case, async: true
 
-  alias Plushie.Test.Screenshot
+  alias Plushie.Automation.Screenshot
+  alias Plushie.Test.Screenshot, as: ScreenshotAssertions
 
   describe "save_png/2" do
     test "writes valid PNG for known RGBA data" do
@@ -69,7 +70,7 @@ defmodule Plushie.Test.ScreenshotTest do
       screenshot = %Screenshot{hash: "", name: "test", size: {0, 0}, rgba_data: nil}
       golden_dir = "/tmp/plushie_screenshot_noop_#{System.unique_integer([:positive])}"
 
-      assert :ok = Screenshot.assert_match(screenshot, golden_dir)
+      assert :ok = ScreenshotAssertions.assert_match(screenshot, golden_dir)
 
       # No golden file should have been created
       refute File.exists?(golden_dir)
@@ -92,16 +93,16 @@ defmodule Plushie.Test.ScreenshotTest do
       golden_path = Path.join(tmp_dir, "shot.sha256")
 
       # First call creates the golden file
-      assert :ok = Screenshot.assert_match(screenshot_a, tmp_dir)
+      assert :ok = ScreenshotAssertions.assert_match(screenshot_a, tmp_dir)
       assert File.exists?(golden_path)
       assert File.read!(golden_path) == hash_a
 
       # Same hash passes
-      assert :ok = Screenshot.assert_match(screenshot_a, tmp_dir)
+      assert :ok = ScreenshotAssertions.assert_match(screenshot_a, tmp_dir)
 
       # Different hash raises
       assert_raise ExUnit.AssertionError, ~r/Screenshot mismatch/, fn ->
-        Screenshot.assert_match(screenshot_b, tmp_dir)
+        ScreenshotAssertions.assert_match(screenshot_b, tmp_dir)
       end
     end
 
@@ -130,8 +131,8 @@ defmodule Plushie.Test.ScreenshotTest do
         backend: :windowed
       }
 
-      assert :ok = Screenshot.assert_match(headless, tmp_dir)
-      assert :ok = Screenshot.assert_match(windowed, tmp_dir)
+      assert :ok = ScreenshotAssertions.assert_match(headless, tmp_dir)
+      assert :ok = ScreenshotAssertions.assert_match(windowed, tmp_dir)
       assert File.read!(Path.join(tmp_dir, "shot.headless.sha256")) == "headless_hash"
       assert File.read!(Path.join(tmp_dir, "shot.windowed.sha256")) == "windowed_hash"
     end

@@ -1370,13 +1370,10 @@ defmodule Plushie.Runtime do
     end
   end
 
-  # Decodes a wire-format event map from an interact_step/interact_response
-  # into an Elixir event struct. Uses the test backend's EventDecoder which
-  # handles the same wire format.
-  defp decode_interact_event(%{"family" => family, "id" => id} = event_map) do
-    Plushie.Test.Backend.EventDecoder.decode(family, id, event_map)
-  end
-
+  # Decodes a renderer event map from interact_step/interact_response using
+  # the shared protocol decoder so scripted interactions and normal runtime
+  # event delivery stay on the same path.
+  defp decode_interact_event(%{} = event_map), do: Plushie.Protocol.decode_event(event_map)
   defp decode_interact_event(_), do: nil
 
   # ---------------------------------------------------------------------------

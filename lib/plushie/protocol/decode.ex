@@ -26,12 +26,31 @@ defmodule Plushie.Protocol.Decode do
   Decodes a wire-format binary into a string-keyed map without dispatch.
 
   Unlike `decode_message/2` which dispatches into Elixir event structs, this
-  returns the raw deserialized map. Used by test backends that handle
-  renderer responses (query_response, interact_response, etc.) directly.
+  returns the raw deserialized map. Used by script and test helpers that
+  handle renderer responses (query_response, interact_response, etc.) directly.
   """
   @spec decode(data :: binary(), format :: Plushie.Protocol.format()) ::
           {:ok, map()} | {:error, term()}
   def decode(data, format \\ :msgpack), do: deserialize(data, format)
+
+  @doc """
+  Decodes a renderer event map into a typed Plushie event struct.
+
+  Accepts either a raw event payload from `interact_step` / `interact_response`
+  or a full protocol event message with `"type" => "event"`.
+  """
+  @spec decode_event(map()) :: Plushie.Event.delivered_t() | nil
+  def decode_event(%{} = event) do
+    event
+    |> Map.put_new("type", "event")
+    |> safe_dispatch()
+    |> case do
+      {:error, {:unknown_message, _}} -> nil
+      {:error, {:unknown_event_family, _, _}} -> nil
+      {:error, reason} -> raise Error, reason: reason, format: :msgpack, data: <<>>
+      decoded -> decoded
+    end
+  end
 
   @doc """
   Decodes a protocol message into an event struct or tuple.
@@ -1220,6 +1239,18 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{"type" => type, "kind" => kind})
        when type in ["effect_stub_registered", "effect_stub_unregistered"] do
     {:effect_stub_ack, kind}
+  end
+
+  defp dispatch(
+         %{
+           "type" => "screenshot_response",
+           "name" => _name,
+           "hash" => _hash,
+           "width" => _width,
+           "height" => _height
+         } = msg
+       ) do
+    {:screenshot_response, msg}
   end
 
   # -- Outbound command messages (for diagnostics / parity tests) --

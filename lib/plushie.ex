@@ -35,6 +35,7 @@ defmodule Plushie do
   - `:format`      -- wire format, `:msgpack` (default) or `:json`
   - `:log_level`   -- plushie binary log level (`:off`, `:error`, `:warning`, `:info`, `:debug`).
                       Default: `:error`.
+  - `:renderer_args` -- extra CLI args passed to the renderer process
 
   When `:transport` is `:stdio` or `{:iostream, pid}`, the `:binary`
   option is ignored (no renderer subprocess is spawned).
@@ -130,6 +131,7 @@ defmodule Plushie do
         transport: transport,
         format: format,
         log_level: log_level,
+        renderer_args: Keyword.get(opts, :renderer_args, []),
         session_id: session_id
       ]
       |> then(fn opts ->

@@ -1,11 +1,11 @@
 defmodule Mix.Tasks.Plushie.Replay do
   @moduledoc """
-  Replay a `.plushie` script with real timing and windows.
+  Replay a `.plushie` automation file with real timing and windows.
 
       mix plushie.replay path.plushie
 
-  Uses the `:windowed` backend, shows real windows, and respects `wait` timings.
-  Useful for demos and debugging.
+  Uses the `:windowed` backend, shows real windows, respects `wait` timings,
+  and writes captures under `tmp/plushie_automation/`.
   """
 
   use Mix.Task
@@ -16,12 +16,12 @@ defmodule Mix.Tasks.Plushie.Replay do
   def run([path | _rest]) do
     Mix.Task.run("app.start")
 
-    case Plushie.Test.Script.parse_file(path) do
+    case Plushie.Automation.File.parse_file(path) do
       {:ok, script} ->
         # Force windowed backend for replay
         script = put_in(script, [:header, :backend], :windowed)
 
-        case Plushie.Test.Script.Runner.run(script, replay: true) do
+        case Plushie.Automation.Runner.run(script, replay: true) do
           :ok ->
             Mix.shell().info("Replay complete.")
 

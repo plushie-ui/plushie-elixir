@@ -1,49 +1,46 @@
-defmodule Plushie.Test.Script.Runner do
+defmodule Plushie.Automation.Runner do
   @moduledoc """
-  Executes parsed `.plushie` scripts.
+  Executes parsed `.plushie` automation files.
 
-  Creates a `Plushie.Test.Session`, runs each instruction sequentially,
-  and collects results.
+  Starts a real Plushie app, attaches a `Plushie.Automation.Session`, runs each
+  instruction sequentially, and collects results.
+
+  The parsed automation header is forwarded to `app.init/1` under the `:script`
+  option so apps can opt into script-specific setup if they want to.
   """
 
-  alias Plushie.Test.{Screenshot, Script, Session, SessionPool, TreeHash}
-
-  @backend_map %{
-    mock: Plushie.Test.Backend.Runtime,
-    headless: Plushie.Test.Backend.Runtime,
-    windowed: Plushie.Test.Backend.Runtime
-  }
+  alias Plushie.Automation.{Element, Screenshot, Session}
+  alias Plushie.Automation.File, as: AutomationFile
 
   @doc """
-  Runs a parsed script.
+  Runs a parsed automation file.
 
   Returns `:ok` on success or `{:error, failures}` where failures is a list
   of `{instruction, reason}` tuples.
   """
-  @spec run(script :: Script.t(), opts :: keyword()) ::
-          :ok | {:error, [{Script.instruction(), String.t()}]}
+  @spec run(script :: AutomationFile.t(), opts :: keyword()) ::
+          :ok | {:error, [{AutomationFile.instruction(), String.t()}]}
   def run(%{header: header, instructions: instructions}, opts \\ []) do
     replay? = Keyword.get(opts, :replay, false)
-    backend_mod = Map.get(@backend_map, header.backend, Plushie.Test.Backend.Runtime)
-    pool_name = :"plushie_script_pool_#{System.unique_integer([:positive])}"
+    instance_name = :"plushie_automation_#{System.unique_integer([:positive])}"
 
-    {:ok, pool_pid} =
-      SessionPool.start_link(
-        name: pool_name,
-        renderer: Plushie.Binary.path!(),
-        mode: header.backend,
-        rust_log: "off"
+    {:ok, sup} =
+      Plushie.start_link(header.app,
+        name: instance_name,
+        binary: Plushie.Binary.path!(),
+        renderer_args: renderer_args(header.backend),
+        app_opts: [script: header]
       )
 
-    session =
-      Session.start(header.app, backend: backend_mod, pool: pool_name, mode: header.backend)
+    session = Session.attach(instance: instance_name)
+    output_dir = Keyword.get(opts, :output_dir, Path.join(["tmp", "plushie_automation"]))
 
     try do
       failures =
         instructions
         |> Enum.with_index(1)
         |> Enum.reduce([], fn {instruction, line_num}, failures ->
-          case execute(session, instruction, header, replay?) do
+          case execute(session, instruction, header, replay?, output_dir) do
             :ok -> failures
             {:error, reason} -> [{instruction, "line #{line_num}: #{reason}"} | failures]
           end
@@ -55,67 +52,66 @@ defmodule Plushie.Test.Script.Runner do
         {:error, Enum.reverse(failures)}
       end
     after
-      Session.stop(session)
-      GenServer.stop(pool_pid, :normal, 10_000)
+      Plushie.stop(sup)
     end
   end
 
-  defp execute(session, {:click, selector}, _header, _replay?) do
+  defp execute(session, {:click, selector}, _header, _replay?, _output_dir) do
     Session.click(session, selector)
     :ok
   rescue
     e -> {:error, Exception.message(e)}
   end
 
-  defp execute(session, {:toggle, selector, value}, _header, _replay?) do
+  defp execute(session, {:toggle, selector, value}, _header, _replay?, _output_dir) do
     Session.toggle(session, selector, value)
     :ok
   rescue
     e -> {:error, Exception.message(e)}
   end
 
-  defp execute(session, {:type_text, selector, text}, _header, _replay?) do
+  defp execute(session, {:type_text, selector, text}, _header, _replay?, _output_dir) do
     Session.type_text(session, selector, text)
     :ok
   rescue
     e -> {:error, Exception.message(e)}
   end
 
-  defp execute(session, {:type_key, key}, _header, _replay?) do
+  defp execute(session, {:type_key, key}, _header, _replay?, _output_dir) do
     Session.type_key(session, key)
     :ok
   rescue
     e -> {:error, Exception.message(e)}
   end
 
-  defp execute(session, {:press, key}, _header, _replay?) do
+  defp execute(session, {:press, key}, _header, _replay?, _output_dir) do
     Session.press(session, key)
     :ok
   rescue
     e -> {:error, Exception.message(e)}
   end
 
-  defp execute(session, {:release, key}, _header, _replay?) do
+  defp execute(session, {:release, key}, _header, _replay?, _output_dir) do
     Session.release(session, key)
     :ok
   rescue
     e -> {:error, Exception.message(e)}
   end
 
-  defp execute(_session, {:move, _selector}, _header, _replay?) do
+  defp execute(_session, {:move, _selector}, _header, _replay?, _output_dir) do
     # No-op: moving cursor to a widget by selector requires widget bounds
     # from layout, which only the renderer knows.
     :ok
   end
 
-  defp execute(session, {:move_to, x, y}, _header, _replay?) do
+  defp execute(session, {:move_to, x, y}, _header, _replay?, _output_dir) do
     Session.move_to(session, x, y)
     :ok
   rescue
     e -> {:error, Exception.message(e)}
   end
 
-  defp execute(session, {:assert_model, expression}, _header, _replay?) do
+  defp execute(session, {:assert_model, expression}, _header, _replay?, _output_dir) do
     # Basic string-match assertion against the inspected model.
     # assert_model checks that the expression string appears somewhere in the
     # inspect output of the current model. For exact equality, use `==`.
@@ -128,7 +124,7 @@ defmodule Plushie.Test.Script.Runner do
     end
   end
 
-  defp execute(session, {:expect, text}, _header, _replay?) do
+  defp execute(session, {:expect, text}, _header, _replay?, _output_dir) do
     tree = Session.tree(session)
 
     if tree_contains_text?(tree, text) do
@@ -138,31 +134,23 @@ defmodule Plushie.Test.Script.Runner do
     end
   end
 
-  defp execute(session, {:tree_hash, name}, _header, _replay?) do
-    snap = Session.tree_hash(session, name)
-    golden_dir = Path.join(["test", "snapshots"])
-    TreeHash.assert_match(snap, golden_dir)
-    :ok
-  rescue
-    e -> {:error, Exception.message(e)}
-  end
-
-  defp execute(session, {:screenshot, name}, %{viewport: {width, height}}, _replay?) do
+  defp execute(session, {:screenshot, name}, %{viewport: {width, height}}, _replay?, output_dir) do
     screenshot = Session.screenshot(session, name, width: width, height: height)
-    golden_dir = Path.join(["test", "screenshots"])
-    Screenshot.assert_match(screenshot, golden_dir)
+    dir = Path.join([output_dir, "screenshots"])
+    File.mkdir_p!(dir)
+    Screenshot.save_png(screenshot, Path.join(dir, "#{name}.png"))
     :ok
   rescue
     e -> {:error, Exception.message(e)}
   end
 
-  defp execute(session, {:assert_text, selector, expected}, _header, _replay?) do
+  defp execute(session, {:assert_text, selector, expected}, _header, _replay?, _output_dir) do
     case Session.find(session, selector) do
       nil ->
         {:error, "element #{inspect(selector)} not found"}
 
       element ->
-        actual = Plushie.Test.Element.text(element)
+        actual = Element.text(element)
 
         if actual == expected do
           :ok
@@ -173,10 +161,15 @@ defmodule Plushie.Test.Script.Runner do
     end
   end
 
-  defp execute(_session, {:wait, ms}, _header, replay?) do
+  defp execute(_session, {:wait, ms}, _header, replay?, _output_dir) do
     if replay?, do: Process.sleep(ms)
     :ok
   end
+
+  defp renderer_args(:mock), do: ["--mock"]
+  defp renderer_args(:headless), do: ["--headless"]
+  defp renderer_args(:windowed), do: []
+  defp renderer_args(_), do: []
 
   # Recursively checks if any node in the tree contains the given text.
   defp tree_contains_text?(nil, _text), do: false

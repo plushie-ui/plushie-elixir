@@ -6,10 +6,8 @@ defmodule Plushie.Test.Session do
   delegate to `Plushie.Test.Backend.Runtime`.
   """
 
-  alias Plushie.Test.Backend.Runtime
-  alias Plushie.Test.Element
-  alias Plushie.Test.Screenshot
-  alias Plushie.Test.TreeHash
+  alias Plushie.Automation.Element
+  alias Plushie.Test.{Backend.Runtime, Screenshot, TreeHash}
 
   @typedoc """
   Test selector.
@@ -19,12 +17,12 @@ defmodule Plushie.Test.Session do
   - `"#form/save"` matches an exact scoped ID
   - bare strings like `"Save"` match visible text
   """
-  @type selector :: String.t() | {:role, String.t()} | {:label, String.t()} | :focused
+  @type selector :: Plushie.Automation.Session.selector()
 
   @type t :: %__MODULE__{pid: pid()}
   defstruct [:pid]
 
-  @doc "Starts a new session."
+  @doc "Starts a new test session."
   @spec start(app :: module(), opts :: keyword()) :: t()
   def start(app, opts \\ []) do
     {:ok, pid} = Runtime.start(app, opts)
@@ -89,8 +87,12 @@ defmodule Plushie.Test.Session do
   @spec type_key(session :: t(), key :: String.t()) :: :ok
   def type_key(%__MODULE__{pid: p}, key), do: Runtime.type_key(p, key)
 
-  @spec scroll(session :: t(), selector :: selector(), delta_x :: number(), delta_y :: number()) ::
-          :ok
+  @spec scroll(
+          session :: t(),
+          selector :: selector(),
+          delta_x :: number(),
+          delta_y :: number()
+        ) :: :ok
   def scroll(%__MODULE__{pid: p}, selector, delta_x \\ 0, delta_y \\ 0),
     do: Runtime.scroll(p, selector, delta_x, delta_y)
 

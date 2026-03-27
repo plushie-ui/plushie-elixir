@@ -2,15 +2,15 @@
 
 ## Philosophy
 
-Progressive fidelity: test your app's logic with fast, pure-Elixir mock tests;
-promote to headless or windowed backends when you need wire-protocol verification
-or pixel-accurate screenshots.
+Progressive fidelity: test your app's logic with fast unit tests, then promote
+to the plushie test framework when you need real renderer interactions,
+wire-protocol verification, or pixel-accurate screenshots.
 
 
 ## Unit testing
 
-`update/2` is pure, `view/1` returns maps. Plain ExUnit -- no framework
-needed.
+`update/2` is pure, `view/1` returns a widget tree. Plain ExUnit works fine
+for unit tests -- no backend session needed.
 
 ### Testing `update/2`
 
@@ -115,8 +115,8 @@ PLUSHIE_UPDATE_SNAPSHOTS=1 mix test
 ```
 
 This is a pure JSON comparison -- it normalizes map key ordering for stable
-output. It is distinct from the framework's `assert_tree_hash/1` (which uses
-SHA-256 hashes of the tree via a backend session) and `assert_screenshot/1`
+output. It is distinct from the framework's `assert_tree_hash/1` (which uses a
+backend session to hash the normalized tree) and `assert_screenshot/1`
 (which compares pixel data).
 
 
@@ -266,8 +266,10 @@ All of the following are imported by `use Plushie.Test.Case`:
 | `assert_exists(selector)` | Assert widget exists in the tree |
 | `assert_not_exists(selector)` | Assert widget does NOT exist in the tree |
 | `assert_model(expected)` | Assert model equals expected (strict equality) |
-| `assert_tree_hash(name)` | Capture tree hash and assert it matches golden file |
-| `assert_screenshot(name)` | Capture screenshot and assert it matches golden file |
+| `assert_tree_hash(name)` | Capture tree hash and assert it matches the default golden file |
+| `assert_tree_hash_match(tree_hash, dir)` | Assert an existing tree hash against a specific golden directory |
+| `assert_screenshot(name)` | Capture screenshot and assert it matches the default golden file |
+| `assert_screenshot_match(screenshot, dir)` | Assert an existing screenshot against a specific golden directory |
 | `await_async(tag, timeout \\ 5000)` | Wait for a tagged async task to complete |
 | `press(key)` | Press a key (key down). Supports modifiers: `"ctrl+s"` |
 | `release(key)` | Release a key (key up). Supports modifiers: `"ctrl+s"` |
@@ -403,20 +405,20 @@ See the [Unit testing](#json-tree-snapshots) section above.
   every backend. Use liberally.
 
 - **`assert_screenshot`** -- after bumping iced, changing the renderer,
-  modifying themes, or any change that affects visual output. Only meaningful
-  on the windowed backend. Include alongside `assert_tree_hash` for critical views.
+  modifying themes, or any change that affects visual output. Meaningful on
+  both headless and windowed backends. Include alongside `assert_tree_hash`
+  for critical views.
 
 - **`assert_tree_snapshot`** -- for unit tests of `view/1` output. No
   framework overhead. Good for documenting what a view produces for a given
   model state.
 
 
-## Script-based testing
+## Scripts and automation
 
 `.plushie` scripts provide a declarative format for describing interaction
-sequences. The format is a superset of iced's `.ice` test scripts -- the
-core instructions (`click`, `type`, `expect`, `snapshot`) use the same
-syntax. Plushie adds `assert_text`, `assert_model`, `screenshot`, `wait`, and
+sequences against real apps. The format is a superset of iced's `.ice` test
+scripts. Plushie adds `assert_text`, `assert_model`, `screenshot`, `wait`, and
 a header section for app configuration.
 
 ### The `.plushie` format
@@ -433,7 +435,6 @@ backend: mock
 click "#increment"
 click "#increment"
 expect "Count: 2"
-tree_hash "counter-at-2"
 screenshot "counter-pixels"
 assert_text "#count" "2"
 wait 500
@@ -444,9 +445,9 @@ wait 500
 | Field | Required | Default | Description |
 |---|---|---|---|
 | `app` | Yes | -- | Module implementing `Plushie.App` |
-| `viewport` | No | `800x600` | Viewport size as `WxH` |
-| `theme` | No | `dark` | Theme name |
-| `backend` | No | `mock` | Backend: `mock`, `headless`, or `windowed` |
+| `viewport` | No | `800x600` | Default capture size for `screenshot` instructions |
+| `theme` | No | `dark` | Script metadata forwarded to `app.init/1` under `opts[:script]`; not applied automatically |
+| `backend` | No | `mock` | Renderer mode for the runner: `mock`, `headless`, or `windowed` |
 
 Lines starting with `#` are comments (in both header and body sections).
 
@@ -458,8 +459,7 @@ Lines starting with `#` are comments (in both header and body sections).
 | `type` | `type "selector" "text"` | Yes | Type text into a widget |
 | `type` (key) | `type enter` | Yes | Send a special key (press + release). Supports modifiers: `type ctrl+s` |
 | `expect` | `expect "text"` | Yes | Assert text appears somewhere in the tree |
-| `tree_hash` | `tree_hash "name"` | Yes | Capture and assert a structural tree hash |
-| `screenshot` | `screenshot "name"` | No-op on mock | Capture and assert a pixel screenshot |
+| `screenshot` | `screenshot "name"` | No-op on mock | Capture a screenshot and write it under `tmp/plushie_automation/screenshots/` |
 | `assert_text` | `assert_text "selector" "text"` | Yes | Assert widget has specific text |
 | `assert_model` | `assert_model "expression"` | Yes | Assert expression appears in inspected model (substring match) |
 | `press` | `press key` | Yes | Press a key down. Supports modifiers: `press ctrl+s` |
@@ -483,6 +483,12 @@ mix plushie.script test/scripts/counter.plushie test/scripts/todo.plushie
 ```bash
 mix plushie.replay test/scripts/counter.plushie
 ```
+
+`mix plushie.script` starts the app declared in each script header with
+`Plushie.start_link/2`, attaches a `Plushie.Automation.Session`, and executes the
+instructions against the real runtime. The parsed script header is forwarded
+to `app.init/1` under `opts[:script]`. Captured artifacts are written under
+`tmp/plushie_automation/`.
 
 Replay mode forces the `:windowed` backend and respects `wait` timings, so you
 see interactions happen in real time with real windows. Useful for debugging

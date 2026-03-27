@@ -1,15 +1,16 @@
 defmodule Mix.Tasks.Plushie.Script do
   @moduledoc """
-  Run `.plushie` test scripts.
+  Run `.plushie` automation files.
 
       mix plushie.script [paths]
 
   If no paths given, runs all `.plushie` files in `test/scripts/`.
+  Artifacts like screenshots are written under `tmp/plushie_automation/`.
   """
 
   use Mix.Task
 
-  @shortdoc "Run .plushie test scripts"
+  @shortdoc "Run .plushie scripts"
 
   @impl Mix.Task
   def run(args) do
@@ -41,9 +42,9 @@ defmodule Mix.Tasks.Plushie.Script do
   defp run_script(path) do
     Mix.shell().info("Running #{path}...")
 
-    case Plushie.Test.Script.parse_file(path) do
+    case Plushie.Automation.File.parse_file(path) do
       {:ok, script} ->
-        case Plushie.Test.Script.Runner.run(script) do
+        case Plushie.Automation.Runner.run(script) do
           :ok ->
             Mix.shell().info("  PASS")
             :ok

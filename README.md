@@ -113,6 +113,9 @@ walkthrough.
   servers or embedded devices. Dashboards, admin tools, IoT
   diagnostics -- over SSH with configurable event throttling.
   [Running guide](docs/running.md)
+- **Scriptable automation** -- drive real running apps with `.plushie`
+  scripts for demos, smoke flows, and screenshots.
+  [Testing guide](docs/testing.md)
 
 ## Testing
 
