@@ -40,8 +40,8 @@ defmodule Plushie.Protocol.Decode do
 
   ## Examples
 
-      iex> Plushie.Protocol.Decode.decode_message(~s({"type":"event","family":"click","id":"btn_save"}), :json)
-      %Plushie.Event.WidgetEvent{type: :click, id: "btn_save", value: nil, data: nil}
+      iex> Plushie.Protocol.Decode.decode_message(~s({"type":"event","family":"click","id":"btn_save","window_id":"main"}), :json)
+      %Plushie.Event.WidgetEvent{type: :click, id: "btn_save", window_id: "main", value: nil, data: nil}
 
       iex> match?({:error, {:decode_failed, _}}, Plushie.Protocol.Decode.decode_message("not json"))
       true
@@ -91,6 +91,35 @@ defmodule Plushie.Protocol.Decode do
         scope = parts |> List.delete_at(-1) |> Enum.reverse()
         {local, scope}
     end
+  end
+
+  defp event_identity!(%{"family" => family, "id" => id} = msg) when is_binary(id) do
+    {local, scope} = split_scoped_id(id)
+    {local, scope, event_window_id!(msg, family), family}
+  end
+
+  defp event_identity!(%{"family" => family, "id" => id} = msg) do
+    raise Plushie.Protocol.Error,
+      reason: {:invalid_event_field, family, "id", id, :expected_binary, msg},
+      format: :msgpack,
+      data: <<>>
+  end
+
+  defp event_window_id!(%{"window_id" => window_id}, _family) when is_binary(window_id),
+    do: window_id
+
+  defp event_window_id!(%{"window_id" => window_id} = msg, family) do
+    raise Plushie.Protocol.Error,
+      reason: {:invalid_event_field, family, "window_id", window_id, :expected_binary, msg},
+      format: :msgpack,
+      data: <<>>
+  end
+
+  defp event_window_id!(msg, family) do
+    raise Plushie.Protocol.Error,
+      reason: {:invalid_event_field, family, "window_id", nil, :required, msg},
+      format: :msgpack,
+      data: <<>>
   end
 
   # ---------------------------------------------------------------------------
@@ -163,71 +192,91 @@ defmodule Plushie.Protocol.Decode do
 
   # -- Widget events --
 
-  defp dispatch(%{"type" => "event", "family" => "click", "id" => id} = msg) do
-    {local, scope} = split_scoped_id(id)
+  defp dispatch(%{"type" => "event", "family" => "click", "id" => _id} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
     # data is nil for standard widget clicks, populated for canvas
     # element clicks (which carry button, x, y coordinates).
-    %WidgetEvent{type: :click, id: local, scope: scope, data: msg["data"]}
+    %WidgetEvent{type: :click, id: local, scope: scope, window_id: window_id, data: msg["data"]}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "input", "id" => id, "value" => value}) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :input, id: local, scope: scope, value: value}
+  defp dispatch(%{"type" => "event", "family" => "input", "id" => _id, "value" => value} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %WidgetEvent{type: :input, id: local, scope: scope, window_id: window_id, value: value}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "submit", "id" => id, "value" => value}) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :submit, id: local, scope: scope, value: value}
+  defp dispatch(%{"type" => "event", "family" => "submit", "id" => _id, "value" => value} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %WidgetEvent{type: :submit, id: local, scope: scope, window_id: window_id, value: value}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "toggle", "id" => id, "value" => value}) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :toggle, id: local, scope: scope, value: value}
+  defp dispatch(%{"type" => "event", "family" => "toggle", "id" => _id, "value" => value} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %WidgetEvent{type: :toggle, id: local, scope: scope, window_id: window_id, value: value}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "select", "id" => id, "value" => value}) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :select, id: local, scope: scope, value: value}
+  defp dispatch(%{"type" => "event", "family" => "select", "id" => _id, "value" => value} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %WidgetEvent{type: :select, id: local, scope: scope, window_id: window_id, value: value}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "slide", "id" => id, "value" => value}) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :slide, id: local, scope: scope, value: value}
+  defp dispatch(%{"type" => "event", "family" => "slide", "id" => _id, "value" => value} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %WidgetEvent{type: :slide, id: local, scope: scope, window_id: window_id, value: value}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "slide_release", "id" => id, "value" => value}) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :slide_release, id: local, scope: scope, value: value}
+  defp dispatch(
+         %{"type" => "event", "family" => "slide_release", "id" => _id, "value" => value} = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %WidgetEvent{
+      type: :slide_release,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      value: value
+    }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "paste", "id" => id, "value" => text}) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :paste, id: local, scope: scope, value: text}
+  defp dispatch(%{"type" => "event", "family" => "paste", "id" => _id, "value" => text} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %WidgetEvent{type: :paste, id: local, scope: scope, window_id: window_id, value: text}
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "option_hovered",
-         "id" => id,
-         "value" => value
-       }) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :option_hovered, id: local, scope: scope, value: value}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "option_hovered",
+           "id" => _id,
+           "value" => value
+         } = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %WidgetEvent{
+      type: :option_hovered,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      value: value
+    }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "open", "id" => id}) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :open, id: local, scope: scope}
+  defp dispatch(%{"type" => "event", "family" => "open", "id" => _id} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %WidgetEvent{type: :open, id: local, scope: scope, window_id: window_id}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "close", "id" => id}) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :close, id: local, scope: scope}
+  defp dispatch(%{"type" => "event", "family" => "close", "id" => _id} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %WidgetEvent{type: :close, id: local, scope: scope, window_id: window_id}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "key_binding", "id" => id, "data" => data}) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :key_binding, id: local, scope: scope, data: data}
+  defp dispatch(
+         %{"type" => "event", "family" => "key_binding", "id" => _id, "data" => data} = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %WidgetEvent{type: :key_binding, id: local, scope: scope, window_id: window_id, data: data}
   end
 
   # -- Keyboard events --
@@ -530,101 +579,132 @@ defmodule Plushie.Protocol.Decode do
 
   # -- MouseArea events --
 
-  defp dispatch(%{"type" => "event", "family" => "mouse_right_press", "id" => id}) do
-    {local, scope} = split_scoped_id(id)
-    %MouseArea{type: :right_press, id: local, scope: scope}
+  defp dispatch(%{"type" => "event", "family" => "mouse_right_press", "id" => _id} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %MouseArea{type: :right_press, id: local, scope: scope, window_id: window_id}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "mouse_right_release", "id" => id}) do
-    {local, scope} = split_scoped_id(id)
-    %MouseArea{type: :right_release, id: local, scope: scope}
+  defp dispatch(%{"type" => "event", "family" => "mouse_right_release", "id" => _id} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %MouseArea{type: :right_release, id: local, scope: scope, window_id: window_id}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "mouse_middle_press", "id" => id}) do
-    {local, scope} = split_scoped_id(id)
-    %MouseArea{type: :middle_press, id: local, scope: scope}
+  defp dispatch(%{"type" => "event", "family" => "mouse_middle_press", "id" => _id} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %MouseArea{type: :middle_press, id: local, scope: scope, window_id: window_id}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "mouse_middle_release", "id" => id}) do
-    {local, scope} = split_scoped_id(id)
-    %MouseArea{type: :middle_release, id: local, scope: scope}
+  defp dispatch(%{"type" => "event", "family" => "mouse_middle_release", "id" => _id} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %MouseArea{type: :middle_release, id: local, scope: scope, window_id: window_id}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "mouse_double_click", "id" => id}) do
-    {local, scope} = split_scoped_id(id)
-    %MouseArea{type: :double_click, id: local, scope: scope}
+  defp dispatch(%{"type" => "event", "family" => "mouse_double_click", "id" => _id} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %MouseArea{type: :double_click, id: local, scope: scope, window_id: window_id}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "mouse_enter", "id" => id}) do
-    {local, scope} = split_scoped_id(id)
-    %MouseArea{type: :enter, id: local, scope: scope}
+  defp dispatch(%{"type" => "event", "family" => "mouse_enter", "id" => _id} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %MouseArea{type: :enter, id: local, scope: scope, window_id: window_id}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "mouse_exit", "id" => id}) do
-    {local, scope} = split_scoped_id(id)
-    %MouseArea{type: :exit, id: local, scope: scope}
+  defp dispatch(%{"type" => "event", "family" => "mouse_exit", "id" => _id} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %MouseArea{type: :exit, id: local, scope: scope, window_id: window_id}
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "mouse_move",
-         "id" => id,
-         "data" => %{"x" => x, "y" => y}
-       }) do
-    {local, scope} = split_scoped_id(id)
-    %MouseArea{type: :move, id: local, scope: scope, x: x, y: y}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "mouse_move",
+           "id" => _id,
+           "data" => %{"x" => x, "y" => y}
+         } = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %MouseArea{type: :move, id: local, scope: scope, window_id: window_id, x: x, y: y}
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "mouse_scroll",
-         "id" => id,
-         "data" => %{"delta_x" => dx, "delta_y" => dy}
-       }) do
-    {local, scope} = split_scoped_id(id)
-    %MouseArea{type: :scroll, id: local, scope: scope, delta_x: dx, delta_y: dy}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "mouse_scroll",
+           "id" => _id,
+           "data" => %{"delta_x" => dx, "delta_y" => dy}
+         } = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %MouseArea{
+      type: :scroll,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      delta_x: dx,
+      delta_y: dy
+    }
   end
 
   # -- Canvas events --
 
-  defp dispatch(%{"type" => "event", "family" => "canvas_press", "id" => id, "data" => data}) do
-    {local, scope} = split_scoped_id(id)
+  defp dispatch(
+         %{"type" => "event", "family" => "canvas_press", "id" => _id, "data" => data} = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
 
     %Canvas{
       type: :press,
       id: local,
       scope: scope,
+      window_id: window_id,
       x: data["x"],
       y: data["y"],
       button: Map.get(data, "button", "left")
     }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "canvas_release", "id" => id, "data" => data}) do
-    {local, scope} = split_scoped_id(id)
+  defp dispatch(
+         %{"type" => "event", "family" => "canvas_release", "id" => _id, "data" => data} = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
 
     %Canvas{
       type: :release,
       id: local,
       scope: scope,
+      window_id: window_id,
       x: data["x"],
       y: data["y"],
       button: Map.get(data, "button", "left")
     }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "canvas_move", "id" => id, "data" => data}) do
-    {local, scope} = split_scoped_id(id)
-    %Canvas{type: :move, id: local, scope: scope, x: data["x"], y: data["y"]}
+  defp dispatch(
+         %{"type" => "event", "family" => "canvas_move", "id" => _id, "data" => data} = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %Canvas{
+      type: :move,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      x: data["x"],
+      y: data["y"]
+    }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "canvas_scroll", "id" => id, "data" => data}) do
-    {local, scope} = split_scoped_id(id)
+  defp dispatch(
+         %{"type" => "event", "family" => "canvas_scroll", "id" => _id, "data" => data} = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
 
     %Canvas{
       type: :scroll,
       id: local,
       scope: scope,
+      window_id: window_id,
       x: data["x"],
       y: data["y"],
       delta_x: data["delta_x"],
@@ -634,22 +714,42 @@ defmodule Plushie.Protocol.Decode do
 
   # -- Sensor events --
 
-  defp dispatch(%{"type" => "event", "family" => "sensor_resize", "id" => id, "data" => data}) do
-    {local, scope} = split_scoped_id(id)
-    %Sensor{type: :resize, id: local, scope: scope, width: data["width"], height: data["height"]}
+  defp dispatch(
+         %{"type" => "event", "family" => "sensor_resize", "id" => _id, "data" => data} = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %Sensor{
+      type: :resize,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      width: data["width"],
+      height: data["height"]
+    }
   end
 
   # -- PaneGrid events --
 
-  defp dispatch(%{"type" => "event", "family" => "pane_resized", "id" => id, "data" => data}) do
-    {local, scope} = split_scoped_id(id)
-    %Pane{type: :resized, id: local, scope: scope, split: data["split"], ratio: data["ratio"]}
+  defp dispatch(
+         %{"type" => "event", "family" => "pane_resized", "id" => _id, "data" => data} = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %Pane{
+      type: :resized,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      split: data["split"],
+      ratio: data["ratio"]
+    }
   end
 
   defp dispatch(
-         %{"type" => "event", "family" => "pane_dragged", "id" => id, "data" => data} = msg
+         %{"type" => "event", "family" => "pane_dragged", "id" => _id, "data" => data} = msg
        ) do
-    {local, scope} = split_scoped_id(id)
+    {local, scope, window_id, _family} = event_identity!(msg)
 
     with {:ok, action} <- Parsers.parse_pane_action(data["action"]),
          {:ok, region} <- Parsers.parse_pane_region(data["region"]),
@@ -658,6 +758,7 @@ defmodule Plushie.Protocol.Decode do
         type: :dragged,
         id: local,
         scope: scope,
+        window_id: window_id,
         pane: data["pane"],
         target: data["target"],
         action: action,
@@ -669,28 +770,33 @@ defmodule Plushie.Protocol.Decode do
     end
   end
 
-  defp dispatch(%{"type" => "event", "family" => "pane_clicked", "id" => id, "data" => data}) do
-    {local, scope} = split_scoped_id(id)
-    %Pane{type: :clicked, id: local, scope: scope, pane: data["pane"]}
+  defp dispatch(
+         %{"type" => "event", "family" => "pane_clicked", "id" => _id, "data" => data} = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %Pane{type: :clicked, id: local, scope: scope, window_id: window_id, pane: data["pane"]}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "pane_focus_cycle", "id" => id, "data" => data}) do
-    {local, scope} = split_scoped_id(id)
-    %Pane{type: :focus_cycle, id: local, scope: scope, pane: data["pane"]}
+  defp dispatch(
+         %{"type" => "event", "family" => "pane_focus_cycle", "id" => _id, "data" => data} = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %Pane{type: :focus_cycle, id: local, scope: scope, window_id: window_id, pane: data["pane"]}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "sort", "id" => id, "data" => data}) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :sort, id: local, scope: scope, data: data["column"]}
+  defp dispatch(%{"type" => "event", "family" => "sort", "id" => _id, "data" => data} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %WidgetEvent{type: :sort, id: local, scope: scope, window_id: window_id, data: data["column"]}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "scroll", "id" => id, "data" => data}) do
-    {local, scope} = split_scoped_id(id)
+  defp dispatch(%{"type" => "event", "family" => "scroll", "id" => _id, "data" => data} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
 
     %WidgetEvent{
       type: :scroll,
       id: local,
       scope: scope,
+      window_id: window_id,
       data: %{
         absolute_x: data["absolute_x"],
         absolute_y: data["absolute_y"],
@@ -875,128 +981,227 @@ defmodule Plushie.Protocol.Decode do
 
   # -- Canvas shape events --
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "canvas_element_enter",
-         "id" => id,
-         "data" => data
-       }) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :canvas_element_enter, id: local, scope: scope, data: data}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "canvas_element_enter",
+           "id" => _id,
+           "data" => data
+         } = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %WidgetEvent{
+      type: :canvas_element_enter,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: data
+    }
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "canvas_element_leave",
-         "id" => id,
-         "data" => data
-       }) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :canvas_element_leave, id: local, scope: scope, data: data}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "canvas_element_leave",
+           "id" => _id,
+           "data" => data
+         } = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %WidgetEvent{
+      type: :canvas_element_leave,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: data
+    }
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "canvas_element_click",
-         "id" => id,
-         "data" => data
-       }) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :canvas_element_click, id: local, scope: scope, data: data}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "canvas_element_click",
+           "id" => _id,
+           "data" => data
+         } = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %WidgetEvent{
+      type: :canvas_element_click,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: data
+    }
   end
 
   # NOTE: canvas_element_key_press carries key name as a wire string
   # (e.g. "ArrowRight") and modifiers as a string-keyed map, unlike
   # %Key{} which uses parsed atoms and %KeyModifiers{}. Should be
   # unified when canvas elements become first-class widget events.
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "canvas_element_key_press",
-         "id" => id,
-         "data" => data
-       }) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :canvas_element_key_press, id: local, scope: scope, data: data}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "canvas_element_key_press",
+           "id" => _id,
+           "data" => data
+         } = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %WidgetEvent{
+      type: :canvas_element_key_press,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: data
+    }
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "canvas_element_key_release",
-         "id" => id,
-         "data" => data
-       }) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :canvas_element_key_release, id: local, scope: scope, data: data}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "canvas_element_key_release",
+           "id" => _id,
+           "data" => data
+         } = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %WidgetEvent{
+      type: :canvas_element_key_release,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: data
+    }
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "canvas_element_drag",
-         "id" => id,
-         "data" => data
-       }) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :canvas_element_drag, id: local, scope: scope, data: data}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "canvas_element_drag",
+           "id" => _id,
+           "data" => data
+         } = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %WidgetEvent{
+      type: :canvas_element_drag,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: data
+    }
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "canvas_element_drag_end",
-         "id" => id,
-         "data" => data
-       }) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :canvas_element_drag_end, id: local, scope: scope, data: data}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "canvas_element_drag_end",
+           "id" => _id,
+           "data" => data
+         } = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %WidgetEvent{
+      type: :canvas_element_drag_end,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: data
+    }
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "canvas_element_focused",
-         "id" => id,
-         "data" => data
-       }) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :canvas_element_focused, id: local, scope: scope, data: data}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "canvas_element_focused",
+           "id" => _id,
+           "data" => data
+         } = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %WidgetEvent{
+      type: :canvas_element_focused,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: data
+    }
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "canvas_element_blurred",
-         "id" => id,
-         "data" => data
-       }) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :canvas_element_blurred, id: local, scope: scope, data: data}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "canvas_element_blurred",
+           "id" => _id,
+           "data" => data
+         } = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %WidgetEvent{
+      type: :canvas_element_blurred,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: data
+    }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "canvas_focused", "id" => id}) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :canvas_focused, id: local, scope: scope}
+  defp dispatch(%{"type" => "event", "family" => "canvas_focused", "id" => _id} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %WidgetEvent{type: :canvas_focused, id: local, scope: scope, window_id: window_id}
   end
 
-  defp dispatch(%{"type" => "event", "family" => "canvas_blurred", "id" => id}) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :canvas_blurred, id: local, scope: scope}
+  defp dispatch(%{"type" => "event", "family" => "canvas_blurred", "id" => _id} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %WidgetEvent{type: :canvas_blurred, id: local, scope: scope, window_id: window_id}
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "canvas_group_focused",
-         "id" => id,
-         "data" => data
-       }) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :canvas_group_focused, id: local, scope: scope, data: data}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "canvas_group_focused",
+           "id" => _id,
+           "data" => data
+         } = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %WidgetEvent{
+      type: :canvas_group_focused,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: data
+    }
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "canvas_group_blurred",
-         "id" => id,
-         "data" => data
-       }) do
-    {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :canvas_group_blurred, id: local, scope: scope, data: data}
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "canvas_group_blurred",
+           "id" => _id,
+           "data" => data
+         } = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %WidgetEvent{
+      type: :canvas_group_blurred,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: data
+    }
   end
 
   defp dispatch(%{"type" => "event", "family" => "diagnostic", "data" => data}) do
@@ -1049,14 +1254,15 @@ defmodule Plushie.Protocol.Decode do
 
   # -- Explicit extension events --
 
-  defp dispatch(%{"type" => "event", "family" => family, "id" => id} = msg) do
+  defp dispatch(%{"type" => "event", "family" => family, "id" => _id} = msg) do
     if Parsers.extension_family?(family) do
-      {local, scope} = split_scoped_id(id)
+      {local, scope, window_id, _family} = event_identity!(msg)
 
       %WidgetEvent{
         type: family,
         id: local,
         scope: scope,
+        window_id: window_id,
         data: msg["data"],
         value: msg["value"]
       }
@@ -1128,6 +1334,7 @@ defmodule Plushie.Protocol.Decode do
   defp safe_dispatch(msg) do
     dispatch(msg)
   rescue
+    error in Plushie.Protocol.Error -> {:error, error.reason}
     FunctionClauseError -> {:error, {:unknown_message, msg}}
   end
 end

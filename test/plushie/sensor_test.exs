@@ -9,6 +9,7 @@ defmodule Plushie.SensorTest do
         "type" => "event",
         "family" => "sensor_resize",
         "id" => "s1",
+        "window_id" => "main",
         "data" => %{"width" => 450.0, "height" => 300.0}
       }
 
@@ -21,6 +22,7 @@ defmodule Plushie.SensorTest do
         "type" => "event",
         "family" => "sensor_resize",
         "id" => "s1",
+        "window_id" => "main",
         "data" => %{"width" => 800, "height" => 600}
       }
 

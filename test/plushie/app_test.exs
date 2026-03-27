@@ -15,7 +15,13 @@ defmodule Plushie.AppTest do
     def update(model, {:increment}), do: %{model | count: model.count + 1}
     def update(model, _event), do: model
 
-    def view(model), do: %{tag: "text", value: "Count: #{model.count}"}
+    def view(model) do
+      import Plushie.UI
+
+      window "main" do
+        text("count", "Count: #{model.count}")
+      end
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -28,7 +34,14 @@ defmodule Plushie.AppTest do
 
     def init(_opts), do: %{status: :idle}
     def update(model, _event), do: model
-    def view(model), do: %{tag: "text", value: inspect(model.status)}
+
+    def view(model) do
+      import Plushie.UI
+
+      window "main" do
+        text("status", inspect(model.status))
+      end
+    end
 
     def subscribe(_model), do: [%{type: "timer", interval: 1000}]
     def handle_renderer_exit(model, _reason), do: %{model | status: :reconnecting}
@@ -128,7 +141,10 @@ defmodule Plushie.AppTest do
 
     test "view/1 returns a map representation of the UI" do
       model = %{count: 3}
-      assert MinimalApp.view(model) == %{tag: "text", value: "Count: 3"}
+      tree = MinimalApp.view(model)
+      assert tree.type == "window"
+      assert tree.id == "main"
+      assert hd(tree.children).type == "text"
     end
   end
 end

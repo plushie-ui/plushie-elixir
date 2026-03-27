@@ -37,12 +37,7 @@ defmodule Plushie.Integration.WindowTest do
           ]
         }
 
-        %{
-          id: "auto:WindowApp:root",
-          type: "container",
-          props: %{},
-          children: [main, secondary]
-        }
+        [main, secondary]
       else
         main
       end

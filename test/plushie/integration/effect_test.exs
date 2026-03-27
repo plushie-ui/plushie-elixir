@@ -25,11 +25,18 @@ defmodule Plushie.Integration.EffectTest do
 
     def view(_model) do
       %{
-        id: "auto:EffectApp:root",
-        type: "column",
+        id: "main",
+        type: "window",
         props: %{},
         children: [
-          %{id: "read", type: "button", props: %{label: "Read Clipboard"}, children: []}
+          %{
+            id: "auto:EffectApp:root",
+            type: "column",
+            props: %{},
+            children: [
+              %{id: "read", type: "button", props: %{label: "Read Clipboard"}, children: []}
+            ]
+          }
         ]
       }
     end

@@ -202,7 +202,7 @@ defmodule Plushie.TreeTest do
         ]
       }
 
-      %{tree: tree}
+      %{tree: Tree.normalize(tree)}
     end
 
     test "find returns the root node when id matches root", %{tree: tree} do
@@ -210,16 +210,16 @@ defmodule Plushie.TreeTest do
     end
 
     test "find returns a direct child node by id", %{tree: tree} do
-      col = Tree.find(tree, "col")
+      col = Tree.find(tree, "root/col")
       assert col != nil
-      assert col.id == "col"
+      assert col.id == "root/col"
       assert col.type == "column"
     end
 
-    test "find returns a deeply nested node by id", %{tree: tree} do
-      btn = Tree.find(tree, "btn")
+    test "find returns a deeply nested node by exact scoped id", %{tree: tree} do
+      btn = Tree.find(tree, "root/col/btn")
       assert btn != nil
-      assert btn.id == "btn"
+      assert btn.id == "root/col/btn"
       assert btn.props[:label] == "Save"
     end
 
@@ -231,26 +231,86 @@ defmodule Plushie.TreeTest do
       assert Tree.find(tree, "") == nil
     end
 
-    test "find searches children recursively and returns first match" do
-      tree = %{
-        id: "root",
-        type: "container",
-        props: %{},
-        children: [
+    test "find searches children recursively for an exact scoped id" do
+      tree =
+        Tree.normalize(%{
+          id: "root",
+          type: "container",
+          props: %{},
+          children: [
+            %{
+              id: "a",
+              type: "column",
+              props: %{},
+              children: [
+                %{id: "target", type: "text", props: %{}, children: []}
+              ]
+            },
+            %{id: "b", type: "column", props: %{}, children: []}
+          ]
+        })
+
+      result = Tree.find(tree, "root/a/target")
+      assert result.id == "root/a/target"
+    end
+
+    test "find raises when the same exact id exists in multiple windows" do
+      tree =
+        Tree.normalize([
           %{
-            id: "a",
-            type: "column",
+            id: "main",
+            type: "window",
+            props: %{},
+            children: [%{id: "save", type: "button", props: %{}, children: []}]
+          },
+          %{
+            id: "prefs",
+            type: "window",
+            props: %{},
+            children: [%{id: "save", type: "button", props: %{}, children: []}]
+          }
+        ])
+
+      assert_raise ArgumentError, ~r/use find\/3 with a window id/, fn ->
+        Tree.find(tree, "save")
+      end
+    end
+
+    test "find/3 looks up an exact id within one window" do
+      tree =
+        Tree.normalize([
+          %{
+            id: "main",
+            type: "window",
             props: %{},
             children: [
-              %{id: "target", type: "text", props: %{}, children: []}
+              %{
+                id: "panel",
+                type: "container",
+                props: %{},
+                children: [%{id: "save", type: "button", props: %{label: "Main"}, children: []}]
+              }
             ]
           },
-          %{id: "b", type: "column", props: %{}, children: []}
-        ]
-      }
+          %{
+            id: "prefs",
+            type: "window",
+            props: %{},
+            children: [
+              %{
+                id: "panel",
+                type: "container",
+                props: %{},
+                children: [%{id: "save", type: "button", props: %{label: "Prefs"}, children: []}]
+              }
+            ]
+          }
+        ])
 
-      result = Tree.find(tree, "target")
-      assert result.id == "target"
+      assert %{id: "panel/save", props: %{label: "Main"}} = Tree.find(tree, "panel/save", "main")
+
+      assert %{id: "panel/save", props: %{label: "Prefs"}} =
+               Tree.find(tree, "panel/save", "prefs")
     end
   end
 

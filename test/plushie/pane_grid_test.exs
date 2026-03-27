@@ -84,6 +84,7 @@ defmodule Plushie.PaneGridTest do
         "type" => "event",
         "family" => "pane_resized",
         "id" => "pg1",
+        "window_id" => "main",
         "data" => %{"split" => 0, "ratio" => 0.45}
       }
 
@@ -96,6 +97,7 @@ defmodule Plushie.PaneGridTest do
         "type" => "event",
         "family" => "pane_dragged",
         "id" => "pg1",
+        "window_id" => "main",
         "data" => %{"pane" => "left", "target" => "right"}
       }
 
@@ -108,6 +110,7 @@ defmodule Plushie.PaneGridTest do
         "type" => "event",
         "family" => "pane_dragged",
         "id" => "pg1",
+        "window_id" => "main",
         "data" => %{
           "pane" => "left",
           "target" => "right",
@@ -126,6 +129,7 @@ defmodule Plushie.PaneGridTest do
         "type" => "event",
         "family" => "pane_clicked",
         "id" => "pg1",
+        "window_id" => "main",
         "data" => %{"pane" => "left"}
       }
 

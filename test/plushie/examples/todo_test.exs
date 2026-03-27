@@ -126,11 +126,11 @@ defmodule TodoTest do
       tree = Plushie.Tree.normalize(Todo.view(model))
 
       assert Plushie.Tree.exists?(tree, "main")
-      assert Plushie.Tree.find(tree, "title")
-      assert Plushie.Tree.find(tree, "new_todo")
-      assert Plushie.Tree.find(tree, "filter_all")
-      assert Plushie.Tree.find(tree, "filter_active")
-      assert Plushie.Tree.find(tree, "filter_done")
+      assert Plushie.Tree.find(tree, "app/title")
+      assert Plushie.Tree.find(tree, "app/new_todo")
+      assert Plushie.Tree.find(tree, "app/filter_all")
+      assert Plushie.Tree.find(tree, "app/filter_active")
+      assert Plushie.Tree.find(tree, "app/filter_done")
     end
 
     test "renders todo items with scoped IDs" do

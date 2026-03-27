@@ -8,6 +8,9 @@ defmodule Plushie.Event.Pane do
   (nearest parent first). Use `Plushie.Event.target/1` to reconstruct the
   full forward-order scoped path.
 
+  The `window_id` field identifies which window produced the event. Runtime-
+  delivered pane events always include it.
+
   ## Fields
 
     * `type` - `:resized`, `:dragged`, `:clicked`, or `:focus_cycle`
@@ -43,9 +46,31 @@ defmodule Plushie.Event.Pane do
   @type action :: :picked | :dropped | :canceled
   @type region :: :center | :top | :bottom | :left | :right
 
+  @typedoc """
+  Pane event struct.
+
+  Hand-built test events may leave `window_id` unset. Events decoded from the
+  renderer always include it.
+  """
   @type t :: %__MODULE__{
           type: :resized | :dragged | :clicked | :focus_cycle,
           id: String.t(),
+          window_id: String.t() | nil,
+          scope: [String.t()],
+          pane: term(),
+          split: term(),
+          ratio: number() | nil,
+          target: term(),
+          action: action() | nil,
+          region: region() | nil,
+          edge: :top | :bottom | :left | :right | nil
+        }
+
+  @typedoc "Pane event delivered by the renderer."
+  @type delivered_t :: %__MODULE__{
+          type: :resized | :dragged | :clicked | :focus_cycle,
+          id: String.t(),
+          window_id: String.t(),
           scope: [String.t()],
           pane: term(),
           split: term(),
@@ -57,12 +82,28 @@ defmodule Plushie.Event.Pane do
         }
 
   @enforce_keys [:type, :id]
-  defstruct [:type, :id, :pane, :split, :ratio, :target, :action, :region, :edge, scope: []]
+  defstruct [
+    :type,
+    :id,
+    :pane,
+    :split,
+    :ratio,
+    :target,
+    :action,
+    :region,
+    :edge,
+    :window_id,
+    scope: []
+  ]
 
   defimpl Inspect do
     def inspect(event, _opts) do
       target = Plushie.Event.target(event)
-      "#Pane<#{Kernel.inspect(event.type)} #{Kernel.inspect(target)}>"
+
+      window =
+        if event.window_id, do: " window=#{Kernel.inspect(event.window_id)}", else: ""
+
+      "#Pane<#{Kernel.inspect(event.type)} #{Kernel.inspect(target)}#{window}>"
     end
   end
 end

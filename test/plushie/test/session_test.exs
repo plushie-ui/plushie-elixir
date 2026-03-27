@@ -18,18 +18,25 @@ defmodule Plushie.Test.SessionTest do
 
     def view(model) do
       %{
-        id: "auto:CounterApp:root",
-        type: "column",
+        id: "main",
+        type: "window",
         props: %{},
         children: [
           %{
-            id: "count",
-            type: "text",
-            props: %{content: "Count: #{model.count}"},
-            children: []
-          },
-          %{id: "increment", type: "button", props: %{label: "+"}, children: []},
-          %{id: "decrement", type: "button", props: %{label: "-"}, children: []}
+            id: "auto:CounterApp:root",
+            type: "column",
+            props: %{},
+            children: [
+              %{
+                id: "count",
+                type: "text",
+                props: %{content: "Count: #{model.count}"},
+                children: []
+              },
+              %{id: "increment", type: "button", props: %{label: "+"}, children: []},
+              %{id: "decrement", type: "button", props: %{label: "-"}, children: []}
+            ]
+          }
         ]
       }
     end

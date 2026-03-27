@@ -184,9 +184,15 @@ defmodule Plushie.UI do
 
   ## Tree query
 
-  `find/2` is re-exported from `Plushie.Tree` for convenience:
+  `find/2`, `find/3`, and `find_local/2` are re-exported from
+  `Plushie.Tree` for convenience.
 
-      Plushie.UI.find(tree, "my_button")
+  `find/2` does exact scoped lookup. Use `find_local/2` when you
+  intentionally want a local ID search:
+
+      Plushie.UI.find(tree, "form/save")
+      Plushie.UI.find(tree, "save", "settings")
+      Plushie.UI.find_local(tree, "save")
 
   ## Internals
 
@@ -2749,6 +2755,10 @@ defmodule Plushie.UI do
   """
   @spec find(tree :: Plushie.Widget.ui_node(), id :: String.t()) :: Plushie.Widget.ui_node() | nil
   defdelegate find(tree, id), to: Plushie.Tree
+
+  @spec find(tree :: Plushie.Widget.ui_node(), id :: String.t(), window_id :: String.t()) ::
+          Plushie.Widget.ui_node() | nil
+  defdelegate find(tree, id, window_id), to: Plushie.Tree
 
   @doc "Returns true if a node with `id` exists in the tree."
   @spec exists?(tree :: Plushie.Widget.ui_node() | nil, id :: String.t()) :: boolean()

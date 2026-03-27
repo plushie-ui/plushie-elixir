@@ -57,7 +57,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
     events([:activated])
 
     @impl true
-    def handle_event(%{type: :click} = _event, state) do
+    def handle_event(%{type: type} = _event, state) when type in [:click, :press] do
       {:emit, :activated, %{source: "emit_widget"}, state}
     end
 
@@ -153,7 +153,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
   describe "scope chain dispatch with :ignored widget" do
     test "event passes through when widget ignores" do
       registry = %{
-        "parent" => %{module: IgnoredWidget, state: %{}}
+        {nil, "parent"} => %{module: IgnoredWidget, state: %{}}
       }
 
       {event, _registry} =
@@ -168,7 +168,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
   describe "scope chain dispatch with :consumed widget" do
     test "event is suppressed" do
       registry = %{
-        "parent" => %{module: ConsumedWidget, state: %{}}
+        {nil, "parent"} => %{module: ConsumedWidget, state: %{}}
       }
 
       {event, _registry} =
@@ -181,7 +181,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
   describe "scope chain dispatch with :emit widget" do
     test "event is transformed" do
       registry = %{
-        "widget" => %{module: EmitWidget, state: %{}}
+        {nil, "widget"} => %{module: EmitWidget, state: %{}}
       }
 
       {event, _registry} =
@@ -195,14 +195,14 @@ defmodule Plushie.CanvasWidgetDispatchTest do
   describe "scope chain dispatch with :update_state widget" do
     test "event is consumed and state is updated" do
       registry = %{
-        "widget" => %{module: StateWidget, state: %{counter: 5}}
+        {nil, "widget"} => %{module: StateWidget, state: %{counter: 5}}
       }
 
       {event, registry} =
         CanvasWidgets.dispatch_event(registry, click_event("elem", ["widget"]))
 
       assert event == nil
-      assert registry["widget"].state.counter == 6
+      assert registry[{nil, "widget"}].state.counter == 6
     end
   end
 
@@ -212,8 +212,8 @@ defmodule Plushie.CanvasWidgetDispatchTest do
     test ":ignored bubbles to parent" do
       # Child ignores, parent consumes
       registry = %{
-        "parent/child" => %{module: IgnoredWidget, state: %{}},
-        "parent" => %{module: ConsumedWidget, state: %{}}
+        {nil, "parent/child"} => %{module: IgnoredWidget, state: %{}},
+        {nil, "parent"} => %{module: ConsumedWidget, state: %{}}
       }
 
       {event, _registry} =
@@ -226,8 +226,8 @@ defmodule Plushie.CanvasWidgetDispatchTest do
     test ":emit from child reaches parent" do
       # Child emits, parent sees the emitted event
       registry = %{
-        "parent/child" => %{module: EmitWidget, state: %{}},
-        "parent" => %{module: ConsumedWidget, state: %{}}
+        {nil, "parent/child"} => %{module: EmitWidget, state: %{}},
+        {nil, "parent"} => %{module: ConsumedWidget, state: %{}}
       }
 
       {event, _registry} =
@@ -240,8 +240,8 @@ defmodule Plushie.CanvasWidgetDispatchTest do
     test ":emit from child passes through :ignored parent to app" do
       # Child emits, parent ignores the emitted event
       registry = %{
-        "parent/child" => %{module: EmitWidget, state: %{}},
-        "parent" => %{module: IgnoredWidget, state: %{}}
+        {nil, "parent/child"} => %{module: EmitWidget, state: %{}},
+        {nil, "parent"} => %{module: IgnoredWidget, state: %{}}
       }
 
       {event, _registry} =
@@ -254,7 +254,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
     test "non-widget scope elements are skipped" do
       # "container" is not a canvas_widget, only "parent" is
       registry = %{
-        "parent" => %{module: ConsumedWidget, state: %{}}
+        {nil, "parent"} => %{module: ConsumedWidget, state: %{}}
       }
 
       {event, _registry} =
@@ -292,10 +292,10 @@ defmodule Plushie.CanvasWidgetDispatchTest do
       }
 
       registry = CanvasWidgets.derive_registry(tree)
-      assert Map.has_key?(registry, "picker")
-      assert registry["picker"].module == EmitWidget
-      assert registry["picker"].state.counter == 3
-      assert registry["picker"].props.color == "red"
+      assert Map.has_key?(registry, {"root", "picker"})
+      assert registry[{"root", "picker"}].module == EmitWidget
+      assert registry[{"root", "picker"}].state.counter == 3
+      assert registry[{"root", "picker"}].props.color == "red"
     end
 
     test "returns empty map for nil tree" do
@@ -313,7 +313,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
   describe "direct-target dispatch (canvas press/move/release)" do
     test "canvas event with empty scope targets widget by full ID" do
       registry = %{
-        "picker" => %{module: ConsumedWidget, state: %{}}
+        {nil, "picker"} => %{module: ConsumedWidget, state: %{}}
       }
 
       # Canvas press: id = "picker", scope = []
@@ -325,7 +325,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
 
     test "canvas event with scope reconstructs full scoped ID" do
       registry = %{
-        "form/picker" => %{module: ConsumedWidget, state: %{}}
+        {nil, "form/picker"} => %{module: ConsumedWidget, state: %{}}
       }
 
       # Canvas press on "form/picker": id = "picker", scope = ["form"]
@@ -339,8 +339,8 @@ defmodule Plushie.CanvasWidgetDispatchTest do
       # Root-level "submit" and scoped "form/submit" both exist.
       # A canvas event for "form/submit" must not match root "submit".
       registry = %{
-        "submit" => %{module: EmitWidget, state: %{}},
-        "form/submit" => %{module: ConsumedWidget, state: %{}}
+        {nil, "submit"} => %{module: EmitWidget, state: %{}},
+        {nil, "form/submit"} => %{module: ConsumedWidget, state: %{}}
       }
 
       # Event for "form/submit": id = "submit", scope = ["form"]
@@ -353,7 +353,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
 
     test "falls through when no widget matches the full path" do
       registry = %{
-        "other" => %{module: ConsumedWidget, state: %{}}
+        {nil, "other"} => %{module: ConsumedWidget, state: %{}}
       }
 
       event = canvas_event("picker", [])
@@ -361,6 +361,46 @@ defmodule Plushie.CanvasWidgetDispatchTest do
 
       # No match → event passes through unchanged
       assert result == event
+    end
+
+    test "direct canvas event targets the child widget before the parent" do
+      registry = %{
+        {nil, "parent/child"} => %{module: ConsumedWidget, state: %{}},
+        {nil, "parent"} => %{module: IgnoredWidget, state: %{}}
+      }
+
+      {event, _registry} =
+        CanvasWidgets.dispatch_event(registry, canvas_event("child", ["parent"]))
+
+      assert event == nil
+    end
+
+    test "direct canvas emit keeps the widget id and parent scope" do
+      registry = %{
+        {nil, "form/picker"} => %{module: EmitWidget, state: %{}}
+      }
+
+      {event, _registry} =
+        CanvasWidgets.dispatch_event(registry, canvas_event("picker", ["form"]))
+
+      assert event.type == {:emit_widget, :activated}
+      assert event.id == "picker"
+      assert event.scope == ["form"]
+      assert event.window_id == nil
+    end
+
+    test "windowed direct canvas event stays in its own window" do
+      registry = %{
+        {"main", "picker"} => %{module: EmitWidget, state: %{}},
+        {"other", "picker"} => %{module: ConsumedWidget, state: %{}}
+      }
+
+      {event, _registry} =
+        CanvasWidgets.dispatch_event(registry, canvas_event("picker", [], "main"))
+
+      assert event.type == {:emit_widget, :activated}
+      assert event.id == "picker"
+      assert event.window_id == "main"
     end
   end
 
@@ -392,7 +432,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
   describe "error handling in dispatch chain" do
     test "raising widget is treated as :ignored and chain continues" do
       registry = %{
-        "widget" => %{module: RaisingWidget, state: %{}}
+        {nil, "widget"} => %{module: RaisingWidget, state: %{}}
       }
 
       log =
@@ -410,8 +450,8 @@ defmodule Plushie.CanvasWidgetDispatchTest do
 
     test "raising child is :ignored, parent still captures" do
       registry = %{
-        "parent/child" => %{module: RaisingWidget, state: %{}},
-        "parent" => %{module: ConsumedWidget, state: %{}}
+        {nil, "parent/child"} => %{module: RaisingWidget, state: %{}},
+        {nil, "parent"} => %{module: ConsumedWidget, state: %{}}
       }
 
       log =
@@ -433,7 +473,15 @@ defmodule Plushie.CanvasWidgetDispatchTest do
     %Plushie.Event.WidgetEvent{type: :click, id: id, scope: scope}
   end
 
-  defp canvas_event(id, scope) do
-    %Plushie.Event.Canvas{type: :press, id: id, scope: scope, x: 100.0, y: 100.0, button: "left"}
+  defp canvas_event(id, scope, window_id \\ nil) do
+    %Plushie.Event.Canvas{
+      type: :press,
+      id: id,
+      scope: scope,
+      window_id: window_id,
+      x: 100.0,
+      y: 100.0,
+      button: "left"
+    }
   end
 end

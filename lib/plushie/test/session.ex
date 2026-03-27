@@ -11,6 +11,14 @@ defmodule Plushie.Test.Session do
   alias Plushie.Test.Screenshot
   alias Plushie.Test.TreeHash
 
+  @typedoc """
+  Test selector.
+
+  String selectors follow these rules:
+  - `"#save"` matches a unique local widget ID
+  - `"#form/save"` matches an exact scoped ID
+  - bare strings like `"Save"` match visible text
+  """
   @type selector :: String.t() | {:role, String.t()} | {:label, String.t()} | :focused
 
   @type t :: %__MODULE__{pid: pid()}

@@ -22,9 +22,11 @@ defmodule Plushie.RuntimeRerenderTest do
     def view(model) do
       import Plushie.UI
 
-      column do
-        text("count:#{model.count}")
-        button("inc", "+")
+      window "main" do
+        column do
+          text("count:#{model.count}")
+          button("inc", "+")
+        end
       end
     end
   end
@@ -46,8 +48,10 @@ defmodule Plushie.RuntimeRerenderTest do
     def view(_model) do
       import Plushie.UI
 
-      column do
-        text("all good")
+      window "main" do
+        column do
+          text("all good")
+        end
       end
     end
   end

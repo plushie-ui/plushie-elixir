@@ -371,7 +371,7 @@ defmodule Plushie.Test.Backend.Runtime do
   defp find_in_tree(nil, _selector), do: nil
 
   defp find_in_tree(tree, "#" <> id) do
-    case Plushie.Tree.find(tree, id) do
+    case find_selector_node(tree, id) do
       nil -> nil
       node -> Element.from_node(node)
     end
@@ -417,7 +417,7 @@ defmodule Plushie.Test.Backend.Runtime do
   defp find_node_in_tree(nil, _selector), do: nil
 
   defp find_node_in_tree(tree, "#" <> id) do
-    Plushie.Tree.find(tree, id)
+    find_selector_node(tree, id)
   end
 
   defp find_node_in_tree(_tree, _selector), do: nil
@@ -429,7 +429,7 @@ defmodule Plushie.Test.Backend.Runtime do
       if String.contains?(id, "/") do
         id
       else
-        case Plushie.Tree.find(tree, id) do
+        case Plushie.Tree.find_local(tree, id) do
           %{id: scoped_id} -> scoped_id
           _ -> id
         end
@@ -446,6 +446,14 @@ defmodule Plushie.Test.Backend.Runtime do
 
   defp encode_selector(:focused, _tree), do: %{"by" => "focused"}
   defp encode_selector(text, _tree) when is_binary(text), do: %{"by" => "text", "value" => text}
+
+  defp find_selector_node(tree, id) do
+    if String.contains?(id, "/") do
+      Plushie.Tree.find(tree, id)
+    else
+      Plushie.Tree.find_local(tree, id)
+    end
+  end
 
   defp maybe_put_dimension(map, opts, key) do
     case Keyword.get(opts, key) do

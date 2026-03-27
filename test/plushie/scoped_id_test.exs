@@ -188,21 +188,28 @@ defmodule Plushie.ScopedIdTest do
 
   describe "Protocol.Decode scoped ID splitting" do
     test "simple ID has empty scope" do
-      json = Jason.encode!(%{type: "event", family: "click", id: "save"})
+      json = Jason.encode!(%{type: "event", family: "click", id: "save", window_id: "main"})
       event = Plushie.Protocol.Decode.decode_message(json, :json)
       assert event.id == "save"
       assert event.scope == []
     end
 
     test "scoped ID is split into local id and reversed scope" do
-      json = Jason.encode!(%{type: "event", family: "click", id: "sidebar/form/save"})
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "click",
+          id: "sidebar/form/save",
+          window_id: "main"
+        })
+
       event = Plushie.Protocol.Decode.decode_message(json, :json)
       assert event.id == "save"
       assert event.scope == ["form", "sidebar"]
     end
 
     test "single scope level" do
-      json = Jason.encode!(%{type: "event", family: "click", id: "panel/save"})
+      json = Jason.encode!(%{type: "event", family: "click", id: "panel/save", window_id: "main"})
       event = Plushie.Protocol.Decode.decode_message(json, :json)
       assert event.id == "save"
       assert event.scope == ["panel"]
@@ -529,7 +536,7 @@ defmodule Plushie.ScopedIdTest do
       assert result.type == "button"
     end
 
-    test "find by local ID falls back when no exact match" do
+    test "find by local ID does not guess" do
       tree =
         Tree.normalize(%{
           id: "panel",
@@ -540,9 +547,7 @@ defmodule Plushie.ScopedIdTest do
           ]
         })
 
-      result = Tree.find(tree, "save")
-      assert result != nil
-      assert result.id == "panel/save"
+      assert Tree.find(tree, "save") == nil
     end
 
     test "exact match takes priority over local ID match" do

@@ -84,7 +84,7 @@ defmodule Plushie.Tree do
       id: "root",
       type: "container",
       props: %{},
-      children: Enum.map(nodes, &normalize_with_scope(&1, ""))
+      children: Enum.map(nodes, &normalize_with_scope(&1, "", nil))
     }
   end
 
@@ -113,24 +113,24 @@ defmodule Plushie.Tree do
   end
 
   def normalize(%{} = node) do
-    normalize_with_scope(node, "")
+    normalize_with_scope(node, "", nil)
   end
 
   # Private scope-aware normalize. `scope` is the prefix string to prepend
   # to children's IDs (e.g. "sidebar/form"). Empty string means no scope.
-  defp normalize_with_scope({:__widget_prop__, key, _value}, _scope) do
+  defp normalize_with_scope({:__widget_prop__, key, _value}, _scope, _window_id) do
     raise ArgumentError,
           "found a DSL prop declaration (#{inspect(key)}) in the widget tree. " <>
             "Props should be declared inside a container's do-block, not passed as children."
   end
 
-  defp normalize_with_scope({:__canvas_meta__, type, _value}, _scope) do
+  defp normalize_with_scope({:__canvas_meta__, type, _value}, _scope, _window_id) do
     raise ArgumentError,
           "found a canvas metadata declaration (#{inspect(type)}) in the widget tree. " <>
             "Canvas metadata (like interactive) should be inside a group block."
   end
 
-  defp normalize_with_scope(%module{}, _scope) when module in @canvas_shape_structs do
+  defp normalize_with_scope(%module{}, _scope, _window_id) when module in @canvas_shape_structs do
     short_name = module |> Module.split() |> List.last()
 
     raise ArgumentError,
@@ -138,11 +138,11 @@ defmodule Plushie.Tree do
             "Canvas shapes belong inside canvas layers, not in the widget tree."
   end
 
-  defp normalize_with_scope(%module{} = widget, scope) when is_atom(module) do
-    normalize_with_scope(Plushie.Widget.to_node(widget), scope)
+  defp normalize_with_scope(%module{} = widget, scope, window_id) when is_atom(module) do
+    normalize_with_scope(Plushie.Widget.to_node(widget), scope, window_id)
   end
 
-  defp normalize_with_scope(%{} = node, scope) do
+  defp normalize_with_scope(%{} = node, scope, window_id) do
     raw_id = fetch_field(node, :id, "id") || "unknown_#{:erlang.unique_integer([:positive])}"
     type = fetch_field(node, :type, "type") || "container"
     props = fetch_field(node, :props, "props") || %{}
@@ -175,6 +175,8 @@ defmodule Plushie.Tree do
         scoped_id
       end
 
+    child_window_id = if type_str == "window", do: scoped_id, else: window_id
+
     atom_props =
       props
       |> atomize_keys()
@@ -189,7 +191,7 @@ defmodule Plushie.Tree do
     # does NOT have __canvas_widget__ in its props, so normalization of
     # the output won't re-trigger rendering (no recursion possible).
     # Widget metadata is attached to the final node's :meta directly.
-    case render_canvas_widget(meta, id, scoped_id, scope) do
+    case render_canvas_widget(meta, id, scoped_id, scope, window_id) do
       {:rendered, final_node} ->
         final_node
 
@@ -200,7 +202,7 @@ defmodule Plushie.Tree do
           id: scoped_id,
           type: type_str,
           props: normalized_props,
-          children: normalize_children_with_scope(children, child_scope)
+          children: normalize_children_with_scope(children, child_scope, child_window_id)
         }
 
         if meta == %{}, do: node, else: Map.put(node, :meta, meta)
@@ -216,20 +218,20 @@ defmodule Plushie.Tree do
   # recursion is possible. After normalization, canvas_widget metadata
   # (module, state, props) is attached to :meta for registry derivation
   # and event interception.
-  @spec render_canvas_widget(map(), String.t(), String.t(), String.t()) ::
+  @spec render_canvas_widget(map(), String.t(), String.t(), String.t(), String.t() | nil) ::
           {:rendered, map()} | :not_a_canvas_widget
-  defp render_canvas_widget(meta, local_id, scoped_id, scope) do
+  defp render_canvas_widget(meta, local_id, scoped_id, scope, window_id) do
     case Map.get(meta, :__canvas_widget__) do
       module when is_atom(module) and not is_nil(module) ->
         widget_props = Map.get(meta, :__canvas_widget_props__, %{})
-        widget_state = lookup_canvas_widget_state(scoped_id, module)
+        widget_state = lookup_canvas_widget_state(scoped_id, window_id, module)
 
         # Render with local ID -- normalization applies scoping.
         rendered = module.render(local_id, widget_props, widget_state)
 
         # Normalize the raw canvas output. It has no __canvas_widget__
         # tags, so this is a plain normalization pass with no recursion.
-        normalized = normalize_with_scope(rendered, scope)
+        normalized = normalize_with_scope(rendered, scope, window_id)
 
         # Attach canvas_widget metadata to the final node's :meta.
         # This is the ONLY place these keys appear in meta on the
@@ -254,11 +256,11 @@ defmodule Plushie.Tree do
   # Look up stored canvas_widget state from the process dictionary
   # (set by the runtime's safe_view). Falls back to initial state
   # for new widgets or when called outside a runtime context.
-  @spec lookup_canvas_widget_state(String.t(), module()) :: map()
-  defp lookup_canvas_widget_state(scoped_id, module) do
+  @spec lookup_canvas_widget_state(String.t(), String.t() | nil, module()) :: map()
+  defp lookup_canvas_widget_state(scoped_id, window_id, module) do
     case Process.get(Plushie.Extension.CanvasWidget.widget_states_key()) do
       registry when is_map(registry) ->
-        case Map.get(registry, scoped_id) do
+        case Map.get(registry, {window_id, scoped_id}) do
           %{state: state} -> state
           nil -> module.__initial_state__()
         end
@@ -311,20 +313,102 @@ defmodule Plushie.Tree do
   defp auto_id?(id), do: String.starts_with?(id, "auto:")
 
   @doc """
-  Finds the first node in a tree whose `:id` matches the given `id`.
+  Finds the node in a tree whose `:id` exactly matches the given scoped ID.
 
-  Matches against the full scoped ID first. If no match is found and
-  the target does not contain "/", falls back to matching the local
-  segment (the part after the last "/") of each node's scoped ID.
-
-  Returns the node map, or `nil` if not found. Searches depth-first.
+  This does exact matching only. It does not fall back to local-ID
+  guessing. If the same ID appears in multiple windows, this raises and
+  you must use `find/3` with a window ID.
   """
   @spec find(tree :: tree_node(), id :: String.t()) :: tree_node() | nil
   def find(tree, target_id) do
-    find_exact(tree, target_id) ||
-      if not String.contains?(target_id, "/") do
-        find_by_local(tree, target_id)
-      end
+    case find_all_exact(tree, target_id, []) do
+      [] ->
+        nil
+
+      [node] ->
+        node
+
+      _ ->
+        raise ArgumentError,
+              "tree contains multiple nodes with id #{inspect(target_id)}; use find/3 with a window id"
+    end
+  end
+
+  @doc """
+  Finds a node by exact scoped ID within a specific window.
+
+  Searches only inside the window whose `id` matches `window_id`.
+  Returns the node map, or `nil` if not found.
+  """
+  @spec find(tree :: tree_node(), id :: String.t(), window_id :: String.t()) :: tree_node() | nil
+  def find(tree, target_id, window_id) do
+    tree
+    |> find_window(window_id)
+    |> case do
+      nil -> nil
+      window -> find_exact(window, target_id)
+    end
+  end
+
+  @doc """
+  Finds a node by local ID.
+
+  This matches the last segment of each node ID. It is for callers that
+  intentionally want local widget IDs instead of full scoped paths.
+
+  Raises if more than one node has the same local ID.
+  """
+  @spec find_local(tree :: tree_node(), id :: String.t()) :: tree_node() | nil
+  def find_local(tree, local_id) do
+    case find_all_local(tree, local_id, []) do
+      [] ->
+        nil
+
+      [node] ->
+        node
+
+      _ ->
+        raise ArgumentError,
+              "tree contains multiple nodes with local id #{inspect(local_id)}; use a scoped id or window-aware lookup"
+    end
+  end
+
+  @doc """
+  Finds a node by local ID within a specific window.
+
+  Searches only inside the window whose `id` matches `window_id`.
+  Raises if more than one node in that window has the same local ID.
+  """
+  @spec find_local(tree :: tree_node(), id :: String.t(), window_id :: String.t()) ::
+          tree_node() | nil
+  def find_local(tree, local_id, window_id) do
+    tree
+    |> find_window(window_id)
+    |> case do
+      nil -> nil
+      window -> find_local(window, local_id)
+    end
+  end
+
+  @doc """
+  Returns the window ID that owns an exact scoped target ID.
+
+  Returns `nil` when the target is not inside any window. Raises if the
+  same target appears in more than one window.
+  """
+  @spec window_id_for(tree :: tree_node(), id :: String.t()) :: String.t() | nil
+  def window_id_for(tree, target_id) do
+    case collect_window_ids(tree, target_id, nil, []) |> Enum.uniq() do
+      [] ->
+        nil
+
+      [window_id] ->
+        window_id
+
+      _ ->
+        raise ArgumentError,
+              "tree contains multiple nodes with id #{inspect(target_id)} in different windows"
+    end
   end
 
   defp find_exact(%{id: id} = node, id), do: node
@@ -341,28 +425,134 @@ defmodule Plushie.Tree do
 
   defp find_exact(_node, _target_id), do: nil
 
-  defp find_by_local(%{id: node_id} = node, target_id) do
-    local = node_id |> String.split("/") |> List.last()
-
-    if local == target_id do
-      node
-    else
+  defp find_all_exact(%{id: id} = node, target_id, acc) when id == target_id do
+    acc =
       case node do
         %{children: children} when is_list(children) ->
-          Enum.find_value(children, &find_by_local(&1, target_id))
+          Enum.reduce(children, [node | acc], &find_all_exact(&1, target_id, &2))
 
         _ ->
-          nil
+          [node | acc]
       end
+
+    acc
+  end
+
+  defp find_all_exact(%{children: children}, target_id, acc) when is_list(children) do
+    Enum.reduce(children, acc, &find_all_exact(&1, target_id, &2))
+  end
+
+  defp find_all_exact(%{"id" => id} = node, target_id, acc) when id == target_id do
+    acc =
+      case node do
+        %{"children" => children} when is_list(children) ->
+          Enum.reduce(children, [node | acc], &find_all_exact(&1, target_id, &2))
+
+        _ ->
+          [node | acc]
+      end
+
+    acc
+  end
+
+  defp find_all_exact(%{"children" => children}, target_id, acc) when is_list(children) do
+    Enum.reduce(children, acc, &find_all_exact(&1, target_id, &2))
+  end
+
+  defp find_all_exact(_node, _target_id, acc), do: acc
+
+  defp find_all_local(%{id: id} = node, local_id, acc) do
+    acc = if local_id(id) == local_id, do: [node | acc], else: acc
+
+    case node do
+      %{children: children} when is_list(children) ->
+        Enum.reduce(children, acc, &find_all_local(&1, local_id, &2))
+
+      _ ->
+        acc
     end
   end
 
-  defp find_by_local(_, _), do: nil
+  defp find_all_local(%{"id" => id} = node, local_id, acc) do
+    acc = if local_id(id) == local_id, do: [node | acc], else: acc
+
+    case node do
+      %{"children" => children} when is_list(children) ->
+        Enum.reduce(children, acc, &find_all_local(&1, local_id, &2))
+
+      _ ->
+        acc
+    end
+  end
+
+  defp find_all_local(%{children: children}, local_id, acc) when is_list(children) do
+    Enum.reduce(children, acc, &find_all_local(&1, local_id, &2))
+  end
+
+  defp find_all_local(%{"children" => children}, local_id, acc) when is_list(children) do
+    Enum.reduce(children, acc, &find_all_local(&1, local_id, &2))
+  end
+
+  defp find_all_local(_node, _local_id, acc), do: acc
+
+  defp local_id(id) when is_binary(id) do
+    case String.split(id, "/") do
+      [] -> id
+      parts -> List.last(parts)
+    end
+  end
+
+  defp find_window(%{type: "window", id: id} = node, id), do: node
+
+  defp find_window(%{children: children}, window_id) when is_list(children) do
+    Enum.find_value(children, &find_window(&1, window_id))
+  end
+
+  defp find_window(_, _window_id), do: nil
+
+  defp collect_window_ids(%{type: "window", id: id, children: children}, target_id, _current, acc) do
+    acc = if id == target_id, do: [id | acc], else: acc
+    Enum.reduce(children, acc, &collect_window_ids(&1, target_id, id, &2))
+  end
+
+  defp collect_window_ids(%{id: id, children: children}, target_id, current_window, acc) do
+    acc = if id == target_id and current_window, do: [current_window | acc], else: acc
+
+    Enum.reduce(children, acc, &collect_window_ids(&1, target_id, current_window, &2))
+  end
+
+  defp collect_window_ids(%{children: children}, target_id, current_window, acc)
+       when is_list(children) do
+    Enum.reduce(children, acc, &collect_window_ids(&1, target_id, current_window, &2))
+  end
+
+  defp collect_window_ids(
+         %{"type" => "window", "id" => id, "children" => children},
+         target_id,
+         _current,
+         acc
+       ) do
+    acc = if id == target_id, do: [id | acc], else: acc
+    Enum.reduce(children, acc, &collect_window_ids(&1, target_id, id, &2))
+  end
+
+  defp collect_window_ids(%{"id" => id, "children" => children}, target_id, current_window, acc) do
+    acc = if id == target_id and current_window, do: [current_window | acc], else: acc
+
+    Enum.reduce(children, acc, &collect_window_ids(&1, target_id, current_window, &2))
+  end
+
+  defp collect_window_ids(%{"children" => children}, target_id, current_window, acc)
+       when is_list(children) do
+    Enum.reduce(children, acc, &collect_window_ids(&1, target_id, current_window, &2))
+  end
+
+  defp collect_window_ids(_node, _target_id, _current_window, acc), do: acc
 
   @doc """
   Returns true if a node with the given `id` exists in the tree.
 
-  Supports both full scoped IDs and local IDs (see `find/2`).
+  Checks exact scoped IDs only.
   """
   @spec exists?(tree :: map() | nil, id :: String.t()) :: boolean()
   def exists?(nil, _id), do: false
@@ -599,13 +789,13 @@ defmodule Plushie.Tree do
 
   # Private
 
-  defp normalize_children_with_scope(children, scope) when is_list(children) do
-    normalized = Enum.map(children, &normalize_with_scope(&1, scope))
+  defp normalize_children_with_scope(children, scope, window_id) when is_list(children) do
+    normalized = Enum.map(children, &normalize_with_scope(&1, scope, window_id))
     check_duplicate_ids(normalized)
     normalized
   end
 
-  defp normalize_children_with_scope(_, _scope), do: []
+  defp normalize_children_with_scope(_, _scope, _window_id), do: []
 
   defp check_duplicate_ids(children) do
     ids = Enum.map(children, & &1.id)

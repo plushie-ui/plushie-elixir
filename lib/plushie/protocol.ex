@@ -34,7 +34,7 @@ defmodule Plushie.Protocol do
   test harness.
   """
   @type decoded_message ::
-          Plushie.Event.t()
+          Plushie.Event.delivered_t()
           | {:hello,
              %{
                protocol: pos_integer(),
@@ -309,8 +309,8 @@ defmodule Plushie.Protocol do
 
   ## Examples
 
-      iex> Plushie.Protocol.decode_message(~s({"type":"event","family":"click","id":"btn_save"}), :json)
-      %Plushie.Event.WidgetEvent{type: :click, id: "btn_save", value: nil, data: nil}
+      iex> Plushie.Protocol.decode_message(~s({"type":"event","family":"click","id":"btn_save","window_id":"main"}), :json)
+      %Plushie.Event.WidgetEvent{type: :click, id: "btn_save", window_id: "main", value: nil, data: nil}
 
       iex> match?({:error, {:decode_failed, _}}, Plushie.Protocol.decode_message("not json"))
       true

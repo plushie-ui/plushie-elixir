@@ -33,18 +33,25 @@ defmodule Plushie.Test.CrossBackendTest do
 
     def view(model) do
       %{
-        id: "root",
-        type: "column",
+        id: "main",
+        type: "window",
         props: %{},
         children: [
           %{
-            id: "label",
-            type: "text",
-            props: %{content: "Count: #{model.count}"},
-            children: []
-          },
-          %{id: "inc", type: "button", props: %{label: "+"}, children: []},
-          %{id: "dec", type: "button", props: %{label: "-"}, children: []}
+            id: "root",
+            type: "column",
+            props: %{},
+            children: [
+              %{
+                id: "label",
+                type: "text",
+                props: %{content: "Count: #{model.count}"},
+                children: []
+              },
+              %{id: "inc", type: "button", props: %{label: "+"}, children: []},
+              %{id: "dec", type: "button", props: %{label: "-"}, children: []}
+            ]
+          }
         ]
       }
     end
@@ -75,18 +82,25 @@ defmodule Plushie.Test.CrossBackendTest do
         end)
 
       %{
-        id: "root",
-        type: "column",
+        id: "main",
+        type: "window",
         props: %{},
-        children:
-          [
-            %{
-              id: "task",
-              type: "text_input",
-              props: %{placeholder: "Add task", value: model.input},
-              children: []
-            }
-          ] ++ item_nodes
+        children: [
+          %{
+            id: "root",
+            type: "column",
+            props: %{},
+            children:
+              [
+                %{
+                  id: "task",
+                  type: "text_input",
+                  props: %{placeholder: "Add task", value: model.input},
+                  children: []
+                }
+              ] ++ item_nodes
+          }
+        ]
       }
     end
   end

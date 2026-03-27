@@ -54,40 +54,47 @@ defmodule Plushie.Test.InteractionRoundtripTest do
 
     def view(model) do
       %{
-        id: "auto:TrackingApp:root",
-        type: "column",
+        id: "main",
+        type: "window",
         props: %{},
         children: [
-          %{id: "submit_btn", type: "button", props: %{label: "Submit"}, children: []},
           %{
-            id: "name_input",
-            type: "text_input",
-            props: %{value: model.text_value, on_submit: true},
-            children: []
-          },
-          %{
-            id: "agree_check",
-            type: "checkbox",
-            props: %{label: "Agree", checked: model.checkbox_state},
-            children: []
-          },
-          %{
-            id: "dark_mode",
-            type: "toggler",
-            props: %{label: "Dark mode", is_toggled: model.toggler_state},
-            children: []
-          },
-          %{
-            id: "volume",
-            type: "slider",
-            props: %{value: model.slider_value, range: [0, 100]},
-            children: []
-          },
-          %{
-            id: "language",
-            type: "pick_list",
-            props: %{options: ["Elixir", "Erlang", "Gleam"], selected: model.selected},
-            children: []
+            id: "auto:TrackingApp:root",
+            type: "column",
+            props: %{},
+            children: [
+              %{id: "submit_btn", type: "button", props: %{label: "Submit"}, children: []},
+              %{
+                id: "name_input",
+                type: "text_input",
+                props: %{value: model.text_value, on_submit: true},
+                children: []
+              },
+              %{
+                id: "agree_check",
+                type: "checkbox",
+                props: %{label: "Agree", checked: model.checkbox_state},
+                children: []
+              },
+              %{
+                id: "dark_mode",
+                type: "toggler",
+                props: %{label: "Dark mode", is_toggled: model.toggler_state},
+                children: []
+              },
+              %{
+                id: "volume",
+                type: "slider",
+                props: %{value: model.slider_value, range: [0, 100]},
+                children: []
+              },
+              %{
+                id: "language",
+                type: "pick_list",
+                props: %{options: ["Elixir", "Erlang", "Gleam"], selected: model.selected},
+                children: []
+              }
+            ]
           }
         ]
       }
@@ -109,7 +116,12 @@ defmodule Plushie.Test.InteractionRoundtripTest do
   describe "click button" do
     test "dispatches %WidgetEvent{type: :click, id: id}", %{pid: pid} do
       Runtime.click(pid, "#submit_btn")
-      assert Runtime.model(pid).last_event == %WidgetEvent{type: :click, id: "submit_btn"}
+
+      assert Runtime.model(pid).last_event == %WidgetEvent{
+               type: :click,
+               id: "submit_btn",
+               window_id: "main"
+             }
     end
   end
 
@@ -122,7 +134,8 @@ defmodule Plushie.Test.InteractionRoundtripTest do
       assert Runtime.model(pid).last_event == %WidgetEvent{
                type: :input,
                id: "name_input",
-               value: "Arthur"
+               value: "Arthur",
+               window_id: "main"
              }
     end
 
@@ -182,7 +195,13 @@ defmodule Plushie.Test.InteractionRoundtripTest do
   describe "slide slider" do
     test "dispatches {:slide, id, value}", %{pid: pid} do
       Runtime.slide(pid, "#volume", 80)
-      assert Runtime.model(pid).last_event == %WidgetEvent{type: :slide, id: "volume", value: 80}
+
+      assert Runtime.model(pid).last_event == %WidgetEvent{
+               type: :slide,
+               id: "volume",
+               value: 80.0,
+               window_id: "main"
+             }
     end
 
     test "model field updated with slid value", %{pid: pid} do
@@ -206,7 +225,8 @@ defmodule Plushie.Test.InteractionRoundtripTest do
       assert Runtime.model(pid).last_event == %WidgetEvent{
                type: :submit,
                id: "name_input",
-               value: "Arthur"
+               value: "Arthur",
+               window_id: "main"
              }
     end
 
@@ -216,7 +236,8 @@ defmodule Plushie.Test.InteractionRoundtripTest do
       assert Runtime.model(pid).last_event == %WidgetEvent{
                type: :submit,
                id: "name_input",
-               value: ""
+               value: "",
+               window_id: "main"
              }
     end
   end
@@ -230,7 +251,8 @@ defmodule Plushie.Test.InteractionRoundtripTest do
       assert Runtime.model(pid).last_event == %WidgetEvent{
                type: :select,
                id: "language",
-               value: "Elixir"
+               value: "Elixir",
+               window_id: "main"
              }
     end
 

@@ -78,29 +78,32 @@ defmodule Plushie.Extension.CanvasWidget do
           module :: module(),
           event :: struct(),
           state :: map(),
-          widget_id :: String.t()
+          widget_id :: String.t(),
+          window_id :: String.t() | nil
         ) :: {{:emit, struct()} | :consumed | :ignored, map()}
-  def invoke_handler(module, event, state, widget_id \\ "") do
+  def invoke_handler(module, event, state, widget_id \\ "", window_id \\ nil) do
     case module.handle_event(event, state) do
       {:emit, family, data} ->
-        {id, scope} = resolve_emit_identity(event, widget_id)
+        {id, scope, emit_window_id} = resolve_emit_identity(event, widget_id, window_id)
 
         widget_event = %Plushie.Event.WidgetEvent{
           type: normalize_emit_family(module, family),
           id: id,
           scope: scope,
+          window_id: emit_window_id,
           data: normalize_emit_data(data)
         }
 
         {{:emit, widget_event}, state}
 
       {:emit, family, data, new_state} when is_map(new_state) ->
-        {id, scope} = resolve_emit_identity(event, widget_id)
+        {id, scope, emit_window_id} = resolve_emit_identity(event, widget_id, window_id)
 
         widget_event = %Plushie.Event.WidgetEvent{
           type: normalize_emit_family(module, family),
           id: id,
           scope: scope,
+          window_id: emit_window_id,
           data: normalize_emit_data(data)
         }
 
@@ -122,21 +125,41 @@ defmodule Plushie.Extension.CanvasWidget do
   # element and the remaining scope becomes the parent scope. For
   # non-widget events (Timer, etc.) that lack scope, fall back to
   # splitting the explicit widget_id.
-  @spec resolve_emit_identity(struct() | map(), String.t()) :: {String.t(), [String.t()]}
-  defp resolve_emit_identity(%{scope: [canvas_id | parent_scope]}, _widget_id) do
-    {canvas_id, parent_scope}
+  @spec resolve_emit_identity(struct() | map(), String.t(), String.t() | nil) ::
+          {String.t(), [String.t()], String.t() | nil}
+  defp resolve_emit_identity(
+         %Plushie.Event.Canvas{id: id, scope: scope, window_id: window_id},
+         _widget_id,
+         _fallback_window_id
+       ) do
+    {id, scope, window_id}
   end
 
-  defp resolve_emit_identity(%{scope: [], id: id}, _widget_id) do
-    {id, []}
+  defp resolve_emit_identity(
+         %{scope: [canvas_id | parent_scope], window_id: window_id},
+         _widget_id,
+         _fallback_window_id
+       ) do
+    {canvas_id, parent_scope, window_id}
   end
 
-  defp resolve_emit_identity(_event, widget_id) do
+  defp resolve_emit_identity(
+         %{scope: [], id: id, window_id: window_id},
+         _widget_id,
+         _fallback_window_id
+       ) do
+    {id, [], window_id}
+  end
+
+  defp resolve_emit_identity(_event, widget_id, fallback_window_id) do
     # Timer or other non-widget event -- use the registered widget ID.
     # Split scoped ID: "form/stars" -> {id: "stars", scope: ["form"]}
     case String.split(widget_id, "/") do
-      [single] -> {single, []}
-      parts -> {List.last(parts), parts |> List.delete_at(-1) |> Enum.reverse()}
+      [single] ->
+        {single, [], fallback_window_id}
+
+      parts ->
+        {List.last(parts), parts |> List.delete_at(-1) |> Enum.reverse(), fallback_window_id}
     end
   end
 

@@ -304,8 +304,8 @@ it disappears, the window closes.
 
 ### Returning multiple windows
 
-`view/1` returns a list of window nodes (or a single window node for
-single-window apps):
+`view/1` returns explicit window nodes. Return a single window node for a
+single-window app, or a list of window nodes for multiple windows:
 
 ```elixir
 def view(model) do
@@ -328,8 +328,9 @@ def view(model) do
 end
 ```
 
-Single-window apps can return a single window node directly (no list
-needed). The runtime normalizes both forms internally.
+Single-window apps return a single window node directly. Multi-window apps
+return a list of window nodes. Returning arbitrary top-level widgets is not
+supported.
 
 ### Window identity
 

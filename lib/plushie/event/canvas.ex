@@ -9,6 +9,9 @@ defmodule Plushie.Event.Canvas do
   (nearest parent first). Use `Plushie.Event.target/1` to reconstruct the
   full forward-order scoped path.
 
+  The `window_id` field identifies which window produced the event. Runtime-
+  delivered canvas events always include it.
+
   ## Fields
 
     * `type` - `:press`, `:release`, `:move`, or `:scroll`
@@ -33,9 +36,29 @@ defmodule Plushie.Event.Canvas do
       end
   """
 
+  @typedoc """
+  Canvas event struct.
+
+  Hand-built test events may leave `window_id` unset. Events decoded from the
+  renderer always include it.
+  """
   @type t :: %__MODULE__{
           type: :press | :release | :move | :scroll,
           id: String.t(),
+          window_id: String.t() | nil,
+          scope: [String.t()],
+          x: number(),
+          y: number(),
+          button: String.t() | nil,
+          delta_x: number() | nil,
+          delta_y: number() | nil
+        }
+
+  @typedoc "Canvas event delivered by the renderer."
+  @type delivered_t :: %__MODULE__{
+          type: :press | :release | :move | :scroll,
+          id: String.t(),
+          window_id: String.t(),
           scope: [String.t()],
           x: number(),
           y: number(),
@@ -45,12 +68,16 @@ defmodule Plushie.Event.Canvas do
         }
 
   @enforce_keys [:type, :id, :x, :y]
-  defstruct [:type, :id, :x, :y, :button, :delta_x, :delta_y, scope: []]
+  defstruct [:type, :id, :x, :y, :button, :delta_x, :delta_y, :window_id, scope: []]
 
   defimpl Inspect do
     def inspect(event, _opts) do
       target = Plushie.Event.target(event)
-      "#Canvas<#{Kernel.inspect(event.type)} #{Kernel.inspect(target)} x=#{event.x} y=#{event.y}>"
+
+      window =
+        if event.window_id, do: " window=#{Kernel.inspect(event.window_id)}", else: ""
+
+      "#Canvas<#{Kernel.inspect(event.type)} #{Kernel.inspect(target)}#{window} x=#{event.x} y=#{event.y}>"
     end
   end
 end

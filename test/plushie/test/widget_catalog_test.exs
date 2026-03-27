@@ -370,7 +370,7 @@ defmodule Plushie.Test.WidgetCatalogTest do
     end
 
     test "finds direct child by local id", %{tree: tree} do
-      result = Tree.find(tree, "save")
+      result = Tree.find_local(tree, "save")
       assert result.type == "button"
       assert result.id == "col/save"
     end
@@ -382,7 +382,7 @@ defmodule Plushie.Test.WidgetCatalogTest do
     end
 
     test "finds deeply nested node by local id", %{tree: tree} do
-      result = Tree.find(tree, "msg")
+      result = Tree.find_local(tree, "msg")
       assert result.type == "text"
       assert result.id == "col/wrapper/msg"
     end

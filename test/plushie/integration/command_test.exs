@@ -23,10 +23,17 @@ defmodule Plushie.Integration.CommandTest do
 
     def view(_model) do
       %{
-        id: "auto:SendAfterApp:root",
-        type: "column",
+        id: "main",
+        type: "window",
         props: %{},
-        children: [%{id: "hi", type: "text", props: %{content: "hello"}, children: []}]
+        children: [
+          %{
+            id: "auto:SendAfterApp:root",
+            type: "column",
+            props: %{},
+            children: [%{id: "hi", type: "text", props: %{content: "hello"}, children: []}]
+          }
+        ]
       }
     end
   end
@@ -63,10 +70,17 @@ defmodule Plushie.Integration.CommandTest do
 
     def view(_model) do
       %{
-        id: "auto:AsyncApp:root",
-        type: "column",
+        id: "main",
+        type: "window",
         props: %{},
-        children: [%{id: "go", type: "button", props: %{label: "Go"}, children: []}]
+        children: [
+          %{
+            id: "auto:AsyncApp:root",
+            type: "column",
+            props: %{},
+            children: [%{id: "go", type: "button", props: %{label: "Go"}, children: []}]
+          }
+        ]
       }
     end
   end
@@ -106,10 +120,17 @@ defmodule Plushie.Integration.CommandTest do
 
     def view(_model) do
       %{
-        id: "auto:BatchApp:root",
-        type: "column",
+        id: "main",
+        type: "window",
         props: %{},
-        children: [%{id: "hi", type: "text", props: %{content: "hello"}, children: []}]
+        children: [
+          %{
+            id: "auto:BatchApp:root",
+            type: "column",
+            props: %{},
+            children: [%{id: "hi", type: "text", props: %{content: "hello"}, children: []}]
+          }
+        ]
       }
     end
   end
@@ -161,10 +182,17 @@ defmodule Plushie.Integration.CommandTest do
 
     def view(_model) do
       %{
-        id: "auto:StreamApp:root",
-        type: "column",
+        id: "main",
+        type: "window",
         props: %{},
-        children: [%{id: "go", type: "button", props: %{label: "Go"}, children: []}]
+        children: [
+          %{
+            id: "auto:StreamApp:root",
+            type: "column",
+            props: %{},
+            children: [%{id: "go", type: "button", props: %{label: "Go"}, children: []}]
+          }
+        ]
       }
     end
   end

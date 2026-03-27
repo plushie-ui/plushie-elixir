@@ -20,9 +20,12 @@ defmodule Plushie.App do
 
         def view(model) do
           import Plushie.UI
-          column do
-            text("Count: \#{model.count}")
-            button("increment", "Increment")
+
+          window "counter", title: "Counter" do
+            column do
+              text("count", "Count: \#{model.count}")
+              button("increment", "Increment")
+            end
           end
         end
       end
@@ -62,6 +65,8 @@ defmodule Plushie.App do
   @type model :: term()
   @type event :: Plushie.Event.t() | term()
   @type command :: Plushie.Command.t() | [Plushie.Command.t()]
+  @type window_view ::
+          Plushie.Widget.Window.t() | map() | [Plushie.Widget.Window.t() | map()] | nil
 
   @doc """
   Called once at startup. Returns the initial model, optionally with commands.
@@ -78,9 +83,13 @@ defmodule Plushie.App do
   @callback update(model, event) :: model | {model, command}
 
   @doc """
-  Called after every update. Returns a UI tree as a plain map.
+  Called after every update. Returns a window node or a list of window nodes.
+
+  The top level must be explicit windows. Single-window apps return one
+  `window(...)` node. Multi-window apps return a list of `window(...)` nodes.
+  `nil` or `[]` is allowed when the app intentionally has no open windows.
   """
-  @callback view(model) :: Plushie.Widget.ui_node()
+  @callback view(model) :: window_view()
 
   @doc """
   Called after every update. Returns the list of active subscriptions.

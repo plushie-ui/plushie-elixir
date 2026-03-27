@@ -113,107 +113,192 @@ defmodule Plushie.ProtocolTest do
 
   describe "decode_message/1 -- click events" do
     test "decodes a click event to %WidgetEvent{type: :click, id: id}" do
-      json = Jason.encode!(%{type: "event", family: "click", id: "btn_save"})
-      assert Protocol.decode_message(json, :json) == %WidgetEvent{type: :click, id: "btn_save"}
+      json = Jason.encode!(%{type: "event", family: "click", id: "btn_save", window_id: "main"})
+
+      assert Protocol.decode_message(json, :json) ==
+               %WidgetEvent{type: :click, id: "btn_save", window_id: "main"}
     end
 
     test "scoped widget id is split into local id and scope" do
-      json = Jason.encode!(%{type: "event", family: "click", id: "panel/submit"})
+      json =
+        Jason.encode!(%{type: "event", family: "click", id: "panel/submit", window_id: "main"})
 
-      assert %WidgetEvent{type: :click, id: "submit", scope: ["panel"]} =
+      assert %WidgetEvent{type: :click, id: "submit", scope: ["panel"], window_id: "main"} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "preserves window_id on widget events" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "click",
+          id: "save",
+          window_id: "main"
+        })
+
+      assert %WidgetEvent{type: :click, id: "save", window_id: "main"} =
                Protocol.decode_message(json, :json)
     end
   end
 
   describe "decode_message/1 -- input events" do
     test "decodes an input event to {:input, id, value}" do
-      json = Jason.encode!(%{type: "event", family: "input", id: "search", value: "elixir"})
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "input",
+          id: "search",
+          value: "elixir",
+          window_id: "main"
+        })
 
       assert Protocol.decode_message(json, :json) == %WidgetEvent{
                type: :input,
                id: "search",
-               value: "elixir"
+               value: "elixir",
+               window_id: "main"
              }
     end
 
     test "preserves an empty string value" do
-      json = Jason.encode!(%{type: "event", family: "input", id: "field", value: ""})
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "input",
+          id: "field",
+          value: "",
+          window_id: "main"
+        })
 
-      assert %WidgetEvent{type: :input, id: "field", value: ""} =
+      assert %WidgetEvent{type: :input, id: "field", value: "", window_id: "main"} =
                Protocol.decode_message(json, :json)
     end
   end
 
   describe "decode_message/1 -- submit events" do
     test "decodes a submit event to {:submit, id, value}" do
-      json = Jason.encode!(%{type: "event", family: "submit", id: "login_form", value: "admin"})
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "submit",
+          id: "login_form",
+          value: "admin",
+          window_id: "main"
+        })
 
       assert Protocol.decode_message(json, :json) == %WidgetEvent{
                type: :submit,
                id: "login_form",
-               value: "admin"
+               value: "admin",
+               window_id: "main"
              }
     end
   end
 
   describe "decode_message/1 -- toggle events" do
     test "decodes a toggle event to {:toggle, id, value}" do
-      json = Jason.encode!(%{type: "event", family: "toggle", id: "dark_mode", value: true})
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "toggle",
+          id: "dark_mode",
+          value: true,
+          window_id: "main"
+        })
 
       assert Protocol.decode_message(json, :json) == %WidgetEvent{
                type: :toggle,
                id: "dark_mode",
-               value: true
+               value: true,
+               window_id: "main"
              }
     end
 
     test "decodes a toggle-off correctly" do
-      json = Jason.encode!(%{type: "event", family: "toggle", id: "dark_mode", value: false})
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "toggle",
+          id: "dark_mode",
+          value: false,
+          window_id: "main"
+        })
 
-      assert %WidgetEvent{type: :toggle, id: "dark_mode", value: false} =
+      assert %WidgetEvent{type: :toggle, id: "dark_mode", value: false, window_id: "main"} =
                Protocol.decode_message(json, :json)
     end
   end
 
   describe "decode_message/1 -- select events" do
     test "decodes a select event to {:select, id, value}" do
-      json = Jason.encode!(%{type: "event", family: "select", id: "lang_picker", value: "fr"})
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "select",
+          id: "lang_picker",
+          value: "fr",
+          window_id: "main"
+        })
 
       assert Protocol.decode_message(json, :json) == %WidgetEvent{
                type: :select,
                id: "lang_picker",
-               value: "fr"
+               value: "fr",
+               window_id: "main"
              }
     end
   end
 
   describe "decode_message/1 -- slide events" do
     test "decodes a slide event to {:slide, id, value}" do
-      json = Jason.encode!(%{type: "event", family: "slide", id: "volume", value: 0.75})
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "slide",
+          id: "volume",
+          value: 0.75,
+          window_id: "main"
+        })
 
       assert Protocol.decode_message(json, :json) == %WidgetEvent{
                type: :slide,
                id: "volume",
-               value: 0.75
+               value: 0.75,
+               window_id: "main"
              }
     end
 
     test "value can be an integer" do
-      json = Jason.encode!(%{type: "event", family: "slide", id: "zoom", value: 100})
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "slide",
+          id: "zoom",
+          value: 100,
+          window_id: "main"
+        })
 
-      assert %WidgetEvent{type: :slide, id: "zoom", value: 100} =
+      assert %WidgetEvent{type: :slide, id: "zoom", value: 100, window_id: "main"} =
                Protocol.decode_message(json, :json)
     end
   end
 
   describe "decode_message/1 -- slide_release events" do
     test "decodes a slide_release event to {:slide_release, id, value}" do
-      json = Jason.encode!(%{type: "event", family: "slide_release", id: "scrubber", value: 42.0})
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "slide_release",
+          id: "scrubber",
+          value: 42.0,
+          window_id: "main"
+        })
 
       assert Protocol.decode_message(json, :json) == %WidgetEvent{
                type: :slide_release,
                id: "scrubber",
-               value: 42.0
+               value: 42.0,
+               window_id: "main"
              }
     end
   end
@@ -547,20 +632,31 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "wizard:levitate",
           id: "wizard",
+          window_id: "main",
           data: %{speed: "fast"}
         })
 
       assert %Plushie.Event.WidgetEvent{
                type: "wizard:levitate",
                id: "wizard",
+               window_id: "main",
                data: %{"speed" => "fast"}
              } =
                Protocol.decode_message(json, :json)
     end
 
-    test "malformed widget id returns unknown_message instead of crashing" do
+    test "malformed widget id returns a structured decode error" do
       json = Jason.encode!(%{type: "event", family: "click", id: 123})
-      assert {:error, {:unknown_message, _}} = Protocol.decode_message(json, :json)
+
+      assert {:error, {:invalid_event_field, "click", "id", 123, :expected_binary, _}} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "malformed window id returns a structured decode error" do
+      json = Jason.encode!(%{type: "event", family: "click", id: "save", window_id: 123})
+
+      assert {:error, {:invalid_event_field, "click", "window_id", 123, :expected_binary, _}} =
+               Protocol.decode_message(json, :json)
     end
 
     test "decode_message! raises protocol error for invalid known enum" do
@@ -868,14 +964,23 @@ defmodule Plushie.ProtocolTest do
   describe "encode -> decode roundtrip for events" do
     test "click event survives JSON roundtrip" do
       # Simulate what the renderer would send back
-      json = Jason.encode!(%{type: "event", family: "click", id: "btn_1"})
-      assert %WidgetEvent{type: :click, id: "btn_1"} = Protocol.decode_message(json, :json)
+      json = Jason.encode!(%{type: "event", family: "click", id: "btn_1", window_id: "main"})
+
+      assert %WidgetEvent{type: :click, id: "btn_1", window_id: "main"} =
+               Protocol.decode_message(json, :json)
     end
 
     test "input event survives JSON roundtrip" do
-      json = Jason.encode!(%{type: "event", family: "input", id: "field", value: "hello"})
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "input",
+          id: "field",
+          value: "hello",
+          window_id: "main"
+        })
 
-      assert %WidgetEvent{type: :input, id: "field", value: "hello"} =
+      assert %WidgetEvent{type: :input, id: "field", value: "hello", window_id: "main"} =
                Protocol.decode_message(json, :json)
     end
 
@@ -902,15 +1007,29 @@ defmodule Plushie.ProtocolTest do
 
   describe "decode_message/1 -- mouse_middle_press" do
     test "decodes mouse_middle_press event to {:mouse_middle_press, id}" do
-      json = Jason.encode!(%{type: "event", family: "mouse_middle_press", id: "zone"})
-      assert Protocol.decode_message(json, :json) == %MouseArea{type: :middle_press, id: "zone"}
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "mouse_middle_press",
+          id: "zone",
+          window_id: "main"
+        })
+
+      assert Protocol.decode_message(json, :json) ==
+               %MouseArea{type: :middle_press, id: "zone", window_id: "main"}
     end
 
     test "decodes mouse_middle_press from msgpack" do
-      event = %{"type" => "event", "family" => "mouse_middle_press", "id" => "zone"}
+      event = %{
+        "type" => "event",
+        "family" => "mouse_middle_press",
+        "id" => "zone",
+        "window_id" => "main"
+      }
+
       packed = Msgpax.pack!(event, iodata: false)
 
-      assert %MouseArea{type: :middle_press, id: "zone"} =
+      assert %MouseArea{type: :middle_press, id: "zone", window_id: "main"} =
                Protocol.decode_message(packed, :msgpack)
     end
   end
@@ -946,6 +1065,13 @@ defmodule Plushie.ProtocolTest do
     test "effect_response with unknown status treated as unknown" do
       json = Jason.encode!(%{type: "effect_response", id: "r", status: "pending", result: nil})
       assert {:error, {:unknown_message, _}} = Protocol.decode_message(json, :json)
+    end
+
+    test "widget-like events require window_id" do
+      json = Jason.encode!(%{type: "event", family: "click", id: "save"})
+
+      assert {:error, {:invalid_event_field, "click", "window_id", nil, :required, _}} =
+               Protocol.decode_message(json, :json)
     end
   end
 
@@ -1016,16 +1142,25 @@ defmodule Plushie.ProtocolTest do
     end
 
     test "event decode from msgpack" do
-      event = %{"type" => "event", "family" => "click", "id" => "btn1"}
+      event = %{"type" => "event", "family" => "click", "id" => "btn1", "window_id" => "main"}
       packed = Msgpax.pack!(event, iodata: false)
-      assert %WidgetEvent{type: :click, id: "btn1"} = Protocol.decode_message(packed, :msgpack)
+
+      assert %WidgetEvent{type: :click, id: "btn1", window_id: "main"} =
+               Protocol.decode_message(packed, :msgpack)
     end
 
     test "input event decode from msgpack" do
-      event = %{"type" => "event", "family" => "input", "id" => "field", "value" => "hello"}
+      event = %{
+        "type" => "event",
+        "family" => "input",
+        "id" => "field",
+        "value" => "hello",
+        "window_id" => "main"
+      }
+
       packed = Msgpax.pack!(event, iodata: false)
 
-      assert %WidgetEvent{type: :input, id: "field", value: "hello"} =
+      assert %WidgetEvent{type: :input, id: "field", value: "hello", window_id: "main"} =
                Protocol.decode_message(packed, :msgpack)
     end
 
@@ -1334,10 +1469,33 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "canvas_scroll",
           id: "viewport",
+          window_id: "main",
           data: %{x: 5.0, y: 10.0, delta_x: 0.0, delta_y: -1.0}
         })
 
-      assert %Canvas{type: :scroll, id: "viewport", x: 5.0, y: 10.0, delta_x: +0.0, delta_y: -1.0} =
+      assert %Canvas{
+               type: :scroll,
+               id: "viewport",
+               window_id: "main",
+               x: 5.0,
+               y: 10.0,
+               delta_x: +0.0,
+               delta_y: -1.0
+             } =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "preserves window_id on canvas events" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "canvas_press",
+          id: "viewport",
+          window_id: "main",
+          data: %{x: 5.0, y: 10.0, button: "left"}
+        })
+
+      assert %Canvas{type: :press, id: "viewport", window_id: "main"} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -1353,10 +1511,16 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "canvas_element_enter",
           id: "my_canvas",
+          window_id: "main",
           data: %{element_id: "btn-1", x: 10.0, y: 20.0}
         })
 
-      assert %WidgetEvent{type: :canvas_element_enter, id: "my_canvas", data: data} =
+      assert %WidgetEvent{
+               type: :canvas_element_enter,
+               id: "my_canvas",
+               window_id: "main",
+               data: data
+             } =
                Protocol.decode_message(json, :json)
 
       assert data["element_id"] == "btn-1"
@@ -1368,10 +1532,16 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "canvas_element_leave",
           id: "my_canvas",
+          window_id: "main",
           data: %{element_id: "btn-1"}
         })
 
-      assert %WidgetEvent{type: :canvas_element_leave, id: "my_canvas", data: data} =
+      assert %WidgetEvent{
+               type: :canvas_element_leave,
+               id: "my_canvas",
+               window_id: "main",
+               data: data
+             } =
                Protocol.decode_message(json, :json)
 
       assert data["element_id"] == "btn-1"
@@ -1383,10 +1553,16 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "canvas_element_click",
           id: "my_canvas",
+          window_id: "main",
           data: %{element_id: "btn-1", x: 15.0, y: 25.0}
         })
 
-      assert %WidgetEvent{type: :canvas_element_click, id: "my_canvas", data: data} =
+      assert %WidgetEvent{
+               type: :canvas_element_click,
+               id: "my_canvas",
+               window_id: "main",
+               data: data
+             } =
                Protocol.decode_message(json, :json)
 
       assert data["element_id"] == "btn-1"
@@ -1398,10 +1574,16 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "canvas_element_drag",
           id: "my_canvas",
+          window_id: "main",
           data: %{element_id: "handle-1", x: 50.0, y: 60.0, dx: 5.0, dy: -3.0}
         })
 
-      assert %WidgetEvent{type: :canvas_element_drag, id: "my_canvas", data: data} =
+      assert %WidgetEvent{
+               type: :canvas_element_drag,
+               id: "my_canvas",
+               window_id: "main",
+               data: data
+             } =
                Protocol.decode_message(json, :json)
 
       assert data["element_id"] == "handle-1"
@@ -1414,10 +1596,16 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "canvas_element_drag_end",
           id: "my_canvas",
+          window_id: "main",
           data: %{element_id: "handle-1", x: 55.0, y: 57.0}
         })
 
-      assert %WidgetEvent{type: :canvas_element_drag_end, id: "my_canvas", data: data} =
+      assert %WidgetEvent{
+               type: :canvas_element_drag_end,
+               id: "my_canvas",
+               window_id: "main",
+               data: data
+             } =
                Protocol.decode_message(json, :json)
 
       assert data["element_id"] == "handle-1"
@@ -1429,10 +1617,16 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "canvas_element_focused",
           id: "my_canvas",
+          window_id: "main",
           data: %{element_id: "input-1", focused: true}
         })
 
-      assert %WidgetEvent{type: :canvas_element_focused, id: "my_canvas", data: data} =
+      assert %WidgetEvent{
+               type: :canvas_element_focused,
+               id: "my_canvas",
+               window_id: "main",
+               data: data
+             } =
                Protocol.decode_message(json, :json)
 
       assert data["element_id"] == "input-1"
@@ -1444,6 +1638,7 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "canvas_element_click",
           id: "panel/my_canvas",
+          window_id: "main",
           data: %{element_id: "btn-1"}
         })
 
@@ -1451,6 +1646,7 @@ defmodule Plushie.ProtocolTest do
                type: :canvas_element_click,
                id: "my_canvas",
                scope: ["panel"],
+               window_id: "main",
                data: %{"element_id" => "btn-1"}
              } = Protocol.decode_message(json, :json)
     end

@@ -10,6 +10,9 @@ defmodule Plushie.Event.MouseArea do
   (nearest parent first). Use `Plushie.Event.target/1` to reconstruct the
   full forward-order scoped path.
 
+  The `window_id` field identifies which window produced the event. Runtime-
+  delivered mouse area events always include it.
+
   ## Fields
 
     * `type` - `:right_press`, `:right_release`, `:middle_press`,
@@ -46,9 +49,28 @@ defmodule Plushie.Event.MouseArea do
           | :move
           | :scroll
 
+  @typedoc """
+  Mouse area event struct.
+
+  Hand-built test events may leave `window_id` unset. Events decoded from the
+  renderer always include it.
+  """
   @type t :: %__MODULE__{
           type: event_type(),
           id: String.t(),
+          window_id: String.t() | nil,
+          scope: [String.t()],
+          x: number() | nil,
+          y: number() | nil,
+          delta_x: number() | nil,
+          delta_y: number() | nil
+        }
+
+  @typedoc "Mouse area event delivered by the renderer."
+  @type delivered_t :: %__MODULE__{
+          type: event_type(),
+          id: String.t(),
+          window_id: String.t(),
           scope: [String.t()],
           x: number() | nil,
           y: number() | nil,
@@ -57,12 +79,16 @@ defmodule Plushie.Event.MouseArea do
         }
 
   @enforce_keys [:type, :id]
-  defstruct [:type, :id, :x, :y, :delta_x, :delta_y, scope: []]
+  defstruct [:type, :id, :x, :y, :delta_x, :delta_y, :window_id, scope: []]
 
   defimpl Inspect do
     def inspect(event, _opts) do
       target = Plushie.Event.target(event)
-      "#MouseArea<#{Kernel.inspect(event.type)} #{Kernel.inspect(target)}>"
+
+      window =
+        if event.window_id, do: " window=#{Kernel.inspect(event.window_id)}", else: ""
+
+      "#MouseArea<#{Kernel.inspect(event.type)} #{Kernel.inspect(target)}#{window}>"
     end
   end
 end

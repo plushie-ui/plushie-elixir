@@ -22,63 +22,126 @@ defmodule Plushie.Test.Backend.EventDecoder do
   @spec decode(family :: String.t(), id :: String.t(), event :: map()) :: struct() | nil
   def decode("click", id, event) do
     {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :click, id: local, scope: scope, data: event["data"]}
+
+    %WidgetEvent{
+      type: :click,
+      id: local,
+      scope: scope,
+      window_id: window_id(event),
+      data: event["data"]
+    }
   end
 
   def decode("input", id, event) do
     {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :input, id: local, scope: scope, value: event["value"] || ""}
+
+    %WidgetEvent{
+      type: :input,
+      id: local,
+      scope: scope,
+      window_id: window_id(event),
+      value: event["value"] || ""
+    }
   end
 
   def decode("submit", id, event) do
     {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :submit, id: local, scope: scope, value: event["value"] || ""}
+
+    %WidgetEvent{
+      type: :submit,
+      id: local,
+      scope: scope,
+      window_id: window_id(event),
+      value: event["value"] || ""
+    }
   end
 
   def decode("toggle", id, event) do
     {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :toggle, id: local, scope: scope, value: event["value"] || false}
+
+    %WidgetEvent{
+      type: :toggle,
+      id: local,
+      scope: scope,
+      window_id: window_id(event),
+      value: event["value"] || false
+    }
   end
 
   def decode("select", id, event) do
     {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :select, id: local, scope: scope, value: event["value"] || ""}
+
+    %WidgetEvent{
+      type: :select,
+      id: local,
+      scope: scope,
+      window_id: window_id(event),
+      value: event["value"] || ""
+    }
   end
 
   def decode("slide", id, event) do
     {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :slide, id: local, scope: scope, value: event["value"] || 0}
+
+    %WidgetEvent{
+      type: :slide,
+      id: local,
+      scope: scope,
+      window_id: window_id(event),
+      value: event["value"] || 0
+    }
   end
 
   def decode("slide_release", id, event) do
     {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :slide_release, id: local, scope: scope, value: event["value"] || 0}
+
+    %WidgetEvent{
+      type: :slide_release,
+      id: local,
+      scope: scope,
+      window_id: window_id(event),
+      value: event["value"] || 0
+    }
   end
 
   def decode("paste", id, event) do
     {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :paste, id: local, scope: scope, value: event["value"] || ""}
+
+    %WidgetEvent{
+      type: :paste,
+      id: local,
+      scope: scope,
+      window_id: window_id(event),
+      value: event["value"] || ""
+    }
   end
 
   def decode("sort", id, event) do
     {local, scope} = split_scoped_id(id)
     data = event["data"] || %{}
-    %WidgetEvent{type: :sort, id: local, scope: scope, data: data["column"]}
+
+    %WidgetEvent{
+      type: :sort,
+      id: local,
+      scope: scope,
+      window_id: window_id(event),
+      data: data["column"]
+    }
   end
 
-  def decode("open", id, _event) do
+  def decode("open", id, event) do
     {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :open, id: local, scope: scope}
+    %WidgetEvent{type: :open, id: local, scope: scope, window_id: window_id(event)}
   end
 
-  def decode("close", id, _event) do
+  def decode("close", id, event) do
     {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :close, id: local, scope: scope}
+    %WidgetEvent{type: :close, id: local, scope: scope, window_id: window_id(event)}
   end
 
-  def decode("pane_focus_cycle", id, _event) do
+  def decode("pane_focus_cycle", id, event) do
     {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :pane_focus_cycle, id: local, scope: scope}
+    %WidgetEvent{type: :pane_focus_cycle, id: local, scope: scope, window_id: window_id(event)}
   end
 
   def decode("canvas_press", id, event) do
@@ -89,6 +152,7 @@ defmodule Plushie.Test.Backend.EventDecoder do
       type: :press,
       id: local,
       scope: scope,
+      window_id: window_id(event),
       x: data["x"] || 0,
       y: data["y"] || 0,
       button: Map.get(data, "button", "left")
@@ -103,6 +167,7 @@ defmodule Plushie.Test.Backend.EventDecoder do
       type: :release,
       id: local,
       scope: scope,
+      window_id: window_id(event),
       x: data["x"] || 0,
       y: data["y"] || 0,
       button: Map.get(data, "button", "left")
@@ -112,7 +177,15 @@ defmodule Plushie.Test.Backend.EventDecoder do
   def decode("canvas_move", id, event) do
     {local, scope} = split_scoped_id(id)
     data = event["data"] || %{}
-    %CanvasEvent{type: :move, id: local, scope: scope, x: data["x"] || 0, y: data["y"] || 0}
+
+    %CanvasEvent{
+      type: :move,
+      id: local,
+      scope: scope,
+      window_id: window_id(event),
+      x: data["x"] || 0,
+      y: data["y"] || 0
+    }
   end
 
   def decode("canvas_scroll", id, event) do
@@ -123,6 +196,7 @@ defmodule Plushie.Test.Backend.EventDecoder do
       type: :scroll,
       id: local,
       scope: scope,
+      window_id: window_id(event),
       x: data["x"] || 0,
       y: data["y"] || 0,
       delta_x: data["delta_x"] || 0,
@@ -165,17 +239,38 @@ defmodule Plushie.Test.Backend.EventDecoder do
   def decode(type, id, event) when type in @canvas_element_families do
     {local, scope} = split_scoped_id(id)
     atom = String.to_atom(type)
-    %WidgetEvent{type: atom, id: local, scope: scope, data: event["data"] || %{}}
+
+    %WidgetEvent{
+      type: atom,
+      id: local,
+      scope: scope,
+      window_id: window_id(event),
+      data: event["data"] || %{}
+    }
   end
 
-  def decode("canvas_focused", id, _event) do
+  def decode("canvas_focused", id, event) do
     {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :canvas_focused, id: local, scope: scope, data: %{}}
+
+    %WidgetEvent{
+      type: :canvas_focused,
+      id: local,
+      scope: scope,
+      window_id: window_id(event),
+      data: %{}
+    }
   end
 
-  def decode("canvas_blurred", id, _event) do
+  def decode("canvas_blurred", id, event) do
     {local, scope} = split_scoped_id(id)
-    %WidgetEvent{type: :canvas_blurred, id: local, scope: scope, data: %{}}
+
+    %WidgetEvent{
+      type: :canvas_blurred,
+      id: local,
+      scope: scope,
+      window_id: window_id(event),
+      data: %{}
+    }
   end
 
   def decode("diagnostic", _id, event) do
@@ -190,6 +285,7 @@ defmodule Plushie.Test.Backend.EventDecoder do
         type: type,
         id: local,
         scope: scope,
+        window_id: window_id(event),
         value: event["value"],
         data: event["data"]
       }
@@ -214,6 +310,14 @@ defmodule Plushie.Test.Backend.EventDecoder do
   end
 
   defp split_scoped_id(id), do: {id, []}
+
+  defp window_id(event) do
+    case event["window_id"] do
+      nil -> nil
+      "" -> nil
+      window_id -> window_id
+    end
+  end
 
   # -- Key event decoding ------------------------------------------------------
 

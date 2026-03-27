@@ -26,9 +26,11 @@ defmodule Plushie.RuntimeTest do
     def view(model) do
       import Plushie.UI
 
-      column do
-        text("Value: #{model.value}")
-        button("inc", "+")
+      window "main" do
+        column do
+          text("Value: #{model.value}")
+          button("inc", "+")
+        end
       end
     end
   end
@@ -50,8 +52,10 @@ defmodule Plushie.RuntimeTest do
     def view(model) do
       import Plushie.UI
 
-      column do
-        text("#{model.value}")
+      window "main" do
+        column do
+          text("#{model.value}")
+        end
       end
     end
   end
@@ -78,8 +82,10 @@ defmodule Plushie.RuntimeTest do
     def view(model) do
       import Plushie.UI
 
-      column do
-        text("#{model.value}")
+      window "main" do
+        column do
+          text("#{model.value}")
+        end
       end
     end
   end
@@ -109,8 +115,151 @@ defmodule Plushie.RuntimeTest do
     def view(_model) do
       import Plushie.UI
 
-      column do
-        StarRatingNative.new("rating", value: 0)
+      window "main" do
+        column do
+          StarRatingNative.new("rating", value: 0)
+        end
+      end
+    end
+  end
+
+  defmodule TickCanvasWidget do
+    use Plushie.Extension, :canvas_widget
+    widget(:tick_canvas_widget)
+
+    @impl true
+    def subscribe(_props, _state) do
+      [Plushie.Subscription.every(1_000, :pulse)]
+    end
+
+    @impl true
+    def handle_event(_event, _state), do: :ignored
+
+    @impl true
+    def render(id, _props, _state) do
+      import Plushie.UI
+
+      canvas id, width: 10, height: 10 do
+      end
+    end
+  end
+
+  defmodule WidgetSubApp do
+    use Plushie.App
+
+    def init(_opts), do: %{clicks: 0}
+
+    def update(model, %WidgetEvent{type: :click, id: "inc"}) do
+      %{model | clicks: model.clicks + 1}
+    end
+
+    def update(model, _event), do: model
+
+    def view(_model) do
+      import Plushie.UI
+
+      window "main" do
+        column do
+          button("inc", "+")
+          TickCanvasWidget.new("ticker")
+        end
+      end
+    end
+  end
+
+  defmodule CoalesceOrderApp do
+    use Plushie.App
+
+    def init(_opts), do: %{events: []}
+
+    def update(model, %Plushie.Event.Mouse{type: :moved}) do
+      %{model | events: model.events ++ [:mouse]}
+    end
+
+    def update(model, %Plushie.Event.Sensor{type: :resize}) do
+      %{model | events: model.events ++ [:sensor]}
+    end
+
+    def update(model, _event), do: model
+
+    def view(_model) do
+      import Plushie.UI
+
+      window "main" do
+        column do
+        end
+      end
+    end
+  end
+
+  defmodule SensorWindowCoalesceApp do
+    use Plushie.App
+
+    def init(_opts), do: %{events: []}
+
+    def update(model, %Plushie.Event.Sensor{type: :resize, window_id: window_id}) do
+      %{model | events: model.events ++ [window_id]}
+    end
+
+    def update(model, _event), do: model
+
+    def view(_model) do
+      import Plushie.UI
+
+      [
+        window("main", title: "Main") do
+          sensor("size", on_resize: true)
+        end,
+        window("prefs", title: "Prefs") do
+          sensor("size", on_resize: true)
+        end
+      ]
+    end
+  end
+
+  defmodule SwitchingCanvasWidget do
+    use Plushie.Extension, :canvas_widget
+    widget(:switching_canvas_widget)
+    state(phase: :first)
+
+    @impl true
+    def subscribe(_props, %{phase: :first}) do
+      [Plushie.Subscription.every(1_000, :first)]
+    end
+
+    def subscribe(_props, %{phase: :second}) do
+      [Plushie.Subscription.every(1_000, :second)]
+    end
+
+    @impl true
+    def handle_event(%Plushie.Event.Timer{tag: :first}, _state) do
+      {:update_state, %{phase: :second}}
+    end
+
+    def handle_event(_event, state), do: {:update_state, state}
+
+    @impl true
+    def render(id, _props, _state) do
+      import Plushie.UI
+
+      canvas id, width: 10, height: 10 do
+      end
+    end
+  end
+
+  defmodule SwitchingWidgetApp do
+    use Plushie.App
+
+    def init(_opts), do: %{}
+    def update(model, _event), do: model
+
+    def view(_model) do
+      import Plushie.UI
+
+      window "main" do
+        column do
+          SwitchingCanvasWidget.new("switcher")
+        end
       end
     end
   end
@@ -186,7 +335,8 @@ defmodule Plushie.RuntimeTest do
       assert length(snapshots) == 1
 
       [snapshot] = snapshots
-      assert snapshot.type == "column"
+      assert snapshot.type == "window"
+      assert snapshot.id == "main"
 
       # The text child should reflect the initial model value of 0.
       text_node = find_by_type(snapshot, "text")
@@ -248,7 +398,7 @@ defmodule Plushie.RuntimeTest do
       await_initial_render(runtime)
 
       dispatch_and_wait(runtime, %WidgetEvent{
-        type: "star_rating:selected",
+        type: {:star_rating, :selected},
         id: "rating",
         value: 4
       })
@@ -350,9 +500,11 @@ defmodule Plushie.RuntimeTest do
         def view(model) do
           import Plushie.UI
 
-          column do
-            text("ticks:#{model.ticks}")
-            button("batch", "Go")
+          window "main" do
+            column do
+              text("ticks:#{model.ticks}")
+              button("batch", "Go")
+            end
           end
         end
       end
@@ -390,8 +542,10 @@ defmodule Plushie.RuntimeTest do
         def view(model) do
           import Plushie.UI
 
-          column do
-            text(inspect(model.result))
+          window "main" do
+            column do
+              text(inspect(model.result))
+            end
           end
         end
       end
@@ -435,8 +589,10 @@ defmodule Plushie.RuntimeTest do
         def view(model) do
           import Plushie.UI
 
-          column do
-            text(inspect(model.status))
+          window "main" do
+            column do
+              text(inspect(model.status))
+            end
           end
         end
 
@@ -480,6 +636,39 @@ defmodule Plushie.RuntimeTest do
       end)
     end
 
+    test ":renderer_restarted re-registers unchanged renderer subscriptions" do
+      defmodule RestartSubApp do
+        use Plushie.App
+
+        def init(_opts), do: %{}
+        def update(model, _event), do: model
+        def subscribe(_model), do: [Plushie.Subscription.on_key_press(:keys)]
+
+        def view(_model) do
+          import Plushie.UI
+
+          window "main" do
+            column do
+            end
+          end
+        end
+      end
+
+      capture_log(fn ->
+        {runtime, bridge} = start_runtime(RestartSubApp)
+        await_initial_render(runtime)
+
+        assert [%{kind: "on_key_press", tag: "keys"}] =
+                 Plushie.Test.InternalMockBridge.get_subscribes(bridge)
+
+        send(runtime, :renderer_restarted)
+        :sys.get_state(runtime)
+
+        subscribes = Plushie.Test.InternalMockBridge.get_subscribes(bridge)
+        assert Enum.count(subscribes, &(&1.kind == "on_key_press")) == 2
+      end)
+    end
+
     test "pending interact replies with renderer exit reason" do
       capture_log(fn ->
         {runtime, bridge} = start_runtime(SimpleApp)
@@ -520,6 +709,26 @@ defmodule Plushie.RuntimeTest do
         assert Task.await(task) == {:error, :renderer_restarted}
         assert :sys.get_state(runtime).pending_interact == nil
       end)
+    end
+
+    test "concurrent interact returns interact_in_progress" do
+      {runtime, bridge} = start_runtime(SimpleApp)
+      await_initial_render(runtime)
+
+      first =
+        Task.async(fn ->
+          Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
+        end)
+
+      await_condition(runtime, fn _state ->
+        Plushie.Test.InternalMockBridge.get_interacts(bridge) != []
+      end)
+
+      assert Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"}) ==
+               {:error, :interact_in_progress}
+
+      send(runtime, :renderer_restarted)
+      assert Task.await(first) == {:error, :renderer_restarted}
     end
 
     test "stale interact responses do not complete a newer interact" do
@@ -581,8 +790,10 @@ defmodule Plushie.RuntimeTest do
         def view(model) do
           import Plushie.UI
 
-          column do
-            text("ticks:#{model.ticks}")
+          window "main" do
+            column do
+              text("ticks:#{model.ticks}")
+            end
           end
         end
       end
@@ -619,8 +830,10 @@ defmodule Plushie.RuntimeTest do
         def view(model) do
           import Plushie.UI
 
-          column do
-            text("ticks:#{model.ticks}")
+          window "main" do
+            column do
+              text("ticks:#{model.ticks}")
+            end
           end
         end
       end
@@ -668,8 +881,10 @@ defmodule Plushie.RuntimeTest do
         def view(model) do
           import Plushie.UI
 
-          column do
-            text("ticks:#{model.ticks}")
+          window "main" do
+            column do
+              text("ticks:#{model.ticks}")
+            end
           end
         end
       end
@@ -727,9 +942,11 @@ defmodule Plushie.RuntimeTest do
         def view(model) do
           import Plushie.UI
 
-          column do
-            text("fast:#{model.fast}")
-            text("slow:#{model.slow}")
+          window "main" do
+            column do
+              text("fast:#{model.fast}")
+              text("slow:#{model.slow}")
+            end
           end
         end
       end
@@ -768,8 +985,10 @@ defmodule Plushie.RuntimeTest do
         def view(model) do
           import Plushie.UI
 
-          column do
-            text("#{model.value}")
+          window "main" do
+            column do
+              text("#{model.value}")
+            end
           end
         end
       end
@@ -807,8 +1026,10 @@ defmodule Plushie.RuntimeTest do
         def view(_model) do
           import Plushie.UI
 
-          column do
-            text("ok")
+          window "main" do
+            column do
+              text("ok")
+            end
           end
         end
       end
@@ -855,8 +1076,10 @@ defmodule Plushie.RuntimeTest do
         def view(model) do
           import Plushie.UI
 
-          column do
-            text(inspect(model.result))
+          window "main" do
+            column do
+              text(inspect(model.result))
+            end
           end
         end
       end
@@ -879,7 +1102,12 @@ defmodule Plushie.RuntimeTest do
         use Plushie.App
         alias Plushie.Event.Effect
 
-        def init(_opts), do: %{path: nil}
+        def init(_opts), do: %{path: nil, effect_id: nil}
+
+        def update(model, %WidgetEvent{type: :click, id: "pick"}) do
+          cmd = Plushie.Effects.file_open(title: "Pick a file")
+          {%{model | effect_id: cmd.payload.id}, cmd}
+        end
 
         def update(model, %Effect{result: {:ok, %{"path" => path}}}) do
           %{model | path: path}
@@ -890,8 +1118,11 @@ defmodule Plushie.RuntimeTest do
         def view(model) do
           import Plushie.UI
 
-          column do
-            text(inspect(model.path))
+          window "main" do
+            column do
+              button("pick", "Pick")
+              text(inspect(model.path))
+            end
           end
         end
       end
@@ -899,11 +1130,16 @@ defmodule Plushie.RuntimeTest do
       {runtime, _bridge} = start_runtime(EffectResultApp)
       await_initial_render(runtime)
 
-      # Simulate the renderer sending back an effect result.
-      dispatch_and_wait(runtime, %Effect{
-        request_id: "ef_42",
-        result: {:ok, %{"path" => "/tmp/test.txt"}}
-      })
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "pick"})
+      effect_id = :sys.get_state(runtime).model.effect_id
+
+      send(
+        runtime,
+        {:renderer_event,
+         %Effect{request_id: effect_id, result: {:ok, %{"path" => "/tmp/test.txt"}}}}
+      )
+
+      :sys.get_state(runtime)
 
       state = :sys.get_state(runtime)
       assert state.model.path == "/tmp/test.txt"
@@ -936,8 +1172,10 @@ defmodule Plushie.RuntimeTest do
         def view(model) do
           import Plushie.UI
 
-          column do
-            text(inspect(model.timeout_result))
+          window "main" do
+            column do
+              text(inspect(model.timeout_result))
+            end
           end
         end
       end
@@ -960,6 +1198,55 @@ defmodule Plushie.RuntimeTest do
       state = :sys.get_state(runtime)
       assert state.model.timeout_result == {:timed_out, effect_id}
       assert state.pending_effects == %{}
+    end
+
+    test "late effect response after timeout is ignored" do
+      defmodule LateEffectApp do
+        use Plushie.App
+        alias Plushie.Event.Effect
+
+        def init(_opts), do: %{effect_id: nil, timeout_result: nil, success_result: nil}
+
+        def update(model, %WidgetEvent{type: :click, id: "trigger"}) do
+          cmd = Plushie.Effects.clipboard_read()
+          {%{model | effect_id: cmd.payload.id}, cmd}
+        end
+
+        def update(model, %Effect{request_id: id, result: {:error, :timeout}}) do
+          %{model | timeout_result: id}
+        end
+
+        def update(model, %Effect{request_id: id, result: {:ok, value}}) do
+          %{model | success_result: {id, value}}
+        end
+
+        def update(model, _event), do: model
+
+        def view(_model) do
+          import Plushie.UI
+
+          window "main" do
+            column do
+            end
+          end
+        end
+      end
+
+      {runtime, _bridge} = start_runtime(LateEffectApp)
+      await_initial_render(runtime)
+
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "trigger"})
+      state = :sys.get_state(runtime)
+      effect_id = state.model.effect_id
+
+      send(runtime, {:effect_timeout, effect_id})
+      :sys.get_state(runtime)
+
+      send(runtime, {:renderer_event, %Effect{request_id: effect_id, result: {:ok, "late"}}})
+      state = :sys.get_state(runtime)
+
+      assert state.model.timeout_result == effect_id
+      assert state.model.success_result == nil
     end
   end
 
@@ -986,8 +1273,10 @@ defmodule Plushie.RuntimeTest do
         def view(_model) do
           import Plushie.UI
 
-          column do
-            text("listening")
+          window "main" do
+            column do
+              text("listening")
+            end
           end
         end
       end
@@ -1022,8 +1311,10 @@ defmodule Plushie.RuntimeTest do
         def view(_model) do
           import Plushie.UI
 
-          column do
-            text("ok")
+          window "main" do
+            column do
+              text("ok")
+            end
           end
         end
       end
@@ -1043,6 +1334,129 @@ defmodule Plushie.RuntimeTest do
       unregisters = Plushie.Test.InternalMockBridge.get_unsubscribes(bridge)
       assert length(unregisters) == 1
       assert hd(unregisters) == %{kind: "on_key_press"}
+    end
+
+    test "canvas widget subscriptions are registered on initial render and survive interact_step" do
+      {runtime, _bridge} = start_runtime(WidgetSubApp)
+      await_initial_render(runtime)
+
+      initial_state = :sys.get_state(runtime)
+
+      assert Map.has_key?(
+               initial_state.subscriptions,
+               {:every, 1_000, {:__canvas_widget__, "main", "ticker", :pulse}}
+             )
+
+      send(
+        runtime,
+        {:renderer_event,
+         {:interact_step, "step_1",
+          [%{"family" => "click", "id" => "inc", "window_id" => "main"}]}}
+      )
+
+      state = await_condition(runtime, fn s -> s.model.clicks == 1 end)
+
+      assert Map.has_key?(
+               state.subscriptions,
+               {:every, 1_000, {:__canvas_widget__, "main", "ticker", :pulse}}
+             )
+    end
+
+    test "canvas widget subscriptions survive force_rerender" do
+      {runtime, _bridge} = start_runtime(WidgetSubApp)
+      await_initial_render(runtime)
+
+      assert Map.has_key?(
+               :sys.get_state(runtime).subscriptions,
+               {:every, 1_000, {:__canvas_widget__, "main", "ticker", :pulse}}
+             )
+
+      send(runtime, :force_rerender)
+      state = :sys.get_state(runtime)
+
+      assert Map.has_key?(
+               state.subscriptions,
+               {:every, 1_000, {:__canvas_widget__, "main", "ticker", :pulse}}
+             )
+    end
+
+    test "canvas widget timer state changes resync widget subscriptions" do
+      {runtime, _bridge} = start_runtime(SwitchingWidgetApp)
+      await_initial_render(runtime)
+
+      assert Map.has_key?(
+               :sys.get_state(runtime).subscriptions,
+               {:every, 1_000, {:__canvas_widget__, "main", "switcher", :first}}
+             )
+
+      send(
+        runtime,
+        {:subscription_tick, {:__canvas_widget__, "main", "switcher", :first}, 1_000}
+      )
+
+      state =
+        await_condition(runtime, fn s ->
+          Map.has_key?(
+            s.subscriptions,
+            {:every, 1_000, {:__canvas_widget__, "main", "switcher", :second}}
+          )
+        end)
+
+      refute Map.has_key?(
+               state.subscriptions,
+               {:every, 1_000, {:__canvas_widget__, "main", "switcher", :first}}
+             )
+    end
+  end
+
+  describe "coalescing" do
+    test "flushes coalesced events in arrival order across keys" do
+      {runtime, _bridge} = start_runtime(CoalesceOrderApp)
+      await_initial_render(runtime)
+
+      send(runtime, {:renderer_event, %Plushie.Event.Mouse{type: :moved, x: 1, y: 1}})
+
+      send(
+        runtime,
+        {:renderer_event, %Plushie.Event.Sensor{type: :resize, id: "win", width: 10, height: 10}}
+      )
+
+      state = await_condition(runtime, fn s -> s.model.events == [:mouse, :sensor] end)
+      assert state.model.events == [:mouse, :sensor]
+    end
+
+    test "sensor resize coalescing keeps same local ids in different windows separate" do
+      {runtime, _bridge} = start_runtime(SensorWindowCoalesceApp)
+      await_initial_render(runtime)
+
+      send(
+        runtime,
+        {:renderer_event,
+         %Plushie.Event.Sensor{
+           type: :resize,
+           id: "size",
+           scope: [],
+           window_id: "main",
+           width: 10,
+           height: 10
+         }}
+      )
+
+      send(
+        runtime,
+        {:renderer_event,
+         %Plushie.Event.Sensor{
+           type: :resize,
+           id: "size",
+           scope: [],
+           window_id: "prefs",
+           width: 20,
+           height: 20
+         }}
+      )
+
+      state = await_condition(runtime, fn s -> s.model.events == ["main", "prefs"] end)
+      assert state.model.events == ["main", "prefs"]
     end
   end
 
@@ -1080,9 +1494,7 @@ defmodule Plushie.RuntimeTest do
               windows
             end
 
-          column do
-            windows
-          end
+          windows
         end
 
         def window_config(_model), do: %{title: "App Window"}
@@ -1123,15 +1535,13 @@ defmodule Plushie.RuntimeTest do
           import Plushie.UI
 
           if model.show_window do
-            column do
-              window "ephemeral", title: "Temp" do
+            [
+              window("ephemeral", title: "Temp") do
                 text("temp")
               end
-            end
+            ]
           else
-            column do
-              text("no windows")
-            end
+            []
           end
         end
 
@@ -1200,8 +1610,10 @@ defmodule Plushie.RuntimeTest do
         def view(model) do
           import Plushie.UI
 
-          column do
-            text("chunks:#{length(model.chunks)}")
+          window "main" do
+            column do
+              text("chunks:#{length(model.chunks)}")
+            end
           end
         end
       end
@@ -1255,8 +1667,10 @@ defmodule Plushie.RuntimeTest do
         def view(model) do
           import Plushie.UI
 
-          column do
-            text("chunks:#{length(model.chunks)}")
+          window "main" do
+            column do
+              text("chunks:#{length(model.chunks)}")
+            end
           end
         end
       end
@@ -1303,8 +1717,10 @@ defmodule Plushie.RuntimeTest do
         def view(model) do
           import Plushie.UI
 
-          column do
-            text("#{model.value}")
+          window "main" do
+            column do
+              text("#{model.value}")
+            end
           end
         end
       end

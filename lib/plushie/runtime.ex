@@ -38,6 +38,7 @@ defmodule Plushie.Runtime do
         pending_effects:    %{String.t() => reference()},
         pending_timers:     %{term() => reference()},
         pending_coalesce:   %{term() => Plushie.Event.t()},
+        pending_coalesce_order: [term()],
         coalesce_timer:     reference() | nil,
         consecutive_errors: non_neg_integer(),
         pending_interact:   {GenServer.from(), String.t()} | nil
@@ -70,6 +71,7 @@ defmodule Plushie.Runtime do
             pending_effects: %{},
             pending_timers: %{},
             pending_coalesce: %{},
+            pending_coalesce_order: [],
             coalesce_timer: nil,
             consecutive_errors: 0,
             canvas_widgets: %{},
@@ -96,15 +98,20 @@ defmodule Plushie.Runtime do
            pending_effects: %{String.t() => reference()},
            pending_timers: %{term() => reference()},
            pending_coalesce: %{term() => Plushie.Event.t()},
+           pending_coalesce_order: [term()],
            coalesce_timer: reference() | nil,
            consecutive_errors: non_neg_integer(),
            diagnostics: [Plushie.Event.System.t()],
            pending_stub_acks: %{String.t() => GenServer.from()},
            canvas_widgets: %{
-             String.t() => %{module: module(), state: map()}
+             {String.t() | nil, String.t()} => %{
+               module: module(),
+               state: map(),
+               window_id: String.t() | nil
+             }
            },
            widget_events: %{
-             String.t() => %{widget_type: atom(), events: MapSet.t(atom())}
+             {String.t() | nil, String.t()} => %{widget_type: atom(), events: MapSet.t(atom())}
            },
            pending_interact: {GenServer.from(), String.t()} | nil,
            pending_await_async: %{atom() => GenServer.from()}
@@ -161,11 +168,12 @@ defmodule Plushie.Runtime do
   Sends an interact request (e.g. click, type_text) to the renderer, which
   processes it against its widget tree and sends back events. The runtime
   processes those events through `update/2` and re-renders. Blocks until
-  the renderer signals completion. Returns an error if the renderer exits
-  or restarts before the interaction finishes.
+  the renderer signals completion. Returns an error if another interact is
+  already in flight, or if the renderer exits or restarts before the
+  interaction finishes.
   """
   @spec interact(GenServer.server(), String.t(), map(), map(), timeout()) ::
-          :ok | {:error, :renderer_restarted | {:renderer_exit, term()}}
+          :ok | {:error, :interact_in_progress | :renderer_restarted | {:renderer_exit, term()}}
   def interact(runtime, action, selector, payload \\ %{}, timeout \\ 10_000) do
     GenServer.call(runtime, {:interact, action, selector, payload}, timeout)
   end
@@ -182,10 +190,16 @@ defmodule Plushie.Runtime do
     GenServer.call(runtime, {:await_async, tag}, timeout)
   end
 
-  @doc "Finds a node in the current tree by ID."
+  @doc "Finds a node in the current tree by exact scoped ID."
   @spec find_node(GenServer.server(), String.t()) :: map() | nil
   def find_node(runtime, id) do
     GenServer.call(runtime, {:find_node, id})
+  end
+
+  @doc "Finds a node in the current tree by exact scoped ID inside a specific window."
+  @spec find_node(GenServer.server(), String.t(), String.t()) :: map() | nil
+  def find_node(runtime, id, window_id) do
+    GenServer.call(runtime, {:find_node, id, window_id})
   end
 
   @doc "Finds a node in the current tree using a predicate function."
@@ -290,7 +304,7 @@ defmodule Plushie.Runtime do
     state = %{state | tree: tree, canvas_widgets: canvas_widgets, widget_events: widget_events}
     state = Commands.execute_commands(state.init_commands, state)
     state = %{state | init_commands: []}
-    state = Subscriptions.sync_subscriptions(state, state.model)
+    state = sync_runtime_subscriptions(state, state.model, canvas_widgets)
     state = Windows.sync_windows(state, tree)
     {:noreply, state}
   end
@@ -310,6 +324,10 @@ defmodule Plushie.Runtime do
 
   def handle_call({:find_node, id}, _from, state) do
     {:reply, Plushie.Tree.find(state.tree, id), state}
+  end
+
+  def handle_call({:find_node, id, window_id}, _from, state) do
+    {:reply, Plushie.Tree.find(state.tree, id, window_id), state}
   end
 
   def handle_call({:find_node_by, fun}, _from, state) do
@@ -334,9 +352,15 @@ defmodule Plushie.Runtime do
   end
 
   def handle_call({:interact, action, selector, payload}, from, state) do
-    id = "interact_#{:erlang.unique_integer([:positive])}"
-    Plushie.Bridge.send_interact(state.bridge, id, action, selector, payload)
-    {:noreply, %{state | pending_interact: {from, id}}}
+    case state.pending_interact do
+      nil ->
+        id = "interact_#{:erlang.unique_integer([:positive])}"
+        Plushie.Bridge.send_interact(state.bridge, id, action, selector, payload)
+        {:noreply, %{state | pending_interact: {from, id}}}
+
+      {_other_from, _id} ->
+        {:reply, {:error, :interact_in_progress}, state}
+    end
   end
 
   def handle_call({:await_async, tag}, from, state) do
@@ -375,9 +399,13 @@ defmodule Plushie.Runtime do
   end
 
   def handle_info({:renderer_event, %Effect{request_id: id} = event}, state) do
-    state = cancel_pending_effect(state, id)
-    state = run_update(state, event)
-    {:noreply, state}
+    case pop_pending_effect(state, id) do
+      {:ok, state} ->
+        {:noreply, run_update(state, event)}
+
+      :missing ->
+        {:noreply, state}
+    end
   end
 
   def handle_info({:renderer_event, {:hello, hello}}, state) do
@@ -414,7 +442,12 @@ defmodule Plushie.Runtime do
   end
 
   def handle_info({:renderer_event, %Sensor{type: :resize} = event}, state) do
-    {:noreply, store_coalescable(state, {:sensor_resize, event.id}, event)}
+    {:noreply,
+     store_coalescable(
+       state,
+       {:sensor_resize, event.window_id, Plushie.Event.target(event)},
+       event
+     )}
   end
 
   # Interact protocol: the renderer sends intermediate event batches during
@@ -494,7 +527,7 @@ defmodule Plushie.Runtime do
 
     # Discard stale coalescable events from the old renderer.
     if state.coalesce_timer, do: Process.cancel_timer(state.coalesce_timer)
-    state = %{state | pending_coalesce: %{}, coalesce_timer: nil}
+    state = %{state | pending_coalesce: %{}, pending_coalesce_order: [], coalesce_timer: nil}
     state = fail_pending_interact(state, :renderer_restarted)
 
     # Flush all pending effect requests -- the renderer that would have
@@ -527,7 +560,10 @@ defmodule Plushie.Runtime do
     widget_events = derive_widget_event_registry(tree)
 
     # Re-sync subscriptions with the new renderer.
-    state = Subscriptions.sync_subscriptions(state, state.model)
+    state =
+      state
+      |> reset_renderer_subscriptions()
+      |> sync_runtime_subscriptions(state.model, canvas_widgets)
 
     # Re-open all known windows with merged per-window props from the tree.
     # Reset tracked windows first so sync_windows sees them all as new.
@@ -684,8 +720,16 @@ defmodule Plushie.Runtime do
 
           widget_events = derive_widget_event_registry(new_tree)
 
-          {:noreply,
-           %{state | tree: new_tree, canvas_widgets: canvas_widgets, widget_events: widget_events}}
+          state = %{
+            state
+            | tree: new_tree,
+              canvas_widgets: canvas_widgets,
+              widget_events: widget_events
+          }
+
+          state = sync_runtime_subscriptions(state, state.model, canvas_widgets)
+
+          {:noreply, state}
 
         {:handled, emitted_event, new_registry} ->
           # Widget emitted an event (possibly dispatched through
@@ -728,7 +772,7 @@ defmodule Plushie.Runtime do
         widget_events: widget_events
     }
 
-    state = Subscriptions.sync_subscriptions(state, state.model)
+    state = sync_runtime_subscriptions(state, state.model, canvas_widgets)
     state = Windows.sync_windows(state, new_tree)
     {:noreply, state}
   end
@@ -917,6 +961,7 @@ defmodule Plushie.Runtime do
         {app.view(model), %{}}
       end)
 
+    validate_root_windows!(raw_tree)
     {:ok, Plushie.Tree.normalize(raw_tree)}
   rescue
     e ->
@@ -932,35 +977,75 @@ defmodule Plushie.Runtime do
     Process.delete(Plushie.Extension.CanvasWidget.widget_states_key())
   end
 
+  defp validate_root_windows!(nil), do: :ok
+  defp validate_root_windows!([]), do: :ok
+
+  defp validate_root_windows!(%{type: "window"}), do: :ok
+
+  defp validate_root_windows!(%{} = node) do
+    raise ArgumentError,
+          "view/1 must return a window node or a list of window nodes at the top level, " <>
+            "got #{inspect(Map.get(node, :type) || Map.get(node, "type") || :unknown)}"
+  end
+
+  defp validate_root_windows!(nodes) when is_list(nodes) do
+    Enum.each(nodes, fn
+      %{type: "window"} ->
+        :ok
+
+      %{} = node ->
+        raise ArgumentError,
+              "view/1 must return only window nodes at the top level, " <>
+                "got #{inspect(Map.get(node, :type) || Map.get(node, "type") || :unknown)}"
+
+      other ->
+        raise ArgumentError,
+              "view/1 must return window nodes at the top level, got #{inspect(other)}"
+    end)
+  end
+
+  defp validate_root_windows!(other) do
+    raise ArgumentError,
+          "view/1 must return a window node or a list of window nodes, got #{inspect(other)}"
+  end
+
   @spec derive_widget_event_registry(map() | nil) ::
-          %{String.t() => %{widget_type: atom(), events: MapSet.t(atom())}}
+          %{{String.t() | nil, String.t()} => %{widget_type: atom(), events: MapSet.t(atom())}}
   defp derive_widget_event_registry(nil), do: %{}
 
   defp derive_widget_event_registry(tree) do
-    collect_widget_event_entries(tree, %{})
+    collect_widget_event_entries(tree, nil, %{})
   end
 
-  defp collect_widget_event_entries(%{id: id, children: children} = node, acc) do
+  defp collect_widget_event_entries(
+         %{id: id, type: "window", children: children},
+         _window_id,
+         acc
+       ) do
+    Enum.reduce(children, acc, &collect_widget_event_entries(&1, id, &2))
+  end
+
+  defp collect_widget_event_entries(%{id: id, children: children} = node, window_id, acc) do
     meta = Map.get(node, :meta, %{})
 
     acc =
       case meta do
         %{__extension_widget_type__: widget_type, __extension_widget_events__: events}
         when is_atom(widget_type) and is_list(events) ->
-          Map.put(acc, id, %{widget_type: widget_type, events: MapSet.new(events)})
+          Map.put(acc, {window_id, id}, %{widget_type: widget_type, events: MapSet.new(events)})
 
         _ ->
           acc
       end
 
-    Enum.reduce(children, acc, &collect_widget_event_entries/2)
+    Enum.reduce(children, acc, &collect_widget_event_entries(&1, window_id, &2))
   end
 
-  defp collect_widget_event_entries(%{children: children}, acc) do
-    Enum.reduce(children, acc, &collect_widget_event_entries/2)
+  defp collect_widget_event_entries(%{children: children}, window_id, acc) do
+    Enum.reduce(children, acc, &collect_widget_event_entries(&1, window_id, &2))
   end
 
-  defp collect_widget_event_entries(_, acc), do: acc
+  defp collect_widget_event_entries(_, _window_id, acc), do: acc
 
   # ---------------------------------------------------------------------------
   # Event pipeline
@@ -1000,8 +1085,9 @@ defmodule Plushie.Runtime do
   defp normalize_widget_event!(state, %Plushie.Event.WidgetEvent{type: family} = event)
        when is_binary(family) do
     target = Plushie.Event.target(event)
+    registry_key = {Map.get(event, :window_id), target}
 
-    case Map.get(state.widget_events, target) do
+    case Map.get(state.widget_events, registry_key) do
       %{widget_type: widget_type, events: events} ->
         {family_widget_type, event_name} = parse_extension_family!(family)
 
@@ -1201,15 +1287,15 @@ defmodule Plushie.Runtime do
   # ---------------------------------------------------------------------------
 
   # Cancels the timeout timer for a resolved effect request.
-  @spec cancel_pending_effect(state(), String.t()) :: state()
-  defp cancel_pending_effect(state, id) do
+  @spec pop_pending_effect(state(), String.t()) :: {:ok, state()} | :missing
+  defp pop_pending_effect(state, id) do
     case Map.pop(state.pending_effects, id) do
       {nil, _} ->
-        state
+        :missing
 
       {timer_ref, pending_effects} ->
         Process.cancel_timer(timer_ref)
-        %{state | pending_effects: pending_effects}
+        {:ok, %{state | pending_effects: pending_effects}}
     end
   end
 
@@ -1274,7 +1360,7 @@ defmodule Plushie.Runtime do
             widget_events: widget_events
         }
 
-        state = Subscriptions.sync_subscriptions(state, state.model)
+        state = sync_runtime_subscriptions(state, state.model, canvas_widgets)
         Windows.sync_windows(state, new_tree)
 
       :error ->
@@ -1309,7 +1395,18 @@ defmodule Plushie.Runtime do
         state
       end
 
-    %{state | pending_coalesce: Map.put(state.pending_coalesce, key, event)}
+    pending_coalesce_order =
+      if Map.has_key?(state.pending_coalesce, key) do
+        state.pending_coalesce_order
+      else
+        state.pending_coalesce_order ++ [key]
+      end
+
+    %{
+      state
+      | pending_coalesce: Map.put(state.pending_coalesce, key, event),
+        pending_coalesce_order: pending_coalesce_order
+    }
   end
 
   @spec flush_coalescables(state()) :: state()
@@ -1322,11 +1419,28 @@ defmodule Plushie.Runtime do
     if state.coalesce_timer, do: Process.cancel_timer(state.coalesce_timer)
 
     state =
-      Enum.reduce(state.pending_coalesce, state, fn {_key, event}, acc ->
+      Enum.reduce(state.pending_coalesce_order, state, fn key, acc ->
+        event = Map.fetch!(acc.pending_coalesce, key)
         run_update(acc, event)
       end)
 
-    %{state | pending_coalesce: %{}, coalesce_timer: nil}
+    %{state | pending_coalesce: %{}, pending_coalesce_order: [], coalesce_timer: nil}
+  end
+
+  defp sync_runtime_subscriptions(state, model, canvas_widgets) do
+    widget_subs = Plushie.Runtime.CanvasWidgets.collect_subscriptions(canvas_widgets)
+    Subscriptions.sync_subscriptions(state, model, widget_subs)
+  end
+
+  defp reset_renderer_subscriptions(state) do
+    subscriptions =
+      Enum.reduce(state.subscriptions, %{}, fn
+        {key, {:timer, _ref} = entry}, acc -> Map.put(acc, key, entry)
+        {_key, _entry}, acc -> acc
+      end)
+
+    subscription_keys = subscriptions |> Map.keys() |> Enum.sort()
+    %{state | subscriptions: subscriptions, subscription_keys: subscription_keys}
   end
 
   defp notify_await_async(state, tag) do

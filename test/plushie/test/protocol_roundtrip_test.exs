@@ -23,47 +23,54 @@ defmodule Plushie.Test.ProtocolRoundtripTest do
 
     def view(model) do
       %{
-        id: "auto:WidgetApp:root",
-        type: "column",
+        id: "main",
+        type: "window",
         props: %{},
         children: [
-          %{id: "title", type: "text", props: %{content: "Widget Gallery"}, children: []},
-          %{id: "save", type: "button", props: %{label: "Save"}, children: []},
           %{
-            id: "search",
-            type: "text_input",
-            props: %{value: model.text_value, placeholder: "Search..."},
-            children: []
-          },
-          %{
-            id: "agree",
-            type: "checkbox",
-            props: %{label: "I agree", checked: false},
-            children: []
-          },
-          %{
-            id: "volume",
-            type: "slider",
-            props: %{value: 50, range: [0, 100]},
-            children: []
-          },
-          %{
-            id: "country",
-            type: "pick_list",
-            props: %{options: ["NZ", "AU", "GB"], selected: model.selected},
-            children: []
-          },
-          %{
-            id: "layout",
-            type: "row",
+            id: "auto:WidgetApp:root",
+            type: "column",
             props: %{},
             children: [
+              %{id: "title", type: "text", props: %{content: "Widget Gallery"}, children: []},
+              %{id: "save", type: "button", props: %{label: "Save"}, children: []},
               %{
-                id: "inner",
-                type: "container",
+                id: "search",
+                type: "text_input",
+                props: %{value: model.text_value, placeholder: "Search..."},
+                children: []
+              },
+              %{
+                id: "agree",
+                type: "checkbox",
+                props: %{label: "I agree", checked: false},
+                children: []
+              },
+              %{
+                id: "volume",
+                type: "slider",
+                props: %{value: 50, range: [0, 100]},
+                children: []
+              },
+              %{
+                id: "country",
+                type: "pick_list",
+                props: %{options: ["NZ", "AU", "GB"], selected: model.selected},
+                children: []
+              },
+              %{
+                id: "layout",
+                type: "row",
                 props: %{},
                 children: [
-                  %{id: "nested", type: "text", props: %{content: "nested"}, children: []}
+                  %{
+                    id: "inner",
+                    type: "container",
+                    props: %{},
+                    children: [
+                      %{id: "nested", type: "text", props: %{content: "nested"}, children: []}
+                    ]
+                  }
                 ]
               }
             ]

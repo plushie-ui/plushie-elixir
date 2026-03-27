@@ -10,6 +10,11 @@ defmodule Plushie.Event.WidgetEvent do
   (nearest parent first). Use `Plushie.Event.target/1` to reconstruct the
   full forward-order scoped path.
 
+  The `window_id` field identifies which window produced the event. Runtime-
+  delivered widget events always include it. This stays separate from `scope`:
+  scope is container ancestry inside a window, while `window_id` identifies
+  the window itself.
+
   ## Pattern matching
 
       def update(model, %WidgetEvent{type: :click, id: "save"}), do: save(model)
@@ -54,16 +59,33 @@ defmodule Plushie.Event.WidgetEvent do
 
   @type event_type :: builtin_event_type() | extension_event_type()
 
+  @typedoc """
+  Widget event struct.
+
+  Hand-built test events may leave `window_id` unset. Events decoded from the
+  renderer always include it.
+  """
   @type t :: %__MODULE__{
           type: event_type(),
           id: String.t(),
+          window_id: String.t() | nil,
+          scope: [String.t()],
+          value: term(),
+          data: map() | nil
+        }
+
+  @typedoc "Widget event delivered by the renderer."
+  @type delivered_t :: %__MODULE__{
+          type: event_type(),
+          id: String.t(),
+          window_id: String.t(),
           scope: [String.t()],
           value: term(),
           data: map() | nil
         }
 
   @enforce_keys [:type, :id]
-  defstruct [:type, :id, :value, :data, scope: []]
+  defstruct [:type, :id, :value, :data, :window_id, scope: []]
 
   @builtin_event_types ~w(
     click input submit toggle select slide slide_release paste open close option_hovered
@@ -82,6 +104,11 @@ defmodule Plushie.Event.WidgetEvent do
     def inspect(event, _opts) do
       target = Plushie.Event.target(event)
       parts = [inspect(event.type), " ", inspect(target)]
+
+      parts =
+        if event.window_id,
+          do: parts ++ [" window=", Kernel.inspect(event.window_id)],
+          else: parts
 
       parts =
         if event.value != nil,

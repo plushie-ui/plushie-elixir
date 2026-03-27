@@ -21,6 +21,25 @@ defmodule Plushie.Event do
     Window
   }
 
+  @type delivered_t ::
+          WidgetEvent.delivered_t()
+          | Key.t()
+          | Modifiers.t()
+          | Mouse.t()
+          | Touch.t()
+          | Ime.t()
+          | Window.t()
+          | Canvas.delivered_t()
+          | MouseArea.delivered_t()
+          | Pane.delivered_t()
+          | Sensor.delivered_t()
+          | Effect.t()
+          | ExtensionCommandError.t()
+          | System.t()
+          | Timer.t()
+          | Async.t()
+          | Stream.t()
+
   @type t ::
           WidgetEvent.t()
           | Key.t()

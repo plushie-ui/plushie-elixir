@@ -9,6 +9,7 @@ defmodule Plushie.CanvasEventsTest do
         "type" => "event",
         "family" => "canvas_press",
         "id" => "my_canvas",
+        "window_id" => "main",
         "data" => %{"x" => 42.5, "y" => 100.0, "button" => "left"}
       }
 
@@ -21,6 +22,7 @@ defmodule Plushie.CanvasEventsTest do
         "type" => "event",
         "family" => "canvas_release",
         "id" => "c1",
+        "window_id" => "main",
         "data" => %{"x" => 10.0, "y" => 20.0, "button" => "right"}
       }
 
@@ -33,6 +35,7 @@ defmodule Plushie.CanvasEventsTest do
         "type" => "event",
         "family" => "canvas_move",
         "id" => "c1",
+        "window_id" => "main",
         "data" => %{"x" => 5.5, "y" => 3.2}
       }
 
@@ -45,6 +48,7 @@ defmodule Plushie.CanvasEventsTest do
         "type" => "event",
         "family" => "canvas_scroll",
         "id" => "c1",
+        "window_id" => "main",
         "data" => %{"x" => 1.5, "y" => 2.5, "delta_x" => 0.5, "delta_y" => -3.0}
       }
 
@@ -57,6 +61,7 @@ defmodule Plushie.CanvasEventsTest do
         "type" => "event",
         "family" => "canvas_press",
         "id" => "c1",
+        "window_id" => "main",
         "data" => %{"x" => 1.0, "y" => 2.0}
       }
 
@@ -69,6 +74,7 @@ defmodule Plushie.CanvasEventsTest do
         "type" => "event",
         "family" => "canvas_release",
         "id" => "c1",
+        "window_id" => "main",
         "data" => %{"x" => 1.0, "y" => 2.0}
       }
 
