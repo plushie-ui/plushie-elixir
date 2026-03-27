@@ -223,6 +223,26 @@ defmodule Plushie.Protocol.Encode do
     serialize(%{type: "window_op", op: op, window_id: window_id, settings: settings}, format)
   end
 
+  @doc "Encodes a system-wide operation as a protocol message."
+  @spec encode_system_op(
+          op :: String.t(),
+          settings :: map(),
+          format :: Plushie.Protocol.format()
+        ) :: iodata()
+  def encode_system_op(op, settings, format \\ :msgpack) do
+    serialize(%{type: "system_op", op: op, settings: settings}, format)
+  end
+
+  @doc "Encodes a system-wide query as a protocol message."
+  @spec encode_system_query(
+          op :: String.t(),
+          settings :: map(),
+          format :: Plushie.Protocol.format()
+        ) :: iodata()
+  def encode_system_query(op, settings, format \\ :msgpack) do
+    serialize(%{type: "system_query", op: op, settings: settings}, format)
+  end
+
   @doc """
   Encodes an interact request as a protocol message.
 

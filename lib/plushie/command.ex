@@ -23,6 +23,7 @@ defmodule Plushie.Command do
   - **Window queries**: `get_window_size/2`, `get_window_position/2`,
     `is_maximized/2`, `is_minimized/2`, `get_mode/2`, `get_scale_factor/2`,
     `raw_id/2`, `monitor_size/2`
+  - **System ops**: `allow_automatic_tabbing/1`
   - **System queries**: `get_system_theme/1`, `get_system_info/1`
   - **PaneGrid ops**: `pane_split/4`, `pane_close/2`, `pane_swap/3`,
     `pane_maximize/2`, `pane_restore/1`
@@ -450,8 +451,8 @@ defmodule Plushie.Command do
   @spec allow_automatic_tabbing(enabled :: boolean()) :: %__MODULE__{}
   def allow_automatic_tabbing(enabled) when is_boolean(enabled) do
     %__MODULE__{
-      type: :window_op,
-      payload: %{op: "allow_automatic_tabbing", window_id: "_global", enabled: enabled}
+      type: :system_op,
+      payload: %{op: "allow_automatic_tabbing", enabled: enabled}
     }
   end
 
@@ -594,8 +595,8 @@ defmodule Plushie.Command do
   @spec get_system_theme(tag :: event_tag()) :: %__MODULE__{}
   def get_system_theme(tag) do
     %__MODULE__{
-      type: :window_query,
-      payload: %{op: "get_system_theme", window_id: "_system", tag: to_string(tag)}
+      type: :system_query,
+      payload: %{op: "get_system_theme", tag: to_string(tag)}
     }
   end
 
@@ -625,8 +626,8 @@ defmodule Plushie.Command do
   @spec get_system_info(tag :: event_tag()) :: %__MODULE__{}
   def get_system_info(tag) do
     %__MODULE__{
-      type: :window_query,
-      payload: %{op: "get_system_info", window_id: "_system", tag: to_string(tag)}
+      type: :system_query,
+      payload: %{op: "get_system_info", tag: to_string(tag)}
     }
   end
 

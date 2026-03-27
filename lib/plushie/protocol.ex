@@ -55,6 +55,8 @@ defmodule Plushie.Protocol do
           | {:extension_command, String.t(), String.t(), map()}
           | {:extension_commands, [map()]}
           | {:window_op, String.t(), String.t(), map()}
+          | {:system_op, String.t(), map()}
+          | {:system_query, String.t(), map()}
           | {:interact, String.t(), String.t(), map(), map()}
           | {:interact_step, String.t(), [map()]}
           | {:interact_response, String.t(), [map()]}
@@ -254,6 +256,15 @@ defmodule Plushie.Protocol do
           format :: format()
         ) :: iodata()
   defdelegate encode_window_op(op, window_id, settings, format \\ :msgpack),
+    to: Plushie.Protocol.Encode
+
+  @doc "Encodes a system-wide operation as a protocol message."
+  @spec encode_system_op(op :: String.t(), settings :: map(), format :: format()) :: iodata()
+  defdelegate encode_system_op(op, settings, format \\ :msgpack), to: Plushie.Protocol.Encode
+
+  @doc "Encodes a system-wide query as a protocol message."
+  @spec encode_system_query(op :: String.t(), settings :: map(), format :: format()) :: iodata()
+  defdelegate encode_system_query(op, settings, format \\ :msgpack),
     to: Plushie.Protocol.Encode
 
   @doc """

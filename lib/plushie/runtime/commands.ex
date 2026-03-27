@@ -195,6 +195,25 @@ defmodule Plushie.Runtime.Commands do
     state
   end
 
+  defp execute_command(%Plushie.Command{type: :system_op, payload: %{op: op} = payload}, state) do
+    if state.bridge do
+      Plushie.Bridge.send_system_op(state.bridge, op, Map.delete(payload, :op))
+    end
+
+    state
+  end
+
+  defp execute_command(
+         %Plushie.Command{type: :system_query, payload: %{op: op} = payload},
+         state
+       ) do
+    if state.bridge do
+      Plushie.Bridge.send_system_query(state.bridge, op, Map.delete(payload, :op))
+    end
+
+    state
+  end
+
   defp execute_command(%Plushie.Command{type: :image_op, payload: %{op: op} = payload}, state) do
     if state.bridge do
       Plushie.Bridge.send_image_op(state.bridge, op, Map.delete(payload, :op))

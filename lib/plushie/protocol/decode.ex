@@ -209,6 +209,14 @@ defmodule Plushie.Protocol.Decode do
     {:window_op, op, window_id, settings}
   end
 
+  defp dispatch(%{"type" => "system_op", "op" => op, "settings" => settings}) do
+    {:system_op, op, settings}
+  end
+
+  defp dispatch(%{"type" => "system_query", "op" => op, "settings" => settings}) do
+    {:system_query, op, settings}
+  end
+
   # -- Widget events --
 
   defp dispatch(%{"type" => "event", "family" => "click", "id" => _id} = msg) do

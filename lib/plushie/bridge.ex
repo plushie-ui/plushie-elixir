@@ -158,6 +158,26 @@ defmodule Plushie.Bridge do
     GenServer.cast(bridge, {:send_window_op, op, window_id, settings})
   end
 
+  @doc "Sends a system-wide operation to the renderer."
+  @spec send_system_op(
+          bridge :: GenServer.server(),
+          op :: String.t(),
+          settings :: map()
+        ) :: :ok
+  def send_system_op(bridge, op, settings \\ %{}) do
+    GenServer.cast(bridge, {:send_system_op, op, settings})
+  end
+
+  @doc "Sends a system-wide query to the renderer."
+  @spec send_system_query(
+          bridge :: GenServer.server(),
+          op :: String.t(),
+          settings :: map()
+        ) :: :ok
+  def send_system_query(bridge, op, settings \\ %{}) do
+    GenServer.cast(bridge, {:send_system_query, op, settings})
+  end
+
   @doc "Sends an image operation (create/update/delete) to the renderer."
   @spec send_image_op(bridge :: GenServer.server(), op :: String.t(), payload :: map()) :: :ok
   def send_image_op(bridge, op, payload) do
@@ -394,6 +414,20 @@ defmodule Plushie.Bridge do
     {:noreply,
      encode_and_send(state, :window_op, fn fmt ->
        Plushie.Protocol.encode_window_op(op, window_id, settings, fmt)
+     end)}
+  end
+
+  def handle_cast({:send_system_op, op, settings}, state) do
+    {:noreply,
+     encode_and_send(state, :system_op, fn fmt ->
+       Plushie.Protocol.encode_system_op(op, settings, fmt)
+     end)}
+  end
+
+  def handle_cast({:send_system_query, op, settings}, state) do
+    {:noreply,
+     encode_and_send(state, :system_query, fn fmt ->
+       Plushie.Protocol.encode_system_query(op, settings, fmt)
      end)}
   end
 

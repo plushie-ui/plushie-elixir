@@ -143,7 +143,7 @@ defmodule Plushie.Docs.CommandsTest do
 
   test "commands_get_system_theme_construct_test" do
     cmd = Command.get_system_theme(:theme_detected)
-    assert %Command{type: :window_query, payload: payload} = cmd
+    assert %Command{type: :system_query, payload: payload} = cmd
     assert payload.tag == "theme_detected"
   end
 

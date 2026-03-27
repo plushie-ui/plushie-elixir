@@ -584,9 +584,12 @@ interprets them:
   renderer.
 - **Window commands** are encoded as wire messages to the renderer.
 - **Window property queries** (get_size, get_position, etc.) are sent as
-  window_op wire messages. The renderer responds with an `effect_response`
-  keyed by window_id. **System queries** (get_system_theme, get_system_info)
-  use a separate `query_response` wire message keyed by tag.
+  `window_op` wire messages. The renderer responds with an `effect_response`
+  keyed by `window_id`.
+- **System ops** are sent as `system_op` wire messages.
+- **System queries** (get_system_theme, get_system_info) are sent as
+  `system_query` wire messages. The renderer responds with an
+  `op_query_response` keyed by tag.
 - **Image operations** are encoded as wire messages to the renderer.
 - **PaneGrid operations** are encoded as widget ops sent to the renderer.
 - **Timers** use `Process.send_after` under the hood.

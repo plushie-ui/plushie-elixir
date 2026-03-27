@@ -280,20 +280,15 @@ defmodule Plushie.CommandTest do
   # ---------------------------------------------------------------------------
 
   describe "allow_automatic_tabbing/1" do
-    test "returns a window_op command with op allow_automatic_tabbing" do
+    test "returns a system_op command with op allow_automatic_tabbing" do
       cmd = Command.allow_automatic_tabbing(true)
-      assert cmd.type == :window_op
+      assert cmd.type == :system_op
       assert cmd.payload.op == "allow_automatic_tabbing"
     end
 
     test "stores enabled flag in payload" do
       cmd = Command.allow_automatic_tabbing(false)
       assert cmd.payload.enabled == false
-    end
-
-    test "uses _global as window_id" do
-      cmd = Command.allow_automatic_tabbing(true)
-      assert cmd.payload.window_id == "_global"
     end
 
     test "raises when enabled is not a boolean" do
