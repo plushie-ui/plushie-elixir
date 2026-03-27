@@ -712,23 +712,25 @@ defmodule Plushie.RuntimeTest do
     end
 
     test "concurrent interact returns interact_in_progress" do
-      {runtime, bridge} = start_runtime(SimpleApp)
-      await_initial_render(runtime)
+      capture_log(fn ->
+        {runtime, bridge} = start_runtime(SimpleApp)
+        await_initial_render(runtime)
 
-      first =
-        Task.async(fn ->
-          Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
+        first =
+          Task.async(fn ->
+            Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
+          end)
+
+        await_condition(runtime, fn _state ->
+          Plushie.Test.InternalMockBridge.get_interacts(bridge) != []
         end)
 
-      await_condition(runtime, fn _state ->
-        Plushie.Test.InternalMockBridge.get_interacts(bridge) != []
+        assert Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"}) ==
+                 {:error, :interact_in_progress}
+
+        send(runtime, :renderer_restarted)
+        assert Task.await(first) == {:error, :renderer_restarted}
       end)
-
-      assert Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"}) ==
-               {:error, :interact_in_progress}
-
-      send(runtime, :renderer_restarted)
-      assert Task.await(first) == {:error, :renderer_restarted}
     end
 
     test "stale interact responses do not complete a newer interact" do
@@ -1363,21 +1365,23 @@ defmodule Plushie.RuntimeTest do
     end
 
     test "canvas widget subscriptions survive force_rerender" do
-      {runtime, _bridge} = start_runtime(WidgetSubApp)
-      await_initial_render(runtime)
+      capture_log(fn ->
+        {runtime, _bridge} = start_runtime(WidgetSubApp)
+        await_initial_render(runtime)
 
-      assert Map.has_key?(
-               :sys.get_state(runtime).subscriptions,
-               {:every, 1_000, {:__canvas_widget__, "main", "ticker", :pulse}}
-             )
+        assert Map.has_key?(
+                 :sys.get_state(runtime).subscriptions,
+                 {:every, 1_000, {:__canvas_widget__, "main", "ticker", :pulse}}
+               )
 
-      send(runtime, :force_rerender)
-      state = :sys.get_state(runtime)
+        send(runtime, :force_rerender)
+        state = :sys.get_state(runtime)
 
-      assert Map.has_key?(
-               state.subscriptions,
-               {:every, 1_000, {:__canvas_widget__, "main", "ticker", :pulse}}
-             )
+        assert Map.has_key?(
+                 state.subscriptions,
+                 {:every, 1_000, {:__canvas_widget__, "main", "ticker", :pulse}}
+               )
+      end)
     end
 
     test "canvas widget timer state changes resync widget subscriptions" do

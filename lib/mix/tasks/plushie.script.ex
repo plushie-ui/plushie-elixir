@@ -9,6 +9,7 @@ defmodule Mix.Tasks.Plushie.Script do
   """
 
   use Mix.Task
+  require Logger
 
   @shortdoc "Run .plushie scripts"
 
@@ -27,7 +28,10 @@ defmodule Mix.Tasks.Plushie.Script do
       System.halt(0)
     end
 
-    results = Enum.map(paths, &run_script/1)
+    results =
+      with_quiet_runtime_logs(fn ->
+        Enum.map(paths, &run_script/1)
+      end)
 
     failures = Enum.count(results, &(&1 == :error))
     passes = Enum.count(results, &(&1 == :ok))
@@ -60,6 +64,17 @@ defmodule Mix.Tasks.Plushie.Script do
       {:error, reason} ->
         Mix.shell().error("  Parse error: #{reason}")
         :error
+    end
+  end
+
+  defp with_quiet_runtime_logs(fun) do
+    old_level = Logger.level()
+
+    try do
+      Logger.configure(level: :warning)
+      fun.()
+    after
+      Logger.configure(level: old_level)
     end
   end
 end
