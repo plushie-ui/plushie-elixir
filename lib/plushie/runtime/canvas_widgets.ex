@@ -156,6 +156,16 @@ defmodule Plushie.Runtime.CanvasWidgets do
             window_id: window_id
           })
 
+        # Composite widgets with event handlers participate in the
+        # dispatch chain but have no internal state.
+        %{__widget_event_handler__: module} when is_atom(module) ->
+          Map.put(acc, {window_id, id}, %{
+            module: module,
+            state: %{},
+            props: %{},
+            window_id: window_id
+          })
+
         _ ->
           acc
       end

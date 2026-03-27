@@ -414,7 +414,19 @@ defmodule Plushie.Extension do
       else
         if is_composite do
           prop_validation = generate_prop_validation(props)
-          generate_composite_new(type_string, container, props, prop_validation, has_render_3)
+          has_handle_event = Module.defines?(env.module, {:handle_event, 2})
+
+          generate_composite_new(%{
+            module: env.module,
+            widget_type: widget_type,
+            container: container,
+            props: props,
+            events: events,
+            event_specs: event_specs,
+            prop_extract: prop_validation,
+            has_render_3: has_render_3,
+            has_handle_event: has_handle_event
+          })
         else
           generate_struct_widget(
             env.module,
@@ -947,72 +959,141 @@ defmodule Plushie.Extension do
     end
   end
 
-  defp generate_composite_new(_type_string, container, props, prop_extract, has_render_3) do
+  defp generate_composite_new(config) do
+    %{
+      module: module,
+      widget_type: widget_type,
+      container: container,
+      props: props,
+      events: events,
+      event_specs: event_specs,
+      prop_extract: prop_extract,
+      has_render_3: has_render_3,
+      has_handle_event: has_handle_event
+    } = config
+
     prop_struct_fields =
       for {name, _type, opts} <- props do
-        default = Keyword.get(opts, :default)
-        {name, default}
+        {name, Keyword.get(opts, :default)}
       end
 
-    if container or has_render_3 do
-      quote do
-        @spec new(id :: String.t(), opts :: keyword()) :: Plushie.Widget.ui_node()
-        def new(id, opts \\ []) when is_binary(id) do
+    has_events = events != [] or has_handle_event
+    is_container = container or has_render_3
+
+    handler_code =
+      generate_composite_handler_code(
+        module,
+        widget_type,
+        events,
+        event_specs,
+        has_events,
+        has_handle_event
+      )
+
+    new_fn = generate_composite_new_fn(prop_struct_fields, prop_extract, is_container, has_events)
+
+    quote do
+      unquote(handler_code)
+      unquote(new_fn)
+    end
+  end
+
+  defp generate_composite_handler_code(
+         _module,
+         _widget_type,
+         _events,
+         _event_specs,
+         false,
+         _has_handle_event
+       ),
+       do: nil
+
+  defp generate_composite_handler_code(
+         module,
+         widget_type,
+         events,
+         event_specs,
+         true,
+         has_handle_event
+       ) do
+    default_handle_event =
+      unless has_handle_event do
+        quote do
+          @doc "Default event handler -- all events consumed (opaque widget)."
+          def handle_event(_event, _state), do: :consumed
+        end
+      end
+
+    quote do
+      unquote(default_handle_event)
+
+      @doc false
+      defp __inject_handler_meta__(node) do
+        meta = Map.get(node, :meta, %{})
+
+        meta =
+          meta
+          |> Map.put(:__widget_event_handler__, unquote(module))
+          |> Map.put(:__extension_widget_type__, unquote(widget_type))
+          |> Map.put(:__extension_widget_events__, unquote(events))
+          |> Map.put(:__extension_widget_event_specs__, unquote(Macro.escape(event_specs)))
+
+        Map.put(node, :meta, meta)
+      end
+    end
+  end
+
+  defp generate_composite_new_fn(prop_struct_fields, prop_extract, is_container, has_events) do
+    render_call =
+      if is_container do
+        quote do
           {children, opts} = Keyword.pop(opts, :do, [])
           children = List.wrap(children)
-          {event_rate_val, opts} = Keyword.pop(opts, :event_rate)
-          {a11y_val, opts} = Keyword.pop(opts, :a11y)
-
-          prop_defaults = unquote(Macro.escape(prop_struct_fields))
-          unquote(prop_extract)
-
-          props_map =
-            prop_defaults
-            |> Enum.map(fn {name, default} ->
-              {name, Keyword.get(opts, name, default)}
-            end)
-            |> Enum.reject(fn {_name, val} -> is_nil(val) end)
-            |> Map.new()
-
-          props_map =
-            if event_rate_val,
-              do: Map.put(props_map, :event_rate, event_rate_val),
-              else: props_map
-
-          props_map =
-            if a11y_val, do: Map.put(props_map, :a11y, a11y_val), else: props_map
-
-          render(id, props_map, children)
         end
       end
-    else
-      quote do
-        @spec new(id :: String.t(), opts :: keyword()) :: Plushie.Widget.ui_node()
-        def new(id, opts \\ []) when is_binary(id) do
-          {event_rate_val, opts} = Keyword.pop(opts, :event_rate)
-          {a11y_val, opts} = Keyword.pop(opts, :a11y)
 
-          prop_defaults = unquote(Macro.escape(prop_struct_fields))
-          unquote(prop_extract)
+    render_invoke =
+      if is_container do
+        quote(do: render(id, props_map, children))
+      else
+        quote(do: render(id, props_map))
+      end
 
-          props_map =
-            prop_defaults
-            |> Enum.map(fn {name, default} ->
-              {name, Keyword.get(opts, name, default)}
-            end)
-            |> Enum.reject(fn {_name, val} -> is_nil(val) end)
-            |> Map.new()
+    wrap_result =
+      if has_events do
+        quote(do: __inject_handler_meta__(result))
+      else
+        quote(do: result)
+      end
 
-          props_map =
-            if event_rate_val,
-              do: Map.put(props_map, :event_rate, event_rate_val),
-              else: props_map
+    quote do
+      @spec new(id :: String.t(), opts :: keyword()) :: Plushie.Widget.ui_node()
+      def new(id, opts \\ []) when is_binary(id) do
+        unquote(render_call)
+        {event_rate_val, opts} = Keyword.pop(opts, :event_rate)
+        {a11y_val, opts} = Keyword.pop(opts, :a11y)
 
-          props_map =
-            if a11y_val, do: Map.put(props_map, :a11y, a11y_val), else: props_map
+        prop_defaults = unquote(Macro.escape(prop_struct_fields))
+        unquote(prop_extract)
 
-          render(id, props_map)
-        end
+        props_map =
+          prop_defaults
+          |> Enum.map(fn {name, default} ->
+            {name, Keyword.get(opts, name, default)}
+          end)
+          |> Enum.reject(fn {_name, val} -> is_nil(val) end)
+          |> Map.new()
+
+        props_map =
+          if event_rate_val,
+            do: Map.put(props_map, :event_rate, event_rate_val),
+            else: props_map
+
+        props_map =
+          if a11y_val, do: Map.put(props_map, :a11y, a11y_val), else: props_map
+
+        result = unquote(render_invoke)
+        unquote(wrap_result)
       end
     end
   end

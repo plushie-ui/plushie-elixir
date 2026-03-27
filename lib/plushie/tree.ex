@@ -42,7 +42,8 @@ defmodule Plushie.Tree do
     :__canvas_widget_state__,
     :__extension_widget_type__,
     :__extension_widget_events__,
-    :__extension_widget_event_specs__
+    :__extension_widget_event_specs__,
+    :__widget_event_handler__
   ]
 
   @doc """
