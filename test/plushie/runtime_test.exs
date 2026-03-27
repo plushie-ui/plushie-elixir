@@ -176,7 +176,7 @@ defmodule Plushie.RuntimeTest do
       %{model | events: model.events ++ [:mouse]}
     end
 
-    def update(model, %Plushie.Event.SensorEvent{type: :resize}) do
+    def update(model, %Plushie.Event.WidgetEvent{type: :sensor_resize}) do
       %{model | events: model.events ++ [:sensor]}
     end
 
@@ -197,7 +197,7 @@ defmodule Plushie.RuntimeTest do
 
     def init(_opts), do: %{events: []}
 
-    def update(model, %Plushie.Event.SensorEvent{type: :resize, window_id: window_id}) do
+    def update(model, %Plushie.Event.WidgetEvent{type: :sensor_resize, window_id: window_id}) do
       %{model | events: model.events ++ [window_id]}
     end
 
@@ -1423,7 +1423,11 @@ defmodule Plushie.RuntimeTest do
       send(
         runtime,
         {:renderer_event,
-         %Plushie.Event.SensorEvent{type: :resize, id: "win", width: 10, height: 10}}
+         %Plushie.Event.WidgetEvent{
+           type: :sensor_resize,
+           id: "win",
+           data: %{width: 10, height: 10}
+         }}
       )
 
       state = await_condition(runtime, fn s -> s.model.events == [:mouse, :sensor] end)
@@ -1437,26 +1441,24 @@ defmodule Plushie.RuntimeTest do
       send(
         runtime,
         {:renderer_event,
-         %Plushie.Event.SensorEvent{
-           type: :resize,
+         %Plushie.Event.WidgetEvent{
+           type: :sensor_resize,
            id: "size",
            scope: [],
            window_id: "main",
-           width: 10,
-           height: 10
+           data: %{width: 10, height: 10}
          }}
       )
 
       send(
         runtime,
         {:renderer_event,
-         %Plushie.Event.SensorEvent{
-           type: :resize,
+         %Plushie.Event.WidgetEvent{
+           type: :sensor_resize,
            id: "size",
            scope: [],
            window_id: "prefs",
-           width: 20,
-           height: 20
+           data: %{width: 20, height: 20}
          }}
       )
 

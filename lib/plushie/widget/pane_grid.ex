@@ -23,11 +23,11 @@ defmodule Plushie.Widget.PaneGrid do
 
   ## Events
 
-  - `%PaneEvent{type: :clicked}` -- pane selected.
-  - `%PaneEvent{type: :resized}` -- split divider moved (split, ratio).
-  - `%PaneEvent{type: :dragged}` -- pane drag (action: :picked/:dropped/:canceled,
-    with optional target, region, edge).
-  - `%PaneEvent{type: :focus_cycle}` -- F6/Shift+F6 focus cycling.
+  - `%WidgetEvent{type: :pane_clicked}` -- pane selected.
+  - `%WidgetEvent{type: :pane_resized}` -- split divider moved (split, ratio in data).
+  - `%WidgetEvent{type: :pane_dragged}` -- pane drag (action: :picked/:dropped/:canceled,
+    with optional target, region, edge in data).
+  - `%WidgetEvent{type: :pane_focus_cycle}` -- F6/Shift+F6 focus cycling.
   """
 
   alias Plushie.Type.Color

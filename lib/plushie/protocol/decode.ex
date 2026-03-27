@@ -6,16 +6,12 @@ defmodule Plushie.Protocol.Decode do
   alias Plushie.Protocol.{Error, Keys, Parsers}
 
   alias Plushie.Event.{
-    CanvasEvent,
     Effect,
     ExtensionCommandError,
     Ime,
     Key,
     Modifiers,
     Mouse,
-    MouseAreaEvent,
-    PaneEvent,
-    SensorEvent,
     SystemEvent,
     Touch,
     WidgetEvent,
@@ -609,37 +605,37 @@ defmodule Plushie.Protocol.Decode do
 
   defp dispatch(%{"type" => "event", "family" => "mouse_right_press", "id" => _id} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    %MouseAreaEvent{type: :right_press, id: local, scope: scope, window_id: window_id}
+    %WidgetEvent{type: :mouse_right_press, id: local, scope: scope, window_id: window_id}
   end
 
   defp dispatch(%{"type" => "event", "family" => "mouse_right_release", "id" => _id} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    %MouseAreaEvent{type: :right_release, id: local, scope: scope, window_id: window_id}
+    %WidgetEvent{type: :mouse_right_release, id: local, scope: scope, window_id: window_id}
   end
 
   defp dispatch(%{"type" => "event", "family" => "mouse_middle_press", "id" => _id} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    %MouseAreaEvent{type: :middle_press, id: local, scope: scope, window_id: window_id}
+    %WidgetEvent{type: :mouse_middle_press, id: local, scope: scope, window_id: window_id}
   end
 
   defp dispatch(%{"type" => "event", "family" => "mouse_middle_release", "id" => _id} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    %MouseAreaEvent{type: :middle_release, id: local, scope: scope, window_id: window_id}
+    %WidgetEvent{type: :mouse_middle_release, id: local, scope: scope, window_id: window_id}
   end
 
   defp dispatch(%{"type" => "event", "family" => "mouse_double_click", "id" => _id} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    %MouseAreaEvent{type: :double_click, id: local, scope: scope, window_id: window_id}
+    %WidgetEvent{type: :mouse_double_click, id: local, scope: scope, window_id: window_id}
   end
 
   defp dispatch(%{"type" => "event", "family" => "mouse_enter", "id" => _id} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    %MouseAreaEvent{type: :enter, id: local, scope: scope, window_id: window_id}
+    %WidgetEvent{type: :mouse_enter, id: local, scope: scope, window_id: window_id}
   end
 
   defp dispatch(%{"type" => "event", "family" => "mouse_exit", "id" => _id} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    %MouseAreaEvent{type: :exit, id: local, scope: scope, window_id: window_id}
+    %WidgetEvent{type: :mouse_exit, id: local, scope: scope, window_id: window_id}
   end
 
   defp dispatch(
@@ -651,7 +647,14 @@ defmodule Plushie.Protocol.Decode do
          } = msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    %MouseAreaEvent{type: :move, id: local, scope: scope, window_id: window_id, x: x, y: y}
+
+    %WidgetEvent{
+      type: :mouse_move,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: %{x: x, y: y}
+    }
   end
 
   defp dispatch(
@@ -664,13 +667,12 @@ defmodule Plushie.Protocol.Decode do
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
-    %MouseAreaEvent{
-      type: :scroll,
+    %WidgetEvent{
+      type: :mouse_scroll,
       id: local,
       scope: scope,
       window_id: window_id,
-      delta_x: dx,
-      delta_y: dy
+      data: %{delta_x: dx, delta_y: dy}
     }
   end
 
@@ -681,14 +683,12 @@ defmodule Plushie.Protocol.Decode do
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
-    %CanvasEvent{
-      type: :press,
+    %WidgetEvent{
+      type: :canvas_press,
       id: local,
       scope: scope,
       window_id: window_id,
-      x: data["x"],
-      y: data["y"],
-      button: parse_canvas_button(data["button"])
+      data: %{x: data["x"], y: data["y"], button: parse_canvas_button(data["button"])}
     }
   end
 
@@ -697,14 +697,12 @@ defmodule Plushie.Protocol.Decode do
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
-    %CanvasEvent{
-      type: :release,
+    %WidgetEvent{
+      type: :canvas_release,
       id: local,
       scope: scope,
       window_id: window_id,
-      x: data["x"],
-      y: data["y"],
-      button: parse_canvas_button(data["button"])
+      data: %{x: data["x"], y: data["y"], button: parse_canvas_button(data["button"])}
     }
   end
 
@@ -713,13 +711,12 @@ defmodule Plushie.Protocol.Decode do
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
-    %CanvasEvent{
-      type: :move,
+    %WidgetEvent{
+      type: :canvas_move,
       id: local,
       scope: scope,
       window_id: window_id,
-      x: data["x"],
-      y: data["y"]
+      data: %{x: data["x"], y: data["y"]}
     }
   end
 
@@ -728,15 +725,17 @@ defmodule Plushie.Protocol.Decode do
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
-    %CanvasEvent{
-      type: :scroll,
+    %WidgetEvent{
+      type: :canvas_scroll,
       id: local,
       scope: scope,
       window_id: window_id,
-      x: data["x"],
-      y: data["y"],
-      delta_x: data["delta_x"],
-      delta_y: data["delta_y"]
+      data: %{
+        x: data["x"],
+        y: data["y"],
+        delta_x: data["delta_x"],
+        delta_y: data["delta_y"]
+      }
     }
   end
 
@@ -747,13 +746,12 @@ defmodule Plushie.Protocol.Decode do
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
-    %SensorEvent{
-      type: :resize,
+    %WidgetEvent{
+      type: :sensor_resize,
       id: local,
       scope: scope,
       window_id: window_id,
-      width: data["width"],
-      height: data["height"]
+      data: %{width: data["width"], height: data["height"]}
     }
   end
 
@@ -764,13 +762,12 @@ defmodule Plushie.Protocol.Decode do
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
-    %PaneEvent{
-      type: :resized,
+    %WidgetEvent{
+      type: :pane_resized,
       id: local,
       scope: scope,
       window_id: window_id,
-      split: data["split"],
-      ratio: data["ratio"]
+      data: %{split: data["split"], ratio: data["ratio"]}
     }
   end
 
@@ -782,16 +779,18 @@ defmodule Plushie.Protocol.Decode do
     with {:ok, action} <- Parsers.parse_pane_action(data["action"]),
          {:ok, region} <- Parsers.parse_pane_region(data["region"]),
          {:ok, edge} <- Parsers.parse_pane_region(data["edge"]) do
-      %PaneEvent{
-        type: :dragged,
+      %WidgetEvent{
+        type: :pane_dragged,
         id: local,
         scope: scope,
         window_id: window_id,
-        pane: data["pane"],
-        target: data["target"],
-        action: action,
-        region: region,
-        edge: edge
+        data: %{
+          pane: data["pane"],
+          target: data["target"],
+          action: action,
+          region: region,
+          edge: edge
+        }
       }
     else
       {:error, reason} -> invalid_pane_dragged_field(data, reason, msg)
@@ -802,7 +801,14 @@ defmodule Plushie.Protocol.Decode do
          %{"type" => "event", "family" => "pane_clicked", "id" => _id, "data" => data} = msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    %PaneEvent{type: :clicked, id: local, scope: scope, window_id: window_id, pane: data["pane"]}
+
+    %WidgetEvent{
+      type: :pane_clicked,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: %{pane: data["pane"]}
+    }
   end
 
   defp dispatch(
@@ -810,12 +816,12 @@ defmodule Plushie.Protocol.Decode do
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
-    %PaneEvent{
-      type: :focus_cycle,
+    %WidgetEvent{
+      type: :pane_focus_cycle,
       id: local,
       scope: scope,
       window_id: window_id,
-      pane: data["pane"]
+      data: %{pane: data["pane"]}
     }
   end
 

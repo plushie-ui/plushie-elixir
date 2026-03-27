@@ -1,7 +1,7 @@
 defmodule Plushie.PaneGridTest do
   use ExUnit.Case, async: true
 
-  alias Plushie.Event.PaneEvent
+  alias Plushie.Event.WidgetEvent
 
   describe "pane_grid widget construction" do
     test "creates pane_grid node with children" do
@@ -88,7 +88,7 @@ defmodule Plushie.PaneGridTest do
         "data" => %{"split" => 0, "ratio" => 0.45}
       }
 
-      assert %PaneEvent{type: :resized, id: "pg1", split: 0, ratio: 0.45} =
+      assert %WidgetEvent{type: :pane_resized, id: "pg1", data: %{split: 0, ratio: 0.45}} =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
@@ -101,7 +101,7 @@ defmodule Plushie.PaneGridTest do
         "data" => %{"pane" => "left", "target" => "right"}
       }
 
-      assert %PaneEvent{type: :dragged, id: "pg1", pane: "left", target: "right"} =
+      assert %WidgetEvent{type: :pane_dragged, id: "pg1", data: %{pane: "left", target: "right"}} =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
@@ -133,7 +133,7 @@ defmodule Plushie.PaneGridTest do
         "data" => %{"pane" => "left"}
       }
 
-      assert %PaneEvent{type: :clicked, id: "pg1", pane: "left"} =
+      assert %WidgetEvent{type: :pane_clicked, id: "pg1", data: %{pane: "left"}} =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
   end

@@ -656,6 +656,7 @@ inside an extension's node tree.
 ### Canvas events (node ID in `id` field)
 
 Emitted by canvas widgets via `Message::CanvasEvent` and `Message::CanvasScroll`.
+Decoded as `%WidgetEvent{}` with `canvas_*` types and coordinate data in the `data` field.
 
 | Family | Data fields |
 |---|---|

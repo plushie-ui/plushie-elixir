@@ -3,15 +3,11 @@ defmodule Plushie.Docs.EventsTest do
 
   alias Plushie.Event.{
     Async,
-    CanvasEvent,
     Effect,
     Ime,
     Key,
     Modifiers,
     Mouse,
-    MouseAreaEvent,
-    PaneEvent,
-    SensorEvent,
     Stream,
     SystemEvent,
     Timer,
@@ -138,42 +134,49 @@ defmodule Plushie.Docs.EventsTest do
   # -- Mouse area events -------------------------------------------------------
 
   test "events_mouse_area_enter_match_test" do
-    event = %MouseAreaEvent{type: :enter, id: "hover_zone", scope: []}
+    event = %WidgetEvent{type: :mouse_enter, id: "hover_zone", scope: []}
 
-    assert match?(%MouseAreaEvent{type: :enter, id: "hover_zone"}, event)
+    assert match?(%WidgetEvent{type: :mouse_enter, id: "hover_zone"}, event)
   end
 
   test "events_mouse_area_move_match_test" do
-    event = %MouseAreaEvent{type: :move, id: "canvas_area", scope: [], x: 10.0, y: 20.0}
+    event = %WidgetEvent{
+      type: :mouse_move,
+      id: "canvas_area",
+      scope: [],
+      data: %{x: 10.0, y: 20.0}
+    }
 
-    assert match?(%MouseAreaEvent{type: :move, id: "canvas_area"}, event)
-    assert event.x == 10.0
-    assert event.y == 20.0
+    assert match?(%WidgetEvent{type: :mouse_move, id: "canvas_area"}, event)
+    assert event.data.x == 10.0
+    assert event.data.y == 20.0
   end
 
   # -- Canvas events -----------------------------------------------------------
 
   test "events_canvas_press_match_test" do
-    event = %CanvasEvent{
-      type: :press,
+    event = %WidgetEvent{
+      type: :canvas_press,
       id: "draw_area",
       scope: [],
-      x: 42.0,
-      y: 100.0,
-      button: "left"
+      data: %{x: 42.0, y: 100.0, button: :left}
     }
 
-    assert match?(%CanvasEvent{type: :press, id: "draw_area", button: "left"}, event)
-    assert event.x == 42.0
-    assert event.y == 100.0
+    assert match?(
+             %WidgetEvent{type: :canvas_press, id: "draw_area", data: %{button: :left}},
+             event
+           )
+
+    assert event.data.x == 42.0
+    assert event.data.y == 100.0
   end
 
   test "events_canvas_move_match_test" do
-    event = %CanvasEvent{type: :move, id: "draw_area", scope: [], x: 5.0, y: 10.0}
+    event = %WidgetEvent{type: :canvas_move, id: "draw_area", scope: [], data: %{x: 5.0, y: 10.0}}
 
-    assert match?(%CanvasEvent{type: :move, id: "draw_area"}, event)
-    assert event.x == 5.0
-    assert event.y == 10.0
+    assert match?(%WidgetEvent{type: :canvas_move, id: "draw_area"}, event)
+    assert event.data.x == 5.0
+    assert event.data.y == 10.0
   end
 
   test "events_canvas_element_event_match_test" do
@@ -191,32 +194,36 @@ defmodule Plushie.Docs.EventsTest do
   # -- Sensor events -----------------------------------------------------------
 
   test "events_sensor_resize_match_test" do
-    event = %SensorEvent{
-      type: :resize,
+    event = %WidgetEvent{
+      type: :sensor_resize,
       id: "content_area",
       scope: [],
-      width: 800.0,
-      height: 600.0
+      data: %{width: 800.0, height: 600.0}
     }
 
-    assert match?(%SensorEvent{type: :resize, id: "content_area"}, event)
-    assert event.width == 800.0
-    assert event.height == 600.0
+    assert match?(%WidgetEvent{type: :sensor_resize, id: "content_area"}, event)
+    assert event.data.width == 800.0
+    assert event.data.height == 600.0
   end
 
   # -- PaneGrid events ---------------------------------------------------------
 
   test "events_pane_resized_match_test" do
-    event = %PaneEvent{type: :resized, id: "editor", scope: [], split: "split_1", ratio: 0.5}
+    event = %WidgetEvent{
+      type: :pane_resized,
+      id: "editor",
+      scope: [],
+      data: %{split: "split_1", ratio: 0.5}
+    }
 
-    assert match?(%PaneEvent{type: :resized, id: "editor"}, event)
-    assert event.ratio == 0.5
+    assert match?(%WidgetEvent{type: :pane_resized, id: "editor"}, event)
+    assert event.data.ratio == 0.5
   end
 
   test "events_pane_clicked_match_test" do
-    event = %PaneEvent{type: :clicked, id: "editor", scope: [], pane: "left"}
+    event = %WidgetEvent{type: :pane_clicked, id: "editor", scope: [], data: %{pane: "left"}}
 
-    assert match?(%PaneEvent{type: :clicked, id: "editor"}, event)
+    assert match?(%WidgetEvent{type: :pane_clicked, id: "editor"}, event)
   end
 
   # -- Keyboard events ---------------------------------------------------------

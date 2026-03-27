@@ -76,10 +76,6 @@ Plushie.Event.target(event)
 ## Which event structs carry scope
 
 - `Plushie.Event.WidgetEvent`
-- `Plushie.Event.CanvasEvent`
-- `Plushie.Event.MouseAreaEvent`
-- `Plushie.Event.PaneEvent`
-- `Plushie.Event.SensorEvent`
 
 Subscription events (Key, Mouse, Touch, IME, Modifiers) are global and
 do not carry scope.
@@ -233,8 +229,8 @@ the full path in debug output:
 ```
 #WidgetEvent<:click "sidebar/form/save">
 #WidgetEvent<:input "email" value="test@example.com">
-#CanvasEvent<:press "panel/drawing" x=42 y=100>
-#SensorEvent<:resize "content/measure" 800x600>
+#WidgetEvent<:canvas_press "panel/drawing">
+#WidgetEvent<:sensor_resize "content/measure">
 ```
 
 Use `Plushie.Event.target/1` to get the same string programmatically.

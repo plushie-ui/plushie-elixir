@@ -3,16 +3,12 @@ defmodule Plushie.Event do
 
   alias Plushie.Event.{
     Async,
-    CanvasEvent,
     Effect,
     ExtensionCommandError,
     Ime,
     Key,
     Modifiers,
     Mouse,
-    MouseAreaEvent,
-    PaneEvent,
-    SensorEvent,
     Stream,
     SystemEvent,
     Timer,
@@ -29,10 +25,6 @@ defmodule Plushie.Event do
           | Touch.t()
           | Ime.t()
           | WindowEvent.delivered_t()
-          | CanvasEvent.delivered_t()
-          | MouseAreaEvent.delivered_t()
-          | PaneEvent.delivered_t()
-          | SensorEvent.delivered_t()
           | Effect.t()
           | ExtensionCommandError.t()
           | SystemEvent.delivered_t()
@@ -48,10 +40,6 @@ defmodule Plushie.Event do
           | Touch.t()
           | Ime.t()
           | WindowEvent.t()
-          | CanvasEvent.t()
-          | MouseAreaEvent.t()
-          | PaneEvent.t()
-          | SensorEvent.t()
           | Effect.t()
           | ExtensionCommandError.t()
           | SystemEvent.t()

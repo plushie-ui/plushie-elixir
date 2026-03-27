@@ -1,7 +1,7 @@
 defmodule Plushie.SensorTest do
   use ExUnit.Case, async: true
 
-  alias Plushie.Event.SensorEvent
+  alias Plushie.Event.WidgetEvent
 
   describe "sensor resize event dispatch" do
     test "decodes sensor_resize" do
@@ -13,7 +13,7 @@ defmodule Plushie.SensorTest do
         "data" => %{"width" => 450.0, "height" => 300.0}
       }
 
-      assert %SensorEvent{type: :resize, id: "s1", width: 450.0, height: 300.0} =
+      assert %WidgetEvent{type: :sensor_resize, id: "s1", data: %{width: 450.0, height: 300.0}} =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
@@ -26,7 +26,7 @@ defmodule Plushie.SensorTest do
         "data" => %{"width" => 800, "height" => 600}
       }
 
-      assert %SensorEvent{type: :resize, id: "s1", width: 800, height: 600} =
+      assert %WidgetEvent{type: :sensor_resize, id: "s1", data: %{width: 800, height: 600}} =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
   end

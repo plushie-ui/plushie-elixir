@@ -1,12 +1,10 @@
 defmodule Plushie.ProtocolTest do
   use ExUnit.Case, async: true
 
-  alias Plushie.Event.CanvasEvent
   alias Plushie.Event.Effect
   alias Plushie.Event.Ime
   alias Plushie.Event.Key
   alias Plushie.Event.Modifiers
-  alias Plushie.Event.MouseAreaEvent
   alias Plushie.Event.SystemEvent
   alias Plushie.Event.Touch
   alias Plushie.Event.WidgetEvent
@@ -1018,7 +1016,7 @@ defmodule Plushie.ProtocolTest do
         })
 
       assert Protocol.decode_message(json, :json) ==
-               %MouseAreaEvent{type: :middle_press, id: "zone", window_id: "main"}
+               %WidgetEvent{type: :mouse_middle_press, id: "zone", window_id: "main"}
     end
 
     test "decodes mouse_middle_press from msgpack" do
@@ -1031,7 +1029,7 @@ defmodule Plushie.ProtocolTest do
 
       packed = Msgpax.pack!(event, iodata: false)
 
-      assert %MouseAreaEvent{type: :middle_press, id: "zone", window_id: "main"} =
+      assert %WidgetEvent{type: :mouse_middle_press, id: "zone", window_id: "main"} =
                Protocol.decode_message(packed, :msgpack)
     end
   end
@@ -1475,14 +1473,11 @@ defmodule Plushie.ProtocolTest do
           data: %{x: 5.0, y: 10.0, delta_x: 0.0, delta_y: -1.0}
         })
 
-      assert %CanvasEvent{
-               type: :scroll,
+      assert %WidgetEvent{
+               type: :canvas_scroll,
                id: "viewport",
                window_id: "main",
-               x: 5.0,
-               y: 10.0,
-               delta_x: +0.0,
-               delta_y: -1.0
+               data: %{x: 5.0, y: 10.0, delta_x: +0.0, delta_y: -1.0}
              } =
                Protocol.decode_message(json, :json)
     end
@@ -1497,7 +1492,7 @@ defmodule Plushie.ProtocolTest do
           data: %{x: 5.0, y: 10.0, button: "left"}
         })
 
-      assert %CanvasEvent{type: :press, id: "viewport", window_id: "main"} =
+      assert %WidgetEvent{type: :canvas_press, id: "viewport", window_id: "main"} =
                Protocol.decode_message(json, :json)
     end
   end

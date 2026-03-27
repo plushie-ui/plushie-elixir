@@ -57,7 +57,8 @@ defmodule Plushie.CanvasWidgetDispatchTest do
     event(:activated, data: [source: :string])
 
     @impl true
-    def handle_event(%{type: type} = _event, state) when type in [:click, :press] do
+    def handle_event(%{type: type} = _event, state)
+        when type in [:click, :canvas_press] do
       {:emit, :activated, %{source: "emit_widget"}, state}
     end
 
@@ -474,14 +475,12 @@ defmodule Plushie.CanvasWidgetDispatchTest do
   end
 
   defp canvas_event(id, scope, window_id \\ nil) do
-    %Plushie.Event.CanvasEvent{
-      type: :press,
+    %Plushie.Event.WidgetEvent{
+      type: :canvas_press,
       id: id,
       scope: scope,
       window_id: window_id,
-      x: 100.0,
-      y: 100.0,
-      button: "left"
+      data: %{x: 100.0, y: 100.0, button: "left"}
     }
   end
 end

@@ -89,9 +89,9 @@ the full event taxonomy. Common families:
 - `%Key{type: :release, ...}` -- keyboard release (via subscription)
 - `%WindowEvent{type: :close_requested, window_id: id}` -- window close requested
 - `%WindowEvent{type: :resized, window_id: id, width: w, height: h}` -- window resized
-- `%CanvasEvent{type: :press, id: id, x: x, y: y, button: btn}` -- canvas interaction
-- `%SensorEvent{type: :resize, id: id, width: w, height: h}` -- sensor size change
-- `%PaneEvent{type: :clicked, id: id, pane: pane}` -- pane grid click
+- `%WidgetEvent{type: :canvas_press, id: id, data: %{x: x, y: y, button: btn}}` -- canvas interaction
+- `%WidgetEvent{type: :sensor_resize, id: id, data: %{width: w, height: h}}` -- sensor size change
+- `%WidgetEvent{type: :pane_clicked, id: id, data: %{pane: pane}}` -- pane grid click
 
 ### view/1
 

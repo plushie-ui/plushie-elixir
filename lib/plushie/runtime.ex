@@ -53,7 +53,7 @@ defmodule Plushie.Runtime do
 
   require Logger
 
-  alias Plushie.Event.{Async, Effect, Mouse, SensorEvent, Stream, Timer}
+  alias Plushie.Event.{Async, Effect, Mouse, Stream, Timer, WidgetEvent}
   alias Plushie.Runtime.{Commands, Subscriptions, Windows}
 
   @enforce_keys [:app, :bridge]
@@ -441,7 +441,7 @@ defmodule Plushie.Runtime do
     {:noreply, store_coalescable(state, :mouse_move, event)}
   end
 
-  def handle_info({:renderer_event, %SensorEvent{type: :resize} = event}, state) do
+  def handle_info({:renderer_event, %WidgetEvent{type: :sensor_resize} = event}, state) do
     {:noreply,
      store_coalescable(
        state,

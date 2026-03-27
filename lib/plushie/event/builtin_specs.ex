@@ -88,14 +88,64 @@ defmodule Plushie.Event.BuiltinSpecs do
     canvas_element_focused: %{carrier: :none},
     canvas_element_blurred: %{carrier: :none},
 
-    # -- Canvas-level events --
+    # -- Canvas-level interaction events --
+    # These were previously CanvasEvent structs with dedicated fields.
+    # Now unified as WidgetEvent with typed data maps.
+    canvas_press: %{
+      carrier: :data,
+      fields: [x: :number, y: :number, button: Plushie.Type.MouseButton]
+    },
+    canvas_release: %{
+      carrier: :data,
+      fields: [x: :number, y: :number, button: Plushie.Type.MouseButton]
+    },
+    canvas_move: %{carrier: :data, fields: [x: :number, y: :number]},
+    canvas_scroll: %{
+      carrier: :data,
+      fields: [x: :number, y: :number, delta_x: :number, delta_y: :number]
+    },
     canvas_focused: %{carrier: :none},
     canvas_blurred: %{carrier: :none},
     canvas_group_focused: %{carrier: :none},
-    canvas_group_blurred: %{carrier: :none}
+    canvas_group_blurred: %{carrier: :none},
+
+    # -- Mouse area events --
+    # Previously MouseAreaEvent structs.
+    mouse_right_press: %{carrier: :none},
+    mouse_right_release: %{carrier: :none},
+    mouse_middle_press: %{carrier: :none},
+    mouse_middle_release: %{carrier: :none},
+    mouse_double_click: %{carrier: :none},
+    mouse_enter: %{carrier: :none},
+    mouse_exit: %{carrier: :none},
+    mouse_move: %{carrier: :data, fields: [x: :number, y: :number]},
+    mouse_scroll: %{carrier: :data, fields: [delta_x: :number, delta_y: :number]},
+
+    # -- Sensor events --
+    # Previously SensorEvent structs.
+    sensor_resize: %{carrier: :data, fields: [width: :number, height: :number]},
+
+    # -- Pane grid events --
+    # Previously PaneEvent structs.
+    pane_resized: %{carrier: :data, fields: [split: :any, ratio: :number]},
+    pane_dragged: %{
+      carrier: :data,
+      fields: [
+        pane: :any,
+        target: :any,
+        action: :any,
+        region: :any,
+        edge: :any
+      ]
+    },
+    pane_clicked: %{carrier: :data, fields: [pane: :any]}
   }
 
   @canvas_internal_types MapSet.new([
+                           :canvas_press,
+                           :canvas_release,
+                           :canvas_move,
+                           :canvas_scroll,
                            :canvas_element_enter,
                            :canvas_element_leave,
                            :canvas_element_click,

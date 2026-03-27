@@ -3,7 +3,7 @@ defmodule Plushie.Widget.Responsive do
   Responsive layout -- adapts to available size by reporting resize events.
 
   The renderer wraps child content in a sensor that sends
-  `%SensorEvent{type: :resize, id: id, width: w, height: h}` events so the
+  `%WidgetEvent{type: :sensor_resize, id: id, data: %{width: w, height: h}}` events so the
   Elixir app can adjust its view based on the measured size.
 
   ## Props
