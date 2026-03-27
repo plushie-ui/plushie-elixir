@@ -58,14 +58,28 @@ defmodule Plushie.TreeTest do
       assert result.children == []
     end
 
-    test "missing type defaults to \"container\"" do
-      result = Tree.normalize(%{id: "a"})
-      assert result.type == "container"
+    test "missing type raises" do
+      assert_raise ArgumentError, ~r/missing required field :type/, fn ->
+        Tree.normalize(%{id: "a"})
+      end
     end
 
-    test "missing id generates unique unknown_ prefix" do
-      result = Tree.normalize(%{type: "button"})
-      assert String.starts_with?(result.id, "unknown_")
+    test "missing id raises" do
+      assert_raise ArgumentError, ~r/missing required field :id/, fn ->
+        Tree.normalize(%{type: "button"})
+      end
+    end
+
+    test "non-list children raise" do
+      assert_raise ArgumentError, ~r/field :children must be a list/, fn ->
+        Tree.normalize(%{id: "a", type: "text", children: :bad})
+      end
+    end
+
+    test "non-map props raise" do
+      assert_raise ArgumentError, ~r/field :props must be a map/, fn ->
+        Tree.normalize(%{id: "a", type: "text", props: :bad})
+      end
     end
   end
 
@@ -94,6 +108,15 @@ defmodule Plushie.TreeTest do
       assert Map.has_key?(child_a, :props)
       assert Map.has_key?(child_a, :children)
       assert child_b.id == "b"
+    end
+
+    test "duplicate sibling ids raise" do
+      assert_raise ArgumentError, ~r/duplicate sibling IDs/, fn ->
+        Tree.normalize([
+          %{id: "a", type: "text", props: %{}, children: []},
+          %{id: "a", type: "button", props: %{}, children: []}
+        ])
+      end
     end
   end
 
@@ -176,6 +199,14 @@ defmodule Plushie.TreeTest do
       [leaf] = mid.children
       assert leaf.id == "root/mid/leaf"
       assert leaf.props[:label] == "Go"
+    end
+  end
+
+  describe "normalize/1 -- rejects canvas structs in widget trees" do
+    test "raises for canvas support structs too" do
+      assert_raise ArgumentError, ~r/found canvas shape \(Stroke\)/, fn ->
+        Tree.normalize(Plushie.Canvas.Shape.stroke("#000", 2))
+      end
     end
   end
 
@@ -365,6 +396,12 @@ defmodule Plushie.TreeTest do
       assert length(result) == 1
       assert hd(result).id == "root"
     end
+
+    test "find_all returns empty list for nil tree without calling predicate" do
+      assert Tree.find_all(nil, fn _ ->
+               flunk("predicate should not run for nil tree")
+             end) == []
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -519,9 +556,16 @@ defmodule Plushie.TreeTest do
       assert Tree.diff(nil, tree) == [%{op: "replace_node", path: [], node: tree}]
     end
 
-    test "tree to nil returns remove_child at root" do
+    test "tree to nil returns replace_node with empty root" do
       tree = %{id: "root", type: "container", props: %{}, children: []}
-      assert Tree.diff(tree, nil) == [%{op: "remove_child", path: [], index: 0}]
+
+      assert Tree.diff(tree, nil) == [
+               %{
+                 op: "replace_node",
+                 path: [],
+                 node: %{id: "root", type: "container", props: %{}, children: []}
+               }
+             ]
     end
   end
 

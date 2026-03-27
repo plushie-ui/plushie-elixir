@@ -90,9 +90,10 @@ defmodule Plushie.Test.WidgetCatalogTest do
       assert result.children == []
     end
 
-    test "missing id generates unique unknown_ prefix" do
-      result = Tree.normalize(%{type: "text", props: %{}, children: []})
-      assert String.starts_with?(result.id, "unknown_")
+    test "missing id raises" do
+      assert_raise ArgumentError, ~r/missing required field :id/, fn ->
+        Tree.normalize(%{type: "text", props: %{}, children: []})
+      end
     end
   end
 

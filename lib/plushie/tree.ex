@@ -1,6 +1,4 @@
 defmodule Plushie.Tree do
-  require Logger
-
   @moduledoc """
   Utilities for working with Plushie UI trees.
 
@@ -13,9 +11,12 @@ defmodule Plushie.Tree do
         children: [...]
       }
 
-  This module provides normalization (ensuring the canonical shape),
-  tree search (by ID and by predicate), and diffing that produces
-  minimal patch operations for incremental renderer updates.
+  This module provides normalization, tree search, and diffing for
+  incremental renderer updates.
+
+  Normalization is strict. Missing required fields, duplicate sibling
+  IDs, and malformed children raise immediately instead of being
+  silently repaired.
   """
 
   @type tree_node :: %{
@@ -49,28 +50,13 @@ defmodule Plushie.Tree do
   Accepts:
   - `nil` -- returns an empty root container
   - a single node map -- normalizes and returns it
-  - a list of node maps -- for Phase 0, wraps in a root container
-    (single-window; multi-window support is Phase 1)
+  - a list of node maps -- wraps them in a synthetic root container
 
-  Every node is guaranteed to have `:id`, `:type`, `:props`, and
-  `:children`. Prop values are encoded for the wire format. Children
-  are always a list, normalized recursively.
+  Every normalized node has `:id`, `:type`, `:props`, and `:children`.
+  Prop values are encoded for the wire format. Missing `:props` and
+  `:children` default to `%{}` and `[]`. Missing required fields or
+  malformed shapes raise.
   """
-  @canvas_shape_structs [
-    Plushie.Canvas.Shape.Rect,
-    Plushie.Canvas.Shape.Circle,
-    Plushie.Canvas.Shape.Line,
-    Plushie.Canvas.Shape.CanvasText,
-    Plushie.Canvas.Shape.Path,
-    Plushie.Canvas.Shape.CanvasImage,
-    Plushie.Canvas.Shape.CanvasSvg,
-    Plushie.Canvas.Shape.Group,
-    Plushie.Canvas.Shape.Translate,
-    Plushie.Canvas.Shape.Rotate,
-    Plushie.Canvas.Shape.Scale,
-    Plushie.Canvas.Shape.Clip
-  ]
-
   @spec normalize(tree :: nil | tree_node() | [tree_node()] | struct()) :: tree_node()
   def normalize(nil), do: @empty_container
 
@@ -80,11 +66,13 @@ defmodule Plushie.Tree do
 
   def normalize([_ | _] = nodes) do
     # Synthetic root wrapper -- does not create a scope boundary
+    children = normalize_children_with_scope(nodes, "", nil)
+
     %{
       id: "root",
       type: "container",
       props: %{},
-      children: Enum.map(nodes, &normalize_with_scope(&1, "", nil))
+      children: children
     }
   end
 
@@ -100,15 +88,15 @@ defmodule Plushie.Tree do
             "Canvas metadata (like interactive) should be inside a group block."
   end
 
-  def normalize(%module{}) when module in @canvas_shape_structs do
-    short_name = module |> Module.split() |> List.last()
-
-    raise ArgumentError,
-          "found canvas shape (#{short_name}) where a widget node was expected. " <>
-            "Canvas shapes belong inside canvas layers, not in the widget tree."
-  end
-
   def normalize(%module{} = widget) when is_atom(module) do
+    if canvas_shape_struct_module?(module) do
+      short_name = module |> Module.split() |> List.last()
+
+      raise ArgumentError,
+            "found canvas shape (#{short_name}) where a widget node was expected. " <>
+              "Canvas shapes belong inside canvas layers, not in the widget tree."
+    end
+
     normalize(Plushie.Widget.to_node(widget))
   end
 
@@ -130,23 +118,23 @@ defmodule Plushie.Tree do
             "Canvas metadata (like interactive) should be inside a group block."
   end
 
-  defp normalize_with_scope(%module{}, _scope, _window_id) when module in @canvas_shape_structs do
-    short_name = module |> Module.split() |> List.last()
-
-    raise ArgumentError,
-          "found canvas shape (#{short_name}) where a widget node was expected. " <>
-            "Canvas shapes belong inside canvas layers, not in the widget tree."
-  end
-
   defp normalize_with_scope(%module{} = widget, scope, window_id) when is_atom(module) do
+    if canvas_shape_struct_module?(module) do
+      short_name = module |> Module.split() |> List.last()
+
+      raise ArgumentError,
+            "found canvas shape (#{short_name}) where a widget node was expected. " <>
+              "Canvas shapes belong inside canvas layers, not in the widget tree."
+    end
+
     normalize_with_scope(Plushie.Widget.to_node(widget), scope, window_id)
   end
 
   defp normalize_with_scope(%{} = node, scope, window_id) do
-    raw_id = fetch_field(node, :id, "id") || "unknown_#{:erlang.unique_integer([:positive])}"
-    type = fetch_field(node, :type, "type") || "container"
-    props = fetch_field(node, :props, "props") || %{}
-    children = fetch_field(node, :children, "children") || []
+    raw_id = required_field!(node, :id, "id")
+    type = required_field!(node, :type, "type")
+    props = optional_map_field!(node, :props, "props", %{})
+    children = optional_list_field!(node, :children, "children", [])
 
     id = to_string(raw_id)
     type_str = to_string(type)
@@ -592,7 +580,10 @@ defmodule Plushie.Tree do
 
   Walks the entire tree depth-first and accumulates all matches.
   """
-  @spec find_all(node :: tree_node(), fun :: (tree_node() -> as_boolean(term()))) :: [tree_node()]
+  @spec find_all(node :: tree_node() | nil, fun :: (tree_node() -> as_boolean(term()))) ::
+          [tree_node()]
+  def find_all(nil, _fun), do: []
+
   def find_all(node, fun) do
     do_find_all(node, fun, [])
     |> Enum.reverse()
@@ -612,7 +603,7 @@ defmodule Plushie.Tree do
   @spec diff(old_tree :: map() | nil, new_tree :: map() | nil) :: [map()]
   def diff(nil, nil), do: []
   def diff(nil, new_tree), do: [%{op: "replace_node", path: [], node: new_tree}]
-  def diff(_old_tree, nil), do: [%{op: "remove_child", path: [], index: 0}]
+  def diff(_old_tree, nil), do: [%{op: "replace_node", path: [], node: @empty_container}]
 
   def diff(%{id: old_id} = _old_tree, %{id: new_id} = new_tree) when old_id != new_id do
     [%{op: "replace_node", path: [], node: new_tree}]
@@ -673,10 +664,7 @@ defmodule Plushie.Tree do
 
     if length(new_ids) != map_size(new_by_id) do
       dupes = new_ids -- Enum.uniq(new_ids)
-
-      Logger.error(
-        "plushie tree: duplicate child IDs will cause rendering errors: #{inspect(Enum.uniq(dupes))}"
-      )
+      raise ArgumentError, "duplicate child IDs in diff: #{inspect(Enum.uniq(dupes))}"
     end
 
     # Reorder detection uses the maps we already built, avoiding duplicate
@@ -795,7 +783,9 @@ defmodule Plushie.Tree do
     normalized
   end
 
-  defp normalize_children_with_scope(_, _scope, _window_id), do: []
+  defp normalize_children_with_scope(children, _scope, _window_id) do
+    raise ArgumentError, "widget children must be a list, got: #{inspect(children)}"
+  end
 
   defp check_duplicate_ids(children) do
     ids = Enum.map(children, & &1.id)
@@ -803,9 +793,8 @@ defmodule Plushie.Tree do
     if length(ids) != length(Enum.uniq(ids)) do
       dupes = ids -- Enum.uniq(ids)
 
-      Logger.error(
-        "Duplicate sibling IDs detected during normalize: #{inspect(Enum.uniq(dupes))}"
-      )
+      raise ArgumentError,
+            "duplicate sibling IDs detected during normalize: #{inspect(Enum.uniq(dupes))}"
     end
   end
 
@@ -825,5 +814,49 @@ defmodule Plushie.Tree do
       %{^string_key => v} -> v
       _ -> nil
     end
+  end
+
+  defp required_field!(map, atom_key, string_key) do
+    case fetch_field(map, atom_key, string_key) do
+      nil ->
+        raise ArgumentError, "widget node is missing required field #{inspect(atom_key)}"
+
+      value ->
+        value
+    end
+  end
+
+  defp optional_map_field!(map, atom_key, string_key, default) do
+    case fetch_field(map, atom_key, string_key) do
+      nil ->
+        default
+
+      value when is_map(value) ->
+        value
+
+      value ->
+        raise ArgumentError,
+              "widget field #{inspect(atom_key)} must be a map, got: #{inspect(value)}"
+    end
+  end
+
+  defp optional_list_field!(map, atom_key, string_key, default) do
+    case fetch_field(map, atom_key, string_key) do
+      nil ->
+        default
+
+      value when is_list(value) ->
+        value
+
+      value ->
+        raise ArgumentError,
+              "widget field #{inspect(atom_key)} must be a list, got: #{inspect(value)}"
+    end
+  end
+
+  defp canvas_shape_struct_module?(module) do
+    module
+    |> Atom.to_string()
+    |> String.starts_with?("Elixir.Plushie.Canvas.Shape.")
   end
 end
