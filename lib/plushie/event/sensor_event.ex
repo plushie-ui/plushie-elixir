@@ -1,4 +1,4 @@
-defmodule Plushie.Event.Sensor do
+defmodule Plushie.Event.SensorEvent do
   @moduledoc """
   Sensor (resize observer) events.
 
@@ -23,11 +23,11 @@ defmodule Plushie.Event.Sensor do
 
   ## Pattern matching
 
-      def update(model, %Sensor{type: :resize, id: "content", width: w, height: h}) do
+      def update(model, %SensorEvent{type: :resize, id: "content", width: w, height: h}) do
         %{model | content_size: {w, h}}
       end
 
-      def update(model, %Sensor{id: "sidebar", width: w}) when w < 200 do
+      def update(model, %SensorEvent{id: "sidebar", width: w}) when w < 200 do
         %{model | sidebar_collapsed: true}
       end
   """
@@ -67,7 +67,7 @@ defmodule Plushie.Event.Sensor do
       window =
         if event.window_id, do: " window=#{Kernel.inspect(event.window_id)}", else: ""
 
-      "#Sensor<#{Kernel.inspect(event.type)} #{Kernel.inspect(target)}#{window} #{event.width}x#{event.height}>"
+      "#SensorEvent<#{Kernel.inspect(event.type)} #{Kernel.inspect(target)}#{window} #{event.width}x#{event.height}>"
     end
   end
 end

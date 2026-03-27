@@ -3,21 +3,21 @@ defmodule Plushie.Docs.EventsTest do
 
   alias Plushie.Event.{
     Async,
-    Canvas,
+    CanvasEvent,
     Effect,
     Ime,
     Key,
     Modifiers,
     Mouse,
-    MouseArea,
-    Pane,
-    Sensor,
+    MouseAreaEvent,
+    PaneEvent,
+    SensorEvent,
     Stream,
-    System,
+    SystemEvent,
     Timer,
     Touch,
     WidgetEvent,
-    Window
+    WindowEvent
   }
 
   # -- Widget events -----------------------------------------------------------
@@ -138,15 +138,15 @@ defmodule Plushie.Docs.EventsTest do
   # -- Mouse area events -------------------------------------------------------
 
   test "events_mouse_area_enter_match_test" do
-    event = %MouseArea{type: :enter, id: "hover_zone", scope: []}
+    event = %MouseAreaEvent{type: :enter, id: "hover_zone", scope: []}
 
-    assert match?(%MouseArea{type: :enter, id: "hover_zone"}, event)
+    assert match?(%MouseAreaEvent{type: :enter, id: "hover_zone"}, event)
   end
 
   test "events_mouse_area_move_match_test" do
-    event = %MouseArea{type: :move, id: "canvas_area", scope: [], x: 10.0, y: 20.0}
+    event = %MouseAreaEvent{type: :move, id: "canvas_area", scope: [], x: 10.0, y: 20.0}
 
-    assert match?(%MouseArea{type: :move, id: "canvas_area"}, event)
+    assert match?(%MouseAreaEvent{type: :move, id: "canvas_area"}, event)
     assert event.x == 10.0
     assert event.y == 20.0
   end
@@ -154,17 +154,24 @@ defmodule Plushie.Docs.EventsTest do
   # -- Canvas events -----------------------------------------------------------
 
   test "events_canvas_press_match_test" do
-    event = %Canvas{type: :press, id: "draw_area", scope: [], x: 42.0, y: 100.0, button: "left"}
+    event = %CanvasEvent{
+      type: :press,
+      id: "draw_area",
+      scope: [],
+      x: 42.0,
+      y: 100.0,
+      button: "left"
+    }
 
-    assert match?(%Canvas{type: :press, id: "draw_area", button: "left"}, event)
+    assert match?(%CanvasEvent{type: :press, id: "draw_area", button: "left"}, event)
     assert event.x == 42.0
     assert event.y == 100.0
   end
 
   test "events_canvas_move_match_test" do
-    event = %Canvas{type: :move, id: "draw_area", scope: [], x: 5.0, y: 10.0}
+    event = %CanvasEvent{type: :move, id: "draw_area", scope: [], x: 5.0, y: 10.0}
 
-    assert match?(%Canvas{type: :move, id: "draw_area"}, event)
+    assert match?(%CanvasEvent{type: :move, id: "draw_area"}, event)
     assert event.x == 5.0
     assert event.y == 10.0
   end
@@ -184,9 +191,15 @@ defmodule Plushie.Docs.EventsTest do
   # -- Sensor events -----------------------------------------------------------
 
   test "events_sensor_resize_match_test" do
-    event = %Sensor{type: :resize, id: "content_area", scope: [], width: 800.0, height: 600.0}
+    event = %SensorEvent{
+      type: :resize,
+      id: "content_area",
+      scope: [],
+      width: 800.0,
+      height: 600.0
+    }
 
-    assert match?(%Sensor{type: :resize, id: "content_area"}, event)
+    assert match?(%SensorEvent{type: :resize, id: "content_area"}, event)
     assert event.width == 800.0
     assert event.height == 600.0
   end
@@ -194,16 +207,16 @@ defmodule Plushie.Docs.EventsTest do
   # -- PaneGrid events ---------------------------------------------------------
 
   test "events_pane_resized_match_test" do
-    event = %Pane{type: :resized, id: "editor", scope: [], split: "split_1", ratio: 0.5}
+    event = %PaneEvent{type: :resized, id: "editor", scope: [], split: "split_1", ratio: 0.5}
 
-    assert match?(%Pane{type: :resized, id: "editor"}, event)
+    assert match?(%PaneEvent{type: :resized, id: "editor"}, event)
     assert event.ratio == 0.5
   end
 
   test "events_pane_clicked_match_test" do
-    event = %Pane{type: :clicked, id: "editor", scope: [], pane: "left"}
+    event = %PaneEvent{type: :clicked, id: "editor", scope: [], pane: "left"}
 
-    assert match?(%Pane{type: :clicked, id: "editor"}, event)
+    assert match?(%PaneEvent{type: :clicked, id: "editor"}, event)
   end
 
   # -- Keyboard events ---------------------------------------------------------
@@ -345,41 +358,41 @@ defmodule Plushie.Docs.EventsTest do
   # -- Window events -----------------------------------------------------------
 
   test "events_window_close_requested_match_test" do
-    event = %Window{type: :close_requested, window_id: "main"}
+    event = %WindowEvent{type: :close_requested, window_id: "main"}
 
-    assert match?(%Window{type: :close_requested, window_id: "main"}, event)
+    assert match?(%WindowEvent{type: :close_requested, window_id: "main"}, event)
   end
 
   test "events_window_resized_match_test" do
-    event = %Window{type: :resized, window_id: "main", width: 800.0, height: 600.0}
+    event = %WindowEvent{type: :resized, window_id: "main", width: 800.0, height: 600.0}
 
-    assert match?(%Window{type: :resized, window_id: "main"}, event)
+    assert match?(%WindowEvent{type: :resized, window_id: "main"}, event)
   end
 
   test "events_window_file_drag_drop_match_test" do
-    hovered = %Window{type: :file_hovered, window_id: "main", path: "/foo.txt"}
-    dropped = %Window{type: :file_dropped, window_id: "main", path: "/foo.txt"}
-    left = %Window{type: :files_hovered_left, window_id: "main"}
+    hovered = %WindowEvent{type: :file_hovered, window_id: "main", path: "/foo.txt"}
+    dropped = %WindowEvent{type: :file_dropped, window_id: "main", path: "/foo.txt"}
+    left = %WindowEvent{type: :files_hovered_left, window_id: "main"}
 
-    assert match?(%Window{type: :file_hovered, window_id: "main"}, hovered)
+    assert match?(%WindowEvent{type: :file_hovered, window_id: "main"}, hovered)
     assert hovered.path == "/foo.txt"
 
-    assert match?(%Window{type: :file_dropped, window_id: "main"}, dropped)
+    assert match?(%WindowEvent{type: :file_dropped, window_id: "main"}, dropped)
     assert dropped.path == "/foo.txt"
 
-    assert match?(%Window{type: :files_hovered_left, window_id: "main"}, left)
+    assert match?(%WindowEvent{type: :files_hovered_left, window_id: "main"}, left)
   end
 
   # -- System events -----------------------------------------------------------
 
   test "events_animation_frame_construct_test" do
-    event = %System{type: :animation_frame, data: 12_345}
+    event = %SystemEvent{type: :animation_frame, data: 12_345}
 
     assert event.data == 12_345
   end
 
   test "events_theme_changed_construct_test" do
-    event = %System{type: :theme_changed, data: "dark"}
+    event = %SystemEvent{type: :theme_changed, data: "dark"}
 
     assert event.data == "dark"
   end

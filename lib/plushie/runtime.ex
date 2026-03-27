@@ -53,7 +53,7 @@ defmodule Plushie.Runtime do
 
   require Logger
 
-  alias Plushie.Event.{Async, Effect, Mouse, Sensor, Stream, Timer}
+  alias Plushie.Event.{Async, Effect, Mouse, SensorEvent, Stream, Timer}
   alias Plushie.Runtime.{Commands, Subscriptions, Windows}
 
   @enforce_keys [:app, :bridge]
@@ -101,7 +101,7 @@ defmodule Plushie.Runtime do
            pending_coalesce_order: [term()],
            coalesce_timer: reference() | nil,
            consecutive_errors: non_neg_integer(),
-           diagnostics: [Plushie.Event.System.t()],
+           diagnostics: [Plushie.Event.SystemEvent.t()],
            pending_stub_acks: %{String.t() => GenServer.from()},
            canvas_widgets: %{
              {String.t() | nil, String.t()} => %{
@@ -238,7 +238,7 @@ defmodule Plushie.Runtime do
   and accumulated in state. This function atomically retrieves and
   clears the list.
   """
-  @spec get_diagnostics(GenServer.server()) :: [Plushie.Event.System.t()]
+  @spec get_diagnostics(GenServer.server()) :: [Plushie.Event.SystemEvent.t()]
   def get_diagnostics(runtime) do
     GenServer.call(runtime, :get_diagnostics)
   end
@@ -380,7 +380,7 @@ defmodule Plushie.Runtime do
 
   @impl true
   def handle_info(
-        {:renderer_event, %Plushie.Event.System{type: :diagnostic} = event},
+        {:renderer_event, %Plushie.Event.SystemEvent{type: :diagnostic} = event},
         state
       ) do
     Logger.warning("plushie runtime: prop validation diagnostic: #{inspect(event.data)}")
@@ -419,7 +419,7 @@ defmodule Plushie.Runtime do
   end
 
   def handle_info(
-        {:renderer_event, %Plushie.Event.System{type: :all_windows_closed} = event},
+        {:renderer_event, %Plushie.Event.SystemEvent{type: :all_windows_closed} = event},
         %{daemon: false} = state
       ) do
     # Non-daemon mode: dispatch through update/2 so the app can perform
@@ -441,7 +441,7 @@ defmodule Plushie.Runtime do
     {:noreply, store_coalescable(state, :mouse_move, event)}
   end
 
-  def handle_info({:renderer_event, %Sensor{type: :resize} = event}, state) do
+  def handle_info({:renderer_event, %SensorEvent{type: :resize} = event}, state) do
     {:noreply,
      store_coalescable(
        state,

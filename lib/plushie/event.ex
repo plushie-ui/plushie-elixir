@@ -3,22 +3,22 @@ defmodule Plushie.Event do
 
   alias Plushie.Event.{
     Async,
-    Canvas,
+    CanvasEvent,
     Effect,
     ExtensionCommandError,
     Ime,
     Key,
     Modifiers,
     Mouse,
-    MouseArea,
-    Pane,
-    Sensor,
+    MouseAreaEvent,
+    PaneEvent,
+    SensorEvent,
     Stream,
-    System,
+    SystemEvent,
     Timer,
     Touch,
     WidgetEvent,
-    Window
+    WindowEvent
   }
 
   @type delivered_t ::
@@ -28,14 +28,14 @@ defmodule Plushie.Event do
           | Mouse.t()
           | Touch.t()
           | Ime.t()
-          | Window.t()
-          | Canvas.delivered_t()
-          | MouseArea.delivered_t()
-          | Pane.delivered_t()
-          | Sensor.delivered_t()
+          | WindowEvent.delivered_t()
+          | CanvasEvent.delivered_t()
+          | MouseAreaEvent.delivered_t()
+          | PaneEvent.delivered_t()
+          | SensorEvent.delivered_t()
           | Effect.t()
           | ExtensionCommandError.t()
-          | System.t()
+          | SystemEvent.delivered_t()
           | Timer.t()
           | Async.t()
           | Stream.t()
@@ -47,14 +47,14 @@ defmodule Plushie.Event do
           | Mouse.t()
           | Touch.t()
           | Ime.t()
-          | Window.t()
-          | Canvas.t()
-          | MouseArea.t()
-          | Pane.t()
-          | Sensor.t()
+          | WindowEvent.t()
+          | CanvasEvent.t()
+          | MouseAreaEvent.t()
+          | PaneEvent.t()
+          | SensorEvent.t()
           | Effect.t()
           | ExtensionCommandError.t()
-          | System.t()
+          | SystemEvent.t()
           | Timer.t()
           | Async.t()
           | Stream.t()

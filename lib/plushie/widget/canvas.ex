@@ -68,10 +68,10 @@ defmodule Plushie.Widget.Canvas do
 
   Raw canvas events (coordinate-level):
 
-  - `%Canvas{type: :press, id: id, x: x, y: y, button: button}`
-  - `%Canvas{type: :release, id: id, x: x, y: y, button: button}`
-  - `%Canvas{type: :move, id: id, x: x, y: y}`
-  - `%Canvas{type: :scroll, id: id, x: x, y: y, delta_x: dx, delta_y: dy}`
+  - `%CanvasEvent{type: :press, id: id, x: x, y: y, button: button}`
+  - `%CanvasEvent{type: :release, id: id, x: x, y: y, button: button}`
+  - `%CanvasEvent{type: :move, id: id, x: x, y: y}`
+  - `%CanvasEvent{type: :scroll, id: id, x: x, y: y, delta_x: dx, delta_y: dy}`
 
   Interactive shape events (semantic, from shapes with `interactive` field):
 
@@ -82,7 +82,7 @@ defmodule Plushie.Widget.Canvas do
   - `%WidgetEvent{type: :canvas_element_drag_end, id: id, data: %{"element_id" => element_id, ...}}`
   - `%WidgetEvent{type: :canvas_element_focused, id: id, data: %{"element_id" => element_id}}`
 
-  Shape events are delivered as `%WidgetEvent{}` structs (not `%Canvas{}`). The `id`
+  Shape events are delivered as `%WidgetEvent{}` structs (not `%CanvasEvent{}`). The `id`
   field is the canvas widget ID; `data.element_id` identifies which shape.
   """
 

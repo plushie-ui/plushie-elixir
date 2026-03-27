@@ -8,9 +8,9 @@ defmodule Plushie.ProtocolParityTest do
   alias Plushie.Event.Key
   alias Plushie.Event.Modifiers
   alias Plushie.Event.Mouse
-  alias Plushie.Event.System, as: SystemEvent
+  alias Plushie.Event.SystemEvent
   alias Plushie.Event.Touch
-  alias Plushie.Event.Window
+  alias Plushie.Event.WindowEvent
 
   alias Plushie.Protocol
 
@@ -536,7 +536,7 @@ defmodule Plushie.ProtocolParityTest do
           }
         })
 
-      assert %Window{
+      assert %WindowEvent{
                type: :opened,
                window_id: "main",
                position: {100, 200},
@@ -555,7 +555,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{window_id: "main", position: nil, width: 1024, height: 768, scale_factor: 1.0}
         })
 
-      assert %Window{
+      assert %WindowEvent{
                type: :opened,
                window_id: "main",
                position: nil,
@@ -572,7 +572,8 @@ defmodule Plushie.ProtocolParityTest do
       json =
         Jason.encode!(%{type: "event", family: "window_closed", data: %{window_id: "settings"}})
 
-      assert %Window{type: :closed, window_id: "settings"} = Protocol.decode_message(json, :json)
+      assert %WindowEvent{type: :closed, window_id: "settings"} =
+               Protocol.decode_message(json, :json)
     end
   end
 
@@ -585,7 +586,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{window_id: "main", x: 300, y: 150}
         })
 
-      assert %Window{type: :moved, window_id: "main", x: 300, y: 150} =
+      assert %WindowEvent{type: :moved, window_id: "main", x: 300, y: 150} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -599,7 +600,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{window_id: "main", width: 1920, height: 1080}
         })
 
-      assert %Window{type: :resized, window_id: "main", width: 1920, height: 1080} =
+      assert %WindowEvent{type: :resized, window_id: "main", width: 1920, height: 1080} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -607,7 +608,9 @@ defmodule Plushie.ProtocolParityTest do
   describe "window_focused event" do
     test "decodes window focused" do
       json = Jason.encode!(%{type: "event", family: "window_focused", data: %{window_id: "main"}})
-      assert %Window{type: :focused, window_id: "main"} = Protocol.decode_message(json, :json)
+
+      assert %WindowEvent{type: :focused, window_id: "main"} =
+               Protocol.decode_message(json, :json)
     end
   end
 
@@ -616,7 +619,8 @@ defmodule Plushie.ProtocolParityTest do
       json =
         Jason.encode!(%{type: "event", family: "window_unfocused", data: %{window_id: "main"}})
 
-      assert %Window{type: :unfocused, window_id: "main"} = Protocol.decode_message(json, :json)
+      assert %WindowEvent{type: :unfocused, window_id: "main"} =
+               Protocol.decode_message(json, :json)
     end
   end
 
@@ -629,7 +633,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{window_id: "main", scale_factor: 2.0}
         })
 
-      assert %Window{type: :rescaled, window_id: "main", scale_factor: 2.0} =
+      assert %WindowEvent{type: :rescaled, window_id: "main", scale_factor: 2.0} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -643,7 +647,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{window_id: "main"}
         })
 
-      assert %Window{type: :close_requested, window_id: "main"} =
+      assert %WindowEvent{type: :close_requested, window_id: "main"} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -661,7 +665,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{window_id: "main", path: "/tmp/test.txt"}
         })
 
-      assert %Window{type: :file_hovered, window_id: "main", path: "/tmp/test.txt"} =
+      assert %WindowEvent{type: :file_hovered, window_id: "main", path: "/tmp/test.txt"} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -675,7 +679,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{window_id: "main", path: "/tmp/image.png"}
         })
 
-      assert %Window{type: :file_dropped, window_id: "main", path: "/tmp/image.png"} =
+      assert %WindowEvent{type: :file_dropped, window_id: "main", path: "/tmp/image.png"} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -685,7 +689,7 @@ defmodule Plushie.ProtocolParityTest do
       json =
         Jason.encode!(%{type: "event", family: "files_hovered_left", data: %{window_id: "main"}})
 
-      assert %Window{type: :files_hovered_left, window_id: "main"} =
+      assert %WindowEvent{type: :files_hovered_left, window_id: "main"} =
                Protocol.decode_message(json, :json)
     end
   end

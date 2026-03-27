@@ -90,7 +90,7 @@ defmodule Plushie.IntegrationCaseTest do
 
       # Send directly -- don't use send_event/2 which calls
       # :sys.get_state after dispatch (the runtime will be dead).
-      Plushie.Runtime.dispatch(runtime, %Plushie.Event.System{type: :all_windows_closed})
+      Plushie.Runtime.dispatch(runtime, %Plushie.Event.SystemEvent{type: :all_windows_closed})
 
       assert_receive {:DOWN, ^ref, :process, ^runtime, :normal}, 1000
     end
@@ -99,7 +99,7 @@ defmodule Plushie.IntegrationCaseTest do
       {runtime, _bridge} = start_app(Counter, daemon: true)
       ref = Process.monitor(runtime)
 
-      send_event(runtime, %Plushie.Event.System{type: :all_windows_closed})
+      send_event(runtime, %Plushie.Event.SystemEvent{type: :all_windows_closed})
 
       # Should NOT receive a DOWN message -- runtime stays alive
       refute_receive {:DOWN, ^ref, :process, ^runtime, _}, 200
@@ -111,7 +111,7 @@ defmodule Plushie.IntegrationCaseTest do
       # which is fine -- the point is the runtime didn't stop.
       {runtime, _bridge} = start_app(Counter, daemon: true)
 
-      send_event(runtime, %Plushie.Event.System{type: :all_windows_closed})
+      send_event(runtime, %Plushie.Event.SystemEvent{type: :all_windows_closed})
 
       # Runtime is still alive and responsive
       model = get_model(runtime)

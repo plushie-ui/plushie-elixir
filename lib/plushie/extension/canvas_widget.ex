@@ -128,7 +128,7 @@ defmodule Plushie.Extension.CanvasWidget do
   @spec resolve_emit_identity(struct() | map(), String.t(), String.t() | nil) ::
           {String.t(), [String.t()], String.t() | nil}
   defp resolve_emit_identity(
-         %Plushie.Event.Canvas{id: id, scope: scope, window_id: window_id},
+         %Plushie.Event.CanvasEvent{id: id, scope: scope, window_id: window_id},
          _widget_id,
          _fallback_window_id
        ) do

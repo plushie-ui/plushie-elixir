@@ -304,7 +304,7 @@ def subscribe(_model) do
   [Plushie.Subscription.on_theme_change(:theme_changed)]
 end
 
-def update(model, %System{type: :theme_changed, data: mode}) do
+def update(model, %SystemEvent{type: :theme_changed, data: mode}) do
   # mode is "light" or "dark"
   %{model | preferred_theme: mode}
 end

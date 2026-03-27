@@ -2,7 +2,7 @@ defmodule Plushie.Docs.CommandsTest do
   use ExUnit.Case, async: true
 
   alias Plushie.Command
-  alias Plushie.Event.System
+  alias Plushie.Event.SystemEvent
   alias Plushie.Subscription
 
   # -- command.none -----------------------------------------------------------
@@ -148,9 +148,9 @@ defmodule Plushie.Docs.CommandsTest do
   end
 
   test "commands_system_theme_event_match_test" do
-    event = %System{type: :system_theme, tag: "theme_detected", data: "dark"}
+    event = %SystemEvent{type: :system_theme, tag: "theme_detected", data: "dark"}
 
-    assert %System{type: :system_theme, tag: "theme_detected", data: mode} = event
+    assert %SystemEvent{type: :system_theme, tag: "theme_detected", data: mode} = event
     assert mode == "dark"
   end
 

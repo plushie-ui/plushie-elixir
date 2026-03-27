@@ -47,7 +47,7 @@ defmodule Plushie.Animation do
         [Plushie.Subscription.on_animation_frame(:frame)]
       end
 
-      def update(model, %System{type: :animation_frame, data: ts}) do
+      def update(model, %SystemEvent{type: :animation_frame, data: ts}) do
         if not model.started do
           %{model | opacity: Animation.start(model.opacity, ts), started: true}
         else

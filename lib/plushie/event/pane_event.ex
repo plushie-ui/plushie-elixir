@@ -1,4 +1,4 @@
-defmodule Plushie.Event.Pane do
+defmodule Plushie.Event.PaneEvent do
   @moduledoc """
   Pane grid interaction events.
 
@@ -26,19 +26,19 @@ defmodule Plushie.Event.Pane do
 
   ## Pattern matching
 
-      def update(model, %Pane{type: :resized, split: split, ratio: ratio}) do
+      def update(model, %PaneEvent{type: :resized, split: split, ratio: ratio}) do
         update_split_ratio(model, split, ratio)
       end
 
-      def update(model, %Pane{type: :clicked, pane: pane}) do
+      def update(model, %PaneEvent{type: :clicked, pane: pane}) do
         %{model | active_pane: pane}
       end
 
-      def update(model, %Pane{type: :dragged, action: :dropped, pane: pane, target: target}) do
+      def update(model, %PaneEvent{type: :dragged, action: :dropped, pane: pane, target: target}) do
         swap_panes(model, pane, target)
       end
 
-      def update(model, %Pane{type: :focus_cycle, pane: pane}) do
+      def update(model, %PaneEvent{type: :focus_cycle, pane: pane}) do
         %{model | focused_pane: pane}
       end
   """
@@ -103,7 +103,7 @@ defmodule Plushie.Event.Pane do
       window =
         if event.window_id, do: " window=#{Kernel.inspect(event.window_id)}", else: ""
 
-      "#Pane<#{Kernel.inspect(event.type)} #{Kernel.inspect(target)}#{window}>"
+      "#PaneEvent<#{Kernel.inspect(event.type)} #{Kernel.inspect(target)}#{window}>"
     end
   end
 end

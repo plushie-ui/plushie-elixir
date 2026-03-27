@@ -6,7 +6,7 @@ defmodule Plushie.Test.Backend.EventDecoder do
   structs. Used by the Bridge to convert incoming protocol messages.
   """
 
-  alias Plushie.Event.Canvas, as: CanvasEvent
+  alias Plushie.Event.CanvasEvent
   alias Plushie.Event.Key, as: KeyEvent
   alias Plushie.Event.Mouse, as: MouseEvent
   alias Plushie.Event.WidgetEvent, as: WidgetEvent
@@ -219,7 +219,7 @@ defmodule Plushie.Test.Backend.EventDecoder do
 
   # NOTE: Canvas element events use generic %WidgetEvent{} with untyped data
   # maps (string keys, string values) instead of dedicated event structs
-  # with parsed fields. This is inconsistent with %Key{} and %Canvas{}
+  # with parsed fields. This is inconsistent with %Key{} and %CanvasEvent{}
   # which have typed fields and atom key names. When canvas elements are
   # promoted to first-class widget events, these should get proper structs
   # and this dynamic atom construction should become explicit decode clauses
@@ -274,7 +274,7 @@ defmodule Plushie.Test.Backend.EventDecoder do
   end
 
   def decode("diagnostic", _id, event) do
-    %Plushie.Event.System{type: :diagnostic, data: event["data"] || %{}}
+    %Plushie.Event.SystemEvent{type: :diagnostic, data: event["data"] || %{}}
   end
 
   def decode(type, id, event) do

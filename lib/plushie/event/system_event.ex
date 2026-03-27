@@ -1,4 +1,4 @@
-defmodule Plushie.Event.System do
+defmodule Plushie.Event.SystemEvent do
   @moduledoc """
   System query responses and platform events.
 
@@ -19,15 +19,15 @@ defmodule Plushie.Event.System do
 
   ## Pattern matching
 
-      def update(model, %System{type: :system_info, data: %{"os" => os}}) do
+      def update(model, %SystemEvent{type: :system_info, data: %{"os" => os}}) do
         %{model | platform: os}
       end
 
-      def update(model, %System{type: :theme_changed, data: theme}) do
+      def update(model, %SystemEvent{type: :theme_changed, data: theme}) do
         %{model | theme: theme}
       end
 
-      def update(model, %System{type: :animation_frame, data: ts}) do
+      def update(model, %SystemEvent{type: :animation_frame, data: ts}) do
         advance_animation(model, ts)
       end
   """
@@ -48,6 +48,9 @@ defmodule Plushie.Event.System do
           tag: String.t() | nil,
           data: map() | String.t() | number() | nil
         }
+
+  @typedoc "System event delivered by the renderer."
+  @type delivered_t :: t()
 
   @enforce_keys [:type]
   defstruct [:type, :tag, :data]

@@ -32,7 +32,7 @@ defmodule Plushie.Subscription do
       # update/2 receives: %Plushie.Event.Key{type: :press, ...} -- NOT {:my_keys, ...}
 
       Plushie.Subscription.on_window_resize(:win_resize)
-      # update/2 receives: %Plushie.Event.Window{type: :resized, ...}
+      # update/2 receives: %Plushie.Event.WindowEvent{type: :resized, ...}
 
   ## Rate limiting
 
@@ -86,7 +86,7 @@ defmodule Plushie.Subscription do
   For renderer subscriptions (keyboard, window, mouse, etc.), the tag
   is sent to the renderer to register/unregister the listener but is
   not included in the event struct -- those use typed event structs like
-  `%Plushie.Event.Key{}`, `%Plushie.Event.Window{}`, etc.
+  `%Plushie.Event.Key{}`, `%Plushie.Event.WindowEvent{}`, etc.
   """
   @type t :: %__MODULE__{
           type: atom(),
@@ -178,7 +178,7 @@ defmodule Plushie.Subscription do
   @doc """
   Fires when a window close is requested (e.g. user clicks the close button).
 
-  Delivers `%Plushie.Event.Window{type: :close_requested, window_id: id}` to `update/2`.
+  Delivers `%Plushie.Event.WindowEvent{type: :close_requested, window_id: id}` to `update/2`.
   The `event_tag` is for subscription management only.
 
   ## Example
@@ -186,7 +186,7 @@ defmodule Plushie.Subscription do
       Plushie.Subscription.on_window_close(:win_close)
 
       # In update/2:
-      def update(model, %Plushie.Event.Window{type: :close_requested, window_id: wid}), do: ...
+      def update(model, %Plushie.Event.WindowEvent{type: :close_requested, window_id: wid}), do: ...
   """
   @spec on_window_close(event_tag :: atom(), opts :: keyword()) :: t()
   def on_window_close(event_tag, opts \\ []) when is_atom(event_tag) do
@@ -196,7 +196,7 @@ defmodule Plushie.Subscription do
   @doc """
   Fires on general window events (resize, move, focus, etc.).
 
-  Delivers `%Plushie.Event.Window{}` structs depending on the event.
+  Delivers `%Plushie.Event.WindowEvent{}` structs depending on the event.
   The `event_tag` is for subscription management only.
 
   **Note:** If both `on_window_event` and a specific subscription
@@ -212,7 +212,7 @@ defmodule Plushie.Subscription do
   @doc """
   Fires when a new window is opened.
 
-  Delivers `%Plushie.Event.Window{type: :opened, window_id: id, ...}` to
+  Delivers `%Plushie.Event.WindowEvent{type: :opened, window_id: id, ...}` to
   `update/2`. The `event_tag` is for subscription management only.
   """
   @spec on_window_open(event_tag :: atom(), opts :: keyword()) :: t()
@@ -223,7 +223,7 @@ defmodule Plushie.Subscription do
   @doc """
   Fires when a window is resized.
 
-  Delivers `%Plushie.Event.Window{type: :resized, window_id: id, width: w, height: h}` to `update/2`.
+  Delivers `%Plushie.Event.WindowEvent{type: :resized, window_id: id, width: w, height: h}` to `update/2`.
   The `event_tag` is for subscription management only.
   """
   @spec on_window_resize(event_tag :: atom(), opts :: keyword()) :: t()
@@ -234,7 +234,7 @@ defmodule Plushie.Subscription do
   @doc """
   Fires when a window gains focus.
 
-  Delivers `%Plushie.Event.Window{type: :focused, window_id: id}` to `update/2`.
+  Delivers `%Plushie.Event.WindowEvent{type: :focused, window_id: id}` to `update/2`.
   The `event_tag` is for subscription management only.
   """
   @spec on_window_focus(event_tag :: atom(), opts :: keyword()) :: t()
@@ -245,7 +245,7 @@ defmodule Plushie.Subscription do
   @doc """
   Fires when a window loses focus.
 
-  Delivers `%Plushie.Event.Window{type: :unfocused, window_id: id}` to `update/2`.
+  Delivers `%Plushie.Event.WindowEvent{type: :unfocused, window_id: id}` to `update/2`.
   The `event_tag` is for subscription management only.
   """
   @spec on_window_unfocus(event_tag :: atom(), opts :: keyword()) :: t()
@@ -256,7 +256,7 @@ defmodule Plushie.Subscription do
   @doc """
   Fires when a window is moved.
 
-  Delivers `%Plushie.Event.Window{type: :moved, window_id: id, x: x, y: y}` to `update/2`.
+  Delivers `%Plushie.Event.WindowEvent{type: :moved, window_id: id, x: x, y: y}` to `update/2`.
   The `event_tag` is for subscription management only.
   """
   @spec on_window_move(event_tag :: atom(), opts :: keyword()) :: t()
@@ -334,7 +334,7 @@ defmodule Plushie.Subscription do
   @doc """
   Fires when the system theme changes (light/dark mode).
 
-  Delivers `%System{type: :theme_changed, data: mode}` to `update/2` where `mode` is
+  Delivers `%SystemEvent{type: :theme_changed, data: mode}` to `update/2` where `mode` is
   a string like `"light"` or `"dark"`. The `event_tag` is for subscription
   management only.
   """
@@ -346,7 +346,7 @@ defmodule Plushie.Subscription do
   @doc """
   Fires on each animation frame (vsync tick).
 
-  Delivers `%System{type: :animation_frame, data: timestamp}` to `update/2`.
+  Delivers `%SystemEvent{type: :animation_frame, data: timestamp}` to `update/2`.
   The `event_tag` is for subscription management only.
   """
   @spec on_animation_frame(event_tag :: atom(), opts :: keyword()) :: t()
@@ -357,9 +357,9 @@ defmodule Plushie.Subscription do
   @doc """
   Fires when a file is dropped on a window.
 
-  Delivers `%Window{type: :file_dropped, window_id: id, path: path}` to `update/2`.
-  Also fires `%Window{type: :file_hovered, ...}` while hovering
-  and `%Window{type: :files_hovered_left, ...}` when the hover exits.
+  Delivers `%WindowEvent{type: :file_dropped, window_id: id, path: path}` to `update/2`.
+  Also fires `%WindowEvent{type: :file_hovered, ...}` while hovering
+  and `%WindowEvent{type: :files_hovered_left, ...}` when the hover exits.
   The `event_tag` is for subscription management only.
   """
   @spec on_file_drop(event_tag :: atom(), opts :: keyword()) :: t()

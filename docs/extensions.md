@@ -170,15 +170,15 @@ defmodule MyApp.StarRating do
   state hover: nil
 
   @impl true
-  def handle_event(%Canvas{type: :element_enter, id: star_id}, state) do
+  def handle_event(%WidgetEvent{type: :canvas_element_enter, data: %{"element_id" => star_id}}, state) do
     {:update_state, %{state | hover: star_id}}
   end
 
-  def handle_event(%Canvas{type: :element_leave}, state) do
+  def handle_event(%WidgetEvent{type: :canvas_element_leave}, state) do
     {:update_state, %{state | hover: nil}}
   end
 
-  def handle_event(%Canvas{type: :element_click, id: star_id}, _state) do
+  def handle_event(%WidgetEvent{type: :canvas_element_click, data: %{"element_id" => star_id}}, _state) do
     {index, _} = Integer.parse(star_id)
     {:emit, :selected, index}
   end

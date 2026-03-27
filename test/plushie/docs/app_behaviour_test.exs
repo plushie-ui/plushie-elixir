@@ -5,7 +5,7 @@ defmodule Plushie.Docs.AppBehaviourTest do
 
   alias Plushie.Command
   alias Plushie.Event.WidgetEvent
-  alias Plushie.Event.Window
+  alias Plushie.Event.WindowEvent
   alias Plushie.Subscription
 
   # -- Types (shared across update/view/subscribe examples) --------------------
@@ -243,8 +243,8 @@ defmodule Plushie.Docs.AppBehaviourTest do
     model = %{inspector_open: true}
 
     model =
-      case %Window{type: :close_requested, window_id: "inspector"} do
-        %Window{type: :close_requested, window_id: "inspector"} ->
+      case %WindowEvent{type: :close_requested, window_id: "inspector"} do
+        %WindowEvent{type: :close_requested, window_id: "inspector"} ->
           %{model | inspector_open: false}
       end
 
@@ -255,8 +255,8 @@ defmodule Plushie.Docs.AppBehaviourTest do
     model = %{window_size: {0, 0}}
 
     model =
-      case %Window{type: :resized, window_id: "main", width: 1024, height: 768} do
-        %Window{type: :resized, window_id: "main", width: width, height: height} ->
+      case %WindowEvent{type: :resized, window_id: "main", width: 1024, height: 768} do
+        %WindowEvent{type: :resized, window_id: "main", width: width, height: height} ->
           %{model | window_size: {width, height}}
       end
 
@@ -267,8 +267,8 @@ defmodule Plushie.Docs.AppBehaviourTest do
     model = %{active_window: nil}
 
     model =
-      case %Window{type: :focused, window_id: "editor"} do
-        %Window{type: :focused, window_id: window_id} ->
+      case %WindowEvent{type: :focused, window_id: "editor"} do
+        %WindowEvent{type: :focused, window_id: window_id} ->
           %{model | active_window: window_id}
       end
 

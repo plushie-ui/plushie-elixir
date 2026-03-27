@@ -28,6 +28,22 @@ defmodule Plushie.Docs.ScopedIdsTest do
     assert item_id == "item_42"
   end
 
+  test "scoped_ids_canvas_element_match_test" do
+    event = %WidgetEvent{type: :canvas_element_click, id: "handle", scope: ["drawing"]}
+
+    assert match?(
+             %WidgetEvent{type: :canvas_element_click, id: "handle", scope: ["drawing" | _]},
+             event
+           )
+  end
+
+  test "scoped_ids_canvas_element_bind_canvas_id_test" do
+    event = %WidgetEvent{type: :canvas_element_click, id: "handle", scope: ["drawing", "panel"]}
+
+    assert %WidgetEvent{type: :canvas_element_click, id: "handle", scope: [canvas_id | _]} = event
+    assert canvas_id == "drawing"
+  end
+
   # -- Dynamic list delete ---------------------------------------------------
 
   test "scoped_ids_dynamic_list_delete_test" do

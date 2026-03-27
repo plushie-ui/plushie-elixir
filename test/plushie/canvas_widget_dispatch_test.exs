@@ -474,7 +474,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
   end
 
   defp canvas_event(id, scope, window_id \\ nil) do
-    %Plushie.Event.Canvas{
+    %Plushie.Event.CanvasEvent{
       type: :press,
       id: id,
       scope: scope,

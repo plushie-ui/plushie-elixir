@@ -342,17 +342,17 @@ Plushie.Command.get_system_info(tag)
 
 **Important:** The `tag` arrives as a **string** in `update/2`, even if you
 pass an atom. `Plushie.Command.get_system_theme(:theme_detected)` produces
-`%System{type: :system_theme, tag: "theme_detected", data: mode}` -- match
+`%SystemEvent{type: :system_theme, tag: "theme_detected", data: mode}` -- match
 on the string, not the atom.
 
 ```elixir
-alias Plushie.Event.{WidgetEvent, System}
+alias Plushie.Event.{WidgetEvent, SystemEvent}
 
 def update(model, %WidgetEvent{type: :click, id: "detect_theme"}) do
   {model, Plushie.Command.get_system_theme(:theme_detected)}
 end
 
-def update(model, %System{type: :system_theme, tag: "theme_detected", data: mode}) do
+def update(model, %SystemEvent{type: :system_theme, tag: "theme_detected", data: mode}) do
   %{model | os_theme: mode}
 end
 ```
@@ -681,22 +681,22 @@ Plushie.Subscription.on_window_close(event_tag)
 # Delivers: {event_tag, window_id}
 
 Plushie.Subscription.on_window_open(event_tag)
-# Delivers: %Window{type: :opened, window_id: wid, position: pos, width: w, height: h}
+# Delivers: %WindowEvent{type: :opened, window_id: wid, position: pos, width: w, height: h}
 
 Plushie.Subscription.on_window_resize(event_tag)
-# Delivers: %Window{type: :resized, window_id: wid, width: w, height: h}
+# Delivers: %WindowEvent{type: :resized, window_id: wid, width: w, height: h}
 
 Plushie.Subscription.on_window_focus(event_tag)
-# Delivers: %Window{type: :focused, window_id: wid}
+# Delivers: %WindowEvent{type: :focused, window_id: wid}
 
 Plushie.Subscription.on_window_unfocus(event_tag)
-# Delivers: %Window{type: :unfocused, window_id: wid}
+# Delivers: %WindowEvent{type: :unfocused, window_id: wid}
 
 Plushie.Subscription.on_window_move(event_tag)
-# Delivers: %Window{type: :moved, window_id: wid, x: x, y: y}
+# Delivers: %WindowEvent{type: :moved, window_id: wid, x: x, y: y}
 
 Plushie.Subscription.on_window_event(event_tag)
-# Delivers: various %Window{type: ..., ...} structs (catch-all for window events)
+# Delivers: various %WindowEvent{type: ..., ...} structs (catch-all for window events)
 ```
 
 #### Mouse
@@ -736,15 +736,15 @@ Plushie.Subscription.on_ime(event_tag)
 
 ```elixir
 Plushie.Subscription.on_theme_change(event_tag)
-# Delivers: %System{type: :theme_changed, data: mode}  (mode is "light" or "dark")
+# Delivers: %SystemEvent{type: :theme_changed, data: mode}  (mode is "light" or "dark")
 
 Plushie.Subscription.on_animation_frame(event_tag)
-# Delivers: %System{type: :animation_frame, data: timestamp}
+# Delivers: %SystemEvent{type: :animation_frame, data: timestamp}
 
 Plushie.Subscription.on_file_drop(event_tag)
-# Delivers: %Window{type: :file_dropped, window_id: wid, path: path}
-#           %Window{type: :file_hovered, window_id: wid, path: path}
-#           %Window{type: :files_hovered_left, window_id: wid}
+# Delivers: %WindowEvent{type: :file_dropped, window_id: wid, path: path}
+#           %WindowEvent{type: :file_hovered, window_id: wid, path: path}
+#           %WindowEvent{type: :files_hovered_left, window_id: wid}
 ```
 
 #### Catch-all

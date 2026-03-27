@@ -42,10 +42,10 @@ defmodule Plushie.Command do
   - **Async/Stream**: `async/2` delivers `%Plushie.Event.Async{tag: tag, result: result}`.
     `stream/2` delivers `%Plushie.Event.Stream{tag: tag, value: value}` for each chunk.
   - **Window and system queries**: `get_window_size/2`, `get_mode/2`, etc. deliver
-    `%Plushie.Event.System{}` structs through `update/2`. The `type` field identifies the
+    `%Plushie.Event.SystemEvent{}` structs through `update/2`. The `type` field identifies the
     query kind, `tag` holds the stringified event tag, and `data` holds the result payload.
     For example, `get_system_theme(:my_tag)` delivers
-    `%System{type: :system_theme, tag: "my_tag", data: "dark"}`.
+    `%SystemEvent{type: :system_theme, tag: "my_tag", data: "dark"}`.
   - **Platform effects**: `Plushie.Effects` functions deliver
     `%Plushie.Event.Effect{request_id: id, result: result}`. The `request_id` correlates
     with the command payload's `:id` field. Timeouts deliver the same struct with
@@ -459,7 +459,12 @@ defmodule Plushie.Command do
   # Window queries (results arrive as events)
   # ---------------------------------------------------------------------------
 
-  @doc "Query the size of a window. Result arrives as `%System{type: :get_size, tag: tag, data: data}`."
+  @doc """
+  Query the size of a window.
+
+  Result arrives as `%Plushie.Event.Effect{request_id: window_id, result: {:ok, data}}`
+  where `data` is `%{"width" => width, "height" => height}`.
+  """
   @spec get_window_size(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
   def get_window_size(window_id, tag) do
     %__MODULE__{
@@ -468,7 +473,12 @@ defmodule Plushie.Command do
     }
   end
 
-  @doc "Query the position of a window. Result arrives as `%System{type: :get_position, tag: tag, data: data}`."
+  @doc """
+  Query the position of a window.
+
+  Result arrives as `%Plushie.Event.Effect{request_id: window_id, result: {:ok, data}}`
+  where `data` is `%{"x" => x, "y" => y}` or `nil` if unavailable.
+  """
   @spec get_window_position(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
   def get_window_position(window_id, tag) do
     %__MODULE__{
@@ -477,7 +487,11 @@ defmodule Plushie.Command do
     }
   end
 
-  @doc "Query whether a window is maximized. Result arrives as `%System{type: :is_maximized, tag: tag, data: data}`."
+  @doc """
+  Query whether a window is maximized.
+
+  Result arrives as `%Plushie.Event.Effect{request_id: window_id, result: {:ok, boolean}}`.
+  """
   @spec is_maximized(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
   def is_maximized(window_id, tag) do
     %__MODULE__{
@@ -486,7 +500,11 @@ defmodule Plushie.Command do
     }
   end
 
-  @doc "Query whether a window is minimized. Result arrives as `%System{type: :is_minimized, tag: tag, data: data}`."
+  @doc """
+  Query whether a window is minimized.
+
+  Result arrives as `%Plushie.Event.Effect{request_id: window_id, result: {:ok, boolean}}`.
+  """
   @spec is_minimized(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
   def is_minimized(window_id, tag) do
     %__MODULE__{
@@ -497,7 +515,8 @@ defmodule Plushie.Command do
 
   @doc """
   Query the current window mode (windowed, fullscreen, hidden).
-  Result arrives as `%System{type: :get_mode, tag: tag, data: data}`.
+
+  Result arrives as `%Plushie.Event.Effect{request_id: window_id, result: {:ok, mode}}`.
   """
   @spec get_mode(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
   def get_mode(window_id, tag) do
@@ -509,7 +528,8 @@ defmodule Plushie.Command do
 
   @doc """
   Query the window's current scale factor (DPI scaling).
-  Result arrives as `%System{type: :get_scale_factor, tag: tag, data: data}`.
+
+  Result arrives as `%Plushie.Event.Effect{request_id: window_id, result: {:ok, factor}}`.
   """
   @spec get_scale_factor(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
   def get_scale_factor(window_id, tag) do
@@ -521,7 +541,8 @@ defmodule Plushie.Command do
 
   @doc """
   Query the raw platform window ID (e.g. X11 window ID, HWND).
-  Result arrives as `%System{type: :raw_id, tag: tag, data: data}`.
+
+  Result arrives as `%Plushie.Event.Effect{request_id: window_id, result: {:ok, platform_id}}`.
   """
   @spec raw_id(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
   def raw_id(window_id, tag) do
@@ -533,8 +554,10 @@ defmodule Plushie.Command do
 
   @doc """
   Query the monitor size for the display containing a window.
-  Result arrives as `%System{type: :monitor_size, tag: tag, data: data}`.
-  Data is `nil` if the monitor cannot be determined.
+
+  Result arrives as `%Plushie.Event.Effect{request_id: window_id, result: {:ok, data}}`
+  where `data` is `%{"width" => width, "height" => height}` or `nil` if the
+  monitor cannot be determined.
   """
   @spec monitor_size(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
   def monitor_size(window_id, tag) do
@@ -552,7 +575,7 @@ defmodule Plushie.Command do
   Query the current system theme (light/dark mode).
 
   The result arrives in `update/2` as
-  `%Plushie.Event.System{type: :system_theme, tag: tag, data: mode}` where
+  `%Plushie.Event.SystemEvent{type: :system_theme, tag: tag, data: mode}` where
   `tag` is the stringified event tag and `mode` is `"light"`, `"dark"`, or
   `"none"` (when no system preference is detected). Returns `"none"` on
   Linux systems without a desktop environment. Apps should provide a theme
@@ -564,7 +587,7 @@ defmodule Plushie.Command do
         {model, Plushie.Command.get_system_theme(:theme_result)}
       end
 
-      def update(model, %Plushie.Event.System{type: :system_theme, tag: "theme_result", data: mode}) do
+      def update(model, %Plushie.Event.SystemEvent{type: :system_theme, tag: "theme_result", data: mode}) do
         %{model | theme_mode: mode}
       end
   """
@@ -580,7 +603,7 @@ defmodule Plushie.Command do
   Query system information (OS, CPU, memory, graphics).
 
   The result arrives in `update/2` as
-  `%Plushie.Event.System{type: :system_info, tag: tag, data: info}` where `tag`
+  `%Plushie.Event.SystemEvent{type: :system_info, tag: tag, data: info}` where `tag`
   is the stringified event tag and `info` is a map with keys:
   `"system_name"`, `"system_kernel"`, `"system_version"`,
   `"system_short_version"`, `"cpu_brand"`, `"cpu_cores"`, `"memory_total"`,
@@ -595,7 +618,7 @@ defmodule Plushie.Command do
         {model, Plushie.Command.get_system_info(:sys_info)}
       end
 
-      def update(model, %Plushie.Event.System{type: :system_info, tag: "sys_info", data: info}) do
+      def update(model, %Plushie.Event.SystemEvent{type: :system_info, tag: "sys_info", data: info}) do
         %{model | system: info}
       end
   """
@@ -841,7 +864,7 @@ defmodule Plushie.Command do
   Lists all in-memory image handles.
 
   The result arrives in `update/2` as
-  `%System{type: :image_list, tag: tag, data: %{"handles" => [...]}}`.
+  `%SystemEvent{type: :image_list, tag: tag, data: %{"handles" => [...]}}`.
   """
   @spec list_images(tag :: atom()) :: %__MODULE__{}
   def list_images(tag) when is_atom(tag) do
@@ -864,7 +887,7 @@ defmodule Plushie.Command do
   Computes a SHA-256 hash of the renderer's current tree state.
 
   The result arrives in `update/2` as
-  `%System{type: :tree_hash, tag: tag, data: %{"hash" => "..."}}`.
+  `%SystemEvent{type: :tree_hash, tag: tag, data: %{"hash" => "..."}}`.
   """
   @spec tree_hash(tag :: atom()) :: %__MODULE__{}
   def tree_hash(tag) when is_atom(tag) do
@@ -878,7 +901,7 @@ defmodule Plushie.Command do
   Queries which widget currently has focus.
 
   The result arrives in `update/2` as
-  `%System{type: :find_focused, tag: tag, data: %{"focused" => "..." | nil}}`.
+  `%SystemEvent{type: :find_focused, tag: tag, data: %{"focused" => "..." | nil}}`.
 
   Note: if no widget is focused, the `"focused"` field may be `nil`.
   """

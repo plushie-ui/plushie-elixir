@@ -12,15 +12,15 @@ for Rust, which plushie drives as a precompiled binary behind the scenes.
 ```elixir
 defmodule Counter do
   use Plushie.App
-  alias Plushie.Event.Widget
+  alias Plushie.Event.WidgetEvent
   import Plushie.UI
 
   def init(_opts), do: %{count: 0}
 
-  def update(model, %Widget{type: :click, id: "inc"}),
+  def update(model, %WidgetEvent{type: :click, id: "inc"}),
     do: %{model | count: model.count + 1}
 
-  def update(model, %Widget{type: :click, id: "dec"}),
+  def update(model, %WidgetEvent{type: :click, id: "dec"}),
     do: %{model | count: model.count - 1}
 
   def update(model, _event), do: model

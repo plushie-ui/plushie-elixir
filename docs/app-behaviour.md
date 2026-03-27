@@ -87,11 +87,11 @@ the full event taxonomy. Common families:
 - `%WidgetEvent{type: :submit, id: id, value: val}` -- form field submission
 - `%Key{type: :press, ...}` -- keyboard event (via subscription)
 - `%Key{type: :release, ...}` -- keyboard release (via subscription)
-- `%Window{type: :close_requested, window_id: id}` -- window close requested
-- `%Window{type: :resized, window_id: id, width: w, height: h}` -- window resized
-- `%Canvas{type: :press, id: id, x: x, y: y, button: btn}` -- canvas interaction
-- `%Sensor{type: :resize, id: id, width: w, height: h}` -- sensor size change
-- `%Pane{type: :clicked, id: id, pane: pane}` -- pane grid click
+- `%WindowEvent{type: :close_requested, window_id: id}` -- window close requested
+- `%WindowEvent{type: :resized, window_id: id, width: w, height: h}` -- window resized
+- `%CanvasEvent{type: :press, id: id, x: x, y: y, button: btn}` -- canvas interaction
+- `%SensorEvent{type: :resize, id: id, width: w, height: h}` -- sensor size change
+- `%PaneEvent{type: :clicked, id: id, pane: pane}` -- pane grid click
 
 ### view/1
 
@@ -384,11 +384,11 @@ came from:
 
 <!-- test: app_behaviour_window_events_close_requested_test, app_behaviour_window_events_resized_test, app_behaviour_window_events_focused_test -- keep this code block in sync with the test -->
 ```elixir
-def update(model, %Window{type: :close_requested, window_id: "inspector"}) do
+def update(model, %WindowEvent{type: :close_requested, window_id: "inspector"}) do
   %{model | inspector_open: false}
 end
 
-def update(model, %Window{type: :close_requested, window_id: "main"}) do
+def update(model, %WindowEvent{type: :close_requested, window_id: "main"}) do
   if model.unsaved_changes do
     %{model | confirm_exit: true}
   else
@@ -396,11 +396,11 @@ def update(model, %Window{type: :close_requested, window_id: "main"}) do
   end
 end
 
-def update(model, %Window{type: :resized, window_id: "main", width: width, height: height}) do
+def update(model, %WindowEvent{type: :resized, window_id: "main", width: width, height: height}) do
   %{model | window_size: {width, height}}
 end
 
-def update(model, %Window{type: :focused, window_id: window_id}) do
+def update(model, %WindowEvent{type: :focused, window_id: window_id}) do
   %{model | active_window: window_id}
 end
 ```
@@ -408,17 +408,17 @@ end
 ### Window close behaviour
 
 By default, when the user clicks the close button on a window, the
-renderer sends a `%Window{type: :close_requested, window_id: window_id}` event instead
+renderer sends a `%WindowEvent{type: :close_requested, window_id: window_id}` event instead
 of closing immediately. Your app decides what to do:
 
 ```elixir
 # Let it close (remove it from view):
-def update(model, %Window{type: :close_requested, window_id: "settings"}) do
+def update(model, %WindowEvent{type: :close_requested, window_id: "settings"}) do
   %{model | settings_open: false}
 end
 
 # Block the close:
-def update(model, %Window{type: :close_requested, window_id: "main"}) do
+def update(model, %WindowEvent{type: :close_requested, window_id: "main"}) do
   %{model | show_save_dialog: true}
 end
 ```
@@ -474,8 +474,8 @@ The renderer tracks which window has OS focus. Window focus/unfocus events
 are delivered as:
 
 ```elixir
-%Window{type: :focused, window_id: window_id}
-%Window{type: :unfocused, window_id: window_id}
+%WindowEvent{type: :focused, window_id: window_id}
+%WindowEvent{type: :unfocused, window_id: window_id}
 ```
 
 The app can use these to adjust behaviour (e.g., pause animations in

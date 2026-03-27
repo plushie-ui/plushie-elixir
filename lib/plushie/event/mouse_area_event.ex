@@ -1,4 +1,4 @@
-defmodule Plushie.Event.MouseArea do
+defmodule Plushie.Event.MouseAreaEvent do
   @moduledoc """
   Mouse area widget events (right-click, hover, etc.).
 
@@ -25,15 +25,15 @@ defmodule Plushie.Event.MouseArea do
 
   ## Pattern matching
 
-      def update(model, %MouseArea{type: :right_press, id: "canvas"}) do
+      def update(model, %MouseAreaEvent{type: :right_press, id: "canvas"}) do
         open_context_menu(model)
       end
 
-      def update(model, %MouseArea{type: :enter, id: "tooltip-target"}) do
+      def update(model, %MouseAreaEvent{type: :enter, id: "tooltip-target"}) do
         %{model | tooltip_visible: true}
       end
 
-      def update(model, %MouseArea{type: :move, id: "drag-zone", x: x, y: y}) do
+      def update(model, %MouseAreaEvent{type: :move, id: "drag-zone", x: x, y: y}) do
         track_cursor(model, x, y)
       end
   """
@@ -88,7 +88,7 @@ defmodule Plushie.Event.MouseArea do
       window =
         if event.window_id, do: " window=#{Kernel.inspect(event.window_id)}", else: ""
 
-      "#MouseArea<#{Kernel.inspect(event.type)} #{Kernel.inspect(target)}#{window}>"
+      "#MouseAreaEvent<#{Kernel.inspect(event.type)} #{Kernel.inspect(target)}#{window}>"
     end
   end
 end

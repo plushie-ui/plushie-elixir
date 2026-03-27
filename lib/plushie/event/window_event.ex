@@ -1,11 +1,11 @@
-defmodule Plushie.Event.Window do
+defmodule Plushie.Event.WindowEvent do
   @moduledoc """
   Window lifecycle events.
 
   ## Pattern matching
 
-      def update(model, %Window{type: :resized, window_id: "main", width: w, height: h}), do: ...
-      def update(model, %Window{type: :close_requested, window_id: wid}), do: ...
+      def update(model, %WindowEvent{type: :resized, window_id: "main", width: w, height: h}), do: ...
+      def update(model, %WindowEvent{type: :close_requested, window_id: wid}), do: ...
   """
 
   @type event_type ::
@@ -32,6 +32,9 @@ defmodule Plushie.Event.Window do
           path: String.t() | nil,
           scale_factor: number() | nil
         }
+
+  @typedoc "Window event delivered by the renderer."
+  @type delivered_t :: t()
 
   @enforce_keys [:type, :window_id]
   defstruct [:type, :window_id, :x, :y, :width, :height, :position, :path, :scale_factor]

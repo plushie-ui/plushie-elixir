@@ -1,4 +1,4 @@
-defmodule Plushie.Event.Canvas do
+defmodule Plushie.Event.CanvasEvent do
   @moduledoc """
   Canvas widget interaction events.
 
@@ -23,15 +23,15 @@ defmodule Plushie.Event.Canvas do
 
   ## Pattern matching
 
-      def update(model, %Canvas{type: :press, id: "drawing", button: "left", x: x, y: y}) do
+      def update(model, %CanvasEvent{type: :press, id: "drawing", button: "left", x: x, y: y}) do
         start_stroke(model, x, y)
       end
 
-      def update(model, %Canvas{type: :move, id: "drawing", x: x, y: y}) do
+      def update(model, %CanvasEvent{type: :move, id: "drawing", x: x, y: y}) do
         continue_stroke(model, x, y)
       end
 
-      def update(model, %Canvas{type: :scroll, id: "viewport", delta_y: dy}) do
+      def update(model, %CanvasEvent{type: :scroll, id: "viewport", delta_y: dy}) do
         zoom(model, dy)
       end
   """
@@ -77,7 +77,7 @@ defmodule Plushie.Event.Canvas do
       window =
         if event.window_id, do: " window=#{Kernel.inspect(event.window_id)}", else: ""
 
-      "#Canvas<#{Kernel.inspect(event.type)} #{Kernel.inspect(target)}#{window} x=#{event.x} y=#{event.y}>"
+      "#CanvasEvent<#{Kernel.inspect(event.type)} #{Kernel.inspect(target)}#{window} x=#{event.x} y=#{event.y}>"
     end
   end
 end

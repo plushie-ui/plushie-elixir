@@ -35,17 +35,17 @@ defmodule Plushie.Widget.MouseArea do
   - `%WidgetEvent{type: :click, id: id}` -- left mouse button pressed.
   - `%WidgetEvent{type: :click, id: "id:release"}` -- left mouse button released.
 
-  Conditional (opt-in via props, delivered as `%MouseArea{}` structs):
+  Conditional (opt-in via props, delivered as `%MouseAreaEvent{}` structs):
 
-  - `%MouseArea{type: :middle_press, id: id}` -- middle mouse button pressed.
-  - `%MouseArea{type: :right_press, id: id}` -- right mouse button pressed.
-  - `%MouseArea{type: :right_release, id: id}` -- right mouse button released.
-  - `%MouseArea{type: :middle_release, id: id}` -- middle mouse button released.
-  - `%MouseArea{type: :double_click, id: id}` -- left mouse button double-clicked.
-  - `%MouseArea{type: :enter, id: id}` -- cursor entered the area.
-  - `%MouseArea{type: :exit, id: id}` -- cursor exited the area.
-  - `%MouseArea{type: :move, id: id, x: x, y: y}` -- cursor moved within the area.
-  - `%MouseArea{type: :scroll, id: id, delta_x: dx, delta_y: dy}` -- scroll wheel within the area.
+  - `%MouseAreaEvent{type: :middle_press, id: id}` -- middle mouse button pressed.
+  - `%MouseAreaEvent{type: :right_press, id: id}` -- right mouse button pressed.
+  - `%MouseAreaEvent{type: :right_release, id: id}` -- right mouse button released.
+  - `%MouseAreaEvent{type: :middle_release, id: id}` -- middle mouse button released.
+  - `%MouseAreaEvent{type: :double_click, id: id}` -- left mouse button double-clicked.
+  - `%MouseAreaEvent{type: :enter, id: id}` -- cursor entered the area.
+  - `%MouseAreaEvent{type: :exit, id: id}` -- cursor exited the area.
+  - `%MouseAreaEvent{type: :move, id: id, x: x, y: y}` -- cursor moved within the area.
+  - `%MouseAreaEvent{type: :scroll, id: id, delta_x: dx, delta_y: dy}` -- scroll wheel within the area.
   """
 
   alias Plushie.Widget.Build

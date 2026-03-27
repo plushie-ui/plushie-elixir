@@ -76,10 +76,10 @@ Plushie.Event.target(event)
 ## Which event structs carry scope
 
 - `Plushie.Event.WidgetEvent`
-- `Plushie.Event.Canvas`
-- `Plushie.Event.MouseArea`
-- `Plushie.Event.Pane`
-- `Plushie.Event.Sensor`
+- `Plushie.Event.CanvasEvent`
+- `Plushie.Event.MouseAreaEvent`
+- `Plushie.Event.PaneEvent`
+- `Plushie.Event.SensorEvent`
 
 Subscription events (Key, Mouse, Touch, IME, Modifiers) are global and
 do not carry scope.
@@ -103,15 +103,15 @@ Events from interactive canvas elements follow the same pattern:
 
 ```elixir
 # Canvas element click arrives as:
-%Canvas{type: :element_click, id: "handle", scope: ["drawing"]}
+%WidgetEvent{type: :canvas_element_click, id: "handle", scope: ["drawing"]}
 
 # Match exactly like a widget inside a container:
-def update(model, %Canvas{type: :element_click, id: "handle", scope: ["drawing" | _]}) do
+def update(model, %WidgetEvent{type: :canvas_element_click, id: "handle", scope: ["drawing" | _]}) do
   # ...
 end
 
 # Bind the canvas ID for dynamic canvases:
-def update(model, %Canvas{type: :element_click, id: "handle", scope: [canvas_id | _]}) do
+def update(model, %WidgetEvent{type: :canvas_element_click, id: "handle", scope: [canvas_id | _]}) do
   handle_click(model, canvas_id)
 end
 ```
@@ -231,10 +231,10 @@ All scoped event structs implement the `Inspect` protocol to show
 the full path in debug output:
 
 ```
-#Widget<:click "sidebar/form/save">
-#Widget<:input "email" value="test@example.com">
-#Canvas<:press "panel/drawing" x=42 y=100>
-#Sensor<:resize "content/measure" 800x600>
+#WidgetEvent<:click "sidebar/form/save">
+#WidgetEvent<:input "email" value="test@example.com">
+#CanvasEvent<:press "panel/drawing" x=42 y=100>
+#SensorEvent<:resize "content/measure" 800x600>
 ```
 
 Use `Plushie.Event.target/1` to get the same string programmatically.
