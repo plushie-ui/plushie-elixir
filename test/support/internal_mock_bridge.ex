@@ -117,6 +117,10 @@ defmodule Plushie.Test.InternalMockBridge do
   end
 
   @impl true
+  def handle_call(:sync, _from, state) do
+    {:reply, :ok, state}
+  end
+
   def handle_call(:get_snapshots, _from, state) do
     {:reply, state.snapshots, state}
   end

@@ -53,7 +53,7 @@ defmodule Plushie.IntegrationCase do
     {:ok, runtime} = Plushie.Runtime.start_link(runtime_opts)
 
     # Wait for initial render (handle_continue) to complete.
-    :sys.get_state(runtime)
+    Plushie.Runtime.sync(runtime)
 
     {runtime, bridge_name}
   end
@@ -63,7 +63,7 @@ defmodule Plushie.IntegrationCase do
   """
   def send_event(runtime, event) do
     Plushie.Runtime.dispatch(runtime, event)
-    :sys.get_state(runtime)
+    Plushie.Runtime.sync(runtime)
     :ok
   end
 
@@ -71,24 +71,22 @@ defmodule Plushie.IntegrationCase do
   Asserts on the current tree state. Calls the assertion function with the current tree.
   """
   def assert_tree(runtime, assertion_fn) when is_function(assertion_fn, 1) do
-    state = :sys.get_state(runtime)
-    assertion_fn.(state.tree)
+    tree = Plushie.Runtime.get_tree(runtime)
+    assertion_fn.(tree)
   end
 
   @doc """
   Returns the current model from the runtime.
   """
   def get_model(runtime) do
-    state = :sys.get_state(runtime)
-    state.model
+    Plushie.Runtime.get_model(runtime)
   end
 
   @doc """
   Returns the current tree from the runtime.
   """
   def get_tree(runtime) do
-    state = :sys.get_state(runtime)
-    state.tree
+    Plushie.Runtime.get_tree(runtime)
   end
 
   @doc """

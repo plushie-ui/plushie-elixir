@@ -48,7 +48,7 @@ defmodule Plushie.TelemetryTest do
   end
 
   defp await_initial_render(runtime) do
-    :sys.get_state(runtime)
+    Plushie.Runtime.sync(runtime)
   end
 
   defp attach(event_name, test_pid) do
@@ -98,7 +98,7 @@ defmodule Plushie.TelemetryTest do
 
         Plushie.Runtime.dispatch(runtime, %WidgetEvent{type: :click, id: "inc"})
         # Synchronise -- ensures the event has been processed.
-        :sys.get_state(runtime)
+        Plushie.Runtime.sync(runtime)
 
         assert_receive {:telemetry_event, [:plushie, :update, :stop], measurements, _metadata}
         assert is_integer(measurements.duration)

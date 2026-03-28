@@ -129,11 +129,11 @@ defmodule Plushie.WidgetOpsTest do
     {runtime, bridge_name}
   end
 
-  defp await_initial_render(runtime), do: :sys.get_state(runtime)
+  defp await_initial_render(runtime), do: Plushie.Runtime.sync(runtime)
 
   defp dispatch_and_wait(runtime, event) do
     Plushie.Runtime.dispatch(runtime, event)
-    :sys.get_state(runtime)
+    Plushie.Runtime.sync(runtime)
   end
 
   describe "runtime dispatches widget ops to bridge" do

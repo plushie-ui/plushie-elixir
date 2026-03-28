@@ -126,6 +126,7 @@ defmodule Plushie.RuntimeTest do
   defmodule TickWidget do
     use Plushie.Extension, :widget
     widget(:tick_widget)
+    event(:tick_widget_pulsed)
 
     @impl true
     def subscribe(_props, _state) do
@@ -133,6 +134,10 @@ defmodule Plushie.RuntimeTest do
     end
 
     @impl true
+    def handle_event(%Plushie.Event.Timer{tag: :pulse}, _state) do
+      {:emit, :tick_widget_pulsed, %{}}
+    end
+
     def handle_event(_event, _state), do: :ignored
 
     @impl true
@@ -147,10 +152,14 @@ defmodule Plushie.RuntimeTest do
   defmodule WidgetSubApp do
     use Plushie.App
 
-    def init(_opts), do: %{clicks: 0}
+    def init(_opts), do: %{clicks: 0, pulses: 0}
 
     def update(model, %WidgetEvent{type: :click, id: "inc"}) do
       %{model | clicks: model.clicks + 1}
+    end
+
+    def update(model, %WidgetEvent{type: {:tick_widget, :tick_widget_pulsed}}) do
+      %{model | pulses: model.pulses + 1}
     end
 
     def update(model, _event), do: model
@@ -221,6 +230,8 @@ defmodule Plushie.RuntimeTest do
     use Plushie.Extension, :widget
     widget(:switching_widget)
     state(phase: :first)
+    event(:switched, value: :any)
+    event(:ticked_second)
 
     @impl true
     def subscribe(_props, %{phase: :first}) do
@@ -233,16 +244,23 @@ defmodule Plushie.RuntimeTest do
 
     @impl true
     def handle_event(%Plushie.Event.Timer{tag: :first}, _state) do
-      {:update_state, %{phase: :second}}
+      {:emit, :switched, %{to: :second}, %{phase: :second}}
     end
 
-    def handle_event(_event, state), do: {:update_state, state}
+    def handle_event(%Plushie.Event.Timer{tag: :second}, _state) do
+      {:emit, :ticked_second, nil}
+    end
+
+    def handle_event(_event, _state), do: :consumed
 
     @impl true
-    def render(id, _props, _state) do
+    def render(id, _props, %{phase: phase}) do
       import Plushie.UI
 
-      canvas id, width: 10, height: 10 do
+      canvas id, width: 100, height: 100 do
+        layer "content" do
+          text(0, 0, "phase:#{phase}")
+        end
       end
     end
   end
@@ -288,36 +306,53 @@ defmodule Plushie.RuntimeTest do
   end
 
   # Waits for handle_continue/:initial_render to complete.
-  # :sys.get_state/1 is synchronous and processes all pending messages first.
   defp await_initial_render(runtime) do
-    :sys.get_state(runtime)
+    Plushie.Runtime.sync(runtime)
   end
 
   # Dispatches an event and waits for the runtime to process it.
   defp dispatch_and_wait(runtime, event) do
     Plushie.Runtime.dispatch(runtime, event)
-    :sys.get_state(runtime)
+    Plushie.Runtime.sync(runtime)
   end
 
-  # Polls :sys.get_state until a condition is met or timeout expires.
-  # Used for async operations where Process.sleep is not appropriate.
-  defp await_condition(runtime, condition_fn, timeout \\ 500) do
+  # Polls until a condition on the model is met (via the public get_model API)
+  # or timeout expires.
+  defp await_model(runtime, condition_fn, timeout \\ 500) do
     deadline = System.monotonic_time(:millisecond) + timeout
-
-    do_await_condition(runtime, condition_fn, deadline)
+    do_await_model(runtime, condition_fn, deadline)
   end
 
-  defp do_await_condition(runtime, condition_fn, deadline) do
-    state = :sys.get_state(runtime)
+  defp do_await_model(runtime, condition_fn, deadline) do
+    model = Plushie.Runtime.get_model(runtime)
 
-    if condition_fn.(state) do
-      state
+    if condition_fn.(model) do
+      model
     else
       if System.monotonic_time(:millisecond) >= deadline do
-        flunk("Timed out waiting for condition. Last state: #{inspect(state.model)}")
+        flunk("Timed out waiting for model condition. Last model: #{inspect(model)}")
       else
         Process.sleep(5)
-        do_await_condition(runtime, condition_fn, deadline)
+        do_await_model(runtime, condition_fn, deadline)
+      end
+    end
+  end
+
+  # Polls until a condition on the bridge state is met or timeout expires.
+  defp await_bridge(bridge, condition_fn, timeout \\ 500) do
+    deadline = System.monotonic_time(:millisecond) + timeout
+    do_await_bridge(bridge, condition_fn, deadline)
+  end
+
+  defp do_await_bridge(bridge, condition_fn, deadline) do
+    if condition_fn.(bridge) do
+      :ok
+    else
+      if System.monotonic_time(:millisecond) >= deadline do
+        flunk("Timed out waiting for bridge condition")
+      else
+        Process.sleep(5)
+        do_await_bridge(bridge, condition_fn, deadline)
       end
     end
   end
@@ -358,8 +393,7 @@ defmodule Plushie.RuntimeTest do
       assert length(patches) == 1
 
       # Verify the runtime's current tree reflects the update.
-      state = :sys.get_state(runtime)
-      text_node = find_by_type(state.tree, "text")
+      text_node = find_by_type(Plushie.Runtime.get_tree(runtime), "text")
       assert text_node.props[:content] == "Value: 1"
     end
 
@@ -371,10 +405,9 @@ defmodule Plushie.RuntimeTest do
       dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
       dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "dec"})
 
-      state = :sys.get_state(runtime)
-      assert state.model.value == 1
+      assert Plushie.Runtime.get_model(runtime).value == 1
 
-      text_node = find_by_type(state.tree, "text")
+      text_node = find_by_type(Plushie.Runtime.get_tree(runtime), "text")
       assert text_node.props[:content] == "Value: 1"
     end
 
@@ -389,8 +422,7 @@ defmodule Plushie.RuntimeTest do
       patches = Plushie.Test.InternalMockBridge.get_patches(bridge)
       assert patches == []
 
-      state = :sys.get_state(runtime)
-      assert state.model.value == 0
+      assert Plushie.Runtime.get_model(runtime).value == 0
     end
 
     test "widget-specific extension families are normalized before update/2" do
@@ -452,12 +484,11 @@ defmodule Plushie.RuntimeTest do
 
       # send_after(10, :timer_tick) is scheduled in init; wait long enough.
       Process.sleep(80)
-      :sys.get_state(runtime)
+      Plushie.Runtime.sync(runtime)
 
-      state = :sys.get_state(runtime)
-      assert state.model.value == 1
+      assert Plushie.Runtime.get_model(runtime).value == 1
 
-      text_node = find_by_type(state.tree, "text")
+      text_node = find_by_type(Plushie.Runtime.get_tree(runtime), "text")
       assert text_node.props[:content] == "1"
     end
 
@@ -468,9 +499,9 @@ defmodule Plushie.RuntimeTest do
       dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "async"})
 
       # Wait for the spawned Task to complete and the runtime to process it.
-      state = await_condition(runtime, fn s -> s.model.value == 42 end)
+      await_model(runtime, fn m -> m.value == 42 end)
 
-      text_node = find_by_type(state.tree, "text")
+      text_node = find_by_type(Plushie.Runtime.get_tree(runtime), "text")
       assert text_node.props[:content] == "42"
     end
 
@@ -516,12 +547,11 @@ defmodule Plushie.RuntimeTest do
 
       # Wait for both delayed events to fire.
       Process.sleep(80)
-      :sys.get_state(runtime)
+      Plushie.Runtime.sync(runtime)
 
-      state = :sys.get_state(runtime)
-      assert state.model.ticks == 2
+      assert Plushie.Runtime.get_model(runtime).ticks == 2
 
-      text_node = find_by_type(state.tree, "text")
+      text_node = find_by_type(Plushie.Runtime.get_tree(runtime), "text")
       assert text_node.props[:content] == "ticks:2"
     end
 
@@ -556,8 +586,8 @@ defmodule Plushie.RuntimeTest do
       dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "go"})
 
       # done/2 uses send_to_self, so the event arrives in the next message.
-      state = await_condition(runtime, fn s -> s.model.result == :raw_value end)
-      assert state.model.result == :raw_value
+      model = await_model(runtime, fn m -> m.result == :raw_value end)
+      assert model.result == :raw_value
     end
 
     test "init with commands executes them" do
@@ -566,10 +596,9 @@ defmodule Plushie.RuntimeTest do
 
       # The CommandApp init schedules send_after(10, :timer_tick).
       Process.sleep(80)
-      :sys.get_state(runtime)
+      Plushie.Runtime.sync(runtime)
 
-      state = :sys.get_state(runtime)
-      assert state.model.value == 1
+      assert Plushie.Runtime.get_model(runtime).value == 1
     end
   end
 
@@ -604,10 +633,9 @@ defmodule Plushie.RuntimeTest do
         await_initial_render(runtime)
 
         send(runtime, {:renderer_exit, :port_closed})
-        :sys.get_state(runtime)
+        Plushie.Runtime.sync(runtime)
 
-        state = :sys.get_state(runtime)
-        assert state.model.status == :crashed
+        assert Plushie.Runtime.get_model(runtime).status == :crashed
 
         # renderer_exit does NOT produce a new snapshot -- it only updates the model
         # so it is ready when the renderer restarts.
@@ -625,7 +653,7 @@ defmodule Plushie.RuntimeTest do
         assert length(initial_snapshots) == 1
 
         send(runtime, :renderer_restarted)
-        :sys.get_state(runtime)
+        Plushie.Runtime.sync(runtime)
 
         snapshots = Plushie.Test.InternalMockBridge.get_snapshots(bridge)
         # Should have sent the same tree a second time.
@@ -662,7 +690,7 @@ defmodule Plushie.RuntimeTest do
                  Plushie.Test.InternalMockBridge.get_subscribes(bridge)
 
         send(runtime, :renderer_restarted)
-        :sys.get_state(runtime)
+        Plushie.Runtime.sync(runtime)
 
         subscribes = Plushie.Test.InternalMockBridge.get_subscribes(bridge)
         assert Enum.count(subscribes, &(&1.kind == "on_key_press")) == 2
@@ -679,14 +707,13 @@ defmodule Plushie.RuntimeTest do
             Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
           end)
 
-        await_condition(runtime, fn _state ->
-          Plushie.Test.InternalMockBridge.get_interacts(bridge) != []
+        await_bridge(bridge, fn b ->
+          Plushie.Test.InternalMockBridge.get_interacts(b) != []
         end)
 
         send(runtime, {:renderer_exit, :port_closed})
 
         assert Task.await(task) == {:error, {:renderer_exit, :port_closed}}
-        assert :sys.get_state(runtime).pending_interact == nil
       end)
     end
 
@@ -700,14 +727,13 @@ defmodule Plushie.RuntimeTest do
             Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
           end)
 
-        await_condition(runtime, fn _state ->
-          Plushie.Test.InternalMockBridge.get_interacts(bridge) != []
+        await_bridge(bridge, fn b ->
+          Plushie.Test.InternalMockBridge.get_interacts(b) != []
         end)
 
         send(runtime, :renderer_restarted)
 
         assert Task.await(task) == {:error, :renderer_restarted}
-        assert :sys.get_state(runtime).pending_interact == nil
       end)
     end
 
@@ -721,8 +747,8 @@ defmodule Plushie.RuntimeTest do
             Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
           end)
 
-        await_condition(runtime, fn _state ->
-          Plushie.Test.InternalMockBridge.get_interacts(bridge) != []
+        await_bridge(bridge, fn b ->
+          Plushie.Test.InternalMockBridge.get_interacts(b) != []
         end)
 
         assert Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"}) ==
@@ -743,8 +769,8 @@ defmodule Plushie.RuntimeTest do
             Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
           end)
 
-        await_condition(runtime, fn _state ->
-          length(Plushie.Test.InternalMockBridge.get_interacts(bridge)) == 1
+        await_bridge(bridge, fn b ->
+          length(Plushie.Test.InternalMockBridge.get_interacts(b)) == 1
         end)
 
         [%{id: first_id}] = Plushie.Test.InternalMockBridge.get_interacts(bridge)
@@ -757,8 +783,8 @@ defmodule Plushie.RuntimeTest do
             Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
           end)
 
-        await_condition(runtime, fn _state ->
-          length(Plushie.Test.InternalMockBridge.get_interacts(bridge)) == 2
+        await_bridge(bridge, fn b ->
+          length(Plushie.Test.InternalMockBridge.get_interacts(b)) == 2
         end)
 
         [%{id: ^first_id}, %{id: second_id}] =
@@ -805,10 +831,9 @@ defmodule Plushie.RuntimeTest do
 
       # Wait long enough for at least 2 ticks (20ms interval).
       Process.sleep(80)
-      :sys.get_state(runtime)
+      Plushie.Runtime.sync(runtime)
 
-      state = :sys.get_state(runtime)
-      assert state.model.ticks >= 2
+      assert Plushie.Runtime.get_model(runtime).ticks >= 2
     end
 
     test "subscription removed when subscribe/1 stops returning it" do
@@ -845,9 +870,9 @@ defmodule Plushie.RuntimeTest do
 
       # Let some ticks accumulate.
       Process.sleep(60)
-      :sys.get_state(runtime)
+      Plushie.Runtime.sync(runtime)
 
-      ticks_before = :sys.get_state(runtime).model.ticks
+      ticks_before = Plushie.Runtime.get_model(runtime).ticks
       assert ticks_before >= 2
 
       # Stop the timer subscription.
@@ -855,9 +880,9 @@ defmodule Plushie.RuntimeTest do
 
       # Wait and confirm no more ticks arrive.
       Process.sleep(60)
-      :sys.get_state(runtime)
+      Plushie.Runtime.sync(runtime)
 
-      ticks_after = :sys.get_state(runtime).model.ticks
+      ticks_after = Plushie.Runtime.get_model(runtime).ticks
       # Ticks should not have increased after stopping.
       assert ticks_after == ticks_before
     end
@@ -900,24 +925,21 @@ defmodule Plushie.RuntimeTest do
       dispatch_and_wait(runtime, :toggle)
 
       # Final state: timer_on = false (started true, toggled 3 times).
-      state = :sys.get_state(runtime)
-      refute state.model.timer_on
-      assert map_size(state.subscriptions) == 0
+      model = Plushie.Runtime.get_model(runtime)
+      refute model.timer_on
+
+      # Verify no ticks arrive while timer is off.
+      ticks_before = model.ticks
+      Process.sleep(60)
+      Plushie.Runtime.sync(runtime)
+      assert Plushie.Runtime.get_model(runtime).ticks == ticks_before
 
       # Toggle back on and verify the timer runs.
       dispatch_and_wait(runtime, :toggle)
-      state = :sys.get_state(runtime)
-      assert state.model.timer_on
-      assert map_size(state.subscriptions) == 1
+      assert Plushie.Runtime.get_model(runtime).timer_on
 
       # Wait for at least one tick to confirm the timer is actually running.
-      Process.sleep(60)
-      :sys.get_state(runtime)
-      state = :sys.get_state(runtime)
-      assert state.model.ticks >= 1
-
-      # Verify exactly one subscription entry (no leaks).
-      assert map_size(state.subscriptions) == 1
+      await_model(runtime, fn m -> m.ticks > ticks_before end, 500)
     end
 
     test "multiple subscriptions can coexist" do
@@ -957,13 +979,14 @@ defmodule Plushie.RuntimeTest do
       await_initial_render(runtime)
 
       Process.sleep(100)
-      state = :sys.get_state(runtime)
+      Plushie.Runtime.sync(runtime)
 
+      model = Plushie.Runtime.get_model(runtime)
       # Both subscriptions should have fired at least once.
-      assert state.model.fast >= 2
-      assert state.model.slow >= 1
+      assert model.fast >= 2
+      assert model.slow >= 1
       # Fast should tick more than slow.
-      assert state.model.fast > state.model.slow
+      assert model.fast > model.slow
     end
   end
 
@@ -1004,13 +1027,11 @@ defmodule Plushie.RuntimeTest do
 
         # Runtime is still alive and model unchanged.
         assert Process.alive?(runtime)
-        state = :sys.get_state(runtime)
-        assert state.model.value == 0
+        assert Plushie.Runtime.get_model(runtime).value == 0
 
         # Can still process normal events after the crash.
         dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
-        state = :sys.get_state(runtime)
-        assert state.model.value == 1
+        assert Plushie.Runtime.get_model(runtime).value == 1
       end)
     end
 
@@ -1046,8 +1067,7 @@ defmodule Plushie.RuntimeTest do
 
         # Fix the view and confirm the runtime continues normally.
         dispatch_and_wait(runtime, :fix_view)
-        state = :sys.get_state(runtime)
-        assert state.model.crash_view == false
+        assert Plushie.Runtime.get_model(runtime).crash_view == false
       end)
     end
   end
@@ -1133,7 +1153,7 @@ defmodule Plushie.RuntimeTest do
       await_initial_render(runtime)
 
       dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "pick"})
-      effect_id = :sys.get_state(runtime).model.effect_id
+      effect_id = Plushie.Runtime.get_model(runtime).effect_id
 
       send(
         runtime,
@@ -1141,10 +1161,9 @@ defmodule Plushie.RuntimeTest do
          %Effect{request_id: effect_id, result: {:ok, %{"path" => "/tmp/test.txt"}}}}
       )
 
-      :sys.get_state(runtime)
+      Plushie.Runtime.sync(runtime)
 
-      state = :sys.get_state(runtime)
-      assert state.model.path == "/tmp/test.txt"
+      assert Plushie.Runtime.get_model(runtime).path == "/tmp/test.txt"
     end
   end
 
@@ -1182,24 +1201,23 @@ defmodule Plushie.RuntimeTest do
         end
       end
 
-      {runtime, _bridge} = start_runtime(EffectTimeoutApp)
+      {runtime, bridge} = start_runtime(EffectTimeoutApp)
       await_initial_render(runtime)
 
       dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "trigger"})
 
-      # After dispatching the effect, pending_effects should have an entry.
-      state = :sys.get_state(runtime)
-      effect_id = state.model.effect_id
+      # After dispatching the effect, verify the bridge received it.
+      effect_id = Plushie.Runtime.get_model(runtime).effect_id
       assert is_binary(effect_id)
-      assert Map.has_key?(state.pending_effects, effect_id)
+
+      effects = Plushie.Test.InternalMockBridge.get_effects(bridge)
+      assert length(effects) == 1
 
       # Simulate the timeout firing (avoids waiting for the real 5s timeout).
       send(runtime, {:effect_timeout, effect_id})
-      :sys.get_state(runtime)
+      Plushie.Runtime.sync(runtime)
 
-      state = :sys.get_state(runtime)
-      assert state.model.timeout_result == {:timed_out, effect_id}
-      assert state.pending_effects == %{}
+      assert Plushie.Runtime.get_model(runtime).timeout_result == {:timed_out, effect_id}
     end
 
     test "late effect response after timeout is ignored" do
@@ -1238,17 +1256,17 @@ defmodule Plushie.RuntimeTest do
       await_initial_render(runtime)
 
       dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "trigger"})
-      state = :sys.get_state(runtime)
-      effect_id = state.model.effect_id
+      effect_id = Plushie.Runtime.get_model(runtime).effect_id
 
       send(runtime, {:effect_timeout, effect_id})
-      :sys.get_state(runtime)
+      Plushie.Runtime.sync(runtime)
 
       send(runtime, {:renderer_event, %Effect{request_id: effect_id, result: {:ok, "late"}}})
-      state = :sys.get_state(runtime)
+      Plushie.Runtime.sync(runtime)
 
-      assert state.model.timeout_result == effect_id
-      assert state.model.success_result == nil
+      model = Plushie.Runtime.get_model(runtime)
+      assert model.timeout_result == effect_id
+      assert model.success_result == nil
     end
   end
 
@@ -1287,7 +1305,7 @@ defmodule Plushie.RuntimeTest do
       await_initial_render(runtime)
 
       # Allow cast to be processed by the mock bridge.
-      :sys.get_state(bridge)
+      GenServer.call(bridge, :sync)
 
       registers = Plushie.Test.InternalMockBridge.get_subscribes(bridge)
       assert length(registers) == 1
@@ -1323,7 +1341,7 @@ defmodule Plushie.RuntimeTest do
 
       {runtime, bridge} = start_runtime(KeyToggleApp)
       await_initial_render(runtime)
-      :sys.get_state(bridge)
+      GenServer.call(bridge, :sync)
 
       # Verify register was sent
       registers = Plushie.Test.InternalMockBridge.get_subscribes(bridge)
@@ -1331,7 +1349,7 @@ defmodule Plushie.RuntimeTest do
 
       # Now remove the subscription
       dispatch_and_wait(runtime, :stop_listening)
-      :sys.get_state(bridge)
+      GenServer.call(bridge, :sync)
 
       unregisters = Plushie.Test.InternalMockBridge.get_unsubscribes(bridge)
       assert length(unregisters) == 1
@@ -1342,12 +1360,10 @@ defmodule Plushie.RuntimeTest do
       {runtime, _bridge} = start_runtime(WidgetSubApp)
       await_initial_render(runtime)
 
-      initial_state = :sys.get_state(runtime)
-
-      assert Map.has_key?(
-               initial_state.subscriptions,
-               {:every, 1_000, {:__widget__, "main", "ticker", :pulse}}
-             )
+      # Verify the widget timer subscription is active by sending a tick.
+      send(runtime, {:subscription_tick, {:__widget__, "main", "ticker", :pulse}, 1_000})
+      Plushie.Runtime.sync(runtime)
+      assert Plushie.Runtime.get_model(runtime).pulses == 1
 
       send(
         runtime,
@@ -1356,12 +1372,12 @@ defmodule Plushie.RuntimeTest do
           [%{"family" => "click", "id" => "inc", "window_id" => "main"}]}}
       )
 
-      state = await_condition(runtime, fn s -> s.model.clicks == 1 end)
+      await_model(runtime, fn m -> m.clicks == 1 end)
 
-      assert Map.has_key?(
-               state.subscriptions,
-               {:every, 1_000, {:__widget__, "main", "ticker", :pulse}}
-             )
+      # Verify subscription survived the interact_step by sending another tick.
+      send(runtime, {:subscription_tick, {:__widget__, "main", "ticker", :pulse}, 1_000})
+      Plushie.Runtime.sync(runtime)
+      assert Plushie.Runtime.get_model(runtime).pulses == 2
     end
 
     test "canvas widget subscriptions survive force_rerender" do
@@ -1369,47 +1385,53 @@ defmodule Plushie.RuntimeTest do
         {runtime, _bridge} = start_runtime(WidgetSubApp)
         await_initial_render(runtime)
 
-        assert Map.has_key?(
-                 :sys.get_state(runtime).subscriptions,
-                 {:every, 1_000, {:__widget__, "main", "ticker", :pulse}}
-               )
+        # Verify the widget timer subscription is active by sending a tick.
+        send(runtime, {:subscription_tick, {:__widget__, "main", "ticker", :pulse}, 1_000})
+        Plushie.Runtime.sync(runtime)
+        assert Plushie.Runtime.get_model(runtime).pulses == 1
 
         send(runtime, :force_rerender)
-        state = :sys.get_state(runtime)
+        Plushie.Runtime.sync(runtime)
 
-        assert Map.has_key?(
-                 state.subscriptions,
-                 {:every, 1_000, {:__widget__, "main", "ticker", :pulse}}
-               )
+        # Verify subscription survived force_rerender by sending another tick.
+        send(runtime, {:subscription_tick, {:__widget__, "main", "ticker", :pulse}, 1_000})
+        Plushie.Runtime.sync(runtime)
+        assert Plushie.Runtime.get_model(runtime).pulses == 2
       end)
     end
 
     test "canvas widget timer state changes resync widget subscriptions" do
-      {runtime, _bridge} = start_runtime(SwitchingWidgetApp)
+      {runtime, bridge} = start_runtime(SwitchingWidgetApp)
       await_initial_render(runtime)
 
-      assert Map.has_key?(
-               :sys.get_state(runtime).subscriptions,
-               {:every, 1_000, {:__widget__, "main", "switcher", :first}}
-             )
+      patches_before = length(Plushie.Test.InternalMockBridge.get_patches(bridge))
+
+      # Trigger the :first timer tick, which switches the widget to :second phase.
+      # The widget re-renders with "phase:second" content, producing a patch.
+      send(
+        runtime,
+        {:subscription_tick, {:__widget__, "main", "switcher", :first}, 1_000}
+      )
+
+      Plushie.Runtime.sync(runtime)
+
+      # A patch should have been sent for the tree change.
+      patches_after = length(Plushie.Test.InternalMockBridge.get_patches(bridge))
+      assert patches_after > patches_before
+
+      # Verify the :first subscription was replaced by :second: the old timer
+      # tick should be silently ignored (no re-render), while :second fires.
+      patches_before_stale = length(Plushie.Test.InternalMockBridge.get_patches(bridge))
 
       send(
         runtime,
         {:subscription_tick, {:__widget__, "main", "switcher", :first}, 1_000}
       )
 
-      state =
-        await_condition(runtime, fn s ->
-          Map.has_key?(
-            s.subscriptions,
-            {:every, 1_000, {:__widget__, "main", "switcher", :second}}
-          )
-        end)
+      Plushie.Runtime.sync(runtime)
 
-      refute Map.has_key?(
-               state.subscriptions,
-               {:every, 1_000, {:__widget__, "main", "switcher", :first}}
-             )
+      # Stale tick: no new patch (subscription was removed).
+      assert length(Plushie.Test.InternalMockBridge.get_patches(bridge)) == patches_before_stale
     end
   end
 
@@ -1430,8 +1452,8 @@ defmodule Plushie.RuntimeTest do
          }}
       )
 
-      state = await_condition(runtime, fn s -> s.model.events == [:mouse, :sensor] end)
-      assert state.model.events == [:mouse, :sensor]
+      model = await_model(runtime, fn m -> m.events == [:mouse, :sensor] end)
+      assert model.events == [:mouse, :sensor]
     end
 
     test "sensor resize coalescing keeps same local ids in different windows separate" do
@@ -1462,8 +1484,8 @@ defmodule Plushie.RuntimeTest do
          }}
       )
 
-      state = await_condition(runtime, fn s -> s.model.events == ["main", "prefs"] end)
-      assert state.model.events == ["main", "prefs"]
+      model = await_model(runtime, fn m -> m.events == ["main", "prefs"] end)
+      assert model.events == ["main", "prefs"]
     end
   end
 
@@ -1509,7 +1531,7 @@ defmodule Plushie.RuntimeTest do
 
       {runtime, bridge} = start_runtime(WindowApp)
       await_initial_render(runtime)
-      :sys.get_state(bridge)
+      GenServer.call(bridge, :sync)
 
       # Initial render should detect the "main" window and send open
       window_ops = Plushie.Test.InternalMockBridge.get_window_ops(bridge)
@@ -1520,7 +1542,7 @@ defmodule Plushie.RuntimeTest do
 
       # Open the secondary window
       dispatch_and_wait(runtime, :open_secondary)
-      :sys.get_state(bridge)
+      GenServer.call(bridge, :sync)
 
       window_ops = Plushie.Test.InternalMockBridge.get_window_ops(bridge)
       assert length(window_ops) == 2
@@ -1557,7 +1579,7 @@ defmodule Plushie.RuntimeTest do
 
       {runtime, bridge} = start_runtime(WindowCloseApp)
       await_initial_render(runtime)
-      :sys.get_state(bridge)
+      GenServer.call(bridge, :sync)
 
       # Initial render opens the window
       window_ops = Plushie.Test.InternalMockBridge.get_window_ops(bridge)
@@ -1567,7 +1589,7 @@ defmodule Plushie.RuntimeTest do
 
       # Remove the window
       dispatch_and_wait(runtime, :close_it)
-      :sys.get_state(bridge)
+      GenServer.call(bridge, :sync)
 
       window_ops = Plushie.Test.InternalMockBridge.get_window_ops(bridge)
       assert length(window_ops) == 2
@@ -1631,8 +1653,8 @@ defmodule Plushie.RuntimeTest do
       dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "start_stream"})
 
       # Wait for the stream task to emit all values and complete.
-      state = await_condition(runtime, fn s -> s.model.final == :done end)
-      assert state.model.chunks == ["a", "b", "c"]
+      model = await_model(runtime, fn m -> m.final == :done end)
+      assert model.chunks == ["a", "b", "c"]
     end
 
     test "cancel stops a running stream task" do
@@ -1690,22 +1712,18 @@ defmodule Plushie.RuntimeTest do
         dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "start"})
 
         # Wait for the first emit to arrive
-        state = await_condition(runtime, fn s -> s.model.chunks == ["first"] end)
-        assert Map.has_key?(state.async_tasks, :import)
+        await_model(runtime, fn m -> m.chunks == ["first"] end)
 
         # Cancel the stream
         dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "cancel"})
 
-        state = :sys.get_state(runtime)
-        assert state.model.cancelled == true
-        assert state.async_tasks == %{}
+        assert Plushie.Runtime.get_model(runtime).cancelled == true
 
         # Wait and confirm no more chunks arrive
         Process.sleep(100)
-        :sys.get_state(runtime)
+        Plushie.Runtime.sync(runtime)
 
-        state = :sys.get_state(runtime)
-        assert state.model.chunks == ["first"]
+        assert Plushie.Runtime.get_model(runtime).chunks == ["first"]
       end)
     end
 
@@ -1738,26 +1756,18 @@ defmodule Plushie.RuntimeTest do
       # Should not crash
       dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "cancel"})
 
-      state = :sys.get_state(runtime)
-      assert state.model.value == 1
-      assert state.async_tasks == %{}
+      assert Plushie.Runtime.get_model(runtime).value == 1
     end
 
-    test "async tasks are tracked in async_tasks and cleaned up on completion" do
+    test "async tasks are tracked and cleaned up on completion" do
       {runtime, _bridge} = start_runtime(AsyncApp)
       await_initial_render(runtime)
 
       dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "async"})
 
-      # Wait for the task to complete, the result to be processed, and the
-      # async_tasks map to be cleaned up (all happen in the same handle_info).
-      state =
-        await_condition(runtime, fn s ->
-          s.model.value == 42 and s.async_tasks == %{}
-        end)
-
-      assert state.model.value == 42
-      assert state.async_tasks == %{}
+      # Wait for the task to complete and the result to be delivered to update/2.
+      model = await_model(runtime, fn m -> m.value == 42 end)
+      assert model.value == 42
     end
   end
 

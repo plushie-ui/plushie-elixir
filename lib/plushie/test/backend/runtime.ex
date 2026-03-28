@@ -230,7 +230,7 @@ defmodule Plushie.Test.Backend.Runtime do
 
     runtime = Plushie.runtime_for(instance_name)
 
-    :sys.get_state(runtime)
+    Plushie.Runtime.sync(runtime)
 
     {:ok,
      %__MODULE__{
@@ -348,7 +348,7 @@ defmodule Plushie.Test.Backend.Runtime do
       )
 
     runtime = Plushie.runtime_for(instance_name)
-    :sys.get_state(runtime)
+    Plushie.Runtime.sync(runtime)
 
     {:reply, :ok,
      %{state | session_id: session_id, sup: sup, instance_name: instance_name, runtime: runtime}}

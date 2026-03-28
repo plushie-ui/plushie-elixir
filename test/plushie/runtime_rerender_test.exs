@@ -67,19 +67,19 @@ defmodule Plushie.RuntimeRerenderTest do
 
     {:ok, _bridge} = Plushie.Test.InternalMockBridge.start_link(name: bridge_name)
     {:ok, runtime} = Plushie.Runtime.start_link(app: app, bridge: bridge_name, name: runtime_name)
-    :sys.get_state(runtime)
+    Plushie.Runtime.sync(runtime)
 
     {runtime, bridge_name}
   end
 
   defp dispatch_and_wait(runtime, event) do
     Plushie.Runtime.dispatch(runtime, event)
-    :sys.get_state(runtime)
+    Plushie.Runtime.sync(runtime)
   end
 
   defp force_rerender_and_wait(runtime) do
     send(runtime, :force_rerender)
-    :sys.get_state(runtime)
+    Plushie.Runtime.sync(runtime)
   end
 
   defp find_by_type(%{type: type} = node, type), do: node
@@ -103,16 +103,14 @@ defmodule Plushie.RuntimeRerenderTest do
         dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
         dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
 
-        state = :sys.get_state(runtime)
-        assert state.model.count == 2
+        assert Plushie.Runtime.get_model(runtime).count == 2
 
         patches_before = length(Plushie.Test.InternalMockBridge.get_patches(bridge))
 
         # Force re-render -- model should not change (no update/2 called).
         force_rerender_and_wait(runtime)
 
-        state = :sys.get_state(runtime)
-        assert state.model.count == 2
+        assert Plushie.Runtime.get_model(runtime).count == 2
 
         # Since the model didn't change and the module code is the same,
         # the tree is identical -- no new patch should be sent.
@@ -129,11 +127,11 @@ defmodule Plushie.RuntimeRerenderTest do
         dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
         dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
 
-        model_before = :sys.get_state(runtime).model
+        model_before = Plushie.Runtime.get_model(runtime)
 
         force_rerender_and_wait(runtime)
 
-        model_after = :sys.get_state(runtime).model
+        model_after = Plushie.Runtime.get_model(runtime)
         assert model_before == model_after
       end)
     end
@@ -150,16 +148,16 @@ defmodule Plushie.RuntimeRerenderTest do
         assert Process.alive?(runtime)
 
         # Old tree should be preserved.
-        state = :sys.get_state(runtime)
-        text_node = find_by_type(state.tree, "text")
+        tree = Plushie.Runtime.get_tree(runtime)
+        text_node = find_by_type(tree, "text")
         assert text_node.props[:content] == "all good"
 
         # Disarm and verify the runtime recovers.
         dispatch_and_wait(runtime, :disarm)
         force_rerender_and_wait(runtime)
 
-        state = :sys.get_state(runtime)
-        text_node = find_by_type(state.tree, "text")
+        tree = Plushie.Runtime.get_tree(runtime)
+        text_node = find_by_type(tree, "text")
         assert text_node.props[:content] == "all good"
       end)
     end
@@ -172,10 +170,9 @@ defmodule Plushie.RuntimeRerenderTest do
 
         dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
 
-        state = :sys.get_state(runtime)
-        assert state.model.count == 1
+        assert Plushie.Runtime.get_model(runtime).count == 1
 
-        text_node = find_by_type(state.tree, "text")
+        text_node = find_by_type(Plushie.Runtime.get_tree(runtime), "text")
         assert text_node.props[:content] == "count:1"
       end)
     end

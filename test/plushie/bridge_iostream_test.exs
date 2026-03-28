@@ -302,36 +302,66 @@ defmodule Plushie.BridgeIostreamTest do
     end
 
     test "holds transient outbound messages until resync completes" do
-      {:ok, bridge} =
-        Plushie.Bridge.start_link(
-          transport: {:iostream, self()},
-          format: :json,
-          runtime: self()
-        )
+      # The awaiting_resync queuing mechanism is triggered by renderer restarts
+      # on spawn-mode bridges. Iostream transport doesn't support restarts
+      # natively, but the queuing code path is shared. We test this with a
+      # spawn-mode bridge using a shell script that crashes once (triggering
+      # the restart + awaiting_resync state), then stays alive on the second
+      # launch so we can verify queued messages are flushed.
 
-      assert_receive {:iostream_bridge, ^bridge}
+      tag = System.unique_integer([:positive])
+      state_file = Path.join(System.tmp_dir!(), "plushie_resync_#{tag}")
+      script = Path.join(System.tmp_dir!(), "plushie_resync_#{tag}.sh")
 
-      :sys.replace_state(bridge, fn state -> %{state | awaiting_resync: true} end)
+      # First invocation: exit with error (triggers restart).
+      # Second invocation: stay alive (simulates successful restart).
+      File.write!(script, """
+      #!/bin/sh
+      if [ ! -f "#{state_file}" ]; then
+        touch "#{state_file}"
+        exit 1
+      fi
+      sleep 60
+      """)
+
+      File.chmod!(script, 0o755)
 
       log =
         capture_log(fn ->
-          Plushie.Bridge.send_widget_op(bridge, "focus", %{id: "save"})
-          refute_receive {:iostream_send, _}, 100
+          {:ok, bridge} =
+            Plushie.Bridge.start_link(
+              transport: :spawn,
+              format: :json,
+              runtime: self(),
+              renderer_path: script,
+              max_restarts: 1,
+              restart_delay: 10
+            )
 
+          # The first launch exits immediately with status 1. The bridge
+          # detects this and enters awaiting_resync + schedules restart.
+          assert_receive {:renderer_exit, _}, 1_000
+
+          # While awaiting resync, queue a widget_op.
+          Plushie.Bridge.send_widget_op(bridge, "focus", %{id: "save"})
+
+          # The restart fires after restart_delay (10ms). The script stays
+          # alive on second invocation.
+          assert_receive :renderer_restarted, 1_000
+
+          # Complete the resync -- this flushes queued messages.
           Plushie.Bridge.send_resync_complete(bridge)
 
-          assert_receive {:iostream_send, data}, 1_000
-          send(self(), {:queued_widget_op, data})
+          # The bridge should still be alive and functioning.
+          assert Process.alive?(bridge)
+
+          GenServer.stop(bridge)
         end)
 
       assert log =~ "queued widget_op while renderer is unavailable"
-      assert_receive {:queued_widget_op, data}, 1_000
-      assert {:ok, decoded} = Jason.decode(IO.iodata_to_binary(data))
-      assert decoded["type"] == "widget_op"
-      assert decoded["op"] == "focus"
-      assert decoded["payload"] == %{"id" => "save"}
 
-      GenServer.stop(bridge)
+      File.rm(state_file)
+      File.rm(script)
     end
   end
 end

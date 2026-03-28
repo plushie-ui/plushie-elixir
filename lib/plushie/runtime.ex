@@ -150,6 +150,18 @@ defmodule Plushie.Runtime do
     :ok
   end
 
+  @doc """
+  Waits for the runtime to finish processing all pending messages.
+
+  Returns `:ok` once the runtime is idle. Use this to synchronize after
+  dispatching events or starting the runtime, ensuring init/update
+  cycles have completed before inspecting state.
+  """
+  @spec sync(runtime :: GenServer.server()) :: :ok
+  def sync(runtime) do
+    GenServer.call(runtime, :sync)
+  end
+
   @doc "Returns the current app model synchronously."
   @spec get_model(GenServer.server()) :: term()
   def get_model(runtime) do
@@ -314,6 +326,10 @@ defmodule Plushie.Runtime do
   # ---------------------------------------------------------------------------
 
   @impl true
+  def handle_call(:sync, _from, state) do
+    {:reply, :ok, state}
+  end
+
   def handle_call(:get_model, _from, state) do
     {:reply, state.model, state}
   end
