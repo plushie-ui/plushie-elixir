@@ -4,8 +4,7 @@ defmodule Plushie.Dev.RebuildingOverlay do
   # Builds and injects a dev-mode overlay bar into the UI tree.
   #
   # The overlay is a slim, semi-transparent bar at the top of each window
-  # showing build status (Elixir recompiles, Rust/WASM rebuilds). It has
-  # a collapsible drawer for detailed output.
+  # showing rebuild status. It has a collapsible drawer for detailed output.
   #
   # All overlay widget IDs use the "__plushie_dev__/" prefix so the
   # Runtime can intercept their events before they reach app.update/2.
@@ -14,24 +13,26 @@ defmodule Plushie.Dev.RebuildingOverlay do
   @dismiss_ms 1500
 
   @type status :: :building | :succeeded | :failed
-  @type source :: :elixir | :rust | :wasm
 
   @type t :: %__MODULE__{
           status: status(),
-          sources: [source()],
-          message: String.t(),
           detail: String.t(),
           expanded: boolean()
         }
 
   defstruct status: :building,
-            sources: [:elixir],
-            message: "",
             detail: "",
             expanded: false
 
   @doc "Auto-dismiss delay in milliseconds."
+  @spec dismiss_ms() :: pos_integer()
   def dismiss_ms, do: @dismiss_ms
+
+  @doc "Returns the display message for a given status."
+  @spec status_message(status()) :: String.t()
+  def status_message(:building), do: "Rebuilding..."
+  def status_message(:succeeded), do: "Rebuild succeeded."
+  def status_message(:failed), do: "Rebuild failed."
 
   @doc "Returns true if the given event ID belongs to the overlay."
   @spec overlay_event?(id :: String.t()) :: boolean()
@@ -41,12 +42,6 @@ defmodule Plushie.Dev.RebuildingOverlay do
   @doc "Extracts the action from an overlay event ID."
   @spec action(id :: String.t()) :: String.t()
   def action(id), do: String.replace_prefix(id, @prefix <> "/", "")
-
-  @doc "Formats a sources list as a parenthesized string: (rust, wasm)"
-  @spec format_sources(sources :: [source()]) :: String.t()
-  def format_sources(sources) do
-    "(#{Enum.map_join(sources, ", ", &Atom.to_string/1)})"
-  end
 
   # -- Action handling --------------------------------------------------------
 
@@ -75,7 +70,7 @@ defmodule Plushie.Dev.RebuildingOverlay do
   def maybe_inject(tree, overlay), do: inject(tree, overlay)
 
   @spec inject(tree :: map(), overlay :: t()) :: map()
-  def inject(tree, overlay) do
+  defp inject(tree, overlay) do
     overlay_node = build_overlay(overlay)
 
     if has_window_nodes?(tree) do
@@ -157,6 +152,7 @@ defmodule Plushie.Dev.RebuildingOverlay do
       end
 
     text_color = bar_text_color(overlay.status)
+    message = status_message(overlay.status)
 
     children = [
       %{
@@ -174,7 +170,7 @@ defmodule Plushie.Dev.RebuildingOverlay do
       %{
         id: "#{@prefix}/status",
         type: "text",
-        props: %{content: overlay.message, color: text_color, size: 12},
+        props: %{content: message, color: text_color, size: 12},
         children: []
       }
     ]

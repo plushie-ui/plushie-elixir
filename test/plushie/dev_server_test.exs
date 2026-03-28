@@ -95,7 +95,7 @@ defmodule Plushie.DevServerTest do
 
     {:ok, pid} =
       GenServer.start_link(
-        Plushie.DevServer.TestHarness,
+        Plushie.Dev.DevServer.TestHarness,
         %{
           runtime: runtime,
           watcher: nil,

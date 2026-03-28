@@ -55,10 +55,11 @@ defmodule Mix.Tasks.Plushie.Gui do
 
     Mix.Task.run("compile")
 
-    validate_module!(app_module)
+    Mix.PlushieHelpers.validate_module!(app_module)
 
     binary_path = Mix.PlushieHelpers.resolve_binary!(opts)
     Mix.Task.run("app.start")
+    Mix.PlushieHelpers.warn_if_unconfigured()
 
     start_opts = [binary: binary_path]
     start_opts = if opts[:json], do: Keyword.put(start_opts, :format, :json), else: start_opts
@@ -95,16 +96,6 @@ defmodule Mix.Tasks.Plushie.Gui do
 
       {:error, reason} ->
         Mix.raise("Failed to start Plushie: #{inspect(reason)}")
-    end
-  end
-
-  defp validate_module!(mod) do
-    unless Code.ensure_loaded?(mod) do
-      Mix.raise("""
-      Module #{inspect(mod)} could not be loaded.
-
-      Make sure the module name is correct and the project compiles.
-      """)
     end
   end
 

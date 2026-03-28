@@ -105,4 +105,51 @@ defmodule Mix.PlushieHelpers do
       Plushie.Binary.path!()
     end
   end
+
+  @doc "Validates that a module is loaded. Raises with a clear message if not."
+  @spec validate_module!(module :: module()) :: :ok
+  def validate_module!(mod) do
+    unless Code.ensure_loaded?(mod) do
+      Mix.raise("""
+      Module #{inspect(mod)} could not be loaded.
+
+      Make sure the module name is correct and the project compiles.
+      """)
+    end
+
+    :ok
+  end
+
+  @doc """
+  Warns if no plushie configuration is detected.
+
+  Shows recommended config blocks for each environment.
+  Only warns once per VM session.
+  """
+  @spec warn_if_unconfigured() :: :ok
+  def warn_if_unconfigured do
+    if Application.get_all_env(:plushie) == [] and
+         not :persistent_term.get(:plushie_config_warned, false) do
+      :persistent_term.put(:plushie_config_warned, true)
+
+      Mix.shell().info("""
+
+      No plushie configuration detected. Recommended setup:
+
+          # config/dev.exs
+          config :plushie,
+            code_reloader: true
+
+          # config/test.exs
+          config :plushie,
+            test_backend: :mock
+
+          # config/prod.exs
+          config :plushie,
+            build_profile: :release
+      """)
+    end
+
+    :ok
+  end
 end

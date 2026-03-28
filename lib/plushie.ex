@@ -8,7 +8,11 @@ defmodule Plushie do
 
   ## Dev mode (live code reloading)
 
-      {:ok, pid} = Plushie.start_link(MyApp, dev: true)
+      # In config/dev.exs:
+      config :plushie, code_reloader: true
+
+      # Or as a start_link option:
+      {:ok, pid} = Plushie.start_link(MyApp, code_reloader: true)
 
   ## Under a supervisor
 
@@ -25,8 +29,10 @@ defmodule Plushie do
   - `:daemon`     -- if `true`, keep running after the last window closes
                       (default: `false`). In daemon mode, `all_windows_closed`
                       is delivered to `update/2` instead of triggering shutdown.
-  - `:dev`        -- enable live code reloading (default: `false`)
-  - `:dev_opts`   -- options forwarded to `Plushie.Dev.DevServer` (default: `[]`)
+  - `:code_reloader` -- enable dev-mode live reloading. `false` (default),
+                      `true`, or a keyword list of reloader options
+                      (`:debounce_ms`, `:rebuild_artifacts`). Can also be set
+                      via `config :plushie, code_reloader: true`.
   - `:transport`   -- `:spawn` (default, spawns the renderer as a child
                       process), `:stdio` (reads/writes the BEAM's own
                       stdin/stdout, for use with `plushie --exec`), or
@@ -215,9 +221,11 @@ defmodule Plushie do
   end
 
   @doc "Returns the registered name of the runtime for the given instance."
+  @spec runtime_for(instance_name :: atom()) :: atom()
   def runtime_for(instance_name \\ __MODULE__), do: runtime_name(instance_name)
 
   @doc "Returns the registered name of the bridge for the given instance."
+  @spec bridge_for(instance_name :: atom()) :: atom()
   def bridge_for(instance_name \\ __MODULE__), do: bridge_name(instance_name)
 
   defp sup_name(instance_name), do: :"#{instance_name}.Supervisor"
@@ -225,6 +233,7 @@ defmodule Plushie do
   defp bridge_name(instance_name), do: :"#{instance_name}.Bridge"
   defp dev_server_name(instance_name), do: :"#{instance_name}.DevServer"
 
+  @spec resolve_code_reloader(opts :: keyword()) :: boolean()
   defp resolve_code_reloader(opts) do
     case Keyword.get(opts, :code_reloader) do
       nil -> Application.get_env(:plushie, :code_reloader, false) != false
@@ -233,6 +242,7 @@ defmodule Plushie do
     end
   end
 
+  @spec resolve_reloader_opts(opts :: keyword()) :: keyword()
   defp resolve_reloader_opts(opts) do
     config =
       case Application.get_env(:plushie, :code_reloader) do

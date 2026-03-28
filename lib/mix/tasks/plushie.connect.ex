@@ -67,7 +67,7 @@ defmodule Mix.Tasks.Plushie.Connect do
     # Start the application and dependencies.
     Mix.Task.run("app.start")
 
-    validate_module!(app_module)
+    Mix.PlushieHelpers.validate_module!(app_module)
 
     # Resolve socket address.
     socket =
@@ -107,16 +107,6 @@ defmodule Mix.Tasks.Plushie.Connect do
 
       {:error, reason} ->
         Mix.raise("Failed to start plushie: #{inspect(reason)}")
-    end
-  end
-
-  defp validate_module!(mod) do
-    unless Code.ensure_loaded?(mod) do
-      Mix.raise("""
-      Module #{inspect(mod)} could not be loaded.
-
-      Make sure the module name is correct and the project compiles.
-      """)
     end
   end
 

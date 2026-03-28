@@ -186,7 +186,7 @@ re-evaluated with the new code. Pass `--no-watch` to disable.
 Try it with an example -- run `mix plushie.gui Counter`, then edit
 `examples/counter.ex` and save. The window updates instantly.
 
-See `Plushie.DevServer` for configuration options.
+See `Plushie.Dev.DevServer` for configuration options.
 
 ## Next steps
 

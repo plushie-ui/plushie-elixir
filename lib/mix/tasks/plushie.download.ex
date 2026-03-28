@@ -48,6 +48,7 @@ defmodule Mix.Tasks.Plushie.Download do
 
     {opts, _rest} = OptionParser.parse!(args, strict: @switches)
 
+    Mix.PlushieHelpers.warn_if_unconfigured()
     check_native_extensions!()
 
     force? = opts[:force] || false

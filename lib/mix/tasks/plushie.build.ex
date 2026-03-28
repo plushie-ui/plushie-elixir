@@ -47,16 +47,15 @@ defmodule Mix.Tasks.Plushie.Build do
 
   CLI flags override config. Default artifacts: `[:bin]`.
 
-  ## Extensions
+  ## Native widgets
 
-  Register extensions in your config to build a custom binary:
+  Native widgets are auto-detected via the `Plushie.Widget` protocol.
+  Any module that implements the protocol and exports `native_crate/0`
+  is included in the build. No explicit configuration is needed.
 
-      config :plushie, extensions: [MyApp.SparklineExtension]
-
-  The task validates that each module implements the `Plushie.Extension`
-  behaviour and that no two extensions claim the same widget type name.
+  The task validates that no two widgets claim the same type name.
   A Cargo workspace is generated under the Mix build directory with a
-  `main.rs` that registers all extensions.
+  `main.rs` that registers each native widget.
   """
   @shortdoc "Build the plushie binary and/or WASM"
 
@@ -76,6 +75,7 @@ defmodule Mix.Tasks.Plushie.Build do
         ]
       )
 
+    Mix.PlushieHelpers.warn_if_unconfigured()
     {want_bin?, want_wasm?} = Mix.PlushieHelpers.resolve_artifacts(opts)
     release? = opts[:release] || false
     verbose? = opts[:verbose] || false

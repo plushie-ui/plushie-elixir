@@ -598,22 +598,12 @@ defmodule Plushie.Runtime do
     state = Windows.sync_windows(state, tree)
     notify_bridge(state, &Plushie.Bridge.send_resync_complete/1)
 
-    # If we just restarted after a Rust build, update the overlay to
-    # "Restarted" and schedule auto-dismiss.
+    # If the overlay is showing a successful rebuild, schedule auto-dismiss
+    # now that the renderer has restarted.
     state =
       case state.dev_overlay do
-        %{sources: sources, status: :succeeded} when is_list(sources) ->
-          if :rust in sources do
-            label = Plushie.Dev.RebuildingOverlay.format_sources(sources)
-            overlay = %{state.dev_overlay | message: "Restarted #{label}"}
-            state = %{state | dev_overlay: overlay}
-            schedule_overlay_dismiss(state)
-          else
-            state
-          end
-
-        _ ->
-          state
+        %{status: :succeeded} -> schedule_overlay_dismiss(state)
+        _ -> state
       end
 
     {:noreply, state}
@@ -839,12 +829,6 @@ defmodule Plushie.Runtime do
       end
 
     {:noreply, state}
-  end
-
-  def handle_info(:dev_overlay_dismiss, state) do
-    state = cancel_overlay_timer(state)
-    state = %{state | dev_overlay: nil}
-    {:noreply, dev_rerender(state)}
   end
 
   def handle_info(:dev_overlay_auto_dismiss, state) do

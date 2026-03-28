@@ -88,7 +88,8 @@ defmodule Plushie.MixProject do
           Plushie.Runtime,
           Plushie.Bridge,
           Plushie.Binary,
-          Plushie.DevServer
+          Plushie.Dev.DevServer,
+          Plushie.Dev.RebuildingOverlay
         ],
         "UI Builder": [
           Plushie.UI,
