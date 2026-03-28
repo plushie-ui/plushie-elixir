@@ -42,6 +42,8 @@ defmodule Plushie.Test.Backend.Runtime do
 
   use GenServer
 
+  require Logger
+
   alias Plushie.Automation.Selector
   alias Plushie.Test.{PoolAdapter, Screenshot, TreeHash}
 
@@ -355,8 +357,9 @@ defmodule Plushie.Test.Backend.Runtime do
   end
 
   @impl GenServer
-  def handle_info({:DOWN, _ref, :process, _pid, _reason}, state) do
-    {:noreply, state}
+  def handle_info({:DOWN, _ref, :process, _pid, reason}, state) do
+    Logger.error("plushie test backend: pool adapter crashed: #{inspect(reason)}")
+    {:stop, {:adapter_crashed, reason}, state}
   end
 
   def handle_info(_msg, state), do: {:noreply, state}

@@ -41,7 +41,7 @@ defmodule Plushie.Runtime do
         pending_coalesce_order: [term()],
         coalesce_timer:     reference() | nil,
         consecutive_errors: non_neg_integer(),
-        pending_interact:   {GenServer.from(), String.t()} | nil
+        pending_interact:   {GenServer.from(), String.t(), reference()} | nil
       }
 
   ## Exit trapping
@@ -74,6 +74,7 @@ defmodule Plushie.Runtime do
             pending_coalesce_order: [],
             coalesce_timer: nil,
             consecutive_errors: 0,
+            consecutive_view_errors: 0,
             widget_handlers: %{},
             widget_events: %{},
             diagnostics: [],
@@ -103,6 +104,7 @@ defmodule Plushie.Runtime do
            pending_coalesce_order: [term()],
            coalesce_timer: reference() | nil,
            consecutive_errors: non_neg_integer(),
+           consecutive_view_errors: non_neg_integer(),
            diagnostics: [Plushie.Event.SystemEvent.t()],
            pending_stub_acks: %{String.t() => GenServer.from()},
            widget_handlers: %{
@@ -115,7 +117,7 @@ defmodule Plushie.Runtime do
            widget_events: %{
              {String.t() | nil, String.t()} => %{widget_type: atom(), events: MapSet.t(atom())}
            },
-           pending_interact: {GenServer.from(), String.t()} | nil,
+           pending_interact: {GenServer.from(), String.t(), reference()} | nil,
            pending_await_async: %{atom() => GenServer.from()},
            dev_overlay: Plushie.Dev.RebuildingOverlay.t() | nil,
            dev_overlay_timer: reference() | nil
@@ -375,10 +377,12 @@ defmodule Plushie.Runtime do
     case state.pending_interact do
       nil ->
         id = "interact_#{:erlang.unique_integer([:positive])}"
+        {caller_pid, _} = from
+        ref = Process.monitor(caller_pid)
         Plushie.Bridge.send_interact(state.bridge, id, action, selector, payload)
-        {:noreply, %{state | pending_interact: {from, id}}}
+        {:noreply, %{state | pending_interact: {from, id, ref}}}
 
-      {_other_from, _id} ->
+      {_other_from, _id, _ref} ->
         {:reply, {:error, :interact_in_progress}, state}
     end
   end
@@ -492,7 +496,8 @@ defmodule Plushie.Runtime do
 
     # Reply to the blocked caller.
     case state.pending_interact do
-      {from, ^id} ->
+      {from, ^id, ref} ->
+        Process.demonitor(ref, [:flush])
         GenServer.reply(from, :ok)
         {:noreply, %{state | pending_interact: nil}}
 
@@ -647,9 +652,21 @@ defmodule Plushie.Runtime do
     end
   end
 
+  # Interact caller died (timeout or crash). Clean up pending_interact so
+  # future interactions aren't blocked.
+  def handle_info({:DOWN, ref, :process, _pid, _reason}, state)
+      when state.pending_interact != nil do
+    case state.pending_interact do
+      {_from, _id, ^ref} ->
+        Logger.debug("plushie runtime: interact caller exited, clearing pending interaction")
+        {:noreply, %{state | pending_interact: nil}}
+
+      _ ->
+        {:noreply, state}
+    end
+  end
+
   def handle_info({:DOWN, _ref, :process, _pid, _reason}, state) do
-    # Safety net -- monitors are no longer placed on async tasks, but handle
-    # gracefully in case external code monitors something linked to us.
     {:noreply, state}
   end
 
@@ -962,7 +979,8 @@ defmodule Plushie.Runtime do
 
   defp fail_pending_interact(%{pending_interact: nil} = state, _reason), do: state
 
-  defp fail_pending_interact(%{pending_interact: {from, _id}} = state, reason) do
+  defp fail_pending_interact(%{pending_interact: {from, _id, ref}} = state, reason) do
+    Process.demonitor(ref, [:flush])
     GenServer.reply(from, {:error, reason})
     %{state | pending_interact: nil}
   end
@@ -1079,6 +1097,21 @@ defmodule Plushie.Runtime do
         # Return old tree unchanged.
         old_tree
     end
+  end
+
+  @view_error_warn_threshold 5
+
+  defp track_view_error(state) do
+    count = state.consecutive_view_errors + 1
+
+    if count == @view_error_warn_threshold do
+      Logger.warning(
+        "plushie runtime: view/1 has failed #{count} consecutive times, " <>
+          "the UI is stale. Check the error log for details."
+      )
+    end
+
+    %{state | consecutive_view_errors: count}
   end
 
   defp maybe_inject_overlay(tree, overlay) do
@@ -1445,15 +1478,27 @@ defmodule Plushie.Runtime do
         state = %{state | model: new_model, consecutive_errors: 0}
         state = Commands.execute_commands(commands, state)
 
+        old_tree = state.tree
+
         new_tree =
           render_and_sync(
             app,
             new_model,
             bridge,
-            state.tree,
+            old_tree,
             state.widget_handlers,
             state.dev_overlay
           )
+
+        # render_and_sync returns the exact old_tree reference on view
+        # failure (safe_view :error). Track consecutive failures so
+        # persistent view bugs are surfaced clearly.
+        state =
+          if new_tree === old_tree and old_tree != nil do
+            track_view_error(state)
+          else
+            %{state | consecutive_view_errors: 0}
+          end
 
         state = %{state | tree: new_tree}
 
@@ -1604,6 +1649,10 @@ defmodule Plushie.Runtime do
         Commands.execute_commands(deferred_commands, state)
 
       :error ->
+        Logger.warning(
+          "plushie runtime: view/1 failed during interact step, keeping previous tree"
+        )
+
         state
     end
   end

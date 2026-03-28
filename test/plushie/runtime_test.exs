@@ -6,9 +6,7 @@ defmodule Plushie.RuntimeTest do
   alias Plushie.Event.Effect
   alias Plushie.Event.WidgetEvent
 
-  # ---------------------------------------------------------------------------
   # Test app: simple counter driven by button click events.
-  # ---------------------------------------------------------------------------
 
   defmodule SimpleApp do
     use Plushie.App
@@ -35,9 +33,7 @@ defmodule Plushie.RuntimeTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Test app: exercises send_after (schedules a timer in init).
-  # ---------------------------------------------------------------------------
 
   defmodule CommandApp do
     use Plushie.App
@@ -60,9 +56,7 @@ defmodule Plushie.RuntimeTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Test app: exercises the async command (no timer in init to avoid races).
-  # ---------------------------------------------------------------------------
 
   defmodule AsyncApp do
     use Plushie.App
@@ -282,9 +276,7 @@ defmodule Plushie.RuntimeTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Helpers
-  # ---------------------------------------------------------------------------
 
   # Starts a uniquely-named InternalMockBridge and Runtime pair for a single test.
   # Returns {runtime_pid, bridge_name}.
@@ -356,10 +348,6 @@ defmodule Plushie.RuntimeTest do
       end
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # describe "init/update/view cycle"
-  # ---------------------------------------------------------------------------
 
   describe "init/update/view cycle" do
     test "Runtime starts and sends initial snapshot to bridge" do
@@ -473,10 +461,6 @@ defmodule Plushie.RuntimeTest do
       Process.flag(:trap_exit, false)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # describe "commands"
-  # ---------------------------------------------------------------------------
 
   describe "commands" do
     test "send_after delivers the event after the specified delay" do
@@ -602,10 +586,6 @@ defmodule Plushie.RuntimeTest do
       assert Plushie.Runtime.get_model(runtime).value == 1
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # describe "renderer lifecycle"
-  # ---------------------------------------------------------------------------
 
   describe "renderer lifecycle" do
     test "{:renderer_exit, reason} calls handle_renderer_exit and model is updated" do
@@ -800,10 +780,6 @@ defmodule Plushie.RuntimeTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # describe "subscriptions"
-  # ---------------------------------------------------------------------------
-
   describe "subscriptions" do
     test "app with every subscription receives periodic tick events" do
       defmodule TickApp do
@@ -991,10 +967,6 @@ defmodule Plushie.RuntimeTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # describe "error recovery"
-  # ---------------------------------------------------------------------------
-
   describe "error recovery" do
     test "update/2 exception does not crash the runtime" do
       defmodule CrashUpdateApp do
@@ -1072,10 +1044,6 @@ defmodule Plushie.RuntimeTest do
       end)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # describe "effects"
-  # ---------------------------------------------------------------------------
 
   describe "effects" do
     test "effect command is forwarded to the bridge" do
@@ -1167,10 +1135,6 @@ defmodule Plushie.RuntimeTest do
       assert Plushie.Runtime.get_model(runtime).path == "/tmp/test.txt"
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # describe "effect timeout"
-  # ---------------------------------------------------------------------------
 
   describe "effect timeout" do
     test "effect command registers a pending timeout and cleans up on timeout" do
@@ -1270,10 +1234,6 @@ defmodule Plushie.RuntimeTest do
       assert model.success_result == nil
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # describe "subscription registration"
-  # ---------------------------------------------------------------------------
 
   describe "subscription registration" do
     test "renderer subscription sends register message to bridge" do
@@ -1490,10 +1450,6 @@ defmodule Plushie.RuntimeTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # describe "multi-window support"
-  # ---------------------------------------------------------------------------
-
   describe "multi-window support" do
     test "window nodes in the tree trigger window open ops" do
       defmodule WindowApp do
@@ -1600,10 +1556,6 @@ defmodule Plushie.RuntimeTest do
       assert close_op.window_id == "ephemeral"
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # describe "stream and cancel commands"
-  # ---------------------------------------------------------------------------
 
   describe "stream and cancel commands" do
     test "stream emits multiple intermediate results through update" do
@@ -1772,10 +1724,6 @@ defmodule Plushie.RuntimeTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # describe "extension config in settings"
-  # ---------------------------------------------------------------------------
-
   describe "extension config in settings" do
     test "settings includes extension_config from application env" do
       Application.put_env(:plushie, :extension_config, %{"terminal" => %{"shell" => "/bin/bash"}})
@@ -1807,9 +1755,171 @@ defmodule Plushie.RuntimeTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
+  describe "interact caller timeout cleanup" do
+    test "pending_interact is cleaned up on caller timeout" do
+      capture_log(fn ->
+        {runtime, bridge} = start_runtime(SimpleApp)
+        await_initial_render(runtime)
+
+        # Spawn a process that calls interact with a very short timeout.
+        # The bridge never replies, so it will time out.
+        task =
+          Task.async(fn ->
+            try do
+              Plushie.Runtime.interact(
+                runtime,
+                "click",
+                %{"by" => "id", "value" => "ok"},
+                %{},
+                50
+              )
+            catch
+              :exit, {:timeout, _} -> :timed_out
+            end
+          end)
+
+        assert Task.await(task, 1000) == :timed_out
+
+        # Give the runtime a moment to process the DOWN message from the
+        # dead task process.
+        Process.sleep(20)
+
+        # Verify that a subsequent interact can proceed (not blocked by
+        # the stale pending_interact).
+        second =
+          Task.async(fn ->
+            Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
+          end)
+
+        await_bridge(bridge, fn b ->
+          length(Plushie.Test.InternalMockBridge.get_interacts(b)) >= 2
+        end)
+
+        # Complete the second interact so the task can finish.
+        [_, %{id: second_id}] = Plushie.Test.InternalMockBridge.get_interacts(bridge)
+        send(runtime, {:renderer_event, {:interact_response, second_id, []}})
+
+        assert Task.await(second, 1000) == :ok
+      end)
+    end
+  end
+
+  describe "concurrent effect stub registration" do
+    test "concurrent registration for same kind returns error" do
+      {runtime, _bridge} = start_runtime(SimpleApp)
+      await_initial_render(runtime)
+
+      # First registration -- will block waiting for the bridge ack.
+      first =
+        Task.async(fn ->
+          Plushie.Runtime.register_effect_stub(runtime, "clipboard_read", "stub_value")
+        end)
+
+      # Give the runtime time to process the first call.
+      Process.sleep(20)
+
+      # Second registration for the same kind should get :stub_ack_pending.
+      assert Plushie.Runtime.register_effect_stub(runtime, "clipboard_read", "other") ==
+               {:error, :stub_ack_pending}
+
+      # Complete the first by simulating the bridge ack.
+      send(runtime, {:renderer_event, {:effect_stub_ack, "clipboard_read"}})
+      assert Task.await(first, 1000) == :ok
+    end
+  end
+
+  describe "concurrent await_async" do
+    defmodule SlowAsyncApp do
+      use Plushie.App
+
+      def init(_opts), do: %{value: 0}
+
+      def update(model, %WidgetEvent{type: :click, id: "start"}) do
+        cmd =
+          Plushie.Command.async(
+            fn ->
+              Process.sleep(500)
+              42
+            end,
+            :slow_task
+          )
+
+        {model, cmd}
+      end
+
+      def update(model, _event), do: model
+
+      def view(_model) do
+        import Plushie.UI
+        window("main", do: column(do: button("start", "Go")))
+      end
+    end
+
+    test "concurrent await_async for same tag returns error" do
+      {runtime, _bridge} = start_runtime(SlowAsyncApp)
+      await_initial_render(runtime)
+
+      # Start a slow async task.
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "start"})
+
+      # First await -- will block until the slow task completes.
+      first =
+        Task.async(fn ->
+          Plushie.Runtime.await_async(runtime, :slow_task)
+        end)
+
+      # Give the runtime time to process the first await call.
+      Process.sleep(20)
+
+      # Second await for the same tag should get :await_in_progress.
+      assert Plushie.Runtime.await_async(runtime, :slow_task) ==
+               {:error, :await_in_progress}
+
+      # The first should eventually complete.
+      assert Task.await(first, 2000) == :ok
+    end
+  end
+
+  describe "consecutive view failures" do
+    @describetag capture_log: true
+    test "consecutive view failures increment counter and warn at threshold" do
+      defmodule AlwaysCrashViewApp do
+        use Plushie.App
+
+        def init(_opts), do: %{count: 0}
+        def update(model, :bump), do: %{model | count: model.count + 1}
+        def update(model, _event), do: model
+
+        # view/1 always raises after init (count > 0)
+        def view(%{count: n}) when n > 0, do: raise("view always fails")
+
+        def view(_model) do
+          import Plushie.UI
+
+          window "main" do
+            column do
+              text("ok")
+            end
+          end
+        end
+      end
+
+      {runtime, _bridge} = start_runtime(AlwaysCrashViewApp)
+      await_initial_render(runtime)
+
+      # Dispatch enough events to trigger 5+ consecutive view failures.
+      # The runtime survives and keeps the previous tree.
+      for _ <- 1..6 do
+        dispatch_and_wait(runtime, :bump)
+      end
+
+      assert Process.alive?(runtime)
+      # Model updates succeed even though view/1 fails.
+      assert Plushie.Runtime.get_model(runtime).count == 6
+    end
+  end
+
   # Private helpers
-  # ---------------------------------------------------------------------------
 
   # Depth-first search for the first node with the given type string.
   defp find_by_type(%{type: type} = node, type), do: node

@@ -689,9 +689,8 @@ defmodule Plushie.Bridge do
         reencoded = reserialize(map, state.format)
         maybe_send_or_queue(state, kind, reencoded)
 
-      {:error, _} ->
-        # Fallback: send without session injection
-        maybe_send_or_queue(state, kind, data)
+      {:error, reason} ->
+        raise "plushie bridge: failed to inject session_id into #{kind} message: #{inspect(reason)}"
     end
   end
 

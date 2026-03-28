@@ -116,6 +116,14 @@ defmodule Plushie.Test.InternalMockBridge do
     {:noreply, state}
   end
 
+  def handle_cast({:send_register_effect_stub, _kind, _response}, state) do
+    {:noreply, state}
+  end
+
+  def handle_cast({:send_unregister_effect_stub, _kind}, state) do
+    {:noreply, state}
+  end
+
   @impl true
   def handle_call(:sync, _from, state) do
     {:reply, :ok, state}
