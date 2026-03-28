@@ -89,6 +89,41 @@ defmodule Plushie.Transport.FramingTest do
       buffer = "a\n\nb\n"
       assert {["a", "", "b"], ""} = Framing.decode_lines(buffer)
     end
+
+    test "multiple complete lines in one chunk without trailing newline" do
+      buffer = "alpha\nbeta\ngamma"
+      assert {["alpha", "beta"], "gamma"} = Framing.decode_lines(buffer)
+    end
+
+    test "partial line followed by completion in next chunk" do
+      # Simulate streaming: first chunk has a partial line at the end.
+      {lines1, remainder} = Framing.decode_lines("first\nsec")
+      assert lines1 == ["first"]
+      assert remainder == "sec"
+
+      # Second chunk completes the partial line and adds another.
+      {lines2, remainder2} = Framing.decode_lines(remainder <> "ond\nthird\n")
+      assert lines2 == ["second", "third"]
+      assert remainder2 == ""
+    end
+
+    test "large message split across chunks" do
+      # A payload too large to arrive in one read, split at an arbitrary byte boundary.
+      payload = String.duplicate("x", 10_000)
+      full = payload <> "\n"
+
+      split_point = 4_096
+      chunk1 = binary_part(full, 0, split_point)
+      chunk2 = binary_part(full, split_point, byte_size(full) - split_point)
+
+      {lines1, remainder} = Framing.decode_lines(chunk1)
+      assert lines1 == []
+      assert remainder == chunk1
+
+      {lines2, remainder2} = Framing.decode_lines(remainder <> chunk2)
+      assert lines2 == [payload]
+      assert remainder2 == ""
+    end
   end
 
   describe "round-trip" do

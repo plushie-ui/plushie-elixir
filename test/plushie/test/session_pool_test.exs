@@ -212,6 +212,124 @@ defmodule Plushie.Test.SessionPoolTest do
     end
   end
 
+  describe "owner death cleanup" do
+    test "session slot is freed when owner process dies" do
+      binary = Application.fetch_env!(:plushie, :test_binary_path)
+
+      {:ok, pool} =
+        SessionPool.start_link(
+          renderer: binary,
+          mode: :mock,
+          format: :json,
+          max_sessions: 2,
+          rust_log: "off"
+        )
+
+      # Register both slots from a spawned process, then kill it.
+      test_pid = self()
+
+      doomed =
+        spawn(fn ->
+          s1 = SessionPool.register(pool)
+          send(test_pid, {:registered, s1})
+          # Block until told to die (or the test kills us).
+          receive do
+            :halt -> :ok
+          end
+        end)
+
+      # Wait for registration to complete.
+      assert_receive {:registered, _s1}
+
+      # Fill the second slot from the test process.
+      _s2 = SessionPool.register(pool)
+
+      # Pool is full -- a third register would fail.
+      assert_raise RuntimeError, ~r/Session pool is full/, fn ->
+        SessionPool.register(pool)
+      end
+
+      # Kill the doomed process. The pool should detect the DOWN and
+      # release its session slot.
+      Process.exit(doomed, :kill)
+      ref = Process.monitor(doomed)
+      assert_receive {:DOWN, ^ref, :process, ^doomed, _reason}
+
+      # Give the pool time to process the DOWN message and the
+      # renderer's reset_response.
+      Process.sleep(200)
+
+      # The freed slot should allow a new registration.
+      s3 = SessionPool.register(pool)
+      assert is_binary(s3)
+    end
+
+    test "pool doesn't hang when owner dies before response arrives" do
+      binary = Application.fetch_env!(:plushie, :test_binary_path)
+
+      {:ok, pool} =
+        SessionPool.start_link(
+          renderer: binary,
+          mode: :mock,
+          format: :json,
+          max_sessions: 4,
+          rust_log: "off"
+        )
+
+      test_pid = self()
+
+      doomed =
+        spawn(fn ->
+          session_id = SessionPool.register(pool)
+
+          # Send a snapshot so the session has state.
+          SessionPool.send_message(pool, session_id, %{
+            type: "snapshot",
+            tree: %{id: "root", type: "text", props: %{content: "bye"}, children: []}
+          })
+
+          Process.sleep(50)
+          send(test_pid, {:ready, session_id})
+
+          # Block until killed.
+          receive do
+            :halt -> :ok
+          end
+        end)
+
+      assert_receive {:ready, _session_id}
+
+      # Kill the owner mid-session.
+      Process.exit(doomed, :kill)
+      ref = Process.monitor(doomed)
+      assert_receive {:DOWN, ^ref, :process, ^doomed, _reason}
+
+      # Wait for the pool to clean up.
+      Process.sleep(200)
+
+      # The pool is still alive and functional -- register a new session
+      # and do a round trip to prove it isn't stuck.
+      new_id = SessionPool.register(pool)
+
+      SessionPool.send_message(pool, new_id, %{
+        type: "snapshot",
+        tree: %{id: "root", type: "text", props: %{content: "alive"}, children: []}
+      })
+
+      Process.sleep(50)
+
+      {:ok, resp} =
+        SessionPool.send_message(
+          pool,
+          new_id,
+          %{type: "query", target: "tree", selector: %{}},
+          "query_response"
+        )
+
+      assert resp["data"]["props"]["content"] == "alive"
+    end
+  end
+
   describe "renderer_mode_flag/1" do
     test "maps multiplexed modes to the correct renderer CLI flag" do
       assert SessionPool.renderer_mode_flag(:mock) == "--mock"
