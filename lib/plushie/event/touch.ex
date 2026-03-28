@@ -34,9 +34,10 @@ defmodule Plushie.Event.Touch do
           finger_id: term(),
           x: number(),
           y: number(),
-          captured: boolean()
+          captured: boolean(),
+          window_id: String.t() | nil
         }
 
   @enforce_keys [:type, :finger_id, :x, :y]
-  defstruct [:type, :finger_id, :x, :y, captured: false]
+  defstruct [:type, :finger_id, :x, :y, :window_id, captured: false]
 end

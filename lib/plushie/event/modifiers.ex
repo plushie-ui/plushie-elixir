@@ -25,12 +25,14 @@ defmodule Plushie.Event.Modifiers do
 
   @type t :: %__MODULE__{
           modifiers: Plushie.KeyModifiers.t(),
-          captured: boolean()
+          captured: boolean(),
+          window_id: String.t() | nil
         }
 
   @enforce_keys [:modifiers]
   defstruct [
     :modifiers,
+    :window_id,
     captured: false
   ]
 end

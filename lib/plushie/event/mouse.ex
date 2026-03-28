@@ -22,9 +22,10 @@ defmodule Plushie.Event.Mouse do
           delta_x: number() | nil,
           delta_y: number() | nil,
           unit: scroll_unit() | nil,
-          captured: boolean()
+          captured: boolean(),
+          window_id: String.t() | nil
         }
 
   @enforce_keys [:type]
-  defstruct [:type, :x, :y, :button, :delta_x, :delta_y, :unit, captured: false]
+  defstruct [:type, :x, :y, :button, :delta_x, :delta_y, :unit, :window_id, captured: false]
 end

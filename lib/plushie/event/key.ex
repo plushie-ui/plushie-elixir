@@ -20,7 +20,8 @@ defmodule Plushie.Event.Key do
           modifiers: Plushie.KeyModifiers.t(),
           text: String.t() | nil,
           repeat: boolean(),
-          captured: boolean()
+          captured: boolean(),
+          window_id: String.t() | nil
         }
 
   @enforce_keys [:type, :key]
@@ -29,6 +30,7 @@ defmodule Plushie.Event.Key do
     :key,
     :modified_key,
     :physical_key,
+    :window_id,
     location: :standard,
     modifiers: %Plushie.KeyModifiers{},
     text: nil,

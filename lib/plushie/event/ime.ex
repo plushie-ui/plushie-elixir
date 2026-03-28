@@ -29,9 +29,10 @@ defmodule Plushie.Event.Ime do
           scope: [String.t()],
           text: String.t() | nil,
           cursor: {non_neg_integer(), non_neg_integer()} | nil,
-          captured: boolean()
+          captured: boolean(),
+          window_id: String.t() | nil
         }
 
   @enforce_keys [:type]
-  defstruct [:type, :id, :text, :cursor, scope: [], captured: false]
+  defstruct [:type, :id, :text, :cursor, :window_id, scope: [], captured: false]
 end
