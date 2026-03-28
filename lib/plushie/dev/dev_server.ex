@@ -79,7 +79,10 @@ defmodule Plushie.Dev.DevServer do
       rust_debounce_ref: nil,
       rust_build_port: nil,
       rust_build_output: "",
+      wasm_build_port: nil,
+      wasm_build_output: "",
       rebuild_artifacts: rebuild_artifacts,
+      rebuild_sources: nil,
       overlay_expanded: false
     }
 
@@ -173,23 +176,13 @@ defmodule Plushie.Dev.DevServer do
     Logger.info("plushie dev: rust build succeeded")
     state = %{state | rust_build_port: nil}
 
-    overlay = %Plushie.Dev.RebuildingOverlay{
-      status: :succeeded,
-      sources: [:rust],
-      message: "Rebuilt (rust), restarting...",
-      detail: state.rust_build_output,
-      expanded: state.overlay_expanded
-    }
-
-    send(state.runtime, {:dev_overlay, overlay})
-
-    # Restart the renderer to pick up the new binary.
-    if state.bridge do
-      Plushie.Bridge.restart_renderer(state.bridge)
+    if :wasm in state.rebuild_artifacts do
+      # Chain WASM build after successful native build.
+      state = start_wasm_build(state)
+      {:noreply, state}
+    else
+      finish_rust_build(state)
     end
-
-    state = %{state | rust_build_output: ""}
-    {:noreply, state}
   end
 
   def handle_info({port, {:exit_status, status}}, %{rust_build_port: port} = state)
@@ -208,6 +201,63 @@ defmodule Plushie.Dev.DevServer do
     # Remember that the user saw expanded (failure auto-expands).
     state = %{state | overlay_expanded: true, rust_build_output: ""}
     send(state.runtime, {:dev_overlay, overlay})
+    {:noreply, state}
+  end
+
+  # -- WASM build port handlers -----------------------------------------------
+
+  def handle_info({port, {:data, {:eol, line}}}, %{wasm_build_port: port} = state)
+      when port != nil do
+    clean_line = strip_ansi(line)
+    state = %{state | wasm_build_output: state.wasm_build_output <> clean_line <> "\n"}
+
+    overlay = %Plushie.Dev.RebuildingOverlay{
+      status: :building,
+      sources: [:rust, :wasm],
+      message: "Rebuilding... (rust, wasm)",
+      detail: state.rust_build_output <> state.wasm_build_output,
+      expanded: state.overlay_expanded
+    }
+
+    send(state.runtime, {:dev_overlay, overlay})
+    {:noreply, state}
+  end
+
+  def handle_info({port, {:data, {:noeol, chunk}}}, %{wasm_build_port: port} = state)
+      when port != nil do
+    clean_chunk = strip_ansi(chunk)
+    state = %{state | wasm_build_output: state.wasm_build_output <> clean_chunk}
+    {:noreply, state}
+  end
+
+  def handle_info({port, {:exit_status, 0}}, %{wasm_build_port: port} = state)
+      when port != nil do
+    Logger.info("plushie dev: wasm build succeeded")
+    state = %{state | wasm_build_port: nil}
+    finish_rust_build(%{state | rebuild_sources: [:rust, :wasm]})
+  end
+
+  def handle_info({port, {:exit_status, status}}, %{wasm_build_port: port} = state)
+      when port != nil do
+    Logger.warning("plushie dev: wasm build failed (exit code #{status})")
+    state = %{state | wasm_build_port: nil}
+
+    overlay = %Plushie.Dev.RebuildingOverlay{
+      status: :failed,
+      sources: [:rust, :wasm],
+      message: "Build failed (wasm)",
+      detail: state.rust_build_output <> state.wasm_build_output,
+      expanded: true
+    }
+
+    state = %{state | overlay_expanded: true, rust_build_output: "", wasm_build_output: ""}
+    send(state.runtime, {:dev_overlay, overlay})
+
+    # Native build succeeded even though WASM failed -- still restart renderer.
+    if state.bridge do
+      Plushie.Bridge.restart_renderer(state.bridge)
+    end
+
     {:noreply, state}
   end
 
@@ -357,14 +407,98 @@ defmodule Plushie.Dev.DevServer do
     end
   end
 
-  defp kill_rust_build(%{rust_build_port: nil} = state), do: state
+  defp kill_rust_build(%{rust_build_port: nil, wasm_build_port: nil} = state), do: state
 
-  defp kill_rust_build(%{rust_build_port: port} = state) do
-    Port.close(port)
-    %{state | rust_build_port: nil, rust_build_output: ""}
+  defp kill_rust_build(state) do
+    state = kill_port(state, :rust_build_port)
+    state = kill_port(state, :wasm_build_port)
+    %{state | rust_build_output: "", wasm_build_output: ""}
+  end
+
+  defp kill_port(state, key) do
+    case Map.get(state, key) do
+      nil ->
+        state
+
+      port ->
+        Port.close(port)
+        Map.put(state, key, nil)
+    end
   rescue
-    # Port already closed.
-    ArgumentError -> %{state | rust_build_port: nil, rust_build_output: ""}
+    ArgumentError -> Map.put(state, key, nil)
+  end
+
+  defp finish_rust_build(state) do
+    sources = Map.get(state, :rebuild_sources, [:rust])
+
+    label = Plushie.Dev.RebuildingOverlay.format_sources(sources)
+
+    overlay = %Plushie.Dev.RebuildingOverlay{
+      status: :succeeded,
+      sources: sources,
+      message: "Rebuilt #{label}, restarting...",
+      detail: state.rust_build_output <> state.wasm_build_output,
+      expanded: state.overlay_expanded
+    }
+
+    send(state.runtime, {:dev_overlay, overlay})
+
+    if state.bridge do
+      Plushie.Bridge.restart_renderer(state.bridge)
+    end
+
+    state = %{state | rust_build_output: "", wasm_build_output: "", rebuild_sources: nil}
+    {:noreply, state}
+  end
+
+  defp start_wasm_build(state) do
+    source_path = Mix.PlushieHelpers.source_path()
+    wasm_pack = System.find_executable("wasm-pack")
+
+    if source_path && wasm_pack do
+      wasm_crate = Path.join(source_path, "plushie-renderer-wasm")
+
+      if File.dir?(wasm_crate) do
+        release? = Application.get_env(:plushie, :build_profile) == :release
+        profile = if release?, do: "--release", else: "--dev"
+        env = [{"WASM_BINDGEN_EXTERNREF", "0"}]
+
+        overlay = %Plushie.Dev.RebuildingOverlay{
+          status: :building,
+          sources: [:rust, :wasm],
+          message: "Rebuilding... (rust, wasm)",
+          detail: state.rust_build_output,
+          expanded: state.overlay_expanded
+        }
+
+        send(state.runtime, {:dev_overlay, overlay})
+
+        port =
+          Port.open({:spawn_executable, wasm_pack}, [
+            :binary,
+            :exit_status,
+            :stderr_to_stdout,
+            {:line, 4096},
+            {:args, ["build", "--target", "web", profile]},
+            {:cd, wasm_crate},
+            {:env, env}
+          ])
+
+        %{state | wasm_build_port: port, wasm_build_output: ""}
+      else
+        Logger.warning("plushie dev: wasm crate not found at #{wasm_crate}, skipping")
+
+        %{state | rebuild_sources: [:rust]}
+        |> then(&finish_rust_build/1)
+        |> elem(1)
+      end
+    else
+      Logger.info("plushie dev: wasm-pack or source_path not available, skipping wasm build")
+
+      %{state | rebuild_sources: [:rust]}
+      |> then(&finish_rust_build/1)
+      |> elem(1)
+    end
   end
 
   # ---------------------------------------------------------------------------
