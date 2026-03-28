@@ -307,11 +307,15 @@ defmodule Plushie.DevServer do
 
     send(state.runtime, {:dev_overlay, overlay})
 
-    build_dir = Path.join(Mix.Project.build_path(), "plushie-renderer")
+    build_dir =
+      if Code.ensure_loaded?(Mix.Project) and function_exported?(Mix.Project, :build_path, 0) do
+        Path.join(Mix.Project.build_path(), "plushie-renderer")
+      end
+
     cargo = System.find_executable("cargo")
 
-    if cargo && File.dir?(build_dir) do
-      release? = Mix.env() == :prod
+    if cargo && build_dir && File.dir?(build_dir) do
+      release? = Application.get_env(:plushie, :build_profile) == :release
       args = if release?, do: ["build", "--release"], else: ["build"]
 
       port =

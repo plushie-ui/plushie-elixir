@@ -51,11 +51,11 @@ defmodule Mix.Tasks.Plushie.Gui do
         [] -> Mix.raise("Usage: mix plushie.gui ModuleName")
       end
 
-    validate_module!(app_module)
-
     watch? = resolve_watch_flag(opts)
 
     Mix.Task.run("compile")
+
+    validate_module!(app_module)
 
     binary_path = Mix.PlushieHelpers.resolve_binary!(opts)
     Mix.Task.run("app.start")

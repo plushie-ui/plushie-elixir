@@ -61,13 +61,13 @@ defmodule Mix.Tasks.Plushie.Connect do
         [] -> Mix.raise("Usage: mix plushie.connect MyModule [socket_path_or_addr]")
       end
 
-    validate_module!(app_module)
-
     format = if opts[:json], do: :json, else: :msgpack
     daemon = Keyword.get(opts, :daemon, false)
 
     # Start the application and dependencies.
     Mix.Task.run("app.start")
+
+    validate_module!(app_module)
 
     # Resolve socket address.
     socket =

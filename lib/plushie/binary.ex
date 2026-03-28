@@ -140,8 +140,10 @@ defmodule Plushie.Binary do
   def build_name do
     case Application.get_env(:plushie, :build_name) do
       nil ->
-        app = Mix.Project.config()[:app] |> Atom.to_string() |> String.replace("_", "-")
-        "#{app}-renderer"
+        case app_name() do
+          nil -> "app-renderer"
+          app -> "#{app |> Atom.to_string() |> String.replace("_", "-")}-renderer"
+        end
 
       name when is_binary(name) ->
         name
@@ -196,23 +198,25 @@ defmodule Plushie.Binary do
 
   @spec custom_build_path() :: String.t() | nil
   defp custom_build_path do
-    bin_name = build_name()
+    if mix_available?() do
+      bin_name = build_name()
 
-    for profile <- ["release", "debug"] do
-      ext = if os_name() == "windows", do: ".exe", else: ""
+      for profile <- ["release", "debug"] do
+        ext = if os_name() == "windows", do: ".exe", else: ""
 
-      path =
-        Path.join([
-          Mix.Project.build_path(),
-          "plushie-renderer",
-          "target",
-          profile,
-          "#{bin_name}#{ext}"
-        ])
+        path =
+          Path.join([
+            Mix.Project.build_path(),
+            "plushie-renderer",
+            "target",
+            profile,
+            "#{bin_name}#{ext}"
+          ])
 
-      if File.exists?(path), do: path
+        if File.exists?(path), do: path
+      end
+      |> Enum.find(& &1)
     end
-    |> Enum.find(& &1)
   end
 
   @spec downloaded_path() :: String.t() | nil
@@ -258,5 +262,15 @@ defmodule Plushie.Binary do
       :aarch64 -> "aarch64"
       nil -> "unknown"
     end
+  end
+
+  @spec mix_available?() :: boolean()
+  defp mix_available? do
+    Code.ensure_loaded?(Mix.Project) and function_exported?(Mix.Project, :config, 0)
+  end
+
+  @spec app_name() :: atom() | nil
+  defp app_name do
+    if mix_available?(), do: Mix.Project.config()[:app]
   end
 end
