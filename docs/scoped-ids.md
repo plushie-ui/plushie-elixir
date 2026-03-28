@@ -112,8 +112,8 @@ def update(model, %WidgetEvent{type: :canvas_element_click, id: "handle", scope:
 end
 ```
 
-This means canvas elements, canvas widgets (`:canvas_widget`
-extensions), and regular widgets all use the same scoping and event
+This means canvas elements, stateful widgets (with `state`
+declarations), and regular widgets all use the same scoping and event
 dispatch model. A canvas widget that emits `{:emit, :click, data}`
 produces an event indistinguishable from a button click inside a
 named container.

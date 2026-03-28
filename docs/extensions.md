@@ -134,34 +134,30 @@ defmodule MyApp.Card do
 end
 ```
 
-### `:canvas_widget` -- Canvas-based widgets with internal state
+### Stateful widgets -- Canvas-based widgets with internal state
 
-Use `use Plushie.Extension, :canvas_widget` for widgets that render via
-canvas, manage their own internal state, and transform raw canvas events
-into semantic events. No Rust code needed. This sits between `:widget`
-(pure composition, no state) and `:native_widget` (Rust-backed, full
-control).
-
-Canvas widgets have three capabilities that plain `:widget` extensions
-do not:
+Add `state` declarations to a `:widget` extension for widgets that
+render via canvas, manage their own internal state, and transform
+raw canvas events into semantic events. No Rust code needed. Features
+are detected at compile time based on which callbacks are defined:
 
 - **Internal state** -- declared with `state`, managed by the runtime.
   The widget tree is the source of truth; state is keyed by scoped
-  widget ID.
-- **Event transformation** -- `handle_event/2` intercepts events at the
-  widget's scope boundary before they reach `update/2`. Raw canvas
-  events become semantic widget events. Built-in families stay atoms
-  (`:click`, `:select`, etc.). Custom families declared with `event`
-  arrive as `{widget_type, event}` tuples. Canvas-internal events
-  that are not intercepted by any handler are auto-consumed and never
-  reach `update/2`.
-- **Widget-scoped subscriptions** -- `subscribe/2` returns subscriptions
-  scoped to this widget instance. Timer events route to `handle_event/2`,
-  not the app's `update/2`.
+  widget ID. Declaring state fields makes the widget stateful.
+- **Event transformation** -- define `handle_event/2` to intercept
+  events at the widget's scope boundary before they reach `update/2`.
+  Raw canvas events become semantic widget events. Built-in families
+  stay atoms (`:click`, `:select`, etc.). Custom families declared
+  with `event` arrive as `{widget_type, event}` tuples. Canvas-
+  internal events that are not intercepted by any handler are
+  auto-consumed and never reach `update/2`.
+- **Widget-scoped subscriptions** -- define `subscribe/2` to return
+  subscriptions scoped to this widget instance. Timer events route to
+  `handle_event/2`, not the app's `update/2`.
 
 ```elixir
 defmodule MyApp.StarRating do
-  use Plushie.Extension, :canvas_widget
+  use Plushie.Extension, :widget
 
   widget :star_rating
 

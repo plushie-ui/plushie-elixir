@@ -12,7 +12,7 @@ defmodule ColorPickerWidget do
   - `{:color_picker_widget, :change}` with `%{"hue" => h, "saturation" => s, "value" => v}`
   """
 
-  use Plushie.Extension, :canvas_widget
+  use Plushie.Extension, :widget
 
   widget(:color_picker_widget)
   event(:change, data: [hue: :number, saturation: :number, value: :number])

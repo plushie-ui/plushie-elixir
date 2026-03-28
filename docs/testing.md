@@ -868,7 +868,7 @@ with the extension compiled in.
 ## Testing canvas widgets
 
 `Plushie.Test.WidgetCase` provides an isolated test environment for
-`:canvas_widget` extensions. It renders the widget in isolation, routes
+stateful `:widget` extensions. It renders the widget in isolation, routes
 events through `handle_event/2`, and exposes the widget's internal state.
 
 ```elixir

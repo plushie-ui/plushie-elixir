@@ -2,18 +2,18 @@ defmodule Plushie.Extension do
   @moduledoc """
   Macro-based DSL for declaring Plushie widget extensions.
 
-  Supports three kinds of extension:
+  Supports two kinds of extension:
 
   - `:native_widget` -- backed by a Rust crate implementing the
     `WidgetExtension` trait. Requires `rust_crate` and `rust_constructor`
     declarations.
-  - `:widget` -- pure Elixir widget, either a direct node builder or a
-    composite that defines `render/2` or `render/3`.
-  - `:canvas_widget` -- pure Elixir canvas-based widget with internal
-    state management and event transformation. Defines `render/3`
-    (id, props, state), `handle_event/2` for event transformation,
-    and optional `state` declarations for runtime-managed internal
-    state. See the canvas_widget section below.
+  - `:widget` -- pure Elixir widget. Features are detected at compile
+    time based on what callbacks are defined:
+    - Has `state` declarations -> stateful (deferred rendering, state
+      persistence via the runtime).
+    - No `state` -> stateless (immediate rendering in `new/2`).
+    - Has `handle_event/2` -> participates in event dispatch.
+    - Has `subscribe/2` -> widget-scoped subscriptions.
 
   ## Usage
 
@@ -133,14 +133,14 @@ defmodule Plushie.Extension do
 
   # -- __using__ -------------------------------------------------------------
 
-  @valid_kinds [:native_widget, :widget, :canvas_widget]
+  @valid_kinds [:native_widget, :widget]
 
-  defmacro __using__(kind) when kind not in [:native_widget, :widget, :canvas_widget] do
+  defmacro __using__(kind) when kind not in [:native_widget, :widget] do
     raise ArgumentError,
           "Plushie.Extension kind must be one of #{inspect(@valid_kinds)}, got: #{inspect(kind)}"
   end
 
-  defmacro __using__(kind) when kind in [:native_widget, :widget, :canvas_widget] do
+  defmacro __using__(kind) when kind in [:native_widget, :widget] do
     common =
       quote do
         @behaviour Plushie.Extension
@@ -154,8 +154,8 @@ defmodule Plushie.Extension do
         Module.put_attribute(__MODULE__, :_extension_container, false)
       end
 
-    canvas_widget_attrs =
-      if kind == :canvas_widget do
+    widget_attrs =
+      if kind == :widget do
         quote do
           Module.register_attribute(__MODULE__, :_extension_state_fields, accumulate: true)
         end
@@ -183,28 +183,10 @@ defmodule Plushie.Extension do
             Module.put_attribute(__MODULE__, :_rust_constructor, nil)
           end
 
-        :canvas_widget ->
-          quote do
-            @behaviour Plushie.Extension.CanvasWidget
-
-            import Plushie.Extension,
-              only: [
-                widget: 1,
-                widget: 2,
-                prop: 2,
-                prop: 3,
-                state: 1,
-                event: 1,
-                event: 2
-              ]
-
-            import Plushie.UI
-          end
-
         :widget ->
           quote do
             import Plushie.Extension,
-              only: [widget: 1, widget: 2, prop: 2, prop: 3, event: 1, event: 2]
+              only: [widget: 1, widget: 2, prop: 2, prop: 3, state: 1, event: 1, event: 2]
 
             import Plushie.UI
           end
@@ -215,7 +197,7 @@ defmodule Plushie.Extension do
         @before_compile Plushie.Extension
       end
 
-    [common, canvas_widget_attrs, imports, before_compile]
+    [common, widget_attrs, imports, before_compile]
   end
 
   # -- DSL macros ------------------------------------------------------------
@@ -301,11 +283,13 @@ defmodule Plushie.Extension do
   end
 
   @doc """
-  Declares internal state fields for a canvas_widget.
+  Declares internal state fields for a stateful widget.
 
   State fields are managed by the runtime, not the app model.
   They persist across renders and are passed to `render/3` and
-  `handle_event/2`.
+  `handle_event/2`. Declaring state fields makes the widget
+  stateful: rendering is deferred to tree normalization and the
+  `CanvasWidget` behaviour is injected automatically.
 
       state hover: nil, drag: :none, animation_progress: 0.0
   """
@@ -371,7 +355,23 @@ defmodule Plushie.Extension do
     warn_duplicate_events(env, events)
     validate_reserved_names!(env, props)
 
-    if kind == :canvas_widget do
+    # Detect stateful widget: has state fields, handle_event/2, or subscribe/2.
+    # Any of these signals that the widget needs deferred rendering, internal
+    # state persistence, and/or event dispatch participation.
+    is_stateful =
+      case kind do
+        :widget ->
+          state_fields = Module.get_attribute(env.module, :_extension_state_fields) || []
+
+          state_fields != [] or
+            Module.defines?(env.module, {:handle_event, 2}) or
+            Module.defines?(env.module, {:subscribe, 2})
+
+        _ ->
+          false
+      end
+
+    if is_stateful do
       validate_canvas_widget!(env)
     else
       validate_render_arity!(env, container)
@@ -394,7 +394,7 @@ defmodule Plushie.Extension do
       )
 
     widget_code =
-      if kind == :canvas_widget do
+      if is_stateful do
         state_fields =
           (Module.get_attribute(env.module, :_extension_state_fields) || [])
           |> Enum.reverse()
@@ -440,11 +440,21 @@ defmodule Plushie.Extension do
         end
       end
 
+    # Inject @behaviour CanvasWidget for stateful widgets (detected by state fields).
+    # This must happen in __before_compile__ since state fields aren't known at __using__ time.
+    canvas_widget_behaviour =
+      if is_stateful do
+        quote do
+          @behaviour Plushie.Extension.CanvasWidget
+        end
+      end
+
     command_fns = generate_commands(commands)
     prop_names_fn = generate_prop_names(props)
     dsl_macro = generate_dsl_macro(widget_type, props)
 
     quote do
+      unquote(canvas_widget_behaviour)
       unquote(behaviour_fns)
       unquote(widget_code)
       unquote(command_fns)
@@ -749,13 +759,13 @@ defmodule Plushie.Extension do
         file: env.file,
         line: 0,
         description:
-          "#{inspect(env.module)} is a :canvas_widget but does not define render/3. " <>
-            "Canvas widgets must define render(id, props, state)."
+          "#{inspect(env.module)} declares state fields but does not define render/3. " <>
+            "Stateful widgets must define render(id, props, state)."
     end
 
     # handle_event/2 is optional. If not defined, a default passthrough
-    # is generated. Read-only canvas widgets (gauges, charts, etc.)
-    # don't need event transformation.
+    # is generated. Read-only widgets (gauges, charts, etc.) don't
+    # need event transformation.
   end
 
   defp generate_canvas_widget_new(
@@ -794,7 +804,7 @@ defmodule Plushie.Extension do
       @spec __initial_state__() :: map()
       def __initial_state__, do: unquote(state_defaults)
 
-      @doc "Returns true for canvas_widget extension modules."
+      @doc "Returns true for stateful widget extension modules."
       @spec __canvas_widget__?() :: true
       def __canvas_widget__?, do: true
 

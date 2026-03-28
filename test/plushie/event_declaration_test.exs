@@ -11,7 +11,7 @@ defmodule Plushie.EventDeclarationTest do
 
   defmodule ValueEventWidget do
     @moduledoc false
-    use Plushie.Extension, :canvas_widget
+    use Plushie.Extension, :widget
     widget(:value_event_widget)
     event(:selected, value: :number)
 
@@ -30,7 +30,7 @@ defmodule Plushie.EventDeclarationTest do
 
   defmodule DataEventWidget do
     @moduledoc false
-    use Plushie.Extension, :canvas_widget
+    use Plushie.Extension, :widget
     widget(:data_event_widget)
     event(:moved, data: [x: :number, y: :number])
 
@@ -49,7 +49,7 @@ defmodule Plushie.EventDeclarationTest do
 
   defmodule NoPayloadEventWidget do
     @moduledoc false
-    use Plushie.Extension, :canvas_widget
+    use Plushie.Extension, :widget
     widget(:no_payload_event_widget)
     event(:cleared)
 
@@ -67,7 +67,7 @@ defmodule Plushie.EventDeclarationTest do
 
   defmodule UnspecifiedValueWidget do
     @moduledoc false
-    use Plushie.Extension, :canvas_widget
+    use Plushie.Extension, :widget
     widget(:unspecified_value_widget)
     event(:changed, value: :any)
 
@@ -85,7 +85,7 @@ defmodule Plushie.EventDeclarationTest do
 
   defmodule CustomTypeWidget do
     @moduledoc false
-    use Plushie.Extension, :canvas_widget
+    use Plushie.Extension, :widget
     widget(:custom_type_widget)
     event(:key_action, data: [key: Plushie.Type.Key])
 

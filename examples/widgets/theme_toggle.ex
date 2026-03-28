@@ -12,7 +12,7 @@ defmodule ThemeToggle do
   - `:toggle` when the user clicks the switch
   """
 
-  use Plushie.Extension, :canvas_widget
+  use Plushie.Extension, :widget
 
   widget :theme_toggle
 

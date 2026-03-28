@@ -124,7 +124,7 @@ defmodule Plushie.RuntimeTest do
   end
 
   defmodule TickCanvasWidget do
-    use Plushie.Extension, :canvas_widget
+    use Plushie.Extension, :widget
     widget(:tick_canvas_widget)
 
     @impl true
@@ -218,7 +218,7 @@ defmodule Plushie.RuntimeTest do
   end
 
   defmodule SwitchingCanvasWidget do
-    use Plushie.Extension, :canvas_widget
+    use Plushie.Extension, :widget
     widget(:switching_canvas_widget)
     state(phase: :first)
 

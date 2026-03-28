@@ -1,6 +1,6 @@
 defmodule Plushie.Extension.CanvasWidget do
   @moduledoc """
-  Runtime support for `:canvas_widget` extensions.
+  Runtime support for stateful widget extensions.
 
   Canvas widgets are pure-Elixir widgets that render via canvas shapes,
   manage internal state (hover, focus, animation), and transform raw

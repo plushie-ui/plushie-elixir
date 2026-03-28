@@ -432,7 +432,7 @@ defmodule Plushie.Subscription do
   @doc """
   Transforms the tag of a subscription spec.
 
-  Used by the runtime to namespace canvas_widget subscription tags
+  Used by the runtime to namespace stateful widget subscription tags
   so timer events can be routed back to the correct widget.
   """
   @spec map_tag(sub :: t(), mapper :: (term() -> term())) :: t()

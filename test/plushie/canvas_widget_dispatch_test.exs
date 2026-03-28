@@ -18,7 +18,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
 
   defmodule IgnoredWidget do
     @moduledoc false
-    use Plushie.Extension, :canvas_widget
+    use Plushie.Extension, :widget
     widget(:ignored_widget)
 
     @impl true
@@ -35,7 +35,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
 
   defmodule ConsumedWidget do
     @moduledoc false
-    use Plushie.Extension, :canvas_widget
+    use Plushie.Extension, :widget
     widget(:consumed_widget)
 
     @impl true
@@ -52,7 +52,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
 
   defmodule EmitWidget do
     @moduledoc false
-    use Plushie.Extension, :canvas_widget
+    use Plushie.Extension, :widget
     widget(:emit_widget)
     event(:activated, data: [source: :string])
 
@@ -75,7 +75,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
 
   defmodule StateWidget do
     @moduledoc false
-    use Plushie.Extension, :canvas_widget
+    use Plushie.Extension, :widget
     widget(:state_widget)
     state(counter: 0)
 
@@ -409,7 +409,7 @@ defmodule Plushie.CanvasWidgetDispatchTest do
 
   defmodule RaisingWidget do
     @moduledoc false
-    use Plushie.Extension, :canvas_widget
+    use Plushie.Extension, :widget
     widget(:raising_widget)
 
     @impl true

@@ -16,7 +16,7 @@ defmodule StarRating do
   - `:select` with `%{"value" => n}` when the user clicks a star
   """
 
-  use Plushie.Extension, :canvas_widget
+  use Plushie.Extension, :widget
 
   widget(:star_rating)
   prop(:rating, :number)
