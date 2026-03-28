@@ -273,6 +273,19 @@ defmodule Plushie.Bridge do
     GenServer.cast(bridge, {:send_unregister_effect_stub, kind})
   end
 
+  @doc """
+  Restarts the renderer process intentionally (e.g. after a Rust rebuild).
+
+  Unlike crash recovery, this does not count against the restart limit
+  and does not use exponential backoff. The existing renderer is closed
+  cleanly before opening the new one. The runtime receives
+  `:renderer_restarted` and re-syncs as usual.
+  """
+  @spec restart_renderer(bridge :: GenServer.server()) :: :ok
+  def restart_renderer(bridge) do
+    GenServer.cast(bridge, :dev_restart)
+  end
+
   @doc false
   @spec send_resync_complete(bridge :: GenServer.server()) :: :ok
   def send_resync_complete(bridge) do
@@ -487,6 +500,33 @@ defmodule Plushie.Bridge do
 
   def handle_cast(:resync_complete, state) do
     {:noreply, flush_queued_messages(%{state | awaiting_resync: false})}
+  end
+
+  # Intentional restart (e.g. after Rust rebuild in dev mode).
+  # No backoff, no restart counting -- the renderer is being replaced
+  # with a freshly built binary, not recovering from a crash.
+  def handle_cast(:dev_restart, %{transport: :spawn} = state) do
+    state = fail_pending_screenshot(state, {:renderer_exit, :dev_restart})
+
+    if state.port do
+      Port.close(state.port)
+    end
+
+    case open_port(%{state | port: nil, buffer: ""}) do
+      {:ok, state} ->
+        send(state.runtime, :renderer_restarted)
+        {:noreply, %{state | awaiting_resync: true, restart_count: 0}}
+
+      {:error, reason} ->
+        Logger.error("plushie bridge: dev restart failed: #{inspect(reason)}")
+        send(state.runtime, {:renderer_exit, {:dev_restart_failed, reason}})
+        {:noreply, %{state | port: nil}}
+    end
+  end
+
+  def handle_cast(:dev_restart, state) do
+    Logger.warning("plushie bridge: dev restart only supported for :spawn transport")
+    {:noreply, state}
   end
 
   @impl true

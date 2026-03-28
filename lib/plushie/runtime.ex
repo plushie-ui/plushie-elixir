@@ -79,7 +79,9 @@ defmodule Plushie.Runtime do
             diagnostics: [],
             pending_stub_acks: %{},
             pending_interact: nil,
-            pending_await_async: %{}
+            pending_await_async: %{},
+            dev_overlay: nil,
+            dev_overlay_timer: nil
 
   @typep state :: %__MODULE__{
            app: module(),
@@ -114,7 +116,9 @@ defmodule Plushie.Runtime do
              {String.t() | nil, String.t()} => %{widget_type: atom(), events: MapSet.t(atom())}
            },
            pending_interact: {GenServer.from(), String.t()} | nil,
-           pending_await_async: %{atom() => GenServer.from()}
+           pending_await_async: %{atom() => GenServer.from()},
+           dev_overlay: Plushie.DevOverlay.t() | nil,
+           dev_overlay_timer: reference() | nil
          }
 
   # ---------------------------------------------------------------------------
@@ -560,9 +564,11 @@ defmodule Plushie.Runtime do
 
     # Re-run view/1 to get a fresh tree rather than relying on a stale cache.
     # Pass widget handler states so widgets render with current internal state.
+    # Preserve the dev overlay through the restart so the new renderer's
+    # first frame shows the "Restarted" status bar.
     tree =
       case safe_view(state.app, state.model, state.widget_handlers) do
-        {:ok, new_tree} -> new_tree
+        {:ok, new_tree} -> maybe_inject_overlay(new_tree, state.dev_overlay)
         :error -> state.tree
       end
 
@@ -591,6 +597,19 @@ defmodule Plushie.Runtime do
 
     state = Windows.sync_windows(state, tree)
     notify_bridge(state, &Plushie.Bridge.send_resync_complete/1)
+
+    # If we just restarted after a Rust build, update the overlay to
+    # "Restarted" and schedule auto-dismiss.
+    state =
+      case state.dev_overlay do
+        %{source: :rust, status: :succeeded} ->
+          overlay = %{state.dev_overlay | message: "Restarted (rust)"}
+          state = %{state | dev_overlay: overlay}
+          schedule_overlay_dismiss(state)
+
+        _ ->
+          state
+      end
 
     {:noreply, state}
   end
@@ -726,7 +745,8 @@ defmodule Plushie.Runtime do
               state.model,
               state.bridge,
               state.tree,
-              state.widget_handlers
+              state.widget_handlers,
+              state.dev_overlay
             )
 
           widget_handlers =
@@ -772,7 +792,14 @@ defmodule Plushie.Runtime do
     Logger.info("plushie runtime: force re-render (code reload)")
 
     new_tree =
-      render_and_sync(state.app, state.model, state.bridge, state.tree, state.widget_handlers)
+      render_and_sync(
+        state.app,
+        state.model,
+        state.bridge,
+        state.tree,
+        state.widget_handlers,
+        state.dev_overlay
+      )
 
     widget_handlers =
       Plushie.Runtime.WidgetHandlers.derive_registry(new_tree)
@@ -791,10 +818,122 @@ defmodule Plushie.Runtime do
     {:noreply, state}
   end
 
+  # -- Dev overlay messages ---------------------------------------------------
+
+  def handle_info({:dev_overlay, overlay}, state) do
+    state = cancel_overlay_timer(state)
+    state = %{state | dev_overlay: overlay}
+    state = dev_rerender(state)
+
+    # Schedule auto-dismiss for success states (unless expanded).
+    state =
+      if overlay.status == :succeeded do
+        schedule_overlay_dismiss(state)
+      else
+        state
+      end
+
+    {:noreply, state}
+  end
+
+  def handle_info(:dev_overlay_dismiss, state) do
+    state = cancel_overlay_timer(state)
+    state = %{state | dev_overlay: nil}
+    {:noreply, dev_rerender(state)}
+  end
+
+  def handle_info(:dev_overlay_auto_dismiss, state) do
+    # Only auto-dismiss if the overlay is not expanded (user is reading).
+    if state.dev_overlay && state.dev_overlay.expanded do
+      {:noreply, state}
+    else
+      state = %{state | dev_overlay: nil, dev_overlay_timer: nil}
+      {:noreply, dev_rerender(state)}
+    end
+  end
+
   # Ignore anything else -- stray messages, etc.
   def handle_info(msg, state) do
     Logger.warning("plushie runtime: unhandled message: #{inspect(msg)}")
     {:noreply, state}
+  end
+
+  # -- Dev overlay helpers ----------------------------------------------------
+
+  @dev_overlay_dismiss_ms 1500
+
+  defp maybe_handle_dev_overlay_event(state, %WidgetEvent{id: id})
+       when is_binary(id) do
+    if Plushie.DevOverlay.overlay_event?(id) do
+      {:handled, handle_dev_overlay_action(Plushie.DevOverlay.action(id), state)}
+    else
+      :passthrough
+    end
+  end
+
+  defp maybe_handle_dev_overlay_event(_state, _event), do: :passthrough
+
+  defp handle_dev_overlay_action("toggle", %{dev_overlay: nil} = state), do: state
+
+  defp handle_dev_overlay_action("toggle", state) do
+    expanded = not state.dev_overlay.expanded
+    overlay = %{state.dev_overlay | expanded: expanded}
+    state = %{state | dev_overlay: overlay}
+
+    state =
+      if not expanded and overlay.status == :succeeded do
+        schedule_overlay_dismiss(state)
+      else
+        cancel_overlay_timer(state)
+      end
+
+    dev_rerender(state)
+  end
+
+  defp handle_dev_overlay_action("dismiss", state) do
+    state = cancel_overlay_timer(state)
+    state = %{state | dev_overlay: nil}
+    dev_rerender(state)
+  end
+
+  defp handle_dev_overlay_action(_action, state), do: state
+
+  defp dev_rerender(state) do
+    new_tree =
+      render_and_sync(
+        state.app,
+        state.model,
+        state.bridge,
+        state.tree,
+        state.widget_handlers,
+        state.dev_overlay
+      )
+
+    widget_handlers = Plushie.Runtime.WidgetHandlers.derive_registry(new_tree)
+    widget_events = derive_widget_event_registry(new_tree)
+
+    state = %{
+      state
+      | tree: new_tree,
+        widget_handlers: widget_handlers,
+        widget_events: widget_events
+    }
+
+    state = sync_runtime_subscriptions(state, state.model, widget_handlers)
+    Windows.sync_windows(state, new_tree)
+  end
+
+  defp schedule_overlay_dismiss(state) do
+    state = cancel_overlay_timer(state)
+    ref = Process.send_after(self(), :dev_overlay_auto_dismiss, @dev_overlay_dismiss_ms)
+    %{state | dev_overlay_timer: ref}
+  end
+
+  defp cancel_overlay_timer(%{dev_overlay_timer: nil} = state), do: state
+
+  defp cancel_overlay_timer(state) do
+    Process.cancel_timer(state.dev_overlay_timer)
+    %{state | dev_overlay_timer: nil}
   end
 
   @impl true
@@ -919,10 +1058,19 @@ defmodule Plushie.Runtime do
   # restart) or a patch (incremental diff) to the bridge.
   # Canvas widget state is injected during normalization (inside safe_view).
   # If view/1 raises, returns old_tree unchanged.
-  @spec render_and_sync(module(), term(), pid() | atom(), map() | nil, map()) :: map() | nil
-  defp render_and_sync(app, model, bridge, old_tree, widget_handlers \\ %{}) do
+  @spec render_and_sync(
+          app :: module(),
+          model :: term(),
+          bridge :: pid() | atom(),
+          old_tree :: map() | nil,
+          widget_handlers :: map(),
+          dev_overlay :: Plushie.DevOverlay.t() | nil
+        ) :: map() | nil
+  defp render_and_sync(app, model, bridge, old_tree, widget_handlers \\ %{}, dev_overlay \\ nil) do
     case safe_view(app, model, widget_handlers) do
       {:ok, new_tree} ->
+        new_tree = maybe_inject_overlay(new_tree, dev_overlay)
+
         if is_nil(old_tree) do
           # First render or after restart -- send full snapshot.
           notify_bridge(%{bridge: bridge}, &Plushie.Bridge.send_snapshot(&1, new_tree))
@@ -943,6 +1091,9 @@ defmodule Plushie.Runtime do
         old_tree
     end
   end
+
+  defp maybe_inject_overlay(tree, nil), do: tree
+  defp maybe_inject_overlay(tree, overlay), do: Plushie.DevOverlay.inject(tree, overlay)
 
   defp safe_init(app, app_opts) do
     {model, commands} = unwrap_result(app.init(app_opts))
@@ -1253,12 +1404,19 @@ defmodule Plushie.Runtime do
   # as separate events in subsequent cycles.
   @spec run_update(state(), term()) :: state()
   defp run_update(state, event) do
-    {resolved_event, state} = route_through_widgets(state, event)
+    # Intercept dev overlay events before they reach the app.
+    case maybe_handle_dev_overlay_event(state, event) do
+      {:handled, state} ->
+        state
 
-    if is_nil(resolved_event) do
-      state
-    else
-      dispatch_update(state, resolved_event)
+      :passthrough ->
+        {resolved_event, state} = route_through_widgets(state, event)
+
+        if is_nil(resolved_event) do
+          state
+        else
+          dispatch_update(state, resolved_event)
+        end
     end
   end
 
@@ -1298,7 +1456,17 @@ defmodule Plushie.Runtime do
       {:ok, new_model, commands} ->
         state = %{state | model: new_model, consecutive_errors: 0}
         state = Commands.execute_commands(commands, state)
-        new_tree = render_and_sync(app, new_model, bridge, state.tree, state.widget_handlers)
+
+        new_tree =
+          render_and_sync(
+            app,
+            new_model,
+            bridge,
+            state.tree,
+            state.widget_handlers,
+            state.dev_overlay
+          )
+
         state = %{state | tree: new_tree}
 
         widget_handlers =

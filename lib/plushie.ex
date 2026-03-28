@@ -176,6 +176,7 @@ defmodule Plushie do
         dev_opts =
           Keyword.get(opts, :dev_opts, [])
           |> Keyword.put(:runtime, runtime_name(name))
+          |> Keyword.put(:bridge, bridge_name(name))
           |> Keyword.put_new(:name, dev_server_name(name))
 
         children ++
