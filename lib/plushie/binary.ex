@@ -14,6 +14,14 @@ defmodule Plushie.Binary do
   3 and 4 are implicit discovery and silently try the next option.
   """
 
+  @binary_version_path Path.expand("../../BINARY_VERSION", __DIR__)
+  @external_resource @binary_version_path
+  @binary_version File.read!(@binary_version_path) |> String.trim()
+
+  @doc "Returns the plushie-renderer version this SDK targets."
+  @spec binary_version() :: String.t()
+  def binary_version, do: @binary_version
+
   @doc """
   Standard instructions for resolving a missing plushie binary.
 
@@ -124,16 +132,16 @@ defmodule Plushie.Binary do
 
   Derived from the Mix project app name by default, overridable via config:
 
-      config :plushie, :build_name, "my-custom-plushie"
+      config :plushie, :build_name, "my-custom-renderer"
 
-  For a project named `:my_dashboard`, the default is `my-dashboard-plushie`.
+  For a project named `:my_dashboard`, the default is `my-dashboard-renderer`.
   """
   @spec build_name() :: String.t()
   def build_name do
     case Application.get_env(:plushie, :build_name) do
       nil ->
         app = Mix.Project.config()[:app] |> Atom.to_string() |> String.replace("_", "-")
-        "#{app}-plushie"
+        "#{app}-renderer"
 
       name when is_binary(name) ->
         name

@@ -32,8 +32,6 @@ defmodule Mix.Tasks.Plushie.Download do
   use Mix.Task
 
   @base_url "https://github.com/plushie-ui/plushie-renderer/releases/download"
-  @binary_version Mix.Project.config()[:binary_version] ||
-                    raise("missing :binary_version in project config (mix.exs)")
   @wasm_archive "plushie-renderer-wasm.tar.gz"
 
   @switches [
@@ -189,7 +187,7 @@ defmodule Mix.Tasks.Plushie.Download do
   # -- Shared helpers ---------------------------------------------------------
 
   defp release_url(artifact) do
-    "#{@base_url}/v#{@binary_version}/#{artifact}"
+    "#{@base_url}/v#{Plushie.Binary.binary_version()}/#{artifact}"
   end
 
   defp download_to_file(url, dest_path) do

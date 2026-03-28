@@ -62,9 +62,6 @@ defmodule Mix.Tasks.Plushie.Build do
 
   use Mix.Task
 
-  @binary_version Mix.Project.config()[:binary_version] ||
-                    raise("missing :binary_version in project config (mix.exs)")
-
   @impl true
   def run(args) do
     {opts, _rest} =
@@ -394,7 +391,7 @@ defmodule Mix.Tasks.Plushie.Build do
     source_info =
       if Mix.PlushieHelpers.source_path(),
         do: "local source",
-        else: "crates.io v#{@binary_version}"
+        else: "crates.io v#{Plushie.Binary.binary_version()}"
 
     if native_extensions != [] do
       ext_names = Enum.map_join(native_extensions, ", ", &inspect/1)
@@ -468,12 +465,12 @@ defmodule Mix.Tasks.Plushie.Build do
   # Extension version compatibility check
   #
   # Each extension crate should depend on a plushie-ext version compatible
-  # with @binary_version. We check this before building to give a clear
+  # with Plushie.Binary.binary_version(). We check this before building to give a clear
   # error instead of a cryptic Cargo resolution failure.
   # ---------------------------------------------------------------------------
 
   defp check_extension_versions!(crate_paths) do
-    expected = Version.parse!(@binary_version)
+    expected = Version.parse!(Plushie.Binary.binary_version())
 
     Enum.each(crate_paths, fn {mod, crate_path} ->
       cargo_toml_path = Path.join(crate_path, "Cargo.toml")
@@ -526,8 +523,8 @@ defmodule Mix.Tasks.Plushie.Build do
   end
 
   # Pre-1.0 (0.x): major AND minor must match. 1.0+: major must match.
-  # Dialyzer sees @binary_version is 0.x at compile time and marks the
-  # 1.0+ branch as unreachable. That branch is needed for when we ship 1.0.
+  # Pre-1.0, the 1.0+ branch is unreachable. Dialyzer flags this.
+  # The branch is needed for when we ship 1.0.
   @dialyzer {:no_match, versions_compatible?: 2}
   defp versions_compatible?(dep, expected) do
     if expected.major == 0 do
@@ -593,7 +590,8 @@ defmodule Mix.Tasks.Plushie.Build do
         {~s(plushie-ext = { path = "#{ext_rel}" }),
          ~s(plushie-renderer = { path = "#{renderer_rel}" })}
       else
-        {~s(plushie-ext = "#{@binary_version}"), ~s(plushie-renderer = "#{@binary_version}")}
+        {~s(plushie-ext = "#{Plushie.Binary.binary_version()}"),
+         ~s(plushie-renderer = "#{Plushie.Binary.binary_version()}")}
       end
 
     ext_deps =

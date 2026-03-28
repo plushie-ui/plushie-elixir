@@ -3,13 +3,11 @@ defmodule Plushie.MixProject do
 
   @version "0.5.0"
   @source_url "https://github.com/plushie-ui/plushie-elixir"
-  @binary_version "0.5.1"
 
   def project do
     [
       app: :plushie,
       version: @version,
-      binary_version: @binary_version,
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: Mix.compilers() ++ [:plushie_binary],
@@ -182,6 +180,7 @@ defmodule Plushie.MixProject do
         docs
         examples
         mix.exs
+        BINARY_VERSION
         README.md
         CHANGELOG.md
         LICENSE

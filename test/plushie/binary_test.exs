@@ -3,10 +3,6 @@ defmodule Plushie.BinaryTest do
 
   alias Plushie.Binary
 
-  # ---------------------------------------------------------------------------
-  # download_name/0
-  # ---------------------------------------------------------------------------
-
   describe "download_name/0" do
     test "returns a string" do
       assert is_binary(Binary.download_name())
@@ -37,10 +33,6 @@ defmodule Plushie.BinaryTest do
       refute String.ends_with?(Binary.download_name(), ".exe")
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # path!/0 -- env var override
-  # ---------------------------------------------------------------------------
 
   describe "path!/0 with PLUSHIE_BINARY_PATH set" do
     setup do
@@ -93,6 +85,33 @@ defmodule Plushie.BinaryTest do
     test "resolved binary exists on disk" do
       path = Binary.path!()
       assert File.exists?(path)
+    end
+  end
+
+  describe "binary_version/0" do
+    test "returns a valid version string" do
+      version = Binary.binary_version()
+      assert is_binary(version)
+      assert version =~ ~r/^\d+\.\d+\.\d+$/
+    end
+  end
+
+  describe "build_name/0" do
+    test "defaults to app-renderer suffix" do
+      previous = Application.get_env(:plushie, :build_name)
+      Application.delete_env(:plushie, :build_name)
+
+      on_exit(fn ->
+        if previous do
+          Application.put_env(:plushie, :build_name, previous)
+        else
+          Application.delete_env(:plushie, :build_name)
+        end
+      end)
+
+      name = Binary.build_name()
+      assert is_binary(name)
+      assert String.ends_with?(name, "-renderer")
     end
   end
 end
