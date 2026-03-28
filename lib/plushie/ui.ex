@@ -400,936 +400,386 @@ defmodule Plushie.UI do
     end
   end
 
-  # -- column(opts) -----------------------------------------------------------
-  # All forms are macros so we always have __CALLER__ for auto-ID.
+  # ---------------------------------------------------------------------------
+  # Generated container macros (explicit-ID and auto-ID)
+  # ---------------------------------------------------------------------------
   #
-  #   column()
-  #   column(padding: 8)
-  #   column do ... end
-  #   column padding: 8 do ... end
+  # Two categories of containers share identical macro structure:
+  #
+  # 1. Explicit-ID containers: macro(id, opts_or_do), macro(id, opts, do: block)
+  # 2. Auto-ID containers: macro(opts_or_block), macro(opts, do: block)
+  #
+  # The only differences are the widget module and the display name string
+  # used for compile-time validation messages. The helpers below generate
+  # the AST shared by every container in each category.
 
-  @doc """
-  Vertical flex layout.
+  # Returns the macro body AST for explicit-ID container 2-arity form.
+  defp id_container_2arity_body(widget_mod, name_str, id, opts_or_do) do
+    case opts_or_do do
+      [do: block] ->
+        option_keys = widget_mod.__option_keys__()
+        option_types = widget_mod.__option_types__()
+        block = container_scope(block, option_keys, option_types, name_str)
+        exprs = block_to_exprs(block)
 
-  ## Options
+        quote do
+          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          Plushie.UI.__build_container__(unquote(widget_mod), unquote(id), [], items, nil)
+        end
 
-  - `:spacing` -- gap between children
-  - `:padding` -- padding around children
-  - `:width` / `:height` -- `:fill`, `:shrink`, or number
-  - `:align_x` -- `:start`, `:center`, `:end`
-  - `:id` -- explicit ID (otherwise auto-generated from call site)
-  - `:children` -- child nodes (function-form shorthand)
+      opts ->
+        quote do
+          Plushie.UI.__build_container__(
+            unquote(widget_mod),
+            unquote(id),
+            unquote(opts),
+            [],
+            nil
+          )
+        end
+    end
+  end
 
-  ## Example
+  # Returns the macro body AST for explicit-ID container 3-arity form.
+  defp id_container_3arity_body(widget_mod, name_str, id, opts, block) do
+    option_keys = widget_mod.__option_keys__()
+    option_types = widget_mod.__option_types__()
+    block = container_scope(block, option_keys, option_types, name_str)
+    exprs = block_to_exprs(block)
 
-      column spacing: 8 do
-        text("Hello")
-        text("World")
-      end
-  """
-  defmacro column(opts_or_block \\ []) do
-    caller_mod = __CALLER__.module
-    caller_line = __CALLER__.line
+    quote do
+      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
+      Plushie.UI.__build_container__(
+        unquote(widget_mod),
+        unquote(id),
+        unquote(opts),
+        items,
+        nil
+      )
+    end
+  end
+
+  # Returns the macro body AST for auto-ID container 1-arity form.
+  defp auto_container_1arity_body(widget_mod, name_str, opts_or_block, auto_id) do
     case opts_or_block do
       [do: block] ->
-        option_keys = Plushie.Widget.Column.__option_keys__()
-        option_types = Plushie.Widget.Column.__option_types__()
-        block = container_scope(block, option_keys, option_types, "column")
+        option_keys = widget_mod.__option_keys__()
+        option_types = widget_mod.__option_types__()
+        block = container_scope(block, option_keys, option_types, name_str)
         exprs = block_to_exprs(block)
 
         quote do
           items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
           Plushie.UI.__build_container__(
-            Plushie.Widget.Column,
+            unquote(widget_mod),
             nil,
             [],
             items,
-            unquote(compile_auto_id(caller_mod, caller_line))
+            unquote(auto_id)
           )
         end
 
       opts ->
         quote do
           Plushie.UI.__build_container__(
-            Plushie.Widget.Column,
+            unquote(widget_mod),
             nil,
             unquote(opts),
             [],
-            unquote(compile_auto_id(caller_mod, caller_line))
+            unquote(auto_id)
           )
         end
     end
   end
 
-  @doc false
-  defmacro column(opts, do: block) do
-    option_keys = Plushie.Widget.Column.__option_keys__()
-    option_types = Plushie.Widget.Column.__option_types__()
-    block = container_scope(block, option_keys, option_types, "column")
+  # Returns the macro body AST for auto-ID container 2-arity form.
+  defp auto_container_2arity_body(widget_mod, name_str, opts, block, auto_id) do
+    option_keys = widget_mod.__option_keys__()
+    option_types = widget_mod.__option_types__()
+    block = container_scope(block, option_keys, option_types, name_str)
     exprs = block_to_exprs(block)
-    caller_mod = __CALLER__.module
-    caller_line = __CALLER__.line
 
     quote do
       items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
 
       Plushie.UI.__build_container__(
-        Plushie.Widget.Column,
+        unquote(widget_mod),
         nil,
         unquote(opts),
         items,
-        unquote(compile_auto_id(caller_mod, caller_line))
+        unquote(auto_id)
       )
     end
   end
 
-  # -- row(opts) --------------------------------------------------------------
+  # -- Auto-ID containers (no explicit id argument) ---------------------------
 
-  @doc """
-  Horizontal flex layout.
+  @auto_id_container_docs %{
+    column: """
+    Vertical flex layout.
 
-  ## Options
+    ## Options
 
-  Same as `column/1`.
+    - `:spacing` -- gap between children
+    - `:padding` -- padding around children
+    - `:width` / `:height` -- `:fill`, `:shrink`, or number
+    - `:align_x` -- `:start`, `:center`, `:end`
+    - `:id` -- explicit ID (otherwise auto-generated from call site)
+    - `:children` -- child nodes (function-form shorthand)
 
-  ## Example
+    ## Example
 
-      row spacing: 4 do
-        button("yes", "Yes")
-        button("no", "No")
-      end
-  """
-  defmacro row(opts_or_block \\ []) do
-    caller_mod = __CALLER__.module
-    caller_line = __CALLER__.line
-
-    case opts_or_block do
-      [do: block] ->
-        option_keys = Plushie.Widget.Row.__option_keys__()
-        option_types = Plushie.Widget.Row.__option_types__()
-        block = container_scope(block, option_keys, option_types, "row")
-        exprs = block_to_exprs(block)
-
-        quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-
-          Plushie.UI.__build_container__(
-            Plushie.Widget.Row,
-            nil,
-            [],
-            items,
-            unquote(compile_auto_id(caller_mod, caller_line))
-          )
+        column spacing: 8 do
+          text("Hello")
+          text("World")
         end
+    """,
+    row: """
+    Horizontal flex layout.
 
-      opts ->
-        quote do
-          Plushie.UI.__build_container__(
-            Plushie.Widget.Row,
-            nil,
-            unquote(opts),
-            [],
-            unquote(compile_auto_id(caller_mod, caller_line))
-          )
+    ## Options
+
+    Same as `column/1`.
+
+    ## Example
+
+        row spacing: 4 do
+          button("yes", "Yes")
+          button("no", "No")
         end
+    """,
+    stack: """
+    Z-axis stacking layout (overlays).
+
+    ## Example
+
+        stack do
+          image("bg", "/path/to/bg.png")
+          container "overlay", padding: 16 do
+            text("Overlaid text")
+          end
+        end
+    """,
+    grid: """
+    Grid layout.
+
+    ## Options
+
+    - `:column_count` -- number of columns
+    - `:column_width` -- width of each column
+    - `:row_height` -- height of each row
+    - `:spacing` -- gap between cells
+    - `:padding` -- padding around grid
+    - `:width` / `:height` -- dimensions
+    - `:id` -- explicit ID (otherwise auto-generated from call site)
+
+    ## Example
+
+        grid column_count: 3, spacing: 8 do
+          for item <- items do
+            text(item.name)
+          end
+        end
+    """,
+    keyed_column: """
+    Keyed column for efficient list diffing.
+
+    ## Options
+
+    Same as `column/1`.
+
+    ## Example
+
+        keyed_column spacing: 8 do
+          for item <- items do
+            text(item.id, item.name)
+          end
+        end
+    """,
+    responsive: """
+    Responsive layout that adapts to available size.
+
+    ## Options
+
+    - `:width` / `:height` -- dimensions
+    - `:id` -- explicit ID (otherwise auto-generated from call site)
+
+    ## Example
+
+        responsive do
+          column do
+            text("Adapts to size")
+          end
+        end
+    """
+  }
+
+  @auto_id_containers [
+    {:column, Plushie.Widget.Column},
+    {:row, Plushie.Widget.Row},
+    {:stack, Plushie.Widget.Stack},
+    {:grid, Plushie.Widget.Grid},
+    {:keyed_column, Plushie.Widget.KeyedColumn},
+    {:responsive, Plushie.Widget.Responsive}
+  ]
+
+  for {name, mod} <- @auto_id_containers do
+    name_str = Atom.to_string(name)
+
+    @doc @auto_id_container_docs[name]
+    defmacro unquote(name)(opts_or_block \\ []) do
+      auto_id = compile_auto_id(__CALLER__.module, __CALLER__.line)
+
+      auto_container_1arity_body(
+        unquote(mod),
+        unquote(name_str),
+        opts_or_block,
+        auto_id
+      )
     end
-  end
 
-  @doc false
-  defmacro row(opts, do: block) do
-    option_keys = Plushie.Widget.Row.__option_keys__()
-    option_types = Plushie.Widget.Row.__option_types__()
-    block = container_scope(block, option_keys, option_types, "row")
-    exprs = block_to_exprs(block)
-    caller_mod = __CALLER__.module
-    caller_line = __CALLER__.line
+    @doc false
+    defmacro unquote(name)(opts, do: block) do
+      auto_id = compile_auto_id(__CALLER__.module, __CALLER__.line)
 
-    quote do
-      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-
-      Plushie.UI.__build_container__(
-        Plushie.Widget.Row,
-        nil,
-        unquote(opts),
-        items,
-        unquote(compile_auto_id(caller_mod, caller_line))
+      auto_container_2arity_body(
+        unquote(mod),
+        unquote(name_str),
+        opts,
+        block,
+        auto_id
       )
     end
   end
 
-  # -- container(id, opts) ----------------------------------------------------
+  # -- Explicit-ID containers -------------------------------------------------
 
-  @doc """
-  Generic box with alignment and padding.
+  @id_container_docs %{
+    container: """
+    Generic box with alignment and padding.
 
-  ## Example
+    ## Example
 
-      container "hero", padding: 16 do
-        text("Welcome")
-      end
-  """
-  defmacro container(id, opts_or_do \\ []) do
-    case opts_or_do do
-      [do: block] ->
-        option_keys = Plushie.Widget.Container.__option_keys__()
-        option_types = Plushie.Widget.Container.__option_types__()
-        block = container_scope(block, option_keys, option_types, "container")
-        exprs = block_to_exprs(block)
-
-        quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Plushie.UI.__build_container__(Plushie.Widget.Container, unquote(id), [], items, nil)
+        container "hero", padding: 16 do
+          text("Welcome")
         end
+    """,
+    overlay: """
+    Overlay container. First child is the anchor, second is the overlay content.
 
-      opts ->
-        quote do
-          Plushie.UI.__build_container__(
-            Plushie.Widget.Container,
-            unquote(id),
-            unquote(opts),
-            [],
-            nil
-          )
+    ## Options
+
+    - `:position` -- `:below`, `:above`, `:left`, `:right`
+    - `:gap` -- space between anchor and overlay in pixels
+    - `:offset_x` -- horizontal offset in pixels
+    - `:offset_y` -- vertical offset in pixels
+
+    ## Example
+
+        overlay "popup", position: :below, gap: 4 do
+          button("anchor", "Click me")
+          container "dropdown" do
+            text("dropdown_text", "Dropdown content")
+          end
         end
+    """,
+    scrollable: """
+    Scrollable region.
+
+    ## Example
+
+        scrollable "feed" do
+          for item <- items do
+            text(item.title)
+          end
+        end
+    """,
+    pin: """
+    Pin layout for absolute positioning.
+
+    ## Example
+
+        pin "overlay" do
+          text("Pinned content")
+        end
+    """,
+    floating: """
+    Floating overlay layout.
+
+    ## Example
+
+        floating "popup" do
+          text("Floating content")
+        end
+    """,
+    mouse_area: """
+    Mouse area for capturing mouse events on children.
+
+    ## Options
+
+    - `:on_press`, `:on_release`, `:on_right_press`, `:on_middle_press`
+    - `:on_enter`, `:on_exit`
+
+    ## Example
+
+        mouse_area "clickable" do
+          text("Click me")
+        end
+    """,
+    sensor: """
+    Sensor for detecting layout changes on children.
+
+    ## Options
+
+    - `:on_resize`, `:on_appear`
+
+    ## Example
+
+        sensor "tracked" do
+          text("Monitored content")
+        end
+    """,
+    themer: """
+    Per-subtree theme override.
+
+    ## Options
+
+    - `:theme` -- theme name string or custom palette map
+
+    ## Example
+
+        themer "dark_section", theme: "Dark" do
+          column do
+            text("This subtree uses the dark theme")
+          end
+        end
+    """
+  }
+
+  @id_containers [
+    {:container, Plushie.Widget.Container},
+    {:overlay, Plushie.Widget.Overlay},
+    {:scrollable, Plushie.Widget.Scrollable},
+    {:pin, Plushie.Widget.Pin},
+    {:floating, Plushie.Widget.Floating},
+    {:mouse_area, Plushie.Widget.MouseArea},
+    {:sensor, Plushie.Widget.Sensor},
+    {:themer, Plushie.Widget.Themer}
+  ]
+
+  for {name, mod} <- @id_containers do
+    name_str = Atom.to_string(name)
+
+    @doc @id_container_docs[name]
+    defmacro unquote(name)(id, opts_or_do \\ []) do
+      id_container_2arity_body(unquote(mod), unquote(name_str), id, opts_or_do)
     end
-  end
 
-  @doc false
-  defmacro container(id, opts, do: block) do
-    option_keys = Plushie.Widget.Container.__option_keys__()
-    option_types = Plushie.Widget.Container.__option_types__()
-    block = container_scope(block, option_keys, option_types, "container")
-    exprs = block_to_exprs(block)
-
-    quote do
-      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-
-      Plushie.UI.__build_container__(
-        Plushie.Widget.Container,
-        unquote(id),
-        unquote(opts),
-        items,
-        nil
-      )
-    end
-  end
-
-  # -- overlay(id, opts) ------------------------------------------------------
-
-  @doc """
-  Overlay container. First child is the anchor, second is the overlay content.
-
-  ## Options
-
-  - `:position` -- `:below`, `:above`, `:left`, `:right`
-  - `:gap` -- space between anchor and overlay in pixels
-  - `:offset_x` -- horizontal offset in pixels
-  - `:offset_y` -- vertical offset in pixels
-
-  ## Example
-
-      overlay "popup", position: :below, gap: 4 do
-        button("anchor", "Click me")
-        container "dropdown" do
-          text("dropdown_text", "Dropdown content")
-        end
-      end
-  """
-  defmacro overlay(id, opts_or_do \\ []) do
-    case opts_or_do do
-      [do: block] ->
-        option_keys = Plushie.Widget.Overlay.__option_keys__()
-        option_types = Plushie.Widget.Overlay.__option_types__()
-        block = container_scope(block, option_keys, option_types, "overlay")
-        exprs = block_to_exprs(block)
-
-        quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Plushie.UI.__build_container__(Plushie.Widget.Overlay, unquote(id), [], items, nil)
-        end
-
-      opts ->
-        quote do
-          Plushie.UI.__build_container__(
-            Plushie.Widget.Overlay,
-            unquote(id),
-            unquote(opts),
-            [],
-            nil
-          )
-        end
-    end
-  end
-
-  @doc false
-  defmacro overlay(id, opts, do: block) do
-    option_keys = Plushie.Widget.Overlay.__option_keys__()
-    option_types = Plushie.Widget.Overlay.__option_types__()
-    block = container_scope(block, option_keys, option_types, "overlay")
-    exprs = block_to_exprs(block)
-
-    quote do
-      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-
-      Plushie.UI.__build_container__(
-        Plushie.Widget.Overlay,
-        unquote(id),
-        unquote(opts),
-        items,
-        nil
-      )
-    end
-  end
-
-  # -- scrollable(id, opts) ---------------------------------------------------
-
-  @doc """
-  Scrollable region.
-
-  ## Example
-
-      scrollable "feed" do
-        for item <- items do
-          text(item.title)
-        end
-      end
-  """
-  defmacro scrollable(id, opts_or_do \\ []) do
-    case opts_or_do do
-      [do: block] ->
-        option_keys = Plushie.Widget.Scrollable.__option_keys__()
-        option_types = Plushie.Widget.Scrollable.__option_types__()
-        block = container_scope(block, option_keys, option_types, "scrollable")
-        exprs = block_to_exprs(block)
-
-        quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Plushie.UI.__build_container__(Plushie.Widget.Scrollable, unquote(id), [], items, nil)
-        end
-
-      opts ->
-        quote do
-          Plushie.UI.__build_container__(
-            Plushie.Widget.Scrollable,
-            unquote(id),
-            unquote(opts),
-            [],
-            nil
-          )
-        end
-    end
-  end
-
-  @doc false
-  defmacro scrollable(id, opts, do: block) do
-    option_keys = Plushie.Widget.Scrollable.__option_keys__()
-    option_types = Plushie.Widget.Scrollable.__option_types__()
-    block = container_scope(block, option_keys, option_types, "scrollable")
-    exprs = block_to_exprs(block)
-
-    quote do
-      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-
-      Plushie.UI.__build_container__(
-        Plushie.Widget.Scrollable,
-        unquote(id),
-        unquote(opts),
-        items,
-        nil
-      )
-    end
-  end
-
-  # -- stack(opts) ------------------------------------------------------------
-
-  @doc """
-  Z-axis stacking layout (overlays).
-
-  ## Example
-
-      stack do
-        image("bg", "/path/to/bg.png")
-        container "overlay", padding: 16 do
-          text("Overlaid text")
-        end
-      end
-  """
-  defmacro stack(opts_or_block \\ []) do
-    caller_mod = __CALLER__.module
-    caller_line = __CALLER__.line
-
-    case opts_or_block do
-      [do: block] ->
-        option_keys = Plushie.Widget.Stack.__option_keys__()
-        option_types = Plushie.Widget.Stack.__option_types__()
-        block = container_scope(block, option_keys, option_types, "stack")
-        exprs = block_to_exprs(block)
-
-        quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-
-          Plushie.UI.__build_container__(
-            Plushie.Widget.Stack,
-            nil,
-            [],
-            items,
-            unquote(compile_auto_id(caller_mod, caller_line))
-          )
-        end
-
-      opts ->
-        quote do
-          Plushie.UI.__build_container__(
-            Plushie.Widget.Stack,
-            nil,
-            unquote(opts),
-            [],
-            unquote(compile_auto_id(caller_mod, caller_line))
-          )
-        end
-    end
-  end
-
-  @doc false
-  defmacro stack(opts, do: block) do
-    option_keys = Plushie.Widget.Stack.__option_keys__()
-    option_types = Plushie.Widget.Stack.__option_types__()
-    block = container_scope(block, option_keys, option_types, "stack")
-    exprs = block_to_exprs(block)
-    caller_mod = __CALLER__.module
-    caller_line = __CALLER__.line
-
-    quote do
-      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-
-      Plushie.UI.__build_container__(
-        Plushie.Widget.Stack,
-        nil,
-        unquote(opts),
-        items,
-        unquote(compile_auto_id(caller_mod, caller_line))
-      )
-    end
-  end
-
-  # -- grid(opts) -------------------------------------------------------------
-
-  @doc """
-  Grid layout.
-
-  ## Options
-
-  - `:column_count` -- number of columns
-  - `:column_width` -- width of each column
-  - `:row_height` -- height of each row
-  - `:spacing` -- gap between cells
-  - `:padding` -- padding around grid
-  - `:width` / `:height` -- dimensions
-  - `:id` -- explicit ID (otherwise auto-generated from call site)
-
-  ## Example
-
-      grid column_count: 3, spacing: 8 do
-        for item <- items do
-          text(item.name)
-        end
-      end
-  """
-  defmacro grid(opts_or_block \\ []) do
-    caller_mod = __CALLER__.module
-    caller_line = __CALLER__.line
-
-    case opts_or_block do
-      [do: block] ->
-        option_keys = Plushie.Widget.Grid.__option_keys__()
-        option_types = Plushie.Widget.Grid.__option_types__()
-        block = container_scope(block, option_keys, option_types, "grid")
-        exprs = block_to_exprs(block)
-
-        quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-
-          Plushie.UI.__build_container__(
-            Plushie.Widget.Grid,
-            nil,
-            [],
-            items,
-            unquote(compile_auto_id(caller_mod, caller_line))
-          )
-        end
-
-      opts ->
-        quote do
-          Plushie.UI.__build_container__(
-            Plushie.Widget.Grid,
-            nil,
-            unquote(opts),
-            [],
-            unquote(compile_auto_id(caller_mod, caller_line))
-          )
-        end
-    end
-  end
-
-  @doc false
-  defmacro grid(opts, do: block) do
-    option_keys = Plushie.Widget.Grid.__option_keys__()
-    option_types = Plushie.Widget.Grid.__option_types__()
-    block = container_scope(block, option_keys, option_types, "grid")
-    exprs = block_to_exprs(block)
-    caller_mod = __CALLER__.module
-    caller_line = __CALLER__.line
-
-    quote do
-      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-
-      Plushie.UI.__build_container__(
-        Plushie.Widget.Grid,
-        nil,
-        unquote(opts),
-        items,
-        unquote(compile_auto_id(caller_mod, caller_line))
-      )
-    end
-  end
-
-  # -- keyed_column(opts) -----------------------------------------------------
-
-  @doc """
-  Keyed column for efficient list diffing.
-
-  ## Options
-
-  Same as `column/1`.
-
-  ## Example
-
-      keyed_column spacing: 8 do
-        for item <- items do
-          text(item.id, item.name)
-        end
-      end
-  """
-  defmacro keyed_column(opts_or_block \\ []) do
-    caller_mod = __CALLER__.module
-    caller_line = __CALLER__.line
-
-    case opts_or_block do
-      [do: block] ->
-        option_keys = Plushie.Widget.KeyedColumn.__option_keys__()
-        option_types = Plushie.Widget.KeyedColumn.__option_types__()
-        block = container_scope(block, option_keys, option_types, "keyed_column")
-        exprs = block_to_exprs(block)
-
-        quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-
-          Plushie.UI.__build_container__(
-            Plushie.Widget.KeyedColumn,
-            nil,
-            [],
-            items,
-            unquote(compile_auto_id(caller_mod, caller_line))
-          )
-        end
-
-      opts ->
-        quote do
-          Plushie.UI.__build_container__(
-            Plushie.Widget.KeyedColumn,
-            nil,
-            unquote(opts),
-            [],
-            unquote(compile_auto_id(caller_mod, caller_line))
-          )
-        end
-    end
-  end
-
-  @doc false
-  defmacro keyed_column(opts, do: block) do
-    option_keys = Plushie.Widget.KeyedColumn.__option_keys__()
-    option_types = Plushie.Widget.KeyedColumn.__option_types__()
-    block = container_scope(block, option_keys, option_types, "keyed_column")
-    exprs = block_to_exprs(block)
-    caller_mod = __CALLER__.module
-    caller_line = __CALLER__.line
-
-    quote do
-      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-
-      Plushie.UI.__build_container__(
-        Plushie.Widget.KeyedColumn,
-        nil,
-        unquote(opts),
-        items,
-        unquote(compile_auto_id(caller_mod, caller_line))
-      )
-    end
-  end
-
-  # -- responsive(opts) -------------------------------------------------------
-
-  @doc """
-  Responsive layout that adapts to available size.
-
-  ## Options
-
-  - `:width` / `:height` -- dimensions
-  - `:id` -- explicit ID (otherwise auto-generated from call site)
-
-  ## Example
-
-      responsive do
-        column do
-          text("Adapts to size")
-        end
-      end
-  """
-  defmacro responsive(opts_or_block \\ []) do
-    caller_mod = __CALLER__.module
-    caller_line = __CALLER__.line
-
-    case opts_or_block do
-      [do: block] ->
-        option_keys = Plushie.Widget.Responsive.__option_keys__()
-        option_types = Plushie.Widget.Responsive.__option_types__()
-        block = container_scope(block, option_keys, option_types, "responsive")
-        exprs = block_to_exprs(block)
-
-        quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-
-          Plushie.UI.__build_container__(
-            Plushie.Widget.Responsive,
-            nil,
-            [],
-            items,
-            unquote(compile_auto_id(caller_mod, caller_line))
-          )
-        end
-
-      opts ->
-        quote do
-          Plushie.UI.__build_container__(
-            Plushie.Widget.Responsive,
-            nil,
-            unquote(opts),
-            [],
-            unquote(compile_auto_id(caller_mod, caller_line))
-          )
-        end
-    end
-  end
-
-  @doc false
-  defmacro responsive(opts, do: block) do
-    option_keys = Plushie.Widget.Responsive.__option_keys__()
-    option_types = Plushie.Widget.Responsive.__option_types__()
-    block = container_scope(block, option_keys, option_types, "responsive")
-    exprs = block_to_exprs(block)
-    caller_mod = __CALLER__.module
-    caller_line = __CALLER__.line
-
-    quote do
-      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-
-      Plushie.UI.__build_container__(
-        Plushie.Widget.Responsive,
-        nil,
-        unquote(opts),
-        items,
-        unquote(compile_auto_id(caller_mod, caller_line))
-      )
-    end
-  end
-
-  # -- pin(id, opts) ----------------------------------------------------------
-
-  @doc """
-  Pin layout for absolute positioning.
-
-  ## Example
-
-      pin "overlay" do
-        text("Pinned content")
-      end
-  """
-  defmacro pin(id, opts_or_do \\ []) do
-    case opts_or_do do
-      [do: block] ->
-        option_keys = Plushie.Widget.Pin.__option_keys__()
-        option_types = Plushie.Widget.Pin.__option_types__()
-        block = container_scope(block, option_keys, option_types, "pin")
-        exprs = block_to_exprs(block)
-
-        quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Plushie.UI.__build_container__(Plushie.Widget.Pin, unquote(id), [], items, nil)
-        end
-
-      opts ->
-        quote do
-          Plushie.UI.__build_container__(Plushie.Widget.Pin, unquote(id), unquote(opts), [], nil)
-        end
-    end
-  end
-
-  @doc false
-  defmacro pin(id, opts, do: block) do
-    option_keys = Plushie.Widget.Pin.__option_keys__()
-    option_types = Plushie.Widget.Pin.__option_types__()
-    block = container_scope(block, option_keys, option_types, "pin")
-    exprs = block_to_exprs(block)
-
-    quote do
-      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-      Plushie.UI.__build_container__(Plushie.Widget.Pin, unquote(id), unquote(opts), items, nil)
-    end
-  end
-
-  # -- floating(id, opts) -----------------------------------------------------
-
-  @doc """
-  Floating overlay layout.
-
-  ## Example
-
-      floating "popup" do
-        text("Floating content")
-      end
-  """
-  defmacro floating(id, opts_or_do \\ []) do
-    case opts_or_do do
-      [do: block] ->
-        option_keys = Plushie.Widget.Floating.__option_keys__()
-        option_types = Plushie.Widget.Floating.__option_types__()
-        block = container_scope(block, option_keys, option_types, "floating")
-        exprs = block_to_exprs(block)
-
-        quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Plushie.UI.__build_container__(Plushie.Widget.Floating, unquote(id), [], items, nil)
-        end
-
-      opts ->
-        quote do
-          Plushie.UI.__build_container__(
-            Plushie.Widget.Floating,
-            unquote(id),
-            unquote(opts),
-            [],
-            nil
-          )
-        end
-    end
-  end
-
-  @doc false
-  defmacro floating(id, opts, do: block) do
-    option_keys = Plushie.Widget.Floating.__option_keys__()
-    option_types = Plushie.Widget.Floating.__option_types__()
-    block = container_scope(block, option_keys, option_types, "floating")
-    exprs = block_to_exprs(block)
-
-    quote do
-      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-
-      Plushie.UI.__build_container__(
-        Plushie.Widget.Floating,
-        unquote(id),
-        unquote(opts),
-        items,
-        nil
-      )
-    end
-  end
-
-  # -- mouse_area(id, opts) ---------------------------------------------------
-
-  @doc """
-  Mouse area for capturing mouse events on children.
-
-  ## Options
-
-  - `:on_press`, `:on_release`, `:on_right_press`, `:on_middle_press`
-  - `:on_enter`, `:on_exit`
-
-  ## Example
-
-      mouse_area "clickable" do
-        text("Click me")
-      end
-  """
-  defmacro mouse_area(id, opts_or_do \\ []) do
-    case opts_or_do do
-      [do: block] ->
-        option_keys = Plushie.Widget.MouseArea.__option_keys__()
-        option_types = Plushie.Widget.MouseArea.__option_types__()
-        block = container_scope(block, option_keys, option_types, "mouse_area")
-        exprs = block_to_exprs(block)
-
-        quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Plushie.UI.__build_container__(Plushie.Widget.MouseArea, unquote(id), [], items, nil)
-        end
-
-      opts ->
-        quote do
-          Plushie.UI.__build_container__(
-            Plushie.Widget.MouseArea,
-            unquote(id),
-            unquote(opts),
-            [],
-            nil
-          )
-        end
-    end
-  end
-
-  @doc false
-  defmacro mouse_area(id, opts, do: block) do
-    option_keys = Plushie.Widget.MouseArea.__option_keys__()
-    option_types = Plushie.Widget.MouseArea.__option_types__()
-    block = container_scope(block, option_keys, option_types, "mouse_area")
-    exprs = block_to_exprs(block)
-
-    quote do
-      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-
-      Plushie.UI.__build_container__(
-        Plushie.Widget.MouseArea,
-        unquote(id),
-        unquote(opts),
-        items,
-        nil
-      )
-    end
-  end
-
-  # -- sensor(id, opts) -------------------------------------------------------
-
-  @doc """
-  Sensor for detecting layout changes on children.
-
-  ## Options
-
-  - `:on_resize`, `:on_appear`
-
-  ## Example
-
-      sensor "tracked" do
-        text("Monitored content")
-      end
-  """
-  defmacro sensor(id, opts_or_do \\ []) do
-    case opts_or_do do
-      [do: block] ->
-        option_keys = Plushie.Widget.Sensor.__option_keys__()
-        option_types = Plushie.Widget.Sensor.__option_types__()
-        block = container_scope(block, option_keys, option_types, "sensor")
-        exprs = block_to_exprs(block)
-
-        quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Plushie.UI.__build_container__(Plushie.Widget.Sensor, unquote(id), [], items, nil)
-        end
-
-      opts ->
-        quote do
-          Plushie.UI.__build_container__(
-            Plushie.Widget.Sensor,
-            unquote(id),
-            unquote(opts),
-            [],
-            nil
-          )
-        end
-    end
-  end
-
-  @doc false
-  defmacro sensor(id, opts, do: block) do
-    option_keys = Plushie.Widget.Sensor.__option_keys__()
-    option_types = Plushie.Widget.Sensor.__option_types__()
-    block = container_scope(block, option_keys, option_types, "sensor")
-    exprs = block_to_exprs(block)
-
-    quote do
-      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-
-      Plushie.UI.__build_container__(
-        Plushie.Widget.Sensor,
-        unquote(id),
-        unquote(opts),
-        items,
-        nil
-      )
-    end
-  end
-
-  # -- themer(id, opts) -------------------------------------------------------
-
-  @doc """
-  Per-subtree theme override.
-
-  ## Options
-
-  - `:theme` -- theme name string or custom palette map
-
-  ## Example
-
-      themer "dark_section", theme: "Dark" do
-        column do
-          text("This subtree uses the dark theme")
-        end
-      end
-  """
-  defmacro themer(id, opts_or_do \\ []) do
-    case opts_or_do do
-      [do: block] ->
-        option_keys = Plushie.Widget.Themer.__option_keys__()
-        option_types = Plushie.Widget.Themer.__option_types__()
-        block = container_scope(block, option_keys, option_types, "themer")
-        exprs = block_to_exprs(block)
-
-        quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-          Plushie.UI.__build_container__(Plushie.Widget.Themer, unquote(id), [], items, nil)
-        end
-
-      opts ->
-        quote do
-          Plushie.UI.__build_container__(
-            Plushie.Widget.Themer,
-            unquote(id),
-            unquote(opts),
-            [],
-            nil
-          )
-        end
-    end
-  end
-
-  @doc false
-  defmacro themer(id, opts, do: block) do
-    option_keys = Plushie.Widget.Themer.__option_keys__()
-    option_types = Plushie.Widget.Themer.__option_types__()
-    block = container_scope(block, option_keys, option_types, "themer")
-    exprs = block_to_exprs(block)
-
-    quote do
-      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
-
-      Plushie.UI.__build_container__(
-        Plushie.Widget.Themer,
-        unquote(id),
-        unquote(opts),
-        items,
-        nil
-      )
+    @doc false
+    defmacro unquote(name)(id, opts, do: block) do
+      id_container_3arity_body(unquote(mod), unquote(name_str), id, opts, block)
     end
   end
 
@@ -1388,36 +838,179 @@ defmodule Plushie.UI do
   end
 
   # ---------------------------------------------------------------------------
-  # Input widgets (require explicit id; support keyword and do-block opts)
+  # Generated leaf widget macros
   # ---------------------------------------------------------------------------
+  #
+  # Leaf widgets that take (id, positional_arg, opts_or_do) share identical
+  # macro structure. Only the widget module, display name, and build function
+  # differ. The macros are stamped out from @leaf_widgets; the build functions
+  # remain hand-written below since each has its own constructor signature.
 
-  @doc """
-  Clickable button.
-
-  Emits `%WidgetEvent{type: :click, id: id}` when clicked.
-
-  ## Example
-
-      button("save", "Save", style: :primary)
-
-      button "save", "Save" do
-        style :primary
-      end
-  """
-  defmacro button(id, label, opts_or_do \\ []) do
+  # Returns the macro body AST for leaf widget 3-arity forms.
+  defp leaf_macro_body(widget_mod, name_str, build_fn, id, positional, opts_or_do, caller) do
     case opts_or_do do
       [do: block] ->
-        option_keys = Plushie.Widget.Button.__option_keys__()
-        option_types = Plushie.Widget.Button.__option_types__()
+        option_keys = widget_mod.__option_keys__()
+        option_types = widget_mod.__option_types__()
         pairs = interpret_block(block, option_types)
-        validate_option_keys!(pairs, option_keys, "button", __CALLER__)
+        validate_option_keys!(pairs, option_keys, name_str, caller)
         opts_ast = pairs_to_keyword_ast(pairs)
-        quote do: Plushie.UI.__build_button__(unquote(id), unquote(label), unquote(opts_ast))
+
+        quote do
+          Plushie.UI.unquote(build_fn)(unquote(id), unquote(positional), unquote(opts_ast))
+        end
 
       opts ->
-        quote do: Plushie.UI.__build_button__(unquote(id), unquote(label), unquote(opts))
+        quote do
+          Plushie.UI.unquote(build_fn)(unquote(id), unquote(positional), unquote(opts))
+        end
     end
   end
+
+  @leaf_widget_docs %{
+    button: """
+    Clickable button.
+
+    Emits `%WidgetEvent{type: :click, id: id}` when clicked.
+
+    ## Example
+
+        button("save", "Save", style: :primary)
+
+        button "save", "Save" do
+          style :primary
+        end
+    """,
+    text_input: """
+    Single-line text input.
+
+    Emits `%WidgetEvent{type: :input, id: id, value: value}` on change and `%WidgetEvent{type: :submit, id: id, value: value}` on Enter.
+
+    ## Example
+
+        text_input("name", model.name, placeholder: "Your name")
+
+        text_input "name", model.name do
+          placeholder "Your name"
+        end
+    """,
+    checkbox: """
+    Boolean checkbox toggle.
+
+    Emits `%WidgetEvent{type: :toggle, id: id, value: boolean}` when toggled.
+
+    ## Example
+
+        checkbox("agree", model.agreed, label: "I agree")
+
+        checkbox "agree", model.agreed do
+          label "I agree"
+        end
+    """,
+    toggler: """
+    Toggle switch.
+
+    Emits `%WidgetEvent{type: :toggle, id: id, value: boolean}` when toggled.
+
+    ## Example
+
+        toggler("dark_mode", model.dark_mode, label: "Dark mode")
+
+        toggler "dark_mode", model.dark_mode do
+          label "Dark mode"
+        end
+    """,
+    text_editor: """
+    Multi-line text editor.
+
+    ## Example
+
+        text_editor("notes", model.notes, width: :fill, height: 200)
+
+        text_editor "notes", model.notes do
+          width :fill
+          height 200
+        end
+    """,
+    image: """
+    Raster image display.
+
+    ## Example
+
+        image("logo", "/assets/logo.png", width: 200, content_fit: :cover)
+
+        image "logo", "/assets/logo.png" do
+          width 200
+          content_fit :cover
+        end
+    """,
+    svg: """
+    SVG image display.
+
+    ## Example
+
+        svg("icon", "/assets/icon.svg", width: 24, height: 24)
+
+        svg "icon", "/assets/icon.svg" do
+          width 24
+          height 24
+        end
+    """,
+    qr_code: """
+    QR code display. No children.
+
+    ## Arguments
+
+    - `id` -- unique identifier
+    - `data` -- the string to encode
+
+    ## Options
+
+    - `:cell_size` -- size of each QR module in pixels (default 4.0)
+    - `:cell_color` -- color of dark modules
+    - `:background_color` -- color of light modules
+    - `:error_correction` -- `:low`, `:medium` (default), `:quartile`, `:high`
+
+    ## Example
+
+        qr_code("my_qr", "https://example.com", cell_size: 6)
+
+        qr_code "my_qr", "https://example.com" do
+          cell_size 6
+        end
+    """
+  }
+
+  @leaf_widgets [
+    {:button, Plushie.Widget.Button},
+    {:text_input, Plushie.Widget.TextInput},
+    {:checkbox, Plushie.Widget.Checkbox},
+    {:toggler, Plushie.Widget.Toggler},
+    {:text_editor, Plushie.Widget.TextEditor},
+    {:image, Plushie.Widget.Image},
+    {:svg, Plushie.Widget.Svg},
+    {:qr_code, Plushie.Widget.QrCode}
+  ]
+
+  for {name, mod} <- @leaf_widgets do
+    name_str = Atom.to_string(name)
+    build_fn = :"__build_#{name}__"
+
+    @doc @leaf_widget_docs[name]
+    defmacro unquote(name)(id, positional, opts_or_do \\ []) do
+      leaf_macro_body(
+        unquote(mod),
+        unquote(name_str),
+        unquote(build_fn),
+        id,
+        positional,
+        opts_or_do,
+        __CALLER__
+      )
+    end
+  end
+
+  # -- Leaf widget build functions (hand-written, each has unique logic) ------
 
   @doc false
   @spec __build_button__(String.t(), String.t(), keyword()) :: Plushie.Widget.ui_node()
@@ -1425,66 +1018,10 @@ defmodule Plushie.UI do
     Plushie.Widget.Button.new(id, label, clean_opts(opts)) |> Plushie.Widget.Button.build()
   end
 
-  @doc """
-  Single-line text input.
-
-  Emits `%WidgetEvent{type: :input, id: id, value: value}` on change and `%WidgetEvent{type: :submit, id: id, value: value}` on Enter.
-
-  ## Example
-
-      text_input("name", model.name, placeholder: "Your name")
-
-      text_input "name", model.name do
-        placeholder "Your name"
-      end
-  """
-  defmacro text_input(id, value, opts_or_do \\ []) do
-    case opts_or_do do
-      [do: block] ->
-        option_keys = Plushie.Widget.TextInput.__option_keys__()
-        option_types = Plushie.Widget.TextInput.__option_types__()
-        pairs = interpret_block(block, option_types)
-        validate_option_keys!(pairs, option_keys, "text_input", __CALLER__)
-        opts_ast = pairs_to_keyword_ast(pairs)
-        quote do: Plushie.UI.__build_text_input__(unquote(id), unquote(value), unquote(opts_ast))
-
-      opts ->
-        quote do: Plushie.UI.__build_text_input__(unquote(id), unquote(value), unquote(opts))
-    end
-  end
-
   @doc false
   @spec __build_text_input__(String.t(), String.t(), keyword()) :: Plushie.Widget.ui_node()
   def __build_text_input__(id, value, opts) when not is_keyword(value) do
     Plushie.Widget.TextInput.new(id, value, clean_opts(opts)) |> Plushie.Widget.TextInput.build()
-  end
-
-  @doc """
-  Boolean checkbox toggle.
-
-  Emits `%WidgetEvent{type: :toggle, id: id, value: boolean}` when toggled.
-
-  ## Example
-
-      checkbox("agree", model.agreed, label: "I agree")
-
-      checkbox "agree", model.agreed do
-        label "I agree"
-      end
-  """
-  defmacro checkbox(id, checked, opts_or_do \\ []) do
-    case opts_or_do do
-      [do: block] ->
-        option_keys = Plushie.Widget.Checkbox.__option_keys__()
-        option_types = Plushie.Widget.Checkbox.__option_types__()
-        pairs = interpret_block(block, option_types)
-        validate_option_keys!(pairs, option_keys, "checkbox", __CALLER__)
-        opts_ast = pairs_to_keyword_ast(pairs)
-        quote do: Plushie.UI.__build_checkbox__(unquote(id), unquote(checked), unquote(opts_ast))
-
-      opts ->
-        quote do: Plushie.UI.__build_checkbox__(unquote(id), unquote(checked), unquote(opts))
-    end
   end
 
   @doc false
@@ -1690,36 +1227,6 @@ defmodule Plushie.UI do
   # ---------------------------------------------------------------------------
   # Additional input widgets
   # ---------------------------------------------------------------------------
-
-  @doc """
-  Toggle switch.
-
-  Emits `%WidgetEvent{type: :toggle, id: id, value: boolean}` when toggled.
-
-  ## Example
-
-      toggler("dark_mode", model.dark_mode, label: "Dark mode")
-
-      toggler "dark_mode", model.dark_mode do
-        label "Dark mode"
-      end
-  """
-  defmacro toggler(id, is_toggled, opts_or_do \\ []) do
-    case opts_or_do do
-      [do: block] ->
-        option_keys = Plushie.Widget.Toggler.__option_keys__()
-        option_types = Plushie.Widget.Toggler.__option_types__()
-        pairs = interpret_block(block, option_types)
-        validate_option_keys!(pairs, option_keys, "toggler", __CALLER__)
-        opts_ast = pairs_to_keyword_ast(pairs)
-
-        quote do:
-                Plushie.UI.__build_toggler__(unquote(id), unquote(is_toggled), unquote(opts_ast))
-
-      opts ->
-        quote do: Plushie.UI.__build_toggler__(unquote(id), unquote(is_toggled), unquote(opts))
-    end
-  end
 
   @doc false
   @spec __build_toggler__(String.t(), boolean(), keyword()) :: Plushie.Widget.ui_node()
@@ -1990,35 +1497,6 @@ defmodule Plushie.UI do
     |> Plushie.Widget.ComboBox.build()
   end
 
-  @doc """
-  Multi-line text editor.
-
-  ## Example
-
-      text_editor("notes", model.notes, width: :fill, height: 200)
-
-      text_editor "notes", model.notes do
-        width :fill
-        height 200
-      end
-  """
-  defmacro text_editor(id, content, opts_or_do \\ []) do
-    case opts_or_do do
-      [do: block] ->
-        option_keys = Plushie.Widget.TextEditor.__option_keys__()
-        option_types = Plushie.Widget.TextEditor.__option_types__()
-        pairs = interpret_block(block, option_types)
-        validate_option_keys!(pairs, option_keys, "text_editor", __CALLER__)
-        opts_ast = pairs_to_keyword_ast(pairs)
-
-        quote do:
-                Plushie.UI.__build_text_editor__(unquote(id), unquote(content), unquote(opts_ast))
-
-      opts ->
-        quote do: Plushie.UI.__build_text_editor__(unquote(id), unquote(content), unquote(opts))
-    end
-  end
-
   @doc false
   @spec __build_text_editor__(String.t(), String.t(), keyword()) :: Plushie.Widget.ui_node()
   def __build_text_editor__(id, content, opts) when not is_keyword(content) do
@@ -2030,64 +1508,10 @@ defmodule Plushie.UI do
   # Additional display widgets
   # ---------------------------------------------------------------------------
 
-  @doc """
-  Raster image display.
-
-  ## Example
-
-      image("logo", "/assets/logo.png", width: 200, content_fit: :cover)
-
-      image "logo", "/assets/logo.png" do
-        width 200
-        content_fit :cover
-      end
-  """
-  defmacro image(id, source, opts_or_do \\ []) do
-    case opts_or_do do
-      [do: block] ->
-        option_keys = Plushie.Widget.Image.__option_keys__()
-        option_types = Plushie.Widget.Image.__option_types__()
-        pairs = interpret_block(block, option_types)
-        validate_option_keys!(pairs, option_keys, "image", __CALLER__)
-        opts_ast = pairs_to_keyword_ast(pairs)
-        quote do: Plushie.UI.__build_image__(unquote(id), unquote(source), unquote(opts_ast))
-
-      opts ->
-        quote do: Plushie.UI.__build_image__(unquote(id), unquote(source), unquote(opts))
-    end
-  end
-
   @doc false
   @spec __build_image__(String.t(), String.t(), keyword()) :: Plushie.Widget.ui_node()
   def __build_image__(id, source, opts) when not is_keyword(source) do
     Plushie.Widget.Image.new(id, source, clean_opts(opts)) |> Plushie.Widget.Image.build()
-  end
-
-  @doc """
-  SVG image display.
-
-  ## Example
-
-      svg("icon", "/assets/icon.svg", width: 24, height: 24)
-
-      svg "icon", "/assets/icon.svg" do
-        width 24
-        height 24
-      end
-  """
-  defmacro svg(id, source, opts_or_do \\ []) do
-    case opts_or_do do
-      [do: block] ->
-        option_keys = Plushie.Widget.Svg.__option_keys__()
-        option_types = Plushie.Widget.Svg.__option_types__()
-        pairs = interpret_block(block, option_types)
-        validate_option_keys!(pairs, option_keys, "svg", __CALLER__)
-        opts_ast = pairs_to_keyword_ast(pairs)
-        quote do: Plushie.UI.__build_svg__(unquote(id), unquote(source), unquote(opts_ast))
-
-      opts ->
-        quote do: Plushie.UI.__build_svg__(unquote(id), unquote(source), unquote(opts))
-    end
   end
 
   @doc false
@@ -2779,44 +2203,6 @@ defmodule Plushie.UI do
   # ---------------------------------------------------------------------------
   # QR Code (function -- no children)
   # ---------------------------------------------------------------------------
-
-  @doc """
-  QR code display. No children.
-
-  ## Arguments
-
-  - `id` -- unique identifier
-  - `data` -- the string to encode
-
-  ## Options
-
-  - `:cell_size` -- size of each QR module in pixels (default 4.0)
-  - `:cell_color` -- color of dark modules
-  - `:background_color` -- color of light modules
-  - `:error_correction` -- `:low`, `:medium` (default), `:quartile`, `:high`
-
-  ## Example
-
-      qr_code("my_qr", "https://example.com", cell_size: 6)
-
-      qr_code "my_qr", "https://example.com" do
-        cell_size 6
-      end
-  """
-  defmacro qr_code(id, data, opts_or_do \\ []) do
-    case opts_or_do do
-      [do: block] ->
-        option_keys = Plushie.Widget.QrCode.__option_keys__()
-        option_types = Plushie.Widget.QrCode.__option_types__()
-        pairs = interpret_block(block, option_types)
-        validate_option_keys!(pairs, option_keys, "qr_code", __CALLER__)
-        opts_ast = pairs_to_keyword_ast(pairs)
-        quote do: Plushie.UI.__build_qr_code__(unquote(id), unquote(data), unquote(opts_ast))
-
-      opts ->
-        quote do: Plushie.UI.__build_qr_code__(unquote(id), unquote(data), unquote(opts))
-    end
-  end
 
   @doc false
   @spec __build_qr_code__(String.t(), String.t(), keyword()) :: Plushie.Widget.ui_node()
