@@ -370,6 +370,40 @@ Atom shorthands (`:mock`, `:headless`, `:windowed`) work in application
 config. All modes use a unified Runtime backend -- the shorthand selects
 which renderer mode the binary runs in.
 
+### Backend-specific tests
+
+Tag tests with the **minimum backend** they require:
+
+```elixir
+# Requires headless -- runs in headless AND windowed, skipped in mock
+@tag backend: :headless
+test "renders text at correct position" do
+  ...
+end
+
+# Requires windowed -- runs ONLY in windowed, skipped in mock and headless
+@tag backend: :windowed
+test "screenshot matches golden file" do
+  ...
+end
+
+# No tag -- runs in all modes (mock, headless, windowed)
+test "clicking button updates model" do
+  ...
+end
+```
+
+Backend capability is hierarchical: mock < headless < windowed. Tag
+with the lowest backend that provides what the test needs:
+
+| Tag | Runs in mock | Runs in headless | Runs in windowed |
+|-----|:---:|:---:|:---:|
+| (none) | yes | yes | yes |
+| `backend: :headless` | no | yes | yes |
+| `backend: :windowed` | no | no | yes |
+
+Use `@moduletag backend: :headless` to tag an entire module.
+
 
 ## Snapshots and screenshots
 
