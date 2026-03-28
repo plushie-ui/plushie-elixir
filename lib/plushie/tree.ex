@@ -224,6 +224,11 @@ defmodule Plushie.Tree do
         # tags, so this is a plain normalization pass with no recursion.
         normalized = normalize_with_scope(rendered, scope, window_id)
 
+        # Auto-apply standard widget options (:a11y, :event_rate) from the
+        # original widget props to the top-level rendered node. This way
+        # widget authors don't have to manually forward these options.
+        normalized = merge_standard_widget_props(normalized, widget_props)
+
         # Attach stateful widget metadata to the final node's :meta.
         # This is the ONLY place these keys appear in meta on the
         # final tree -- they weren't in the rendered node's props.
@@ -259,6 +264,28 @@ defmodule Plushie.Tree do
 
       nil ->
         module.__initial_state__()
+    end
+  end
+
+  # Merge standard widget options (:a11y, :event_rate) from the original
+  # widget props into the top-level rendered node's props. These are
+  # consumer-facing options that should pass through to the rendered output
+  # without widget authors needing to forward them manually.
+  @standard_widget_prop_keys [:a11y, :event_rate]
+
+  defp merge_standard_widget_props(node, widget_props) do
+    overrides =
+      Enum.reduce(@standard_widget_prop_keys, %{}, fn key, acc ->
+        case Map.get(widget_props, key) do
+          nil -> acc
+          val -> Map.put(acc, key, encode_value(val))
+        end
+      end)
+
+    if map_size(overrides) == 0 do
+      node
+    else
+      Map.update!(node, :props, &Map.merge(&1, overrides))
     end
   end
 
