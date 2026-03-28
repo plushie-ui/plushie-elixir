@@ -203,6 +203,13 @@ defmodule Plushie.Extension do
 
   @doc "Declares the widget type name. Pass `container: true` for container widgets."
   defmacro widget(type_name, opts \\ []) do
+    unless is_atom(type_name) do
+      raise CompileError,
+        file: __CALLER__.file,
+        line: __CALLER__.line,
+        description: "widget type name must be an atom, got: #{inspect(type_name)}"
+    end
+
     quote do
       if @_extension_widget do
         IO.warn(
@@ -1295,7 +1302,7 @@ defmodule Plushie.Extension do
   @doc false
   def generate_prop_validation(props) do
     known_names =
-      Enum.map(props, fn {name, _type, _opts} -> name end) ++ [:event_rate, :a11y, :do]
+      Enum.map(props, fn {name, _type, _opts} -> name end) ++ [:event_rate, :a11y]
 
     quote do
       unknown_keys = Keyword.keys(opts) -- unquote(known_names)
