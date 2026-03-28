@@ -88,21 +88,11 @@ defmodule Mix.Tasks.Plushie.Build do
     check_rust_toolchain()
     check_cargo()
 
-    # Ensure the project is compiled so extension modules are available
+    # Ensure the project is compiled so widget modules are available
+    # for protocol-based discovery.
     Mix.Task.run("compile", [])
 
-    all_extensions = configured_extensions()
-
-    # Only native extensions (those with a Rust crate) need building.
-    # Pure Elixir :widget extensions compose existing widgets and don't
-    # require a custom binary.
-    {native, skipped} =
-      Enum.split_with(all_extensions, &function_exported?(&1, :native_crate, 0))
-
-    if skipped != [] do
-      names = Enum.map_join(skipped, ", ", &inspect/1)
-      Mix.shell().info("Skipping non-native extension(s): #{names}")
-    end
+    native = Plushie.WidgetRegistry.native_widgets()
 
     if native != [] do
       check_collisions!(native)
@@ -237,62 +227,6 @@ defmodule Mix.Tasks.Plushie.Build do
     File.cp!(src, dest)
     File.chmod!(dest, 0o755)
     Mix.shell().info("Installed to #{dest}")
-  end
-
-  # -- Extension registration -------------------------------------------------
-
-  @doc """
-  Returns the list of extension modules from application config.
-
-  Users register extensions explicitly in their config.exs:
-
-      config :plushie, extensions: [MyApp.SparklineExtension]
-
-  This replaces the previous `:code.all_loaded/0` auto-discovery approach,
-  which was unreliable because it only saw modules already loaded by the VM
-  at the time of the call.
-  """
-  @spec configured_extensions() :: [module()]
-  def configured_extensions do
-    extensions = Application.get_env(:plushie, :extensions, [])
-
-    unless is_list(extensions) do
-      Mix.raise("""
-      Invalid :extensions config for :plushie.
-
-      Expected a list of modules, got: #{inspect(extensions)}
-
-      Configure in config.exs:
-          config :plushie, extensions: [MyApp.SparklineExtension]
-      """)
-    end
-
-    # Validate that each module implements the Plushie.Extension behaviour.
-    Enum.each(extensions, fn mod ->
-      unless Code.ensure_loaded?(mod) do
-        Mix.raise("Extension module #{inspect(mod)} could not be loaded")
-      end
-
-      behaviours = mod_behaviours(mod)
-
-      unless Plushie.Extension in behaviours do
-        Mix.raise(
-          "Module #{inspect(mod)} is listed in :plushie :extensions config " <>
-            "but does not implement the Plushie.Extension behaviour"
-        )
-      end
-    end)
-
-    extensions
-  end
-
-  defp mod_behaviours(mod) do
-    if function_exported?(mod, :module_info, 1) do
-      (mod.module_info(:attributes)[:behaviour] || []) ++
-        (mod.module_info(:attributes)[:behavior] || [])
-    else
-      []
-    end
   end
 
   # -- Collision detection ----------------------------------------------------

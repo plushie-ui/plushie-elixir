@@ -1438,9 +1438,7 @@ defmodule Plushie.Runtime do
   end
 
   defp configured_extension_keys do
-    :plushie
-    |> Application.get_env(:extensions, [])
-    |> Enum.filter(&function_exported?(&1, :native_crate, 0))
+    Plushie.WidgetRegistry.native_widgets()
     |> Enum.map(&extension_widget_type/1)
     |> Enum.uniq()
   end

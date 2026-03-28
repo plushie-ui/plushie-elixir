@@ -57,25 +57,20 @@ defmodule Mix.Tasks.Plushie.Download do
     if want_wasm?, do: download_wasm(opts, force?)
   end
 
-  # Refuse to download a precompiled binary when native extensions are
-  # configured -- the stock binary won't have them registered.
+  # Refuse to download a precompiled binary when native widgets are
+  # detected -- the stock binary won't have them registered.
   defp check_native_extensions! do
     Mix.Task.run("compile", [])
 
-    extensions = Application.get_env(:plushie, :extensions, [])
-
-    native =
-      Enum.filter(extensions, fn mod ->
-        Code.ensure_loaded?(mod) and function_exported?(mod, :native_crate, 0)
-      end)
+    native = Plushie.WidgetRegistry.native_widgets()
 
     if native != [] do
       names = Enum.map_join(native, ", ", &inspect/1)
 
       Mix.raise("""
-      Cannot download a precompiled binary when native extensions are configured.
+      Cannot download a precompiled binary when native widgets are detected.
 
-      Native extensions: #{names}
+      Native widgets: #{names}
 
       These require a custom build that includes the extension crates.
       Use `mix plushie.build` instead.

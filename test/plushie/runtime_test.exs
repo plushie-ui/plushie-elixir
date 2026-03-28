@@ -439,9 +439,10 @@ defmodule Plushie.RuntimeTest do
     end
 
     test "runtime stops when renderer is missing a required native extension" do
-      original = Application.get_env(:plushie, :extensions)
-      Application.put_env(:plushie, :extensions, [StarRatingNative])
-      on_exit(fn -> Application.put_env(:plushie, :extensions, original) end)
+      # Seed the WidgetRegistry cache to include StarRatingNative so the
+      # runtime expects it in the renderer's hello message.
+      :persistent_term.put({Plushie.WidgetRegistry, :all}, [StarRatingNative])
+      on_exit(fn -> Plushie.WidgetRegistry.invalidate() end)
 
       Process.flag(:trap_exit, true)
       {runtime, _bridge} = start_runtime(SimpleApp)

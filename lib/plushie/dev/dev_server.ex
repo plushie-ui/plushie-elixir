@@ -240,6 +240,9 @@ defmodule Plushie.Dev.DevServer do
 
     send(state.runtime, {:dev_overlay, overlay})
 
+    # Snapshot widget impls before recompilation to detect new widgets.
+    prev_widget_impls = protocol_impl_set()
+
     # Suppress "redefining module" warnings -- we're intentionally
     # reloading modules that are already loaded from _build.
     prev = Code.get_compiler_option(:ignore_module_conflict)
@@ -263,6 +266,11 @@ defmodule Plushie.Dev.DevServer do
     Code.put_compiler_option(:ignore_module_conflict, prev)
 
     if errors == [] do
+      # Reconsolidate the Widget protocol if new widgets appeared.
+      if protocol_impl_set() != prev_widget_impls do
+        reconsolidate_widgets()
+      end
+
       send(state.runtime, :force_rerender)
 
       overlay = %Plushie.Dev.RebuildingOverlay{
@@ -386,16 +394,11 @@ defmodule Plushie.Dev.DevServer do
   end
 
   defp native_extension_dirs do
-    extensions = Application.get_env(:plushie, :extensions, [])
-
-    Enum.flat_map(extensions, fn mod ->
-      if Code.ensure_loaded?(mod) and function_exported?(mod, :native_crate, 0) do
-        crate_rel = mod.native_crate()
-        path = Path.expand(crate_rel)
-        if File.dir?(path), do: [path], else: []
-      else
-        []
-      end
+    Plushie.WidgetRegistry.native_widgets()
+    |> Enum.flat_map(fn mod ->
+      crate_rel = mod.native_crate()
+      path = Path.expand(crate_rel)
+      if File.dir?(path), do: [path], else: []
     end)
   end
 
@@ -435,5 +438,22 @@ defmodule Plushie.Dev.DevServer do
           {:file_system, "~> 1.0"}
       """
     end
+  end
+
+  # -- Protocol reconsolidation -----------------------------------------------
+
+  defp protocol_impl_set do
+    Protocol.extract_impls(Plushie.Widget, :code.get_path()) |> MapSet.new()
+  end
+
+  defp reconsolidate_widgets do
+    # MUST use :code.get_path() to scan ALL paths including deps.
+    # Protocol.consolidate only knows about types you pass it --
+    # passing a subset loses widgets from hex deps.
+    impls = Protocol.extract_impls(Plushie.Widget, :code.get_path())
+    {:ok, binary} = Protocol.consolidate(Plushie.Widget, impls)
+    :code.load_binary(Plushie.Widget, ~c"nofile", binary)
+    Plushie.WidgetRegistry.invalidate()
+    Logger.info("plushie dev: widget protocol reconsolidated")
   end
 end
