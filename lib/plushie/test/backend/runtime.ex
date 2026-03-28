@@ -171,6 +171,20 @@ defmodule Plushie.Test.Backend.Runtime do
     do: GenServer.call(pid, :get_diagnostics)
 
   defp do_interact(pid, action, selector, payload) do
+    # For widget-targeted actions, validate the selector resolves before
+    # sending the interact request. Fail fast with a clear error instead
+    # of silently producing no events.
+    if selector != nil do
+      case GenServer.call(pid, {:find, selector}, 10_000) do
+        nil ->
+          raise "widget not found: #{inspect(selector)}. " <>
+                  "The #{action} action requires a valid widget selector."
+
+        _element ->
+          :ok
+      end
+    end
+
     case GenServer.call(pid, {:interact, action, selector, payload}, 10_000) do
       :ok -> :ok
       {:error, reason} -> raise "interaction failed: #{inspect(reason)}"
