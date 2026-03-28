@@ -82,25 +82,25 @@ defmodule Mix.PlushieHelpers do
       Path.join(["_build", "plushie-renderer", "wasm"])
   end
 
-  @doc "Returns the expected path to the built plushie binary in the source tree."
-  @spec built_binary_path(release? :: boolean()) :: String.t()
-  def built_binary_path(release?) do
-    profile = if release?, do: "release", else: "debug"
-    Path.join([source_path!(), "target", profile, "plushie-renderer"])
-  end
-
   @doc """
   Resolves the plushie binary path for a mix task.
 
   When `--build` is passed, delegates to `mix plushie.build` and returns
-  the expected output path. Otherwise uses `Plushie.Binary.path!/0`.
+  the installed output path. Otherwise uses `Plushie.Binary.path!/0`.
+
+  Raises if `--release` is passed without `--build`, since `--release`
+  only controls the build profile and has no effect on binary resolution.
   """
   @spec resolve_binary!(opts :: keyword()) :: String.t()
   def resolve_binary!(opts) do
+    if opts[:release] and not opts[:build] do
+      Mix.raise("--release requires --build (it controls the build profile)")
+    end
+
     if opts[:build] do
       build_args = if opts[:release], do: ["--release"], else: []
       Mix.Task.run("plushie.build", build_args)
-      built_binary_path(opts[:release] || false)
+      resolve_bin_file(opts)
     else
       Plushie.Binary.path!()
     end

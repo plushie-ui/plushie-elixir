@@ -32,25 +32,26 @@ defmodule Mix.Tasks.Plushie.Gui do
 
   @shortdoc "Start a Plushie GUI application"
 
+  @switches [
+    build: :boolean,
+    release: :boolean,
+    json: :boolean,
+    watch: :boolean,
+    debounce: :integer,
+    daemon: :boolean
+  ]
+
   @impl Mix.Task
   def run(args) do
-    {opts, args, _} =
-      OptionParser.parse(args,
-        strict: [
-          build: :boolean,
-          release: :boolean,
-          json: :boolean,
-          watch: :boolean,
-          debounce: :integer,
-          daemon: :boolean
-        ]
-      )
+    {opts, args} = OptionParser.parse!(args, strict: @switches)
 
     app_module =
       case args do
         [mod_str | _] -> Module.concat([mod_str])
         [] -> Mix.raise("Usage: mix plushie.gui ModuleName")
       end
+
+    validate_module!(app_module)
 
     watch? = resolve_watch_flag(opts)
 
@@ -85,6 +86,16 @@ defmodule Mix.Tasks.Plushie.Gui do
 
       {:error, reason} ->
         Mix.raise("Failed to start Plushie: #{inspect(reason)}")
+    end
+  end
+
+  defp validate_module!(mod) do
+    unless Code.ensure_loaded?(mod) do
+      Mix.raise("""
+      Module #{inspect(mod)} could not be loaded.
+
+      Make sure the module name is correct and the project compiles.
+      """)
     end
   end
 

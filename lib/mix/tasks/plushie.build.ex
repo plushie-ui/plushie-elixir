@@ -4,14 +4,19 @@ defmodule Mix.Tasks.Plushie.Build do
   @moduledoc """
   Build the plushie binary and/or WASM renderer from source.
 
-  Without extensions configured, builds the stock plushie binary from the Rust
-  source checkout. With extensions, generates a custom Cargo workspace that
-  registers each extension crate and builds a combined binary.
+  Generates a Cargo workspace and builds it. When a local source checkout
+  is available (`PLUSHIE_SOURCE_PATH`), dependencies use local paths for
+  development. Otherwise, dependencies are pulled from crates.io using
+  the `:binary_version` from mix.exs.
+
+  With extensions configured, the workspace includes each extension crate
+  and the generated `main.rs` registers them at startup.
 
   ## Prerequisites
 
   - **Rust toolchain** #{elem(@min_rust_version, 0)}.#{elem(@min_rust_version, 1)}+ (install via https://rustup.rs)
-  - **Plushie Rust source** -- set `PLUSHIE_SOURCE_PATH` or `config :plushie, :source_path`
+  - **Plushie Rust source** (optional) -- set `PLUSHIE_SOURCE_PATH` or
+    `config :plushie, :source_path` to use local sources instead of crates.io
   - **wasm-pack** (for `--wasm` only) -- install via https://rustwasm.github.io/wasm-pack/
 
   ## Usage
@@ -57,6 +62,9 @@ defmodule Mix.Tasks.Plushie.Build do
 
   use Mix.Task
 
+  @binary_version Mix.Project.config()[:binary_version] ||
+                    raise("missing :binary_version in project config (mix.exs)")
+
   @impl true
   def run(args) do
     {opts, _rest} =
@@ -81,6 +89,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
   defp build_bin(release?, verbose?, opts) do
     check_rust_toolchain()
+    check_cargo()
 
     # Ensure the project is compiled so extension modules are available
     Mix.Task.run("compile", [])
@@ -98,13 +107,12 @@ defmodule Mix.Tasks.Plushie.Build do
       Mix.shell().info("Skipping non-native extension(s): #{names}")
     end
 
-    if native == [] do
-      build_stock(release?, verbose?, opts)
-    else
+    if native != [] do
       check_collisions!(native)
       check_crate_name_collisions!(native)
-      build_with_extensions(native, release?, verbose?, opts)
     end
+
+    build_workspace(native, release?, verbose?, opts)
   end
 
   defp build_wasm(release?, verbose?, opts) do
@@ -212,60 +220,21 @@ defmodule Mix.Tasks.Plushie.Build do
       Mix.raise("rustc not found. Install Rust #{min_str}+ via https://rustup.rs")
   end
 
-  defp build_stock(release?, verbose?, opts) do
-    source_dir = Mix.PlushieHelpers.source_path!()
-
-    unless File.dir?(source_dir) do
+  defp check_cargo do
+    unless System.find_executable("cargo") do
       Mix.raise("""
-      plushie source not found at #{source_dir}.
+      cargo not found.
 
-      Check that PLUSHIE_SOURCE_PATH or config :plushie, :source_path
-      points to a valid checkout of the plushie repo.
+      Install the Rust toolchain via https://rustup.rs which includes cargo.
       """)
     end
-
-    release? = release? or Mix.env() == :prod
-
-    cmd_args = ["build", "-p", "plushie-renderer"]
-    cmd_args = if release?, do: cmd_args ++ ["--release"], else: cmd_args
-
-    Mix.shell().info("Building plushie#{if release?, do: " (release)", else: ""}...")
-
-    case System.cmd("cargo", cmd_args, stderr_to_stdout: true, cd: source_dir) do
-      {output, 0} ->
-        Mix.shell().info("Build succeeded.")
-        if verbose?, do: Mix.shell().info(output)
-        install_binary(source_dir, release?, opts)
-
-      {output, status} ->
-        Mix.shell().error("Build failed (exit code #{status}):")
-        Mix.shell().error(output)
-        Mix.raise("cargo build failed")
-    end
-  end
-
-  # Copy the built binary into _build/plushie/bin/ so the resolution chain
-  # finds it without needing PLUSHIE_BINARY_PATH or PLUSHIE_SOURCE_PATH.
-  defp install_binary(source_dir, release?, opts) do
-    profile = if release?, do: "release", else: "debug"
-    src = Path.join([source_dir, "target", profile, "plushie-renderer"])
-
-    unless File.exists?(src) do
-      Mix.raise("Build succeeded but binary not found at #{src}")
-    end
-
-    install_bin_to(src, opts)
-  end
-
-  defp install_extension_binary(src, opts) do
-    unless File.exists?(src) do
-      Mix.raise("Build succeeded but binary not found at #{src}")
-    end
-
-    install_bin_to(src, opts)
   end
 
   defp install_bin_to(src, opts) do
+    unless File.exists?(src) do
+      Mix.raise("Build succeeded but binary not found at #{src}")
+    end
+
     dest = Mix.PlushieHelpers.resolve_bin_file(opts)
     File.mkdir_p!(Path.dirname(dest))
     File.cp!(src, dest)
@@ -403,23 +372,36 @@ defmodule Mix.Tasks.Plushie.Build do
     :ok
   end
 
-  # -- Extension build --------------------------------------------------------
+  # -- Workspace build --------------------------------------------------------
 
-  defp build_with_extensions(extensions, release?, verbose?, opts) do
+  defp build_workspace(native_extensions, release?, verbose?, opts) do
     build_dir = Path.join(Mix.Project.build_path(), "plushie-renderer")
     File.mkdir_p!(build_dir)
 
-    bin_name = Plushie.Binary.build_name()
-    crate_paths = resolve_crate_paths(extensions)
-    check_extension_versions!(crate_paths)
-    generate_workspace(build_dir, bin_name, extensions, crate_paths)
+    bin_name =
+      if native_extensions == [],
+        do: "plushie-renderer",
+        else: Plushie.Binary.build_name()
 
-    ext_names = Enum.map_join(extensions, ", ", &inspect/1)
+    crate_paths = resolve_crate_paths(native_extensions)
 
-    Mix.shell().info(
-      "Generated custom build workspace at #{build_dir} " <>
-        "with #{length(extensions)} extension(s): #{ext_names}"
-    )
+    if crate_paths != %{} do
+      check_extension_versions!(crate_paths)
+    end
+
+    generate_workspace(build_dir, bin_name, native_extensions, crate_paths)
+
+    source_info =
+      if Mix.PlushieHelpers.source_path(),
+        do: "local source",
+        else: "crates.io v#{@binary_version}"
+
+    if native_extensions != [] do
+      ext_names = Enum.map_join(native_extensions, ", ", &inspect/1)
+      Mix.shell().info("Extensions: #{ext_names}")
+    end
+
+    Mix.shell().info("Source: #{source_info}")
 
     release? = release? or Mix.env() == :prod
     release_flags = if release?, do: ["--release"], else: []
@@ -435,14 +417,12 @@ defmodule Mix.Tasks.Plushie.Build do
         Mix.shell().info("Build succeeded.")
         if verbose?, do: Mix.shell().info(output)
         binary = Path.join([build_dir, "target", profile, bin_name])
-        Mix.shell().info("Binary: #{binary}")
-        install_extension_binary(binary, opts)
-        :ok
+        install_bin_to(binary, opts)
 
       {output, status} ->
         Mix.shell().error("Build failed (exit code #{status}):")
         Mix.shell().error(output)
-        Mix.raise("cargo build failed for custom build workspace")
+        Mix.raise("cargo build failed")
     end
   end
 
@@ -483,9 +463,6 @@ defmodule Mix.Tasks.Plushie.Build do
     main_rs = generate_main_rs(extensions)
     File.write!(Path.join(src_dir, "main.rs"), main_rs)
   end
-
-  @binary_version Mix.Project.config()[:binary_version] ||
-                    raise("missing :binary_version in project config (mix.exs)")
 
   # ---------------------------------------------------------------------------
   # Extension version compatibility check
@@ -620,12 +597,17 @@ defmodule Mix.Tasks.Plushie.Build do
       end
 
     ext_deps =
-      Enum.map_join(extensions, "\n", fn mod ->
-        path = crate_paths[mod]
-        rel_path = Path.relative_to(path, build_dir)
-        crate_name = Path.basename(path)
-        "#{crate_name} = { path = \"#{rel_path}\" }"
-      end)
+      if extensions == [] do
+        ""
+      else
+        "\n" <>
+          Enum.map_join(extensions, "\n", fn mod ->
+            path = crate_paths[mod]
+            rel_path = Path.relative_to(path, build_dir)
+            crate_name = Path.basename(path)
+            "#{crate_name} = { path = \"#{rel_path}\" }"
+          end)
+      end
 
     # When using local source paths, add [patch.crates-io] so extension
     # crates that depend on plushie-ext from crates.io get redirected to
@@ -685,12 +667,19 @@ defmodule Mix.Tasks.Plushie.Build do
   end
 
   defp generate_main_rs(extensions) do
-    ext_registrations =
-      Enum.map_join(extensions, "\n        ", fn mod ->
-        constructor = mod.rust_constructor()
-        validate_rust_constructor!(mod, constructor)
-        ".extension(#{constructor})"
-      end)
+    builder_expr =
+      if extensions == [] do
+        "PlushieAppBuilder::new()"
+      else
+        registrations =
+          Enum.map_join(extensions, "\n        ", fn mod ->
+            constructor = mod.rust_constructor()
+            validate_rust_constructor!(mod, constructor)
+            ".extension(#{constructor})"
+          end)
+
+        "PlushieAppBuilder::new()\n        #{registrations}"
+      end
 
     """
     // Auto-generated by mix plushie.build
@@ -699,8 +688,7 @@ defmodule Mix.Tasks.Plushie.Build do
     use plushie_ext::app::PlushieAppBuilder;
 
     fn main() -> plushie_ext::iced::Result {
-        let builder = PlushieAppBuilder::new()
-                #{ext_registrations};
+        let builder = #{builder_expr};
         plushie_renderer::run(builder)
     }
     """

@@ -48,10 +48,11 @@ defmodule Mix.Tasks.Plushie.Connect do
 
   use Mix.Task
 
+  @switches [token: :string, json: :boolean, daemon: :boolean]
+
   @impl Mix.Task
   def run(args) do
-    {opts, argv, _} =
-      OptionParser.parse(args, strict: [token: :string, json: :boolean, daemon: :boolean])
+    {opts, argv} = OptionParser.parse!(args, strict: @switches)
 
     {app_module, socket_addr} =
       case argv do
@@ -59,6 +60,8 @@ defmodule Mix.Tasks.Plushie.Connect do
         [module_str] -> {Module.concat([module_str]), nil}
         [] -> Mix.raise("Usage: mix plushie.connect MyModule [socket_path_or_addr]")
       end
+
+    validate_module!(app_module)
 
     format = if opts[:json], do: :json, else: :msgpack
     daemon = Keyword.get(opts, :daemon, false)
@@ -75,7 +78,19 @@ defmodule Mix.Tasks.Plushie.Connect do
     token = resolve_token(opts[:token])
 
     # Connect to the renderer's socket via the iostream adapter.
-    {:ok, adapter} = Plushie.SocketAdapter.start_link(socket, format)
+    adapter =
+      case Plushie.SocketAdapter.start_link(socket, format) do
+        {:ok, pid} ->
+          pid
+
+        {:error, reason} ->
+          Mix.raise("""
+          Could not connect to renderer at #{socket}: #{inspect(reason)}
+
+          Make sure the renderer is running with --listen and the socket
+          path is correct. You can also set PLUSHIE_SOCKET in the environment.
+          """)
+      end
 
     case Plushie.start_link(app_module,
            transport: {:iostream, adapter},
@@ -92,6 +107,16 @@ defmodule Mix.Tasks.Plushie.Connect do
 
       {:error, reason} ->
         Mix.raise("Failed to start plushie: #{inspect(reason)}")
+    end
+  end
+
+  defp validate_module!(mod) do
+    unless Code.ensure_loaded?(mod) do
+      Mix.raise("""
+      Module #{inspect(mod)} could not be loaded.
+
+      Make sure the module name is correct and the project compiles.
+      """)
     end
   end
 

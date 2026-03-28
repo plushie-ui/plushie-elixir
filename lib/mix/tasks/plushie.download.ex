@@ -50,11 +50,39 @@ defmodule Mix.Tasks.Plushie.Download do
 
     {opts, _rest} = OptionParser.parse!(args, strict: @switches)
 
+    check_native_extensions!()
+
     force? = opts[:force] || false
     {want_bin?, want_wasm?} = Mix.PlushieHelpers.resolve_artifacts(opts)
 
     if want_bin?, do: download_bin(opts, force?)
     if want_wasm?, do: download_wasm(opts, force?)
+  end
+
+  # Refuse to download a precompiled binary when native extensions are
+  # configured -- the stock binary won't have them registered.
+  defp check_native_extensions! do
+    Mix.Task.run("compile", [])
+
+    extensions = Application.get_env(:plushie, :extensions, [])
+
+    native =
+      Enum.filter(extensions, fn mod ->
+        Code.ensure_loaded?(mod) and function_exported?(mod, :native_crate, 0)
+      end)
+
+    if native != [] do
+      names = Enum.map_join(native, ", ", &inspect/1)
+
+      Mix.raise("""
+      Cannot download a precompiled binary when native extensions are configured.
+
+      Native extensions: #{names}
+
+      These require a custom build that includes the extension crates.
+      Use `mix plushie.build` instead.
+      """)
+    end
   end
 
   # -- Native binary ----------------------------------------------------------
@@ -117,8 +145,8 @@ defmodule Mix.Tasks.Plushie.Download do
     extract_dir = Mix.PlushieHelpers.resolve_wasm_dir(opts)
     tarball_path = Path.join(extract_dir, @wasm_archive)
 
-    js_path = Path.join(extract_dir, "plushie_wasm.js")
-    wasm_path = Path.join(extract_dir, "plushie_wasm_bg.wasm")
+    js_path = Path.join(extract_dir, "plushie_renderer_wasm.js")
+    wasm_path = Path.join(extract_dir, "plushie_renderer_wasm_bg.wasm")
 
     if File.exists?(js_path) and File.exists?(wasm_path) and not force? do
       Mix.shell().info("WASM files already exist in #{extract_dir}. Use --force to re-download.")
@@ -211,19 +239,23 @@ defmodule Mix.Tasks.Plushie.Download do
   end
 
   defp ssl_opts do
-    if Code.ensure_loaded?(:public_key) and
-         function_exported?(:public_key, :cacerts_get, 0) do
-      [
-        verify: :verify_peer,
-        cacerts: apply(:public_key, :cacerts_get, []),
-        depth: 3,
-        customize_hostname_check: [
-          match_fun: apply(:public_key, :pkix_verify_hostname_match_fun, [:https])
-        ]
-      ]
-    else
-      [verify: :verify_none]
+    unless Code.ensure_loaded?(:public_key) and
+             function_exported?(:public_key, :cacerts_get, 0) do
+      Mix.raise("""
+      TLS certificate verification requires :public_key with cacerts_get/0.
+
+      This is available on OTP 25+. Check your Erlang/OTP installation.
+      """)
     end
+
+    [
+      verify: :verify_peer,
+      cacerts: apply(:public_key, :cacerts_get, []),
+      depth: 3,
+      customize_hostname_check: [
+        match_fun: apply(:public_key, :pkix_verify_hostname_match_fun, [:https])
+      ]
+    ]
   end
 
   defp verify_checksum!(file_path, checksum_url) do
