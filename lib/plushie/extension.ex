@@ -43,7 +43,7 @@ defmodule Plushie.Extension do
   - `type_names/0` -- returns `[:gauge]` (from the `widget` declaration)
   - `native_crate/0` -- returns the `rust_crate` path (native_widget only)
   - `rust_constructor/0` -- returns the Rust expression (native_widget only)
-  - `new/2` -- creates a `%Module{}` struct (or a node map for composites)
+  - `new/2` -- creates a `%Module{}` struct ()
   - Setter functions per prop for pipeline composition
   - `with_options/2` -- applies keyword options via setters
   - `build/1` -- converts the struct to a `ui_node()` map
@@ -77,33 +77,32 @@ defmodule Plushie.Extension do
       defmodule MyApp.LabeledInput do
         use Plushie.Extension, :widget
 
-        widget :labeled_input, container: true
+        widget :labeled_input
 
         prop :label, :string
 
-        def render(id, props, children) do
+        def render(id, props) do
           import Plushie.UI
           column id: id do
             text(props.label)
-            Enum.map(children, & &1)
           end
         end
       end
 
   ### render/2 vs render/3
 
-  Use `render/2` for leaf composites that do not accept children:
+  Use `render/2` for simple widgets:
 
       def render(id, props) do
         %{id: id, type: "text", props: %{content: props.label}, children: []}
       end
 
-  Use `render/3` for container composites that accept children. When
-  `container: true` is set on the `widget` declaration, you must define
-  `render/3` (not `render/2`):
+  Use `render/3` when the widget has state (declared via `state`).
+  The third argument is the widget's internal state map:
 
-      def render(id, props, children) do
-        %{id: id, type: "column", props: %{}, children: children}
+      def render(id, props, state) do
+        fill = if state.hover, do: "#ff0", else: "#ccc"
+        ...
       end
 
   ## Special options
@@ -289,7 +288,7 @@ defmodule Plushie.Extension do
   They persist across renders and are passed to `render/3` and
   `handle_event/2`. Declaring state fields makes the widget
   stateful: rendering is deferred to tree normalization and the
-  `CanvasWidget` behaviour is injected automatically.
+  `WidgetHandler` behaviour is injected automatically.
 
       state hover: nil, drag: :none, animation_progress: 0.0
   """
@@ -355,32 +354,15 @@ defmodule Plushie.Extension do
     warn_duplicate_events(env, events)
     validate_reserved_names!(env, props)
 
-    # Detect stateful widget: has state fields, handle_event/2, or subscribe/2.
-    # Any of these signals that the widget needs deferred rendering, internal
-    # state persistence, and/or event dispatch participation.
-    is_stateful =
-      case kind do
-        :widget ->
-          state_fields = Module.get_attribute(env.module, :_extension_state_fields) || []
-
-          state_fields != [] or
-            Module.defines?(env.module, {:handle_event, 2}) or
-            Module.defines?(env.module, {:subscribe, 2})
-
-        _ ->
-          false
-      end
-
-    if is_stateful do
-      validate_canvas_widget!(env)
-    else
-      validate_render_arity!(env, container)
-    end
-
     rust_crate_val = Module.get_attribute(env.module, :_rust_crate)
     rust_constructor_val = Module.get_attribute(env.module, :_rust_constructor)
     has_render_3 = Module.defines?(env.module, {:render, 3})
-    is_composite = Module.defines?(env.module, {:render, 2}) or has_render_3
+    has_render = Module.defines?(env.module, {:render, 2}) or has_render_3
+
+    if has_render do
+      validate_widget_callbacks!(env)
+    end
+
     type_string = Atom.to_string(widget_type)
 
     behaviour_fns =
@@ -394,14 +376,16 @@ defmodule Plushie.Extension do
       )
 
     widget_code =
-      if is_stateful do
+      if has_render do
+        # All widgets with render go through the unified path:
+        # struct + placeholder to_node + deferred rendering.
         state_fields =
           (Module.get_attribute(env.module, :_extension_state_fields) || [])
           |> Enum.reverse()
 
         prop_validation = generate_prop_validation(props)
 
-        generate_canvas_widget_new(
+        generate_widget_new(
           env.module,
           widget_type,
           type_string,
@@ -412,40 +396,25 @@ defmodule Plushie.Extension do
           prop_validation
         )
       else
-        if is_composite do
-          prop_validation = generate_prop_validation(props)
-          has_handle_event = Module.defines?(env.module, {:handle_event, 2})
-
-          generate_composite_new(%{
-            module: env.module,
-            widget_type: widget_type,
-            container: container,
-            props: props,
-            events: events,
-            event_specs: event_specs,
-            prop_extract: prop_validation,
-            has_render_3: has_render_3,
-            has_handle_event: has_handle_event
-          })
-        else
-          generate_struct_widget(
-            env.module,
-            widget_type,
-            type_string,
-            container,
-            props,
-            events,
-            event_specs
-          )
-        end
+        # Struct-only widgets (native_widget, no render callback).
+        generate_struct_widget(
+          env.module,
+          widget_type,
+          type_string,
+          container,
+          props,
+          events,
+          event_specs
+        )
       end
 
-    # Inject @behaviour CanvasWidget for stateful widgets (detected by state fields).
-    # This must happen in __before_compile__ since state fields aren't known at __using__ time.
-    canvas_widget_behaviour =
-      if is_stateful do
+    # Inject @behaviour WidgetHandler for stateful widgets (detected by state fields).
+    # Inject WidgetHandler behaviour for all widgets with render callbacks.
+    # This must happen in __before_compile__ since we detect render at this point.
+    widget_handler_behaviour =
+      if has_render do
         quote do
-          @behaviour Plushie.Extension.CanvasWidget
+          @behaviour Plushie.Extension.WidgetHandler
         end
       end
 
@@ -454,7 +423,7 @@ defmodule Plushie.Extension do
     dsl_macro = generate_dsl_macro(widget_type, props)
 
     quote do
-      unquote(canvas_widget_behaviour)
+      unquote(widget_handler_behaviour)
       unquote(behaviour_fns)
       unquote(widget_code)
       unquote(command_fns)
@@ -740,35 +709,19 @@ defmodule Plushie.Extension do
     end
   end
 
-  defp validate_render_arity!(env, container) do
+  defp validate_widget_callbacks!(env) do
     has_render_2 = Module.defines?(env.module, {:render, 2})
     has_render_3 = Module.defines?(env.module, {:render, 3})
 
-    if container and has_render_2 and not has_render_3 do
+    unless has_render_2 or has_render_3 do
       raise CompileError,
         file: env.file,
         line: 0,
-        description:
-          "#{inspect(env.module)} declares container: true but defines render/2 instead of render/3. Container widgets must accept children via render/3."
+        description: "#{inspect(env.module)} must define render/2 or render/3."
     end
   end
 
-  defp validate_canvas_widget!(env) do
-    unless Module.defines?(env.module, {:render, 3}) do
-      raise CompileError,
-        file: env.file,
-        line: 0,
-        description:
-          "#{inspect(env.module)} declares state fields but does not define render/3. " <>
-            "Stateful widgets must define render(id, props, state)."
-    end
-
-    # handle_event/2 is optional. If not defined, a default passthrough
-    # is generated. Read-only widgets (gauges, charts, etc.) don't
-    # need event transformation.
-  end
-
-  defp generate_canvas_widget_new(
+  defp generate_widget_new(
          module,
          widget_type,
          _type_string,
@@ -790,6 +743,8 @@ defmodule Plushie.Extension do
     state_defaults = Macro.escape(Map.new(state_fields))
 
     has_handle_event = Module.defines?(module, {:handle_event, 2})
+    has_render_3 = Module.defines?(module, {:render, 3})
+    has_render_2 = Module.defines?(module, {:render, 2})
 
     default_handle_event =
       unless has_handle_event do
@@ -799,14 +754,26 @@ defmodule Plushie.Extension do
         end
       end
 
+    # Composites with render/2 need a render/3 wrapper so the unified
+    # normalization path can call render(id, props, state) uniformly.
+    render_adapter =
+      if has_render_2 and not has_render_3 do
+        quote do
+          @doc false
+          def render(id, props, _state), do: render(id, props)
+        end
+      end
+
     quote do
-      @doc "Returns the initial internal state for this canvas widget."
+      unquote(render_adapter)
+
+      @doc "Returns the initial internal state for this widget."
       @spec __initial_state__() :: map()
       def __initial_state__, do: unquote(state_defaults)
 
-      @doc "Returns true for stateful widget extension modules."
-      @spec __canvas_widget__?() :: true
-      def __canvas_widget__?, do: true
+      @doc "Returns true for widget extension modules with render callbacks."
+      @spec __widget__?() :: true
+      def __widget__?, do: true
 
       unquote(default_handle_event)
 
@@ -814,7 +781,7 @@ defmodule Plushie.Extension do
 
       defimpl Plushie.Widget do
         @doc """
-        Converts the canvas_widget struct to a placeholder node.
+        Converts the stateful widget struct to a placeholder node.
 
         The placeholder carries the module and props as metadata tags.
         During tree normalization, the runtime detects these tags and
@@ -831,10 +798,10 @@ defmodule Plushie.Extension do
 
           %{
             id: widget.id,
-            type: "canvas_widget",
+            type: "widget_placeholder",
             props: %{
-              __canvas_widget__: unquote(module),
-              __canvas_widget_props__: props,
+              __widget__: unquote(module),
+              __widget_props__: props,
               __extension_widget_type__: unquote(widget_type),
               __extension_widget_events__: unquote(events),
               __extension_widget_event_specs__: unquote(Macro.escape(event_specs))
@@ -996,148 +963,9 @@ defmodule Plushie.Extension do
     end
   end
 
-  defp generate_composite_new(config) do
-    %{
-      module: module,
-      widget_type: widget_type,
-      container: container,
-      props: props,
-      events: events,
-      event_specs: event_specs,
-      prop_extract: prop_extract,
-      has_render_3: has_render_3,
-      has_handle_event: has_handle_event
-    } = config
-
-    prop_struct_fields =
-      for {name, _type, opts} <- props do
-        {name, Keyword.get(opts, :default)}
-      end
-
-    has_events = events != [] or has_handle_event
-    is_container = container or has_render_3
-
-    handler_code =
-      generate_composite_handler_code(
-        module,
-        widget_type,
-        events,
-        event_specs,
-        has_events,
-        has_handle_event
-      )
-
-    new_fn = generate_composite_new_fn(prop_struct_fields, prop_extract, is_container, has_events)
-
-    quote do
-      unquote(handler_code)
-      unquote(new_fn)
-    end
-  end
-
-  defp generate_composite_handler_code(
-         _module,
-         _widget_type,
-         _events,
-         _event_specs,
-         false,
-         _has_handle_event
-       ),
-       do: nil
-
-  defp generate_composite_handler_code(
-         module,
-         widget_type,
-         events,
-         event_specs,
-         true,
-         has_handle_event
-       ) do
-    default_handle_event =
-      unless has_handle_event do
-        quote do
-          @doc "Default event handler -- all events consumed (opaque widget)."
-          def handle_event(_event, _state), do: :consumed
-        end
-      end
-
-    quote do
-      unquote(default_handle_event)
-
-      @doc false
-      defp __inject_handler_meta__(node) do
-        meta = Map.get(node, :meta, %{})
-
-        meta =
-          meta
-          |> Map.put(:__widget_event_handler__, unquote(module))
-          |> Map.put(:__extension_widget_type__, unquote(widget_type))
-          |> Map.put(:__extension_widget_events__, unquote(events))
-          |> Map.put(:__extension_widget_event_specs__, unquote(Macro.escape(event_specs)))
-
-        Map.put(node, :meta, meta)
-      end
-    end
-  end
-
-  defp generate_composite_new_fn(prop_struct_fields, prop_extract, is_container, has_events) do
-    render_call =
-      if is_container do
-        quote do
-          {children, opts} = Keyword.pop(opts, :do, [])
-          children = List.wrap(children)
-        end
-      end
-
-    render_invoke =
-      if is_container do
-        quote(do: render(id, props_map, children))
-      else
-        quote(do: render(id, props_map))
-      end
-
-    wrap_result =
-      if has_events do
-        quote(do: __inject_handler_meta__(result))
-      else
-        quote(do: result)
-      end
-
-    quote do
-      @spec new(id :: String.t(), opts :: keyword()) :: Plushie.Widget.ui_node()
-      def new(id, opts \\ []) when is_binary(id) do
-        unquote(render_call)
-        {event_rate_val, opts} = Keyword.pop(opts, :event_rate)
-        {a11y_val, opts} = Keyword.pop(opts, :a11y)
-
-        prop_defaults = unquote(Macro.escape(prop_struct_fields))
-        unquote(prop_extract)
-
-        props_map =
-          prop_defaults
-          |> Enum.map(fn {name, default} ->
-            {name, Keyword.get(opts, name, default)}
-          end)
-          |> Enum.reject(fn {_name, val} -> is_nil(val) end)
-          |> Map.new()
-
-        props_map =
-          if event_rate_val,
-            do: Map.put(props_map, :event_rate, event_rate_val),
-            else: props_map
-
-        props_map =
-          if a11y_val, do: Map.put(props_map, :a11y, a11y_val), else: props_map
-
-        result = unquote(render_invoke)
-        unquote(wrap_result)
-      end
-    end
-  end
-
   # -- Struct-based widget generation -----------------------------------------
   #
-  # For non-composite widgets (no render/2 or render/3), we generate:
+  # For struct-only widgets (native_widget) (no render/2 or render/3), we generate:
   # - defstruct with all props + :id + :event_rate + :a11y
   # - @type t with proper field types
   # - @type option union of keyword tuples

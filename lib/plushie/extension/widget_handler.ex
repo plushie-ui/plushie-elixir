@@ -1,4 +1,4 @@
-defmodule Plushie.Extension.CanvasWidget do
+defmodule Plushie.Extension.WidgetHandler do
   @moduledoc """
   Runtime support for stateful widget extensions.
 
@@ -18,14 +18,14 @@ defmodule Plushie.Extension.CanvasWidget do
      initial defaults for new widgets)
   4. The rendered output is normalized in place -- no post-processing
 
-  The tree carries widget state in `:meta` (`__canvas_widget_state__`),
+  The tree carries widget state in `:meta` (`__widget_state__`),
   making it the single source of truth. The runtime derives a registry
   from the tree after each render for O(1) event dispatch lookups.
 
   ## Event dispatch (captured/ignored model)
 
   `invoke_handler/4` is called by the runtime when an event arrives
-  for a widget inside a canvas_widget's scope. It calls the module's
+  for a widget inside a widget's scope. It calls the module's
   `handle_event/2` and interprets the return value using iced's
   captured/ignored model:
 
@@ -36,12 +36,12 @@ defmodule Plushie.Extension.CanvasWidget do
   - `:ignored` -- not captured, continue to next handler in scope chain
 
   Events are dispatched through the scope chain (innermost to outermost).
-  `:ignored` continues to the next canvas_widget in the chain. Captured
+  `:ignored` continues to the next widget handler in the chain. Captured
   events stop propagation (or, for `:emit`, replace the event and
   continue). If no handler captures, the event reaches `app.update/2`.
   """
 
-  @widget_states_key :__plushie_canvas_widget_states__
+  @widget_states_key :__plushie_widget_states__
 
   @doc "Process dictionary key used to pass canvas widget states during normalization."
   @spec widget_states_key() :: atom()
@@ -67,7 +67,7 @@ defmodule Plushie.Extension.CanvasWidget do
   @optional_callbacks [subscribe: 2]
 
   @doc """
-  Invokes a canvas_widget's handle_event/2 and interprets the result.
+  Invokes a widget's handle_event/2 and interprets the result.
 
   Returns `{action, new_state}` where action is one of:
   - `{:emit, %WidgetEvent{}}` -- captured with transformed event
@@ -163,7 +163,7 @@ defmodule Plushie.Extension.CanvasWidget do
   # (canvas_press, canvas_move, etc.) the event's id IS the canvas
   # widget id and scope is the parent scope -- pass through as-is.
   # For other widget events (click on a child element inside a
-  # canvas_widget), the canvas widget's ID is the first scope element
+  # stateful widget), the canvas widget's ID is the first scope element
   # and the remaining scope becomes the parent scope. For non-widget
   # events (Timer, etc.) that lack scope, fall back to splitting the
   # explicit widget_id.

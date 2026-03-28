@@ -1,17 +1,17 @@
-defmodule Plushie.Runtime.CanvasWidgets do
+defmodule Plushie.Runtime.WidgetHandlers do
   @moduledoc """
-  Runtime support for canvas_widget event dispatch and state management.
+  Runtime support for widget handler event dispatch and state management.
 
-  Maintains a registry of active canvas_widgets (keyed by window ID and
+  Maintains a registry of active widget_handlers (keyed by window ID and
   scoped ID)
   derived from the normalized tree. Routes events through the scope
-  chain of canvas_widget handlers, following iced's captured/ignored
+  chain of widget handlers, following iced's captured/ignored
   model.
 
   ## Event dispatch
 
   When an event arrives with a scope that contains one or more
-  registered canvas_widgets, the runtime builds a handler chain
+  registered widget_handlers, the runtime builds a handler chain
   (innermost to outermost) and walks it:
 
   - `:ignored` -- handler didn't capture; continue to next handler
@@ -31,10 +31,10 @@ defmodule Plushie.Runtime.CanvasWidgets do
 
   require Logger
 
-  alias Plushie.Extension.CanvasWidget
+  alias Plushie.Extension.WidgetHandler
 
   @doc """
-  Collects subscription specs from all registered canvas_widgets.
+  Collects subscription specs from all registered widget_handlers.
 
   Each widget's `subscribe/2` callback (if defined) is called with
   props and state from the registry. The returned specs are namespaced
@@ -60,18 +60,18 @@ defmodule Plushie.Runtime.CanvasWidgets do
   end
 
   @doc """
-  Checks if a timer event is for a canvas_widget subscription.
+  Checks if a timer event is for a widget handler subscription.
   If so, routes it through the widget's handle_event and returns
   the result. Timer-triggered emits are dispatched through the
-  scope chain of parent canvas_widgets.
+  scope chain of parent widget_handlers.
 
   Returns:
-  - `{:handled, event_or_nil, new_registry}` -- timer was for a canvas_widget
-  - `:not_routed` -- not a canvas_widget timer
+  - `{:handled, event_or_nil, new_registry}` -- timer was for a widget handler
+  - `:not_routed` -- not a widget handler timer
   """
   @spec maybe_handle_timer(registry :: %{widget_key() => map()}, tag :: term()) ::
           {:handled, struct() | nil, map()} | :not_routed
-  def maybe_handle_timer(registry, {:__canvas_widget__, window_id, widget_id, inner_tag}) do
+  def maybe_handle_timer(registry, {:__widget__, window_id, widget_id, inner_tag}) do
     case Map.get(registry, {window_id, widget_id}) do
       %{module: module, state: widget_state} = entry ->
         timer_event = %Plushie.Event.Timer{
@@ -80,7 +80,7 @@ defmodule Plushie.Runtime.CanvasWidgets do
         }
 
         {action, new_state} =
-          CanvasWidget.invoke_handler(
+          WidgetHandler.invoke_handler(
             module,
             timer_event,
             widget_state,
@@ -93,7 +93,7 @@ defmodule Plushie.Runtime.CanvasWidgets do
         case action do
           {:emit, transformed} ->
             # Dispatch the emitted event through the scope chain
-            # so parent canvas_widgets can intercept it.
+            # so parent widget_handlers can intercept it.
             {result_event, final_registry} = dispatch_event(new_registry, transformed)
             {:handled, result_event, final_registry}
 
@@ -113,15 +113,15 @@ defmodule Plushie.Runtime.CanvasWidgets do
 
   defp namespace_subscription(spec, window_id, widget_id) do
     Plushie.Subscription.map_tag(spec, fn tag ->
-      {:__canvas_widget__, window_id, widget_id, tag}
+      {:__widget__, window_id, widget_id, tag}
     end)
   end
 
   @doc """
-  Derives the canvas_widget registry from the normalized tree.
+  Derives the widget handler registry from the normalized tree.
 
   The tree carries widget metadata (module, state, props) in each
-  canvas_widget node's `:meta` field. This function extracts that
+  stateful widget node's `:meta` field. This function extracts that
   metadata into a flat map keyed by scoped ID for O(1) event
   dispatch lookups.
 
@@ -146,23 +146,13 @@ defmodule Plushie.Runtime.CanvasWidgets do
 
     acc =
       case meta do
-        %{__canvas_widget__: module, __canvas_widget_state__: state} when is_atom(module) ->
-          props = Map.get(meta, :__canvas_widget_props__, %{})
+        %{__widget__: module, __widget_state__: state} when is_atom(module) ->
+          props = Map.get(meta, :__widget_props__, %{})
 
           Map.put(acc, {window_id, id}, %{
             module: module,
             state: state,
             props: props,
-            window_id: window_id
-          })
-
-        # Composite widgets with event handlers participate in the
-        # dispatch chain but have no internal state.
-        %{__widget_event_handler__: module} when is_atom(module) ->
-          Map.put(acc, {window_id, id}, %{
-            module: module,
-            state: %{},
-            props: %{},
             window_id: window_id
           })
 
@@ -180,9 +170,9 @@ defmodule Plushie.Runtime.CanvasWidgets do
   defp collect_widget_entries(_, _window_id, acc), do: acc
 
   @doc """
-  Dispatches an event through the canvas_widget handler chain.
+  Dispatches an event through the widget handler chain.
 
-  Builds an ordered list of canvas_widget handlers from the event's
+  Builds an ordered list of widget handlers from the event's
   scope (innermost to outermost), then walks the chain:
 
   - `:ignored` -- not captured, continue to next handler
@@ -218,7 +208,7 @@ defmodule Plushie.Runtime.CanvasWidgets do
   def dispatch_event(registry, event), do: {event, registry}
 
   # Build an ordered list of {scoped_id, registry_entry} for all
-  # canvas_widgets in the scope chain, from innermost to outermost.
+  # widget_handlers in the scope chain, from innermost to outermost.
   #
   # For scope ["picker", "form", "page"]:
   #   candidates: "page/form/picker", "page/form", "page"
@@ -268,11 +258,11 @@ defmodule Plushie.Runtime.CanvasWidgets do
        ) do
     {action, new_state} =
       try do
-        CanvasWidget.invoke_handler(module, event, widget_state, scoped_id, widget_window_id)
+        WidgetHandler.invoke_handler(module, event, widget_state, scoped_id, widget_window_id)
       rescue
         error ->
           Logger.warning(
-            "canvas_widget #{inspect(module)} (#{scoped_id}) " <>
+            "widget_handler #{inspect(module)} (#{scoped_id}) " <>
               "raised in handle_event: #{Exception.message(error)}"
           )
 
@@ -300,11 +290,11 @@ defmodule Plushie.Runtime.CanvasWidgets do
   defp walk_chain(registry, event, [{scoped_id, %{module: module, state: widget_state}} | rest]) do
     {action, new_state} =
       try do
-        CanvasWidget.invoke_handler(module, event, widget_state, scoped_id, nil)
+        WidgetHandler.invoke_handler(module, event, widget_state, scoped_id, nil)
       rescue
         error ->
           Logger.warning(
-            "canvas_widget #{inspect(module)} handle_event/2 raised: #{Exception.message(error)}"
+            "widget_handler #{inspect(module)} handle_event/2 raised: #{Exception.message(error)}"
           )
 
           {:ignored, widget_state}

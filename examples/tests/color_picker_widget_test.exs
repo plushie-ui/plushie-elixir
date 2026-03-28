@@ -1,6 +1,6 @@
 defmodule Examples.ColorPickerWidgetTest do
   @moduledoc """
-  Integration tests for the ColorPickerWidget canvas_widget.
+  Integration tests for the ColorPickerWidget stateful widget.
 
   Tests the widget through the real renderer binary using the
   WidgetCase test harness. Keyboard tests work in all backends

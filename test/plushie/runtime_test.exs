@@ -123,9 +123,9 @@ defmodule Plushie.RuntimeTest do
     end
   end
 
-  defmodule TickCanvasWidget do
+  defmodule TickWidget do
     use Plushie.Extension, :widget
-    widget(:tick_canvas_widget)
+    widget(:tick_widget)
 
     @impl true
     def subscribe(_props, _state) do
@@ -161,7 +161,7 @@ defmodule Plushie.RuntimeTest do
       window "main" do
         column do
           button("inc", "+")
-          TickCanvasWidget.new("ticker")
+          TickWidget.new("ticker")
         end
       end
     end
@@ -217,9 +217,9 @@ defmodule Plushie.RuntimeTest do
     end
   end
 
-  defmodule SwitchingCanvasWidget do
+  defmodule SwitchingWidget do
     use Plushie.Extension, :widget
-    widget(:switching_canvas_widget)
+    widget(:switching_widget)
     state(phase: :first)
 
     @impl true
@@ -258,7 +258,7 @@ defmodule Plushie.RuntimeTest do
 
       window "main" do
         column do
-          SwitchingCanvasWidget.new("switcher")
+          SwitchingWidget.new("switcher")
         end
       end
     end
@@ -1346,7 +1346,7 @@ defmodule Plushie.RuntimeTest do
 
       assert Map.has_key?(
                initial_state.subscriptions,
-               {:every, 1_000, {:__canvas_widget__, "main", "ticker", :pulse}}
+               {:every, 1_000, {:__widget__, "main", "ticker", :pulse}}
              )
 
       send(
@@ -1360,7 +1360,7 @@ defmodule Plushie.RuntimeTest do
 
       assert Map.has_key?(
                state.subscriptions,
-               {:every, 1_000, {:__canvas_widget__, "main", "ticker", :pulse}}
+               {:every, 1_000, {:__widget__, "main", "ticker", :pulse}}
              )
     end
 
@@ -1371,7 +1371,7 @@ defmodule Plushie.RuntimeTest do
 
         assert Map.has_key?(
                  :sys.get_state(runtime).subscriptions,
-                 {:every, 1_000, {:__canvas_widget__, "main", "ticker", :pulse}}
+                 {:every, 1_000, {:__widget__, "main", "ticker", :pulse}}
                )
 
         send(runtime, :force_rerender)
@@ -1379,7 +1379,7 @@ defmodule Plushie.RuntimeTest do
 
         assert Map.has_key?(
                  state.subscriptions,
-                 {:every, 1_000, {:__canvas_widget__, "main", "ticker", :pulse}}
+                 {:every, 1_000, {:__widget__, "main", "ticker", :pulse}}
                )
       end)
     end
@@ -1390,25 +1390,25 @@ defmodule Plushie.RuntimeTest do
 
       assert Map.has_key?(
                :sys.get_state(runtime).subscriptions,
-               {:every, 1_000, {:__canvas_widget__, "main", "switcher", :first}}
+               {:every, 1_000, {:__widget__, "main", "switcher", :first}}
              )
 
       send(
         runtime,
-        {:subscription_tick, {:__canvas_widget__, "main", "switcher", :first}, 1_000}
+        {:subscription_tick, {:__widget__, "main", "switcher", :first}, 1_000}
       )
 
       state =
         await_condition(runtime, fn s ->
           Map.has_key?(
             s.subscriptions,
-            {:every, 1_000, {:__canvas_widget__, "main", "switcher", :second}}
+            {:every, 1_000, {:__widget__, "main", "switcher", :second}}
           )
         end)
 
       refute Map.has_key?(
                state.subscriptions,
-               {:every, 1_000, {:__canvas_widget__, "main", "switcher", :first}}
+               {:every, 1_000, {:__widget__, "main", "switcher", :first}}
              )
     end
   end

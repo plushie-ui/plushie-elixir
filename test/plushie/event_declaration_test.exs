@@ -149,7 +149,7 @@ defmodule Plushie.EventDeclarationTest do
   # -- Canvas widget emit routing --------------------------------------------
 
   describe "emit routing with specs" do
-    alias Plushie.Extension.CanvasWidget
+    alias Plushie.Extension.WidgetHandler
 
     test "value-spec event puts data in value field" do
       click = %Plushie.Event.WidgetEvent{
@@ -160,7 +160,7 @@ defmodule Plushie.EventDeclarationTest do
       }
 
       {{:emit, event}, _state} =
-        CanvasWidget.invoke_handler(ValueEventWidget, click, %{}, "widget", "main")
+        WidgetHandler.invoke_handler(ValueEventWidget, click, %{}, "widget", "main")
 
       assert event.type == {:value_event_widget, :selected}
       assert event.value == 42
@@ -176,7 +176,7 @@ defmodule Plushie.EventDeclarationTest do
       }
 
       {{:emit, event}, _state} =
-        CanvasWidget.invoke_handler(DataEventWidget, click, %{}, "widget", "main")
+        WidgetHandler.invoke_handler(DataEventWidget, click, %{}, "widget", "main")
 
       assert event.type == {:data_event_widget, :moved}
       assert event.data == %{x: 10.0, y: 20.0}
@@ -194,7 +194,7 @@ defmodule Plushie.EventDeclarationTest do
       }
 
       {{:emit, event}, _state} =
-        CanvasWidget.invoke_handler(
+        WidgetHandler.invoke_handler(
           ThemeToggle,
           click,
           %{progress: 0.0, target: 0.0},

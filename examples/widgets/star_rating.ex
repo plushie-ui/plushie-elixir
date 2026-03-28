@@ -31,7 +31,7 @@ defmodule StarRating do
   # -- Event transformation ----------------------------------------------------
 
   # Click on a star -> emit :select with the 1-based star number.
-  @impl Plushie.Extension.CanvasWidget
+  @impl Plushie.Extension.WidgetHandler
   def handle_event(%Plushie.Event.WidgetEvent{type: :click, id: "star-" <> n}, _state) do
     {:emit, :select, String.to_integer(n) + 1}
   end
@@ -55,7 +55,7 @@ defmodule StarRating do
 
   # -- Rendering ---------------------------------------------------------------
 
-  @impl Plushie.Extension.CanvasWidget
+  @impl Plushie.Extension.WidgetHandler
   def render(id, props, state) do
     import Plushie.UI
 

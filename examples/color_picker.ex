@@ -1,6 +1,6 @@
 defmodule ColorPicker do
   @moduledoc """
-  HSV color picker using a canvas_widget.
+  HSV color picker using a stateful widget.
 
   The color picker widget handles all interaction internally (mouse drag,
   keyboard adjustment, focus tracking). The app receives

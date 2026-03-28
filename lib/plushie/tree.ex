@@ -37,13 +37,12 @@ defmodule Plushie.Tree do
   # They're extracted into a separate :meta field during normalization
   # and never sent to the renderer.
   @runtime_meta_keys [
-    :__canvas_widget__,
-    :__canvas_widget_props__,
-    :__canvas_widget_state__,
+    :__widget__,
+    :__widget_props__,
+    :__widget_state__,
     :__extension_widget_type__,
     :__extension_widget_events__,
-    :__extension_widget_event_specs__,
-    :__widget_event_handler__
+    :__extension_widget_event_specs__
   ]
 
   @doc """
@@ -175,17 +174,17 @@ defmodule Plushie.Tree do
 
     {meta, wire_props} = extract_meta(atom_props)
 
-    # Canvas widget rendering: if this node is a canvas_widget placeholder
-    # (tagged with __canvas_widget__ in meta), render it with the best
+    # Stateful widget rendering: if this node is a stateful widget placeholder
+    # (tagged with __widget__ in meta), render it with the best
     # available state and normalize the output. The rendered canvas node
-    # does NOT have __canvas_widget__ in its props, so normalization of
+    # does NOT have __widget__ in its props, so normalization of
     # the output won't re-trigger rendering (no recursion possible).
     # Widget metadata is attached to the final node's :meta directly.
-    case render_canvas_widget(meta, id, scoped_id, scope, window_id) do
+    case render_widget_placeholder(meta, id, scoped_id, scope, window_id) do
       {:rendered, final_node} ->
         final_node
 
-      :not_a_canvas_widget ->
+      :not_a_widget_placeholder ->
         normalized_props = encode_prop_values(wire_props)
 
         node = %{
@@ -199,37 +198,39 @@ defmodule Plushie.Tree do
     end
   end
 
-  # Render a canvas_widget placeholder with stored or initial state.
-  # Returns {:rendered, fully_normalized_node} or :not_a_canvas_widget.
+  # Render a stateful widget placeholder with stored or initial state.
+  # Returns {:rendered, fully_normalized_node} or :not_a_widget_placeholder.
   #
   # The rendered output is normalized at the same scope position. Since
-  # render/3 produces a plain canvas node (no __canvas_widget__ tags in
+  # render/3 produces a plain canvas node (no __widget__ tags in
   # its props), normalization processes it as a regular widget -- no
-  # recursion is possible. After normalization, canvas_widget metadata
+  # recursion is possible. After normalization, stateful widget metadata
   # (module, state, props) is attached to :meta for registry derivation
   # and event interception.
-  @spec render_canvas_widget(map(), String.t(), String.t(), String.t(), String.t() | nil) ::
-          {:rendered, map()} | :not_a_canvas_widget
-  defp render_canvas_widget(meta, local_id, scoped_id, scope, window_id) do
-    case Map.get(meta, :__canvas_widget__) do
+  @spec render_widget_placeholder(map(), String.t(), String.t(), String.t(), String.t() | nil) ::
+          {:rendered, map()} | :not_a_widget_placeholder
+  defp render_widget_placeholder(meta, local_id, scoped_id, scope, window_id) do
+    case Map.get(meta, :__widget__) do
       module when is_atom(module) and not is_nil(module) ->
-        widget_props = Map.get(meta, :__canvas_widget_props__, %{})
-        widget_state = lookup_canvas_widget_state(scoped_id, window_id, module)
+        widget_props = Map.get(meta, :__widget_props__, %{})
+        widget_state = lookup_widget_state(scoped_id, window_id, module)
 
         # Render with local ID -- normalization applies scoping.
+        # State is always a map (empty for stateless widgets).
+        # Children are in props[:children] for container widgets.
         rendered = module.render(local_id, widget_props, widget_state)
 
-        # Normalize the raw canvas output. It has no __canvas_widget__
+        # Normalize the raw canvas output. It has no __widget__
         # tags, so this is a plain normalization pass with no recursion.
         normalized = normalize_with_scope(rendered, scope, window_id)
 
-        # Attach canvas_widget metadata to the final node's :meta.
+        # Attach stateful widget metadata to the final node's :meta.
         # This is the ONLY place these keys appear in meta on the
         # final tree -- they weren't in the rendered node's props.
         widget_meta = %{
-          __canvas_widget__: module,
-          __canvas_widget_state__: widget_state,
-          __canvas_widget_props__: widget_props,
+          __widget__: module,
+          __widget_state__: widget_state,
+          __widget_props__: widget_props,
           __extension_widget_type__: Map.get(meta, :__extension_widget_type__),
           __extension_widget_events__: Map.get(meta, :__extension_widget_events__, []),
           __extension_widget_event_specs__: Map.get(meta, :__extension_widget_event_specs__, [])
@@ -240,16 +241,16 @@ defmodule Plushie.Tree do
         {:rendered, final}
 
       _ ->
-        :not_a_canvas_widget
+        :not_a_widget_placeholder
     end
   end
 
-  # Look up stored canvas_widget state from the process dictionary
+  # Look up stored stateful widget state from the process dictionary
   # (set by the runtime's safe_view). Falls back to initial state
   # for new widgets or when called outside a runtime context.
-  @spec lookup_canvas_widget_state(String.t(), String.t() | nil, module()) :: map()
-  defp lookup_canvas_widget_state(scoped_id, window_id, module) do
-    case Process.get(Plushie.Extension.CanvasWidget.widget_states_key()) do
+  @spec lookup_widget_state(String.t(), String.t() | nil, module()) :: map()
+  defp lookup_widget_state(scoped_id, window_id, module) do
+    case Process.get(Plushie.Extension.WidgetHandler.widget_states_key()) do
       registry when is_map(registry) ->
         case Map.get(registry, {window_id, scoped_id}) do
           %{state: state} -> state

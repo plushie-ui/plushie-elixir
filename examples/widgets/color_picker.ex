@@ -39,7 +39,7 @@ defmodule ColorPickerWidget do
 
   # -- Event transformation ----------------------------------------------------
 
-  @impl Plushie.Extension.CanvasWidget
+  @impl Plushie.Extension.WidgetHandler
   def handle_event(
         %Plushie.Event.WidgetEvent{type: :canvas_press, data: %{x: x, y: y, button: :left}},
         state
@@ -177,7 +177,7 @@ defmodule ColorPickerWidget do
 
   # -- Rendering ---------------------------------------------------------------
 
-  @impl Plushie.Extension.CanvasWidget
+  @impl Plushie.Extension.WidgetHandler
   def render(id, _props, state) do
     import Plushie.UI
 

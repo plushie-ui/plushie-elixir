@@ -35,20 +35,18 @@ defmodule Plushie.Docs.ExtensionsTest do
   defmodule TestCard do
     use Plushie.Extension, :widget
 
-    widget(:card, container: true)
+    widget(:card)
 
     prop(:title, :string)
     prop(:subtitle, :string, default: nil)
 
-    def render(id, props, children) do
+    def render(id, props) do
       column id: id, padding: 16, spacing: 8 do
         text("ext_title", props.title, size: 20)
 
         if props.subtitle do
           text("ext_subtitle", props.subtitle, size: 14)
         end
-
-        children
       end
     end
   end
@@ -99,15 +97,10 @@ defmodule Plushie.Docs.ExtensionsTest do
   # ---------------------------------------------------------------------------
 
   test "extensions_composite_card_test" do
-    import Plushie.UI
-
-    child = text("child1", "Hello")
-
     node =
       TestCard.new("info",
         title: "Details",
-        subtitle: "More info",
-        do: [child]
+        subtitle: "More info"
       )
       |> Plushie.Tree.normalize()
 

@@ -92,18 +92,18 @@ defmodule Plushie.ExtensionMacroTest do
   defmodule Wrapper do
     use Plushie.Extension, :widget
 
-    widget(:wrapper, container: true)
+    widget(:wrapper)
 
     prop(:border, :boolean, default: false)
 
-    def render(id, props, children) do
+    def render(id, props) do
       border_val = Map.get(props, :border, false)
 
       %{
         id: id,
         type: "container",
         props: %{border: border_val},
-        children: children
+        children: []
       }
     end
   end
@@ -341,18 +341,20 @@ defmodule Plushie.ExtensionMacroTest do
   # --- 8. composite with render callback ------------------------------------
 
   describe "composite with render callback" do
-    test "render/2 composite produces custom output" do
-      node = StatusIndicator.new("si1", status: :ok, label: "Health")
-      assert node.type == "text"
-      assert node.props[:content] == "Health: ok"
+    test "render/2 widget produces struct" do
+      widget = StatusIndicator.new("si1", status: :ok, label: "Health")
+      assert %StatusIndicator{id: "si1", status: :ok, label: "Health"} = widget
     end
 
-    test "render/3 composite receives children" do
-      child = %{id: "x", type: "text", props: %{}, children: []}
-      node = Wrapper.new("w1", border: true, do: [child])
-      assert node.type == "container"
-      assert node.props[:border] == true
-      assert length(node.children) == 1
+    test "render/2 widget renders via to_node placeholder" do
+      widget = StatusIndicator.new("si1", status: :ok, label: "Health")
+      node = Plushie.Widget.to_node(widget)
+      assert node.type == "widget_placeholder"
+    end
+
+    test "render/3 widget produces struct" do
+      widget = Wrapper.new("w1", border: true)
+      assert %Wrapper{id: "w1", border: true} = widget
     end
   end
 
@@ -535,24 +537,6 @@ defmodule Plushie.ExtensionMacroTest do
 
       assert warnings =~ "duplicate prop names"
       assert warnings =~ "foo"
-    end
-
-    test "container: true with render/2 raises CompileError" do
-      assert_raise CompileError, ~r/container: true but defines render\/2/, fn ->
-        Code.compile_string("""
-        defmodule TestContainerRender2 do
-          use Plushie.Extension, :widget
-
-          widget :bad_container, container: true
-
-          prop :label, :string
-
-          def render(id, props) do
-            %{id: id, type: "text", props: props, children: []}
-          end
-        end
-        """)
-      end
     end
 
     test "duplicate widget declaration warns" do

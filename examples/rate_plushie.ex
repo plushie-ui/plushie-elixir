@@ -50,7 +50,7 @@ defmodule RatePlushie do
   def update(model, event) do
     alias Plushie.Event.WidgetEvent
 
-    # StarRating and ThemeToggle are canvas_widgets that emit semantic
+    # StarRating and ThemeToggle are widget_handlers that emit semantic
     # events. The widget ID is un-scoped here because they're direct
     # children of the page container (named containers scope their
     # children, but the events carry the widget's own ID).
@@ -60,7 +60,7 @@ defmodule RatePlushie do
         %{model | rating: stars, errors: Map.delete(model.errors, :rating)}
 
       # Theme toggle emits built-in :toggle with the new state.
-      # Animation is managed internally by the canvas_widget.
+      # Animation is managed internally by the stateful widget.
       %WidgetEvent{type: :toggle, id: "theme-toggle", value: dark?} ->
         %{model | dark_mode: dark?}
 

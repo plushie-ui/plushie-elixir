@@ -74,7 +74,7 @@ defmodule Plushie.Runtime do
             pending_coalesce_order: [],
             coalesce_timer: nil,
             consecutive_errors: 0,
-            canvas_widgets: %{},
+            widget_handlers: %{},
             widget_events: %{},
             diagnostics: [],
             pending_stub_acks: %{},
@@ -103,7 +103,7 @@ defmodule Plushie.Runtime do
            consecutive_errors: non_neg_integer(),
            diagnostics: [Plushie.Event.SystemEvent.t()],
            pending_stub_acks: %{String.t() => GenServer.from()},
-           canvas_widgets: %{
+           widget_handlers: %{
              {String.t() | nil, String.t()} => %{
                module: module(),
                state: map(),
@@ -293,18 +293,18 @@ defmodule Plushie.Runtime do
     # 2-4. Render initial tree and push snapshot (old_tree is nil -> full snapshot).
     tree = render_and_sync(state.app, state.model, state.bridge, nil)
 
-    # 5. Sync canvas_widget registry so widgets are available for
+    # 5. Sync widget handler registry so widgets are available for
     # event interception from the very first interaction.
-    canvas_widgets =
-      Plushie.Runtime.CanvasWidgets.derive_registry(tree)
+    widget_handlers =
+      Plushie.Runtime.WidgetHandlers.derive_registry(tree)
 
     widget_events = derive_widget_event_registry(tree)
 
     # 6. Execute initial commands.
-    state = %{state | tree: tree, canvas_widgets: canvas_widgets, widget_events: widget_events}
+    state = %{state | tree: tree, widget_handlers: widget_handlers, widget_events: widget_events}
     state = Commands.execute_commands(state.init_commands, state)
     state = %{state | init_commands: []}
-    state = sync_runtime_subscriptions(state, state.model, canvas_widgets)
+    state = sync_runtime_subscriptions(state, state.model, widget_handlers)
     state = Windows.sync_windows(state, tree)
     {:noreply, state}
   end
@@ -543,9 +543,9 @@ defmodule Plushie.Runtime do
     send_settings(state)
 
     # Re-run view/1 to get a fresh tree rather than relying on a stale cache.
-    # Pass canvas_widget states so widgets render with current internal state.
+    # Pass widget handler states so widgets render with current internal state.
     tree =
-      case safe_view(state.app, state.model, state.canvas_widgets) do
+      case safe_view(state.app, state.model, state.widget_handlers) do
         {:ok, new_tree} -> new_tree
         :error -> state.tree
       end
@@ -554,21 +554,21 @@ defmodule Plushie.Runtime do
       notify_bridge(state, &Plushie.Bridge.send_snapshot(&1, tree))
     end
 
-    canvas_widgets = Plushie.Runtime.CanvasWidgets.derive_registry(tree)
+    widget_handlers = Plushie.Runtime.WidgetHandlers.derive_registry(tree)
     widget_events = derive_widget_event_registry(tree)
 
     # Re-sync subscriptions with the new renderer.
     state =
       state
       |> reset_renderer_subscriptions()
-      |> sync_runtime_subscriptions(state.model, canvas_widgets)
+      |> sync_runtime_subscriptions(state.model, widget_handlers)
 
     # Re-open all known windows with merged per-window props from the tree.
     # Reset tracked windows first so sync_windows sees them all as new.
     state = %{
       state
       | tree: tree,
-        canvas_widgets: canvas_widgets,
+        widget_handlers: widget_handlers,
         widget_events: widget_events,
         windows: MapSet.new()
     }
@@ -696,13 +696,13 @@ defmodule Plushie.Runtime do
       ref = Process.send_after(self(), {:subscription_tick, tag, interval}, interval)
       state = put_in(state.subscriptions[key], {:timer, ref})
 
-      # Route canvas_widget timer ticks to the widget's handle_event
+      # Route widget handler timer ticks to the widget's handle_event
       # instead of the app's update/2. Timer-triggered emits are
-      # dispatched through the scope chain of parent canvas_widgets.
-      case Plushie.Runtime.CanvasWidgets.maybe_handle_timer(state.canvas_widgets, tag) do
+      # dispatched through the scope chain of parent widget_handlers.
+      case Plushie.Runtime.WidgetHandlers.maybe_handle_timer(state.widget_handlers, tag) do
         {:handled, nil, new_registry} ->
           # Widget captured the timer (state update, re-render only).
-          state = %{state | canvas_widgets: new_registry}
+          state = %{state | widget_handlers: new_registry}
 
           new_tree =
             render_and_sync(
@@ -710,29 +710,29 @@ defmodule Plushie.Runtime do
               state.model,
               state.bridge,
               state.tree,
-              state.canvas_widgets
+              state.widget_handlers
             )
 
-          canvas_widgets =
-            Plushie.Runtime.CanvasWidgets.derive_registry(new_tree)
+          widget_handlers =
+            Plushie.Runtime.WidgetHandlers.derive_registry(new_tree)
 
           widget_events = derive_widget_event_registry(new_tree)
 
           state = %{
             state
             | tree: new_tree,
-              canvas_widgets: canvas_widgets,
+              widget_handlers: widget_handlers,
               widget_events: widget_events
           }
 
-          state = sync_runtime_subscriptions(state, state.model, canvas_widgets)
+          state = sync_runtime_subscriptions(state, state.model, widget_handlers)
 
           {:noreply, state}
 
         {:handled, emitted_event, new_registry} ->
           # Widget emitted an event (possibly dispatched through
-          # parent canvas_widgets). Deliver to app's update/2.
-          state = %{state | canvas_widgets: new_registry}
+          # parent widget_handlers). Deliver to app's update/2.
+          state = %{state | widget_handlers: new_registry}
           state = run_update(state, emitted_event)
           {:noreply, state}
 
@@ -756,21 +756,21 @@ defmodule Plushie.Runtime do
     Logger.info("plushie runtime: force re-render (code reload)")
 
     new_tree =
-      render_and_sync(state.app, state.model, state.bridge, state.tree, state.canvas_widgets)
+      render_and_sync(state.app, state.model, state.bridge, state.tree, state.widget_handlers)
 
-    canvas_widgets =
-      Plushie.Runtime.CanvasWidgets.derive_registry(new_tree)
+    widget_handlers =
+      Plushie.Runtime.WidgetHandlers.derive_registry(new_tree)
 
     widget_events = derive_widget_event_registry(new_tree)
 
     state = %{
       state
       | tree: new_tree,
-        canvas_widgets: canvas_widgets,
+        widget_handlers: widget_handlers,
         widget_events: widget_events
     }
 
-    state = sync_runtime_subscriptions(state, state.model, canvas_widgets)
+    state = sync_runtime_subscriptions(state, state.model, widget_handlers)
     state = Windows.sync_windows(state, new_tree)
     {:noreply, state}
   end
@@ -904,8 +904,8 @@ defmodule Plushie.Runtime do
   # Canvas widget state is injected during normalization (inside safe_view).
   # If view/1 raises, returns old_tree unchanged.
   @spec render_and_sync(module(), term(), pid() | atom(), map() | nil, map()) :: map() | nil
-  defp render_and_sync(app, model, bridge, old_tree, canvas_widgets \\ %{}) do
-    case safe_view(app, model, canvas_widgets) do
+  defp render_and_sync(app, model, bridge, old_tree, widget_handlers \\ %{}) do
+    case safe_view(app, model, widget_handlers) do
       {:ok, new_tree} ->
         if is_nil(old_tree) do
           # First render or after restart -- send full snapshot.
@@ -943,15 +943,15 @@ defmodule Plushie.Runtime do
 
   # Renders the view and normalizes the tree. Canvas widget stored state
   # is injected during normalization via the process dictionary -- the
-  # normalizer detects canvas_widget nodes and re-renders them with
+  # normalizer detects stateful widget nodes and re-renders them with
   # stored state before normalizing the output. This eliminates the need
-  # for post-processing (the old apply_canvas_widget_state approach).
+  # for post-processing (the old apply_widget_handler_state approach).
   @spec safe_view(module(), term(), map()) :: {:ok, map()} | :error
-  defp safe_view(app, model, canvas_widget_states) do
+  defp safe_view(app, model, widget_handler_states) do
     # Stash widget states for Tree.normalize to pick up during the
     # normalization pass. Cleaned up in the after block.
-    if canvas_widget_states != %{} do
-      Process.put(Plushie.Extension.CanvasWidget.widget_states_key(), canvas_widget_states)
+    if widget_handler_states != %{} do
+      Process.put(Plushie.Extension.WidgetHandler.widget_states_key(), widget_handler_states)
     end
 
     raw_tree =
@@ -972,7 +972,7 @@ defmodule Plushie.Runtime do
 
       :error
   after
-    Process.delete(Plushie.Extension.CanvasWidget.widget_states_key())
+    Process.delete(Plushie.Extension.WidgetHandler.widget_states_key())
   end
 
   defp validate_root_windows!(nil), do: :ok
@@ -1058,8 +1058,8 @@ defmodule Plushie.Runtime do
   #
   # Every inbound event flows through two stages:
   #
-  # 1. **Dispatch through canvas_widgets**: walk the scope chain of
-  #    canvas_widget handlers (innermost to outermost) following iced's
+  # 1. **Dispatch through widget_handlers**: walk the scope chain of
+  #    widget handlers (innermost to outermost) following iced's
   #    captured/ignored model. Returns the (possibly transformed) event
   #    to deliver, or nil if captured with no output.
   #
@@ -1074,7 +1074,7 @@ defmodule Plushie.Runtime do
   #   is sent after all events are processed.
   # ---------------------------------------------------------------------------
 
-  # Dispatch an event through the canvas_widget handler chain. Returns
+  # Dispatch an event through the widget handler chain. Returns
   # `{event_or_nil, updated_state}` where event_or_nil is the event
   # to deliver to app.update/2 (nil if captured by a widget).
   @spec route_through_widgets(state(), term()) :: {term() | nil, state()}
@@ -1082,10 +1082,10 @@ defmodule Plushie.Runtime do
     event = normalize_widget_event!(state, event)
 
     {result_event, new_registry} =
-      Plushie.Runtime.CanvasWidgets.dispatch_event(state.canvas_widgets, event)
+      Plushie.Runtime.WidgetHandlers.dispatch_event(state.widget_handlers, event)
 
     # Auto-consume canvas-internal events that were not intercepted by
-    # any canvas_widget handler. These are implementation details that
+    # any widget handler. These are implementation details that
     # should not reach the app's update/2.
     result_event =
       case result_event do
@@ -1096,7 +1096,7 @@ defmodule Plushie.Runtime do
           result_event
       end
 
-    {result_event, %{state | canvas_widgets: new_registry}}
+    {result_event, %{state | widget_handlers: new_registry}}
   end
 
   @spec normalize_widget_event!(state(), term()) :: term()
@@ -1282,17 +1282,17 @@ defmodule Plushie.Runtime do
       {:ok, new_model, commands} ->
         state = %{state | model: new_model, consecutive_errors: 0}
         state = Commands.execute_commands(commands, state)
-        new_tree = render_and_sync(app, new_model, bridge, state.tree, state.canvas_widgets)
+        new_tree = render_and_sync(app, new_model, bridge, state.tree, state.widget_handlers)
         state = %{state | tree: new_tree}
 
-        canvas_widgets =
-          Plushie.Runtime.CanvasWidgets.derive_registry(new_tree)
+        widget_handlers =
+          Plushie.Runtime.WidgetHandlers.derive_registry(new_tree)
 
         widget_events = derive_widget_event_registry(new_tree)
-        state = %{state | canvas_widgets: canvas_widgets, widget_events: widget_events}
+        state = %{state | widget_handlers: widget_handlers, widget_events: widget_events}
 
         widget_subs =
-          Plushie.Runtime.CanvasWidgets.collect_subscriptions(canvas_widgets)
+          Plushie.Runtime.WidgetHandlers.collect_subscriptions(widget_handlers)
 
         state = Subscriptions.sync_subscriptions(state, new_model, widget_subs)
         Windows.sync_windows(state, new_tree)
@@ -1410,24 +1410,24 @@ defmodule Plushie.Runtime do
       end)
 
     # Re-render and send a full snapshot (not a patch).
-    # Pass canvas_widget states so normalization injects stored state.
-    case safe_view(state.app, state.model, state.canvas_widgets) do
+    # Pass widget handler states so normalization injects stored state.
+    case safe_view(state.app, state.model, state.widget_handlers) do
       {:ok, new_tree} ->
         notify_bridge(state, &Plushie.Bridge.send_snapshot(&1, new_tree))
 
-        canvas_widgets =
-          Plushie.Runtime.CanvasWidgets.derive_registry(new_tree)
+        widget_handlers =
+          Plushie.Runtime.WidgetHandlers.derive_registry(new_tree)
 
         widget_events = derive_widget_event_registry(new_tree)
 
         state = %{
           state
           | tree: new_tree,
-            canvas_widgets: canvas_widgets,
+            widget_handlers: widget_handlers,
             widget_events: widget_events
         }
 
-        state = sync_runtime_subscriptions(state, state.model, canvas_widgets)
+        state = sync_runtime_subscriptions(state, state.model, widget_handlers)
         state = Windows.sync_windows(state, new_tree)
         Commands.execute_commands(deferred_commands, state)
 
@@ -1515,8 +1515,8 @@ defmodule Plushie.Runtime do
     %{state | pending_coalesce: %{}, pending_coalesce_order: [], coalesce_timer: nil}
   end
 
-  defp sync_runtime_subscriptions(state, model, canvas_widgets) do
-    widget_subs = Plushie.Runtime.CanvasWidgets.collect_subscriptions(canvas_widgets)
+  defp sync_runtime_subscriptions(state, model, widget_handlers) do
+    widget_subs = Plushie.Runtime.WidgetHandlers.collect_subscriptions(widget_handlers)
     Subscriptions.sync_subscriptions(state, model, widget_subs)
   end
 
