@@ -93,13 +93,13 @@ defmodule Plushie.Test.InternalMockBridge do
     {:noreply, %{state | interacts: state.interacts ++ [entry]}}
   end
 
-  def handle_cast({:send_subscribe, kind, tag, max_rate}, state) do
-    entry = %{kind: kind, tag: tag, max_rate: max_rate}
+  def handle_cast({:send_subscribe, kind, tag, max_rate, window_id}, state) do
+    entry = %{kind: kind, tag: tag, max_rate: max_rate, window_id: window_id}
     {:noreply, %{state | subscribes: state.subscribes ++ [entry]}}
   end
 
-  def handle_cast({:send_unsubscribe, kind}, state) do
-    entry = %{kind: kind}
+  def handle_cast({:send_unsubscribe, kind, tag}, state) do
+    entry = %{kind: kind, tag: tag}
     {:noreply, %{state | unsubscribes: state.unsubscribes ++ [entry]}}
   end
 

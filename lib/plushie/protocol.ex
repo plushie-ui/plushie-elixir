@@ -169,7 +169,8 @@ defmodule Plushie.Protocol do
   Encodes a subscribe message as a protocol message.
 
   An optional `max_rate` (events per second) can be included to enable
-  renderer-side event coalescing for this subscription.
+  renderer-side event coalescing for this subscription. An optional
+  `window_id` scopes the subscription to a specific window.
 
   ## Example
 
@@ -180,21 +181,30 @@ defmodule Plushie.Protocol do
           kind :: String.t(),
           tag :: String.t(),
           format :: format(),
-          max_rate :: non_neg_integer() | nil
+          max_rate :: non_neg_integer() | nil,
+          window_id :: String.t() | nil
         ) :: iodata()
-  defdelegate encode_subscribe(kind, tag, format \\ :msgpack, max_rate \\ nil),
+  defdelegate encode_subscribe(kind, tag, format \\ :msgpack, max_rate \\ nil, window_id \\ nil),
     to: Plushie.Protocol.Encode
 
   @doc """
   Encodes an unsubscribe message as a protocol message.
+
+  An optional `tag` identifies the specific subscription to remove
+  (when multiple subscriptions share the same kind).
 
   ## Example
 
       Plushie.Protocol.encode_unsubscribe("on_key_press", :json)
       #=> ~s({"kind":"on_key_press","session":"","type":"unsubscribe"}) <> "\\n"
   """
-  @spec encode_unsubscribe(kind :: String.t(), format :: format()) :: iodata()
-  defdelegate encode_unsubscribe(kind, format \\ :msgpack), to: Plushie.Protocol.Encode
+  @spec encode_unsubscribe(
+          kind :: String.t(),
+          format :: format(),
+          tag :: String.t() | nil
+        ) :: iodata()
+  defdelegate encode_unsubscribe(kind, format \\ :msgpack, tag \\ nil),
+    to: Plushie.Protocol.Encode
 
   @doc """
   Encodes an image operation as a protocol message.

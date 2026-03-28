@@ -115,17 +115,13 @@ defmodule Plushie.Protocol.Encode do
           kind :: String.t(),
           tag :: String.t(),
           format :: Plushie.Protocol.format(),
-          max_rate :: non_neg_integer() | nil
+          max_rate :: non_neg_integer() | nil,
+          window_id :: String.t() | nil
         ) :: iodata()
-  def encode_subscribe(kind, tag, format \\ :msgpack, max_rate \\ nil) do
+  def encode_subscribe(kind, tag, format \\ :msgpack, max_rate \\ nil, window_id \\ nil) do
     msg = %{type: "subscribe", kind: kind, tag: tag}
-
-    msg =
-      case max_rate do
-        nil -> msg
-        rate -> Map.put(msg, :max_rate, rate)
-      end
-
+    msg = if max_rate, do: Map.put(msg, :max_rate, max_rate), else: msg
+    msg = if window_id, do: Map.put(msg, :window_id, window_id), else: msg
     serialize(msg, format)
   end
 
@@ -137,9 +133,15 @@ defmodule Plushie.Protocol.Encode do
       Plushie.Protocol.Encode.encode_unsubscribe("on_key_press")
       #=> ~s({"kind":"on_key_press","session":"","type":"unsubscribe"}) <> "\\n"
   """
-  @spec encode_unsubscribe(kind :: String.t(), format :: Plushie.Protocol.format()) :: iodata()
-  def encode_unsubscribe(kind, format \\ :msgpack) do
-    serialize(%{type: "unsubscribe", kind: kind}, format)
+  @spec encode_unsubscribe(
+          kind :: String.t(),
+          format :: Plushie.Protocol.format(),
+          tag :: String.t() | nil
+        ) :: iodata()
+  def encode_unsubscribe(kind, format \\ :msgpack, tag \\ nil) do
+    msg = %{type: "unsubscribe", kind: kind}
+    msg = if tag, do: Map.put(msg, :tag, tag), else: msg
+    serialize(msg, format)
   end
 
   @doc """

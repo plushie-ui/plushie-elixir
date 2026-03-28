@@ -1291,7 +1291,7 @@ defmodule Plushie.RuntimeTest do
 
       registers = Plushie.Test.InternalMockBridge.get_subscribes(bridge)
       assert length(registers) == 1
-      assert hd(registers) == %{kind: "on_key_press", tag: "keys", max_rate: nil}
+      assert hd(registers) == %{kind: "on_key_press", tag: "keys", max_rate: nil, window_id: nil}
     end
 
     test "removing a renderer subscription sends unregister message to bridge" do
@@ -1335,7 +1335,7 @@ defmodule Plushie.RuntimeTest do
 
       unregisters = Plushie.Test.InternalMockBridge.get_unsubscribes(bridge)
       assert length(unregisters) == 1
-      assert hd(unregisters) == %{kind: "on_key_press"}
+      assert hd(unregisters) == %{kind: "on_key_press", tag: "keys"}
     end
 
     test "canvas widget subscriptions are registered on initial render and survive interact_step" do

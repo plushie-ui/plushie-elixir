@@ -92,11 +92,12 @@ defmodule Plushie.Subscription do
           type: atom(),
           tag: atom(),
           interval: pos_integer() | nil,
-          max_rate: pos_integer() | nil
+          max_rate: pos_integer() | nil,
+          window_id: String.t() | nil
         }
 
   @enforce_keys [:type, :tag]
-  defstruct [:type, :tag, :interval, :max_rate]
+  defstruct [:type, :tag, :interval, :max_rate, :window_id]
 
   @doc """
   Timer that fires every `interval_ms` milliseconds.
@@ -136,7 +137,14 @@ defmodule Plushie.Subscription do
   """
   @spec on_key_press(event_tag :: atom(), opts :: keyword()) :: t()
   def on_key_press(event_tag, opts \\ []) when is_atom(event_tag) do
-    %__MODULE__{type: :on_key_press, tag: event_tag, max_rate: opts[:max_rate]}
+    {window_id, opts} = Keyword.pop(opts, :window)
+
+    %__MODULE__{
+      type: :on_key_press,
+      tag: event_tag,
+      max_rate: opts[:max_rate],
+      window_id: window_id
+    }
   end
 
   @doc """
@@ -155,7 +163,14 @@ defmodule Plushie.Subscription do
   """
   @spec on_key_release(event_tag :: atom(), opts :: keyword()) :: t()
   def on_key_release(event_tag, opts \\ []) when is_atom(event_tag) do
-    %__MODULE__{type: :on_key_release, tag: event_tag, max_rate: opts[:max_rate]}
+    {window_id, opts} = Keyword.pop(opts, :window)
+
+    %__MODULE__{
+      type: :on_key_release,
+      tag: event_tag,
+      max_rate: opts[:max_rate],
+      window_id: window_id
+    }
   end
 
   @doc """
@@ -172,7 +187,14 @@ defmodule Plushie.Subscription do
   """
   @spec on_modifiers_changed(event_tag :: atom(), opts :: keyword()) :: t()
   def on_modifiers_changed(event_tag, opts \\ []) when is_atom(event_tag) do
-    %__MODULE__{type: :on_modifiers_changed, tag: event_tag, max_rate: opts[:max_rate]}
+    {window_id, opts} = Keyword.pop(opts, :window)
+
+    %__MODULE__{
+      type: :on_modifiers_changed,
+      tag: event_tag,
+      max_rate: opts[:max_rate],
+      window_id: window_id
+    }
   end
 
   @doc """
@@ -190,7 +212,14 @@ defmodule Plushie.Subscription do
   """
   @spec on_window_close(event_tag :: atom(), opts :: keyword()) :: t()
   def on_window_close(event_tag, opts \\ []) when is_atom(event_tag) do
-    %__MODULE__{type: :on_window_close, tag: event_tag, max_rate: opts[:max_rate]}
+    {window_id, opts} = Keyword.pop(opts, :window)
+
+    %__MODULE__{
+      type: :on_window_close,
+      tag: event_tag,
+      max_rate: opts[:max_rate],
+      window_id: window_id
+    }
   end
 
   @doc """
@@ -206,7 +235,14 @@ defmodule Plushie.Subscription do
   """
   @spec on_window_event(event_tag :: atom(), opts :: keyword()) :: t()
   def on_window_event(event_tag, opts \\ []) when is_atom(event_tag) do
-    %__MODULE__{type: :on_window_event, tag: event_tag, max_rate: opts[:max_rate]}
+    {window_id, opts} = Keyword.pop(opts, :window)
+
+    %__MODULE__{
+      type: :on_window_event,
+      tag: event_tag,
+      max_rate: opts[:max_rate],
+      window_id: window_id
+    }
   end
 
   @doc """
@@ -217,7 +253,14 @@ defmodule Plushie.Subscription do
   """
   @spec on_window_open(event_tag :: atom(), opts :: keyword()) :: t()
   def on_window_open(event_tag, opts \\ []) when is_atom(event_tag) do
-    %__MODULE__{type: :on_window_open, tag: event_tag, max_rate: opts[:max_rate]}
+    {window_id, opts} = Keyword.pop(opts, :window)
+
+    %__MODULE__{
+      type: :on_window_open,
+      tag: event_tag,
+      max_rate: opts[:max_rate],
+      window_id: window_id
+    }
   end
 
   @doc """
@@ -228,7 +271,14 @@ defmodule Plushie.Subscription do
   """
   @spec on_window_resize(event_tag :: atom(), opts :: keyword()) :: t()
   def on_window_resize(event_tag, opts \\ []) when is_atom(event_tag) do
-    %__MODULE__{type: :on_window_resize, tag: event_tag, max_rate: opts[:max_rate]}
+    {window_id, opts} = Keyword.pop(opts, :window)
+
+    %__MODULE__{
+      type: :on_window_resize,
+      tag: event_tag,
+      max_rate: opts[:max_rate],
+      window_id: window_id
+    }
   end
 
   @doc """
@@ -239,7 +289,14 @@ defmodule Plushie.Subscription do
   """
   @spec on_window_focus(event_tag :: atom(), opts :: keyword()) :: t()
   def on_window_focus(event_tag, opts \\ []) when is_atom(event_tag) do
-    %__MODULE__{type: :on_window_focus, tag: event_tag, max_rate: opts[:max_rate]}
+    {window_id, opts} = Keyword.pop(opts, :window)
+
+    %__MODULE__{
+      type: :on_window_focus,
+      tag: event_tag,
+      max_rate: opts[:max_rate],
+      window_id: window_id
+    }
   end
 
   @doc """
@@ -250,7 +307,14 @@ defmodule Plushie.Subscription do
   """
   @spec on_window_unfocus(event_tag :: atom(), opts :: keyword()) :: t()
   def on_window_unfocus(event_tag, opts \\ []) when is_atom(event_tag) do
-    %__MODULE__{type: :on_window_unfocus, tag: event_tag, max_rate: opts[:max_rate]}
+    {window_id, opts} = Keyword.pop(opts, :window)
+
+    %__MODULE__{
+      type: :on_window_unfocus,
+      tag: event_tag,
+      max_rate: opts[:max_rate],
+      window_id: window_id
+    }
   end
 
   @doc """
@@ -261,7 +325,14 @@ defmodule Plushie.Subscription do
   """
   @spec on_window_move(event_tag :: atom(), opts :: keyword()) :: t()
   def on_window_move(event_tag, opts \\ []) when is_atom(event_tag) do
-    %__MODULE__{type: :on_window_move, tag: event_tag, max_rate: opts[:max_rate]}
+    {window_id, opts} = Keyword.pop(opts, :window)
+
+    %__MODULE__{
+      type: :on_window_move,
+      tag: event_tag,
+      max_rate: opts[:max_rate],
+      window_id: window_id
+    }
   end
 
   @doc """
@@ -273,7 +344,14 @@ defmodule Plushie.Subscription do
   """
   @spec on_mouse_move(event_tag :: atom(), opts :: keyword()) :: t()
   def on_mouse_move(event_tag, opts \\ []) when is_atom(event_tag) do
-    %__MODULE__{type: :on_mouse_move, tag: event_tag, max_rate: opts[:max_rate]}
+    {window_id, opts} = Keyword.pop(opts, :window)
+
+    %__MODULE__{
+      type: :on_mouse_move,
+      tag: event_tag,
+      max_rate: opts[:max_rate],
+      window_id: window_id
+    }
   end
 
   @doc """
@@ -286,7 +364,14 @@ defmodule Plushie.Subscription do
   """
   @spec on_mouse_button(event_tag :: atom(), opts :: keyword()) :: t()
   def on_mouse_button(event_tag, opts \\ []) when is_atom(event_tag) do
-    %__MODULE__{type: :on_mouse_button, tag: event_tag, max_rate: opts[:max_rate]}
+    {window_id, opts} = Keyword.pop(opts, :window)
+
+    %__MODULE__{
+      type: :on_mouse_button,
+      tag: event_tag,
+      max_rate: opts[:max_rate],
+      window_id: window_id
+    }
   end
 
   @doc """
@@ -298,7 +383,14 @@ defmodule Plushie.Subscription do
   """
   @spec on_mouse_scroll(event_tag :: atom(), opts :: keyword()) :: t()
   def on_mouse_scroll(event_tag, opts \\ []) when is_atom(event_tag) do
-    %__MODULE__{type: :on_mouse_scroll, tag: event_tag, max_rate: opts[:max_rate]}
+    {window_id, opts} = Keyword.pop(opts, :window)
+
+    %__MODULE__{
+      type: :on_mouse_scroll,
+      tag: event_tag,
+      max_rate: opts[:max_rate],
+      window_id: window_id
+    }
   end
 
   @doc """
@@ -315,7 +407,8 @@ defmodule Plushie.Subscription do
   """
   @spec on_ime(event_tag :: atom(), opts :: keyword()) :: t()
   def on_ime(event_tag, opts \\ []) when is_atom(event_tag) do
-    %__MODULE__{type: :on_ime, tag: event_tag, max_rate: opts[:max_rate]}
+    {window_id, opts} = Keyword.pop(opts, :window)
+    %__MODULE__{type: :on_ime, tag: event_tag, max_rate: opts[:max_rate], window_id: window_id}
   end
 
   @doc """
@@ -328,7 +421,8 @@ defmodule Plushie.Subscription do
   """
   @spec on_touch(event_tag :: atom(), opts :: keyword()) :: t()
   def on_touch(event_tag, opts \\ []) when is_atom(event_tag) do
-    %__MODULE__{type: :on_touch, tag: event_tag, max_rate: opts[:max_rate]}
+    {window_id, opts} = Keyword.pop(opts, :window)
+    %__MODULE__{type: :on_touch, tag: event_tag, max_rate: opts[:max_rate], window_id: window_id}
   end
 
   @doc """
@@ -340,7 +434,14 @@ defmodule Plushie.Subscription do
   """
   @spec on_theme_change(event_tag :: atom(), opts :: keyword()) :: t()
   def on_theme_change(event_tag, opts \\ []) when is_atom(event_tag) do
-    %__MODULE__{type: :on_theme_change, tag: event_tag, max_rate: opts[:max_rate]}
+    {window_id, opts} = Keyword.pop(opts, :window)
+
+    %__MODULE__{
+      type: :on_theme_change,
+      tag: event_tag,
+      max_rate: opts[:max_rate],
+      window_id: window_id
+    }
   end
 
   @doc """
@@ -351,7 +452,14 @@ defmodule Plushie.Subscription do
   """
   @spec on_animation_frame(event_tag :: atom(), opts :: keyword()) :: t()
   def on_animation_frame(event_tag, opts \\ []) when is_atom(event_tag) do
-    %__MODULE__{type: :on_animation_frame, tag: event_tag, max_rate: opts[:max_rate]}
+    {window_id, opts} = Keyword.pop(opts, :window)
+
+    %__MODULE__{
+      type: :on_animation_frame,
+      tag: event_tag,
+      max_rate: opts[:max_rate],
+      window_id: window_id
+    }
   end
 
   @doc """
@@ -364,7 +472,14 @@ defmodule Plushie.Subscription do
   """
   @spec on_file_drop(event_tag :: atom(), opts :: keyword()) :: t()
   def on_file_drop(event_tag, opts \\ []) when is_atom(event_tag) do
-    %__MODULE__{type: :on_file_drop, tag: event_tag, max_rate: opts[:max_rate]}
+    {window_id, opts} = Keyword.pop(opts, :window)
+
+    %__MODULE__{
+      type: :on_file_drop,
+      tag: event_tag,
+      max_rate: opts[:max_rate],
+      window_id: window_id
+    }
   end
 
   @doc """
@@ -376,7 +491,8 @@ defmodule Plushie.Subscription do
   """
   @spec on_event(event_tag :: atom(), opts :: keyword()) :: t()
   def on_event(event_tag, opts \\ []) when is_atom(event_tag) do
-    %__MODULE__{type: :on_event, tag: event_tag, max_rate: opts[:max_rate]}
+    {window_id, opts} = Keyword.pop(opts, :window)
+    %__MODULE__{type: :on_event, tag: event_tag, max_rate: opts[:max_rate], window_id: window_id}
   end
 
   @doc """
@@ -400,6 +516,23 @@ defmodule Plushie.Subscription do
   @spec max_rate(sub :: t(), rate :: non_neg_integer()) :: t()
   def max_rate(%__MODULE__{} = sub, rate) when is_integer(rate) and rate >= 0 do
     %{sub | max_rate: rate}
+  end
+
+  @doc """
+  Scope a list of subscriptions to a specific window.
+
+  Window-scoped subscriptions tell the renderer to only deliver events
+  from the given window. Without a window scope, subscriptions receive
+  events from all windows.
+
+      Subscription.for_window("editor", [
+        Subscription.on_key_press(:editor_keys),
+        Subscription.on_mouse_move(:editor_mouse, max_rate: 60)
+      ])
+  """
+  @spec for_window(window_id :: String.t(), subscriptions :: [t()]) :: [t()]
+  def for_window(window_id, subscriptions) when is_binary(window_id) and is_list(subscriptions) do
+    Enum.map(subscriptions, fn sub -> %{sub | window_id: window_id} end)
   end
 
   @doc """

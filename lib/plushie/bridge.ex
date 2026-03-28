@@ -135,16 +135,21 @@ defmodule Plushie.Bridge do
           bridge :: GenServer.server(),
           kind :: String.t(),
           tag :: String.t(),
-          max_rate :: non_neg_integer() | nil
+          max_rate :: non_neg_integer() | nil,
+          window_id :: String.t() | nil
         ) :: :ok
-  def send_subscribe(bridge, kind, tag, max_rate \\ nil) do
-    GenServer.cast(bridge, {:send_subscribe, kind, tag, max_rate})
+  def send_subscribe(bridge, kind, tag, max_rate \\ nil, window_id \\ nil) do
+    GenServer.cast(bridge, {:send_subscribe, kind, tag, max_rate, window_id})
   end
 
   @doc "Unsubscribes from a renderer-side event source."
-  @spec send_unsubscribe(bridge :: GenServer.server(), kind :: String.t()) :: :ok
-  def send_unsubscribe(bridge, kind) do
-    GenServer.cast(bridge, {:send_unsubscribe, kind})
+  @spec send_unsubscribe(
+          bridge :: GenServer.server(),
+          kind :: String.t(),
+          tag :: String.t() | nil
+        ) :: :ok
+  def send_unsubscribe(bridge, kind, tag \\ nil) do
+    GenServer.cast(bridge, {:send_unsubscribe, kind, tag})
   end
 
   @doc "Sends a window lifecycle operation to the renderer."
@@ -396,17 +401,17 @@ defmodule Plushie.Bridge do
      end)}
   end
 
-  def handle_cast({:send_subscribe, kind, tag, max_rate}, state) do
+  def handle_cast({:send_subscribe, kind, tag, max_rate, window_id}, state) do
     {:noreply,
      encode_and_send(state, :subscribe, fn fmt ->
-       Plushie.Protocol.encode_subscribe(kind, tag, fmt, max_rate)
+       Plushie.Protocol.encode_subscribe(kind, tag, fmt, max_rate, window_id)
      end)}
   end
 
-  def handle_cast({:send_unsubscribe, kind}, state) do
+  def handle_cast({:send_unsubscribe, kind, tag}, state) do
     {:noreply,
      encode_and_send(state, :unsubscribe, fn fmt ->
-       Plushie.Protocol.encode_unsubscribe(kind, fmt)
+       Plushie.Protocol.encode_unsubscribe(kind, fmt, tag)
      end)}
   end
 
