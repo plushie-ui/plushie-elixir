@@ -411,6 +411,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
     bin_name = Plushie.Binary.build_name()
     crate_paths = resolve_crate_paths(extensions)
+    check_extension_versions!(crate_paths)
     generate_workspace(build_dir, bin_name, extensions, crate_paths)
 
     ext_names = Enum.map_join(extensions, ", ", &inspect/1)
@@ -486,6 +487,120 @@ defmodule Mix.Tasks.Plushie.Build do
   @binary_version Mix.Project.config()[:binary_version] ||
                     raise("missing :binary_version in project config (mix.exs)")
 
+  # ---------------------------------------------------------------------------
+  # Extension version compatibility check
+  #
+  # Each extension crate should depend on a plushie-ext version compatible
+  # with @binary_version. We check this before building to give a clear
+  # error instead of a cryptic Cargo resolution failure.
+  # ---------------------------------------------------------------------------
+
+  defp check_extension_versions!(crate_paths) do
+    expected = Version.parse!(@binary_version)
+
+    Enum.each(crate_paths, fn {mod, crate_path} ->
+      cargo_toml_path = Path.join(crate_path, "Cargo.toml")
+
+      case read_plushie_ext_version(cargo_toml_path) do
+        {:version, dep_version} ->
+          check_version_compatible!(mod, dep_version, expected)
+
+        {:path, dep_path} ->
+          # Path dependency -- read the version from the target Cargo.toml.
+          target_toml = Path.join(Path.expand(dep_path, crate_path), "Cargo.toml")
+
+          case read_package_version(target_toml) do
+            {:ok, pkg_version} -> check_version_compatible!(mod, pkg_version, expected)
+            :error -> :ok
+          end
+
+        :not_found ->
+          Mix.shell().info(
+            "Extension #{inspect(mod)}: no plushie-ext dependency found in #{cargo_toml_path}"
+          )
+
+        :no_cargo_toml ->
+          :ok
+      end
+    end)
+  end
+
+  defp check_version_compatible!(mod, dep_version_str, expected) do
+    # Strip leading operators (^, ~, >=, =) to get the base version.
+    base = String.replace(dep_version_str, ~r/^[^0-9]*/, "")
+
+    case Version.parse(base) do
+      {:ok, dep} ->
+        # For pre-1.0 crates (0.x), major AND minor must match (Cargo semver).
+        # For 1.0+, only major must match.
+        compatible? = versions_compatible?(dep, expected)
+
+        unless compatible? do
+          Mix.shell().error(
+            "Extension #{inspect(mod)} depends on plushie-ext #{dep_version_str}, " <>
+              "but this project targets #{expected}. " <>
+              "Update the extension crate or change :binary_version in mix.exs."
+          )
+        end
+
+      :error ->
+        :ok
+    end
+  end
+
+  # Pre-1.0 (0.x): major AND minor must match. 1.0+: major must match.
+  # Dialyzer sees @binary_version is 0.x at compile time and marks the
+  # 1.0+ branch as unreachable. That branch is needed for when we ship 1.0.
+  @dialyzer {:no_match, versions_compatible?: 2}
+  defp versions_compatible?(dep, expected) do
+    if expected.major == 0 do
+      dep.major == expected.major and dep.minor == expected.minor
+    else
+      dep.major == expected.major
+    end
+  end
+
+  # Read the plushie-ext dependency version from a Cargo.toml.
+  # Returns {:version, "0.5.0"}, {:path, "../plushie-ext"}, or :not_found.
+  defp read_plushie_ext_version(cargo_toml_path) do
+    if File.exists?(cargo_toml_path) do
+      content = File.read!(cargo_toml_path)
+
+      cond do
+        # Inline version: plushie-ext = "0.5.0"
+        match = Regex.run(~r/plushie-ext\s*=\s*"([^"]+)"/, content) ->
+          {:version, Enum.at(match, 1)}
+
+        # Table with version: plushie-ext = { version = "0.5.0", ... }
+        match = Regex.run(~r/plushie-ext\s*=\s*\{[^}]*version\s*=\s*"([^"]+)"/, content) ->
+          {:version, Enum.at(match, 1)}
+
+        # Table with path only: plushie-ext = { path = "..." }
+        match = Regex.run(~r/plushie-ext\s*=\s*\{[^}]*path\s*=\s*"([^"]+)"/, content) ->
+          {:path, Enum.at(match, 1)}
+
+        true ->
+          :not_found
+      end
+    else
+      :no_cargo_toml
+    end
+  end
+
+  # Read the [package] version from a Cargo.toml.
+  defp read_package_version(cargo_toml_path) do
+    if File.exists?(cargo_toml_path) do
+      content = File.read!(cargo_toml_path)
+
+      case Regex.run(~r/\[package\][^\[]*version\s*=\s*"([^"]+)"/s, content) do
+        [_, version] -> {:ok, version}
+        _ -> :error
+      end
+    else
+      :error
+    end
+  end
+
   defp generate_cargo_toml(bin_name, extensions, crate_paths, build_dir) do
     source_path = Mix.PlushieHelpers.source_path()
 
@@ -552,7 +667,12 @@ defmodule Mix.Tasks.Plushie.Build do
     """
   end
 
-  @rust_constructor_pattern ~r/^[A-Za-z_][A-Za-z0-9_:]*(\([^)]*\))?$/
+  # Validates Rust constructor expressions. Matches:
+  #   gauge::GaugeExtension::new()      -- module path with call
+  #   MyExt::<Config>::new()            -- turbofish generics
+  #   MyExt::new                        -- path without parens
+  #   create_widget()                   -- bare function call
+  @rust_constructor_pattern ~r/^[A-Za-z_][A-Za-z0-9_:<>, ]*(\([^)]*\))?$/
 
   defp validate_rust_constructor!(mod, constructor) do
     unless Regex.match?(@rust_constructor_pattern, constructor) do
