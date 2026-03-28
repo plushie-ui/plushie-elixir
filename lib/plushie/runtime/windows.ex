@@ -11,7 +11,7 @@ defmodule Plushie.Runtime.Windows do
   @window_prop_keys ~w(
     title size width height position min_size max_size maximized fullscreen
     visible resizable closeable minimizable decorations transparent blur level
-    exit_on_close_request
+    exit_on_close_request scale_factor
   )a
 
   @doc """
@@ -65,25 +65,34 @@ defmodule Plushie.Runtime.Windows do
   end
 
   @doc """
-  Detects window node IDs from the tree. Only recognizes window nodes
-  at root level or as direct children of the root node (matching the
-  Rust renderer's depth).
+  Detects window node IDs from the tree. Searches the entire tree
+  recursively, matching the Rust renderer's behavior.
   """
   @spec detect_windows(map() | nil) :: MapSet.t()
   def detect_windows(nil), do: MapSet.new()
 
-  def detect_windows(%{type: "window", id: id}) do
-    MapSet.new([id])
-  end
-
-  def detect_windows(%{children: children}) when is_list(children) do
-    children
-    |> Enum.filter(fn node -> node.type == "window" end)
-    |> Enum.map(& &1.id)
+  def detect_windows(tree) do
+    tree
+    |> collect_window_ids([])
     |> MapSet.new()
   end
 
-  def detect_windows(_), do: MapSet.new()
+  defp collect_window_ids(%{type: "window", id: id} = node, acc) do
+    acc = [id | acc]
+    collect_children_window_ids(node, acc)
+  end
+
+  defp collect_window_ids(%{children: _} = node, acc) do
+    collect_children_window_ids(node, acc)
+  end
+
+  defp collect_window_ids(_, acc), do: acc
+
+  defp collect_children_window_ids(%{children: children}, acc) when is_list(children) do
+    Enum.reduce(children, acc, &collect_window_ids/2)
+  end
+
+  defp collect_children_window_ids(_, acc), do: acc
 
   # -- Private helpers --------------------------------------------------------
 
@@ -103,11 +112,11 @@ defmodule Plushie.Runtime.Windows do
     decompose_size_tuples(props)
   end
 
-  # Find a window node at root level or as a direct child (matching Rust depth).
+  # Recursively search the tree for a window node with the given ID.
   defp find_window_node(%{type: "window", id: id} = node, id), do: node
 
   defp find_window_node(%{children: children}, window_id) when is_list(children) do
-    Enum.find(children, fn node -> node.type == "window" and node.id == window_id end)
+    Enum.find_value(children, fn child -> find_window_node(child, window_id) end)
   end
 
   defp find_window_node(_, _), do: nil

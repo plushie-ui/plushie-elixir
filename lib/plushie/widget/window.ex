@@ -27,6 +27,7 @@ defmodule Plushie.Widget.Window do
   - `blur` (boolean) -- whether to blur the window background.
   - `level` (atom) -- window stacking level (`:normal`, `:always_on_top`, `:always_on_bottom`).
   - `exit_on_close_request` (boolean) -- whether closing the window exits the app.
+  - `scale_factor` (number) -- window scale factor override.
   """
 
   alias Plushie.Widget.Build
@@ -50,6 +51,7 @@ defmodule Plushie.Widget.Window do
           | {:blur, boolean()}
           | {:level, atom()}
           | {:exit_on_close_request, boolean()}
+          | {:scale_factor, number()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -71,6 +73,7 @@ defmodule Plushie.Widget.Window do
           blur: boolean() | nil,
           level: atom() | nil,
           exit_on_close_request: boolean() | nil,
+          scale_factor: number() | nil,
           children: [Plushie.Widget.ui_node() | struct()]
         }
 
@@ -94,10 +97,11 @@ defmodule Plushie.Widget.Window do
     :blur,
     :level,
     :exit_on_close_request,
+    :scale_factor,
     children: []
   ]
 
-  @valid_option_keys ~w(title size width height position min_size max_size maximized fullscreen visible resizable closeable minimizable decorations transparent blur level exit_on_close_request)a
+  @valid_option_keys ~w(title size width height position min_size max_size maximized fullscreen visible resizable closeable minimizable decorations transparent blur level exit_on_close_request scale_factor)a
 
   @doc false
   def __option_keys__, do: @valid_option_keys
@@ -135,6 +139,7 @@ defmodule Plushie.Widget.Window do
       {:blur, v}, acc -> blur(acc, v)
       {:level, v}, acc -> level(acc, v)
       {:exit_on_close_request, v}, acc -> exit_on_close_request(acc, v)
+      {:scale_factor, v}, acc -> scale_factor(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -220,6 +225,11 @@ defmodule Plushie.Widget.Window do
   def exit_on_close_request(%__MODULE__{} = w, v) when is_boolean(v),
     do: %{w | exit_on_close_request: v}
 
+  @doc "Sets the window scale factor."
+  @spec scale_factor(window :: t(), scale_factor :: number()) :: t()
+  def scale_factor(%__MODULE__{} = w, scale_factor) when is_number(scale_factor),
+    do: %{w | scale_factor: scale_factor}
+
   @doc "Appends a child to the window."
   @spec push(window :: t(), child :: Plushie.Widget.ui_node() | struct()) :: t()
   def push(%__MODULE__{} = w, child), do: %{w | children: [child | w.children]}
@@ -257,6 +267,7 @@ defmodule Plushie.Widget.Window do
         |> put_if(w.blur, :blur)
         |> put_if(w.level, :level)
         |> put_if(w.exit_on_close_request, :exit_on_close_request)
+        |> put_if(w.scale_factor, :scale_factor)
 
       %{
         id: w.id,
