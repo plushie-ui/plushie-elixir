@@ -118,7 +118,7 @@ defmodule Plushie do
       end
 
     daemon? = Keyword.get(opts, :daemon, false)
-    dev? = Keyword.get(opts, :dev, false)
+    code_reloader? = resolve_code_reloader(opts)
     format = Keyword.get(opts, :format, :msgpack)
     log_level = Keyword.get(opts, :log_level, :error)
 
@@ -172,9 +172,11 @@ defmodule Plushie do
     ]
 
     children =
-      if dev? do
+      if code_reloader? do
+        reloader_opts = resolve_reloader_opts(opts)
+
         dev_opts =
-          Keyword.get(opts, :dev_opts, [])
+          reloader_opts
           |> Keyword.put(:runtime, runtime_name(name))
           |> Keyword.put(:bridge, bridge_name(name))
           |> Keyword.put_new(:name, dev_server_name(name))
@@ -222,4 +224,23 @@ defmodule Plushie do
   defp runtime_name(instance_name), do: :"#{instance_name}.Runtime"
   defp bridge_name(instance_name), do: :"#{instance_name}.Bridge"
   defp dev_server_name(instance_name), do: :"#{instance_name}.DevServer"
+
+  defp resolve_code_reloader(opts) do
+    case Keyword.get(opts, :code_reloader) do
+      nil -> Application.get_env(:plushie, :code_reloader, false) != false
+      false -> false
+      _ -> true
+    end
+  end
+
+  defp resolve_reloader_opts(opts) do
+    config =
+      case Application.get_env(:plushie, :code_reloader) do
+        list when is_list(list) -> list
+        _ -> []
+      end
+
+    cli_opts = Keyword.get(opts, :reloader_opts, [])
+    Keyword.merge(config, cli_opts)
+  end
 end

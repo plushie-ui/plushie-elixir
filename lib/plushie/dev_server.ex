@@ -66,6 +66,8 @@ defmodule Plushie.DevServer do
     # Start Rust file watcher for native extension crates if applicable.
     rust_watcher = start_rust_watcher(bridge)
 
+    rebuild_artifacts = Keyword.get(opts, :rebuild_artifacts, [:bin])
+
     state = %{
       runtime: runtime,
       bridge: bridge,
@@ -77,6 +79,7 @@ defmodule Plushie.DevServer do
       rust_debounce_ref: nil,
       rust_build_port: nil,
       rust_build_output: "",
+      rebuild_artifacts: rebuild_artifacts,
       overlay_expanded: false
     }
 

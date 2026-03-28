@@ -127,7 +127,7 @@ defmodule Mix.Tasks.Plushie.Build do
       """)
     end
 
-    release? = release? or Mix.env() == :prod
+    release? = release? or Application.get_env(:plushie, :build_profile) == :release
     profile = if release?, do: "--release", else: "--dev"
 
     Mix.shell().info("Building plushie-wasm#{if release?, do: " (release)", else: ""}...")
@@ -400,7 +400,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
     Mix.shell().info("Source: #{source_info}")
 
-    release? = release? or Mix.env() == :prod
+    release? = release? or Application.get_env(:plushie, :build_profile) == :release
     release_flags = if release?, do: ["--release"], else: []
     profile = if release?, do: "release", else: "debug"
 

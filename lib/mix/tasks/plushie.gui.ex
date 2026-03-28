@@ -63,7 +63,16 @@ defmodule Mix.Tasks.Plushie.Gui do
     start_opts = [binary: binary_path]
     start_opts = if opts[:json], do: Keyword.put(start_opts, :format, :json), else: start_opts
     start_opts = if opts[:daemon], do: Keyword.put(start_opts, :daemon, true), else: start_opts
-    start_opts = if watch?, do: Keyword.merge(start_opts, dev_opts(opts)), else: start_opts
+
+    start_opts =
+      if watch? do
+        reloader_opts = if opts[:debounce], do: [debounce_ms: opts[:debounce]], else: []
+
+        Keyword.put(start_opts, :code_reloader, true)
+        |> Keyword.put(:reloader_opts, reloader_opts)
+      else
+        start_opts
+      end
 
     case Plushie.start_link(app_module, start_opts) do
       {:ok, pid} ->
@@ -100,33 +109,17 @@ defmodule Mix.Tasks.Plushie.Gui do
   end
 
   defp resolve_watch_flag(opts) do
-    explicit = Keyword.get(opts, :watch)
-
-    case {explicit, Mix.env()} do
-      {true, :dev} ->
+    case Keyword.get(opts, :watch) do
+      true ->
+        Application.put_env(:plushie, :code_reloader, true)
         true
 
-      {true, _} ->
-        Mix.raise("--watch is only available in MIX_ENV=dev")
-
-      {false, _} ->
+      false ->
+        Application.put_env(:plushie, :code_reloader, false)
         false
 
-      {nil, :dev} ->
-        true
-
-      {nil, _} ->
-        false
+      nil ->
+        Application.get_env(:plushie, :code_reloader, false) != false
     end
-  end
-
-  defp dev_opts(opts) do
-    dev_opts =
-      case opts[:debounce] do
-        nil -> []
-        ms -> [debounce_ms: ms]
-      end
-
-    [dev: true, dev_opts: dev_opts]
   end
 end
