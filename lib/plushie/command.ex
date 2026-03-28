@@ -108,6 +108,10 @@ defmodule Plushie.Command do
   @doc """
   Run `fun` asynchronously in a Task. When it returns, the runtime dispatches
   `%Plushie.Event.Async{tag: event_tag, result: result}` through `update/2`.
+
+  Only one task per tag can be active. If a task with the same tag is
+  already running, it is killed and replaced. Use unique tags if you
+  need concurrent tasks.
   """
   @spec async(fun :: fun(), event_tag :: atom()) :: %__MODULE__{}
   def async(fun, event_tag) when is_function(fun) and is_atom(event_tag) do
@@ -149,7 +153,13 @@ defmodule Plushie.Command do
     %__MODULE__{type: :scroll_to, payload: %{target: widget_id, offset_y: offset}}
   end
 
-  @doc "Send `event` through `update/2` after `delay_ms` milliseconds."
+  @doc """
+  Send `event` through `update/2` after `delay_ms` milliseconds.
+
+  If a timer with the same event term is already pending, the previous
+  timer is canceled and replaced. This prevents duplicate deliveries
+  when `send_after` is called repeatedly for the same event.
+  """
   @spec send_after(delay_ms :: non_neg_integer(), event :: term()) :: %__MODULE__{}
   def send_after(delay_ms, event) when is_integer(delay_ms) and delay_ms >= 0 do
     %__MODULE__{type: :send_after, payload: %{delay: delay_ms, event: event}}
@@ -736,6 +746,10 @@ defmodule Plushie.Command do
   `%Plushie.Event.Stream{tag: event_tag, value: value}`. The function's final
   return value is delivered as `%Plushie.Event.Async{tag: event_tag, result: result}`.
 
+  Only one task per tag can be active. If a task with the same tag is
+  already running, it is killed and replaced. Use unique tags if you
+  need concurrent streams.
+
   This is sugar over spawning a process manually. You can achieve the same
   thing with bare `Task` and `send/2` if you prefer direct Elixir patterns.
 
@@ -987,7 +1001,8 @@ defmodule Plushie.Command do
   end
 
   @doc """
-  Issue multiple commands. Commands in the batch execute concurrently.
+  Issue multiple commands. Commands in the batch execute sequentially
+  in list order, with state threaded through each.
 
   Accepts a single command, a list of commands, or a nested list -- anything
   `List.wrap/1` can normalize.
