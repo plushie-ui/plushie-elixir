@@ -1,61 +1,79 @@
-defmodule Plushie.DevOverlay do
+defmodule Plushie.Dev.RebuildingOverlay do
   @moduledoc false
 
   # Builds and injects a dev-mode overlay bar into the UI tree.
   #
   # The overlay is a slim, semi-transparent bar at the top of each window
-  # showing build status (Elixir recompiles, Rust rebuilds). It has a
-  # collapsible drawer for detailed output.
+  # showing build status (Elixir recompiles, Rust/WASM rebuilds). It has
+  # a collapsible drawer for detailed output.
   #
   # All overlay widget IDs use the "__plushie_dev__/" prefix so the
   # Runtime can intercept their events before they reach app.update/2.
 
   @prefix "__plushie_dev__"
+  @dismiss_ms 1500
 
   @type status :: :building | :succeeded | :failed
-  @type source :: :elixir | :rust
+  @type source :: :elixir | :rust | :wasm
 
   @type t :: %__MODULE__{
           status: status(),
-          source: source(),
+          sources: [source()],
           message: String.t(),
           detail: String.t(),
           expanded: boolean()
         }
 
   defstruct status: :building,
-            source: :elixir,
+            sources: [:elixir],
             message: "",
             detail: "",
             expanded: false
 
-  @doc "Creates a new overlay state."
-  @spec new(source :: source(), message :: String.t()) :: t()
-  def new(source, message) do
-    %__MODULE__{
-      source: source,
-      message: message
-    }
-  end
-
-  @doc "Returns the ID prefix used for overlay widgets."
-  @spec prefix() :: String.t()
-  def prefix, do: @prefix
+  @doc "Auto-dismiss delay in milliseconds."
+  def dismiss_ms, do: @dismiss_ms
 
   @doc "Returns true if the given event ID belongs to the overlay."
   @spec overlay_event?(id :: String.t()) :: boolean()
-  def overlay_event?(id), do: String.starts_with?(id, @prefix <> "/")
+  def overlay_event?(id) when is_binary(id), do: String.starts_with?(id, @prefix <> "/")
+  def overlay_event?(_), do: false
 
   @doc "Extracts the action from an overlay event ID."
   @spec action(id :: String.t()) :: String.t()
   def action(id), do: String.replace_prefix(id, @prefix <> "/", "")
 
-  @doc """
-  Injects the overlay into a UI tree.
+  @doc "Formats a sources list as a parenthesized string: (rust, wasm)"
+  @spec format_sources(sources :: [source()]) :: String.t()
+  def format_sources(sources) do
+    "(#{Enum.map_join(sources, ", ", &Atom.to_string/1)})"
+  end
 
-  For multi-window apps, the overlay is injected into each window node's
-  children. For single-window apps (no window nodes), the root is wrapped.
+  # -- Action handling --------------------------------------------------------
+
+  @doc """
+  Handles an overlay user action (toggle, dismiss).
+
+  Returns:
+  - `{:updated, overlay}` -- overlay state changed, re-render needed
+  - `:dismissed` -- overlay should be removed
+  - `:noop` -- no change
   """
+  @spec handle_action(action :: String.t(), overlay :: t()) ::
+          {:updated, t()} | :dismissed | :noop
+  def handle_action("toggle", overlay) do
+    {:updated, %{overlay | expanded: not overlay.expanded}}
+  end
+
+  def handle_action("dismiss", _overlay), do: :dismissed
+  def handle_action(_action, _overlay), do: :noop
+
+  # -- Tree injection ---------------------------------------------------------
+
+  @doc "Injects the overlay into a tree, or returns the tree unchanged if overlay is nil."
+  @spec maybe_inject(tree :: map(), overlay :: t() | nil) :: map()
+  def maybe_inject(tree, nil), do: tree
+  def maybe_inject(tree, overlay), do: inject(tree, overlay)
+
   @spec inject(tree :: map(), overlay :: t()) :: map()
   def inject(tree, overlay) do
     overlay_node = build_overlay(overlay)
@@ -66,8 +84,6 @@ defmodule Plushie.DevOverlay do
       wrap_root(tree, overlay_node)
     end
   end
-
-  # -- Tree injection ---------------------------------------------------------
 
   defp has_window_nodes?(%{type: "window"}), do: true
 

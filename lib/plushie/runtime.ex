@@ -117,7 +117,7 @@ defmodule Plushie.Runtime do
            },
            pending_interact: {GenServer.from(), String.t()} | nil,
            pending_await_async: %{atom() => GenServer.from()},
-           dev_overlay: Plushie.DevOverlay.t() | nil,
+           dev_overlay: Plushie.Dev.RebuildingOverlay.t() | nil,
            dev_overlay_timer: reference() | nil
          }
 
@@ -602,10 +602,15 @@ defmodule Plushie.Runtime do
     # "Restarted" and schedule auto-dismiss.
     state =
       case state.dev_overlay do
-        %{source: :rust, status: :succeeded} ->
-          overlay = %{state.dev_overlay | message: "Restarted (rust)"}
-          state = %{state | dev_overlay: overlay}
-          schedule_overlay_dismiss(state)
+        %{sources: sources, status: :succeeded} when is_list(sources) ->
+          if :rust in sources do
+            label = Plushie.Dev.RebuildingOverlay.format_sources(sources)
+            overlay = %{state.dev_overlay | message: "Restarted #{label}"}
+            state = %{state | dev_overlay: overlay}
+            schedule_overlay_dismiss(state)
+          else
+            state
+          end
 
         _ ->
           state
@@ -860,12 +865,12 @@ defmodule Plushie.Runtime do
 
   # -- Dev overlay helpers ----------------------------------------------------
 
-  @dev_overlay_dismiss_ms 1500
+  @dev_overlay_dismiss_ms Plushie.Dev.RebuildingOverlay.dismiss_ms()
 
   defp maybe_handle_dev_overlay_event(state, %WidgetEvent{id: id})
        when is_binary(id) do
-    if Plushie.DevOverlay.overlay_event?(id) do
-      {:handled, handle_dev_overlay_action(Plushie.DevOverlay.action(id), state)}
+    if Plushie.Dev.RebuildingOverlay.overlay_event?(id) do
+      {:handled, handle_dev_overlay_action(Plushie.Dev.RebuildingOverlay.action(id), state)}
     else
       :passthrough
     end
@@ -873,30 +878,30 @@ defmodule Plushie.Runtime do
 
   defp maybe_handle_dev_overlay_event(_state, _event), do: :passthrough
 
-  defp handle_dev_overlay_action("toggle", %{dev_overlay: nil} = state), do: state
+  defp handle_dev_overlay_action(_action, %{dev_overlay: nil} = state), do: state
 
-  defp handle_dev_overlay_action("toggle", state) do
-    expanded = not state.dev_overlay.expanded
-    overlay = %{state.dev_overlay | expanded: expanded}
-    state = %{state | dev_overlay: overlay}
+  defp handle_dev_overlay_action(action, state) do
+    case Plushie.Dev.RebuildingOverlay.handle_action(action, state.dev_overlay) do
+      {:updated, overlay} ->
+        state = %{state | dev_overlay: overlay}
 
-    state =
-      if not expanded and overlay.status == :succeeded do
-        schedule_overlay_dismiss(state)
-      else
-        cancel_overlay_timer(state)
-      end
+        state =
+          if not overlay.expanded and overlay.status == :succeeded do
+            schedule_overlay_dismiss(state)
+          else
+            cancel_overlay_timer(state)
+          end
 
-    dev_rerender(state)
+        dev_rerender(state)
+
+      :dismissed ->
+        state = cancel_overlay_timer(state)
+        dev_rerender(%{state | dev_overlay: nil})
+
+      :noop ->
+        state
+    end
   end
-
-  defp handle_dev_overlay_action("dismiss", state) do
-    state = cancel_overlay_timer(state)
-    state = %{state | dev_overlay: nil}
-    dev_rerender(state)
-  end
-
-  defp handle_dev_overlay_action(_action, state), do: state
 
   defp dev_rerender(state) do
     new_tree =
@@ -1064,7 +1069,7 @@ defmodule Plushie.Runtime do
           bridge :: pid() | atom(),
           old_tree :: map() | nil,
           widget_handlers :: map(),
-          dev_overlay :: Plushie.DevOverlay.t() | nil
+          dev_overlay :: Plushie.Dev.RebuildingOverlay.t() | nil
         ) :: map() | nil
   defp render_and_sync(app, model, bridge, old_tree, widget_handlers \\ %{}, dev_overlay \\ nil) do
     case safe_view(app, model, widget_handlers) do
@@ -1092,8 +1097,9 @@ defmodule Plushie.Runtime do
     end
   end
 
-  defp maybe_inject_overlay(tree, nil), do: tree
-  defp maybe_inject_overlay(tree, overlay), do: Plushie.DevOverlay.inject(tree, overlay)
+  defp maybe_inject_overlay(tree, overlay) do
+    Plushie.Dev.RebuildingOverlay.maybe_inject(tree, overlay)
+  end
 
   defp safe_init(app, app_opts) do
     {model, commands} = unwrap_result(app.init(app_opts))

@@ -26,7 +26,7 @@ defmodule Plushie do
                       (default: `false`). In daemon mode, `all_windows_closed`
                       is delivered to `update/2` instead of triggering shutdown.
   - `:dev`        -- enable live code reloading (default: `false`)
-  - `:dev_opts`   -- options forwarded to `Plushie.DevServer` (default: `[]`)
+  - `:dev_opts`   -- options forwarded to `Plushie.Dev.DevServer` (default: `[]`)
   - `:transport`   -- `:spawn` (default, spawns the renderer as a child
                       process), `:stdio` (reads/writes the BEAM's own
                       stdin/stdout, for use with `plushie --exec`), or
@@ -184,7 +184,7 @@ defmodule Plushie do
         children ++
           [
             Supervisor.child_spec(
-              {Plushie.DevServer, dev_opts},
+              {Plushie.Dev.DevServer, dev_opts},
               restart: :transient
             )
           ]

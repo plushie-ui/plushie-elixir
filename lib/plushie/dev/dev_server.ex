@@ -1,4 +1,4 @@
-defmodule Plushie.DevServer do
+defmodule Plushie.Dev.DevServer do
   @moduledoc """
   File watcher and recompiler for dev-mode live reload.
 
@@ -149,9 +149,9 @@ defmodule Plushie.DevServer do
     clean_line = strip_ansi(line)
     state = %{state | rust_build_output: state.rust_build_output <> clean_line <> "\n"}
 
-    overlay = %Plushie.DevOverlay{
+    overlay = %Plushie.Dev.RebuildingOverlay{
       status: :building,
-      source: :rust,
+      sources: [:rust],
       message: "Rebuilding... (rust)",
       detail: state.rust_build_output,
       expanded: state.overlay_expanded
@@ -173,9 +173,9 @@ defmodule Plushie.DevServer do
     Logger.info("plushie dev: rust build succeeded")
     state = %{state | rust_build_port: nil}
 
-    overlay = %Plushie.DevOverlay{
+    overlay = %Plushie.Dev.RebuildingOverlay{
       status: :succeeded,
-      source: :rust,
+      sources: [:rust],
       message: "Rebuilt (rust), restarting...",
       detail: state.rust_build_output,
       expanded: state.overlay_expanded
@@ -197,9 +197,9 @@ defmodule Plushie.DevServer do
     Logger.warning("plushie dev: rust build failed (exit code #{status})")
     state = %{state | rust_build_port: nil}
 
-    overlay = %Plushie.DevOverlay{
+    overlay = %Plushie.Dev.RebuildingOverlay{
       status: :failed,
-      source: :rust,
+      sources: [:rust],
       message: "Build failed (rust)",
       detail: state.rust_build_output,
       expanded: true
@@ -230,9 +230,9 @@ defmodule Plushie.DevServer do
       |> Enum.sort()
       |> Enum.map_join(", ", &Path.rootname(Path.basename(&1)))
 
-    overlay = %Plushie.DevOverlay{
+    overlay = %Plushie.Dev.RebuildingOverlay{
       status: :building,
-      source: :elixir,
+      sources: [:elixir],
       message: "Rebuilding... (elixir)",
       detail: modules_str,
       expanded: state.overlay_expanded
@@ -265,9 +265,9 @@ defmodule Plushie.DevServer do
     if errors == [] do
       send(state.runtime, :force_rerender)
 
-      overlay = %Plushie.DevOverlay{
+      overlay = %Plushie.Dev.RebuildingOverlay{
         status: :succeeded,
-        source: :elixir,
+        sources: [:elixir],
         message: "Rebuilt (elixir)",
         detail: Enum.join(compiled, ", "),
         expanded: state.overlay_expanded
@@ -276,9 +276,9 @@ defmodule Plushie.DevServer do
       send(state.runtime, {:dev_overlay, overlay})
       Logger.info("plushie dev: reload complete")
     else
-      overlay = %Plushie.DevOverlay{
+      overlay = %Plushie.Dev.RebuildingOverlay{
         status: :failed,
-        source: :elixir,
+        sources: [:elixir],
         message: "Build failed (elixir)",
         detail: Enum.join(Enum.reverse(errors), "\n\n"),
         expanded: true
@@ -300,9 +300,9 @@ defmodule Plushie.DevServer do
     state = kill_rust_build(state)
     state = %{state | rust_build_output: ""}
 
-    overlay = %Plushie.DevOverlay{
+    overlay = %Plushie.Dev.RebuildingOverlay{
       status: :building,
-      source: :rust,
+      sources: [:rust],
       message: "Rebuilding... (rust)",
       detail: "",
       expanded: state.overlay_expanded
