@@ -1,5 +1,6 @@
 defmodule Plushie.ExtensionMacroTest do
-  use ExUnit.Case, async: true
+  # async: false because Code.compile_string affects global code server state
+  use ExUnit.Case, async: false
 
   # ---------------------------------------------------------------------------
   # Test modules: native_widget

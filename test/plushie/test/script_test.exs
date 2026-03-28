@@ -1,6 +1,42 @@
 defmodule Plushie.Automation.FileTest do
   use ExUnit.Case, async: true
 
+  defmodule ScriptHeaderApp do
+    use Plushie.App
+
+    def init(opts) do
+      %{script: Keyword.fetch!(opts, :script)}
+    end
+
+    def update(model, _event), do: model
+
+    def view(model) do
+      %{theme: theme, viewport: {width, height}} = model.script
+
+      %{
+        id: "main",
+        type: "window",
+        props: %{},
+        children: [
+          %{
+            id: "root",
+            type: "column",
+            props: %{},
+            children: [
+              %{id: "theme", type: "text", props: %{content: "Theme: #{theme}"}, children: []},
+              %{
+                id: "viewport",
+                type: "text",
+                props: %{content: "Viewport: #{width}x#{height}"},
+                children: []
+              }
+            ]
+          }
+        ]
+      }
+    end
+  end
+
   alias Plushie.Automation.File
   alias Plushie.Automation.Runner
 
@@ -173,41 +209,5 @@ defmodule Plushie.Automation.FileTest do
 
       assert :ok = Runner.run(script)
     end
-  end
-end
-
-defmodule ScriptHeaderApp do
-  use Plushie.App
-
-  def init(opts) do
-    %{script: Keyword.fetch!(opts, :script)}
-  end
-
-  def update(model, _event), do: model
-
-  def view(model) do
-    %{theme: theme, viewport: {width, height}} = model.script
-
-    %{
-      id: "main",
-      type: "window",
-      props: %{},
-      children: [
-        %{
-          id: "root",
-          type: "column",
-          props: %{},
-          children: [
-            %{id: "theme", type: "text", props: %{content: "Theme: #{theme}"}, children: []},
-            %{
-              id: "viewport",
-              type: "text",
-              props: %{content: "Viewport: #{width}x#{height}"},
-              children: []
-            }
-          ]
-        }
-      ]
-    }
   end
 end
