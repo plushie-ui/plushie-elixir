@@ -85,14 +85,25 @@ defmodule Mix.Tasks.Plushie.Build do
     # Ensure the project is compiled so extension modules are available
     Mix.Task.run("compile", [])
 
-    extensions = configured_extensions()
+    all_extensions = configured_extensions()
 
-    if extensions == [] do
+    # Only native extensions (those with a Rust crate) need building.
+    # Pure Elixir :widget extensions compose existing widgets and don't
+    # require a custom binary.
+    {native, skipped} =
+      Enum.split_with(all_extensions, &function_exported?(&1, :native_crate, 0))
+
+    if skipped != [] do
+      names = Enum.map_join(skipped, ", ", &inspect/1)
+      Mix.shell().info("Skipping non-native extension(s): #{names}")
+    end
+
+    if native == [] do
       build_stock(release?, verbose?, opts)
     else
-      check_collisions!(extensions)
-      check_crate_name_collisions!(extensions)
-      build_with_extensions(extensions, release?, verbose?, opts)
+      check_collisions!(native)
+      check_crate_name_collisions!(native)
+      build_with_extensions(native, release?, verbose?, opts)
     end
   end
 
