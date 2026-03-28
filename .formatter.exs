@@ -35,7 +35,6 @@ plushie_ui_locals = [
   group: :*,
   image: 2,
   image: 3,
-  interactive: :*,
   keyed_column: :*,
   layer: 2,
   line: 4,

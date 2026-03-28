@@ -7,8 +7,8 @@ defmodule Plushie.Canvas.Shape do
   wire-format conversion. These are plain functions, not macros --
   they can be called anywhere.
 
-  Structure macros (`group`, `layer`, `interactive` directive) live
-  in `Plushie.UI` and are available inside canvas do-blocks. Inside
+  Structure macros (`group`, `layer`) live in `Plushie.UI` and are
+  available inside canvas do-blocks. Inside
   those blocks, `text`, `image`, and `svg` calls resolve
   automatically to their canvas shape variants. For helper functions
   outside canvas blocks, import this module directly.
@@ -96,13 +96,12 @@ defmodule Plushie.Canvas.Shape do
 
   ## Interactive shapes
 
-  Use `interactive/2` to attach click/hover/drag behavior to any shape:
+  Make shapes interactive by placing them in a named group with
+  interaction opts:
 
-      rect(0, 0, 100, 40, fill: "#3498db")
-      |> interactive(id: "btn", on_click: true, cursor: "pointer")
-
-  Inside `Plushie.UI` group blocks, the `interactive` directive provides
-  ergonomic do-block and keyword forms -- see `Plushie.UI` moduledoc.
+      group "btn", on_click: true, cursor: "pointer" do
+        rect(0, 0, 100, 40, fill: "#3498db")
+      end
   """
 
   alias Plushie.Canvas.Shape.{
@@ -209,7 +208,15 @@ defmodule Plushie.Canvas.Shape do
 
     # Apply remaining keyword opts as group fields.
     Enum.reduce(opts, shape, fn {key, val}, acc ->
-      if Map.has_key?(acc, key), do: Map.put(acc, key, val), else: acc
+      if Map.has_key?(acc, key) do
+        Map.put(acc, key, val)
+      else
+        valid = Map.keys(%Group{children: []}) -- [:__struct__]
+
+        raise ArgumentError,
+              "unknown group option #{inspect(key)}. " <>
+                "Valid options: #{inspect(valid)}"
+      end
     end)
   end
 
@@ -398,25 +405,6 @@ defmodule Plushie.Canvas.Shape do
     |> maybe_put_dash(opts)
   end
 
-  # -- Interactive shapes (pipe sugar) ----------------------------------------
-
-  @doc """
-  Wraps a shape in an interactive group.
-
-  Sugar for `group id do ... end` -- creates a `%Group{}` containing
-  the shape with the specified interactive fields.
-
-  ## Required option
-
-  - `:id` -- unique identifier for this element (used in events).
-  """
-  @spec interactive(shape :: map(), opts :: keyword()) :: Group.t()
-  def interactive(shape, opts) when is_map(shape) do
-    {id, opts} = Keyword.pop!(opts, :id)
-    group = %Group{id: id, children: [shape]}
-    Enum.reduce(opts, group, fn {k, v}, acc -> Map.put(acc, k, v) end)
-  end
-
   # -- Build helpers for canvas_scope rewrites --------------------------------
 
   @doc false
@@ -430,7 +418,13 @@ defmodule Plushie.Canvas.Shape do
   @doc false
   def __build_svg__(source, x, y, w, h), do: svg(source, x, y, w, h)
 
-  def __build_svg__(source, x, y, w, h, _opts) do
+  def __build_svg__(source, x, y, w, h, opts) do
+    if opts != [] do
+      raise ArgumentError,
+            "canvas svg does not accept options (got #{inspect(opts)}). " <>
+              "SVG shapes do not support fill, stroke, or opacity."
+    end
+
     %CanvasSvg{source: source, x: x, y: y, w: w, h: h}
   end
 

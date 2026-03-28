@@ -86,7 +86,7 @@ defmodule Plushie.Tree do
   def normalize({:__canvas_meta__, type, _value}) do
     raise ArgumentError,
           "found a canvas metadata declaration (#{inspect(type)}) in the widget tree. " <>
-            "Canvas metadata (like interactive) should be inside a group block."
+            "Canvas metadata should be inside a group block."
   end
 
   def normalize(%module{} = widget) when is_atom(module) do
@@ -116,7 +116,7 @@ defmodule Plushie.Tree do
   defp normalize_with_scope({:__canvas_meta__, type, _value}, _scope, _window_id) do
     raise ArgumentError,
           "found a canvas metadata declaration (#{inspect(type)}) in the widget tree. " <>
-            "Canvas metadata (like interactive) should be inside a group block."
+            "Canvas metadata should be inside a group block."
   end
 
   defp normalize_with_scope(%module{} = widget, scope, window_id) when is_atom(module) do

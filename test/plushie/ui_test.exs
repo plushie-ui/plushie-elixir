@@ -178,11 +178,6 @@ defmodule PlushieUICanvasShapeHelper do
     end
   end
 
-  def interactive_pipe_form do
-    rect(0, 0, 100, 40, fill: "#3498db")
-    |> Plushie.Canvas.Shape.interactive(id: "btn", on_click: true)
-  end
-
   def canvas_with_for do
     canvas "chart" do
       layer "bars" do
@@ -1562,12 +1557,6 @@ defmodule Plushie.UITest do
       assert result.id == "btn"
       assert result.on_click == true
     end
-
-    test "pipe form wraps in group" do
-      result = PlushieUICanvasShapeHelper.interactive_pipe_form()
-      assert %Plushie.Canvas.Shape.Group{} = result
-      assert result.id == "btn"
-    end
   end
 
   # ---------------------------------------------------------------------------
@@ -1654,23 +1643,6 @@ defmodule Plushie.UITest do
       end)
     end
 
-    test "interactive in layer (not group) raises" do
-      capture_io(:stderr, fn ->
-        assert_raise CompileError, fn ->
-          Code.compile_string("""
-          import Plushie.UI
-          canvas "x" do
-            layer "l" do
-              interactive "btn" do
-                on_click true
-              end
-            end
-          end
-          """)
-        end
-      end)
-    end
-
     test "layer inside layer raises" do
       capture_io(:stderr, fn ->
         assert_raise CompileError, fn ->
@@ -1681,21 +1653,6 @@ defmodule Plushie.UITest do
               layer "inner" do
                 rect(0, 0, 50, 50)
               end
-            end
-          end
-          """)
-        end
-      end)
-    end
-
-    test "interactive do-block without id raises" do
-      capture_io(:stderr, fn ->
-        assert_raise CompileError, fn ->
-          Code.compile_string("""
-          import Plushie.UI
-          group do
-            interactive do
-              on_click true
             end
           end
           """)

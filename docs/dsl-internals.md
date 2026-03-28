@@ -37,7 +37,7 @@ handle:
 - Auto-ID generation from call-site module and line number
 - Block-form option parsing (bare `key value` declarations in do-blocks)
 - Container child collection (flattening lists, filtering nils)
-- Canvas context validation (layer/group/interactive nesting rules)
+- Canvas context validation (layer/group nesting rules)
 - Compile-time option key validation with helpful error messages
 
 The key design constraint: macros produce the same `%{id, type, props,
@@ -275,7 +275,7 @@ contexts: `:canvas`, `:layer`, and `:group`.
 |---|---|---|
 | `layer` | `:canvas` | `:layer`, `:group` |
 | `group` | `:layer`, `:group` | `:canvas` |
-| `interactive` | `:group` | `:canvas`, `:layer` |
+| Transforms | `:group` | `:canvas`, `:layer` |
 | Shape functions | `:layer`, `:group` | `:canvas` |
 
 ### Rewriting

@@ -147,13 +147,11 @@ defmodule Plushie.UI do
   Inside `canvas`, `layer`, and `group` blocks, `text`, `image`, and
   `svg` calls resolve automatically to their canvas shape variants.
 
-  The `interactive` directive inside a `group` block attaches hit-test
-  and accessibility metadata:
+  Interactive fields go directly on the group via keyword opts:
 
       canvas "toggle", width: 52, height: 28 do
         layer "bg" do
-          group do
-            interactive "switch", on_click: true, cursor: :pointer
+          group "switch", on_click: true, cursor: :pointer do
             rect(0, 0, 52, 28, fill: "#4CAF50", radius: 14)
             circle(36, 14, 10, fill: "#fff")
           end
@@ -1930,7 +1928,7 @@ defmodule Plushie.UI do
   # __build_fixed_node__ removed -- use __build_container__
 
   # ---------------------------------------------------------------------------
-  # Canvas group, layer, and interactive macros
+  # Canvas group and layer macros
   # ---------------------------------------------------------------------------
 
   @doc """
@@ -1938,10 +1936,7 @@ defmodule Plushie.UI do
 
   ## Do-block form
 
-      group x: 4, y: 4 do
-        interactive "btn" do
-          on_click
-        end
+      group "btn", x: 4, y: 4, on_click: true do
         rect(0, 0, 32, 32, radius: 4)
       end
 
@@ -2024,16 +2019,6 @@ defmodule Plushie.UI do
       {unquote(name), [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)}
     end
   end
-
-  # The `interactive` macro has been removed. Interactive fields now go
-  # directly on the group via keyword opts or DSL directives:
-  #
-  #     group "btn-id", on_click: true do
-  #       rect(0, 0, 100, 40)
-  #     end
-  #
-  # For the pipe form, use Plushie.Canvas.Shape.interactive/2 which
-  # auto-wraps a shape in an interactive group.
 
   # ---------------------------------------------------------------------------
   # Canvas shape macros (block-form support)
@@ -2563,22 +2548,6 @@ defmodule Plushie.UI do
     """)
   end
 
-  # interactive: valid in :group only
-  defp canvas_scope({:interactive, _, _} = node, :group), do: node
-
-  defp canvas_scope({:interactive, meta, _}, _ctx) do
-    canvas_scope_error!(meta, """
-    interactive is not valid here. Use it inside a group:
-
-        group do
-          interactive "btn" do
-            on_click
-          end
-          rect(0, 0, 100, 40)
-        end
-    """)
-  end
-
   # --- Ambiguous name rewrites (text, image, svg) ---
 
   # text/1,2: always error in canvas context
@@ -2708,7 +2677,12 @@ defmodule Plushie.UI do
         end
 
       _other ->
-        node
+        {_, meta, _} = node
+
+        canvas_scope_error!(meta, """
+        #{name} must be inside a group block, not directly in a layer. \
+        Wrap your shapes in a group to apply transforms.
+        """)
     end
   end
 
