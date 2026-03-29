@@ -22,8 +22,10 @@ defmodule Plushie.TelemetryTest do
     def view(model) do
       import Plushie.UI
 
-      column do
-        text("#{model.value}")
+      window "main" do
+        column do
+          text("#{model.value}")
+        end
       end
     end
   end

@@ -112,8 +112,10 @@ defmodule Plushie.WidgetOpsTest do
     def view(_model) do
       import Plushie.UI
 
-      column do
-        text("widget ops test")
+      window "main" do
+        column do
+          text("widget ops test")
+        end
       end
     end
   end
@@ -252,8 +254,10 @@ defmodule Plushie.WidgetOpsTest do
         def view(_model) do
           import Plushie.UI
 
-          column do
-            text("batch test")
+          window "main" do
+            column do
+              text("batch test")
+            end
           end
         end
       end
