@@ -2,11 +2,13 @@
 
 Build native desktop apps in Elixir. **[Pre-1.0](#status)**
 
-Plushie is a desktop GUI framework that allows you to write your entire
-application in Elixir -- state, events, UI -- and get native windows
-on Linux, macOS, and Windows. Rendering is powered by
-[iced](https://github.com/iced-rs/iced), a cross-platform GUI library
-for Rust, which plushie drives as a precompiled binary behind the scenes.
+Plushie is a native desktop GUI platform with SDKs for Elixir, Gleam,
+Python, Ruby, and TypeScript. This is the Elixir SDK.
+
+Write your entire application in Elixir -- state, events, UI -- and get
+native windows on Linux, macOS, and Windows. Rendering is powered by
+[iced](https://github.com/iced-rs/iced), a cross-platform GUI toolkit
+for Rust, which Plushie drives as a precompiled binary behind the scenes.
 
 <!-- test: readme_counter_init_test, readme_counter_increment_test, readme_counter_decrement_test, readme_counter_unknown_event_test, readme_counter_view_structure_test, readme_counter_view_after_increment_test -- keep this code block in sync with the test -->
 ```elixir
@@ -79,28 +81,27 @@ Pin to an exact version (`==`, not `~>`) and read the
 The precompiled binary requires no Rust toolchain. To build from
 source instead, install [rustup](https://rustup.rs/) and run
 `mix plushie.build`. See the
-[getting started guide](docs/getting-started.md) for the full
-walkthrough.
+[getting started guide](docs/guides/02-getting-started.md) for the
+full walkthrough.
 
 ## Features
 
-- **38 built-in widget types** -- buttons, text inputs, sliders,
-  tables, markdown, canvas, and more. Easy to build your own.
-  [Layout guide](docs/layout.md)
-- **22 built-in themes** -- light, dark, dracula, nord, solarized,
-  gruvbox, catppuccin, tokyo night, kanagawa, and more. Custom
-  palettes and per-widget style overrides.
-  [Theming guide](docs/theming.md)
+- **Built-in widgets** -- buttons, text inputs, sliders, tables,
+  markdown, canvas, and more. Easy to build your own.
+  [Layout guide](docs/guides/07-layout.md)
+- **Themes** -- dark, light, nord, catppuccin, tokyo night, and
+  more. Custom palettes and per-widget style overrides.
+  [Styling guide](docs/guides/08-styling.md)
 - **Multi-window** -- declare window nodes in your widget tree;
   the framework opens, closes, and manages them automatically.
-  [App behaviour guide](docs/app-behaviour.md)
+  [Async and Effects guide](docs/guides/10-async-and-effects.md)
 - **Platform effects** -- native file dialogs, clipboard, OS
-  notifications. [Effects guide](docs/effects.md)
-- **Accessibility** -- screen reader support via
-  [accesskit](https://accesskit.dev) on all platforms.
-  [Accessibility guide](docs/accessibility.md)
-- **Live reload** -- edit code, see changes instantly. Enabled by
-  default in dev mode.
+  notifications. [Async and Effects guide](docs/guides/10-async-and-effects.md)
+- **Accessibility** -- keyboard navigation, screen reader support
+  via [AccessKit](https://accesskit.dev) on all platforms.
+  [Accessibility reference](docs/reference/accessibility.md)
+- **Hot reload** -- edit code, see changes instantly when enabled
+  via `config :plushie, code_reloader: true` or `--watch`.
 - **Custom Widgets** -- multiple paths to custom widgets:
   - **Compose** existing widgets into higher-level components with
     pure Elixir. No Rust, no binary rebuild.
@@ -108,14 +109,14 @@ walkthrough.
     diagrams, and other custom 2D rendering.
   - **Native** -- implement `WidgetExtension` in Rust for full
     control over rendering, state, and event handling.
-  - [Widgets guide](docs/widgets.md)
+  - [Custom Widgets guide](docs/guides/12-custom-widgets.md)
 - **Remote rendering** -- native desktop UI for apps running on
   servers or embedded devices. Dashboards, admin tools, IoT
   diagnostics -- over SSH with configurable event throttling.
-  [Running guide](docs/running.md)
+  [Tooling and Deployment guide](docs/guides/15-tooling-and-deployment.md)
 - **Scriptable automation** -- drive real running apps with `.plushie`
   scripts for demos, smoke flows, and screenshots.
-  [Testing guide](docs/testing.md)
+  [Testing guide](docs/guides/14-testing.md)
 
 ## Testing
 
@@ -150,8 +151,8 @@ defmodule TodoTest do
 end
 ```
 
-See the [testing guide](docs/testing.md) for the full API, backend
-details, and CI configuration.
+See the [testing guide](docs/guides/14-testing.md) for the full API,
+backend details, and CI configuration.
 
 ## How it works
 
@@ -164,16 +165,17 @@ user events back over stdout.
 You don't need Rust to use plushie. The renderer is a precompiled
 binary, similar to how your app talks to a database without you
 writing C. If you ever need custom native rendering, the
-[widget system](docs/widgets.md) lets you write Rust for just
-those parts.
+[widget system](docs/guides/12-custom-widgets.md) lets you write
+Rust for just those parts.
 
 The same protocol works over a local pipe, an SSH connection, or
 any bidirectional byte stream -- your code doesn't need to change.
-See the [running guide](docs/running.md) for deployment options.
+See the [dev workflow guide](docs/guides/15-tooling-and-deployment.md) for
+deployment options.
 
 ## Status
 
-Pre-1.0. The core works -- 38 widget types, event system, 22 themes,
+Pre-1.0. The core works -- built-in widgets, event system, themes,
 multi-window, testing framework, accessibility -- but the API is
 still evolving:
 
@@ -185,22 +187,45 @@ still evolving:
 
 ## Documentation
 
-Guides are in [`docs/`](docs/) and will be on
+Guides and references are in [`docs/`](docs/) and will be on
 [hexdocs](https://hexdocs.pm/plushie) once published:
 
-- [Getting started](docs/getting-started.md) -- setup, first app, mix tasks, dev mode
-- [Tutorial](docs/tutorial.md) -- build a todo app step by step
-- [App behaviour](docs/app-behaviour.md) -- the Elixir API contract, multi-window
-- [Layout](docs/layout.md) -- length, padding, alignment, spacing
-- [Events](docs/events.md) -- full event taxonomy
-- [Commands and subscriptions](docs/commands.md) -- async work, timers, widget ops
-- [Effects](docs/effects.md) -- native platform features
-- [Theming](docs/theming.md) -- themes, custom palettes, styling
-- [Composition patterns](docs/composition-patterns.md) -- tabs, sidebars, modals, cards, state helpers
-- [Scoped IDs](docs/scoped-ids.md) -- hierarchical ID namespacing
-- [Testing](docs/testing.md) -- three-backend test framework and pixel regression
-- [Accessibility](docs/accessibility.md) -- accesskit integration, a11y props
-- [Custom Widgets](docs/widgets.md) -- custom widgets, publishing packages
+**Guides** -- sequential chapters building a live widget editor:
+
+- [Introduction](docs/guides/01-introduction.md)
+- [Getting Started](docs/guides/02-getting-started.md)
+- [Your First App](docs/guides/03-your-first-app.md)
+- [The Development Loop](docs/guides/04-the-development-loop.md)
+- [Events](docs/guides/05-events.md)
+- [Lists and Inputs](docs/guides/06-lists-and-inputs.md)
+- [Layout](docs/guides/07-layout.md)
+- [Styling](docs/guides/08-styling.md)
+- [Subscriptions](docs/guides/09-subscriptions.md)
+- [Async and Effects](docs/guides/10-async-and-effects.md)
+- [Canvas](docs/guides/11-canvas.md)
+- [Custom Widgets](docs/guides/12-custom-widgets.md)
+- [State Management](docs/guides/13-state-management.md)
+- [Testing](docs/guides/14-testing.md)
+- [Tooling and Deployment](docs/guides/15-tooling-and-deployment.md)
+
+**References** -- lookup material by topic:
+
+- [App Lifecycle](docs/reference/app-lifecycle.md),
+  [Events](docs/reference/events.md),
+  [Commands](docs/reference/commands.md),
+  [Subscriptions](docs/reference/subscriptions.md),
+  [Built-in Widgets](docs/reference/built-in-widgets.md),
+  [Patterns](docs/reference/patterns.md),
+  [Canvas](docs/reference/canvas.md),
+  [Types](docs/reference/types.md),
+  [Custom Widgets](docs/reference/custom-widgets.md),
+  [Accessibility](docs/reference/accessibility.md),
+  [Testing](docs/reference/testing.md),
+  [Scoped IDs](docs/reference/scoped-ids.md),
+  [DSL](docs/reference/dsl.md),
+  [Mix Tasks](docs/reference/mix-tasks.md),
+  [Configuration](docs/reference/configuration.md),
+  [Wire Protocol](docs/reference/wire-protocol.md)
 
 ## Development
 

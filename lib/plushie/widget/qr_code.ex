@@ -14,7 +14,7 @@ defmodule Plushie.Widget.QrCode do
     `:medium` (default), `:quartile`, `:high`.
   - `alt` (string) -- accessible label for the QR code. Sits outside the
     `a11y` object. See "Widget-specific accessibility props" in
-    `docs/accessibility.md`.
+    `docs/reference/accessibility.md`.
   - `description` (string) -- extended accessible description for the QR
     code. Sits outside the `a11y` object.
   - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.

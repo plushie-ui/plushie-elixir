@@ -18,7 +18,7 @@ defmodule Plushie.Widget.Slider do
   - `style` -- `:default` or `StyleMap.t()` for custom styling. See `Plushie.Type.StyleMap`.
   - `label` (string) -- accessible label for the slider (e.g. "Volume").
     Sits outside the `a11y` object. See "Widget-specific accessibility props"
-    in `docs/accessibility.md`.
+    in `docs/reference/accessibility.md`.
   - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
 
   ## Events

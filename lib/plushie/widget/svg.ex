@@ -13,7 +13,7 @@ defmodule Plushie.Widget.Svg do
   - `color` (color) -- color tint applied to the SVG. See `Plushie.Type.Color`.
   - `alt` (string) -- accessible label for the SVG. Auto-populates the
     accessibility label outside the `a11y` object. See "Widget-specific
-    accessibility props" in `docs/accessibility.md`.
+    accessibility props" in `docs/reference/accessibility.md`.
   - `description` (string) -- extended accessible description for the SVG.
     Sits outside the `a11y` object.
   - `decorative` (boolean) -- when true, hides the SVG from assistive

@@ -195,7 +195,7 @@ defmodule Plushie.UI do
   ## Internals
 
   For maintainer and widget author details on the macro architecture,
-  see `docs/dsl-internals.md`.
+  see `docs/reference/dsl.md`.
   """
 
   # Container widget modules and their display names, used to build the

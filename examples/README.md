@@ -7,9 +7,9 @@ Run any example with:
 mix plushie.gui <Name>
 ```
 
-In dev mode, file watching is enabled by default. Edit an example
-while the GUI is running and the window updates instantly -- a good
-way to experiment with the API.
+With hot reload enabled (`--watch` flag or `config :plushie,
+code_reloader: true`), you can edit an example while the GUI is
+running and the window updates instantly.
 
 ## DSL styles
 
@@ -117,6 +117,20 @@ coordinate-based canvas events (press/move/release for continuous drag).
 
 ```sh
 mix plushie.gui ColorPicker
+```
+
+### Gallery
+
+**File:** `gallery.ex`
+
+Interactive widget gallery demonstrating common widget types: buttons
+(default, primary, danger, text styles), text input (with on_submit),
+checkbox, toggler, slider, pick list, radio buttons, progress bar, and
+styled text. A good starting point for exploring what widgets are
+available and what events they produce.
+
+```sh
+mix plushie.gui Gallery
 ```
 
 ### Catalog

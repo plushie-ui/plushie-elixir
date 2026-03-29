@@ -34,52 +34,51 @@ defmodule Plushie.MixProject do
 
   defp docs do
     [
-      main: "getting-started",
+      main: "01-introduction",
       source_url: @source_url,
       source_ref: "v#{@version}",
       extras: [
-        "docs/getting-started.md",
-        "docs/tutorial.md",
-        "docs/app-behaviour.md",
-        "docs/layout.md",
-        "docs/events.md",
-        "docs/commands.md",
-        "docs/effects.md",
-        "docs/scoped-ids.md",
-        "docs/theming.md",
-        "docs/testing.md",
-        "docs/running.md",
-        "docs/composition-patterns.md",
-        "docs/accessibility.md",
-        "docs/widgets.md",
-        "docs/dsl-internals.md",
+        # Guides (ordered, read sequentially)
+        "docs/guides/01-introduction.md",
+        "docs/guides/02-getting-started.md",
+        "docs/guides/03-your-first-app.md",
+        "docs/guides/04-the-development-loop.md",
+        "docs/guides/05-events.md",
+        "docs/guides/06-lists-and-inputs.md",
+        "docs/guides/07-layout.md",
+        "docs/guides/08-styling.md",
+        "docs/guides/09-subscriptions.md",
+        "docs/guides/10-async-and-effects.md",
+        "docs/guides/11-canvas.md",
+        "docs/guides/12-custom-widgets.md",
+        "docs/guides/13-state-management.md",
+        "docs/guides/14-testing.md",
+        "docs/guides/15-tooling-and-deployment.md",
+        # Reference (alphabetical, lookup by topic)
+        "docs/reference/app-lifecycle.md",
+        "docs/reference/accessibility.md",
+        "docs/reference/built-in-widgets.md",
+        "docs/reference/canvas.md",
+        "docs/reference/commands.md",
+        "docs/reference/configuration.md",
+        "docs/reference/custom-widgets.md",
+        "docs/reference/dsl.md",
+        "docs/reference/events.md",
+        "docs/reference/mix-tasks.md",
+        "docs/reference/patterns.md",
+        "docs/reference/scoped-ids.md",
+        "docs/reference/subscriptions.md",
+        "docs/reference/testing.md",
+        "docs/reference/types.md",
+        "docs/reference/wire-protocol.md",
+        # About
         "examples/README.md",
         "CHANGELOG.md"
       ],
       groups_for_extras: [
-        Guides: [
-          "docs/getting-started.md",
-          "docs/tutorial.md",
-          "docs/app-behaviour.md",
-          "docs/layout.md",
-          "docs/events.md",
-          "docs/commands.md",
-          "docs/effects.md",
-          "docs/scoped-ids.md",
-          "docs/theming.md",
-          "docs/testing.md"
-        ],
-        Advanced: [
-          "docs/running.md",
-          "docs/composition-patterns.md",
-          "docs/accessibility.md",
-          "docs/widgets.md",
-          "docs/dsl-internals.md"
-        ],
-        About: [
-          "examples/README.md",
-          "CHANGELOG.md"
-        ]
+        Guides: ~r/docs\/guides\/.*/,
+        Reference: ~r/docs\/reference\/.*/,
+        About: ["examples/README.md", "CHANGELOG.md"]
       ],
       groups_for_modules: [
         "App Framework": [
@@ -163,7 +162,8 @@ defmodule Plushie.MixProject do
           not String.starts_with?(mod_str, "Elixir.StarRating") and
           not String.starts_with?(mod_str, "Elixir.ThemeToggle") and
           not String.starts_with?(mod_str, "Elixir.TabApp") and
-          not String.starts_with?(mod_str, "Elixir.ModalApp")
+          not String.starts_with?(mod_str, "Elixir.ModalApp") and
+          not String.starts_with?(mod_str, "Elixir.Gallery")
       end
     ]
   end

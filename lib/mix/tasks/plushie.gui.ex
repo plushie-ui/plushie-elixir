@@ -13,19 +13,17 @@ defmodule Mix.Tasks.Plushie.Gui do
   - `--build` -- Build the plushie binary before starting
   - `--release` -- Use the release build
   - `--json` -- Use JSON wire protocol (debugging)
-  - `--watch` -- Enable file watching and live reload (default in dev)
+  - `--watch` -- Enable file watching and live reload
   - `--no-watch` -- Disable file watching
   - `--debounce` -- File watch debounce interval in ms (default: 100)
   - `--daemon` -- Keep running after the last window closes
 
   ## File watching
 
-  In `MIX_ENV=dev`, file watching is enabled by default. Edit any
-  `.ex` file under `lib/` and the GUI updates in place, preserving
-  application state.
-
-  In other environments, watching is disabled. Passing `--watch`
-  outside of dev will raise an error.
+  File watching is opt-in. Enable it with `--watch` or by setting
+  `config :plushie, code_reloader: true` in your config. When active,
+  editing any `.ex` file under `lib/` recompiles and updates the GUI
+  in place, preserving application state.
   """
 
   use Mix.Task

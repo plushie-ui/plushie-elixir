@@ -18,7 +18,7 @@ defmodule Plushie.Widget.Image do
   - `crop` (map) -- crop rectangle: `%{x, y, width, height}` (integer pixel values).
   - `alt` (string) -- accessible label for the image. Auto-populates the
     accessibility label outside the `a11y` object. See "Widget-specific
-    accessibility props" in `docs/accessibility.md`.
+    accessibility props" in `docs/reference/accessibility.md`.
   - `description` (string) -- extended accessible description for the image.
     Sits outside the `a11y` object.
   - `decorative` (boolean) -- when true, hides the image from assistive

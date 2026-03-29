@@ -14,7 +14,7 @@ defmodule Plushie.Widget.ProgressBar do
   - `vertical` (boolean) -- when `true`, renders the progress bar vertically.
   - `label` (string) -- accessible label for the progress bar (e.g.
     "Upload progress"). Sits outside the `a11y` object. See "Widget-specific
-    accessibility props" in `docs/accessibility.md`.
+    accessibility props" in `docs/reference/accessibility.md`.
   - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
   """
 
