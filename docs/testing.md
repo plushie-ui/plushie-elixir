@@ -868,12 +868,10 @@ PLUSHIE_TEST_BACKEND=headless mix test
 
 `mix plushie.build` reads extensions from application config:
 
-```elixir
-# config/config.exs
-config :plushie, extensions: [MyGauge]
-```
+Native widgets are auto-detected via the `Plushie.Widget` protocol --
+no explicit config needed. Just run `mix plushie.build`.
 
-The custom binary is placed at `_build/<env>/plushie/target/debug/<project>-plushie`.
+The custom binary is placed at `_build/<env>/plushie/target/debug/<project>-renderer`.
 `Plushie.Binary.path!/0` finds it automatically, so the headless
 and windowed test backends use it without additional configuration.
 

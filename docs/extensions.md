@@ -62,8 +62,8 @@ impl WidgetExtension for SparklineExtension {
 }
 ```
 
-Build with `mix plushie.build` (extensions are registered explicitly via
-`config :plushie, extensions: [MySparkline]` in your config) or run
+Build with `mix plushie.build` (native widgets are auto-detected via
+the `Plushie.Widget` protocol -- no config needed) or run
 the renderer binary directly. The `PlushieAppBuilder` chains `.extension()` calls
 in the generated `main.rs`:
 
