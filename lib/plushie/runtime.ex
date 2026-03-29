@@ -202,8 +202,11 @@ defmodule Plushie.Runtime do
   If the task has already completed, returns immediately. Otherwise
   blocks until the task finishes and its result has been processed
   through update/2.
+
+  Returns `{:error, :await_in_progress}` if another caller is already
+  waiting for the same tag.
   """
-  @spec await_async(GenServer.server(), atom(), timeout()) :: :ok
+  @spec await_async(GenServer.server(), atom(), timeout()) :: :ok | {:error, :await_in_progress}
   def await_async(runtime, tag, timeout \\ 5000) do
     GenServer.call(runtime, {:await_async, tag}, timeout)
   end
@@ -232,8 +235,12 @@ defmodule Plushie.Runtime do
   The renderer will return `response` immediately for any effect of
   the given `kind`, without executing the real effect. Blocks until
   the renderer confirms the stub is stored.
+
+  Returns `{:error, :stub_ack_pending}` if a register or unregister
+  for the same kind is already awaiting confirmation.
   """
-  @spec register_effect_stub(GenServer.server(), String.t(), term(), timeout()) :: :ok
+  @spec register_effect_stub(GenServer.server(), String.t(), term(), timeout()) ::
+          :ok | {:error, :stub_ack_pending}
   def register_effect_stub(runtime, kind, response, timeout \\ 5000) do
     GenServer.call(runtime, {:register_effect_stub, kind, response}, timeout)
   end
@@ -242,8 +249,12 @@ defmodule Plushie.Runtime do
   Removes a previously registered effect stub.
 
   Blocks until the renderer confirms the stub is removed.
+
+  Returns `{:error, :stub_ack_pending}` if a register or unregister
+  for the same kind is already awaiting confirmation.
   """
-  @spec unregister_effect_stub(GenServer.server(), String.t(), timeout()) :: :ok
+  @spec unregister_effect_stub(GenServer.server(), String.t(), timeout()) ::
+          :ok | {:error, :stub_ack_pending}
   def unregister_effect_stub(runtime, kind, timeout \\ 5000) do
     GenServer.call(runtime, {:unregister_effect_stub, kind}, timeout)
   end
@@ -362,15 +373,21 @@ defmodule Plushie.Runtime do
   end
 
   def handle_call({:register_effect_stub, kind, response}, from, state) do
-    Plushie.Bridge.send_register_effect_stub(state.bridge, kind, response)
-    pending = Map.put(state.pending_stub_acks, kind, from)
-    {:noreply, %{state | pending_stub_acks: pending}}
+    if Map.has_key?(state.pending_stub_acks, kind) do
+      {:reply, {:error, :stub_ack_pending}, state}
+    else
+      Plushie.Bridge.send_register_effect_stub(state.bridge, kind, response)
+      {:noreply, %{state | pending_stub_acks: Map.put(state.pending_stub_acks, kind, from)}}
+    end
   end
 
   def handle_call({:unregister_effect_stub, kind}, from, state) do
-    Plushie.Bridge.send_unregister_effect_stub(state.bridge, kind)
-    pending = Map.put(state.pending_stub_acks, kind, from)
-    {:noreply, %{state | pending_stub_acks: pending}}
+    if Map.has_key?(state.pending_stub_acks, kind) do
+      {:reply, {:error, :stub_ack_pending}, state}
+    else
+      Plushie.Bridge.send_unregister_effect_stub(state.bridge, kind)
+      {:noreply, %{state | pending_stub_acks: Map.put(state.pending_stub_acks, kind, from)}}
+    end
   end
 
   def handle_call({:interact, action, selector, payload}, from, state) do
@@ -388,13 +405,17 @@ defmodule Plushie.Runtime do
   end
 
   def handle_call({:await_async, tag}, from, state) do
-    if Map.has_key?(state.async_tasks, tag) do
-      # Task still running -- store caller and reply when it completes.
-      pending = Map.put(state.pending_await_async, tag, from)
-      {:noreply, %{state | pending_await_async: pending}}
-    else
-      # Task already completed (or never existed).
-      {:reply, :ok, state}
+    cond do
+      Map.has_key?(state.pending_await_async, tag) ->
+        {:reply, {:error, :await_in_progress}, state}
+
+      Map.has_key?(state.async_tasks, tag) ->
+        # Task still running -- store caller and reply when it completes.
+        {:noreply, %{state | pending_await_async: Map.put(state.pending_await_async, tag, from)}}
+
+      true ->
+        # Task already completed (or never existed).
+        {:reply, :ok, state}
     end
   end
 
