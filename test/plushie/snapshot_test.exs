@@ -8,9 +8,7 @@ defmodule Plushie.SnapshotTest do
 
   @moduledoc false
 
-  # ---------------------------------------------------------------------------
   # Helpers
-  # ---------------------------------------------------------------------------
 
   defp tmp_snapshot_path(context, name) do
     Path.join(context.tmp_dir, name)
@@ -78,9 +76,7 @@ defmodule Plushie.SnapshotTest do
     :ok
   end
 
-  # ---------------------------------------------------------------------------
   # 1. First run creates a snapshot file
-  # ---------------------------------------------------------------------------
 
   describe "first run (no existing snapshot)" do
     test "creates the snapshot file and returns :ok", ctx do
@@ -102,9 +98,7 @@ defmodule Plushie.SnapshotTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # 2. Matching snapshot passes
-  # ---------------------------------------------------------------------------
 
   describe "matching snapshot" do
     test "returns :ok when tree matches stored snapshot", ctx do
@@ -126,9 +120,7 @@ defmodule Plushie.SnapshotTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # 3. Mismatched snapshot fails with useful diff info
-  # ---------------------------------------------------------------------------
 
   describe "mismatched snapshot" do
     test "raises ExUnit.AssertionError on mismatch", ctx do
@@ -171,9 +163,7 @@ defmodule Plushie.SnapshotTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # 4. PLUSHIE_UPDATE_SNAPSHOTS=1 overwrites existing snapshots
-  # ---------------------------------------------------------------------------
 
   describe "PLUSHIE_UPDATE_SNAPSHOTS=1" do
     test "overwrites an existing snapshot instead of failing", ctx do
@@ -228,9 +218,7 @@ defmodule Plushie.SnapshotTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # 5. Nested tree structures snapshot correctly
-  # ---------------------------------------------------------------------------
 
   describe "nested tree snapshots" do
     test "deeply nested tree round-trips through snapshot", ctx do
@@ -298,9 +286,7 @@ defmodule Plushie.SnapshotTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # 6. Snapshot files are valid JSON with sorted keys
-  # ---------------------------------------------------------------------------
 
   describe "snapshot file format" do
     test "output is valid JSON", ctx do
@@ -366,6 +352,43 @@ defmodule Plushie.SnapshotTest do
       assert Map.has_key?(decoded, "type")
       assert Map.has_key?(decoded, "props")
       assert Map.has_key?(decoded, "children")
+    end
+  end
+
+  # 7. :meta is stripped from tree nodes
+
+  describe ":meta stripping" do
+    test "assert_tree_snapshot strips :meta from tree nodes", ctx do
+      path = tmp_snapshot_path(ctx, "meta_stripped.json")
+
+      tree = %{
+        id: "main",
+        type: "window",
+        props: %{title: "Test"},
+        children: [
+          %{
+            id: "widget",
+            type: "canvas",
+            props: %{width: 10},
+            children: [],
+            meta: %{
+              __widget__: SomeModule,
+              __widget_state__: %{counter: 0},
+              __widget_props__: %{color: "red"},
+              __widget_handles_events__: true
+            }
+          }
+        ]
+      }
+
+      # Should not crash despite :meta containing non-serializable module refs
+      assert :ok = Plushie.Test.assert_tree_snapshot(tree, path)
+
+      # Verify :meta is not present in the stored JSON
+      contents = File.read!(path)
+      decoded = Jason.decode!(contents)
+      [child] = decoded["children"]
+      refute Map.has_key?(child, "meta")
     end
   end
 end
