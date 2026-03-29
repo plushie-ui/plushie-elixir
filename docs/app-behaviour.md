@@ -6,8 +6,8 @@ Elm architecture: model, update, view.
 ## Callbacks
 
 ```elixir
-@callback init(opts :: keyword()) :: model | {model, Plushie.Command.t()}
-@callback update(model, event) :: model | {model, Plushie.Command.t()}
+@callback init(opts :: keyword()) :: model | {model, Plushie.Command.t()} | {model, [Plushie.Command.t()]}
+@callback update(model, event) :: model | {model, Plushie.Command.t()} | {model, [Plushie.Command.t()]}
 @callback view(model) :: Plushie.Widget.ui_node()
 
 # Optional:

@@ -1079,7 +1079,9 @@ defmodule Plushie.Protocol.Decode do
 
   # -- Canvas element events --
 
-  # Uniform canvas element events (no data parsing needed).
+  # Canvas element events with data atomized for consistency with
+  # parsed events (drag, key_press). Wire data uses string keys;
+  # we convert to atoms so all canvas element events use atom keys.
   @canvas_element_passthrough %{
     "canvas_element_enter" => :canvas_element_enter,
     "canvas_element_leave" => :canvas_element_leave,
@@ -1097,12 +1099,21 @@ defmodule Plushie.Protocol.Decode do
        when is_map_key(@canvas_element_passthrough, family) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
+    data = atomize_wire_data(msg["data"])
+
+    # Parse button field if present (click, drag_end).
+    data =
+      case data do
+        %{button: button} -> %{data | button: parse_canvas_button(button)}
+        _ -> data
+      end
+
     %WidgetEvent{
       type: Map.fetch!(@canvas_element_passthrough, family),
       id: local,
       scope: scope,
       window_id: window_id,
-      data: msg["data"]
+      data: data
     }
   end
 
@@ -1354,6 +1365,17 @@ defmodule Plushie.Protocol.Decode do
       :error -> :left
     end
   end
+
+  # Converts string-keyed wire data to atom-keyed maps. The keys are
+  # renderer-defined (element_id, x, y, button, etc.) and safe to atomize.
+  @spec atomize_wire_data(data :: map() | nil) :: map() | nil
+  defp atomize_wire_data(nil), do: nil
+
+  defp atomize_wire_data(data) when is_map(data) do
+    Map.new(data, fn {key, value} -> {String.to_atom(key), value} end)
+  end
+
+  defp atomize_wire_data(_other), do: nil
 
   defp safe_dispatch(msg) do
     dispatch(msg)

@@ -62,9 +62,19 @@ defmodule Plushie.Event.BuiltinSpecs do
 
     # -- Canvas element events --
     # Events targeting specific interactive elements inside a canvas widget.
-    canvas_element_enter: %{carrier: :none},
-    canvas_element_leave: %{carrier: :none},
-    canvas_element_click: %{carrier: :none},
+    # All events that carry data use atom keys for consistency.
+    canvas_element_enter: %{
+      carrier: :data,
+      fields: [element_id: :string, x: :number, y: :number]
+    },
+    canvas_element_leave: %{
+      carrier: :data,
+      fields: [element_id: :string]
+    },
+    canvas_element_click: %{
+      carrier: :data,
+      fields: [element_id: :string, x: :number, y: :number, button: Plushie.Type.MouseButton]
+    },
     canvas_element_key_press: %{
       carrier: :data,
       fields: [
@@ -84,9 +94,12 @@ defmodule Plushie.Event.BuiltinSpecs do
       carrier: :data,
       fields: [x: :number, y: :number, dx: :number, dy: :number]
     },
-    canvas_element_drag_end: %{carrier: :none},
-    canvas_element_focused: %{carrier: :none},
-    canvas_element_blurred: %{carrier: :none},
+    canvas_element_drag_end: %{
+      carrier: :data,
+      fields: [element_id: :string, x: :number, y: :number]
+    },
+    canvas_element_focused: %{carrier: :data, fields: [element_id: :string]},
+    canvas_element_blurred: %{carrier: :data, fields: [element_id: :string]},
 
     # -- Canvas-level interaction events --
     # These were previously CanvasEvent structs with dedicated fields.

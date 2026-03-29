@@ -836,7 +836,7 @@ defmodule ToggleApp do
 
   def init(_opts), do: %{dark_mode: false}
 
-  def update(model, %WidgetEvent{type: :canvas_element_click, id: "toggle", data: %{"element_id" => "switch"}}) do
+  def update(model, %WidgetEvent{type: :canvas_element_click, id: "toggle", data: %{element_id: "switch"}}) do
     %{model | dark_mode: !model.dark_mode}
   end
 
@@ -850,12 +850,10 @@ defmodule ToggleApp do
       column padding: 24, spacing: 16 do
         canvas "toggle", width: 52, height: 28 do
           layer "switch" do
-            group do
-              interactive "switch",
-                on_click: true,
-                cursor: :pointer,
-                a11y: %{role: :switch, label: "Dark mode", toggled: on}
-
+            group "switch",
+              on_click: true,
+              cursor: :pointer,
+              a11y: %{role: :switch, label: "Dark mode", toggled: on} do
               rect(0, 0, 52, 28, fill: if(on, do: "#4CAF50", else: "#ccc"), radius: 14)
               circle(knob_x, 14, 10, fill: "#fff")
             end
@@ -871,9 +869,9 @@ end
 
 The canvas do-block collects `layer` declarations into a layers map.
 Each layer contains shapes -- here a single `group` with a rounded rect
-background and a circle knob. The `interactive` directive inside the
-group enables click events, sets the pointer cursor, and provides a11y
-metadata. On click, the host toggles `dark_mode` and the view
+background and a circle knob. The group's `on_click`, `cursor`, and
+`a11y` options enable click events, set the pointer cursor, and provide
+a11y metadata. On click, the host toggles `dark_mode` and the view
 re-renders with new positions and colours.
 
 Canvas shape functions (`rect`, `circle`, `line`, `path`, `stroke`,
@@ -905,7 +903,7 @@ defmodule ChartApp do
 
   def init(_opts), do: %{selected: nil}
 
-  def update(model, %WidgetEvent{type: :canvas_element_click, id: "chart", data: %{"element_id" => id}}) do
+  def update(model, %WidgetEvent{type: :canvas_element_click, id: "chart", data: %{element_id: id}}) do
     %{model | selected: id}
   end
 
@@ -925,19 +923,19 @@ defmodule ChartApp do
               bar_x = i * (bar_w + 20)
               bar_y = chart_h - bar_h
 
-              group x: bar_x, y: bar_y do
-                interactive "bar-#{i}",
-                  on_click: true,
-                  on_hover: true,
-                  cursor: :pointer,
-                  tooltip: "#{bar.month}: #{bar.value} units",
-                  a11y: %{
-                    role: :button,
-                    label: "#{bar.month}: #{bar.value} units",
-                    position_in_set: i + 1,
-                    size_of_set: count
-                  }
-
+              group "bar-#{i}",
+                x: bar_x,
+                y: bar_y,
+                on_click: true,
+                on_hover: true,
+                cursor: :pointer,
+                tooltip: "#{bar.month}: #{bar.value} units",
+                a11y: %{
+                  role: :button,
+                  label: "#{bar.month}: #{bar.value} units",
+                  position_in_set: i + 1,
+                  size_of_set: count
+                } do
                 rect(0, 0, bar_w, bar_h, fill: bar.color)
                 text(bar_w / 2, -12, "#{bar.value}", fill: "#666", align_x: :center)
               end
@@ -956,9 +954,8 @@ end
 
 #### How it works
 
-Each bar is a `group` containing a rect and a label. The `interactive`
-field enables click and hover events, sets a pointer cursor, and
-provides a tooltip. The `position_in_set` and `size_of_set` fields
+Each bar is a named `group` with `on_click`, `on_hover`, `cursor`,
+`tooltip`, and `a11y` options. The `position_in_set` and `size_of_set` fields
 let screen readers announce "Jan: 120 units, button, 1 of 4." Arrow
 keys navigate between bars. `event_rate: 30` throttles hover events
 to 30fps.

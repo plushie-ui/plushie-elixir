@@ -75,15 +75,15 @@ defmodule Plushie.Widget.Canvas do
 
   Interactive shape events (semantic, from shapes with `interactive` field):
 
-  - `%WidgetEvent{type: :canvas_element_enter, id: id, data: %{"element_id" => element_id, ...}}`
-  - `%WidgetEvent{type: :canvas_element_leave, id: id, data: %{"element_id" => element_id}}`
-  - `%WidgetEvent{type: :canvas_element_click, id: id, data: %{"element_id" => element_id, ...}}`
-  - `%WidgetEvent{type: :canvas_element_drag, id: id, data: %{"element_id" => element_id, ...}}`
-  - `%WidgetEvent{type: :canvas_element_drag_end, id: id, data: %{"element_id" => element_id, ...}}`
-  - `%WidgetEvent{type: :canvas_element_focused, id: id, data: %{"element_id" => element_id}}`
+  - `%WidgetEvent{type: :canvas_element_enter, id: id, data: %{element_id: element_id, x: x, y: y}}`
+  - `%WidgetEvent{type: :canvas_element_leave, id: id, data: %{element_id: element_id}}`
+  - `%WidgetEvent{type: :canvas_element_click, id: id, data: %{element_id: element_id, x: x, y: y, button: button}}`
+  - `%WidgetEvent{type: :canvas_element_drag, id: id, data: %{x: x, y: y, dx: dx, dy: dy}}`
+  - `%WidgetEvent{type: :canvas_element_drag_end, id: id, data: %{element_id: element_id, x: x, y: y}}`
+  - `%WidgetEvent{type: :canvas_element_focused, id: id, data: %{element_id: element_id}}`
 
-  Shape events use `canvas_element_*` types. The `id`
-  field is the canvas widget ID; `data.element_id` identifies which shape.
+  Shape events use `canvas_element_*` types. All data uses atom keys.
+  The `id` field is the canvas widget ID; `data.element_id` identifies which shape.
   """
 
   alias Plushie.Widget.Build

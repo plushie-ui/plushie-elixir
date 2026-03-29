@@ -665,7 +665,8 @@ defmodule Plushie.Extension do
           file: env.file,
           line: 0,
           description:
-            "unsupported prop type #{inspect(type)} for prop #{inspect(name)} in #{inspect(env.module)}. Supported: #{inspect(@known_prop_types)}"
+            "unsupported prop type #{inspect(type)} for prop #{inspect(name)} in #{inspect(env.module)}. " <>
+              "Supported: #{inspect(@known_prop_types ++ [{:list, :type}])}"
       end
     end
   end

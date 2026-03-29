@@ -354,11 +354,15 @@ events. These arrive as `%WidgetEvent{}` structs with `canvas_element_*` types.
 The element ID uses scoped IDs (e.g. `"bar-jan"` scoped under the
 canvas widget).
 
-Canvas element events are internal to canvas widgets. When a canvas
-widget's `handle_event/2` intercepts them (via `:emit`, `:consumed`,
-or `:update_state`), the raw event never reaches the app. Unhandled
-canvas-internal events are auto-consumed by the runtime -- they
-never leak to `update/2`.
+Canvas element events behave differently depending on context. Inside
+a canvas widget, `handle_event/2` intercepts them (via `:emit`,
+`:consumed`, or `:update_state`) and the raw event never reaches
+the app. Canvas-internal events that are not intercepted by any
+canvas widget handler are auto-consumed by the runtime and never
+reach `update/2`. However, in a raw canvas (one not managed by a
+canvas widget), there is no `handle_event/2` handler, so canvas
+element events are delivered directly to `update/2` like any other
+widget event.
 
 Inside `handle_event/2`, canvas element events look like:
 

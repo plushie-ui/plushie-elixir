@@ -1520,7 +1520,7 @@ defmodule Plushie.ProtocolTest do
              } =
                Protocol.decode_message(json, :json)
 
-      assert data["element_id"] == "btn-1"
+      assert data.element_id == "btn-1"
     end
 
     test "decodes canvas_element_leave" do
@@ -1541,7 +1541,7 @@ defmodule Plushie.ProtocolTest do
              } =
                Protocol.decode_message(json, :json)
 
-      assert data["element_id"] == "btn-1"
+      assert data.element_id == "btn-1"
     end
 
     test "decodes canvas_element_click" do
@@ -1562,7 +1562,7 @@ defmodule Plushie.ProtocolTest do
              } =
                Protocol.decode_message(json, :json)
 
-      assert data["element_id"] == "btn-1"
+      assert data.element_id == "btn-1"
     end
 
     test "decodes canvas_element_drag" do
@@ -1605,7 +1605,7 @@ defmodule Plushie.ProtocolTest do
              } =
                Protocol.decode_message(json, :json)
 
-      assert data["element_id"] == "handle-1"
+      assert data.element_id == "handle-1"
     end
 
     test "decodes canvas_element_focused" do
@@ -1626,7 +1626,7 @@ defmodule Plushie.ProtocolTest do
              } =
                Protocol.decode_message(json, :json)
 
-      assert data["element_id"] == "input-1"
+      assert data.element_id == "input-1"
     end
 
     test "canvas shape event with scoped id splits correctly" do
@@ -1644,7 +1644,7 @@ defmodule Plushie.ProtocolTest do
                id: "my_canvas",
                scope: ["panel"],
                window_id: "main",
-               data: %{"element_id" => "btn-1"}
+               data: %{element_id: "btn-1"}
              } = Protocol.decode_message(json, :json)
     end
   end

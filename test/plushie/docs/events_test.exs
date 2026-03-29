@@ -88,18 +88,18 @@ defmodule Plushie.Docs.EventsTest do
       id: "log_view",
       scope: [],
       data: %{
-        "absolute_x" => 0.0,
-        "absolute_y" => 150.0,
-        "relative_x" => 0.0,
-        "relative_y" => 0.75,
-        "bounds" => {400.0, 300.0},
-        "content_bounds" => {400.0, 600.0}
+        absolute_x: 0.0,
+        absolute_y: 150.0,
+        relative_x: 0.0,
+        relative_y: 0.75,
+        bounds: {400.0, 300.0},
+        content_bounds: {400.0, 600.0}
       }
     }
 
     assert match?(%WidgetEvent{type: :scroll, id: "log_view"}, event)
-    assert event.data["relative_y"] == 0.75
-    refute event.data["relative_y"] >= 0.99
+    assert event.data.relative_y == 0.75
+    refute event.data.relative_y >= 0.99
   end
 
   test "events_widget_paste_match_test" do
@@ -184,11 +184,11 @@ defmodule Plushie.Docs.EventsTest do
       type: :canvas_element_click,
       id: "chart",
       scope: [],
-      data: %{"element_id" => "bar-jan", "x" => 15.0, "y" => 70.0, "button" => "left"}
+      data: %{element_id: "bar-jan", x: 15.0, y: 70.0, button: :left}
     }
 
     assert match?(%WidgetEvent{type: :canvas_element_click, id: "chart"}, event)
-    assert event.data["element_id"] == "bar-jan"
+    assert event.data.element_id == "bar-jan"
   end
 
   # -- Sensor events -----------------------------------------------------------

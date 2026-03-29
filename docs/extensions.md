@@ -37,7 +37,7 @@ end
 This generates:
 
 - `MySparkline.new(id, opts)` -- builds a widget node with typed props
-- `MySparkline.push(widget, value:)` -- sends a command to the Rust extension
+- `MySparkline.push(widget_id, value)` -- sends a command to the Rust extension
 - `MySparkline.type_names/0`, `native_crate/0`, `rust_constructor/0` callbacks
 - Compile-time validation of prop types, required declarations, and duplicates
 
@@ -83,9 +83,26 @@ repo:
 - [sparkline-dashboard](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/sparkline-dashboard)
   -- Tier A render-only canvas extension with timer subscriptions
 
+## Choosing an extension kind
+
+Decision tree:
+
+1. Does the widget need custom Rust rendering (custom `iced::advanced::Widget`,
+   third-party crate, GPU shaders)?
+   **Yes** -> `:native_widget`
+
+2. Does the widget need internal state or event transformation (hover
+   tracking, drag handling, emitting semantic events from raw canvas
+   events)?
+   **Yes** -> `:widget` with `state` declarations (canvas widget)
+
+3. Is the widget a pure composition of existing Plushie widgets with
+   no internal state beyond props?
+   **Yes** -> `:widget` (pure Elixir composite)
+
 ## Extension kinds
 
-The macro supports two kinds:
+The macro supports three kinds:
 
 ### `:native_widget` -- Rust-backed extensions
 
