@@ -40,6 +40,7 @@ defmodule Plushie.Tree do
     :__widget__,
     :__widget_props__,
     :__widget_state__,
+    :__widget_handles_events__,
     :__extension_widget_type__,
     :__extension_widget_events__,
     :__extension_widget_event_specs__
@@ -236,6 +237,7 @@ defmodule Plushie.Tree do
           __widget__: module,
           __widget_state__: widget_state,
           __widget_props__: widget_props,
+          __widget_handles_events__: Map.get(meta, :__widget_handles_events__, false),
           __extension_widget_type__: Map.get(meta, :__extension_widget_type__),
           __extension_widget_events__: Map.get(meta, :__extension_widget_events__, []),
           __extension_widget_event_specs__: Map.get(meta, :__extension_widget_event_specs__, [])

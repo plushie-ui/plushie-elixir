@@ -286,7 +286,8 @@ defmodule Plushie.WidgetHandlerDispatchTest do
             meta: %{
               __widget__: EmitWidget,
               __widget_state__: %{counter: 3},
-              __widget_props__: %{color: "red"}
+              __widget_props__: %{color: "red"},
+              __widget_handles_events__: true
             }
           }
         ]
@@ -306,6 +307,31 @@ defmodule Plushie.WidgetHandlerDispatchTest do
     test "returns empty map for tree without widget_handlers" do
       tree = %{id: "root", type: "window", props: %{}, children: []}
       assert WidgetHandlers.derive_registry(tree) == %{}
+    end
+
+    test "skips render-only widgets without event participation" do
+      tree = %{
+        id: "root",
+        type: "window",
+        props: %{},
+        children: [
+          %{
+            id: "display_only",
+            type: "canvas",
+            props: %{},
+            children: [],
+            meta: %{
+              __widget__: EmitWidget,
+              __widget_state__: %{},
+              __widget_props__: %{},
+              __widget_handles_events__: false
+            }
+          }
+        ]
+      }
+
+      registry = WidgetHandlers.derive_registry(tree)
+      refute Map.has_key?(registry, {"root", "display_only"})
     end
   end
 

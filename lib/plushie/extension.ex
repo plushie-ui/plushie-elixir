@@ -753,6 +753,7 @@ defmodule Plushie.Extension do
     has_handle_event = Module.defines?(module, {:handle_event, 2})
     has_render_3 = Module.defines?(module, {:render, 3})
     has_render_2 = Module.defines?(module, {:render, 2})
+    participates_in_dispatch = participates_in_dispatch?(has_handle_event, events, state_fields)
 
     default_handle_event =
       unless has_handle_event do
@@ -817,7 +818,8 @@ defmodule Plushie.Extension do
               __widget_props__: props,
               __extension_widget_type__: unquote(widget_type),
               __extension_widget_events__: unquote(events),
-              __extension_widget_event_specs__: unquote(Macro.escape(event_specs))
+              __extension_widget_event_specs__: unquote(Macro.escape(event_specs)),
+              __widget_handles_events__: unquote(participates_in_dispatch)
             },
             children: []
           }
@@ -859,6 +861,12 @@ defmodule Plushie.Extension do
         struct!(__MODULE__, Map.put(props_map, :id, id))
       end
     end
+  end
+
+  # Widget participates in event dispatch if it declares events,
+  # has state fields, or defines handle_event/2 explicitly.
+  defp participates_in_dispatch?(has_handle_event, events, state_fields) do
+    has_handle_event or events != [] or state_fields != []
   end
 
   defp valid_type?(type) when type in @known_prop_types, do: true

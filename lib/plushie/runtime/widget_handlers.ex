@@ -146,7 +146,8 @@ defmodule Plushie.Runtime.WidgetHandlers do
 
     acc =
       case meta do
-        %{__widget__: module, __widget_state__: state} when is_atom(module) ->
+        %{__widget__: module, __widget_state__: state, __widget_handles_events__: true}
+        when is_atom(module) ->
           props = Map.get(meta, :__widget_props__, %{})
 
           Map.put(acc, {window_id, id}, %{
