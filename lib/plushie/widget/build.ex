@@ -23,7 +23,9 @@ defmodule Plushie.Widget.Build do
   def to_node(%_module{} = widget), do: Plushie.Widget.to_node(widget)
 
   @doc "Converts a list of children (maps or structs) to ui_node() maps."
-  @spec children_to_nodes(children :: [map() | struct()]) :: [Plushie.Widget.ui_node()]
+  @spec children_to_nodes(children :: [map() | struct()]) :: [
+          Plushie.Widget.ui_node()
+        ]
   def children_to_nodes(children), do: Enum.map(children, &to_node/1)
 
   @doc "Raises ArgumentError for an unknown option key passed to a widget constructor."

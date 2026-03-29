@@ -9,8 +9,8 @@ defmodule Mix.Tasks.Plushie.Build do
   development. Otherwise, dependencies are pulled from crates.io using
   the `:binary_version` from mix.exs.
 
-  With extensions configured, the workspace includes each extension crate
-  and the generated `main.rs` registers them at startup.
+  When native widgets are detected, the workspace includes each widget's
+  Rust crate and the generated `main.rs` registers them at startup.
 
   ## Prerequisites
 
@@ -232,12 +232,12 @@ defmodule Mix.Tasks.Plushie.Build do
   # -- Collision detection ----------------------------------------------------
 
   @doc """
-  Raises `Mix.Error` if any two extensions claim the same type name.
+  Raises `Mix.Error` if any two native widgets claim the same type name.
   """
-  @spec check_collisions!(extensions :: [module()]) :: :ok
-  def check_collisions!(extensions) do
+  @spec check_collisions!(widgets :: [module()]) :: :ok
+  def check_collisions!(widgets) do
     all_types =
-      Enum.flat_map(extensions, fn mod ->
+      Enum.flat_map(widgets, fn mod ->
         Enum.map(mod.type_names(), &{&1, mod})
       end)
 
@@ -254,10 +254,10 @@ defmodule Mix.Tasks.Plushie.Build do
         end)
 
       Mix.raise("""
-      Extension type name collision detected:
+      Widget type name collision detected:
       #{Enum.join(messages, "\n")}
 
-      Each type name must be handled by exactly one extension.\
+      Each type name must be handled by exactly one widget.\
       """)
     end
 
@@ -265,16 +265,16 @@ defmodule Mix.Tasks.Plushie.Build do
   end
 
   @doc """
-  Raises `Mix.Error` if any two extensions produce the same Cargo crate name.
+  Raises `Mix.Error` if any two native widgets produce the same Cargo crate name.
 
-  The crate name is `Path.basename/1` of each extension's `native_crate/0`
-  path. Two extensions at `native/widget/` and `other/widget/` would both
+  The crate name is `Path.basename/1` of each widget's `native_crate/0`
+  path. Two widgets at `native/widget/` and `other/widget/` would both
   produce `widget`, causing a Cargo dependency conflict.
   """
-  @spec check_crate_name_collisions!(extensions :: [module()]) :: :ok
-  def check_crate_name_collisions!(extensions) do
+  @spec check_crate_name_collisions!(widgets :: [module()]) :: :ok
+  def check_crate_name_collisions!(widgets) do
     all_crates =
-      Enum.map(extensions, fn mod ->
+      Enum.map(widgets, fn mod ->
         crate_name = Path.basename(mod.native_crate())
         {crate_name, mod}
       end)
@@ -292,10 +292,10 @@ defmodule Mix.Tasks.Plushie.Build do
         end)
 
       Mix.raise("""
-      Extension crate name collision detected:
+      Widget crate name collision detected:
       #{Enum.join(messages, "\n")}
 
-      Each extension's native_crate path must have a unique basename.
+      Each widget's native_crate path must have a unique basename.
       Rename one of the crate directories to resolve the conflict.\
       """)
     end
@@ -305,31 +305,31 @@ defmodule Mix.Tasks.Plushie.Build do
 
   # -- Workspace build --------------------------------------------------------
 
-  defp build_workspace(native_extensions, release?, verbose?, opts) do
+  defp build_workspace(native_widgets, release?, verbose?, opts) do
     build_dir = Path.join(Mix.Project.build_path(), "plushie-renderer")
     File.mkdir_p!(build_dir)
 
     bin_name =
-      if native_extensions == [],
+      if native_widgets == [],
         do: "plushie-renderer",
         else: Plushie.Binary.build_name()
 
-    crate_paths = resolve_crate_paths(native_extensions)
+    crate_paths = resolve_crate_paths(native_widgets)
 
     if crate_paths != %{} do
-      check_extension_versions!(crate_paths)
+      check_widget_versions!(crate_paths)
     end
 
-    generate_workspace(build_dir, bin_name, native_extensions, crate_paths)
+    generate_workspace(build_dir, bin_name, native_widgets, crate_paths)
 
     source_info =
       if Mix.PlushieHelpers.source_path(),
         do: "local source",
         else: "crates.io v#{Plushie.Binary.binary_version()}"
 
-    if native_extensions != [] do
-      ext_names = Enum.map_join(native_extensions, ", ", &inspect/1)
-      Mix.shell().info("Extensions: #{ext_names}")
+    if native_widgets != [] do
+      ext_names = Enum.map_join(native_widgets, ", ", &inspect/1)
+      Mix.shell().info("Native widgets: #{ext_names}")
     end
 
     Mix.shell().info("Source: #{source_info}")
@@ -357,10 +357,10 @@ defmodule Mix.Tasks.Plushie.Build do
     end
   end
 
-  defp resolve_crate_paths(extensions) do
+  defp resolve_crate_paths(widgets) do
     deps_paths = Mix.Project.deps_paths()
 
-    Map.new(extensions, fn mod ->
+    Map.new(widgets, fn mod ->
       app = Application.get_application(mod)
       crate_rel = mod.native_crate()
 
@@ -376,7 +376,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
       unless String.starts_with?(resolved, allowed_root) do
         Mix.raise(
-          "Extension #{inspect(mod)} native_crate path #{inspect(crate_rel)} " <>
+          "Widget #{inspect(mod)} native_crate path #{inspect(crate_rel)} " <>
             "resolves to #{resolved}, which is outside the allowed directory #{allowed_root}"
         )
       end
@@ -385,25 +385,21 @@ defmodule Mix.Tasks.Plushie.Build do
     end)
   end
 
-  defp generate_workspace(build_dir, bin_name, extensions, crate_paths) do
-    cargo_toml = generate_cargo_toml(bin_name, extensions, crate_paths, build_dir)
+  defp generate_workspace(build_dir, bin_name, widgets, crate_paths) do
+    cargo_toml = generate_cargo_toml(bin_name, widgets, crate_paths, build_dir)
     File.write!(Path.join(build_dir, "Cargo.toml"), cargo_toml)
 
     src_dir = Path.join(build_dir, "src")
     File.mkdir_p!(src_dir)
-    main_rs = generate_main_rs(extensions)
+    main_rs = generate_main_rs(widgets)
     File.write!(Path.join(src_dir, "main.rs"), main_rs)
   end
 
-  # ---------------------------------------------------------------------------
-  # Extension version compatibility check
-  #
-  # Each extension crate should depend on a plushie-ext version compatible
-  # with Plushie.Binary.binary_version(). We check this before building to give a clear
+  # Each native widget crate should depend on a plushie-ext version compatible
+  # with Plushie.Binary.binary_version(). Check before building to give a clear
   # error instead of a cryptic Cargo resolution failure.
-  # ---------------------------------------------------------------------------
 
-  defp check_extension_versions!(crate_paths) do
+  defp check_widget_versions!(crate_paths) do
     expected = Version.parse!(Plushie.Binary.binary_version())
 
     Enum.each(crate_paths, fn {mod, crate_path} ->
@@ -424,7 +420,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
         :not_found ->
           Mix.shell().info(
-            "Extension #{inspect(mod)}: no plushie-ext dependency found in #{cargo_toml_path}"
+            "Widget #{inspect(mod)}: no plushie-ext dependency found in #{cargo_toml_path}"
           )
 
         :no_cargo_toml ->
@@ -445,9 +441,9 @@ defmodule Mix.Tasks.Plushie.Build do
 
         unless compatible? do
           Mix.shell().error(
-            "Extension #{inspect(mod)} depends on plushie-ext #{dep_version_str}, " <>
+            "Widget #{inspect(mod)} depends on plushie-ext #{dep_version_str}, " <>
               "but this project targets #{expected}. " <>
-              "Update the extension crate or change :binary_version in mix.exs."
+              "Update the widget's Rust crate to a compatible version."
           )
         end
 
@@ -509,12 +505,12 @@ defmodule Mix.Tasks.Plushie.Build do
     end
   end
 
-  defp generate_cargo_toml(bin_name, extensions, crate_paths, build_dir) do
+  defp generate_cargo_toml(bin_name, widgets, crate_paths, build_dir) do
     source_path = Mix.PlushieHelpers.source_path()
 
     # Use local source paths if available, otherwise pull from crates.io.
-    # The plushie-renderer workspace has two crates the extension needs:
-    #   plushie-ext       -- core library (widget types, protocols, extensions API)
+    # The plushie-renderer workspace has two crates native widgets need:
+    #   plushie-ext       -- core library (widget types, protocols, widget API)
     #   plushie-renderer  -- binary entry point (run function)
     {plushie_ext_dep, plushie_renderer_dep} =
       if source_path && File.dir?(source_path) do
@@ -529,11 +525,11 @@ defmodule Mix.Tasks.Plushie.Build do
       end
 
     ext_deps =
-      if extensions == [] do
+      if widgets == [] do
         ""
       else
         "\n" <>
-          Enum.map_join(extensions, "\n", fn mod ->
+          Enum.map_join(widgets, "\n", fn mod ->
             path = crate_paths[mod]
             rel_path = Path.relative_to(path, build_dir)
             crate_name = Path.basename(path)
@@ -541,7 +537,7 @@ defmodule Mix.Tasks.Plushie.Build do
           end)
       end
 
-    # When using local source paths, add [patch.crates-io] so extension
+    # When using local source paths, add [patch.crates-io] so widget
     # crates that depend on plushie-ext from crates.io get redirected to
     # the same local checkout. Without this, Cargo treats the path dep and
     # the crates.io dep as different crates and trait impls don't match.
@@ -582,7 +578,7 @@ defmodule Mix.Tasks.Plushie.Build do
   end
 
   # Validates Rust constructor expressions. Matches:
-  #   gauge::GaugeExtension::new()      -- module path with call
+  #   gauge::GaugeWidget::new()      -- module path with call
   #   MyExt::<Config>::new()            -- turbofish generics
   #   MyExt::new                        -- path without parens
   #   create_widget()                   -- bare function call
@@ -591,20 +587,20 @@ defmodule Mix.Tasks.Plushie.Build do
   defp validate_rust_constructor!(mod, constructor) do
     unless Regex.match?(@rust_constructor_pattern, constructor) do
       Mix.raise(
-        "Extension #{inspect(mod)} rust_constructor #{inspect(constructor)} " <>
+        "Widget #{inspect(mod)} rust_constructor #{inspect(constructor)} " <>
           "contains invalid characters. Expected a Rust identifier, path (::), " <>
           "or simple invocation (e.g. \"MyExt::new()\")"
       )
     end
   end
 
-  defp generate_main_rs(extensions) do
+  defp generate_main_rs(widgets) do
     builder_expr =
-      if extensions == [] do
+      if widgets == [] do
         "PlushieAppBuilder::new()"
       else
         registrations =
-          Enum.map_join(extensions, "\n        ", fn mod ->
+          Enum.map_join(widgets, "\n        ", fn mod ->
             constructor = mod.rust_constructor()
             validate_rust_constructor!(mod, constructor)
             ".extension(#{constructor})"

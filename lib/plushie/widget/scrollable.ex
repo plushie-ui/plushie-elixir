@@ -175,11 +175,15 @@ defmodule Plushie.Widget.Scrollable do
     do: %{s | scroller_color: Color.cast(scroller_color)}
 
   @doc "Appends a child to the scrollable."
-  @spec push(scrollable :: t(), child :: Plushie.Widget.ui_node() | struct()) :: t()
+  @spec push(scrollable :: t(), child :: Plushie.Widget.ui_node() | struct()) ::
+          t()
   def push(%__MODULE__{} = s, child), do: %{s | children: [child | s.children]}
 
   @doc "Appends multiple children to the scrollable."
-  @spec extend(scrollable :: t(), children :: [Plushie.Widget.ui_node() | struct()]) :: t()
+  @spec extend(
+          scrollable :: t(),
+          children :: [Plushie.Widget.ui_node() | struct()]
+        ) :: t()
   def extend(%__MODULE__{} = s, children),
     do: %{s | children: Enum.reverse(children) ++ s.children}
 
@@ -191,7 +195,7 @@ defmodule Plushie.Widget.Scrollable do
   @spec build(scrollable :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = s), do: Plushie.Widget.to_node(s)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(s) do

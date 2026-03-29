@@ -94,7 +94,7 @@ defmodule Plushie.Widget.Rule do
   @spec build(rule :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = rule), do: Plushie.Widget.to_node(rule)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(rule) do

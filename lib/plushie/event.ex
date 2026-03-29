@@ -4,7 +4,6 @@ defmodule Plushie.Event do
   alias Plushie.Event.{
     Async,
     Effect,
-    ExtensionCommandError,
     Ime,
     Key,
     Modifiers,
@@ -13,6 +12,7 @@ defmodule Plushie.Event do
     SystemEvent,
     Timer,
     Touch,
+    WidgetCommandError,
     WidgetEvent,
     WindowEvent
   }
@@ -26,7 +26,7 @@ defmodule Plushie.Event do
           | Ime.t()
           | WindowEvent.delivered_t()
           | Effect.t()
-          | ExtensionCommandError.t()
+          | WidgetCommandError.t()
           | SystemEvent.delivered_t()
           | Timer.t()
           | Async.t()
@@ -41,7 +41,7 @@ defmodule Plushie.Event do
           | Ime.t()
           | WindowEvent.t()
           | Effect.t()
-          | ExtensionCommandError.t()
+          | WidgetCommandError.t()
           | SystemEvent.t()
           | Timer.t()
           | Async.t()

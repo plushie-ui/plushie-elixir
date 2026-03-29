@@ -12,7 +12,7 @@ defmodule ThemeToggle do
   - `:toggle` when the user clicks the switch
   """
 
-  use Plushie.Extension, :widget
+  use Plushie.Widget
 
   widget :theme_toggle
 
@@ -29,7 +29,7 @@ defmodule ThemeToggle do
 
   # Click on the switch group -> emit :toggle with the new boolean state
   # and flip the animation target so the thumb starts moving.
-  @impl Plushie.Extension.WidgetHandler
+  @impl Plushie.Widget.Handler
   def handle_event(%Plushie.Event.WidgetEvent{type: :click, id: "switch"}, state) do
     new_target = if state.target == 0.0, do: 1.0, else: 0.0
     {:emit, :toggle, new_target >= 0.5, %{state | target: new_target}}
@@ -46,7 +46,7 @@ defmodule ThemeToggle do
 
   # -- Widget-scoped subscriptions ---------------------------------------------
 
-  @impl Plushie.Extension.WidgetHandler
+  @impl Plushie.Widget.Handler
   def subscribe(_props, state) do
     if state.progress != state.target do
       [Plushie.Subscription.every(16, :animate)]
@@ -57,7 +57,7 @@ defmodule ThemeToggle do
 
   # -- Rendering ---------------------------------------------------------------
 
-  @impl Plushie.Extension.WidgetHandler
+  @impl Plushie.Widget.Handler
   def render(id, _props, state) do
     import Plushie.UI
 

@@ -57,15 +57,15 @@ defmodule Plushie.Protocol.Parsers do
 
   @doc """
   Returns true when an event family is explicitly namespaced for widget-specific
-  extension use as `widget_type:event_name`.
+  widgets use `widget_type:event_name`.
   """
-  @spec extension_family?(term()) :: boolean()
-  def extension_family?(family) when is_binary(family) do
+  @spec widget_family?(term()) :: boolean()
+  def widget_family?(family) when is_binary(family) do
     case String.split(family, ":", parts: 2) do
       [widget_type, event_name] -> widget_type != "" and event_name != ""
       _ -> false
     end
   end
 
-  def extension_family?(_), do: false
+  def widget_family?(_), do: false
 end

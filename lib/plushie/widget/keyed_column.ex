@@ -103,11 +103,15 @@ defmodule Plushie.Widget.KeyedColumn do
     do: %{kc | max_width: max_width}
 
   @doc "Appends a child to the keyed column."
-  @spec push(keyed_column :: t(), child :: Plushie.Widget.ui_node() | struct()) :: t()
+  @spec push(keyed_column :: t(), child :: Plushie.Widget.ui_node() | struct()) ::
+          t()
   def push(%__MODULE__{} = kc, child), do: %{kc | children: [child | kc.children]}
 
   @doc "Appends multiple children to the keyed column."
-  @spec extend(keyed_column :: t(), children :: [Plushie.Widget.ui_node() | struct()]) :: t()
+  @spec extend(
+          keyed_column :: t(),
+          children :: [Plushie.Widget.ui_node() | struct()]
+        ) :: t()
   def extend(%__MODULE__{} = kc, children),
     do: %{kc | children: Enum.reverse(children) ++ kc.children}
 
@@ -119,7 +123,7 @@ defmodule Plushie.Widget.KeyedColumn do
   @spec build(keyed_column :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = kc), do: Plushie.Widget.to_node(kc)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(kc) do

@@ -27,8 +27,8 @@ defmodule Plushie.Dev.DevServer do
   @default_debounce_ms 100
   @rust_debounce_ms 200
   @fallback_dirs ["lib"]
-  @elixir_extensions ~w(.ex .exs)
-  @rust_extensions ~w(.rs .toml)
+  @elixir_file_exts ~w(.ex .exs)
+  @rust_file_exts ~w(.rs .toml)
 
   # ---------------------------------------------------------------------------
   # Public API
@@ -64,7 +64,7 @@ defmodule Plushie.Dev.DevServer do
     {:ok, watcher} = apply(FileSystem, :start_link, [[dirs: dirs]])
     apply(FileSystem, :subscribe, [watcher])
 
-    # Start Rust file watcher for native extension crates if applicable.
+    # Start Rust file watcher for native widget crates if applicable.
     rust_watcher = start_rust_watcher(bridge)
 
     rebuild_artifacts = Keyword.get(opts, :rebuild_artifacts, [:bin])
@@ -398,7 +398,7 @@ defmodule Plushie.Dev.DevServer do
   defp start_rust_watcher(nil), do: nil
 
   defp start_rust_watcher(_bridge) do
-    crate_dirs = native_extension_dirs()
+    crate_dirs = native_widget_dirs()
 
     if crate_dirs != [] do
       Logger.info("plushie dev: watching rust crates: #{Enum.join(crate_dirs, ", ")}")
@@ -417,7 +417,7 @@ defmodule Plushie.Dev.DevServer do
     end
   end
 
-  defp native_extension_dirs do
+  defp native_widget_dirs do
     Plushie.WidgetRegistry.native_widgets()
     |> Enum.flat_map(fn mod ->
       crate_rel = mod.native_crate()
@@ -432,12 +432,12 @@ defmodule Plushie.Dev.DevServer do
 
   defp watchable_elixir?(path) do
     ext = Path.extname(path)
-    ext in @elixir_extensions and not String.contains?(path, "/_build/")
+    ext in @elixir_file_exts and not String.contains?(path, "/_build/")
   end
 
   defp watchable_rust?(path) do
     ext = Path.extname(path)
-    ext in @rust_extensions and not String.contains?(path, "/target/")
+    ext in @rust_file_exts and not String.contains?(path, "/target/")
   end
 
   # ---------------------------------------------------------------------------
@@ -484,16 +484,16 @@ defmodule Plushie.Dev.DevServer do
   # -- Protocol reconsolidation -----------------------------------------------
 
   defp protocol_impl_set do
-    Protocol.extract_impls(Plushie.Widget, :code.get_path()) |> MapSet.new()
+    Protocol.extract_impls(Plushie.Widget.WidgetProtocol, :code.get_path()) |> MapSet.new()
   end
 
   defp reconsolidate_widgets do
     # MUST use :code.get_path() to scan ALL paths including deps.
     # Protocol.consolidate only knows about types you pass it --
     # passing a subset loses widgets from hex deps.
-    impls = Protocol.extract_impls(Plushie.Widget, :code.get_path())
-    {:ok, binary} = Protocol.consolidate(Plushie.Widget, impls)
-    :code.load_binary(Plushie.Widget, ~c"nofile", binary)
+    impls = Protocol.extract_impls(Plushie.Widget.WidgetProtocol, :code.get_path())
+    {:ok, binary} = Protocol.consolidate(Plushie.Widget.WidgetProtocol, impls)
+    :code.load_binary(Plushie.Widget.WidgetProtocol, ~c"nofile", binary)
     Plushie.WidgetRegistry.invalidate()
     Logger.info("plushie dev: widget protocol reconsolidated")
   end

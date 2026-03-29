@@ -7,7 +7,7 @@ defmodule Plushie.Dev.DevServer.TestHarness do
 
   use GenServer
 
-  @elixir_extensions ~w(.ex .exs)
+  @elixir_file_exts ~w(.ex .exs)
 
   @impl true
   def init(state) do
@@ -52,6 +52,6 @@ defmodule Plushie.Dev.DevServer.TestHarness do
 
   defp watchable?(path) do
     ext = Path.extname(path)
-    ext in @elixir_extensions and not String.contains?(path, "/_build/")
+    ext in @elixir_file_exts and not String.contains?(path, "/_build/")
   end
 end

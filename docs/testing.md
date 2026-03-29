@@ -778,21 +778,21 @@ The mock backend does not use a wire protocol (pure Elixir, no
 renderer process), so the format option has no effect on it.
 
 
-## Testing extensions
+## Testing custom widgets
 
-Extension widgets have two testing layers: Elixir-side logic (struct
+Custom widgets have two testing layers: Elixir-side logic (struct
 building, command generation, demo app behavior) and Rust-side
 rendering (the widget actually renders, handles events, etc.).
 
 For complete test suites covering both layers, see the
 [gauge-demo](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/gauge-demo)
-(72 tests, Tier C extension) and
+(72 tests, Tier C widget) and
 [sparkline-dashboard](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/sparkline-dashboard)
-(58 tests, Tier A extension) in the plushie-demos repo.
+(58 tests, Tier A widget) in the plushie-demos repo.
 
 ### Elixir-side: unit tests (no renderer)
 
-Extension macros generate structs, setters, and protocol
+Widget macros generate structs, setters, and protocol
 implementations. Test these directly:
 
 ```elixir
@@ -813,12 +813,12 @@ defmodule MyGauge.MacroTest do
 
   test "push command" do
     cmd = MyGauge.push("g1", 42.0)
-    assert %Plushie.Command{type: :extension_command} = cmd
+    assert %Plushie.Command{type: :widget_command} = cmd
   end
 end
 ```
 
-Demo apps test the extension in context:
+Demo apps test the widget in context:
 
 ```elixir
 defmodule MyGauge.DemoTest do
@@ -844,7 +844,7 @@ use plushie_ext::prelude::*;
 
 #[test]
 fn gauge_renders_without_panic() {
-    let ext = MyGaugeExtension::new();
+    let ext = MyGaugeWidget::new();
     let test = TestEnv::default();
     let node = node_with_props("g1", "gauge", json!({"value": 75}));
     let env = test.env();
@@ -854,19 +854,19 @@ fn gauge_renders_without_panic() {
 
 ### End-to-end: through the renderer
 
-To verify extension widgets survive the wire protocol round-trip and
+To verify custom widgets survive the wire protocol round-trip and
 render correctly, build a custom renderer binary that includes the
-extension's Rust crate:
+widget's Rust crate:
 
 ```bash
-# Build the custom renderer with your extension compiled in
+# Build the custom renderer with your widget compiled in
 mix plushie.build
 
 # Run tests through the real renderer (headless, no display server)
 PLUSHIE_TEST_BACKEND=headless mix test
 ```
 
-`mix plushie.build` reads extensions from application config:
+`mix plushie.build` auto-detects native widgets via protocol:
 
 Native widgets are auto-detected via the `Plushie.Widget` protocol --
 no explicit config needed. Just run `mix plushie.build`.
@@ -894,13 +894,13 @@ end
 
 These tests run on `:mock` by default (fast, logic-only). Set
 `PLUSHIE_TEST_BACKEND=headless` to exercise the full Rust rendering path
-with the extension compiled in.
+with the widget compiled in.
 
 
 ## Testing canvas widgets
 
 `Plushie.Test.WidgetCase` provides an isolated test environment for
-stateful `:widget` extensions. It renders the widget in isolation, routes
+stateful widgets. It renders the widget in isolation, routes
 events through `handle_event/2`, and exposes the widget's internal state.
 
 ```elixir

@@ -47,7 +47,7 @@ Use it in event declarations:
 
 ```elixir
 defmodule MyApp.SwipeWidget do
-  use Plushie.Extension, :widget
+  use Plushie.Widget
 
   widget :swipe
   event :swiped, data: [direction: MyApp.Direction, velocity: :number]

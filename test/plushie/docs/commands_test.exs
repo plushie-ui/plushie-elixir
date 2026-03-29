@@ -214,23 +214,23 @@ defmodule Plushie.Docs.CommandsTest do
     assert %Command{type: :batch, payload: %{commands: ^cmds}} = batch
   end
 
-  # -- Extension commands -----------------------------------------------------
+  # -- Widget commands -----------------------------------------------------
 
-  test "commands_extension_command_construct_test" do
-    cmd = Command.extension_command("term-1", "write", %{data: "output"})
-    assert %Command{type: :extension_command, payload: payload} = cmd
+  test "commands_widget_command_construct_test" do
+    cmd = Command.widget_command("term-1", "write", %{data: "output"})
+    assert %Command{type: :widget_command, payload: payload} = cmd
     assert payload.node_id == "term-1"
     assert payload.op == "write"
   end
 
-  test "commands_extension_commands_construct_test" do
+  test "commands_widget_commands_construct_test" do
     cmds = [
       {"term-1", "write", %{data: "line1"}},
       {"log-1", "append", %{line: "entry"}}
     ]
 
-    cmd = Command.extension_commands(cmds)
-    assert %Command{type: :extension_commands, payload: %{commands: ^cmds}} = cmd
+    cmd = Command.widget_commands(cmds)
+    assert %Command{type: :widget_commands, payload: %{commands: ^cmds}} = cmd
   end
 
   # -- Subscriptions ----------------------------------------------------------

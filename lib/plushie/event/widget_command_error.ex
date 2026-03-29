@@ -1,15 +1,15 @@
-defmodule Plushie.Event.ExtensionCommandError do
+defmodule Plushie.Event.WidgetCommandError do
   @moduledoc """
-  Renderer error for a native extension command.
+  Renderer error for a native widget command.
 
-  Emitted when the renderer cannot deliver or execute an `extension_command`.
+  Emitted when the renderer cannot deliver or execute an `widget_command`.
 
   ## Fields
 
     * `reason` - machine-readable reason from the renderer
     * `node_id` - target widget node ID
     * `op` - command operation name
-    * `extension` - extension widget type when known
+    * `extension` - native widget type when known
     * `message` - human-readable error text
   """
 

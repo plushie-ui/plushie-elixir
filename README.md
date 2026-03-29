@@ -51,7 +51,7 @@ iex> Plushie.start_link(Counter)
 
 This is one of [8 examples](examples/) included in the repo, from a
 minimal counter to a full widget catalog. Edit them while the GUI is
-running and see changes instantly. For multi-file projects (extensions,
+running and see changes instantly. For multi-file projects (custom widgets,
 collaborative transports, real project scaffolding), see the
 [plushie-demos](https://github.com/plushie-ui/plushie-demos/tree/main/elixir)
 repo.
@@ -101,14 +101,14 @@ walkthrough.
   [Accessibility guide](docs/accessibility.md)
 - **Live reload** -- edit code, see changes instantly. Enabled by
   default in dev mode.
-- **Extensions** -- multiple paths to custom widgets:
+- **Custom Widgets** -- multiple paths to custom widgets:
   - **Compose** existing widgets into higher-level components with
     pure Elixir. No Rust, no binary rebuild.
   - **Draw** on the canvas with shape primitives for charts, gauges,
     diagrams, and other custom 2D rendering.
   - **Native** -- implement `WidgetExtension` in Rust for full
     control over rendering, state, and event handling.
-  - [Extensions guide](docs/extensions.md)
+  - [Widgets guide](docs/widgets.md)
 - **Remote rendering** -- native desktop UI for apps running on
   servers or embedded devices. Dashboards, admin tools, IoT
   diagnostics -- over SSH with configurable event throttling.
@@ -164,7 +164,7 @@ user events back over stdout.
 You don't need Rust to use plushie. The renderer is a precompiled
 binary, similar to how your app talks to a database without you
 writing C. If you ever need custom native rendering, the
-[extension system](docs/extensions.md) lets you write Rust for just
+[widget system](docs/widgets.md) lets you write Rust for just
 those parts.
 
 The same protocol works over a local pipe, an SSH connection, or
@@ -180,7 +180,7 @@ still evolving:
 - Pin to an exact version and read the
   [CHANGELOG](CHANGELOG.md) when upgrading.
 - Mix releases are not yet supported.
-- The extension macro DSL (`Plushie.Extension`) is the least stable
+- The widget macro DSL (`Plushie.Widget`) is the least stable
   part of the API.
 
 ## Documentation
@@ -200,7 +200,7 @@ Guides are in [`docs/`](docs/) and will be on
 - [Scoped IDs](docs/scoped-ids.md) -- hierarchical ID namespacing
 - [Testing](docs/testing.md) -- three-backend test framework and pixel regression
 - [Accessibility](docs/accessibility.md) -- accesskit integration, a11y props
-- [Extensions](docs/extensions.md) -- custom widgets, publishing packages
+- [Custom Widgets](docs/widgets.md) -- custom widgets, publishing packages
 
 ## Development
 

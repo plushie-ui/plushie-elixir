@@ -131,7 +131,8 @@ defmodule Plushie.Widget.Column do
   def push(%__MODULE__{} = col, child), do: %{col | children: [child | col.children]}
 
   @doc "Appends multiple children to the column."
-  @spec extend(column :: t(), children :: [Plushie.Widget.ui_node() | struct()]) :: t()
+  @spec extend(column :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+          t()
   def extend(%__MODULE__{} = col, children),
     do: %{col | children: Enum.reverse(children) ++ col.children}
 
@@ -143,7 +144,7 @@ defmodule Plushie.Widget.Column do
   @spec build(column :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = col), do: Plushie.Widget.to_node(col)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(col) do

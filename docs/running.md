@@ -23,7 +23,7 @@ Or from code:
 
 The renderer is resolved automatically. For most projects,
 `mix plushie.download` fetches a precompiled renderer and you're done.
-If you have native Rust extensions, `mix plushie.build` compiles a
+If you have native Rust widgets, `mix plushie.build` compiles a
 custom renderer. You can also set `PLUSHIE_BINARY_PATH` or
 `config :plushie, :binary_path` explicitly.
 
@@ -115,8 +115,8 @@ not the server). How you get it there depends on your project:
 | Your project uses | Renderer needed | How to get it |
 |---|---|---|
 | Built-in widgets only | Precompiled | `mix plushie.download` or GitHub release |
-| Pure Elixir extensions | Precompiled | Same -- composites don't need a custom build |
-| Native Rust extensions | Custom build | `mix plushie.build` targeting your laptop's architecture |
+| Pure Elixir widgets | Precompiled | Same -- composites don't need a custom build |
+| Native Rust widgets | Custom build | `mix plushie.build` targeting your laptop's architecture |
 
 The server doesn't need the renderer at all. It only needs your
 Elixir project and its dependencies.
@@ -159,7 +159,7 @@ events continue firing for monitoring.
 
 > The [crash-test](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/crash-test)
 > demo shows all three failure paths in action: Elixir exceptions in
-> update, view, and Rust extension panics -- with a counter that proves
+> update, view, and Rust widget panics -- with a counter that proves
 > the model survives every one.
 
 ### Network drops
@@ -422,7 +422,7 @@ PLUSHIE_TEST_BACKEND=windowed mix test          # real windows (needs display)
 ## How props reach the renderer
 
 You don't need to understand this to use plushie. It's here for when
-you're debugging wire format issues or writing extensions.
+you're debugging wire format issues or writing widgets.
 
 When you return a tree from `view/1`, it passes through four stages
 before reaching the wire:
@@ -457,5 +457,5 @@ wire has `"fill"`.
 - [Getting started](getting-started.md) -- setup, first app
 - [Commands and subscriptions](commands.md) -- event rate limiting details
 - [Testing](testing.md) -- test framework (mock/headless/windowed modes)
-- [Extensions](extensions.md) -- custom widgets, CoalesceHint for throttling
+- [Custom Widgets](widgets.md) -- custom widgets, CoalesceHint for throttling
 - [Collab demo](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/collab) -- the same app running in 5 transport modes (native, stdio, WebSocket, SSH)

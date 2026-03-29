@@ -11,7 +11,7 @@ defmodule Plushie.EventDeclarationTest do
 
   defmodule ValueEventWidget do
     @moduledoc false
-    use Plushie.Extension, :widget
+    use Plushie.Widget
     widget(:value_event_widget)
     event(:selected, value: :number)
 
@@ -30,7 +30,7 @@ defmodule Plushie.EventDeclarationTest do
 
   defmodule DataEventWidget do
     @moduledoc false
-    use Plushie.Extension, :widget
+    use Plushie.Widget
     widget(:data_event_widget)
     event(:moved, data: [x: :number, y: :number])
 
@@ -49,7 +49,7 @@ defmodule Plushie.EventDeclarationTest do
 
   defmodule NoPayloadEventWidget do
     @moduledoc false
-    use Plushie.Extension, :widget
+    use Plushie.Widget
     widget(:no_payload_event_widget)
     event(:cleared)
 
@@ -67,7 +67,7 @@ defmodule Plushie.EventDeclarationTest do
 
   defmodule UnspecifiedValueWidget do
     @moduledoc false
-    use Plushie.Extension, :widget
+    use Plushie.Widget
     widget(:unspecified_value_widget)
     event(:changed, value: :any)
 
@@ -85,7 +85,7 @@ defmodule Plushie.EventDeclarationTest do
 
   defmodule CustomTypeWidget do
     @moduledoc false
-    use Plushie.Extension, :widget
+    use Plushie.Widget
     widget(:custom_type_widget)
     event(:key_action, data: [key: Plushie.Type.Key])
 
@@ -149,7 +149,7 @@ defmodule Plushie.EventDeclarationTest do
   # -- Canvas widget emit routing --------------------------------------------
 
   describe "emit routing with specs" do
-    alias Plushie.Extension.WidgetHandler
+    alias Plushie.Widget.Handler
 
     test "value-spec event puts data in value field" do
       click = %Plushie.Event.WidgetEvent{
@@ -160,7 +160,7 @@ defmodule Plushie.EventDeclarationTest do
       }
 
       {{:emit, event}, _state} =
-        WidgetHandler.invoke_handler(ValueEventWidget, click, %{}, "widget", "main")
+        Handler.invoke_handler(ValueEventWidget, click, %{}, "widget", "main")
 
       assert event.type == {:value_event_widget, :selected}
       assert event.value == 42
@@ -176,7 +176,7 @@ defmodule Plushie.EventDeclarationTest do
       }
 
       {{:emit, event}, _state} =
-        WidgetHandler.invoke_handler(DataEventWidget, click, %{}, "widget", "main")
+        Handler.invoke_handler(DataEventWidget, click, %{}, "widget", "main")
 
       assert event.type == {:data_event_widget, :moved}
       assert event.data == %{x: 10.0, y: 20.0}
@@ -194,7 +194,7 @@ defmodule Plushie.EventDeclarationTest do
       }
 
       {{:emit, event}, _state} =
-        WidgetHandler.invoke_handler(
+        Handler.invoke_handler(
           ThemeToggle,
           click,
           %{progress: 0.0, target: 0.0},

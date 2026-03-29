@@ -167,10 +167,10 @@ repo has larger self-contained projects with their own mix.exs, tests,
 and build configuration:
 
 - [**gauge-demo**](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/gauge-demo)
-  -- native Rust extension with commands, extension events, and
+  -- native Rust widget with commands, widget events, and
   optimistic updates (Tier C)
 - [**sparkline-dashboard**](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/sparkline-dashboard)
-  -- render-only Rust canvas extension with timer subscriptions and
+  -- render-only Rust canvas widget with timer subscriptions and
   multiple widget instances (Tier A)
 - [**notes**](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/notes)
   -- pure Elixir widgets + state helpers (Route, Selection, Undo, Data)

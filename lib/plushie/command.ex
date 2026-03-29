@@ -32,7 +32,7 @@ defmodule Plushie.Command do
   - **Queries**: `tree_hash/1`, `find_focused/1`
   - **Font**: `load_font/1`
   - **Accessibility**: `announce/1`
-  - **Extension**: `extension_command/3`, `extension_commands/1`
+  - **Native widget**: `widget_command/3`, `widget_commands/1`
   - **Test/Headless**: `advance_frame/1`
   - **Batch**: `batch/1`
 
@@ -949,33 +949,33 @@ defmodule Plushie.Command do
   end
 
   # ---------------------------------------------------------------------------
-  # Extension commands
+  # Widget commands
   # ---------------------------------------------------------------------------
 
   @doc """
-  Send a command to a native extension widget.
+  Send a command to a native widget.
 
-  Extension commands bypass the normal tree update / diff / patch cycle and
-  are delivered directly to the target extension widget on the Rust side.
+  Widget commands bypass the normal tree update / diff / patch cycle and
+  are delivered directly to the target native widget on the Rust side.
   """
-  @spec extension_command(node_id :: String.t(), op :: String.t(), payload :: map()) ::
+  @spec widget_command(node_id :: String.t(), op :: String.t(), payload :: map()) ::
           %__MODULE__{}
-  def extension_command(node_id, op, payload \\ %{})
+  def widget_command(node_id, op, payload \\ %{})
       when is_binary(node_id) and is_binary(op) do
     %__MODULE__{
-      type: :extension_command,
+      type: :widget_command,
       payload: %{node_id: node_id, op: op, payload: payload}
     }
   end
 
   @doc """
-  Send a batch of extension commands (processed in one cycle).
+  Send a batch of widget commands (processed in one cycle).
 
   Each command in the list is a `{node_id, op, payload}` tuple.
   """
-  @spec extension_commands(commands :: [{String.t(), String.t(), map()}]) :: %__MODULE__{}
-  def extension_commands(commands) when is_list(commands) do
-    %__MODULE__{type: :extension_commands, payload: %{commands: commands}}
+  @spec widget_commands(commands :: [{String.t(), String.t(), map()}]) :: %__MODULE__{}
+  def widget_commands(commands) when is_list(commands) do
+    %__MODULE__{type: :widget_commands, payload: %{commands: commands}}
   end
 
   @doc """

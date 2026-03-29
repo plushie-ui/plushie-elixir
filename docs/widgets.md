@@ -1,30 +1,30 @@
-# Writing Widget Extensions
+# Writing Custom Widgets
 
-Guide for building custom widget extensions for Plushie. Extensions let you
+Guide for building custom widgets for Plushie. Custom widgets let you
 render arbitrary Rust-native widgets (iced widgets, custom `iced::advanced::Widget`
 implementations, third-party crates) while keeping your app's state and logic
 in Elixir.
 
 ## Quick start
 
-An extension has two halves:
+A widget has two halves:
 
-1. **Elixir side:** use the `Plushie.Extension` macro. This declares the widget's
+1. **Elixir side:** use the `Plushie.Widget` macro. This declares the widget's
    props, commands, and (for native widgets) the Rust crate and constructor.
 
 2. **Rust side:** implement the `WidgetExtension` trait from `plushie-ext`. This
    receives tree nodes from Elixir and returns `iced::Element`s for rendering.
 
-<!-- test: extensions_sparkline_def_test, extensions_sparkline_build_test -- keep this code block in sync with the test -->
+<!-- test: widgets_sparkline_def_test, widgets_sparkline_build_test -- keep this code block in sync with the test -->
 ```elixir
-# lib/my_sparkline/extension.ex
+# lib/my_sparkline/sparkline.ex
 defmodule MySparkline do
-  use Plushie.Extension, :native_widget
+  use Plushie.Widget, :native_widget
 
   widget :sparkline
 
   rust_crate "native/my_sparkline"
-  rust_constructor "my_sparkline::SparklineExtension::new()"
+  rust_constructor "my_sparkline::SparklineWidget::new()"
 
   prop :data, {:list, :number}, doc: "Sample values to plot"
   prop :color, :color, default: "#4CAF50", doc: "Line color"
@@ -37,7 +37,7 @@ end
 This generates:
 
 - `MySparkline.new(id, opts)` -- builds a widget node with typed props
-- `MySparkline.push(widget_id, value)` -- sends a command to the Rust extension
+- `MySparkline.push(widget_id, value)` -- sends a command to the native widget
 - `MySparkline.type_names/0`, `native_crate/0`, `rust_constructor/0` callbacks
 - Compile-time validation of prop types, required declarations, and duplicates
 
@@ -45,13 +45,13 @@ This generates:
 // native/my_sparkline/src/lib.rs
 use plushie_ext::prelude::*;
 
-pub struct SparklineExtension;
+pub struct SparklineWidget;
 
-impl SparklineExtension {
+impl SparklineWidget {
     pub fn new() -> Self { Self }
 }
 
-impl WidgetExtension for SparklineExtension {
+impl WidgetExtension for SparklineWidget {
     fn type_names(&self) -> &[&str] { &["sparkline"] }
     fn config_key(&self) -> &str { "sparkline" }
 
@@ -70,7 +70,7 @@ in the generated `main.rs`:
 ```rust
 plushie::run(
     PlushieAppBuilder::new()
-        .extension(my_sparkline::SparklineExtension::new())
+        .extension(my_sparkline::SparklineWidget::new())
 )
 ```
 
@@ -79,11 +79,11 @@ the [plushie-demos](https://github.com/plushie-ui/plushie-demos/tree/main/elixir
 repo:
 
 - [gauge-demo](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/gauge-demo)
-  -- Tier C extension with commands, events, and optimistic updates
+  -- Tier C widget with commands, events, and optimistic updates
 - [sparkline-dashboard](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/sparkline-dashboard)
-  -- Tier A render-only canvas extension with timer subscriptions
+  -- Tier A render-only canvas widget with timer subscriptions
 
-## Choosing an extension kind
+## Choosing a widget kind
 
 Decision tree:
 
@@ -100,23 +100,23 @@ Decision tree:
    no internal state beyond props?
    **Yes** -> `:widget` (pure Elixir composite)
 
-## Extension kinds
+## Widget kinds
 
 The macro supports three kinds:
 
-### `:native_widget` -- Rust-backed extensions
+### `:native_widget` -- Rust-backed widgets
 
-Use `use Plushie.Extension, :native_widget` for widgets rendered by a Rust
+Use `use Plushie.Widget, :native_widget` for widgets rendered by a Rust
 crate. Requires `rust_crate` and `rust_constructor` declarations.
 
-<!-- test: extensions_hex_view_def_test, extensions_hex_view_build_test -- keep this code block in sync with the test -->
+<!-- test: widgets_hex_view_def_test, widgets_hex_view_build_test -- keep this code block in sync with the test -->
 ```elixir
 defmodule MyApp.HexView do
-  use Plushie.Extension, :native_widget
+  use Plushie.Widget, :native_widget
 
   widget :hex_view
   rust_crate "native/hex_view"
-  rust_constructor "hex_view::HexViewExtension::new()"
+  rust_constructor "hex_view::HexViewWidget::new()"
 
   prop :data, :string, doc: "Binary data (base64)"
   prop :columns, :number, default: 16
@@ -125,14 +125,14 @@ end
 
 ### `:widget` -- Pure Elixir composite widgets
 
-Use `use Plushie.Extension, :widget` for widgets composed entirely from
+Use `use Plushie.Widget` for widgets composed entirely from
 existing Plushie widgets. No Rust code needed. Must define a `render/2`
 (or `render/3` if the widget accepts children) callback.
 
-<!-- test: extensions_composite_card_test -- keep this code block in sync with the test -->
+<!-- test: widgets_composite_card_test -- keep this code block in sync with the test -->
 ```elixir
 defmodule MyApp.Card do
-  use Plushie.Extension, :widget
+  use Plushie.Widget
 
   widget :card, container: true
 
@@ -153,7 +153,7 @@ end
 
 ### Stateful widgets -- Canvas-based widgets with internal state
 
-Add `state` declarations to a `:widget` extension for widgets that
+Add `state` declarations to a `:widget` kind for widgets that
 render via canvas, manage their own internal state, and transform
 raw canvas events into semantic events. No Rust code needed. Features
 are detected at compile time based on which callbacks are defined:
@@ -174,7 +174,7 @@ are detected at compile time based on which callbacks are defined:
 
 ```elixir
 defmodule MyApp.StarRating do
-  use Plushie.Extension, :widget
+  use Plushie.Widget
 
   widget :star_rating
 
@@ -345,16 +345,16 @@ the full testing guide.
 `prop` declarations automatically generate `Plushie.DSL.Buildable`
 callbacks (`from_opts/1`, `__field_keys__/0`, `__field_types__/0`) and
 the `__option_keys__/0` / `__option_types__/0` functions that the DSL
-macros use for compile-time validation. Extension widgets work with
+macros use for compile-time validation. Custom widgets work with
 block-form options out of the box -- no extra boilerplate needed.
 
 When a prop's type maps to a `Buildable` struct (e.g. `:padding` maps
-to `Plushie.Type.Padding`), the extension widget automatically supports
+to `Plushie.Type.Padding`), the custom widget automatically supports
 nested do-block construction for that prop:
 
 ```elixir
 defmodule MyApp.Card do
-  use Plushie.Extension, :widget
+  use Plushie.Widget
 
   widget :card, container: true
 
@@ -383,16 +383,16 @@ end
 `:number`, `:string`, `:boolean`, `:color`, `:length`, `:padding`,
 `:alignment`, `:font`, `:style`, `:atom`, `:map`, `:any`, `{:list, inner}`
 
-The `a11y` and `event_rate` options are available on all extension
+The `a11y` and `event_rate` options are available on all custom widget
 widgets automatically. You do not need to declare them with `prop`.
 
 The `a11y` map supports all standard fields including `disabled`,
 `position_in_set`, `size_of_set`, and `has_popup` -- useful when
-building accessible composite widgets from extension primitives.
+building accessible composite widgets from widget primitives.
 
-## Extension tiers
+## Widget tiers
 
-Not every extension needs the full trait. The `WidgetExtension` trait has
+Not every widget needs the full trait. The `WidgetExtension` trait has
 sensible defaults for all methods except `type_names`, `config_key`, and
 `render`. Choose the tier that fits your widget:
 
@@ -408,7 +408,7 @@ defaults. Good for widgets that compose existing iced widgets (e.g.
 interaction state.
 
 ```rust
-impl WidgetExtension for HexViewExtension {
+impl WidgetExtension for HexViewWidget {
     fn type_names(&self) -> &[&str] { &["hex_view"] }
     fn config_key(&self) -> &str { "hex_view" }
 
@@ -424,7 +424,7 @@ impl WidgetExtension for HexViewExtension {
 ### Tier B: interactive (+handle_event)
 
 Add `handle_event` to intercept events from your widgets before they reach
-Elixir. Use this when the extension needs to process mouse/keyboard input
+Elixir. Use this when the widget needs to process mouse/keyboard input
 internally (pan, zoom, hover tracking) or transform events before forwarding.
 For example, a canvas-based plotting widget might handle pan/zoom entirely
 in Rust while forwarding click events to Elixir as semantic `plot_click`
@@ -443,7 +443,7 @@ fn handle_event(
             // Transform raw canvas coordinates into plot-space click
             let x = data.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0);
             let y = data.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0);
-            let plot_event = OutgoingEvent::extension_event(
+            let plot_event = OutgoingEvent::widget_event_family(
                 "plot_click".to_string(),
                 node_id.to_string(),
                 Some(serde_json::json!({"plot_x": x, "plot_y": y})),
@@ -459,9 +459,9 @@ fn handle_event(
 }
 ```
 
-#### Throttling high-frequency extension events
+#### Throttling high-frequency widget events
 
-If your extension emits events on every mouse move or at frame rate,
+If your widget emits events on every mouse move or at frame rate,
 the host receives far more events than it needs, and over SSH or
 slow connections the unthrottled traffic can stall the UI entirely.
 The renderer can buffer these and deliver only the latest value (or
@@ -472,17 +472,17 @@ discrete actions.
 
 ```rust
 // Latest value wins -- position tracking, state snapshots
-let event = OutgoingEvent::extension_event("my_plot:cursor_pos", node_id, data)
+let event = OutgoingEvent::widget_event_family("my_plot:cursor_pos", node_id, data)
     .with_coalesce(CoalesceHint::Replace);
 
 // Deltas sum -- scroll, velocity, counters
-let event = OutgoingEvent::extension_event("my_plot:pan_scroll", node_id, data)
+let event = OutgoingEvent::widget_event_family("my_plot:pan_scroll", node_id, data)
     .with_coalesce(CoalesceHint::Accumulate(
         vec!["delta_x".into(), "delta_y".into()]
     ));
 
 // No hint -- discrete actions are never coalesced
-let event = OutgoingEvent::extension_event("my_plot:node_selected", node_id, data);
+let event = OutgoingEvent::widget_event_family("my_plot:node_selected", node_id, data);
 ```
 
 The hint declares how to coalesce; `event_rate` on the widget node
@@ -497,16 +497,16 @@ Both are in the prelude (`CoalesceHint`, `OutgoingEvent`).
 ### Tier C: full lifecycle (+prepare, handle_command, cleanup)
 
 Add `prepare` for mutable state synchronization before each render pass,
-`handle_command` for commands sent from Elixir to the extension, and
+`handle_command` for commands sent from Elixir to the widget, and
 `cleanup` for resource teardown when nodes are removed. Typical uses
-include ring buffers fed by extension commands with canvas rendering,
+include ring buffers fed by widget commands with canvas rendering,
 generation-tracked cache invalidation, and custom `iced::advanced::Widget`
 implementations with viewport state, hit testing, and pan/zoom persisted
 in `ExtensionCaches`.
 
 > Working example:
 > [gauge-demo](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/gauge-demo)
-> -- extension commands (`set_value`, `animate_to`), extension events
+> -- widget commands (`set_value`, `animate_to`), widget events
 > (`value_changed`), `GenerationCounter`, and `ExtensionCaches`.
 
 ```rust
@@ -567,7 +567,7 @@ The full list of trait methods:
 - `env.window_id` -- the window ID (`&str`) this render pass is for
 - `env.scale_factor` -- DPI scale factor (`f32`) for the current window
 
-Extensions doing DPI-aware rendering or per-window adaptation can use
+Widgets doing DPI-aware rendering or per-window adaptation can use
 `window_id` and `scale_factor` directly.
 
 ### Prelude additions
@@ -579,8 +579,8 @@ alignment types.
 
 ## Message::Event construction
 
-Extensions that implement custom `iced::advanced::Widget` types need to
-publish events back through the extension system. Use the `Message::Event`
+Widgets that implement custom `iced::advanced::Widget` types need to
+publish events back through the widget system. Use the `Message::Event`
 variant:
 
 ```rust
@@ -595,7 +595,7 @@ shell.publish(Message::Event(
 ));
 ```
 
-Use `widget_type:event_name` for custom extension families. The Elixir SDK
+Use `widget_type:event_name` for custom widget families. The Elixir SDK
 validates these against the widget's declared `events [...]` list and
 delivers them to the app as `%WidgetEvent{type: {widget_type, event_name}}`.
 
@@ -606,22 +606,22 @@ Widget::update()
   -> shell.publish(Message::Event(id, data, family))
   -> App::update() in renderer.rs
   -> ExtensionDispatcher::handle_event(id, family, data, caches)
-  -> your extension's handle_event() method
+  -> your widget's handle_event() method
   -> EventResult determines what reaches Elixir
 ```
 
-If your extension does not implement `handle_event` (or returns
+If your widget does not implement `handle_event` (or returns
 `EventResult::PassThrough`), the event is serialized as-is and sent to
 Elixir over the wire as an `OutgoingEvent` with the family and data you
 provided.
 
-### Constructing OutgoingEvent from extensions
+### Constructing OutgoingEvent from widgets
 
 When your `handle_event` or `handle_command` needs to emit events to Elixir,
-use `OutgoingEvent::extension_event`:
+use `OutgoingEvent::widget_event_family`:
 
 ```rust
-OutgoingEvent::extension_event(
+OutgoingEvent::widget_event_family(
     "my_custom_family".to_string(),  // family string
     node_id.to_string(),             // node ID
     Some(json!({"detail": 42})),     // optional data payload (None for bare events)
@@ -639,15 +639,15 @@ resulting JSON sent to Elixir looks like:
 ## Event family reference
 
 Every event sent over the wire carries a `family` string that identifies
-what kind of interaction produced it. Extension authors need to know these
+what kind of interaction produced it. Widget authors need to know these
 strings when implementing `handle_event` -- the `family` parameter tells
 you what happened.
 
 ### Widget events (node ID in `id` field)
 
 These are emitted by built-in widgets. They use dedicated `Message` variants
-internally but arrive at extensions via `Message::Event` when the widget is
-inside an extension's node tree.
+internally but arrive at widgets via `Message::Event` when the widget is
+inside a widget's node tree.
 
 | Family | Source widget | Data fields |
 |---|---|---|
@@ -716,8 +716,8 @@ Emitted by mouse_area widgets.
 
 ### Subscription events (subscription tag in `tag` field, empty `id`)
 
-These are only routed through extensions if the extension widget's node ID
-matches. In practice, extensions mostly see the widget-scoped events above.
+These are only routed through widgets if the custom widget's node ID
+matches. In practice, widgets mostly see the widget-scoped events above.
 Listed here for completeness.
 
 | Family | Data fields |
@@ -767,7 +767,7 @@ Listed here for completeness.
 
 "I don't care about this event. Forward it to Elixir as-is."
 
-This is the default. Use it for events your extension doesn't need to
+This is the default. Use it for events your widget doesn't need to
 intercept. The original event is serialized and sent over the wire.
 
 ```rust
@@ -784,7 +784,7 @@ fn handle_event(&mut self, _id: &str, family: &str, _data: &Value, _caches: &mut
 "I handled this event. Do NOT forward the original to Elixir. Optionally
 emit different events instead."
 
-Use this when the extension fully owns the interaction:
+Use this when the widget fully owns the interaction:
 
 ```rust
 // Pan/zoom: handle internally, emit nothing to Elixir
@@ -792,7 +792,7 @@ EventResult::Consumed(vec![])
 
 // Transform: swallow the raw canvas event, emit a semantic one
 EventResult::Consumed(vec![
-    OutgoingEvent::extension_event(
+    OutgoingEvent::widget_event_family(
         "plot_click".to_string(),
         node_id.to_string(),
         Some(json!({"series": "cpu", "index": 42})),
@@ -804,7 +804,7 @@ EventResult::Consumed(vec![
 visual state (e.g., updates hover position, changes zoom level) and returns
 `Consumed(vec![])`, iced will still call `view()` after the update (the
 daemon always re-renders after every `update()`). Standard iced widgets
-re-render correctly. But if your extension uses `canvas::Cache`, the cache
+re-render correctly. But if your widget uses `canvas::Cache`, the cache
 won't know to clear itself -- you need to invalidate it explicitly via
 `GenerationCounter` (see below) or by structuring your `Program::draw()` to
 detect the state change.
@@ -814,12 +814,12 @@ detect the state change.
 "I handled this event AND forward the original to Elixir. Also emit
 additional events."
 
-Use this when both the extension and Elixir need to see the event:
+Use this when both the widget and Elixir need to see the event:
 
 ```rust
 // Forward the original click AND emit a computed event
 EventResult::Observed(vec![
-    OutgoingEvent::extension_event(
+    OutgoingEvent::widget_event_family(
         "sparkline_sample_clicked".to_string(),
         node_id.to_string(),
         Some(json!({"sample_index": 7, "value": 42.5})),
@@ -917,7 +917,7 @@ call `.bump()` to increment, and `.get()` to read the current value.
 
 ## plushie-iced Widget trait guide
 
-Extensions implementing `iced::advanced::Widget` directly (Tier C) need to
+Widgets implementing `iced::advanced::Widget` directly (Tier C) need to
 be aware of the plushie-iced API. Several methods changed names and signatures
 from earlier versions.
 
@@ -1119,17 +1119,17 @@ manually traversing `serde_json::Value`:
 | `node.prop_color(key)` | `Option<Color>` | Method on `TreeNode` (same as `prop_color`) |
 | `node.prop_padding(key)` | `Padding` | Method on `TreeNode` (same as `prop_padding`) |
 | `node.props()` | `Option<&Map>` | Access the props object directly |
-| `OutgoingEvent::with_value(value)` | `OutgoingEvent` | Set the `value` field on extension events |
-| `PlushieAppBuilder::extension_boxed(ext)` | `PlushieAppBuilder` | Register pre-boxed extensions |
+| `OutgoingEvent::with_value(value)` | `OutgoingEvent` | Set the `value` field on widget events |
+| `PlushieAppBuilder::extension_boxed(ext)` | `PlushieAppBuilder` | Register pre-boxed widgets |
 | `f64_to_f32(v)` | `f32` | Clamping f64-to-f32 conversion |
 | `prop_padding(node, key)` | `Padding` | Public padding prop helper |
 
 
-## Testing extensions
+## Testing custom widgets
 
 ### Elixir-side tests
 
-Test your extension's generated functions and callbacks:
+Test your widget's generated functions and callbacks:
 
 ```elixir
 defmodule MySparklineTest do
@@ -1164,7 +1164,7 @@ mod tests {
 
     #[test]
     fn handle_command_push_adds_sample() {
-        let mut ext = SparklineExtension::new();
+        let mut ext = SparklineWidget::new();
         let mut caches = ext_caches();
 
         // Simulate prepare to initialize state
@@ -1181,7 +1181,7 @@ mod tests {
 
     #[test]
     fn cleanup_removes_state() {
-        let mut ext = SparklineExtension::new();
+        let mut ext = SparklineWidget::new();
         let mut caches = ext_caches();
 
         let n = node("s-1", "sparkline");
@@ -1203,7 +1203,7 @@ method doesn't panic and returns a valid `Element`:
 ```rust
 #[test]
 fn render_does_not_panic() {
-    let ext = HexViewExtension::new();
+    let ext = HexViewWidget::new();
     let wc = widget_caches();
     let ec = ext_caches();
     let images = image_registry();
@@ -1222,20 +1222,20 @@ fn render_does_not_panic() {
 
 The mock backend (`:mock`) runs the real Runtime against `plushie --mock`
 with session multiplexing. Standard test helpers like `click/1`,
-`type_text/2`, etc. work with extension widget types out of the box --
+`type_text/2`, etc. work with custom widget types out of the box --
 the mock backend infers events for known widget interaction patterns.
 
 For integration tests that exercise the full wire protocol round-trip
-(including extension commands), build a custom renderer with
+(including widget commands), build a custom renderer with
 `mix plushie.build` and use the `:headless` backend. See the
-[Testing extensions](testing.md#testing-extensions) section in the
+[Testing custom widgets](testing.md#testing-custom-widgets) section in the
 testing guide for the full workflow.
 
 
 ## ExtensionCaches
 
 `ExtensionCaches` is type-erased storage keyed by `(namespace, key)` pairs.
-The namespace is typically your extension's `config_key()`, and the key is
+The namespace is typically your widget's `config_key()`, and the key is
 the node ID. This is the primary mechanism for persisting state between
 `prepare`/`render`/`handle_event`/`handle_command` calls.
 
@@ -1255,7 +1255,7 @@ Common keying patterns:
 
 - **Per-node state:** `caches.get::<MyState>(self.config_key(), &node.id)`
 - **Per-node sub-keys:** `caches.get::<GenerationCounter>(self.config_key(), &format!("{}:gen", node.id))`
-- **Global extension state:** `caches.get::<GlobalConfig>(self.config_key(), "_global")`
+- **Global widget state:** `caches.get::<GlobalConfig>(self.config_key(), "_global")`
 
 The type parameter `T` must be `Send + Sync + 'static`. This is why
 `canvas::Cache` (which is `!Send + !Sync`) cannot be stored here.
@@ -1265,24 +1265,24 @@ The type parameter `T` must be `Send + Sync + 'static`. This is why
 
 > Working example: the
 > [crash-test](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/crash-test)
-> demo deliberately panics an extension and shows the red placeholder.
+> demo deliberately panics a widget and shows the red placeholder.
 
-The `ExtensionDispatcher` wraps all mutable extension calls (`init`,
+The `ExtensionDispatcher` wraps all mutable widget calls (`init`,
 `prepare`, `handle_event`, `handle_command`, `cleanup`) in
-`catch_unwind`. If your extension panics:
+`catch_unwind`. If your widget panics:
 
 1. The panic is logged via `log::error!`.
-2. The extension is marked as "poisoned".
-3. All subsequent calls to the poisoned extension are skipped.
+2. The widget is marked as "poisoned".
+3. All subsequent calls to the poisoned widget are skipped.
 4. `render()` returns a red error placeholder text instead of calling your code.
 5. Poisoned state is cleared on the next `Snapshot` message (full tree sync).
 
-This means a bug in one extension cannot crash the renderer or affect other
-extensions. But it also means panics are unrecoverable until the next
-snapshot -- design your extension to avoid panics in production.
+This means a bug in one widget cannot crash the renderer or affect other
+widgets. But it also means panics are unrecoverable until the next
+snapshot -- design your widget to avoid panics in production.
 
 **Note:** `render()` panics ARE caught via `catch_unwind` in
-`widgets::render()`. When a render panic is caught, the extension is
+`widgets::render()`. When a render panic is caught, the widget is
 marked as "poisoned" and subsequent renders skip it, returning a red
 error placeholder text until `clear_poisoned()` is called (typically on
 the next `Snapshot` message).
@@ -1295,11 +1295,11 @@ Widget packages come in two tiers:
 1. **Pure Elixir** -- compose existing primitives (canvas, column, container,
    etc.) into higher-level widgets. Works with prebuilt renderer binaries.
    No Rust toolchain needed.
-2. **Elixir + Rust** -- custom native rendering via a `WidgetExtension`
+2. **Elixir + Rust** -- custom native rendering via a `WidgetExtension` trait
    trait. Requires a Rust toolchain to compile a custom renderer binary.
 
 The rest of this section covers Tier 1 (pure Elixir packages). For Tier 2,
-see the extension quick start and trait reference above.
+see the widget quick start and trait reference above.
 
 ### When pure Elixir is enough
 
@@ -1437,7 +1437,7 @@ defmodule MyWidget.DonutChart do
 
   # -- Widget protocol --
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     def to_node(chart) do
       layers = %{arcs: build_arc_shapes(chart)}
 
@@ -1610,9 +1610,9 @@ Document these in your package README:
 
 ## Demo projects
 
-Complete working examples of native widget extensions:
+Complete working examples of native custom widgets:
 
-- [gauge-demo](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/gauge-demo) -- extension with commands (`set_value`, `animate_to`), optimistic updates, and comprehensive test suite
-- [sparkline-dashboard](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/sparkline-dashboard) -- render-only canvas extension with timer subscriptions and simulated live data
+- [gauge-demo](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/gauge-demo) -- widget with commands (`set_value`, `animate_to`), optimistic updates, and comprehensive test suite
+- [sparkline-dashboard](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/sparkline-dashboard) -- render-only canvas widget with timer subscriptions and simulated live data
 
-The same demos exist in [Gleam](https://github.com/plushie-ui/plushie-demos/tree/main/gleam), [TypeScript](https://github.com/plushie-ui/plushie-demos/tree/main/typescript), [Ruby](https://github.com/plushie-ui/plushie-demos/tree/main/ruby), and [Python](https://github.com/plushie-ui/plushie-demos/tree/main/python). The Rust extension code is identical across languages.
+The same demos exist in [Gleam](https://github.com/plushie-ui/plushie-demos/tree/main/gleam), [TypeScript](https://github.com/plushie-ui/plushie-demos/tree/main/typescript), [Ruby](https://github.com/plushie-ui/plushie-demos/tree/main/ruby), and [Python](https://github.com/plushie-ui/plushie-demos/tree/main/python). The Rust widget code is identical across languages.

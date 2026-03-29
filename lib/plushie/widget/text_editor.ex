@@ -264,7 +264,7 @@ defmodule Plushie.Widget.TextEditor do
   @spec build(text_editor :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = ed), do: Plushie.Widget.to_node(ed)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(ed) do

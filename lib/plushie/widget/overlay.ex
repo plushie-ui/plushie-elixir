@@ -140,7 +140,8 @@ defmodule Plushie.Widget.Overlay do
   def push(%__MODULE__{} = overlay, child), do: %{overlay | children: [child | overlay.children]}
 
   @doc "Appends multiple children to the overlay."
-  @spec extend(overlay :: t(), children :: [Plushie.Widget.ui_node() | struct()]) :: t()
+  @spec extend(overlay :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+          t()
   def extend(%__MODULE__{} = overlay, children),
     do: %{overlay | children: Enum.reverse(children) ++ overlay.children}
 
@@ -152,7 +153,7 @@ defmodule Plushie.Widget.Overlay do
   @spec build(overlay :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = overlay), do: Plushie.Widget.to_node(overlay)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(overlay) do

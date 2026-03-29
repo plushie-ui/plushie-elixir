@@ -90,7 +90,8 @@ defmodule Plushie.Widget.Sensor do
   def push(%__MODULE__{} = sensor, child), do: %{sensor | children: [child | sensor.children]}
 
   @doc "Appends multiple children to the sensor."
-  @spec extend(sensor :: t(), children :: [Plushie.Widget.ui_node() | struct()]) :: t()
+  @spec extend(sensor :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+          t()
   def extend(%__MODULE__{} = sensor, children),
     do: %{sensor | children: Enum.reverse(children) ++ sensor.children}
 
@@ -107,7 +108,7 @@ defmodule Plushie.Widget.Sensor do
   @spec build(sensor :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = sensor), do: Plushie.Widget.to_node(sensor)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(sensor) do

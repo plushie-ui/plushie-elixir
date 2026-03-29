@@ -202,7 +202,7 @@ defmodule Plushie.Widget.Image do
   @spec build(image :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = img), do: Plushie.Widget.to_node(img)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(img) do

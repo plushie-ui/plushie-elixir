@@ -92,7 +92,8 @@ defmodule Plushie.Widget.Pin do
   def push(%__MODULE__{} = pin, child), do: %{pin | children: [child | pin.children]}
 
   @doc "Appends multiple children to the pin."
-  @spec extend(pin :: t(), children :: [Plushie.Widget.ui_node() | struct()]) :: t()
+  @spec extend(pin :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+          t()
   def extend(%__MODULE__{} = pin, children),
     do: %{pin | children: Enum.reverse(children) ++ pin.children}
 
@@ -104,7 +105,7 @@ defmodule Plushie.Widget.Pin do
   @spec build(pin :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = pin), do: Plushie.Widget.to_node(pin)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(pin) do

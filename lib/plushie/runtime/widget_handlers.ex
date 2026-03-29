@@ -31,7 +31,7 @@ defmodule Plushie.Runtime.WidgetHandlers do
 
   require Logger
 
-  alias Plushie.Extension.WidgetHandler
+  alias Plushie.Widget.Handler
 
   @doc """
   Collects subscription specs from all registered widget_handlers.
@@ -80,7 +80,7 @@ defmodule Plushie.Runtime.WidgetHandlers do
         }
 
         {action, new_state} =
-          WidgetHandler.invoke_handler(
+          Handler.invoke_handler(
             module,
             timer_event,
             widget_state,
@@ -259,7 +259,7 @@ defmodule Plushie.Runtime.WidgetHandlers do
        ) do
     {action, new_state} =
       try do
-        WidgetHandler.invoke_handler(module, event, widget_state, scoped_id, widget_window_id)
+        Handler.invoke_handler(module, event, widget_state, scoped_id, widget_window_id)
       rescue
         error ->
           Logger.warning(
@@ -291,7 +291,7 @@ defmodule Plushie.Runtime.WidgetHandlers do
   defp walk_chain(registry, event, [{scoped_id, %{module: module, state: widget_state}} | rest]) do
     {action, new_state} =
       try do
-        WidgetHandler.invoke_handler(module, event, widget_state, scoped_id, nil)
+        Handler.invoke_handler(module, event, widget_state, scoped_id, nil)
       rescue
         error ->
           Logger.warning(

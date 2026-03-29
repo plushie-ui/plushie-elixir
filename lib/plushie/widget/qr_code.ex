@@ -130,7 +130,7 @@ defmodule Plushie.Widget.QrCode do
   @spec build(qr_code :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = qr), do: Plushie.Widget.to_node(qr)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(qr) do

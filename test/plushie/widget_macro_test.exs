@@ -1,4 +1,4 @@
-defmodule Plushie.ExtensionMacroTest do
+defmodule Plushie.WidgetMacroTest do
   # async: false because Code.compile_string affects global code server state
   use ExUnit.Case, async: false
 
@@ -6,8 +6,8 @@ defmodule Plushie.ExtensionMacroTest do
   # Test modules: native_widget
   # ---------------------------------------------------------------------------
 
-  defmodule GaugeExtension do
-    use Plushie.Extension, :native_widget
+  defmodule GaugeWidget do
+    use Plushie.Widget, :native_widget
 
     widget(:gauge)
     event(:calibrated, value: :number)
@@ -21,14 +21,14 @@ defmodule Plushie.ExtensionMacroTest do
     prop(:label, :string)
 
     rust_crate("native/my_gauge")
-    rust_constructor("my_gauge::GaugeExtension::new()")
+    rust_constructor("my_gauge::GaugeWidget::new()")
 
     command(:set_value, value: :number)
     command(:reset)
   end
 
   defmodule ContainerNative do
-    use Plushie.Extension, :native_widget
+    use Plushie.Widget, :native_widget
 
     widget(:native_panel, container: true)
 
@@ -45,7 +45,7 @@ defmodule Plushie.ExtensionMacroTest do
   # ---------------------------------------------------------------------------
 
   defmodule BadgeWidget do
-    use Plushie.Extension, :widget
+    use Plushie.Widget
 
     widget(:badge)
 
@@ -59,7 +59,7 @@ defmodule Plushie.ExtensionMacroTest do
   # ---------------------------------------------------------------------------
 
   defmodule CardWidget do
-    use Plushie.Extension, :widget
+    use Plushie.Widget
 
     widget(:card, container: true)
 
@@ -72,7 +72,7 @@ defmodule Plushie.ExtensionMacroTest do
   # ---------------------------------------------------------------------------
 
   defmodule StatusIndicator do
-    use Plushie.Extension, :widget
+    use Plushie.Widget
 
     widget(:status_indicator)
 
@@ -91,7 +91,7 @@ defmodule Plushie.ExtensionMacroTest do
   # ---------------------------------------------------------------------------
 
   defmodule Wrapper do
-    use Plushie.Extension, :widget
+    use Plushie.Widget
 
     widget(:wrapper)
 
@@ -114,7 +114,7 @@ defmodule Plushie.ExtensionMacroTest do
   # ---------------------------------------------------------------------------
 
   defmodule TypeKitchen do
-    use Plushie.Extension, :widget
+    use Plushie.Widget
 
     widget(:type_kitchen)
 
@@ -141,20 +141,20 @@ defmodule Plushie.ExtensionMacroTest do
 
   describe "native_widget behaviour callbacks" do
     test "type_names/0 returns the widget type as an atom list" do
-      assert GaugeExtension.type_names() == [:gauge]
+      assert GaugeWidget.type_names() == [:gauge]
     end
 
     test "__widget_type__/0 and __events__/0 expose declared widget event metadata" do
-      assert GaugeExtension.__widget_type__() == :gauge
-      assert GaugeExtension.__events__() == [:calibrated]
+      assert GaugeWidget.__widget_type__() == :gauge
+      assert GaugeWidget.__events__() == [:calibrated]
     end
 
     test "native_crate/0 returns the crate path" do
-      assert GaugeExtension.native_crate() == "native/my_gauge"
+      assert GaugeWidget.native_crate() == "native/my_gauge"
     end
 
     test "rust_constructor/0 returns the constructor expression" do
-      assert GaugeExtension.rust_constructor() == "my_gauge::GaugeExtension::new()"
+      assert GaugeWidget.rust_constructor() == "my_gauge::GaugeWidget::new()"
     end
   end
 
@@ -170,14 +170,14 @@ defmodule Plushie.ExtensionMacroTest do
     end
 
     test "native widget builds node with type and props" do
-      node = GaugeExtension.new("g1", value: 42) |> GaugeExtension.build()
+      node = GaugeWidget.new("g1", value: 42) |> GaugeWidget.build()
       assert node.id == "g1"
       assert node.type == "gauge"
       assert node.props[:value] == 42
       assert node.props[:min] == 0
       assert node.props[:max] == 100
-      assert node.props[:__extension_widget_type__] == :gauge
-      assert node.props[:__extension_widget_events__] == [:calibrated]
+      assert node.props[:__widget_type__] == :gauge
+      assert node.props[:__widget_events__] == [:calibrated]
       assert node.children == []
     end
 
@@ -202,7 +202,7 @@ defmodule Plushie.ExtensionMacroTest do
 
     test "raises ArgumentError listing the unknown keys" do
       assert_raise ArgumentError, ~r/bogus/, fn ->
-        GaugeExtension.new("g1", bogus: 123)
+        GaugeWidget.new("g1", bogus: 123)
       end
     end
   end
@@ -217,13 +217,13 @@ defmodule Plushie.ExtensionMacroTest do
     end
 
     test "number defaults applied for native" do
-      node = GaugeExtension.new("g1", value: 50) |> GaugeExtension.build()
+      node = GaugeWidget.new("g1", value: 50) |> GaugeWidget.build()
       assert node.props[:min] == 0
       assert node.props[:max] == 100
     end
 
     test "props without defaults are omitted when not provided" do
-      node = GaugeExtension.new("g1", value: 50) |> GaugeExtension.build()
+      node = GaugeWidget.new("g1", value: 50) |> GaugeWidget.build()
       refute Map.has_key?(node.props, "width")
       refute Map.has_key?(node.props, "height")
       refute Map.has_key?(node.props, "label")
@@ -244,7 +244,7 @@ defmodule Plushie.ExtensionMacroTest do
     end
 
     test "length values are stored raw" do
-      node = GaugeExtension.new("g1", value: 0, width: :fill) |> GaugeExtension.build()
+      node = GaugeWidget.new("g1", value: 0, width: :fill) |> GaugeWidget.build()
       assert node.props[:width] == :fill
     end
 
@@ -287,17 +287,17 @@ defmodule Plushie.ExtensionMacroTest do
   # --- 6. command generation (native) ---------------------------------------
 
   describe "command generation for native widgets" do
-    test "parameterized command returns extension_command" do
-      cmd = GaugeExtension.set_value("g1", 75)
-      assert cmd.type == :extension_command
+    test "parameterized command returns widget_command" do
+      cmd = GaugeWidget.set_value("g1", 75)
+      assert cmd.type == :widget_command
       assert cmd.payload.node_id == "g1"
       assert cmd.payload.op == "set_value"
       assert cmd.payload.payload == %{value: 75}
     end
 
-    test "parameterless command returns extension_command" do
-      cmd = GaugeExtension.reset("g1")
-      assert cmd.type == :extension_command
+    test "parameterless command returns widget_command" do
+      cmd = GaugeWidget.reset("g1")
+      assert cmd.type == :widget_command
       assert cmd.payload.node_id == "g1"
       assert cmd.payload.op == "reset"
       assert cmd.payload.payload == %{}
@@ -305,13 +305,13 @@ defmodule Plushie.ExtensionMacroTest do
 
     test "command enforces widget_id is binary" do
       assert_raise FunctionClauseError, fn ->
-        GaugeExtension.set_value(:not_binary, 42)
+        GaugeWidget.set_value(:not_binary, 42)
       end
     end
 
     test "command enforces type guard on params" do
       assert_raise FunctionClauseError, fn ->
-        GaugeExtension.set_value("g1", "not a number")
+        GaugeWidget.set_value("g1", "not a number")
       end
     end
   end
@@ -366,7 +366,7 @@ defmodule Plushie.ExtensionMacroTest do
       assert_raise CompileError, ~r/missing.*widget :type_name/, fn ->
         Code.compile_string("""
         defmodule MissingWidget do
-          use Plushie.Extension, :widget
+          use Plushie.Widget
 
           prop :foo, :string
         end
@@ -380,7 +380,7 @@ defmodule Plushie.ExtensionMacroTest do
       assert_raise CompileError, ~r/missing.*rust_crate/, fn ->
         Code.compile_string("""
         defmodule MissingCrate do
-          use Plushie.Extension, :native_widget
+          use Plushie.Widget, :native_widget
 
           widget :foo
           rust_constructor "foo::Foo::new()"
@@ -393,7 +393,7 @@ defmodule Plushie.ExtensionMacroTest do
       assert_raise CompileError, ~r/missing.*rust_constructor/, fn ->
         Code.compile_string("""
         defmodule MissingConstructor do
-          use Plushie.Extension, :native_widget
+          use Plushie.Widget, :native_widget
 
           widget :foo
           rust_crate "native/foo"
@@ -419,8 +419,8 @@ defmodule Plushie.ExtensionMacroTest do
       a11y = %{role: :meter, label: "CPU"}
 
       node =
-        GaugeExtension.new("g1", value: 50, a11y: a11y)
-        |> GaugeExtension.build()
+        GaugeWidget.new("g1", value: 50, a11y: a11y)
+        |> GaugeWidget.build()
 
       assert %Plushie.Type.A11y{} = node.props[:a11y]
       assert node.props[:a11y].role == :meter
@@ -464,7 +464,7 @@ defmodule Plushie.ExtensionMacroTest do
       assert_raise ArgumentError, ~r/must be one of/, fn ->
         Code.compile_string("""
         defmodule TestInvalidKind do
-          use Plushie.Extension, :invalid
+          use Plushie.Widget, :invalid
         end
         """)
       end
@@ -474,7 +474,7 @@ defmodule Plushie.ExtensionMacroTest do
       assert_raise CompileError, ~r/unsupported prop type.*:bogus_type/, fn ->
         Code.compile_string("""
         defmodule TestBadPropType do
-          use Plushie.Extension, :widget
+          use Plushie.Widget
 
           widget :bad_prop
           prop :foo, :bogus_type
@@ -487,7 +487,7 @@ defmodule Plushie.ExtensionMacroTest do
       assert_raise CompileError, ~r/unsupported command param type.*:widget_ref/, fn ->
         Code.compile_string("""
         defmodule TestBadCmdType do
-          use Plushie.Extension, :native_widget
+          use Plushie.Widget, :native_widget
 
           widget :bad_cmd
           rust_crate "native/bad"
@@ -501,7 +501,7 @@ defmodule Plushie.ExtensionMacroTest do
     test "allows {:list, inner} prop type" do
       Code.compile_string("""
       defmodule TestListPropType do
-        use Plushie.Extension, :widget
+        use Plushie.Widget
 
         widget :list_prop
         prop :items, {:list, :string}
@@ -513,7 +513,7 @@ defmodule Plushie.ExtensionMacroTest do
       assert_raise CompileError, ~r/unsupported prop type.*\{:list, :widget_ref\}/, fn ->
         Code.compile_string("""
         defmodule TestBadListPropType do
-          use Plushie.Extension, :widget
+          use Plushie.Widget
 
           widget :bad_list_prop
           prop :items, {:list, :widget_ref}
@@ -527,7 +527,7 @@ defmodule Plushie.ExtensionMacroTest do
         ExUnit.CaptureIO.capture_io(:stderr, fn ->
           Code.compile_string("""
           defmodule TestDuplicateProps do
-            use Plushie.Extension, :widget
+            use Plushie.Widget
 
             widget :dup_props
             prop :foo, :string
@@ -545,7 +545,7 @@ defmodule Plushie.ExtensionMacroTest do
         ExUnit.CaptureIO.capture_io(:stderr, fn ->
           Code.compile_string("""
           defmodule TestDuplicateWidget do
-            use Plushie.Extension, :widget
+            use Plushie.Widget
 
             widget :first_name
             widget :second_name
@@ -563,7 +563,7 @@ defmodule Plushie.ExtensionMacroTest do
       assert_raise CompileError, ~r/prop name :id is reserved/, fn ->
         Code.compile_string("""
         defmodule TestReservedId do
-          use Plushie.Extension, :widget
+          use Plushie.Widget
           widget :bad
           prop :id, :string
         end
@@ -575,7 +575,7 @@ defmodule Plushie.ExtensionMacroTest do
       assert_raise CompileError, ~r/prop name :type is reserved/, fn ->
         Code.compile_string("""
         defmodule TestReservedType do
-          use Plushie.Extension, :widget
+          use Plushie.Widget
           widget :bad
           prop :type, :string
         end
@@ -587,7 +587,7 @@ defmodule Plushie.ExtensionMacroTest do
       assert_raise CompileError, ~r/prop name :children is reserved/, fn ->
         Code.compile_string("""
         defmodule TestReservedChildren do
-          use Plushie.Extension, :widget
+          use Plushie.Widget
           widget :bad
           prop :children, :any
         end
@@ -599,7 +599,7 @@ defmodule Plushie.ExtensionMacroTest do
       assert_raise CompileError, ~r/prop name :a11y is reserved/, fn ->
         Code.compile_string("""
         defmodule TestReservedA11y do
-          use Plushie.Extension, :widget
+          use Plushie.Widget
           widget :bad
           prop :a11y, :map
         end
@@ -618,8 +618,8 @@ defmodule Plushie.ExtensionMacroTest do
     end
 
     test "new/2 returns a struct for native widget" do
-      widget = GaugeExtension.new("g1", value: 42)
-      assert %GaugeExtension{} = widget
+      widget = GaugeWidget.new("g1", value: 42)
+      assert %GaugeWidget{} = widget
       assert widget.id == "g1"
     end
 
@@ -664,7 +664,7 @@ defmodule Plushie.ExtensionMacroTest do
     end
 
     test "build/1 on native widget converts struct to node map" do
-      node = GaugeExtension.new("g1", value: 75, width: :fill) |> GaugeExtension.build()
+      node = GaugeWidget.new("g1", value: 75, width: :fill) |> GaugeWidget.build()
       assert node.id == "g1"
       assert node.type == "gauge"
       assert node.props[:value] == 75

@@ -124,7 +124,7 @@ defmodule Plushie.Widget.Button do
   @spec build(button :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = btn), do: Plushie.Widget.to_node(btn)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(btn) do

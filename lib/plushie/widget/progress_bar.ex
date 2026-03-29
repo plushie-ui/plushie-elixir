@@ -118,7 +118,7 @@ defmodule Plushie.Widget.ProgressBar do
   @spec build(progress_bar :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = bar), do: Plushie.Widget.to_node(bar)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(bar) do

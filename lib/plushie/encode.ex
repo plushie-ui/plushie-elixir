@@ -12,7 +12,7 @@ defprotocol Plushie.Encode do
   That happens at the wire boundary in `Protocol.Encode.stringify_keys/1`,
   which runs just before serialization.
 
-  Extension authors should implement this protocol for custom value
+  Widget authors should implement this protocol for custom value
   types that need special wire encoding (e.g. a struct that should
   become a specific map shape on the wire).
 

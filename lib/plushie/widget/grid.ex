@@ -136,7 +136,8 @@ defmodule Plushie.Widget.Grid do
   def push(%__MODULE__{} = grid, child), do: %{grid | children: [child | grid.children]}
 
   @doc "Appends multiple children to the grid."
-  @spec extend(grid :: t(), children :: [Plushie.Widget.ui_node() | struct()]) :: t()
+  @spec extend(grid :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+          t()
   def extend(%__MODULE__{} = grid, children),
     do: %{grid | children: Enum.reverse(children) ++ grid.children}
 
@@ -148,7 +149,7 @@ defmodule Plushie.Widget.Grid do
   @spec build(grid :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = grid), do: Plushie.Widget.to_node(grid)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(grid) do

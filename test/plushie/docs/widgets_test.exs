@@ -1,12 +1,12 @@
-defmodule Plushie.Docs.ExtensionsTest do
+defmodule Plushie.Docs.WidgetsTest do
   use ExUnit.Case, async: true
 
   # ---------------------------------------------------------------------------
-  # Extension modules mirroring the extensions.md code blocks.
+  # Widget modules mirroring the widgets.md code blocks.
   # ---------------------------------------------------------------------------
 
   defmodule TestSparkline do
-    use Plushie.Extension, :native_widget
+    use Plushie.Widget, :native_widget
 
     widget(:sparkline)
 
@@ -21,7 +21,7 @@ defmodule Plushie.Docs.ExtensionsTest do
   end
 
   defmodule TestHexView do
-    use Plushie.Extension, :native_widget
+    use Plushie.Widget, :native_widget
 
     widget(:hex_view)
 
@@ -33,7 +33,7 @@ defmodule Plushie.Docs.ExtensionsTest do
   end
 
   defmodule TestCard do
-    use Plushie.Extension, :widget
+    use Plushie.Widget
 
     widget(:card)
 
@@ -55,13 +55,13 @@ defmodule Plushie.Docs.ExtensionsTest do
   # Quick start: sparkline definition and build
   # ---------------------------------------------------------------------------
 
-  test "extensions_sparkline_def_test" do
+  test "widgets_sparkline_def_test" do
     assert TestSparkline.type_names() == [:sparkline]
     assert TestSparkline.native_crate() == "native/my_sparkline"
     assert TestSparkline.rust_constructor() == "my_sparkline::SparklineExtension::new()"
   end
 
-  test "extensions_sparkline_build_test" do
+  test "widgets_sparkline_build_test" do
     widget = TestSparkline.new("s1", data: [1.0, 2.0, 3.0], color: "#ff0000")
     node = Plushie.Widget.to_node(widget) |> Plushie.Tree.normalize()
 
@@ -70,21 +70,21 @@ defmodule Plushie.Docs.ExtensionsTest do
     assert node.props[:color] == "#ff0000"
   end
 
-  test "extensions_sparkline_push_command_test" do
+  test "widgets_sparkline_push_command_test" do
     cmd = TestSparkline.push("s1", 42.0)
-    assert %Plushie.Command{type: :extension_command} = cmd
+    assert %Plushie.Command{type: :widget_command} = cmd
   end
 
   # ---------------------------------------------------------------------------
   # Native widget: hex_view
   # ---------------------------------------------------------------------------
 
-  test "extensions_hex_view_def_test" do
+  test "widgets_hex_view_def_test" do
     assert TestHexView.type_names() == [:hex_view]
     assert TestHexView.native_crate() == "native/hex_view"
   end
 
-  test "extensions_hex_view_build_test" do
+  test "widgets_hex_view_build_test" do
     widget = TestHexView.new("hv1", data: "deadbeef", columns: 16)
     node = Plushie.Widget.to_node(widget) |> Plushie.Tree.normalize()
 
@@ -96,7 +96,7 @@ defmodule Plushie.Docs.ExtensionsTest do
   # Composite widget: card with render/3
   # ---------------------------------------------------------------------------
 
-  test "extensions_composite_card_test" do
+  test "widgets_composite_card_test" do
     node =
       TestCard.new("info",
         title: "Details",

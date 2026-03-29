@@ -141,7 +141,8 @@ defmodule Plushie.Widget.Tooltip do
   def push(%__MODULE__{} = tt, child), do: %{tt | children: [child | tt.children]}
 
   @doc "Appends multiple children to the tooltip."
-  @spec extend(tooltip :: t(), children :: [Plushie.Widget.ui_node() | struct()]) :: t()
+  @spec extend(tooltip :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+          t()
   def extend(%__MODULE__{} = tt, children),
     do: %{tt | children: Enum.reverse(children) ++ tt.children}
 
@@ -153,7 +154,7 @@ defmodule Plushie.Widget.Tooltip do
   @spec build(tooltip :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = tt), do: Plushie.Widget.to_node(tt)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(tt) do

@@ -1,6 +1,6 @@
 defmodule Plushie.Test.WidgetCase do
   @moduledoc """
-  ExUnit case template for testing stateful widget extensions.
+  ExUnit case template for testing stateful widgets.
 
   Hosts the widget in a parameterized harness app and records emitted
   events. The widget is initialized in a `setup` block via

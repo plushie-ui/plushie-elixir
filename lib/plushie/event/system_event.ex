@@ -14,8 +14,8 @@ defmodule Plushie.Event.SystemEvent do
     * `tag` - caller-supplied correlation tag from the originating query
     * `data` - payload; shape depends on event type (e.g. a map of system
       info fields, a theme name string, a frame timestamp, or a renderer
-      error payload. Native extension command failures decode to
-      `Plushie.Event.ExtensionCommandError` instead.
+      error payload. Native widget command failures decode to
+      `Plushie.Event.WidgetCommandError` instead.
 
   ## Pattern matching
 

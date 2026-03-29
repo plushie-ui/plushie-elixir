@@ -101,7 +101,8 @@ defmodule Plushie.Widget.Floating do
   def push(%__MODULE__{} = fw, child), do: %{fw | children: [child | fw.children]}
 
   @doc "Appends multiple children to the float."
-  @spec extend(floating :: t(), children :: [Plushie.Widget.ui_node() | struct()]) :: t()
+  @spec extend(floating :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+          t()
   def extend(%__MODULE__{} = fw, children),
     do: %{fw | children: Enum.reverse(children) ++ fw.children}
 
@@ -113,7 +114,7 @@ defmodule Plushie.Widget.Floating do
   @spec build(floating :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = fw), do: Plushie.Widget.to_node(fw)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(fw) do

@@ -152,7 +152,8 @@ defmodule Plushie.Widget.PaneGrid do
   def push(%__MODULE__{} = pg, child), do: %{pg | children: [child | pg.children]}
 
   @doc "Appends multiple child panes to the grid."
-  @spec extend(pane_grid :: t(), children :: [Plushie.Widget.ui_node() | struct()]) :: t()
+  @spec extend(pane_grid :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+          t()
   def extend(%__MODULE__{} = pg, children),
     do: %{pg | children: Enum.reverse(children) ++ pg.children}
 
@@ -169,7 +170,7 @@ defmodule Plushie.Widget.PaneGrid do
   @spec build(pane_grid :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = pg), do: Plushie.Widget.to_node(pg)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(pg) do

@@ -149,7 +149,7 @@ defmodule Plushie.Widget.Svg do
   @spec build(svg :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = svg), do: Plushie.Widget.to_node(svg)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(svg) do

@@ -1,8 +1,8 @@
-defmodule Plushie.ExtensionTest do
+defmodule Plushie.WidgetTest do
   use ExUnit.Case, async: true
 
-  defmodule MockExtension do
-    @behaviour Plushie.Extension
+  defmodule MockNativeWidget do
+    @behaviour Plushie.Widget
 
     @impl true
     def native_crate, do: "native/mock_ext"
@@ -14,8 +14,8 @@ defmodule Plushie.ExtensionTest do
     def type_names, do: [:mock_widget]
   end
 
-  defmodule ConflictExtension do
-    @behaviour Plushie.Extension
+  defmodule ConflictWidget do
+    @behaviour Plushie.Widget
 
     @impl true
     def native_crate, do: "native/conflict_ext"
@@ -35,12 +35,12 @@ defmodule Plushie.ExtensionTest do
 
   test "check_collisions! raises on duplicate type names" do
     assert_raise Mix.Error, ~r/collision/i, fn ->
-      Mix.Tasks.Plushie.Build.check_collisions!([MockExtension, ConflictExtension])
+      Mix.Tasks.Plushie.Build.check_collisions!([MockNativeWidget, ConflictWidget])
     end
   end
 
   test "check_collisions! passes with no duplicates" do
-    assert :ok == Mix.Tasks.Plushie.Build.check_collisions!([MockExtension])
+    assert :ok == Mix.Tasks.Plushie.Build.check_collisions!([MockNativeWidget])
   end
 
   describe "WidgetRegistry" do

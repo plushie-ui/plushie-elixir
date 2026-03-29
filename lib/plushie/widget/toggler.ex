@@ -182,7 +182,7 @@ defmodule Plushie.Widget.Toggler do
   @spec build(toggler :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = tg), do: Plushie.Widget.to_node(tg)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(tg) do

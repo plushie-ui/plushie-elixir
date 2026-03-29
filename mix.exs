@@ -51,7 +51,7 @@ defmodule Plushie.MixProject do
         "docs/running.md",
         "docs/composition-patterns.md",
         "docs/accessibility.md",
-        "docs/extensions.md",
+        "docs/widgets.md",
         "docs/dsl-internals.md",
         "examples/README.md",
         "CHANGELOG.md"
@@ -73,7 +73,7 @@ defmodule Plushie.MixProject do
           "docs/running.md",
           "docs/composition-patterns.md",
           "docs/accessibility.md",
-          "docs/extensions.md",
+          "docs/widgets.md",
           "docs/dsl-internals.md"
         ],
         About: [
@@ -141,8 +141,9 @@ defmodule Plushie.MixProject do
         DSL: [
           Plushie.DSL.Buildable
         ],
-        Extensions: [
-          Plushie.Extension
+        Widgets: [
+          Plushie.Widget,
+          Plushie.Widget.WidgetProtocol
         ],
         Protocol: ~r/Plushie\.Protocol.*/
       ],

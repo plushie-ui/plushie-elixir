@@ -85,7 +85,7 @@ defmodule Plushie.RuntimeTest do
   end
 
   defmodule StarRatingNative do
-    use Plushie.Extension, :native_widget
+    use Plushie.Widget, :native_widget
 
     widget(:star_rating)
     event(:selected, value: :any)
@@ -118,7 +118,7 @@ defmodule Plushie.RuntimeTest do
   end
 
   defmodule TickWidget do
-    use Plushie.Extension, :widget
+    use Plushie.Widget
     widget(:tick_widget)
     event(:tick_widget_pulsed)
 
@@ -221,7 +221,7 @@ defmodule Plushie.RuntimeTest do
   end
 
   defmodule SwitchingWidget do
-    use Plushie.Extension, :widget
+    use Plushie.Widget
     widget(:switching_widget)
     state(phase: :first)
     event(:switched, value: :any)
@@ -449,14 +449,14 @@ defmodule Plushie.RuntimeTest do
                 name: "plushie",
                 backend: "test",
                 transport: "spawn",
-                extensions: []
+                widgets: []
               }}}
           )
 
           assert_receive {:DOWN, ^ref, :process, ^runtime, {%ArgumentError{}, _stack}}, 1_000
         end)
 
-      assert log =~ "renderer is missing required extensions"
+      assert log =~ "renderer is missing required native widgets"
     after
       Process.flag(:trap_exit, false)
     end
@@ -1725,8 +1725,8 @@ defmodule Plushie.RuntimeTest do
   end
 
   describe "extension config in settings" do
-    test "settings includes extension_config from application env" do
-      Application.put_env(:plushie, :extension_config, %{"terminal" => %{"shell" => "/bin/bash"}})
+    test "settings includes widget_config from application env" do
+      Application.put_env(:plushie, :widget_config, %{"terminal" => %{"shell" => "/bin/bash"}})
 
       {runtime, bridge} = start_runtime(SimpleApp)
       await_initial_render(runtime)
@@ -1734,15 +1734,15 @@ defmodule Plushie.RuntimeTest do
       settings_list = Plushie.Test.InternalMockBridge.get_settings(bridge)
       assert settings_list != []
 
-      # The first settings message should contain the extension_config.
+      # The first settings message should contain the widget_config.
       settings = hd(settings_list)
-      assert settings[:extension_config] == %{"terminal" => %{"shell" => "/bin/bash"}}
+      assert settings[:widget_config] == %{"terminal" => %{"shell" => "/bin/bash"}}
     after
-      Application.delete_env(:plushie, :extension_config)
+      Application.delete_env(:plushie, :widget_config)
     end
 
-    test "settings omits extension_config when application env is empty" do
-      Application.delete_env(:plushie, :extension_config)
+    test "settings omits widget_config when application env is empty" do
+      Application.delete_env(:plushie, :widget_config)
 
       {runtime, bridge} = start_runtime(SimpleApp)
       await_initial_render(runtime)
@@ -1751,7 +1751,7 @@ defmodule Plushie.RuntimeTest do
       assert settings_list != []
 
       settings = hd(settings_list)
-      refute Map.has_key?(settings, :extension_config)
+      refute Map.has_key?(settings, :widget_config)
     end
   end
 

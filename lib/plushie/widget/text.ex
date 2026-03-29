@@ -181,7 +181,7 @@ defmodule Plushie.Widget.Text do
   @spec build(text :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = txt), do: Plushie.Widget.to_node(txt)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(txt) do

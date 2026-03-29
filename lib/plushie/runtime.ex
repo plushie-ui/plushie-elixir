@@ -454,7 +454,7 @@ defmodule Plushie.Runtime do
   end
 
   def handle_info({:renderer_event, {:hello, hello}}, state) do
-    validate_renderer_extensions!(hello)
+    validate_renderer_widgets!(hello)
 
     Logger.info(
       "plushie runtime: renderer connected -- #{hello.name} v#{hello.version} (#{hello.backend}, #{hello.transport})"
@@ -1020,11 +1020,11 @@ defmodule Plushie.Runtime do
         %{}
       end
 
-    extension_config = Application.get_env(:plushie, :extension_config, %{})
+    widget_config = Application.get_env(:plushie, :widget_config, %{})
 
     settings =
-      if extension_config != %{} do
-        Map.put(settings, :extension_config, extension_config)
+      if widget_config != %{} do
+        Map.put(settings, :widget_config, widget_config)
       else
         settings
       end
@@ -1162,7 +1162,7 @@ defmodule Plushie.Runtime do
     # Stash widget states for Tree.normalize to pick up during the
     # normalization pass. Cleaned up in the after block.
     if widget_handler_states != %{} do
-      Process.put(Plushie.Extension.WidgetHandler.widget_states_key(), widget_handler_states)
+      Process.put(Plushie.Widget.Handler.widget_states_key(), widget_handler_states)
     end
 
     raw_tree =
@@ -1183,7 +1183,7 @@ defmodule Plushie.Runtime do
 
       :error
   after
-    Process.delete(Plushie.Extension.WidgetHandler.widget_states_key())
+    Process.delete(Plushie.Widget.Handler.widget_states_key())
   end
 
   defp validate_root_windows!(nil), do: :ok
@@ -1239,10 +1239,10 @@ defmodule Plushie.Runtime do
 
     acc =
       case meta do
-        %{__extension_widget_type__: widget_type, __extension_widget_events__: events}
+        %{__widget_type__: widget_type, __widget_events__: events}
         when is_atom(widget_type) and is_list(events) ->
           event_specs =
-            Map.get(meta, :__extension_widget_event_specs__, [])
+            Map.get(meta, :__widget_event_specs__, [])
             |> Map.new(fn {name, spec} -> {name, spec} end)
 
           Map.put(acc, {window_id, id}, %{
@@ -1318,7 +1318,7 @@ defmodule Plushie.Runtime do
 
     case Map.get(state.widget_events, registry_key) do
       %{widget_type: widget_type, events: events, event_specs: event_specs} ->
-        {family_widget_type, event_name} = parse_extension_family!(family)
+        {family_widget_type, event_name} = parse_widget_family!(family)
 
         cond do
           family_widget_type != widget_type ->
@@ -1329,7 +1329,7 @@ defmodule Plushie.Runtime do
 
           MapSet.member?(events, event_name) ->
             spec = Map.get(event_specs, event_name)
-            apply_extension_event_spec(event, widget_type, event_name, spec)
+            apply_widget_event_family_spec(event, widget_type, event_name, spec)
 
           true ->
             raise Plushie.Protocol.Error,
@@ -1350,13 +1350,13 @@ defmodule Plushie.Runtime do
 
   # Applies an event spec to a native widget event, setting type tuple
   # and routing data to value/data fields based on the spec.
-  @spec apply_extension_event_spec(
+  @spec apply_widget_event_family_spec(
           event :: Plushie.Event.WidgetEvent.t(),
           widget_type :: atom(),
           event_name :: atom(),
           spec :: Plushie.Event.BuiltinSpecs.t() | nil
         ) :: Plushie.Event.WidgetEvent.t()
-  defp apply_extension_event_spec(event, widget_type, event_name, spec) do
+  defp apply_widget_event_family_spec(event, widget_type, event_name, spec) do
     event = %{event | type: {widget_type, event_name}}
 
     case spec do
@@ -1375,7 +1375,7 @@ defmodule Plushie.Runtime do
         %{event | data: nil}
 
       nil ->
-        # No spec -- the extension declared the event name but not a
+        # No spec -- the widget declared the event name but not a
         # typed spec. Keep the event as-is with the type tuple set.
         event
     end
@@ -1417,8 +1417,8 @@ defmodule Plushie.Runtime do
     end)
   end
 
-  @spec parse_extension_family!(String.t()) :: {atom(), atom()}
-  defp parse_extension_family!(family) do
+  @spec parse_widget_family!(String.t()) :: {atom(), atom()}
+  defp parse_widget_family!(family) do
     case String.split(family, ":", parts: 2) do
       [widget_type, event_name] when widget_type != "" and event_name != "" ->
         {String.to_existing_atom(widget_type), String.to_existing_atom(event_name)}
@@ -1464,30 +1464,30 @@ defmodule Plushie.Runtime do
     end
   end
 
-  defp validate_renderer_extensions!(hello) do
-    expected = configured_extension_keys()
-    missing = expected -- hello.extensions
+  defp validate_renderer_widgets!(hello) do
+    expected = configured_widget_keys()
+    missing = expected -- hello.widgets
 
     if missing != [] do
       raise ArgumentError,
-            "renderer is missing required extensions #{inspect(missing)}. " <>
-              "Renderer reported #{inspect(hello.extensions)}"
+            "renderer is missing required native widgets #{inspect(missing)}. " <>
+              "Renderer reported #{inspect(hello.widgets)}"
     end
   end
 
-  defp configured_extension_keys do
+  defp configured_widget_keys do
     Plushie.WidgetRegistry.native_widgets()
-    |> Enum.map(&extension_widget_type/1)
+    |> Enum.map(&native_widget_type/1)
     |> Enum.uniq()
   end
 
-  defp extension_widget_type(module) do
+  defp native_widget_type(module) do
     case module.type_names() do
       [type | _] ->
         Atom.to_string(type)
 
       [] ->
-        raise ArgumentError, "native extension #{inspect(module)} does not declare a widget type"
+        raise ArgumentError, "native widget #{inspect(module)} does not declare a widget type"
     end
   end
 

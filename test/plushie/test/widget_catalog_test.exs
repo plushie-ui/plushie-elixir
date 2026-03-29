@@ -1,7 +1,7 @@
 defmodule Plushie.Test.WidgetCatalogTest do
   use ExUnit.Case, async: true
 
-  alias Plushie.Widget
+  alias Plushie.Widget.WidgetProtocol
 
   alias Plushie.Widget.{
     Button,
@@ -425,7 +425,7 @@ defmodule Plushie.Test.WidgetCatalogTest do
             Row.new("r"),
             Container.new("cx")
           ] do
-        node = Widget.to_node(widget)
+        node = WidgetProtocol.to_node(widget)
         assert is_map(node), "expected map from #{inspect(widget.__struct__)}"
         assert is_binary(node.id), "expected string id from #{inspect(widget.__struct__)}"
         assert is_binary(node.type), "expected string type from #{inspect(widget.__struct__)}"

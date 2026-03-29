@@ -294,7 +294,7 @@ your `config.exs` (or per-environment config files).
 |---|---|---|---|
 | `:test_backend` | `:mock \| :headless \| :windowed` | `:mock` | Renderer mode used by `Plushie.Test.Case`. Controls which mode the binary runs in (mock/headless/windowed) through a unified Runtime backend. Override per-run with `PLUSHIE_TEST_BACKEND` env var. |
 | `:test_format` | `:json \| :msgpack` | `:msgpack` | Wire format for test sessions. Set to `:json` for easier debugging. |
-| `:extension_config` | `map()` | `%{}` | Configuration map passed to widget extensions at runtime, keyed by widget type. |
+| `:widget_config` | `map()` | `%{}` | Configuration map passed to custom widgets at runtime, keyed by widget type. |
 
 ## Multi-window
 
@@ -516,7 +516,7 @@ end
 
 Values returned by `view/1` go through several transformation stages
 before reaching the wire. Understanding this pipeline helps when
-debugging unexpected behaviour or writing custom extensions.
+debugging unexpected behaviour or writing custom widgets.
 
 1. **Widget builders** (`Plushie.UI` macros, `Plushie.Iced` functions)
    return structs with raw Elixir values -- atoms, tuples, structs.

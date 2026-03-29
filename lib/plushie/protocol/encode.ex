@@ -170,32 +170,32 @@ defmodule Plushie.Protocol.Encode do
   end
 
   @doc """
-  Encodes a single extension command as a protocol message.
+  Encodes a single widget command as a protocol message.
 
-  Extension commands bypass the normal tree update / diff / patch cycle
-  and are delivered directly to the target extension widget on the Rust side.
+  Widget commands bypass the normal tree update / diff / patch cycle
+  and are delivered directly to the target native widget on the Rust side.
   """
-  @spec encode_extension_command(
+  @spec encode_widget_command(
           node_id :: String.t(),
           op :: String.t(),
           payload :: map(),
           format :: Plushie.Protocol.format()
         ) :: iodata()
-  def encode_extension_command(node_id, op, payload, format \\ :msgpack) do
+  def encode_widget_command(node_id, op, payload, format \\ :msgpack) do
     serialize(%{type: "extension_command", node_id: node_id, op: op, payload: payload}, format)
   end
 
   @doc """
-  Encodes a batch of extension commands as a protocol message.
+  Encodes a batch of widget commands as a protocol message.
 
   Each command in the list is a `{node_id, op, payload}` tuple.
   All commands in the batch are processed in a single cycle on the Rust side.
   """
-  @spec encode_extension_commands(
+  @spec encode_widget_commands(
           commands :: [{String.t(), String.t(), map()}],
           format :: Plushie.Protocol.format()
         ) :: iodata()
-  def encode_extension_commands(commands, format \\ :msgpack) when is_list(commands) do
+  def encode_widget_commands(commands, format \\ :msgpack) when is_list(commands) do
     items =
       Enum.map(commands, fn {node_id, op, payload} ->
         %{node_id: node_id, op: op, payload: payload}
@@ -447,7 +447,7 @@ defmodule Plushie.Protocol.Encode do
   # for wire serialization. The internal tree uses atom-keyed props;
   # the wire format requires string keys.
   # :meta carries runtime-only data (canvas widget state, event specs,
-  # extension metadata) that must never be sent over the wire. Strip it
+  # widget metadata) that must never be sent over the wire. Strip it
   # before serialization.
   defp stringify_tree(%{props: props, children: children} = node) do
     node

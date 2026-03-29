@@ -54,7 +54,7 @@ This means:
 
 - **Standard widgets** get correct accessibility semantics automatically
   from iced's own `Accessible` implementations.
-- **Extension widgets** get free a11y support without any code -- they are
+- **Custom widgets** get free a11y support without any code -- they are
   already iced `Element`s that participate in `operate()`.
 - **The `a11y` prop** lets Elixir override or augment the inferred semantics
   when auto-inference is insufficient.

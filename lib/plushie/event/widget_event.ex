@@ -2,7 +2,7 @@ defmodule Plushie.Event.WidgetEvent do
   @moduledoc """
   Events from interactive widgets (buttons, inputs, sliders, etc.).
 
-  Built-in widget event families decode to atoms. Custom widget extension
+  Built-in widget event families decode to atoms. Custom widget
   events decode to `{widget_type, event}` tuples, for example
   `{:star_rating, :selected}`.
 
@@ -72,9 +72,9 @@ defmodule Plushie.Event.WidgetEvent do
           | :pane_dragged
           | :pane_clicked
 
-  @type extension_event_type :: {widget_type :: atom(), event_name :: atom()}
+  @type widget_event_type :: {widget_type :: atom(), event_name :: atom()}
 
-  @type event_type :: builtin_event_type() | extension_event_type()
+  @type event_type :: builtin_event_type() | widget_event_type()
 
   @typedoc """
   Widget event struct.

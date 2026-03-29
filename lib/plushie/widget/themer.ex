@@ -66,7 +66,8 @@ defmodule Plushie.Widget.Themer do
   def push(%__MODULE__{} = t, child), do: %{t | children: [child | t.children]}
 
   @doc "Appends multiple children to the themer."
-  @spec extend(themer :: t(), children :: [Plushie.Widget.ui_node() | struct()]) :: t()
+  @spec extend(themer :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+          t()
   def extend(%__MODULE__{} = t, children),
     do: %{t | children: Enum.reverse(children) ++ t.children}
 
@@ -78,7 +79,7 @@ defmodule Plushie.Widget.Themer do
   @spec build(themer :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = t), do: Plushie.Widget.to_node(t)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(t) do

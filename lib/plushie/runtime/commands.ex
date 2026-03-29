@@ -224,24 +224,24 @@ defmodule Plushie.Runtime.Commands do
 
   defp execute_command(
          %Plushie.Command{
-           type: :extension_command,
+           type: :widget_command,
            payload: %{node_id: node_id, op: op, payload: payload}
          },
          state
        ) do
     if state.bridge do
-      Plushie.Bridge.send_extension_command(state.bridge, node_id, op, payload)
+      Plushie.Bridge.send_widget_command(state.bridge, node_id, op, payload)
     end
 
     state
   end
 
   defp execute_command(
-         %Plushie.Command{type: :extension_commands, payload: %{commands: commands}},
+         %Plushie.Command{type: :widget_commands, payload: %{commands: commands}},
          state
        ) do
     if state.bridge do
-      Plushie.Bridge.send_extension_commands(state.bridge, commands)
+      Plushie.Bridge.send_widget_commands(state.bridge, commands)
     end
 
     state

@@ -183,7 +183,7 @@ defmodule Plushie.Widget.Radio do
   @spec build(radio :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = r), do: Plushie.Widget.to_node(r)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(r) do

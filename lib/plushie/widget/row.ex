@@ -129,7 +129,8 @@ defmodule Plushie.Widget.Row do
   def push(%__MODULE__{} = row, child), do: %{row | children: [child | row.children]}
 
   @doc "Appends multiple children to the row."
-  @spec extend(row :: t(), children :: [Plushie.Widget.ui_node() | struct()]) :: t()
+  @spec extend(row :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+          t()
   def extend(%__MODULE__{} = row, children),
     do: %{row | children: Enum.reverse(children) ++ row.children}
 
@@ -141,7 +142,7 @@ defmodule Plushie.Widget.Row do
   @spec build(row :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = row), do: Plushie.Widget.to_node(row)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(row) do

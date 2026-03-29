@@ -235,7 +235,8 @@ defmodule Plushie.Widget.Window do
   def push(%__MODULE__{} = w, child), do: %{w | children: [child | w.children]}
 
   @doc "Appends multiple children to the window."
-  @spec extend(window :: t(), children :: [Plushie.Widget.ui_node() | struct()]) :: t()
+  @spec extend(window :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+          t()
   def extend(%__MODULE__{} = w, children),
     do: %{w | children: Enum.reverse(children) ++ w.children}
 
@@ -243,7 +244,7 @@ defmodule Plushie.Widget.Window do
   @spec build(window :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = w), do: Plushie.Widget.to_node(w)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(w) do

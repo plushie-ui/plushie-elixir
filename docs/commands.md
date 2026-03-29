@@ -441,27 +441,27 @@ Commands in a batch are dispatched sequentially. Async commands spawn
 concurrent tasks, but the dispatch loop itself processes each command in
 order (`Enum.reduce` in the runtime).
 
-#### Extension commands
+#### Widget commands
 
-Push data directly to a native Rust extension widget without triggering the
+Push data directly to a native Rust custom widget without triggering the
 view/diff/patch cycle. Used for high-frequency data like terminal output or
 streaming log lines.
 
-<!-- test: commands_extension_command_construct_test, commands_extension_commands_construct_test -- keep this code block in sync with the test -->
+<!-- test: commands_widget_command_construct_test, commands_widget_commands_construct_test -- keep this code block in sync with the test -->
 ```elixir
 # Single command
-Plushie.Command.extension_command("term-1", "write", %{data: output})
+Plushie.Command.widget_command("term-1", "write", %{data: output})
 
 # Batch (all processed before next view cycle)
-Plushie.Command.extension_commands([
+Plushie.Command.widget_commands([
   {"term-1", "write", %{data: line1}},
   {"log-1", "append", %{line: entry}}
 ])
 ```
 
-Extension commands are only meaningful for widgets backed by a
+Widget commands are only meaningful for widgets backed by a
 `WidgetExtension` Rust implementation. They are silently ignored for
-widgets without an extension handler.
+widgets without a widget handler.
 
 #### No-op
 
@@ -781,7 +781,7 @@ slider("seek", {0, model.duration}, model.position, event_rate: 60)
 ```
 
 Supported on: `Slider`, `VerticalSlider`, `Canvas`, `MouseArea`, `Sensor`,
-`PaneGrid`, and all extension widgets.
+`PaneGrid`, and all custom widgets.
 
 #### Per-subscription `max_rate`
 
@@ -901,6 +901,6 @@ mechanism for the API but effect/effect_response for the transport.
 
 ## Next steps
 
-- [Extensions](extensions.md) -- native widget extensions with custom commands
+- [Custom Widgets](widgets.md) -- native custom widgets with custom commands
 - [Effects](effects.md) -- platform requests (file dialogs, clipboard)
-- [Gauge demo](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/gauge-demo) -- extension commands (`set_value`, `animate_to`) with optimistic updates
+- [Gauge demo](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/gauge-demo) -- widget commands (`set_value`, `animate_to`) with optimistic updates

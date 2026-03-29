@@ -11,14 +11,14 @@ defmodule Plushie.WidgetHandlerDispatchTest do
 
   import ExUnit.CaptureLog
 
-  alias Plushie.Extension.WidgetHandler
   alias Plushie.Runtime.WidgetHandlers
+  alias Plushie.Widget.Handler
 
   # -- Minimal test widgets ----------------------------------------------------
 
   defmodule IgnoredWidget do
     @moduledoc false
-    use Plushie.Extension, :widget
+    use Plushie.Widget
     widget(:ignored_widget)
 
     @impl true
@@ -35,7 +35,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
 
   defmodule ConsumedWidget do
     @moduledoc false
-    use Plushie.Extension, :widget
+    use Plushie.Widget
     widget(:consumed_widget)
 
     @impl true
@@ -52,7 +52,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
 
   defmodule EmitWidget do
     @moduledoc false
-    use Plushie.Extension, :widget
+    use Plushie.Widget
     widget(:emit_widget)
     event(:activated, data: [source: :string])
 
@@ -75,7 +75,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
 
   defmodule StateWidget do
     @moduledoc false
-    use Plushie.Extension, :widget
+    use Plushie.Widget
     widget(:state_widget)
     state(counter: 0)
 
@@ -100,7 +100,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
   describe "invoke_handler/4 with :ignored" do
     test "returns :ignored action and unchanged state" do
       {action, state} =
-        WidgetHandler.invoke_handler(IgnoredWidget, click_event("test"), %{}, "test")
+        Handler.invoke_handler(IgnoredWidget, click_event("test"), %{}, "test")
 
       assert action == :ignored
       assert state == %{}
@@ -110,7 +110,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
   describe "invoke_handler/4 with :consumed" do
     test "returns :consumed action and unchanged state" do
       {action, state} =
-        WidgetHandler.invoke_handler(ConsumedWidget, click_event("test"), %{}, "test")
+        Handler.invoke_handler(ConsumedWidget, click_event("test"), %{}, "test")
 
       assert action == :consumed
       assert state == %{}
@@ -120,7 +120,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
   describe "invoke_handler/4 with {:emit, ...}" do
     test "returns {:emit, widget_event} with transformed event" do
       {{:emit, widget_event}, _state} =
-        WidgetHandler.invoke_handler(EmitWidget, click_event("elem", ["widget"]), %{}, "widget")
+        Handler.invoke_handler(EmitWidget, click_event("elem", ["widget"]), %{}, "widget")
 
       assert widget_event.type == {:emit_widget, :activated}
       assert widget_event.data.source == "emit_widget"
@@ -131,7 +131,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
   describe "invoke_handler/4 with {:update_state, ...}" do
     test "returns :consumed with updated state" do
       {action, state} =
-        WidgetHandler.invoke_handler(StateWidget, click_event("test"), %{counter: 0}, "test")
+        Handler.invoke_handler(StateWidget, click_event("test"), %{counter: 0}, "test")
 
       assert action == :consumed
       assert state.counter == 1
@@ -435,7 +435,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
 
   defmodule RaisingWidget do
     @moduledoc false
-    use Plushie.Extension, :widget
+    use Plushie.Widget
     widget(:raising_widget)
 
     @impl true

@@ -6,7 +6,7 @@ defmodule Plushie.Binary do
 
   1. `PLUSHIE_BINARY_PATH` environment variable
   2. Application config `:binary_path`
-  3. Custom extension build in `_build/<env>/plushie/target/`
+  3. Custom widget build in `_build/<env>/plushie/target/`
   4. Downloaded binary in `_build/plushie/bin/`
 
   Steps 1 and 2 are explicit configuration -- if set but pointing to a
@@ -128,7 +128,7 @@ defmodule Plushie.Binary do
   end
 
   @doc """
-  Returns the binary name for custom extension builds.
+  Returns the binary name for custom widget builds.
 
   Derived from the Mix project app name by default, overridable via config:
 

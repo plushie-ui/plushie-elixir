@@ -12,7 +12,7 @@ defmodule ColorPickerWidget do
   - `{:color_picker_widget, :change}` with `%{"hue" => h, "saturation" => s, "value" => v}`
   """
 
-  use Plushie.Extension, :widget
+  use Plushie.Widget
 
   widget(:color_picker_widget)
   event(:change, data: [hue: :number, saturation: :number, value: :number])
@@ -39,7 +39,7 @@ defmodule ColorPickerWidget do
 
   # -- Event transformation ----------------------------------------------------
 
-  @impl Plushie.Extension.WidgetHandler
+  @impl Plushie.Widget.Handler
   def handle_event(
         %Plushie.Event.WidgetEvent{type: :canvas_press, data: %{x: x, y: y, button: :left}},
         state
@@ -177,7 +177,7 @@ defmodule ColorPickerWidget do
 
   # -- Rendering ---------------------------------------------------------------
 
-  @impl Plushie.Extension.WidgetHandler
+  @impl Plushie.Widget.Handler
   def render(id, _props, state) do
     import Plushie.UI
 

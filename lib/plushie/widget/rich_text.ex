@@ -158,7 +158,7 @@ defmodule Plushie.Widget.RichText do
   @spec build(rich_text :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = rt), do: Plushie.Widget.to_node(rt)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(rt) do

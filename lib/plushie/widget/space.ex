@@ -75,7 +75,7 @@ defmodule Plushie.Widget.Space do
   @spec build(space :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = space), do: Plushie.Widget.to_node(space)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(space) do

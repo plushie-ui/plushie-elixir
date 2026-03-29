@@ -1,6 +1,6 @@
-defmodule Plushie.Extension.WidgetHandler do
+defmodule Plushie.Widget.Handler do
   @moduledoc """
-  Runtime support for stateful widget extensions.
+  Runtime support for stateful widgets.
 
   Canvas widgets are pure-Elixir widgets that render via canvas shapes,
   manage internal state (hover, focus, animation), and transform raw

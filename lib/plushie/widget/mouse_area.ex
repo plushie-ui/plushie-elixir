@@ -233,11 +233,15 @@ defmodule Plushie.Widget.MouseArea do
     do: %{ma | on_scroll: enabled}
 
   @doc "Appends a child to the mouse area."
-  @spec push(mouse_area :: t(), child :: Plushie.Widget.ui_node() | struct()) :: t()
+  @spec push(mouse_area :: t(), child :: Plushie.Widget.ui_node() | struct()) ::
+          t()
   def push(%__MODULE__{} = ma, child), do: %{ma | children: [child | ma.children]}
 
   @doc "Appends multiple children to the mouse area."
-  @spec extend(mouse_area :: t(), children :: [Plushie.Widget.ui_node() | struct()]) :: t()
+  @spec extend(
+          mouse_area :: t(),
+          children :: [Plushie.Widget.ui_node() | struct()]
+        ) :: t()
   def extend(%__MODULE__{} = ma, children),
     do: %{ma | children: Enum.reverse(children) ++ ma.children}
 
@@ -254,7 +258,7 @@ defmodule Plushie.Widget.MouseArea do
   @spec build(mouse_area :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = ma), do: Plushie.Widget.to_node(ma)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(ma) do

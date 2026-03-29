@@ -1,6 +1,6 @@
 # DSL internals
 
-Maintainer and extension author guide to the Plushie UI DSL. This covers
+Maintainer and widget author guide to the Plushie UI DSL. This covers
 the macro architecture, how blocks are compiled, and how to add new
 widgets and type structs that participate in the DSL.
 
@@ -62,7 +62,7 @@ Implement `Buildable` on any struct that:
 
 All `Plushie.Type.*` structs that appear in widget option types implement
 it. Canvas shape helper structs (`Stroke`, `Dash`, `Interactive`,
-`HitRect`, `DragBounds`, `ShapeStyle`) implement it. Extension widgets
+`HitRect`, `DragBounds`, `ShapeStyle`) implement it. Custom widgets
 get it automatically from `prop` declarations.
 
 ### Callbacks
@@ -131,7 +131,7 @@ Key points:
 ### 2. Implement the Widget protocol
 
 ```elixir
-defimpl Plushie.Widget, for: Plushie.Widget.MyWidget do
+defimpl Plushie.Widget.WidgetProtocol, for: Plushie.Widget.MyWidget do
   def to_node(w) do
     props =
       %{}

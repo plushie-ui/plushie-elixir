@@ -37,9 +37,9 @@ defmodule Plushie.WidgetRegistry do
   # build where the protocol is always consolidated.
   @dialyzer {:no_match, protocol_impls: 0}
   defp protocol_impls do
-    case Plushie.Widget.__protocol__(:impls) do
+    case Plushie.Widget.WidgetProtocol.__protocol__(:impls) do
       {:consolidated, impls} -> impls
-      :not_consolidated -> Protocol.extract_impls(Plushie.Widget, :code.get_path())
+      :not_consolidated -> Protocol.extract_impls(Plushie.Widget.WidgetProtocol, :code.get_path())
     end
   end
 

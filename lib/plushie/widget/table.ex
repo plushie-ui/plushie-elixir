@@ -204,7 +204,8 @@ defmodule Plushie.Widget.Table do
   def push(%__MODULE__{} = tbl, child), do: %{tbl | children: [child | tbl.children]}
 
   @doc "Appends multiple children to the table."
-  @spec extend(table :: t(), children :: [Plushie.Widget.ui_node() | struct()]) :: t()
+  @spec extend(table :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+          t()
   def extend(%__MODULE__{} = tbl, children),
     do: %{tbl | children: Enum.reverse(children) ++ tbl.children}
 
@@ -216,7 +217,7 @@ defmodule Plushie.Widget.Table do
   @spec build(table :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = tbl), do: Plushie.Widget.to_node(tbl)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(tbl) do

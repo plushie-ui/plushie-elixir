@@ -49,7 +49,7 @@ defmodule Mix.Tasks.Plushie.Download do
     {opts, _rest} = OptionParser.parse!(args, strict: @switches)
 
     Mix.PlushieHelpers.warn_if_unconfigured()
-    check_native_extensions!()
+    check_native_widgets!()
 
     force? = opts[:force] || false
     {want_bin?, want_wasm?} = Mix.PlushieHelpers.resolve_artifacts(opts)
@@ -60,7 +60,7 @@ defmodule Mix.Tasks.Plushie.Download do
 
   # Refuse to download a precompiled binary when native widgets are
   # detected -- the stock binary won't have them registered.
-  defp check_native_extensions! do
+  defp check_native_widgets! do
     Mix.Task.run("compile", [])
 
     native = Plushie.WidgetRegistry.native_widgets()
@@ -73,7 +73,7 @@ defmodule Mix.Tasks.Plushie.Download do
 
       Native widgets: #{names}
 
-      These require a custom build that includes the extension crates.
+      These require a custom build that includes the widget crates.
       Use `mix plushie.build` instead.
       """)
     end

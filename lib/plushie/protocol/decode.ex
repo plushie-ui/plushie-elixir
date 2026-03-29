@@ -7,13 +7,13 @@ defmodule Plushie.Protocol.Decode do
 
   alias Plushie.Event.{
     Effect,
-    ExtensionCommandError,
     Ime,
     Key,
     Modifiers,
     Mouse,
     SystemEvent,
     Touch,
+    WidgetCommandError,
     WidgetEvent,
     WindowEvent
   }
@@ -1024,7 +1024,7 @@ defmodule Plushie.Protocol.Decode do
          "id" => "extension_command",
          "data" => %{"reason" => reason} = data
        }) do
-    %ExtensionCommandError{
+    %WidgetCommandError{
       reason: reason,
       node_id: data["node_id"],
       op: data["op"],
@@ -1072,7 +1072,7 @@ defmodule Plushie.Protocol.Decode do
        version: version,
        name: name,
        backend: Map.get(msg, "backend", "unknown"),
-       extensions: Map.get(msg, "extensions", []),
+       widgets: Map.get(msg, "extensions", []),
        transport: Map.get(msg, "transport", "stdio")
      }}
   end
@@ -1206,12 +1206,12 @@ defmodule Plushie.Protocol.Decode do
   end
 
   defp dispatch(%{"type" => "extension_command", "node_id" => node_id, "op" => op} = msg) do
-    {:extension_command, node_id, op, msg["payload"] || %{}}
+    {:widget_command, node_id, op, msg["payload"] || %{}}
   end
 
   defp dispatch(%{"type" => "extension_commands", "commands" => commands})
        when is_list(commands) do
-    {:extension_commands, commands}
+    {:widget_commands, commands}
   end
 
   defp dispatch(%{
@@ -1236,10 +1236,10 @@ defmodule Plushie.Protocol.Decode do
     {:unregister_effect_stub, kind}
   end
 
-  # -- Explicit extension events --
+  # -- Explicit widget events --
 
   defp dispatch(%{"type" => "event", "family" => family, "id" => _id} = msg) do
-    if Parsers.extension_family?(family) do
+    if Parsers.widget_family?(family) do
       {local, scope, window_id, _family} = event_identity!(msg)
 
       %WidgetEvent{

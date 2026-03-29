@@ -156,7 +156,7 @@ defmodule Plushie.Widget.Markdown do
   @spec build(markdown :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = md), do: Plushie.Widget.to_node(md)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(md) do

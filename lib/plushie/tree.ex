@@ -41,9 +41,9 @@ defmodule Plushie.Tree do
     :__widget_props__,
     :__widget_state__,
     :__widget_handles_events__,
-    :__extension_widget_type__,
-    :__extension_widget_events__,
-    :__extension_widget_event_specs__
+    :__widget_type__,
+    :__widget_events__,
+    :__widget_event_specs__
   ]
 
   @doc """
@@ -238,9 +238,9 @@ defmodule Plushie.Tree do
           __widget_state__: widget_state,
           __widget_props__: widget_props,
           __widget_handles_events__: Map.get(meta, :__widget_handles_events__, false),
-          __extension_widget_type__: Map.get(meta, :__extension_widget_type__),
-          __extension_widget_events__: Map.get(meta, :__extension_widget_events__, []),
-          __extension_widget_event_specs__: Map.get(meta, :__extension_widget_event_specs__, [])
+          __widget_type__: Map.get(meta, :__widget_type__),
+          __widget_events__: Map.get(meta, :__widget_events__, []),
+          __widget_event_specs__: Map.get(meta, :__widget_event_specs__, [])
         }
 
         existing_meta = Map.get(normalized, :meta, %{})
@@ -257,7 +257,7 @@ defmodule Plushie.Tree do
   # for new widgets or when called outside a runtime context.
   @spec lookup_widget_state(String.t(), String.t() | nil, module()) :: map()
   defp lookup_widget_state(scoped_id, window_id, module) do
-    case Process.get(Plushie.Extension.WidgetHandler.widget_states_key()) do
+    case Process.get(Plushie.Widget.Handler.widget_states_key()) do
       registry when is_map(registry) ->
         case Map.get(registry, {window_id, scoped_id}) do
           %{state: state} -> state

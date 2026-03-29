@@ -189,7 +189,7 @@ defmodule Plushie.Widget.Slider do
   @spec build(slider :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = slider), do: Plushie.Widget.to_node(slider)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(slider) do

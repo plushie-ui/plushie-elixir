@@ -1198,12 +1198,12 @@ defmodule Plushie.ProtocolTest do
   end
 
   # ---------------------------------------------------------------------------
-  # encode_extension_command/4
+  # encode_widget_command/4
   # ---------------------------------------------------------------------------
 
-  describe "encode_extension_command/4" do
+  describe "encode_widget_command/4" do
     test "produces valid JSON message" do
-      result = Protocol.encode_extension_command("term-1", "write", %{"data" => "hello"}, :json)
+      result = Protocol.encode_widget_command("term-1", "write", %{"data" => "hello"}, :json)
       decoded = decode_json!(result)
       assert decoded["type"] == "extension_command"
       assert decoded["node_id"] == "term-1"
@@ -1212,7 +1212,7 @@ defmodule Plushie.ProtocolTest do
     end
 
     test "produces valid msgpack message" do
-      result = Protocol.encode_extension_command("ext-1", "reset", %{}, :msgpack)
+      result = Protocol.encode_widget_command("ext-1", "reset", %{}, :msgpack)
       {:ok, decoded} = Msgpax.unpack(result)
       assert decoded["type"] == "extension_command"
       assert decoded["node_id"] == "ext-1"
@@ -1221,9 +1221,9 @@ defmodule Plushie.ProtocolTest do
 
     test "round-trips through decode_message" do
       encoded =
-        Protocol.encode_extension_command("term-1", "write", %{"data" => "hello"}, :msgpack)
+        Protocol.encode_widget_command("term-1", "write", %{"data" => "hello"}, :msgpack)
 
-      assert {:extension_command, "term-1", "write", %{"data" => "hello"}} =
+      assert {:widget_command, "term-1", "write", %{"data" => "hello"}} =
                Protocol.decode_message(encoded, :msgpack)
     end
   end
@@ -1250,7 +1250,7 @@ defmodule Plushie.ProtocolTest do
                 version: "0.3.2",
                 name: "plushie",
                 backend: "tiny-skia",
-                extensions: ["charts"],
+                widgets: ["charts"],
                 transport: "stdio"
               }} = Protocol.decode_message(json, :json)
     end
@@ -1270,7 +1270,7 @@ defmodule Plushie.ProtocolTest do
                 version: "0.3.0",
                 name: "plushie",
                 backend: "unknown",
-                extensions: [],
+                widgets: [],
                 transport: "stdio"
               }} = Protocol.decode_message(json, :json)
     end
@@ -1306,14 +1306,14 @@ defmodule Plushie.ProtocolTest do
                 version: "0.3.2",
                 name: "plushie",
                 backend: "wgpu",
-                extensions: [],
+                widgets: [],
                 transport: "stdio"
               }} = Protocol.decode_message(packed, :msgpack)
     end
   end
 
   describe "decode_message/1 -- error events" do
-    test "decodes extension command errors as typed events" do
+    test "decodes widget command errors as typed events" do
       json =
         Jason.encode!(%{
           type: "event",
@@ -1328,7 +1328,7 @@ defmodule Plushie.ProtocolTest do
           }
         })
 
-      assert %Plushie.Event.ExtensionCommandError{
+      assert %Plushie.Event.WidgetCommandError{
                reason: "unknown_node",
                node_id: "g1",
                op: "set_value",
@@ -1351,17 +1351,17 @@ defmodule Plushie.ProtocolTest do
   end
 
   # ---------------------------------------------------------------------------
-  # encode_extension_commands/2
+  # encode_widget_commands/2
   # ---------------------------------------------------------------------------
 
-  describe "encode_extension_commands/2" do
+  describe "encode_widget_commands/2" do
     test "produces valid JSON batch message" do
       commands = [
         {"term-1", "write", %{"data" => "a"}},
         {"log-1", "append", %{"line" => "x"}}
       ]
 
-      result = Protocol.encode_extension_commands(commands, :json)
+      result = Protocol.encode_widget_commands(commands, :json)
       decoded = decode_json!(result)
       assert decoded["type"] == "extension_commands"
       assert length(decoded["commands"]) == 2
@@ -1371,7 +1371,7 @@ defmodule Plushie.ProtocolTest do
 
     test "produces valid msgpack batch message" do
       commands = [{"n1", "op1", %{"k" => "v"}}]
-      result = Protocol.encode_extension_commands(commands, :msgpack)
+      result = Protocol.encode_widget_commands(commands, :msgpack)
       {:ok, decoded} = Msgpax.unpack(result)
       assert decoded["type"] == "extension_commands"
       assert length(decoded["commands"]) == 1
@@ -1379,10 +1379,9 @@ defmodule Plushie.ProtocolTest do
 
     test "round-trips through decode_message" do
       commands = [{"n1", "op1", %{"k" => "v"}}]
-      encoded = Protocol.encode_extension_commands(commands, :msgpack)
+      encoded = Protocol.encode_widget_commands(commands, :msgpack)
 
-      assert {:extension_commands,
-              [%{"node_id" => "n1", "op" => "op1", "payload" => %{"k" => "v"}}]} =
+      assert {:widget_commands, [%{"node_id" => "n1", "op" => "op1", "payload" => %{"k" => "v"}}]} =
                Protocol.decode_message(encoded, :msgpack)
     end
   end

@@ -18,7 +18,7 @@ defmodule Plushie.Protocol do
   * `Protocol.Encode` -- all `encode_*` functions and serialization
   * `Protocol.Decode` -- `decode/2`, `decode_message/2`, `decode_message!/2`, and dispatch
   * `Protocol.Keys` -- named/physical key maps and `parse_key/1`
-  * `Protocol.Parsers` -- strict enum parsers and extension-family checks
+  * `Protocol.Parsers` -- strict enum parsers and widget-family checks
   """
 
   @protocol_version 1
@@ -41,7 +41,7 @@ defmodule Plushie.Protocol do
                version: String.t(),
                name: String.t(),
                backend: String.t(),
-               extensions: [String.t()],
+               widgets: [String.t()],
                transport: String.t()
              }}
           | {:settings, map()}
@@ -52,8 +52,8 @@ defmodule Plushie.Protocol do
           | {:subscribe, String.t(), String.t()}
           | {:unsubscribe, String.t()}
           | {:image_op, String.t(), map()}
-          | {:extension_command, String.t(), String.t(), map()}
-          | {:extension_commands, [map()]}
+          | {:widget_command, String.t(), String.t(), map()}
+          | {:widget_commands, [map()]}
           | {:window_op, String.t(), String.t(), map()}
           | {:system_op, String.t(), map()}
           | {:system_query, String.t(), map()}
@@ -225,31 +225,31 @@ defmodule Plushie.Protocol do
   defdelegate encode_image_op(op, payload, format \\ :msgpack), to: Plushie.Protocol.Encode
 
   @doc """
-  Encodes a single extension command as a protocol message.
+  Encodes a single widget command as a protocol message.
 
-  Extension commands bypass the normal tree update / diff / patch cycle
-  and are delivered directly to the target extension widget on the Rust side.
+  Widget commands bypass the normal tree update / diff / patch cycle
+  and are delivered directly to the target native widget on the Rust side.
   """
-  @spec encode_extension_command(
+  @spec encode_widget_command(
           node_id :: String.t(),
           op :: String.t(),
           payload :: map(),
           format :: format()
         ) :: iodata()
-  defdelegate encode_extension_command(node_id, op, payload, format \\ :msgpack),
+  defdelegate encode_widget_command(node_id, op, payload, format \\ :msgpack),
     to: Plushie.Protocol.Encode
 
   @doc """
-  Encodes a batch of extension commands as a protocol message.
+  Encodes a batch of widget commands as a protocol message.
 
   Each command in the list is a `{node_id, op, payload}` tuple.
   All commands in the batch are processed in a single cycle on the Rust side.
   """
-  @spec encode_extension_commands(
+  @spec encode_widget_commands(
           commands :: [{String.t(), String.t(), map()}],
           format :: format()
         ) :: iodata()
-  defdelegate encode_extension_commands(commands, format \\ :msgpack), to: Plushie.Protocol.Encode
+  defdelegate encode_widget_commands(commands, format \\ :msgpack), to: Plushie.Protocol.Encode
 
   @doc """
   Encodes a window lifecycle operation as a protocol message.

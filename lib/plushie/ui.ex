@@ -194,7 +194,7 @@ defmodule Plushie.UI do
 
   ## Internals
 
-  For maintainer and extension author details on the macro architecture,
+  For maintainer and widget author details on the macro architecture,
   see `docs/dsl-internals.md`.
   """
 
@@ -1011,19 +1011,22 @@ defmodule Plushie.UI do
   # -- Leaf widget build functions (hand-written, each has unique logic) ------
 
   @doc false
-  @spec __build_button__(String.t(), String.t(), keyword()) :: Plushie.Widget.ui_node()
+  @spec __build_button__(String.t(), String.t(), keyword()) ::
+          Plushie.Widget.ui_node()
   def __build_button__(id, label, opts) do
     Plushie.Widget.Button.new(id, label, clean_opts(opts)) |> Plushie.Widget.Button.build()
   end
 
   @doc false
-  @spec __build_text_input__(String.t(), String.t(), keyword()) :: Plushie.Widget.ui_node()
+  @spec __build_text_input__(String.t(), String.t(), keyword()) ::
+          Plushie.Widget.ui_node()
   def __build_text_input__(id, value, opts) when not is_keyword(value) do
     Plushie.Widget.TextInput.new(id, value, clean_opts(opts)) |> Plushie.Widget.TextInput.build()
   end
 
   @doc false
-  @spec __build_checkbox__(String.t(), boolean(), keyword()) :: Plushie.Widget.ui_node()
+  @spec __build_checkbox__(String.t(), boolean(), keyword()) ::
+          Plushie.Widget.ui_node()
   def __build_checkbox__(id, checked, opts) when not is_keyword(checked) do
     clean = clean_opts(opts)
     {label, remaining} = Keyword.pop(clean, :label, "")
@@ -1227,7 +1230,8 @@ defmodule Plushie.UI do
   # ---------------------------------------------------------------------------
 
   @doc false
-  @spec __build_toggler__(String.t(), boolean(), keyword()) :: Plushie.Widget.ui_node()
+  @spec __build_toggler__(String.t(), boolean(), keyword()) ::
+          Plushie.Widget.ui_node()
   def __build_toggler__(id, is_toggled, opts) when not is_keyword(is_toggled) do
     Plushie.Widget.Toggler.new(id, is_toggled, clean_opts(opts)) |> Plushie.Widget.Toggler.build()
   end
@@ -1279,7 +1283,8 @@ defmodule Plushie.UI do
   end
 
   @doc false
-  @spec __build_radio__(String.t(), term(), term(), keyword()) :: Plushie.Widget.ui_node()
+  @spec __build_radio__(String.t(), term(), term(), keyword()) ::
+          Plushie.Widget.ui_node()
   def __build_radio__(id, value, selected, opts)
       when not is_keyword(value) and not is_keyword(selected) do
     Plushie.Widget.Radio.new(id, value, selected, clean_opts(opts))
@@ -1496,7 +1501,8 @@ defmodule Plushie.UI do
   end
 
   @doc false
-  @spec __build_text_editor__(String.t(), String.t(), keyword()) :: Plushie.Widget.ui_node()
+  @spec __build_text_editor__(String.t(), String.t(), keyword()) ::
+          Plushie.Widget.ui_node()
   def __build_text_editor__(id, content, opts) when not is_keyword(content) do
     Plushie.Widget.TextEditor.new(id, [{:content, content} | clean_opts(opts)])
     |> Plushie.Widget.TextEditor.build()
@@ -1507,13 +1513,15 @@ defmodule Plushie.UI do
   # ---------------------------------------------------------------------------
 
   @doc false
-  @spec __build_image__(String.t(), String.t(), keyword()) :: Plushie.Widget.ui_node()
+  @spec __build_image__(String.t(), String.t(), keyword()) ::
+          Plushie.Widget.ui_node()
   def __build_image__(id, source, opts) when not is_keyword(source) do
     Plushie.Widget.Image.new(id, source, clean_opts(opts)) |> Plushie.Widget.Image.build()
   end
 
   @doc false
-  @spec __build_svg__(String.t(), String.t(), keyword()) :: Plushie.Widget.ui_node()
+  @spec __build_svg__(String.t(), String.t(), keyword()) ::
+          Plushie.Widget.ui_node()
   def __build_svg__(id, source, opts) when not is_keyword(source) do
     Plushie.Widget.Svg.new(id, source, clean_opts(opts)) |> Plushie.Widget.Svg.build()
   end
@@ -2162,15 +2170,21 @@ defmodule Plushie.UI do
       tree = MyApp.view(model)
       Plushie.UI.find(tree, "save_button")
   """
-  @spec find(tree :: Plushie.Widget.ui_node(), id :: String.t()) :: Plushie.Widget.ui_node() | nil
+  @spec find(tree :: Plushie.Widget.ui_node(), id :: String.t()) ::
+          Plushie.Widget.ui_node() | nil
   defdelegate find(tree, id), to: Plushie.Tree
 
-  @spec find(tree :: Plushie.Widget.ui_node(), id :: String.t(), window_id :: String.t()) ::
+  @spec find(
+          tree :: Plushie.Widget.ui_node(),
+          id :: String.t(),
+          window_id :: String.t()
+        ) ::
           Plushie.Widget.ui_node() | nil
   defdelegate find(tree, id, window_id), to: Plushie.Tree
 
   @doc "Returns true if a node with `id` exists in the tree."
-  @spec exists?(tree :: Plushie.Widget.ui_node() | nil, id :: String.t()) :: boolean()
+  @spec exists?(tree :: Plushie.Widget.ui_node() | nil, id :: String.t()) ::
+          boolean()
   defdelegate exists?(tree, id), to: Plushie.Tree
 
   @doc "Returns all node IDs in the tree."
@@ -2190,7 +2204,8 @@ defmodule Plushie.UI do
   # ---------------------------------------------------------------------------
 
   @doc false
-  @spec __build_qr_code__(String.t(), String.t(), keyword()) :: Plushie.Widget.ui_node()
+  @spec __build_qr_code__(String.t(), String.t(), keyword()) ::
+          Plushie.Widget.ui_node()
   def __build_qr_code__(id, data, opts) do
     Plushie.Widget.QrCode.new(id, data, clean_opts(opts)) |> Plushie.Widget.QrCode.build()
   end

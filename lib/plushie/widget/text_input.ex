@@ -225,7 +225,7 @@ defmodule Plushie.Widget.TextInput do
   @spec build(text_input :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = ti), do: Plushie.Widget.to_node(ti)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(ti) do

@@ -179,7 +179,7 @@ defmodule Plushie.Widget.Checkbox do
   @spec build(checkbox :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = cb), do: Plushie.Widget.to_node(cb)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(cb) do

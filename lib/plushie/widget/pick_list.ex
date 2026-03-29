@@ -220,7 +220,7 @@ defmodule Plushie.Widget.PickList do
   @spec build(pick_list :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = pl), do: Plushie.Widget.to_node(pl)
 
-  defimpl Plushie.Widget do
+  defimpl Plushie.Widget.WidgetProtocol do
     import Plushie.Widget.Build
 
     def to_node(pl) do
