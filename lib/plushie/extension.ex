@@ -756,9 +756,14 @@ defmodule Plushie.Extension do
 
     default_handle_event =
       unless has_handle_event do
+        # Widgets with event declarations are opaque by default (consume all
+        # events). Render-only widgets without events are transparent (events
+        # pass through to the app's update/2).
+        default_action = if events != [], do: :consumed, else: :ignored
+
         quote do
-          @doc "Default event handler -- all events consumed (opaque widget)."
-          def handle_event(_event, _state), do: :consumed
+          @doc false
+          def handle_event(_event, _state), do: unquote(default_action)
         end
       end
 
