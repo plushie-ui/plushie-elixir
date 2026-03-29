@@ -192,17 +192,23 @@ defmodule Plushie.Test.Backend.Runtime do
   end
 
   defp validate_selector!(pid, action, selector, _window_id) do
-    # Validate the selector resolves before sending the interact request.
-    # Ambiguity detection across windows happens in Selector.encode/3.
-    case GenServer.call(pid, {:find, selector}, 10_000) do
-      nil ->
-        raise "widget not found: #{inspect(selector)}. " <>
-                "The #{action} action requires a valid widget selector."
+    # Only validate selectors we can resolve Elixir-side. Text-content
+    # selectors (bare strings, {:role, _}, {:label, _}) and :focused are
+    # resolved by the renderer during the interact step.
+    if id_selector?(selector) do
+      case GenServer.call(pid, {:find, selector}, 10_000) do
+        nil ->
+          raise "widget not found: #{inspect(selector)}. " <>
+                  "The #{action} action requires a valid widget selector."
 
-      _element ->
-        :ok
+        _element ->
+          :ok
+      end
     end
   end
+
+  defp id_selector?("#" <> _), do: true
+  defp id_selector?(_), do: false
 
   # -- GenServer ---------------------------------------------------------------
 
