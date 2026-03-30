@@ -26,13 +26,13 @@ defmodule CounterTest do
   describe "update/2 -- increment" do
     test "increments count by 1" do
       model = %{count: 0}
-      result = Counter.update(model, %WidgetEvent{type: :click, id: "increment"})
+      result = Counter.update(model, %WidgetEvent{type: :click, id: "inc"})
       assert result.count == 1
     end
 
     test "increments from a non-zero count" do
       model = %{count: 4}
-      result = Counter.update(model, %WidgetEvent{type: :click, id: "increment"})
+      result = Counter.update(model, %WidgetEvent{type: :click, id: "inc"})
       assert result.count == 5
     end
   end
@@ -40,13 +40,13 @@ defmodule CounterTest do
   describe "update/2 -- decrement" do
     test "decrements count by 1" do
       model = %{count: 3}
-      result = Counter.update(model, %WidgetEvent{type: :click, id: "decrement"})
+      result = Counter.update(model, %WidgetEvent{type: :click, id: "dec"})
       assert result.count == 2
     end
 
     test "decrements below zero" do
       model = %{count: 0}
-      result = Counter.update(model, %WidgetEvent{type: :click, id: "decrement"})
+      result = Counter.update(model, %WidgetEvent{type: :click, id: "dec"})
       assert result.count == -1
     end
   end
@@ -103,14 +103,14 @@ defmodule CounterTest do
 
     test "increment button is present in the tree" do
       tree = Counter.view(%{count: 0})
-      inc = Plushie.UI.find(tree, "increment")
+      inc = Plushie.UI.find(tree, "inc")
       assert inc != nil
       assert inc.type == "button"
     end
 
     test "decrement button is present in the tree" do
       tree = Counter.view(%{count: 0})
-      dec = Plushie.UI.find(tree, "decrement")
+      dec = Plushie.UI.find(tree, "dec")
       assert dec != nil
       assert dec.type == "button"
     end
@@ -147,10 +147,10 @@ defmodule CounterTest do
     test "init -> increment 3x -> decrement 1x -> view shows Count: 2" do
       model =
         Counter.init([])
-        |> Counter.update(%WidgetEvent{type: :click, id: "increment"})
-        |> Counter.update(%WidgetEvent{type: :click, id: "increment"})
-        |> Counter.update(%WidgetEvent{type: :click, id: "increment"})
-        |> Counter.update(%WidgetEvent{type: :click, id: "decrement"})
+        |> Counter.update(%WidgetEvent{type: :click, id: "inc"})
+        |> Counter.update(%WidgetEvent{type: :click, id: "inc"})
+        |> Counter.update(%WidgetEvent{type: :click, id: "inc"})
+        |> Counter.update(%WidgetEvent{type: :click, id: "dec"})
 
       assert model.count == 2
 

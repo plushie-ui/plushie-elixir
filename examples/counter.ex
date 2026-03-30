@@ -14,8 +14,8 @@ defmodule Counter do
 
   def init(_opts), do: %{count: 0}
 
-  def update(model, %WidgetEvent{type: :click, id: "increment"}), do: %{model | count: model.count + 1}
-  def update(model, %WidgetEvent{type: :click, id: "decrement"}), do: %{model | count: model.count - 1}
+  def update(model, %WidgetEvent{type: :click, id: "inc"}), do: %{model | count: model.count + 1}
+  def update(model, %WidgetEvent{type: :click, id: "dec"}), do: %{model | count: model.count - 1}
   def update(model, _event), do: model
 
   def view(model) do
@@ -26,8 +26,8 @@ defmodule Counter do
         text("count", "Count: #{model.count}")
 
         row spacing: 8 do
-          button("increment", "+")
-          button("decrement", "-")
+          button("inc", "+")
+          button("dec", "-")
         end
       end
     end
