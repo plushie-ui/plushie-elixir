@@ -1,43 +1,43 @@
-defmodule Plushie.Animation.SdkAnimationTest do
+defmodule Plushie.Animation.TweenIntegrationTest do
   @moduledoc """
-  Integration tests for SDK-side Plushie.Animation through the real
+  Integration tests for Plushie.Animation.Tween through the real
   renderer binary. Tests the model-level animation lifecycle and
   tree rendering.
   """
 
-  use Plushie.Test.Case, app: Plushie.Animation.SdkAnimationTest.AnimApp
+  use Plushie.Test.Case, app: Plushie.Animation.TweenIntegrationTest.AnimApp
 
-  alias Plushie.Animation
+  alias Plushie.Animation.Tween
   alias Plushie.Event.WidgetEvent
 
   defmodule AnimApp do
     use Plushie.App
     import Plushie.UI
 
-    alias Plushie.Animation
+    alias Plushie.Animation.Tween
     alias Plushie.Event.WidgetEvent
 
     def init(_opts) do
-      anim = Animation.new(from: 0.0, to: 100.0, duration: 200, easing: :linear)
+      anim = Tween.new(from: 0.0, to: 100.0, duration: 200, easing: :linear)
       %{anim: anim, value: 0.0, started: false}
     end
 
     def update(model, %WidgetEvent{type: :click, id: "start"}) do
       # Simulate starting the animation at timestamp 0
-      anim = Animation.start(model.anim, 0)
+      anim = Tween.start(model.anim, 0)
       %{model | anim: anim, started: true}
     end
 
     def update(model, %WidgetEvent{type: :click, id: "advance"}) do
       # Advance by 100ms
-      anim = Animation.advance(model.anim, 100)
-      %{model | anim: anim, value: Animation.value(anim)}
+      anim = Tween.advance(model.anim, 100)
+      %{model | anim: anim, value: Tween.value(anim)}
     end
 
     def update(model, %WidgetEvent{type: :click, id: "finish"}) do
       # Advance past completion
-      anim = Animation.advance(model.anim, 300)
-      %{model | anim: anim, value: Animation.value(anim)}
+      anim = Tween.advance(model.anim, 300)
+      %{model | anim: anim, value: Tween.value(anim)}
     end
 
     def update(model, _event), do: model
@@ -46,8 +46,8 @@ defmodule Plushie.Animation.SdkAnimationTest do
       window "main", title: "SDK Animation" do
         column padding: 16, spacing: 8 do
           text("value", "Value: #{Float.round(model.value, 1)}")
-          text("finished", "Finished: #{Animation.finished?(model.anim)}")
-          text("running", "Running: #{Animation.running?(model.anim)}")
+          text("finished", "Finished: #{Tween.finished?(model.anim)}")
+          text("running", "Running: #{Tween.running?(model.anim)}")
           button("start", "Start")
           button("advance", "Advance")
           button("finish", "Finish")
@@ -81,7 +81,7 @@ defmodule Plushie.Animation.SdkAnimationTest do
       click("#start")
 
       assert model().started == true
-      assert Animation.running?(model().anim)
+      assert Tween.running?(model().anim)
       assert_text("#running", "Running: true")
     end
 
@@ -91,7 +91,7 @@ defmodule Plushie.Animation.SdkAnimationTest do
 
       m = model()
       assert_in_delta m.value, 50.0, 1.0
-      refute Animation.finished?(m.anim)
+      refute Tween.finished?(m.anim)
     end
 
     test "finish completes the animation" do
@@ -100,7 +100,7 @@ defmodule Plushie.Animation.SdkAnimationTest do
 
       m = model()
       assert_in_delta m.value, 100.0, 1.0
-      assert Animation.finished?(m.anim)
+      assert Tween.finished?(m.anim)
       assert_text("#finished", "Finished: true")
     end
 

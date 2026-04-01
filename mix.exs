@@ -125,8 +125,11 @@ defmodule Plushie.MixProject do
           Plushie.Subscription,
           Plushie.Effects
         ],
-        "State Helpers": [
+        Animation: [
           Plushie.Animation,
+          ~r/Plushie\.Animation\..*/
+        ],
+        "State Helpers": [
           Plushie.Data,
           Plushie.KeyModifiers,
           Plushie.Route,
