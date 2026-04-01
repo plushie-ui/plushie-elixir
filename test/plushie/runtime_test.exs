@@ -3,7 +3,6 @@ defmodule Plushie.RuntimeTest do
 
   import ExUnit.CaptureLog
 
-  alias Plushie.Event.Effect
   alias Plushie.Event.WidgetEvent
 
   # Test app: simple counter driven by button click events.
@@ -1054,11 +1053,11 @@ defmodule Plushie.RuntimeTest do
         def init(_opts), do: %{result: nil}
 
         def update(model, %WidgetEvent{type: :click, id: "open"}) do
-          cmd = Plushie.Effects.file_open(title: "Pick a file")
+          cmd = Plushie.Effects.file_open(:open, title: "Pick a file")
           {model, cmd}
         end
 
-        def update(model, %Effect{result: {:ok, result}}) do
+        def update(model, %Effect{tag: :open, result: {:ok, result}}) do
           %{model | result: result}
         end
 
@@ -1096,11 +1095,11 @@ defmodule Plushie.RuntimeTest do
         def init(_opts), do: %{path: nil, effect_id: nil}
 
         def update(model, %WidgetEvent{type: :click, id: "pick"}) do
-          cmd = Plushie.Effects.file_open(title: "Pick a file")
+          cmd = Plushie.Effects.file_open(:pick, title: "Pick a file")
           {%{model | effect_id: cmd.payload.id}, cmd}
         end
 
-        def update(model, %Effect{result: {:ok, %{path: path}}}) do
+        def update(model, %Effect{tag: :pick, result: {:ok, %{path: path}}}) do
           %{model | path: path}
         end
 
@@ -1126,7 +1125,7 @@ defmodule Plushie.RuntimeTest do
 
       send(
         runtime,
-        {:renderer_event, %Effect{request_id: effect_id, result: {:ok, %{path: "/tmp/test.txt"}}}}
+        {:renderer_event, {:effect_response, effect_id, {:ok, %{path: "/tmp/test.txt"}}}}
       )
 
       Plushie.Runtime.sync(runtime)
@@ -1144,12 +1143,12 @@ defmodule Plushie.RuntimeTest do
         def init(_opts), do: %{effect_id: nil, timeout_result: nil}
 
         def update(model, %WidgetEvent{type: :click, id: "trigger"}) do
-          cmd = Plushie.Effects.clipboard_read()
+          cmd = Plushie.Effects.clipboard_read(:read)
           {%{model | effect_id: cmd.payload.id}, cmd}
         end
 
-        def update(model, %Effect{request_id: id, result: {:error, :timeout}}) do
-          %{model | timeout_result: {:timed_out, id}}
+        def update(model, %Effect{tag: :read, result: {:error, :timeout}}) do
+          %{model | timeout_result: {:timed_out, :read}}
         end
 
         def update(model, _event), do: model
@@ -1181,7 +1180,7 @@ defmodule Plushie.RuntimeTest do
       send(runtime, {:effect_timeout, effect_id})
       Plushie.Runtime.sync(runtime)
 
-      assert Plushie.Runtime.get_model(runtime).timeout_result == {:timed_out, effect_id}
+      assert Plushie.Runtime.get_model(runtime).timeout_result == {:timed_out, :read}
     end
 
     test "late effect response after timeout is ignored" do
@@ -1192,16 +1191,16 @@ defmodule Plushie.RuntimeTest do
         def init(_opts), do: %{effect_id: nil, timeout_result: nil, success_result: nil}
 
         def update(model, %WidgetEvent{type: :click, id: "trigger"}) do
-          cmd = Plushie.Effects.clipboard_read()
+          cmd = Plushie.Effects.clipboard_read(:read)
           {%{model | effect_id: cmd.payload.id}, cmd}
         end
 
-        def update(model, %Effect{request_id: id, result: {:error, :timeout}}) do
-          %{model | timeout_result: id}
+        def update(model, %Effect{tag: :read, result: {:error, :timeout}}) do
+          %{model | timeout_result: :read}
         end
 
-        def update(model, %Effect{request_id: id, result: {:ok, value}}) do
-          %{model | success_result: {id, value}}
+        def update(model, %Effect{tag: :read, result: {:ok, value}}) do
+          %{model | success_result: {:read, value}}
         end
 
         def update(model, _event), do: model
@@ -1225,11 +1224,11 @@ defmodule Plushie.RuntimeTest do
       send(runtime, {:effect_timeout, effect_id})
       Plushie.Runtime.sync(runtime)
 
-      send(runtime, {:renderer_event, %Effect{request_id: effect_id, result: {:ok, "late"}}})
+      send(runtime, {:renderer_event, {:effect_response, effect_id, {:ok, "late"}}})
       Plushie.Runtime.sync(runtime)
 
       model = Plushie.Runtime.get_model(runtime)
-      assert model.timeout_result == effect_id
+      assert model.timeout_result == :read
       assert model.success_result == nil
     end
   end

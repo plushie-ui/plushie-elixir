@@ -436,19 +436,19 @@ defmodule Plushie.Docs.EventsTest do
   # -- Effect result events ----------------------------------------------------
 
   test "events_effect_response_ok_match_test" do
-    event = %Effect{request_id: "ef_1234", result: {:ok, %{}}}
+    event = %Effect{tag: :open, result: {:ok, %{}}}
 
-    assert match?(%Effect{result: {:ok, _}}, event)
+    assert match?(%Effect{tag: :open, result: {:ok, _}}, event)
   end
 
   test "events_effect_response_cancelled_match_test" do
-    event = %Effect{request_id: "ef_1234", result: :cancelled}
+    event = %Effect{tag: :open, result: :cancelled}
 
-    assert match?(%Effect{result: :cancelled}, event)
+    assert match?(%Effect{tag: :open, result: :cancelled}, event)
   end
 
   test "events_effect_response_error_match_test" do
-    event = %Effect{request_id: "ef_1234", result: {:error, "err"}}
+    event = %Effect{tag: :open, result: {:error, "err"}}
 
     assert match?(%Effect{result: {:error, _}}, event)
   end

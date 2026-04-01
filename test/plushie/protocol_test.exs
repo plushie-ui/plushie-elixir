@@ -1,7 +1,6 @@
 defmodule Plushie.ProtocolTest do
   use ExUnit.Case, async: true
 
-  alias Plushie.Event.Effect
   alias Plushie.Event.Ime
   alias Plushie.Event.Key
   alias Plushie.Event.Modifiers
@@ -543,7 +542,7 @@ defmodule Plushie.ProtocolTest do
   end
 
   describe "decode_message/1 -- effect_response ok" do
-    test "decodes an ok effect response to {:effect_result, id, {:ok, result}}" do
+    test "decodes an ok effect response to {:effect_response, id, {:ok, result}}" do
       json =
         Jason.encode!(%{
           type: "effect_response",
@@ -552,7 +551,7 @@ defmodule Plushie.ProtocolTest do
           result: %{body: "hello"}
         })
 
-      assert %Effect{request_id: "req_1", result: {:ok, result}} =
+      assert {:effect_response, "req_1", {:ok, result}} =
                Protocol.decode_message(json, :json)
 
       assert result[:body] == "hello"
@@ -560,12 +559,12 @@ defmodule Plushie.ProtocolTest do
 
     test "result can be any JSON-decodable value" do
       json = Jason.encode!(%{type: "effect_response", id: "r", status: "ok", result: 99})
-      assert %Effect{request_id: "r", result: {:ok, 99}} = Protocol.decode_message(json, :json)
+      assert {:effect_response, "r", {:ok, 99}} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "decode_message/1 -- effect_response error" do
-    test "decodes an error effect response to {:effect_result, id, {:error, reason}}" do
+    test "decodes an error effect response to {:effect_response, id, {:error, reason}}" do
       json =
         Jason.encode!(%{
           type: "effect_response",
@@ -574,13 +573,13 @@ defmodule Plushie.ProtocolTest do
           error: "connection refused"
         })
 
-      assert Protocol.decode_message(json, :json) ==
-               %Effect{request_id: "req_2", result: {:error, "connection refused"}}
+      assert {:effect_response, "req_2", {:error, "connection refused"}} =
+               Protocol.decode_message(json, :json)
     end
   end
 
   describe "decode_message/1 -- effect_response cancelled" do
-    test "decodes a cancelled effect response to :cancelled" do
+    test "decodes a cancelled effect response to {:effect_response, id, :cancelled}" do
       json =
         Jason.encode!(%{
           type: "effect_response",
@@ -588,8 +587,8 @@ defmodule Plushie.ProtocolTest do
           status: "cancelled"
         })
 
-      assert Protocol.decode_message(json, :json) ==
-               %Effect{request_id: "req_3", result: :cancelled}
+      assert {:effect_response, "req_3", :cancelled} =
+               Protocol.decode_message(json, :json)
     end
   end
 
@@ -988,7 +987,7 @@ defmodule Plushie.ProtocolTest do
       json =
         Jason.encode!(%{type: "effect_response", id: "r1", status: "ok", result: %{data: 42}})
 
-      assert %Effect{request_id: "r1", result: {:ok, %{data: 42}}} =
+      assert {:effect_response, "r1", {:ok, %{data: 42}}} =
                Protocol.decode_message(json, :json)
     end
 
@@ -996,7 +995,7 @@ defmodule Plushie.ProtocolTest do
       json =
         Jason.encode!(%{type: "effect_response", id: "r2", status: "error", error: "timeout"})
 
-      assert %Effect{request_id: "r2", result: {:error, "timeout"}} =
+      assert {:effect_response, "r2", {:error, "timeout"}} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -1174,7 +1173,7 @@ defmodule Plushie.ProtocolTest do
 
       packed = Msgpax.pack!(msg, iodata: false)
 
-      assert %Effect{request_id: "r1", result: {:ok, %{data: 42}}} =
+      assert {:effect_response, "r1", {:ok, %{data: 42}}} =
                Protocol.decode_message(packed, :msgpack)
     end
 
@@ -1188,7 +1187,7 @@ defmodule Plushie.ProtocolTest do
 
       packed = Msgpax.pack!(msg, iodata: false)
 
-      assert %Effect{request_id: "r2", result: {:error, "timeout"}} =
+      assert {:effect_response, "r2", {:error, "timeout"}} =
                Protocol.decode_message(packed, :msgpack)
     end
 

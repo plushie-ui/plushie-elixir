@@ -3,11 +3,12 @@ defmodule Plushie.Event.Effect do
   Platform effect responses (file dialogs, clipboard, etc.).
 
   Returned asynchronously after a platform effect command completes. The
-  `request_id` correlates the response to the command that triggered it.
+  `tag` identifies which effect this response belongs to -- it matches
+  the tag you provided when creating the effect command.
 
   ## Fields
 
-    * `request_id` - the effect identifier from the originating command
+    * `tag` - the atom tag from the originating effect command
     * `result` - one of:
       * `{:ok, value}` -- success. For file dialogs, the value is a map
         with a file path or list of paths. For clipboard reads, it contains
@@ -18,24 +19,24 @@ defmodule Plushie.Event.Effect do
 
   ## Pattern matching
 
-      def update(model, %Effect{request_id: "open-file", result: {:ok, %{path: path}}}) do
+      def update(model, %Effect{tag: :open_file, result: {:ok, %{path: path}}}) do
         load_file(model, path)
       end
 
-      def update(model, %Effect{request_id: "open-file", result: :cancelled}) do
+      def update(model, %Effect{tag: :open_file, result: :cancelled}) do
         model  # user changed their mind, nothing to do
       end
 
-      def update(model, %Effect{request_id: _id, result: {:error, reason}}) do
+      def update(model, %Effect{result: {:error, reason}}) do
         show_error(model, reason)
       end
   """
 
   @type t :: %__MODULE__{
-          request_id: String.t(),
+          tag: atom(),
           result: {:ok, term()} | :cancelled | {:error, term()}
         }
 
-  @enforce_keys [:request_id, :result]
-  defstruct [:request_id, :result]
+  @enforce_keys [:tag, :result]
+  defstruct [:tag, :result]
 end

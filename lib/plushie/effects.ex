@@ -6,46 +6,34 @@ defmodule Plushie.Effects do
   interact with the OS on behalf of the Elixir app -- file dialogs,
   clipboard access, notifications, and similar.
 
-  Each function returns a `Plushie.Command` struct. Dispatch it from
-  `update/2` like any other command. The result arrives later as a
-  `%Plushie.Event.Effect{request_id: id, result: result}` event in
-  `update/2`. The `request_id` is auto-generated internally and embedded
-  in the command payload. Match on it in the result event if you need to
-  correlate requests and responses.
+  Each function takes an atom `tag` as the first argument and returns a
+  `Plushie.Command` struct. Dispatch it from `update/2` like any other
+  command. The result arrives later as a `%Plushie.Event.Effect{tag: tag,
+  result: result}` event in `update/2`. Pattern match on the tag to
+  identify which effect the response belongs to.
 
-  The result is `{:ok, value}` on success or `{:error, reason}` on failure.
+  Only one effect per tag can be in flight at a time. Starting a new
+  effect with a tag that already has a pending request discards the
+  previous one.
 
   ## Example
 
       def update(model, %Plushie.Event.WidgetEvent{type: :click, id: "open"}) do
-        cmd = Plushie.Effects.file_open(title: "Pick a file")
-        {model, cmd}
+        {model, Plushie.Effects.file_open(:import, title: "Pick a file")}
       end
 
-      def update(model, %Plushie.Event.Effect{result: {:ok, result}}) do
-        %{model | file: result}
+      def update(model, %Plushie.Event.Effect{tag: :import, result: {:ok, %{path: path}}}) do
+        %{model | file: path}
       end
 
-  ## Correlating concurrent requests
-
-  When multiple effects of the same type are in flight, use the `request_id`
-  to match results to requests. The auto-generated ID is in `cmd.payload.id`:
-
-      # In update/2 -- store the request ID:
-      cmd = Plushie.Effects.file_open(title: "Pick a file")
-      model = %{model | pending_open: cmd.payload.id}
-      {model, cmd}
-
-      # Handle result -- match on the stored ID:
-      def update(model, %Effect{request_id: id, result: {:ok, path}})
-          when id == model.pending_open do
-        %{model | file: path, pending_open: nil}
+      def update(model, %Plushie.Event.Effect{tag: :import, result: :cancelled}) do
+        model
       end
 
   ## Timeouts
 
   Each effect has a default timeout. If the renderer does not respond in time,
-  `%Plushie.Event.Effect{request_id: id, result: {:error, :timeout}}` arrives
+  `%Plushie.Event.Effect{tag: tag, result: {:error, :timeout}}` arrives
   in `update/2`.
 
   Default timeouts:
@@ -57,7 +45,7 @@ defmodule Plushie.Effects do
 
   Override the default by passing a `:timeout` option (milliseconds):
 
-      Plushie.Effects.file_open(title: "Pick a file", timeout: 300_000)
+      Plushie.Effects.file_open(:import, title: "Pick a file", timeout: 300_000)
   """
 
   @valid_kinds ~w(
@@ -71,18 +59,19 @@ defmodule Plushie.Effects do
   @doc """
   Generic effect request. Returns a command struct.
 
-  `kind` must be one of the supported effect types. `opts` is a keyword
-  list of parameters sent as the effect payload. The effect ID is
-  auto-generated and stored in the command's payload as `:id`.
+  `tag` is an atom that identifies this effect -- it appears in the
+  `%Effect{tag: tag}` result event. `kind` must be one of the supported
+  effect types. `opts` is a keyword list of parameters sent as the effect
+  payload.
   """
-  @spec request(kind :: atom(), opts :: keyword()) :: Plushie.Command.t()
-  def request(kind, opts \\ []) when kind in @valid_kinds do
+  @spec request(tag :: atom(), kind :: atom(), opts :: keyword()) :: Plushie.Command.t()
+  def request(tag, kind, opts \\ []) when is_atom(tag) and kind in @valid_kinds do
     id = generate_id()
     payload = Map.new(opts)
 
     %Plushie.Command{
       type: :effect,
-      payload: %{id: id, kind: to_string(kind), opts: payload}
+      payload: %{id: id, tag: tag, kind: to_string(kind), opts: payload}
     }
   end
 
@@ -93,57 +82,58 @@ defmodule Plushie.Effects do
   platform-native format: glob patterns on Linux (GTK), UTIs on macOS,
   and filter patterns on Windows.
   """
-  @spec file_open(opts :: keyword()) :: Plushie.Command.t()
-  def file_open(opts \\ []), do: request(:file_open, opts)
+  @spec file_open(tag :: atom(), opts :: keyword()) :: Plushie.Command.t()
+  def file_open(tag, opts \\ []), do: request(tag, :file_open, opts)
 
   @doc "Multi-file open dialog. Returns a command."
-  @spec file_open_multiple(opts :: keyword()) :: Plushie.Command.t()
-  def file_open_multiple(opts \\ []), do: request(:file_open_multiple, opts)
+  @spec file_open_multiple(tag :: atom(), opts :: keyword()) :: Plushie.Command.t()
+  def file_open_multiple(tag, opts \\ []), do: request(tag, :file_open_multiple, opts)
 
   @doc "Save-file dialog. Returns a command."
-  @spec file_save(opts :: keyword()) :: Plushie.Command.t()
-  def file_save(opts \\ []), do: request(:file_save, opts)
+  @spec file_save(tag :: atom(), opts :: keyword()) :: Plushie.Command.t()
+  def file_save(tag, opts \\ []), do: request(tag, :file_save, opts)
 
   @doc "Directory picker. Returns a command."
-  @spec directory_select(opts :: keyword()) :: Plushie.Command.t()
-  def directory_select(opts \\ []), do: request(:directory_select, opts)
+  @spec directory_select(tag :: atom(), opts :: keyword()) :: Plushie.Command.t()
+  def directory_select(tag, opts \\ []), do: request(tag, :directory_select, opts)
 
   @doc "Multi-directory picker. Returns a command."
-  @spec directory_select_multiple(opts :: keyword()) :: Plushie.Command.t()
-  def directory_select_multiple(opts \\ []), do: request(:directory_select_multiple, opts)
+  @spec directory_select_multiple(tag :: atom(), opts :: keyword()) :: Plushie.Command.t()
+  def directory_select_multiple(tag, opts \\ []),
+    do: request(tag, :directory_select_multiple, opts)
 
   @doc "Read clipboard contents. Returns a command."
-  @spec clipboard_read() :: Plushie.Command.t()
-  def clipboard_read, do: request(:clipboard_read)
+  @spec clipboard_read(tag :: atom()) :: Plushie.Command.t()
+  def clipboard_read(tag), do: request(tag, :clipboard_read)
 
   @doc "Write `text` to the clipboard. Returns a command."
-  @spec clipboard_write(text :: String.t()) :: Plushie.Command.t()
-  def clipboard_write(text), do: request(:clipboard_write, text: text)
+  @spec clipboard_write(tag :: atom(), text :: String.t()) :: Plushie.Command.t()
+  def clipboard_write(tag, text), do: request(tag, :clipboard_write, text: text)
 
   @doc "Read HTML content from the clipboard. Returns a command."
-  @spec clipboard_read_html() :: Plushie.Command.t()
-  def clipboard_read_html, do: request(:clipboard_read_html)
+  @spec clipboard_read_html(tag :: atom()) :: Plushie.Command.t()
+  def clipboard_read_html(tag), do: request(tag, :clipboard_read_html)
 
   @doc "Write HTML content to the clipboard. Returns a command."
-  @spec clipboard_write_html(html :: String.t(), alt_text :: String.t() | nil) ::
+  @spec clipboard_write_html(tag :: atom(), html :: String.t(), alt_text :: String.t() | nil) ::
           Plushie.Command.t()
-  def clipboard_write_html(html, alt_text \\ nil) do
+  def clipboard_write_html(tag, html, alt_text \\ nil) do
     opts = [html: html]
     opts = if alt_text, do: Keyword.put(opts, :alt_text, alt_text), else: opts
-    request(:clipboard_write_html, opts)
+    request(tag, :clipboard_write_html, opts)
   end
 
   @doc "Clear the clipboard. Returns a command."
-  @spec clipboard_clear() :: Plushie.Command.t()
-  def clipboard_clear, do: request(:clipboard_clear)
+  @spec clipboard_clear(tag :: atom()) :: Plushie.Command.t()
+  def clipboard_clear(tag), do: request(tag, :clipboard_clear)
 
   @doc "Read primary clipboard (middle-click paste on Linux). Returns a command."
-  @spec clipboard_read_primary() :: Plushie.Command.t()
-  def clipboard_read_primary, do: request(:clipboard_read_primary)
+  @spec clipboard_read_primary(tag :: atom()) :: Plushie.Command.t()
+  def clipboard_read_primary(tag), do: request(tag, :clipboard_read_primary)
 
   @doc "Write `text` to the primary clipboard. Returns a command."
-  @spec clipboard_write_primary(text :: String.t()) :: Plushie.Command.t()
-  def clipboard_write_primary(text), do: request(:clipboard_write_primary, text: text)
+  @spec clipboard_write_primary(tag :: atom(), text :: String.t()) :: Plushie.Command.t()
+  def clipboard_write_primary(tag, text), do: request(tag, :clipboard_write_primary, text: text)
 
   @doc """
   Show an OS notification. Returns a command.
@@ -158,9 +148,9 @@ defmodule Plushie.Effects do
     * `:urgency` - `:low`, `:normal`, or `:critical` (atom).
     * `:sound` - Sound name to play (string).
   """
-  @spec notification(title :: String.t(), body :: String.t(), opts :: keyword()) ::
+  @spec notification(tag :: atom(), title :: String.t(), body :: String.t(), opts :: keyword()) ::
           Plushie.Command.t()
-  def notification(title, body, opts \\ []) do
+  def notification(tag, title, body, opts \\ []) do
     payload = [title: title, body: body]
 
     payload =
@@ -177,7 +167,7 @@ defmodule Plushie.Effects do
     payload =
       if opts[:sound], do: Keyword.put(payload, :sound, opts[:sound]), else: payload
 
-    request(:notification, payload)
+    request(tag, :notification, payload)
   end
 
   # Default timeouts per effect kind (milliseconds). File dialogs get longer
@@ -207,7 +197,8 @@ defmodule Plushie.Effects do
     Map.get(@default_timeouts, kind)
   end
 
-  # Generates a unique, monotonically increasing effect ID.
+  # Generates a unique, monotonically increasing effect ID for wire correlation.
+  @doc false
   defp generate_id do
     "ef_" <> Integer.to_string(System.unique_integer([:positive, :monotonic]))
   end

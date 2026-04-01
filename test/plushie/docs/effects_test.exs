@@ -8,12 +8,13 @@ defmodule Plushie.Docs.EffectsTest do
 
   test "effects_file_open_returns_effect_command_test" do
     cmd =
-      Plushie.Effects.file_open(
+      Plushie.Effects.file_open(:import,
         title: "Choose a file",
         filters: [{"Text files", "*.txt"}, {"All files", "*"}]
       )
 
     assert %Command{type: :effect, payload: payload} = cmd
+    assert payload.tag == :import
     assert payload.kind == "file_open"
     assert payload.opts.title == "Choose a file"
     assert payload.opts.filters == [{"Text files", "*.txt"}, {"All files", "*"}]
@@ -23,20 +24,20 @@ defmodule Plushie.Docs.EffectsTest do
   # -- Effect result event matching -------------------------------------------
 
   test "effects_ok_result_match_test" do
-    event = %Effect{request_id: "ef_1", result: {:ok, %{path: "/tmp/notes.txt"}}}
+    event = %Effect{tag: :import, result: {:ok, %{path: "/tmp/notes.txt"}}}
 
-    assert %Effect{result: {:ok, %{path: path}}} = event
+    assert %Effect{tag: :import, result: {:ok, %{path: path}}} = event
     assert path == "/tmp/notes.txt"
   end
 
   test "effects_cancelled_result_match_test" do
-    event = %Effect{request_id: "ef_1", result: :cancelled}
+    event = %Effect{tag: :import, result: :cancelled}
 
-    assert %Effect{result: :cancelled} = event
+    assert %Effect{tag: :import, result: :cancelled} = event
   end
 
   test "effects_error_result_match_test" do
-    event = %Effect{request_id: "ef_1", result: {:error, "unsupported"}}
+    event = %Effect{tag: :import, result: {:error, "unsupported"}}
 
     assert %Effect{result: {:error, reason}} = event
     assert reason == "unsupported"

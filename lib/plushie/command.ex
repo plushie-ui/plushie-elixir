@@ -48,9 +48,9 @@ defmodule Plushie.Command do
     For example, `get_system_theme(:my_tag)` delivers
     `%SystemEvent{type: :system_theme, tag: "my_tag", data: "dark"}`.
   - **Platform effects**: `Plushie.Effects` functions deliver
-    `%Plushie.Event.Effect{request_id: id, result: result}`. The `request_id` correlates
-    with the command payload's `:id` field. Timeouts deliver the same struct with
-    `result: {:error, :timeout}`. See `Plushie.Effects` for details.
+    `%Plushie.Event.Effect{tag: tag, result: result}`. The `tag` matches the
+    atom you provided when creating the effect command. Timeouts deliver the
+    same struct with `result: {:error, :timeout}`. See `Plushie.Effects`.
 
   ## Usage
 

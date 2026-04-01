@@ -102,9 +102,12 @@ defmodule Plushie.Runtime.Commands do
   end
 
   defp execute_command(
-         %Plushie.Command{type: :effect, payload: %{id: id, kind: kind, opts: opts}},
+         %Plushie.Command{type: :effect, payload: %{id: id, tag: tag, kind: kind, opts: opts}},
          state
        ) do
+    # Cancel any existing effect with the same tag (one-per-tag enforcement).
+    state = cancel_pending_effect_by_tag(state, tag)
+
     bridge = state.bridge
 
     if bridge do
@@ -117,7 +120,7 @@ defmodule Plushie.Runtime.Commands do
     # if one is configured.
     timeout = Plushie.Effects.default_timeout(kind) || @effect_timeout_ms
     ref = Process.send_after(self(), {:effect_timeout, id}, timeout)
-    put_in(state.pending_effects[id], ref)
+    put_in(state.pending_effects[id], %{tag: tag, timer_ref: ref})
   end
 
   defp execute_command(%Plushie.Command{type: type, payload: payload}, state)
@@ -289,6 +292,21 @@ defmodule Plushie.Runtime.Commands do
       {old_pid, _nonce} ->
         Process.exit(old_pid, :kill)
         %{state | async_tasks: Map.delete(state.async_tasks, tag)}
+
+      nil ->
+        state
+    end
+  end
+
+  # Cancels a pending effect with the given tag (one-per-tag enforcement).
+  # Finds the wire ID by scanning pending_effects for the matching tag,
+  # cancels its timer, and removes it.
+  @spec cancel_pending_effect_by_tag(map(), atom()) :: map()
+  defp cancel_pending_effect_by_tag(state, tag) do
+    case Enum.find(state.pending_effects, fn {_id, entry} -> entry.tag == tag end) do
+      {id, %{timer_ref: ref}} ->
+        Process.cancel_timer(ref)
+        %{state | pending_effects: Map.delete(state.pending_effects, id)}
 
       nil ->
         state

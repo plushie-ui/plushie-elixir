@@ -9,15 +9,15 @@ defmodule Plushie.Integration.EffectTest do
     def init(_opts), do: %{clipboard_text: "", got_unsupported: false}
 
     def update(model, %WidgetEvent{type: :click, id: "read"}) do
-      {model, Plushie.Effects.clipboard_read()}
+      {model, Plushie.Effects.clipboard_read(:read)}
     end
 
-    def update(model, %Effect{result: {:ok, data}}) do
+    def update(model, %Effect{tag: :read, result: {:ok, data}}) do
       text = if is_binary(data), do: data, else: ""
       %{model | clipboard_text: text}
     end
 
-    def update(model, %Effect{result: {:error, :unsupported}}) do
+    def update(model, %Effect{tag: :read, result: {:error, :unsupported}}) do
       %{model | got_unsupported: true}
     end
 

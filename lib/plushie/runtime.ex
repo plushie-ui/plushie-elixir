@@ -35,7 +35,7 @@ defmodule Plushie.Runtime do
         subscription_keys:  [term()],
         windows:            MapSet.t(),
         async_tasks:        %{atom() => {pid(), reference()}},
-        pending_effects:    %{String.t() => reference()},
+        pending_effects:    %{String.t() => %{tag: atom(), timer_ref: reference()}},
         pending_timers:     %{term() => reference()},
         pending_coalesce:   %{term() => Plushie.Event.t()},
         pending_coalesce_order: [term()],
@@ -98,7 +98,7 @@ defmodule Plushie.Runtime do
            subscription_keys: [term()],
            windows: MapSet.t(),
            async_tasks: %{atom() => {pid(), reference()}},
-           pending_effects: %{String.t() => reference()},
+           pending_effects: %{String.t() => %{tag: atom(), timer_ref: reference()}},
            pending_timers: %{term() => reference()},
            pending_coalesce: %{term() => Plushie.Event.t()},
            pending_coalesce_order: [term()],
@@ -466,10 +466,10 @@ defmodule Plushie.Runtime do
     end
   end
 
-  def handle_info({:renderer_event, %Effect{request_id: id} = event}, state) do
-    case pop_pending_effect(state, id) do
-      {:ok, state} ->
-        {:noreply, run_update(state, event)}
+  def handle_info({:renderer_event, {:effect_response, wire_id, result}}, state) do
+    case pop_pending_effect(state, wire_id) do
+      {:ok, tag, state} ->
+        {:noreply, run_update(state, %Effect{tag: tag, result: result})}
 
       :missing ->
         {:noreply, state}
@@ -734,10 +734,10 @@ defmodule Plushie.Runtime do
         # Already resolved or flushed -- ignore.
         {:noreply, state}
 
-      {_timer_ref, pending_effects} ->
+      {%{tag: tag}, pending_effects} ->
         :telemetry.execute([:plushie, :runtime, :effect_timeout], %{count: 1}, %{id: id})
         state = %{state | pending_effects: pending_effects}
-        state = run_update(state, %Effect{request_id: id, result: {:error, :timeout}})
+        state = run_update(state, %Effect{tag: tag, result: {:error, :timeout}})
         {:noreply, state}
     end
   end
@@ -1004,7 +1004,7 @@ defmodule Plushie.Runtime do
     end)
 
     # Cancel effect timeout timers.
-    Enum.each(state.pending_effects, fn {_id, ref} ->
+    Enum.each(state.pending_effects, fn {_id, %{timer_ref: ref}} ->
       Process.cancel_timer(ref)
     end)
 
@@ -1616,16 +1616,16 @@ defmodule Plushie.Runtime do
   # Effect request tracking
   # ---------------------------------------------------------------------------
 
-  # Cancels the timeout timer for a resolved effect request.
-  @spec pop_pending_effect(state(), String.t()) :: {:ok, state()} | :missing
+  # Cancels the timeout timer for a resolved effect request and returns the tag.
+  @spec pop_pending_effect(state(), String.t()) :: {:ok, atom(), state()} | :missing
   defp pop_pending_effect(state, id) do
     case Map.pop(state.pending_effects, id) do
       {nil, _} ->
         :missing
 
-      {timer_ref, pending_effects} ->
+      {%{tag: tag, timer_ref: timer_ref}, pending_effects} ->
         Process.cancel_timer(timer_ref)
-        {:ok, %{state | pending_effects: pending_effects}}
+        {:ok, tag, %{state | pending_effects: pending_effects}}
     end
   end
 
@@ -1634,11 +1634,12 @@ defmodule Plushie.Runtime do
   @spec flush_pending_effects(state(), atom()) :: state()
   defp flush_pending_effects(state, reason) do
     state =
-      Enum.reduce(state.pending_effects, state, fn {id, timer_ref}, acc ->
+      Enum.reduce(state.pending_effects, state, fn {_id, %{tag: tag, timer_ref: timer_ref}},
+                                                   acc ->
         # Cancel the timer first to prevent double dispatch (the timeout
         # handler checks pending_effects, but better safe than racy).
         if timer_ref, do: Process.cancel_timer(timer_ref)
-        run_update(acc, %Effect{request_id: id, result: {:error, reason}})
+        run_update(acc, %Effect{tag: tag, result: {:error, reason}})
       end)
 
     %{state | pending_effects: %{}}
