@@ -59,7 +59,7 @@ Called after every successful `update/2`. Returns one or more `window`
 nodes describing the current UI. The runtime diffs the new tree against
 the previous one and sends only the changes to the renderer.
 
-`view/1` runs after every successful update -- even if the model
+`view/1` runs after every successful update, even if the model
 hasn't changed. There is no model-equality check that skips it. The
 optimisation happens at the diff stage: if the new tree is identical
 to the old one, no patch is sent and no wire traffic occurs. When
@@ -71,7 +71,7 @@ previous tree is preserved.
 Called after each update cycle. Returns a list of active subscription
 specs (timers, keyboard, mouse, window events). The runtime diffs this
 list against the currently active subscriptions: new specs start, removed
-specs stop. Subscriptions are a function of the model -- return different
+specs stop. Subscriptions are a function of the model. Return different
 lists based on model state to conditionally activate them.
 
 Default: `[]` (no subscriptions).
@@ -126,12 +126,12 @@ is logged and the model reverts to its pre-exit state.
 
 Children start in order:
 
-1. **`Plushie.Bridge`** -- opens the renderer port (`:spawn`) or
+1. **`Plushie.Bridge`** - opens the renderer port (`:spawn`) or
    attaches to the transport (`:stdio`, `{:iostream, pid}`). Owns the
    wire connection. Marked `:transient` + `:significant`.
-2. **`Plushie.Runtime`** -- owns the app model and runs the update loop.
+2. **`Plushie.Runtime`** - owns the app model and runs the update loop.
    Marked `:transient` + `:significant`.
-3. **`Plushie.Dev.DevServer`** -- (optional) file watcher and recompiler.
+3. **`Plushie.Dev.DevServer`** - (optional) file watcher and recompiler.
    Started only when `:code_reloader` is enabled. Marked `:transient`.
 
 **`:rest_for_one`** means if Bridge crashes, Runtime restarts too (it
@@ -163,10 +163,10 @@ names programmatically.
 The full sequence from `Plushie.start_link/2` to a rendered window:
 
 1. Supervisor starts Bridge, then Runtime
-2. Runtime calls `init/1` -- produces initial model and optional commands
+2. Runtime calls `init/1`, producing initial model and optional commands
 3. `handle_continue(:initial_render)` fires:
    a. Settings from `settings/0` sent to renderer
-   b. `view/1` called with initial model -- full snapshot sent to renderer
+   b. `view/1` called with initial model; full snapshot sent to renderer
    c. Widget handler registry derived from the tree
    d. **Init commands execute** (after the first snapshot, not before)
    e. Subscriptions synced via `subscribe/1`
@@ -181,21 +181,21 @@ as events in subsequent updates.
 
 On each event:
 
-1. **`update/2`** -- event + current model -> new model + commands
-2. **Execute commands** -- synchronous commands run immediately; async
+1. **`update/2`** - event + current model -> new model + commands
+2. **Execute commands** - synchronous commands run immediately; async
    commands spawn tasks; effect commands go to the renderer
-3. **`view/1`** -- new model -> new tree (runs unconditionally)
-4. **Diff and patch** -- new tree compared against previous tree. If
+3. **`view/1`** - new model -> new tree (runs unconditionally)
+4. **Diff and patch** - new tree compared against previous tree. If
    different, a patch is sent to the renderer. If identical, no wire
    traffic. A full snapshot (instead of a patch) is sent when the
    previous tree is `nil` (startup, renderer restart).
-5. **`subscribe/1`** -- diff active subscriptions, start new ones, stop
+5. **`subscribe/1`** - diff active subscriptions, start new ones, stop
    removed ones
-6. **Sync windows** -- detect new/removed/changed windows in the tree,
+6. **Sync windows** - detect new/removed/changed windows in the tree,
    send open/close/update operations to the renderer
 
 Steps 3-6 happen inside `render_and_sync/1`. The entire cycle is
-synchronous within the Runtime GenServer -- no concurrent updates.
+synchronous within the Runtime GenServer. There are no concurrent updates.
 
 ### Window sync
 
@@ -226,7 +226,7 @@ by consecutive error count to prevent log flooding:
 |---|---|
 | 1-10 | `:error` level with full stacktrace |
 | 11-100 | `:debug` level with stacktrace |
-| 101 | `:warning` -- suppression notice |
+| 101 | `:warning` suppression notice |
 | 102+ | silent, with `:warning` reminders every 1000 errors |
 
 The counter resets to zero on the next successful `update/2` call.
@@ -246,15 +246,15 @@ render.
 Both `init/1` and `update/2` returns are validated immediately. Valid
 shapes:
 
-- `model` -- bare model, no commands
-- `{model, %Command{}}` -- model + single command
-- `{model, [%Command{}, ...]}` -- model + command list
+- `model` - bare model, no commands
+- `{model, %Command{}}` - model + single command
+- `{model, [%Command{}, ...]}` - model + command list
 
 Invalid shapes raise `ArgumentError` with a descriptive message:
 
-- `{model, :not_a_command}` -- second element must be a Command
-- `{model, commands, extra}` -- tuples with more than 2 elements
-- `{model, [valid_cmd, :invalid]}` -- all list elements must be Commands
+- `{model, :not_a_command}` - second element must be a Command
+- `{model, commands, extra}` - tuples with more than 2 elements
+- `{model, [valid_cmd, :invalid]}` - all list elements must be Commands
 
 This catches bugs at the source rather than producing confusing errors
 downstream.
@@ -277,7 +277,7 @@ shutdown.
 
 When the renderer restarts successfully:
 
-1. `handle_renderer_exit/2` called -- opportunity to adjust model
+1. `handle_renderer_exit/2` called (opportunity to adjust model)
 2. Settings re-sent to the new renderer process
 3. `view/1` re-evaluated with a fresh tree diff baseline (`nil`),
    causing a full snapshot instead of a patch
@@ -308,17 +308,17 @@ that re-open windows based on external events.
 
 ## See also
 
-- `Plushie.App` -- callback typespecs and examples
-- `Plushie.Runtime` -- update loop internals, `get_model/1`,
+- `Plushie.App` - callback typespecs and examples
+- `Plushie.Runtime` - update loop internals, `get_model/1`,
   `get_tree/1`, `sync/1`
-- `Plushie.Bridge` -- wire protocol, transport modes, restart logic
-- `Plushie.Command` -- command types returned from `init/1` and
+- `Plushie.Bridge` - wire protocol, transport modes, restart logic
+- `Plushie.Command` - command types returned from `init/1` and
   `update/2`
-- `Plushie.Subscription` -- subscription specs returned from
+- `Plushie.Subscription` - subscription specs returned from
   `subscribe/1`
-- [Configuration reference](configuration.md) -- environment variables,
+- [Configuration reference](configuration.md) - environment variables,
   app config, and `settings/0` key table
-- [Events reference](events.md) -- all event types delivered to
+- [Events reference](events.md) - all event types delivered to
   `update/2`
-- [Guide: Getting Started](../guides/02-getting-started.md) -- the Elm
+- [Guide: Getting Started](../guides/02-getting-started.md) - the Elm
   loop in practice

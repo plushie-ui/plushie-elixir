@@ -5,7 +5,7 @@ bring it to life with two complementary techniques: **hot reload** for
 editing the pad's own source code, and **runtime compilation** for compiling
 widget code typed into the pad's editor.
 
-Along the way we will learn how to inspect a running app from `iex` -- a
+Along the way we will learn how to inspect a running app from `iex`, a
 useful debugging skill.
 
 ## Hot reload
@@ -33,7 +33,7 @@ not fail. Create `config/test.exs` and `config/prod.exs` each containing
 just `import Config`.
 
 With this in place, `mix plushie.gui` enables hot reload automatically
-in dev -- no `--watch` flag needed. Plushie watches your `lib/` directory.
+in dev without the `--watch` flag. Plushie watches your `lib/` directory.
 Edit any `.ex` file, save it, and the running app recompiles in place --
 your model state is preserved.
 
@@ -51,9 +51,9 @@ renderer.
 The pad's editor holds Plushie widget code. We want to compile that code
 and render the result in the preview pane. This requires three steps:
 
-1. **Parse** -- check that the code is valid Elixir syntax
-2. **Compile** -- compile it into a module with macro expansion
-3. **Render** -- call the module's `view/0` function and embed the result
+1. **Parse** - check that the code is valid Elixir syntax
+2. **Compile** - compile it into a module with macro expansion
+3. **Render** - call the module's `view/0` function and embed the result
 
 Here is the helper that does all three:
 
@@ -87,7 +87,7 @@ end
 syntax is invalid, we get an error with a line number.
 
 `Code.compile_string/1` compiles the source into a module. This runs the
-full Elixir compilation pipeline including macro expansion -- so
+full Elixir compilation pipeline including macro expansion, so
 `import Plushie.UI` and the DSL macros work exactly as they would in a
 normal `.ex` file. We set `ignore_module_conflict` to suppress the warning
 that appears when saving the same experiment twice (redefining the module).
@@ -160,7 +160,7 @@ defmodule Pad.Experiments.Hello do
 end
 ```
 
-This is the same DSL code you write in an app's `view/1` -- experiments
+This is the same DSL code you write in an app's `view/1`. Experiments
 just don't have a model, so the function takes no arguments.
 
 ## Inspecting a running app from iex
@@ -325,13 +325,13 @@ end
 
 The preview widgets have scoped IDs (`preview/greeting`, `preview/btn`)
 because they are inside `container "preview"`. This is how scoped IDs
-work -- we will use them more in chapter 6.
+work. We will use them more in chapter 6.
 
 ## Try it
 
 - Change the starter experiment: add a `checkbox`, a `slider`, or a
   `text_input` to the column. Save and see them render.
-- Deliberately break the syntax -- delete a closing `end`. Save and see
+- Deliberately break the syntax: delete a closing `end`. Save and see
   the error message in the preview. Fix it and save again.
 - Try writing a completely different experiment: a row of coloured buttons,
   or a progress bar with a label.

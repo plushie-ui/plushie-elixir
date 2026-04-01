@@ -25,7 +25,7 @@ defp deps do
 end
 ```
 
-Pin to an exact version pre-1.0 -- the API may change between minor
+Pin to an exact version pre-1.0. The API may change between minor
 releases. Check the [CHANGELOG](https://github.com/plushie-ui/plushie-elixir/blob/main/CHANGELOG.md)
 when upgrading.
 
@@ -60,7 +60,7 @@ automatically at runtime.
 
 If you prefer to build the renderer yourself (or need to for
 [native widgets](13-custom-widgets.md)), see the
-[build instructions](../reference/mix-tasks.md) -- you will need a Rust
+[build instructions](../reference/mix-tasks.md). You will need a Rust
 toolchain installed.
 
 ## Your first window
@@ -96,16 +96,16 @@ window or press Ctrl+C in the terminal to stop.
 
 Here is what each piece does:
 
-- `use Plushie.App` -- declares that this module implements the
+- `use Plushie.App` - declares that this module implements the
   `Plushie.App` behaviour. This gives you the `init/1`, `update/2`, and
   `view/1` callbacks that the runtime calls to drive your application.
-- `import Plushie.UI` -- brings the widget DSL into scope. Every widget
-  you place in a view -- `window`, `text`, `button`, `column`, `row`,
-  and the rest -- comes from this import.
-- `window` -- creates a native OS window. The first argument is the
+- `import Plushie.UI` - brings the widget DSL into scope. Every widget
+  you place in a view (`window`, `text`, `button`, `column`, `row`,
+  and the rest) comes from this import.
+- `window` - creates a native OS window. The first argument is the
   window's ID (here `"main"`). The `title:` option sets the title bar
   text. Every view must return at least one window.
-- `text` -- displays a read-only string. The first argument is the
+- `text` - displays a read-only string. The first argument is the
   widget ID, the second is the content to display.
 
 ## The Elm loop: a counter
@@ -158,15 +158,15 @@ Click the "+" and "-" buttons. The count updates on every click.
 
 Here is what is new:
 
-- `alias Plushie.Event.WidgetEvent` -- `Plushie.Event.WidgetEvent` is
+- `alias Plushie.Event.WidgetEvent` - `Plushie.Event.WidgetEvent` is
   the struct delivered when a user interacts with a widget. It carries a
   `type` (`:click`, `:toggle`, `:submit`, etc.) and the `id` of the
   widget that emitted it.
-- `column` -- a vertical layout container. Children stack top to bottom.
+- `column` - a vertical layout container. Children stack top to bottom.
   `padding:` adds space around the edges, `spacing:` adds space between
   children.
-- `row` -- a horizontal layout container. Children flow left to right.
-- `button` -- a clickable button. The first argument is the widget ID,
+- `row` - a horizontal layout container. Children flow left to right.
+- `button` - a clickable button. The first argument is the widget ID,
   the second is the label text. When clicked, the runtime delivers a
   `%WidgetEvent{type: :click, id: "increment"}` to your `update/2`.
 
@@ -180,7 +180,7 @@ round trip happens in milliseconds.
 
 One thing worth knowing early: if `update/2` raises an exception, the
 runtime catches it, logs the error, and reverts to the previous model.
-Your app keeps running. This makes it safe to experiment -- a bad
+Your app keeps running. This makes it safe to experiment. A bad
 pattern match or a missing function clause will not crash the window.
 
 ## Your first test

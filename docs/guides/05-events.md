@@ -1,7 +1,7 @@
 # Events
 
 Every interaction in a Plushie app produces an event. A button click, a
-keystroke in a text input, a checkbox toggle -- each one arrives in your
+keystroke in a text input, a checkbox toggle. Each one arrives in your
 `update/2` as a typed struct. Understanding what events look like and how to
 match on them is essential for building anything beyond a static layout.
 
@@ -19,7 +19,7 @@ structs. Here are the key fields:
 | `type` | atom | The kind of interaction: `:click`, `:input`, `:toggle`, `:submit`, `:select`, `:slide`, etc. |
 | `id` | string | The widget's local ID |
 | `scope` | list of strings | Ancestor container IDs (nearest parent first) |
-| `value` | term or nil | Scalar payload -- text content for `:input`, boolean for `:toggle`, number for `:slide` |
+| `value` | term or nil | Scalar payload: text content for `:input`, boolean for `:toggle`, number for `:slide` |
 | `data` | map or nil | Structured payload for events with multiple fields |
 | `window_id` | string | Which window the event came from |
 
@@ -61,11 +61,11 @@ container ancestry.
 
 Not all events are `WidgetEvent`. Plushie also delivers:
 
-- `Plushie.Event.KeyEvent` -- keyboard events (from subscriptions)
-- `Plushie.Event.TimerEvent` -- timer ticks (from subscriptions)
-- `Plushie.Event.AsyncEvent` -- results from background tasks
-- `Plushie.Event.EffectEvent` -- responses from platform effects (file dialogs, clipboard)
-- `Plushie.Event.WindowEvent` -- window lifecycle (opened, closed, resized)
+- `Plushie.Event.KeyEvent` - keyboard events (from subscriptions)
+- `Plushie.Event.TimerEvent` - timer ticks (from subscriptions)
+- `Plushie.Event.AsyncEvent` - results from background tasks
+- `Plushie.Event.EffectEvent` - responses from platform effects (file dialogs, clipboard)
+- `Plushie.Event.WindowEvent` - window lifecycle (opened, closed, resized)
 
 We will cover each of these in the chapters where they are introduced. For
 now, `WidgetEvent` is the one you use most. See the
@@ -339,7 +339,7 @@ The event log shows you exactly what to pattern match on in `update/2`.
 ## Try it
 
 - Write an experiment with a `text_input` that has `on_submit: true`. Type
-  some text and press Enter. Watch for the `:submit` event in the log -- it
+  some text and press Enter. Watch for the `:submit` event in the log. It
   carries the submitted text as `value`.
 - Add a `pick_list` with a few options. Select one and see the `:select`
   event.
@@ -348,7 +348,7 @@ The event log shows you exactly what to pattern match on in `update/2`.
   them.
 
 The event log is your best teacher from here on. Every new widget you
-encounter produces events -- the log shows you their shape without having
+encounter produces events, and the log shows you their shape without having
 to check the documentation.
 
 In the next chapter, we will add a file list to the pad so you can save

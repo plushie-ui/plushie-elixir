@@ -117,7 +117,7 @@ end
 ```
 
 The sidebar gets 1/4 of the width, the main area gets 3/4. The numbers are
-relative -- `{:fill_portion, 1}` and `{:fill_portion, 3}` is the same ratio
+relative. `{:fill_portion, 1}` and `{:fill_portion, 3}` is the same ratio
 as `{:fill_portion, 2}` and `{:fill_portion, 6}`.
 
 ### Fixed size
@@ -193,14 +193,14 @@ end
 These containers cover specialised needs. We will not use them in the pad
 right now, but they are good to know about:
 
-- **stack** -- layers children on top of each other (z-axis). Useful for
+- **stack** - layers children on top of each other (z-axis). Useful for
   overlays, badges, and loading spinners.
-- **grid** -- CSS-like grid layout. Supports fixed column count (`columns: 3`)
+- **grid** - CSS-like grid layout. Supports fixed column count (`columns: 3`)
   or fluid mode (`fluid: 200`) that auto-wraps.
-- **pin** -- positions a child at exact `(x, y)` pixel coordinates.
-- **floating** -- applies translate and scale transforms to a child.
-- **responsive** -- adapts layout based on available size.
-- **space** -- explicit empty space with configurable width and height.
+- **pin** - positions a child at exact `(x, y)` pixel coordinates.
+- **floating** - applies translate and scale transforms to a child.
+- **responsive** - adapts layout based on available size.
+- **space** - explicit empty space with configurable width and height.
 
 See the [Built-in Widgets reference](../reference/built-in-widgets.md) for
 full details on each.
@@ -254,7 +254,7 @@ The toolbar uses `{4, 8}` padding (vertical, horizontal) for a compact look.
 The event log has a smaller fixed height and tighter text. Each section
 manages its own internal spacing.
 
-The update logic is unchanged from chapter 6 -- only the view and helper
+The update logic is unchanged from chapter 6. Only the view and helper
 functions changed.
 
 ## Verify it
@@ -273,7 +273,7 @@ test "three-pane layout with sidebar, editor, and preview" do
 end
 ```
 
-This verifies the layout didn't break the editing flow -- the editor,
+This verifies the layout didn't break the editing flow. The editor,
 save button, and preview pane all still work together.
 
 ## Try it

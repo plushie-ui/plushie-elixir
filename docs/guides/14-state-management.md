@@ -1,12 +1,12 @@
 # State Management
 
 As apps grow, model management gets complex. Tracking undo history, managing
-list selection, navigating between views, searching and sorting data -- these
+list selection, navigating between views, searching and sorting data. These
 are recurring patterns that Plushie provides as standalone helper modules.
 
 Each helper is a pure data structure. No processes, no side effects, no
 framework coupling. You store them in your model and update them in
-`update/2`. They compose freely -- use one, some, or all.
+`update/2`. They compose freely: use one, some, or all.
 
 This chapter introduces each helper with an isolated example, then applies
 it to the pad.
@@ -179,10 +179,10 @@ Selection.selected(sel)             # MapSet.new([])
 
 Modes:
 
-- `:single` -- at most one item selected. Selecting a new item deselects the
+- `:single` - at most one item selected. Selecting a new item deselects the
   previous one.
-- `:multi` -- any number of items. `toggle/2` adds or removes.
-- `:range` -- contiguous selection with an anchor. `range_select/2` selects
+- `:multi` - any number of items. `toggle/2` adds or removes.
+- `:range` - contiguous selection with an anchor. `range_select/2` selects
   everything between the anchor and the target.
 
 ### Applying it: multi-select experiments
@@ -233,7 +233,7 @@ route = Route.pop(route)
 Route.current(route)       # :editor
 ```
 
-The stack is LIFO. The root entry never pops -- `pop/1` on a single-entry
+The stack is LIFO. The root entry never pops. `pop/1` on a single-entry
 stack returns it unchanged.
 
 ### Applying it: view switching
@@ -280,7 +280,7 @@ State.revision(state)                      # 1
 ```
 
 Every mutation increments the revision counter. This is useful for change
-detection -- if the revision has not changed, neither has the data.
+detection. If the revision has not changed, neither has the data.
 
 Transactions group multiple mutations into a single revision bump:
 
@@ -312,8 +312,8 @@ See `Plushie.State` for the full API.
 
 For most property animations, renderer-side transitions ([chapter 9](09-animation.md))
 are simpler and more performant. `Plushie.Animation.Tween` is for cases
-that need frame-by-frame control in Elixir -- canvas animations, physics
-simulations, or values that drive model logic rather than widget props.
+that need frame-by-frame control in Elixir (canvas animations, physics
+simulations, or values that drive model logic rather than widget props).
 
 ```elixir
 alias Plushie.Animation.Tween
@@ -387,7 +387,7 @@ test "ctrl+z undoes editor changes" do
 end
 ```
 
-This verifies the full undo/redo cycle through the real runtime -- typing
+This verifies the full undo/redo cycle through the real runtime. Typing
 creates an undo entry, Ctrl+Z reverts it, Ctrl+Shift+Z restores it.
 
 ## Try it

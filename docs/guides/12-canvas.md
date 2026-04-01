@@ -19,7 +19,7 @@ automatically resolve to their canvas shape variants inside canvas blocks --
 the compiler handles this, so you use the same names without qualification.
 
 Variables assigned in one line of a layer or group block are visible in
-subsequent lines -- standard Elixir scoping rules apply:
+subsequent lines. Standard Elixir scoping rules apply:
 
 ```elixir
 canvas "demo", width: 200, height: 100 do
@@ -122,7 +122,7 @@ generally preferred for UI elements because it scales without pixelation.
 ## Interactive groups
 
 Groups become interactive when you add event props. This is where canvas
-gets powerful -- you can make any collection of shapes clickable, hoverable,
+gets powerful. You can make any collection of shapes clickable, hoverable,
 or draggable:
 
 ```elixir
@@ -135,7 +135,7 @@ end
 ### Hover and press styles
 
 `hover_style` and `pressed_style` change the visual appearance during
-interaction. No event handling needed -- the renderer applies them
+interaction. No event handling needed; the renderer applies them
 automatically:
 
 ```elixir
@@ -156,7 +156,7 @@ the properties you specify.
 ### Accessibility
 
 Built-in widgets like `button` and `text_input` have accessibility roles
-and labels built in -- a button announces itself as a button automatically.
+and labels built in (a button announces itself as a button automatically).
 Canvas is a raw drawing surface, so the renderer has no way to know that
 a group of shapes is meant to be a "button." You tell it with `a11y`
 annotations:
@@ -347,7 +347,7 @@ end
 
 This exercises the canvas click event, verifies compilation still works,
 and confirms the accessibility annotations are present on the canvas
-element -- something that built-in widgets provide automatically but
+element, something that built-in widgets provide automatically but
 canvas elements need explicitly.
 
 ## Try it

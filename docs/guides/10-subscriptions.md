@@ -1,6 +1,6 @@
 # Subscriptions
 
-So far, every event in the pad has come from direct widget interaction -- a
+So far, every event in the pad has come from direct widget interaction: a
 button click, a text input keystroke. But some events come from outside the
 widget tree: keyboard shortcuts, timers, window events, mouse movement.
 These are delivered through **subscriptions**.
@@ -22,7 +22,7 @@ end
 The runtime calls `subscribe/1` after every update cycle and diffs the
 returned list against the active subscriptions. New specs start new event
 sources; removed specs stop them. You never start or stop subscriptions
-manually -- you describe what you want, and the runtime manages the
+manually. You describe what you want, and the runtime manages the
 lifecycle.
 
 This is the same declarative approach as the view: the list is a function of
@@ -53,11 +53,11 @@ end
 
 The `Plushie.Event.KeyEvent` struct has these key fields:
 
-- `type` -- `:press` or `:release`
-- `key` -- the key that was pressed. Named keys are atoms (`:escape`,
+- `type` - `:press` or `:release`
+- `key` - the key that was pressed. Named keys are atoms (`:escape`,
   `:enter`, `:tab`, `:backspace`, `:arrow_up`, etc.). Single characters are
   strings (`"s"`, `"a"`, `"1"`).
-- `modifiers` -- a `Plushie.KeyModifiers` struct with boolean fields:
+- `modifiers` - a `Plushie.KeyModifiers` struct with boolean fields:
   `ctrl`, `shift`, `alt`, `logo` (Windows/Super key), and `command`
   (platform-aware: Ctrl on Linux/Windows, Cmd on macOS).
 
@@ -185,7 +185,7 @@ end
 When auto-save is checked and the content has changed, a timer fires every
 second. The handler compiles, saves, and clears the dirty flag. Once the
 flag is cleared, the subscription disappears from the list and the timer
-stops -- until the next edit.
+stops, until the next edit.
 
 ## Other subscriptions
 
@@ -204,7 +204,7 @@ timers:
 - **Catch-all**: `on_event/1` for any renderer event
 
 Each returns its corresponding event struct in `update/2`. The tag argument
-is for managing subscriptions (diffing, starting, stopping) -- for renderer
+is for managing subscriptions (diffing, starting, stopping). For renderer
 subscriptions, the tag does not appear in the delivered event. Timer
 subscriptions are the exception: the tag is embedded in the `%TimerEvent{}` event.
 
@@ -214,7 +214,7 @@ complete list and details.
 ## Rate limiting
 
 High-frequency events like mouse movement can call `update/2`
-unnecessarily often -- hundreds of times per second when you only need
+unnecessarily often, potentially hundreds of times per second when you only need
 the position at 30fps. This is especially wasteful over networked
 connections where each update generates wire traffic.
 `Plushie.Subscription.max_rate/2` throttles delivery:

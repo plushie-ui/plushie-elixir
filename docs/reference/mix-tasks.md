@@ -25,7 +25,7 @@ mix plushie.gui PlushiePad
 This compiles your project, resolves the renderer binary (see
 [binary resolution](#binary-resolution)), starts the Plushie supervision
 tree (Bridge + Runtime), and opens your app's windows. The task blocks
-until the app exits -- either by closing the last window or pressing
+until the app exits, either by closing the last window or pressing
 Ctrl+C.
 
 ### Flags
@@ -64,7 +64,7 @@ When active:
   recompilation. The runtime re-calls `view/1` with the **current model**
   (not a fresh `init/1`) and diffs the new tree against the old one.
   Only the changes are sent to the renderer. This means your application
-  state -- form inputs, scroll positions, navigation -- is preserved
+  state (form inputs, scroll positions, navigation) is preserved
   across recompilations. The debounce (default 100ms) prevents rapid
   recompilation when your editor writes multiple files.
 - **Rust changes** (native widgets only): `.rs` and `Cargo.toml` changes
@@ -150,13 +150,13 @@ want to work against a local renderer checkout.
 The task creates a Cargo workspace under `_build/<env>/plushie/`
 containing:
 
-- **Cargo.toml** -- workspace manifest with dependencies from crates.io
+- **Cargo.toml** - workspace manifest with dependencies from crates.io
   (version from `BINARY_VERSION` file) or local paths (when
   `PLUSHIE_SOURCE_PATH` is set). Includes `[patch.crates-io]` for local
   source mode so all crates share the same types.
-- **main.rs** -- entry point that initialises the Plushie renderer and
+- **main.rs** - entry point that initialises the Plushie renderer and
   registers each native widget via its `rust_constructor` expression.
-- **Crate references** -- one `[dependencies]` entry per native widget,
+- **Crate references** - one `[dependencies]` entry per native widget,
   pointing to the widget's Rust crate.
 
 ### Native widget auto-detection
@@ -164,7 +164,7 @@ containing:
 Native widgets are discovered automatically via
 `Plushie.Widget.WidgetProtocol` protocol consolidation at compile time.
 Any module that implements the protocol and exports `native_crate/0` is
-included in the build. No configuration needed -- add a native widget
+included in the build. No configuration needed. Add a native widget
 dependency to your `mix.exs` and it appears in the next build.
 
 The task validates:
@@ -197,7 +197,7 @@ config :plushie, source_path: "../plushie-renderer"
 
 This adds `[patch.crates-io]` to the generated Cargo workspace,
 redirecting all crate dependencies to local paths. This is essential when
-modifying the renderer alongside the SDK -- without it, the build would
+modifying the renderer alongside the SDK. Without it, the build would
 mix crates.io types with local types, causing Rust compilation errors.
 
 To build against the latest renderer `main` branch:
@@ -259,7 +259,7 @@ via the `BINARY_VERSION` file.
 Every download is verified against a SHA256 checksum fetched from the
 same GitHub release. If the checksum does not match, the downloaded file
 is deleted and an error is raised. There is no option to skip
-verification -- this is intentional, as the binary runs as a child
+verification. This is intentional, as the binary runs as a child
 process of your application.
 
 ### Native widget refusal
@@ -271,7 +271,7 @@ to the renderer, which means a precompiled binary cannot include them.
 Use `mix plushie.build` instead.
 
 Pure Elixir widgets (those with `view/2` or `view/3` callbacks but no
-`native_crate/0`) work fine with precompiled binaries -- they compose
+`native_crate/0`) work fine with precompiled binaries. They compose
 existing renderer widgets and do not require a custom build.
 
 ## plushie.inspect
@@ -294,7 +294,7 @@ This is useful for:
 - Quick inspection in CI or scripts
 - Checking that `view/1` doesn't crash with a fresh model
 
-No renderer binary is needed -- the tree is computed entirely in Elixir.
+No renderer binary is needed. The tree is computed entirely in Elixir.
 
 ### Script mode
 
@@ -322,7 +322,7 @@ This is the Elixir side of Plushie's remote rendering architecture.
 Normally, `plushie.gui` spawns the renderer as a child process (the
 `:spawn` transport). With `plushie.connect`, the renderer is already
 running elsewhere and listening on a socket. The SDK connects to it
-and communicates over the same wire protocol -- the app code is
+and communicates over the same wire protocol. The app code is
 identical either way.
 
 ### Flags
@@ -353,7 +353,7 @@ negotiation line on stdin (1-second timeout).
    the Plushie supervision tree with `transport: {:iostream, adapter}`.
 
 3. From this point, the protocol is identical to local mode. The only
-   difference is latency -- messages travel over a socket instead of
+   difference is latency, since messages travel over a socket instead of
    stdio pipes.
 
 This pattern enables:
@@ -414,12 +414,12 @@ mix preflight
 
 Steps, in order:
 
-1. `mix format --check-formatted` -- code formatting
-2. `mix compile --warnings-as-errors` -- compilation with strict warnings
-3. `mix credo --strict` -- static analysis and style checking
-4. `mix test` -- the full test suite
-5. `mix docs --warnings-as-errors` -- documentation generation (dev env)
-6. `mix dialyzer` -- type checking via [Dialyzer](https://www.erlang.org/doc/apps/dialyzer/)
+1. `mix format --check-formatted` - code formatting
+2. `mix compile --warnings-as-errors` - compilation with strict warnings
+3. `mix credo --strict` - static analysis and style checking
+4. `mix test` - the full test suite
+5. `mix docs --warnings-as-errors` - documentation generation (dev env)
+6. `mix dialyzer` - type checking via [Dialyzer](https://www.erlang.org/doc/apps/dialyzer/)
 
 The order is deliberate: fast, cheap checks first (formatting takes
 milliseconds), expensive checks last (Dialyzer can take minutes on first
@@ -437,12 +437,12 @@ prints "All checks passed." and exits with code 0.
 Several tasks need the renderer binary. `Plushie.Binary.path!/0`
 resolves it in priority order:
 
-1. `PLUSHIE_BINARY_PATH` environment variable -- explicit override,
+1. `PLUSHIE_BINARY_PATH` environment variable - explicit override,
    useful for CI or custom build pipelines
-2. Application config `:binary_path` -- explicit per-environment path
-3. Custom widget build in `_build/<env>/plushie/target/` -- auto-detected
+2. Application config `:binary_path` - explicit per-environment path
+3. Custom widget build in `_build/<env>/plushie/target/` - auto-detected
    after `mix plushie.build`
-4. Downloaded binary in `_build/plushie/bin/` -- auto-detected after
+4. Downloaded binary in `_build/plushie/bin/` - auto-detected after
    `mix plushie.download`
 
 Steps 1 and 2 are explicit: if set but pointing to a missing file, they
@@ -456,14 +456,14 @@ version information.
 
 ## See also
 
-- [Configuration reference](configuration.md) -- environment variables,
+- [Configuration reference](configuration.md) - environment variables,
   application config, and transport modes
-- [Testing reference](testing.md) -- test backends, CI setup, and the
+- [Testing reference](testing.md) - test backends, CI setup, and the
   full test helper API
-- [Wire Protocol reference](wire-protocol.md) -- message format for
+- [Wire Protocol reference](wire-protocol.md) - message format for
   `--json` debugging
-- `Plushie.Binary` -- binary path resolution and version
-- [Guide: Getting Started](../guides/02-getting-started.md) -- first
+- `Plushie.Binary` - binary path resolution and version
+- [Guide: Getting Started](../guides/02-getting-started.md) - first
   use of `plushie.download` and `plushie.gui`
-- [Guide: Shared State](../guides/16-shared-state.md) -- remote
+- [Guide: Shared State](../guides/16-shared-state.md) - remote
   rendering with SSH transport

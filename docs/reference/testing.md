@@ -11,13 +11,19 @@ Plushie.Test.setup!()
 ExUnit.start()
 ```
 
-See `Plushie.Test` for setup options.
+`setup!/0` starts the shared renderer session pool, configures ExUnit
+exclusions for backend-specific tests, and registers cleanup hooks.
+The pool multiplexes test sessions over a single renderer process
+(mock/headless) or spawns per-test renderer processes (windowed).
+
+See `Plushie.Test` for setup options including `:pool_name` and
+`:max_sessions` (default: `max(schedulers * 8, 128)`).
 
 ## Test cases
 
 | Module | Purpose |
 |---|---|
-| `Plushie.Test.Case` | Full app testing -- starts Runtime + Bridge per test |
+| `Plushie.Test.Case` | Full app testing (starts Runtime + Bridge per test) |
 | `Plushie.Test.WidgetCase` | Single widget testing in a harness app |
 
 ### Plushie.Test.Case
@@ -26,9 +32,11 @@ See `Plushie.Test` for setup options.
 use Plushie.Test.Case, app: MyApp
 ```
 
-Starts a fresh app instance before each test. Imports all helpers. Tests run
-in parallel (`async: true`). On teardown, checks prop validation diagnostics
-and raises if any are found.
+Starts a fresh app instance before each test. Imports all helpers.
+Tests support parallel execution. Add `async: true` to your test
+module to run concurrently (the session pool handles isolation). On
+teardown, checks prop validation diagnostics and raises if any are
+found.
 
 ### Plushie.Test.WidgetCase
 
@@ -82,12 +90,13 @@ See `Plushie.Test.Helpers` for full specs.
 | `canvas_press(selector, x, y, opts)` | canvas | `:canvas_press` |
 | `canvas_release(selector, x, y, opts)` | canvas | `:canvas_release` |
 | `canvas_move(selector, x, y, opts)` | canvas | `:canvas_move` |
-| `press(key)` | -- | `Plushie.Event.KeyEvent` |
-| `release(key)` | -- | `Plushie.Event.KeyEvent` |
-| `type_key(key)` | -- | press + release |
-| `move_to(x, y)` | -- | cursor position |
+| `press(key)` | *n/a* | `Plushie.Event.KeyEvent` |
+| `release(key)` | *n/a* | `Plushie.Event.KeyEvent` |
+| `type_key(key)` | *n/a* | press + release |
+| `move_to(x, y)` | *n/a* | cursor position |
+| `pane_focus_cycle(selector, opts)` | pane_grid | `:pane_focus_cycle` |
 
-All interactions are synchronous -- they wait for the full update cycle to
+All interactions are synchronous. They wait for the full update cycle to
 complete before returning.
 
 ### Multi-window interactions
@@ -138,12 +147,21 @@ Key names are case-insensitive. Named keys use PascalCase internally:
 
 | Function | Description |
 |---|---|
-| `await_async(tag, timeout)` | Wait for tagged async task |
-| `register_effect_stub(kind, response)` | Mock a platform effect |
-| `unregister_effect_stub(kind)` | Remove effect mock |
-| `reset()` | Reset session to initial state |
+| `await_async(tag, timeout)` | Wait for tagged async task to complete |
+| `register_effect_stub(kind, response)` | Stub a platform effect by kind atom (e.g. `:file_open`) |
+| `unregister_effect_stub(kind)` | Remove an effect stub |
+| `reset()` | Re-initialise the app from scratch (stops and restarts the full supervision tree) |
 
-Effect stubs are scoped to the test process and auto-cleaned on teardown.
+Effect stubs intercept effects at the renderer and return controlled
+responses. They register by **kind** (the operation type atom like
+`:file_open`, `:clipboard_write`), not by tag. A stub applies to all
+effects of that kind regardless of which tag they use. Stubs are scoped
+to the test session and auto-cleaned on teardown.
+
+`reset/0` is expensive. It stops the entire Plushie supervisor tree
+and starts a fresh instance. Use it when you need a guaranteed clean
+slate mid-test. For most tests, the per-test setup from
+`Plushie.Test.Case` is sufficient.
 
 ## Selector syntax
 
@@ -174,7 +192,18 @@ The mock backend uses focus + space for click simulation and synthetic events
 for canvas/select. All backends use the real renderer binary and real wire
 protocol.
 
-Tests are backend-agnostic -- the same assertions work on all three.
+Tests are backend-agnostic by default. The same assertions work on all
+three. Use tags to restrict tests to specific backends when they depend
+on rendering capabilities:
+
+```elixir
+@tag backend: :headless    # runs in headless + windowed, skipped in mock
+@tag backend: :windowed    # runs only in windowed
+```
+
+Backend capability is hierarchical: `mock < headless < windowed`. A test
+tagged `:headless` runs in both headless and windowed mode but is excluded
+from mock mode. Untagged tests run on all backends.
 
 ## Screenshots and tree hashes
 
@@ -198,7 +227,7 @@ These are separate environment variables.
 
 ## Animation testing
 
-The mock backend resolves renderer-side transitions instantly -- props
+The mock backend resolves renderer-side transitions instantly. Props
 snap to their target values without interpolation. The headless backend
 runs real interpolation; use `Command.advance_frame/1` to step through
 frames deterministically. The `skip_transitions` helper fast-forwards
@@ -252,7 +281,14 @@ mix plushie.replay path/to/test.plushie      # replay with real windows
 
 ## See also
 
-- `Plushie.Test.Case` -- case template docs
-- `Plushie.Test.Helpers` -- helper function specs
-- `Plushie.Test.WidgetCase` -- widget testing harness
-- [Testing guide](../guides/15-testing.md) -- narrative walkthrough
+- `Plushie.Test.Case` - case template docs
+- `Plushie.Test.Helpers` - helper function specs
+- `Plushie.Test.WidgetCase` - widget testing harness
+- [Testing guide](../guides/15-testing.md) - narrative walkthrough
+- [Commands reference](commands.md) - effect stubs and async mechanics
+- [Custom Widgets reference](custom-widgets.md) - testing widgets with
+  WidgetCase
+- [Configuration reference](configuration.md) - test pool and backend
+  configuration
+- [Mix Tasks reference](mix-tasks.md) - `plushie.script` and
+  `plushie.replay`

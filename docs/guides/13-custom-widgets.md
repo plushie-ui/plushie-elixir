@@ -43,7 +43,7 @@ functions, and the protocol implementation that connects it to the rendering
 pipeline.
 
 `widget :labeled_input` declares the widget's type name. This must be unique
-across your application -- it is used for event namespacing and protocol
+across your application. It is used for event namespacing and protocol
 dispatch.
 
 `prop` declarations define typed properties with optional defaults. Available
@@ -115,7 +115,7 @@ PlushiePad.FileList.new("sidebar",
 ```
 
 The pad's `update/2` still handles the select and delete events via scoped
-IDs -- the widget is transparent to events.
+IDs. The widget is transparent to events.
 
 ## Stateful widgets
 
@@ -157,7 +157,7 @@ end
 ```
 
 `state expanded: true` declares internal state with a default value. The
-runtime manages this state -- it persists across re-renders as long as the
+runtime manages this state. It persists across re-renders as long as the
 widget remains in the tree.
 
 `view/3` receives the ID, props, and current state.
@@ -344,14 +344,14 @@ Canvas-based widgets with interactivity combine `handle_event/2` with
 canvas events (`:canvas_press`, `:canvas_element_click`, etc.) to build
 rich custom controls like colour pickers, drawing tools, and data
 visualisations. You can also embed SVG content in canvas layers (as
-shown in [chapter 12](12-canvas.md)) -- design your visuals in a vector
+shown in [chapter 12](12-canvas.md)). Design your visuals in a vector
 editor and use them as interactive widget elements.
 
 ## The widget lifecycle
 
 Understanding the lifecycle helps when debugging:
 
-1. Your view calls `MyWidget.new(id, opts)` -- returns a widget struct.
+1. Your view calls `MyWidget.new(id, opts)`, which returns a widget struct.
 2. During tree normalization, the struct is converted to a placeholder node
    tagged with the widget module and props.
 3. The runtime detects the placeholder, looks up stored state (or uses
@@ -364,12 +364,12 @@ Understanding the lifecycle helps when debugging:
 There are no explicit mount or unmount callbacks. **Tree presence is the
 lifecycle.** When a widget appears in the tree, it is "mounted" with initial
 state. When it disappears, its state is cleaned up. This is why widget IDs
-must be stable -- a changing ID looks like a removal and re-creation.
+must be stable. A changing ID looks like a removal and re-creation.
 
 ## Native widgets
 
 When you need rendering capabilities beyond what built-in widgets offer --
-custom GPU drawing, new input types, performance-critical visuals -- you
+custom GPU drawing, new input types, or performance-critical visuals, you
 can build a **native widget** backed by Rust:
 
 ```elixir

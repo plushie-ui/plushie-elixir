@@ -1,7 +1,7 @@
 # Testing
 
 Plushie tests exercise the real renderer binary. Every test starts a full
-application instance -- Runtime, Bridge, and renderer -- and interacts with
+application instance (Runtime, Bridge, and renderer) and interacts with
 it through the same wire protocol that a real user session uses. This catches
 bugs that live at the boundary between the SDK and the renderer: wire format
 drift, startup ordering, codec issues.
@@ -109,7 +109,7 @@ click("#save", window: "settings")
 Without `window:`, an ambiguous ID that exists in multiple windows raises an
 error.
 
-All interactions are synchronous -- they wait for the full update cycle
+All interactions are synchronous. They wait for the full update cycle
 (event -> update -> view -> patch) to complete before returning.
 
 ## Assertions
@@ -233,7 +233,7 @@ PLUSHIE_TEST_BACKEND=windowed mix test       # real windows
 | `:headless` | ~100ms | Software (tiny-skia) | Pixel-accurate | Stubs |
 | `:windowed` | ~seconds | GPU | Pixel-accurate | Real |
 
-Tests are backend-agnostic by default -- the same test code works on all
+Tests are backend-agnostic by default. The same test code works on all
 three. Write tests once, run them at different fidelity levels.
 
 See the [Testing reference](../reference/testing.md) for backend setup
@@ -293,8 +293,8 @@ app wraps it in a window and records emitted events.
 
 Two helpers are specific to WidgetCase:
 
-- `last_event/0` -- the most recently emitted `WidgetEvent`, or nil
-- `events/0` -- all emitted events, newest first
+- `last_event/0` - the most recently emitted `WidgetEvent`, or nil
+- `events/0` - all emitted events, newest first
 
 ## Automation scripts
 

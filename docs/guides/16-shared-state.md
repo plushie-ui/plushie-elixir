@@ -8,7 +8,7 @@ pad over SSH and see each other's changes in real time.
 
 Plushie apps communicate with the renderer over a byte stream. By
 default that stream is stdio to a local process, but it can be any
-transport -- including an SSH channel. We will build a server that
+transport, including an SSH channel. We will build a server that
 accepts SSH connections and gives each client a live view of the
 shared pad state.
 
@@ -235,12 +235,9 @@ defmodule PlushiePad.SshServer do
   end
 
   defp generate_key_erlang(path) do
-    # Fall back to RSA when ssh-keygen is not available.
-    # RSA PEM encoding is well-tested across all OTP versions.
-    key = :public_key.generate_key({:rsa, 4096, 65537})
-    pem = :public_key.pem_encode([:public_key.pem_entry_encode(:RSAPrivateKey, key)])
-    rsa_path = String.replace(path, "ed25519", "rsa")
-    File.write!(rsa_path, pem)
+    key = :public_key.generate_key({:namedCurve, :ed25519})
+    pem = :public_key.pem_encode([:public_key.pem_entry_encode(:ECPrivateKey, key)])
+    File.write!(path, pem)
   end
 end
 ```
@@ -281,7 +278,7 @@ plushie --exec "ssh -p 2222 localhost -s plushie"
 ```
 
 Open a third terminal and connect again. Both windows show the same
-pad. Edit an experiment in one window and click Save -- the other
+pad. Edit an experiment in one window and click Save. The other
 window updates instantly.
 
 This is the same wire protocol, the same renderer binary, the same

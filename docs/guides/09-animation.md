@@ -1,7 +1,7 @@
 # Animation and Transitions
 
 Your widgets are styled. Now make them move. Animation turns a
-functional UI into one that feels responsive and alive -- elements
+functional UI into one that feels responsive and alive. Elements
 that slide, fade, and spring give the user feedback that the
 interface is reacting to their actions.
 
@@ -65,7 +65,7 @@ end
 ```
 
 On mount, the renderer starts at `from: 0` and animates to
-`to: 300`. On subsequent renders, `from:` is ignored -- the
+`to: 300`. On subsequent renders, `from:` is ignored and the
 animation runs from the current value.
 
 ### Staggered enter
@@ -103,7 +103,7 @@ rotation: loop(1000, to: 360, from: 0, auto_reverse: false)
 ## Springs
 
 Springs use physics simulation instead of timed curves. They
-have no fixed duration -- they settle naturally based on
+have no fixed duration. They settle naturally based on
 stiffness and damping:
 
 ```elixir
@@ -114,7 +114,7 @@ scale: spring(to: 1.05, preset: :bouncy)
 scale: spring(to: 1.05, stiffness: 200, damping: 20)
 ```
 
-Springs handle interruption gracefully -- if the target changes
+Springs handle interruption gracefully. If the target changes
 mid-animation, the spring preserves velocity and smoothly
 redirects. This makes them ideal for interactive elements.
 
@@ -177,13 +177,13 @@ defp slide_in(to, delay \\ 0) do
 end
 ```
 
-This is plain Elixir -- no framework feature, just functions
+This is plain Elixir, no framework feature, just functions
 returning structs.
 
 ## SDK-side animation
 
-For complex cases that need frame-by-frame control -- canvas
-animations, physics simulations, chained model updates -- use
+For complex cases that need frame-by-frame control (canvas
+animations, physics simulations, chained model updates), use
 `Plushie.Animation.Tween`:
 
 ```elixir
@@ -223,7 +223,7 @@ The `from: 0.0` makes each item start fully transparent and fade to
 `1.0`. The `delay: i * 40` offsets each item by 40ms, so they appear
 one after another. When a new file is created, it enters the tree for
 the first time and gets its own entrance animation. Existing files
-that are already in the tree are unaffected -- `from:` only applies
+that are already in the tree are unaffected. `from:` only applies
 on first appearance.
 
 ## Verify it

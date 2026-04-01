@@ -1,12 +1,12 @@
 # Your First App
 
 In the previous chapter we built a counter and learned the init/update/view
-cycle. Now we will start building **Plushie Pad** -- a live widget editor
+cycle. Now we will start building **Plushie Pad**, a live widget editor
 that grows with you throughout this guide.
 
 In this chapter we set up the pad's layout: a code editor on the left, a
 preview area on the right, and a save button. We will make the preview
-actually work in the next chapter -- for now the focus is on the DSL and
+actually work in the next chapter. For now the focus is on the DSL and
 how views are composed.
 
 ## The DSL: three equivalent forms
@@ -16,7 +16,7 @@ are three ways to set widget properties, and they all produce the same result.
 
 **Keyword arguments** on the call line, **inline declarations** mixed with
 children in the do-block, and **nested do-blocks** for struct-typed
-properties like padding -- all in one expression:
+properties like padding, all in one expression:
 
 ```elixir
 column spacing: 8 do
@@ -38,7 +38,7 @@ end
 
 You can mix all three in the same expression. Block declarations override
 keyword arguments when they conflict. Use whichever form reads best for the
-situation -- throughout this guide we will use different forms depending on
+situation. Throughout this guide we will use different forms depending on
 context.
 
 Widgets also have a programmatic struct API that you can use instead of the
@@ -123,7 +123,7 @@ mix plushie.gui PlushiePad --watch
 
 You should see the editor on the left with syntax highlighting and a
 placeholder message on the right. The save button is there but does not do
-anything yet -- we will fix that in the next chapter.
+anything yet. We will fix that in the next chapter.
 
 ## Walking through the code
 
@@ -132,7 +132,7 @@ anything yet -- we will fix that in the next chapter.
 `init/1` receives a keyword list passed via the `app_opts:` option when
 starting the app (e.g. `Plushie.start_link(PlushiePad, app_opts: [key: val])`).
 We do not need it yet, so we ignore it. The returned map becomes the initial
-model -- here we track the editor source text and leave slots for a compiled
+model. Here we track the editor source text and leave slots for a compiled
 preview and an error message.
 
 ### text_editor
@@ -142,8 +142,8 @@ support. The `content` argument seeds the initial text, and subsequent
 changes arrive as `:input` events with the full content as the value.
 The `highlight_syntax: "ex"` option enables Elixir syntax highlighting.
 
-Some widgets hold renderer-side state -- cursor position, scroll offset,
-text selection. `text_editor`, `text_input`, `combo_box`, `scrollable`,
+Some widgets hold renderer-side state (cursor position, scroll offset,
+text selection). `text_editor`, `text_input`, `combo_box`, `scrollable`,
 and `pane_grid` all fall into this category. These widgets need an explicit
 string ID so the renderer can match them to their state across renders. If
 the ID changes, the state resets. Layout widgets like `column` and `row`
@@ -170,7 +170,7 @@ a main content `row` and a toolbar `row` at the bottom.
 
 The editor emits `:input` events on every keystroke. We pattern-match on the
 widget ID and update the model. The catch-all clause ignores everything
-else, including save button clicks -- we will wire those up in the next
+else, including save button clicks. We will wire those up in the next
 chapter.
 
 ## Verify it
@@ -202,7 +202,7 @@ With the pad running and hot reload active:
 - Add a second button to the toolbar row: `button("clear", "Clear")`. Save
   and see it appear.
 
-The pad is a shell right now -- a text editor next to an empty preview. In
+The pad is a shell right now, a text editor next to an empty preview. In
 the next chapter, we will bring it to life by wiring up hot reload and code
 compilation so you can write Plushie widgets and see them rendered instantly.
 

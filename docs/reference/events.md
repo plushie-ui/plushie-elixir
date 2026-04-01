@@ -144,7 +144,7 @@ The carrier (value vs. data) and field types are defined by the widget's
 
 ### `Plushie.Event.WidgetEvent`
 
-The workhorse event struct. Covers all widget interactions -- buttons,
+The workhorse event struct. Covers all widget interactions: buttons,
 inputs, sliders, canvas, mouse areas, sensors, panes, and custom widgets.
 
 | Field       | Type                         | Description                          |
@@ -172,6 +172,25 @@ Keyboard press and release events from subscriptions.
 | `repeat`       | `boolean()`                       | Whether this is a repeat event   |
 | `captured`     | `boolean()`                       | Whether a subscription captured  |
 | `window_id`    | `String.t() \| nil`              | Source window                    |
+
+#### KeyModifiers
+
+The `modifiers` field is a `Plushie.KeyModifiers` struct with boolean
+fields:
+
+| Field | Purpose |
+|---|---|
+| `ctrl` | Control key |
+| `shift` | Shift key |
+| `alt` | Alt key (Option on macOS) |
+| `logo` | Logo/Super key (Windows key, Command on macOS) |
+| `command` | **Platform-aware**: Ctrl on Linux/Windows, Cmd on macOS |
+
+`command` is the one to use for cross-platform shortcuts. Match on
+`command: true` and it works on all platforms.
+
+Helper functions `ctrl?/1`, `shift?/1`, `alt?/1`, `logo?/1`,
+`command?/1` are available for readable conditionals.
 
 ### `Plushie.Event.ModifiersEvent`
 
@@ -439,25 +458,28 @@ def update(model, _event), do: model
 
 Events travel through a fixed pipeline before reaching your `update/2`:
 
-1. **Renderer** -- the renderer detects a user interaction and
+1. **Renderer** - the renderer detects a user interaction and
    encodes an event message.
-2. **Bridge** -- `Plushie.Bridge` receives the wire frame, decodes
+2. **Bridge** - `Plushie.Bridge` receives the wire frame, decodes
    it via `Plushie.Protocol`, and forwards the struct to the runtime.
-3. **Runtime** -- `Plushie.Runtime` receives the event. If the
+3. **Runtime** - `Plushie.Runtime` receives the event. If the
    event targets a widget with a registered `handle_event/2`
    callback, the runtime walks the scope chain (innermost widget
    handler first) before delivering to the app. Widget handlers
    can emit, transform, consume, or ignore events.
-4. **App** -- your `update/2` receives the event (unless a widget
+4. **App** - your `update/2` receives the event (unless a widget
    handler consumed it).
 
 ### Coalescable events
 
-High-frequency events -- `:mouse_move`, `:canvas_move`,
-`:sensor_resize`, and `:mouse_scroll` -- are coalescable. When
-multiple events of the same type arrive for the same widget before
-the runtime processes them, only the latest is delivered. This
-prevents queue backup during rapid mouse movement or window resizing.
+High-frequency events (global mouse moves with `MouseEvent`
+`type: :moved`, and sensor resizes with `WidgetEvent`
+`type: :sensor_resize`) are coalescable. When multiple events of
+the same type arrive for the same source before the runtime processes
+them, only the latest is delivered. This prevents queue backup during
+rapid mouse movement or window resizing. A zero-delay timer ensures
+coalescable events are flushed before the next non-coalescable event,
+preserving relative ordering.
 
 ### Widget handler interception
 
@@ -466,17 +488,17 @@ handler registry derived from the current view tree. When an event
 arrives, the runtime checks the scope chain for registered handlers.
 Each handler can return:
 
-- `{:emit, family, data}` -- transform and re-emit as a new event
-- `{:update_state, new_state}` -- update widget state, suppress event
-- `:ignored` -- pass through to the next handler
-- `:consumed` -- suppress the event entirely
+- `{:emit, family, data}` - transform and re-emit as a new event
+- `{:update_state, new_state}` - update widget state, suppress event
+- `:ignored` - pass through to the next handler
+- `:consumed` - suppress the event entirely
 
 Render-only widgets (no events, no state) are skipped in the registry
 and have zero overhead in the event path.
 
 ## See also
 
-- [Events](../guides/05-events.md) -- events, pattern matching, and the event log
-- [Subscriptions](../guides/10-subscriptions.md) -- keyboard, timer, and other event sources
-- [Scoped IDs](scoped-ids.md) -- how container scoping affects event IDs
-- [Commands](commands.md) -- the command structs that produce async/effect events
+- [Events](../guides/05-events.md) - events, pattern matching, and the event log
+- [Subscriptions](../guides/10-subscriptions.md) - keyboard, timer, and other event sources
+- [Scoped IDs](scoped-ids.md) - how container scoping affects event IDs
+- [Commands](commands.md) - the command structs that produce async/effect events

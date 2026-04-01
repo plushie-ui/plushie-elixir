@@ -58,7 +58,7 @@ file dialogs, clipboard access, and notifications. Unlike async commands
 ### File dialogs
 
 Every effect takes an atom tag as its first argument. The tag identifies the
-effect in result matching -- no need to store request IDs in your model.
+effect in result matching, so there is no need to store request IDs in your model.
 
 ```elixir
 alias Plushie.Effect
@@ -89,11 +89,11 @@ end
 
 Available file dialogs:
 
-- `Effect.file_open/2` -- single file selection
-- `Effect.file_open_multiple/2` -- multiple file selection
-- `Effect.file_save/2` -- save dialog
-- `Effect.directory_select/2` -- directory selection
-- `Effect.directory_select_multiple/2` -- multiple directories
+- `Effect.file_open/2` - single file selection
+- `Effect.file_open_multiple/2` - multiple file selection
+- `Effect.file_save/2` - save dialog
+- `Effect.directory_select/2` - directory selection
+- `Effect.directory_select_multiple/2` - multiple directories
 
 ### Clipboard
 
@@ -318,7 +318,7 @@ def update(model, %AsyncEvent{tag: :export, result: {:error, reason}}) do
 end
 
 def update(model, %EffectEvent{tag: _tag, result: :cancelled}) do
-  model  # user cancelled the dialog -- not an error
+  model  # user cancelled the dialog, not an error
 end
 ```
 
@@ -335,7 +335,7 @@ responds with your stub instead of executing the real operation:
 test "import loads experiment from file" do
   register_effect_stub("file_open", {:ok, %{path: "/tmp/test.ex"}})
   click("#import")
-  # The stub responds with the path -- verify the source was loaded
+  # The stub responds with the path; verify the source was loaded
   assert model().source != ""
 end
 

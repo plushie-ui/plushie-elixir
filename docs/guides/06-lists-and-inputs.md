@@ -11,7 +11,7 @@ Along the way we will learn about dynamic list rendering, scoped IDs,
 ## Saving experiments to files
 
 Experiments are plain Elixir source files. We will store them in
-`priv/experiments/` -- a directory outside the compilation paths so they
+`priv/experiments/`, a directory outside the compilation paths so they
 do not get compiled by Mix at startup. Each file is a module with a
 `view/0` function, exactly like the starter code from chapter 4.
 
@@ -107,7 +107,7 @@ end
 
 This works, but there is a subtlety. When you add or remove a file,
 `column` matches children to their previous state by position. If you add
-a file at the top of the list, every child shifts down one position -- the
+a file at the top of the list, every child shifts down one position. The
 second file inherits the first file's widget state (focus, scroll position,
 text cursor), the third inherits the second's, and so on.
 
@@ -127,7 +127,7 @@ static layouts where the children are fixed.
 
 ## Scoped IDs
 
-Each file in the list needs controls -- at least a delete button. But if
+Each file in the list needs controls, at least a delete button. But if
 every delete button has `id: "delete"`, how does `update/2` know which file
 to delete?
 
@@ -206,7 +206,7 @@ end
 
 Each file gets a `container` scoped by the filename. Inside it, a select
 button and a delete button. The active file is highlighted with `:primary`
-style -- we will refine the styling in [chapter 8](08-styling.md).
+style. We will refine the styling in [chapter 8](08-styling.md).
 
 ## Text input
 
@@ -220,8 +220,8 @@ text_input("new-name", model.new_name,
 )
 ```
 
-- `placeholder:` -- grey hint text shown when the input is empty.
-- `on_submit: true` -- enables the `:submit` event when the user presses
+- `placeholder:` - grey hint text shown when the input is empty.
+- `on_submit: true` - enables the `:submit` event when the user presses
   Enter. Without this, only `:input` events (on every keystroke) are emitted.
 
 The `:input` event delivers the current text as `value`:
@@ -305,7 +305,7 @@ end
 The `{model, Command.focus("editor")}` return tells the runtime to set focus
 on the widget with ID `"editor"` after processing the update.
 
-Commands are pure data -- `Plushie.Command` structs. The runtime executes
+Commands are pure data (`Plushie.Command` structs). The runtime executes
 them after `update/2` returns. See the [Commands reference](../reference/commands.md)
 for the full list.
 
@@ -415,7 +415,7 @@ space equally via `{:fill_portion, 1}`.
 ## The complete pad
 
 Here is the full module with file management. This is a substantial update
-from chapter 5 -- if anything is not working, compare against this listing:
+from chapter 5. If anything is not working, compare against this listing:
 
 ```elixir
 defmodule PlushiePad do
@@ -685,7 +685,7 @@ end
 
 ## Verify it
 
-Test the file management flow -- create an experiment and switch between
+Test the file management flow: create an experiment and switch between
 files:
 
 ```elixir
@@ -703,7 +703,7 @@ end
 ```
 
 This exercises scoped IDs, the create flow, file switching, and
-compilation -- the core of what this chapter builds.
+compilation. That is the core of what this chapter builds.
 
 ## Try it
 
@@ -716,11 +716,11 @@ With the updated pad running:
 - Delete an experiment. The sidebar updates and the next experiment loads
   automatically.
 - Write a gallery experiment from chapter 5 and interact with the widgets.
-  Switch to another experiment and back -- your content is preserved because
+  Switch to another experiment and back. Your content is preserved because
   we save on switch.
 - Try the auto-save checkbox. It toggles in the model but does not save yet
-  -- that comes in [chapter 10](10-subscriptions.md) when we learn about
-  subscriptions.
+  (that comes in [chapter 10](10-subscriptions.md) when we learn about
+  subscriptions).
 
 Your pad now manages a library of experiments. Each one is a plain `.ex`
 file in `priv/experiments/` that you can also open in your code editor.

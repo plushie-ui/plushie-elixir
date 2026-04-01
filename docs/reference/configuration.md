@@ -3,7 +3,7 @@
 Plushie is configured at three levels: environment variables for
 deployment and CI, application config for project-wide defaults, and
 runtime options on `Plushie.start_link/2` for per-instance control.
-Most projects need minimal configuration -- build or download the
+Most projects need minimal configuration. Build or download the
 binary and go.
 
 ## Environment variables
@@ -44,9 +44,9 @@ Controls the renderer's log output using the standard
 [`env_logger`](https://docs.rs/env_logger/) format. The Bridge forwards
 this to the renderer process at startup. Common values:
 
-- `plushie=debug` -- full protocol and rendering detail
-- `plushie=info` -- connection events and major state changes
-- `plushie=warn` -- warnings only (default-like)
+- `plushie=debug` - full protocol and rendering detail
+- `plushie=info` - connection events and major state changes
+- `plushie=warn` - warnings only (default-like)
 
 When `RUST_LOG` is set, the `:log_level` option on `start_link/2` is
 ignored. Combine with `--json` for full wire protocol visibility:
@@ -188,7 +188,7 @@ protocol and exports `native_crate/0` is included in `mix plushie.build`
 automatically.
 
 `Plushie.WidgetRegistry` exposes the discovered widgets. No
-configuration is needed -- add a native widget to your dependencies
+configuration is needed. Add a native widget to your dependencies
 and it appears in the next build.
 
 Pure Elixir widgets (those with `view/2` or `view/3` callbacks) do not
@@ -206,7 +206,7 @@ stream). The SDK supports three transport modes:
 The SDK spawns the renderer as a child process via an
 [Erlang Port](https://www.erlang.org/doc/apps/erts/ports.html).
 Communication happens over the process's stdin/stdout. This is the
-default for local development -- `mix plushie.gui` uses this mode.
+default for local development. `mix plushie.gui` uses this mode.
 
 The Bridge manages the Port lifecycle: starting, monitoring, and
 restarting the renderer on crash (with exponential backoff). The
@@ -238,14 +238,14 @@ The adapter process must handle these messages:
 | Adapter -> Bridge | `{:iostream_data, binary}` | One complete protocol message received from the transport. |
 | Adapter -> Bridge | `{:iostream_closed, reason}` | Transport closed. The bridge handles shutdown. |
 
-The adapter is responsible for framing -- splitting the byte stream
+The adapter is responsible for framing, splitting the byte stream
 into complete protocol messages before sending `{:iostream_data, ...}`.
 `Plushie.Transport.Framing` provides frame encode/decode for
 length-prefixed byte streams (the standard wire framing).
 
 This mode enables remote rendering: the Elixir app runs on one machine
 (server, embedded device, cloud), the renderer runs on another (desktop,
-laptop, mobile). The wire protocol is identical -- only the transport
+laptop, mobile). The wire protocol is identical; only the transport
 layer differs. See the [Shared State guide](../guides/16-shared-state.md)
 for a complete SSH example.
 
@@ -264,12 +264,12 @@ variable or `config :plushie, :test_backend`. See the
 
 ## See also
 
-- [Mix Tasks reference](mix-tasks.md) -- binary resolution, build
+- [Mix Tasks reference](mix-tasks.md) - binary resolution, build
   options, and all task flags
-- [Wire Protocol reference](wire-protocol.md) -- message formats and
+- [Wire Protocol reference](wire-protocol.md) - message formats and
   framing details
-- [Testing reference](testing.md) -- test backends and session pool
-- `Plushie.Binary` -- binary resolution logic and version
-- `Plushie.Bridge` -- transport management and restart behaviour
-- `Plushie.WidgetRegistry` -- widget discovery at compile time
-- `Plushie.App` -- the full callback specification including `settings/0`
+- [Testing reference](testing.md) - test backends and session pool
+- `Plushie.Binary` - binary resolution logic and version
+- `Plushie.Bridge` - transport management and restart behaviour
+- `Plushie.WidgetRegistry` - widget discovery at compile time
+- `Plushie.App` - the full callback specification including `settings/0`

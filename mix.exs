@@ -38,6 +38,7 @@ defmodule Plushie.MixProject do
       source_url: @source_url,
       source_ref: "v#{@version}",
       extras: [
+        {"docs/README.md", [title: "Documentation", filename: "documentation"]},
         # Guides (ordered, read sequentially)
         "docs/guides/01-introduction.md",
         "docs/guides/02-getting-started.md",
@@ -66,12 +67,13 @@ defmodule Plushie.MixProject do
         "docs/reference/custom-widgets.md",
         "docs/reference/dsl.md",
         "docs/reference/events.md",
+        "docs/reference/windows-and-layout.md",
         "docs/reference/mix-tasks.md",
-        "docs/reference/patterns.md",
+        "docs/reference/composition-patterns.md",
         "docs/reference/scoped-ids.md",
+        "docs/reference/themes-and-styling.md",
         "docs/reference/subscriptions.md",
         "docs/reference/testing.md",
-        "docs/reference/types.md",
         "docs/reference/wire-protocol.md",
         # About
         "examples/README.md",
@@ -179,7 +181,7 @@ defmodule Plushie.MixProject do
       licenses: ["MIT"],
       links: %{
         "GitHub" => @source_url,
-        "Rust binary" => "https://github.com/plushie-ui/plushie",
+        "Rust binary" => "https://github.com/plushie-ui/plushie-renderer",
         "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md"
       },
       files: ~w(

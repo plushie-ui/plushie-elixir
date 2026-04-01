@@ -7,7 +7,7 @@ override individual elements, and type modules like `Plushie.Type.Border` and
 
 This chapter covers the parts you will use most often. The full theme palette,
 shade override keys, and every type option are in the
-[Types reference](../reference/types.md).
+[Styling reference](../reference/themes-and-styling.md).
 
 ## Themes
 
@@ -63,8 +63,8 @@ my_theme = Plushie.Type.Theme.custom("Nord+",
 )
 ```
 
-For fine-grained control, the theme system supports shade overrides -- keys
-like `primary_strong`, `background_weakest`, `danger_base_text` that target
+For fine-grained control, the theme system supports shade overrides (keys
+like `primary_strong`, `background_weakest`, `danger_base_text`) that target
 specific shade levels in the generated palette. See `Plushie.Type.Theme` for
 the full list of shade keys.
 
@@ -89,7 +89,7 @@ end
 
 This is useful for dark sidebars in a light app, brand-specific sections, or
 any case where part of the UI needs a different palette. No prop threading
-needed -- `themer` changes the theme context for everything inside it.
+needed. `themer` changes the theme context for everything inside it.
 
 You can give the preview pane a different theme from the rest of the pad
 using `themer`, so experiments render in a distinct palette:
@@ -149,7 +149,7 @@ StyleMap.new()
 |> StyleMap.hovered(%{background: "#2563eb"})
 ```
 
-Available presets vary by widget -- `:primary`, `:secondary`, `:success`,
+Available presets vary by widget. `:primary`, `:secondary`, `:success`,
 `:danger`, `:warning`, `:text` are common. Check each widget's module docs
 for its supported presets.
 
@@ -265,7 +265,7 @@ column spacing: spacing(:md), padding: spacing(:lg) do
 end
 ```
 
-This is just Elixir module design -- no Plushie magic. But it keeps spacing,
+This is just Elixir module design, no Plushie magic. But it keeps spacing,
 sizes, and styles consistent across your app. As the pad grows, a design
 module prevents the gradual drift toward inconsistent values.
 
@@ -273,9 +273,9 @@ module prevents the gradual drift toward inconsistent values.
 
 Plushie supports three font forms:
 
-- `:default` -- the system default proportional font
-- `:monospace` -- the system monospace font
-- `"Family Name"` -- a specific font family by name
+- `:default` - the system default proportional font
+- `:monospace` - the system monospace font
+- `"Family Name"` - a specific font family by name
 
 App-level font defaults are set via the `c:Plushie.App.settings/0` callback:
 
@@ -360,7 +360,7 @@ Write a styling experiment in your pad:
 - Create a card: container with border, shadow, rounded corners, and padding.
 - Try `StyleMap` with status overrides: build a button that changes colour
   on hover and press.
-- Try the do-block syntax for border and shadow -- nest them inside a
+- Try the do-block syntax for border and shadow. Nest them inside a
   container block.
 - Apply different themes to nested `themer` widgets to see how palettes
   compose.
