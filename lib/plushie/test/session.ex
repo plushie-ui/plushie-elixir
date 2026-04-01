@@ -161,11 +161,12 @@ defmodule Plushie.Test.Session do
   def pane_focus_cycle(%__MODULE__{pid: p}, selector, opts \\ []),
     do: Runtime.pane_focus_cycle(p, selector, opts)
 
-  @spec register_effect_stub(session :: t(), kind :: String.t(), response :: term()) :: :ok
+  @spec register_effect_stub(session :: t(), kind :: Plushie.Effect.kind(), response :: term()) ::
+          :ok
   def register_effect_stub(%__MODULE__{pid: p}, kind, response),
     do: Runtime.register_effect_stub(p, kind, response)
 
-  @spec unregister_effect_stub(session :: t(), kind :: String.t()) :: :ok
+  @spec unregister_effect_stub(session :: t(), kind :: Plushie.Effect.kind()) :: :ok
   def unregister_effect_stub(%__MODULE__{pid: p}, kind),
     do: Runtime.unregister_effect_stub(p, kind)
 

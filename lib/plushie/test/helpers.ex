@@ -468,16 +468,18 @@ defmodule Plushie.Test.Helpers do
   Registers an effect stub with the renderer for the current session.
 
   The renderer will return `response` immediately for any effect of
-  the given `kind`, without executing the real effect.
+  the given `kind`, without executing the real effect. The `kind`
+  matches the effect function name as an atom (e.g. `:file_open`,
+  `:clipboard_write`).
   """
-  @spec register_effect_stub(kind :: String.t(), response :: term()) :: :ok
+  @spec register_effect_stub(kind :: Plushie.Effect.kind(), response :: term()) :: :ok
   def register_effect_stub(kind, response),
     do: Session.register_effect_stub(session(), kind, response)
 
   @doc """
   Removes a previously registered effect stub.
   """
-  @spec unregister_effect_stub(kind :: String.t()) :: :ok
+  @spec unregister_effect_stub(kind :: Plushie.Effect.kind()) :: :ok
   def unregister_effect_stub(kind),
     do: Session.unregister_effect_stub(session(), kind)
 

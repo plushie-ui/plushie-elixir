@@ -1816,14 +1816,14 @@ defmodule Plushie.RuntimeTest do
       # First registration -- will block waiting for the bridge ack.
       first =
         Task.async(fn ->
-          Plushie.Runtime.register_effect_stub(runtime, "clipboard_read", "stub_value")
+          Plushie.Runtime.register_effect_stub(runtime, :clipboard_read, "stub_value")
         end)
 
       # Give the runtime time to process the first call.
       Process.sleep(20)
 
       # Second registration for the same kind should get :stub_ack_pending.
-      assert Plushie.Runtime.register_effect_stub(runtime, "clipboard_read", "other") ==
+      assert Plushie.Runtime.register_effect_stub(runtime, :clipboard_read, "other") ==
                {:error, :stub_ack_pending}
 
       # Complete the first by simulating the bridge ack.

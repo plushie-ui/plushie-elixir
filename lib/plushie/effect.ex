@@ -56,6 +56,22 @@ defmodule Plushie.Effect do
     notification
   )a
 
+  @typedoc "Valid effect kind atoms."
+  @type kind ::
+          :file_open
+          | :file_open_multiple
+          | :file_save
+          | :directory_select
+          | :directory_select_multiple
+          | :clipboard_read
+          | :clipboard_write
+          | :clipboard_read_html
+          | :clipboard_write_html
+          | :clipboard_clear
+          | :clipboard_read_primary
+          | :clipboard_write_primary
+          | :notification
+
   @doc """
   Generic effect request. Returns a command struct.
 
@@ -64,7 +80,7 @@ defmodule Plushie.Effect do
   effect types. `opts` is a keyword list of parameters sent as the effect
   payload.
   """
-  @spec request(tag :: atom(), kind :: atom(), opts :: keyword()) :: Plushie.Command.t()
+  @spec request(tag :: atom(), kind :: kind(), opts :: keyword()) :: Plushie.Command.t()
   def request(tag, kind, opts \\ []) when is_atom(tag) and kind in @valid_kinds do
     id = generate_id()
     payload = Map.new(opts)

@@ -255,13 +255,16 @@ defmodule Plushie.Runtime do
   the given `kind`, without executing the real effect. Blocks until
   the renderer confirms the stub is stored.
 
+  The `kind` matches the effect function name as an atom (e.g.
+  `:file_open`, `:clipboard_write`).
+
   Returns `{:error, :stub_ack_pending}` if a register or unregister
   for the same kind is already awaiting confirmation.
   """
-  @spec register_effect_stub(GenServer.server(), String.t(), term(), timeout()) ::
+  @spec register_effect_stub(GenServer.server(), Plushie.Effect.kind(), term(), timeout()) ::
           :ok | {:error, :stub_ack_pending}
-  def register_effect_stub(runtime, kind, response, timeout \\ 5000) do
-    GenServer.call(runtime, {:register_effect_stub, kind, response}, timeout)
+  def register_effect_stub(runtime, kind, response, timeout \\ 5000) when is_atom(kind) do
+    GenServer.call(runtime, {:register_effect_stub, Atom.to_string(kind), response}, timeout)
   end
 
   @doc """
@@ -272,10 +275,10 @@ defmodule Plushie.Runtime do
   Returns `{:error, :stub_ack_pending}` if a register or unregister
   for the same kind is already awaiting confirmation.
   """
-  @spec unregister_effect_stub(GenServer.server(), String.t(), timeout()) ::
+  @spec unregister_effect_stub(GenServer.server(), Plushie.Effect.kind(), timeout()) ::
           :ok | {:error, :stub_ack_pending}
-  def unregister_effect_stub(runtime, kind, timeout \\ 5000) do
-    GenServer.call(runtime, {:unregister_effect_stub, kind}, timeout)
+  def unregister_effect_stub(runtime, kind, timeout \\ 5000) when is_atom(kind) do
+    GenServer.call(runtime, {:unregister_effect_stub, Atom.to_string(kind)}, timeout)
   end
 
   @doc """

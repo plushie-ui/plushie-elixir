@@ -43,7 +43,7 @@ defmodule Plushie.Integration.EffectTest do
   end
 
   test "stubbed effect returns controlled response" do
-    register_effect_stub("clipboard_read", "test data")
+    register_effect_stub(:clipboard_read, "test data")
 
     click("#read")
 
@@ -55,8 +55,8 @@ defmodule Plushie.Integration.EffectTest do
   end
 
   test "unregister removes the stub" do
-    register_effect_stub("clipboard_read", "first")
-    unregister_effect_stub("clipboard_read")
+    register_effect_stub(:clipboard_read, "first")
+    unregister_effect_stub(:clipboard_read)
 
     # Without a stub, clipboard_read in mock mode returns unsupported
     # or an empty response. We just verify no crash occurs.
