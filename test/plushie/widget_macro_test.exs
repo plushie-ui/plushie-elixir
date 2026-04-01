@@ -137,8 +137,6 @@ defmodule Plushie.WidgetMacroTest do
   # Tests
   # =========================================================================
 
-  # --- 1. native_widget behaviour callbacks ---------------------------------
-
   describe "native_widget behaviour callbacks" do
     test "type_names/0 returns the widget type as an atom list" do
       assert GaugeWidget.type_names() == [:gauge]
@@ -157,8 +155,6 @@ defmodule Plushie.WidgetMacroTest do
       assert GaugeWidget.rust_constructor() == "my_gauge::GaugeWidget::new()"
     end
   end
-
-  # --- 2. widget new/2 produces correct tree nodes --------------------------
 
   describe "widget new/2 produces correct tree nodes (via build)" do
     test "leaf widget builds node with type and props" do
@@ -191,8 +187,6 @@ defmodule Plushie.WidgetMacroTest do
     end
   end
 
-  # --- 3. unknown keys rejected --------------------------------------------
-
   describe "prop validation rejects unknown keys" do
     test "raises ArgumentError for unknown option" do
       assert_raise ArgumentError, ~r/unknown option/, fn ->
@@ -206,8 +200,6 @@ defmodule Plushie.WidgetMacroTest do
       end
     end
   end
-
-  # --- 4. defaults applied --------------------------------------------------
 
   describe "prop defaults are applied" do
     test "color default is cast and applied" do
@@ -229,8 +221,6 @@ defmodule Plushie.WidgetMacroTest do
       refute Map.has_key?(node.props, "label")
     end
   end
-
-  # --- 5. prop type encoding ------------------------------------------------
 
   describe "prop type encoding" do
     test "color cast normalizes named atoms" do
@@ -284,8 +274,6 @@ defmodule Plushie.WidgetMacroTest do
     end
   end
 
-  # --- 6. command generation (native) ---------------------------------------
-
   describe "command generation for native widgets" do
     test "parameterized command returns widget_command" do
       cmd = GaugeWidget.set_value("g1", 75)
@@ -316,8 +304,6 @@ defmodule Plushie.WidgetMacroTest do
     end
   end
 
-  # --- 7. container: true accepts do blocks ---------------------------------
-
   describe "container widgets accept do blocks" do
     test "card container captures children" do
       child1 = %{id: "t1", type: "text", props: %{}, children: []}
@@ -339,8 +325,6 @@ defmodule Plushie.WidgetMacroTest do
     end
   end
 
-  # --- 8. composite with render callback ------------------------------------
-
   describe "composite with view callback" do
     test "view/2 widget produces struct" do
       widget = StatusIndicator.new("si1", status: :ok, label: "Health")
@@ -358,8 +342,6 @@ defmodule Plushie.WidgetMacroTest do
       assert %Wrapper{id: "w1", border: true} = widget
     end
   end
-
-  # --- 9. compile error on missing widget declaration -----------------------
 
   describe "compile errors" do
     test "missing widget declaration raises CompileError" do
@@ -403,8 +385,6 @@ defmodule Plushie.WidgetMacroTest do
     end
   end
 
-  # --- a11y prop support ----------------------------------------------------
-
   describe "a11y prop" do
     test "a11y prop is raw struct on leaf widget" do
       a11y = %{role: :alert, label: "New items"}
@@ -433,8 +413,6 @@ defmodule Plushie.WidgetMacroTest do
     end
   end
 
-  # --- __prop_names__ -------------------------------------------------------
-
   describe "__prop_names__/0" do
     test "returns declared prop names plus :a11y" do
       names = BadgeWidget.__prop_names__()
@@ -445,8 +423,6 @@ defmodule Plushie.WidgetMacroTest do
     end
   end
 
-  # --- widget kind callback for :widget doesn't have native callbacks -------
-
   describe "widget kind does not define native callbacks" do
     test "widget extension does not export native_crate/0" do
       refute function_exported?(BadgeWidget, :native_crate, 0)
@@ -456,8 +432,6 @@ defmodule Plushie.WidgetMacroTest do
       refute function_exported?(BadgeWidget, :rust_constructor, 0)
     end
   end
-
-  # --- compile-time validation ------------------------------------------------
 
   describe "compile-time validation" do
     test "raises on invalid kind" do
@@ -607,8 +581,6 @@ defmodule Plushie.WidgetMacroTest do
       end
     end
   end
-
-  # --- struct API for non-composite widgets ---------------------------------
 
   describe "struct API for non-composite widgets" do
     test "new/2 returns a struct for leaf widget" do

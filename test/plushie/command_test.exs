@@ -3,10 +3,6 @@ defmodule Plushie.CommandTest do
 
   alias Plushie.Command
 
-  # ---------------------------------------------------------------------------
-  # Struct shape
-  # ---------------------------------------------------------------------------
-
   describe "Command struct" do
     test "has :type and :payload fields" do
       cmd = %Command{type: :none, payload: %{}}
@@ -32,10 +28,6 @@ defmodule Plushie.CommandTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # none/0
-  # ---------------------------------------------------------------------------
-
   describe "none/0" do
     test "returns a Command with type :none" do
       assert %Command{type: :none} = Command.none()
@@ -45,10 +37,6 @@ defmodule Plushie.CommandTest do
       assert Command.none().payload == %{}
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # done/2
-  # ---------------------------------------------------------------------------
 
   describe "done/2" do
     test "returns a Command with type :done" do
@@ -74,10 +62,6 @@ defmodule Plushie.CommandTest do
       end
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # async/2
-  # ---------------------------------------------------------------------------
 
   describe "async/2" do
     test "returns a Command with type :async" do
@@ -109,10 +93,6 @@ defmodule Plushie.CommandTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # focus/1
-  # ---------------------------------------------------------------------------
-
   describe "focus/1" do
     test "returns a Command with type :focus" do
       assert %Command{type: :focus} = Command.focus("username")
@@ -128,10 +108,6 @@ defmodule Plushie.CommandTest do
       assert cmd.payload.target == :my_widget
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # focus_next/0 and focus_previous/0
-  # ---------------------------------------------------------------------------
 
   describe "focus_next/0" do
     test "returns a Command with type :focus_next" do
@@ -153,10 +129,6 @@ defmodule Plushie.CommandTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # select_all/1
-  # ---------------------------------------------------------------------------
-
   describe "select_all/1" do
     test "returns a Command with type :select_all" do
       assert %Command{type: :select_all} = Command.select_all("body_input")
@@ -167,10 +139,6 @@ defmodule Plushie.CommandTest do
       assert cmd.payload.target == "body_input"
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # scroll_to/2
-  # ---------------------------------------------------------------------------
 
   describe "scroll_to/2" do
     test "returns a Command with type :scroll_to" do
@@ -188,10 +156,6 @@ defmodule Plushie.CommandTest do
       assert cmd.payload.offset_y == :bottom
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # send_after/2
-  # ---------------------------------------------------------------------------
 
   describe "send_after/2" do
     test "returns a Command with type :send_after" do
@@ -227,10 +191,6 @@ defmodule Plushie.CommandTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # close_window/1
-  # ---------------------------------------------------------------------------
-
   describe "close_window/1" do
     test "returns a Command with type :close_window" do
       assert %Command{type: :close_window} = Command.close_window("settings")
@@ -241,10 +201,6 @@ defmodule Plushie.CommandTest do
       assert cmd.payload.window_id == "preferences"
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # batch/1
-  # ---------------------------------------------------------------------------
 
   describe "batch/1" do
     test "wraps a list of commands under type :batch" do
@@ -275,10 +231,6 @@ defmodule Plushie.CommandTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # allow_automatic_tabbing/1
-  # ---------------------------------------------------------------------------
-
   describe "allow_automatic_tabbing/1" do
     test "returns a system_op command with op allow_automatic_tabbing" do
       cmd = Command.allow_automatic_tabbing(true)
@@ -297,10 +249,6 @@ defmodule Plushie.CommandTest do
       end
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # stream/2
-  # ---------------------------------------------------------------------------
 
   describe "stream/2" do
     test "returns a Command with type :stream" do
@@ -332,10 +280,6 @@ defmodule Plushie.CommandTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # cancel/1
-  # ---------------------------------------------------------------------------
-
   describe "cancel/1" do
     test "returns a Command with type :cancel" do
       cmd = Command.cancel(:my_stream)
@@ -353,10 +297,6 @@ defmodule Plushie.CommandTest do
       end
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # widget_command/3
-  # ---------------------------------------------------------------------------
 
   describe "widget_command/3" do
     test "returns a Command with type :widget_command" do
@@ -379,10 +319,6 @@ defmodule Plushie.CommandTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # announce/1
-  # ---------------------------------------------------------------------------
-
   describe "announce/1" do
     test "returns a widget_op Command with op announce" do
       cmd = Command.announce("File saved")
@@ -396,10 +332,6 @@ defmodule Plushie.CommandTest do
       end
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # widget_commands/1
-  # ---------------------------------------------------------------------------
 
   describe "widget_commands/1" do
     test "returns a Command with type :widget_commands" do

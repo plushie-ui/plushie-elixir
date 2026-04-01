@@ -3,10 +3,6 @@ defmodule Plushie.SubscriptionTest do
 
   alias Plushie.Subscription
 
-  # ---------------------------------------------------------------------------
-  # describe "constructors"
-  # ---------------------------------------------------------------------------
-
   describe "every/2" do
     test "returns a map with type, interval, and tag" do
       spec = Subscription.every(1000, :tick)
@@ -82,10 +78,6 @@ defmodule Plushie.SubscriptionTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # describe "key/1"
-  # ---------------------------------------------------------------------------
-
   describe "key/1" do
     test "every specs include interval in key" do
       key = Subscription.key(%Subscription{type: :every, interval: 1000, tag: :tick})
@@ -123,10 +115,6 @@ defmodule Plushie.SubscriptionTest do
       assert Subscription.key(a) == Subscription.key(c)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # describe "max_rate"
-  # ---------------------------------------------------------------------------
 
   describe "max_rate" do
     test "constructors store max_rate from opts" do

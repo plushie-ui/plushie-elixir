@@ -3,10 +3,6 @@ defmodule Plushie.WidgetOpsTest do
 
   alias Plushie.{Command, Protocol}
 
-  # ---------------------------------------------------------------------------
-  # Protocol encoding
-  # ---------------------------------------------------------------------------
-
   defp decode_json!(str) do
     str |> String.trim_trailing("\n") |> Jason.decode!()
   end
@@ -43,10 +39,6 @@ defmodule Plushie.WidgetOpsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Command construction
-  # ---------------------------------------------------------------------------
-
   describe "Command constructors for widget ops" do
     test "focus/1 returns a Command with type :focus and target in payload" do
       cmd = Command.focus("name_input")
@@ -78,10 +70,6 @@ defmodule Plushie.WidgetOpsTest do
       assert %Command{type: :close_window, payload: %{window_id: "settings"}} = cmd
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Runtime dispatch via InternalMockBridge
-  # ---------------------------------------------------------------------------
 
   # A minimal app that returns widget op commands in response to events.
   defmodule WidgetOpApp do

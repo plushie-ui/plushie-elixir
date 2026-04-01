@@ -9,10 +9,6 @@ defmodule Plushie.CompositionPatternsTest do
 
   alias Plushie.Event.WidgetEvent
 
-  # ---------------------------------------------------------------------------
-  # 1. Tab bar
-  # ---------------------------------------------------------------------------
-
   defmodule TabApp do
     @behaviour Plushie.App
     alias Plushie.Event.WidgetEvent
@@ -71,10 +67,6 @@ defmodule Plushie.CompositionPatternsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # 2. Sidebar navigation
-  # ---------------------------------------------------------------------------
-
   defmodule SidebarApp do
     @behaviour Plushie.App
     alias Plushie.Event.WidgetEvent
@@ -130,10 +122,6 @@ defmodule Plushie.CompositionPatternsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # 3. Toolbar with toggles
-  # ---------------------------------------------------------------------------
-
   defmodule ToolbarApp do
     @behaviour Plushie.App
 
@@ -187,10 +175,6 @@ defmodule Plushie.CompositionPatternsTest do
       assert is_map(tree)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # 4. Modal dialog
-  # ---------------------------------------------------------------------------
 
   defmodule ModalApp do
     @behaviour Plushie.App
@@ -275,10 +259,6 @@ defmodule Plushie.CompositionPatternsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # 5. Card (reusable helper function)
-  # ---------------------------------------------------------------------------
-
   defmodule CardApp do
     @behaviour Plushie.App
 
@@ -329,10 +309,6 @@ defmodule Plushie.CompositionPatternsTest do
       assert tree.type == "window"
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # 6. Breadcrumb navigation
-  # ---------------------------------------------------------------------------
 
   defmodule BreadcrumbApp do
     @behaviour Plushie.App
@@ -392,10 +368,6 @@ defmodule Plushie.CompositionPatternsTest do
       assert is_map(tree)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # 7. Badge / chip with toggle selection
-  # ---------------------------------------------------------------------------
 
   defmodule BadgeApp do
     @behaviour Plushie.App

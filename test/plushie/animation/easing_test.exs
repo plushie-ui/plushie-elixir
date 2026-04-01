@@ -3,10 +3,6 @@ defmodule Plushie.Animation.EasingTest do
 
   alias Plushie.Animation.Easing
 
-  # ---------------------------------------------------------------------------
-  # Boundary conditions: every easing function must satisfy f(0) == 0, f(1) == 1
-  # ---------------------------------------------------------------------------
-
   describe "boundary conditions" do
     for easing <- Easing.named_easings() do
       test "#{easing}(0) == 0 and #{easing}(1) == 1" do
@@ -15,11 +11,6 @@ defmodule Plushie.Animation.EasingTest do
       end
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Monotonicity: ease_in curves should be <= linear, ease_out >= linear at 0.5
-  # (except back/elastic/bounce which overshoot)
-  # ---------------------------------------------------------------------------
 
   describe "midpoint behavior" do
     test "linear at 0.5 is 0.5" do
@@ -56,10 +47,6 @@ defmodule Plushie.Animation.EasingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Back curves overshoot
-  # ---------------------------------------------------------------------------
-
   describe "back overshoot" do
     test "ease_in_back goes negative near start" do
       assert Easing.ease_in_back(0.1) < 0.0
@@ -70,10 +57,6 @@ defmodule Plushie.Animation.EasingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Elastic curves overshoot
-  # ---------------------------------------------------------------------------
-
   describe "elastic overshoot" do
     test "ease_out_elastic exceeds 1.0 early" do
       # Elastic overshoots then settles
@@ -81,10 +64,6 @@ defmodule Plushie.Animation.EasingTest do
       assert Enum.any?(values, &(&1 > 1.0))
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Bounce curves stay in 0..1
-  # ---------------------------------------------------------------------------
 
   describe "bounce range" do
     test "ease_out_bounce stays in 0..1" do
@@ -95,10 +74,6 @@ defmodule Plushie.Animation.EasingTest do
       end
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Cubic bezier
-  # ---------------------------------------------------------------------------
 
   describe "cubic_bezier" do
     test "linear bezier matches linear easing" do
@@ -120,10 +95,6 @@ defmodule Plushie.Animation.EasingTest do
       assert_in_delta Easing.cubic_bezier(1.0, 0.42, 0.0, 0.58, 1.0), 1.0, 1.0e-6
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # valid?/1
-  # ---------------------------------------------------------------------------
 
   describe "valid?/1" do
     test "accepts all named easings" do
@@ -148,10 +119,6 @@ defmodule Plushie.Animation.EasingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # name/1
-  # ---------------------------------------------------------------------------
-
   describe "name/1" do
     test "named easings return their string form" do
       assert Easing.name(:linear) == "linear"
@@ -164,10 +131,6 @@ defmodule Plushie.Animation.EasingTest do
                %{"cubic_bezier" => [0.25, 0.1, 0.25, 1.0]}
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # function/1
-  # ---------------------------------------------------------------------------
 
   describe "function/1" do
     test "returns a callable function" do
@@ -183,10 +146,6 @@ defmodule Plushie.Animation.EasingTest do
       assert_in_delta f.(0.5), 0.5, 0.01
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # interpolate/4
-  # ---------------------------------------------------------------------------
 
   describe "interpolate/4" do
     test "linear interpolation at midpoint" do

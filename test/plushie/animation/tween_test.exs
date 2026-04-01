@@ -3,10 +3,6 @@ defmodule Plushie.Animation.TweenTest do
 
   alias Plushie.Animation.Tween
 
-  # ---------------------------------------------------------------------------
-  # new/1
-  # ---------------------------------------------------------------------------
-
   describe "new/1" do
     test "creates animation with required fields" do
       anim = Tween.new(from: 0.0, to: 1.0, duration: 300)
@@ -50,10 +46,6 @@ defmodule Plushie.Animation.TweenTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # spring/1
-  # ---------------------------------------------------------------------------
-
   describe "spring/1" do
     test "creates spring animation" do
       anim = Tween.spring(from: 0.0, to: 1.0)
@@ -71,10 +63,6 @@ defmodule Plushie.Animation.TweenTest do
       assert anim.spring_config.damping == 20
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # start/2 and start_once/2
-  # ---------------------------------------------------------------------------
 
   describe "start/2" do
     test "sets started_at and resets value" do
@@ -111,10 +99,6 @@ defmodule Plushie.Animation.TweenTest do
       assert anim.started_at == 1000
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # advance/2 (timed)
-  # ---------------------------------------------------------------------------
 
   describe "advance/2 (timed)" do
     test "returns struct unchanged if not started" do
@@ -191,10 +175,6 @@ defmodule Plushie.Animation.TweenTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # advance/2 (repeat)
-  # ---------------------------------------------------------------------------
-
   describe "advance/2 (repeat)" do
     test "repeats forever" do
       anim =
@@ -232,10 +212,6 @@ defmodule Plushie.Animation.TweenTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # advance/2 (spring)
-  # ---------------------------------------------------------------------------
-
   describe "advance/2 (spring)" do
     test "spring approaches target" do
       anim =
@@ -256,10 +232,6 @@ defmodule Plushie.Animation.TweenTest do
       assert_in_delta Tween.value(anim), 1.0, 0.001
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # redirect/2
-  # ---------------------------------------------------------------------------
 
   describe "redirect/2" do
     test "changes target from current position" do
@@ -285,10 +257,6 @@ defmodule Plushie.Animation.TweenTest do
       assert anim.duration == 400
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # value/1, finished?/1, running?/1
-  # ---------------------------------------------------------------------------
 
   describe "queries" do
     test "value returns current value" do

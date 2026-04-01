@@ -47,10 +47,6 @@ defmodule Plushie.AppTest do
     def handle_renderer_exit(model, _reason), do: %{model | status: :reconnecting}
   end
 
-  # ---------------------------------------------------------------------------
-  # Behaviour presence
-  # ---------------------------------------------------------------------------
-
   describe "use Plushie.App -- behaviour injection" do
     test "module declares the Plushie.App behaviour" do
       assert Plushie.App in (MinimalApp.module_info(:attributes)[:behaviour] || [])
@@ -70,10 +66,6 @@ defmodule Plushie.AppTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Default subscribe/1
-  # ---------------------------------------------------------------------------
-
   describe "default subscribe/1" do
     test "returns an empty list when not overridden" do
       assert MinimalApp.subscribe(%{count: 0}) == []
@@ -84,10 +76,6 @@ defmodule Plushie.AppTest do
       assert MinimalApp.subscribe(%{anything: :goes}) == []
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Default handle_renderer_exit/2
-  # ---------------------------------------------------------------------------
 
   describe "default handle_renderer_exit/2" do
     test "returns the model unchanged" do
@@ -102,10 +90,6 @@ defmodule Plushie.AppTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Overriding optional callbacks
-  # ---------------------------------------------------------------------------
-
   describe "overriding optional callbacks" do
     test "subscribe/1 returns the overridden value" do
       result = FullApp.subscribe(%{status: :idle})
@@ -118,10 +102,6 @@ defmodule Plushie.AppTest do
       assert result == %{status: :reconnecting}
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Required callbacks work correctly
-  # ---------------------------------------------------------------------------
 
   describe "required callbacks -- init/1, update/2, view/1" do
     test "init/1 returns the initial model" do

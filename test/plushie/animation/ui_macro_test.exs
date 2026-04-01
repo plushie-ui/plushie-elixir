@@ -5,10 +5,6 @@ defmodule Plushie.Animation.UIMacroTest do
 
   alias Plushie.Animation.{Sequence, Spring, Transition}
 
-  # ---------------------------------------------------------------------------
-  # transition macro
-  # ---------------------------------------------------------------------------
-
   describe "transition macro" do
     test "keyword form with duration positional" do
       t = transition(300, to: 0.0)
@@ -57,10 +53,6 @@ defmodule Plushie.Animation.UIMacroTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # loop macro
-  # ---------------------------------------------------------------------------
-
   describe "loop macro" do
     test "keyword form with duration positional" do
       t = loop(800, to: 0.4, from: 1.0)
@@ -88,10 +80,6 @@ defmodule Plushie.Animation.UIMacroTest do
       assert %Transition{to: 0.4, from: 1.0, duration: 800, repeat: :forever} = t
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # spring macro
-  # ---------------------------------------------------------------------------
 
   describe "spring macro" do
     test "keyword form" do
@@ -123,10 +111,6 @@ defmodule Plushie.Animation.UIMacroTest do
       assert %Spring{} = node.props[:max_width]
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # sequence macro
-  # ---------------------------------------------------------------------------
 
   describe "sequence macro" do
     test "list form" do
@@ -172,10 +156,6 @@ defmodule Plushie.Animation.UIMacroTest do
       assert %Spring{} = Enum.at(s.steps, 1)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Encode integration (descriptors as prop values)
-  # ---------------------------------------------------------------------------
 
   describe "encode integration" do
     test "transition descriptor survives tree normalization" do

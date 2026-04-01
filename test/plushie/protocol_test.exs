@@ -20,10 +20,6 @@ defmodule Plushie.ProtocolTest do
     str |> String.trim_trailing("\n") |> Jason.decode!()
   end
 
-  # ---------------------------------------------------------------------------
-  # encode_snapshot/1
-  # ---------------------------------------------------------------------------
-
   describe "encode_snapshot/1" do
     test "produces a JSON object with type 'snapshot' and a 'tree' key" do
       tree = %{tag: "text", value: "hello"}
@@ -51,10 +47,6 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # encode_patch/1
-  # ---------------------------------------------------------------------------
-
   describe "encode_patch/1" do
     test "produces a JSON object with type 'patch' and an 'ops' key" do
       result = Protocol.encode_patch([], :json)
@@ -76,10 +68,6 @@ defmodule Plushie.ProtocolTest do
       assert String.ends_with?(result, "\n")
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # encode_effect/3
-  # ---------------------------------------------------------------------------
 
   describe "encode_effect/3" do
     test "produces a JSON object with type 'effect'" do
@@ -592,10 +580,6 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # decode_message/1 -- error cases
-  # ---------------------------------------------------------------------------
-
   describe "decode_message/1 -- error cases" do
     test "returns detailed decode error for non-JSON input" do
       assert {:error, {:decode_failed, %Jason.DecodeError{}}} =
@@ -679,10 +663,6 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # parse_key/1
-  # ---------------------------------------------------------------------------
-
   describe "parse_key/1 -- named keys" do
     test "converts 'Escape' to :escape" do
       assert Protocol.parse_key("Escape") == :escape
@@ -759,10 +739,6 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # encode_widget_op/2
-  # ---------------------------------------------------------------------------
-
   describe "encode_widget_op/2" do
     test "produces a JSON object with type 'widget_op'" do
       result = Protocol.encode_widget_op("focus", %{target: "username"}, :json)
@@ -783,10 +759,6 @@ defmodule Plushie.ProtocolTest do
       assert String.ends_with?(result, "\n")
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # encode_window_op/3
-  # ---------------------------------------------------------------------------
 
   describe "encode_window_op/3" do
     test "produces a JSON object with type 'window_op'" do
@@ -816,10 +788,6 @@ defmodule Plushie.ProtocolTest do
       assert String.ends_with?(result, "\n")
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Binary data roundtrips (set_icon)
-  # ---------------------------------------------------------------------------
 
   describe "window_op with binary data (set_icon)" do
     test "encodes raw icon_data as base64 in JSON mode" do
@@ -857,10 +825,6 @@ defmodule Plushie.ProtocolTest do
       assert decoded["settings"]["icon_data"] == rgba
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # encode_subscribe/2
-  # ---------------------------------------------------------------------------
 
   describe "encode_subscribe/2" do
     test "produces a JSON object with type 'subscribe'" do
@@ -927,10 +891,6 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # encode_unsubscribe/1
-  # ---------------------------------------------------------------------------
-
   describe "encode_unsubscribe/1" do
     test "produces a JSON object with type 'unsubscribe'" do
       result = Protocol.encode_unsubscribe("on_key_press", :json)
@@ -955,10 +915,6 @@ defmodule Plushie.ProtocolTest do
       assert String.ends_with?(result, "\n")
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # encode/decode roundtrip
-  # ---------------------------------------------------------------------------
 
   describe "encode -> decode roundtrip for events" do
     test "click event survives JSON roundtrip" do
@@ -1073,10 +1029,6 @@ defmodule Plushie.ProtocolTest do
                Protocol.decode_message(json, :json)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # msgpack encode/decode roundtrips
-  # ---------------------------------------------------------------------------
 
   describe "msgpack encode/decode roundtrips" do
     test "settings roundtrip" do
@@ -1196,10 +1148,6 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # encode_widget_command/4
-  # ---------------------------------------------------------------------------
-
   describe "encode_widget_command/4" do
     test "produces valid JSON message" do
       result = Protocol.encode_widget_command("term-1", "write", %{"data" => "hello"}, :json)
@@ -1226,10 +1174,6 @@ defmodule Plushie.ProtocolTest do
                Protocol.decode_message(encoded, :msgpack)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # hello message
-  # ---------------------------------------------------------------------------
 
   describe "decode_message/1 -- hello" do
     test "decodes a hello message with backend and extensions" do
@@ -1337,10 +1281,6 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # protocol_version/0
-  # ---------------------------------------------------------------------------
-
   describe "protocol_version/0" do
     test "returns a positive integer" do
       version = Protocol.protocol_version()
@@ -1348,10 +1288,6 @@ defmodule Plushie.ProtocolTest do
       assert version > 0
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # encode_widget_commands/2
-  # ---------------------------------------------------------------------------
 
   describe "encode_widget_commands/2" do
     test "produces valid JSON batch message" do
@@ -1426,10 +1362,6 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # decode_message/1 -- touch events (id field rename)
-  # ---------------------------------------------------------------------------
-
   describe "decode_message/1 -- touch events (wire id field)" do
     test "decodes finger_pressed with data.id" do
       json =
@@ -1455,10 +1387,6 @@ defmodule Plushie.ProtocolTest do
                Protocol.decode_message(json, :json)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # decode_message/1 -- canvas scroll (x/y)
-  # ---------------------------------------------------------------------------
 
   describe "decode_message/1 -- canvas_scroll" do
     test "reads x/y into struct fields" do
@@ -1494,10 +1422,6 @@ defmodule Plushie.ProtocolTest do
                Protocol.decode_message(json, :json)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # decode_message/1 -- canvas shape events
-  # ---------------------------------------------------------------------------
 
   describe "decode_message/1 -- canvas shape events" do
     test "decodes canvas_element_enter" do
@@ -1647,10 +1571,6 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # decode_message/1 -- session events
-  # ---------------------------------------------------------------------------
-
   describe "decode_message/1 -- session events" do
     test "decodes session_error" do
       json =
@@ -1679,10 +1599,6 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # decode_message/1 -- announce event
-  # ---------------------------------------------------------------------------
-
   describe "decode_message/1 -- announce event" do
     test "decodes announce as System event" do
       json =
@@ -1697,10 +1613,6 @@ defmodule Plushie.ProtocolTest do
                Protocol.decode_message(json, :json)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # decode_message/1 -- duplicate_node_ids error
-  # ---------------------------------------------------------------------------
 
   describe "decode_message/1 -- duplicate_node_ids error" do
     test "decodes duplicate_node_ids error as System event" do

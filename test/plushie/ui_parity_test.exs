@@ -150,10 +150,6 @@ defmodule Plushie.UIParityTest do
 
   alias PlushieUIParityTestHelper, as: H
 
-  # ---------------------------------------------------------------------------
-  # grid
-  # ---------------------------------------------------------------------------
-
   describe "grid macro" do
     test "empty grid has correct shape" do
       node = H.grid_empty()
@@ -191,10 +187,6 @@ defmodule Plushie.UIParityTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # keyed_column
-  # ---------------------------------------------------------------------------
-
   describe "keyed_column macro" do
     test "empty keyed_column has correct shape" do
       node = H.keyed_column_empty()
@@ -209,10 +201,6 @@ defmodule Plushie.UIParityTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # responsive
-  # ---------------------------------------------------------------------------
-
   describe "responsive macro" do
     test "empty responsive has correct shape" do
       node = H.responsive_empty()
@@ -225,10 +213,6 @@ defmodule Plushie.UIParityTest do
       assert length(node.children) == 1
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # pin
-  # ---------------------------------------------------------------------------
 
   describe "pin macro" do
     test "empty pin has correct shape" do
@@ -250,10 +234,6 @@ defmodule Plushie.UIParityTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # floating
-  # ---------------------------------------------------------------------------
-
   describe "floating macro" do
     test "empty float has correct type" do
       node = H.float_empty()
@@ -273,10 +253,6 @@ defmodule Plushie.UIParityTest do
       assert length(node.children) == 1
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # mouse_area
-  # ---------------------------------------------------------------------------
 
   describe "mouse_area macro" do
     test "empty mouse_area has correct shape" do
@@ -300,10 +276,6 @@ defmodule Plushie.UIParityTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # sensor
-  # ---------------------------------------------------------------------------
-
   describe "sensor macro" do
     test "empty sensor has correct shape" do
       node = H.sensor_empty()
@@ -318,10 +290,6 @@ defmodule Plushie.UIParityTest do
       assert length(node.children) == 1
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # pane_grid (function)
-  # ---------------------------------------------------------------------------
 
   describe "pane_grid function" do
     test "empty pane_grid has correct shape" do
@@ -339,10 +307,6 @@ defmodule Plushie.UIParityTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # rich_text (function)
-  # ---------------------------------------------------------------------------
-
   describe "rich_text function" do
     test "empty rich_text has correct shape" do
       node = H.rich_text_empty()
@@ -357,10 +321,6 @@ defmodule Plushie.UIParityTest do
       assert node.props[:spans] == [%{text: "hello", weight: :bold}]
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # All new UI widgets produce well-formed nodes
-  # ---------------------------------------------------------------------------
 
   describe "node shape consistency" do
     test "all new widget nodes have id, type, props, children keys" do

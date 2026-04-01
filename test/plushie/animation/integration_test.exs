@@ -91,10 +91,6 @@ defmodule Plushie.Animation.IntegrationTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Basic rendering: descriptors resolve to target values
-  # ---------------------------------------------------------------------------
-
   describe "transition props resolve through binary" do
     test "timed transition resolves to target value" do
       panel = find!("#panel")
@@ -118,10 +114,6 @@ defmodule Plushie.Animation.IntegrationTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Model changes trigger new targets
-  # ---------------------------------------------------------------------------
-
   describe "model changes update transition targets" do
     test "toggling model changes the resolved target" do
       assert find!("#panel").props[:max_width] == 400
@@ -139,10 +131,6 @@ defmodule Plushie.Animation.IntegrationTest do
       assert find!("#spring-box").props[:max_height] == 100
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Conditional rendering with transitions
-  # ---------------------------------------------------------------------------
 
   describe "conditional widgets with transitions" do
     test "pulse container appears when activated" do
@@ -166,10 +154,6 @@ defmodule Plushie.Animation.IntegrationTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Tree structure remains correct with transitions
-  # ---------------------------------------------------------------------------
-
   describe "tree structure" do
     test "root is a window" do
       t = tree()
@@ -191,10 +175,6 @@ defmodule Plushie.Animation.IntegrationTest do
       assert_text("#enter-text", "Entered!")
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Removable widget
-  # ---------------------------------------------------------------------------
 
   describe "removable widget" do
     test "removable item renders initially" do

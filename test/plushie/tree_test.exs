@@ -3,10 +3,6 @@ defmodule Plushie.TreeTest do
 
   alias Plushie.Tree
 
-  # ---------------------------------------------------------------------------
-  # normalize/1
-  # ---------------------------------------------------------------------------
-
   describe "normalize/1 -- nil and empty inputs" do
     test "normalize(nil) returns empty container" do
       result = Tree.normalize(nil)
@@ -210,10 +206,6 @@ defmodule Plushie.TreeTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # find/2
-  # ---------------------------------------------------------------------------
-
   describe "find/2" do
     setup do
       tree = %{
@@ -345,10 +337,6 @@ defmodule Plushie.TreeTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # find_all/2
-  # ---------------------------------------------------------------------------
-
   describe "find_all/2" do
     setup do
       tree = %{
@@ -404,10 +392,6 @@ defmodule Plushie.TreeTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # exists?/2
-  # ---------------------------------------------------------------------------
-
   describe "exists?/2" do
     test "returns true for existing node" do
       tree = %{
@@ -432,10 +416,6 @@ defmodule Plushie.TreeTest do
       refute Tree.exists?(nil, "anything")
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # ids/1
-  # ---------------------------------------------------------------------------
 
   describe "ids/1" do
     test "returns all IDs depth-first" do
@@ -464,10 +444,6 @@ defmodule Plushie.TreeTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # find_all/2 with predicate (additional coverage)
-  # ---------------------------------------------------------------------------
-
   describe "find_all/2 with predicate" do
     test "finds all nodes matching predicate" do
       tree = %{
@@ -486,10 +462,6 @@ defmodule Plushie.TreeTest do
       assert Enum.map(texts, & &1.id) == ["t1", "t2"]
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # stringify_keys/1
-  # ---------------------------------------------------------------------------
 
   describe "stringify_keys/1" do
     test "converts atom keys to string keys" do
@@ -541,10 +513,6 @@ defmodule Plushie.TreeTest do
       end
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # diff/2
-  # ---------------------------------------------------------------------------
 
   describe "diff/2 -- nil inputs" do
     test "both nil returns empty list" do

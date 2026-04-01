@@ -4,10 +4,6 @@ defmodule Plushie.ScopedIdTest do
   alias Plushie.Event.WidgetEvent
   alias Plushie.Tree
 
-  # ---------------------------------------------------------------------------
-  # Tree.normalize scoping
-  # ---------------------------------------------------------------------------
-
   describe "Tree.normalize scoping" do
     test "named container scopes its children" do
       tree = %{
@@ -182,10 +178,6 @@ defmodule Plushie.ScopedIdTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Protocol.Decode scoped ID splitting
-  # ---------------------------------------------------------------------------
-
   describe "Protocol.Decode scoped ID splitting" do
     test "simple ID has empty scope" do
       json = Jason.encode!(%{type: "event", family: "click", id: "save", window_id: "main"})
@@ -216,10 +208,6 @@ defmodule Plushie.ScopedIdTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Plushie.Event.target/1
-  # ---------------------------------------------------------------------------
-
   describe "Plushie.Event.target/1" do
     test "no scope returns bare id" do
       event = %WidgetEvent{type: :click, id: "save", scope: []}
@@ -236,10 +224,6 @@ defmodule Plushie.ScopedIdTest do
       assert Plushie.Event.target(event) == "panel/save"
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Pattern matching
-  # ---------------------------------------------------------------------------
 
   describe "pattern matching" do
     test "match on local id only (any scope)" do
@@ -271,10 +255,6 @@ defmodule Plushie.ScopedIdTest do
       assert match?(%WidgetEvent{id: "query", scope: ["search" | _]}, deep)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Dynamic list scoping
-  # ---------------------------------------------------------------------------
 
   describe "dynamic list scoping" do
     test "items wrapped in named rows get unique scoped IDs" do
@@ -326,10 +306,6 @@ defmodule Plushie.ScopedIdTest do
       assert item_id == "item_3"
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # A11y ID reference resolution
-  # ---------------------------------------------------------------------------
 
   describe "a11y ID reference resolution" do
     test "labelled_by is scoped to current scope" do
@@ -456,10 +432,6 @@ defmodule Plushie.ScopedIdTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Tree diffing with scoped IDs
-  # ---------------------------------------------------------------------------
-
   describe "tree diffing with scoped IDs" do
     test "keyed children with same parent are matched correctly" do
       old =
@@ -514,10 +486,6 @@ defmodule Plushie.ScopedIdTest do
       assert hd(ops).op == "update_props"
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Tree.find with scoped IDs
-  # ---------------------------------------------------------------------------
 
   describe "Tree.find with scoped IDs" do
     test "find by full scoped path" do

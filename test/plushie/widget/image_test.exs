@@ -3,10 +3,6 @@ defmodule Plushie.Widget.ImageTest do
 
   alias Plushie.Widget.Image
 
-  # ---------------------------------------------------------------------------
-  # Construction
-  # ---------------------------------------------------------------------------
-
   describe "new/3 with file path source" do
     test "stores a string source as the image path" do
       img = Image.new("photo", "/tmp/cat.png")
@@ -39,10 +35,6 @@ defmodule Plushie.Widget.ImageTest do
       assert img.source == %{handle: "user_avatar"}
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Builder functions
-  # ---------------------------------------------------------------------------
 
   describe "builder functions" do
     test "width/2 sets the width" do
@@ -96,10 +88,6 @@ defmodule Plushie.Widget.ImageTest do
       assert img.crop == crop
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # build/1 -- node output
-  # ---------------------------------------------------------------------------
 
   describe "build/1" do
     test "produces correct node with file path source" do
@@ -159,10 +147,6 @@ defmodule Plushie.Widget.ImageTest do
       assert node.props[:crop] == crop
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # with_options/2 -- error case
-  # ---------------------------------------------------------------------------
 
   describe "with_options/2" do
     test "raises on unknown option" do

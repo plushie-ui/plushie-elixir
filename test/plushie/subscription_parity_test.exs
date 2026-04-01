@@ -118,10 +118,6 @@ defmodule Plushie.SubscriptionParityTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Subscription key uniqueness
-  # ---------------------------------------------------------------------------
-
   describe "key/1 for new subscriptions" do
     test "keys are unique per type+tag" do
       subs = [

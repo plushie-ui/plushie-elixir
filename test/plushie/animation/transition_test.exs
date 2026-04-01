@@ -3,10 +3,6 @@ defmodule Plushie.Animation.TransitionTest do
 
   alias Plushie.Animation.Transition
 
-  # ---------------------------------------------------------------------------
-  # new/1 (all keyword)
-  # ---------------------------------------------------------------------------
-
   describe "new/1" do
     test "creates transition with required fields" do
       t = Transition.new(to: 0.0, duration: 300)
@@ -84,10 +80,6 @@ defmodule Plushie.Animation.TransitionTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # new/2 (duration positional)
-  # ---------------------------------------------------------------------------
-
   describe "new/2" do
     test "duration as first arg" do
       t = Transition.new(300, to: 0.0)
@@ -102,10 +94,6 @@ defmodule Plushie.Animation.TransitionTest do
       assert t.delay == 50
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # loop/1 and loop/2
-  # ---------------------------------------------------------------------------
 
   describe "loop/1" do
     test "sets repeat and auto_reverse defaults" do
@@ -142,10 +130,6 @@ defmodule Plushie.Animation.TransitionTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Pipeline setters
-  # ---------------------------------------------------------------------------
-
   describe "pipeline" do
     test "chain setters" do
       t =
@@ -165,10 +149,6 @@ defmodule Plushie.Animation.TransitionTest do
       assert t.on_complete == :done
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Encode
-  # ---------------------------------------------------------------------------
 
   describe "encode" do
     test "minimal transition encodes type, to, duration" do
@@ -225,10 +205,6 @@ defmodule Plushie.Animation.TransitionTest do
       assert encoded["from"] == 1.0
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Buildable
-  # ---------------------------------------------------------------------------
 
   describe "Buildable" do
     test "from_opts/1 builds a transition" do

@@ -56,10 +56,6 @@ defmodule Plushie.Animation.TweenIntegrationTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Initial state through binary
-  # ---------------------------------------------------------------------------
-
   describe "initial state" do
     test "animation starts at from value" do
       assert model().value == 0.0
@@ -71,10 +67,6 @@ defmodule Plushie.Animation.TweenIntegrationTest do
       assert_text("#running", "Running: false")
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Animation lifecycle through click-driven updates
-  # ---------------------------------------------------------------------------
 
   describe "animation through binary" do
     test "start sets running state" do

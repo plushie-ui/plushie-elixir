@@ -5,10 +5,6 @@ defmodule CounterTest do
 
   alias Counter
 
-  # ---------------------------------------------------------------------------
-  # init/1
-  # ---------------------------------------------------------------------------
-
   describe "init/1" do
     test "returns initial model with count 0" do
       assert Counter.init([]) == %{count: 0}
@@ -18,10 +14,6 @@ defmodule CounterTest do
       assert Counter.init(nil) == %{count: 0}
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # update/2
-  # ---------------------------------------------------------------------------
 
   describe "update/2 -- increment" do
     test "increments count by 1" do
@@ -70,10 +62,6 @@ defmodule CounterTest do
       assert result == model
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # view/1
-  # ---------------------------------------------------------------------------
 
   describe "view/1 -- tree structure" do
     test "returns a window node at the root" do
@@ -138,10 +126,6 @@ defmodule CounterTest do
       assert match != nil
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Full cycle
-  # ---------------------------------------------------------------------------
 
   describe "full cycle" do
     test "init -> increment 3x -> decrement 1x -> view shows Count: 2" do

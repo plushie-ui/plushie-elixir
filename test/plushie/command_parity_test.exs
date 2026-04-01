@@ -7,10 +7,6 @@ defmodule Plushie.CommandParityTest do
 
   alias Plushie.Command
 
-  # ---------------------------------------------------------------------------
-  # New basic commands
-  # ---------------------------------------------------------------------------
-
   describe "exit/0" do
     test "returns exit command" do
       cmd = Command.exit()
@@ -57,10 +53,6 @@ defmodule Plushie.CommandParityTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Text cursor commands
-  # ---------------------------------------------------------------------------
-
   describe "move_cursor_to_front/1" do
     test "returns correct command" do
       cmd = Command.move_cursor_to_front("editor1")
@@ -91,10 +83,6 @@ defmodule Plushie.CommandParityTest do
       assert cmd.payload.end == 15
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Window operations
-  # ---------------------------------------------------------------------------
 
   describe "resize_window/3" do
     test "creates resize window op" do
@@ -270,10 +258,6 @@ defmodule Plushie.CommandParityTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Window queries
-  # ---------------------------------------------------------------------------
-
   describe "get_window_size/2" do
     test "creates size query" do
       cmd = Command.get_window_size("main", :size_result)
@@ -306,10 +290,6 @@ defmodule Plushie.CommandParityTest do
       assert cmd.payload.tag == "min_result"
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # All new commands return the correct struct type
-  # ---------------------------------------------------------------------------
 
   describe "struct consistency" do
     test "all new commands are Command structs" do

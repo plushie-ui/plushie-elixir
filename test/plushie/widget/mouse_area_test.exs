@@ -3,10 +3,6 @@ defmodule Plushie.Widget.MouseAreaTest do
 
   alias Plushie.Widget.MouseArea
 
-  # ---------------------------------------------------------------------------
-  # Construction
-  # ---------------------------------------------------------------------------
-
   describe "new/2" do
     test "creates a mouse area with no cursor by default" do
       ma = MouseArea.new("click_zone")
@@ -22,10 +18,6 @@ defmodule Plushie.Widget.MouseAreaTest do
       assert ma.cursor == :pointer
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Builders
-  # ---------------------------------------------------------------------------
 
   describe "cursor/2" do
     test "sets the cursor" do
@@ -61,10 +53,6 @@ defmodule Plushie.Widget.MouseAreaTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # build/1 -- node output
-  # ---------------------------------------------------------------------------
-
   describe "build/1" do
     test "includes cursor in props when set" do
       node = MouseArea.new("ma1") |> MouseArea.cursor(:pointer) |> MouseArea.build()
@@ -88,10 +76,6 @@ defmodule Plushie.Widget.MouseAreaTest do
       assert hd(node.children).id == "child"
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Event prop builders
-  # ---------------------------------------------------------------------------
 
   describe "event prop builders" do
     test "on_right_press/2 sets the field" do
@@ -140,10 +124,6 @@ defmodule Plushie.Widget.MouseAreaTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # build/1 -- event props in output
-  # ---------------------------------------------------------------------------
-
   describe "build/1 event props" do
     test "includes event props when set to true" do
       node =
@@ -167,10 +147,6 @@ defmodule Plushie.Widget.MouseAreaTest do
       end
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # with_options/2
-  # ---------------------------------------------------------------------------
 
   describe "with_options/2" do
     test "accepts all event options" do

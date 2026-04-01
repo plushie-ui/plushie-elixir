@@ -433,10 +433,6 @@ defmodule Plushie.UITest do
   import ExUnit.CaptureIO
   import Plushie.UI
 
-  # ---------------------------------------------------------------------------
-  # button/2,3
-  # ---------------------------------------------------------------------------
-
   describe "button/2" do
     test "produces correct node shape" do
       node = button("save", "Save")
@@ -474,10 +470,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # text_input/2,3
-  # ---------------------------------------------------------------------------
-
   describe "text_input/2" do
     test "produces correct node shape" do
       node = text_input("name", "Alice")
@@ -495,10 +487,6 @@ defmodule Plushie.UITest do
       assert node.props[:value] == "Alice"
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # checkbox/2,3
-  # ---------------------------------------------------------------------------
 
   describe "checkbox/2" do
     test "produces correct node shape with checked: true" do
@@ -522,10 +510,6 @@ defmodule Plushie.UITest do
       assert node.props[:checked] == true
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # text/1,2,3 macro
-  # ---------------------------------------------------------------------------
 
   describe "text/1" do
     test "produces a text node with content prop" do
@@ -567,10 +551,6 @@ defmodule Plushie.UITest do
       assert node.props[:content] == "world"
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # column/0,1 macro
-  # ---------------------------------------------------------------------------
 
   describe "column/0" do
     test "produces a column node" do
@@ -631,10 +611,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # row do...end
-  # ---------------------------------------------------------------------------
-
   describe "row/0" do
     test "produces a row node with no children" do
       node = row()
@@ -669,10 +645,6 @@ defmodule Plushie.UITest do
       assert length(node.children) == 1
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # window macro
-  # ---------------------------------------------------------------------------
 
   describe "window/1" do
     test "produces a window node with given id" do
@@ -719,10 +691,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # container macro
-  # ---------------------------------------------------------------------------
-
   describe "container/1" do
     test "produces a container node with given id" do
       node = container("hero")
@@ -757,10 +725,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # scrollable macro
-  # ---------------------------------------------------------------------------
-
   describe "scrollable/1" do
     test "produces a scrollable node" do
       node = scrollable("feed")
@@ -794,10 +758,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # stack macro
-  # ---------------------------------------------------------------------------
-
   describe "stack/0" do
     test "produces a stack node" do
       node = stack()
@@ -818,10 +778,6 @@ defmodule Plushie.UITest do
       assert length(node.children) == 2
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # space macro
-  # ---------------------------------------------------------------------------
 
   describe "space/0" do
     test "produces a space node with no children" do
@@ -844,10 +800,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # rule macro
-  # ---------------------------------------------------------------------------
-
   describe "rule/0" do
     test "produces a rule node with no children" do
       node = rule()
@@ -869,10 +821,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # do block with for comprehension
-  # ---------------------------------------------------------------------------
-
   describe "for comprehension inside do block" do
     test "flattens list children produced by for" do
       node = PlushieUITestHelper.column_with_for()
@@ -882,10 +830,6 @@ defmodule Plushie.UITest do
       assert contents == ["a", "b", "c"]
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # do block with if/nil filtering
-  # ---------------------------------------------------------------------------
 
   describe "if/nil filtering inside do block" do
     test "nil children are filtered out (show? = false)" do
@@ -903,10 +847,6 @@ defmodule Plushie.UITest do
       assert "sometimes" in contents
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Nested do blocks
-  # ---------------------------------------------------------------------------
 
   describe "nested do blocks" do
     test "produces correct tree shape" do
@@ -935,10 +875,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # find/2 delegates to Tree.find
-  # ---------------------------------------------------------------------------
-
   describe "find/2" do
     test "finds a node by id in the tree" do
       tree =
@@ -957,10 +893,6 @@ defmodule Plushie.UITest do
       assert Plushie.UI.find(tree, "ghost") == nil
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # toggler/2,3
-  # ---------------------------------------------------------------------------
 
   describe "toggler/2" do
     test "produces correct node shape" do
@@ -986,10 +918,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # radio/3,4
-  # ---------------------------------------------------------------------------
-
   describe "radio/3" do
     test "produces correct node shape" do
       node = radio("size_large", "large", "small")
@@ -1014,10 +942,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # slider/3,4
-  # ---------------------------------------------------------------------------
-
   describe "slider/3" do
     test "produces correct node shape" do
       node = slider("volume", {0, 100}, 50)
@@ -1038,10 +962,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # vertical_slider/3,4
-  # ---------------------------------------------------------------------------
-
   describe "vertical_slider/3" do
     test "produces correct node shape" do
       node = vertical_slider("brightness", {0, 255}, 128)
@@ -1060,10 +980,6 @@ defmodule Plushie.UITest do
       assert node.props[:width] == 20
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # pick_list/3,4
-  # ---------------------------------------------------------------------------
 
   describe "pick_list/3" do
     test "produces correct node shape" do
@@ -1089,10 +1005,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # combo_box/3,4
-  # ---------------------------------------------------------------------------
-
   describe "combo_box/3" do
     test "produces correct node shape" do
       node = combo_box("lang", ["Elixir", "Rust", "Go"], "Elixir")
@@ -1111,10 +1023,6 @@ defmodule Plushie.UITest do
       assert node.props[:width] == 200
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # text_editor/2,3
-  # ---------------------------------------------------------------------------
 
   describe "text_editor/2" do
     test "produces correct node shape" do
@@ -1135,10 +1043,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # image/2,3
-  # ---------------------------------------------------------------------------
-
   describe "image/2" do
     test "produces correct node shape" do
       node = image("logo", "/assets/logo.png")
@@ -1158,10 +1062,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # svg/2,3
-  # ---------------------------------------------------------------------------
-
   describe "svg/2" do
     test "produces correct node shape" do
       node = svg("icon", "/assets/icon.svg")
@@ -1180,10 +1080,6 @@ defmodule Plushie.UITest do
       assert node.props[:content_fit] == :contain
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # markdown/1,2,3 macro
-  # ---------------------------------------------------------------------------
 
   describe "markdown/1" do
     test "produces a markdown node with content prop" do
@@ -1216,10 +1112,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # tooltip macro
-  # ---------------------------------------------------------------------------
-
   describe "tooltip id, tip do...end" do
     test "collects children with tip" do
       node =
@@ -1248,10 +1140,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # canvas/1,2
-  # ---------------------------------------------------------------------------
-
   describe "canvas/1" do
     test "produces a canvas node with given id" do
       node = canvas("drawing")
@@ -1274,10 +1162,6 @@ defmodule Plushie.UITest do
       assert node.children == []
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # table/1,2 macro
-  # ---------------------------------------------------------------------------
 
   describe "table/1" do
     test "produces a table node with given id" do
@@ -1331,10 +1215,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # canvas edge cases
-  # ---------------------------------------------------------------------------
-
   describe "canvas with empty shapes" do
     test "canvas with explicit empty shapes list" do
       node = canvas("cv", shapes: [])
@@ -1362,10 +1242,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # table edge cases
-  # ---------------------------------------------------------------------------
-
   describe "table with empty rows" do
     test "table with columns but empty rows list" do
       cols = [%{key: "name", label: "Name", width: 200}]
@@ -1391,10 +1267,6 @@ defmodule Plushie.UITest do
       refute Map.has_key?(node.props, "rows")
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # canvas do-block form
-  # ---------------------------------------------------------------------------
 
   describe "canvas id do...end" do
     test "collects layers from do block" do
@@ -1436,10 +1308,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Counter example view produces expected tree shape
-  # ---------------------------------------------------------------------------
-
   describe "Counter example view shape" do
     test "root node is a window" do
       tree = Counter.view(%{count: 0})
@@ -1465,10 +1333,6 @@ defmodule Plushie.UITest do
       assert count_node != nil
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Block-form leaf widgets
-  # ---------------------------------------------------------------------------
 
   describe "block-form leaf widgets" do
     test "button with do-block produces same node as keyword form for shared props" do
@@ -1507,10 +1371,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Canvas shape macros
-  # ---------------------------------------------------------------------------
-
   describe "canvas shape macros" do
     test "rect with do-block" do
       result = PlushieUICanvasShapeHelper.rect_block_form()
@@ -1522,10 +1382,6 @@ defmodule Plushie.UITest do
       assert %Plushie.Canvas.Shape.Circle{fill: "#00ff00"} = result
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Group macro
-  # ---------------------------------------------------------------------------
 
   describe "group macro" do
     test "group with do-block produces Group struct" do
@@ -1545,10 +1401,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Layer macro
-  # ---------------------------------------------------------------------------
-
   describe "layer macro" do
     test "layer produces {name, shapes} tuple" do
       {name, shapes} = PlushieUICanvasShapeHelper.layer_standalone()
@@ -1556,10 +1408,6 @@ defmodule Plushie.UITest do
       assert [%Plushie.Canvas.Shape.Rect{}] = shapes
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Interactive group
-  # ---------------------------------------------------------------------------
 
   describe "interactive group" do
     test "keyword form with id" do
@@ -1570,10 +1418,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Canvas scope text rewriting
-  # ---------------------------------------------------------------------------
-
   describe "canvas_scope text rewriting" do
     test "text/4 inside canvas layer is rewritten to canvas shape" do
       node = PlushieUICanvasShapeHelper.canvas_with_text_rewrite()
@@ -1582,10 +1426,6 @@ defmodule Plushie.UITest do
       assert [%Plushie.Canvas.Shape.CanvasText{x: 10, y: 20, content: "Hello"}] = shapes
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Canvas scope control flow
-  # ---------------------------------------------------------------------------
 
   describe "canvas_scope control flow" do
     test "for inside canvas layer" do
@@ -1605,10 +1445,6 @@ defmodule Plushie.UITest do
       assert length(shapes) == 1
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Canvas scope compile errors
-  # ---------------------------------------------------------------------------
 
   describe "canvas_scope compile errors" do
     test "text/1 in canvas raises" do
@@ -1672,10 +1508,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # text/3 numeric literal guard
-  # ---------------------------------------------------------------------------
-
   describe "text/3 numeric literal guard" do
     test "text with numeric first args outside canvas raises" do
       capture_io(:stderr, fn ->
@@ -1688,10 +1520,6 @@ defmodule Plushie.UITest do
       end)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Container inline props
-  # ---------------------------------------------------------------------------
 
   describe "container inline props" do
     test "column with inline spacing/padding/width" do
@@ -1721,10 +1549,6 @@ defmodule Plushie.UITest do
       assert spacious.props.padding == 24
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Nested struct do-blocks
-  # ---------------------------------------------------------------------------
 
   describe "nested struct do-blocks" do
     test "padding with do-block" do
@@ -1775,10 +1599,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Container scope compile errors
-  # ---------------------------------------------------------------------------
-
   describe "container_scope compile errors" do
     test "spacing in container (wrong container) raises" do
       capture_io(:stderr, fn ->
@@ -1809,10 +1629,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Edge cases: empty blocks
-  # ---------------------------------------------------------------------------
-
   describe "edge cases: empty blocks" do
     test "empty column do-block" do
       node = PlushieUIEdgeCaseHelper.empty_column_block()
@@ -1821,10 +1637,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Edge cases: prop override
-  # ---------------------------------------------------------------------------
-
   describe "edge cases: prop override" do
     test "block prop overrides keyword prop" do
       node = PlushieUIEdgeCaseHelper.mixed_key_override()
@@ -1832,20 +1644,12 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Edge cases: boolean bare props
-  # ---------------------------------------------------------------------------
-
   describe "edge cases: boolean bare props" do
     test "bare name in container sets true" do
       node = PlushieUIEdgeCaseHelper.boolean_bare_prop()
       assert node.props.clip == true
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Edge cases: interleaved props and children
-  # ---------------------------------------------------------------------------
 
   describe "edge cases: interleaved props and children" do
     test "props and children order preserved" do
@@ -1856,10 +1660,6 @@ defmodule Plushie.UITest do
       assert hd(node.children).props.content == "First"
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Edge cases: multi-expression control flow
-  # ---------------------------------------------------------------------------
 
   describe "edge cases: multi-expression control flow" do
     test "multiple props in if body all take effect" do
@@ -1882,10 +1682,6 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Edge cases: window inline props
-  # ---------------------------------------------------------------------------
-
   describe "edge cases: window inline props" do
     test "window with inline title and resizable" do
       node = PlushieUIEdgeCaseHelper.window_inline_props()
@@ -1895,10 +1691,6 @@ defmodule Plushie.UITest do
       assert length(node.children) == 1
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Edge cases: space and rule do-blocks
-  # ---------------------------------------------------------------------------
 
   describe "edge cases: space and rule do-blocks" do
     test "space with do-block options" do
@@ -1915,20 +1707,12 @@ defmodule Plushie.UITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Edge cases: variable values
-  # ---------------------------------------------------------------------------
-
   describe "edge cases: variable values" do
     test "variable in block prop" do
       node = PlushieUIEdgeCaseHelper.variable_prop_value(42)
       assert node.props.spacing == 42
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Edge cases: leaf widget compile errors
-  # ---------------------------------------------------------------------------
 
   describe "edge cases: leaf widget compile errors" do
     test "unknown option in button block" do

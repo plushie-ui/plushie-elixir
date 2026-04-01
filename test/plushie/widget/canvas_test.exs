@@ -3,10 +3,6 @@ defmodule Plushie.Widget.CanvasTest do
 
   alias Plushie.Widget.Canvas
 
-  # ---------------------------------------------------------------------------
-  # Construction
-  # ---------------------------------------------------------------------------
-
   describe "new/2" do
     test "creates a canvas with the given id and nil defaults" do
       canvas = Canvas.new("my_canvas")
@@ -34,10 +30,6 @@ defmodule Plushie.Widget.CanvasTest do
       assert canvas.layers == layers
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Layer builders
-  # ---------------------------------------------------------------------------
 
   describe "layers/2" do
     test "replaces the entire layers map" do
@@ -84,10 +76,6 @@ defmodule Plushie.Widget.CanvasTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Dimension builders
-  # ---------------------------------------------------------------------------
-
   describe "width/2 and height/2" do
     test "set dimension values" do
       canvas = Canvas.new("c1") |> Canvas.width(640) |> Canvas.height(480)
@@ -104,20 +92,12 @@ defmodule Plushie.Widget.CanvasTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Background builder
-  # ---------------------------------------------------------------------------
-
   describe "background/2" do
     test "stores the color value" do
       canvas = Canvas.new("c1") |> Canvas.background("#00ff00")
       assert canvas.background == "#00ff00"
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Interactive event builders
-  # ---------------------------------------------------------------------------
 
   describe "interactive event builders" do
     test "interactive/2 enables all mouse events" do
@@ -158,10 +138,6 @@ defmodule Plushie.Widget.CanvasTest do
       assert canvas.interactive == nil
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # build/1 -- node output
-  # ---------------------------------------------------------------------------
 
   describe "build/1" do
     test "produces a node with correct type and id" do
@@ -220,10 +196,6 @@ defmodule Plushie.Widget.CanvasTest do
       assert node.props[:on_press] == false
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # with_options/2 -- error case
-  # ---------------------------------------------------------------------------
 
   describe "with_options/2" do
     test "raises on unknown option" do

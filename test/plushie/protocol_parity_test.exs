@@ -15,10 +15,6 @@ defmodule Plushie.ProtocolParityTest do
 
   alias Plushie.Protocol
 
-  # ---------------------------------------------------------------------------
-  # Key events (new format: family "key_press"/"key_release" with "value" field)
-  # ---------------------------------------------------------------------------
-
   describe "key_press event decoding" do
     test "decodes named key with modifiers (key in data)" do
       json =
@@ -102,10 +98,6 @@ defmodule Plushie.ProtocolParityTest do
                Protocol.decode_message(json, :json)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Named key mapping (representative sample)
-  # ---------------------------------------------------------------------------
 
   describe "parse_key/1" do
     # Navigation
@@ -363,10 +355,6 @@ defmodule Plushie.ProtocolParityTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Mouse events
-  # ---------------------------------------------------------------------------
-
   describe "cursor_moved event" do
     test "decodes cursor position" do
       json = Jason.encode!(%{type: "event", family: "cursor_moved", data: %{x: 100.5, y: 200.3}})
@@ -458,10 +446,6 @@ defmodule Plushie.ProtocolParityTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Touch events
-  # ---------------------------------------------------------------------------
-
   describe "finger_pressed event" do
     test "decodes finger press with data.id and position" do
       json =
@@ -517,10 +501,6 @@ defmodule Plushie.ProtocolParityTest do
                Protocol.decode_message(json, :json)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Window lifecycle events
-  # ---------------------------------------------------------------------------
 
   describe "window_opened event" do
     test "decodes window opened with position, size, and scale_factor" do
@@ -653,10 +633,6 @@ defmodule Plushie.ProtocolParityTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # File events
-  # ---------------------------------------------------------------------------
-
   describe "file_hovered event" do
     test "decodes file hovered over window" do
       json =
@@ -694,10 +670,6 @@ defmodule Plushie.ProtocolParityTest do
                Protocol.decode_message(json, :json)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Modifiers / animation / theme events
-  # ---------------------------------------------------------------------------
 
   describe "modifiers_changed event" do
     test "decodes modifier state change" do

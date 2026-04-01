@@ -4,10 +4,6 @@ defmodule Plushie.CommandImageTest do
   alias Plushie.Command
   alias Plushie.Protocol
 
-  # ---------------------------------------------------------------------------
-  # Command construction
-  # ---------------------------------------------------------------------------
-
   describe "create_image/2 (encoded PNG/JPEG bytes)" do
     test "returns a command struct with image_op type" do
       png_data = <<137, 80, 78, 71>>
@@ -73,10 +69,6 @@ defmodule Plushie.CommandImageTest do
       refute Map.has_key?(cmd.payload, :pixels)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Protocol encoding
-  # ---------------------------------------------------------------------------
 
   describe "encode_image_op/3 with :json format" do
     test "base64-encodes the data field" do

@@ -3,11 +3,6 @@ defmodule Plushie.MultiWindowTest do
 
   alias Plushie.Command
 
-  # ---------------------------------------------------------------------------
-  # 1.3 - Payload key alignment: maximize, minimize, mouse_passthrough,
-  #       set_resizable must send the keys that Rust reads.
-  # ---------------------------------------------------------------------------
-
   describe "maximize_window/2 payload key" do
     test "sends :maximized key (not :value)" do
       cmd = Command.maximize_window("win1", true)
@@ -61,10 +56,6 @@ defmodule Plushie.MultiWindowTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # 1.2 - close_window carries correct window_id in payload
-  # ---------------------------------------------------------------------------
-
   describe "close_window/1" do
     test "payload includes window_id" do
       cmd = Command.close_window("settings_window")
@@ -76,10 +67,6 @@ defmodule Plushie.MultiWindowTest do
       assert cmd.type == :close_window
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # 1.5 - detect_windows depth constraint
-  # ---------------------------------------------------------------------------
 
   describe "detect_windows (via sync_windows)" do
     # detect_windows is private, so we test its behaviour indirectly via
@@ -137,10 +124,6 @@ defmodule Plushie.MultiWindowTest do
       assert detect_windows_test(tree) == MapSet.new()
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # 1.6 - Size tuple decomposition
-  # ---------------------------------------------------------------------------
 
   describe "size tuple decomposition" do
     test "size: {w, h} decomposes into width and height" do
