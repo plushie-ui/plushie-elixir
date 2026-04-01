@@ -74,7 +74,7 @@ defmodule Plushie.Widget.Window do
           level: atom() | nil,
           exit_on_close_request: boolean() | nil,
           scale_factor: number() | nil,
-          children: [Plushie.Widget.ui_node() | struct()]
+          children: [Plushie.Widget.child()]
         }
 
   defstruct [
@@ -231,11 +231,11 @@ defmodule Plushie.Widget.Window do
     do: %{w | scale_factor: scale_factor}
 
   @doc "Appends a child to the window."
-  @spec push(window :: t(), child :: Plushie.Widget.ui_node() | struct()) :: t()
+  @spec push(window :: t(), child :: Plushie.Widget.child()) :: t()
   def push(%__MODULE__{} = w, child), do: %{w | children: [child | w.children]}
 
   @doc "Appends multiple children to the window."
-  @spec extend(window :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+  @spec extend(window :: t(), children :: [Plushie.Widget.child()]) ::
           t()
   def extend(%__MODULE__{} = w, children),
     do: %{w | children: Enum.reverse(children) ++ w.children}
@@ -248,6 +248,9 @@ defmodule Plushie.Widget.Window do
     import Plushie.Widget.Build
 
     def to_node(w) do
+      children = Enum.reverse(w.children)
+      validate_single_child!(w.id, "window", children)
+
       props =
         %{}
         |> put_if(w.title, :title)
@@ -274,7 +277,7 @@ defmodule Plushie.Widget.Window do
         id: w.id,
         type: "window",
         props: props,
-        children: children_to_nodes(Enum.reverse(w.children))
+        children: children_to_nodes(children)
       }
     end
   end

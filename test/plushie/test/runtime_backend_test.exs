@@ -21,19 +21,19 @@ defmodule Plushie.Test.RuntimeBackendTest do
     end
 
     test "find locates elements by ID" do
-      element = find!("#increment")
+      element = find!("#inc")
       assert element != nil
     end
 
     test "click dispatches through the real Runtime" do
-      click("#increment")
+      click("#inc")
       assert model().count == 1
     end
 
     test "multiple interactions work" do
-      click("#increment")
-      click("#increment")
-      click("#decrement")
+      click("#inc")
+      click("#inc")
+      click("#dec")
       assert model().count == 1
     end
   end

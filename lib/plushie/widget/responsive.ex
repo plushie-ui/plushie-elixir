@@ -25,7 +25,7 @@ defmodule Plushie.Widget.Responsive do
           width: Plushie.Type.Length.t() | nil,
           height: Plushie.Type.Length.t() | nil,
           a11y: Plushie.Type.A11y.t() | nil,
-          children: [Plushie.Widget.ui_node() | struct()]
+          children: [Plushie.Widget.child()]
         }
 
   defstruct [
@@ -74,14 +74,14 @@ defmodule Plushie.Widget.Responsive do
   def height(%__MODULE__{} = r, height), do: %{r | height: height}
 
   @doc "Appends a child to the responsive container."
-  @spec push(responsive :: t(), child :: Plushie.Widget.ui_node() | struct()) ::
+  @spec push(responsive :: t(), child :: Plushie.Widget.child()) ::
           t()
   def push(%__MODULE__{} = r, child), do: %{r | children: [child | r.children]}
 
   @doc "Appends multiple children to the responsive container."
   @spec extend(
           responsive :: t(),
-          children :: [Plushie.Widget.ui_node() | struct()]
+          children :: [Plushie.Widget.child()]
         ) :: t()
   def extend(%__MODULE__{} = r, children),
     do: %{r | children: Enum.reverse(children) ++ r.children}
@@ -98,6 +98,9 @@ defmodule Plushie.Widget.Responsive do
     import Plushie.Widget.Build
 
     def to_node(r) do
+      children = Enum.reverse(r.children)
+      validate_single_child!(r.id, "responsive", children)
+
       props =
         %{}
         |> put_if(r.width, :width)
@@ -108,7 +111,7 @@ defmodule Plushie.Widget.Responsive do
         id: r.id,
         type: "responsive",
         props: props,
-        children: children_to_nodes(Enum.reverse(r.children))
+        children: children_to_nodes(children)
       }
     end
   end

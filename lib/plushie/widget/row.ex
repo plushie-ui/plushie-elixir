@@ -39,7 +39,7 @@ defmodule Plushie.Widget.Row do
           clip: boolean() | nil,
           wrap: boolean() | nil,
           a11y: Plushie.Type.A11y.t() | nil,
-          children: [Plushie.Widget.ui_node() | struct()]
+          children: [Plushie.Widget.child()]
         }
 
   defstruct [
@@ -125,11 +125,11 @@ defmodule Plushie.Widget.Row do
   def wrap(%__MODULE__{} = row, wrap) when is_boolean(wrap), do: %{row | wrap: wrap}
 
   @doc "Appends a child to the row."
-  @spec push(row :: t(), child :: Plushie.Widget.ui_node() | struct()) :: t()
+  @spec push(row :: t(), child :: Plushie.Widget.child()) :: t()
   def push(%__MODULE__{} = row, child), do: %{row | children: [child | row.children]}
 
   @doc "Appends multiple children to the row."
-  @spec extend(row :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+  @spec extend(row :: t(), children :: [Plushie.Widget.child()]) ::
           t()
   def extend(%__MODULE__{} = row, children),
     do: %{row | children: Enum.reverse(children) ++ row.children}

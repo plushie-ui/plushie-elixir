@@ -9,7 +9,7 @@ defmodule Plushie.Widget.QrCode do
   - `data` (string) -- the data to encode in the QR code. Required.
   - `cell_size` (number) -- size of each QR module in pixels. Default: 4.0.
   - `cell_color` (color) -- color of dark modules. Default: black.
-  - `background_color` (color) -- color of light modules. Default: white.
+  - `background` (color) -- color of light modules. Default: white.
   - `error_correction` (atom) -- error correction level. One of `:low`,
     `:medium` (default), `:quartile`, `:high`.
   - `alt` (string) -- accessible label for the QR code. Sits outside the
@@ -31,7 +31,7 @@ defmodule Plushie.Widget.QrCode do
   @type option ::
           {:cell_size, number()}
           | {:cell_color, Plushie.Type.Color.input()}
-          | {:background_color, Plushie.Type.Color.input()}
+          | {:background, Plushie.Type.Color.input()}
           | {:error_correction, error_correction()}
           | {:alt, String.t()}
           | {:description, String.t()}
@@ -42,7 +42,7 @@ defmodule Plushie.Widget.QrCode do
           data: String.t(),
           cell_size: number() | nil,
           cell_color: Plushie.Type.Color.t() | nil,
-          background_color: Plushie.Type.Color.t() | nil,
+          background: Plushie.Type.Color.t() | nil,
           error_correction: error_correction() | nil,
           alt: String.t() | nil,
           description: String.t() | nil,
@@ -54,14 +54,14 @@ defmodule Plushie.Widget.QrCode do
     :data,
     :cell_size,
     :cell_color,
-    :background_color,
+    :background,
     :error_correction,
     :alt,
     :description,
     :a11y
   ]
 
-  @valid_option_keys ~w(cell_size cell_color background_color error_correction alt description a11y)a
+  @valid_option_keys ~w(cell_size cell_color background error_correction alt description a11y)a
 
   @doc false
   def __option_keys__, do: @valid_option_keys
@@ -85,7 +85,7 @@ defmodule Plushie.Widget.QrCode do
     Enum.reduce(opts, qr, fn
       {:cell_size, v}, acc -> cell_size(acc, v)
       {:cell_color, v}, acc -> cell_color(acc, v)
-      {:background_color, v}, acc -> background_color(acc, v)
+      {:background, v}, acc -> background(acc, v)
       {:error_correction, v}, acc -> error_correction(acc, v)
       {:alt, v}, acc -> alt(acc, v)
       {:description, v}, acc -> description(acc, v)
@@ -104,9 +104,9 @@ defmodule Plushie.Widget.QrCode do
   def cell_color(%__MODULE__{} = qr, cell_color), do: %{qr | cell_color: Color.cast(cell_color)}
 
   @doc "Sets the background color (light modules)."
-  @spec background_color(qr_code :: t(), background_color :: Plushie.Type.Color.input()) :: t()
-  def background_color(%__MODULE__{} = qr, background_color),
-    do: %{qr | background_color: Color.cast(background_color)}
+  @spec background(qr_code :: t(), background :: Plushie.Type.Color.input()) :: t()
+  def background(%__MODULE__{} = qr, background),
+    do: %{qr | background: Color.cast(background)}
 
   @doc "Sets the error correction level."
   @spec error_correction(qr_code :: t(), error_correction :: error_correction()) :: t()
@@ -139,7 +139,7 @@ defmodule Plushie.Widget.QrCode do
         |> put_if(qr.data, :data)
         |> put_if(qr.cell_size, :cell_size)
         |> put_if(qr.cell_color, :cell_color)
-        |> put_if(qr.background_color, :background_color)
+        |> put_if(qr.background, :background)
         |> put_if(qr.error_correction, :error_correction)
         |> put_if(qr.alt, :alt)
         |> put_if(qr.description, :description)

@@ -47,7 +47,7 @@ defmodule Plushie.Widget.Tooltip do
           delay: non_neg_integer() | nil,
           style: style() | nil,
           a11y: Plushie.Type.A11y.t() | nil,
-          children: [Plushie.Widget.ui_node() | struct()]
+          children: [Plushie.Widget.child()]
         }
 
   defstruct [
@@ -137,11 +137,11 @@ defmodule Plushie.Widget.Tooltip do
   def style(%__MODULE__{} = tt, style) when style in @presets, do: %{tt | style: style}
 
   @doc "Appends a child to the tooltip."
-  @spec push(tooltip :: t(), child :: Plushie.Widget.ui_node() | struct()) :: t()
+  @spec push(tooltip :: t(), child :: Plushie.Widget.child()) :: t()
   def push(%__MODULE__{} = tt, child), do: %{tt | children: [child | tt.children]}
 
   @doc "Appends multiple children to the tooltip."
-  @spec extend(tooltip :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+  @spec extend(tooltip :: t(), children :: [Plushie.Widget.child()]) ::
           t()
   def extend(%__MODULE__{} = tt, children),
     do: %{tt | children: Enum.reverse(children) ++ tt.children}
@@ -158,6 +158,9 @@ defmodule Plushie.Widget.Tooltip do
     import Plushie.Widget.Build
 
     def to_node(tt) do
+      children = Enum.reverse(tt.children)
+      validate_single_child!(tt.id, "tooltip", children)
+
       props =
         %{}
         |> put_if(tt.tip, :tip)
@@ -173,7 +176,7 @@ defmodule Plushie.Widget.Tooltip do
         id: tt.id,
         type: "tooltip",
         props: props,
-        children: children_to_nodes(Enum.reverse(tt.children))
+        children: children_to_nodes(children)
       }
     end
   end

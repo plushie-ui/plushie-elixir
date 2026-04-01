@@ -28,24 +28,13 @@ defmodule Plushie.Widget.ThemerTest do
       assert t.children == [child]
     end
 
-    test "preserves order across multiple pushes" do
+    test "raises when building with multiple children" do
       c1 = %{id: "c1", type: "text", props: %{}, children: []}
       c2 = %{id: "c2", type: "text", props: %{}, children: []}
-      t = Themer.new("th1", "Dark") |> Themer.push(c1) |> Themer.push(c2)
-      assert t.children == [c2, c1]
-      node = Themer.build(t)
-      assert node.children == [c1, c2]
-    end
-  end
 
-  describe "extend/2" do
-    test "appends multiple children at once" do
-      c1 = %{id: "c1", type: "text", props: %{}, children: []}
-      c2 = %{id: "c2", type: "text", props: %{}, children: []}
-      t = Themer.new("th1", "Dark") |> Themer.extend([c1, c2])
-      assert t.children == [c2, c1]
-      node = Themer.build(t)
-      assert node.children == [c1, c2]
+      assert_raise ArgumentError, ~r/at most 1 child/, fn ->
+        Themer.new("th1", "Dark") |> Themer.push(c1) |> Themer.push(c2) |> Themer.build()
+      end
     end
   end
 

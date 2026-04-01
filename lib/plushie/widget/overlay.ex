@@ -19,9 +19,11 @@ defmodule Plushie.Widget.Overlay do
 
   ## Children
 
-  Exactly two children are expected:
+  Exactly two children are required:
   1. The anchor widget (rendered inline in the layout).
   2. The overlay content (rendered as a floating overlay above everything else).
+
+  Building with any other count raises `ArgumentError`.
   """
 
   alias Plushie.Widget.Build
@@ -52,7 +54,7 @@ defmodule Plushie.Widget.Overlay do
           align: align() | nil,
           width: Plushie.Type.Length.t() | nil,
           a11y: Plushie.Type.A11y.t() | nil,
-          children: [Plushie.Widget.ui_node() | struct()]
+          children: [Plushie.Widget.child()]
         }
 
   defstruct [
@@ -136,11 +138,11 @@ defmodule Plushie.Widget.Overlay do
   def width(%__MODULE__{} = overlay, width), do: %{overlay | width: width}
 
   @doc "Appends a child to the overlay."
-  @spec push(overlay :: t(), child :: Plushie.Widget.ui_node() | struct()) :: t()
+  @spec push(overlay :: t(), child :: Plushie.Widget.child()) :: t()
   def push(%__MODULE__{} = overlay, child), do: %{overlay | children: [child | overlay.children]}
 
   @doc "Appends multiple children to the overlay."
-  @spec extend(overlay :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+  @spec extend(overlay :: t(), children :: [Plushie.Widget.child()]) ::
           t()
   def extend(%__MODULE__{} = overlay, children),
     do: %{overlay | children: Enum.reverse(children) ++ overlay.children}
@@ -157,6 +159,9 @@ defmodule Plushie.Widget.Overlay do
     import Plushie.Widget.Build
 
     def to_node(overlay) do
+      children = Enum.reverse(overlay.children)
+      validate_children_count!(overlay.id, "overlay", children, 2)
+
       props =
         %{}
         |> put_if(overlay.position, :position)
@@ -172,7 +177,7 @@ defmodule Plushie.Widget.Overlay do
         id: overlay.id,
         type: "overlay",
         props: props,
-        children: children_to_nodes(Enum.reverse(overlay.children))
+        children: children_to_nodes(children)
       }
     end
   end

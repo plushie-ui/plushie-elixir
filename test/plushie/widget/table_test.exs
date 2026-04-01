@@ -43,6 +43,17 @@ defmodule Plushie.Widget.TableTest do
       tbl = Table.new("tbl1") |> Table.rows(@rows)
       assert tbl.rows == @rows
     end
+
+    test "accepts empty list" do
+      tbl = Table.new("tbl1") |> Table.rows([])
+      assert tbl.rows == []
+    end
+
+    test "raises on atom-keyed rows" do
+      assert_raise ArgumentError, ~r/must use string keys/, fn ->
+        Table.new("tbl1") |> Table.rows([%{name: "Alice", age: 30}])
+      end
+    end
   end
 
   describe "header/2" do

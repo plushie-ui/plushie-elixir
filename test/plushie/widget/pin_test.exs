@@ -58,15 +58,13 @@ defmodule Plushie.Widget.PinTest do
       assert length(p.children) == 2
     end
 
-    test "push/2 preserves existing children" do
+    test "raises when building with multiple children" do
       c1 = %{id: "c1", type: "text", props: %{}, children: []}
       c2 = %{id: "c2", type: "text", props: %{}, children: []}
-      p = Pin.new("p1") |> Pin.push(c1) |> Pin.push(c2)
-      assert length(p.children) == 2
-      # Internal list is reversed; build restores order
-      node = Pin.build(p)
-      assert Enum.at(node.children, 0) == c1
-      assert Enum.at(node.children, 1) == c2
+
+      assert_raise ArgumentError, ~r/at most 1 child/, fn ->
+        Pin.new("p1") |> Pin.push(c1) |> Pin.push(c2) |> Pin.build()
+      end
     end
   end
 

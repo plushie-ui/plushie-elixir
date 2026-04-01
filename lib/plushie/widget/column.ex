@@ -10,7 +10,7 @@ defmodule Plushie.Widget.Column do
   - `width` (length) -- width of the column. Default: shrink. See `Plushie.Type.Length`.
   - `height` (length) -- height of the column. Default: shrink.
   - `max_width` (number) -- maximum width in pixels.
-  - `align_x` -- horizontal alignment of children: `:start`, `:center`, `:end`. See `Plushie.Type.Alignment`.
+  - `align_x` -- horizontal alignment of children: `:left`, `:center`, `:right`. See `Plushie.Type.Alignment`.
   - `clip` (boolean) -- clip children that overflow. Default: false.
   - `wrap` (boolean) -- wrap children to next column when they overflow. Default: false.
   - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
@@ -40,7 +40,7 @@ defmodule Plushie.Widget.Column do
           clip: boolean() | nil,
           wrap: boolean() | nil,
           a11y: Plushie.Type.A11y.t() | nil,
-          children: [Plushie.Widget.ui_node() | struct()]
+          children: [Plushie.Widget.child()]
         }
 
   defstruct [
@@ -127,11 +127,11 @@ defmodule Plushie.Widget.Column do
   def wrap(%__MODULE__{} = col, wrap) when is_boolean(wrap), do: %{col | wrap: wrap}
 
   @doc "Appends a child to the column."
-  @spec push(column :: t(), child :: Plushie.Widget.ui_node() | struct()) :: t()
+  @spec push(column :: t(), child :: Plushie.Widget.child()) :: t()
   def push(%__MODULE__{} = col, child), do: %{col | children: [child | col.children]}
 
   @doc "Appends multiple children to the column."
-  @spec extend(column :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+  @spec extend(column :: t(), children :: [Plushie.Widget.child()]) ::
           t()
   def extend(%__MODULE__{} = col, children),
     do: %{col | children: Enum.reverse(children) ++ col.children}

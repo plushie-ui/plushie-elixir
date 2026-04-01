@@ -1,6 +1,6 @@
 defmodule Plushie.Widget.Themer do
   @moduledoc """
-  Per-subtree theme override -- applies a different theme to child widgets.
+  Per-subtree theme override -- applies a different theme to a single child widget.
 
   ## Props
 
@@ -19,7 +19,7 @@ defmodule Plushie.Widget.Themer do
           id: String.t(),
           theme: Plushie.Type.Theme.t(),
           a11y: Plushie.Type.A11y.t() | nil,
-          children: [Plushie.Widget.ui_node() | struct()]
+          children: [Plushie.Widget.child()]
         }
 
   defstruct [
@@ -62,11 +62,11 @@ defmodule Plushie.Widget.Themer do
   end
 
   @doc "Appends a child to the themer."
-  @spec push(themer :: t(), child :: Plushie.Widget.ui_node() | struct()) :: t()
+  @spec push(themer :: t(), child :: Plushie.Widget.child()) :: t()
   def push(%__MODULE__{} = t, child), do: %{t | children: [child | t.children]}
 
   @doc "Appends multiple children to the themer."
-  @spec extend(themer :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+  @spec extend(themer :: t(), children :: [Plushie.Widget.child()]) ::
           t()
   def extend(%__MODULE__{} = t, children),
     do: %{t | children: Enum.reverse(children) ++ t.children}
@@ -83,6 +83,9 @@ defmodule Plushie.Widget.Themer do
     import Plushie.Widget.Build
 
     def to_node(t) do
+      children = Enum.reverse(t.children)
+      validate_single_child!(t.id, "themer", children)
+
       props =
         %{}
         |> put_if(t.theme, :theme)
@@ -92,7 +95,7 @@ defmodule Plushie.Widget.Themer do
         id: t.id,
         type: "themer",
         props: props,
-        children: children_to_nodes(Enum.reverse(t.children))
+        children: children_to_nodes(children)
       }
     end
   end

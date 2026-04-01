@@ -59,7 +59,7 @@ defmodule Plushie.Widget.Scrollable do
           scrollbar_color: Plushie.Type.Color.t() | nil,
           scroller_color: Plushie.Type.Color.t() | nil,
           a11y: Plushie.Type.A11y.t() | nil,
-          children: [Plushie.Widget.ui_node() | struct()]
+          children: [Plushie.Widget.child()]
         }
 
   defstruct [
@@ -175,14 +175,14 @@ defmodule Plushie.Widget.Scrollable do
     do: %{s | scroller_color: Color.cast(scroller_color)}
 
   @doc "Appends a child to the scrollable."
-  @spec push(scrollable :: t(), child :: Plushie.Widget.ui_node() | struct()) ::
+  @spec push(scrollable :: t(), child :: Plushie.Widget.child()) ::
           t()
   def push(%__MODULE__{} = s, child), do: %{s | children: [child | s.children]}
 
   @doc "Appends multiple children to the scrollable."
   @spec extend(
           scrollable :: t(),
-          children :: [Plushie.Widget.ui_node() | struct()]
+          children :: [Plushie.Widget.child()]
         ) :: t()
   def extend(%__MODULE__{} = s, children),
     do: %{s | children: Enum.reverse(children) ++ s.children}
@@ -199,6 +199,9 @@ defmodule Plushie.Widget.Scrollable do
     import Plushie.Widget.Build
 
     def to_node(s) do
+      children = Enum.reverse(s.children)
+      validate_single_child!(s.id, "scrollable", children)
+
       props =
         %{}
         |> put_if(s.width, :width)
@@ -219,7 +222,7 @@ defmodule Plushie.Widget.Scrollable do
         id: s.id,
         type: "scrollable",
         props: props,
-        children: children_to_nodes(Enum.reverse(s.children))
+        children: children_to_nodes(children)
       }
     end
   end

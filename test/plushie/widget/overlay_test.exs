@@ -108,7 +108,12 @@ defmodule Plushie.Widget.OverlayTest do
     end
 
     test "omits nil props" do
-      node = Overlay.new("ol1") |> Overlay.build()
+      node =
+        Overlay.new("ol1")
+        |> Overlay.push(%{id: "a", type: "text", props: %{}, children: []})
+        |> Overlay.push(%{id: "b", type: "text", props: %{}, children: []})
+        |> Overlay.build()
+
       refute Map.has_key?(node.props, "position")
       refute Map.has_key?(node.props, "gap")
       refute Map.has_key?(node.props, "offset_x")
@@ -119,6 +124,8 @@ defmodule Plushie.Widget.OverlayTest do
     test "includes offset props when set" do
       node =
         Overlay.new("ol1", offset_x: 10, offset_y: -5)
+        |> Overlay.push(%{id: "a", type: "text", props: %{}, children: []})
+        |> Overlay.push(%{id: "b", type: "text", props: %{}, children: []})
         |> Overlay.build()
 
       assert node.props[:offset_x] == 10
@@ -126,8 +133,35 @@ defmodule Plushie.Widget.OverlayTest do
     end
 
     test "includes width when set" do
-      node = Overlay.new("ol1", width: :fill) |> Overlay.build()
+      node =
+        Overlay.new("ol1", width: :fill)
+        |> Overlay.push(%{id: "a", type: "text", props: %{}, children: []})
+        |> Overlay.push(%{id: "b", type: "text", props: %{}, children: []})
+        |> Overlay.build()
+
       assert node.props[:width] == :fill
+    end
+
+    test "raises with fewer than 2 children" do
+      assert_raise ArgumentError, ~r/requires exactly 2 children, got 0/, fn ->
+        Overlay.new("ol1") |> Overlay.build()
+      end
+
+      assert_raise ArgumentError, ~r/requires exactly 2 children, got 1/, fn ->
+        Overlay.new("ol1")
+        |> Overlay.push(%{id: "a", type: "text", props: %{}, children: []})
+        |> Overlay.build()
+      end
+    end
+
+    test "raises with more than 2 children" do
+      assert_raise ArgumentError, ~r/requires exactly 2 children, got 3/, fn ->
+        Overlay.new("ol1")
+        |> Overlay.push(%{id: "a", type: "text", props: %{}, children: []})
+        |> Overlay.push(%{id: "b", type: "text", props: %{}, children: []})
+        |> Overlay.push(%{id: "c", type: "text", props: %{}, children: []})
+        |> Overlay.build()
+      end
     end
   end
 
@@ -136,6 +170,7 @@ defmodule Plushie.Widget.OverlayTest do
       overlay =
         Overlay.new("ol1", position: :above, gap: 4)
         |> Overlay.push(%{id: "a", type: "text", props: %{}, children: []})
+        |> Overlay.push(%{id: "b", type: "text", props: %{}, children: []})
 
       assert Plushie.Widget.to_node(overlay) == Overlay.build(overlay)
     end

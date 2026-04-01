@@ -4,16 +4,32 @@ defmodule Plushie.Widget.Table do
 
   ## Props
 
-  - `columns` (list of maps) -- column definitions. Each column is
-    `%{key: string, label: string}`. The `key` maps to row data fields.
-    Optional per-column fields:
-    - `align` -- horizontal alignment for the column cells (`"left"`,
+  - `columns` (list of maps) -- column definitions. Each column is a map
+    with atom keys from a fixed schema:
+
+        %{key: "name", label: "Name", sortable: true}
+
+    Required fields:
+    - `key` (string) -- lookup key into row data maps.
+    - `label` (string) -- display text for the column header.
+
+    Optional fields:
+    - `align` -- horizontal alignment for column cells (`"left"`,
       `"center"`, `"right"`). Default: `"left"`.
     - `width` -- column width as a `Plushie.Type.Length` value. Default: `:fill`.
     - `sortable` -- whether clicking the header triggers a sort event.
       Default: `false`.
-  - `rows` (list of maps) -- data rows. Each row is a map where keys
-    correspond to column `key` values.
+
+  - `rows` (list of maps) -- data rows. Each row is a string-keyed map
+    where keys match the column `key` values:
+
+        %{"name" => "Alice", "email" => "alice@example.com"}
+
+    String keys are the convention because row schemas are typically
+    user-defined or come from external data (JSON, database queries).
+    Atom keys also work (the wire protocol stringifies all keys), but
+    string keys avoid dynamic atom creation when data comes from
+    external sources.
   - `header` (boolean) -- show header row. Default: true.
   - `separator` (boolean) -- show separator line below header. Default: true.
   - `width` (length) -- table width. Default: fill. See `Plushie.Type.Length`.
@@ -36,9 +52,27 @@ defmodule Plushie.Widget.Table do
 
   @type sort_order :: unquote(Enum.reduce([:asc, :desc], &{:|, [], [&1, &2]}))
 
+  @typedoc """
+  A column definition map. Uses atom keys from the fixed SDK schema:
+  `:key`, `:label`, `:align`, `:width`, `:sortable`.
+  """
+  @type column :: %{
+          required(:key) => String.t(),
+          required(:label) => String.t(),
+          optional(:align) => String.t(),
+          optional(:width) => Plushie.Type.Length.t(),
+          optional(:sortable) => boolean()
+        }
+
+  @typedoc """
+  A data row map. Keys are strings matching column `:key` values.
+  Values are any term (rendered as text via `to_string/1`).
+  """
+  @type row :: %{optional(String.t()) => term()}
+
   @type option ::
-          {:columns, [map()]}
-          | {:rows, [map()]}
+          {:columns, [column()]}
+          | {:rows, [row()]}
           | {:header, boolean()}
           | {:separator, boolean()}
           | {:width, Plushie.Type.Length.t()}
@@ -55,8 +89,8 @@ defmodule Plushie.Widget.Table do
 
   @type t :: %__MODULE__{
           id: String.t(),
-          columns: [map()] | nil,
-          rows: [map()] | nil,
+          columns: [column()] | nil,
+          rows: [row()] | nil,
           header: boolean() | nil,
           separator: boolean() | nil,
           width: Plushie.Type.Length.t() | nil,
@@ -70,7 +104,7 @@ defmodule Plushie.Widget.Table do
           separator_thickness: number() | nil,
           separator_color: Plushie.Type.Color.t() | nil,
           a11y: Plushie.Type.A11y.t() | nil,
-          children: [Plushie.Widget.ui_node() | struct()]
+          children: [Plushie.Widget.child()]
         }
 
   defstruct [
@@ -135,11 +169,29 @@ defmodule Plushie.Widget.Table do
   end
 
   @doc "Sets the column definitions."
-  @spec columns(table :: t(), columns :: [map()]) :: t()
+  @spec columns(table :: t(), columns :: [column()]) :: t()
   def columns(%__MODULE__{} = tbl, columns), do: %{tbl | columns: columns}
 
-  @doc "Sets the data rows."
-  @spec rows(table :: t(), rows :: [map()]) :: t()
+  @doc """
+  Sets the data rows.
+
+  Row maps must use string keys matching the column `:key` values.
+  Raises `ArgumentError` if the first row contains atom keys.
+  """
+  @spec rows(table :: t(), rows :: [row()]) :: t()
+  def rows(%__MODULE__{} = tbl, [first | _] = rows) when is_map(first) do
+    case Enum.find(Map.keys(first), &is_atom/1) do
+      nil ->
+        %{tbl | rows: rows}
+
+      atom_key ->
+        raise ArgumentError,
+              "table #{inspect(tbl.id)} row maps must use string keys to match column key values, " <>
+                "got atom key #{inspect(atom_key)}. " <>
+                "Use %{#{inspect(Atom.to_string(atom_key))} => value} instead of %{#{atom_key}: value}"
+    end
+  end
+
   def rows(%__MODULE__{} = tbl, rows), do: %{tbl | rows: rows}
 
   @doc "Sets whether the header row is shown."
@@ -200,11 +252,11 @@ defmodule Plushie.Widget.Table do
     do: %{tbl | separator_color: Color.cast(separator_color)}
 
   @doc "Appends a child to the table."
-  @spec push(table :: t(), child :: Plushie.Widget.ui_node() | struct()) :: t()
+  @spec push(table :: t(), child :: Plushie.Widget.child()) :: t()
   def push(%__MODULE__{} = tbl, child), do: %{tbl | children: [child | tbl.children]}
 
   @doc "Appends multiple children to the table."
-  @spec extend(table :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+  @spec extend(table :: t(), children :: [Plushie.Widget.child()]) ::
           t()
   def extend(%__MODULE__{} = tbl, children),
     do: %{tbl | children: Enum.reverse(children) ++ tbl.children}

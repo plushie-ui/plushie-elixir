@@ -771,15 +771,26 @@ defmodule Plushie.UITest do
   end
 
   describe "scrollable id do...end" do
-    test "collects children" do
+    test "wraps single child" do
       node =
+        scrollable "feed" do
+          column do
+            text("Item 1")
+            text("Item 2")
+          end
+        end
+
+      assert node.id == "feed"
+      assert length(node.children) == 1
+    end
+
+    test "raises with multiple children" do
+      assert_raise ArgumentError, ~r/at most 1 child/, fn ->
         scrollable "feed" do
           text("Item 1")
           text("Item 2")
         end
-
-      assert node.id == "feed"
-      assert length(node.children) == 2
+      end
     end
   end
 
@@ -1278,9 +1289,9 @@ defmodule Plushie.UITest do
   end
 
   describe "table/2 with opts" do
-    test "columns and rows become atom-keyed props" do
+    test "columns and rows become props" do
       cols = [%{key: "name", label: "Name", width: 200}]
-      rows = [%{name: "Alice"}, %{name: "Bob"}]
+      rows = [%{"name" => "Alice"}, %{"name" => "Bob"}]
       node = table("users", columns: cols, rows: rows)
 
       assert node.props[:columns] == cols
@@ -1306,7 +1317,7 @@ defmodule Plushie.UITest do
   describe "table id, opts do...end" do
     test "has both props and children" do
       cols = [%{key: "name", label: "Name", width: 200}]
-      rows = [%{name: "Alice"}]
+      rows = [%{"name" => "Alice"}]
 
       node =
         table "users", columns: cols, rows: rows do
@@ -1366,7 +1377,7 @@ defmodule Plushie.UITest do
 
   describe "table with empty columns" do
     test "table with rows but empty columns list" do
-      rows = [%{name: "Alice"}]
+      rows = [%{"name" => "Alice"}]
       node = table("t", columns: [], rows: rows)
       assert node.props[:columns] == []
       assert node.props[:rows] == rows
@@ -1438,8 +1449,8 @@ defmodule Plushie.UITest do
 
     test "contains increment and decrement buttons" do
       tree = Counter.view(%{count: 0})
-      inc = Plushie.UI.find(tree, "increment")
-      dec = Plushie.UI.find(tree, "decrement")
+      inc = Plushie.UI.find(tree, "inc")
+      dec = Plushie.UI.find(tree, "dec")
       assert inc != nil
       assert inc.type == "button"
       assert dec != nil

@@ -27,7 +27,7 @@ defmodule Plushie.Widget.Pin do
           width: Plushie.Type.Length.t() | nil,
           height: Plushie.Type.Length.t() | nil,
           a11y: Plushie.Type.A11y.t() | nil,
-          children: [Plushie.Widget.ui_node() | struct()]
+          children: [Plushie.Widget.child()]
         }
 
   defstruct [
@@ -88,11 +88,11 @@ defmodule Plushie.Widget.Pin do
   def height(%__MODULE__{} = pin, height), do: %{pin | height: height}
 
   @doc "Appends a child to the pin."
-  @spec push(pin :: t(), child :: Plushie.Widget.ui_node() | struct()) :: t()
+  @spec push(pin :: t(), child :: Plushie.Widget.child()) :: t()
   def push(%__MODULE__{} = pin, child), do: %{pin | children: [child | pin.children]}
 
   @doc "Appends multiple children to the pin."
-  @spec extend(pin :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+  @spec extend(pin :: t(), children :: [Plushie.Widget.child()]) ::
           t()
   def extend(%__MODULE__{} = pin, children),
     do: %{pin | children: Enum.reverse(children) ++ pin.children}
@@ -109,6 +109,9 @@ defmodule Plushie.Widget.Pin do
     import Plushie.Widget.Build
 
     def to_node(pin) do
+      children = Enum.reverse(pin.children)
+      validate_single_child!(pin.id, "pin", children)
+
       props =
         %{}
         |> put_if(pin.x, :x)
@@ -121,7 +124,7 @@ defmodule Plushie.Widget.Pin do
         id: pin.id,
         type: "pin",
         props: props,
-        children: children_to_nodes(Enum.reverse(pin.children))
+        children: children_to_nodes(children)
       }
     end
   end

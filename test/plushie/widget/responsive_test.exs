@@ -44,24 +44,13 @@ defmodule Plushie.Widget.ResponsiveTest do
       assert r.children == [child]
     end
 
-    test "preserves order across multiple pushes" do
+    test "raises when building with multiple children" do
       c1 = %{id: "c1", type: "text", props: %{}, children: []}
       c2 = %{id: "c2", type: "text", props: %{}, children: []}
-      r = Responsive.new("r1") |> Responsive.push(c1) |> Responsive.push(c2)
-      assert r.children == [c2, c1]
-      node = Responsive.build(r)
-      assert node.children == [c1, c2]
-    end
-  end
 
-  describe "extend/2" do
-    test "appends multiple children at once" do
-      c1 = %{id: "c1", type: "text", props: %{}, children: []}
-      c2 = %{id: "c2", type: "text", props: %{}, children: []}
-      r = Responsive.new("r1") |> Responsive.extend([c1, c2])
-      assert r.children == [c2, c1]
-      node = Responsive.build(r)
-      assert node.children == [c1, c2]
+      assert_raise ArgumentError, ~r/at most 1 child/, fn ->
+        Responsive.new("r1") |> Responsive.push(c1) |> Responsive.push(c2) |> Responsive.build()
+      end
     end
   end
 

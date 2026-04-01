@@ -12,22 +12,22 @@ defmodule Examples.CounterTest do
   end
 
   test "increment button increases count" do
-    click("#increment")
+    click("#inc")
     assert model().count == 1
     assert_text("#count", "Count: 1")
   end
 
   test "decrement button decreases count" do
-    click("#decrement")
+    click("#dec")
     assert model().count == -1
     assert_text("#count", "Count: -1")
   end
 
   test "multiple clicks accumulate" do
-    click("#increment")
-    click("#increment")
-    click("#increment")
-    click("#decrement")
+    click("#inc")
+    click("#inc")
+    click("#inc")
+    click("#dec")
     assert model().count == 2
     assert_text("#count", "Count: 2")
   end

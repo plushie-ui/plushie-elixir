@@ -10,7 +10,7 @@ defmodule Plushie.Widget.QrCodeTest do
       assert qr.data == "hello"
       assert qr.cell_size == nil
       assert qr.cell_color == nil
-      assert qr.background_color == nil
+      assert qr.background == nil
       assert qr.error_correction == nil
     end
   end
@@ -45,9 +45,9 @@ defmodule Plushie.Widget.QrCodeTest do
       assert qr.cell_color == "#ff0000"
     end
 
-    test "background_color/2 casts named atom" do
-      qr = QrCode.new("q", "x") |> QrCode.background_color(:white)
-      assert is_binary(qr.background_color)
+    test "background/2 casts named atom" do
+      qr = QrCode.new("q", "x") |> QrCode.background(:white)
+      assert is_binary(qr.background)
     end
 
     test "error_correction/2" do
@@ -86,18 +86,18 @@ defmodule Plushie.Widget.QrCodeTest do
       assert node.props[:cell_size] == 8
       assert node.props[:error_correction] == :high
       refute Map.has_key?(node.props, "cell_color")
-      refute Map.has_key?(node.props, "background_color")
+      refute Map.has_key?(node.props, "background")
     end
 
     test "color props are encoded" do
       node =
         QrCode.new("qr", "data")
         |> QrCode.cell_color("#112233")
-        |> QrCode.background_color("#ffffff")
+        |> QrCode.background("#ffffff")
         |> QrCode.build()
 
       assert node.props[:cell_color] == "#112233"
-      assert node.props[:background_color] == "#ffffff"
+      assert node.props[:background] == "#ffffff"
     end
   end
 end

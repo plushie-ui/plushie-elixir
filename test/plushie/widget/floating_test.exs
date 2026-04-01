@@ -52,15 +52,13 @@ defmodule Plushie.Widget.FloatingTest do
       assert length(fw.children) == 2
     end
 
-    test "push/2 preserves existing children" do
+    test "raises when building with multiple children" do
       c1 = %{id: "c1", type: "text", props: %{}, children: []}
       c2 = %{id: "c2", type: "text", props: %{}, children: []}
-      fw = Float.new("f1") |> Float.push(c1) |> Float.push(c2)
-      assert length(fw.children) == 2
-      # Internal list is reversed; build restores order
-      node = Float.build(fw)
-      assert Enum.at(node.children, 0) == c1
-      assert Enum.at(node.children, 1) == c2
+
+      assert_raise ArgumentError, ~r/at most 1 child/, fn ->
+        Float.new("f1") |> Float.push(c1) |> Float.push(c2) |> Float.build()
+      end
     end
   end
 

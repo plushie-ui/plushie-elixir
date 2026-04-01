@@ -111,7 +111,7 @@ defmodule Plushie.Widget.MouseArea do
           on_scroll: boolean() | nil,
           event_rate: pos_integer() | nil,
           a11y: Plushie.Type.A11y.t() | nil,
-          children: [Plushie.Widget.ui_node() | struct()]
+          children: [Plushie.Widget.child()]
         }
 
   defstruct [
@@ -233,14 +233,14 @@ defmodule Plushie.Widget.MouseArea do
     do: %{ma | on_scroll: enabled}
 
   @doc "Appends a child to the mouse area."
-  @spec push(mouse_area :: t(), child :: Plushie.Widget.ui_node() | struct()) ::
+  @spec push(mouse_area :: t(), child :: Plushie.Widget.child()) ::
           t()
   def push(%__MODULE__{} = ma, child), do: %{ma | children: [child | ma.children]}
 
   @doc "Appends multiple children to the mouse area."
   @spec extend(
           mouse_area :: t(),
-          children :: [Plushie.Widget.ui_node() | struct()]
+          children :: [Plushie.Widget.child()]
         ) :: t()
   def extend(%__MODULE__{} = ma, children),
     do: %{ma | children: Enum.reverse(children) ++ ma.children}
@@ -262,6 +262,9 @@ defmodule Plushie.Widget.MouseArea do
     import Plushie.Widget.Build
 
     def to_node(ma) do
+      children = Enum.reverse(ma.children)
+      validate_single_child!(ma.id, "mouse_area", children)
+
       props =
         %{}
         |> put_if(ma.cursor, :cursor)
@@ -283,7 +286,7 @@ defmodule Plushie.Widget.MouseArea do
         id: ma.id,
         type: "mouse_area",
         props: props,
-        children: children_to_nodes(Enum.reverse(ma.children))
+        children: children_to_nodes(children)
       }
     end
   end

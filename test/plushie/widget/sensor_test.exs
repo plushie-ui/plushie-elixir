@@ -52,37 +52,13 @@ defmodule Plushie.Widget.SensorTest do
       assert s.children == [child]
     end
 
-    test "preserves order across multiple pushes (internal reverse, build restores)" do
+    test "raises when building with multiple children" do
       c1 = %{id: "c1", type: "text", props: %{}, children: []}
       c2 = %{id: "c2", type: "text", props: %{}, children: []}
-      s = Sensor.new("s1") |> Sensor.push(c1) |> Sensor.push(c2)
-      # Internal list is prepend-order (reversed); build/1 reverses back
-      assert s.children == [c2, c1]
-      node = Sensor.build(s)
-      assert node.children == [c1, c2]
-    end
-  end
 
-  describe "extend/2" do
-    test "appends multiple children at once" do
-      c1 = %{id: "c1", type: "text", props: %{}, children: []}
-      c2 = %{id: "c2", type: "text", props: %{}, children: []}
-      s = Sensor.new("s1") |> Sensor.extend([c1, c2])
-      # Internal list is reversed; build/1 reverses back
-      assert s.children == [c2, c1]
-      node = Sensor.build(s)
-      assert node.children == [c1, c2]
-    end
-
-    test "extends after push preserves all children" do
-      c1 = %{id: "c1", type: "text", props: %{}, children: []}
-      c2 = %{id: "c2", type: "text", props: %{}, children: []}
-      c3 = %{id: "c3", type: "text", props: %{}, children: []}
-      s = Sensor.new("s1") |> Sensor.push(c1) |> Sensor.extend([c2, c3])
-      # Internal: extend reverses [c2,c3] to [c3,c2], prepends to [c1] -> [c3, c2, c1]
-      assert s.children == [c3, c2, c1]
-      node = Sensor.build(s)
-      assert node.children == [c1, c2, c3]
+      assert_raise ArgumentError, ~r/at most 1 child/, fn ->
+        Sensor.new("s1") |> Sensor.push(c1) |> Sensor.push(c2) |> Sensor.build()
+      end
     end
   end
 

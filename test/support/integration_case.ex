@@ -17,7 +17,7 @@ defmodule Plushie.IntegrationCase do
             assert tree.type == "window"
           end)
 
-          send_event(runtime, %Plushie.Event.WidgetEvent{type: :click, id: "increment"})
+          send_event(runtime, %Plushie.Event.WidgetEvent{type: :click, id: "inc"})
 
           model = get_model(runtime)
           assert model.count == 1

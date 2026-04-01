@@ -57,7 +57,7 @@ defmodule Plushie.Widget.PaneGrid do
           leeway: number() | nil,
           event_rate: pos_integer() | nil,
           a11y: Plushie.Type.A11y.t() | nil,
-          children: [Plushie.Widget.ui_node() | struct()]
+          children: [Plushie.Widget.child()]
         }
 
   defstruct [
@@ -148,11 +148,11 @@ defmodule Plushie.Widget.PaneGrid do
   def leeway(%__MODULE__{} = pg, leeway) when is_number(leeway), do: %{pg | leeway: leeway}
 
   @doc "Appends a child pane to the grid."
-  @spec push(pane_grid :: t(), child :: Plushie.Widget.ui_node() | struct()) :: t()
+  @spec push(pane_grid :: t(), child :: Plushie.Widget.child()) :: t()
   def push(%__MODULE__{} = pg, child), do: %{pg | children: [child | pg.children]}
 
   @doc "Appends multiple child panes to the grid."
-  @spec extend(pane_grid :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+  @spec extend(pane_grid :: t(), children :: [Plushie.Widget.child()]) ::
           t()
   def extend(%__MODULE__{} = pg, children),
     do: %{pg | children: Enum.reverse(children) ++ pg.children}

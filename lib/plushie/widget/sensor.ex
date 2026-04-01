@@ -33,7 +33,7 @@ defmodule Plushie.Widget.Sensor do
           on_resize: String.t() | nil,
           event_rate: pos_integer() | nil,
           a11y: Plushie.Type.A11y.t() | nil,
-          children: [Plushie.Widget.ui_node() | struct()]
+          children: [Plushie.Widget.child()]
         }
 
   defstruct [:id, :delay, :anticipate, :on_resize, :event_rate, :a11y, children: []]
@@ -86,11 +86,11 @@ defmodule Plushie.Widget.Sensor do
     do: %{sensor | on_resize: tag}
 
   @doc "Appends a child to the sensor."
-  @spec push(sensor :: t(), child :: Plushie.Widget.ui_node() | struct()) :: t()
+  @spec push(sensor :: t(), child :: Plushie.Widget.child()) :: t()
   def push(%__MODULE__{} = sensor, child), do: %{sensor | children: [child | sensor.children]}
 
   @doc "Appends multiple children to the sensor."
-  @spec extend(sensor :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+  @spec extend(sensor :: t(), children :: [Plushie.Widget.child()]) ::
           t()
   def extend(%__MODULE__{} = sensor, children),
     do: %{sensor | children: Enum.reverse(children) ++ sensor.children}
@@ -112,6 +112,9 @@ defmodule Plushie.Widget.Sensor do
     import Plushie.Widget.Build
 
     def to_node(sensor) do
+      children = Enum.reverse(sensor.children)
+      validate_single_child!(sensor.id, "sensor", children)
+
       props =
         %{}
         |> put_if(sensor.delay, :delay)
@@ -124,7 +127,7 @@ defmodule Plushie.Widget.Sensor do
         id: sensor.id,
         type: "sensor",
         props: props,
-        children: children_to_nodes(Enum.reverse(sensor.children))
+        children: children_to_nodes(children)
       }
     end
   end

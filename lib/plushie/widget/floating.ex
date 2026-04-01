@@ -30,7 +30,7 @@ defmodule Plushie.Widget.Floating do
           width: Plushie.Type.Length.t() | nil,
           height: Plushie.Type.Length.t() | nil,
           a11y: Plushie.Type.A11y.t() | nil,
-          children: [Plushie.Widget.ui_node() | struct()]
+          children: [Plushie.Widget.child()]
         }
 
   defstruct [
@@ -97,11 +97,11 @@ defmodule Plushie.Widget.Floating do
   def height(%__MODULE__{} = fw, height), do: %{fw | height: height}
 
   @doc "Appends a child to the float."
-  @spec push(floating :: t(), child :: Plushie.Widget.ui_node() | struct()) :: t()
+  @spec push(floating :: t(), child :: Plushie.Widget.child()) :: t()
   def push(%__MODULE__{} = fw, child), do: %{fw | children: [child | fw.children]}
 
   @doc "Appends multiple children to the float."
-  @spec extend(floating :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+  @spec extend(floating :: t(), children :: [Plushie.Widget.child()]) ::
           t()
   def extend(%__MODULE__{} = fw, children),
     do: %{fw | children: Enum.reverse(children) ++ fw.children}
@@ -118,6 +118,9 @@ defmodule Plushie.Widget.Floating do
     import Plushie.Widget.Build
 
     def to_node(fw) do
+      children = Enum.reverse(fw.children)
+      validate_single_child!(fw.id, "floating", children)
+
       props =
         %{}
         |> put_if(fw.translate_x, :translate_x)
@@ -131,7 +134,7 @@ defmodule Plushie.Widget.Floating do
         id: fw.id,
         type: "float",
         props: props,
-        children: children_to_nodes(Enum.reverse(fw.children))
+        children: children_to_nodes(children)
       }
     end
   end

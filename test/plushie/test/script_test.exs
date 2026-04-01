@@ -190,7 +190,7 @@ defmodule Plushie.Automation.FileTest do
       script = %{
         header: %{app: Counter, viewport: {800, 600}, theme: "dark", backend: :mock},
         instructions: [
-          {:click, "#increment"},
+          {:click, "#inc"},
           {:assert_text, "#count", "Count: 1"}
         ]
       }

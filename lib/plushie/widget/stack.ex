@@ -24,7 +24,7 @@ defmodule Plushie.Widget.Stack do
           height: Plushie.Type.Length.t() | nil,
           clip: boolean() | nil,
           a11y: Plushie.Type.A11y.t() | nil,
-          children: [Plushie.Widget.ui_node() | struct()]
+          children: [Plushie.Widget.child()]
         }
 
   defstruct [
@@ -79,11 +79,11 @@ defmodule Plushie.Widget.Stack do
   def clip(%__MODULE__{} = stack, clip) when is_boolean(clip), do: %{stack | clip: clip}
 
   @doc "Appends a child to the stack."
-  @spec push(stack :: t(), child :: Plushie.Widget.ui_node() | struct()) :: t()
+  @spec push(stack :: t(), child :: Plushie.Widget.child()) :: t()
   def push(%__MODULE__{} = stack, child), do: %{stack | children: [child | stack.children]}
 
   @doc "Appends multiple children to the stack."
-  @spec extend(stack :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+  @spec extend(stack :: t(), children :: [Plushie.Widget.child()]) ::
           t()
   def extend(%__MODULE__{} = stack, children),
     do: %{stack | children: Enum.reverse(children) ++ stack.children}

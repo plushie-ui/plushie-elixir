@@ -28,7 +28,7 @@ defmodule Plushie.IntegrationCaseTest do
     test "dispatches events through the runtime" do
       {runtime, _bridge} = start_app(Counter)
 
-      send_event(runtime, %WidgetEvent{type: :click, id: "increment"})
+      send_event(runtime, %WidgetEvent{type: :click, id: "inc"})
 
       model = get_model(runtime)
       assert model.count == 1
@@ -70,9 +70,9 @@ defmodule Plushie.IntegrationCaseTest do
     test "counter app increments and decrements" do
       {runtime, _bridge} = start_app(Counter)
 
-      send_event(runtime, %WidgetEvent{type: :click, id: "increment"})
-      send_event(runtime, %WidgetEvent{type: :click, id: "increment"})
-      send_event(runtime, %WidgetEvent{type: :click, id: "decrement"})
+      send_event(runtime, %WidgetEvent{type: :click, id: "inc"})
+      send_event(runtime, %WidgetEvent{type: :click, id: "inc"})
+      send_event(runtime, %WidgetEvent{type: :click, id: "dec"})
 
       model = get_model(runtime)
       assert model.count == 1

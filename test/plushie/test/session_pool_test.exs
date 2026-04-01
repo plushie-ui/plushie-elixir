@@ -363,10 +363,10 @@ defmodule Plushie.Test.SessionPoolTest do
       {:ok, pid} = Runtime.start(Counter, pool: pool)
       assert Runtime.model(pid).count == 0
 
-      Runtime.click(pid, "#increment")
+      Runtime.click(pid, "#inc")
       assert Runtime.model(pid).count == 1
 
-      Runtime.click(pid, "#increment")
+      Runtime.click(pid, "#inc")
       assert Runtime.model(pid).count == 2
 
       Runtime.stop(pid)
@@ -376,9 +376,9 @@ defmodule Plushie.Test.SessionPoolTest do
       {:ok, p1} = Runtime.start(Counter, pool: pool)
       {:ok, p2} = Runtime.start(Counter, pool: pool)
 
-      Runtime.click(p1, "#increment")
-      Runtime.click(p1, "#increment")
-      Runtime.click(p2, "#increment")
+      Runtime.click(p1, "#inc")
+      Runtime.click(p1, "#inc")
+      Runtime.click(p2, "#inc")
 
       assert Runtime.model(p1).count == 2
       assert Runtime.model(p2).count == 1
@@ -389,7 +389,7 @@ defmodule Plushie.Test.SessionPoolTest do
 
     test "reset restores initial state", %{pool: pool} do
       {:ok, pid} = Runtime.start(Counter, pool: pool)
-      Runtime.click(pid, "#increment")
+      Runtime.click(pid, "#inc")
       assert Runtime.model(pid).count == 1
 
       Runtime.reset(pid)

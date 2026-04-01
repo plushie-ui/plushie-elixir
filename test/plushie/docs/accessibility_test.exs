@@ -136,14 +136,17 @@ defmodule Plushie.Docs.AccessibilityTest do
   test "accessibility_search_landmark_test" do
     node =
       container "search_area", a11y: %A11y{role: :search, label: "Search"} do
-        text_input("query", "", placeholder: "Search...")
-        button("go", "Search")
+        row do
+          text_input("query", "", placeholder: "Search...")
+          button("go", "Search")
+        end
       end
       |> Plushie.Tree.normalize()
 
     assert node.props[:a11y][:role] == "search"
     assert node.props[:a11y][:label] == "Search"
-    assert length(node.children) == 2
+    assert length(node.children) == 1
+    assert length(hd(node.children).children) == 2
   end
 
   # ---------------------------------------------------------------------------

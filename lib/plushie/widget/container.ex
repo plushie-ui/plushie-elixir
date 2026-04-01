@@ -79,7 +79,7 @@ defmodule Plushie.Widget.Container do
           shadow: Plushie.Type.Shadow.t() | nil,
           style: style() | nil,
           a11y: Plushie.Type.A11y.t() | nil,
-          children: [Plushie.Widget.ui_node() | struct()]
+          children: [Plushie.Widget.child()]
         }
 
   defstruct [
@@ -248,11 +248,11 @@ defmodule Plushie.Widget.Container do
   def style(%__MODULE__{} = c, style) when style in @presets, do: %{c | style: style}
 
   @doc "Appends a child to the container."
-  @spec push(container :: t(), child :: Plushie.Widget.ui_node() | struct()) :: t()
+  @spec push(container :: t(), child :: Plushie.Widget.child()) :: t()
   def push(%__MODULE__{} = c, child), do: %{c | children: [child | c.children]}
 
   @doc "Appends multiple children to the container."
-  @spec extend(container :: t(), children :: [Plushie.Widget.ui_node() | struct()]) ::
+  @spec extend(container :: t(), children :: [Plushie.Widget.child()]) ::
           t()
   def extend(%__MODULE__{} = c, children),
     do: %{c | children: Enum.reverse(children) ++ c.children}
@@ -269,6 +269,9 @@ defmodule Plushie.Widget.Container do
     import Plushie.Widget.Build
 
     def to_node(c) do
+      children = Enum.reverse(c.children)
+      validate_single_child!(c.id, "container", children)
+
       props =
         %{}
         |> put_if(c.padding, :padding)
@@ -291,7 +294,7 @@ defmodule Plushie.Widget.Container do
         id: c.id,
         type: "container",
         props: props,
-        children: children_to_nodes(Enum.reverse(c.children))
+        children: children_to_nodes(children)
       }
     end
   end
