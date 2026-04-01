@@ -53,7 +53,7 @@ defmodule Plushie.Runtime do
 
   require Logger
 
-  alias Plushie.Event.{Async, Effect, Mouse, Stream, Timer, WidgetEvent}
+  alias Plushie.Event.{AsyncEvent, EffectEvent, MouseEvent, StreamEvent, TimerEvent, WidgetEvent}
   alias Plushie.Runtime.{Commands, Subscriptions, Windows}
 
   @enforce_keys [:app, :bridge]
@@ -469,7 +469,7 @@ defmodule Plushie.Runtime do
   def handle_info({:renderer_event, {:effect_response, wire_id, result}}, state) do
     case pop_pending_effect(state, wire_id) do
       {:ok, tag, state} ->
-        {:noreply, run_update(state, %Effect{tag: tag, result: result})}
+        {:noreply, run_update(state, %EffectEvent{tag: tag, result: result})}
 
       :missing ->
         {:noreply, state}
@@ -505,7 +505,7 @@ defmodule Plushie.Runtime do
   # latest value. This preserves ordering relative to other event types (a
   # non-coalescable event always flushes pending coalescables first) and avoids
   # redundant update cycles during bursts.
-  def handle_info({:renderer_event, %Mouse{type: :moved} = event}, state) do
+  def handle_info({:renderer_event, %MouseEvent{type: :moved} = event}, state) do
     {:noreply, store_coalescable(state, :mouse_move, event)}
   end
 
@@ -674,7 +674,7 @@ defmodule Plushie.Runtime do
     case Map.get(state.async_tasks, tag) do
       {_pid, ^nonce} ->
         # Nonce matches -- this is from the current task.
-        state = run_update(state, %Async{tag: tag, result: result})
+        state = run_update(state, %AsyncEvent{tag: tag, result: result})
         {:noreply, state}
 
       _ ->
@@ -687,7 +687,7 @@ defmodule Plushie.Runtime do
     case Map.get(state.async_tasks, tag) do
       {_pid, ^nonce} ->
         # Nonce matches -- this is from the current stream task.
-        state = run_update(state, %Stream{tag: tag, value: value})
+        state = run_update(state, %StreamEvent{tag: tag, value: value})
         {:noreply, state}
 
       _ ->
@@ -737,7 +737,7 @@ defmodule Plushie.Runtime do
       {%{tag: tag}, pending_effects} ->
         :telemetry.execute([:plushie, :runtime, :effect_timeout], %{count: 1}, %{id: id})
         state = %{state | pending_effects: pending_effects}
-        state = run_update(state, %Effect{tag: tag, result: {:error, :timeout}})
+        state = run_update(state, %EffectEvent{tag: tag, result: {:error, :timeout}})
         {:noreply, state}
     end
   end
@@ -761,7 +761,7 @@ defmodule Plushie.Runtime do
       if reason != :normal do
         Logger.warning("plushie runtime: async task #{inspect(tag)} crashed: #{inspect(reason)}")
 
-        state = run_update(state, %Async{tag: tag, result: {:error, {:crashed, reason}}})
+        state = run_update(state, %AsyncEvent{tag: tag, result: {:error, {:crashed, reason}}})
         {:noreply, state}
       else
         {:noreply, state}
@@ -831,7 +831,7 @@ defmodule Plushie.Runtime do
         :not_routed ->
           # Standard app timer -- dispatch to update/2.
           now = System.monotonic_time(:millisecond)
-          state = run_update(state, %Timer{tag: tag, timestamp: now})
+          state = run_update(state, %TimerEvent{tag: tag, timestamp: now})
           {:noreply, state}
       end
     else
@@ -1639,7 +1639,7 @@ defmodule Plushie.Runtime do
         # Cancel the timer first to prevent double dispatch (the timeout
         # handler checks pending_effects, but better safe than racy).
         if timer_ref, do: Process.cancel_timer(timer_ref)
-        run_update(acc, %Effect{tag: tag, result: {:error, reason}})
+        run_update(acc, %EffectEvent{tag: tag, result: {:error, reason}})
       end)
 
     %{state | pending_effects: %{}}

@@ -1,11 +1,11 @@
-defmodule Plushie.Event.Mouse do
+defmodule Plushie.Event.MouseEvent do
   @moduledoc """
   Global mouse events from subscriptions.
 
   ## Pattern matching
 
-      def update(model, %Mouse{type: :moved, x: x, y: y}), do: ...
-      def update(model, %Mouse{type: :button_pressed, button: :left, captured: false}), do: ...
+      def update(model, %MouseEvent{type: :moved, x: x, y: y}), do: ...
+      def update(model, %MouseEvent{type: :button_pressed, button: :left, captured: false}), do: ...
   """
 
   @type event_type ::

@@ -1,11 +1,11 @@
 defmodule Plushie.ProtocolTest do
   use ExUnit.Case, async: true
 
-  alias Plushie.Event.Ime
-  alias Plushie.Event.Key
-  alias Plushie.Event.Modifiers
+  alias Plushie.Event.ImeEvent
+  alias Plushie.Event.KeyEvent
+  alias Plushie.Event.ModifiersEvent
   alias Plushie.Event.SystemEvent
-  alias Plushie.Event.Touch
+  alias Plushie.Event.TouchEvent
   alias Plushie.Event.WidgetEvent
 
   alias Plushie.Protocol
@@ -289,7 +289,7 @@ defmodule Plushie.ProtocolTest do
   end
 
   describe "decode_message/1 -- key events (key in data.key)" do
-    test "decodes a named key to %Key{type: :press}" do
+    test "decodes a named key to %KeyEvent{type: :press}" do
       json =
         Jason.encode!(%{
           type: "event",
@@ -298,10 +298,10 @@ defmodule Plushie.ProtocolTest do
           data: %{key: "Escape"}
         })
 
-      assert %Key{type: :press, key: :escape} = Protocol.decode_message(json, :json)
+      assert %KeyEvent{type: :press, key: :escape} = Protocol.decode_message(json, :json)
     end
 
-    test "decodes a character key to %Key{type: :press, key: string}" do
+    test "decodes a character key to %KeyEvent{type: :press, key: string}" do
       json =
         Jason.encode!(%{
           type: "event",
@@ -310,7 +310,7 @@ defmodule Plushie.ProtocolTest do
           data: %{key: "a"}
         })
 
-      assert %Key{type: :press, key: "a"} = Protocol.decode_message(json, :json)
+      assert %KeyEvent{type: :press, key: "a"} = Protocol.decode_message(json, :json)
     end
 
     test "modifiers are a KeyModifiers struct with all fields" do
@@ -322,7 +322,7 @@ defmodule Plushie.ProtocolTest do
           data: %{key: "s"}
         })
 
-      %Key{type: :press, modifiers: mods} = Protocol.decode_message(json, :json)
+      %KeyEvent{type: :press, modifiers: mods} = Protocol.decode_message(json, :json)
       assert %Plushie.KeyModifiers{} = mods
       assert Map.has_key?(mods, :ctrl)
       assert Map.has_key?(mods, :shift)
@@ -340,7 +340,7 @@ defmodule Plushie.ProtocolTest do
           data: %{key: "c"}
         })
 
-      %Key{type: :press, modifiers: mods} = Protocol.decode_message(json, :json)
+      %KeyEvent{type: :press, modifiers: mods} = Protocol.decode_message(json, :json)
       assert mods.ctrl == true
       assert mods.shift == false
     end
@@ -354,7 +354,7 @@ defmodule Plushie.ProtocolTest do
           data: %{key: "z"}
         })
 
-      %Key{type: :press, modifiers: mods} = Protocol.decode_message(json, :json)
+      %KeyEvent{type: :press, modifiers: mods} = Protocol.decode_message(json, :json)
       assert mods.ctrl == false
       assert mods.alt == false
     end
@@ -368,7 +368,7 @@ defmodule Plushie.ProtocolTest do
           data: %{key: "Enter"}
         })
 
-      assert %Key{type: :release, key: :enter} = Protocol.decode_message(json, :json)
+      assert %KeyEvent{type: :release, key: :enter} = Protocol.decode_message(json, :json)
     end
 
     test "rejects key event with top-level value instead of data.key" do
@@ -395,7 +395,7 @@ defmodule Plushie.ProtocolTest do
           }
         })
 
-      assert %Key{type: :press, key: "s", modifiers: %Plushie.KeyModifiers{ctrl: true}} =
+      assert %KeyEvent{type: :press, key: "s", modifiers: %Plushie.KeyModifiers{ctrl: true}} =
                Protocol.decode_message(json, :json)
     end
 
@@ -428,8 +428,8 @@ defmodule Plushie.ProtocolTest do
           }
         })
 
-      %Key{type: :press} = evt = Protocol.decode_message(json, :json)
-      assert %Key{} = evt
+      %KeyEvent{type: :press} = evt = Protocol.decode_message(json, :json)
+      assert %KeyEvent{} = evt
       assert evt.key == "a"
       assert evt.modified_key == "A"
       assert evt.physical_key == :key_a
@@ -447,7 +447,7 @@ defmodule Plushie.ProtocolTest do
           modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: true}
         })
 
-      assert %Modifiers{modifiers: %Plushie.KeyModifiers{ctrl: true, command: true}} =
+      assert %ModifiersEvent{modifiers: %Plushie.KeyModifiers{ctrl: true, command: true}} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -461,7 +461,7 @@ defmodule Plushie.ProtocolTest do
           id: "editor"
         })
 
-      assert %Ime{type: :opened, id: "editor", scope: [], captured: false} =
+      assert %ImeEvent{type: :opened, id: "editor", scope: [], captured: false} =
                Protocol.decode_message(json, :json)
     end
 
@@ -474,7 +474,13 @@ defmodule Plushie.ProtocolTest do
           data: %{text: "hello", cursor: %{start: 2, end: 5}}
         })
 
-      assert %Ime{type: :preedit, id: "editor", text: "hello", cursor: {2, 5}, captured: false} =
+      assert %ImeEvent{
+               type: :preedit,
+               id: "editor",
+               text: "hello",
+               cursor: {2, 5},
+               captured: false
+             } =
                Protocol.decode_message(json, :json)
     end
 
@@ -487,7 +493,7 @@ defmodule Plushie.ProtocolTest do
           data: %{text: "hi"}
         })
 
-      assert %Ime{type: :preedit, id: "editor", text: "hi", cursor: nil, captured: false} =
+      assert %ImeEvent{type: :preedit, id: "editor", text: "hi", cursor: nil, captured: false} =
                Protocol.decode_message(json, :json)
     end
 
@@ -500,7 +506,7 @@ defmodule Plushie.ProtocolTest do
           data: %{text: "final"}
         })
 
-      assert %Ime{type: :commit, id: "editor", text: "final", captured: false} =
+      assert %ImeEvent{type: :commit, id: "editor", text: "final", captured: false} =
                Protocol.decode_message(json, :json)
     end
 
@@ -512,7 +518,7 @@ defmodule Plushie.ProtocolTest do
           id: "editor"
         })
 
-      assert %Ime{type: :closed, id: "editor", captured: false} =
+      assert %ImeEvent{type: :closed, id: "editor", captured: false} =
                Protocol.decode_message(json, :json)
     end
 
@@ -524,7 +530,7 @@ defmodule Plushie.ProtocolTest do
           id: "form/editor"
         })
 
-      assert %Ime{type: :opened, id: "editor", scope: ["form"]} =
+      assert %ImeEvent{type: :opened, id: "editor", scope: ["form"]} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -1371,7 +1377,7 @@ defmodule Plushie.ProtocolTest do
           data: %{id: 0, x: 50.0, y: 75.0}
         })
 
-      assert %Touch{type: :pressed, finger_id: 0, x: 50.0, y: 75.0} =
+      assert %TouchEvent{type: :pressed, finger_id: 0, x: 50.0, y: 75.0} =
                Protocol.decode_message(json, :json)
     end
 
@@ -1383,7 +1389,7 @@ defmodule Plushie.ProtocolTest do
           data: %{id: 1, x: 60.0, y: 80.0}
         })
 
-      assert %Touch{type: :moved, finger_id: 1, x: 60.0, y: 80.0} =
+      assert %TouchEvent{type: :moved, finger_id: 1, x: 60.0, y: 80.0} =
                Protocol.decode_message(json, :json)
     end
   end

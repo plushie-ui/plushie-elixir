@@ -1,7 +1,7 @@
 defmodule Plushie.Integration.EffectTest do
   use Plushie.Test.Case, app: Plushie.Integration.EffectTest.EffectApp
 
-  alias Plushie.Event.{Effect, WidgetEvent}
+  alias Plushie.Event.{EffectEvent, WidgetEvent}
 
   defmodule EffectApp do
     use Plushie.App
@@ -12,12 +12,12 @@ defmodule Plushie.Integration.EffectTest do
       {model, Plushie.Effects.clipboard_read(:read)}
     end
 
-    def update(model, %Effect{tag: :read, result: {:ok, data}}) do
+    def update(model, %EffectEvent{tag: :read, result: {:ok, data}}) do
       text = if is_binary(data), do: data, else: ""
       %{model | clipboard_text: text}
     end
 
-    def update(model, %Effect{tag: :read, result: {:error, :unsupported}}) do
+    def update(model, %EffectEvent{tag: :read, result: {:error, :unsupported}}) do
       %{model | got_unsupported: true}
     end
 

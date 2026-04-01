@@ -1,4 +1,4 @@
-defmodule Plushie.Event.Timer do
+defmodule Plushie.Event.TimerEvent do
   @moduledoc """
   Timer tick events from `Plushie.Subscription.every/2`.
 
@@ -9,8 +9,8 @@ defmodule Plushie.Event.Timer do
 
   ## Pattern matching
 
-      def update(model, %Timer{tag: :tick}), do: %{model | ticks: model.ticks + 1}
-      def update(model, %Timer{tag: :animate, timestamp: ts}), do: animate(model, ts)
+      def update(model, %TimerEvent{tag: :tick}), do: %{model | ticks: model.ticks + 1}
+      def update(model, %TimerEvent{tag: :animate, timestamp: ts}), do: animate(model, ts)
   """
 
   @type t :: %__MODULE__{

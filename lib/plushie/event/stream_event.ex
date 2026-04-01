@@ -1,4 +1,4 @@
-defmodule Plushie.Event.Stream do
+defmodule Plushie.Event.StreamEvent do
   @moduledoc """
   Intermediate values from `Plushie.Command.stream/2` tasks.
 
@@ -9,8 +9,8 @@ defmodule Plushie.Event.Stream do
 
   ## Pattern matching
 
-      def update(model, %Stream{tag: :download, value: %{progress: p}}), do: ...
-      def update(model, %Stream{tag: :search, value: result}), do: ...
+      def update(model, %StreamEvent{tag: :download, value: %{progress: p}}), do: ...
+      def update(model, %StreamEvent{tag: :search, value: result}), do: ...
   """
 
   @type t :: %__MODULE__{

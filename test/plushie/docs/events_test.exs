@@ -2,16 +2,16 @@ defmodule Plushie.Docs.EventsTest do
   use ExUnit.Case, async: true
 
   alias Plushie.Event.{
-    Async,
-    Effect,
-    Ime,
-    Key,
-    Modifiers,
-    Mouse,
-    Stream,
+    AsyncEvent,
+    EffectEvent,
+    ImeEvent,
+    KeyEvent,
+    ModifiersEvent,
+    MouseEvent,
+    StreamEvent,
     SystemEvent,
-    Timer,
-    Touch,
+    TimerEvent,
+    TouchEvent,
     WidgetEvent,
     WindowEvent
   }
@@ -229,7 +229,7 @@ defmodule Plushie.Docs.EventsTest do
   # -- Keyboard events ---------------------------------------------------------
 
   test "events_key_press_cmd_s_match_test" do
-    event = %Key{
+    event = %KeyEvent{
       type: :press,
       key: "s",
       modified_key: "s",
@@ -241,11 +241,11 @@ defmodule Plushie.Docs.EventsTest do
       captured: false
     }
 
-    assert match?(%Key{type: :press, key: "s", modifiers: %{command: true}}, event)
+    assert match?(%KeyEvent{type: :press, key: "s", modifiers: %{command: true}}, event)
   end
 
   test "events_key_press_escape_match_test" do
-    event = %Key{
+    event = %KeyEvent{
       type: :press,
       key: :escape,
       modified_key: :escape,
@@ -257,11 +257,11 @@ defmodule Plushie.Docs.EventsTest do
       captured: false
     }
 
-    assert match?(%Key{type: :press, key: :escape}, event)
+    assert match?(%KeyEvent{type: :press, key: :escape}, event)
   end
 
   test "events_key_press_physical_key_match_test" do
-    event = %Key{
+    event = %KeyEvent{
       type: :press,
       key: "w",
       modified_key: "w",
@@ -273,11 +273,11 @@ defmodule Plushie.Docs.EventsTest do
       captured: false
     }
 
-    assert match?(%Key{type: :press, physical_key: :key_w}, event)
+    assert match?(%KeyEvent{type: :press, physical_key: :key_w}, event)
   end
 
   test "events_key_press_text_field_match_test" do
-    event = %Key{
+    event = %KeyEvent{
       type: :press,
       key: "a",
       modified_key: "a",
@@ -309,14 +309,14 @@ defmodule Plushie.Docs.EventsTest do
   # -- IME events --------------------------------------------------------------
 
   test "events_ime_preedit_match_test" do
-    event = %Ime{type: :preedit, text: "compose", cursor: {0, 7}}
+    event = %ImeEvent{type: :preedit, text: "compose", cursor: {0, 7}}
 
     assert event.text == "compose"
     assert event.cursor == {0, 7}
   end
 
   test "events_ime_commit_match_test" do
-    event = %Ime{type: :commit, text: "final"}
+    event = %ImeEvent{type: :commit, text: "final"}
 
     assert event.text == "final"
   end
@@ -324,22 +324,22 @@ defmodule Plushie.Docs.EventsTest do
   # -- Mouse events (global) ---------------------------------------------------
 
   test "events_mouse_moved_match_test" do
-    event = %Mouse{type: :moved, x: 100.0, y: 200.0}
+    event = %MouseEvent{type: :moved, x: 100.0, y: 200.0}
 
     assert event.x == 100.0
     assert event.y == 200.0
   end
 
   test "events_mouse_button_pressed_match_test" do
-    event = %Mouse{type: :button_pressed, button: :left}
+    event = %MouseEvent{type: :button_pressed, button: :left}
 
-    assert match?(%Mouse{type: :button_pressed, button: :left}, event)
+    assert match?(%MouseEvent{type: :button_pressed, button: :left}, event)
   end
 
   # -- Touch events ------------------------------------------------------------
 
   test "events_touch_pressed_match_test" do
-    event = %Touch{type: :pressed, finger_id: 0, x: 50.0, y: 75.0}
+    event = %TouchEvent{type: :pressed, finger_id: 0, x: 50.0, y: 75.0}
 
     assert event.x == 50.0
     assert event.y == 75.0
@@ -348,7 +348,7 @@ defmodule Plushie.Docs.EventsTest do
   # -- Modifier state events ---------------------------------------------------
 
   test "events_modifiers_changed_match_test" do
-    event = %Modifiers{
+    event = %ModifiersEvent{
       modifiers: %Plushie.KeyModifiers{
         shift: true,
         ctrl: false,
@@ -407,50 +407,50 @@ defmodule Plushie.Docs.EventsTest do
   # -- Timer events ------------------------------------------------------------
 
   test "events_timer_tick_match_test" do
-    event = %Timer{tag: :tick, timestamp: 1_000_000}
+    event = %TimerEvent{tag: :tick, timestamp: 1_000_000}
 
-    assert match?(%Timer{tag: :tick}, event)
+    assert match?(%TimerEvent{tag: :tick}, event)
     assert event.timestamp == 1_000_000
   end
 
   # -- Command result events ---------------------------------------------------
 
   test "events_async_result_ok_match_test" do
-    event = %Async{tag: :data_loaded, result: {:ok, "hello"}}
+    event = %AsyncEvent{tag: :data_loaded, result: {:ok, "hello"}}
 
-    assert match?(%Async{tag: :data_loaded, result: {:ok, _}}, event)
+    assert match?(%AsyncEvent{tag: :data_loaded, result: {:ok, _}}, event)
   end
 
   test "events_async_result_error_match_test" do
-    event = %Async{tag: :data_loaded, result: {:error, "fail"}}
+    event = %AsyncEvent{tag: :data_loaded, result: {:error, "fail"}}
 
-    assert match?(%Async{tag: :data_loaded, result: {:error, _}}, event)
+    assert match?(%AsyncEvent{tag: :data_loaded, result: {:error, _}}, event)
   end
 
   test "events_stream_value_match_test" do
-    event = %Stream{tag: :file_import, value: 42}
+    event = %StreamEvent{tag: :file_import, value: 42}
 
-    assert match?(%Stream{tag: :file_import}, event)
+    assert match?(%StreamEvent{tag: :file_import}, event)
   end
 
   # -- Effect result events ----------------------------------------------------
 
   test "events_effect_response_ok_match_test" do
-    event = %Effect{tag: :open, result: {:ok, %{}}}
+    event = %EffectEvent{tag: :open, result: {:ok, %{}}}
 
-    assert match?(%Effect{tag: :open, result: {:ok, _}}, event)
+    assert match?(%EffectEvent{tag: :open, result: {:ok, _}}, event)
   end
 
   test "events_effect_response_cancelled_match_test" do
-    event = %Effect{tag: :open, result: :cancelled}
+    event = %EffectEvent{tag: :open, result: :cancelled}
 
-    assert match?(%Effect{tag: :open, result: :cancelled}, event)
+    assert match?(%EffectEvent{tag: :open, result: :cancelled}, event)
   end
 
   test "events_effect_response_error_match_test" do
-    event = %Effect{tag: :open, result: {:error, "err"}}
+    event = %EffectEvent{tag: :open, result: {:error, "err"}}
 
-    assert match?(%Effect{result: {:error, _}}, event)
+    assert match?(%EffectEvent{result: {:error, _}}, event)
   end
 
   # -- Pattern matching tips ---------------------------------------------------

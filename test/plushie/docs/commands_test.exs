@@ -330,9 +330,9 @@ defmodule Plushie.Docs.CommandsTest do
   # -- Timer tick event -------------------------------------------------------
 
   test "subscriptions_timer_tick_event_test" do
-    event = %Plushie.Event.Timer{tag: :poll, timestamp: 100}
+    event = %Plushie.Event.TimerEvent{tag: :poll, timestamp: 100}
 
-    assert %Plushie.Event.Timer{tag: :poll} = event
+    assert %Plushie.Event.TimerEvent{tag: :poll} = event
   end
 
   # -- Update testability pattern ---------------------------------------------

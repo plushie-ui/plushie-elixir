@@ -1,4 +1,4 @@
-defmodule Plushie.Event.Modifiers do
+defmodule Plushie.Event.ModifiersEvent do
   @moduledoc """
   Keyboard modifier state change event.
 
@@ -14,11 +14,11 @@ defmodule Plushie.Event.Modifiers do
 
   ## Pattern matching
 
-      def update(model, %Modifiers{modifiers: %{shift: true}}) do
+      def update(model, %ModifiersEvent{modifiers: %{shift: true}}) do
         %{model | shift_held: true}
       end
 
-      def update(model, %Modifiers{modifiers: mods}) do
+      def update(model, %ModifiersEvent{modifiers: mods}) do
         %{model | modifiers: mods}
       end
   """

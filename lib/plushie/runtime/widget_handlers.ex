@@ -74,7 +74,7 @@ defmodule Plushie.Runtime.WidgetHandlers do
   def maybe_handle_timer(registry, {:__widget__, window_id, widget_id, inner_tag}) do
     case Map.get(registry, {window_id, widget_id}) do
       %{module: module, state: widget_state} = entry ->
-        timer_event = %Plushie.Event.Timer{
+        timer_event = %Plushie.Event.TimerEvent{
           tag: inner_tag,
           timestamp: System.monotonic_time(:millisecond)
         }

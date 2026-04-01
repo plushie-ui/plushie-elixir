@@ -1,4 +1,4 @@
-defmodule Plushie.Event.Async do
+defmodule Plushie.Event.AsyncEvent do
   @moduledoc """
   Results from `Plushie.Command.async/2` tasks.
 
@@ -9,11 +9,11 @@ defmodule Plushie.Event.Async do
 
   ## Pattern matching
 
-      def update(model, %Async{tag: :fetch, result: {:ok, data}}), do: ...
-      def update(model, %Async{tag: :fetch, result: {:error, reason}}), do: ...
+      def update(model, %AsyncEvent{tag: :fetch, result: {:ok, data}}), do: ...
+      def update(model, %AsyncEvent{tag: :fetch, result: {:error, reason}}), do: ...
 
       # Catch all async errors regardless of tag:
-      def update(model, %Async{result: {:error, reason}}), do: ...
+      def update(model, %AsyncEvent{result: {:error, reason}}), do: ...
   """
 
   @type t :: %__MODULE__{

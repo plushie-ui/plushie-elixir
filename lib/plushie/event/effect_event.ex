@@ -1,4 +1,4 @@
-defmodule Plushie.Event.Effect do
+defmodule Plushie.Event.EffectEvent do
   @moduledoc """
   Platform effect responses (file dialogs, clipboard, etc.).
 
@@ -19,15 +19,15 @@ defmodule Plushie.Event.Effect do
 
   ## Pattern matching
 
-      def update(model, %Effect{tag: :open_file, result: {:ok, %{path: path}}}) do
+      def update(model, %EffectEvent{tag: :open_file, result: {:ok, %{path: path}}}) do
         load_file(model, path)
       end
 
-      def update(model, %Effect{tag: :open_file, result: :cancelled}) do
+      def update(model, %EffectEvent{tag: :open_file, result: :cancelled}) do
         model  # user changed their mind, nothing to do
       end
 
-      def update(model, %Effect{result: {:error, reason}}) do
+      def update(model, %EffectEvent{result: {:error, reason}}) do
         show_error(model, reason)
       end
   """

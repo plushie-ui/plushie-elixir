@@ -14,10 +14,10 @@ defmodule Plushie.Subscription do
   ### Timer subscriptions (`:every`)
 
   For `every/2`, the tag **becomes part of the Timer struct**. Your `update/2`
-  receives `%Plushie.Event.Timer{tag: tag, timestamp: timestamp}`.
+  receives `%Plushie.Event.TimerEvent{tag: tag, timestamp: timestamp}`.
 
       Plushie.Subscription.every(1000, :tick)
-      # update/2 receives: %Plushie.Event.Timer{tag: :tick, timestamp: 1234567890}
+      # update/2 receives: %Plushie.Event.TimerEvent{tag: :tick, timestamp: 1234567890}
 
   ### Renderer subscriptions (all others)
 
@@ -29,7 +29,7 @@ defmodule Plushie.Subscription do
   documented on each constructor.
 
       Plushie.Subscription.on_key_press(:my_keys)
-      # update/2 receives: %Plushie.Event.Key{type: :press, ...} -- NOT {:my_keys, ...}
+      # update/2 receives: %Plushie.Event.KeyEvent{type: :press, ...} -- NOT {:my_keys, ...}
 
       Plushie.Subscription.on_window_resize(:win_resize)
       # update/2 receives: %Plushie.Event.WindowEvent{type: :resized, ...}
@@ -66,12 +66,12 @@ defmodule Plushie.Subscription do
         subs
       end
 
-      def update(model, %Plushie.Event.Timer{tag: :tick}) do
+      def update(model, %Plushie.Event.TimerEvent{tag: :tick}) do
         # Timer events are Timer structs with tag and timestamp fields.
         %{model | ticks: model.ticks + 1}
       end
 
-      def update(model, %Plushie.Event.Key{type: :press, key: :escape}) do
+      def update(model, %Plushie.Event.KeyEvent{type: :press, key: :escape}) do
         # Renderer subscription tag is NOT in the event -- match on struct type.
         %{model | menu_open: false}
       end
@@ -82,11 +82,11 @@ defmodule Plushie.Subscription do
   identifying the kind (`:every`, `:on_key_press`, etc.) and a `:tag`
   atom used for subscription management. For timer subscriptions, the
   tag is also part of the Timer event struct in `update/2`
-  (e.g. `%Plushie.Event.Timer{tag: tag, timestamp: timestamp}`).
+  (e.g. `%Plushie.Event.TimerEvent{tag: tag, timestamp: timestamp}`).
   For renderer subscriptions (keyboard, window, mouse, etc.), the tag
   is sent to the renderer to register/unregister the listener but is
   not included in the event struct -- those use typed event structs like
-  `%Plushie.Event.Key{}`, `%Plushie.Event.WindowEvent{}`, etc.
+  `%Plushie.Event.KeyEvent{}`, `%Plushie.Event.WindowEvent{}`, etc.
   """
   @type t :: %__MODULE__{
           type: atom(),
@@ -103,7 +103,7 @@ defmodule Plushie.Subscription do
   Timer that fires every `interval_ms` milliseconds.
 
   The tag becomes part of the Timer event struct -- `update/2` receives
-  `%Plushie.Event.Timer{tag: event_tag, timestamp: timestamp}` where
+  `%Plushie.Event.TimerEvent{tag: event_tag, timestamp: timestamp}` where
   `timestamp` is `System.monotonic_time(:millisecond)`.
 
   ## Example
@@ -111,7 +111,7 @@ defmodule Plushie.Subscription do
       Plushie.Subscription.every(1000, :tick)
 
       # In update/2:
-      def update(model, %Plushie.Event.Timer{tag: :tick}), do: %{model | count: model.count + 1}
+      def update(model, %Plushie.Event.TimerEvent{tag: :tick}), do: %{model | count: model.count + 1}
   """
   @spec every(interval_ms :: pos_integer(), event_tag :: atom()) :: t()
   def every(interval_ms, event_tag)
@@ -122,18 +122,18 @@ defmodule Plushie.Subscription do
   @doc """
   Fires on key press events from the renderer.
 
-  Delivers `%Plushie.Event.Key{type: :press, ...}` to `update/2`. The
+  Delivers `%Plushie.Event.KeyEvent{type: :press, ...}` to `update/2`. The
   `event_tag` is used **only for subscription management** (registration
   and diffing). It does NOT appear in the event struct.
 
-  See `Plushie.Event.Key` and `Plushie.KeyModifiers` for struct definitions.
+  See `Plushie.Event.KeyEvent` and `Plushie.KeyModifiers` for struct definitions.
 
   ## Example
 
       Plushie.Subscription.on_key_press(:my_keys)
 
       # In update/2 -- match on the struct, NOT the tag:
-      def update(model, %Plushie.Event.Key{type: :press, key: :enter}), do: ...
+      def update(model, %Plushie.Event.KeyEvent{type: :press, key: :enter}), do: ...
   """
   @spec on_key_press(event_tag :: atom(), opts :: keyword()) :: t()
   def on_key_press(event_tag, opts \\ []) when is_atom(event_tag) do
@@ -150,7 +150,7 @@ defmodule Plushie.Subscription do
   @doc """
   Fires on key release events from the renderer.
 
-  Delivers `%Plushie.Event.Key{type: :release, ...}` to `update/2`. Same
+  Delivers `%Plushie.Event.KeyEvent{type: :release, ...}` to `update/2`. Same
   format as `on_key_press/1`. The `event_tag` is used for subscription
   management only -- it does NOT appear in the event struct.
 
@@ -159,7 +159,7 @@ defmodule Plushie.Subscription do
       Plushie.Subscription.on_key_release(:keys)
 
       # In update/2:
-      def update(model, %Plushie.Event.Key{type: :release, key: key}), do: ...
+      def update(model, %Plushie.Event.KeyEvent{type: :release, key: key}), do: ...
   """
   @spec on_key_release(event_tag :: atom(), opts :: keyword()) :: t()
   def on_key_release(event_tag, opts \\ []) when is_atom(event_tag) do
@@ -176,14 +176,14 @@ defmodule Plushie.Subscription do
   @doc """
   Fires when keyboard modifier state changes (shift, ctrl, alt, etc.).
 
-  Delivers `%Plushie.Event.Modifiers{modifiers: %KeyModifiers{}, captured: bool}`
+  Delivers `%Plushie.Event.ModifiersEvent{modifiers: %KeyModifiers{}, captured: bool}`
   to `update/2`. The `event_tag` is for subscription management only.
 
   ## Example
 
       Plushie.Subscription.on_modifiers_changed(:mods)
 
-      def update(model, %Plushie.Event.Modifiers{modifiers: %{shift: true}}), do: ...
+      def update(model, %Plushie.Event.ModifiersEvent{modifiers: %{shift: true}}), do: ...
   """
   @spec on_modifiers_changed(event_tag :: atom(), opts :: keyword()) :: t()
   def on_modifiers_changed(event_tag, opts \\ []) when is_atom(event_tag) do
@@ -338,8 +338,8 @@ defmodule Plushie.Subscription do
   @doc """
   Fires on mouse movement.
 
-  Delivers `%Mouse{type: :moved, x: x, y: y, captured: bool}` to `update/2`.
-  Also delivers `%Mouse{type: :entered, ...}` and `%Mouse{type: :left, ...}`.
+  Delivers `%MouseEvent{type: :moved, x: x, y: y, captured: bool}` to `update/2`.
+  Also delivers `%MouseEvent{type: :entered, ...}` and `%MouseEvent{type: :left, ...}`.
   The `event_tag` is for subscription management only.
   """
   @spec on_mouse_move(event_tag :: atom(), opts :: keyword()) :: t()
@@ -357,8 +357,8 @@ defmodule Plushie.Subscription do
   @doc """
   Fires on mouse button press/release.
 
-  Delivers `%Mouse{type: :button_pressed, button: atom, captured: bool}` or
-  `%Mouse{type: :button_released, button: atom, captured: bool}` to `update/2`.
+  Delivers `%MouseEvent{type: :button_pressed, button: atom, captured: bool}` or
+  `%MouseEvent{type: :button_released, button: atom, captured: bool}` to `update/2`.
   `button` is `:left`, `:right`, or `:middle`.
   The `event_tag` is for subscription management only.
   """
@@ -377,7 +377,7 @@ defmodule Plushie.Subscription do
   @doc """
   Fires on mouse scroll events.
 
-  Delivers `%Mouse{type: :wheel_scrolled, delta_x: num, delta_y: num, unit: atom, captured: bool}`
+  Delivers `%MouseEvent{type: :wheel_scrolled, delta_x: num, delta_y: num, unit: atom, captured: bool}`
   to `update/2`. The `unit` field is `:line` or `:pixel`.
   The `event_tag` is for subscription management only.
   """
@@ -398,10 +398,10 @@ defmodule Plushie.Subscription do
 
   Delivers one of:
 
-  * `%Ime{type: :opened, captured: bool}` -- the IME session started
-  * `%Ime{type: :preedit, text: str, cursor: {start, end_pos} | nil, captured: bool}`
-  * `%Ime{type: :commit, text: str, captured: bool}` -- final text committed
-  * `%Ime{type: :closed, captured: bool}` -- the IME session ended
+  * `%ImeEvent{type: :opened, captured: bool}` -- the IME session started
+  * `%ImeEvent{type: :preedit, text: str, cursor: {start, end_pos} | nil, captured: bool}`
+  * `%ImeEvent{type: :commit, text: str, captured: bool}` -- final text committed
+  * `%ImeEvent{type: :closed, captured: bool}` -- the IME session ended
 
   The `event_tag` is for subscription management only.
   """
@@ -414,8 +414,8 @@ defmodule Plushie.Subscription do
   @doc """
   Fires on touch events.
 
-  Delivers `%Touch{type: :pressed, finger_id: id, x: num, y: num, captured: bool}`,
-  `%Touch{type: :moved, ...}`, `%Touch{type: :lifted, ...}`, or `%Touch{type: :lost, ...}`
+  Delivers `%TouchEvent{type: :pressed, finger_id: id, x: num, y: num, captured: bool}`,
+  `%TouchEvent{type: :moved, ...}`, `%TouchEvent{type: :lifted, ...}`, or `%TouchEvent{type: :lost, ...}`
   to `update/2`.
   The `event_tag` is for subscription management only.
   """

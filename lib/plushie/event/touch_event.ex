@@ -1,4 +1,4 @@
-defmodule Plushie.Event.Touch do
+defmodule Plushie.Event.TouchEvent do
   @moduledoc """
   Touch events from subscriptions.
 
@@ -16,15 +16,15 @@ defmodule Plushie.Event.Touch do
 
   ## Pattern matching
 
-      def update(model, %Touch{type: :pressed, finger_id: fid, x: x, y: y}) do
+      def update(model, %TouchEvent{type: :pressed, finger_id: fid, x: x, y: y}) do
         start_touch(model, fid, x, y)
       end
 
-      def update(model, %Touch{type: :moved, finger_id: fid, x: x, y: y}) do
+      def update(model, %TouchEvent{type: :moved, finger_id: fid, x: x, y: y}) do
         move_touch(model, fid, x, y)
       end
 
-      def update(model, %Touch{type: :lifted, finger_id: fid}) do
+      def update(model, %TouchEvent{type: :lifted, finger_id: fid}) do
         end_touch(model, fid)
       end
   """

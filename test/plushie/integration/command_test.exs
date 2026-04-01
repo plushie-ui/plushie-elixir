@@ -1,7 +1,7 @@
 defmodule Plushie.Integration.CommandTest do
   use ExUnit.Case, async: true
 
-  alias Plushie.Event.{Async, Stream, Timer, WidgetEvent}
+  alias Plushie.Event.{AsyncEvent, StreamEvent, TimerEvent, WidgetEvent}
 
   # ---------------------------------------------------------------------------
   # send_after: fires from init
@@ -11,11 +11,11 @@ defmodule Plushie.Integration.CommandTest do
     use Plushie.App
 
     def init(_opts) do
-      cmd = Plushie.Command.send_after(20, %Timer{tag: :init_timer, timestamp: 0})
+      cmd = Plushie.Command.send_after(20, %TimerEvent{tag: :init_timer, timestamp: 0})
       {%{value: 0}, cmd}
     end
 
-    def update(model, %Timer{tag: :init_timer}) do
+    def update(model, %TimerEvent{tag: :init_timer}) do
       %{model | value: model.value + 1}
     end
 
@@ -62,7 +62,7 @@ defmodule Plushie.Integration.CommandTest do
       {model, cmd}
     end
 
-    def update(model, %Async{tag: :compute, result: value}) do
+    def update(model, %AsyncEvent{tag: :compute, result: value}) do
       %{model | result: value}
     end
 
@@ -107,15 +107,15 @@ defmodule Plushie.Integration.CommandTest do
     def init(_opts) do
       cmd =
         Plushie.Command.batch([
-          Plushie.Command.send_after(15, %Timer{tag: :batch_a, timestamp: 0}),
-          Plushie.Command.send_after(15, %Timer{tag: :batch_b, timestamp: 0})
+          Plushie.Command.send_after(15, %TimerEvent{tag: :batch_a, timestamp: 0}),
+          Plushie.Command.send_after(15, %TimerEvent{tag: :batch_b, timestamp: 0})
         ])
 
       {%{a: false, b: false}, cmd}
     end
 
-    def update(model, %Timer{tag: :batch_a}), do: %{model | a: true}
-    def update(model, %Timer{tag: :batch_b}), do: %{model | b: true}
+    def update(model, %TimerEvent{tag: :batch_a}), do: %{model | a: true}
+    def update(model, %TimerEvent{tag: :batch_b}), do: %{model | b: true}
     def update(model, _event), do: model
 
     def view(_model) do
@@ -170,11 +170,11 @@ defmodule Plushie.Integration.CommandTest do
       {model, cmd}
     end
 
-    def update(model, %Stream{tag: :chunks, value: v}) do
+    def update(model, %StreamEvent{tag: :chunks, value: v}) do
       %{model | chunks: model.chunks ++ [v]}
     end
 
-    def update(model, %Async{tag: :chunks}) do
+    def update(model, %AsyncEvent{tag: :chunks}) do
       %{model | done: true}
     end
 

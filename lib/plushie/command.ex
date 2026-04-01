@@ -40,15 +40,15 @@ defmodule Plushie.Command do
 
   Commands deliver results back to `update/2` through three mechanisms:
 
-  - **Async/Stream**: `async/2` delivers `%Plushie.Event.Async{tag: tag, result: result}`.
-    `stream/2` delivers `%Plushie.Event.Stream{tag: tag, value: value}` for each chunk.
+  - **Async/Stream**: `async/2` delivers `%Plushie.Event.AsyncEvent{tag: tag, result: result}`.
+    `stream/2` delivers `%Plushie.Event.StreamEvent{tag: tag, value: value}` for each chunk.
   - **Window and system queries**: `get_window_size/2`, `get_mode/2`, etc. deliver
     `%Plushie.Event.SystemEvent{}` structs through `update/2`. The `type` field identifies the
     query kind, `tag` holds the stringified event tag, and `data` holds the result payload.
     For example, `get_system_theme(:my_tag)` delivers
     `%SystemEvent{type: :system_theme, tag: "my_tag", data: "dark"}`.
   - **Platform effects**: `Plushie.Effects` functions deliver
-    `%Plushie.Event.Effect{tag: tag, result: result}`. The `tag` matches the
+    `%Plushie.Event.EffectEvent{tag: tag, result: result}`. The `tag` matches the
     atom you provided when creating the effect command. Timeouts deliver the
     same struct with `result: {:error, :timeout}`. See `Plushie.Effects`.
 
@@ -59,7 +59,7 @@ defmodule Plushie.Command do
         {model, cmd}
       end
 
-      def update(model, %Plushie.Event.Async{tag: :save_result, result: :ok}), do: %{model | saved: true}
+      def update(model, %Plushie.Event.AsyncEvent{tag: :save_result, result: :ok}), do: %{model | saved: true}
 
   Multiple commands can be issued at once via `batch/1`:
 
@@ -107,7 +107,7 @@ defmodule Plushie.Command do
 
   @doc """
   Run `fun` asynchronously in a Task. When it returns, the runtime dispatches
-  `%Plushie.Event.Async{tag: event_tag, result: result}` through `update/2`.
+  `%Plushie.Event.AsyncEvent{tag: event_tag, result: result}` through `update/2`.
 
   Only one task per tag can be active. If a task with the same tag is
   already running, it is killed and replaced. Use unique tags if you
@@ -743,8 +743,8 @@ defmodule Plushie.Command do
   @doc """
   Run `fun` as a streaming async task. The function receives an `emit` callback
   that sends intermediate results to `update/2` as
-  `%Plushie.Event.Stream{tag: event_tag, value: value}`. The function's final
-  return value is delivered as `%Plushie.Event.Async{tag: event_tag, result: result}`.
+  `%Plushie.Event.StreamEvent{tag: event_tag, value: value}`. The function's final
+  return value is delivered as `%Plushie.Event.AsyncEvent{tag: event_tag, result: result}`.
 
   Only one task per tag can be active. If a task with the same tag is
   already running, it is killed and replaced. Use unique tags if you

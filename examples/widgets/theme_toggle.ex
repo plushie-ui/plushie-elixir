@@ -36,7 +36,7 @@ defmodule ThemeToggle do
   end
 
   # Animation tick -> step progress toward the target value.
-  def handle_event(%Plushie.Event.Timer{tag: :animate}, state) do
+  def handle_event(%Plushie.Event.TimerEvent{tag: :animate}, state) do
     new_progress = approach(state.progress, state.target, 0.06)
     {:update_state, %{state | progress: new_progress}}
   end

@@ -1,4 +1,4 @@
-defmodule Plushie.Event.Ime do
+defmodule Plushie.Event.ImeEvent do
   @moduledoc """
   Input Method Editor events from subscriptions.
 
@@ -14,11 +14,11 @@ defmodule Plushie.Event.Ime do
 
   ## Pattern matching
 
-      def update(model, %Ime{type: :preedit, text: text, cursor: {start, _end}}) do
+      def update(model, %ImeEvent{type: :preedit, text: text, cursor: {start, _end}}) do
         show_composition(model, text, start)
       end
 
-      def update(model, %Ime{type: :commit, text: text}) do
+      def update(model, %ImeEvent{type: :commit, text: text}) do
         insert_text(model, text)
       end
   """

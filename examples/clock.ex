@@ -4,13 +4,13 @@ defmodule Clock do
 
   Demonstrates:
   - `Plushie.Subscription.every/2` for timer-based updates
-  - Pattern matching on `%Timer{tag: :tick}` in `update/2`
+  - Pattern matching on `%TimerEvent{tag: :tick}` in `update/2`
   - Simple model with derived display value
   """
 
   use Plushie.App
 
-  alias Plushie.Event.Timer
+  alias Plushie.Event.TimerEvent
   alias Plushie.Subscription
 
   # -- init ------------------------------------------------------------------
@@ -21,7 +21,7 @@ defmodule Clock do
 
   # -- update ----------------------------------------------------------------
 
-  def update(model, %Timer{tag: :tick}) do
+  def update(model, %TimerEvent{tag: :tick}) do
     %{model | time: current_time()}
   end
 

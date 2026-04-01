@@ -5,11 +5,11 @@ defmodule Plushie.ProtocolParityTest do
   """
   use ExUnit.Case, async: true
 
-  alias Plushie.Event.Key
-  alias Plushie.Event.Modifiers
-  alias Plushie.Event.Mouse
+  alias Plushie.Event.KeyEvent
+  alias Plushie.Event.ModifiersEvent
+  alias Plushie.Event.MouseEvent
   alias Plushie.Event.SystemEvent
-  alias Plushie.Event.Touch
+  alias Plushie.Event.TouchEvent
   alias Plushie.Event.WidgetEvent
   alias Plushie.Event.WindowEvent
 
@@ -25,7 +25,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{key: "Escape"}
         })
 
-      assert %Key{type: :press, key: :escape, modifiers: %Plushie.KeyModifiers{ctrl: false}} =
+      assert %KeyEvent{type: :press, key: :escape, modifiers: %Plushie.KeyModifiers{ctrl: false}} =
                Protocol.decode_message(json, :json)
     end
 
@@ -38,7 +38,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{key: "a"}
         })
 
-      assert %Key{type: :press, key: "a", modifiers: %Plushie.KeyModifiers{ctrl: true}} =
+      assert %KeyEvent{type: :press, key: "a", modifiers: %Plushie.KeyModifiers{ctrl: true}} =
                Protocol.decode_message(json, :json)
     end
 
@@ -51,7 +51,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{key: "Tab"}
         })
 
-      assert %Key{
+      assert %KeyEvent{
                type: :press,
                key: :tab,
                modifiers: %Plushie.KeyModifiers{ctrl: true, shift: true}
@@ -69,7 +69,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{key: "Control"}
         })
 
-      assert %Key{type: :release, key: :control} = Protocol.decode_message(json, :json)
+      assert %KeyEvent{type: :release, key: :control} = Protocol.decode_message(json, :json)
     end
   end
 
@@ -359,14 +359,14 @@ defmodule Plushie.ProtocolParityTest do
     test "decodes cursor position" do
       json = Jason.encode!(%{type: "event", family: "cursor_moved", data: %{x: 100.5, y: 200.3}})
 
-      assert %Mouse{type: :moved, x: 100.5, y: 200.3, captured: false} =
+      assert %MouseEvent{type: :moved, x: 100.5, y: 200.3, captured: false} =
                Protocol.decode_message(json, :json)
     end
 
     test "decodes integer coordinates" do
       json = Jason.encode!(%{type: "event", family: "cursor_moved", data: %{x: 0, y: 0}})
 
-      assert %Mouse{type: :moved, x: 0, y: 0, captured: false} =
+      assert %MouseEvent{type: :moved, x: 0, y: 0, captured: false} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -374,14 +374,14 @@ defmodule Plushie.ProtocolParityTest do
   describe "cursor_entered event" do
     test "decodes cursor entered" do
       json = Jason.encode!(%{type: "event", family: "cursor_entered"})
-      assert %Mouse{type: :entered, captured: false} = Protocol.decode_message(json, :json)
+      assert %MouseEvent{type: :entered, captured: false} = Protocol.decode_message(json, :json)
     end
   end
 
   describe "cursor_left event" do
     test "decodes cursor left" do
       json = Jason.encode!(%{type: "event", family: "cursor_left"})
-      assert %Mouse{type: :left, captured: false} = Protocol.decode_message(json, :json)
+      assert %MouseEvent{type: :left, captured: false} = Protocol.decode_message(json, :json)
     end
   end
 
@@ -389,14 +389,14 @@ defmodule Plushie.ProtocolParityTest do
     test "decodes mouse button press" do
       json = Jason.encode!(%{type: "event", family: "button_pressed", value: "left"})
 
-      assert %Mouse{type: :button_pressed, button: :left, captured: false} =
+      assert %MouseEvent{type: :button_pressed, button: :left, captured: false} =
                Protocol.decode_message(json, :json)
     end
 
     test "decodes right button press" do
       json = Jason.encode!(%{type: "event", family: "button_pressed", value: "right"})
 
-      assert %Mouse{type: :button_pressed, button: :right, captured: false} =
+      assert %MouseEvent{type: :button_pressed, button: :right, captured: false} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -405,7 +405,7 @@ defmodule Plushie.ProtocolParityTest do
     test "decodes mouse button release" do
       json = Jason.encode!(%{type: "event", family: "button_released", value: "left"})
 
-      assert %Mouse{type: :button_released, button: :left, captured: false} =
+      assert %MouseEvent{type: :button_released, button: :left, captured: false} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -419,7 +419,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{delta_x: 0.0, delta_y: -3.0, unit: "line"}
         })
 
-      assert %Mouse{
+      assert %MouseEvent{
                type: :wheel_scrolled,
                delta_x: +0.0,
                delta_y: -3.0,
@@ -436,7 +436,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{delta_x: 10.0, delta_y: 20.0, unit: "pixel"}
         })
 
-      assert %Mouse{
+      assert %MouseEvent{
                type: :wheel_scrolled,
                delta_x: 10.0,
                delta_y: 20.0,
@@ -455,7 +455,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{id: 0, x: 50.0, y: 75.0}
         })
 
-      assert %Touch{type: :pressed, finger_id: 0, x: 50.0, y: 75.0, captured: false} =
+      assert %TouchEvent{type: :pressed, finger_id: 0, x: 50.0, y: 75.0, captured: false} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -469,7 +469,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{id: 1, x: 60.0, y: 80.0}
         })
 
-      assert %Touch{type: :moved, finger_id: 1, x: 60.0, y: 80.0, captured: false} =
+      assert %TouchEvent{type: :moved, finger_id: 1, x: 60.0, y: 80.0, captured: false} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -483,7 +483,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{id: 0, x: 55.0, y: 70.0}
         })
 
-      assert %Touch{type: :lifted, finger_id: 0, x: 55.0, y: 70.0, captured: false} =
+      assert %TouchEvent{type: :lifted, finger_id: 0, x: 55.0, y: 70.0, captured: false} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -497,7 +497,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{id: 2, x: 30.0, y: 40.0}
         })
 
-      assert %Touch{type: :lost, finger_id: 2, x: 30.0, y: 40.0, captured: false} =
+      assert %TouchEvent{type: :lost, finger_id: 2, x: 30.0, y: 40.0, captured: false} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -680,14 +680,14 @@ defmodule Plushie.ProtocolParityTest do
           modifiers: %{ctrl: true, shift: false, alt: true, logo: false, command: false}
         })
 
-      assert %Modifiers{modifiers: %{ctrl: true, alt: true, shift: false}} =
+      assert %ModifiersEvent{modifiers: %{ctrl: true, alt: true, shift: false}} =
                Protocol.decode_message(json, :json)
     end
 
     test "handles missing modifier fields with defaults" do
       json = Jason.encode!(%{type: "event", family: "modifiers_changed", modifiers: %{}})
 
-      assert %Modifiers{
+      assert %ModifiersEvent{
                modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
              } =
                Protocol.decode_message(json, :json)

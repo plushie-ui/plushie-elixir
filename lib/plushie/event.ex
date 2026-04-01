@@ -2,16 +2,16 @@ defmodule Plushie.Event do
   @moduledoc "Event types delivered to `update/2`."
 
   alias Plushie.Event.{
-    Async,
-    Effect,
-    Ime,
-    Key,
-    Modifiers,
-    Mouse,
-    Stream,
+    AsyncEvent,
+    EffectEvent,
+    ImeEvent,
+    KeyEvent,
+    ModifiersEvent,
+    MouseEvent,
+    StreamEvent,
     SystemEvent,
-    Timer,
-    Touch,
+    TimerEvent,
+    TouchEvent,
     WidgetCommandError,
     WidgetEvent,
     WindowEvent
@@ -19,33 +19,33 @@ defmodule Plushie.Event do
 
   @type delivered_t ::
           WidgetEvent.delivered_t()
-          | Key.t()
-          | Modifiers.t()
-          | Mouse.t()
-          | Touch.t()
-          | Ime.t()
+          | KeyEvent.t()
+          | ModifiersEvent.t()
+          | MouseEvent.t()
+          | TouchEvent.t()
+          | ImeEvent.t()
           | WindowEvent.delivered_t()
-          | Effect.t()
+          | EffectEvent.t()
           | WidgetCommandError.t()
           | SystemEvent.delivered_t()
-          | Timer.t()
-          | Async.t()
-          | Stream.t()
+          | TimerEvent.t()
+          | AsyncEvent.t()
+          | StreamEvent.t()
 
   @type t ::
           WidgetEvent.t()
-          | Key.t()
-          | Modifiers.t()
-          | Mouse.t()
-          | Touch.t()
-          | Ime.t()
+          | KeyEvent.t()
+          | ModifiersEvent.t()
+          | MouseEvent.t()
+          | TouchEvent.t()
+          | ImeEvent.t()
           | WindowEvent.t()
-          | Effect.t()
+          | EffectEvent.t()
           | WidgetCommandError.t()
           | SystemEvent.t()
-          | Timer.t()
-          | Async.t()
-          | Stream.t()
+          | TimerEvent.t()
+          | AsyncEvent.t()
+          | StreamEvent.t()
 
   @doc """
   Returns the full scoped path as a forward-order string.

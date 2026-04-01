@@ -8,7 +8,7 @@ defmodule Plushie.Effects do
 
   Each function takes an atom `tag` as the first argument and returns a
   `Plushie.Command` struct. Dispatch it from `update/2` like any other
-  command. The result arrives later as a `%Plushie.Event.Effect{tag: tag,
+  command. The result arrives later as a `%Plushie.Event.EffectEvent{tag: tag,
   result: result}` event in `update/2`. Pattern match on the tag to
   identify which effect the response belongs to.
 
@@ -22,18 +22,18 @@ defmodule Plushie.Effects do
         {model, Plushie.Effects.file_open(:import, title: "Pick a file")}
       end
 
-      def update(model, %Plushie.Event.Effect{tag: :import, result: {:ok, %{path: path}}}) do
+      def update(model, %Plushie.Event.EffectEvent{tag: :import, result: {:ok, %{path: path}}}) do
         %{model | file: path}
       end
 
-      def update(model, %Plushie.Event.Effect{tag: :import, result: :cancelled}) do
+      def update(model, %Plushie.Event.EffectEvent{tag: :import, result: :cancelled}) do
         model
       end
 
   ## Timeouts
 
   Each effect has a default timeout. If the renderer does not respond in time,
-  `%Plushie.Event.Effect{tag: tag, result: {:error, :timeout}}` arrives
+  `%Plushie.Event.EffectEvent{tag: tag, result: {:error, :timeout}}` arrives
   in `update/2`.
 
   Default timeouts:
@@ -60,7 +60,7 @@ defmodule Plushie.Effects do
   Generic effect request. Returns a command struct.
 
   `tag` is an atom that identifies this effect -- it appears in the
-  `%Effect{tag: tag}` result event. `kind` must be one of the supported
+  `%EffectEvent{tag: tag}` result event. `kind` must be one of the supported
   effect types. `opts` is a keyword list of parameters sent as the effect
   payload.
   """

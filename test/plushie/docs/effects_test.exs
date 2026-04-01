@@ -2,7 +2,7 @@ defmodule Plushie.Docs.EffectsTest do
   use ExUnit.Case, async: true
 
   alias Plushie.Command
-  alias Plushie.Event.Effect
+  alias Plushie.Event.EffectEvent
 
   # -- File open effect -------------------------------------------------------
 
@@ -24,22 +24,22 @@ defmodule Plushie.Docs.EffectsTest do
   # -- Effect result event matching -------------------------------------------
 
   test "effects_ok_result_match_test" do
-    event = %Effect{tag: :import, result: {:ok, %{path: "/tmp/notes.txt"}}}
+    event = %EffectEvent{tag: :import, result: {:ok, %{path: "/tmp/notes.txt"}}}
 
-    assert %Effect{tag: :import, result: {:ok, %{path: path}}} = event
+    assert %EffectEvent{tag: :import, result: {:ok, %{path: path}}} = event
     assert path == "/tmp/notes.txt"
   end
 
   test "effects_cancelled_result_match_test" do
-    event = %Effect{tag: :import, result: :cancelled}
+    event = %EffectEvent{tag: :import, result: :cancelled}
 
-    assert %Effect{tag: :import, result: :cancelled} = event
+    assert %EffectEvent{tag: :import, result: :cancelled} = event
   end
 
   test "effects_error_result_match_test" do
-    event = %Effect{tag: :import, result: {:error, "unsupported"}}
+    event = %EffectEvent{tag: :import, result: {:error, "unsupported"}}
 
-    assert %Effect{result: {:error, reason}} = event
+    assert %EffectEvent{result: {:error, reason}} = event
     assert reason == "unsupported"
   end
 end

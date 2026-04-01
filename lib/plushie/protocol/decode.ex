@@ -6,12 +6,12 @@ defmodule Plushie.Protocol.Decode do
   alias Plushie.Protocol.{Error, Keys, Parsers}
 
   alias Plushie.Event.{
-    Ime,
-    Key,
-    Modifiers,
-    Mouse,
+    ImeEvent,
+    KeyEvent,
+    ModifiersEvent,
+    MouseEvent,
     SystemEvent,
-    Touch,
+    TouchEvent,
     WidgetCommandError,
     WidgetEvent,
     WindowEvent
@@ -329,7 +329,7 @@ defmodule Plushie.Protocol.Decode do
            "modifiers" => mods
          } = msg
        ) do
-    %Modifiers{
+    %ModifiersEvent{
       modifiers: parse_modifiers(mods),
       captured: msg["captured"] || false,
       window_id: msg["window_id"]
@@ -341,7 +341,7 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(
          %{"type" => "event", "family" => "cursor_moved", "data" => %{"x" => x, "y" => y}} = msg
        ) do
-    %Mouse{
+    %MouseEvent{
       type: :moved,
       x: x,
       y: y,
@@ -351,17 +351,17 @@ defmodule Plushie.Protocol.Decode do
   end
 
   defp dispatch(%{"type" => "event", "family" => "cursor_entered"} = msg) do
-    %Mouse{type: :entered, captured: msg["captured"] || false, window_id: msg["window_id"]}
+    %MouseEvent{type: :entered, captured: msg["captured"] || false, window_id: msg["window_id"]}
   end
 
   defp dispatch(%{"type" => "event", "family" => "cursor_left"} = msg) do
-    %Mouse{type: :left, captured: msg["captured"] || false, window_id: msg["window_id"]}
+    %MouseEvent{type: :left, captured: msg["captured"] || false, window_id: msg["window_id"]}
   end
 
   defp dispatch(%{"type" => "event", "family" => "button_pressed", "value" => button} = msg) do
     case Parsers.parse_mouse_button(button) do
       {:ok, parsed_button} ->
-        %Mouse{
+        %MouseEvent{
           type: :button_pressed,
           button: parsed_button,
           captured: msg["captured"] || false,
@@ -376,7 +376,7 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{"type" => "event", "family" => "button_released", "value" => button} = msg) do
     case Parsers.parse_mouse_button(button) do
       {:ok, parsed_button} ->
-        %Mouse{
+        %MouseEvent{
           type: :button_released,
           button: parsed_button,
           captured: msg["captured"] || false,
@@ -397,7 +397,7 @@ defmodule Plushie.Protocol.Decode do
        ) do
     case Parsers.parse_scroll_unit(unit) do
       {:ok, parsed_unit} ->
-        %Mouse{
+        %MouseEvent{
           type: :wheel_scrolled,
           delta_x: dx,
           delta_y: dy,
@@ -417,7 +417,7 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{"type" => "event", "family" => "ime_opened", "id" => id} = msg) do
     {local_id, scope} = split_scoped_id(id)
 
-    %Ime{
+    %ImeEvent{
       type: :opened,
       id: local_id,
       scope: scope,
@@ -430,7 +430,7 @@ defmodule Plushie.Protocol.Decode do
     {local_id, scope} = split_scoped_id(id)
     cursor = parse_ime_cursor(data["cursor"])
 
-    %Ime{
+    %ImeEvent{
       type: :preedit,
       id: local_id,
       scope: scope,
@@ -444,7 +444,7 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{"type" => "event", "family" => "ime_commit", "id" => id, "data" => data} = msg) do
     {local_id, scope} = split_scoped_id(id)
 
-    %Ime{
+    %ImeEvent{
       type: :commit,
       id: local_id,
       scope: scope,
@@ -457,7 +457,7 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{"type" => "event", "family" => "ime_closed", "id" => id} = msg) do
     {local_id, scope} = split_scoped_id(id)
 
-    %Ime{
+    %ImeEvent{
       type: :closed,
       id: local_id,
       scope: scope,
@@ -475,7 +475,7 @@ defmodule Plushie.Protocol.Decode do
            "data" => %{"id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
-    %Touch{
+    %TouchEvent{
       type: :pressed,
       finger_id: finger_id,
       x: x,
@@ -492,7 +492,7 @@ defmodule Plushie.Protocol.Decode do
            "data" => %{"id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
-    %Touch{
+    %TouchEvent{
       type: :moved,
       finger_id: finger_id,
       x: x,
@@ -509,7 +509,7 @@ defmodule Plushie.Protocol.Decode do
            "data" => %{"id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
-    %Touch{
+    %TouchEvent{
       type: :lifted,
       finger_id: finger_id,
       x: x,
@@ -526,7 +526,7 @@ defmodule Plushie.Protocol.Decode do
            "data" => %{"id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
-    %Touch{
+    %TouchEvent{
       type: :lost,
       finger_id: finger_id,
       x: x,
@@ -922,8 +922,8 @@ defmodule Plushie.Protocol.Decode do
 
   # -- Effect responses --
   #
-  # Returns a tagged tuple instead of an Effect struct. The runtime maps
-  # the wire ID to the user-provided tag and creates the final %Effect{}.
+  # Returns a tagged tuple instead of an EffectEvent struct. The runtime maps
+  # the wire ID to the user-provided tag and creates the final %EffectEvent{}.
 
   defp dispatch(%{
          "type" => "effect_response",
@@ -1300,7 +1300,7 @@ defmodule Plushie.Protocol.Decode do
         data: <<>>
     end
 
-    %Key{
+    %KeyEvent{
       type: type,
       key: Keys.parse_key(key),
       modified_key: Keys.parse_key(data["modified_key"] || key),
@@ -1345,7 +1345,7 @@ defmodule Plushie.Protocol.Decode do
 
   # Parses canvas element key event data into an atom-keyed map with
   # parsed key names and %KeyModifiers{} structs, matching the shapes
-  # used by top-level %Key{} events for consistency.
+  # used by top-level %KeyEvent{} events for consistency.
   @spec parse_canvas_key_data(data :: map() | nil, type :: :press | :release) :: map()
   defp parse_canvas_key_data(%{} = data, type) do
     key =

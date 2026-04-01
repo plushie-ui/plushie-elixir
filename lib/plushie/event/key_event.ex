@@ -1,11 +1,11 @@
-defmodule Plushie.Event.Key do
+defmodule Plushie.Event.KeyEvent do
   @moduledoc """
   Keyboard press and release events.
 
   ## Pattern matching
 
-      def update(model, %Key{type: :press, key: :escape, captured: false}), do: ...
-      def update(model, %Key{type: :press, key: "s", modifiers: %{command: true}}), do: ...
+      def update(model, %KeyEvent{type: :press, key: :escape, captured: false}), do: ...
+      def update(model, %KeyEvent{type: :press, key: "s", modifiers: %{command: true}}), do: ...
   """
 
   @type key :: atom() | String.t()

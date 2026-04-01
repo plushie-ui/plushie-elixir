@@ -4,14 +4,14 @@ defmodule Shortcuts do
 
   Demonstrates:
   - `Plushie.Subscription.on_key_press/1` for global keyboard events
-  - Pattern matching on `%Key{type: :press}` with modifier inspection
+  - Pattern matching on `%KeyEvent{type: :press}` with modifier inspection
   - `scrollable` for overflow content with dynamic list items
   - Capped log buffer (`@max_log_entries`)
   """
 
   use Plushie.App
 
-  alias Plushie.Event.Key
+  alias Plushie.Event.KeyEvent
   alias Plushie.KeyModifiers
   alias Plushie.Subscription
 
@@ -25,7 +25,7 @@ defmodule Shortcuts do
 
   # -- update ----------------------------------------------------------------
 
-  def update(model, %Key{type: :press} = event) do
+  def update(model, %KeyEvent{type: :press} = event) do
     entry = format_key_event(event, model.count + 1)
 
     %{

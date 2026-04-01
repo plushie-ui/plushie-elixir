@@ -4,7 +4,7 @@ defmodule AsyncFetch do
 
   Demonstrates:
   - `Plushie.Command.async/2` for off-thread work
-  - Pattern matching on `%Async{tag: ..., result: ...}` for success/error
+  - Pattern matching on `%AsyncEvent{tag: ..., result: ...}` for success/error
   - Loading state management
   - Extracting view helpers for reuse
   """
@@ -12,7 +12,7 @@ defmodule AsyncFetch do
   use Plushie.App
 
   alias Plushie.Command
-  alias Plushie.Event.{Async, WidgetEvent}
+  alias Plushie.Event.{AsyncEvent, WidgetEvent}
 
   # -- Init -------------------------------------------------------------------
 
@@ -33,11 +33,11 @@ defmodule AsyncFetch do
     {%{model | status: :loading, result: nil, error: nil}, cmd}
   end
 
-  def update(model, %Async{tag: :fetch_result, result: {:ok, value}}) do
+  def update(model, %AsyncEvent{tag: :fetch_result, result: {:ok, value}}) do
     %{model | status: :done, result: value}
   end
 
-  def update(model, %Async{tag: :fetch_result, result: {:error, reason}}) do
+  def update(model, %AsyncEvent{tag: :fetch_result, result: {:error, reason}}) do
     %{model | status: :error, error: inspect(reason)}
   end
 

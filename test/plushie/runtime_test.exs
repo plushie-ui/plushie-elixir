@@ -67,7 +67,7 @@ defmodule Plushie.RuntimeTest do
       {model, cmd}
     end
 
-    def update(model, %Plushie.Event.Async{tag: :async_result, result: result}),
+    def update(model, %Plushie.Event.AsyncEvent{tag: :async_result, result: result}),
       do: %{model | value: result}
 
     def update(model, _event), do: model
@@ -127,7 +127,7 @@ defmodule Plushie.RuntimeTest do
     end
 
     @impl true
-    def handle_event(%Plushie.Event.Timer{tag: :pulse}, _state) do
+    def handle_event(%Plushie.Event.TimerEvent{tag: :pulse}, _state) do
       {:emit, :tick_widget_pulsed, %{}}
     end
 
@@ -174,7 +174,7 @@ defmodule Plushie.RuntimeTest do
 
     def init(_opts), do: %{events: []}
 
-    def update(model, %Plushie.Event.Mouse{type: :moved}) do
+    def update(model, %Plushie.Event.MouseEvent{type: :moved}) do
       %{model | events: model.events ++ [:mouse]}
     end
 
@@ -236,11 +236,11 @@ defmodule Plushie.RuntimeTest do
     end
 
     @impl true
-    def handle_event(%Plushie.Event.Timer{tag: :first}, _state) do
+    def handle_event(%Plushie.Event.TimerEvent{tag: :first}, _state) do
       {:emit, :switched, %{to: :second}, %{phase: :second}}
     end
 
-    def handle_event(%Plushie.Event.Timer{tag: :second}, _state) do
+    def handle_event(%Plushie.Event.TimerEvent{tag: :second}, _state) do
       {:emit, :ticked_second, nil}
     end
 
@@ -786,7 +786,9 @@ defmodule Plushie.RuntimeTest do
 
         def init(_opts), do: %{ticks: 0}
 
-        def update(model, %Plushie.Event.Timer{tag: :tick}), do: %{model | ticks: model.ticks + 1}
+        def update(model, %Plushie.Event.TimerEvent{tag: :tick}),
+          do: %{model | ticks: model.ticks + 1}
+
         def update(model, _event), do: model
 
         def subscribe(_model), do: [Plushie.Subscription.every(20, :tick)]
@@ -818,7 +820,9 @@ defmodule Plushie.RuntimeTest do
 
         def init(_opts), do: %{timer_on: true, ticks: 0}
 
-        def update(model, %Plushie.Event.Timer{tag: :tick}), do: %{model | ticks: model.ticks + 1}
+        def update(model, %Plushie.Event.TimerEvent{tag: :tick}),
+          do: %{model | ticks: model.ticks + 1}
+
         def update(model, :stop_timer), do: %{model | timer_on: false}
         def update(model, _event), do: model
 
@@ -869,7 +873,9 @@ defmodule Plushie.RuntimeTest do
 
         def init(_opts), do: %{timer_on: true, ticks: 0}
 
-        def update(model, %Plushie.Event.Timer{tag: :tick}), do: %{model | ticks: model.ticks + 1}
+        def update(model, %Plushie.Event.TimerEvent{tag: :tick}),
+          do: %{model | ticks: model.ticks + 1}
+
         def update(model, :toggle), do: %{model | timer_on: not model.timer_on}
         def update(model, _event), do: model
 
@@ -924,10 +930,10 @@ defmodule Plushie.RuntimeTest do
 
         def init(_opts), do: %{fast: 0, slow: 0}
 
-        def update(model, %Plushie.Event.Timer{tag: :fast_tick}),
+        def update(model, %Plushie.Event.TimerEvent{tag: :fast_tick}),
           do: %{model | fast: model.fast + 1}
 
-        def update(model, %Plushie.Event.Timer{tag: :slow_tick}),
+        def update(model, %Plushie.Event.TimerEvent{tag: :slow_tick}),
           do: %{model | slow: model.slow + 1}
 
         def update(model, _event), do: model
@@ -1048,7 +1054,7 @@ defmodule Plushie.RuntimeTest do
     test "effect command is forwarded to the bridge" do
       defmodule EffectApp do
         use Plushie.App
-        alias Plushie.Event.Effect
+        alias Plushie.Event.EffectEvent
 
         def init(_opts), do: %{result: nil}
 
@@ -1057,7 +1063,7 @@ defmodule Plushie.RuntimeTest do
           {model, cmd}
         end
 
-        def update(model, %Effect{tag: :open, result: {:ok, result}}) do
+        def update(model, %EffectEvent{tag: :open, result: {:ok, result}}) do
           %{model | result: result}
         end
 
@@ -1090,7 +1096,7 @@ defmodule Plushie.RuntimeTest do
     test "effect_result event is dispatched through update" do
       defmodule EffectResultApp do
         use Plushie.App
-        alias Plushie.Event.Effect
+        alias Plushie.Event.EffectEvent
 
         def init(_opts), do: %{path: nil, effect_id: nil}
 
@@ -1099,7 +1105,7 @@ defmodule Plushie.RuntimeTest do
           {%{model | effect_id: cmd.payload.id}, cmd}
         end
 
-        def update(model, %Effect{tag: :pick, result: {:ok, %{path: path}}}) do
+        def update(model, %EffectEvent{tag: :pick, result: {:ok, %{path: path}}}) do
           %{model | path: path}
         end
 
@@ -1138,7 +1144,7 @@ defmodule Plushie.RuntimeTest do
     test "effect command registers a pending timeout and cleans up on timeout" do
       defmodule EffectTimeoutApp do
         use Plushie.App
-        alias Plushie.Event.Effect
+        alias Plushie.Event.EffectEvent
 
         def init(_opts), do: %{effect_id: nil, timeout_result: nil}
 
@@ -1147,7 +1153,7 @@ defmodule Plushie.RuntimeTest do
           {%{model | effect_id: cmd.payload.id}, cmd}
         end
 
-        def update(model, %Effect{tag: :read, result: {:error, :timeout}}) do
+        def update(model, %EffectEvent{tag: :read, result: {:error, :timeout}}) do
           %{model | timeout_result: {:timed_out, :read}}
         end
 
@@ -1186,7 +1192,7 @@ defmodule Plushie.RuntimeTest do
     test "late effect response after timeout is ignored" do
       defmodule LateEffectApp do
         use Plushie.App
-        alias Plushie.Event.Effect
+        alias Plushie.Event.EffectEvent
 
         def init(_opts), do: %{effect_id: nil, timeout_result: nil, success_result: nil}
 
@@ -1195,11 +1201,11 @@ defmodule Plushie.RuntimeTest do
           {%{model | effect_id: cmd.payload.id}, cmd}
         end
 
-        def update(model, %Effect{tag: :read, result: {:error, :timeout}}) do
+        def update(model, %EffectEvent{tag: :read, result: {:error, :timeout}}) do
           %{model | timeout_result: :read}
         end
 
-        def update(model, %Effect{tag: :read, result: {:ok, value}}) do
+        def update(model, %EffectEvent{tag: :read, result: {:ok, value}}) do
           %{model | success_result: {:read, value}}
         end
 
@@ -1399,7 +1405,7 @@ defmodule Plushie.RuntimeTest do
       {runtime, _bridge} = start_runtime(CoalesceOrderApp)
       await_initial_render(runtime)
 
-      send(runtime, {:renderer_event, %Plushie.Event.Mouse{type: :moved, x: 1, y: 1}})
+      send(runtime, {:renderer_event, %Plushie.Event.MouseEvent{type: :moved, x: 1, y: 1}})
 
       send(
         runtime,
@@ -1577,11 +1583,11 @@ defmodule Plushie.RuntimeTest do
           {model, cmd}
         end
 
-        def update(model, %Plushie.Event.Stream{tag: :import, value: {:chunk, value}}) do
+        def update(model, %Plushie.Event.StreamEvent{tag: :import, value: {:chunk, value}}) do
           %{model | chunks: model.chunks ++ [value]}
         end
 
-        def update(model, %Plushie.Event.Async{tag: :import, result: :done}) do
+        def update(model, %Plushie.Event.AsyncEvent{tag: :import, result: :done}) do
           %{model | final: :done}
         end
 
@@ -1634,11 +1640,11 @@ defmodule Plushie.RuntimeTest do
           {%{model | cancelled: true}, Plushie.Command.cancel(:import)}
         end
 
-        def update(model, %Plushie.Event.Stream{tag: :import, value: {:chunk, value}}) do
+        def update(model, %Plushie.Event.StreamEvent{tag: :import, value: {:chunk, value}}) do
           %{model | chunks: model.chunks ++ [value]}
         end
 
-        def update(model, %Plushie.Event.Async{tag: :import, result: :done}) do
+        def update(model, %Plushie.Event.AsyncEvent{tag: :import, result: :done}) do
           model
         end
 
