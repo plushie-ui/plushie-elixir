@@ -58,7 +58,7 @@ defmodule ThemeToggle do
   # -- Rendering ---------------------------------------------------------------
 
   @impl Plushie.Widget.Handler
-  def render(id, _props, state) do
+  def view(id, _props, state) do
     import Plushie.UI
 
     progress = state.progress

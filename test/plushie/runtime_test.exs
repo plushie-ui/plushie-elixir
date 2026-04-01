@@ -135,7 +135,7 @@ defmodule Plushie.RuntimeTest do
     def handle_event(_event, _state), do: :ignored
 
     @impl true
-    def render(id, _props, _state) do
+    def view(id, _props, _state) do
       import Plushie.UI
 
       canvas id, width: 10, height: 10 do
@@ -248,7 +248,7 @@ defmodule Plushie.RuntimeTest do
     def handle_event(_event, _state), do: :consumed
 
     @impl true
-    def render(id, _props, %{phase: phase}) do
+    def view(id, _props, %{phase: phase}) do
       import Plushie.UI
 
       canvas id, width: 100, height: 100 do

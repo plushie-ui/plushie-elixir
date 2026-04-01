@@ -56,7 +56,7 @@ defmodule StarRating do
   # -- Rendering ---------------------------------------------------------------
 
   @impl Plushie.Widget.Handler
-  def render(id, props, state) do
+  def view(id, props, state) do
     import Plushie.UI
 
     rating = props.rating || 0

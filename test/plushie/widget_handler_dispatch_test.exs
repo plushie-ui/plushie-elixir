@@ -25,7 +25,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
     def handle_event(_event, _state), do: :ignored
 
     @impl true
-    def render(id, _props, _state) do
+    def view(id, _props, _state) do
       import Plushie.UI
 
       canvas id, width: 10, height: 10 do
@@ -42,7 +42,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
     def handle_event(_event, _state), do: :consumed
 
     @impl true
-    def render(id, _props, _state) do
+    def view(id, _props, _state) do
       import Plushie.UI
 
       canvas id, width: 10, height: 10 do
@@ -65,7 +65,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
     def handle_event(_event, _state), do: :ignored
 
     @impl true
-    def render(id, _props, _state) do
+    def view(id, _props, _state) do
       import Plushie.UI
 
       canvas id, width: 10, height: 10 do
@@ -87,7 +87,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
     def handle_event(_event, _state), do: :ignored
 
     @impl true
-    def render(id, _props, _state) do
+    def view(id, _props, _state) do
       import Plushie.UI
 
       canvas id, width: 10, height: 10 do
@@ -446,7 +446,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
     def handle_event(_event, _state), do: :ignored
 
     @impl true
-    def render(id, _props, _state) do
+    def view(id, _props, _state) do
       import Plushie.UI
 
       canvas id, width: 10, height: 10 do

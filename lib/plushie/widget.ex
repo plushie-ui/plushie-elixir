@@ -9,9 +9,9 @@ defmodule Plushie.Widget do
     declarations.
   - `:widget` -- pure Elixir widget. Features are detected at compile
     time based on what callbacks are defined:
-    - Has `state` declarations -> stateful (deferred rendering, state
+    - Has `state` declarations -> stateful (deferred view, state
       persistence via the runtime).
-    - No `state` -> stateless (immediate rendering in `new/2`).
+    - No `state` -> stateless (immediate view in `new/2`).
     - Has `handle_event/2` -> participates in event dispatch.
     - Has `subscribe/2` -> widget-scoped subscriptions.
 
@@ -71,7 +71,7 @@ defmodule Plushie.Widget do
 
   ## Composite widgets
 
-  If the using module defines `render/2` (leaf) or `render/3` (container),
+  If the using module defines `view/2` (leaf) or `view/3` (container),
   `new/2` delegates to it after resolving props:
 
       defmodule MyApp.LabeledInput do
@@ -81,7 +81,7 @@ defmodule Plushie.Widget do
 
         prop :label, :string
 
-        def render(id, props) do
+        def view(id, props) do
           import Plushie.UI
           column id: id do
             text(props.label)
@@ -89,18 +89,18 @@ defmodule Plushie.Widget do
         end
       end
 
-  ### render/2 vs render/3
+  ### view/2 vs view/3
 
-  Use `render/2` for simple widgets:
+  Use `view/2` for simple widgets:
 
-      def render(id, props) do
+      def view(id, props) do
         %{id: id, type: "text", props: %{content: props.label}, children: []}
       end
 
-  Use `render/3` when the widget has state (declared via `state`).
+  Use `view/3` when the widget has state (declared via `state`).
   The third argument is the widget's internal state map:
 
-      def render(id, props, state) do
+      def view(id, props, state) do
         fill = if state.hover, do: "#ff0", else: "#ccc"
         ...
       end
@@ -314,9 +314,9 @@ defmodule Plushie.Widget do
   Declares internal state fields for a stateful widget.
 
   State fields are managed by the runtime, not the app model.
-  They persist across renders and are passed to `render/3` and
+  They persist across renders and are passed to `view/3` and
   `handle_event/2`. Declaring state fields makes the widget
-  stateful: rendering is deferred to tree normalization and the
+  stateful: the view is deferred to tree normalization and the
   `WidgetHandler` behaviour is injected automatically.
 
       state hover: nil, drag: :none, animation_progress: 0.0
@@ -385,10 +385,10 @@ defmodule Plushie.Widget do
 
     rust_crate_val = Module.get_attribute(env.module, :_rust_crate)
     rust_constructor_val = Module.get_attribute(env.module, :_rust_constructor)
-    has_render_3 = Module.defines?(env.module, {:render, 3})
-    has_render = Module.defines?(env.module, {:render, 2}) or has_render_3
+    has_view_3 = Module.defines?(env.module, {:view, 3})
+    has_view = Module.defines?(env.module, {:view, 2}) or has_view_3
 
-    if has_render do
+    if has_view do
       validate_widget_callbacks!(env)
     end
 
@@ -405,9 +405,9 @@ defmodule Plushie.Widget do
       )
 
     widget_code =
-      if has_render do
-        # All widgets with render go through the unified path:
-        # struct + placeholder to_node + deferred rendering.
+      if has_view do
+        # All widgets with view go through the unified path:
+        # struct + placeholder to_node + deferred view.
         state_fields =
           (Module.get_attribute(env.module, :_widget_state_fields) || [])
           |> Enum.reverse()
@@ -425,7 +425,7 @@ defmodule Plushie.Widget do
           prop_validation
         )
       else
-        # Struct-only widgets (native_widget, no render callback).
+        # Struct-only widgets (native_widget, no view callback).
         generate_struct_widget(
           env.module,
           widget_type,
@@ -438,10 +438,10 @@ defmodule Plushie.Widget do
       end
 
     # Inject @behaviour WidgetHandler for stateful widgets (detected by state fields).
-    # Inject WidgetHandler behaviour for all widgets with render callbacks.
-    # This must happen in __before_compile__ since we detect render at this point.
+    # Inject WidgetHandler behaviour for all widgets with view callbacks.
+    # This must happen in __before_compile__ since we detect view at this point.
     widget_handler_behaviour =
-      if has_render do
+      if has_view do
         quote do
           @behaviour Plushie.Widget.Handler
         end
@@ -740,14 +740,14 @@ defmodule Plushie.Widget do
   end
 
   defp validate_widget_callbacks!(env) do
-    has_render_2 = Module.defines?(env.module, {:render, 2})
-    has_render_3 = Module.defines?(env.module, {:render, 3})
+    has_view_2 = Module.defines?(env.module, {:view, 2})
+    has_view_3 = Module.defines?(env.module, {:view, 3})
 
-    unless has_render_2 or has_render_3 do
+    unless has_view_2 or has_view_3 do
       raise CompileError,
         file: env.file,
         line: 0,
-        description: "#{inspect(env.module)} must define render/2 or render/3."
+        description: "#{inspect(env.module)} must define view/2 or view/3."
     end
   end
 
@@ -773,8 +773,8 @@ defmodule Plushie.Widget do
     state_defaults = Macro.escape(Map.new(state_fields))
 
     has_handle_event = Module.defines?(module, {:handle_event, 2})
-    has_render_3 = Module.defines?(module, {:render, 3})
-    has_render_2 = Module.defines?(module, {:render, 2})
+    has_view_3 = Module.defines?(module, {:view, 3})
+    has_view_2 = Module.defines?(module, {:view, 2})
     participates_in_dispatch = participates_in_dispatch?(has_handle_event, events, state_fields)
 
     default_handle_event =
@@ -790,24 +790,24 @@ defmodule Plushie.Widget do
         end
       end
 
-    # Composites with render/2 need a render/3 wrapper so the unified
-    # normalization path can call render(id, props, state) uniformly.
-    render_adapter =
-      if has_render_2 and not has_render_3 do
+    # Composites with view/2 need a view/3 wrapper so the unified
+    # normalization path can call view(id, props, state) uniformly.
+    view_adapter =
+      if has_view_2 and not has_view_3 do
         quote do
           @doc false
-          def render(id, props, _state), do: render(id, props)
+          def view(id, props, _state), do: view(id, props)
         end
       end
 
     quote do
-      unquote(render_adapter)
+      unquote(view_adapter)
 
       @doc "Returns the initial internal state for this widget."
       @spec __initial_state__() :: map()
       def __initial_state__, do: unquote(state_defaults)
 
-      @doc "Returns true for widget modules with render callbacks."
+      @doc "Returns true for widget modules with view callbacks."
       @spec __widget__?() :: true
       def __widget__?, do: true
 
@@ -1008,7 +1008,7 @@ defmodule Plushie.Widget do
 
   # -- Struct-based widget generation -----------------------------------------
   #
-  # For struct-only widgets (native_widget) (no render/2 or render/3), we generate:
+  # For struct-only widgets (native_widget) (no view/2 or view/3), we generate:
   # - defstruct with all props + :id + :event_rate + :a11y
   # - @type t with proper field types
   # - @type option union of keyword tuples

@@ -20,7 +20,7 @@ defmodule Plushie.EventDeclarationTest do
     def handle_event(_event, _state), do: :ignored
 
     @impl true
-    def render(id, _props, _state) do
+    def view(id, _props, _state) do
       import Plushie.UI
 
       canvas id, width: 1, height: 1 do
@@ -39,7 +39,7 @@ defmodule Plushie.EventDeclarationTest do
     def handle_event(_event, _state), do: :ignored
 
     @impl true
-    def render(id, _props, _state) do
+    def view(id, _props, _state) do
       import Plushie.UI
 
       canvas id, width: 1, height: 1 do
@@ -57,7 +57,7 @@ defmodule Plushie.EventDeclarationTest do
     def handle_event(_event, _state), do: :ignored
 
     @impl true
-    def render(id, _props, _state) do
+    def view(id, _props, _state) do
       import Plushie.UI
 
       canvas id, width: 1, height: 1 do
@@ -75,7 +75,7 @@ defmodule Plushie.EventDeclarationTest do
     def handle_event(_event, _state), do: :ignored
 
     @impl true
-    def render(id, _props, _state) do
+    def view(id, _props, _state) do
       import Plushie.UI
 
       canvas id, width: 1, height: 1 do
@@ -93,7 +93,7 @@ defmodule Plushie.EventDeclarationTest do
     def handle_event(_event, _state), do: :ignored
 
     @impl true
-    def render(id, _props, _state) do
+    def view(id, _props, _state) do
       import Plushie.UI
 
       canvas id, width: 1, height: 1 do

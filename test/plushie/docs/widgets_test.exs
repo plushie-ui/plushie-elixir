@@ -40,7 +40,7 @@ defmodule Plushie.Docs.WidgetsTest do
     prop(:title, :string)
     prop(:subtitle, :string, default: nil)
 
-    def render(id, props) do
+    def view(id, props) do
       column id: id, padding: 16, spacing: 8 do
         text("ext_title", props.title, size: 20)
 
@@ -93,7 +93,7 @@ defmodule Plushie.Docs.WidgetsTest do
   end
 
   # ---------------------------------------------------------------------------
-  # Composite widget: card with render/3
+  # Composite widget: card with view/3
   # ---------------------------------------------------------------------------
 
   test "widgets_composite_card_test" do

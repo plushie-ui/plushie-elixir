@@ -203,7 +203,7 @@ defmodule Plushie.Tree do
   # Returns {:rendered, fully_normalized_node} or :not_a_widget_placeholder.
   #
   # The rendered output is normalized at the same scope position. Since
-  # render/3 produces a plain canvas node (no __widget__ tags in
+  # view/3 produces a plain canvas node (no __widget__ tags in
   # its props), normalization processes it as a regular widget -- no
   # recursion is possible. After normalization, stateful widget metadata
   # (module, state, props) is attached to :meta for registry derivation
@@ -216,10 +216,10 @@ defmodule Plushie.Tree do
         widget_props = Map.get(meta, :__widget_props__, %{})
         widget_state = lookup_widget_state(scoped_id, window_id, module)
 
-        # Render with local ID -- normalization applies scoping.
+        # View with local ID -- normalization applies scoping.
         # State is always a map (empty for stateless widgets).
         # Children are in props[:children] for container widgets.
-        rendered = module.render(local_id, widget_props, widget_state)
+        rendered = module.view(local_id, widget_props, widget_state)
 
         # Normalize the raw canvas output. It has no __widget__
         # tags, so this is a plain normalization pass with no recursion.

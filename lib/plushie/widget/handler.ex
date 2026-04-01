@@ -58,8 +58,8 @@ defmodule Plushie.Widget.Handler do
   @doc "Transforms a raw event into a semantic widget event (or ignores it)."
   @callback handle_event(event :: struct(), state :: map()) :: handle_event_result()
 
-  @doc "Renders the canvas widget given its id, resolved props, and internal state."
-  @callback render(id :: String.t(), props :: map(), state :: map()) :: map()
+  @doc "Returns the widget tree for this widget given its id, resolved props, and internal state."
+  @callback view(id :: String.t(), props :: map(), state :: map()) :: map()
 
   @doc "Returns subscription specs for this widget (optional)."
   @callback subscribe(props :: map(), state :: map()) :: [Plushie.Subscription.t()]

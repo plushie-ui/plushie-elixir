@@ -68,7 +68,7 @@ defmodule Plushie.WidgetMacroTest do
   end
 
   # ---------------------------------------------------------------------------
-  # Test modules: widget (composite with render/2)
+  # Test modules: widget (composite with view/2)
   # ---------------------------------------------------------------------------
 
   defmodule StatusIndicator do
@@ -79,7 +79,7 @@ defmodule Plushie.WidgetMacroTest do
     prop(:status, :atom)
     prop(:label, :string)
 
-    def render(id, props) do
+    def view(id, props) do
       status_str = Map.get(props, :status, "unknown")
       label = Map.get(props, :label, "Status")
       %{id: id, type: "text", props: %{content: "#{label}: #{status_str}"}, children: []}
@@ -87,7 +87,7 @@ defmodule Plushie.WidgetMacroTest do
   end
 
   # ---------------------------------------------------------------------------
-  # Test modules: widget (composite with render/3, container)
+  # Test modules: widget (composite with view/3, container)
   # ---------------------------------------------------------------------------
 
   defmodule Wrapper do
@@ -97,7 +97,7 @@ defmodule Plushie.WidgetMacroTest do
 
     prop(:border, :boolean, default: false)
 
-    def render(id, props) do
+    def view(id, props) do
       border_val = Map.get(props, :border, false)
 
       %{
@@ -341,19 +341,19 @@ defmodule Plushie.WidgetMacroTest do
 
   # --- 8. composite with render callback ------------------------------------
 
-  describe "composite with render callback" do
-    test "render/2 widget produces struct" do
+  describe "composite with view callback" do
+    test "view/2 widget produces struct" do
       widget = StatusIndicator.new("si1", status: :ok, label: "Health")
       assert %StatusIndicator{id: "si1", status: :ok, label: "Health"} = widget
     end
 
-    test "render/2 widget renders via to_node placeholder" do
+    test "view/2 widget renders via to_node placeholder" do
       widget = StatusIndicator.new("si1", status: :ok, label: "Health")
       node = Plushie.Widget.to_node(widget)
       assert node.type == "widget_placeholder"
     end
 
-    test "render/3 widget produces struct" do
+    test "view/3 widget produces struct" do
       widget = Wrapper.new("w1", border: true)
       assert %Wrapper{id: "w1", border: true} = widget
     end
