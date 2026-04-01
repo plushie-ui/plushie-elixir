@@ -23,9 +23,9 @@ defmodule Plushie.Docs.EffectsTest do
   # -- Effect result event matching -------------------------------------------
 
   test "effects_ok_result_match_test" do
-    event = %Effect{request_id: "ef_1", result: {:ok, %{"path" => "/tmp/notes.txt"}}}
+    event = %Effect{request_id: "ef_1", result: {:ok, %{path: "/tmp/notes.txt"}}}
 
-    assert %Effect{result: {:ok, %{"path" => path}}} = event
+    assert %Effect{result: {:ok, %{path: path}}} = event
     assert path == "/tmp/notes.txt"
   end
 

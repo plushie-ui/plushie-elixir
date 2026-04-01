@@ -125,7 +125,7 @@ defmodule Plushie.Dev.RebuildingOverlay do
     %{
       id: "#{@prefix}/anchor",
       type: "container",
-      props: %{width: :fill, align_y: :start},
+      props: %{width: :fill, align_y: :top},
       children: [
         %{
           id: "#{@prefix}/column",

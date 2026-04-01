@@ -159,9 +159,17 @@ defmodule Plushie.Canvas.ShapeTest do
       assert Shape.translate(100, 200) == %Translate{x: 100, y: 200}
     end
 
-    test "rotate/1 produces a Rotate struct with angle in radians" do
+    test "rotate/1 accepts degrees by default" do
+      assert_in_delta Shape.rotate(45).angle, :math.pi() / 4, 0.0001
+    end
+
+    test "rotate/1 with explicit radians" do
       angle = :math.pi() / 4
-      assert Shape.rotate(angle) == %Rotate{angle: angle}
+      assert Shape.rotate(radians: angle) == %Rotate{angle: angle}
+    end
+
+    test "rotate/1 with explicit degrees" do
+      assert_in_delta Shape.rotate(degrees: 90).angle, :math.pi() / 2, 0.0001
     end
 
     test "scale/2 produces a Scale struct with per-axis factors" do

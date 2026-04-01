@@ -316,9 +316,28 @@ defmodule Plushie.Canvas.Shape do
   @spec translate(x :: number(), y :: number()) :: Translate.t()
   def translate(x, y), do: %Translate{x: x, y: y}
 
-  @doc "Create a rotation transform (angle in radians)."
-  @spec rotate(angle :: number()) :: Rotate.t()
-  def rotate(angle), do: %Rotate{angle: angle}
+  @doc """
+  Create a rotation transform.
+
+  Accepts degrees by default. Use `degrees:` or `radians:` for
+  explicit units.
+
+      rotate(45)              # 45 degrees
+      rotate(degrees: 45)     # explicit degrees
+      rotate(radians: 0.785)  # explicit radians
+  """
+  @spec rotate(angle_or_opts :: number() | keyword()) :: Rotate.t()
+  def rotate(angle) when is_number(angle) do
+    %Rotate{angle: angle * :math.pi() / 180.0}
+  end
+
+  def rotate(degrees: d) when is_number(d) do
+    %Rotate{angle: d * :math.pi() / 180.0}
+  end
+
+  def rotate(radians: r) when is_number(r) do
+    %Rotate{angle: r}
+  end
 
   @doc "Create a uniform scale transform."
   @spec scale(factor :: number()) :: Scale.t()

@@ -15,9 +15,10 @@ defmodule Plushie.Automation.Session do
   String selectors follow these rules:
   - `"#save"` matches a unique local widget ID
   - `"#form/save"` matches an exact scoped ID
-  - bare strings like `"Save"` match visible text
+  - `{:text, "Save"}` matches visible text content
   """
-  @type selector :: String.t() | {:role, String.t()} | {:label, String.t()} | :focused
+  @type selector ::
+          String.t() | {:text, String.t()} | {:role, String.t()} | {:label, String.t()} | :focused
 
   @type runtime_ref :: GenServer.server()
   @type bridge_ref :: GenServer.server() | nil

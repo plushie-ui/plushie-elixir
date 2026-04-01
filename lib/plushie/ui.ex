@@ -265,16 +265,18 @@ defmodule Plushie.UI do
         Keyword.get(opts, :children, [])
       end
 
-    widget = widget_mod.new(resolved_id, merged_opts)
+    Plushie.Widget.Build.build_node(merged_opts, fn widget_opts ->
+      widget = widget_mod.new(resolved_id, widget_opts)
 
-    widget =
-      if resolved_children != [] do
-        widget_mod.extend(widget, resolved_children)
-      else
-        widget
-      end
+      widget =
+        if resolved_children != [] do
+          widget_mod.extend(widget, resolved_children)
+        else
+          widget
+        end
 
-    widget_mod.build(widget)
+      widget_mod.build(widget)
+    end)
   end
 
   # Kept for external callers. Internal macros use compile_auto_id/2 to
@@ -354,7 +356,11 @@ defmodule Plushie.UI do
         exprs = block_to_exprs(block)
 
         quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          items =
+            unquote(build_list_accumulator(exprs))
+            |> :lists.reverse()
+            |> List.flatten()
+            |> Enum.reject(&is_nil/1)
 
           Plushie.UI.__build_container__(
             Plushie.Widget.Window,
@@ -386,7 +392,11 @@ defmodule Plushie.UI do
     exprs = block_to_exprs(block)
 
     quote do
-      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items =
+        unquote(build_list_accumulator(exprs))
+        |> :lists.reverse()
+        |> List.flatten()
+        |> Enum.reject(&is_nil/1)
 
       Plushie.UI.__build_container__(
         Plushie.Widget.Window,
@@ -421,7 +431,12 @@ defmodule Plushie.UI do
         exprs = block_to_exprs(block)
 
         quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          items =
+            unquote(build_list_accumulator(exprs))
+            |> :lists.reverse()
+            |> List.flatten()
+            |> Enum.reject(&is_nil/1)
+
           Plushie.UI.__build_container__(unquote(widget_mod), unquote(id), [], items, nil)
         end
 
@@ -446,7 +461,11 @@ defmodule Plushie.UI do
     exprs = block_to_exprs(block)
 
     quote do
-      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items =
+        unquote(build_list_accumulator(exprs))
+        |> :lists.reverse()
+        |> List.flatten()
+        |> Enum.reject(&is_nil/1)
 
       Plushie.UI.__build_container__(
         unquote(widget_mod),
@@ -468,7 +487,11 @@ defmodule Plushie.UI do
         exprs = block_to_exprs(block)
 
         quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          items =
+            unquote(build_list_accumulator(exprs))
+            |> :lists.reverse()
+            |> List.flatten()
+            |> Enum.reject(&is_nil/1)
 
           Plushie.UI.__build_container__(
             unquote(widget_mod),
@@ -500,7 +523,11 @@ defmodule Plushie.UI do
     exprs = block_to_exprs(block)
 
     quote do
-      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items =
+        unquote(build_list_accumulator(exprs))
+        |> :lists.reverse()
+        |> List.flatten()
+        |> Enum.reject(&is_nil/1)
 
       Plushie.UI.__build_container__(
         unquote(widget_mod),
@@ -523,7 +550,7 @@ defmodule Plushie.UI do
     - `:spacing` -- gap between children
     - `:padding` -- padding around children
     - `:width` / `:height` -- `:fill`, `:shrink`, or number
-    - `:align_x` -- `:start`, `:center`, `:end`
+    - `:align_x` -- `:left`, `:center`, `:right`
     - `:id` -- explicit ID (otherwise auto-generated from call site)
     - `:children` -- child nodes (function-form shorthand)
 
@@ -565,7 +592,7 @@ defmodule Plushie.UI do
 
     ## Options
 
-    - `:column_count` -- number of columns
+    - `:columns` -- number of columns
     - `:column_width` -- width of each column
     - `:row_height` -- height of each row
     - `:spacing` -- gap between cells
@@ -575,7 +602,7 @@ defmodule Plushie.UI do
 
     ## Example
 
-        grid column_count: 3, spacing: 8 do
+        grid columns: 3, spacing: 8 do
           for item <- items do
             text(item.name)
           end
@@ -756,6 +783,9 @@ defmodule Plushie.UI do
     """
   }
 
+  # Stateful containers that hold renderer-side state
+  @stateful_id_containers ~w(scrollable pane_grid)a
+
   @id_containers [
     {:container, Plushie.Widget.Container},
     {:overlay, Plushie.Widget.Overlay},
@@ -772,6 +802,17 @@ defmodule Plushie.UI do
 
     @doc @id_container_docs[name]
     defmacro unquote(name)(id, opts_or_do \\ []) do
+      # Detect scrollable do...end without an ID (id arg receives the do-block)
+      if unquote(name) in @stateful_id_containers and Keyword.keyword?(id) and
+           Keyword.has_key?(id, :do) do
+        raise CompileError,
+          line: __CALLER__.line,
+          file: __CALLER__.file,
+          description:
+            "#{unquote(name_str)} requires an explicit ID because it holds renderer-side state. " <>
+              "Use #{unquote(name_str)}(\"my-id\") do ... end"
+      end
+
       id_container_2arity_body(unquote(mod), unquote(name_str), id, opts_or_do)
     end
 
@@ -811,7 +852,11 @@ defmodule Plushie.UI do
         exprs = block_to_exprs(block)
 
         quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          items =
+            unquote(build_list_accumulator(exprs))
+            |> :lists.reverse()
+            |> List.flatten()
+            |> Enum.reject(&is_nil/1)
 
           Plushie.UI.__build_container__(
             Plushie.Widget.Space,
@@ -855,12 +900,16 @@ defmodule Plushie.UI do
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
-          Plushie.UI.unquote(build_fn)(unquote(id), unquote(positional), unquote(opts_ast))
+          Plushie.Widget.Build.build_node(unquote(opts_ast), fn widget_opts ->
+            Plushie.UI.unquote(build_fn)(unquote(id), unquote(positional), widget_opts)
+          end)
         end
 
       opts ->
         quote do
-          Plushie.UI.unquote(build_fn)(unquote(id), unquote(positional), unquote(opts))
+          Plushie.Widget.Build.build_node(unquote(opts), fn widget_opts ->
+            Plushie.UI.unquote(build_fn)(unquote(id), unquote(positional), widget_opts)
+          end)
         end
     end
   end
@@ -966,7 +1015,7 @@ defmodule Plushie.UI do
 
     - `:cell_size` -- size of each QR module in pixels (default 4.0)
     - `:cell_color` -- color of dark modules
-    - `:background_color` -- color of light modules
+    - `:background` -- color of light modules
     - `:error_correction` -- `:low`, `:medium` (default), `:quartile`, `:high`
 
     ## Example
@@ -1091,14 +1140,18 @@ defmodule Plushie.UI do
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
-          Plushie.Widget.Text.new(unquote(id), unquote(content), unquote(opts_ast))
-          |> Plushie.Widget.Text.build()
+          Plushie.Widget.Build.build_node(unquote(opts_ast), fn widget_opts ->
+            Plushie.Widget.Text.new(unquote(id), unquote(content), widget_opts)
+            |> Plushie.Widget.Text.build()
+          end)
         end
 
       opts ->
         quote do
-          Plushie.Widget.Text.new(unquote(id), unquote(content), unquote(opts))
-          |> Plushie.Widget.Text.build()
+          Plushie.Widget.Build.build_node(unquote(opts), fn widget_opts ->
+            Plushie.Widget.Text.new(unquote(id), unquote(content), widget_opts)
+            |> Plushie.Widget.Text.build()
+          end)
         end
     end
   end
@@ -1127,7 +1180,11 @@ defmodule Plushie.UI do
         exprs = block_to_exprs(block)
 
         quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          items =
+            unquote(build_list_accumulator(exprs))
+            |> :lists.reverse()
+            |> List.flatten()
+            |> Enum.reject(&is_nil/1)
 
           Plushie.UI.__build_container__(
             Plushie.Widget.Rule,
@@ -1203,24 +1260,28 @@ defmodule Plushie.UI do
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
-          Plushie.Widget.ProgressBar.new(
-            unquote(id),
-            unquote(range),
-            unquote(value),
-            unquote(opts_ast)
-          )
-          |> Plushie.Widget.ProgressBar.build()
+          Plushie.Widget.Build.build_node(unquote(opts_ast), fn widget_opts ->
+            Plushie.Widget.ProgressBar.new(
+              unquote(id),
+              unquote(range),
+              unquote(value),
+              widget_opts
+            )
+            |> Plushie.Widget.ProgressBar.build()
+          end)
         end
 
       opts ->
         quote do
-          Plushie.Widget.ProgressBar.new(
-            unquote(id),
-            unquote(range),
-            unquote(value),
-            unquote(opts)
-          )
-          |> Plushie.Widget.ProgressBar.build()
+          Plushie.Widget.Build.build_node(unquote(opts), fn widget_opts ->
+            Plushie.Widget.ProgressBar.new(
+              unquote(id),
+              unquote(range),
+              unquote(value),
+              widget_opts
+            )
+            |> Plushie.Widget.ProgressBar.build()
+          end)
         end
     end
   end
@@ -1262,22 +1323,26 @@ defmodule Plushie.UI do
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
-          Plushie.UI.__build_radio__(
-            unquote(id),
-            unquote(value),
-            unquote(selected),
-            unquote(opts_ast)
-          )
+          Plushie.Widget.Build.build_node(unquote(opts_ast), fn widget_opts ->
+            Plushie.UI.__build_radio__(
+              unquote(id),
+              unquote(value),
+              unquote(selected),
+              widget_opts
+            )
+          end)
         end
 
       opts ->
         quote do
-          Plushie.UI.__build_radio__(
-            unquote(id),
-            unquote(value),
-            unquote(selected),
-            unquote(opts)
-          )
+          Plushie.Widget.Build.build_node(unquote(opts), fn widget_opts ->
+            Plushie.UI.__build_radio__(
+              unquote(id),
+              unquote(value),
+              unquote(selected),
+              widget_opts
+            )
+          end)
         end
     end
   end
@@ -1318,22 +1383,26 @@ defmodule Plushie.UI do
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
-          Plushie.UI.__build_slider__(
-            unquote(id),
-            unquote(range),
-            unquote(value),
-            unquote(opts_ast)
-          )
+          Plushie.Widget.Build.build_node(unquote(opts_ast), fn widget_opts ->
+            Plushie.UI.__build_slider__(
+              unquote(id),
+              unquote(range),
+              unquote(value),
+              widget_opts
+            )
+          end)
         end
 
       opts ->
         quote do
-          Plushie.UI.__build_slider__(
-            unquote(id),
-            unquote(range),
-            unquote(value),
-            unquote(opts)
-          )
+          Plushie.Widget.Build.build_node(unquote(opts), fn widget_opts ->
+            Plushie.UI.__build_slider__(
+              unquote(id),
+              unquote(range),
+              unquote(value),
+              widget_opts
+            )
+          end)
         end
     end
   end
@@ -1371,22 +1440,26 @@ defmodule Plushie.UI do
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
-          Plushie.UI.__build_vertical_slider__(
-            unquote(id),
-            unquote(range),
-            unquote(value),
-            unquote(opts_ast)
-          )
+          Plushie.Widget.Build.build_node(unquote(opts_ast), fn widget_opts ->
+            Plushie.UI.__build_vertical_slider__(
+              unquote(id),
+              unquote(range),
+              unquote(value),
+              widget_opts
+            )
+          end)
         end
 
       opts ->
         quote do
-          Plushie.UI.__build_vertical_slider__(
-            unquote(id),
-            unquote(range),
-            unquote(value),
-            unquote(opts)
-          )
+          Plushie.Widget.Build.build_node(unquote(opts), fn widget_opts ->
+            Plushie.UI.__build_vertical_slider__(
+              unquote(id),
+              unquote(range),
+              unquote(value),
+              widget_opts
+            )
+          end)
         end
     end
   end
@@ -1421,22 +1494,26 @@ defmodule Plushie.UI do
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
-          Plushie.UI.__build_pick_list__(
-            unquote(id),
-            unquote(options),
-            unquote(selected),
-            unquote(opts_ast)
-          )
+          Plushie.Widget.Build.build_node(unquote(opts_ast), fn widget_opts ->
+            Plushie.UI.__build_pick_list__(
+              unquote(id),
+              unquote(options),
+              unquote(selected),
+              widget_opts
+            )
+          end)
         end
 
       opts ->
         quote do
-          Plushie.UI.__build_pick_list__(
-            unquote(id),
-            unquote(options),
-            unquote(selected),
-            unquote(opts)
-          )
+          Plushie.Widget.Build.build_node(unquote(opts), fn widget_opts ->
+            Plushie.UI.__build_pick_list__(
+              unquote(id),
+              unquote(options),
+              unquote(selected),
+              widget_opts
+            )
+          end)
         end
     end
   end
@@ -1471,22 +1548,26 @@ defmodule Plushie.UI do
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
-          Plushie.UI.__build_combo_box__(
-            unquote(id),
-            unquote(options),
-            unquote(value),
-            unquote(opts_ast)
-          )
+          Plushie.Widget.Build.build_node(unquote(opts_ast), fn widget_opts ->
+            Plushie.UI.__build_combo_box__(
+              unquote(id),
+              unquote(options),
+              unquote(value),
+              widget_opts
+            )
+          end)
         end
 
       opts ->
         quote do
-          Plushie.UI.__build_combo_box__(
-            unquote(id),
-            unquote(options),
-            unquote(value),
-            unquote(opts)
-          )
+          Plushie.Widget.Build.build_node(unquote(opts), fn widget_opts ->
+            Plushie.UI.__build_combo_box__(
+              unquote(id),
+              unquote(options),
+              unquote(value),
+              widget_opts
+            )
+          end)
         end
     end
   end
@@ -1572,14 +1653,18 @@ defmodule Plushie.UI do
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
-          Plushie.Widget.Markdown.new(unquote(id), unquote(content), unquote(opts_ast))
-          |> Plushie.Widget.Markdown.build()
+          Plushie.Widget.Build.build_node(unquote(opts_ast), fn widget_opts ->
+            Plushie.Widget.Markdown.new(unquote(id), unquote(content), widget_opts)
+            |> Plushie.Widget.Markdown.build()
+          end)
         end
 
       opts ->
         quote do
-          Plushie.Widget.Markdown.new(unquote(id), unquote(content), unquote(opts))
-          |> Plushie.Widget.Markdown.build()
+          Plushie.Widget.Build.build_node(unquote(opts), fn widget_opts ->
+            Plushie.Widget.Markdown.new(unquote(id), unquote(content), widget_opts)
+            |> Plushie.Widget.Markdown.build()
+          end)
         end
     end
   end
@@ -1614,7 +1699,12 @@ defmodule Plushie.UI do
         exprs = block_to_exprs(block)
 
         quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          items =
+            unquote(build_list_accumulator(exprs))
+            |> :lists.reverse()
+            |> List.flatten()
+            |> Enum.reject(&is_nil/1)
+
           Plushie.UI.__build_container__(Plushie.Widget.Tooltip, unquote(id), [], items, nil)
         end
 
@@ -1642,7 +1732,11 @@ defmodule Plushie.UI do
         exprs = block_to_exprs(block)
 
         quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          items =
+            unquote(build_list_accumulator(exprs))
+            |> :lists.reverse()
+            |> List.flatten()
+            |> Enum.reject(&is_nil/1)
 
           Plushie.UI.__build_container__(
             Plushie.Widget.Tooltip,
@@ -1674,7 +1768,11 @@ defmodule Plushie.UI do
     exprs = block_to_exprs(block)
 
     quote do
-      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items =
+        unquote(build_list_accumulator(exprs))
+        |> :lists.reverse()
+        |> List.flatten()
+        |> Enum.reject(&is_nil/1)
 
       Plushie.UI.__build_container__(
         Plushie.Widget.Tooltip,
@@ -1729,15 +1827,28 @@ defmodule Plushie.UI do
         exprs = block_to_exprs(block)
 
         quote do
-          layers =
-            [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1) |> Map.new()
+          items =
+            unquote(build_list_accumulator(exprs))
+            |> :lists.reverse()
+            |> List.flatten()
+            |> Enum.reject(&is_nil/1)
 
-          Plushie.UI.__build_canvas__(unquote(id), layers: layers)
+          {prop_tuples, layer_items} =
+            Enum.split_with(items, &match?({:__widget_prop__, _, _}, &1))
+
+          block_opts = Enum.map(prop_tuples, fn {:__widget_prop__, k, v} -> {k, v} end)
+          layers = Map.new(layer_items)
+
+          Plushie.Widget.Build.build_node([{:layers, layers} | block_opts], fn widget_opts ->
+            Plushie.UI.__build_canvas__(unquote(id), widget_opts)
+          end)
         end
 
       opts ->
         quote do
-          Plushie.UI.__build_canvas__(unquote(id), unquote(opts))
+          Plushie.Widget.Build.build_node(unquote(opts), fn widget_opts ->
+            Plushie.UI.__build_canvas__(unquote(id), widget_opts)
+          end)
         end
     end
   end
@@ -1748,18 +1859,32 @@ defmodule Plushie.UI do
     exprs = block_to_exprs(block)
 
     quote do
-      layers =
-        [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1) |> Map.new()
+      items =
+        unquote(build_list_accumulator(exprs))
+        |> :lists.reverse()
+        |> List.flatten()
+        |> Enum.reject(&is_nil/1)
 
-      opts = [{:layers, layers} | Keyword.delete(unquote(opts), :layers)]
-      Plushie.UI.__build_canvas__(unquote(id), opts)
+      {prop_tuples, layer_items} =
+        Enum.split_with(items, &match?({:__widget_prop__, _, _}, &1))
+
+      block_opts = Enum.map(prop_tuples, fn {:__widget_prop__, k, v} -> {k, v} end)
+      layers = Map.new(layer_items)
+
+      merged_opts =
+        Keyword.merge(Keyword.delete(unquote(opts), :layers), block_opts)
+
+      Plushie.Widget.Build.build_node([{:layers, layers} | merged_opts], fn widget_opts ->
+        Plushie.UI.__build_canvas__(unquote(id), widget_opts)
+      end)
     end
   end
 
   @doc false
   @spec __build_canvas__(String.t(), keyword()) :: Plushie.Widget.ui_node()
   def __build_canvas__(id, opts) do
-    Plushie.Widget.Canvas.new(id, clean_opts(opts)) |> Plushie.Widget.Canvas.build()
+    Plushie.Widget.Canvas.new(id, clean_opts(opts))
+    |> Plushie.Widget.Canvas.build()
   end
 
   # -- pane_grid(id, opts) ----------------------------------------------------
@@ -1797,7 +1922,12 @@ defmodule Plushie.UI do
         exprs = block_to_exprs(block)
 
         quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          items =
+            unquote(build_list_accumulator(exprs))
+            |> :lists.reverse()
+            |> List.flatten()
+            |> Enum.reject(&is_nil/1)
+
           Plushie.UI.__build_container__(Plushie.Widget.PaneGrid, unquote(id), [], items, nil)
         end
 
@@ -1822,7 +1952,11 @@ defmodule Plushie.UI do
     exprs = block_to_exprs(block)
 
     quote do
-      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items =
+        unquote(build_list_accumulator(exprs))
+        |> :lists.reverse()
+        |> List.flatten()
+        |> Enum.reject(&is_nil/1)
 
       Plushie.UI.__build_container__(
         Plushie.Widget.PaneGrid,
@@ -1860,17 +1994,27 @@ defmodule Plushie.UI do
         pairs = interpret_block(block, option_types)
         validate_option_keys!(pairs, option_keys, "rich_text", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
-        quote do: Plushie.UI.__build_rich_text__(unquote(id), unquote(opts_ast))
+
+        quote do
+          Plushie.Widget.Build.build_node(unquote(opts_ast), fn widget_opts ->
+            Plushie.UI.__build_rich_text__(unquote(id), widget_opts)
+          end)
+        end
 
       opts ->
-        quote do: Plushie.UI.__build_rich_text__(unquote(id), unquote(opts))
+        quote do
+          Plushie.Widget.Build.build_node(unquote(opts), fn widget_opts ->
+            Plushie.UI.__build_rich_text__(unquote(id), widget_opts)
+          end)
+        end
     end
   end
 
   @doc false
   @spec __build_rich_text__(String.t(), keyword()) :: Plushie.Widget.ui_node()
   def __build_rich_text__(id, opts) do
-    Plushie.Widget.RichText.new(id, clean_opts(opts)) |> Plushie.Widget.RichText.build()
+    Plushie.Widget.RichText.new(id, clean_opts(opts))
+    |> Plushie.Widget.RichText.build()
   end
 
   # -- table(id, opts) --------------------------------------------------------
@@ -1903,7 +2047,12 @@ defmodule Plushie.UI do
         exprs = block_to_exprs(block)
 
         quote do
-          items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          items =
+            unquote(build_list_accumulator(exprs))
+            |> :lists.reverse()
+            |> List.flatten()
+            |> Enum.reject(&is_nil/1)
+
           Plushie.UI.__build_container__(Plushie.Widget.Table, unquote(id), [], items, nil)
         end
 
@@ -1928,7 +2077,12 @@ defmodule Plushie.UI do
     exprs = block_to_exprs(block)
 
     quote do
-      items = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      items =
+        unquote(build_list_accumulator(exprs))
+        |> :lists.reverse()
+        |> List.flatten()
+        |> Enum.reject(&is_nil/1)
+
       Plushie.UI.__build_container__(Plushie.Widget.Table, unquote(id), unquote(opts), items, nil)
     end
   end
@@ -1959,7 +2113,12 @@ defmodule Plushie.UI do
         exprs = block_to_exprs(block)
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          children =
+            unquote(build_list_accumulator(exprs))
+            |> :lists.reverse()
+            |> List.flatten()
+            |> Enum.reject(&is_nil/1)
+
           Plushie.Canvas.Shape.__build_group__(children, [])
         end
 
@@ -1988,7 +2147,12 @@ defmodule Plushie.UI do
           end
 
         quote do
-          children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+          children =
+            unquote(build_list_accumulator(exprs))
+            |> :lists.reverse()
+            |> List.flatten()
+            |> Enum.reject(&is_nil/1)
+
           Plushie.Canvas.Shape.__build_group__(children, unquote(opts_ast))
         end
 
@@ -2005,7 +2169,12 @@ defmodule Plushie.UI do
     exprs = block_to_exprs(block)
 
     quote do
-      children = [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)
+      children =
+        unquote(build_list_accumulator(exprs))
+        |> :lists.reverse()
+        |> List.flatten()
+        |> Enum.reject(&is_nil/1)
+
       Plushie.Canvas.Shape.__build_group__(children, [{:id, unquote(id)} | unquote(opts)])
     end
   end
@@ -2023,8 +2192,11 @@ defmodule Plushie.UI do
     block = canvas_scope(block, :layer)
     exprs = block_to_exprs(block)
 
+    acc_ast = build_list_accumulator(exprs)
+
     quote do
-      {unquote(name), [unquote_splicing(exprs)] |> List.flatten() |> Enum.reject(&is_nil/1)}
+      {unquote(name),
+       unquote(acc_ast) |> :lists.reverse() |> List.flatten() |> Enum.reject(&is_nil/1)}
     end
   end
 
@@ -2033,10 +2205,13 @@ defmodule Plushie.UI do
   # ---------------------------------------------------------------------------
 
   @doc "Builds a rectangle shape. See `Plushie.Canvas.Shape.rect/5`."
+  @canvas_shape_type_mapping %{stroke: Plushie.Canvas.Shape.Stroke}
+  @canvas_option_keys Plushie.Widget.Canvas.__option_keys__()
+
   defmacro rect(x, y, w, h, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block)
+        pairs = interpret_block(block, @canvas_shape_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do:
@@ -2064,7 +2239,7 @@ defmodule Plushie.UI do
   defmacro circle(x, y, r, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block)
+        pairs = interpret_block(block, @canvas_shape_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do:
@@ -2079,7 +2254,7 @@ defmodule Plushie.UI do
   defmacro line(x1, y1, x2, y2, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block)
+        pairs = interpret_block(block, @canvas_shape_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do:
@@ -2107,7 +2282,7 @@ defmodule Plushie.UI do
   defmacro path(commands, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block)
+        pairs = interpret_block(block, @canvas_shape_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Plushie.Canvas.Shape.path(unquote(commands), unquote(opts_ast))
 
@@ -2120,7 +2295,7 @@ defmodule Plushie.UI do
   defmacro stroke(color, width, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block)
+        pairs = interpret_block(block, %{dash: Plushie.Canvas.Shape.Dash})
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Plushie.Canvas.Shape.stroke(unquote(color), unquote(width), unquote(opts_ast))
 
@@ -2155,6 +2330,181 @@ defmodule Plushie.UI do
 
   # Gradients
   defdelegate linear_gradient(from, to, stops), to: Plushie.Canvas.Shape
+
+  # ---------------------------------------------------------------------------
+  # Animation descriptors
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Creates a timed transition descriptor for animated prop values.
+
+  The renderer handles interpolation locally -- zero wire traffic
+  during animation. Duration can be a positional argument or a
+  keyword.
+
+  ## Examples
+
+      opacity: transition(300, to: 0.0)
+      opacity: transition(300, to: 0.0, easing: :ease_out)
+      opacity: transition(to: 0.0, duration: 300)
+
+      # Enter animation
+      opacity: transition(200, to: 1.0, from: 0.0)
+
+      # Do-block
+      opacity: transition 300 do
+        to 0.0
+        easing :ease_out
+      end
+  """
+  defmacro transition(opts_or_do) do
+    case opts_or_do do
+      [do: block] ->
+        option_keys = Plushie.Animation.Transition.__field_keys__()
+        pairs = interpret_block(block)
+        validate_option_keys!(pairs, option_keys, "transition", __CALLER__)
+        opts_ast = pairs_to_keyword_ast(pairs)
+        quote do: Plushie.UI.__build_transition__(unquote(opts_ast))
+
+      opts ->
+        quote do: Plushie.UI.__build_transition__(unquote(opts))
+    end
+  end
+
+  defmacro transition(duration, opts_or_do) do
+    case opts_or_do do
+      [do: block] ->
+        option_keys = Plushie.Animation.Transition.__field_keys__()
+        pairs = interpret_block(block)
+        validate_option_keys!(pairs, option_keys, "transition", __CALLER__)
+        opts_ast = pairs_to_keyword_ast(pairs)
+        quote do: Plushie.UI.__build_transition__(unquote(duration), unquote(opts_ast))
+
+      opts ->
+        quote do: Plushie.UI.__build_transition__(unquote(duration), unquote(opts))
+    end
+  end
+
+  @doc """
+  Creates a looping transition descriptor.
+
+  Sets `repeat: :forever` and `auto_reverse: true` by default.
+  Requires `from:` and `to:`.
+
+  ## Examples
+
+      opacity: loop(800, to: 0.4, from: 1.0)
+      rotation: loop(1000, to: 360, from: 0, auto_reverse: false)
+      opacity: loop(to: 0.4, from: 1.0, duration: 800, cycles: 3)
+  """
+  defmacro loop(opts_or_do) do
+    case opts_or_do do
+      [do: block] ->
+        option_keys = Plushie.Animation.Transition.__field_keys__()
+        pairs = interpret_block(block)
+        validate_option_keys!(pairs, option_keys, "loop", __CALLER__)
+        opts_ast = pairs_to_keyword_ast(pairs)
+        quote do: Plushie.UI.__build_loop__(unquote(opts_ast))
+
+      opts ->
+        quote do: Plushie.UI.__build_loop__(unquote(opts))
+    end
+  end
+
+  defmacro loop(duration, opts_or_do) do
+    case opts_or_do do
+      [do: block] ->
+        option_keys = Plushie.Animation.Transition.__field_keys__()
+        pairs = interpret_block(block)
+        validate_option_keys!(pairs, option_keys, "loop", __CALLER__)
+        opts_ast = pairs_to_keyword_ast(pairs)
+        quote do: Plushie.UI.__build_loop__(unquote(duration), unquote(opts_ast))
+
+      opts ->
+        quote do: Plushie.UI.__build_loop__(unquote(duration), unquote(opts))
+    end
+  end
+
+  @doc """
+  Creates a physics-based spring descriptor.
+
+  Springs have no fixed duration -- they settle naturally based
+  on stiffness and damping.
+
+  ## Examples
+
+      scale: spring(to: 1.05, preset: :bouncy)
+      scale: spring(to: 1.05, stiffness: 200, damping: 20)
+
+      scale: spring do
+        to 1.05
+        preset :bouncy
+      end
+  """
+  defmacro spring(opts_or_do) do
+    case opts_or_do do
+      [do: block] ->
+        option_keys = Plushie.Animation.Spring.__field_keys__()
+        pairs = interpret_block(block)
+        validate_option_keys!(pairs, option_keys, "spring", __CALLER__)
+        opts_ast = pairs_to_keyword_ast(pairs)
+        quote do: Plushie.UI.__build_spring__(unquote(opts_ast))
+
+      opts ->
+        quote do: Plushie.UI.__build_spring__(unquote(opts))
+    end
+  end
+
+  @doc """
+  Creates a sequential animation chain.
+
+  Steps execute one after another on the same prop. Accepts a
+  list of transition/spring descriptors.
+
+  ## Examples
+
+      opacity: sequence([
+        transition(200, to: 1.0, from: 0.0),
+        loop(800, to: 0.7, from: 1.0, cycles: 3),
+        transition(300, to: 0.0)
+      ])
+
+      opacity: sequence do
+        transition(200, to: 1.0, from: 0.0)
+        transition(300, to: 0.0)
+      end
+  """
+  defmacro sequence(list_or_do) do
+    case list_or_do do
+      [do: {:__block__, _, exprs}] ->
+        quote do: Plushie.UI.__build_sequence__(unquote(exprs))
+
+      [do: single_expr] ->
+        quote do: Plushie.UI.__build_sequence__([unquote(single_expr)])
+
+      list ->
+        quote do: Plushie.UI.__build_sequence__(unquote(list))
+    end
+  end
+
+  @doc false
+  def __build_transition__(opts), do: Plushie.Animation.Transition.new(opts)
+
+  @doc false
+  def __build_transition__(duration, opts),
+    do: Plushie.Animation.Transition.new(duration, opts)
+
+  @doc false
+  def __build_loop__(opts), do: Plushie.Animation.Transition.loop(opts)
+
+  @doc false
+  def __build_loop__(duration, opts), do: Plushie.Animation.Transition.loop(duration, opts)
+
+  @doc false
+  def __build_spring__(opts), do: Plushie.Animation.Spring.new(opts)
+
+  @doc false
+  def __build_sequence__(steps), do: Plushie.Animation.Sequence.new(steps)
 
   # ---------------------------------------------------------------------------
   # Tree query
@@ -2207,7 +2557,8 @@ defmodule Plushie.UI do
   @spec __build_qr_code__(String.t(), String.t(), keyword()) ::
           Plushie.Widget.ui_node()
   def __build_qr_code__(id, data, opts) do
-    Plushie.Widget.QrCode.new(id, data, clean_opts(opts)) |> Plushie.Widget.QrCode.build()
+    Plushie.Widget.QrCode.new(id, data, clean_opts(opts))
+    |> Plushie.Widget.QrCode.build()
   end
 
   # ---------------------------------------------------------------------------
@@ -2247,6 +2598,23 @@ defmodule Plushie.UI do
 
   defp block_to_exprs({:__block__, _, exprs}), do: exprs
   defp block_to_exprs(single_expr), do: [single_expr]
+
+  # Builds an AST that evaluates expressions sequentially (preserving
+  # variable scope between them) and collects results into a list.
+  # This replaces [unquote_splicing(exprs)] which breaks variable bindings
+  # because list literal elements don't share scope in Elixir macros.
+  defp build_list_accumulator(exprs) do
+    var = Macro.var(:__canvas_acc__, __MODULE__)
+
+    init = quote do: unquote(var) = []
+
+    steps =
+      Enum.map(exprs, fn expr ->
+        quote do: unquote(var) = [unquote(expr) | unquote(var)]
+      end)
+
+    {:__block__, [], [init | steps] ++ [var]}
+  end
 
   # ---------------------------------------------------------------------------
   # Block-form option interpretation
@@ -2741,6 +3109,17 @@ defmodule Plushie.UI do
     {:fn, meta, canvas_scope_match_clauses(clauses, ctx)}
   end
 
+  # --- Canvas inline option declarations (width, height, background, etc.) ---
+  defp canvas_scope({name, _meta, [_value]} = node, :canvas)
+       when is_atom(name) and name in @canvas_option_keys do
+    quote_prop_tuple(name, elem(node, 2) |> hd(), elem(node, 1))
+  end
+
+  defp canvas_scope({name, _meta, nil} = node, :canvas)
+       when is_atom(name) and name in @canvas_option_keys do
+    quote_prop_tuple(name, true, elem(node, 1))
+  end
+
   # --- Default: pass through ---
   defp canvas_scope(other, _ctx), do: other
 
@@ -2756,7 +3135,7 @@ defmodule Plushie.UI do
   defp canvas_scope_rewrite_do_block(args) do
     case List.last(args) do
       [{:do, block}] ->
-        pairs = interpret_block(block)
+        pairs = interpret_block(block, @canvas_shape_type_mapping)
         opts_ast = pairs_to_keyword_ast(pairs)
         List.replace_at(args, -1, opts_ast)
 

@@ -15,10 +15,10 @@ defmodule Plushie.Protocol do
 
   Implementation is split across internal submodules:
 
-  * `Protocol.Encode` -- all `encode_*` functions and serialization
-  * `Protocol.Decode` -- `decode/2`, `decode_message/2`, `decode_message!/2`, and dispatch
-  * `Protocol.Keys` -- named/physical key maps and `parse_key/1`
-  * `Protocol.Parsers` -- strict enum parsers and widget-family checks
+  * Protocol.Encode -- all `encode_*` functions and serialization
+  * Protocol.Decode -- `decode/2`, `decode_message/2`, `decode_message!/2`, and dispatch
+  * Protocol.Keys -- named/physical key maps and `parse_key/1`
+  * Protocol.Parsers -- strict enum parsers and widget-family checks
   """
 
   @protocol_version 1

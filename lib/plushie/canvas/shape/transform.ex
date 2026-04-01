@@ -12,7 +12,7 @@ defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Translate do
 end
 
 defmodule Plushie.Canvas.Shape.Rotate do
-  @moduledoc "Rotation transform for canvas groups (angle in radians)."
+  @moduledoc "Rotation transform for canvas groups. Stored as radians internally."
 
   @type t :: %__MODULE__{angle: number()}
 

@@ -555,7 +555,7 @@ defmodule Plushie.ProtocolTest do
       assert %Effect{request_id: "req_1", result: {:ok, result}} =
                Protocol.decode_message(json, :json)
 
-      assert result["body"] == "hello"
+      assert result[:body] == "hello"
     end
 
     test "result can be any JSON-decodable value" do
@@ -988,7 +988,7 @@ defmodule Plushie.ProtocolTest do
       json =
         Jason.encode!(%{type: "effect_response", id: "r1", status: "ok", result: %{data: 42}})
 
-      assert %Effect{request_id: "r1", result: {:ok, %{"data" => 42}}} =
+      assert %Effect{request_id: "r1", result: {:ok, %{data: 42}}} =
                Protocol.decode_message(json, :json)
     end
 
@@ -1174,7 +1174,7 @@ defmodule Plushie.ProtocolTest do
 
       packed = Msgpax.pack!(msg, iodata: false)
 
-      assert %Effect{request_id: "r1", result: {:ok, %{"data" => 42}}} =
+      assert %Effect{request_id: "r1", result: {:ok, %{data: 42}}} =
                Protocol.decode_message(packed, :msgpack)
     end
 

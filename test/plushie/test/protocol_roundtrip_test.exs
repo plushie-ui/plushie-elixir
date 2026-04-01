@@ -117,7 +117,7 @@ defmodule Plushie.Test.ProtocolRoundtripTest do
     end
 
     test "findable by text content", %{pid: pid} do
-      element = Runtime.find(pid, "Widget Gallery")
+      element = Runtime.find(pid, {:text, "Widget Gallery"})
       assert %Element{type: "text"} = element
     end
   end
@@ -219,7 +219,7 @@ defmodule Plushie.Test.ProtocolRoundtripTest do
     end
 
     test "find by text traverses nested children", %{pid: pid} do
-      element = Runtime.find(pid, "nested")
+      element = Runtime.find(pid, {:text, "nested"})
       assert %Element{type: "text"} = element
     end
   end

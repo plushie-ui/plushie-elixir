@@ -36,7 +36,7 @@ defmodule Plushie.Automation.Selector do
     |> maybe_wrap()
   end
 
-  def find(tree, text) when is_binary(text) do
+  def find(tree, {:text, text}) when is_binary(text) do
     tree
     |> Plushie.Tree.find_all(fn node ->
       type = node[:type] || node["type"]
@@ -48,6 +48,12 @@ defmodule Plushie.Automation.Selector do
   end
 
   def find(_tree, :focused), do: nil
+
+  def find(_tree, text) when is_binary(text) do
+    raise ArgumentError,
+          "bare strings are not valid selectors. " <>
+            "Use \"##{text}\" for ID selectors or {:text, #{inspect(text)}} for text content matching."
+  end
 
   @doc """
   Finds the raw tree node for selectors that resolve directly to a widget.
@@ -104,9 +110,15 @@ defmodule Plushie.Automation.Selector do
 
   def encode(:focused, _tree, _window_id), do: %{"by" => "focused"}
 
-  def encode(text, _tree, window_id) when is_binary(text) do
+  def encode({:text, text}, _tree, window_id) when is_binary(text) do
     sel = %{"by" => "text", "value" => text}
     if window_id, do: Map.put(sel, "window_id", window_id), else: sel
+  end
+
+  def encode(text, _tree, _window_id) when is_binary(text) do
+    raise ArgumentError,
+          "bare strings are not valid selectors. " <>
+            "Use \"##{text}\" for ID selectors or {:text, #{inspect(text)}} for text content matching."
   end
 
   @doc """

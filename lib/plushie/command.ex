@@ -473,8 +473,8 @@ defmodule Plushie.Command do
   @doc """
   Query the size of a window.
 
-  Result arrives as `%Plushie.Event.Effect{request_id: window_id, result: {:ok, data}}`
-  where `data` is `%{"width" => width, "height" => height}`.
+  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: data}`
+  where `data` is `%{width: width, height: height}`.
   """
   @spec get_window_size(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
   def get_window_size(window_id, tag) do
@@ -487,8 +487,8 @@ defmodule Plushie.Command do
   @doc """
   Query the position of a window.
 
-  Result arrives as `%Plushie.Event.Effect{request_id: window_id, result: {:ok, data}}`
-  where `data` is `%{"x" => x, "y" => y}` or `nil` if unavailable.
+  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: data}`
+  where `data` is `%{x: x, y: y}` or `nil` if unavailable.
   """
   @spec get_window_position(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
   def get_window_position(window_id, tag) do
@@ -501,7 +501,7 @@ defmodule Plushie.Command do
   @doc """
   Query whether a window is maximized.
 
-  Result arrives as `%Plushie.Event.Effect{request_id: window_id, result: {:ok, boolean}}`.
+  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: boolean}`.
   """
   @spec is_maximized(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
   def is_maximized(window_id, tag) do
@@ -514,7 +514,7 @@ defmodule Plushie.Command do
   @doc """
   Query whether a window is minimized.
 
-  Result arrives as `%Plushie.Event.Effect{request_id: window_id, result: {:ok, boolean}}`.
+  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: boolean}`.
   """
   @spec is_minimized(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
   def is_minimized(window_id, tag) do
@@ -527,7 +527,7 @@ defmodule Plushie.Command do
   @doc """
   Query the current window mode (windowed, fullscreen, hidden).
 
-  Result arrives as `%Plushie.Event.Effect{request_id: window_id, result: {:ok, mode}}`.
+  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: mode}`.
   """
   @spec get_mode(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
   def get_mode(window_id, tag) do
@@ -540,7 +540,7 @@ defmodule Plushie.Command do
   @doc """
   Query the window's current scale factor (DPI scaling).
 
-  Result arrives as `%Plushie.Event.Effect{request_id: window_id, result: {:ok, factor}}`.
+  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: factor}`.
   """
   @spec get_scale_factor(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
   def get_scale_factor(window_id, tag) do
@@ -553,7 +553,7 @@ defmodule Plushie.Command do
   @doc """
   Query the raw platform window ID (e.g. X11 window ID, HWND).
 
-  Result arrives as `%Plushie.Event.Effect{request_id: window_id, result: {:ok, platform_id}}`.
+  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: platform_id}`.
   """
   @spec raw_id(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
   def raw_id(window_id, tag) do
@@ -566,8 +566,8 @@ defmodule Plushie.Command do
   @doc """
   Query the monitor size for the display containing a window.
 
-  Result arrives as `%Plushie.Event.Effect{request_id: window_id, result: {:ok, data}}`
-  where `data` is `%{"width" => width, "height" => height}` or `nil` if the
+  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: data}`
+  where `data` is `%{width: width, height: height}` or `nil` if the
   monitor cannot be determined.
   """
   @spec monitor_size(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}

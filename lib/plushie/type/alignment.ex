@@ -2,14 +2,14 @@ defmodule Plushie.Type.Alignment do
   @moduledoc """
   Alignment values for `align_x` and `align_y` widget props.
 
-  Horizontal: `:left`, `:center`, `:right` (aliases: `:start` = `:left`, `:end` = `:right`).
-  Vertical: `:top`, `:center`, `:bottom` (aliases: `:start` = `:top`, `:end` = `:bottom`).
+  Horizontal: `:left`, `:center`, `:right`.
+  Vertical: `:top`, `:center`, `:bottom`.
   """
 
-  @valid [:left, :center, :right, :top, :bottom, :start, :end]
+  @valid [:left, :center, :right, :top, :bottom]
 
-  @type horizontal :: :left | :center | :right | :start | :end
-  @type vertical :: :top | :center | :bottom | :start | :end
+  @type horizontal :: :left | :center | :right
+  @type vertical :: :top | :center | :bottom
   @type t :: horizontal() | vertical()
 
   @doc """
@@ -31,12 +31,6 @@ defmodule Plushie.Type.Alignment do
 
       iex> Plushie.Type.Alignment.encode(:bottom)
       "bottom"
-
-      iex> Plushie.Type.Alignment.encode(:start)
-      "start"
-
-      iex> Plushie.Type.Alignment.encode(:end)
-      "end"
   """
   @spec encode(alignment :: t()) :: String.t()
   def encode(value) when value in @valid, do: Atom.to_string(value)

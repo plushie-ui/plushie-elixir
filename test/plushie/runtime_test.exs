@@ -1100,7 +1100,7 @@ defmodule Plushie.RuntimeTest do
           {%{model | effect_id: cmd.payload.id}, cmd}
         end
 
-        def update(model, %Effect{result: {:ok, %{"path" => path}}}) do
+        def update(model, %Effect{result: {:ok, %{path: path}}}) do
           %{model | path: path}
         end
 
@@ -1126,8 +1126,7 @@ defmodule Plushie.RuntimeTest do
 
       send(
         runtime,
-        {:renderer_event,
-         %Effect{request_id: effect_id, result: {:ok, %{"path" => "/tmp/test.txt"}}}}
+        {:renderer_event, %Effect{request_id: effect_id, result: {:ok, %{path: "/tmp/test.txt"}}}}
       )
 
       Plushie.Runtime.sync(runtime)

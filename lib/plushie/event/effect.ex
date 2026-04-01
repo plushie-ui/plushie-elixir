@@ -18,7 +18,7 @@ defmodule Plushie.Event.Effect do
 
   ## Pattern matching
 
-      def update(model, %Effect{request_id: "open-file", result: {:ok, %{"path" => path}}}) do
+      def update(model, %Effect{request_id: "open-file", result: {:ok, %{path: path}}}) do
         load_file(model, path)
       end
 
