@@ -47,10 +47,10 @@ defmodule Plushie.Command do
     query kind, `tag` holds the stringified event tag, and `data` holds the result payload.
     For example, `get_system_theme(:my_tag)` delivers
     `%SystemEvent{type: :system_theme, tag: "my_tag", data: "dark"}`.
-  - **Platform effects**: `Plushie.Effects` functions deliver
+  - **Platform effects**: `Plushie.Effect` functions deliver
     `%Plushie.Event.EffectEvent{tag: tag, result: result}`. The `tag` matches the
     atom you provided when creating the effect command. Timeouts deliver the
-    same struct with `result: {:error, :timeout}`. See `Plushie.Effects`.
+    same struct with `result: {:error, :timeout}`. See `Plushie.Effect`.
 
   ## Usage
 

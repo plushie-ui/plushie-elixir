@@ -123,7 +123,7 @@ defmodule Plushie.MixProject do
         Commands: [
           Plushie.Command,
           Plushie.Subscription,
-          Plushie.Effects
+          Plushie.Effect
         ],
         Animation: [
           Plushie.Animation,

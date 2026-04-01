@@ -1059,7 +1059,7 @@ defmodule Plushie.RuntimeTest do
         def init(_opts), do: %{result: nil}
 
         def update(model, %WidgetEvent{type: :click, id: "open"}) do
-          cmd = Plushie.Effects.file_open(:open, title: "Pick a file")
+          cmd = Plushie.Effect.file_open(:open, title: "Pick a file")
           {model, cmd}
         end
 
@@ -1101,7 +1101,7 @@ defmodule Plushie.RuntimeTest do
         def init(_opts), do: %{path: nil, effect_id: nil}
 
         def update(model, %WidgetEvent{type: :click, id: "pick"}) do
-          cmd = Plushie.Effects.file_open(:pick, title: "Pick a file")
+          cmd = Plushie.Effect.file_open(:pick, title: "Pick a file")
           {%{model | effect_id: cmd.payload.id}, cmd}
         end
 
@@ -1149,7 +1149,7 @@ defmodule Plushie.RuntimeTest do
         def init(_opts), do: %{effect_id: nil, timeout_result: nil}
 
         def update(model, %WidgetEvent{type: :click, id: "trigger"}) do
-          cmd = Plushie.Effects.clipboard_read(:read)
+          cmd = Plushie.Effect.clipboard_read(:read)
           {%{model | effect_id: cmd.payload.id}, cmd}
         end
 
@@ -1197,7 +1197,7 @@ defmodule Plushie.RuntimeTest do
         def init(_opts), do: %{effect_id: nil, timeout_result: nil, success_result: nil}
 
         def update(model, %WidgetEvent{type: :click, id: "trigger"}) do
-          cmd = Plushie.Effects.clipboard_read(:read)
+          cmd = Plushie.Effect.clipboard_read(:read)
           {%{model | effect_id: cmd.payload.id}, cmd}
         end
 

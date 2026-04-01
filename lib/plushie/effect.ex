@@ -1,4 +1,4 @@
-defmodule Plushie.Effects do
+defmodule Plushie.Effect do
   @moduledoc """
   Native platform effect requests.
 
@@ -19,7 +19,7 @@ defmodule Plushie.Effects do
   ## Example
 
       def update(model, %Plushie.Event.WidgetEvent{type: :click, id: "open"}) do
-        {model, Plushie.Effects.file_open(:import, title: "Pick a file")}
+        {model, Plushie.Effect.file_open(:import, title: "Pick a file")}
       end
 
       def update(model, %Plushie.Event.EffectEvent{tag: :import, result: {:ok, %{path: path}}}) do
@@ -45,7 +45,7 @@ defmodule Plushie.Effects do
 
   Override the default by passing a `:timeout` option (milliseconds):
 
-      Plushie.Effects.file_open(:import, title: "Pick a file", timeout: 300_000)
+      Plushie.Effect.file_open(:import, title: "Pick a file", timeout: 300_000)
   """
 
   @valid_kinds ~w(

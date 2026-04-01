@@ -8,7 +8,7 @@ defmodule Plushie.Docs.EffectsTest do
 
   test "effects_file_open_returns_effect_command_test" do
     cmd =
-      Plushie.Effects.file_open(:import,
+      Plushie.Effect.file_open(:import,
         title: "Choose a file",
         filters: [{"Text files", "*.txt"}, {"All files", "*"}]
       )

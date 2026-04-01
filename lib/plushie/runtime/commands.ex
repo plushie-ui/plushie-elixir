@@ -118,7 +118,7 @@ defmodule Plushie.Runtime.Commands do
 
     # Start a timeout timer for this effect request, using a per-effect default
     # if one is configured.
-    timeout = Plushie.Effects.default_timeout(kind) || @effect_timeout_ms
+    timeout = Plushie.Effect.default_timeout(kind) || @effect_timeout_ms
     ref = Process.send_after(self(), {:effect_timeout, id}, timeout)
     put_in(state.pending_effects[id], %{tag: tag, timer_ref: ref})
   end

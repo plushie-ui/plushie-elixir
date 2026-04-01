@@ -9,7 +9,7 @@ defmodule Plushie.Integration.EffectTest do
     def init(_opts), do: %{clipboard_text: "", got_unsupported: false}
 
     def update(model, %WidgetEvent{type: :click, id: "read"}) do
-      {model, Plushie.Effects.clipboard_read(:read)}
+      {model, Plushie.Effect.clipboard_read(:read)}
     end
 
     def update(model, %EffectEvent{tag: :read, result: {:ok, data}}) do
