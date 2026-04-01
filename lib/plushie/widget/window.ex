@@ -28,6 +28,10 @@ defmodule Plushie.Widget.Window do
   - `level` (atom) -- window stacking level (`:normal`, `:always_on_top`, `:always_on_bottom`).
   - `exit_on_close_request` (boolean) -- whether closing the window exits the app.
   - `scale_factor` (number) -- window scale factor override.
+  - `theme` -- per-window theme. A built-in theme atom (e.g. `:dark`,
+    `:nord`), `:system` to follow OS preference, or a custom palette map
+    from `Plushie.Type.Theme.custom/2`. Overrides the app-level theme
+    from `settings/0` for this window only.
   """
 
   alias Plushie.Widget.Build
@@ -52,6 +56,7 @@ defmodule Plushie.Widget.Window do
           | {:level, atom()}
           | {:exit_on_close_request, boolean()}
           | {:scale_factor, number()}
+          | {:theme, Plushie.Type.Theme.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -74,6 +79,7 @@ defmodule Plushie.Widget.Window do
           level: atom() | nil,
           exit_on_close_request: boolean() | nil,
           scale_factor: number() | nil,
+          theme: Plushie.Type.Theme.t() | nil,
           children: [Plushie.Widget.child()]
         }
 
@@ -98,10 +104,11 @@ defmodule Plushie.Widget.Window do
     :level,
     :exit_on_close_request,
     :scale_factor,
+    :theme,
     children: []
   ]
 
-  @valid_option_keys ~w(title size width height position min_size max_size maximized fullscreen visible resizable closeable minimizable decorations transparent blur level exit_on_close_request scale_factor)a
+  @valid_option_keys ~w(title size width height position min_size max_size maximized fullscreen visible resizable closeable minimizable decorations transparent blur level exit_on_close_request scale_factor theme)a
 
   @doc false
   def __option_keys__, do: @valid_option_keys
@@ -140,6 +147,7 @@ defmodule Plushie.Widget.Window do
       {:level, v}, acc -> level(acc, v)
       {:exit_on_close_request, v}, acc -> exit_on_close_request(acc, v)
       {:scale_factor, v}, acc -> scale_factor(acc, v)
+      {:theme, v}, acc -> theme(acc, v)
       {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
     end)
   end
@@ -230,6 +238,10 @@ defmodule Plushie.Widget.Window do
   def scale_factor(%__MODULE__{} = w, scale_factor) when is_number(scale_factor),
     do: %{w | scale_factor: scale_factor}
 
+  @doc "Sets the per-window theme."
+  @spec theme(window :: t(), theme :: Plushie.Type.Theme.t()) :: t()
+  def theme(%__MODULE__{} = w, theme), do: %{w | theme: theme}
+
   @doc "Appends a child to the window."
   @spec push(window :: t(), child :: Plushie.Widget.child()) :: t()
   def push(%__MODULE__{} = w, child), do: %{w | children: [child | w.children]}
@@ -272,6 +284,7 @@ defmodule Plushie.Widget.Window do
         |> put_if(w.level, :level)
         |> put_if(w.exit_on_close_request, :exit_on_close_request)
         |> put_if(w.scale_factor, :scale_factor)
+        |> put_if(w.theme, :theme)
 
       %{
         id: w.id,

@@ -235,9 +235,12 @@ defmodule PlushiePad.SshServer do
   end
 
   defp generate_key_erlang(path) do
-    key = :public_key.generate_key({:namedCurve, :ed25519})
-    pem = :public_key.pem_encode([:public_key.pem_entry_encode(:ECPrivateKey, key)])
-    File.write!(path, pem)
+    # Fall back to RSA when ssh-keygen is not available.
+    # RSA PEM encoding is well-tested across all OTP versions.
+    key = :public_key.generate_key({:rsa, 4096, 65537})
+    pem = :public_key.pem_encode([:public_key.pem_entry_encode(:RSAPrivateKey, key)])
+    rsa_path = String.replace(path, "ed25519", "rsa")
+    File.write!(rsa_path, pem)
   end
 end
 ```

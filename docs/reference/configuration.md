@@ -57,14 +57,25 @@ RUST_LOG=plushie=debug mix plushie.gui MyApp --json
 
 ## Application config
 
-Set in `config/*.exs` under `config :plushie`.
+Set in `config/*.exs` under `config :plushie`. A typical development
+setup looks like this:
+
+```elixir
+# config/dev.exs
+import Config
+
+config :plushie, code_reloader: true
+```
+
+Most projects only need `:code_reloader` in dev. The remaining options
+are for customising builds, binary paths, and test backends.
 
 ### Binary and build
 
 | Key | Type | Default | Purpose |
 |---|---|---|---|
-| `:binary_path` | `String.t()` | `nil` | Explicit binary path. Like `PLUSHIE_BINARY_PATH` but in config. |
-| `:source_path` | `String.t()` | `nil` | Rust source checkout path. Like `PLUSHIE_SOURCE_PATH` but in config. |
+| `:binary_path` | `String.t()` | `nil` | Explicit binary path. The env var `PLUSHIE_BINARY_PATH` takes precedence if set. |
+| `:source_path` | `String.t()` | `nil` | Rust source checkout path. The env var `PLUSHIE_SOURCE_PATH` takes precedence if set. |
 | `:build_name` | `String.t()` | `"app-renderer"` | Custom binary name for `mix plushie.build` output. |
 | `:build_profile` | `:release \| :debug` | `:debug` | Cargo build profile. `:release` enables optimisations. |
 | `:artifacts` | `[:bin] \| [:bin, :wasm]` | `[:bin]` | Which artifacts `mix plushie.build` and `mix plushie.download` install. |
@@ -95,13 +106,13 @@ from more coalescing.
 
 ## Runtime options (start_link/2)
 
-`Plushie.start_link(MyApp, opts)` accepts these options:
+`Plushie.start_link/2` starts a Plushie application. The first argument
+is the app module (implementing `Plushie.App`), and the second is an
+optional keyword list of options:
 
-### Required
-
-| Option | Type | Purpose |
-|---|---|---|
-| First argument | `module()` | App module implementing `Plushie.App`. |
+```elixir
+Plushie.start_link(MyApp, binary: Plushie.Binary.path!(), daemon: true)
+```
 
 ### Common options
 
@@ -134,13 +145,27 @@ application-level defaults to the renderer at startup. These are
 sent once during the initial handshake and affect all windows.
 
 ```elixir
-def settings do
-  [
-    default_text_size: 16,
-    theme: :dark,
-    fonts: ["priv/fonts/inter.ttf"],
-    default_event_rate: 60
-  ]
+defmodule MyApp do
+  use Plushie.App
+  import Plushie.UI
+
+  def settings do
+    [
+      default_text_size: 16,
+      theme: :dark,
+      fonts: ["priv/fonts/inter.ttf"],
+      default_event_rate: 60
+    ]
+  end
+
+  def init(_opts), do: %{}
+  def update(model, _event), do: model
+
+  def view(_model) do
+    window "main", title: "MyApp" do
+      text("hello", "Hello")
+    end
+  end
 end
 ```
 
