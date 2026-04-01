@@ -61,6 +61,7 @@ an atom-keyed map).
 | `:sort`            | data    | Table column sort requested (`column`)     |
 | `:scroll`          | data    | Scroll position changed (`absolute_x`, `absolute_y`, `relative_x`, `relative_y`) |
 | `:pane_focus_cycle` | none   | Pane focus cycle requested                 |
+| `:transition_complete` | value (any) | Emitted when a renderer-side transition completes (requires `on_complete: tag`) |
 
 ### Canvas events
 
@@ -386,7 +387,7 @@ end
 ### Match effect result
 
 ```elixir
-def update(model, %Effect{request_id: "open-file", result: {:ok, %{"path" => path}}}) do
+def update(model, %Effect{request_id: "open-file", result: {:ok, %{path: path}}}) do
   load_file(model, path)
 end
 
@@ -476,6 +477,6 @@ and have zero overhead in the event path.
 ## See also
 
 - [Events](../guides/05-events.md) -- events, pattern matching, and the event log
-- [Subscriptions](../guides/09-subscriptions.md) -- keyboard, timer, and other event sources
+- [Subscriptions](../guides/10-subscriptions.md) -- keyboard, timer, and other event sources
 - [Scoped IDs](scoped-ids.md) -- how container scoping affects event IDs
 - [Commands](commands.md) -- the command structs that produce async/effect events

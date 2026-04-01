@@ -102,8 +102,7 @@ for the full message table.
 
 - [Configuration reference](configuration.md) -- transport modes
   and environment variables
-- `Plushie.Protocol` -- encode/decode API
-- `Plushie.Protocol.Encode` -- outbound message encoding
-- `Plushie.Protocol.Decode` -- inbound message decoding
+- `Plushie.Protocol` -- encode/decode API (includes
+  Protocol.Encode and Protocol.Decode internally)
 - `Plushie.Transport.Framing` -- frame encode/decode for raw streams
 - `Plushie.Bridge` -- transport management and restart logic

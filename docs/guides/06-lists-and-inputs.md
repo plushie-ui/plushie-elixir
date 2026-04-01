@@ -59,7 +59,7 @@ The model needs a few new fields:
   files: [],              # list of filenames in experiments dir
   active_file: nil,       # currently selected filename, or nil
   new_name: "",           # text input for creating new experiments
-  auto_save: false        # auto-save toggle (wired up in chapter 9)
+  auto_save: false        # auto-save toggle (wired up in chapter 10)
 }
 ```
 
@@ -252,7 +252,7 @@ def update(model, %WidgetEvent{type: :toggle, id: "auto-save", value: checked}) 
 end
 ```
 
-For now we just track the flag in the model. In [chapter 9](09-subscriptions.md)
+For now we just track the flag in the model. In [chapter 10](10-subscriptions.md)
 we will wire it up with a debounce timer so saving happens automatically
 when the checkbox is checked and the content changes.
 
@@ -706,7 +706,7 @@ With the updated pad running:
   Switch to another experiment and back -- your content is preserved because
   we save on switch.
 - Try the auto-save checkbox. It toggles in the model but does not save yet
-  -- that comes in [chapter 9](09-subscriptions.md) when we learn about
+  -- that comes in [chapter 10](10-subscriptions.md) when we learn about
   subscriptions.
 
 Your pad now manages a library of experiments. Each one is a real `.ex` file

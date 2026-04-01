@@ -69,8 +69,7 @@ The result arrives as a `Plushie.Event.Effect` struct:
 ```elixir
 alias Plushie.Event.Effect
 
-def update(model, %Effect{result: {:ok, result}}) do
-  path = result["path"]
+def update(model, %Effect{result: {:ok, %{path: path}}}) do
   source = File.read!(path)
   # ... load the experiment
 end
@@ -83,11 +82,6 @@ def update(model, %Effect{result: {:error, reason}}) do
   %{model | error: inspect(reason)}
 end
 ```
-
-**Important:** effect results use **string keys**, not atoms. The result map
-has `"path"`, not `:path`. This is because results come from the renderer
-over the wire protocol and are not converted to atom keys. Pattern match
-accordingly.
 
 Available file dialogs:
 
@@ -105,7 +99,7 @@ Available file dialogs:
 
 # Read from clipboard
 {model, Effects.clipboard_read()}
-# Result: %Effect{result: {:ok, %{"text" => content}}}
+# Result: %Effect{result: {:ok, %{text: content}}}
 ```
 
 Also available: `clipboard_read_html/0`, `clipboard_write_html/2`,
@@ -152,7 +146,7 @@ def update(model, %WidgetEvent{type: :click, id: "export"}) do
   {model, Effects.file_save(title: "Export Experiment")}
 end
 
-def update(model, %Effect{result: {:ok, %{"path" => path}}}) do
+def update(model, %Effect{result: {:ok, %{path: path}}}) do
   # Could be import or export -- check context
   handle_effect_result(model, path)
 end

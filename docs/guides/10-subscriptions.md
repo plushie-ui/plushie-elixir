@@ -200,6 +200,8 @@ timers:
 - **Touch**: `on_touch/1`
 - **IME**: `on_ime/1` for input method editor events
 - **System**: `on_theme_change/1`, `on_animation_frame/1`, `on_file_drop/1`
+  (Note: renderer-side transitions run independently and do not require
+  `on_animation_frame` or timer subscriptions.)
 - **Catch-all**: `on_event/1` for any renderer event
 
 Each returns its corresponding event struct in `update/2`. The tag argument

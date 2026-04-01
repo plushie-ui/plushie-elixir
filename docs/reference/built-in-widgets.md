@@ -97,9 +97,9 @@ only the diffing strategy differs.
 
 Layout containers (`column`, `row`, `stack`, `grid`,
 `keyed_column`, `responsive`) and some display widgets (`text`,
-`rule`, `space`, `progress_bar`) support auto-generated IDs. You
-can omit the `id` argument and one will be generated from the call
-site.
+`markdown`, `rule`, `space`, `progress_bar`) support auto-generated
+IDs. You can omit the `id` argument and one will be generated from
+the call site.
 
 Stateful and interactive widgets (`text_input`, `text_editor`,
 `combo_box`, `pick_list`, `pane_grid`, `checkbox`, `toggler`,
@@ -109,6 +109,13 @@ matters for event routing and state caching.
 
 See [Scoped IDs](scoped-ids.md) for how IDs compose inside
 named containers.
+
+## Animatable Props
+
+Numeric props support renderer-side transitions via `transition()`,
+`spring()`, and `loop()`: `max_width`, `max_height`, `translate_x`,
+`translate_y`, `scale`, and `size`. See the
+[animation reference](animation.md) for details.
 
 ## Row Wrapping
 

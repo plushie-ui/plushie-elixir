@@ -326,7 +326,7 @@ Write a layout experiment in your pad:
   `1` to see the 2:1 split.
 - Nest a `scrollable` inside a fixed-height container. Add enough items to
   trigger scrolling.
-- Experiment with `align_x: :center` and `align_y: :end` on a container.
+- Experiment with `align_x: :center` and `align_y: :bottom` on a container.
 - Try `row` with `wrap: true` and enough buttons to overflow the width.
 
 In the next chapter, we will style the pad with themes, colours, and

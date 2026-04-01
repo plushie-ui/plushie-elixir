@@ -20,15 +20,36 @@ write layers and shapes, not children and inline options. The `text`,
 the widget variants) inside canvas and layer blocks. The compiler validates
 this at compile time.
 
+Canvas do-blocks also support **inline option declarations** -- bare
+calls like `width`, `height`, and `background` inside the do-block
+set canvas-level props without needing keyword arguments on the
+opening line:
+
+```elixir
+canvas "chart" do
+  width :fill
+  height 200
+
+  layer "data" do
+    rect(0, 0, 100, 50, fill: "#3b82f6")
+  end
+end
+```
+
+This is equivalent to `canvas "chart", width: :fill, height: 200 do ...`.
+
 ## Shapes
 
 All shapes are plain function calls that return typed structs. They live
-inside `layer` blocks within a canvas:
+inside `layer` blocks within a canvas. Variables assigned in one line of
+a layer or group block are visible in subsequent lines -- standard
+Elixir scoping rules apply:
 
 ```elixir
 canvas "demo", width: 200, height: 100 do
   layer "bg" do
-    rect(0, 0, 200, 100, fill: "#f0f0f0", radius: 8)
+    bg_fill = "#f0f0f0"
+    rect(0, 0, 200, 100, fill: bg_fill, radius: 8)
     circle(100, 50, 20, fill: "#3b82f6")
     line(10, 90, 190, 90, stroke: stroke("#ccc", 1))
     text(100, 50, "Hello", fill: "#333", size: 14)
@@ -48,6 +69,21 @@ The `stroke/3` helper creates stroke descriptors:
 stroke("#333", 2)                        # colour and width
 stroke("#333", 2, cap: :round)           # with line cap
 stroke("#333", 2, dash: {[5, 3], 0})     # dashed line
+```
+
+Shape do-blocks support nested Buildable types, so you can declare
+stroke options inline:
+
+```elixir
+rect(0, 0, 100, 50) do
+  fill "#3b82f6"
+  radius 6
+  stroke do
+    color "#333"
+    width 2
+    cap :round
+  end
+end
 ```
 
 ### Gradients
@@ -220,14 +256,18 @@ end
 ## Transforms and clips
 
 Transforms apply to **groups**, not individual shapes. Three transforms are
-available: `translate/2`, `rotate/1` (radians), and `scale/1` or `scale/2`.
+available: `translate/2`, `rotate/1` (degrees by default), and `scale/1`
+or `scale/2`.
 
 ```elixir
 group x: 100, y: 50 do
-  rotate(:math.pi() / 4)
+  rotate(45)
   rect(0, 0, 40, 40, fill: "#ef4444")
 end
 ```
+
+`rotate/1` accepts degrees by default. For explicit units, use keyword
+form: `rotate(degrees: 45)` or `rotate(radians: 0.785)`.
 
 The `x:` and `y:` shorthand desugars to a leading `translate`.
 

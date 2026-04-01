@@ -103,10 +103,10 @@ Tags are automatically prefixed with `{:__widget__, window_id, widget_id, tag}`
 to prevent collisions. Timer events are routed through the widget's
 `handle_event/2` callback, not the app's `update/2`.
 
-See the [Custom Widgets guide](../guides/12-custom-widgets.md) for details.
+See the [Custom Widgets guide](../guides/13-custom-widgets.md) for details.
 
 ## See also
 
 - `Plushie.Subscription` -- module docs with specs and examples
-- [Subscriptions guide](../guides/09-subscriptions.md) -- keyboard shortcuts, timers, auto-save
+- [Subscriptions guide](../guides/10-subscriptions.md) -- keyboard shortcuts, timers, auto-save
 - [Events reference](events.md) -- the event structs delivered by subscriptions

@@ -142,8 +142,9 @@ end
 ```
 
 The first child is the anchor (rendered inline). The second is the overlay
-(floated above). `flip: true` auto-repositions when the overlay would go
-off-screen.
+(floated above). Exactly two children are required -- any other count
+raises `ArgumentError`. `flip: true` auto-repositions when the overlay
+would go off-screen.
 
 ## Layout patterns
 

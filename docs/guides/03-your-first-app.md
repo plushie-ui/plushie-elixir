@@ -50,7 +50,7 @@ situation -- throughout this guide we will use different forms depending on
 context.
 
 One exception: canvas blocks work differently. We will cover that in
-[chapter 11](11-canvas.md).
+[chapter 12](12-canvas.md).
 
 > Widgets also have a programmatic struct API (`Column.new/2`, setter
 > pipelines) for use in helpers and tests. See the

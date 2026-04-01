@@ -93,6 +93,20 @@ config :plushie, source_path: "~/projects/plushie-renderer"
 This adds `[patch.crates-io]` to the generated workspace so all crates share
 the same types.
 
+### WASM renderer
+
+Plushie supports building a WASM renderer for browser deployment:
+
+```bash
+mix plushie.build --wasm           # build WASM via wasm-pack
+mix plushie.build --wasm --release # optimised WASM build
+```
+
+This produces `plushie_renderer_wasm.js` and `plushie_renderer_wasm_bg.wasm`
+for embedding in web applications. Requires a local renderer source checkout
+(`PLUSHIE_SOURCE_PATH`). `--bin` and `--wasm` can be combined to build both
+artifacts in one pass.
+
 ## Downloading precompiled binaries
 
 ```bash

@@ -64,12 +64,14 @@ Most helper functions take a selector to identify widgets:
 |---|---|
 | `"#save"` | Widget with local ID `"save"` |
 | `"#sidebar/hello.ex/delete"` | Widget at exact scoped path |
-| `"Save"` | Widget displaying the text "Save" |
+| `{:text, "Save"}` | Widget displaying the text "Save" |
 | `{:role, :button}` | Widget with accessibility role `:button` |
 | `{:label, "Email"}` | Widget with accessibility label "Email" |
 | `:focused` | Currently focused widget |
 
-The `#` prefix distinguishes ID selectors from text selectors.
+The `#` prefix marks ID selectors. Text content matching uses the
+`{:text, "..."}` tuple form. Bare strings without a `#` prefix are
+not valid selectors and will raise an `ArgumentError`.
 
 ## Finding elements
 
@@ -196,7 +198,7 @@ For platform effects (file dialogs, clipboard), use stubs to avoid opening
 real OS dialogs in tests:
 
 ```elixir
-register_effect_stub(:file_open, {:ok, %{"path" => "/tmp/test.ex"}})
+register_effect_stub(:file_open, {:ok, %{path: "/tmp/test.ex"}})
 click("#import")
 # The effect stub returns immediately with the configured response
 assert model().active_file != nil
@@ -212,7 +214,7 @@ on teardown.
 
 ```elixir
 test "import loads an experiment from file" do
-  register_effect_stub(:file_open, {:ok, %{"path" => "/tmp/hello.ex"}})
+  register_effect_stub(:file_open, {:ok, %{path: "/tmp/hello.ex"}})
   # Ensure the file exists for File.read!
   File.write!("/tmp/hello.ex", @valid_experiment_source)
 

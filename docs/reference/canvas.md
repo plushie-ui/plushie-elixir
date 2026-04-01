@@ -3,7 +3,7 @@
 The canvas system provides 2D drawing with typed shape structs, transforms,
 interactive groups, and accessibility support.
 
-For a narrative introduction, see the [Canvas guide](../guides/11-canvas.md).
+For a narrative introduction, see the [Canvas guide](../guides/12-canvas.md).
 
 ## Canvas widget
 
@@ -174,5 +174,5 @@ never reach `update/2`.
 
 - `Plushie.Canvas.Shape` -- builder functions
 - `Plushie.Widget.Canvas` -- canvas widget props
-- [Canvas guide](../guides/11-canvas.md) -- narrative introduction
+- [Canvas guide](../guides/12-canvas.md) -- narrative introduction
 - [Patterns reference](patterns.md) -- canvas composition recipes

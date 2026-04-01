@@ -26,7 +26,7 @@ All functions live in `Plushie.Command` unless noted otherwise.
 | Font | `load_font/1` | Runtime font loading from binary data |
 | Accessibility | `announce/1` | Screen reader announcements |
 | Native widget | `widget_command/3`, `widget_commands/1` | Direct commands to Rust-backed widgets |
-| Test/Headless | `advance_frame/1` | Manual animation frame advance |
+| Test/Headless | `advance_frame/1` | Manual animation frame advance (also drives renderer-side transitions in headless/test mode) |
 
 ## Platform effects
 
@@ -90,20 +90,15 @@ struct. Results arrive as `%Plushie.Event.Effect{}` events in `update/2`.
   shorter `register_effect_stub/2` and `unregister_effect_stub/1`
   delegate through the test session.
 
-## Result key format
-
-Results from the renderer use **string keys**, not atom keys. This
-applies uniformly across all response types:
-
-- Effect results: `%{"path" => "/tmp/file.txt"}`
-- System query data: `%{"system_name" => "Linux", "cpu_cores" => 8}`
-- Window/image query data: `%{"width" => 800, "height" => 600}`
-- System query tags are stringified: `get_system_theme(:my_tag)` delivers
-  `tag: "my_tag"` in the `%SystemEvent{}`.
+## Result types
 
 Query results (system, window, image, tree hash, focused widget) arrive
 as `%Plushie.Event.SystemEvent{type: type, tag: tag, data: data}`.
 Effect results arrive as `%Plushie.Event.Effect{request_id: id, result: result}`.
+
+Result maps use atom keys: `%{path: "/tmp/file.txt"}`,
+`%{width: 800, height: 600}`. Unknown keys from the renderer
+that don't correspond to existing atoms are kept as strings.
 
 ## DIY patterns
 
@@ -135,4 +130,4 @@ provides.
 
 - `Plushie.Command` -- full module docs with specs and examples
 - `Plushie.Effects` -- platform effect functions and timeout details
-- [Async and Effects](../guides/10-async-and-effects.md) -- guide with patterns
+- [Async and Effects](../guides/11-async-and-effects.md) -- guide with patterns

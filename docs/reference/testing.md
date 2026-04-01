@@ -1,7 +1,7 @@
 # Testing Reference
 
 Complete reference for the Plushie test framework. For a narrative
-introduction, see the [Testing guide](../guides/14-testing.md).
+introduction, see the [Testing guide](../guides/15-testing.md).
 
 ## Setup
 
@@ -151,10 +151,13 @@ Effect stubs are scoped to the test process and auto-cleaned on teardown.
 |---|---|
 | `"#widget_id"` | Local widget ID (# prefix required) |
 | `"#scope/path/id"` | Exact scoped path |
-| `"Visible Text"` | Widget displaying this text (depth-first) |
+| `{:text, "Save"}` | Widget displaying this text (depth-first) |
 | `{:role, :button}` | Widget with accessibility role |
 | `{:label, "Name"}` | Widget with accessibility label |
 | `:focused` | Currently focused widget |
+
+Bare strings without a `#` prefix are not valid selectors and raise
+`ArgumentError`. Use `{:text, "..."}` for text content matching.
 
 ## Backend capabilities
 
@@ -192,6 +195,14 @@ PLUSHIE_UPDATE_SCREENSHOTS=1 mix test   # pixel screenshots
 ```
 
 These are separate environment variables.
+
+## Animation testing
+
+The mock backend resolves renderer-side transitions instantly -- props
+snap to their target values without interpolation. The headless backend
+runs real interpolation; use `Command.advance_frame/1` to step through
+frames deterministically. The `skip_transitions` helper fast-forwards
+all in-flight transitions to completion in a single call.
 
 ## .plushie scripting format
 
@@ -244,4 +255,4 @@ mix plushie.replay path/to/test.plushie      # replay with real windows
 - `Plushie.Test.Case` -- case template docs
 - `Plushie.Test.Helpers` -- helper function specs
 - `Plushie.Test.WidgetCase` -- widget testing harness
-- [Testing guide](../guides/14-testing.md) -- narrative walkthrough
+- [Testing guide](../guides/15-testing.md) -- narrative walkthrough

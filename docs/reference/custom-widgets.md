@@ -2,7 +2,7 @@
 
 This page covers the widget macro API, handler protocol, and native widget
 integration. For a narrative introduction, see the
-[Custom Widgets guide](../guides/12-custom-widgets.md).
+[Custom Widgets guide](../guides/13-custom-widgets.md).
 
 ## Widget macro API
 
@@ -173,4 +173,4 @@ paths.
 
 - `Plushie.Widget` -- macro API docs
 - `Plushie.Widget.Handler` -- callback specs
-- [Custom Widgets guide](../guides/12-custom-widgets.md) -- step-by-step tutorial
+- [Custom Widgets guide](../guides/13-custom-widgets.md) -- step-by-step tutorial

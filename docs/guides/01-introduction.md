@@ -74,7 +74,9 @@ The two-process split also gives you resilience. If the renderer crashes,
 Plushie restarts it automatically and re-syncs your application state --
 your model is never lost. If your application code raises an exception, the
 runtime catches it, reverts to the previous state, and logs the error.
-Neither process can take the other down.
+Neither process can take the other down. The renderer also handles animation
+interpolation locally, so transitions run at full frame rate with zero wire
+traffic until they complete.
 
 You do not need to think about any of this to use Plushie. The runtime and
 bridge handle it. But knowing the shape helps when you are debugging or

@@ -231,7 +231,7 @@ mix test
 The test starts a real app instance, clicks the increment button, and
 verifies the display text changed. We will add tests throughout the guide
 -- just enough to verify each chapter's work. The full testing framework
-is covered in [chapter 14](14-testing.md).
+is covered in [chapter 15](15-testing.md).
 
 ## Enabling hot reload
 

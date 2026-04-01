@@ -412,7 +412,7 @@ end
 
 `WidgetCase` hosts a single widget in a test harness. The `init_widget/2`
 call creates the widget with the given props. This is covered in detail in
-[chapter 14](14-testing.md).
+[chapter 15](15-testing.md).
 
 ## Try it
 
