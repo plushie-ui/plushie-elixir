@@ -107,6 +107,9 @@ defmodule Plushie.Test.Backend.Runtime do
   def slide(pid, selector, value, opts \\ []),
     do: do_interact(pid, "slide", selector, %{value: value}, opts)
 
+  def advance_frame(pid, timestamp),
+    do: GenServer.call(pid, {:advance_frame, timestamp})
+
   def model(pid), do: GenServer.call(pid, :model)
 
   def tree(pid), do: GenServer.call(pid, :tree)
@@ -258,6 +261,18 @@ defmodule Plushie.Test.Backend.Runtime do
     {:reply, state.runtime, state}
   end
 
+  def handle_call({:advance_frame, timestamp}, _from, state) do
+    bridge = Plushie.Runtime.get_bridge(state.runtime)
+
+    if bridge do
+      Plushie.Bridge.send_advance_frame(bridge, timestamp)
+    end
+
+    # Sync to process any events the renderer sends back
+    Plushie.Runtime.sync(state.runtime)
+    {:reply, :ok, state}
+  end
+
   def handle_call(:model, _from, state) do
     model = Plushie.Runtime.get_model(state.runtime)
     {:reply, model, state}
@@ -265,12 +280,12 @@ defmodule Plushie.Test.Backend.Runtime do
 
   def handle_call(:tree, _from, state) do
     tree = Plushie.Runtime.get_tree(state.runtime)
-    {:reply, tree, state}
+    {:reply, resolve_animation_descriptors(tree), state}
   end
 
   def handle_call({:tree_hash, name}, _from, state) do
     current_state = wait_for_draw(state)
-    tree = Plushie.Runtime.get_tree(current_state.runtime)
+    tree = Plushie.Runtime.get_tree(current_state.runtime) |> resolve_animation_descriptors()
     {:reply, TreeHash.from_tree(name, tree, current_state.mode), state}
   end
 
@@ -281,7 +296,7 @@ defmodule Plushie.Test.Backend.Runtime do
   end
 
   def handle_call({:find, selector}, _from, state) do
-    tree = Plushie.Runtime.get_tree(state.runtime)
+    tree = Plushie.Runtime.get_tree(state.runtime) |> resolve_animation_descriptors()
     element = Selector.find(tree, selector)
     {:reply, element, state}
   end
@@ -467,4 +482,49 @@ defmodule Plushie.Test.Backend.Runtime do
       _ -> :mock
     end
   end
+
+  # Resolves animation descriptors in tree props to their target values.
+  # In mock mode, transitions resolve instantly. This ensures tests see
+  # concrete prop values instead of descriptor maps.
+  defp resolve_animation_descriptors(nil), do: nil
+
+  defp resolve_animation_descriptors(%{props: props, children: children} = node) do
+    resolved_props =
+      Map.new(props, fn
+        {k, %{"type" => t, "to" => to}} when t in ["transition", "spring"] ->
+          {k, to}
+
+        {k, %{"type" => "sequence", "steps" => steps}} when is_list(steps) and steps != [] ->
+          last_to = steps |> List.last() |> Map.get("to")
+          {k, last_to}
+
+        # Resolve nested descriptors inside exit prop
+        {k, %{} = map} when k in [:exit, "exit"] ->
+          resolved =
+            Map.new(map, fn
+              {sk, %{"type" => t, "to" => to}} when t in ["transition", "spring"] ->
+                {sk, to}
+
+              {sk, %{"type" => "sequence", "steps" => steps}}
+              when is_list(steps) and steps != [] ->
+                {sk, steps |> List.last() |> Map.get("to")}
+
+              other ->
+                other
+            end)
+
+          {k, resolved}
+
+        pair ->
+          pair
+      end)
+
+    %{
+      node
+      | props: resolved_props,
+        children: Enum.map(children, &resolve_animation_descriptors/1)
+    }
+  end
+
+  defp resolve_animation_descriptors(other), do: other
 end

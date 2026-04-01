@@ -652,6 +652,21 @@ defmodule Plushie.Protocol.Decode do
 
   defp dispatch(%{
          "type" => "event",
+         "family" => "transition_complete",
+         "id" => id,
+         "data" => data
+       }) do
+    tag = if data["tag"], do: String.to_atom(data["tag"])
+
+    %WidgetEvent{
+      type: :transition_complete,
+      id: id,
+      data: %{tag: tag, prop: data["prop"]}
+    }
+  end
+
+  defp dispatch(%{
+         "type" => "event",
          "family" => "theme_changed",
          "value" => mode
        }) do
@@ -914,7 +929,7 @@ defmodule Plushie.Protocol.Decode do
          "status" => "ok",
          "result" => result
        }) do
-    %Effect{request_id: id, result: {:ok, result}}
+    %Effect{request_id: id, result: {:ok, safe_atomize_keys(result)}}
   end
 
   defp dispatch(%{
@@ -942,7 +957,7 @@ defmodule Plushie.Protocol.Decode do
          "tag" => tag,
          "data" => data
        }) do
-    %SystemEvent{type: :system_info, tag: tag, data: data}
+    %SystemEvent{type: :system_info, tag: tag, data: safe_atomize_keys(data)}
   end
 
   defp dispatch(%{
@@ -951,7 +966,7 @@ defmodule Plushie.Protocol.Decode do
          "tag" => tag,
          "data" => data
        }) do
-    %SystemEvent{type: :system_theme, tag: tag, data: data}
+    %SystemEvent{type: :system_theme, tag: tag, data: safe_atomize_keys(data)}
   end
 
   defp dispatch(%{
@@ -960,7 +975,7 @@ defmodule Plushie.Protocol.Decode do
          "tag" => tag,
          "data" => data
        }) do
-    %SystemEvent{type: :image_list, tag: tag, data: data}
+    %SystemEvent{type: :image_list, tag: tag, data: safe_atomize_keys(data)}
   end
 
   defp dispatch(%{
@@ -969,7 +984,7 @@ defmodule Plushie.Protocol.Decode do
          "tag" => tag,
          "data" => data
        }) do
-    %SystemEvent{type: :tree_hash, tag: tag, data: data}
+    %SystemEvent{type: :tree_hash, tag: tag, data: safe_atomize_keys(data)}
   end
 
   defp dispatch(%{
@@ -978,7 +993,7 @@ defmodule Plushie.Protocol.Decode do
          "tag" => tag,
          "data" => data
        }) do
-    %SystemEvent{type: :find_focused, tag: tag, data: data}
+    %SystemEvent{type: :find_focused, tag: tag, data: safe_atomize_keys(data)}
   end
 
   # -- Session events (multiplexed mode) --
@@ -1376,6 +1391,31 @@ defmodule Plushie.Protocol.Decode do
   end
 
   defp atomize_wire_data(_other), do: nil
+
+  # Recursively converts string-keyed wire data to atom-keyed maps
+  # for effect results and query responses. Uses String.to_existing_atom/1
+  # to avoid atom table exhaustion from arbitrary renderer data --
+  # unknown keys are kept as strings.
+  @spec safe_atomize_keys(term()) :: term()
+  defp safe_atomize_keys(map) when is_map(map) do
+    Map.new(map, fn
+      {k, v} when is_binary(k) ->
+        atom_key =
+          try do
+            String.to_existing_atom(k)
+          rescue
+            ArgumentError -> k
+          end
+
+        {atom_key, safe_atomize_keys(v)}
+
+      {k, v} ->
+        {k, safe_atomize_keys(v)}
+    end)
+  end
+
+  defp safe_atomize_keys(list) when is_list(list), do: Enum.map(list, &safe_atomize_keys/1)
+  defp safe_atomize_keys(other), do: other
 
   defp safe_dispatch(msg) do
     dispatch(msg)

@@ -66,6 +66,9 @@ defmodule Plushie.Test.Session do
   def slide(%__MODULE__{pid: p}, selector, value, opts \\ []),
     do: Runtime.slide(p, selector, value, opts)
 
+  @spec advance_frame(session :: t(), timestamp :: non_neg_integer()) :: :ok
+  def advance_frame(%__MODULE__{pid: p}, timestamp), do: Runtime.advance_frame(p, timestamp)
+
   @spec model(session :: t()) :: term()
   def model(%__MODULE__{pid: p}), do: Runtime.model(p)
 

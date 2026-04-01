@@ -71,6 +71,7 @@ defmodule Plushie.Event.WidgetEvent do
           | :pane_resized
           | :pane_dragged
           | :pane_clicked
+          | :transition_complete
 
   @type widget_event_type :: {widget_type :: atom(), event_name :: atom()}
 
@@ -116,6 +117,7 @@ defmodule Plushie.Event.WidgetEvent do
     mouse_double_click mouse_enter mouse_exit mouse_move mouse_scroll
     sensor_resize
     pane_resized pane_dragged pane_clicked
+    transition_complete
   )a
 
   @doc false

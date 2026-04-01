@@ -3,382 +3,321 @@ defmodule Plushie.AnimationTest do
 
   alias Plushie.Animation
 
-  # -- Easing functions -------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # new/1
+  # ---------------------------------------------------------------------------
 
-  describe "linear/1" do
-    test "identity at boundaries and midpoint" do
-      assert Animation.linear(0.0) == 0.0
-      assert Animation.linear(0.5) == 0.5
-      assert Animation.linear(1.0) == 1.0
-    end
-  end
-
-  describe "ease_in/1 (cubic)" do
-    test "boundaries" do
-      assert Animation.ease_in(0.0) == 0.0
-      assert Animation.ease_in(1.0) == 1.0
-    end
-
-    test "midpoint is below linear (starts slow)" do
-      mid = Animation.ease_in(0.5)
-      assert mid == 0.125
-      assert mid < 0.5
-    end
-  end
-
-  describe "ease_out/1 (cubic)" do
-    test "boundaries" do
-      assert Animation.ease_out(0.0) == 0.0
-      assert Animation.ease_out(1.0) == 1.0
-    end
-
-    test "midpoint is above linear (starts fast)" do
-      mid = Animation.ease_out(0.5)
-      assert mid == 0.875
-      assert mid > 0.5
-    end
-  end
-
-  describe "ease_in_out/1 (cubic)" do
-    test "boundaries" do
-      assert Animation.ease_in_out(0.0) == 0.0
-      assert Animation.ease_in_out(1.0) == 1.0
-    end
-
-    test "midpoint is exactly 0.5" do
-      assert Animation.ease_in_out(0.5) == 0.5
-    end
-
-    test "first half is below linear, second half is above" do
-      assert Animation.ease_in_out(0.25) < 0.25
-      assert Animation.ease_in_out(0.75) > 0.75
-    end
-  end
-
-  describe "ease_in_quad/1" do
-    test "boundaries" do
-      assert Animation.ease_in_quad(0.0) == 0.0
-      assert Animation.ease_in_quad(1.0) == 1.0
-    end
-
-    test "midpoint" do
-      assert Animation.ease_in_quad(0.5) == 0.25
-    end
-  end
-
-  describe "ease_out_quad/1" do
-    test "boundaries" do
-      assert Animation.ease_out_quad(0.0) == 0.0
-      assert Animation.ease_out_quad(1.0) == 1.0
-    end
-
-    test "midpoint" do
-      assert Animation.ease_out_quad(0.5) == 0.75
-    end
-  end
-
-  describe "ease_in_out_quad/1" do
-    test "boundaries" do
-      assert Animation.ease_in_out_quad(0.0) == 0.0
-      assert Animation.ease_in_out_quad(1.0) == 1.0
-    end
-
-    test "midpoint is exactly 0.5" do
-      assert Animation.ease_in_out_quad(0.5) == 0.5
-    end
-
-    test "symmetry around midpoint" do
-      lo = Animation.ease_in_out_quad(0.25)
-      hi = Animation.ease_in_out_quad(0.75)
-      assert_in_delta lo, 1.0 - hi, 1.0e-10
-    end
-  end
-
-  describe "spring/1" do
-    test "boundaries" do
-      assert Animation.spring(0.0) == 0.0
-      assert_in_delta Animation.spring(1.0), 1.0, 1.0e-3
-    end
-
-    test "overshoots past 1.0 during animation" do
-      # Sample several points -- at least one should exceed 1.0
-      samples = for i <- 1..9, do: Animation.spring(i / 10.0)
-      assert Enum.any?(samples, &(&1 > 1.0))
-    end
-  end
-
-  # -- Out-of-range t values ---------------------------------------------------
-
-  describe "easing functions with out-of-range t" do
-    # Verify that easing functions don't crash or produce non-numeric results
-    # when given t values outside the expected 0.0..1.0 range.
-
-    test "linear handles t < 0 and t > 1" do
-      assert is_number(Animation.linear(-0.5))
-      assert is_number(Animation.linear(1.5))
-      assert Animation.linear(-0.5) == -0.5
-      assert Animation.linear(1.5) == 1.5
-    end
-
-    test "ease_in handles t < 0 and t > 1" do
-      assert is_number(Animation.ease_in(-0.5))
-      assert is_number(Animation.ease_in(1.5))
-      # ease_in is cubic: t^3, so -0.5^3 = -0.125
-      assert_in_delta Animation.ease_in(-0.5), -0.125, 1.0e-10
-    end
-
-    test "ease_out handles t < 0 and t > 1" do
-      assert is_number(Animation.ease_out(-0.5))
-      assert is_number(Animation.ease_out(1.5))
-    end
-
-    test "ease_in_out handles t < 0 and t > 1" do
-      assert is_number(Animation.ease_in_out(-0.5))
-      assert is_number(Animation.ease_in_out(1.5))
-    end
-
-    test "ease_in_quad handles t < 0 and t > 1" do
-      assert is_number(Animation.ease_in_quad(-0.5))
-      assert is_number(Animation.ease_in_quad(1.5))
-      # ease_in_quad is t^2, so (-0.5)^2 = 0.25
-      assert_in_delta Animation.ease_in_quad(-0.5), 0.25, 1.0e-10
-    end
-
-    test "ease_out_quad handles t < 0 and t > 1" do
-      assert is_number(Animation.ease_out_quad(-0.5))
-      assert is_number(Animation.ease_out_quad(1.5))
-    end
-
-    test "spring handles t < 0 and t > 1" do
-      assert is_number(Animation.spring(-0.5))
-      assert is_number(Animation.spring(1.5))
-    end
-  end
-
-  # -- Interpolation ----------------------------------------------------------
-
-  describe "interpolate/4" do
-    test "basic lerp without easing" do
-      assert Animation.interpolate(0.0, 100.0, 0.0) == 0.0
-      assert Animation.interpolate(0.0, 100.0, 0.5) == 50.0
-      assert Animation.interpolate(0.0, 100.0, 1.0) == 100.0
-    end
-
-    test "lerp with non-zero start" do
-      assert Animation.interpolate(10.0, 20.0, 0.5) == 15.0
-    end
-
-    test "lerp with easing function" do
-      # ease_in_quad at t=0.5 -> 0.25, so result should be 25.0
-      result = Animation.interpolate(0.0, 100.0, 0.5, &Animation.ease_in_quad/1)
-      assert result == 25.0
-    end
-
-    test "clamps t below 0" do
-      assert Animation.interpolate(0.0, 100.0, -0.5) == 0.0
-    end
-
-    test "clamps t above 1" do
-      assert Animation.interpolate(0.0, 100.0, 1.5) == 100.0
-    end
-
-    test "works with negative ranges" do
-      assert Animation.interpolate(100.0, 0.0, 0.5) == 50.0
-    end
-  end
-
-  # -- Animation struct lifecycle ---------------------------------------------
-
-  describe "new/4" do
-    test "creates animation with defaults" do
-      anim = Animation.new(0.0, 1.0, 300)
+  describe "new/1" do
+    test "creates animation with required fields" do
+      anim = Animation.new(from: 0.0, to: 1.0, duration: 300)
       assert anim.from == 0.0
       assert anim.to == 1.0
       assert anim.duration == 300
-      assert anim.started_at == nil
+      assert anim.easing == :ease_in_out
       assert anim.value == 0.0
+      assert anim.finished == false
+      assert anim.started_at == nil
     end
 
     test "accepts easing option" do
-      anim = Animation.new(0.0, 1.0, 300, easing: &Animation.ease_out/1)
-      # Easing is a function, just verify it works
-      assert anim.easing.(0.5) == Animation.ease_out(0.5)
+      anim = Animation.new(from: 0.0, to: 1.0, duration: 300, easing: :ease_out)
+      assert anim.easing == :ease_out
+    end
+
+    test "accepts delay option" do
+      anim = Animation.new(from: 0.0, to: 1.0, duration: 300, delay: 100)
+      assert anim.delay == 100
+    end
+
+    test "accepts repeat and auto_reverse" do
+      anim =
+        Animation.new(from: 0.0, to: 1.0, duration: 300, repeat: :forever, auto_reverse: true)
+
+      assert anim.repeat == :forever
+      assert anim.auto_reverse == true
+    end
+
+    test "raises without required fields" do
+      assert_raise KeyError, fn -> Animation.new(to: 1.0, duration: 300) end
+      assert_raise KeyError, fn -> Animation.new(from: 0.0, duration: 300) end
+      assert_raise KeyError, fn -> Animation.new(from: 0.0, to: 1.0) end
+    end
+
+    test "raises with invalid easing" do
+      assert_raise ArgumentError, fn ->
+        Animation.new(from: 0.0, to: 1.0, duration: 300, easing: :nonexistent)
+      end
     end
   end
 
+  # ---------------------------------------------------------------------------
+  # spring/1
+  # ---------------------------------------------------------------------------
+
+  describe "spring/1" do
+    test "creates spring animation" do
+      anim = Animation.spring(from: 0.0, to: 1.0)
+      assert anim.from == 0.0
+      assert anim.to == 1.0
+      assert anim.spring_config.stiffness == 100
+      assert anim.spring_config.damping == 10
+      assert anim.spring_config.mass == 1.0
+      assert anim.spring_config.velocity == 0.0
+    end
+
+    test "accepts custom spring parameters" do
+      anim = Animation.spring(from: 0.0, to: 1.0, stiffness: 200, damping: 20)
+      assert anim.spring_config.stiffness == 200
+      assert anim.spring_config.damping == 20
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # start/2 and start_once/2
+  # ---------------------------------------------------------------------------
+
   describe "start/2" do
-    test "sets started_at and resets value to from" do
-      anim = Animation.new(10.0, 20.0, 500)
-      started = Animation.start(anim, 1000)
-      assert started.started_at == 1000
-      assert started.value == 10.0
+    test "sets started_at and resets value" do
+      anim = Animation.new(from: 0.0, to: 1.0, duration: 300) |> Animation.start(1000)
+      assert anim.started_at == 1000
+      assert anim.value == 0.0
+      assert anim.finished == false
     end
 
     test "restart resets to from" do
       anim =
-        Animation.new(0.0, 1.0, 100)
+        Animation.new(from: 0.0, to: 1.0, duration: 300, easing: :linear)
         |> Animation.start(1000)
+        |> Animation.advance(1150)
+        |> Animation.start(2000)
 
-      # Simulate mid-animation
-      {_val, anim} = Animation.advance(anim, 1050)
-      assert anim.value != 0.0
-
-      # Restart
-      restarted = Animation.start(anim, 2000)
-      assert restarted.started_at == 2000
-      assert restarted.value == 0.0
+      assert anim.started_at == 2000
+      assert anim.value == 0.0
     end
   end
 
-  describe "advance/2" do
-    test "returns from value if not started" do
-      anim = Animation.new(5.0, 10.0, 100)
-      {value, returned} = Animation.advance(anim, 1050)
-      assert value == 5.0
-      assert returned == anim
+  describe "start_once/2" do
+    test "starts if not started" do
+      anim = Animation.new(from: 0.0, to: 1.0, duration: 300) |> Animation.start_once(1000)
+      assert anim.started_at == 1000
+    end
+
+    test "no-op if already started" do
+      anim =
+        Animation.new(from: 0.0, to: 1.0, duration: 300)
+        |> Animation.start(1000)
+        |> Animation.start_once(2000)
+
+      assert anim.started_at == 1000
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # advance/2 (timed)
+  # ---------------------------------------------------------------------------
+
+  describe "advance/2 (timed)" do
+    test "returns struct unchanged if not started" do
+      anim = Animation.new(from: 0.0, to: 1.0, duration: 300)
+      assert Animation.advance(anim, 5000) == anim
     end
 
     test "interpolates at midpoint" do
       anim =
-        Animation.new(0.0, 100.0, 1000)
+        Animation.new(from: 0.0, to: 100.0, duration: 200, easing: :linear)
         |> Animation.start(1000)
+        |> Animation.advance(1100)
 
-      {value, updated} = Animation.advance(anim, 1500)
-      assert value == 50.0
-      assert updated.value == 50.0
+      assert_in_delta Animation.value(anim), 50.0, 0.5
     end
 
-    test "returns :finished when duration elapsed" do
+    test "finishes at or past duration" do
       anim =
-        Animation.new(0.0, 100.0, 1000)
+        Animation.new(from: 0.0, to: 1.0, duration: 300, easing: :linear)
         |> Animation.start(1000)
-
-      {value, status} = Animation.advance(anim, 2000)
-      assert value == 100.0
-      assert status == :finished
-    end
-
-    test "returns :finished when past duration" do
-      anim =
-        Animation.new(0.0, 100.0, 1000)
-        |> Animation.start(1000)
-
-      {value, status} = Animation.advance(anim, 3000)
-      assert value == 100.0
-      assert status == :finished
-    end
-
-    test "uses easing function" do
-      anim =
-        Animation.new(0.0, 100.0, 1000, easing: &Animation.ease_in_quad/1)
-        |> Animation.start(1000)
-
-      # At t=0.5, ease_in_quad gives 0.25, so value should be 25.0
-      {value, _} = Animation.advance(anim, 1500)
-      assert value == 25.0
-    end
-
-    test "clamps negative elapsed to start" do
-      anim =
-        Animation.new(0.0, 100.0, 1000)
-        |> Animation.start(1000)
-
-      # Timestamp before start -- should clamp to t=0
-      {value, updated} = Animation.advance(anim, 500)
-      assert value == 0.0
-      assert updated.value == 0.0
-    end
-
-    test "sequential advances track progress" do
-      anim =
-        Animation.new(0.0, 100.0, 1000)
-        |> Animation.start(0)
-
-      {v1, anim} = Animation.advance(anim, 250)
-      assert v1 == 25.0
-
-      {v2, anim} = Animation.advance(anim, 500)
-      assert v2 == 50.0
-
-      {v3, _status} = Animation.advance(anim, 1000)
-      assert v3 == 100.0
-    end
-  end
-
-  describe "finished?/1" do
-    test "false when not started" do
-      anim = Animation.new(0.0, 1.0, 100)
-      refute Animation.finished?(anim)
-    end
-
-    test "false mid-animation" do
-      anim =
-        Animation.new(0.0, 1.0, 1000)
-        |> Animation.start(0)
-
-      {_, anim} = Animation.advance(anim, 500)
-      refute Animation.finished?(anim)
-    end
-
-    test "true after reaching target via manual value set" do
-      # finished? checks value == to
-      anim = %Animation{
-        from: 0.0,
-        to: 1.0,
-        duration: 100,
-        started_at: 0,
-        easing: &Animation.linear/1,
-        value: 1.0
-      }
+        |> Animation.advance(1300)
 
       assert Animation.finished?(anim)
+      assert Animation.value(anim) == 1.0
+    end
+
+    test "stays finished after completion" do
+      anim =
+        Animation.new(from: 0.0, to: 1.0, duration: 100, easing: :linear)
+        |> Animation.start(0)
+        |> Animation.advance(200)
+
+      assert Animation.finished?(anim)
+      anim2 = Animation.advance(anim, 300)
+      assert Animation.finished?(anim2)
+    end
+
+    test "respects delay" do
+      anim =
+        Animation.new(from: 0.0, to: 1.0, duration: 200, delay: 100, easing: :linear)
+        |> Animation.start(1000)
+
+      # During delay: value stays at from
+      anim_during = Animation.advance(anim, 1050)
+      assert Animation.value(anim_during) == 0.0
+
+      # After delay: animation starts
+      anim_after = Animation.advance(anim, 1200)
+      assert_in_delta Animation.value(anim_after), 0.5, 0.1
+    end
+
+    test "applies easing" do
+      anim_linear =
+        Animation.new(from: 0.0, to: 1.0, duration: 200, easing: :linear)
+        |> Animation.start(0)
+        |> Animation.advance(100)
+
+      anim_ease_in =
+        Animation.new(from: 0.0, to: 1.0, duration: 200, easing: :ease_in)
+        |> Animation.start(0)
+        |> Animation.advance(100)
+
+      # ease_in at midpoint should be less than linear
+      assert Animation.value(anim_ease_in) < Animation.value(anim_linear)
+    end
+
+    test "negative range (downward animation)" do
+      anim =
+        Animation.new(from: 100.0, to: 0.0, duration: 200, easing: :linear)
+        |> Animation.start(0)
+        |> Animation.advance(100)
+
+      assert_in_delta Animation.value(anim), 50.0, 0.5
     end
   end
 
-  describe "value/1" do
-    test "returns current value" do
-      anim = Animation.new(42.0, 100.0, 500)
-      assert Animation.value(anim) == 42.0
+  # ---------------------------------------------------------------------------
+  # advance/2 (repeat)
+  # ---------------------------------------------------------------------------
+
+  describe "advance/2 (repeat)" do
+    test "repeats forever" do
+      anim =
+        Animation.new(from: 0.0, to: 1.0, duration: 100, easing: :linear, repeat: :forever)
+        |> Animation.start(0)
+        |> Animation.advance(100)
+
+      refute Animation.finished?(anim)
     end
 
-    test "returns updated value after advance" do
+    test "finite repeat counts down" do
       anim =
-        Animation.new(0.0, 100.0, 1000)
+        Animation.new(from: 0.0, to: 1.0, duration: 100, easing: :linear, repeat: 2)
         |> Animation.start(0)
+        |> Animation.advance(100)
 
-      {_, anim} = Animation.advance(anim, 500)
-      assert Animation.value(anim) == 50.0
+      refute Animation.finished?(anim)
+    end
+
+    test "auto_reverse swaps from/to" do
+      anim =
+        Animation.new(
+          from: 0.0,
+          to: 1.0,
+          duration: 100,
+          easing: :linear,
+          repeat: :forever,
+          auto_reverse: true
+        )
+        |> Animation.start(0)
+        |> Animation.advance(100)
+
+      assert anim.from == 1.0
+      assert anim.to == 0.0
     end
   end
 
-  # -- Edge cases -------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # advance/2 (spring)
+  # ---------------------------------------------------------------------------
 
-  describe "edge cases" do
-    test "zero-from-to animation" do
+  describe "advance/2 (spring)" do
+    test "spring approaches target" do
       anim =
-        Animation.new(5.0, 5.0, 100)
+        Animation.spring(from: 0.0, to: 1.0, stiffness: 200, damping: 20)
         |> Animation.start(0)
+        |> Animation.advance(500)
 
-      {value, :finished} = Animation.advance(anim, 100)
-      assert value == 5.0
+      assert_in_delta Animation.value(anim), 1.0, 0.1
     end
 
-    test "very short duration" do
+    test "spring settles and finishes" do
       anim =
-        Animation.new(0.0, 1.0, 1)
+        Animation.spring(from: 0.0, to: 1.0, stiffness: 200, damping: 20)
         |> Animation.start(0)
+        |> Animation.advance(2000)
 
-      {value, :finished} = Animation.advance(anim, 1)
-      assert value == 1.0
+      assert Animation.finished?(anim)
+      assert_in_delta Animation.value(anim), 1.0, 0.001
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # redirect/2
+  # ---------------------------------------------------------------------------
+
+  describe "redirect/2" do
+    test "changes target from current position" do
+      anim =
+        Animation.new(from: 0.0, to: 1.0, duration: 200, easing: :linear)
+        |> Animation.start(0)
+        |> Animation.advance(100)
+
+      anim = Animation.redirect(anim, to: 0.0, at: 100)
+      assert anim.to == 0.0
+      assert_in_delta anim.from, 0.5, 0.1
+      assert anim.started_at == 100
+      refute Animation.finished?(anim)
     end
 
-    test "negative range (animating downward)" do
+    test "can change duration on redirect" do
       anim =
-        Animation.new(100.0, 0.0, 1000)
+        Animation.new(from: 0.0, to: 1.0, duration: 200, easing: :linear)
         |> Animation.start(0)
+        |> Animation.advance(100)
+        |> Animation.redirect(to: 0.0, at: 100, duration: 400)
 
-      {value, _} = Animation.advance(anim, 500)
-      assert value == 50.0
+      assert anim.duration == 400
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # value/1, finished?/1, running?/1
+  # ---------------------------------------------------------------------------
+
+  describe "queries" do
+    test "value returns current value" do
+      anim = Animation.new(from: 5.0, to: 10.0, duration: 100)
+      assert Animation.value(anim) == 5.0
+    end
+
+    test "finished? is false initially" do
+      anim = Animation.new(from: 0.0, to: 1.0, duration: 100)
+      refute Animation.finished?(anim)
+    end
+
+    test "running? is false before start" do
+      anim = Animation.new(from: 0.0, to: 1.0, duration: 100)
+      refute Animation.running?(anim)
+    end
+
+    test "running? is true during animation" do
+      anim = Animation.new(from: 0.0, to: 1.0, duration: 100) |> Animation.start(0)
+      assert Animation.running?(anim)
+    end
+
+    test "running? is false after finish" do
+      anim =
+        Animation.new(from: 0.0, to: 1.0, duration: 100, easing: :linear)
+        |> Animation.start(0)
+        |> Animation.advance(200)
+
+      refute Animation.running?(anim)
     end
   end
 end

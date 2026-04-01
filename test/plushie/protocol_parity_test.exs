@@ -10,6 +10,7 @@ defmodule Plushie.ProtocolParityTest do
   alias Plushie.Event.Mouse
   alias Plushie.Event.SystemEvent
   alias Plushie.Event.Touch
+  alias Plushie.Event.WidgetEvent
   alias Plushie.Event.WindowEvent
 
   alias Plushie.Protocol
@@ -736,6 +737,40 @@ defmodule Plushie.ProtocolParityTest do
 
       assert %SystemEvent{type: :animation_frame, data: 16.666} =
                Protocol.decode_message(json, :json)
+    end
+  end
+
+  describe "transition_complete event" do
+    test "decodes transition complete with tag and prop" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "transition_complete",
+          id: "box",
+          data: %{tag: "faded_out", prop: "opacity"}
+        })
+
+      assert %WidgetEvent{
+               type: :transition_complete,
+               id: "box",
+               data: %{tag: :faded_out, prop: "opacity"}
+             } = Protocol.decode_message(json, :json)
+    end
+
+    test "decodes transition complete without tag" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "transition_complete",
+          id: "box",
+          data: %{prop: "opacity"}
+        })
+
+      assert %WidgetEvent{
+               type: :transition_complete,
+               id: "box",
+               data: %{tag: nil, prop: "opacity"}
+             } = Protocol.decode_message(json, :json)
     end
   end
 

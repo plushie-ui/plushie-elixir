@@ -145,10 +145,23 @@ defmodule Plushie.Runtime do
   end
 
   @doc """
-  Dispatches `event` through `app.update/2`, then re-renders and snapshots.
+  Dispatches a message through `app.update/2`, then re-renders.
 
-  Fire-and-forget from the caller's perspective. The runtime processes the
-  event asynchronously from its mailbox.
+  Fire-and-forget from the caller's perspective. The runtime processes
+  the message asynchronously. Use this to send results from spawned
+  processes back to the runtime:
+
+      runtime = self()  # inside update/2, self() is the runtime
+      spawn(fn ->
+        result = expensive_computation()
+        Plushie.Runtime.dispatch(runtime, {:computation_done, result})
+      end)
+
+      # In update/2:
+      def update(model, {:computation_done, result}), do: ...
+
+  Prefer `Plushie.Command.async/2` for most async work. Use `dispatch/2`
+  when you need direct control over the spawned process lifecycle.
   """
   @spec dispatch(GenServer.server(), term()) :: :ok
   def dispatch(runtime, event) do
@@ -178,6 +191,12 @@ defmodule Plushie.Runtime do
   @spec get_tree(GenServer.server()) :: map() | nil
   def get_tree(runtime) do
     GenServer.call(runtime, :get_tree)
+  end
+
+  @doc "Returns the bridge pid for this runtime."
+  @spec get_bridge(GenServer.server()) :: pid() | atom() | nil
+  def get_bridge(runtime) do
+    GenServer.call(runtime, :get_bridge)
   end
 
   @doc """
@@ -353,6 +372,10 @@ defmodule Plushie.Runtime do
 
   def handle_call(:get_tree, _from, state) do
     {:reply, state.tree, state}
+  end
+
+  def handle_call(:get_bridge, _from, state) do
+    {:reply, state.bridge, state}
   end
 
   def handle_call({:find_node, id}, _from, state) do
@@ -879,7 +902,8 @@ defmodule Plushie.Runtime do
     end
   end
 
-  # Ignore anything else -- stray messages, etc.
+  # Catch-all: ignore unrecognised messages. Use Plushie.Runtime.dispatch/2
+  # to formally send events from spawned processes.
   def handle_info(msg, state) do
     Logger.warning("plushie runtime: unhandled message: #{inspect(msg)}")
     {:noreply, state}

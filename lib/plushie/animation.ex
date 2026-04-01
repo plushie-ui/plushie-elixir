@@ -1,46 +1,22 @@
 defmodule Plushie.Animation do
   @moduledoc """
-  Server-side animation interpolation and easing functions.
+  SDK-side animation for model-level interpolation.
 
-  Pure functions operating on structs -- no processes, no state management
-  beyond what lives in your app model. The host computes interpolated
-  values on each animation frame tick.
+  Pure functions operating on structs -- no processes, no state
+  management beyond what lives in your app model. Use this for
+  complex animations that need frame-by-frame control: canvas
+  animations, physics simulations, custom interpolation logic.
 
-  ## Easing functions
-
-  All easing functions take a `t` value in `0.0..1.0` and return a
-  curved `t` value. Available easings:
-
-    * `linear/1` -- identity
-    * `ease_in/1` -- cubic ease in
-    * `ease_out/1` -- cubic ease out
-    * `ease_in_out/1` -- cubic ease in-out
-    * `ease_in_quad/1` -- quadratic ease in
-    * `ease_out_quad/1` -- quadratic ease out
-    * `ease_in_out_quad/1` -- quadratic ease in-out
-    * `spring/1` -- spring with overshoot
-
-  ## Interpolation
-
-  `interpolate/4` lerps between two numbers with an optional easing
-  function applied to `t`.
-
-  ## Animation struct
-
-  The `%Animation{}` struct tracks a single animated value over time.
-  Create one with `new/4`, start it with `start/2`, and advance it on
-  each frame with `advance/2`.
+  For simple property animations (fades, slides, scales), prefer
+  renderer-side transitions via `Plushie.Animation.Transition`
+  which require zero model state and zero wire traffic.
 
   ## Example
 
       alias Plushie.Animation
 
       def init(_opts) do
-        model = %{
-          opacity: Animation.new(0.0, 1.0, 300, easing: &Animation.ease_out/1),
-          started: false
-        }
-        {model, []}
+        %{anim: Animation.new(from: 0.0, to: 1.0, duration: 300, easing: :ease_out)}
       end
 
       def subscribe(_model) do
@@ -48,185 +24,352 @@ defmodule Plushie.Animation do
       end
 
       def update(model, %SystemEvent{type: :animation_frame, data: ts}) do
-        if not model.started do
-          %{model | opacity: Animation.start(model.opacity, ts), started: true}
-        else
-          {_value, opacity} = Animation.advance(model.opacity, ts)
-          %{model | opacity: opacity}
-        end
+        anim = model.anim |> Animation.start_once(ts) |> Animation.advance(ts)
+        %{model | anim: anim}
       end
 
       def view(model) do
-        opacity = Animation.value(model.opacity)
-        # use opacity in your widget props
+        opacity = Animation.value(model.anim)
+        # use opacity in widget props
       end
+
+  ## Easing
+
+  Uses `Plushie.Animation.Easing` for the full catalogue of 31
+  named curves plus cubic bezier. Pass easing as an atom:
+
+      Animation.new(from: 0.0, to: 1.0, duration: 300, easing: :ease_out_bounce)
+
+  ## Interruption
+
+  Change the target mid-animation with `redirect/2`. The animation
+  smoothly continues from its current interpolated value:
+
+      anim = Animation.redirect(model.anim, to: 0.0, at: timestamp)
+
+  ## Spring mode
+
+  For physics-based animation on the SDK side:
+
+      anim = Animation.spring(from: 0.0, to: 1.0, stiffness: 200, damping: 20)
   """
 
-  defstruct [:from, :to, :duration, :started_at, :easing, :value]
+  alias Plushie.Animation.Easing
 
-  @type easing :: (float() -> float())
+  defstruct [
+    :from,
+    :to,
+    :duration,
+    :started_at,
+    :last_timestamp,
+    :delay,
+    :repeat,
+    :auto_reverse,
+    :spring_config,
+    :easing_fn,
+    easing: :ease_in_out,
+    value: nil,
+    finished: false
+  ]
 
   @type t :: %__MODULE__{
           from: number(),
           to: number(),
-          duration: pos_integer(),
+          duration: pos_integer() | nil,
           started_at: integer() | nil,
-          easing: easing(),
-          value: number()
+          last_timestamp: integer() | nil,
+          easing: Easing.t(),
+          easing_fn: (float() -> float()) | nil,
+          delay: non_neg_integer() | nil,
+          repeat: pos_integer() | :forever | nil,
+          auto_reverse: boolean() | nil,
+          spring_config: map() | nil,
+          value: number() | nil,
+          finished: boolean()
         }
 
-  # -- Easing functions -------------------------------------------------------
-
-  @doc "Linear easing (identity). Returns `t` unchanged."
-  @spec linear(t :: float()) :: float()
-  def linear(t), do: t
-
-  @doc "Cubic ease in. Starts slow, accelerates."
-  @spec ease_in(t :: float()) :: float()
-  def ease_in(t), do: t * t * t
-
-  @doc "Cubic ease out. Starts fast, decelerates."
-  @spec ease_out(t :: float()) :: float()
-  def ease_out(t) do
-    inv = 1.0 - t
-    1.0 - inv * inv * inv
-  end
-
-  @doc "Cubic ease in-out. Slow start, fast middle, slow end."
-  @spec ease_in_out(t :: float()) :: float()
-  def ease_in_out(t) when t < 0.5, do: 4.0 * t * t * t
-
-  def ease_in_out(t) do
-    inv = -2.0 * t + 2.0
-    1.0 - inv * inv * inv / 2.0
-  end
-
-  @doc "Quadratic ease in. Starts slow, accelerates."
-  @spec ease_in_quad(t :: float()) :: float()
-  def ease_in_quad(t), do: t * t
-
-  @doc "Quadratic ease out. Starts fast, decelerates."
-  @spec ease_out_quad(t :: float()) :: float()
-  def ease_out_quad(t), do: 1.0 - (1.0 - t) * (1.0 - t)
-
-  @doc "Quadratic ease in-out. Slow start and end, fast middle."
-  @spec ease_in_out_quad(t :: float()) :: float()
-  def ease_in_out_quad(t) when t < 0.5, do: 2.0 * t * t
-  def ease_in_out_quad(t), do: 1.0 - (-2.0 * t + 2.0) ** 2 / 2.0
+  # ---------------------------------------------------------------------------
+  # Constructors
+  # ---------------------------------------------------------------------------
 
   @doc """
-  Spring easing with overshoot. Overshoots the target slightly
-  before settling. Uses a single-period damped sine approximation.
+  Creates a new timed animation.
+
+  ## Required options
+
+  - `from:` -- start value
+  - `to:` -- end value
+  - `duration:` -- duration in milliseconds
+
+  ## Optional
+
+  - `easing:` -- easing atom or `{:cubic_bezier, ...}`. Default: `:ease_in_out`
+  - `delay:` -- delay before start in ms. Default: 0
+  - `repeat:` -- repeat count or `:forever`
+  - `auto_reverse:` -- reverse on each repeat cycle
+
+  ## Example
+
+      Animation.new(from: 0.0, to: 1.0, duration: 300, easing: :ease_out)
   """
-  @spec spring(t :: float()) :: float()
-  def spring(t) when t == +0.0, do: +0.0
-  def spring(t) when t == 1.0, do: 1.0
+  @spec new(opts :: keyword()) :: t()
+  def new(opts) when is_list(opts) do
+    from = Keyword.fetch!(opts, :from)
+    to = Keyword.fetch!(opts, :to)
+    duration = Keyword.fetch!(opts, :duration)
+    easing = Keyword.get(opts, :easing, :ease_in_out)
 
-  def spring(t) do
-    c4 = 2.0 * :math.pi() / 3.0
-    :math.pow(2.0, -10.0 * t) * :math.sin((t * 10.0 - 0.75) * c4) + 1.0
-  end
-
-  # -- Interpolation ----------------------------------------------------------
-
-  @doc """
-  Linearly interpolate between `from` and `to` at progress `t`,
-  with an optional easing function applied to `t` first.
-
-  `t` is clamped to `0.0..1.0` before easing is applied.
-  """
-  @spec interpolate(from :: number(), to :: number(), t :: number(), easing :: easing()) ::
-          float()
-  def interpolate(from, to, t, easing \\ &linear/1)
-      when is_number(from) and is_number(to) and is_number(t) and is_function(easing, 1) do
-    clamped = clamp(t)
-    eased = easing.(clamped)
-    from + (to - from) * eased
-  end
-
-  # -- Animation lifecycle ----------------------------------------------------
-
-  @doc """
-  Create a new animation.
-
-  ## Options
-
-    * `:easing` -- easing function, defaults to `&linear/1`
-  """
-  @spec new(from :: number(), to :: number(), duration_ms :: pos_integer(), opts :: keyword()) ::
-          t()
-  def new(from, to, duration_ms, opts \\ [])
-      when is_number(from) and is_number(to) and is_integer(duration_ms) and duration_ms > 0 do
-    easing = Keyword.get(opts, :easing, &linear/1)
+    unless Easing.valid?(easing) do
+      raise ArgumentError, "invalid easing: #{inspect(easing)}"
+    end
 
     %__MODULE__{
       from: from,
       to: to,
-      duration: duration_ms,
-      started_at: nil,
+      duration: duration,
       easing: easing,
-      value: from
+      easing_fn: Easing.function(easing),
+      delay: Keyword.get(opts, :delay, 0),
+      repeat: Keyword.get(opts, :repeat),
+      auto_reverse: Keyword.get(opts, :auto_reverse, false),
+      value: from,
+      finished: false
     }
   end
 
   @doc """
-  Start (or restart) the animation at the given frame timestamp.
-  Resets the current value to `from`.
+  Creates a spring-mode animation (SDK-side spring solver).
+
+  ## Required options
+
+  - `from:` -- start value
+  - `to:` -- end value
+
+  ## Optional
+
+  - `stiffness:` -- spring constant. Default: 100
+  - `damping:` -- friction. Default: 10
+  - `mass:` -- mass. Default: 1.0
+  - `velocity:` -- initial velocity. Default: 0.0
+
+  ## Example
+
+      Animation.spring(from: 0.0, to: 1.0, stiffness: 200, damping: 20)
+  """
+  @spec spring(opts :: keyword()) :: t()
+  def spring(opts) when is_list(opts) do
+    from = Keyword.fetch!(opts, :from)
+    to = Keyword.fetch!(opts, :to)
+
+    %__MODULE__{
+      from: from,
+      to: to,
+      value: from,
+      finished: false,
+      spring_config: %{
+        stiffness: Keyword.get(opts, :stiffness, 100),
+        damping: Keyword.get(opts, :damping, 10),
+        mass: Keyword.get(opts, :mass, 1.0),
+        velocity: Keyword.get(opts, :velocity, 0.0)
+      }
+    }
+  end
+
+  # ---------------------------------------------------------------------------
+  # Lifecycle
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Starts the animation at the given timestamp. Resets value to `from`.
+
+  If already started, restarts from the beginning.
   """
   @spec start(animation :: t(), timestamp :: integer()) :: t()
   def start(%__MODULE__{} = anim, timestamp) when is_integer(timestamp) do
-    %{anim | started_at: timestamp, value: anim.from}
+    %{anim | started_at: timestamp, last_timestamp: timestamp, value: anim.from, finished: false}
   end
 
   @doc """
-  Advance the animation to the given frame timestamp.
+  Starts the animation only if it hasn't been started yet.
 
-  Returns `{current_value, updated_animation}` while the animation is
-  in progress, or `{final_value, :finished}` when it completes.
-
-  If the animation has not been started yet, returns `{from, animation}`
-  unchanged.
+  Convenience for the common pattern of starting on the first frame.
   """
-  @spec advance(animation :: t(), timestamp :: integer()) ::
-          {number(), t()} | {number(), :finished}
-  def advance(%__MODULE__{started_at: nil} = anim, _timestamp) do
-    {anim.value, anim}
+  @spec start_once(animation :: t(), timestamp :: integer()) :: t()
+  def start_once(%__MODULE__{started_at: nil} = anim, timestamp), do: start(anim, timestamp)
+  def start_once(%__MODULE__{} = anim, _timestamp), do: anim
+
+  @doc """
+  Advances the animation to the given timestamp.
+
+  Always returns an updated `%Animation{}` struct. Check
+  `finished?/1` to detect completion.
+
+  If the animation hasn't been started, returns the struct unchanged.
+  """
+  @spec advance(animation :: t(), timestamp :: integer()) :: t()
+  def advance(%__MODULE__{started_at: nil} = anim, _timestamp), do: anim
+  def advance(%__MODULE__{finished: true} = anim, _timestamp), do: anim
+
+  def advance(%__MODULE__{spring_config: %{} = config} = anim, timestamp) do
+    advance_spring(anim, config, timestamp)
   end
 
   def advance(%__MODULE__{} = anim, timestamp) do
-    elapsed = timestamp - anim.started_at
-    t = clamp(elapsed / anim.duration)
-    current = interpolate(anim.from, anim.to, t, anim.easing)
-
-    if t >= 1.0 do
-      {anim.to, :finished}
-    else
-      updated = %{anim | value: current}
-      {current, updated}
-    end
+    advance_timed(anim, timestamp)
   end
 
   @doc """
-  Returns `true` if the animation has run to completion.
+  Redirects the animation to a new target, starting from the
+  current interpolated value. Resets the timer.
 
-  Note: once `advance/2` returns `{value, :finished}`, the animation
-  struct is no longer updated. Use the `:finished` return value from
-  `advance/2` as the primary completion signal.
+  Use this for smooth interruption -- the animation continues
+  from where it is rather than jumping.
+
+  ## Options
+
+  - `to:` -- new target value (required)
+  - `at:` -- current timestamp (required)
+  - `easing:` -- optionally change easing
+  - `duration:` -- optionally change duration
   """
-  @spec finished?(animation :: t()) :: boolean()
-  def finished?(%__MODULE__{started_at: nil}), do: false
+  @spec redirect(animation :: t(), opts :: keyword()) :: t()
+  def redirect(%__MODULE__{} = anim, opts) when is_list(opts) do
+    new_to = Keyword.fetch!(opts, :to)
+    timestamp = Keyword.fetch!(opts, :at)
+    new_easing = Keyword.get(opts, :easing, anim.easing)
 
-  def finished?(%__MODULE__{} = anim) do
-    anim.value == anim.to
+    # For spring mode, preserve velocity for natural momentum
+    spring_config =
+      case anim.spring_config do
+        %{} = config -> config
+        nil -> nil
+      end
+
+    %{
+      anim
+      | from: if(anim.value != nil, do: anim.value, else: anim.from),
+        to: new_to,
+        started_at: timestamp,
+        last_timestamp: timestamp,
+        finished: false,
+        easing: new_easing,
+        easing_fn:
+          if(new_easing != anim.easing, do: Easing.function(new_easing), else: anim.easing_fn),
+        duration: Keyword.get(opts, :duration, anim.duration),
+        spring_config: spring_config
+    }
   end
 
-  @doc "Return the current interpolated value."
-  @spec value(animation :: t()) :: number()
+  # ---------------------------------------------------------------------------
+  # Queries
+  # ---------------------------------------------------------------------------
+
+  @doc "Returns the current interpolated value."
+  @spec value(animation :: t()) :: number() | nil
   def value(%__MODULE__{value: v}), do: v
 
-  # -- Private ----------------------------------------------------------------
+  @doc "Returns true if the animation has completed."
+  @spec finished?(animation :: t()) :: boolean()
+  def finished?(%__MODULE__{finished: f}), do: f
+
+  @doc "Returns true if the animation is actively running (started and not finished)."
+  @spec running?(animation :: t()) :: boolean()
+  def running?(%__MODULE__{started_at: nil}), do: false
+  def running?(%__MODULE__{finished: true}), do: false
+  def running?(%__MODULE__{}), do: true
+
+  # ---------------------------------------------------------------------------
+  # Private: timed advance
+  # ---------------------------------------------------------------------------
+
+  defp advance_timed(anim, timestamp) do
+    raw_elapsed = timestamp - anim.started_at
+    delay = anim.delay || 0
+    elapsed = max(0, raw_elapsed - delay)
+
+    if raw_elapsed < delay do
+      %{anim | value: anim.from}
+    else
+      t = clamp(elapsed / anim.duration)
+      easing_fn = anim.easing_fn || Easing.function(anim.easing)
+      current = anim.from + (anim.to - anim.from) * easing_fn.(t)
+
+      if t >= 1.0 do
+        handle_repeat_or_finish(anim, anim.to, timestamp)
+      else
+        %{anim | value: current}
+      end
+    end
+  end
+
+  defp handle_repeat_or_finish(anim, final_value, _timestamp) do
+    case anim.repeat do
+      nil ->
+        %{anim | value: final_value, finished: true}
+
+      :forever ->
+        restart_cycle(anim)
+
+      n when is_integer(n) and n > 1 ->
+        %{restart_cycle(anim) | repeat: n - 1}
+
+      _n ->
+        %{anim | value: final_value, finished: true}
+    end
+  end
+
+  defp restart_cycle(anim) do
+    if anim.auto_reverse do
+      %{anim | from: anim.to, to: anim.from, started_at: anim.started_at + anim.duration}
+    else
+      %{anim | value: anim.from, started_at: anim.started_at + anim.duration}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Private: spring advance
+  # ---------------------------------------------------------------------------
+
+  defp advance_spring(anim, config, timestamp) do
+    # Delta since last advance, not total elapsed (avoids re-simulation)
+    delta_ms = timestamp - (anim.last_timestamp || anim.started_at)
+    # Fixed 1ms timestep for stability, simulate delta_ms steps
+    dt = 0.001
+    steps = min(max(delta_ms, 0), 1000)
+
+    {pos, vel} =
+      Enum.reduce(
+        1..max(1, steps)//1,
+        {if(anim.value != nil, do: anim.value, else: anim.from), config.velocity},
+        fn _, {pos, vel} ->
+          force = -config.stiffness * (pos - anim.to) - config.damping * vel
+          acc = force / config.mass
+          new_vel = vel + acc * dt
+          new_pos = pos + new_vel * dt
+          {new_pos, new_vel}
+        end
+      )
+
+    settled = abs(vel) < 0.01 and abs(pos - anim.to) < 0.001
+
+    if settled do
+      %{
+        anim
+        | value: anim.to,
+          finished: true,
+          last_timestamp: timestamp,
+          spring_config: %{config | velocity: 0.0}
+      }
+    else
+      %{anim | value: pos, last_timestamp: timestamp, spring_config: %{config | velocity: vel}}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Private: utils
+  # ---------------------------------------------------------------------------
 
   defp clamp(t) when t < 0, do: 0.0
   defp clamp(t) when t > 1.0, do: 1.0
-  defp clamp(t), do: t
+  defp clamp(t), do: t * 1.0
 end

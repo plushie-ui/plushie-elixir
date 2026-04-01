@@ -528,4 +528,40 @@ defmodule Plushie.Test.Helpers do
       :ok
     end
   end
+
+  @doc """
+  Advances the renderer animation clock, driving both SDK-side
+  animation frame events and renderer-side transitions.
+
+  In mock mode this is a no-op for renderer-side transitions
+  (they resolve instantly). In headless/windowed mode it advances
+  the animation clock by the given timestamp.
+
+  ## Example
+
+      click("#toggle")
+      advance_frame(150)   # 150ms into the animation
+  """
+  @spec advance_frame(timestamp :: non_neg_integer()) :: :ok
+  def advance_frame(timestamp) when is_integer(timestamp) and timestamp >= 0 do
+    Session.advance_frame(session(), timestamp)
+  end
+
+  @doc """
+  Skips all active renderer-side transitions to completion.
+
+  Advances the animation clock far enough to complete any
+  reasonable animation (10 seconds). Useful in tests that
+  trigger animations but only care about the final state.
+
+  ## Example
+
+      click("#toggle")
+      skip_transitions()
+      assert find!("#box").props[:opacity] == 0.0
+  """
+  @spec skip_transitions() :: :ok
+  def skip_transitions do
+    advance_frame(10_000)
+  end
 end
