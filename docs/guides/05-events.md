@@ -61,10 +61,10 @@ container ancestry.
 
 Not all events are `WidgetEvent`. Plushie also delivers:
 
-- `Plushie.Event.Key` -- keyboard events (from subscriptions)
-- `Plushie.Event.Timer` -- timer ticks (from subscriptions)
-- `Plushie.Event.Async` -- results from background tasks
-- `Plushie.Event.Effect` -- responses from platform effects (file dialogs, clipboard)
+- `Plushie.Event.KeyEvent` -- keyboard events (from subscriptions)
+- `Plushie.Event.TimerEvent` -- timer ticks (from subscriptions)
+- `Plushie.Event.AsyncEvent` -- results from background tasks
+- `Plushie.Event.EffectEvent` -- responses from platform effects (file dialogs, clipboard)
 - `Plushie.Event.WindowEvent` -- window lifecycle (opened, closed, resized)
 
 We will cover each of these in the chapters where they are introduced. For
@@ -96,42 +96,48 @@ def init(_opts) do
 end
 ```
 
-### Catching preview events
+### Logging events
 
-Widgets inside `container "preview"` have their events tagged with
-`scope: ["preview" | _]`. We can match on this to capture only preview
-events, not the pad's own UI events:
+The catch-all clause at the bottom of `update/2` is the perfect place to
+log events. Anything not handled by a specific clause gets logged:
 
 ```elixir
-def update(model, %WidgetEvent{scope: ["preview" | _]} = event) do
+def update(model, event) do
   entry = format_event(event)
   %{model | event_log: Enum.take([entry | model.event_log], 20)}
 end
 ```
 
-This clause must come **before** the catch-all. It prepends the formatted
-event to the log and caps it at 20 entries.
+This replaces the old `def update(model, _event), do: model` catch-all.
+It prepends the formatted event to the log and caps it at 20 entries.
 
 ### Formatting events
 
-We format events to mirror how you would pattern match on them:
+We format events as struct literals so you can see exactly what to
+pattern match on:
 
 ```elixir
-defp format_event(%WidgetEvent{type: type, id: id, value: value}) do
-  case value do
-    nil -> "%WidgetEvent{type: #{inspect(type)}, id: #{inspect(id)}}"
-    val -> "%WidgetEvent{type: #{inspect(type)}, id: #{inspect(id)}, value: #{inspect(val)}}"
-  end
+defp format_event(%mod{} = event) do
+  name = mod |> Module.split() |> List.last()
+
+  fields =
+    event
+    |> Map.from_struct()
+    |> Enum.map(fn {k, v} -> "#{k}: #{inspect(v)}" end)
+    |> Enum.join(", ")
+
+  "%#{name}{#{fields}}"
 end
 ```
 
-When you click a button in the preview, the log shows:
+This works for any event type, not just `WidgetEvent`. When you click a
+button in the preview, the log shows all fields:
 
-    %WidgetEvent{type: :click, id: "btn"}
+    %WidgetEvent{type: :click, id: "btn", value: nil, data: nil, scope: ["preview"], window_id: "main"}
 
-When you type in a text input, it shows the value:
+When you type in a text input:
 
-    %WidgetEvent{type: :input, id: "name", value: "hello"}
+    %WidgetEvent{type: :input, id: "name", value: "hello", ...}
 
 ### The event log view
 
@@ -156,15 +162,15 @@ Here is the full module:
 defmodule PlushiePad do
   use Plushie.App
 
-  alias Plushie.Event.WidgetEvent
-
   import Plushie.UI
+
+  alias Plushie.Event.WidgetEvent
 
   @starter_code """
   defmodule Pad.Experiments.Hello do
     import Plushie.UI
 
-    def render do
+    def view do
       column padding: 16, spacing: 8 do
         text("greeting", "Hello, Plushie!", size: 24)
         button("btn", "Click Me")
@@ -198,13 +204,11 @@ defmodule PlushiePad do
     end
   end
 
-  # Events from preview widgets (scoped under "preview" container)
-  def update(model, %WidgetEvent{scope: ["preview" | _]} = event) do
+  # Log everything else
+  def update(model, event) do
     entry = format_event(event)
     %{model | event_log: Enum.take([entry | model.event_log], 20)}
   end
-
-  def update(model, _event), do: model
 
   def view(model) do
     window "main", title: "Plushie Pad" do
@@ -256,10 +260,10 @@ defmodule PlushiePad do
           Code.put_compiler_option(:ignore_module_conflict, true)
           [{module, _}] = Code.compile_string(source)
 
-          if function_exported?(module, :render, 0) do
-            {:ok, module.render()}
+          if function_exported?(module, :view, 0) do
+            {:ok, module.view()}
           else
-            {:error, "Module must export a render/0 function"}
+            {:error, "Module must export a view/0 function"}
           end
         rescue
           e -> {:error, Exception.message(e)}
@@ -269,11 +273,16 @@ defmodule PlushiePad do
     end
   end
 
-  defp format_event(%WidgetEvent{type: type, id: id, value: value}) do
-    case value do
-      nil -> "%WidgetEvent{type: #{inspect(type)}, id: #{inspect(id)}}"
-      val -> "%WidgetEvent{type: #{inspect(type)}, id: #{inspect(id)}, value: #{inspect(val)}}"
-    end
+  defp format_event(%mod{} = event) do
+    name = mod |> Module.split() |> List.last()
+
+    fields =
+      event
+      |> Map.from_struct()
+      |> Enum.map(fn {k, v} -> "#{k}: #{inspect(v)}" end)
+      |> Enum.join(", ")
+
+    "%#{name}{#{fields}}"
   end
 end
 ```
@@ -301,7 +310,7 @@ Try replacing the editor content with a gallery of common widgets:
 defmodule Pad.Experiments.Gallery do
   import Plushie.UI
 
-  def render do
+  def view do
     column padding: 16, spacing: 12 do
       text("title", "Widget Gallery", size: 20)
 
@@ -344,3 +353,7 @@ to check the documentation.
 
 In the next chapter, we will add a file list to the pad so you can save
 multiple experiments and switch between them.
+
+---
+
+Next: [Lists and Inputs](06-lists-and-inputs.md)

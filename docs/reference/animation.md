@@ -189,12 +189,12 @@ end
 
 ## SDK-side animation
 
-`Plushie.Animation` provides model-level animation for cases
-that need frame-by-frame control. See `Plushie.Animation`.
+`Plushie.Animation.Tween` provides model-level animation for cases
+that need frame-by-frame control. See `Plushie.Animation.Tween`.
 
 ```elixir
-Animation.new(from: 0.0, to: 1.0, duration: 300, easing: :ease_out)
-Animation.spring(from: 0.0, to: 1.0, stiffness: 200, damping: 20)
+Tween.new(from: 0.0, to: 1.0, duration: 300, easing: :ease_out)
+Tween.spring(from: 0.0, to: 1.0, stiffness: 200, damping: 20)
 ```
 
 Key functions: `start/2`, `start_once/2`, `advance/2`,
@@ -236,7 +236,7 @@ assert find!("#panel").props[:max_width] == 200
 
 Canvas shapes are not animatable via transition descriptors
 (shapes are data inside canvas prop values, not individual
-widgets). Use SDK-side `Plushie.Animation` with
+widgets). Use SDK-side `Plushie.Animation.Tween` with
 `on_animation_frame` for canvas animation.
 
 ## See also
@@ -246,4 +246,4 @@ widgets). Use SDK-side `Plushie.Animation` with
 - `Plushie.Animation.Transition` -- transition descriptor
 - `Plushie.Animation.Spring` -- spring descriptor
 - `Plushie.Animation.Sequence` -- sequential chain
-- `Plushie.Animation` -- SDK-side animation
+- `Plushie.Animation.Tween` -- SDK-side stateful interpolator

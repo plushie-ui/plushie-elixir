@@ -31,27 +31,27 @@ the model. When the model changes, the active subscriptions change with it.
 ## Keyboard subscriptions
 
 `Plushie.Subscription.on_key_press/1` subscribes to keyboard events. It
-delivers `Plushie.Event.Key` structs to `update/2`:
+delivers `Plushie.Event.KeyEvent` structs to `update/2`:
 
 ```elixir
-alias Plushie.Event.Key
+alias Plushie.Event.KeyEvent
 
 def subscribe(_model) do
   [Plushie.Subscription.on_key_press(:keys)]
 end
 
-def update(model, %Key{key: "s", modifiers: %{command: true}}) do
+def update(model, %KeyEvent{key: "s", modifiers: %{command: true}}) do
   # Ctrl+S (or Cmd+S on macOS)
   save_current(model)
 end
 
-def update(model, %Key{key: :escape}) do
+def update(model, %KeyEvent{key: :escape}) do
   # Escape key
   %{model | error: nil}
 end
 ```
 
-The `Plushie.Event.Key` struct has these key fields:
+The `Plushie.Event.KeyEvent` struct has these key fields:
 
 - `type` -- `:press` or `:release`
 - `key` -- the key that was pressed. Named keys are atoms (`:escape`,
@@ -77,7 +77,7 @@ def subscribe(_model) do
   [Plushie.Subscription.on_key_press(:keys)]
 end
 
-def update(model, %Key{key: "s", modifiers: %{command: true}}) do
+def update(model, %KeyEvent{key: "s", modifiers: %{command: true}}) do
   # Ctrl+S / Cmd+S: save and compile
   case compile_preview(model.source) do
     {:ok, tree} ->
@@ -89,20 +89,19 @@ def update(model, %Key{key: "s", modifiers: %{command: true}}) do
   end
 end
 
-def update(model, %Key{key: "n", modifiers: %{command: true}}) do
+def update(model, %KeyEvent{key: "n", modifiers: %{command: true}}) do
   # Ctrl+N / Cmd+N: focus the new experiment input
   {model, Plushie.Command.focus("new-name")}
 end
 
-def update(model, %Key{key: :escape}) do
+def update(model, %KeyEvent{key: :escape}) do
   # Escape: clear error display
   %{model | error: nil}
 end
 ```
 
-The reader builds these shortcuts themselves -- this is a real feature, not a
-demonstration. Ctrl+S saves, Ctrl+N focuses the new experiment input, and
-Escape dismisses errors.
+These are real features for the pad. Ctrl+S saves, Ctrl+N focuses the new
+experiment input, and Escape dismisses errors.
 
 ## Timer subscriptions
 
@@ -112,17 +111,17 @@ Escape dismisses errors.
 Plushie.Subscription.every(1000, :tick)
 ```
 
-This delivers a `Plushie.Event.Timer` struct every 1000 milliseconds:
+This delivers a `Plushie.Event.TimerEvent` struct every 1000 milliseconds:
 
 ```elixir
-alias Plushie.Event.Timer
+alias Plushie.Event.TimerEvent
 
-def update(model, %Timer{tag: :tick}) do
+def update(model, %TimerEvent{tag: :tick}) do
   %{model | time: DateTime.utc_now()}
 end
 ```
 
-The `tag` field in the Timer event matches the tag you gave the subscription.
+The `tag` field in the TimerEvent matches the tag you gave the subscription.
 This is different from renderer subscriptions (like `on_key_press`) where
 the tag is for management only and does not appear in the event.
 
@@ -171,7 +170,7 @@ def subscribe(model) do
 end
 
 # Handle the timer:
-def update(model, %Timer{tag: :auto_save}) do
+def update(model, %TimerEvent{tag: :auto_save}) do
   case compile_preview(model.source) do
     {:ok, tree} ->
       if model.active_file, do: save_experiment(model.active_file, model.source)
@@ -207,14 +206,17 @@ timers:
 Each returns its corresponding event struct in `update/2`. The tag argument
 is for managing subscriptions (diffing, starting, stopping) -- for renderer
 subscriptions, the tag does not appear in the delivered event. Timer
-subscriptions are the exception: the tag is embedded in the `%Timer{}` event.
+subscriptions are the exception: the tag is embedded in the `%TimerEvent{}` event.
 
 See the [Subscriptions reference](../reference/subscriptions.md) for the
 complete list and details.
 
 ## Rate limiting
 
-High-frequency events like mouse movement can overwhelm `update/2`.
+High-frequency events like mouse movement can call `update/2`
+unnecessarily often -- hundreds of times per second when you only need
+the position at 30fps. This is especially wasteful over networked
+connections where each update generates wire traffic.
 `Plushie.Subscription.max_rate/2` throttles delivery:
 
 ```elixir
@@ -264,7 +266,7 @@ end
 ```
 
 This verifies the full subscription pipeline: the key subscription is
-active, the runtime delivers the `%Key{}` event, your handler compiles
+active, the runtime delivers the `%KeyEvent{}` event, your handler compiles
 the source and updates the preview.
 
 ## Try it
@@ -281,3 +283,7 @@ Write a subscription experiment in your pad:
 
 In the next chapter, we will add file dialogs, clipboard integration, and
 multi-window support to the pad.
+
+---
+
+Next: [Async and Effects](11-async-and-effects.md)

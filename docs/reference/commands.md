@@ -3,7 +3,7 @@
 Commands are pure data returned from `update/2`. The runtime executes
 them after the update cycle completes. See `Plushie.Command` for full
 API docs and examples. Platform effects are a special command category
-with their own module; see `Plushie.Effects`.
+with their own module; see `Plushie.Effect`.
 
 ## Command categories
 
@@ -30,27 +30,27 @@ All functions live in `Plushie.Command` unless noted otherwise.
 
 ## Platform effects
 
-All functions live in `Plushie.Effects`. Each returns a `Plushie.Command`
-struct. Results arrive as `%Plushie.Event.Effect{}` events in `update/2`.
+All functions live in `Plushie.Effect`. Each returns a `Plushie.Command`
+struct. Results arrive as `%Plushie.Event.EffectEvent{}` events in `update/2`.
 
 **File dialogs**
 
-- `file_open/1` -- single file picker
-- `file_open_multiple/1` -- multi-file picker
-- `file_save/1` -- save dialog
-- `directory_select/1` -- single directory picker
-- `directory_select_multiple/1` -- multi-directory picker
+- `file_open/2` -- single file picker
+- `file_open_multiple/2` -- multi-file picker
+- `file_save/2` -- save dialog
+- `directory_select/2` -- single directory picker
+- `directory_select_multiple/2` -- multi-directory picker
 
 **Clipboard**
 
-- `clipboard_read/0`, `clipboard_write/1` -- plain text
-- `clipboard_read_html/0`, `clipboard_write_html/2` -- HTML content
+- `clipboard_read/1`, `clipboard_write/2` -- plain text
+- `clipboard_read_html/1`, `clipboard_write_html/2` -- HTML content
 - `clipboard_clear/0` -- clear clipboard
-- `clipboard_read_primary/0`, `clipboard_write_primary/1` -- primary selection (Linux middle-click)
+- `clipboard_read_primary/1`, `clipboard_write_primary/2` -- primary selection (Linux middle-click)
 
 **Notifications**
 
-- `notification/3` -- OS-level notification with title, body, and options
+- `notification/4` -- OS-level notification with tag, title, body, and options
 
 ## Async mechanics
 
@@ -69,9 +69,10 @@ struct. Results arrive as `%Plushie.Event.Effect{}` events in `update/2`.
 
 ## Effect lifecycle
 
-- **Auto-generated request IDs.** Each effect gets a unique ID (e.g.
-  `"ef_1"`, `"ef_2"`, ...) stored in `cmd.payload.id`. Use it to
-  correlate concurrent requests with their responses.
+- **Tag-based matching.** Every effect function takes an atom tag as
+  its first argument. The tag is returned in the `%EffectEvent{tag: tag}`
+  event, so you match results directly -- no need to store or
+  correlate IDs in your model.
 
 - **Default timeouts:**
   - File dialogs: 120 seconds
@@ -94,7 +95,7 @@ struct. Results arrive as `%Plushie.Event.Effect{}` events in `update/2`.
 
 Query results (system, window, image, tree hash, focused widget) arrive
 as `%Plushie.Event.SystemEvent{type: type, tag: tag, data: data}`.
-Effect results arrive as `%Plushie.Event.Effect{request_id: id, result: result}`.
+Effect results arrive as `%Plushie.Event.EffectEvent{tag: tag, result: result}`.
 
 Result maps use atom keys: `%{path: "/tmp/file.txt"}`,
 `%{width: 800, height: 600}`. Unknown keys from the renderer
@@ -129,5 +130,5 @@ provides.
 ## See also
 
 - `Plushie.Command` -- full module docs with specs and examples
-- `Plushie.Effects` -- platform effect functions and timeout details
+- `Plushie.Effect` -- platform effect functions and timeout details
 - [Async and Effects](../guides/11-async-and-effects.md) -- guide with patterns

@@ -6,14 +6,14 @@ own rendering logic. In this chapter we extract them into **custom widgets**
 -- reusable modules that encapsulate UI and behaviour.
 
 Plushie has two kinds of custom widgets: pure Elixir (compose existing
-widgets) and native (Rust-backed, for new rendering primitives). This
-chapter covers pure Elixir widgets. Native widgets get a brief section at the
-end, with full details in the
+widgets or draw custom visuals with canvas and SVG) and native (Rust-backed,
+for custom GPU rendering). This chapter covers pure Elixir widgets. Native
+widgets get a brief section at the end, with full details in the
 [Custom Widgets reference](../reference/custom-widgets.md).
 
 ## Stateless widgets
 
-The simplest custom widget is render-only: it takes props, returns a UI tree,
+The simplest custom widget is stateless: it takes props, returns a UI tree,
 and has no internal state. Events from widgets inside it pass through
 transparently to the parent app.
 
@@ -27,7 +27,7 @@ defmodule PlushiePad.LabeledInput do
   prop :value, :string
   prop :placeholder, :string, default: ""
 
-  def render(id, props) do
+  def view(id, props) do
     import Plushie.UI
 
     column id: id, spacing: 4 do
@@ -42,14 +42,16 @@ end
 functions, and the protocol implementation that connects it to the rendering
 pipeline.
 
-`widget :labeled_input` declares the widget's type name.
+`widget :labeled_input` declares the widget's type name. This must be unique
+across your application -- it is used for event namespacing and protocol
+dispatch.
 
 `prop` declarations define typed properties with optional defaults. Available
 types include `:string`, `:number`, `:boolean`, `:color`, `:length`,
 `:padding`, `:font`, `:atom`, `:map`, `:any`, and others. See
 `Plushie.Widget` for the full list.
 
-`render/2` receives the widget ID and a props map. It returns a UI tree using
+`view/2` receives the widget ID and a props map. It returns a UI tree using
 the same DSL as `view/1`. Events from widgets inside (like the `text_input`)
 flow through to the parent app's `update/2` without any special handling.
 
@@ -77,7 +79,7 @@ defmodule PlushiePad.FileList do
   prop :files, :any        # list of filenames
   prop :active_file, :any  # currently selected filename
 
-  def render(id, props) do
+  def view(id, props) do
     import Plushie.UI
 
     column id: id, width: 200, height: :fill, padding: 8, spacing: 8 do
@@ -118,7 +120,7 @@ IDs -- the widget is transparent to events.
 ## Stateful widgets
 
 When a widget needs internal state that the parent app should not manage,
-add `state` declarations and a three-argument `render/3`:
+add `state` declarations and a three-argument `view/3`:
 
 ```elixir
 defmodule PlushiePad.CollapsiblePanel do
@@ -127,12 +129,11 @@ defmodule PlushiePad.CollapsiblePanel do
   widget :collapsible_panel, container: true
 
   prop :title, :string
-  prop :collapsed, :boolean, default: false
 
   state expanded: true
 
   @impl Plushie.Widget.Handler
-  def render(id, props, state) do
+  def view(id, props, state) do
     import Plushie.UI
 
     column id: id, spacing: 4 do
@@ -159,7 +160,7 @@ end
 runtime manages this state -- it persists across re-renders as long as the
 widget remains in the tree.
 
-`render/3` receives the ID, props, and current state.
+`view/3` receives the ID, props, and current state.
 
 `container: true` on the widget declaration allows the widget to accept
 children via `props.children`.
@@ -167,7 +168,7 @@ children via `props.children`.
 ## Handling events
 
 The `handle_event/2` callback intercepts events before they reach the parent
-app. It returns one of:
+app. All clauses must return one of:
 
 | Return value | Effect |
 |---|---|
@@ -196,7 +197,7 @@ defmodule PlushiePad.EventLog do
   state expanded: true
 
   @impl Plushie.Widget.Handler
-  def render(id, props, state) do
+  def view(id, props, state) do
     import Plushie.UI
 
     column id: id, spacing: 4 do
@@ -245,7 +246,7 @@ defmodule PlushiePad.RatingWidget do
   event :change, value: :number
 
   @impl Plushie.Widget.Handler
-  def render(id, props, _state) do
+  def view(id, props, _state) do
     import Plushie.UI
 
     row id: id, spacing: 4 do
@@ -289,7 +290,7 @@ Widgets can declare their own subscriptions via the optional `subscribe/2`
 callback:
 
 ```elixir
-  @impl Plushie.Widget.Handler
+@impl Plushie.Widget.Handler
 def subscribe(_props, state) do
   if state.animating do
     [Plushie.Subscription.every(16, :animate)]
@@ -303,7 +304,7 @@ Multiple instances of the same widget each get independent subscriptions.
 
 ## Canvas-based widgets
 
-A widget's `render/2` can return a canvas instead of layout widgets:
+A widget's `view/2` can return a canvas instead of layout widgets:
 
 ```elixir
 defmodule PlushiePad.Gauge do
@@ -315,7 +316,7 @@ defmodule PlushiePad.Gauge do
   prop :max, :number, default: 100
 
   @impl Plushie.Widget.Handler
-  def render(id, props, _state) do
+  def view(id, props, _state) do
     import Plushie.UI
 
     pct = min(props.value / props.max, 1.0)
@@ -342,7 +343,9 @@ end
 Canvas-based widgets with interactivity combine `handle_event/2` with
 canvas events (`:canvas_press`, `:canvas_element_click`, etc.) to build
 rich custom controls like colour pickers, drawing tools, and data
-visualisations.
+visualisations. You can also embed SVG content in canvas layers (as
+shown in [chapter 12](12-canvas.md)) -- design your visuals in a vector
+editor and use them as interactive widget elements.
 
 ## The widget lifecycle
 
@@ -352,7 +355,7 @@ Understanding the lifecycle helps when debugging:
 2. During tree normalization, the struct is converted to a placeholder node
    tagged with the widget module and props.
 3. The runtime detects the placeholder, looks up stored state (or uses
-   initial defaults for new widgets), and calls `render/3`.
+   initial defaults for new widgets), and calls `view/3`.
 4. The rendered output replaces the placeholder in the final tree.
 5. Widget metadata (module, state, event handlers) is attached to the
    node's `:meta` field.
@@ -405,7 +408,8 @@ defmodule PlushiePad.EventLogTest do
   end
 
   test "shows event entries" do
-    assert_text("#log/log-scroll/log-0", "click on btn")
+    element = find!({:text, "click on btn"})
+    assert element.type == "text"
   end
 end
 ```
@@ -421,11 +425,15 @@ Build custom widgets in your pad experiments:
 - Start with a stateless widget that composes a label and an input. Use it
   in another experiment.
 - Add `state` and `handle_event/2` to make a collapsible section.
-- Declare a custom event and match on the `{module, :event_name}` tuple in
-  the parent experiment.
+- Declare a custom event and match on the `{widget_type, :event_name}` tuple
+  in the parent experiment.
 - Build a canvas-based widget: a simple progress ring, a mini sparkline, or
   a colour swatch.
 - Try a widget with `subscribe/2` that animates on a timer.
 
 In the next chapter, we will enhance the pad with state management helpers
 for undo, search, selection, and navigation.
+
+---
+
+Next: [State Management](14-state-management.md)

@@ -11,35 +11,27 @@ how views are composed.
 
 ## The DSL: three equivalent forms
 
-Before we build the view, a quick note on how the Plushie DSL works. There
-are three ways to set widget properties, and they all do the same thing:
+Before we look at the code, a quick note on how the Plushie DSL works. There
+are three ways to set widget properties, and they all produce the same result.
 
-**Keyword arguments on the call line:**
-
-```elixir
-column spacing: 8, padding: 16 do
-  text("hello", "Hello")
-end
-```
-
-**Inline declarations in the do-block:**
+**Keyword arguments** on the call line, **inline declarations** mixed with
+children in the do-block, and **nested do-blocks** for struct-typed
+properties like padding -- all in one expression:
 
 ```elixir
-column do
-  spacing 8
-  padding 16
-  text("hello", "Hello")
-end
-```
-
-**Nested do-blocks for struct-typed properties:**
-
-```elixir
-column do
+column spacing: 8 do
   padding do
     top 16
     bottom 8
   end
+  text("hello", "Hello")
+end
+```
+
+This is equivalent to:
+
+```elixir
+column spacing: 8, padding: %{top: 16, bottom: 8} do
   text("hello", "Hello")
 end
 ```
@@ -49,136 +41,32 @@ keyword arguments when they conflict. Use whichever form reads best for the
 situation -- throughout this guide we will use different forms depending on
 context.
 
-One exception: canvas blocks work differently. We will cover that in
-[chapter 12](12-canvas.md).
-
-> Widgets also have a programmatic struct API (`Column.new/2`, setter
-> pipelines) for use in helpers and tests. See the
-> [DSL reference](../reference/dsl.md) for details.
-
-## Introducing text_editor
-
-`text_editor` is a multi-line editing widget -- think of it as `text_input`
-for longer content. The `content` prop seeds the initial text, and
-subsequent changes arrive as `:input` events with the full content as the
-value.
+Widgets also have a programmatic struct API that you can use instead of the
+macro-based DSL. The same column from above:
 
 ```elixir
-text_editor("editor", "Hello, world!",
-  width: :fill,
-  height: :fill,
-  highlight_syntax: "ex"
-)
+alias Plushie.Widget.{Column, Text}
+
+Column.new("my_col", spacing: 8, padding: %{top: 16, bottom: 8})
+|> Column.push(Text.new("hello", "Hello"))
 ```
 
-The `highlight_syntax: "ex"` option enables Elixir syntax highlighting.
-We will explore more `text_editor` options (key bindings, themes) in later
-chapters -- for now this is all we need.
+The struct API produces the same output as the DSL. It is useful for helper
+functions, dynamic generation, or anywhere you prefer working with data
+structures directly. We will use the DSL throughout this guide.
 
-Like all stateful widgets, `text_editor` needs an explicit string ID.
-Widgets that hold internal state -- `text_editor`, `text_input`, `combo_box`,
-`scrollable`, `pane_grid` -- lose that state if their ID changes between
-renders. Layout widgets like `column` and `row` are fine with auto-generated
-IDs.
+## The complete pad
 
-## The model
-
-Our pad needs to track the editor content and an eventual preview:
-
-```elixir
-def init(_opts) do
-  %{
-    source: "# Write some Plushie code here\n",
-    preview: nil,
-    error: nil
-  }
-end
-```
-
-We will add the compile-and-preview logic in the next chapter. For now the
-model just holds the source text.
-
-## Building the view
-
-Let us build the layout: a `window` containing a `row` that splits the
-screen into an editor pane and a preview pane.
-
-```elixir
-def view(model) do
-  window "main", title: "Plushie Pad" do
-    column width: :fill, height: :fill do
-      row width: :fill, height: :fill do
-        # Editor pane (left)
-        text_editor "editor", model.source do
-          width {:fill_portion, 1}
-          height :fill
-          highlight_syntax "ex"
-          font :monospace
-        end
-
-        # Preview pane (right)
-        container "preview", width: {:fill_portion, 1}, height: :fill, padding: 16 do
-          if model.error do
-            text("error", model.error, color: :red)
-          else
-            if model.preview do
-              model.preview
-            else
-              text("placeholder", "Press Save to compile and preview")
-            end
-          end
-        end
-      end
-
-      # Toolbar
-      row padding: 8 do
-        button("save", "Save")
-      end
-    end
-  end
-end
-```
-
-A few things to note:
-
-- `{:fill_portion, 1}` gives the editor and preview equal width. Change one
-  to `{:fill_portion, 2}` and it takes twice the space. We cover sizing in
-  depth in [chapter 7](07-layout.md).
-- The preview pane is wrapped in `container "preview"`. This named container
-  will matter later when we need to distinguish events from preview widgets
-  vs the pad's own widgets.
-- `model.preview` will hold a compiled widget tree once we wire up
-  compilation. For now it is `nil`, so the placeholder text shows.
-- The `if` without `else` returns `nil`, which the layout filters out
-  automatically.
-
-## Handling events
-
-The editor emits `:input` events on every keystroke. We track the content in
-the model. The save button emits `:click` -- for now it does nothing, but we
-will wire it up in the next chapter.
-
-```elixir
-alias Plushie.Event.WidgetEvent
-
-def update(model, %WidgetEvent{type: :input, id: "editor", value: source}) do
-  %{model | source: source}
-end
-
-def update(model, _event), do: model
-```
-
-## The complete pad (so far)
-
-Here is the full module. Save it as `lib/plushie_pad.ex`:
+Here is the full module for this chapter. Save it as `lib/plushie_pad.ex`
+and we will walk through the key parts below.
 
 ```elixir
 defmodule PlushiePad do
   use Plushie.App
 
-  alias Plushie.Event.WidgetEvent
-
   import Plushie.UI
+
+  alias Plushie.Event.WidgetEvent
 
   def init(_opts) do
     %{
@@ -230,12 +118,60 @@ end
 Run it:
 
 ```bash
-mix plushie.gui PlushiePad
+mix plushie.gui PlushiePad --watch
 ```
 
 You should see the editor on the left with syntax highlighting and a
 placeholder message on the right. The save button is there but does not do
 anything yet -- we will fix that in the next chapter.
+
+## Walking through the code
+
+### The model
+
+`init/1` receives a keyword list passed via the `app_opts:` option when
+starting the app (e.g. `Plushie.start_link(PlushiePad, app_opts: [key: val])`).
+We do not need it yet, so we ignore it. The returned map becomes the initial
+model -- here we track the editor source text and leave slots for a compiled
+preview and an error message.
+
+### text_editor
+
+`text_editor` is a multi-line editing widget with syntax highlighting
+support. The `content` argument seeds the initial text, and subsequent
+changes arrive as `:input` events with the full content as the value.
+The `highlight_syntax: "ex"` option enables Elixir syntax highlighting.
+
+Some widgets hold renderer-side state -- cursor position, scroll offset,
+text selection. `text_editor`, `text_input`, `combo_box`, `scrollable`,
+and `pane_grid` all fall into this category. These widgets need an explicit
+string ID so the renderer can match them to their state across renders. If
+the ID changes, the state resets. Layout widgets like `column` and `row`
+have no renderer-side state, so auto-generated IDs work fine for them.
+
+### The view
+
+The view is a `window` containing a `column` that splits vertically into
+a main content `row` and a toolbar `row` at the bottom.
+
+- `{:fill_portion, 1}` gives the editor and preview equal width. Change one
+  to `{:fill_portion, 2}` and it takes twice the space. We cover sizing in
+  depth in [chapter 7](07-layout.md).
+- The preview pane is wrapped in `container "preview"`. This named container
+  will matter later when we need to distinguish events from preview widgets
+  vs the pad's own widgets.
+- `model.preview` will hold a compiled widget tree once we wire up
+  compilation. For now it is `nil`, so the placeholder text shows.
+- An `if` without an `else` returns `nil`, which the layout filters out
+  automatically. This is a useful pattern throughout Plushie views for
+  conditionally showing widgets.
+
+### Events
+
+The editor emits `:input` events on every keystroke. We pattern-match on the
+widget ID and update the model. The catch-all clause ignores everything
+else, including save button clicks -- we will wire those up in the next
+chapter.
 
 ## Verify it
 
@@ -263,11 +199,13 @@ With the pad running and hot reload active:
   you type.
 - Change `{:fill_portion, 1}` to `{:fill_portion, 2}` on the editor pane.
   Save the file. The editor takes twice the width.
-- Try the three DSL forms: rewrite the `row padding: 8` toolbar using
-  inline declarations instead of keyword arguments.
 - Add a second button to the toolbar row: `button("clear", "Clear")`. Save
   and see it appear.
 
 The pad is a shell right now -- a text editor next to an empty preview. In
 the next chapter, we will bring it to life by wiring up hot reload and code
 compilation so you can write Plushie widgets and see them rendered instantly.
+
+---
+
+Next: [The Development Loop](04-the-development-loop.md)

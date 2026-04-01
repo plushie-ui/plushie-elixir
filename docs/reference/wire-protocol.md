@@ -106,3 +106,4 @@ for the full message table.
   Protocol.Encode and Protocol.Decode internally)
 - `Plushie.Transport.Framing` -- frame encode/decode for raw streams
 - `Plushie.Bridge` -- transport management and restart logic
+- [Renderer Protocol Spec](https://github.com/plushie-ui/plushie-renderer/blob/main/docs/protocol.md) -- renderer-side protocol documentation and message reference

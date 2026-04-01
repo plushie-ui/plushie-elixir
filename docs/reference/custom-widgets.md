@@ -55,8 +55,8 @@ See `Plushie.Widget.Handler` for callback specs.
 
 | Callback | Signature | Required? |
 |---|---|---|
-| `render/2` | `(id, props) -> tree` | Yes (stateless) |
-| `render/3` | `(id, props, state) -> tree` | Yes (stateful) |
+| `view/2` | `(id, props) -> tree` | Yes (stateless) |
+| `view/3` | `(id, props, state) -> tree` | Yes (stateful) |
 | `handle_event/2` | `(event, state) -> result` | No (default depends on declarations) |
 | `subscribe/2` | `(props, state) -> [sub]` | No |
 
@@ -81,7 +81,7 @@ and declarations are present and generates the appropriate code.
 
 | Tier | Declarations | Behaviour |
 |---|---|---|
-| Render-only | `widget`, `prop`, `render/2` | Transparent to events. No state. |
+| Render-only | `widget`, `prop`, `view/2` | Transparent to events. No state. |
 | Interactive | + `state`, `handle_event/2` | Captures and transforms events. Has state. |
 | Full lifecycle | + `subscribe/2`, `event` | Events, state, subscriptions. |
 
@@ -108,7 +108,7 @@ handler are auto-consumed by the runtime and never reach `update/2`.
 3. During `Plushie.Tree.normalize/1`, placeholders are detected.
 4. State is looked up (from process dictionary, set by the runtime) or
    initialized from `__initial_state__/0`.
-5. `render/3` is called with the ID, props, and state.
+5. `view/3` is called with the ID, props, and state.
 6. The rendered output replaces the placeholder and is normalized
    recursively.
 7. Widget metadata (module, state, event specs) is attached to the final
@@ -174,3 +174,5 @@ paths.
 - `Plushie.Widget` -- macro API docs
 - `Plushie.Widget.Handler` -- callback specs
 - [Custom Widgets guide](../guides/13-custom-widgets.md) -- step-by-step tutorial
+- [Rust Extension Guide](https://github.com/plushie-ui/plushie-renderer/blob/main/docs/extension-guide.md) -- `WidgetExtension` trait and Rust-side lifecycle
+- [Rust Widget Development](https://github.com/plushie-ui/plushie-renderer/blob/main/docs/widget-development.md) -- renderer-side widget development patterns

@@ -1,6 +1,9 @@
 # Animation and Transitions
 
-Your widgets are styled. Now make them move.
+Your widgets are styled. Now make them move. Animation turns a
+functional UI into one that feels responsive and alive -- elements
+that slide, fade, and spring give the user feedback that the
+interface is reacting to their actions.
 
 Plushie's animation system is built around a key insight: the
 renderer is closer to the screen than your Elixir code. By
@@ -181,24 +184,68 @@ returning structs.
 
 For complex cases that need frame-by-frame control -- canvas
 animations, physics simulations, chained model updates -- use
-`Plushie.Animation` directly:
+`Plushie.Animation.Tween`:
 
 ```elixir
-anim = Animation.new(from: 0.0, to: 1.0, duration: 300, easing: :ease_out)
+anim = Tween.new(from: 0.0, to: 1.0, duration: 300, easing: :ease_out)
 ```
 
-This requires an `on_animation_frame` subscription and manual
-advancement in `update/2`. See `Plushie.Animation` and the
+This requires a subscription for frame events (covered in the
+[next chapter](10-subscriptions.md)) and manual advancement in
+`update/2`. See `Plushie.Animation.Tween` and the
 [animation reference](../reference/animation.md) for details.
 
 For most property animations, renderer-side transitions are
 simpler and more performant.
 
+## Applying it: animated pad
+
+Add a staggered entrance to the file list. Each file fades in with a
+slight delay, creating a cascade effect when the pad starts or new files
+are created:
+
+```elixir
+# In file_list, wrap each file entry:
+for {file, i} <- Enum.with_index(model.files) do
+  container file, opacity: transition(200, to: 1.0, from: 0.0, delay: i * 40) do
+    row spacing: 4 do
+      button("select", file,
+        width: :fill,
+        style: if(file == model.active_file, do: :primary, else: :text)
+      )
+      button("delete", "x")
+    end
+  end
+end
+```
+
+The `from: 0.0` makes each item start fully transparent and fade to
+`1.0`. The `delay: i * 40` offsets each item by 40ms, so they appear
+one after another. When a new file is created, it enters the tree for
+the first time and gets its own entrance animation. Existing files
+that are already in the tree are unaffected -- `from:` only applies
+on first appearance.
+
+## Verify it
+
+Animations resolve to their target values in mock mode, so tests
+work without waiting for frames:
+
+```elixir
+test "file list renders with animation descriptors" do
+  assert_exists("#hello.ex/select")
+  click("#save")
+  assert_text("#preview/greeting", "Hello, Plushie!")
+end
+```
+
 ## Try it
 
-Add transitions to your pad:
+- Try different easing curves on the file list stagger: `:ease_out`,
+  `:ease_in_out`, `:spring`.
+- Add a `spring` to the preview pane width and toggle it with a button.
+- Experiment with `sequence` to chain multiple animations on one prop.
 
-- Fade in file list items with staggered `delay:`
-- Pulse the save button width during compilation
-- Animate the sidebar width when toggling
-- Try different easing curves on the same animation
+---
+
+Next: [Subscriptions](10-subscriptions.md)

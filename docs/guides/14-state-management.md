@@ -74,7 +74,7 @@ def update(model, %WidgetEvent{type: :input, id: "editor", value: source}) do
   %{model | source: source, undo: undo, dirty: true}
 end
 
-def update(model, %Key{key: "z", modifiers: %{command: true, shift: false}}) do
+def update(model, %KeyEvent{key: "z", modifiers: %{command: true, shift: false}}) do
   if Undo.can_undo?(model.undo) do
     undo = Undo.undo(model.undo)
     %{model | undo: undo, source: Undo.current(undo)}
@@ -83,7 +83,7 @@ def update(model, %Key{key: "z", modifiers: %{command: true, shift: false}}) do
   end
 end
 
-def update(model, %Key{key: "z", modifiers: %{command: true, shift: true}}) do
+def update(model, %KeyEvent{key: "z", modifiers: %{command: true, shift: true}}) do
   if Undo.can_redo?(model.undo) do
     undo = Undo.redo(model.undo)
     %{model | undo: undo, source: Undo.current(undo)}
@@ -308,30 +308,29 @@ settings = State.put(model.settings, [:theme], :nord)
 
 See `Plushie.State` for the full API.
 
-## Plushie.Animation
+## Plushie.Animation.Tween
 
-`Plushie.Animation` interpolates values over time with easing functions:
-
-```elixir
-alias Plushie.Animation
-
-anim = Animation.new(0.0, 1.0, 300, easing: &Animation.ease_out/1)
-anim = Animation.start(anim, current_timestamp)
-```
-
-On each frame, advance the animation:
+For most property animations, renderer-side transitions ([chapter 9](09-animation.md))
+are simpler and more performant. `Plushie.Animation.Tween` is for cases
+that need frame-by-frame control in Elixir -- canvas animations, physics
+simulations, or values that drive model logic rather than widget props.
 
 ```elixir
-{value, anim} = Animation.advance(anim, current_timestamp)
-# value is between 0.0 and 1.0, eased
-# anim is :finished when duration has elapsed
+alias Plushie.Animation.Tween
+
+anim = Tween.new(from: 0.0, to: 1.0, duration: 300, easing: :ease_out)
+anim = Tween.start(anim, System.monotonic_time(:millisecond))
 ```
 
-Available easing functions: `linear/1`, `ease_in/1`, `ease_out/1`,
-`ease_in_out/1`, `ease_in_quad/1`, `ease_out_quad/1`, `ease_in_out_quad/1`,
-`spring/1`.
+On each frame, advance the animation and read the current value:
 
-Animation requires a subscription to `on_animation_frame` for the timestamp
+```elixir
+anim = Tween.advance(anim, current_timestamp)
+Tween.value(anim)      # number between 0.0 and 1.0, eased
+Tween.finished?(anim)  # true when duration has elapsed
+```
+
+Tween requires a subscription to `on_animation_frame` for the timestamp
 source:
 
 ```elixir
@@ -345,10 +344,12 @@ def subscribe(model) do
 end
 
 def update(model, %Plushie.Event.SystemEvent{type: :animation_frame, data: ts}) do
-  {value, anim} = Animation.advance(model.anim, ts)
-  case anim do
-    :finished -> %{model | anim: nil, animating: false, opacity: 1.0}
-    anim -> %{model | anim: anim, opacity: value}
+  anim = Tween.advance(model.anim, ts)
+
+  if Tween.finished?(anim) do
+    %{model | anim: nil, animating: false, opacity: 1.0}
+  else
+    %{model | anim: anim, opacity: Tween.value(anim)}
   end
 end
 ```
@@ -359,14 +360,35 @@ Animate the transition between editor and browser views with a fade:
 
 ```elixir
 # When switching views, start an opacity animation
-anim = Animation.new(0.0, 1.0, 200, easing: &Animation.ease_out/1)
-anim = Animation.start(anim, System.monotonic_time(:millisecond))
+anim = Tween.new(from: 0.0, to: 1.0, duration: 200, easing: :ease_out)
+anim = Tween.start(anim, System.monotonic_time(:millisecond))
 %{model | route: Route.push(model.route, :browser), anim: anim, animating: true}
 ```
 
-In the view, use the animated opacity value on the container.
+In the view, use `Tween.value(model.anim)` as the opacity on the container.
 
-See `Plushie.Animation` for the full API and easing function details.
+See `Plushie.Animation.Tween` for the full API including spring mode,
+redirect, and the complete easing catalogue.
+
+## Verify it
+
+Test that undo/redo works on the editor:
+
+```elixir
+test "ctrl+z undoes editor changes" do
+  type_text("#editor", "new content")
+  source_after_edit = model().source
+
+  press("ctrl+z")
+  assert model().source != source_after_edit
+
+  press("ctrl+shift+z")
+  assert model().source == source_after_edit
+end
+```
+
+This verifies the full undo/redo cycle through the real runtime -- typing
+creates an undo entry, Ctrl+Z reverts it, Ctrl+Shift+Z restores it.
 
 ## Try it
 
@@ -382,3 +404,7 @@ Write state management experiments in your pad:
   `Route.params/1` to pass the selected item ID.
 
 In the next chapter, we will test the pad and its extracted widgets.
+
+---
+
+Next: [Testing](15-testing.md)

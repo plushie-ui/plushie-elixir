@@ -10,14 +10,15 @@ Along the way we will learn about dynamic list rendering, scoped IDs,
 
 ## Saving experiments to files
 
-Experiments are plain Elixir source files. We will store them in a
-`lib/pad/experiments/` directory inside the project. Each file is a module
-with a `render/0` function, exactly like the starter code from chapter 4.
+Experiments are plain Elixir source files. We will store them in
+`priv/experiments/` -- a directory outside the compilation paths so they
+do not get compiled by Mix at startup. Each file is a module with a
+`view/0` function, exactly like the starter code from chapter 4.
 
 These are standard Elixir file operations, not Plushie concepts:
 
 ```elixir
-@experiments_dir "lib/pad/experiments"
+@experiments_dir "priv/experiments"
 
 defp list_experiments do
   File.mkdir_p!(@experiments_dir)
@@ -99,16 +100,19 @@ To display the file list, we need to render a dynamic list of items. The
 ```elixir
 column spacing: 4 do
   for file <- model.files do
-    text(file, file)
+    button(file, file)
   end
 end
 ```
 
-For dynamic lists where items can be added, removed, or reordered, use
-`keyed_column` instead of `column`. It uses each child's ID as a diffing
-key, which preserves widget state (scroll position, text cursor, focus)
-across list changes. A plain `column` diffs by position index, so adding
-an item at the top would shift all widget state down by one.
+This works, but there is a subtlety. When you add or remove a file,
+`column` matches children to their previous state by position. If you add
+a file at the top of the list, every child shifts down one position -- the
+second file inherits the first file's widget state (focus, scroll position,
+text cursor), the third inherits the second's, and so on.
+
+`keyed_column` solves this by matching children by their ID instead of
+position. Items keep their state no matter where they move in the list:
 
 ```elixir
 keyed_column spacing: 4 do
@@ -118,8 +122,8 @@ keyed_column spacing: 4 do
 end
 ```
 
-Rule of thumb: use `keyed_column` for any list that changes at runtime. Use
-`column` for static layouts.
+Use `keyed_column` for any list that changes at runtime. Use `column` for
+static layouts where the children are fixed.
 
 ## Scoped IDs
 
@@ -270,37 +274,31 @@ alias Plushie.Command
 
 defp create_new_experiment(model) do
   name = String.trim(model.new_name)
-  if name == "" or not String.ends_with?(name, ".ex"), do: throw(:invalid)
 
-  template = """
-  defmodule Pad.Experiments.#{name |> Path.rootname() |> Macro.camelize()} do
-    import Plushie.UI
+  if name == "" or not String.ends_with?(name, ".ex") do
+    model
+  else
+    template = """
+    defmodule Pad.Experiments.#{name |> Path.rootname() |> Macro.camelize()} do
+      import Plushie.UI
 
-    def render do
-      column padding: 16 do
-        text("hello", "New experiment")
+      def view do
+        column padding: 16 do
+          text("hello", "New experiment")
+        end
       end
     end
+    """
+
+    save_experiment(name, template)
+    files = list_experiments()
+    model = %{model | files: files, active_file: name, source: template, new_name: ""}
+
+    case compile_preview(template) do
+      {:ok, tree} -> {%{model | preview: tree, error: nil}, Command.focus("editor")}
+      {:error, msg} -> {%{model | error: msg, preview: nil}, Command.focus("editor")}
+    end
   end
-  """
-
-  save_experiment(name, template)
-  source = template
-  files = list_experiments()
-
-  model = %{model |
-    files: files,
-    active_file: name,
-    source: source,
-    new_name: ""
-  }
-
-  case compile_preview(source) do
-    {:ok, tree} -> {%{model | preview: tree, error: nil}, Command.focus("editor")}
-    {:error, msg} -> {%{model | error: msg, preview: nil}, Command.focus("editor")}
-  end
-catch
-  :invalid -> model
 end
 ```
 
@@ -423,18 +421,18 @@ from chapter 5 -- if anything is not working, compare against this listing:
 defmodule PlushiePad do
   use Plushie.App
 
+  import Plushie.UI
+
   alias Plushie.Command
   alias Plushie.Event.WidgetEvent
 
-  import Plushie.UI
-
-  @experiments_dir "lib/pad/experiments"
+  @experiments_dir "priv/experiments"
 
   @starter_code """
   defmodule Pad.Experiments.Hello do
     import Plushie.UI
 
-    def render do
+    def view do
       column padding: 16, spacing: 8 do
         text("greeting", "Hello, Plushie!", size: 24)
         button("btn", "Click Me")
@@ -527,12 +525,11 @@ defmodule PlushiePad do
     end
   end
 
-  def update(model, %WidgetEvent{scope: ["preview" | _]} = event) do
+  # Log everything else
+  def update(model, event) do
     entry = format_event(event)
     %{model | event_log: Enum.take([entry | model.event_log], 20)}
   end
-
-  def update(model, _event), do: model
 
   def view(model) do
     window "main", title: "Plushie Pad" do
@@ -608,30 +605,31 @@ defmodule PlushiePad do
 
   defp create_new_experiment(model) do
     name = String.trim(model.new_name)
-    if name == "" or not String.ends_with?(name, ".ex"), do: throw(:invalid)
 
-    template = """
-    defmodule Pad.Experiments.#{name |> Path.rootname() |> Macro.camelize()} do
-      import Plushie.UI
+    if name == "" or not String.ends_with?(name, ".ex") do
+      model
+    else
+      template = """
+      defmodule Pad.Experiments.#{name |> Path.rootname() |> Macro.camelize()} do
+        import Plushie.UI
 
-      def render do
-        column padding: 16 do
-          text("hello", "New experiment")
+        def view do
+          column padding: 16 do
+            text("hello", "New experiment")
+          end
         end
       end
-    end
-    """
+      """
 
-    save_experiment(name, template)
-    files = list_experiments()
-    model = %{model | files: files, active_file: name, source: template, new_name: ""}
+      save_experiment(name, template)
+      files = list_experiments()
+      model = %{model | files: files, active_file: name, source: template, new_name: ""}
 
-    case compile_preview(template) do
-      {:ok, tree} -> {%{model | preview: tree, error: nil}, Command.focus("editor")}
-      {:error, msg} -> {%{model | error: msg, preview: nil}, Command.focus("editor")}
+      case compile_preview(template) do
+        {:ok, tree} -> {%{model | preview: tree, error: nil}, Command.focus("editor")}
+        {:error, msg} -> {%{model | error: msg, preview: nil}, Command.focus("editor")}
+      end
     end
-  catch
-    :invalid -> model
   end
 
   defp compile_preview(source) do
@@ -645,10 +643,10 @@ defmodule PlushiePad do
           Code.put_compiler_option(:ignore_module_conflict, true)
           [{module, _}] = Code.compile_string(source)
 
-          if function_exported?(module, :render, 0) do
-            {:ok, module.render()}
+          if function_exported?(module, :view, 0) do
+            {:ok, module.view()}
           else
-            {:error, "Module must export a render/0 function"}
+            {:error, "Module must export a view/0 function"}
           end
         rescue
           e -> {:error, Exception.message(e)}
@@ -658,11 +656,16 @@ defmodule PlushiePad do
     end
   end
 
-  defp format_event(%WidgetEvent{type: type, id: id, value: value}) do
-    case value do
-      nil -> "%WidgetEvent{type: #{inspect(type)}, id: #{inspect(id)}}"
-      val -> "%WidgetEvent{type: #{inspect(type)}, id: #{inspect(id)}, value: #{inspect(val)}}"
-    end
+  defp format_event(%mod{} = event) do
+    name = mod |> Module.split() |> List.last()
+
+    fields =
+      event
+      |> Map.from_struct()
+      |> Enum.map(fn {k, v} -> "#{k}: #{inspect(v)}" end)
+      |> Enum.join(", ")
+
+    "%#{name}{#{fields}}"
   end
 
   defp list_experiments do
@@ -682,15 +685,25 @@ end
 
 ## Verify it
 
-Test that the sidebar and new experiment input are present:
+Test the file management flow -- create an experiment and switch between
+files:
 
 ```elixir
-test "sidebar and input exist" do
-  assert_text("#sidebar-title", "Experiments")
-  assert_exists("#new-name")
-  assert_exists("#auto-save")
+test "create experiment and switch back" do
+  type_text("#new-name", "test.ex")
+  submit("#new-name")
+
+  # New experiment appears in the sidebar
+  assert_exists("#test.ex/select")
+
+  # Switch back to the starter experiment
+  click("#hello.ex/select")
+  assert_text("#preview/greeting", "Hello, Plushie!")
 end
 ```
+
+This exercises scoped IDs, the create flow, file switching, and
+compilation -- the core of what this chapter builds.
 
 ## Try it
 
@@ -709,7 +722,11 @@ With the updated pad running:
   -- that comes in [chapter 10](10-subscriptions.md) when we learn about
   subscriptions.
 
-Your pad now manages a library of experiments. Each one is a real `.ex` file
-that you can also open in your code editor or run standalone with
-`mix plushie.gui`. In the next chapter, we will improve the layout so the
-panes are properly sized and the spacing is consistent.
+Your pad now manages a library of experiments. Each one is a plain `.ex`
+file in `priv/experiments/` that you can also open in your code editor.
+In the next chapter, we will improve the layout so the panes are properly
+sized and the spacing is consistent.
+
+---
+
+Next: [Layout](07-layout.md)

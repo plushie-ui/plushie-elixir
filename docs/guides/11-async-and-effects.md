@@ -25,16 +25,17 @@ def update(model, %WidgetEvent{type: :click, id: "fetch"}) do
 end
 ```
 
-The result arrives as a `Plushie.Event.Async` struct in `update/2`:
+The second argument, `:data_loaded`, is a **tag** that identifies this task.
+The result arrives as a `Plushie.Event.AsyncEvent` struct with the same tag:
 
 ```elixir
-alias Plushie.Event.Async
+alias Plushie.Event.AsyncEvent
 
-def update(model, %Async{tag: :data_loaded, result: {:ok, data}}) do
+def update(model, %AsyncEvent{tag: :data_loaded, result: {:ok, data}}) do
   %{model | status: :done, data: data}
 end
 
-def update(model, %Async{tag: :data_loaded, result: {:error, reason}}) do
+def update(model, %AsyncEvent{tag: :data_loaded, result: {:error, reason}}) do
   %{model | status: :error, error: inspect(reason)}
 end
 ```
@@ -46,7 +47,7 @@ A few things to know about async:
 - **Results are nonce-checked.** If a task is killed and its result arrives
   late, the runtime discards it silently.
 - **The function runs in a linked Task.** Exceptions in the function become
-  `{:error, reason}` results.
+  `{:error, reason}` results, where `reason` is the exception struct.
 
 ## Platform effects
 
@@ -56,60 +57,63 @@ file dialogs, clipboard access, and notifications. Unlike async commands
 
 ### File dialogs
 
+Every effect takes an atom tag as its first argument. The tag identifies the
+effect in result matching -- no need to store request IDs in your model.
+
 ```elixir
-alias Plushie.Effects
+alias Plushie.Effect
 
 def update(model, %WidgetEvent{type: :click, id: "import"}) do
-  {model, Effects.file_open(title: "Import Experiment", filters: [{"Elixir", "*.ex"}])}
+  {model, Effect.file_open(:import, title: "Import Experiment", filters: [{"Elixir", "*.ex"}])}
 end
 ```
 
-The result arrives as a `Plushie.Event.Effect` struct:
+The result arrives as a `Plushie.Event.EffectEvent` struct. Match on the tag:
 
 ```elixir
-alias Plushie.Event.Effect
+alias Plushie.Event.EffectEvent
 
-def update(model, %Effect{result: {:ok, %{path: path}}}) do
+def update(model, %EffectEvent{tag: :import, result: {:ok, %{path: path}}}) do
   source = File.read!(path)
   # ... load the experiment
 end
 
-def update(model, %Effect{result: :cancelled}) do
+def update(model, %EffectEvent{tag: :import, result: :cancelled}) do
   model  # user closed the dialog
 end
 
-def update(model, %Effect{result: {:error, reason}}) do
+def update(model, %EffectEvent{tag: :import, result: {:error, reason}}) do
   %{model | error: inspect(reason)}
 end
 ```
 
 Available file dialogs:
 
-- `Effects.file_open/1` -- single file selection
-- `Effects.file_open_multiple/1` -- multiple file selection
-- `Effects.file_save/1` -- save dialog
-- `Effects.directory_select/1` -- directory selection
-- `Effects.directory_select_multiple/1` -- multiple directories
+- `Effect.file_open/2` -- single file selection
+- `Effect.file_open_multiple/2` -- multiple file selection
+- `Effect.file_save/2` -- save dialog
+- `Effect.directory_select/2` -- directory selection
+- `Effect.directory_select_multiple/2` -- multiple directories
 
 ### Clipboard
 
 ```elixir
 # Copy text to clipboard
-{model, Effects.clipboard_write(model.source)}
+{model, Effect.clipboard_write(:copy, model.source)}
 
 # Read from clipboard
-{model, Effects.clipboard_read()}
-# Result: %Effect{result: {:ok, %{text: content}}}
+{model, Effect.clipboard_read(:paste)}
+# Result: %EffectEvent{tag: :paste, result: {:ok, %{text: content}}}
 ```
 
-Also available: `clipboard_read_html/0`, `clipboard_write_html/2`,
-`clipboard_clear/0`. On Linux, `clipboard_read_primary/0` and
-`clipboard_write_primary/1` access the middle-click selection buffer.
+Also available: `clipboard_read_html/1`, `clipboard_write_html/3`,
+`clipboard_clear/1`. On Linux, `clipboard_read_primary/1` and
+`clipboard_write_primary/2` access the middle-click selection buffer.
 
 ### Notifications
 
 ```elixir
-{model, Effects.notification("Exported", "Experiment saved to #{path}")}
+{model, Effect.notification(:exported, "Exported", "Experiment saved to #{path}")}
 ```
 
 Options include `:icon`, `:timeout`, and `:urgency` (`:low`, `:normal`,
@@ -135,27 +139,32 @@ row padding: {4, 8}, spacing: 8 do
 end
 ```
 
-Handle the events:
+Handle the events. Each effect gets a distinct tag, so matching the
+result is straightforward:
 
 ```elixir
 def update(model, %WidgetEvent{type: :click, id: "import"}) do
-  {model, Effects.file_open(title: "Import Experiment")}
+  {model, Effect.file_open(:import, title: "Import Experiment")}
 end
 
 def update(model, %WidgetEvent{type: :click, id: "export"}) do
-  {model, Effects.file_save(title: "Export Experiment")}
+  {model, Effect.file_save(:export, title: "Export Experiment")}
 end
 
-def update(model, %Effect{result: {:ok, %{path: path}}}) do
-  # Could be import or export -- check context
-  handle_effect_result(model, path)
+def update(model, %EffectEvent{tag: :import, result: {:ok, %{path: path}}}) do
+  source = File.read!(path)
+  %{model | source: source}
+end
+
+def update(model, %EffectEvent{tag: :export, result: {:ok, %{path: path}}}) do
+  File.write!(path, model.source)
+  model
+end
+
+def update(model, %EffectEvent{tag: tag, result: :cancelled}) when tag in [:import, :export] do
+  model
 end
 ```
-
-To distinguish import from export results, you can track the pending
-operation in the model, or use `Plushie.Command.batch/1` to pair the effect
-with a state update. See the [Commands reference](../reference/commands.md)
-for the request ID correlation pattern.
 
 ### Applying it: copy code
 
@@ -164,7 +173,7 @@ clipboard:
 
 ```elixir
 def update(model, %WidgetEvent{type: :click, id: "copy"}) do
-  {model, Effects.clipboard_write(model.source)}
+  {model, Effect.clipboard_write(:copy, model.source)}
 end
 ```
 
@@ -181,8 +190,8 @@ cmd = Command.stream(fn emit ->
 end, :csv_import)
 ```
 
-Each `emit.()` call delivers a `Plushie.Event.Stream` struct. The final
-return value arrives as a `Plushie.Event.Async` struct, same as regular async.
+Each `emit.()` call delivers a `Plushie.Event.StreamEvent` struct. The final
+return value arrives as a `Plushie.Event.AsyncEvent` struct, same as regular async.
 
 To cancel a running async or stream:
 
@@ -204,8 +213,8 @@ Combine multiple commands from a single update:
 
 ```elixir
 {model, Command.batch([
-  Effects.clipboard_write(model.source),
-  Effects.notification("Copied", "Source copied to clipboard"),
+  Effect.clipboard_write(:copy, model.source),
+  Effect.notification(:copied, "Copied", "Source copied to clipboard"),
   Command.focus("editor")
 ])}
 ```
@@ -300,21 +309,43 @@ returns to the preview pane.
 Always handle both success and failure for async and effects:
 
 ```elixir
-def update(model, %Async{tag: :export, result: {:ok, _}}) do
+def update(model, %AsyncEvent{tag: :export, result: {:ok, _}}) do
   %{model | status: "Exported"}
 end
 
-def update(model, %Async{tag: :export, result: {:error, reason}}) do
+def update(model, %AsyncEvent{tag: :export, result: {:error, reason}}) do
   %{model | error: "Export failed: #{inspect(reason)}"}
 end
 
-def update(model, %Effect{result: :cancelled}) do
+def update(model, %EffectEvent{tag: _tag, result: :cancelled}) do
   model  # user cancelled the dialog -- not an error
 end
 ```
 
 The `:cancelled` result is distinct from `{:error, reason}`. A user
 cancelling a file dialog is expected behaviour, not a failure.
+
+## Verify it
+
+Effect stubs let you control what the renderer returns for platform
+operations. Register a stub before triggering the effect, and the renderer
+responds with your stub instead of executing the real operation:
+
+```elixir
+test "import loads experiment from file" do
+  register_effect_stub("file_open", {:ok, %{path: "/tmp/test.ex"}})
+  click("#import")
+  # The stub responds with the path -- verify the source was loaded
+  assert model().source != ""
+end
+
+test "detach button opens second window" do
+  click("#detach")
+  assert model().detached == true
+end
+```
+
+The full effect stubbing API is covered in [chapter 15](15-testing.md).
 
 ## Try it
 
@@ -331,3 +362,7 @@ Write experiments to try these concepts:
   from the view.
 
 In the next chapter, we will explore the canvas system for custom 2D drawing.
+
+---
+
+Next: [Canvas](12-canvas.md)

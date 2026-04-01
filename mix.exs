@@ -54,7 +54,7 @@ defmodule Plushie.MixProject do
         "docs/guides/13-custom-widgets.md",
         "docs/guides/14-state-management.md",
         "docs/guides/15-testing.md",
-        "docs/guides/16-tooling-and-deployment.md",
+        "docs/guides/16-shared-state.md",
         # Reference (alphabetical, lookup by topic)
         "docs/reference/accessibility.md",
         "docs/reference/animation.md",

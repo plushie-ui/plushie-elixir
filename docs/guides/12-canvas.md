@@ -11,39 +11,15 @@ a styled, interactive canvas widget that replaces the plain `button("save")`
 in the pad. Along the way we will cover shapes, interactive groups, style
 overrides, and how canvas composes with the rest of the widget tree.
 
-## Canvas do-blocks
-
-Canvas blocks are the one exception to the "three equivalent DSL forms"
-rule from [chapter 3](03-your-first-app.md). Inside a canvas block, you
-write layers and shapes, not children and inline options. The `text`,
-`image`, and `svg` functions resolve to their canvas shape variants (not
-the widget variants) inside canvas and layer blocks. The compiler validates
-this at compile time.
-
-Canvas do-blocks also support **inline option declarations** -- bare
-calls like `width`, `height`, and `background` inside the do-block
-set canvas-level props without needing keyword arguments on the
-opening line:
-
-```elixir
-canvas "chart" do
-  width :fill
-  height 200
-
-  layer "data" do
-    rect(0, 0, 100, 50, fill: "#3b82f6")
-  end
-end
-```
-
-This is equivalent to `canvas "chart", width: :fill, height: 200 do ...`.
-
 ## Shapes
 
 All shapes are plain function calls that return typed structs. They live
-inside `layer` blocks within a canvas. Variables assigned in one line of
-a layer or group block are visible in subsequent lines -- standard
-Elixir scoping rules apply:
+inside `layer` blocks within a canvas. Note that `text`, `image`, and `svg`
+automatically resolve to their canvas shape variants inside canvas blocks --
+the compiler handles this, so you use the same names without qualification.
+
+Variables assigned in one line of a layer or group block are visible in
+subsequent lines -- standard Elixir scoping rules apply:
 
 ```elixir
 canvas "demo", width: 200, height: 100 do
@@ -117,6 +93,32 @@ See the [Canvas reference](../reference/canvas.md) for the full list of
 path commands (`bezier_to`, `quadratic_to`, `arc`, `arc_to`, `ellipse`,
 `rounded_rect`).
 
+## SVG and images
+
+For complex visuals, you can embed SVG content directly in a canvas layer.
+Design your icons, illustrations, or controls in a vector editor (Figma,
+Inkscape, Illustrator), export to SVG, and render them at any position and
+size:
+
+```elixir
+layer "icons" do
+  svg(File.read!("priv/icons/save.svg"), 10, 8, 20, 20)
+end
+```
+
+The first argument is the SVG source string. Combined with interactive
+groups, this lets you build fully custom controls from externally designed
+assets:
+
+```elixir
+group "save", on_click: true, cursor: :pointer do
+  svg(File.read!("priv/icons/save.svg"), 0, 0, 36, 36)
+end
+```
+
+`image/5` works the same way for raster images (PNG, JPEG). SVG is
+generally preferred for UI elements because it scales without pixelation.
+
 ## Interactive groups
 
 Groups become interactive when you add event props. This is where canvas
@@ -153,7 +155,11 @@ the properties you specify.
 
 ### Accessibility
 
-Interactive groups should have accessibility annotations:
+Built-in widgets like `button` and `text_input` have accessibility roles
+and labels built in -- a button announces itself as a button automatically.
+Canvas is a raw drawing surface, so the renderer has no way to know that
+a group of shapes is meant to be a "button." You tell it with `a11y`
+annotations:
 
 ```elixir
 group "save-btn",
@@ -167,6 +173,8 @@ end
 
 `focusable: true` allows keyboard navigation (Tab to focus, Space/Enter to
 activate). The `a11y` map provides the role and label for screen readers.
+See the [Accessibility reference](../reference/accessibility.md) for the
+full set of available annotations.
 
 ## Building the save button
 
@@ -323,6 +331,25 @@ end
 Mix canvas and regular widgets freely. Use canvas when you need custom
 visuals; use widgets for standard controls.
 
+## Verify it
+
+Test the canvas save button, including its accessibility annotations:
+
+```elixir
+test "canvas save button works and has correct a11y" do
+  click("#save-canvas/save")
+  assert_text("#preview/greeting", "Hello, Plushie!")
+
+  assert_role("#save-canvas/save", "button")
+  assert_a11y("#save-canvas/save", %{label: "Save experiment"})
+end
+```
+
+This exercises the canvas click event, verifies compilation still works,
+and confirms the accessibility annotations are present on the canvas
+element -- something that built-in widgets provide automatically but
+canvas elements need explicitly.
+
 ## Try it
 
 Write canvas experiments in your pad:
@@ -341,3 +368,7 @@ catalog, all path commands, and full interactive group props.
 
 In the next chapter, we will extract reusable components from the pad as
 custom widgets.
+
+---
+
+Next: [Custom Widgets](13-custom-widgets.md)

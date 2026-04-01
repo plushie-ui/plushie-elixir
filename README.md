@@ -7,7 +7,7 @@ Python, Ruby, and TypeScript. This is the Elixir SDK.
 
 Write your entire application in Elixir -- state, events, UI -- and get
 native windows on Linux, macOS, and Windows. Rendering is powered by
-[iced](https://github.com/iced-rs/iced), a cross-platform GUI toolkit
+[Iced](https://github.com/iced-rs/iced), a cross-platform GUI toolkit
 for Rust, which Plushie drives as a precompiled binary behind the scenes.
 
 <!-- test: readme_counter_init_test, readme_counter_increment_test, readme_counter_decrement_test, readme_counter_unknown_event_test, readme_counter_view_structure_test, readme_counter_view_after_increment_test -- keep this code block in sync with the test -->
@@ -157,7 +157,7 @@ backend details, and CI configuration.
 ## How it works
 
 Under the hood, a renderer built on
-[iced](https://github.com/iced-rs/iced) handles window drawing and
+[Iced](https://github.com/iced-rs/iced) handles window drawing and
 platform integration. Your Elixir code sends widget trees to the
 renderer over stdin; the renderer draws native windows and sends
 user events back over stdout.

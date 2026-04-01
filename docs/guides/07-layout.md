@@ -130,33 +130,6 @@ container "icon", width: 48, height: 48 do
 end
 ```
 
-### Applying it: pad pane sizing
-
-Our pad has three horizontal areas: sidebar, editor, and preview. We want
-the sidebar to have a fixed width and the editor and preview to share the
-remaining space equally:
-
-```elixir
-row width: :fill, height: :fill do
-  # Fixed-width sidebar
-  file_list(model)  # file_list sets width: 200 internally
-
-  # Editor and preview share remaining space
-  text_editor "editor", model.source do
-    width {:fill_portion, 1}
-    height :fill
-    # ...
-  end
-
-  container "preview", width: {:fill_portion, 1}, height: :fill do
-    # ...
-  end
-end
-```
-
-The sidebar takes 200 pixels. The editor and preview each get half of what
-remains. Resize the window and they reflow proportionally.
-
 ## Spacing and padding
 
 **Spacing** is the gap between sibling children inside a container:
@@ -191,38 +164,6 @@ column do
 end
 ```
 
-### Applying it: consistent pad spacing
-
-Add consistent spacing throughout the pad:
-
-```elixir
-def view(model) do
-  window "main", title: "Plushie Pad" do
-    column width: :fill, height: :fill, spacing: 0 do
-      # Main editing area
-      row width: :fill, height: :fill, spacing: 0 do
-        file_list(model)
-        editor_pane(model)
-        preview_pane(model)
-      end
-
-      # Toolbar
-      row padding: {4, 8}, spacing: 8 do
-        button("save", "Save")
-        checkbox("auto-save", model.auto_save)
-        text("auto-label", "Auto-save")
-      end
-
-      # Event log
-      event_log(model)
-    end
-  end
-end
-```
-
-Setting `spacing: 0` on the outer column and row eliminates unwanted gaps
-between the main area, toolbar, and event log. Each section manages its own
-internal spacing.
 
 ## Alignment
 
@@ -232,8 +173,6 @@ container:
 | `align_x` values | `align_y` values |
 |---|---|
 | `:left` (default), `:center`, `:right` | `:top` (default), `:center`, `:bottom` |
-
-`:start` and `:end` are aliases for `:left`/`:top` and `:right`/`:bottom`.
 
 ```elixir
 container width: :fill, height: 200, align_x: :center, align_y: :center do
@@ -260,8 +199,7 @@ right now, but they are good to know about:
   or fluid mode (`fluid: 200`) that auto-wraps.
 - **pin** -- positions a child at exact `(x, y)` pixel coordinates.
 - **floating** -- applies translate and scale transforms to a child.
-- **responsive** -- emits `:sensor_resize` events when its size changes,
-  enabling adaptive layouts.
+- **responsive** -- adapts layout based on available size.
 - **space** -- explicit empty space with configurable width and height.
 
 See the [Built-in Widgets reference](../reference/built-in-widgets.md) for
@@ -316,6 +254,28 @@ The toolbar uses `{4, 8}` padding (vertical, horizontal) for a compact look.
 The event log has a smaller fixed height and tighter text. Each section
 manages its own internal spacing.
 
+The update logic is unchanged from chapter 6 -- only the view and helper
+functions changed.
+
+## Verify it
+
+Test that the three-pane layout renders with the expected structure:
+
+```elixir
+test "three-pane layout with sidebar, editor, and preview" do
+  assert_exists("#file-scroll")
+  assert_exists("#editor")
+
+  # Typing in the editor still works after layout changes
+  type_text("#editor", ~s[text("test", "hello")])
+  click("#save")
+  assert_text("#preview/test", "hello")
+end
+```
+
+This verifies the layout didn't break the editing flow -- the editor,
+save button, and preview pane all still work together.
+
 ## Try it
 
 Write a layout experiment in your pad:
@@ -331,3 +291,7 @@ Write a layout experiment in your pad:
 
 In the next chapter, we will style the pad with themes, colours, and
 per-widget styling to make it look polished.
+
+---
+
+Next: [Styling](08-styling.md)

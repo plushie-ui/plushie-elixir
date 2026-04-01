@@ -82,8 +82,8 @@ See `Plushie.Test.Helpers` for full specs.
 | `canvas_press(selector, x, y, opts)` | canvas | `:canvas_press` |
 | `canvas_release(selector, x, y, opts)` | canvas | `:canvas_release` |
 | `canvas_move(selector, x, y, opts)` | canvas | `:canvas_move` |
-| `press(key)` | -- | `Plushie.Event.Key` |
-| `release(key)` | -- | `Plushie.Event.Key` |
+| `press(key)` | -- | `Plushie.Event.KeyEvent` |
+| `release(key)` | -- | `Plushie.Event.KeyEvent` |
 | `type_key(key)` | -- | press + release |
 | `move_to(x, y)` | -- | cursor position |
 

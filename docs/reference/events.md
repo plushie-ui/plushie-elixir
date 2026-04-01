@@ -22,17 +22,17 @@ Use the union type when writing generic event-handling helpers. For
 | Category           | Struct                                          | Source                                   |
 | ------------------ | ----------------------------------------------- | ---------------------------------------- |
 | Widget interaction | `Plushie.Event.WidgetEvent`                     | Renderer (widget callbacks)              |
-| Keyboard           | `Plushie.Event.Key`                             | Subscription (key press/release)         |
-| Modifier state     | `Plushie.Event.Modifiers`                       | Subscription (modifier change)           |
-| Mouse              | `Plushie.Event.Mouse`                           | Subscription (global mouse)              |
-| Touch              | `Plushie.Event.Touch`                           | Subscription (touchscreen)               |
-| IME                | `Plushie.Event.Ime`                             | Subscription (input method editor)       |
+| Keyboard           | `Plushie.Event.KeyEvent`                        | Subscription (key press/release)         |
+| Modifier state     | `Plushie.Event.ModifiersEvent`                  | Subscription (modifier change)           |
+| Mouse              | `Plushie.Event.MouseEvent`                      | Subscription (global mouse)              |
+| Touch              | `Plushie.Event.TouchEvent`                      | Subscription (touchscreen)               |
+| IME                | `Plushie.Event.ImeEvent`                        | Subscription (input method editor)       |
 | Window lifecycle   | `Plushie.Event.WindowEvent`                     | Renderer (open, close, resize, etc.)     |
 | System             | `Plushie.Event.SystemEvent`                     | Renderer (queries, theme, diagnostics)   |
-| Timer              | `Plushie.Event.Timer`                           | Subscription (`every/2`)                 |
-| Async result       | `Plushie.Event.Async`                           | Command (`async/2`)                      |
-| Stream value       | `Plushie.Event.Stream`                          | Command (`stream/2`)                     |
-| Effect response    | `Plushie.Event.Effect`                          | Renderer (file dialogs, clipboard, etc.) |
+| Timer              | `Plushie.Event.TimerEvent`                      | Subscription (`every/2`)                 |
+| Async result       | `Plushie.Event.AsyncEvent`                      | Command (`async/2`)                      |
+| Stream value       | `Plushie.Event.StreamEvent`                     | Command (`stream/2`)                     |
+| Effect response    | `Plushie.Event.EffectEvent`                     | Renderer (file dialogs, clipboard, etc.) |
 | Widget cmd error   | `Plushie.Event.WidgetCommandError`              | Renderer (native widget command failure) |
 
 ## WidgetEvent built-in types
@@ -156,7 +156,7 @@ inputs, sliders, canvas, mouse areas, sensors, panes, and custom widgets.
 | `data`      | `map() \| nil`               | Structured payload (atom keys)       |
 | `window_id` | `String.t() \| nil`          | Source window                        |
 
-### `Plushie.Event.Key`
+### `Plushie.Event.KeyEvent`
 
 Keyboard press and release events from subscriptions.
 
@@ -173,7 +173,7 @@ Keyboard press and release events from subscriptions.
 | `captured`     | `boolean()`                       | Whether a subscription captured  |
 | `window_id`    | `String.t() \| nil`              | Source window                    |
 
-### `Plushie.Event.Modifiers`
+### `Plushie.Event.ModifiersEvent`
 
 Modifier state change event. Fires when the set of held modifiers changes.
 
@@ -183,7 +183,7 @@ Modifier state change event. Fires when the set of held modifiers changes.
 | `captured`  | `boolean()`                | Subscription captured     |
 | `window_id` | `String.t() \| nil`       | Source window             |
 
-### `Plushie.Event.Mouse`
+### `Plushie.Event.MouseEvent`
 
 Global mouse events from subscriptions.
 
@@ -197,7 +197,7 @@ Global mouse events from subscriptions.
 | `captured`  | `boolean()`                                         | Subscription captured|
 | `window_id` | `String.t() \| nil`                                | Source window        |
 
-### `Plushie.Event.Touch`
+### `Plushie.Event.TouchEvent`
 
 Touchscreen events from subscriptions.
 
@@ -209,7 +209,7 @@ Touchscreen events from subscriptions.
 | `captured`  | `boolean()`                            | Subscription captured      |
 | `window_id` | `String.t() \| nil`                   | Source window              |
 
-### `Plushie.Event.Ime`
+### `Plushie.Event.ImeEvent`
 
 Input Method Editor events from subscriptions. Lifecycle:
 `:opened` -> `:preedit` (repeated) -> `:commit` -> `:closed`.
@@ -256,7 +256,7 @@ System event types: `:system_info`, `:system_theme`, `:animation_frame`,
 `:theme_changed`, `:all_windows_closed`, `:image_list`, `:tree_hash`,
 `:find_focused`, `:diagnostic`, `:announce`, `:error`.
 
-### `Plushie.Event.Timer`
+### `Plushie.Event.TimerEvent`
 
 Timer tick events from `Plushie.Subscription.every/2`.
 
@@ -265,7 +265,7 @@ Timer tick events from `Plushie.Subscription.every/2`.
 | `tag`       | `atom()`     | User-defined tag from subscription |
 | `timestamp` | `integer()`  | Monotonic timestamp in ms          |
 
-### `Plushie.Event.Async`
+### `Plushie.Event.AsyncEvent`
 
 Results from `Plushie.Command.async/2` tasks.
 
@@ -274,7 +274,7 @@ Results from `Plushie.Command.async/2` tasks.
 | `tag`    | `atom()`                          | User-defined tag   |
 | `result` | `{:ok, term()} \| {:error, term()}` | Task result     |
 
-### `Plushie.Event.Stream`
+### `Plushie.Event.StreamEvent`
 
 Intermediate values from `Plushie.Command.stream/2` tasks.
 
@@ -283,14 +283,14 @@ Intermediate values from `Plushie.Command.stream/2` tasks.
 | `tag`   | `atom()`  | User-defined tag        |
 | `value` | `term()`  | Emitted stream value    |
 
-### `Plushie.Event.Effect`
+### `Plushie.Event.EffectEvent`
 
 Platform effect responses (file dialogs, clipboard, notifications).
 
-| Field        | Type                                          | Description        |
-| ------------ | --------------------------------------------- | ------------------ |
-| `request_id` | `String.t()`                                 | Correlation ID     |
-| `result`     | `{:ok, term()} \| :cancelled \| {:error, term()}` | Effect result |
+| Field    | Type                                          | Description        |
+| -------- | --------------------------------------------- | ------------------ |
+| `tag`    | `atom()`                                      | User-defined tag   |
+| `result` | `{:ok, term()} \| :cancelled \| {:error, term()}` | Effect result |
 
 The `:cancelled` result is a normal outcome (user dismissed a dialog),
 not an error.
@@ -347,11 +347,11 @@ end
 ### Match key with modifiers
 
 ```elixir
-def update(model, %Key{type: :press, key: "s", modifiers: %{command: true}}) do
+def update(model, %KeyEvent{type: :press, key: "s", modifiers: %{command: true}}) do
   save(model)
 end
 
-def update(model, %Key{type: :press, key: :escape}) do
+def update(model, %KeyEvent{type: :press, key: :escape}) do
   close_dialog(model)
 end
 ```
@@ -367,11 +367,11 @@ end
 ### Match async result
 
 ```elixir
-def update(model, %Async{tag: :fetch, result: {:ok, data}}) do
+def update(model, %AsyncEvent{tag: :fetch, result: {:ok, data}}) do
   %{model | items: data, loading: false}
 end
 
-def update(model, %Async{tag: :fetch, result: {:error, reason}}) do
+def update(model, %AsyncEvent{tag: :fetch, result: {:error, reason}}) do
   %{model | error: reason, loading: false}
 end
 ```
@@ -379,7 +379,7 @@ end
 ### Match stream values
 
 ```elixir
-def update(model, %Stream{tag: :download, value: %{progress: pct}}) do
+def update(model, %StreamEvent{tag: :download, value: %{progress: pct}}) do
   %{model | progress: pct}
 end
 ```
@@ -387,11 +387,11 @@ end
 ### Match effect result
 
 ```elixir
-def update(model, %Effect{request_id: "open-file", result: {:ok, %{path: path}}}) do
+def update(model, %EffectEvent{tag: :open_file, result: {:ok, %{path: path}}}) do
   load_file(model, path)
 end
 
-def update(model, %Effect{request_id: "open-file", result: :cancelled}) do
+def update(model, %EffectEvent{tag: :open_file, result: :cancelled}) do
   model
 end
 ```
@@ -399,7 +399,7 @@ end
 ### Match timer tick
 
 ```elixir
-def update(model, %Timer{tag: :tick}) do
+def update(model, %TimerEvent{tag: :tick}) do
   %{model | ticks: model.ticks + 1}
 end
 ```

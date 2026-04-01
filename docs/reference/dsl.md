@@ -136,9 +136,12 @@ end
 
 # Struct builder (in helpers, tests, programmatic construction)
 Column.new("col", spacing: 8)
-|> Column.push(Text.new("hello", content: "Hello") |> Text.build())
-|> Column.build()
+|> Column.push(Text.new("hello", content: "Hello"))
 ```
+
+Widget structs can be returned directly from `view/1` or passed as
+children -- the runtime normalizes them automatically. No explicit
+`build/1` call is needed.
 
 Use macros in view functions for readability. Use struct builders in test
 helpers, programmatic construction, and code that generates widgets
@@ -149,7 +152,7 @@ Each widget module provides:
 - `new/2` -- create struct from ID and options
 - `with_options/2` -- apply keyword options via setters
 - Per-prop setter functions (e.g., `Column.spacing/2`, `Text.size/2`)
-- `build/1` -- convert struct to a `ui_node()` map via `WidgetProtocol`
+- `push/2`, `extend/2` -- add children (container widgets)
 
 ## See also
 

@@ -32,11 +32,8 @@ window "main", title: "Plushie Pad", theme: :system do
 end
 ```
 
-### Applying it: theme the pad
-
-Pick a theme and set it on the pad's window. Try a few different ones to see
-how the entire UI adapts -- buttons, text inputs, scrollbars, and the editor
-all respond to the active theme.
+Try a few themes on the pad's window to see how the entire UI adapts --
+buttons, text inputs, scrollbars, and the editor all respond.
 
 ## Custom themes
 
@@ -94,11 +91,8 @@ This is useful for dark sidebars in a light app, brand-specific sections, or
 any case where part of the UI needs a different palette. No prop threading
 needed -- `themer` changes the theme context for everything inside it.
 
-### Applying it: themed preview pane
-
-Give the preview pane a different theme from the rest of the pad. This makes
-it visually distinct and lets you see how your experiments look in different
-themes:
+You can give the preview pane a different theme from the rest of the pad
+using `themer`, so experiments render in a distinct palette:
 
 ```elixir
 themer "preview-theme", theme: :light do
@@ -166,26 +160,6 @@ button("save", "Save", style: :primary)
 button("cancel", "Cancel", style: :text)
 ```
 
-### Applying it: styled pad
-
-Give the save button a primary style and highlight the active file in the
-sidebar:
-
-```elixir
-button("save", "Save", style: :primary)
-
-# In file_list, for the select button:
-style: if(file == model.active_file, do: :primary, else: :text)
-```
-
-Style error messages with a danger colour:
-
-```elixir
-if model.error do
-  text("error", model.error, color: :red)
-end
-```
-
 ## Borders and shadows
 
 `Plushie.Type.Border` and `Plushie.Type.Shadow` are struct types used
@@ -217,7 +191,7 @@ Border supports per-corner radius:
 Border.new()
 |> Border.width(1)
 |> Border.color("#ccc")
-|> Border.radius(Border.radius(8, 8, 0, 0))  # rounded top, square bottom
+|> Border.rounded(Border.radius(8, 8, 0, 0))  # rounded top, square bottom
 ```
 
 These types also work in do-block syntax:
@@ -238,12 +212,6 @@ container "card" do
   text("content", "Card content")
 end
 ```
-
-### Applying it: pad panel borders
-
-Add subtle borders between the sidebar, editor, and preview panes to create
-visual separation. A single-pixel right border on the sidebar and a left
-border on the preview are enough.
 
 ## Design tokens
 
@@ -301,12 +269,6 @@ This is just Elixir module design -- no Plushie magic. But it keeps spacing,
 sizes, and styles consistent across your app. As the pad grows, a design
 module prevents the gradual drift toward inconsistent values.
 
-### Applying it: extract pad styles
-
-Move the pad's spacing values, font sizes, and reusable styles into a
-`PlushiePad.Design` module. Replace hardcoded numbers in the view with calls
-to design functions.
-
 ## Fonts
 
 Plushie supports three font forms:
@@ -328,12 +290,6 @@ end
 
 Fonts loaded in `settings/0` are available by family name in any widget's
 `font:` prop.
-
-### Applying it: pad fonts
-
-Use `:monospace` for the editor and event log. Use `:default` (or a custom
-font) for the sidebar labels. The `font:` prop is available on `text`,
-`text_editor`, and `text_input`.
 
 ## Applying it: the styled pad
 
@@ -382,6 +338,21 @@ The dark theme transforms the entire pad. The primary save button stands
 out. The sidebar border creates visual separation. Error text uses an
 explicit red colour for contrast. Small adjustments, dramatic result.
 
+## Verify it
+
+Test that the styled pad still works end-to-end:
+
+```elixir
+test "styled pad compiles and previews correctly" do
+  click("#save")
+  assert_text("#preview/greeting", "Hello, Plushie!")
+  assert_not_exists("#error")
+end
+```
+
+Styling is visual, but this confirms the theme, borders, and style changes
+did not break the compilation and preview flow.
+
 ## Try it
 
 Write a styling experiment in your pad:
@@ -396,5 +367,9 @@ Write a styling experiment in your pad:
 - Build a design token module for your experiments with a spacing scale and
   reusable styles.
 
-In the next chapter, we will add keyboard shortcuts and an auto-save timer
-to the pad using subscriptions.
+In the next chapter, we will add animations and transitions to make the pad
+feel alive.
+
+---
+
+Next: [Animation and Transitions](09-animation.md)

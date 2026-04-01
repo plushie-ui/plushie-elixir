@@ -342,7 +342,11 @@ defmodule Plushie.Runtime do
     send_settings(state)
 
     # 2-4. Render initial tree and push snapshot (old_tree is nil -> full snapshot).
-    tree = render_and_sync(state.app, state.model, state.bridge, nil)
+    tree =
+      case render_and_sync(state.app, state.model, state.bridge, nil) do
+        {:ok, tree} -> tree
+        :view_error -> nil
+      end
 
     # 5. Sync widget handler registry so widgets are available for
     # event interception from the very first interaction.
@@ -798,15 +802,18 @@ defmodule Plushie.Runtime do
           # Widget captured the timer (state update, re-render only).
           state = %{state | widget_handlers: new_registry}
 
-          new_tree =
-            render_and_sync(
-              state.app,
-              state.model,
-              state.bridge,
-              state.tree,
-              state.widget_handlers,
-              state.dev_overlay
-            )
+          {new_tree, state} =
+            case render_and_sync(
+                   state.app,
+                   state.model,
+                   state.bridge,
+                   state.tree,
+                   state.widget_handlers,
+                   state.dev_overlay
+                 ) do
+              {:ok, tree} -> {tree, %{state | consecutive_view_errors: 0}}
+              :view_error -> {state.tree, track_view_error(state)}
+            end
 
           widget_handlers =
             Plushie.Runtime.WidgetHandlers.derive_registry(new_tree)
@@ -850,15 +857,18 @@ defmodule Plushie.Runtime do
   def handle_info(:force_rerender, state) do
     Logger.info("plushie runtime: force re-render (code reload)")
 
-    new_tree =
-      render_and_sync(
-        state.app,
-        state.model,
-        state.bridge,
-        state.tree,
-        state.widget_handlers,
-        state.dev_overlay
-      )
+    {new_tree, state} =
+      case render_and_sync(
+             state.app,
+             state.model,
+             state.bridge,
+             state.tree,
+             state.widget_handlers,
+             state.dev_overlay
+           ) do
+        {:ok, tree} -> {tree, %{state | consecutive_view_errors: 0}}
+        :view_error -> {state.tree, track_view_error(state)}
+      end
 
     widget_handlers =
       Plushie.Runtime.WidgetHandlers.derive_registry(new_tree)
@@ -953,15 +963,18 @@ defmodule Plushie.Runtime do
   end
 
   defp dev_rerender(state) do
-    new_tree =
-      render_and_sync(
-        state.app,
-        state.model,
-        state.bridge,
-        state.tree,
-        state.widget_handlers,
-        state.dev_overlay
-      )
+    {new_tree, state} =
+      case render_and_sync(
+             state.app,
+             state.model,
+             state.bridge,
+             state.tree,
+             state.widget_handlers,
+             state.dev_overlay
+           ) do
+        {:ok, tree} -> {tree, %{state | consecutive_view_errors: 0}}
+        :view_error -> {state.tree, track_view_error(state)}
+      end
 
     widget_handlers = Plushie.Runtime.WidgetHandlers.derive_registry(new_tree)
     widget_events = derive_widget_event_registry(new_tree)
@@ -1112,7 +1125,8 @@ defmodule Plushie.Runtime do
   # Renders the view and sends either a full snapshot (first render or after
   # restart) or a patch (incremental diff) to the bridge.
   # Canvas widget state is injected during normalization (inside safe_view).
-  # If view/1 raises, returns old_tree unchanged.
+  # Returns {:ok, new_tree} on success, :view_error on failure (old_tree
+  # is preserved by the caller).
   @spec render_and_sync(
           app :: module(),
           model :: term(),
@@ -1120,7 +1134,7 @@ defmodule Plushie.Runtime do
           old_tree :: map() | nil,
           widget_handlers :: map(),
           dev_overlay :: Plushie.Dev.RebuildingOverlay.t() | nil
-        ) :: map() | nil
+        ) :: {:ok, map()} | :view_error
   defp render_and_sync(app, model, bridge, old_tree, widget_handlers \\ %{}, dev_overlay \\ nil) do
     case safe_view(app, model, widget_handlers) do
       {:ok, new_tree} ->
@@ -1139,11 +1153,10 @@ defmodule Plushie.Runtime do
           end
         end
 
-        new_tree
+        {:ok, new_tree}
 
       :error ->
-        # Return old tree unchanged.
-        old_tree
+        :view_error
     end
   end
 
@@ -1526,26 +1539,17 @@ defmodule Plushie.Runtime do
         state = %{state | model: new_model, consecutive_errors: 0}
         state = Commands.execute_commands(commands, state)
 
-        old_tree = state.tree
-
-        new_tree =
-          render_and_sync(
-            app,
-            new_model,
-            bridge,
-            old_tree,
-            state.widget_handlers,
-            state.dev_overlay
-          )
-
-        # render_and_sync returns the exact old_tree reference on view
-        # failure (safe_view :error). Track consecutive failures so
-        # persistent view bugs are surfaced clearly.
-        state =
-          if new_tree === old_tree and old_tree != nil do
-            track_view_error(state)
-          else
-            %{state | consecutive_view_errors: 0}
+        {new_tree, state} =
+          case render_and_sync(
+                 app,
+                 new_model,
+                 bridge,
+                 state.tree,
+                 state.widget_handlers,
+                 state.dev_overlay
+               ) do
+            {:ok, tree} -> {tree, %{state | consecutive_view_errors: 0}}
+            :view_error -> {state.tree, track_view_error(state)}
           end
 
         state = %{state | tree: new_tree}

@@ -21,13 +21,6 @@ ExUnit.start()
 session pool, sets up ExUnit exclusions for backend-specific tests, and
 registers cleanup hooks.
 
-The renderer binary must be built before running tests:
-
-```bash
-mix plushie.build
-mix test
-```
-
 Tests run against the mock backend by default. This is the fastest option --
 it uses the real binary with the real wire protocol, but skips GPU rendering.
 
@@ -161,7 +154,7 @@ defmodule PlushiePad.PadTest do
     type_text("#editor", """
     defmodule Pad.Experiments.Test do
       import Plushie.UI
-      def render do
+      def view do
         text("t", "Test passed")
       end
     end
@@ -202,13 +195,12 @@ register_effect_stub(:file_open, {:ok, %{path: "/tmp/test.ex"}})
 click("#import")
 # The effect stub returns immediately with the configured response
 assert model().active_file != nil
-
-# Clean up
-unregister_effect_stub(:file_open)
 ```
 
-Effect stubs are scoped to the test process and cleaned up automatically
-on teardown.
+Effect stubs register by **kind** (the operation type atom like
+`:file_open`), not by tag. This means the stub applies to all effects of
+that kind regardless of which tag they use. Stubs are scoped to the test
+process and cleaned up automatically on teardown.
 
 ### Applying it: test import/export
 
@@ -249,7 +241,7 @@ details, CI configuration, and the full helper API.
 
 ## Screenshots and tree hashes
 
-For visual regression testing:
+For structural and visual regression testing:
 
 ```elixir
 # Capture a structural hash of the UI tree
@@ -341,3 +333,7 @@ instruction set.
 
 In the next chapter, we cover the development workflow: mix tasks, debugging,
 and deployment.
+
+---
+
+Next: [Shared State](16-shared-state.md)

@@ -10,13 +10,13 @@ See `Plushie.Subscription` for the full module API.
 
 | Function | Event delivered | Tag in event? |
 |---|---|---|
-| `Plushie.Subscription.every/2` | `Plushie.Event.Timer` | Yes -- `%Timer{tag: tag}` |
+| `Plushie.Subscription.every/2` | `Plushie.Event.TimerEvent` | Yes -- `%TimerEvent{tag: tag}` |
 
 Timer subscriptions run in the runtime process. The tag you provide is
-embedded in the `%Timer{}` event, so you match on it:
+embedded in the `%TimerEvent{}` event, so you match on it:
 
 ```elixir
-def update(model, %Timer{tag: :auto_save}), do: ...
+def update(model, %TimerEvent{tag: :auto_save}), do: ...
 ```
 
 ## Renderer subscriptions
@@ -27,9 +27,9 @@ in the delivered event.
 
 | Function | Event delivered |
 |---|---|
-| `Plushie.Subscription.on_key_press/1` | `Plushie.Event.Key` |
-| `Plushie.Subscription.on_key_release/1` | `Plushie.Event.Key` |
-| `Plushie.Subscription.on_modifiers_changed/1` | `Plushie.Event.Modifiers` |
+| `Plushie.Subscription.on_key_press/1` | `Plushie.Event.KeyEvent` |
+| `Plushie.Subscription.on_key_release/1` | `Plushie.Event.KeyEvent` |
+| `Plushie.Subscription.on_modifiers_changed/1` | `Plushie.Event.ModifiersEvent` |
 | `Plushie.Subscription.on_window_close/1` | `Plushie.Event.WindowEvent` |
 | `Plushie.Subscription.on_window_event/1` | `Plushie.Event.WindowEvent` |
 | `Plushie.Subscription.on_window_open/1` | `Plushie.Event.WindowEvent` |
@@ -37,11 +37,11 @@ in the delivered event.
 | `Plushie.Subscription.on_window_focus/1` | `Plushie.Event.WindowEvent` |
 | `Plushie.Subscription.on_window_unfocus/1` | `Plushie.Event.WindowEvent` |
 | `Plushie.Subscription.on_window_move/1` | `Plushie.Event.WindowEvent` |
-| `Plushie.Subscription.on_mouse_move/1` | `Plushie.Event.Mouse` |
-| `Plushie.Subscription.on_mouse_button/1` | `Plushie.Event.Mouse` |
-| `Plushie.Subscription.on_mouse_scroll/1` | `Plushie.Event.Mouse` |
-| `Plushie.Subscription.on_touch/1` | `Plushie.Event.Touch` |
-| `Plushie.Subscription.on_ime/1` | `Plushie.Event.Ime` |
+| `Plushie.Subscription.on_mouse_move/1` | `Plushie.Event.MouseEvent` |
+| `Plushie.Subscription.on_mouse_button/1` | `Plushie.Event.MouseEvent` |
+| `Plushie.Subscription.on_mouse_scroll/1` | `Plushie.Event.MouseEvent` |
+| `Plushie.Subscription.on_touch/1` | `Plushie.Event.TouchEvent` |
+| `Plushie.Subscription.on_ime/1` | `Plushie.Event.ImeEvent` |
 | `Plushie.Subscription.on_theme_change/1` | `Plushie.Event.SystemEvent` |
 | `Plushie.Subscription.on_animation_frame/1` | `Plushie.Event.SystemEvent` |
 | `Plushie.Subscription.on_file_drop/1` | `Plushie.Event.WindowEvent` |

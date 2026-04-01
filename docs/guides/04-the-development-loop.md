@@ -10,9 +10,32 @@ useful debugging skill.
 
 ## Hot reload
 
-You set up `config/dev.exs` with `code_reloader: true` in chapter 2. When
-active, Plushie watches your `lib/` directory. Edit any `.ex` file, save it,
-and the running app recompiles in place -- your model state is preserved.
+In chapter 2 you used `--watch` to enable hot reload on a per-run basis.
+Let us make it the default for development. Create a `config/` directory
+with the following files:
+
+```elixir
+# config/config.exs
+import Config
+
+import_config "#{config_env()}.exs"
+```
+
+```elixir
+# config/dev.exs
+import Config
+
+config :plushie, code_reloader: true
+```
+
+You also need stub files for the other environments so the import does
+not fail. Create `config/test.exs` and `config/prod.exs` each containing
+just `import Config`.
+
+With this in place, `mix plushie.gui` enables hot reload automatically
+in dev -- no `--watch` flag needed. Plushie watches your `lib/` directory.
+Edit any `.ex` file, save it, and the running app recompiles in place --
+your model state is preserved.
 
 This is how you develop the pad itself. Change the view, save, see the
 result. You have been using this already if you tried the "Try it" exercises
@@ -30,7 +53,7 @@ and render the result in the preview pane. This requires three steps:
 
 1. **Parse** -- check that the code is valid Elixir syntax
 2. **Compile** -- compile it into a module with macro expansion
-3. **Render** -- call the module's `render/0` function and embed the result
+3. **Render** -- call the module's `view/0` function and embed the result
 
 Here is the helper that does all three:
 
@@ -46,10 +69,10 @@ defp compile_preview(source) do
         Code.put_compiler_option(:ignore_module_conflict, true)
         [{module, _}] = Code.compile_string(source)
 
-        if function_exported?(module, :render, 0) do
-          {:ok, module.render()}
+        if function_exported?(module, :view, 0) do
+          {:ok, module.view()}
         else
-          {:error, "Module must export a render/0 function"}
+          {:error, "Module must export a view/0 function"}
         end
       rescue
         e -> {:error, Exception.message(e)}
@@ -69,7 +92,7 @@ full Elixir compilation pipeline including macro expansion -- so
 normal `.ex` file. We set `ignore_module_conflict` to suppress the warning
 that appears when saving the same experiment twice (redefining the module).
 
-The compiled module's `render/0` function returns a widget tree. Because
+The compiled module's `view/0` function returns a widget tree. Because
 widget structs compose naturally, we can place this tree directly in the
 pad's view.
 
@@ -86,7 +109,7 @@ handler to `update/2`:
 defmodule Pad.Experiments.Hello do
   import Plushie.UI
 
-  def render do
+  def view do
     column padding: 16, spacing: 8 do
       text("greeting", "Hello, Plushie!", size: 24)
       button("btn", "Click Me")
@@ -116,19 +139,19 @@ def update(model, %WidgetEvent{type: :click, id: "save"}) do
 end
 ```
 
-Now when the reader types experiment code in the editor and clicks Save, the
+Now when you type experiment code in the editor and click Save, the
 preview updates with the rendered widgets. Syntax errors, compile errors, and
 runtime errors all show as red text in the preview pane.
 
 ## The experiment format
 
-Experiments are modules with a `render/0` function:
+Experiments are modules with a `view/0` function:
 
 ```elixir
 defmodule Pad.Experiments.Hello do
   import Plushie.UI
 
-  def render do
+  def view do
     column padding: 16, spacing: 8 do
       text("greeting", "Hello, Plushie!", size: 24)
       button("btn", "Click Me")
@@ -137,10 +160,8 @@ defmodule Pad.Experiments.Hello do
 end
 ```
 
-The reader writes real Plushie DSL code. The macros expand during
-compilation. This is the exact same code they would write in a standalone
-app's `view/1` -- the only difference is it is in a `render/0` function
-instead.
+This is the same DSL code you write in an app's `view/1` -- experiments
+just don't have a model, so the function takes no arguments.
 
 ## Inspecting a running app from iex
 
@@ -181,15 +202,15 @@ Here is the full module with compilation wired up:
 defmodule PlushiePad do
   use Plushie.App
 
-  alias Plushie.Event.WidgetEvent
-
   import Plushie.UI
+
+  alias Plushie.Event.WidgetEvent
 
   @starter_code """
   defmodule Pad.Experiments.Hello do
     import Plushie.UI
 
-    def render do
+    def view do
       column padding: 16, spacing: 8 do
         text("greeting", "Hello, Plushie!", size: 24)
         button("btn", "Click Me")
@@ -266,10 +287,10 @@ defmodule PlushiePad do
           Code.put_compiler_option(:ignore_module_conflict, true)
           [{module, _}] = Code.compile_string(source)
 
-          if function_exported?(module, :render, 0) do
-            {:ok, module.render()}
+          if function_exported?(module, :view, 0) do
+            {:ok, module.view()}
           else
-            {:error, "Module must export a render/0 function"}
+            {:error, "Module must export a view/0 function"}
           end
         rescue
           e -> {:error, Exception.message(e)}
@@ -320,3 +341,7 @@ work -- we will use them more in chapter 6.
 
 In the next chapter, we will add an event log to the pad so you can see
 exactly what events widgets produce when you interact with them.
+
+---
+
+Next: [Events](05-events.md)
