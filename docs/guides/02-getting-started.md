@@ -20,7 +20,7 @@ Open `mix.exs` and add `:plushie` to your dependencies:
 ```elixir
 defp deps do
   [
-    {:plushie, "== 0.5.0"}
+    {:plushie, "== 0.6.0"}
   ]
 end
 ```

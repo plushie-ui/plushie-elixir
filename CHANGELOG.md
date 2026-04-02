@@ -4,6 +4,96 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.6.0] - 2026-04-02
+
+### Breaking
+
+- **Unified pointer events.** 14 device/widget-specific event types
+  replaced with 8 generic types: `:press`, `:release`, `:move`,
+  `:scroll`, `:enter`, `:exit`, `:double_click`, `:resize`. All carry
+  `pointer` type (`:mouse`/`:touch`/`:pen`), `modifiers` state, and
+  optional `finger` ID for touch. Removed types: `canvas_press`,
+  `canvas_release`, `canvas_move`, `canvas_scroll`, `mouse_right_press`,
+  `mouse_right_release`, `mouse_middle_press`, `mouse_middle_release`,
+  `mouse_move`, `mouse_scroll`, `mouse_enter`, `mouse_exit`,
+  `mouse_double_click`, `sensor_resize`.
+
+- **Canvas element events unified.** `canvas_element_enter`/`leave`/
+  `focused`/`blurred`/`drag`/`drag_end`/`key_press`/`key_release` and
+  `canvas_element_click` replaced with standard types using scoped IDs.
+  Canvas elements look like regular widgets from the SDK's perspective.
+
+- **`MouseEvent` and `TouchEvent` removed.** Subscription pointer
+  events are now delivered as `WidgetEvent` structs with `id` set to
+  the window ID and `scope` of `[]`.
+
+- **`mouse_area` renamed to `pointer_area`.** The widget, DSL macro,
+  and wire type all use the new name.
+
+- **Window ID in scope chain.** Window IDs are appended to the end of
+  the scope list. Pattern matching with `| _` at the end of scope
+  naturally ignores the window for single-window apps.
+
+- **`:scroll` vs `:scrolled`.** `:scroll` is pointer wheel input (with
+  coordinates and deltas). `:scrolled` is scrollable container viewport
+  state change. Previously both used `:scroll`.
+
+- **`:start`/`:end` alignment aliases removed.** Use `:left`/`:right`/
+  `:top`/`:bottom`/`:center`.
+
+- **Subscription functions renamed.** `on_mouse_move` -> `on_pointer_move`,
+  `on_mouse_button` -> `on_pointer_button`, `on_mouse_scroll` ->
+  `on_pointer_scroll`, `on_touch` -> `on_pointer_touch`.
+
+- **Canvas auto-consumption removed.** Canvas background pointer events
+  now reach `update/2` when opted in via `on_press`/`on_move`/etc.
+
+- **Renderer binary version** bumped to 0.6.0.
+
+### Added
+
+- **Device awareness on pointer events.** `Plushie.Type.Pointer` module
+  with `pointer_type` (`:mouse`/`:touch`/`:pen`) and `button` types.
+  Every pointer event includes pointer type, modifier state, and finger
+  ID for touch.
+
+- **Window-qualified selector syntax.** `"main#form/save"` targets a
+  widget in a specific window. Works in test selectors and commands
+  (`Command.focus`, `Command.scroll_to`, etc.).
+
+- **Widget state re-render.** When a widget's `handle_event/2` returns
+  `{:update_state, new_state}`, the view is immediately re-rendered.
+  Previously required an unrelated event to trigger the re-render.
+
+- **Mock canvas element click.** `click("#canvas-id/element-id")` works
+  in mock mode tests by detecting scoped IDs and verifying element
+  existence.
+
+- **Mock sequential click fix.** Sequential clicks on different widgets
+  now work reliably in mock mode (synthetic event path replaces fragile
+  focus+space approach).
+
+- **Coalescing for pointer events.** `:move` (Replace), `:scroll`
+  (Accumulate deltas), `:scrolled` (Replace), `:resize` (Replace).
+
+### Fixed
+
+- **Widget re-render on state change** with window sync and error
+  revert.
+- **Pre-existing decoder bugs**: `transition_complete` missing from
+  specs and missing scope extraction, `sort` data shape mismatch,
+  `pane_focus_cycle` spec/decoder mismatch.
+- **`plushie.build`** patches vendored iced subcrates when local source
+  checkout exists. Handles file read errors in Cargo.toml parsing.
+
+### Changed
+
+- **Documentation overhaul.** README rewritten, `docs/README.md` index
+  added for hexdocs, `CONTRIBUTING.md` created. All em-dashes replaced
+  with single dashes. Comprehensive docs for pointer events, device
+  awareness, canvas touch, modifier patterns, window scope, and
+  selector syntax.
+
 ## [0.5.0] - 2026-03-23
 
 ### Breaking
