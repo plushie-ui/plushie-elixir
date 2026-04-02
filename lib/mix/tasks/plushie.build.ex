@@ -541,16 +541,24 @@ defmodule Mix.Tasks.Plushie.Build do
     # crates that depend on plushie-ext from crates.io get redirected to
     # the same local checkout. Without this, Cargo treats the path dep and
     # the crates.io dep as different crates and trait impls don't match.
+    #
+    # Also patch plushie-iced-* subcrates when the vendored iced fork is
+    # a sibling of the source path (../plushie-iced). The renderer's own
+    # workspace does the same thing; without these patches, iced types
+    # from crates.io and the local fork are treated as distinct types.
     patch_section =
       if source_path && File.dir?(source_path) do
         ext_path = Path.join(source_path, "plushie-ext")
         renderer_path = Path.join(source_path, "plushie-renderer")
+
+        iced_patches = iced_patch_entries(source_path)
 
         """
 
         [patch.crates-io]
         plushie-ext = { path = "#{ext_path}" }
         plushie-renderer = { path = "#{renderer_path}" }
+        #{iced_patches}\
         """
       else
         ""
@@ -575,6 +583,52 @@ defmodule Mix.Tasks.Plushie.Build do
     #{ext_deps}
     #{patch_section}\
     """
+  end
+
+  # Discovers plushie-iced subcrates from the vendored iced fork (expected
+  # as a sibling directory of the source path) and returns patch lines.
+  defp iced_patch_entries(source_path) do
+    iced_root = source_path |> Path.dirname() |> Path.join("plushie-iced")
+
+    if File.dir?(iced_root) do
+      # The root crate (plushie-iced itself)
+      root_entry = "plushie-iced = { path = \"#{iced_root}\" }"
+
+      # Subcrates: each subdirectory with a Cargo.toml containing a
+      # plushie-iced-* package name
+      sub_entries =
+        iced_root
+        |> File.ls!()
+        |> Enum.sort()
+        |> Enum.flat_map(&iced_subcrate_entry(iced_root, &1))
+
+      Enum.join([root_entry | sub_entries], "\n")
+    else
+      ""
+    end
+  end
+
+  defp iced_subcrate_entry(iced_root, dir) do
+    cargo_path = Path.join([iced_root, dir, "Cargo.toml"])
+
+    with true <- File.regular?(cargo_path),
+         "plushie-iced-" <> _ = name <- extract_cargo_package_name(cargo_path) do
+      ["#{name} = { path = \"#{Path.join(iced_root, dir)}\" }"]
+    else
+      _ -> []
+    end
+  end
+
+  defp extract_cargo_package_name(cargo_path) do
+    cargo_path
+    |> File.read!()
+    |> String.split("\n")
+    |> Enum.find_value(fn line ->
+      case Regex.run(~r/^name\s*=\s*"([^"]+)"/, String.trim(line)) do
+        [_, name] -> name
+        _ -> nil
+      end
+    end)
   end
 
   # Validates Rust constructor expressions. Matches:
