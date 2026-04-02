@@ -516,11 +516,11 @@ defmodule Plushie.Runtime do
     {:noreply, store_coalescable(state, :mouse_move, event)}
   end
 
-  def handle_info({:renderer_event, %WidgetEvent{type: :sensor_resize} = event}, state) do
+  def handle_info({:renderer_event, %WidgetEvent{type: :resize} = event}, state) do
     {:noreply,
      store_coalescable(
        state,
-       {:sensor_resize, event.window_id, Plushie.Event.target(event)},
+       {:resize, event.window_id, Plushie.Event.target(event)},
        event
      )}
   end
@@ -1335,18 +1335,6 @@ defmodule Plushie.Runtime do
 
     {result_event, new_registry} =
       Plushie.Runtime.WidgetHandlers.dispatch_event(state.widget_handlers, event)
-
-    # Auto-consume canvas-internal events that were not intercepted by
-    # any widget handler. These are implementation details that
-    # should not reach the app's update/2.
-    result_event =
-      case result_event do
-        %Plushie.Event.WidgetEvent{type: type} when is_atom(type) ->
-          if Plushie.Event.BuiltinSpecs.canvas_internal?(type), do: nil, else: result_event
-
-        _ ->
-          result_event
-      end
 
     {result_event, %{state | widget_handlers: new_registry}}
   end

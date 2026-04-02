@@ -131,39 +131,37 @@ defmodule Plushie.Docs.EventsTest do
     assert event.value == "name"
   end
 
-  # -- Mouse area events -------------------------------------------------------
+  # -- Pointer events (mouse area + canvas unified) ----------------------------
 
-  test "events_mouse_area_enter_match_test" do
-    event = %WidgetEvent{type: :mouse_enter, id: "hover_zone", scope: []}
+  test "events_pointer_enter_match_test" do
+    event = %WidgetEvent{type: :enter, id: "hover_zone", scope: []}
 
-    assert match?(%WidgetEvent{type: :mouse_enter, id: "hover_zone"}, event)
+    assert match?(%WidgetEvent{type: :enter, id: "hover_zone"}, event)
   end
 
-  test "events_mouse_area_move_match_test" do
+  test "events_pointer_move_match_test" do
     event = %WidgetEvent{
-      type: :mouse_move,
+      type: :move,
       id: "canvas_area",
       scope: [],
-      data: %{x: 10.0, y: 20.0}
+      data: %{x: 10.0, y: 20.0, pointer: :mouse}
     }
 
-    assert match?(%WidgetEvent{type: :mouse_move, id: "canvas_area"}, event)
+    assert match?(%WidgetEvent{type: :move, id: "canvas_area"}, event)
     assert event.data.x == 10.0
     assert event.data.y == 20.0
   end
 
-  # -- Canvas events -----------------------------------------------------------
-
-  test "events_canvas_press_match_test" do
+  test "events_pointer_press_match_test" do
     event = %WidgetEvent{
-      type: :canvas_press,
+      type: :press,
       id: "draw_area",
       scope: [],
-      data: %{x: 42.0, y: 100.0, button: :left}
+      data: %{x: 42.0, y: 100.0, button: :left, pointer: :mouse}
     }
 
     assert match?(
-             %WidgetEvent{type: :canvas_press, id: "draw_area", data: %{button: :left}},
+             %WidgetEvent{type: :press, id: "draw_area", data: %{button: :left}},
              event
            )
 
@@ -171,10 +169,15 @@ defmodule Plushie.Docs.EventsTest do
     assert event.data.y == 100.0
   end
 
-  test "events_canvas_move_match_test" do
-    event = %WidgetEvent{type: :canvas_move, id: "draw_area", scope: [], data: %{x: 5.0, y: 10.0}}
+  test "events_pointer_move_canvas_match_test" do
+    event = %WidgetEvent{
+      type: :move,
+      id: "draw_area",
+      scope: [],
+      data: %{x: 5.0, y: 10.0, pointer: :mouse}
+    }
 
-    assert match?(%WidgetEvent{type: :canvas_move, id: "draw_area"}, event)
+    assert match?(%WidgetEvent{type: :move, id: "draw_area"}, event)
     assert event.data.x == 5.0
     assert event.data.y == 10.0
   end
@@ -193,15 +196,15 @@ defmodule Plushie.Docs.EventsTest do
 
   # -- Sensor events -----------------------------------------------------------
 
-  test "events_sensor_resize_match_test" do
+  test "events_resize_match_test" do
     event = %WidgetEvent{
-      type: :sensor_resize,
+      type: :resize,
       id: "content_area",
       scope: [],
       data: %{width: 800.0, height: 600.0}
     }
 
-    assert match?(%WidgetEvent{type: :sensor_resize, id: "content_area"}, event)
+    assert match?(%WidgetEvent{type: :resize, id: "content_area"}, event)
     assert event.data.width == 800.0
     assert event.data.height == 600.0
   end

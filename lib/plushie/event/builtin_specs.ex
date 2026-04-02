@@ -89,38 +89,52 @@ defmodule Plushie.Event.BuiltinSpecs do
       ]
     },
 
-    # -- Canvas-level interaction events --
-    # These were previously CanvasEvent structs with dedicated fields.
-    # Now unified as WidgetEvent with typed data maps.
-    canvas_press: %{
+    # -- Unified pointer events --
+    # Replace canvas_*, mouse_*, and sensor_* with a device-agnostic model.
+    press: %{
       carrier: :data,
-      fields: [x: :number, y: :number, button: Plushie.Type.MouseButton]
+      fields: [
+        x: :number,
+        y: :number,
+        button: Plushie.Type.Pointer,
+        pointer: :atom,
+        finger: :number,
+        modifiers: :any
+      ]
     },
-    canvas_release: %{
+    release: %{
       carrier: :data,
-      fields: [x: :number, y: :number, button: Plushie.Type.MouseButton]
+      fields: [
+        x: :number,
+        y: :number,
+        button: Plushie.Type.Pointer,
+        pointer: :atom,
+        finger: :number,
+        modifiers: :any
+      ]
     },
-    canvas_move: %{carrier: :data, fields: [x: :number, y: :number]},
-    canvas_scroll: %{
+    move: %{
       carrier: :data,
-      fields: [x: :number, y: :number, delta_x: :number, delta_y: :number]
+      fields: [x: :number, y: :number, pointer: :atom, finger: :number, modifiers: :any]
     },
-
-    # -- Mouse area events --
-    # Previously MouseAreaEvent structs.
-    mouse_right_press: %{carrier: :none},
-    mouse_right_release: %{carrier: :none},
-    mouse_middle_press: %{carrier: :none},
-    mouse_middle_release: %{carrier: :none},
-    mouse_double_click: %{carrier: :none},
-    mouse_enter: %{carrier: :none},
-    mouse_exit: %{carrier: :none},
-    mouse_move: %{carrier: :data, fields: [x: :number, y: :number]},
-    mouse_scroll: %{carrier: :data, fields: [delta_x: :number, delta_y: :number]},
-
-    # -- Sensor events --
-    # Previously SensorEvent structs.
-    sensor_resize: %{carrier: :data, fields: [width: :number, height: :number]},
+    pointer_scroll: %{
+      carrier: :data,
+      fields: [
+        x: :number,
+        y: :number,
+        delta_x: :number,
+        delta_y: :number,
+        pointer: :atom,
+        modifiers: :any
+      ]
+    },
+    enter: %{carrier: :none},
+    exit: %{carrier: :none},
+    double_click: %{
+      carrier: :data,
+      fields: [x: :number, y: :number, pointer: :atom, modifiers: :any]
+    },
+    resize: %{carrier: :data, fields: [width: :number, height: :number]},
 
     # -- Pane grid events --
     # Previously PaneEvent structs.
@@ -141,21 +155,17 @@ defmodule Plushie.Event.BuiltinSpecs do
     transition_complete: %{carrier: :data, fields: [tag: :any, prop: :string]}
   }
 
-  @canvas_internal_types MapSet.new([
-                           :canvas_press,
-                           :canvas_release,
-                           :canvas_move,
-                           :canvas_scroll
-                         ])
-
   @doc "Returns the event spec for a built-in event type, or nil."
   @spec spec(name :: atom()) :: t() | nil
   def spec(name) when is_atom(name), do: Map.get(@specs, name)
 
-  @doc "Returns true if the event type is a canvas-internal type."
-  @spec canvas_internal?(type :: atom()) :: boolean()
-  def canvas_internal?(type) when is_atom(type), do: MapSet.member?(@canvas_internal_types, type)
-  def canvas_internal?(_), do: false
+  @doc """
+  Deprecated: always returns false. Canvas auto-consumption was removed
+  with the unified pointer event model. Kept temporarily so existing
+  call sites compile during the transition.
+  """
+  @spec canvas_internal?(type :: atom()) :: false
+  def canvas_internal?(_type), do: false
 
   @doc "Returns all built-in event specs as a map."
   @spec all() :: %{atom() => t()}

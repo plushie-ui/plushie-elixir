@@ -41,7 +41,7 @@ defmodule ColorPickerWidget do
 
   @impl Plushie.Widget.Handler
   def handle_event(
-        %Plushie.Event.WidgetEvent{type: :canvas_press, data: %{x: x, y: y, button: :left}},
+        %Plushie.Event.WidgetEvent{type: :press, data: %{x: x, y: y, button: :left}},
         state
       ) do
     dx = x - @cx
@@ -62,7 +62,7 @@ defmodule ColorPickerWidget do
     end
   end
 
-  def handle_event(%Plushie.Event.WidgetEvent{type: :canvas_move, data: %{x: x, y: y}}, state) do
+  def handle_event(%Plushie.Event.WidgetEvent{type: :move, data: %{x: x, y: y}}, state) do
     case state.drag do
       :ring ->
         new_state = %{state | hue: hue_from_point(x - @cx, y - @cy)}
@@ -77,7 +77,7 @@ defmodule ColorPickerWidget do
     end
   end
 
-  def handle_event(%Plushie.Event.WidgetEvent{type: :canvas_release}, state) do
+  def handle_event(%Plushie.Event.WidgetEvent{type: :release}, state) do
     {:update_state, %{state | drag: :none}}
   end
 

@@ -63,20 +63,29 @@ an atom-keyed map).
 | `:pane_focus_cycle` | none   | Pane focus cycle requested                 |
 | `:transition_complete` | value (any) | Emitted when a renderer-side transition completes (requires `on_complete: tag`) |
 
-### Canvas events
+### Pointer events
 
-Canvas-level interaction events. These target the canvas widget itself.
+Unified pointer events for canvas-level, mouse area, and sensor
+interactions. These replace the previous `canvas_*`, `mouse_*`, and
+`sensor_*` families with a device-agnostic model. The `pointer` field
+identifies the input device (`:mouse`, `:touch`, `:pen`) and `button`
+identifies which button was involved.
 
-| Type               | Carrier | Fields                                     |
-| ------------------ | ------- | ------------------------------------------ |
-| `:canvas_press`    | data    | `x`, `y`, `button`                        |
-| `:canvas_release`  | data    | `x`, `y`, `button`                        |
-| `:canvas_move`     | data    | `x`, `y`                                  |
-| `:canvas_scroll`   | data    | `x`, `y`, `delta_x`, `delta_y`            |
+| Type              | Carrier | Fields                                              |
+| ----------------- | ------- | --------------------------------------------------- |
+| `:press`          | data    | `x`, `y`, `button`, `pointer`, `finger`, `modifiers` |
+| `:release`        | data    | `x`, `y`, `button`, `pointer`, `finger`, `modifiers` |
+| `:move`           | data    | `x`, `y`, `pointer`, `finger`, `modifiers`           |
+| `:pointer_scroll` | data    | `x`, `y`, `delta_x`, `delta_y`, `pointer`, `modifiers` |
+| `:enter`          | none    |                                                       |
+| `:exit`           | none    |                                                       |
+| `:double_click`   | data    | `x`, `y`, `pointer`, `modifiers`                     |
+| `:resize`         | data    | `width`, `height`                                     |
 
-> Canvas-level events (`canvas_press`, `canvas_release`, `canvas_move`,
-> `canvas_scroll`) that are not intercepted by a widget `handle_event/2`
-> callback are auto-consumed by the runtime and never reach `update/2`.
+The `button` field is one of `:left`, `:right`, `:middle`, `:back`,
+`:forward`. The `pointer` field is one of `:mouse`, `:touch`, `:pen`.
+The `finger` field is an integer for touch events, nil otherwise.
+`modifiers` is a `Plushie.KeyModifiers` struct.
 
 ### Generic element events
 
@@ -93,30 +102,6 @@ reference](canvas.md#element-level-events) for details.
 | `:drag_end`         | data    | `x`, `y`                            |
 | `:key_press`        | data    | `key`, `modifiers`, `text`          |
 | `:key_release`      | data    | `key`, `modifiers`                  |
-| `:mouse_enter`      | none    |                                     |
-| `:mouse_exit`       | none    |                                     |
-
-### Mouse area events
-
-Events from `mouse_area` containers.
-
-| Type                    | Carrier | Fields                              |
-| ----------------------- | ------- | ----------------------------------- |
-| `:mouse_right_press`    | none    |                                     |
-| `:mouse_right_release`  | none    |                                     |
-| `:mouse_middle_press`   | none    |                                     |
-| `:mouse_middle_release` | none    |                                     |
-| `:mouse_double_click`   | none    |                                     |
-| `:mouse_enter`          | none    |                                     |
-| `:mouse_exit`           | none    |                                     |
-| `:mouse_move`           | data    | `x`, `y`                           |
-| `:mouse_scroll`         | data    | `delta_x`, `delta_y`               |
-
-### Sensor events
-
-| Type              | Carrier | Fields                                  |
-| ----------------- | ------- | --------------------------------------- |
-| `:sensor_resize`  | data    | `width`, `height`                       |
 
 ### Pane grid events
 
@@ -471,8 +456,8 @@ Events travel through a fixed pipeline before reaching your `update/2`:
 ### Coalescable events
 
 High-frequency events (global mouse moves with `MouseEvent`
-`type: :moved`, and sensor resizes with `WidgetEvent`
-`type: :sensor_resize`) are coalescable. When multiple events of
+`type: :moved`, and resize events with `WidgetEvent`
+`type: :resize`) are coalescable. When multiple events of
 the same type arrive for the same source before the runtime processes
 them, only the latest is delivered. This prevents queue backup during
 rapid mouse movement or window resizing. A zero-delay timer ensures

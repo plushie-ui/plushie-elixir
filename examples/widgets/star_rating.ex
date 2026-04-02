@@ -38,14 +38,14 @@ defmodule StarRating do
 
   # Hover enter on a star -> update internal hover state for preview highlight.
   def handle_event(
-        %Plushie.Event.WidgetEvent{type: :mouse_enter, id: "star-" <> n},
+        %Plushie.Event.WidgetEvent{type: :enter, id: "star-" <> n},
         state
       ) do
     {:update_state, %{state | hover: String.to_integer(n) + 1}}
   end
 
   # Hover leave -> clear preview highlight.
-  def handle_event(%Plushie.Event.WidgetEvent{type: :mouse_exit}, state) do
+  def handle_event(%Plushie.Event.WidgetEvent{type: :exit}, state) do
     {:update_state, %{state | hover: nil}}
   end
 

@@ -159,15 +159,20 @@ defmodule Plushie.Widget.Handler do
     end
   end
 
-  # Resolve the ID and scope for emitted events. For canvas_* events
-  # (canvas_press, canvas_move, etc.) the event's id IS the canvas
-  # widget id and scope is the parent scope -- pass through as-is.
+  # Resolve the ID and scope for emitted events. For pointer events
+  # (press, release, move, etc.) the event's id IS the canvas/widget
+  # id and scope is the parent scope -- pass through as-is.
   # For other widget events (click on a child element inside a
-  # stateful widget), the canvas widget's ID is the first scope element
+  # stateful widget), the widget's ID is the first scope element
   # and the remaining scope becomes the parent scope. For non-widget
   # events (Timer, etc.) that lack scope, fall back to splitting the
   # explicit widget_id.
-  @canvas_event_types [:canvas_press, :canvas_release, :canvas_move, :canvas_scroll]
+  @canvas_event_types [
+    :press,
+    :release,
+    :move,
+    :pointer_scroll
+  ]
 
   @spec resolve_emit_identity(struct() | map(), String.t(), String.t() | nil) ::
           {String.t(), [String.t()], String.t() | nil}

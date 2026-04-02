@@ -767,4 +767,217 @@ defmodule Plushie.ProtocolParityTest do
                Protocol.decode_message(json, :json)
     end
   end
+
+  # -- Unified pointer events --
+
+  describe "press event decoding" do
+    test "decodes left mouse press with coordinates and modifiers" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "press",
+          id: "canvas1",
+          window_id: "main",
+          data: %{
+            x: 100.5,
+            y: 200.3,
+            button: "left",
+            pointer: "mouse",
+            modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false}
+          }
+        })
+
+      assert %WidgetEvent{
+               type: :press,
+               id: "canvas1",
+               window_id: "main",
+               data: %{
+                 x: 100.5,
+                 y: 200.3,
+                 button: :left,
+                 pointer: :mouse,
+                 finger: nil,
+                 modifiers: %Plushie.KeyModifiers{ctrl: false}
+               }
+             } = Protocol.decode_message(json, :json)
+    end
+
+    test "decodes right button press" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "press",
+          id: "area",
+          window_id: "main",
+          data: %{x: 50.0, y: 75.0, button: "right", pointer: "mouse"}
+        })
+
+      assert %WidgetEvent{type: :press, data: %{button: :right, pointer: :mouse}} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "decodes touch press with finger" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "press",
+          id: "canvas1",
+          window_id: "main",
+          data: %{x: 50.0, y: 75.0, button: "left", pointer: "touch", finger: 0}
+        })
+
+      assert %WidgetEvent{type: :press, data: %{pointer: :touch, finger: 0}} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "defaults to left button and mouse pointer when omitted" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "press",
+          id: "canvas1",
+          window_id: "main",
+          data: %{x: 10.0, y: 20.0}
+        })
+
+      assert %WidgetEvent{type: :press, data: %{button: :left, pointer: :mouse}} =
+               Protocol.decode_message(json, :json)
+    end
+  end
+
+  describe "release event decoding" do
+    test "decodes mouse release" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "release",
+          id: "canvas1",
+          window_id: "main",
+          data: %{x: 100.0, y: 200.0, button: "left", pointer: "mouse"}
+        })
+
+      assert %WidgetEvent{
+               type: :release,
+               id: "canvas1",
+               data: %{x: 100.0, y: 200.0, button: :left}
+             } = Protocol.decode_message(json, :json)
+    end
+  end
+
+  describe "move event decoding" do
+    test "decodes pointer move" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "move",
+          id: "canvas1",
+          window_id: "main",
+          data: %{x: 55.5, y: 88.2, pointer: "pen"}
+        })
+
+      assert %WidgetEvent{
+               type: :move,
+               id: "canvas1",
+               data: %{x: 55.5, y: 88.2, pointer: :pen, finger: nil}
+             } = Protocol.decode_message(json, :json)
+    end
+  end
+
+  describe "pointer_scroll event decoding" do
+    test "decodes scroll with position and deltas" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "scroll",
+          id: "canvas1",
+          window_id: "main",
+          data: %{
+            x: 100.0,
+            y: 200.0,
+            delta_x: 0.0,
+            delta_y: -3.0,
+            pointer: "mouse",
+            modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false}
+          }
+        })
+
+      assert %WidgetEvent{
+               type: :pointer_scroll,
+               data: %{
+                 delta_y: -3.0,
+                 pointer: :mouse,
+                 modifiers: %Plushie.KeyModifiers{ctrl: true}
+               }
+             } = Protocol.decode_message(json, :json)
+    end
+  end
+
+  describe "enter event decoding" do
+    test "decodes pointer enter" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "enter",
+          id: "hover_zone",
+          window_id: "main"
+        })
+
+      assert %WidgetEvent{type: :enter, id: "hover_zone", window_id: "main"} =
+               Protocol.decode_message(json, :json)
+    end
+  end
+
+  describe "exit event decoding" do
+    test "decodes pointer exit" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "exit",
+          id: "hover_zone",
+          window_id: "main"
+        })
+
+      assert %WidgetEvent{type: :exit, id: "hover_zone", window_id: "main"} =
+               Protocol.decode_message(json, :json)
+    end
+  end
+
+  describe "double_click event decoding" do
+    test "decodes double click with position" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "double_click",
+          id: "area",
+          window_id: "main",
+          data: %{x: 75.0, y: 150.0, pointer: "mouse"}
+        })
+
+      assert %WidgetEvent{
+               type: :double_click,
+               id: "area",
+               data: %{x: 75.0, y: 150.0, pointer: :mouse}
+             } = Protocol.decode_message(json, :json)
+    end
+  end
+
+  describe "resize event decoding" do
+    test "decodes resize with dimensions" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "resize",
+          id: "sensor1",
+          window_id: "main",
+          data: %{width: 800.0, height: 600.0}
+        })
+
+      assert %WidgetEvent{
+               type: :resize,
+               id: "sensor1",
+               window_id: "main",
+               data: %{width: 800.0, height: 600.0}
+             } = Protocol.decode_message(json, :json)
+    end
+  end
 end

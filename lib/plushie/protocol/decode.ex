@@ -665,132 +665,80 @@ defmodule Plushie.Protocol.Decode do
     %SystemEvent{type: :theme_changed, data: mode}
   end
 
-  # -- MouseArea events --
+  # -- Unified pointer events --
+  # New wire format: press, release, move, scroll, enter, exit, double_click, resize.
+  # These replace canvas_*, mouse_*, and sensor_* events.
 
-  defp dispatch(%{"type" => "event", "family" => "mouse_right_press", "id" => _id} = msg) do
+  defp dispatch(%{"type" => "event", "family" => "press", "id" => _id, "data" => data} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    %WidgetEvent{type: :mouse_right_press, id: local, scope: scope, window_id: window_id}
+
+    %WidgetEvent{
+      type: :press,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: %{
+        x: data["x"],
+        y: data["y"],
+        button: parse_pointer_button(data["button"]),
+        pointer: parse_pointer_type(data["pointer"]),
+        finger: data["finger"],
+        modifiers: parse_modifiers(data["modifiers"])
+      }
+    }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "mouse_right_release", "id" => _id} = msg) do
+  defp dispatch(%{"type" => "event", "family" => "release", "id" => _id, "data" => data} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    %WidgetEvent{type: :mouse_right_release, id: local, scope: scope, window_id: window_id}
+
+    %WidgetEvent{
+      type: :release,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: %{
+        x: data["x"],
+        y: data["y"],
+        button: parse_pointer_button(data["button"]),
+        pointer: parse_pointer_type(data["pointer"]),
+        finger: data["finger"],
+        modifiers: parse_modifiers(data["modifiers"])
+      }
+    }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "mouse_middle_press", "id" => _id} = msg) do
+  defp dispatch(%{"type" => "event", "family" => "move", "id" => _id, "data" => data} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    %WidgetEvent{type: :mouse_middle_press, id: local, scope: scope, window_id: window_id}
+
+    %WidgetEvent{
+      type: :move,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: %{
+        x: data["x"],
+        y: data["y"],
+        pointer: parse_pointer_type(data["pointer"]),
+        finger: data["finger"],
+        modifiers: parse_modifiers(data["modifiers"])
+      }
+    }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "mouse_middle_release", "id" => _id} = msg) do
-    {local, scope, window_id, _family} = event_identity!(msg)
-    %WidgetEvent{type: :mouse_middle_release, id: local, scope: scope, window_id: window_id}
-  end
-
-  defp dispatch(%{"type" => "event", "family" => "mouse_double_click", "id" => _id} = msg) do
-    {local, scope, window_id, _family} = event_identity!(msg)
-    %WidgetEvent{type: :mouse_double_click, id: local, scope: scope, window_id: window_id}
-  end
-
-  defp dispatch(%{"type" => "event", "family" => "mouse_enter", "id" => _id} = msg) do
-    {local, scope, window_id, _family} = event_identity!(msg)
-    %WidgetEvent{type: :mouse_enter, id: local, scope: scope, window_id: window_id}
-  end
-
-  defp dispatch(%{"type" => "event", "family" => "mouse_exit", "id" => _id} = msg) do
-    {local, scope, window_id, _family} = event_identity!(msg)
-    %WidgetEvent{type: :mouse_exit, id: local, scope: scope, window_id: window_id}
-  end
-
+  # Pointer scroll (unified pointer event) -- disambiguated from scrollable
+  # widget's "scroll" by the presence of the "pointer" key in data.
   defp dispatch(
          %{
            "type" => "event",
-           "family" => "mouse_move",
+           "family" => "scroll",
            "id" => _id,
-           "data" => %{"x" => x, "y" => y}
+           "data" => %{"pointer" => _} = data
          } = msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
     %WidgetEvent{
-      type: :mouse_move,
-      id: local,
-      scope: scope,
-      window_id: window_id,
-      data: %{x: x, y: y}
-    }
-  end
-
-  defp dispatch(
-         %{
-           "type" => "event",
-           "family" => "mouse_scroll",
-           "id" => _id,
-           "data" => %{"delta_x" => dx, "delta_y" => dy}
-         } = msg
-       ) do
-    {local, scope, window_id, _family} = event_identity!(msg)
-
-    %WidgetEvent{
-      type: :mouse_scroll,
-      id: local,
-      scope: scope,
-      window_id: window_id,
-      data: %{delta_x: dx, delta_y: dy}
-    }
-  end
-
-  # -- Canvas events --
-
-  defp dispatch(
-         %{"type" => "event", "family" => "canvas_press", "id" => _id, "data" => data} = msg
-       ) do
-    {local, scope, window_id, _family} = event_identity!(msg)
-
-    %WidgetEvent{
-      type: :canvas_press,
-      id: local,
-      scope: scope,
-      window_id: window_id,
-      data: %{x: data["x"], y: data["y"], button: parse_canvas_button(data["button"])}
-    }
-  end
-
-  defp dispatch(
-         %{"type" => "event", "family" => "canvas_release", "id" => _id, "data" => data} = msg
-       ) do
-    {local, scope, window_id, _family} = event_identity!(msg)
-
-    %WidgetEvent{
-      type: :canvas_release,
-      id: local,
-      scope: scope,
-      window_id: window_id,
-      data: %{x: data["x"], y: data["y"], button: parse_canvas_button(data["button"])}
-    }
-  end
-
-  defp dispatch(
-         %{"type" => "event", "family" => "canvas_move", "id" => _id, "data" => data} = msg
-       ) do
-    {local, scope, window_id, _family} = event_identity!(msg)
-
-    %WidgetEvent{
-      type: :canvas_move,
-      id: local,
-      scope: scope,
-      window_id: window_id,
-      data: %{x: data["x"], y: data["y"]}
-    }
-  end
-
-  defp dispatch(
-         %{"type" => "event", "family" => "canvas_scroll", "id" => _id, "data" => data} = msg
-       ) do
-    {local, scope, window_id, _family} = event_identity!(msg)
-
-    %WidgetEvent{
-      type: :canvas_scroll,
+      type: :pointer_scroll,
       id: local,
       scope: scope,
       window_id: window_id,
@@ -798,20 +746,47 @@ defmodule Plushie.Protocol.Decode do
         x: data["x"],
         y: data["y"],
         delta_x: data["delta_x"],
-        delta_y: data["delta_y"]
+        delta_y: data["delta_y"],
+        pointer: parse_pointer_type(data["pointer"]),
+        modifiers: parse_modifiers(data["modifiers"])
       }
     }
   end
 
-  # -- Sensor events --
+  defp dispatch(%{"type" => "event", "family" => "enter", "id" => _id} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %WidgetEvent{type: :enter, id: local, scope: scope, window_id: window_id}
+  end
+
+  defp dispatch(%{"type" => "event", "family" => "exit", "id" => _id} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %WidgetEvent{type: :exit, id: local, scope: scope, window_id: window_id}
+  end
 
   defp dispatch(
-         %{"type" => "event", "family" => "sensor_resize", "id" => _id, "data" => data} = msg
+         %{"type" => "event", "family" => "double_click", "id" => _id, "data" => data} = msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
     %WidgetEvent{
-      type: :sensor_resize,
+      type: :double_click,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: %{
+        x: data["x"],
+        y: data["y"],
+        pointer: parse_pointer_type(data["pointer"]),
+        modifiers: parse_modifiers(data["modifiers"])
+      }
+    }
+  end
+
+  defp dispatch(%{"type" => "event", "family" => "resize", "id" => _id, "data" => data} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %WidgetEvent{
+      type: :resize,
       id: local,
       scope: scope,
       window_id: window_id,
@@ -1364,15 +1339,25 @@ defmodule Plushie.Protocol.Decode do
 
   defp parse_canvas_key_data(_, _type), do: %{key: nil, modifiers: %Plushie.KeyModifiers{}}
 
-  # Parses a canvas button string into an atom. Defaults to :left when
-  # nil (canvas press/release events without an explicit button are left clicks).
-  @spec parse_canvas_button(button :: String.t() | nil) :: atom()
-  defp parse_canvas_button(nil), do: :left
+  # Parses a unified pointer button string. Defaults to :left when nil.
+  @spec parse_pointer_button(value :: String.t() | nil) :: atom()
+  defp parse_pointer_button(nil), do: :left
 
-  defp parse_canvas_button(button) when is_binary(button) do
-    case Plushie.Type.MouseButton.parse(button) do
+  defp parse_pointer_button(value) when is_binary(value) do
+    case Plushie.Type.Pointer.parse_button(value) do
       {:ok, parsed} -> parsed
       :error -> :left
+    end
+  end
+
+  # Parses a pointer type string. Defaults to :mouse when nil.
+  @spec parse_pointer_type(value :: String.t() | nil) :: atom()
+  defp parse_pointer_type(nil), do: :mouse
+
+  defp parse_pointer_type(value) when is_binary(value) do
+    case Plushie.Type.Pointer.parse_pointer(value) do
+      {:ok, parsed} -> parsed
+      :error -> :mouse
     end
   end
 

@@ -963,34 +963,52 @@ defmodule Plushie.ProtocolTest do
   end
 
   # ---------------------------------------------------------------------------
-  # decode_message/1 -- mouse area events
+  # decode_message/1 -- pointer press events (mouse area)
   # ---------------------------------------------------------------------------
 
-  describe "decode_message/1 -- mouse_middle_press" do
-    test "decodes mouse_middle_press event to {:mouse_middle_press, id}" do
+  describe "decode_message/1 -- pointer press (middle button)" do
+    test "decodes pointer press with middle button from json" do
       json =
         Jason.encode!(%{
           type: "event",
-          family: "mouse_middle_press",
+          family: "press",
           id: "zone",
-          window_id: "main"
+          window_id: "main",
+          data: %{
+            x: 10.0,
+            y: 20.0,
+            button: "middle",
+            pointer: "mouse",
+            modifiers: %{}
+          }
         })
 
-      assert Protocol.decode_message(json, :json) ==
-               %WidgetEvent{type: :mouse_middle_press, id: "zone", window_id: "main"}
+      assert %WidgetEvent{
+               type: :press,
+               id: "zone",
+               window_id: "main",
+               data: %{button: :middle, pointer: :mouse}
+             } = Protocol.decode_message(json, :json)
     end
 
-    test "decodes mouse_middle_press from msgpack" do
+    test "decodes pointer press with middle button from msgpack" do
       event = %{
         "type" => "event",
-        "family" => "mouse_middle_press",
+        "family" => "press",
         "id" => "zone",
-        "window_id" => "main"
+        "window_id" => "main",
+        "data" => %{
+          "x" => 10.0,
+          "y" => 20.0,
+          "button" => "middle",
+          "pointer" => "mouse",
+          "modifiers" => %{}
+        }
       }
 
       packed = Msgpax.pack!(event, iodata: false)
 
-      assert %WidgetEvent{type: :mouse_middle_press, id: "zone", window_id: "main"} =
+      assert %WidgetEvent{type: :press, id: "zone", window_id: "main", data: %{button: :middle}} =
                Protocol.decode_message(packed, :msgpack)
     end
   end
@@ -1394,37 +1412,50 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
-  describe "decode_message/1 -- canvas_scroll" do
-    test "reads x/y into struct fields" do
+  describe "decode_message/1 -- pointer_scroll" do
+    test "reads x/y and deltas into struct fields" do
       json =
         Jason.encode!(%{
           type: "event",
-          family: "canvas_scroll",
+          family: "scroll",
           id: "viewport",
           window_id: "main",
-          data: %{x: 5.0, y: 10.0, delta_x: 0.0, delta_y: -1.0}
+          data: %{
+            x: 5.0,
+            y: 10.0,
+            delta_x: 0.0,
+            delta_y: -1.0,
+            pointer: "mouse",
+            modifiers: %{}
+          }
         })
 
       assert %WidgetEvent{
-               type: :canvas_scroll,
+               type: :pointer_scroll,
                id: "viewport",
                window_id: "main",
-               data: %{x: 5.0, y: 10.0, delta_x: +0.0, delta_y: -1.0}
+               data: %{x: 5.0, y: 10.0, delta_x: +0.0, delta_y: -1.0, pointer: :mouse}
              } =
                Protocol.decode_message(json, :json)
     end
 
-    test "preserves window_id on canvas events" do
+    test "preserves window_id on pointer press events" do
       json =
         Jason.encode!(%{
           type: "event",
-          family: "canvas_press",
+          family: "press",
           id: "viewport",
           window_id: "main",
-          data: %{x: 5.0, y: 10.0, button: "left"}
+          data: %{
+            x: 5.0,
+            y: 10.0,
+            button: "left",
+            pointer: "mouse",
+            modifiers: %{}
+          }
         })
 
-      assert %WidgetEvent{type: :canvas_press, id: "viewport", window_id: "main"} =
+      assert %WidgetEvent{type: :press, id: "viewport", window_id: "main"} =
                Protocol.decode_message(json, :json)
     end
   end

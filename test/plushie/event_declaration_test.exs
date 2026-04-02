@@ -217,19 +217,29 @@ defmodule Plushie.EventDeclarationTest do
       end
     end
 
-    test "canvas_internal? identifies canvas-internal types" do
-      assert BuiltinSpecs.canvas_internal?(:canvas_press)
-      assert BuiltinSpecs.canvas_internal?(:canvas_release)
-      assert BuiltinSpecs.canvas_internal?(:canvas_move)
-      assert BuiltinSpecs.canvas_internal?(:canvas_scroll)
-    end
-
-    test "canvas_internal? rejects non-canvas types" do
+    test "canvas_internal? always returns false (deprecated)" do
+      refute BuiltinSpecs.canvas_internal?(:canvas_press)
+      refute BuiltinSpecs.canvas_internal?(:press)
       refute BuiltinSpecs.canvas_internal?(:click)
       refute BuiltinSpecs.canvas_internal?(:toggle)
-      refute BuiltinSpecs.canvas_internal?(:input)
-      refute BuiltinSpecs.canvas_internal?(:focused)
-      refute BuiltinSpecs.canvas_internal?(:drag)
+    end
+
+    test "has specs for unified pointer event types" do
+      for type <- ~w(press release move pointer_scroll enter exit double_click resize)a do
+        assert BuiltinSpecs.spec(type) != nil, "missing spec for #{type}"
+      end
+    end
+
+    test "press spec has pointer data fields" do
+      spec = BuiltinSpecs.spec(:press)
+      assert spec.carrier == :data
+      field_names = Keyword.keys(spec.fields)
+      assert :x in field_names
+      assert :y in field_names
+      assert :button in field_names
+      assert :pointer in field_names
+      assert :finger in field_names
+      assert :modifiers in field_names
     end
 
     test "toggle spec has value :boolean" do

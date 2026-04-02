@@ -4,29 +4,29 @@ defmodule Plushie.SensorTest do
   alias Plushie.Event.WidgetEvent
 
   describe "sensor resize event dispatch" do
-    test "decodes sensor_resize" do
+    test "decodes resize" do
       msg = %{
         "type" => "event",
-        "family" => "sensor_resize",
+        "family" => "resize",
         "id" => "s1",
         "window_id" => "main",
         "data" => %{"width" => 450.0, "height" => 300.0}
       }
 
-      assert %WidgetEvent{type: :sensor_resize, id: "s1", data: %{width: 450.0, height: 300.0}} =
+      assert %WidgetEvent{type: :resize, id: "s1", data: %{width: 450.0, height: 300.0}} =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
-    test "decodes sensor_resize with integer values" do
+    test "decodes resize with integer values" do
       msg = %{
         "type" => "event",
-        "family" => "sensor_resize",
+        "family" => "resize",
         "id" => "s1",
         "window_id" => "main",
         "data" => %{"width" => 800, "height" => 600}
       }
 
-      assert %WidgetEvent{type: :sensor_resize, id: "s1", data: %{width: 800, height: 600}} =
+      assert %WidgetEvent{type: :resize, id: "s1", data: %{width: 800, height: 600}} =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
   end

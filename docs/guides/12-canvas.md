@@ -293,10 +293,10 @@ end
 Canvas events arrive as `Plushie.Event.WidgetEvent` structs:
 
 **Canvas-level** (requires `on_press`/`on_release`/`on_move`/`on_scroll`
-on the canvas):
+on the canvas). These use the unified pointer event model:
 
 ```elixir
-%WidgetEvent{type: :canvas_press, data: %{x: 150.0, y: 75.0, button: :left}}
+%WidgetEvent{type: :press, data: %{x: 150.0, y: 75.0, button: :left, pointer: :mouse}}
 ```
 
 **Element-level** (requires `on_click`/`on_hover`/`draggable` on the
@@ -304,8 +304,8 @@ group):
 
 ```elixir
 %WidgetEvent{type: :click, id: "save", scope: ["save-canvas"]}
-%WidgetEvent{type: :mouse_enter, id: "save"}
-%WidgetEvent{type: :mouse_exit, id: "save"}
+%WidgetEvent{type: :enter, id: "save"}
+%WidgetEvent{type: :exit, id: "save"}
 ```
 
 See the [Canvas reference](../reference/canvas.md) for the full event list.

@@ -22,10 +22,10 @@ height, background) but its content is drawn shapes, not child widgets.
 | `width` | Length | `:fill` | Canvas width |
 | `height` | Length | `200` | Canvas height (pixels) |
 | `background` | Color | *n/a* | Canvas background colour |
-| `on_press` | boolean | `false` | Emit `:canvas_press` events |
-| `on_release` | boolean | `false` | Emit `:canvas_release` events |
-| `on_move` | boolean | `false` | Emit `:canvas_move` events |
-| `on_scroll` | boolean | `false` | Emit `:canvas_scroll` events |
+| `on_press` | boolean | `false` | Emit `:press` events |
+| `on_release` | boolean | `false` | Emit `:release` events |
+| `on_move` | boolean | `false` | Emit `:move` events |
+| `on_scroll` | boolean | `false` | Emit `:pointer_scroll` events |
 | `event_rate` | integer | *n/a* | Max events/sec for canvas-level events |
 | `a11y` | map | *n/a* | Accessibility overrides. See [Accessibility](accessibility.md). |
 
@@ -286,14 +286,15 @@ All canvas events arrive as `Plushie.Event.WidgetEvent` structs.
 ### Canvas-level events
 
 Require `on_press`/`on_release`/`on_move`/`on_scroll` props on the
-canvas widget:
+canvas widget. These use the unified pointer event model with device
+type and modifier information:
 
 | Event type | Data fields |
 |---|---|
-| `:canvas_press` | `x`, `y`, `button` |
-| `:canvas_release` | `x`, `y`, `button` |
-| `:canvas_move` | `x`, `y` |
-| `:canvas_scroll` | `x`, `y`, `delta_x`, `delta_y` |
+| `:press` | `x`, `y`, `button`, `pointer`, `finger`, `modifiers` |
+| `:release` | `x`, `y`, `button`, `pointer`, `finger`, `modifiers` |
+| `:move` | `x`, `y`, `pointer`, `finger`, `modifiers` |
+| `:pointer_scroll` | `x`, `y`, `delta_x`, `delta_y`, `pointer`, `modifiers` |
 
 ### Element-level events
 
@@ -302,8 +303,8 @@ Require interaction props on interactive groups:
 | Event type | Trigger | Data fields |
 |---|---|---|
 | `:click` | `on_click: true` | Scoped under canvas ID (see below) |
-| `:mouse_enter` | `on_hover: true` | *n/a* |
-| `:mouse_exit` | `on_hover: true` | *n/a* |
+| `:enter` | `on_hover: true` | *n/a* |
+| `:exit` | `on_hover: true` | *n/a* |
 | `:drag` | `draggable: true` | `x`, `y`, `delta_x`, `delta_y` |
 | `:drag_end` | `draggable: true` | `x`, `y` |
 | `:key_press` | `focusable: true` | `key`, `modifiers`, `text` |
@@ -325,17 +326,15 @@ end
 Other element events (enter, leave, drag, key, focus) use standard
 generic event families shared across all widget types.
 
-### Auto-consumption in custom widgets
+### Pointer events in custom widgets
 
-Inside custom widgets, canvas-level events (`:canvas_press`,
-`:canvas_release`, `:canvas_move`, `:canvas_scroll`) that are not
-intercepted by the widget's `handle_event/2` callback are automatically
-consumed by the runtime. They never reach the parent app's `update/2`.
-This prevents internal canvas implementation details from leaking out
-of widget boundaries.
+Canvas-level pointer events (`:press`, `:release`, `:move`,
+`:pointer_scroll`) are delivered through the widget handler pipeline
+like any other event. If a custom widget's `handle_event/2` does not
+intercept them, they reach the parent app's `update/2`.
 
-If you want a canvas event to reach `update/2`, handle it in
-`handle_event/2` and emit it via `{:emit, family, data}`.
+To transform a pointer event before it reaches `update/2`, handle it in
+`handle_event/2` and emit a new event via `{:emit, family, data}`.
 
 ## Element scoping
 

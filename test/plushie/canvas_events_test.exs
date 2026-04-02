@@ -3,101 +3,117 @@ defmodule Plushie.CanvasEventsTest do
 
   alias Plushie.Event.WidgetEvent
 
-  describe "canvas event dispatch" do
-    test "decodes canvas_press" do
+  describe "unified pointer event dispatch (canvas)" do
+    test "decodes press" do
       msg = %{
         "type" => "event",
-        "family" => "canvas_press",
+        "family" => "press",
         "id" => "my_canvas",
         "window_id" => "main",
-        "data" => %{"x" => 42.5, "y" => 100.0, "button" => "left"}
+        "data" => %{
+          "x" => 42.5,
+          "y" => 100.0,
+          "button" => "left",
+          "pointer" => "mouse",
+          "modifiers" => %{"shift" => false, "ctrl" => false, "alt" => false}
+        }
       }
 
       assert %WidgetEvent{
-               type: :canvas_press,
+               type: :press,
                id: "my_canvas",
-               data: %{x: 42.5, y: 100.0, button: :left}
+               data: %{x: 42.5, y: 100.0, button: :left, pointer: :mouse}
              } =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
-    test "decodes canvas_release" do
+    test "decodes release" do
       msg = %{
         "type" => "event",
-        "family" => "canvas_release",
+        "family" => "release",
         "id" => "c1",
         "window_id" => "main",
-        "data" => %{"x" => 10.0, "y" => 20.0, "button" => "right"}
+        "data" => %{
+          "x" => 10.0,
+          "y" => 20.0,
+          "button" => "right",
+          "pointer" => "mouse",
+          "modifiers" => %{}
+        }
       }
 
       assert %WidgetEvent{
-               type: :canvas_release,
+               type: :release,
                id: "c1",
-               data: %{x: 10.0, y: 20.0, button: :right}
+               data: %{x: 10.0, y: 20.0, button: :right, pointer: :mouse}
              } =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
-    test "decodes canvas_move" do
+    test "decodes move" do
       msg = %{
         "type" => "event",
-        "family" => "canvas_move",
+        "family" => "move",
         "id" => "c1",
         "window_id" => "main",
-        "data" => %{"x" => 5.5, "y" => 3.2}
+        "data" => %{
+          "x" => 5.5,
+          "y" => 3.2,
+          "pointer" => "mouse",
+          "modifiers" => %{}
+        }
       }
 
-      assert %WidgetEvent{type: :canvas_move, id: "c1", data: %{x: 5.5, y: 3.2}} =
+      assert %WidgetEvent{type: :move, id: "c1", data: %{x: 5.5, y: 3.2, pointer: :mouse}} =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
-    test "decodes canvas_scroll" do
+    test "decodes pointer scroll (wire family 'scroll' with pointer field)" do
       msg = %{
         "type" => "event",
-        "family" => "canvas_scroll",
+        "family" => "scroll",
         "id" => "c1",
         "window_id" => "main",
-        "data" => %{"x" => 1.5, "y" => 2.5, "delta_x" => 0.5, "delta_y" => -3.0}
+        "data" => %{
+          "x" => 1.5,
+          "y" => 2.5,
+          "delta_x" => 0.5,
+          "delta_y" => -3.0,
+          "pointer" => "mouse",
+          "modifiers" => %{}
+        }
       }
 
       assert %WidgetEvent{
-               type: :canvas_scroll,
+               type: :pointer_scroll,
                id: "c1",
-               data: %{x: 1.5, y: 2.5, delta_x: 0.5, delta_y: -3.0}
+               data: %{x: 1.5, y: 2.5, delta_x: 0.5, delta_y: -3.0, pointer: :mouse}
              } =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
-    test "canvas_press defaults button to left when missing" do
+    test "scrollable widget scroll (wire family 'scroll' without pointer field)" do
       msg = %{
         "type" => "event",
-        "family" => "canvas_press",
-        "id" => "c1",
+        "family" => "scroll",
+        "id" => "scroller",
         "window_id" => "main",
-        "data" => %{"x" => 1.0, "y" => 2.0}
+        "data" => %{
+          "absolute_x" => 0.0,
+          "absolute_y" => 50.0,
+          "relative_x" => 0.0,
+          "relative_y" => 0.5,
+          "bounds_width" => 400.0,
+          "bounds_height" => 300.0,
+          "content_width" => 400.0,
+          "content_height" => 600.0
+        }
       }
 
       assert %WidgetEvent{
-               type: :canvas_press,
-               id: "c1",
-               data: %{x: 1.0, y: 2.0, button: :left}
-             } =
-               Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
-    end
-
-    test "canvas_release defaults button to left when missing" do
-      msg = %{
-        "type" => "event",
-        "family" => "canvas_release",
-        "id" => "c1",
-        "window_id" => "main",
-        "data" => %{"x" => 1.0, "y" => 2.0}
-      }
-
-      assert %WidgetEvent{
-               type: :canvas_release,
-               id: "c1",
-               data: %{x: 1.0, y: 2.0, button: :left}
+               type: :scroll,
+               id: "scroller",
+               data: %{absolute_y: 50.0, relative_y: 0.5}
              } =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end

@@ -41,26 +41,20 @@ defmodule Plushie.Event.WidgetEvent do
           | :sort
           | :scroll
           | :pane_focus_cycle
-          | :canvas_press
-          | :canvas_release
-          | :canvas_move
-          | :canvas_scroll
+          | :press
+          | :release
+          | :move
+          | :pointer_scroll
+          | :enter
+          | :exit
+          | :double_click
+          | :resize
           | :focused
           | :blurred
           | :drag
           | :drag_end
           | :key_press
           | :key_release
-          | :mouse_right_press
-          | :mouse_right_release
-          | :mouse_middle_press
-          | :mouse_middle_release
-          | :mouse_double_click
-          | :mouse_enter
-          | :mouse_exit
-          | :mouse_move
-          | :mouse_scroll
-          | :sensor_resize
           | :pane_resized
           | :pane_dragged
           | :pane_clicked
@@ -101,11 +95,8 @@ defmodule Plushie.Event.WidgetEvent do
   @builtin_event_types ~w(
     click input submit toggle select slide slide_release paste open close option_hovered
     key_binding sort scroll pane_focus_cycle
-    canvas_press canvas_release canvas_move canvas_scroll
+    press release move pointer_scroll enter exit double_click resize
     focused blurred drag drag_end key_press key_release
-    mouse_right_press mouse_right_release mouse_middle_press mouse_middle_release
-    mouse_double_click mouse_enter mouse_exit mouse_move mouse_scroll
-    sensor_resize
     pane_resized pane_dragged pane_clicked
     transition_complete
   )a
