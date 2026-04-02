@@ -58,7 +58,7 @@ defmodule Plushie.Event.BuiltinSpecs do
         relative_y: :number
       ]
     },
-    pane_focus_cycle: %{carrier: :none},
+    pane_focus_cycle: %{carrier: :data, fields: [pane: :any]},
 
     # -- Generic element events --
     # Focus, blur, drag, and key events. These apply to any focusable or
@@ -135,7 +135,10 @@ defmodule Plushie.Event.BuiltinSpecs do
         edge: :any
       ]
     },
-    pane_clicked: %{carrier: :data, fields: [pane: :any]}
+    pane_clicked: %{carrier: :data, fields: [pane: :any]},
+
+    # -- Animation events --
+    transition_complete: %{carrier: :data, fields: [tag: :any, prop: :string]}
   }
 
   @canvas_internal_types MapSet.new([

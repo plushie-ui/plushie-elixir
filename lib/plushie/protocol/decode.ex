@@ -641,17 +641,18 @@ defmodule Plushie.Protocol.Decode do
     %SystemEvent{type: :animation_frame, data: timestamp}
   end
 
-  defp dispatch(%{
-         "type" => "event",
-         "family" => "transition_complete",
-         "id" => id,
-         "data" => data
-       }) do
+  defp dispatch(
+         %{"type" => "event", "family" => "transition_complete", "id" => _id, "data" => data} =
+           msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
     tag = if data["tag"], do: String.to_atom(data["tag"])
 
     %WidgetEvent{
       type: :transition_complete,
-      id: id,
+      id: local,
+      scope: scope,
+      window_id: window_id,
       data: %{tag: tag, prop: data["prop"]}
     }
   end
@@ -890,7 +891,14 @@ defmodule Plushie.Protocol.Decode do
 
   defp dispatch(%{"type" => "event", "family" => "sort", "id" => _id, "data" => data} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    %WidgetEvent{type: :sort, id: local, scope: scope, window_id: window_id, data: data["column"]}
+
+    %WidgetEvent{
+      type: :sort,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: %{column: data["column"]}
+    }
   end
 
   defp dispatch(%{"type" => "event", "family" => "scroll", "id" => _id, "data" => data} = msg) do

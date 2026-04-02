@@ -620,15 +620,20 @@ defmodule Mix.Tasks.Plushie.Build do
   end
 
   defp extract_cargo_package_name(cargo_path) do
-    cargo_path
-    |> File.read!()
-    |> String.split("\n")
-    |> Enum.find_value(fn line ->
-      case Regex.run(~r/^name\s*=\s*"([^"]+)"/, String.trim(line)) do
-        [_, name] -> name
-        _ -> nil
-      end
-    end)
+    case File.read(cargo_path) do
+      {:ok, content} ->
+        content
+        |> String.split("\n")
+        |> Enum.find_value(fn line ->
+          case Regex.run(~r/^name\s*=\s*"([^"]+)"/, String.trim(line)) do
+            [_, name] -> name
+            _ -> nil
+          end
+        end)
+
+      {:error, _} ->
+        nil
+    end
   end
 
   # Validates Rust constructor expressions. Matches:

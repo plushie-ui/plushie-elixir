@@ -828,6 +828,7 @@ defmodule Plushie.Runtime do
           }
 
           state = sync_runtime_subscriptions(state, state.model, widget_handlers)
+          state = Windows.sync_windows(state, new_tree)
 
           {:noreply, state}
 
@@ -1499,7 +1500,7 @@ defmodule Plushie.Runtime do
 
         if is_nil(resolved_event) do
           if state.widget_handlers != handlers_before do
-            rerender_after_widget_state_change(state)
+            rerender_after_widget_state_change(state, handlers_before)
           else
             state
           end
@@ -1580,8 +1581,15 @@ defmodule Plushie.Runtime do
   # without emitting an event. The widget state changed but the app's
   # update/2 was never called, so we need to re-render to pick up
   # any view changes driven by the new widget state.
-  @spec rerender_after_widget_state_change(state()) :: state()
-  defp rerender_after_widget_state_change(%{app: app, model: model, bridge: bridge} = state) do
+  #
+  # `handlers_before` is the widget_handlers state prior to the update.
+  # On view error we revert to this to avoid a state-tree desync where
+  # the handler registry reflects an update the tree never rendered.
+  @spec rerender_after_widget_state_change(state(), map()) :: state()
+  defp rerender_after_widget_state_change(
+         %{app: app, model: model, bridge: bridge} = state,
+         handlers_before
+       ) do
     {new_tree, state} =
       case render_and_sync(
              app,
@@ -1591,8 +1599,11 @@ defmodule Plushie.Runtime do
              state.widget_handlers,
              state.dev_overlay
            ) do
-        {:ok, tree} -> {tree, %{state | consecutive_view_errors: 0}}
-        :view_error -> {state.tree, track_view_error(state)}
+        {:ok, tree} ->
+          {tree, %{state | consecutive_view_errors: 0}}
+
+        :view_error ->
+          {state.tree, %{track_view_error(state) | widget_handlers: handlers_before}}
       end
 
     widget_handlers = Plushie.Runtime.WidgetHandlers.derive_registry(new_tree)
@@ -1605,7 +1616,8 @@ defmodule Plushie.Runtime do
         widget_events: widget_events
     }
 
-    sync_runtime_subscriptions(state, model, widget_handlers)
+    state = sync_runtime_subscriptions(state, model, widget_handlers)
+    Windows.sync_windows(state, new_tree)
   end
 
   defp safe_update(app, model, event, consecutive_errors) do
