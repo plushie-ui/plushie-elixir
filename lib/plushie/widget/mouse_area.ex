@@ -37,15 +37,32 @@ defmodule Plushie.Widget.MouseArea do
 
   Conditional (opt-in via props):
 
-  - `%WidgetEvent{type: :mouse_middle_press, id: id}` -- middle mouse button pressed.
-  - `%WidgetEvent{type: :mouse_right_press, id: id}` -- right mouse button pressed.
-  - `%WidgetEvent{type: :mouse_right_release, id: id}` -- right mouse button released.
-  - `%WidgetEvent{type: :mouse_middle_release, id: id}` -- middle mouse button released.
-  - `%WidgetEvent{type: :mouse_double_click, id: id}` -- left mouse button double-clicked.
-  - `%WidgetEvent{type: :mouse_enter, id: id}` -- cursor entered the area.
-  - `%WidgetEvent{type: :mouse_exit, id: id}` -- cursor exited the area.
-  - `%WidgetEvent{type: :mouse_move, id: id, data: %{x: x, y: y}}` -- cursor moved within the area.
-  - `%WidgetEvent{type: :mouse_scroll, id: id, data: %{delta_x: dx, delta_y: dy}}` -- scroll wheel within the area.
+  - `%WidgetEvent{type: :press, id: id, data: %{button: :right}}` -- right mouse button pressed.
+  - `%WidgetEvent{type: :release, id: id, data: %{button: :right}}` -- right mouse button released.
+  - `%WidgetEvent{type: :press, id: id, data: %{button: :middle}}` -- middle mouse button pressed.
+  - `%WidgetEvent{type: :release, id: id, data: %{button: :middle}}` -- middle mouse button released.
+  - `%WidgetEvent{type: :double_click, id: id}` -- left mouse button double-clicked.
+  - `%WidgetEvent{type: :enter, id: id}` -- cursor entered the area.
+  - `%WidgetEvent{type: :exit, id: id}` -- cursor exited the area.
+  - `%WidgetEvent{type: :move, id: id, data: %{x: x, y: y, pointer: pointer, modifiers: mods}}` -- cursor moved within the area.
+  - `%WidgetEvent{type: :pointer_scroll, id: id, data: %{delta_x: dx, delta_y: dy, pointer: pointer, modifiers: mods}}` -- scroll wheel within the area.
+
+  ### Pattern matching examples
+
+      # Right-click context menu
+      def update(model, %WidgetEvent{type: :press, id: "area", data: %{button: :right}}) do
+        %{model | context_menu: true}
+      end
+
+      # Pointer move (works for mouse and touch)
+      def update(model, %WidgetEvent{type: :move, id: "area", data: %{x: x, y: y}}) do
+        %{model | cursor: {x, y}}
+      end
+
+      # Scroll with accumulated deltas
+      def update(model, %WidgetEvent{type: :pointer_scroll, data: %{delta_y: dy}}) do
+        %{model | offset: model.offset + dy}
+      end
   """
 
   alias Plushie.Widget.Build

@@ -237,7 +237,7 @@ group.
 | Prop | Type | Default | Purpose |
 |---|---|---|---|
 | `on_click` | boolean | `false` | Enable `:click` events (scoped under canvas ID) |
-| `on_hover` | boolean | `false` | Enable `:mouse_enter`/`:mouse_exit` events |
+| `on_hover` | boolean | `false` | Enable `:enter`/`:exit` events |
 | `draggable` | boolean | `false` | Enable `:drag`/`:drag_end` events |
 | `drag_axis` | `"x"` / `"y"` / `"both"` | *n/a* | Constrain drag direction (unconstrained when not set) |
 | `drag_bounds` | DragBounds | *n/a* | Limit drag region (`%{min_x, max_x, min_y, max_y}`) |

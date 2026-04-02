@@ -87,9 +87,9 @@ See `Plushie.Test.Helpers` for full specs.
 | `slide(selector, value, opts)` | slider, vertical_slider | `:slide` |
 | `scroll(selector, dx, dy, opts)` | scrollable | `:scroll` |
 | `paste(selector, text, opts)` | text_input, text_editor | `:paste` |
-| `canvas_press(selector, x, y, opts)` | canvas | `:canvas_press` |
-| `canvas_release(selector, x, y, opts)` | canvas | `:canvas_release` |
-| `canvas_move(selector, x, y, opts)` | canvas | `:canvas_move` |
+| `canvas_press(selector, x, y, opts)` | canvas | `:press` (unified pointer) |
+| `canvas_release(selector, x, y, opts)` | canvas | `:release` (unified pointer) |
+| `canvas_move(selector, x, y, opts)` | canvas | `:move` (unified pointer) |
 | `press(key)` | *n/a* | `Plushie.Event.KeyEvent` |
 | `release(key)` | *n/a* | `Plushie.Event.KeyEvent` |
 | `type_key(key)` | *n/a* | press + release |

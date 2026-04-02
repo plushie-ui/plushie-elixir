@@ -571,7 +571,7 @@ mouse_area "item-#{item.id}",
   text(item.id, item.name)
 end
 
-def update(model, %WidgetEvent{type: :mouse_right_press, scope: [item_id | _]}) do
+def update(model, %WidgetEvent{type: :press, data: %{button: :right}, scope: [item_id | _]}) do
   %{model | context_menu: %{item_id: item_id, x: model.cursor_x, y: model.cursor_y}}
 end
 

@@ -66,18 +66,20 @@ defmodule Plushie.Widget.Canvas do
 
   ## Events
 
-  Raw canvas events (coordinate-level):
+  Canvas background events (coordinate-level, unified pointer types):
 
-  - `%WidgetEvent{type: :canvas_press, id: id, data: %{x: x, y: y, button: button}}`
-  - `%WidgetEvent{type: :canvas_release, id: id, data: %{x: x, y: y, button: button}}`
-  - `%WidgetEvent{type: :canvas_move, id: id, data: %{x: x, y: y}}`
-  - `%WidgetEvent{type: :canvas_scroll, id: id, data: %{x: x, y: y, delta_x: dx, delta_y: dy}}`
+  - `%WidgetEvent{type: :press, id: id, data: %{x: x, y: y, button: button, pointer: pointer, modifiers: mods}}`
+  - `%WidgetEvent{type: :release, id: id, data: %{x: x, y: y, button: button, pointer: pointer, modifiers: mods}}`
+  - `%WidgetEvent{type: :move, id: id, data: %{x: x, y: y, pointer: pointer, modifiers: mods}}`
+  - `%WidgetEvent{type: :pointer_scroll, id: id, data: %{x: x, y: y, delta_x: dx, delta_y: dy, pointer: pointer, modifiers: mods}}`
+  - `%WidgetEvent{type: :enter, id: id}`
+  - `%WidgetEvent{type: :exit, id: id}`
 
   Interactive shape events (semantic, from shapes with `interactive` field):
 
   - `%WidgetEvent{type: :click, id: element_id, scope: [canvas_id | ...]}`
-  - `%WidgetEvent{type: :mouse_enter, id: id}`
-  - `%WidgetEvent{type: :mouse_exit, id: id}`
+  - `%WidgetEvent{type: :enter, id: id}`
+  - `%WidgetEvent{type: :exit, id: id}`
   - `%WidgetEvent{type: :drag, id: id, data: %{x: x, y: y, delta_x: dx, delta_y: dy}}`
   - `%WidgetEvent{type: :drag_end, id: id, data: %{x: x, y: y}}`
   - `%WidgetEvent{type: :focused, id: id}`

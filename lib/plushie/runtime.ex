@@ -516,6 +516,37 @@ defmodule Plushie.Runtime do
     {:noreply, store_coalescable(state, :mouse_move, event)}
   end
 
+  def handle_info({:renderer_event, %WidgetEvent{type: :move} = event}, state) do
+    {:noreply,
+     store_coalescable(
+       state,
+       {:move, event.window_id, Plushie.Event.target(event)},
+       event
+     )}
+  end
+
+  def handle_info({:renderer_event, %WidgetEvent{type: :pointer_scroll} = event}, state) do
+    key = {:pointer_scroll, event.window_id, Plushie.Event.target(event)}
+
+    existing = Map.get(state.pending_coalesce, key)
+
+    accumulated =
+      if existing do
+        %{
+          event
+          | data: %{
+              event.data
+              | delta_x: existing.data.delta_x + event.data.delta_x,
+                delta_y: existing.data.delta_y + event.data.delta_y
+            }
+        }
+      else
+        event
+      end
+
+    {:noreply, store_coalescable(state, key, accumulated)}
+  end
+
   def handle_info({:renderer_event, %WidgetEvent{type: :resize} = event}, state) do
     {:noreply,
      store_coalescable(
