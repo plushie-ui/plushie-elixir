@@ -282,17 +282,17 @@ defmodule Plushie.Docs.CommandsTest do
 
   test "subscriptions_on_pointer_button_test" do
     sub = Subscription.on_pointer_button(:mouse_btn)
-    assert %Subscription{type: :on_mouse_button, tag: :mouse_btn} = sub
+    assert %Subscription{type: :on_pointer_button, tag: :mouse_btn} = sub
   end
 
   test "subscriptions_on_pointer_scroll_test" do
     sub = Subscription.on_pointer_scroll(:scroll)
-    assert %Subscription{type: :on_mouse_scroll, tag: :scroll} = sub
+    assert %Subscription{type: :on_pointer_scroll, tag: :scroll} = sub
   end
 
   test "subscriptions_on_pointer_touch_test" do
     sub = Subscription.on_pointer_touch(:touch)
-    assert %Subscription{type: :on_touch, tag: :touch} = sub
+    assert %Subscription{type: :on_pointer_touch, tag: :touch} = sub
   end
 
   test "subscriptions_on_ime_test" do

@@ -122,13 +122,13 @@ defmodule Plushie.Docs.RunningTest do
     alias Plushie.Subscription
 
     sub_mouse = Subscription.on_pointer_move(:mouse, max_rate: 30)
-    assert %Subscription{type: :on_mouse_move, tag: :mouse, max_rate: 30} = sub_mouse
+    assert %Subscription{type: :on_pointer_move, tag: :mouse, max_rate: 30} = sub_mouse
 
     sub_frame = Subscription.on_animation_frame(:frame, max_rate: 60)
     assert %Subscription{type: :on_animation_frame, tag: :frame, max_rate: 60} = sub_frame
 
     sub_capture = Subscription.on_pointer_move(:capture, max_rate: 0)
-    assert %Subscription{type: :on_mouse_move, tag: :capture, max_rate: 0} = sub_capture
+    assert %Subscription{type: :on_pointer_move, tag: :capture, max_rate: 0} = sub_capture
   end
 
   # ============================================================================

@@ -45,28 +45,28 @@ defmodule Plushie.SubscriptionParityTest do
   describe "on_pointer_move/1" do
     test "returns correct subscription spec" do
       sub = Subscription.on_pointer_move(:mouse)
-      assert sub == %Subscription{type: :on_mouse_move, tag: :mouse}
+      assert sub == %Subscription{type: :on_pointer_move, tag: :mouse}
     end
   end
 
   describe "on_pointer_button/1" do
     test "returns correct subscription spec" do
       sub = Subscription.on_pointer_button(:btn)
-      assert sub == %Subscription{type: :on_mouse_button, tag: :btn}
+      assert sub == %Subscription{type: :on_pointer_button, tag: :btn}
     end
   end
 
   describe "on_pointer_scroll/1" do
     test "returns correct subscription spec" do
       sub = Subscription.on_pointer_scroll(:scroll)
-      assert sub == %Subscription{type: :on_mouse_scroll, tag: :scroll}
+      assert sub == %Subscription{type: :on_pointer_scroll, tag: :scroll}
     end
   end
 
   describe "on_pointer_touch/1" do
     test "returns correct subscription spec" do
       sub = Subscription.on_pointer_touch(:touch)
-      assert sub == %Subscription{type: :on_touch, tag: :touch}
+      assert sub == %Subscription{type: :on_pointer_touch, tag: :touch}
     end
   end
 

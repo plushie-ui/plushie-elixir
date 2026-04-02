@@ -859,10 +859,10 @@ defmodule Plushie.ProtocolTest do
 
   describe "encode_subscribe with max_rate" do
     test "includes max_rate field in JSON when set" do
-      result = Protocol.encode_subscribe("on_mouse_move", "mouse", :json, 30)
+      result = Protocol.encode_subscribe("on_pointer_move", "mouse", :json, 30)
       parsed = decode_json!(result)
       assert parsed["type"] == "subscribe"
-      assert parsed["kind"] == "on_mouse_move"
+      assert parsed["kind"] == "on_pointer_move"
       assert parsed["tag"] == "mouse"
       assert parsed["max_rate"] == 30
     end
@@ -881,16 +881,16 @@ defmodule Plushie.ProtocolTest do
     end
 
     test "includes max_rate of 0 in JSON (subscribe but never emit)" do
-      result = Protocol.encode_subscribe("on_mouse_move", "mouse", :json, 0)
+      result = Protocol.encode_subscribe("on_pointer_move", "mouse", :json, 0)
       parsed = decode_json!(result)
       assert parsed["max_rate"] == 0
     end
 
     test "max_rate roundtrips through msgpack" do
-      encoded = Protocol.encode_subscribe("on_mouse_move", "mouse", :msgpack, 30)
+      encoded = Protocol.encode_subscribe("on_pointer_move", "mouse", :msgpack, 30)
       {:ok, decoded} = Msgpax.unpack(encoded)
       assert decoded["type"] == "subscribe"
-      assert decoded["kind"] == "on_mouse_move"
+      assert decoded["kind"] == "on_pointer_move"
       assert decoded["tag"] == "mouse"
       assert decoded["max_rate"] == 30
     end

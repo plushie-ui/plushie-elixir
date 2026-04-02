@@ -349,7 +349,7 @@ defmodule Plushie.Subscription do
     {window_id, opts} = Keyword.pop(opts, :window)
 
     %__MODULE__{
-      type: :on_mouse_move,
+      type: :on_pointer_move,
       tag: event_tag,
       max_rate: opts[:max_rate],
       window_id: window_id
@@ -369,7 +369,7 @@ defmodule Plushie.Subscription do
     {window_id, opts} = Keyword.pop(opts, :window)
 
     %__MODULE__{
-      type: :on_mouse_button,
+      type: :on_pointer_button,
       tag: event_tag,
       max_rate: opts[:max_rate],
       window_id: window_id
@@ -389,7 +389,7 @@ defmodule Plushie.Subscription do
     {window_id, opts} = Keyword.pop(opts, :window)
 
     %__MODULE__{
-      type: :on_mouse_scroll,
+      type: :on_pointer_scroll,
       tag: event_tag,
       max_rate: opts[:max_rate],
       window_id: window_id
@@ -426,7 +426,13 @@ defmodule Plushie.Subscription do
   @spec on_pointer_touch(event_tag :: atom(), opts :: keyword()) :: t()
   def on_pointer_touch(event_tag, opts \\ []) when is_atom(event_tag) do
     {window_id, opts} = Keyword.pop(opts, :window)
-    %__MODULE__{type: :on_touch, tag: event_tag, max_rate: opts[:max_rate], window_id: window_id}
+
+    %__MODULE__{
+      type: :on_pointer_touch,
+      tag: event_tag,
+      max_rate: opts[:max_rate],
+      window_id: window_id
+    }
   end
 
   @doc """
