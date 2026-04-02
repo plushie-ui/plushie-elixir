@@ -168,7 +168,7 @@ Events walk the scope chain from innermost to outermost:
 7. If no handler captures, the event reaches `update/2`.
 
 Canvas background events use the unified pointer types (`:press`,
-`:release`, `:move`, `:pointer_scroll`) and are delivered to `update/2`
+`:release`, `:move`, `:scroll`) and are delivered to `update/2`
 like any other event. They are not auto-consumed.
 
 ## Widget-scoped subscriptions

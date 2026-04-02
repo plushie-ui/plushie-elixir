@@ -225,7 +225,7 @@ defmodule Plushie.EventDeclarationTest do
     end
 
     test "has specs for unified pointer event types" do
-      for type <- ~w(press release move pointer_scroll enter exit double_click resize)a do
+      for type <- ~w(press release move scroll enter exit double_click resize)a do
         assert BuiltinSpecs.spec(type) != nil, "missing spec for #{type}"
       end
     end

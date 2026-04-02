@@ -883,7 +883,7 @@ defmodule Plushie.ProtocolParityTest do
     end
   end
 
-  describe "pointer_scroll event decoding" do
+  describe "scroll (pointer) event decoding" do
     test "decodes scroll with position and deltas" do
       json =
         Jason.encode!(%{
@@ -902,7 +902,7 @@ defmodule Plushie.ProtocolParityTest do
         })
 
       assert %WidgetEvent{
-               type: :pointer_scroll,
+               type: :scroll,
                data: %{
                  delta_y: -3.0,
                  pointer: :mouse,

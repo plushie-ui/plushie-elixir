@@ -525,8 +525,8 @@ defmodule Plushie.Runtime do
      )}
   end
 
-  def handle_info({:renderer_event, %WidgetEvent{type: :pointer_scroll} = event}, state) do
-    key = {:pointer_scroll, event.window_id, Plushie.Event.target(event)}
+  def handle_info({:renderer_event, %WidgetEvent{type: :scroll} = event}, state) do
+    key = {:scroll, event.window_id, Plushie.Event.target(event)}
 
     existing = Map.get(state.pending_coalesce, key)
 
@@ -545,6 +545,15 @@ defmodule Plushie.Runtime do
       end
 
     {:noreply, store_coalescable(state, key, accumulated)}
+  end
+
+  def handle_info({:renderer_event, %WidgetEvent{type: :scrolled} = event}, state) do
+    {:noreply,
+     store_coalescable(
+       state,
+       {:scrolled, event.window_id, Plushie.Event.target(event)},
+       event
+     )}
   end
 
   def handle_info({:renderer_event, %WidgetEvent{type: :resize} = event}, state) do

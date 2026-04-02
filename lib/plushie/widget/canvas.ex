@@ -71,7 +71,7 @@ defmodule Plushie.Widget.Canvas do
   - `%WidgetEvent{type: :press, id: id, data: %{x: x, y: y, button: button, pointer: pointer, modifiers: mods}}`
   - `%WidgetEvent{type: :release, id: id, data: %{x: x, y: y, button: button, pointer: pointer, modifiers: mods}}`
   - `%WidgetEvent{type: :move, id: id, data: %{x: x, y: y, pointer: pointer, modifiers: mods}}`
-  - `%WidgetEvent{type: :pointer_scroll, id: id, data: %{x: x, y: y, delta_x: dx, delta_y: dy, pointer: pointer, modifiers: mods}}`
+  - `%WidgetEvent{type: :scroll, id: id, data: %{x: x, y: y, delta_x: dx, delta_y: dy, pointer: pointer, modifiers: mods}}`
   - `%WidgetEvent{type: :enter, id: id}`
   - `%WidgetEvent{type: :exit, id: id}`
 

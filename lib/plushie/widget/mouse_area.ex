@@ -45,7 +45,7 @@ defmodule Plushie.Widget.MouseArea do
   - `%WidgetEvent{type: :enter, id: id}` -- cursor entered the area.
   - `%WidgetEvent{type: :exit, id: id}` -- cursor exited the area.
   - `%WidgetEvent{type: :move, id: id, data: %{x: x, y: y, pointer: pointer, modifiers: mods}}` -- cursor moved within the area.
-  - `%WidgetEvent{type: :pointer_scroll, id: id, data: %{delta_x: dx, delta_y: dy, pointer: pointer, modifiers: mods}}` -- scroll wheel within the area.
+  - `%WidgetEvent{type: :scroll, id: id, data: %{delta_x: dx, delta_y: dy, pointer: pointer, modifiers: mods}}` -- scroll wheel within the area.
 
   ### Pattern matching examples
 
@@ -60,7 +60,7 @@ defmodule Plushie.Widget.MouseArea do
       end
 
       # Scroll with accumulated deltas
-      def update(model, %WidgetEvent{type: :pointer_scroll, data: %{delta_y: dy}}) do
+      def update(model, %WidgetEvent{type: :scroll, data: %{delta_y: dy}}) do
         %{model | offset: model.offset + dy}
       end
   """

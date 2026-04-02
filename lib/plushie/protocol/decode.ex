@@ -725,20 +725,19 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  # Pointer scroll (unified pointer event) -- disambiguated from scrollable
-  # widget's "scroll" by the presence of the "pointer" key in data.
+  # Pointer scroll (unified pointer event).
   defp dispatch(
          %{
            "type" => "event",
            "family" => "scroll",
            "id" => _id,
-           "data" => %{"pointer" => _} = data
+           "data" => data
          } = msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
     %WidgetEvent{
-      type: :pointer_scroll,
+      type: :scroll,
       id: local,
       scope: scope,
       window_id: window_id,
@@ -876,11 +875,11 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "scroll", "id" => _id, "data" => data} = msg) do
+  defp dispatch(%{"type" => "event", "family" => "scrolled", "id" => _id, "data" => data} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
     %WidgetEvent{
-      type: :scroll,
+      type: :scrolled,
       id: local,
       scope: scope,
       window_id: window_id,

@@ -59,7 +59,7 @@ an atom-keyed map).
 | `:option_hovered`  | value (any) | Pick list option hovered                |
 | `:key_binding`     | data    | Key binding activated (empty data map)     |
 | `:sort`            | data    | Table column sort requested (`column`)     |
-| `:scroll`          | data    | Scroll position changed (`absolute_x`, `absolute_y`, `relative_x`, `relative_y`) |
+| `:scrolled`        | data    | Scrollable viewport offset changed (`absolute_x`, `absolute_y`, `relative_x`, `relative_y`, `bounds`, `content_bounds`) |
 | `:pane_focus_cycle` | none   | Pane focus cycle requested                 |
 | `:transition_complete` | value (any) | Emitted when a renderer-side transition completes (requires `on_complete: tag`) |
 
@@ -76,7 +76,7 @@ identifies which button was involved.
 | `:press`          | data    | `x`, `y`, `button`, `pointer`, `finger`, `modifiers` |
 | `:release`        | data    | `x`, `y`, `button`, `pointer`, `finger`, `modifiers` |
 | `:move`           | data    | `x`, `y`, `pointer`, `finger`, `modifiers`           |
-| `:pointer_scroll` | data    | `x`, `y`, `delta_x`, `delta_y`, `pointer`, `modifiers` |
+| `:scroll` | data    | `x`, `y`, `delta_x`, `delta_y`, `pointer`, `modifiers` |
 | `:enter`          | none    |                                                       |
 | `:exit`           | none    |                                                       |
 | `:double_click`   | data    | `x`, `y`, `pointer`, `modifiers`                     |
@@ -86,6 +86,10 @@ The `button` field is one of `:left`, `:right`, `:middle`, `:back`,
 `:forward`. The `pointer` field is one of `:mouse`, `:touch`, `:pen`.
 The `finger` field is an integer for touch events, nil otherwise.
 `modifiers` is a `Plushie.KeyModifiers` struct.
+
+Note: `:scroll` is pointer input (wheel delta at coordinates).
+`:scrolled` (in the standard widget events table above) is container
+state -- a scrollable widget reporting its viewport offset changed.
 
 ### Generic element events
 

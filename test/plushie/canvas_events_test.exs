@@ -68,7 +68,7 @@ defmodule Plushie.CanvasEventsTest do
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
-    test "decodes pointer scroll (wire family 'scroll' with pointer field)" do
+    test "decodes pointer scroll (wire family 'scroll')" do
       msg = %{
         "type" => "event",
         "family" => "scroll",
@@ -85,17 +85,17 @@ defmodule Plushie.CanvasEventsTest do
       }
 
       assert %WidgetEvent{
-               type: :pointer_scroll,
+               type: :scroll,
                id: "c1",
                data: %{x: 1.5, y: 2.5, delta_x: 0.5, delta_y: -3.0, pointer: :mouse}
              } =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
-    test "scrollable widget scroll (wire family 'scroll' without pointer field)" do
+    test "scrollable widget scroll (wire family 'scrolled')" do
       msg = %{
         "type" => "event",
-        "family" => "scroll",
+        "family" => "scrolled",
         "id" => "scroller",
         "window_id" => "main",
         "data" => %{
@@ -111,7 +111,7 @@ defmodule Plushie.CanvasEventsTest do
       }
 
       assert %WidgetEvent{
-               type: :scroll,
+               type: :scrolled,
                id: "scroller",
                data: %{absolute_y: 50.0, relative_y: 0.5}
              } =

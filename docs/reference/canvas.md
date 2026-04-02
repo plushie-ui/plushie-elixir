@@ -25,7 +25,7 @@ height, background) but its content is drawn shapes, not child widgets.
 | `on_press` | boolean | `false` | Emit `:press` events |
 | `on_release` | boolean | `false` | Emit `:release` events |
 | `on_move` | boolean | `false` | Emit `:move` events |
-| `on_scroll` | boolean | `false` | Emit `:pointer_scroll` events |
+| `on_scroll` | boolean | `false` | Emit `:scroll` events |
 | `event_rate` | integer | *n/a* | Max events/sec for canvas-level events |
 | `a11y` | map | *n/a* | Accessibility overrides. See [Accessibility](accessibility.md). |
 
@@ -294,7 +294,7 @@ type and modifier information:
 | `:press` | `x`, `y`, `button`, `pointer`, `finger`, `modifiers` |
 | `:release` | `x`, `y`, `button`, `pointer`, `finger`, `modifiers` |
 | `:move` | `x`, `y`, `pointer`, `finger`, `modifiers` |
-| `:pointer_scroll` | `x`, `y`, `delta_x`, `delta_y`, `pointer`, `modifiers` |
+| `:scroll` | `x`, `y`, `delta_x`, `delta_y`, `pointer`, `modifiers` |
 
 ### Element-level events
 
@@ -329,7 +329,7 @@ generic event families shared across all widget types.
 ### Pointer events in custom widgets
 
 Canvas-level pointer events (`:press`, `:release`, `:move`,
-`:pointer_scroll`) are delivered through the widget handler pipeline
+`:scroll`) are delivered through the widget handler pipeline
 like any other event. If a custom widget's `handle_event/2` does not
 intercept them, they reach the parent app's `update/2`.
 

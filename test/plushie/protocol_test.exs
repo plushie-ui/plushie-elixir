@@ -1412,7 +1412,7 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
-  describe "decode_message/1 -- pointer_scroll" do
+  describe "decode_message/1 -- scroll (pointer)" do
     test "reads x/y and deltas into struct fields" do
       json =
         Jason.encode!(%{
@@ -1431,7 +1431,7 @@ defmodule Plushie.ProtocolTest do
         })
 
       assert %WidgetEvent{
-               type: :pointer_scroll,
+               type: :scroll,
                id: "viewport",
                window_id: "main",
                data: %{x: 5.0, y: 10.0, delta_x: +0.0, delta_y: -1.0, pointer: :mouse}

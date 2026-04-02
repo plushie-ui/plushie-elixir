@@ -171,7 +171,7 @@ defmodule Plushie.Widget.Handler do
     :press,
     :release,
     :move,
-    :pointer_scroll
+    :scroll
   ]
 
   @spec resolve_emit_identity(struct() | map(), String.t(), String.t() | nil) ::

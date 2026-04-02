@@ -49,13 +49,15 @@ defmodule Plushie.Event.BuiltinSpecs do
     option_hovered: %{carrier: :value, type: :any},
     key_binding: %{carrier: :data, fields: []},
     sort: %{carrier: :data, fields: [column: :string]},
-    scroll: %{
+    scrolled: %{
       carrier: :data,
       fields: [
         absolute_x: :number,
         absolute_y: :number,
         relative_x: :number,
-        relative_y: :number
+        relative_y: :number,
+        bounds: :any,
+        content_bounds: :any
       ]
     },
     pane_focus_cycle: %{carrier: :data, fields: [pane: :any]},
@@ -117,7 +119,7 @@ defmodule Plushie.Event.BuiltinSpecs do
       carrier: :data,
       fields: [x: :number, y: :number, pointer: :atom, finger: :number, modifiers: :any]
     },
-    pointer_scroll: %{
+    scroll: %{
       carrier: :data,
       fields: [
         x: :number,
