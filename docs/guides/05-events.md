@@ -133,7 +133,7 @@ end
 This works for any event type, not just `WidgetEvent`. When you click a
 button in the preview, the log shows all fields:
 
-    %WidgetEvent{type: :click, id: "btn", value: nil, data: nil, scope: ["preview"], window_id: "main"}
+    %WidgetEvent{type: :click, id: "btn", value: nil, data: nil, scope: ["preview", "main"], window_id: "main"}
 
 When you type in a text input:
 

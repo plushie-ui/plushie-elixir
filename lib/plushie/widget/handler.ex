@@ -185,6 +185,16 @@ defmodule Plushie.Widget.Handler do
     {id, scope, window_id}
   end
 
+  # Top-level widget (no container scope, only window_id in scope list)
+  defp resolve_emit_identity(
+         %{scope: [wid], id: id, window_id: wid},
+         _widget_id,
+         _fallback_window_id
+       )
+       when is_binary(wid) do
+    {id, [wid], wid}
+  end
+
   defp resolve_emit_identity(
          %{scope: [canvas_id | parent_scope], window_id: window_id},
          _widget_id,

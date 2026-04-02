@@ -11,7 +11,7 @@ file B" because the container's ID becomes part of the path.
 |---|---|---|
 | Named container (explicit ID) | Yes | ID pushed onto scope chain |
 | Auto-ID container (`auto:` prefix) | No | Transparent, no scope effect |
-| Window node (`type: "window"`) | No | Namespace boundary, not scope |
+| Window node (`type: "window"`) | Yes | Appended to end of scope list |
 | Custom widget | No | Widget IDs are transparent to scoping |
 
 User-provided IDs must not contain `/`. The slash is reserved for the
@@ -130,14 +130,27 @@ and no duplicates among siblings.
 When the renderer emits a widget event, the wire ID is the full
 scoped path (e.g. `"sidebar/form/save"`). The SDK splits it into
 `id` (local) and `scope` (reversed ancestor chain, nearest parent
-first):
+first, window ID last):
 
 ```elixir
-%WidgetEvent{type: :click, id: "save", scope: ["form", "sidebar"]}
+%WidgetEvent{type: :click, id: "save", scope: ["form", "sidebar", "main"], window_id: "main"}
 ```
 
 The scope is reversed so you can pattern match on the immediate parent
-with `[parent | _]` without knowing the full ancestry.
+with `[parent | _]` without knowing the full ancestry. The window ID
+is always the last element in the scope list, giving you the full
+hierarchy from innermost container to outermost window.
+
+The `window_id` field remains on the event struct for direct access.
+You can use either approach:
+
+```elixir
+# Via scope (window is last element)
+%WidgetEvent{scope: [_form, _sidebar, window_id]} = event
+
+# Via dedicated field
+%WidgetEvent{window_id: window_id} = event
+```
 
 ### Pattern matching examples
 
@@ -145,30 +158,31 @@ with `[parent | _]` without knowing the full ancestry.
 # Local ID only (any scope)
 def update(model, %WidgetEvent{type: :click, id: "save"}), do: ...
 
-# Immediate parent match
+# Immediate parent match (window_id at end doesn't affect [parent | _])
 def update(model, %WidgetEvent{type: :click, id: "save", scope: ["form" | _]}), do: ...
 
 # Bind dynamic parent (list items)
 def update(model, %WidgetEvent{type: :toggle, id: "done", scope: [item_id | _]}), do: ...
 
-# Exact depth (only one ancestor)
-def update(model, %WidgetEvent{id: "query", scope: ["search"]}), do: ...
+# Match window via scope
+def update(model, %WidgetEvent{id: "save", window_id: "settings"}), do: ...
 
-# Unscoped widget (top-level)
-def update(model, %WidgetEvent{id: "save", scope: []}), do: ...
+# Top-level widget (only window in scope)
+def update(model, %WidgetEvent{id: "save", scope: [window_id]}), do: ...
 ```
 
-Only `Plushie.Event.WidgetEvent` carries scope. Subscription events
-(`KeyEvent`, `MouseEvent`, `TouchEvent`, `ImeEvent`, `ModifiersEvent`)
-are global and unscoped.
+Only `Plushie.Event.WidgetEvent` and `Plushie.Event.ImeEvent` carry
+scope. Other subscription events (`KeyEvent`, `MouseEvent`,
+`TouchEvent`, `ModifiersEvent`) are global and unscoped.
 
 ## Path reconstruction
 
 `Plushie.Event.target/1` reconstructs the full forward-slash path from
-an event's `id` and `scope` fields:
+an event's `id` and `scope` fields. The window ID is automatically
+stripped from the scope since it is not part of the container path:
 
 ```elixir
-Plushie.Event.target(%WidgetEvent{id: "save", scope: ["form", "sidebar"]})
+Plushie.Event.target(%WidgetEvent{id: "save", scope: ["form", "sidebar", "main"], window_id: "main"})
 # => "sidebar/form/save"
 ```
 
@@ -184,10 +198,10 @@ canvas "drawing"              ->  "drawing"
 ```
 
 Canvas element clicks are regular `:click` events with the canvas ID in
-scope:
+scope (and window ID at the end):
 
 ```elixir
-%WidgetEvent{type: :click, id: "handle", scope: ["drawing"]}
+%WidgetEvent{type: :click, id: "handle", scope: ["drawing", "main"], window_id: "main"}
 ```
 
 ## Command paths
@@ -202,15 +216,23 @@ Command.scroll_to("sidebar/list", 0)
 
 ## Multi-window scoping
 
-Scopes do not cross window boundaries. Each window creates a separate
-namespace. The widget handler registry keys entries by
-`{window_id, scoped_id}`. A widget with scoped ID `"form/save"` in
-window `"main"` is a different registry entry from `"form/save"` in
-window `"settings"`.
+The window ID is part of the scope chain (always the last element).
+Each window creates a separate namespace. The widget handler registry
+keys entries by `{window_id, scoped_id}`. A widget with scoped ID
+`"form/save"` in window `"main"` is a different registry entry from
+`"form/save"` in window `"settings"`.
 
-Events include `window_id` so the runtime dispatches to the correct
-window's handler chain. In multi-window apps, events from one window
-never trigger handlers in another.
+Events from a widget in window `"main"` carry
+`scope: ["form", "main"], window_id: "main"`. In multi-window apps,
+you can pattern match on the window via `window_id`:
+
+```elixir
+def update(model, %WidgetEvent{id: "save", window_id: "settings"}) do
+  save_settings(model)
+end
+```
+
+Events from one window never trigger handlers in another.
 
 ## Test selectors
 

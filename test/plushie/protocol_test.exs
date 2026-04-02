@@ -101,14 +101,14 @@ defmodule Plushie.ProtocolTest do
       json = Jason.encode!(%{type: "event", family: "click", id: "btn_save", window_id: "main"})
 
       assert Protocol.decode_message(json, :json) ==
-               %WidgetEvent{type: :click, id: "btn_save", window_id: "main"}
+               %WidgetEvent{type: :click, id: "btn_save", scope: ["main"], window_id: "main"}
     end
 
     test "scoped widget id is split into local id and scope" do
       json =
         Jason.encode!(%{type: "event", family: "click", id: "panel/submit", window_id: "main"})
 
-      assert %WidgetEvent{type: :click, id: "submit", scope: ["panel"], window_id: "main"} =
+      assert %WidgetEvent{type: :click, id: "submit", scope: ["panel", "main"], window_id: "main"} =
                Protocol.decode_message(json, :json)
     end
 
@@ -141,6 +141,7 @@ defmodule Plushie.ProtocolTest do
                type: :input,
                id: "search",
                value: "elixir",
+               scope: ["main"],
                window_id: "main"
              }
     end
@@ -175,6 +176,7 @@ defmodule Plushie.ProtocolTest do
                type: :submit,
                id: "login_form",
                value: "admin",
+               scope: ["main"],
                window_id: "main"
              }
     end
@@ -195,6 +197,7 @@ defmodule Plushie.ProtocolTest do
                type: :toggle,
                id: "dark_mode",
                value: true,
+               scope: ["main"],
                window_id: "main"
              }
     end
@@ -229,6 +232,7 @@ defmodule Plushie.ProtocolTest do
                type: :select,
                id: "lang_picker",
                value: "fr",
+               scope: ["main"],
                window_id: "main"
              }
     end
@@ -249,6 +253,7 @@ defmodule Plushie.ProtocolTest do
                type: :slide,
                id: "volume",
                value: 0.75,
+               scope: ["main"],
                window_id: "main"
              }
     end
@@ -283,6 +288,7 @@ defmodule Plushie.ProtocolTest do
                type: :slide_release,
                id: "scrubber",
                value: 42.0,
+               scope: ["main"],
                window_id: "main"
              }
     end
@@ -1595,7 +1601,7 @@ defmodule Plushie.ProtocolTest do
       assert %WidgetEvent{
                type: :focused,
                id: "my_canvas",
-               scope: ["panel"],
+               scope: ["panel", "main"],
                window_id: "main"
              } = Protocol.decode_message(json, :json)
     end

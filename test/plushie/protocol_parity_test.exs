@@ -726,7 +726,7 @@ defmodule Plushie.ProtocolParityTest do
       assert %WidgetEvent{
                type: :transition_complete,
                id: "box",
-               scope: [],
+               scope: ["main"],
                window_id: "main",
                data: %{tag: :faded_out, prop: "opacity"}
              } = Protocol.decode_message(json, :json)
@@ -745,7 +745,7 @@ defmodule Plushie.ProtocolParityTest do
       assert %WidgetEvent{
                type: :transition_complete,
                id: "box",
-               scope: [],
+               scope: ["main"],
                window_id: "main",
                data: %{tag: nil, prop: "opacity"}
              } = Protocol.decode_message(json, :json)

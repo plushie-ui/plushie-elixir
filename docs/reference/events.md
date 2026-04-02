@@ -138,7 +138,7 @@ inputs, sliders, canvas, mouse areas, sensors, panes, and custom widgets.
 | ----------- | ---------------------------- | ------------------------------------ |
 | `type`      | `atom \| {atom, atom}`       | Event family (see tables above)      |
 | `id`        | `String.t()`                 | Widget ID                            |
-| `scope`     | `[String.t()]`               | Ancestor scope chain (nearest first) |
+| `scope`     | `[String.t()]`               | Ancestor scope chain (nearest first, window last) |
 | `value`     | `term() \| nil`              | Scalar payload                       |
 | `data`      | `map() \| nil`               | Structured payload (atom keys)       |
 | `window_id` | `String.t() \| nil`          | Source window                        |
@@ -224,7 +224,7 @@ Input Method Editor events from subscriptions. Lifecycle:
 | ----------- | --------------------------------------------- | ------------------------- |
 | `type`      | `:opened \| :preedit \| :commit \| :closed`  | IME phase                 |
 | `id`        | `String.t() \| nil`                           | Target widget ID          |
-| `scope`     | `[String.t()]`                                | Ancestor scope chain      |
+| `scope`     | `[String.t()]`                                | Ancestor scope chain (nearest first, window last) |
 | `text`      | `String.t() \| nil`                           | Composition/commit text   |
 | `cursor`    | `{start, end} \| nil`                         | Byte offsets in preedit   |
 | `captured`  | `boolean()`                                   | Subscription captured     |
@@ -428,7 +428,7 @@ end
 `id` and `scope`:
 
 ```elixir
-event = %WidgetEvent{type: :click, id: "save", scope: ["form", "sidebar"]}
+event = %WidgetEvent{type: :click, id: "save", scope: ["form", "sidebar", "main"], window_id: "main"}
 Plushie.Event.target(event)
 # => "sidebar/form/save"
 ```

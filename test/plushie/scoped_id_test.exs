@@ -179,14 +179,14 @@ defmodule Plushie.ScopedIdTest do
   end
 
   describe "Protocol.Decode scoped ID splitting" do
-    test "simple ID has empty scope" do
+    test "simple ID has window_id as sole scope entry" do
       json = Jason.encode!(%{type: "event", family: "click", id: "save", window_id: "main"})
       event = Plushie.Protocol.Decode.decode_message(json, :json)
       assert event.id == "save"
-      assert event.scope == []
+      assert event.scope == ["main"]
     end
 
-    test "scoped ID is split into local id and reversed scope" do
+    test "scoped ID is split into local id and reversed scope with window_id at end" do
       json =
         Jason.encode!(%{
           type: "event",
@@ -197,31 +197,47 @@ defmodule Plushie.ScopedIdTest do
 
       event = Plushie.Protocol.Decode.decode_message(json, :json)
       assert event.id == "save"
-      assert event.scope == ["form", "sidebar"]
+      assert event.scope == ["form", "sidebar", "main"]
     end
 
     test "single scope level" do
       json = Jason.encode!(%{type: "event", family: "click", id: "panel/save", window_id: "main"})
       event = Plushie.Protocol.Decode.decode_message(json, :json)
       assert event.id == "save"
-      assert event.scope == ["panel"]
+      assert event.scope == ["panel", "main"]
     end
   end
 
   describe "Plushie.Event.target/1" do
-    test "no scope returns bare id" do
+    test "window_id-only scope returns bare id" do
+      event = %WidgetEvent{type: :click, id: "save", scope: ["main"], window_id: "main"}
+      assert Plushie.Event.target(event) == "save"
+    end
+
+    test "no scope and no window_id returns bare id" do
       event = %WidgetEvent{type: :click, id: "save", scope: []}
       assert Plushie.Event.target(event) == "save"
     end
 
-    test "with scope returns forward-order path" do
-      event = %WidgetEvent{type: :click, id: "save", scope: ["form", "sidebar"]}
+    test "with scope and window_id strips window_id from path" do
+      event = %WidgetEvent{
+        type: :click,
+        id: "save",
+        scope: ["form", "sidebar", "main"],
+        window_id: "main"
+      }
+
       assert Plushie.Event.target(event) == "sidebar/form/save"
     end
 
-    test "single scope level" do
-      event = %WidgetEvent{type: :click, id: "save", scope: ["panel"]}
+    test "single container scope with window_id" do
+      event = %WidgetEvent{type: :click, id: "save", scope: ["panel", "main"], window_id: "main"}
       assert Plushie.Event.target(event) == "panel/save"
+    end
+
+    test "scope without window_id preserves full path" do
+      event = %WidgetEvent{type: :click, id: "save", scope: ["form", "sidebar"]}
+      assert Plushie.Event.target(event) == "sidebar/form/save"
     end
   end
 

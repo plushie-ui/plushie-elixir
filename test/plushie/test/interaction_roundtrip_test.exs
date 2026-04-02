@@ -120,6 +120,7 @@ defmodule Plushie.Test.InteractionRoundtripTest do
       assert Runtime.model(pid).last_event == %WidgetEvent{
                type: :click,
                id: "submit_btn",
+               scope: ["main"],
                window_id: "main"
              }
     end
@@ -135,6 +136,7 @@ defmodule Plushie.Test.InteractionRoundtripTest do
                type: :input,
                id: "name_input",
                value: "Arthur",
+               scope: ["main"],
                window_id: "main"
              }
     end
@@ -200,6 +202,7 @@ defmodule Plushie.Test.InteractionRoundtripTest do
                type: :slide,
                id: "volume",
                value: 80.0,
+               scope: ["main"],
                window_id: "main"
              }
     end
@@ -226,6 +229,7 @@ defmodule Plushie.Test.InteractionRoundtripTest do
                type: :submit,
                id: "name_input",
                value: "Arthur",
+               scope: ["main"],
                window_id: "main"
              }
     end
@@ -237,6 +241,7 @@ defmodule Plushie.Test.InteractionRoundtripTest do
                type: :submit,
                id: "name_input",
                value: "",
+               scope: ["main"],
                window_id: "main"
              }
     end
@@ -252,6 +257,7 @@ defmodule Plushie.Test.InteractionRoundtripTest do
                type: :select,
                id: "language",
                value: "Elixir",
+               scope: ["main"],
                window_id: "main"
              }
     end

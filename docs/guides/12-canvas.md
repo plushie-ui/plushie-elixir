@@ -236,8 +236,9 @@ end
 ```
 
 The `id` is `"save"` (the group ID), and it arrives with
-`scope: ["save-canvas"]`. You can match on scope to disambiguate canvas
-element clicks from regular widget clicks with the same ID.
+`scope: ["save-canvas", window_id]`. You can match on scope to
+disambiguate canvas element clicks from regular widget clicks with
+the same ID.
 
 You now have a custom-drawn, gradient-filled, hover-responsive save button
 in your pad. This is the same technique you would use to build custom
@@ -303,9 +304,9 @@ on the canvas). These use the unified pointer event model:
 group):
 
 ```elixir
-%WidgetEvent{type: :click, id: "save", scope: ["save-canvas"]}
-%WidgetEvent{type: :enter, id: "save"}
-%WidgetEvent{type: :exit, id: "save"}
+%WidgetEvent{type: :click, id: "save", scope: ["save-canvas", "main"], window_id: "main"}
+%WidgetEvent{type: :enter, id: "save", scope: ["save-canvas", "main"], window_id: "main"}
+%WidgetEvent{type: :exit, id: "save", scope: ["save-canvas", "main"], window_id: "main"}
 ```
 
 See the [Canvas reference](../reference/canvas.md) for the full event list.

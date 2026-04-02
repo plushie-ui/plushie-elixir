@@ -191,9 +191,14 @@ defmodule Plushie.Runtime.WidgetHandlers do
     id = Map.get(event, :id, "")
     window_id = Map.get(event, :window_id)
 
-    target_id = scope_to_id(scope, id)
+    # Strip window_id from end of scope for registry lookups.
+    # Registry keys are {window_id, scoped_id} where scoped_id
+    # does not include the window -- it's keyed separately.
+    container_scope = strip_window_from_scope(scope, window_id)
+
+    target_id = scope_to_id(container_scope, id)
     target_entry = widget_entry(registry, window_id, target_id)
-    chain = build_handler_chain(registry, window_id, scope)
+    chain = build_handler_chain(registry, window_id, container_scope)
 
     chain =
       case target_entry do
@@ -234,6 +239,16 @@ defmodule Plushie.Runtime.WidgetHandlers do
     case Map.get(registry, {window_id, scoped_id}) do
       nil -> nil
       entry -> {scoped_id, entry}
+    end
+  end
+
+  defp strip_window_from_scope(scope, nil), do: scope
+  defp strip_window_from_scope([], _window_id), do: []
+
+  defp strip_window_from_scope(scope, window_id) do
+    case List.last(scope) do
+      ^window_id -> List.delete_at(scope, -1)
+      _ -> scope
     end
   end
 

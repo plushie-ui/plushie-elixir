@@ -144,11 +144,12 @@ end
 When the delete button is clicked, the event arrives as:
 
 ```elixir
-%WidgetEvent{type: :click, id: "delete", scope: ["hello.ex"]}
+%WidgetEvent{type: :click, id: "delete", scope: ["hello.ex", "main"], window_id: "main"}
 ```
 
-The `scope` list contains ancestor container IDs, nearest parent first. You
-pattern match on it to extract the file name:
+The `scope` list contains ancestor container IDs (nearest parent first)
+with the window ID as the last element. You pattern match on the head
+to extract the file name:
 
 ```elixir
 def update(model, %WidgetEvent{type: :click, id: "delete", scope: [file | _]}) do

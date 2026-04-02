@@ -108,9 +108,13 @@ defmodule Plushie.Protocol.Decode do
     end
   end
 
+  defp append_window_scope(scope, nil), do: scope
+  defp append_window_scope(scope, window_id) when is_binary(window_id), do: scope ++ [window_id]
+
   defp event_identity!(%{"family" => family, "id" => id} = msg) when is_binary(id) do
     {local, scope} = split_scoped_id(id)
-    {local, scope, event_window_id!(msg, family), family}
+    window_id = event_window_id!(msg, family)
+    {local, scope ++ [window_id], window_id, family}
   end
 
   defp event_identity!(%{"family" => family, "id" => id} = msg) do
@@ -408,53 +412,57 @@ defmodule Plushie.Protocol.Decode do
 
   defp dispatch(%{"type" => "event", "family" => "ime_opened", "id" => id} = msg) do
     {local_id, scope} = split_scoped_id(id)
+    window_id = msg["window_id"]
 
     %ImeEvent{
       type: :opened,
       id: local_id,
-      scope: scope,
+      scope: append_window_scope(scope, window_id),
       captured: msg["captured"] || false,
-      window_id: msg["window_id"]
+      window_id: window_id
     }
   end
 
   defp dispatch(%{"type" => "event", "family" => "ime_preedit", "id" => id, "data" => data} = msg) do
     {local_id, scope} = split_scoped_id(id)
     cursor = parse_ime_cursor(data["cursor"])
+    window_id = msg["window_id"]
 
     %ImeEvent{
       type: :preedit,
       id: local_id,
-      scope: scope,
+      scope: append_window_scope(scope, window_id),
       text: data["text"],
       cursor: cursor,
       captured: msg["captured"] || false,
-      window_id: msg["window_id"]
+      window_id: window_id
     }
   end
 
   defp dispatch(%{"type" => "event", "family" => "ime_commit", "id" => id, "data" => data} = msg) do
     {local_id, scope} = split_scoped_id(id)
+    window_id = msg["window_id"]
 
     %ImeEvent{
       type: :commit,
       id: local_id,
-      scope: scope,
+      scope: append_window_scope(scope, window_id),
       text: data["text"],
       captured: msg["captured"] || false,
-      window_id: msg["window_id"]
+      window_id: window_id
     }
   end
 
   defp dispatch(%{"type" => "event", "family" => "ime_closed", "id" => id} = msg) do
     {local_id, scope} = split_scoped_id(id)
+    window_id = msg["window_id"]
 
     %ImeEvent{
       type: :closed,
       id: local_id,
-      scope: scope,
+      scope: append_window_scope(scope, window_id),
       captured: msg["captured"] || false,
-      window_id: msg["window_id"]
+      window_id: window_id
     }
   end
 

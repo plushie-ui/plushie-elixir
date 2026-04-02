@@ -315,7 +315,7 @@ Require interaction props on interactive groups:
 Canvas element clicks are regular `:click` events. The renderer
 emits them with the element's scoped ID (e.g., `"my-canvas/handle"`),
 and the SDK's scoped ID system splits this into `id: "handle"` with
-`scope: ["my-canvas"]`. Match them like any scoped click:
+`scope: ["my-canvas", window_id]`. Match them like any scoped click:
 
 ```elixir
 def update(model, %WidgetEvent{type: :click, id: "handle", scope: ["my-canvas" | _]}) do
@@ -347,10 +347,11 @@ canvas "drawing"              ->  "drawing"
   group "handle" ...          ->  "drawing/handle"
 ```
 
-Events arrive with the group's local ID and the canvas in the scope:
+Events arrive with the group's local ID, the canvas in the scope, and
+the window ID at the end:
 
 ```elixir
-%WidgetEvent{type: :click, id: "handle", scope: ["drawing"]}
+%WidgetEvent{type: :click, id: "handle", scope: ["drawing", "main"], window_id: "main"}
 ```
 
 ## Examples
