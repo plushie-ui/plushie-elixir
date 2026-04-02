@@ -183,10 +183,11 @@ canvas "drawing"              ->  "drawing"
   group "handle" ...          ->  "drawing/handle"
 ```
 
-Canvas element events look like regular scoped widget events:
+Canvas element clicks are regular `:click` events with the canvas ID in
+scope:
 
 ```elixir
-%WidgetEvent{type: :canvas_element_click, id: "handle", scope: ["drawing"]}
+%WidgetEvent{type: :click, id: "handle", scope: ["drawing"]}
 ```
 
 ## Command paths

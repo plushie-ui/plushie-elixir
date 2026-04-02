@@ -1102,7 +1102,6 @@ defmodule Plushie.Protocol.Decode do
   @canvas_element_passthrough %{
     "canvas_element_enter" => :canvas_element_enter,
     "canvas_element_leave" => :canvas_element_leave,
-    "canvas_element_click" => :canvas_element_click,
     "canvas_element_drag_end" => :canvas_element_drag_end,
     "canvas_element_focused" => :canvas_element_focused,
     "canvas_element_blurred" => :canvas_element_blurred,

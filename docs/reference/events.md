@@ -82,11 +82,14 @@ Canvas-level interaction events. These target the canvas widget itself.
 
 Events targeting specific interactive elements inside a canvas widget.
 
+Canvas element clicks are regular `:click` events with the canvas ID in
+scope (e.g., `%WidgetEvent{type: :click, id: "handle", scope: ["my-canvas"]}`).
+See the [Canvas reference](canvas.md#element-level-events) for details.
+
 | Type                           | Carrier | Fields                              |
 | ------------------------------ | ------- | ----------------------------------- |
 | `:canvas_element_enter`        | data    | `element_id`, `x`, `y`             |
 | `:canvas_element_leave`        | data    | `element_id`                        |
-| `:canvas_element_click`        | data    | `element_id`, `x`, `y`, `button`   |
 | `:canvas_element_key_press`    | data    | `key`, `modifiers`, `text`          |
 | `:canvas_element_key_release`  | data    | `key`, `modifiers`                  |
 | `:canvas_element_drag`         | data    | `x`, `y`, `dx`, `dy`               |

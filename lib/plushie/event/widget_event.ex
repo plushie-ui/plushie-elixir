@@ -47,7 +47,6 @@ defmodule Plushie.Event.WidgetEvent do
           | :canvas_scroll
           | :canvas_element_enter
           | :canvas_element_leave
-          | :canvas_element_click
           | :canvas_element_key_press
           | :canvas_element_key_release
           | :canvas_element_drag
@@ -109,7 +108,7 @@ defmodule Plushie.Event.WidgetEvent do
     click input submit toggle select slide slide_release paste open close option_hovered
     key_binding sort scroll pane_focus_cycle
     canvas_press canvas_release canvas_move canvas_scroll
-    canvas_element_enter canvas_element_leave canvas_element_click
+    canvas_element_enter canvas_element_leave
     canvas_element_key_press canvas_element_key_release canvas_element_drag
     canvas_element_drag_end canvas_element_focused canvas_element_blurred canvas_focused
     canvas_blurred canvas_group_focused canvas_group_blurred

@@ -28,19 +28,20 @@ defmodule Plushie.Docs.ScopedIdsTest do
     assert item_id == "item_42"
   end
 
-  test "scoped_ids_canvas_element_match_test" do
-    event = %WidgetEvent{type: :canvas_element_click, id: "handle", scope: ["drawing"]}
+  test "scoped_ids_canvas_element_click_is_scoped_click_test" do
+    # Canvas element clicks are regular :click events with the canvas ID in scope
+    event = %WidgetEvent{type: :click, id: "handle", scope: ["drawing"]}
 
     assert match?(
-             %WidgetEvent{type: :canvas_element_click, id: "handle", scope: ["drawing" | _]},
+             %WidgetEvent{type: :click, id: "handle", scope: ["drawing" | _]},
              event
            )
   end
 
-  test "scoped_ids_canvas_element_bind_canvas_id_test" do
-    event = %WidgetEvent{type: :canvas_element_click, id: "handle", scope: ["drawing", "panel"]}
+  test "scoped_ids_canvas_element_click_bind_canvas_id_test" do
+    event = %WidgetEvent{type: :click, id: "handle", scope: ["drawing", "panel"]}
 
-    assert %WidgetEvent{type: :canvas_element_click, id: "handle", scope: [canvas_id | _]} = event
+    assert %WidgetEvent{type: :click, id: "handle", scope: [canvas_id | _]} = event
     assert canvas_id == "drawing"
   end
 

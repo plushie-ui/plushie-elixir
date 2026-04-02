@@ -1472,27 +1472,6 @@ defmodule Plushie.ProtocolTest do
       assert data.element_id == "btn-1"
     end
 
-    test "decodes canvas_element_click" do
-      json =
-        Jason.encode!(%{
-          type: "event",
-          family: "canvas_element_click",
-          id: "my_canvas",
-          window_id: "main",
-          data: %{element_id: "btn-1", x: 15.0, y: 25.0}
-        })
-
-      assert %WidgetEvent{
-               type: :canvas_element_click,
-               id: "my_canvas",
-               window_id: "main",
-               data: data
-             } =
-               Protocol.decode_message(json, :json)
-
-      assert data.element_id == "btn-1"
-    end
-
     test "decodes canvas_element_drag" do
       json =
         Jason.encode!(%{
@@ -1561,14 +1540,14 @@ defmodule Plushie.ProtocolTest do
       json =
         Jason.encode!(%{
           type: "event",
-          family: "canvas_element_click",
+          family: "canvas_element_enter",
           id: "panel/my_canvas",
           window_id: "main",
-          data: %{element_id: "btn-1"}
+          data: %{element_id: "btn-1", x: 10.0, y: 20.0}
         })
 
       assert %WidgetEvent{
-               type: :canvas_element_click,
+               type: :canvas_element_enter,
                id: "my_canvas",
                scope: ["panel"],
                window_id: "main",

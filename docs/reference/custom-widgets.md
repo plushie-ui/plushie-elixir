@@ -167,8 +167,9 @@ Events walk the scope chain from innermost to outermost:
 6. `:ignored` passes the original event to the next handler.
 7. If no handler captures, the event reaches `update/2`.
 
-Canvas-internal events (`:canvas_element_*`) that are not intercepted by
-any handler are auto-consumed by the runtime and never reach `update/2`.
+Canvas-internal events (`:canvas_element_*` types and canvas-level types)
+that are not intercepted by any handler are auto-consumed by the runtime
+and never reach `update/2`.
 
 ## Widget-scoped subscriptions
 

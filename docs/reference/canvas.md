@@ -236,7 +236,7 @@ group.
 
 | Prop | Type | Default | Purpose |
 |---|---|---|---|
-| `on_click` | boolean | `false` | Enable `:canvas_element_click` events |
+| `on_click` | boolean | `false` | Enable `:click` events (scoped under canvas ID) |
 | `on_hover` | boolean | `false` | Enable `:canvas_element_enter`/`:canvas_element_leave` events |
 | `draggable` | boolean | `false` | Enable `:canvas_element_drag`/`:canvas_element_drag_end` events |
 | `drag_axis` | `"x"` / `"y"` / `"both"` | *n/a* | Constrain drag direction (unconstrained when not set) |
@@ -301,7 +301,7 @@ Require interaction props on interactive groups:
 
 | Event type | Trigger | Data fields |
 |---|---|---|
-| `:canvas_element_click` | `on_click: true` | `x`, `y`, `button` |
+| `:click` | `on_click: true` | Scoped under canvas ID (see below) |
 | `:canvas_element_enter` | `on_hover: true` | `x`, `y` |
 | `:canvas_element_leave` | `on_hover: true` | *n/a* |
 | `:canvas_element_drag` | `draggable: true` | `x`, `y`, `dx`, `dy` |
@@ -310,6 +310,21 @@ Require interaction props on interactive groups:
 | `:canvas_element_key_release` | `focusable: true` | `key`, `modifiers` |
 | `:canvas_element_focused` | `focusable: true` | *n/a* |
 | `:canvas_element_blurred` | `focusable: true` | *n/a* |
+
+Canvas element clicks are regular `:click` events. The renderer
+emits them with the element's scoped ID (e.g., `"my-canvas/handle"`),
+and the SDK's scoped ID system splits this into `id: "handle"` with
+`scope: ["my-canvas"]`. Match them like any scoped click:
+
+```elixir
+def update(model, %WidgetEvent{type: :click, id: "handle", scope: ["my-canvas" | _]}) do
+  # handle canvas element click
+end
+```
+
+Other element events (enter, leave, drag, key, focus) use their own
+`canvas_element_*` families because they have no standard widget
+equivalent.
 
 ### Focus events
 
@@ -345,7 +360,7 @@ canvas "drawing"              ->  "drawing"
 Events arrive with the group's local ID and the canvas in the scope:
 
 ```elixir
-%WidgetEvent{type: :canvas_element_click, id: "handle", scope: ["drawing"]}
+%WidgetEvent{type: :click, id: "handle", scope: ["drawing"]}
 ```
 
 ## Examples

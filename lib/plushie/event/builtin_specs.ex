@@ -71,10 +71,6 @@ defmodule Plushie.Event.BuiltinSpecs do
       carrier: :data,
       fields: [element_id: :string]
     },
-    canvas_element_click: %{
-      carrier: :data,
-      fields: [element_id: :string, x: :number, y: :number, button: Plushie.Type.MouseButton]
-    },
     canvas_element_key_press: %{
       carrier: :data,
       fields: [
@@ -161,7 +157,6 @@ defmodule Plushie.Event.BuiltinSpecs do
                            :canvas_scroll,
                            :canvas_element_enter,
                            :canvas_element_leave,
-                           :canvas_element_click,
                            :canvas_element_key_press,
                            :canvas_element_key_release,
                            :canvas_element_drag,

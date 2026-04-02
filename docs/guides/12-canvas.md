@@ -220,11 +220,11 @@ row padding: 4, spacing: 8 do
 end
 ```
 
-The canvas button emits a `:canvas_element_click` event (not `:click` like
-a regular button). Update the save handler to match:
+The canvas button emits a regular `:click` event with the canvas ID in scope.
+Update the save handler to match:
 
 ```elixir
-def update(model, %WidgetEvent{type: :canvas_element_click, id: "save"}) do
+def update(model, %WidgetEvent{type: :click, id: "save", scope: ["save-canvas" | _]}) do
   case compile_preview(model.source) do
     {:ok, tree} ->
       if model.active_file, do: save_experiment(model.active_file, model.source)
@@ -235,9 +235,9 @@ def update(model, %WidgetEvent{type: :canvas_element_click, id: "save"}) do
 end
 ```
 
-Note the event type changed from `:click` to `:canvas_element_click` and the
-scope includes the canvas ID. The `id` is `"save"` (the group ID), and it
-arrives with `scope: ["save-canvas"]`.
+The `id` is `"save"` (the group ID), and it arrives with
+`scope: ["save-canvas"]`. You can match on scope to disambiguate canvas
+element clicks from regular widget clicks with the same ID.
 
 You now have a custom-drawn, gradient-filled, hover-responsive save button
 in your pad. This is the same technique you would use to build custom
@@ -303,7 +303,7 @@ on the canvas):
 group):
 
 ```elixir
-%WidgetEvent{type: :canvas_element_click, id: "save", data: %{x: 50.0, y: 18.0}}
+%WidgetEvent{type: :click, id: "save", scope: ["save-canvas"]}
 %WidgetEvent{type: :canvas_element_enter, id: "save"}
 %WidgetEvent{type: :canvas_element_leave, id: "save"}
 ```
