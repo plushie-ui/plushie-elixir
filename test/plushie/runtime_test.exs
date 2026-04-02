@@ -178,7 +178,7 @@ defmodule Plushie.RuntimeTest do
       %{model | events: model.events ++ [:mouse]}
     end
 
-    def update(model, %Plushie.Event.WidgetEvent{type: :sensor_resize}) do
+    def update(model, %Plushie.Event.WidgetEvent{type: :resize}) do
       %{model | events: model.events ++ [:sensor]}
     end
 
@@ -199,7 +199,7 @@ defmodule Plushie.RuntimeTest do
 
     def init(_opts), do: %{events: []}
 
-    def update(model, %Plushie.Event.WidgetEvent{type: :sensor_resize, window_id: window_id}) do
+    def update(model, %Plushie.Event.WidgetEvent{type: :resize, window_id: window_id}) do
       %{model | events: model.events ++ [window_id]}
     end
 
@@ -1411,7 +1411,7 @@ defmodule Plushie.RuntimeTest do
         runtime,
         {:renderer_event,
          %Plushie.Event.WidgetEvent{
-           type: :sensor_resize,
+           type: :resize,
            id: "win",
            data: %{width: 10, height: 10}
          }}
@@ -1429,7 +1429,7 @@ defmodule Plushie.RuntimeTest do
         runtime,
         {:renderer_event,
          %Plushie.Event.WidgetEvent{
-           type: :sensor_resize,
+           type: :resize,
            id: "size",
            scope: [],
            window_id: "main",
@@ -1441,7 +1441,7 @@ defmodule Plushie.RuntimeTest do
         runtime,
         {:renderer_event,
          %Plushie.Event.WidgetEvent{
-           type: :sensor_resize,
+           type: :resize,
            id: "size",
            scope: [],
            window_id: "prefs",

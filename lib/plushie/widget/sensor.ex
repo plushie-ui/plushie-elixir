@@ -12,8 +12,8 @@ defmodule Plushie.Widget.Sensor do
 
   ## Events
 
-  - `%WidgetEvent{type: :sensor_resize, id: id, data: %{width: w, height: h}}` -- emitted on resize.
-  - `%WidgetEvent{type: :sensor_resize, id: "id:show", data: %{width: w, height: h}}` -- emitted when child becomes visible.
+  - `%WidgetEvent{type: :resize, id: id, data: %{width: w, height: h}}` -- emitted on resize.
+  - `%WidgetEvent{type: :resize, id: "id:show", data: %{width: w, height: h}}` -- emitted when child becomes visible.
   - `%WidgetEvent{type: :click, id: "id:hide"}` -- emitted when child becomes hidden.
   """
 

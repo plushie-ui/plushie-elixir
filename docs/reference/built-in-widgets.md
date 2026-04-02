@@ -265,7 +265,7 @@ lazy loading, and intersection observation.
 | `event_rate` | integer | Max events/sec for resize |
 | `a11y` | map | Accessibility overrides |
 
-Events: `:sensor_resize` with `%{width: w, height: h}` in data.
+Events: `:resize` with `%{width: w, height: h}` in data.
 
 ### overlay
 
