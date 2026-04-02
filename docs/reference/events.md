@@ -65,7 +65,7 @@ an atom-keyed map).
 
 ### Pointer events
 
-Unified pointer events for canvas-level, mouse area, and sensor
+Unified pointer events for canvas-level, pointer area, and sensor
 interactions. These replace the previous `canvas_*`, `mouse_*`, and
 `sensor_*` families with a device-agnostic model. The `pointer` field
 identifies the input device (`:mouse`, `:touch`, `:pen`) and `button`
@@ -89,7 +89,7 @@ The `finger` field is an integer for touch events, nil otherwise.
 
 Note: `:scroll` is pointer input (wheel delta at coordinates).
 `:scrolled` (in the standard widget events table above) is container
-state -- a scrollable widget reporting its viewport offset changed.
+state: a scrollable widget reporting its viewport offset changed.
 
 ### Generic element events
 
@@ -132,7 +132,7 @@ The carrier (value vs. data) and field types are defined by the widget's
 ### `Plushie.Event.WidgetEvent`
 
 The workhorse event struct. Covers all widget interactions: buttons,
-inputs, sliders, canvas, mouse areas, sensors, panes, and custom widgets.
+inputs, sliders, canvas, pointer areas, sensors, panes, and custom widgets.
 
 | Field       | Type                         | Description                          |
 | ----------- | ---------------------------- | ------------------------------------ |
@@ -361,6 +361,38 @@ end
 
 def update(model, %KeyEvent{type: :press, key: :escape}) do
   close_dialog(model)
+end
+```
+
+### Match pointer event with device type
+
+```elixir
+# Mouse click
+def update(model, %WidgetEvent{type: :press, id: "area",
+    data: %{pointer: :mouse, button: :left}}) do
+  select(model)
+end
+
+# Touch press
+def update(model, %WidgetEvent{type: :press, id: "area",
+    data: %{pointer: :touch, finger: finger_id}}) do
+  touch_start(model, finger_id)
+end
+```
+
+### Match pointer event with modifiers
+
+```elixir
+# Shift-click for multi-select
+def update(model, %WidgetEvent{type: :press, id: "item",
+    data: %{modifiers: %{shift: true}}}) do
+  add_to_selection(model)
+end
+
+# Ctrl-drag for special behaviour
+def update(model, %WidgetEvent{type: :move, id: "canvas",
+    data: %{x: x, y: y, modifiers: %{ctrl: true}}}) do
+  pan(model, x, y)
 end
 ```
 

@@ -294,10 +294,16 @@ end
 Canvas events arrive as `Plushie.Event.WidgetEvent` structs:
 
 **Canvas-level** (requires `on_press`/`on_release`/`on_move`/`on_scroll`
-on the canvas). These use the unified pointer event model:
+on the canvas). These use the unified pointer event model. Mouse, touch,
+and pen input all produce the same event types. The `pointer` field
+identifies the device, and `finger` carries the touch finger ID:
 
 ```elixir
-%WidgetEvent{type: :press, data: %{x: 150.0, y: 75.0, button: :left, pointer: :mouse}}
+# Mouse click
+%WidgetEvent{type: :press, data: %{x: 150.0, y: 75.0, button: :left, pointer: :mouse, modifiers: %KeyModifiers{}}}
+
+# Touch press
+%WidgetEvent{type: :press, data: %{x: 150.0, y: 75.0, button: :left, pointer: :touch, finger: 0, modifiers: %KeyModifiers{}}}
 ```
 
 **Element-level** (requires `on_click`/`on_hover`/`draggable` on the

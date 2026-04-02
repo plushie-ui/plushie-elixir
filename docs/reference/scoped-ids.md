@@ -269,7 +269,7 @@ assert_text("main#count", "3")     # assertion scoped to a window
 
 The `#` separates the window ID from the widget path. Without a window
 qualifier (i.e. `"#save"`), the selector searches all windows. An
-ambiguous match across windows raises an error -- use the window
+ambiguous match across windows raises an error. Use the window
 qualifier or the `window:` option to disambiguate.
 
 The test backend resolves IDs against the normalised tree.

@@ -227,8 +227,12 @@ provide. Sort in your model or use `Plushie.Data.query/2`.
 
 ### pointer_area
 
-Wraps a single child and captures mouse events. Use for right-click
-menus, hover detection, drag tracking, and custom cursor styles.
+Wraps a single child and captures pointer events from mouse, touch,
+and pen input. Use for right-click menus, hover detection, drag
+tracking, scroll capture, and custom cursor styles. All events use the
+unified pointer model: the `pointer` field (`:mouse`, `:touch`,
+`:pen`) identifies the device, and `modifiers` carries the current
+modifier key state for shift-click, ctrl-drag, and similar patterns.
 
 | Prop | Type | Purpose |
 |---|---|---|
@@ -250,6 +254,39 @@ menus, hover detection, drag tracking, and custom cursor styles.
 Cursor values: `:pointer`, `:grab`, `:grabbing`, `:crosshair`, `:text`,
 `:move`, `:not_allowed`, `:progress`, `:wait`, `:help`,
 `:resizing_horizontally`, `:resizing_vertically`, and others.
+
+Move and scroll events carry `pointer` (device type) and `modifiers`
+(current modifier key state):
+
+```elixir
+pointer_area "canvas-area",
+  on_move: true,
+  on_press: :area_press,
+  on_scroll: true,
+  cursor: :crosshair do
+  canvas "drawing", width: 400, height: 300 do
+    # ...
+  end
+end
+
+# Shift-click for multi-select
+def update(model, %WidgetEvent{type: :press, id: "canvas-area",
+    data: %{pointer: :mouse, modifiers: %{shift: true}}}) do
+  add_to_selection(model)
+end
+
+# Ctrl-drag for panning
+def update(model, %WidgetEvent{type: :move, id: "canvas-area",
+    data: %{x: x, y: y, modifiers: %{ctrl: true}}}) do
+  pan_canvas(model, x, y)
+end
+
+# Scroll with pointer type
+def update(model, %WidgetEvent{type: :scroll, id: "canvas-area",
+    data: %{delta_y: dy, pointer: :mouse}}) do
+  zoom(model, dy)
+end
+```
 
 ### sensor
 

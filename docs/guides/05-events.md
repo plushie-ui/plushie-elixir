@@ -18,7 +18,7 @@ structs. Here are the key fields:
 |---|---|---|
 | `type` | atom | The kind of interaction: `:click`, `:input`, `:toggle`, `:submit`, `:select`, `:slide`, etc. |
 | `id` | string | The widget's local ID |
-| `scope` | list of strings | Ancestor container IDs (nearest parent first) |
+| `scope` | list of strings | Ancestor container IDs (nearest parent first, window ID last) |
 | `value` | term or nil | Scalar payload: text content for `:input`, boolean for `:toggle`, number for `:slide` |
 | `data` | map or nil | Structured payload for events with multiple fields |
 | `window_id` | string | Which window the event came from |
@@ -66,6 +66,13 @@ Not all events are `WidgetEvent`. Plushie also delivers:
 - `Plushie.Event.AsyncEvent` - results from background tasks
 - `Plushie.Event.EffectEvent` - responses from platform effects (file dialogs, clipboard)
 - `Plushie.Event.WindowEvent` - window lifecycle (opened, closed, resized)
+
+Pointer events (mouse, touch, pen) from subscriptions and widgets like
+`pointer_area` are also delivered as `WidgetEvent` structs using the
+unified pointer event types (`:press`, `:release`, `:move`, `:scroll`,
+`:enter`, `:exit`). There are no separate MouseEvent or TouchEvent
+structs. The `pointer` field in the event data identifies the input
+device (`:mouse`, `:touch`, `:pen`).
 
 We will cover each of these in the chapters where they are introduced. For
 now, `WidgetEvent` is the one you use most. See the

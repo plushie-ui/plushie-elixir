@@ -65,7 +65,7 @@ Most helper functions take a selector to identify widgets:
 | `:focused` | Currently focused widget |
 
 The `#` prefix marks ID selectors. The `window_id#path` form scopes
-the selector to a specific window -- useful for multi-window apps
+the selector to a specific window. Useful for multi-window apps
 where the same widget ID may appear in different windows. Text content
 matching uses the `{:text, "..."}` tuple form. Bare strings without a
 `#` prefix are not valid selectors and will raise an `ArgumentError`.

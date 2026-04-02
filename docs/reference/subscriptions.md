@@ -104,7 +104,7 @@ independently in the renderer.
 ### Catch-all
 
 `on_event/1` subscribes to **all** renderer events: every widget
-event, keyboard event, mouse event, window event, and system event.
+event, keyboard event, pointer event, window event, and system event.
 Use it for debugging or logging, not as a primary event source. It
 delivers a lot of traffic.
 

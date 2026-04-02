@@ -287,7 +287,11 @@ All canvas events arrive as `Plushie.Event.WidgetEvent` structs.
 
 Require `on_press`/`on_release`/`on_move`/`on_scroll` props on the
 canvas widget. These use the unified pointer event model with device
-type and modifier information:
+type and modifier information. Mouse, touch, and pen input all produce
+the same event types with full hit testing, drag, and click support.
+The `pointer` field identifies the device, `finger` carries the touch
+finger ID (nil for mouse), and `modifiers` carries the current modifier
+key state:
 
 | Event type | Data fields |
 |---|---|
@@ -295,6 +299,23 @@ type and modifier information:
 | `:release` | `x`, `y`, `button`, `pointer`, `finger`, `modifiers` |
 | `:move` | `x`, `y`, `pointer`, `finger`, `modifiers` |
 | `:scroll` | `x`, `y`, `delta_x`, `delta_y`, `pointer`, `modifiers` |
+
+Touch events use `pointer: :touch` with `button: :left` and include
+a `finger` integer identifying the touch point:
+
+```elixir
+# Handle touch press on canvas
+def update(model, %WidgetEvent{type: :press, id: "drawing",
+    data: %{x: x, y: y, pointer: :touch, finger: 0}}) do
+  start_stroke(model, x, y)
+end
+
+# Handle touch drag
+def update(model, %WidgetEvent{type: :move, id: "drawing",
+    data: %{x: x, y: y, pointer: :touch, finger: 0}}) do
+  continue_stroke(model, x, y)
+end
+```
 
 ### Element-level events
 

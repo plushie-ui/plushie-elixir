@@ -2,7 +2,7 @@
 
 So far, every event in the pad has come from direct widget interaction: a
 button click, a text input keystroke. But some events come from outside the
-widget tree: keyboard shortcuts, timers, window events, mouse movement.
+widget tree: keyboard shortcuts, timers, window events, pointer movement.
 These are delivered through **subscriptions**.
 
 ## What are subscriptions?
@@ -192,7 +192,10 @@ stops, until the next edit.
 Plushie provides subscriptions for many event sources beyond keyboard and
 timers:
 
-- **Pointer**: `on_pointer_move/1`, `on_pointer_button/1`, `on_pointer_scroll/1`, `on_pointer_touch/1`
+- **Pointer**: `on_pointer_move/1`, `on_pointer_button/1`, `on_pointer_scroll/1`, `on_pointer_touch/1`.
+  These deliver `WidgetEvent` structs with `id` set to the window ID
+  and `scope` set to `[]`. The `data` map includes `pointer` (`:mouse`
+  or `:touch`) and `modifiers` (current modifier key state).
 - **Window lifecycle**: `on_window_close/1`, `on_window_resize/1`,
   `on_window_event/1`, `on_window_open/1`, `on_window_focus/1`,
   `on_window_unfocus/1`, `on_window_move/1`
