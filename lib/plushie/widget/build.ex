@@ -94,7 +94,7 @@ defmodule Plushie.Widget.Build do
       ** (ArgumentError) container "sidebar" accepts at most 1 child, got 3
 
   Called at the top of `to_node/1` for single-child wrappers (container,
-  tooltip, mouse_area, scrollable, themer, floating, responsive, pin,
+  tooltip, pointer_area, scrollable, themer, floating, responsive, pin,
   sensor, window).
   """
   @spec validate_single_child!(

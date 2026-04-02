@@ -641,8 +641,8 @@ progress_bar("upload", {0, 100},
 ### Hover scale with spring
 
 ```elixir
-# Track hover state via mouse_area
-mouse_area "card-hover", on_enter: true, on_exit: true, cursor: :pointer do
+# Track hover state via pointer_area
+pointer_area "card-hover", on_enter: true, on_exit: true, cursor: :pointer do
   container "card",
     scale: spring(to: if(model.card_hovered, do: 1.02, else: 1.0), preset: :snappy),
     shadow: ... do

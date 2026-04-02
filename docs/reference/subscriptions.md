@@ -82,7 +82,7 @@ one or the other, not both.
 
 Mouse subscriptions are global. They deliver events regardless of
 which widget is under the cursor. For widget-specific mouse handling,
-use `mouse_area` instead.
+use `pointer_area` instead.
 
 ### Other
 

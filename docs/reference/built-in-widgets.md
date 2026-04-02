@@ -225,7 +225,7 @@ provide. Sort in your model or use `Plushie.Data.query/2`.
 
 ## Interaction wrappers
 
-### mouse_area
+### pointer_area
 
 Wraps a single child and captures mouse events. Use for right-click
 menus, hover detection, drag tracking, and custom cursor styles.
@@ -312,7 +312,7 @@ Most widgets support a subset of these cross-cutting props:
   `{:fill_portion, n}`, or a pixel number. See the
   [Layout reference](windows-and-layout.md).
 - **`:event_rate`** - max events per second for high-frequency events.
-  Supported on `slider`, `vertical_slider`, `mouse_area`, `sensor`,
+  Supported on `slider`, `vertical_slider`, `pointer_area`, `sensor`,
   `canvas`, and `pane_grid`.
 
 ## Renderer-side state

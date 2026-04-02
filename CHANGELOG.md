@@ -198,7 +198,7 @@ Initial public release.
   markdown, image, svg, progress_bar, qr_code, rule, canvas),
   input (button, text_input, text_editor, checkbox, radio, toggler,
   slider, vertical_slider, pick_list, combo_box, table), and
-  wrappers (tooltip, mouse_area, sensor, overlay, responsive, themer,
+  wrappers (tooltip, pointer_area, sensor, overlay, responsive, themer,
   keyed_column, space, floating, pin, window).
 - **22 built-in themes** -- light, dark, dracula, nord, solarized,
   gruvbox, catppuccin, tokyo night, kanagawa, moonfly, nightfly,
@@ -216,7 +216,7 @@ Initial public release.
 - **Subscriptions** -- timers, keyboard, mouse, touch, IME, window
   lifecycle, animation frames, system theme changes.
 - **16 typed event structs** -- Widget, Key, Mouse, Touch, Ime,
-  Window, Canvas, MouseArea, Pane, Sensor, Effect, System, Timer,
+  Window, Canvas, PointerArea, Pane, Sensor, Effect, System, Timer,
   Async, Stream, Modifiers.
 - **Scoped widget IDs** -- containers namespace children's IDs
   automatically. Pattern match on local ID or scope chain.

@@ -213,7 +213,7 @@ defmodule Plushie.UI do
     {Plushie.Widget.Responsive, "responsive"},
     {Plushie.Widget.Pin, "pin"},
     {Plushie.Widget.Floating, "floating"},
-    {Plushie.Widget.MouseArea, "mouse_area"},
+    {Plushie.Widget.PointerArea, "pointer_area"},
     {Plushie.Widget.Sensor, "sensor"},
     {Plushie.Widget.Themer, "themer"},
     {Plushie.Widget.PaneGrid, "pane_grid"},
@@ -739,8 +739,8 @@ defmodule Plushie.UI do
           text("Floating content")
         end
     """,
-    mouse_area: """
-    Mouse area for capturing mouse events on children.
+    pointer_area: """
+    Pointer area for capturing mouse events on children.
 
     ## Options
 
@@ -749,7 +749,7 @@ defmodule Plushie.UI do
 
     ## Example
 
-        mouse_area "clickable" do
+        pointer_area "clickable" do
           text("Click me")
         end
     """,
@@ -792,7 +792,7 @@ defmodule Plushie.UI do
     {:scrollable, Plushie.Widget.Scrollable},
     {:pin, Plushie.Widget.Pin},
     {:floating, Plushie.Widget.Floating},
-    {:mouse_area, Plushie.Widget.MouseArea},
+    {:pointer_area, Plushie.Widget.PointerArea},
     {:sensor, Plushie.Widget.Sensor},
     {:themer, Plushie.Widget.Themer}
   ]

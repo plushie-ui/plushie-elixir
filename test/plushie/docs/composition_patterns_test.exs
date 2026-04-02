@@ -450,7 +450,7 @@ defmodule Plushie.Docs.CompositionPatternsTest do
             end
           end
 
-          mouse_area "divider", cursor: :resizing_horizontally do
+          pointer_area "divider", cursor: :resizing_horizontally do
             container "divider_track",
               width: 5,
               height: :fill,
@@ -483,7 +483,7 @@ defmodule Plushie.Docs.CompositionPatternsTest do
     assert [left, divider, right] = row.children
     assert left.id == "left_panel"
     assert divider.id == "divider"
-    assert divider.type == "mouse_area"
+    assert divider.type == "pointer_area"
     assert right.id == "right_panel"
   end
 

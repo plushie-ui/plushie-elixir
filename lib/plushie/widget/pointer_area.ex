@@ -1,6 +1,6 @@
-defmodule Plushie.Widget.MouseArea do
+defmodule Plushie.Widget.PointerArea do
   @moduledoc """
-  Mouse area -- captures mouse events on child content.
+  Pointer area -- captures mouse events on child content.
 
   Wraps child content and emits click events for various mouse buttons,
   hover enter/exit, cursor movement, scroll, and double-click events.
@@ -165,7 +165,7 @@ defmodule Plushie.Widget.MouseArea do
   def new(id, opts \\ []) when is_binary(id), do: %__MODULE__{id: id} |> with_options(opts)
 
   @doc "Applies keyword options to an existing mouse area struct."
-  @spec with_options(mouse_area :: t(), opts :: [option()]) :: t()
+  @spec with_options(pointer_area :: t(), opts :: [option()]) :: t()
   def with_options(%__MODULE__{} = ma, []), do: ma
 
   def with_options(%__MODULE__{} = ma, opts) do
@@ -189,90 +189,90 @@ defmodule Plushie.Widget.MouseArea do
   end
 
   @doc "Sets the mouse cursor shown on hover."
-  @spec cursor(mouse_area :: t(), cursor :: cursor()) :: t()
+  @spec cursor(pointer_area :: t(), cursor :: cursor()) :: t()
   def cursor(%__MODULE__{} = ma, cursor) when cursor in @cursors, do: %{ma | cursor: cursor}
 
   @doc "Sets the event tag for left mouse button press events."
-  @spec on_press(mouse_area :: t(), tag :: atom() | String.t()) :: t()
+  @spec on_press(pointer_area :: t(), tag :: atom() | String.t()) :: t()
   def on_press(%__MODULE__{} = ma, tag) when is_atom(tag),
     do: %{ma | on_press: Atom.to_string(tag)}
 
   def on_press(%__MODULE__{} = ma, tag) when is_binary(tag), do: %{ma | on_press: tag}
 
   @doc "Sets the event tag for left mouse button release events."
-  @spec on_release(mouse_area :: t(), tag :: atom() | String.t()) :: t()
+  @spec on_release(pointer_area :: t(), tag :: atom() | String.t()) :: t()
   def on_release(%__MODULE__{} = ma, tag) when is_atom(tag),
     do: %{ma | on_release: Atom.to_string(tag)}
 
   def on_release(%__MODULE__{} = ma, tag) when is_binary(tag), do: %{ma | on_release: tag}
 
   @doc "Enables or disables right mouse button press events."
-  @spec on_right_press(mouse_area :: t(), enabled :: boolean()) :: t()
+  @spec on_right_press(pointer_area :: t(), enabled :: boolean()) :: t()
   def on_right_press(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
     do: %{ma | on_right_press: enabled}
 
   @doc "Enables or disables right mouse button release events."
-  @spec on_right_release(mouse_area :: t(), enabled :: boolean()) :: t()
+  @spec on_right_release(pointer_area :: t(), enabled :: boolean()) :: t()
   def on_right_release(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
     do: %{ma | on_right_release: enabled}
 
   @doc "Enables or disables middle mouse button press events."
-  @spec on_middle_press(mouse_area :: t(), enabled :: boolean()) :: t()
+  @spec on_middle_press(pointer_area :: t(), enabled :: boolean()) :: t()
   def on_middle_press(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
     do: %{ma | on_middle_press: enabled}
 
   @doc "Enables or disables middle mouse button release events."
-  @spec on_middle_release(mouse_area :: t(), enabled :: boolean()) :: t()
+  @spec on_middle_release(pointer_area :: t(), enabled :: boolean()) :: t()
   def on_middle_release(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
     do: %{ma | on_middle_release: enabled}
 
   @doc "Enables or disables double-click events."
-  @spec on_double_click(mouse_area :: t(), enabled :: boolean()) :: t()
+  @spec on_double_click(pointer_area :: t(), enabled :: boolean()) :: t()
   def on_double_click(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
     do: %{ma | on_double_click: enabled}
 
   @doc "Enables or disables cursor enter events."
-  @spec on_enter(mouse_area :: t(), enabled :: boolean()) :: t()
+  @spec on_enter(pointer_area :: t(), enabled :: boolean()) :: t()
   def on_enter(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
     do: %{ma | on_enter: enabled}
 
   @doc "Enables or disables cursor exit events."
-  @spec on_exit(mouse_area :: t(), enabled :: boolean()) :: t()
+  @spec on_exit(pointer_area :: t(), enabled :: boolean()) :: t()
   def on_exit(%__MODULE__{} = ma, enabled) when is_boolean(enabled), do: %{ma | on_exit: enabled}
 
   @doc "Enables or disables cursor move events."
-  @spec on_move(mouse_area :: t(), enabled :: boolean()) :: t()
+  @spec on_move(pointer_area :: t(), enabled :: boolean()) :: t()
   def on_move(%__MODULE__{} = ma, enabled) when is_boolean(enabled), do: %{ma | on_move: enabled}
 
   @doc "Enables or disables scroll wheel events."
-  @spec on_scroll(mouse_area :: t(), enabled :: boolean()) :: t()
+  @spec on_scroll(pointer_area :: t(), enabled :: boolean()) :: t()
   def on_scroll(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
     do: %{ma | on_scroll: enabled}
 
   @doc "Appends a child to the mouse area."
-  @spec push(mouse_area :: t(), child :: Plushie.Widget.child()) ::
+  @spec push(pointer_area :: t(), child :: Plushie.Widget.child()) ::
           t()
   def push(%__MODULE__{} = ma, child), do: %{ma | children: [child | ma.children]}
 
   @doc "Appends multiple children to the mouse area."
   @spec extend(
-          mouse_area :: t(),
+          pointer_area :: t(),
           children :: [Plushie.Widget.child()]
         ) :: t()
   def extend(%__MODULE__{} = ma, children),
     do: %{ma | children: Enum.reverse(children) ++ ma.children}
 
   @doc "Sets the maximum event rate (events per second) for this widget's coalescable events."
-  @spec event_rate(mouse_area :: t(), rate :: pos_integer()) :: t()
+  @spec event_rate(pointer_area :: t(), rate :: pos_integer()) :: t()
   def event_rate(%__MODULE__{} = ma, rate) when is_integer(rate) and rate >= 0,
     do: %{ma | event_rate: rate}
 
   @doc "Sets accessibility annotations."
-  @spec a11y(mouse_area :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
+  @spec a11y(pointer_area :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
   def a11y(%__MODULE__{} = ma, a11y), do: %{ma | a11y: Plushie.Type.A11y.cast(a11y)}
 
   @doc "Converts this mouse area struct to a `ui_node()` map via the `Plushie.Widget` protocol."
-  @spec build(mouse_area :: t()) :: Plushie.Widget.ui_node()
+  @spec build(pointer_area :: t()) :: Plushie.Widget.ui_node()
   def build(%__MODULE__{} = ma), do: Plushie.Widget.to_node(ma)
 
   defimpl Plushie.Widget.WidgetProtocol do
@@ -280,7 +280,7 @@ defmodule Plushie.Widget.MouseArea do
 
     def to_node(ma) do
       children = Enum.reverse(ma.children)
-      validate_single_child!(ma.id, "mouse_area", children)
+      validate_single_child!(ma.id, "pointer_area", children)
 
       props =
         %{}
@@ -301,7 +301,7 @@ defmodule Plushie.Widget.MouseArea do
 
       %{
         id: ma.id,
-        type: "mouse_area",
+        type: "pointer_area",
         props: props,
         children: children_to_nodes(children)
       }

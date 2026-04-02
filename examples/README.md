@@ -146,7 +146,7 @@ tabbed sections:
   vertical_slider, pick_list, combo_box, text_editor
 - **Display:** text, rule, progress_bar, tooltip, image, svg, markdown,
   rich_text, canvas
-- **Composite:** mouse_area, sensor, pane_grid, table, simulated tabs,
+- **Composite:** pointer_area, sensor, pane_grid, table, simulated tabs,
   modal, collapsible panel
 
 Use this as a reference for widget props and event patterns.

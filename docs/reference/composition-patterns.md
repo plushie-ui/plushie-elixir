@@ -338,7 +338,7 @@ end
 
 ### Split panel
 
-A resizable divider between two panes. Use `mouse_area` for drag
+A resizable divider between two panes. Use `pointer_area` for drag
 tracking and a subscription for mouse move during drag:
 
 ```elixir
@@ -347,7 +347,7 @@ row width: :fill, height: :fill do
     left_content(model)
   end
 
-  mouse_area "divider",
+  pointer_area "divider",
     cursor: :resizing_horizontally,
     on_press: "drag-start",
     on_release: "drag-end" do
@@ -562,11 +562,11 @@ automatically. No manual cleanup needed.
 
 ### Context menu
 
-Right-click menu using `mouse_area` and the window-level stack:
+Right-click menu using `pointer_area` and the window-level stack:
 
 ```elixir
-# In the content area, wrap the target in a mouse_area:
-mouse_area "item-#{item.id}",
+# In the content area, wrap the target in a pointer_area:
+pointer_area "item-#{item.id}",
   on_right_press: true do
   text(item.id, item.name)
 end

@@ -94,7 +94,7 @@ All interactive and stateful widgets require an explicit string ID:
   These hold renderer-side state (scroll position, pane sizes, search
   text). If the ID changes, the state resets.
 - **Named containers**: `container`, `themer`, `window`, `tooltip`,
-  `overlay`, `pin`, `floating`, `mouse_area`, `sensor`
+  `overlay`, `pin`, `floating`, `pointer_area`, `sensor`
 - **Input widgets**: `button`, `text_input`, `text_editor`, `checkbox`,
   `toggler`, `radio`, `slider`, `vertical_slider`, `pick_list`
 

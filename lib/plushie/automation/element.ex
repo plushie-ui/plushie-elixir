@@ -100,7 +100,7 @@ defmodule Plushie.Automation.Element do
     "responsive" => "generic_container",
     "space" => "generic_container",
     "themer" => "generic_container",
-    "mouse_area" => "generic_container",
+    "pointer_area" => "generic_container",
     "sensor" => "generic_container",
     "overlay" => "generic_container",
     "window" => "window",

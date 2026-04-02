@@ -90,20 +90,20 @@ defmodule PlushieUIParityTestHelper do
     end
   end
 
-  # -- mouse_area --
+  # -- pointer_area --
 
-  def mouse_area_empty do
-    mouse_area("ma1")
+  def pointer_area_empty do
+    pointer_area("ma1")
   end
 
-  def mouse_area_with_do do
-    mouse_area "ma1", on_press: :clicked do
+  def pointer_area_with_do do
+    pointer_area "ma1", on_press: :clicked do
       button("btn1", "Click")
     end
   end
 
-  def mouse_area_with_opts_and_do do
-    mouse_area "ma1", on_press: :p, on_release: :r do
+  def pointer_area_with_opts_and_do do
+    pointer_area "ma1", on_press: :p, on_release: :r do
       text("interactive")
     end
   end
@@ -254,22 +254,22 @@ defmodule Plushie.UIParityTest do
     end
   end
 
-  describe "mouse_area macro" do
-    test "empty mouse_area has correct shape" do
-      node = H.mouse_area_empty()
-      assert node.type == "mouse_area"
+  describe "pointer_area macro" do
+    test "empty pointer_area has correct shape" do
+      node = H.pointer_area_empty()
+      assert node.type == "pointer_area"
       assert node.id == "ma1"
       assert node.children == []
     end
 
-    test "mouse_area with event props and do block" do
-      node = H.mouse_area_with_do()
+    test "pointer_area with event props and do block" do
+      node = H.pointer_area_with_do()
       assert node.props[:on_press] == "clicked"
       assert length(node.children) == 1
     end
 
-    test "mouse_area with multiple event props" do
-      node = H.mouse_area_with_opts_and_do()
+    test "pointer_area with multiple event props" do
+      node = H.pointer_area_with_opts_and_do()
       assert node.props[:on_press] == "p"
       assert node.props[:on_release] == "r"
       assert length(node.children) == 1
@@ -330,7 +330,7 @@ defmodule Plushie.UIParityTest do
         H.responsive_empty(),
         H.pin_empty(),
         H.float_empty(),
-        H.mouse_area_empty(),
+        H.pointer_area_empty(),
         H.sensor_empty(),
         H.pane_grid_empty(),
         H.rich_text_empty()
@@ -354,7 +354,7 @@ defmodule Plushie.UIParityTest do
         H.keyed_column_with_do(),
         H.pin_with_opts_and_do(),
         H.float_with_opts_and_do(),
-        H.mouse_area_with_opts_and_do(),
+        H.pointer_area_with_opts_and_do(),
         H.sensor_with_do(),
         H.pane_grid_with_opts(),
         H.rich_text_with_spans()
