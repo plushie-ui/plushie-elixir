@@ -61,8 +61,13 @@ defmodule Plushie.Dev.DevServer do
     dirs = Keyword.get(opts, :dirs, default_dirs) |> Enum.map(&Path.expand/1)
     debounce_ms = Keyword.get(opts, :debounce_ms, @default_debounce_ms)
 
-    {:ok, watcher} = apply(FileSystem, :start_link, [[dirs: dirs]])
-    apply(FileSystem, :subscribe, [watcher])
+    watcher =
+      case apply(FileSystem, :start_link, [[dirs: dirs]]) do
+        {:ok, pid} -> pid
+        :ignore -> nil
+      end
+
+    if watcher, do: apply(FileSystem, :subscribe, [watcher])
 
     # Start Rust file watcher for native widget crates if applicable.
     rust_watcher = start_rust_watcher(bridge)

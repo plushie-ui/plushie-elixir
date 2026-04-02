@@ -8,7 +8,7 @@ defmodule Plushie.Animation.UIMacroTest do
   describe "transition macro" do
     test "keyword form with duration positional" do
       t = transition(300, to: 0.0)
-      assert %Transition{to: 0.0, duration: 300} = t
+      assert %Transition{to: +0.0, duration: 300} = t
     end
 
     test "keyword form with all options" do
@@ -20,7 +20,7 @@ defmodule Plushie.Animation.UIMacroTest do
 
     test "all-keyword form" do
       t = transition(to: 0.0, duration: 300)
-      assert %Transition{to: 0.0, duration: 300} = t
+      assert %Transition{to: +0.0, duration: 300} = t
     end
 
     test "do-block form with duration" do
@@ -30,7 +30,7 @@ defmodule Plushie.Animation.UIMacroTest do
           easing(:ease_out)
         end
 
-      assert %Transition{to: 0.0, duration: 300, easing: :ease_out} = t
+      assert %Transition{to: +0.0, duration: 300, easing: :ease_out} = t
     end
 
     test "do-block form all keyword" do
@@ -41,7 +41,7 @@ defmodule Plushie.Animation.UIMacroTest do
           easing(:ease_out)
         end
 
-      assert %Transition{to: 0.0, duration: 300, easing: :ease_out} = t
+      assert %Transition{to: +0.0, duration: 300, easing: :ease_out} = t
     end
 
     test "used as a prop value on container" do
