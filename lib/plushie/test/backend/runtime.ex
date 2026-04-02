@@ -199,7 +199,12 @@ defmodule Plushie.Test.Backend.Runtime do
     # selectors (bare strings, {:role, _}, {:label, _}) and :focused are
     # resolved by the renderer during the interact step.
     if id_selector?(selector) do
-      case GenServer.call(pid, {:find, selector}, 10_000) do
+      # Scoped IDs like "#canvas/element" reference canvas interactive
+      # elements. The element isn't a tree node, so validate the parent
+      # canvas node instead. Element existence is verified renderer-side.
+      lookup = scoped_parent_selector(selector) || selector
+
+      case GenServer.call(pid, {:find, lookup}, 10_000) do
         nil ->
           raise "widget not found: #{inspect(selector)}. " <>
                   "The #{action} action requires a valid widget selector."
@@ -209,6 +214,17 @@ defmodule Plushie.Test.Backend.Runtime do
       end
     end
   end
+
+  # For scoped selectors like "#canvas/element", returns "#canvas".
+  # Returns nil for non-scoped selectors.
+  defp scoped_parent_selector("#" <> rest) do
+    case String.split(rest, "/", parts: 2) do
+      [parent, _element] -> "#" <> parent
+      _ -> nil
+    end
+  end
+
+  defp scoped_parent_selector(_), do: nil
 
   defp id_selector?("#" <> _), do: true
   defp id_selector?(_), do: false
