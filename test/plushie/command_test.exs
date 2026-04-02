@@ -347,4 +347,57 @@ defmodule Plushie.CommandTest do
       end
     end
   end
+
+  describe "window-qualified widget IDs" do
+    test "focus/1 extracts window_id from qualified path" do
+      cmd = Command.focus("main#email")
+      assert cmd.payload.target == "email"
+      assert cmd.payload.window_id == "main"
+    end
+
+    test "focus/1 plain path has no window_id" do
+      cmd = Command.focus("form/email")
+      assert cmd.payload.target == "form/email"
+      refute Map.has_key?(cmd.payload, :window_id)
+    end
+
+    test "scroll_to/2 extracts window_id" do
+      cmd = Command.scroll_to("settings#list", 100)
+      assert cmd.payload.target == "list"
+      assert cmd.payload.window_id == "settings"
+      assert cmd.payload.offset_y == 100
+    end
+
+    test "snap_to/3 extracts window_id" do
+      cmd = Command.snap_to("main#scroll", 10.0, 20.0)
+      assert cmd.payload.target == "scroll"
+      assert cmd.payload.window_id == "main"
+    end
+
+    test "select_all/1 extracts window_id" do
+      cmd = Command.select_all("main#editor")
+      assert cmd.payload.target == "editor"
+      assert cmd.payload.window_id == "main"
+    end
+
+    test "move_cursor_to/2 extracts window_id" do
+      cmd = Command.move_cursor_to("main#input", 5)
+      assert cmd.payload.target == "input"
+      assert cmd.payload.window_id == "main"
+      assert cmd.payload.position == 5
+    end
+
+    test "select_range/3 extracts window_id" do
+      cmd = Command.select_range("main#editor", 0, 10)
+      assert cmd.payload.target == "editor"
+      assert cmd.payload.window_id == "main"
+    end
+
+    test "focus_element/2 extracts window_id from canvas" do
+      cmd = Command.focus_element("main#drawing", "handle")
+      assert cmd.payload.target == "drawing"
+      assert cmd.payload.window_id == "main"
+      assert cmd.payload.element_id == "handle"
+    end
+  end
 end

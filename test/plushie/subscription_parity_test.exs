@@ -42,30 +42,30 @@ defmodule Plushie.SubscriptionParityTest do
     end
   end
 
-  describe "on_mouse_move/1" do
+  describe "on_pointer_move/1" do
     test "returns correct subscription spec" do
-      sub = Subscription.on_mouse_move(:mouse)
+      sub = Subscription.on_pointer_move(:mouse)
       assert sub == %Subscription{type: :on_mouse_move, tag: :mouse}
     end
   end
 
-  describe "on_mouse_button/1" do
+  describe "on_pointer_button/1" do
     test "returns correct subscription spec" do
-      sub = Subscription.on_mouse_button(:btn)
+      sub = Subscription.on_pointer_button(:btn)
       assert sub == %Subscription{type: :on_mouse_button, tag: :btn}
     end
   end
 
-  describe "on_mouse_scroll/1" do
+  describe "on_pointer_scroll/1" do
     test "returns correct subscription spec" do
-      sub = Subscription.on_mouse_scroll(:scroll)
+      sub = Subscription.on_pointer_scroll(:scroll)
       assert sub == %Subscription{type: :on_mouse_scroll, tag: :scroll}
     end
   end
 
-  describe "on_touch/1" do
+  describe "on_pointer_touch/1" do
     test "returns correct subscription spec" do
-      sub = Subscription.on_touch(:touch)
+      sub = Subscription.on_pointer_touch(:touch)
       assert sub == %Subscription{type: :on_touch, tag: :touch}
     end
   end
@@ -101,8 +101,8 @@ defmodule Plushie.SubscriptionParityTest do
   describe "batch/1" do
     test "returns the list unchanged" do
       subs = [
-        Subscription.on_mouse_move(:mouse),
-        Subscription.on_touch(:touch)
+        Subscription.on_pointer_move(:mouse),
+        Subscription.on_pointer_touch(:touch)
       ]
 
       assert Subscription.batch(subs) == subs
@@ -123,8 +123,8 @@ defmodule Plushie.SubscriptionParityTest do
       subs = [
         Subscription.on_window_open(:a),
         Subscription.on_window_resize(:a),
-        Subscription.on_mouse_move(:a),
-        Subscription.on_touch(:a),
+        Subscription.on_pointer_move(:a),
+        Subscription.on_pointer_touch(:a),
         Subscription.on_theme_change(:a),
         Subscription.on_animation_frame(:a),
         Subscription.on_file_drop(:a),
@@ -136,8 +136,8 @@ defmodule Plushie.SubscriptionParityTest do
     end
 
     test "same type different tags produce different keys" do
-      k1 = Subscription.key(Subscription.on_mouse_move(:alpha))
-      k2 = Subscription.key(Subscription.on_mouse_move(:beta))
+      k1 = Subscription.key(Subscription.on_pointer_move(:alpha))
+      k2 = Subscription.key(Subscription.on_pointer_move(:beta))
       assert k1 != k2
     end
 

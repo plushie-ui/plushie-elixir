@@ -174,7 +174,7 @@ defmodule Plushie.RuntimeTest do
 
     def init(_opts), do: %{events: []}
 
-    def update(model, %Plushie.Event.MouseEvent{type: :moved}) do
+    def update(model, %Plushie.Event.WidgetEvent{type: :move, data: %{pointer: :mouse}}) do
       %{model | events: model.events ++ [:mouse]}
     end
 
@@ -1405,7 +1405,21 @@ defmodule Plushie.RuntimeTest do
       {runtime, _bridge} = start_runtime(CoalesceOrderApp)
       await_initial_render(runtime)
 
-      send(runtime, {:renderer_event, %Plushie.Event.MouseEvent{type: :moved, x: 1, y: 1}})
+      send(
+        runtime,
+        {:renderer_event,
+         %Plushie.Event.WidgetEvent{
+           type: :move,
+           id: "__global__",
+           data: %{
+             x: 1,
+             y: 1,
+             pointer: :mouse,
+             captured: false,
+             modifiers: %Plushie.KeyModifiers{}
+           }
+         }}
+      )
 
       send(
         runtime,

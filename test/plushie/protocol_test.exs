@@ -5,7 +5,6 @@ defmodule Plushie.ProtocolTest do
   alias Plushie.Event.KeyEvent
   alias Plushie.Event.ModifiersEvent
   alias Plushie.Event.SystemEvent
-  alias Plushie.Event.TouchEvent
   alias Plushie.Event.WidgetEvent
 
   alias Plushie.Protocol
@@ -1401,7 +1400,7 @@ defmodule Plushie.ProtocolTest do
           data: %{id: 0, x: 50.0, y: 75.0}
         })
 
-      assert %TouchEvent{type: :pressed, finger_id: 0, x: 50.0, y: 75.0} =
+      assert %WidgetEvent{type: :press, data: %{pointer: :touch, finger: 0, x: 50.0, y: 75.0}} =
                Protocol.decode_message(json, :json)
     end
 
@@ -1413,7 +1412,7 @@ defmodule Plushie.ProtocolTest do
           data: %{id: 1, x: 60.0, y: 80.0}
         })
 
-      assert %TouchEvent{type: :moved, finger_id: 1, x: 60.0, y: 80.0} =
+      assert %WidgetEvent{type: :move, data: %{pointer: :touch, finger: 1, x: 60.0, y: 80.0}} =
                Protocol.decode_message(json, :json)
     end
   end

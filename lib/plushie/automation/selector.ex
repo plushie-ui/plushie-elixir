@@ -10,15 +10,58 @@ defmodule Plushie.Automation.Selector do
   alias Plushie.Automation.Session
 
   @doc """
+  Parses a window-qualified selector string into its components.
+
+  Returns `{window_id, selector}` where `window_id` is `nil` when no
+  window qualifier is present.
+
+  ## Examples
+
+      iex> parse("main#save")
+      {"main", "#save"}
+
+      iex> parse("main#form/save")
+      {"main", "#form/save"}
+
+      iex> parse("#save")
+      {nil, "#save"}
+
+      iex> parse({:text, "Save"})
+      {nil, {:text, "Save"}}
+  """
+  @spec parse(Session.selector()) :: {String.t() | nil, Session.selector()}
+  def parse(selector) when is_binary(selector) do
+    case String.split(selector, "#", parts: 2) do
+      [window_id, widget_path] when window_id != "" ->
+        {window_id, "#" <> widget_path}
+
+      _ ->
+        {nil, selector}
+    end
+  end
+
+  def parse(selector), do: {nil, selector}
+
+  @doc """
   Finds the first element matching an automation selector.
   """
   @spec find(map() | nil, Session.selector()) :: Element.t() | nil
   def find(nil, _selector), do: nil
 
-  def find(tree, "#" <> id) do
-    case find_selector_node(tree, id) do
-      nil -> nil
-      node -> Element.from_node(node)
+  def find(tree, selector) when is_binary(selector) do
+    {window_id, resolved} = parse(selector)
+
+    case resolved do
+      "#" <> id ->
+        search_tree = if window_id, do: find_window_subtree(tree, window_id), else: tree
+
+        case find_selector_node(search_tree, id) do
+          nil -> nil
+          node -> Element.from_node(node)
+        end
+
+      _ ->
+        do_find_non_id(tree, resolved)
     end
   end
 
@@ -49,18 +92,23 @@ defmodule Plushie.Automation.Selector do
 
   def find(_tree, :focused), do: nil
 
-  def find(_tree, text) when is_binary(text) do
-    raise ArgumentError,
-          "bare strings are not valid selectors. " <>
-            "Use \"##{text}\" for ID selectors or {:text, #{inspect(text)}} for text content matching."
-  end
-
   @doc """
   Finds the raw tree node for selectors that resolve directly to a widget.
   """
   @spec find_node(map() | nil, Session.selector()) :: map() | nil
   def find_node(nil, _selector), do: nil
-  def find_node(tree, "#" <> id), do: find_selector_node(tree, id)
+
+  def find_node(tree, selector) when is_binary(selector) do
+    case parse(selector) do
+      {window_id, "#" <> id} ->
+        search_tree = if window_id, do: find_window_subtree(tree, window_id), else: tree
+        find_selector_node(search_tree, id)
+
+      _ ->
+        nil
+    end
+  end
+
   def find_node(_tree, _selector), do: nil
 
   @doc """
@@ -78,24 +126,19 @@ defmodule Plushie.Automation.Selector do
 
   def encode(nil, _tree, _window_id), do: %{}
 
-  def encode("#" <> id, tree, window_id) do
-    resolved =
-      if String.contains?(id, "/") do
-        id
-      else
-        case tree && Plushie.Tree.find_local(tree, id) do
-          %{id: scoped_id} -> scoped_id
-          _ -> id
-        end
-      end
+  def encode(selector, tree, window_id) when is_binary(selector) do
+    {parsed_window, resolved_selector} = parse(selector)
+    effective_window = window_id || parsed_window
 
-    # When no window is specified, check for ambiguity across windows.
-    if is_nil(window_id) and tree != nil do
-      check_ambiguity!("#" <> id, tree)
+    case resolved_selector do
+      "#" <> id ->
+        encode_id(id, tree, effective_window)
+
+      _bare ->
+        raise ArgumentError,
+              "bare strings are not valid selectors. " <>
+                "Use \"##{selector}\" for ID selectors or {:text, #{inspect(selector)}} for text content matching."
     end
-
-    sel = %{"by" => "id", "value" => resolved}
-    if window_id, do: Map.put(sel, "window_id", window_id), else: sel
   end
 
   def encode({:role, role}, _tree, window_id) when is_binary(role) do
@@ -113,12 +156,6 @@ defmodule Plushie.Automation.Selector do
   def encode({:text, text}, _tree, window_id) when is_binary(text) do
     sel = %{"by" => "text", "value" => text}
     if window_id, do: Map.put(sel, "window_id", window_id), else: sel
-  end
-
-  def encode(text, _tree, _window_id) when is_binary(text) do
-    raise ArgumentError,
-          "bare strings are not valid selectors. " <>
-            "Use \"##{text}\" for ID selectors or {:text, #{inspect(text)}} for text content matching."
   end
 
   @doc """
@@ -170,8 +207,50 @@ defmodule Plushie.Automation.Selector do
     end
   end
 
+  defp encode_id(id, tree, window_id) do
+    resolved =
+      if String.contains?(id, "/") do
+        id
+      else
+        search_tree = if window_id, do: find_window_subtree(tree, window_id), else: tree
+
+        case search_tree && Plushie.Tree.find_local(search_tree, id) do
+          %{id: scoped_id} -> scoped_id
+          _ -> id
+        end
+      end
+
+    # When no window is specified, check for ambiguity across windows.
+    if is_nil(window_id) and tree != nil do
+      check_ambiguity!("#" <> id, tree)
+    end
+
+    sel = %{"by" => "id", "value" => resolved}
+    if window_id, do: Map.put(sel, "window_id", window_id), else: sel
+  end
+
+  defp find_window_subtree(nil, _window_id), do: nil
+
+  defp find_window_subtree(%{type: "window", id: id} = node, window_id) do
+    if id == window_id, do: node, else: nil
+  end
+
+  defp find_window_subtree(%{children: children}, window_id) do
+    Enum.find_value(children, fn child -> find_window_subtree(child, window_id) end)
+  end
+
+  defp find_window_subtree(_, _window_id), do: nil
+
+  defp do_find_non_id(_tree, text) when is_binary(text) do
+    raise ArgumentError,
+          "bare strings are not valid selectors. " <>
+            "Use \"##{text}\" for ID selectors or {:text, #{inspect(text)}} for text content matching."
+  end
+
   defp maybe_wrap(nil), do: nil
   defp maybe_wrap(node), do: Element.from_node(node)
+
+  defp find_selector_node(nil, _id), do: nil
 
   defp find_selector_node(tree, id) do
     if String.contains?(id, "/") do

@@ -7,11 +7,9 @@ defmodule Plushie.Event do
     ImeEvent,
     KeyEvent,
     ModifiersEvent,
-    MouseEvent,
     StreamEvent,
     SystemEvent,
     TimerEvent,
-    TouchEvent,
     WidgetCommandError,
     WidgetEvent,
     WindowEvent
@@ -21,8 +19,6 @@ defmodule Plushie.Event do
           WidgetEvent.delivered_t()
           | KeyEvent.t()
           | ModifiersEvent.t()
-          | MouseEvent.t()
-          | TouchEvent.t()
           | ImeEvent.t()
           | WindowEvent.delivered_t()
           | EffectEvent.t()
@@ -36,8 +32,6 @@ defmodule Plushie.Event do
           WidgetEvent.t()
           | KeyEvent.t()
           | ModifiersEvent.t()
-          | MouseEvent.t()
-          | TouchEvent.t()
           | ImeEvent.t()
           | WindowEvent.t()
           | EffectEvent.t()

@@ -53,7 +53,7 @@ defmodule Plushie.Runtime do
 
   require Logger
 
-  alias Plushie.Event.{AsyncEvent, EffectEvent, MouseEvent, StreamEvent, TimerEvent, WidgetEvent}
+  alias Plushie.Event.{AsyncEvent, EffectEvent, StreamEvent, TimerEvent, WidgetEvent}
   alias Plushie.Runtime.{Commands, Subscriptions, Windows}
 
   @enforce_keys [:app, :bridge]
@@ -512,10 +512,6 @@ defmodule Plushie.Runtime do
   # latest value. This preserves ordering relative to other event types (a
   # non-coalescable event always flushes pending coalescables first) and avoids
   # redundant update cycles during bursts.
-  def handle_info({:renderer_event, %MouseEvent{type: :moved} = event}, state) do
-    {:noreply, store_coalescable(state, :mouse_move, event)}
-  end
-
   def handle_info({:renderer_event, %WidgetEvent{type: :move} = event}, state) do
     {:noreply,
      store_coalescable(

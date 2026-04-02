@@ -174,7 +174,12 @@ defmodule Plushie.Test.Backend.Runtime do
     do: GenServer.call(pid, :get_diagnostics)
 
   defp do_interact(pid, action, selector, payload, opts \\ []) do
-    window_id = Keyword.get(opts, :window)
+    explicit_window = Keyword.get(opts, :window)
+
+    # Extract window_id from window-qualified selector syntax, falling
+    # back to the explicit :window option.
+    {parsed_window, _} = if selector, do: Selector.parse(selector), else: {nil, selector}
+    window_id = explicit_window || parsed_window
 
     # For widget-targeted actions, validate the selector resolves before
     # sending the interact request. Fail fast with a clear error.
@@ -194,7 +199,7 @@ defmodule Plushie.Test.Backend.Runtime do
     :exit, reason -> raise "runtime crashed during interaction: #{inspect(reason)}"
   end
 
-  defp validate_selector!(pid, action, selector, _window_id) do
+  defp validate_selector!(pid, action, selector, window_id) do
     # Only validate selectors we can resolve Elixir-side. Text-content
     # selectors (bare strings, {:role, _}, {:label, _}) and :focused are
     # resolved by the renderer during the interact step.
@@ -204,9 +209,19 @@ defmodule Plushie.Test.Backend.Runtime do
       # canvas node instead. Element existence is verified renderer-side.
       lookup = scoped_parent_selector(selector) || selector
 
+      # Extract window_id from the selector if present, falling back to
+      # the explicit window_id option.
+      {parsed_window, _} = Selector.parse(selector)
+      effective_window = window_id || parsed_window
+
       case GenServer.call(pid, {:find, lookup}, 10_000) do
         nil ->
-          raise "widget not found: #{inspect(selector)}. " <>
+          hint =
+            if effective_window,
+              do: " (window: #{inspect(effective_window)})",
+              else: ""
+
+          raise "widget not found: #{inspect(selector)}#{hint}. " <>
                   "The #{action} action requires a valid widget selector."
 
         _element ->
@@ -215,18 +230,36 @@ defmodule Plushie.Test.Backend.Runtime do
     end
   end
 
-  # For scoped selectors like "#canvas/element", returns "#canvas".
-  # Returns nil for non-scoped selectors.
-  defp scoped_parent_selector("#" <> rest) do
-    case String.split(rest, "/", parts: 2) do
-      [parent, _element] -> "#" <> parent
-      _ -> nil
+  # For scoped selectors like "#canvas/element" or "main#canvas/element",
+  # returns the parent selector. Returns nil for non-scoped selectors.
+  defp scoped_parent_selector(selector) when is_binary(selector) do
+    {window_id, resolved} = Selector.parse(selector)
+
+    case resolved do
+      "#" <> rest ->
+        case String.split(rest, "/", parts: 2) do
+          [parent, _element] ->
+            prefix = if window_id, do: window_id <> "#", else: "#"
+            prefix <> parent
+
+          _ ->
+            nil
+        end
+
+      _ ->
+        nil
     end
   end
 
   defp scoped_parent_selector(_), do: nil
 
-  defp id_selector?("#" <> _), do: true
+  defp id_selector?(selector) when is_binary(selector) do
+    case Selector.parse(selector) do
+      {_window_id, "#" <> _} -> true
+      _ -> false
+    end
+  end
+
   defp id_selector?(_), do: false
 
   # -- GenServer ---------------------------------------------------------------

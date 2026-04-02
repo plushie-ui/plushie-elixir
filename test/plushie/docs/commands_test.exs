@@ -246,12 +246,12 @@ defmodule Plushie.Docs.CommandsTest do
   end
 
   test "subscriptions_set_max_rate_test" do
-    sub = Subscription.on_mouse_move(:mouse) |> Subscription.max_rate(30)
+    sub = Subscription.on_pointer_move(:mouse) |> Subscription.max_rate(30)
     assert sub.max_rate == 30
   end
 
   test "subscriptions_set_max_rate_zero_test" do
-    sub = Subscription.on_mouse_move(:mouse) |> Subscription.max_rate(0)
+    sub = Subscription.on_pointer_move(:mouse) |> Subscription.max_rate(0)
     assert sub.max_rate == 0
   end
 
@@ -280,18 +280,18 @@ defmodule Plushie.Docs.CommandsTest do
     assert %Subscription{type: :on_window_resize, tag: :win_resize} = sub
   end
 
-  test "subscriptions_on_mouse_button_test" do
-    sub = Subscription.on_mouse_button(:mouse_btn)
+  test "subscriptions_on_pointer_button_test" do
+    sub = Subscription.on_pointer_button(:mouse_btn)
     assert %Subscription{type: :on_mouse_button, tag: :mouse_btn} = sub
   end
 
-  test "subscriptions_on_mouse_scroll_test" do
-    sub = Subscription.on_mouse_scroll(:scroll)
+  test "subscriptions_on_pointer_scroll_test" do
+    sub = Subscription.on_pointer_scroll(:scroll)
     assert %Subscription{type: :on_mouse_scroll, tag: :scroll} = sub
   end
 
-  test "subscriptions_on_touch_test" do
-    sub = Subscription.on_touch(:touch)
+  test "subscriptions_on_pointer_touch_test" do
+    sub = Subscription.on_pointer_touch(:touch)
     assert %Subscription{type: :on_touch, tag: :touch} = sub
   end
 

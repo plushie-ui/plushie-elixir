@@ -101,14 +101,17 @@ complete before returning.
 
 ### Multi-window interactions
 
-Add `window:` to target a specific window:
+Target a specific window using window-qualified selectors or the
+`window:` option:
 
 ```elixir
-click("#save", window: "settings")
-type_text("#name", "hello", window: "settings")
+click("settings#save")                         # window qualifier in selector
+click("#save", window: "settings")             # explicit window: option
+type_text("settings#name", "hello")            # qualifier works everywhere
+type_text("#name", "hello", window: "settings") # equivalent
 ```
 
-Without `window:`, an ambiguous ID that exists in multiple windows raises
+Without either, an ambiguous ID that exists in multiple windows raises
 an error.
 
 ### Key name parsing
@@ -169,10 +172,18 @@ slate mid-test. For most tests, the per-test setup from
 |---|---|
 | `"#widget_id"` | Local widget ID (# prefix required) |
 | `"#scope/path/id"` | Exact scoped path |
+| `"window_id#widget_id"` | Widget in a specific window |
+| `"window_id#scope/path/id"` | Scoped path in a specific window |
 | `{:text, "Save"}` | Widget displaying this text (depth-first) |
 | `{:role, :button}` | Widget with accessibility role |
 | `{:label, "Name"}` | Widget with accessibility label |
 | `:focused` | Currently focused widget |
+
+The `window_id#path` form scopes the selector to a specific window.
+`"main#save"` finds widget `"save"` only in window `"main"`.
+`"main#form/save"` finds the scoped widget `"form/save"` in window
+`"main"`. The window qualifier works with all ID-based helpers
+(`find`, `click`, `assert_text`, etc.).
 
 Bare strings without a `#` prefix are not valid selectors and raise
 `ArgumentError`. Use `{:text, "..."}` for text content matching.

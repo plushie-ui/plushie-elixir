@@ -108,8 +108,8 @@ defmodule Plushie.Protocol.Encode do
       Plushie.Protocol.Encode.encode_subscribe("on_key_press", "keys")
       #=> ~s({"kind":"on_key_press","session":"","tag":"keys","type":"subscribe"}) <> "\\n"
 
-      Plushie.Protocol.Encode.encode_subscribe("on_mouse_move", "mouse", :json, 30)
-      #=> ~s({"kind":"on_mouse_move","max_rate":30,"session":"","tag":"mouse","type":"subscribe"}) <> "\\n"
+      Plushie.Protocol.Encode.encode_subscribe("on_mouse_move", "pointer", :json, 30)
+      #=> ~s({"kind":"on_mouse_move","max_rate":30,"session":"","tag":"pointer","type":"subscribe"}) <> "\\n"
   """
   @spec encode_subscribe(
           kind :: String.t(),

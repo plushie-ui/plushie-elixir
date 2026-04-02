@@ -172,8 +172,10 @@ def update(model, %WidgetEvent{id: "save", scope: [window_id]}), do: ...
 ```
 
 Only `Plushie.Event.WidgetEvent` and `Plushie.Event.ImeEvent` carry
-scope. Other subscription events (`KeyEvent`, `MouseEvent`,
-`TouchEvent`, `ModifiersEvent`) are global and unscoped.
+scope. Other subscription events (`KeyEvent`, `ModifiersEvent`) are
+global and unscoped. Pointer subscription events (mouse/touch) are
+delivered as `WidgetEvent` with `id` set to the window ID and
+`scope` set to `[]`.
 
 ## Path reconstruction
 
@@ -214,6 +216,17 @@ Command.focus("form/email")
 Command.scroll_to("sidebar/list", 0)
 ```
 
+In multi-window apps, commands can target a specific window using the
+`window_id#path` syntax:
+
+```elixir
+Command.focus("settings#email")
+Command.scroll_to("main#sidebar/list", 0)
+```
+
+The `#` separates the window ID from the widget path. Without a window
+qualifier, the command targets whatever window contains the widget.
+
 ## Multi-window scoping
 
 The window ID is part of the scope chain (always the last element).
@@ -244,6 +257,20 @@ find!("#save")                     # local ID
 click("#sidebar/form/save")        # full scoped path
 assert_text("#form/email", "")     # scoped assertion
 ```
+
+In multi-window apps, selectors can include a window qualifier using
+the `window_id#widget_path` syntax:
+
+```elixir
+click("main#save")                 # "save" in window "main"
+find!("settings#form/email")       # scoped path in window "settings"
+assert_text("main#count", "3")     # assertion scoped to a window
+```
+
+The `#` separates the window ID from the widget path. Without a window
+qualifier (i.e. `"#save"`), the selector searches all windows. An
+ambiguous match across windows raises an error -- use the window
+qualifier or the `window:` option to disambiguate.
 
 The test backend resolves IDs against the normalised tree.
 

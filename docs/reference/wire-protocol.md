@@ -125,7 +125,7 @@ messages and dispatches them to typed structs:
 | Wire type | Decoded to | Delivered via |
 |---|---|---|
 | `hello` | `{:hello, map}` | Bridge stores and notifies Runtime |
-| `event` | `WidgetEvent`, `KeyEvent`, `MouseEvent`, etc. | `update/2` |
+| `event` | `WidgetEvent`, `KeyEvent`, `WindowEvent`, etc. | `update/2` |
 | `effect_response` | `{:effect_response, wire_id, result}` | Runtime maps to `%EffectEvent{tag: tag}` |
 | `interact_step` | `{:interact_step, id, events}` | Test backend processes |
 | `interact_response` | `{:interact_response, id, events}` | Test backend resolves |

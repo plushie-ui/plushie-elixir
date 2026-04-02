@@ -192,11 +192,10 @@ stops, until the next edit.
 Plushie provides subscriptions for many event sources beyond keyboard and
 timers:
 
-- **Mouse**: `on_mouse_move/1`, `on_mouse_button/1`, `on_mouse_scroll/1`
+- **Pointer**: `on_pointer_move/1`, `on_pointer_button/1`, `on_pointer_scroll/1`, `on_pointer_touch/1`
 - **Window lifecycle**: `on_window_close/1`, `on_window_resize/1`,
   `on_window_event/1`, `on_window_open/1`, `on_window_focus/1`,
   `on_window_unfocus/1`, `on_window_move/1`
-- **Touch**: `on_touch/1`
 - **IME**: `on_ime/1` for input method editor events
 - **System**: `on_theme_change/1`, `on_animation_frame/1`, `on_file_drop/1`
   (Note: renderer-side transitions run independently and do not require
@@ -213,14 +212,14 @@ complete list and details.
 
 ## Rate limiting
 
-High-frequency events like mouse movement can call `update/2`
+High-frequency events like pointer movement can call `update/2`
 unnecessarily often, potentially hundreds of times per second when you only need
 the position at 30fps. This is especially wasteful over networked
 connections where each update generates wire traffic.
 `Plushie.Subscription.max_rate/2` throttles delivery:
 
 ```elixir
-Plushie.Subscription.on_mouse_move(:mouse)
+Plushie.Subscription.on_pointer_move(:mouse)
 |> Plushie.Subscription.max_rate(30)
 ```
 
@@ -230,7 +229,7 @@ intermediate events, delivering only the latest state at each interval.
 You can also set `max_rate` as a constructor option:
 
 ```elixir
-Plushie.Subscription.on_mouse_move(:mouse, max_rate: 30)
+Plushie.Subscription.on_pointer_move(:mouse, max_rate: 30)
 ```
 
 Rate limiting works at three levels, from most to least specific:

@@ -72,23 +72,25 @@ macOS. Match on `command: true` for cross-platform shortcuts.
 (e.g. `on_window_resize`), matching events are delivered twice.** Use
 one or the other, not both.
 
-### Mouse
+### Pointer
 
 | Function | Event delivered |
 |---|---|
-| `on_mouse_move/1` | `Plushie.Event.MouseEvent` |
-| `on_mouse_button/1` | `Plushie.Event.MouseEvent` |
-| `on_mouse_scroll/1` | `Plushie.Event.MouseEvent` |
+| `on_pointer_move/1` | `Plushie.Event.WidgetEvent` (`:move`, `:enter`, `:exit`) |
+| `on_pointer_button/1` | `Plushie.Event.WidgetEvent` (`:press`, `:release`) |
+| `on_pointer_scroll/1` | `Plushie.Event.WidgetEvent` (`:scroll`) |
+| `on_pointer_touch/1` | `Plushie.Event.WidgetEvent` (`:press`, `:move`, `:release`) |
 
-Mouse subscriptions are global. They deliver events regardless of
-which widget is under the cursor. For widget-specific mouse handling,
+Pointer subscriptions are global. They deliver events as `WidgetEvent`
+with `id` set to the window ID and `scope` set to `[]`. The `data`
+map includes `pointer` (`:mouse` or `:touch`) and other fields
+depending on the event type. For widget-specific pointer handling,
 use `pointer_area` instead.
 
 ### Other
 
 | Function | Event delivered |
 |---|---|
-| `on_touch/1` | `Plushie.Event.TouchEvent` |
 | `on_ime/1` | `Plushie.Event.ImeEvent` |
 | `on_theme_change/1` | `Plushie.Event.SystemEvent` |
 | `on_animation_frame/1` | `Plushie.Event.SystemEvent` |
@@ -114,7 +116,7 @@ and an optional keyword list:
 ```elixir
 Plushie.Subscription.on_key_press(:keys)
 Plushie.Subscription.on_key_press(:keys, max_rate: 30)
-Plushie.Subscription.on_mouse_move(:mouse, max_rate: 60)
+Plushie.Subscription.on_pointer_move(:mouse, max_rate: 60)
 Plushie.Subscription.every(1000, :tick)
 ```
 
@@ -128,14 +130,14 @@ coalesces intermediate events, delivering only the latest state at each
 interval:
 
 ```elixir
-Plushie.Subscription.on_mouse_move(:mouse)
+Plushie.Subscription.on_pointer_move(:mouse)
 |> Plushie.Subscription.max_rate(30)
 ```
 
 Or inline:
 
 ```elixir
-Plushie.Subscription.on_mouse_move(:mouse, max_rate: 30)
+Plushie.Subscription.on_pointer_move(:mouse, max_rate: 30)
 ```
 
 `max_rate/2` returns a modified subscription struct. It works on

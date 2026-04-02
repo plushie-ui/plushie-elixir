@@ -362,7 +362,7 @@ end
 
 def subscribe(model) do
   if model.dragging do
-    [Plushie.Subscription.on_mouse_move(:drag, max_rate: 60)]
+    [Plushie.Subscription.on_pointer_move(:drag, max_rate: 60)]
   else
     []
   end
@@ -370,7 +370,7 @@ end
 
 def update(model, %WidgetEvent{type: :click, id: "drag-start"}), do: %{model | dragging: true}
 def update(model, %WidgetEvent{type: :click, id: "drag-end"}), do: %{model | dragging: false}
-def update(model, %MouseEvent{type: :moved, x: x}), do: %{model | split_width: max(100, x)}
+def update(model, %WidgetEvent{type: :move, data: %{x: x}}), do: %{model | split_width: max(100, x)}
 ```
 
 ### Badges and chips

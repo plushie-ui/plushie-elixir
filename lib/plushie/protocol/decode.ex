@@ -9,9 +9,7 @@ defmodule Plushie.Protocol.Decode do
     ImeEvent,
     KeyEvent,
     ModifiersEvent,
-    MouseEvent,
     SystemEvent,
-    TouchEvent,
     WidgetCommandError,
     WidgetEvent,
     WindowEvent
@@ -332,36 +330,71 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  # -- Mouse events --
+  # -- Subscription pointer events --
+  # Delivered as WidgetEvents with id = window_id and scope = [].
 
   defp dispatch(
          %{"type" => "event", "family" => "cursor_moved", "data" => %{"x" => x, "y" => y}} = msg
        ) do
-    %MouseEvent{
-      type: :moved,
-      x: x,
-      y: y,
-      captured: msg["captured"] || false,
-      window_id: msg["window_id"]
+    window_id = msg["window_id"]
+
+    %WidgetEvent{
+      type: :move,
+      id: window_id || "__global__",
+      scope: [],
+      window_id: window_id,
+      data: %{
+        x: x,
+        y: y,
+        pointer: :mouse,
+        captured: msg["captured"] || false,
+        modifiers: parse_modifiers(msg["modifiers"])
+      }
     }
   end
 
   defp dispatch(%{"type" => "event", "family" => "cursor_entered"} = msg) do
-    %MouseEvent{type: :entered, captured: msg["captured"] || false, window_id: msg["window_id"]}
+    window_id = msg["window_id"]
+
+    %WidgetEvent{
+      type: :enter,
+      id: window_id || "__global__",
+      scope: [],
+      window_id: window_id,
+      data: %{captured: msg["captured"] || false}
+    }
   end
 
   defp dispatch(%{"type" => "event", "family" => "cursor_left"} = msg) do
-    %MouseEvent{type: :left, captured: msg["captured"] || false, window_id: msg["window_id"]}
+    window_id = msg["window_id"]
+
+    %WidgetEvent{
+      type: :exit,
+      id: window_id || "__global__",
+      scope: [],
+      window_id: window_id,
+      data: %{captured: msg["captured"] || false}
+    }
   end
 
   defp dispatch(%{"type" => "event", "family" => "button_pressed", "value" => button} = msg) do
     case Parsers.parse_mouse_button(button) do
       {:ok, parsed_button} ->
-        %MouseEvent{
-          type: :button_pressed,
-          button: parsed_button,
-          captured: msg["captured"] || false,
-          window_id: msg["window_id"]
+        window_id = msg["window_id"]
+
+        %WidgetEvent{
+          type: :press,
+          id: window_id || "__global__",
+          scope: [],
+          window_id: window_id,
+          data: %{
+            button: parsed_button,
+            pointer: :mouse,
+            x: nil,
+            y: nil,
+            captured: msg["captured"] || false,
+            modifiers: parse_modifiers(msg["modifiers"])
+          }
         }
 
       {:error, reason} ->
@@ -372,11 +405,21 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{"type" => "event", "family" => "button_released", "value" => button} = msg) do
     case Parsers.parse_mouse_button(button) do
       {:ok, parsed_button} ->
-        %MouseEvent{
-          type: :button_released,
-          button: parsed_button,
-          captured: msg["captured"] || false,
-          window_id: msg["window_id"]
+        window_id = msg["window_id"]
+
+        %WidgetEvent{
+          type: :release,
+          id: window_id || "__global__",
+          scope: [],
+          window_id: window_id,
+          data: %{
+            button: parsed_button,
+            pointer: :mouse,
+            x: nil,
+            y: nil,
+            captured: msg["captured"] || false,
+            modifiers: parse_modifiers(msg["modifiers"])
+          }
         }
 
       {:error, reason} ->
@@ -393,13 +436,21 @@ defmodule Plushie.Protocol.Decode do
        ) do
     case Parsers.parse_scroll_unit(unit) do
       {:ok, parsed_unit} ->
-        %MouseEvent{
-          type: :wheel_scrolled,
-          delta_x: dx,
-          delta_y: dy,
-          unit: parsed_unit,
-          captured: msg["captured"] || false,
-          window_id: msg["window_id"]
+        window_id = msg["window_id"]
+
+        %WidgetEvent{
+          type: :scroll,
+          id: window_id || "__global__",
+          scope: [],
+          window_id: window_id,
+          data: %{
+            delta_x: dx,
+            delta_y: dy,
+            unit: parsed_unit,
+            pointer: :mouse,
+            captured: msg["captured"] || false,
+            modifiers: parse_modifiers(msg["modifiers"])
+          }
         }
 
       {:error, reason} ->
@@ -466,7 +517,8 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  # -- Touch events --
+  # -- Touch events (subscription) --
+  # Delivered as WidgetEvents with pointer: :touch.
 
   defp dispatch(
          %{
@@ -475,13 +527,22 @@ defmodule Plushie.Protocol.Decode do
            "data" => %{"id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
-    %TouchEvent{
-      type: :pressed,
-      finger_id: finger_id,
-      x: x,
-      y: y,
-      captured: msg["captured"] || false,
-      window_id: msg["window_id"]
+    window_id = msg["window_id"]
+
+    %WidgetEvent{
+      type: :press,
+      id: window_id || "__global__",
+      scope: [],
+      window_id: window_id,
+      data: %{
+        pointer: :touch,
+        finger: finger_id,
+        x: x,
+        y: y,
+        button: :left,
+        captured: msg["captured"] || false,
+        modifiers: parse_modifiers(msg["modifiers"])
+      }
     }
   end
 
@@ -492,13 +553,21 @@ defmodule Plushie.Protocol.Decode do
            "data" => %{"id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
-    %TouchEvent{
-      type: :moved,
-      finger_id: finger_id,
-      x: x,
-      y: y,
-      captured: msg["captured"] || false,
-      window_id: msg["window_id"]
+    window_id = msg["window_id"]
+
+    %WidgetEvent{
+      type: :move,
+      id: window_id || "__global__",
+      scope: [],
+      window_id: window_id,
+      data: %{
+        pointer: :touch,
+        finger: finger_id,
+        x: x,
+        y: y,
+        captured: msg["captured"] || false,
+        modifiers: parse_modifiers(msg["modifiers"])
+      }
     }
   end
 
@@ -509,13 +578,22 @@ defmodule Plushie.Protocol.Decode do
            "data" => %{"id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
-    %TouchEvent{
-      type: :lifted,
-      finger_id: finger_id,
-      x: x,
-      y: y,
-      captured: msg["captured"] || false,
-      window_id: msg["window_id"]
+    window_id = msg["window_id"]
+
+    %WidgetEvent{
+      type: :release,
+      id: window_id || "__global__",
+      scope: [],
+      window_id: window_id,
+      data: %{
+        pointer: :touch,
+        finger: finger_id,
+        x: x,
+        y: y,
+        button: :left,
+        captured: msg["captured"] || false,
+        modifiers: parse_modifiers(msg["modifiers"])
+      }
     }
   end
 
@@ -526,13 +604,23 @@ defmodule Plushie.Protocol.Decode do
            "data" => %{"id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
-    %TouchEvent{
-      type: :lost,
-      finger_id: finger_id,
-      x: x,
-      y: y,
-      captured: msg["captured"] || false,
-      window_id: msg["window_id"]
+    window_id = msg["window_id"]
+
+    %WidgetEvent{
+      type: :release,
+      id: window_id || "__global__",
+      scope: [],
+      window_id: window_id,
+      data: %{
+        pointer: :touch,
+        finger: finger_id,
+        x: x,
+        y: y,
+        button: :left,
+        lost: true,
+        captured: msg["captured"] || false,
+        modifiers: parse_modifiers(msg["modifiers"])
+      }
     }
   end
 

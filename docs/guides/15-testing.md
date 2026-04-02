@@ -57,14 +57,18 @@ Most helper functions take a selector to identify widgets:
 |---|---|
 | `"#save"` | Widget with local ID `"save"` |
 | `"#sidebar/hello.ex/delete"` | Widget at exact scoped path |
+| `"main#save"` | Widget `"save"` in window `"main"` |
+| `"main#form/save"` | Scoped path `"form/save"` in window `"main"` |
 | `{:text, "Save"}` | Widget displaying the text "Save" |
 | `{:role, :button}` | Widget with accessibility role `:button` |
 | `{:label, "Email"}` | Widget with accessibility label "Email" |
 | `:focused` | Currently focused widget |
 
-The `#` prefix marks ID selectors. Text content matching uses the
-`{:text, "..."}` tuple form. Bare strings without a `#` prefix are
-not valid selectors and will raise an `ArgumentError`.
+The `#` prefix marks ID selectors. The `window_id#path` form scopes
+the selector to a specific window -- useful for multi-window apps
+where the same widget ID may appear in different windows. Text content
+matching uses the `{:text, "..."}` tuple form. Bare strings without a
+`#` prefix are not valid selectors and will raise an `ArgumentError`.
 
 ## Finding elements
 
@@ -100,13 +104,16 @@ release("ctrl+s")                      # key up
 type_key("escape")                     # press + release
 ```
 
-In multi-window apps, add `window:` to target a specific window:
+In multi-window apps, target a specific window using the `window_id#path`
+selector syntax or the `window:` option:
 
 ```elixir
-click("#save", window: "settings")
+click("settings#save")                  # window qualifier in selector
+click("#save", window: "settings")      # explicit window: option
+type_text("settings#name", "hello")     # works with all interactions
 ```
 
-Without `window:`, an ambiguous ID that exists in multiple windows raises an
+Without either, an ambiguous ID that exists in multiple windows raises an
 error.
 
 All interactions are synchronous. They wait for the full update cycle

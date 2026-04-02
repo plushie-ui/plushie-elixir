@@ -41,17 +41,17 @@ defmodule Plushie.Subscription do
   This reduces wire traffic and host CPU usage for high-frequency events.
 
       # Rate-limit mouse moves to 30 events per second:
-      Subscription.on_mouse_move(:mouse, max_rate: 30)
+      Subscription.on_pointer_move(:mouse, max_rate: 30)
 
       # Animation frames at 60fps (matches display refresh):
       Subscription.on_animation_frame(:frame, max_rate: 60)
 
       # Subscribe but never emit (capture tracking only):
-      Subscription.on_mouse_move(:mouse, max_rate: 0)
+      Subscription.on_pointer_move(:mouse, max_rate: 0)
 
   The rate can also be set via the `max_rate/2` setter for pipeline style:
 
-      Subscription.on_mouse_move(:mouse) |> Subscription.max_rate(30)
+      Subscription.on_pointer_move(:mouse) |> Subscription.max_rate(30)
 
   Timer subscriptions (`every/2`) do not support max_rate -- they are
   host-side timers, not renderer events.
@@ -83,10 +83,11 @@ defmodule Plushie.Subscription do
   atom used for subscription management. For timer subscriptions, the
   tag is also part of the Timer event struct in `update/2`
   (e.g. `%Plushie.Event.TimerEvent{tag: tag, timestamp: timestamp}`).
-  For renderer subscriptions (keyboard, window, mouse, etc.), the tag
+  For renderer subscriptions (keyboard, window, pointer, etc.), the tag
   is sent to the renderer to register/unregister the listener but is
   not included in the event struct -- those use typed event structs like
-  `%Plushie.Event.KeyEvent{}`, `%Plushie.Event.WindowEvent{}`, etc.
+  `%Plushie.Event.KeyEvent{}`, `%Plushie.Event.WindowEvent{}`, or
+  `%Plushie.Event.WidgetEvent{}` (for pointer subscriptions).
   """
   @type t :: %__MODULE__{
           type: atom(),
@@ -336,14 +337,15 @@ defmodule Plushie.Subscription do
   end
 
   @doc """
-  Fires on mouse movement.
+  Fires on pointer movement (mouse or touch).
 
-  Delivers `%MouseEvent{type: :moved, x: x, y: y, captured: bool}` to `update/2`.
-  Also delivers `%MouseEvent{type: :entered, ...}` and `%MouseEvent{type: :left, ...}`.
+  Delivers `%WidgetEvent{type: :move, id: window_id, scope: [], ...}` to `update/2`.
+  The `data` map includes `pointer: :mouse`, `x`, `y`, and `modifiers`.
+  Also delivers `:enter` and `:exit` events for cursor enter/leave.
   The `event_tag` is for subscription management only.
   """
-  @spec on_mouse_move(event_tag :: atom(), opts :: keyword()) :: t()
-  def on_mouse_move(event_tag, opts \\ []) when is_atom(event_tag) do
+  @spec on_pointer_move(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_pointer_move(event_tag, opts \\ []) when is_atom(event_tag) do
     {window_id, opts} = Keyword.pop(opts, :window)
 
     %__MODULE__{
@@ -355,15 +357,15 @@ defmodule Plushie.Subscription do
   end
 
   @doc """
-  Fires on mouse button press/release.
+  Fires on pointer button press/release (mouse or touch).
 
-  Delivers `%MouseEvent{type: :button_pressed, button: atom, captured: bool}` or
-  `%MouseEvent{type: :button_released, button: atom, captured: bool}` to `update/2`.
-  `button` is `:left`, `:right`, or `:middle`.
+  Delivers `%WidgetEvent{type: :press, id: window_id, scope: [], ...}` or
+  `%WidgetEvent{type: :release, ...}` to `update/2`. The `data` map includes
+  `button` (`:left`, `:right`, `:middle`), `pointer`, and `modifiers`.
   The `event_tag` is for subscription management only.
   """
-  @spec on_mouse_button(event_tag :: atom(), opts :: keyword()) :: t()
-  def on_mouse_button(event_tag, opts \\ []) when is_atom(event_tag) do
+  @spec on_pointer_button(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_pointer_button(event_tag, opts \\ []) when is_atom(event_tag) do
     {window_id, opts} = Keyword.pop(opts, :window)
 
     %__MODULE__{
@@ -375,14 +377,15 @@ defmodule Plushie.Subscription do
   end
 
   @doc """
-  Fires on mouse scroll events.
+  Fires on pointer scroll events.
 
-  Delivers `%MouseEvent{type: :wheel_scrolled, delta_x: num, delta_y: num, unit: atom, captured: bool}`
-  to `update/2`. The `unit` field is `:line` or `:pixel`.
+  Delivers `%WidgetEvent{type: :scroll, id: window_id, scope: [], ...}` to `update/2`.
+  The `data` map includes `delta_x`, `delta_y`, `unit` (`:line` or `:pixel`),
+  `pointer`, and `modifiers`.
   The `event_tag` is for subscription management only.
   """
-  @spec on_mouse_scroll(event_tag :: atom(), opts :: keyword()) :: t()
-  def on_mouse_scroll(event_tag, opts \\ []) when is_atom(event_tag) do
+  @spec on_pointer_scroll(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_pointer_scroll(event_tag, opts \\ []) when is_atom(event_tag) do
     {window_id, opts} = Keyword.pop(opts, :window)
 
     %__MODULE__{
@@ -414,13 +417,14 @@ defmodule Plushie.Subscription do
   @doc """
   Fires on touch events.
 
-  Delivers `%TouchEvent{type: :pressed, finger_id: id, x: num, y: num, captured: bool}`,
-  `%TouchEvent{type: :moved, ...}`, `%TouchEvent{type: :lifted, ...}`, or `%TouchEvent{type: :lost, ...}`
-  to `update/2`.
+  Delivers `%WidgetEvent{type: :press, id: window_id, scope: [], ...}`,
+  `%WidgetEvent{type: :move, ...}`, or `%WidgetEvent{type: :release, ...}`
+  to `update/2`. The `data` map includes `pointer: :touch`, `finger`, `x`, `y`.
+  Touch `:release` events from a lost finger include `lost: true` in the data.
   The `event_tag` is for subscription management only.
   """
-  @spec on_touch(event_tag :: atom(), opts :: keyword()) :: t()
-  def on_touch(event_tag, opts \\ []) when is_atom(event_tag) do
+  @spec on_pointer_touch(event_tag :: atom(), opts :: keyword()) :: t()
+  def on_pointer_touch(event_tag, opts \\ []) when is_atom(event_tag) do
     {window_id, opts} = Keyword.pop(opts, :window)
     %__MODULE__{type: :on_touch, tag: event_tag, max_rate: opts[:max_rate], window_id: window_id}
   end
@@ -508,7 +512,7 @@ defmodule Plushie.Subscription do
   ## Examples
 
       # Rate-limit mouse moves to 30 events per second:
-      Subscription.on_mouse_move(:mouse) |> Subscription.max_rate(30)
+      Subscription.on_pointer_move(:mouse) |> Subscription.max_rate(30)
 
       # Animation frames at 60fps:
       Subscription.on_animation_frame(:frame, max_rate: 60)
@@ -527,7 +531,7 @@ defmodule Plushie.Subscription do
 
       Subscription.for_window("editor", [
         Subscription.on_key_press(:editor_keys),
-        Subscription.on_mouse_move(:editor_mouse, max_rate: 60)
+        Subscription.on_pointer_move(:editor_mouse, max_rate: 60)
       ])
   """
   @spec for_window(window_id :: String.t(), subscriptions :: [t()]) :: [t()]

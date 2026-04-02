@@ -7,11 +7,9 @@ defmodule Plushie.Docs.EventsTest do
     ImeEvent,
     KeyEvent,
     ModifiersEvent,
-    MouseEvent,
     StreamEvent,
     SystemEvent,
     TimerEvent,
-    TouchEvent,
     WidgetEvent,
     WindowEvent
   }
@@ -324,28 +322,40 @@ defmodule Plushie.Docs.EventsTest do
     assert event.text == "final"
   end
 
-  # -- Mouse events (global) ---------------------------------------------------
+  # -- Pointer events (subscription) --------------------------------------------
 
-  test "events_mouse_moved_match_test" do
-    event = %MouseEvent{type: :moved, x: 100.0, y: 200.0}
+  test "events_pointer_moved_match_test" do
+    event = %WidgetEvent{
+      type: :move,
+      id: "main",
+      data: %{x: 100.0, y: 200.0, pointer: :mouse, captured: false}
+    }
 
-    assert event.x == 100.0
-    assert event.y == 200.0
+    assert event.data.x == 100.0
+    assert event.data.y == 200.0
+    assert event.data.pointer == :mouse
   end
 
-  test "events_mouse_button_pressed_match_test" do
-    event = %MouseEvent{type: :button_pressed, button: :left}
+  test "events_pointer_button_pressed_match_test" do
+    event = %WidgetEvent{
+      type: :press,
+      id: "main",
+      data: %{button: :left, pointer: :mouse, captured: false}
+    }
 
-    assert match?(%MouseEvent{type: :button_pressed, button: :left}, event)
+    assert match?(%WidgetEvent{type: :press, data: %{button: :left}}, event)
   end
-
-  # -- Touch events ------------------------------------------------------------
 
   test "events_touch_pressed_match_test" do
-    event = %TouchEvent{type: :pressed, finger_id: 0, x: 50.0, y: 75.0}
+    event = %WidgetEvent{
+      type: :press,
+      id: "main",
+      data: %{pointer: :touch, finger: 0, x: 50.0, y: 75.0, button: :left, captured: false}
+    }
 
-    assert event.x == 50.0
-    assert event.y == 75.0
+    assert event.data.x == 50.0
+    assert event.data.y == 75.0
+    assert event.data.pointer == :touch
   end
 
   # -- Modifier state events ---------------------------------------------------

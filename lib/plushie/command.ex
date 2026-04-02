@@ -118,19 +118,27 @@ defmodule Plushie.Command do
     %__MODULE__{type: :async, payload: %{fun: fun, tag: event_tag}}
   end
 
-  @doc "Focus the widget identified by `widget_id`."
+  @doc """
+  Focus the widget identified by `widget_id`.
+
+  Supports window-qualified paths: `"main#email"` targets widget
+  `"email"` in window `"main"`.
+  """
   @spec focus(widget_id :: widget_id()) :: %__MODULE__{}
   def focus(widget_id) do
-    %__MODULE__{type: :focus, payload: %{target: widget_id}}
+    {window_id, target} = parse_target(widget_id)
+    payload = %{target: target}
+    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
+    %__MODULE__{type: :focus, payload: payload}
   end
 
-  @doc "Focus a specific interactive element within a canvas."
+  @doc "Focus a specific interactive element within a canvas. Supports `\"window#canvas\"`."
   @spec focus_element(canvas_id :: widget_id(), element_id :: String.t()) :: %__MODULE__{}
   def focus_element(canvas_id, element_id) do
-    %__MODULE__{
-      type: :widget_op,
-      payload: %{op: "focus_element", target: canvas_id, element_id: element_id}
-    }
+    {window_id, target} = parse_target(canvas_id)
+    payload = %{op: "focus_element", target: target, element_id: element_id}
+    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
+    %__MODULE__{type: :widget_op, payload: payload}
   end
 
   @doc "Move focus to the next focusable widget."
@@ -141,16 +149,30 @@ defmodule Plushie.Command do
   @spec focus_previous() :: %__MODULE__{}
   def focus_previous, do: %__MODULE__{type: :focus_previous, payload: %{}}
 
-  @doc "Select all text in the widget identified by `widget_id`."
+  @doc """
+  Select all text in the widget identified by `widget_id`.
+
+  Supports window-qualified paths: `"main#email"`.
+  """
   @spec select_all(widget_id :: widget_id()) :: %__MODULE__{}
   def select_all(widget_id) do
-    %__MODULE__{type: :select_all, payload: %{target: widget_id}}
+    {window_id, target} = parse_target(widget_id)
+    payload = %{target: target}
+    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
+    %__MODULE__{type: :select_all, payload: payload}
   end
 
-  @doc "Scroll the widget identified by `widget_id` to `offset`."
+  @doc """
+  Scroll the widget identified by `widget_id` to `offset`.
+
+  Supports window-qualified paths: `"main#list"`.
+  """
   @spec scroll_to(widget_id :: widget_id(), offset :: term()) :: %__MODULE__{}
   def scroll_to(widget_id, offset) do
-    %__MODULE__{type: :scroll_to, payload: %{target: widget_id, offset_y: offset}}
+    {window_id, target} = parse_target(widget_id)
+    payload = %{target: target, offset_y: offset}
+    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
+    %__MODULE__{type: :scroll_to, payload: payload}
   end
 
   @doc """
@@ -175,53 +197,71 @@ defmodule Plushie.Command do
   @spec exit() :: %__MODULE__{}
   def exit, do: %__MODULE__{type: :exit, payload: %{}}
 
-  @doc "Snap the scrollable widget to an absolute offset."
+  @doc "Snap the scrollable widget to an absolute offset. Supports `\"window#path\"`."
   @spec snap_to(widget_id :: widget_id(), x :: float(), y :: float()) :: %__MODULE__{}
   def snap_to(widget_id, x \\ 0.0, y \\ 0.0) do
-    %__MODULE__{type: :snap_to, payload: %{target: widget_id, x: x, y: y}}
+    {window_id, target} = parse_target(widget_id)
+    payload = %{target: target, x: x, y: y}
+    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
+    %__MODULE__{type: :snap_to, payload: payload}
   end
 
-  @doc "Snap the scrollable widget to the end of its content."
+  @doc "Snap the scrollable widget to the end of its content. Supports `\"window#path\"`."
   @spec snap_to_end(widget_id :: widget_id()) :: %__MODULE__{}
   def snap_to_end(widget_id) do
-    %__MODULE__{type: :snap_to_end, payload: %{target: widget_id}}
+    {window_id, target} = parse_target(widget_id)
+    payload = %{target: target}
+    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
+    %__MODULE__{type: :snap_to_end, payload: payload}
   end
 
-  @doc "Scroll the widget by a relative offset."
+  @doc "Scroll the widget by a relative offset. Supports `\"window#path\"`."
   @spec scroll_by(widget_id :: widget_id(), x :: float(), y :: float()) :: %__MODULE__{}
   def scroll_by(widget_id, x \\ 0.0, y \\ 0.0) do
-    %__MODULE__{type: :scroll_by, payload: %{target: widget_id, x: x, y: y}}
+    {window_id, target} = parse_target(widget_id)
+    payload = %{target: target, x: x, y: y}
+    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
+    %__MODULE__{type: :scroll_by, payload: payload}
   end
 
-  @doc "Move the text cursor to the front of the input."
+  @doc "Move the text cursor to the front of the input. Supports `\"window#path\"`."
   @spec move_cursor_to_front(widget_id :: widget_id()) :: %__MODULE__{}
   def move_cursor_to_front(widget_id) do
-    %__MODULE__{type: :move_cursor_to_front, payload: %{target: widget_id}}
+    {window_id, target} = parse_target(widget_id)
+    payload = %{target: target}
+    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
+    %__MODULE__{type: :move_cursor_to_front, payload: payload}
   end
 
-  @doc "Move the text cursor to the end of the input."
+  @doc "Move the text cursor to the end of the input. Supports `\"window#path\"`."
   @spec move_cursor_to_end(widget_id :: widget_id()) :: %__MODULE__{}
   def move_cursor_to_end(widget_id) do
-    %__MODULE__{type: :move_cursor_to_end, payload: %{target: widget_id}}
+    {window_id, target} = parse_target(widget_id)
+    payload = %{target: target}
+    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
+    %__MODULE__{type: :move_cursor_to_end, payload: payload}
   end
 
-  @doc "Move the text cursor to a specific position."
+  @doc "Move the text cursor to a specific position. Supports `\"window#path\"`."
   @spec move_cursor_to(widget_id :: widget_id(), position :: non_neg_integer()) :: %__MODULE__{}
   def move_cursor_to(widget_id, position) do
-    %__MODULE__{type: :move_cursor_to, payload: %{target: widget_id, position: position}}
+    {window_id, target} = parse_target(widget_id)
+    payload = %{target: target, position: position}
+    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
+    %__MODULE__{type: :move_cursor_to, payload: payload}
   end
 
-  @doc "Select a range of text in the input."
+  @doc "Select a range of text in the input. Supports `\"window#path\"`."
   @spec select_range(
           widget_id :: widget_id(),
           start_pos :: non_neg_integer(),
           end_pos :: non_neg_integer()
         ) :: %__MODULE__{}
   def select_range(widget_id, start_pos, end_pos) do
-    %__MODULE__{
-      type: :select_range,
-      payload: %{target: widget_id, start: start_pos, end: end_pos}
-    }
+    {window_id, target} = parse_target(widget_id)
+    payload = %{target: target, start: start_pos, end: end_pos}
+    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
+    %__MODULE__{type: :select_range, payload: payload}
   end
 
   # ---------------------------------------------------------------------------
@@ -1011,4 +1051,20 @@ defmodule Plushie.Command do
   def batch(commands) do
     %__MODULE__{type: :batch, payload: %{commands: List.wrap(commands)}}
   end
+
+  # -- Helpers -----------------------------------------------------------------
+
+  # Parses a widget ID that may contain a window qualifier.
+  # "main#form/email" -> {"main", "form/email"}
+  # "form/email"      -> {nil, "form/email"}
+  # Non-string IDs pass through unchanged.
+  @spec parse_target(widget_id()) :: {String.t() | nil, widget_id()}
+  defp parse_target(widget_id) when is_binary(widget_id) do
+    case String.split(widget_id, "#", parts: 2) do
+      [window_id, path] when window_id != "" -> {window_id, path}
+      _ -> {nil, widget_id}
+    end
+  end
+
+  defp parse_target(widget_id), do: {nil, widget_id}
 end

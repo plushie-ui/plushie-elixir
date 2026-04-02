@@ -24,8 +24,8 @@ Use the union type when writing generic event-handling helpers. For
 | Widget interaction | `Plushie.Event.WidgetEvent`                     | Renderer (widget callbacks)              |
 | Keyboard           | `Plushie.Event.KeyEvent`                        | Subscription (key press/release)         |
 | Modifier state     | `Plushie.Event.ModifiersEvent`                  | Subscription (modifier change)           |
-| Mouse              | `Plushie.Event.MouseEvent`                      | Subscription (global mouse)              |
-| Touch              | `Plushie.Event.TouchEvent`                      | Subscription (touchscreen)               |
+| Pointer (mouse)    | `Plushie.Event.WidgetEvent`                     | Subscription (global pointer)            |
+| Pointer (touch)    | `Plushie.Event.WidgetEvent`                     | Subscription (touchscreen)               |
 | IME                | `Plushie.Event.ImeEvent`                        | Subscription (input method editor)       |
 | Window lifecycle   | `Plushie.Event.WindowEvent`                     | Renderer (open, close, resize, etc.)     |
 | System             | `Plushie.Event.SystemEvent`                     | Renderer (queries, theme, diagnostics)   |
@@ -189,31 +189,33 @@ Modifier state change event. Fires when the set of held modifiers changes.
 | `captured`  | `boolean()`                | Subscription captured     |
 | `window_id` | `String.t() \| nil`       | Source window             |
 
-### `Plushie.Event.MouseEvent`
+### Subscription pointer events
 
-Global mouse events from subscriptions.
+Global mouse and touch subscription events are delivered as
+`Plushie.Event.WidgetEvent` structs where `id` is the window ID
+(or `"__global__"` when no window context) and `scope` is `[]`.
 
-| Field       | Type                                                | Description          |
-| ----------- | --------------------------------------------------- | -------------------- |
-| `type`      | `:moved \| :entered \| :left \| :button_pressed \| :button_released \| :wheel_scrolled` | Mouse action |
-| `x`, `y`   | `number() \| nil`                                   | Cursor position      |
-| `button`    | `:left \| :right \| :middle \| :back \| :forward \| nil` | Button involved |
-| `delta_x`, `delta_y` | `number() \| nil`                           | Scroll delta         |
-| `unit`      | `:line \| :pixel \| nil`                            | Scroll unit          |
-| `captured`  | `boolean()`                                         | Subscription captured|
-| `window_id` | `String.t() \| nil`                                | Source window        |
+**Mouse move** (`cursor_moved`): `%WidgetEvent{type: :move, data: %{x, y, pointer: :mouse, captured, modifiers}}`
 
-### `Plushie.Event.TouchEvent`
+**Cursor enter/exit**: `%WidgetEvent{type: :enter | :exit, data: %{captured}}`
 
-Touchscreen events from subscriptions.
+**Button press/release** (`button_pressed`, `button_released`):
+`%WidgetEvent{type: :press | :release, data: %{button, pointer: :mouse, x: nil, y: nil, captured, modifiers}}`
 
-| Field       | Type                                   | Description                |
-| ----------- | -------------------------------------- | -------------------------- |
-| `type`      | `:pressed \| :moved \| :lifted \| :lost` | Touch phase             |
-| `finger_id` | `term()`                              | Finger identifier          |
-| `x`, `y`   | `number()`                             | Touch position             |
-| `captured`  | `boolean()`                            | Subscription captured      |
-| `window_id` | `String.t() \| nil`                   | Source window              |
+**Scroll** (`wheel_scrolled`):
+`%WidgetEvent{type: :scroll, data: %{delta_x, delta_y, unit, pointer: :mouse, captured, modifiers}}`
+
+**Touch press** (`finger_pressed`):
+`%WidgetEvent{type: :press, data: %{pointer: :touch, finger, x, y, button: :left, captured, modifiers}}`
+
+**Touch move** (`finger_moved`):
+`%WidgetEvent{type: :move, data: %{pointer: :touch, finger, x, y, captured, modifiers}}`
+
+**Touch release** (`finger_lifted`):
+`%WidgetEvent{type: :release, data: %{pointer: :touch, finger, x, y, button: :left, captured, modifiers}}`
+
+**Touch lost** (`finger_lost`):
+`%WidgetEvent{type: :release, data: %{pointer: :touch, finger, x, y, button: :left, lost: true, captured, modifiers}}`
 
 ### `Plushie.Event.ImeEvent`
 
@@ -459,8 +461,8 @@ Events travel through a fixed pipeline before reaching your `update/2`:
 
 ### Coalescable events
 
-High-frequency events (global mouse moves with `MouseEvent`
-`type: :moved`, and resize events with `WidgetEvent`
+High-frequency events (pointer moves with `WidgetEvent`
+`type: :move`, and resize events with `WidgetEvent`
 `type: :resize`) are coalescable. When multiple events of
 the same type arrive for the same source before the runtime processes
 them, only the latest is delivered. This prevents queue backup during
