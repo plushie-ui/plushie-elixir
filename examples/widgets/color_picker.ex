@@ -83,7 +83,7 @@ defmodule ColorPickerWidget do
 
   def handle_event(
         %Plushie.Event.WidgetEvent{
-          type: :canvas_element_key_press,
+          type: :key_press,
           id: element_id,
           data: %{key: key, modifiers: mods}
         },

@@ -76,15 +76,18 @@ defmodule Plushie.Widget.Canvas do
   Interactive shape events (semantic, from shapes with `interactive` field):
 
   - `%WidgetEvent{type: :click, id: element_id, scope: [canvas_id | ...]}`
-  - `%WidgetEvent{type: :canvas_element_enter, id: id, data: %{element_id: element_id, x: x, y: y}}`
-  - `%WidgetEvent{type: :canvas_element_leave, id: id, data: %{element_id: element_id}}`
-  - `%WidgetEvent{type: :canvas_element_drag, id: id, data: %{x: x, y: y, dx: dx, dy: dy}}`
-  - `%WidgetEvent{type: :canvas_element_drag_end, id: id, data: %{element_id: element_id, x: x, y: y}}`
-  - `%WidgetEvent{type: :canvas_element_focused, id: id, data: %{element_id: element_id}}`
+  - `%WidgetEvent{type: :mouse_enter, id: id}`
+  - `%WidgetEvent{type: :mouse_exit, id: id}`
+  - `%WidgetEvent{type: :drag, id: id, data: %{x: x, y: y, delta_x: dx, delta_y: dy}}`
+  - `%WidgetEvent{type: :drag_end, id: id, data: %{x: x, y: y}}`
+  - `%WidgetEvent{type: :focused, id: id}`
+  - `%WidgetEvent{type: :blurred, id: id}`
+  - `%WidgetEvent{type: :key_press, id: id, data: %{key: key, modifiers: mods, text: text}}`
+  - `%WidgetEvent{type: :key_release, id: id, data: %{key: key, modifiers: mods}}`
 
   Canvas element clicks arrive as regular `:click` events with the element ID
   as the event `id` and the canvas ID in the `scope`. Other element events use
-  `canvas_element_*` types with atom-keyed data maps.
+  standard generic event families.
   """
 
   alias Plushie.Widget.Build

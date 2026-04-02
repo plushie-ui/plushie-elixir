@@ -73,33 +73,28 @@ Canvas-level interaction events. These target the canvas widget itself.
 | `:canvas_release`  | data    | `x`, `y`, `button`                        |
 | `:canvas_move`     | data    | `x`, `y`                                  |
 | `:canvas_scroll`   | data    | `x`, `y`, `delta_x`, `delta_y`            |
-| `:canvas_focused`  | none    |                                            |
-| `:canvas_blurred`  | none    |                                            |
-| `:canvas_group_focused` | none |                                          |
-| `:canvas_group_blurred` | none |                                          |
 
-### Canvas element events
+> Canvas-level events (`canvas_press`, `canvas_release`, `canvas_move`,
+> `canvas_scroll`) that are not intercepted by a widget `handle_event/2`
+> callback are auto-consumed by the runtime and never reach `update/2`.
 
-Events targeting specific interactive elements inside a canvas widget.
+### Generic element events
 
-Canvas element clicks are regular `:click` events with the canvas ID in
-scope (e.g., `%WidgetEvent{type: :click, id: "handle", scope: ["my-canvas"]}`).
-See the [Canvas reference](canvas.md#element-level-events) for details.
+Focus, blur, drag, and key events emitted by interactive elements
+(canvas groups, widgets, etc.). Canvas element clicks are regular
+`:click` events with the canvas ID in scope. See the [Canvas
+reference](canvas.md#element-level-events) for details.
 
-| Type                           | Carrier | Fields                              |
-| ------------------------------ | ------- | ----------------------------------- |
-| `:canvas_element_enter`        | data    | `element_id`, `x`, `y`             |
-| `:canvas_element_leave`        | data    | `element_id`                        |
-| `:canvas_element_key_press`    | data    | `key`, `modifiers`, `text`          |
-| `:canvas_element_key_release`  | data    | `key`, `modifiers`                  |
-| `:canvas_element_drag`         | data    | `x`, `y`, `dx`, `dy`               |
-| `:canvas_element_drag_end`     | data    | `element_id`, `x`, `y`             |
-| `:canvas_element_focused`      | data    | `element_id`                        |
-| `:canvas_element_blurred`      | data    | `element_id`                        |
-
-> Canvas-internal events (all `canvas_*` and `canvas_element_*` types) that
-> are not intercepted by a widget `handle_event/2` callback are auto-consumed
-> by the runtime and never reach `update/2`.
+| Type                | Carrier | Fields                              |
+| ------------------- | ------- | ----------------------------------- |
+| `:focused`          | none    |                                     |
+| `:blurred`          | none    |                                     |
+| `:drag`             | data    | `x`, `y`, `delta_x`, `delta_y`     |
+| `:drag_end`         | data    | `x`, `y`                            |
+| `:key_press`        | data    | `key`, `modifiers`, `text`          |
+| `:key_release`      | data    | `key`, `modifiers`                  |
+| `:mouse_enter`      | none    |                                     |
+| `:mouse_exit`       | none    |                                     |
 
 ### Mouse area events
 

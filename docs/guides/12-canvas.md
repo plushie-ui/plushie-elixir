@@ -304,8 +304,8 @@ group):
 
 ```elixir
 %WidgetEvent{type: :click, id: "save", scope: ["save-canvas"]}
-%WidgetEvent{type: :canvas_element_enter, id: "save"}
-%WidgetEvent{type: :canvas_element_leave, id: "save"}
+%WidgetEvent{type: :mouse_enter, id: "save"}
+%WidgetEvent{type: :mouse_exit, id: "save"}
 ```
 
 See the [Canvas reference](../reference/canvas.md) for the full event list.

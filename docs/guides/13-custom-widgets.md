@@ -341,7 +341,7 @@ end
 ```
 
 Canvas-based widgets with interactivity combine `handle_event/2` with
-canvas events (`:canvas_press`, `:canvas_element_enter`, etc.) to build
+canvas events (`:canvas_press`, `:mouse_enter`, `:drag`, etc.) to build
 rich custom controls like colour pickers, drawing tools, and data
 visualisations. You can also embed SVG content in canvas layers (as
 shown in [chapter 12](12-canvas.md)). Design your visuals in a vector

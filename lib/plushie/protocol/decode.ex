@@ -303,23 +303,15 @@ defmodule Plushie.Protocol.Decode do
   end
 
   # -- Keyboard events --
-  # Rust emits family "key_press"/"key_release" with the logical key in "data.key",
-  # modifiers at top level in "modifiers", and extra fields in "data".
+  # Global key events have no "id" field (or an empty "id"). Widget-scoped
+  # key events include a non-empty "id" and are handled as WidgetEvent structs.
 
-  defp dispatch(
-         %{
-           "type" => "event",
-           "family" => "key_press"
-         } = msg
-       ),
+  defp dispatch(%{"type" => "event", "family" => "key_press"} = msg)
+       when not is_map_key(msg, "id") or :erlang.map_get("id", msg) == "",
        do: decode_key_event(msg, :press)
 
-  defp dispatch(
-         %{
-           "type" => "event",
-           "family" => "key_release"
-         } = msg
-       ),
+  defp dispatch(%{"type" => "event", "family" => "key_release"} = msg)
+       when not is_map_key(msg, "id") or :erlang.map_get("id", msg) == "",
        do: decode_key_event(msg, :release)
 
   defp dispatch(
@@ -1094,50 +1086,24 @@ defmodule Plushie.Protocol.Decode do
      }}
   end
 
-  # -- Canvas element events --
+  # -- Generic element events --
 
-  # Canvas element events with data atomized for consistency with
-  # parsed events (drag, key_press). Wire data uses string keys;
-  # we convert to atoms so all canvas element events use atom keys.
-  @canvas_element_passthrough %{
-    "canvas_element_enter" => :canvas_element_enter,
-    "canvas_element_leave" => :canvas_element_leave,
-    "canvas_element_drag_end" => :canvas_element_drag_end,
-    "canvas_element_focused" => :canvas_element_focused,
-    "canvas_element_blurred" => :canvas_element_blurred,
-    "canvas_focused" => :canvas_focused,
-    "canvas_blurred" => :canvas_blurred,
-    "canvas_group_focused" => :canvas_group_focused,
-    "canvas_group_blurred" => :canvas_group_blurred
-  }
-
-  defp dispatch(%{"type" => "event", "family" => family, "id" => _id} = msg)
-       when is_map_key(@canvas_element_passthrough, family) do
+  # Focus/blur -- simple passthrough with no data payload.
+  defp dispatch(%{"type" => "event", "family" => "focused", "id" => _id} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
-
-    data = atomize_wire_data(msg["data"])
-
-    # Parse button field if present (click, drag_end).
-    data =
-      case data do
-        %{button: button} -> %{data | button: parse_canvas_button(button)}
-        _ -> data
-      end
-
-    %WidgetEvent{
-      type: Map.fetch!(@canvas_element_passthrough, family),
-      id: local,
-      scope: scope,
-      window_id: window_id,
-      data: data
-    }
+    %WidgetEvent{type: :focused, id: local, scope: scope, window_id: window_id}
   end
 
-  # Canvas element key events -- parse key and modifiers using type modules.
+  defp dispatch(%{"type" => "event", "family" => "blurred", "id" => _id} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    %WidgetEvent{type: :blurred, id: local, scope: scope, window_id: window_id}
+  end
+
+  # Drag -- coordinates and deltas.
   defp dispatch(
          %{
            "type" => "event",
-           "family" => "canvas_element_key_press",
+           "family" => "drag",
            "id" => _id,
            "data" => data
          } = msg
@@ -1145,7 +1111,47 @@ defmodule Plushie.Protocol.Decode do
     {local, scope, window_id, _family} = event_identity!(msg)
 
     %WidgetEvent{
-      type: :canvas_element_key_press,
+      type: :drag,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: %{x: data["x"], y: data["y"], delta_x: data["delta_x"], delta_y: data["delta_y"]}
+    }
+  end
+
+  # Drag end -- final coordinates.
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "drag_end",
+           "id" => _id,
+           "data" => data
+         } = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %WidgetEvent{
+      type: :drag_end,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      data: %{x: data["x"], y: data["y"]}
+    }
+  end
+
+  # Key press/release -- parse key and modifiers using type modules.
+  defp dispatch(
+         %{
+           "type" => "event",
+           "family" => "key_press",
+           "id" => _id,
+           "data" => data
+         } = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    %WidgetEvent{
+      type: :key_press,
       id: local,
       scope: scope,
       window_id: window_id,
@@ -1156,7 +1162,7 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(
          %{
            "type" => "event",
-           "family" => "canvas_element_key_release",
+           "family" => "key_release",
            "id" => _id,
            "data" => data
          } = msg
@@ -1164,31 +1170,11 @@ defmodule Plushie.Protocol.Decode do
     {local, scope, window_id, _family} = event_identity!(msg)
 
     %WidgetEvent{
-      type: :canvas_element_key_release,
+      type: :key_release,
       id: local,
       scope: scope,
       window_id: window_id,
       data: parse_canvas_key_data(data, :release)
-    }
-  end
-
-  # Canvas element drag -- parse coordinates.
-  defp dispatch(
-         %{
-           "type" => "event",
-           "family" => "canvas_element_drag",
-           "id" => _id,
-           "data" => data
-         } = msg
-       ) do
-    {local, scope, window_id, _family} = event_identity!(msg)
-
-    %WidgetEvent{
-      type: :canvas_element_drag,
-      id: local,
-      scope: scope,
-      window_id: window_id,
-      data: %{x: data["x"], y: data["y"], dx: data["dx"], dy: data["dy"]}
     }
   end
 
@@ -1381,17 +1367,6 @@ defmodule Plushie.Protocol.Decode do
       :error -> :left
     end
   end
-
-  # Converts string-keyed wire data to atom-keyed maps. The keys are
-  # renderer-defined (element_id, x, y, button, etc.) and safe to atomize.
-  @spec atomize_wire_data(data :: map() | nil) :: map() | nil
-  defp atomize_wire_data(nil), do: nil
-
-  defp atomize_wire_data(data) when is_map(data) do
-    Map.new(data, fn {key, value} -> {String.to_atom(key), value} end)
-  end
-
-  defp atomize_wire_data(_other), do: nil
 
   # Recursively converts string-keyed wire data to atom-keyed maps
   # for effect results and query responses. Uses String.to_existing_atom/1

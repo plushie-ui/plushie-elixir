@@ -237,8 +237,8 @@ group.
 | Prop | Type | Default | Purpose |
 |---|---|---|---|
 | `on_click` | boolean | `false` | Enable `:click` events (scoped under canvas ID) |
-| `on_hover` | boolean | `false` | Enable `:canvas_element_enter`/`:canvas_element_leave` events |
-| `draggable` | boolean | `false` | Enable `:canvas_element_drag`/`:canvas_element_drag_end` events |
+| `on_hover` | boolean | `false` | Enable `:mouse_enter`/`:mouse_exit` events |
+| `draggable` | boolean | `false` | Enable `:drag`/`:drag_end` events |
 | `drag_axis` | `"x"` / `"y"` / `"both"` | *n/a* | Constrain drag direction (unconstrained when not set) |
 | `drag_bounds` | DragBounds | *n/a* | Limit drag region (`%{min_x, max_x, min_y, max_y}`) |
 | `focusable` | boolean | `false` | Add to Tab order for keyboard navigation |
@@ -302,14 +302,14 @@ Require interaction props on interactive groups:
 | Event type | Trigger | Data fields |
 |---|---|---|
 | `:click` | `on_click: true` | Scoped under canvas ID (see below) |
-| `:canvas_element_enter` | `on_hover: true` | `x`, `y` |
-| `:canvas_element_leave` | `on_hover: true` | *n/a* |
-| `:canvas_element_drag` | `draggable: true` | `x`, `y`, `dx`, `dy` |
-| `:canvas_element_drag_end` | `draggable: true` | `x`, `y` |
-| `:canvas_element_key_press` | `focusable: true` | `key`, `modifiers`, `text` |
-| `:canvas_element_key_release` | `focusable: true` | `key`, `modifiers` |
-| `:canvas_element_focused` | `focusable: true` | *n/a* |
-| `:canvas_element_blurred` | `focusable: true` | *n/a* |
+| `:mouse_enter` | `on_hover: true` | *n/a* |
+| `:mouse_exit` | `on_hover: true` | *n/a* |
+| `:drag` | `draggable: true` | `x`, `y`, `delta_x`, `delta_y` |
+| `:drag_end` | `draggable: true` | `x`, `y` |
+| `:key_press` | `focusable: true` | `key`, `modifiers`, `text` |
+| `:key_release` | `focusable: true` | `key`, `modifiers` |
+| `:focused` | `focusable: true` | *n/a* |
+| `:blurred` | `focusable: true` | *n/a* |
 
 Canvas element clicks are regular `:click` events. The renderer
 emits them with the element's scoped ID (e.g., `"my-canvas/handle"`),
@@ -322,26 +322,17 @@ def update(model, %WidgetEvent{type: :click, id: "handle", scope: ["my-canvas" |
 end
 ```
 
-Other element events (enter, leave, drag, key, focus) use their own
-`canvas_element_*` families because they have no standard widget
-equivalent.
-
-### Focus events
-
-| Event type | Description |
-|---|---|
-| `:canvas_focused` | Canvas widget gained focus |
-| `:canvas_blurred` | Canvas widget lost focus |
-| `:canvas_group_focused` | An interactive group gained focus |
-| `:canvas_group_blurred` | An interactive group lost focus |
+Other element events (enter, leave, drag, key, focus) use standard
+generic event families shared across all widget types.
 
 ### Auto-consumption in custom widgets
 
-Inside custom widgets, canvas events that are not intercepted by the
-widget's `handle_event/2` callback are automatically consumed by the
-runtime. They never reach the parent app's `update/2`. This prevents
-internal canvas implementation details from leaking out of widget
-boundaries.
+Inside custom widgets, canvas-level events (`:canvas_press`,
+`:canvas_release`, `:canvas_move`, `:canvas_scroll`) that are not
+intercepted by the widget's `handle_event/2` callback are automatically
+consumed by the runtime. They never reach the parent app's `update/2`.
+This prevents internal canvas implementation details from leaking out
+of widget boundaries.
 
 If you want a canvas event to reach `update/2`, handle it in
 `handle_event/2` and emit it via `{:emit, family, data}`.

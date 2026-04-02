@@ -218,24 +218,26 @@ defmodule Plushie.EventDeclarationTest do
     end
 
     test "canvas_internal? identifies canvas-internal types" do
-      assert BuiltinSpecs.canvas_internal?(:canvas_element_enter)
-      assert BuiltinSpecs.canvas_internal?(:canvas_element_key_press)
-      assert BuiltinSpecs.canvas_internal?(:canvas_focused)
-      assert BuiltinSpecs.canvas_internal?(:canvas_group_blurred)
+      assert BuiltinSpecs.canvas_internal?(:canvas_press)
+      assert BuiltinSpecs.canvas_internal?(:canvas_release)
+      assert BuiltinSpecs.canvas_internal?(:canvas_move)
+      assert BuiltinSpecs.canvas_internal?(:canvas_scroll)
     end
 
     test "canvas_internal? rejects non-canvas types" do
       refute BuiltinSpecs.canvas_internal?(:click)
       refute BuiltinSpecs.canvas_internal?(:toggle)
       refute BuiltinSpecs.canvas_internal?(:input)
+      refute BuiltinSpecs.canvas_internal?(:focused)
+      refute BuiltinSpecs.canvas_internal?(:drag)
     end
 
     test "toggle spec has value :boolean" do
       assert %{carrier: :value, type: :boolean} = BuiltinSpecs.spec(:toggle)
     end
 
-    test "canvas_element_key_press spec has parsed data fields" do
-      spec = BuiltinSpecs.spec(:canvas_element_key_press)
+    test "key_press spec has parsed data fields" do
+      spec = BuiltinSpecs.spec(:key_press)
       assert %{carrier: :data, fields: fields} = spec
       assert Keyword.fetch!(fields, :key) == Plushie.Type.Key
       assert Keyword.fetch!(fields, :modifiers) == Plushie.Type.KeyModifiers

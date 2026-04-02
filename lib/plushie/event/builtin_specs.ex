@@ -60,18 +60,20 @@ defmodule Plushie.Event.BuiltinSpecs do
     },
     pane_focus_cycle: %{carrier: :none},
 
-    # -- Canvas element events --
-    # Events targeting specific interactive elements inside a canvas widget.
-    # All events that carry data use atom keys for consistency.
-    canvas_element_enter: %{
+    # -- Generic element events --
+    # Focus, blur, drag, and key events. These apply to any focusable or
+    # draggable element (canvas interactive groups, widgets, etc.).
+    focused: %{carrier: :none},
+    blurred: %{carrier: :none},
+    drag: %{
       carrier: :data,
-      fields: [element_id: :string, x: :number, y: :number]
+      fields: [x: :number, y: :number, delta_x: :number, delta_y: :number]
     },
-    canvas_element_leave: %{
+    drag_end: %{
       carrier: :data,
-      fields: [element_id: :string]
+      fields: [x: :number, y: :number]
     },
-    canvas_element_key_press: %{
+    key_press: %{
       carrier: :data,
       fields: [
         key: Plushie.Type.Key,
@@ -79,23 +81,13 @@ defmodule Plushie.Event.BuiltinSpecs do
         text: :string
       ]
     },
-    canvas_element_key_release: %{
+    key_release: %{
       carrier: :data,
       fields: [
         key: Plushie.Type.Key,
         modifiers: Plushie.Type.KeyModifiers
       ]
     },
-    canvas_element_drag: %{
-      carrier: :data,
-      fields: [x: :number, y: :number, dx: :number, dy: :number]
-    },
-    canvas_element_drag_end: %{
-      carrier: :data,
-      fields: [element_id: :string, x: :number, y: :number]
-    },
-    canvas_element_focused: %{carrier: :data, fields: [element_id: :string]},
-    canvas_element_blurred: %{carrier: :data, fields: [element_id: :string]},
 
     # -- Canvas-level interaction events --
     # These were previously CanvasEvent structs with dedicated fields.
@@ -113,10 +105,6 @@ defmodule Plushie.Event.BuiltinSpecs do
       carrier: :data,
       fields: [x: :number, y: :number, delta_x: :number, delta_y: :number]
     },
-    canvas_focused: %{carrier: :none},
-    canvas_blurred: %{carrier: :none},
-    canvas_group_focused: %{carrier: :none},
-    canvas_group_blurred: %{carrier: :none},
 
     # -- Mouse area events --
     # Previously MouseAreaEvent structs.
@@ -154,19 +142,7 @@ defmodule Plushie.Event.BuiltinSpecs do
                            :canvas_press,
                            :canvas_release,
                            :canvas_move,
-                           :canvas_scroll,
-                           :canvas_element_enter,
-                           :canvas_element_leave,
-                           :canvas_element_key_press,
-                           :canvas_element_key_release,
-                           :canvas_element_drag,
-                           :canvas_element_drag_end,
-                           :canvas_element_focused,
-                           :canvas_element_blurred,
-                           :canvas_focused,
-                           :canvas_blurred,
-                           :canvas_group_focused,
-                           :canvas_group_blurred
+                           :canvas_scroll
                          ])
 
   @doc "Returns the event spec for a built-in event type, or nil."
