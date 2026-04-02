@@ -177,4 +177,84 @@ defmodule Plushie.RuntimeRerenderTest do
       end)
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # Widget :update_state re-render
+  # ---------------------------------------------------------------------------
+
+  defmodule ClickCounterWidget do
+    @moduledoc false
+    use Plushie.Widget
+    widget(:click_counter_widget)
+    state(clicks: 0)
+
+    @impl true
+    def handle_event(%{type: :click}, state) do
+      {:update_state, %{state | clicks: state.clicks + 1}}
+    end
+
+    def handle_event(_event, _state), do: :ignored
+
+    @impl true
+    def view(id, _props, state) do
+      import Plushie.UI
+
+      container id do
+        text("clicks:#{state.clicks}")
+      end
+    end
+  end
+
+  defmodule WidgetStateApp do
+    use Plushie.App
+
+    def init(_opts), do: %{}
+    def update(model, _event), do: model
+
+    def view(_model) do
+      import Plushie.UI
+
+      window "main" do
+        column do
+          ClickCounterWidget.new("counter")
+        end
+      end
+    end
+  end
+
+  describe "widget :update_state re-render" do
+    test "re-renders tree immediately when handle_event returns {:update_state, ...}" do
+      capture_log(fn ->
+        {runtime, _bridge} = start_runtime(WidgetStateApp)
+
+        # Before any click the widget renders "clicks:0".
+        tree = Plushie.Runtime.get_tree(runtime)
+        text_node = find_by_type(tree, "text")
+        assert text_node.props[:content] == "clicks:0"
+
+        # Dispatch a click scoped to the widget. The widget's
+        # handle_event returns {:update_state, ...} (no emit),
+        # so the event is consumed and update/2 is never called.
+        dispatch_and_wait(
+          runtime,
+          %WidgetEvent{type: :click, id: "counter", scope: [], window_id: "main"}
+        )
+
+        # The tree should reflect the updated widget state immediately.
+        tree = Plushie.Runtime.get_tree(runtime)
+        text_node = find_by_type(tree, "text")
+        assert text_node.props[:content] == "clicks:1"
+
+        # A second click should also re-render.
+        dispatch_and_wait(
+          runtime,
+          %WidgetEvent{type: :click, id: "counter", scope: [], window_id: "main"}
+        )
+
+        tree = Plushie.Runtime.get_tree(runtime)
+        text_node = find_by_type(tree, "text")
+        assert text_node.props[:content] == "clicks:2"
+      end)
+    end
+  end
 end

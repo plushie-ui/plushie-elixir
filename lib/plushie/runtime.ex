@@ -1494,10 +1494,15 @@ defmodule Plushie.Runtime do
         state
 
       :passthrough ->
+        handlers_before = state.widget_handlers
         {resolved_event, state} = route_through_widgets(state, event)
 
         if is_nil(resolved_event) do
-          state
+          if state.widget_handlers != handlers_before do
+            rerender_after_widget_state_change(state)
+          else
+            state
+          end
         else
           dispatch_update(state, resolved_event)
         end
@@ -1569,6 +1574,38 @@ defmodule Plushie.Runtime do
       :error ->
         %{state | consecutive_errors: state.consecutive_errors + 1}
     end
+  end
+
+  # Re-render after a widget's handle_event returned {:update_state, ...}
+  # without emitting an event. The widget state changed but the app's
+  # update/2 was never called, so we need to re-render to pick up
+  # any view changes driven by the new widget state.
+  @spec rerender_after_widget_state_change(state()) :: state()
+  defp rerender_after_widget_state_change(%{app: app, model: model, bridge: bridge} = state) do
+    {new_tree, state} =
+      case render_and_sync(
+             app,
+             model,
+             bridge,
+             state.tree,
+             state.widget_handlers,
+             state.dev_overlay
+           ) do
+        {:ok, tree} -> {tree, %{state | consecutive_view_errors: 0}}
+        :view_error -> {state.tree, track_view_error(state)}
+      end
+
+    widget_handlers = Plushie.Runtime.WidgetHandlers.derive_registry(new_tree)
+    widget_events = derive_widget_event_registry(new_tree)
+
+    state = %{
+      state
+      | tree: new_tree,
+        widget_handlers: widget_handlers,
+        widget_events: widget_events
+    }
+
+    sync_runtime_subscriptions(state, model, widget_handlers)
   end
 
   defp safe_update(app, model, event, consecutive_errors) do
