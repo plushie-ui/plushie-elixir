@@ -15,6 +15,21 @@ defmodule Plushie.Test.Case do
           assert find!("#count") |> text() == "1"
         end
       end
+
+  ## Selectors
+
+  All interaction helpers (`click/1`, `find!/1`, `type_text/2`, etc.)
+  accept the following selector forms:
+
+  - `"#save"` matches a unique local widget ID
+  - `"#form/save"` matches an exact scoped ID
+  - `{:text, "Save"}` matches visible text content
+  - `{:role, "button"}` matches an accessibility role
+  - `{:label, "Save"}` matches an accessibility label
+  - `:focused` matches the currently focused element
+
+  Bare strings without a `#` prefix are not valid selectors.
+  Use `{:text, "Save"}` to match by visible text content.
   """
 
   use ExUnit.CaseTemplate
@@ -47,7 +62,7 @@ defmodule Plushie.Test.Case do
 
             Session.stop(session)
           catch
-            :exit, _ -> :ok
+            _, _ -> :ok
           end
         end)
 

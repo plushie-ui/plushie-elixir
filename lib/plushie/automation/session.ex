@@ -12,10 +12,16 @@ defmodule Plushie.Automation.Session do
   @typedoc """
   Automation selector.
 
-  String selectors follow these rules:
+  Valid forms:
   - `"#save"` matches a unique local widget ID
   - `"#form/save"` matches an exact scoped ID
   - `{:text, "Save"}` matches visible text content
+  - `{:role, "button"}` matches an accessibility role
+  - `{:label, "Save"}` matches an accessibility label
+  - `:focused` matches the currently focused element
+
+  Bare strings without a `#` prefix are not valid selectors.
+  Use `{:text, "Save"}` to match by visible text content.
   """
   @type selector ::
           String.t() | {:text, String.t()} | {:role, String.t()} | {:label, String.t()} | :focused
@@ -267,8 +273,14 @@ defmodule Plushie.Automation.Session do
     encoded = Selector.encode(selector, tree, window_id)
 
     case Plushie.Runtime.interact(runtime, action, encoded, payload) do
-      :ok -> :ok
-      {:error, reason} -> raise "interaction failed: #{inspect(reason)}"
+      :ok ->
+        :ok
+
+      {:error, {:timeout, timed_action, timed_selector}} ->
+        raise "interaction timed out: #{timed_action} on #{inspect(timed_selector)}"
+
+      {:error, reason} ->
+        raise "interaction failed (#{inspect(reason)}): #{action} on #{inspect(encoded)}"
     end
   catch
     :exit, reason -> raise "runtime crashed during interaction: #{inspect(reason)}"
