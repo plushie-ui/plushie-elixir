@@ -476,7 +476,7 @@ undo: Undo.new("")
 
 # In update: track editor changes with coalescing
 def update(model, %WidgetEvent{type: :input, id: "editor", value: text}) do
-  undo = Undo.apply(model.undo, %{
+  undo = Undo.push(model.undo, %{
     apply: fn _ -> text end,
     undo: fn _ -> model.source end,
     coalesce: :typing,

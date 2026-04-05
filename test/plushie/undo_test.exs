@@ -41,35 +41,35 @@ defmodule Plushie.UndoTest do
 
   describe "apply/2" do
     test "applies the command and updates current" do
-      u = Undo.new(0) |> Undo.apply(inc_cmd())
+      u = Undo.new(0) |> Undo.push(inc_cmd())
       assert Undo.current(u) == 1
     end
 
     test "pushes onto the undo stack" do
-      u = Undo.new(0) |> Undo.apply(inc_cmd())
+      u = Undo.new(0) |> Undo.push(inc_cmd())
       assert Undo.can_undo?(u)
     end
 
     test "clears the redo stack" do
       u =
         Undo.new(0)
-        |> Undo.apply(inc_cmd())
-        |> Undo.apply(inc_cmd())
+        |> Undo.push(inc_cmd())
+        |> Undo.push(inc_cmd())
         |> Undo.undo()
 
       assert Undo.can_redo?(u)
 
       # Applying a new command should clear redo.
-      u = Undo.apply(u, add_cmd(10))
+      u = Undo.push(u, add_cmd(10))
       refute Undo.can_redo?(u)
     end
 
     test "multiple applies accumulate on the undo stack" do
       u =
         Undo.new(0)
-        |> Undo.apply(inc_cmd(label: "first"))
-        |> Undo.apply(inc_cmd(label: "second"))
-        |> Undo.apply(inc_cmd(label: "third"))
+        |> Undo.push(inc_cmd(label: "first"))
+        |> Undo.push(inc_cmd(label: "second"))
+        |> Undo.push(inc_cmd(label: "third"))
 
       assert Undo.current(u) == 3
       assert Undo.history(u) == ["third", "second", "first"]
@@ -80,7 +80,7 @@ defmodule Plushie.UndoTest do
     test "reverses the last command" do
       u =
         Undo.new(0)
-        |> Undo.apply(inc_cmd())
+        |> Undo.push(inc_cmd())
         |> Undo.undo()
 
       assert Undo.current(u) == 0
@@ -94,7 +94,7 @@ defmodule Plushie.UndoTest do
     test "moves entry to the redo stack" do
       u =
         Undo.new(0)
-        |> Undo.apply(inc_cmd())
+        |> Undo.push(inc_cmd())
         |> Undo.undo()
 
       assert Undo.can_redo?(u)
@@ -104,9 +104,9 @@ defmodule Plushie.UndoTest do
     test "multiple undos walk back in order" do
       u =
         Undo.new(0)
-        |> Undo.apply(add_cmd(1))
-        |> Undo.apply(add_cmd(10))
-        |> Undo.apply(add_cmd(100))
+        |> Undo.push(add_cmd(1))
+        |> Undo.push(add_cmd(10))
+        |> Undo.push(add_cmd(100))
 
       assert Undo.current(u) == 111
 
@@ -129,7 +129,7 @@ defmodule Plushie.UndoTest do
     test "re-applies after undo" do
       u =
         Undo.new(0)
-        |> Undo.apply(inc_cmd())
+        |> Undo.push(inc_cmd())
         |> Undo.undo()
         |> Undo.redo()
 
@@ -144,9 +144,9 @@ defmodule Plushie.UndoTest do
     test "multiple redo after multiple undo" do
       u =
         Undo.new(0)
-        |> Undo.apply(add_cmd(1))
-        |> Undo.apply(add_cmd(10))
-        |> Undo.apply(add_cmd(100))
+        |> Undo.push(add_cmd(1))
+        |> Undo.push(add_cmd(10))
+        |> Undo.push(add_cmd(100))
         |> Undo.undo()
         |> Undo.undo()
         |> Undo.undo()
@@ -172,8 +172,8 @@ defmodule Plushie.UndoTest do
     test "interleaved undo and redo" do
       u =
         Undo.new(0)
-        |> Undo.apply(add_cmd(1))
-        |> Undo.apply(add_cmd(10))
+        |> Undo.push(add_cmd(1))
+        |> Undo.push(add_cmd(10))
 
       assert Undo.current(u) == 11
 
@@ -194,13 +194,13 @@ defmodule Plushie.UndoTest do
     test "applying after undo forks history (redo lost)" do
       u =
         Undo.new(0)
-        |> Undo.apply(add_cmd(1))
-        |> Undo.apply(add_cmd(10))
+        |> Undo.push(add_cmd(1))
+        |> Undo.push(add_cmd(10))
         |> Undo.undo()
 
       assert Undo.current(u) == 1
 
-      u = Undo.apply(u, add_cmd(100))
+      u = Undo.push(u, add_cmd(100))
       assert Undo.current(u) == 101
       refute Undo.can_redo?(u)
 
@@ -219,7 +219,7 @@ defmodule Plushie.UndoTest do
       refute Undo.can_undo?(u)
       refute Undo.can_redo?(u)
 
-      u = Undo.apply(u, inc_cmd())
+      u = Undo.push(u, inc_cmd())
       assert Undo.can_undo?(u)
       refute Undo.can_redo?(u)
 
@@ -237,9 +237,9 @@ defmodule Plushie.UndoTest do
     test "returns labels in most-recent-first order" do
       u =
         Undo.new(0)
-        |> Undo.apply(inc_cmd(label: "alpha"))
-        |> Undo.apply(inc_cmd(label: "bravo"))
-        |> Undo.apply(inc_cmd(label: "charlie"))
+        |> Undo.push(inc_cmd(label: "alpha"))
+        |> Undo.push(inc_cmd(label: "bravo"))
+        |> Undo.push(inc_cmd(label: "charlie"))
 
       assert Undo.history(u) == ["charlie", "bravo", "alpha"]
     end
@@ -247,8 +247,8 @@ defmodule Plushie.UndoTest do
     test "returns nil for commands without labels" do
       u =
         Undo.new(0)
-        |> Undo.apply(inc_cmd())
-        |> Undo.apply(inc_cmd(label: "labelled"))
+        |> Undo.push(inc_cmd())
+        |> Undo.push(inc_cmd(label: "labelled"))
 
       assert Undo.history(u) == ["labelled", nil]
     end
@@ -260,13 +260,13 @@ defmodule Plushie.UndoTest do
 
       u =
         Undo.new(0)
-        |> Undo.apply(inc_cmd(coalesce: :typing, coalesce_window_ms: 500))
+        |> Undo.push(inc_cmd(coalesce: :typing, coalesce_window_ms: 500))
 
       set_time(1100)
-      u = Undo.apply(u, inc_cmd(coalesce: :typing, coalesce_window_ms: 500))
+      u = Undo.push(u, inc_cmd(coalesce: :typing, coalesce_window_ms: 500))
 
       set_time(1200)
-      u = Undo.apply(u, inc_cmd(coalesce: :typing, coalesce_window_ms: 500))
+      u = Undo.push(u, inc_cmd(coalesce: :typing, coalesce_window_ms: 500))
 
       assert Undo.current(u) == 3
 
@@ -280,10 +280,10 @@ defmodule Plushie.UndoTest do
 
     test "coalesced entry can be redone" do
       set_time(1000)
-      u = Undo.new(0) |> Undo.apply(inc_cmd(coalesce: :typing, coalesce_window_ms: 500))
+      u = Undo.new(0) |> Undo.push(inc_cmd(coalesce: :typing, coalesce_window_ms: 500))
 
       set_time(1100)
-      u = Undo.apply(u, inc_cmd(coalesce: :typing, coalesce_window_ms: 500))
+      u = Undo.push(u, inc_cmd(coalesce: :typing, coalesce_window_ms: 500))
 
       u = Undo.undo(u)
       assert Undo.current(u) == 0
@@ -297,10 +297,10 @@ defmodule Plushie.UndoTest do
 
       u =
         Undo.new(0)
-        |> Undo.apply(inc_cmd(coalesce: :typing, coalesce_window_ms: 500))
+        |> Undo.push(inc_cmd(coalesce: :typing, coalesce_window_ms: 500))
 
       set_time(1100)
-      u = Undo.apply(u, inc_cmd(coalesce: :formatting, coalesce_window_ms: 500))
+      u = Undo.push(u, inc_cmd(coalesce: :formatting, coalesce_window_ms: 500))
 
       assert Undo.current(u) == 2
       assert length(Undo.history(u)) == 2
@@ -311,11 +311,11 @@ defmodule Plushie.UndoTest do
 
       u =
         Undo.new(0)
-        |> Undo.apply(inc_cmd(coalesce: :typing, coalesce_window_ms: 500))
+        |> Undo.push(inc_cmd(coalesce: :typing, coalesce_window_ms: 500))
 
       # Jump well past the 500ms window.
       set_time(2000)
-      u = Undo.apply(u, inc_cmd(coalesce: :typing, coalesce_window_ms: 500))
+      u = Undo.push(u, inc_cmd(coalesce: :typing, coalesce_window_ms: 500))
 
       assert Undo.current(u) == 2
       assert length(Undo.history(u)) == 2
@@ -323,12 +323,47 @@ defmodule Plushie.UndoTest do
 
     test "command without coalesce key never coalesces" do
       set_time(1000)
-      u = Undo.new(0) |> Undo.apply(inc_cmd())
+      u = Undo.new(0) |> Undo.push(inc_cmd())
 
       set_time(1001)
-      u = Undo.apply(u, inc_cmd())
+      u = Undo.push(u, inc_cmd())
 
       assert length(Undo.history(u)) == 2
+    end
+  end
+
+  describe "max_size" do
+    test "drops oldest entries when undo stack exceeds max_size" do
+      u = Undo.new(0, max_size: 3)
+
+      u =
+        u
+        |> Undo.push(inc_cmd(label: "a"))
+        |> Undo.push(inc_cmd(label: "b"))
+        |> Undo.push(inc_cmd(label: "c"))
+        |> Undo.push(inc_cmd(label: "d"))
+
+      assert Undo.current(u) == 4
+      assert Undo.history(u) == ["d", "c", "b"]
+    end
+
+    test "defaults to 100" do
+      u = Undo.new(0)
+      assert u.max_size == 100
+    end
+
+    test "rejects non-positive max_size" do
+      assert_raise ArgumentError, ~r/positive integer/, fn ->
+        Undo.new(0, max_size: 0)
+      end
+    end
+
+    test "validates command has apply and undo functions" do
+      u = Undo.new(0)
+
+      assert_raise FunctionClauseError, fn ->
+        Undo.push(u, %{apply: "not a function", undo: "not a function"})
+      end
     end
   end
 end

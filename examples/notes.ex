@@ -105,7 +105,7 @@ defmodule Notes do
       label: "edit title"
     }
 
-    %{model | undo: Undo.apply(model.undo, cmd)}
+    %{model | undo: Undo.push(model.undo, cmd)}
   end
 
   def update(model, %WidgetEvent{type: :input, id: "body", value: value}) do
@@ -117,7 +117,7 @@ defmodule Notes do
       label: "edit body"
     }
 
-    %{model | undo: Undo.apply(model.undo, cmd)}
+    %{model | undo: Undo.push(model.undo, cmd)}
   end
 
   def update(model, %WidgetEvent{type: :click, id: "undo"}) do

@@ -21,7 +21,7 @@ alias Plushie.Undo
 undo = Undo.new(%{text: ""})
 
 # Apply a change
-undo = Undo.apply(undo, %{
+undo = Undo.push(undo, %{
   apply: fn state -> %{state | text: "hello"} end,
   undo: fn state -> %{state | text: ""} end,
   label: "Type hello"
@@ -47,7 +47,7 @@ Rapid sequential changes (like keystrokes) can be grouped into a single undo
 step. Add `:coalesce` and `:coalesce_window_ms`:
 
 ```elixir
-Undo.apply(undo, %{
+Undo.push(undo, %{
   apply: fn state -> %{state | text: state.text <> "a"} end,
   undo: fn state -> %{state | text: String.slice(state.text, 0..-2//1)} end,
   coalesce: :typing,
@@ -64,7 +64,7 @@ Track editor changes with Undo. Add `undo: Undo.new("")` to the model:
 
 ```elixir
 def update(model, %WidgetEvent{type: :input, id: "editor", value: source}) do
-  undo = Undo.apply(model.undo, %{
+  undo = Undo.push(model.undo, %{
     apply: fn _old -> source end,
     undo: fn _new -> model.source end,
     coalesce: :typing,

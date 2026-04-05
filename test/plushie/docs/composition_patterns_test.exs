@@ -561,7 +561,7 @@ defmodule Plushie.Docs.CompositionPatternsTest do
     undo = Plushie.Undo.new(0)
 
     undo =
-      Plushie.Undo.apply(undo, %{
+      Plushie.Undo.push(undo, %{
         apply: &(&1 + 10),
         undo: &(&1 - 10),
         label: "add 10"
