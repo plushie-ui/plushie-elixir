@@ -141,11 +141,9 @@ defmodule Plushie.Tree do
     id = to_string(raw_id)
     type_str = to_string(type)
 
-    # Validate: user-provided IDs must not contain "/"
-    if not auto_id?(id) and String.contains?(id, "/") do
-      raise ArgumentError,
-            "widget ID #{inspect(id)} cannot contain \"/\" -- " <>
-              "scoped paths are built automatically by named containers"
+    # Validate user-provided IDs
+    unless auto_id?(id) do
+      validate_user_id!(id)
     end
 
     # Apply scope prefix to this node's ID
@@ -332,6 +330,43 @@ defmodule Plushie.Tree do
   end
 
   defp auto_id?(id), do: String.starts_with?(id, "auto:")
+
+  # Printable ASCII range (0x21-0x7E), excludes space and control characters.
+  @valid_id_pattern ~r/^[\x21-\x7e]+$/
+
+  # Validates a user-provided widget ID (not auto-generated).
+  # Called only for IDs that did NOT pass auto_id?/1, so the "auto:" prefix
+  # is already excluded by the caller.
+  #
+  # Rules:
+  # - Must not be empty
+  # - Must not contain "/" (reserved for scope separators)
+  # - Must not exceed 1024 bytes
+  # - Must contain only printable ASCII (0x21-0x7E)
+  @spec validate_user_id!(String.t()) :: :ok
+  defp validate_user_id!(id) do
+    cond do
+      id == "" ->
+        raise ArgumentError, "widget ID must not be empty"
+
+      String.contains?(id, "/") ->
+        raise ArgumentError,
+              "widget ID #{inspect(id)} cannot contain \"/\" -- " <>
+                "scoped paths are built automatically by named containers"
+
+      byte_size(id) > 1024 ->
+        raise ArgumentError,
+              "widget ID #{inspect(id)} exceeds maximum length of 1024 bytes"
+
+      not Regex.match?(@valid_id_pattern, id) ->
+        raise ArgumentError,
+              "widget ID #{inspect(id)} contains invalid characters -- " <>
+                "IDs must contain only printable ASCII (0x21-0x7E)"
+
+      true ->
+        :ok
+    end
+  end
 
   @doc """
   Finds the node in a tree whose `:id` exactly matches the given scoped ID.

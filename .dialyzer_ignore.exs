@@ -16,4 +16,8 @@
   # to MapSet.new() before calling sync_windows, which dialyzer flags.
   {"lib/plushie/runtime.ex", :call_without_opaque},
 
+  # :erl_tar.extract/2 typespec does not include {:safe_relative_path, true}
+  # in OTP 28's dialyzer PLT, but the option works at runtime.
+  {"lib/mix/tasks/plushie.download.ex", :no_return},
+
 ]

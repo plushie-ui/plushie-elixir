@@ -169,7 +169,8 @@ defmodule Mix.Tasks.Plushie.Download do
   defp extract_tarball!(tarball, dest_dir) do
     case :erl_tar.extract(String.to_charlist(tarball), [
            :compressed,
-           {:cwd, String.to_charlist(dest_dir)}
+           {:cwd, String.to_charlist(dest_dir)},
+           {:safe_relative_path, true}
          ]) do
       :ok ->
         :ok

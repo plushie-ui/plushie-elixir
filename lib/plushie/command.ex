@@ -854,6 +854,14 @@ defmodule Plushie.Command do
         ) :: %__MODULE__{}
   def create_image(handle, width, height, pixels)
       when is_binary(handle) and is_integer(width) and is_integer(height) and is_binary(pixels) do
+    expected = width * height * 4
+
+    if byte_size(pixels) != expected do
+      raise ArgumentError,
+            "pixel buffer size mismatch: expected #{expected} bytes " <>
+              "(#{width}x#{height}x4 RGBA) but got #{byte_size(pixels)}"
+    end
+
     %__MODULE__{
       type: :image_op,
       payload: %{
@@ -894,6 +902,14 @@ defmodule Plushie.Command do
         ) :: %__MODULE__{}
   def update_image(handle, width, height, pixels)
       when is_binary(handle) and is_integer(width) and is_integer(height) and is_binary(pixels) do
+    expected = width * height * 4
+
+    if byte_size(pixels) != expected do
+      raise ArgumentError,
+            "pixel buffer size mismatch: expected #{expected} bytes " <>
+              "(#{width}x#{height}x4 RGBA) but got #{byte_size(pixels)}"
+    end
+
     %__MODULE__{
       type: :image_op,
       payload: %{

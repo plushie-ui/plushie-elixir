@@ -550,4 +550,44 @@ defmodule Plushie.ScopedIdTest do
       assert result.type == "container"
     end
   end
+
+  describe "widget ID validation" do
+    test "empty ID raises" do
+      tree = %{id: "", type: "button", props: %{}, children: []}
+
+      assert_raise ArgumentError, ~r/must not be empty/, fn ->
+        Tree.normalize(tree)
+      end
+    end
+
+    test "non-ASCII characters in ID raise" do
+      tree = %{id: "héllo", type: "button", props: %{}, children: []}
+
+      assert_raise ArgumentError, ~r/invalid characters/, fn ->
+        Tree.normalize(tree)
+      end
+    end
+
+    test "control characters in ID raise" do
+      tree = %{id: "bad\nid", type: "button", props: %{}, children: []}
+
+      assert_raise ArgumentError, ~r/invalid characters/, fn ->
+        Tree.normalize(tree)
+      end
+    end
+
+    test "space in ID raises" do
+      tree = %{id: "bad id", type: "button", props: %{}, children: []}
+
+      assert_raise ArgumentError, ~r/invalid characters/, fn ->
+        Tree.normalize(tree)
+      end
+    end
+
+    test "printable ASCII IDs are accepted" do
+      tree = %{id: "my-button_123!@#", type: "button", props: %{}, children: []}
+      normalized = Tree.normalize(tree)
+      assert normalized.id == "my-button_123!@#"
+    end
+  end
 end

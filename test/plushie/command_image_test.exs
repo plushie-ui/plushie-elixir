@@ -139,4 +139,24 @@ defmodule Plushie.CommandImageTest do
       assert decoded["handle"] == "gone"
     end
   end
+
+  describe "pixel buffer validation" do
+    test "create_image/4 rejects wrong buffer size" do
+      assert_raise ArgumentError, ~r/pixel buffer size mismatch/, fn ->
+        Command.create_image("sprite", 2, 2, <<0, 0, 0>>)
+      end
+    end
+
+    test "update_image/4 rejects wrong buffer size" do
+      assert_raise ArgumentError, ~r/pixel buffer size mismatch/, fn ->
+        Command.update_image("sprite", 2, 2, <<0, 0, 0>>)
+      end
+    end
+
+    test "create_image/4 accepts correct buffer size" do
+      pixels = :binary.copy(<<255, 0, 0, 255>>, 4)
+      cmd = Command.create_image("sprite", 2, 2, pixels)
+      assert cmd.payload.op == "create_image"
+    end
+  end
 end

@@ -287,7 +287,15 @@ defmodule Plushie.UI do
   def __auto_id__(nil, line), do: "auto:nomodule:#{line}"
 
   def __auto_id__(mod, line) do
-    mod_str = mod |> Module.split() |> Enum.join(".")
+    # Elixir module names can contain Unicode (e.g. Héllo.Wörld).
+    # Normalize to printable ASCII so auto-IDs satisfy the wire protocol's
+    # ID constraints. Line number ensures uniqueness even after normalization.
+    mod_str =
+      mod
+      |> Module.split()
+      |> Enum.join(".")
+      |> String.replace(~r/[^\x21-\x7e]/, "_")
+
     "auto:#{mod_str}:#{line}"
   end
 
@@ -298,7 +306,12 @@ defmodule Plushie.UI do
   defp compile_auto_id(nil, line), do: "auto:nomodule:#{line}"
 
   defp compile_auto_id(mod, line) do
-    mod_str = mod |> Module.split() |> Enum.join(".")
+    mod_str =
+      mod
+      |> Module.split()
+      |> Enum.join(".")
+      |> String.replace(~r/[^\x21-\x7e]/, "_")
+
     "auto:#{mod_str}:#{line}"
   end
 
