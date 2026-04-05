@@ -362,4 +362,134 @@ defmodule Plushie.BridgeIostreamTest do
       File.rm(script)
     end
   end
+
+  describe "heartbeat watchdog" do
+    defp start_bridge_with_heartbeat(interval) do
+      {:ok, bridge} =
+        Plushie.Bridge.start_link(
+          transport: {:iostream, self()},
+          format: :msgpack,
+          runtime: self(),
+          heartbeat_interval: interval
+        )
+
+      assert_receive {:iostream_bridge, ^bridge}
+      bridge
+    end
+
+    defp send_hello(bridge) do
+      hello_data =
+        Plushie.Protocol.encode(
+          %{
+            type: "hello",
+            name: "plushie",
+            version: "0.1.0",
+            protocol: Plushie.Protocol.protocol_version(),
+            backend: "test"
+          },
+          :msgpack
+        )
+
+      send(bridge, {:iostream_data, IO.iodata_to_binary(hello_data)})
+      assert_receive {:renderer_event, {:hello, _}}, 1_000
+    end
+
+    test "triggers restart when no messages arrive within the interval" do
+      bridge = start_bridge_with_heartbeat(50)
+      ref = Process.monitor(bridge)
+
+      send_hello(bridge)
+
+      # No further messages. The watchdog should fire after ~50ms and
+      # the bridge should stop (iostream transport does not restart,
+      # it just shuts down).
+      log =
+        capture_log(fn ->
+          assert_receive {:renderer_exit, :heartbeat_timeout}, 500
+          assert_receive {:DOWN, ^ref, :process, ^bridge, :normal}, 500
+        end)
+
+      assert log =~ "renderer unresponsive"
+    end
+
+    test "resets timer on each received message" do
+      bridge = start_bridge_with_heartbeat(100)
+
+      send_hello(bridge)
+
+      # Send a click event before the 100ms window expires to reset the timer.
+      event_data =
+        Plushie.Protocol.encode(
+          %{type: "event", family: "click", id: "btn", window_id: "main"},
+          :msgpack
+        )
+
+      Process.sleep(60)
+      send(bridge, {:iostream_data, IO.iodata_to_binary(event_data)})
+      assert_receive {:renderer_event, _}, 1_000
+
+      # Another 60ms passes (total 120ms from hello), but only 60ms since
+      # the last message. Timer should not have fired.
+      Process.sleep(60)
+      assert Process.alive?(bridge)
+
+      GenServer.stop(bridge)
+    end
+
+    test "does not fire during awaiting_resync" do
+      Process.flag(:trap_exit, true)
+
+      try do
+        # Use spawn transport with a script to trigger the resync state.
+        tag = System.unique_integer([:positive])
+        script = Path.join(System.tmp_dir!(), "plushie_hb_resync_#{tag}.sh")
+
+        File.write!(script, """
+        #!/bin/sh
+        exit 1
+        """)
+
+        File.chmod!(script, 0o755)
+
+        log =
+          capture_log(fn ->
+            {:ok, bridge} =
+              Plushie.Bridge.start_link(
+                transport: :spawn,
+                format: :json,
+                runtime: self(),
+                renderer_path: script,
+                max_restarts: 0,
+                restart_delay: 10,
+                heartbeat_interval: 50
+              )
+
+            ref = Process.monitor(bridge)
+
+            # The renderer exits immediately. Bridge hits max_restarts
+            # and stops.
+            assert_receive {:DOWN, ^ref, :process, ^bridge, _}, 1_000
+          end)
+
+        # Should NOT see heartbeat timeout in the logs.
+        refute log =~ "renderer unresponsive"
+
+        File.rm(script)
+      after
+        Process.flag(:trap_exit, false)
+      end
+    end
+
+    test "disabled when heartbeat_interval is nil" do
+      bridge = start_bridge_with_heartbeat(nil)
+
+      send_hello(bridge)
+
+      # Wait longer than any reasonable interval. No timeout should fire.
+      Process.sleep(100)
+      assert Process.alive?(bridge)
+
+      GenServer.stop(bridge)
+    end
+  end
 end

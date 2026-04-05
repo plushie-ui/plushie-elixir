@@ -42,6 +42,9 @@ defmodule Plushie do
   - `:log_level`   -- plushie binary log level (`:off`, `:error`, `:warning`, `:info`, `:debug`).
                       Default: `:error`.
   - `:renderer_args` -- extra CLI args passed to the renderer process
+  - `:heartbeat_interval` -- maximum time (ms) between renderer messages
+                      before the bridge considers it unresponsive and restarts
+                      the renderer. `nil` disables the watchdog. Default: `30_000`.
 
   When `:transport` is `:stdio` or `{:iostream, pid}`, the `:binary`
   option is ignored (no renderer subprocess is spawned).
@@ -132,6 +135,8 @@ defmodule Plushie do
 
     session_id = Keyword.get(opts, :session_id, "")
 
+    heartbeat_interval = Keyword.get(opts, :heartbeat_interval, 30_000)
+
     bridge_opts =
       [
         runtime: runtime_name(name),
@@ -140,6 +145,7 @@ defmodule Plushie do
         format: format,
         log_level: log_level,
         renderer_args: Keyword.get(opts, :renderer_args, []),
+        heartbeat_interval: heartbeat_interval,
         session_id: session_id
       ]
       |> then(fn opts ->

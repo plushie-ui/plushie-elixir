@@ -89,6 +89,9 @@ defmodule Plushie.Bridge do
     - `:renderer_args` - extra CLI args prepended to the renderer command (e.g. `["--headless"]`)
     - `:max_restarts`  - max restart attempts before giving up (default: 5)
     - `:restart_delay` - base delay in ms for exponential back-off (default: 100)
+    - `:heartbeat_interval` - maximum time (ms) between renderer messages before
+                         the bridge considers the renderer unresponsive and triggers
+                         a restart. `nil` disables the watchdog. Default: `30_000`.
   """
   @spec start_link(opts :: keyword()) :: GenServer.on_start()
   def start_link(opts) do
@@ -338,6 +341,8 @@ defmodule Plushie.Bridge do
     :awaiting_resync,
     :queued_messages,
     :pending_screenshot,
+    :heartbeat_interval,
+    :heartbeat_timer,
     session_id: ""
   ]
 
@@ -359,6 +364,8 @@ defmodule Plushie.Bridge do
         {:iostream, _} -> Keyword.get(opts, :renderer_path)
       end
 
+    heartbeat_interval = Keyword.get(opts, :heartbeat_interval, 30_000)
+
     state = %__MODULE__{
       port: nil,
       runtime: runtime,
@@ -375,6 +382,8 @@ defmodule Plushie.Bridge do
       awaiting_resync: false,
       queued_messages: [],
       pending_screenshot: nil,
+      heartbeat_interval: heartbeat_interval,
+      heartbeat_timer: nil,
       session_id: Keyword.get(opts, :session_id, "")
     }
 
@@ -508,6 +517,7 @@ defmodule Plushie.Bridge do
   # No backoff, no restart counting -- the renderer is being replaced
   # with a freshly built binary, not recovering from a crash.
   def handle_cast(:dev_restart, %{transport: :spawn} = state) do
+    state = cancel_heartbeat_timer(state)
     state = fail_pending_screenshot(state, {:renderer_exit, :dev_restart})
 
     if state.port do
@@ -596,6 +606,7 @@ defmodule Plushie.Bridge do
   # Stdio transport: stdin closed (renderer exited or pipe broken).
   def handle_info({port, :eof}, %{port: port, transport: :stdio} = state) do
     Logger.info("plushie bridge: stdin closed (renderer exited) -- shutting down")
+    state = cancel_heartbeat_timer(state)
     send(state.runtime, {:renderer_exit, :normal})
     {:stop, :normal, %{state | port: nil}}
   end
@@ -603,6 +614,7 @@ defmodule Plushie.Bridge do
   def handle_info({port, {:exit_status, 0}}, %{port: port} = state) do
     # Clean exit (user closed window). Stop normally -- don't restart.
     Logger.info("plushie bridge: renderer exited cleanly (status 0)")
+    state = cancel_heartbeat_timer(state)
     send(state.runtime, {:renderer_exit, :normal})
     {:stop, :normal, %{state | port: nil}}
   end
@@ -641,6 +653,7 @@ defmodule Plushie.Bridge do
   # iostream adapter reports the transport is closed.
   def handle_info({:iostream_closed, reason}, %{transport: {:iostream, _}} = state) do
     log_iostream_exit(reason, "iostream closed")
+    state = cancel_heartbeat_timer(state)
     state = fail_pending_screenshot(state, {:renderer_exit, reason})
     send(state.runtime, {:renderer_exit, reason})
     {:stop, :normal, %{state | port: nil}}
@@ -653,9 +666,25 @@ defmodule Plushie.Bridge do
       )
       when is_reference(ref) do
     log_iostream_exit(reason, "iostream process exited")
+    state = cancel_heartbeat_timer(state)
     state = fail_pending_screenshot(state, {:renderer_exit, reason})
     send(state.runtime, {:renderer_exit, reason})
     {:stop, :normal, state}
+  end
+
+  def handle_info(:heartbeat_timeout, %{awaiting_resync: true} = state) do
+    # Renderer is already restarting; ignore stale timer.
+    {:noreply, state}
+  end
+
+  def handle_info(:heartbeat_timeout, state) do
+    Logger.warning(
+      "plushie bridge: renderer unresponsive " <>
+        "(no message in #{state.heartbeat_interval}ms), triggering restart"
+    )
+
+    state = %{state | heartbeat_timer: nil}
+    handle_port_exit(state, :heartbeat_timeout)
   end
 
   def handle_info(msg, state) do
@@ -670,13 +699,20 @@ defmodule Plushie.Bridge do
   end
 
   @impl true
-  def terminate(_reason, %{port: port} = _state) when is_port(port) do
+  def terminate(_reason, %{heartbeat_timer: ref} = state) when is_reference(ref) do
+    Process.cancel_timer(ref)
+    terminate_port(state)
+  end
+
+  def terminate(_reason, state), do: terminate_port(state)
+
+  defp terminate_port(%{port: port}) when is_port(port) do
     Port.close(port)
   catch
     _, _ -> :ok
   end
 
-  def terminate(_reason, _state), do: :ok
+  defp terminate_port(_state), do: :ok
 
   # ---------------------------------------------------------------------------
   # Private helpers
@@ -832,39 +868,42 @@ defmodule Plushie.Bridge do
         :telemetry.execute([:plushie, :bridge, :receive], %{byte_size: byte_size(data)}, %{})
 
         try do
-          case Plushie.Protocol.decode_message!(data, format) do
-            {:hello, %{protocol: protocol} = hello} ->
-              expected = Plushie.Protocol.protocol_version()
+          state =
+            case Plushie.Protocol.decode_message!(data, format) do
+              {:hello, %{protocol: protocol} = hello} ->
+                expected = Plushie.Protocol.protocol_version()
 
-              if protocol != expected do
-                Logger.error(
-                  "plushie bridge: protocol mismatch -- renderer reports protocol #{protocol}, " <>
-                    "expected #{expected}. Stopping bridge."
-                )
+                if protocol != expected do
+                  Logger.error(
+                    "plushie bridge: protocol mismatch -- renderer reports protocol #{protocol}, " <>
+                      "expected #{expected}. Stopping bridge."
+                  )
 
-                send(self(), {:stop_protocol_mismatch, protocol, expected})
-                state
-              else
-                send(state.runtime, {:renderer_event, {:hello, hello}})
-                %{state | restart_count: 0}
-              end
-
-            {:screenshot_response, response} ->
-              case state.pending_screenshot do
-                nil ->
-                  send(state.runtime, {:renderer_event, {:screenshot_response, response}})
+                  send(self(), {:stop_protocol_mismatch, protocol, expected})
+                  state
+                else
+                  send(state.runtime, {:renderer_event, {:hello, hello}})
                   %{state | restart_count: 0}
+                end
 
-                from ->
-                  GenServer.reply(from, response)
-                  %{state | restart_count: 0, pending_screenshot: nil}
-              end
+              {:screenshot_response, response} ->
+                case state.pending_screenshot do
+                  nil ->
+                    send(state.runtime, {:renderer_event, {:screenshot_response, response}})
+                    %{state | restart_count: 0}
 
-            event ->
-              send(state.runtime, {:renderer_event, event})
-              # Reset restart count on first successful message from the renderer.
-              %{state | restart_count: 0}
-          end
+                  from ->
+                    GenServer.reply(from, response)
+                    %{state | restart_count: 0, pending_screenshot: nil}
+                end
+
+              event ->
+                send(state.runtime, {:renderer_event, event})
+                # Reset restart count on first successful message from the renderer.
+                %{state | restart_count: 0}
+            end
+
+          reset_heartbeat_timer(state)
         rescue
           error in Plushie.Protocol.Error ->
             :telemetry.execute([:plushie, :bridge, :protocol_error], %{}, %{
@@ -878,21 +917,26 @@ defmodule Plushie.Bridge do
     end
   end
 
-  defp handle_port_exit(%{transport: {:iostream, _}} = state, _reason) do
+  defp handle_port_exit(%{transport: {:iostream, _}} = state, reason) do
+    exit_reason = normalize_exit_reason(reason)
     Logger.info("plushie bridge: iostream transport closed -- shutting down")
-    state = fail_pending_screenshot(state, {:renderer_exit, :normal})
-    send(state.runtime, {:renderer_exit, :normal})
+    state = cancel_heartbeat_timer(state)
+    state = fail_pending_screenshot(state, {:renderer_exit, exit_reason})
+    send(state.runtime, {:renderer_exit, exit_reason})
     {:stop, :normal, %{state | port: nil}}
   end
 
-  defp handle_port_exit(%{transport: :stdio} = state, _reason) do
+  defp handle_port_exit(%{transport: :stdio} = state, reason) do
+    exit_reason = normalize_exit_reason(reason)
     Logger.info("plushie bridge: stdio port closed -- shutting down")
-    state = fail_pending_screenshot(state, {:renderer_exit, :normal})
-    send(state.runtime, {:renderer_exit, :normal})
+    state = cancel_heartbeat_timer(state)
+    state = fail_pending_screenshot(state, {:renderer_exit, exit_reason})
+    send(state.runtime, {:renderer_exit, exit_reason})
     {:stop, :normal, %{state | port: nil}}
   end
 
   defp handle_port_exit(state, reason) do
+    state = cancel_heartbeat_timer(state)
     state = fail_pending_screenshot(state, {:renderer_exit, reason})
     send(state.runtime, {:renderer_exit, reason})
 
@@ -996,7 +1040,32 @@ defmodule Plushie.Bridge do
     end
   end
 
+  # For transports that don't support restart (iostream, stdio), the heartbeat
+  # timeout reason is preserved so the runtime knows why the renderer exited.
+  # All other exit reasons are normalized to :normal since these transports
+  # treat any close as a clean shutdown.
+  defp normalize_exit_reason(:heartbeat_timeout), do: :heartbeat_timeout
+  defp normalize_exit_reason(_reason), do: :normal
+
   defp transport_ready?(%{transport: {:iostream, _}}), do: true
   defp transport_ready?(%{port: port}) when is_port(port), do: true
   defp transport_ready?(_state), do: false
+
+  # Heartbeat watchdog: resets the timer that detects an unresponsive renderer.
+  # Called after every successful message from the renderer.
+  defp reset_heartbeat_timer(%{heartbeat_interval: nil} = state), do: state
+  defp reset_heartbeat_timer(%{awaiting_resync: true} = state), do: state
+
+  defp reset_heartbeat_timer(state) do
+    state = cancel_heartbeat_timer(state)
+    ref = Process.send_after(self(), :heartbeat_timeout, state.heartbeat_interval)
+    %{state | heartbeat_timer: ref}
+  end
+
+  defp cancel_heartbeat_timer(%{heartbeat_timer: nil} = state), do: state
+
+  defp cancel_heartbeat_timer(%{heartbeat_timer: ref} = state) do
+    Process.cancel_timer(ref)
+    %{state | heartbeat_timer: nil}
+  end
 end
