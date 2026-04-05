@@ -1,18 +1,3 @@
-defmodule Plushie.Widget.Window.SingleChild do
-  @moduledoc false
-
-  defmacro __before_compile__(_env) do
-    quote do
-      defoverridable build: 1
-
-      def build(%__MODULE__{} = w) do
-        Plushie.Widget.Build.validate_single_child!(w.id, "window", Enum.reverse(w.children))
-        super(w)
-      end
-    end
-  end
-end
-
 defmodule Plushie.Widget.Window do
   @moduledoc """
   Top-level window container node.
@@ -25,9 +10,7 @@ defmodule Plushie.Widget.Window do
 
   use Plushie.Widget
 
-  @before_compile Plushie.Widget.Window.SingleChild
-
-  widget :window, container: true do
+  widget :window, container: :single do
     field :title, :string, doc: "Window title bar text."
     field :size, :any, doc: "Initial window size as `{width, height}` tuple."
     field :width, :float, doc: "Window width in pixels (alternative to `size`)."

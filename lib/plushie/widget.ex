@@ -483,6 +483,10 @@ defmodule Plushie.Widget do
   # raw values and defer encoding to Tree.normalize.
   @setter_cast_types [Plushie.Type.Color]
 
+  # Known field options consumed by the widget macro. Anything else is
+  # treated as a type constraint and forwarded to constrain_guard/2.
+  @known_field_opts [:doc, :default, :option, :wire_name, :required]
+
   # Type validation delegates to Plushie.Type.resolve/1 at compile time.
 
   defmacro __before_compile__(env) do
@@ -867,7 +871,7 @@ defmodule Plushie.Widget do
   end
 
   defp validate_prop_types!(env, props) do
-    for {name, type, _opts} <- props do
+    for {name, type, opts} <- props do
       unless valid_type?(type) do
         raise CompileError,
           file: env.file,
@@ -877,7 +881,62 @@ defmodule Plushie.Widget do
               "Use a primitive shortcut (:string, :float, etc.), a Plushie.Type module, " <>
               "or a composite ({:list, :type})."
       end
+
+      validate_field_constraints!(env, name, type, opts)
     end
+  end
+
+  defp validate_field_constraints!(env, name, type, opts) do
+    constraint_opts = Keyword.drop(opts, @known_field_opts)
+
+    case {constraint_opts, Plushie.Type.resolve(type)} do
+      {[], _} ->
+        :ok
+
+      {_, {:composite, _}} ->
+        constraint_error!(
+          env,
+          name,
+          constraint_opts,
+          "composite types do not support constraints"
+        )
+
+      {_, module} ->
+        validate_module_constraints!(env, name, module, constraint_opts)
+    end
+  end
+
+  defp validate_module_constraints!(env, name, module, constraint_opts) do
+    Code.ensure_compiled(module)
+
+    unless function_exported?(module, :field_options, 0) do
+      constraint_error!(
+        env,
+        name,
+        constraint_opts,
+        "#{inspect(module)} does not support constraints (no field_options/0)"
+      )
+    end
+
+    allowed = module.field_options()
+
+    for {key, _val} <- constraint_opts, key not in allowed do
+      raise CompileError,
+        file: env.file,
+        line: 0,
+        description:
+          "field #{inspect(name)} in #{inspect(env.module)} has unknown constraint " <>
+            "#{inspect(key)}. #{inspect(module)} supports: #{inspect(allowed)}"
+    end
+  end
+
+  defp constraint_error!(env, name, constraint_opts, reason) do
+    raise CompileError,
+      file: env.file,
+      line: 0,
+      description:
+        "field #{inspect(name)} in #{inspect(env.module)} has constraint options " <>
+          "#{inspect(Keyword.keys(constraint_opts))} but #{reason}"
   end
 
   defp validate_command_types!(commands) do
@@ -1443,9 +1502,9 @@ defmodule Plushie.Widget do
     struct_def = generate_struct_and_types(props, container)
     new_fn = generate_struct_new(container, positional, props)
     with_options_fn = generate_with_options(option_props)
-    setters = generate_setters(props)
+    setters = generate_setters(props, positional)
     dsl_fns = generate_dsl_buildable(option_props)
-    build_fn = generate_build()
+    build_fn = generate_build(container)
     container_fns = if container, do: generate_container_helpers(), else: nil
 
     protocol_impl =
@@ -1605,12 +1664,22 @@ defmodule Plushie.Widget do
     struct_pairs =
       [{:id, id_var} | Enum.map(positional, fn name -> {name, Macro.var(name, ctx)} end)]
 
-    # Build guards for positional args based on their prop types
+    # Build guards for positional args based on their prop types.
+    # Positional fields with a default are optional and accept nil.
     positional_guards =
       for name <- positional,
-          {^name, type, _opts} <- props,
-          guard_fn = positional_guard(type),
-          do: guard_fn.(Macro.var(name, ctx))
+          {^name, type, opts} <- props,
+          guard_fn = positional_guard(type) do
+        var = Macro.var(name, ctx)
+        base = guard_fn.(var)
+        has_default = Keyword.has_key?(opts, :default)
+
+        if has_default do
+          quote(do: unquote(base) or is_nil(unquote(var)))
+        else
+          base
+        end
+      end
 
     base_guard = quote(do: is_binary(unquote(id_var)))
 
@@ -1664,6 +1733,20 @@ defmodule Plushie.Widget do
 
   defp positional_guard(type) do
     case Plushie.Type.resolve(type) do
+      {:composite, {:list, _}} ->
+        fn var -> quote(do: is_list(unquote(var))) end
+
+      {:composite, {:tuple, types}} ->
+        len = length(types)
+
+        fn var ->
+          quote(do: is_tuple(unquote(var)) and tuple_size(unquote(var)) == unquote(len))
+        end
+
+      {:composite, {:enum, values}} ->
+        escaped = Macro.escape(values)
+        fn var -> quote(do: unquote(var) in unquote(escaped)) end
+
       {:composite, _} ->
         nil
 
@@ -1756,7 +1839,7 @@ defmodule Plushie.Widget do
     end
   end
 
-  defp generate_setters(props) do
+  defp generate_setters(props, positional) do
     prop_setters =
       Enum.map(props, fn {name, type, opts} ->
         type_str = type_display_string(type)
@@ -1772,25 +1855,60 @@ defmodule Plushie.Widget do
 
         encoder = encoder_for_type(type)
         value_type = elixir_type_for(type)
+        constraint_opts = Keyword.drop(opts, @known_field_opts)
+        base_guard = setter_guard(type)
+        guard = combine_guard(base_guard, constraint_guard(type, constraint_opts))
 
-        case setter_guard(type) do
-          nil ->
-            quote do
-              @doc unquote(doc)
-              @spec unquote(name)(widget :: t(), value :: unquote(value_type)) :: t()
-              def unquote(name)(%__MODULE__{} = widget, value) do
-                %{widget | unquote(name) => unquote(encoder).(value)}
-              end
-            end
+        # A field is "required" if it's positional with no default.
+        # Required fields do not get a nil setter clause.
+        has_default = Keyword.has_key?(opts, :default)
+        is_positional = name in positional
+        is_required = is_positional and not has_default
+        wants_nil_clause = not is_required
 
-          guard ->
+        nil_clause =
+          if wants_nil_clause do
             quote do
-              @doc unquote(doc)
-              @spec unquote(name)(widget :: t(), value :: unquote(value_type)) :: t()
-              def unquote(name)(%__MODULE__{} = widget, value) when unquote(guard) do
-                %{widget | unquote(name) => unquote(encoder).(value)}
-              end
+              def unquote(name)(%__MODULE__{} = widget, nil),
+                do: %{widget | unquote(name) => nil}
             end
+          end
+
+        setter_clause =
+          case guard do
+            nil ->
+              quote do
+                @doc unquote(doc)
+                @spec unquote(name)(widget :: t(), value :: unquote(value_type) | nil) :: t()
+                def unquote(name)(%__MODULE__{} = widget, value) do
+                  %{widget | unquote(name) => unquote(encoder).(value)}
+                end
+              end
+
+            guard ->
+              spec_type =
+                if wants_nil_clause do
+                  quote(do: unquote(value_type) | nil)
+                else
+                  value_type
+                end
+
+              quote do
+                @doc unquote(doc)
+                @spec unquote(name)(widget :: t(), value :: unquote(spec_type)) :: t()
+                def unquote(name)(%__MODULE__{} = widget, value) when unquote(guard) do
+                  %{widget | unquote(name) => unquote(encoder).(value)}
+                end
+              end
+          end
+
+        if nil_clause do
+          quote do
+            unquote(nil_clause)
+            unquote(setter_clause)
+          end
+        else
+          setter_clause
         end
       end)
 
@@ -1828,6 +1946,13 @@ defmodule Plushie.Widget do
       {:composite, {:list, _}} ->
         quote(do: is_list(value))
 
+      {:composite, {:tuple, types}} ->
+        len = length(types)
+        quote(do: is_tuple(value) and tuple_size(value) == unquote(len))
+
+      {:composite, {:enum, values}} ->
+        quote(do: value in unquote(Macro.escape(values)))
+
       {:composite, _} ->
         nil
 
@@ -1839,7 +1964,55 @@ defmodule Plushie.Widget do
     end
   end
 
-  defp generate_build do
+  # Extracts constraint guards from a type module's constrain_guard/2 callback.
+  defp constraint_guard(_type, []), do: []
+
+  defp constraint_guard(type, constraint_opts) do
+    case Plushie.Type.resolve(type) do
+      {:composite, _} ->
+        []
+
+      module ->
+        Code.ensure_compiled(module)
+
+        if function_exported?(module, :constrain_guard, 2) do
+          module.constrain_guard(quote(do: value), constraint_opts)
+        else
+          []
+        end
+    end
+  end
+
+  # Combines a base guard with a list of additional constraint guards.
+  defp combine_guard(base, []), do: base
+
+  defp combine_guard(nil, constraints) do
+    Enum.reduce(constraints, fn right, left ->
+      quote(do: unquote(left) and unquote(right))
+    end)
+  end
+
+  defp combine_guard(base, constraints) do
+    Enum.reduce(constraints, base, fn right, left ->
+      quote(do: unquote(left) and unquote(right))
+    end)
+  end
+
+  defp generate_build(:single) do
+    quote do
+      @doc "Converts this widget struct to a `ui_node()` map. Validates at most one child."
+      @spec build(widget :: t()) :: Plushie.Widget.ui_node()
+      def build(%__MODULE__{children: []} = widget), do: Plushie.Widget.to_node(widget)
+      def build(%__MODULE__{children: [_]} = widget), do: Plushie.Widget.to_node(widget)
+
+      def build(%__MODULE__{children: children}) do
+        raise ArgumentError,
+              "#{inspect(__MODULE__)} accepts at most 1 child, got #{length(children)}"
+      end
+    end
+  end
+
+  defp generate_build(_container) do
     quote do
       @doc "Converts this widget struct to a `ui_node()` map."
       @spec build(widget :: t()) :: Plushie.Widget.ui_node()

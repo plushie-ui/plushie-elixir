@@ -1,28 +1,9 @@
-defmodule Plushie.Widget.PickList.NilSelected do
-  @moduledoc false
-
-  # Overrides selected/2 to accept nil (deselect).
-  defmacro __before_compile__(_env) do
-    quote do
-      defoverridable selected: 2
-
-      @doc "Sets the currently selected value. Accepts nil to deselect."
-      def selected(%__MODULE__{} = pl, nil), do: %{pl | selected: nil}
-
-      def selected(%__MODULE__{} = pl, selected) when is_binary(selected),
-        do: %{pl | selected: selected}
-    end
-  end
-end
-
 defmodule Plushie.Widget.PickList do
   @moduledoc """
   Pick list, dropdown selection.
   """
 
   use Plushie.Widget
-
-  @before_compile Plushie.Widget.PickList.NilSelected
 
   widget :pick_list do
     field :options, {:list, :string}, option: false, doc: "Available choices."

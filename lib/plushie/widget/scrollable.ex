@@ -1,23 +1,3 @@
-defmodule Plushie.Widget.Scrollable.SingleChild do
-  @moduledoc false
-
-  defmacro __before_compile__(_env) do
-    quote do
-      defoverridable build: 1
-
-      def build(%__MODULE__{} = w) do
-        Plushie.Widget.Build.validate_single_child!(
-          w.id,
-          "scrollable",
-          Enum.reverse(w.children)
-        )
-
-        super(w)
-      end
-    end
-  end
-end
-
 defmodule Plushie.Widget.Scrollable do
   @moduledoc """
   Scrollable container, wraps child content in a scrollable viewport.
@@ -25,9 +5,7 @@ defmodule Plushie.Widget.Scrollable do
 
   use Plushie.Widget
 
-  @before_compile Plushie.Widget.Scrollable.SingleChild
-
-  widget :scrollable, container: true do
+  widget :scrollable, container: :single do
     field :width, Plushie.Type.Length, doc: "Width of the scrollable area. Default: shrink."
     field :height, Plushie.Type.Length, doc: "Height of the scrollable area. Default: shrink."
 
