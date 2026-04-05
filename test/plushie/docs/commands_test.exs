@@ -241,27 +241,27 @@ defmodule Plushie.Docs.CommandsTest do
   end
 
   test "subscriptions_on_key_press_construct_test" do
-    sub = Subscription.on_key_press(:key_event)
-    assert %Subscription{type: :on_key_press, tag: :key_event, max_rate: nil} = sub
+    sub = Subscription.on_key_press()
+    assert %Subscription{type: :on_key_press, tag: nil, max_rate: nil} = sub
   end
 
   test "subscriptions_set_max_rate_test" do
-    sub = Subscription.on_pointer_move(:mouse) |> Subscription.max_rate(30)
+    sub = Subscription.on_pointer_move() |> Subscription.max_rate(30)
     assert sub.max_rate == 30
   end
 
   test "subscriptions_set_max_rate_zero_test" do
-    sub = Subscription.on_pointer_move(:mouse) |> Subscription.max_rate(0)
+    sub = Subscription.on_pointer_move() |> Subscription.max_rate(0)
     assert sub.max_rate == 0
   end
 
   test "subscriptions_on_animation_frame_test" do
-    sub = Subscription.on_animation_frame(:frame) |> Subscription.max_rate(60)
+    sub = Subscription.on_animation_frame() |> Subscription.max_rate(60)
     assert sub.max_rate == 60
   end
 
   test "subscriptions_on_animation_frame_opts_test" do
-    sub = Subscription.on_animation_frame(:frame, max_rate: 60)
+    sub = Subscription.on_animation_frame(max_rate: 60)
     assert sub.max_rate == 60
   end
 
@@ -271,48 +271,48 @@ defmodule Plushie.Docs.CommandsTest do
   end
 
   test "subscriptions_on_window_close_test" do
-    sub = Subscription.on_window_close(:win_close)
-    assert %Subscription{type: :on_window_close, tag: :win_close} = sub
+    sub = Subscription.on_window_close()
+    assert %Subscription{type: :on_window_close, tag: nil} = sub
   end
 
   test "subscriptions_on_window_resize_test" do
-    sub = Subscription.on_window_resize(:win_resize)
-    assert %Subscription{type: :on_window_resize, tag: :win_resize} = sub
+    sub = Subscription.on_window_resize()
+    assert %Subscription{type: :on_window_resize, tag: nil} = sub
   end
 
   test "subscriptions_on_pointer_button_test" do
-    sub = Subscription.on_pointer_button(:mouse_btn)
-    assert %Subscription{type: :on_pointer_button, tag: :mouse_btn} = sub
+    sub = Subscription.on_pointer_button()
+    assert %Subscription{type: :on_pointer_button, tag: nil} = sub
   end
 
   test "subscriptions_on_pointer_scroll_test" do
-    sub = Subscription.on_pointer_scroll(:scroll)
-    assert %Subscription{type: :on_pointer_scroll, tag: :scroll} = sub
+    sub = Subscription.on_pointer_scroll()
+    assert %Subscription{type: :on_pointer_scroll, tag: nil} = sub
   end
 
   test "subscriptions_on_pointer_touch_test" do
-    sub = Subscription.on_pointer_touch(:touch)
-    assert %Subscription{type: :on_pointer_touch, tag: :touch} = sub
+    sub = Subscription.on_pointer_touch()
+    assert %Subscription{type: :on_pointer_touch, tag: nil} = sub
   end
 
   test "subscriptions_on_ime_test" do
-    sub = Subscription.on_ime(:ime)
-    assert %Subscription{type: :on_ime, tag: :ime} = sub
+    sub = Subscription.on_ime()
+    assert %Subscription{type: :on_ime, tag: nil} = sub
   end
 
   test "subscriptions_on_theme_change_test" do
-    sub = Subscription.on_theme_change(:theme)
-    assert %Subscription{type: :on_theme_change, tag: :theme} = sub
+    sub = Subscription.on_theme_change()
+    assert %Subscription{type: :on_theme_change, tag: nil} = sub
   end
 
   test "subscriptions_on_file_drop_test" do
-    sub = Subscription.on_file_drop(:files)
-    assert %Subscription{type: :on_file_drop, tag: :files} = sub
+    sub = Subscription.on_file_drop()
+    assert %Subscription{type: :on_file_drop, tag: nil} = sub
   end
 
   test "subscriptions_on_event_test" do
-    sub = Subscription.on_event(:all)
-    assert %Subscription{type: :on_event, tag: :all} = sub
+    sub = Subscription.on_event()
+    assert %Subscription{type: :on_event, tag: nil} = sub
   end
 
   # -- Subscription lifecycle -------------------------------------------------

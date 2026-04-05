@@ -650,7 +650,7 @@ defmodule Plushie.RuntimeTest do
 
         def init(_opts), do: %{}
         def update(model, _event), do: model
-        def subscribe(_model), do: [Plushie.Subscription.on_key_press(:keys)]
+        def subscribe(_model), do: [Plushie.Subscription.on_key_press()]
 
         def view(_model) do
           import Plushie.UI
@@ -666,7 +666,7 @@ defmodule Plushie.RuntimeTest do
         {runtime, bridge} = start_runtime(RestartSubApp)
         await_initial_render(runtime)
 
-        assert [%{kind: "on_key_press", tag: "keys"}] =
+        assert [%{kind: "on_key_press", tag: "on_key_press"}] =
                  Plushie.Test.InternalMockBridge.get_subscribes(bridge)
 
         send(runtime, :renderer_restarted)
@@ -1286,7 +1286,7 @@ defmodule Plushie.RuntimeTest do
 
         def subscribe(model) do
           if model.listening do
-            [Plushie.Subscription.on_key_press(:keys)]
+            [Plushie.Subscription.on_key_press()]
           else
             []
           end
@@ -1311,7 +1311,13 @@ defmodule Plushie.RuntimeTest do
 
       registers = Plushie.Test.InternalMockBridge.get_subscribes(bridge)
       assert length(registers) == 1
-      assert hd(registers) == %{kind: "on_key_press", tag: "keys", max_rate: nil, window_id: nil}
+
+      assert hd(registers) == %{
+               kind: "on_key_press",
+               tag: "on_key_press",
+               max_rate: nil,
+               window_id: nil
+             }
     end
 
     test "removing a renderer subscription sends unregister message to bridge" do
@@ -1324,7 +1330,7 @@ defmodule Plushie.RuntimeTest do
 
         def subscribe(model) do
           if model.listening do
-            [Plushie.Subscription.on_key_press(:keys)]
+            [Plushie.Subscription.on_key_press()]
           else
             []
           end
@@ -1355,7 +1361,7 @@ defmodule Plushie.RuntimeTest do
 
       unregisters = Plushie.Test.InternalMockBridge.get_unsubscribes(bridge)
       assert length(unregisters) == 1
-      assert hd(unregisters) == %{kind: "on_key_press", tag: "keys"}
+      assert hd(unregisters) == %{kind: "on_key_press", tag: "on_key_press"}
     end
 
     test "canvas widget subscriptions are registered on initial render and survive interact_step" do

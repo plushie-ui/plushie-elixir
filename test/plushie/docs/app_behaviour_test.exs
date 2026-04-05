@@ -65,7 +65,7 @@ defmodule Plushie.Docs.AppBehaviourTest do
   # -- subscribe example -------------------------------------------------------
 
   defp subscribe(model) do
-    subs = [Subscription.on_key_press(:key_event)]
+    subs = [Subscription.on_key_press()]
 
     if model.auto_refresh do
       [Subscription.every(5000, :refresh) | subs]
@@ -192,7 +192,7 @@ defmodule Plushie.Docs.AppBehaviourTest do
     model = new_model(%{auto_refresh: false})
     subs = subscribe(model)
     assert [sub] = subs
-    assert sub == Subscription.on_key_press(:key_event)
+    assert sub == Subscription.on_key_press()
   end
 
   test "app_behaviour_subscribe_with_auto_refresh_test" do
@@ -200,7 +200,7 @@ defmodule Plushie.Docs.AppBehaviourTest do
     subs = subscribe(model)
     assert [timer, key_sub] = subs
     assert timer == Subscription.every(5000, :refresh)
-    assert key_sub == Subscription.on_key_press(:key_event)
+    assert key_sub == Subscription.on_key_press()
   end
 
   test "app_behaviour_settings_test" do

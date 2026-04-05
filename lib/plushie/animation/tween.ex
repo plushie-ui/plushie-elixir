@@ -20,7 +20,7 @@ defmodule Plushie.Animation.Tween do
       end
 
       def subscribe(_model) do
-        [Plushie.Subscription.on_animation_frame(:frame)]
+        [Plushie.Subscription.on_animation_frame()]
       end
 
       def update(model, %SystemEvent{type: :animation_frame, data: ts}) do

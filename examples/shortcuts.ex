@@ -3,7 +3,7 @@ defmodule Shortcuts do
   Keyboard shortcuts example showing a scrollable log of key presses.
 
   Demonstrates:
-  - `Plushie.Subscription.on_key_press/1` for global keyboard events
+  - `Plushie.Subscription.on_key_press/0` for global keyboard events
   - Pattern matching on `%KeyEvent{type: :press}` with modifier inspection
   - `scrollable` for overflow content with dynamic list items
   - Capped log buffer (`@max_log_entries`)
@@ -40,7 +40,7 @@ defmodule Shortcuts do
   # -- subscribe -------------------------------------------------------------
 
   def subscribe(_model) do
-    [Subscription.on_key_press(:keys)]
+    [Subscription.on_key_press()]
   end
 
   # -- view ------------------------------------------------------------------

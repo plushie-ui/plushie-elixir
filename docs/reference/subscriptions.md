@@ -36,16 +36,17 @@ old timer and starts a new one automatically. No manual cleanup needed.
 ## Renderer subscriptions
 
 Renderer subscriptions are forwarded to the renderer binary via the
-wire protocol. The tag is for management only (diffing, starting,
-stopping). It does **not** appear in the delivered event.
+wire protocol. They take no tag argument. Lifecycle management is
+keyed by `{kind, window_id}`, so only one subscription of each kind
+per window (or globally when unscoped) can be active.
 
 ### Keyboard
 
 | Function | Event delivered |
 |---|---|
-| `on_key_press/1` | `Plushie.Event.KeyEvent` |
-| `on_key_release/1` | `Plushie.Event.KeyEvent` |
-| `on_modifiers_changed/1` | `Plushie.Event.ModifiersEvent` |
+| `on_key_press/0` | `Plushie.Event.KeyEvent` |
+| `on_key_release/0` | `Plushie.Event.KeyEvent` |
+| `on_modifiers_changed/0` | `Plushie.Event.ModifiersEvent` |
 
 `KeyEvent` includes `key` (atom for named keys like `:escape`,
 `:enter`; string for characters like `"s"`, `"a"`), `modifiers`
@@ -59,15 +60,15 @@ macOS. Match on `command: true` for cross-platform shortcuts.
 
 | Function | Event delivered | Scope |
 |---|---|---|
-| `on_window_event/1` | `WindowEvent` | All window events |
-| `on_window_open/1` | `WindowEvent` (`:opened`) | Open only |
-| `on_window_close/1` | `WindowEvent` (`:close_requested`) | Close only |
-| `on_window_resize/1` | `WindowEvent` (`:resized`) | Resize only |
-| `on_window_focus/1` | `WindowEvent` (`:focused`) | Focus only |
-| `on_window_unfocus/1` | `WindowEvent` (`:unfocused`) | Unfocus only |
-| `on_window_move/1` | `WindowEvent` (`:moved`) | Move only |
+| `on_window_event/0` | `WindowEvent` | All window events |
+| `on_window_open/0` | `WindowEvent` (`:opened`) | Open only |
+| `on_window_close/0` | `WindowEvent` (`:close_requested`) | Close only |
+| `on_window_resize/0` | `WindowEvent` (`:resized`) | Resize only |
+| `on_window_focus/0` | `WindowEvent` (`:focused`) | Focus only |
+| `on_window_unfocus/0` | `WindowEvent` (`:unfocused`) | Unfocus only |
+| `on_window_move/0` | `WindowEvent` (`:moved`) | Move only |
 
-`on_window_event/1` is a superset that delivers all window event types.
+`on_window_event/0` is a superset that delivers all window event types.
 **If you subscribe to both `on_window_event` and a specific variant
 (e.g. `on_window_resize`), matching events are delivered twice.** Use
 one or the other, not both.
@@ -76,10 +77,10 @@ one or the other, not both.
 
 | Function | Event delivered |
 |---|---|
-| `on_pointer_move/1` | `Plushie.Event.WidgetEvent` (`:move`, `:enter`, `:exit`) |
-| `on_pointer_button/1` | `Plushie.Event.WidgetEvent` (`:press`, `:release`) |
-| `on_pointer_scroll/1` | `Plushie.Event.WidgetEvent` (`:scroll`) |
-| `on_pointer_touch/1` | `Plushie.Event.WidgetEvent` (`:press`, `:move`, `:release`) |
+| `on_pointer_move/0` | `Plushie.Event.WidgetEvent` (`:move`, `:enter`, `:exit`) |
+| `on_pointer_button/0` | `Plushie.Event.WidgetEvent` (`:press`, `:release`) |
+| `on_pointer_scroll/0` | `Plushie.Event.WidgetEvent` (`:scroll`) |
+| `on_pointer_touch/0` | `Plushie.Event.WidgetEvent` (`:press`, `:move`, `:release`) |
 
 Pointer subscriptions are global. They deliver events as `WidgetEvent`
 with `id` set to the window ID and `scope` set to `[]`. The `data`
@@ -91,37 +92,38 @@ use `pointer_area` instead.
 
 | Function | Event delivered |
 |---|---|
-| `on_ime/1` | `Plushie.Event.ImeEvent` |
-| `on_theme_change/1` | `Plushie.Event.SystemEvent` |
-| `on_animation_frame/1` | `Plushie.Event.SystemEvent` |
-| `on_file_drop/1` | `Plushie.Event.WindowEvent` |
+| `on_ime/0` | `Plushie.Event.ImeEvent` |
+| `on_theme_change/0` | `Plushie.Event.SystemEvent` |
+| `on_animation_frame/0` | `Plushie.Event.SystemEvent` |
+| `on_file_drop/0` | `Plushie.Event.WindowEvent` |
 
-`on_animation_frame/1` delivers vsync ticks for SDK-side animation via
+`on_animation_frame/0` delivers vsync ticks for SDK-side animation via
 `Plushie.Animation.Tween`. Renderer-side transitions (`transition()`,
 `spring()`, `loop()`) do not require this subscription. They run
 independently in the renderer.
 
 ### Catch-all
 
-`on_event/1` subscribes to **all** renderer events: every widget
+`on_event/0` subscribes to **all** renderer events: every widget
 event, keyboard event, pointer event, window event, and system event.
 Use it for debugging or logging, not as a primary event source. It
 delivers a lot of traffic.
 
 ## All subscription constructors
 
-Every subscription constructor takes a tag atom as the first argument
-and an optional keyword list:
+Renderer subscription constructors take an optional keyword list.
+Timer subscriptions take an interval and a tag:
 
 ```elixir
-Plushie.Subscription.on_key_press(:keys)
-Plushie.Subscription.on_key_press(:keys, max_rate: 30)
-Plushie.Subscription.on_pointer_move(:mouse, max_rate: 60)
+Plushie.Subscription.on_key_press()
+Plushie.Subscription.on_key_press(max_rate: 30)
+Plushie.Subscription.on_pointer_move(max_rate: 60)
 Plushie.Subscription.every(1000, :tick)
 ```
 
-The tag identifies the subscription for diffing. Two subscriptions with
-the same type and tag are considered identical, so only one is active.
+Renderer subscriptions are keyed by `{kind, window_id}`. Only one
+subscription of each kind per window (or globally when unscoped) is
+active at a time.
 
 ## Rate limiting
 
@@ -130,14 +132,14 @@ coalesces intermediate events, delivering only the latest state at each
 interval:
 
 ```elixir
-Plushie.Subscription.on_pointer_move(:mouse)
+Plushie.Subscription.on_pointer_move()
 |> Plushie.Subscription.max_rate(30)
 ```
 
 Or inline:
 
 ```elixir
-Plushie.Subscription.on_pointer_move(:mouse, max_rate: 30)
+Plushie.Subscription.on_pointer_move(max_rate: 30)
 ```
 
 `max_rate/2` returns a modified subscription struct. It works on
@@ -166,7 +168,7 @@ Scope subscriptions to a specific window in multi-window apps:
 
 ```elixir
 Plushie.Subscription.for_window("settings", [
-  Plushie.Subscription.on_key_press(:settings_keys)
+  Plushie.Subscription.on_key_press()
 ])
 ```
 
@@ -180,7 +182,7 @@ subscriptions conditionally:
 
 ```elixir
 def subscribe(model) do
-  subs = [Plushie.Subscription.on_key_press(:keys)]
+  subs = [Plushie.Subscription.on_key_press()]
 
   if model.auto_save and model.dirty do
     [Plushie.Subscription.every(1000, :auto_save) | subs]
@@ -207,7 +209,7 @@ result against active subscriptions:
 
 1. Generate a key for each spec using `Plushie.Subscription.key/1`:
    - Timer: `{:every, interval, tag}`
-   - Renderer: `{type, tag}`
+   - Renderer: `{type, window_id}`
 2. Sort and compare keys against the previous cycle's key set.
 3. **Short-circuit**: if the sorted key set is unchanged, only check
    for `max_rate` changes on existing subscriptions.

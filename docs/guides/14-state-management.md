@@ -337,7 +337,7 @@ source:
 def subscribe(model) do
   subs = [...]
   if model.animating do
-    [Plushie.Subscription.on_animation_frame(:frame) | subs]
+    [Plushie.Subscription.on_animation_frame() | subs]
   else
     subs
   end

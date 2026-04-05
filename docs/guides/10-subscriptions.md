@@ -14,7 +14,7 @@ returns a list of subscription specs:
 ```elixir
 def subscribe(model) do
   [
-    Plushie.Subscription.on_key_press(:keys)
+    Plushie.Subscription.on_key_press()
   ]
 end
 ```
@@ -30,14 +30,14 @@ the model. When the model changes, the active subscriptions change with it.
 
 ## Keyboard subscriptions
 
-`Plushie.Subscription.on_key_press/1` subscribes to keyboard events. It
+`Plushie.Subscription.on_key_press/0` subscribes to keyboard events. It
 delivers `Plushie.Event.KeyEvent` structs to `update/2`:
 
 ```elixir
 alias Plushie.Event.KeyEvent
 
 def subscribe(_model) do
-  [Plushie.Subscription.on_key_press(:keys)]
+  [Plushie.Subscription.on_key_press()]
 end
 
 def update(model, %KeyEvent{key: "s", modifiers: %{command: true}}) do
@@ -65,7 +65,7 @@ The `command` field is particularly useful. Matching on `command: true`
 gives you Ctrl+S on Linux/Windows and Cmd+S on macOS without platform
 checks.
 
-There is also `Plushie.Subscription.on_key_release/1` if you need to track
+There is also `Plushie.Subscription.on_key_release/0` if you need to track
 key-up events.
 
 ### Applying it: pad keyboard shortcuts
@@ -74,7 +74,7 @@ Add keyboard shortcuts to the pad:
 
 ```elixir
 def subscribe(_model) do
-  [Plushie.Subscription.on_key_press(:keys)]
+  [Plushie.Subscription.on_key_press()]
 end
 
 def update(model, %KeyEvent{key: "s", modifiers: %{command: true}}) do
@@ -123,7 +123,7 @@ end
 
 The `tag` field in the TimerEvent matches the tag you gave the subscription.
 This is different from renderer subscriptions (like `on_key_press`) where
-the tag is for management only and does not appear in the event.
+the tag is not part of the API (renderer subscriptions take no tag).
 
 ### Conditional subscriptions
 
@@ -132,7 +132,7 @@ subscriptions conditionally:
 
 ```elixir
 def subscribe(model) do
-  subs = [Plushie.Subscription.on_key_press(:keys)]
+  subs = [Plushie.Subscription.on_key_press()]
 
   if model.auto_save and model.dirty do
     [Plushie.Subscription.every(1000, :auto_save) | subs]
@@ -160,7 +160,7 @@ end
 
 # In subscribe/1:
 def subscribe(model) do
-  subs = [Plushie.Subscription.on_key_press(:keys)]
+  subs = [Plushie.Subscription.on_key_press()]
 
   if model.auto_save and model.dirty do
     [Plushie.Subscription.every(1000, :auto_save) | subs]
@@ -192,23 +192,23 @@ stops, until the next edit.
 Plushie provides subscriptions for many event sources beyond keyboard and
 timers:
 
-- **Pointer**: `on_pointer_move/1`, `on_pointer_button/1`, `on_pointer_scroll/1`, `on_pointer_touch/1`.
+- **Pointer**: `on_pointer_move/0`, `on_pointer_button/0`, `on_pointer_scroll/0`, `on_pointer_touch/0`.
   These deliver `WidgetEvent` structs with `id` set to the window ID
   and `scope` set to `[]`. The `data` map includes `pointer` (`:mouse`
   or `:touch`) and `modifiers` (current modifier key state).
-- **Window lifecycle**: `on_window_close/1`, `on_window_resize/1`,
-  `on_window_event/1`, `on_window_open/1`, `on_window_focus/1`,
-  `on_window_unfocus/1`, `on_window_move/1`
-- **IME**: `on_ime/1` for input method editor events
-- **System**: `on_theme_change/1`, `on_animation_frame/1`, `on_file_drop/1`
+- **Window lifecycle**: `on_window_close/0`, `on_window_resize/0`,
+  `on_window_event/0`, `on_window_open/0`, `on_window_focus/0`,
+  `on_window_unfocus/0`, `on_window_move/0`
+- **IME**: `on_ime/0` for input method editor events
+- **System**: `on_theme_change/0`, `on_animation_frame/0`, `on_file_drop/0`
   (Note: renderer-side transitions run independently and do not require
   `on_animation_frame` or timer subscriptions.)
-- **Catch-all**: `on_event/1` for any renderer event
+- **Catch-all**: `on_event/0` for any renderer event
 
-Each returns its corresponding event struct in `update/2`. The tag argument
-is for managing subscriptions (diffing, starting, stopping). For renderer
-subscriptions, the tag does not appear in the delivered event. Timer
-subscriptions are the exception: the tag is embedded in the `%TimerEvent{}` event.
+Each returns its corresponding event struct in `update/2`. Renderer
+subscriptions take no tag; they are keyed by `{kind, window_id}` for
+lifecycle management. Timer subscriptions are different: the tag is
+embedded in the `%TimerEvent{}` event and is required.
 
 See the [Subscriptions reference](../reference/subscriptions.md) for the
 complete list and details.
@@ -222,7 +222,7 @@ connections where each update generates wire traffic.
 `Plushie.Subscription.max_rate/2` throttles delivery:
 
 ```elixir
-Plushie.Subscription.on_pointer_move(:mouse)
+Plushie.Subscription.on_pointer_move()
 |> Plushie.Subscription.max_rate(30)
 ```
 
@@ -232,7 +232,7 @@ intermediate events, delivering only the latest state at each interval.
 You can also set `max_rate` as a constructor option:
 
 ```elixir
-Plushie.Subscription.on_pointer_move(:mouse, max_rate: 30)
+Plushie.Subscription.on_pointer_move(max_rate: 30)
 ```
 
 Rate limiting works at three levels, from most to least specific:
@@ -250,7 +250,7 @@ In multi-window apps, you can scope subscriptions to a specific window:
 
 ```elixir
 Plushie.Subscription.for_window("settings", [
-  Plushie.Subscription.on_key_press(:settings_keys)
+  Plushie.Subscription.on_key_press()
 ])
 ```
 
@@ -277,7 +277,7 @@ Write a subscription experiment in your pad:
 
 - Build a clock: subscribe to `every(1000, :tick)` and display the current
   time. Watch the display update every second.
-- Subscribe to `on_key_press(:keys)` and log key names in a list. Press
+- Subscribe to `on_key_press()` and log key names in a list. Press
   modifier keys and see how `modifiers` changes.
 - Try a conditional subscription: subscribe to a timer only when a checkbox
   is checked. Toggle the checkbox and observe the timer starting and

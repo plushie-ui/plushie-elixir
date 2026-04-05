@@ -362,7 +362,7 @@ end
 
 def subscribe(model) do
   if model.dragging do
-    [Plushie.Subscription.on_pointer_move(:drag, max_rate: 60)]
+    [Plushie.Subscription.on_pointer_move(max_rate: 60)]
   else
     []
   end
@@ -598,7 +598,7 @@ Organise shortcuts with a dedicated function to keep `update/2` clean:
 
 ```elixir
 def subscribe(_model) do
-  [Plushie.Subscription.on_key_press(:keys)]
+  [Plushie.Subscription.on_key_press()]
 end
 
 def update(model, %KeyEvent{type: :press} = key) do

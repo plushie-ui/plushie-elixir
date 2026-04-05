@@ -519,7 +519,7 @@ anim = Tween.new(from: 0.0, to: 1.0, duration: 300, easing: :ease_out)
 # Subscribe to frame events:
 def subscribe(model) do
   if model.animating do
-    [Plushie.Subscription.on_animation_frame(:frame)]
+    [Plushie.Subscription.on_animation_frame()]
   else
     []
   end

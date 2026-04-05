@@ -102,18 +102,18 @@ defmodule Plushie.Runtime.Subscriptions do
       new_spec = Map.fetch!(new_by_key, key)
 
       case old_entry do
-        {:renderer, type, old_rate, _tag} when old_rate != new_spec.max_rate ->
+        {:renderer, type, old_rate} when old_rate != new_spec.max_rate ->
           if bridge do
             Plushie.Bridge.send_subscribe(
               bridge,
               Atom.to_string(type),
-              Atom.to_string(new_spec.tag),
+              renderer_wire_tag(new_spec),
               new_spec.max_rate,
               new_spec.window_id
             )
           end
 
-          {key, {:renderer, type, new_spec.max_rate, new_spec.tag}}
+          {key, {:renderer, type, new_spec.max_rate}}
 
         _ ->
           {key, old_entry}
@@ -127,18 +127,18 @@ defmodule Plushie.Runtime.Subscriptions do
     updated =
       Enum.reduce(new_by_key, state.subscriptions, fn {key, new_spec}, subs ->
         case Map.get(subs, key) do
-          {:renderer, type, old_rate, _tag} when old_rate != new_spec.max_rate ->
+          {:renderer, type, old_rate} when old_rate != new_spec.max_rate ->
             if state.bridge do
               Plushie.Bridge.send_subscribe(
                 state.bridge,
                 Atom.to_string(type),
-                Atom.to_string(new_spec.tag),
+                renderer_wire_tag(new_spec),
                 new_spec.max_rate,
                 new_spec.window_id
               )
             end
 
-            Map.put(subs, key, {:renderer, type, new_spec.max_rate, new_spec.tag})
+            Map.put(subs, key, {:renderer, type, new_spec.max_rate})
 
           _ ->
             subs
@@ -154,9 +154,14 @@ defmodule Plushie.Runtime.Subscriptions do
         {:timer, ref} ->
           Process.cancel_timer(ref)
 
-        {:renderer, type, _max_rate, tag} ->
+        {:renderer, type, _max_rate} ->
           if bridge,
-            do: Plushie.Bridge.send_unsubscribe(bridge, Atom.to_string(type), Atom.to_string(tag))
+            do:
+              Plushie.Bridge.send_unsubscribe(
+                bridge,
+                Atom.to_string(type),
+                Atom.to_string(type)
+              )
 
         _ ->
           :ok
@@ -173,7 +178,7 @@ defmodule Plushie.Runtime.Subscriptions do
   end
 
   defp start_subscription(
-         %Plushie.Subscription{type: type, tag: tag, max_rate: max_rate, window_id: window_id},
+         %Plushie.Subscription{type: type, max_rate: max_rate, window_id: window_id} = spec,
          bridge
        )
        when type in [
@@ -201,12 +206,18 @@ defmodule Plushie.Runtime.Subscriptions do
       Plushie.Bridge.send_subscribe(
         bridge,
         Atom.to_string(type),
-        Atom.to_string(tag),
+        renderer_wire_tag(spec),
         max_rate,
         window_id
       )
     end
 
-    {:renderer, type, max_rate, tag}
+    {:renderer, type, max_rate}
+  end
+
+  # Derive the wire tag sent to the renderer. For renderer subs, use the
+  # kind atom as the tag (stable identifier for the renderer protocol).
+  defp renderer_wire_tag(%Plushie.Subscription{type: type}) do
+    Atom.to_string(type)
   end
 end

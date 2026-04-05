@@ -83,7 +83,7 @@ mix plushie.gui Clock
 **File:** `shortcuts.ex`
 
 Logs keyboard events to a scrollable list. Demonstrates
-`Plushie.Subscription.on_key_press/1` for global keyboard handling. Shows
+`Plushie.Subscription.on_key_press/0` for global keyboard handling. Shows
 modifier key detection (Ctrl, Alt, Shift, Super) and the `Plushie.Event.KeyEvent`
 struct.
 

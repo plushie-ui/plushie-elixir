@@ -113,22 +113,22 @@ defmodule Plushie.Docs.RunningTest do
   # ============================================================================
   # Subscriptions with max_rate (from "Per-subscription" section)
   # The doc shows:
-  #   Subscription.on_pointer_move(:mouse, max_rate: 30)
-  #   Subscription.on_animation_frame(:frame, max_rate: 60)
-  #   Subscription.on_pointer_move(:capture, max_rate: 0)
+  #   Subscription.on_pointer_move(max_rate: 30)
+  #   Subscription.on_animation_frame(max_rate: 60)
+  #   Subscription.on_pointer_move(max_rate: 0)
   # ============================================================================
 
   test "running_subscription_pointer_move_with_rate_test" do
     alias Plushie.Subscription
 
-    sub_mouse = Subscription.on_pointer_move(:mouse, max_rate: 30)
-    assert %Subscription{type: :on_pointer_move, tag: :mouse, max_rate: 30} = sub_mouse
+    sub_mouse = Subscription.on_pointer_move(max_rate: 30)
+    assert %Subscription{type: :on_pointer_move, tag: nil, max_rate: 30} = sub_mouse
 
-    sub_frame = Subscription.on_animation_frame(:frame, max_rate: 60)
-    assert %Subscription{type: :on_animation_frame, tag: :frame, max_rate: 60} = sub_frame
+    sub_frame = Subscription.on_animation_frame(max_rate: 60)
+    assert %Subscription{type: :on_animation_frame, tag: nil, max_rate: 60} = sub_frame
 
-    sub_capture = Subscription.on_pointer_move(:capture, max_rate: 0)
-    assert %Subscription{type: :on_pointer_move, tag: :capture, max_rate: 0} = sub_capture
+    sub_capture = Subscription.on_pointer_move(max_rate: 0)
+    assert %Subscription{type: :on_pointer_move, tag: nil, max_rate: 0} = sub_capture
   end
 
   # ============================================================================
