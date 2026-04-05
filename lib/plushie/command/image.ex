@@ -114,7 +114,7 @@ defmodule Plushie.Command.Image do
   Lists all in-memory image handles.
 
   The result arrives in `update/2` as
-  `%SystemEvent{type: :image_list, tag: tag, data: %{"handles" => [...]}}`.
+  `%SystemEvent{type: :image_list, tag: tag, value: %{"handles" => [...]}}`.
   """
   @spec list_images(tag :: atom()) :: Command.t()
   def list_images(tag) when is_atom(tag) do

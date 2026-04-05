@@ -725,7 +725,7 @@ defmodule Plushie.ProtocolParityTest do
       json =
         Jason.encode!(%{type: "event", family: "animation_frame", data: %{timestamp: 16_666}})
 
-      assert %SystemEvent{type: :animation_frame, data: 16_666} =
+      assert %SystemEvent{type: :animation_frame, value: 16_666} =
                Protocol.decode_message(json, :json)
     end
 
@@ -733,7 +733,7 @@ defmodule Plushie.ProtocolParityTest do
       json =
         Jason.encode!(%{type: "event", family: "animation_frame", data: %{timestamp: 16.666}})
 
-      assert %SystemEvent{type: :animation_frame, data: 16.666} =
+      assert %SystemEvent{type: :animation_frame, value: 16.666} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -782,14 +782,14 @@ defmodule Plushie.ProtocolParityTest do
     test "decodes theme change to dark" do
       json = Jason.encode!(%{type: "event", family: "theme_changed", value: "dark"})
 
-      assert %SystemEvent{type: :theme_changed, data: "dark"} =
+      assert %SystemEvent{type: :theme_changed, value: "dark"} =
                Protocol.decode_message(json, :json)
     end
 
     test "decodes theme change to light" do
       json = Jason.encode!(%{type: "event", family: "theme_changed", value: "light"})
 
-      assert %SystemEvent{type: :theme_changed, data: "light"} =
+      assert %SystemEvent{type: :theme_changed, value: "light"} =
                Protocol.decode_message(json, :json)
     end
   end

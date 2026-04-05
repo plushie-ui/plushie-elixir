@@ -12,22 +12,22 @@ defmodule Plushie.Event.SystemEvent do
       `:theme_changed`, `:all_windows_closed`, `:image_list`,
       `:tree_hash`, `:find_focused`, `:diagnostic`, `:announce`, or `:error`
     * `tag` - caller-supplied correlation tag from the originating query
-    * `data` - payload; shape depends on event type (e.g. a map of system
+    * `value` - payload; shape depends on event type (e.g. a map of system
       info fields, a theme name string, a frame timestamp, or a renderer
       error payload. Native widget command failures decode to
       `Plushie.Event.WidgetCommandError` instead.
 
   ## Pattern matching
 
-      def update(model, %SystemEvent{type: :system_info, data: %{"os" => os}}) do
+      def update(model, %SystemEvent{type: :system_info, value: %{"os" => os}}) do
         %{model | platform: os}
       end
 
-      def update(model, %SystemEvent{type: :theme_changed, data: theme}) do
+      def update(model, %SystemEvent{type: :theme_changed, value: theme}) do
         %{model | theme: theme}
       end
 
-      def update(model, %SystemEvent{type: :animation_frame, data: ts}) do
+      def update(model, %SystemEvent{type: :animation_frame, value: ts}) do
         advance_animation(model, ts)
       end
   """
@@ -46,12 +46,12 @@ defmodule Plushie.Event.SystemEvent do
             | :diagnostic
             | :error,
           tag: String.t() | nil,
-          data: map() | String.t() | number() | nil
+          value: map() | String.t() | number() | nil
         }
 
   @typedoc "System event delivered by the renderer."
   @type delivered_t :: t()
 
   @enforce_keys [:type]
-  defstruct [:type, :tag, :data]
+  defstruct [:type, :tag, :value]
 end

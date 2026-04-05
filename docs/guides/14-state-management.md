@@ -343,7 +343,7 @@ def subscribe(model) do
   end
 end
 
-def update(model, %Plushie.Event.SystemEvent{type: :animation_frame, data: ts}) do
+def update(model, %Plushie.Event.SystemEvent{type: :animation_frame, value: ts}) do
   anim = Tween.advance(model.anim, ts)
 
   if Tween.finished?(anim) do

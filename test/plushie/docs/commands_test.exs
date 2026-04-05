@@ -148,9 +148,9 @@ defmodule Plushie.Docs.CommandsTest do
   end
 
   test "commands_system_theme_event_match_test" do
-    event = %SystemEvent{type: :system_theme, tag: "theme_detected", data: "dark"}
+    event = %SystemEvent{type: :system_theme, tag: "theme_detected", value: "dark"}
 
-    assert %SystemEvent{type: :system_theme, tag: "theme_detected", data: mode} = event
+    assert %SystemEvent{type: :system_theme, tag: "theme_detected", value: mode} = event
     assert mode == "dark"
   end
 

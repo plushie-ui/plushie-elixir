@@ -466,7 +466,7 @@ defmodule Plushie.Runtime do
         {:renderer_event, %Plushie.Event.SystemEvent{type: :diagnostic} = event},
         state
       ) do
-    Logger.warning("plushie runtime: prop validation diagnostic: #{inspect(event.data)}")
+    Logger.warning("plushie runtime: prop validation diagnostic: #{inspect(event.value)}")
     {:noreply, %{state | diagnostics: [event | state.diagnostics]}}
   end
 

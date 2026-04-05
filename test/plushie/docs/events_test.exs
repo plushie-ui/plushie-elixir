@@ -406,15 +406,15 @@ defmodule Plushie.Docs.EventsTest do
   # -- System events -----------------------------------------------------------
 
   test "events_animation_frame_construct_test" do
-    event = %SystemEvent{type: :animation_frame, data: 12_345}
+    event = %SystemEvent{type: :animation_frame, value: 12_345}
 
-    assert event.data == 12_345
+    assert event.value == 12_345
   end
 
   test "events_theme_changed_construct_test" do
-    event = %SystemEvent{type: :theme_changed, data: "dark"}
+    event = %SystemEvent{type: :theme_changed, value: "dark"}
 
-    assert event.data == "dark"
+    assert event.value == "dark"
   end
 
   # -- Timer events ------------------------------------------------------------

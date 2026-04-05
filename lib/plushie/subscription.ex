@@ -413,7 +413,7 @@ defmodule Plushie.Subscription do
   @doc """
   Fires when the system theme changes (light/dark mode).
 
-  Delivers `%SystemEvent{type: :theme_changed, data: mode}` to `update/2` where `mode` is
+  Delivers `%SystemEvent{type: :theme_changed, value: mode}` to `update/2` where `mode` is
   a string like `"light"` or `"dark"`.
   """
   @spec on_theme_change(opts :: keyword()) :: t()
@@ -431,7 +431,7 @@ defmodule Plushie.Subscription do
   @doc """
   Fires on each animation frame (vsync tick).
 
-  Delivers `%SystemEvent{type: :animation_frame, data: timestamp}` to `update/2`.
+  Delivers `%SystemEvent{type: :animation_frame, value: timestamp}` to `update/2`.
   """
   @spec on_animation_frame(opts :: keyword()) :: t()
   def on_animation_frame(opts \\ []) do

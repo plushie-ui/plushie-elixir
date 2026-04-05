@@ -1644,7 +1644,7 @@ defmodule Plushie.ProtocolTest do
           data: %{text: "Item saved"}
         })
 
-      assert %SystemEvent{type: :announce, data: "Item saved"} =
+      assert %SystemEvent{type: :announce, value: "Item saved"} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -1659,7 +1659,7 @@ defmodule Plushie.ProtocolTest do
           data: %{error: "duplicate IDs found", duplicates: ["btn1 (button)", "btn1 (text)"]}
         })
 
-      assert %SystemEvent{type: :error, data: %{error: "duplicate_node_ids", details: details}} =
+      assert %SystemEvent{type: :error, value: %{error: "duplicate_node_ids", details: details}} =
                Protocol.decode_message(json, :json)
 
       assert details["duplicates"] == ["btn1 (button)", "btn1 (text)"]

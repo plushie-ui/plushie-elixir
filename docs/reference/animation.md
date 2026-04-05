@@ -526,7 +526,7 @@ def subscribe(model) do
 end
 
 # Advance on each frame:
-def update(model, %SystemEvent{type: :animation_frame, data: ts}) do
+def update(model, %SystemEvent{type: :animation_frame, value: ts}) do
   anim = model.anim |> Tween.start_once(ts) |> Tween.advance(ts)
 
   if Tween.finished?(anim) do

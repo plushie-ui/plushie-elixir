@@ -46,9 +46,9 @@ defmodule Plushie.Command do
     `stream/2` delivers `%Plushie.Event.StreamEvent{tag: tag, value: value}` for each chunk.
   - **Window and system queries**: `get_window_size/2`, `get_mode/2`, etc. deliver
     `%Plushie.Event.SystemEvent{}` structs through `update/2`. The `type` field identifies the
-    query kind, `tag` holds the stringified event tag, and `data` holds the result payload.
+    query kind, `tag` holds the stringified event tag, and `value` holds the result payload.
     For example, `get_system_theme(:my_tag)` delivers
-    `%SystemEvent{type: :system_theme, tag: "my_tag", data: "dark"}`.
+    `%SystemEvent{type: :system_theme, tag: "my_tag", value: "dark"}`.
   - **Platform effects**: `Plushie.Effect` functions deliver
     `%Plushie.Event.EffectEvent{tag: tag, result: result}`. The `tag` matches the
     atom you provided when creating the effect command. Timeouts deliver the
@@ -265,7 +265,7 @@ defmodule Plushie.Command do
   Query the current system theme (light/dark mode).
 
   The result arrives in `update/2` as
-  `%Plushie.Event.SystemEvent{type: :system_theme, tag: tag, data: mode}` where
+  `%Plushie.Event.SystemEvent{type: :system_theme, tag: tag, value: mode}` where
   `tag` is the stringified event tag and `mode` is `"light"`, `"dark"`, or
   `"none"` (when no system preference is detected). Returns `"none"` on
   Linux systems without a desktop environment. Apps should provide a theme
@@ -277,7 +277,7 @@ defmodule Plushie.Command do
         {model, Plushie.Command.get_system_theme(:theme_result)}
       end
 
-      def update(model, %Plushie.Event.SystemEvent{type: :system_theme, tag: "theme_result", data: mode}) do
+      def update(model, %Plushie.Event.SystemEvent{type: :system_theme, tag: "theme_result", value: mode}) do
         %{model | theme_mode: mode}
       end
   """
@@ -293,7 +293,7 @@ defmodule Plushie.Command do
   Query system information (OS, CPU, memory, graphics).
 
   The result arrives in `update/2` as
-  `%Plushie.Event.SystemEvent{type: :system_info, tag: tag, data: info}` where `tag`
+  `%Plushie.Event.SystemEvent{type: :system_info, tag: tag, value: info}` where `tag`
   is the stringified event tag and `info` is a map with keys:
   `"system_name"`, `"system_kernel"`, `"system_version"`,
   `"system_short_version"`, `"cpu_brand"`, `"cpu_cores"`, `"memory_total"`,
@@ -308,7 +308,7 @@ defmodule Plushie.Command do
         {model, Plushie.Command.get_system_info(:sys_info)}
       end
 
-      def update(model, %Plushie.Event.SystemEvent{type: :system_info, tag: "sys_info", data: info}) do
+      def update(model, %Plushie.Event.SystemEvent{type: :system_info, tag: "sys_info", value: info}) do
         %{model | system: info}
       end
   """
@@ -465,7 +465,7 @@ defmodule Plushie.Command do
   Computes a SHA-256 hash of the renderer's current tree state.
 
   The result arrives in `update/2` as
-  `%SystemEvent{type: :tree_hash, tag: tag, data: %{"hash" => "..."}}`.
+  `%SystemEvent{type: :tree_hash, tag: tag, value: %{"hash" => "..."}}`.
   """
   @spec tree_hash(tag :: atom()) :: %__MODULE__{}
   def tree_hash(tag) when is_atom(tag) do
@@ -479,7 +479,7 @@ defmodule Plushie.Command do
   Queries which widget currently has focus.
 
   The result arrives in `update/2` as
-  `%SystemEvent{type: :find_focused, tag: tag, data: %{"focused" => "..." | nil}}`.
+  `%SystemEvent{type: :find_focused, tag: tag, value: %{"focused" => "..." | nil}}`.
 
   Note: if no widget is focused, the `"focused"` field may be `nil`.
   """

@@ -8,7 +8,7 @@ defmodule Plushie.Command.WindowQuery do
   @doc """
   Query the size of a window.
 
-  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: data}`
+  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, value: data}`
   where `data` is `%{width: width, height: height}`.
   """
   @spec get_window_size(window_id :: Command.window_id(), tag :: Command.event_tag()) ::
@@ -23,7 +23,7 @@ defmodule Plushie.Command.WindowQuery do
   @doc """
   Query the position of a window.
 
-  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: data}`
+  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, value: data}`
   where `data` is `%{x: x, y: y}` or `nil` if unavailable.
   """
   @spec get_window_position(window_id :: Command.window_id(), tag :: Command.event_tag()) ::
@@ -38,7 +38,7 @@ defmodule Plushie.Command.WindowQuery do
   @doc """
   Query whether a window is maximized.
 
-  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: boolean}`.
+  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, value: boolean}`.
   """
   @spec is_maximized(window_id :: Command.window_id(), tag :: Command.event_tag()) :: Command.t()
   def is_maximized(window_id, tag) do
@@ -51,7 +51,7 @@ defmodule Plushie.Command.WindowQuery do
   @doc """
   Query whether a window is minimized.
 
-  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: boolean}`.
+  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, value: boolean}`.
   """
   @spec is_minimized(window_id :: Command.window_id(), tag :: Command.event_tag()) :: Command.t()
   def is_minimized(window_id, tag) do
@@ -64,7 +64,7 @@ defmodule Plushie.Command.WindowQuery do
   @doc """
   Query the current window mode (windowed, fullscreen, hidden).
 
-  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: mode}`.
+  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, value: mode}`.
   """
   @spec get_mode(window_id :: Command.window_id(), tag :: Command.event_tag()) :: Command.t()
   def get_mode(window_id, tag) do
@@ -77,7 +77,7 @@ defmodule Plushie.Command.WindowQuery do
   @doc """
   Query the window's current scale factor (DPI scaling).
 
-  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: factor}`.
+  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, value: factor}`.
   """
   @spec get_scale_factor(window_id :: Command.window_id(), tag :: Command.event_tag()) ::
           Command.t()
@@ -91,7 +91,7 @@ defmodule Plushie.Command.WindowQuery do
   @doc """
   Query the raw platform window ID (e.g. X11 window ID, HWND).
 
-  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: platform_id}`.
+  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, value: platform_id}`.
   """
   @spec raw_id(window_id :: Command.window_id(), tag :: Command.event_tag()) :: Command.t()
   def raw_id(window_id, tag) do
@@ -104,7 +104,7 @@ defmodule Plushie.Command.WindowQuery do
   @doc """
   Query the monitor size for the display containing a window.
 
-  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: data}`
+  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, value: data}`
   where `data` is `%{width: width, height: height}` or `nil` if the
   monitor cannot be determined.
   """

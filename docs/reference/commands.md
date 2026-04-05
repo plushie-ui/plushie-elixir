@@ -126,7 +126,7 @@ in `update/2` (not a `SystemEvent`). The data map contains `name`,
 | `raw_id/2` | Query platform window handle |
 | `monitor_size/2` | Query monitor dimensions |
 
-Results arrive as `%SystemEvent{type: type, tag: tag, data: data}`.
+Results arrive as `%SystemEvent{type: type, tag: tag, value: data}`.
 The `tag` matches the atom you provided. Data maps use atom keys:
 `%{width: 800, height: 600}`.
 
@@ -223,7 +223,7 @@ Options: `:icon`, `:timeout` (auto-dismiss ms), `:urgency`
 ```elixir
 cmd = Command.stream(fn emit ->
   for chunk <- fetch_chunks() do
-    emit.(%{progress: chunk.index, data: chunk.data})
+    emit.(%{progress: chunk.index, value: chunk.data})
   end
   :done
 end, :import)

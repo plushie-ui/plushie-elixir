@@ -23,7 +23,7 @@ defmodule Plushie.Animation.Tween do
         [Plushie.Subscription.on_animation_frame()]
       end
 
-      def update(model, %SystemEvent{type: :animation_frame, data: ts}) do
+      def update(model, %SystemEvent{type: :animation_frame, value: ts}) do
         anim = model.anim |> Tween.start_once(ts) |> Tween.advance(ts)
         %{model | anim: anim}
       end

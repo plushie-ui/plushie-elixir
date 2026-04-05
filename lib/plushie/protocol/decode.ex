@@ -749,7 +749,7 @@ defmodule Plushie.Protocol.Decode do
          "family" => "animation_frame",
          "data" => %{"timestamp" => timestamp}
        }) do
-    %SystemEvent{type: :animation_frame, data: timestamp}
+    %SystemEvent{type: :animation_frame, value: timestamp}
   end
 
   defp dispatch(
@@ -789,7 +789,7 @@ defmodule Plushie.Protocol.Decode do
          "family" => "theme_changed",
          "value" => mode
        }) do
-    %SystemEvent{type: :theme_changed, data: mode}
+    %SystemEvent{type: :theme_changed, value: mode}
   end
 
   # -- Unified pointer events --
@@ -1068,7 +1068,7 @@ defmodule Plushie.Protocol.Decode do
          "tag" => tag,
          "data" => data
        }) do
-    %SystemEvent{type: :system_info, tag: tag, data: safe_atomize_keys(data)}
+    %SystemEvent{type: :system_info, tag: tag, value: safe_atomize_keys(data)}
   end
 
   defp dispatch(%{
@@ -1077,7 +1077,7 @@ defmodule Plushie.Protocol.Decode do
          "tag" => tag,
          "data" => data
        }) do
-    %SystemEvent{type: :system_theme, tag: tag, data: safe_atomize_keys(data)}
+    %SystemEvent{type: :system_theme, tag: tag, value: safe_atomize_keys(data)}
   end
 
   defp dispatch(%{
@@ -1086,7 +1086,7 @@ defmodule Plushie.Protocol.Decode do
          "tag" => tag,
          "data" => data
        }) do
-    %SystemEvent{type: :image_list, tag: tag, data: safe_atomize_keys(data)}
+    %SystemEvent{type: :image_list, tag: tag, value: safe_atomize_keys(data)}
   end
 
   defp dispatch(%{
@@ -1095,7 +1095,7 @@ defmodule Plushie.Protocol.Decode do
          "tag" => tag,
          "data" => data
        }) do
-    %SystemEvent{type: :tree_hash, tag: tag, data: safe_atomize_keys(data)}
+    %SystemEvent{type: :tree_hash, tag: tag, value: safe_atomize_keys(data)}
   end
 
   defp dispatch(%{
@@ -1104,7 +1104,7 @@ defmodule Plushie.Protocol.Decode do
          "tag" => tag,
          "data" => data
        }) do
-    %SystemEvent{type: :find_focused, tag: tag, data: safe_atomize_keys(data)}
+    %SystemEvent{type: :find_focused, tag: tag, value: safe_atomize_keys(data)}
   end
 
   # -- Session events (multiplexed mode) --
@@ -1130,7 +1130,7 @@ defmodule Plushie.Protocol.Decode do
   # -- Announce event (headless/mock: screen reader announcements surface as events) --
 
   defp dispatch(%{"type" => "event", "family" => "announce", "data" => data}) do
-    %SystemEvent{type: :announce, data: data["text"]}
+    %SystemEvent{type: :announce, value: data["text"]}
   end
 
   # -- Duplicate node ID error --
@@ -1141,7 +1141,7 @@ defmodule Plushie.Protocol.Decode do
          "id" => "duplicate_node_ids",
          "data" => data
        }) do
-    %SystemEvent{type: :error, data: %{error: "duplicate_node_ids", details: data}}
+    %SystemEvent{type: :error, value: %{error: "duplicate_node_ids", details: data}}
   end
 
   defp dispatch(%{
@@ -1173,7 +1173,7 @@ defmodule Plushie.Protocol.Decode do
         other -> %{"id" => id, "details" => other}
       end
 
-    %SystemEvent{type: :error, data: data}
+    %SystemEvent{type: :error, value: data}
   end
 
   # -- All windows closed --
@@ -1296,7 +1296,7 @@ defmodule Plushie.Protocol.Decode do
   end
 
   defp dispatch(%{"type" => "event", "family" => "diagnostic", "data" => data}) do
-    %Plushie.Event.SystemEvent{type: :diagnostic, data: data}
+    %Plushie.Event.SystemEvent{type: :diagnostic, value: data}
   end
 
   # -- Effect stub ack responses --
