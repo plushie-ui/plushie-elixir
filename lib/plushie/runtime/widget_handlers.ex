@@ -157,6 +157,120 @@ defmodule Plushie.Runtime.WidgetHandlers do
     collect_widget_entries(tree, nil, %{})
   end
 
+  @doc """
+  Derives all registries from the normalized tree in a single walk.
+
+  Returns `{handler_registry, event_registry, window_set}` where:
+  - `handler_registry` is the same as `derive_registry/1`
+  - `event_registry` is the widget event spec registry (previously
+    `derive_widget_event_registry/1` in Runtime)
+  - `window_set` is the MapSet of window IDs (previously
+    `Windows.detect_windows/1`)
+  """
+  @spec derive_all_registries(tree :: map() | nil) ::
+          {%{widget_key() => map()}, map(), MapSet.t()}
+  def derive_all_registries(nil), do: {%{}, %{}, MapSet.new()}
+
+  def derive_all_registries(tree) do
+    {handlers, events, window_ids} = collect_all(tree, nil, {%{}, %{}, []})
+    {handlers, events, MapSet.new(window_ids)}
+  end
+
+  defp collect_all(%{id: id, type: "window", children: children}, _window_id, {h, e, w}) do
+    Enum.reduce(children, {h, e, [id | w]}, &collect_all(&1, id, &2))
+  end
+
+  defp collect_all(%{id: id, children: children} = node, window_id, {h, e, w}) do
+    meta = Map.get(node, :meta, %{})
+
+    {h, e} = collect_meta(meta, window_id, id, h, e)
+
+    Enum.reduce(children, {h, e, w}, &collect_all(&1, window_id, &2))
+  end
+
+  defp collect_all(%{children: children}, window_id, acc) do
+    Enum.reduce(children, acc, &collect_all(&1, window_id, &2))
+  end
+
+  defp collect_all(_, _window_id, acc), do: acc
+
+  # Extract handler and event entries from a node's meta in one pass.
+  defp collect_meta(
+         %{
+           __widget__: %Plushie.Widget.Meta.Composite{
+             module: module,
+             state: state,
+             handles_events: handles_events,
+             props: props,
+             type: widget_type,
+             events: events,
+             event_specs: event_specs
+           }
+         },
+         window_id,
+         id,
+         h,
+         e
+       ) do
+    h =
+      if handles_events do
+        Map.put(h, {window_id, id}, %{
+          module: module,
+          state: state,
+          props: props || %{},
+          window_id: window_id
+        })
+      else
+        h
+      end
+
+    e =
+      if is_atom(widget_type) and not is_nil(widget_type) and is_list(events) do
+        specs_map = Map.new(event_specs || [], fn {name, spec} -> {name, spec} end)
+
+        Map.put(e, {window_id, id}, %{
+          widget_type: widget_type,
+          events: MapSet.new(events),
+          event_specs: specs_map
+        })
+      else
+        e
+      end
+
+    {h, e}
+  end
+
+  defp collect_meta(
+         %{
+           __widget__: %Plushie.Widget.Meta.Native{
+             type: widget_type,
+             events: events,
+             event_specs: event_specs
+           }
+         },
+         window_id,
+         id,
+         h,
+         e
+       ) do
+    e =
+      if is_atom(widget_type) and not is_nil(widget_type) and is_list(events) do
+        specs_map = Map.new(event_specs || [], fn {name, spec} -> {name, spec} end)
+
+        Map.put(e, {window_id, id}, %{
+          widget_type: widget_type,
+          events: MapSet.new(events),
+          event_specs: specs_map
+        })
+      else
+        e
+      end
+
+    {h, e}
+  end
+
+  defp collect_meta(_meta, _window_id, _id, h, e), do: {h, e}
+
   defp collect_widget_entries(%{id: id, type: "window", children: children}, _window_id, acc) do
     Enum.reduce(children, acc, &collect_widget_entries(&1, id, &2))
   end

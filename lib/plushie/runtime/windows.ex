@@ -25,7 +25,15 @@ defmodule Plushie.Runtime.Windows do
   """
   @spec sync_windows(map(), map() | nil) :: map()
   def sync_windows(state, tree) do
-    new_windows = detect_windows(tree)
+    sync_windows(state, tree, detect_windows(tree))
+  end
+
+  @doc """
+  Same as `sync_windows/2` but accepts a pre-computed window set,
+  avoiding a redundant tree walk when the caller already has it.
+  """
+  @spec sync_windows(map(), map() | nil, MapSet.t()) :: map()
+  def sync_windows(state, tree, new_windows) do
     current_windows = state.windows
 
     # Open new windows

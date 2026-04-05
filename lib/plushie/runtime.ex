@@ -353,17 +353,15 @@ defmodule Plushie.Runtime do
 
     # 5. Sync widget handler registry so widgets are available for
     # event interception from the very first interaction.
-    widget_handlers =
-      Plushie.Runtime.WidgetHandlers.derive_registry(tree)
-
-    widget_events = derive_widget_event_registry(tree)
+    {widget_handlers, widget_events, window_set} =
+      Plushie.Runtime.WidgetHandlers.derive_all_registries(tree)
 
     # 6. Execute initial commands.
     state = %{state | tree: tree, widget_handlers: widget_handlers, widget_events: widget_events}
     state = Commands.execute_commands(state.init_commands, state)
     state = %{state | init_commands: []}
     state = sync_runtime_subscriptions(state, state.model, widget_handlers)
-    state = Windows.sync_windows(state, tree)
+    state = Windows.sync_windows(state, tree, window_set)
     {:noreply, state}
   end
 
@@ -679,8 +677,8 @@ defmodule Plushie.Runtime do
       notify_bridge(state, &Plushie.Bridge.send_snapshot(&1, tree))
     end
 
-    widget_handlers = Plushie.Runtime.WidgetHandlers.derive_registry(tree)
-    widget_events = derive_widget_event_registry(tree)
+    {widget_handlers, widget_events, window_set} =
+      Plushie.Runtime.WidgetHandlers.derive_all_registries(tree)
 
     # Re-sync subscriptions with the new renderer.
     state =
@@ -698,7 +696,7 @@ defmodule Plushie.Runtime do
         windows: MapSet.new()
     }
 
-    state = Windows.sync_windows(state, tree)
+    state = Windows.sync_windows(state, tree, window_set)
     notify_bridge(state, &Plushie.Bridge.send_resync_complete/1)
 
     # If the overlay is showing a successful rebuild, schedule auto-dismiss
@@ -874,10 +872,8 @@ defmodule Plushie.Runtime do
               :view_error -> {state.tree, track_view_error(state)}
             end
 
-          widget_handlers =
-            Plushie.Runtime.WidgetHandlers.derive_registry(new_tree)
-
-          widget_events = derive_widget_event_registry(new_tree)
+          {widget_handlers, widget_events, window_set} =
+            Plushie.Runtime.WidgetHandlers.derive_all_registries(new_tree)
 
           state = %{
             state
@@ -887,7 +883,7 @@ defmodule Plushie.Runtime do
           }
 
           state = sync_runtime_subscriptions(state, state.model, widget_handlers)
-          state = Windows.sync_windows(state, new_tree)
+          state = Windows.sync_windows(state, new_tree, window_set)
 
           {:noreply, state}
 
@@ -930,10 +926,8 @@ defmodule Plushie.Runtime do
         :view_error -> {state.tree, track_view_error(state)}
       end
 
-    widget_handlers =
-      Plushie.Runtime.WidgetHandlers.derive_registry(new_tree)
-
-    widget_events = derive_widget_event_registry(new_tree)
+    {widget_handlers, widget_events, window_set} =
+      Plushie.Runtime.WidgetHandlers.derive_all_registries(new_tree)
 
     state = %{
       state
@@ -943,7 +937,7 @@ defmodule Plushie.Runtime do
     }
 
     state = sync_runtime_subscriptions(state, state.model, widget_handlers)
-    state = Windows.sync_windows(state, new_tree)
+    state = Windows.sync_windows(state, new_tree, window_set)
     {:noreply, state}
   end
 
@@ -1044,8 +1038,8 @@ defmodule Plushie.Runtime do
         :view_error -> {state.tree, track_view_error(state)}
       end
 
-    widget_handlers = Plushie.Runtime.WidgetHandlers.derive_registry(new_tree)
-    widget_events = derive_widget_event_registry(new_tree)
+    {widget_handlers, widget_events, window_set} =
+      Plushie.Runtime.WidgetHandlers.derive_all_registries(new_tree)
 
     state = %{
       state
@@ -1055,7 +1049,7 @@ defmodule Plushie.Runtime do
     }
 
     state = sync_runtime_subscriptions(state, state.model, widget_handlers)
-    Windows.sync_windows(state, new_tree)
+    Windows.sync_windows(state, new_tree, window_set)
   end
 
   defp schedule_overlay_dismiss(state) do
@@ -1359,72 +1353,6 @@ defmodule Plushie.Runtime do
           "view/1 must return a window node or a list of window nodes, got #{inspect(other)}"
   end
 
-  @spec derive_widget_event_registry(map() | nil) ::
-          %{{String.t() | nil, String.t()} => %{widget_type: atom(), events: MapSet.t(atom())}}
-  defp derive_widget_event_registry(nil), do: %{}
-
-  defp derive_widget_event_registry(tree) do
-    collect_widget_event_entries(tree, nil, %{})
-  end
-
-  defp collect_widget_event_entries(
-         %{id: id, type: "window", children: children},
-         _window_id,
-         acc
-       ) do
-    Enum.reduce(children, acc, &collect_widget_event_entries(&1, id, &2))
-  end
-
-  defp collect_widget_event_entries(%{id: id, children: children} = node, window_id, acc) do
-    meta = Map.get(node, :meta, %{})
-
-    acc =
-      case meta do
-        %{
-          __widget__: %Plushie.Widget.Meta.Composite{
-            type: widget_type,
-            events: events,
-            event_specs: event_specs
-          }
-        }
-        when is_atom(widget_type) and not is_nil(widget_type) and is_list(events) ->
-          specs_map = Map.new(event_specs || [], fn {name, spec} -> {name, spec} end)
-
-          Map.put(acc, {window_id, id}, %{
-            widget_type: widget_type,
-            events: MapSet.new(events),
-            event_specs: specs_map
-          })
-
-        %{
-          __widget__: %Plushie.Widget.Meta.Native{
-            type: widget_type,
-            events: events,
-            event_specs: event_specs
-          }
-        }
-        when is_atom(widget_type) and not is_nil(widget_type) and is_list(events) ->
-          specs_map = Map.new(event_specs || [], fn {name, spec} -> {name, spec} end)
-
-          Map.put(acc, {window_id, id}, %{
-            widget_type: widget_type,
-            events: MapSet.new(events),
-            event_specs: specs_map
-          })
-
-        _ ->
-          acc
-      end
-
-    Enum.reduce(children, acc, &collect_widget_event_entries(&1, window_id, &2))
-  end
-
-  defp collect_widget_event_entries(%{children: children}, window_id, acc) do
-    Enum.reduce(children, acc, &collect_widget_event_entries(&1, window_id, &2))
-  end
-
-  defp collect_widget_event_entries(_, _window_id, acc), do: acc
-
   # ---------------------------------------------------------------------------
   # Event pipeline
   #
@@ -1678,17 +1606,16 @@ defmodule Plushie.Runtime do
 
         state = %{state | tree: new_tree}
 
-        widget_handlers =
-          Plushie.Runtime.WidgetHandlers.derive_registry(new_tree)
+        {widget_handlers, widget_events, window_set} =
+          Plushie.Runtime.WidgetHandlers.derive_all_registries(new_tree)
 
-        widget_events = derive_widget_event_registry(new_tree)
         state = %{state | widget_handlers: widget_handlers, widget_events: widget_events}
 
         widget_subs =
           Plushie.Runtime.WidgetHandlers.collect_subscriptions(widget_handlers)
 
         state = Subscriptions.sync_subscriptions(state, new_model, widget_subs)
-        Windows.sync_windows(state, new_tree)
+        Windows.sync_windows(state, new_tree, window_set)
 
       :error ->
         %{state | consecutive_errors: state.consecutive_errors + 1}
@@ -1724,8 +1651,8 @@ defmodule Plushie.Runtime do
           {state.tree, %{track_view_error(state) | widget_handlers: handlers_before}}
       end
 
-    widget_handlers = Plushie.Runtime.WidgetHandlers.derive_registry(new_tree)
-    widget_events = derive_widget_event_registry(new_tree)
+    {widget_handlers, widget_events, window_set} =
+      Plushie.Runtime.WidgetHandlers.derive_all_registries(new_tree)
 
     state = %{
       state
@@ -1735,7 +1662,7 @@ defmodule Plushie.Runtime do
     }
 
     state = sync_runtime_subscriptions(state, model, widget_handlers)
-    Windows.sync_windows(state, new_tree)
+    Windows.sync_windows(state, new_tree, window_set)
   end
 
   defp safe_update(app, model, event, consecutive_errors) do
@@ -1863,10 +1790,8 @@ defmodule Plushie.Runtime do
       {:ok, new_tree} ->
         notify_bridge(state, &Plushie.Bridge.send_snapshot(&1, new_tree))
 
-        widget_handlers =
-          Plushie.Runtime.WidgetHandlers.derive_registry(new_tree)
-
-        widget_events = derive_widget_event_registry(new_tree)
+        {widget_handlers, widget_events, window_set} =
+          Plushie.Runtime.WidgetHandlers.derive_all_registries(new_tree)
 
         state = %{
           state
@@ -1876,7 +1801,7 @@ defmodule Plushie.Runtime do
         }
 
         state = sync_runtime_subscriptions(state, state.model, widget_handlers)
-        state = Windows.sync_windows(state, new_tree)
+        state = Windows.sync_windows(state, new_tree, window_set)
         Commands.execute_commands(deferred_commands, state)
 
       :error ->

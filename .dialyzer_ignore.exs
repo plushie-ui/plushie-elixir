@@ -11,6 +11,7 @@
   {"lib/plushie/selection.ex", :contract_with_opaque},
   {"lib/plushie/runtime/windows.ex", :contract_with_opaque},
   {"lib/plushie/runtime/windows.ex", :call_without_opaque},
+  {"lib/plushie/runtime/widget_handlers.ex", :contract_with_opaque},
 
   # Same MapSet opaque issue -- renderer_restarted handler resets windows
   # to MapSet.new() before calling sync_windows, which dialyzer flags.

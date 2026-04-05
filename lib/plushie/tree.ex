@@ -706,6 +706,8 @@ defmodule Plushie.Tree do
     diff_node(old_tree, new_tree, [])
   end
 
+  defp diff_node(old, new, _path) when old === new, do: []
+
   defp diff_node(old, new, path) do
     if old.type != new.type do
       [%{op: "replace_node", path: path, node: new}]
