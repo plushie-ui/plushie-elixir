@@ -217,13 +217,6 @@ defmodule Plushie.EventDeclarationTest do
       end
     end
 
-    test "canvas_internal? always returns false (deprecated)" do
-      refute BuiltinSpecs.canvas_internal?(:canvas_press)
-      refute BuiltinSpecs.canvas_internal?(:press)
-      refute BuiltinSpecs.canvas_internal?(:click)
-      refute BuiltinSpecs.canvas_internal?(:toggle)
-    end
-
     test "has specs for unified pointer event types" do
       for type <- ~w(press release move scroll enter exit double_click resize)a do
         assert BuiltinSpecs.spec(type) != nil, "missing spec for #{type}"

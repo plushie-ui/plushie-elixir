@@ -161,14 +161,6 @@ defmodule Plushie.Event.BuiltinSpecs do
   @spec spec(name :: atom()) :: t() | nil
   def spec(name) when is_atom(name), do: Map.get(@specs, name)
 
-  @doc """
-  Deprecated: always returns false. Canvas auto-consumption was removed
-  with the unified pointer event model. Kept temporarily so existing
-  call sites compile during the transition.
-  """
-  @spec canvas_internal?(type :: atom()) :: false
-  def canvas_internal?(_type), do: false
-
   @doc "Returns all built-in event specs as a map."
   @spec all() :: %{atom() => t()}
   def all, do: @specs

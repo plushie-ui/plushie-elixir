@@ -748,7 +748,23 @@ defmodule Plushie.Protocol.Decode do
            msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    tag = if data["tag"], do: String.to_atom(data["tag"])
+
+    tag =
+      if data["tag"] do
+        try do
+          String.to_existing_atom(data["tag"])
+        rescue
+          ArgumentError ->
+            reraise Error.exception(
+                      reason:
+                        {:invalid_event_field, "transition_complete", :tag, data["tag"],
+                         :unknown_atom, msg},
+                      format: :msgpack,
+                      data: <<>>
+                    ),
+                    __STACKTRACE__
+        end
+      end
 
     %WidgetEvent{
       type: :transition_complete,
