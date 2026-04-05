@@ -7,6 +7,8 @@ defmodule Plushie.Runtime.Windows do
   runtime state.
   """
 
+  require Logger
+
   # Window setting keys that can be specified as node props on window elements.
   @window_prop_keys ~w(
     title size width height position min_size max_size maximized fullscreen
@@ -30,7 +32,19 @@ defmodule Plushie.Runtime.Windows do
     opened = MapSet.difference(new_windows, current_windows)
 
     Enum.each(opened, fn window_id ->
-      base_settings = state.app.window_config(state.model)
+      base_settings =
+        try do
+          state.app.window_config(state.model)
+        catch
+          kind, reason ->
+            Logger.warning(
+              "plushie runtime: window_config/1 #{kind}: " <>
+                Exception.format(kind, reason, __STACKTRACE__)
+            )
+
+            %{}
+        end
+
       per_window_props = extract_window_props(tree, window_id)
       settings = Map.merge(base_settings, per_window_props)
 

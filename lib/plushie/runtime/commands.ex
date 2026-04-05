@@ -34,8 +34,17 @@ defmodule Plushie.Runtime.Commands do
          %Plushie.Command{type: :done, payload: %{value: value, mapper: mapper}},
          state
        ) do
-    event = mapper.(value)
-    send(self(), {:renderer_event, event})
+    try do
+      event = mapper.(value)
+      send(self(), {:renderer_event, event})
+    catch
+      kind, reason ->
+        Logger.warning(
+          "plushie runtime: Command.done mapper #{kind}: " <>
+            Exception.format(kind, reason, __STACKTRACE__)
+        )
+    end
+
     state
   end
 

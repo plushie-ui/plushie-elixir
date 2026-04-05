@@ -41,16 +41,19 @@ defmodule Plushie.Runtime.Subscriptions do
           []
       end
 
-    new_specs = app_specs ++ extra_specs
+    new_specs =
+      (app_specs ++ extra_specs)
+      |> Enum.filter(fn
+        %Plushie.Subscription{} ->
+          true
 
-    Enum.each(new_specs, fn
-      %Plushie.Subscription{} ->
-        :ok
+        other ->
+          Logger.warning(
+            "plushie runtime: subscribe/1 returned invalid spec (dropping): #{inspect(other)}"
+          )
 
-      other ->
-        raise ArgumentError,
-              "subscribe/1 must return a list of %Plushie.Subscription{} structs, got: #{inspect(other)}"
-    end)
+          false
+      end)
 
     new_by_key = Map.new(new_specs, fn spec -> {Plushie.Subscription.key(spec), spec} end)
     new_sorted_keys = new_by_key |> Map.keys() |> Enum.sort()

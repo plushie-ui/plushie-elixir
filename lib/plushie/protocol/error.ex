@@ -45,4 +45,8 @@ defmodule Plushie.Protocol.Error do
   defp format_message({:invalid_event_field, family, field, value, reason, _msg}, _format) do
     "invalid #{family} event field #{field}: #{inspect(value)} (#{reason})"
   end
+
+  defp format_message(reason, _format) do
+    "protocol error: #{inspect(reason)}"
+  end
 end
