@@ -207,6 +207,8 @@ defmodule Plushie.Type.A11y do
   def cast(kw) when is_list(kw), do: cast(Map.new(kw))
 
   def cast(map) when is_map(map) do
+    if map[:mnemonic], do: validate_mnemonic!(map[:mnemonic])
+
     {:ok,
      %__MODULE__{
        role: normalize_optional_role!(map[:role]),
@@ -310,8 +312,10 @@ defmodule Plushie.Type.A11y do
 
   @doc "Sets the Alt+letter keyboard shortcut (single character)."
   @spec mnemonic(a11y :: t(), mnemonic :: String.t()) :: t()
-  def mnemonic(%__MODULE__{} = a, mnemonic) when is_binary(mnemonic),
-    do: %{a | mnemonic: mnemonic}
+  def mnemonic(%__MODULE__{} = a, char) when is_binary(char) do
+    validate_mnemonic!(char)
+    %{a | mnemonic: char}
+  end
 
   @doc "Sets the toggled/checked state."
   @spec toggled(a11y :: t(), toggled :: boolean()) :: t()
@@ -437,6 +441,13 @@ defmodule Plushie.Type.A11y do
 
   defp unknown_role_message(role) do
     "unknown a11y role #{inspect(role)}. Supported roles: #{inspect(@accepted_roles)}"
+  end
+
+  defp validate_mnemonic!(char) when is_binary(char) do
+    if String.length(char) != 1 do
+      raise ArgumentError,
+            "mnemonic must be a single character, got: #{inspect(char)}"
+    end
   end
 
   # -- Plushie.Type callbacks --------------------------------------------------
