@@ -26,6 +26,9 @@ defmodule Plushie.Widget.TextEditor do
       doc: "Language extension for syntax highlighting (e.g. \"rs\", \"py\", \"ex\")."
 
     field :highlight_theme, :string, doc: "Highlighter theme name."
+    field :on_focus, :boolean, doc: "When true, emits focused events. Default: false."
+    field :on_blur, :boolean, doc: "When true, emits blurred events. Default: false."
+
     field :style, Plushie.Type.Style, doc: "Named preset or custom `StyleMap`."
     field :key_bindings, {:list, :map}, doc: "Declarative key binding rules for the editor."
     field :placeholder_color, Plushie.Type.Color, doc: "Placeholder text color."
@@ -33,4 +36,6 @@ defmodule Plushie.Widget.TextEditor do
   end
 
   event :edit, value: :string, doc: "Emitted on content changes."
+  event :focused, doc: "Emitted when the editor gains focus (requires `on_focus` prop)."
+  event :blurred, doc: "Emitted when the editor loses focus (requires `on_blur` prop)."
 end

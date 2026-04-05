@@ -172,4 +172,8 @@ defmodule Plushie.Test.Session do
 
   @spec get_diagnostics(session :: t()) :: [Plushie.Event.SystemEvent.t()]
   def get_diagnostics(%__MODULE__{pid: p}), do: Runtime.get_diagnostics(p)
+
+  @doc "Returns the underlying Plushie.Runtime pid for direct interaction."
+  @spec runtime(session :: t()) :: pid()
+  def runtime(%__MODULE__{pid: p}), do: GenServer.call(p, :runtime)
 end
