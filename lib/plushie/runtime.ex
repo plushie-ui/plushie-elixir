@@ -1278,19 +1278,13 @@ defmodule Plushie.Runtime do
   # for post-processing (the old apply_widget_handler_state approach).
   @spec safe_view(module(), term(), map()) :: {:ok, map()} | :error
   defp safe_view(app, model, widget_handler_states) do
-    # Stash widget states for Tree.normalize to pick up during the
-    # normalization pass. Cleaned up in the after block.
-    if widget_handler_states != %{} do
-      Process.put(Plushie.Widget.Handler.widget_states_key(), widget_handler_states)
-    end
-
     raw_tree =
       :telemetry.span([:plushie, :view], %{app: app}, fn ->
         {app.view(model), %{}}
       end)
 
     validate_root_windows!(raw_tree)
-    {:ok, Plushie.Tree.normalize(raw_tree)}
+    {:ok, Plushie.Tree.normalize(raw_tree, widget_handler_states)}
   catch
     kind, reason ->
       :telemetry.execute([:plushie, :runtime, :view_error], %{count: 1}, %{app: app})
@@ -1300,8 +1294,6 @@ defmodule Plushie.Runtime do
       """)
 
       :error
-  after
-    Process.delete(Plushie.Widget.Handler.widget_states_key())
   end
 
   defp validate_root_windows!(nil), do: :ok

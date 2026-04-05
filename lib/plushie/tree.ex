@@ -26,6 +26,12 @@ defmodule Plushie.Tree do
           required(:children) => [tree_node()]
         }
 
+  @typep normalize_ctx :: %{
+           scope: String.t(),
+           window_id: String.t() | nil,
+           widget_states: map()
+         }
+
   @empty_container %{
     id: "root",
     type: "container",
@@ -65,15 +71,26 @@ defmodule Plushie.Tree do
   malformed shapes raise.
   """
   @spec normalize(tree :: nil | tree_node() | [tree_node()] | struct()) :: tree_node()
-  def normalize(nil), do: @empty_container
+  def normalize(tree), do: normalize(tree, %{})
 
-  def normalize([]), do: @empty_container
+  @doc """
+  Normalizes a UI tree with explicit widget states.
 
-  def normalize([single]), do: normalize(single)
+  Same as `normalize/1` but uses the provided `widget_states` map for
+  stateful widget rendering instead of relying on the process dictionary.
+  """
+  @spec normalize(tree :: nil | tree_node() | [tree_node()] | struct(), widget_states :: map()) ::
+          tree_node()
+  def normalize(nil, _widget_states), do: @empty_container
 
-  def normalize([_ | _] = nodes) do
+  def normalize([], _widget_states), do: @empty_container
+
+  def normalize([single], widget_states), do: normalize(single, widget_states)
+
+  def normalize([_ | _] = nodes, widget_states) do
+    ctx = %{scope: "", window_id: nil, widget_states: widget_states}
     # Synthetic root wrapper -- does not create a scope boundary
-    children = normalize_children_with_scope(nodes, "", nil)
+    children = normalize_children_with_ctx(nodes, ctx)
 
     %{
       id: "root",
@@ -83,19 +100,19 @@ defmodule Plushie.Tree do
     }
   end
 
-  def normalize({:__widget_prop__, key, _value}) do
+  def normalize({:__widget_prop__, key, _value}, _widget_states) do
     raise ArgumentError,
           "found a DSL prop declaration (#{inspect(key)}) in the widget tree. " <>
             "Props should be declared inside a container's do-block, not passed as children."
   end
 
-  def normalize({:__canvas_meta__, type, _value}) do
+  def normalize({:__canvas_meta__, type, _value}, _widget_states) do
     raise ArgumentError,
           "found a canvas metadata declaration (#{inspect(type)}) in the widget tree. " <>
             "Canvas metadata should be inside a group block."
   end
 
-  def normalize(%module{} = widget) when is_atom(module) do
+  def normalize(%module{} = widget, widget_states) when is_atom(module) do
     if canvas_shape_struct_module?(module) do
       short_name = module |> Module.split() |> List.last()
 
@@ -104,28 +121,30 @@ defmodule Plushie.Tree do
               "Canvas shapes belong inside canvas layers, not in the widget tree."
     end
 
-    normalize(Plushie.Widget.to_node(widget))
+    normalize(Plushie.Widget.to_node(widget), widget_states)
   end
 
-  def normalize(%{} = node) do
-    normalize_with_scope(node, "", nil)
+  def normalize(%{} = node, widget_states) do
+    ctx = %{scope: "", window_id: nil, widget_states: widget_states}
+    normalize_with_ctx(node, ctx)
   end
 
-  # Private scope-aware normalize. `scope` is the prefix string to prepend
+  # Private context-aware normalize. ctx.scope is the prefix string to prepend
   # to children's IDs (e.g. "sidebar/form"). Empty string means no scope.
-  defp normalize_with_scope({:__widget_prop__, key, _value}, _scope, _window_id) do
+  @spec normalize_with_ctx(term(), normalize_ctx()) :: tree_node()
+  defp normalize_with_ctx({:__widget_prop__, key, _value}, _ctx) do
     raise ArgumentError,
           "found a DSL prop declaration (#{inspect(key)}) in the widget tree. " <>
             "Props should be declared inside a container's do-block, not passed as children."
   end
 
-  defp normalize_with_scope({:__canvas_meta__, type, _value}, _scope, _window_id) do
+  defp normalize_with_ctx({:__canvas_meta__, type, _value}, _ctx) do
     raise ArgumentError,
           "found a canvas metadata declaration (#{inspect(type)}) in the widget tree. " <>
             "Canvas metadata should be inside a group block."
   end
 
-  defp normalize_with_scope(%module{} = widget, scope, window_id) when is_atom(module) do
+  defp normalize_with_ctx(%module{} = widget, ctx) when is_atom(module) do
     if canvas_shape_struct_module?(module) do
       short_name = module |> Module.split() |> List.last()
 
@@ -134,10 +153,10 @@ defmodule Plushie.Tree do
               "Canvas shapes belong inside canvas layers, not in the widget tree."
     end
 
-    normalize_with_scope(Plushie.Widget.to_node(widget), scope, window_id)
+    normalize_with_ctx(Plushie.Widget.to_node(widget), ctx)
   end
 
-  defp normalize_with_scope(%{} = node, scope, window_id) do
+  defp normalize_with_ctx(%{} = node, ctx) do
     prev_depth = increment_depth!()
 
     try do
@@ -148,6 +167,8 @@ defmodule Plushie.Tree do
 
       id = to_string(raw_id)
       type_str = to_string(type)
+      scope = ctx.scope
+      window_id = ctx.window_id
 
       # Validate user-provided IDs
       unless auto_id?(id) do
@@ -172,6 +193,7 @@ defmodule Plushie.Tree do
         end
 
       child_window_id = if type_str == "window", do: scoped_id, else: window_id
+      child_ctx = %{ctx | scope: child_scope, window_id: child_window_id}
 
       atom_props =
         props
@@ -187,7 +209,7 @@ defmodule Plushie.Tree do
       # does NOT have __widget__ in its props, so normalization of
       # the output won't re-trigger rendering (no recursion possible).
       # Widget metadata is attached to the final node's :meta directly.
-      case render_widget_placeholder(meta, id, scoped_id, scope, window_id) do
+      case render_widget_placeholder(meta, id, scoped_id, ctx) do
         {:rendered, final_node} ->
           final_node
 
@@ -198,7 +220,7 @@ defmodule Plushie.Tree do
             id: scoped_id,
             type: type_str,
             props: normalized_props,
-            children: normalize_children_with_scope(children, child_scope, child_window_id)
+            children: normalize_children_with_ctx(children, child_ctx)
           }
 
           if meta == %{}, do: node, else: Map.put(node, :meta, meta)
@@ -217,13 +239,13 @@ defmodule Plushie.Tree do
   # recursion is possible. After normalization, stateful widget metadata
   # (module, state, props) is attached to :meta for registry derivation
   # and event interception.
-  @spec render_widget_placeholder(map(), String.t(), String.t(), String.t(), String.t() | nil) ::
+  @spec render_widget_placeholder(map(), String.t(), String.t(), normalize_ctx()) ::
           {:rendered, map()} | :not_a_widget_placeholder
-  defp render_widget_placeholder(meta, local_id, scoped_id, scope, window_id) do
+  defp render_widget_placeholder(meta, local_id, scoped_id, ctx) do
     case Map.get(meta, :__widget__) do
       module when is_atom(module) and not is_nil(module) ->
         widget_props = Map.get(meta, :__widget_props__, %{})
-        widget_state = lookup_widget_state(scoped_id, window_id, module)
+        widget_state = lookup_widget_state(scoped_id, module, ctx)
 
         # View with local ID -- normalization applies scoping.
         # State is always a map (empty for stateless widgets).
@@ -232,7 +254,7 @@ defmodule Plushie.Tree do
 
         # Normalize the raw canvas output. It has no __widget__
         # tags, so this is a plain normalization pass with no recursion.
-        normalized = normalize_with_scope(rendered, scope, window_id)
+        normalized = normalize_with_ctx(rendered, ctx)
 
         # Auto-apply standard widget options (:a11y, :event_rate) from the
         # original widget props to the top-level rendered node. This way
@@ -261,22 +283,15 @@ defmodule Plushie.Tree do
     end
   end
 
-  # Look up stored stateful widget state from the process dictionary
-  # (set by the runtime's safe_view). Falls back to initial state
-  # for new widgets, module mismatches, or when called outside a
-  # runtime context.
-  @spec lookup_widget_state(String.t(), String.t() | nil, module()) :: map()
-  defp lookup_widget_state(scoped_id, window_id, module) do
-    case Process.get(Plushie.Widget.Handler.widget_states_key()) do
-      registry when is_map(registry) ->
-        case Map.get(registry, {window_id, scoped_id}) do
-          %{module: ^module, state: state} -> state
-          %{module: _other} -> module.__initial_state__()
-          nil -> module.__initial_state__()
-        end
-
-      nil ->
-        module.__initial_state__()
+  # Look up stored stateful widget state from the context map.
+  # Falls back to initial state for new widgets, module mismatches,
+  # or when widget_states is empty.
+  @spec lookup_widget_state(String.t(), module(), normalize_ctx()) :: map()
+  defp lookup_widget_state(scoped_id, module, ctx) do
+    case Map.get(ctx.widget_states, {ctx.window_id, scoped_id}) do
+      %{module: ^module, state: state} -> state
+      %{module: _other} -> module.__initial_state__()
+      nil -> module.__initial_state__()
     end
   end
 
@@ -908,13 +923,14 @@ defmodule Plushie.Tree do
 
   defp decrement_depth(prev), do: Process.put(@depth_key, prev)
 
-  defp normalize_children_with_scope(children, scope, window_id) when is_list(children) do
-    normalized = Enum.map(children, &normalize_with_scope(&1, scope, window_id))
+  @spec normalize_children_with_ctx([term()], normalize_ctx()) :: [tree_node()]
+  defp normalize_children_with_ctx(children, ctx) when is_list(children) do
+    normalized = Enum.map(children, &normalize_with_ctx(&1, ctx))
     check_duplicate_ids(normalized)
     normalized
   end
 
-  defp normalize_children_with_scope(children, _scope, _window_id) do
+  defp normalize_children_with_ctx(children, _ctx) do
     raise ArgumentError, "widget children must be a list, got: #{inspect(children)}"
   end
 
