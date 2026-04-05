@@ -29,6 +29,7 @@ defmodule Mix.Tasks.Preflight do
       {"mix compile --warnings-as-errors", fn -> mix_compile() end},
       {"mix credo --strict", fn -> mix_cmd(["credo", "--strict"]) end},
       {"mix test", fn -> mix_cmd(["test"]) end},
+      {"mix test (headless)", fn -> mix_test_headless() end},
       {"mix docs --warnings-as-errors", fn -> mix_docs() end},
       {"mix dialyzer", fn -> mix_cmd(["dialyzer"]) end}
     ]
@@ -64,6 +65,11 @@ defmodule Mix.Tasks.Preflight do
     exit_code_to_result(
       stream_cmd("mix", ["docs", "--warnings-as-errors"], env: [{"MIX_ENV", "dev"}])
     )
+  end
+
+  @spec mix_test_headless() :: step_result()
+  defp mix_test_headless do
+    exit_code_to_result(stream_cmd("mix", ["test"], env: [{"PLUSHIE_TEST_BACKEND", "headless"}]))
   end
 
   @spec mix_cmd([String.t()]) :: step_result()
