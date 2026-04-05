@@ -183,10 +183,9 @@ defmodule Mix.Tasks.Plushie.Build do
               {String.to_integer(major), String.to_integer(minor), String.to_integer(patch)}
 
             if version < @min_rust_version do
-              Mix.shell().info(
-                "Warning: rustc #{major}.#{minor}.#{patch} detected, " <>
-                  "but plushie requires >= #{min_str}. " <>
-                  "Consider upgrading with `rustup update`."
+              Mix.raise(
+                "rustc #{major}.#{minor}.#{patch} is too old for plushie " <>
+                  "(requires >= #{min_str}). Upgrade with: rustup update"
               )
             end
 
@@ -347,7 +346,8 @@ defmodule Mix.Tasks.Plushie.Build do
       {output, 0} ->
         Mix.shell().info("Build succeeded.")
         if verbose?, do: Mix.shell().info(output)
-        binary = Path.join([build_dir, "target", profile, bin_name])
+        ext = if :os.type() |> elem(0) == :win32, do: ".exe", else: ""
+        binary = Path.join([build_dir, "target", profile, bin_name <> ext])
         install_bin_to(binary, opts)
 
       {output, status} ->
@@ -387,12 +387,22 @@ defmodule Mix.Tasks.Plushie.Build do
 
   defp generate_workspace(build_dir, bin_name, widgets, crate_paths) do
     cargo_toml = generate_cargo_toml(bin_name, widgets, crate_paths, build_dir)
-    File.write!(Path.join(build_dir, "Cargo.toml"), cargo_toml)
+    write_if_changed(Path.join(build_dir, "Cargo.toml"), cargo_toml)
 
     src_dir = Path.join(build_dir, "src")
     File.mkdir_p!(src_dir)
     main_rs = generate_main_rs(widgets)
-    File.write!(Path.join(src_dir, "main.rs"), main_rs)
+    write_if_changed(Path.join(src_dir, "main.rs"), main_rs)
+  end
+
+  # Writes content to path only if it differs from the existing file.
+  # Avoids mtime changes on identical content so Cargo skips recompilation.
+  defp write_if_changed(path, content) do
+    if File.read(path) == {:ok, content} do
+      :ok
+    else
+      File.write!(path, content)
+    end
   end
 
   # Each native widget crate should depend on a plushie-ext version compatible
