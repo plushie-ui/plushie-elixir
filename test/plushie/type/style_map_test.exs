@@ -32,7 +32,7 @@ defmodule Plushie.Type.StyleMapTest do
 
     test "casts named atom through Color.cast" do
       style = StyleMap.new() |> StyleMap.background(:red)
-      assert style.background == Color.cast(:red)
+      assert {:ok, style.background} == Color.cast(:red)
       assert style.background == "#ff0000"
     end
   end

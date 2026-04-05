@@ -214,7 +214,7 @@ Set `sortable: true` on columns that support sorting. The table emits
 `:sort` events when a sortable header is clicked:
 
 ```elixir
-def update(model, %WidgetEvent{type: :sort, id: "users", data: %{column: col}}) do
+def update(model, %WidgetEvent{type: :sort, id: "users", value: %{column: col}}) do
   dir = if model.sort_by == col and model.sort_order == :asc, do: :desc, else: :asc
   %{model | sort_by: col, sort_order: dir}
 end

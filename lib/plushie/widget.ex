@@ -301,7 +301,7 @@ defmodule Plushie.Widget do
 
       event :select, value: :float
 
-  ## Structured data (goes in `WidgetEvent.data` with atom keys)
+  ## Structured data (goes in `WidgetEvent.value` as an atom-keyed map)
 
       event :change, data: [hue: :float, saturation: :float]
 
@@ -701,7 +701,7 @@ defmodule Plushie.Widget do
                 "event data: must be a keyword list of [field: type], got: #{inspect(fields)}"
           end
 
-          %{carrier: :data, fields: fields, required: Keyword.keys(fields)}
+          %{carrier: :value, fields: fields, required: Keyword.keys(fields)}
 
         opts == [] ->
           %{carrier: :none}
@@ -748,7 +748,7 @@ defmodule Plushie.Widget do
               description: "event data: must be a keyword list of [field: type]"
           end
 
-          %{carrier: :data, fields: fields, required: Keyword.keys(fields)}
+          %{carrier: :value, fields: fields, required: Keyword.keys(fields)}
 
         _other, acc ->
           acc
@@ -759,7 +759,7 @@ defmodule Plushie.Widget do
   # Parses a list of `field` statements into a data spec with required tracking.
   defp parse_data_block_to_spec(stmts, caller) do
     {fields, required} = parse_data_stmts(stmts, caller)
-    %{carrier: :data, fields: fields, required: required}
+    %{carrier: :value, fields: fields, required: required}
   end
 
   defp block_to_list({:__block__, _, stmts}), do: stmts
@@ -804,7 +804,7 @@ defmodule Plushie.Widget do
       %{carrier: :value, type: type} ->
         validate_event_field_type!(name, nil, type, caller)
 
-      %{carrier: :data, fields: fields} ->
+      %{carrier: :value, fields: fields} ->
         Enum.each(fields, fn {field_name, type} ->
           validate_event_field_type!(name, field_name, type, caller)
         end)
@@ -1288,13 +1288,13 @@ defmodule Plushie.Widget do
     "`value: #{type_display_string(type)}`"
   end
 
-  defp event_spec_display(%{carrier: :data, fields: fields}) do
+  defp event_spec_display(%{carrier: :value, fields: fields}) do
     fields_str =
       Enum.map_join(fields, ", ", fn {name, type} ->
         "#{name}: #{type_display_string(type)}"
       end)
 
-    "`data: [#{fields_str}]`"
+    "`value: %{#{fields_str}}`"
   end
 
   @doc false
@@ -1798,7 +1798,8 @@ defmodule Plushie.Widget do
         @doc "Sets accessibility annotations."
         @spec a11y(widget :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
         def a11y(%__MODULE__{} = widget, a11y) do
-          %{widget | a11y: Plushie.Type.A11y.cast(a11y)}
+          {:ok, casted} = Plushie.Type.A11y.cast(a11y)
+          %{widget | a11y: casted}
         end
       end
 
@@ -1852,7 +1853,10 @@ defmodule Plushie.Widget do
                 props,
                 widget.unquote(name),
                 unquote(wire_key),
-                fn val -> Plushie.Type.Color.cast(val) end
+                fn val ->
+                  {:ok, casted} = Plushie.Type.Color.cast(val)
+                  casted
+                end
               )
           end
         else
@@ -1942,7 +1946,12 @@ defmodule Plushie.Widget do
 
       module ->
         if function_exported?(module, :cast, 1) and module in @setter_cast_types do
-          quote(do: fn val -> unquote(module).cast(val) end)
+          quote do
+            fn val ->
+              {:ok, casted} = unquote(module).cast(val)
+              casted
+            end
+          end
         else
           quote(do: fn val -> val end)
         end

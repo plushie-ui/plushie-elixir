@@ -357,7 +357,7 @@ defmodule Plushie.ProtocolParityTest do
     test "decodes cursor position as WidgetEvent" do
       json = Jason.encode!(%{type: "event", family: "cursor_moved", data: %{x: 100.5, y: 200.3}})
 
-      assert %WidgetEvent{type: :move, id: "__global__", scope: [], data: data} =
+      assert %WidgetEvent{type: :move, id: "__global__", scope: [], value: data} =
                Protocol.decode_message(json, :json)
 
       assert data.x == 100.5
@@ -369,7 +369,7 @@ defmodule Plushie.ProtocolParityTest do
     test "decodes integer coordinates" do
       json = Jason.encode!(%{type: "event", family: "cursor_moved", data: %{x: 0, y: 0}})
 
-      assert %WidgetEvent{type: :move, data: %{x: 0, y: 0}} =
+      assert %WidgetEvent{type: :move, value: %{x: 0, y: 0}} =
                Protocol.decode_message(json, :json)
     end
 
@@ -409,7 +409,7 @@ defmodule Plushie.ProtocolParityTest do
     test "decodes mouse button press as WidgetEvent" do
       json = Jason.encode!(%{type: "event", family: "button_pressed", value: "left"})
 
-      assert %WidgetEvent{type: :press, id: "__global__", scope: [], data: data} =
+      assert %WidgetEvent{type: :press, id: "__global__", scope: [], value: data} =
                Protocol.decode_message(json, :json)
 
       assert data.button == :left
@@ -420,7 +420,7 @@ defmodule Plushie.ProtocolParityTest do
     test "decodes right button press" do
       json = Jason.encode!(%{type: "event", family: "button_pressed", value: "right"})
 
-      assert %WidgetEvent{type: :press, data: %{button: :right}} =
+      assert %WidgetEvent{type: :press, value: %{button: :right}} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -429,7 +429,7 @@ defmodule Plushie.ProtocolParityTest do
     test "decodes mouse button release as WidgetEvent" do
       json = Jason.encode!(%{type: "event", family: "button_released", value: "left"})
 
-      assert %WidgetEvent{type: :release, data: %{button: :left, pointer: :mouse}} =
+      assert %WidgetEvent{type: :release, value: %{button: :left, pointer: :mouse}} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -443,7 +443,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{delta_x: 0.0, delta_y: -3.0, unit: "line"}
         })
 
-      assert %WidgetEvent{type: :scroll, data: data} = Protocol.decode_message(json, :json)
+      assert %WidgetEvent{type: :scroll, value: data} = Protocol.decode_message(json, :json)
       assert data.delta_x == +0.0
       assert data.delta_y == -3.0
       assert data.unit == :line
@@ -459,7 +459,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{delta_x: 10.0, delta_y: 20.0, unit: "pixel"}
         })
 
-      assert %WidgetEvent{type: :scroll, data: %{unit: :pixel, delta_x: 10.0, delta_y: 20.0}} =
+      assert %WidgetEvent{type: :scroll, value: %{unit: :pixel, delta_x: 10.0, delta_y: 20.0}} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -473,7 +473,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{id: 0, x: 50.0, y: 75.0}
         })
 
-      assert %WidgetEvent{type: :press, data: data} = Protocol.decode_message(json, :json)
+      assert %WidgetEvent{type: :press, value: data} = Protocol.decode_message(json, :json)
       assert data.pointer == :touch
       assert data.finger == 0
       assert data.x == 50.0
@@ -491,7 +491,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{id: 1, x: 60.0, y: 80.0}
         })
 
-      assert %WidgetEvent{type: :move, data: %{pointer: :touch, finger: 1, x: 60.0, y: 80.0}} =
+      assert %WidgetEvent{type: :move, value: %{pointer: :touch, finger: 1, x: 60.0, y: 80.0}} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -507,7 +507,7 @@ defmodule Plushie.ProtocolParityTest do
 
       assert %WidgetEvent{
                type: :release,
-               data: %{pointer: :touch, finger: 0, x: 55.0, y: 70.0}
+               value: %{pointer: :touch, finger: 0, x: 55.0, y: 70.0}
              } = Protocol.decode_message(json, :json)
     end
   end
@@ -521,7 +521,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{id: 2, x: 30.0, y: 40.0}
         })
 
-      assert %WidgetEvent{type: :release, data: data} = Protocol.decode_message(json, :json)
+      assert %WidgetEvent{type: :release, value: data} = Protocol.decode_message(json, :json)
       assert data.pointer == :touch
       assert data.finger == 2
       assert data.lost == true
@@ -754,7 +754,7 @@ defmodule Plushie.ProtocolParityTest do
                id: "box",
                scope: ["main"],
                window_id: "main",
-               data: %{tag: :faded_out, prop: "opacity"}
+               value: %{tag: :faded_out, prop: "opacity"}
              } = Protocol.decode_message(json, :json)
     end
 
@@ -773,7 +773,7 @@ defmodule Plushie.ProtocolParityTest do
                id: "box",
                scope: ["main"],
                window_id: "main",
-               data: %{tag: nil, prop: "opacity"}
+               value: %{tag: nil, prop: "opacity"}
              } = Protocol.decode_message(json, :json)
     end
   end
@@ -817,7 +817,7 @@ defmodule Plushie.ProtocolParityTest do
                type: :press,
                id: "canvas1",
                window_id: "main",
-               data: %{
+               value: %{
                  x: 100.5,
                  y: 200.3,
                  button: :left,
@@ -838,7 +838,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{x: 50.0, y: 75.0, button: "right", pointer: "mouse"}
         })
 
-      assert %WidgetEvent{type: :press, data: %{button: :right, pointer: :mouse}} =
+      assert %WidgetEvent{type: :press, value: %{button: :right, pointer: :mouse}} =
                Protocol.decode_message(json, :json)
     end
 
@@ -852,7 +852,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{x: 50.0, y: 75.0, button: "left", pointer: "touch", finger: 0}
         })
 
-      assert %WidgetEvent{type: :press, data: %{pointer: :touch, finger: 0}} =
+      assert %WidgetEvent{type: :press, value: %{pointer: :touch, finger: 0}} =
                Protocol.decode_message(json, :json)
     end
 
@@ -866,7 +866,7 @@ defmodule Plushie.ProtocolParityTest do
           data: %{x: 10.0, y: 20.0}
         })
 
-      assert %WidgetEvent{type: :press, data: %{button: :left, pointer: :mouse}} =
+      assert %WidgetEvent{type: :press, value: %{button: :left, pointer: :mouse}} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -885,7 +885,7 @@ defmodule Plushie.ProtocolParityTest do
       assert %WidgetEvent{
                type: :release,
                id: "canvas1",
-               data: %{x: 100.0, y: 200.0, button: :left}
+               value: %{x: 100.0, y: 200.0, button: :left}
              } = Protocol.decode_message(json, :json)
     end
   end
@@ -904,7 +904,7 @@ defmodule Plushie.ProtocolParityTest do
       assert %WidgetEvent{
                type: :move,
                id: "canvas1",
-               data: %{x: 55.5, y: 88.2, pointer: :pen, finger: nil}
+               value: %{x: 55.5, y: 88.2, pointer: :pen, finger: nil}
              } = Protocol.decode_message(json, :json)
     end
   end
@@ -929,7 +929,7 @@ defmodule Plushie.ProtocolParityTest do
 
       assert %WidgetEvent{
                type: :scroll,
-               data: %{
+               value: %{
                  delta_y: -3.0,
                  pointer: :mouse,
                  modifiers: %Plushie.KeyModifiers{ctrl: true}
@@ -982,7 +982,7 @@ defmodule Plushie.ProtocolParityTest do
       assert %WidgetEvent{
                type: :double_click,
                id: "area",
-               data: %{x: 75.0, y: 150.0, pointer: :mouse}
+               value: %{x: 75.0, y: 150.0, pointer: :mouse}
              } = Protocol.decode_message(json, :json)
     end
   end
@@ -1002,7 +1002,7 @@ defmodule Plushie.ProtocolParityTest do
                type: :resize,
                id: "sensor1",
                window_id: "main",
-               data: %{width: 800.0, height: 600.0}
+               value: %{width: 800.0, height: 600.0}
              } = Protocol.decode_message(json, :json)
     end
   end

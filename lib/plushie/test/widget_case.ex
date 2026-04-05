@@ -132,7 +132,7 @@ defmodule Plushie.Test.WidgetCase.HarnessApp do
 
   @impl true
   def update(model, %Plushie.Event.WidgetEvent{} = event) do
-    data = event.data || %{}
+    data = if is_map(event.value), do: event.value, else: %{}
 
     model
     |> Map.merge(atomize_data(data))

@@ -13,7 +13,7 @@ defmodule Plushie.SensorTest do
         "data" => %{"width" => 450.0, "height" => 300.0}
       }
 
-      assert %WidgetEvent{type: :resize, id: "s1", data: %{width: 450.0, height: 300.0}} =
+      assert %WidgetEvent{type: :resize, id: "s1", value: %{width: 450.0, height: 300.0}} =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
@@ -26,7 +26,7 @@ defmodule Plushie.SensorTest do
         "data" => %{"width" => 800, "height" => 600}
       }
 
-      assert %WidgetEvent{type: :resize, id: "s1", data: %{width: 800, height: 600}} =
+      assert %WidgetEvent{type: :resize, id: "s1", value: %{width: 800, height: 600}} =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
   end

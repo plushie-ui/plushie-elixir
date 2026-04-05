@@ -85,7 +85,7 @@ defmodule Plushie.Docs.EventsTest do
       type: :scroll,
       id: "log_view",
       scope: [],
-      data: %{
+      value: %{
         absolute_x: 0.0,
         absolute_y: 150.0,
         relative_x: 0.0,
@@ -96,8 +96,8 @@ defmodule Plushie.Docs.EventsTest do
     }
 
     assert match?(%WidgetEvent{type: :scroll, id: "log_view"}, event)
-    assert event.data.relative_y == 0.75
-    refute event.data.relative_y >= 0.99
+    assert event.value.relative_y == 0.75
+    refute event.value.relative_y >= 0.99
   end
 
   test "events_widget_paste_match_test" do
@@ -142,12 +142,12 @@ defmodule Plushie.Docs.EventsTest do
       type: :move,
       id: "canvas_area",
       scope: [],
-      data: %{x: 10.0, y: 20.0, pointer: :mouse}
+      value: %{x: 10.0, y: 20.0, pointer: :mouse}
     }
 
     assert match?(%WidgetEvent{type: :move, id: "canvas_area"}, event)
-    assert event.data.x == 10.0
-    assert event.data.y == 20.0
+    assert event.value.x == 10.0
+    assert event.value.y == 20.0
   end
 
   test "events_pointer_press_match_test" do
@@ -155,16 +155,16 @@ defmodule Plushie.Docs.EventsTest do
       type: :press,
       id: "draw_area",
       scope: [],
-      data: %{x: 42.0, y: 100.0, button: :left, pointer: :mouse}
+      value: %{x: 42.0, y: 100.0, button: :left, pointer: :mouse}
     }
 
     assert match?(
-             %WidgetEvent{type: :press, id: "draw_area", data: %{button: :left}},
+             %WidgetEvent{type: :press, id: "draw_area", value: %{button: :left}},
              event
            )
 
-    assert event.data.x == 42.0
-    assert event.data.y == 100.0
+    assert event.value.x == 42.0
+    assert event.value.y == 100.0
   end
 
   test "events_pointer_move_canvas_match_test" do
@@ -172,12 +172,12 @@ defmodule Plushie.Docs.EventsTest do
       type: :move,
       id: "draw_area",
       scope: [],
-      data: %{x: 5.0, y: 10.0, pointer: :mouse}
+      value: %{x: 5.0, y: 10.0, pointer: :mouse}
     }
 
     assert match?(%WidgetEvent{type: :move, id: "draw_area"}, event)
-    assert event.data.x == 5.0
-    assert event.data.y == 10.0
+    assert event.value.x == 5.0
+    assert event.value.y == 10.0
   end
 
   test "events_canvas_element_click_is_scoped_click_test" do
@@ -186,7 +186,7 @@ defmodule Plushie.Docs.EventsTest do
       type: :click,
       id: "bar-jan",
       scope: ["chart"],
-      data: %{x: 15.0, y: 70.0, button: :left}
+      value: %{x: 15.0, y: 70.0, button: :left}
     }
 
     assert match?(%WidgetEvent{type: :click, id: "bar-jan", scope: ["chart" | _]}, event)
@@ -199,12 +199,12 @@ defmodule Plushie.Docs.EventsTest do
       type: :resize,
       id: "content_area",
       scope: [],
-      data: %{width: 800.0, height: 600.0}
+      value: %{width: 800.0, height: 600.0}
     }
 
     assert match?(%WidgetEvent{type: :resize, id: "content_area"}, event)
-    assert event.data.width == 800.0
-    assert event.data.height == 600.0
+    assert event.value.width == 800.0
+    assert event.value.height == 600.0
   end
 
   # -- PaneGrid events ---------------------------------------------------------
@@ -214,15 +214,15 @@ defmodule Plushie.Docs.EventsTest do
       type: :pane_resized,
       id: "editor",
       scope: [],
-      data: %{split: "split_1", ratio: 0.5}
+      value: %{split: "split_1", ratio: 0.5}
     }
 
     assert match?(%WidgetEvent{type: :pane_resized, id: "editor"}, event)
-    assert event.data.ratio == 0.5
+    assert event.value.ratio == 0.5
   end
 
   test "events_pane_clicked_match_test" do
-    event = %WidgetEvent{type: :pane_clicked, id: "editor", scope: [], data: %{pane: "left"}}
+    event = %WidgetEvent{type: :pane_clicked, id: "editor", scope: [], value: %{pane: "left"}}
 
     assert match?(%WidgetEvent{type: :pane_clicked, id: "editor"}, event)
   end
@@ -328,34 +328,34 @@ defmodule Plushie.Docs.EventsTest do
     event = %WidgetEvent{
       type: :move,
       id: "main",
-      data: %{x: 100.0, y: 200.0, pointer: :mouse, captured: false}
+      value: %{x: 100.0, y: 200.0, pointer: :mouse, captured: false}
     }
 
-    assert event.data.x == 100.0
-    assert event.data.y == 200.0
-    assert event.data.pointer == :mouse
+    assert event.value.x == 100.0
+    assert event.value.y == 200.0
+    assert event.value.pointer == :mouse
   end
 
   test "events_pointer_button_pressed_match_test" do
     event = %WidgetEvent{
       type: :press,
       id: "main",
-      data: %{button: :left, pointer: :mouse, captured: false}
+      value: %{button: :left, pointer: :mouse, captured: false}
     }
 
-    assert match?(%WidgetEvent{type: :press, data: %{button: :left}}, event)
+    assert match?(%WidgetEvent{type: :press, value: %{button: :left}}, event)
   end
 
   test "events_touch_pressed_match_test" do
     event = %WidgetEvent{
       type: :press,
       id: "main",
-      data: %{pointer: :touch, finger: 0, x: 50.0, y: 75.0, button: :left, captured: false}
+      value: %{pointer: :touch, finger: 0, x: 50.0, y: 75.0, button: :left, captured: false}
     }
 
-    assert event.data.x == 50.0
-    assert event.data.y == 75.0
-    assert event.data.pointer == :touch
+    assert event.value.x == 50.0
+    assert event.value.y == 75.0
+    assert event.value.pointer == :touch
   end
 
   # -- Modifier state events ---------------------------------------------------

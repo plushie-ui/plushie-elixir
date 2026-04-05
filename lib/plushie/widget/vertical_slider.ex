@@ -145,7 +145,7 @@ defmodule Plushie.Widget.VerticalSlider do
   @doc "Sets the rail color."
   @spec rail_color(vertical_slider :: t(), rail_color :: Plushie.Type.Color.input()) :: t()
   def rail_color(%__MODULE__{} = slider, rail_color),
-    do: %{slider | rail_color: Color.cast(rail_color)}
+    do: %{slider | rail_color: elem(Color.cast(rail_color), 1)}
 
   @doc "Sets the rail width in pixels."
   @spec rail_width(vertical_slider :: t(), rail_width :: number()) :: t()
@@ -175,7 +175,15 @@ defmodule Plushie.Widget.VerticalSlider do
 
   @doc "Sets accessibility annotations."
   @spec a11y(vertical_slider :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = slider, a11y), do: %{slider | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = slider, a11y),
+    do: %{
+      slider
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this vertical slider struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(vertical_slider :: t()) :: Plushie.Widget.ui_node()

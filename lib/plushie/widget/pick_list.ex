@@ -214,7 +214,15 @@ defmodule Plushie.Widget.PickList do
 
   @doc "Sets accessibility annotations."
   @spec a11y(pick_list :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = pl, a11y), do: %{pl | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = pl, a11y),
+    do: %{
+      pl
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this pick list struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(pick_list :: t()) :: Plushie.Widget.ui_node()

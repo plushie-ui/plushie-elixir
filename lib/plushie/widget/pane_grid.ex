@@ -136,7 +136,7 @@ defmodule Plushie.Widget.PaneGrid do
   @doc "Sets the divider color."
   @spec divider_color(pane_grid :: t(), divider_color :: Plushie.Type.Color.input()) :: t()
   def divider_color(%__MODULE__{} = pg, divider_color),
-    do: %{pg | divider_color: Color.cast(divider_color)}
+    do: %{pg | divider_color: elem(Color.cast(divider_color), 1)}
 
   @doc "Sets the divider width in pixels."
   @spec divider_width(pane_grid :: t(), divider_width :: number()) :: t()
@@ -170,7 +170,15 @@ defmodule Plushie.Widget.PaneGrid do
 
   @doc "Sets accessibility annotations."
   @spec a11y(pane_grid :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = pg, a11y), do: %{pg | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = pg, a11y),
+    do: %{
+      pg
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this pane grid struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(pane_grid :: t()) :: Plushie.Widget.ui_node()

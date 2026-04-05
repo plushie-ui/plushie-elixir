@@ -370,7 +370,7 @@ end
 
 def update(model, %WidgetEvent{type: :click, id: "drag-start"}), do: %{model | dragging: true}
 def update(model, %WidgetEvent{type: :click, id: "drag-end"}), do: %{model | dragging: false}
-def update(model, %WidgetEvent{type: :move, data: %{x: x}}), do: %{model | split_width: max(100, x)}
+def update(model, %WidgetEvent{type: :move, value: %{x: x}}), do: %{model | split_width: max(100, x)}
 ```
 
 ### Badges and chips
@@ -571,7 +571,7 @@ pointer_area "item-#{item.id}",
   text(item.id, item.name)
 end
 
-def update(model, %WidgetEvent{type: :press, data: %{button: :right}, scope: [item_id | _]}) do
+def update(model, %WidgetEvent{type: :press, value: %{button: :right}, scope: [item_id | _]}) do
   %{model | context_menu: %{item_id: item_id, x: model.cursor_x, y: model.cursor_y}}
 end
 

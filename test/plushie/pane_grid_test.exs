@@ -88,7 +88,7 @@ defmodule Plushie.PaneGridTest do
         "data" => %{"split" => 0, "ratio" => 0.45}
       }
 
-      assert %WidgetEvent{type: :pane_resized, id: "pg1", data: %{split: 0, ratio: 0.45}} =
+      assert %WidgetEvent{type: :pane_resized, id: "pg1", value: %{split: 0, ratio: 0.45}} =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
@@ -101,7 +101,7 @@ defmodule Plushie.PaneGridTest do
         "data" => %{"pane" => "left", "target" => "right"}
       }
 
-      assert %WidgetEvent{type: :pane_dragged, id: "pg1", data: %{pane: "left", target: "right"}} =
+      assert %WidgetEvent{type: :pane_dragged, id: "pg1", value: %{pane: "left", target: "right"}} =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
@@ -133,7 +133,7 @@ defmodule Plushie.PaneGridTest do
         "data" => %{"pane" => "left"}
       }
 
-      assert %WidgetEvent{type: :pane_clicked, id: "pg1", data: %{pane: "left"}} =
+      assert %WidgetEvent{type: :pane_clicked, id: "pg1", value: %{pane: "left"}} =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
   end

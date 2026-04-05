@@ -130,7 +130,8 @@ defmodule Plushie.Widget.Text do
 
   @doc "Sets the text color."
   @spec color(text :: t(), color :: Plushie.Type.Color.input()) :: t()
-  def color(%__MODULE__{} = txt, color), do: %{txt | color: Plushie.Type.Color.cast(color)}
+  def color(%__MODULE__{} = txt, color),
+    do: %{txt | color: elem(Plushie.Type.Color.cast(color), 1)}
 
   @doc "Sets the font."
   @spec font(text :: t(), font :: Plushie.Type.Font.t()) :: t()
@@ -175,7 +176,15 @@ defmodule Plushie.Widget.Text do
 
   @doc "Sets accessibility annotations."
   @spec a11y(text :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = txt, a11y), do: %{txt | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = txt, a11y),
+    do: %{
+      txt
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this text struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(text :: t()) :: Plushie.Widget.ui_node()

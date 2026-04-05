@@ -56,7 +56,7 @@ defmodule Plushie.Type.Gradient do
 
   # All stop colors are normalized to canonical hex strings via Color.cast.
   # This covers hex strings, named atoms, and float RGBA maps.
-  defp cast_stop_color(color), do: Plushie.Type.Color.cast(color)
+  defp cast_stop_color(color), do: elem(Plushie.Type.Color.cast(color), 1)
 
   @doc "Encodes a gradient to the wire format."
   @spec encode(gradient :: t()) :: t()

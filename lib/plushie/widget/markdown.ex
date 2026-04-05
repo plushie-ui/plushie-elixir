@@ -141,7 +141,7 @@ defmodule Plushie.Widget.Markdown do
   @doc "Sets the link text color."
   @spec link_color(markdown :: t(), link_color :: Plushie.Type.Color.input()) :: t()
   def link_color(%__MODULE__{} = md, link_color),
-    do: %{md | link_color: Color.cast(link_color)}
+    do: %{md | link_color: elem(Color.cast(link_color), 1)}
 
   @doc "Sets the syntax highlighting theme for code blocks."
   @spec code_theme(markdown :: t(), code_theme :: String.t()) :: t()
@@ -150,7 +150,15 @@ defmodule Plushie.Widget.Markdown do
 
   @doc "Sets accessibility annotations."
   @spec a11y(markdown :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = md, a11y), do: %{md | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = md, a11y),
+    do: %{
+      md
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this markdown struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(markdown :: t()) :: Plushie.Widget.ui_node()

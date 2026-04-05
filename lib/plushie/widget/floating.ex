@@ -108,7 +108,15 @@ defmodule Plushie.Widget.Floating do
 
   @doc "Sets accessibility annotations."
   @spec a11y(floating :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = fw, a11y), do: %{fw | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = fw, a11y),
+    do: %{
+      fw
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this float struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(floating :: t()) :: Plushie.Widget.ui_node()

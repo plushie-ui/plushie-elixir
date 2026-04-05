@@ -228,11 +228,11 @@ defmodule Plushie.Widget.Container do
     do: %{c | background: gradient}
 
   def background(%__MODULE__{} = c, background),
-    do: %{c | background: Plushie.Type.Color.cast(background)}
+    do: %{c | background: elem(Plushie.Type.Color.cast(background), 1)}
 
   @doc "Sets the text color override."
   @spec color(container :: t(), color :: Plushie.Type.Color.input()) :: t()
-  def color(%__MODULE__{} = c, color), do: %{c | color: Plushie.Type.Color.cast(color)}
+  def color(%__MODULE__{} = c, color), do: %{c | color: elem(Plushie.Type.Color.cast(color), 1)}
 
   @doc "Sets the border specification."
   @spec border(container :: t(), border :: Plushie.Type.Border.t()) :: t()
@@ -259,7 +259,15 @@ defmodule Plushie.Widget.Container do
 
   @doc "Sets accessibility annotations."
   @spec a11y(container :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = c, a11y), do: %{c | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = c, a11y),
+    do: %{
+      c
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this container struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(container :: t()) :: Plushie.Widget.ui_node()

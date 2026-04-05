@@ -174,7 +174,7 @@ defmodule Plushie.RuntimeTest do
 
     def init(_opts), do: %{events: []}
 
-    def update(model, %Plushie.Event.WidgetEvent{type: :move, data: %{pointer: :mouse}}) do
+    def update(model, %Plushie.Event.WidgetEvent{type: :move, value: %{pointer: :mouse}}) do
       %{model | events: model.events ++ [:mouse]}
     end
 
@@ -1454,7 +1454,7 @@ defmodule Plushie.RuntimeTest do
          %Plushie.Event.WidgetEvent{
            type: :move,
            id: "__global__",
-           data: %{
+           value: %{
              x: 1,
              y: 1,
              pointer: :mouse,
@@ -1470,7 +1470,7 @@ defmodule Plushie.RuntimeTest do
          %Plushie.Event.WidgetEvent{
            type: :resize,
            id: "win",
-           data: %{width: 10, height: 10}
+           value: %{width: 10, height: 10}
          }}
       )
 
@@ -1490,7 +1490,7 @@ defmodule Plushie.RuntimeTest do
            id: "size",
            scope: [],
            window_id: "main",
-           data: %{width: 10, height: 10}
+           value: %{width: 10, height: 10}
          }}
       )
 
@@ -1502,7 +1502,7 @@ defmodule Plushie.RuntimeTest do
            id: "size",
            scope: [],
            window_id: "prefs",
-           data: %{width: 20, height: 20}
+           value: %{width: 20, height: 20}
          }}
       )
 

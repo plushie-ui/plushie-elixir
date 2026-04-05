@@ -121,7 +121,7 @@ Custom widgets declare events with the `event` macro. Their `:type` field
 uses a `{widget_type, event_name}` tuple instead of a bare atom:
 
 ```elixir
-%WidgetEvent{type: {:color_picker, :change}, id: "picker", data: %{hue: 180}}
+%WidgetEvent{type: {:color_picker, :change}, id: "picker", value: %{hue: 180}}
 ```
 
 The carrier (value vs. data) and field types are defined by the widget's
@@ -195,27 +195,27 @@ Global mouse and touch subscription events are delivered as
 `Plushie.Event.WidgetEvent` structs where `id` is the window ID
 (or `"__global__"` when no window context) and `scope` is `[]`.
 
-**Mouse move** (`cursor_moved`): `%WidgetEvent{type: :move, data: %{x, y, pointer: :mouse, captured, modifiers}}`
+**Mouse move** (`cursor_moved`): `%WidgetEvent{type: :move, value: %{x, y, pointer: :mouse, captured, modifiers}}`
 
-**Cursor enter/exit**: `%WidgetEvent{type: :enter | :exit, data: %{captured}}`
+**Cursor enter/exit**: `%WidgetEvent{type: :enter | :exit, value: %{captured}}`
 
 **Button press/release** (`button_pressed`, `button_released`):
-`%WidgetEvent{type: :press | :release, data: %{button, pointer: :mouse, x: nil, y: nil, captured, modifiers}}`
+`%WidgetEvent{type: :press | :release, value: %{button, pointer: :mouse, x: nil, y: nil, captured, modifiers}}`
 
 **Scroll** (`wheel_scrolled`):
-`%WidgetEvent{type: :scroll, data: %{delta_x, delta_y, unit, pointer: :mouse, captured, modifiers}}`
+`%WidgetEvent{type: :scroll, value: %{delta_x, delta_y, unit, pointer: :mouse, captured, modifiers}}`
 
 **Touch press** (`finger_pressed`):
-`%WidgetEvent{type: :press, data: %{pointer: :touch, finger, x, y, button: :left, captured, modifiers}}`
+`%WidgetEvent{type: :press, value: %{pointer: :touch, finger, x, y, button: :left, captured, modifiers}}`
 
 **Touch move** (`finger_moved`):
-`%WidgetEvent{type: :move, data: %{pointer: :touch, finger, x, y, captured, modifiers}}`
+`%WidgetEvent{type: :move, value: %{pointer: :touch, finger, x, y, captured, modifiers}}`
 
 **Touch release** (`finger_lifted`):
-`%WidgetEvent{type: :release, data: %{pointer: :touch, finger, x, y, button: :left, captured, modifiers}}`
+`%WidgetEvent{type: :release, value: %{pointer: :touch, finger, x, y, button: :left, captured, modifiers}}`
 
 **Touch lost** (`finger_lost`):
-`%WidgetEvent{type: :release, data: %{pointer: :touch, finger, x, y, button: :left, lost: true, captured, modifiers}}`
+`%WidgetEvent{type: :release, value: %{pointer: :touch, finger, x, y, button: :left, lost: true, captured, modifiers}}`
 
 ### `Plushie.Event.ImeEvent`
 
@@ -399,7 +399,7 @@ end
 ### Match custom widget event
 
 ```elixir
-def update(model, %WidgetEvent{type: {:color_picker, :change}, data: %{hue: h}}) do
+def update(model, %WidgetEvent{type: {:color_picker, :change}, value: %{hue: h}}) do
   %{model | hue: h}
 end
 ```

@@ -300,10 +300,10 @@ identifies the device, and `finger` carries the touch finger ID:
 
 ```elixir
 # Mouse click
-%WidgetEvent{type: :press, data: %{x: 150.0, y: 75.0, button: :left, pointer: :mouse, modifiers: %KeyModifiers{}}}
+%WidgetEvent{type: :press, value: %{x: 150.0, y: 75.0, button: :left, pointer: :mouse, modifiers: %KeyModifiers{}}}
 
 # Touch press
-%WidgetEvent{type: :press, data: %{x: 150.0, y: 75.0, button: :left, pointer: :touch, finger: 0, modifiers: %KeyModifiers{}}}
+%WidgetEvent{type: :press, value: %{x: 150.0, y: 75.0, button: :left, pointer: :touch, finger: 0, modifiers: %KeyModifiers{}}}
 ```
 
 **Element-level** (requires `on_click`/`on_hover`/`draggable` on the

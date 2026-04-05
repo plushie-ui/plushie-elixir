@@ -39,7 +39,7 @@ defmodule Plushie.Type.Shadow do
   @doc "Sets the shadow color. Accepts a hex string or named color atom."
   @spec color(shadow :: t(), color :: Plushie.Type.Color.input()) :: t()
   def color(%__MODULE__{} = shadow, color) do
-    %{shadow | color: Plushie.Type.Color.cast(color)}
+    %{shadow | color: elem(Plushie.Type.Color.cast(color), 1)}
   end
 
   @doc "Sets the shadow offset in pixels."

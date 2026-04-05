@@ -634,7 +634,7 @@ defmodule Plushie.ProtocolTest do
                type: "wizard:levitate",
                id: "wizard",
                window_id: "main",
-               data: %{"speed" => "fast"}
+               value: %{speed: "fast"}
              } =
                Protocol.decode_message(json, :json)
     end
@@ -992,7 +992,7 @@ defmodule Plushie.ProtocolTest do
                type: :press,
                id: "zone",
                window_id: "main",
-               data: %{button: :middle, pointer: :mouse}
+               value: %{button: :middle, pointer: :mouse}
              } = Protocol.decode_message(json, :json)
     end
 
@@ -1013,7 +1013,7 @@ defmodule Plushie.ProtocolTest do
 
       packed = Msgpax.pack!(event, iodata: false)
 
-      assert %WidgetEvent{type: :press, id: "zone", window_id: "main", data: %{button: :middle}} =
+      assert %WidgetEvent{type: :press, id: "zone", window_id: "main", value: %{button: :middle}} =
                Protocol.decode_message(packed, :msgpack)
     end
   end
@@ -1400,7 +1400,7 @@ defmodule Plushie.ProtocolTest do
           data: %{id: 0, x: 50.0, y: 75.0}
         })
 
-      assert %WidgetEvent{type: :press, data: %{pointer: :touch, finger: 0, x: 50.0, y: 75.0}} =
+      assert %WidgetEvent{type: :press, value: %{pointer: :touch, finger: 0, x: 50.0, y: 75.0}} =
                Protocol.decode_message(json, :json)
     end
 
@@ -1412,7 +1412,7 @@ defmodule Plushie.ProtocolTest do
           data: %{id: 1, x: 60.0, y: 80.0}
         })
 
-      assert %WidgetEvent{type: :move, data: %{pointer: :touch, finger: 1, x: 60.0, y: 80.0}} =
+      assert %WidgetEvent{type: :move, value: %{pointer: :touch, finger: 1, x: 60.0, y: 80.0}} =
                Protocol.decode_message(json, :json)
     end
   end
@@ -1439,7 +1439,7 @@ defmodule Plushie.ProtocolTest do
                type: :scroll,
                id: "viewport",
                window_id: "main",
-               data: %{x: 5.0, y: 10.0, delta_x: +0.0, delta_y: -1.0, pointer: :mouse}
+               value: %{x: 5.0, y: 10.0, delta_x: +0.0, delta_y: -1.0, pointer: :mouse}
              } =
                Protocol.decode_message(json, :json)
     end
@@ -1512,7 +1512,7 @@ defmodule Plushie.ProtocolTest do
                type: :drag,
                id: "my_canvas",
                window_id: "main",
-               data: data
+               value: data
              } =
                Protocol.decode_message(json, :json)
 
@@ -1534,7 +1534,7 @@ defmodule Plushie.ProtocolTest do
                type: :drag_end,
                id: "my_canvas",
                window_id: "main",
-               data: data
+               value: data
              } =
                Protocol.decode_message(json, :json)
 
@@ -1560,7 +1560,7 @@ defmodule Plushie.ProtocolTest do
                type: :key_press,
                id: "my_input",
                window_id: "main",
-               data: data
+               value: data
              } =
                Protocol.decode_message(json, :json)
 
@@ -1581,7 +1581,7 @@ defmodule Plushie.ProtocolTest do
                type: :key_release,
                id: "my_input",
                window_id: "main",
-               data: data
+               value: data
              } =
                Protocol.decode_message(json, :json)
 

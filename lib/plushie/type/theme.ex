@@ -159,7 +159,7 @@ defmodule Plushie.Type.Theme do
     # Every remaining key is a color (core palette, shade overrides,
     # or text overrides). All are cast to canonical hex.
     Enum.reduce(opts, result, fn {key, value}, acc ->
-      Map.put(acc, key, Plushie.Type.Color.cast(value))
+      Map.put(acc, key, elem(Plushie.Type.Color.cast(value), 1))
     end)
   end
 

@@ -19,7 +19,7 @@ defmodule Plushie.Widget.Scrollable do
   - `id` (string) -- widget ID for programmatic scroll control via `Plushie.Command`.
   - `anchor` (atom) -- scroll anchor: `:start` (default) or `:end` / `:bottom` / `:right`.
     See `Plushie.Type.Anchor`.
-  - `on_scroll` (boolean) -- when `true`, emits `%WidgetEvent{type: :scroll, id: id, data: viewport}` events on scroll.
+  - `on_scroll` (boolean) -- when `true`, emits `%WidgetEvent{type: :scroll, id: id, value: viewport}` events on scroll.
     The viewport map contains `absolute_x`, `absolute_y`, `relative_x`, `relative_y`,
     `bounds` (as `{width, height}`), and `content_bounds` (as `{width, height}`).
   - `auto_scroll` (boolean) -- when `true`, automatically scrolls to show new content.
@@ -167,12 +167,12 @@ defmodule Plushie.Widget.Scrollable do
   @doc "Sets the scrollbar track color."
   @spec scrollbar_color(scrollable :: t(), scrollbar_color :: Plushie.Type.Color.input()) :: t()
   def scrollbar_color(%__MODULE__{} = s, scrollbar_color),
-    do: %{s | scrollbar_color: Color.cast(scrollbar_color)}
+    do: %{s | scrollbar_color: elem(Color.cast(scrollbar_color), 1)}
 
   @doc "Sets the scroller handle color."
   @spec scroller_color(scrollable :: t(), scroller_color :: Plushie.Type.Color.input()) :: t()
   def scroller_color(%__MODULE__{} = s, scroller_color),
-    do: %{s | scroller_color: Color.cast(scroller_color)}
+    do: %{s | scroller_color: elem(Color.cast(scroller_color), 1)}
 
   @doc "Appends a child to the scrollable."
   @spec push(scrollable :: t(), child :: Plushie.Widget.child()) ::
@@ -189,7 +189,15 @@ defmodule Plushie.Widget.Scrollable do
 
   @doc "Sets accessibility annotations."
   @spec a11y(scrollable :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = s, a11y), do: %{s | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = s, a11y),
+    do: %{
+      s
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this scrollable struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(scrollable :: t()) :: Plushie.Widget.ui_node()

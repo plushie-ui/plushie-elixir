@@ -68,10 +68,10 @@ defmodule Plushie.Widget.Canvas do
 
   Canvas background events (coordinate-level, unified pointer types):
 
-  - `%WidgetEvent{type: :press, id: id, data: %{x: x, y: y, button: button, pointer: pointer, modifiers: mods}}`
-  - `%WidgetEvent{type: :release, id: id, data: %{x: x, y: y, button: button, pointer: pointer, modifiers: mods}}`
-  - `%WidgetEvent{type: :move, id: id, data: %{x: x, y: y, pointer: pointer, modifiers: mods}}`
-  - `%WidgetEvent{type: :scroll, id: id, data: %{x: x, y: y, delta_x: dx, delta_y: dy, pointer: pointer, modifiers: mods}}`
+  - `%WidgetEvent{type: :press, id: id, value: %{x: x, y: y, button: button, pointer: pointer, modifiers: mods}}`
+  - `%WidgetEvent{type: :release, id: id, value: %{x: x, y: y, button: button, pointer: pointer, modifiers: mods}}`
+  - `%WidgetEvent{type: :move, id: id, value: %{x: x, y: y, pointer: pointer, modifiers: mods}}`
+  - `%WidgetEvent{type: :scroll, id: id, value: %{x: x, y: y, delta_x: dx, delta_y: dy, pointer: pointer, modifiers: mods}}`
   - `%WidgetEvent{type: :enter, id: id}`
   - `%WidgetEvent{type: :exit, id: id}`
 
@@ -80,12 +80,12 @@ defmodule Plushie.Widget.Canvas do
   - `%WidgetEvent{type: :click, id: element_id, scope: [canvas_id | ...]}`
   - `%WidgetEvent{type: :enter, id: id}`
   - `%WidgetEvent{type: :exit, id: id}`
-  - `%WidgetEvent{type: :drag, id: id, data: %{x: x, y: y, delta_x: dx, delta_y: dy}}`
-  - `%WidgetEvent{type: :drag_end, id: id, data: %{x: x, y: y}}`
+  - `%WidgetEvent{type: :drag, id: id, value: %{x: x, y: y, delta_x: dx, delta_y: dy}}`
+  - `%WidgetEvent{type: :drag_end, id: id, value: %{x: x, y: y}}`
   - `%WidgetEvent{type: :focused, id: id}`
   - `%WidgetEvent{type: :blurred, id: id}`
-  - `%WidgetEvent{type: :key_press, id: id, data: %{key: key, modifiers: mods, text: text}}`
-  - `%WidgetEvent{type: :key_release, id: id, data: %{key: key, modifiers: mods}}`
+  - `%WidgetEvent{type: :key_press, id: id, value: %{key: key, modifiers: mods, text: text}}`
+  - `%WidgetEvent{type: :key_release, id: id, value: %{key: key, modifiers: mods}}`
 
   Canvas element clicks arrive as regular `:click` events with the element ID
   as the event `id` and the canvas ID in the `scope`. Other element events use
@@ -235,7 +235,7 @@ defmodule Plushie.Widget.Canvas do
   @doc "Sets the canvas background color. Accepts a hex string or named color atom."
   @spec background(canvas :: t(), background :: Plushie.Type.Color.input()) :: t()
   def background(%__MODULE__{} = canvas, background),
-    do: %{canvas | background: Plushie.Type.Color.cast(background)}
+    do: %{canvas | background: elem(Plushie.Type.Color.cast(background), 1)}
 
   @doc "Sets whether all mouse event handlers are enabled."
   @spec interactive(canvas :: t(), interactive :: boolean()) :: t()
@@ -295,7 +295,15 @@ defmodule Plushie.Widget.Canvas do
 
   @doc "Sets accessibility annotations."
   @spec a11y(canvas :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = canvas, a11y), do: %{canvas | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = canvas, a11y),
+    do: %{
+      canvas
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this canvas struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(canvas :: t()) :: Plushie.Widget.ui_node()

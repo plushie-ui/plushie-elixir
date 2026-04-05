@@ -117,7 +117,15 @@ defmodule Plushie.Widget.KeyedColumn do
 
   @doc "Sets accessibility annotations."
   @spec a11y(keyed_column :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = kc, a11y), do: %{kc | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = kc, a11y),
+    do: %{
+      kc
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this keyed column struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(keyed_column :: t()) :: Plushie.Widget.ui_node()

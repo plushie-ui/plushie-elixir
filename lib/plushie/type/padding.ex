@@ -61,44 +61,54 @@ defmodule Plushie.Type.Padding do
   ## Examples
 
       iex> Plushie.Type.Padding.cast(8)
-      %{top: 8, right: 8, bottom: 8, left: 8}
+      {:ok, %{top: 8, right: 8, bottom: 8, left: 8}}
 
       iex> Plushie.Type.Padding.cast({4, 12})
-      %{top: 4, right: 12, bottom: 4, left: 12}
+      {:ok, %{top: 4, right: 12, bottom: 4, left: 12}}
 
       iex> Plushie.Type.Padding.cast(%{top: 1, right: 2, bottom: 3, left: 4})
-      %{top: 1, right: 2, bottom: 3, left: 4}
+      {:ok, %{top: 1, right: 2, bottom: 3, left: 4}}
   """
-  @spec cast(padding :: t()) :: map()
+  @behaviour Plushie.Type
+
+  @impl Plushie.Type
+  @spec cast(padding :: t()) :: {:ok, map()} | :error
 
   def cast(n) when is_number(n) do
-    %{top: n, right: n, bottom: n, left: n}
+    {:ok, %{top: n, right: n, bottom: n, left: n}}
   end
 
   def cast({vertical, horizontal}) when is_number(vertical) and is_number(horizontal) do
-    %{top: vertical, right: horizontal, bottom: vertical, left: horizontal}
+    {:ok, %{top: vertical, right: horizontal, bottom: vertical, left: horizontal}}
   end
 
   def cast(%__MODULE__{} = padding) do
-    padding
-    |> Map.from_struct()
-    |> Enum.reject(fn {_, v} -> is_nil(v) end)
-    |> Map.new()
+    result =
+      padding
+      |> Map.from_struct()
+      |> Enum.reject(fn {_, v} -> is_nil(v) end)
+      |> Map.new()
+
+    {:ok, result}
   end
 
   def cast(%{top: t, right: r, bottom: b, left: l})
       when is_number(t) and is_number(r) and is_number(b) and is_number(l) do
-    %{top: t, right: r, bottom: b, left: l}
+    {:ok, %{top: t, right: r, bottom: b, left: l}}
   end
+
+  def cast(_), do: :error
 
   # -- Plushie.Type callbacks --------------------------------------------------
 
   @doc false
+  @impl Plushie.Type
   def typespec do
     quote do: number() | {number(), number()} | %Plushie.Type.Padding{}
   end
 
   @doc false
+  @impl Plushie.Type
   def guard(var) do
     quote do
       is_number(unquote(var)) or is_tuple(unquote(var)) or is_map(unquote(var))
@@ -108,6 +118,7 @@ end
 
 defimpl Plushie.Encode, for: Plushie.Type.Padding do
   def encode(%Plushie.Type.Padding{} = padding) do
-    Plushie.Type.Padding.cast(padding)
+    {:ok, result} = Plushie.Type.Padding.cast(padding)
+    result
   end
 end

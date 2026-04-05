@@ -283,7 +283,7 @@ For events with multiple fields, use `data:` instead of `value:`:
 event :change, data: [hue: :float, saturation: :float, value: :float]
 ```
 
-These arrive in `WidgetEvent.data` as an atom-keyed map.
+These arrive in `WidgetEvent.value` as an atom-keyed map.
 
 ## Widget subscriptions
 

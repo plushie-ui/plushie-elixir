@@ -6,7 +6,7 @@ defmodule Plushie.Event.BuiltinSpecs do
 
   - `%{carrier: :none}` -- no payload (just id/scope)
   - `%{carrier: :value, type: type}` -- scalar in `WidgetEvent.value`
-  - `%{carrier: :data, fields: [field: type]}` -- map in `WidgetEvent.data`
+  - `%{carrier: :value, fields: [field: type]}` -- map in `WidgetEvent.value`
 
   Type identifiers are either built-in atoms (`:float`, `:string`,
   `:boolean`, `:any`) or modules with a `parse/1` function.
@@ -27,11 +27,11 @@ defmodule Plushie.Event.BuiltinSpecs do
 
   - `:none` -- no payload
   - `:value` -- scalar value, stored in `WidgetEvent.value`
-  - `:data` -- structured map, stored in `WidgetEvent.data` with atom keys
+  - `:value` with `:fields` -- structured map, stored in `WidgetEvent.value` with atom keys
   """
   @type t ::
           %{
-            required(:carrier) => :none | :value | :data,
+            required(:carrier) => :none | :value,
             optional(:doc) => String.t(),
             optional(:type) => field_type(),
             optional(:fields) => [{atom(), field_type()}],
@@ -51,10 +51,10 @@ defmodule Plushie.Event.BuiltinSpecs do
     open: %{carrier: :none},
     close: %{carrier: :none},
     option_hovered: %{carrier: :value, type: :any},
-    key_binding: %{carrier: :data, fields: []},
-    sort: %{carrier: :data, fields: [column: :string]},
+    key_binding: %{carrier: :value, fields: []},
+    sort: %{carrier: :value, fields: [column: :string]},
     scrolled: %{
-      carrier: :data,
+      carrier: :value,
       fields: [
         absolute_x: :float,
         absolute_y: :float,
@@ -64,7 +64,7 @@ defmodule Plushie.Event.BuiltinSpecs do
         content_bounds: :any
       ]
     },
-    pane_focus_cycle: %{carrier: :data, fields: [pane: :any]},
+    pane_focus_cycle: %{carrier: :value, fields: [pane: :any]},
 
     # -- Generic element events --
     # Focus, blur, drag, and key events. These apply to any focusable or
@@ -72,15 +72,15 @@ defmodule Plushie.Event.BuiltinSpecs do
     focused: %{carrier: :none},
     blurred: %{carrier: :none},
     drag: %{
-      carrier: :data,
+      carrier: :value,
       fields: [x: :float, y: :float, delta_x: :float, delta_y: :float]
     },
     drag_end: %{
-      carrier: :data,
+      carrier: :value,
       fields: [x: :float, y: :float]
     },
     key_press: %{
-      carrier: :data,
+      carrier: :value,
       fields: [
         key: Plushie.Type.Key,
         modifiers: Plushie.Type.KeyModifiers,
@@ -88,7 +88,7 @@ defmodule Plushie.Event.BuiltinSpecs do
       ]
     },
     key_release: %{
-      carrier: :data,
+      carrier: :value,
       fields: [
         key: Plushie.Type.Key,
         modifiers: Plushie.Type.KeyModifiers
@@ -98,7 +98,7 @@ defmodule Plushie.Event.BuiltinSpecs do
     # -- Unified pointer events --
     # Replace canvas_*, mouse_*, and sensor_* with a device-agnostic model.
     press: %{
-      carrier: :data,
+      carrier: :value,
       fields: [
         x: :float,
         y: :float,
@@ -109,7 +109,7 @@ defmodule Plushie.Event.BuiltinSpecs do
       ]
     },
     release: %{
-      carrier: :data,
+      carrier: :value,
       fields: [
         x: :float,
         y: :float,
@@ -120,11 +120,11 @@ defmodule Plushie.Event.BuiltinSpecs do
       ]
     },
     move: %{
-      carrier: :data,
+      carrier: :value,
       fields: [x: :float, y: :float, pointer: :atom, finger: :float, modifiers: :any]
     },
     scroll: %{
-      carrier: :data,
+      carrier: :value,
       fields: [
         x: :float,
         y: :float,
@@ -137,16 +137,16 @@ defmodule Plushie.Event.BuiltinSpecs do
     enter: %{carrier: :none},
     exit: %{carrier: :none},
     double_click: %{
-      carrier: :data,
+      carrier: :value,
       fields: [x: :float, y: :float, pointer: :atom, modifiers: :any]
     },
-    resize: %{carrier: :data, fields: [width: :float, height: :float]},
+    resize: %{carrier: :value, fields: [width: :float, height: :float]},
 
     # -- Pane grid events --
     # Previously PaneEvent structs.
-    pane_resized: %{carrier: :data, fields: [split: :any, ratio: :float]},
+    pane_resized: %{carrier: :value, fields: [split: :any, ratio: :float]},
     pane_dragged: %{
-      carrier: :data,
+      carrier: :value,
       fields: [
         pane: :any,
         target: :any,
@@ -155,10 +155,10 @@ defmodule Plushie.Event.BuiltinSpecs do
         edge: :any
       ]
     },
-    pane_clicked: %{carrier: :data, fields: [pane: :any]},
+    pane_clicked: %{carrier: :value, fields: [pane: :any]},
 
     # -- Animation events --
-    transition_complete: %{carrier: :data, fields: [tag: :any, prop: :string]}
+    transition_complete: %{carrier: :value, fields: [tag: :any, prop: :string]}
   }
 
   @doc "Returns the event spec for a built-in event type, or nil."

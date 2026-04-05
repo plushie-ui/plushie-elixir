@@ -190,47 +190,55 @@ defmodule Plushie.Type.A11y do
   ## Examples
 
       iex> Plushie.Type.A11y.cast(%{role: :heading, level: 1})
-      %Plushie.Type.A11y{role: :heading, level: 1}
+      {:ok, %Plushie.Type.A11y{role: :heading, level: 1}}
 
       iex> Plushie.Type.A11y.cast(role: :heading, level: 1)
-      %Plushie.Type.A11y{role: :heading, level: 1}
+      {:ok, %Plushie.Type.A11y{role: :heading, level: 1}}
 
       iex> a11y = %Plushie.Type.A11y{label: "Close"}
       iex> Plushie.Type.A11y.cast(a11y)
-      %Plushie.Type.A11y{label: "Close"}
+      {:ok, %Plushie.Type.A11y{label: "Close"}}
   """
-  @spec cast(a11y :: t() | map() | keyword()) :: t()
-  def cast(%__MODULE__{} = a11y), do: normalize!(a11y)
+  @behaviour Plushie.Type
+
+  @impl Plushie.Type
+  @spec cast(a11y :: t() | map() | keyword()) :: {:ok, t()} | :error
+  def cast(%__MODULE__{} = a11y), do: {:ok, normalize!(a11y)}
   def cast(kw) when is_list(kw), do: cast(Map.new(kw))
 
   def cast(map) when is_map(map) do
-    %__MODULE__{
-      role: normalize_optional_role!(map[:role]),
-      label: map[:label],
-      description: map[:description],
-      live: map[:live],
-      hidden: map[:hidden],
-      expanded: map[:expanded],
-      required: map[:required],
-      level: map[:level],
-      busy: map[:busy],
-      invalid: map[:invalid],
-      modal: map[:modal],
-      read_only: map[:read_only],
-      mnemonic: map[:mnemonic],
-      toggled: map[:toggled],
-      selected: map[:selected],
-      value: map[:value],
-      orientation: map[:orientation],
-      labelled_by: map[:labelled_by],
-      described_by: map[:described_by],
-      error_message: map[:error_message],
-      disabled: map[:disabled],
-      position_in_set: map[:position_in_set],
-      size_of_set: map[:size_of_set],
-      has_popup: map[:has_popup]
-    }
+    {:ok,
+     %__MODULE__{
+       role: normalize_optional_role!(map[:role]),
+       label: map[:label],
+       description: map[:description],
+       live: map[:live],
+       hidden: map[:hidden],
+       expanded: map[:expanded],
+       required: map[:required],
+       level: map[:level],
+       busy: map[:busy],
+       invalid: map[:invalid],
+       modal: map[:modal],
+       read_only: map[:read_only],
+       mnemonic: map[:mnemonic],
+       toggled: map[:toggled],
+       selected: map[:selected],
+       value: map[:value],
+       orientation: map[:orientation],
+       labelled_by: map[:labelled_by],
+       described_by: map[:described_by],
+       error_message: map[:error_message],
+       disabled: map[:disabled],
+       position_in_set: map[:position_in_set],
+       size_of_set: map[:size_of_set],
+       has_popup: map[:has_popup]
+     }}
+  rescue
+    ArgumentError -> :error
   end
+
+  def cast(_), do: :error
 
   # -- Setter functions --------------------------------------------------------
 
@@ -434,11 +442,13 @@ defmodule Plushie.Type.A11y do
   # -- Plushie.Type callbacks --------------------------------------------------
 
   @doc false
+  @impl Plushie.Type
   def typespec do
     quote do: %Plushie.Type.A11y{} | map() | keyword()
   end
 
   @doc false
+  @impl Plushie.Type
   def guard(var) do
     quote do: is_map(unquote(var)) or is_list(unquote(var))
   end

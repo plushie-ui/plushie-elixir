@@ -12,8 +12,8 @@ defmodule Plushie.Widget.Sensor do
 
   ## Events
 
-  - `%WidgetEvent{type: :resize, id: id, data: %{width: w, height: h}}` -- emitted on resize.
-  - `%WidgetEvent{type: :resize, id: "id:show", data: %{width: w, height: h}}` -- emitted when child becomes visible.
+  - `%WidgetEvent{type: :resize, id: id, value: %{width: w, height: h}}` -- emitted on resize.
+  - `%WidgetEvent{type: :resize, id: "id:show", value: %{width: w, height: h}}` -- emitted when child becomes visible.
   - `%WidgetEvent{type: :click, id: "id:hide"}` -- emitted when child becomes hidden.
   """
 
@@ -108,7 +108,15 @@ defmodule Plushie.Widget.Sensor do
 
   @doc "Sets accessibility annotations."
   @spec a11y(sensor :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = sensor, a11y), do: %{sensor | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = sensor, a11y),
+    do: %{
+      sensor
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this sensor struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(sensor :: t()) :: Plushie.Widget.ui_node()

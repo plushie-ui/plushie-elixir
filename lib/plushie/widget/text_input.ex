@@ -210,16 +210,24 @@ defmodule Plushie.Widget.TextInput do
   @doc "Sets the placeholder text color. Accepts any form `Color.cast/1` supports."
   @spec placeholder_color(text_input :: t(), color :: Plushie.Type.Color.input()) :: t()
   def placeholder_color(%__MODULE__{} = ti, color),
-    do: %{ti | placeholder_color: Color.cast(color)}
+    do: %{ti | placeholder_color: elem(Color.cast(color), 1)}
 
   @doc "Sets the text selection highlight color. Accepts any form `Color.cast/1` supports."
   @spec selection_color(text_input :: t(), color :: Plushie.Type.Color.input()) :: t()
   def selection_color(%__MODULE__{} = ti, color),
-    do: %{ti | selection_color: Color.cast(color)}
+    do: %{ti | selection_color: elem(Color.cast(color), 1)}
 
   @doc "Sets accessibility annotations."
   @spec a11y(text_input :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = ti, a11y), do: %{ti | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = ti, a11y),
+    do: %{
+      ti
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this text input struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(text_input :: t()) :: Plushie.Widget.ui_node()

@@ -75,8 +75,7 @@ defmodule Plushie.Event.WidgetEvent do
           id: String.t(),
           window_id: String.t() | nil,
           scope: [String.t()],
-          value: term(),
-          data: map() | nil
+          value: term()
         }
 
   @typedoc "Widget event delivered by the renderer."
@@ -85,12 +84,11 @@ defmodule Plushie.Event.WidgetEvent do
           id: String.t(),
           window_id: String.t(),
           scope: [String.t()],
-          value: term(),
-          data: map() | nil
+          value: term()
         }
 
   @enforce_keys [:type, :id]
-  defstruct [:type, :id, :value, :data, :window_id, scope: []]
+  defstruct [:type, :id, :value, :window_id, scope: []]
 
   @builtin_event_types ~w(
     click input submit toggle select slide slide_release paste open close option_hovered

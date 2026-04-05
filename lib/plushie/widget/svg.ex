@@ -125,7 +125,7 @@ defmodule Plushie.Widget.Svg do
 
   @doc "Sets the color tint applied to the SVG."
   @spec color(svg :: t(), color :: Plushie.Type.Color.input()) :: t()
-  def color(%__MODULE__{} = svg, color), do: %{svg | color: Color.cast(color)}
+  def color(%__MODULE__{} = svg, color), do: %{svg | color: elem(Color.cast(color), 1)}
 
   @doc "Sets the alt text for the SVG."
   @spec alt(svg :: t(), alt :: String.t()) :: t()
@@ -143,7 +143,15 @@ defmodule Plushie.Widget.Svg do
 
   @doc "Sets accessibility annotations."
   @spec a11y(svg :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = svg, a11y), do: %{svg | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = svg, a11y),
+    do: %{
+      svg
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this SVG struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(svg :: t()) :: Plushie.Widget.ui_node()

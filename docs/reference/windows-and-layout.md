@@ -366,7 +366,7 @@ Adapts layout based on available size by emitting resize events.
 | `a11y` | map | *n/a* | Accessibility overrides. See [Accessibility](accessibility.md). |
 
 When the responsive container's size changes, it emits
-`%WidgetEvent{type: :resize, data: %{width: w, height: h}}`.
+`%WidgetEvent{type: :resize, value: %{width: w, height: h}}`.
 Use this in `update/2` to store the measured size and adjust your
 `view/1` based on it (for example, switching from a sidebar layout to
 a stacked layout below a certain width).

@@ -22,7 +22,7 @@ defmodule Plushie.CanvasEventsTest do
       assert %WidgetEvent{
                type: :press,
                id: "my_canvas",
-               data: %{x: 42.5, y: 100.0, button: :left, pointer: :mouse}
+               value: %{x: 42.5, y: 100.0, button: :left, pointer: :mouse}
              } =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
@@ -45,7 +45,7 @@ defmodule Plushie.CanvasEventsTest do
       assert %WidgetEvent{
                type: :release,
                id: "c1",
-               data: %{x: 10.0, y: 20.0, button: :right, pointer: :mouse}
+               value: %{x: 10.0, y: 20.0, button: :right, pointer: :mouse}
              } =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
@@ -64,7 +64,7 @@ defmodule Plushie.CanvasEventsTest do
         }
       }
 
-      assert %WidgetEvent{type: :move, id: "c1", data: %{x: 5.5, y: 3.2, pointer: :mouse}} =
+      assert %WidgetEvent{type: :move, id: "c1", value: %{x: 5.5, y: 3.2, pointer: :mouse}} =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
 
@@ -87,7 +87,7 @@ defmodule Plushie.CanvasEventsTest do
       assert %WidgetEvent{
                type: :scroll,
                id: "c1",
-               data: %{x: 1.5, y: 2.5, delta_x: 0.5, delta_y: -3.0, pointer: :mouse}
+               value: %{x: 1.5, y: 2.5, delta_x: 0.5, delta_y: -3.0, pointer: :mouse}
              } =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end
@@ -113,7 +113,7 @@ defmodule Plushie.CanvasEventsTest do
       assert %WidgetEvent{
                type: :scrolled,
                id: "scroller",
-               data: %{absolute_y: 50.0, relative_y: 0.5}
+               value: %{absolute_y: 50.0, relative_y: 0.5}
              } =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end

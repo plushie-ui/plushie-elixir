@@ -342,7 +342,7 @@ defmodule Plushie.Protocol do
   ## Examples
 
       iex> Plushie.Protocol.decode_message(~s({"type":"event","family":"click","id":"btn_save","window_id":"main"}), :json)
-      %Plushie.Event.WidgetEvent{type: :click, id: "btn_save", scope: ["main"], window_id: "main", value: nil, data: nil}
+      %Plushie.Event.WidgetEvent{type: :click, id: "btn_save", scope: ["main"], window_id: "main", value: nil}
 
       iex> match?({:error, {:decode_failed, _}}, Plushie.Protocol.decode_message("not json"))
       true

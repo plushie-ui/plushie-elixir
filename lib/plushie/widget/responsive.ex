@@ -3,7 +3,7 @@ defmodule Plushie.Widget.Responsive do
   Responsive layout -- adapts to available size by reporting resize events.
 
   The renderer wraps child content in a sensor that sends
-  `%WidgetEvent{type: :resize, id: id, data: %{width: w, height: h}}` events so the
+  `%WidgetEvent{type: :resize, id: id, value: %{width: w, height: h}}` events so the
   Elixir app can adjust its view based on the measured size.
 
   ## Props
@@ -88,7 +88,15 @@ defmodule Plushie.Widget.Responsive do
 
   @doc "Sets accessibility annotations."
   @spec a11y(responsive :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = r, a11y), do: %{r | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = r, a11y),
+    do: %{
+      r
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this responsive struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(responsive :: t()) :: Plushie.Widget.ui_node()

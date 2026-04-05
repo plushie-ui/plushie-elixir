@@ -135,7 +135,7 @@ defmodule Plushie.Widget.RichText do
 
   @doc "Sets the default text color for all spans."
   @spec color(rich_text :: t(), color :: Plushie.Type.Color.input()) :: t()
-  def color(%__MODULE__{} = rt, color), do: %{rt | color: Plushie.Type.Color.cast(color)}
+  def color(%__MODULE__{} = rt, color), do: %{rt | color: elem(Plushie.Type.Color.cast(color), 1)}
 
   @doc "Sets the line height."
   @spec line_height(rich_text :: t(), line_height :: number() | map()) :: t()
@@ -152,7 +152,15 @@ defmodule Plushie.Widget.RichText do
 
   @doc "Sets accessibility annotations."
   @spec a11y(rich_text :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = rt, a11y), do: %{rt | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = rt, a11y),
+    do: %{
+      rt
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this rich text struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(rich_text :: t()) :: Plushie.Widget.ui_node()

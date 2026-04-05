@@ -192,7 +192,7 @@ defmodule Plushie.EventDeclarationTest do
 
     test "data event has carrier :data with fields" do
       spec = DataEventWidget.__event_spec__(:moved)
-      assert %{carrier: :data, fields: [x: :float, y: :float]} = spec
+      assert %{carrier: :value, fields: [x: :float, y: :float]} = spec
     end
 
     test "no-payload event has carrier :none" do
@@ -207,7 +207,7 @@ defmodule Plushie.EventDeclarationTest do
 
     test "custom module type is preserved in spec" do
       spec = CustomTypeWidget.__event_spec__(:key_action)
-      assert %{carrier: :data, fields: [key: Plushie.Type.Key]} = spec
+      assert %{carrier: :value, fields: [key: Plushie.Type.Key]} = spec
     end
 
     test "__events__/0 returns flat name list" do
@@ -228,14 +228,14 @@ defmodule Plushie.EventDeclarationTest do
 
     test "inline data: form includes required list with all field names" do
       spec = DataEventWidget.__event_spec__(:moved)
-      assert %{carrier: :data, fields: [x: :float, y: :float], required: [:x, :y]} = spec
+      assert %{carrier: :value, fields: [x: :float, y: :float], required: [:x, :y]} = spec
     end
   end
 
   describe "event do-block with field macro" do
     test "do-block fields produce carrier :data spec" do
       spec = DoBlockEventWidget.__event_spec__(:changed)
-      assert %{carrier: :data, fields: [hue: :float, saturation: :float]} = spec
+      assert %{carrier: :value, fields: [hue: :float, saturation: :float]} = spec
     end
 
     test "do-block fields are all required by default" do
@@ -245,7 +245,7 @@ defmodule Plushie.EventDeclarationTest do
 
     test "required: false excludes field from required list" do
       spec = OptionalFieldWidget.__event_spec__(:adjusted)
-      assert %{carrier: :data} = spec
+      assert %{carrier: :value} = spec
       assert :hue in spec.required
       assert :saturation in spec.required
       refute :modifier in spec.required
@@ -280,7 +280,7 @@ defmodule Plushie.EventDeclarationTest do
         Handler.invoke_handler(DoBlockEventWidget, click, %{}, "widget", "main")
 
       assert event.type == {:do_block_event_widget, :changed}
-      assert event.data == %{hue: 180.0, saturation: 0.75}
+      assert event.value == %{hue: 180.0, saturation: 0.75}
     end
 
     test "optional field can be omitted from emitted data" do
@@ -295,7 +295,7 @@ defmodule Plushie.EventDeclarationTest do
         Handler.invoke_handler(OptionalFieldWidget, click, %{}, "widget", "main")
 
       assert event.type == {:optional_field_widget, :adjusted}
-      assert event.data == %{hue: 90.0, saturation: 0.5}
+      assert event.value == %{hue: 90.0, saturation: 0.5}
     end
 
     test "optional field can be included in emitted data" do
@@ -310,7 +310,7 @@ defmodule Plushie.EventDeclarationTest do
         Handler.invoke_handler(OptionalFieldWidget, click, %{}, "widget", "main")
 
       assert event.type == {:optional_field_widget, :adjusted}
-      assert event.data == %{hue: 90.0, saturation: 0.5, modifier: "shift"}
+      assert event.value == %{hue: 90.0, saturation: 0.5, modifier: "shift"}
     end
 
     test "missing required field raises ArgumentError" do
@@ -345,7 +345,6 @@ defmodule Plushie.EventDeclarationTest do
 
       assert event.type == {:value_event_widget, :selected}
       assert event.value == 42
-      assert event.data == nil
     end
 
     test "data-spec event puts map in data field with atom keys" do
@@ -360,8 +359,7 @@ defmodule Plushie.EventDeclarationTest do
         Handler.invoke_handler(DataEventWidget, click, %{}, "widget", "main")
 
       assert event.type == {:data_event_widget, :moved}
-      assert event.data == %{x: 10.0, y: 20.0}
-      assert event.value == nil
+      assert event.value == %{x: 10.0, y: 20.0}
     end
 
     test "built-in event type uses builtin spec for routing" do
@@ -385,7 +383,6 @@ defmodule Plushie.EventDeclarationTest do
 
       assert event.type == :toggle
       assert event.value == true
-      assert event.data == nil
     end
   end
 
@@ -406,7 +403,7 @@ defmodule Plushie.EventDeclarationTest do
 
     test "press spec has pointer data fields" do
       spec = BuiltinSpecs.spec(:press)
-      assert spec.carrier == :data
+      assert spec.carrier == :value
       field_names = Keyword.keys(spec.fields)
       assert :x in field_names
       assert :y in field_names
@@ -422,7 +419,7 @@ defmodule Plushie.EventDeclarationTest do
 
     test "key_press spec has parsed data fields" do
       spec = BuiltinSpecs.spec(:key_press)
-      assert %{carrier: :data, fields: fields} = spec
+      assert %{carrier: :value, fields: fields} = spec
       assert Keyword.fetch!(fields, :key) == Plushie.Type.Key
       assert Keyword.fetch!(fields, :modifiers) == Plushie.Type.KeyModifiers
     end

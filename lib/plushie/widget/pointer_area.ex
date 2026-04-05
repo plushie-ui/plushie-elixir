@@ -37,30 +37,30 @@ defmodule Plushie.Widget.PointerArea do
 
   Conditional (opt-in via props):
 
-  - `%WidgetEvent{type: :press, id: id, data: %{button: :right}}` -- right mouse button pressed.
-  - `%WidgetEvent{type: :release, id: id, data: %{button: :right}}` -- right mouse button released.
-  - `%WidgetEvent{type: :press, id: id, data: %{button: :middle}}` -- middle mouse button pressed.
-  - `%WidgetEvent{type: :release, id: id, data: %{button: :middle}}` -- middle mouse button released.
+  - `%WidgetEvent{type: :press, id: id, value: %{button: :right}}` -- right mouse button pressed.
+  - `%WidgetEvent{type: :release, id: id, value: %{button: :right}}` -- right mouse button released.
+  - `%WidgetEvent{type: :press, id: id, value: %{button: :middle}}` -- middle mouse button pressed.
+  - `%WidgetEvent{type: :release, id: id, value: %{button: :middle}}` -- middle mouse button released.
   - `%WidgetEvent{type: :double_click, id: id}` -- left mouse button double-clicked.
   - `%WidgetEvent{type: :enter, id: id}` -- cursor entered the area.
   - `%WidgetEvent{type: :exit, id: id}` -- cursor exited the area.
-  - `%WidgetEvent{type: :move, id: id, data: %{x: x, y: y, pointer: pointer, modifiers: mods}}` -- cursor moved within the area.
-  - `%WidgetEvent{type: :scroll, id: id, data: %{delta_x: dx, delta_y: dy, pointer: pointer, modifiers: mods}}` -- scroll wheel within the area.
+  - `%WidgetEvent{type: :move, id: id, value: %{x: x, y: y, pointer: pointer, modifiers: mods}}` -- cursor moved within the area.
+  - `%WidgetEvent{type: :scroll, id: id, value: %{delta_x: dx, delta_y: dy, pointer: pointer, modifiers: mods}}` -- scroll wheel within the area.
 
   ### Pattern matching examples
 
       # Right-click context menu
-      def update(model, %WidgetEvent{type: :press, id: "area", data: %{button: :right}}) do
+      def update(model, %WidgetEvent{type: :press, id: "area", value: %{button: :right}}) do
         %{model | context_menu: true}
       end
 
       # Pointer move (works for mouse and touch)
-      def update(model, %WidgetEvent{type: :move, id: "area", data: %{x: x, y: y}}) do
+      def update(model, %WidgetEvent{type: :move, id: "area", value: %{x: x, y: y}}) do
         %{model | cursor: {x, y}}
       end
 
       # Scroll with accumulated deltas
-      def update(model, %WidgetEvent{type: :scroll, data: %{delta_y: dy}}) do
+      def update(model, %WidgetEvent{type: :scroll, value: %{delta_y: dy}}) do
         %{model | offset: model.offset + dy}
       end
   """
@@ -275,7 +275,15 @@ defmodule Plushie.Widget.PointerArea do
 
   @doc "Sets accessibility annotations."
   @spec a11y(pointer_area :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = ma, a11y), do: %{ma | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = ma, a11y),
+    do: %{
+      ma
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this mouse area struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(pointer_area :: t()) :: Plushie.Widget.ui_node()

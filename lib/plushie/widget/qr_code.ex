@@ -101,12 +101,13 @@ defmodule Plushie.Widget.QrCode do
 
   @doc "Sets the color of dark modules."
   @spec cell_color(qr_code :: t(), cell_color :: Plushie.Type.Color.input()) :: t()
-  def cell_color(%__MODULE__{} = qr, cell_color), do: %{qr | cell_color: Color.cast(cell_color)}
+  def cell_color(%__MODULE__{} = qr, cell_color),
+    do: %{qr | cell_color: elem(Color.cast(cell_color), 1)}
 
   @doc "Sets the background color (light modules)."
   @spec background(qr_code :: t(), background :: Plushie.Type.Color.input()) :: t()
   def background(%__MODULE__{} = qr, background),
-    do: %{qr | background: Color.cast(background)}
+    do: %{qr | background: elem(Color.cast(background), 1)}
 
   @doc "Sets the error correction level."
   @spec error_correction(qr_code :: t(), error_correction :: error_correction()) :: t()
@@ -124,7 +125,15 @@ defmodule Plushie.Widget.QrCode do
 
   @doc "Sets accessibility annotations."
   @spec a11y(qr_code :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = qr, a11y), do: %{qr | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = qr, a11y),
+    do: %{
+      qr
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this QR code struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(qr_code :: t()) :: Plushie.Widget.ui_node()

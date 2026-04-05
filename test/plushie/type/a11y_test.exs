@@ -178,45 +178,47 @@ defmodule Plushie.Type.A11yTest do
 
   describe "cast/1 accepts keyword lists" do
     test "keyword list is cast like a map" do
-      a = A11y.cast(role: :heading, level: 1, label: "Title")
+      {:ok, a} = A11y.cast(role: :heading, level: 1, label: "Title")
       assert a.role == :heading
       assert a.level == 1
       assert a.label == "Title"
     end
 
     test "empty keyword list returns empty struct" do
-      assert %A11y{} = A11y.cast([])
+      assert {:ok, %A11y{}} = A11y.cast([])
     end
   end
 
   describe "cast/1 with new fields" do
     test "cast bare map with busy" do
-      a = A11y.cast(%{busy: true, label: "Loading"})
+      {:ok, a} = A11y.cast(%{busy: true, label: "Loading"})
       assert %A11y{busy: true, label: "Loading"} = a
     end
 
     test "cast bare map with invalid" do
-      a = A11y.cast(%{invalid: true, required: true})
+      {:ok, a} = A11y.cast(%{invalid: true, required: true})
       assert %A11y{invalid: true, required: true} = a
     end
 
     test "cast bare map with modal" do
-      a = A11y.cast(%{modal: true, role: :dialog})
+      {:ok, a} = A11y.cast(%{modal: true, role: :dialog})
       assert %A11y{modal: true, role: :dialog} = a
     end
 
     test "cast bare map with read_only" do
-      a = A11y.cast(%{read_only: true})
+      {:ok, a} = A11y.cast(%{read_only: true})
       assert %A11y{read_only: true} = a
     end
 
     test "cast bare map with mnemonic" do
-      a = A11y.cast(%{mnemonic: "F"})
+      {:ok, a} = A11y.cast(%{mnemonic: "F"})
       assert %A11y{mnemonic: "F"} = a
     end
 
     test "cast bare map with all new fields" do
-      a = A11y.cast(%{busy: true, invalid: false, modal: true, read_only: true, mnemonic: "X"})
+      {:ok, a} =
+        A11y.cast(%{busy: true, invalid: false, modal: true, read_only: true, mnemonic: "X"})
+
       assert a.busy == true
       assert a.invalid == false
       assert a.modal == true
@@ -226,34 +228,32 @@ defmodule Plushie.Type.A11yTest do
 
     test "cast passthrough for struct with new fields" do
       a = %A11y{busy: true, modal: true}
-      assert A11y.cast(a) == a
+      assert A11y.cast(a) == {:ok, a}
     end
 
     test "cast normalizes role aliases" do
-      a = A11y.cast(%{role: :checkbox})
+      {:ok, a} = A11y.cast(%{role: :checkbox})
       assert a.role == :check_box
     end
 
     test "cast rejects non-atom roles" do
-      assert_raise ArgumentError, ~r/invalid a11y role \"checkbox\"/, fn ->
-        A11y.cast(%{role: "checkbox"})
-      end
+      assert :error = A11y.cast(%{role: "checkbox"})
     end
   end
 
   describe "mnemonic field" do
     test "nil mnemonic" do
-      a = A11y.cast(%{mnemonic: nil})
+      {:ok, a} = A11y.cast(%{mnemonic: nil})
       assert a.mnemonic == nil
     end
 
     test "single ASCII character" do
-      a = A11y.cast(%{mnemonic: "F"})
+      {:ok, a} = A11y.cast(%{mnemonic: "F"})
       assert a.mnemonic == "F"
     end
 
     test "precomposed Unicode character" do
-      a = A11y.cast(%{mnemonic: "\u00E9"})
+      {:ok, a} = A11y.cast(%{mnemonic: "\u00E9"})
       assert a.mnemonic == "\u00E9"
     end
 
@@ -295,37 +295,39 @@ defmodule Plushie.Type.A11yTest do
 
   describe "cast/1 with toggled/selected/value/orientation" do
     test "cast bare map with toggled" do
-      a = A11y.cast(%{toggled: true, role: :switch})
+      {:ok, a} = A11y.cast(%{toggled: true, role: :switch})
       assert %A11y{toggled: true, role: :switch} = a
     end
 
     test "cast bare map with toggled false" do
-      a = A11y.cast(%{toggled: false})
+      {:ok, a} = A11y.cast(%{toggled: false})
       assert %A11y{toggled: false} = a
     end
 
     test "cast bare map with selected" do
-      a = A11y.cast(%{selected: true})
+      {:ok, a} = A11y.cast(%{selected: true})
       assert %A11y{selected: true} = a
     end
 
     test "cast bare map with value" do
-      a = A11y.cast(%{value: "42%", role: :meter})
+      {:ok, a} = A11y.cast(%{value: "42%", role: :meter})
       assert %A11y{value: "42%", role: :meter} = a
     end
 
     test "cast bare map with orientation horizontal" do
-      a = A11y.cast(%{orientation: :horizontal})
+      {:ok, a} = A11y.cast(%{orientation: :horizontal})
       assert %A11y{orientation: :horizontal} = a
     end
 
     test "cast bare map with orientation vertical" do
-      a = A11y.cast(%{orientation: :vertical})
+      {:ok, a} = A11y.cast(%{orientation: :vertical})
       assert %A11y{orientation: :vertical} = a
     end
 
     test "cast bare map with all new state fields" do
-      a = A11y.cast(%{toggled: true, selected: false, value: "50%", orientation: :vertical})
+      {:ok, a} =
+        A11y.cast(%{toggled: true, selected: false, value: "50%", orientation: :vertical})
+
       assert a.toggled == true
       assert a.selected == false
       assert a.value == "50%"
@@ -334,7 +336,7 @@ defmodule Plushie.Type.A11yTest do
 
     test "cast passthrough preserves new state fields" do
       a = %A11y{toggled: true, value: "80%", orientation: :horizontal}
-      assert A11y.cast(a) == a
+      assert A11y.cast(a) == {:ok, a}
     end
   end
 
@@ -405,22 +407,22 @@ defmodule Plushie.Type.A11yTest do
     end
 
     test "cast bare map with labelled_by" do
-      a = A11y.cast(%{labelled_by: "name-label"})
+      {:ok, a} = A11y.cast(%{labelled_by: "name-label"})
       assert %A11y{labelled_by: "name-label"} = a
     end
 
     test "cast bare map with described_by" do
-      a = A11y.cast(%{described_by: "name-help"})
+      {:ok, a} = A11y.cast(%{described_by: "name-help"})
       assert %A11y{described_by: "name-help"} = a
     end
 
     test "cast bare map with error_message" do
-      a = A11y.cast(%{error_message: "name-error"})
+      {:ok, a} = A11y.cast(%{error_message: "name-error"})
       assert %A11y{error_message: "name-error"} = a
     end
 
     test "cast bare map with all relationship fields" do
-      a = A11y.cast(%{labelled_by: "lb", described_by: "db", error_message: "em"})
+      {:ok, a} = A11y.cast(%{labelled_by: "lb", described_by: "db", error_message: "em"})
       assert a.labelled_by == "lb"
       assert a.described_by == "db"
       assert a.error_message == "em"
@@ -428,7 +430,7 @@ defmodule Plushie.Type.A11yTest do
 
     test "cast passthrough preserves relationship fields" do
       a = %A11y{labelled_by: "lb", described_by: "db", error_message: "em"}
-      assert A11y.cast(a) == a
+      assert A11y.cast(a) == {:ok, a}
     end
   end
 

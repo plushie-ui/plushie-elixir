@@ -395,7 +395,7 @@ defmodule Plushie.Docs.AccessibilityTest do
   end
 
   test "accessibility_cast_from_bare_map_test" do
-    a = A11y.cast(%{role: :heading, level: 1})
+    {:ok, a} = A11y.cast(%{role: :heading, level: 1})
     assert %A11y{role: :heading, level: 1} = a
   end
 end

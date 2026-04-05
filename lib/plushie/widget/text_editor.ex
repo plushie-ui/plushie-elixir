@@ -249,16 +249,24 @@ defmodule Plushie.Widget.TextEditor do
   @doc "Sets the placeholder text color. Accepts any form `Color.cast/1` supports."
   @spec placeholder_color(text_editor :: t(), color :: Plushie.Type.Color.input()) :: t()
   def placeholder_color(%__MODULE__{} = ed, color),
-    do: %{ed | placeholder_color: Color.cast(color)}
+    do: %{ed | placeholder_color: elem(Color.cast(color), 1)}
 
   @doc "Sets the text selection highlight color. Accepts any form `Color.cast/1` supports."
   @spec selection_color(text_editor :: t(), color :: Plushie.Type.Color.input()) :: t()
   def selection_color(%__MODULE__{} = ed, color),
-    do: %{ed | selection_color: Color.cast(color)}
+    do: %{ed | selection_color: elem(Color.cast(color), 1)}
 
   @doc "Sets accessibility annotations."
   @spec a11y(text_editor :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = ed, a11y), do: %{ed | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = ed, a11y),
+    do: %{
+      ed
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this text editor struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(text_editor :: t()) :: Plushie.Widget.ui_node()

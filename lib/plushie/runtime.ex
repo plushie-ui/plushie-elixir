@@ -538,10 +538,10 @@ defmodule Plushie.Runtime do
       if existing do
         %{
           event
-          | data: %{
-              event.data
-              | delta_x: existing.data.delta_x + event.data.delta_x,
-                delta_y: existing.data.delta_y + event.data.delta_y
+          | value: %{
+              event.value
+              | delta_x: existing.value.delta_x + event.value.delta_x,
+                delta_y: existing.value.delta_y + event.value.delta_y
             }
         }
       else
@@ -1509,19 +1509,19 @@ defmodule Plushie.Runtime do
     event = %{event | type: {widget_type, event_name}}
 
     case spec do
-      %{carrier: :value} ->
-        # Extract value from wire data map, put in value field
-        wire_value = extract_wire_value(event.data)
-        %{event | value: wire_value, data: nil}
-
-      %{carrier: :data, fields: declared_fields} ->
-        # Atomize declared keys from wire data, parse typed fields
-        wire_data = event.data || %{}
+      %{carrier: :value, fields: declared_fields} ->
+        # Multi-field event: atomize declared keys from wire data, parse typed fields
+        wire_data = if is_map(event.value), do: event.value, else: %{}
         parsed = atomize_declared_fields(wire_data, declared_fields)
-        %{event | data: parsed}
+        %{event | value: parsed}
+
+      %{carrier: :value} ->
+        # Scalar value: extract from wire data map if needed
+        wire_value = extract_wire_value(event.value)
+        %{event | value: wire_value}
 
       %{carrier: :none} ->
-        %{event | data: nil}
+        %{event | value: nil}
 
       nil ->
         # No spec -- the widget declared the event name but not a

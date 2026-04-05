@@ -76,58 +76,54 @@ defmodule Plushie.Type.ColorTest do
 
   describe "cast/1" do
     test "casts named atom :black" do
-      assert Color.cast(:black) == "#000000"
+      assert Color.cast(:black) == {:ok, "#000000"}
     end
 
     test "casts named atom :white" do
-      assert Color.cast(:white) == "#ffffff"
+      assert Color.cast(:white) == {:ok, "#ffffff"}
     end
 
     test "casts named atom :transparent" do
-      assert Color.cast(:transparent) == "#00000000"
+      assert Color.cast(:transparent) == {:ok, "#00000000"}
     end
 
     test "casts named atom :red" do
-      assert Color.cast(:red) == "#ff0000"
+      assert Color.cast(:red) == {:ok, "#ff0000"}
     end
 
     test "casts :gray and :grey to same value" do
       assert Color.cast(:gray) == Color.cast(:grey)
-      assert Color.cast(:gray) == "#808080"
+      assert Color.cast(:gray) == {:ok, "#808080"}
     end
 
     test "casts hex string passthrough" do
-      assert Color.cast("#ff0000") == "#ff0000"
+      assert Color.cast("#ff0000") == {:ok, "#ff0000"}
     end
 
     test "casts uppercase hex string with downcase" do
-      assert Color.cast("#FF0000") == "#ff0000"
+      assert Color.cast("#FF0000") == {:ok, "#ff0000"}
     end
 
-    test "raises on unknown atom" do
-      assert_raise ArgumentError, ~r/unknown color name/, fn ->
-        Color.cast(:nonexistent_color)
-      end
+    test "returns error on unknown atom" do
+      assert Color.cast(:nonexistent_color) == :error
     end
 
     test "casts named string \"red\"" do
-      assert Color.cast("red") == "#ff0000"
+      assert Color.cast("red") == {:ok, "#ff0000"}
     end
 
     test "casts named string case-insensitively" do
-      assert Color.cast("Blue") == "#0000ff"
-      assert Color.cast("CORAL") == "#ff7f50"
-      assert Color.cast("CornflowerBlue") == "#6495ed"
+      assert Color.cast("Blue") == {:ok, "#0000ff"}
+      assert Color.cast("CORAL") == {:ok, "#ff7f50"}
+      assert Color.cast("CornflowerBlue") == {:ok, "#6495ed"}
     end
 
     test "casts named string \"transparent\"" do
-      assert Color.cast("transparent") == "#00000000"
+      assert Color.cast("transparent") == {:ok, "#00000000"}
     end
 
-    test "non-color string falls through to hex parsing" do
-      assert_raise ArgumentError, ~r/invalid hex color digits/, fn ->
-        Color.cast("banana")
-      end
+    test "non-color string returns error" do
+      assert Color.cast("banana") == :error
     end
   end
 

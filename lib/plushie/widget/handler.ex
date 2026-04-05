@@ -135,7 +135,7 @@ defmodule Plushie.Widget.Handler do
           value: data
         }
 
-      %{carrier: :data, fields: declared_fields} = spec ->
+      %{carrier: :value, fields: declared_fields} = spec ->
         unless is_map(data) do
           raise ArgumentError,
                 "event #{inspect(family)} spec declares data fields " <>
@@ -151,7 +151,7 @@ defmodule Plushie.Widget.Handler do
           id: id,
           scope: scope,
           window_id: emit_window_id,
-          data: validated
+          value: validated
         }
 
       %{carrier: :none} ->

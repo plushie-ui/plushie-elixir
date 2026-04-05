@@ -118,7 +118,15 @@ defmodule Plushie.Widget.Button do
 
   @doc "Sets accessibility annotations."
   @spec a11y(button :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = btn, a11y), do: %{btn | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = btn, a11y),
+    do: %{
+      btn
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this button struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(button :: t()) :: Plushie.Widget.ui_node()

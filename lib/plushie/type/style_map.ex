@@ -93,13 +93,13 @@ defmodule Plushie.Type.StyleMap do
   end
 
   def background(%__MODULE__{} = style_map, background) do
-    %{style_map | background: Color.cast(background)}
+    %{style_map | background: elem(Color.cast(background), 1)}
   end
 
   @doc "Sets the text color. Accepts a hex string or named color atom."
   @spec text_color(style_map :: t(), text_color :: Color.input()) :: t()
   def text_color(%__MODULE__{} = style_map, text_color) do
-    %{style_map | text_color: Color.cast(text_color)}
+    %{style_map | text_color: elem(Color.cast(text_color), 1)}
   end
 
   @doc "Sets the border specification."
@@ -183,7 +183,7 @@ defmodule Plushie.Type.StyleMap do
       nil -> map
       # Gradients pass through as-is (already a wire-format map).
       %{type: "linear"} = gradient -> Map.put(map, key, gradient)
-      val -> Map.put(map, key, Color.cast(val))
+      val -> Map.put(map, key, elem(Color.cast(val), 1))
     end
   end
 end

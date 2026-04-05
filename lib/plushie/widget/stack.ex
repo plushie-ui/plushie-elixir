@@ -90,7 +90,15 @@ defmodule Plushie.Widget.Stack do
 
   @doc "Sets accessibility annotations."
   @spec a11y(stack :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = stack, a11y), do: %{stack | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = stack, a11y),
+    do: %{
+      stack
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this stack struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(stack :: t()) :: Plushie.Widget.ui_node()

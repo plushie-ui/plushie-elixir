@@ -54,7 +54,8 @@ defmodule Plushie.Type.Border do
 
   @doc "Sets the border color. Accepts a hex string or named color atom."
   @spec color(border :: t(), color :: Plushie.Type.Color.input()) :: t()
-  def color(%__MODULE__{} = border, color), do: %{border | color: Plushie.Type.Color.cast(color)}
+  def color(%__MODULE__{} = border, color),
+    do: %{border | color: elem(Plushie.Type.Color.cast(color), 1)}
 
   @doc "Sets the border width in pixels."
   @spec width(border :: t(), width :: number()) :: t()

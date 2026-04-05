@@ -20,10 +20,10 @@ defmodule Plushie.Type.Color do
       "#ff8800"
 
       iex> Plushie.Type.Color.cast(:red)
-      "#ff0000"
+      {:ok, "#ff0000"}
 
       iex> Plushie.Type.Color.cast(:cornflowerblue)
-      "#6495ed"
+      {:ok, "#6495ed"}
   """
 
   @typedoc ~S'Canonical hex color string (`"#rrggbb"` or `"#rrggbbaa"`).'
@@ -303,49 +303,63 @@ defmodule Plushie.Type.Color do
   ## Examples
 
       iex> Plushie.Type.Color.cast(:black)
-      "#000000"
+      {:ok, "#000000"}
 
       iex> Plushie.Type.Color.cast(:transparent)
-      "#00000000"
+      {:ok, "#00000000"}
 
       iex> Plushie.Type.Color.cast("#FF0000")
-      "#ff0000"
+      {:ok, "#ff0000"}
 
       iex> Plushie.Type.Color.cast(:cornflowerblue)
-      "#6495ed"
+      {:ok, "#6495ed"}
 
       iex> Plushie.Type.Color.cast("red")
-      "#ff0000"
+      {:ok, "#ff0000"}
 
       iex> Plushie.Type.Color.cast("CornflowerBlue")
-      "#6495ed"
+      {:ok, "#6495ed"}
   """
-  @spec cast(color :: input()) :: t()
+  @behaviour Plushie.Type
+
+  @impl Plushie.Type
+  @spec cast(color :: input()) :: {:ok, t()} | :error
   def cast(%{r: r, g: g, b: b, a: a})
       when is_number(r) and is_number(g) and is_number(b) and is_number(a) do
-    from_rgba(float_to_byte(r), float_to_byte(g), float_to_byte(b), clamp_float(a))
+    {:ok, from_rgba(float_to_byte(r), float_to_byte(g), float_to_byte(b), clamp_float(a))}
   end
 
   def cast(%{r: r, g: g, b: b})
       when is_number(r) and is_number(g) and is_number(b) do
-    from_rgb(float_to_byte(r), float_to_byte(g), float_to_byte(b))
+    {:ok, from_rgb(float_to_byte(r), float_to_byte(g), float_to_byte(b))}
   end
 
   def cast(name) when is_atom(name) do
     case Map.fetch(@named_colors, name) do
-      {:ok, hex} -> hex
-      :error -> raise ArgumentError, "unknown color name: #{inspect(name)}"
+      {:ok, hex} -> {:ok, hex}
+      :error -> :error
     end
   end
 
-  def cast("#" <> _ = hex), do: from_hex(hex)
+  def cast("#" <> _ = hex) do
+    {:ok, from_hex(hex)}
+  rescue
+    ArgumentError -> :error
+  end
 
   def cast(str) when is_binary(str) do
     case Map.fetch(@named_colors_by_string, String.downcase(str)) do
-      {:ok, hex} -> hex
-      :error -> from_hex(str)
+      {:ok, hex} ->
+        {:ok, hex}
+
+      :error ->
+        {:ok, from_hex(str)}
     end
+  rescue
+    ArgumentError -> :error
   end
+
+  def cast(_), do: :error
 
   @doc """
   Returns the map of all supported named colors.
@@ -363,6 +377,7 @@ defmodule Plushie.Type.Color do
       iex> Plushie.Type.Color.encode("#ff0000")
       "#ff0000"
   """
+  @impl Plushie.Type
   @spec encode(color :: t()) :: t()
   def encode(color) when is_binary(color), do: color
 
@@ -386,11 +401,13 @@ defmodule Plushie.Type.Color do
   # -- Plushie.Type callbacks ----------------------------------------------------
 
   @doc false
+  @impl Plushie.Type
   def typespec do
     quote do: String.t()
   end
 
   @doc false
+  @impl Plushie.Type
   def guard(var) do
     quote do: is_binary(unquote(var))
   end

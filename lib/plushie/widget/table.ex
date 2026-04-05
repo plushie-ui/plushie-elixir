@@ -249,7 +249,7 @@ defmodule Plushie.Widget.Table do
   @doc "Sets the separator line color."
   @spec separator_color(table :: t(), separator_color :: Plushie.Type.Color.input()) :: t()
   def separator_color(%__MODULE__{} = tbl, separator_color),
-    do: %{tbl | separator_color: Color.cast(separator_color)}
+    do: %{tbl | separator_color: elem(Color.cast(separator_color), 1)}
 
   @doc "Appends a child to the table."
   @spec push(table :: t(), child :: Plushie.Widget.child()) :: t()
@@ -263,7 +263,15 @@ defmodule Plushie.Widget.Table do
 
   @doc "Sets accessibility annotations."
   @spec a11y(table :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = tbl, a11y), do: %{tbl | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = tbl, a11y),
+    do: %{
+      tbl
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this table struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(table :: t()) :: Plushie.Widget.ui_node()

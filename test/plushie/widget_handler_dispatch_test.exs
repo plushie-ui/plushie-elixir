@@ -123,7 +123,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
         Handler.invoke_handler(EmitWidget, click_event("elem", ["widget"]), %{}, "widget")
 
       assert widget_event.type == {:emit_widget, :activated}
-      assert widget_event.data.source == "emit_widget"
+      assert widget_event.value.source == "emit_widget"
       assert widget_event.id == "widget"
     end
   end
@@ -189,7 +189,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
         WidgetHandlers.dispatch_event(registry, click_event("elem", ["widget"]))
 
       assert event.type == {:emit_widget, :activated}
-      assert event.data.source == "emit_widget"
+      assert event.value.source == "emit_widget"
     end
   end
 
@@ -545,7 +545,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
       id: id,
       scope: scope,
       window_id: window_id,
-      data: %{x: 100.0, y: 100.0, button: :left, pointer: :mouse}
+      value: %{x: 100.0, y: 100.0, button: :left, pointer: :mouse}
     }
   end
 end

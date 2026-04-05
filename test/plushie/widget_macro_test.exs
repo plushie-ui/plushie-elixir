@@ -668,7 +668,7 @@ defmodule Plushie.WidgetMacroTest do
 
       assert widget.label == "Hello"
       assert widget.size == 18
-      assert widget.color == Plushie.Type.Color.cast(:green)
+      assert {:ok, widget.color} == Plushie.Type.Color.cast(:green)
     end
 
     test "with_options/2 applies multiple options" do

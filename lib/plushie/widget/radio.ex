@@ -177,7 +177,15 @@ defmodule Plushie.Widget.Radio do
 
   @doc "Sets accessibility annotations."
   @spec a11y(radio :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = r, a11y), do: %{r | a11y: Plushie.Type.A11y.cast(a11y)}
+  def a11y(%__MODULE__{} = r, a11y),
+    do: %{
+      r
+      | a11y:
+          (fn a ->
+             {:ok, v} = Plushie.Type.A11y.cast(a)
+             v
+           end).(a11y)
+    }
 
   @doc "Converts this radio struct to a `ui_node()` map via the `Plushie.Widget` protocol."
   @spec build(radio :: t()) :: Plushie.Widget.ui_node()

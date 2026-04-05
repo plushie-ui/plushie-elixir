@@ -55,7 +55,7 @@ defmodule Plushie.Protocol.Decode do
   ## Examples
 
       iex> Plushie.Protocol.Decode.decode_message(~s({"type":"event","family":"click","id":"btn_save","window_id":"main"}), :json)
-      %Plushie.Event.WidgetEvent{type: :click, id: "btn_save", window_id: "main", value: nil, data: nil}
+      %Plushie.Event.WidgetEvent{type: :click, id: "btn_save", window_id: "main", value: nil}
 
       iex> match?({:error, {:decode_failed, _}}, Plushie.Protocol.Decode.decode_message("not json"))
       true
@@ -225,9 +225,11 @@ defmodule Plushie.Protocol.Decode do
 
   defp dispatch(%{"type" => "event", "family" => "click", "id" => _id} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    # data is nil for standard widget clicks, populated for canvas
+    # value is nil for standard widget clicks, populated for canvas
     # element clicks (which carry button, x, y coordinates).
-    %WidgetEvent{type: :click, id: local, scope: scope, window_id: window_id, data: msg["data"]}
+    wire_data = msg["data"]
+    click_value = if is_map(wire_data), do: safe_atomize_keys(wire_data), else: wire_data
+    %WidgetEvent{type: :click, id: local, scope: scope, window_id: window_id, value: click_value}
   end
 
   defp dispatch(%{"type" => "event", "family" => "input", "id" => _id, "value" => value} = msg) do
@@ -307,7 +309,14 @@ defmodule Plushie.Protocol.Decode do
          %{"type" => "event", "family" => "key_binding", "id" => _id, "data" => data} = msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    %WidgetEvent{type: :key_binding, id: local, scope: scope, window_id: window_id, data: data}
+
+    %WidgetEvent{
+      type: :key_binding,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      value: safe_atomize_keys(data)
+    }
   end
 
   # -- Keyboard events --
@@ -349,7 +358,7 @@ defmodule Plushie.Protocol.Decode do
       id: window_id || "__global__",
       scope: [],
       window_id: window_id,
-      data: %{
+      value: %{
         x: x,
         y: y,
         pointer: :mouse,
@@ -367,7 +376,7 @@ defmodule Plushie.Protocol.Decode do
       id: window_id || "__global__",
       scope: [],
       window_id: window_id,
-      data: %{captured: msg["captured"] || false}
+      value: %{captured: msg["captured"] || false}
     }
   end
 
@@ -379,7 +388,7 @@ defmodule Plushie.Protocol.Decode do
       id: window_id || "__global__",
       scope: [],
       window_id: window_id,
-      data: %{captured: msg["captured"] || false}
+      value: %{captured: msg["captured"] || false}
     }
   end
 
@@ -393,7 +402,7 @@ defmodule Plushie.Protocol.Decode do
           id: window_id || "__global__",
           scope: [],
           window_id: window_id,
-          data: %{
+          value: %{
             button: parsed_button,
             pointer: :mouse,
             x: nil,
@@ -418,7 +427,7 @@ defmodule Plushie.Protocol.Decode do
           id: window_id || "__global__",
           scope: [],
           window_id: window_id,
-          data: %{
+          value: %{
             button: parsed_button,
             pointer: :mouse,
             x: nil,
@@ -449,7 +458,7 @@ defmodule Plushie.Protocol.Decode do
           id: window_id || "__global__",
           scope: [],
           window_id: window_id,
-          data: %{
+          value: %{
             delta_x: dx,
             delta_y: dy,
             unit: parsed_unit,
@@ -540,7 +549,7 @@ defmodule Plushie.Protocol.Decode do
       id: window_id || "__global__",
       scope: [],
       window_id: window_id,
-      data: %{
+      value: %{
         pointer: :touch,
         finger: finger_id,
         x: x,
@@ -566,7 +575,7 @@ defmodule Plushie.Protocol.Decode do
       id: window_id || "__global__",
       scope: [],
       window_id: window_id,
-      data: %{
+      value: %{
         pointer: :touch,
         finger: finger_id,
         x: x,
@@ -591,7 +600,7 @@ defmodule Plushie.Protocol.Decode do
       id: window_id || "__global__",
       scope: [],
       window_id: window_id,
-      data: %{
+      value: %{
         pointer: :touch,
         finger: finger_id,
         x: x,
@@ -617,7 +626,7 @@ defmodule Plushie.Protocol.Decode do
       id: window_id || "__global__",
       scope: [],
       window_id: window_id,
-      data: %{
+      value: %{
         pointer: :touch,
         finger: finger_id,
         x: x,
@@ -771,7 +780,7 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      data: %{tag: tag, prop: data["prop"]}
+      value: %{tag: tag, prop: data["prop"]}
     }
   end
 
@@ -795,7 +804,7 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      data: %{
+      value: %{
         x: data["x"],
         y: data["y"],
         button: parse_pointer_button(data["button"]),
@@ -814,7 +823,7 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      data: %{
+      value: %{
         x: data["x"],
         y: data["y"],
         button: parse_pointer_button(data["button"]),
@@ -833,7 +842,7 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      data: %{
+      value: %{
         x: data["x"],
         y: data["y"],
         pointer: parse_pointer_type(data["pointer"]),
@@ -859,7 +868,7 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      data: %{
+      value: %{
         x: data["x"],
         y: data["y"],
         delta_x: data["delta_x"],
@@ -890,7 +899,7 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      data: %{
+      value: %{
         x: data["x"],
         y: data["y"],
         pointer: parse_pointer_type(data["pointer"]),
@@ -907,7 +916,7 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      data: %{width: data["width"], height: data["height"]}
+      value: %{width: data["width"], height: data["height"]}
     }
   end
 
@@ -923,7 +932,7 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      data: %{split: data["split"], ratio: data["ratio"]}
+      value: %{split: data["split"], ratio: data["ratio"]}
     }
   end
 
@@ -940,7 +949,7 @@ defmodule Plushie.Protocol.Decode do
         id: local,
         scope: scope,
         window_id: window_id,
-        data: %{
+        value: %{
           pane: data["pane"],
           target: data["target"],
           action: action,
@@ -963,7 +972,7 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      data: %{pane: data["pane"]}
+      value: %{pane: data["pane"]}
     }
   end
 
@@ -977,7 +986,7 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      data: %{pane: data["pane"]}
+      value: %{pane: data["pane"]}
     }
   end
 
@@ -989,7 +998,7 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      data: %{column: data["column"]}
+      value: %{column: data["column"]}
     }
   end
 
@@ -1001,7 +1010,7 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      data: %{
+      value: %{
         absolute_x: data["absolute_x"],
         absolute_y: data["absolute_y"],
         relative_x: data["relative_x"],
@@ -1223,7 +1232,7 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      data: %{x: data["x"], y: data["y"], delta_x: data["delta_x"], delta_y: data["delta_y"]}
+      value: %{x: data["x"], y: data["y"], delta_x: data["delta_x"], delta_y: data["delta_y"]}
     }
   end
 
@@ -1243,7 +1252,7 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      data: %{x: data["x"], y: data["y"]}
+      value: %{x: data["x"], y: data["y"]}
     }
   end
 
@@ -1263,7 +1272,7 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      data: parse_canvas_key_data(data, :press)
+      value: parse_canvas_key_data(data, :press)
     }
   end
 
@@ -1282,7 +1291,7 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      data: parse_canvas_key_data(data, :release)
+      value: parse_canvas_key_data(data, :release)
     }
   end
 
@@ -1352,13 +1361,23 @@ defmodule Plushie.Protocol.Decode do
     if Parsers.widget_family?(family) do
       {local, scope, window_id, _family} = event_identity!(msg)
 
+      wire_data = msg["data"]
+      wire_value = msg["value"]
+      # Normalize: wire "data" (map) goes into value with atom keys.
+      # Wire "value" (scalar) goes into value directly.
+      resolved_value =
+        cond do
+          wire_value != nil -> wire_value
+          is_map(wire_data) -> safe_atomize_keys(wire_data)
+          true -> wire_data
+        end
+
       %WidgetEvent{
         type: family,
         id: local,
         scope: scope,
         window_id: window_id,
-        data: msg["data"],
-        value: msg["value"]
+        value: resolved_value
       }
     else
       {:error, {:unknown_event_family, family, msg}}
