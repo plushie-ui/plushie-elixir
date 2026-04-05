@@ -15,7 +15,7 @@ defmodule Plushie.Widget.RichText do
     field :font, Plushie.Type.Font, doc: "Default font for all spans."
     field :color, Plushie.Type.Color, doc: "Default text color for all spans."
     field :line_height, :any, doc: "Line height. Number is relative; map for explicit control."
-    field :wrapping, :atom, doc: "Text wrapping mode."
+    field :wrapping, Plushie.Type.Wrapping, doc: "Text wrapping mode."
     field :ellipsis, :string, doc: "Text ellipsis mode: \"none\", \"start\", \"middle\", \"end\"."
   end
 end

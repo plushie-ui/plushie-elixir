@@ -277,10 +277,10 @@ these arrive as:
 Custom widget event types are tuples: `{widget_type, event_name}`. This
 distinguishes them from built-in events.
 
-For events with multiple fields, use `data:` instead of `value:`:
+For events with multiple fields, use `fields:` instead of `value:`:
 
 ```elixir
-event :change, data: [hue: :float, saturation: :float, value: :float]
+event :change, fields: [hue: :float, saturation: :float, value: :float]
 ```
 
 These arrive in `WidgetEvent.value` as an atom-keyed map.

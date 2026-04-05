@@ -72,8 +72,13 @@ defmodule Plushie.Widget.Container do
     field :max_height, :float, doc: "Maximum height in pixels."
     field :center, :boolean, doc: "Center child in both axes. Default: false."
     field :clip, :boolean, doc: "Clip child that overflows. Default: false."
-    field :align_x, :atom, doc: "Horizontal alignment: `:left`, `:center`, `:right`."
-    field :align_y, :atom, doc: "Vertical alignment: `:top`, `:center`, `:bottom`."
+
+    field :align_x, Plushie.Type.Alignment,
+      doc: "Horizontal alignment: `:left`, `:center`, `:right`."
+
+    field :align_y, Plushie.Type.Alignment,
+      doc: "Vertical alignment: `:top`, `:center`, `:bottom`."
+
     field :background, :any, doc: "Background fill. Accepts a color or gradient."
     field :color, Plushie.Type.Color, doc: "Text color override."
     field :border, Plushie.Type.Border, doc: "Border specification: `%{color, width, radius}`."

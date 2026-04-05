@@ -878,7 +878,7 @@ defmodule Plushie.WidgetMacroTest do
 
   describe "type_display_string" do
     test "primitive types render correctly" do
-      assert Plushie.Widget.type_display_string(:string) == "String.t()"
+      assert Plushie.Widget.type_display_string(:string) == "String.t() | atom()"
       assert Plushie.Widget.type_display_string(:float) == "number()"
       assert Plushie.Widget.type_display_string(:boolean) == "boolean()"
     end

@@ -1,32 +1,3 @@
-defmodule Plushie.Widget.PointerArea.Extras do
-  @moduledoc false
-
-  # Overrides on_press/2 and on_release/2 to coerce atoms to strings.
-  defmacro __before_compile__(_env) do
-    quote do
-      defoverridable on_press: 2, on_release: 2
-
-      @doc "Sets the event tag for left mouse press events. Atoms are coerced to strings."
-      def on_press(%__MODULE__{} = ma, nil), do: %{ma | on_press: nil}
-
-      def on_press(%__MODULE__{} = ma, tag) when is_atom(tag),
-        do: %{ma | on_press: Atom.to_string(tag)}
-
-      def on_press(%__MODULE__{} = ma, tag) when is_binary(tag),
-        do: %{ma | on_press: tag}
-
-      @doc "Sets the event tag for left mouse release events. Atoms are coerced to strings."
-      def on_release(%__MODULE__{} = ma, nil), do: %{ma | on_release: nil}
-
-      def on_release(%__MODULE__{} = ma, tag) when is_atom(tag),
-        do: %{ma | on_release: Atom.to_string(tag)}
-
-      def on_release(%__MODULE__{} = ma, tag) when is_binary(tag),
-        do: %{ma | on_release: tag}
-    end
-  end
-end
-
 defmodule Plushie.Widget.PointerArea do
   @moduledoc """
   Pointer area, captures mouse events on child content.
@@ -37,8 +8,6 @@ defmodule Plushie.Widget.PointerArea do
   """
 
   use Plushie.Widget
-
-  @before_compile Plushie.Widget.PointerArea.Extras
 
   widget :pointer_area, container: :single do
     field :cursor, :atom, doc: "Mouse cursor to show on hover (e.g. `:pointer`, `:grab`)."

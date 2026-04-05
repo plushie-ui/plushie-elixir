@@ -45,7 +45,7 @@ defmodule Plushie.Widget.ComboBox do
     field :on_option_hovered, :boolean, doc: "Emit hover events over dropdown options."
     field :on_open, :boolean, doc: "Emit open event when the dropdown opens."
     field :on_close, :boolean, doc: "Emit close event when the dropdown closes."
-    field :shaping, :atom, doc: "Text shaping strategy."
+    field :shaping, Plushie.Type.Shaping, doc: "Text shaping strategy."
     field :ellipsis, :string, doc: "Text ellipsis: \"none\", \"start\", \"middle\", or \"end\"."
     field :menu_style, :map, doc: "Inline style for the dropdown menu."
     field :style, Plushie.Type.Style, doc: "Named preset or custom `StyleMap`."

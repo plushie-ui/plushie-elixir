@@ -8,7 +8,7 @@ defmodule Plushie.Widget.Rule do
   widget :rule do
     field :height, :float, doc: "Line thickness in pixels (for horizontal rules)."
     field :width, :float, doc: "Line thickness in pixels (for vertical rules)."
-    field :direction, :atom, doc: "`:horizontal` (default) or `:vertical`."
+    field :direction, Plushie.Type.Direction, doc: "`:horizontal` (default) or `:vertical`."
     field :style, Plushie.Type.Style, doc: "Named preset or custom `StyleMap`."
   end
 end

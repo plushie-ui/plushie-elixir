@@ -54,7 +54,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
     @moduledoc false
     use Plushie.Widget
     widget(:emit_widget)
-    event(:activated, data: [source: :string])
+    event(:activated, fields: [source: :string])
 
     @impl true
     def handle_event(%{type: type} = _event, state)

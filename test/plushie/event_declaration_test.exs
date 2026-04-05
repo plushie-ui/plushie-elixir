@@ -32,7 +32,7 @@ defmodule Plushie.EventDeclarationTest do
     @moduledoc false
     use Plushie.Widget
     widget(:data_event_widget)
-    event(:moved, data: [x: :float, y: :float])
+    event(:moved, fields: [x: :float, y: :float])
 
     @impl true
     def handle_event(%{type: :click}, _state), do: {:emit, :moved, %{x: 10.0, y: 20.0}}
@@ -87,7 +87,7 @@ defmodule Plushie.EventDeclarationTest do
     @moduledoc false
     use Plushie.Widget
     widget(:custom_type_widget)
-    event(:key_action, data: [key: Plushie.Type.Key])
+    event(:key_action, fields: [key: Plushie.Type.Key])
 
     @impl true
     def handle_event(_event, _state), do: :ignored
@@ -226,7 +226,7 @@ defmodule Plushie.EventDeclarationTest do
       assert nil == ValueEventWidget.__event_spec__(:nonexistent)
     end
 
-    test "inline data: form includes required list with all field names" do
+    test "inline fields: form includes required list with all field names" do
       spec = DataEventWidget.__event_spec__(:moved)
       assert %{carrier: :value, fields: [x: :float, y: :float], required: [:x, :y]} = spec
     end

@@ -12,11 +12,11 @@ defmodule Plushie.Widget.Image do
 
     field :width, Plushie.Type.Length, doc: "Image width. Default: shrink."
     field :height, Plushie.Type.Length, doc: "Image height. Default: shrink."
-    field :content_fit, :atom, doc: "How the image fits its bounds."
+    field :content_fit, Plushie.Type.ContentFit, doc: "How the image fits its bounds."
     field :rotation, :float, doc: "Rotation angle in degrees."
     field :opacity, :float, doc: "Opacity from 0.0 (transparent) to 1.0 (opaque)."
     field :border_radius, :float, doc: "Corner radius in pixels."
-    field :filter_method, :atom, doc: "Image interpolation mode."
+    field :filter_method, Plushie.Type.FilterMethod, doc: "Image interpolation mode."
     field :expand, :boolean, doc: "Expand image to fill available space."
     field :scale, :float, doc: "Scale factor for the image."
     field :crop, :map, doc: "Crop rectangle: `%{x, y, width, height}` (integer pixel values)."

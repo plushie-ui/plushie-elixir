@@ -98,15 +98,19 @@ defmodule Plushie.TypeTest do
       assert {:ok, ""} = Plushie.Type.String.cast("")
     end
 
-    test "cast rejects non-binaries" do
+    test "cast coerces atoms to strings" do
+      assert {:ok, "hello"} = Plushie.Type.String.cast(:hello)
+      assert {:ok, "ok"} = Plushie.Type.String.cast(:ok)
+    end
+
+    test "cast rejects non-binaries and non-atoms" do
       assert :error = Plushie.Type.String.cast(42)
-      assert :error = Plushie.Type.String.cast(:hello)
       assert :error = Plushie.Type.String.cast(nil)
     end
 
-    test "guard produces is_binary check" do
+    test "guard accepts binaries and non-nil atoms" do
       ast = Plushie.Type.String.guard(quote(do: x))
-      assert {:is_binary, _, [{:x, _, _}]} = ast
+      assert {:or, _, _} = ast
     end
 
     test "field_options includes string constraints" do

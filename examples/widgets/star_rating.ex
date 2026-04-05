@@ -18,15 +18,18 @@ defmodule StarRating do
 
   use Plushie.Widget
 
-  widget(:star_rating)
-  field(:rating, :float)
-  field(:readonly, :boolean, default: false)
-  field(:scale, :float, default: 1.0)
-  field(:theme_progress, :float, default: 0.0)
+  widget :star_rating do
+    field :rating, :float
+    field :readonly, :boolean, default: false
+    field :scale, :float, default: 1.0
+    field :theme_progress, :float, default: 0.0
+  end
 
   event :select, value: :float
 
-  state(hover: nil)
+  state do
+    field :hover, :integer
+  end
 
   # -- Event transformation ----------------------------------------------------
 

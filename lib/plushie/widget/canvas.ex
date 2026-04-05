@@ -2,12 +2,9 @@ defmodule Plushie.Widget.Canvas.Extras do
   @moduledoc false
 
   # Injects the layer/3, shapes/2, and layers/2 setters that bypass
-  # the standard option system. Also overrides role/2 and arrow_mode/2
-  # to coerce atoms to strings.
+  # the standard option system.
   defmacro __before_compile__(_env) do
     quote do
-      defoverridable role: 2, arrow_mode: 2
-
       @doc "Sets the layers map (layer name => list of shape descriptors)."
       @spec layers(canvas :: t(), layers :: map()) :: t()
       def layers(%__MODULE__{} = canvas, layers), do: %{canvas | layers: layers}
@@ -23,20 +20,6 @@ defmodule Plushie.Widget.Canvas.Extras do
         current = canvas.layers || %{}
         %{canvas | layers: Map.put(current, name, shapes)}
       end
-
-      @doc "Sets the accessible role. Atoms are coerced to strings."
-      def role(%__MODULE__{} = canvas, role) when is_atom(role),
-        do: %{canvas | role: Atom.to_string(role)}
-
-      def role(%__MODULE__{} = canvas, role) when is_binary(role),
-        do: %{canvas | role: role}
-
-      @doc "Sets the arrow key navigation mode. Atoms are coerced to strings."
-      def arrow_mode(%__MODULE__{} = canvas, mode) when is_atom(mode),
-        do: %{canvas | arrow_mode: Atom.to_string(mode)}
-
-      def arrow_mode(%__MODULE__{} = canvas, mode) when is_binary(mode),
-        do: %{canvas | arrow_mode: mode}
     end
   end
 end

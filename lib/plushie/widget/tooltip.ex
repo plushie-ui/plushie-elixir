@@ -42,7 +42,7 @@ defmodule Plushie.Widget.Tooltip do
   widget :tooltip, container: true do
     field :tip, :string, option: false, doc: "Tooltip text."
 
-    field :position, :atom,
+    field :position, Plushie.Type.Position,
       doc: "Position: `:top`, `:bottom`, `:left`, `:right`, `:follow_cursor`."
 
     field :gap, :float, doc: "Gap between tooltip and content in pixels."

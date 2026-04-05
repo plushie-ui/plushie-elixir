@@ -39,7 +39,7 @@ defmodule Plushie.Widget.PaneGrid do
   event :pane_clicked, doc: "Emitted when a pane is selected."
 
   event :pane_resized,
-    data: [split: :string, ratio: :float],
+    fields: [split: :string, ratio: :float],
     doc: "Emitted when a split divider is moved."
 
   event :pane_dragged, doc: "Emitted during pane drag operations."

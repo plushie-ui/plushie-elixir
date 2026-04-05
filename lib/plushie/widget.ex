@@ -32,7 +32,7 @@ defmodule Plushie.Widget do
         rust_crate "native/my_gauge"
         rust_constructor "my_gauge::GaugeWidget::new()"
 
-        event :value_changed, data: [value: :float]
+        event :value_changed, fields: [value: :float]
         command :set_value, value: :float
       end
 
@@ -310,9 +310,9 @@ defmodule Plushie.Widget do
 
       event :select, value: :float
 
-  ## Structured data (goes in `WidgetEvent.value` as an atom-keyed map)
+  ## Structured fields (goes in `WidgetEvent.value` as an atom-keyed map)
 
-      event :change, data: [hue: :float, saturation: :float]
+      event :change, fields: [hue: :float, saturation: :float]
 
   ## Block form (Ecto-style)
 
@@ -326,16 +326,16 @@ defmodule Plushie.Widget do
   a field optional. Optional fields may be omitted from emitted data
   without raising an error.
 
-  ## Block form (nested data)
+  ## Block form (nested fields)
 
       event :change do
-        data do
+        fields do
           field :hue, :float
           field :saturation, :float
         end
       end
 
-  `value:` and `data:` are mutually exclusive.
+  `value:` and `fields:` are mutually exclusive.
 
   Type identifiers can be built-in atoms (`:float`, `:string`,
   `:boolean`, `:any`) or modules with a `parse/1` function.
@@ -483,9 +483,13 @@ defmodule Plushie.Widget do
   # raw values and defer encoding to Tree.normalize.
   @setter_cast_types [Plushie.Type.Color]
 
+  # Types that coerce input in setters (guard accepts wider input than stored type).
+  # These get a coercion step instead of a plain identity encoder.
+  @setter_coerce_types [Plushie.Type.String]
+
   # Known field options consumed by the widget macro. Anything else is
   # treated as a type constraint and forwarded to constrain_guard/2.
-  @known_field_opts [:doc, :default, :option, :wire_name, :required]
+  @known_field_opts [:doc, :default, :option, :wire_name, :required, :cast]
 
   # Type validation delegates to Plushie.Type.resolve/1 at compile time.
 
@@ -645,8 +649,8 @@ defmodule Plushie.Widget do
       {:value, type} ->
         {:value, maybe_expand_alias(type, caller)}
 
-      {:data, fields} when is_list(fields) ->
-        {:data, Enum.map(fields, fn {k, v} -> {k, maybe_expand_alias(v, caller)} end)}
+      {:fields, fields} when is_list(fields) ->
+        {:fields, Enum.map(fields, fn {k, v} -> {k, maybe_expand_alias(v, caller)} end)}
 
       other ->
         other
@@ -689,13 +693,13 @@ defmodule Plushie.Widget do
   def parse_event_opts(opts, caller) when is_list(opts) do
     {doc, opts} = Keyword.pop(opts, :doc)
     has_value = Keyword.has_key?(opts, :value)
-    has_data = Keyword.has_key?(opts, :data)
+    has_fields = Keyword.has_key?(opts, :fields)
 
-    if has_value and has_data do
+    if has_value and has_fields do
       raise CompileError,
         file: caller.file,
         line: caller.line,
-        description: "event cannot declare both value: and data: -- they are mutually exclusive"
+        description: "event cannot declare both value: and fields: (they are mutually exclusive)"
     end
 
     spec =
@@ -703,15 +707,15 @@ defmodule Plushie.Widget do
         has_value ->
           %{carrier: :value, type: Keyword.fetch!(opts, :value)}
 
-        has_data ->
-          fields = Keyword.fetch!(opts, :data)
+        has_fields ->
+          fields = Keyword.fetch!(opts, :fields)
 
           unless is_list(fields) and Keyword.keyword?(fields) do
             raise CompileError,
               file: caller.file,
               line: caller.line,
               description:
-                "event data: must be a keyword list of [field: type], got: #{inspect(fields)}"
+                "event fields: must be a keyword list of [field: type], got: #{inspect(fields)}"
           end
 
           %{carrier: :value, fields: fields, required: Keyword.keys(fields)}
@@ -723,7 +727,7 @@ defmodule Plushie.Widget do
           raise CompileError,
             file: caller.file,
             line: caller.line,
-            description: "event options must include value: or data:, got: #{inspect(opts)}"
+            description: "event options must include value: or fields:, got: #{inspect(opts)}"
       end
 
     if doc, do: Map.put(spec, :doc, doc), else: spec
@@ -750,15 +754,15 @@ defmodule Plushie.Widget do
         {:value, _meta, [type]}, %{carrier: :none} ->
           %{carrier: :value, type: type}
 
-        {:data, _meta, [[do: inner_block]]}, %{carrier: :none} ->
+        {:fields, _meta, [[do: inner_block]]}, %{carrier: :none} ->
           parse_data_block_to_spec(block_to_list(inner_block), caller)
 
-        {:data, _meta, [fields]}, %{carrier: :none} when is_list(fields) ->
+        {:fields, _meta, [fields]}, %{carrier: :none} when is_list(fields) ->
           unless Keyword.keyword?(fields) do
             raise CompileError,
               file: caller.file,
               line: caller.line,
-              description: "event data: must be a keyword list of [field: type]"
+              description: "event fields: must be a keyword list of [field: type]"
           end
 
           %{carrier: :value, fields: fields, required: Keyword.keys(fields)}
@@ -1853,6 +1857,8 @@ defmodule Plushie.Widget do
               "#{desc}\n\nAccepts `#{type_str}`."
           end
 
+        cast_fn = Keyword.get(opts, :cast)
+
         encoder = encoder_for_type(type)
         value_type = elixir_type_for(type)
         constraint_opts = Keyword.drop(opts, @known_field_opts)
@@ -1875,32 +1881,7 @@ defmodule Plushie.Widget do
           end
 
         setter_clause =
-          case guard do
-            nil ->
-              quote do
-                @doc unquote(doc)
-                @spec unquote(name)(widget :: t(), value :: unquote(value_type) | nil) :: t()
-                def unquote(name)(%__MODULE__{} = widget, value) do
-                  %{widget | unquote(name) => unquote(encoder).(value)}
-                end
-              end
-
-            guard ->
-              spec_type =
-                if wants_nil_clause do
-                  quote(do: unquote(value_type) | nil)
-                else
-                  value_type
-                end
-
-              quote do
-                @doc unquote(doc)
-                @spec unquote(name)(widget :: t(), value :: unquote(spec_type)) :: t()
-                def unquote(name)(%__MODULE__{} = widget, value) when unquote(guard) do
-                  %{widget | unquote(name) => unquote(encoder).(value)}
-                end
-              end
-          end
+          generate_setter_clause(name, doc, value_type, wants_nil_clause, cast_fn, guard, encoder)
 
         if nil_clause do
           quote do
@@ -1939,6 +1920,47 @@ defmodule Plushie.Widget do
       end
 
     prop_setters ++ [event_rate_setter, a11y_setter]
+  end
+
+  # Generates the value-accepting clause of a setter (the non-nil branch).
+  defp generate_setter_clause(name, doc, value_type, _wants_nil, cast_fn, _guard, _encoder)
+       when cast_fn != nil do
+    escaped_cast = Macro.escape(cast_fn)
+
+    quote do
+      @doc unquote(doc)
+      @spec unquote(name)(widget :: t(), value :: unquote(value_type) | nil) :: t()
+      def unquote(name)(%__MODULE__{} = widget, value) do
+        %{widget | unquote(name) => unquote(escaped_cast).(value)}
+      end
+    end
+  end
+
+  defp generate_setter_clause(name, doc, value_type, _wants_nil, _cast_fn, nil = _guard, encoder) do
+    quote do
+      @doc unquote(doc)
+      @spec unquote(name)(widget :: t(), value :: unquote(value_type) | nil) :: t()
+      def unquote(name)(%__MODULE__{} = widget, value) do
+        %{widget | unquote(name) => unquote(encoder).(value)}
+      end
+    end
+  end
+
+  defp generate_setter_clause(name, doc, value_type, wants_nil, _cast_fn, guard, encoder) do
+    spec_type =
+      if wants_nil do
+        quote(do: unquote(value_type) | nil)
+      else
+        value_type
+      end
+
+    quote do
+      @doc unquote(doc)
+      @spec unquote(name)(widget :: t(), value :: unquote(spec_type)) :: t()
+      def unquote(name)(%__MODULE__{} = widget, value) when unquote(guard) do
+        %{widget | unquote(name) => unquote(encoder).(value)}
+      end
+    end
   end
 
   defp setter_guard(type) do
@@ -2151,15 +2173,27 @@ defmodule Plushie.Widget do
         quote(do: fn val -> val end)
 
       module ->
-        if function_exported?(module, :cast, 1) and module in @setter_cast_types do
-          quote do
-            fn val ->
-              {:ok, casted} = unquote(module).cast(val)
-              casted
+        cond do
+          function_exported?(module, :cast, 1) and module in @setter_cast_types ->
+            quote do
+              fn val ->
+                {:ok, casted} = unquote(module).cast(val)
+                casted
+              end
             end
-          end
-        else
-          quote(do: fn val -> val end)
+
+          module in @setter_coerce_types ->
+            # Coerce types accept wider input than stored type.
+            # The guard gates what gets through; this normalizes it.
+            quote do
+              fn val ->
+                {:ok, casted} = unquote(module).cast(val)
+                casted
+              end
+            end
+
+          true ->
+            quote(do: fn val -> val end)
         end
     end
   end

@@ -83,7 +83,7 @@ def extend(%__MODULE__{} = w, children), do: %{w | children: w.children ++ child
 
 - `event :name, value: :type` - scalar payload, delivered in
   `WidgetEvent.value`
-- `event :name, data: [field: :type, ...]` - structured payload,
+- `event :name, fields: [field: :type, ...]` - structured payload,
   delivered in `WidgetEvent.value` as an atom-keyed map
 
 Custom events appear in `WidgetEvent.type` as `{widget_type, :event_name}`
@@ -297,7 +297,7 @@ defmodule MyApp.Gauge do
   field :value, :float
   rust_crate "path/to/gauge_crate"
   rust_constructor "gauge::new()"
-  event :value_changed, data: [value: :float]
+  event :value_changed, fields: [value: :float]
   command :set_value, value: :float
 end
 ```

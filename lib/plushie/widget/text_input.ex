@@ -19,7 +19,8 @@ defmodule Plushie.Widget.TextInput do
     field :line_height, :any,
       doc: "Line height. Number is a relative multiplier; map for explicit control."
 
-    field :align_x, :atom, doc: "Text horizontal alignment: `:left`, `:center`, `:right`."
+    field :align_x, Plushie.Type.Alignment,
+      doc: "Text horizontal alignment: `:left`, `:center`, `:right`."
 
     field :icon, :map,
       doc:

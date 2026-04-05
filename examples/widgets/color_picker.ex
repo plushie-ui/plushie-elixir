@@ -15,9 +15,14 @@ defmodule ColorPickerWidget do
   use Plushie.Widget
 
   widget(:color_picker_widget)
-  event(:change, data: [hue: :float, saturation: :float, value: :float])
+  event(:change, fields: [hue: :float, saturation: :float, value: :float])
 
-  state(hue: 0.0, saturation: 1.0, value: 1.0, drag: :none)
+  state do
+    field :hue, :float, default: 0.0
+    field :saturation, :float, default: 1.0
+    field :value, :float, default: 1.0
+    field :drag, :atom, default: :none
+  end
 
   # -- Geometry constants ------------------------------------------------------
 

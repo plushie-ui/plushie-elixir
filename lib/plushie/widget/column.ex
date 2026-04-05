@@ -11,7 +11,10 @@ defmodule Plushie.Widget.Column do
     field :width, Plushie.Type.Length, doc: "Width of the column. Default: shrink."
     field :height, Plushie.Type.Length, doc: "Height of the column. Default: shrink."
     field :max_width, :float, doc: "Maximum width in pixels."
-    field :align_x, :atom, doc: "Horizontal alignment of children: `:left`, `:center`, `:right`."
+
+    field :align_x, Plushie.Type.Alignment,
+      doc: "Horizontal alignment of children: `:left`, `:center`, `:right`."
+
     field :clip, :boolean, doc: "Clip children that overflow. Default: false."
     field :wrap, :boolean, doc: "Wrap children to next column when they overflow. Default: false."
   end

@@ -101,25 +101,9 @@ defmodule Plushie.MixProject do
           Plushie.Tree
         ],
         Widgets: ~r/Plushie\.Widget\..*/,
-        "Widget Types": [
-          Plushie.Type.Alignment,
-          Plushie.Type.Anchor,
-          Plushie.Type.Border,
-          Plushie.Type.Color,
-          Plushie.Type.ContentFit,
-          Plushie.Type.Direction,
-          Plushie.Type.FilterMethod,
-          Plushie.Type.Font,
-          Plushie.Type.Gradient,
-          Plushie.Type.Length,
-          Plushie.Type.Padding,
-          Plushie.Type.Position,
-          Plushie.Type.Shadow,
-          Plushie.Type.Shaping,
-          Plushie.Type.StyleMap,
-          Plushie.Type.Theme,
-          Plushie.Type.Wrapping,
-          Plushie.Type.A11y
+        Types: [
+          Plushie.Type,
+          ~r/Plushie\.Type\..*/
         ],
         Events: ~r/Plushie\.Event.*/,
         Commands: [

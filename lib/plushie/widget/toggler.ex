@@ -14,9 +14,9 @@ defmodule Plushie.Widget.Toggler do
     field :text_size, :float, doc: "Label text size in pixels."
     field :font, Plushie.Type.Font, doc: "Label font."
     field :line_height, :any, doc: "Label line height."
-    field :shaping, :atom, doc: "Text shaping strategy."
-    field :wrapping, :atom, doc: "Text wrapping mode."
-    field :text_alignment, :atom, doc: "Horizontal label alignment."
+    field :shaping, Plushie.Type.Shaping, doc: "Text shaping strategy."
+    field :wrapping, Plushie.Type.Wrapping, doc: "Text wrapping mode."
+    field :text_alignment, Plushie.Type.Alignment, doc: "Horizontal label alignment."
     field :style, Plushie.Type.Style, doc: "Named style preset."
     field :disabled, :boolean, doc: "When true, cannot be toggled."
 
