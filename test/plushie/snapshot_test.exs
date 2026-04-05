@@ -372,10 +372,12 @@ defmodule Plushie.SnapshotTest do
             props: %{width: 10},
             children: [],
             meta: %{
-              __widget__: SomeModule,
-              __widget_state__: %{counter: 0},
-              __widget_props__: %{color: "red"},
-              __widget_handles_events__: true
+              __widget__: %Plushie.Widget.Meta.Composite{
+                module: SomeModule,
+                state: %{counter: 0},
+                props: %{color: "red"},
+                handles_events: true
+              }
             }
           }
         ]

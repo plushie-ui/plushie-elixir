@@ -172,8 +172,8 @@ defmodule Plushie.WidgetMacroTest do
       assert node.props[:value] == 42
       assert node.props[:min] == 0
       assert node.props[:max] == 100
-      assert node.props[:__widget_type__] == :gauge
-      assert node.props[:__widget_events__] == [:calibrated]
+      assert node.props[:__widget__].type == :gauge
+      assert node.props[:__widget__].events == [:calibrated]
       assert node.children == []
     end
 

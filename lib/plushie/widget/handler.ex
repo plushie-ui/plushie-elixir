@@ -18,7 +18,7 @@ defmodule Plushie.Widget.Handler do
      initial defaults for new widgets)
   4. The rendered output is normalized in place -- no post-processing
 
-  The tree carries widget state in `:meta` (`__widget_state__`),
+  The tree carries widget state in `:meta` (via `%Meta.Composite{}`),
   making it the single source of truth. The runtime derives a registry
   from the tree after each render for O(1) event dispatch lookups.
 

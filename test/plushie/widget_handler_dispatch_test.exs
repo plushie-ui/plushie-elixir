@@ -284,10 +284,12 @@ defmodule Plushie.WidgetHandlerDispatchTest do
             props: %{},
             children: [],
             meta: %{
-              __widget__: EmitWidget,
-              __widget_state__: %{counter: 3},
-              __widget_props__: %{color: "red"},
-              __widget_handles_events__: true
+              __widget__: %Plushie.Widget.Meta.Composite{
+                module: EmitWidget,
+                state: %{counter: 3},
+                props: %{color: "red"},
+                handles_events: true
+              }
             }
           }
         ]
@@ -321,10 +323,12 @@ defmodule Plushie.WidgetHandlerDispatchTest do
             props: %{},
             children: [],
             meta: %{
-              __widget__: EmitWidget,
-              __widget_state__: %{},
-              __widget_props__: %{},
-              __widget_handles_events__: false
+              __widget__: %Plushie.Widget.Meta.Composite{
+                module: EmitWidget,
+                state: %{},
+                props: %{},
+                handles_events: false
+              }
             }
           }
         ]

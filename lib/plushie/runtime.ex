@@ -1349,16 +1349,36 @@ defmodule Plushie.Runtime do
 
     acc =
       case meta do
-        %{__widget_type__: widget_type, __widget_events__: events}
-        when is_atom(widget_type) and is_list(events) ->
-          event_specs =
-            Map.get(meta, :__widget_event_specs__, [])
-            |> Map.new(fn {name, spec} -> {name, spec} end)
+        %{
+          __widget__: %Plushie.Widget.Meta.Composite{
+            type: widget_type,
+            events: events,
+            event_specs: event_specs
+          }
+        }
+        when is_atom(widget_type) and not is_nil(widget_type) and is_list(events) ->
+          specs_map = Map.new(event_specs || [], fn {name, spec} -> {name, spec} end)
 
           Map.put(acc, {window_id, id}, %{
             widget_type: widget_type,
             events: MapSet.new(events),
+            event_specs: specs_map
+          })
+
+        %{
+          __widget__: %Plushie.Widget.Meta.Native{
+            type: widget_type,
+            events: events,
             event_specs: event_specs
+          }
+        }
+        when is_atom(widget_type) and not is_nil(widget_type) and is_list(events) ->
+          specs_map = Map.new(event_specs || [], fn {name, spec} -> {name, spec} end)
+
+          Map.put(acc, {window_id, id}, %{
+            widget_type: widget_type,
+            events: MapSet.new(events),
+            event_specs: specs_map
           })
 
         _ ->

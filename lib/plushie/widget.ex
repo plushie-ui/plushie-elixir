@@ -836,12 +836,14 @@ defmodule Plushie.Widget do
             id: widget.id,
             type: "widget_placeholder",
             props: %{
-              __widget__: unquote(module),
-              __widget_props__: props,
-              __widget_type__: unquote(widget_type),
-              __widget_events__: unquote(events),
-              __widget_event_specs__: unquote(Macro.escape(event_specs)),
-              __widget_handles_events__: unquote(participates_in_dispatch)
+              __widget__: %Plushie.Widget.Meta.Composite{
+                module: unquote(module),
+                props: props,
+                type: unquote(widget_type),
+                events: unquote(events),
+                event_specs: unquote(Macro.escape(event_specs)),
+                handles_events: unquote(participates_in_dispatch)
+              }
             },
             children: []
           }
@@ -1322,10 +1324,11 @@ defmodule Plushie.Widget do
           unquote(a11y_put)
 
           props =
-            props
-            |> Map.put(:__widget_type__, unquote(widget_type))
-            |> Map.put(:__widget_events__, unquote(events))
-            |> Map.put(:__widget_event_specs__, unquote(Macro.escape(event_specs)))
+            Map.put(props, :__widget__, %Plushie.Widget.Meta.Native{
+              type: unquote(widget_type),
+              events: unquote(events),
+              event_specs: unquote(Macro.escape(event_specs))
+            })
 
           %{
             id: widget.id,

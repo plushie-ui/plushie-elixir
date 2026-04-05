@@ -44,18 +44,7 @@ defmodule Plushie.Tree do
   @depth_warning 200
   @max_depth 256
 
-  # Props with these keys are runtime metadata, not wire props.
-  # They're extracted into a separate :meta field during normalization
-  # and never sent to the renderer.
-  @runtime_meta_keys [
-    :__widget__,
-    :__widget_props__,
-    :__widget_state__,
-    :__widget_handles_events__,
-    :__widget_type__,
-    :__widget_events__,
-    :__widget_event_specs__
-  ]
+  alias Plushie.Widget.Meta
 
   @doc """
   Normalizes a UI tree into the canonical node shape.
@@ -243,8 +232,8 @@ defmodule Plushie.Tree do
           {:rendered, map()} | :not_a_widget_placeholder
   defp render_widget_placeholder(meta, local_id, scoped_id, ctx) do
     case Map.get(meta, :__widget__) do
-      module when is_atom(module) and not is_nil(module) ->
-        widget_props = Map.get(meta, :__widget_props__, %{})
+      %Meta.Composite{module: module} = composite ->
+        widget_props = composite.props || %{}
         widget_state = lookup_widget_state(scoped_id, module, ctx)
 
         # View with local ID -- normalization applies scoping.
@@ -264,18 +253,11 @@ defmodule Plushie.Tree do
         # Attach stateful widget metadata to the final node's :meta.
         # This is the ONLY place these keys appear in meta on the
         # final tree -- they weren't in the rendered node's props.
-        widget_meta = %{
-          __widget__: module,
-          __widget_state__: widget_state,
-          __widget_props__: widget_props,
-          __widget_handles_events__: Map.get(meta, :__widget_handles_events__, false),
-          __widget_type__: Map.get(meta, :__widget_type__),
-          __widget_events__: Map.get(meta, :__widget_events__, []),
-          __widget_event_specs__: Map.get(meta, :__widget_event_specs__, [])
-        }
+        enriched = %Meta.Composite{composite | state: widget_state}
+        enriched_meta = %{__widget__: enriched}
 
         existing_meta = Map.get(normalized, :meta, %{})
-        final = Map.put(normalized, :meta, Map.merge(existing_meta, widget_meta))
+        final = Map.put(normalized, :meta, Map.merge(existing_meta, enriched_meta))
         {:rendered, final}
 
       _ ->
@@ -865,7 +847,10 @@ defmodule Plushie.Tree do
   defp atomize_a11y(props), do: props
 
   defp extract_meta(props) do
-    Map.split_with(props, fn {k, _} -> k in @runtime_meta_keys end)
+    case Map.pop(props, :__widget__) do
+      {nil, _} -> {%{}, props}
+      {widget_meta, rest} -> {%{__widget__: widget_meta}, rest}
+    end
   end
 
   defp encode_prop_values(%{} = map) do
