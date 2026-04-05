@@ -91,14 +91,14 @@ defmodule CounterTest do
 
     test "increment button is present in the tree" do
       tree = Counter.view(%{count: 0})
-      inc = Plushie.UI.find(tree, "inc")
+      inc = Plushie.Tree.find(tree, "inc")
       assert inc != nil
       assert inc.type == "button"
     end
 
     test "decrement button is present in the tree" do
       tree = Counter.view(%{count: 0})
-      dec = Plushie.UI.find(tree, "dec")
+      dec = Plushie.Tree.find(tree, "dec")
       assert dec != nil
       assert dec.type == "button"
     end

@@ -182,15 +182,11 @@ defmodule Plushie.UI do
 
   ## Tree query
 
-  `find/2`, `find/3`, and `find_local/2` are re-exported from
-  `Plushie.Tree` for convenience.
+  Tree query functions live in `Plushie.Tree`:
 
-  `find/2` does exact scoped lookup. Use `find_local/2` when you
-  intentionally want a local ID search:
-
-      Plushie.UI.find(tree, "form/save")
-      Plushie.UI.find(tree, "save", "settings")
-      Plushie.UI.find_local(tree, "save")
+      Plushie.Tree.find(tree, "form/save")
+      Plushie.Tree.find(tree, "save", "settings")
+      Plushie.Tree.find_local(tree, "save")
 
   ## Internals
 
@@ -2518,49 +2514,6 @@ defmodule Plushie.UI do
 
   @doc false
   def __build_sequence__(steps), do: Plushie.Animation.Sequence.new(steps)
-
-  # ---------------------------------------------------------------------------
-  # Tree query
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Finds the first node in a tree whose `:id` matches `id`.
-
-  Delegates to `Plushie.Tree.find/2`. Returns the node map or `nil`.
-
-  ## Example
-
-      tree = MyApp.view(model)
-      Plushie.UI.find(tree, "save_button")
-  """
-  @spec find(tree :: Plushie.Widget.ui_node(), id :: String.t()) ::
-          Plushie.Widget.ui_node() | nil
-  defdelegate find(tree, id), to: Plushie.Tree
-
-  @spec find(
-          tree :: Plushie.Widget.ui_node(),
-          id :: String.t(),
-          window_id :: String.t()
-        ) ::
-          Plushie.Widget.ui_node() | nil
-  defdelegate find(tree, id, window_id), to: Plushie.Tree
-
-  @doc "Returns true if a node with `id` exists in the tree."
-  @spec exists?(tree :: Plushie.Widget.ui_node() | nil, id :: String.t()) ::
-          boolean()
-  defdelegate exists?(tree, id), to: Plushie.Tree
-
-  @doc "Returns all node IDs in the tree."
-  @spec ids(tree :: Plushie.Widget.ui_node() | nil) :: [String.t()]
-  defdelegate ids(tree), to: Plushie.Tree
-
-  @doc "Finds all nodes matching a predicate."
-  @spec find_all(
-          tree :: Plushie.Widget.ui_node() | nil,
-          id_or_pred :: String.t() | (Plushie.Widget.ui_node() -> boolean())
-        ) ::
-          [Plushie.Widget.ui_node()]
-  defdelegate find_all(tree, id_or_pred), to: Plushie.Tree
 
   # ---------------------------------------------------------------------------
   # QR Code (function -- no children)

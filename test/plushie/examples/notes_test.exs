@@ -215,10 +215,10 @@ defmodule NotesTest do
       model = Notes.update(model, %WidgetEvent{type: :click, id: "back"})
 
       tree = Notes.view(model)
-      assert Plushie.UI.exists?(tree, "search")
-      assert Plushie.UI.exists?(tree, "new_note")
-      assert Plushie.UI.exists?(tree, "delete_selected")
-      assert Plushie.UI.exists?(tree, "note:1")
+      assert Plushie.Tree.exists?(tree, "search")
+      assert Plushie.Tree.exists?(tree, "new_note")
+      assert Plushie.Tree.exists?(tree, "delete_selected")
+      assert Plushie.Tree.exists?(tree, "note:1")
     end
 
     test "edit view contains expected widgets" do
@@ -226,11 +226,11 @@ defmodule NotesTest do
       model = Notes.update(model, %WidgetEvent{type: :click, id: "new_note"})
 
       tree = Notes.view(model)
-      assert Plushie.UI.exists?(tree, "back")
-      assert Plushie.UI.exists?(tree, "undo")
-      assert Plushie.UI.exists?(tree, "redo")
-      assert Plushie.UI.exists?(tree, "title")
-      assert Plushie.UI.exists?(tree, "body")
+      assert Plushie.Tree.exists?(tree, "back")
+      assert Plushie.Tree.exists?(tree, "undo")
+      assert Plushie.Tree.exists?(tree, "redo")
+      assert Plushie.Tree.exists?(tree, "title")
+      assert Plushie.Tree.exists?(tree, "body")
     end
   end
 

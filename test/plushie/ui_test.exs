@@ -882,7 +882,7 @@ defmodule Plushie.UITest do
           button("save", "Save")
         end
 
-      result = Plushie.UI.find(tree, "save")
+      result = Plushie.Tree.find(tree, "save")
       assert result != nil
       assert result.id == "save"
       assert result.type == "button"
@@ -890,7 +890,7 @@ defmodule Plushie.UITest do
 
     test "returns nil when id is not in the tree" do
       tree = window("app")
-      assert Plushie.UI.find(tree, "ghost") == nil
+      assert Plushie.Tree.find(tree, "ghost") == nil
     end
   end
 
@@ -1317,8 +1317,8 @@ defmodule Plushie.UITest do
 
     test "contains increment and decrement buttons" do
       tree = Counter.view(%{count: 0})
-      inc = Plushie.UI.find(tree, "inc")
-      dec = Plushie.UI.find(tree, "dec")
+      inc = Plushie.Tree.find(tree, "inc")
+      dec = Plushie.Tree.find(tree, "dec")
       assert inc != nil
       assert inc.type == "button"
       assert dec != nil
