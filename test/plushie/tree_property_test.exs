@@ -102,7 +102,9 @@ defmodule Plushie.TreePropertyTest do
   defp apply_mutation(tree, 3), do: mutate_random_child_gen(tree)
 
   defp apply_mutation(tree, 4) when length(tree.children) < 2, do: StreamData.constant(tree)
-  defp apply_mutation(tree, 4), do: StreamData.constant(%{tree | children: Enum.shuffle(tree.children)})
+
+  defp apply_mutation(tree, 4),
+    do: StreamData.constant(%{tree | children: Enum.shuffle(tree.children)})
 
   defp mutate_random_child_gen(%{children: []} = tree), do: StreamData.constant(tree)
 
@@ -111,7 +113,10 @@ defmodule Plushie.TreePropertyTest do
       child = Enum.at(tree.children, idx)
 
       StreamData.bind(apply_random_mutation_gen(child), fn mutated_child ->
-        StreamData.constant(%{tree | children: List.replace_at(tree.children, idx, mutated_child)})
+        StreamData.constant(%{
+          tree
+          | children: List.replace_at(tree.children, idx, mutated_child)
+        })
       end)
     end)
   end
