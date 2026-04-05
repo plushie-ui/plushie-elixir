@@ -194,6 +194,8 @@ defmodule Plushie.Widget do
                 prop: 3,
                 event: 1,
                 event: 2,
+                field: 2,
+                field: 3,
                 command: 1,
                 command: 2,
                 rust_crate: 1,
@@ -207,7 +209,17 @@ defmodule Plushie.Widget do
         :widget ->
           quote do
             import Plushie.Widget,
-              only: [widget: 1, widget: 2, prop: 2, prop: 3, state: 1, event: 1, event: 2]
+              only: [
+                widget: 1,
+                widget: 2,
+                prop: 2,
+                prop: 3,
+                state: 1,
+                event: 1,
+                event: 2,
+                field: 2,
+                field: 3
+              ]
 
             import Plushie.UI
           end
@@ -268,7 +280,19 @@ defmodule Plushie.Widget do
 
       event :change, data: [hue: :number, saturation: :number]
 
-  ## Block form
+  ## Block form (Ecto-style)
+
+      event :change do
+        field :hue, :number
+        field :saturation, :number
+        field :modifier, :string, required: false
+      end
+
+  All fields are required by default. Use `required: false` to make
+  a field optional. Optional fields may be omitted from emitted data
+  without raising an error.
+
+  ## Block form (nested data)
 
       event :change do
         data do
@@ -326,6 +350,30 @@ defmodule Plushie.Widget do
       for {name, default} <- unquote(fields) do
         @_widget_state_fields {name, default}
       end
+    end
+  end
+
+  @doc """
+  Declares a typed field inside an `event` do-block.
+
+  Fields are required by default. Use `required: false` to make a field
+  optional:
+
+      event :change do
+        field :hue, :number
+        field :saturation, :number
+        field :modifier, :string, required: false
+      end
+
+  This macro is only valid inside an `event` do-block. It is consumed
+  as AST by the event macro and never actually expanded.
+  """
+  defmacro field(name, type, opts \\ []) do
+    quote do
+      raise CompileError,
+        description:
+          "field #{inspect(unquote(name))}/#{inspect(unquote(type))}/#{inspect(unquote(opts))} " <>
+            "can only be used inside an event do-block"
     end
   end
 
@@ -512,6 +560,9 @@ defmodule Plushie.Widget do
       {:field, meta, [name, type]} ->
         {:field, meta, [name, maybe_expand_alias(type, caller)]}
 
+      {:field, meta, [name, type, opts]} ->
+        {:field, meta, [name, maybe_expand_alias(type, caller), opts]}
+
       other ->
         other
     end)
@@ -562,7 +613,7 @@ defmodule Plushie.Widget do
               "event data: must be a keyword list of [field: type], got: #{inspect(fields)}"
         end
 
-        %{carrier: :data, fields: fields}
+        %{carrier: :data, fields: fields, required: Keyword.keys(fields)}
 
       true ->
         raise CompileError,
@@ -578,46 +629,75 @@ defmodule Plushie.Widget do
   def parse_event_block(block, caller) do
     stmts = block_to_list(block)
 
-    Enum.reduce(stmts, %{carrier: :none}, fn
-      {:value, _meta, [type]}, %{carrier: :none} ->
-        %{carrier: :value, type: type}
+    # Check if the block contains top-level field declarations.
+    # If so, treat them as data fields directly (no wrapping `data do end`).
+    has_top_level_fields =
+      Enum.any?(stmts, fn
+        {:field, _meta, [_name, _type | _rest]} -> true
+        _ -> false
+      end)
 
-      {:data, _meta, [[do: inner_block]]}, %{carrier: :none} ->
-        %{carrier: :data, fields: parse_data_fields(inner_block, caller)}
+    if has_top_level_fields do
+      parse_data_block_to_spec(stmts, caller)
+    else
+      Enum.reduce(stmts, %{carrier: :none}, fn
+        {:value, _meta, [type]}, %{carrier: :none} ->
+          %{carrier: :value, type: type}
 
-      {:data, _meta, [fields]}, %{carrier: :none} when is_list(fields) ->
-        unless Keyword.keyword?(fields) do
-          raise CompileError,
-            file: caller.file,
-            line: caller.line,
-            description: "event data: must be a keyword list of [field: type]"
-        end
+        {:data, _meta, [[do: inner_block]]}, %{carrier: :none} ->
+          parse_data_block_to_spec(block_to_list(inner_block), caller)
 
-        %{carrier: :data, fields: fields}
+        {:data, _meta, [fields]}, %{carrier: :none} when is_list(fields) ->
+          unless Keyword.keyword?(fields) do
+            raise CompileError,
+              file: caller.file,
+              line: caller.line,
+              description: "event data: must be a keyword list of [field: type]"
+          end
 
-      _other, acc ->
-        acc
-    end)
+          %{carrier: :data, fields: fields, required: Keyword.keys(fields)}
+
+        _other, acc ->
+          acc
+      end)
+    end
+  end
+
+  # Parses a list of `field` statements into a data spec with required tracking.
+  defp parse_data_block_to_spec(stmts, caller) do
+    {fields, required} = parse_data_stmts(stmts, caller)
+    %{carrier: :data, fields: fields, required: required}
   end
 
   defp block_to_list({:__block__, _, stmts}), do: stmts
   defp block_to_list(stmt), do: [stmt]
 
-  defp parse_data_fields({:__block__, _, stmts}, caller), do: parse_data_stmts(stmts, caller)
-  defp parse_data_fields(stmt, caller), do: parse_data_stmts([stmt], caller)
-
   defp parse_data_stmts(stmts, caller) do
-    Enum.map(stmts, fn
-      {:field, _meta, [name, type]} when is_atom(name) ->
-        {name, type}
+    parsed =
+      Enum.map(stmts, fn
+        {:field, _meta, [name, type]} when is_atom(name) ->
+          {name, type, true}
 
-      other ->
-        raise CompileError,
-          file: caller.file,
-          line: caller.line,
-          description:
-            "expected `field :name, :type` inside data block, got: #{Macro.to_string(other)}"
-    end)
+        {:field, _meta, [name, type, opts]} when is_atom(name) and is_list(opts) ->
+          required = Keyword.get(opts, :required, true)
+          {name, type, required}
+
+        other ->
+          raise CompileError,
+            file: caller.file,
+            line: caller.line,
+            description:
+              "expected `field :name, :type` inside data block, got: #{Macro.to_string(other)}"
+      end)
+
+    fields = Enum.map(parsed, fn {name, type, _req} -> {name, type} end)
+
+    required =
+      parsed
+      |> Enum.filter(fn {_name, _type, req} -> req end)
+      |> Enum.map(fn {name, _type, _req} -> name end)
+
+    {fields, required}
   end
 
   @doc false

@@ -135,7 +135,7 @@ defmodule Plushie.Widget.Handler do
           value: data
         }
 
-      %{carrier: :data, fields: declared_fields} ->
+      %{carrier: :data, fields: declared_fields} = spec ->
         unless is_map(data) do
           raise ArgumentError,
                 "event #{inspect(family)} spec declares data fields " <>
@@ -143,7 +143,8 @@ defmodule Plushie.Widget.Handler do
                   "but emit data is not a map: #{inspect(data)}"
         end
 
-        validated = validate_and_coerce_emit_data!(family, data, declared_fields)
+        required_fields = Map.get(spec, :required, Keyword.keys(declared_fields))
+        validated = validate_and_coerce_emit_data!(family, data, declared_fields, required_fields)
 
         %Plushie.Event.WidgetEvent{
           type: event_type,
@@ -272,19 +273,27 @@ defmodule Plushie.Widget.Handler do
     end
   end
 
-  # Validates and coerces emit data: atomizes keys and validates each
-  # declared field's value against its type.
+  # Validates and coerces emit data: atomizes keys, checks required
+  # fields are present, and validates each declared field's type.
   @spec validate_and_coerce_emit_data!(
           family :: atom(),
           data :: map(),
-          declared_fields :: [{atom(), term()}]
+          declared_fields :: [{atom(), term()}],
+          required_fields :: [atom()]
         ) :: map()
-  defp validate_and_coerce_emit_data!(family, data, declared_fields) do
+  defp validate_and_coerce_emit_data!(family, data, declared_fields, required_fields) do
     atom_data =
       Map.new(data, fn
         {k, v} when is_atom(k) -> {k, v}
         {k, v} when is_binary(k) -> {String.to_existing_atom(k), v}
       end)
+
+    missing = Enum.reject(required_fields, &Map.has_key?(atom_data, &1))
+
+    if missing != [] do
+      raise ArgumentError,
+            "event #{inspect(family)} is missing required fields: #{inspect(missing)}"
+    end
 
     for {field_name, type} <- declared_fields do
       if Map.has_key?(atom_data, field_name) do

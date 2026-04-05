@@ -101,6 +101,87 @@ defmodule Plushie.EventDeclarationTest do
     end
   end
 
+  # -- Test widgets with do-block event declarations --------------------------
+
+  defmodule DoBlockEventWidget do
+    @moduledoc false
+    use Plushie.Widget
+    widget(:do_block_event_widget)
+
+    event :changed do
+      field(:hue, :number)
+      field(:saturation, :number)
+    end
+
+    @impl true
+    def handle_event(%{type: :click}, _state),
+      do: {:emit, :changed, %{hue: 180.0, saturation: 0.75}}
+
+    def handle_event(_event, _state), do: :ignored
+
+    @impl true
+    def view(id, _props, _state) do
+      import Plushie.UI
+
+      canvas id, width: 1, height: 1 do
+      end
+    end
+  end
+
+  defmodule OptionalFieldWidget do
+    @moduledoc false
+    use Plushie.Widget
+    widget(:optional_field_widget)
+
+    event :adjusted do
+      field(:hue, :number)
+      field(:saturation, :number)
+      field(:modifier, :string, required: false)
+    end
+
+    @impl true
+    def handle_event(%{type: :click, id: "with_mod"}, _state),
+      do: {:emit, :adjusted, %{hue: 90.0, saturation: 0.5, modifier: "shift"}}
+
+    def handle_event(%{type: :click}, _state),
+      do: {:emit, :adjusted, %{hue: 90.0, saturation: 0.5}}
+
+    def handle_event(_event, _state), do: :ignored
+
+    @impl true
+    def view(id, _props, _state) do
+      import Plushie.UI
+
+      canvas id, width: 1, height: 1 do
+      end
+    end
+  end
+
+  defmodule MissingRequiredFieldWidget do
+    @moduledoc false
+    use Plushie.Widget
+    widget(:missing_required_field_widget)
+
+    event :color_pick do
+      field(:hue, :number)
+      field(:saturation, :number)
+    end
+
+    @impl true
+    def handle_event(%{type: :click}, _state),
+      do: {:emit, :color_pick, %{hue: 90.0}}
+
+    def handle_event(_event, _state), do: :ignored
+
+    @impl true
+    def view(id, _props, _state) do
+      import Plushie.UI
+
+      canvas id, width: 1, height: 1 do
+      end
+    end
+  end
+
   # -- Event spec generation --------------------------------------------------
 
   describe "event macro generates specs" do
@@ -143,6 +224,106 @@ defmodule Plushie.EventDeclarationTest do
 
     test "__event_spec__/1 returns nil for unknown events" do
       assert nil == ValueEventWidget.__event_spec__(:nonexistent)
+    end
+
+    test "inline data: form includes required list with all field names" do
+      spec = DataEventWidget.__event_spec__(:moved)
+      assert %{carrier: :data, fields: [x: :number, y: :number], required: [:x, :y]} = spec
+    end
+  end
+
+  describe "event do-block with field macro" do
+    test "do-block fields produce carrier :data spec" do
+      spec = DoBlockEventWidget.__event_spec__(:changed)
+      assert %{carrier: :data, fields: [hue: :number, saturation: :number]} = spec
+    end
+
+    test "do-block fields are all required by default" do
+      spec = DoBlockEventWidget.__event_spec__(:changed)
+      assert spec.required == [:hue, :saturation]
+    end
+
+    test "required: false excludes field from required list" do
+      spec = OptionalFieldWidget.__event_spec__(:adjusted)
+      assert %{carrier: :data} = spec
+      assert :hue in spec.required
+      assert :saturation in spec.required
+      refute :modifier in spec.required
+    end
+
+    test "optional field is still declared in fields list" do
+      spec = OptionalFieldWidget.__event_spec__(:adjusted)
+      field_names = Keyword.keys(spec.fields)
+      assert :hue in field_names
+      assert :saturation in field_names
+      assert :modifier in field_names
+    end
+
+    test "__events__/0 includes do-block declared events" do
+      assert [:changed] = DoBlockEventWidget.__events__()
+      assert [:adjusted] = OptionalFieldWidget.__events__()
+    end
+  end
+
+  describe "do-block emit routing" do
+    alias Plushie.Widget.Handler
+
+    test "do-block data event emits to data field" do
+      click = %Plushie.Event.WidgetEvent{
+        type: :click,
+        id: "elem",
+        scope: ["widget"],
+        window_id: "main"
+      }
+
+      {{:emit, event}, _state} =
+        Handler.invoke_handler(DoBlockEventWidget, click, %{}, "widget", "main")
+
+      assert event.type == {:do_block_event_widget, :changed}
+      assert event.data == %{hue: 180.0, saturation: 0.75}
+    end
+
+    test "optional field can be omitted from emitted data" do
+      click = %Plushie.Event.WidgetEvent{
+        type: :click,
+        id: "elem",
+        scope: ["widget"],
+        window_id: "main"
+      }
+
+      {{:emit, event}, _state} =
+        Handler.invoke_handler(OptionalFieldWidget, click, %{}, "widget", "main")
+
+      assert event.type == {:optional_field_widget, :adjusted}
+      assert event.data == %{hue: 90.0, saturation: 0.5}
+    end
+
+    test "optional field can be included in emitted data" do
+      click = %Plushie.Event.WidgetEvent{
+        type: :click,
+        id: "with_mod",
+        scope: ["widget"],
+        window_id: "main"
+      }
+
+      {{:emit, event}, _state} =
+        Handler.invoke_handler(OptionalFieldWidget, click, %{}, "widget", "main")
+
+      assert event.type == {:optional_field_widget, :adjusted}
+      assert event.data == %{hue: 90.0, saturation: 0.5, modifier: "shift"}
+    end
+
+    test "missing required field raises ArgumentError" do
+      click = %Plushie.Event.WidgetEvent{
+        type: :click,
+        id: "elem",
+        scope: ["widget"],
+        window_id: "main"
+      }
+
+      assert_raise ArgumentError, ~r/missing required fields.*:saturation/, fn ->
+        Handler.invoke_handler(MissingRequiredFieldWidget, click, %{}, "widget", "main")
+      end
     end
   end
 

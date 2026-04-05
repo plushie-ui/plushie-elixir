@@ -33,6 +33,7 @@ defmodule Plushie.Event.BuiltinSpecs do
           %{carrier: :none}
           | %{carrier: :value, type: field_type()}
           | %{carrier: :data, fields: [{atom(), field_type()}]}
+          | %{carrier: :data, fields: [{atom(), field_type()}], required: [atom()]}
 
   @specs %{
     # -- Standard widget events --
