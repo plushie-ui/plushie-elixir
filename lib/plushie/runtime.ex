@@ -60,6 +60,7 @@ defmodule Plushie.Runtime do
   defstruct app: nil,
             model: nil,
             bridge: nil,
+            task_supervisor: nil,
             daemon: false,
             token: nil,
             tree: nil,
@@ -304,6 +305,7 @@ defmodule Plushie.Runtime do
 
     app = Keyword.fetch!(opts, :app)
     bridge = Keyword.fetch!(opts, :bridge)
+    task_supervisor = Keyword.get(opts, :task_supervisor)
     daemon? = Keyword.get(opts, :daemon, false)
     token = Keyword.get(opts, :token)
 
@@ -312,7 +314,7 @@ defmodule Plushie.Runtime do
       Keyword.get(
         opts,
         :app_opts,
-        Keyword.drop(opts, [:app, :bridge, :name, :daemon, :token, :app_opts])
+        Keyword.drop(opts, [:app, :bridge, :name, :daemon, :token, :task_supervisor, :app_opts])
       )
 
     # 1. Initialize app model.
@@ -322,6 +324,7 @@ defmodule Plushie.Runtime do
           app: app,
           model: model,
           bridge: bridge,
+          task_supervisor: task_supervisor,
           daemon: daemon?,
           token: token,
           init_commands: commands
@@ -776,8 +779,13 @@ defmodule Plushie.Runtime do
     end
   end
 
-  def handle_info({:DOWN, _ref, :process, _pid, _reason}, state) do
-    {:noreply, state}
+  # Catch-all DOWN handler. Checks if the dead process is a monitored
+  # async task before discarding.
+  def handle_info({:DOWN, _ref, :process, pid, reason}, state) do
+    case handle_async_task_exit(state, pid, reason) do
+      {:handled, state} -> {:noreply, state}
+      :not_a_task -> {:noreply, state}
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -812,41 +820,18 @@ defmodule Plushie.Runtime do
   # Exit trapping -- bridge or linked process crashes
   # ---------------------------------------------------------------------------
 
+  # Task death via link (:EXIT from Task.start_link fallback or other
+  # linked processes).
   def handle_info({:EXIT, pid, reason}, state) do
-    # Find the async_tasks entry for this pid (sole owner of cleanup).
-    {tag, entry} =
-      Enum.find_value(state.async_tasks, {nil, nil}, fn
-        {tag, {^pid, nonce}} -> {tag, nonce}
-        _ -> nil
-      end)
+    case handle_async_task_exit(state, pid, reason) do
+      {:handled, state} ->
+        {:noreply, state}
 
-    case entry do
-      # Unknown process (not in async_tasks). Log for visibility.
-      nil ->
+      :not_a_task ->
         Logger.warning(
           "plushie runtime: linked process #{inspect(pid)} exited: #{inspect(reason)}"
         )
 
-        {:noreply, state}
-
-      # Cancelled via Command.cancel or cancel_existing_task. Silent cleanup.
-      :cancelled ->
-        state = %{state | async_tasks: Map.delete(state.async_tasks, tag)}
-        state = notify_await_async(state, tag)
-        {:noreply, state}
-
-      # Active task exited normally. Clean up, no error event.
-      _nonce when reason == :normal ->
-        state = %{state | async_tasks: Map.delete(state.async_tasks, tag)}
-        state = notify_await_async(state, tag)
-        {:noreply, state}
-
-      # Active task crashed. Clean up and deliver error event.
-      _nonce ->
-        Logger.warning("plushie runtime: async task #{inspect(tag)} crashed: #{inspect(reason)}")
-        state = %{state | async_tasks: Map.delete(state.async_tasks, tag)}
-        state = notify_await_async(state, tag)
-        state = run_update(state, %AsyncEvent{tag: tag, result: {:error, {:crashed, reason}}})
         {:noreply, state}
     end
   end
@@ -1956,6 +1941,39 @@ defmodule Plushie.Runtime do
 
     subscription_keys = subscriptions |> Map.keys() |> Enum.sort()
     %{state | subscriptions: subscriptions, subscription_keys: subscription_keys}
+  end
+
+  # Shared handler for async task exits (both :EXIT and :DOWN paths).
+  # Returns {:handled, state} if the pid was an async task, :not_a_task otherwise.
+  @spec handle_async_task_exit(state(), pid(), term()) :: {:handled, state()} | :not_a_task
+  defp handle_async_task_exit(state, pid, reason) do
+    {tag, entry} =
+      Enum.find_value(state.async_tasks, {nil, nil}, fn
+        {tag, {^pid, nonce}} -> {tag, nonce}
+        _ -> nil
+      end)
+
+    case entry do
+      nil ->
+        :not_a_task
+
+      :cancelled ->
+        state = %{state | async_tasks: Map.delete(state.async_tasks, tag)}
+        state = notify_await_async(state, tag)
+        {:handled, state}
+
+      _nonce when reason == :normal ->
+        state = %{state | async_tasks: Map.delete(state.async_tasks, tag)}
+        state = notify_await_async(state, tag)
+        {:handled, state}
+
+      _nonce ->
+        Logger.warning("plushie runtime: async task #{inspect(tag)} crashed: #{inspect(reason)}")
+        state = %{state | async_tasks: Map.delete(state.async_tasks, tag)}
+        state = notify_await_async(state, tag)
+        state = run_update(state, %AsyncEvent{tag: tag, result: {:error, {:crashed, reason}}})
+        {:handled, state}
+    end
   end
 
   defp notify_await_async(state, tag) do

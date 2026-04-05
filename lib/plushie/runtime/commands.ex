@@ -56,11 +56,12 @@ defmodule Plushie.Runtime.Commands do
     nonce = make_ref()
 
     {:ok, pid} =
-      Task.start_link(fn ->
+      start_task(state, fn ->
         result = fun.()
         send(runtime, {:async_result, tag, nonce, result})
       end)
 
+    Process.monitor(pid)
     put_in(state.async_tasks[tag], {pid, nonce})
   end
 
@@ -76,11 +77,12 @@ defmodule Plushie.Runtime.Commands do
     emit = fn value -> send(runtime, {:stream_value, tag, nonce, value}) end
 
     {:ok, pid} =
-      Task.start_link(fn ->
+      start_task(state, fn ->
         result = fun.(emit)
         send(runtime, {:async_result, tag, nonce, result})
       end)
 
+    Process.monitor(pid)
     put_in(state.async_tasks[tag], {pid, nonce})
   end
 
@@ -323,4 +325,11 @@ defmodule Plushie.Runtime.Commands do
         state
     end
   end
+
+  # Starts a task under the Task.Supervisor if available, otherwise
+  # falls back to Task.start_link (for tests that start Runtime without
+  # the full supervisor tree).
+  @spec start_task(map(), (-> any())) :: {:ok, pid()}
+  defp start_task(%{task_supervisor: nil}, fun), do: Task.start_link(fun)
+  defp start_task(%{task_supervisor: sup}, fun), do: Task.Supervisor.start_child(sup, fun)
 end

@@ -150,10 +150,15 @@ defmodule Plushie do
         end
       end)
 
+    # Task.Supervisor MUST start before Bridge and Runtime so async
+    # tasks have a supervisor when the Runtime starts processing commands.
     # Bridge MUST start before Runtime. Runtime's handle_continue(:initial_render)
     # fires immediately and casts Settings + Snapshot to Bridge. If Bridge hasn't
     # started yet, those casts are lost and the renderer hangs.
     children = [
+      # Task supervisor for async/stream commands. Started first so it is
+      # available when Runtime begins executing commands.
+      {Task.Supervisor, name: task_supervisor_name(name)},
       # Bridge opens the Port and spawns the renderer process (spawn mode)
       # or attaches to stdin/stdout (stdio mode). In spawn mode the renderer
       # blocks on stdin waiting for a Settings message.
@@ -170,6 +175,7 @@ defmodule Plushie do
            app: app,
            bridge: bridge_name(name),
            name: runtime_name(name),
+           task_supervisor: task_supervisor_name(name),
            daemon: daemon?,
            token: Keyword.get(opts, :token),
            app_opts: Keyword.get(opts, :app_opts, [])
@@ -260,6 +266,7 @@ defmodule Plushie do
   def bridge_for(instance_name \\ __MODULE__), do: bridge_name(instance_name)
 
   defp sup_name(instance_name), do: :"#{instance_name}.Supervisor"
+  defp task_supervisor_name(instance_name), do: :"#{instance_name}.TaskSupervisor"
   defp runtime_name(instance_name), do: :"#{instance_name}.Runtime"
   defp bridge_name(instance_name), do: :"#{instance_name}.Bridge"
   defp dev_server_name(instance_name), do: :"#{instance_name}.DevServer"
