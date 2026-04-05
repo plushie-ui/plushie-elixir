@@ -44,6 +44,10 @@ defmodule Plushie.Tree do
   @depth_warning 200
   @max_depth 256
 
+  # Process dictionary keys for memo cache (set by runtime, read during normalize)
+  @memo_prev_cache_key :__plushie_memo_prev_cache__
+  @memo_cache_key :__plushie_memo_cache__
+
   alias Plushie.Widget.Meta
 
   @doc """
@@ -143,6 +147,31 @@ defmodule Plushie.Tree do
     end
 
     normalize_with_ctx(Plushie.Widget.to_node(widget), ctx)
+  end
+
+  defp normalize_with_ctx(%{type: "__memo__", meta: meta} = node, ctx) do
+    deps = Map.fetch!(meta, :__memo_deps__)
+    memo_fun = Map.fetch!(meta, :__memo_fun__)
+    node_id = Map.fetch!(node, :id)
+    cache_key = {node_id, ctx.scope, ctx.window_id, deps}
+
+    prev_cache = Process.get(@memo_prev_cache_key, %{})
+
+    case Map.get(prev_cache, cache_key) do
+      nil ->
+        :telemetry.execute([:plushie, :memo, :miss], %{count: 1}, %{id: node_id})
+        result = normalize_memo_body(memo_fun, ctx)
+        current = Process.get(@memo_cache_key, %{})
+        Process.put(@memo_cache_key, Map.put(current, cache_key, result))
+        result
+
+      cached ->
+        :telemetry.execute([:plushie, :memo, :hit], %{count: 1}, %{id: node_id})
+        refreshed = refresh_widget_states(cached, ctx)
+        current = Process.get(@memo_cache_key, %{})
+        Process.put(@memo_cache_key, Map.put(current, cache_key, refreshed))
+        refreshed
+    end
   end
 
   defp normalize_with_ctx(%{} = node, ctx) do
@@ -1055,4 +1084,103 @@ defmodule Plushie.Tree do
     |> Atom.to_string()
     |> String.starts_with?("Elixir.Plushie.Canvas.Shape.")
   end
+
+  # ---------------------------------------------------------------------------
+  # Memo cache helpers
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Sets the previous memo cache for the next normalize pass.
+
+  Called by the runtime before normalize to seed the cache from the
+  previous render cycle. Returns the atom `:ok`.
+  """
+  @spec set_memo_prev_cache(map()) :: :ok
+  def set_memo_prev_cache(cache) do
+    Process.put(@memo_prev_cache_key, cache)
+    :ok
+  end
+
+  @doc """
+  Returns the memo cache built during the most recent normalize pass
+  and clears it from the process dictionary.
+  """
+  @spec take_memo_cache() :: map()
+  def take_memo_cache do
+    cache = Process.get(@memo_cache_key, %{})
+    Process.delete(@memo_cache_key)
+    Process.delete(@memo_prev_cache_key)
+    cache
+  end
+
+  # Evaluate the memo body function and normalize the result. If the body
+  # produces multiple children, wraps them in a transparent container
+  # (no scope creation) so the cache stores a single node.
+  defp normalize_memo_body(memo_fun, ctx) do
+    case memo_fun.() do
+      [] ->
+        @empty_container
+
+      [single] ->
+        normalize_with_ctx(single, ctx)
+
+      [_ | _] = nodes ->
+        children = normalize_children_with_ctx(nodes, ctx)
+
+        %{
+          id: "auto:memo_container",
+          type: "container",
+          props: %{},
+          children: children
+        }
+
+      nil ->
+        @empty_container
+
+      single ->
+        normalize_with_ctx(single, ctx)
+    end
+  end
+
+  # Walk a cached normalized subtree and refresh widget internal states.
+  # Preserves map references where the state has not changed, so the
+  # differ's reference equality check still short-circuits.
+  defp refresh_widget_states(node, ctx) do
+    case node do
+      %{meta: %{__widget__: %Meta.Composite{module: module} = comp}} ->
+        fresh_state = lookup_widget_state(node.id, module, ctx)
+
+        node =
+          if fresh_state === comp.state do
+            node
+          else
+            updated_comp = %{comp | state: fresh_state}
+            put_in(node, [:meta, :__widget__], updated_comp)
+          end
+
+        refresh_children_states(node, ctx)
+
+      _ ->
+        refresh_children_states(node, ctx)
+    end
+  end
+
+  defp refresh_children_states(%{children: []} = node, _ctx), do: node
+
+  defp refresh_children_states(%{children: children} = node, ctx) when is_list(children) do
+    refreshed =
+      Enum.map(children, fn child ->
+        refreshed_child = refresh_widget_states(child, ctx)
+        # Preserve reference if nothing changed
+        if refreshed_child === child, do: child, else: refreshed_child
+      end)
+
+    if refreshed === children do
+      node
+    else
+      %{node | children: refreshed}
+    end
+  end
+
+  defp refresh_children_states(node, _ctx), do: node
 end

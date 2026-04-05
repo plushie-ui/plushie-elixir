@@ -1728,4 +1728,61 @@ defmodule Plushie.UITest do
       end)
     end
   end
+
+  describe "memo/2" do
+    test "produces a __memo__ node with deps and fun in meta" do
+      import Plushie.UI
+
+      deps = :my_version
+
+      node =
+        memo deps do
+          text("hello")
+        end
+
+      assert node.type == "__memo__"
+      assert String.starts_with?(node.id, "auto:")
+      assert is_map(node.meta)
+      assert node.meta.__memo_deps__ == :my_version
+      assert is_function(node.meta.__memo_fun__, 0)
+
+      # Calling the function produces the body
+      result = node.meta.__memo_fun__.()
+      assert [%{type: "text"}] = result
+    end
+
+    test "memo inside a window normalizes correctly" do
+      import Plushie.UI
+
+      tree =
+        window "main" do
+          memo :v1 do
+            text("content")
+          end
+        end
+
+      normalized = Plushie.Tree.normalize(tree, %{})
+      assert normalized.type == "window"
+      # The memo should have been resolved during normalize
+      child = hd(normalized.children)
+      assert child.type == "text"
+    end
+
+    test "memo with multiple children wraps in container" do
+      import Plushie.UI
+
+      tree =
+        window "main" do
+          memo :v1 do
+            text("a")
+            text("b")
+          end
+        end
+
+      normalized = Plushie.Tree.normalize(tree, %{})
+      child = hd(normalized.children)
+      assert child.type == "container"
+      assert length(child.children) == 2
+    end
+  end
 end

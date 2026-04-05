@@ -38,6 +38,7 @@ plushie_ui_locals = [
   keyed_column: :*,
   layer: 2,
   line: 4,
+  memo: 2,
   line: 5,
   pointer_area: 1,
   pointer_area: 2,

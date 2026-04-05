@@ -329,6 +329,57 @@ defmodule Plushie.UI do
                   is_atom(elem(hd(v), 0))
 
   # ---------------------------------------------------------------------------
+  # Memo (render path optimization)
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Caches a subtree based on a dependency term.
+
+  When `deps` is structurally equal (`===`) to the previous render's
+  value for this memo site, the cached normalized subtree is reused
+  directly. The tree differ short-circuits on reference equality, making
+  the diff for unchanged subtrees O(1).
+
+      window "main" do
+        memo model.sidebar_version do
+          sidebar(model.sidebar_data)
+        end
+      end
+
+  The body is only evaluated when `deps` changes. For dynamic lists,
+  include the item key in deps so each iteration gets a unique cache
+  entry:
+
+      for item <- model.items do
+        memo {item.id, item.version} do
+          item_card(item)
+        end
+      end
+  """
+  defmacro memo(deps, do: block) do
+    auto_id = compile_auto_id(__CALLER__.module, __CALLER__.line)
+    exprs = block_to_exprs(block)
+
+    quote do
+      %{
+        type: "__memo__",
+        id: unquote(auto_id),
+        props: %{},
+        children: [],
+        meta: %{
+          __memo_deps__: unquote(deps),
+          __memo_fun__: fn ->
+            unquote(build_list_accumulator(exprs))
+            |> :lists.reverse()
+            |> List.flatten()
+            |> Enum.reject(&is_nil/1)
+          end
+        }
+      }
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Layout widgets
   # ---------------------------------------------------------------------------
 
