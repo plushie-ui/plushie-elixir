@@ -19,6 +19,29 @@ defmodule Plushie.Widget.PaneGrid do
 
   Children are keyed by their node ID and rendered as individual panes.
   The renderer manages an internal `pane_grid::State` cache.
+
+  ## Accessibility
+
+  The pane grid itself does not expose a semantic role to assistive
+  technology. To make the grid navigable by screen readers, wrap it
+  in a `container` with an explicit role and label:
+
+      container "editor-panes" do
+        a11y do
+          role :group
+          label "Editor panes"
+        end
+
+        pane_grid "grid", panes: ["left", "right"] do
+          text_input "left", model.left
+          text_input "right", model.right
+        end
+      end
+
+  Individual panes can carry their own `a11y` annotations for
+  further context (e.g., `label` describing each pane's purpose).
+  The `pane_focus_cycle` event (F6/Shift+F6) provides keyboard
+  navigation between panes.
   """
 
   use Plushie.Widget

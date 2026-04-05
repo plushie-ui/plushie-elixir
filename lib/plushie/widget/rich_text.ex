@@ -1,6 +1,22 @@
 defmodule Plushie.Widget.RichText do
   @moduledoc """
   Rich text display with individually styled spans.
+
+  ## Accessibility
+
+  Screen readers see individual spans but cannot infer the overall
+  meaning of the composed text. Set `a11y: %{label: "..."}` with a
+  plain-text summary so assistive technology can announce the full
+  content in one pass:
+
+      rich_text "status", spans: spans,
+        a11y: %{label: "Build succeeded in 3.2 seconds"}
+
+  For content that updates dynamically, combine `label` with a live
+  region annotation so changes are announced automatically:
+
+      rich_text "output", spans: spans,
+        a11y: %{label: summary_text, live: :polite}
   """
 
   use Plushie.Widget
