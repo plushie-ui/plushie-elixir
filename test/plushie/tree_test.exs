@@ -3,6 +3,33 @@ defmodule Plushie.TreeTest do
 
   alias Plushie.Tree
 
+  # Applies diff ops to a children list to verify correctness.
+  # Ops are applied sequentially: removes (desc), updates, inserts (asc).
+  defp apply_child_ops(children, ops) do
+    Enum.reduce(ops, children, fn
+      %{op: "remove_child", index: idx}, acc ->
+        List.delete_at(acc, idx)
+
+      %{op: "insert_child", index: idx, node: node}, acc ->
+        List.insert_at(acc, idx, node)
+
+      %{op: "update_props", path: [idx], props: new_props}, acc ->
+        old = Enum.at(acc, idx)
+        merged = Map.merge(old.props, new_props)
+        List.replace_at(acc, idx, %{old | props: merged})
+
+      # Skip ops targeting deeper paths (nested updates)
+      %{op: "update_props"}, acc ->
+        acc
+
+      %{op: "replace_node", path: [idx], node: node}, acc ->
+        List.replace_at(acc, idx, node)
+
+      %{op: "replace_node", path: []}, _acc ->
+        raise "replace_node at root not handled by apply_child_ops"
+    end)
+  end
+
   describe "normalize/1 -- nil and empty inputs" do
     test "normalize(nil) returns empty container" do
       result = Tree.normalize(nil)
@@ -676,7 +703,7 @@ defmodule Plushie.TreeTest do
       assert insert == %{op: "insert_child", path: [], index: 0, node: new_child_x}
     end
 
-    test "reordered children emit replace_node to preserve correct order" do
+    test "reordered children emit minimal remove+insert moves" do
       child_a = %{id: "a", type: "text", props: %{content: "A"}, children: []}
       child_b = %{id: "b", type: "text", props: %{content: "B"}, children: []}
       child_c = %{id: "c", type: "text", props: %{content: "C"}, children: []}
@@ -684,7 +711,11 @@ defmodule Plushie.TreeTest do
       old = %{id: "root", type: "container", props: %{}, children: [child_a, child_b, child_c]}
       new = %{id: "root", type: "container", props: %{}, children: [child_c, child_b, child_a]}
 
-      assert Tree.diff(old, new) == [%{op: "replace_node", path: [], node: new}]
+      ops = Tree.diff(old, new)
+
+      # Apply ops to old children and verify result matches new
+      result = apply_child_ops(old.children, ops)
+      assert Enum.map(result, & &1.id) == ["c", "b", "a"]
     end
   end
 
@@ -781,7 +812,7 @@ defmodule Plushie.TreeTest do
   end
 
   describe "diff/2 -- reorder detection" do
-    test "reversed children emit replace_node" do
+    test "reversed children use LIS-based moves" do
       children =
         for i <- 1..4 do
           %{id: "c#{i}", type: "text", props: %{content: "#{i}"}, children: []}
@@ -790,10 +821,17 @@ defmodule Plushie.TreeTest do
       old = %{id: "root", type: "container", props: %{}, children: children}
       new = %{id: "root", type: "container", props: %{}, children: Enum.reverse(children)}
 
-      assert [%{op: "replace_node", path: [], node: ^new}] = Tree.diff(old, new)
+      ops = Tree.diff(old, new)
+
+      # Should produce granular move ops, not a full replace
+      refute Enum.any?(ops, &(&1.op == "replace_node"))
+
+      # Apply and verify correctness
+      result = apply_child_ops(old.children, ops)
+      assert Enum.map(result, & &1.id) == ["c4", "c3", "c2", "c1"]
     end
 
-    test "swapping two adjacent children emits replace_node" do
+    test "swapping two adjacent children uses a single move" do
       a = %{id: "a", type: "text", props: %{}, children: []}
       b = %{id: "b", type: "text", props: %{}, children: []}
       c = %{id: "c", type: "text", props: %{}, children: []}
@@ -801,7 +839,59 @@ defmodule Plushie.TreeTest do
       old = %{id: "root", type: "container", props: %{}, children: [a, b, c]}
       new = %{id: "root", type: "container", props: %{}, children: [b, a, c]}
 
-      assert [%{op: "replace_node", path: [], node: ^new}] = Tree.diff(old, new)
+      ops = Tree.diff(old, new)
+
+      # b moves: remove from old position, insert at new position
+      removes = Enum.filter(ops, &(&1.op == "remove_child"))
+      inserts = Enum.filter(ops, &(&1.op == "insert_child"))
+      assert length(removes) == 1
+      assert length(inserts) == 1
+
+      # Apply and verify
+      result = apply_child_ops(old.children, ops)
+      assert Enum.map(result, & &1.id) == ["b", "a", "c"]
+    end
+
+    test "identical children produce no ops" do
+      children =
+        for i <- 1..3 do
+          %{id: "c#{i}", type: "text", props: %{content: "#{i}"}, children: []}
+        end
+
+      tree = %{id: "root", type: "container", props: %{}, children: children}
+      assert Tree.diff(tree, tree) == []
+    end
+
+    test "reorder with prop changes applies both" do
+      a = %{id: "a", type: "text", props: %{content: "A"}, children: []}
+      b = %{id: "b", type: "text", props: %{content: "B"}, children: []}
+      c = %{id: "c", type: "text", props: %{content: "C"}, children: []}
+
+      old = %{id: "root", type: "container", props: %{}, children: [a, b, c]}
+
+      b_new = %{id: "b", type: "text", props: %{content: "B2"}, children: []}
+      new = %{id: "root", type: "container", props: %{}, children: [b_new, a, c]}
+
+      ops = Tree.diff(old, new)
+
+      # b is moved and its content changed: the insert carries the new node
+      inserts = Enum.filter(ops, &(&1.op == "insert_child"))
+      assert length(inserts) == 1
+      assert hd(inserts).node.props.content == "B2"
+    end
+
+    test "move + insert + remove combined" do
+      a = %{id: "a", type: "text", props: %{}, children: []}
+      b = %{id: "b", type: "text", props: %{}, children: []}
+      c = %{id: "c", type: "text", props: %{}, children: []}
+      d = %{id: "d", type: "text", props: %{}, children: []}
+
+      old = %{id: "root", type: "container", props: %{}, children: [a, b, c]}
+      new = %{id: "root", type: "container", props: %{}, children: [c, d, a]}
+
+      ops = Tree.diff(old, new)
+      result = apply_child_ops(old.children, ops)
+      assert Enum.map(result, & &1.id) == ["c", "d", "a"]
     end
   end
 
@@ -928,6 +1018,175 @@ defmodule Plushie.TreeTest do
       assert [%{op: "update_props", props: props}] = ops
       assert props == %{background: "black"}
       refute Map.has_key?(props, :shapes)
+    end
+  end
+
+  describe "normalize/1 -- canvas shapes as children" do
+    test "flat shapes are promoted from props to children" do
+      canvas = %{
+        id: "c",
+        type: "canvas",
+        props: %{
+          shapes: [
+            %{id: "s1", type: "rect", x: 0, y: 0, w: 100, h: 50},
+            %{id: "s2", type: "circle", cx: 50, cy: 50, r: 25}
+          ]
+        },
+        children: []
+      }
+
+      result = Tree.normalize(canvas)
+      assert result.type == "canvas"
+
+      # Shapes should no longer be in props
+      refute Map.has_key?(result.props, :shapes)
+
+      # Shapes should be children
+      assert length(result.children) == 2
+      assert Enum.at(result.children, 0).type == "rect"
+      assert Enum.at(result.children, 1).type == "circle"
+    end
+
+    test "layered shapes become __layer__ children with shape children" do
+      canvas = %{
+        id: "c",
+        type: "canvas",
+        props: %{
+          layers: %{
+            "bg" => [%{type: "rect", x: 0, y: 0, w: 400, h: 300}],
+            "fg" => [%{type: "circle", cx: 200, cy: 150, r: 50}]
+          }
+        },
+        children: []
+      }
+
+      result = Tree.normalize(canvas)
+      refute Map.has_key?(result.props, :layers)
+
+      # Two __layer__ children (sorted by name: bg, fg)
+      assert length(result.children) == 2
+      [bg_layer, fg_layer] = result.children
+      assert bg_layer.type == "__layer__"
+      assert fg_layer.type == "__layer__"
+
+      # Each layer has its shapes as children
+      assert length(bg_layer.children) == 1
+      assert hd(bg_layer.children).type == "rect"
+
+      assert length(fg_layer.children) == 1
+      assert hd(fg_layer.children).type == "circle"
+    end
+
+    test "non-canvas nodes are unaffected" do
+      node = %{
+        id: "col",
+        type: "column",
+        props: %{shapes: [1, 2, 3]},
+        children: []
+      }
+
+      result = Tree.normalize(node)
+      # shapes prop is preserved (it's not a canvas)
+      assert result.props.shapes == [1, 2, 3]
+    end
+
+    test "canvas without shapes has no children" do
+      canvas = %{
+        id: "c",
+        type: "canvas",
+        props: %{background: "white"},
+        children: []
+      }
+
+      result = Tree.normalize(canvas)
+      assert result.children == []
+      assert result.props == %{background: "white"}
+    end
+
+    test "shapes without explicit IDs get auto-IDs" do
+      canvas = %{
+        id: "c",
+        type: "canvas",
+        props: %{
+          shapes: [
+            %{type: "rect", x: 0, y: 0, w: 100, h: 50},
+            %{type: "line", x1: 0, y1: 0, x2: 100, y2: 100}
+          ]
+        },
+        children: []
+      }
+
+      result = Tree.normalize(canvas)
+      ids = Enum.map(result.children, & &1.id)
+
+      # Auto-IDs start with "auto:"
+      assert Enum.all?(ids, &String.starts_with?(&1, "auto:"))
+    end
+
+    test "diff detects individual shape changes via children" do
+      old_canvas =
+        Tree.normalize(%{
+          id: "c",
+          type: "canvas",
+          props: %{
+            shapes: [
+              %{id: "s1", type: "rect", x: 0, y: 0, w: 100, h: 50},
+              %{id: "s2", type: "rect", x: 10, y: 10, w: 50, h: 50}
+            ]
+          },
+          children: []
+        })
+
+      new_canvas =
+        Tree.normalize(%{
+          id: "c",
+          type: "canvas",
+          props: %{
+            shapes: [
+              %{id: "s1", type: "rect", x: 20, y: 0, w: 100, h: 50},
+              %{id: "s2", type: "rect", x: 10, y: 10, w: 50, h: 50}
+            ]
+          },
+          children: []
+        })
+
+      ops = Tree.diff(old_canvas, new_canvas)
+
+      # Should detect the change in s1's x prop
+      assert length(ops) == 1
+      assert [%{op: "update_props", props: %{x: 20}}] = ops
+    end
+
+    test "diff detects added shape via insert_child" do
+      old_canvas =
+        Tree.normalize(%{
+          id: "c",
+          type: "canvas",
+          props: %{
+            shapes: [
+              %{id: "s1", type: "rect", x: 0, y: 0, w: 100, h: 50}
+            ]
+          },
+          children: []
+        })
+
+      new_canvas =
+        Tree.normalize(%{
+          id: "c",
+          type: "canvas",
+          props: %{
+            shapes: [
+              %{id: "s1", type: "rect", x: 0, y: 0, w: 100, h: 50},
+              %{id: "s2", type: "circle", cx: 50, cy: 50, r: 25}
+            ]
+          },
+          children: []
+        })
+
+      ops = Tree.diff(old_canvas, new_canvas)
+      inserts = Enum.filter(ops, &(&1.op == "insert_child"))
+      assert length(inserts) == 1
+      assert hd(inserts).node.type == "circle"
     end
   end
 end

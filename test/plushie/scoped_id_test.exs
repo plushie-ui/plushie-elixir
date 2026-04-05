@@ -473,7 +473,13 @@ defmodule Plushie.ScopedIdTest do
         })
 
       ops = Tree.diff(old, new)
-      assert Enum.any?(ops, &(&1.op == "replace_node"))
+      # Reorders now produce granular move ops (remove + insert) instead of
+      # a full replace_node, minimizing re-rendering on the renderer side.
+      removes = Enum.filter(ops, &(&1.op == "remove_child"))
+      inserts = Enum.filter(ops, &(&1.op == "insert_child"))
+      assert length(removes) == 1
+      assert length(inserts) == 1
+      assert hd(inserts).node.id == "list/b"
     end
 
     test "scoped IDs do not break incremental diffing" do

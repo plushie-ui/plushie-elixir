@@ -293,6 +293,18 @@ defmodule Plushie.Tree do
 
         {:not_a_widget_placeholder, ctx} ->
           normalized_props = encode_prop_values(wire_props)
+
+          # Canvas nodes: promote shapes from props to tree children.
+          # Layers become __layer__ container nodes; shapes become leaf nodes
+          # with their properties as props. This enables standard diff_children
+          # to handle shape diffing automatically.
+          {normalized_props, children} =
+            if type_str == "canvas" do
+              shapes_as_children(normalized_props, scoped_id)
+            else
+              {normalized_props, children}
+            end
+
           {children, child_ctx} = normalize_children_with_ctx(children, child_ctx)
 
           node = %{
@@ -816,14 +828,9 @@ defmodule Plushie.Tree do
     if old.type != new.type do
       [%{op: "replace_node", path: path, node: new}]
     else
-      case diff_children(old.children, new.children, path) do
-        :reordered ->
-          [%{op: "replace_node", path: path, node: new}]
-
-        child_ops ->
-          prop_ops = diff_props(old.props, new.props, path)
-          prop_ops ++ child_ops
-      end
+      child_ops = diff_children(old.children, new.children, path)
+      prop_ops = diff_props(old.props, new.props, path)
+      prop_ops ++ child_ops
     end
   end
 
@@ -906,64 +913,350 @@ defmodule Plushie.Tree do
       raise ArgumentError, "duplicate child IDs in diff: #{inspect(Enum.uniq(dupes))}"
     end
 
-    # Reorder detection uses the maps we already built, avoiding duplicate
-    # MapSet construction. Uses key set comparison of common child IDs, not
-    # LCS (Longest Common Subsequence). LCS would produce minimal move
-    # operations but is O(n^2). Set comparison is O(n) and catches all
-    # reorders, at the cost of producing a full replace_node instead of
-    # individual moves. Deliberate simplicity-over-optimality tradeoff.
     old_ids = Enum.map(old_children, & &1.id)
+
+    # Common IDs in old and new order
     common_old = Enum.filter(old_ids, &Map.has_key?(new_by_id, &1))
     common_new = Enum.filter(new_ids, &Map.has_key?(old_by_id, &1))
 
-    if common_old != common_new do
-      :reordered
+    # Fast path: identical ID sequences, just diff props per child
+    if old_ids == new_ids do
+      diff_children_same_order(old_children, new_children, path)
     else
-      # Removals: old IDs not present in new, highest index first
-      removed_indices =
-        old_by_id
-        |> Enum.reject(fn {id, _} -> Map.has_key?(new_by_id, id) end)
-        |> Enum.map(fn {_, {_, idx}} -> idx end)
+      # IDs that exist only in old (pure removals)
+      old_only = MapSet.new(old_ids) |> MapSet.difference(MapSet.new(new_ids))
 
-      remove_ops =
-        removed_indices
-        |> Enum.sort(:desc)
-        |> Enum.map(fn idx -> %{op: "remove_child", path: path, index: idx} end)
-
-      # Walk new children for updates and inserts
-      {update_ops, insert_ops} =
-        new_children
-        |> Enum.with_index()
-        |> Enum.reduce({[], []}, fn {child, idx}, {updates, inserts} ->
-          case Map.fetch(old_by_id, child.id) do
-            {:ok, {old_child, old_idx}} ->
-              child_path = path ++ [index_after_removals(old_idx, removed_indices)]
-              ops = diff_node(old_child, child, child_path)
-              {updates ++ ops, inserts}
-
-            :error ->
-              insert = %{op: "insert_child", path: path, index: idx, node: child}
-              {updates, inserts ++ [insert]}
-          end
-        end)
-
-      # Patch ops MUST be applied sequentially in the order they appear.
-      # The ordering is: removals (descending index), then updates (adjusted
-      # indices), then inserts (ascending index). The Rust renderer applies
-      # ops sequentially per the protocol spec ("Operations are applied
-      # sequentially"). The index calculations in update ops depend on
-      # removals having been applied first.
-      remove_ops ++ update_ops ++ insert_ops
+      if common_old == common_new do
+        # Medium path: no reordering among common IDs. Use simple
+        # insert/remove logic (no LIS needed).
+        diff_children_no_reorder(
+          old_by_id,
+          new_children,
+          old_only,
+          path
+        )
+      else
+        # Slow path: reordering detected. Use LIS to minimize moves.
+        diff_children_reorder(
+          old_by_id,
+          new_by_id,
+          new_children,
+          common_new,
+          old_only,
+          path
+        )
+      end
     end
   end
 
-  # Returns the new index of a child after removals have been applied.
-  # O(r) per call where r is the removal count. For n surviving children,
-  # total cost is O(n*r). Acceptable for typical UI trees (under ~100
-  # children per level). For large flat lists (1000+ items), pre-sorting
-  # removed_indices and using binary search would reduce to O(n log r).
-  defp index_after_removals(old_idx, removed_indices) do
-    old_idx - Enum.count(removed_indices, &(&1 < old_idx))
+  # Fast path: old and new have identical ID lists. Diff props per child.
+  defp diff_children_same_order(old_children, new_children, path) do
+    old_children
+    |> Enum.zip(new_children)
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {{old_child, new_child}, idx} ->
+      diff_node(old_child, new_child, path ++ [idx])
+    end)
+  end
+
+  # Medium path: common IDs maintain relative order. Pure inserts and
+  # removes with no moves needed.
+  defp diff_children_no_reorder(old_by_id, new_children, old_only, path) do
+    # Collect old indices that will be removed (old-only IDs)
+    removed_indices =
+      old_only
+      |> Enum.map(fn id -> old_by_id |> Map.fetch!(id) |> elem(1) end)
+      |> Enum.sort()
+
+    remove_ops =
+      removed_indices
+      |> Enum.reverse()
+      |> Enum.map(fn idx -> %{op: "remove_child", path: path, index: idx} end)
+
+    # Walk new children for updates and inserts
+    {update_ops, insert_ops} =
+      new_children
+      |> Enum.with_index()
+      |> Enum.reduce({[], []}, fn {child, idx}, {updates, inserts} ->
+        case Map.fetch(old_by_id, child.id) do
+          {:ok, {old_child, old_idx}} ->
+            child_path = path ++ [index_after_removals(old_idx, removed_indices)]
+            ops = diff_node(old_child, child, child_path)
+            {updates ++ ops, inserts}
+
+          :error ->
+            insert = %{op: "insert_child", path: path, index: idx, node: child}
+            {updates, inserts ++ [insert]}
+        end
+      end)
+
+    remove_ops ++ update_ops ++ insert_ops
+  end
+
+  # Slow path: reordering detected. Use LIS to find the largest subset
+  # of common elements that maintain relative order. Elements in the LIS
+  # stay in place; elements not in the LIS are removed and re-inserted
+  # at their new positions.
+  defp diff_children_reorder(
+         old_by_id,
+         _new_by_id,
+         new_children,
+         common_new,
+         old_only,
+         path
+       ) do
+    # For common IDs in new order, get their old indices
+    old_indices_of_common =
+      Enum.map(common_new, fn id ->
+        old_by_id |> Map.fetch!(id) |> elem(1)
+      end)
+
+    # Find LIS positions (indices into common_new that form the LIS)
+    lis_positions = longest_increasing_subsequence(old_indices_of_common)
+    lis_set = MapSet.new(lis_positions)
+
+    # IDs that stay in place (in the LIS)
+    lis_ids =
+      common_new
+      |> Enum.with_index()
+      |> Enum.filter(fn {_id, i} -> MapSet.member?(lis_set, i) end)
+      |> Enum.map(fn {id, _i} -> id end)
+      |> MapSet.new()
+
+    # IDs that need to move: common but not in LIS
+    moved_ids =
+      common_new
+      |> MapSet.new()
+      |> MapSet.difference(lis_ids)
+
+    # All indices to remove: old-only IDs + moved IDs (removed from old position)
+    all_remove_ids = MapSet.union(old_only, moved_ids)
+
+    removed_indices =
+      all_remove_ids
+      |> Enum.map(fn id -> old_by_id |> Map.fetch!(id) |> elem(1) end)
+      |> Enum.sort()
+
+    remove_ops =
+      removed_indices
+      |> Enum.reverse()
+      |> Enum.map(fn idx -> %{op: "remove_child", path: path, index: idx} end)
+
+    # Build new child lookup for O(1) access
+    new_child_by_id = Map.new(new_children, fn c -> {c.id, c} end)
+
+    # Update ops for LIS elements (they survive removals, need adjusted indices)
+    update_ops =
+      lis_ids
+      |> Enum.flat_map(fn id ->
+        {old_child, old_idx} = Map.fetch!(old_by_id, id)
+        new_child = Map.fetch!(new_child_by_id, id)
+        child_path = path ++ [index_after_removals(old_idx, removed_indices)]
+        diff_node(old_child, new_child, child_path)
+      end)
+
+    # Insert ops: new-only IDs and moved IDs, at their new positions
+    insert_ops =
+      new_children
+      |> Enum.with_index()
+      |> Enum.filter(fn {child, _idx} ->
+        not Map.has_key?(old_by_id, child.id) or MapSet.member?(moved_ids, child.id)
+      end)
+      |> Enum.map(fn {child, idx} ->
+        # For moved IDs, use the new version of the node from new_children
+        # (which is already `child` here). For props that changed, the
+        # insert carries the full new node so no separate update is needed.
+        %{op: "insert_child", path: path, index: idx, node: child}
+      end)
+
+    remove_ops ++ update_ops ++ insert_ops
+  end
+
+  # Returns the adjusted index of an element after removals, using binary
+  # search on a sorted tuple of removed indices. O(log r) per call.
+  @spec index_after_removals(non_neg_integer(), [non_neg_integer()]) :: non_neg_integer()
+  defp index_after_removals(old_idx, sorted_removed) do
+    tup = List.to_tuple(sorted_removed)
+    old_idx - bsearch_count_lt(tup, old_idx, 0, tuple_size(tup))
+  end
+
+  # Binary search: count elements in a sorted tuple that are strictly less
+  # than the target value. O(log n) with O(1) random access.
+  defp bsearch_count_lt(_tup, _target, lo, hi) when lo >= hi, do: lo
+
+  defp bsearch_count_lt(tup, target, lo, hi) do
+    mid = div(lo + hi, 2)
+
+    if elem(tup, mid) < target do
+      bsearch_count_lt(tup, target, mid + 1, hi)
+    else
+      bsearch_count_lt(tup, target, lo, mid)
+    end
+  end
+
+  # Longest Increasing Subsequence using patience sorting.
+  # Returns the indices (positions) in the input list that form the LIS.
+  # Uses Erlang :array for O(1) random access in the inner binary search.
+  # O(n log n) time, O(n) space.
+  @spec longest_increasing_subsequence([integer()]) :: [non_neg_integer()]
+  defp longest_increasing_subsequence([]), do: []
+
+  defp longest_increasing_subsequence(values) do
+    # tails[i] = smallest tail value for increasing subsequence of length i+1
+    # idxs[i] = index in original list for tails[i]
+    # preds = %{pos => predecessor_pos} for backtracking
+    n = length(values)
+    empty_arr = :array.new(n, default: 0)
+
+    {_tails, preds, idxs, len} =
+      values
+      |> Enum.with_index()
+      |> Enum.reduce({empty_arr, %{}, empty_arr, 0}, fn {val, pos}, {tails, preds, idxs, len} ->
+        insert_pos = lis_bsearch(tails, val, 0, len)
+
+        preds =
+          if insert_pos > 0 do
+            Map.put(preds, pos, :array.get(insert_pos - 1, idxs))
+          else
+            preds
+          end
+
+        tails = :array.set(insert_pos, val, tails)
+        idxs = :array.set(insert_pos, pos, idxs)
+        len = max(len, insert_pos + 1)
+
+        {tails, preds, idxs, len}
+      end)
+
+    # Reconstruct the LIS by following predecessors backward
+    last_idx = :array.get(len - 1, idxs)
+    reconstruct_lis(preds, last_idx, len, [])
+  end
+
+  defp lis_bsearch(_tails, _val, lo, hi) when lo >= hi, do: lo
+
+  defp lis_bsearch(tails, val, lo, hi) do
+    mid = div(lo + hi, 2)
+
+    if :array.get(mid, tails) < val do
+      lis_bsearch(tails, val, mid + 1, hi)
+    else
+      lis_bsearch(tails, val, lo, mid)
+    end
+  end
+
+  defp reconstruct_lis(_preds, _idx, 0, acc), do: acc
+
+  defp reconstruct_lis(preds, idx, remaining, acc) do
+    case Map.fetch(preds, idx) do
+      {:ok, prev_idx} -> reconstruct_lis(preds, prev_idx, remaining - 1, [idx | acc])
+      :error -> [idx | acc]
+    end
+  end
+
+  # Extracts shapes/layers from canvas props and converts them to tree
+  # children. Returns {updated_props, children} where shapes/layers keys
+  # are removed from props and shape maps become child nodes.
+  #
+  # Shapes have already been through encode_prop_values at this point,
+  # so they are plain maps (atom keys) like %{type: "rect", x: 0, ...}.
+  # Each shape becomes a node: %{id: shape_id, type: shape_type, props: rest, children: []}.
+  # Layers become container nodes: %{id: layer_name, type: "__layer__", props: %{}, children: [shape_nodes]}.
+  @spec shapes_as_children(map(), String.t()) :: {map(), [map()]}
+  defp shapes_as_children(props, _canvas_id) do
+    cond do
+      # Layered canvas: %{layers: %{layer_name => [shape_maps]}}
+      Map.has_key?(props, :layers) ->
+        layers = Map.get(props, :layers, %{})
+        rest_props = Map.drop(props, [:layers, :shapes])
+
+        children =
+          layers
+          |> Enum.sort_by(fn {name, _} -> name end)
+          |> Enum.map(fn {layer_name, shapes} ->
+            shape_children = shapes_to_nodes(shapes, layer_name)
+
+            %{
+              id: "auto:layer:#{layer_name}",
+              type: "__layer__",
+              props: %{name: layer_name},
+              children: shape_children
+            }
+          end)
+
+        {rest_props, children}
+
+      # Flat canvas: %{shapes: [shape_maps]}
+      Map.has_key?(props, :shapes) ->
+        shapes = Map.get(props, :shapes, [])
+        rest_props = Map.drop(props, [:shapes])
+
+        children = shapes_to_nodes(shapes, "default")
+        {rest_props, children}
+
+      true ->
+        {props, []}
+    end
+  end
+
+  # Converts a list of encoded shape maps to tree nodes. Each shape map
+  # has :type and an optional :id. Shapes without an explicit :id get
+  # a positional auto-id.
+  defp shapes_to_nodes(shapes, _parent_id) when not is_list(shapes), do: []
+
+  defp shapes_to_nodes(shapes, parent_id) do
+    shapes
+    |> Enum.with_index()
+    |> Enum.map(fn {shape, idx} ->
+      shape_to_node(shape, parent_id, idx)
+    end)
+  end
+
+  defp shape_to_node(%{} = shape, parent_id, idx) do
+    shape_type = Map.get(shape, :type, "unknown")
+
+    # Use explicit shape id if present, otherwise generate an auto-id.
+    # Auto-ids use the auto: prefix to bypass user ID validation.
+    shape_id =
+      case Map.get(shape, :id) do
+        nil -> "auto:shape:#{parent_id}:#{idx}"
+        explicit -> explicit
+      end
+
+    # Extract children for group shapes (they contain nested shapes)
+    {shape_children, shape_props} =
+      case Map.pop(shape, :children) do
+        {nil, props} ->
+          {[], props}
+
+        {child_shapes, props} when is_list(child_shapes) ->
+          nodes = shapes_to_nodes(child_shapes, shape_id)
+          {nodes, props}
+
+        {_, props} ->
+          {[], props}
+      end
+
+    # Remove :type from props (it's on the node itself) but keep :id for the
+    # renderer to use as canvas element identifier
+    clean_props = Map.drop(shape_props, [:type])
+
+    %{
+      id: shape_id,
+      type: shape_type,
+      props: clean_props,
+      children: shape_children
+    }
+  end
+
+  defp shape_to_node(other, parent_id, idx) do
+    # Non-map shape (shouldn't happen after encoding, but be defensive)
+    %{
+      id: "auto:shape:#{parent_id}:#{idx}",
+      type: "unknown",
+      props: %{value: other},
+      children: []
+    }
   end
 
   # Ensures all keys in the map are atoms. String keys from manually
