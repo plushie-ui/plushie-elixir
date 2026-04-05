@@ -20,7 +20,7 @@ defmodule Plushie.Widget.TextEditor do
     field :line_height, :any, doc: "Line height. Number is relative; map for explicit control."
     field :padding, :float, doc: "Uniform padding in pixels."
     field :wrapping, Plushie.Type.Wrapping, doc: "Text wrapping mode."
-    field :ime_purpose, :string, doc: "IME input purpose: \"normal\", \"secure\", \"terminal\"."
+    field :input_purpose, :string, doc: "Input purpose: \"normal\", \"secure\", \"terminal\"."
 
     field :highlight_syntax, :string,
       doc: "Language extension for syntax highlighting (e.g. \"rs\", \"py\", \"ex\")."
