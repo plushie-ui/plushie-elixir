@@ -50,9 +50,19 @@ defmodule Plushie.Runtime.WidgetHandlers do
       props = Map.get(entry, :props, %{})
 
       if function_exported?(module, :subscribe, 2) do
-        module.subscribe(props, widget_state)
-        |> List.wrap()
-        |> Enum.map(&namespace_subscription(&1, window_id, widget_id))
+        try do
+          module.subscribe(props, widget_state)
+          |> List.wrap()
+          |> Enum.map(&namespace_subscription(&1, window_id, widget_id))
+        rescue
+          error ->
+            Logger.warning(
+              "widget_handler #{inspect(module)} (#{widget_id}) " <>
+                "raised in subscribe/2: #{Exception.message(error)}"
+            )
+
+            []
+        end
       else
         []
       end
@@ -80,13 +90,23 @@ defmodule Plushie.Runtime.WidgetHandlers do
         }
 
         {action, new_state} =
-          Handler.invoke_handler(
-            module,
-            timer_event,
-            widget_state,
-            widget_id,
-            entry.window_id
-          )
+          try do
+            Handler.invoke_handler(
+              module,
+              timer_event,
+              widget_state,
+              widget_id,
+              entry.window_id
+            )
+          rescue
+            error ->
+              Logger.warning(
+                "widget_handler #{inspect(module)} (#{widget_id}) " <>
+                  "raised in timer handle_event: #{Exception.message(error)}"
+              )
+
+              {:ignored, widget_state}
+          end
 
         new_registry = put_in(registry, [{window_id, widget_id}, :state], new_state)
 

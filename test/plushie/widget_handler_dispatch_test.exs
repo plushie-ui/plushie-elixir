@@ -492,6 +492,41 @@ defmodule Plushie.WidgetHandlerDispatchTest do
 
       assert log =~ "kaboom from RaisingWidget"
     end
+
+    test "unexpected return value from handle_event is treated as :ignored" do
+      defmodule BadReturnWidget do
+        @moduledoc false
+        use Plushie.Widget
+        widget(:bad_return_widget)
+
+        @impl true
+        def handle_event(%{type: :click}, _state), do: {:bad_return}
+        def handle_event(_event, _state), do: :ignored
+
+        @impl true
+        def view(id, _props, _state) do
+          import Plushie.UI
+
+          canvas id, width: 10, height: 10 do
+          end
+        end
+      end
+
+      registry = %{
+        {nil, "widget"} => %{module: BadReturnWidget, state: %{}}
+      }
+
+      log =
+        capture_log(fn ->
+          {event, _registry} =
+            WidgetHandlers.dispatch_event(registry, click_event("elem", ["widget"]))
+
+          assert event.type == :click
+          assert event.id == "elem"
+        end)
+
+      assert log =~ "returned unexpected value"
+    end
   end
 
   # -- Helpers -----------------------------------------------------------------

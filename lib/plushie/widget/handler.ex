@@ -41,6 +41,8 @@ defmodule Plushie.Widget.Handler do
   continue). If no handler captures, the event reaches `app.update/2`.
   """
 
+  require Logger
+
   @widget_states_key :__plushie_widget_states__
 
   @doc "Process dictionary key used to pass canvas widget states during normalization."
@@ -97,6 +99,13 @@ defmodule Plushie.Widget.Handler do
 
       :consumed ->
         {:consumed, state}
+
+      other ->
+        Logger.warning(
+          "widget #{inspect(module)} handle_event/2 returned unexpected value: #{inspect(other)}"
+        )
+
+        {:ignored, state}
     end
   end
 
