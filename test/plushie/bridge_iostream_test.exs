@@ -181,8 +181,7 @@ defmodule Plushie.BridgeIostreamTest do
       end
     end
 
-    test "crashes on protocol violations instead of leaking decode errors" do
-      Process.flag(:trap_exit, true)
+    test "logs and drops protocol violations instead of crashing" do
       handler_id = attach([:plushie, :bridge, :protocol_error], self())
 
       try do
@@ -217,15 +216,14 @@ defmodule Plushie.BridgeIostreamTest do
 
             assert metadata.format == :json
 
-            assert_receive {:EXIT, ^bridge, reason}, 1_000
-            assert inspect(reason) =~ "Plushie.Protocol.Error"
+            # Bridge should survive the protocol error (log + drop).
             refute_receive {:renderer_event, _}, 100
+            assert Process.alive?(bridge)
           end)
 
         assert log =~ "invalid wheel_scrolled event field unit"
       after
         :telemetry.detach(handler_id)
-        Process.flag(:trap_exit, false)
       end
     end
   end

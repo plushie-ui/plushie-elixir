@@ -326,6 +326,7 @@ defmodule Plushie.Bridge do
     :runtime,
     :renderer_path,
     :buffer,
+    :discard_next_eol,
     :format,
     :transport,
     :log_level,
@@ -363,6 +364,7 @@ defmodule Plushie.Bridge do
       runtime: runtime,
       renderer_path: renderer_path,
       buffer: "",
+      discard_next_eol: false,
       format: format,
       transport: transport,
       log_level: log_level,
@@ -557,6 +559,11 @@ defmodule Plushie.Bridge do
   end
 
   # Complete line -- flush any buffered prefix and dispatch.
+  def handle_info({port, {:data, {:eol, _chunk}}}, %{port: port, discard_next_eol: true} = state) do
+    # Tail of an oversized message that was dropped. Discard and resume.
+    {:noreply, %{state | buffer: "", discard_next_eol: false}}
+  end
+
   def handle_info({port, {:data, {:eol, chunk}}}, %{port: port} = state) do
     line = state.buffer <> chunk
     state = dispatch_message(line, :json, %{state | buffer: ""})
@@ -564,6 +571,14 @@ defmodule Plushie.Bridge do
   end
 
   # Partial line exceeding {:line, N} -- accumulate.
+  def handle_info(
+        {port, {:data, {:noeol, _chunk}}},
+        %{port: port, discard_next_eol: true} = state
+      ) do
+    # Still accumulating fragments of the oversized message. Skip.
+    {:noreply, state}
+  end
+
   def handle_info({port, {:data, {:noeol, chunk}}}, %{port: port} = state) do
     new_buffer = state.buffer <> chunk
 
@@ -572,7 +587,7 @@ defmodule Plushie.Bridge do
         "plushie bridge: JSON buffer exceeded #{@max_buffer_size} bytes, dropping message"
       )
 
-      {:noreply, %{state | buffer: ""}}
+      {:noreply, %{state | buffer: "", discard_next_eol: true}}
     else
       {:noreply, %{state | buffer: new_buffer}}
     end
@@ -673,6 +688,11 @@ defmodule Plushie.Bridge do
   defp encode_and_send(%{session_id: ""} = state, kind, encode_fn) do
     data = encode_fn.(state.format)
     maybe_send_or_queue(state, kind, data)
+  rescue
+    e ->
+      Logger.error("plushie bridge: failed to encode #{kind} message: #{Exception.message(e)}")
+
+      state
   end
 
   defp encode_and_send(state, kind, encode_fn) do
@@ -690,12 +710,21 @@ defmodule Plushie.Bridge do
         maybe_send_or_queue(state, kind, reencoded)
 
       {:error, reason} ->
-        raise "plushie bridge: failed to inject session_id into #{kind} message: #{inspect(reason)}"
+        Logger.error(
+          "plushie bridge: failed to inject session_id into #{kind} message: #{inspect(reason)}"
+        )
+
+        state
     end
+  rescue
+    e ->
+      Logger.error("plushie bridge: failed to encode #{kind} message: #{Exception.message(e)}")
+
+      state
   end
 
   defp deserialize(data, :json), do: Jason.decode(data)
-  defp deserialize(data, :msgpack), do: Msgpax.unpack(data)
+  defp deserialize(data, :msgpack), do: Msgpax.unpack(data, binary: true)
 
   defp reserialize(map, :json), do: Jason.encode!(map) <> "\n"
   defp reserialize(map, :msgpack), do: Msgpax.pack!(map)
@@ -788,54 +817,64 @@ defmodule Plushie.Bridge do
   end
 
   defp dispatch_message(data, format, state) do
-    if format == :json and String.trim(data) == "" do
-      state
-    else
-      :telemetry.execute([:plushie, :bridge, :receive], %{byte_size: byte_size(data)}, %{})
+    cond do
+      format == :json and String.trim(data) == "" ->
+        state
 
-      try do
-        case Plushie.Protocol.decode_message!(data, format) do
-          {:hello, %{protocol: protocol} = hello} ->
-            expected = Plushie.Protocol.protocol_version()
+      byte_size(data) > @max_buffer_size ->
+        Logger.error(
+          "plushie bridge: dropping oversized #{format} message (#{byte_size(data)} bytes)"
+        )
 
-            if protocol != expected do
-              Logger.error(
-                "plushie bridge: protocol mismatch -- renderer reports protocol #{protocol}, " <>
-                  "expected #{expected}. Stopping bridge."
-              )
+        state
 
-              send(self(), {:stop_protocol_mismatch, protocol, expected})
-              state
-            else
-              send(state.runtime, {:renderer_event, {:hello, hello}})
-              %{state | restart_count: 0}
-            end
+      true ->
+        :telemetry.execute([:plushie, :bridge, :receive], %{byte_size: byte_size(data)}, %{})
 
-          {:screenshot_response, response} ->
-            case state.pending_screenshot do
-              nil ->
-                send(state.runtime, {:renderer_event, {:screenshot_response, response}})
+        try do
+          case Plushie.Protocol.decode_message!(data, format) do
+            {:hello, %{protocol: protocol} = hello} ->
+              expected = Plushie.Protocol.protocol_version()
+
+              if protocol != expected do
+                Logger.error(
+                  "plushie bridge: protocol mismatch -- renderer reports protocol #{protocol}, " <>
+                    "expected #{expected}. Stopping bridge."
+                )
+
+                send(self(), {:stop_protocol_mismatch, protocol, expected})
+                state
+              else
+                send(state.runtime, {:renderer_event, {:hello, hello}})
                 %{state | restart_count: 0}
+              end
 
-              from ->
-                GenServer.reply(from, response)
-                %{state | restart_count: 0, pending_screenshot: nil}
-            end
+            {:screenshot_response, response} ->
+              case state.pending_screenshot do
+                nil ->
+                  send(state.runtime, {:renderer_event, {:screenshot_response, response}})
+                  %{state | restart_count: 0}
 
-          event ->
-            send(state.runtime, {:renderer_event, event})
-            # Reset restart count on first successful message from the renderer.
-            %{state | restart_count: 0}
+                from ->
+                  GenServer.reply(from, response)
+                  %{state | restart_count: 0, pending_screenshot: nil}
+              end
+
+            event ->
+              send(state.runtime, {:renderer_event, event})
+              # Reset restart count on first successful message from the renderer.
+              %{state | restart_count: 0}
+          end
+        rescue
+          error in Plushie.Protocol.Error ->
+            :telemetry.execute([:plushie, :bridge, :protocol_error], %{}, %{
+              reason: error.reason,
+              format: format
+            })
+
+            Logger.error("plushie bridge: #{Exception.message(error)}")
+            state
         end
-      rescue
-        error in Plushie.Protocol.Error ->
-          :telemetry.execute([:plushie, :bridge, :protocol_error], %{}, %{
-            reason: error.reason,
-            format: format
-          })
-
-          reraise error, __STACKTRACE__
-      end
     end
   end
 
