@@ -170,9 +170,10 @@ defmodule Plushie.Test.Helpers do
       unless actual == unquote(expected) do
         raise ExUnit.AssertionError,
           message: """
-          Expected text #{inspect(unquote(expected))} for #{inspect(unquote(selector))},
-          got #{inspect(actual)}
-          """
+          Text mismatch for #{inspect(unquote(selector))}
+          """,
+          left: actual,
+          right: unquote(expected)
       end
 
       :ok
@@ -230,11 +231,12 @@ defmodule Plushie.Test.Helpers do
         unless actual_value == expected_value do
           raise ExUnit.AssertionError,
             message: """
-            Expected a11y #{inspect(key)} to be #{inspect(expected_value)} \
-            for #{inspect(unquote(selector))}, got #{inspect(actual_value)}
+            a11y #{inspect(key)} mismatch for #{inspect(unquote(selector))}
 
             Full a11y: #{inspect(actual_a11y)}
-            """
+            """,
+            left: actual_value,
+            right: expected_value
         end
       end
 
@@ -258,9 +260,10 @@ defmodule Plushie.Test.Helpers do
       unless actual_role == unquote(expected_role) do
         raise ExUnit.AssertionError,
           message: """
-          Expected role #{inspect(unquote(expected_role))} \
-          for #{inspect(unquote(selector))}, got #{inspect(actual_role)}
-          """
+          Role mismatch for #{inspect(unquote(selector))}
+          """,
+          left: actual_role,
+          right: unquote(expected_role)
       end
 
       :ok
@@ -519,12 +522,9 @@ defmodule Plushie.Test.Helpers do
 
       unless actual == unquote(expected) do
         raise ExUnit.AssertionError,
-          message: """
-          Expected model:
-            #{inspect(unquote(expected))}
-          Got:
-            #{inspect(actual)}
-          """
+          message: "Model mismatch",
+          left: actual,
+          right: unquote(expected)
       end
 
       :ok
