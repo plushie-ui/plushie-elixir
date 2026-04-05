@@ -715,6 +715,96 @@ defmodule Plushie.TreeTest do
     end
   end
 
+  describe "diff/2 -- type change at same path" do
+    test "different type on same ID emits replace_node" do
+      old = %{
+        id: "root",
+        type: "container",
+        props: %{},
+        children: [
+          %{id: "x", type: "text", props: %{content: "hello"}, children: []}
+        ]
+      }
+
+      new = %{
+        id: "root",
+        type: "container",
+        props: %{},
+        children: [
+          %{id: "x", type: "button", props: %{label: "hello"}, children: []}
+        ]
+      }
+
+      ops = Tree.diff(old, new)
+      assert [%{op: "replace_node", path: [0], node: _}] = ops
+    end
+  end
+
+  describe "diff/2 -- multi-insert" do
+    test "inserting several children at once" do
+      old = %{id: "root", type: "container", props: %{}, children: []}
+
+      children =
+        for i <- 1..3 do
+          %{id: "c#{i}", type: "text", props: %{content: "#{i}"}, children: []}
+        end
+
+      new = %{id: "root", type: "container", props: %{}, children: children}
+
+      ops = Tree.diff(old, new)
+      inserts = Enum.filter(ops, &(&1.op == "insert_child"))
+      assert length(inserts) == 3
+
+      indices = Enum.map(inserts, & &1.index) |> Enum.sort()
+      assert indices == [0, 1, 2]
+    end
+  end
+
+  describe "diff/2 -- multi-remove" do
+    test "removing several children at once" do
+      children =
+        for i <- 1..3 do
+          %{id: "c#{i}", type: "text", props: %{content: "#{i}"}, children: []}
+        end
+
+      old = %{id: "root", type: "container", props: %{}, children: children}
+      new = %{id: "root", type: "container", props: %{}, children: []}
+
+      ops = Tree.diff(old, new)
+      removes = Enum.filter(ops, &(&1.op == "remove_child"))
+      assert length(removes) == 3
+
+      # Removes should be ordered high-to-low to avoid index shifting
+      indices = Enum.map(removes, & &1.index)
+      assert indices == [2, 1, 0]
+    end
+  end
+
+  describe "diff/2 -- reorder detection" do
+    test "reversed children emit replace_node" do
+      children =
+        for i <- 1..4 do
+          %{id: "c#{i}", type: "text", props: %{content: "#{i}"}, children: []}
+        end
+
+      old = %{id: "root", type: "container", props: %{}, children: children}
+      new = %{id: "root", type: "container", props: %{}, children: Enum.reverse(children)}
+
+      assert [%{op: "replace_node", path: [], node: ^new}] = Tree.diff(old, new)
+    end
+
+    test "swapping two adjacent children emits replace_node" do
+      a = %{id: "a", type: "text", props: %{}, children: []}
+      b = %{id: "b", type: "text", props: %{}, children: []}
+      c = %{id: "c", type: "text", props: %{}, children: []}
+
+      old = %{id: "root", type: "container", props: %{}, children: [a, b, c]}
+      new = %{id: "root", type: "container", props: %{}, children: [b, a, c]}
+
+      assert [%{op: "replace_node", path: [], node: ^new}] = Tree.diff(old, new)
+    end
+  end
+
   describe "diff/2 -- ID-keyed shape list comparison" do
     test "identical shape lists with IDs produce no ops" do
       shapes = [

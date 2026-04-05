@@ -1941,6 +1941,156 @@ defmodule Plushie.RuntimeTest do
     end
   end
 
+  describe "Command.cancel stops a running async task" do
+    defmodule CancelApp do
+      use Plushie.App
+
+      def init(_opts), do: %{value: 0, cancelled: false}
+
+      def update(model, %WidgetEvent{type: :click, id: "start"}) do
+        cmd =
+          Plushie.Command.async(
+            fn ->
+              Process.sleep(60_000)
+              :should_not_arrive
+            end,
+            :slow
+          )
+
+        {model, cmd}
+      end
+
+      def update(model, %WidgetEvent{type: :click, id: "cancel"}) do
+        {model, Plushie.Command.cancel(:slow)}
+      end
+
+      def update(model, %Plushie.Event.AsyncEvent{tag: :slow, result: result}) do
+        %{model | value: result}
+      end
+
+      def update(model, _event), do: model
+
+      def view(_model) do
+        import Plushie.UI
+
+        window "main" do
+          column do
+            button("start", "Start")
+            button("cancel", "Cancel")
+          end
+        end
+      end
+    end
+
+    test "cancel prevents async result from arriving" do
+      {runtime, _bridge} = start_runtime(CancelApp)
+      await_initial_render(runtime)
+
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "start"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "cancel"})
+
+      # Wait long enough that the async would have completed if not cancelled.
+      Process.sleep(100)
+      Plushie.Runtime.sync(runtime)
+
+      # The async result should never arrive since we cancelled.
+      assert Plushie.Runtime.get_model(runtime).value == 0
+    end
+  end
+
+  describe "Command.stream delivers chunks then completes" do
+    defmodule StreamChunkApp do
+      use Plushie.App
+
+      def init(_opts), do: %{chunks: [], result: nil}
+
+      def update(model, %WidgetEvent{type: :click, id: "go"}) do
+        cmd =
+          Plushie.Command.stream(
+            fn emit ->
+              emit.(:chunk_a)
+              emit.(:chunk_b)
+              :stream_done
+            end,
+            :my_stream
+          )
+
+        {model, cmd}
+      end
+
+      def update(model, %Plushie.Event.StreamEvent{tag: :my_stream, value: value}) do
+        %{model | chunks: model.chunks ++ [value]}
+      end
+
+      def update(model, %Plushie.Event.AsyncEvent{tag: :my_stream, result: result}) do
+        %{model | result: result}
+      end
+
+      def update(model, _event), do: model
+
+      def view(_model) do
+        import Plushie.UI
+
+        window "main" do
+          column do
+            button("go", "Go")
+          end
+        end
+      end
+    end
+
+    test "stream delivers intermediate chunks and final result" do
+      {runtime, _bridge} = start_runtime(StreamChunkApp)
+      await_initial_render(runtime)
+
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "go"})
+
+      await_model(runtime, fn m -> m.result != nil end)
+
+      model = Plushie.Runtime.get_model(runtime)
+      assert model.chunks == [:chunk_a, :chunk_b]
+      assert model.result == :stream_done
+    end
+  end
+
+  describe "Command.exit causes the runtime to stop" do
+    defmodule ExitCommandApp do
+      use Plushie.App
+
+      def init(_opts), do: %{}
+
+      def update(model, %WidgetEvent{type: :click, id: "quit"}) do
+        {model, Plushie.Command.exit()}
+      end
+
+      def update(model, _event), do: model
+
+      def view(_model) do
+        import Plushie.UI
+
+        window "main" do
+          column do
+            button("quit", "Quit")
+          end
+        end
+      end
+    end
+
+    @tag capture_log: true
+    test "exit command causes the runtime process to stop" do
+      Process.flag(:trap_exit, true)
+      {runtime, _bridge} = start_runtime(ExitCommandApp)
+      await_initial_render(runtime)
+
+      ref = Process.monitor(runtime)
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "quit"})
+
+      assert_receive {:DOWN, ^ref, :process, ^runtime, :normal}, 2_000
+    after
+      Process.flag(:trap_exit, false)
+    end
+  end
+
   describe "consecutive view failures" do
     @describetag capture_log: true
     test "consecutive view failures increment counter and warn at threshold" do
