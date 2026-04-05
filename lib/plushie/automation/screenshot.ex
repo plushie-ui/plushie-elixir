@@ -47,17 +47,13 @@ defmodule Plushie.Automation.Screenshot do
           "width" => width,
           "height" => height
         } = msg,
-        format,
+        _format,
         backend
       )
       when is_binary(name) and is_binary(hash) and is_integer(width) and is_integer(height) do
-    rgba =
-      case Map.get(msg, "rgba") do
-        nil -> nil
-        data when is_binary(data) and format == :msgpack -> data
-        data when is_binary(data) and format == :json -> Base.decode64!(data)
-        other -> raise ArgumentError, "invalid screenshot rgba field: #{inspect(other)}"
-      end
+    # Binary fields (rgba) are normalized in the decode layer, so no
+    # format-specific handling is needed here.
+    rgba = Map.get(msg, "rgba")
 
     %__MODULE__{name: name, hash: hash, size: {width, height}, rgba_data: rgba, backend: backend}
   end

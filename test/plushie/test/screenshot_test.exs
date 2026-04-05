@@ -165,7 +165,9 @@ defmodule Plushie.Test.ScreenshotTest do
              }
     end
 
-    test "decodes a json-style base64 rgba payload" do
+    test "accepts pre-decoded binary rgba payload" do
+      # Binary normalization (base64 -> raw) now happens in the decode layer.
+      # from_response receives already-decoded binary data regardless of format.
       screenshot =
         Screenshot.from_response(
           %{
@@ -174,7 +176,7 @@ defmodule Plushie.Test.ScreenshotTest do
             "hash" => "abc",
             "width" => 1,
             "height" => 1,
-            "rgba" => Base.encode64(<<1, 2, 3, 4>>)
+            "rgba" => <<1, 2, 3, 4>>
           },
           :json,
           :windowed

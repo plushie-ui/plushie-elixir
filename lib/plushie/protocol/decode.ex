@@ -64,8 +64,14 @@ defmodule Plushie.Protocol.Decode do
           Plushie.Protocol.decode_result()
   def decode_message(data, format \\ :msgpack) do
     case deserialize(data, format) do
-      {:ok, msg} -> safe_dispatch(msg)
-      {:error, reason} -> {:error, {:decode_failed, reason}}
+      {:ok, msg} ->
+        case safe_dispatch(msg) do
+          {:error, _} = error -> error
+          message -> normalize_binary_fields(message, format)
+        end
+
+      {:error, reason} ->
+        {:error, {:decode_failed, reason}}
     end
   end
 
@@ -1021,6 +1027,14 @@ defmodule Plushie.Protocol.Decode do
     {:effect_response, id, {:error, reason}}
   end
 
+  defp dispatch(%{
+         "type" => "effect_response",
+         "id" => id,
+         "status" => "unsupported"
+       }) do
+    {:effect_response, id, {:error, :unsupported}}
+  end
+
   # -- System query responses --
 
   defp dispatch(%{
@@ -1487,4 +1501,22 @@ defmodule Plushie.Protocol.Decode do
     error in Plushie.Protocol.Error -> {:error, error.reason}
     FunctionClauseError -> {:error, {:unknown_message, msg}}
   end
+
+  # Normalizes format-specific binary representations so consumers do not
+  # need to know the wire format. JSON encodes raw bytes as base64 strings;
+  # this decodes them back to raw binaries after dispatch.
+  @spec normalize_binary_fields(Plushie.Protocol.decoded_message(), Plushie.Protocol.format()) ::
+          Plushie.Protocol.decoded_message()
+  defp normalize_binary_fields({:screenshot_response, %{"rgba" => rgba} = msg}, :json)
+       when is_binary(rgba) do
+    case Base.decode64(rgba) do
+      {:ok, decoded} ->
+        {:screenshot_response, %{msg | "rgba" => decoded}}
+
+      :error ->
+        {:error, {:decode_failed, {:invalid_base64, "screenshot_response.rgba"}}}
+    end
+  end
+
+  defp normalize_binary_fields(message, _format), do: message
 end
