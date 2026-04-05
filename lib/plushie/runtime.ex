@@ -1549,7 +1549,7 @@ defmodule Plushie.Runtime do
       raw_value = Map.get(wire_data, wire_key)
 
       parsed =
-        case Plushie.Type.parse_event_field(type, raw_value) do
+        case Plushie.Type.cast_field(type, raw_value) do
           {:ok, v} ->
             v
 

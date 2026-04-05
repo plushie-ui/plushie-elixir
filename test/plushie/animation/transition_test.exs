@@ -206,7 +206,7 @@ defmodule Plushie.Animation.TransitionTest do
     end
   end
 
-  describe "Buildable" do
+  describe "from_opts/1" do
     test "from_opts/1 builds a transition" do
       t = Transition.from_opts(to: 0.0, duration: 300, easing: :ease_out)
       assert t.to == 0.0

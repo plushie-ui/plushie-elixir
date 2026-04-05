@@ -340,7 +340,7 @@ defmodule Plushie.Subscription do
   Fires on pointer button press/release (mouse or touch).
 
   Delivers `%WidgetEvent{type: :press, id: window_id, scope: [], ...}` or
-  `%WidgetEvent{type: :release, ...}` to `update/2`. The `data` map includes
+  `%WidgetEvent{type: :release, ...}` to `update/2`. The `value` map includes
   `button` (`:left`, `:right`, `:middle`), `pointer`, and `modifiers`.
   """
   @spec on_pointer_button(opts :: keyword()) :: t()

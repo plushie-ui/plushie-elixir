@@ -121,7 +121,7 @@ defmodule Plushie.Animation.SpringTest do
     end
   end
 
-  describe "Buildable" do
+  describe "from_opts/1" do
     test "from_opts/1 builds a spring" do
       s = Spring.from_opts(to: 1.05, stiffness: 200, damping: 20)
       assert s.to == 1.05

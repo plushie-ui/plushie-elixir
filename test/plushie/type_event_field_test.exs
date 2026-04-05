@@ -8,41 +8,41 @@ defmodule Plushie.Type.EventFieldTest do
   alias Plushie.Type
   alias Plushie.Type.{Key, KeyModifiers, MouseButton}
 
-  # -- Type.parse_event_field/2 ------------------------------------------------
+  # -- Type.cast_field/2 ------------------------------------------------
 
-  describe "parse_event_field/2 with built-in types" do
+  describe "cast_field/2 with built-in types" do
     test "parses :float" do
-      assert {:ok, 42} = Type.parse_event_field(:float, 42)
-      assert {:ok, 3.14} = Type.parse_event_field(:float, 3.14)
-      assert :error = Type.parse_event_field(:float, "42")
-      assert :error = Type.parse_event_field(:float, nil)
+      assert {:ok, 42} = Type.cast_field(:float, 42)
+      assert {:ok, 3.14} = Type.cast_field(:float, 3.14)
+      assert :error = Type.cast_field(:float, "42")
+      assert :error = Type.cast_field(:float, nil)
     end
 
     test "parses :string" do
-      assert {:ok, "hello"} = Type.parse_event_field(:string, "hello")
-      assert {:ok, nil} = Type.parse_event_field(:string, nil)
-      assert :error = Type.parse_event_field(:string, 42)
+      assert {:ok, "hello"} = Type.cast_field(:string, "hello")
+      assert {:ok, nil} = Type.cast_field(:string, nil)
+      assert :error = Type.cast_field(:string, 42)
     end
 
     test "parses :boolean" do
-      assert {:ok, true} = Type.parse_event_field(:boolean, true)
-      assert {:ok, false} = Type.parse_event_field(:boolean, false)
-      assert :error = Type.parse_event_field(:boolean, "true")
-      assert :error = Type.parse_event_field(:boolean, nil)
+      assert {:ok, true} = Type.cast_field(:boolean, true)
+      assert {:ok, false} = Type.cast_field(:boolean, false)
+      assert :error = Type.cast_field(:boolean, "true")
+      assert :error = Type.cast_field(:boolean, nil)
     end
 
     test "parses :any" do
-      assert {:ok, 42} = Type.parse_event_field(:any, 42)
-      assert {:ok, "hello"} = Type.parse_event_field(:any, "hello")
-      assert {:ok, nil} = Type.parse_event_field(:any, nil)
-      assert {:ok, %{nested: true}} = Type.parse_event_field(:any, %{nested: true})
+      assert {:ok, 42} = Type.cast_field(:any, 42)
+      assert {:ok, "hello"} = Type.cast_field(:any, "hello")
+      assert {:ok, nil} = Type.cast_field(:any, nil)
+      assert {:ok, %{nested: true}} = Type.cast_field(:any, %{nested: true})
     end
   end
 
-  describe "parse_event_field/2 with module types" do
+  describe "cast_field/2 with module types" do
     test "delegates to module parse/1" do
-      assert {:ok, :arrow_right} = Type.parse_event_field(Key, "ArrowRight")
-      assert {:ok, :left} = Type.parse_event_field(MouseButton, "left")
+      assert {:ok, :arrow_right} = Type.cast_field(Key, "ArrowRight")
+      assert {:ok, :left} = Type.cast_field(MouseButton, "left")
     end
   end
 

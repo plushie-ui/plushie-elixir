@@ -66,7 +66,6 @@ defmodule Plushie.Type do
   @callback constrain_guard(Macro.t(), keyword()) :: [Macro.t()]
 
   @optional_callbacks [
-    cast: 1,
     guard: 1,
     encode: 1,
     fields: 0,
@@ -113,50 +112,43 @@ defmodule Plushie.Type do
     is_map_key(@primitive_shortcuts, name)
   end
 
-  # -- Event field parsing -----------------------------------------------------
-
-  @builtin_event_types [:float, :string, :boolean, :any]
-
-  @doc "Returns the list of built-in atomic type identifiers for event fields."
-  @spec builtin_event_types() :: [atom()]
-  def builtin_event_types, do: @builtin_event_types
+  # -- Event field casting -----------------------------------------------------
 
   @doc """
   Returns true if the given type identifier is valid for event fields.
 
-  Valid types are built-in atoms (`:float`, `:string`, `:boolean`, `:any`)
-  or modules that export `parse/1`.
+  Valid types are primitive shortcuts, modules implementing Plushie.Type
+  (with `cast/1`), or modules with `parse/1`.
   """
   @spec valid_event_type?(type :: term()) :: boolean()
-  def valid_event_type?(type) when type in @builtin_event_types, do: true
-
   def valid_event_type?(type) when is_atom(type) do
-    Code.ensure_loaded?(type) and function_exported?(type, :parse, 1)
+    shortcut?(type) or type_has_cast?(type)
   end
 
   def valid_event_type?(_), do: false
 
+  defp type_has_cast?(module) do
+    Code.ensure_loaded?(module) and
+      (function_exported?(module, :cast, 1) or function_exported?(module, :parse, 1))
+  end
+
   @doc """
-  Parses a value according to an event field type identifier.
+  Casts a value according to a type identifier.
 
-  For built-in atomic types, validates the value matches the expected
-  type. For module types, delegates to `module.parse/1`.
-
-  The `:string` type accepts `nil` in addition to binaries, since
-  wire-format event fields may be absent (decoded as nil).
+  Resolves the type via `resolve/1` and delegates to the type module's
+  `cast/1`. The `:string` type accepts `nil` (wire-format absent fields).
 
   Returns `{:ok, value}` on success, `:error` on failure.
   """
-  @spec parse_event_field(type :: atom(), value :: term()) :: {:ok, term()} | :error
-  def parse_event_field(:any, value), do: {:ok, value}
-  def parse_event_field(:float, value) when is_number(value), do: {:ok, value}
-  def parse_event_field(:float, _), do: :error
-  def parse_event_field(:string, value) when is_binary(value), do: {:ok, value}
-  def parse_event_field(:string, nil), do: {:ok, nil}
-  def parse_event_field(:string, _), do: :error
-  def parse_event_field(:boolean, value) when is_boolean(value), do: {:ok, value}
-  def parse_event_field(:boolean, _), do: :error
-  def parse_event_field(module, value) when is_atom(module), do: module.parse(value)
+  @spec cast_field(type :: term(), value :: term()) :: {:ok, term()} | :error
+  def cast_field(:string, nil), do: {:ok, nil}
+
+  def cast_field(type, value) do
+    case resolve(type) do
+      {:composite, _} -> {:ok, value}
+      module -> module.cast(value)
+    end
+  end
 
   # -- use Plushie.Type --------------------------------------------------------
 
