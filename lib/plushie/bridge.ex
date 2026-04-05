@@ -338,6 +338,7 @@ defmodule Plushie.Bridge do
     :restart_count,
     :restart_delay,
     :iostream_ref,
+    :iostream_alive,
     :awaiting_resync,
     :queued_messages,
     :pending_screenshot,
@@ -666,6 +667,7 @@ defmodule Plushie.Bridge do
       )
       when is_reference(ref) do
     log_iostream_exit(reason, "iostream process exited")
+    state = %{state | iostream_alive: false}
     state = cancel_heartbeat_timer(state)
     state = fail_pending_screenshot(state, {:renderer_exit, reason})
     send(state.runtime, {:renderer_exit, reason})
@@ -768,7 +770,7 @@ defmodule Plushie.Bridge do
   defp open_port(%{transport: {:iostream, io_pid}} = state) do
     ref = Process.monitor(io_pid)
     send(io_pid, {:iostream_bridge, self()})
-    {:ok, %{state | iostream_ref: ref}}
+    {:ok, %{state | iostream_ref: ref, iostream_alive: true}}
   end
 
   defp open_port(%{transport: :stdio} = state) do
@@ -1047,7 +1049,7 @@ defmodule Plushie.Bridge do
   defp normalize_exit_reason(:heartbeat_timeout), do: :heartbeat_timeout
   defp normalize_exit_reason(_reason), do: :normal
 
-  defp transport_ready?(%{transport: {:iostream, _}}), do: true
+  defp transport_ready?(%{transport: {:iostream, _}, iostream_alive: alive}), do: alive == true
   defp transport_ready?(%{port: port}) when is_port(port), do: true
   defp transport_ready?(_state), do: false
 
