@@ -36,8 +36,8 @@ defmodule Plushie.SocketAdapter do
   def init({addr, format}) do
     socket_opts =
       case format do
-        :msgpack -> [:binary, {:packet, 4}, {:active, true}]
-        :json -> [:binary, {:active, true}]
+        :msgpack -> [:binary, {:packet, 4}, {:active, true}, {:nodelay, true}]
+        :json -> [:binary, {:active, true}, {:nodelay, true}]
       end
 
     case connect(addr, socket_opts) do
