@@ -46,6 +46,7 @@ defmodule Plushie.Dev.DevServer do
 
   @impl true
   def init(opts) do
+    Process.flag(:trap_exit, true)
     ensure_file_system!()
 
     runtime = Keyword.fetch!(opts, :runtime)
@@ -223,6 +224,23 @@ defmodule Plushie.Dev.DevServer do
     if state.bridge, do: Plushie.Bridge.restart_renderer(state.bridge)
 
     {:noreply, state}
+  end
+
+  # Handle EXIT from linked watchers or build ports. Watcher deaths are
+  # logged but not fatal; port cleanup happens in terminate/2.
+  def handle_info({:EXIT, pid, reason}, state) do
+    cond do
+      pid == state.watcher ->
+        Logger.warning("plushie dev: file watcher exited: #{inspect(reason)}")
+        {:noreply, %{state | watcher: nil}}
+
+      pid == state.rust_watcher ->
+        Logger.warning("plushie dev: rust file watcher exited: #{inspect(reason)}")
+        {:noreply, %{state | rust_watcher: nil}}
+
+      true ->
+        {:noreply, state}
+    end
   end
 
   def handle_info(msg, state) do
@@ -490,6 +508,16 @@ defmodule Plushie.Dev.DevServer do
 
   defp protocol_impl_set do
     Protocol.extract_impls(Plushie.Widget.WidgetProtocol, :code.get_path()) |> MapSet.new()
+  end
+
+  @impl true
+  def terminate(_reason, state) do
+    kill_rust_build(state)
+
+    if state.watcher, do: Process.exit(state.watcher, :shutdown)
+    if state.rust_watcher, do: Process.exit(state.rust_watcher, :shutdown)
+
+    :ok
   end
 
   defp reconsolidate_widgets do
