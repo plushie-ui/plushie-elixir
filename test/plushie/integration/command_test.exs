@@ -41,9 +41,7 @@ defmodule Plushie.Integration.CommandTest do
   test "send_after fires from init" do
     session = Plushie.Test.Session.start(SendAfterApp)
 
-    Process.sleep(100)
-    m = Plushie.Test.Session.model(session)
-    assert m.value >= 1
+    await_model_condition(session, fn m -> m.value >= 1 end)
 
     Plushie.Test.Session.stop(session)
   end
@@ -138,10 +136,7 @@ defmodule Plushie.Integration.CommandTest do
   test "batch commands all execute from init" do
     session = Plushie.Test.Session.start(BatchApp)
 
-    Process.sleep(100)
-    m = Plushie.Test.Session.model(session)
-    assert m.a == true
-    assert m.b == true
+    await_model_condition(session, fn m -> m.a == true and m.b == true end)
 
     Plushie.Test.Session.stop(session)
   end
@@ -208,5 +203,27 @@ defmodule Plushie.Integration.CommandTest do
     assert m.chunks == ["a", "b", "c"]
 
     Plushie.Test.Session.stop(session)
+  end
+
+  # Polls the session model until condition_fn returns true or timeout expires.
+  defp await_model_condition(session, condition_fn, timeout \\ 500) do
+    deadline = System.monotonic_time(:millisecond) + timeout
+    do_await_model_condition(session, condition_fn, deadline)
+  end
+
+  defp do_await_model_condition(session, condition_fn, deadline) do
+    model = Plushie.Test.Session.model(session)
+
+    if condition_fn.(model) do
+      model
+    else
+      if System.monotonic_time(:millisecond) >= deadline do
+        raise ExUnit.AssertionError,
+          message: "Timed out waiting for model condition. Last model: #{inspect(model)}"
+      else
+        Process.sleep(5)
+        do_await_model_condition(session, condition_fn, deadline)
+      end
+    end
   end
 end

@@ -876,6 +876,49 @@ defmodule Plushie.WidgetMacroTest do
     end
   end
 
+  describe "positional argument guards" do
+    test "new/2 rejects non-binary id with FunctionClauseError" do
+      assert_raise FunctionClauseError, fn ->
+        BlockFormWidget.new(123, "label")
+      end
+    end
+
+    test "new/2 rejects non-string/atom positional label with FunctionClauseError" do
+      assert_raise FunctionClauseError, fn ->
+        BlockFormWidget.new("ok", 999)
+      end
+    end
+
+    test "new/2 accepts binary id and binary positional label" do
+      widget = BlockFormWidget.new("w1", "Hello")
+      assert widget.id == "w1"
+      assert widget.label == "Hello"
+    end
+
+    test "new/2 accepts atom positional label" do
+      widget = BlockFormWidget.new("w1", :hello)
+      assert widget.id == "w1"
+      assert widget.label == :hello
+    end
+
+    test "native widget new/2 rejects non-binary id" do
+      assert_raise FunctionClauseError, fn ->
+        GaugeWidget.new(42)
+      end
+    end
+
+    test "widget without positional args rejects non-binary id" do
+      assert_raise FunctionClauseError, fn ->
+        BadgeWidget.new(42)
+      end
+    end
+
+    test "widget without positional args accepts binary id" do
+      widget = BadgeWidget.new("b1")
+      assert widget.id == "b1"
+    end
+  end
+
   describe "type_display_string" do
     test "primitive types render correctly" do
       assert Plushie.Widget.type_display_string(:string) == "String.t() | atom()"

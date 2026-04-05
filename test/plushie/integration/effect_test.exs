@@ -48,10 +48,8 @@ defmodule Plushie.Integration.EffectTest do
     click("#read")
 
     # The effect response arrives asynchronously after the interact
-    # completes. Give the runtime a moment to process it.
-    Process.sleep(100)
-
-    assert model().clipboard_text == "test data"
+    # completes. Poll until the model reflects the response.
+    assert_eventually(fn -> model().clipboard_text == "test data" end)
   end
 
   test "unregister removes the stub" do
@@ -66,5 +64,24 @@ defmodule Plushie.Integration.EffectTest do
     # After unregister, the mock backend has no real clipboard,
     # so we should not get "first" back.
     refute m.clipboard_text == "first"
+  end
+
+  defp assert_eventually(condition_fn, timeout \\ 500) do
+    deadline = System.monotonic_time(:millisecond) + timeout
+
+    do_assert_eventually(condition_fn, deadline)
+  end
+
+  defp do_assert_eventually(condition_fn, deadline) do
+    if condition_fn.() do
+      :ok
+    else
+      if System.monotonic_time(:millisecond) >= deadline do
+        flunk("Timed out waiting for condition")
+      else
+        Process.sleep(5)
+        do_assert_eventually(condition_fn, deadline)
+      end
+    end
   end
 end

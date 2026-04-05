@@ -158,11 +158,8 @@ defmodule Plushie.BridgeMsgpackTest do
         # Send settings through the bridge (triggers :send telemetry).
         Plushie.Bridge.send_settings(bridge, %{antialiasing: false})
 
-        # Give the renderer time to respond.
-        Process.sleep(200)
-
-        # The send event should have fired.
-        assert_received {:tel, [:plushie, :bridge, :send], %{byte_size: size}}
+        # The send telemetry fires synchronously within send_settings.
+        assert_receive {:tel, [:plushie, :bridge, :send], %{byte_size: size}}, 1_000
         assert is_integer(size) and size > 0
 
         # The receive event may or may not fire depending on whether the

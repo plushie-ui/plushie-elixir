@@ -1649,6 +1649,100 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
+  describe "cross-format round-trip (JSON to msgpack)" do
+    test "click event round-trips through both codecs" do
+      msg = %{
+        "type" => "event",
+        "family" => "click",
+        "id" => "save_btn",
+        "window_id" => "main"
+      }
+
+      json_encoded = Protocol.encode(msg, :json)
+      from_json = Protocol.decode_message(json_encoded, :json)
+
+      msgpack_encoded = Protocol.encode(msg, :msgpack)
+      from_msgpack = Protocol.decode_message(IO.iodata_to_binary(msgpack_encoded), :msgpack)
+
+      assert %WidgetEvent{type: :click, id: "save_btn", window_id: "main"} = from_json
+      assert from_json == from_msgpack
+    end
+
+    test "key_press event round-trips through both codecs" do
+      msg = %{
+        "type" => "event",
+        "family" => "key_press",
+        "modifiers" => %{
+          "ctrl" => true,
+          "shift" => false,
+          "alt" => false,
+          "logo" => false,
+          "command" => false
+        },
+        "data" => %{"key" => "Enter"}
+      }
+
+      json_encoded = Protocol.encode(msg, :json)
+      from_json = Protocol.decode_message(json_encoded, :json)
+
+      msgpack_encoded = Protocol.encode(msg, :msgpack)
+      from_msgpack = Protocol.decode_message(IO.iodata_to_binary(msgpack_encoded), :msgpack)
+
+      assert %KeyEvent{type: :press, key: :enter, modifiers: %{ctrl: true}} = from_json
+      assert from_json == from_msgpack
+    end
+
+    test "window_resized event round-trips through both codecs" do
+      msg = %{
+        "type" => "event",
+        "family" => "window_resized",
+        "data" => %{"window_id" => "main", "width" => 1024, "height" => 768}
+      }
+
+      json_encoded = Protocol.encode(msg, :json)
+      from_json = Protocol.decode_message(json_encoded, :json)
+
+      msgpack_encoded = Protocol.encode(msg, :msgpack)
+      from_msgpack = Protocol.decode_message(IO.iodata_to_binary(msgpack_encoded), :msgpack)
+
+      assert %Plushie.Event.WindowEvent{type: :resized, width: 1024, height: 768} = from_json
+      assert from_json == from_msgpack
+    end
+
+    test "snapshot message round-trips through both codecs" do
+      tree = %{
+        "id" => "root",
+        "type" => "text",
+        "props" => %{"content" => "hi"},
+        "children" => []
+      }
+
+      json_encoded = Protocol.encode_snapshot(tree, :json)
+      from_json = Protocol.decode_message(json_encoded, :json)
+
+      msgpack_encoded = Protocol.encode_snapshot(tree, :msgpack)
+      from_msgpack = Protocol.decode_message(IO.iodata_to_binary(msgpack_encoded), :msgpack)
+
+      assert {:snapshot, json_tree} = from_json
+      assert {:snapshot, msgpack_tree} = from_msgpack
+      assert json_tree == msgpack_tree
+    end
+
+    test "settings message round-trips through both codecs" do
+      settings = %{antialiasing: true, default_text_size: 14}
+
+      json_encoded = Protocol.encode_settings(settings, :json)
+      from_json = Protocol.decode_message(json_encoded, :json)
+
+      msgpack_encoded = Protocol.encode_settings(settings, :msgpack)
+      from_msgpack = Protocol.decode_message(IO.iodata_to_binary(msgpack_encoded), :msgpack)
+
+      assert {:settings, json_settings} = from_json
+      assert {:settings, msgpack_settings} = from_msgpack
+      assert json_settings == msgpack_settings
+    end
+  end
+
   describe "decode_message/1 -- duplicate_node_ids error" do
     test "decodes duplicate_node_ids error as System event" do
       json =
@@ -1663,6 +1757,112 @@ defmodule Plushie.ProtocolTest do
                Protocol.decode_message(json, :json)
 
       assert details["duplicates"] == ["btn1 (button)", "btn1 (text)"]
+    end
+  end
+
+  describe "cross-format round-trip" do
+    test "click event encodes in JSON, decodes, re-encodes in msgpack, decodes equivalently" do
+      original = %{
+        "type" => "event",
+        "family" => "click",
+        "id" => "btn_save",
+        "window_id" => "main"
+      }
+
+      json_wire = Jason.encode!(original) <> "\n"
+      json_decoded = Protocol.decode_message(json_wire, :json)
+
+      msgpack_wire = Msgpax.pack!(original) |> IO.iodata_to_binary()
+      msgpack_decoded = Protocol.decode_message(msgpack_wire, :msgpack)
+
+      assert json_decoded == msgpack_decoded
+      assert %WidgetEvent{type: :click, id: "btn_save", window_id: "main"} = json_decoded
+    end
+
+    test "key_press event round-trips identically across formats" do
+      original = %{
+        "type" => "event",
+        "family" => "key_press",
+        "modifiers" => %{
+          "ctrl" => true,
+          "shift" => false,
+          "alt" => false,
+          "logo" => false,
+          "command" => false
+        },
+        "data" => %{"key" => "Tab"}
+      }
+
+      json_wire = Jason.encode!(original) <> "\n"
+      json_decoded = Protocol.decode_message(json_wire, :json)
+
+      msgpack_wire = Msgpax.pack!(original) |> IO.iodata_to_binary()
+      msgpack_decoded = Protocol.decode_message(msgpack_wire, :msgpack)
+
+      assert json_decoded == msgpack_decoded
+      assert %KeyEvent{type: :press, key: :tab, modifiers: %{ctrl: true}} = json_decoded
+    end
+
+    test "window_resized event round-trips identically across formats" do
+      original = %{
+        "type" => "event",
+        "family" => "window_resized",
+        "data" => %{"window_id" => "main", "width" => 1920, "height" => 1080}
+      }
+
+      json_wire = Jason.encode!(original) <> "\n"
+      json_decoded = Protocol.decode_message(json_wire, :json)
+
+      msgpack_wire = Msgpax.pack!(original) |> IO.iodata_to_binary()
+      msgpack_decoded = Protocol.decode_message(msgpack_wire, :msgpack)
+
+      assert json_decoded == msgpack_decoded
+
+      assert %Plushie.Event.WindowEvent{
+               type: :resized,
+               window_id: "main",
+               width: 1920,
+               height: 1080
+             } = json_decoded
+    end
+
+    test "snapshot message round-trips through encode/decode in both formats" do
+      tree = %{
+        id: "main",
+        type: "window",
+        props: %{title: "Test"},
+        children: [
+          %{id: "label", type: "text", props: %{content: "Hello"}, children: []}
+        ]
+      }
+
+      json_encoded = Protocol.encode_snapshot(tree, :json)
+      json_decoded = Protocol.decode_message(IO.iodata_to_binary(json_encoded), :json)
+
+      msgpack_encoded = Protocol.encode_snapshot(tree, :msgpack)
+      msgpack_decoded = Protocol.decode_message(IO.iodata_to_binary(msgpack_encoded), :msgpack)
+
+      assert json_decoded == msgpack_decoded
+      assert {:snapshot, snapshot_tree} = json_decoded
+      assert snapshot_tree["id"] == "main"
+      assert snapshot_tree["type"] == "window"
+    end
+
+    test "effect event with nested data round-trips across formats" do
+      original = %{
+        "type" => "event",
+        "family" => "effect_response",
+        "id" => "req_1",
+        "data" => %{"status" => "ok", "payload" => %{"text" => "clipboard contents"}}
+      }
+
+      json_wire = Jason.encode!(original) <> "\n"
+      json_decoded = Protocol.decode_message(json_wire, :json)
+
+      msgpack_wire = Msgpax.pack!(original) |> IO.iodata_to_binary()
+      msgpack_decoded = Protocol.decode_message(msgpack_wire, :msgpack)
+
+      assert json_decoded == msgpack_decoded
     end
   end
 end

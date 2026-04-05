@@ -60,4 +60,20 @@ defmodule Plushie.Integration.WindowTest do
     click("#toggle")
     assert model().show_secondary == false
   end
+
+  test "secondary window content is visible after toggle" do
+    click("#toggle")
+
+    element = find("#sec_text")
+    assert element != nil
+    assert element.props[:content] == "second"
+  end
+
+  test "secondary window disappears after closing" do
+    click("#toggle")
+    assert find("#sec_text") != nil
+
+    click("#toggle")
+    assert find("#sec_text") == nil
+  end
 end

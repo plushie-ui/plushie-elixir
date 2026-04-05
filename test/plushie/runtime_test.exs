@@ -466,11 +466,8 @@ defmodule Plushie.RuntimeTest do
       {runtime, _bridge} = start_runtime(CommandApp)
       await_initial_render(runtime)
 
-      # send_after(10, :timer_tick) is scheduled in init; wait long enough.
-      Process.sleep(80)
-      Plushie.Runtime.sync(runtime)
-
-      assert Plushie.Runtime.get_model(runtime).value == 1
+      # send_after(10, :timer_tick) is scheduled in init; wait for it.
+      await_model(runtime, fn m -> m.value == 1 end)
 
       text_node = find_by_type(Plushie.Runtime.get_tree(runtime), "text")
       assert text_node.props[:content] == "1"
@@ -530,10 +527,7 @@ defmodule Plushie.RuntimeTest do
       dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "batch"})
 
       # Wait for both delayed events to fire.
-      Process.sleep(80)
-      Plushie.Runtime.sync(runtime)
-
-      assert Plushie.Runtime.get_model(runtime).ticks == 2
+      await_model(runtime, fn m -> m.ticks == 2 end)
 
       text_node = find_by_type(Plushie.Runtime.get_tree(runtime), "text")
       assert text_node.props[:content] == "ticks:2"
@@ -579,10 +573,7 @@ defmodule Plushie.RuntimeTest do
       await_initial_render(runtime)
 
       # The CommandApp init schedules send_after(10, :timer_tick).
-      Process.sleep(80)
-      Plushie.Runtime.sync(runtime)
-
-      assert Plushie.Runtime.get_model(runtime).value == 1
+      await_model(runtime, fn m -> m.value == 1 end)
     end
   end
 
@@ -807,11 +798,8 @@ defmodule Plushie.RuntimeTest do
       {runtime, _bridge} = start_runtime(TickApp)
       await_initial_render(runtime)
 
-      # Wait long enough for at least 2 ticks (20ms interval).
-      Process.sleep(80)
-      Plushie.Runtime.sync(runtime)
-
-      assert Plushie.Runtime.get_model(runtime).ticks >= 2
+      # Wait for at least 2 ticks (20ms interval).
+      await_model(runtime, fn m -> m.ticks >= 2 end)
     end
 
     test "subscription removed when subscribe/1 stops returning it" do
@@ -849,11 +837,8 @@ defmodule Plushie.RuntimeTest do
       await_initial_render(runtime)
 
       # Let some ticks accumulate.
-      Process.sleep(60)
-      Plushie.Runtime.sync(runtime)
-
-      ticks_before = Plushie.Runtime.get_model(runtime).ticks
-      assert ticks_before >= 2
+      model = await_model(runtime, fn m -> m.ticks >= 2 end)
+      ticks_before = model.ticks
 
       # Stop the timer subscription.
       dispatch_and_wait(runtime, :stop_timer)
@@ -960,13 +945,8 @@ defmodule Plushie.RuntimeTest do
       {runtime, _bridge} = start_runtime(MultiSubApp)
       await_initial_render(runtime)
 
-      Process.sleep(100)
-      Plushie.Runtime.sync(runtime)
-
-      model = Plushie.Runtime.get_model(runtime)
-      # Both subscriptions should have fired at least once.
-      assert model.fast >= 2
-      assert model.slow >= 1
+      # Wait for both subscriptions to fire enough times.
+      model = await_model(runtime, fn m -> m.fast >= 2 and m.slow >= 1 end)
       # Fast should tick more than slow.
       assert model.fast > model.slow
     end
@@ -1841,9 +1821,8 @@ defmodule Plushie.RuntimeTest do
 
         assert Task.await(task, 1000) == :timed_out
 
-        # Give the runtime a moment to process the DOWN message from the
-        # dead task process.
-        Process.sleep(20)
+        # Let the runtime process the DOWN message from the dead task.
+        Plushie.Runtime.sync(runtime)
 
         # Verify that a subsequent interact can proceed (not blocked by
         # the stale pending_interact).
@@ -1876,7 +1855,9 @@ defmodule Plushie.RuntimeTest do
           Plushie.Runtime.register_effect_stub(runtime, :clipboard_read, "stub_value")
         end)
 
-      # Give the runtime time to process the first call.
+      # Give the scheduler time for the Task's GenServer.call to arrive
+      # and be processed. We cannot use sync here because it would race
+      # with the Task's call in the GenServer mailbox.
       Process.sleep(20)
 
       # Second registration for the same kind should get :stub_ack_pending.
@@ -1929,7 +1910,9 @@ defmodule Plushie.RuntimeTest do
           Plushie.Runtime.await_async(runtime, :slow_task)
         end)
 
-      # Give the runtime time to process the first await call.
+      # Give the scheduler time for the Task's GenServer.call to arrive
+      # and be processed. We cannot use sync here because it would race
+      # with the Task's call in the GenServer mailbox.
       Process.sleep(20)
 
       # Second await for the same tag should get :await_in_progress.
@@ -2127,6 +2110,186 @@ defmodule Plushie.RuntimeTest do
       assert Process.alive?(runtime)
       # Model updates succeed even though view/1 fails.
       assert Plushie.Runtime.get_model(runtime).count == 6
+    end
+  end
+
+  describe "multi-window lifecycle" do
+    defmodule TwoWindowApp do
+      use Plushie.App
+
+      def init(_opts), do: %{events: []}
+
+      def update(model, %WidgetEvent{type: :click, id: "btn_a"}),
+        do: %{model | events: model.events ++ [:click_a]}
+
+      def update(model, %WidgetEvent{type: :click, id: "btn_b"}),
+        do: %{model | events: model.events ++ [:click_b]}
+
+      def update(model, _event), do: model
+
+      def view(_model) do
+        import Plushie.UI
+
+        [
+          window "main", title: "Main" do
+            column do
+              button("btn_a", "A")
+            end
+          end,
+          window "settings", title: "Settings" do
+            column do
+              button("btn_b", "B")
+            end
+          end
+        ]
+      end
+    end
+
+    test "app returning two windows sends both window open ops" do
+      {runtime, bridge} = start_runtime(TwoWindowApp)
+      await_initial_render(runtime)
+
+      window_ops = Plushie.Test.InternalMockBridge.get_window_ops(bridge)
+      open_ops = Enum.filter(window_ops, fn op -> op.op == "open" end)
+      opened_ids = Enum.map(open_ops, & &1.window_id) |> Enum.sort()
+      assert opened_ids == ["main", "settings"]
+    end
+
+    test "events reach update for both windows" do
+      {runtime, _bridge} = start_runtime(TwoWindowApp)
+      await_initial_render(runtime)
+
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "btn_a", window_id: "main"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "btn_b", window_id: "settings"})
+
+      model = Plushie.Runtime.get_model(runtime)
+      assert model.events == [:click_a, :click_b]
+    end
+
+    defmodule DynamicWindowApp do
+      use Plushie.App
+
+      def init(_opts), do: %{show_settings: true}
+
+      def update(model, :close_settings), do: %{model | show_settings: false}
+      def update(model, :open_settings), do: %{model | show_settings: true}
+      def update(model, _event), do: model
+
+      def view(model) do
+        import Plushie.UI
+
+        windows = [
+          window "main" do
+            column do
+              text("main")
+            end
+          end
+        ]
+
+        if model.show_settings do
+          windows ++
+            [
+              window "settings" do
+                column do
+                  text("settings")
+                end
+              end
+            ]
+        else
+          windows
+        end
+      end
+    end
+
+    test "closing a window sends a close op to the bridge" do
+      {runtime, bridge} = start_runtime(DynamicWindowApp)
+      await_initial_render(runtime)
+
+      # Both windows should be open initially.
+      open_ops = Plushie.Test.InternalMockBridge.get_window_ops(bridge)
+      opened_ids = open_ops |> Enum.filter(&(&1.op == "open")) |> Enum.map(& &1.window_id)
+      assert "settings" in opened_ids
+
+      # Close the settings window by updating the model.
+      dispatch_and_wait(runtime, :close_settings)
+
+      window_ops = Plushie.Test.InternalMockBridge.get_window_ops(bridge)
+      close_ops = Enum.filter(window_ops, fn op -> op.op == "close" end)
+      closed_ids = Enum.map(close_ops, & &1.window_id)
+      assert "settings" in closed_ids
+    end
+
+    test "reopening a closed window sends a new open op" do
+      {runtime, bridge} = start_runtime(DynamicWindowApp)
+      await_initial_render(runtime)
+
+      dispatch_and_wait(runtime, :close_settings)
+      dispatch_and_wait(runtime, :open_settings)
+
+      window_ops = Plushie.Test.InternalMockBridge.get_window_ops(bridge)
+      open_ops = Enum.filter(window_ops, fn op -> op.op == "open" end)
+      # Should have opened "settings" twice (initial + reopen).
+      settings_opens = Enum.count(open_ops, fn op -> op.window_id == "settings" end)
+      assert settings_opens == 2
+    end
+  end
+
+  describe "prop validation diagnostics" do
+    @describetag capture_log: true
+
+    test "diagnostic events are accumulated and retrievable" do
+      {runtime, _bridge} = start_runtime(SimpleApp)
+      await_initial_render(runtime)
+
+      # Simulate the renderer sending a diagnostic event.
+      diag_event = %Plushie.Event.SystemEvent{
+        type: :diagnostic,
+        value: %{"id" => "btn", "message" => "unknown prop: foo"}
+      }
+
+      send(runtime, {:renderer_event, diag_event})
+      Plushie.Runtime.sync(runtime)
+
+      diagnostics = Plushie.Runtime.get_diagnostics(runtime)
+      assert length(diagnostics) == 1
+      [diag] = diagnostics
+      assert diag.type == :diagnostic
+      assert diag.value["message"] == "unknown prop: foo"
+    end
+
+    test "get_diagnostics clears the accumulated list" do
+      {runtime, _bridge} = start_runtime(SimpleApp)
+      await_initial_render(runtime)
+
+      send(
+        runtime,
+        {:renderer_event, %Plushie.Event.SystemEvent{type: :diagnostic, value: %{"id" => "x"}}}
+      )
+
+      Plushie.Runtime.sync(runtime)
+
+      assert length(Plushie.Runtime.get_diagnostics(runtime)) == 1
+      # Second call should return empty (cleared by first call).
+      assert Plushie.Runtime.get_diagnostics(runtime) == []
+    end
+
+    test "multiple diagnostics accumulate in order" do
+      {runtime, _bridge} = start_runtime(SimpleApp)
+      await_initial_render(runtime)
+
+      for i <- 1..3 do
+        send(
+          runtime,
+          {:renderer_event, %Plushie.Event.SystemEvent{type: :diagnostic, value: %{"n" => i}}}
+        )
+      end
+
+      Plushie.Runtime.sync(runtime)
+
+      diagnostics = Plushie.Runtime.get_diagnostics(runtime)
+      assert length(diagnostics) == 3
+      ns = Enum.map(diagnostics, fn d -> d.value["n"] end)
+      assert ns == [1, 2, 3]
     end
   end
 
