@@ -65,8 +65,6 @@ defmodule Plushie.Animation.Transition do
 
   alias Plushie.Animation.Easing
 
-  @behaviour Plushie.DSL.Buildable
-
   @known_keys ~w(to duration easing delay from repeat auto_reverse on_complete cycles)a
 
   @type t :: %__MODULE__{
@@ -95,13 +93,10 @@ defmodule Plushie.Animation.Transition do
   # Buildable
   # ---------------------------------------------------------------------------
 
-  @impl Plushie.DSL.Buildable
   def __field_keys__, do: @known_keys
 
-  @impl Plushie.DSL.Buildable
   def __field_types__, do: %{}
 
-  @impl Plushie.DSL.Buildable
   def from_opts(opts) when is_list(opts) do
     validate_required!(opts)
     %__MODULE__{} |> with_options(opts)

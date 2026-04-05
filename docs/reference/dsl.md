@@ -215,29 +215,29 @@ max_width: Transition.new(300, to: 200) |> Transition.easing(:ease_out)
 See the [Animation reference](animation.md) for the full animation
 system.
 
-## Buildable behaviour
+## Do-block types
 
-Types that participate in the do-block syntax implement
-`Plushie.DSL.Buildable`:
+Types that participate in the do-block syntax implement three
+functions:
 
-| Callback | Purpose |
+| Function | Purpose |
 |---|---|
 | `from_opts/1` | Construct struct from keyword list |
 | `__field_keys__/0` | Valid field names (for compile-time validation) |
 | `__field_types__/0` | Map of field names to nested struct modules |
 
 `__field_types__/0` enables recursive nesting. When a field maps to a
-module that also implements Buildable, that field can be specified as a
+module that exports these functions, that field can be specified as a
 nested do-block:
 
 ```elixir
 container "card" do
-  border do          # Border implements Buildable
+  border do          # Border supports do-block syntax
     color "#e5e7eb"
     width 1
     rounded 8
   end
-  shadow do          # Shadow implements Buildable
+  shadow do          # Shadow supports do-block syntax
     color "#0000001a"
     offset 0, 2
     blur_radius 4
@@ -245,7 +245,7 @@ container "card" do
 end
 ```
 
-### Modules implementing Buildable
+### Modules supporting do-block syntax
 
 **Styling types**: `Plushie.Type.A11y`, `Plushie.Type.Border`,
 `Plushie.Type.Font`, `Plushie.Type.Padding`, `Plushie.Type.Shadow`,
@@ -311,7 +311,7 @@ and `spacing 8`, breaking the visual style of the DSL.
 ## See also
 
 - `Plushie.UI` - full module docs with the complete widget macro list
-- `Plushie.DSL.Buildable` - Buildable behaviour definition
+- [Themes and Styling](themes-and-styling.md) - do-block types for styling
 - [Layout reference](windows-and-layout.md) - layout containers with full prop
   tables
 - [Styling reference](themes-and-styling.md) - Border, Shadow, StyleMap, and

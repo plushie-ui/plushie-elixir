@@ -13,7 +13,7 @@ defmodule Plushie.EventDeclarationTest do
     @moduledoc false
     use Plushie.Widget
     widget(:value_event_widget)
-    event(:selected, value: :number)
+    event(:selected, value: :float)
 
     @impl true
     def handle_event(%{type: :click}, _state), do: {:emit, :selected, 42}
@@ -32,7 +32,7 @@ defmodule Plushie.EventDeclarationTest do
     @moduledoc false
     use Plushie.Widget
     widget(:data_event_widget)
-    event(:moved, data: [x: :number, y: :number])
+    event(:moved, data: [x: :float, y: :float])
 
     @impl true
     def handle_event(%{type: :click}, _state), do: {:emit, :moved, %{x: 10.0, y: 20.0}}
@@ -109,8 +109,8 @@ defmodule Plushie.EventDeclarationTest do
     widget(:do_block_event_widget)
 
     event :changed do
-      field(:hue, :number)
-      field(:saturation, :number)
+      field(:hue, :float)
+      field(:saturation, :float)
     end
 
     @impl true
@@ -134,8 +134,8 @@ defmodule Plushie.EventDeclarationTest do
     widget(:optional_field_widget)
 
     event :adjusted do
-      field(:hue, :number)
-      field(:saturation, :number)
+      field(:hue, :float)
+      field(:saturation, :float)
       field(:modifier, :string, required: false)
     end
 
@@ -163,8 +163,8 @@ defmodule Plushie.EventDeclarationTest do
     widget(:missing_required_field_widget)
 
     event :color_pick do
-      field(:hue, :number)
-      field(:saturation, :number)
+      field(:hue, :float)
+      field(:saturation, :float)
     end
 
     @impl true
@@ -187,12 +187,12 @@ defmodule Plushie.EventDeclarationTest do
   describe "event macro generates specs" do
     test "value event has carrier :value" do
       spec = ValueEventWidget.__event_spec__(:selected)
-      assert %{carrier: :value, type: :number} = spec
+      assert %{carrier: :value, type: :float} = spec
     end
 
     test "data event has carrier :data with fields" do
       spec = DataEventWidget.__event_spec__(:moved)
-      assert %{carrier: :data, fields: [x: :number, y: :number]} = spec
+      assert %{carrier: :data, fields: [x: :float, y: :float]} = spec
     end
 
     test "no-payload event has carrier :none" do
@@ -219,7 +219,7 @@ defmodule Plushie.EventDeclarationTest do
 
     test "__event_specs__/0 returns all specs" do
       specs = ValueEventWidget.__event_specs__()
-      assert [{:selected, %{carrier: :value, type: :number}}] = specs
+      assert [{:selected, %{carrier: :value, type: :float}}] = specs
     end
 
     test "__event_spec__/1 returns nil for unknown events" do
@@ -228,14 +228,14 @@ defmodule Plushie.EventDeclarationTest do
 
     test "inline data: form includes required list with all field names" do
       spec = DataEventWidget.__event_spec__(:moved)
-      assert %{carrier: :data, fields: [x: :number, y: :number], required: [:x, :y]} = spec
+      assert %{carrier: :data, fields: [x: :float, y: :float], required: [:x, :y]} = spec
     end
   end
 
   describe "event do-block with field macro" do
     test "do-block fields produce carrier :data spec" do
       spec = DoBlockEventWidget.__event_spec__(:changed)
-      assert %{carrier: :data, fields: [hue: :number, saturation: :number]} = spec
+      assert %{carrier: :data, fields: [hue: :float, saturation: :float]} = spec
     end
 
     test "do-block fields are all required by default" do

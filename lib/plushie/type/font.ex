@@ -37,14 +37,12 @@ defmodule Plushie.Type.Font do
 
   defstruct [:family, :weight, :style, :stretch]
 
-  @behaviour Plushie.DSL.Buildable
+  @behaviour Plushie.Type
 
   @known_keys ~w(family weight style stretch)a
 
-  @impl Plushie.DSL.Buildable
   def __field_keys__, do: @known_keys
 
-  @impl Plushie.DSL.Buildable
   def __field_types__, do: %{}
 
   @doc """
@@ -52,7 +50,6 @@ defmodule Plushie.Type.Font do
 
   Raises `ArgumentError` if any key is not a valid font field.
   """
-  @impl Plushie.DSL.Buildable
   @spec from_opts(Keyword.t()) :: %__MODULE__{}
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do
@@ -66,6 +63,52 @@ defmodule Plushie.Type.Font do
       style: Keyword.get(opts, :style),
       stretch: Keyword.get(opts, :stretch)
     }
+  end
+
+  # -- Plushie.Type callbacks --------------------------------------------------
+
+  @doc """
+  Validates a font value.
+
+  Accepts `:default`, `:monospace`, a family name string, or a
+  `%Font{}` struct.
+
+  ## Examples
+
+      iex> Plushie.Type.Font.cast(:default)
+      {:ok, :default}
+
+      iex> Plushie.Type.Font.cast(:monospace)
+      {:ok, :monospace}
+
+      iex> Plushie.Type.Font.cast("Fira Code")
+      {:ok, "Fira Code"}
+
+      iex> Plushie.Type.Font.cast(%Plushie.Type.Font{family: "Inter"})
+      {:ok, %Plushie.Type.Font{family: "Inter"}}
+
+      iex> Plushie.Type.Font.cast(42)
+      :error
+  """
+  @impl Plushie.Type
+  @spec cast(term()) :: {:ok, t()} | :error
+  def cast(:default), do: {:ok, :default}
+  def cast(:monospace), do: {:ok, :monospace}
+  def cast(name) when is_binary(name), do: {:ok, name}
+  def cast(%__MODULE__{} = font), do: {:ok, font}
+  def cast(_), do: :error
+
+  @impl Plushie.Type
+  def typespec do
+    quote do: :default | :monospace | String.t() | %Plushie.Type.Font{}
+  end
+
+  @impl Plushie.Type
+  def guard(var) do
+    quote do
+      unquote(var) in [:default, :monospace] or is_binary(unquote(var)) or
+        is_struct(unquote(var), Plushie.Type.Font)
+    end
   end
 
   @doc """
@@ -85,6 +128,7 @@ defmodule Plushie.Type.Font do
       iex> Plushie.Type.Font.encode(%{family: "Inter", weight: :bold, style: :italic})
       %{family: "Inter", weight: "Bold", style: "Italic"}
   """
+  @impl Plushie.Type
   @spec encode(font :: t()) :: String.t() | map()
   def encode(:default), do: "default"
   def encode(:monospace), do: "monospace"

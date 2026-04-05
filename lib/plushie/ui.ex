@@ -222,8 +222,8 @@ defmodule Plushie.UI do
 
   @all_container_option_owners (for {mod, name} <- @container_modules,
                                     Code.ensure_loaded?(mod) and
-                                      function_exported?(mod, :__option_keys__, 0),
-                                    key <- mod.__option_keys__(),
+                                      function_exported?(mod, :__field_keys__, 0),
+                                    key <- mod.__field_keys__(),
                                     reduce: %{} do
                                   acc -> Map.update(acc, key, [name], &[name | &1])
                                 end)
@@ -359,8 +359,8 @@ defmodule Plushie.UI do
   defmacro window(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        option_keys = Plushie.Widget.Window.__option_keys__()
-        option_types = Plushie.Widget.Window.__option_types__()
+        option_keys = Plushie.Widget.Window.__field_keys__()
+        option_types = Plushie.Widget.Window.__field_types__()
         block = container_scope(block, option_keys, option_types, "window")
         exprs = block_to_exprs(block)
 
@@ -395,8 +395,8 @@ defmodule Plushie.UI do
 
   @doc false
   defmacro window(id, opts, do: block) do
-    option_keys = Plushie.Widget.Window.__option_keys__()
-    option_types = Plushie.Widget.Window.__option_types__()
+    option_keys = Plushie.Widget.Window.__field_keys__()
+    option_types = Plushie.Widget.Window.__field_types__()
     block = container_scope(block, option_keys, option_types, "window")
     exprs = block_to_exprs(block)
 
@@ -434,8 +434,8 @@ defmodule Plushie.UI do
   defp id_container_2arity_body(widget_mod, name_str, id, opts_or_do) do
     case opts_or_do do
       [do: block] ->
-        option_keys = widget_mod.__option_keys__()
-        option_types = widget_mod.__option_types__()
+        option_keys = widget_mod.__field_keys__()
+        option_types = widget_mod.__field_types__()
         block = container_scope(block, option_keys, option_types, name_str)
         exprs = block_to_exprs(block)
 
@@ -464,8 +464,8 @@ defmodule Plushie.UI do
 
   # Returns the macro body AST for explicit-ID container 3-arity form.
   defp id_container_3arity_body(widget_mod, name_str, id, opts, block) do
-    option_keys = widget_mod.__option_keys__()
-    option_types = widget_mod.__option_types__()
+    option_keys = widget_mod.__field_keys__()
+    option_types = widget_mod.__field_types__()
     block = container_scope(block, option_keys, option_types, name_str)
     exprs = block_to_exprs(block)
 
@@ -490,8 +490,8 @@ defmodule Plushie.UI do
   defp auto_container_1arity_body(widget_mod, name_str, opts_or_block, auto_id) do
     case opts_or_block do
       [do: block] ->
-        option_keys = widget_mod.__option_keys__()
-        option_types = widget_mod.__option_types__()
+        option_keys = widget_mod.__field_keys__()
+        option_types = widget_mod.__field_types__()
         block = container_scope(block, option_keys, option_types, name_str)
         exprs = block_to_exprs(block)
 
@@ -526,8 +526,8 @@ defmodule Plushie.UI do
 
   # Returns the macro body AST for auto-ID container 2-arity form.
   defp auto_container_2arity_body(widget_mod, name_str, opts, block, auto_id) do
-    option_keys = widget_mod.__option_keys__()
-    option_types = widget_mod.__option_types__()
+    option_keys = widget_mod.__field_keys__()
+    option_types = widget_mod.__field_types__()
     block = container_scope(block, option_keys, option_types, name_str)
     exprs = block_to_exprs(block)
 
@@ -852,8 +852,8 @@ defmodule Plushie.UI do
   defmacro space(opts_or_do \\ []) do
     caller_mod = __CALLER__.module
     caller_line = __CALLER__.line
-    option_keys = Plushie.Widget.Space.__option_keys__()
-    option_types = Plushie.Widget.Space.__option_types__()
+    option_keys = Plushie.Widget.Space.__field_keys__()
+    option_types = Plushie.Widget.Space.__field_types__()
 
     case opts_or_do do
       [do: block] ->
@@ -902,8 +902,8 @@ defmodule Plushie.UI do
   defp leaf_macro_body(widget_mod, name_str, build_fn, id, positional, opts_or_do, caller) do
     case opts_or_do do
       [do: block] ->
-        option_keys = widget_mod.__option_keys__()
-        option_types = widget_mod.__option_types__()
+        option_keys = widget_mod.__field_keys__()
+        option_types = widget_mod.__field_types__()
         pairs = interpret_block(block, option_types)
         validate_option_keys!(pairs, option_keys, name_str, caller)
         opts_ast = pairs_to_keyword_ast(pairs)
@@ -1142,8 +1142,8 @@ defmodule Plushie.UI do
 
     case opts_or_do do
       [do: block] ->
-        option_keys = Plushie.Widget.Text.__option_keys__()
-        option_types = Plushie.Widget.Text.__option_types__()
+        option_keys = Plushie.Widget.Text.__field_keys__()
+        option_types = Plushie.Widget.Text.__field_types__()
         pairs = interpret_block(block, option_types)
         validate_option_keys!(pairs, option_keys, "text", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
@@ -1180,8 +1180,8 @@ defmodule Plushie.UI do
   defmacro rule(opts_or_do \\ []) do
     caller_mod = __CALLER__.module
     caller_line = __CALLER__.line
-    option_keys = Plushie.Widget.Rule.__option_keys__()
-    option_types = Plushie.Widget.Rule.__option_types__()
+    option_keys = Plushie.Widget.Rule.__field_keys__()
+    option_types = Plushie.Widget.Rule.__field_types__()
 
     case opts_or_do do
       [do: block] ->
@@ -1262,8 +1262,8 @@ defmodule Plushie.UI do
   defmacro progress_bar(id, range, value, opts_or_do) do
     case opts_or_do do
       [do: block] ->
-        option_keys = Plushie.Widget.ProgressBar.__option_keys__()
-        option_types = Plushie.Widget.ProgressBar.__option_types__()
+        option_keys = Plushie.Widget.ProgressBar.__field_keys__()
+        option_types = Plushie.Widget.ProgressBar.__field_types__()
         pairs = interpret_block(block, option_types)
         validate_option_keys!(pairs, option_keys, "progress_bar", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
@@ -1325,8 +1325,8 @@ defmodule Plushie.UI do
   defmacro radio(id, value, selected, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        option_keys = Plushie.Widget.Radio.__option_keys__()
-        option_types = Plushie.Widget.Radio.__option_types__()
+        option_keys = Plushie.Widget.Radio.__field_keys__()
+        option_types = Plushie.Widget.Radio.__field_types__()
         pairs = interpret_block(block, option_types)
         validate_option_keys!(pairs, option_keys, "radio", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
@@ -1385,8 +1385,8 @@ defmodule Plushie.UI do
   defmacro slider(id, range, value, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        option_keys = Plushie.Widget.Slider.__option_keys__()
-        option_types = Plushie.Widget.Slider.__option_types__()
+        option_keys = Plushie.Widget.Slider.__field_keys__()
+        option_types = Plushie.Widget.Slider.__field_types__()
         pairs = interpret_block(block, option_types)
         validate_option_keys!(pairs, option_keys, "slider", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
@@ -1442,8 +1442,8 @@ defmodule Plushie.UI do
   defmacro vertical_slider(id, range, value, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        option_keys = Plushie.Widget.VerticalSlider.__option_keys__()
-        option_types = Plushie.Widget.VerticalSlider.__option_types__()
+        option_keys = Plushie.Widget.VerticalSlider.__field_keys__()
+        option_types = Plushie.Widget.VerticalSlider.__field_types__()
         pairs = interpret_block(block, option_types)
         validate_option_keys!(pairs, option_keys, "vertical_slider", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
@@ -1496,8 +1496,8 @@ defmodule Plushie.UI do
   defmacro pick_list(id, options, selected, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        option_keys = Plushie.Widget.PickList.__option_keys__()
-        option_types = Plushie.Widget.PickList.__option_types__()
+        option_keys = Plushie.Widget.PickList.__field_keys__()
+        option_types = Plushie.Widget.PickList.__field_types__()
         pairs = interpret_block(block, option_types)
         validate_option_keys!(pairs, option_keys, "pick_list", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
@@ -1550,8 +1550,8 @@ defmodule Plushie.UI do
   defmacro combo_box(id, options, value, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        option_keys = Plushie.Widget.ComboBox.__option_keys__()
-        option_types = Plushie.Widget.ComboBox.__option_types__()
+        option_keys = Plushie.Widget.ComboBox.__field_keys__()
+        option_types = Plushie.Widget.ComboBox.__field_types__()
         pairs = interpret_block(block, option_types)
         validate_option_keys!(pairs, option_keys, "combo_box", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
@@ -1655,8 +1655,8 @@ defmodule Plushie.UI do
   defmacro markdown(id, content, opts_or_do) do
     case opts_or_do do
       [do: block] ->
-        option_keys = Plushie.Widget.Markdown.__option_keys__()
-        option_types = Plushie.Widget.Markdown.__option_types__()
+        option_keys = Plushie.Widget.Markdown.__field_keys__()
+        option_types = Plushie.Widget.Markdown.__field_types__()
         pairs = interpret_block(block, option_types)
         validate_option_keys!(pairs, option_keys, "markdown", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
@@ -1699,8 +1699,8 @@ defmodule Plushie.UI do
       end
   """
   defmacro tooltip(id, tip_or_do) do
-    option_keys = Plushie.Widget.Tooltip.__option_keys__()
-    option_types = Plushie.Widget.Tooltip.__option_types__()
+    option_keys = Plushie.Widget.Tooltip.__field_keys__()
+    option_types = Plushie.Widget.Tooltip.__field_types__()
 
     case tip_or_do do
       [do: block] ->
@@ -1732,8 +1732,8 @@ defmodule Plushie.UI do
 
   @doc false
   defmacro tooltip(id, tip, opts_or_do) do
-    option_keys = Plushie.Widget.Tooltip.__option_keys__()
-    option_types = Plushie.Widget.Tooltip.__option_types__()
+    option_keys = Plushie.Widget.Tooltip.__field_keys__()
+    option_types = Plushie.Widget.Tooltip.__field_types__()
 
     case opts_or_do do
       [do: block] ->
@@ -1771,8 +1771,8 @@ defmodule Plushie.UI do
 
   @doc false
   defmacro tooltip(id, tip, opts, do: block) do
-    option_keys = Plushie.Widget.Tooltip.__option_keys__()
-    option_types = Plushie.Widget.Tooltip.__option_types__()
+    option_keys = Plushie.Widget.Tooltip.__field_keys__()
+    option_types = Plushie.Widget.Tooltip.__field_types__()
     block = container_scope(block, option_keys, option_types, "tooltip")
     exprs = block_to_exprs(block)
 
@@ -1925,8 +1925,8 @@ defmodule Plushie.UI do
   defmacro pane_grid(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        option_keys = Plushie.Widget.PaneGrid.__option_keys__()
-        option_types = Plushie.Widget.PaneGrid.__option_types__()
+        option_keys = Plushie.Widget.PaneGrid.__field_keys__()
+        option_types = Plushie.Widget.PaneGrid.__field_types__()
         block = container_scope(block, option_keys, option_types, "pane_grid")
         exprs = block_to_exprs(block)
 
@@ -1955,8 +1955,8 @@ defmodule Plushie.UI do
 
   @doc false
   defmacro pane_grid(id, opts, do: block) do
-    option_keys = Plushie.Widget.PaneGrid.__option_keys__()
-    option_types = Plushie.Widget.PaneGrid.__option_types__()
+    option_keys = Plushie.Widget.PaneGrid.__field_keys__()
+    option_types = Plushie.Widget.PaneGrid.__field_types__()
     block = container_scope(block, option_keys, option_types, "pane_grid")
     exprs = block_to_exprs(block)
 
@@ -1998,8 +1998,8 @@ defmodule Plushie.UI do
   defmacro rich_text(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        option_keys = Plushie.Widget.RichText.__option_keys__()
-        option_types = Plushie.Widget.RichText.__option_types__()
+        option_keys = Plushie.Widget.RichText.__field_keys__()
+        option_types = Plushie.Widget.RichText.__field_types__()
         pairs = interpret_block(block, option_types)
         validate_option_keys!(pairs, option_keys, "rich_text", __CALLER__)
         opts_ast = pairs_to_keyword_ast(pairs)
@@ -2050,8 +2050,8 @@ defmodule Plushie.UI do
   defmacro table(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        option_keys = Plushie.Widget.Table.__option_keys__()
-        option_types = Plushie.Widget.Table.__option_types__()
+        option_keys = Plushie.Widget.Table.__field_keys__()
+        option_types = Plushie.Widget.Table.__field_types__()
         block = container_scope(block, option_keys, option_types, "table")
         exprs = block_to_exprs(block)
 
@@ -2080,8 +2080,8 @@ defmodule Plushie.UI do
 
   @doc false
   defmacro table(id, opts, do: block) do
-    option_keys = Plushie.Widget.Table.__option_keys__()
-    option_types = Plushie.Widget.Table.__option_types__()
+    option_keys = Plushie.Widget.Table.__field_keys__()
+    option_types = Plushie.Widget.Table.__field_types__()
     block = container_scope(block, option_keys, option_types, "table")
     exprs = block_to_exprs(block)
 
@@ -2215,7 +2215,7 @@ defmodule Plushie.UI do
 
   @doc "Builds a rectangle shape. See `Plushie.Canvas.Shape.rect/5`."
   @canvas_shape_type_mapping %{stroke: Plushie.Canvas.Shape.Stroke}
-  @canvas_option_keys Plushie.Widget.Canvas.__option_keys__()
+  @canvas_option_keys Plushie.Widget.Canvas.__field_keys__()
 
   defmacro rect(x, y, w, h, opts_or_do \\ []) do
     case opts_or_do do

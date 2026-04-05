@@ -5,21 +5,9 @@ defmodule Plushie.Type.Anchor do
   Maps to iced's `scrollable::Anchor` enum.
   """
 
+  use Plushie.Type
+
   @type t :: :start | :end
 
-  @valid [:start, :end]
-
-  @doc """
-  Encodes an anchor value to the wire format.
-
-  ## Examples
-
-      iex> Plushie.Type.Anchor.encode(:start)
-      "start"
-
-      iex> Plushie.Type.Anchor.encode(:end)
-      "end"
-  """
-  @spec encode(anchor :: t()) :: String.t()
-  def encode(value) when value in @valid, do: Atom.to_string(value)
+  enum([:start, :end])
 end

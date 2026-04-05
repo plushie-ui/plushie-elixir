@@ -73,7 +73,46 @@ defmodule Plushie.Type.Theme do
 
   @type builtin :: unquote(Enum.reduce(@themes, &{:|, [], [&1, &2]}))
 
+  @behaviour Plushie.Type
+
   @type t :: builtin() | :system | map()
+
+  @doc """
+  Validates a theme value.
+
+  Accepts built-in theme atoms, `:system`, or a custom theme map
+  (a map with at least a `:name` key).
+
+  ## Examples
+
+      iex> Plushie.Type.Theme.cast(:dark)
+      {:ok, :dark}
+
+      iex> Plushie.Type.Theme.cast(:system)
+      {:ok, :system}
+
+      iex> Plushie.Type.Theme.cast(%{name: "custom"})
+      {:ok, %{name: "custom"}}
+
+      iex> Plushie.Type.Theme.cast(:bogus)
+      :error
+  """
+  @impl Plushie.Type
+  @spec cast(term()) :: {:ok, t()} | :error
+  def cast(:system), do: {:ok, :system}
+  def cast(v) when v in @themes, do: {:ok, v}
+  def cast(%{name: _} = map), do: {:ok, map}
+  def cast(_), do: :error
+
+  @impl Plushie.Type
+  def typespec do
+    quote do: atom() | map()
+  end
+
+  @impl Plushie.Type
+  def guard(var) do
+    quote do: is_atom(unquote(var)) or is_map(unquote(var))
+  end
 
   @doc """
   Returns the list of all known built-in theme atoms.

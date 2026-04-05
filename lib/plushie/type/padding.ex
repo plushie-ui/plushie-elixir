@@ -29,14 +29,10 @@ defmodule Plushie.Type.Padding do
 
   defstruct [:top, :right, :bottom, :left]
 
-  @behaviour Plushie.DSL.Buildable
-
   @known_keys ~w(top right bottom left)a
 
-  @impl Plushie.DSL.Buildable
   def __field_keys__, do: @known_keys
 
-  @impl Plushie.DSL.Buildable
   def __field_types__, do: %{}
 
   @doc """
@@ -44,7 +40,6 @@ defmodule Plushie.Type.Padding do
 
   Raises `ArgumentError` if any key is not a valid padding field.
   """
-  @impl Plushie.DSL.Buildable
   @spec from_opts(Keyword.t()) :: %__MODULE__{}
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do
@@ -94,6 +89,20 @@ defmodule Plushie.Type.Padding do
   def cast(%{top: t, right: r, bottom: b, left: l})
       when is_number(t) and is_number(r) and is_number(b) and is_number(l) do
     %{top: t, right: r, bottom: b, left: l}
+  end
+
+  # -- Plushie.Type callbacks --------------------------------------------------
+
+  @doc false
+  def typespec do
+    quote do: number() | {number(), number()} | %Plushie.Type.Padding{}
+  end
+
+  @doc false
+  def guard(var) do
+    quote do
+      is_number(unquote(var)) or is_tuple(unquote(var)) or is_map(unquote(var))
+    end
   end
 end
 

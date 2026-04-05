@@ -111,10 +111,10 @@ defmodule Plushie.Widget.ComboBox do
   @valid_option_keys ~w(selected value placeholder width padding size font line_height menu_height icon on_option_hovered on_open on_close shaping ellipsis menu_style style a11y)a
 
   @doc false
-  def __option_keys__, do: @valid_option_keys
+  def __field_keys__, do: @valid_option_keys
 
   @doc false
-  def __option_types__ do
+  def __field_types__ do
     %{padding: Plushie.Type.Padding, font: Plushie.Type.Font, a11y: Plushie.Type.A11y}
   end
 

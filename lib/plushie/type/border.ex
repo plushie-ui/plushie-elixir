@@ -42,7 +42,7 @@ defmodule Plushie.Type.Border do
           radius: number() | radius_map()
         }
 
-  @behaviour Plushie.DSL.Buildable
+  @behaviour Plushie.Type
 
   @known_keys ~w(color width rounded radius)a
 
@@ -83,14 +83,11 @@ defmodule Plushie.Type.Border do
     }
   end
 
-  @impl Plushie.DSL.Buildable
   def __field_keys__, do: @known_keys
 
-  @impl Plushie.DSL.Buildable
   def __field_types__, do: %{}
 
   @doc "Constructs a `Border` from a keyword list."
-  @impl Plushie.DSL.Buildable
   @spec from_opts(opts :: keyword()) :: t()
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do
@@ -106,7 +103,42 @@ defmodule Plushie.Type.Border do
     end)
   end
 
+  # -- Plushie.Type callbacks --------------------------------------------------
+
+  @doc """
+  Validates a border value.
+
+  Accepts a `%Border{}` struct or a map with border fields.
+
+  ## Examples
+
+      iex> Plushie.Type.Border.cast(%Plushie.Type.Border{width: 2})
+      {:ok, %Plushie.Type.Border{width: 2}}
+  """
+  @impl Plushie.Type
+  @spec cast(term()) :: {:ok, t()} | :error
+  def cast(%__MODULE__{} = border), do: {:ok, border}
+
+  def cast(map) when is_map(map) do
+    {:ok, from_opts(Enum.to_list(map))}
+  rescue
+    ArgumentError -> :error
+  end
+
+  def cast(_), do: :error
+
+  @impl Plushie.Type
+  def typespec do
+    quote do: %Plushie.Type.Border{}
+  end
+
+  @impl Plushie.Type
+  def guard(var) do
+    quote do: is_struct(unquote(var), Plushie.Type.Border)
+  end
+
   @doc "Encodes a border to the wire format."
+  @impl Plushie.Type
   @spec encode(border :: t()) :: map()
   def encode(%__MODULE__{} = border) do
     %{color: border.color, width: border.width, radius: encode_radius(border.radius)}

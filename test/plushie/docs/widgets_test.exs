@@ -13,11 +13,11 @@ defmodule Plushie.Docs.WidgetsTest do
     rust_crate("native/my_sparkline")
     rust_constructor("my_sparkline::SparklineExtension::new()")
 
-    prop(:data, {:list, :number}, doc: "Sample values to plot")
-    prop(:color, :color, default: "#4CAF50", doc: "Line color")
-    prop(:capacity, :number, default: 100, doc: "Max samples in the ring buffer")
+    field(:data, {:list, :float}, doc: "Sample values to plot")
+    field(:color, Plushie.Type.Color, default: "#4CAF50", doc: "Line color")
+    field(:capacity, :float, default: 100, doc: "Max samples in the ring buffer")
 
-    command(:push, value: :number)
+    command(:push, value: :float)
   end
 
   defmodule TestHexView do
@@ -28,8 +28,8 @@ defmodule Plushie.Docs.WidgetsTest do
     rust_crate("native/hex_view")
     rust_constructor("hex_view::HexViewExtension::new()")
 
-    prop(:data, :string, doc: "Binary data (base64)")
-    prop(:columns, :number, default: 16)
+    field(:data, :string, doc: "Binary data (base64)")
+    field(:columns, :float, default: 16)
   end
 
   defmodule TestCard do
@@ -37,8 +37,8 @@ defmodule Plushie.Docs.WidgetsTest do
 
     widget(:card)
 
-    prop(:title, :string)
-    prop(:subtitle, :string, default: nil)
+    field(:title, :string)
+    field(:subtitle, :string, default: nil)
 
     def view(id, props) do
       column id: id, padding: 16, spacing: 8 do

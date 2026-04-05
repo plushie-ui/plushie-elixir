@@ -111,10 +111,10 @@ defmodule Plushie.Widget.Window do
   @valid_option_keys ~w(title size width height position min_size max_size maximized fullscreen visible resizable closeable minimizable decorations transparent blur level exit_on_close_request scale_factor theme)a
 
   @doc false
-  def __option_keys__, do: @valid_option_keys
+  def __field_keys__, do: @valid_option_keys
 
   @doc false
-  def __option_types__, do: %{}
+  def __field_types__, do: %{}
 
   @doc "Creates a new window struct with optional keyword opts."
   @spec new(id :: String.t(), opts :: [option()]) :: t()

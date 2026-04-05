@@ -26,7 +26,7 @@ defmodule Plushie.Type.Shadow do
           blur_radius: number()
         }
 
-  @behaviour Plushie.DSL.Buildable
+  @behaviour Plushie.Type
 
   @known_keys ~w(color offset offset_x offset_y blur_radius)a
 
@@ -52,14 +52,11 @@ defmodule Plushie.Type.Shadow do
   def blur_radius(%__MODULE__{} = shadow, r) when is_number(r),
     do: %{shadow | blur_radius: r}
 
-  @impl Plushie.DSL.Buildable
   def __field_keys__, do: @known_keys
 
-  @impl Plushie.DSL.Buildable
   def __field_types__, do: %{}
 
   @doc "Constructs a `Shadow` from a keyword list."
-  @impl Plushie.DSL.Buildable
   @spec from_opts(opts :: keyword()) :: t()
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do
@@ -74,6 +71,40 @@ defmodule Plushie.Type.Shadow do
       {:offset_y, v}, acc -> %{acc | offset_y: v}
       {:blur_radius, v}, acc -> blur_radius(acc, v)
     end)
+  end
+
+  # -- Plushie.Type callbacks --------------------------------------------------
+
+  @doc """
+  Validates a shadow value.
+
+  Accepts a `%Shadow{}` struct or a map with shadow fields.
+
+  ## Examples
+
+      iex> Plushie.Type.Shadow.cast(%Plushie.Type.Shadow{blur_radius: 4})
+      {:ok, %Plushie.Type.Shadow{blur_radius: 4}}
+  """
+  @impl Plushie.Type
+  @spec cast(term()) :: {:ok, t()} | :error
+  def cast(%__MODULE__{} = shadow), do: {:ok, shadow}
+
+  def cast(map) when is_map(map) do
+    {:ok, from_opts(Enum.to_list(map))}
+  rescue
+    ArgumentError -> :error
+  end
+
+  def cast(_), do: :error
+
+  @impl Plushie.Type
+  def typespec do
+    quote do: %Plushie.Type.Shadow{}
+  end
+
+  @impl Plushie.Type
+  def guard(var) do
+    quote do: is_struct(unquote(var), Plushie.Type.Shadow)
   end
 end
 

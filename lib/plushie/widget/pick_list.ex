@@ -103,10 +103,10 @@ defmodule Plushie.Widget.PickList do
   @valid_option_keys ~w(selected placeholder width padding text_size font line_height menu_height shaping handle ellipsis menu_style style on_open on_close a11y)a
 
   @doc false
-  def __option_keys__, do: @valid_option_keys
+  def __field_keys__, do: @valid_option_keys
 
   @doc false
-  def __option_types__ do
+  def __field_types__ do
     %{padding: Plushie.Type.Padding, font: Plushie.Type.Font, a11y: Plushie.Type.A11y}
   end
 

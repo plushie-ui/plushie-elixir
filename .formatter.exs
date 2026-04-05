@@ -102,10 +102,27 @@ plushie_ui_locals = [
   window: 3
 ]
 
+# Widget and type declaration macros (used in module definitions).
+plushie_declaration_locals = [
+  widget: 1,
+  widget: 2,
+  field: 2,
+  field: 3,
+  positional: 1,
+  event: 1,
+  event: 2,
+  state: 1,
+  state: 2,
+  command: 1,
+  command: 2,
+  enum: 1,
+  union: 1
+]
+
 [
   inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"],
-  locals_without_parens: plushie_ui_locals,
+  locals_without_parens: plushie_ui_locals ++ plushie_declaration_locals,
   export: [
-    locals_without_parens: plushie_ui_locals
+    locals_without_parens: plushie_ui_locals ++ plushie_declaration_locals
   ]
 ]

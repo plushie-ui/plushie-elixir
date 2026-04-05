@@ -144,9 +144,7 @@ defmodule Plushie.MixProject do
           Plushie.Canvas.Shape,
           ~r/Plushie\.Canvas\.Shape\..*/
         ],
-        DSL: [
-          Plushie.DSL.Buildable
-        ],
+        DSL: [],
         Widgets: [
           Plushie.Widget,
           Plushie.Widget.WidgetProtocol

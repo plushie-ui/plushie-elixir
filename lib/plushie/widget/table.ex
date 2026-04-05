@@ -130,10 +130,10 @@ defmodule Plushie.Widget.Table do
   @valid_option_keys ~w(columns rows header separator width padding sort_by sort_order header_text_size row_text_size cell_spacing row_spacing separator_thickness separator_color a11y)a
 
   @doc false
-  def __option_keys__, do: @valid_option_keys
+  def __field_keys__, do: @valid_option_keys
 
   @doc false
-  def __option_types__ do
+  def __field_types__ do
     %{padding: Plushie.Type.Padding, a11y: Plushie.Type.A11y}
   end
 

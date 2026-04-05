@@ -6,32 +6,11 @@ defmodule Plushie.Type.Alignment do
   Vertical: `:top`, `:center`, `:bottom`.
   """
 
-  @valid [:left, :center, :right, :top, :bottom]
+  use Plushie.Type
 
   @type horizontal :: :left | :center | :right
   @type vertical :: :top | :center | :bottom
   @type t :: horizontal() | vertical()
 
-  @doc """
-  Encodes an alignment value to the wire format.
-
-  ## Examples
-
-      iex> Plushie.Type.Alignment.encode(:left)
-      "left"
-
-      iex> Plushie.Type.Alignment.encode(:center)
-      "center"
-
-      iex> Plushie.Type.Alignment.encode(:right)
-      "right"
-
-      iex> Plushie.Type.Alignment.encode(:top)
-      "top"
-
-      iex> Plushie.Type.Alignment.encode(:bottom)
-      "bottom"
-  """
-  @spec encode(alignment :: t()) :: String.t()
-  def encode(value) when value in @valid, do: Atom.to_string(value)
+  enum([:left, :center, :right, :top, :bottom])
 end

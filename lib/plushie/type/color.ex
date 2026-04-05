@@ -383,6 +383,20 @@ defmodule Plushie.Type.Color do
     |> String.pad_leading(2, "0")
   end
 
+  # -- Plushie.Type callbacks ----------------------------------------------------
+
+  @doc false
+  def typespec do
+    quote do: String.t()
+  end
+
+  @doc false
+  def guard(var) do
+    quote do: is_binary(unquote(var))
+  end
+
+  # -- Private -----------------------------------------------------------------
+
   defp validate_hex_digits!(hex) do
     unless Regex.match?(~r/\A[0-9a-fA-F]+\z/, hex) do
       raise ArgumentError, "invalid hex color digits: #{inspect(hex)}"

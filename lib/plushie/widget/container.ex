@@ -105,10 +105,10 @@ defmodule Plushie.Widget.Container do
   @valid_option_keys ~w(padding width height max_width max_height center clip align_x align_y background color border shadow style a11y)a
 
   @doc false
-  def __option_keys__, do: @valid_option_keys
+  def __field_keys__, do: @valid_option_keys
 
   @doc false
-  def __option_types__ do
+  def __field_types__ do
     %{
       padding: Plushie.Type.Padding,
       border: Plushie.Type.Border,

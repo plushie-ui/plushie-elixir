@@ -114,10 +114,10 @@ defmodule Plushie.Widget.TextEditor do
   @valid_option_keys ~w(content placeholder width height min_height max_height font size line_height padding wrapping ime_purpose highlight_syntax highlight_theme style key_bindings placeholder_color selection_color a11y)a
 
   @doc false
-  def __option_keys__, do: @valid_option_keys
+  def __field_keys__, do: @valid_option_keys
 
   @doc false
-  def __option_types__ do
+  def __field_types__ do
     %{font: Plushie.Type.Font, a11y: Plushie.Type.A11y}
   end
 

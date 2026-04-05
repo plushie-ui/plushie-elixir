@@ -10,20 +10,20 @@ defmodule Plushie.WidgetMacroTest do
     use Plushie.Widget, :native_widget
 
     widget(:gauge)
-    event(:calibrated, value: :number)
+    event(:calibrated, value: :float)
 
-    prop(:value, :number)
-    prop(:min, :number, default: 0)
-    prop(:max, :number, default: 100)
-    prop(:color, :color, default: :blue)
-    prop(:width, :length)
-    prop(:height, :length)
-    prop(:label, :string)
+    field(:value, :float)
+    field(:min, :float, default: 0)
+    field(:max, :float, default: 100)
+    field(:color, Plushie.Type.Color, default: :blue)
+    field(:width, Plushie.Type.Length)
+    field(:height, Plushie.Type.Length)
+    field(:label, :string)
 
     rust_crate("native/my_gauge")
     rust_constructor("my_gauge::GaugeWidget::new()")
 
-    command(:set_value, value: :number)
+    command(:set_value, value: :float)
     command(:reset)
   end
 
@@ -32,9 +32,9 @@ defmodule Plushie.WidgetMacroTest do
 
     widget(:native_panel, container: true)
 
-    prop(:title, :string)
-    prop(:padding, :padding)
-    prop(:align, :alignment, default: :center)
+    field(:title, :string)
+    field(:padding, Plushie.Type.Padding)
+    field(:align, Plushie.Type.Alignment, default: :center)
 
     rust_crate("native/panel")
     rust_constructor("panel::PanelExtension::new()")
@@ -49,9 +49,9 @@ defmodule Plushie.WidgetMacroTest do
 
     widget(:badge)
 
-    prop(:label, :string)
-    prop(:color, :color, default: :red)
-    prop(:size, :number, default: 14)
+    field(:label, :string)
+    field(:color, Plushie.Type.Color, default: :red)
+    field(:size, :float, default: 14)
   end
 
   # ---------------------------------------------------------------------------
@@ -63,8 +63,8 @@ defmodule Plushie.WidgetMacroTest do
 
     widget(:card, container: true)
 
-    prop(:title, :string)
-    prop(:style, :style, default: :primary)
+    field(:title, :string)
+    field(:style, Plushie.Type.Style, default: :primary)
   end
 
   # ---------------------------------------------------------------------------
@@ -76,8 +76,8 @@ defmodule Plushie.WidgetMacroTest do
 
     widget(:status_indicator)
 
-    prop(:status, :atom)
-    prop(:label, :string)
+    field(:status, :atom)
+    field(:label, :string)
 
     def view(id, props) do
       status_str = Map.get(props, :status, "unknown")
@@ -95,7 +95,7 @@ defmodule Plushie.WidgetMacroTest do
 
     widget(:wrapper)
 
-    prop(:border, :boolean, default: false)
+    field(:border, :boolean, default: false)
 
     def view(id, props) do
       border_val = Map.get(props, :border, false)
@@ -110,7 +110,7 @@ defmodule Plushie.WidgetMacroTest do
   end
 
   # ---------------------------------------------------------------------------
-  # Test modules: prop type coverage
+  # Test modules: field type coverage
   # ---------------------------------------------------------------------------
 
   defmodule TypeKitchen do
@@ -118,19 +118,19 @@ defmodule Plushie.WidgetMacroTest do
 
     widget(:type_kitchen)
 
-    prop(:a_number, :number)
-    prop(:a_string, :string)
-    prop(:a_bool, :boolean)
-    prop(:a_color, :color)
-    prop(:a_length, :length)
-    prop(:a_padding, :padding)
-    prop(:an_alignment, :alignment)
-    prop(:an_atom, :atom)
-    prop(:a_map, :map)
-    prop(:a_list, {:list, :string})
-    prop(:any_val, :any)
-    prop(:a_style, :style)
-    prop(:a_font, :font)
+    field(:a_number, :float)
+    field(:a_string, :string)
+    field(:a_bool, :boolean)
+    field(:a_color, Plushie.Type.Color)
+    field(:a_length, Plushie.Type.Length)
+    field(:a_padding, Plushie.Type.Padding)
+    field(:an_alignment, Plushie.Type.Alignment)
+    field(:an_atom, :atom)
+    field(:a_map, :map)
+    field(:a_list, {:list, :string})
+    field(:any_val, :any)
+    field(:a_style, Plushie.Type.Style)
+    field(:a_font, Plushie.Type.Font)
   end
 
   # =========================================================================
@@ -204,7 +204,7 @@ defmodule Plushie.WidgetMacroTest do
   describe "prop defaults are applied" do
     test "color default is cast and applied" do
       node = BadgeWidget.new("b1") |> BadgeWidget.build()
-      assert node.props[:color] == Plushie.Type.Color.cast(:red)
+      assert node.props[:color] == "#ff0000"
       assert node.props[:size] == 14
     end
 
@@ -350,7 +350,7 @@ defmodule Plushie.WidgetMacroTest do
         defmodule MissingWidget do
           use Plushie.Widget
 
-          prop :foo, :string
+          field :foo, :string
         end
         """)
       end
@@ -444,14 +444,14 @@ defmodule Plushie.WidgetMacroTest do
       end
     end
 
-    test "raises on unknown prop type" do
-      assert_raise CompileError, ~r/unsupported prop type.*:bogus_type/, fn ->
+    test "raises on unknown field type" do
+      assert_raise CompileError, ~r/unsupported field type.*:bogus_type/, fn ->
         Code.compile_string("""
         defmodule TestBadPropType do
           use Plushie.Widget
 
           widget :bad_prop
-          prop :foo, :bogus_type
+          field :foo, :bogus_type
         end
         """)
       end
@@ -472,31 +472,31 @@ defmodule Plushie.WidgetMacroTest do
       end
     end
 
-    test "allows {:list, inner} prop type" do
+    test "allows {:list, inner} field type" do
       Code.compile_string("""
       defmodule TestListPropType do
         use Plushie.Widget
 
         widget :list_prop
-        prop :items, {:list, :string}
+        field :items, {:list, :string}
       end
       """)
     end
 
-    test "rejects {:list, bad_inner} prop type" do
-      assert_raise CompileError, ~r/unsupported prop type.*\{:list, :widget_ref\}/, fn ->
+    test "rejects {:list, bad_inner} field type" do
+      assert_raise CompileError, ~r/unsupported field type.*\{:list, :widget_ref\}/, fn ->
         Code.compile_string("""
         defmodule TestBadListPropType do
           use Plushie.Widget
 
           widget :bad_list_prop
-          prop :items, {:list, :widget_ref}
+          field :items, {:list, :widget_ref}
         end
         """)
       end
     end
 
-    test "warns on duplicate prop names" do
+    test "warns on duplicate field names" do
       warnings =
         ExUnit.CaptureIO.capture_io(:stderr, fn ->
           Code.compile_string("""
@@ -504,8 +504,8 @@ defmodule Plushie.WidgetMacroTest do
             use Plushie.Widget
 
             widget :dup_props
-            prop :foo, :string
-            prop :foo, :number
+            field :foo, :string
+            field :foo, :float
           end
           """)
         end)
@@ -532,50 +532,50 @@ defmodule Plushie.WidgetMacroTest do
     end
   end
 
-  describe "reserved prop names" do
-    test "raises on prop named :id" do
-      assert_raise CompileError, ~r/prop name :id is reserved/, fn ->
+  describe "reserved field names" do
+    test "raises on field named :id" do
+      assert_raise CompileError, ~r/field name :id is reserved/, fn ->
         Code.compile_string("""
         defmodule TestReservedId do
           use Plushie.Widget
           widget :bad
-          prop :id, :string
+          field :id, :string
         end
         """)
       end
     end
 
-    test "raises on prop named :type" do
-      assert_raise CompileError, ~r/prop name :type is reserved/, fn ->
+    test "raises on field named :type" do
+      assert_raise CompileError, ~r/field name :type is reserved/, fn ->
         Code.compile_string("""
         defmodule TestReservedType do
           use Plushie.Widget
           widget :bad
-          prop :type, :string
+          field :type, :string
         end
         """)
       end
     end
 
-    test "raises on prop named :children" do
-      assert_raise CompileError, ~r/prop name :children is reserved/, fn ->
+    test "raises on field named :children" do
+      assert_raise CompileError, ~r/field name :children is reserved/, fn ->
         Code.compile_string("""
         defmodule TestReservedChildren do
           use Plushie.Widget
           widget :bad
-          prop :children, :any
+          field :children, :any
         end
         """)
       end
     end
 
-    test "raises on prop named :a11y" do
-      assert_raise CompileError, ~r/prop name :a11y is reserved/, fn ->
+    test "raises on field named :a11y" do
+      assert_raise CompileError, ~r/field name :a11y is reserved/, fn ->
         Code.compile_string("""
         defmodule TestReservedA11y do
           use Plushie.Widget
           widget :bad
-          prop :a11y, :map
+          field :a11y, :map
         end
         """)
       end
@@ -661,7 +661,7 @@ defmodule Plushie.WidgetMacroTest do
 
     test "defaults are applied via setter encoding in build" do
       node = BadgeWidget.new("b1") |> BadgeWidget.build()
-      assert node.props[:color] == Plushie.Type.Color.cast(:red)
+      assert node.props[:color] == "#ff0000"
       assert node.props[:size] == 14
     end
 

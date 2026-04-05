@@ -17,9 +17,8 @@ defmodule Plushie.Type.KeyModifiers do
       {:ok, %Plushie.KeyModifiers{}}
   """
 
-  @behaviour Plushie.Event.EventType
+  @behaviour Plushie.Type
 
-  @impl true
   @spec parse(value :: term()) :: {:ok, Plushie.KeyModifiers.t()} | :error
   def parse(mods) when is_map(mods) do
     {:ok,
@@ -34,4 +33,12 @@ defmodule Plushie.Type.KeyModifiers do
 
   def parse(nil), do: {:ok, %Plushie.KeyModifiers{}}
   def parse(_), do: :error
+
+  @impl Plushie.Type
+  def cast(value), do: parse(value)
+
+  @impl Plushie.Type
+  def typespec do
+    quote do: Plushie.KeyModifiers.t()
+  end
 end

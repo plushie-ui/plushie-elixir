@@ -83,10 +83,10 @@ defmodule Plushie.Widget.Scrollable do
   @valid_option_keys ~w(width height direction spacing scrollbar_width scrollbar_margin scroller_width anchor on_scroll auto_scroll scrollbar_color scroller_color a11y)a
 
   @doc false
-  def __option_keys__, do: @valid_option_keys
+  def __field_keys__, do: @valid_option_keys
 
   @doc false
-  def __option_types__ do
+  def __field_types__ do
     %{a11y: Plushie.Type.A11y}
   end
 

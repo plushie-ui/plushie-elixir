@@ -19,12 +19,12 @@ defmodule StarRating do
   use Plushie.Widget
 
   widget(:star_rating)
-  prop(:rating, :number)
-  prop(:readonly, :boolean, default: false)
-  prop(:scale, :number, default: 1.0)
-  prop(:theme_progress, :number, default: 0.0)
+  field(:rating, :float)
+  field(:readonly, :boolean, default: false)
+  field(:scale, :float, default: 1.0)
+  field(:theme_progress, :float, default: 0.0)
 
-  event :select, value: :number
+  event :select, value: :float
 
   state(hover: nil)
 

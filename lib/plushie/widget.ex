@@ -22,18 +22,18 @@ defmodule Plushie.Widget do
 
         widget :gauge
 
-        prop :value, :number
-        prop :min, :number, default: 0
-        prop :max, :number, default: 100
-        prop :color, :color, default: :blue
-        prop :width, :length
-        prop :height, :length
+        field :value, :float
+        field :min, :float, default: 0
+        field :max, :float, default: 100
+        field :color, Plushie.Type.Color, default: :blue
+        field :width, Plushie.Type.Length
+        field :height, Plushie.Type.Length
 
         rust_crate "native/my_gauge"
         rust_constructor "my_gauge::GaugeWidget::new()"
 
-        event :value_changed, data: [value: :number]
-        command :set_value, value: :number
+        event :value_changed, data: [value: :float]
+        command :set_value, value: :float
       end
 
   ## Generated code
@@ -44,7 +44,7 @@ defmodule Plushie.Widget do
   - `native_crate/0` -- returns the `rust_crate` path (native_widget only)
   - `rust_constructor/0` -- returns the Rust expression (native_widget only)
   - `new/2` -- creates a `%Module{}` struct ()
-  - Setter functions per prop for pipeline composition
+  - Setter functions per field for pipeline composition
   - `with_options/2` -- applies keyword options via setters
   - `build/1` -- converts the struct to a `ui_node()` map
   - `@type t`, `@type option` -- typespecs for dialyzer
@@ -53,21 +53,14 @@ defmodule Plushie.Widget do
   - Command functions (native_widget only) that wrap
     `Plushie.Command.widget_command/3`
 
-  ## Prop types
+  ## Field types
 
-  Supported prop types. Values are stored raw; `Tree.normalize/1`
-  handles wire encoding in a single pass.
-
-  - `:number`, `:string`, `:boolean` -- pass through
-  - `:color` -- normalized via `Plushie.Type.Color.cast/1` (input casting)
-  - `:length` -- pass through (encoded by `Tree.normalize`)
-  - `:padding` -- pass through (encoded by `Tree.normalize`)
-  - `:alignment` -- pass through (encoded by `Tree.normalize`)
-  - `:font` -- pass through
-  - `:style` -- pass through (atom or StyleMap)
-  - `:atom` -- pass through (encoded by `Tree.normalize`)
-  - `:map`, `:any` -- pass through
-  - `{:list, _}` -- pass through
+  Field types are resolved via `Plushie.Type.resolve/1`. Primitive
+  atom shortcuts (`:integer`, `:float`, `:string`, `:boolean`,
+  `:atom`, `:any`, `:map`), `Plushie.Type` module names (e.g.
+  `Plushie.Type.Color`), and composite forms (`{:list, :string}`)
+  are accepted. Values are stored raw; `Tree.normalize/1` handles
+  wire encoding in a single pass.
 
   ## Composite widgets
 
@@ -79,7 +72,7 @@ defmodule Plushie.Widget do
 
         widget :labeled_input
 
-        prop :label, :string
+        field :label, :string
 
         def view(id, props) do
           import Plushie.UI
@@ -113,7 +106,7 @@ defmodule Plushie.Widget do
   - `:event_rate` -- maximum events per second for coalescable events
     from this widget (see the event throttling design doc)
 
-  These do not need to be declared via `prop` -- they are always
+  These do not need to be declared via `field` -- they are always
   available on `new/2`.
   """
 
@@ -173,6 +166,7 @@ defmodule Plushie.Widget do
         Module.register_attribute(__MODULE__, :_widget_event_family_specs, accumulate: true)
         Module.put_attribute(__MODULE__, :_widget_type_name, nil)
         Module.put_attribute(__MODULE__, :_widget_container, false)
+        Module.put_attribute(__MODULE__, :_widget_positional, nil)
       end
 
     widget_attrs =
@@ -190,8 +184,7 @@ defmodule Plushie.Widget do
               only: [
                 widget: 1,
                 widget: 2,
-                prop: 2,
-                prop: 3,
+                positional: 1,
                 event: 1,
                 event: 2,
                 field: 2,
@@ -212,8 +205,7 @@ defmodule Plushie.Widget do
               only: [
                 widget: 1,
                 widget: 2,
-                prop: 2,
-                prop: 3,
+                positional: 1,
                 state: 1,
                 event: 1,
                 event: 2,
@@ -256,10 +248,24 @@ defmodule Plushie.Widget do
     end
   end
 
-  @doc "Declares a prop with name, type, and optional default."
-  defmacro prop(name, type, opts \\ []) do
+  @doc """
+  Declares which props are positional arguments in `new/N`.
+
+  Props listed here appear as positional arguments before the `opts`
+  keyword in the generated constructor. The order matters: it
+  determines the argument order.
+
+  Props with `option: false` are excluded from `with_options/2` and
+  `__field_keys__/0` but still generate struct fields and setters.
+
+      positional [:label, :is_toggled]
+
+  Generates `new(id, label, is_toggled, opts \\\\ [])` instead of the
+  default `new(id, opts \\\\ [])`.
+  """
+  defmacro positional(names) when is_list(names) do
     quote do
-      @_widget_props {unquote(name), unquote(type), unquote(opts)}
+      @_widget_positional unquote(names)
     end
   end
 
@@ -274,17 +280,17 @@ defmodule Plushie.Widget do
 
   ## Typed value (goes in `WidgetEvent.value`)
 
-      event :select, value: :number
+      event :select, value: :float
 
   ## Structured data (goes in `WidgetEvent.data` with atom keys)
 
-      event :change, data: [hue: :number, saturation: :number]
+      event :change, data: [hue: :float, saturation: :float]
 
   ## Block form (Ecto-style)
 
       event :change do
-        field :hue, :number
-        field :saturation, :number
+        field :hue, :float
+        field :saturation, :float
         field :modifier, :string, required: false
       end
 
@@ -296,15 +302,15 @@ defmodule Plushie.Widget do
 
       event :change do
         data do
-          field :hue, :number
-          field :saturation, :number
+          field :hue, :float
+          field :saturation, :float
         end
       end
 
   `value:` and `data:` are mutually exclusive.
 
-  Type identifiers can be built-in atoms (`:number`, `:string`,
-  `:boolean`, `:any`) or modules implementing `Plushie.Event.EventType`.
+  Type identifiers can be built-in atoms (`:float`, `:string`,
+  `:boolean`, `:any`) or modules with a `parse/1` function.
   """
   defmacro event(name, opts_or_block \\ [])
 
@@ -354,26 +360,20 @@ defmodule Plushie.Widget do
   end
 
   @doc """
-  Declares a typed field inside an `event` do-block.
+  Declares a typed field on the widget.
 
-  Fields are required by default. Use `required: false` to make a field
-  optional:
+  At the widget level, accumulates into `@_widget_props`:
 
-      event :change do
-        field :hue, :number
-        field :saturation, :number
-        field :modifier, :string, required: false
-      end
+      field :value, :float
+      field :color, Plushie.Type.Color, default: :blue
 
-  This macro is only valid inside an `event` do-block. It is consumed
-  as AST by the event macro and never actually expanded.
+  Inside an `event` do-block, `field` calls are consumed as AST by the
+  event macro and parsed into the event spec. They are never expanded
+  as macros in that context.
   """
   defmacro field(name, type, opts \\ []) do
     quote do
-      raise CompileError,
-        description:
-          "field #{inspect(unquote(name))}/#{inspect(unquote(type))}/#{inspect(unquote(opts))} " <>
-            "can only be used inside an event do-block"
+      @_widget_props {unquote(name), unquote(type), unquote(opts)}
     end
   end
 
@@ -400,20 +400,11 @@ defmodule Plushie.Widget do
 
   # -- __before_compile__ ----------------------------------------------------
 
-  @known_prop_types [
-    :number,
-    :string,
-    :boolean,
-    :color,
-    :length,
-    :padding,
-    :alignment,
-    :style,
-    :font,
-    :atom,
-    :map,
-    :any
-  ]
+  # Types that get eagerly cast in setter functions. Most types store
+  # raw values and defer encoding to Tree.normalize.
+  @setter_cast_types [Plushie.Type.Color]
+
+  # Type validation delegates to Plushie.Type.resolve/1 at compile time.
 
   defmacro __before_compile__(env) do
     kind = Module.get_attribute(env.module, :_widget_kind)
@@ -430,6 +421,9 @@ defmodule Plushie.Widget do
     warn_duplicate_props(env, props)
     warn_duplicate_events(env, events)
     validate_reserved_names!(env, props)
+
+    positional = Module.get_attribute(env.module, :_widget_positional) || []
+    validate_positional!(env, positional, props)
 
     rust_crate_val = Module.get_attribute(env.module, :_rust_crate)
     rust_constructor_val = Module.get_attribute(env.module, :_rust_constructor)
@@ -473,15 +467,16 @@ defmodule Plushie.Widget do
           prop_validation
         )
       else
-        # Struct-only widgets (native_widget, no view callback).
+        # Struct-only widgets (native_widget or builtin, no view callback).
         generate_struct_widget(
           env.module,
+          kind,
           widget_type,
-          type_string,
           container,
           props,
-          events,
-          event_specs
+          positional: positional,
+          events: events,
+          event_specs: event_specs
         )
       end
 
@@ -722,7 +717,7 @@ defmodule Plushie.Widget do
   end
 
   defp validate_event_field_type!(event_name, field_name, type, caller) do
-    unless Plushie.Event.EventType.valid_type?(type) do
+    unless Plushie.Type.valid_event_type?(type) do
       context =
         if field_name,
           do: "field #{inspect(field_name)} has",
@@ -733,7 +728,7 @@ defmodule Plushie.Widget do
         line: caller.line,
         description:
           "event #{inspect(event_name)} #{context} invalid type #{inspect(type)}. " <>
-            "Use a built-in type (:number, :string, :boolean, :any) or a module implementing Plushie.Event.EventType."
+            "Use a built-in type (:float, :string, :boolean, :any) or a module with parse/1."
     end
   end
 
@@ -771,8 +766,9 @@ defmodule Plushie.Widget do
           file: env.file,
           line: 0,
           description:
-            "unsupported prop type #{inspect(type)} for prop #{inspect(name)} in #{inspect(env.module)}. " <>
-              "Supported: #{inspect(@known_prop_types ++ [{:list, :type}])}"
+            "unsupported field type #{inspect(type)} for field #{inspect(name)} in #{inspect(env.module)}. " <>
+              "Use a primitive shortcut (:string, :float, etc.), a Plushie.Type module, " <>
+              "or a composite ({:list, :type})."
       end
     end
   end
@@ -818,8 +814,23 @@ defmodule Plushie.Widget do
         file: env.file,
         line: 0,
         description:
-          "prop name #{inspect(name)} is reserved in #{inspect(env.module)}. " <>
+          "field name #{inspect(name)} is reserved in #{inspect(env.module)}. " <>
             "Reserved names: #{inspect(@reserved_prop_names)}"
+    end
+  end
+
+  defp validate_positional!(env, positional, props) do
+    prop_names = Enum.map(props, fn {name, _, _} -> name end)
+
+    for name <- positional do
+      unless name in prop_names do
+        raise CompileError,
+          file: env.file,
+          line: 0,
+          description:
+            "positional #{inspect(name)} is not a declared field in #{inspect(env.module)}. " <>
+              "Declared fields: #{inspect(prop_names)}"
+      end
     end
   end
 
@@ -977,9 +988,27 @@ defmodule Plushie.Widget do
     has_handle_event or events != [] or state_fields != []
   end
 
-  defp valid_type?(type) when type in @known_prop_types, do: true
-  defp valid_type?({:list, inner}) when inner in @known_prop_types, do: true
+  defp valid_type?(type) when is_atom(type) do
+    # Known shortcuts are valid by definition (avoids compile-order issues).
+    Plushie.Type.shortcut?(type) or type_module?(type)
+  end
+
+  defp valid_type?({:list, inner}), do: valid_type?(inner)
+  defp valid_type?({:tuple, types}) when is_list(types), do: Enum.all?(types, &valid_type?/1)
+  defp valid_type?({:enum, values}) when is_list(values), do: true
+  defp valid_type?({:union, types}) when is_list(types), do: Enum.all?(types, &valid_type?/1)
   defp valid_type?(_), do: false
+
+  # Check if a module is a valid Plushie.Type module. Uses ensure_compiled
+  # so that compile-order between widget and type modules is resolved
+  # automatically (ensure_loaded would fail for not-yet-compiled modules
+  # in the same project).
+  defp type_module?(module) do
+    case Code.ensure_compiled(module) do
+      {:module, _} -> function_exported?(module, :typespec, 0)
+      {:error, _} -> false
+    end
+  end
 
   # -- Code generation helpers (called at compile time) ----------------------
 
@@ -1077,25 +1106,26 @@ defmodule Plushie.Widget do
   }
 
   @doc false
-  def generate_struct_widget(
-        module,
-        widget_type,
-        type_string,
-        container,
-        props,
-        events,
-        event_specs \\ []
-      ) do
+  def generate_struct_widget(module, kind, widget_type, container, props, extra \\ []) do
+    type_string = Atom.to_string(widget_type)
+    positional = Keyword.get(extra, :positional, [])
+    events = Keyword.get(extra, :events, [])
+    event_specs = Keyword.get(extra, :event_specs, [])
+
+    # Props with option: false are excluded from option_keys and with_options.
+    option_props = Enum.filter(props, fn {_n, _t, opts} -> Keyword.get(opts, :option, true) end)
+
     struct_def = generate_struct_and_types(props, container)
-    new_fn = generate_struct_new(container)
-    with_options_fn = generate_with_options(props)
+    new_fn = generate_struct_new(container, positional, props)
+    with_options_fn = generate_with_options(option_props)
     setters = generate_setters(props)
-    dsl_fns = generate_dsl_buildable(props)
+    dsl_fns = generate_dsl_buildable(option_props)
     build_fn = generate_build()
 
     protocol_impl =
       generate_widget_protocol(
         module,
+        kind,
         widget_type,
         type_string,
         container,
@@ -1150,9 +1180,13 @@ defmodule Plushie.Widget do
           {:a11y, quote(do: Plushie.Type.A11y.t() | nil)}
         ]
 
+    option_props =
+      Enum.filter(props, fn {_n, _t, opts} -> Keyword.get(opts, :option, true) end)
+
     option_variants =
-      Enum.map(props, fn {name, type, _opts} ->
-        quote(do: {unquote(name), unquote(elixir_type_for(type))})
+      Enum.map(option_props, fn {name, type, _opts} ->
+        type_ast = option_type_for(type)
+        quote(do: {unquote(name), unquote(type_ast)})
       end) ++
         [
           quote(do: {:event_rate, non_neg_integer()}),
@@ -1169,7 +1203,7 @@ defmodule Plushie.Widget do
     end
   end
 
-  defp prop_type_ast({name, :color, _opts}) do
+  defp prop_type_ast({name, Plushie.Type.Color, _opts}) do
     {name, quote(do: Plushie.Type.Color.t() | nil)}
   end
 
@@ -1177,19 +1211,25 @@ defmodule Plushie.Widget do
     {name, quote(do: unquote(elixir_type_for(type)) | nil)}
   end
 
-  defp elixir_type_for(:number), do: quote(do: number())
-  defp elixir_type_for(:string), do: quote(do: String.t())
-  defp elixir_type_for(:boolean), do: quote(do: boolean())
-  defp elixir_type_for(:color), do: quote(do: Plushie.Type.Color.input())
-  defp elixir_type_for(:length), do: quote(do: Plushie.Type.Length.t())
-  defp elixir_type_for(:padding), do: quote(do: Plushie.Type.Padding.t())
-  defp elixir_type_for(:alignment), do: quote(do: Plushie.Type.Alignment.t())
-  defp elixir_type_for(:font), do: quote(do: Plushie.Type.Font.t())
-  defp elixir_type_for(:style), do: quote(do: atom() | Plushie.Type.StyleMap.t())
-  defp elixir_type_for(:atom), do: quote(do: atom())
-  defp elixir_type_for(:map), do: quote(do: map())
-  defp elixir_type_for(:any), do: quote(do: term())
-  defp elixir_type_for({:list, inner}), do: quote(do: [unquote(elixir_type_for(inner))])
+  defp elixir_type_for(type) do
+    case Plushie.Type.resolve(type) do
+      {:composite, {:list, inner}} ->
+        quote(do: [unquote(elixir_type_for(inner))])
+
+      {:composite, _} ->
+        quote(do: term())
+
+      module ->
+        module.typespec()
+    end
+  end
+
+  # Option types use broader input types for cast-based types (e.g. Color
+  # accepts atoms, hex strings, maps). For other types the option and
+  # storage types are the same.
+  defp option_type_for(Plushie.Type.Color), do: quote(do: Plushie.Type.Color.input())
+
+  defp option_type_for(type), do: elixir_type_for(type)
 
   defp union_type([single]), do: single
 
@@ -1199,7 +1239,9 @@ defmodule Plushie.Widget do
     end)
   end
 
-  defp generate_struct_new(container) do
+  defp generate_struct_new(container, positional, props)
+
+  defp generate_struct_new(container, [], _props) do
     if container do
       quote do
         @doc "Creates a new widget struct with the given ID and keyword options."
@@ -1218,6 +1260,63 @@ defmodule Plushie.Widget do
           %__MODULE__{id: id} |> with_options(opts)
         end
       end
+    end
+  end
+
+  defp generate_struct_new(_container, positional, props) do
+    # Use Macro.var with __MODULE__ context so all references within the
+    # generated quote block share the same hygiene context.
+    ctx = __MODULE__
+    id_var = Macro.var(:id, ctx)
+    opts_var = Macro.var(:opts, ctx)
+
+    positional_vars = Enum.map(positional, fn name -> Macro.var(name, ctx) end)
+
+    # Build struct init map: %{id: id, pos1: pos1, pos2: pos2}
+    struct_pairs =
+      [{:id, id_var} | Enum.map(positional, fn name -> {name, Macro.var(name, ctx)} end)]
+
+    # Build guards for positional args based on their prop types
+    positional_guards =
+      for name <- positional,
+          {^name, type, _opts} <- props,
+          guard_fn = positional_guard(type),
+          do: guard_fn.(Macro.var(name, ctx))
+
+    base_guard = quote(do: is_binary(unquote(id_var)))
+
+    full_guard =
+      Enum.reduce(positional_guards, base_guard, fn guard, acc ->
+        quote(do: unquote(acc) and unquote(guard))
+      end)
+
+    args_with_default = positional_vars ++ [{:\\, [], [opts_var, []]}]
+
+    struct_kw = Enum.map(struct_pairs, fn {k, v} -> {k, v} end)
+
+    body =
+      quote do
+        struct!(__MODULE__, unquote(struct_kw)) |> with_options(unquote(opts_var))
+      end
+
+    quote do
+      @doc "Creates a new widget struct with the given positional args and keyword options."
+      def new(unquote(id_var), unquote_splicing(args_with_default))
+          when unquote(full_guard) do
+        unquote(body)
+      end
+    end
+  end
+
+  defp positional_guard(type) do
+    case Plushie.Type.resolve(type) do
+      {:composite, _} ->
+        nil
+
+      module ->
+        if function_exported?(module, :guard, 1) do
+          fn var -> module.guard(var) end
+        end
     end
   end
 
@@ -1286,19 +1385,14 @@ defmodule Plushie.Widget do
           do: {name, mod}
 
     quote do
-      @behaviour Plushie.DSL.Buildable
-
-      @impl Plushie.DSL.Buildable
+      @doc false
       def from_opts(opts), do: with_options(%__MODULE__{id: Keyword.fetch!(opts, :id)}, opts)
 
-      @impl Plushie.DSL.Buildable
+      @doc false
       def __field_keys__, do: unquote(prop_names)
 
-      @impl Plushie.DSL.Buildable
+      @doc false
       def __field_types__, do: unquote(Macro.escape(field_types_map))
-
-      def __option_keys__, do: unquote(prop_names)
-      def __option_types__, do: unquote(Macro.escape(field_types_map))
     end
   end
 
@@ -1358,13 +1452,21 @@ defmodule Plushie.Widget do
     prop_setters ++ [event_rate_setter, a11y_setter]
   end
 
-  defp setter_guard(:number), do: quote(do: is_number(value))
-  defp setter_guard(:string), do: quote(do: is_binary(value))
-  defp setter_guard(:boolean), do: quote(do: is_boolean(value))
-  defp setter_guard(:atom), do: quote(do: is_atom(value))
-  defp setter_guard(:map), do: quote(do: is_map(value))
-  defp setter_guard({:list, _}), do: quote(do: is_list(value))
-  defp setter_guard(_), do: nil
+  defp setter_guard(type) do
+    case Plushie.Type.resolve(type) do
+      {:composite, {:list, _}} ->
+        quote(do: is_list(value))
+
+      {:composite, _} ->
+        nil
+
+      module ->
+        # Types with eager casting in setters skip guards (the cast handles validation).
+        if module not in @setter_cast_types and function_exported?(module, :guard, 1) do
+          module.guard(quote(do: value))
+        end
+    end
+  end
 
   defp generate_build do
     quote do
@@ -1376,6 +1478,7 @@ defmodule Plushie.Widget do
 
   defp generate_widget_protocol(
          _module,
+         kind,
          widget_type,
          type_string,
          container,
@@ -1384,16 +1487,18 @@ defmodule Plushie.Widget do
          event_specs
        ) do
     put_calls =
-      Enum.map(props, fn {name, type, _opts} ->
+      Enum.map(props, fn {name, type, opts} ->
+        wire_key = Keyword.get(opts, :wire_name, name)
+
         # Color needs casting in to_node because struct defaults bypass setters.
         # All other types store raw values -- Tree.normalize handles encoding.
-        if type == :color do
+        if type == Plushie.Type.Color do
           quote do
             props =
               Plushie.Widget.Build.put_if(
                 props,
                 widget.unquote(name),
-                unquote(name),
+                unquote(wire_key),
                 fn val -> Plushie.Type.Color.cast(val) end
               )
           end
@@ -1403,7 +1508,7 @@ defmodule Plushie.Widget do
               Plushie.Widget.Build.put_if(
                 props,
                 widget.unquote(name),
-                unquote(name)
+                unquote(wire_key)
               )
           end
         end
@@ -1426,6 +1531,20 @@ defmodule Plushie.Widget do
         quote(do: [])
       end
 
+    # Native widgets attach Meta.Native for event dispatch registration.
+    # Built-in widgets (kind == :widget without view) don't need metadata.
+    meta_put =
+      if kind == :native_widget do
+        quote do
+          props =
+            Map.put(props, :__widget__, %Plushie.Widget.Meta.Native{
+              type: unquote(widget_type),
+              events: unquote(events),
+              event_specs: unquote(Macro.escape(event_specs))
+            })
+        end
+      end
+
     # defimpl must be defined at the top level of the module, not inside a
     # function. We generate the AST here; it's injected via __before_compile__.
     quote do
@@ -1435,13 +1554,7 @@ defmodule Plushie.Widget do
           unquote_splicing(put_calls)
           unquote(event_rate_put)
           unquote(a11y_put)
-
-          props =
-            Map.put(props, :__widget__, %Plushie.Widget.Meta.Native{
-              type: unquote(widget_type),
-              events: unquote(events),
-              event_specs: unquote(Macro.escape(event_specs))
-            })
+          unquote(meta_put)
 
           %{
             id: widget.id,
@@ -1469,16 +1582,17 @@ defmodule Plushie.Widget do
     end
   end
 
-  defp encoder_for_type(:color) do
-    quote do
-      fn val -> Plushie.Type.Color.cast(val) end
-    end
-  end
+  defp encoder_for_type(type) do
+    case Plushie.Type.resolve(type) do
+      {:composite, _} ->
+        quote(do: fn val -> val end)
 
-  defp encoder_for_type(_type) do
-    # All other types store raw values. Tree.normalize handles wire encoding.
-    quote do
-      fn val -> val end
+      module ->
+        if function_exported?(module, :cast, 1) and module in @setter_cast_types do
+          quote(do: fn val -> unquote(module).cast(val) end)
+        else
+          quote(do: fn val -> val end)
+        end
     end
   end
 
@@ -1553,14 +1667,22 @@ defmodule Plushie.Widget do
     end)
   end
 
-  defp guard_for_type(var, :number), do: quote(do: is_number(unquote(var)))
-  defp guard_for_type(var, :string), do: quote(do: is_binary(unquote(var)))
-  defp guard_for_type(var, :boolean), do: quote(do: is_boolean(unquote(var)))
-  defp guard_for_type(var, :atom), do: quote(do: is_atom(unquote(var)))
-  defp guard_for_type(var, :map), do: quote(do: is_map(unquote(var)))
-  defp guard_for_type(var, :list), do: quote(do: is_list(unquote(var)))
-  defp guard_for_type(var, {:list, _}), do: quote(do: is_list(unquote(var)))
-  defp guard_for_type(_var, _), do: quote(do: true)
+  defp guard_for_type(var, type) do
+    case Plushie.Type.resolve(type) do
+      {:composite, {:list, _}} ->
+        quote(do: is_list(unquote(var)))
+
+      {:composite, _} ->
+        quote(do: true)
+
+      module ->
+        if function_exported?(module, :guard, 1) do
+          module.guard(var) || quote(do: true)
+        else
+          quote(do: true)
+        end
+    end
+  end
 
   # Build a simple AST variable reference from an atom name.
   defp to_var(name) when is_atom(name), do: {name, [], nil}

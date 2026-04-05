@@ -80,10 +80,10 @@ defmodule Plushie.Widget.RichText do
   @valid_option_keys ~w(spans width height size font color line_height wrapping ellipsis a11y)a
 
   @doc false
-  def __option_keys__, do: @valid_option_keys
+  def __field_keys__, do: @valid_option_keys
 
   @doc false
-  def __option_types__ do
+  def __field_types__ do
     %{font: Plushie.Type.Font, a11y: Plushie.Type.A11y}
   end
 

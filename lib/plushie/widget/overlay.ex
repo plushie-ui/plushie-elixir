@@ -73,10 +73,10 @@ defmodule Plushie.Widget.Overlay do
   @valid_option_keys ~w(position gap offset_x offset_y flip align width a11y)a
 
   @doc false
-  def __option_keys__, do: @valid_option_keys
+  def __field_keys__, do: @valid_option_keys
 
   @doc false
-  def __option_types__ do
+  def __field_types__ do
     %{a11y: Plushie.Type.A11y}
   end
 

@@ -75,10 +75,10 @@ defmodule Plushie.Widget.Markdown do
   @valid_option_keys ~w(width text_size h1_size h2_size h3_size code_size spacing link_color code_theme a11y)a
 
   @doc false
-  def __option_keys__, do: @valid_option_keys
+  def __field_keys__, do: @valid_option_keys
 
   @doc false
-  def __option_types__ do
+  def __field_types__ do
     %{a11y: Plushie.Type.A11y}
   end
 

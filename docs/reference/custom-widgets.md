@@ -21,10 +21,10 @@ present and generates the appropriate code.
 | Macro | Purpose | Example |
 |---|---|---|
 | `widget/2` | Type name and options | `widget :gauge` or `widget :gauge, container: true` |
-| `prop/3` | Typed property | `prop :label, :string, default: "Hello"` |
-| `event/2` | Event declaration | `event :change, value: :number` |
+| `field/3` | Typed property | `field :label, :string, default: "Hello"` |
+| `event/2` | Event declaration | `event :change, value: :float` |
 | `state/1` | Internal state fields | `state hover: nil, count: 0` |
-| `command/2` | Widget command (native) | `command :reset, value: :number` |
+| `command/2` | Widget command (native) | `command :reset, value: :float` |
 | `rust_crate/1` | Rust crate path (native) | `rust_crate "path/to/crate"` |
 | `rust_constructor/1` | Rust constructor (native) | `rust_constructor "gauge::new()"` |
 
@@ -36,23 +36,24 @@ dispatch. Choose a unique name across your application. Duplicate
 type names are not validated at compile time and will cause event
 routing confusion.
 
-### Prop types
+### Field types
 
-Built-in type atoms: `:string`, `:number`, `:boolean`, `:color`,
-`:length`, `:padding`, `:alignment`, `:style`, `:font`, `:atom`,
-`:map`, `:any`.
+Primitive atom shortcuts: `:integer`, `:float`, `:string`, `:boolean`,
+`:atom`, `:any`, `:map`.
 
-For list-typed props, use the `{:list, :type}` form:
+Domain types use their full module name (e.g. `Plushie.Type.Color`,
+`Plushie.Type.Length`, `Plushie.Type.Font`).
+
+For list-typed fields, use the `{:list, :type}` form:
 
 ```elixir
-prop :tags, {:list, :string}
-prop :points, {:list, :number}
+field :tags, {:list, :string}
+field :points, {:list, :float}
 ```
 
-You can also use any module that implements the
-`Plushie.Event.EventType` behaviour as a type. The behaviour requires
-a single `parse/1` callback that returns `{:ok, value}` or `:error`.
-This is useful for domain-specific types in event declarations.
+Any module that implements `Plushie.Type` can be used as a field type.
+For event field types specifically, modules that export `parse/1` are
+also accepted.
 
 ### Container widgets
 
@@ -103,8 +104,8 @@ tuples (e.g. `{:my_widget, :change}`). Built-in event names (`:click`,
 - `Plushie.Widget.Handler` behaviour (if `view/2` or `view/3` defined)
 - `__initial_state__/0` - returns the default state map
 - `__widget__?/0` - returns `true` (marker function)
-- `__option_keys__/0` - valid option names for compile-time validation
-- `__option_types__/0` - nested struct types for do-block syntax
+- `__field_keys__/0` - valid option names for compile-time validation
+- `__field_types__/0` - nested struct types for do-block syntax
 
 For native widgets, additionally generates:
 - `native_crate/0`, `rust_constructor/0`, `type_names/0`
@@ -147,7 +148,7 @@ All clauses must return one of:
 
 | Tier | Declarations | Behaviour |
 |---|---|---|
-| Stateless | `widget`, `prop`, `view/2` | Transparent to events. No state. |
+| Stateless | `widget`, `field`, `view/2` | Transparent to events. No state. |
 | Stateful | + `state`, `view/3`, `handle_event/2` | Captures and transforms events. Has state. |
 | Full lifecycle | + `subscribe/2`, `event` | Events, state, subscriptions. |
 
@@ -293,11 +294,11 @@ defmodule MyApp.Gauge do
   use Plushie.Widget, :native_widget
 
   widget :gauge
-  prop :value, :number
+  field :value, :float
   rust_crate "path/to/gauge_crate"
   rust_constructor "gauge::new()"
-  event :value_changed, data: [value: :number]
-  command :set_value, value: :number
+  event :value_changed, data: [value: :float]
+  command :set_value, value: :float
 end
 ```
 
@@ -343,7 +344,7 @@ details.
 
 - `Plushie.Widget` - macro API docs and examples
 - `Plushie.Widget.Handler` - callback specs
-- `Plushie.Event.EventType` - custom event type behaviour
+- `Plushie.Type` - type behaviour and resolution
 - [Custom Widgets guide](../guides/13-custom-widgets.md) - step-by-step
   tutorial
 - [Scoped IDs reference](scoped-ids.md) - widget scope transparency

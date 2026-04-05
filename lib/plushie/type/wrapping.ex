@@ -5,27 +5,9 @@ defmodule Plushie.Type.Wrapping do
   Maps to iced's `text::Wrapping` enum.
   """
 
+  use Plushie.Type
+
   @type t :: :none | :word | :glyph | :word_or_glyph
 
-  @valid [:none, :word, :glyph, :word_or_glyph]
-
-  @doc """
-  Encodes a wrapping value to the wire format.
-
-  ## Examples
-
-      iex> Plushie.Type.Wrapping.encode(:none)
-      "none"
-
-      iex> Plushie.Type.Wrapping.encode(:word)
-      "word"
-
-      iex> Plushie.Type.Wrapping.encode(:glyph)
-      "glyph"
-
-      iex> Plushie.Type.Wrapping.encode(:word_or_glyph)
-      "word_or_glyph"
-  """
-  @spec encode(wrapping :: t()) :: String.t()
-  def encode(value) when value in @valid, do: Atom.to_string(value)
+  enum([:none, :word, :glyph, :word_or_glyph])
 end

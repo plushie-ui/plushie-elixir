@@ -15,7 +15,7 @@ defmodule ColorPickerWidget do
   use Plushie.Widget
 
   widget(:color_picker_widget)
-  event(:change, data: [hue: :number, saturation: :number, value: :number])
+  event(:change, data: [hue: :float, saturation: :float, value: :float])
 
   state(hue: 0.0, saturation: 1.0, value: 1.0, drag: :none)
 

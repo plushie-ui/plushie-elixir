@@ -20,13 +20,20 @@ defmodule Plushie.Type.Key do
       :error
   """
 
-  @behaviour Plushie.Event.EventType
+  @behaviour Plushie.Type
 
-  @impl true
   @spec parse(value :: term()) :: {:ok, atom() | String.t()} | :error
   def parse(value) when is_binary(value) do
     {:ok, Plushie.Protocol.Keys.parse_key(value)}
   end
 
   def parse(_), do: :error
+
+  @impl Plushie.Type
+  def cast(value), do: parse(value)
+
+  @impl Plushie.Type
+  def typespec do
+    quote do: atom() | String.t()
+  end
 end

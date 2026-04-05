@@ -23,9 +23,9 @@ defmodule PlushiePad.LabeledInput do
 
   widget :labeled_input
 
-  prop :label, :string
-  prop :value, :string
-  prop :placeholder, :string, default: ""
+  field :label, :string
+  field :value, :string
+  field :placeholder, :string, default: ""
 
   def view(id, props) do
     import Plushie.UI
@@ -46,10 +46,11 @@ pipeline.
 across your application. It is used for event namespacing and protocol
 dispatch.
 
-`prop` declarations define typed properties with optional defaults. Available
-types include `:string`, `:number`, `:boolean`, `:color`, `:length`,
-`:padding`, `:font`, `:atom`, `:map`, `:any`, and others. See
-`Plushie.Widget` for the full list.
+`field` declarations define typed properties with optional defaults.
+Primitive shortcuts (`:integer`, `:float`, `:string`, `:boolean`,
+`:atom`, `:any`, `:map`) and domain type modules (`Plushie.Type.Color`,
+`Plushie.Type.Length`, etc.) are accepted. See `Plushie.Type` for
+details.
 
 `view/2` receives the widget ID and a props map. It returns a UI tree using
 the same DSL as `view/1`. Events from widgets inside (like the `text_input`)
@@ -76,8 +77,8 @@ defmodule PlushiePad.FileList do
   use Plushie.Widget
 
   widget :file_list
-  prop :files, :any        # list of filenames
-  prop :active_file, :any  # currently selected filename
+  field :files, :any        # list of filenames
+  field :active_file, :any  # currently selected filename
 
   def view(id, props) do
     import Plushie.UI
@@ -128,7 +129,7 @@ defmodule PlushiePad.CollapsiblePanel do
 
   widget :collapsible_panel, container: true
 
-  prop :title, :string
+  field :title, :string
 
   state expanded: true
 
@@ -192,7 +193,7 @@ defmodule PlushiePad.EventLog do
 
   widget :event_log
 
-  prop :events, :any  # list of event description strings
+  field :events, :any  # list of event description strings
 
   state expanded: true
 
@@ -241,9 +242,9 @@ defmodule PlushiePad.RatingWidget do
 
   widget :rating
 
-  prop :value, :number, default: 0
+  field :value, :float, default: 0
 
-  event :change, value: :number
+  event :change, value: :float
 
   @impl Plushie.Widget.Handler
   def view(id, props, _state) do
@@ -265,7 +266,7 @@ defmodule PlushiePad.RatingWidget do
 end
 ```
 
-The `event :change, value: :number` declaration tells the framework that
+The `event :change, value: :float` declaration tells the framework that
 this widget emits `:change` events with a numeric value. In the parent app,
 these arrive as:
 
@@ -279,7 +280,7 @@ distinguishes them from built-in events.
 For events with multiple fields, use `data:` instead of `value:`:
 
 ```elixir
-event :change, data: [hue: :number, saturation: :number, value: :number]
+event :change, data: [hue: :float, saturation: :float, value: :float]
 ```
 
 These arrive in `WidgetEvent.data` as an atom-keyed map.
@@ -312,8 +313,8 @@ defmodule PlushiePad.Gauge do
 
   widget :gauge
 
-  prop :value, :number, default: 0
-  prop :max, :number, default: 100
+  field :value, :float, default: 0
+  field :max, :float, default: 100
 
   @impl Plushie.Widget.Handler
   def view(id, props, _state) do
@@ -377,7 +378,7 @@ defmodule MyApp.Gauge do
   use Plushie.Widget, :native_widget
 
   widget :gauge
-  prop :value, :number
+  field :value, :float
   rust_crate "path/to/gauge_crate"
   rust_constructor "gauge::new()"
 end

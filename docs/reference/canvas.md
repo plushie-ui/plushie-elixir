@@ -127,7 +127,7 @@ stroke("#333", 2, dash: {[5, 3], 0})     # dashed line
 | `join:` | `:miter`, `:round`, `:bevel` | `:miter` | Corner join style |
 | `dash:` | `{segments, offset}` | *n/a* | Dash pattern (segment lengths + initial offset) |
 
-Strokes support the Buildable do-block syntax:
+Strokes support the do-block syntax:
 
 ```elixir
 rect(0, 0, 100, 50) do

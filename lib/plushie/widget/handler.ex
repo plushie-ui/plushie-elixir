@@ -262,7 +262,7 @@ defmodule Plushie.Widget.Handler do
   defp validate_emit_value!(_family, :any, _value), do: :ok
 
   defp validate_emit_value!(family, type, value) do
-    case Plushie.Event.EventType.parse_field(type, value) do
+    case Plushie.Type.parse_event_field(type, value) do
       {:ok, _} ->
         :ok
 
@@ -299,7 +299,7 @@ defmodule Plushie.Widget.Handler do
       if Map.has_key?(atom_data, field_name) do
         value = Map.fetch!(atom_data, field_name)
 
-        case Plushie.Event.EventType.parse_field(type, value) do
+        case Plushie.Type.parse_event_field(type, value) do
           {:ok, _} ->
             :ok
 

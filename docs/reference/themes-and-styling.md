@@ -253,7 +253,7 @@ widget's module docs for its supported values.
 
 ### Do-block syntax
 
-StyleMap supports the [Buildable](dsl.md) do-block syntax with nested
+StyleMap supports the [do-block](dsl.md#do-block-types) syntax with nested
 Border and Shadow blocks:
 
 ```elixir

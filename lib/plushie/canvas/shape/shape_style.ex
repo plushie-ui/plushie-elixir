@@ -9,18 +9,13 @@ defmodule Plushie.Canvas.Shape.ShapeStyle do
 
   defstruct [:fill, :stroke, :opacity]
 
-  @behaviour Plushie.DSL.Buildable
-
   @known_keys ~w(fill stroke opacity)a
 
-  @impl Plushie.DSL.Buildable
   def __field_keys__, do: @known_keys
 
-  @impl Plushie.DSL.Buildable
   def __field_types__, do: %{}
 
   @doc "Constructs a shape style from a keyword list."
-  @impl Plushie.DSL.Buildable
   @spec from_opts(keyword()) :: t()
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do

@@ -47,7 +47,7 @@ stroke("#333", 2, cap: :round)           # with line cap
 stroke("#333", 2, dash: {[5, 3], 0})     # dashed line
 ```
 
-Shape do-blocks support nested Buildable types, so you can declare
+Shape do-blocks support nested do-block types, so you can declare
 stroke options inline:
 
 ```elixir

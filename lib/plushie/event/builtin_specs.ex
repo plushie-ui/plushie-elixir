@@ -8,8 +8,8 @@ defmodule Plushie.Event.BuiltinSpecs do
   - `%{carrier: :value, type: type}` -- scalar in `WidgetEvent.value`
   - `%{carrier: :data, fields: [field: type]}` -- map in `WidgetEvent.data`
 
-  Type identifiers are either built-in atoms (`:number`, `:string`,
-  `:boolean`, `:any`) or modules implementing `Plushie.Event.EventType`.
+  Type identifiers are either built-in atoms (`:float`, `:string`,
+  `:boolean`, `:any`) or modules with a `parse/1` function.
 
   Used by the canvas widget emit path and the protocol decoder to route
   event data into the correct WidgetEvent fields with proper parsing.
@@ -18,9 +18,9 @@ defmodule Plushie.Event.BuiltinSpecs do
   @typedoc """
   Event field type identifier.
 
-  Built-in atomic types or a module implementing `Plushie.Event.EventType`.
+  Built-in atomic types or a module with a `parse/1` function.
   """
-  @type field_type :: :number | :string | :boolean | :any | module()
+  @type field_type :: :float | :string | :boolean | :any | module()
 
   @typedoc """
   Event spec describing the payload shape.
@@ -42,8 +42,8 @@ defmodule Plushie.Event.BuiltinSpecs do
     submit: %{carrier: :value, type: :string},
     toggle: %{carrier: :value, type: :boolean},
     select: %{carrier: :value, type: :any},
-    slide: %{carrier: :value, type: :number},
-    slide_release: %{carrier: :value, type: :number},
+    slide: %{carrier: :value, type: :float},
+    slide_release: %{carrier: :value, type: :float},
     paste: %{carrier: :value, type: :string},
     open: %{carrier: :none},
     close: %{carrier: :none},
@@ -53,10 +53,10 @@ defmodule Plushie.Event.BuiltinSpecs do
     scrolled: %{
       carrier: :data,
       fields: [
-        absolute_x: :number,
-        absolute_y: :number,
-        relative_x: :number,
-        relative_y: :number,
+        absolute_x: :float,
+        absolute_y: :float,
+        relative_x: :float,
+        relative_y: :float,
         bounds: :any,
         content_bounds: :any
       ]
@@ -70,11 +70,11 @@ defmodule Plushie.Event.BuiltinSpecs do
     blurred: %{carrier: :none},
     drag: %{
       carrier: :data,
-      fields: [x: :number, y: :number, delta_x: :number, delta_y: :number]
+      fields: [x: :float, y: :float, delta_x: :float, delta_y: :float]
     },
     drag_end: %{
       carrier: :data,
-      fields: [x: :number, y: :number]
+      fields: [x: :float, y: :float]
     },
     key_press: %{
       carrier: :data,
@@ -97,36 +97,36 @@ defmodule Plushie.Event.BuiltinSpecs do
     press: %{
       carrier: :data,
       fields: [
-        x: :number,
-        y: :number,
+        x: :float,
+        y: :float,
         button: Plushie.Type.Pointer,
         pointer: :atom,
-        finger: :number,
+        finger: :float,
         modifiers: :any
       ]
     },
     release: %{
       carrier: :data,
       fields: [
-        x: :number,
-        y: :number,
+        x: :float,
+        y: :float,
         button: Plushie.Type.Pointer,
         pointer: :atom,
-        finger: :number,
+        finger: :float,
         modifiers: :any
       ]
     },
     move: %{
       carrier: :data,
-      fields: [x: :number, y: :number, pointer: :atom, finger: :number, modifiers: :any]
+      fields: [x: :float, y: :float, pointer: :atom, finger: :float, modifiers: :any]
     },
     scroll: %{
       carrier: :data,
       fields: [
-        x: :number,
-        y: :number,
-        delta_x: :number,
-        delta_y: :number,
+        x: :float,
+        y: :float,
+        delta_x: :float,
+        delta_y: :float,
         pointer: :atom,
         modifiers: :any
       ]
@@ -135,13 +135,13 @@ defmodule Plushie.Event.BuiltinSpecs do
     exit: %{carrier: :none},
     double_click: %{
       carrier: :data,
-      fields: [x: :number, y: :number, pointer: :atom, modifiers: :any]
+      fields: [x: :float, y: :float, pointer: :atom, modifiers: :any]
     },
-    resize: %{carrier: :data, fields: [width: :number, height: :number]},
+    resize: %{carrier: :data, fields: [width: :float, height: :float]},
 
     # -- Pane grid events --
     # Previously PaneEvent structs.
-    pane_resized: %{carrier: :data, fields: [split: :any, ratio: :number]},
+    pane_resized: %{carrier: :data, fields: [split: :any, ratio: :float]},
     pane_dragged: %{
       carrier: :data,
       fields: [

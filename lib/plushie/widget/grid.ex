@@ -58,10 +58,10 @@ defmodule Plushie.Widget.Grid do
   @valid_option_keys ~w(columns spacing width height column_width row_height fluid a11y)a
 
   @doc false
-  def __option_keys__, do: @valid_option_keys
+  def __field_keys__, do: @valid_option_keys
 
   @doc false
-  def __option_types__ do
+  def __field_types__ do
     %{a11y: Plushie.Type.A11y}
   end
 

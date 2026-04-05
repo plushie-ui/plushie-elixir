@@ -14,20 +14,15 @@ defmodule Plushie.Canvas.Shape.Stroke do
   @enforce_keys [:color, :width]
   defstruct [:color, :width, :cap, :join, :dash]
 
-  @behaviour Plushie.DSL.Buildable
-
   @known_keys ~w(color width cap join dash)a
 
-  @impl Plushie.DSL.Buildable
   def __field_keys__, do: @known_keys
 
-  @impl Plushie.DSL.Buildable
   def __field_types__ do
     %{dash: Dash}
   end
 
   @doc "Constructs a stroke from a keyword list."
-  @impl Plushie.DSL.Buildable
   @spec from_opts(keyword()) :: t()
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do

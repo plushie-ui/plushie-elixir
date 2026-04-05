@@ -25,7 +25,7 @@ defmodule Plushie.Type.Pointer do
       {:ok, :right}
   """
 
-  @behaviour Plushie.Event.EventType
+  @behaviour Plushie.Type
 
   @type pointer_type :: :mouse | :touch | :pen
   @type button :: :left | :right | :middle | :back | :forward
@@ -77,9 +77,14 @@ defmodule Plushie.Type.Pointer do
   def parse_button(nil), do: {:ok, :left}
   def parse_button(_), do: :error
 
-  # EventType implementation -- parse/1 handles pointer type strings
-  # for use in event spec field type declarations.
-  @impl true
   @spec parse(value :: term()) :: {:ok, pointer_type()} | :error
   def parse(value), do: parse_pointer(value)
+
+  @impl Plushie.Type
+  def cast(value), do: parse(value)
+
+  @impl Plushie.Type
+  def typespec do
+    quote do: :mouse | :touch | :pen
+  end
 end

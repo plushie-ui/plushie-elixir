@@ -1,8 +1,6 @@
 defmodule Plushie.Canvas.Shape.LinearGradient do
   @moduledoc "Linear gradient descriptor usable as a canvas fill value."
 
-  @behaviour Plushie.DSL.Buildable
-
   @type t :: %__MODULE__{
           from: {number(), number()},
           to: {number(), number()},
@@ -14,13 +12,10 @@ defmodule Plushie.Canvas.Shape.LinearGradient do
 
   @known_keys ~w(from to stops)a
 
-  @impl Plushie.DSL.Buildable
   def __field_keys__, do: @known_keys
 
-  @impl Plushie.DSL.Buildable
   def __field_types__, do: %{}
 
-  @impl Plushie.DSL.Buildable
   def from_opts(opts) when is_list(opts) do
     %__MODULE__{
       from: Keyword.fetch!(opts, :from),

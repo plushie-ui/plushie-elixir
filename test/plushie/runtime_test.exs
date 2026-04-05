@@ -88,7 +88,7 @@ defmodule Plushie.RuntimeTest do
 
     widget(:star_rating)
     event(:selected, value: :any)
-    prop(:value, :number)
+    field(:value, :float)
 
     rust_crate("native/star_rating")
     rust_constructor("star_rating::StarRating::new()")

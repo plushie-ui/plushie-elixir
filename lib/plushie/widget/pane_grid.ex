@@ -78,10 +78,10 @@ defmodule Plushie.Widget.PaneGrid do
   @valid_option_keys ~w(panes spacing width height min_size divider_color divider_width leeway event_rate a11y)a
 
   @doc false
-  def __option_keys__, do: @valid_option_keys
+  def __field_keys__, do: @valid_option_keys
 
   @doc false
-  def __option_types__ do
+  def __field_types__ do
     %{a11y: Plushie.Type.A11y}
   end
 

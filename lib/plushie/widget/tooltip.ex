@@ -66,10 +66,10 @@ defmodule Plushie.Widget.Tooltip do
   @valid_option_keys ~w(position gap padding snap_within_viewport delay style a11y)a
 
   @doc false
-  def __option_keys__, do: @valid_option_keys
+  def __field_keys__, do: @valid_option_keys
 
   @doc false
-  def __option_types__ do
+  def __field_types__ do
     %{style: Plushie.Type.StyleMap, a11y: Plushie.Type.A11y}
   end
 

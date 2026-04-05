@@ -49,8 +49,6 @@ defmodule Plushie.Animation.Spring do
   - The animation is fire-and-forget (not interactive)
   """
 
-  @behaviour Plushie.DSL.Buildable
-
   @presets %{
     gentle: [stiffness: 120, damping: 14],
     bouncy: [stiffness: 300, damping: 10],
@@ -87,13 +85,10 @@ defmodule Plushie.Animation.Spring do
   # Buildable
   # ---------------------------------------------------------------------------
 
-  @impl Plushie.DSL.Buildable
   def __field_keys__, do: @known_keys
 
-  @impl Plushie.DSL.Buildable
   def __field_types__, do: %{}
 
-  @impl Plushie.DSL.Buildable
   def from_opts(opts) when is_list(opts) do
     validate_required!(opts)
 

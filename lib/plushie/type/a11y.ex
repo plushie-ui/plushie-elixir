@@ -85,8 +85,6 @@ defmodule Plushie.Type.A11y do
   - `has_popup` -- popup type: `"listbox"`, `"menu"`, `"dialog"`, `"tree"`, `"grid"`
   """
 
-  @behaviour Plushie.DSL.Buildable
-
   @known_keys ~w(role label description live hidden expanded required level busy invalid modal read_only mnemonic toggled selected value orientation labelled_by described_by error_message disabled position_in_set size_of_set has_popup)a
 
   defstruct [
@@ -359,10 +357,8 @@ defmodule Plushie.Type.A11y do
 
   # -- Buildable ---------------------------------------------------------------
 
-  @impl Plushie.DSL.Buildable
   def __field_keys__, do: @known_keys
 
-  @impl Plushie.DSL.Buildable
   def __field_types__, do: %{}
 
   @doc false
@@ -376,7 +372,6 @@ defmodule Plushie.Type.A11y do
   def accepted_roles, do: @accepted_roles
 
   @doc "Constructs an `A11y` struct from a keyword list."
-  @impl Plushie.DSL.Buildable
   @spec from_opts(opts :: keyword()) :: t()
   def from_opts(opts) when is_list(opts) do
     for {key, _} <- opts, key not in @known_keys do
@@ -434,6 +429,18 @@ defmodule Plushie.Type.A11y do
 
   defp unknown_role_message(role) do
     "unknown a11y role #{inspect(role)}. Supported roles: #{inspect(@accepted_roles)}"
+  end
+
+  # -- Plushie.Type callbacks --------------------------------------------------
+
+  @doc false
+  def typespec do
+    quote do: %Plushie.Type.A11y{} | map() | keyword()
+  end
+
+  @doc false
+  def guard(var) do
+    quote do: is_map(unquote(var)) or is_list(unquote(var))
   end
 end
 

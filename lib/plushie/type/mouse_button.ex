@@ -16,7 +16,7 @@ defmodule Plushie.Type.MouseButton do
       :error
   """
 
-  @behaviour Plushie.Event.EventType
+  @behaviour Plushie.Type
 
   # nil defaults to :left because canvas press/release events omit
   # the button field when the left button is used (the common case).
@@ -30,7 +30,6 @@ defmodule Plushie.Type.MouseButton do
     "forward" => :forward
   }
 
-  @impl true
   @spec parse(value :: term()) :: {:ok, :left | :right | :middle | :back | :forward} | :error
   def parse(value) when is_binary(value) do
     case Map.fetch(@buttons, value) do
@@ -41,4 +40,12 @@ defmodule Plushie.Type.MouseButton do
 
   def parse(nil), do: {:ok, :left}
   def parse(_), do: :error
+
+  @impl Plushie.Type
+  def cast(value), do: parse(value)
+
+  @impl Plushie.Type
+  def typespec do
+    quote do: :left | :right | :middle | :back | :forward
+  end
 end
