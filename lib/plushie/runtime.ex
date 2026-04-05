@@ -619,12 +619,12 @@ defmodule Plushie.Runtime do
     new_model =
       try do
         state.app.handle_renderer_exit(state.model, reason)
-      rescue
-        e ->
-          Logger.error("""
-          plushie runtime: handle_renderer_exit raised: #{Exception.message(e)}
-          #{Exception.format_stacktrace(__STACKTRACE__)}
-          """)
+      catch
+        catch_kind, catch_reason ->
+          Logger.error(
+            "plushie runtime: handle_renderer_exit #{catch_kind}: " <>
+              Exception.format(catch_kind, catch_reason, __STACKTRACE__)
+          )
 
           state.model
       end
@@ -997,6 +997,14 @@ defmodule Plushie.Runtime do
       :noop ->
         state
     end
+  catch
+    kind, reason ->
+      Logger.warning(
+        "plushie runtime: dev overlay action #{kind}: " <>
+          Exception.format(kind, reason, __STACKTRACE__)
+      )
+
+      state
   end
 
   defp dev_rerender(state) do
@@ -1089,9 +1097,19 @@ defmodule Plushie.Runtime do
   defp send_settings(state) do
     settings =
       if function_exported?(state.app, :settings, 0) do
-        case state.app.settings() do
-          s when is_list(s) and s != [] -> Map.new(s)
-          _ -> %{}
+        try do
+          case state.app.settings() do
+            s when is_list(s) and s != [] -> Map.new(s)
+            _ -> %{}
+          end
+        catch
+          kind, reason ->
+            Logger.warning(
+              "plushie runtime: settings/0 #{kind}: " <>
+                Exception.format(kind, reason, __STACKTRACE__)
+            )
+
+            %{}
         end
       else
         %{}
@@ -1219,14 +1237,13 @@ defmodule Plushie.Runtime do
   defp safe_init(app, app_opts) do
     {model, commands} = unwrap_result(app.init(app_opts))
     {:ok, model, commands}
-  rescue
-    e ->
+  catch
+    kind, reason ->
       Logger.error("""
-      plushie runtime: app.init/1 raised: #{Exception.message(e)}
-      #{Exception.format_stacktrace(__STACKTRACE__)}
+      plushie runtime: app.init/1 #{kind}: #{Exception.format(kind, reason, __STACKTRACE__)}
       """)
 
-      {:error, {:init_crashed, e}}
+      {:error, {:init_crashed, reason}}
   end
 
   # Renders the view and normalizes the tree. Canvas widget stored state
@@ -1249,13 +1266,12 @@ defmodule Plushie.Runtime do
 
     validate_root_windows!(raw_tree)
     {:ok, Plushie.Tree.normalize(raw_tree)}
-  rescue
-    e ->
+  catch
+    kind, reason ->
       :telemetry.execute([:plushie, :runtime, :view_error], %{count: 1}, %{app: app})
 
       Logger.error("""
-      plushie runtime: view/1 raised: #{Exception.message(e)}
-      #{Exception.format_stacktrace(__STACKTRACE__)}
+      plushie runtime: view/1 #{kind}: #{Exception.format(kind, reason, __STACKTRACE__)}
       """)
 
       :error
@@ -1519,17 +1535,27 @@ defmodule Plushie.Runtime do
         state
 
       :passthrough ->
-        handlers_before = state.widget_handlers
-        {resolved_event, state} = route_through_widgets(state, event)
+        try do
+          handlers_before = state.widget_handlers
+          {resolved_event, state} = route_through_widgets(state, event)
 
-        if is_nil(resolved_event) do
-          if state.widget_handlers != handlers_before do
-            rerender_after_widget_state_change(state, handlers_before)
+          if is_nil(resolved_event) do
+            if state.widget_handlers != handlers_before do
+              rerender_after_widget_state_change(state, handlers_before)
+            else
+              state
+            end
           else
-            state
+            dispatch_update(state, resolved_event)
           end
-        else
-          dispatch_update(state, resolved_event)
+        catch
+          kind, reason ->
+            Logger.warning(
+              "plushie runtime: widget event routing #{kind}: " <>
+                Exception.format(kind, reason, __STACKTRACE__)
+            )
+
+            state
         end
     end
   end
@@ -1651,8 +1677,8 @@ defmodule Plushie.Runtime do
       end)
 
     {:ok, new_model, commands}
-  rescue
-    e ->
+  catch
+    kind, reason ->
       :telemetry.execute([:plushie, :runtime, :update_error], %{count: 1}, %{
         app: app,
         event: event
@@ -1663,19 +1689,14 @@ defmodule Plushie.Runtime do
       # is the pre-increment count (before this error), so thresholds are offset
       # by one (e.g., < 9 means the first 10 errors log at :error level).
       count = consecutive_errors + 1
+      formatted = Exception.format(kind, reason, __STACKTRACE__)
 
       cond do
         count <= 10 ->
-          Logger.error("""
-          plushie runtime: update/2 raised: #{Exception.message(e)}
-          #{Exception.format_stacktrace(__STACKTRACE__)}
-          """)
+          Logger.error("plushie runtime: update/2 #{kind}: #{formatted}")
 
         count <= 100 ->
-          Logger.debug("""
-          plushie runtime: update/2 raised (repeated): #{Exception.message(e)}
-          #{Exception.format_stacktrace(__STACKTRACE__)}
-          """)
+          Logger.debug("plushie runtime: update/2 #{kind} (repeated): #{formatted}")
 
         count == 101 ->
           Logger.warning(

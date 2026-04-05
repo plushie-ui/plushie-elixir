@@ -1048,6 +1048,43 @@ defmodule Plushie.RuntimeTest do
         assert Plushie.Runtime.get_model(runtime).crash_view == false
       end)
     end
+
+    test "update/2 throw does not crash the runtime" do
+      defmodule ThrowUpdateApp do
+        use Plushie.App
+
+        def init(_opts), do: %{value: 0}
+        def update(_model, :throw_it), do: throw(:oops)
+
+        def update(model, %WidgetEvent{type: :click, id: "inc"}),
+          do: %{model | value: model.value + 1}
+
+        def update(model, _event), do: model
+
+        def view(model) do
+          import Plushie.UI
+
+          window "main" do
+            column do
+              text("#{model.value}")
+            end
+          end
+        end
+      end
+
+      capture_log(fn ->
+        {runtime, _bridge} = start_runtime(ThrowUpdateApp)
+        await_initial_render(runtime)
+
+        dispatch_and_wait(runtime, :throw_it)
+
+        assert Process.alive?(runtime)
+        assert Plushie.Runtime.get_model(runtime).value == 0
+
+        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
+        assert Plushie.Runtime.get_model(runtime).value == 1
+      end)
+    end
   end
 
   describe "effects" do
