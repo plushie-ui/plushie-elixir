@@ -1056,6 +1056,7 @@ defmodule Plushie.Tree do
       end)
 
     check_duplicate_ids(normalized)
+    normalized = infer_radio_groups(normalized)
     {normalized, ctx}
   end
 
@@ -1081,6 +1082,66 @@ defmodule Plushie.Tree do
         end
 
       raise ArgumentError, message
+    end
+  end
+
+  # Scans normalized children for radio widgets sharing a group prop and
+  # injects position_in_set / size_of_set into their a11y props. Respects
+  # manual overrides: if position_in_set is already set, the node is left
+  # untouched (but still counted toward size_of_set for siblings).
+  defp infer_radio_groups(children) do
+    radio_groups =
+      children
+      |> Enum.with_index()
+      |> Enum.filter(fn {node, _idx} ->
+        node.type == "radio" and is_binary(Map.get(node.props, :group, nil))
+      end)
+      |> Enum.group_by(fn {node, _idx} -> node.props.group end)
+
+    if map_size(radio_groups) == 0 do
+      children
+    else
+      patches =
+        Enum.reduce(radio_groups, %{}, fn {_group, members}, acc ->
+          radio_group_patches(members, acc)
+        end)
+
+      children
+      |> Enum.with_index()
+      |> Enum.map(fn {node, idx} ->
+        case Map.fetch(patches, idx) do
+          {:ok, a11y} -> %{node | props: Map.put(node.props, :a11y, a11y)}
+          :error -> node
+        end
+      end)
+    end
+  end
+
+  defp radio_group_patches(members, acc) do
+    size = length(members)
+
+    members
+    |> Enum.with_index(1)
+    |> Enum.reduce(acc, fn {{node, child_idx}, pos}, inner_acc ->
+      patch_radio_a11y(node, child_idx, pos, size, inner_acc)
+    end)
+  end
+
+  defp patch_radio_a11y(node, child_idx, pos, size, acc) do
+    a11y = Map.get(node.props, :a11y) || %{}
+    has_position = Map.get(a11y, :position_in_set) != nil
+    has_size = Map.get(a11y, :size_of_set) != nil
+
+    cond do
+      has_position and has_size ->
+        acc
+
+      has_position ->
+        Map.put(acc, child_idx, Map.put(a11y, :size_of_set, size))
+
+      true ->
+        patched = a11y |> Map.put(:position_in_set, pos) |> Map.put(:size_of_set, size)
+        Map.put(acc, child_idx, patched)
     end
   end
 
