@@ -6,6 +6,11 @@ defmodule Plushie.Data do
   All operations are applied in order: filter, search, sort, then paginate.
   Grouping is applied to the paginated results.
 
+  Each pipeline step creates intermediate list copies. For small to moderate
+  collections (up to a few thousand records) this is fine. For very large
+  datasets, consider filtering or paginating at the data source (database
+  query, API call) rather than loading everything into memory.
+
   ## Example
 
       records = [

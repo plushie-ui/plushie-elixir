@@ -107,6 +107,10 @@ defmodule Plushie.State do
     %{state | transaction: nil, revision: old_rev + 1}
   end
 
+  def commit_transaction(%__MODULE__{transaction: nil}) do
+    raise ArgumentError, "cannot commit: no active transaction (call begin_transaction/1 first)"
+  end
+
   @doc """
   Rolls back the active transaction, restoring the data and revision
   to their pre-transaction values.
@@ -114,5 +118,10 @@ defmodule Plushie.State do
   @spec rollback_transaction(state :: t()) :: t()
   def rollback_transaction(%__MODULE__{transaction: %{} = snapshot} = state) do
     %{state | data: snapshot.data, revision: snapshot.revision, transaction: nil}
+  end
+
+  def rollback_transaction(%__MODULE__{transaction: nil}) do
+    raise ArgumentError,
+          "cannot rollback: no active transaction (call begin_transaction/1 first)"
   end
 end

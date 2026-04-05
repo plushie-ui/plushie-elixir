@@ -99,6 +99,11 @@ defmodule Plushie.Command do
   dispatches `msg_fn.(value)` through `update/2` without spawning a task.
 
   Useful for lifting a pure value into the command pipeline.
+
+  The mapper receives only the value, not the model. Do not capture the
+  current model in the closure: it will be stale by the time the event
+  is processed. The mapper should produce an event struct that `update/2`
+  handles by reading the current model at that point.
   """
   @spec done(value :: term(), msg_fn :: (term() -> term())) :: %__MODULE__{}
   def done(value, msg_fn) when is_function(msg_fn, 1) do
