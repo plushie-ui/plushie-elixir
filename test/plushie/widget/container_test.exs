@@ -94,7 +94,7 @@ defmodule Plushie.Widget.ContainerTest do
     end
 
     test "border/2 sets the border field" do
-      b = %{color: "#000000", width: 1, radius: 4}
+      b = %Plushie.Type.Border{color: "#000000", width: 1, radius: 4}
       c = Container.new("c1") |> Container.border(b)
       assert c.border == b
     end

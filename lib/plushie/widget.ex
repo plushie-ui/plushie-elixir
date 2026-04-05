@@ -184,6 +184,7 @@ defmodule Plushie.Widget do
               only: [
                 widget: 1,
                 widget: 2,
+                widget: 3,
                 positional: 1,
                 event: 1,
                 event: 2,
@@ -205,6 +206,7 @@ defmodule Plushie.Widget do
               only: [
                 widget: 1,
                 widget: 2,
+                widget: 3,
                 positional: 1,
                 state: 1,
                 event: 1,
@@ -240,6 +242,13 @@ defmodule Plushie.Widget do
 
   Without a block, declares the type name only (e.g. `widget :space`).
   """
+  # When Elixir parses `widget :name, key: val do ... end`, the keyword
+  # opts and do-block arrive as separate arguments (arity 3). Merge them
+  # so the two-arg clause handles everything uniformly.
+  defmacro widget(type_name, opts, do_block) do
+    quote do: widget(unquote(type_name), unquote(opts ++ do_block))
+  end
+
   defmacro widget(type_name, opts \\ []) do
     validate_widget_type_name!(type_name, __CALLER__)
     {block, opts} = Keyword.pop(opts, :do, nil)
@@ -1437,6 +1446,7 @@ defmodule Plushie.Widget do
     setters = generate_setters(props)
     dsl_fns = generate_dsl_buildable(option_props)
     build_fn = generate_build()
+    container_fns = if container, do: generate_container_helpers(), else: nil
 
     protocol_impl =
       generate_widget_protocol(
@@ -1457,6 +1467,7 @@ defmodule Plushie.Widget do
       unquote_splicing(setters)
       unquote(dsl_fns)
       unquote(build_fn)
+      unquote(container_fns)
       unquote(protocol_impl)
     end
   end
@@ -1721,18 +1732,24 @@ defmodule Plushie.Widget do
   defp generate_dsl_buildable(props) do
     prop_names = Enum.map(props, fn {name, _type, _opts} -> name end)
 
+    # Include the auto-injected fields so DSL validation recognises them.
+    all_option_names = prop_names ++ [:event_rate, :a11y]
+
     field_types_map =
       for {name, _type, _opts} <- props,
           mod = Map.get(@known_type_mappings, name),
           into: %{},
           do: {name, mod}
 
+    # Always include the a11y type mapping for DSL block support.
+    field_types_map = Map.put(field_types_map, :a11y, Plushie.Type.A11y)
+
     quote do
       @doc false
       def from_opts(opts), do: with_options(%__MODULE__{id: Keyword.fetch!(opts, :id)}, opts)
 
       @doc false
-      def __field_keys__, do: unquote(prop_names)
+      def __field_keys__, do: unquote(all_option_names)
 
       @doc false
       def __field_types__, do: unquote(Macro.escape(field_types_map))
@@ -1830,6 +1847,20 @@ defmodule Plushie.Widget do
     end
   end
 
+  defp generate_container_helpers do
+    quote do
+      @doc "Appends a child to the widget."
+      @spec push(widget :: t(), child :: Plushie.Widget.child()) :: t()
+      def push(%__MODULE__{} = widget, child),
+        do: %{widget | children: [child | widget.children]}
+
+      @doc "Appends multiple children to the widget."
+      @spec extend(widget :: t(), children :: [Plushie.Widget.child()]) :: t()
+      def extend(%__MODULE__{} = widget, children),
+        do: %{widget | children: Enum.reverse(children) ++ widget.children}
+    end
+  end
+
   defp generate_widget_protocol(
          _module,
          kind,
@@ -1883,7 +1914,9 @@ defmodule Plushie.Widget do
 
     children =
       if container do
-        quote(do: Plushie.Widget.Build.children_to_nodes(widget.children))
+        # Children are stored in reverse order via push/extend.
+        # Reverse before converting to nodes to restore insertion order.
+        quote(do: Plushie.Widget.Build.children_to_nodes(Enum.reverse(widget.children)))
       else
         quote(do: [])
       end
