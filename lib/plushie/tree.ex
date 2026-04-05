@@ -33,6 +33,11 @@ defmodule Plushie.Tree do
     children: []
   }
 
+  # Maximum tree depth. Warns at @depth_warning, raises at @max_depth.
+  # Protects against infinite recursion from circular widget compositions.
+  @depth_warning 200
+  @max_depth 256
+
   # Props with these keys are runtime metadata, not wire props.
   # They're extracted into a separate :meta field during normalization
   # and never sent to the renderer.
@@ -133,67 +138,73 @@ defmodule Plushie.Tree do
   end
 
   defp normalize_with_scope(%{} = node, scope, window_id) do
-    raw_id = required_field!(node, :id, "id")
-    type = required_field!(node, :type, "type")
-    props = optional_map_field!(node, :props, "props", %{})
-    children = optional_list_field!(node, :children, "children", [])
+    prev_depth = increment_depth!()
 
-    id = to_string(raw_id)
-    type_str = to_string(type)
+    try do
+      raw_id = required_field!(node, :id, "id")
+      type = required_field!(node, :type, "type")
+      props = optional_map_field!(node, :props, "props", %{})
+      children = optional_list_field!(node, :children, "children", [])
 
-    # Validate user-provided IDs
-    unless auto_id?(id) do
-      validate_user_id!(id)
-    end
+      id = to_string(raw_id)
+      type_str = to_string(type)
 
-    # Apply scope prefix to this node's ID
-    scoped_id =
-      if scope != "" and not auto_id?(id) do
-        "#{scope}/#{id}"
-      else
-        id
+      # Validate user-provided IDs
+      unless auto_id?(id) do
+        validate_user_id!(id)
       end
 
-    # Determine scope for children: named (non-auto) non-window nodes
-    # propagate their scoped ID as the child scope
-    child_scope =
-      if auto_id?(id) or type_str == "window" do
-        scope
-      else
-        scoped_id
+      # Apply scope prefix to this node's ID
+      scoped_id =
+        if scope != "" and not auto_id?(id) do
+          "#{scope}/#{id}"
+        else
+          id
+        end
+
+      # Determine scope for children: named (non-auto) non-window nodes
+      # propagate their scoped ID as the child scope
+      child_scope =
+        if auto_id?(id) or type_str == "window" do
+          scope
+        else
+          scoped_id
+        end
+
+      child_window_id = if type_str == "window", do: scoped_id, else: window_id
+
+      atom_props =
+        props
+        |> atomize_keys()
+        |> atomize_a11y()
+        |> resolve_a11y_id_refs(scope)
+
+      {meta, wire_props} = extract_meta(atom_props)
+
+      # Stateful widget rendering: if this node is a stateful widget placeholder
+      # (tagged with __widget__ in meta), render it with the best
+      # available state and normalize the output. The rendered canvas node
+      # does NOT have __widget__ in its props, so normalization of
+      # the output won't re-trigger rendering (no recursion possible).
+      # Widget metadata is attached to the final node's :meta directly.
+      case render_widget_placeholder(meta, id, scoped_id, scope, window_id) do
+        {:rendered, final_node} ->
+          final_node
+
+        :not_a_widget_placeholder ->
+          normalized_props = encode_prop_values(wire_props)
+
+          node = %{
+            id: scoped_id,
+            type: type_str,
+            props: normalized_props,
+            children: normalize_children_with_scope(children, child_scope, child_window_id)
+          }
+
+          if meta == %{}, do: node, else: Map.put(node, :meta, meta)
       end
-
-    child_window_id = if type_str == "window", do: scoped_id, else: window_id
-
-    atom_props =
-      props
-      |> atomize_keys()
-      |> atomize_a11y()
-      |> resolve_a11y_id_refs(scope)
-
-    {meta, wire_props} = extract_meta(atom_props)
-
-    # Stateful widget rendering: if this node is a stateful widget placeholder
-    # (tagged with __widget__ in meta), render it with the best
-    # available state and normalize the output. The rendered canvas node
-    # does NOT have __widget__ in its props, so normalization of
-    # the output won't re-trigger rendering (no recursion possible).
-    # Widget metadata is attached to the final node's :meta directly.
-    case render_widget_placeholder(meta, id, scoped_id, scope, window_id) do
-      {:rendered, final_node} ->
-        final_node
-
-      :not_a_widget_placeholder ->
-        normalized_props = encode_prop_values(wire_props)
-
-        node = %{
-          id: scoped_id,
-          type: type_str,
-          props: normalized_props,
-          children: normalize_children_with_scope(children, child_scope, child_window_id)
-        }
-
-        if meta == %{}, do: node, else: Map.put(node, :meta, meta)
+    after
+      decrement_depth(prev_depth)
     end
   end
 
@@ -252,13 +263,15 @@ defmodule Plushie.Tree do
 
   # Look up stored stateful widget state from the process dictionary
   # (set by the runtime's safe_view). Falls back to initial state
-  # for new widgets or when called outside a runtime context.
+  # for new widgets, module mismatches, or when called outside a
+  # runtime context.
   @spec lookup_widget_state(String.t(), String.t() | nil, module()) :: map()
   defp lookup_widget_state(scoped_id, window_id, module) do
     case Process.get(Plushie.Widget.Handler.widget_states_key()) do
       registry when is_map(registry) ->
         case Map.get(registry, {window_id, scoped_id}) do
-          %{state: state} -> state
+          %{module: ^module, state: state} -> state
+          %{module: _other} -> module.__initial_state__()
           nil -> module.__initial_state__()
         end
 
@@ -658,6 +671,21 @@ defmodule Plushie.Tree do
   end
 
   @doc """
+  Finds the first node in a tree for which `fun` returns truthy.
+
+  Walks the tree depth-first and returns immediately on the first
+  match, avoiding a full tree traversal. Returns `nil` if no node
+  matches.
+  """
+  @spec find_first(node :: tree_node() | nil, fun :: (tree_node() -> as_boolean(term()))) ::
+          tree_node() | nil
+  def find_first(nil, _fun), do: nil
+
+  def find_first(node, fun) do
+    do_find_first(node, fun)
+  end
+
+  @doc """
   Compares two normalized trees and returns a list of patch operations.
 
   Patch operations:
@@ -786,6 +814,11 @@ defmodule Plushie.Tree do
     end
   end
 
+  # Returns the new index of a child after removals have been applied.
+  # O(r) per call where r is the removal count. For n surviving children,
+  # total cost is O(n*r). Acceptable for typical UI trees (under ~100
+  # children per level). For large flat lists (1000+ items), pre-sorting
+  # removed_indices and using binary search would reduce to O(n log r).
   defp index_after_removals(old_idx, removed_indices) do
     old_idx - Enum.count(removed_indices, &(&1 < old_idx))
   end
@@ -845,6 +878,36 @@ defmodule Plushie.Tree do
 
   # Private
 
+  @depth_key :__plushie_normalize_depth__
+
+  # Increments the normalization depth counter and checks the limit.
+  # Returns the previous depth for decrement_depth to restore.
+  @spec increment_depth!() :: non_neg_integer()
+  defp increment_depth! do
+    prev = Process.get(@depth_key, 0)
+    depth = prev + 1
+    Process.put(@depth_key, depth)
+
+    if depth > @max_depth do
+      raise ArgumentError,
+            "tree depth exceeds maximum of #{@max_depth} during normalize " <>
+              "(likely a circular widget composition)"
+    end
+
+    if depth == @depth_warning do
+      require Logger
+
+      Logger.warning(
+        "plushie tree: normalization depth reached #{@depth_warning}, " <>
+          "approaching maximum of #{@max_depth}"
+      )
+    end
+
+    prev
+  end
+
+  defp decrement_depth(prev), do: Process.put(@depth_key, prev)
+
   defp normalize_children_with_scope(children, scope, window_id) when is_list(children) do
     normalized = Enum.map(children, &normalize_with_scope(&1, scope, window_id))
     check_duplicate_ids(normalized)
@@ -859,10 +922,20 @@ defmodule Plushie.Tree do
     ids = Enum.map(children, & &1.id)
 
     if length(ids) != length(Enum.uniq(ids)) do
-      dupes = ids -- Enum.uniq(ids)
+      dupes = Enum.uniq(ids -- Enum.uniq(ids))
 
-      raise ArgumentError,
-            "duplicate sibling IDs detected during normalize: #{inspect(Enum.uniq(dupes))}"
+      message = "duplicate sibling IDs detected during normalize: #{inspect(dupes)}"
+
+      message =
+        if Enum.any?(dupes, &auto_id?/1) do
+          message <>
+            ". Auto-generated IDs are based on source position; provide explicit " <>
+            "IDs for items in dynamic lists (e.g., text(item.id, item.name))"
+        else
+          message
+        end
+
+      raise ArgumentError, message
     end
   end
 
@@ -873,6 +946,18 @@ defmodule Plushie.Tree do
 
   defp do_find_all(node, fun, acc) do
     if fun.(node), do: [node | acc], else: acc
+  end
+
+  defp do_find_first(%{children: children} = node, fun) do
+    if fun.(node) do
+      node
+    else
+      Enum.find_value(children, &do_find_first(&1, fun))
+    end
+  end
+
+  defp do_find_first(node, fun) do
+    if fun.(node), do: node
   end
 
   # Fetches a field by atom key first, then string key, returning nil if absent.
