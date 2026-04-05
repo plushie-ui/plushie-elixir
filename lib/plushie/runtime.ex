@@ -83,6 +83,7 @@ defmodule Plushie.Runtime do
             pending_interact: nil,
             pending_await_async: %{},
             memo_cache: %{},
+            widget_view_cache: %{},
             dev_overlay: nil,
             dev_overlay_timer: nil
 
@@ -122,6 +123,7 @@ defmodule Plushie.Runtime do
            pending_interact: {GenServer.from(), String.t(), reference()} | nil,
            pending_await_async: %{atom() => GenServer.from()},
            memo_cache: map(),
+           widget_view_cache: map(),
            dev_overlay: Plushie.Dev.RebuildingOverlay.t() | nil,
            dev_overlay_timer: reference() | nil
          }
@@ -347,10 +349,10 @@ defmodule Plushie.Runtime do
     send_settings(state)
 
     # 2-4. Render initial tree and push snapshot (old_tree is nil -> full snapshot).
-    {tree, memo_cache} =
+    {tree, memo_cache, widget_view_cache} =
       case render_and_sync(state.app, state.model, state.bridge, nil) do
-        {:ok, tree, new_memo_cache} -> {tree, new_memo_cache}
-        :view_error -> {nil, %{}}
+        {:ok, tree, new_memo_cache, new_wvc} -> {tree, new_memo_cache, new_wvc}
+        :view_error -> {nil, %{}, %{}}
       end
 
     # 5. Sync widget handler registry so widgets are available for
@@ -363,6 +365,7 @@ defmodule Plushie.Runtime do
       state
       | tree: tree,
         memo_cache: memo_cache,
+        widget_view_cache: widget_view_cache,
         widget_handlers: widget_handlers,
         widget_events: widget_events
     }
@@ -676,13 +679,19 @@ defmodule Plushie.Runtime do
     # Pass widget handler states so widgets render with current internal state.
     # Preserve the dev overlay through the restart so the new renderer's
     # first frame shows the "Restarted" status bar.
-    {tree, memo_cache} =
-      case safe_view(state.app, state.model, state.widget_handlers, state.memo_cache) do
-        {:ok, new_tree, new_memo_cache} ->
-          {maybe_inject_overlay(new_tree, state.dev_overlay), new_memo_cache}
+    {tree, memo_cache, widget_view_cache} =
+      case safe_view(
+             state.app,
+             state.model,
+             state.widget_handlers,
+             state.memo_cache,
+             state.widget_view_cache
+           ) do
+        {:ok, new_tree, new_mc, new_wvc} ->
+          {maybe_inject_overlay(new_tree, state.dev_overlay), new_mc, new_wvc}
 
         :error ->
-          {state.tree, state.memo_cache}
+          {state.tree, state.memo_cache, state.widget_view_cache}
       end
 
     if tree do
@@ -704,6 +713,7 @@ defmodule Plushie.Runtime do
       state
       | tree: tree,
         memo_cache: memo_cache,
+        widget_view_cache: widget_view_cache,
         widget_handlers: widget_handlers,
         widget_events: widget_events,
         windows: MapSet.new()
@@ -872,7 +882,7 @@ defmodule Plushie.Runtime do
           # Widget captured the timer (state update, re-render only).
           state = %{state | widget_handlers: new_registry}
 
-          {new_tree, memo_cache, state} =
+          {new_tree, memo_cache, widget_view_cache, state} =
             case render_and_sync(
                    state.app,
                    state.model,
@@ -880,10 +890,14 @@ defmodule Plushie.Runtime do
                    state.tree,
                    state.widget_handlers,
                    state.memo_cache,
+                   state.widget_view_cache,
                    state.dev_overlay
                  ) do
-              {:ok, tree, mc} -> {tree, mc, %{state | consecutive_view_errors: 0}}
-              :view_error -> {state.tree, state.memo_cache, track_view_error(state)}
+              {:ok, tree, mc, wvc} ->
+                {tree, mc, wvc, %{state | consecutive_view_errors: 0}}
+
+              :view_error ->
+                {state.tree, state.memo_cache, state.widget_view_cache, track_view_error(state)}
             end
 
           {widget_handlers, widget_events, window_set} =
@@ -893,6 +907,7 @@ defmodule Plushie.Runtime do
             state
             | tree: new_tree,
               memo_cache: memo_cache,
+              widget_view_cache: widget_view_cache,
               widget_handlers: widget_handlers,
               widget_events: widget_events
           }
@@ -928,7 +943,7 @@ defmodule Plushie.Runtime do
   def handle_info(:force_rerender, state) do
     Logger.info("plushie runtime: force re-render (code reload)")
 
-    {new_tree, memo_cache, state} =
+    {new_tree, memo_cache, widget_view_cache, state} =
       case render_and_sync(
              state.app,
              state.model,
@@ -936,10 +951,14 @@ defmodule Plushie.Runtime do
              state.tree,
              state.widget_handlers,
              state.memo_cache,
+             state.widget_view_cache,
              state.dev_overlay
            ) do
-        {:ok, tree, mc} -> {tree, mc, %{state | consecutive_view_errors: 0}}
-        :view_error -> {state.tree, state.memo_cache, track_view_error(state)}
+        {:ok, tree, mc, wvc} ->
+          {tree, mc, wvc, %{state | consecutive_view_errors: 0}}
+
+        :view_error ->
+          {state.tree, state.memo_cache, state.widget_view_cache, track_view_error(state)}
       end
 
     {widget_handlers, widget_events, window_set} =
@@ -949,6 +968,7 @@ defmodule Plushie.Runtime do
       state
       | tree: new_tree,
         memo_cache: memo_cache,
+        widget_view_cache: widget_view_cache,
         widget_handlers: widget_handlers,
         widget_events: widget_events
     }
@@ -1042,7 +1062,7 @@ defmodule Plushie.Runtime do
   end
 
   defp dev_rerender(state) do
-    {new_tree, memo_cache, state} =
+    {new_tree, memo_cache, widget_view_cache, state} =
       case render_and_sync(
              state.app,
              state.model,
@@ -1050,10 +1070,14 @@ defmodule Plushie.Runtime do
              state.tree,
              state.widget_handlers,
              state.memo_cache,
+             state.widget_view_cache,
              state.dev_overlay
            ) do
-        {:ok, tree, mc} -> {tree, mc, %{state | consecutive_view_errors: 0}}
-        :view_error -> {state.tree, state.memo_cache, track_view_error(state)}
+        {:ok, tree, mc, wvc} ->
+          {tree, mc, wvc, %{state | consecutive_view_errors: 0}}
+
+        :view_error ->
+          {state.tree, state.memo_cache, state.widget_view_cache, track_view_error(state)}
       end
 
     {widget_handlers, widget_events, window_set} =
@@ -1063,6 +1087,7 @@ defmodule Plushie.Runtime do
       state
       | tree: new_tree,
         memo_cache: memo_cache,
+        widget_view_cache: widget_view_cache,
         widget_handlers: widget_handlers,
         widget_events: widget_events
     }
@@ -1258,8 +1283,9 @@ defmodule Plushie.Runtime do
           old_tree :: map() | nil,
           widget_handlers :: map(),
           memo_cache :: map(),
+          widget_view_cache :: map(),
           dev_overlay :: Plushie.Dev.RebuildingOverlay.t() | nil
-        ) :: {:ok, map(), map()} | :view_error
+        ) :: {:ok, map(), map(), map()} | :view_error
   defp render_and_sync(
          app,
          model,
@@ -1267,10 +1293,11 @@ defmodule Plushie.Runtime do
          old_tree,
          widget_handlers \\ %{},
          memo_cache \\ %{},
+         widget_view_cache \\ %{},
          dev_overlay \\ nil
        ) do
-    case safe_view(app, model, widget_handlers, memo_cache) do
-      {:ok, new_tree, new_memo_cache} ->
+    case safe_view(app, model, widget_handlers, memo_cache, widget_view_cache) do
+      {:ok, new_tree, new_memo_cache, new_widget_view_cache} ->
         new_tree = maybe_inject_overlay(new_tree, dev_overlay)
 
         if is_nil(old_tree) do
@@ -1286,7 +1313,7 @@ defmodule Plushie.Runtime do
           end
         end
 
-        {:ok, new_tree, new_memo_cache}
+        {:ok, new_tree, new_memo_cache, new_widget_view_cache}
 
       :error ->
         :view_error
@@ -1329,8 +1356,9 @@ defmodule Plushie.Runtime do
   # normalizer detects stateful widget nodes and re-renders them with
   # stored state before normalizing the output. This eliminates the need
   # for post-processing (the old apply_widget_handler_state approach).
-  @spec safe_view(module(), term(), map(), map()) :: {:ok, map(), map()} | :error
-  defp safe_view(app, model, widget_handler_states, memo_cache) do
+  @spec safe_view(module(), term(), map(), map(), map()) ::
+          {:ok, map(), map(), map()} | :error
+  defp safe_view(app, model, widget_handler_states, memo_cache, widget_view_cache) do
     raw_tree =
       :telemetry.span([:plushie, :view], %{app: app}, fn ->
         {app.view(model), %{}}
@@ -1338,9 +1366,11 @@ defmodule Plushie.Runtime do
 
     validate_root_windows!(raw_tree)
     Plushie.Tree.set_memo_prev_cache(memo_cache)
+    Plushie.Tree.set_widget_view_prev_cache(widget_view_cache)
     normalized = Plushie.Tree.normalize(raw_tree, widget_handler_states)
     new_memo_cache = Plushie.Tree.take_memo_cache()
-    {:ok, normalized, new_memo_cache}
+    new_widget_view_cache = Plushie.Tree.take_widget_view_cache()
+    {:ok, normalized, new_memo_cache, new_widget_view_cache}
   catch
     kind, reason ->
       :telemetry.execute([:plushie, :runtime, :view_error], %{count: 1}, %{app: app})
@@ -1350,6 +1380,14 @@ defmodule Plushie.Runtime do
       """)
 
       :error
+  after
+    # Clean up process dictionary caches on both success and error paths.
+    # On success, take_memo_cache/take_widget_view_cache already cleared them.
+    # On error, they may still be set from set_*_prev_cache.
+    Process.delete(:__plushie_memo_prev_cache__)
+    Process.delete(:__plushie_memo_cache__)
+    Process.delete(:__plushie_widget_view_prev_cache__)
+    Process.delete(:__plushie_widget_view_cache__)
   end
 
   defp validate_root_windows!(nil), do: :ok
@@ -1622,7 +1660,7 @@ defmodule Plushie.Runtime do
         state = %{state | model: new_model, consecutive_errors: 0}
         state = Commands.execute_commands(commands, state)
 
-        {new_tree, memo_cache, state} =
+        {new_tree, memo_cache, widget_view_cache, state} =
           case render_and_sync(
                  app,
                  new_model,
@@ -1630,13 +1668,22 @@ defmodule Plushie.Runtime do
                  state.tree,
                  state.widget_handlers,
                  state.memo_cache,
+                 state.widget_view_cache,
                  state.dev_overlay
                ) do
-            {:ok, tree, mc} -> {tree, mc, %{state | consecutive_view_errors: 0}}
-            :view_error -> {state.tree, state.memo_cache, track_view_error(state)}
+            {:ok, tree, mc, wvc} ->
+              {tree, mc, wvc, %{state | consecutive_view_errors: 0}}
+
+            :view_error ->
+              {state.tree, state.memo_cache, state.widget_view_cache, track_view_error(state)}
           end
 
-        state = %{state | tree: new_tree, memo_cache: memo_cache}
+        state = %{
+          state
+          | tree: new_tree,
+            memo_cache: memo_cache,
+            widget_view_cache: widget_view_cache
+        }
 
         {widget_handlers, widget_events, window_set} =
           Plushie.Runtime.WidgetHandlers.derive_all_registries(new_tree)
@@ -1667,7 +1714,7 @@ defmodule Plushie.Runtime do
          %{app: app, model: model, bridge: bridge} = state,
          handlers_before
        ) do
-    {new_tree, memo_cache, state} =
+    {new_tree, memo_cache, widget_view_cache, state} =
       case render_and_sync(
              app,
              model,
@@ -1675,13 +1722,14 @@ defmodule Plushie.Runtime do
              state.tree,
              state.widget_handlers,
              state.memo_cache,
+             state.widget_view_cache,
              state.dev_overlay
            ) do
-        {:ok, tree, mc} ->
-          {tree, mc, %{state | consecutive_view_errors: 0}}
+        {:ok, tree, mc, wvc} ->
+          {tree, mc, wvc, %{state | consecutive_view_errors: 0}}
 
         :view_error ->
-          {state.tree, state.memo_cache,
+          {state.tree, state.memo_cache, state.widget_view_cache,
            %{track_view_error(state) | widget_handlers: handlers_before}}
       end
 
@@ -1692,6 +1740,7 @@ defmodule Plushie.Runtime do
       state
       | tree: new_tree,
         memo_cache: memo_cache,
+        widget_view_cache: widget_view_cache,
         widget_handlers: widget_handlers,
         widget_events: widget_events
     }
@@ -1821,8 +1870,14 @@ defmodule Plushie.Runtime do
 
     # Re-render and send a full snapshot (not a patch).
     # Pass widget handler states so normalization injects stored state.
-    case safe_view(state.app, state.model, state.widget_handlers, state.memo_cache) do
-      {:ok, new_tree, new_memo_cache} ->
+    case safe_view(
+           state.app,
+           state.model,
+           state.widget_handlers,
+           state.memo_cache,
+           state.widget_view_cache
+         ) do
+      {:ok, new_tree, new_memo_cache, new_wvc} ->
         notify_bridge(state, &Plushie.Bridge.send_snapshot(&1, new_tree))
 
         {widget_handlers, widget_events, window_set} =
@@ -1832,6 +1887,7 @@ defmodule Plushie.Runtime do
           state
           | tree: new_tree,
             memo_cache: new_memo_cache,
+            widget_view_cache: new_wvc,
             widget_handlers: widget_handlers,
             widget_events: widget_events
         }

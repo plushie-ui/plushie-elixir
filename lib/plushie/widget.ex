@@ -173,6 +173,7 @@ defmodule Plushie.Widget do
       if kind == :widget do
         quote do
           Module.register_attribute(__MODULE__, :_widget_state_fields, accumulate: true)
+          Module.put_attribute(__MODULE__, :_widget_cache_key_fn, nil)
         end
       end
 
@@ -209,6 +210,7 @@ defmodule Plushie.Widget do
                 widget: 3,
                 positional: 1,
                 state: 1,
+                cache_key: 1,
                 event: 1,
                 event: 2,
                 field: 2,
@@ -427,6 +429,27 @@ defmodule Plushie.Widget do
     end
   end
 
+  @doc """
+  Declares an optional cache key function for expensive widgets.
+
+  When declared, the normalizer calls this function before `view/3`.
+  If the returned key matches the previous render's key, the cached
+  normalized output is reused and `view/3` is skipped entirely.
+
+      cache_key fn props, state ->
+        {props.data_version, state.zoom_level}
+      end
+
+  Only applicable to `:widget` kind (not `:native_widget`).
+  """
+  defmacro cache_key(fun) do
+    escaped = Macro.escape(fun)
+
+    quote do
+      @_widget_cache_key_fn unquote(escaped)
+    end
+  end
+
   defp validate_state_field_type!(name, type, caller) do
     unless valid_type?(type) do
       raise CompileError,
@@ -590,6 +613,11 @@ defmodule Plushie.Widget do
     prop_names_fn = generate_prop_names(props)
     dsl_macro = generate_dsl_macro(widget_type, props)
 
+    cache_key_fn =
+      if kind == :widget do
+        generate_cache_key_fn(Module.get_attribute(env.module, :_widget_cache_key_fn))
+      end
+
     widget_info_fn =
       generate_widget_info(kind, type_string, props, events, state_fields, commands)
 
@@ -609,6 +637,7 @@ defmodule Plushie.Widget do
       unquote(behaviour_fns)
       unquote(widget_code)
       unquote(command_fns)
+      unquote(cache_key_fn)
       unquote(prop_names_fn)
       unquote(dsl_macro)
       unquote(widget_info_fn)
@@ -1473,6 +1502,20 @@ defmodule Plushie.Widget do
   end
 
   @doc false
+  def generate_cache_key_fn(nil), do: nil
+
+  @doc false
+  def generate_cache_key_fn(fun_ast) do
+    quote do
+      @doc false
+      @spec __cache_key__(map(), map()) :: term()
+      def __cache_key__(props, state) do
+        fun = unquote(fun_ast)
+        fun.(props, state)
+      end
+    end
+  end
+
   def generate_prop_names(props) do
     known =
       Enum.map(props, fn {name, _type, _opts} -> name end)

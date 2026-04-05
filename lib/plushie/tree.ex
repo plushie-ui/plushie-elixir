@@ -48,6 +48,10 @@ defmodule Plushie.Tree do
   @memo_prev_cache_key :__plushie_memo_prev_cache__
   @memo_cache_key :__plushie_memo_cache__
 
+  # Process dictionary keys for widget view cache (cache_key opt-in)
+  @widget_view_prev_cache_key :__plushie_widget_view_prev_cache__
+  @widget_view_cache_key :__plushie_widget_view_cache__
+
   alias Plushie.Widget.Meta
 
   @doc """
@@ -265,19 +269,30 @@ defmodule Plushie.Tree do
         widget_props = composite.props || %{}
         widget_state = lookup_widget_state(scoped_id, module, ctx)
 
-        # View with local ID -- normalization applies scoping.
-        # State is always a map (empty for stateless widgets).
-        # Children are in props[:children] for container widgets.
-        rendered = module.view(local_id, widget_props, widget_state)
+        # Check opt-in cache_key before calling view/3.
+        normalized =
+          case widget_view_cache_lookup(module, scoped_id, widget_props, widget_state, ctx) do
+            {:hit, cached_node} ->
+              cached_node
 
-        # Normalize the raw canvas output. It has no __widget__
-        # tags, so this is a plain normalization pass with no recursion.
-        normalized = normalize_with_ctx(rendered, ctx)
+            :miss ->
+              # View with local ID -- normalization applies scoping.
+              # State is always a map (empty for stateless widgets).
+              # Children are in props[:children] for container widgets.
+              rendered = module.view(local_id, widget_props, widget_state)
 
-        # Auto-apply standard widget options (:a11y, :event_rate) from the
-        # original widget props to the top-level rendered node. This way
-        # widget authors don't have to manually forward these options.
-        normalized = merge_standard_widget_props(normalized, widget_props)
+              # Normalize the raw canvas output. It has no __widget__
+              # tags, so this is a plain normalization pass with no recursion.
+              node = normalize_with_ctx(rendered, ctx)
+
+              # Auto-apply standard widget options (:a11y, :event_rate) from the
+              # original widget props to the top-level rendered node. This way
+              # widget authors don't have to manually forward these options.
+              node = merge_standard_widget_props(node, widget_props)
+
+              widget_view_cache_store(module, scoped_id, widget_props, widget_state, node)
+              node
+          end
 
         # Attach stateful widget metadata to the final node's :meta.
         # This is the ONLY place these keys appear in meta on the
@@ -1111,6 +1126,83 @@ defmodule Plushie.Tree do
     Process.delete(@memo_cache_key)
     Process.delete(@memo_prev_cache_key)
     cache
+  end
+
+  # ---------------------------------------------------------------------------
+  # Widget view cache helpers (cache_key opt-in)
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Sets the previous widget view cache for the next normalize pass.
+
+  Called by the runtime before normalize to seed the cache from the
+  previous render cycle. Returns the atom `:ok`.
+  """
+  @spec set_widget_view_prev_cache(map()) :: :ok
+  def set_widget_view_prev_cache(cache) do
+    Process.put(@widget_view_prev_cache_key, cache)
+    :ok
+  end
+
+  @doc """
+  Returns the widget view cache built during the most recent normalize
+  pass and clears it from the process dictionary.
+  """
+  @spec take_widget_view_cache() :: map()
+  def take_widget_view_cache do
+    cache = Process.get(@widget_view_cache_key, %{})
+    Process.delete(@widget_view_cache_key)
+    Process.delete(@widget_view_prev_cache_key)
+    cache
+  end
+
+  # Check the widget view cache for a hit. Only applies to widgets that
+  # export __cache_key__/2. Returns {:hit, node} or :miss.
+  @spec widget_view_cache_lookup(module(), String.t(), map(), map(), normalize_ctx()) ::
+          {:hit, map()} | :miss
+  defp widget_view_cache_lookup(module, scoped_id, props, state, ctx) do
+    if function_exported?(module, :__cache_key__, 2) do
+      key = module.__cache_key__(props, state)
+      cache_key = {module, scoped_id, key}
+      prev_cache = Process.get(@widget_view_prev_cache_key, %{})
+
+      case Map.get(prev_cache, cache_key) do
+        nil ->
+          :telemetry.execute([:plushie, :widget_cache, :miss], %{count: 1}, %{
+            id: scoped_id,
+            module: module
+          })
+
+          :miss
+
+        cached ->
+          :telemetry.execute([:plushie, :widget_cache, :hit], %{count: 1}, %{
+            id: scoped_id,
+            module: module
+          })
+
+          refreshed = refresh_widget_states(cached, ctx)
+          current = Process.get(@widget_view_cache_key, %{})
+          Process.put(@widget_view_cache_key, Map.put(current, cache_key, refreshed))
+          {:hit, refreshed}
+      end
+    else
+      :miss
+    end
+  end
+
+  # Store a rendered widget node in the widget view cache.
+  # Only called when the module exports __cache_key__/2.
+  @spec widget_view_cache_store(module(), String.t(), map(), map(), map()) :: :ok
+  defp widget_view_cache_store(module, scoped_id, props, state, node) do
+    if function_exported?(module, :__cache_key__, 2) do
+      key = module.__cache_key__(props, state)
+      cache_key = {module, scoped_id, key}
+      current = Process.get(@widget_view_cache_key, %{})
+      Process.put(@widget_view_cache_key, Map.put(current, cache_key, node))
+    end
+
+    :ok
   end
 
   # Evaluate the memo body function and normalize the result. If the body
