@@ -35,6 +35,7 @@ defmodule Mix.Tasks.Plushie.Build do
   - `--wasm-dir PATH` -- Override WASM output directory
   - `--release` -- Build with optimizations (also implied by `MIX_ENV=prod`)
   - `--verbose` -- Print full cargo output on successful builds
+  - `--update` -- Force dependency re-resolution (deletes the tracked lock file)
 
   ## Config
 
@@ -70,6 +71,7 @@ defmodule Mix.Tasks.Plushie.Build do
           wasm: :boolean,
           release: :boolean,
           verbose: :boolean,
+          update: :boolean,
           bin_file: :string,
           wasm_dir: :string
         ]
@@ -79,12 +81,13 @@ defmodule Mix.Tasks.Plushie.Build do
     {want_bin?, want_wasm?} = Mix.PlushieHelpers.resolve_artifacts(opts)
     release? = opts[:release] || false
     verbose? = opts[:verbose] || false
+    update? = opts[:update] || false
 
-    if want_bin?, do: build_bin(release?, verbose?, opts)
+    if want_bin?, do: build_bin(release?, verbose?, update?, opts)
     if want_wasm?, do: build_wasm(release?, verbose?, opts)
   end
 
-  defp build_bin(release?, verbose?, opts) do
+  defp build_bin(release?, verbose?, update?, opts) do
     check_rust_toolchain()
     check_cargo()
 
@@ -99,7 +102,7 @@ defmodule Mix.Tasks.Plushie.Build do
       check_crate_name_collisions!(native)
     end
 
-    build_workspace(native, release?, verbose?, opts)
+    build_workspace(native, release?, verbose?, update?, opts)
   end
 
   defp build_wasm(release?, verbose?, opts) do
@@ -304,7 +307,9 @@ defmodule Mix.Tasks.Plushie.Build do
 
   # -- Workspace build --------------------------------------------------------
 
-  defp build_workspace(native_widgets, release?, verbose?, opts) do
+  @lock_file "native/plushie/Cargo.lock"
+
+  defp build_workspace(native_widgets, release?, verbose?, update?, opts) do
     build_dir = Path.join(Mix.Project.build_path(), "plushie-renderer")
     File.mkdir_p!(build_dir)
 
@@ -320,6 +325,15 @@ defmodule Mix.Tasks.Plushie.Build do
     end
 
     generate_workspace(build_dir, bin_name, native_widgets, crate_paths)
+
+    workspace_lock = Path.join(build_dir, "Cargo.lock")
+
+    if update? do
+      File.rm(workspace_lock)
+    else
+      check_lock_version!()
+      copy_lock_to_workspace(build_dir)
+    end
 
     source_info =
       if Mix.PlushieHelpers.source_path(),
@@ -346,6 +360,7 @@ defmodule Mix.Tasks.Plushie.Build do
       {output, 0} ->
         Mix.shell().info("Build succeeded.")
         if verbose?, do: Mix.shell().info(output)
+        copy_lock_from_workspace(build_dir)
         ext = if :os.type() |> elem(0) == :win32, do: ".exe", else: ""
         binary = Path.join([build_dir, "target", profile, bin_name <> ext])
         install_bin_to(binary, opts)
@@ -354,6 +369,46 @@ defmodule Mix.Tasks.Plushie.Build do
         Mix.shell().error("Build failed (exit code #{status}):")
         Mix.shell().error(output)
         Mix.raise("cargo build failed")
+    end
+  end
+
+  # -- Cargo.lock management --------------------------------------------------
+
+  defp copy_lock_to_workspace(build_dir) do
+    if File.exists?(@lock_file) do
+      File.cp!(@lock_file, Path.join(build_dir, "Cargo.lock"))
+    end
+  end
+
+  defp copy_lock_from_workspace(build_dir) do
+    workspace_lock = Path.join(build_dir, "Cargo.lock")
+
+    if File.exists?(workspace_lock) do
+      File.mkdir_p!(Path.dirname(@lock_file))
+      File.cp!(workspace_lock, @lock_file)
+    end
+  end
+
+  defp check_lock_version! do
+    if File.exists?(@lock_file) do
+      content = File.read!(@lock_file)
+      expected = Plushie.Binary.binary_version()
+
+      case Regex.run(
+             ~r/name = "plushie-ext"\nversion = "(\d+\.\d+\.\d+)"/,
+             content
+           ) do
+        [_, locked_version] when locked_version != expected ->
+          Mix.raise("""
+          Cargo.lock version mismatch: plushie-ext #{locked_version} is locked \
+          but BINARY_VERSION is #{expected}.
+
+          Run `mix plushie.build --update` to re-resolve dependencies.\
+          """)
+
+        _ ->
+          :ok
+      end
     end
   end
 
