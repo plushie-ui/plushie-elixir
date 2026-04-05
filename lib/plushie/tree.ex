@@ -867,9 +867,9 @@ defmodule Plushie.Tree do
   # equal. Falls back to false for non-list or non-ID-bearing values so
   # the caller treats them as changed (existing behavior).
   #
-  # TODO: when the renderer protocol supports granular shape ops
-  # (add/remove/update by ID), this function can return a diff instead
-  # of a boolean, enabling sub-list patching over the wire.
+  # A future renderer protocol extension could support granular shape ops
+  # (add/remove/update by ID), at which point this function would return
+  # a diff instead of a boolean, enabling sub-list patching over the wire.
   @spec id_keyed_list_equal?(term(), term()) :: boolean()
   defp id_keyed_list_equal?(old, new) when is_list(old) and is_list(new) do
     length(old) == length(new) and
