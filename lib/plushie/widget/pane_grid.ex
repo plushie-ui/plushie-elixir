@@ -1,212 +1,47 @@
+defmodule Plushie.Widget.PaneGrid.PanesCoercion do
+  @moduledoc false
+
+  # Overrides panes/2 to coerce atom pane identifiers to strings.
+  defmacro __before_compile__(_env) do
+    quote do
+      defoverridable panes: 2
+
+      @doc "Sets the list of pane identifiers. Atoms are coerced to strings."
+      def panes(%__MODULE__{} = pg, panes) when is_list(panes),
+        do: %{pg | panes: Enum.map(panes, &to_string/1)}
+    end
+  end
+end
+
 defmodule Plushie.Widget.PaneGrid do
   @moduledoc """
-  Pane grid -- resizable tiled panes.
+  Pane grid, resizable tiled panes.
 
   Children are keyed by their node ID and rendered as individual panes.
   The renderer manages an internal `pane_grid::State` cache.
-
-  ## Props
-
-  - `spacing` (number) -- space between panes in pixels. Default: 2.
-  - `width` (length) -- grid width. Default: fill. See `Plushie.Type.Length`.
-  - `height` (length) -- grid height. Default: fill.
-  - `min_size` (number) -- minimum pane size in pixels. Default: 10.
-  - `leeway` (number) -- grabbable area around dividers. Defaults to min_size.
-  - `divider_color` (hex color) -- color for the split divider.
-  - `divider_width` (number) -- divider thickness in pixels.
-  - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
-
-  ## Child pane props
-
-  Each child node can have a `title` prop (string). If present, the pane
-  renders a title bar with that text. If absent, no title bar is shown.
-
-  ## Events
-
-  - `%WidgetEvent{type: :pane_clicked}` -- pane selected.
-  - `%WidgetEvent{type: :pane_resized}` -- split divider moved (split, ratio in data).
-  - `%WidgetEvent{type: :pane_dragged}` -- pane drag (action: :picked/:dropped/:canceled,
-    with optional target, region, edge in data).
-  - `%WidgetEvent{type: :pane_focus_cycle}` -- F6/Shift+F6 focus cycling.
   """
 
-  alias Plushie.Type.Color
-  alias Plushie.Widget.Build
+  use Plushie.Widget
 
-  @type option ::
-          {:panes, [atom() | String.t()]}
-          | {:spacing, number()}
-          | {:width, Plushie.Type.Length.t()}
-          | {:height, Plushie.Type.Length.t()}
-          | {:min_size, number()}
-          | {:divider_color, Plushie.Type.Color.input()}
-          | {:divider_width, number()}
-          | {:leeway, number()}
-          | {:event_rate, non_neg_integer()}
-          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
+  @before_compile Plushie.Widget.PaneGrid.PanesCoercion
 
-  @type t :: %__MODULE__{
-          id: String.t(),
-          panes: [String.t()] | nil,
-          spacing: number() | nil,
-          width: Plushie.Type.Length.t() | nil,
-          height: Plushie.Type.Length.t() | nil,
-          min_size: number() | nil,
-          divider_color: Plushie.Type.Color.t() | nil,
-          divider_width: number() | nil,
-          leeway: number() | nil,
-          event_rate: non_neg_integer() | nil,
-          a11y: Plushie.Type.A11y.t() | nil,
-          children: [Plushie.Widget.child()]
-        }
-
-  defstruct [
-    :id,
-    :panes,
-    :spacing,
-    :width,
-    :height,
-    :min_size,
-    :divider_color,
-    :divider_width,
-    :leeway,
-    :event_rate,
-    :a11y,
-    children: []
-  ]
-
-  @valid_option_keys ~w(panes spacing width height min_size divider_color divider_width leeway event_rate a11y)a
-
-  @doc false
-  def __field_keys__, do: @valid_option_keys
-
-  @doc false
-  def __field_types__ do
-    %{a11y: Plushie.Type.A11y}
+  widget :pane_grid, container: true do
+    field :panes, {:list, :string}, doc: "List of pane identifiers."
+    field :spacing, :float, doc: "Space between panes in pixels. Default: 2."
+    field :width, Plushie.Type.Length, doc: "Grid width. Default: fill."
+    field :height, Plushie.Type.Length, doc: "Grid height. Default: fill."
+    field :min_size, :float, doc: "Minimum pane size in pixels. Default: 10."
+    field :divider_color, Plushie.Type.Color, doc: "Color for the split divider."
+    field :divider_width, :float, doc: "Divider thickness in pixels."
+    field :leeway, :float, doc: "Grabbable area around dividers in pixels."
   end
 
-  @doc "Creates a new pane grid struct with optional keyword opts."
-  @spec new(id :: String.t(), opts :: [option()]) :: t()
-  def new(id, opts \\ []) when is_binary(id) do
-    %__MODULE__{id: id} |> with_options(opts)
-  end
+  event :pane_clicked, doc: "Emitted when a pane is selected."
 
-  @doc "Applies keyword options to an existing pane grid struct."
-  @spec with_options(pane_grid :: t(), opts :: [option()]) :: t()
-  def with_options(%__MODULE__{} = pg, []), do: pg
+  event :pane_resized,
+    data: [split: :string, ratio: :float],
+    doc: "Emitted when a split divider is moved."
 
-  def with_options(%__MODULE__{} = pg, opts) do
-    Enum.reduce(opts, pg, fn
-      {:panes, v}, acc -> panes(acc, v)
-      {:spacing, v}, acc -> spacing(acc, v)
-      {:width, v}, acc -> width(acc, v)
-      {:height, v}, acc -> height(acc, v)
-      {:min_size, v}, acc -> min_size(acc, v)
-      {:divider_color, v}, acc -> divider_color(acc, v)
-      {:divider_width, v}, acc -> divider_width(acc, v)
-      {:leeway, v}, acc -> leeway(acc, v)
-      {:event_rate, v}, acc -> event_rate(acc, v)
-      {:a11y, v}, acc -> a11y(acc, v)
-      {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
-    end)
-  end
-
-  @doc "Sets the list of pane identifiers."
-  @spec panes(pane_grid :: t(), panes :: [atom() | String.t()]) :: t()
-  def panes(%__MODULE__{} = pg, panes) when is_list(panes),
-    do: %{pg | panes: Enum.map(panes, &to_string/1)}
-
-  @doc "Sets the spacing between panes."
-  @spec spacing(pane_grid :: t(), spacing :: number()) :: t()
-  def spacing(%__MODULE__{} = pg, spacing) when is_number(spacing), do: %{pg | spacing: spacing}
-
-  @doc "Sets the pane grid width."
-  @spec width(pane_grid :: t(), width :: Plushie.Type.Length.t()) :: t()
-  def width(%__MODULE__{} = pg, width), do: %{pg | width: width}
-
-  @doc "Sets the pane grid height."
-  @spec height(pane_grid :: t(), height :: Plushie.Type.Length.t()) :: t()
-  def height(%__MODULE__{} = pg, height), do: %{pg | height: height}
-
-  @doc "Sets the minimum pane size in pixels."
-  @spec min_size(pane_grid :: t(), min_size :: number()) :: t()
-  def min_size(%__MODULE__{} = pg, min_size) when is_number(min_size),
-    do: %{pg | min_size: min_size}
-
-  @doc "Sets the divider color."
-  @spec divider_color(pane_grid :: t(), divider_color :: Plushie.Type.Color.input()) :: t()
-  def divider_color(%__MODULE__{} = pg, divider_color),
-    do: %{pg | divider_color: elem(Color.cast(divider_color), 1)}
-
-  @doc "Sets the divider width in pixels."
-  @spec divider_width(pane_grid :: t(), divider_width :: number()) :: t()
-  def divider_width(%__MODULE__{} = pg, divider_width) when is_number(divider_width),
-    do: %{pg | divider_width: divider_width}
-
-  @doc "Sets the drag leeway in pixels (how far a pane must be dragged before it detaches)."
-  @spec leeway(pane_grid :: t(), leeway :: number()) :: t()
-  def leeway(%__MODULE__{} = pg, leeway) when is_number(leeway), do: %{pg | leeway: leeway}
-
-  @doc "Appends a child pane to the grid."
-  @spec push(pane_grid :: t(), child :: Plushie.Widget.child()) :: t()
-  def push(%__MODULE__{} = pg, child), do: %{pg | children: [child | pg.children]}
-
-  @doc "Appends multiple child panes to the grid."
-  @spec extend(pane_grid :: t(), children :: [Plushie.Widget.child()]) ::
-          t()
-  def extend(%__MODULE__{} = pg, children),
-    do: %{pg | children: Enum.reverse(children) ++ pg.children}
-
-  @doc """
-  Sets the maximum event rate (events per second) for this widget's coalescable events.
-
-  Three states: `nil` (no limiting, the default), `0` (track only,
-  never emit events to the host), or `N > 0` (emit at most N
-  events per second).
-  """
-  @spec event_rate(pane_grid :: t(), rate :: non_neg_integer()) :: t()
-  def event_rate(%__MODULE__{} = pg, rate) when is_integer(rate) and rate >= 0,
-    do: %{pg | event_rate: rate}
-
-  @doc "Sets accessibility annotations."
-  @spec a11y(pane_grid :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = pg, a11y),
-    do: %{
-      pg
-      | a11y:
-          (fn a ->
-             {:ok, v} = Plushie.Type.A11y.cast(a)
-             v
-           end).(a11y)
-    }
-
-  @doc "Converts this pane grid struct to a `ui_node()` map via the `Plushie.Widget` protocol."
-  @spec build(pane_grid :: t()) :: Plushie.Widget.ui_node()
-  def build(%__MODULE__{} = pg), do: Plushie.Widget.to_node(pg)
-
-  defimpl Plushie.Widget.WidgetProtocol do
-    import Plushie.Widget.Build
-
-    def to_node(pg) do
-      props =
-        %{}
-        |> put_if(pg.panes, :panes)
-        |> put_if(pg.spacing, :spacing)
-        |> put_if(pg.width, :width)
-        |> put_if(pg.height, :height)
-        |> put_if(pg.min_size, :min_size)
-        |> put_if(pg.divider_color, :divider_color)
-        |> put_if(pg.divider_width, :divider_width)
-        |> put_if(pg.leeway, :leeway)
-        |> put_if(pg.event_rate, :event_rate)
-        |> put_if(pg.a11y, :a11y)
-
-      %{
-        id: pg.id,
-        type: "pane_grid",
-        props: props,
-        children: children_to_nodes(Enum.reverse(pg.children))
-      }
-    end
-  end
+  event :pane_dragged, doc: "Emitted during pane drag operations."
+  event :pane_focus_cycle, doc: "Emitted on F6/Shift+F6 focus cycling."
 end

@@ -1,324 +1,64 @@
+defmodule Plushie.Widget.PointerArea.Extras do
+  @moduledoc false
+
+  # Overrides on_press/2 and on_release/2 to coerce atoms to strings.
+  # Overrides build/1 to validate single child.
+  defmacro __before_compile__(_env) do
+    quote do
+      defoverridable on_press: 2, on_release: 2, build: 1
+
+      @doc "Sets the event tag for left mouse press events. Atoms are coerced to strings."
+      def on_press(%__MODULE__{} = ma, tag) when is_atom(tag),
+        do: %{ma | on_press: Atom.to_string(tag)}
+
+      def on_press(%__MODULE__{} = ma, tag) when is_binary(tag),
+        do: %{ma | on_press: tag}
+
+      @doc "Sets the event tag for left mouse release events. Atoms are coerced to strings."
+      def on_release(%__MODULE__{} = ma, tag) when is_atom(tag),
+        do: %{ma | on_release: Atom.to_string(tag)}
+
+      def on_release(%__MODULE__{} = ma, tag) when is_binary(tag),
+        do: %{ma | on_release: tag}
+
+      def build(%__MODULE__{} = w) do
+        Plushie.Widget.Build.validate_single_child!(
+          w.id,
+          "pointer_area",
+          Enum.reverse(w.children)
+        )
+
+        super(w)
+      end
+    end
+  end
+end
+
 defmodule Plushie.Widget.PointerArea do
   @moduledoc """
-  Pointer area -- captures mouse events on child content.
+  Pointer area, captures mouse events on child content.
 
   Wraps child content and emits click events for various mouse buttons,
   hover enter/exit, cursor movement, scroll, and double-click events.
   Optionally sets the mouse cursor when hovering the area.
-
-  ## Props
-
-  - `cursor` (atom) -- mouse cursor to show on hover. One of: `:pointer`,
-    `:grab`, `:grabbing`, `:crosshair`, `:text`, `:move`, `:not_allowed`,
-    `:progress`, `:wait`, `:help`, `:cell`, `:copy`, `:alias`, `:no_drop`,
-    `:all_scroll`, `:zoom_in`, `:zoom_out`, `:context_menu`,
-    `:resizing_horizontally`, `:resizing_vertically`,
-    `:resizing_diagonally_up`, `:resizing_diagonally_down`,
-    `:resizing_column`, `:resizing_row`.
-  - `on_press` (atom | string) -- event tag for left mouse button press events.
-  - `on_release` (atom | string) -- event tag for left mouse button release events.
-  - `on_right_press` (boolean) -- enable right mouse button press events.
-  - `on_right_release` (boolean) -- enable right mouse button release events.
-  - `on_middle_press` (boolean) -- enable middle mouse button press events.
-  - `on_middle_release` (boolean) -- enable middle mouse button release events.
-  - `on_double_click` (boolean) -- enable double-click events.
-  - `on_enter` (boolean) -- enable cursor enter events.
-  - `on_exit` (boolean) -- enable cursor exit events.
-  - `on_move` (boolean) -- enable cursor move events.
-  - `on_scroll` (boolean) -- enable scroll wheel events.
-  - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
-
-  ## Events
-
-  Always emitted (unconditional):
-
-  - `%WidgetEvent{type: :click, id: id}` -- left mouse button pressed.
-  - `%WidgetEvent{type: :click, id: "id:release"}` -- left mouse button released.
-
-  Conditional (opt-in via props):
-
-  - `%WidgetEvent{type: :press, id: id, value: %{button: :right}}` -- right mouse button pressed.
-  - `%WidgetEvent{type: :release, id: id, value: %{button: :right}}` -- right mouse button released.
-  - `%WidgetEvent{type: :press, id: id, value: %{button: :middle}}` -- middle mouse button pressed.
-  - `%WidgetEvent{type: :release, id: id, value: %{button: :middle}}` -- middle mouse button released.
-  - `%WidgetEvent{type: :double_click, id: id}` -- left mouse button double-clicked.
-  - `%WidgetEvent{type: :enter, id: id}` -- cursor entered the area.
-  - `%WidgetEvent{type: :exit, id: id}` -- cursor exited the area.
-  - `%WidgetEvent{type: :move, id: id, value: %{x: x, y: y, pointer: pointer, modifiers: mods}}` -- cursor moved within the area.
-  - `%WidgetEvent{type: :scroll, id: id, value: %{delta_x: dx, delta_y: dy, pointer: pointer, modifiers: mods}}` -- scroll wheel within the area.
-
-  ### Pattern matching examples
-
-      # Right-click context menu
-      def update(model, %WidgetEvent{type: :press, id: "area", value: %{button: :right}}) do
-        %{model | context_menu: true}
-      end
-
-      # Pointer move (works for mouse and touch)
-      def update(model, %WidgetEvent{type: :move, id: "area", value: %{x: x, y: y}}) do
-        %{model | cursor: {x, y}}
-      end
-
-      # Scroll with accumulated deltas
-      def update(model, %WidgetEvent{type: :scroll, value: %{delta_y: dy}}) do
-        %{model | offset: model.offset + dy}
-      end
   """
 
-  alias Plushie.Widget.Build
+  use Plushie.Widget
 
-  @cursors [
-    :pointer,
-    :grab,
-    :grabbing,
-    :crosshair,
-    :text,
-    :move,
-    :not_allowed,
-    :progress,
-    :wait,
-    :help,
-    :cell,
-    :copy,
-    :alias,
-    :no_drop,
-    :all_scroll,
-    :zoom_in,
-    :zoom_out,
-    :context_menu,
-    :resizing_horizontally,
-    :resizing_vertically,
-    :resizing_diagonally_up,
-    :resizing_diagonally_down,
-    :resizing_column,
-    :resizing_row
-  ]
+  @before_compile Plushie.Widget.PointerArea.Extras
 
-  @type cursor :: unquote(Enum.reduce(@cursors, &{:|, [], [&1, &2]}))
-
-  @type option ::
-          {:cursor, cursor()}
-          | {:on_press, atom() | String.t()}
-          | {:on_release, atom() | String.t()}
-          | {:on_right_press, boolean()}
-          | {:on_right_release, boolean()}
-          | {:on_middle_press, boolean()}
-          | {:on_middle_release, boolean()}
-          | {:on_double_click, boolean()}
-          | {:on_enter, boolean()}
-          | {:on_exit, boolean()}
-          | {:on_move, boolean()}
-          | {:on_scroll, boolean()}
-          | {:event_rate, non_neg_integer()}
-          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
-
-  @type t :: %__MODULE__{
-          id: String.t(),
-          cursor: cursor() | nil,
-          on_press: String.t() | nil,
-          on_release: String.t() | nil,
-          on_right_press: boolean() | nil,
-          on_right_release: boolean() | nil,
-          on_middle_press: boolean() | nil,
-          on_middle_release: boolean() | nil,
-          on_double_click: boolean() | nil,
-          on_enter: boolean() | nil,
-          on_exit: boolean() | nil,
-          on_move: boolean() | nil,
-          on_scroll: boolean() | nil,
-          event_rate: non_neg_integer() | nil,
-          a11y: Plushie.Type.A11y.t() | nil,
-          children: [Plushie.Widget.child()]
-        }
-
-  defstruct [
-    :id,
-    :cursor,
-    :on_press,
-    :on_release,
-    :on_right_press,
-    :on_right_release,
-    :on_middle_press,
-    :on_middle_release,
-    :on_double_click,
-    :on_enter,
-    :on_exit,
-    :on_move,
-    :on_scroll,
-    :event_rate,
-    :a11y,
-    children: []
-  ]
-
-  @valid_option_keys ~w(cursor on_press on_release on_right_press on_right_release on_middle_press on_middle_release on_double_click on_enter on_exit on_move on_scroll event_rate a11y)a
-
-  @doc false
-  def __field_keys__, do: @valid_option_keys
-
-  @doc false
-  def __field_types__ do
-    %{a11y: Plushie.Type.A11y}
-  end
-
-  @doc "Creates a new mouse area struct."
-  @spec new(id :: String.t(), opts :: [option()]) :: t()
-  def new(id, opts \\ []) when is_binary(id), do: %__MODULE__{id: id} |> with_options(opts)
-
-  @doc "Applies keyword options to an existing mouse area struct."
-  @spec with_options(pointer_area :: t(), opts :: [option()]) :: t()
-  def with_options(%__MODULE__{} = ma, []), do: ma
-
-  def with_options(%__MODULE__{} = ma, opts) do
-    Enum.reduce(opts, ma, fn
-      {:cursor, v}, acc -> cursor(acc, v)
-      {:on_press, v}, acc -> on_press(acc, v)
-      {:on_release, v}, acc -> on_release(acc, v)
-      {:on_right_press, v}, acc -> on_right_press(acc, v)
-      {:on_right_release, v}, acc -> on_right_release(acc, v)
-      {:on_middle_press, v}, acc -> on_middle_press(acc, v)
-      {:on_middle_release, v}, acc -> on_middle_release(acc, v)
-      {:on_double_click, v}, acc -> on_double_click(acc, v)
-      {:on_enter, v}, acc -> on_enter(acc, v)
-      {:on_exit, v}, acc -> on_exit(acc, v)
-      {:on_move, v}, acc -> on_move(acc, v)
-      {:on_scroll, v}, acc -> on_scroll(acc, v)
-      {:event_rate, v}, acc -> event_rate(acc, v)
-      {:a11y, v}, acc -> a11y(acc, v)
-      {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
-    end)
-  end
-
-  @doc "Sets the mouse cursor shown on hover."
-  @spec cursor(pointer_area :: t(), cursor :: cursor()) :: t()
-  def cursor(%__MODULE__{} = ma, cursor) when cursor in @cursors, do: %{ma | cursor: cursor}
-
-  @doc "Sets the event tag for left mouse button press events."
-  @spec on_press(pointer_area :: t(), tag :: atom() | String.t()) :: t()
-  def on_press(%__MODULE__{} = ma, tag) when is_atom(tag),
-    do: %{ma | on_press: Atom.to_string(tag)}
-
-  def on_press(%__MODULE__{} = ma, tag) when is_binary(tag), do: %{ma | on_press: tag}
-
-  @doc "Sets the event tag for left mouse button release events."
-  @spec on_release(pointer_area :: t(), tag :: atom() | String.t()) :: t()
-  def on_release(%__MODULE__{} = ma, tag) when is_atom(tag),
-    do: %{ma | on_release: Atom.to_string(tag)}
-
-  def on_release(%__MODULE__{} = ma, tag) when is_binary(tag), do: %{ma | on_release: tag}
-
-  @doc "Enables or disables right mouse button press events."
-  @spec on_right_press(pointer_area :: t(), enabled :: boolean()) :: t()
-  def on_right_press(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
-    do: %{ma | on_right_press: enabled}
-
-  @doc "Enables or disables right mouse button release events."
-  @spec on_right_release(pointer_area :: t(), enabled :: boolean()) :: t()
-  def on_right_release(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
-    do: %{ma | on_right_release: enabled}
-
-  @doc "Enables or disables middle mouse button press events."
-  @spec on_middle_press(pointer_area :: t(), enabled :: boolean()) :: t()
-  def on_middle_press(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
-    do: %{ma | on_middle_press: enabled}
-
-  @doc "Enables or disables middle mouse button release events."
-  @spec on_middle_release(pointer_area :: t(), enabled :: boolean()) :: t()
-  def on_middle_release(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
-    do: %{ma | on_middle_release: enabled}
-
-  @doc "Enables or disables double-click events."
-  @spec on_double_click(pointer_area :: t(), enabled :: boolean()) :: t()
-  def on_double_click(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
-    do: %{ma | on_double_click: enabled}
-
-  @doc "Enables or disables cursor enter events."
-  @spec on_enter(pointer_area :: t(), enabled :: boolean()) :: t()
-  def on_enter(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
-    do: %{ma | on_enter: enabled}
-
-  @doc "Enables or disables cursor exit events."
-  @spec on_exit(pointer_area :: t(), enabled :: boolean()) :: t()
-  def on_exit(%__MODULE__{} = ma, enabled) when is_boolean(enabled), do: %{ma | on_exit: enabled}
-
-  @doc "Enables or disables cursor move events."
-  @spec on_move(pointer_area :: t(), enabled :: boolean()) :: t()
-  def on_move(%__MODULE__{} = ma, enabled) when is_boolean(enabled), do: %{ma | on_move: enabled}
-
-  @doc "Enables or disables scroll wheel events."
-  @spec on_scroll(pointer_area :: t(), enabled :: boolean()) :: t()
-  def on_scroll(%__MODULE__{} = ma, enabled) when is_boolean(enabled),
-    do: %{ma | on_scroll: enabled}
-
-  @doc "Appends a child to the mouse area."
-  @spec push(pointer_area :: t(), child :: Plushie.Widget.child()) ::
-          t()
-  def push(%__MODULE__{} = ma, child), do: %{ma | children: [child | ma.children]}
-
-  @doc "Appends multiple children to the mouse area."
-  @spec extend(
-          pointer_area :: t(),
-          children :: [Plushie.Widget.child()]
-        ) :: t()
-  def extend(%__MODULE__{} = ma, children),
-    do: %{ma | children: Enum.reverse(children) ++ ma.children}
-
-  @doc """
-  Sets the maximum event rate (events per second) for this widget's coalescable events.
-
-  Three states: `nil` (no limiting, the default), `0` (track only,
-  never emit events to the host), or `N > 0` (emit at most N
-  events per second).
-  """
-  @spec event_rate(pointer_area :: t(), rate :: non_neg_integer()) :: t()
-  def event_rate(%__MODULE__{} = ma, rate) when is_integer(rate) and rate >= 0,
-    do: %{ma | event_rate: rate}
-
-  @doc "Sets accessibility annotations."
-  @spec a11y(pointer_area :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = ma, a11y),
-    do: %{
-      ma
-      | a11y:
-          (fn a ->
-             {:ok, v} = Plushie.Type.A11y.cast(a)
-             v
-           end).(a11y)
-    }
-
-  @doc "Converts this mouse area struct to a `ui_node()` map via the `Plushie.Widget` protocol."
-  @spec build(pointer_area :: t()) :: Plushie.Widget.ui_node()
-  def build(%__MODULE__{} = ma), do: Plushie.Widget.to_node(ma)
-
-  defimpl Plushie.Widget.WidgetProtocol do
-    import Plushie.Widget.Build
-
-    def to_node(ma) do
-      children = Enum.reverse(ma.children)
-      validate_single_child!(ma.id, "pointer_area", children)
-
-      props =
-        %{}
-        |> put_if(ma.cursor, :cursor)
-        |> put_if(ma.on_press, :on_press)
-        |> put_if(ma.on_release, :on_release)
-        |> put_if(ma.on_right_press, :on_right_press)
-        |> put_if(ma.on_right_release, :on_right_release)
-        |> put_if(ma.on_middle_press, :on_middle_press)
-        |> put_if(ma.on_middle_release, :on_middle_release)
-        |> put_if(ma.on_double_click, :on_double_click)
-        |> put_if(ma.on_enter, :on_enter)
-        |> put_if(ma.on_exit, :on_exit)
-        |> put_if(ma.on_move, :on_move)
-        |> put_if(ma.on_scroll, :on_scroll)
-        |> put_if(ma.event_rate, :event_rate)
-        |> put_if(ma.a11y, :a11y)
-
-      %{
-        id: ma.id,
-        type: "pointer_area",
-        props: props,
-        children: children_to_nodes(children)
-      }
-    end
+  widget :pointer_area, container: true do
+    field :cursor, :atom, doc: "Mouse cursor to show on hover (e.g. `:pointer`, `:grab`)."
+    field :on_press, :string, doc: "Event tag for left mouse press events."
+    field :on_release, :string, doc: "Event tag for left mouse release events."
+    field :on_right_press, :boolean, doc: "Enable right mouse press events."
+    field :on_right_release, :boolean, doc: "Enable right mouse release events."
+    field :on_middle_press, :boolean, doc: "Enable middle mouse press events."
+    field :on_middle_release, :boolean, doc: "Enable middle mouse release events."
+    field :on_double_click, :boolean, doc: "Enable double-click events."
+    field :on_enter, :boolean, doc: "Enable cursor enter events."
+    field :on_exit, :boolean, doc: "Enable cursor exit events."
+    field :on_move, :boolean, doc: "Enable cursor move events."
+    field :on_scroll, :boolean, doc: "Enable scroll wheel events."
   end
 end

@@ -1,172 +1,23 @@
 defmodule Plushie.Widget.Grid do
   @moduledoc """
-  Grid layout -- arranges children in a fixed-column grid.
-
-  ## Props
-
-  - `columns` (integer) -- number of columns. Default: 1.
-  - `spacing` (number) -- spacing between grid cells in pixels. Default: 0.
-  - `width` (number) -- grid width in pixels.
-  - `height` (number) -- grid height in pixels.
-  - `column_width` (Length) -- width of each column. Accepts `:fill`, `:shrink`,
-    `{:fill_portion, n}`, or a fixed pixel number.
-  - `row_height` (Length) -- height of each row. Accepts `:fill`, `:shrink`,
-    `{:fill_portion, n}`, or a fixed pixel number.
-  - `fluid` (number) -- enables fluid grid mode. The value is the max cell width
-    in pixels; columns auto-wrap to fit the available width.
-  - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
+  Grid layout, arranges children in a fixed-column grid.
   """
 
-  alias Plushie.Widget.Build
+  use Plushie.Widget
 
-  @type option ::
-          {:columns, pos_integer()}
-          | {:spacing, number()}
-          | {:width, number()}
-          | {:height, number()}
-          | {:column_width, Plushie.Type.Length.t()}
-          | {:row_height, Plushie.Type.Length.t()}
-          | {:fluid, number()}
-          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
+  widget :grid, container: true do
+    field :columns, :integer, doc: "Number of columns. Default: 1."
+    field :spacing, :float, doc: "Spacing between grid cells in pixels. Default: 0."
+    field :width, :float, doc: "Grid width in pixels."
+    field :height, :float, doc: "Grid height in pixels."
 
-  @type t :: %__MODULE__{
-          id: String.t(),
-          columns: pos_integer() | nil,
-          spacing: number() | nil,
-          width: number() | nil,
-          height: number() | nil,
-          column_width: Plushie.Type.Length.t() | nil,
-          row_height: Plushie.Type.Length.t() | nil,
-          fluid: number() | nil,
-          a11y: Plushie.Type.A11y.t() | nil,
-          children: [Plushie.Widget.child()]
-        }
+    field :column_width, Plushie.Type.Length,
+      doc: "Width of each column. Accepts `:fill`, `:shrink`, `{:fill_portion, n}`, or a number."
 
-  defstruct [
-    :id,
-    :columns,
-    :spacing,
-    :width,
-    :height,
-    :column_width,
-    :row_height,
-    :fluid,
-    :a11y,
-    children: []
-  ]
+    field :row_height, Plushie.Type.Length,
+      doc: "Height of each row. Accepts `:fill`, `:shrink`, `{:fill_portion, n}`, or a number."
 
-  @valid_option_keys ~w(columns spacing width height column_width row_height fluid a11y)a
-
-  @doc false
-  def __field_keys__, do: @valid_option_keys
-
-  @doc false
-  def __field_types__ do
-    %{a11y: Plushie.Type.A11y}
-  end
-
-  @doc "Creates a new grid struct with optional keyword opts."
-  @spec new(id :: String.t(), opts :: [option()]) :: t()
-  def new(id, opts \\ []) when is_binary(id) do
-    %__MODULE__{id: id} |> with_options(opts)
-  end
-
-  @doc "Applies keyword options to an existing grid struct."
-  @spec with_options(grid :: t(), opts :: [option()]) :: t()
-  def with_options(%__MODULE__{} = grid, []), do: grid
-
-  def with_options(%__MODULE__{} = grid, opts) do
-    Enum.reduce(opts, grid, fn
-      {:columns, v}, acc -> columns(acc, v)
-      {:spacing, v}, acc -> spacing(acc, v)
-      {:width, v}, acc -> width(acc, v)
-      {:height, v}, acc -> height(acc, v)
-      {:column_width, v}, acc -> column_width(acc, v)
-      {:row_height, v}, acc -> row_height(acc, v)
-      {:fluid, v}, acc -> fluid(acc, v)
-      {:a11y, v}, acc -> a11y(acc, v)
-      {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
-    end)
-  end
-
-  @doc "Sets the number of columns."
-  @spec columns(grid :: t(), columns :: pos_integer()) :: t()
-  def columns(%__MODULE__{} = grid, columns) when is_integer(columns) and columns > 0,
-    do: %{grid | columns: columns}
-
-  @doc "Sets the spacing between grid cells in pixels."
-  @spec spacing(grid :: t(), spacing :: number()) :: t()
-  def spacing(%__MODULE__{} = grid, spacing) when is_number(spacing),
-    do: %{grid | spacing: spacing}
-
-  @doc "Sets the grid width in pixels."
-  @spec width(grid :: t(), width :: number()) :: t()
-  def width(%__MODULE__{} = grid, width) when is_number(width), do: %{grid | width: width}
-
-  @doc "Sets the grid height in pixels."
-  @spec height(grid :: t(), height :: number()) :: t()
-  def height(%__MODULE__{} = grid, height) when is_number(height), do: %{grid | height: height}
-
-  @doc "Sets the column width using a Length value (fill/shrink/fixed/fill_portion)."
-  @spec column_width(grid :: t(), column_width :: Plushie.Type.Length.t()) :: t()
-  def column_width(%__MODULE__{} = grid, column_width), do: %{grid | column_width: column_width}
-
-  @doc "Sets the row height using a Length value (fill/shrink/fixed/fill_portion)."
-  @spec row_height(grid :: t(), row_height :: Plushie.Type.Length.t()) :: t()
-  def row_height(%__MODULE__{} = grid, row_height), do: %{grid | row_height: row_height}
-
-  @doc "Enables fluid grid mode. The value is the max cell width in pixels; columns auto-wrap."
-  @spec fluid(grid :: t(), max_width :: number()) :: t()
-  def fluid(%__MODULE__{} = grid, max_width) when is_number(max_width),
-    do: %{grid | fluid: max_width}
-
-  @doc "Appends a child to the grid."
-  @spec push(grid :: t(), child :: Plushie.Widget.child()) :: t()
-  def push(%__MODULE__{} = grid, child), do: %{grid | children: [child | grid.children]}
-
-  @doc "Appends multiple children to the grid."
-  @spec extend(grid :: t(), children :: [Plushie.Widget.child()]) ::
-          t()
-  def extend(%__MODULE__{} = grid, children),
-    do: %{grid | children: Enum.reverse(children) ++ grid.children}
-
-  @doc "Sets accessibility annotations."
-  @spec a11y(grid :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = grid, a11y),
-    do: %{
-      grid
-      | a11y:
-          (fn a ->
-             {:ok, v} = Plushie.Type.A11y.cast(a)
-             v
-           end).(a11y)
-    }
-
-  @doc "Converts this grid struct to a `ui_node()` map via the `Plushie.Widget` protocol."
-  @spec build(grid :: t()) :: Plushie.Widget.ui_node()
-  def build(%__MODULE__{} = grid), do: Plushie.Widget.to_node(grid)
-
-  defimpl Plushie.Widget.WidgetProtocol do
-    import Plushie.Widget.Build
-
-    def to_node(grid) do
-      props =
-        %{}
-        |> put_if(grid.columns, :columns)
-        |> put_if(grid.spacing, :spacing)
-        |> put_if(grid.width, :width)
-        |> put_if(grid.height, :height)
-        |> put_if(grid.column_width, :column_width)
-        |> put_if(grid.row_height, :row_height)
-        |> put_if(grid.fluid, :fluid)
-        |> put_if(grid.a11y, :a11y)
-
-      %{
-        id: grid.id,
-        type: "grid",
-        props: props,
-        children: children_to_nodes(Enum.reverse(grid.children))
-      }
-    end
+    field :fluid, :float,
+      doc: "Enables fluid grid mode. Value is max cell width; columns auto-wrap."
   end
 end

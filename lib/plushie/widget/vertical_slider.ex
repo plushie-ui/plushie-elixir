@@ -1,215 +1,26 @@
 defmodule Plushie.Widget.VerticalSlider do
   @moduledoc """
-  Vertical slider -- vertical range input.
-
-  ## Props
-
-  - `range` (list) -- `[min, max]` range as a two-element list. Default: `[0, 100]`.
-  - `value` (number) -- current slider value. Defaults to range minimum.
-  - `step` (number) -- step increment.
-  - `height` (length) -- slider height. Default: fill. See `Plushie.Type.Length`.
-  - `default` (number) -- default value (double-click resets to this).
-  - `shift_step` (number) -- step increment when Shift is held.
-  - `rail_color` (hex color) -- color for the slider rail (both active and inactive portions).
-  - `rail_width` (number) -- rail thickness in pixels.
-  - `style` -- `:default` or `StyleMap.t()` for custom styling. See `Plushie.Type.StyleMap`.
-  - `label` (string) -- accessible label for the slider (e.g. "Volume").
-    Sits outside the `a11y` object. See "Widget-specific accessibility props"
-    in `docs/reference/accessibility.md`.
-  - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
-
-  ## Events
-
-  - `%WidgetEvent{type: :slide, id: id, value: value}` -- emitted continuously while dragging.
-  - `%WidgetEvent{type: :slide_release, id: id, value: value}` -- emitted when drag ends.
+  Vertical slider, vertical range input.
   """
 
-  alias Plushie.Type.Color
-  alias Plushie.Type.StyleMap
-  alias Plushie.Widget.Build
+  use Plushie.Widget
 
-  @type style :: :default | StyleMap.t()
+  widget :vertical_slider do
+    field :range, Plushie.Type.Range, option: false, doc: "`{min, max}` numeric range."
+    field :value, :float, option: false, doc: "Current slider value."
+    field :step, :float, doc: "Step increment."
+    field :shift_step, :float, doc: "Step increment when Shift is held."
+    field :default, :float, doc: "Default value (double-click resets to this)."
+    field :width, Plushie.Type.Length, doc: "Slider width."
+    field :height, Plushie.Type.Length, doc: "Slider height. Default: fill."
+    field :rail_color, Plushie.Type.Color, doc: "Color for the slider rail."
+    field :rail_width, :float, doc: "Rail thickness in pixels."
+    field :style, Plushie.Type.Style, doc: "Named preset or custom `StyleMap`."
+    field :label, :string, doc: "Accessible label for the slider."
 
-  @type option ::
-          {:step, number()}
-          | {:shift_step, number()}
-          | {:default, number()}
-          | {:width, Plushie.Type.Length.t()}
-          | {:height, Plushie.Type.Length.t()}
-          | {:rail_color, Plushie.Type.Color.input()}
-          | {:rail_width, number()}
-          | {:style, style()}
-          | {:label, String.t()}
-          | {:event_rate, non_neg_integer()}
-          | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
-
-  @type t :: %__MODULE__{
-          id: String.t(),
-          range: {number(), number()},
-          value: number(),
-          step: number() | nil,
-          shift_step: number() | nil,
-          default: number() | nil,
-          width: Plushie.Type.Length.t() | nil,
-          height: Plushie.Type.Length.t() | nil,
-          rail_color: Plushie.Type.Color.t() | nil,
-          rail_width: number() | nil,
-          style: style() | nil,
-          label: String.t() | nil,
-          event_rate: non_neg_integer() | nil,
-          a11y: Plushie.Type.A11y.t() | nil
-        }
-
-  defstruct [
-    :id,
-    :range,
-    :value,
-    :step,
-    :shift_step,
-    :default,
-    :width,
-    :height,
-    :rail_color,
-    :rail_width,
-    :style,
-    :label,
-    :event_rate,
-    :a11y
-  ]
-
-  @valid_option_keys ~w(step shift_step default width height rail_color rail_width style label event_rate a11y)a
-
-  @doc false
-  def __field_keys__, do: @valid_option_keys
-
-  @doc false
-  def __field_types__ do
-    %{a11y: Plushie.Type.A11y}
+    positional [:range, :value]
   end
 
-  @doc "Creates a new vertical slider struct with the given range, value, and optional keyword opts."
-  @spec new(
-          id :: String.t(),
-          range :: {number(), number()},
-          value :: number(),
-          opts :: [option()]
-        ) :: t()
-  def new(id, {min, max} = range, value, opts \\ [])
-      when is_binary(id) and is_number(min) and is_number(max) and is_number(value) do
-    %__MODULE__{id: id, range: range, value: value} |> with_options(opts)
-  end
-
-  @doc "Applies keyword options to an existing vertical slider struct."
-  @spec with_options(vertical_slider :: t(), opts :: [option()]) :: t()
-  def with_options(%__MODULE__{} = slider, []), do: slider
-
-  def with_options(%__MODULE__{} = slider, opts) do
-    Enum.reduce(opts, slider, fn
-      {:step, v}, acc -> step(acc, v)
-      {:shift_step, v}, acc -> shift_step(acc, v)
-      {:default, v}, acc -> __MODULE__.default(acc, v)
-      {:width, v}, acc -> width(acc, v)
-      {:height, v}, acc -> height(acc, v)
-      {:rail_color, v}, acc -> rail_color(acc, v)
-      {:rail_width, v}, acc -> rail_width(acc, v)
-      {:style, v}, acc -> style(acc, v)
-      {:label, v}, acc -> label(acc, v)
-      {:event_rate, v}, acc -> event_rate(acc, v)
-      {:a11y, v}, acc -> a11y(acc, v)
-      {key, _v}, _acc -> Build.unknown_option!(__MODULE__, key)
-    end)
-  end
-
-  @doc "Sets the step increment."
-  @spec step(vertical_slider :: t(), step :: number()) :: t()
-  def step(%__MODULE__{} = slider, step) when is_number(step), do: %{slider | step: step}
-
-  @doc "Sets the step increment when Shift is held."
-  @spec shift_step(vertical_slider :: t(), shift_step :: number()) :: t()
-  def shift_step(%__MODULE__{} = slider, shift_step) when is_number(shift_step),
-    do: %{slider | shift_step: shift_step}
-
-  @doc "Sets the default value (double-click resets to this)."
-  @spec default(vertical_slider :: t(), default :: number()) :: t()
-  def default(%__MODULE__{} = slider, default) when is_number(default),
-    do: %{slider | default: default}
-
-  @doc "Sets the slider width."
-  @spec width(vertical_slider :: t(), width :: Plushie.Type.Length.t()) :: t()
-  def width(%__MODULE__{} = slider, width), do: %{slider | width: width}
-
-  @doc "Sets the slider height."
-  @spec height(vertical_slider :: t(), height :: Plushie.Type.Length.t()) :: t()
-  def height(%__MODULE__{} = slider, height), do: %{slider | height: height}
-
-  @doc "Sets the rail color."
-  @spec rail_color(vertical_slider :: t(), rail_color :: Plushie.Type.Color.input()) :: t()
-  def rail_color(%__MODULE__{} = slider, rail_color),
-    do: %{slider | rail_color: elem(Color.cast(rail_color), 1)}
-
-  @doc "Sets the rail width in pixels."
-  @spec rail_width(vertical_slider :: t(), rail_width :: number()) :: t()
-  def rail_width(%__MODULE__{} = slider, rail_width) when is_number(rail_width),
-    do: %{slider | rail_width: rail_width}
-
-  @doc "Sets the accessible label for the vertical slider."
-  @spec label(vertical_slider :: t(), label :: String.t()) :: t()
-  def label(%__MODULE__{} = slider, label) when is_binary(label),
-    do: %{slider | label: label}
-
-  @doc "Sets the slider style."
-  @spec style(vertical_slider :: t(), style :: style()) :: t()
-  def style(%__MODULE__{} = slider, %StyleMap{} = style), do: %{slider | style: style}
-  def style(%__MODULE__{} = slider, :default), do: %{slider | style: :default}
-
-  @doc """
-  Sets the maximum event rate (events per second) for this widget's coalescable events.
-
-  Three states: `nil` (no limiting, the default), `0` (track only,
-  never emit events to the host), or `N > 0` (emit at most N
-  events per second).
-  """
-  @spec event_rate(vertical_slider :: t(), rate :: non_neg_integer()) :: t()
-  def event_rate(%__MODULE__{} = slider, rate) when is_integer(rate) and rate >= 0,
-    do: %{slider | event_rate: rate}
-
-  @doc "Sets accessibility annotations."
-  @spec a11y(vertical_slider :: t(), a11y :: Plushie.Type.A11y.t() | map() | keyword()) :: t()
-  def a11y(%__MODULE__{} = slider, a11y),
-    do: %{
-      slider
-      | a11y:
-          (fn a ->
-             {:ok, v} = Plushie.Type.A11y.cast(a)
-             v
-           end).(a11y)
-    }
-
-  @doc "Converts this vertical slider struct to a `ui_node()` map via the `Plushie.Widget` protocol."
-  @spec build(vertical_slider :: t()) :: Plushie.Widget.ui_node()
-  def build(%__MODULE__{} = slider), do: Plushie.Widget.to_node(slider)
-
-  defimpl Plushie.Widget.WidgetProtocol do
-    import Plushie.Widget.Build
-
-    def to_node(slider) do
-      props =
-        %{}
-        |> put_if(slider.value, :value)
-        |> put_if(slider.range, :range)
-        |> put_if(slider.step, :step)
-        |> put_if(slider.shift_step, :shift_step)
-        |> put_if(slider.default, :default)
-        |> put_if(slider.width, :width)
-        |> put_if(slider.height, :height)
-        |> put_if(slider.rail_color, :rail_color)
-        |> put_if(slider.rail_width, :rail_width)
-        |> put_if(slider.style, :style)
-        |> put_if(slider.label, :label)
-        |> put_if(slider.event_rate, :event_rate)
-        |> put_if(slider.a11y, :a11y)
-
-      %{id: slider.id, type: "vertical_slider", props: props, children: []}
-    end
-  end
+  event :slide, value: :float, doc: "Emitted continuously while dragging."
+  event :slide_release, value: :float, doc: "Emitted when drag ends."
 end
