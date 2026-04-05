@@ -13,7 +13,7 @@ defmodule Plushie.Runtime.Windows do
   @window_prop_keys ~w(
     title size width height position min_size max_size maximized fullscreen
     visible resizable closeable minimizable decorations transparent blur level
-    exit_on_close_request scale_factor
+    exit_on_close_request scale_factor theme
   )a
 
   @doc """
