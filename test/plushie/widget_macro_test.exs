@@ -2,6 +2,10 @@ defmodule Plushie.WidgetMacroTest do
   # async: false because Code.compile_string affects global code server state
   use ExUnit.Case, async: false
 
+  # For testing generated docs, we use Plushie.Widget.type_display_string/1
+  # and Plushie.Widget.generate_moduledoc_update/7 directly rather than
+  # extracting from beam chunks (which have encoding issues in Latin1 VMs).
+
   # ---------------------------------------------------------------------------
   # Test modules: native_widget
   # ---------------------------------------------------------------------------
@@ -131,6 +135,54 @@ defmodule Plushie.WidgetMacroTest do
     field(:any_val, :any)
     field(:a_style, Plushie.Type.Style)
     field(:a_font, Plushie.Type.Font)
+  end
+
+  # ---------------------------------------------------------------------------
+  # Test modules: widget block form
+  # ---------------------------------------------------------------------------
+
+  defmodule BlockFormWidget do
+    use Plushie.Widget
+
+    @moduledoc "A widget using block form."
+
+    widget :block_form do
+      field :label, :string, doc: "Text label."
+      field :size, :float, default: 14, doc: "Font size in pixels."
+      field :active, :boolean, doc: "Whether active."
+
+      positional [:label]
+    end
+
+    event :click, value: :boolean, doc: "Emitted on click."
+  end
+
+  # ---------------------------------------------------------------------------
+  # Test modules: state block form
+  # ---------------------------------------------------------------------------
+
+  defmodule StatefulBlockWidget do
+    use Plushie.Widget
+
+    @moduledoc "A stateful widget using state block form."
+
+    widget :stateful_block
+
+    field :color, Plushie.Type.Color, default: :red
+
+    state do
+      field :hue, :float, default: 0.0
+      field :saturation, :float, default: 1.0
+    end
+
+    def view(id, props, state) do
+      %{
+        id: id,
+        type: "container",
+        props: %{color: Map.get(props, :color), hue: state.hue},
+        children: []
+      }
+    end
   end
 
   # =========================================================================
@@ -669,6 +721,174 @@ defmodule Plushie.WidgetMacroTest do
       widget = BadgeWidget.new("b1")
       assert widget.label == nil
       assert widget.a11y == nil
+    end
+  end
+
+  describe "widget block form" do
+    test "block form produces same struct as flat form" do
+      widget = BlockFormWidget.new("b1", "Hello", size: 18)
+      assert %BlockFormWidget{} = widget
+      assert widget.id == "b1"
+      assert widget.label == "Hello"
+      assert widget.size == 18
+    end
+
+    test "block form respects positional args" do
+      widget = BlockFormWidget.new("b1", "Hello")
+      assert widget.label == "Hello"
+      assert widget.size == 14
+    end
+
+    test "block form applies defaults" do
+      node = BlockFormWidget.new("b1", "X") |> BlockFormWidget.build()
+      assert node.props[:size] == 14
+    end
+
+    test "block form type_names still works" do
+      assert BlockFormWidget.type_names() == [:block_form]
+    end
+
+    test "block form events still work" do
+      assert BlockFormWidget.__events__() == [:click]
+    end
+  end
+
+  describe "state block form" do
+    test "state block produces correct initial state" do
+      state = StatefulBlockWidget.__initial_state__()
+      assert state == %{hue: 0.0, saturation: 1.0}
+    end
+
+    test "state block widget creates struct" do
+      widget = StatefulBlockWidget.new("s1", color: :blue)
+      assert %StatefulBlockWidget{} = widget
+      assert widget.id == "s1"
+    end
+  end
+
+  describe "generated moduledoc sections" do
+    test "props table contains field names, types, defaults, and descriptions" do
+      props = [
+        {:label, :string, [doc: "Text label."]},
+        {:size, :float, [default: 14, doc: "Font size."]}
+      ]
+
+      doc =
+        Plushie.Widget.generate_moduledoc_sections(
+          __MODULE__,
+          props,
+          [],
+          [],
+          [],
+          [],
+          []
+        )
+
+      assert doc =~ "## Props"
+      assert doc =~ "| `label` |"
+      assert doc =~ "Text label."
+      assert doc =~ "| `size` |"
+      assert doc =~ "Font size."
+      assert doc =~ "`14`"
+    end
+
+    test "events section contains event name, type, and doc" do
+      events = [:click]
+      event_specs = [{:click, %{carrier: :value, type: :boolean, doc: "Emitted on click."}}]
+
+      doc =
+        Plushie.Widget.generate_moduledoc_sections(
+          __MODULE__,
+          [{:value, :float, []}],
+          [],
+          events,
+          event_specs,
+          [],
+          []
+        )
+
+      assert doc =~ "## Events"
+      assert doc =~ "`:click`"
+      assert doc =~ "Emitted on click."
+      assert doc =~ "`value: boolean()`"
+    end
+
+    test "constructor section shows positional form" do
+      doc =
+        Plushie.Widget.generate_moduledoc_sections(
+          Plushie.Widget.Checkbox,
+          [{:label, :string, []}],
+          [:label],
+          [],
+          [],
+          [],
+          []
+        )
+
+      assert doc =~ "## Constructor"
+      assert doc =~ "Checkbox.new(id, label)"
+      assert doc =~ "Checkbox.new(id, label, opts)"
+    end
+
+    test "state section contains typed state fields" do
+      state_fields_raw = [
+        {:hue, 0.0, :float},
+        {:saturation, 1.0, :float}
+      ]
+
+      doc =
+        Plushie.Widget.generate_moduledoc_sections(
+          __MODULE__,
+          [],
+          [],
+          [],
+          [],
+          state_fields_raw,
+          []
+        )
+
+      assert doc =~ "## Internal State"
+      assert doc =~ "| `hue` |"
+      assert doc =~ "| `saturation` |"
+      assert doc =~ "`number()`"
+      assert doc =~ "`0.0`"
+    end
+
+    test "empty when no props, events, state, or commands" do
+      doc =
+        Plushie.Widget.generate_moduledoc_sections(
+          __MODULE__,
+          [],
+          [],
+          [],
+          [],
+          [],
+          []
+        )
+
+      assert doc == ""
+    end
+
+    test "widget module with block form compiles with all fields" do
+      info = BlockFormWidget.__widget_info__()
+      assert info.props == [:label, :size, :active]
+      assert info.events == [:click]
+    end
+  end
+
+  describe "type_display_string" do
+    test "primitive types render correctly" do
+      assert Plushie.Widget.type_display_string(:string) == "String.t()"
+      assert Plushie.Widget.type_display_string(:float) == "number()"
+      assert Plushie.Widget.type_display_string(:boolean) == "boolean()"
+    end
+  end
+
+  describe "setter @doc with field description" do
+    test "setter works on widget with :doc options" do
+      widget = BlockFormWidget.new("b1", "X")
+      widget = BlockFormWidget.label(widget, "Y")
+      assert widget.label == "Y"
     end
   end
 end

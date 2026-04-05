@@ -1,48 +1,27 @@
 defmodule Plushie.Widget.Checkbox do
   @moduledoc """
-  Checkbox -- toggleable boolean input.
-
-  ## Props
-
-  - `checked` (boolean) -- whether the checkbox is checked. Default: false.
-  - `label` (string) -- text label displayed next to the checkbox.
-  - `spacing` (number) -- space between checkbox and label in pixels.
-  - `width` (length) -- widget width. Default: shrink. See `Plushie.Type.Length`.
-  - `size` (number) -- checkbox size in pixels.
-  - `text_size` (number) -- label text size in pixels.
-  - `font` (string | map) -- label font. See `Plushie.Type.Font`.
-  - `line_height` (number | map) -- label line height.
-  - `shaping` -- text shaping strategy. See `Plushie.Type.Shaping`.
-  - `wrapping` -- text wrapping mode. See `Plushie.Type.Wrapping`.
-  - `style` -- named preset (`:primary` (default), `:secondary`, `:success`,
-    `:danger`) or `StyleMap.t()`. See `Plushie.Type.StyleMap`.
-  - `icon` (map) -- custom icon for the check mark. Map with `:code_point` (required),
-    and optional `:size`, `:line_height`, `:font`, `:shaping`.
-  - `disabled` (boolean) -- when true, the checkbox cannot be toggled. Default: false.
-  - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
-
-  ## Events
-
-  - `%WidgetEvent{type: :toggle, id: id, value: bool}` -- emitted on toggle, `value` is the new boolean state.
+  Checkbox, toggleable boolean input.
   """
 
   use Plushie.Widget
 
-  widget(:checkbox)
+  widget :checkbox do
+    field :label, :string, doc: "Text label next to the checkbox."
+    field :is_toggled, :boolean, option: false, wire_name: :checked, doc: "Whether checked."
+    field :spacing, :float, doc: "Space between checkbox and label in pixels."
+    field :width, Plushie.Type.Length, doc: "Widget width. Default: shrink."
+    field :size, :float, doc: "Checkbox size in pixels."
+    field :text_size, :float, doc: "Label text size in pixels."
+    field :font, Plushie.Type.Font, doc: "Label font."
+    field :line_height, :any, doc: "Label line height."
+    field :shaping, :atom, doc: "Text shaping strategy."
+    field :wrapping, :atom, doc: "Text wrapping mode."
+    field :style, Plushie.Type.Style, doc: "Named preset or custom `StyleMap`."
+    field :icon, :map, doc: "Custom icon for the check mark."
+    field :disabled, :boolean, doc: "When true, cannot be toggled."
 
-  field(:label, :string)
-  field(:is_toggled, :boolean, option: false, wire_name: :checked)
-  field(:spacing, :float)
-  field(:width, Plushie.Type.Length)
-  field(:size, :float)
-  field(:text_size, :float)
-  field(:font, Plushie.Type.Font)
-  field(:line_height, :any)
-  field(:shaping, :atom)
-  field(:wrapping, :atom)
-  field(:style, Plushie.Type.Style)
-  field(:icon, :map)
-  field(:disabled, :boolean)
+    positional [:label, :is_toggled]
+  end
 
-  positional([:label, :is_toggled])
+  event :toggle, value: :boolean, doc: "Emitted when toggled. Value is the new boolean state."
 end

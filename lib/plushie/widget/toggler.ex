@@ -1,49 +1,27 @@
 defmodule Plushie.Widget.Toggler do
   @moduledoc """
-  Toggler -- on/off switch.
-
-  ## Props
-
-  - `is_toggled` (boolean) -- whether the toggler is on. Default: false.
-  - `label` (string) -- text label displayed next to the toggler.
-  - `spacing` (number) -- space between toggler and label in pixels.
-  - `width` (length) -- widget width. Default: shrink. See `Plushie.Type.Length`.
-  - `size` (number) -- toggler size in pixels.
-  - `text_size` (number) -- label text size in pixels.
-  - `font` (string | map) -- label font. See `Plushie.Type.Font`.
-  - `line_height` (number | map) -- label line height.
-  - `shaping` (atom) -- text shaping: `:basic`, `:advanced`, or `:auto`.
-    See `Plushie.Type.Shaping`.
-  - `wrapping` (atom) -- text wrapping: `:none`, `:word`, `:glyph`, `:word_or_glyph`.
-    See `Plushie.Type.Wrapping`.
-  - `text_alignment` (atom) -- horizontal label alignment: `:left`, `:center`, `:right`.
-    See `Plushie.Type.Alignment`.
-  - `style` (atom) -- named style. Currently only `:default`.
-  - `disabled` (boolean) -- when true, the toggler cannot be toggled. Default: false.
-  - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
-
-  ## Events
-
-  - `%WidgetEvent{type: :toggle, id: id, value: bool}` -- emitted on toggle, `value` is the new boolean state.
+  Toggler, on/off switch.
   """
 
   use Plushie.Widget
 
-  widget(:toggler)
+  widget :toggler do
+    field :is_toggled, :boolean, option: false, doc: "Whether the toggler is on."
+    field :label, :string, doc: "Text label next to the toggler."
+    field :spacing, :float, doc: "Space between toggler and label in pixels."
+    field :width, Plushie.Type.Length, doc: "Widget width. Default: shrink."
+    field :size, :float, doc: "Toggler size in pixels."
+    field :text_size, :float, doc: "Label text size in pixels."
+    field :font, Plushie.Type.Font, doc: "Label font."
+    field :line_height, :any, doc: "Label line height."
+    field :shaping, :atom, doc: "Text shaping strategy."
+    field :wrapping, :atom, doc: "Text wrapping mode."
+    field :text_alignment, :atom, doc: "Horizontal label alignment."
+    field :style, Plushie.Type.Style, doc: "Named style preset."
+    field :disabled, :boolean, doc: "When true, cannot be toggled."
 
-  field(:is_toggled, :boolean, option: false)
-  field(:label, :string)
-  field(:spacing, :float)
-  field(:width, Plushie.Type.Length)
-  field(:size, :float)
-  field(:text_size, :float)
-  field(:font, Plushie.Type.Font)
-  field(:line_height, :any)
-  field(:shaping, :atom)
-  field(:wrapping, :atom)
-  field(:text_alignment, :atom)
-  field(:style, Plushie.Type.Style)
-  field(:disabled, :boolean)
+    positional [:is_toggled]
+  end
 
-  positional([:is_toggled])
+  event :toggle, value: :boolean, doc: "Emitted when toggled. Value is the new boolean state."
 end

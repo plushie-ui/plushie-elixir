@@ -1,18 +1,12 @@
 defmodule Plushie.Widget.Space do
   @moduledoc """
-  Empty space -- invisible spacer widget.
-
-  ## Props
-
-  - `width` (length) -- space width. Default: shrink. See `Plushie.Type.Length`.
-  - `height` (length) -- space height. Default: shrink.
-  - `a11y` (map) -- accessibility overrides. See `Plushie.Type.A11y`.
+  Empty space, invisible spacer widget.
   """
 
   use Plushie.Widget
 
-  widget(:space)
-
-  field(:width, Plushie.Type.Length)
-  field(:height, Plushie.Type.Length)
+  widget :space do
+    field :width, Plushie.Type.Length, doc: "Space width. Default: shrink."
+    field :height, Plushie.Type.Length, doc: "Space height. Default: shrink."
+  end
 end

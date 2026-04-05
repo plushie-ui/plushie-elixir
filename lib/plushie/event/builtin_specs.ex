@@ -30,10 +30,13 @@ defmodule Plushie.Event.BuiltinSpecs do
   - `:data` -- structured map, stored in `WidgetEvent.data` with atom keys
   """
   @type t ::
-          %{carrier: :none}
-          | %{carrier: :value, type: field_type()}
-          | %{carrier: :data, fields: [{atom(), field_type()}]}
-          | %{carrier: :data, fields: [{atom(), field_type()}], required: [atom()]}
+          %{
+            required(:carrier) => :none | :value | :data,
+            optional(:doc) => String.t(),
+            optional(:type) => field_type(),
+            optional(:fields) => [{atom(), field_type()}],
+            optional(:required) => [atom()]
+          }
 
   @specs %{
     # -- Standard widget events --

@@ -227,14 +227,23 @@ defmodule Plushie.Widget do
 
   # -- DSL macros ------------------------------------------------------------
 
-  @doc "Declares the widget type name. Pass `container: true` for container widgets."
+  @doc """
+  Declares the widget type name. Pass `container: true` for container widgets.
+
+  Accepts an optional do-block for grouping field and positional declarations:
+
+      widget :checkbox do
+        field :label, :string, doc: "Text label."
+        field :is_toggled, :boolean, option: false, doc: "Checked state."
+        positional [:label, :is_toggled]
+      end
+
+  Without a block, declares the type name only (e.g. `widget :space`).
+  """
   defmacro widget(type_name, opts \\ []) do
-    unless is_atom(type_name) do
-      raise CompileError,
-        file: __CALLER__.file,
-        line: __CALLER__.line,
-        description: "widget type name must be an atom, got: #{inspect(type_name)}"
-    end
+    validate_widget_type_name!(type_name, __CALLER__)
+    {block, opts} = Keyword.pop(opts, :do, nil)
+    container = Keyword.get(opts, :container, false)
 
     quote do
       if @_widget_type_name do
@@ -244,7 +253,17 @@ defmodule Plushie.Widget do
       end
 
       @_widget_type_name unquote(type_name)
-      @_widget_container unquote(Keyword.get(opts, :container, false))
+      @_widget_container unquote(container)
+      unquote(block)
+    end
+  end
+
+  defp validate_widget_type_name!(type_name, caller) do
+    unless is_atom(type_name) do
+      raise CompileError,
+        file: caller.file,
+        line: caller.line,
+        description: "widget type name must be an atom, got: #{inspect(type_name)}"
     end
   end
 
@@ -349,13 +368,64 @@ defmodule Plushie.Widget do
   stateful: the view is deferred to tree normalization and the
   `WidgetHandler` behaviour is injected automatically.
 
-      state hover: nil, drag: :none, animation_progress: 0.0
+  Supports two forms:
+
+      # Keyword form (untyped, original)
+      state hover: nil, drag: :none
+
+      # Block form (typed)
+      state do
+        field :hover, :boolean, default: false
+        field :drag, :atom, default: :none
+      end
   """
+  defmacro state(fields_or_block)
+
+  defmacro state(do: block) do
+    stmts = block_to_list(block)
+    caller = __CALLER__
+
+    parsed =
+      Enum.map(stmts, fn
+        {:field, _meta, [name, type]} when is_atom(name) ->
+          validate_state_field_type!(name, type, caller)
+          {name, type, nil}
+
+        {:field, _meta, [name, type, opts]} when is_atom(name) and is_list(opts) ->
+          validate_state_field_type!(name, type, caller)
+          {name, type, Keyword.get(opts, :default)}
+
+        other ->
+          raise CompileError,
+            file: caller.file,
+            line: caller.line,
+            description:
+              "expected `field :name, :type` inside state block, got: #{Macro.to_string(other)}"
+      end)
+
+    quote do
+      for {name, type, default} <- unquote(Macro.escape(parsed)) do
+        @_widget_state_fields {name, default, type}
+      end
+    end
+  end
+
   defmacro state(fields) when is_list(fields) do
     quote do
       for {name, default} <- unquote(fields) do
         @_widget_state_fields {name, default}
       end
+    end
+  end
+
+  defp validate_state_field_type!(name, type, caller) do
+    unless valid_type?(type) do
+      raise CompileError,
+        file: caller.file,
+        line: caller.line,
+        description:
+          "unsupported state field type #{inspect(type)} for field #{inspect(name)}. " <>
+            "Use a primitive shortcut (:string, :float, etc.) or a Plushie.Type module."
     end
   end
 
@@ -446,9 +516,18 @@ defmodule Plushie.Widget do
         rust_constructor_val
       )
 
-    state_fields =
+    state_fields_raw =
       (Module.get_attribute(env.module, :_widget_state_fields) || [])
       |> Enum.reverse()
+
+    # Normalize state fields: 2-tuples from keyword form become {name, default},
+    # 3-tuples from block form carry a type: {name, default, type}.
+    # For the runtime (state defaults map), only name and default matter.
+    state_fields =
+      Enum.map(state_fields_raw, fn
+        {name, default, _type} -> {name, default}
+        {name, default} -> {name, default}
+      end)
 
     widget_code =
       if has_view do
@@ -497,6 +576,17 @@ defmodule Plushie.Widget do
     widget_info_fn =
       generate_widget_info(kind, type_string, props, events, state_fields, commands)
 
+    moduledoc_update =
+      generate_moduledoc_update(
+        env,
+        props,
+        positional,
+        events,
+        event_specs,
+        state_fields_raw,
+        commands
+      )
+
     quote do
       unquote(widget_handler_behaviour)
       unquote(behaviour_fns)
@@ -505,6 +595,7 @@ defmodule Plushie.Widget do
       unquote(prop_names_fn)
       unquote(dsl_macro)
       unquote(widget_info_fn)
+      unquote(moduledoc_update)
     end
   end
 
@@ -583,6 +674,7 @@ defmodule Plushie.Widget do
   def parse_event_opts([], _caller), do: %{carrier: :none}
 
   def parse_event_opts(opts, caller) when is_list(opts) do
+    {doc, opts} = Keyword.pop(opts, :doc)
     has_value = Keyword.has_key?(opts, :value)
     has_data = Keyword.has_key?(opts, :data)
 
@@ -593,29 +685,35 @@ defmodule Plushie.Widget do
         description: "event cannot declare both value: and data: -- they are mutually exclusive"
     end
 
-    cond do
-      has_value ->
-        %{carrier: :value, type: Keyword.fetch!(opts, :value)}
+    spec =
+      cond do
+        has_value ->
+          %{carrier: :value, type: Keyword.fetch!(opts, :value)}
 
-      has_data ->
-        fields = Keyword.fetch!(opts, :data)
+        has_data ->
+          fields = Keyword.fetch!(opts, :data)
 
-        unless is_list(fields) and Keyword.keyword?(fields) do
+          unless is_list(fields) and Keyword.keyword?(fields) do
+            raise CompileError,
+              file: caller.file,
+              line: caller.line,
+              description:
+                "event data: must be a keyword list of [field: type], got: #{inspect(fields)}"
+          end
+
+          %{carrier: :data, fields: fields, required: Keyword.keys(fields)}
+
+        opts == [] ->
+          %{carrier: :none}
+
+        true ->
           raise CompileError,
             file: caller.file,
             line: caller.line,
-            description:
-              "event data: must be a keyword list of [field: type], got: #{inspect(fields)}"
-        end
+            description: "event options must include value: or data:, got: #{inspect(opts)}"
+      end
 
-        %{carrier: :data, fields: fields, required: Keyword.keys(fields)}
-
-      true ->
-        raise CompileError,
-          file: caller.file,
-          line: caller.line,
-          description: "event options must include value: or data:, got: #{inspect(opts)}"
-    end
+    if doc, do: Map.put(spec, :doc, doc), else: spec
   end
 
   @doc false
@@ -1010,6 +1108,224 @@ defmodule Plushie.Widget do
     end
   end
 
+  # -- Moduledoc generation ---------------------------------------------------
+
+  @doc false
+  def generate_moduledoc_update(
+        env,
+        props,
+        positional,
+        events,
+        event_specs,
+        state_fields_raw,
+        commands
+      ) do
+    existing = Module.get_attribute(env.module, :moduledoc)
+
+    existing_text =
+      case existing do
+        {_line, text} when is_binary(text) -> text
+        text when is_binary(text) -> text
+        _ -> nil
+      end
+
+    if existing_text do
+      generated =
+        generate_moduledoc_sections(
+          env.module,
+          props,
+          positional,
+          events,
+          event_specs,
+          state_fields_raw,
+          commands
+        )
+
+      if generated != "" do
+        new_doc = existing_text <> "\n\n" <> generated
+
+        quote do
+          @moduledoc unquote(new_doc)
+        end
+      end
+    end
+  end
+
+  @doc false
+  def generate_moduledoc_sections(
+        module,
+        props,
+        positional,
+        events,
+        event_specs,
+        state_fields_raw,
+        commands
+      ) do
+    sections =
+      [
+        generate_props_section(props, positional),
+        generate_events_section(events, event_specs),
+        generate_constructor_section(module, positional),
+        generate_state_section(state_fields_raw),
+        generate_commands_section(commands)
+      ]
+      |> Enum.reject(&is_nil/1)
+
+    Enum.join(sections, "\n\n")
+  end
+
+  defp generate_props_section([], _positional), do: nil
+
+  defp generate_props_section(props, positional) do
+    rows =
+      Enum.map(props, fn {name, type, opts} ->
+        type_str = type_display_string(type) |> escape_table_pipes()
+        is_positional = name in positional
+        has_default = Keyword.has_key?(opts, :default)
+        is_option = Keyword.get(opts, :option, true)
+
+        default_str =
+          cond do
+            has_default -> "`#{inspect(Keyword.get(opts, :default))}`"
+            is_positional and not is_option -> "required"
+            true -> "`nil`"
+          end
+
+        desc = Keyword.get(opts, :doc, "")
+
+        "| `#{name}` | `#{type_str}` | #{default_str} | #{desc} |"
+      end)
+
+    header =
+      "## Props\n\n" <>
+        "| Name | Type | Default | Description |\n" <>
+        "|------|------|---------|-------------|"
+
+    header <> "\n" <> Enum.join(rows, "\n")
+  end
+
+  defp generate_events_section([], _event_specs), do: nil
+
+  defp generate_events_section(events, event_specs) do
+    specs_map = Map.new(event_specs)
+
+    rows =
+      Enum.map(events, fn name ->
+        spec = Map.get(specs_map, name, %{carrier: :none})
+        type_str = event_spec_display(spec) |> escape_table_pipes()
+        doc = Map.get(spec, :doc, "")
+        "| `:#{name}` | #{type_str} | #{doc} |"
+      end)
+
+    header =
+      "## Events\n\n" <>
+        "| Event | Type | Description |\n" <>
+        "|-------|------|-------------|"
+
+    header <> "\n" <> Enum.join(rows, "\n")
+  end
+
+  defp generate_constructor_section(_module, []), do: nil
+
+  defp generate_constructor_section(module, positional) do
+    short = module |> Module.split() |> List.last()
+    args = Enum.join(positional, ", ")
+
+    "## Constructor\n\n" <>
+      "    #{short}.new(id, #{args})\n" <>
+      "    #{short}.new(id, #{args}, opts)"
+  end
+
+  defp generate_state_section([]), do: nil
+
+  defp generate_state_section(state_fields_raw) do
+    rows =
+      Enum.map(state_fields_raw, fn
+        {name, default, type} ->
+          type_str = type_display_string(type) |> escape_table_pipes()
+          "| `#{name}` | `#{type_str}` | `#{inspect(default)}` |"
+
+        {name, default} ->
+          "| `#{name}` | `term()` | `#{inspect(default)}` |"
+      end)
+
+    header =
+      "## Internal State\n\n" <>
+        "| Field | Type | Default |\n" <>
+        "|-------|------|---------|"
+
+    header <> "\n" <> Enum.join(rows, "\n")
+  end
+
+  defp generate_commands_section([]), do: nil
+
+  defp generate_commands_section(commands) do
+    rows =
+      Enum.map(commands, fn {name, params} ->
+        param_str =
+          if params == [] do
+            "none"
+          else
+            Enum.map_join(params, ", ", fn {pname, ptype} ->
+              "`#{pname}: #{type_display_string(ptype)}`"
+            end)
+          end
+
+        "| `:#{name}` | #{param_str} |"
+      end)
+
+    header =
+      "## Commands\n\n" <>
+        "| Command | Params |\n" <>
+        "|---------|--------|"
+
+    header <> "\n" <> Enum.join(rows, "\n")
+  end
+
+  defp event_spec_display(%{carrier: :none}), do: "none"
+
+  defp event_spec_display(%{carrier: :value, type: type}) do
+    "`value: #{type_display_string(type)}`"
+  end
+
+  defp event_spec_display(%{carrier: :data, fields: fields}) do
+    fields_str =
+      Enum.map_join(fields, ", ", fn {name, type} ->
+        "#{name}: #{type_display_string(type)}"
+      end)
+
+    "`data: [#{fields_str}]`"
+  end
+
+  @doc false
+  def type_display_string(type) do
+    case Plushie.Type.resolve(type) do
+      {:composite, {:list, inner}} ->
+        "[#{type_display_string(inner)}]"
+
+      {:composite, {:tuple, types}} ->
+        inner = Enum.map_join(types, ", ", &type_display_string/1)
+        "{#{inner}}"
+
+      {:composite, {:enum, values}} ->
+        Enum.map_join(values, " | ", &inspect/1)
+
+      {:composite, {:union, types}} ->
+        Enum.map_join(types, " | ", &type_display_string/1)
+
+      module ->
+        try do
+          Macro.to_string(module.typespec())
+        rescue
+          _ -> inspect(module)
+        end
+    end
+  end
+
+  # Escape pipe characters inside markdown table cells so that ExDoc does not
+  # split on them. Uses the HTML entity which renders as a literal pipe.
+  defp escape_table_pipes(str), do: String.replace(str, "|", "\\|")
+
   # -- Code generation helpers (called at compile time) ----------------------
 
   @doc false
@@ -1242,9 +1558,11 @@ defmodule Plushie.Widget do
   defp generate_struct_new(container, positional, props)
 
   defp generate_struct_new(container, [], _props) do
+    doc = "Creates a new widget struct with the given ID and keyword options."
+
     if container do
       quote do
-        @doc "Creates a new widget struct with the given ID and keyword options."
+        @doc unquote(doc)
         @spec new(id :: String.t(), opts :: [option()]) :: t()
         def new(id, opts \\ []) when is_binary(id) do
           {children, opts} = Keyword.pop(opts, :do, [])
@@ -1254,7 +1572,7 @@ defmodule Plushie.Widget do
       end
     else
       quote do
-        @doc "Creates a new widget struct with the given ID and keyword options."
+        @doc unquote(doc)
         @spec new(id :: String.t(), opts :: [option()]) :: t()
         def new(id, opts \\ []) when is_binary(id) do
           %__MODULE__{id: id} |> with_options(opts)
@@ -1299,8 +1617,33 @@ defmodule Plushie.Widget do
         struct!(__MODULE__, unquote(struct_kw)) |> with_options(unquote(opts_var))
       end
 
+    # Build a proper constructor doc with positional argument descriptions
+    arg_lines =
+      Enum.map(positional, fn name ->
+        case Enum.find(props, fn {n, _, _} -> n == name end) do
+          {_, _type, opts} ->
+            desc = Keyword.get(opts, :doc, "")
+            if desc != "", do: "- `#{name}` - #{desc}", else: "- `#{name}`"
+
+          nil ->
+            "- `#{name}`"
+        end
+      end)
+
+    doc =
+      [
+        "Creates a new widget struct with the given positional args and keyword options.",
+        "",
+        "## Arguments",
+        "",
+        "- `id` - unique widget identifier"
+        | arg_lines
+      ]
+      |> Kernel.++(["- `opts` - keyword list of optional props"])
+      |> Enum.join("\n")
+
     quote do
-      @doc "Creates a new widget struct with the given positional args and keyword options."
+      @doc unquote(doc)
       def new(unquote(id_var), unquote_splicing(args_with_default))
           when unquote(full_guard) do
         unquote(body)
@@ -1399,7 +1742,17 @@ defmodule Plushie.Widget do
   defp generate_setters(props) do
     prop_setters =
       Enum.map(props, fn {name, type, opts} ->
-        doc = Keyword.get(opts, :doc, "Sets the `#{name}` prop.")
+        type_str = type_display_string(type)
+
+        doc =
+          case Keyword.get(opts, :doc) do
+            nil ->
+              "Sets the `#{name}` field. Accepts `#{type_str}`."
+
+            desc ->
+              "#{desc}\n\nAccepts `#{type_str}`."
+          end
+
         encoder = encoder_for_type(type)
         value_type = elixir_type_for(type)
 
