@@ -29,7 +29,12 @@ defmodule Plushie.Tree do
   @typep normalize_ctx :: %{
            scope: String.t(),
            window_id: String.t() | nil,
-           widget_states: map()
+           widget_states: map(),
+           depth: non_neg_integer(),
+           memo_prev: map(),
+           memo: map(),
+           widget_view_prev: map(),
+           widget_view: map()
          }
 
   @empty_container %{
@@ -44,13 +49,17 @@ defmodule Plushie.Tree do
   @depth_warning 200
   @max_depth 256
 
-  # Process dictionary keys for memo cache (set by runtime, read during normalize)
-  @memo_prev_cache_key :__plushie_memo_prev_cache__
-  @memo_cache_key :__plushie_memo_cache__
-
-  # Process dictionary keys for widget view cache (cache_key opt-in)
-  @widget_view_prev_cache_key :__plushie_widget_view_prev_cache__
-  @widget_view_cache_key :__plushie_widget_view_cache__
+  # Default context for normalization (no caches, no depth)
+  @default_ctx %{
+    scope: "",
+    window_id: nil,
+    widget_states: %{},
+    depth: 0,
+    memo_prev: %{},
+    memo: %{},
+    widget_view_prev: %{},
+    widget_view: %{}
+  }
 
   alias Plushie.Widget.Meta
 
@@ -85,9 +94,9 @@ defmodule Plushie.Tree do
   def normalize([single], widget_states), do: normalize(single, widget_states)
 
   def normalize([_ | _] = nodes, widget_states) do
-    ctx = %{scope: "", window_id: nil, widget_states: widget_states}
+    ctx = %{@default_ctx | widget_states: widget_states}
     # Synthetic root wrapper -- does not create a scope boundary
-    children = normalize_children_with_ctx(nodes, ctx)
+    {children, _ctx} = normalize_children_with_ctx(nodes, ctx)
 
     %{
       id: "root",
@@ -122,13 +131,64 @@ defmodule Plushie.Tree do
   end
 
   def normalize(%{} = node, widget_states) do
-    ctx = %{scope: "", window_id: nil, widget_states: widget_states}
-    normalize_with_ctx(node, ctx)
+    ctx = %{@default_ctx | widget_states: widget_states}
+    {result, _ctx} = normalize_with_ctx(node, ctx)
+    result
   end
+
+  @doc false
+  @spec normalize_with_caches(
+          tree :: nil | tree_node() | [tree_node()] | struct(),
+          normalize_ctx()
+        ) :: {tree_node(), map(), map()}
+  def normalize_with_caches(tree, ctx) do
+    {result, final_ctx} = normalize_root(tree, ctx)
+    {result, final_ctx.memo, final_ctx.widget_view}
+  end
+
+  # Top-level entry point for normalize that handles nil, lists, structs,
+  # and maps. Returns {tree_node, ctx} with updated caches.
+  @spec normalize_root(term(), normalize_ctx()) :: {tree_node(), normalize_ctx()}
+  defp normalize_root(nil, ctx), do: {@empty_container, ctx}
+  defp normalize_root([], ctx), do: {@empty_container, ctx}
+
+  defp normalize_root([single], ctx), do: normalize_root(single, ctx)
+
+  defp normalize_root([_ | _] = nodes, ctx) do
+    {children, ctx} = normalize_children_with_ctx(nodes, ctx)
+    {%{id: "root", type: "container", props: %{}, children: children}, ctx}
+  end
+
+  defp normalize_root({:__widget_prop__, key, _value}, _ctx) do
+    raise ArgumentError,
+          "found a DSL prop declaration (#{inspect(key)}) in the widget tree. " <>
+            "Props should be declared inside a container's do-block, not passed as children."
+  end
+
+  defp normalize_root({:__canvas_meta__, type, _value}, _ctx) do
+    raise ArgumentError,
+          "found a canvas metadata declaration (#{inspect(type)}) in the widget tree. " <>
+            "Canvas metadata should be inside a group block."
+  end
+
+  defp normalize_root(%module{} = widget, ctx) when is_atom(module) do
+    if canvas_shape_struct_module?(module) do
+      short_name = module |> Module.split() |> List.last()
+
+      raise ArgumentError,
+            "found canvas shape (#{short_name}) where a widget node was expected. " <>
+              "Canvas shapes belong inside canvas layers, not in the widget tree."
+    end
+
+    normalize_root(Plushie.Widget.to_node(widget), ctx)
+  end
+
+  defp normalize_root(%{} = node, ctx), do: normalize_with_ctx(node, ctx)
 
   # Private context-aware normalize. ctx.scope is the prefix string to prepend
   # to children's IDs (e.g. "sidebar/form"). Empty string means no scope.
-  @spec normalize_with_ctx(term(), normalize_ctx()) :: tree_node()
+  # Returns {tree_node, updated_ctx} with memo and widget_view caches threaded through.
+  @spec normalize_with_ctx(term(), normalize_ctx()) :: {tree_node(), normalize_ctx()}
   defp normalize_with_ctx({:__widget_prop__, key, _value}, _ctx) do
     raise ArgumentError,
           "found a DSL prop declaration (#{inspect(key)}) in the widget tree. " <>
@@ -159,101 +219,99 @@ defmodule Plushie.Tree do
     node_id = Map.fetch!(node, :id)
     cache_key = {node_id, ctx.scope, ctx.window_id, deps}
 
-    prev_cache = Process.get(@memo_prev_cache_key, %{})
-
-    case Map.get(prev_cache, cache_key) do
+    case Map.get(ctx.memo_prev, cache_key) do
       nil ->
         :telemetry.execute([:plushie, :memo, :miss], %{count: 1}, %{id: node_id})
-        result = normalize_memo_body(memo_fun, ctx)
-        current = Process.get(@memo_cache_key, %{})
-        Process.put(@memo_cache_key, Map.put(current, cache_key, result))
-        result
+        {result, ctx} = normalize_memo_body(memo_fun, ctx)
+        ctx = %{ctx | memo: Map.put(ctx.memo, cache_key, result)}
+        {result, ctx}
 
       cached ->
         :telemetry.execute([:plushie, :memo, :hit], %{count: 1}, %{id: node_id})
         refreshed = refresh_widget_states(cached, ctx)
-        current = Process.get(@memo_cache_key, %{})
-        Process.put(@memo_cache_key, Map.put(current, cache_key, refreshed))
-        refreshed
+        ctx = %{ctx | memo: Map.put(ctx.memo, cache_key, refreshed)}
+        {refreshed, ctx}
     end
   end
 
   defp normalize_with_ctx(%{} = node, ctx) do
-    prev_depth = increment_depth!()
+    ctx = check_and_increment_depth(ctx)
 
-    try do
-      raw_id = required_field!(node, :id, "id")
-      type = required_field!(node, :type, "type")
-      props = optional_map_field!(node, :props, "props", %{})
-      children = optional_list_field!(node, :children, "children", [])
+    raw_id = required_field!(node, :id, "id")
+    type = required_field!(node, :type, "type")
+    props = optional_map_field!(node, :props, "props", %{})
+    children = optional_list_field!(node, :children, "children", [])
 
-      id = to_string(raw_id)
-      type_str = to_string(type)
-      scope = ctx.scope
-      window_id = ctx.window_id
+    id = to_string(raw_id)
+    type_str = to_string(type)
+    scope = ctx.scope
+    window_id = ctx.window_id
 
-      # Validate user-provided IDs
-      unless auto_id?(id) do
-        validate_user_id!(id)
+    # Validate user-provided IDs
+    unless auto_id?(id) do
+      validate_user_id!(id)
+    end
+
+    # Apply scope prefix to this node's ID
+    scoped_id =
+      if scope != "" and not auto_id?(id) do
+        "#{scope}/#{id}"
+      else
+        id
       end
 
-      # Apply scope prefix to this node's ID
-      scoped_id =
-        if scope != "" and not auto_id?(id) do
-          "#{scope}/#{id}"
-        else
-          id
-        end
+    # Determine scope for children: named (non-auto) non-window nodes
+    # propagate their scoped ID as the child scope
+    child_scope =
+      if auto_id?(id) or type_str == "window" do
+        scope
+      else
+        scoped_id
+      end
 
-      # Determine scope for children: named (non-auto) non-window nodes
-      # propagate their scoped ID as the child scope
-      child_scope =
-        if auto_id?(id) or type_str == "window" do
-          scope
-        else
-          scoped_id
-        end
+    child_window_id = if type_str == "window", do: scoped_id, else: window_id
+    child_ctx = %{ctx | scope: child_scope, window_id: child_window_id}
 
-      child_window_id = if type_str == "window", do: scoped_id, else: window_id
-      child_ctx = %{ctx | scope: child_scope, window_id: child_window_id}
+    atom_props =
+      props
+      |> atomize_keys()
+      |> atomize_a11y()
+      |> resolve_a11y_id_refs(scope)
 
-      atom_props =
-        props
-        |> atomize_keys()
-        |> atomize_a11y()
-        |> resolve_a11y_id_refs(scope)
+    {meta, wire_props} = extract_meta(atom_props)
 
-      {meta, wire_props} = extract_meta(atom_props)
-
-      # Stateful widget rendering: if this node is a stateful widget placeholder
-      # (tagged with __widget__ in meta), render it with the best
-      # available state and normalize the output. The rendered canvas node
-      # does NOT have __widget__ in its props, so normalization of
-      # the output won't re-trigger rendering (no recursion possible).
-      # Widget metadata is attached to the final node's :meta directly.
+    # Stateful widget rendering: if this node is a stateful widget placeholder
+    # (tagged with __widget__ in meta), render it with the best
+    # available state and normalize the output. The rendered canvas node
+    # does NOT have __widget__ in its props, so normalization of
+    # the output won't re-trigger rendering (no recursion possible).
+    # Widget metadata is attached to the final node's :meta directly.
+    {result, ctx} =
       case render_widget_placeholder(meta, id, scoped_id, ctx) do
-        {:rendered, final_node} ->
-          final_node
+        {:rendered, final_node, ctx} ->
+          {final_node, ctx}
 
-        :not_a_widget_placeholder ->
+        {:not_a_widget_placeholder, ctx} ->
           normalized_props = encode_prop_values(wire_props)
+          {children, child_ctx} = normalize_children_with_ctx(children, child_ctx)
 
           node = %{
             id: scoped_id,
             type: type_str,
             props: normalized_props,
-            children: normalize_children_with_ctx(children, child_ctx)
+            children: children
           }
 
-          if meta == %{}, do: node, else: Map.put(node, :meta, meta)
+          node = if meta == %{}, do: node, else: Map.put(node, :meta, meta)
+          # Merge child_ctx caches back into ctx (child_ctx diverged on scope/window_id)
+          {node, %{ctx | memo: child_ctx.memo, widget_view: child_ctx.widget_view}}
       end
-    after
-      decrement_depth(prev_depth)
-    end
+
+    {result, %{ctx | depth: ctx.depth - 1}}
   end
 
   # Render a stateful widget placeholder with stored or initial state.
-  # Returns {:rendered, fully_normalized_node} or :not_a_widget_placeholder.
+  # Returns {:rendered, fully_normalized_node, ctx} or {:not_a_widget_placeholder, ctx}.
   #
   # The rendered output is normalized at the same scope position. Since
   # view/3 produces a plain canvas node (no __widget__ tags in
@@ -262,7 +320,7 @@ defmodule Plushie.Tree do
   # (module, state, props) is attached to :meta for registry derivation
   # and event interception.
   @spec render_widget_placeholder(map(), String.t(), String.t(), normalize_ctx()) ::
-          {:rendered, map()} | :not_a_widget_placeholder
+          {:rendered, map(), normalize_ctx()} | {:not_a_widget_placeholder, normalize_ctx()}
   defp render_widget_placeholder(meta, local_id, scoped_id, ctx) do
     case Map.get(meta, :__widget__) do
       %Meta.Composite{module: module} = composite ->
@@ -270,12 +328,12 @@ defmodule Plushie.Tree do
         widget_state = lookup_widget_state(scoped_id, module, ctx)
 
         # Check opt-in cache_key before calling view/3.
-        normalized =
+        {normalized, ctx} =
           case widget_view_cache_lookup(module, scoped_id, widget_props, widget_state, ctx) do
-            {:hit, cached_node} ->
-              cached_node
+            {:hit, cached_node, ctx} ->
+              {cached_node, ctx}
 
-            :miss ->
+            {:miss, ctx} ->
               # View with local ID -- normalization applies scoping.
               # State is always a map (empty for stateless widgets).
               # Children are in props[:children] for container widgets.
@@ -283,15 +341,17 @@ defmodule Plushie.Tree do
 
               # Normalize the raw canvas output. It has no __widget__
               # tags, so this is a plain normalization pass with no recursion.
-              node = normalize_with_ctx(rendered, ctx)
+              {node, ctx} = normalize_with_ctx(rendered, ctx)
 
               # Auto-apply standard widget options (:a11y, :event_rate) from the
               # original widget props to the top-level rendered node. This way
               # widget authors don't have to manually forward these options.
               node = merge_standard_widget_props(node, widget_props)
 
-              widget_view_cache_store(module, scoped_id, widget_props, widget_state, node)
-              node
+              ctx =
+                widget_view_cache_store(module, scoped_id, widget_props, widget_state, node, ctx)
+
+              {node, ctx}
           end
 
         # Attach stateful widget metadata to the final node's :meta.
@@ -302,10 +362,10 @@ defmodule Plushie.Tree do
 
         existing_meta = Map.get(normalized, :meta, %{})
         final = Map.put(normalized, :meta, Map.merge(existing_meta, enriched_meta))
-        {:rendered, final}
+        {:rendered, final, ctx}
 
       _ ->
-        :not_a_widget_placeholder
+        {:not_a_widget_placeholder, ctx}
     end
   end
 
@@ -964,15 +1024,11 @@ defmodule Plushie.Tree do
 
   # Private
 
-  @depth_key :__plushie_normalize_depth__
-
-  # Increments the normalization depth counter and checks the limit.
-  # Returns the previous depth for decrement_depth to restore.
-  @spec increment_depth!() :: non_neg_integer()
-  defp increment_depth! do
-    prev = Process.get(@depth_key, 0)
-    depth = prev + 1
-    Process.put(@depth_key, depth)
+  # Increments the normalization depth counter in the context and checks limits.
+  # Returns the updated context with depth incremented by 1.
+  @spec check_and_increment_depth(normalize_ctx()) :: normalize_ctx()
+  defp check_and_increment_depth(ctx) do
+    depth = ctx.depth + 1
 
     if depth > @max_depth do
       raise ArgumentError,
@@ -989,16 +1045,18 @@ defmodule Plushie.Tree do
       )
     end
 
-    prev
+    %{ctx | depth: depth}
   end
 
-  defp decrement_depth(prev), do: Process.put(@depth_key, prev)
-
-  @spec normalize_children_with_ctx([term()], normalize_ctx()) :: [tree_node()]
+  @spec normalize_children_with_ctx([term()], normalize_ctx()) :: {[tree_node()], normalize_ctx()}
   defp normalize_children_with_ctx(children, ctx) when is_list(children) do
-    normalized = Enum.map(children, &normalize_with_ctx(&1, ctx))
+    {normalized, ctx} =
+      Enum.map_reduce(children, ctx, fn child, acc ->
+        normalize_with_ctx(child, acc)
+      end)
+
     check_duplicate_ids(normalized)
-    normalized
+    {normalized, ctx}
   end
 
   defp normalize_children_with_ctx(children, _ctx) do
@@ -1100,80 +1158,23 @@ defmodule Plushie.Tree do
     |> String.starts_with?("Elixir.Plushie.Canvas.Shape.")
   end
 
-  # ---------------------------------------------------------------------------
-  # Memo cache helpers
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Sets the previous memo cache for the next normalize pass.
-
-  Called by the runtime before normalize to seed the cache from the
-  previous render cycle. Returns the atom `:ok`.
-  """
-  @spec set_memo_prev_cache(map()) :: :ok
-  def set_memo_prev_cache(cache) do
-    Process.put(@memo_prev_cache_key, cache)
-    :ok
-  end
-
-  @doc """
-  Returns the memo cache built during the most recent normalize pass
-  and clears it from the process dictionary.
-  """
-  @spec take_memo_cache() :: map()
-  def take_memo_cache do
-    cache = Process.get(@memo_cache_key, %{})
-    Process.delete(@memo_cache_key)
-    Process.delete(@memo_prev_cache_key)
-    cache
-  end
-
-  # ---------------------------------------------------------------------------
-  # Widget view cache helpers (cache_key opt-in)
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Sets the previous widget view cache for the next normalize pass.
-
-  Called by the runtime before normalize to seed the cache from the
-  previous render cycle. Returns the atom `:ok`.
-  """
-  @spec set_widget_view_prev_cache(map()) :: :ok
-  def set_widget_view_prev_cache(cache) do
-    Process.put(@widget_view_prev_cache_key, cache)
-    :ok
-  end
-
-  @doc """
-  Returns the widget view cache built during the most recent normalize
-  pass and clears it from the process dictionary.
-  """
-  @spec take_widget_view_cache() :: map()
-  def take_widget_view_cache do
-    cache = Process.get(@widget_view_cache_key, %{})
-    Process.delete(@widget_view_cache_key)
-    Process.delete(@widget_view_prev_cache_key)
-    cache
-  end
-
   # Check the widget view cache for a hit. Only applies to widgets that
-  # export __cache_key__/2. Returns {:hit, node} or :miss.
+  # export __cache_key__/2. Returns {:hit, node, ctx} or {:miss, ctx}.
   @spec widget_view_cache_lookup(module(), String.t(), map(), map(), normalize_ctx()) ::
-          {:hit, map()} | :miss
+          {:hit, map(), normalize_ctx()} | {:miss, normalize_ctx()}
   defp widget_view_cache_lookup(module, scoped_id, props, state, ctx) do
     if function_exported?(module, :__cache_key__, 2) do
       key = module.__cache_key__(props, state)
       cache_key = {module, scoped_id, key}
-      prev_cache = Process.get(@widget_view_prev_cache_key, %{})
 
-      case Map.get(prev_cache, cache_key) do
+      case Map.get(ctx.widget_view_prev, cache_key) do
         nil ->
           :telemetry.execute([:plushie, :widget_cache, :miss], %{count: 1}, %{
             id: scoped_id,
             module: module
           })
 
-          :miss
+          {:miss, ctx}
 
         cached ->
           :telemetry.execute([:plushie, :widget_cache, :hit], %{count: 1}, %{
@@ -1182,27 +1183,26 @@ defmodule Plushie.Tree do
           })
 
           refreshed = refresh_widget_states(cached, ctx)
-          current = Process.get(@widget_view_cache_key, %{})
-          Process.put(@widget_view_cache_key, Map.put(current, cache_key, refreshed))
-          {:hit, refreshed}
+          ctx = %{ctx | widget_view: Map.put(ctx.widget_view, cache_key, refreshed)}
+          {:hit, refreshed, ctx}
       end
     else
-      :miss
+      {:miss, ctx}
     end
   end
 
   # Store a rendered widget node in the widget view cache.
   # Only called when the module exports __cache_key__/2.
-  @spec widget_view_cache_store(module(), String.t(), map(), map(), map()) :: :ok
-  defp widget_view_cache_store(module, scoped_id, props, state, node) do
+  @spec widget_view_cache_store(module(), String.t(), map(), map(), map(), normalize_ctx()) ::
+          normalize_ctx()
+  defp widget_view_cache_store(module, scoped_id, props, state, node, ctx) do
     if function_exported?(module, :__cache_key__, 2) do
       key = module.__cache_key__(props, state)
       cache_key = {module, scoped_id, key}
-      current = Process.get(@widget_view_cache_key, %{})
-      Process.put(@widget_view_cache_key, Map.put(current, cache_key, node))
+      %{ctx | widget_view: Map.put(ctx.widget_view, cache_key, node)}
+    else
+      ctx
     end
-
-    :ok
   end
 
   # Evaluate the memo body function and normalize the result. If the body
@@ -1211,23 +1211,23 @@ defmodule Plushie.Tree do
   defp normalize_memo_body(memo_fun, ctx) do
     case memo_fun.() do
       [] ->
-        @empty_container
+        {@empty_container, ctx}
 
       [single] ->
         normalize_with_ctx(single, ctx)
 
       [_ | _] = nodes ->
-        children = normalize_children_with_ctx(nodes, ctx)
+        {children, ctx} = normalize_children_with_ctx(nodes, ctx)
 
-        %{
-          id: "auto:memo_container",
-          type: "container",
-          props: %{},
-          children: children
-        }
+        {%{
+           id: "auto:memo_container",
+           type: "container",
+           props: %{},
+           children: children
+         }, ctx}
 
       nil ->
-        @empty_container
+        {@empty_container, ctx}
 
       single ->
         normalize_with_ctx(single, ctx)

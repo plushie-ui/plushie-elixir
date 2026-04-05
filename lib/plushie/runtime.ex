@@ -1352,7 +1352,7 @@ defmodule Plushie.Runtime do
   end
 
   # Renders the view and normalizes the tree. Canvas widget stored state
-  # is injected during normalization via the process dictionary -- the
+  # is injected during normalization via the context map -- the
   # normalizer detects stateful widget nodes and re-renders them with
   # stored state before normalizing the output. This eliminates the need
   # for post-processing (the old apply_widget_handler_state approach).
@@ -1365,11 +1365,21 @@ defmodule Plushie.Runtime do
       end)
 
     validate_root_windows!(raw_tree)
-    Plushie.Tree.set_memo_prev_cache(memo_cache)
-    Plushie.Tree.set_widget_view_prev_cache(widget_view_cache)
-    normalized = Plushie.Tree.normalize(raw_tree, widget_handler_states)
-    new_memo_cache = Plushie.Tree.take_memo_cache()
-    new_widget_view_cache = Plushie.Tree.take_widget_view_cache()
+
+    ctx = %{
+      scope: "",
+      window_id: nil,
+      widget_states: widget_handler_states,
+      depth: 0,
+      memo_prev: memo_cache,
+      memo: %{},
+      widget_view_prev: widget_view_cache,
+      widget_view: %{}
+    }
+
+    {normalized, new_memo_cache, new_widget_view_cache} =
+      Plushie.Tree.normalize_with_caches(raw_tree, ctx)
+
     {:ok, normalized, new_memo_cache, new_widget_view_cache}
   catch
     kind, reason ->
@@ -1380,14 +1390,6 @@ defmodule Plushie.Runtime do
       """)
 
       :error
-  after
-    # Clean up process dictionary caches on both success and error paths.
-    # On success, take_memo_cache/take_widget_view_cache already cleared them.
-    # On error, they may still be set from set_*_prev_cache.
-    Process.delete(:__plushie_memo_prev_cache__)
-    Process.delete(:__plushie_memo_cache__)
-    Process.delete(:__plushie_widget_view_prev_cache__)
-    Process.delete(:__plushie_widget_view_cache__)
   end
 
   defp validate_root_windows!(nil), do: :ok

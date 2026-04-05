@@ -24,15 +24,12 @@ defmodule Plushie.MemoTest do
       tree = memo_tree(:v1, body_fn)
 
       # First normalize (miss)
-      first = normalize_with_memo(tree)
-      memo_cache = Tree.take_memo_cache()
+      {first, memo_cache} = normalize_with_memo(tree)
       assert map_size(memo_cache) == 1
 
       # Second normalize with same deps (hit)
-      Tree.set_memo_prev_cache(memo_cache)
       tree2 = memo_tree(:v1, body_fn)
-      second = normalize_with_memo(tree2)
-      _cache2 = Tree.take_memo_cache()
+      {second, _cache2} = normalize_with_memo(tree2, memo_cache)
 
       # The memo node itself should be reference-equal from cache
       first_memo_child = hd(first.children)
@@ -50,13 +47,10 @@ defmodule Plushie.MemoTest do
       end
 
       tree1 = memo_tree(:v1, body_v1)
-      _first = normalize_with_memo(tree1)
-      cache1 = Tree.take_memo_cache()
+      {_first, cache1} = normalize_with_memo(tree1)
 
-      Tree.set_memo_prev_cache(cache1)
       tree2 = memo_tree(:v2, body_v2)
-      second = normalize_with_memo(tree2)
-      _cache2 = Tree.take_memo_cache()
+      {second, _cache2} = normalize_with_memo(tree2, cache1)
 
       child = hd(second.children)
       assert child.props.content == "v2"
@@ -95,8 +89,7 @@ defmodule Plushie.MemoTest do
       end
 
       tree = memo_tree(:outer_deps, outer_body)
-      _first = normalize_with_memo(tree)
-      cache = Tree.take_memo_cache()
+      {_first, cache} = normalize_with_memo(tree)
 
       # Both inner and outer should be cached
       assert map_size(cache) == 2
@@ -130,15 +123,12 @@ defmodule Plushie.MemoTest do
 
       # First pass: miss
       tree = memo_tree(:v1, body)
-      _first = normalize_with_memo(tree)
-      cache = Tree.take_memo_cache()
+      {_first, cache} = normalize_with_memo(tree)
       assert_receive {:memo_miss, %{id: "auto:memo:test:1"}}
 
       # Second pass: hit
-      Tree.set_memo_prev_cache(cache)
       tree2 = memo_tree(:v1, body)
-      _second = normalize_with_memo(tree2)
-      Tree.take_memo_cache()
+      normalize_with_memo(tree2, cache)
       assert_receive {:memo_hit, %{id: "auto:memo:test:1"}}
 
       :telemetry.detach("memo-miss-#{inspect(ref)}")
@@ -152,13 +142,10 @@ defmodule Plushie.MemoTest do
 
       # First render with memo
       tree = memo_tree(:v1, body)
-      _first = normalize_with_memo(tree)
-      cache1 = Tree.take_memo_cache()
+      {_first, cache1} = normalize_with_memo(tree)
       assert map_size(cache1) == 1
 
       # Second render WITHOUT memo (simulating the memo being removed)
-      Tree.set_memo_prev_cache(cache1)
-
       plain_tree = %{
         id: "main",
         type: "window",
@@ -166,8 +153,7 @@ defmodule Plushie.MemoTest do
         children: [%{id: "other", type: "text", props: %{}, children: []}]
       }
 
-      Tree.normalize(plain_tree, %{})
-      cache2 = Tree.take_memo_cache()
+      {_result, cache2} = normalize_with_memo(plain_tree, cache1)
       # Old memo entry should be gone (not written to new cache)
       assert map_size(cache2) == 0
     end
@@ -203,7 +189,19 @@ defmodule Plushie.MemoTest do
     Tree.normalize(tree, %{})
   end
 
-  defp normalize_with_memo(tree) do
-    Tree.normalize(tree, %{})
+  defp normalize_with_memo(tree, memo_prev \\ %{}) do
+    ctx = %{
+      scope: "",
+      window_id: nil,
+      widget_states: %{},
+      depth: 0,
+      memo_prev: memo_prev,
+      memo: %{},
+      widget_view_prev: %{},
+      widget_view: %{}
+    }
+
+    {result, memo, _widget_view} = Tree.normalize_with_caches(tree, ctx)
+    {result, memo}
   end
 end

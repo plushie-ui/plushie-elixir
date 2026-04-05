@@ -77,15 +77,12 @@ defmodule Plushie.WidgetCacheKeyTest do
     test "cache hit returns same reference on second normalize" do
       tree1 = widget_tree(CachedWidget, "w1", data_version: 1, label: "first")
 
-      first = normalize_in_window(tree1)
-      wvc = Tree.take_widget_view_cache()
+      {first, wvc} = normalize_with_widget_cache(tree1)
       assert map_size(wvc) == 1
 
       # Second normalize with same cache_key
-      Tree.set_widget_view_prev_cache(wvc)
       tree2 = widget_tree(CachedWidget, "w1", data_version: 1, label: "first")
-      second = normalize_in_window(tree2)
-      _wvc2 = Tree.take_widget_view_cache()
+      {second, _wvc2} = normalize_with_widget_cache(tree2, wvc)
 
       # The rendered content node should be reference-equal from cache.
       # We compare the text child (not the top-level window).
@@ -99,13 +96,10 @@ defmodule Plushie.WidgetCacheKeyTest do
 
     test "cache_key change triggers re-render" do
       tree1 = widget_tree(CachedWidget, "w1", data_version: 1, label: "v1")
-      _first = normalize_in_window(tree1)
-      wvc = Tree.take_widget_view_cache()
+      {_first, wvc} = normalize_with_widget_cache(tree1)
 
-      Tree.set_widget_view_prev_cache(wvc)
       tree2 = widget_tree(CachedWidget, "w1", data_version: 2, label: "v2")
-      second = normalize_in_window(tree2)
-      _wvc2 = Tree.take_widget_view_cache()
+      {second, _wvc2} = normalize_with_widget_cache(tree2, wvc)
 
       child = hd(second.children)
       assert child.props.content == "v2"
@@ -113,8 +107,7 @@ defmodule Plushie.WidgetCacheKeyTest do
 
     test "widget without cache_key always re-renders" do
       tree1 = widget_tree(UncachedWidget, "w1", label: "hello")
-      _first = normalize_in_window(tree1)
-      wvc = Tree.take_widget_view_cache()
+      {_first, wvc} = normalize_with_widget_cache(tree1)
 
       # No entries for uncached widget
       assert map_size(wvc) == 0
@@ -122,13 +115,10 @@ defmodule Plushie.WidgetCacheKeyTest do
 
     test "old cache entries are naturally pruned" do
       tree1 = widget_tree(CachedWidget, "w1", data_version: 1, label: "v1")
-      _first = normalize_in_window(tree1)
-      wvc = Tree.take_widget_view_cache()
+      {_first, wvc} = normalize_with_widget_cache(tree1)
       assert map_size(wvc) == 1
 
       # Second render without the widget (simulating removal)
-      Tree.set_widget_view_prev_cache(wvc)
-
       plain_tree = %{
         id: "main",
         type: "window",
@@ -136,8 +126,7 @@ defmodule Plushie.WidgetCacheKeyTest do
         children: [%{id: "other", type: "text", props: %{}, children: []}]
       }
 
-      Tree.normalize(plain_tree, %{})
-      wvc2 = Tree.take_widget_view_cache()
+      {_result, wvc2} = normalize_with_widget_cache(plain_tree, wvc)
       assert map_size(wvc2) == 0
     end
   end
@@ -167,15 +156,12 @@ defmodule Plushie.WidgetCacheKeyTest do
 
       # First pass: miss
       tree1 = widget_tree(CachedWidget, "w1", data_version: 1, label: "v1")
-      _first = normalize_in_window(tree1)
-      wvc = Tree.take_widget_view_cache()
+      {_first, wvc} = normalize_with_widget_cache(tree1)
       assert_receive {:wvc_miss, %{id: "w1", module: CachedWidget}}
 
       # Second pass: hit
-      Tree.set_widget_view_prev_cache(wvc)
       tree2 = widget_tree(CachedWidget, "w1", data_version: 1, label: "v1")
-      _second = normalize_in_window(tree2)
-      Tree.take_widget_view_cache()
+      normalize_with_widget_cache(tree2, wvc)
       assert_receive {:wvc_hit, %{id: "w1", module: CachedWidget}}
 
       :telemetry.detach("wvc-miss-#{inspect(ref)}")
@@ -201,5 +187,21 @@ defmodule Plushie.WidgetCacheKeyTest do
 
   defp normalize_in_window(tree) do
     Tree.normalize(tree, %{})
+  end
+
+  defp normalize_with_widget_cache(tree, widget_view_prev \\ %{}) do
+    ctx = %{
+      scope: "",
+      window_id: nil,
+      widget_states: %{},
+      depth: 0,
+      memo_prev: %{},
+      memo: %{},
+      widget_view_prev: widget_view_prev,
+      widget_view: %{}
+    }
+
+    {result, _memo, widget_view} = Tree.normalize_with_caches(tree, ctx)
+    {result, widget_view}
   end
 end
