@@ -975,15 +975,16 @@ defmodule Plushie.Bridge do
     ]
   end
 
+  # Prepend to avoid O(n) list append; reversed before flushing.
   defp queue_message(state, kind, data) do
     Logger.debug("plushie bridge: queued #{kind} while renderer is unavailable")
-    %{state | queued_messages: state.queued_messages ++ [data]}
+    %{state | queued_messages: [data | state.queued_messages]}
   end
 
   defp flush_queued_messages(%{queued_messages: []} = state), do: state
 
   defp flush_queued_messages(state) do
-    do_flush_queued_messages(state, state.queued_messages)
+    do_flush_queued_messages(state, Enum.reverse(state.queued_messages))
   end
 
   defp do_flush_queued_messages(state, []), do: %{state | queued_messages: []}

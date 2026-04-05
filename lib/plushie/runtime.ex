@@ -41,7 +41,7 @@ defmodule Plushie.Runtime do
         pending_coalesce_order: [term()],
         coalesce_timer:     reference() | nil,
         consecutive_errors: non_neg_integer(),
-        pending_interact:   {GenServer.from(), String.t(), reference()} | nil
+        pending_interact:   {GenServer.from(), String.t(), reference(), reference()} | nil
       }
 
   ## Exit trapping
@@ -420,16 +420,21 @@ defmodule Plushie.Runtime do
     end
   end
 
+  # Internal timeout for pending_interact. Slightly exceeds the default
+  # GenServer.call timeout (10s) to avoid racing with the caller's timeout.
+  @interact_timeout 15_000
+
   def handle_call({:interact, action, selector, payload}, from, state) do
     case state.pending_interact do
       nil ->
         id = "interact_#{:erlang.unique_integer([:positive])}"
         {caller_pid, _} = from
-        ref = Process.monitor(caller_pid)
+        monitor_ref = Process.monitor(caller_pid)
+        timer_ref = Process.send_after(self(), {:interact_timeout, id}, @interact_timeout)
         Plushie.Bridge.send_interact(state.bridge, id, action, selector, payload)
-        {:noreply, %{state | pending_interact: {from, id, ref}}}
+        {:noreply, %{state | pending_interact: {from, id, monitor_ref, timer_ref}}}
 
-      {_other_from, _id, _ref} ->
+      {_other_from, _id, _monitor_ref, _timer_ref} ->
         {:reply, {:error, :interact_in_progress}, state}
     end
   end
@@ -583,8 +588,9 @@ defmodule Plushie.Runtime do
 
     # Reply to the blocked caller.
     case state.pending_interact do
-      {from, ^id, ref} ->
-        Process.demonitor(ref, [:flush])
+      {from, ^id, monitor_ref, timer_ref} ->
+        Process.demonitor(monitor_ref, [:flush])
+        Process.cancel_timer(timer_ref)
         GenServer.reply(from, :ok)
         {:noreply, %{state | pending_interact: nil}}
 
@@ -716,7 +722,9 @@ defmodule Plushie.Runtime do
   def handle_info({:async_result, tag, nonce, result}, state) do
     case Map.get(state.async_tasks, tag) do
       {_pid, ^nonce} ->
-        # Nonce matches -- this is from the current task.
+        # Clean up before run_update so the tag is free for reuse in update/2.
+        state = %{state | async_tasks: Map.delete(state.async_tasks, tag)}
+        state = notify_await_async(state, tag)
         state = run_update(state, %AsyncEvent{tag: tag, result: result})
         {:noreply, state}
 
@@ -744,11 +752,26 @@ defmodule Plushie.Runtime do
   def handle_info({:DOWN, ref, :process, _pid, _reason}, state)
       when state.pending_interact != nil do
     case state.pending_interact do
-      {_from, _id, ^ref} ->
+      {_from, _id, ^ref, timer_ref} ->
+        Process.cancel_timer(timer_ref)
         Logger.debug("plushie runtime: interact caller exited, clearing pending interaction")
         {:noreply, %{state | pending_interact: nil}}
 
       _ ->
+        {:noreply, state}
+    end
+  end
+
+  def handle_info({:interact_timeout, id}, state) do
+    case state.pending_interact do
+      {from, ^id, monitor_ref, _timer_ref} ->
+        Process.demonitor(monitor_ref, [:flush])
+        GenServer.reply(from, {:error, :timeout})
+        Logger.warning("plushie runtime: interact #{id} timed out")
+        {:noreply, %{state | pending_interact: nil}}
+
+      _ ->
+        # Stale timeout for an already-resolved interact.
         {:noreply, state}
     end
   end
@@ -790,28 +813,41 @@ defmodule Plushie.Runtime do
   # ---------------------------------------------------------------------------
 
   def handle_info({:EXIT, pid, reason}, state) do
-    # Clean up async_tasks entry if this was an async task process.
-    tag =
-      Enum.find_value(state.async_tasks, fn
-        {tag, {^pid, _nonce}} -> tag
+    # Find the async_tasks entry for this pid (sole owner of cleanup).
+    {tag, entry} =
+      Enum.find_value(state.async_tasks, {nil, nil}, fn
+        {tag, {^pid, nonce}} -> {tag, nonce}
         _ -> nil
       end)
 
-    if tag do
-      state = %{state | async_tasks: Map.delete(state.async_tasks, tag)}
-      state = notify_await_async(state, tag)
+    case entry do
+      # Unknown process (not in async_tasks). Log for visibility.
+      nil ->
+        Logger.warning(
+          "plushie runtime: linked process #{inspect(pid)} exited: #{inspect(reason)}"
+        )
 
-      if reason != :normal do
+        {:noreply, state}
+
+      # Cancelled via Command.cancel or cancel_existing_task. Silent cleanup.
+      :cancelled ->
+        state = %{state | async_tasks: Map.delete(state.async_tasks, tag)}
+        state = notify_await_async(state, tag)
+        {:noreply, state}
+
+      # Active task exited normally. Clean up, no error event.
+      _nonce when reason == :normal ->
+        state = %{state | async_tasks: Map.delete(state.async_tasks, tag)}
+        state = notify_await_async(state, tag)
+        {:noreply, state}
+
+      # Active task crashed. Clean up and deliver error event.
+      _nonce ->
         Logger.warning("plushie runtime: async task #{inspect(tag)} crashed: #{inspect(reason)}")
-
+        state = %{state | async_tasks: Map.delete(state.async_tasks, tag)}
+        state = notify_await_async(state, tag)
         state = run_update(state, %AsyncEvent{tag: tag, result: {:error, {:crashed, reason}}})
         {:noreply, state}
-      else
-        {:noreply, state}
-      end
-    else
-      Logger.warning("plushie runtime: linked process #{inspect(pid)} exited: #{inspect(reason)}")
-      {:noreply, state}
     end
   end
 
@@ -1085,8 +1121,12 @@ defmodule Plushie.Runtime do
 
   defp fail_pending_interact(%{pending_interact: nil} = state, _reason), do: state
 
-  defp fail_pending_interact(%{pending_interact: {from, _id, ref}} = state, reason) do
-    Process.demonitor(ref, [:flush])
+  defp fail_pending_interact(
+         %{pending_interact: {from, _id, monitor_ref, timer_ref}} = state,
+         reason
+       ) do
+    Process.demonitor(monitor_ref, [:flush])
+    Process.cancel_timer(timer_ref)
     GenServer.reply(from, {:error, reason})
     %{state | pending_interact: nil}
   end
@@ -1732,29 +1772,45 @@ defmodule Plushie.Runtime do
 
   # Flushes all pending effect requests, dispatching error results through
   # update/2 and cancelling their timers.
+  # Flushes all pending effects by cancelling their timers and delivering
+  # error events. Each effect is removed individually before its error event
+  # is dispatched so that new effects started during the flush survive.
   @spec flush_pending_effects(state(), atom()) :: state()
   defp flush_pending_effects(state, reason) do
-    state =
-      Enum.reduce(state.pending_effects, state, fn {_id, %{tag: tag, timer_ref: timer_ref}},
-                                                   acc ->
-        # Cancel the timer first to prevent double dispatch (the timeout
-        # handler checks pending_effects, but better safe than racy).
-        if timer_ref, do: Process.cancel_timer(timer_ref)
-        run_update(acc, %EffectEvent{tag: tag, result: {:error, reason}})
-      end)
+    ids = Map.keys(state.pending_effects)
 
-    %{state | pending_effects: %{}}
+    Enum.reduce(ids, state, fn id, acc ->
+      case Map.get(acc.pending_effects, id) do
+        %{tag: tag, timer_ref: timer_ref} ->
+          if timer_ref, do: Process.cancel_timer(timer_ref)
+          acc = %{acc | pending_effects: Map.delete(acc.pending_effects, id)}
+          run_update(acc, %EffectEvent{tag: tag, result: {:error, reason}})
+
+        nil ->
+          # Already removed (e.g. by a run_update side effect).
+          acc
+      end
+    end)
   end
 
   # Drains queued subscription ticks for the same tag/interval from the
   # mailbox. This coalesces rapid-fire animation or timer ticks so the
   # runtime only processes the latest one, avoiding redundant update cycles.
-  @spec drain_matching_ticks(term(), non_neg_integer()) :: :ok
-  defp drain_matching_ticks(tag, interval) do
+  @spec drain_matching_ticks(term(), non_neg_integer(), non_neg_integer()) :: non_neg_integer()
+  defp drain_matching_ticks(tag, interval, count \\ 0) do
     receive do
-      {:subscription_tick, ^tag, ^interval} -> drain_matching_ticks(tag, interval)
+      {:subscription_tick, ^tag, ^interval} -> drain_matching_ticks(tag, interval, count + 1)
     after
-      0 -> :ok
+      0 ->
+        if count > 0 do
+          :telemetry.execute(
+            [:plushie, :runtime, :ticks_drained],
+            %{count: count},
+            %{tag: tag}
+          )
+        end
+
+        count
     end
   end
 
@@ -1851,11 +1907,12 @@ defmodule Plushie.Runtime do
         state
       end
 
+    # Prepend to avoid O(n) list append; reversed before flushing.
     pending_coalesce_order =
       if Map.has_key?(state.pending_coalesce, key) do
         state.pending_coalesce_order
       else
-        state.pending_coalesce_order ++ [key]
+        [key | state.pending_coalesce_order]
       end
 
     %{
@@ -1875,7 +1932,9 @@ defmodule Plushie.Runtime do
     if state.coalesce_timer, do: Process.cancel_timer(state.coalesce_timer)
 
     state =
-      Enum.reduce(state.pending_coalesce_order, state, fn key, acc ->
+      state.pending_coalesce_order
+      |> Enum.reverse()
+      |> Enum.reduce(state, fn key, acc ->
         event = Map.fetch!(acc.pending_coalesce, key)
         run_update(acc, event)
       end)
