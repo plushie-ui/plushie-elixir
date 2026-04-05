@@ -305,6 +305,11 @@ end
 
 ---
 
+WebSocket is another viable transport for shared state, particularly
+for browser-based collaboration where SSH is not available. The wire
+protocol is the same; only the transport layer changes. See the collab
+demo in the `plushie-demos` repository for a WebSocket-based example.
+
 You now have a collaborative editor with file management, styling,
 animation, subscriptions, effects, canvas drawing, custom widgets,
 tests, and shared state over SSH. The

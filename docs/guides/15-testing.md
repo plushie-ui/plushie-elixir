@@ -46,8 +46,8 @@ end
 
 `use Plushie.Test.Case, app: PlushiePad` starts a fresh PlushiePad instance
 before each test, connected to the renderer session pool. All test helper
-functions are imported automatically. Tests run in parallel by default
-(`async: true`).
+functions are imported automatically. Tests are synchronous by default
+(`async: false`) because each test gets its own renderer session.
 
 ## Selectors
 

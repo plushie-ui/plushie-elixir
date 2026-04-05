@@ -333,7 +333,7 @@ responds with your stub instead of executing the real operation:
 
 ```elixir
 test "import loads experiment from file" do
-  register_effect_stub("file_open", {:ok, %{path: "/tmp/test.ex"}})
+  register_effect_stub(:file_open, {:ok, %{path: "/tmp/test.ex"}})
   click("#import")
   # The stub responds with the path; verify the source was loaded
   assert model().source != ""

@@ -68,6 +68,26 @@ checks.
 There is also `Plushie.Subscription.on_key_release/0` if you need to track
 key-up events.
 
+`Plushie.Subscription.on_modifiers_changed/0` tracks modifier key state
+changes (Shift, Ctrl, Alt, etc.) without requiring a regular key press.
+It delivers `Plushie.Event.ModifiersEvent` structs:
+
+```elixir
+def subscribe(_model) do
+  [
+    Plushie.Subscription.on_key_press(),
+    Plushie.Subscription.on_modifiers_changed()
+  ]
+end
+
+def update(model, %Plushie.Event.ModifiersEvent{modifiers: %{shift: true}}) do
+  %{model | shift_held: true}
+end
+```
+
+This is useful for UI that changes appearance based on held modifier
+keys (e.g., showing alternate button labels when Shift is held).
+
 ### Applying it: pad keyboard shortcuts
 
 Add keyboard shortcuts to the pad:
