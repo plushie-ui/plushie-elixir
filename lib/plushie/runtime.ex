@@ -625,9 +625,11 @@ defmodule Plushie.Runtime do
     state = fail_pending_interact(state, {:renderer_exit, reason})
     Logger.warning("plushie runtime: renderer exited: #{inspect(reason)}")
 
+    exit = build_renderer_exit(reason)
+
     new_model =
       try do
-        state.app.handle_renderer_exit(state.model, reason)
+        state.app.handle_renderer_exit(state.model, exit)
       catch
         catch_kind, catch_reason ->
           Logger.error(
@@ -1124,6 +1126,7 @@ defmodule Plushie.Runtime do
       if function_exported?(state.app, :settings, 0) do
         try do
           case state.app.settings() do
+            s when is_map(s) and s != %{} -> s
             s when is_list(s) and s != [] -> Map.new(s)
             _ -> %{}
           end
@@ -1159,6 +1162,34 @@ defmodule Plushie.Runtime do
 
     notify_bridge(state, &Plushie.Bridge.send_settings(&1, settings))
   end
+
+  # Converts a raw renderer exit reason into a structured %RendererExit{}.
+  @spec build_renderer_exit(term()) :: Plushie.RendererExit.t()
+  defp build_renderer_exit(:normal),
+    do: %Plushie.RendererExit{type: :shutdown, message: "renderer shut down normally"}
+
+  defp build_renderer_exit(:shutdown),
+    do: %Plushie.RendererExit{type: :shutdown, message: "renderer shut down"}
+
+  defp build_renderer_exit(:heartbeat_timeout),
+    do: %Plushie.RendererExit{
+      type: :heartbeat_timeout,
+      message: "renderer unresponsive (heartbeat timeout)"
+    }
+
+  defp build_renderer_exit({:exit_status, status}),
+    do: %Plushie.RendererExit{
+      type: :crash,
+      message: "renderer crashed with exit status #{status}",
+      details: status
+    }
+
+  defp build_renderer_exit(reason),
+    do: %Plushie.RendererExit{
+      type: :crash,
+      message: "renderer exited unexpectedly: #{inspect(reason)}",
+      details: reason
+    }
 
   # Unwraps `app.init/1` or `app.update/2` return values into a
   # `{model, commands}` tuple. Commands are always a flat list of

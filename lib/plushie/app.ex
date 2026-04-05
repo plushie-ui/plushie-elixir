@@ -99,10 +99,12 @@ defmodule Plushie.App do
   @callback subscribe(model) :: [Plushie.Subscription.t()]
 
   @doc """
-  Called when the renderer process exits unexpectedly. Return the model to
-  use when the renderer restarts. Default: return model unchanged.
+  Called when the renderer process exits unexpectedly. Receives a
+  `%Plushie.RendererExit{}` struct with `:type`, `:message`, and `:details`.
+  Return the model to use when the renderer restarts.
+  Default: return model unchanged.
   """
-  @callback handle_renderer_exit(model, reason :: term()) :: model
+  @callback handle_renderer_exit(model, reason :: Plushie.RendererExit.t()) :: model
 
   @doc """
   Called on runtime startup to configure window properties. Also called
@@ -152,9 +154,9 @@ defmodule Plushie.App do
     most apps, lower for dashboards or remote rendering. Per-subscription
     `max_rate` and per-widget `event_rate` override this default.
 
-  Default: `[]` (renderer uses its own defaults).
+  Default: `%{}` (renderer uses its own defaults).
   """
-  @callback settings() :: keyword()
+  @callback settings() :: map()
 
   @optional_callbacks subscribe: 1, handle_renderer_exit: 2, window_config: 1, settings: 0
 
@@ -165,7 +167,7 @@ defmodule Plushie.App do
       def subscribe(_model), do: []
       def handle_renderer_exit(model, _reason), do: model
       def window_config(_model), do: %{}
-      def settings, do: []
+      def settings, do: %{}
 
       defoverridable subscribe: 1, handle_renderer_exit: 2, window_config: 1, settings: 0
     end

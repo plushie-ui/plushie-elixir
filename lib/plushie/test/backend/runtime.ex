@@ -54,13 +54,13 @@ defmodule Plushie.Test.Backend.Runtime do
           session_id: String.t(),
           mode: mode(),
           sup: pid(),
-          instance_name: atom(),
+          plushie_name: atom(),
           runtime: pid(),
           app: module(),
           format: :json | :msgpack
         }
 
-  defstruct [:pool, :session_id, :mode, :sup, :instance_name, :runtime, :app, :format]
+  defstruct [:pool, :session_id, :mode, :sup, :plushie_name, :runtime, :app, :format]
 
   # -- Public API --------------------------------------------------------------
 
@@ -274,21 +274,21 @@ defmodule Plushie.Test.Backend.Runtime do
     {:ok, adapter_pid, session_id} = PoolAdapter.start_link(pool: pool, format: format)
     Process.monitor(adapter_pid)
 
-    # Generate a unique instance name for this test session.
+    # Generate a unique name for this test session's Plushie supervisor.
     tag = :erlang.unique_integer([:positive])
-    instance_name = :"plushie_test_#{tag}"
+    plushie_name = :"plushie_test_#{tag}"
 
     # Start the full Plushie supervisor tree with iostream transport.
     {:ok, sup} =
       Plushie.start_link(app,
-        name: instance_name,
+        name: plushie_name,
         transport: {:iostream, adapter_pid},
         format: format,
         session_id: session_id,
         app_opts: Keyword.get(opts, :init_arg) |> List.wrap()
       )
 
-    runtime = Plushie.runtime_for(instance_name)
+    runtime = Plushie.runtime_for(plushie_name)
 
     Plushie.Runtime.sync(runtime)
 
@@ -298,7 +298,7 @@ defmodule Plushie.Test.Backend.Runtime do
        session_id: session_id,
        mode: mode,
        sup: sup,
-       instance_name: instance_name,
+       plushie_name: plushie_name,
        runtime: runtime,
        app: app,
        format: format
@@ -339,7 +339,7 @@ defmodule Plushie.Test.Backend.Runtime do
   end
 
   def handle_call({:screenshot, name, opts}, _from, state) do
-    bridge = Plushie.bridge_for(state.instance_name)
+    bridge = Plushie.bridge_for(state.plushie_name)
     response = Plushie.Bridge.screenshot(bridge, name, opts)
     {:reply, Screenshot.from_response(response, state.format, state.mode), state}
   end
@@ -409,21 +409,21 @@ defmodule Plushie.Test.Backend.Runtime do
     Process.monitor(adapter_pid)
 
     tag = :erlang.unique_integer([:positive])
-    instance_name = :"plushie_test_#{tag}"
+    plushie_name = :"plushie_test_#{tag}"
 
     {:ok, sup} =
       Plushie.start_link(state.app,
-        name: instance_name,
+        name: plushie_name,
         transport: {:iostream, adapter_pid},
         format: state.format,
         session_id: session_id
       )
 
-    runtime = Plushie.runtime_for(instance_name)
+    runtime = Plushie.runtime_for(plushie_name)
     Plushie.Runtime.sync(runtime)
 
     {:reply, :ok,
-     %{state | session_id: session_id, sup: sup, instance_name: instance_name, runtime: runtime}}
+     %{state | session_id: session_id, sup: sup, plushie_name: plushie_name, runtime: runtime}}
   end
 
   @impl GenServer
@@ -505,21 +505,21 @@ defmodule Plushie.Test.Backend.Runtime do
 
   @spec wait_for_draw(t()) :: t()
   defp wait_for_draw(state) do
-    wait_for_draw(Plushie.bridge_for(state.instance_name), state.mode, state.instance_name)
+    wait_for_draw(Plushie.bridge_for(state.plushie_name), state.mode, state.plushie_name)
     state
   end
 
   @spec wait_for_draw(GenServer.server(), mode(), atom()) :: :ok
-  defp wait_for_draw(_bridge, mode, _instance_name) when mode in [:mock, :headless], do: :ok
+  defp wait_for_draw(_bridge, mode, _plushie_name) when mode in [:mock, :headless], do: :ok
 
-  defp wait_for_draw(bridge, :windowed, instance_name) do
+  defp wait_for_draw(bridge, :windowed, plushie_name) do
     case Plushie.Bridge.screenshot(bridge, "__sync__", width: 1, height: 1) do
       %{"type" => "screenshot_response"} ->
         :ok
 
       other ->
         raise RuntimeError,
-              "windowed renderer returned unexpected sync response for #{inspect(instance_name)}: #{inspect(other)}"
+              "windowed renderer returned unexpected sync response for #{inspect(plushie_name)}: #{inspect(other)}"
     end
   end
 

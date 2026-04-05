@@ -19,9 +19,9 @@ callbacks are required; four are optional.
 | `update/2` | `update(model, event)` | `model \| {model, command}` | yes |
 | `view/1` | `view(model)` | window node(s) | yes |
 | `subscribe/1` | `subscribe(model)` | `[Subscription.t()]` | no |
-| `settings/0` | `settings()` | `keyword()` | no |
+| `settings/0` | `settings()` | `map()` | no |
 | `window_config/1` | `window_config(model)` | `map()` | no |
-| `handle_renderer_exit/2` | `handle_renderer_exit(model, reason)` | `model` | no |
+| `handle_renderer_exit/2` | `handle_renderer_exit(model, %RendererExit{})` | `model` | no |
 
 Where `command` is `Plushie.Command.t()` or `[Plushie.Command.t()]`.
 
@@ -85,7 +85,7 @@ Called once during startup to configure renderer-level defaults (font,
 text size, theme, antialiasing, event rate). Sent to the renderer
 before the first snapshot.
 
-Default: `[]` (renderer uses its own defaults).
+Default: `%{}` (renderer uses its own defaults).
 
 See the [Configuration reference](configuration.md#app-settings-callback)
 for the full key table.
@@ -107,8 +107,9 @@ Default: `%{}` (only per-window props from the tree apply).
 ### handle_renderer_exit/2
 
 Called when the renderer process crashes or is restarted (e.g. during
-Rust hot reload). Receives the current model and the exit reason (an
-atom like `:normal`, `:shutdown`, `:dev_restart`, or a raw crash term).
+Rust hot reload). Receives the current model and a `%Plushie.RendererExit{}`
+struct with `:type` (`:crash`, `:shutdown`, `:heartbeat_timeout`, or
+`:connection_lost`), `:message`, and `:details`.
 Returns a potentially adjusted model.
 
 This is your opportunity to reset state that depends on renderer-side

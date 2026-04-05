@@ -68,9 +68,9 @@ defmodule Plushie do
     opts =
       opts
       |> Keyword.put(:app, app_module)
-      |> put_instance_name()
+      |> Keyword.put_new(:name, __MODULE__)
 
-    Supervisor.start_link(__MODULE__, opts, name: sup_name(opts[:instance_name]))
+    Supervisor.start_link(__MODULE__, opts, name: sup_name(opts[:name]))
   end
 
   @doc """
@@ -95,8 +95,8 @@ defmodule Plushie do
   """
   @spec child_spec(keyword()) :: Supervisor.child_spec()
   def child_spec(opts) do
-    opts = put_instance_name(opts)
-    name = opts[:instance_name]
+    opts = Keyword.put_new(opts, :name, __MODULE__)
+    name = opts[:name]
 
     %{
       id: name,
@@ -112,7 +112,7 @@ defmodule Plushie do
   @doc false
   @impl true
   def init(opts) do
-    name = opts[:instance_name]
+    name = Keyword.get(opts, :name, __MODULE__)
     app = Keyword.fetch!(opts, :app)
     validate_app!(app)
     transport = Keyword.get(opts, :transport, :spawn)
@@ -256,26 +256,19 @@ defmodule Plushie do
           "expected :transport to be :spawn, :stdio, or {:iostream, pid}, got: #{inspect(other)}"
   end
 
-  defp put_instance_name(opts) do
-    case Keyword.fetch(opts, :name) do
-      {:ok, name} -> Keyword.put_new(opts, :instance_name, name)
-      :error -> Keyword.put_new(opts, :instance_name, __MODULE__)
-    end
-  end
-
   @doc "Returns the registered name of the runtime for the given instance."
-  @spec runtime_for(instance_name :: atom()) :: atom()
-  def runtime_for(instance_name \\ __MODULE__), do: runtime_name(instance_name)
+  @spec runtime_for(name :: atom()) :: atom()
+  def runtime_for(name \\ __MODULE__), do: runtime_name(name)
 
   @doc "Returns the registered name of the bridge for the given instance."
-  @spec bridge_for(instance_name :: atom()) :: atom()
-  def bridge_for(instance_name \\ __MODULE__), do: bridge_name(instance_name)
+  @spec bridge_for(name :: atom()) :: atom()
+  def bridge_for(name \\ __MODULE__), do: bridge_name(name)
 
-  defp sup_name(instance_name), do: :"#{instance_name}.Supervisor"
-  defp task_supervisor_name(instance_name), do: :"#{instance_name}.TaskSupervisor"
-  defp runtime_name(instance_name), do: :"#{instance_name}.Runtime"
-  defp bridge_name(instance_name), do: :"#{instance_name}.Bridge"
-  defp dev_server_name(instance_name), do: :"#{instance_name}.DevServer"
+  defp sup_name(name), do: :"#{name}.Supervisor"
+  defp task_supervisor_name(name), do: :"#{name}.TaskSupervisor"
+  defp runtime_name(name), do: :"#{name}.Runtime"
+  defp bridge_name(name), do: :"#{name}.Bridge"
+  defp dev_server_name(name), do: :"#{name}.DevServer"
 
   @spec resolve_code_reloader(opts :: keyword()) :: boolean()
   defp resolve_code_reloader(opts) do
