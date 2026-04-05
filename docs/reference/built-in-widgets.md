@@ -223,6 +223,70 @@ end
 The table itself does not sort. It displays rows in the order you
 provide. Sort in your model or use `Plushie.Data.query/2`.
 
+## Pane grid
+
+`Plushie.Widget.PaneGrid`
+
+Resizable tiled pane layout. Children are keyed by their node ID and
+rendered as individual panes. The renderer manages internal pane sizes
+and arrangement, persisted across re-renders by the widget's ID.
+
+```elixir
+pane_grid "editor", panes: ["left", "right"], spacing: 2 do
+  text_editor "left", model.left_source
+  text_editor "right", model.right_source
+end
+```
+
+### Pane grid props
+
+| Prop | Type | Default | Purpose |
+|---|---|---|---|
+| `panes` | `[string]` | *n/a* | List of pane identifiers (atoms coerced to strings) |
+| `spacing` | number | `2` | Space between panes in pixels |
+| `width` | Length | `:fill` | Grid width |
+| `height` | Length | `:fill` | Grid height |
+| `min_size` | number | `10` | Minimum pane size in pixels |
+| `divider_color` | Color | *n/a* | Color for the split divider |
+| `divider_width` | number | *n/a* | Divider thickness in pixels |
+| `leeway` | number | *n/a* | Grabbable area around dividers in pixels |
+
+### Pane grid events
+
+| Event | Data | Description |
+|---|---|---|
+| `:pane_clicked` | *n/a* | Emitted when a pane is selected |
+| `:pane_resized` | `%{split: string, ratio: float}` | Emitted when a split divider is moved |
+| `:pane_dragged` | *n/a* | Emitted during pane drag operations |
+| `:pane_focus_cycle` | *n/a* | Emitted on F6/Shift+F6 focus cycling |
+
+### Usage patterns
+
+Pane identifiers in the `panes` list determine which children map to
+which pane. Each child's ID must match a pane identifier. Atom pane
+identifiers are automatically coerced to strings.
+
+The pane grid holds renderer-side state (pane sizes and arrangement).
+If the widget's ID changes, this state resets. An explicit string ID
+is required (compile-time error if omitted).
+
+For accessibility, wrap the pane grid in a container with an explicit
+role and label:
+
+```elixir
+container "editor-panes" do
+  a11y do
+    role :group
+    label "Editor panes"
+  end
+
+  pane_grid "grid", panes: ["left", "right"] do
+    text_editor "left", model.left
+    text_editor "right", model.right
+  end
+end
+```
+
 ## Interaction wrappers
 
 ### pointer_area
@@ -484,6 +548,29 @@ Used by: `scrollable`.
 |---|---|
 | `:start` | Anchor at the top/left (default) |
 | `:end` | Anchor at the bottom/right |
+
+### Auto scroll
+
+Used by: `scrollable`.
+
+When `auto_scroll: true` is set, the scrollable automatically scrolls to
+reveal new content appended at the anchor end. This is useful for chat
+logs, terminal output, and other append-only content where the user
+expects to see the latest entries without manual scrolling.
+
+```elixir
+scrollable "log", direction: :vertical, anchor: :end, auto_scroll: true do
+  column spacing: 4 do
+    for entry <- model.log_entries do
+      text(entry.id, entry.text)
+    end
+  end
+end
+```
+
+When the user manually scrolls away from the anchor, auto-scroll pauses
+to avoid fighting the user's position. It resumes when the user scrolls
+back to the anchor end.
 
 ## See also
 
