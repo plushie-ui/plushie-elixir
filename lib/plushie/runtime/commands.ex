@@ -88,9 +88,10 @@ defmodule Plushie.Runtime.Commands do
     case Map.get(state.async_tasks, tag) do
       {pid, _nonce} when is_pid(pid) ->
         Process.exit(pid, :kill)
-        %{state | async_tasks: Map.delete(state.async_tasks, tag)}
+        # Mark as cancelled; the EXIT handler owns entry cleanup.
+        %{state | async_tasks: Map.put(state.async_tasks, tag, {pid, :cancelled})}
 
-      nil ->
+      _ ->
         state
     end
   end
@@ -298,11 +299,12 @@ defmodule Plushie.Runtime.Commands do
   @spec cancel_existing_task(map(), term()) :: map()
   defp cancel_existing_task(state, tag) do
     case Map.get(state.async_tasks, tag) do
-      {old_pid, _nonce} ->
+      {old_pid, _nonce} when is_pid(old_pid) ->
         Process.exit(old_pid, :kill)
-        %{state | async_tasks: Map.delete(state.async_tasks, tag)}
+        # Mark as cancelled; the EXIT handler owns entry cleanup.
+        %{state | async_tasks: Map.put(state.async_tasks, tag, {old_pid, :cancelled})}
 
-      nil ->
+      _ ->
         state
     end
   end
