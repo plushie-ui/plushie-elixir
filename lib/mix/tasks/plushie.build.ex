@@ -577,22 +577,32 @@ defmodule Mix.Tasks.Plushie.Build do
     # Use underscores for the Cargo package name (Cargo convention)
     package_name = String.replace(bin_name, "-", "_")
 
-    """
-    [package]
-    name = "#{package_name}"
-    version = "#{Mix.Project.config()[:version]}"
-    edition = "2024"
+    deps =
+      [plushie_ext_dep, plushie_renderer_dep]
+      |> Enum.join("\n")
 
-    [[bin]]
-    name = "#{bin_name}"
-    path = "src/main.rs"
+    sections =
+      [
+        """
+        [package]
+        name = "#{package_name}"
+        version = "#{Mix.Project.config()[:version]}"
+        edition = "2024"
 
-    [dependencies]
-    #{plushie_ext_dep}
-    #{plushie_renderer_dep}
-    #{ext_deps}
-    #{patch_section}\
-    """
+        [[bin]]
+        name = "#{bin_name}"
+        path = "src/main.rs"
+
+        [dependencies]
+        #{deps}\
+        """,
+        ext_deps,
+        patch_section
+      ]
+      |> Enum.reject(&(&1 == ""))
+      |> Enum.join("\n")
+
+    String.trim_trailing(sections) <> "\n"
   end
 
   # Discovers plushie-iced subcrates from the vendored iced fork (expected

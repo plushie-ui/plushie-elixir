@@ -173,6 +173,12 @@ The task validates:
 - Widget versions are compatible with the renderer version (pre-1.0:
   major.minor must match; post-1.0: major must match)
 
+**Removing native widgets**: when you remove a native widget dependency
+from your project, run `mix clean` before the next build. Protocol
+consolidation reads compiled BEAM files, so stale `.beam` files from
+the removed widget will cause phantom detection until they are cleaned
+out.
+
 ### Local source vs crates.io
 
 By default, Rust dependencies come from crates.io using the version in

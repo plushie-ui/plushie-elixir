@@ -388,7 +388,9 @@ and optionally `init()`, `prepare()`, `handle_event()`, and `cleanup()`.
 
 `mix plushie.build` auto-detects native widgets via protocol consolidation,
 generates a Cargo workspace that includes them, and builds the renderer
-binary with your widgets registered.
+binary with your widgets registered. If you later remove a native widget
+dependency, run `mix clean` to clear stale BEAM files. Without this,
+protocol consolidation may still detect the removed widget.
 
 Native widgets are an escape hatch for when pure Elixir composition is not
 enough. Most apps will never need them. See the

@@ -331,6 +331,11 @@ workspace with a `main.rs` that registers each native widget via its
 `rust_constructor` expression. No configuration needed. Add a native
 widget to your dependencies and it appears in the next build.
 
+When removing a native widget, run `mix clean` to clear stale BEAM
+files. Protocol consolidation reads compiled `.beam` files, so leftover
+files from the removed widget will cause phantom detection until
+cleaned out.
+
 See the [Mix Tasks reference](mix-tasks.md#plushiebuild) for build
 details.
 
