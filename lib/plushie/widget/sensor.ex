@@ -23,7 +23,7 @@ defmodule Plushie.Widget.Sensor do
           {:delay, non_neg_integer()}
           | {:anticipate, number()}
           | {:on_resize, atom() | String.t()}
-          | {:event_rate, pos_integer()}
+          | {:event_rate, non_neg_integer()}
           | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
@@ -31,7 +31,7 @@ defmodule Plushie.Widget.Sensor do
           delay: non_neg_integer() | nil,
           anticipate: number() | nil,
           on_resize: String.t() | nil,
-          event_rate: pos_integer() | nil,
+          event_rate: non_neg_integer() | nil,
           a11y: Plushie.Type.A11y.t() | nil,
           children: [Plushie.Widget.child()]
         }
@@ -95,8 +95,14 @@ defmodule Plushie.Widget.Sensor do
   def extend(%__MODULE__{} = sensor, children),
     do: %{sensor | children: Enum.reverse(children) ++ sensor.children}
 
-  @doc "Sets the maximum event rate (events per second) for this widget's coalescable events."
-  @spec event_rate(sensor :: t(), rate :: pos_integer()) :: t()
+  @doc """
+  Sets the maximum event rate (events per second) for this widget's coalescable events.
+
+  Three states: `nil` (no limiting, the default), `0` (track only,
+  never emit events to the host), or `N > 0` (emit at most N
+  events per second).
+  """
+  @spec event_rate(sensor :: t(), rate :: non_neg_integer()) :: t()
   def event_rate(%__MODULE__{} = sensor, rate) when is_integer(rate) and rate >= 0,
     do: %{sensor | event_rate: rate}
 

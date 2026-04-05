@@ -316,26 +316,4 @@ defmodule Plushie.Runtime.WidgetHandlers do
         walk_chain(new_registry, event, rest)
     end
   end
-
-  defp walk_chain(registry, event, [{scoped_id, %{module: module, state: widget_state}} | rest]) do
-    {action, new_state} =
-      try do
-        Handler.invoke_handler(module, event, widget_state, scoped_id, nil)
-      rescue
-        error ->
-          Logger.warning(
-            "widget_handler #{inspect(module)} handle_event/2 raised: #{Exception.message(error)}"
-          )
-
-          {:ignored, widget_state}
-      end
-
-    updated_registry = put_in(registry, [{event.window_id, scoped_id}, :state], new_state)
-
-    case action do
-      {:emit, transformed} -> walk_chain(updated_registry, transformed, rest)
-      :consumed -> {nil, updated_registry}
-      :ignored -> walk_chain(updated_registry, event, rest)
-    end
-  end
 end

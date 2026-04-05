@@ -42,7 +42,7 @@ defmodule Plushie.Widget.PaneGrid do
           | {:divider_color, Plushie.Type.Color.input()}
           | {:divider_width, number()}
           | {:leeway, number()}
-          | {:event_rate, pos_integer()}
+          | {:event_rate, non_neg_integer()}
           | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
@@ -55,7 +55,7 @@ defmodule Plushie.Widget.PaneGrid do
           divider_color: Plushie.Type.Color.t() | nil,
           divider_width: number() | nil,
           leeway: number() | nil,
-          event_rate: pos_integer() | nil,
+          event_rate: non_neg_integer() | nil,
           a11y: Plushie.Type.A11y.t() | nil,
           children: [Plushie.Widget.child()]
         }
@@ -157,8 +157,14 @@ defmodule Plushie.Widget.PaneGrid do
   def extend(%__MODULE__{} = pg, children),
     do: %{pg | children: Enum.reverse(children) ++ pg.children}
 
-  @doc "Sets the maximum event rate (events per second) for this widget's coalescable events."
-  @spec event_rate(pane_grid :: t(), rate :: pos_integer()) :: t()
+  @doc """
+  Sets the maximum event rate (events per second) for this widget's coalescable events.
+
+  Three states: `nil` (no limiting, the default), `0` (track only,
+  never emit events to the host), or `N > 0` (emit at most N
+  events per second).
+  """
+  @spec event_rate(pane_grid :: t(), rate :: non_neg_integer()) :: t()
   def event_rate(%__MODULE__{} = pg, rate) when is_integer(rate) and rate >= 0,
     do: %{pg | event_rate: rate}
 

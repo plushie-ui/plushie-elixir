@@ -40,7 +40,7 @@ defmodule Plushie.Widget.VerticalSlider do
           | {:rail_width, number()}
           | {:style, style()}
           | {:label, String.t()}
-          | {:event_rate, pos_integer()}
+          | {:event_rate, non_neg_integer()}
           | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
@@ -56,7 +56,7 @@ defmodule Plushie.Widget.VerticalSlider do
           rail_width: number() | nil,
           style: style() | nil,
           label: String.t() | nil,
-          event_rate: pos_integer() | nil,
+          event_rate: non_neg_integer() | nil,
           a11y: Plushie.Type.A11y.t() | nil
         }
 
@@ -162,8 +162,14 @@ defmodule Plushie.Widget.VerticalSlider do
   def style(%__MODULE__{} = slider, %StyleMap{} = style), do: %{slider | style: style}
   def style(%__MODULE__{} = slider, :default), do: %{slider | style: :default}
 
-  @doc "Sets the maximum event rate (events per second) for this widget's coalescable events."
-  @spec event_rate(vertical_slider :: t(), rate :: pos_integer()) :: t()
+  @doc """
+  Sets the maximum event rate (events per second) for this widget's coalescable events.
+
+  Three states: `nil` (no limiting, the default), `0` (track only,
+  never emit events to the host), or `N > 0` (emit at most N
+  events per second).
+  """
+  @spec event_rate(vertical_slider :: t(), rate :: non_neg_integer()) :: t()
   def event_rate(%__MODULE__{} = slider, rate) when is_integer(rate) and rate >= 0,
     do: %{slider | event_rate: rate}
 

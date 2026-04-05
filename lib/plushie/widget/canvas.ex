@@ -123,7 +123,7 @@ defmodule Plushie.Widget.Canvas do
           | {:on_scroll, boolean()}
           | {:alt, String.t()}
           | {:description, String.t()}
-          | {:event_rate, pos_integer()}
+          | {:event_rate, non_neg_integer()}
           | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
@@ -142,7 +142,7 @@ defmodule Plushie.Widget.Canvas do
           description: String.t() | nil,
           role: String.t() | nil,
           arrow_mode: String.t() | nil,
-          event_rate: pos_integer() | nil,
+          event_rate: non_neg_integer() | nil,
           a11y: Plushie.Type.A11y.t() | nil
         }
 
@@ -282,8 +282,14 @@ defmodule Plushie.Widget.Canvas do
   def arrow_mode(%__MODULE__{} = canvas, mode) when is_atom(mode),
     do: %{canvas | arrow_mode: Atom.to_string(mode)}
 
-  @doc "Sets the maximum event rate (events per second) for this widget's coalescable events."
-  @spec event_rate(canvas :: t(), rate :: pos_integer()) :: t()
+  @doc """
+  Sets the maximum event rate (events per second) for this widget's coalescable events.
+
+  Three states: `nil` (no limiting, the default), `0` (track only,
+  never emit events to the host), or `N > 0` (emit at most N
+  events per second).
+  """
+  @spec event_rate(canvas :: t(), rate :: non_neg_integer()) :: t()
   def event_rate(%__MODULE__{} = canvas, rate) when is_integer(rate) and rate >= 0,
     do: %{canvas | event_rate: rate}
 

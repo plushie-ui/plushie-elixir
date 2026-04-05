@@ -93,7 +93,7 @@ defmodule Plushie.Subscription do
           type: atom(),
           tag: atom(),
           interval: pos_integer() | nil,
-          max_rate: pos_integer() | nil,
+          max_rate: non_neg_integer() | nil,
           window_id: String.t() | nil
         }
 

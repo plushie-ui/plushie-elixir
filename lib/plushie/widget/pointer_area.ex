@@ -109,7 +109,7 @@ defmodule Plushie.Widget.PointerArea do
           | {:on_exit, boolean()}
           | {:on_move, boolean()}
           | {:on_scroll, boolean()}
-          | {:event_rate, pos_integer()}
+          | {:event_rate, non_neg_integer()}
           | {:a11y, Plushie.Type.A11y.t() | map() | keyword()}
 
   @type t :: %__MODULE__{
@@ -126,7 +126,7 @@ defmodule Plushie.Widget.PointerArea do
           on_exit: boolean() | nil,
           on_move: boolean() | nil,
           on_scroll: boolean() | nil,
-          event_rate: pos_integer() | nil,
+          event_rate: non_neg_integer() | nil,
           a11y: Plushie.Type.A11y.t() | nil,
           children: [Plushie.Widget.child()]
         }
@@ -262,8 +262,14 @@ defmodule Plushie.Widget.PointerArea do
   def extend(%__MODULE__{} = ma, children),
     do: %{ma | children: Enum.reverse(children) ++ ma.children}
 
-  @doc "Sets the maximum event rate (events per second) for this widget's coalescable events."
-  @spec event_rate(pointer_area :: t(), rate :: pos_integer()) :: t()
+  @doc """
+  Sets the maximum event rate (events per second) for this widget's coalescable events.
+
+  Three states: `nil` (no limiting, the default), `0` (track only,
+  never emit events to the host), or `N > 0` (emit at most N
+  events per second).
+  """
+  @spec event_rate(pointer_area :: t(), rate :: non_neg_integer()) :: t()
   def event_rate(%__MODULE__{} = ma, rate) when is_integer(rate) and rate >= 0,
     do: %{ma | event_rate: rate}
 

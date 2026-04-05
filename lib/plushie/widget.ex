@@ -404,14 +404,14 @@ defmodule Plushie.Widget do
         rust_constructor_val
       )
 
+    state_fields =
+      (Module.get_attribute(env.module, :_widget_state_fields) || [])
+      |> Enum.reverse()
+
     widget_code =
       if has_view do
         # All widgets with view go through the unified path:
         # struct + placeholder to_node + deferred view.
-        state_fields =
-          (Module.get_attribute(env.module, :_widget_state_fields) || [])
-          |> Enum.reverse()
-
         prop_validation = generate_prop_validation(props)
 
         generate_widget_new(
@@ -451,6 +451,9 @@ defmodule Plushie.Widget do
     prop_names_fn = generate_prop_names(props)
     dsl_macro = generate_dsl_macro(widget_type, props)
 
+    widget_info_fn =
+      generate_widget_info(kind, type_string, props, events, state_fields, commands)
+
     quote do
       unquote(widget_handler_behaviour)
       unquote(behaviour_fns)
@@ -458,6 +461,7 @@ defmodule Plushie.Widget do
       unquote(command_fns)
       unquote(prop_names_fn)
       unquote(dsl_macro)
+      unquote(widget_info_fn)
     end
   end
 
@@ -949,6 +953,29 @@ defmodule Plushie.Widget do
   end
 
   @doc false
+  def generate_widget_info(kind, type_string, props, events, state_fields, commands) do
+    prop_names = Enum.map(props, fn {name, _type, _opts} -> name end)
+    event_names = events
+    state_field_names = Enum.map(state_fields, fn {name, _default} -> name end)
+    command_names = Enum.map(commands, fn {name, _params} -> name end)
+
+    quote do
+      @doc false
+      @spec __widget_info__() :: map()
+      def __widget_info__ do
+        %{
+          kind: unquote(kind),
+          type: unquote(type_string),
+          props: unquote(prop_names),
+          events: unquote(event_names),
+          state_fields: unquote(state_field_names),
+          commands: unquote(command_names)
+        }
+      end
+    end
+  end
+
+  @doc false
   def generate_prop_names(props) do
     known =
       Enum.map(props, fn {name, _type, _opts} -> name end)
@@ -1039,7 +1066,7 @@ defmodule Plushie.Widget do
           else: []
         ) ++
         [
-          {:event_rate, quote(do: pos_integer() | nil)},
+          {:event_rate, quote(do: non_neg_integer() | nil)},
           {:a11y, quote(do: Plushie.Type.A11y.t() | nil)}
         ]
 
@@ -1048,7 +1075,7 @@ defmodule Plushie.Widget do
         quote(do: {unquote(name), unquote(elixir_type_for(type))})
       end) ++
         [
-          quote(do: {:event_rate, pos_integer()}),
+          quote(do: {:event_rate, non_neg_integer()}),
           quote(do: {:a11y, Plushie.Type.A11y.t()})
         ]
 
@@ -1225,8 +1252,14 @@ defmodule Plushie.Widget do
 
     event_rate_setter =
       quote do
-        @doc "Sets the maximum event rate (events per second) for this widget's coalescable events."
-        @spec event_rate(widget :: t(), rate :: pos_integer()) :: t()
+        @doc """
+        Sets the maximum event rate (events per second) for this widget's coalescable events.
+
+        Three states: `nil` (no limiting, the default), `0` (track only,
+        never emit events to the host), or `N > 0` (emit at most N
+        events per second).
+        """
+        @spec event_rate(widget :: t(), rate :: non_neg_integer()) :: t()
         def event_rate(%__MODULE__{} = widget, rate)
             when is_integer(rate) and rate >= 0 do
           %{widget | event_rate: rate}
