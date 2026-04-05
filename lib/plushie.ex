@@ -111,7 +111,9 @@ defmodule Plushie do
   def init(opts) do
     name = opts[:instance_name]
     app = Keyword.fetch!(opts, :app)
+    validate_app!(app)
     transport = Keyword.get(opts, :transport, :spawn)
+    validate_transport!(transport)
 
     binary_path =
       if transport == :stdio or match?({:iostream, _}, transport) do
@@ -212,6 +214,35 @@ defmodule Plushie do
   # ---------------------------------------------------------------------------
   # Private helpers
   # ---------------------------------------------------------------------------
+
+  @spec validate_app!(module()) :: :ok
+  defp validate_app!(app) do
+    unless is_atom(app) and Code.ensure_loaded?(app) do
+      raise ArgumentError,
+            "expected :app to be a loaded module, got: #{inspect(app)}"
+    end
+
+    unless function_exported?(app, :init, 1) and function_exported?(app, :update, 2) and
+             function_exported?(app, :view, 1) do
+      raise ArgumentError,
+            "#{inspect(app)} does not implement the Plushie.App behaviour " <>
+              "(missing init/1, update/2, or view/1)"
+    end
+
+    :ok
+  end
+
+  @type transport :: :spawn | :stdio | {:iostream, pid()}
+
+  @spec validate_transport!(transport()) :: :ok
+  @valid_transports [:spawn, :stdio]
+  defp validate_transport!(transport) when transport in @valid_transports, do: :ok
+  defp validate_transport!({:iostream, pid}) when is_pid(pid), do: :ok
+
+  defp validate_transport!(other) do
+    raise ArgumentError,
+          "expected :transport to be :spawn, :stdio, or {:iostream, pid}, got: #{inspect(other)}"
+  end
 
   defp put_instance_name(opts) do
     case Keyword.fetch(opts, :name) do

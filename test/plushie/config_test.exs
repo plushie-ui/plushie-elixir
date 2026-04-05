@@ -90,4 +90,48 @@ defmodule Plushie.ConfigTest do
       end)
     end
   end
+
+  describe "start_link option validation" do
+    test "rejects non-module :app" do
+      Process.flag(:trap_exit, true)
+
+      result =
+        try do
+          Plushie.start_link("NotAModule", name: :val_test_1)
+        catch
+          :exit, reason -> {:exit, reason}
+        end
+
+      assert match?({:exit, _}, result) or match?({:error, _}, result)
+      Process.flag(:trap_exit, false)
+    end
+
+    test "rejects module without App behaviour" do
+      Process.flag(:trap_exit, true)
+
+      result =
+        try do
+          Plushie.start_link(String, name: :val_test_2)
+        catch
+          :exit, reason -> {:exit, reason}
+        end
+
+      assert match?({:exit, _}, result) or match?({:error, _}, result)
+      Process.flag(:trap_exit, false)
+    end
+
+    test "rejects invalid transport" do
+      Process.flag(:trap_exit, true)
+
+      result =
+        try do
+          Plushie.start_link(ConfigTestApp, name: :val_test_3, transport: :invalid)
+        catch
+          :exit, reason -> {:exit, reason}
+        end
+
+      assert match?({:exit, _}, result) or match?({:error, _}, result)
+      Process.flag(:trap_exit, false)
+    end
+  end
 end
