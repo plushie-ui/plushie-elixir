@@ -729,7 +729,8 @@ defmodule Plushie.Tree do
       |> Enum.reduce(%{}, fn {k, v}, acc ->
         case Map.fetch(old_props, k) do
           {:ok, ^v} -> acc
-          _ -> Map.put(acc, k, v)
+          {:ok, old_v} -> if id_keyed_list_equal?(old_v, v), do: acc, else: Map.put(acc, k, v)
+          :error -> Map.put(acc, k, v)
         end
       end)
 
@@ -747,6 +748,45 @@ defmodule Plushie.Tree do
     else
       [%{op: "update_props", path: path, props: merged}]
     end
+  end
+
+  # Compares two list-valued props by element ID when both are lists of
+  # ID-bearing maps (e.g. canvas shape lists). This catches the common
+  # case where the view function reconstructed the list with identical
+  # content but the structural `===` check failed (different map key
+  # ordering, float rounding, nested struct re-encoding).
+  #
+  # Returns true only when both lists have the same length, every element
+  # has an :id key, the ID sequences match, and each pair is structurally
+  # equal. Falls back to false for non-list or non-ID-bearing values so
+  # the caller treats them as changed (existing behavior).
+  #
+  # TODO: when the renderer protocol supports granular shape ops
+  # (add/remove/update by ID), this function can return a diff instead
+  # of a boolean, enabling sub-list patching over the wire.
+  @spec id_keyed_list_equal?(term(), term()) :: boolean()
+  defp id_keyed_list_equal?(old, new) when is_list(old) and is_list(new) do
+    length(old) == length(new) and
+      id_keyed_list?(old) and
+      id_keyed_list?(new) and
+      lists_equal_by_id?(old, new)
+  end
+
+  defp id_keyed_list_equal?(_old, _new), do: false
+
+  defp id_keyed_list?(list) do
+    list != [] and Enum.all?(list, &match?(%{id: _}, &1))
+  end
+
+  defp lists_equal_by_id?(old, new) do
+    old_by_id = Map.new(old, fn %{id: id} = el -> {id, el} end)
+
+    Enum.all?(new, fn %{id: id} = el ->
+      case Map.fetch(old_by_id, id) do
+        {:ok, ^el} -> true
+        _ -> false
+      end
+    end)
   end
 
   defp diff_children(old_children, new_children, path) do

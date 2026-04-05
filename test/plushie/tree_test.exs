@@ -714,4 +714,130 @@ defmodule Plushie.TreeTest do
       assert ops == [%{op: "insert_child", path: [0], index: 0, node: new_child}]
     end
   end
+
+  describe "diff/2 -- ID-keyed shape list comparison" do
+    test "identical shape lists with IDs produce no ops" do
+      shapes = [
+        %{id: "s1", type: "rect", x: 0, y: 0, w: 100, h: 50},
+        %{id: "s2", type: "circle", cx: 50, cy: 50, r: 25}
+      ]
+
+      old = %{id: "canvas", type: "canvas", props: %{shapes: shapes}, children: []}
+      new = %{id: "canvas", type: "canvas", props: %{shapes: shapes}, children: []}
+
+      assert Tree.diff(old, new) == []
+    end
+
+    test "reconstructed shape list with same content by ID produces no ops" do
+      old_shapes = [
+        %{id: "s1", type: "rect", x: 0, y: 0, w: 100, h: 50},
+        %{id: "s2", type: "group", children: [%{type: "circle", cx: 10, cy: 10, r: 5}]}
+      ]
+
+      # Freshly constructed with identical values
+      new_shapes = [
+        %{id: "s1", type: "rect", x: 0, y: 0, w: 100, h: 50},
+        %{id: "s2", type: "group", children: [%{type: "circle", cx: 10, cy: 10, r: 5}]}
+      ]
+
+      old = %{id: "canvas", type: "canvas", props: %{shapes: old_shapes}, children: []}
+      new = %{id: "canvas", type: "canvas", props: %{shapes: new_shapes}, children: []}
+
+      assert Tree.diff(old, new) == []
+    end
+
+    test "shape list with one element changed sends full shapes prop" do
+      old_shapes = [
+        %{id: "s1", type: "rect", x: 0, y: 0, w: 100, h: 50},
+        %{id: "s2", type: "rect", x: 10, y: 10, w: 50, h: 50}
+      ]
+
+      new_shapes = [
+        %{id: "s1", type: "rect", x: 20, y: 0, w: 100, h: 50},
+        %{id: "s2", type: "rect", x: 10, y: 10, w: 50, h: 50}
+      ]
+
+      old = %{id: "canvas", type: "canvas", props: %{shapes: old_shapes}, children: []}
+      new = %{id: "canvas", type: "canvas", props: %{shapes: new_shapes}, children: []}
+
+      ops = Tree.diff(old, new)
+      assert [%{op: "update_props", props: %{shapes: ^new_shapes}}] = ops
+    end
+
+    test "shape list with element added sends full shapes prop" do
+      old_shapes = [%{id: "s1", type: "rect", x: 0, y: 0, w: 100, h: 50}]
+
+      new_shapes = [
+        %{id: "s1", type: "rect", x: 0, y: 0, w: 100, h: 50},
+        %{id: "s2", type: "rect", x: 10, y: 10, w: 50, h: 50}
+      ]
+
+      old = %{id: "canvas", type: "canvas", props: %{shapes: old_shapes}, children: []}
+      new = %{id: "canvas", type: "canvas", props: %{shapes: new_shapes}, children: []}
+
+      ops = Tree.diff(old, new)
+      assert [%{op: "update_props", props: %{shapes: ^new_shapes}}] = ops
+    end
+
+    test "shape list with element removed sends full shapes prop" do
+      old_shapes = [
+        %{id: "s1", type: "rect", x: 0, y: 0, w: 100, h: 50},
+        %{id: "s2", type: "rect", x: 10, y: 10, w: 50, h: 50}
+      ]
+
+      new_shapes = [%{id: "s1", type: "rect", x: 0, y: 0, w: 100, h: 50}]
+
+      old = %{id: "canvas", type: "canvas", props: %{shapes: old_shapes}, children: []}
+      new = %{id: "canvas", type: "canvas", props: %{shapes: new_shapes}, children: []}
+
+      ops = Tree.diff(old, new)
+      assert [%{op: "update_props", props: %{shapes: ^new_shapes}}] = ops
+    end
+
+    test "non-ID lists still compared by structural equality" do
+      old = %{id: "root", type: "container", props: %{items: [1, 2, 3]}, children: []}
+      new = %{id: "root", type: "container", props: %{items: [1, 2, 3]}, children: []}
+      assert Tree.diff(old, new) == []
+
+      new2 = %{id: "root", type: "container", props: %{items: [1, 2, 4]}, children: []}
+      ops = Tree.diff(old, new2)
+      assert [%{op: "update_props", props: %{items: [1, 2, 4]}}] = ops
+    end
+
+    test "mixed list (some elements without IDs) falls back to full comparison" do
+      old_shapes = [%{id: "s1", type: "rect"}, %{type: "circle"}]
+      new_shapes = [%{id: "s1", type: "rect"}, %{type: "circle"}]
+
+      old = %{id: "canvas", type: "canvas", props: %{shapes: old_shapes}, children: []}
+      new = %{id: "canvas", type: "canvas", props: %{shapes: new_shapes}, children: []}
+
+      # Structural equality still catches this since content is identical
+      assert Tree.diff(old, new) == []
+    end
+
+    test "unchanged shapes not included when other props change" do
+      shapes = [
+        %{id: "s1", type: "rect", x: 0, y: 0, w: 100, h: 50}
+      ]
+
+      old = %{
+        id: "canvas",
+        type: "canvas",
+        props: %{shapes: shapes, background: "white"},
+        children: []
+      }
+
+      new = %{
+        id: "canvas",
+        type: "canvas",
+        props: %{shapes: shapes, background: "black"},
+        children: []
+      }
+
+      ops = Tree.diff(old, new)
+      assert [%{op: "update_props", props: props}] = ops
+      assert props == %{background: "black"}
+      refute Map.has_key?(props, :shapes)
+    end
+  end
 end
