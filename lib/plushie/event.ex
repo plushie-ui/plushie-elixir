@@ -59,7 +59,7 @@ defmodule Plushie.Event do
   """
   @spec target(event :: struct()) :: String.t()
   def target(%{id: id} = event) do
-    scope = strip_window_scope(Map.get(event, :scope, []), Map.get(event, :window_id))
+    scope = strip_window_from_scope(Map.get(event, :scope, []), Map.get(event, :window_id))
 
     case scope do
       [] -> id
@@ -67,10 +67,23 @@ defmodule Plushie.Event do
     end
   end
 
-  defp strip_window_scope(scope, nil), do: scope
-  defp strip_window_scope(scope, _window_id) when scope == [], do: scope
+  @doc """
+  Strips the window ID from the end of a reversed scope list.
 
-  defp strip_window_scope(scope, window_id) do
+  Events carry a reversed ancestor scope where the window ID appears
+  at the tail. Registry keys and scoped IDs do not include the window
+  (it is keyed separately). This function removes it so scope can be
+  used for registry lookups and path reconstruction.
+
+  Returns the scope unchanged when `window_id` is nil or does not
+  appear at the end.
+  """
+  @spec strip_window_from_scope(scope :: [String.t()], window_id :: String.t() | nil) ::
+          [String.t()]
+  def strip_window_from_scope(scope, nil), do: scope
+  def strip_window_from_scope([], _window_id), do: []
+
+  def strip_window_from_scope(scope, window_id) do
     case List.last(scope) do
       ^window_id -> List.delete_at(scope, -1)
       _ -> scope

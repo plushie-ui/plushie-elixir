@@ -115,19 +115,6 @@ defmodule Plushie.Runtime.Subscriptions do
 
           {key, {:renderer, type, new_spec.max_rate, new_spec.tag}}
 
-        {:renderer, type, old_rate} when old_rate != new_spec.max_rate ->
-          if bridge do
-            Plushie.Bridge.send_subscribe(
-              bridge,
-              Atom.to_string(type),
-              Atom.to_string(new_spec.tag),
-              new_spec.max_rate,
-              new_spec.window_id
-            )
-          end
-
-          {key, {:renderer, type, new_spec.max_rate, new_spec.tag}}
-
         _ ->
           {key, old_entry}
       end
@@ -141,19 +128,6 @@ defmodule Plushie.Runtime.Subscriptions do
       Enum.reduce(new_by_key, state.subscriptions, fn {key, new_spec}, subs ->
         case Map.get(subs, key) do
           {:renderer, type, old_rate, _tag} when old_rate != new_spec.max_rate ->
-            if state.bridge do
-              Plushie.Bridge.send_subscribe(
-                state.bridge,
-                Atom.to_string(type),
-                Atom.to_string(new_spec.tag),
-                new_spec.max_rate,
-                new_spec.window_id
-              )
-            end
-
-            Map.put(subs, key, {:renderer, type, new_spec.max_rate, new_spec.tag})
-
-          {:renderer, type, old_rate} when old_rate != new_spec.max_rate ->
             if state.bridge do
               Plushie.Bridge.send_subscribe(
                 state.bridge,
@@ -183,12 +157,6 @@ defmodule Plushie.Runtime.Subscriptions do
         {:renderer, type, _max_rate, tag} ->
           if bridge,
             do: Plushie.Bridge.send_unsubscribe(bridge, Atom.to_string(type), Atom.to_string(tag))
-
-        {:renderer, type, _max_rate} ->
-          if bridge, do: Plushie.Bridge.send_unsubscribe(bridge, Atom.to_string(type))
-
-        {:renderer, type} ->
-          if bridge, do: Plushie.Bridge.send_unsubscribe(bridge, Atom.to_string(type))
 
         _ ->
           :ok
