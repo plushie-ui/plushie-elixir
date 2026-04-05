@@ -440,7 +440,7 @@ Use `on_complete:` to trigger the next phase from `update/2`:
 ```elixir
 max_width: transition(300, to: 0, on_complete: :collapsed)
 
-def update(model, %WidgetEvent{type: :transition_complete, value: %{tag: :collapsed}}) do
+def update(model, %WidgetEvent{type: :transition_complete, value: %{tag: :collapsed, prop: "max_width"}}) do
   %{model | show_panel: false}  # remove from tree after collapse
 end
 ```

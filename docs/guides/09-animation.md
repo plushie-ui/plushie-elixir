@@ -242,7 +242,7 @@ end
 ## Try it
 
 - Try different easing curves on the file list stagger: `:ease_out`,
-  `:ease_in_out`, `:spring`.
+  `:ease_in_out`, `:ease_out_back`.
 - Add a `spring` to the preview pane width and toggle it with a button.
 - Experiment with `sequence` to chain multiple animations on one prop.
 

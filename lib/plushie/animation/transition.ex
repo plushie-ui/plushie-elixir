@@ -50,7 +50,7 @@ defmodule Plushie.Animation.Transition do
       opacity: loop(800, to: 0.4, from: 1.0)
 
       # Spin forever (no reverse)
-      rotation: loop(1000, to: 360, from: 0, reverse: false)
+      rotation: loop(1000, to: 360, from: 0, auto_reverse: false)
 
       # Finite: 3 cycles
       opacity: loop(800, to: 0.4, from: 1.0, cycles: 3)
