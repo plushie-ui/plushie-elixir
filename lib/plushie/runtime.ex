@@ -41,7 +41,7 @@ defmodule Plushie.Runtime do
         pending_coalesce_order: [term()],
         coalesce_timer:     reference() | nil,
         consecutive_errors: non_neg_integer(),
-        pending_interact:   {GenServer.from(), String.t(), reference(), reference()} | nil
+        pending_interact:   {GenServer.from(), String.t(), reference(), reference(), String.t(), map()} | nil
       }
 
   ## Exit trapping
@@ -120,7 +120,8 @@ defmodule Plushie.Runtime do
            widget_events: %{
              {String.t() | nil, String.t()} => %{widget_type: atom(), events: MapSet.t(atom())}
            },
-           pending_interact: {GenServer.from(), String.t(), reference()} | nil,
+           pending_interact:
+             {GenServer.from(), String.t(), reference(), reference(), String.t(), map()} | nil,
            pending_await_async: %{atom() => GenServer.from()},
            memo_cache: map(),
            widget_view_cache: map(),
@@ -215,7 +216,12 @@ defmodule Plushie.Runtime do
   interaction finishes.
   """
   @spec interact(GenServer.server(), String.t(), map(), map(), timeout()) ::
-          :ok | {:error, :interact_in_progress | :renderer_restarted | {:renderer_exit, term()}}
+          :ok
+          | {:error,
+             :interact_in_progress
+             | :renderer_restarted
+             | {:renderer_exit, term()}
+             | {:timeout, String.t(), map()}}
   def interact(runtime, action, selector, payload \\ %{}, timeout \\ 10_000) do
     GenServer.call(runtime, {:interact, action, selector, payload}, timeout)
   end
@@ -445,9 +451,11 @@ defmodule Plushie.Runtime do
         monitor_ref = Process.monitor(caller_pid)
         timer_ref = Process.send_after(self(), {:interact_timeout, id}, @interact_timeout)
         Plushie.Bridge.send_interact(state.bridge, id, action, selector, payload)
-        {:noreply, %{state | pending_interact: {from, id, monitor_ref, timer_ref}}}
 
-      {_other_from, _id, _monitor_ref, _timer_ref} ->
+        {:noreply,
+         %{state | pending_interact: {from, id, monitor_ref, timer_ref, action, selector}}}
+
+      _ ->
         {:reply, {:error, :interact_in_progress}, state}
     end
   end
@@ -601,7 +609,7 @@ defmodule Plushie.Runtime do
 
     # Reply to the blocked caller.
     case state.pending_interact do
-      {from, ^id, monitor_ref, timer_ref} ->
+      {from, ^id, monitor_ref, timer_ref, _action, _selector} ->
         Process.demonitor(monitor_ref, [:flush])
         Process.cancel_timer(timer_ref)
         GenServer.reply(from, :ok)
@@ -778,7 +786,7 @@ defmodule Plushie.Runtime do
   def handle_info({:DOWN, ref, :process, _pid, _reason}, state)
       when state.pending_interact != nil do
     case state.pending_interact do
-      {_from, _id, ^ref, timer_ref} ->
+      {_from, _id, ^ref, timer_ref, _action, _selector} ->
         Process.cancel_timer(timer_ref)
         Logger.debug("plushie runtime: interact caller exited, clearing pending interaction")
         {:noreply, %{state | pending_interact: nil}}
@@ -790,10 +798,14 @@ defmodule Plushie.Runtime do
 
   def handle_info({:interact_timeout, id}, state) do
     case state.pending_interact do
-      {from, ^id, monitor_ref, _timer_ref} ->
+      {from, ^id, monitor_ref, _timer_ref, action, selector} ->
         Process.demonitor(monitor_ref, [:flush])
-        GenServer.reply(from, {:error, :timeout})
-        Logger.warning("plushie runtime: interact #{id} timed out")
+        GenServer.reply(from, {:error, {:timeout, action, selector}})
+
+        Logger.warning(
+          "plushie runtime: interact #{id} timed out (action=#{action}, selector=#{inspect(selector)})"
+        )
+
         {:noreply, %{state | pending_interact: nil}}
 
       _ ->
@@ -1147,7 +1159,7 @@ defmodule Plushie.Runtime do
   defp fail_pending_interact(%{pending_interact: nil} = state, _reason), do: state
 
   defp fail_pending_interact(
-         %{pending_interact: {from, _id, monitor_ref, timer_ref}} = state,
+         %{pending_interact: {from, _id, monitor_ref, timer_ref, _action, _selector}} = state,
          reason
        ) do
     Process.demonitor(monitor_ref, [:flush])
