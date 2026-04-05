@@ -103,7 +103,7 @@ use `Plushie.Subscription.every/2` instead.
 | `set_window_mode/2` | Set fullscreen/windowed mode |
 | `toggle_maximize/1` | Toggle maximized state |
 | `toggle_decorations/1` | Toggle window decorations |
-| `gain_focus/1` | Bring window to front |
+| `focus_window/1` | Bring window to front |
 | `set_window_level/2` | Set window z-level |
 | `drag_window/1` | Begin window drag |
 | `drag_resize_window/2` | Begin window resize drag |

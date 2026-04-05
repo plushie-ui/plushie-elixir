@@ -10,25 +10,27 @@ defmodule Plushie.Command do
   - **Basic**: `none/0`, `done/2`, `async/2`, `stream/2`, `cancel/1`, `send_after/2`, `exit/0`
   - **Focus**: `focus/1`, `focus_next/0`, `focus_previous/0`
   - **Text**: `select_all/1`, `move_cursor_to_front/1`, `move_cursor_to_end/1`,
-    `move_cursor_to/2`, `select_range/3`
+    `move_cursor_to/2`, `select_range/3` (see `Command.Text`)
   - **Scroll**: `scroll_to/2`, `snap_to/3`, `snap_to_end/1`, `scroll_by/3`
+    (see `Command.Scroll`)
   - **Window ops**: `close_window/1`, `resize_window/3`, `move_window/3`,
     `maximize_window/2`, `minimize_window/2`, `set_window_mode/2`,
-    `toggle_maximize/1`, `toggle_decorations/1`, `gain_focus/1`,
+    `toggle_maximize/1`, `toggle_decorations/1`, `focus_window/1`,
     `set_window_level/2`, `drag_window/1`, `drag_resize_window/2`,
     `request_user_attention/2`, `screenshot/2`, `set_resizable/2`,
     `set_min_size/3`, `set_max_size/3`, `enable_mouse_passthrough/1`,
     `disable_mouse_passthrough/1`, `show_system_menu/1`, `set_icon/4`,
-    `set_resize_increments/3`, `allow_automatic_tabbing/1`.
+    `set_resize_increments/3` (see `Command.Window`)
   - **Window queries**: `get_window_size/2`, `get_window_position/2`,
     `is_maximized/2`, `is_minimized/2`, `get_mode/2`, `get_scale_factor/2`,
-    `raw_id/2`, `monitor_size/2`
+    `raw_id/2`, `monitor_size/2` (see `Command.WindowQuery`)
   - **System ops**: `allow_automatic_tabbing/1`
   - **System queries**: `get_system_theme/1`, `get_system_info/1`
   - **PaneGrid ops**: `pane_split/4`, `pane_close/2`, `pane_swap/3`,
     `pane_maximize/2`, `pane_restore/1`
   - **Image ops**: `create_image/2`, `create_image/4`, `update_image/2`,
     `update_image/4`, `delete_image/1`, `list_images/1`, `clear_images/0`
+    (see `Command.Image`)
   - **Queries**: `tree_hash/1`, `find_focused/1`
   - **Font**: `load_font/1`
   - **Accessibility**: `announce/1`
@@ -155,32 +157,6 @@ defmodule Plushie.Command do
   def focus_previous, do: %__MODULE__{type: :focus_previous, payload: %{}}
 
   @doc """
-  Select all text in the widget identified by `widget_id`.
-
-  Supports window-qualified paths: `"main#email"`.
-  """
-  @spec select_all(widget_id :: widget_id()) :: %__MODULE__{}
-  def select_all(widget_id) do
-    {window_id, target} = parse_target(widget_id)
-    payload = %{target: target}
-    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
-    %__MODULE__{type: :select_all, payload: payload}
-  end
-
-  @doc """
-  Scroll the widget identified by `widget_id` to `offset`.
-
-  Supports window-qualified paths: `"main#list"`.
-  """
-  @spec scroll_to(widget_id :: widget_id(), offset :: term()) :: %__MODULE__{}
-  def scroll_to(widget_id, offset) do
-    {window_id, target} = parse_target(widget_id)
-    payload = %{target: target, offset_y: offset}
-    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
-    %__MODULE__{type: :scroll_to, payload: payload}
-  end
-
-  @doc """
   Send `event` through `update/2` after `delay_ms` milliseconds.
 
   If a timer with the same event term is already pending, the previous
@@ -192,310 +168,80 @@ defmodule Plushie.Command do
     %__MODULE__{type: :send_after, payload: %{delay: delay_ms, event: event}}
   end
 
-  @doc "Close the window identified by `window_id`."
-  @spec close_window(window_id :: window_id()) :: %__MODULE__{}
-  def close_window(window_id) do
-    %__MODULE__{type: :close_window, payload: %{window_id: window_id}}
-  end
+  # ---------------------------------------------------------------------------
+  # Delegated: Text (Command.Text)
+  # ---------------------------------------------------------------------------
+
+  defdelegate select_all(widget_id), to: __MODULE__.Text
+  defdelegate move_cursor_to_front(widget_id), to: __MODULE__.Text
+  defdelegate move_cursor_to_end(widget_id), to: __MODULE__.Text
+  defdelegate move_cursor_to(widget_id, position), to: __MODULE__.Text
+  defdelegate select_range(widget_id, start_pos, end_pos), to: __MODULE__.Text
+
+  # ---------------------------------------------------------------------------
+  # Delegated: Scroll (Command.Scroll)
+  # ---------------------------------------------------------------------------
+
+  defdelegate scroll_to(widget_id, offset), to: __MODULE__.Scroll
+  defdelegate snap_to(widget_id, x \\ 0.0, y \\ 0.0), to: __MODULE__.Scroll
+  defdelegate snap_to_end(widget_id), to: __MODULE__.Scroll
+  defdelegate scroll_by(widget_id, x \\ 0.0, y \\ 0.0), to: __MODULE__.Scroll
+
+  # ---------------------------------------------------------------------------
+  # Delegated: Window operations (Command.Window)
+  # ---------------------------------------------------------------------------
+
+  defdelegate close_window(window_id), to: __MODULE__.Window
+  defdelegate set_icon(window_id, rgba_data, width, height), to: __MODULE__.Window
+  defdelegate resize_window(window_id, width, height), to: __MODULE__.Window
+  defdelegate move_window(window_id, x, y), to: __MODULE__.Window
+  defdelegate maximize_window(window_id, maximized \\ true), to: __MODULE__.Window
+  defdelegate minimize_window(window_id, minimized \\ true), to: __MODULE__.Window
+  defdelegate set_window_mode(window_id, mode), to: __MODULE__.Window
+  defdelegate toggle_maximize(window_id), to: __MODULE__.Window
+  defdelegate toggle_decorations(window_id), to: __MODULE__.Window
+  defdelegate focus_window(window_id), to: __MODULE__.Window
+  defdelegate set_window_level(window_id, level), to: __MODULE__.Window
+  defdelegate drag_window(window_id), to: __MODULE__.Window
+  defdelegate drag_resize_window(window_id, direction), to: __MODULE__.Window
+  defdelegate request_user_attention(window_id, urgency \\ nil), to: __MODULE__.Window
+  defdelegate screenshot(window_id, tag), to: __MODULE__.Window
+  defdelegate set_resizable(window_id, resizable), to: __MODULE__.Window
+  defdelegate set_min_size(window_id, width, height), to: __MODULE__.Window
+  defdelegate set_max_size(window_id, width, height), to: __MODULE__.Window
+  defdelegate enable_mouse_passthrough(window_id), to: __MODULE__.Window
+  defdelegate disable_mouse_passthrough(window_id), to: __MODULE__.Window
+  defdelegate show_system_menu(window_id), to: __MODULE__.Window
+  defdelegate set_resize_increments(window_id, width, height), to: __MODULE__.Window
+
+  # ---------------------------------------------------------------------------
+  # Delegated: Window queries (Command.WindowQuery)
+  # ---------------------------------------------------------------------------
+
+  defdelegate get_window_size(window_id, tag), to: __MODULE__.WindowQuery
+  defdelegate get_window_position(window_id, tag), to: __MODULE__.WindowQuery
+  defdelegate is_maximized(window_id, tag), to: __MODULE__.WindowQuery
+  defdelegate is_minimized(window_id, tag), to: __MODULE__.WindowQuery
+  defdelegate get_mode(window_id, tag), to: __MODULE__.WindowQuery
+  defdelegate get_scale_factor(window_id, tag), to: __MODULE__.WindowQuery
+  defdelegate raw_id(window_id, tag), to: __MODULE__.WindowQuery
+  defdelegate monitor_size(window_id, tag), to: __MODULE__.WindowQuery
+
+  # ---------------------------------------------------------------------------
+  # Delegated: Image operations (Command.Image)
+  # ---------------------------------------------------------------------------
+
+  defdelegate create_image(handle, data), to: __MODULE__.Image
+  defdelegate create_image(handle, width, height, pixels), to: __MODULE__.Image
+  defdelegate update_image(handle, data), to: __MODULE__.Image
+  defdelegate update_image(handle, width, height, pixels), to: __MODULE__.Image
+  defdelegate delete_image(handle), to: __MODULE__.Image
+  defdelegate list_images(tag), to: __MODULE__.Image
+  defdelegate clear_images(), to: __MODULE__.Image
 
   @doc "Exit the application."
   @spec exit() :: %__MODULE__{}
   def exit, do: %__MODULE__{type: :exit, payload: %{}}
-
-  @doc "Snap the scrollable widget to an absolute offset. Supports `\"window#path\"`."
-  @spec snap_to(widget_id :: widget_id(), x :: float(), y :: float()) :: %__MODULE__{}
-  def snap_to(widget_id, x \\ 0.0, y \\ 0.0) do
-    {window_id, target} = parse_target(widget_id)
-    payload = %{target: target, x: x, y: y}
-    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
-    %__MODULE__{type: :snap_to, payload: payload}
-  end
-
-  @doc "Snap the scrollable widget to the end of its content. Supports `\"window#path\"`."
-  @spec snap_to_end(widget_id :: widget_id()) :: %__MODULE__{}
-  def snap_to_end(widget_id) do
-    {window_id, target} = parse_target(widget_id)
-    payload = %{target: target}
-    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
-    %__MODULE__{type: :snap_to_end, payload: payload}
-  end
-
-  @doc "Scroll the widget by a relative offset. Supports `\"window#path\"`."
-  @spec scroll_by(widget_id :: widget_id(), x :: float(), y :: float()) :: %__MODULE__{}
-  def scroll_by(widget_id, x \\ 0.0, y \\ 0.0) do
-    {window_id, target} = parse_target(widget_id)
-    payload = %{target: target, x: x, y: y}
-    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
-    %__MODULE__{type: :scroll_by, payload: payload}
-  end
-
-  @doc "Move the text cursor to the front of the input. Supports `\"window#path\"`."
-  @spec move_cursor_to_front(widget_id :: widget_id()) :: %__MODULE__{}
-  def move_cursor_to_front(widget_id) do
-    {window_id, target} = parse_target(widget_id)
-    payload = %{target: target}
-    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
-    %__MODULE__{type: :move_cursor_to_front, payload: payload}
-  end
-
-  @doc "Move the text cursor to the end of the input. Supports `\"window#path\"`."
-  @spec move_cursor_to_end(widget_id :: widget_id()) :: %__MODULE__{}
-  def move_cursor_to_end(widget_id) do
-    {window_id, target} = parse_target(widget_id)
-    payload = %{target: target}
-    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
-    %__MODULE__{type: :move_cursor_to_end, payload: payload}
-  end
-
-  @doc "Move the text cursor to a specific position. Supports `\"window#path\"`."
-  @spec move_cursor_to(widget_id :: widget_id(), position :: non_neg_integer()) :: %__MODULE__{}
-  def move_cursor_to(widget_id, position) do
-    {window_id, target} = parse_target(widget_id)
-    payload = %{target: target, position: position}
-    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
-    %__MODULE__{type: :move_cursor_to, payload: payload}
-  end
-
-  @doc "Select a range of text in the input. Supports `\"window#path\"`."
-  @spec select_range(
-          widget_id :: widget_id(),
-          start_pos :: non_neg_integer(),
-          end_pos :: non_neg_integer()
-        ) :: %__MODULE__{}
-  def select_range(widget_id, start_pos, end_pos) do
-    {window_id, target} = parse_target(widget_id)
-    payload = %{target: target, start: start_pos, end: end_pos}
-    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
-    %__MODULE__{type: :select_range, payload: payload}
-  end
-
-  # ---------------------------------------------------------------------------
-  # Window operations
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Sets the window icon from raw RGBA pixel data.
-
-  The `rgba_data` must be a binary of `width * height * 4` bytes (one byte
-  each for R, G, B, A per pixel, row-major). The raw binary is stored as-is
-  in the command payload. The protocol layer handles format-specific encoding
-  (native binary for msgpack via Msgpax.Bin, base64 for JSON).
-
-  ## Example
-
-      icon_data = File.read!("icon_32x32.rgba")
-      Plushie.Command.set_icon("main", icon_data, 32, 32)
-  """
-  @spec set_icon(
-          window_id :: window_id(),
-          rgba_data :: binary(),
-          width :: pos_integer(),
-          height :: pos_integer()
-        ) :: %__MODULE__{}
-  def set_icon(window_id, rgba_data, width, height)
-      when is_binary(rgba_data) and is_integer(width) and width > 0 and is_integer(height) and
-             height > 0 do
-    %__MODULE__{
-      type: :window_op,
-      payload: %{
-        op: "set_icon",
-        window_id: window_id,
-        icon_data: rgba_data,
-        width: width,
-        height: height
-      }
-    }
-  end
-
-  @doc "Resize a window to the given dimensions."
-  @spec resize_window(window_id :: window_id(), width :: number(), height :: number()) ::
-          %__MODULE__{}
-  def resize_window(window_id, width, height) do
-    %__MODULE__{
-      type: :window_op,
-      payload: %{op: "resize", window_id: window_id, width: width, height: height}
-    }
-  end
-
-  @doc "Move a window to the given position."
-  @spec move_window(window_id :: window_id(), x :: number(), y :: number()) :: %__MODULE__{}
-  def move_window(window_id, x, y) do
-    %__MODULE__{type: :window_op, payload: %{op: "move", window_id: window_id, x: x, y: y}}
-  end
-
-  @doc "Maximize or restore a window."
-  @spec maximize_window(window_id :: window_id(), maximized :: boolean()) :: %__MODULE__{}
-  def maximize_window(window_id, maximized \\ true) do
-    %__MODULE__{
-      type: :window_op,
-      payload: %{op: "maximize", window_id: window_id, maximized: maximized}
-    }
-  end
-
-  @doc "Minimize or restore a window."
-  @spec minimize_window(window_id :: window_id(), minimized :: boolean()) :: %__MODULE__{}
-  def minimize_window(window_id, minimized \\ true) do
-    %__MODULE__{
-      type: :window_op,
-      payload: %{op: "minimize", window_id: window_id, minimized: minimized}
-    }
-  end
-
-  @doc "Set window mode (windowed, fullscreen, etc.)."
-  @spec set_window_mode(window_id :: window_id(), mode :: atom() | String.t()) :: %__MODULE__{}
-  def set_window_mode(window_id, mode) do
-    %__MODULE__{
-      type: :window_op,
-      payload: %{op: "set_mode", window_id: window_id, mode: to_string(mode)}
-    }
-  end
-
-  @doc "Toggle window maximized state."
-  @spec toggle_maximize(window_id :: window_id()) :: %__MODULE__{}
-  def toggle_maximize(window_id) do
-    %__MODULE__{type: :window_op, payload: %{op: "toggle_maximize", window_id: window_id}}
-  end
-
-  @doc "Toggle window decorations (title bar, borders)."
-  @spec toggle_decorations(window_id :: window_id()) :: %__MODULE__{}
-  def toggle_decorations(window_id) do
-    %__MODULE__{type: :window_op, payload: %{op: "toggle_decorations", window_id: window_id}}
-  end
-
-  @doc "Give focus to a window."
-  @spec gain_focus(window_id :: window_id()) :: %__MODULE__{}
-  def gain_focus(window_id) do
-    %__MODULE__{type: :window_op, payload: %{op: "gain_focus", window_id: window_id}}
-  end
-
-  @doc """
-  Set window stacking level (:normal, :always_on_top, :always_on_bottom).
-
-  On Wayland, window stacking is compositor-controlled and this command may
-  be silently ignored.
-  """
-  @spec set_window_level(window_id :: window_id(), level :: atom() | String.t()) :: %__MODULE__{}
-  def set_window_level(window_id, level) do
-    %__MODULE__{
-      type: :window_op,
-      payload: %{op: "set_level", window_id: window_id, level: to_string(level)}
-    }
-  end
-
-  @doc "Start dragging the window."
-  @spec drag_window(window_id :: window_id()) :: %__MODULE__{}
-  def drag_window(window_id) do
-    %__MODULE__{type: :window_op, payload: %{op: "drag", window_id: window_id}}
-  end
-
-  @doc "Start drag-resizing the window from the given edge/corner direction."
-  @spec drag_resize_window(window_id :: window_id(), direction :: atom() | String.t()) ::
-          %__MODULE__{}
-  def drag_resize_window(window_id, direction) do
-    %__MODULE__{
-      type: :window_op,
-      payload: %{op: "drag_resize", window_id: window_id, direction: to_string(direction)}
-    }
-  end
-
-  @doc "Request user attention for a window. Urgency can be :informational or :critical."
-  @spec request_user_attention(window_id :: window_id(), urgency :: atom() | nil) :: %__MODULE__{}
-  def request_user_attention(window_id, urgency \\ nil) do
-    %__MODULE__{
-      type: :window_op,
-      payload: %{
-        op: "request_attention",
-        window_id: window_id,
-        urgency: urgency && to_string(urgency)
-      }
-    }
-  end
-
-  @doc "Take a screenshot of a window. Result arrives as a tagged event."
-  @spec screenshot(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
-  def screenshot(window_id, tag) do
-    %__MODULE__{
-      type: :window_op,
-      payload: %{op: "screenshot", window_id: window_id, tag: to_string(tag)}
-    }
-  end
-
-  @doc "Set whether a window is resizable."
-  @spec set_resizable(window_id :: window_id(), resizable :: boolean()) :: %__MODULE__{}
-  def set_resizable(window_id, resizable) do
-    %__MODULE__{
-      type: :window_op,
-      payload: %{op: "set_resizable", window_id: window_id, resizable: resizable}
-    }
-  end
-
-  @doc "Set the minimum size of a window."
-  @spec set_min_size(window_id :: window_id(), width :: number(), height :: number()) ::
-          %__MODULE__{}
-  def set_min_size(window_id, width, height) do
-    %__MODULE__{
-      type: :window_op,
-      payload: %{op: "set_min_size", window_id: window_id, width: width, height: height}
-    }
-  end
-
-  @doc "Set the maximum size of a window."
-  @spec set_max_size(window_id :: window_id(), width :: number(), height :: number()) ::
-          %__MODULE__{}
-  def set_max_size(window_id, width, height) do
-    %__MODULE__{
-      type: :window_op,
-      payload: %{op: "set_max_size", window_id: window_id, width: width, height: height}
-    }
-  end
-
-  @doc "Enable mouse passthrough on a window (clicks pass through to windows below)."
-  @spec enable_mouse_passthrough(window_id :: window_id()) :: %__MODULE__{}
-  def enable_mouse_passthrough(window_id) do
-    %__MODULE__{
-      type: :window_op,
-      payload: %{op: "mouse_passthrough", window_id: window_id, enabled: true}
-    }
-  end
-
-  @doc "Disable mouse passthrough on a window."
-  @spec disable_mouse_passthrough(window_id :: window_id()) :: %__MODULE__{}
-  def disable_mouse_passthrough(window_id) do
-    %__MODULE__{
-      type: :window_op,
-      payload: %{op: "mouse_passthrough", window_id: window_id, enabled: false}
-    }
-  end
-
-  @doc "Show the system menu for a window."
-  @spec show_system_menu(window_id :: window_id()) :: %__MODULE__{}
-  def show_system_menu(window_id) do
-    %__MODULE__{type: :window_op, payload: %{op: "show_system_menu", window_id: window_id}}
-  end
-
-  @doc """
-  Sets the resize increment size for a window.
-
-  When set, the window will only resize in multiples of the given width and
-  height. Pass `nil` for both to clear the constraint. Useful for terminal
-  emulators and grid-aligned apps.
-  """
-  @spec set_resize_increments(
-          window_id :: window_id(),
-          width :: number() | nil,
-          height :: number() | nil
-        ) :: %__MODULE__{}
-  def set_resize_increments(window_id, width, height) do
-    %__MODULE__{
-      type: :window_op,
-      payload: %{
-        op: "set_resize_increments",
-        window_id: window_id,
-        width: width,
-        height: height
-      }
-    }
-  end
 
   @doc """
   Sets whether the system can automatically organize windows into tabs.
@@ -508,118 +254,6 @@ defmodule Plushie.Command do
     %__MODULE__{
       type: :system_op,
       payload: %{op: "allow_automatic_tabbing", enabled: enabled}
-    }
-  end
-
-  # ---------------------------------------------------------------------------
-  # Window queries (results arrive as events)
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Query the size of a window.
-
-  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: data}`
-  where `data` is `%{width: width, height: height}`.
-  """
-  @spec get_window_size(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
-  def get_window_size(window_id, tag) do
-    %__MODULE__{
-      type: :window_query,
-      payload: %{op: "get_size", window_id: window_id, tag: to_string(tag)}
-    }
-  end
-
-  @doc """
-  Query the position of a window.
-
-  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: data}`
-  where `data` is `%{x: x, y: y}` or `nil` if unavailable.
-  """
-  @spec get_window_position(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
-  def get_window_position(window_id, tag) do
-    %__MODULE__{
-      type: :window_query,
-      payload: %{op: "get_position", window_id: window_id, tag: to_string(tag)}
-    }
-  end
-
-  @doc """
-  Query whether a window is maximized.
-
-  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: boolean}`.
-  """
-  @spec is_maximized(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
-  def is_maximized(window_id, tag) do
-    %__MODULE__{
-      type: :window_query,
-      payload: %{op: "is_maximized", window_id: window_id, tag: to_string(tag)}
-    }
-  end
-
-  @doc """
-  Query whether a window is minimized.
-
-  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: boolean}`.
-  """
-  @spec is_minimized(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
-  def is_minimized(window_id, tag) do
-    %__MODULE__{
-      type: :window_query,
-      payload: %{op: "is_minimized", window_id: window_id, tag: to_string(tag)}
-    }
-  end
-
-  @doc """
-  Query the current window mode (windowed, fullscreen, hidden).
-
-  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: mode}`.
-  """
-  @spec get_mode(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
-  def get_mode(window_id, tag) do
-    %__MODULE__{
-      type: :window_query,
-      payload: %{op: "get_mode", window_id: window_id, tag: to_string(tag)}
-    }
-  end
-
-  @doc """
-  Query the window's current scale factor (DPI scaling).
-
-  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: factor}`.
-  """
-  @spec get_scale_factor(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
-  def get_scale_factor(window_id, tag) do
-    %__MODULE__{
-      type: :window_query,
-      payload: %{op: "get_scale_factor", window_id: window_id, tag: to_string(tag)}
-    }
-  end
-
-  @doc """
-  Query the raw platform window ID (e.g. X11 window ID, HWND).
-
-  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: platform_id}`.
-  """
-  @spec raw_id(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
-  def raw_id(window_id, tag) do
-    %__MODULE__{
-      type: :window_query,
-      payload: %{op: "raw_id", window_id: window_id, tag: to_string(tag)}
-    }
-  end
-
-  @doc """
-  Query the monitor size for the display containing a window.
-
-  Result arrives as `%Plushie.Event.SystemEvent{tag: tag, data: data}`
-  where `data` is `%{width: width, height: height}` or `nil` if the
-  monitor cannot be determined.
-  """
-  @spec monitor_size(window_id :: window_id(), tag :: event_tag()) :: %__MODULE__{}
-  def monitor_size(window_id, tag) do
-    %__MODULE__{
-      type: :window_query,
-      payload: %{op: "monitor_size", window_id: window_id, tag: to_string(tag)}
     }
   end
 
@@ -827,138 +461,6 @@ defmodule Plushie.Command do
     %__MODULE__{type: :cancel, payload: %{tag: event_tag}}
   end
 
-  # ---------------------------------------------------------------------------
-  # Image operations
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Creates an in-memory image from encoded PNG/JPEG bytes.
-
-  The raw binary is stored as-is in the command payload. The protocol layer
-  handles format-specific encoding (native binary for msgpack, base64 for JSON).
-  """
-  @spec create_image(handle :: String.t(), data :: binary()) :: %__MODULE__{}
-  def create_image(handle, data) when is_binary(handle) and is_binary(data) do
-    %__MODULE__{
-      type: :image_op,
-      payload: %{op: "create_image", handle: handle, data: data}
-    }
-  end
-
-  @doc """
-  Creates an in-memory image from raw RGBA pixel data.
-
-  The raw binary is stored as-is in the command payload. The protocol layer
-  handles format-specific encoding (native binary for msgpack, base64 for JSON).
-  """
-  @spec create_image(
-          handle :: String.t(),
-          width :: pos_integer(),
-          height :: pos_integer(),
-          pixels :: binary()
-        ) :: %__MODULE__{}
-  def create_image(handle, width, height, pixels)
-      when is_binary(handle) and is_integer(width) and is_integer(height) and is_binary(pixels) do
-    expected = width * height * 4
-
-    if byte_size(pixels) != expected do
-      raise ArgumentError,
-            "pixel buffer size mismatch: expected #{expected} bytes " <>
-              "(#{width}x#{height}x4 RGBA) but got #{byte_size(pixels)}"
-    end
-
-    %__MODULE__{
-      type: :image_op,
-      payload: %{
-        op: "create_image",
-        handle: handle,
-        width: width,
-        height: height,
-        pixels: pixels
-      }
-    }
-  end
-
-  @doc """
-  Updates an existing in-memory image with new encoded PNG/JPEG bytes.
-
-  The raw binary is stored as-is in the command payload. The protocol layer
-  handles format-specific encoding (native binary for msgpack, base64 for JSON).
-  """
-  @spec update_image(handle :: String.t(), data :: binary()) :: %__MODULE__{}
-  def update_image(handle, data) when is_binary(handle) and is_binary(data) do
-    %__MODULE__{
-      type: :image_op,
-      payload: %{op: "update_image", handle: handle, data: data}
-    }
-  end
-
-  @doc """
-  Updates an existing in-memory image with new raw RGBA pixel data.
-
-  The raw binary is stored as-is in the command payload. The protocol layer
-  handles format-specific encoding (native binary for msgpack, base64 for JSON).
-  """
-  @spec update_image(
-          handle :: String.t(),
-          width :: pos_integer(),
-          height :: pos_integer(),
-          pixels :: binary()
-        ) :: %__MODULE__{}
-  def update_image(handle, width, height, pixels)
-      when is_binary(handle) and is_integer(width) and is_integer(height) and is_binary(pixels) do
-    expected = width * height * 4
-
-    if byte_size(pixels) != expected do
-      raise ArgumentError,
-            "pixel buffer size mismatch: expected #{expected} bytes " <>
-              "(#{width}x#{height}x4 RGBA) but got #{byte_size(pixels)}"
-    end
-
-    %__MODULE__{
-      type: :image_op,
-      payload: %{
-        op: "update_image",
-        handle: handle,
-        width: width,
-        height: height,
-        pixels: pixels
-      }
-    }
-  end
-
-  @doc "Deletes an in-memory image by handle name."
-  @spec delete_image(handle :: String.t()) :: %__MODULE__{}
-  def delete_image(handle) when is_binary(handle) do
-    %__MODULE__{
-      type: :image_op,
-      payload: %{op: "delete_image", handle: handle}
-    }
-  end
-
-  @doc """
-  Lists all in-memory image handles.
-
-  The result arrives in `update/2` as
-  `%SystemEvent{type: :image_list, tag: tag, data: %{"handles" => [...]}}`.
-  """
-  @spec list_images(tag :: atom()) :: %__MODULE__{}
-  def list_images(tag) when is_atom(tag) do
-    %__MODULE__{
-      type: :widget_op,
-      payload: %{op: "list_images", tag: Atom.to_string(tag)}
-    }
-  end
-
-  @doc "Clears all in-memory images."
-  @spec clear_images() :: %__MODULE__{}
-  def clear_images do
-    %__MODULE__{
-      type: :widget_op,
-      payload: %{op: "clear_images"}
-    }
-  end
-
   @doc """
   Computes a SHA-256 hash of the renderer's current tree state.
 
@@ -1079,13 +581,14 @@ defmodule Plushie.Command do
   # "main#form/email" -> {"main", "form/email"}
   # "form/email"      -> {nil, "form/email"}
   # Non-string IDs pass through unchanged.
+  @doc false
   @spec parse_target(widget_id()) :: {String.t() | nil, widget_id()}
-  defp parse_target(widget_id) when is_binary(widget_id) do
+  def parse_target(widget_id) when is_binary(widget_id) do
     case String.split(widget_id, "#", parts: 2) do
       [window_id, path] when window_id != "" -> {window_id, path}
       _ -> {nil, widget_id}
     end
   end
 
-  defp parse_target(widget_id), do: {nil, widget_id}
+  def parse_target(widget_id), do: {nil, widget_id}
 end

@@ -158,9 +158,9 @@ defmodule Plushie.CommandParityTest do
     end
   end
 
-  describe "gain_focus/1" do
+  describe "focus_window/1" do
     test "creates gain focus op" do
-      cmd = Command.gain_focus("main")
+      cmd = Command.focus_window("main")
       assert cmd.payload.op == "gain_focus"
     end
   end
@@ -309,7 +309,7 @@ defmodule Plushie.CommandParityTest do
         Command.set_window_mode("w", :windowed),
         Command.toggle_maximize("w"),
         Command.toggle_decorations("w"),
-        Command.gain_focus("w"),
+        Command.focus_window("w"),
         Command.set_window_level("w", :normal),
         Command.drag_window("w"),
         Command.drag_resize_window("w", :south),
