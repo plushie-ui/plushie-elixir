@@ -361,25 +361,11 @@ defmodule Plushie.Runtime do
         :view_error -> {nil, %{}, %{}}
       end
 
-    # 5. Sync widget handler registry so widgets are available for
-    # event interception from the very first interaction.
-    {widget_handlers, widget_events, window_set} =
-      Plushie.Runtime.WidgetHandlers.derive_all_registries(tree)
-
-    # 6. Execute initial commands.
-    state = %{
-      state
-      | tree: tree,
-        memo_cache: memo_cache,
-        widget_view_cache: widget_view_cache,
-        widget_handlers: widget_handlers,
-        widget_events: widget_events
-    }
-
+    # 5. Execute initial commands, then sync registries/subs/windows.
+    state = %{state | tree: tree, memo_cache: memo_cache, widget_view_cache: widget_view_cache}
     state = Commands.execute_commands(state.init_commands, state)
     state = %{state | init_commands: []}
-    state = sync_runtime_subscriptions(state, state.model, widget_handlers)
-    state = Windows.sync_windows(state, tree, window_set)
+    state = sync_after_render(state, tree)
     {:noreply, state}
   end
 
@@ -922,20 +908,14 @@ defmodule Plushie.Runtime do
                 {state.tree, state.memo_cache, state.widget_view_cache, track_view_error(state)}
             end
 
-          {widget_handlers, widget_events, window_set} =
-            Plushie.Runtime.WidgetHandlers.derive_all_registries(new_tree)
-
           state = %{
             state
             | tree: new_tree,
               memo_cache: memo_cache,
-              widget_view_cache: widget_view_cache,
-              widget_handlers: widget_handlers,
-              widget_events: widget_events
+              widget_view_cache: widget_view_cache
           }
 
-          state = sync_runtime_subscriptions(state, state.model, widget_handlers)
-          state = Windows.sync_windows(state, new_tree, window_set)
+          state = sync_after_render(state, new_tree)
 
           {:noreply, state}
 
@@ -984,20 +964,14 @@ defmodule Plushie.Runtime do
           {state.tree, state.memo_cache, state.widget_view_cache, track_view_error(state)}
       end
 
-    {widget_handlers, widget_events, window_set} =
-      Plushie.Runtime.WidgetHandlers.derive_all_registries(new_tree)
-
     state = %{
       state
       | tree: new_tree,
         memo_cache: memo_cache,
-        widget_view_cache: widget_view_cache,
-        widget_handlers: widget_handlers,
-        widget_events: widget_events
+        widget_view_cache: widget_view_cache
     }
 
-    state = sync_runtime_subscriptions(state, state.model, widget_handlers)
-    state = Windows.sync_windows(state, new_tree, window_set)
+    state = sync_after_render(state, new_tree)
     {:noreply, state}
   end
 
@@ -1103,20 +1077,14 @@ defmodule Plushie.Runtime do
           {state.tree, state.memo_cache, state.widget_view_cache, track_view_error(state)}
       end
 
-    {widget_handlers, widget_events, window_set} =
-      Plushie.Runtime.WidgetHandlers.derive_all_registries(new_tree)
-
     state = %{
       state
       | tree: new_tree,
         memo_cache: memo_cache,
-        widget_view_cache: widget_view_cache,
-        widget_handlers: widget_handlers,
-        widget_events: widget_events
+        widget_view_cache: widget_view_cache
     }
 
-    state = sync_runtime_subscriptions(state, state.model, widget_handlers)
-    Windows.sync_windows(state, new_tree, window_set)
+    sync_after_render(state, new_tree)
   end
 
   defp schedule_overlay_dismiss(state) do
@@ -1599,16 +1567,7 @@ defmodule Plushie.Runtime do
             widget_view_cache: widget_view_cache
         }
 
-        {widget_handlers, widget_events, window_set} =
-          Plushie.Runtime.WidgetHandlers.derive_all_registries(new_tree)
-
-        state = %{state | widget_handlers: widget_handlers, widget_events: widget_events}
-
-        widget_subs =
-          Plushie.Runtime.WidgetHandlers.collect_subscriptions(widget_handlers)
-
-        state = Subscriptions.sync_subscriptions(state, new_model, widget_subs)
-        Windows.sync_windows(state, new_tree, window_set)
+        sync_after_render(state, new_tree)
 
       :error ->
         %{state | consecutive_errors: state.consecutive_errors + 1}
@@ -1647,20 +1606,14 @@ defmodule Plushie.Runtime do
            %{track_view_error(state) | widget_handlers: handlers_before}}
       end
 
-    {widget_handlers, widget_events, window_set} =
-      Plushie.Runtime.WidgetHandlers.derive_all_registries(new_tree)
-
     state = %{
       state
       | tree: new_tree,
         memo_cache: memo_cache,
-        widget_view_cache: widget_view_cache,
-        widget_handlers: widget_handlers,
-        widget_events: widget_events
+        widget_view_cache: widget_view_cache
     }
 
-    state = sync_runtime_subscriptions(state, model, widget_handlers)
-    Windows.sync_windows(state, new_tree, window_set)
+    sync_after_render(state, new_tree)
   end
 
   defp safe_update(app, model, event, consecutive_errors) do
@@ -1794,20 +1747,14 @@ defmodule Plushie.Runtime do
       {:ok, new_tree, new_memo_cache, new_wvc} ->
         notify_bridge(state, &Plushie.Bridge.send_snapshot(&1, new_tree))
 
-        {widget_handlers, widget_events, window_set} =
-          Plushie.Runtime.WidgetHandlers.derive_all_registries(new_tree)
-
         state = %{
           state
           | tree: new_tree,
             memo_cache: new_memo_cache,
-            widget_view_cache: new_wvc,
-            widget_handlers: widget_handlers,
-            widget_events: widget_events
+            widget_view_cache: new_wvc
         }
 
-        state = sync_runtime_subscriptions(state, state.model, widget_handlers)
-        state = Windows.sync_windows(state, new_tree, window_set)
+        state = sync_after_render(state, new_tree)
         Commands.execute_commands(deferred_commands, state)
 
       :error ->
@@ -1899,6 +1846,19 @@ defmodule Plushie.Runtime do
       end)
 
     %{state | pending_coalesce: %{}, pending_coalesce_order: [], coalesce_timer: nil}
+  end
+
+  # Derives widget registries from the rendered tree and syncs
+  # subscriptions and windows. Called after every render cycle
+  # once tree/memo_cache/widget_view_cache are already on state.
+  @spec sync_after_render(state(), map()) :: state()
+  defp sync_after_render(state, tree) do
+    {widget_handlers, widget_events, window_set} =
+      Plushie.Runtime.WidgetHandlers.derive_all_registries(tree)
+
+    state = %{state | widget_handlers: widget_handlers, widget_events: widget_events}
+    state = sync_runtime_subscriptions(state, state.model, widget_handlers)
+    Windows.sync_windows(state, tree, window_set)
   end
 
   defp sync_runtime_subscriptions(state, model, widget_handlers) do
