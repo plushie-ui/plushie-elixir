@@ -29,13 +29,12 @@ defmodule Plushie.Canvas.Shape.ShapeStyle do
       opacity: Keyword.get(opts, :opacity)
     }
   end
-end
 
-defimpl Plushie.Encode, for: Plushie.Canvas.Shape.ShapeStyle do
-  def encode(style) do
+  @doc false
+  def encode(%__MODULE__{} = style) do
     style
     |> Map.from_struct()
     |> Enum.reject(fn {_, v} -> is_nil(v) end)
-    |> Map.new(fn {k, v} -> {k, Plushie.Encode.encode(v)} end)
+    |> Map.new(fn {k, v} -> {k, Plushie.Type.encode_value(v)} end)
   end
 end

@@ -91,7 +91,7 @@ defmodule Plushie.Animation.SpringTest do
   describe "encode" do
     test "minimal spring encodes type, to, stiffness, damping" do
       s = Spring.new(to: 1.05)
-      encoded = Plushie.Encode.encode(s)
+      encoded = Spring.encode(s)
 
       assert encoded["type"] == "spring"
       assert encoded["to"] == 1.05
@@ -103,19 +103,19 @@ defmodule Plushie.Animation.SpringTest do
 
     test "non-default mass is included" do
       s = Spring.new(to: 1.0, mass: 2.0)
-      encoded = Plushie.Encode.encode(s)
+      encoded = Spring.encode(s)
       assert encoded["mass"] == 2.0
     end
 
     test "non-zero velocity is included" do
       s = Spring.new(to: 1.0, velocity: 5.0)
-      encoded = Plushie.Encode.encode(s)
+      encoded = Spring.encode(s)
       assert encoded["velocity"] == 5.0
     end
 
     test "from and on_complete are included when set" do
       s = Spring.new(to: 1.0, from: 0.0, on_complete: :settled)
-      encoded = Plushie.Encode.encode(s)
+      encoded = Spring.encode(s)
       assert encoded["from"] == 0.0
       assert encoded["on_complete"] == "settled"
     end

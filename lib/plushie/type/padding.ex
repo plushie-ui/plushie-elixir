@@ -56,15 +56,19 @@ defmodule Plushie.Type.Padding do
   end
 
   @doc """
-  Normalises a padding value to the canonical four-side map with atom keys.
+  Validates a padding value, returning it in its canonical stored form.
+
+  Numbers and tuples are validated and returned as-is (expansion to the
+  four-side map happens during encoding). Structs and maps are validated
+  and returned as four-side maps.
 
   ## Examples
 
       iex> Plushie.Type.Padding.cast(8)
-      {:ok, %{top: 8, right: 8, bottom: 8, left: 8}}
+      {:ok, 8}
 
       iex> Plushie.Type.Padding.cast({4, 12})
-      {:ok, %{top: 4, right: 12, bottom: 4, left: 12}}
+      {:ok, {4, 12}}
 
       iex> Plushie.Type.Padding.cast(%{top: 1, right: 2, bottom: 3, left: 4})
       {:ok, %{top: 1, right: 2, bottom: 3, left: 4}}
@@ -74,12 +78,10 @@ defmodule Plushie.Type.Padding do
   @impl Plushie.Type
   @spec cast(padding :: t()) :: {:ok, map()} | :error
 
-  def cast(n) when is_number(n) do
-    {:ok, %{top: n, right: n, bottom: n, left: n}}
-  end
+  def cast(n) when is_number(n), do: {:ok, n}
 
   def cast({vertical, horizontal}) when is_number(vertical) and is_number(horizontal) do
-    {:ok, %{top: vertical, right: horizontal, bottom: vertical, left: horizontal}}
+    {:ok, {vertical, horizontal}}
   end
 
   def cast(%__MODULE__{} = padding) do
@@ -114,11 +116,20 @@ defmodule Plushie.Type.Padding do
       is_number(unquote(var)) or is_tuple(unquote(var)) or is_map(unquote(var))
     end
   end
-end
 
-defimpl Plushie.Encode, for: Plushie.Type.Padding do
-  def encode(%Plushie.Type.Padding{} = padding) do
-    {:ok, result} = Plushie.Type.Padding.cast(padding)
-    result
+  @impl Plushie.Type
+  def encode(n) when is_number(n), do: n
+
+  def encode({vertical, horizontal}) when is_number(vertical) and is_number(horizontal) do
+    %{top: vertical, right: horizontal, bottom: vertical, left: horizontal}
   end
+
+  def encode(%__MODULE__{} = padding) do
+    padding
+    |> Map.from_struct()
+    |> Enum.reject(fn {_, v} -> is_nil(v) end)
+    |> Map.new()
+  end
+
+  def encode(%{top: _, right: _, bottom: _, left: _} = map), do: map
 end

@@ -5,10 +5,9 @@ defmodule Plushie.Canvas.Shape.Translate do
 
   @enforce_keys [:x, :y]
   defstruct [:x, :y]
-end
 
-defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Translate do
-  def encode(t), do: %{type: "translate", x: t.x, y: t.y}
+  @doc false
+  def encode(%__MODULE__{} = t), do: %{type: "translate", x: t.x, y: t.y}
 end
 
 defmodule Plushie.Canvas.Shape.Rotate do
@@ -18,10 +17,9 @@ defmodule Plushie.Canvas.Shape.Rotate do
 
   @enforce_keys [:angle]
   defstruct [:angle]
-end
 
-defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Rotate do
-  def encode(r), do: %{type: "rotate", angle: r.angle}
+  @doc false
+  def encode(%__MODULE__{} = r), do: %{type: "rotate", angle: r.angle}
 end
 
 defmodule Plushie.Canvas.Shape.Scale do
@@ -34,9 +32,8 @@ defmodule Plushie.Canvas.Shape.Scale do
   @type t :: %__MODULE__{x: number() | nil, y: number() | nil, factor: number() | nil}
 
   defstruct [:x, :y, :factor]
-end
 
-defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Scale do
+  @doc false
   def encode(%{factor: f}) when is_number(f), do: %{type: "scale", factor: f}
-  def encode(s), do: %{type: "scale", x: s.x || 1, y: s.y || 1}
+  def encode(%__MODULE__{} = s), do: %{type: "scale", x: s.x || 1, y: s.y || 1}
 end

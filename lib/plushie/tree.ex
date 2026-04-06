@@ -26,16 +26,7 @@ defmodule Plushie.Tree do
           required(:children) => [tree_node()]
         }
 
-  @typep normalize_ctx :: %{
-           scope: String.t(),
-           window_id: String.t() | nil,
-           widget_states: map(),
-           depth: non_neg_integer(),
-           memo_prev: map(),
-           memo: map(),
-           widget_view_prev: map(),
-           widget_view: map()
-         }
+  @typep normalize_ctx :: Plushie.Tree.NormalizeCtx.t()
 
   @empty_container %{
     id: "root",
@@ -49,17 +40,7 @@ defmodule Plushie.Tree do
   @depth_warning 200
   @max_depth 256
 
-  # Default context for normalization (no caches, no depth)
-  @default_ctx %{
-    scope: "",
-    window_id: nil,
-    widget_states: %{},
-    depth: 0,
-    memo_prev: %{},
-    memo: %{},
-    widget_view_prev: %{},
-    widget_view: %{}
-  }
+  @default_ctx %Plushie.Tree.NormalizeCtx{scope: "", window_id: nil}
 
   alias Plushie.Widget.Meta
 
@@ -1296,24 +1277,7 @@ defmodule Plushie.Tree do
     Map.new(map, fn {k, v} -> {k, encode_value(v)} end)
   end
 
-  # Like stringify_value but preserves atom keys in nested maps.
-  defp encode_value(%_{} = v), do: Plushie.Encode.encode(v)
-
-  defp encode_value(%{} = v) do
-    Map.new(v, fn {k, val} -> {k, encode_value(val)} end)
-  end
-
-  defp encode_value(list) when is_list(list), do: Enum.map(list, &encode_value/1)
-
-  defp encode_value(tuple) when is_tuple(tuple) do
-    tuple |> Tuple.to_list() |> Enum.map(&encode_value/1)
-  end
-
-  defp encode_value(true), do: true
-  defp encode_value(false), do: false
-  defp encode_value(nil), do: nil
-  defp encode_value(v) when is_atom(v), do: Atom.to_string(v)
-  defp encode_value(v), do: v
+  defp encode_value(v), do: Plushie.Type.encode_value(v)
 
   # Private
 

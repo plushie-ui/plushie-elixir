@@ -12,15 +12,14 @@ defmodule Plushie.Canvas.Shape.Line do
 
   @enforce_keys [:x1, :y1, :x2, :y2]
   defstruct [:x1, :y1, :x2, :y2, :stroke, :opacity]
-end
 
-defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Line do
-  def encode(line) do
+  @doc false
+  def encode(%__MODULE__{} = line) do
     %{type: "line", x1: line.x1, y1: line.y1, x2: line.x2, y2: line.y2}
     |> put_if(:stroke, line.stroke)
     |> put_if(:opacity, line.opacity)
   end
 
   defp put_if(map, _key, nil), do: map
-  defp put_if(map, key, val), do: Map.put(map, key, Plushie.Encode.encode(val))
+  defp put_if(map, key, val), do: Map.put(map, key, Plushie.Type.encode_value(val))
 end

@@ -151,9 +151,3 @@ defmodule Plushie.Type.Border do
 
   defp encode_radius(radius), do: radius
 end
-
-defimpl Plushie.Encode, for: Plushie.Type.Border do
-  def encode(%Plushie.Type.Border{} = border) do
-    Plushie.Type.Border.encode(border)
-  end
-end

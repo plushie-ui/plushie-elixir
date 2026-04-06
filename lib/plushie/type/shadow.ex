@@ -106,10 +106,9 @@ defmodule Plushie.Type.Shadow do
   def guard(var) do
     quote do: is_struct(unquote(var), Plushie.Type.Shadow)
   end
-end
 
-defimpl Plushie.Encode, for: Plushie.Type.Shadow do
-  def encode(shadow) do
+  @impl Plushie.Type
+  def encode(%__MODULE__{} = shadow) do
     %{
       color: shadow.color,
       offset: [shadow.offset_x, shadow.offset_y],

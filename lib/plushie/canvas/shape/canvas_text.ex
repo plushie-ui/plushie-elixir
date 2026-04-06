@@ -15,10 +15,9 @@ defmodule Plushie.Canvas.Shape.CanvasText do
 
   @enforce_keys [:x, :y, :content]
   defstruct [:x, :y, :content, :fill, :size, :font, :align_x, :align_y, :opacity]
-end
 
-defimpl Plushie.Encode, for: Plushie.Canvas.Shape.CanvasText do
-  def encode(text) do
+  @doc false
+  def encode(%__MODULE__{} = text) do
     %{type: "text", x: text.x, y: text.y, content: text.content}
     |> put_if(:fill, text.fill)
     |> put_if(:size, text.size)
@@ -29,5 +28,5 @@ defimpl Plushie.Encode, for: Plushie.Canvas.Shape.CanvasText do
   end
 
   defp put_if(map, _key, nil), do: map
-  defp put_if(map, key, val), do: Map.put(map, key, Plushie.Encode.encode(val))
+  defp put_if(map, key, val), do: Map.put(map, key, Plushie.Type.encode_value(val))
 end

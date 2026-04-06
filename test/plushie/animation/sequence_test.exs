@@ -66,7 +66,7 @@ defmodule Plushie.Animation.SequenceTest do
           Transition.new(300, to: 0.0)
         ])
 
-      encoded = Plushie.Encode.encode(s)
+      encoded = Sequence.encode(s)
 
       assert encoded["type"] == "sequence"
       assert length(encoded["steps"]) == 2
@@ -81,7 +81,7 @@ defmodule Plushie.Animation.SequenceTest do
           on_complete: :done
         )
 
-      encoded = Plushie.Encode.encode(s)
+      encoded = Sequence.encode(s)
       assert encoded["on_complete"] == "done"
     end
 
@@ -92,7 +92,7 @@ defmodule Plushie.Animation.SequenceTest do
           Spring.new(to: 0.5, preset: :bouncy)
         ])
 
-      encoded = Plushie.Encode.encode(s)
+      encoded = Sequence.encode(s)
       steps = encoded["steps"]
       assert Enum.at(steps, 0)["type"] == "transition"
       assert Enum.at(steps, 1)["type"] == "spring"
@@ -106,7 +106,7 @@ defmodule Plushie.Animation.SequenceTest do
           Transition.new(300, to: 0.0)
         ])
 
-      encoded = Plushie.Encode.encode(s)
+      encoded = Sequence.encode(s)
       loop_step = Enum.at(encoded["steps"], 1)
       assert loop_step["repeat"] == 3
       assert loop_step["auto_reverse"] == true

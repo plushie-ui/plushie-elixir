@@ -5,8 +5,7 @@ defmodule Plushie.Canvas.Shape.Clip do
 
   @enforce_keys [:x, :y, :w, :h]
   defstruct [:x, :y, :w, :h]
-end
 
-defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Clip do
-  def encode(c), do: %{x: c.x, y: c.y, w: c.w, h: c.h}
+  @doc false
+  def encode(%__MODULE__{} = c), do: %{x: c.x, y: c.y, w: c.w, h: c.h}
 end

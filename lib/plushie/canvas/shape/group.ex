@@ -65,11 +65,10 @@ defmodule Plushie.Canvas.Shape.Group do
     :a11y,
     :focusable
   ]
-end
 
-defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Group do
-  def encode(group) do
-    base = %{type: "group", children: Enum.map(group.children, &Plushie.Encode.encode/1)}
+  @doc false
+  def encode(%__MODULE__{} = group) do
+    base = %{type: "group", children: Enum.map(group.children, &Plushie.Type.encode_value/1)}
 
     base
     |> encode_transforms(group.transforms)
@@ -96,9 +95,9 @@ defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Group do
   defp encode_transforms(map, []), do: map
 
   defp encode_transforms(map, transforms) do
-    Map.put(map, :transforms, Enum.map(transforms, &Plushie.Encode.encode/1))
+    Map.put(map, :transforms, Enum.map(transforms, &Plushie.Type.encode_value/1))
   end
 
   defp put_if(map, _key, nil), do: map
-  defp put_if(map, key, val), do: Map.put(map, key, Plushie.Encode.encode(val))
+  defp put_if(map, key, val), do: Map.put(map, key, Plushie.Type.encode_value(val))
 end

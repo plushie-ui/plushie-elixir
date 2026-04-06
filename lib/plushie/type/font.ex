@@ -182,9 +182,3 @@ defmodule Plushie.Type.Font do
     |> Enum.map_join(&String.capitalize/1)
   end
 end
-
-defimpl Plushie.Encode, for: Plushie.Type.Font do
-  def encode(%Plushie.Type.Font{} = font) do
-    Plushie.Type.Font.encode(font)
-  end
-end

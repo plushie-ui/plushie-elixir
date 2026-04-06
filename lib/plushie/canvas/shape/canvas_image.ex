@@ -13,15 +13,14 @@ defmodule Plushie.Canvas.Shape.CanvasImage do
 
   @enforce_keys [:source, :x, :y, :w, :h]
   defstruct [:source, :x, :y, :w, :h, :rotation, :opacity]
-end
 
-defimpl Plushie.Encode, for: Plushie.Canvas.Shape.CanvasImage do
-  def encode(image) do
+  @doc false
+  def encode(%__MODULE__{} = image) do
     %{type: "image", source: image.source, x: image.x, y: image.y, w: image.w, h: image.h}
     |> put_if(:rotation, image.rotation)
     |> put_if(:opacity, image.opacity)
   end
 
   defp put_if(map, _key, nil), do: map
-  defp put_if(map, key, val), do: Map.put(map, key, Plushie.Encode.encode(val))
+  defp put_if(map, key, val), do: Map.put(map, key, Plushie.Type.encode_value(val))
 end

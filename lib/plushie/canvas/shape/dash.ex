@@ -28,10 +28,9 @@ defmodule Plushie.Canvas.Shape.Dash do
       offset: Keyword.fetch!(opts, :offset)
     }
   end
-end
 
-defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Dash do
-  def encode(dash) do
+  @doc false
+  def encode(%__MODULE__{} = dash) do
     %{segments: dash.segments, offset: dash.offset}
   end
 end

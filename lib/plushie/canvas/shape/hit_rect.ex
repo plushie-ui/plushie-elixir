@@ -32,10 +32,9 @@ defmodule Plushie.Canvas.Shape.HitRect do
       h: Keyword.fetch!(opts, :h)
     }
   end
-end
 
-defimpl Plushie.Encode, for: Plushie.Canvas.Shape.HitRect do
-  def encode(rect) do
+  @doc false
+  def encode(%__MODULE__{} = rect) do
     %{x: rect.x, y: rect.y, w: rect.w, h: rect.h}
   end
 end

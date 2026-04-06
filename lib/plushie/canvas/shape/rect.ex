@@ -15,10 +15,9 @@ defmodule Plushie.Canvas.Shape.Rect do
 
   @enforce_keys [:x, :y, :w, :h]
   defstruct [:x, :y, :w, :h, :fill, :stroke, :opacity, :fill_rule, :radius]
-end
 
-defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Rect do
-  def encode(rect) do
+  @doc false
+  def encode(%__MODULE__{} = rect) do
     %{type: "rect", x: rect.x, y: rect.y, w: rect.w, h: rect.h}
     |> put_if(:fill, rect.fill)
     |> put_if(:stroke, rect.stroke)
@@ -28,5 +27,5 @@ defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Rect do
   end
 
   defp put_if(map, _key, nil), do: map
-  defp put_if(map, key, val), do: Map.put(map, key, Plushie.Encode.encode(val))
+  defp put_if(map, key, val), do: Map.put(map, key, Plushie.Type.encode_value(val))
 end

@@ -502,13 +502,8 @@ defmodule Plushie.Widget do
 
   # -- __before_compile__ ----------------------------------------------------
 
-  # Types that get eagerly cast in setter functions. Most types store
-  # raw values and defer encoding to Tree.normalize.
-  @setter_cast_types [Plushie.Type.Color]
-
-  # Types that coerce input in setters (guard accepts wider input than stored type).
-  # These get a coercion step instead of a plain identity encoder.
-  @setter_coerce_types [Plushie.Type.String]
+  # Previously @setter_cast_types and @setter_coerce_types gated which
+  # types got eager casting. Now ALL setters cast eagerly for consistency.
 
   # Known field options consumed by the widget macro. Anything else is
   # treated as a type constraint and forwarded to constrain_guard/2.
@@ -2022,8 +2017,12 @@ defmodule Plushie.Widget do
         nil
 
       module ->
-        # Types with eager casting in setters skip guards (the cast handles validation).
-        if module not in @setter_cast_types and function_exported?(module, :guard, 1) do
+        Code.ensure_compiled(module)
+
+        # Types with cast/1 use the cast as the sole validator.
+        # Guards are only used for types without cast (which rely
+        # on the guard to reject invalid inputs).
+        if not function_exported?(module, :cast, 1) and function_exported?(module, :guard, 1) do
           module.guard(quote(do: value))
         end
     end
@@ -2212,32 +2211,47 @@ defmodule Plushie.Widget do
 
   defp encoder_for_type(type) do
     case Plushie.Type.resolve(type) do
-      {:composite, _} ->
+      {:composite, composite} -> composite_encoder(composite)
+      module -> module_encoder(module)
+    end
+  end
+
+  defp composite_encoder(composite) do
+    escaped = Macro.escape(composite)
+
+    quote do
+      fn val ->
+        case Plushie.Type.cast_composite(unquote(escaped), val) do
+          {:ok, casted} -> casted
+          :error -> raise ArgumentError, "cast failed for value: #{inspect(val)}"
+        end
+      end
+    end
+  end
+
+  defp module_encoder(module) do
+    Code.ensure_compiled(module)
+
+    cond do
+      module == Plushie.Type.Any ->
         quote(do: fn val -> val end)
 
-      module ->
-        cond do
-          function_exported?(module, :cast, 1) and module in @setter_cast_types ->
-            quote do
-              fn val ->
-                {:ok, casted} = unquote(module).cast(val)
-                casted
-              end
-            end
+      function_exported?(module, :cast, 1) ->
+        cast_encoder(module)
 
-          module in @setter_coerce_types ->
-            # Coerce types accept wider input than stored type.
-            # The guard gates what gets through; this normalizes it.
-            quote do
-              fn val ->
-                {:ok, casted} = unquote(module).cast(val)
-                casted
-              end
-            end
+      true ->
+        quote(do: fn val -> val end)
+    end
+  end
 
-          true ->
-            quote(do: fn val -> val end)
+  defp cast_encoder(module) do
+    quote do
+      fn val ->
+        case unquote(module).cast(val) do
+          {:ok, casted} -> casted
+          :error -> raise ArgumentError, "cast failed for value: #{inspect(val)}"
         end
+      end
     end
   end
 

@@ -99,10 +99,10 @@ defmodule Plushie.Type.BorderTest do
     end
   end
 
-  describe "Encode protocol" do
-    test "encodes via the protocol" do
+  describe "encode" do
+    test "encodes via module encode/1" do
       border = Border.new() |> Border.color("#abc") |> Border.width(2) |> Border.rounded(6)
-      encoded = Plushie.Encode.encode(border)
+      encoded = Border.encode(border)
       assert encoded == %{color: "#aabbcc", width: 2, radius: 6}
     end
   end

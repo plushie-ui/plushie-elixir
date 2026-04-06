@@ -190,15 +190,10 @@ defmodule Plushie.WidgetCacheKeyTest do
   end
 
   defp normalize_with_widget_cache(tree, widget_view_prev \\ %{}) do
-    ctx = %{
+    ctx = %Plushie.Tree.NormalizeCtx{
       scope: "",
       window_id: nil,
-      widget_states: %{},
-      depth: 0,
-      memo_prev: %{},
-      memo: %{},
-      widget_view_prev: widget_view_prev,
-      widget_view: %{}
+      widget_view_prev: widget_view_prev
     }
 
     {result, _memo, widget_view} = Tree.normalize_with_caches(tree, ctx)

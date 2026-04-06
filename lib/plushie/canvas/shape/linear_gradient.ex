@@ -23,16 +23,15 @@ defmodule Plushie.Canvas.Shape.LinearGradient do
       stops: Keyword.get(opts, :stops, [])
     }
   end
-end
 
-defimpl Plushie.Encode, for: Plushie.Canvas.Shape.LinearGradient do
-  def encode(grad) do
+  @doc false
+  def encode(%__MODULE__{} = grad) do
     {fx, fy} = grad.from
     {tx, ty} = grad.to
 
     stops =
       Enum.map(grad.stops, fn {offset, color} ->
-        [offset, Plushie.Encode.encode(color)]
+        [offset, Plushie.Type.encode_value(color)]
       end)
 
     %{type: "linear", start: [fx, fy], end: [tx, ty], stops: stops}

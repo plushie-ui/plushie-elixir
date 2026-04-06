@@ -144,11 +144,107 @@ defmodule Plushie.Type do
   def cast_field(:string, nil), do: {:ok, nil}
 
   def cast_field(type, value) do
+    cast_value(type, value)
+  end
+
+  # -- Composite type casts ----------------------------------------------------
+
+  @doc """
+  Casts a value according to a composite type constructor.
+
+  Composite types are `{:list, inner}`, `{:tuple, [types]}`,
+  `{:enum, [atoms]}`, and `{:union, [types]}`.
+  """
+  @spec cast_composite(
+          {:list, term()} | {:tuple, [term()]} | {:enum, [atom()]} | {:union, [term()]},
+          term()
+        ) :: {:ok, term()} | :error
+  def cast_composite({:list, inner_type}, value) when is_list(value) do
+    results = Enum.map(value, fn el -> cast_value(inner_type, el) end)
+
+    if Enum.all?(results, &match?({:ok, _}, &1)) do
+      {:ok, Enum.map(results, fn {:ok, v} -> v end)}
+    else
+      :error
+    end
+  end
+
+  def cast_composite({:list, _}, _), do: :error
+
+  def cast_composite({:tuple, types}, value)
+      when is_tuple(value) and tuple_size(value) == length(types) do
+    pairs = Enum.zip(types, Tuple.to_list(value))
+    results = Enum.map(pairs, fn {type, val} -> cast_value(type, val) end)
+
+    if Enum.all?(results, &match?({:ok, _}, &1)) do
+      {:ok, List.to_tuple(Enum.map(results, fn {:ok, v} -> v end))}
+    else
+      :error
+    end
+  end
+
+  def cast_composite({:tuple, _}, _), do: :error
+
+  def cast_composite({:enum, values}, value) do
+    if value in values, do: {:ok, value}, else: :error
+  end
+
+  def cast_composite({:union, types}, value) do
+    Enum.find_value(types, :error, fn type ->
+      case cast_value(type, value) do
+        {:ok, v} -> {:ok, v}
+        :error -> nil
+      end
+    end)
+  end
+
+  @doc """
+  Universal cast entry point that handles both module types and composite types.
+
+  Resolves the type via `resolve/1` and delegates to either
+  `cast_composite/2` or the type module's `cast/1`.
+  """
+  @spec cast_value(term(), term()) :: {:ok, term()} | :error
+  def cast_value(type, value) do
     case resolve(type) do
-      {:composite, _} -> {:ok, value}
+      {:composite, composite} -> cast_composite(composite, value)
       module -> module.cast(value)
     end
   end
+
+  # -- Value encoding ----------------------------------------------------------
+
+  @doc """
+  Encodes a value to its wire-safe representation.
+
+  Handles primitives (atoms become strings, tuples become lists) and
+  structs (delegates to `module.encode/1` when available). This replaces
+  the former `Plushie.Encode` protocol dispatch.
+  """
+  @spec encode_value(term()) :: term()
+  def encode_value(%module{} = v) do
+    if Code.ensure_loaded?(module) and function_exported?(module, :encode, 1) do
+      module.encode(v)
+    else
+      v
+    end
+  end
+
+  def encode_value(%{} = map) do
+    Map.new(map, fn {k, v} -> {k, encode_value(v)} end)
+  end
+
+  def encode_value(list) when is_list(list), do: Enum.map(list, &encode_value/1)
+
+  def encode_value(tuple) when is_tuple(tuple) do
+    tuple |> Tuple.to_list() |> Enum.map(&encode_value/1)
+  end
+
+  def encode_value(true), do: true
+  def encode_value(false), do: false
+  def encode_value(nil), do: nil
+  def encode_value(v) when is_atom(v), do: Atom.to_string(v)
+  def encode_value(v), do: v
 
   # -- use Plushie.Type --------------------------------------------------------
 

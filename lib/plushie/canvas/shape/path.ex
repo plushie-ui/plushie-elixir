@@ -11,11 +11,10 @@ defmodule Plushie.Canvas.Shape.Path do
 
   @enforce_keys [:commands]
   defstruct [:commands, :fill, :stroke, :opacity, :fill_rule]
-end
 
-defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Path do
-  def encode(path) do
-    %{type: "path", commands: Enum.map(path.commands, &Plushie.Encode.encode/1)}
+  @doc false
+  def encode(%__MODULE__{} = path) do
+    %{type: "path", commands: Enum.map(path.commands, &Plushie.Type.encode_value/1)}
     |> put_if(:fill, path.fill)
     |> put_if(:stroke, path.stroke)
     |> put_if(:opacity, path.opacity)
@@ -23,5 +22,5 @@ defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Path do
   end
 
   defp put_if(map, _key, nil), do: map
-  defp put_if(map, key, val), do: Map.put(map, key, Plushie.Encode.encode(val))
+  defp put_if(map, key, val), do: Map.put(map, key, Plushie.Type.encode_value(val))
 end

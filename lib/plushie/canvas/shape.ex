@@ -3,8 +3,8 @@ defmodule Plushie.Canvas.Shape do
   Pure builder functions returning typed canvas shape structs.
 
   Every function returns a struct from `Plushie.Canvas.Shape.*`.
-  The `Plushie.Encode` protocol implementations on each struct handle
-  wire-format conversion. These are plain functions, not macros --
+  Each struct module has an `encode/1` function for wire-format
+  conversion. These are plain functions, not macros --
   they can be called anywhere.
 
   Structure macros (`group`, `layer`) live in `Plushie.UI` and are

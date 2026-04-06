@@ -46,16 +46,15 @@ defmodule Plushie.Canvas.Shape.Stroke do
       dash: dash_val
     }
   end
-end
 
-defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Stroke do
-  def encode(stroke) do
-    %{color: Plushie.Encode.encode(stroke.color), width: stroke.width}
+  @doc false
+  def encode(%__MODULE__{} = stroke) do
+    %{color: Plushie.Type.encode_value(stroke.color), width: stroke.width}
     |> put_if(:cap, stroke.cap)
     |> put_if(:join, stroke.join)
     |> put_if(:dash, stroke.dash)
   end
 
   defp put_if(map, _key, nil), do: map
-  defp put_if(map, key, val), do: Map.put(map, key, Plushie.Encode.encode(val))
+  defp put_if(map, key, val), do: Map.put(map, key, Plushie.Type.encode_value(val))
 end

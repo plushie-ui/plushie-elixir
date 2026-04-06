@@ -31,13 +31,12 @@ defmodule Plushie.Canvas.Shape.DragBounds do
       max_y: Keyword.get(opts, :max_y)
     }
   end
-end
 
-defimpl Plushie.Encode, for: Plushie.Canvas.Shape.DragBounds do
-  def encode(bounds) do
+  @doc false
+  def encode(%__MODULE__{} = bounds) do
     bounds
     |> Map.from_struct()
     |> Enum.reject(fn {_, v} -> is_nil(v) end)
-    |> Map.new(fn {k, v} -> {k, Plushie.Encode.encode(v)} end)
+    |> Map.new(fn {k, v} -> {k, Plushie.Type.encode_value(v)} end)
   end
 end

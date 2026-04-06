@@ -153,7 +153,7 @@ defmodule Plushie.Animation.TransitionTest do
   describe "encode" do
     test "minimal transition encodes type, to, duration" do
       t = Transition.new(300, to: 0.0)
-      encoded = Plushie.Encode.encode(t)
+      encoded = Transition.encode(t)
 
       assert encoded["type"] == "transition"
       assert encoded["to"] == 0.0
@@ -165,7 +165,7 @@ defmodule Plushie.Animation.TransitionTest do
 
     test "non-default fields are included" do
       t = Transition.new(300, to: 0.0, easing: :ease_out, delay: 100, from: 1.0)
-      encoded = Plushie.Encode.encode(t)
+      encoded = Transition.encode(t)
 
       assert encoded["easing"] == "ease_out"
       assert encoded["delay"] == 100
@@ -174,31 +174,31 @@ defmodule Plushie.Animation.TransitionTest do
 
     test "repeat forever encodes as -1" do
       t = Transition.new(300, to: 0.0, repeat: :forever)
-      encoded = Plushie.Encode.encode(t)
+      encoded = Transition.encode(t)
       assert encoded["repeat"] == -1
     end
 
     test "repeat count encodes as integer" do
       t = Transition.new(300, to: 0.0, repeat: 3)
-      encoded = Plushie.Encode.encode(t)
+      encoded = Transition.encode(t)
       assert encoded["repeat"] == 3
     end
 
     test "on_complete encodes as string" do
       t = Transition.new(300, to: 0.0, on_complete: :faded)
-      encoded = Plushie.Encode.encode(t)
+      encoded = Transition.encode(t)
       assert encoded["on_complete"] == "faded"
     end
 
     test "cubic bezier easing encodes as map" do
       t = Transition.new(300, to: 0.0, easing: {:cubic_bezier, 0.25, 0.1, 0.25, 1.0})
-      encoded = Plushie.Encode.encode(t)
+      encoded = Transition.encode(t)
       assert encoded["easing"] == %{"cubic_bezier" => [0.25, 0.1, 0.25, 1.0]}
     end
 
     test "loop encodes with repeat and auto_reverse" do
       t = Transition.loop(800, to: 0.4, from: 1.0)
-      encoded = Plushie.Encode.encode(t)
+      encoded = Transition.encode(t)
 
       assert encoded["repeat"] == -1
       assert encoded["auto_reverse"] == true

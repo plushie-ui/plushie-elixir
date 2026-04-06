@@ -1,7 +1,6 @@
 defmodule Plushie.Type.StyleMapTest do
   use ExUnit.Case, async: true
 
-  alias Plushie.Encode
   alias Plushie.Type.{Border, Color, Shadow, StyleMap}
 
   # -- Construction -----------------------------------------------------------
@@ -134,7 +133,7 @@ defmodule Plushie.Type.StyleMapTest do
         |> StyleMap.border(border)
         |> StyleMap.shadow(shadow)
 
-      encoded = Encode.encode(style)
+      encoded = StyleMap.encode(style)
 
       assert encoded[:background] == "#ff0000"
       assert encoded[:text_color] == "#ffffff"
@@ -150,7 +149,7 @@ defmodule Plushie.Type.StyleMapTest do
 
     test "omits nil fields from the wire map" do
       style = StyleMap.new() |> StyleMap.background("#336699")
-      encoded = Encode.encode(style)
+      encoded = StyleMap.encode(style)
 
       assert encoded[:background] == "#336699"
       refute Map.has_key?(encoded, :text_color)
@@ -168,7 +167,7 @@ defmodule Plushie.Type.StyleMapTest do
         |> StyleMap.hovered(%{background: "#aaaaaa"})
         |> StyleMap.pressed(%{background: "#555555", text_color: "#ffffff"})
 
-      encoded = Encode.encode(style)
+      encoded = StyleMap.encode(style)
 
       assert encoded[:hovered][:background] == "#aaaaaa"
       assert encoded[:pressed][:background] == "#555555"
@@ -186,7 +185,7 @@ defmodule Plushie.Type.StyleMapTest do
         |> StyleMap.focused(%{border: border, shadow: shadow})
         |> StyleMap.hovered(%{border: border})
 
-      encoded = Encode.encode(style)
+      encoded = StyleMap.encode(style)
 
       assert is_map(encoded[:focused][:border])
       assert encoded[:focused][:border][:color] == "#ff0000"
@@ -210,7 +209,7 @@ defmodule Plushie.Type.StyleMapTest do
         |> StyleMap.pressed(%{background: :red})
         |> StyleMap.disabled(background: "#cccccc", text_color: "#999999")
 
-      encoded = Encode.encode(style)
+      encoded = StyleMap.encode(style)
 
       # Base properties
       assert encoded[:background] == "#ff6600"

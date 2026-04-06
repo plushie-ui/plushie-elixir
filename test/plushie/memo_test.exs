@@ -190,15 +190,10 @@ defmodule Plushie.MemoTest do
   end
 
   defp normalize_with_memo(tree, memo_prev \\ %{}) do
-    ctx = %{
+    ctx = %Plushie.Tree.NormalizeCtx{
       scope: "",
       window_id: nil,
-      widget_states: %{},
-      depth: 0,
-      memo_prev: memo_prev,
-      memo: %{},
-      widget_view_prev: %{},
-      widget_view: %{}
+      memo_prev: memo_prev
     }
 
     {result, memo, _widget_view} = Tree.normalize_with_caches(tree, ctx)

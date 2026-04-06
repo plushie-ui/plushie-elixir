@@ -210,12 +210,6 @@ defmodule Plushie.Animation.Spring do
   # Encode
   # ---------------------------------------------------------------------------
 
-  defimpl Plushie.Encode, for: Plushie.Animation.Spring do
-    def encode(%Plushie.Animation.Spring{} = s) do
-      Plushie.Animation.Spring.encode(s)
-    end
-  end
-
   @doc false
   @spec encode(t()) :: map()
   def encode(%__MODULE__{} = s) do

@@ -342,25 +342,25 @@ defmodule Plushie.Type.A11yTest do
 
   describe "encoding toggled/selected/value/orientation" do
     test "radio_group role encodes to renderer string" do
-      encoded = A11y.new() |> A11y.role(:radio_group) |> Plushie.Encode.encode()
+      encoded = A11y.new() |> A11y.role(:radio_group) |> A11y.encode()
       assert encoded[:role] == "radio_group"
     end
 
     test "role aliases encode to canonical renderer strings" do
-      encoded = A11y.new() |> A11y.role(:progress_bar) |> Plushie.Encode.encode()
+      encoded = A11y.new() |> A11y.role(:progress_bar) |> A11y.encode()
       assert encoded[:role] == "progress_indicator"
     end
 
     test "encoding direct structs still rejects unsupported roles" do
       assert_raise ArgumentError, ~r/unknown a11y role :option/, fn ->
         %A11y{role: :option}
-        |> Plushie.Encode.encode()
+        |> A11y.encode()
       end
     end
 
     test "nil state fields are omitted from encoding" do
       a = %A11y{label: "test"}
-      encoded = Plushie.Encode.encode(a)
+      encoded = A11y.encode(a)
       refute Map.has_key?(encoded, :toggled)
       refute Map.has_key?(encoded, :selected)
       refute Map.has_key?(encoded, :value)
@@ -369,7 +369,7 @@ defmodule Plushie.Type.A11yTest do
 
     test "present state fields are included in encoding" do
       a = %A11y{toggled: true, selected: false, value: "75%", orientation: :horizontal}
-      encoded = Plushie.Encode.encode(a)
+      encoded = A11y.encode(a)
       assert encoded[:toggled] == true
       assert encoded[:selected] == false
       assert encoded[:value] == "75%"
@@ -378,7 +378,7 @@ defmodule Plushie.Type.A11yTest do
 
     test "false toggled is preserved in encoding" do
       a = %A11y{toggled: false}
-      encoded = Plushie.Encode.encode(a)
+      encoded = A11y.encode(a)
       assert encoded[:toggled] == false
     end
   end
@@ -437,7 +437,7 @@ defmodule Plushie.Type.A11yTest do
   describe "encoding new fields" do
     test "nil new fields are omitted from encoding" do
       a = %A11y{label: "test"}
-      encoded = Plushie.Encode.encode(a)
+      encoded = A11y.encode(a)
       refute Map.has_key?(encoded, :busy)
       refute Map.has_key?(encoded, :invalid)
       refute Map.has_key?(encoded, :modal)
@@ -447,7 +447,7 @@ defmodule Plushie.Type.A11yTest do
 
     test "present new fields are included in encoding" do
       a = %A11y{busy: true, invalid: true, modal: true, read_only: true, mnemonic: "S"}
-      encoded = Plushie.Encode.encode(a)
+      encoded = A11y.encode(a)
       assert encoded[:busy] == true
       assert encoded[:invalid] == true
       assert encoded[:modal] == true
@@ -457,14 +457,14 @@ defmodule Plushie.Type.A11yTest do
 
     test "false values are preserved in encoding" do
       a = %A11y{busy: false, invalid: false}
-      encoded = Plushie.Encode.encode(a)
+      encoded = A11y.encode(a)
       assert encoded[:busy] == false
       assert encoded[:invalid] == false
     end
 
     test "nil relationship fields are omitted from encoding" do
       a = %A11y{label: "test"}
-      encoded = Plushie.Encode.encode(a)
+      encoded = A11y.encode(a)
       refute Map.has_key?(encoded, :labelled_by)
       refute Map.has_key?(encoded, :described_by)
       refute Map.has_key?(encoded, :error_message)
@@ -472,7 +472,7 @@ defmodule Plushie.Type.A11yTest do
 
     test "present relationship fields are included in encoding" do
       a = %A11y{labelled_by: "lb", described_by: "db", error_message: "em"}
-      encoded = Plushie.Encode.encode(a)
+      encoded = A11y.encode(a)
       assert encoded[:labelled_by] == "lb"
       assert encoded[:described_by] == "db"
       assert encoded[:error_message] == "em"

@@ -76,6 +76,11 @@ defmodule Plushie.Type.StyleMap do
     :focused
   ]
 
+  @doc "Validates and returns a StyleMap struct."
+  @spec cast(term()) :: {:ok, t()} | :error
+  def cast(%__MODULE__{} = v), do: {:ok, v}
+  def cast(_), do: :error
+
   @doc "Creates an empty style map."
   @spec new() :: t()
   def new, do: %__MODULE__{}
@@ -186,27 +191,36 @@ defmodule Plushie.Type.StyleMap do
       val -> Map.put(map, key, elem(Color.cast(val), 1))
     end
   end
-end
 
-defimpl Plushie.Encode, for: Plushie.Type.StyleMap do
-  def encode(style_map) do
+  @doc false
+  @spec encode(t()) :: map()
+  def encode(%__MODULE__{} = style_map) do
     %{}
-    |> put_field(:base, encode_base(style_map.base))
-    |> put_field(:background, style_map.background)
-    |> put_field(:text_color, style_map.text_color)
-    |> put_encoded(:border, style_map.border)
-    |> put_encoded(:shadow, style_map.shadow)
-    |> put_field(:hovered, encode_override(style_map.hovered))
-    |> put_field(:pressed, encode_override(style_map.pressed))
-    |> put_field(:disabled, encode_override(style_map.disabled))
-    |> put_field(:focused, encode_override(style_map.focused))
+    |> encode_put(:base, encode_base(style_map.base))
+    |> encode_put(:background, style_map.background)
+    |> encode_put(:text_color, style_map.text_color)
+    |> encode_put_nested(:border, style_map.border)
+    |> encode_put_nested(:shadow, style_map.shadow)
+    |> encode_put(:hovered, encode_override(style_map.hovered))
+    |> encode_put(:pressed, encode_override(style_map.pressed))
+    |> encode_put(:disabled, encode_override(style_map.disabled))
+    |> encode_put(:focused, encode_override(style_map.focused))
   end
 
-  defp put_field(map, _key, nil), do: map
-  defp put_field(map, key, value), do: Map.put(map, key, value)
+  defp encode_put(map, _key, nil), do: map
+  defp encode_put(map, key, value), do: Map.put(map, key, value)
 
-  defp put_encoded(map, _key, nil), do: map
-  defp put_encoded(map, key, value), do: Map.put(map, key, Plushie.Encode.encode(value))
+  defp encode_put_nested(map, _key, nil), do: map
+
+  defp encode_put_nested(map, key, %mod{} = value) do
+    if function_exported?(mod, :encode, 1) do
+      Map.put(map, key, mod.encode(value))
+    else
+      Map.put(map, key, value)
+    end
+  end
+
+  defp encode_put_nested(map, key, value), do: Map.put(map, key, value)
 
   defp encode_base(nil), do: nil
   defp encode_base(atom) when is_atom(atom), do: Atom.to_string(atom)
@@ -215,9 +229,9 @@ defimpl Plushie.Encode, for: Plushie.Type.StyleMap do
 
   defp encode_override(override) when is_map(override) do
     %{}
-    |> put_field(:background, Map.get(override, :background))
-    |> put_field(:text_color, Map.get(override, :text_color))
-    |> put_encoded(:border, Map.get(override, :border))
-    |> put_encoded(:shadow, Map.get(override, :shadow))
+    |> encode_put(:background, Map.get(override, :background))
+    |> encode_put(:text_color, Map.get(override, :text_color))
+    |> encode_put_nested(:border, Map.get(override, :border))
+    |> encode_put_nested(:shadow, Map.get(override, :shadow))
   end
 end

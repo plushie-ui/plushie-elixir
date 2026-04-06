@@ -259,12 +259,6 @@ defmodule Plushie.Animation.Transition do
   # Encode
   # ---------------------------------------------------------------------------
 
-  defimpl Plushie.Encode, for: Plushie.Animation.Transition do
-    def encode(%Plushie.Animation.Transition{} = t) do
-      Plushie.Animation.Transition.encode(t)
-    end
-  end
-
   @doc false
   @spec encode(t()) :: map()
   def encode(%__MODULE__{} = t) do

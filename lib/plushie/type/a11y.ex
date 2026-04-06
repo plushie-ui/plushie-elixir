@@ -463,14 +463,20 @@ defmodule Plushie.Type.A11y do
   def guard(var) do
     quote do: is_map(unquote(var)) or is_list(unquote(var))
   end
-end
 
-defimpl Plushie.Encode, for: Plushie.Type.A11y do
-  def encode(%Plushie.Type.A11y{} = a11y) do
+  @doc false
+  @impl Plushie.Type
+  def encode(%__MODULE__{} = a11y) do
     a11y
-    |> Plushie.Type.A11y.normalize!()
+    |> normalize!()
     |> Map.from_struct()
     |> Enum.reject(fn {_, v} -> is_nil(v) end)
-    |> Map.new(fn {k, v} -> {k, Plushie.Encode.encode(v)} end)
+    |> Map.new(fn {k, v} -> {k, encode_a11y_value(v)} end)
   end
+
+  defp encode_a11y_value(true), do: true
+  defp encode_a11y_value(false), do: false
+  defp encode_a11y_value(nil), do: nil
+  defp encode_a11y_value(v) when is_atom(v), do: Atom.to_string(v)
+  defp encode_a11y_value(v), do: v
 end

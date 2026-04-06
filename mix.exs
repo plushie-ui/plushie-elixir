@@ -97,7 +97,6 @@ defmodule Plushie.MixProject do
         "UI Builder": [
           Plushie.UI,
           Plushie.Widget,
-          Plushie.Encode,
           Plushie.Tree
         ],
         Widgets: ~r/Plushie\.Widget\..*/,

@@ -13,10 +13,9 @@ defmodule Plushie.Canvas.Shape.Circle do
 
   @enforce_keys [:x, :y, :r]
   defstruct [:x, :y, :r, :fill, :stroke, :opacity, :fill_rule]
-end
 
-defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Circle do
-  def encode(circle) do
+  @doc false
+  def encode(%__MODULE__{} = circle) do
     %{type: "circle", x: circle.x, y: circle.y, r: circle.r}
     |> put_if(:fill, circle.fill)
     |> put_if(:stroke, circle.stroke)
@@ -25,5 +24,5 @@ defimpl Plushie.Encode, for: Plushie.Canvas.Shape.Circle do
   end
 
   defp put_if(map, _key, nil), do: map
-  defp put_if(map, key, val), do: Map.put(map, key, Plushie.Encode.encode(val))
+  defp put_if(map, key, val), do: Map.put(map, key, Plushie.Type.encode_value(val))
 end

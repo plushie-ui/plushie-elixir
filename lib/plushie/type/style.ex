@@ -9,7 +9,18 @@ defmodule Plushie.Type.Style do
   use Plushie.Type
 
   union do
-    enum([:primary, :secondary, :success, :danger, :warning])
+    enum([
+      :default,
+      :primary,
+      :secondary,
+      :success,
+      :danger,
+      :warning,
+      :dark,
+      :weak,
+      :rounded_box
+    ])
+
     type(Plushie.Type.StyleMap)
   end
 end

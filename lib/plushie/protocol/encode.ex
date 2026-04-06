@@ -415,7 +415,7 @@ defmodule Plushie.Protocol.Encode do
 
   # Structs must be encoded before key stringification -- otherwise they
   # match the bare map clause and get destructured into raw struct fields.
-  defp stringify_value(%_{} = v), do: Plushie.Encode.encode(v)
+  defp stringify_value(%_{} = v), do: Plushie.Type.encode_value(v)
 
   # Recurse into nested maps for stringify_keys, but not lists.
   # Lists in props are treated as scalar sequences (e.g. color tuples, ranges),

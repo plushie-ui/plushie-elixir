@@ -1378,15 +1378,12 @@ defmodule Plushie.Runtime do
 
     validate_root_windows!(raw_tree)
 
-    ctx = %{
+    ctx = %Plushie.Tree.NormalizeCtx{
       scope: "",
       window_id: nil,
       widget_states: widget_handler_states,
-      depth: 0,
       memo_prev: memo_cache,
-      memo: %{},
-      widget_view_prev: widget_view_cache,
-      widget_view: %{}
+      widget_view_prev: widget_view_cache
     }
 
     {normalized, new_memo_cache, new_widget_view_cache} =
