@@ -57,6 +57,8 @@ defmodule Plushie.Widget.PaneGrid do
     field :divider_color, Plushie.Type.Color, doc: "Color for the split divider."
     field :divider_width, :float, doc: "Divider thickness in pixels."
     field :leeway, :float, doc: "Grabbable area around dividers in pixels."
+
+    field :split_axis, {:enum, [:horizontal, :vertical]}, doc: "Split axis for initial layout."
   end
 
   event :pane_clicked, doc: "Emitted when a pane is selected."

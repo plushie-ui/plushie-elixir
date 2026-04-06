@@ -14,6 +14,10 @@ defmodule Plushie.Widget.Slider do
     field :width, Plushie.Type.Length, doc: "Slider width. Default: fill."
     field :height, :float, doc: "Slider track height in pixels."
     field :circular_handle, :boolean, doc: "Use a circular handle. Default: false."
+
+    field :handle_radius, :float,
+      doc: "Circular handle radius in pixels. Only used when circular_handle is true."
+
     field :rail_color, Plushie.Type.Color, doc: "Color for the slider rail."
     field :rail_width, :float, doc: "Rail thickness in pixels."
     field :style, Plushie.Type.Style, doc: "Named preset or custom `StyleMap`."
