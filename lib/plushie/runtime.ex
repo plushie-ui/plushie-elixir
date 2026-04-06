@@ -667,7 +667,16 @@ defmodule Plushie.Runtime do
 
     # Discard stale coalescable events from the old renderer.
     if state.coalesce_timer, do: Process.cancel_timer(state.coalesce_timer)
-    state = %{state | pending_coalesce: %{}, pending_coalesce_order: [], coalesce_timer: nil}
+
+    state = %{
+      state
+      | pending_coalesce: %{},
+        pending_coalesce_order: [],
+        coalesce_timer: nil,
+        consecutive_errors: 0,
+        consecutive_view_errors: 0
+    }
+
     state = fail_pending_interact(state, :renderer_restarted)
 
     # Flush all pending effect requests -- the renderer that would have
@@ -955,6 +964,7 @@ defmodule Plushie.Runtime do
 
   def handle_info(:force_rerender, state) do
     Logger.info("plushie runtime: force re-render (code reload)")
+    state = %{state | consecutive_errors: 0, consecutive_view_errors: 0}
 
     {new_tree, memo_cache, widget_view_cache, state} =
       case render_and_sync(
