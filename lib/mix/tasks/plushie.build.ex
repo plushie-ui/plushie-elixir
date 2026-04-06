@@ -436,6 +436,14 @@ defmodule Mix.Tasks.Plushie.Build do
         )
       end
 
+      unless File.dir?(resolved) do
+        Mix.raise(
+          "Widget #{inspect(mod)} native_crate path #{inspect(crate_rel)} " <>
+            "resolves to #{resolved}, which does not exist. " <>
+            "Ensure the crate directory is present and included in the package files."
+        )
+      end
+
       {mod, resolved}
     end)
   end
@@ -505,7 +513,7 @@ defmodule Mix.Tasks.Plushie.Build do
         compatible? = versions_compatible?(dep, expected)
 
         unless compatible? do
-          Mix.shell().error(
+          Mix.raise(
             "Widget #{inspect(mod)} depends on plushie-ext #{dep_version_str}, " <>
               "but this project targets #{expected}. " <>
               "Update the widget's Rust crate to a compatible version."
