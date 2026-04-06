@@ -8,43 +8,25 @@ defmodule Plushie.Bridge do
 
   ## Transport modes
 
+  Transport I/O is delegated to modules implementing `Plushie.Transport`.
   Controlled by the `:transport` option:
 
   - `:spawn` (default) -- spawns the renderer binary as a child process
-    using an Erlang Port. The Port handles stdio framing automatically.
+    using an Erlang Port (`Plushie.Transport.Port`).
 
   - `:stdio` -- reads/writes the BEAM's own stdin/stdout. Used when the
-    renderer spawns the Elixir process (e.g. `plushie --exec`).
+    renderer spawns the Elixir process (`Plushie.Transport.Port`).
 
   - `{:iostream, pid}` -- sends and receives protocol messages via an
-    external process (the iostream adapter). Used for custom transports
-    like SSH channels, TCP sockets, or WebSockets where the adapter
-    process handles the underlying I/O and framing.
-
-    The iostream adapter must:
-    1. Receive `{:iostream_bridge, bridge_pid}` on startup (Bridge sends
-       this during init).
-    2. Send `{:iostream_data, binary}` to the bridge when protocol data
-       arrives (one complete protocol message per delivery).
-    3. Handle `{:iostream_send, iodata}` messages from the bridge by
-       writing the data to the underlying transport.
-    4. Send `{:iostream_closed, reason}` when the transport is closed.
+    external process (`Plushie.Transport.IOStream`). See that module for
+    the adapter protocol.
 
   ## Wire formats
 
   Controlled by the `:format` option:
 
   - `:json` -- JSONL over stdio. Opt-in for debugging and observability.
-    The Port is opened with `{:line, 65_536}`, which causes the driver to
-    deliver data as `{port, {:data, {:eol, line}}}` for complete lines and
-    `{port, {:data, {:noeol, chunk}}}` for partial lines that exceed the
-    line buffer. Partial chunks are accumulated in `buffer` and flushed when
-    the matching `:eol` chunk arrives.
-
-  - `:msgpack` (default) -- MessagePack over stdio with 4-byte big-endian
-    length-prefixed framing. The Port is opened with `{:packet, 4}`, which
-    causes the Erlang Port driver to handle framing automatically in both
-    directions. Complete frames arrive as `{port, {:data, binary}}`.
+  - `:msgpack` (default) -- MessagePack with 4-byte length-prefixed framing.
 
   On unexpected exit the bridge applies exponential back-off and attempts
   to restart the renderer up to `max_restarts` times. If the limit is
@@ -325,20 +307,15 @@ defmodule Plushie.Bridge do
   # ---------------------------------------------------------------------------
 
   defstruct [
-    :port,
+    :transport_mod,
+    :transport_state,
     :runtime,
-    :renderer_path,
     :buffer,
     :discard_next_eol,
     :format,
-    :transport,
-    :log_level,
-    :renderer_args,
     :max_restarts,
     :restart_count,
     :restart_delay,
-    :iostream_ref,
-    :iostream_alive,
     :awaiting_resync,
     :queued_messages,
     :pending_screenshot,
@@ -356,42 +333,56 @@ defmodule Plushie.Bridge do
     runtime = Keyword.fetch!(opts, :runtime)
     transport = Keyword.get(opts, :transport, :spawn)
     format = Keyword.get(opts, :format, :msgpack)
-    log_level = Keyword.get(opts, :log_level, :error)
-
-    renderer_path =
-      case transport do
-        :spawn -> Keyword.fetch!(opts, :renderer_path)
-        :stdio -> Keyword.get(opts, :renderer_path)
-        {:iostream, _} -> Keyword.get(opts, :renderer_path)
-      end
-
     heartbeat_interval = Keyword.get(opts, :heartbeat_interval, 30_000)
 
-    state = %__MODULE__{
-      port: nil,
-      runtime: runtime,
-      renderer_path: renderer_path,
-      buffer: "",
-      discard_next_eol: false,
-      format: format,
-      transport: transport,
-      log_level: log_level,
-      renderer_args: Keyword.get(opts, :renderer_args, []),
-      max_restarts: Keyword.get(opts, :max_restarts, 5),
-      restart_count: 0,
-      restart_delay: Keyword.get(opts, :restart_delay, 100),
-      awaiting_resync: false,
-      queued_messages: [],
-      pending_screenshot: nil,
-      heartbeat_interval: heartbeat_interval,
-      heartbeat_timer: nil,
-      session_id: Keyword.get(opts, :session_id, "")
-    }
+    {transport_mod, transport_opts} = transport_init_args(transport, format, opts)
 
-    case open_port(state) do
-      {:ok, state} -> {:ok, state}
-      {:error, reason} -> {:stop, reason}
+    case transport_mod.init(transport_opts) do
+      {:ok, transport_state} ->
+        state = %__MODULE__{
+          transport_mod: transport_mod,
+          transport_state: transport_state,
+          runtime: runtime,
+          buffer: "",
+          discard_next_eol: false,
+          format: format,
+          max_restarts: Keyword.get(opts, :max_restarts, 5),
+          restart_count: 0,
+          restart_delay: Keyword.get(opts, :restart_delay, 100),
+          awaiting_resync: false,
+          queued_messages: [],
+          pending_screenshot: nil,
+          heartbeat_interval: heartbeat_interval,
+          heartbeat_timer: nil,
+          session_id: Keyword.get(opts, :session_id, "")
+        }
+
+        {:ok, state}
+
+      {:error, reason} ->
+        {:stop, reason}
     end
+  end
+
+  defp transport_init_args({:iostream, io_pid}, _format, _opts) do
+    {Plushie.Transport.IOStream, [io_pid: io_pid]}
+  end
+
+  defp transport_init_args(mode, format, opts) when mode in [:spawn, :stdio] do
+    renderer_path =
+      case mode do
+        :spawn -> Keyword.fetch!(opts, :renderer_path)
+        :stdio -> Keyword.get(opts, :renderer_path)
+      end
+
+    {Plushie.Transport.Port,
+     [
+       mode: mode,
+       format: format,
+       renderer_path: renderer_path,
+       renderer_args: Keyword.get(opts, :renderer_args, []),
+       log_level: Keyword.get(opts, :log_level, :error)
+     ]}
   end
 
   @impl true
@@ -517,29 +508,27 @@ defmodule Plushie.Bridge do
   # Intentional restart (e.g. after Rust rebuild in dev mode).
   # No backoff, no restart counting -- the renderer is being replaced
   # with a freshly built binary, not recovering from a crash.
-  def handle_cast(:dev_restart, %{transport: :spawn} = state) do
-    state = cancel_heartbeat_timer(state)
-    state = fail_pending_screenshot(state, {:renderer_exit, :dev_restart})
-
-    if state.port do
-      Port.close(state.port)
-    end
-
-    case open_port(%{state | port: nil, buffer: ""}) do
-      {:ok, state} ->
-        send(state.runtime, :renderer_restarted)
-        {:noreply, %{state | awaiting_resync: true, restart_count: 0}}
-
-      {:error, reason} ->
-        Logger.error("plushie bridge: dev restart failed: #{inspect(reason)}")
-        send(state.runtime, {:renderer_exit, {:dev_restart_failed, reason}})
-        {:noreply, %{state | port: nil}}
-    end
-  end
-
   def handle_cast(:dev_restart, state) do
-    Logger.warning("plushie bridge: dev restart only supported for :spawn transport")
-    {:noreply, state}
+    if state.transport_mod.restartable?(state.transport_state) do
+      state = cancel_heartbeat_timer(state)
+      state = fail_pending_screenshot(state, {:renderer_exit, :dev_restart})
+      state.transport_mod.close(state.transport_state)
+
+      case Plushie.Transport.Port.reopen(state.transport_state) do
+        {:ok, transport_state} ->
+          state = %{state | transport_state: transport_state, buffer: ""}
+          send(state.runtime, :renderer_restarted)
+          {:noreply, %{state | awaiting_resync: true, restart_count: 0}}
+
+        {:error, reason} ->
+          Logger.error("plushie bridge: dev restart failed: #{inspect(reason)}")
+          send(state.runtime, {:renderer_exit, {:dev_restart_failed, reason}})
+          {:noreply, %{state | transport_state: %{state.transport_state | port: nil}}}
+      end
+    else
+      Logger.warning("plushie bridge: dev restart only supported for :spawn transport")
+      {:noreply, state}
+    end
   end
 
   @impl true
@@ -561,80 +550,21 @@ defmodule Plushie.Bridge do
     {:reply, {:error, :screenshot_in_progress}, state}
   end
 
-  # MessagePack frame -- {:packet, 4} driver delivers raw binaries.
   @impl true
-  def handle_info({port, {:data, binary}}, %{port: port, format: :msgpack} = state)
-      when is_binary(binary) do
-    state = dispatch_message(binary, :msgpack, state)
-    {:noreply, state}
-  end
-
-  # Complete line -- flush any buffered prefix and dispatch.
-  def handle_info({port, {:data, {:eol, _chunk}}}, %{port: port, discard_next_eol: true} = state) do
-    # Tail of an oversized message that was dropped. Discard and resume.
-    {:noreply, %{state | buffer: "", discard_next_eol: false}}
-  end
-
-  def handle_info({port, {:data, {:eol, chunk}}}, %{port: port} = state) do
-    line = state.buffer <> chunk
-    state = dispatch_message(line, :json, %{state | buffer: ""})
-    {:noreply, state}
-  end
-
-  # Partial line exceeding {:line, N} -- accumulate.
-  def handle_info(
-        {port, {:data, {:noeol, _chunk}}},
-        %{port: port, discard_next_eol: true} = state
-      ) do
-    # Still accumulating fragments of the oversized message. Skip.
-    {:noreply, state}
-  end
-
-  def handle_info({port, {:data, {:noeol, chunk}}}, %{port: port} = state) do
-    new_buffer = state.buffer <> chunk
-
-    if byte_size(new_buffer) > @max_buffer_size do
-      Logger.error(
-        "plushie bridge: JSON buffer exceeded #{@max_buffer_size} bytes, dropping message"
-      )
-
-      {:noreply, %{state | buffer: "", discard_next_eol: true}}
-    else
-      {:noreply, %{state | buffer: new_buffer}}
-    end
-  end
-
-  # Stdio transport: stdin closed (renderer exited or pipe broken).
-  def handle_info({port, :eof}, %{port: port, transport: :stdio} = state) do
-    Logger.info("plushie bridge: stdin closed (renderer exited) -- shutting down")
-    state = cancel_heartbeat_timer(state)
-    send(state.runtime, {:renderer_exit, :normal})
-    {:stop, :normal, %{state | port: nil}}
-  end
-
-  def handle_info({port, {:exit_status, 0}}, %{port: port} = state) do
-    # Clean exit (user closed window). Stop normally -- don't restart.
-    Logger.info("plushie bridge: renderer exited cleanly (status 0)")
-    state = cancel_heartbeat_timer(state)
-    send(state.runtime, {:renderer_exit, :normal})
-    {:stop, :normal, %{state | port: nil}}
-  end
-
-  def handle_info({port, {:exit_status, status}}, %{port: port} = state) do
-    handle_port_exit(state, {:exit_status, status})
-  end
-
-  def handle_info({:DOWN, _ref, :port, port, reason}, %{port: port} = state) do
-    handle_port_exit(state, reason)
-  end
-
   def handle_info(:restart_renderer, state) do
-    case open_port(state) do
-      {:ok, state} ->
+    case Plushie.Transport.Port.reopen(state.transport_state) do
+      {:ok, transport_state} ->
         new_count = state.restart_count + 1
         :telemetry.execute([:plushie, :bridge, :restart], %{count: new_count}, %{})
         send(state.runtime, :renderer_restarted)
-        {:noreply, %{state | restart_count: new_count, awaiting_resync: true}}
+
+        {:noreply,
+         %{
+           state
+           | transport_state: transport_state,
+             restart_count: new_count,
+             awaiting_resync: true
+         }}
 
       {:error, reason} ->
         {:stop, {:renderer_restart_failed, reason}, state}
@@ -643,35 +573,6 @@ defmodule Plushie.Bridge do
 
   def handle_info({:stop_protocol_mismatch, got, expected}, state) do
     {:stop, {:protocol_mismatch, got, expected}, state}
-  end
-
-  # iostream adapter sends us a complete protocol message.
-  def handle_info({:iostream_data, data}, %{transport: {:iostream, _}} = state) do
-    state = dispatch_message(data, state.format, state)
-    {:noreply, state}
-  end
-
-  # iostream adapter reports the transport is closed.
-  def handle_info({:iostream_closed, reason}, %{transport: {:iostream, _}} = state) do
-    log_iostream_exit(reason, "iostream closed")
-    state = cancel_heartbeat_timer(state)
-    state = fail_pending_screenshot(state, {:renderer_exit, reason})
-    send(state.runtime, {:renderer_exit, reason})
-    {:stop, :normal, %{state | port: nil}}
-  end
-
-  # iostream adapter process exited.
-  def handle_info(
-        {:DOWN, ref, :process, _pid, reason},
-        %{iostream_ref: ref} = state
-      )
-      when is_reference(ref) do
-    log_iostream_exit(reason, "iostream process exited")
-    state = %{state | iostream_alive: false}
-    state = cancel_heartbeat_timer(state)
-    state = fail_pending_screenshot(state, {:renderer_exit, reason})
-    send(state.runtime, {:renderer_exit, reason})
-    {:stop, :normal, state}
   end
 
   def handle_info(:heartbeat_timeout, %{awaiting_resync: true} = state) do
@@ -686,35 +587,33 @@ defmodule Plushie.Bridge do
     )
 
     state = %{state | heartbeat_timer: nil}
-    handle_port_exit(state, :heartbeat_timeout)
+    handle_transport_closed(state, :heartbeat_timeout)
   end
 
+  # Delegate all other messages to the transport module.
   def handle_info(msg, state) do
-    Logger.debug("plushie bridge: unhandled message: #{inspect(msg)}")
-    {:noreply, state}
-  end
+    case state.transport_mod.handle_info(msg, state.transport_state) do
+      {:data, data, transport_state} ->
+        state = %{state | transport_state: transport_state}
+        handle_transport_data(data, state)
 
-  defp log_iostream_exit(reason, _prefix) when reason in [:normal, :shutdown], do: :ok
+      {:closed, reason, transport_state} ->
+        state = %{state | transport_state: transport_state}
+        handle_transport_closed(state, reason)
 
-  defp log_iostream_exit(reason, prefix) do
-    Logger.info("plushie bridge: #{prefix}: #{inspect(reason)}")
+      :ignore ->
+        Logger.debug("plushie bridge: unhandled message: #{inspect(msg)}")
+        {:noreply, state}
+    end
   end
 
   @impl true
   def terminate(_reason, %{heartbeat_timer: ref} = state) when is_reference(ref) do
     Process.cancel_timer(ref)
-    terminate_port(state)
+    state.transport_mod.close(state.transport_state)
   end
 
-  def terminate(_reason, state), do: terminate_port(state)
-
-  defp terminate_port(%{port: port}) when is_port(port) do
-    Port.close(port)
-  catch
-    _, _ -> :ok
-  end
-
-  defp terminate_port(_state), do: :ok
+  def terminate(_reason, state), do: state.transport_mod.close(state.transport_state)
 
   # ---------------------------------------------------------------------------
   # Private helpers
@@ -767,91 +666,14 @@ defmodule Plushie.Bridge do
   defp reserialize(map, :json), do: Jason.encode!(map) <> "\n"
   defp reserialize(map, :msgpack), do: Msgpax.pack!(map)
 
-  defp open_port(%{transport: {:iostream, io_pid}} = state) do
-    ref = Process.monitor(io_pid)
-    send(io_pid, {:iostream_bridge, self()})
-    {:ok, %{state | iostream_ref: ref, iostream_alive: true}}
-  end
+  defp send_data(state, data) do
+    case state.transport_mod.send_data(state.transport_state, data) do
+      {:ok, transport_state} ->
+        {:ok, %{state | transport_state: transport_state}}
 
-  defp open_port(%{transport: :stdio} = state) do
-    port_opts =
-      case state.format do
-        :msgpack -> [:binary, :eof, {:packet, 4}]
-        :json -> [:binary, :eof, {:line, 65_536}]
-      end
-
-    port = Port.open({:fd, 0, 1}, port_opts)
-    {:ok, %{state | port: port, buffer: ""}}
-  end
-
-  defp open_port(state) do
-    path = state.renderer_path
-
-    if File.exists?(path) do
-      port_opts =
-        case state.format do
-          :msgpack -> [:binary, :exit_status, :use_stdio, {:packet, 4}]
-          # 65KB line limit is sufficient for normal protocol messages.
-          # Unusually large JSON messages (e.g., full tree snapshots with
-          # many nodes) may be split into :noeol chunks, which are buffered
-          # and reassembled. For large payloads, use msgpack mode (default)
-          # which has no line limit.
-          :json -> [:binary, :exit_status, :use_stdio, {:line, 65_536}]
-        end
-
-      format_args = if state.format == :json, do: ["--json"], else: []
-      args = state.renderer_args ++ format_args
-      env = Plushie.RendererEnv.build(rust_log: rust_log_value(state.log_level))
-
-      port =
-        Port.open({:spawn_executable, path}, [{:args, args}, {:env, env} | port_opts])
-
-      {:ok, %{state | port: port, buffer: ""}}
-    else
-      {:error, {:renderer_not_found, path}}
+      {:error, _reason} ->
+        :error
     end
-  end
-
-  @typep log_level :: :off | :error | :warning | :info | :debug
-
-  # Translate log_level atom to RUST_LOG filter string. Returns nil when
-  # the system RUST_LOG env var is already set (env var always wins).
-  @spec rust_log_value(log_level()) :: String.t() | nil
-  defp rust_log_value(level) do
-    if System.get_env("RUST_LOG") do
-      nil
-    else
-      case level do
-        :off -> "off"
-        :error -> "plushie=error"
-        :warning -> "plushie=warn"
-        :info -> "plushie=info"
-        :debug -> "plushie=debug"
-      end
-    end
-  end
-
-  defp send_data(%{transport: {:iostream, io_pid}}, data) do
-    send(io_pid, {:iostream_send, data})
-    :telemetry.execute([:plushie, :bridge, :send], %{byte_size: IO.iodata_length(data)}, %{})
-  rescue
-    ArgumentError ->
-      Logger.warning("plushie bridge: iostream process unreachable during send")
-      :error
-  end
-
-  defp send_data(%{port: nil}, _data), do: :error
-
-  defp send_data(%{port: port}, data) when is_port(port) do
-    Port.command(port, data)
-    # byte_size measures payload size (excludes framing overhead in both
-    # JSON and msgpack modes). This is intentionally consistent across
-    # formats -- framing is a transport concern, not a telemetry concern.
-    :telemetry.execute([:plushie, :bridge, :send], %{byte_size: IO.iodata_length(data)}, %{})
-  rescue
-    ArgumentError ->
-      Logger.warning("plushie bridge: port closed during send")
-      :error
   end
 
   defp dispatch_message(data, format, state) do
@@ -919,25 +741,73 @@ defmodule Plushie.Bridge do
     end
   end
 
-  defp handle_port_exit(%{transport: {:iostream, _}} = state, reason) do
-    exit_reason = normalize_exit_reason(reason)
-    Logger.info("plushie bridge: iostream transport closed -- shutting down")
-    state = cancel_heartbeat_timer(state)
-    state = fail_pending_screenshot(state, {:renderer_exit, exit_reason})
-    send(state.runtime, {:renderer_exit, exit_reason})
-    {:stop, :normal, %{state | port: nil}}
+  # Handle transport data. Msgpack delivers complete binaries directly.
+  # JSON delivers :eol/:noeol tuples that need buffering.
+  defp handle_transport_data(binary, %{format: :msgpack} = state) when is_binary(binary) do
+    state = dispatch_message(binary, :msgpack, state)
+    {:noreply, state}
   end
 
-  defp handle_port_exit(%{transport: :stdio} = state, reason) do
-    exit_reason = normalize_exit_reason(reason)
-    Logger.info("plushie bridge: stdio port closed -- shutting down")
-    state = cancel_heartbeat_timer(state)
-    state = fail_pending_screenshot(state, {:renderer_exit, exit_reason})
-    send(state.runtime, {:renderer_exit, exit_reason})
-    {:stop, :normal, %{state | port: nil}}
+  defp handle_transport_data({:eol, _chunk}, %{discard_next_eol: true} = state) do
+    {:noreply, %{state | buffer: "", discard_next_eol: false}}
   end
 
-  defp handle_port_exit(state, reason) do
+  defp handle_transport_data({:eol, chunk}, state) do
+    line = state.buffer <> chunk
+    state = dispatch_message(line, :json, %{state | buffer: ""})
+    {:noreply, state}
+  end
+
+  defp handle_transport_data({:noeol, _chunk}, %{discard_next_eol: true} = state) do
+    {:noreply, state}
+  end
+
+  defp handle_transport_data({:noeol, chunk}, state) do
+    new_buffer = state.buffer <> chunk
+
+    if byte_size(new_buffer) > @max_buffer_size do
+      Logger.error(
+        "plushie bridge: JSON buffer exceeded #{@max_buffer_size} bytes, dropping message"
+      )
+
+      {:noreply, %{state | buffer: "", discard_next_eol: true}}
+    else
+      {:noreply, %{state | buffer: new_buffer}}
+    end
+  end
+
+  # IOStream delivers complete protocol messages as raw binaries.
+  defp handle_transport_data(binary, state) when is_binary(binary) do
+    state = dispatch_message(binary, state.format, state)
+    {:noreply, state}
+  end
+
+  # Transport closed cleanly or via iostream. Non-restartable transports
+  # shut down; restartable ones (spawn) go through exit handling.
+  defp handle_transport_closed(state, reason) do
+    if state.transport_mod.restartable?(state.transport_state) do
+      # Spawn mode: check for clean exit (status 0) vs crash.
+      case reason do
+        {:exit_status, 0} ->
+          Logger.info("plushie bridge: renderer exited cleanly (status 0)")
+          state = cancel_heartbeat_timer(state)
+          send(state.runtime, {:renderer_exit, :normal})
+          {:stop, :normal, state}
+
+        _ ->
+          handle_transport_exit(state, reason)
+      end
+    else
+      # Non-restartable (stdio, iostream): shut down cleanly.
+      log_transport_close(state.transport_mod, reason)
+      state = cancel_heartbeat_timer(state)
+      state = fail_pending_screenshot(state, {:renderer_exit, reason})
+      send(state.runtime, {:renderer_exit, reason})
+      {:stop, :normal, state}
+    end
+  end
+
+  defp handle_transport_exit(state, reason) do
     state = cancel_heartbeat_timer(state)
     state = fail_pending_screenshot(state, {:renderer_exit, reason})
     send(state.runtime, {:renderer_exit, reason})
@@ -945,7 +815,7 @@ defmodule Plushie.Bridge do
     if state.restart_count < state.max_restarts do
       delay = min(round(state.restart_delay * :math.pow(2, state.restart_count)), @max_backoff_ms)
       Process.send_after(self(), :restart_renderer, delay)
-      {:noreply, %{state | port: nil, awaiting_resync: true}}
+      {:noreply, %{state | awaiting_resync: true}}
     else
       Logger.error("""
       plushie bridge: renderer crashed #{state.max_restarts} times, giving up.
@@ -964,6 +834,18 @@ defmodule Plushie.Bridge do
 
       {:stop, {:max_restarts_reached, reason}, state}
     end
+  end
+
+  defp log_transport_close(Plushie.Transport.IOStream, reason)
+       when reason in [:normal, :shutdown],
+       do: :ok
+
+  defp log_transport_close(Plushie.Transport.IOStream, reason) do
+    Logger.info("plushie bridge: iostream closed: #{inspect(reason)}")
+  end
+
+  defp log_transport_close(Plushie.Transport.Port, _reason) do
+    Logger.info("plushie bridge: stdio port closed, shutting down")
   end
 
   defp maybe_put_dimension(map, opts, key) do
@@ -990,7 +872,7 @@ defmodule Plushie.Bridge do
     cond do
       send_now?(state, kind) ->
         case send_data(state, data) do
-          :ok -> state
+          {:ok, state} -> state
           :error -> queue_message(state, kind, data)
         end
 
@@ -1004,6 +886,10 @@ defmodule Plushie.Bridge do
 
   defp send_now?(%{awaiting_resync: false} = state, _kind), do: transport_ready?(state)
   defp send_now?(state, kind), do: transport_ready?(state) and not queue_during_restart?(kind)
+
+  defp transport_ready?(state) do
+    state.transport_mod.transport_ready?(state.transport_state)
+  end
 
   # Settings, snapshots, patches, subscriptions, and window ops are rebuilt
   # by the runtime during resync. These command-like messages are not.
@@ -1037,21 +923,10 @@ defmodule Plushie.Bridge do
 
   defp do_flush_queued_messages(state, [data | rest]) do
     case send_data(state, data) do
-      :ok -> do_flush_queued_messages(state, rest)
+      {:ok, state} -> do_flush_queued_messages(state, rest)
       :error -> %{state | queued_messages: [data | rest]}
     end
   end
-
-  # For transports that don't support restart (iostream, stdio), the heartbeat
-  # timeout reason is preserved so the runtime knows why the renderer exited.
-  # All other exit reasons are normalized to :normal since these transports
-  # treat any close as a clean shutdown.
-  defp normalize_exit_reason(:heartbeat_timeout), do: :heartbeat_timeout
-  defp normalize_exit_reason(_reason), do: :normal
-
-  defp transport_ready?(%{transport: {:iostream, _}, iostream_alive: alive}), do: alive == true
-  defp transport_ready?(%{port: port}) when is_port(port), do: true
-  defp transport_ready?(_state), do: false
 
   # Heartbeat watchdog: resets the timer that detects an unresponsive renderer.
   # Called after every successful message from the renderer.
