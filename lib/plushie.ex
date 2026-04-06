@@ -48,6 +48,74 @@ defmodule Plushie do
 
   When `:transport` is `:stdio` or `{:iostream, pid}`, the `:binary`
   option is ignored (no renderer subprocess is spawned).
+
+  ## Telemetry
+
+  Plushie emits `:telemetry` events for observability. Spans include
+  both `start` and `stop` (or `exception`) suffixes automatically.
+
+  ### Spans
+
+  Spans are emitted via `:telemetry.span/3`. Each produces
+  `[:plushie, <name>, :start]` and `[:plushie, <name>, :stop]`
+  events (or `:exception` on failure).
+
+  - `[:plushie, :view]` - calls `app.view(model)`.
+    Metadata: `%{app: module()}`.
+  - `[:plushie, :normalize]` - normalizes the raw view tree into
+    canonical wire format, including widget rendering and memo caching.
+    Metadata: `%{app: module()}`.
+  - `[:plushie, :diff]` - diffs old and new trees to produce patch
+    operations. Metadata: `%{app: module()}`.
+  - `[:plushie, :update]` - calls `app.update(model, event)`.
+    Metadata: `%{app: module(), event: Plushie.Event.t()}`.
+  - `[:plushie, :commands]` - executes commands returned by
+    `update/2` or `init/1`. Metadata: `%{count: non_neg_integer()}`.
+  - `[:plushie, :subscriptions, :sync]` - diffs and synchronizes
+    active subscriptions. Metadata: `%{}`.
+
+  ### Single events
+
+  Single events are emitted via `:telemetry.execute/3`.
+
+  #### Runtime
+
+  - `[:plushie, :runtime, :view_error]` - `view/1` raised or threw.
+    Measurements: `%{count: 1}`. Metadata: `%{app: module()}`.
+  - `[:plushie, :runtime, :update_error]` - `update/2` raised or threw.
+    Measurements: `%{count: 1}`. Metadata: `%{app: module(), event: term()}`.
+  - `[:plushie, :runtime, :effect_timeout]` - a pending effect
+    request timed out. Measurements: `%{count: 1}`.
+    Metadata: `%{id: term()}`.
+  - `[:plushie, :runtime, :ticks_drained]` - coalesced multiple
+    pending ticks into one cycle. Measurements: `%{count: integer()}`.
+    Metadata: `%{tag: atom()}`.
+
+  #### Tree
+
+  - `[:plushie, :memo, :hit]` - memo cache hit during normalization.
+    Measurements: `%{count: 1}`. Metadata: `%{id: String.t()}`.
+  - `[:plushie, :memo, :miss]` - memo cache miss during normalization.
+    Measurements: `%{count: 1}`. Metadata: `%{id: String.t()}`.
+  - `[:plushie, :widget_cache, :hit]` - widget view cache hit.
+    Measurements: `%{count: 1}`.
+    Metadata: `%{id: String.t(), module: module()}`.
+  - `[:plushie, :widget_cache, :miss]` - widget view cache miss.
+    Measurements: `%{count: 1}`.
+    Metadata: `%{id: String.t(), module: module()}`.
+
+  #### Bridge
+
+  - `[:plushie, :bridge, :send]` - frame sent to the renderer.
+    Measurements: `%{byte_size: non_neg_integer()}`.
+  - `[:plushie, :bridge, :receive]` - frame received from the renderer.
+    Measurements: `%{byte_size: non_neg_integer()}`.
+  - `[:plushie, :bridge, :restart]` - renderer process restarted.
+    Measurements: `%{count: pos_integer()}` (cumulative restart count).
+  - `[:plushie, :bridge, :protocol_error]` - failed to decode a
+    renderer frame. Metadata: `%{reason: term(), format: atom()}`.
+  - `[:plushie, :bridge, :max_restarts_reached]` - renderer exceeded
+    the maximum restart limit. Metadata: `%{reason: term(), max_restarts: integer()}`.
   """
 
   use Supervisor

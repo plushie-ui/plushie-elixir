@@ -18,6 +18,12 @@ defmodule Plushie.Runtime.Subscriptions do
   """
   @spec sync_subscriptions(map(), term(), [Plushie.Subscription.t()]) :: map()
   def sync_subscriptions(state, new_model, extra_specs \\ []) do
+    :telemetry.span([:plushie, :subscriptions, :sync], %{}, fn ->
+      {do_sync_subscriptions(state, new_model, extra_specs), %{}}
+    end)
+  end
+
+  defp do_sync_subscriptions(state, new_model, extra_specs) do
     app_specs =
       try do
         case state.app.subscribe(new_model) do

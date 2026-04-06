@@ -1317,7 +1317,10 @@ defmodule Plushie.Runtime do
         else
           # Incremental update -- diff produces an empty list for identical
           # trees, so the previous O(n) equality pre-check is unnecessary.
-          ops = Plushie.Tree.diff(old_tree, new_tree)
+          ops =
+            :telemetry.span([:plushie, :diff], %{app: app}, fn ->
+              {Plushie.Tree.diff(old_tree, new_tree), %{}}
+            end)
 
           if ops != [] do
             notify_bridge(%{bridge: bridge}, &Plushie.Bridge.send_patch(&1, ops))
@@ -1415,7 +1418,9 @@ defmodule Plushie.Runtime do
     }
 
     {normalized, new_memo_cache, new_widget_view_cache} =
-      Plushie.Tree.normalize_with_caches(raw_tree, ctx)
+      :telemetry.span([:plushie, :normalize], %{app: app}, fn ->
+        {Plushie.Tree.normalize_with_caches(raw_tree, ctx), %{}}
+      end)
 
     {:ok, normalized, new_memo_cache, new_widget_view_cache}
   catch

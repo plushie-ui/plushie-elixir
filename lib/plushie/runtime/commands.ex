@@ -18,11 +18,15 @@ defmodule Plushie.Runtime.Commands do
   """
   @spec execute_commands([Plushie.Command.t()] | Plushie.Command.t(), map()) :: map()
   def execute_commands(commands, state) when is_list(commands) do
-    Enum.reduce(commands, state, &execute_command/2)
+    :telemetry.span([:plushie, :commands], %{count: length(commands)}, fn ->
+      {Enum.reduce(commands, state, &execute_command/2), %{}}
+    end)
   end
 
   def execute_commands(%Plushie.Command{} = cmd, state) do
-    execute_command(cmd, state)
+    :telemetry.span([:plushie, :commands], %{count: 1}, fn ->
+      {execute_command(cmd, state), %{}}
+    end)
   end
 
   # -- Private command handlers -----------------------------------------------
