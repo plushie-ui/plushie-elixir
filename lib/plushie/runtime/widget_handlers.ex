@@ -40,6 +40,12 @@ defmodule Plushie.Runtime.WidgetHandlers do
 
   Non-widget events pass through unchanged.
 
+  Unknown event families raise `Protocol.Error`. This is intentional:
+  the SDK version pins 1:1 to the renderer version, so an unknown
+  family indicates a real bug (stale tree, wrong binary) rather than
+  a forward-compatibility scenario. Graceful degradation would hide
+  the mismatch.
+
   The `widget_events` argument is the event registry derived from the tree
   (keyed by `{window_id, scoped_id}`).
   """

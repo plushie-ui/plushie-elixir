@@ -271,7 +271,10 @@ defmodule Mix.Tasks.Plushie.Build do
 
   The crate name is `Path.basename/1` of each widget's `native_crate/0`
   path. Two widgets at `native/widget/` and `other/widget/` would both
-  produce `widget`, causing a Cargo dependency conflict.
+  produce `widget`, causing a Cargo dependency conflict. Basename
+  comparison is correct here because Cargo identifies workspace
+  dependencies by crate name, not by path. Two different paths with
+  the same crate name cannot coexist in a Cargo workspace.
   """
   @spec check_crate_name_collisions!(widgets :: [module()]) :: :ok
   def check_crate_name_collisions!(widgets) do
