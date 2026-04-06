@@ -1198,8 +1198,11 @@ defmodule Plushie.Protocol.Decode do
        version: version,
        name: name,
        backend: Map.get(msg, "backend", "unknown"),
-       widgets: Map.get(msg, "extensions", []),
-       transport: Map.get(msg, "transport", "stdio")
+       native_widgets: Map.get(msg, "native_widgets", Map.get(msg, "extensions", [])),
+       widgets:
+         Map.get(msg, "widgets", Map.get(msg, "native_widgets", Map.get(msg, "extensions", []))),
+       transport: Map.get(msg, "transport", "stdio"),
+       mode: Map.get(msg, "mode")
      }}
   end
 

@@ -1550,12 +1550,12 @@ defmodule Plushie.Runtime do
 
   defp validate_renderer_widgets!(hello) do
     expected = configured_widget_keys()
-    missing = expected -- hello.widgets
+    missing = expected -- hello.native_widgets
 
     if missing != [] do
       raise ArgumentError,
             "renderer is missing required native widgets #{inspect(missing)}. " <>
-              "Renderer reported #{inspect(hello.widgets)}"
+              "Renderer reported #{inspect(hello.native_widgets)}"
     end
   end
 

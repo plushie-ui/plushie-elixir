@@ -448,6 +448,7 @@ defmodule Plushie.RuntimeTest do
                 name: "plushie",
                 backend: "test",
                 transport: "spawn",
+                native_widgets: [],
                 widgets: []
               }}}
           )
