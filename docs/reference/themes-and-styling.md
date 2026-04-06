@@ -114,13 +114,17 @@ end
 | `:background` | Page/window background |
 | `:text` | Default text colour |
 | `:primary` | Primary accent (buttons, links, focus rings) |
-| `:secondary` | Secondary accent |
 | `:success` | Success indicators |
 | `:danger` | Error/destructive actions |
 | `:warning` | Warning indicators |
 
 All seed values are passed through `Color.cast/1`, so any colour input
 form works.
+
+The secondary palette is auto-derived from `:background` and `:text`
+by iced's palette generator. To customize it, use shade overrides
+(`secondary_base`, `secondary_weak`, `secondary_strong`, plus `_text`
+variants) rather than a core seed.
 
 ### Extending built-in themes
 

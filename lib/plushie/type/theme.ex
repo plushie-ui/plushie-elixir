@@ -141,6 +141,14 @@ defmodule Plushie.Type.Theme do
   `background_weakest`, `primary_strong_text`) are also accepted and
   cast as colors.
 
+  Note: `:secondary` is not a core seed. It is auto-derived from
+  `:background` and `:text` by iced's palette generator. To customize
+  the secondary palette, use shade overrides: `secondary_base`,
+  `secondary_weak`, `secondary_strong` (plus `_text` variants).
+
+  Unknown keys raise `ArgumentError`. Use `valid_custom_keys/0` for
+  the complete set.
+
   ## Examples
 
       iex> Plushie.Type.Theme.custom("Tokyo Remix", primary: "#7aa2f7", danger: "#f7768e")
@@ -152,18 +160,73 @@ defmodule Plushie.Type.Theme do
   @spec custom(name :: String.t(), opts :: keyword()) :: map()
   def custom(name, opts \\ []) when is_binary(name) and is_list(opts) do
     {base, opts} = Keyword.pop(opts, :base)
+    validate_custom_keys!(opts)
 
     result = %{name: name}
     result = maybe_put(result, :base, encode_base(base))
 
-    # Every remaining key is a color (core palette, shade overrides,
-    # or text overrides). All are cast to canonical hex.
     Enum.reduce(opts, result, fn {key, value}, acc ->
       Map.put(acc, key, elem(Plushie.Type.Color.cast(value), 1))
     end)
   end
 
+  # -- Valid custom theme keys -------------------------------------------------
+
+  # Core palette seeds.
+  @core_seeds [:background, :text, :primary, :success, :danger, :warning]
+
+  # Color families with base/weak/strong shades.
+  @color_families [:primary, :secondary, :success, :warning, :danger]
+
+  # Background has 8 shade levels.
+  @background_shades [
+    :background_base,
+    :background_weakest,
+    :background_weaker,
+    :background_weak,
+    :background_neutral,
+    :background_strong,
+    :background_stronger,
+    :background_strongest
+  ]
+
+  # Generate all shade override keys: {family}_{shade} + {family}_{shade}_text
+  @color_shade_keys for family <- @color_families,
+                        shade <- [:base, :weak, :strong],
+                        suffix <- ["", "_text"],
+                        do: :"#{family}_#{shade}#{suffix}"
+
+  @background_shade_keys for shade <- @background_shades,
+                             suffix <- ["", "_text"],
+                             do: :"#{shade}#{suffix}"
+
+  @valid_custom_keys MapSet.new(@core_seeds ++ @color_shade_keys ++ @background_shade_keys)
+
+  @doc """
+  Returns the set of valid keys for `custom/2` (excluding `:base`, which
+  is handled separately).
+  """
+  @spec valid_custom_keys() :: MapSet.t(atom())
+  def valid_custom_keys, do: @valid_custom_keys
+
   # -- Private ----------------------------------------------------------------
+
+  defp validate_custom_keys!(opts) do
+    Enum.each(opts, fn {key, _value} ->
+      unless MapSet.member?(@valid_custom_keys, key) do
+        raise ArgumentError,
+              "unknown key #{inspect(key)} in Theme.custom/2. " <>
+                "Valid keys: :base, #{inspect_valid_keys()}"
+      end
+    end)
+  end
+
+  defp inspect_valid_keys do
+    @valid_custom_keys
+    |> MapSet.to_list()
+    |> Enum.sort()
+    |> Enum.map_join(", ", &inspect/1)
+  end
 
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
