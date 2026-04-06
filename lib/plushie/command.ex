@@ -133,19 +133,16 @@ defmodule Plushie.Command do
   """
   @spec focus(widget_id :: widget_id()) :: %__MODULE__{}
   def focus(widget_id) do
-    {window_id, target} = parse_target(widget_id)
-    payload = %{target: target}
-    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
-    %__MODULE__{type: :focus, payload: payload}
+    %__MODULE__{type: :focus, payload: targeted_payload(widget_id)}
   end
 
   @doc "Focus a specific interactive element within a canvas. Supports `\"window#canvas\"`."
   @spec focus_element(canvas_id :: widget_id(), element_id :: String.t()) :: %__MODULE__{}
   def focus_element(canvas_id, element_id) do
-    {window_id, target} = parse_target(canvas_id)
-    payload = %{op: "focus_element", target: target, element_id: element_id}
-    payload = if window_id, do: Map.put(payload, :window_id, window_id), else: payload
-    %__MODULE__{type: :widget_op, payload: payload}
+    %__MODULE__{
+      type: :widget_op,
+      payload: targeted_payload(canvas_id, %{op: "focus_element", element_id: element_id})
+    }
   end
 
   @doc "Move focus to the next focusable widget."
@@ -591,4 +588,16 @@ defmodule Plushie.Command do
   end
 
   def parse_target(widget_id), do: {nil, widget_id}
+
+  @doc """
+  Builds a command payload from a widget ID, handling window-qualified paths.
+
+  Adds `:target` (and `:window_id` when present) to the given `extra` map.
+  """
+  @spec targeted_payload(widget_id(), map()) :: map()
+  def targeted_payload(widget_id, extra \\ %{}) do
+    {window_id, target} = parse_target(widget_id)
+    payload = Map.put(extra, :target, target)
+    if window_id, do: Map.put(payload, :window_id, window_id), else: payload
+  end
 end
