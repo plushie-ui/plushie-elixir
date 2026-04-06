@@ -307,8 +307,9 @@ widgets (no stored state) fall back to `__initial_state__/0`.
 5. `view/3` is called with the ID, props, and state.
 6. The rendered output replaces the placeholder and is normalised
    recursively.
-7. Widget metadata (module, state, event specs) is attached to the
-   final node's `:meta` field.
+7. Widget metadata (module, state, event specs) is accumulated in the
+   `NormalizeCtx` during normalization. Tree nodes are pure wire
+   representations and do not carry metadata.
 8. The runtime derives the handler registry from the tree for O(1)
    event dispatch lookups.
 

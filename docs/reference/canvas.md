@@ -70,7 +70,7 @@ typed structs. Use them inside `layer` or `group` blocks.
 
 | Function | Struct | Required args | Key options |
 |---|---|---|---|
-| `rect/4` | `Rect` | x, y, w, h | `fill`, `stroke`, `opacity`, `radius` |
+| `rect/4` | `Rect` | x, y, w, h | `fill`, `stroke`, `opacity`, `radius` (uniform number or per-corner map) |
 | `circle/3` | `Circle` | x, y, r | `fill`, `stroke`, `opacity` |
 | `line/4` | `Line` | x1, y1, x2, y2 | `stroke`, `opacity` |
 | `text/3` | `CanvasText` | x, y, content | `fill`, `size`, `font`, `align_x`, `align_y`, `opacity` |
@@ -85,6 +85,10 @@ Common shape options:
 - **`stroke`**: a stroke descriptor (see [Strokes](#strokes)). Draws
   the shape outline.
 - **`opacity`**: 0.0 (transparent) to 1.0 (opaque).
+- **`radius`** (rect only): corner radius for rounded rectangles.
+  Accepts a single number for uniform corners, or a map with
+  `:top_left`, `:top_right`, `:bottom_right`, `:bottom_left` keys
+  for per-corner control.
 
 ## Path commands
 

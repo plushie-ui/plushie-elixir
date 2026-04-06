@@ -56,6 +56,10 @@ All standard helpers are available. Additional helpers:
 | `last_event/0` | Most recently emitted `WidgetEvent`, or nil |
 | `events/0` | All emitted events, newest first |
 
+Event data from the most recent event is available via `model().last_value`,
+which contains the atomized map from the event's value field. This is
+useful for asserting on structured event data emitted by the widget.
+
 These are the only WidgetCase-specific helpers.
 
 ## Helpers by category
@@ -97,7 +101,10 @@ See `Plushie.Test.Helpers` for full specs.
 | `pane_focus_cycle(selector, opts)` | pane_grid | `:pane_focus_cycle` |
 
 All interactions are synchronous. They wait for the full update cycle to
-complete before returning.
+complete before returning. Under the hood they call `sync/1`, which
+returns `:ok` on success or `{:ok, :view_error}` if the last `view/1`
+call raised. The interaction helpers propagate this, so a view crash
+after an interaction won't silently pass.
 
 ### Multi-window interactions
 

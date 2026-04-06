@@ -358,9 +358,9 @@ Understanding the lifecycle helps when debugging:
 3. The runtime detects the placeholder, looks up stored state (or uses
    initial defaults for new widgets), and calls `view/3`.
 4. The rendered output replaces the placeholder in the final tree.
-5. Widget metadata (module, state, event handlers) is attached to the
-   node's `:meta` field.
-6. The runtime derives a handler registry from the tree for event dispatch.
+5. Widget metadata (module, state, event handlers) is accumulated in the
+   `NormalizeCtx` during normalization, not attached to tree nodes.
+6. The runtime derives a handler registry from the context for event dispatch.
 
 There are no explicit mount or unmount callbacks. **Tree presence is the
 lifecycle.** When a widget appears in the tree, it is "mounted" with initial

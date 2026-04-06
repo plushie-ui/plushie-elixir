@@ -58,7 +58,9 @@ Add `label:` for accessible text.
 
 **slider** / **vertical_slider** are range inputs. `range` is a
 `{min, max}` tuple. Emits `:slide` continuously while dragging and
-`:slide_release` when the drag ends with the final value.
+`:slide_release` when the drag ends with the final value. Supports
+`circular_handle: true` for a round handle, with `handle_radius`
+(float) controlling the circle's radius.
 
 **pick_list** is a dropdown selection. `options` is a list of strings.
 `selected` is the currently selected value (or nil). Emits `:select`
@@ -250,6 +252,7 @@ end
 | `divider_color` | Color | *n/a* | Color for the split divider |
 | `divider_width` | number | *n/a* | Divider thickness in pixels |
 | `leeway` | number | *n/a* | Grabbable area around dividers in pixels |
+| `split_axis` | `:horizontal` / `:vertical` | *n/a* | Controls the initial split direction |
 
 ### Pane grid events
 

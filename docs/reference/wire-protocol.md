@@ -75,8 +75,9 @@ The SDK and renderer follow a fixed startup sequence:
 2. **Renderer auto-detects format** from the first byte and reads the
    Settings.
 3. **Renderer sends Hello** - reports its version, mode (`mock`,
-   `headless`, `windowed`), backend, transport, and registered
-   extensions.
+   `headless`, `windowed`), backend, transport, registered
+   extensions, `native_widgets` (list of native widget type names),
+   and `widgets` (full widget capability descriptors).
 4. **SDK sends Snapshot** - the Runtime calls `view/1`, normalises the
    tree via `Plushie.Tree.normalize/1`, and sends the full tree via
    `Plushie.Protocol.encode_snapshot/2`.
@@ -104,6 +105,8 @@ module for all outbound messages:
 | `encode_image_op/3` | `image_op` | In-memory image lifecycle |
 | `encode_interact/5` | `interact` | Test interactions |
 | `encode_advance_frame/2` | `advance_frame` | Manual frame step (test/headless) |
+| `encode_register_effect_stub/3` | `register_effect_stub` | Register a stubbed effect response for testing |
+| `encode_unregister_effect_stub/2` | `unregister_effect_stub` | Remove a previously registered effect stub |
 
 ### Key stringification
 
