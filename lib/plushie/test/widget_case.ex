@@ -125,6 +125,7 @@ defmodule Plushie.Test.WidgetCase.HarnessApp do
       widget_module: widget_module,
       widget_id: widget_id,
       widget_opts: widget_opts,
+      last_value: %{},
       events: [],
       last_event: nil
     }
@@ -135,7 +136,7 @@ defmodule Plushie.Test.WidgetCase.HarnessApp do
     data = if is_map(event.value), do: event.value, else: %{}
 
     model
-    |> Map.merge(atomize_data(data))
+    |> Map.put(:last_value, atomize_data(data))
     |> Map.put(:events, [event | model.events])
     |> Map.put(:last_event, event)
   end

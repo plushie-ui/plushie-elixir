@@ -21,30 +21,30 @@ defmodule Examples.ColorPickerWidgetTest do
     press("Tab")
     press("ArrowRight")
     assert last_event().type == {:color_picker_widget, :change}
-    assert_in_delta model().hue, 1.0, 0.5
+    assert_in_delta model().last_value.hue, 1.0, 0.5
   end
 
   test "Shift+ArrowRight gives coarse hue step" do
     press("Tab")
     press("Tab")
     press("Shift+ArrowRight")
-    assert_in_delta model().hue, 15.0, 0.5
+    assert_in_delta model().last_value.hue, 15.0, 0.5
   end
 
   test "Home and End set hue extremes" do
     press("Tab")
     press("Tab")
     press("End")
-    assert model().hue == 359.0
+    assert model().last_value.hue == 359.0
     press("Home")
-    assert model().hue == 0.0
+    assert model().last_value.hue == 0.0
   end
 
   test "PageUp increments hue by coarse step" do
     press("Tab")
     press("Tab")
     press("PageUp")
-    assert_in_delta model().hue, 15.0, 0.5
+    assert_in_delta model().last_value.hue, 15.0, 0.5
   end
 
   # -- Keyboard: SV cursor -----------------------------------------------------
@@ -54,7 +54,7 @@ defmodule Examples.ColorPickerWidgetTest do
     press("Tab")
     press("Tab")
     press("ArrowLeft")
-    assert_in_delta model().saturation, 0.99, 0.005
+    assert_in_delta model().last_value.saturation, 0.99, 0.005
   end
 
   test "ArrowDown on SV cursor decreases value" do
@@ -62,7 +62,7 @@ defmodule Examples.ColorPickerWidgetTest do
     press("Tab")
     press("Tab")
     press("ArrowDown")
-    assert_in_delta model().value, 0.99, 0.005
+    assert_in_delta model().last_value.value, 0.99, 0.005
   end
 
   test "Shift+Home on SV cursor sets saturation to 0" do
@@ -70,7 +70,7 @@ defmodule Examples.ColorPickerWidgetTest do
     press("Tab")
     press("Tab")
     press("Shift+Home")
-    assert model().saturation == 0.0
+    assert model().last_value.saturation == 0.0
   end
 
   test "End on SV cursor sets value to 0" do
@@ -78,7 +78,7 @@ defmodule Examples.ColorPickerWidgetTest do
     press("Tab")
     press("Tab")
     press("End")
-    assert model().value == 0.0
+    assert model().last_value.value == 0.0
   end
 
   # -- No event for unrecognized keys ------------------------------------------
@@ -95,31 +95,31 @@ defmodule Examples.ColorPickerWidgetTest do
   test "press on ring at right side sets hue near 90" do
     canvas_press("#picker", 370.0, 200.0)
     assert last_event().type == {:color_picker_widget, :change}
-    assert_in_delta model().hue, 90.0, 2.0
+    assert_in_delta model().last_value.hue, 90.0, 2.0
   end
 
   test "press on ring at bottom sets hue near 180" do
     canvas_press("#picker", 200.0, 370.0)
-    assert_in_delta model().hue, 180.0, 2.0
+    assert_in_delta model().last_value.hue, 180.0, 2.0
   end
 
   test "press on ring at left sets hue near 270" do
     canvas_press("#picker", 30.0, 200.0)
-    assert_in_delta model().hue, 270.0, 2.0
+    assert_in_delta model().last_value.hue, 270.0, 2.0
   end
 
   # -- Mouse: SV square --------------------------------------------------------
 
   test "press at center of square sets s=0.5, v=0.5" do
     canvas_press("#picker", 200.0, 200.0)
-    assert_in_delta model().saturation, 0.5, 0.01
-    assert_in_delta model().value, 0.5, 0.01
+    assert_in_delta model().last_value.saturation, 0.5, 0.01
+    assert_in_delta model().last_value.value, 0.5, 0.01
   end
 
   test "press at top-left of square sets s=0, v=1" do
     canvas_press("#picker", 100.0, 100.0)
-    assert_in_delta model().saturation, 0.0, 0.01
-    assert_in_delta model().value, 1.0, 0.01
+    assert_in_delta model().last_value.saturation, 0.0, 0.01
+    assert_in_delta model().last_value.value, 1.0, 0.01
   end
 
   # -- Mouse: outside ----------------------------------------------------------
