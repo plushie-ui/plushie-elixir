@@ -385,7 +385,27 @@ defmodule Plushie.Protocol.Encode do
   end
 
   # ---------------------------------------------------------------------------
-  # Tree/prop key stringification at the wire boundary
+  # Tree/prop stringification at the wire boundary
+  # ---------------------------------------------------------------------------
+  #
+  # Performance note: both Jason and Msgpax handle atom keys and atom
+  # values natively (converting to strings during serialization). The key
+  # and value conversion in this pass is therefore redundant from a
+  # correctness standpoint. The pass exists for two reasons the
+  # serializers cannot handle:
+  #
+  #   1. Stripping :meta from tree nodes (runtime-only data that must
+  #      never hit the wire).
+  #   2. Validation: catching structs that bypassed encode_prop_values
+  #      in normalization, and rejecting tuples that would serialize
+  #      incorrectly.
+  #
+  # The allocation overhead was benchmarked on a 50-node tree:
+  # ~50us per snapshot (infrequent, startup/restart only), noise-level
+  # on patches (the hot path, where only changed props are stringified).
+  # Eliminating the pass would require moving :meta stripping into the
+  # diff output and validation into normalization, adding complexity
+  # for sub-100us savings on an infrequent code path.
   # ---------------------------------------------------------------------------
 
   @doc """
@@ -394,9 +414,9 @@ defmodule Plushie.Protocol.Encode do
   Recursively stringifies nested map values. Does NOT recurse into
   lists (child nodes are not prop values and must not be treated as such).
 
-  This is the wire boundary function -- called just before serialization
-  to convert atom-keyed prop maps into the string-keyed format expected
-  by the renderer.
+  This is the wire boundary function, called just before serialization.
+  See the module-level performance note above for why this pass exists
+  despite serializers handling atom keys natively.
   """
   @spec stringify_keys(map :: map()) :: %{String.t() => term()}
   def stringify_keys(%{} = map) do
