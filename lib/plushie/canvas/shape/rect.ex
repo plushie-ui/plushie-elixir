@@ -1,6 +1,15 @@
 defmodule Plushie.Canvas.Shape.Rect do
   @moduledoc "Canvas rectangle shape with position, size, and optional styling."
 
+  @type radius ::
+          number()
+          | %{
+              top_left: number(),
+              top_right: number(),
+              bottom_right: number(),
+              bottom_left: number()
+            }
+
   @type t :: %__MODULE__{
           x: number(),
           y: number(),
@@ -10,7 +19,7 @@ defmodule Plushie.Canvas.Shape.Rect do
           stroke: term(),
           opacity: number() | nil,
           fill_rule: String.t() | nil,
-          radius: number() | nil
+          radius: radius() | nil
         }
 
   @enforce_keys [:x, :y, :w, :h]
