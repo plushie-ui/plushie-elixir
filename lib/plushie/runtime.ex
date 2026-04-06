@@ -511,6 +511,7 @@ defmodule Plushie.Runtime do
 
   def handle_info({:renderer_event, {:hello, hello}}, state) do
     validate_renderer_widgets!(hello)
+    check_renderer_version(hello)
 
     Logger.info(
       "plushie runtime: renderer connected -- #{hello.name} v#{hello.version} (#{hello.backend}, #{hello.transport})"
@@ -1633,6 +1634,19 @@ defmodule Plushie.Runtime do
 
             state
         end
+    end
+  end
+
+  defp check_renderer_version(hello) do
+    expected = Plushie.Binary.binary_version()
+
+    if hello.version != expected do
+      Logger.warning(
+        "plushie runtime: renderer version mismatch, " <>
+          "got #{hello.version}, expected #{expected}. " <>
+          "The renderer binary may be stale. " <>
+          "Run `mix plushie.build` or `mix plushie.download` to update."
+      )
     end
   end
 
