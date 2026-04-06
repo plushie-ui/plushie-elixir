@@ -12,7 +12,7 @@ defmodule Plushie.Dev.RebuildingOverlay do
   @prefix "__plushie_dev__"
   @dismiss_ms 1500
 
-  @type status :: :building | :succeeded | :failed
+  @type status :: :building | :succeeded | :failed | :frozen_ui
 
   @type t :: %__MODULE__{
           status: status(),
@@ -33,6 +33,7 @@ defmodule Plushie.Dev.RebuildingOverlay do
   def status_message(:building), do: "Rebuilding..."
   def status_message(:succeeded), do: "Rebuild succeeded."
   def status_message(:failed), do: "Rebuild failed."
+  def status_message(:frozen_ui), do: "UI frozen: view/1 is failing repeatedly."
 
   @doc "Returns true if the given event ID belongs to the overlay."
   @spec overlay_event?(id :: String.t()) :: boolean()
@@ -55,6 +56,8 @@ defmodule Plushie.Dev.RebuildingOverlay do
   """
   @spec handle_action(action :: String.t(), overlay :: t()) ::
           {:updated, t()} | :dismissed | :noop
+  def handle_action("toggle", %{status: :frozen_ui} = _overlay), do: :noop
+
   def handle_action("toggle", overlay) do
     {:updated, %{overlay | expanded: not overlay.expanded}}
   end
@@ -149,34 +152,42 @@ defmodule Plushie.Dev.RebuildingOverlay do
         :building -> "..."
         :succeeded -> "ok"
         :failed -> "!!"
+        :frozen_ui -> "!!"
       end
 
     text_color = bar_text_color(overlay.status)
     message = status_message(overlay.status)
 
-    children = [
-      %{
-        id: "#{@prefix}/toggle",
-        type: "button",
-        props: %{label: toggle_label, style: "text", padding: 0, width: 20},
-        children: []
-      },
-      %{
-        id: "#{@prefix}/icon",
-        type: "text",
-        props: %{content: "[#{status_icon}]", color: text_color, size: 12},
-        children: []
-      },
-      %{
-        id: "#{@prefix}/status",
-        type: "text",
-        props: %{content: message, color: text_color, size: 12},
-        children: []
-      }
-    ]
+    icon_node = %{
+      id: "#{@prefix}/icon",
+      type: "text",
+      props: %{content: "[#{status_icon}]", color: text_color, size: 12},
+      children: []
+    }
+
+    status_node = %{
+      id: "#{@prefix}/status",
+      type: "text",
+      props: %{content: message, color: text_color, size: 12},
+      children: []
+    }
 
     children =
-      if overlay.status == :failed do
+      if overlay.status == :frozen_ui do
+        [icon_node, status_node]
+      else
+        toggle_node = %{
+          id: "#{@prefix}/toggle",
+          type: "button",
+          props: %{label: toggle_label, style: "text", padding: 0, width: 20},
+          children: []
+        }
+
+        [toggle_node, icon_node, status_node]
+      end
+
+    children =
+      if overlay.status in [:failed, :frozen_ui] do
         children ++
           [
             %{
@@ -250,9 +261,11 @@ defmodule Plushie.Dev.RebuildingOverlay do
   end
 
   defp bar_background(:failed), do: "rgba(180, 40, 40, 0.85)"
+  defp bar_background(:frozen_ui), do: "rgba(180, 40, 40, 0.85)"
   defp bar_background(_), do: "rgba(0, 0, 0, 0.7)"
 
   defp bar_text_color(:failed), do: "#ffaaaa"
+  defp bar_text_color(:frozen_ui), do: "#ffaaaa"
   defp bar_text_color(:succeeded), do: "#aaffaa"
   defp bar_text_color(_), do: "#ffffff"
 end

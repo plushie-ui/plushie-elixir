@@ -673,6 +673,7 @@ defmodule Plushie.Runtime do
         consecutive_view_errors: 0
     }
 
+    state = clear_frozen_ui_overlay(state)
     state = fail_pending_interact(state, :renderer_restarted)
 
     # Flush all pending effect requests -- the renderer that would have
@@ -912,7 +913,7 @@ defmodule Plushie.Runtime do
                    state.dev_overlay
                  ) do
               {:ok, tree, mc, wvc} ->
-                {tree, mc, wvc, %{state | consecutive_view_errors: 0}}
+                {tree, mc, wvc, clear_view_errors(state)}
 
               :view_error ->
                 {state.tree, state.memo_cache, state.widget_view_cache, track_view_error(state)}
@@ -955,6 +956,7 @@ defmodule Plushie.Runtime do
   def handle_info(:force_rerender, state) do
     Logger.info("plushie runtime: force re-render (code reload)")
     state = %{state | consecutive_errors: 0, consecutive_view_errors: 0}
+    state = clear_frozen_ui_overlay(state)
 
     {new_tree, memo_cache, widget_view_cache, state} =
       case render_and_sync(
@@ -968,7 +970,7 @@ defmodule Plushie.Runtime do
              state.dev_overlay
            ) do
         {:ok, tree, mc, wvc} ->
-          {tree, mc, wvc, %{state | consecutive_view_errors: 0}}
+          {tree, mc, wvc, clear_view_errors(state)}
 
         :view_error ->
           {state.tree, state.memo_cache, state.widget_view_cache, track_view_error(state)}
@@ -1081,7 +1083,7 @@ defmodule Plushie.Runtime do
              state.dev_overlay
            ) do
         {:ok, tree, mc, wvc} ->
-          {tree, mc, wvc, %{state | consecutive_view_errors: 0}}
+          {tree, mc, wvc, clear_view_errors(state)}
 
         :view_error ->
           {state.tree, state.memo_cache, state.widget_view_cache, track_view_error(state)}
@@ -1341,7 +1343,36 @@ defmodule Plushie.Runtime do
       )
     end
 
-    %{state | consecutive_view_errors: count}
+    state = %{state | consecutive_view_errors: count}
+
+    if count == @view_error_warn_threshold && is_nil(state.dev_overlay) && state.tree do
+      overlay = %Plushie.Dev.RebuildingOverlay{status: :frozen_ui}
+      new_tree = maybe_inject_overlay(state.tree, overlay)
+      ops = Plushie.Tree.diff(state.tree, new_tree)
+
+      if ops != [] do
+        notify_bridge(state, &Plushie.Bridge.send_patch(&1, ops))
+      end
+
+      %{state | dev_overlay: overlay, tree: new_tree}
+    else
+      state
+    end
+  end
+
+  defp clear_view_errors(state) do
+    state = %{state | consecutive_view_errors: 0}
+    clear_frozen_ui_overlay(state)
+  end
+
+  defp clear_frozen_ui_overlay(state) do
+    case state.dev_overlay do
+      %Plushie.Dev.RebuildingOverlay{status: :frozen_ui} ->
+        %{state | dev_overlay: nil}
+
+      _ ->
+        state
+    end
   end
 
   defp maybe_inject_overlay(tree, overlay) do
@@ -1564,7 +1595,7 @@ defmodule Plushie.Runtime do
                  state.dev_overlay
                ) do
             {:ok, tree, mc, wvc} ->
-              {tree, mc, wvc, %{state | consecutive_view_errors: 0}}
+              {tree, mc, wvc, clear_view_errors(state)}
 
             :view_error ->
               {state.tree, state.memo_cache, state.widget_view_cache, track_view_error(state)}
@@ -1609,7 +1640,7 @@ defmodule Plushie.Runtime do
              state.dev_overlay
            ) do
         {:ok, tree, mc, wvc} ->
-          {tree, mc, wvc, %{state | consecutive_view_errors: 0}}
+          {tree, mc, wvc, clear_view_errors(state)}
 
         :view_error ->
           {state.tree, state.memo_cache, state.widget_view_cache,
