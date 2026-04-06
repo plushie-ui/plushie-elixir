@@ -56,4 +56,14 @@ defmodule Plushie.Transport do
   Whether the transport is ready to accept outgoing data.
   """
   @callback transport_ready?(state :: t()) :: boolean()
+
+  @doc """
+  Re-open the transport connection (e.g. after crash or dev rebuild).
+
+  Only meaningful for transports where `restartable?/1` returns `true`.
+  Returns `{:ok, new_state}` or `{:error, reason}`.
+  """
+  @callback reopen(state :: t()) :: {:ok, t()} | {:error, term()}
+
+  @optional_callbacks [reopen: 1]
 end

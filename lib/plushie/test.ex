@@ -139,9 +139,8 @@ defmodule Plushie.Test do
   # string-keyed maps in some OTP releases).
   defp normalize_for_tree_snapshot(data) when is_map(data) do
     data
-    # Strip :meta -- it's internal runtime bookkeeping (widget state,
-    # event specs) that isn't sent over the wire. Snapshots should
-    # match what the renderer sees.
+    # Strip :meta defensively in case test trees are constructed
+    # manually with :meta present.
     |> Map.drop([:meta])
     |> Enum.sort_by(fn {k, _v} -> to_string(k) end)
     |> Enum.map(fn {k, v} -> {to_string(k), normalize_for_tree_snapshot(v)} end)

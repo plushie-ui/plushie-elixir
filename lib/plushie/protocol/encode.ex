@@ -394,18 +394,13 @@ defmodule Plushie.Protocol.Encode do
   # correctness standpoint. The pass exists for two reasons the
   # serializers cannot handle:
   #
-  #   1. Stripping :meta from tree nodes (runtime-only data that must
-  #      never hit the wire).
-  #   2. Validation: catching structs that bypassed encode_prop_values
+  #   1. Validation: catching structs that bypassed encode_prop_values
   #      in normalization, and rejecting tuples that would serialize
   #      incorrectly.
   #
   # The allocation overhead was benchmarked on a 50-node tree:
   # ~50us per snapshot (infrequent, startup/restart only), noise-level
   # on patches (the hot path, where only changed props are stringified).
-  # Eliminating the pass would require moving :meta stripping into the
-  # diff output and validation into normalization, adding complexity
-  # for sub-100us savings on an infrequent code path.
   # ---------------------------------------------------------------------------
 
   @doc """
@@ -466,12 +461,8 @@ defmodule Plushie.Protocol.Encode do
   # Recursively converts atom keys in tree node props to string keys
   # for wire serialization. The internal tree uses atom-keyed props;
   # the wire format requires string keys.
-  # :meta carries runtime-only data (canvas widget state, event specs,
-  # widget metadata) that must never be sent over the wire. Strip it
-  # before serialization.
   defp stringify_tree(%{props: props, children: children} = node) do
     node
-    |> Map.drop([:meta])
     |> Map.put(:props, stringify_keys(props))
     |> Map.put(:children, Enum.map(children, &stringify_tree/1))
   end

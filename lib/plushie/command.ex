@@ -594,7 +594,7 @@ defmodule Plushie.Command do
 
   Adds `:target` (and `:window_id` when present) to the given `extra` map.
   """
-  @spec targeted_payload(widget_id(), map()) :: map()
+  @spec targeted_payload(widget_id :: widget_id(), extra :: map()) :: map()
   def targeted_payload(widget_id, extra \\ %{}) do
     {window_id, target} = parse_target(widget_id)
     payload = Map.put(extra, :target, target)

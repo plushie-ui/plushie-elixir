@@ -17,6 +17,12 @@ defmodule Plushie.Transport.IOStream do
 
   require Logger
 
+  @type t :: %__MODULE__{
+          io_pid: pid(),
+          monitor_ref: reference(),
+          alive: boolean()
+        }
+
   defstruct [:io_pid, :monitor_ref, alive: false]
 
   @impl true

@@ -196,7 +196,7 @@ defmodule Plushie.MemoTest do
       memo_prev: memo_prev
     }
 
-    {result, memo, _widget_view} = Tree.normalize_with_caches(tree, ctx)
-    {result, memo}
+    {result, nctx} = Tree.normalize_with_caches(tree, ctx)
+    {result, nctx.memo}
   end
 end

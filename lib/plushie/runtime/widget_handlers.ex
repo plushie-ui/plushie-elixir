@@ -308,16 +308,10 @@ defmodule Plushie.Runtime.WidgetHandlers do
     collect_widget_entries(tree, nil, %{})
   end
 
-  @doc """
-  Derives all registries from the normalized tree in a single walk.
-
-  Returns `{handler_registry, event_registry, window_set}` where:
-  - `handler_registry` is the same as `derive_registry/1`
-  - `event_registry` is the widget event spec registry (previously
-    `derive_widget_event_registry/1` in Runtime)
-  - `window_set` is the MapSet of window IDs (previously
-    `Windows.detect_windows/1`)
-  """
+  @doc false
+  # Derives all registries from the normalized tree in a single walk.
+  # Used by tests and error recovery paths that need registries from
+  # an already-normalized tree without re-running normalization.
   @spec derive_all_registries(tree :: map() | nil) ::
           {%{widget_key() => map()}, map(), MapSet.t()}
   def derive_all_registries(nil), do: {%{}, %{}, MapSet.new()}

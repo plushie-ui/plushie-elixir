@@ -143,7 +143,6 @@ defmodule Plushie.Event.BuiltinSpecs do
     resize: %{carrier: :value, fields: [width: :float, height: :float]},
 
     # -- Pane grid events --
-    # Previously PaneEvent structs.
     pane_resized: %{carrier: :value, fields: [split: :any, ratio: :float]},
     pane_dragged: %{
       carrier: :value,

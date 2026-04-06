@@ -8,7 +8,10 @@ defmodule Plushie.Tree.NormalizeCtx do
             memo_prev: %{},
             memo: %{},
             widget_view_prev: %{},
-            widget_view: %{}
+            widget_view: %{},
+            widget_handlers: %{},
+            widget_events: %{},
+            window_ids: []
 
   @type t :: %__MODULE__{
           scope: String.t(),
@@ -18,6 +21,9 @@ defmodule Plushie.Tree.NormalizeCtx do
           memo_prev: map(),
           memo: map(),
           widget_view_prev: map(),
-          widget_view: map()
+          widget_view: map(),
+          widget_handlers: map(),
+          widget_events: map(),
+          window_ids: [String.t()]
         }
 end

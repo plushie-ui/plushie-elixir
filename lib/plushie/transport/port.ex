@@ -14,6 +14,15 @@ defmodule Plushie.Transport.Port do
 
   require Logger
 
+  @type t :: %__MODULE__{
+          port: port() | nil,
+          mode: :spawn | :stdio,
+          format: :msgpack | :json,
+          renderer_path: String.t() | nil,
+          renderer_args: [String.t()],
+          log_level: atom()
+        }
+
   defstruct [:port, :mode, :format, :renderer_path, :renderer_args, :log_level]
 
   @impl true
@@ -94,11 +103,7 @@ defmodule Plushie.Transport.Port do
   def transport_ready?(%{port: port}) when is_port(port), do: true
   def transport_ready?(_state), do: false
 
-  @doc """
-  Re-open the port (used for restart after crash or dev rebuild).
-
-  Returns `{:ok, new_state}` or `{:error, reason}`.
-  """
+  @impl true
   @spec reopen(t :: %__MODULE__{}) :: {:ok, %__MODULE__{}} | {:error, term()}
   def reopen(state) do
     open(%{state | port: nil})

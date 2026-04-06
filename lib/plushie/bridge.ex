@@ -514,7 +514,7 @@ defmodule Plushie.Bridge do
       state = fail_pending_screenshot(state, {:renderer_exit, :dev_restart})
       state.transport_mod.close(state.transport_state)
 
-      case Plushie.Transport.Port.reopen(state.transport_state) do
+      case state.transport_mod.reopen(state.transport_state) do
         {:ok, transport_state} ->
           state = %{state | transport_state: transport_state, buffer: ""}
           send(state.runtime, :renderer_restarted)
@@ -552,7 +552,7 @@ defmodule Plushie.Bridge do
 
   @impl true
   def handle_info(:restart_renderer, state) do
-    case Plushie.Transport.Port.reopen(state.transport_state) do
+    case state.transport_mod.reopen(state.transport_state) do
       {:ok, transport_state} ->
         new_count = state.restart_count + 1
         :telemetry.execute([:plushie, :bridge, :restart], %{count: new_count}, %{})

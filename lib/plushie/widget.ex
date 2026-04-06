@@ -502,9 +502,6 @@ defmodule Plushie.Widget do
 
   # -- __before_compile__ ----------------------------------------------------
 
-  # Previously @setter_cast_types and @setter_coerce_types gated which
-  # types got eager casting. Now ALL setters cast eagerly for consistency.
-
   # Known field options consumed by the widget macro. Anything else is
   # treated as a type constraint and forwarded to constrain_guard/2.
   @known_field_opts [:doc, :default, :option, :wire_name, :required, :cast]

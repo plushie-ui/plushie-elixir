@@ -20,9 +20,12 @@ defmodule Plushie.Type.Theme do
 
   ### Color families (base, weak, strong)
 
-  `primary`, `secondary`, `success`, `warning`, `danger` -- each has
-  `{family}_base`, `{family}_weak`, `{family}_strong`, plus `_text`
-  variants.
+  `primary`, `success`, `warning`, `danger` are core palette seeds
+  (set via `custom/2`). `secondary` is auto-derived from `background`
+  and `text` by iced's palette generator.
+
+  All five families support shade overrides: `{family}_base`,
+  `{family}_weak`, `{family}_strong`, plus `_text` variants.
 
   ### Background family (8 levels)
 

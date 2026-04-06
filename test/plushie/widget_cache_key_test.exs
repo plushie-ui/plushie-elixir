@@ -196,7 +196,7 @@ defmodule Plushie.WidgetCacheKeyTest do
       widget_view_prev: widget_view_prev
     }
 
-    {result, _memo, widget_view} = Tree.normalize_with_caches(tree, ctx)
-    {result, widget_view}
+    {result, nctx} = Tree.normalize_with_caches(tree, ctx)
+    {result, nctx.widget_view}
   end
 end

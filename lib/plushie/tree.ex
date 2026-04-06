@@ -121,10 +121,9 @@ defmodule Plushie.Tree do
   @spec normalize_with_caches(
           tree :: nil | tree_node() | [tree_node()] | struct(),
           normalize_ctx()
-        ) :: {tree_node(), map(), map()}
+        ) :: {tree_node(), normalize_ctx()}
   def normalize_with_caches(tree, ctx) do
-    {result, final_ctx} = normalize_root(tree, ctx)
-    {result, final_ctx.memo, final_ctx.widget_view}
+    normalize_root(tree, ctx)
   end
 
   # Top-level entry point for normalize that handles nil, lists, structs,
@@ -201,17 +200,44 @@ defmodule Plushie.Tree do
     cache_key = {node_id, ctx.scope, ctx.window_id, deps}
 
     case Map.get(ctx.memo_prev, cache_key) do
-      nil ->
-        :telemetry.execute([:plushie, :memo, :miss], %{count: 1}, %{id: node_id})
-        {result, ctx} = normalize_memo_body(memo_fun, ctx)
-        ctx = %{ctx | memo: Map.put(ctx.memo, cache_key, result)}
-        {result, ctx}
-
-      cached ->
+      {cached_tree, delta_handlers, delta_events, delta_windows} ->
         :telemetry.execute([:plushie, :memo, :hit], %{count: 1}, %{id: node_id})
-        refreshed = refresh_widget_states(cached, ctx)
-        ctx = %{ctx | memo: Map.put(ctx.memo, cache_key, refreshed)}
-        {refreshed, ctx}
+        refreshed_handlers = refresh_handler_states(delta_handlers, ctx.widget_states)
+
+        ctx = %{
+          ctx
+          | memo:
+              Map.put(
+                ctx.memo,
+                cache_key,
+                {cached_tree, delta_handlers, delta_events, delta_windows}
+              ),
+            widget_handlers: Map.merge(ctx.widget_handlers, refreshed_handlers),
+            widget_events: Map.merge(ctx.widget_events, delta_events),
+            window_ids: delta_windows ++ ctx.window_ids
+        }
+
+        {cached_tree, ctx}
+
+      _ ->
+        :telemetry.execute([:plushie, :memo, :miss], %{count: 1}, %{id: node_id})
+        pre_handlers = ctx.widget_handlers
+        pre_events = ctx.widget_events
+        pre_windows = ctx.window_ids
+
+        {result, ctx} = normalize_memo_body(memo_fun, ctx)
+
+        delta_handlers = Map.drop(ctx.widget_handlers, Map.keys(pre_handlers))
+        delta_events = Map.drop(ctx.widget_events, Map.keys(pre_events))
+        delta_windows = ctx.window_ids -- pre_windows
+
+        ctx = %{
+          ctx
+          | memo:
+              Map.put(ctx.memo, cache_key, {result, delta_handlers, delta_events, delta_windows})
+        }
+
+        {result, ctx}
     end
   end
 
@@ -251,6 +277,14 @@ defmodule Plushie.Tree do
       end
 
     child_window_id = if type_str == "window", do: scoped_id, else: window_id
+
+    ctx =
+      if type_str == "window" do
+        %{ctx | window_ids: [scoped_id | ctx.window_ids]}
+      else
+        ctx
+      end
+
     child_ctx = %{ctx | scope: child_scope, window_id: child_window_id}
 
     atom_props =
@@ -266,7 +300,7 @@ defmodule Plushie.Tree do
     # available state and normalize the output. The rendered canvas node
     # does NOT have __widget__ in its props, so normalization of
     # the output won't re-trigger rendering (no recursion possible).
-    # Widget metadata is attached to the final node's :meta directly.
+    # Widget registry entries are accumulated into the context.
     {result, ctx} =
       case render_widget_placeholder(meta, id, scoped_id, ctx) do
         {:rendered, final_node, ctx} ->
@@ -295,9 +329,19 @@ defmodule Plushie.Tree do
             children: children
           }
 
-          node = if meta == %{}, do: node, else: Map.put(node, :meta, meta)
-          # Merge child_ctx caches back into ctx (child_ctx diverged on scope/window_id)
-          {node, %{ctx | memo: child_ctx.memo, widget_view: child_ctx.widget_view}}
+          # Accumulate native widget entries into ctx instead of attaching :meta
+          ctx = accumulate_native_meta(ctx, scoped_id, meta)
+
+          # Merge child_ctx caches and accumulators back into ctx
+          {node,
+           %{
+             ctx
+             | memo: child_ctx.memo,
+               widget_view: child_ctx.widget_view,
+               widget_handlers: child_ctx.widget_handlers,
+               widget_events: child_ctx.widget_events,
+               window_ids: child_ctx.window_ids
+           }}
       end
 
     {result, %{ctx | depth: ctx.depth - 1}}
@@ -309,9 +353,8 @@ defmodule Plushie.Tree do
   # The rendered output is normalized at the same scope position. Since
   # view/3 produces a plain canvas node (no __widget__ tags in
   # its props), normalization processes it as a regular widget -- no
-  # recursion is possible. After normalization, stateful widget metadata
-  # (module, state, props) is attached to :meta for registry derivation
-  # and event interception.
+  # recursion is possible. Widget handler and event registry entries
+  # are accumulated into the context during rendering.
   @spec render_widget_placeholder(map(), String.t(), String.t(), normalize_ctx()) ::
           {:rendered, map(), normalize_ctx()} | {:not_a_widget_placeholder, normalize_ctx()}
   defp render_widget_placeholder(meta, local_id, scoped_id, ctx) do
@@ -332,6 +375,11 @@ defmodule Plushie.Tree do
               # Children are in props[:children] for container widgets.
               rendered = module.view(local_id, widget_props, widget_state)
 
+              # Snapshot accumulators before normalizing child tree for delta tracking.
+              pre_handlers = ctx.widget_handlers
+              pre_events = ctx.widget_events
+              pre_windows = ctx.window_ids
+
               # Normalize the raw canvas output. It has no __widget__
               # tags, so this is a plain normalization pass with no recursion.
               {node, ctx} = normalize_with_ctx(rendered, ctx)
@@ -342,20 +390,16 @@ defmodule Plushie.Tree do
               node = merge_standard_widget_props(node, widget_props)
 
               ctx =
-                widget_view_cache_store(module, scoped_id, widget_props, widget_state, node, ctx)
+                widget_view_cache_store(module, scoped_id, widget_props, widget_state, node, ctx,
+                  pre: {pre_handlers, pre_events, pre_windows}
+                )
 
               {node, ctx}
           end
 
-        # Attach stateful widget metadata to the final node's :meta.
-        # This is the ONLY place these keys appear in meta on the
-        # final tree -- they weren't in the rendered node's props.
-        enriched = %Meta.Composite{composite | state: widget_state}
-        enriched_meta = %{__widget__: enriched}
-
-        existing_meta = Map.get(normalized, :meta, %{})
-        final = Map.put(normalized, :meta, Map.merge(existing_meta, enriched_meta))
-        {:rendered, final, ctx}
+        # Accumulate widget entry into ctx instead of attaching :meta to the node.
+        ctx = accumulate_widget_entry(ctx, scoped_id, composite, widget_state)
+        {:rendered, normalized, ctx}
 
       _ ->
         {:not_a_widget_placeholder, ctx}
@@ -395,6 +439,73 @@ defmodule Plushie.Tree do
       Map.update!(node, :props, &Map.merge(&1, overrides))
     end
   end
+
+  # Accumulate handler and event entries for a composite widget into ctx.
+  # Mirrors the logic in WidgetHandlers.collect_meta for Composite structs.
+  @spec accumulate_widget_entry(normalize_ctx(), String.t(), Meta.Composite.t(), map()) ::
+          normalize_ctx()
+  defp accumulate_widget_entry(ctx, scoped_id, composite, widget_state) do
+    window_id = ctx.window_id
+    key = {window_id, scoped_id}
+
+    ctx =
+      if composite.handles_events do
+        entry = %{
+          module: composite.module,
+          state: widget_state,
+          props: composite.props || %{},
+          window_id: window_id
+        }
+
+        %{ctx | widget_handlers: Map.put(ctx.widget_handlers, key, entry)}
+      else
+        ctx
+      end
+
+    widget_type = composite.type
+    events = composite.events
+    event_specs = composite.event_specs
+
+    if is_atom(widget_type) and not is_nil(widget_type) and is_list(events) do
+      specs_map = Map.new(event_specs || [], fn {name, spec} -> {name, spec} end)
+
+      event_entry = %{
+        widget_type: widget_type,
+        events: MapSet.new(events),
+        event_specs: specs_map
+      }
+
+      %{ctx | widget_events: Map.put(ctx.widget_events, key, event_entry)}
+    else
+      ctx
+    end
+  end
+
+  # Accumulate event entries for native widget meta into ctx.
+  # Native widgets only have event entries (no handler entries).
+  @spec accumulate_native_meta(normalize_ctx(), String.t(), map()) :: normalize_ctx()
+  defp accumulate_native_meta(ctx, _scoped_id, meta) when meta == %{}, do: ctx
+
+  defp accumulate_native_meta(ctx, scoped_id, %{
+         __widget__: %Meta.Native{type: widget_type, events: events, event_specs: event_specs}
+       }) do
+    if is_atom(widget_type) and not is_nil(widget_type) and is_list(events) do
+      key = {ctx.window_id, scoped_id}
+      specs_map = Map.new(event_specs || [], fn {name, spec} -> {name, spec} end)
+
+      event_entry = %{
+        widget_type: widget_type,
+        events: MapSet.new(events),
+        event_specs: specs_map
+      }
+
+      %{ctx | widget_events: Map.put(ctx.widget_events, key, event_entry)}
+    else
+      ctx
+    end
+  end
+
+  defp accumulate_native_meta(ctx, _scoped_id, _meta), do: ctx
 
   # Resolve a11y ID references (labelled_by, described_by, error_message)
   # relative to the current scope. These fields reference sibling widgets
@@ -1486,38 +1597,68 @@ defmodule Plushie.Tree do
       cache_key = {module, scoped_id, key}
 
       case Map.get(ctx.widget_view_prev, cache_key) do
-        nil ->
+        {cached_tree, delta_handlers, delta_events, delta_windows} ->
+          :telemetry.execute([:plushie, :widget_cache, :hit], %{count: 1}, %{
+            id: scoped_id,
+            module: module
+          })
+
+          refreshed_handlers = refresh_handler_states(delta_handlers, ctx.widget_states)
+
+          ctx = %{
+            ctx
+            | widget_view:
+                Map.put(
+                  ctx.widget_view,
+                  cache_key,
+                  {cached_tree, delta_handlers, delta_events, delta_windows}
+                ),
+              widget_handlers: Map.merge(ctx.widget_handlers, refreshed_handlers),
+              widget_events: Map.merge(ctx.widget_events, delta_events),
+              window_ids: delta_windows ++ ctx.window_ids
+          }
+
+          {:hit, cached_tree, ctx}
+
+        _ ->
           :telemetry.execute([:plushie, :widget_cache, :miss], %{count: 1}, %{
             id: scoped_id,
             module: module
           })
 
           {:miss, ctx}
-
-        cached ->
-          :telemetry.execute([:plushie, :widget_cache, :hit], %{count: 1}, %{
-            id: scoped_id,
-            module: module
-          })
-
-          refreshed = refresh_widget_states(cached, ctx)
-          ctx = %{ctx | widget_view: Map.put(ctx.widget_view, cache_key, refreshed)}
-          {:hit, refreshed, ctx}
       end
     else
       {:miss, ctx}
     end
   end
 
-  # Store a rendered widget node in the widget view cache.
-  # Only called when the module exports __cache_key__/2.
-  @spec widget_view_cache_store(module(), String.t(), map(), map(), map(), normalize_ctx()) ::
-          normalize_ctx()
-  defp widget_view_cache_store(module, scoped_id, props, state, node, ctx) do
+  # Store a rendered widget node in the widget view cache with registry deltas.
+  # pre_* snapshots are taken BEFORE the widget's normalize_with_ctx call;
+  # deltas capture entries accumulated during the widget's child normalization.
+  # The widget's OWN entry is accumulated AFTER this call, so it is not
+  # included in the delta (correct, since the widget's entry depends on
+  # the composite struct, not the cached child tree).
+  defp widget_view_cache_store(module, scoped_id, props, state, node, ctx, opts) do
+    {pre_handlers, pre_events, pre_windows} = Keyword.fetch!(opts, :pre)
+
     if function_exported?(module, :__cache_key__, 2) do
       key = module.__cache_key__(props, state)
       cache_key = {module, scoped_id, key}
-      %{ctx | widget_view: Map.put(ctx.widget_view, cache_key, node)}
+
+      delta_handlers = Map.drop(ctx.widget_handlers, Map.keys(pre_handlers))
+      delta_events = Map.drop(ctx.widget_events, Map.keys(pre_events))
+      delta_windows = ctx.window_ids -- pre_windows
+
+      %{
+        ctx
+        | widget_view:
+            Map.put(
+              ctx.widget_view,
+              cache_key,
+              {node, delta_handlers, delta_events, delta_windows}
+            )
+      }
     else
       ctx
     end
@@ -1552,45 +1693,19 @@ defmodule Plushie.Tree do
     end
   end
 
-  # Walk a cached normalized subtree and refresh widget internal states.
-  # Preserves map references where the state has not changed, so the
-  # differ's reference equality check still short-circuits.
-  defp refresh_widget_states(node, ctx) do
-    case node do
-      %{meta: %{__widget__: %Meta.Composite{module: module} = comp}} ->
-        fresh_state = lookup_widget_state(node.id, module, ctx)
+  # Refresh handler entry states from the current widget_states map.
+  # Flat map iteration (no tree walk). Returns a new map with updated
+  # states where they differ from the cached version.
+  @spec refresh_handler_states(map(), map()) :: map()
+  defp refresh_handler_states(handlers, widget_states) do
+    Map.new(handlers, fn {key, entry} ->
+      case Map.get(widget_states, key) do
+        %{state: fresh_state} when fresh_state !== entry.state ->
+          {key, %{entry | state: fresh_state}}
 
-        node =
-          if fresh_state === comp.state do
-            node
-          else
-            updated_comp = %{comp | state: fresh_state}
-            put_in(node, [:meta, :__widget__], updated_comp)
-          end
-
-        refresh_children_states(node, ctx)
-
-      _ ->
-        refresh_children_states(node, ctx)
-    end
+        _ ->
+          {key, entry}
+      end
+    end)
   end
-
-  defp refresh_children_states(%{children: []} = node, _ctx), do: node
-
-  defp refresh_children_states(%{children: children} = node, ctx) when is_list(children) do
-    refreshed =
-      Enum.map(children, fn child ->
-        refreshed_child = refresh_widget_states(child, ctx)
-        # Preserve reference if nothing changed
-        if refreshed_child === child, do: child, else: refreshed_child
-      end)
-
-    if refreshed === children do
-      node
-    else
-      %{node | children: refreshed}
-    end
-  end
-
-  defp refresh_children_states(node, _ctx), do: node
 end
