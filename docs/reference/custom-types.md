@@ -115,13 +115,19 @@ The macro generates:
 - `typespec/0`: `:low | :medium | :high | :critical`
 - `encode/1`: `Atom.to_string(value)`
 
-Use it in a widget:
+Use it in a widget. The `:doc` option provides the description that
+appears in the auto-generated Props table and the setter's `@doc`:
 
 ```elixir
 widget :task_card do
   field :priority, MyApp.Type.Priority, doc: "Task priority level."
 end
 ```
+
+See [Custom Widgets: Field options](custom-widgets.md#field-options)
+for all available field options (`:doc`, `:default`, `:wire_name`,
+`:cast`, etc.) and
+[reserved field names](custom-widgets.md#reserved-field-names).
 
 The setter accepts only the declared atoms:
 

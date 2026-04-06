@@ -53,7 +53,81 @@ field :points, {:list, :float}
 
 Any module that implements `Plushie.Type` can be used as a field type.
 For event field types specifically, modules that export `parse/1` are
-also accepted.
+also accepted. See the [Custom Types reference](custom-types.md) for
+building your own type modules.
+
+### Field options
+
+Every `field` declaration accepts the type as the second argument and
+an optional keyword list of options:
+
+```elixir
+field :name, :string, default: "untitled", doc: "Display name."
+```
+
+| Option | Type | Purpose |
+|--------|------|---------|
+| `:doc` | `String.t()` | Description for setter `@doc` and the auto-generated Props table in `@moduledoc`. Always provide this for public-facing widgets. |
+| `:default` | `term()` | Default value in the struct. When present, the field is not required at construction time. |
+| `:option` | `boolean()` | When `false`, excludes the field from the keyword options API (`with_options/2`, `__field_keys__/0`). Use for positional-only fields. Default: `true`. |
+| `:wire_name` | `atom()` | Override the prop key sent over the wire. Use when the Elixir field name differs from the renderer's expected key (e.g., `field :is_toggled, :boolean, wire_name: :checked`). |
+| `:required` | `boolean()` | Explicit required flag. Positional fields without a default are required automatically. |
+| `:cast` | `(term() -> term())` | Custom cast function for the setter, bypassing the type's `cast/1`. Use for fields that need coercion beyond what the type provides. |
+
+Type-specific constraints (like `:min`, `:max`, `:min_length`) are
+passed through to the type module. See
+[Custom Types: Field constraints](custom-types.md#field-constraints).
+
+### Writing good field docs
+
+The `:doc` option is the primary way to document widget props. It
+appears in two places:
+
+1. The setter's `@doc` (visible in `h MyWidget.spacing` in iex and
+   in per-function hexdocs)
+2. The auto-generated Props table in the widget's `@moduledoc`
+   (visible at the top of the module's hexdocs page)
+
+Write concise, specific descriptions:
+
+```elixir
+# Good: specific, actionable
+field :spacing, :float, doc: "Space between checkbox and label in pixels."
+field :style, Plushie.Type.Style, doc: "Named preset (`:primary`, `:danger`) or custom `StyleMap`."
+
+# Bad: restates the name
+field :spacing, :float, doc: "The spacing."
+field :style, Plushie.Type.Style, doc: "The style."
+```
+
+Include the unit (pixels, milliseconds) when applicable. Link to
+related types or docs with backtick references. Mention the default
+behavior when nil ("Default: fill", "Default: shrink").
+
+Fields without `:doc` get a generic "Sets the `:name` field."
+message. For internal or experimental widgets this is fine, but
+published widgets should document every field.
+
+### Reserved field names
+
+The following names are reserved and cannot be used in `field`
+declarations. The macro raises a compile error if you try:
+
+| Name | Reason |
+|------|--------|
+| `:id` | Always the first positional argument to `new/N`. Present on every widget struct. |
+| `:type` | Used internally for the widget's type string on the wire. |
+| `:children` | Managed by the container system (`container: true`). |
+| `:a11y` | Auto-generated accessibility field with special cast (`A11y.cast/1`). Set via `a11y: %{role: :button}` in options, not as a declared field. |
+| `:event_rate` | Auto-generated rate-limiting field. Set via `event_rate: 60` in options. |
+| `:do` | Reserved by Elixir for block syntax. |
+
+If you need to send a prop with one of these names over the wire,
+use `:wire_name` on a differently-named field:
+
+```elixir
+field :widget_type, :string, wire_name: :type, doc: "Custom type tag."
+```
 
 ### Container widgets
 

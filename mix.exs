@@ -56,6 +56,7 @@ defmodule Plushie.MixProject do
         "docs/guides/14-state-management.md",
         "docs/guides/15-testing.md",
         "docs/guides/16-shared-state.md",
+        "docs/guides/17-wasm-deployment.md",
         # Reference (alphabetical, lookup by topic)
         "docs/reference/accessibility.md",
         "docs/reference/animation.md",
@@ -64,6 +65,7 @@ defmodule Plushie.MixProject do
         "docs/reference/canvas.md",
         "docs/reference/commands.md",
         "docs/reference/configuration.md",
+        "docs/reference/custom-types.md",
         "docs/reference/custom-widgets.md",
         "docs/reference/dsl.md",
         "docs/reference/events.md",
