@@ -34,6 +34,151 @@ defmodule Plushie.Runtime.WidgetHandlers do
   alias Plushie.Widget.Handler
 
   @doc """
+  Normalizes a widget event by resolving the wire family string
+  (e.g., "color_picker:select") into a `{widget_type, event_name}`
+  tuple and applying the event spec (scalar extraction, field atomization).
+
+  Non-widget events pass through unchanged.
+
+  The `widget_events` argument is the event registry derived from the tree
+  (keyed by `{window_id, scoped_id}`).
+  """
+  @spec normalize_widget_event!(widget_events :: map(), event :: term()) :: term()
+  def normalize_widget_event!(widget_events, %Plushie.Event.WidgetEvent{type: family} = event)
+      when is_binary(family) do
+    target = Plushie.Event.target(event)
+    registry_key = {Map.get(event, :window_id), target}
+
+    case Map.get(widget_events, registry_key) do
+      %{widget_type: widget_type, events: events, event_specs: event_specs} ->
+        {family_widget_type, event_name} = parse_widget_family!(family)
+
+        cond do
+          family_widget_type != widget_type ->
+            raise Plushie.Protocol.Error,
+              reason: {:unknown_event_family, family, %{"id" => target}},
+              format: :msgpack,
+              data: <<>>
+
+          MapSet.member?(events, event_name) ->
+            spec = Map.get(event_specs, event_name)
+            apply_widget_event_family_spec(event, widget_type, event_name, spec)
+
+          true ->
+            raise Plushie.Protocol.Error,
+              reason: {:unknown_event_family, family, %{"id" => target}},
+              format: :msgpack,
+              data: <<>>
+        end
+
+      nil ->
+        raise Plushie.Protocol.Error,
+          reason: {:unknown_event_family, family, %{"id" => target}},
+          format: :msgpack,
+          data: <<>>
+    end
+  end
+
+  def normalize_widget_event!(_widget_events, event), do: event
+
+  @doc """
+  Applies an event spec to a native widget event, setting type tuple
+  and routing data to value/data fields based on the spec.
+  """
+  @spec apply_widget_event_family_spec(
+          event :: Plushie.Event.WidgetEvent.t(),
+          widget_type :: atom(),
+          event_name :: atom(),
+          spec :: Plushie.Event.BuiltinSpecs.t() | nil
+        ) :: Plushie.Event.WidgetEvent.t()
+  def apply_widget_event_family_spec(event, widget_type, event_name, spec) do
+    event = %{event | type: {widget_type, event_name}}
+
+    case spec do
+      %{carrier: :value, fields: declared_fields} ->
+        wire_data = if is_map(event.value), do: event.value, else: %{}
+        parsed = atomize_declared_fields(wire_data, declared_fields)
+        %{event | value: parsed}
+
+      %{carrier: :value} ->
+        wire_value = extract_wire_value(event.value)
+        %{event | value: wire_value}
+
+      %{carrier: :none} ->
+        %{event | value: nil}
+
+      nil ->
+        event
+    end
+  end
+
+  @doc """
+  Extracts a scalar value from wire event data. Wire data from the
+  renderer is a string-keyed map; value events carry the value under
+  "value". Falls back to the raw data for pre-parsed or nil values.
+  """
+  @spec extract_wire_value(wire_data :: map() | term()) :: term()
+  def extract_wire_value(%{"value" => v}), do: v
+  def extract_wire_value(v), do: v
+
+  @doc """
+  Atomizes declared field keys from wire data and parses typed fields.
+  Undeclared keys are dropped; only declared fields appear in the result.
+  """
+  @spec atomize_declared_fields(
+          wire_data :: map(),
+          declared_fields :: [{atom(), Plushie.Event.BuiltinSpecs.field_type()}]
+        ) :: map()
+  def atomize_declared_fields(wire_data, declared_fields) do
+    Map.new(declared_fields, fn {field_name, type} ->
+      wire_key = Atom.to_string(field_name)
+      raw_value = Map.get(wire_data, wire_key)
+
+      parsed =
+        case Plushie.Type.cast_field(type, raw_value) do
+          {:ok, v} ->
+            v
+
+          :error ->
+            Logger.warning(
+              "event field #{inspect(field_name)} failed to parse as #{inspect(type)}, " <>
+                "raw value: #{inspect(raw_value)}"
+            )
+
+            raw_value
+        end
+
+      {field_name, parsed}
+    end)
+  end
+
+  @doc """
+  Parses a wire event family string (e.g., "color_picker:select") into
+  a `{widget_type, event_name}` tuple of existing atoms.
+  """
+  @spec parse_widget_family!(String.t()) :: {atom(), atom()}
+  def parse_widget_family!(family) do
+    case String.split(family, ":", parts: 2) do
+      [widget_type, event_name] when widget_type != "" and event_name != "" ->
+        {String.to_existing_atom(widget_type), String.to_existing_atom(event_name)}
+
+      _ ->
+        raise Plushie.Protocol.Error,
+          reason: {:unknown_event_family, family, %{}},
+          format: :msgpack,
+          data: <<>>
+    end
+  rescue
+    ArgumentError ->
+      reraise Plushie.Protocol.Error.exception(
+                reason: {:unknown_event_family, family, %{}},
+                format: :msgpack,
+                data: <<>>
+              ),
+              __STACKTRACE__
+  end
+
+  @doc """
   Collects subscription specs from all registered widget_handlers.
 
   Each widget's `subscribe/2` callback (if defined) is called with
