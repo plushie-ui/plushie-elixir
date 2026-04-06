@@ -88,6 +88,7 @@ are for customising builds, binary paths, and test backends.
 |---|---|---|---|
 | `:code_reloader` | `boolean() \| keyword()` | `false` | Enable hot code reloading in dev. |
 | `:test_backend` | `:mock \| :headless \| :windowed` | `:mock` | Test backend selection. |
+| `:validate_props` | `boolean()` | `false` | Enable renderer-side prop validation. When `true`, the renderer emits diagnostic events for unknown or invalid props. Useful in dev/test to catch typos and type mismatches early. |
 
 #### Code reloader options
 

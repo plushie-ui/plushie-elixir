@@ -1221,6 +1221,14 @@ defmodule Plushie.Runtime do
         settings
       end
 
+    # Enable renderer-side prop validation when configured.
+    settings =
+      if Application.get_env(:plushie, :validate_props) do
+        Map.put(settings, :validate_props, true)
+      else
+        settings
+      end
+
     notify_bridge(state, &Plushie.Bridge.send_settings(&1, settings))
   end
 
