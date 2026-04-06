@@ -178,11 +178,14 @@ defmodule Plushie.Runtime do
   @doc """
   Waits for the runtime to finish processing all pending messages.
 
-  Returns `:ok` once the runtime is idle. Use this to synchronize after
-  dispatching events or starting the runtime, ensuring init/update
-  cycles have completed before inspecting state.
+  Returns `:ok` once the runtime is idle, or `{:ok, :view_error}` if
+  the most recent view/1 call failed. In the view error case, the model
+  has been updated but the tree is stale (showing the last successful
+  render). Use this to synchronize after dispatching events or starting
+  the runtime, ensuring init/update cycles have completed before
+  inspecting state.
   """
-  @spec sync(runtime :: GenServer.server()) :: :ok
+  @spec sync(runtime :: GenServer.server()) :: :ok | {:ok, :view_error}
   def sync(runtime) do
     GenServer.call(runtime, :sync)
   end
@@ -375,7 +378,14 @@ defmodule Plushie.Runtime do
 
   @impl true
   def handle_call(:sync, _from, state) do
-    {:reply, :ok, state}
+    reply =
+      if state.consecutive_view_errors > 0 do
+        {:ok, :view_error}
+      else
+        :ok
+      end
+
+    {:reply, reply, state}
   end
 
   def handle_call(:get_model, _from, state) do
