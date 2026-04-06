@@ -291,10 +291,10 @@ re-creation, resetting state.
 ### State storage
 
 The runtime maintains widget state in the handler registry, keyed by
-`{window_id, scoped_id}`. During the render cycle, states are placed
-in the process dictionary so `Plushie.Tree.normalize/1` can look them
-up when it encounters widget placeholders. New widgets (no stored state)
-fall back to `__initial_state__/0`.
+`{window_id, scoped_id}`. During the render cycle, states are passed
+to `Plushie.Tree.normalize/2` via the normalize context map, where
+they are looked up when widget placeholders are encountered. New
+widgets (no stored state) fall back to `__initial_state__/0`.
 
 ## Placeholder-to-rendered pipeline
 

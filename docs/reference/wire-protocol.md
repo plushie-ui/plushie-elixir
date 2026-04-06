@@ -112,7 +112,7 @@ props: %{content: "Hello"}}`). During encoding, all map keys are
 converted to strings for the wire format. The `stringify_tree/1`
 function in the encode module recursively walks the tree, converting
 atom keys to strings and encoding type-specific values (colours,
-lengths, paddings, borders, etc.) via the `Plushie.Encode` protocol.
+lengths, paddings, borders, etc.) via `Plushie.Type.encode_value/1`.
 
 This means you never need to think about string vs atom keys in your
 view code. The encoding layer handles it.

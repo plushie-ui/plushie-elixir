@@ -385,8 +385,8 @@ end
 
 ## Encoding
 
-All styling types implement the `Plushie.Encode` protocol for wire
-serialisation. Encoding happens during `Plushie.Tree.normalize/1` --
+All styling types implement `encode/1` via the `Plushie.Type` behaviour
+for wire serialisation. Encoding happens during tree normalization --
 you work with Elixir structs and atoms in your view code, and encoding
 is deferred to the single normalisation pass before the tree hits the
 wire.
