@@ -536,7 +536,7 @@ defmodule Plushie.Widget do
     has_view = Module.defines?(env.module, {:view, 2}) or has_view_3
 
     if has_view do
-      validate_widget_callbacks!(env)
+      validate_widget_callbacks!(env, has_view_3)
     end
 
     type_string = Atom.to_string(widget_type)
@@ -1028,15 +1028,26 @@ defmodule Plushie.Widget do
     end
   end
 
-  defp validate_widget_callbacks!(env) do
+  defp validate_widget_callbacks!(env, has_view_3) do
     has_view_2 = Module.defines?(env.module, {:view, 2})
-    has_view_3 = Module.defines?(env.module, {:view, 3})
 
     unless has_view_2 or has_view_3 do
       raise CompileError,
         file: env.file,
         line: 0,
         description: "#{inspect(env.module)} must define view/2 or view/3."
+    end
+
+    has_handle_event = Module.defines?(env.module, {:handle_event, 2})
+    state_fields = Module.get_attribute(env.module, :_widget_state_fields) || []
+
+    if has_view_3 and not has_view_2 and state_fields == [] and not has_handle_event do
+      raise CompileError,
+        file: env.file,
+        line: 0,
+        description:
+          "#{inspect(env.module)} defines view/3 (stateful) but declares no state fields. " <>
+            "Use `state field_name: default` to declare state, or define view/2 for stateless widgets."
     end
   end
 
