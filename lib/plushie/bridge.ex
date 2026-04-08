@@ -502,7 +502,7 @@ defmodule Plushie.Bridge do
   end
 
   def handle_cast(:resync_complete, state) do
-    {:noreply, flush_queued_messages(%{state | awaiting_resync: false})}
+    {:noreply, flush_queued_messages(%{state | awaiting_resync: false, restart_count: 0})}
   end
 
   # Intentional restart (e.g. after Rust rebuild in dev mode).
@@ -516,7 +516,7 @@ defmodule Plushie.Bridge do
 
       case state.transport_mod.reopen(state.transport_state) do
         {:ok, transport_state} ->
-          state = %{state | transport_state: transport_state, buffer: ""}
+          state = %{state | transport_state: transport_state, buffer: "", discard_next_eol: false}
           send(state.runtime, :renderer_restarted)
           {:noreply, %{state | awaiting_resync: true, restart_count: 0}}
 
@@ -563,7 +563,9 @@ defmodule Plushie.Bridge do
            state
            | transport_state: transport_state,
              restart_count: new_count,
-             awaiting_resync: true
+             awaiting_resync: true,
+             buffer: "",
+             discard_next_eol: false
          }}
 
       {:error, reason} ->
@@ -707,24 +709,23 @@ defmodule Plushie.Bridge do
                   state
                 else
                   send(state.runtime, {:renderer_event, {:hello, hello}})
-                  %{state | restart_count: 0}
+                  state
                 end
 
               {:screenshot_response, response} ->
                 case state.pending_screenshot do
                   nil ->
                     send(state.runtime, {:renderer_event, {:screenshot_response, response}})
-                    %{state | restart_count: 0}
+                    state
 
                   from ->
                     GenServer.reply(from, response)
-                    %{state | restart_count: 0, pending_screenshot: nil}
+                    %{state | pending_screenshot: nil}
                 end
 
               event ->
                 send(state.runtime, {:renderer_event, event})
-                # Reset restart count on first successful message from the renderer.
-                %{state | restart_count: 0}
+                state
             end
 
           reset_heartbeat_timer(state)
@@ -903,7 +904,9 @@ defmodule Plushie.Bridge do
       :interact,
       :advance_frame,
       :register_effect_stub,
-      :unregister_effect_stub
+      :unregister_effect_stub,
+      :system_op,
+      :system_query
     ]
   end
 

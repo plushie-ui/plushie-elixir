@@ -1605,10 +1605,10 @@ defmodule Plushie.ProtocolTest do
           family: "session_closed",
           session: "s2",
           id: "",
-          data: %{reason: "reset"}
+          data: %{}
         })
 
-      assert {:session_closed, "s2", "reset"} = Protocol.decode_message(json, :json)
+      assert {:session_closed, "s2", nil} = Protocol.decode_message(json, :json)
     end
   end
 
