@@ -234,7 +234,7 @@ defmodule ColorPickerWidget do
     focus_stroke = %{stroke: %{color: "#3b82f6", width: 3}}
 
     [
-      group "hue-cursor",
+      interactive "hue-cursor",
         x: ring_x,
         y: ring_y,
         focusable: true,
@@ -249,7 +249,7 @@ defmodule ColorPickerWidget do
         } do
         circle(0, 0, @cursor_r, fill: "#ffffff", stroke: cursor_stroke)
       end,
-      group "sv-cursor",
+      interactive "sv-cursor",
         x: sv_x,
         y: sv_y,
         focusable: true,

@@ -8,7 +8,7 @@ annotations.
 
 In this chapter we will learn canvas by building a **custom save button** --
 a styled, interactive canvas widget that replaces the plain `button("save")`
-in the pad. Along the way we will cover shapes, interactive groups, style
+in the pad. Along the way we will cover shapes, interactive elements, style
 overrides, and how canvas composes with the rest of the widget tree.
 
 ## Shapes
@@ -106,12 +106,12 @@ layer "icons" do
 end
 ```
 
-The first argument is the SVG source string. Combined with interactive
-groups, this lets you build fully custom controls from externally designed
+The first argument is the SVG source string. Combined with `interactive`,
+this lets you build fully custom controls from externally designed
 assets:
 
 ```elixir
-group "save", on_click: true, cursor: :pointer do
+interactive "save", on_click: true, cursor: :pointer do
   svg(File.read!("priv/icons/save.svg"), 0, 0, 36, 36)
 end
 ```
@@ -119,14 +119,14 @@ end
 `image/5` works the same way for raster images (PNG, JPEG). SVG is
 generally preferred for UI elements because it scales without pixelation.
 
-## Interactive groups
+## Interactive elements
 
-Groups become interactive when you add event props. This is where canvas
-gets powerful. You can make any collection of shapes clickable, hoverable,
-or draggable:
+The `interactive` macro creates canvas elements that respond to user input.
+It requires a string id as the first argument. You can make any collection
+of shapes clickable, hoverable, or draggable:
 
 ```elixir
-group "my-btn", on_click: true, on_hover: true, cursor: :pointer do
+interactive "my-btn", on_click: true, on_hover: true, cursor: :pointer do
   rect(0, 0, 100, 36, fill: "#3b82f6", radius: 6)
   text(50, 11, "Click me", fill: "#fff", size: 14)
 end
@@ -139,7 +139,7 @@ interaction. No event handling needed; the renderer applies them
 automatically:
 
 ```elixir
-group "my-btn",
+interactive "my-btn",
   on_click: true,
   cursor: :pointer,
   hover_style: %{fill: "#2563eb"},
@@ -158,11 +158,11 @@ the properties you specify.
 Built-in widgets like `button` and `text_input` have accessibility roles
 and labels built in (a button announces itself as a button automatically).
 Canvas is a raw drawing surface, so the renderer has no way to know that
-a group of shapes is meant to be a "button." You tell it with `a11y`
+a collection of shapes is meant to be a "button." You tell it with `a11y`
 annotations:
 
 ```elixir
-group "save-btn",
+interactive "save-btn",
   on_click: true,
   cursor: :pointer,
   focusable: true,
@@ -185,7 +185,7 @@ fill, rounded corners, hover/press feedback, and accessibility:
 defp save_button do
   canvas "save-canvas", width: 100, height: 36 do
     layer "button" do
-      group "save",
+      interactive "save",
         on_click: true,
         cursor: :pointer,
         focusable: true,
@@ -366,12 +366,12 @@ Write canvas experiments in your pad:
 - Build a bar chart: for each data point, draw a `rect` with height
   proportional to the value. Add `tooltip:` for hover labels.
 - Create a path: draw a triangle, a star, or a curved shape.
-- Add an interactive group with `on_hover: true` and `hover_style`. Watch
-  the element highlight when you mouse over it.
+- Add an interactive element with `on_hover: true` and `hover_style`. Watch
+  it highlight when you mouse over it.
 - Try transforms: rotate a group, clip a shape to a smaller region.
 
 The [Canvas reference](../reference/canvas.md) has the complete shape
-catalog, all path commands, and full interactive group props.
+catalog, all path commands, and full interactive element props.
 
 In the next chapter, we will extract reusable components from the pad as
 custom widgets.

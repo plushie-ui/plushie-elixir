@@ -190,18 +190,18 @@ keyboard navigation but not on mouse clicks.
 
 ### Canvas keyboard navigation
 
-Canvas interactive groups can opt into keyboard focus with
+Canvas interactive elements can opt into keyboard focus with
 `focusable: true`:
 
 ```elixir
-group "save-btn", on_click: true, focusable: true,
+interactive "save-btn", on_click: true, focusable: true,
   a11y: %{role: :button, label: "Save"} do
   rect(0, 0, 100, 36, fill: "#3b82f6")
 end
 ```
 
-`focusable: true` adds the group to the Tab order. Space/Enter activates
-it. Without `focusable: true`, the group responds to mouse clicks but
+`focusable: true` adds the element to the Tab order. Space/Enter activates
+it. Without `focusable: true`, the element responds to mouse clicks but
 is invisible to keyboard navigation and screen readers.
 
 ## Live regions
@@ -361,7 +361,7 @@ See the [Testing reference](testing.md) for the full assertion API.
 
 - `Plushie.Type.A11y` - full struct and field documentation
 - [Canvas reference](canvas.md) - canvas accessibility annotations
-  and interactive groups
+  and interactive elements
 - [Scoped IDs reference](scoped-ids.md) - how `labelled_by` and
   `described_by` IDs are resolved
 - [AccessKit](https://github.com/AccessKit/accesskit) - the

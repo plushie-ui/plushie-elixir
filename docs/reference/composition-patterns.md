@@ -700,7 +700,7 @@ only removes it from the view rather than exiting the app.
 ## See also
 
 - [Built-in Widgets reference](built-in-widgets.md) - widget catalog
-- [Canvas reference](canvas.md) - shapes, transforms, interactive groups
+- [Canvas reference](canvas.md) - shapes, transforms, interactive elements
 - [Styling reference](themes-and-styling.md) - Color, Theme, StyleMap, Border,
   Shadow, Gradient
 - [Layout reference](windows-and-layout.md) - sizing, alignment, containers

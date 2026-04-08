@@ -1,7 +1,7 @@
 # Canvas
 
 The canvas system provides 2D drawing with typed shape structs,
-transforms, interactive groups, and accessibility support. Unlike
+transforms, interactive elements, and accessibility support. Unlike
 layout widgets that compose children, canvas draws shapes on a
 surface: rectangles, circles, lines, paths, text, images, and SVG.
 
@@ -182,11 +182,11 @@ end
 `svg/5` takes an SVG source string (not a file path; read the file
 first). `image/5` takes a file path string.
 
-Combined with interactive groups, SVG content can be made clickable,
+Combined with `interactive`, SVG content can be made clickable,
 hoverable, and keyboard-accessible:
 
 ```elixir
-group "save", on_click: true, cursor: :pointer,
+interactive "save", on_click: true, cursor: :pointer,
   focusable: true, a11y: %{role: :button, label: "Save"} do
   svg(File.read!("priv/icons/save.svg"), 0, 0, 36, 36)
 end
@@ -229,12 +229,12 @@ end
 
 See `Plushie.Canvas.Shape.Clip`.
 
-## Interactive groups
+## Interactive elements
 
-`Plushie.Canvas.Shape.Group` is the only shape type that supports
-interactivity. Any collection of shapes can become clickable, hoverable,
-draggable, or keyboard-focusable by wrapping them in an interactive
-group.
+`Plushie.Canvas.Shape.Interactive` makes any collection of shapes
+clickable, hoverable, draggable, or keyboard-focusable. It requires an
+explicit string id as the first argument. On the wire it encodes as a
+`"group"` (the split is SDK-side only).
 
 ### Interaction props
 
@@ -267,11 +267,11 @@ overridden; others inherit from the shape's base values.
 ### Accessibility
 
 Canvas is a raw drawing surface with no inherent semantic knowledge.
-Interactive groups need explicit `a11y` annotations for screen reader
+Interactive elements need explicit `a11y` annotations for screen reader
 and keyboard support:
 
 ```elixir
-group "hue-ring",
+interactive "hue-ring",
   on_click: true,
   focusable: true,
   a11y: %{role: :slider, label: "Hue", value: "#{round(hue)} degrees"} do
@@ -279,7 +279,7 @@ group "hue-ring",
 end
 ```
 
-Without `a11y` annotations, interactive groups are invisible to
+Without `a11y` annotations, interactive elements are invisible to
 assistive technology. See the [Accessibility reference](accessibility.md)
 for the full set of fields and roles.
 
@@ -323,7 +323,7 @@ end
 
 ### Element-level events
 
-Require interaction props on interactive groups:
+Require interaction props on interactive elements:
 
 | Event type | Trigger | Data fields |
 |---|---|---|
@@ -365,14 +365,14 @@ To transform a pointer event before it reaches `update/2`, handle it in
 
 Canvas element IDs participate in the standard
 [scoped ID](scoped-ids.md) system. The canvas widget's ID creates a
-scope, and interactive group IDs within it are scoped under it:
+scope, and interactive element IDs within it are scoped under it:
 
 ```
-canvas "drawing"              ->  "drawing"
-  group "handle" ...          ->  "drawing/handle"
+canvas "drawing"                      ->  "drawing"
+  interactive "handle", ... do ... end  ->  "drawing/handle"
 ```
 
-Events arrive with the group's local ID, the canvas in the scope, and
+Events arrive with the element's local ID, the canvas in the scope, and
 the window ID at the end:
 
 ```elixir
@@ -383,13 +383,13 @@ the window ID at the end:
 
 ### Toggle switch
 
-An interactive group with state-driven thumb position and accessibility
+An interactive element with state-driven thumb position and accessibility
 annotations:
 
 ```elixir
 canvas "switch", width: 64, height: 32 do
   layer "track" do
-    group "toggle", on_click: true, cursor: :pointer,
+    interactive "toggle", on_click: true, cursor: :pointer,
       a11y: %{role: :switch, label: "Dark mode", toggled: model.dark} do
       rect(0, 0, 64, 32, fill: if(model.dark, do: "#3b82f6", else: "#ddd"), radius: 16)
       circle(if(model.dark, do: 44, else: 20), 16, 12, fill: "#fff")
@@ -410,7 +410,7 @@ canvas "chart", width: 300, height: 200 do
       x = i * 40 + 10
       h = value * 2
 
-      group "bar-#{i}", x: x, y: 200 - h, focusable: true,
+      interactive "bar-#{i}", x: x, y: 200 - h, focusable: true,
         tooltip: "#{value}",
         a11y: %{role: :image, label: "Value: #{value}",
                position_in_set: i + 1, size_of_set: length(model.data)} do

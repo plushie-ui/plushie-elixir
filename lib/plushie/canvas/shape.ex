@@ -96,10 +96,10 @@ defmodule Plushie.Canvas.Shape do
 
   ## Interactive shapes
 
-  Make shapes interactive by placing them in a named group with
-  interaction opts:
+  Make shapes interactive with the `interactive` macro (requires a
+  string id as the first argument):
 
-      group "btn", on_click: true, cursor: "pointer" do
+      interactive "btn", on_click: true, cursor: "pointer" do
         rect(0, 0, 100, 40, fill: "#3498db")
       end
   """
@@ -111,6 +111,7 @@ defmodule Plushie.Canvas.Shape do
     Circle,
     Clip,
     Group,
+    Interactive,
     Line,
     LinearGradient,
     Path,
@@ -215,6 +216,56 @@ defmodule Plushie.Canvas.Shape do
 
         raise ArgumentError,
               "unknown group option #{inspect(key)}. " <>
+                "Valid options: #{inspect(valid)}"
+      end
+    end)
+  end
+
+  # -- Interactive shape -------------------------------------------------------
+
+  @doc false
+  @spec __build_interactive__(id :: String.t(), children :: [map()], opts :: keyword()) ::
+          Interactive.t()
+  def __build_interactive__(id, items, explicit_opts)
+      when is_binary(id) and is_list(items) and is_list(explicit_opts) do
+    {meta, children} = Enum.split_with(items, &match?({:__canvas_meta__, _, _}, &1))
+
+    transforms =
+      meta
+      |> Enum.filter(&match?({:__canvas_meta__, :transform, _}, &1))
+      |> Enum.map(fn {:__canvas_meta__, :transform, t} -> t end)
+
+    clip =
+      Enum.find_value(meta, fn
+        {:__canvas_meta__, :clip, c} -> c
+        _ -> nil
+      end)
+
+    {x, opts} = Keyword.pop(explicit_opts, :x)
+    {y, opts} = Keyword.pop(opts, :y)
+
+    transforms =
+      if x || y do
+        [%Translate{x: x || 0, y: y || 0} | transforms]
+      else
+        transforms
+      end
+
+    shape = %Interactive{
+      id: id,
+      children: children,
+      transforms: if(transforms == [], do: nil, else: transforms),
+      clip: clip
+    }
+
+    Enum.reduce(opts, shape, fn {key, val}, acc ->
+      if Map.has_key?(acc, key) do
+        Map.put(acc, key, val)
+      else
+        valid = Map.keys(%Interactive{children: [], id: ""}) -- [:__struct__, :id]
+
+        raise ArgumentError,
+              "unknown interactive option #{inspect(key)}. " <>
                 "Valid options: #{inspect(valid)}"
       end
     end)

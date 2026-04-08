@@ -75,7 +75,7 @@ defmodule ThemeToggle do
       height: @track_h + ring_pad * 2,
       alt: "Theme toggle" do
       layer "toggle" do
-        group "switch",
+        interactive "switch",
           x: ring_pad,
           y: ring_pad,
           on_click: true,

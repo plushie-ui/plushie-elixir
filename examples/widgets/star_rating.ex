@@ -101,7 +101,7 @@ defmodule StarRating do
             filled = i < display
             preview = hover != nil and i < hover and i >= rating
 
-            group "star-#{i}",
+            interactive "star-#{i}",
               x: i * (size + gap) + size / 2,
               y: size / 2,
               on_click: true,

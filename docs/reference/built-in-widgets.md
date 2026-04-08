@@ -595,7 +595,7 @@ back to the anchor end.
   containers with full prop tables
 - [Styling reference](themes-and-styling.md) - Color, Theme, StyleMap, Border,
   Shadow, Gradient
-- [Canvas reference](canvas.md) - shapes, layers, interactive groups
+- [Canvas reference](canvas.md) - shapes, layers, interactive elements
 - [Accessibility reference](accessibility.md) - the `a11y` prop, roles,
   and keyboard navigation
 - [Events reference](events.md) - all event types delivered by widgets

@@ -30,7 +30,7 @@ defmodule Plushie.Test.CanvasElementClickTest do
       window "main" do
         canvas "toolbar", width: 200, height: 50 do
           layer "buttons" do
-            group "save-btn", on_click: true do
+            interactive "save-btn", on_click: true do
               rect(0, 0, 80, 40, fill: "#ccc")
             end
           end

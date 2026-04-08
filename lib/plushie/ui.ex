@@ -147,11 +147,11 @@ defmodule Plushie.UI do
   Inside `canvas`, `layer`, and `group` blocks, `text`, `image`, and
   `svg` calls resolve automatically to their canvas shape variants.
 
-  Interactive fields go directly on the group via keyword opts:
+  For interactive canvas elements, use `interactive` (requires an id):
 
       canvas "toggle", width: 52, height: 28 do
         layer "bg" do
-          group "switch", on_click: true, cursor: :pointer do
+          interactive "switch", on_click: true, cursor: :pointer do
             rect(0, 0, 52, 28, fill: "#4CAF50", radius: 14)
             circle(36, 14, 10, fill: "#fff")
           end
@@ -2162,11 +2162,14 @@ defmodule Plushie.UI do
   # ---------------------------------------------------------------------------
 
   @doc """
-  Groups child shapes with optional positioning and interaction.
+  Groups child shapes as a structural container (transforms, clips).
+
+  For interactive elements (click, hover, drag, focus), use the
+  `interactive` macro instead.
 
   ## Do-block form
 
-      group "btn", x: 4, y: 4, on_click: true do
+      group x: 4, y: 4 do
         rect(0, 0, 32, 32, radius: 4)
       end
 
@@ -2244,6 +2247,56 @@ defmodule Plushie.UI do
         |> Enum.reject(&is_nil/1)
 
       Plushie.Canvas.Shape.__build_group__(children, [{:id, unquote(id)} | unquote(opts)])
+    end
+  end
+
+  @doc """
+  Creates an interactive canvas element with a required id.
+
+  Use `interactive` for canvas elements that respond to user input
+  (click, hover, drag, focus). For structural grouping (transforms,
+  clips), use `group`.
+
+      interactive "btn", on_click: true, cursor: "pointer" do
+        rect(0, 0, 100, 40, fill: "#3498db")
+      end
+  """
+  defmacro interactive(id, opts_or_do \\ []) do
+    case opts_or_do do
+      [do: block] ->
+        block = canvas_scope(block, :group)
+        exprs = block_to_exprs(block)
+
+        quote do
+          children =
+            unquote(build_list_accumulator(exprs))
+            |> :lists.reverse()
+            |> List.flatten()
+            |> Enum.reject(&is_nil/1)
+
+          Plushie.Canvas.Shape.__build_interactive__(unquote(id), children, [])
+        end
+
+      opts ->
+        quote do
+          Plushie.Canvas.Shape.__build_interactive__(unquote(id), [], unquote(opts))
+        end
+    end
+  end
+
+  @doc false
+  defmacro interactive(id, opts, do: block) do
+    block = canvas_scope(block, :group)
+    exprs = block_to_exprs(block)
+
+    quote do
+      children =
+        unquote(build_list_accumulator(exprs))
+        |> :lists.reverse()
+        |> List.flatten()
+        |> Enum.reject(&is_nil/1)
+
+      Plushie.Canvas.Shape.__build_interactive__(unquote(id), children, unquote(opts))
     end
   end
 
@@ -2956,6 +3009,21 @@ defmodule Plushie.UI do
     """)
   end
 
+  # interactive: valid in :layer and :group
+  defp canvas_scope({:interactive, _, _} = node, ctx) when ctx in [:layer, :group], do: node
+
+  defp canvas_scope({:interactive, meta, _}, :canvas) do
+    canvas_scope_error!(meta, """
+    interactive is not valid here. Put interactive elements inside a layer:
+
+        layer "main" do
+          interactive "btn", on_click: true do
+            ...
+          end
+        end
+    """)
+  end
+
   # --- Ambiguous name rewrites (text, image, svg) ---
 
   # text/1,2: always error in canvas context
@@ -3100,7 +3168,7 @@ defmodule Plushie.UI do
        when is_atom(name) and is_list(args) and name in @widget_calls do
     canvas_scope_error!(meta, """
     #{name} is not valid here. Expected canvas shapes:
-    rect, circle, line, text, path, image, svg, group
+    rect, circle, line, text, path, image, svg, group, interactive
     """)
   end
 

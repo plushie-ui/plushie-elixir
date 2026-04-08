@@ -144,7 +144,7 @@ defmodule PlushieUICanvasShapeHelper do
   def canvas_with_group_interactive do
     canvas "chart" do
       layer "main" do
-        group "btn", x: 4, y: 4, on_click: true, hover_style: %{fill: "#ddd"} do
+        interactive "btn", x: 4, y: 4, on_click: true, hover_style: %{fill: "#ddd"} do
           rect(0, 0, 32, 32, fill: "#ccc")
         end
       end
@@ -173,7 +173,7 @@ defmodule PlushieUICanvasShapeHelper do
   end
 
   def interactive_keyword_directive do
-    group "btn", on_click: true, hover_style: %{fill: "#ddd"} do
+    interactive "btn", on_click: true, hover_style: %{fill: "#ddd"} do
       rect(0, 0, 100, 40)
     end
   end
@@ -306,7 +306,7 @@ defmodule PlushieUIContainerPropsHelper do
   end
 
   def interactive_with_nested_blocks do
-    group "btn",
+    interactive "btn",
       on_click: true,
       hover_style: %{fill: "#ddd", opacity: 0.8},
       drag_bounds: %{min_x: 0, max_x: 400},
@@ -1397,10 +1397,10 @@ defmodule Plushie.UITest do
       node = PlushieUICanvasShapeHelper.canvas_with_group_interactive()
       assert node.type == "canvas"
       shapes = node.props[:layers]["main"]
-      [group] = shapes
-      assert %Plushie.Canvas.Shape.Group{} = group
-      assert group.id == "btn"
-      assert group.on_click == true
+      [el] = shapes
+      assert %Plushie.Canvas.Shape.Interactive{} = el
+      assert el.id == "btn"
+      assert el.on_click == true
     end
   end
 
@@ -1412,10 +1412,10 @@ defmodule Plushie.UITest do
     end
   end
 
-  describe "interactive group" do
+  describe "interactive element" do
     test "keyword form with id" do
       result = PlushieUICanvasShapeHelper.interactive_keyword_directive()
-      assert %Plushie.Canvas.Shape.Group{} = result
+      assert %Plushie.Canvas.Shape.Interactive{} = result
       assert result.id == "btn"
       assert result.on_click == true
     end
@@ -1591,9 +1591,9 @@ defmodule Plushie.UITest do
       assert padding.top == 10
     end
 
-    test "interactive group with nested opts" do
+    test "interactive element with nested opts" do
       result = PlushieUIContainerPropsHelper.interactive_with_nested_blocks()
-      assert %Plushie.Canvas.Shape.Group{} = result
+      assert %Plushie.Canvas.Shape.Interactive{} = result
       assert result.id == "btn"
       assert result.on_click == true
       assert result.hover_style == %{fill: "#ddd", opacity: 0.8}

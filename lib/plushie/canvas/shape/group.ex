@@ -1,46 +1,23 @@
 defmodule Plushie.Canvas.Shape.Group do
   @moduledoc """
-  Canvas group -- the only container and interactive unit in the canvas.
+  Canvas group: a structural container for transforms, clips, and
+  visual grouping.
 
-  A group with an `id` is an interactive element (referred to as an
-  "element" in event names). Groups without an `id` are purely
-  structural containers for transforms, clips, and visual grouping.
+  Groups carry an ordered `transforms` list and an optional `clip`
+  rect. The optional `id` is for tree diffing and targeting, not
+  interactivity.
 
-  ## Transforms and clips
-
-  Groups carry an ordered `transforms` list and an optional `clip` rect.
-  These replace the old standalone push_transform/pop_transform and
-  push_clip/pop_clip shape commands.
-
-  ## Interactivity
-
-  All interactive fields (`on_click`, `hover_style`, `a11y`, etc.) live
-  directly on the group struct -- there is no nested `Interactive`
-  sub-struct.
+  For interactive canvas elements (click, hover, drag, focus, a11y),
+  use `Plushie.Canvas.Shape.Interactive` via the `interactive` macro.
   """
 
-  alias Plushie.Canvas.Shape.{Clip, DragBounds, HitRect, Rotate, Scale, ShapeStyle, Translate}
+  alias Plushie.Canvas.Shape.{Clip, Rotate, Scale, Translate}
 
   @type t :: %__MODULE__{
           children: [term()],
           transforms: [Translate.t() | Rotate.t() | Scale.t()] | nil,
           clip: Clip.t() | nil,
-          id: String.t() | nil,
-          on_click: boolean() | nil,
-          on_hover: boolean() | nil,
-          draggable: boolean() | nil,
-          drag_axis: String.t() | nil,
-          drag_bounds: DragBounds.t() | nil,
-          cursor: String.t() | nil,
-          hit_rect: HitRect.t() | nil,
-          tooltip: String.t() | nil,
-          hover_style: ShapeStyle.t() | nil,
-          pressed_style: ShapeStyle.t() | nil,
-          focus_style: ShapeStyle.t() | nil,
-          show_focus_ring: boolean() | nil,
-          focus_ring_radius: number() | nil,
-          a11y: map() | nil,
-          focusable: boolean() | nil
+          id: String.t() | nil
         }
 
   @enforce_keys [:children]
@@ -48,22 +25,7 @@ defmodule Plushie.Canvas.Shape.Group do
     :children,
     :transforms,
     :clip,
-    :id,
-    :on_click,
-    :on_hover,
-    :draggable,
-    :drag_axis,
-    :drag_bounds,
-    :cursor,
-    :hit_rect,
-    :tooltip,
-    :hover_style,
-    :pressed_style,
-    :focus_style,
-    :show_focus_ring,
-    :focus_ring_radius,
-    :a11y,
-    :focusable
+    :id
   ]
 
   @doc false
@@ -74,41 +36,7 @@ defmodule Plushie.Canvas.Shape.Group do
     |> encode_transforms(group.transforms)
     |> put_if(:clip, group.clip)
     |> put_if(:id, group.id)
-    |> put_if(:on_click, group.on_click)
-    |> put_if(:on_hover, group.on_hover)
-    |> put_if(:draggable, group.draggable)
-    |> put_if(:drag_axis, group.drag_axis)
-    |> put_if(:drag_bounds, group.drag_bounds)
-    |> put_if(:cursor, group.cursor)
-    |> put_if(:hit_rect, group.hit_rect)
-    |> put_if(:tooltip, group.tooltip)
-    |> put_if(:hover_style, group.hover_style)
-    |> put_if(:pressed_style, group.pressed_style)
-    |> put_if(:focus_style, group.focus_style)
-    |> put_if(:show_focus_ring, group.show_focus_ring)
-    |> put_if(:focus_ring_radius, group.focus_ring_radius)
-    |> put_if(:a11y, default_a11y(group))
-    |> put_if(:focusable, group.focusable)
   end
-
-  # Inject default a11y for interactive groups that don't have explicit a11y.
-  # This ensures interactive canvas elements are visible to AT without
-  # requiring full manual annotation.
-  defp default_a11y(%__MODULE__{a11y: a11y}) when not is_nil(a11y), do: a11y
-
-  defp default_a11y(%__MODULE__{focusable: true} = group) do
-    %{role: "group", label: group.tooltip}
-  end
-
-  defp default_a11y(%__MODULE__{on_click: true}) do
-    %{role: "button"}
-  end
-
-  defp default_a11y(%__MODULE__{draggable: true}) do
-    %{role: "slider"}
-  end
-
-  defp default_a11y(_group), do: nil
 
   defp encode_transforms(map, nil), do: map
   defp encode_transforms(map, []), do: map

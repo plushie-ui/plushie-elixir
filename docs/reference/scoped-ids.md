@@ -192,12 +192,12 @@ Plushie.Event.target(%WidgetEvent{id: "save", scope: ["form", "sidebar", "main"]
 ## Canvas element scoping
 
 Canvas elements participate in the same mechanism. The canvas widget's
-ID creates a scope, and interactive group IDs within it are scoped
+ID creates a scope, and interactive element IDs within it are scoped
 under it:
 
 ```
-canvas "drawing"              ->  "drawing"
-  group "handle" ...          ->  "drawing/handle"
+canvas "drawing"                      ->  "drawing"
+  interactive "handle", ... do ... end  ->  "drawing/handle"
 ```
 
 Canvas element clicks are regular `:click` events with the canvas ID in
