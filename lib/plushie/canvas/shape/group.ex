@@ -87,9 +87,28 @@ defmodule Plushie.Canvas.Shape.Group do
     |> put_if(:focus_style, group.focus_style)
     |> put_if(:show_focus_ring, group.show_focus_ring)
     |> put_if(:focus_ring_radius, group.focus_ring_radius)
-    |> put_if(:a11y, group.a11y)
+    |> put_if(:a11y, default_a11y(group))
     |> put_if(:focusable, group.focusable)
   end
+
+  # Inject default a11y for interactive groups that don't have explicit a11y.
+  # This ensures interactive canvas elements are visible to AT without
+  # requiring full manual annotation.
+  defp default_a11y(%__MODULE__{a11y: a11y}) when not is_nil(a11y), do: a11y
+
+  defp default_a11y(%__MODULE__{focusable: true} = group) do
+    %{role: "group", label: group.tooltip}
+  end
+
+  defp default_a11y(%__MODULE__{on_click: true}) do
+    %{role: "button"}
+  end
+
+  defp default_a11y(%__MODULE__{draggable: true}) do
+    %{role: "slider"}
+  end
+
+  defp default_a11y(_group), do: nil
 
   defp encode_transforms(map, nil), do: map
   defp encode_transforms(map, []), do: map
