@@ -263,9 +263,6 @@ defmodule Plushie.Automation.Session do
   def unregister_effect_stub(%__MODULE__{runtime: runtime}, kind),
     do: Plushie.Runtime.unregister_effect_stub(runtime, kind)
 
-  @spec get_diagnostics(session :: t()) :: [Plushie.Event.SystemEvent.t()]
-  def get_diagnostics(%__MODULE__{runtime: runtime}), do: Plushie.Runtime.get_diagnostics(runtime)
-
   defp resolve_targets(opts) do
     case Keyword.fetch(opts, :instance) do
       {:ok, instance} ->

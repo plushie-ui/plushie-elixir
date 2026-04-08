@@ -2239,59 +2239,77 @@ defmodule Plushie.RuntimeTest do
   describe "prop validation diagnostics" do
     @describetag capture_log: true
 
-    test "diagnostic events are accumulated and retrievable" do
+    test "diagnostic events emit telemetry" do
+      test_pid = self()
+      ref = make_ref()
+
+      :telemetry.attach(
+        "diag-test-#{inspect(ref)}",
+        [:plushie, :diagnostic],
+        fn _event, _measurements, metadata, _ ->
+          send(test_pid, {:diag, metadata})
+        end,
+        nil
+      )
+
       {runtime, _bridge} = start_runtime(SimpleApp)
       await_initial_render(runtime)
 
-      # Simulate the renderer sending a diagnostic event.
       diag_event = %Plushie.Event.SystemEvent{
         type: :diagnostic,
-        value: %{"id" => "btn", "message" => "unknown prop: foo"}
+        tag: "unknown_prop",
+        value: %{level: "warning", code: "unknown_prop", message: "unknown prop: foo"},
+        id: "canvas1",
+        window_id: "main"
       }
 
       send(runtime, {:renderer_event, diag_event})
       Plushie.Runtime.sync(runtime)
 
-      diagnostics = Plushie.Runtime.get_diagnostics(runtime)
-      assert length(diagnostics) == 1
-      [diag] = diagnostics
-      assert diag.type == :diagnostic
-      assert diag.value["message"] == "unknown prop: foo"
+      assert_receive {:diag, metadata}
+      assert metadata.code == "unknown_prop"
+      assert metadata.message == "unknown prop: foo"
+      assert metadata.id == "canvas1"
+      assert metadata.window_id == "main"
+
+      :telemetry.detach("diag-test-#{inspect(ref)}")
     end
 
-    test "get_diagnostics clears the accumulated list" do
-      {runtime, _bridge} = start_runtime(SimpleApp)
-      await_initial_render(runtime)
+    test "multiple diagnostics each emit telemetry" do
+      test_pid = self()
+      ref = make_ref()
 
-      send(
-        runtime,
-        {:renderer_event, %Plushie.Event.SystemEvent{type: :diagnostic, value: %{"id" => "x"}}}
+      :telemetry.attach(
+        "diag-multi-#{inspect(ref)}",
+        [:plushie, :diagnostic],
+        fn _event, _measurements, metadata, _ ->
+          send(test_pid, {:diag, metadata})
+        end,
+        nil
       )
 
-      Plushie.Runtime.sync(runtime)
-
-      assert length(Plushie.Runtime.get_diagnostics(runtime)) == 1
-      # Second call should return empty (cleared by first call).
-      assert Plushie.Runtime.get_diagnostics(runtime) == []
-    end
-
-    test "multiple diagnostics accumulate in order" do
       {runtime, _bridge} = start_runtime(SimpleApp)
       await_initial_render(runtime)
 
       for i <- 1..3 do
         send(
           runtime,
-          {:renderer_event, %Plushie.Event.SystemEvent{type: :diagnostic, value: %{"n" => i}}}
+          {:renderer_event,
+           %Plushie.Event.SystemEvent{
+             type: :diagnostic,
+             value: %{n: i, level: "info", message: "diag #{i}"}
+           }}
         )
       end
 
       Plushie.Runtime.sync(runtime)
 
-      diagnostics = Plushie.Runtime.get_diagnostics(runtime)
-      assert length(diagnostics) == 3
-      ns = Enum.map(diagnostics, fn d -> d.value["n"] end)
-      assert ns == [1, 2, 3]
+      for i <- 1..3 do
+        assert_receive {:diag, %{message: msg}}
+        assert msg == "diag #{i}"
+      end
+
+      :telemetry.detach("diag-multi-#{inspect(ref)}")
     end
   end
 

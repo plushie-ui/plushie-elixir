@@ -489,18 +489,18 @@ defmodule Plushie.Test.Helpers do
   @doc """
   Asserts that no prop validation diagnostics have been emitted.
 
-  Returns `:ok` if no diagnostics are pending. Raises
-  `ExUnit.AssertionError` with the diagnostic details otherwise.
-  Clears the diagnostic list after checking.
+  Checks the telemetry-based diagnostic collector set up by
+  `Plushie.Test.Case`. Raises `ExUnit.AssertionError` with the
+  diagnostic details if any diagnostics were received.
   """
   @spec assert_no_diagnostics() :: :ok
   def assert_no_diagnostics do
-    diagnostics = Session.get_diagnostics(session())
+    diagnostics = Plushie.Test.DiagnosticCollector.flush()
 
     if diagnostics != [] do
       details =
         Enum.map_join(diagnostics, "\n", fn d ->
-          "  - #{inspect(d.data)}"
+          "  - [#{d[:level]}] #{d[:code]}: #{d[:message]}"
         end)
 
       raise ExUnit.AssertionError,

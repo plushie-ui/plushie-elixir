@@ -82,7 +82,6 @@ defmodule Plushie.Runtime do
             consecutive_view_errors: 0,
             widget_handlers: %{},
             widget_events: %{},
-            diagnostics: [],
             pending_stub_acks: %{},
             pending_interact: nil,
             pending_await_async: %{},
@@ -114,7 +113,6 @@ defmodule Plushie.Runtime do
            coalesce_timer: reference() | nil,
            consecutive_errors: non_neg_integer(),
            consecutive_view_errors: non_neg_integer(),
-           diagnostics: [Plushie.Event.SystemEvent.t()],
            pending_stub_acks: %{String.t() => GenServer.from()},
            widget_handlers: %{
              {String.t() | nil, String.t()} => %{
@@ -308,19 +306,6 @@ defmodule Plushie.Runtime do
   end
 
   @doc """
-  Returns and clears accumulated prop validation diagnostics.
-
-  The renderer emits diagnostic events when `validate_props` is enabled.
-  These are intercepted by the runtime (never delivered to `update/2`)
-  and accumulated in state. This function atomically retrieves and
-  clears the list.
-  """
-  @spec get_diagnostics(GenServer.server()) :: [Plushie.Event.SystemEvent.t()]
-  def get_diagnostics(runtime) do
-    GenServer.call(runtime, :get_diagnostics)
-  end
-
-  @doc """
   Returns the ID of the currently focused widget, or `nil`.
 
   Focus is tracked automatically from renderer status events.
@@ -433,10 +418,6 @@ defmodule Plushie.Runtime do
   def handle_call({:find_node_by, fun}, _from, state) do
     result = Plushie.Tree.find_all(state.tree, fun) |> List.first()
     {:reply, result, state}
-  end
-
-  def handle_call(:get_diagnostics, _from, state) do
-    {:reply, Enum.reverse(state.diagnostics), %{state | diagnostics: []}}
   end
 
   def handle_call(:get_focused, _from, state) do
@@ -558,7 +539,17 @@ defmodule Plushie.Runtime do
       _ -> Logger.warning(msg)
     end
 
-    {:noreply, %{state | diagnostics: [event | state.diagnostics]}}
+    :telemetry.execute([:plushie, :diagnostic], %{count: 1}, %{
+      level: level,
+      code: code,
+      message: event.value[:message],
+      id: event.id,
+      window_id: event.window_id,
+      element_id: event.value[:element_id],
+      event: event
+    })
+
+    {:noreply, state}
   end
 
   def handle_info({:renderer_event, {:effect_stub_ack, kind}}, state) do
@@ -1525,7 +1516,11 @@ defmodule Plushie.Runtime do
     {:ok, normalized, result_ctx}
   catch
     kind, reason ->
-      :telemetry.execute([:plushie, :runtime, :view_error], %{count: 1}, %{app: app})
+      :telemetry.execute([:plushie, :runtime, :view_error], %{count: 1}, %{
+        app: app,
+        kind: kind,
+        reason: reason
+      })
 
       Logger.error("""
       plushie runtime: view/1 #{kind}: #{Exception.format(kind, reason, __STACKTRACE__)}
@@ -1777,7 +1772,9 @@ defmodule Plushie.Runtime do
     kind, reason ->
       :telemetry.execute([:plushie, :runtime, :update_error], %{count: 1}, %{
         app: app,
-        event: event
+        event: event,
+        kind: kind,
+        reason: reason
       })
 
       # Rate-limit logging: normal up to 10, debug up to 100, suppress with

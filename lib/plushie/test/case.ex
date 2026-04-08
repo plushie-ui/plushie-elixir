@@ -43,26 +43,28 @@ defmodule Plushie.Test.Case do
       import Plushie.Test.Helpers
 
       setup _context do
+        Plushie.Test.DiagnosticCollector.attach()
         session = Session.start(unquote(app))
         Process.put(:plushie_test_session, session)
 
         on_exit(fn ->
+          diagnostics = Plushie.Test.DiagnosticCollector.flush()
+          Plushie.Test.DiagnosticCollector.detach()
+
           try do
-            diagnostics = Session.get_diagnostics(session)
-
-            if diagnostics != [] do
-              details =
-                Enum.map_join(diagnostics, "\n", fn d ->
-                  "  - #{inspect(d.data)}"
-                end)
-
-              raise ExUnit.AssertionError,
-                message: "Prop validation diagnostics detected during test:\n#{details}"
-            end
-
             Session.stop(session)
           catch
-            _, _ -> :ok
+            :exit, _ -> :ok
+          end
+
+          if diagnostics != [] do
+            details =
+              Enum.map_join(diagnostics, "\n", fn d ->
+                "  - [#{d[:level]}] #{d[:code]}: #{d[:message]}"
+              end)
+
+            raise ExUnit.AssertionError,
+              message: "Prop validation diagnostics detected during test:\n#{details}"
           end
         end)
 

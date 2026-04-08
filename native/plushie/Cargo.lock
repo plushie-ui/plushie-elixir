@@ -3472,7 +3472,7 @@ dependencies = [
 
 [[package]]
 name = "plushie_renderer"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "plushie-ext",
  "plushie-renderer",

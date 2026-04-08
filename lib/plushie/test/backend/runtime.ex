@@ -170,9 +170,6 @@ defmodule Plushie.Test.Backend.Runtime do
   def unregister_effect_stub(pid, kind),
     do: GenServer.call(pid, {:unregister_effect_stub, kind}, 10_000)
 
-  def get_diagnostics(pid),
-    do: GenServer.call(pid, :get_diagnostics)
-
   defp do_interact(pid, action, selector, payload, opts \\ []) do
     explicit_window = Keyword.get(opts, :window)
 
@@ -394,11 +391,6 @@ defmodule Plushie.Test.Backend.Runtime do
 
   def handle_call({:unregister_effect_stub, kind}, _from, state) do
     result = Plushie.Runtime.unregister_effect_stub(state.runtime, kind)
-    {:reply, result, state}
-  end
-
-  def handle_call(:get_diagnostics, _from, state) do
-    result = Plushie.Runtime.get_diagnostics(state.runtime)
     {:reply, result, state}
   end
 

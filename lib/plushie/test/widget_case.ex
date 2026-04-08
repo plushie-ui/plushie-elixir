@@ -80,6 +80,8 @@ defmodule Plushie.Test.WidgetCase do
 
   @doc false
   def init_widget(widget_module, widget_id, widget_opts) do
+    Plushie.Test.DiagnosticCollector.attach()
+
     session =
       Session.start(Plushie.Test.WidgetCase.HarnessApp,
         init_arg: [widget_module: widget_module, widget_id: widget_id, widget_opts: widget_opts]
@@ -88,22 +90,23 @@ defmodule Plushie.Test.WidgetCase do
     Process.put(:plushie_test_session, session)
 
     on_exit(fn ->
+      diagnostics = Plushie.Test.DiagnosticCollector.flush()
+      Plushie.Test.DiagnosticCollector.detach()
+
       try do
-        diagnostics = Session.get_diagnostics(session)
-
-        if diagnostics != [] do
-          details =
-            Enum.map_join(diagnostics, "\n", fn d ->
-              "  - #{inspect(d.data)}"
-            end)
-
-          raise ExUnit.AssertionError,
-            message: "Prop validation diagnostics detected during test:\n#{details}"
-        end
-
         Session.stop(session)
       catch
         :exit, _ -> :ok
+      end
+
+      if diagnostics != [] do
+        details =
+          Enum.map_join(diagnostics, "\n", fn d ->
+            "  - [#{d[:level]}] #{d[:code]}: #{d[:message]}"
+          end)
+
+        raise ExUnit.AssertionError,
+          message: "Prop validation diagnostics detected during test:\n#{details}"
       end
     end)
 
