@@ -161,19 +161,20 @@ defmodule Plushie.Runtime.Subscriptions do
           Process.cancel_timer(ref)
 
         {:renderer, type, _max_rate} ->
-          if bridge,
-            do:
-              Plushie.Bridge.send_unsubscribe(
-                bridge,
-                Atom.to_string(type),
-                Atom.to_string(type)
-              )
+          if bridge do
+            {_type, window_id} = key
+            tag = unsubscribe_wire_tag(type, window_id)
+            Plushie.Bridge.send_unsubscribe(bridge, Atom.to_string(type), tag)
+          end
 
         _ ->
           :ok
       end
     end)
   end
+
+  defp unsubscribe_wire_tag(type, nil), do: Atom.to_string(type)
+  defp unsubscribe_wire_tag(type, window_id), do: "#{type}:#{window_id}"
 
   defp start_subscription(
          %Plushie.Subscription{type: :every, interval: interval, tag: tag},
@@ -221,9 +222,15 @@ defmodule Plushie.Runtime.Subscriptions do
     {:renderer, type, max_rate}
   end
 
-  # Derive the wire tag sent to the renderer. For renderer subs, use the
-  # kind atom as the tag (stable identifier for the renderer protocol).
-  defp renderer_wire_tag(%Plushie.Subscription{type: type}) do
+  # Derive the wire tag sent to the renderer. The tag is the stable
+  # identity for this subscription entry in the renderer's storage.
+  # Window-scoped subscriptions include the window_id so they don't
+  # collide with global subscriptions of the same kind.
+  defp renderer_wire_tag(%Plushie.Subscription{type: type, window_id: nil}) do
     Atom.to_string(type)
+  end
+
+  defp renderer_wire_tag(%Plushie.Subscription{type: type, window_id: window_id}) do
+    "#{type}:#{window_id}"
   end
 end
