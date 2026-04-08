@@ -1188,33 +1188,33 @@ defmodule Plushie.UITest do
   end
 
   describe "table id do...end" do
-    test "collects children from do block" do
+    test "sets options from do block" do
       node =
         table "users" do
-          text("custom footer")
+          header_text_size(14)
+          row_text_size(12)
         end
 
       assert node.id == "users"
       assert node.type == "table"
-      assert length(node.children) == 1
-      assert hd(node.children).props[:content] == "custom footer"
+      assert node.props[:header_text_size] == 14
+      assert node.props[:row_text_size] == 12
     end
   end
 
   describe "table id, opts do...end" do
-    test "has both props and children" do
+    test "merges keyword opts with block opts" do
       cols = [%{key: "name", label: "Name", width: 200}]
       rows = [%{"name" => "Alice"}]
 
       node =
         table "users", columns: cols, rows: rows do
-          text("row template")
+          header_text_size(14)
         end
 
       assert node.props[:columns] == cols
       assert node.props[:rows] == rows
-      assert length(node.children) == 1
-      assert hd(node.children).props[:content] == "row template"
+      assert node.props[:header_text_size] == 14
     end
   end
 

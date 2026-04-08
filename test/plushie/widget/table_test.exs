@@ -244,7 +244,6 @@ defmodule Plushie.Widget.TableTest do
       node = Table.new("tbl1") |> Table.build()
       assert node.id == "tbl1"
       assert node.type == "table"
-      assert node.children == []
     end
 
     test "includes non-nil props" do

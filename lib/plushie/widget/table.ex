@@ -133,7 +133,7 @@ defmodule Plushie.Widget.Table do
 
   @a11y_defaults %{role: :table}
 
-  widget :table, container: true do
+  widget :table do
     field :columns, {:list, :map}, doc: "Column definitions. Maps with `:key`, `:label`, etc."
 
     field :rows, {:list, :map},

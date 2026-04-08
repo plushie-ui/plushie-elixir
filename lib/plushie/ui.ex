@@ -2095,15 +2095,13 @@ defmodule Plushie.UI do
   - `:columns` -- list of column descriptors (`%{key, label, width}`)
   - `:rows` -- list of row data maps
 
-  The `do` block can contain row content templates (e.g. for custom cell
-  rendering). Children from the block are stored in `:children`.
-
   ## Examples
 
       table("users", columns: cols, rows: data)
 
       table "users", columns: cols, rows: data do
-        text("custom footer")
+        header_text_size 14
+        row_text_size 12
       end
   """
   defmacro table(id, opts_or_do \\ []) do
@@ -2111,28 +2109,23 @@ defmodule Plushie.UI do
       [do: block] ->
         option_keys = Plushie.Widget.Table.__field_keys__()
         option_types = Plushie.Widget.Table.__field_types__()
-        block = container_scope(block, option_keys, option_types, "table")
-        exprs = block_to_exprs(block)
+        pairs = interpret_block(block, option_types)
+        validate_option_keys!(pairs, option_keys, "table", __CALLER__)
+        opts_ast = pairs_to_keyword_ast(pairs)
 
         quote do
-          items =
-            unquote(build_list_accumulator(exprs))
-            |> :lists.reverse()
-            |> List.flatten()
-            |> Enum.reject(&is_nil/1)
-
-          Plushie.UI.__build_container__(Plushie.Widget.Table, unquote(id), [], items, nil)
+          Plushie.Widget.Build.build_node(unquote(opts_ast), fn widget_opts ->
+            Plushie.Widget.Table.new(unquote(id), widget_opts)
+            |> Plushie.Widget.Table.build()
+          end)
         end
 
       opts ->
         quote do
-          Plushie.UI.__build_container__(
-            Plushie.Widget.Table,
-            unquote(id),
-            unquote(opts),
-            [],
-            nil
-          )
+          Plushie.Widget.Build.build_node(unquote(opts), fn widget_opts ->
+            Plushie.Widget.Table.new(unquote(id), widget_opts)
+            |> Plushie.Widget.Table.build()
+          end)
         end
     end
   end
@@ -2141,17 +2134,18 @@ defmodule Plushie.UI do
   defmacro table(id, opts, do: block) do
     option_keys = Plushie.Widget.Table.__field_keys__()
     option_types = Plushie.Widget.Table.__field_types__()
-    block = container_scope(block, option_keys, option_types, "table")
-    exprs = block_to_exprs(block)
+    pairs = interpret_block(block, option_types)
+    validate_option_keys!(pairs, option_keys, "table", __CALLER__)
+    opts_ast = pairs_to_keyword_ast(pairs)
 
     quote do
-      items =
-        unquote(build_list_accumulator(exprs))
-        |> :lists.reverse()
-        |> List.flatten()
-        |> Enum.reject(&is_nil/1)
-
-      Plushie.UI.__build_container__(Plushie.Widget.Table, unquote(id), unquote(opts), items, nil)
+      Plushie.Widget.Build.build_node(
+        Keyword.merge(unquote(opts), unquote(opts_ast)),
+        fn widget_opts ->
+          Plushie.Widget.Table.new(unquote(id), widget_opts)
+          |> Plushie.Widget.Table.build()
+        end
+      )
     end
   end
 
