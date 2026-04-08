@@ -1410,7 +1410,8 @@ defmodule Plushie.Runtime do
         else
           ops =
             :telemetry.span([:plushie, :diff], %{app: app}, fn ->
-              {Plushie.Tree.diff(old_tree, new_tree), %{}}
+              result = Plushie.Tree.diff(old_tree, new_tree)
+              {result, %{op_count: length(result)}}
             end)
 
           if ops != [] do
@@ -1510,7 +1511,14 @@ defmodule Plushie.Runtime do
 
     {normalized, result_ctx} =
       :telemetry.span([:plushie, :normalize], %{app: app}, fn ->
-        {Plushie.Tree.normalize_with_caches(raw_tree, ctx), %{}}
+        {tree, nctx} = Plushie.Tree.normalize_with_caches(raw_tree, ctx)
+
+        {{tree, nctx},
+         %{
+           window_count: length(nctx.window_ids),
+           widget_count: map_size(nctx.widget_handlers),
+           memo_count: map_size(nctx.memo)
+         }}
       end)
 
     {:ok, normalized, result_ctx}

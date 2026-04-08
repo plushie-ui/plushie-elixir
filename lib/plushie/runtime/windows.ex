@@ -34,6 +34,12 @@ defmodule Plushie.Runtime.Windows do
   """
   @spec sync_windows(map(), map() | nil, MapSet.t()) :: map()
   def sync_windows(state, tree, new_windows) do
+    :telemetry.execute([:plushie, :windows, :sync], %{
+      window_count: MapSet.size(new_windows),
+      opened: MapSet.size(MapSet.difference(new_windows, state.windows)),
+      closed: MapSet.size(MapSet.difference(state.windows, new_windows))
+    })
+
     current_windows = state.windows
 
     # Open new windows
