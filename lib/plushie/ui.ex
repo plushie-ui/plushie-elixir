@@ -254,6 +254,14 @@ defmodule Plushie.UI do
     # Merge: keyword opts from call line + block opts (block wins on conflict)
     merged_opts = Keyword.merge(clean_opts(opts), block_opts)
 
+    # Block children take precedence over keyword children when present.
+    # An empty block does NOT suppress keyword children because blocks
+    # can be used purely for prop declarations (padding, spacing, etc.)
+    # while children come from the keyword:
+    #
+    #   column(children: dynamic_items) do
+    #     padding 10
+    #   end
     resolved_children =
       if children != [] do
         children
@@ -664,7 +672,7 @@ defmodule Plushie.UI do
 
         grid columns: 3, spacing: 8 do
           for item <- items do
-            text(item.name)
+            text(item.id, item.name)
           end
         end
     """,
@@ -777,7 +785,7 @@ defmodule Plushie.UI do
 
         scrollable "feed" do
           for item <- items do
-            text(item.title)
+            text(item.id, item.title)
           end
         end
     """,

@@ -80,7 +80,9 @@ end
 
 Auto-IDs use the format `"auto:ModuleName:line"` (e.g.
 `"auto:MyApp.Home:42"`). They are stable across re-renders as long as
-the code doesn't move.
+the code doesn't move. Because auto-IDs are based on source position,
+dynamic lists (`for` comprehensions, `Enum.map`) must use explicit IDs
+to avoid sibling collisions.
 
 ### Widgets with auto-ID support
 
