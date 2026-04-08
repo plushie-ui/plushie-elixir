@@ -5,6 +5,8 @@ defmodule Plushie.Widget.Toggler do
 
   use Plushie.Widget
 
+  @a11y_defaults %{role: :switch, label_from: :label}
+
   widget :toggler do
     field :is_toggled, :boolean, option: false, doc: "Whether the toggler is on."
     field :label, :string, doc: "Text label next to the toggler."
@@ -19,6 +21,8 @@ defmodule Plushie.Widget.Toggler do
     field :text_alignment, Plushie.Type.Alignment, doc: "Horizontal label alignment."
     field :style, Plushie.Type.Style, doc: "Named style preset."
     field :disabled, :boolean, doc: "When true, cannot be toggled."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
 
     positional [:is_toggled]
   end

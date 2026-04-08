@@ -31,6 +31,8 @@ defmodule Plushie.Widget.ComboBox do
 
   @before_compile Plushie.Widget.ComboBox.ValueAlias
 
+  @a11y_defaults %{role: :combo_box, has_popup: "listbox", label_from: :placeholder}
+
   widget :combo_box do
     field :options, {:list, :string}, option: false, doc: "Available choices."
     field :selected, :string, doc: "Currently selected value. Also accepts `:value` as alias."
@@ -49,6 +51,8 @@ defmodule Plushie.Widget.ComboBox do
     field :ellipsis, :string, doc: "Text ellipsis: \"none\", \"start\", \"middle\", or \"end\"."
     field :menu_style, :map, doc: "Inline style for the dropdown menu."
     field :style, Plushie.Type.Style, doc: "Named preset or custom `StyleMap`."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
 
     positional [:options]
   end

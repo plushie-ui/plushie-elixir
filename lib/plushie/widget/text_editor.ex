@@ -8,6 +8,8 @@ defmodule Plushie.Widget.TextEditor do
 
   use Plushie.Widget
 
+  @a11y_defaults %{role: :multiline_text_input, label_from: :placeholder}
+
   widget :text_editor do
     field :content, :string, doc: "Initial text content (seeds the editor cache)."
     field :placeholder, :string, doc: "Placeholder text shown when editor is empty."
@@ -30,6 +32,8 @@ defmodule Plushie.Widget.TextEditor do
     field :key_bindings, {:list, :map}, doc: "Declarative key binding rules for the editor."
     field :placeholder_color, Plushie.Type.Color, doc: "Placeholder text color."
     field :selection_color, Plushie.Type.Color, doc: "Text selection highlight color."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
   end
 
   event :edit, value: :string, doc: "Emitted on content changes."

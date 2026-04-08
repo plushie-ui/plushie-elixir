@@ -10,6 +10,8 @@ defmodule Plushie.Widget.Window do
 
   use Plushie.Widget
 
+  @a11y_defaults %{role: :window}
+
   widget :window, container: :single do
     field :title, :string, doc: "Window title bar text."
     field :size, :any, doc: "Initial window size as `{width, height}` tuple."
@@ -33,5 +35,7 @@ defmodule Plushie.Widget.Window do
 
     field :scale_factor, :float, doc: "Window scale factor override."
     field :theme, :any, doc: "Per-window theme: built-in atom, `:system`, or custom palette."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
   end
 end

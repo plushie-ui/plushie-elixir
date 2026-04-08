@@ -5,6 +5,8 @@ defmodule Plushie.Widget.Column do
 
   use Plushie.Widget
 
+  @a11y_defaults %{role: :generic_container}
+
   widget :column, container: true do
     field :spacing, :float, doc: "Vertical space between children in pixels. Default: 0."
     field :padding, Plushie.Type.Padding, doc: "Padding inside the column."
@@ -17,5 +19,7 @@ defmodule Plushie.Widget.Column do
 
     field :clip, :boolean, doc: "Clip children that overflow. Default: false."
     field :wrap, :boolean, doc: "Wrap children to next column when they overflow. Default: false."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
   end
 end

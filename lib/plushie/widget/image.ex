@@ -5,6 +5,8 @@ defmodule Plushie.Widget.Image do
 
   use Plushie.Widget
 
+  @a11y_defaults %{role: :image}
+
   widget :image do
     field :source, :any,
       option: false,
@@ -23,6 +25,8 @@ defmodule Plushie.Widget.Image do
     field :alt, :string, doc: "Accessible label for the image."
     field :description, :string, doc: "Extended accessible description for the image."
     field :decorative, :boolean, doc: "When true, hides the image from assistive technology."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
 
     positional [:source]
   end

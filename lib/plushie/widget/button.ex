@@ -33,6 +33,8 @@ defmodule Plushie.Widget.Button do
 
   @before_compile Plushie.Widget.Button.EnabledAlias
 
+  @a11y_defaults %{role: :button, label_from: :label}
+
   widget :button do
     field :label, :string, option: false, doc: "Text label displayed on the button."
     field :width, Plushie.Type.Length, doc: "Button width. Default: shrink."
@@ -41,6 +43,8 @@ defmodule Plushie.Widget.Button do
     field :clip, :boolean, doc: "Clip child content that overflows. Default: false."
     field :style, Plushie.Type.Style, doc: "Named preset or custom `StyleMap`."
     field :disabled, :boolean, doc: "Disable the button (no click events). Default: false."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
 
     positional [:label]
   end

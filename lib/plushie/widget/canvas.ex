@@ -36,6 +36,8 @@ defmodule Plushie.Widget.Canvas do
 
   @before_compile Plushie.Widget.Canvas.Extras
 
+  @a11y_defaults %{role: :canvas}
+
   widget :canvas do
     field :layers, :map, doc: "Named layers of shape descriptors."
     field :shapes, {:list, :map}, doc: "Flat list of shapes (unlayered shorthand)."
@@ -51,5 +53,7 @@ defmodule Plushie.Widget.Canvas do
     field :description, :string, doc: "Extended accessible description."
     field :role, :string, doc: "Accessible role (e.g. \"radiogroup\", \"toolbar\")."
     field :arrow_mode, :string, doc: "Arrow key navigation mode: \"wrap\", \"clamp\", etc."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
   end
 end

@@ -39,6 +39,8 @@ defmodule Plushie.Widget.Tooltip do
 
   @before_compile Plushie.Widget.Tooltip.TipNew
 
+  @a11y_defaults %{role: :tooltip}
+
   widget :tooltip, container: true do
     field :tip, :string, option: false, doc: "Tooltip text."
 
@@ -52,5 +54,7 @@ defmodule Plushie.Widget.Tooltip do
 
     field :delay, :integer, doc: "Delay in milliseconds before showing."
     field :style, Plushie.Type.Style, doc: "Named style preset or custom `StyleMap`."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
   end
 end

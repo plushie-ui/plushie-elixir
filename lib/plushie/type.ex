@@ -65,12 +65,32 @@ defmodule Plushie.Type do
   @callback field_options() :: [atom()]
   @callback constrain_guard(Macro.t(), keyword()) :: [Macro.t()]
 
+  @doc """
+  Merges a default value with a user-provided override.
+
+  For most types, the override replaces the default entirely. Types
+  with internal structure (like A11y) can implement field-level merge
+  where only non-nil override fields replace the corresponding defaults.
+  """
+  @callback merge(default :: term(), override :: term()) :: term()
+
+  @doc """
+  Resolves derived values after all widget props are set.
+
+  Called during to_node with the full props map. Types that derive
+  values from other props (e.g., A11y deriving label from a widget's
+  :label prop) implement this. Most types return the value unchanged.
+  """
+  @callback resolve(value :: term(), props :: map()) :: term()
+
   @optional_callbacks [
     guard: 1,
     encode: 1,
     fields: 0,
     field_options: 0,
-    constrain_guard: 2
+    constrain_guard: 2,
+    merge: 2,
+    resolve: 2
   ]
 
   # -- resolve/1 ---------------------------------------------------------------
@@ -110,6 +130,34 @@ defmodule Plushie.Type do
   @spec shortcut?(atom()) :: boolean()
   def shortcut?(name) when is_atom(name) do
     is_map_key(@primitive_shortcuts, name)
+  end
+
+  @doc """
+  Merges a default value with a user override using the type's merge semantics.
+
+  Falls back to simple replacement if the type module doesn't implement merge/2.
+  """
+  @spec merge_value(module(), term(), term()) :: term()
+  def merge_value(type_mod, default, override) when is_atom(type_mod) do
+    if function_exported?(type_mod, :merge, 2) do
+      type_mod.merge(default, override)
+    else
+      override
+    end
+  end
+
+  @doc """
+  Resolves derived values using the type's resolve semantics.
+
+  Falls back to identity if the type module doesn't implement resolve/2.
+  """
+  @spec resolve_value(module(), term(), map()) :: term()
+  def resolve_value(type_mod, value, props) when is_atom(type_mod) do
+    if function_exported?(type_mod, :resolve, 2) do
+      type_mod.resolve(value, props)
+    else
+      value
+    end
   end
 
   # -- Event field casting -----------------------------------------------------
@@ -307,19 +355,39 @@ defmodule Plushie.Type do
     type_union = Module.get_attribute(env.module, :_type_union)
     union_variants = Module.get_attribute(env.module, :_type_union_variants) |> Enum.reverse()
 
-    cond do
-      type_union ->
-        generate_union(union_variants, type_enum)
+    type_code =
+      cond do
+        type_union ->
+          generate_union(union_variants, type_enum)
 
-      type_enum != nil ->
-        generate_enum(type_enum)
+        type_enum != nil ->
+          generate_enum(type_enum)
 
-      type_fields != [] ->
-        generate_struct(type_fields, env.module)
+        type_fields != [] ->
+          generate_struct(type_fields, env.module)
 
-      true ->
-        # Manual implementation, nothing to generate
-        quote do: :ok
+        true ->
+          # Manual implementation, nothing to generate
+          quote do: :ok
+      end
+
+    # Default merge/resolve implementations unless the module defined its own.
+    defaults =
+      quote do
+        unless Module.defines?(__MODULE__, {:merge, 2}) do
+          @impl Plushie.Type
+          def merge(_default, override), do: override
+        end
+
+        unless Module.defines?(__MODULE__, {:resolve, 2}) do
+          @impl Plushie.Type
+          def resolve(value, _props), do: value
+        end
+      end
+
+    quote do
+      unquote(type_code)
+      unquote(defaults)
     end
   end
 

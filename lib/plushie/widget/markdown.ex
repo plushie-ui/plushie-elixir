@@ -7,6 +7,8 @@ defmodule Plushie.Widget.Markdown do
 
   use Plushie.Widget
 
+  @a11y_defaults %{role: :document}
+
   widget :markdown do
     field :content, :string,
       option: false,
@@ -21,6 +23,8 @@ defmodule Plushie.Widget.Markdown do
     field :spacing, :float, doc: "Spacing between markdown elements in pixels."
     field :link_color, Plushie.Type.Color, doc: "Color to override the default link color."
     field :code_theme, :string, doc: "Syntax highlighting theme for code blocks."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
 
     positional [:content]
   end

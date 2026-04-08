@@ -65,11 +65,22 @@ defmodule Plushie.Automation.Selector do
     end
   end
 
-  def find(tree, {:role, role}) do
+  def find(tree, {:role, role}) when is_binary(role) do
+    role_atom = String.to_existing_atom(role)
+
     tree
-    |> Plushie.Tree.find_all(fn node -> a11y_field(node, :role) == role end)
+    |> Plushie.Tree.find_all(fn node ->
+      node_role = a11y_field(node, :role)
+      node_role == role or node_role == role_atom
+    end)
     |> List.first()
     |> maybe_wrap()
+  rescue
+    ArgumentError -> nil
+  end
+
+  def find(tree, {:role, role}) when is_atom(role) do
+    find(tree, {:role, Atom.to_string(role)})
   end
 
   def find(tree, {:label, label}) do

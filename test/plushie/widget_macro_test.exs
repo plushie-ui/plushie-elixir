@@ -23,6 +23,7 @@ defmodule Plushie.WidgetMacroTest do
     field(:width, Plushie.Type.Length)
     field(:height, Plushie.Type.Length)
     field(:label, :string)
+    field(:a11y, Plushie.Type.A11y, default: %{role: :meter})
 
     rust_crate("native/my_gauge")
     rust_constructor("my_gauge::GaugeWidget::new()")
@@ -56,6 +57,7 @@ defmodule Plushie.WidgetMacroTest do
     field(:label, :string)
     field(:color, Plushie.Type.Color, default: :red)
     field(:size, :float, default: 14)
+    field(:a11y, Plushie.Type.A11y, default: %{role: :badge})
   end
 
   # ---------------------------------------------------------------------------
@@ -459,9 +461,10 @@ defmodule Plushie.WidgetMacroTest do
       assert node.props[:a11y].label == "CPU"
     end
 
-    test "without a11y prop, no a11y key in props" do
+    test "a11y has per-widget default in props" do
       node = BadgeWidget.new("b1") |> BadgeWidget.build()
-      refute Map.has_key?(node.props, :a11y)
+      assert Map.has_key?(node.props, :a11y)
+      assert node.props[:a11y][:role] == :badge
     end
   end
 
@@ -575,6 +578,8 @@ defmodule Plushie.WidgetMacroTest do
 
             widget :first_name
             widget :second_name
+
+            field :label, :string
           end
           """)
         end)
@@ -621,16 +626,16 @@ defmodule Plushie.WidgetMacroTest do
       end
     end
 
-    test "raises on field named :a11y" do
-      assert_raise CompileError, ~r/field name :a11y is reserved/, fn ->
-        Code.compile_string("""
-        defmodule TestReservedA11y do
-          use Plushie.Widget
-          widget :bad
-          field :a11y, :map
-        end
-        """)
+    test "a11y is not a reserved field name" do
+      Code.compile_string("""
+      defmodule TestA11yField do
+        use Plushie.Widget
+        widget :a11y_test
+        field :a11y, Plushie.Type.A11y, default: %{role: :generic_container}
       end
+      """)
+
+      assert :a11y in TestA11yField.__prop_names__()
     end
   end
 
@@ -720,7 +725,11 @@ defmodule Plushie.WidgetMacroTest do
     test "struct fields without defaults are nil" do
       widget = BadgeWidget.new("b1")
       assert widget.label == nil
-      assert widget.a11y == nil
+    end
+
+    test "a11y field has per-widget default" do
+      widget = BadgeWidget.new("b1")
+      assert widget.a11y == %{role: :badge}
     end
   end
 

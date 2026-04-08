@@ -33,6 +33,8 @@ defmodule Plushie.Widget.Overlay do
 
   @before_compile Plushie.Widget.Overlay.ChildValidation
 
+  @a11y_defaults %{role: :generic_container}
+
   widget :overlay, container: true do
     field :position, :atom, doc: "Overlay position: `:below`, `:above`, `:left`, `:right`."
     field :gap, :float, doc: "Space between anchor and overlay in pixels. Default: 0."
@@ -44,5 +46,7 @@ defmodule Plushie.Widget.Overlay do
       doc: "Cross-axis alignment relative to anchor: `:start`, `:center`, `:end`."
 
     field :width, Plushie.Type.Length, doc: "Width of the overlay node."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
   end
 end

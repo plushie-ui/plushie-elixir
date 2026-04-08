@@ -154,7 +154,7 @@ defmodule Plushie.UIParityTest do
     test "empty grid has correct shape" do
       node = H.grid_empty()
       assert node.type == "grid"
-      assert node.props == %{}
+      assert Map.drop(node.props, [:a11y]) == %{}
       assert node.children == []
     end
 
@@ -296,7 +296,7 @@ defmodule Plushie.UIParityTest do
       node = H.pane_grid_empty()
       assert node.type == "pane_grid"
       assert node.id == "pg1"
-      assert node.props == %{}
+      assert Map.drop(node.props, [:a11y]) == %{}
       assert node.children == []
     end
 
@@ -312,7 +312,7 @@ defmodule Plushie.UIParityTest do
       node = H.rich_text_empty()
       assert node.type == "rich_text"
       assert node.id == "rt1"
-      assert node.props == %{}
+      assert Map.drop(node.props, [:a11y]) == %{}
       assert node.children == []
     end
 

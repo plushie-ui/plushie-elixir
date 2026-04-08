@@ -64,6 +64,8 @@ defmodule Plushie.Widget.Container do
 
   @before_compile Plushie.Widget.Container.Extras
 
+  @a11y_defaults %{role: :generic_container}
+
   widget :container, container: true do
     field :padding, Plushie.Type.Padding, doc: "Padding inside the container."
     field :width, Plushie.Type.Length, doc: "Container width. Default: shrink."
@@ -87,6 +89,8 @@ defmodule Plushie.Widget.Container do
       doc: "Shadow specification: `%{color, offset, blur_radius}`."
 
     field :style, Plushie.Type.Style, doc: "Named preset or custom `StyleMap`."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
   end
 
   @presets [

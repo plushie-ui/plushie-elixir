@@ -5,6 +5,8 @@ defmodule Plushie.Widget.VerticalSlider do
 
   use Plushie.Widget
 
+  @a11y_defaults %{role: :slider}
+
   widget :vertical_slider do
     field :range, Plushie.Type.Range, option: false, doc: "`{min, max}` numeric range."
     field :value, :float, option: false, doc: "Current slider value."
@@ -17,6 +19,8 @@ defmodule Plushie.Widget.VerticalSlider do
     field :rail_width, :float, doc: "Rail thickness in pixels."
     field :style, Plushie.Type.Style, doc: "Named preset or custom `StyleMap`."
     field :label, :string, doc: "Accessible label for the slider."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
 
     positional [:range, :value]
   end

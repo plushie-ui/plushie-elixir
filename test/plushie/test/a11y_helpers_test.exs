@@ -23,27 +23,33 @@ defmodule Plushie.Test.A11yHelpersTest do
 
   describe "Element.inferred_role/1" do
     test "button infers button role" do
-      el = %Element{id: "b", type: "button", props: %{}, children: []}
+      el = %Element{id: "b", type: "button", props: %{a11y: %{role: :button}}, children: []}
       assert Element.inferred_role(el) == "button"
     end
 
     test "text infers label role" do
-      el = %Element{id: "t", type: "text", props: %{}, children: []}
+      el = %Element{id: "t", type: "text", props: %{a11y: %{role: :label}}, children: []}
       assert Element.inferred_role(el) == "label"
     end
 
     test "checkbox infers check_box role" do
-      el = %Element{id: "cb", type: "checkbox", props: %{}, children: []}
+      el = %Element{id: "cb", type: "checkbox", props: %{a11y: %{role: :check_box}}, children: []}
       assert Element.inferred_role(el) == "check_box"
     end
 
     test "slider infers slider role" do
-      el = %Element{id: "sl", type: "slider", props: %{}, children: []}
+      el = %Element{id: "sl", type: "slider", props: %{a11y: %{role: :slider}}, children: []}
       assert Element.inferred_role(el) == "slider"
     end
 
     test "container infers generic_container role" do
-      el = %Element{id: "c", type: "container", props: %{}, children: []}
+      el = %Element{
+        id: "c",
+        type: "container",
+        props: %{a11y: %{role: :generic_container}},
+        children: []
+      }
+
       assert Element.inferred_role(el) == "generic_container"
     end
 
@@ -64,12 +70,12 @@ defmodule Plushie.Test.A11yHelpersTest do
     end
 
     test "rule infers splitter role" do
-      el = %Element{id: "r", type: "rule", props: %{}, children: []}
+      el = %Element{id: "r", type: "rule", props: %{a11y: %{role: :splitter}}, children: []}
       assert Element.inferred_role(el) == "splitter"
     end
 
     test "toggler infers switch role" do
-      el = %Element{id: "tg", type: "toggler", props: %{}, children: []}
+      el = %Element{id: "tg", type: "toggler", props: %{a11y: %{role: :switch}}, children: []}
       assert Element.inferred_role(el) == "switch"
     end
   end

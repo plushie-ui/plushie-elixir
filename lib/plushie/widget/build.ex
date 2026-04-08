@@ -136,4 +136,19 @@ defmodule Plushie.Widget.Build do
     raise ArgumentError,
           "#{type} #{inspect(id)} requires exactly #{expected} children, got #{length(children)}"
   end
+
+  @doc """
+  Resolves a11y derived values from the widget's props.
+
+  If the a11y prop has a `label_from` directive, the referenced prop's
+  value is used as the accessible label. Called during to_node after
+  all props are set.
+  """
+  @spec resolve_a11y(props :: map()) :: map()
+  def resolve_a11y(%{a11y: %Plushie.Type.A11y{} = a11y} = props) do
+    resolved = Plushie.Type.A11y.resolve(a11y, props)
+    Map.put(props, :a11y, resolved)
+  end
+
+  def resolve_a11y(props), do: props
 end

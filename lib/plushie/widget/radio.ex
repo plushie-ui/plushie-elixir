@@ -9,6 +9,8 @@ defmodule Plushie.Widget.Radio do
 
   use Plushie.Widget
 
+  @a11y_defaults %{role: :radio_button, label_from: :label}
+
   widget :radio do
     field :value, :string, option: false, doc: "The value this radio represents."
 
@@ -28,6 +30,8 @@ defmodule Plushie.Widget.Radio do
     field :shaping, Plushie.Type.Shaping, doc: "Text shaping strategy."
     field :wrapping, Plushie.Type.Wrapping, doc: "Text wrapping mode."
     field :style, Plushie.Type.Style, doc: "Named preset or custom `StyleMap`."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
 
     positional [:value, :selected]
   end

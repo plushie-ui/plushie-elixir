@@ -5,6 +5,8 @@ defmodule Plushie.Widget.TextInput do
 
   use Plushie.Widget
 
+  @a11y_defaults %{role: :text_input, label_from: :placeholder}
+
   widget :text_input do
     field :value, :string,
       option: false,
@@ -36,6 +38,8 @@ defmodule Plushie.Widget.TextInput do
     field :style, Plushie.Type.Style, doc: "Named style preset or custom `StyleMap`."
     field :placeholder_color, Plushie.Type.Color, doc: "Placeholder text color."
     field :selection_color, Plushie.Type.Color, doc: "Text selection highlight color."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
 
     positional [:value]
   end

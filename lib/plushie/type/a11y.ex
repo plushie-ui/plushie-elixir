@@ -2,11 +2,14 @@ defmodule Plushie.Type.A11y do
   @moduledoc """
   Accessibility annotation type for widget nodes.
 
-  When attached to a widget via the `a11y` prop, these attributes override the
-  auto-inferred accessibility semantics on the renderer side. The renderer
-  automatically derives roles and labels from widget types and props (e.g. a
-  button's label becomes the accessible name), so most widgets need no explicit
-  `a11y` annotation. Use this for cases where auto-inference is insufficient.
+  Every widget declares default a11y values (role, label source) in its
+  widget definition. When the user sets `a11y` on a widget, the user's
+  values are merged with the defaults (user wins per field). The resolved
+  a11y flows through the tree to the renderer, selectors, assertions,
+  and assistive technology.
+
+  Most widgets need no explicit `a11y` annotation because the defaults
+  provide the correct role and derive the label from the widget's props.
 
   ## Construction
 
@@ -82,14 +85,18 @@ defmodule Plushie.Type.A11y do
   - `disabled` -- override disabled state for AT
   - `position_in_set` -- 1-based position within a set (lists, radio groups, tabs)
   - `size_of_set` -- total items in the set
+  - `active_descendant` -- ID of the currently active child in a composite widget
+  - `radio_group` -- list of IDs of all radio buttons in a group
+  - `label_from` -- (build-time only) prop name to derive label from
   - `has_popup` -- popup type: `"listbox"`, `"menu"`, `"dialog"`, `"tree"`, `"grid"`
   """
 
-  @known_keys ~w(role label description live hidden expanded required level busy invalid modal read_only mnemonic toggled selected value orientation labelled_by described_by error_message disabled position_in_set size_of_set has_popup)a
+  @known_keys ~w(role label label_from description live hidden expanded required level busy invalid modal read_only mnemonic toggled selected value orientation labelled_by described_by error_message disabled position_in_set size_of_set has_popup active_descendant radio_group)a
 
   defstruct [
     :role,
     :label,
+    :label_from,
     :description,
     :live,
     :hidden,
@@ -111,7 +118,9 @@ defmodule Plushie.Type.A11y do
     :disabled,
     :position_in_set,
     :size_of_set,
-    :has_popup
+    :has_popup,
+    :active_descendant,
+    :radio_group
   ]
 
   @canonical_roles ~w(
@@ -171,7 +180,10 @@ defmodule Plushie.Type.A11y do
           disabled: boolean() | nil,
           position_in_set: non_neg_integer() | nil,
           size_of_set: non_neg_integer() | nil,
-          has_popup: has_popup()
+          has_popup: has_popup(),
+          label_from: atom() | nil,
+          active_descendant: String.t() | nil,
+          radio_group: [String.t()] | nil
         }
 
   # -- Construction -------------------------------------------------------------
@@ -479,4 +491,56 @@ defmodule Plushie.Type.A11y do
   defp encode_a11y_value(nil), do: nil
   defp encode_a11y_value(v) when is_atom(v), do: Atom.to_string(v)
   defp encode_a11y_value(v), do: v
+
+  # -- Merge / Resolve ---------------------------------------------------------
+
+  @doc """
+  Merges widget-default a11y with user-provided overrides.
+
+  Non-nil fields in the override replace the corresponding default.
+  Nil fields in the override keep the default value. This allows
+  widgets to declare default roles and labels while letting users
+  override specific fields.
+  """
+  @impl Plushie.Type
+  def merge(%__MODULE__{} = default, %__MODULE__{} = override) do
+    merged =
+      default
+      |> Map.from_struct()
+      |> Enum.map(fn {key, default_val} ->
+        override_val = Map.get(override, key)
+
+        {key, if(is_nil(override_val), do: default_val, else: override_val)}
+      end)
+      |> Map.new()
+
+    struct!(__MODULE__, merged)
+  end
+
+  def merge(_default, override), do: override
+
+  @doc """
+  Resolves derived a11y values from the widget's props.
+
+  If `label_from` is set and `label` is nil, copies the value of the
+  named prop as the accessible label. The `label_from` field is then
+  cleared (it's a build-time directive, not a wire prop).
+  """
+  @impl Plushie.Type
+  def resolve(%__MODULE__{label: nil, label_from: field} = a11y, props)
+      when is_atom(field) and not is_nil(field) do
+    label = props[field]
+
+    if label do
+      %{a11y | label: to_string(label), label_from: nil}
+    else
+      %{a11y | label_from: nil}
+    end
+  end
+
+  def resolve(%__MODULE__{} = a11y, _props) do
+    %{a11y | label_from: nil}
+  end
+
+  def resolve(value, _props), do: value
 end

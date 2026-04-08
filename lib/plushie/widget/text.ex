@@ -5,6 +5,8 @@ defmodule Plushie.Widget.Text do
 
   use Plushie.Widget
 
+  @a11y_defaults %{role: :label, label_from: :content}
+
   widget :text do
     field :content, :string, option: false, doc: "The text string to display."
     field :size, :float, doc: "Font size in pixels."
@@ -33,6 +35,9 @@ defmodule Plushie.Widget.Text do
 
     field :style, Plushie.Type.Style,
       doc: "Named style: `:default`, `:primary`, `:secondary`, `:success`, `:danger`, `:warning`."
+
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
 
     positional [:content]
   end

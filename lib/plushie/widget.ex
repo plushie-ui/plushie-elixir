@@ -98,16 +98,16 @@ defmodule Plushie.Widget do
         ...
       end
 
-  ## Special options
+  ## Common options
 
-  All widgets automatically support:
+  Widgets that support accessibility or event rate limiting declare
+  these as normal fields:
 
-  - `:a11y` -- accessibility overrides (see `Plushie.Type.A11y`)
-  - `:event_rate` -- maximum events per second for coalescable events
-    from this widget (see the event throttling design doc)
-
-  These do not need to be declared via `field` -- they are always
-  available on `new/2`.
+  - `field :a11y, Plushie.Type.A11y, merge: true` -- accessibility
+    overrides (see `Plushie.Type.A11y`). The `merge: true` option
+    makes the setter merge user values with widget defaults.
+  - `field :event_rate, :integer` -- maximum events per second for
+    coalescable events from this widget.
   """
 
   # -- Behaviour callbacks ---------------------------------------------------
@@ -504,7 +504,7 @@ defmodule Plushie.Widget do
 
   # Known field options consumed by the widget macro. Anything else is
   # treated as a type constraint and forwarded to constrain_guard/2.
-  @known_field_opts [:doc, :default, :option, :wire_name, :required, :cast]
+  @known_field_opts [:doc, :default, :option, :wire_name, :required, :cast, :merge]
 
   # Type validation delegates to Plushie.Type.resolve/1 at compile time.
 
@@ -997,7 +997,7 @@ defmodule Plushie.Widget do
     end
   end
 
-  @reserved_prop_names [:id, :type, :children, :a11y, :event_rate, :do]
+  @reserved_prop_names [:id, :type, :children, :do]
 
   defp validate_reserved_names!(env, props) do
     for {name, _type, _opts} <- props, name in @reserved_prop_names do
@@ -1064,8 +1064,8 @@ defmodule Plushie.Widget do
         {name, default}
       end
 
-    # Struct fields: :id + declared props + standard widget options
-    struct_fields = [{:id, nil} | prop_struct_fields] ++ [{:event_rate, nil}, {:a11y, nil}]
+    # Struct fields: :id + declared props
+    struct_fields = [{:id, nil} | prop_struct_fields]
 
     state_defaults = Macro.escape(Map.new(state_fields))
 
@@ -1157,9 +1157,6 @@ defmodule Plushie.Widget do
       """
       @spec new(id :: String.t(), opts :: keyword()) :: %__MODULE__{}
       def new(id, opts \\ []) when is_binary(id) do
-        {event_rate_val, opts} = Keyword.pop(opts, :event_rate)
-        {a11y_val, opts} = Keyword.pop(opts, :a11y)
-
         prop_defaults = unquote(Macro.escape(prop_struct_fields))
         unquote(prop_extract)
 
@@ -1170,14 +1167,6 @@ defmodule Plushie.Widget do
           end)
           |> Enum.reject(fn {_name, val} -> is_nil(val) end)
           |> Map.new()
-
-        props_map =
-          if event_rate_val,
-            do: Map.put(props_map, :event_rate, event_rate_val),
-            else: props_map
-
-        props_map =
-          if a11y_val, do: Map.put(props_map, :a11y, a11y_val), else: props_map
 
         struct!(__MODULE__, Map.put(props_map, :id, id))
       end
@@ -1522,7 +1511,6 @@ defmodule Plushie.Widget do
   def generate_prop_names(props) do
     known =
       Enum.map(props, fn {name, _type, _opts} -> name end)
-      |> Kernel.++([:event_rate, :a11y])
 
     quote do
       @doc false
@@ -1584,13 +1572,12 @@ defmodule Plushie.Widget do
   # -- Struct-based widget generation -----------------------------------------
   #
   # For struct-only widgets (native_widget) (no view/2 or view/3), we generate:
-  # - defstruct with all props + :id + :event_rate + :a11y
+  # - defstruct with all declared fields + :id
   # - @type t with proper field types
   # - @type option union of keyword tuples
   # - new/2 that creates a struct and applies keyword options
   # - with_options/2 that reduces options through setter functions
-  # - A setter function per prop with encoding and guards
-  # - a11y/2 setter for accessibility overrides
+  # - A setter function per field with encoding and guards
   # - build/1 convenience that calls the protocol
   # - Plushie.Widget protocol implementation (to_node)
 
@@ -1600,8 +1587,9 @@ defmodule Plushie.Widget do
 
     struct_fields =
       [{:id, nil} | prop_fields] ++
-        if(container, do: [{:children, []}], else: []) ++
-        [{:event_rate, nil}, {:a11y, nil}]
+        if(container, do: [{:children, []}], else: [])
+
+    escaped_struct_fields = Macro.escape(struct_fields)
 
     prop_type_fields = Enum.map(props, &prop_type_ast/1)
 
@@ -1610,11 +1598,7 @@ defmodule Plushie.Widget do
         if(container,
           do: [{:children, quote(do: [Plushie.Widget.ui_node()])}],
           else: []
-        ) ++
-        [
-          {:event_rate, quote(do: non_neg_integer() | nil)},
-          {:a11y, quote(do: Plushie.Type.A11y.t() | nil)}
-        ]
+        )
 
     option_props =
       Enum.filter(props, fn {_n, _t, opts} -> Keyword.get(opts, :option, true) end)
@@ -1623,15 +1607,11 @@ defmodule Plushie.Widget do
       Enum.map(option_props, fn {name, type, _opts} ->
         type_ast = option_type_for(type)
         quote(do: {unquote(name), unquote(type_ast)})
-      end) ++
-        [
-          quote(do: {:event_rate, non_neg_integer()}),
-          quote(do: {:a11y, Plushie.Type.A11y.t()})
-        ]
+      end)
 
     quote do
       @enforce_keys [:id]
-      defstruct unquote(struct_fields)
+      defstruct unquote(escaped_struct_fields)
 
       @type t :: %__MODULE__{unquote_splicing(type_fields)}
 
@@ -1821,20 +1801,6 @@ defmodule Plushie.Widget do
          ]}
       end)
 
-    event_rate_clause =
-      {:->, [],
-       [
-         [{:{}, [], [:event_rate, v]}, acc],
-         quote(do: __MODULE__.event_rate(unquote(acc), unquote(v)))
-       ]}
-
-    a11y_clause =
-      {:->, [],
-       [
-         [{:{}, [], [:a11y, v]}, acc],
-         quote(do: __MODULE__.a11y(unquote(acc), unquote(v)))
-       ]}
-
     unknown_v = Macro.var(:_, __MODULE__)
     unknown_acc = Macro.var(:_, __MODULE__)
 
@@ -1848,7 +1814,7 @@ defmodule Plushie.Widget do
          end
        ]}
 
-    all_clauses = prop_clauses ++ [event_rate_clause, a11y_clause, unknown_clause]
+    all_clauses = prop_clauses ++ [unknown_clause]
     reducer_fn = {:fn, [], all_clauses}
 
     quote do
@@ -1865,24 +1831,18 @@ defmodule Plushie.Widget do
   defp generate_dsl_buildable(props) do
     prop_names = Enum.map(props, fn {name, _type, _opts} -> name end)
 
-    # Include the auto-injected fields so DSL validation recognises them.
-    all_option_names = prop_names ++ [:event_rate, :a11y]
-
     field_types_map =
       for {name, _type, _opts} <- props,
           mod = Map.get(@known_type_mappings, name),
           into: %{},
           do: {name, mod}
 
-    # Always include the a11y type mapping for DSL block support.
-    field_types_map = Map.put(field_types_map, :a11y, Plushie.Type.A11y)
-
     quote do
       @doc false
       def from_opts(opts), do: with_options(%__MODULE__{id: Keyword.fetch!(opts, :id)}, opts)
 
       @doc false
-      def __field_keys__, do: unquote(all_option_names)
+      def __field_keys__, do: unquote(prop_names)
 
       @doc false
       def __field_types__, do: unquote(Macro.escape(field_types_map))
@@ -1926,8 +1886,22 @@ defmodule Plushie.Widget do
             end
           end
 
+        merge = Keyword.get(opts, :merge, false)
+
         setter_clause =
-          generate_setter_clause(name, doc, value_type, wants_nil_clause, cast_fn, guard, encoder)
+          if merge do
+            generate_merge_setter_clause(name, type, doc, value_type)
+          else
+            generate_setter_clause(
+              name,
+              doc,
+              value_type,
+              wants_nil_clause,
+              cast_fn,
+              guard,
+              encoder
+            )
+          end
 
         if nil_clause do
           quote do
@@ -1939,33 +1913,7 @@ defmodule Plushie.Widget do
         end
       end)
 
-    event_rate_setter =
-      quote do
-        @doc """
-        Sets the maximum event rate (events per second) for this widget's coalescable events.
-
-        Three states: `nil` (no limiting, the default), `0` (track only,
-        never emit events to the host), or `N > 0` (emit at most N
-        events per second).
-        """
-        @spec event_rate(widget :: t(), rate :: non_neg_integer()) :: t()
-        def event_rate(%__MODULE__{} = widget, rate)
-            when is_integer(rate) and rate >= 0 do
-          %{widget | event_rate: rate}
-        end
-      end
-
-    a11y_setter =
-      quote do
-        @doc "Sets accessibility annotations."
-        @spec a11y(widget :: t(), a11y :: Plushie.Type.A11y.t()) :: t()
-        def a11y(%__MODULE__{} = widget, a11y) do
-          {:ok, casted} = Plushie.Type.A11y.cast(a11y)
-          %{widget | a11y: casted}
-        end
-      end
-
-    prop_setters ++ [event_rate_setter, a11y_setter]
+    prop_setters
   end
 
   # Generates the value-accepting clause of a setter (the non-nil branch).
@@ -2005,6 +1953,38 @@ defmodule Plushie.Widget do
       @spec unquote(name)(widget :: t(), value :: unquote(spec_type)) :: t()
       def unquote(name)(%__MODULE__{} = widget, value) when unquote(guard) do
         %{widget | unquote(name) => unquote(encoder).(value)}
+      end
+    end
+  end
+
+  # Generates a setter that casts the value and merges with the existing
+  # field value when present. Used for types like A11y where user-provided
+  # values should overlay widget defaults rather than replace them.
+  defp generate_merge_setter_clause(name, type, doc, value_type) do
+    type_module =
+      case Plushie.Type.resolve(type) do
+        {:composite, _} ->
+          raise CompileError,
+            description:
+              "merge: true is not supported for composite types (field #{inspect(name)})"
+
+        module ->
+          module
+      end
+
+    quote do
+      @doc unquote(doc)
+      @spec unquote(name)(widget :: t(), value :: unquote(value_type) | nil) :: t()
+      def unquote(name)(%__MODULE__{} = widget, value) do
+        {:ok, casted} = unquote(type_module).cast(value)
+
+        merged =
+          case Map.get(widget, unquote(name)) do
+            nil -> casted
+            existing -> Plushie.Type.merge_value(unquote(type_module), existing, casted)
+          end
+
+        %{widget | unquote(name) => merged}
       end
     end
   end
@@ -2147,16 +2127,6 @@ defmodule Plushie.Widget do
         end
       end)
 
-    event_rate_put =
-      quote do
-        props = Plushie.Widget.Build.put_if(props, widget.event_rate, :event_rate)
-      end
-
-    a11y_put =
-      quote do
-        props = Plushie.Widget.Build.put_if(props, widget.a11y, :a11y)
-      end
-
     children =
       if container do
         # Children are stored in reverse order via push/extend.
@@ -2187,9 +2157,8 @@ defmodule Plushie.Widget do
         def to_node(widget) do
           props = %{}
           unquote_splicing(put_calls)
-          unquote(event_rate_put)
-          unquote(a11y_put)
           unquote(meta_put)
+          props = Plushie.Widget.Build.resolve_a11y(props)
 
           %{
             id: widget.id,
@@ -2205,7 +2174,7 @@ defmodule Plushie.Widget do
   @doc false
   def generate_prop_validation(props) do
     known_names =
-      Enum.map(props, fn {name, _type, _opts} -> name end) ++ [:event_rate, :a11y]
+      Enum.map(props, fn {name, _type, _opts} -> name end)
 
     quote do
       unknown_keys = Keyword.keys(opts) -- unquote(known_names)

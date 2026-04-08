@@ -22,7 +22,11 @@ defmodule Plushie.Widget.Themer do
 
   @before_compile Plushie.Widget.Themer.Extras
 
+  @a11y_defaults %{role: :generic_container}
+
   widget :themer, container: :single do
     field :theme, :any, doc: "Built-in theme atom (e.g. `:dark`, `:nord`) or custom palette map."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
   end
 end

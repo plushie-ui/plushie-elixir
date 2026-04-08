@@ -61,19 +61,24 @@ defmodule Plushie.Automation.Element do
   end
 
   @doc """
-  Returns the inferred accessibility role for this element.
+  Returns the accessibility role for this element.
 
-  Mirrors the renderer-side role mapping in plushie_ext::widgets::a11y.
-  If the element has an explicit a11y role override, that takes precedence.
+  Reads the role from the element's a11y props first. Falls back
+  to inferring from the widget type for elements without a11y
+  (e.g., manually constructed Elements in tests).
   """
   @spec inferred_role(element :: t()) :: String.t()
   def inferred_role(%__MODULE__{} = element) do
     case get_in(element.props, [:a11y, :role]) do
+      role when is_atom(role) and not is_nil(role) -> Atom.to_string(role)
       role when is_binary(role) -> role
       _ -> role_for_type(element.type)
     end
   end
 
+  # Fallback role inference from widget type. Used when the element
+  # doesn't have an a11y prop (e.g., raw Element construction in tests).
+  # In production, all widgets have a11y defaults with roles.
   @role_map %{
     "button" => "button",
     "text" => "label",

@@ -48,6 +48,8 @@ defmodule Plushie.Widget.PaneGrid do
 
   @before_compile Plushie.Widget.PaneGrid.PanesCoercion
 
+  @a11y_defaults %{role: :group}
+
   widget :pane_grid, container: true do
     field :panes, {:list, :string}, doc: "List of pane identifiers."
     field :spacing, :float, doc: "Space between panes in pixels. Default: 2."
@@ -59,6 +61,8 @@ defmodule Plushie.Widget.PaneGrid do
     field :leeway, :float, doc: "Grabbable area around dividers in pixels."
 
     field :split_axis, {:enum, [:horizontal, :vertical]}, doc: "Split axis for initial layout."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
   end
 
   event :pane_clicked, doc: "Emitted when a pane is selected."

@@ -5,6 +5,8 @@ defmodule Plushie.Widget.PickList do
 
   use Plushie.Widget
 
+  @a11y_defaults %{role: :combo_box, has_popup: "listbox", label_from: :placeholder}
+
   widget :pick_list do
     field :options, {:list, :string}, option: false, doc: "Available choices."
     field :selected, :string, doc: "Currently selected value."
@@ -22,6 +24,8 @@ defmodule Plushie.Widget.PickList do
     field :style, Plushie.Type.Style, doc: "Named preset or custom `StyleMap`."
     field :on_open, :boolean, doc: "Emit open event when the dropdown opens."
     field :on_close, :boolean, doc: "Emit close event when the dropdown closes."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
 
     positional [:options]
   end

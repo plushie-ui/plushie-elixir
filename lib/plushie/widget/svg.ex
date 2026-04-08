@@ -5,6 +5,8 @@ defmodule Plushie.Widget.Svg do
 
   use Plushie.Widget
 
+  @a11y_defaults %{role: :image}
+
   widget :svg do
     field :source, :string, option: false, doc: "Path to the SVG file."
     field :width, Plushie.Type.Length, doc: "SVG width. Default: shrink."
@@ -16,6 +18,8 @@ defmodule Plushie.Widget.Svg do
     field :alt, :string, doc: "Accessible label for the SVG."
     field :description, :string, doc: "Extended accessible description for the SVG."
     field :decorative, :boolean, doc: "When true, hides the SVG from assistive technology."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
 
     positional [:source]
   end

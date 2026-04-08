@@ -565,9 +565,10 @@ defmodule Plushie.UITest do
       assert String.starts_with?(node.id, "auto:")
     end
 
-    test "props is an empty map when no opts" do
+    test "props only contains a11y defaults when no opts" do
       node = column()
-      assert node.props == %{}
+      assert Map.drop(node.props, [:a11y]) == %{}
+      assert node.props[:a11y][:role] == :generic_container
     end
   end
 
@@ -652,7 +653,8 @@ defmodule Plushie.UITest do
       assert node.id == "main"
       assert node.type == "window"
       assert node.children == []
-      assert node.props == %{}
+      assert Map.drop(node.props, [:a11y]) == %{}
+      assert node.props[:a11y][:role] == :window
     end
   end
 
@@ -1145,7 +1147,8 @@ defmodule Plushie.UITest do
       node = canvas("drawing")
       assert node.id == "drawing"
       assert node.type == "canvas"
-      assert node.props == %{}
+      assert Map.drop(node.props, [:a11y]) == %{}
+      assert node.props[:a11y][:role] == :canvas
       assert node.children == []
     end
   end

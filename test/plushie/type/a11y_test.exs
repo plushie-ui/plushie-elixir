@@ -36,10 +36,12 @@ defmodule Plushie.Type.A11yTest do
       assert node.props[:a11y][:level] == 1
     end
 
-    test "a11y prop is nil by default" do
+    test "a11y has per-widget defaults" do
       btn = Button.new("b1", "Go")
       node = Tree.normalize(Plushie.Widget.to_node(btn))
-      refute Map.has_key?(node.props, :a11y)
+      assert Map.has_key?(node.props, :a11y)
+      assert node.props[:a11y][:role] == "button"
+      assert node.props[:a11y][:label_from] == "label"
     end
 
     test "a11y builder function works" do

@@ -131,6 +131,8 @@ defmodule Plushie.Widget.Table do
 
   @before_compile Plushie.Widget.Table.Validation
 
+  @a11y_defaults %{role: :table}
+
   widget :table, container: true do
     field :columns, {:list, :map}, doc: "Column definitions. Maps with `:key`, `:label`, etc."
 
@@ -149,6 +151,8 @@ defmodule Plushie.Widget.Table do
     field :row_spacing, :float, doc: "Vertical spacing between rows in pixels."
     field :separator_thickness, :float, doc: "Separator line thickness in pixels."
     field :separator_color, Plushie.Type.Color, doc: "Separator line color."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
   end
 
   event :sort, value: :string, doc: "Emitted when a sortable column header is clicked."

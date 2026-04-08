@@ -5,6 +5,8 @@ defmodule Plushie.Widget.Checkbox do
 
   use Plushie.Widget
 
+  @a11y_defaults %{role: :check_box, label_from: :label}
+
   widget :checkbox do
     field :label, :string, doc: "Text label next to the checkbox."
     field :is_toggled, :boolean, option: false, wire_name: :checked, doc: "Whether checked."
@@ -19,6 +21,8 @@ defmodule Plushie.Widget.Checkbox do
     field :style, Plushie.Type.Style, doc: "Named preset or custom `StyleMap`."
     field :icon, :map, doc: "Custom icon for the check mark."
     field :disabled, :boolean, doc: "When true, cannot be toggled."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
 
     positional [:label, :is_toggled]
   end

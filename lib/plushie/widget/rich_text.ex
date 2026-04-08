@@ -21,6 +21,8 @@ defmodule Plushie.Widget.RichText do
 
   use Plushie.Widget
 
+  @a11y_defaults %{role: :label}
+
   widget :rich_text do
     field :spans, {:list, :map},
       doc: "List of span descriptors with text, size, color, font, etc."
@@ -33,5 +35,7 @@ defmodule Plushie.Widget.RichText do
     field :line_height, :any, doc: "Line height. Number is relative; map for explicit control."
     field :wrapping, Plushie.Type.Wrapping, doc: "Text wrapping mode."
     field :ellipsis, :string, doc: "Text ellipsis mode: \"none\", \"start\", \"middle\", \"end\"."
+    field :event_rate, :integer, doc: "Max events per second for coalescable events."
+    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
   end
 end
