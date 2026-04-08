@@ -277,10 +277,12 @@ defmodule Plushie.Runtime do
   `:file_open`, `:clipboard_write`).
 
   Returns `{:error, :stub_ack_pending}` if a register or unregister
-  for the same kind is already awaiting confirmation.
+  for the same kind is already awaiting confirmation. Returns
+  `{:error, :renderer_restarted}` if the renderer restarts while the
+  registration is in flight (the stub must be re-registered).
   """
   @spec register_effect_stub(GenServer.server(), Plushie.Effect.kind(), term(), timeout()) ::
-          :ok | {:error, :stub_ack_pending}
+          :ok | {:error, :stub_ack_pending | :renderer_restarted}
   def register_effect_stub(runtime, kind, response, timeout \\ 5000) when is_atom(kind) do
     GenServer.call(runtime, {:register_effect_stub, Atom.to_string(kind), response}, timeout)
   end
@@ -291,10 +293,12 @@ defmodule Plushie.Runtime do
   Blocks until the renderer confirms the stub is removed.
 
   Returns `{:error, :stub_ack_pending}` if a register or unregister
-  for the same kind is already awaiting confirmation.
+  for the same kind is already awaiting confirmation. Returns
+  `{:error, :renderer_restarted}` if the renderer restarts while the
+  request is in flight.
   """
   @spec unregister_effect_stub(GenServer.server(), Plushie.Effect.kind(), timeout()) ::
-          :ok | {:error, :stub_ack_pending}
+          :ok | {:error, :stub_ack_pending | :renderer_restarted}
   def unregister_effect_stub(runtime, kind, timeout \\ 5000) when is_atom(kind) do
     GenServer.call(runtime, {:unregister_effect_stub, Atom.to_string(kind)}, timeout)
   end
@@ -684,9 +688,10 @@ defmodule Plushie.Runtime do
     # responded is gone.
     state = flush_pending_effects(state, :renderer_restarted)
 
-    # Flush pending stub acks (old renderer is gone, stubs lost).
+    # Flush pending stub acks with an error: the old renderer is gone
+    # and its stub registry was lost. Callers must re-register.
     Enum.each(state.pending_stub_acks, fn {_kind, from} ->
-      GenServer.reply(from, :ok)
+      GenServer.reply(from, {:error, :renderer_restarted})
     end)
 
     state = %{state | pending_stub_acks: %{}}
@@ -766,8 +771,9 @@ defmodule Plushie.Runtime do
       {_pid, ^nonce} ->
         # Clean up before run_update so the tag is free for reuse in update/2.
         state = %{state | async_tasks: Map.delete(state.async_tasks, tag)}
-        state = notify_await_async(state, tag)
         state = run_update(state, %AsyncEvent{tag: tag, result: result})
+        # Notify after update so the caller sees the post-update model.
+        state = notify_await_async(state, tag)
         {:noreply, state}
 
       _ ->
@@ -1980,8 +1986,8 @@ defmodule Plushie.Runtime do
       _nonce ->
         Logger.warning("plushie runtime: async task #{inspect(tag)} crashed: #{inspect(reason)}")
         state = %{state | async_tasks: Map.delete(state.async_tasks, tag)}
-        state = notify_await_async(state, tag)
         state = run_update(state, %AsyncEvent{tag: tag, result: {:error, {:crashed, reason}}})
+        state = notify_await_async(state, tag)
         {:handled, state}
     end
   end
