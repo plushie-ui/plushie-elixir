@@ -33,7 +33,7 @@ defmodule Plushie.Widget.Overlay do
 
   @before_compile Plushie.Widget.Overlay.ChildValidation
 
-  @a11y_defaults %{role: :generic_container}
+  # No a11y defaults: layout containers are transparent to AT
 
   widget :overlay, container: true do
     field :position, :atom, doc: "Overlay position: `:below`, `:above`, `:left`, `:right`."
@@ -47,6 +47,6 @@ defmodule Plushie.Widget.Overlay do
 
     field :width, Plushie.Type.Length, doc: "Width of the overlay node."
     field :event_rate, :integer, doc: "Max events per second for coalescable events."
-    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
+    field :a11y, Plushie.Type.A11y, doc: "Accessibility annotations."
   end
 end

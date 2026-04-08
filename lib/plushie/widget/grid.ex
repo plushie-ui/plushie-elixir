@@ -5,7 +5,7 @@ defmodule Plushie.Widget.Grid do
 
   use Plushie.Widget
 
-  @a11y_defaults %{role: :generic_container}
+  # No a11y defaults: layout containers are transparent to AT
 
   widget :grid, container: true do
     field :columns, :integer, doc: "Number of columns. Default: 1."
@@ -23,6 +23,6 @@ defmodule Plushie.Widget.Grid do
       doc: "Enables fluid grid mode. Value is max cell width; columns auto-wrap."
 
     field :event_rate, :integer, doc: "Max events per second for coalescable events."
-    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
+    field :a11y, Plushie.Type.A11y, doc: "Accessibility annotations."
   end
 end

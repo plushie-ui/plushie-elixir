@@ -9,12 +9,12 @@ defmodule Plushie.Widget.Responsive do
 
   use Plushie.Widget
 
-  @a11y_defaults %{role: :generic_container}
+  # No a11y defaults: layout containers are transparent to AT
 
   widget :responsive, container: :single do
     field :width, Plushie.Type.Length, doc: "Container width. Default: fill."
     field :height, Plushie.Type.Length, doc: "Container height. Default: fill."
     field :event_rate, :integer, doc: "Max events per second for coalescable events."
-    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
+    field :a11y, Plushie.Type.A11y, doc: "Accessibility annotations."
   end
 end

@@ -69,10 +69,10 @@ defmodule Plushie.Widget.SensorTest do
       assert node.type == "sensor"
     end
 
-    test "props only contains a11y defaults when no delay set" do
+    test "props is empty when no delay set" do
       node = Sensor.new("s1") |> Sensor.build()
       assert Map.drop(node.props, [:a11y]) == %{}
-      assert node.props[:a11y][:role] == :generic_container
+      assert node.props == %{}
     end
 
     test "includes delay in props when set" do

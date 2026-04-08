@@ -9,7 +9,7 @@ defmodule Plushie.Widget.PointerArea do
 
   use Plushie.Widget
 
-  @a11y_defaults %{role: :generic_container}
+  # No a11y defaults: layout containers are transparent to AT
 
   widget :pointer_area, container: :single do
     field :cursor, :atom, doc: "Mouse cursor to show on hover (e.g. `:pointer`, `:grab`)."
@@ -25,6 +25,6 @@ defmodule Plushie.Widget.PointerArea do
     field :on_move, :boolean, doc: "Enable cursor move events."
     field :on_scroll, :boolean, doc: "Enable scroll wheel events."
     field :event_rate, :integer, doc: "Max events per second for coalescable events."
-    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
+    field :a11y, Plushie.Type.A11y, doc: "Accessibility annotations."
   end
 end

@@ -5,7 +5,7 @@ defmodule Plushie.Widget.Floating do
 
   use Plushie.Widget
 
-  @a11y_defaults %{role: :generic_container}
+  # No a11y defaults: layout containers are transparent to AT
 
   widget :float, container: :single do
     field :translate_x, :float, doc: "Horizontal translation in pixels. Default: 0."
@@ -14,6 +14,6 @@ defmodule Plushie.Widget.Floating do
     field :width, Plushie.Type.Length, doc: "Float width."
     field :height, Plushie.Type.Length, doc: "Float height."
     field :event_rate, :integer, doc: "Max events per second for coalescable events."
-    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
+    field :a11y, Plushie.Type.A11y, doc: "Accessibility annotations."
   end
 end

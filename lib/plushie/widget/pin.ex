@@ -5,7 +5,7 @@ defmodule Plushie.Widget.Pin do
 
   use Plushie.Widget
 
-  @a11y_defaults %{role: :generic_container}
+  # No a11y defaults: layout containers are transparent to AT
 
   widget :pin, container: :single do
     field :x, :float, doc: "X position in pixels. Default: 0."
@@ -13,6 +13,6 @@ defmodule Plushie.Widget.Pin do
     field :width, Plushie.Type.Length, doc: "Pin container width. Default: shrink."
     field :height, Plushie.Type.Length, doc: "Pin container height. Default: shrink."
     field :event_rate, :integer, doc: "Max events per second for coalescable events."
-    field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
+    field :a11y, Plushie.Type.A11y, doc: "Accessibility annotations."
   end
 end

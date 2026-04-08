@@ -57,10 +57,10 @@ defmodule Plushie.Widget.SpaceTest do
       refute Map.has_key?(node.props, "height")
     end
 
-    test "props only contains a11y defaults when no options set" do
+    test "props is empty when no options set" do
       node = Space.new("s1") |> Space.build()
       assert Map.drop(node.props, [:a11y]) == %{}
-      assert node.props[:a11y][:role] == :generic_container
+      assert node.props == %{}
     end
   end
 

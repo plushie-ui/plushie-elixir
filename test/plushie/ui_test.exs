@@ -565,10 +565,10 @@ defmodule Plushie.UITest do
       assert String.starts_with?(node.id, "auto:")
     end
 
-    test "props only contains a11y defaults when no opts" do
+    test "props is empty when no opts" do
       node = column()
       assert Map.drop(node.props, [:a11y]) == %{}
-      assert node.props[:a11y][:role] == :generic_container
+      assert node.props == %{}
     end
   end
 

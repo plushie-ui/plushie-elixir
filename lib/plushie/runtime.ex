@@ -208,6 +208,28 @@ defmodule Plushie.Runtime do
     GenServer.call(runtime, :get_tree)
   end
 
+  @doc """
+  Returns the runtime's current health status.
+
+  The returned map contains:
+
+    * `:status` - `:healthy` or `:degraded`
+    * `:consecutive_errors` - update/2 error count since last success
+    * `:consecutive_view_errors` - view/1 error count since last success
+
+  A runtime is `:degraded` when consecutive view errors have
+  accumulated (the UI is showing stale content). Otherwise it
+  is `:healthy`.
+  """
+  @spec get_health(GenServer.server()) :: %{
+          status: :healthy | :degraded,
+          consecutive_errors: non_neg_integer(),
+          consecutive_view_errors: non_neg_integer()
+        }
+  def get_health(runtime) do
+    GenServer.call(runtime, :get_health)
+  end
+
   @doc "Returns the bridge pid for this runtime."
   @spec get_bridge(GenServer.server()) :: pid() | atom() | nil
   def get_bridge(runtime) do
@@ -405,6 +427,19 @@ defmodule Plushie.Runtime do
 
   def handle_call(:get_bridge, _from, state) do
     {:reply, state.bridge, state}
+  end
+
+  def handle_call(:get_health, _from, state) do
+    status =
+      if state.consecutive_view_errors > 0, do: :degraded, else: :healthy
+
+    health = %{
+      status: status,
+      consecutive_errors: state.consecutive_errors,
+      consecutive_view_errors: state.consecutive_view_errors
+    }
+
+    {:reply, health, state}
   end
 
   def handle_call({:find_node, id}, _from, state) do
