@@ -9,6 +9,18 @@ defmodule Plushie.BridgeIostreamTest do
 
   import ExUnit.CaptureLog
 
+  @hello_msg %{
+    type: "hello",
+    name: "plushie",
+    version: "0.1.0",
+    protocol: Plushie.Protocol.protocol_version(),
+    mode: "mock",
+    backend: "test",
+    transport: "stdio",
+    native_widgets: [],
+    widgets: []
+  }
+
   def forward_telemetry(event, measurements, metadata, test_pid) do
     send(test_pid, {:telemetry_event, event, measurements, metadata})
   end
@@ -67,17 +79,7 @@ defmodule Plushie.BridgeIostreamTest do
       assert_receive {:iostream_bridge, ^bridge}
 
       # Simulate a hello message from the renderer through the iostream adapter.
-      hello_data =
-        Plushie.Protocol.encode(
-          %{
-            type: "hello",
-            name: "plushie",
-            version: "0.1.0",
-            protocol: Plushie.Protocol.protocol_version(),
-            backend: "test"
-          },
-          :msgpack
-        )
+      hello_data = Plushie.Protocol.encode(@hello_msg, :msgpack)
 
       send(bridge, {:iostream_data, IO.iodata_to_binary(hello_data)})
 
@@ -159,13 +161,7 @@ defmodule Plushie.BridgeIostreamTest do
         assert_receive {:iostream_bridge, ^bridge}
 
         bad_hello =
-          Jason.encode!(%{
-            type: "hello",
-            name: "plushie",
-            version: "0.1.0",
-            protocol: Plushie.Protocol.protocol_version() + 1,
-            backend: "test"
-          })
+          Jason.encode!(%{@hello_msg | protocol: Plushie.Protocol.protocol_version() + 1})
 
         log =
           capture_log(fn ->
@@ -378,17 +374,7 @@ defmodule Plushie.BridgeIostreamTest do
     end
 
     defp send_hello(bridge) do
-      hello_data =
-        Plushie.Protocol.encode(
-          %{
-            type: "hello",
-            name: "plushie",
-            version: "0.1.0",
-            protocol: Plushie.Protocol.protocol_version(),
-            backend: "test"
-          },
-          :msgpack
-        )
+      hello_data = Plushie.Protocol.encode(@hello_msg, :msgpack)
 
       send(bridge, {:iostream_data, IO.iodata_to_binary(hello_data)})
       assert_receive {:renderer_event, {:hello, _}}, 1_000

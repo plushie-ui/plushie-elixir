@@ -446,6 +446,7 @@ defmodule Plushie.RuntimeTest do
                 protocol: 1,
                 version: "0.5.0",
                 name: "plushie",
+                mode: "mock",
                 backend: "test",
                 transport: "spawn",
                 native_widgets: [],

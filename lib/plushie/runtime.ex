@@ -514,7 +514,7 @@ defmodule Plushie.Runtime do
     check_renderer_version(hello)
 
     Logger.info(
-      "plushie runtime: renderer connected -- #{hello.name} v#{hello.version} (#{hello.backend}, #{hello.transport})"
+      "plushie runtime: renderer connected -- #{hello.name} v#{hello.version} (#{hello.mode}, #{hello.backend}, #{hello.transport})"
     )
 
     {:noreply, state}

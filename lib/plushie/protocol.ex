@@ -40,9 +40,11 @@ defmodule Plushie.Protocol do
                protocol: pos_integer(),
                version: String.t(),
                name: String.t(),
+               mode: String.t(),
                backend: String.t(),
-               widgets: [String.t()],
-               transport: String.t()
+               transport: String.t(),
+               native_widgets: [String.t()],
+               widgets: [String.t()]
              }}
           | {:settings, map()}
           | {:snapshot, map()}

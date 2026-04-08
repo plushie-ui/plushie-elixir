@@ -1205,70 +1205,47 @@ defmodule Plushie.ProtocolTest do
   end
 
   describe "decode_message/1 -- hello" do
-    test "decodes a hello message with backend and extensions" do
-      json =
-        Jason.encode!(%{
-          type: "hello",
-          protocol: 1,
-          version: "0.3.2",
-          name: "plushie",
-          backend: "tiny-skia",
-          extensions: ["charts"]
-        })
+    @hello_fields %{
+      type: "hello",
+      protocol: 1,
+      version: "0.3.2",
+      name: "plushie",
+      mode: "headless",
+      backend: "tiny-skia",
+      transport: "stdio",
+      native_widgets: ["charts"],
+      widgets: ["button", "text", "charts"]
+    }
+
+    test "decodes a complete hello message" do
+      json = Jason.encode!(@hello_fields)
 
       assert {:hello,
               %{
                 protocol: 1,
                 version: "0.3.2",
                 name: "plushie",
+                mode: "headless",
                 backend: "tiny-skia",
-                widgets: ["charts"],
-                transport: "stdio"
+                transport: "stdio",
+                native_widgets: ["charts"],
+                widgets: ["button", "text", "charts"]
               }} = Protocol.decode_message(json, :json)
     end
 
-    test "hello defaults backend, extensions, and transport when absent" do
-      json =
-        Jason.encode!(%{
-          type: "hello",
-          protocol: 1,
-          version: "0.3.0",
-          name: "plushie"
-        })
-
-      assert {:hello,
-              %{
-                protocol: 1,
-                version: "0.3.0",
-                name: "plushie",
-                backend: "unknown",
-                widgets: [],
-                transport: "stdio"
-              }} = Protocol.decode_message(json, :json)
-    end
-
-    test "hello preserves explicit transport value" do
-      json =
-        Jason.encode!(%{
-          type: "hello",
-          protocol: 1,
-          version: "0.3.2",
-          name: "plushie",
-          transport: "spawn"
-        })
-
-      assert {:hello, %{transport: "spawn"}} = Protocol.decode_message(json, :json)
+    test "hello with missing fields is treated as unknown message" do
+      for field <- ~w(protocol version name mode backend transport native_widgets widgets) do
+        incomplete = Map.delete(@hello_fields, String.to_existing_atom(field))
+        json = Jason.encode!(incomplete)
+        assert {:error, {:unknown_message, _}} = Protocol.decode_message(json, :json)
+      end
     end
 
     test "decodes hello from msgpack" do
-      msg = %{
-        "type" => "hello",
-        "protocol" => 1,
-        "version" => "0.3.2",
-        "name" => "plushie",
-        "backend" => "wgpu",
-        "extensions" => []
-      }
+      msg =
+        @hello_fields
+        |> Enum.map(fn {k, v} -> {Atom.to_string(k), v} end)
+        |> Map.new()
 
       packed = Msgpax.pack!(msg, iodata: false)
 
@@ -1277,9 +1254,10 @@ defmodule Plushie.ProtocolTest do
                 protocol: 1,
                 version: "0.3.2",
                 name: "plushie",
-                backend: "wgpu",
-                widgets: [],
-                transport: "stdio"
+                mode: "headless",
+                backend: "tiny-skia",
+                native_widgets: ["charts"],
+                widgets: ["button", "text", "charts"]
               }} = Protocol.decode_message(packed, :msgpack)
     end
   end
