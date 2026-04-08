@@ -446,8 +446,8 @@ resolves it in priority order:
 1. `PLUSHIE_BINARY_PATH` environment variable - explicit override,
    useful for CI or custom build pipelines
 2. Application config `:binary_path` - explicit per-environment path
-3. Custom widget build in `_build/<env>/plushie/target/` - auto-detected
-   after `mix plushie.build`
+3. Custom widget build in `_build/<env>/plushie-renderer/target/` -
+   auto-detected after `mix plushie.build`
 4. Downloaded binary in `_build/plushie/bin/` - auto-detected after
    `mix plushie.download`
 

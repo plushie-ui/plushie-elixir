@@ -635,6 +635,11 @@ defmodule Mix.Tasks.Plushie.Build do
       )
     end
 
+    # Expand to absolute so paths are correct regardless of the Cargo.toml
+    # location (Cargo resolves relative paths against the manifest directory,
+    # not the Elixir project root).
+    source_path = source_path && Path.expand(source_path)
+
     {plushie_ext_dep, plushie_renderer_dep} =
       if source_path do
         ext_rel = Path.relative_to(Path.join(source_path, "plushie-ext"), build_dir)
@@ -665,23 +670,21 @@ defmodule Mix.Tasks.Plushie.Build do
     # the same local checkout. Without this, Cargo treats the path dep and
     # the crates.io dep as different crates and trait impls don't match.
     #
-    # Also patch plushie-iced-* subcrates when the vendored iced fork is
-    # a sibling of the source path (../plushie-iced). The renderer's own
-    # workspace does the same thing; without these patches, iced types
-    # from crates.io and the local fork are treated as distinct types.
+    # Forward any additional [patch.crates-io] entries from the renderer
+    # workspace so the generated workspace shares the same local overrides.
     patch_section =
       if source_path do
         ext_path = Path.join(source_path, "plushie-ext")
         renderer_path = Path.join(source_path, "plushie-renderer")
 
-        iced_patches = iced_patch_entries(source_path)
+        extra_patches = renderer_patch_entries(source_path)
 
         """
 
         [patch.crates-io]
         plushie-ext = { path = "#{ext_path}" }
         plushie-renderer = { path = "#{renderer_path}" }
-        #{iced_patches}\
+        #{extra_patches}\
         """
       else
         ""
@@ -718,55 +721,58 @@ defmodule Mix.Tasks.Plushie.Build do
     String.trim_trailing(sections) <> "\n"
   end
 
-  # Discovers plushie-iced subcrates from the vendored iced fork (expected
-  # as a sibling directory of the source path) and returns patch lines.
-  defp iced_patch_entries(source_path) do
-    iced_root = source_path |> Path.dirname() |> Path.join("plushie-iced")
+  # Reads [patch.crates-io] entries from the renderer workspace's Cargo.toml
+  # and returns patch lines with paths resolved against the renderer root.
+  # Entries for plushie-ext and plushie-renderer are skipped (already added
+  # as explicit patches above).
+  @spec renderer_patch_entries(source_path :: String.t()) :: String.t()
+  defp renderer_patch_entries(source_path) do
+    cargo_toml = Path.join(source_path, "Cargo.toml")
 
-    if File.dir?(iced_root) do
-      # The root crate (plushie-iced itself)
-      root_entry = "plushie-iced = { path = \"#{iced_root}\" }"
-
-      # Subcrates: each subdirectory with a Cargo.toml containing a
-      # plushie-iced-* package name
-      sub_entries =
-        iced_root
-        |> File.ls!()
-        |> Enum.sort()
-        |> Enum.flat_map(&iced_subcrate_entry(iced_root, &1))
-
-      Enum.join([root_entry | sub_entries], "\n")
+    if File.exists?(cargo_toml) do
+      cargo_toml
+      |> File.read!()
+      |> parse_cargo_patch_entries()
+      |> Enum.reject(fn {name, _} -> name in ["plushie-ext", "plushie-renderer"] end)
+      |> Enum.flat_map(fn {name, rel_path} ->
+        resolved = Path.expand(rel_path, source_path)
+        if File.dir?(resolved), do: ["#{name} = { path = \"#{resolved}\" }"], else: []
+      end)
+      |> Enum.join("\n")
     else
       ""
     end
   end
 
-  defp iced_subcrate_entry(iced_root, dir) do
-    cargo_path = Path.join([iced_root, dir, "Cargo.toml"])
+  # Parses [patch.crates-io] path entries from a Cargo.toml string.
+  # Returns a list of {crate_name, relative_path} tuples.
+  @spec parse_cargo_patch_entries(content :: String.t()) :: [{String.t(), String.t()}]
+  defp parse_cargo_patch_entries(content) do
+    {_, entries} =
+      content
+      |> String.split("\n")
+      |> Enum.reduce({false, []}, fn line, {in_section, acc} ->
+        trimmed = String.trim(line)
 
-    with true <- File.regular?(cargo_path),
-         "plushie-iced-" <> _ = name <- extract_cargo_package_name(cargo_path) do
-      ["#{name} = { path = \"#{Path.join(iced_root, dir)}\" }"]
-    else
-      _ -> []
-    end
-  end
+        cond do
+          trimmed == "[patch.crates-io]" ->
+            {true, acc}
 
-  defp extract_cargo_package_name(cargo_path) do
-    case File.read(cargo_path) do
-      {:ok, content} ->
-        content
-        |> String.split("\n")
-        |> Enum.find_value(fn line ->
-          case Regex.run(~r/^name\s*=\s*"([^"]+)"/, String.trim(line)) do
-            [_, name] -> name
-            _ -> nil
-          end
-        end)
+          in_section and String.starts_with?(trimmed, "[") ->
+            {false, acc}
 
-      {:error, _} ->
-        nil
-    end
+          in_section ->
+            case Regex.run(~r/^(\S+)\s*=\s*\{[^}]*path\s*=\s*"([^"]+)"/, trimmed) do
+              [_, name, path] -> {true, [{name, path} | acc]}
+              _ -> {true, acc}
+            end
+
+          true ->
+            {false, acc}
+        end
+      end)
+
+    Enum.reverse(entries)
   end
 
   # Validates Rust constructor expressions. Matches:
