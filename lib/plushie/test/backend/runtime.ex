@@ -209,17 +209,21 @@ defmodule Plushie.Test.Backend.Runtime do
       # canvas node instead. Element existence is verified renderer-side.
       lookup = scoped_parent_selector(selector) || selector
 
-      # Extract window_id from the selector if present, falling back to
-      # the explicit window_id option.
+      # Thread the window scope into the selector so Selector.find
+      # searches within the correct window subtree.
       {parsed_window, _} = Selector.parse(selector)
       effective_window = window_id || parsed_window
 
-      case GenServer.call(pid, {:find, lookup}, 10_000) do
+      scoped_lookup =
+        if effective_window && !parsed_window do
+          "#{effective_window}#{lookup}"
+        else
+          lookup
+        end
+
+      case GenServer.call(pid, {:find, scoped_lookup}, 10_000) do
         nil ->
-          hint =
-            if effective_window,
-              do: " (window: #{inspect(effective_window)})",
-              else: ""
+          hint = if effective_window, do: " (window: #{inspect(effective_window)})", else: ""
 
           raise "widget not found: #{inspect(selector)}#{hint}. " <>
                   "The #{action} action requires a valid widget selector."

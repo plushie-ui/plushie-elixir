@@ -62,6 +62,18 @@ an atom-keyed map).
 | `:scrolled`        | data    | Scrollable viewport offset changed (`absolute_x`, `absolute_y`, `relative_x`, `relative_y`, `bounds`, `content_bounds`) |
 | `:pane_focus_cycle` | none   | Pane focus cycle requested                 |
 | `:transition_complete` | value (any) | Emitted when a renderer-side transition completes (requires `on_complete: tag`) |
+| `:status`          | value (string) | Widget interaction status changed (see below) |
+
+### Status events
+
+Every built-in widget emits `:status` events when its interaction
+status changes. The runtime tracks these internally for focus and
+hover queries. Derived `:focused` and `:blurred` events are
+dispatched to `update/2` on focus transitions.
+
+Status names: `"active"`, `"hovered"`, `"focused"`, `"pressed"`,
+`"dragged"`, `"disabled"`, `"opened"`. Not all widgets support all
+statuses (e.g., only sliders emit `"dragged"`).
 
 ### Pointer events
 

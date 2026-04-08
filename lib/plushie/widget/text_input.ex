@@ -33,9 +33,6 @@ defmodule Plushie.Widget.TextInput do
     field :input_purpose, :string,
       doc: "Input purpose hint: `\"normal\"`, `\"secure\"`, `\"terminal\"`."
 
-    field :on_focus, :boolean, doc: "When true, emits focused events. Default: false."
-    field :on_blur, :boolean, doc: "When true, emits blurred events. Default: false."
-
     field :style, Plushie.Type.Style, doc: "Named style preset or custom `StyleMap`."
     field :placeholder_color, Plushie.Type.Color, doc: "Placeholder text color."
     field :selection_color, Plushie.Type.Color, doc: "Text selection highlight color."
@@ -46,6 +43,6 @@ defmodule Plushie.Widget.TextInput do
   event :input, value: :string, doc: "Emitted on every text change."
   event :submit, value: :string, doc: "Emitted on Enter (requires `on_submit` prop)."
   event :paste, value: :string, doc: "Emitted on paste (requires `on_paste` prop)."
-  event :focused, doc: "Emitted when the input gains focus (requires `on_focus` prop)."
-  event :blurred, doc: "Emitted when the input loses focus (requires `on_blur` prop)."
+  event :focused, doc: "Emitted when the input gains focus."
+  event :blurred, doc: "Emitted when the input loses focus."
 end

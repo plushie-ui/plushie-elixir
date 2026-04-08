@@ -82,15 +82,19 @@ defmodule Plushie.Automation.Selector do
   def find(tree, {:text, text}) when is_binary(text) do
     tree
     |> Plushie.Tree.find_all(fn node ->
-      type = node[:type] || node["type"]
-      content = prop(node, :content)
-      type == "text" and content == text
+      Enum.any?([:content, :label, :value, :placeholder], fn key ->
+        prop(node, key) == text
+      end)
     end)
     |> List.first()
     |> maybe_wrap()
   end
 
-  def find(_tree, :focused), do: nil
+  def find(_tree, :focused) do
+    raise ArgumentError,
+          ":focused selector requires runtime context. " <>
+            "Use Session.find(session, :focused) instead of Selector.find(tree, :focused)"
+  end
 
   @doc """
   Finds the raw tree node for selectors that resolve directly to a widget.

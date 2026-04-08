@@ -49,6 +49,7 @@ defmodule Plushie.Event.WidgetEvent do
           | :exit
           | :double_click
           | :resize
+          | :status
           | :focused
           | :blurred
           | :drag

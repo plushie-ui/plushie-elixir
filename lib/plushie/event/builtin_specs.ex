@@ -40,6 +40,7 @@ defmodule Plushie.Event.BuiltinSpecs do
 
   @specs %{
     # -- Standard widget events --
+    status: %{carrier: :value, type: :string},
     click: %{carrier: :none},
     input: %{carrier: :value, type: :string},
     submit: %{carrier: :value, type: :string},

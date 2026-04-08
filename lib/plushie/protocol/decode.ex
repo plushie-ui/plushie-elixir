@@ -1221,6 +1221,12 @@ defmodule Plushie.Protocol.Decode do
     %WidgetEvent{type: :blurred, id: local, scope: scope, window_id: window_id}
   end
 
+  defp dispatch(%{"type" => "event", "family" => "status", "id" => _id} = msg) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+    value = msg["data"] || msg["value"]
+    %WidgetEvent{type: :status, id: local, scope: scope, window_id: window_id, value: value}
+  end
+
   # Drag -- coordinates and deltas.
   defp dispatch(
          %{

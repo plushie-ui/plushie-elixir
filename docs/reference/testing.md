@@ -181,7 +181,7 @@ slate mid-test. For most tests, the per-test setup from
 | `"#scope/path/id"` | Exact scoped path |
 | `"window_id#widget_id"` | Widget in a specific window |
 | `"window_id#scope/path/id"` | Scoped path in a specific window |
-| `{:text, "Save"}` | Widget displaying this text (depth-first) |
+| `{:text, "Save"}` | Widget with matching text (content, label, value, placeholder) |
 | `{:role, :button}` | Widget with accessibility role |
 | `{:label, "Name"}` | Widget with accessibility label |
 | `:focused` | Currently focused widget |

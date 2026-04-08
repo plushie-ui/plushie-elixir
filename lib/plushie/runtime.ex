@@ -86,6 +86,8 @@ defmodule Plushie.Runtime do
             pending_stub_acks: %{},
             pending_interact: nil,
             pending_await_async: %{},
+            widget_statuses: %{},
+            focused_widget_id: nil,
             memo_cache: %{},
             widget_view_cache: %{},
             dev_overlay: nil,
@@ -127,6 +129,8 @@ defmodule Plushie.Runtime do
            pending_interact:
              {GenServer.from(), String.t(), reference(), reference(), String.t(), map()} | nil,
            pending_await_async: %{atom() => GenServer.from()},
+           widget_statuses: %{String.t() => String.t()},
+           focused_widget_id: String.t() | nil,
            memo_cache: map(),
            widget_view_cache: map(),
            dev_overlay: Plushie.Dev.RebuildingOverlay.t() | nil,
@@ -316,6 +320,16 @@ defmodule Plushie.Runtime do
     GenServer.call(runtime, :get_diagnostics)
   end
 
+  @doc """
+  Returns the ID of the currently focused widget, or `nil`.
+
+  Focus is tracked automatically from renderer status events.
+  """
+  @spec get_focused(GenServer.server()) :: String.t() | nil
+  def get_focused(runtime) do
+    GenServer.call(runtime, :get_focused)
+  end
+
   # ---------------------------------------------------------------------------
   # GenServer callbacks
   # ---------------------------------------------------------------------------
@@ -425,6 +439,10 @@ defmodule Plushie.Runtime do
     {:reply, Enum.reverse(state.diagnostics), %{state | diagnostics: []}}
   end
 
+  def handle_call(:get_focused, _from, state) do
+    {:reply, state.focused_widget_id, state}
+  end
+
   def handle_call({:register_effect_stub, kind, response}, from, state) do
     if Map.has_key?(state.pending_stub_acks, kind) do
       {:reply, {:error, :stub_ack_pending}, state}
@@ -484,6 +502,46 @@ defmodule Plushie.Runtime do
   # ---------------------------------------------------------------------------
 
   @impl true
+  # Status events are always intercepted to track widget interaction
+  # state (focus, hover, etc.). The raw status event is absorbed by
+  # the runtime. Derived events (focused, blurred) are dispatched to
+  # update/2 for widgets that declared those event types.
+  def handle_info(
+        {:renderer_event, %WidgetEvent{type: :status, id: id, value: status} = event},
+        state
+      )
+      when is_binary(status) do
+    prev_status = Map.get(state.widget_statuses, id)
+    state = %{state | widget_statuses: Map.put(state.widget_statuses, id, status)}
+
+    state =
+      cond do
+        status == "focused" ->
+          %{state | focused_widget_id: id}
+
+        prev_status == "focused" and state.focused_widget_id == id ->
+          %{state | focused_widget_id: nil}
+
+        true ->
+          state
+      end
+
+    # Derive focused/blurred events from status transitions.
+    state =
+      cond do
+        prev_status != "focused" and status == "focused" ->
+          run_update(state, %{event | type: :focused, value: nil})
+
+        prev_status == "focused" and status != "focused" ->
+          run_update(state, %{event | type: :blurred, value: nil})
+
+        true ->
+          state
+      end
+
+    {:noreply, state}
+  end
+
   def handle_info(
         {:renderer_event, %Plushie.Event.SystemEvent{type: :diagnostic} = event},
         state
@@ -683,6 +741,9 @@ defmodule Plushie.Runtime do
 
     state = clear_frozen_ui_overlay(state)
     state = fail_pending_interact(state, :renderer_restarted)
+
+    # Clear widget status tracking (old renderer state is stale).
+    state = %{state | widget_statuses: %{}, focused_widget_id: nil}
 
     # Flush all pending effect requests -- the renderer that would have
     # responded is gone.

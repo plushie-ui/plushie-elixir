@@ -59,7 +59,7 @@ Most helper functions take a selector to identify widgets:
 | `"#sidebar/hello.ex/delete"` | Widget at exact scoped path |
 | `"main#save"` | Widget `"save"` in window `"main"` |
 | `"main#form/save"` | Scoped path `"form/save"` in window `"main"` |
-| `{:text, "Save"}` | Widget displaying the text "Save" |
+| `{:text, "Save"}` | Widget with matching text (content, label, value, placeholder) |
 | `{:role, :button}` | Widget with accessibility role `:button` |
 | `{:label, "Email"}` | Widget with accessibility label "Email" |
 | `:focused` | Currently focused widget |

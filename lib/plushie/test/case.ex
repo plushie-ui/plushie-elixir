@@ -23,7 +23,7 @@ defmodule Plushie.Test.Case do
 
   - `"#save"` matches a unique local widget ID
   - `"#form/save"` matches an exact scoped ID
-  - `{:text, "Save"}` matches visible text content
+  - `{:text, "Save"}` matches visible text (content, label, value, placeholder)
   - `{:role, "button"}` matches an accessibility role
   - `{:label, "Save"}` matches an accessibility label
   - `:focused` matches the currently focused element

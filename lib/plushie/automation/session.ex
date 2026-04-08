@@ -15,7 +15,7 @@ defmodule Plushie.Automation.Session do
   Valid forms:
   - `"#save"` matches a unique local widget ID
   - `"#form/save"` matches an exact scoped ID
-  - `{:text, "Save"}` matches visible text content
+  - `{:text, "Save"}` matches visible text (content, label, value, placeholder)
   - `{:role, "button"}` matches an accessibility role
   - `{:label, "Save"}` matches an accessibility label
   - `:focused` matches the currently focused element
@@ -47,6 +47,18 @@ defmodule Plushie.Automation.Session do
   end
 
   @spec find(session :: t(), selector :: selector()) :: Element.t() | nil
+  def find(%__MODULE__{runtime: runtime}, :focused) do
+    case Plushie.Runtime.get_focused(runtime) do
+      nil ->
+        nil
+
+      widget_id when is_binary(widget_id) ->
+        runtime
+        |> Plushie.Runtime.get_tree()
+        |> Selector.find("#" <> widget_id)
+    end
+  end
+
   def find(%__MODULE__{runtime: runtime}, selector) do
     runtime
     |> Plushie.Runtime.get_tree()
