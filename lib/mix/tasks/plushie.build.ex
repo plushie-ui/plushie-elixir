@@ -99,6 +99,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
     if native != [] do
       check_collisions!(native)
+      check_builtin_collisions!(native)
       check_crate_name_collisions!(native)
     end
 
@@ -260,6 +261,45 @@ defmodule Mix.Tasks.Plushie.Build do
       #{Enum.join(messages, "\n")}
 
       Each type name must be handled by exactly one widget.\
+      """)
+    end
+
+    :ok
+  end
+
+  # Built-in widget type names reserved by the renderer. Native widgets
+  # must not use these names because the renderer dispatches built-ins
+  # before extensions, silently shadowing the custom widget.
+  @builtin_widget_types ~w(
+    column row container stack grid pin keyed_column float responsive
+    scrollable pane_grid text rich_text rich space rule progress_bar
+    image svg markdown qr_code text_input text_editor checkbox toggler
+    radio slider vertical_slider pick_list combo_box button pointer_area
+    sensor tooltip themer window overlay canvas table
+  )
+
+  @spec check_builtin_collisions!(widgets :: [module()]) :: :ok
+  def check_builtin_collisions!(widgets) do
+    collisions =
+      Enum.flat_map(widgets, fn mod ->
+        mod.type_names()
+        |> Enum.filter(&(&1 in @builtin_widget_types))
+        |> Enum.map(&{&1, mod})
+      end)
+
+    if collisions != [] do
+      messages =
+        Enum.map(collisions, fn {type, mod} ->
+          "  #{type}: #{inspect(mod)}"
+        end)
+
+      Mix.raise("""
+      Native widget type name shadows a built-in widget:
+      #{Enum.join(messages, "\n")}
+
+      Choose a different type name. The renderer dispatches built-in
+      widgets before extensions, so a shadowed name will never reach
+      the extension.\
       """)
     end
 
