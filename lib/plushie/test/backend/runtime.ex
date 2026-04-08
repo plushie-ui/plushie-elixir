@@ -70,10 +70,10 @@ defmodule Plushie.Test.Backend.Runtime do
 
   def stop(pid), do: GenServer.stop(pid, :normal, 10_000)
 
-  def find(pid, selector), do: GenServer.call(pid, {:find, selector})
+  def find(pid, selector, opts \\ []), do: GenServer.call(pid, {:find, selector, opts})
 
-  def find!(pid, selector) do
-    case find(pid, selector) do
+  def find!(pid, selector, opts \\ []) do
+    case find(pid, selector, opts) do
       nil -> raise "element not found: #{inspect(selector)}"
       element -> element
     end
@@ -345,10 +345,24 @@ defmodule Plushie.Test.Backend.Runtime do
     {:reply, Screenshot.from_response(response, state.format, state.mode), state}
   end
 
-  def handle_call({:find, selector}, _from, state) do
+  def handle_call({:find, selector, opts}, _from, state) do
     tree = Plushie.Runtime.get_tree(state.runtime) |> resolve_animation_descriptors()
-    element = Selector.find(tree, selector)
+    window_id = Keyword.get(opts, :window)
+
+    search_tree =
+      if window_id do
+        Selector.find_window_subtree(tree, window_id) || tree
+      else
+        tree
+      end
+
+    element = Selector.find(search_tree, selector)
     {:reply, element, state}
+  end
+
+  # Keep arity-2 for backwards compat with validate_selector!
+  def handle_call({:find, selector}, from, state) do
+    handle_call({:find, selector, []}, from, state)
   end
 
   def handle_call({:read_prop, selector, :toggle_value}, _from, state) do

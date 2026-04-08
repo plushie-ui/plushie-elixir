@@ -244,17 +244,19 @@ defmodule Plushie.Automation.Selector do
     if window_id, do: Map.put(sel, "window_id", window_id), else: sel
   end
 
-  defp find_window_subtree(nil, _window_id), do: nil
+  @doc "Finds the window subtree with the given window ID."
+  @spec find_window_subtree(map() | nil, String.t()) :: map() | nil
+  def find_window_subtree(nil, _window_id), do: nil
 
-  defp find_window_subtree(%{type: "window", id: id} = node, window_id) do
+  def find_window_subtree(%{type: "window", id: id} = node, window_id) do
     if id == window_id, do: node, else: nil
   end
 
-  defp find_window_subtree(%{children: children}, window_id) do
+  def find_window_subtree(%{children: children}, window_id) do
     Enum.find_value(children, fn child -> find_window_subtree(child, window_id) end)
   end
 
-  defp find_window_subtree(_, _window_id), do: nil
+  def find_window_subtree(_, _window_id), do: nil
 
   defp do_find_non_id(_tree, text) when is_binary(text) do
     raise ArgumentError,

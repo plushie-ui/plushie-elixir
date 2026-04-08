@@ -32,11 +32,18 @@ defmodule Plushie.Test.Session do
   @spec stop(session :: t()) :: :ok
   def stop(%__MODULE__{pid: p}), do: Runtime.stop(p)
 
-  @spec find(session :: t(), selector :: selector()) :: Element.t() | nil
-  def find(%__MODULE__{pid: p}, selector), do: Runtime.find(p, selector)
+  @spec find(session :: t(), selector :: selector(), opts :: keyword()) :: Element.t() | nil
+  def find(%__MODULE__{pid: p} = _session, selector, opts \\ []) do
+    Runtime.find(p, selector, opts)
+  end
 
-  @spec find!(session :: t(), selector :: selector()) :: Element.t()
-  def find!(%__MODULE__{pid: p}, selector), do: Runtime.find!(p, selector)
+  @spec find!(session :: t(), selector :: selector(), opts :: keyword()) :: Element.t()
+  def find!(%__MODULE__{} = session, selector, opts \\ []) do
+    case find(session, selector, opts) do
+      nil -> raise "element not found: #{inspect(selector)}"
+      element -> element
+    end
+  end
 
   @spec click(session :: t(), selector :: selector(), opts :: keyword()) :: :ok
   def click(%__MODULE__{pid: p}, selector, opts \\ []), do: Runtime.click(p, selector, opts)

@@ -46,28 +46,46 @@ defmodule Plushie.Automation.Session do
     %__MODULE__{runtime: runtime, bridge: bridge}
   end
 
-  @spec find(session :: t(), selector :: selector()) :: Element.t() | nil
-  def find(%__MODULE__{runtime: runtime}, :focused) do
+  @spec find(session :: t(), selector :: selector(), opts :: keyword()) :: Element.t() | nil
+  def find(session, selector, opts \\ [])
+
+  def find(%__MODULE__{runtime: runtime}, :focused, opts) do
     case Plushie.Runtime.get_focused(runtime) do
       nil ->
         nil
 
       widget_id when is_binary(widget_id) ->
-        runtime
-        |> Plushie.Runtime.get_tree()
-        |> Selector.find("#" <> widget_id)
+        tree = Plushie.Runtime.get_tree(runtime)
+        window_id = Keyword.get(opts, :window)
+
+        search_tree =
+          if window_id do
+            Selector.find_window_subtree(tree, window_id) || tree
+          else
+            tree
+          end
+
+        Selector.find(search_tree, "#" <> widget_id)
     end
   end
 
-  def find(%__MODULE__{runtime: runtime}, selector) do
-    runtime
-    |> Plushie.Runtime.get_tree()
-    |> Selector.find(selector)
+  def find(%__MODULE__{runtime: runtime}, selector, opts) do
+    tree = Plushie.Runtime.get_tree(runtime)
+    window_id = Keyword.get(opts, :window)
+
+    search_tree =
+      if window_id do
+        Selector.find_window_subtree(tree, window_id) || tree
+      else
+        tree
+      end
+
+    Selector.find(search_tree, selector)
   end
 
-  @spec find!(session :: t(), selector :: selector()) :: Element.t()
-  def find!(%__MODULE__{} = session, selector) do
-    case find(session, selector) do
+  @spec find!(session :: t(), selector :: selector(), opts :: keyword()) :: Element.t()
+  def find!(%__MODULE__{} = session, selector, opts \\ []) do
+    case find(session, selector, opts) do
       nil -> raise "element not found: #{inspect(selector)}"
       element -> element
     end

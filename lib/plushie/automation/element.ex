@@ -26,21 +26,27 @@ defmodule Plushie.Automation.Element do
     }
   end
 
-  # Converts string keys in a props map to atoms. Wire-format data
-  # from the renderer uses string keys; the internal tree uses atoms.
-  # Normalizing here ensures Element props are always atom-keyed.
+  # Converts string keys in a props map to atoms. The normalized tree
+  # uses atom keys; this handles the rare case where string-keyed data
+  # reaches Element construction. Unknown keys that don't have an
+  # existing atom are kept as strings (extension-defined props).
   defp atomize_keys(map) when is_map(map) do
     Map.new(map, fn
       {k, v} when is_binary(k) ->
-        try do
-          {String.to_existing_atom(k), v}
-        rescue
-          ArgumentError -> {k, v}
+        case safe_to_atom(k) do
+          {:ok, atom} -> {atom, v}
+          :error -> {k, v}
         end
 
       {k, v} ->
         {k, v}
     end)
+  end
+
+  defp safe_to_atom(str) do
+    {:ok, String.to_existing_atom(str)}
+  rescue
+    ArgumentError -> :error
   end
 
   @doc """

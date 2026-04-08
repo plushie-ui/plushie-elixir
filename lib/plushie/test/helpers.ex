@@ -31,13 +31,30 @@ defmodule Plushie.Test.Helpers do
       raise "No Plushie test session found. Are you using `use Plushie.Test.Case`?"
   end
 
-  @doc "Finds an element by selector. Returns nil if not found."
-  @spec find(selector :: Session.selector()) :: Element.t() | nil
-  def find(selector), do: Session.find(session(), selector)
+  @doc """
+  Finds an element by selector. Returns nil if not found.
 
-  @doc "Finds an element by selector. Raises if not found."
-  @spec find!(selector :: Session.selector()) :: Element.t()
-  def find!(selector), do: Session.find!(session(), selector)
+  ## Options
+
+  - `window:` -- target window ID for multi-window apps
+  """
+  @spec find(selector :: Session.selector(), opts :: keyword()) :: Element.t() | nil
+  def find(selector, opts \\ []), do: Session.find(session(), selector, opts)
+
+  @doc """
+  Finds an element by selector. Raises if not found.
+
+  ## Options
+
+  - `window:` -- target window ID for multi-window apps
+  """
+  @spec find!(selector :: Session.selector(), opts :: keyword()) :: Element.t()
+  def find!(selector, opts \\ []) do
+    case Session.find(session(), selector, opts) do
+      nil -> raise "element not found: #{inspect(selector)}"
+      element -> element
+    end
+  end
 
   @doc "Finds an element by its accessibility role. Returns nil if not found."
   @spec find_by_role(role :: atom() | String.t()) :: Element.t() | nil
