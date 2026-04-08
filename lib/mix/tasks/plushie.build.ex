@@ -472,7 +472,7 @@ defmodule Mix.Tasks.Plushie.Build do
       resolved = Path.expand(Path.join(base, crate_rel))
       allowed_root = Path.expand(base)
 
-      unless String.starts_with?(resolved, allowed_root) do
+      unless resolved == allowed_root or String.starts_with?(resolved, allowed_root <> "/") do
         Mix.raise(
           "Widget #{inspect(mod)} native_crate path #{inspect(crate_rel)} " <>
             "resolves to #{resolved}, which is outside the allowed directory #{allowed_root}"
@@ -628,8 +628,15 @@ defmodule Mix.Tasks.Plushie.Build do
     # The plushie-renderer workspace has two crates native widgets need:
     #   plushie-ext       -- core library (widget types, protocols, widget API)
     #   plushie-renderer  -- binary entry point (run function)
+    if source_path && !File.dir?(source_path) do
+      Mix.raise(
+        "PLUSHIE_SOURCE_PATH is set to #{inspect(source_path)} but the directory does not exist. " <>
+          "Fix the path or unset it to use crates.io dependencies."
+      )
+    end
+
     {plushie_ext_dep, plushie_renderer_dep} =
-      if source_path && File.dir?(source_path) do
+      if source_path do
         ext_rel = Path.relative_to(Path.join(source_path, "plushie-ext"), build_dir)
         renderer_rel = Path.relative_to(Path.join(source_path, "plushie-renderer"), build_dir)
 
@@ -663,7 +670,7 @@ defmodule Mix.Tasks.Plushie.Build do
     # workspace does the same thing; without these patches, iced types
     # from crates.io and the local fork are treated as distinct types.
     patch_section =
-      if source_path && File.dir?(source_path) do
+      if source_path do
         ext_path = Path.join(source_path, "plushie-ext")
         renderer_path = Path.join(source_path, "plushie-renderer")
 
@@ -692,7 +699,7 @@ defmodule Mix.Tasks.Plushie.Build do
         """
         [package]
         name = "#{package_name}"
-        version = "#{Mix.Project.config()[:version]}"
+        version = "#{Plushie.Binary.binary_version()}"
         edition = "2024"
 
         [[bin]]

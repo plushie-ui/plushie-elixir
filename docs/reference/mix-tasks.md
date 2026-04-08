@@ -138,7 +138,6 @@ want to work against a local renderer checkout.
 | `--bin` | Build the native binary (default if no flags given) |
 | `--wasm` | Build the WASM renderer via [wasm-pack](https://rustwasm.github.io/wasm-pack/) |
 | `--release` | Build with optimisations (also enabled by `config :plushie, build_profile: :release`) |
-| `--clean` | Clean the build directory before building |
 | `--verbose` | Print full Cargo output even on success |
 | `--bin-file PATH` | Override native binary destination |
 | `--wasm-dir PATH` | Override WASM output directory |
@@ -147,7 +146,7 @@ want to work against a local renderer checkout.
 
 ### What it generates
 
-The task creates a Cargo workspace under `_build/<env>/plushie/`
+The task creates a Cargo workspace under `_build/<env>/plushie-renderer/`
 containing:
 
 - **Cargo.toml** - workspace manifest with dependencies from crates.io
@@ -222,7 +221,7 @@ mix plushie.build --wasm --release
 
 Builds a WASM renderer via [wasm-pack](https://rustwasm.github.io/wasm-pack/)
 with `--target web`. The output files (`plushie_renderer_wasm.js` and
-`plushie_renderer_wasm_bg.wasm`) go to `priv/static/` by default.
+`plushie_renderer_wasm_bg.wasm`) go to `_build/plushie-renderer/wasm/` by default.
 
 WASM builds require a local renderer source checkout
 (`PLUSHIE_SOURCE_PATH`) and `wasm-pack` on the PATH. The task sets
@@ -423,9 +422,10 @@ Steps, in order:
 1. `mix format --check-formatted` - code formatting
 2. `mix compile --warnings-as-errors` - compilation with strict warnings
 3. `mix credo --strict` - static analysis and style checking
-4. `mix test` - the full test suite
-5. `mix docs --warnings-as-errors` - documentation generation (dev env)
-6. `mix dialyzer` - type checking via [Dialyzer](https://www.erlang.org/doc/apps/dialyzer/)
+4. `mix test` - test suite (default backend from app config)
+5. `PLUSHIE_TEST_BACKEND=headless mix test` - test suite with headless backend
+6. `mix docs --warnings-as-errors` - documentation generation (dev env)
+7. `mix dialyzer` - type checking via [Dialyzer](https://www.erlang.org/doc/apps/dialyzer/)
 
 The order is deliberate: fast, cheap checks first (formatting takes
 milliseconds), expensive checks last (Dialyzer can take minutes on first
