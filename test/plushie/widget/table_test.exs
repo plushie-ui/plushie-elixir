@@ -3,8 +3,11 @@ defmodule Plushie.Widget.TableTest do
 
   alias Plushie.Widget.Table
 
-  @columns [%{key: "name", label: "Name"}, %{key: "age", label: "Age"}]
-  @rows [%{"name" => "Alice", "age" => 30}, %{"name" => "Bob", "age" => 25}]
+  @string_columns [%{key: "name", label: "Name"}, %{key: "age", label: "Age"}]
+  @string_rows [%{"name" => "Alice", "age" => 30}, %{"name" => "Bob", "age" => 25}]
+
+  @atom_columns [%{key: :name, label: "Name"}, %{key: :age, label: "Age"}]
+  @atom_rows [%{name: "Alice", age: 30}, %{name: "Bob", age: 25}]
 
   describe "new/2" do
     test "creates a struct with the given id" do
@@ -25,23 +28,42 @@ defmodule Plushie.Widget.TableTest do
     end
 
     test "accepts keyword options" do
-      tbl = Table.new("tbl1", columns: @columns, rows: @rows)
-      assert tbl.columns == @columns
-      assert tbl.rows == @rows
+      tbl = Table.new("tbl1", columns: @string_columns, rows: @string_rows)
+      assert tbl.columns == @string_columns
+      assert tbl.rows == @string_rows
     end
   end
 
   describe "columns/2" do
-    test "sets the columns field" do
-      tbl = Table.new("tbl1") |> Table.columns(@columns)
-      assert tbl.columns == @columns
+    test "sets string-keyed columns" do
+      tbl = Table.new("tbl1") |> Table.columns(@string_columns)
+      assert tbl.columns == @string_columns
+    end
+
+    test "sets atom-keyed columns" do
+      tbl = Table.new("tbl1") |> Table.columns(@atom_columns)
+      assert tbl.columns == @atom_columns
+    end
+
+    test "raises on mixed key types" do
+      mixed = [%{key: :name, label: "Name"}, %{key: "age", label: "Age"}]
+
+      assert_raise ArgumentError, ~r/all column :key values must be the same type/, fn ->
+        Table.new("tbl1") |> Table.columns(mixed)
+      end
+    end
+
+    test "raises when column is missing :key" do
+      assert_raise ArgumentError, ~r/missing a :key field/, fn ->
+        Table.new("tbl1") |> Table.columns([%{label: "Name"}])
+      end
     end
   end
 
-  describe "rows/2" do
-    test "sets the rows field" do
-      tbl = Table.new("tbl1") |> Table.rows(@rows)
-      assert tbl.rows == @rows
+  describe "rows/2 with string keys" do
+    test "sets string-keyed rows" do
+      tbl = Table.new("tbl1") |> Table.rows(@string_rows)
+      assert tbl.rows == @string_rows
     end
 
     test "accepts empty list" do
@@ -49,10 +71,124 @@ defmodule Plushie.Widget.TableTest do
       assert tbl.rows == []
     end
 
-    test "raises on atom-keyed rows" do
-      assert_raise ArgumentError, ~r/must use string keys/, fn ->
-        Table.new("tbl1") |> Table.rows([%{name: "Alice", age: 30}])
+    test "validates all rows, not just the first" do
+      rows = [%{"name" => "Alice"}, %{name: "Bob"}]
+
+      assert_raise ArgumentError, ~r/row 1 uses atom keys/, fn ->
+        Table.new("tbl1")
+        |> Table.columns(@string_columns)
+        |> Table.rows(rows)
       end
+    end
+  end
+
+  describe "rows/2 with atom keys" do
+    test "accepts atom-keyed rows when columns use atom keys" do
+      tbl =
+        Table.new("tbl1")
+        |> Table.columns(@atom_columns)
+        |> Table.rows(@atom_rows)
+
+      assert tbl.rows == @atom_rows
+    end
+
+    test "rejects atom-keyed rows when columns use string keys" do
+      assert_raise ArgumentError, ~r/columns use string keys, but row 0 uses atom keys/, fn ->
+        Table.new("tbl1")
+        |> Table.columns(@string_columns)
+        |> Table.rows(@atom_rows)
+      end
+    end
+
+    test "rejects string-keyed rows when columns use atom keys" do
+      assert_raise ArgumentError, ~r/columns use atom keys, but row 0 uses string keys/, fn ->
+        Table.new("tbl1")
+        |> Table.columns(@atom_columns)
+        |> Table.rows(@string_rows)
+      end
+    end
+
+    test "rejects mixed keys within a single row" do
+      mixed_row = [%{"name" => "Alice", age: 30}]
+
+      assert_raise ArgumentError, ~r/row 0 has mixed atom and string keys/, fn ->
+        Table.new("tbl1") |> Table.rows(mixed_row)
+      end
+    end
+  end
+
+  describe "rows/2 with structs" do
+    defmodule User do
+      defstruct [:name, :age, :email]
+    end
+
+    test "converts structs to maps" do
+      users = [%User{name: "Alice", age: 30, email: "a@b.com"}]
+
+      tbl =
+        Table.new("tbl1")
+        |> Table.columns(@atom_columns)
+        |> Table.rows(users)
+
+      # Struct is converted to a plain map (extra fields are fine)
+      assert [%{name: "Alice", age: 30, email: "a@b.com"}] = tbl.rows
+      refute Map.has_key?(hd(tbl.rows), :__struct__)
+    end
+
+    test "struct rows work with atom-keyed columns" do
+      users = [
+        %User{name: "Alice", age: 30, email: "a@b.com"},
+        %User{name: "Bob", age: 25, email: "b@c.com"}
+      ]
+
+      tbl =
+        Table.new("tbl1")
+        |> Table.columns(@atom_columns)
+        |> Table.rows(users)
+
+      assert length(tbl.rows) == 2
+    end
+
+    test "struct rows rejected with string-keyed columns" do
+      users = [%User{name: "Alice", age: 30, email: "a@b.com"}]
+
+      assert_raise ArgumentError, ~r/columns use string keys, but row 0 uses atom keys/, fn ->
+        Table.new("tbl1")
+        |> Table.columns(@string_columns)
+        |> Table.rows(users)
+      end
+    end
+  end
+
+  describe "rows/2 without columns set" do
+    test "accepts atom-keyed rows when columns not yet set" do
+      tbl = Table.new("tbl1") |> Table.rows(@atom_rows)
+      assert tbl.rows == @atom_rows
+    end
+
+    test "accepts string-keyed rows when columns not yet set" do
+      tbl = Table.new("tbl1") |> Table.rows(@string_rows)
+      assert tbl.rows == @string_rows
+    end
+  end
+
+  describe "cross-validation on set order" do
+    test "columns set after mismatched rows raises" do
+      assert_raise ArgumentError, ~r/columns use string keys, but row 0 uses atom keys/, fn ->
+        Table.new("tbl1")
+        |> Table.rows(@atom_rows)
+        |> Table.columns(@string_columns)
+      end
+    end
+
+    test "columns set after matching rows succeeds" do
+      tbl =
+        Table.new("tbl1")
+        |> Table.rows(@atom_rows)
+        |> Table.columns(@atom_columns)
+
+      assert tbl.columns == @atom_columns
+      assert tbl.rows == @atom_rows
     end
   end
 
@@ -114,15 +250,15 @@ defmodule Plushie.Widget.TableTest do
     test "includes non-nil props" do
       node =
         Table.new("tbl1")
-        |> Table.columns(@columns)
-        |> Table.rows(@rows)
+        |> Table.columns(@string_columns)
+        |> Table.rows(@string_rows)
         |> Table.header(true)
         |> Table.sort_by("age")
         |> Table.sort_order(:desc)
         |> Table.build()
 
-      assert node.props[:columns] == @columns
-      assert node.props[:rows] == @rows
+      assert node.props[:columns] == @string_columns
+      assert node.props[:rows] == @string_rows
       assert node.props[:header] == true
       assert node.props[:sort_by] == "age"
       assert node.props[:sort_order] == :desc
@@ -156,8 +292,8 @@ defmodule Plushie.Widget.TableTest do
     test "routes all known options" do
       tbl =
         Table.new("tbl1",
-          columns: @columns,
-          rows: @rows,
+          columns: @string_columns,
+          rows: @string_rows,
           header: true,
           separator: false,
           width: :fill,
@@ -166,8 +302,8 @@ defmodule Plushie.Widget.TableTest do
           sort_order: :asc
         )
 
-      assert tbl.columns == @columns
-      assert tbl.rows == @rows
+      assert tbl.columns == @string_columns
+      assert tbl.rows == @string_rows
       assert tbl.header == true
       assert tbl.separator == false
       assert tbl.width == :fill

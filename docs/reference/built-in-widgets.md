@@ -157,6 +157,7 @@ streaming alternative for large dynamic images is planned.
 Data table with typed columns, rows, sorting, and scrolling.
 
 ```elixir
+# String keys (JSON data, external APIs)
 table "users",
   columns: [
     %{key: "name", label: "Name", sortable: true},
@@ -169,6 +170,15 @@ table "users",
   ],
   sort_by: model.sort_by,
   sort_order: model.sort_order
+
+# Atom keys (Ecto structs, internal data)
+table "users",
+  columns: [
+    %{key: :name, label: "Name", sortable: true},
+    %{key: :email, label: "Email"},
+    %{key: :role, label: "Role", align: "center"}
+  ],
+  rows: model.users  # list of structs or atom-keyed maps
 ```
 
 ### Column format
@@ -177,18 +187,22 @@ Maps with these keys:
 
 | Key | Type | Required | Default | Purpose |
 |---|---|---|---|---|
-| `key` | string | yes | *n/a* | Lookup key into row data |
+| `key` | atom or string | yes | *n/a* | Lookup key into row data |
 | `label` | string | yes | *n/a* | Header display text |
 | `sortable` | boolean | no | `false` | Enable sort on header click |
 | `align` | `"left"` / `"center"` / `"right"` | no | `"left"` | Text alignment |
 | `width` | Length | no | `:fill` | Column width |
 
+All column `key` values must be the same type (all atoms or all
+strings).
+
 ### Row format
 
-Rows are **string-keyed** maps where keys match column `key` values.
-String keys are required to avoid dynamic atom creation from external
-data (databases, JSON APIs). Values are rendered as text via
-`to_string/1`.
+Rows are maps or structs where keys match the column `key` type.
+Use atom keys for Ecto structs and internal data; use string keys
+for JSON or external data. Structs are converted to maps
+automatically (extra fields are ignored). Values are rendered as
+text via `to_string/1`.
 
 ### Table props
 
