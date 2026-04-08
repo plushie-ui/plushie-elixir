@@ -393,11 +393,10 @@ defmodule Plushie.CommandTest do
       assert cmd.payload.window_id == "main"
     end
 
-    test "focus_element/2 extracts window_id from canvas" do
-      cmd = Command.focus_element("main#drawing", "handle")
-      assert cmd.payload.target == "drawing"
+    test "focus/1 with scoped canvas element path" do
+      cmd = Command.focus("main#drawing/handle")
+      assert cmd.payload.target == "drawing/handle"
       assert cmd.payload.window_id == "main"
-      assert cmd.payload.element_id == "handle"
     end
   end
 end

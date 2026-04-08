@@ -67,8 +67,7 @@ use `Plushie.Subscription.every/2` instead.
 
 | Function | Purpose |
 |---|---|
-| `focus/1` | Set focus on a widget by scoped ID path |
-| `focus_element/2` | Set focus on a canvas element within a canvas |
+| `focus/1` | Set focus on a widget or canvas element by scoped ID path |
 | `focus_next/0` | Move focus to the next focusable widget |
 | `focus_previous/0` | Move focus to the previous focusable widget |
 

@@ -126,23 +126,15 @@ defmodule Plushie.Command do
   end
 
   @doc """
-  Focus the widget identified by `widget_id`.
+  Focus the widget or canvas element identified by `widget_id`.
 
-  Supports window-qualified paths: `"main#email"` targets widget
-  `"email"` in window `"main"`.
+  Supports scoped paths for canvas elements: `"canvas/element"`
+  focuses the element within the canvas. Supports window-qualified
+  paths: `"main#email"` or `"main#canvas/element"`.
   """
   @spec focus(widget_id :: widget_id()) :: %__MODULE__{}
   def focus(widget_id) do
     %__MODULE__{type: :focus, payload: targeted_payload(widget_id)}
-  end
-
-  @doc "Focus a specific interactive element within a canvas. Supports `\"window#canvas\"`."
-  @spec focus_element(canvas_id :: widget_id(), element_id :: String.t()) :: %__MODULE__{}
-  def focus_element(canvas_id, element_id) do
-    %__MODULE__{
-      type: :widget_op,
-      payload: targeted_payload(canvas_id, %{op: "focus_element", element_id: element_id})
-    }
   end
 
   @doc "Move focus to the next focusable widget."
