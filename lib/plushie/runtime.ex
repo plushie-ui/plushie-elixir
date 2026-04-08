@@ -546,7 +546,18 @@ defmodule Plushie.Runtime do
         {:renderer_event, %Plushie.Event.SystemEvent{type: :diagnostic} = event},
         state
       ) do
-    Logger.warning("plushie runtime: prop validation diagnostic: #{inspect(event.value)}")
+    level = event.value[:level] || "warning"
+    code = event.tag || "unknown"
+    source = [event.window_id, event.id] |> Enum.reject(&is_nil/1) |> Enum.join("/")
+    prefix = if source != "", do: " [#{source}]", else: ""
+    msg = "plushie runtime:#{prefix} #{code}: #{event.value[:message] || inspect(event.value)}"
+
+    case level do
+      "error" -> Logger.error(msg)
+      "info" -> Logger.info(msg)
+      _ -> Logger.warning(msg)
+    end
+
     {:noreply, %{state | diagnostics: [event | state.diagnostics]}}
   end
 
@@ -708,9 +719,9 @@ defmodule Plushie.Runtime do
 
     exit = build_renderer_exit(reason)
 
-    new_model =
+    {new_model, recovery_error} =
       try do
-        state.app.handle_renderer_exit(state.model, exit)
+        {state.app.handle_renderer_exit(state.model, exit), nil}
       catch
         catch_kind, catch_reason ->
           Logger.error(
@@ -718,10 +729,26 @@ defmodule Plushie.Runtime do
               Exception.format(catch_kind, catch_reason, __STACKTRACE__)
           )
 
-          state.model
+          {state.model, {catch_kind, catch_reason}}
       end
 
-    {:noreply, %{state | model: new_model}}
+    state = %{state | model: new_model}
+
+    # If the recovery callback failed, dispatch a recovery_failed event
+    # so the app can react (show an error, reset to safe state, etc.).
+    state =
+      if recovery_error do
+        {kind, error} = recovery_error
+
+        run_update(state, %Plushie.Event.SystemEvent{
+          type: :recovery_failed,
+          value: %{kind: kind, error: inspect(error), renderer_exit: exit}
+        })
+      else
+        state
+      end
+
+    {:noreply, state}
   end
 
   def handle_info(:renderer_restarted, state) do

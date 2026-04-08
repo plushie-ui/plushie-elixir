@@ -1306,8 +1306,14 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "diagnostic", "data" => data}) do
-    %Plushie.Event.SystemEvent{type: :diagnostic, value: data}
+  defp dispatch(%{"type" => "event", "family" => "diagnostic", "data" => data} = msg) do
+    %Plushie.Event.SystemEvent{
+      type: :diagnostic,
+      tag: data["code"],
+      value: safe_atomize_keys(data),
+      id: msg["id"],
+      window_id: msg["window_id"]
+    }
   end
 
   # -- Effect stub ack responses --
