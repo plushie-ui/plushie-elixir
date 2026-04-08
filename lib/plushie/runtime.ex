@@ -36,7 +36,7 @@ defmodule Plushie.Runtime do
         windows:            MapSet.t(),
         async_tasks:        %{atom() => {pid(), reference()}},
         pending_effects:    %{String.t() => %{tag: atom(), timer_ref: reference()}},
-        pending_timers:     %{term() => reference()},
+        pending_timers:     %{term() => {reference(), integer()}},
         pending_coalesce:   %{term() => Plushie.Event.t()},
         pending_coalesce_order: [term()],
         coalesce_timer:     reference() | nil,
@@ -106,7 +106,7 @@ defmodule Plushie.Runtime do
            windows: MapSet.t(),
            async_tasks: %{atom() => {pid(), reference()}},
            pending_effects: %{String.t() => %{tag: atom(), timer_ref: reference()}},
-           pending_timers: %{term() => reference()},
+           pending_timers: %{term() => {reference(), integer()}},
            pending_coalesce: %{term() => Plushie.Event.t()},
            pending_coalesce_order: [term()],
            coalesce_timer: reference() | nil,
@@ -835,10 +835,18 @@ defmodule Plushie.Runtime do
   # Timer-driven events
   # ---------------------------------------------------------------------------
 
-  def handle_info({:send_after_event, event}, state) do
-    state = %{state | pending_timers: Map.delete(state.pending_timers, event)}
-    state = run_update(state, event)
-    {:noreply, state}
+  def handle_info({:send_after_event, event, nonce}, state) do
+    case Map.get(state.pending_timers, event) do
+      {_ref, ^nonce} ->
+        state = %{state | pending_timers: Map.delete(state.pending_timers, event)}
+        state = run_update(state, event)
+        {:noreply, state}
+
+      _ ->
+        # Stale timer: the message was already in the mailbox when a
+        # replacement timer was scheduled. Discard it.
+        {:noreply, state}
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -1119,7 +1127,7 @@ defmodule Plushie.Runtime do
     if state.coalesce_timer, do: Process.cancel_timer(state.coalesce_timer)
 
     # Cancel all pending send_after timers so they don't fire into the void.
-    Enum.each(state.pending_timers, fn {_event, ref} ->
+    Enum.each(state.pending_timers, fn {_event, {ref, _nonce}} ->
       Process.cancel_timer(ref)
     end)
 
@@ -1783,8 +1791,12 @@ defmodule Plushie.Runtime do
         {next_state, commands_acc ++ commands}
       end)
 
+    # Execute commands before re-rendering, consistent with dispatch_update.
+    # Commands are the result of update/2, not the view. They must execute
+    # regardless of whether the re-render succeeds.
+    state = Commands.execute_commands(deferred_commands, state)
+
     # Re-render and send a full snapshot (not a patch).
-    # Pass widget handler states so normalization injects stored state.
     case safe_view(
            state.app,
            state.model,
@@ -1802,8 +1814,7 @@ defmodule Plushie.Runtime do
             widget_view_cache: nctx.widget_view
         }
 
-        state = sync_after_render(state, nctx)
-        Commands.execute_commands(deferred_commands, state)
+        sync_after_render(state, nctx)
 
       :error ->
         Logger.warning(

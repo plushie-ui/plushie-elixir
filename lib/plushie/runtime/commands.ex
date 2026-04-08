@@ -109,11 +109,16 @@ defmodule Plushie.Runtime.Commands do
     # Cancel any existing timer for the same event key to prevent duplicates.
     case Map.get(state.pending_timers, event) do
       nil -> :ok
-      old_ref -> Process.cancel_timer(old_ref)
+      {old_ref, _nonce} -> Process.cancel_timer(old_ref)
     end
 
-    ref = Process.send_after(self(), {:send_after_event, event}, delay)
-    pending_timers = Map.put(state.pending_timers, event, ref)
+    # Tag the message with a nonce so the handler can discard stale deliveries.
+    # Process.cancel_timer is best-effort: if the old timer already fired and
+    # the message is in the mailbox, the nonce lets us distinguish it from the
+    # current timer.
+    nonce = System.unique_integer([:monotonic])
+    ref = Process.send_after(self(), {:send_after_event, event, nonce}, delay)
+    pending_timers = Map.put(state.pending_timers, event, {ref, nonce})
     %{state | pending_timers: pending_timers}
   end
 
