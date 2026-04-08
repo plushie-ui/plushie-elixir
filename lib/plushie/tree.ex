@@ -225,7 +225,7 @@ defmodule Plushie.Tree do
         pre_events = ctx.widget_events
         pre_windows = ctx.window_ids
 
-        {result, ctx} = normalize_memo_body(memo_fun, ctx)
+        {result, ctx} = normalize_memo_body(memo_fun, node_id, ctx)
 
         delta_handlers = Map.drop(ctx.widget_handlers, Map.keys(pre_handlers))
         delta_events = Map.drop(ctx.widget_events, Map.keys(pre_events))
@@ -1444,7 +1444,7 @@ defmodule Plushie.Tree do
         if Enum.any?(dupes, &auto_id?/1) do
           message <>
             ". Auto-generated IDs are based on source position; provide explicit " <>
-            "IDs for items in dynamic lists (e.g., text(item.id, item.name))"
+            "IDs for items in dynamic lists (for comprehensions, Enum.map, etc.)"
         else
           message
         end
@@ -1666,8 +1666,10 @@ defmodule Plushie.Tree do
 
   # Evaluate the memo body function and normalize the result. If the body
   # produces multiple children, wraps them in a transparent container
-  # (no scope creation) so the cache stores a single node.
-  defp normalize_memo_body(memo_fun, ctx) do
+  # (no scope creation) so the cache stores a single node. The wrapper
+  # uses an auto: prefixed ID derived from the memo node's own ID so
+  # sibling memos with multi-child bodies don't collide.
+  defp normalize_memo_body(memo_fun, memo_id, ctx) do
     case memo_fun.() do
       [] ->
         {@empty_container, ctx}
@@ -1679,7 +1681,7 @@ defmodule Plushie.Tree do
         {children, ctx} = normalize_children_with_ctx(nodes, ctx)
 
         {%{
-           id: "auto:memo_container",
+           id: "auto:memo_wrap:#{memo_id}",
            type: "container",
            props: %{},
            children: children

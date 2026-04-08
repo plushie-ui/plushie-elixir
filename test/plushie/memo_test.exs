@@ -76,7 +76,40 @@ defmodule Plushie.MemoTest do
       result = normalize_in_window(tree)
       memo_child = hd(result.children)
       assert memo_child.type == "container"
+      assert memo_child.id == "auto:memo_wrap:auto:memo:test:1"
       assert length(memo_child.children) == 2
+    end
+
+    test "sibling memos with multi-child bodies get unique wrapper IDs" do
+      memo_a =
+        memo_node("memo_a", :v1, fn ->
+          [
+            %{id: "a1", type: "text", props: %{}, children: []},
+            %{id: "a2", type: "text", props: %{}, children: []}
+          ]
+        end)
+
+      memo_b =
+        memo_node("memo_b", :v1, fn ->
+          [
+            %{id: "b1", type: "text", props: %{}, children: []},
+            %{id: "b2", type: "text", props: %{}, children: []}
+          ]
+        end)
+
+      tree = %{
+        id: "main",
+        type: "window",
+        props: %{},
+        children: [memo_a, memo_b]
+      }
+
+      result = normalize_in_window(tree)
+      [wrap_a, wrap_b] = result.children
+      assert wrap_a.id == "auto:memo_wrap:memo_a"
+      assert wrap_b.id == "auto:memo_wrap:memo_b"
+      assert wrap_a.type == "container"
+      assert wrap_b.type == "container"
     end
 
     test "nested memos work independently" do
