@@ -94,7 +94,7 @@ defmodule Plushie.MultiWindowTest do
       assert MapSet.equal?(result, MapSet.new(["w1", "w2"]))
     end
 
-    test "does NOT find deeply nested window nodes" do
+    test "finds deeply nested window nodes" do
       tree = %{
         id: "root",
         type: "column",
@@ -112,7 +112,7 @@ defmodule Plushie.MultiWindowTest do
       }
 
       result = detect_windows_test(tree)
-      assert result == MapSet.new()
+      assert MapSet.equal?(result, MapSet.new(["deep_win"]))
     end
 
     test "returns empty set for nil tree" do
@@ -179,20 +179,9 @@ defmodule Plushie.MultiWindowTest do
   # ---------------------------------------------------------------------------
 
   # Mirrors detect_windows/1 from runtime.ex
-  defp detect_windows_test(nil), do: MapSet.new()
-
-  defp detect_windows_test(%{type: "window", id: id}) do
-    MapSet.new([id])
+  defp detect_windows_test(tree) do
+    Plushie.Runtime.Windows.detect_windows(tree)
   end
-
-  defp detect_windows_test(%{children: children}) when is_list(children) do
-    children
-    |> Enum.filter(fn node -> node.type == "window" end)
-    |> Enum.map(& &1.id)
-    |> MapSet.new()
-  end
-
-  defp detect_windows_test(_), do: MapSet.new()
 
   # Mirrors decompose_size_tuples/1 from runtime.ex
   defp decompose_test(props) do

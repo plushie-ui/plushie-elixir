@@ -591,9 +591,17 @@ defmodule Plushie.ScopedIdTest do
     end
 
     test "printable ASCII IDs are accepted" do
-      tree = %{id: "my-button_123!@#", type: "button", props: %{}, children: []}
+      tree = %{id: "my-button_123!@$", type: "button", props: %{}, children: []}
       normalized = Tree.normalize(tree)
-      assert normalized.id == "my-button_123!@#"
+      assert normalized.id == "my-button_123!@$"
+    end
+
+    test "IDs with # are rejected" do
+      tree = %{id: "panel#1", type: "button", props: %{}, children: []}
+
+      assert_raise ArgumentError, ~r/cannot contain "#"/, fn ->
+        Tree.normalize(tree)
+      end
     end
   end
 end

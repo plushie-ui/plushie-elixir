@@ -559,6 +559,7 @@ defmodule Plushie.Tree do
   # Rules:
   # - Must not be empty
   # - Must not contain "/" (reserved for scope separators)
+  # - Must not contain "#" (reserved for window-qualified paths)
   # - Must not exceed 1024 bytes
   # - Must contain only printable ASCII (0x21-0x7E)
   @spec validate_user_id!(String.t()) :: :ok
@@ -571,6 +572,11 @@ defmodule Plushie.Tree do
         raise ArgumentError,
               "widget ID #{inspect(id)} cannot contain \"/\" -- " <>
                 "scoped paths are built automatically by named containers"
+
+      String.contains?(id, "#") ->
+        raise ArgumentError,
+              "widget ID #{inspect(id)} cannot contain \"#\" -- " <>
+                "\"#\" is reserved for window-qualified paths (e.g., \"window#widget\")"
 
       byte_size(id) > 1024 ->
         raise ArgumentError,

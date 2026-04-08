@@ -14,9 +14,10 @@ file B" because the container's ID becomes part of the path.
 | Window node (`type: "window"`) | Yes | Appended to end of scope list |
 | Custom widget | No | Widget IDs are transparent to scoping |
 
-User-provided IDs must not contain `/`. The slash is reserved for the
-scope separator; `Plushie.Tree.normalize/1` raises `ArgumentError` on
-violation.
+User-provided IDs must not contain `/` or `#`. The slash is reserved
+for the scope separator and `#` is reserved for window-qualified paths
+(e.g., `"main#form/email"`). `Plushie.Tree.normalize/1` raises
+`ArgumentError` on violation.
 
 ## ID resolution
 
