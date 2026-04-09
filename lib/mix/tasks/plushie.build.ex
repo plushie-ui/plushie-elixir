@@ -437,12 +437,12 @@ defmodule Mix.Tasks.Plushie.Build do
       expected = Plushie.Binary.binary_version()
 
       case Regex.run(
-             ~r/name = "plushie-ext"\nversion = "(\d+\.\d+\.\d+)"/,
+             ~r/name = "plushie-widget-sdk"\nversion = "(\d+\.\d+\.\d+)"/,
              content
            ) do
         [_, locked_version] when locked_version != expected ->
           Mix.raise("""
-          Cargo.lock version mismatch: plushie-ext #{locked_version} is locked \
+          Cargo.lock version mismatch: plushie-widget-sdk #{locked_version} is locked \
           but BINARY_VERSION is #{expected}.
 
           Run `mix plushie.build --update` to re-resolve dependencies.\
@@ -510,7 +510,7 @@ defmodule Mix.Tasks.Plushie.Build do
     end
   end
 
-  # Each native widget crate should depend on a plushie-ext version compatible
+  # Each native widget crate should depend on a plushie-widget-sdk version compatible
   # with Plushie.Binary.binary_version(). Check before building to give a clear
   # error instead of a cryptic Cargo resolution failure.
 
@@ -520,7 +520,7 @@ defmodule Mix.Tasks.Plushie.Build do
     Enum.each(crate_paths, fn {mod, crate_path} ->
       cargo_toml_path = Path.join(crate_path, "Cargo.toml")
 
-      case read_plushie_ext_version(cargo_toml_path) do
+      case read_plushie_widget_sdk_version(cargo_toml_path) do
         {:version, dep_version} ->
           check_version_compatible!(mod, dep_version, expected)
 
@@ -535,7 +535,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
         :not_found ->
           Mix.shell().info(
-            "Widget #{inspect(mod)}: no plushie-ext dependency found in #{cargo_toml_path}"
+            "Widget #{inspect(mod)}: no plushie-widget-sdk dependency found in #{cargo_toml_path}"
           )
 
         :no_cargo_toml ->
@@ -556,7 +556,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
         unless compatible? do
           Mix.raise(
-            "Widget #{inspect(mod)} depends on plushie-ext #{dep_version_str}, " <>
+            "Widget #{inspect(mod)} depends on plushie-widget-sdk #{dep_version_str}, " <>
               "but this project targets #{expected}. " <>
               "Update the widget's Rust crate to a compatible version."
           )
@@ -579,23 +579,23 @@ defmodule Mix.Tasks.Plushie.Build do
     end
   end
 
-  # Read the plushie-ext dependency version from a Cargo.toml.
-  # Returns {:version, "0.5.0"}, {:path, "../plushie-ext"}, or :not_found.
-  defp read_plushie_ext_version(cargo_toml_path) do
+  # Read the plushie-widget-sdk dependency version from a Cargo.toml.
+  # Returns {:version, "0.5.0"}, {:path, "../plushie-widget-sdk"}, or :not_found.
+  defp read_plushie_widget_sdk_version(cargo_toml_path) do
     if File.exists?(cargo_toml_path) do
       content = File.read!(cargo_toml_path)
 
       cond do
-        # Inline version: plushie-ext = "0.5.0"
-        match = Regex.run(~r/plushie-ext\s*=\s*"([^"]+)"/, content) ->
+        # Inline version: plushie-widget-sdk = "0.5.0"
+        match = Regex.run(~r/plushie-widget-sdk\s*=\s*"([^"]+)"/, content) ->
           {:version, Enum.at(match, 1)}
 
-        # Table with version: plushie-ext = { version = "0.5.0", ... }
-        match = Regex.run(~r/plushie-ext\s*=\s*\{[^}]*version\s*=\s*"([^"]+)"/, content) ->
+        # Table with version: plushie-widget-sdk = { version = "0.5.0", ... }
+        match = Regex.run(~r/plushie-widget-sdk\s*=\s*\{[^}]*version\s*=\s*"([^"]+)"/, content) ->
           {:version, Enum.at(match, 1)}
 
-        # Table with path only: plushie-ext = { path = "..." }
-        match = Regex.run(~r/plushie-ext\s*=\s*\{[^}]*path\s*=\s*"([^"]+)"/, content) ->
+        # Table with path only: plushie-widget-sdk = { path = "..." }
+        match = Regex.run(~r/plushie-widget-sdk\s*=\s*\{[^}]*path\s*=\s*"([^"]+)"/, content) ->
           {:path, Enum.at(match, 1)}
 
         true ->
@@ -625,7 +625,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
     # Use local source paths if available, otherwise pull from crates.io.
     # The plushie-renderer workspace has two crates native widgets need:
-    #   plushie-ext       -- core library (widget types, protocols, widget API)
+    #   plushie-widget-sdk       -- core library (widget types, protocols, widget API)
     #   plushie-renderer  -- binary entry point (run function)
     if source_path && !File.dir?(source_path) do
       Mix.raise(
@@ -639,15 +639,15 @@ defmodule Mix.Tasks.Plushie.Build do
     # not the Elixir project root).
     source_path = source_path && Path.expand(source_path)
 
-    {plushie_ext_dep, plushie_renderer_dep} =
+    {plushie_widget_sdk_dep, plushie_renderer_dep} =
       if source_path do
-        ext_rel = Path.relative_to(Path.join(source_path, "plushie-ext"), build_dir)
+        ext_rel = Path.relative_to(Path.join(source_path, "plushie-widget-sdk"), build_dir)
         renderer_rel = Path.relative_to(Path.join(source_path, "plushie-renderer"), build_dir)
 
-        {~s(plushie-ext = { path = "#{ext_rel}" }),
+        {~s(plushie-widget-sdk = { path = "#{ext_rel}" }),
          ~s(plushie-renderer = { path = "#{renderer_rel}" })}
       else
-        {~s(plushie-ext = "#{Plushie.Binary.binary_version()}"),
+        {~s(plushie-widget-sdk = "#{Plushie.Binary.binary_version()}"),
          ~s(plushie-renderer = "#{Plushie.Binary.binary_version()}")}
       end
 
@@ -665,7 +665,7 @@ defmodule Mix.Tasks.Plushie.Build do
       end
 
     # When using local source paths, add [patch.crates-io] so widget
-    # crates that depend on plushie-ext from crates.io get redirected to
+    # crates that depend on plushie-widget-sdk from crates.io get redirected to
     # the same local checkout. Without this, Cargo treats the path dep and
     # the crates.io dep as different crates and trait impls don't match.
     #
@@ -673,7 +673,7 @@ defmodule Mix.Tasks.Plushie.Build do
     # workspace so the generated workspace shares the same local overrides.
     patch_section =
       if source_path do
-        ext_path = Path.join(source_path, "plushie-ext")
+        ext_path = Path.join(source_path, "plushie-widget-sdk")
         renderer_path = Path.join(source_path, "plushie-renderer")
 
         extra_patches = renderer_patch_entries(source_path)
@@ -681,7 +681,7 @@ defmodule Mix.Tasks.Plushie.Build do
         """
 
         [patch.crates-io]
-        plushie-ext = { path = "#{ext_path}" }
+        plushie-widget-sdk = { path = "#{ext_path}" }
         plushie-renderer = { path = "#{renderer_path}" }
         #{extra_patches}\
         """
@@ -693,7 +693,7 @@ defmodule Mix.Tasks.Plushie.Build do
     package_name = String.replace(bin_name, "-", "_")
 
     deps =
-      [plushie_ext_dep, plushie_renderer_dep]
+      [plushie_widget_sdk_dep, plushie_renderer_dep]
       |> Enum.join("\n")
 
     sections =
@@ -722,7 +722,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
   # Reads [patch.crates-io] entries from the renderer workspace's Cargo.toml
   # and returns patch lines with paths resolved against the renderer root.
-  # Entries for plushie-ext and plushie-renderer are skipped (already added
+  # Entries for plushie-widget-sdk and plushie-renderer are skipped (already added
   # as explicit patches above).
   @spec renderer_patch_entries(source_path :: String.t()) :: String.t()
   defp renderer_patch_entries(source_path) do
@@ -732,7 +732,7 @@ defmodule Mix.Tasks.Plushie.Build do
       cargo_toml
       |> File.read!()
       |> parse_cargo_patch_entries()
-      |> Enum.reject(fn {name, _} -> name in ["plushie-ext", "plushie-renderer"] end)
+      |> Enum.reject(fn {name, _} -> name in ["plushie-widget-sdk", "plushie-renderer"] end)
       |> Enum.flat_map(fn {name, rel_path} ->
         resolved = Path.expand(rel_path, source_path)
         if File.dir?(resolved), do: ["#{name} = { path = \"#{resolved}\" }"], else: []
@@ -810,9 +810,9 @@ defmodule Mix.Tasks.Plushie.Build do
     // Auto-generated by mix plushie.build
     // Do not edit manually.
 
-    use plushie_ext::app::PlushieAppBuilder;
+    use plushie_widget_sdk::app::PlushieAppBuilder;
 
-    fn main() -> plushie_ext::iced::Result {
+    fn main() -> plushie_widget_sdk::iced::Result {
         let builder = #{builder_expr};
         plushie_renderer::run(builder)
     }
