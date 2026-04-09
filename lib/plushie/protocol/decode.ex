@@ -1184,17 +1184,19 @@ defmodule Plushie.Protocol.Decode do
 
   # -- Hello (internal, never reaches update/2) --
 
-  defp dispatch(%{
-         "type" => "hello",
-         "protocol" => protocol,
-         "version" => version,
-         "name" => name,
-         "mode" => mode,
-         "backend" => backend,
-         "transport" => transport,
-         "native_widgets" => native_widgets,
-         "widgets" => widgets
-       }) do
+  defp dispatch(
+         %{
+           "type" => "hello",
+           "protocol" => protocol,
+           "version" => version,
+           "name" => name,
+           "mode" => mode,
+           "backend" => backend,
+           "transport" => transport,
+           "native_widgets" => native_widgets,
+           "widgets" => widgets
+         } = msg
+       ) do
     {:hello,
      %{
        protocol: protocol,
@@ -1204,6 +1206,7 @@ defmodule Plushie.Protocol.Decode do
        backend: backend,
        transport: transport,
        native_widgets: native_widgets,
+       widget_sets: Map.get(msg, "widget_sets", []),
        widgets: widgets
      }}
   end
