@@ -76,7 +76,7 @@ The SDK and renderer follow a fixed startup sequence:
    Settings.
 3. **Renderer sends Hello** - reports its version, mode (`mock`,
    `headless`, `windowed`), backend, transport, registered
-   `native_widgets` (type names from native widget extensions),
+   `native_widgets` (type names from native widgets),
    and `widgets` (all compiled widget type names, built-in + native).
 4. **SDK sends Snapshot** - the Runtime calls `view/1`, normalises the
    tree via `Plushie.Tree.normalize/1`, and sends the full tree via
@@ -100,7 +100,7 @@ module for all outbound messages:
 | `encode_subscribe/5` | `subscribe` | Subscription activation |
 | `encode_unsubscribe/3` | `unsubscribe` | Subscription removal |
 | `encode_widget_op/3` | `widget_op` | Focus, scroll, select, cursor, announce |
-| `encode_widget_command/4` | `extension_command` | Native widget commands |
+| `encode_widget_command/4` | `widget_command` | Native widget commands |
 | `encode_window_op/4` | `window_op` | Window open, close, update |
 | `encode_image_op/3` | `image_op` | In-memory image lifecycle |
 | `encode_interact/5` | `interact` | Test interactions |

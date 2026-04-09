@@ -153,6 +153,10 @@ defmodule Plushie.App do
     moves, scroll, animation frames, slider drags, etc. Set to 60 for
     most apps, lower for dashboards or remote rendering. Per-subscription
     `max_rate` and per-widget `event_rate` override this default.
+  - `widget_config` -- map of namespace -> config for native widgets.
+    Each key matches a widget's `namespace()` on the Rust side. The
+    config is passed to `PlushieWidget::init()` via `InitCtx.config`.
+    Also configurable via `config :plushie, :widget_config`.
 
   Default: `%{}` (renderer uses its own defaults).
   """

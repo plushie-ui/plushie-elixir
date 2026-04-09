@@ -182,7 +182,7 @@ defmodule Plushie.Protocol.Encode do
           format :: Plushie.Protocol.format()
         ) :: iodata()
   def encode_widget_command(node_id, op, payload, format \\ :msgpack) do
-    serialize(%{type: "extension_command", node_id: node_id, op: op, payload: payload}, format)
+    serialize(%{type: "widget_command", node_id: node_id, op: op, payload: payload}, format)
   end
 
   @doc """
@@ -201,7 +201,7 @@ defmodule Plushie.Protocol.Encode do
         %{node_id: node_id, op: op, payload: payload}
       end)
 
-    serialize(%{type: "extension_commands", commands: items}, format)
+    serialize(%{type: "widget_commands", commands: items}, format)
   end
 
   @doc """

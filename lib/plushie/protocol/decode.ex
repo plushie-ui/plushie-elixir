@@ -1147,14 +1147,14 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{
          "type" => "event",
          "family" => "error",
-         "id" => "extension_command",
+         "id" => "widget_command",
          "data" => %{"reason" => reason} = data
        }) do
     %WidgetCommandError{
       reason: reason,
       node_id: data["node_id"],
       op: data["op"],
-      extension: data["extension"],
+      widget_type: data["widget_type"],
       message: data["message"]
     }
   end
@@ -1344,11 +1344,11 @@ defmodule Plushie.Protocol.Decode do
     {:image_op, op, Map.drop(msg, ["type", "op", "session"])}
   end
 
-  defp dispatch(%{"type" => "extension_command", "node_id" => node_id, "op" => op} = msg) do
+  defp dispatch(%{"type" => "widget_command", "node_id" => node_id, "op" => op} = msg) do
     {:widget_command, node_id, op, msg["payload"] || %{}}
   end
 
-  defp dispatch(%{"type" => "extension_commands", "commands" => commands})
+  defp dispatch(%{"type" => "widget_commands", "commands" => commands})
        when is_list(commands) do
     {:widget_commands, commands}
   end

@@ -384,8 +384,8 @@ defmodule MyApp.Gauge do
 end
 ```
 
-On the Rust side, you implement the `WidgetExtension` trait with `render()`,
-and optionally `init()`, `prepare()`, `handle_event()`, and `cleanup()`.
+On the Rust side, you implement the `PlushieWidget` trait with `render()`,
+and optionally `init()`, `prepare()`, `handle_message()`, and `cleanup()`.
 
 `mix plushie.build` auto-detects native widgets via protocol consolidation,
 generates a Cargo workspace that includes them, and builds the renderer

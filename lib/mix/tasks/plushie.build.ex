@@ -267,9 +267,9 @@ defmodule Mix.Tasks.Plushie.Build do
     :ok
   end
 
-  # Built-in widget type names reserved by the renderer. Native widgets
-  # must not use these names because the renderer dispatches built-ins
-  # before extensions, silently shadowing the custom widget.
+  # Built-in widget type names reserved by the renderer's iced widget set.
+  # Native widgets must not use these names because the iced set is
+  # registered first, and last-registered-wins applies per type name.
   @builtin_widget_types ~w(
     column row container stack grid pin keyed_column float responsive
     scrollable pane_grid text rich_text rich space rule progress_bar
@@ -297,9 +297,8 @@ defmodule Mix.Tasks.Plushie.Build do
       Native widget type name shadows a built-in widget:
       #{Enum.join(messages, "\n")}
 
-      Choose a different type name. The renderer dispatches built-in
-      widgets before extensions, so a shadowed name will never reach
-      the extension.\
+      Choose a different type name. The iced widget set is registered
+      first and handles these names.\
       """)
     end
 
@@ -801,7 +800,7 @@ defmodule Mix.Tasks.Plushie.Build do
           Enum.map_join(widgets, "\n        ", fn mod ->
             constructor = mod.rust_constructor()
             validate_rust_constructor!(mod, constructor)
-            ".extension(#{constructor})"
+            ".widget(#{constructor})"
           end)
 
         "PlushieAppBuilder::new()\n        #{registrations}"

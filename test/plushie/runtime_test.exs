@@ -412,7 +412,7 @@ defmodule Plushie.RuntimeTest do
       assert Plushie.Runtime.get_model(runtime).value == 0
     end
 
-    test "widget-specific extension families are normalized before update/2" do
+    test "widget-specific event families are normalized before update/2" do
       {runtime, _bridge} = start_runtime(NativeEventApp)
       await_initial_render(runtime)
 
@@ -425,7 +425,7 @@ defmodule Plushie.RuntimeTest do
       assert Plushie.Runtime.get_model(runtime).selected == 4
     end
 
-    test "runtime stops when renderer is missing a required native extension" do
+    test "runtime stops when renderer is missing a required native widget" do
       # Seed the WidgetRegistry cache to include StarRatingNative so the
       # runtime expects it in the renderer's hello message.
       :persistent_term.put({Plushie.WidgetRegistry, :all}, [StarRatingNative])
@@ -1767,7 +1767,7 @@ defmodule Plushie.RuntimeTest do
     end
   end
 
-  describe "extension config in settings" do
+  describe "widget config in settings" do
     test "settings includes widget_config from application env" do
       Application.put_env(:plushie, :widget_config, %{"terminal" => %{"shell" => "/bin/bash"}})
 

@@ -324,7 +324,7 @@ Renderer error for a native widget command.
 | `reason`    | `String.t()`        | Machine-readable reason         |
 | `node_id`   | `String.t() \| nil` | Target widget node ID          |
 | `op`        | `String.t() \| nil` | Command operation name         |
-| `extension` | `String.t() \| nil` | Native widget type             |
+| `widget_type` | `String.t() \| nil` | Native widget type           |
 | `message`   | `String.t() \| nil` | Human-readable error text      |
 
 ## Pattern matching cookbook

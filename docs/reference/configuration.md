@@ -180,6 +180,7 @@ end
 | `theme` | `atom() \| map()` | renderer default | Built-in theme (`:dark`, `:light`, `:nord`, `:system`, etc.) or a custom palette. See `Plushie.Type.Theme`. |
 | `fonts` | `[String.t()]` | `[]` | Paths to font files to load. Loaded fonts are available by family name in any widget's `font:` prop. |
 | `default_event_rate` | `integer()` | unlimited | Maximum events per second for coalescable event types (mouse moves, scroll, slider drags, animation frames). Set to 60 for most apps, lower for remote rendering. Per-subscription `max_rate` and per-widget `event_rate` override this. |
+| `widget_config` | `map()` | `%{}` | Per-namespace config for native widgets. Keys match a widget's `namespace()` on the Rust side; values are passed to `PlushieWidget::init()` via `InitCtx.config`. Also settable via `config :plushie, :widget_config`. |
 
 ## Widget discovery
 

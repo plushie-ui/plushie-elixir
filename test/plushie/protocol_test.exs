@@ -620,7 +620,7 @@ defmodule Plushie.ProtocolTest do
       assert {:error, {:unknown_event_family, 123, _}} = Protocol.decode_message(json, :json)
     end
 
-    test "extension event family dispatches as widget event" do
+    test "custom event family dispatches as widget event" do
       json =
         Jason.encode!(%{
           type: "event",
@@ -1181,17 +1181,17 @@ defmodule Plushie.ProtocolTest do
     test "produces valid JSON message" do
       result = Protocol.encode_widget_command("term-1", "write", %{"data" => "hello"}, :json)
       decoded = decode_json!(result)
-      assert decoded["type"] == "extension_command"
+      assert decoded["type"] == "widget_command"
       assert decoded["node_id"] == "term-1"
       assert decoded["op"] == "write"
       assert decoded["payload"]["data"] == "hello"
     end
 
     test "produces valid msgpack message" do
-      result = Protocol.encode_widget_command("ext-1", "reset", %{}, :msgpack)
+      result = Protocol.encode_widget_command("wgt-1", "reset", %{}, :msgpack)
       {:ok, decoded} = Msgpax.unpack(result)
-      assert decoded["type"] == "extension_command"
-      assert decoded["node_id"] == "ext-1"
+      assert decoded["type"] == "widget_command"
+      assert decoded["node_id"] == "wgt-1"
       assert decoded["op"] == "reset"
     end
 
@@ -1268,13 +1268,13 @@ defmodule Plushie.ProtocolTest do
         Jason.encode!(%{
           type: "event",
           family: "error",
-          id: "extension_command",
+          id: "widget_command",
           data: %{
-            kind: "extension_command",
+            kind: "widget_command",
             reason: "unknown_node",
             node_id: "g1",
             op: "set_value",
-            message: "no extension handles node `g1`"
+            message: "no widget handles node `g1`"
           }
         })
 
@@ -1282,8 +1282,8 @@ defmodule Plushie.ProtocolTest do
                reason: "unknown_node",
                node_id: "g1",
                op: "set_value",
-               extension: nil,
-               message: "no extension handles node `g1`"
+               widget_type: nil,
+               message: "no widget handles node `g1`"
              } = Protocol.decode_message(json, :json)
     end
   end
@@ -1305,7 +1305,7 @@ defmodule Plushie.ProtocolTest do
 
       result = Protocol.encode_widget_commands(commands, :json)
       decoded = decode_json!(result)
-      assert decoded["type"] == "extension_commands"
+      assert decoded["type"] == "widget_commands"
       assert length(decoded["commands"]) == 2
       assert Enum.at(decoded["commands"], 0)["node_id"] == "term-1"
       assert Enum.at(decoded["commands"], 1)["op"] == "append"
@@ -1315,7 +1315,7 @@ defmodule Plushie.ProtocolTest do
       commands = [{"n1", "op1", %{"k" => "v"}}]
       result = Protocol.encode_widget_commands(commands, :msgpack)
       {:ok, decoded} = Msgpax.unpack(result)
-      assert decoded["type"] == "extension_commands"
+      assert decoded["type"] == "widget_commands"
       assert length(decoded["commands"]) == 1
     end
 

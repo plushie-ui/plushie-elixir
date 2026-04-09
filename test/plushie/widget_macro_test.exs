@@ -479,11 +479,11 @@ defmodule Plushie.WidgetMacroTest do
   end
 
   describe "widget kind does not define native callbacks" do
-    test "widget extension does not export native_crate/0" do
+    test "pure widget does not export native_crate/0" do
       refute function_exported?(BadgeWidget, :native_crate, 0)
     end
 
-    test "widget extension does not export rust_constructor/0" do
+    test "pure widget does not export rust_constructor/0" do
       refute function_exported?(BadgeWidget, :rust_constructor, 0)
     end
   end

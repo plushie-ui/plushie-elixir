@@ -5,7 +5,7 @@ defmodule Plushie.Widget do
   Supports two kinds of widget:
 
   - `:native_widget` -- backed by a Rust crate implementing the
-    `WidgetExtension` trait. Requires `rust_crate` and `rust_constructor`
+    `PlushieWidget` trait. Requires `rust_crate` and `rust_constructor`
     declarations.
   - `:widget` -- pure Elixir widget. Features are detected at compile
     time based on what callbacks are defined:

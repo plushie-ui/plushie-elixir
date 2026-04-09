@@ -352,7 +352,7 @@ defmodule Mix.Tasks.Plushie.BuildTest do
     test "no widgets produces vanilla builder" do
       # The expected output when no native widgets are registered.
       # We verify this indirectly: an empty widget list should not
-      # produce any .extension() calls.
+      # produce any .widget() calls.
       assert Build.check_collisions!([]) == :ok
     end
   end

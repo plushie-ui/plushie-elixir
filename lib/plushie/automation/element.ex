@@ -29,7 +29,7 @@ defmodule Plushie.Automation.Element do
   # Converts string keys in a props map to atoms. The normalized tree
   # uses atom keys; this handles the rare case where string-keyed data
   # reaches Element construction. Unknown keys that don't have an
-  # existing atom are kept as strings (extension-defined props).
+  # existing atom are kept as strings (custom widget props).
   defp atomize_keys(map) when is_map(map) do
     Map.new(map, fn
       {k, v} when is_binary(k) ->

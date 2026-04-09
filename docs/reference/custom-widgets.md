@@ -379,23 +379,25 @@ end
 
 ### Rust side
 
-Implement the `WidgetExtension` trait from `plushie_ext::prelude::*`:
+Implement the `PlushieWidget` trait from `plushie_ext::prelude::*`:
 
 | Method | Phase | Required? |
 |---|---|---|
 | `type_names()` | Registration | Yes |
-| `config_key()` | Registration | Yes |
+| `namespace()` | Registration | No |
 | `render()` | View (immutable) | Yes |
+| `clone_for_session()` | Multiplexing | Yes |
 | `init()` | Startup | No |
 | `prepare()` | Pre-view (mutable) | No |
-| `handle_event()` | Event dispatch | No |
-| `handle_command()` | Command dispatch | No |
+| `handle_message()` | Message dispatch | No |
+| `handle_widget_op()` | Command dispatch | No |
 | `cleanup()` | Node removal | No |
+| `infer_a11y()` | Accessibility | No |
 
 ### Panic isolation
 
-The renderer wraps all mutable extension methods in `catch_unwind`.
-Three consecutive render panics auto-poison the extension (red
+The renderer wraps all mutable widget methods in `catch_unwind`.
+Three consecutive render panics auto-poison the widget (red
 placeholder shown). Poisoned state is cleared on the next full snapshot
 (triggered by tree changes or renderer restart).
 
@@ -424,5 +426,4 @@ details.
   tutorial
 - [Scoped IDs reference](scoped-ids.md) - widget scope transparency
 - [Testing reference](testing.md) - full test helper API
-- [Rust Extension Guide](https://github.com/plushie-ui/plushie-renderer/blob/main/docs/extension-guide.md) - `WidgetExtension` trait and Rust-side lifecycle
-- [Rust Widget Development](https://github.com/plushie-ui/plushie-renderer/blob/main/docs/widget-development.md) - renderer-side widget development patterns
+- [Rust Widget Guide](https://github.com/plushie-ui/plushie-renderer/blob/main/docs/core-widget-guide.md) - `PlushieWidget` trait and Rust-side lifecycle
