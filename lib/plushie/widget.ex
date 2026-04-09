@@ -656,7 +656,11 @@ defmodule Plushie.Widget do
       """
       defmacro unquote(macro_name)(id, opts \\ []) do
         mod = __MODULE__
-        quote do: unquote(mod).new(unquote(id), unquote(opts))
+
+        quote do
+          unquote(mod).new(unquote(id), unquote(opts))
+          |> Plushie.Widget.to_node()
+        end
       end
     end
   end
