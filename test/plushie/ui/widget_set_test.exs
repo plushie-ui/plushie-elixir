@@ -55,13 +55,4 @@ defmodule Plushie.UI.WidgetSetTest do
       end
     end
   end
-
-  # Simple node finder for test assertions.
-  defp find_node(%{id: id} = node, target) when id == target, do: node
-
-  defp find_node(%{children: children}, target) do
-    Enum.find_value(children, fn child -> find_node(child, target) end)
-  end
-
-  defp find_node(_, _), do: nil
 end

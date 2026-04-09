@@ -25,11 +25,11 @@ defmodule Plushie.UI.WidgetSet do
         use Plushie.App
 
         def view(model) do
-          import MyApp.MaterialUI
+          use MyApp.MaterialUI
 
           window "main", title: "My App" do
-            button("save", "Save")       # uses MaterialButton
-            text("greeting", "Hello")    # uses built-in (not overridden)
+            button("save", label: "Save")  # uses MaterialButton
+            text("greeting", "Hello")      # uses built-in (not overridden)
           end
         end
       end
