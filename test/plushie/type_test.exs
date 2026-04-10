@@ -346,8 +346,11 @@ defmodule Plushie.TypeTest.UnionTest do
       assert :error = DirectionOrInteger.cast([])
     end
 
-    test "typespec returns term()" do
-      assert {:term, _, _} = DirectionOrInteger.typespec()
+    test "typespec returns union of variants" do
+      spec = DirectionOrInteger.typespec()
+      spec_string = Macro.to_string(spec)
+      assert spec_string =~ "north"
+      assert spec_string =~ "integer()"
     end
   end
 end

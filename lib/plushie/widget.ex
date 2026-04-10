@@ -1188,6 +1188,7 @@ defmodule Plushie.Widget do
     Plushie.Type.shortcut?(type) or type_module?(type)
   end
 
+  defp valid_type?({:enum, values}) when is_list(values), do: true
   defp valid_type?({:list, inner}), do: valid_type?(inner)
   defp valid_type?({:map, {k, v}}), do: valid_type?(k) and valid_type?(v)
 
@@ -1195,7 +1196,6 @@ defmodule Plushie.Widget do
     do: Enum.all?(fields, fn {_, t} -> valid_type?(t) end)
 
   defp valid_type?({:tuple, types}) when is_list(types), do: Enum.all?(types, &valid_type?/1)
-  defp valid_type?({:enum, values}) when is_list(values), do: true
   defp valid_type?({:union, types}) when is_list(types), do: Enum.all?(types, &valid_type?/1)
   defp valid_type?(_), do: false
 
@@ -1402,6 +1402,9 @@ defmodule Plushie.Widget do
   @doc false
   def type_display_string(type) do
     case Plushie.Type.resolve(type) do
+      {:composite, {:enum, values}} ->
+        Enum.map_join(values, " | ", &inspect/1)
+
       {:composite, {:list, inner}} ->
         "[#{type_display_string(inner)}]"
 
@@ -1417,9 +1420,6 @@ defmodule Plushie.Widget do
       {:composite, {:tuple, types}} ->
         inner = Enum.map_join(types, ", ", &type_display_string/1)
         "{#{inner}}"
-
-      {:composite, {:enum, values}} ->
-        Enum.map_join(values, " | ", &inspect/1)
 
       {:composite, {:union, types}} ->
         Enum.map_join(types, " | ", &type_display_string/1)
@@ -1647,11 +1647,33 @@ defmodule Plushie.Widget do
 
   defp elixir_type_for(type) do
     case Plushie.Type.resolve(type) do
+      {:composite, {:enum, values}} ->
+        values
+        |> Enum.reverse()
+        |> Enum.reduce(fn val, acc -> {:|, [], [val, acc]} end)
+
       {:composite, {:list, inner}} ->
         quote(do: [unquote(elixir_type_for(inner))])
 
-      {:composite, _} ->
-        quote(do: term())
+      {:composite, {:map, {key_type, val_type}}} ->
+        kt = elixir_type_for(key_type)
+        vt = elixir_type_for(val_type)
+        quote(do: %{optional(unquote(kt)) => unquote(vt)})
+
+      {:composite, {:map, fields}} when is_list(fields) ->
+        field_types = Enum.map(fields, fn {name, t} -> {name, elixir_type_for(t)} end)
+        {:%{}, [], field_types}
+
+      {:composite, {:tuple, types}} ->
+        type_asts = Enum.map(types, &elixir_type_for/1)
+        {:{}, [], type_asts}
+
+      {:composite, {:union, types}} ->
+        type_asts = Enum.map(types, &elixir_type_for/1)
+
+        type_asts
+        |> Enum.reverse()
+        |> Enum.reduce(fn t, acc -> {:|, [], [t, acc]} end)
 
       module ->
         module.typespec()
@@ -1781,6 +1803,10 @@ defmodule Plushie.Widget do
 
   defp positional_guard(type) do
     case Plushie.Type.resolve(type) do
+      {:composite, {:enum, values}} ->
+        escaped = Macro.escape(values)
+        fn var -> quote(do: unquote(var) in unquote(escaped)) end
+
       {:composite, {:list, _}} ->
         fn var -> quote(do: is_list(unquote(var))) end
 
@@ -1794,11 +1820,7 @@ defmodule Plushie.Widget do
           quote(do: is_tuple(unquote(var)) and tuple_size(unquote(var)) == unquote(len))
         end
 
-      {:composite, {:enum, values}} ->
-        escaped = Macro.escape(values)
-        fn var -> quote(do: unquote(var) in unquote(escaped)) end
-
-      {:composite, _} ->
+      {:composite, {:union, _}} ->
         nil
 
       module ->
@@ -2012,6 +2034,9 @@ defmodule Plushie.Widget do
 
   defp setter_guard(type) do
     case Plushie.Type.resolve(type) do
+      {:composite, {:enum, values}} ->
+        quote(do: value in unquote(Macro.escape(values)))
+
       {:composite, {:list, _}} ->
         quote(do: is_list(value))
 
@@ -2022,10 +2047,7 @@ defmodule Plushie.Widget do
         len = length(types)
         quote(do: is_tuple(value) and tuple_size(value) == unquote(len))
 
-      {:composite, {:enum, values}} ->
-        quote(do: value in unquote(Macro.escape(values)))
-
-      {:composite, _} ->
+      {:composite, {:union, _}} ->
         nil
 
       module ->
@@ -2329,13 +2351,20 @@ defmodule Plushie.Widget do
 
   defp guard_for_type(var, type) do
     case Plushie.Type.resolve(type) do
+      {:composite, {:enum, values}} ->
+        quote(do: unquote(var) in unquote(Macro.escape(values)))
+
       {:composite, {:list, _}} ->
         quote(do: is_list(unquote(var)))
 
       {:composite, {:map, _}} ->
         quote(do: is_map(unquote(var)) or is_list(unquote(var)))
 
-      {:composite, _} ->
+      {:composite, {:tuple, types}} ->
+        len = length(types)
+        quote(do: is_tuple(unquote(var)) and tuple_size(unquote(var)) == unquote(len))
+
+      {:composite, {:union, _}} ->
         quote(do: true)
 
       module ->

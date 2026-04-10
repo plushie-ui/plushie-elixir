@@ -1,60 +1,191 @@
 defmodule Plushie.Type do
   @moduledoc """
-  Behaviour for types in the Plushie DSL.
+  Types for widget fields and events.
 
-  Type modules define how values are validated, coerced, guarded in
-  function heads, represented in typespecs, and encoded for the wire
-  protocol. Used by widget field declarations, event field declarations,
-  and composite type definitions.
+  Widget field declarations like `field :name, :string` or
+  `field :color, Plushie.Type.Color` each name a type. The type
+  determines what values a field accepts, how they appear in
+  typespecs, and how they encode for the renderer.
 
-  ## Atom shortcuts
+  The SDK includes types for common values; when your application
+  needs something more specific, you can define your own by
+  implementing the `Plushie.Type` behaviour.
 
-  Primitive types have atom shortcuts that resolve to built-in modules:
+  ## Primitive types
 
-    - `:integer` resolves to `Plushie.Type.Integer`
-    - `:float` resolves to `Plushie.Type.Float`
-    - `:string` resolves to `Plushie.Type.String`
-    - `:boolean` resolves to `Plushie.Type.Boolean`
-    - `:atom` resolves to `Plushie.Type.Atom`
-    - `:any` resolves to `Plushie.Type.Any`
-    - `:map` resolves to `Plushie.Type.Map`
+  Types for basic values like numbers, strings, and booleans,
+  represented as atoms in field declarations:
 
-  Domain types use their full module name (e.g. `Plushie.Type.Color`).
+    - `:integer` - `Plushie.Type.Integer`
+    - `:float` - `Plushie.Type.Float`
+    - `:string` - `Plushie.Type.String`
+    - `:boolean` - `Plushie.Type.Boolean`
+    - `:atom` - `Plushie.Type.Atom`
+    - `:any` - `Plushie.Type.Any`
+    - `:map` - `Plushie.Type.Map`
 
-  ## Composite constructors
+  Example in a field declaration:
 
-    - `{:enum, [:a, :b, :c]}` for inline enum
-    - `{:list, :string}` for typed list
-    - `{:tuple, [:float, :float]}` for fixed-size typed tuple
-    - `{:union, [Plushie.Type.Color, Plushie.Type.StyleMap]}` for first-successful-cast
+      field :label, :string
+      field :count, :integer, default: 0
 
-  ## Declaring type modules
+  ## Domain types
 
-  Use `use Plushie.Type` with one of three declaration forms:
+  The SDK includes additional types beyond the primitives, referenced
+  by module name. Some examples:
 
-      # Enum type
-      defmodule MyType do
+    - `Plushie.Type.Color` - CSS colors (named atoms, hex strings, RGBA maps)
+    - `Plushie.Type.Padding` - uniform number, `{v, h}` tuple, or per-side map
+    - `Plushie.Type.Font` - font family, weight, style, and stretch
+    - `Plushie.Type.Border` - color, width, and radius
+    - `Plushie.Type.A11y` - accessibility annotations
+
+  Example in a field declaration:
+
+      field :color, Plushie.Type.Color
+      field :padding, Plushie.Type.Padding, default: 8
+
+  ## Composite types
+
+  When you need a list of values, a set of specific atoms, or a
+  choice between types, you can express that directly in the field
+  declaration:
+
+    - `{:enum, [:a, :b, :c]}` - one of a fixed set of atoms
+    - `{:list, :string}` - list where every element matches the inner type
+    - `{:map, {:string, :integer}}` - map with typed keys and values
+    - `{:map, [name: :string, age: :integer]}` - map with specific named fields
+    - `{:tuple, [:float, :float]}` - fixed-size tuple with typed positions
+    - `{:union, [Plushie.Type.Color, Plushie.Type.StyleMap]}` - tries each type in order, first successful cast wins
+
+  Example in a field declaration:
+
+      field :tags, {:list, :string}
+      field :mode, {:enum, [:read, :write]}
+      field :scores, {:map, {:string, :integer}}
+
+  ## Building your own type
+
+  If the built-in types and composite types don't quite fit,
+  you can define your own. All custom types start with
+  `use Plushie.Type`. From there, you can either compose existing
+  types using the DSL macros, or implement callbacks directly for
+  more control.
+
+  ### Composing with the DSL
+
+  The DSL macros let you build types from existing ones. All
+  callbacks are generated automatically.
+
+  **Enum** for a fixed set of atom values:
+
+      defmodule MyApp.Type.Priority do
         use Plushie.Type
-        enum [:value_a, :value_b, :value_c]
+        enum [:low, :medium, :high, :critical]
       end
 
-      # Struct type (composite with fields)
-      defmodule MyStruct do
-        use Plushie.Type
-        field :name, :string
-        field :count, :integer
-      end
+  **Struct** for grouping related fields into a single value:
 
-      # Union type
-      defmodule MyUnion do
+      defmodule MyApp.Type.Dimensions do
         use Plushie.Type
-        union do
-          enum [:preset_a, :preset_b]
-          type Plushie.Type.StyleMap
+
+        struct do
+          field :width, :float
+          field :height, :float
         end
       end
 
-  Modules without declarations implement callbacks manually.
+  **Union** when a field accepts multiple forms (first match wins):
+
+      defmodule MyApp.Type.Size do
+        use Plushie.Type
+
+        union do
+          enum [:small, :medium, :large]
+          type MyApp.Type.Dimensions
+        end
+      end
+
+  Use them in widget field declarations by module name:
+
+      field :priority, MyApp.Type.Priority, default: :medium
+      field :size, MyApp.Type.Size
+
+  ### Custom callbacks
+
+  When you need custom validation, coercion from multiple input
+  forms, or encoding logic that the DSL can't express, you can
+  implement the callbacks directly. You still start with
+  `use Plushie.Type`.
+
+  A type needs at least `cast/1` and `typespec/0`. Adding `guard/1`
+  enables pattern matching in generated setters, and `encode/1`
+  handles cases where the wire representation differs from the
+  Elixir value:
+
+      defmodule MyApp.Type.Percentage do
+        use Plushie.Type
+
+        # Accept integers 0..100 or floats 0.0..1.0, normalize to float
+        @impl true
+        def cast(v) when is_integer(v) and v >= 0 and v <= 100, do: {:ok, v / 100}
+        def cast(v) when is_float(v) and v >= 0.0 and v <= 1.0, do: {:ok, v}
+        def cast(_), do: :error
+
+        @impl true
+        def typespec, do: quote(do: float())
+
+        @impl true
+        def guard(var), do: quote(do: is_float(unquote(var)))
+
+        # encode/1 not needed: floats are already wire-safe
+      end
+
+  You can also delegate to other types within your callbacks.
+  This is useful when your type wraps or combines existing types
+  with custom logic:
+
+      def cast(%{fg: fg, bg: bg}) do
+        with {:ok, fg} <- Plushie.Type.Color.cast(fg),
+             {:ok, bg} <- Plushie.Type.Color.cast(bg) do
+          {:ok, %{fg: fg, bg: bg}}
+        else
+          _ -> :error
+        end
+      end
+
+  `Plushie.Type.Integer` serves as a minimal reference.
+  `Plushie.Type.Color` shows how to handle many input forms.
+
+  ## Callbacks
+
+  Required:
+
+    - `cast/1` - validates input, returns `{:ok, normalized}` or
+      `:error`. Defines what values are accepted and what canonical
+      form they take.
+    - `typespec/0` - returns a quoted typespec
+      (e.g. `quote(do: float())`). Used in generated `@type` and
+      `@spec` attributes.
+
+  Optional:
+
+    - `guard/1` - returns a quoted guard expression. Enables pattern
+      matching in generated setter functions.
+    - `encode/1` - converts to wire-safe form (atoms to strings,
+      structs to maps). Only needed when the Elixir value isn't
+      directly serializable.
+    - `fields/0` - for struct types, returns `[{name, type}, ...]`.
+    - `field_options/0` - declares constraint keys (e.g.
+      `[:min, :max]`). Validated at compile time.
+    - `constrain_guard/2` - generates guards from field constraints
+      (e.g. range checks from `:min`/`:max` options).
+    - `merge/2` - controls how a field default combines with a user
+      override. Default: full replacement. Implement for struct types
+      where partial updates should preserve unset fields.
+    - `resolve/2` - derives the final value from sibling widget props
+      at render time. Default: identity. Implement when your type
+      needs to read other props to compute its value.
   """
 
   @callback cast(term()) :: {:ok, term()} | :error
@@ -68,18 +199,41 @@ defmodule Plushie.Type do
   @doc """
   Merges a default value with a user-provided override.
 
-  For most types, the override replaces the default entirely. Types
-  with internal structure (like A11y) can implement field-level merge
-  where only non-nil override fields replace the corresponding defaults.
+  When a widget field has a default value and the user also provides a
+  value, this callback controls how the two combine. The default
+  implementation replaces the default entirely with the override, which
+  is correct for most types.
+
+  Struct types with many optional fields can implement field-level
+  merge instead. Consider a `%Config{theme: nil, locale: nil}` type.
+  A widget declares `default: %Config{theme: :dark}` and the user
+  sets `config: %Config{locale: :en}`. A field-level merge produces
+  `%Config{theme: :dark, locale: :en}` rather than discarding the
+  default theme.
+
+  Implement this callback when your type is a struct and partial
+  overrides should preserve unset defaults. See `Plushie.Type.A11y`
+  for a real-world example.
   """
   @callback merge(default :: term(), override :: term()) :: term()
 
   @doc """
   Resolves derived values after all widget props are set.
 
-  Called during to_node with the full props map. Types that derive
-  values from other props (e.g., A11y deriving label from a widget's
-  :label prop) implement this. Most types return the value unchanged.
+  Called during tree normalization with the current field value and the
+  full props map of the widget. This lets a type compute its final
+  value based on sibling props that aren't known at declaration time.
+
+  For example, imagine a type with a `derive_from` field that names
+  another prop. A widget declares `field :tooltip, MyType, default:
+  %MyType{derive_from: :label}`. When `resolve/2` runs, it looks up
+  the `:label` prop from the props map and uses it as the tooltip
+  value. The `derive_from` directive is cleared since it only exists
+  to guide resolution, not to appear on the wire.
+
+  Most types don't need this. Implement it only when your type must
+  read other widget props to compute its final value. See
+  `Plushie.Type.A11y` for a real-world example.
   """
   @callback resolve(value :: term(), props :: map()) :: term()
 
@@ -109,7 +263,9 @@ defmodule Plushie.Type do
   Resolves a type reference to a module or composite descriptor.
 
   Accepts primitive atom shortcuts (`:integer`, `:string`, etc.),
-  module names, and composite tuple forms (`{:enum, [...]}`).
+  module names, and composite tuple forms (`{:enum, [...]}`,
+  `{:list, type}`, `{:map, spec}`, `{:tuple, [types]}`,
+  `{:union, [types]}`).
   """
   @spec resolve(term()) :: module() | {:composite, term()}
   def resolve(shortcut) when is_map_key(@primitive_shortcuts, shortcut) do
@@ -157,6 +313,37 @@ defmodule Plushie.Type do
       type_mod.resolve(value, props)
     else
       value
+    end
+  end
+
+  # -- Union typespec -----------------------------------------------------------
+
+  @doc false
+  @spec union_typespec([{:enum, [atom()]} | {:type, module()}]) :: Macro.t()
+  def union_typespec(variants) do
+    variant_types =
+      Enum.flat_map(variants, fn
+        {:enum, atoms} -> atoms
+        {:type, module} -> [typespec_for_module(module)]
+      end)
+
+    case variant_types do
+      [] -> quote(do: term())
+      types -> Enum.reduce(Enum.reverse(types), fn t, acc -> {:|, [], [t, acc]} end)
+    end
+  end
+
+  defp typespec_for_module(module) do
+    case resolve(module) do
+      {:composite, _} ->
+        quote(do: term())
+
+      mod ->
+        if Code.ensure_loaded?(mod) and function_exported?(mod, :typespec, 0) do
+          mod.typespec()
+        else
+          quote(do: term())
+        end
     end
   end
 
@@ -211,6 +398,10 @@ defmodule Plushie.Type do
           | {:map, {term(), term()} | [{atom(), term()}]},
           term()
         ) :: {:ok, term()} | :error
+  def cast_composite({:enum, values}, value) do
+    if value in values, do: {:ok, value}, else: :error
+  end
+
   def cast_composite({:list, inner_type}, value) when is_list(value) do
     results = Enum.map(value, fn el -> cast_value(inner_type, el) end)
 
@@ -229,7 +420,7 @@ defmodule Plushie.Type do
            {:ok, cv} <- cast_value(val_type, v) do
         {:cont, {:ok, Map.put(acc, ck, cv)}}
       else
-        :error -> {:halt, :error}
+        _ -> {:halt, :error}
       end
     end)
   end
@@ -255,10 +446,6 @@ defmodule Plushie.Type do
 
   def cast_composite({:tuple, _}, _), do: :error
 
-  def cast_composite({:enum, values}, value) do
-    if value in values, do: {:ok, value}, else: :error
-  end
-
   def cast_composite({:union, types}, value) do
     Enum.find_value(types, :error, fn type ->
       case cast_value(type, value) do
@@ -271,7 +458,7 @@ defmodule Plushie.Type do
   @doc """
   Casts a named field value, treating nil as a valid absent value.
 
-  Used by struct type cast and named field composites.
+  Used by map record composites and struct type cast.
   """
   @spec cast_optional_field(term(), term()) :: {:ok, term()} | :error
   def cast_optional_field(_type, nil), do: {:ok, nil}
@@ -626,7 +813,7 @@ defmodule Plushie.Type do
 
       @impl Plushie.Type
       def typespec do
-        quote do: term()
+        Plushie.Type.union_typespec(@_union_variants)
       end
     end
   end
