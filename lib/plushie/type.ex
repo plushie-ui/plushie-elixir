@@ -259,6 +259,14 @@ defmodule Plushie.Type do
     map: Plushie.Type.Map
   }
 
+  @composite_modules %{
+    enum: Plushie.Type.Composite.Enum,
+    list: Plushie.Type.Composite.List,
+    map: Plushie.Type.Composite.Map,
+    tuple: Plushie.Type.Composite.Tuple,
+    union: Plushie.Type.Composite.Union
+  }
+
   @doc """
   Resolves a type reference to a module or composite descriptor.
 
@@ -274,9 +282,19 @@ defmodule Plushie.Type do
 
   def resolve(module) when is_atom(module), do: module
 
-  def resolve({kind, _} = ref) when kind in [:enum, :list, :tuple, :union, :map] do
+  def resolve({kind, _} = ref) when is_map_key(@composite_modules, kind) do
     {:composite, ref}
   end
+
+  @doc "Returns the composite module for the given kind atom."
+  @spec composite_module(atom()) :: module()
+  def composite_module(kind) when is_map_key(@composite_modules, kind) do
+    Map.fetch!(@composite_modules, kind)
+  end
+
+  @doc "Returns true if the given atom is a known composite kind."
+  @spec composite_kind?(atom()) :: boolean()
+  def composite_kind?(kind) when is_atom(kind), do: is_map_key(@composite_modules, kind)
 
   @doc "Returns the map of primitive atom shortcuts to their type modules."
   @spec primitive_shortcuts() :: %{atom() => module()}
@@ -360,20 +378,9 @@ defmodule Plushie.Type do
     shortcut?(type) or type_has_cast?(type)
   end
 
-  def valid_event_type?({:enum, values}) when is_list(values), do: true
-  def valid_event_type?({:list, inner}), do: valid_event_type?(inner)
-
-  def valid_event_type?({:map, {k, v}}),
-    do: valid_event_type?(k) and valid_event_type?(v)
-
-  def valid_event_type?({:map, fields}) when is_list(fields),
-    do: Enum.all?(fields, fn {_, t} -> valid_event_type?(t) end)
-
-  def valid_event_type?({:tuple, types}) when is_list(types),
-    do: Enum.all?(types, &valid_event_type?/1)
-
-  def valid_event_type?({:union, types}) when is_list(types),
-    do: Enum.all?(types, &valid_event_type?/1)
+  def valid_event_type?({kind, spec}) when is_map_key(@composite_modules, kind) do
+    composite_module(kind).valid_spec?(spec, &valid_event_type?/1)
+  end
 
   def valid_event_type?(_), do: false
 
@@ -402,90 +409,13 @@ defmodule Plushie.Type do
   @doc """
   Casts a value according to a composite type constructor.
 
-  Composite types are `{:list, inner}`, `{:tuple, [types]}`,
-  `{:enum, [atoms]}`, `{:union, [types]}`, and `{:map, spec}`.
+  Dispatches to the appropriate `Plushie.Type.Composite` module
+  based on the composite kind.
   """
-  @spec cast_composite(
-          {:list, term()}
-          | {:tuple, [term()]}
-          | {:enum, [atom()]}
-          | {:union, [term()]}
-          | {:map, {term(), term()} | [{atom(), term()}]},
-          term()
-        ) :: {:ok, term()} | :error
-  def cast_composite({:enum, values}, value) do
-    if value in values do
-      {:ok, value}
-    else
-      cast_enum_from_string(values, value)
-    end
+  @spec cast_composite({atom(), term()}, term()) :: {:ok, term()} | :error
+  def cast_composite({kind, spec}, value) when is_map_key(@composite_modules, kind) do
+    composite_module(kind).cast(spec, value)
   end
-
-  def cast_composite({:list, inner_type}, value) when is_list(value) do
-    results = Enum.map(value, fn el -> cast_value(inner_type, el) end)
-
-    if Enum.all?(results, &match?({:ok, _}, &1)) do
-      {:ok, Enum.map(results, fn {:ok, v} -> v end)}
-    else
-      :error
-    end
-  end
-
-  def cast_composite({:list, _}, _), do: :error
-
-  def cast_composite({:map, {key_type, val_type}}, value) when is_map(value) do
-    Enum.reduce_while(value, {:ok, %{}}, fn {k, v}, {:ok, acc} ->
-      with {:ok, ck} <- cast_value(key_type, k),
-           {:ok, cv} <- cast_value(val_type, v) do
-        {:cont, {:ok, Map.put(acc, ck, cv)}}
-      else
-        _ -> {:halt, :error}
-      end
-    end)
-  end
-
-  def cast_composite({:map, fields}, value)
-      when is_list(fields) and (is_map(value) or is_list(value)) do
-    cast_named_fields(fields, value)
-  end
-
-  def cast_composite({:map, _}, _), do: :error
-
-  def cast_composite({:tuple, types}, value)
-      when is_tuple(value) and tuple_size(value) == length(types) do
-    pairs = Enum.zip(types, Tuple.to_list(value))
-    results = Enum.map(pairs, fn {type, val} -> cast_value(type, val) end)
-
-    if Enum.all?(results, &match?({:ok, _}, &1)) do
-      {:ok, List.to_tuple(Enum.map(results, fn {:ok, v} -> v end))}
-    else
-      :error
-    end
-  end
-
-  def cast_composite({:tuple, _}, _), do: :error
-
-  def cast_composite({:union, types}, value) do
-    Enum.find_value(types, :error, fn type ->
-      case cast_value(type, value) do
-        {:ok, v} -> {:ok, v}
-        :error -> nil
-      end
-    end)
-  end
-
-  # Wire data arrives as strings. Coerce to matching atom if possible.
-  defp cast_enum_from_string(values, value) when is_binary(value) do
-    Enum.find_value(values, :error, fn
-      atom when is_atom(atom) ->
-        if Atom.to_string(atom) == value, do: {:ok, atom}
-
-      _ ->
-        nil
-    end)
-  end
-
-  defp cast_enum_from_string(_, _), do: :error
 
   @doc """
   Casts a named field value, treating nil as a valid absent value.
