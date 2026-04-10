@@ -88,9 +88,11 @@ defmodule Plushie.EncodeTest do
   end
 
   describe "Any (fallback)" do
-    test "unknown structs pass through" do
-      bogus = struct(Plushie.EncodeTest.BogusStruct, x: 1)
-      assert Type.encode_value(bogus) == bogus
+    test "unknown structs are encoded as maps" do
+      bogus = Kernel.struct(Plushie.EncodeTest.BogusStruct, x: 1)
+      encoded = Type.encode_value(bogus)
+      assert encoded == %{x: 1}
+      refute Map.has_key?(encoded, :__struct__)
     end
   end
 

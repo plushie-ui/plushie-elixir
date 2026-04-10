@@ -399,8 +399,7 @@ defmodule Plushie.Type do
   def valid_event_type?(_), do: false
 
   defp type_has_cast?(module) do
-    Code.ensure_loaded?(module) and
-      (function_exported?(module, :cast, 1) or function_exported?(module, :parse, 1))
+    Code.ensure_loaded?(module) and function_exported?(module, :cast, 1)
   end
 
   @doc """
@@ -495,14 +494,15 @@ defmodule Plushie.Type do
   Encodes a value to its wire-safe representation.
 
   Handles primitives (atoms become strings, tuples become lists) and
-  structs (delegates to `module.encode/1` when available).
+  structs (delegates to `module.encode/1` when available, otherwise
+  strips `__struct__` and recursively encodes the map).
   """
   @spec encode_value(term()) :: term()
   def encode_value(%module{} = v) do
     if Code.ensure_loaded?(module) and function_exported?(module, :encode, 1) do
       module.encode(v)
     else
-      v
+      v |> Map.from_struct() |> encode_value()
     end
   end
 
