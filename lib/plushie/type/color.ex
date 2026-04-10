@@ -408,6 +408,12 @@ defmodule Plushie.Type.Color do
 
   @doc false
   @impl Plushie.Type
+  def castable do
+    quote do: atom() | String.t() | map()
+  end
+
+  @doc false
+  @impl Plushie.Type
   def guard(var) do
     quote do: is_binary(unquote(var))
   end

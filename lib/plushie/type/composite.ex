@@ -26,8 +26,11 @@ defmodule Plushie.Type.Composite do
   @doc "Casts a value against the composite spec."
   @callback cast(spec(), term()) :: {:ok, term()} | :error
 
-  @doc "Returns quoted typespec AST. The resolver maps inner type refs to their AST."
+  @doc "Returns quoted typespec AST for the canonical form. The resolver maps inner type refs to their AST."
   @callback typespec(spec(), type_resolver :: (term() -> Macro.t())) :: Macro.t()
+
+  @doc "Returns quoted typespec AST for accepted input forms. Defaults to typespec/2."
+  @callback castable(spec(), type_resolver :: (term() -> Macro.t())) :: Macro.t()
 
   @doc "Returns a quoted guard expression, or nil if no guard applies."
   @callback guard(spec(), var :: Macro.t()) :: Macro.t() | nil
@@ -37,4 +40,6 @@ defmodule Plushie.Type.Composite do
 
   @doc "Returns true if the spec is structurally valid."
   @callback valid_spec?(spec(), checker :: (term() -> boolean())) :: boolean()
+
+  @optional_callbacks [castable: 2]
 end

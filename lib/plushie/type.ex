@@ -237,12 +237,26 @@ defmodule Plushie.Type do
   """
   @callback resolve(value :: term(), props :: map()) :: term()
 
+  @doc """
+  Returns the quoted typespec for values accepted by `cast/1`.
+
+  For types that normalize input (e.g., Color accepts atoms, strings,
+  and maps but stores a hex string), this describes the broader input
+  surface. Widget setter `@spec` annotations use this so dialyzer
+  and documentation reflect what users can actually pass.
+
+  Defaults to `typespec/0` when not implemented, which is correct
+  for types where the input and canonical forms are the same.
+  """
+  @callback castable() :: Macro.t()
+
   @optional_callbacks [
-    guard: 1,
-    encode: 1,
-    fields: 0,
-    field_options: 0,
+    castable: 0,
     constrain_guard: 2,
+    encode: 1,
+    field_options: 0,
+    fields: 0,
+    guard: 1,
     merge: 2,
     resolve: 2
   ]
@@ -625,9 +639,14 @@ defmodule Plushie.Type do
           quote do: :ok
       end
 
-    # Default merge/resolve implementations unless the module defined its own.
+    # Default implementations for optional callbacks.
     defaults =
       quote do
+        unless Module.defines?(__MODULE__, {:castable, 0}) do
+          @impl Plushie.Type
+          def castable, do: typespec()
+        end
+
         unless Module.defines?(__MODULE__, {:merge, 2}) do
           @impl Plushie.Type
           def merge(_default, override), do: override

@@ -1617,10 +1617,6 @@ defmodule Plushie.Widget do
     end
   end
 
-  defp prop_type_ast({name, Plushie.Type.Color, _opts}) do
-    {name, quote(do: Plushie.Type.Color.t() | nil)}
-  end
-
   defp prop_type_ast({name, type, _opts}) do
     {name, quote(do: unquote(elixir_type_for(type)) | nil)}
   end
@@ -1635,12 +1631,23 @@ defmodule Plushie.Widget do
     end
   end
 
-  # Option types use broader input types for cast-based types (e.g. Color
-  # accepts atoms, hex strings, maps). For other types the option and
-  # storage types are the same.
-  defp option_type_for(Plushie.Type.Color), do: quote(do: Plushie.Type.Color.input())
+  defp castable_type_for(type) do
+    case Plushie.Type.resolve(type) do
+      {:composite, {kind, spec}} ->
+        mod = Plushie.Type.composite_module(kind)
 
-  defp option_type_for(type), do: elixir_type_for(type)
+        if function_exported?(mod, :castable, 2) do
+          mod.castable(spec, &castable_type_for/1)
+        else
+          mod.typespec(spec, &castable_type_for/1)
+        end
+
+      module ->
+        module.castable()
+    end
+  end
+
+  defp option_type_for(type), do: castable_type_for(type)
 
   defp union_type([single]), do: single
 
@@ -1852,7 +1859,7 @@ defmodule Plushie.Widget do
         cast_fn = Keyword.get(opts, :cast)
 
         encoder = encoder_for_type(type)
-        value_type = elixir_type_for(type)
+        value_type = castable_type_for(type)
         constraint_opts = Keyword.drop(opts, @known_field_opts)
         base_guard = setter_guard(type)
         guard = combine_guard(base_guard, constraint_guard(type, constraint_opts))
@@ -2257,7 +2264,10 @@ defmodule Plushie.Widget do
   end
 
   defp build_command_spec(name, params) do
-    param_types = [quote(do: String.t()) | Enum.map(params, fn {_n, t} -> elixir_type_for(t) end)]
+    param_types = [
+      quote(do: String.t()) | Enum.map(params, fn {_n, t} -> castable_type_for(t) end)
+    ]
+
     return_type = quote(do: Plushie.Command.t())
 
     quote do
