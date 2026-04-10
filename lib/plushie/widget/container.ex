@@ -14,7 +14,7 @@ defmodule Plushie.Widget.Container.Extras do
       def center(%__MODULE__{} = c, val) when is_boolean(val), do: %{c | center: val}
 
       @doc "Sets the background fill (color or gradient)."
-      def background(%__MODULE__{} = c, %{type: "linear"} = gradient),
+      def background(%__MODULE__{} = c, %Plushie.Type.Gradient{} = gradient),
         do: %{c | background: gradient}
 
       def background(%__MODULE__{} = c, background) do

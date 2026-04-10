@@ -1,9 +1,18 @@
 defmodule Plushie.Type.Gradient do
   @moduledoc """
-  Gradient backgrounds for container widgets.
+  Gradient type for container and style backgrounds.
 
-  Used via the `background` prop on containers. The renderer parses
-  gradient maps and converts them to `iced::gradient::Linear`.
+  Build gradients with `linear/2`:
+
+      Plushie.Type.Gradient.linear(90, [
+        {0.0, "#ff0000"},
+        {0.5, "#00ff00"},
+        {1.0, "#0000ff"}
+      ])
+
+  Stop colors accept any form `Plushie.Type.Color.cast/1` supports
+  (named atoms, hex strings, RGBA maps). They are normalized to
+  canonical hex strings during construction.
 
   ## Wire format
 
@@ -17,34 +26,31 @@ defmodule Plushie.Type.Gradient do
       }
 
   `angle` is in degrees (converted to radians by the renderer).
-
-  ## Example
-
-      gradient = Plushie.Type.Gradient.linear(90, [
-        {0.0, "#ff0000"},
-        {0.5, "#00ff00"},
-        {1.0, "#0000ff"}
-      ])
   """
+
+  use Plushie.Type
 
   @typedoc "A gradient color stop with offset (0.0-1.0) and color (canonical hex string)."
   @type stop :: %{offset: float(), color: String.t()}
 
-  @typedoc "Gradient specification with type, angle, and color stops."
-  @type t :: %{type: String.t(), angle: number(), stops: [stop()]}
+  @typedoc "Color input for gradient stops: any form `Color.cast/1` supports."
+  @type stop_color :: Plushie.Type.Color.input()
 
-  @typedoc "Color input for gradient stops: any `Color.input()` form, or a float RGBA map."
-  @type stop_color ::
-          Plushie.Type.Color.input() | %{r: float(), g: float(), b: float(), a: float()}
+  @type t :: %__MODULE__{
+          type: String.t(),
+          angle: number(),
+          stops: [stop()]
+        }
+
+  defstruct type: "linear", angle: 0, stops: []
 
   @doc """
   Creates a linear gradient with an angle (degrees) and a list of
-  `{offset, color}` stops. Colors accept any form `Color.cast/1`
-  supports (hex strings or named atoms).
+  `{offset, color}` stops.
   """
   @spec linear(angle :: number(), stops :: [{number(), stop_color()}]) :: t()
   def linear(angle, stops) when is_number(angle) and is_list(stops) do
-    %{
+    %__MODULE__{
       type: "linear",
       angle: angle,
       stops:
@@ -54,11 +60,37 @@ defmodule Plushie.Type.Gradient do
     }
   end
 
-  # All stop colors are normalized to canonical hex strings via Color.cast.
-  # This covers hex strings, named atoms, and float RGBA maps.
   defp cast_stop_color(color), do: elem(Plushie.Type.Color.cast(color), 1)
 
-  @doc "Encodes a gradient to the wire format."
-  @spec encode(gradient :: t()) :: t()
-  def encode(%{} = gradient), do: gradient
+  @impl Plushie.Type
+  def cast(%__MODULE__{} = v), do: {:ok, v}
+
+  def cast(%{type: "linear", angle: angle, stops: stops})
+      when is_number(angle) and is_list(stops) do
+    validated_stops =
+      Enum.map(stops, fn
+        %{offset: offset, color: color} when is_number(offset) and is_binary(color) ->
+          %{offset: offset, color: color}
+      end)
+
+    {:ok, %__MODULE__{type: "linear", angle: angle, stops: validated_stops}}
+  rescue
+    _ -> :error
+  end
+
+  def cast(_), do: :error
+
+  @impl Plushie.Type
+  def typespec, do: quote(do: %__MODULE__{})
+
+  @impl Plushie.Type
+  def guard(var) do
+    mod = __MODULE__
+    quote(do: is_struct(unquote(var), unquote(mod)))
+  end
+
+  @impl Plushie.Type
+  def encode(%__MODULE__{type: type, angle: angle, stops: stops}) do
+    %{type: type, angle: angle, stops: stops}
+  end
 end

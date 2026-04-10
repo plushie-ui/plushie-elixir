@@ -40,9 +40,35 @@ defmodule Plushie.Type.GradientTest do
   end
 
   describe "encode/1" do
-    test "passes through the gradient map unchanged" do
+    test "converts struct to plain map" do
       grad = Gradient.linear(0.0, [{0.0, "#000"}, {1.0, "#fff"}])
-      assert Gradient.encode(grad) == grad
+      encoded = Gradient.encode(grad)
+
+      refute Map.has_key?(encoded, :__struct__)
+      assert encoded.type == "linear"
+      assert encoded.angle == 0.0
+      assert length(encoded.stops) == 2
+    end
+  end
+
+  describe "cast/1" do
+    test "accepts Gradient struct" do
+      grad = Gradient.linear(90, [{0.0, "#ff0000"}, {1.0, "#0000ff"}])
+      assert {:ok, ^grad} = Gradient.cast(grad)
+    end
+
+    test "accepts valid map" do
+      assert {:ok, %Gradient{angle: 45}} =
+               Gradient.cast(%{
+                 type: "linear",
+                 angle: 45,
+                 stops: [%{offset: 0.0, color: "#ff0000"}]
+               })
+    end
+
+    test "rejects invalid input" do
+      assert :error = Gradient.cast("not a gradient")
+      assert :error = Gradient.cast(42)
     end
   end
 end

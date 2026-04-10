@@ -93,7 +93,7 @@ defmodule Plushie.Type.StyleMap do
 
   @doc "Sets the background. Accepts a color (any form `Color.cast/1` supports) or a `Gradient`."
   @spec background(style_map :: t(), background :: Color.input() | Gradient.t()) :: t()
-  def background(%__MODULE__{} = style_map, %{type: "linear"} = gradient) do
+  def background(%__MODULE__{} = style_map, %Gradient{} = gradient) do
     %{style_map | background: gradient}
   end
 
@@ -186,8 +186,7 @@ defmodule Plushie.Type.StyleMap do
   defp cast_color_field(map, key) do
     case Map.get(map, key) do
       nil -> map
-      # Gradients pass through as-is (already a wire-format map).
-      %{type: "linear"} = gradient -> Map.put(map, key, gradient)
+      %Gradient{} = gradient -> Map.put(map, key, gradient)
       val -> Map.put(map, key, elem(Color.cast(val), 1))
     end
   end
