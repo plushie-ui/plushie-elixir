@@ -353,12 +353,27 @@ defmodule Plushie.Type do
   Returns true if the given type identifier is valid for event fields.
 
   Valid types are primitive shortcuts, modules implementing Plushie.Type
-  (with `cast/1`), or modules with `parse/1`.
+  (with `cast/1`), modules with `parse/1`, or composite type tuples.
   """
   @spec valid_event_type?(type :: term()) :: boolean()
   def valid_event_type?(type) when is_atom(type) do
     shortcut?(type) or type_has_cast?(type)
   end
+
+  def valid_event_type?({:enum, values}) when is_list(values), do: true
+  def valid_event_type?({:list, inner}), do: valid_event_type?(inner)
+
+  def valid_event_type?({:map, {k, v}}),
+    do: valid_event_type?(k) and valid_event_type?(v)
+
+  def valid_event_type?({:map, fields}) when is_list(fields),
+    do: Enum.all?(fields, fn {_, t} -> valid_event_type?(t) end)
+
+  def valid_event_type?({:tuple, types}) when is_list(types),
+    do: Enum.all?(types, &valid_event_type?/1)
+
+  def valid_event_type?({:union, types}) when is_list(types),
+    do: Enum.all?(types, &valid_event_type?/1)
 
   def valid_event_type?(_), do: false
 
@@ -399,7 +414,11 @@ defmodule Plushie.Type do
           term()
         ) :: {:ok, term()} | :error
   def cast_composite({:enum, values}, value) do
-    if value in values, do: {:ok, value}, else: :error
+    if value in values do
+      {:ok, value}
+    else
+      cast_enum_from_string(values, value)
+    end
   end
 
   def cast_composite({:list, inner_type}, value) when is_list(value) do
@@ -454,6 +473,19 @@ defmodule Plushie.Type do
       end
     end)
   end
+
+  # Wire data arrives as strings. Coerce to matching atom if possible.
+  defp cast_enum_from_string(values, value) when is_binary(value) do
+    Enum.find_value(values, :error, fn
+      atom when is_atom(atom) ->
+        if Atom.to_string(atom) == value, do: {:ok, atom}
+
+      _ ->
+        nil
+    end)
+  end
+
+  defp cast_enum_from_string(_, _), do: :error
 
   @doc """
   Casts a named field value, treating nil as a valid absent value.
@@ -802,13 +834,8 @@ defmodule Plushie.Type do
 
       defp try_variant({:enum, _}, _), do: :error
 
-      defp try_variant({:type, module}, value) do
-        resolved = Plushie.Type.resolve(module)
-
-        case resolved do
-          {:composite, _} -> {:ok, value}
-          mod -> mod.cast(value)
-        end
+      defp try_variant({:type, type_ref}, value) do
+        Plushie.Type.cast_value(type_ref, value)
       end
 
       @impl Plushie.Type

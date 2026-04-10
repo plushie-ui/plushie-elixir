@@ -444,3 +444,61 @@ defmodule Plushie.TypeTest.MapCompositeTest do
     end
   end
 end
+
+# -- Enum string coercion -----------------------------------------------------
+
+defmodule Plushie.TypeTest.EnumCompositeTest do
+  use ExUnit.Case, async: true
+
+  describe "enum composite string coercion" do
+    test "coerces string to matching atom" do
+      assert {:ok, :read} = Plushie.Type.cast_composite({:enum, [:read, :write]}, "read")
+      assert {:ok, :write} = Plushie.Type.cast_composite({:enum, [:read, :write]}, "write")
+    end
+
+    test "rejects non-matching string" do
+      assert :error = Plushie.Type.cast_composite({:enum, [:read, :write]}, "delete")
+    end
+
+    test "still accepts atoms directly" do
+      assert {:ok, :read} = Plushie.Type.cast_composite({:enum, [:read, :write]}, :read)
+    end
+
+    test "rejects non-atom non-string values" do
+      assert :error = Plushie.Type.cast_composite({:enum, [:read, :write]}, 42)
+    end
+  end
+end
+
+# -- valid_event_type? for composites ------------------------------------------
+
+defmodule Plushie.TypeTest.ValidEventTypeTest do
+  use ExUnit.Case, async: true
+
+  describe "valid_event_type? with composites" do
+    test "accepts enum composites" do
+      assert Plushie.Type.valid_event_type?({:enum, [:a, :b]})
+    end
+
+    test "accepts list composites" do
+      assert Plushie.Type.valid_event_type?({:list, :string})
+    end
+
+    test "accepts map composites" do
+      assert Plushie.Type.valid_event_type?({:map, {:string, :integer}})
+      assert Plushie.Type.valid_event_type?({:map, [name: :string]})
+    end
+
+    test "accepts tuple composites" do
+      assert Plushie.Type.valid_event_type?({:tuple, [:float, :float]})
+    end
+
+    test "accepts union composites" do
+      assert Plushie.Type.valid_event_type?({:union, [:string, :integer]})
+    end
+
+    test "rejects invalid inner types" do
+      refute Plushie.Type.valid_event_type?({:list, :nonexistent_type})
+    end
+  end
+end
