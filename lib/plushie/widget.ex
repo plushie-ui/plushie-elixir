@@ -1189,6 +1189,11 @@ defmodule Plushie.Widget do
   end
 
   defp valid_type?({:list, inner}), do: valid_type?(inner)
+  defp valid_type?({:map, {k, v}}), do: valid_type?(k) and valid_type?(v)
+
+  defp valid_type?({:map, fields}) when is_list(fields),
+    do: Enum.all?(fields, fn {_, t} -> valid_type?(t) end)
+
   defp valid_type?({:tuple, types}) when is_list(types), do: Enum.all?(types, &valid_type?/1)
   defp valid_type?({:enum, values}) when is_list(values), do: true
   defp valid_type?({:union, types}) when is_list(types), do: Enum.all?(types, &valid_type?/1)
@@ -1399,6 +1404,15 @@ defmodule Plushie.Widget do
     case Plushie.Type.resolve(type) do
       {:composite, {:list, inner}} ->
         "[#{type_display_string(inner)}]"
+
+      {:composite, {:map, {key_type, val_type}}} ->
+        "%{#{type_display_string(key_type)} => #{type_display_string(val_type)}}"
+
+      {:composite, {:map, fields}} when is_list(fields) ->
+        inner =
+          Enum.map_join(fields, ", ", fn {name, t} -> "#{name}: #{type_display_string(t)}" end)
+
+        "%{#{inner}}"
 
       {:composite, {:tuple, types}} ->
         inner = Enum.map_join(types, ", ", &type_display_string/1)
@@ -1770,6 +1784,9 @@ defmodule Plushie.Widget do
       {:composite, {:list, _}} ->
         fn var -> quote(do: is_list(unquote(var))) end
 
+      {:composite, {:map, _}} ->
+        fn var -> quote(do: is_map(unquote(var)) or is_list(unquote(var))) end
+
       {:composite, {:tuple, types}} ->
         len = length(types)
 
@@ -1997,6 +2014,9 @@ defmodule Plushie.Widget do
     case Plushie.Type.resolve(type) do
       {:composite, {:list, _}} ->
         quote(do: is_list(value))
+
+      {:composite, {:map, _}} ->
+        quote(do: is_map(value) or is_list(value))
 
       {:composite, {:tuple, types}} ->
         len = length(types)
@@ -2311,6 +2331,9 @@ defmodule Plushie.Widget do
     case Plushie.Type.resolve(type) do
       {:composite, {:list, _}} ->
         quote(do: is_list(unquote(var)))
+
+      {:composite, {:map, _}} ->
+        quote(do: is_map(unquote(var)) or is_list(unquote(var)))
 
       {:composite, _} ->
         quote(do: true)

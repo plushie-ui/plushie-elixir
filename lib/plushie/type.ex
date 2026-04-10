@@ -118,7 +118,7 @@ defmodule Plushie.Type do
 
   def resolve(module) when is_atom(module), do: module
 
-  def resolve({kind, _} = ref) when kind in [:enum, :list, :tuple, :union] do
+  def resolve({kind, _} = ref) when kind in [:enum, :list, :tuple, :union, :map] do
     {:composite, ref}
   end
 
@@ -201,10 +201,14 @@ defmodule Plushie.Type do
   Casts a value according to a composite type constructor.
 
   Composite types are `{:list, inner}`, `{:tuple, [types]}`,
-  `{:enum, [atoms]}`, and `{:union, [types]}`.
+  `{:enum, [atoms]}`, `{:union, [types]}`, and `{:map, spec}`.
   """
   @spec cast_composite(
-          {:list, term()} | {:tuple, [term()]} | {:enum, [atom()]} | {:union, [term()]},
+          {:list, term()}
+          | {:tuple, [term()]}
+          | {:enum, [atom()]}
+          | {:union, [term()]}
+          | {:map, {term(), term()} | [{atom(), term()}]},
           term()
         ) :: {:ok, term()} | :error
   def cast_composite({:list, inner_type}, value) when is_list(value) do
@@ -218,6 +222,24 @@ defmodule Plushie.Type do
   end
 
   def cast_composite({:list, _}, _), do: :error
+
+  def cast_composite({:map, {key_type, val_type}}, value) when is_map(value) do
+    Enum.reduce_while(value, {:ok, %{}}, fn {k, v}, {:ok, acc} ->
+      with {:ok, ck} <- cast_value(key_type, k),
+           {:ok, cv} <- cast_value(val_type, v) do
+        {:cont, {:ok, Map.put(acc, ck, cv)}}
+      else
+        :error -> {:halt, :error}
+      end
+    end)
+  end
+
+  def cast_composite({:map, fields}, value)
+      when is_list(fields) and (is_map(value) or is_list(value)) do
+    cast_named_fields(fields, value)
+  end
+
+  def cast_composite({:map, _}, _), do: :error
 
   def cast_composite({:tuple, types}, value)
       when is_tuple(value) and tuple_size(value) == length(types) do

@@ -351,3 +351,93 @@ defmodule Plushie.TypeTest.UnionTest do
     end
   end
 end
+
+# -- Map composite types ------------------------------------------------------
+
+defmodule Plushie.TypeTest.MapCompositeTest do
+  use ExUnit.Case, async: true
+
+  describe "map dictionary form {:map, {key_type, val_type}}" do
+    test "casts all keys and values" do
+      assert {:ok, %{"a" => 1, "b" => 2}} =
+               Plushie.Type.cast_composite({:map, {:string, :integer}}, %{"a" => 1, "b" => 2})
+    end
+
+    test "casts keys through the key type" do
+      assert {:ok, %{"hello" => 1}} =
+               Plushie.Type.cast_composite({:map, {:string, :integer}}, %{hello: 1})
+    end
+
+    test "rejects invalid values" do
+      assert :error =
+               Plushie.Type.cast_composite({:map, {:string, :integer}}, %{"a" => "not_int"})
+    end
+
+    test "rejects non-map input" do
+      assert :error = Plushie.Type.cast_composite({:map, {:string, :integer}}, "nope")
+    end
+
+    test "accepts empty map" do
+      assert {:ok, %{}} = Plushie.Type.cast_composite({:map, {:string, :integer}}, %{})
+    end
+  end
+
+  describe "map record form {:map, [name: type]}" do
+    test "casts named fields from atom-keyed map" do
+      assert {:ok, %{name: "alice", age: 30}} =
+               Plushie.Type.cast_composite(
+                 {:map, [name: :string, age: :integer]},
+                 %{name: "alice", age: 30}
+               )
+    end
+
+    test "casts named fields from string-keyed map" do
+      assert {:ok, %{name: "bob", age: 25}} =
+               Plushie.Type.cast_composite(
+                 {:map, [name: :string, age: :integer]},
+                 %{"name" => "bob", "age" => 25}
+               )
+    end
+
+    test "casts named fields from keyword list" do
+      assert {:ok, %{name: "carol", age: 40}} =
+               Plushie.Type.cast_composite(
+                 {:map, [name: :string, age: :integer]},
+                 name: "carol",
+                 age: 40
+               )
+    end
+
+    test "missing fields become nil" do
+      assert {:ok, %{name: "dan", age: nil}} =
+               Plushie.Type.cast_composite(
+                 {:map, [name: :string, age: :integer]},
+                 %{name: "dan"}
+               )
+    end
+
+    test "rejects invalid field values" do
+      assert :error =
+               Plushie.Type.cast_composite(
+                 {:map, [name: :string, age: :integer]},
+                 %{name: "eve", age: "not_int"}
+               )
+    end
+
+    test "preserves false and nil field values" do
+      assert {:ok, %{enabled: false, label: nil}} =
+               Plushie.Type.cast_composite(
+                 {:map, [enabled: :boolean, label: :string]},
+                 %{enabled: false}
+               )
+    end
+
+    test "rejects non-keyword list input" do
+      assert :error = Plushie.Type.cast_composite({:map, [name: :string]}, [1, 2, 3])
+    end
+
+    test "rejects non-map non-list input" do
+      assert :error = Plushie.Type.cast_composite({:map, [name: :string]}, 42)
+    end
+  end
+end
