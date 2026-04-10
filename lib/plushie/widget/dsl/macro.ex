@@ -134,7 +134,7 @@ defmodule Plushie.Widget.DSL.Macro do
   `value:` and `fields:` are mutually exclusive.
 
   Type identifiers can be built-in atoms (`:float`, `:string`,
-  `:boolean`, `:any`) or modules with a `parse/1` function.
+  `:boolean`, `:any`) or modules implementing `Plushie.Type`.
   """
   defmacro event(name, opts_or_block \\ [])
 
@@ -639,7 +639,7 @@ defmodule Plushie.Widget.DSL.Macro do
         line: caller.line,
         description:
           "event #{inspect(event_name)} #{context} invalid type #{inspect(type)}. " <>
-            "Use a built-in type (:float, :string, :boolean, :any) or a module with parse/1."
+            "Use a built-in type (:float, :string, :boolean, :any) or a module implementing Plushie.Type."
     end
   end
 end

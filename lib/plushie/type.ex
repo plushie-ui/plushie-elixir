@@ -468,7 +468,7 @@ defmodule Plushie.Type do
   Returns true if the given type identifier is valid for event fields.
 
   Valid types are primitive shortcuts, modules implementing Plushie.Type
-  (with `cast/1`), modules with `parse/1`, or composite type tuples.
+  (with `cast/1`), or composite type tuples.
   """
   @spec valid_event_type?(type :: term()) :: boolean()
   def valid_event_type?(type) when is_atom(type) do
