@@ -62,11 +62,15 @@ These are full modules referenced by name in field declarations:
 
 | Callback | Signature | Purpose |
 |----------|-----------|---------|
-| `guard/1` | `Macro.t() -> Macro.t() \| nil` | Quoted guard clause for setter function heads |
-| `encode/1` | `term() -> term()` | Wire encoding (Elixir value to JSON-safe value) |
-| `fields/0` | `-> [{atom(), term()}] \| nil` | Sub-field definitions for DSL block support |
-| `field_options/0` | `-> [atom()]` | Valid constraint names for this type |
+| `castable/0` | `-> Macro.t()` | Quoted typespec for values `cast/1` accepts (defaults to `typespec/0`) |
 | `constrain_guard/2` | `(Macro.t(), keyword()) -> [Macro.t()]` | Additional guard clauses from field constraints |
+| `decode/1` | `term() -> {:ok, term()} \| :error` | Wire decoding (JSON values to canonical form, defaults to `cast/1`) |
+| `encode/1` | `term() -> term()` | Wire encoding (Elixir value to JSON-safe value) |
+| `field_options/0` | `-> [atom()]` | Valid constraint names for this type |
+| `fields/0` | `-> [{atom(), term()}] \| nil` | Sub-field definitions for DSL block support |
+| `guard/1` | `Macro.t() -> Macro.t() \| nil` | Quoted guard clause for setter function heads |
+| `merge/2` | `(term(), term()) -> term()` | Merge default with override (defaults to replacement) |
+| `resolve/2` | `(term(), map()) -> term()` | Derive value from sibling widget props (defaults to identity) |
 
 ## How types are used
 
@@ -74,16 +78,20 @@ When you declare `field :size, :float, min: 0`, the widget macro
 resolves `:float` to `Plushie.Type.Float` at compile time and:
 
 1. **Typespec**: calls `Float.typespec()` to generate the field's
-   `@type` entry and setter `@spec`
-2. **Guard**: calls `Float.guard(var)` to generate the setter's
+   `@type` entry
+2. **Castable**: calls `Float.castable()` to generate the setter's
+   `@spec` (what the setter accepts as input)
+3. **Guard**: calls `Float.guard(var)` to generate the setter's
    `when is_number(value)` clause
-3. **Constraints**: calls `Float.constrain_guard(var, [min: 0])` to
+4. **Constraints**: calls `Float.constrain_guard(var, [min: 0])` to
    add `and value >= 0` to the guard
-4. **Cast**: calls `Float.cast(value)` in the setter body to
-   validate and coerce the input
-5. **Encode**: calls `Float.encode(value)` during tree normalization
-   to produce the wire-safe representation
-6. **Doc generation**: uses the typespec string in the auto-generated
+5. **Cast**: calls `Float.cast(value)` in the setter body to
+   validate and coerce user input
+6. **Encode**: calls `Float.encode(value)` during tree normalization
+   to produce the wire-safe representation sent to the renderer
+7. **Decode**: calls `Float.decode(value)` when event data arrives
+   from the renderer, coercing wire-format values back to Elixir
+8. **Doc generation**: uses the typespec string in the auto-generated
    Props table in the widget's `@moduledoc`
 
 If cast returns `:error`, the setter raises `ArgumentError` with the
@@ -216,13 +224,13 @@ first. Place more specific types before more general ones.
 ### Manual types
 
 For types with complex validation logic, implement the callbacks
-directly without the macro:
+directly. You still start with `use Plushie.Type`:
 
 ```elixir
 defmodule MyApp.Type.HexColor do
-  @behaviour Plushie.Type
+  use Plushie.Type
 
-  @impl true
+  @impl Plushie.Type
   def cast("#" <> hex = value) when byte_size(hex) in [6, 8] do
     if String.match?(hex, ~r/^[0-9a-fA-F]+$/) do
       {:ok, String.downcase(value)}
@@ -232,10 +240,10 @@ defmodule MyApp.Type.HexColor do
   end
   def cast(_), do: :error
 
-  @impl true
+  @impl Plushie.Type
   def typespec, do: quote(do: String.t())
 
-  @impl true
+  @impl Plushie.Type
   def guard(var), do: quote(do: is_binary(unquote(var)))
 end
 ```
@@ -260,7 +268,7 @@ canonical form. `Plushie.Type.Color` is a good example:
 
 ```elixir
 defmodule Plushie.Type.Color do
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   # Named atoms: :red, :blue, :cornflowerblue, ...
   def cast(name) when is_atom(name) do
@@ -298,7 +306,7 @@ Types can compose internally by calling other types' `cast/1`:
 
 ```elixir
 defmodule MyApp.Type.ColorPair do
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   def cast(%{fg: fg, bg: bg}) do
     with {:ok, fg_hex} <- Plushie.Type.Color.cast(fg),
@@ -320,7 +328,7 @@ cast). Guards must use only guard-safe expressions (BIF calls like
 `is_binary`, `is_number`, comparisons, boolean operators).
 
 ```elixir
-@impl true
+@impl Plushie.Type
 def guard(var) do
   quote(do: is_binary(unquote(var)) or is_atom(unquote(var)))
 end
@@ -362,7 +370,7 @@ representation. Called during tree normalization for every non-nil
 prop value.
 
 ```elixir
-@impl true
+@impl Plushie.Type
 def encode(%__MODULE__{top: t, right: r, bottom: b, left: l}) do
   %{top: t, right: r, bottom: b, left: l}
 end
@@ -478,22 +486,22 @@ Define your own constraints by implementing `field_options/0` and
 
 ```elixir
 defmodule MyApp.Type.Port do
-  @behaviour Plushie.Type
+  use Plushie.Type
 
-  @impl true
+  @impl Plushie.Type
   def cast(v) when is_integer(v) and v > 0 and v <= 65535, do: {:ok, v}
   def cast(_), do: :error
 
-  @impl true
+  @impl Plushie.Type
   def typespec, do: quote(do: pos_integer())
 
-  @impl true
+  @impl Plushie.Type
   def guard(var), do: quote(do: is_integer(unquote(var)))
 
-  @impl true
+  @impl Plushie.Type
   def field_options, do: [:exclude_reserved]
 
-  @impl true
+  @impl Plushie.Type
   def constrain_guard(var, opts) do
     if opts[:exclude_reserved] do
       [quote(do: unquote(var) > 1024)]
@@ -527,11 +535,11 @@ end
 event :item_selected, value: MyApp.Type.Priority
 ```
 
-Event fields are validated at the wire boundary when events arrive
-from the renderer, using `Plushie.Type.cast_field/2`. Invalid values
-are dropped with a protocol error. This catches type mismatches
-between the renderer and SDK at the boundary rather than deep in
-application code.
+Event fields are decoded at the wire boundary when events arrive
+from the renderer, using `Plushie.Type.decode_field/2`. This calls
+the type's `decode/1` callback, which handles wire-format coercion
+(e.g., converting JSON strings to atoms for enum types). Invalid
+values are dropped with a protocol error.
 
 ## Nil handling
 

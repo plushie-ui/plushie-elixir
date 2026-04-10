@@ -54,9 +54,8 @@ field :range, {:tuple, [:float, :float]}
 ```
 
 Any module that implements `Plushie.Type` can be used as a field type.
-For event field types specifically, modules that export `parse/1` are
-also accepted. See the [Custom Types reference](custom-types.md) for
-building your own type modules.
+See the [Custom Types reference](custom-types.md) for building your
+own type modules.
 
 ### Field options
 
