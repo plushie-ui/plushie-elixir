@@ -659,19 +659,9 @@ defmodule Plushie.Widget.DSL.Codegen do
   end
 
   defp positional_guard(type) do
-    case Plushie.Type.resolve(type) do
-      {:composite, {kind, spec}} ->
-        mod = Plushie.Type.composite_module(kind)
-
-        case mod.guard(spec, quote(do: __placeholder__)) do
-          nil -> nil
-          _guard -> fn var -> mod.guard(spec, var) end
-        end
-
-      module ->
-        if function_exported?(module, :guard, 1) do
-          fn var -> module.guard(var) end
-        end
+    case type_guard_ast(type, quote(do: __placeholder__)) do
+      nil -> nil
+      _guard -> fn var -> type_guard_ast(type, var) end
     end
   end
 
@@ -877,20 +867,38 @@ defmodule Plushie.Widget.DSL.Codegen do
     end
   end
 
-  defp setter_guard(type) do
+  # Single source of truth for extracting a guard AST from a type.
+  # Returns the guard expression or nil when the type has no guard.
+  defp type_guard_ast(type, var) do
     case Plushie.Type.resolve(type) do
       {:composite, {kind, spec}} ->
-        Plushie.Type.composite_module(kind).guard(spec, quote(do: value))
+        Plushie.Type.composite_module(kind).guard(spec, var)
 
       module ->
         Code.ensure_compiled(module)
 
-        # Types with cast/1 use the cast as the sole validator.
-        # Guards are only used for types without cast (which rely
-        # on the guard to reject invalid inputs).
-        if not function_exported?(module, :cast, 1) and function_exported?(module, :guard, 1) do
-          module.guard(quote(do: value))
+        if function_exported?(module, :guard, 1) do
+          module.guard(var)
         end
+    end
+  end
+
+  defp setter_guard(type) do
+    case Plushie.Type.resolve(type) do
+      # Types with cast/1 use the cast as the sole validator.
+      # Guards are only used for types without cast (which rely
+      # on the guard to reject invalid inputs).
+      module when is_atom(module) ->
+        Code.ensure_compiled(module)
+
+        if function_exported?(module, :cast, 1) do
+          nil
+        else
+          type_guard_ast(type, quote(do: value))
+        end
+
+      _ ->
+        type_guard_ast(type, quote(do: value))
     end
   end
 
@@ -964,6 +972,40 @@ defmodule Plushie.Widget.DSL.Codegen do
     end
   end
 
+  # Generates the list of quoted `put_if` expressions that populate the
+  # props map inside a WidgetProtocol.to_node/1 implementation.
+  defp generate_prop_put_calls(props) do
+    Enum.map(props, fn {name, type, opts} ->
+      wire_key = Keyword.get(opts, :wire_name, name)
+
+      # Color needs casting in to_node because struct defaults bypass setters.
+      # All other types store raw values: Tree.normalize handles encoding.
+      if type == Plushie.Type.Color do
+        quote do
+          props =
+            Plushie.Widget.Build.put_if(
+              props,
+              widget.unquote(name),
+              unquote(wire_key),
+              fn val ->
+                {:ok, casted} = Plushie.Type.Color.cast(val)
+                casted
+              end
+            )
+        end
+      else
+        quote do
+          props =
+            Plushie.Widget.Build.put_if(
+              props,
+              widget.unquote(name),
+              unquote(wire_key)
+            )
+        end
+      end
+    end)
+  end
+
   defp generate_widget_protocol(
          _module,
          kind,
@@ -974,36 +1016,7 @@ defmodule Plushie.Widget.DSL.Codegen do
          events,
          event_specs
        ) do
-    put_calls =
-      Enum.map(props, fn {name, type, opts} ->
-        wire_key = Keyword.get(opts, :wire_name, name)
-
-        # Color needs casting in to_node because struct defaults bypass setters.
-        # All other types store raw values: Tree.normalize handles encoding.
-        if type == Plushie.Type.Color do
-          quote do
-            props =
-              Plushie.Widget.Build.put_if(
-                props,
-                widget.unquote(name),
-                unquote(wire_key),
-                fn val ->
-                  {:ok, casted} = Plushie.Type.Color.cast(val)
-                  casted
-                end
-              )
-          end
-        else
-          quote do
-            props =
-              Plushie.Widget.Build.put_if(
-                props,
-                widget.unquote(name),
-                unquote(wire_key)
-              )
-          end
-        end
-      end)
+    put_calls = generate_prop_put_calls(props)
 
     children =
       if container do
@@ -1122,17 +1135,7 @@ defmodule Plushie.Widget.DSL.Codegen do
   end
 
   defp guard_for_type(var, type) do
-    case Plushie.Type.resolve(type) do
-      {:composite, {kind, spec}} ->
-        Plushie.Type.composite_module(kind).guard(spec, var) || quote(do: true)
-
-      module ->
-        if function_exported?(module, :guard, 1) do
-          module.guard(var) || quote(do: true)
-        else
-          quote(do: true)
-        end
-    end
+    type_guard_ast(type, var) || quote(do: true)
   end
 
   # Build a simple AST variable reference from an atom name.
