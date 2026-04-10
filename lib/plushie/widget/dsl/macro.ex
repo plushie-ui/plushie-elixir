@@ -20,6 +20,28 @@ defmodule Plushie.Widget.DSL.Macro do
       end
 
   Without a block, declares the type name only (e.g. `widget :space`).
+
+  ## Container widgets
+
+  Pass `container: true` to declare a widget that holds children:
+
+      widget :panel, container: true do
+        field :direction, :atom, default: :vertical
+      end
+
+  This generates:
+
+  - A `:children` field on the struct (defaults to `[]`)
+  - `push/2` to append a single child
+  - `extend/2` to append multiple children
+  - `new/2` accepts a do-block for children
+
+  Example usage:
+
+      Panel.new("main", direction: :horizontal) do
+        text("greeting", "Hello")
+        button("ok", "OK")
+      end
   """
   # When Elixir parses `widget :name, key: val do ... end`, the keyword
   # opts and do-block arrive as separate arguments (arity 3). Merge them
@@ -147,21 +169,64 @@ defmodule Plushie.Widget.DSL.Macro do
   @doc """
   Declares internal state fields for a stateful widget.
 
-  State fields are managed by the runtime, not the app model.
-  They persist across renders and are passed to `view/3` and
-  `handle_event/2`. Declaring state fields makes the widget
-  stateful: the view is deferred to tree normalization and the
-  `WidgetHandler` behaviour is injected automatically.
+  State is persistent internal data that survives across renders
+  but is never sent to the renderer. It is owned by the runtime
+  and scoped to each widget instance. Use it for interaction
+  tracking (hover, drag, selection) that the app model should
+  not need to know about.
 
-  Supports two forms:
+  Declaring any state fields makes the widget stateful: the view
+  is deferred to tree normalization and the `WidgetHandler`
+  behaviour is injected automatically.
 
-      # Keyword form (untyped, original)
+  ## Lifecycle
+
+  1. `__initial_state__/0` returns the default state map (generated
+     from your declarations).
+  2. The runtime stores per-instance state keyed by widget ID.
+  3. `view/3` receives `(id, props, state)` where `state` is the
+     current state map for this instance.
+  4. `handle_event/2` can return `{:update_state, new_state}` to
+     modify state without emitting an event to the app.
+
+  ## Keyword form (untyped)
+
       state hover: nil, drag: :none
 
-      # Block form (typed)
+  ## Block form (typed)
+
       state do
         field :hover, :boolean, default: false
         field :drag, :atom, default: :none
+      end
+
+  ## Example
+
+      defmodule HoverButton do
+        use Plushie.Widget
+
+        widget :hover_button do
+          field :label, :string
+        end
+
+        state do
+          field :hovered, :boolean, default: false
+        end
+
+        def view(id, props, state) do
+          color = if state.hovered, do: :blue, else: :gray
+          button(id, props.label, style: [background: color])
+        end
+
+        def handle_event(%WidgetEvent{family: :mouse_enter}, state) do
+          {:update_state, %{state | hovered: true}}
+        end
+
+        def handle_event(%WidgetEvent{family: :mouse_leave}, state) do
+          {:update_state, %{state | hovered: false}}
+        end
+
+        def handle_event(_event, _state), do: :ignored
       end
   """
   defmacro state(fields_or_block)
@@ -211,9 +276,23 @@ defmodule Plushie.Widget.DSL.Macro do
   When declared, the normalizer calls this function before `view/3`.
   If the returned key matches the previous render's key, the cached
   normalized output is reused and `view/3` is skipped entirely.
+  This avoids re-running the view function and re-normalizing the
+  subtree, which matters for widgets that produce large or
+  computationally expensive trees.
+
+  The function receives two arguments: the full props map and the
+  current state map (or `nil` for stateless widgets). Return any
+  term that can be compared with `==`.
 
       cache_key fn props, state ->
         {props.data_version, state.zoom_level}
+      end
+
+  A common pattern is to derive the key from the specific props
+  that affect the output:
+
+      cache_key fn props, _state ->
+        {props.items, props.filter}
       end
 
   Only applicable to `:widget` kind (not `:native_widget`).
@@ -239,6 +318,29 @@ defmodule Plushie.Widget.DSL.Macro do
   Inside an `event` do-block, `field` calls are consumed as AST by the
   event macro and parsed into the event spec. They are never expanded
   as macros in that context.
+
+  ## Options
+
+  - `default:` - default value for the struct field. When omitted,
+    defaults to `nil`.
+  - `doc:` - description used in auto-generated moduledoc tables and
+    setter function docs.
+  - `option:` - when `false`, the field is excluded from keyword
+    options (`with_options/2`, `__field_keys__/0`) but still
+    generates a struct field and setter. Default `true`. Typically
+    used with `positional` for fields that should only be set
+    positionally.
+  - `wire_name:` - override the key name sent to the renderer. The
+    Elixir-side field keeps its declared name; only the wire
+    representation changes. Useful when the renderer expects a
+    different naming convention.
+  - `cast:` - custom cast function (1-arity) that overrides the
+    type's built-in cast. Receives the raw value, should return
+    `{:ok, casted}` or `:error`.
+  - `merge:` - when `true`, the setter merges the new value with
+    the existing value (via `Map.merge/2`) instead of replacing it.
+    Useful for map-typed fields where callers set partial updates.
+    Default `false`.
   """
   defmacro field(name, type, opts \\ []) do
     quote do
@@ -248,7 +350,45 @@ defmodule Plushie.Widget.DSL.Macro do
 
   # -- command/1..2 ------------------------------------------------------------
 
-  @doc "Declares a command (native_widget only) with optional typed params."
+  @doc """
+  Declares a command that the renderer can execute (native_widget only).
+
+  Commands generate a public function that builds a `Plushie.Command`
+  targeting a specific widget instance by ID. The renderer receives
+  the command and routes it to the widget's `handle_widget_op`
+  implementation on the Rust side.
+
+  ## With typed params
+
+      command :set_value, value: :float
+
+  Generates:
+
+      @spec set_value(String.t(), number()) :: Plushie.Command.t()
+      def set_value(widget_id, value) when is_binary(widget_id) and is_number(value)
+
+  ## Without params
+
+      command :reset
+
+  Generates:
+
+      @spec reset(String.t()) :: Plushie.Command.t()
+      def reset(widget_id) when is_binary(widget_id)
+
+  ## Usage from `update/2`
+
+      def update(model, %WidgetEvent{id: "slider", family: :changed, value: val}) do
+        {model, MyNativeWidget.set_value("slider", val)}
+      end
+
+  Or batched:
+
+      {model, Command.batch([
+        MyNativeWidget.set_value("slider", 0.5),
+        MyNativeWidget.reset("other")
+      ])}
+  """
   defmacro command(name, params \\ []) do
     quote do
       @_widget_commands {unquote(name), unquote(params)}
