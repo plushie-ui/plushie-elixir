@@ -6,7 +6,7 @@ defmodule Plushie.Type.Length do
   `{:fill_portion, n}`, or a numeric pixel value.
   """
 
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   @type t :: :fill | :shrink | {:fill_portion, pos_integer()} | number()
 

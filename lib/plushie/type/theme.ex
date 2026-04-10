@@ -76,7 +76,7 @@ defmodule Plushie.Type.Theme do
 
   @type builtin :: unquote(Enum.reduce(@themes, &{:|, [], [&1, &2]}))
 
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   @type t :: builtin() | :system | map()
 

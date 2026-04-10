@@ -25,7 +25,7 @@ defmodule Plushie.Type.Pointer do
       {:ok, :right}
   """
 
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   @type pointer_type :: :mouse | :touch | :pen
   @type button :: :left | :right | :middle | :back | :forward

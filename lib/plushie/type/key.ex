@@ -20,7 +20,7 @@ defmodule Plushie.Type.Key do
       :error
   """
 
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   @spec parse(value :: term()) :: {:ok, atom() | String.t()} | :error
   def parse(value) when is_binary(value) do

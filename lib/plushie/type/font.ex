@@ -37,7 +37,7 @@ defmodule Plushie.Type.Font do
 
   defstruct [:family, :weight, :style, :stretch]
 
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   @known_keys ~w(family weight style stretch)a
 

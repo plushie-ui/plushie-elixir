@@ -211,7 +211,7 @@ defmodule Plushie.Type.A11y do
       iex> Plushie.Type.A11y.cast(a11y)
       {:ok, %Plushie.Type.A11y{label: "Close"}}
   """
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   @impl Plushie.Type
   @spec cast(a11y :: t() | map() | keyword()) :: {:ok, t()} | :error

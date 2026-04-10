@@ -5,7 +5,7 @@ defmodule Plushie.Type.Range do
   Used by slider and progress bar widgets for the value range.
   """
 
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   @type t :: {number(), number()}
 

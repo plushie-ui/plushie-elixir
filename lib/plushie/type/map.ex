@@ -3,7 +3,7 @@ defmodule Plushie.Type.Map do
   Map type. Accepts any map.
   """
 
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   @impl true
   def cast(v) when is_map(v), do: {:ok, v}

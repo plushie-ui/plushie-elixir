@@ -3,7 +3,7 @@ defmodule Plushie.Type.String do
   String (binary) type.
   """
 
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   @impl true
   def cast(v) when is_binary(v), do: {:ok, v}

@@ -73,7 +73,7 @@ defmodule Plushie.Type.Padding do
       iex> Plushie.Type.Padding.cast(%{top: 1, right: 2, bottom: 3, left: 4})
       {:ok, %{top: 1, right: 2, bottom: 3, left: 4}}
   """
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   @impl Plushie.Type
   @spec cast(padding :: t()) :: {:ok, map()} | :error

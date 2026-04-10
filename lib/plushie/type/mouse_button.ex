@@ -16,7 +16,7 @@ defmodule Plushie.Type.MouseButton do
       :error
   """
 
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   # nil defaults to :left because canvas press/release events omit
   # the button field when the left button is used (the common case).

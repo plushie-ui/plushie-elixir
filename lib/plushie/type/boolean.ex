@@ -3,7 +3,7 @@ defmodule Plushie.Type.Boolean do
   Boolean type. Accepts `true` and `false` only.
   """
 
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   @impl true
   def cast(v) when is_boolean(v), do: {:ok, v}

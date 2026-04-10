@@ -320,7 +320,7 @@ defmodule Plushie.Type.Color do
       iex> Plushie.Type.Color.cast("CornflowerBlue")
       {:ok, "#6495ed"}
   """
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   @impl Plushie.Type
   @spec cast(color :: input()) :: {:ok, t()} | :error

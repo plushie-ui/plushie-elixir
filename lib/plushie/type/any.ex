@@ -3,7 +3,7 @@ defmodule Plushie.Type.Any do
   Accepts any value without validation.
   """
 
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   @impl true
   def cast(v), do: {:ok, v}

@@ -3,7 +3,7 @@ defmodule Plushie.Type.Integer do
   Integer type. Accepts Elixir integers only.
   """
 
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   @impl true
   def cast(v) when is_integer(v), do: {:ok, v}

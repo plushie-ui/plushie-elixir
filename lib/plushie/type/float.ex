@@ -3,7 +3,7 @@ defmodule Plushie.Type.Float do
   Numeric type. Accepts both integers and floats (any `number()`).
   """
 
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   @impl true
   def cast(v) when is_number(v), do: {:ok, v}

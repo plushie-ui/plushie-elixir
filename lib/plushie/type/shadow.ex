@@ -26,7 +26,7 @@ defmodule Plushie.Type.Shadow do
           blur_radius: number()
         }
 
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   @known_keys ~w(color offset offset_x offset_y blur_radius)a
 

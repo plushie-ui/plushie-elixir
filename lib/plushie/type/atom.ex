@@ -3,7 +3,7 @@ defmodule Plushie.Type.Atom do
   Atom type. Accepts any atom.
   """
 
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   @impl true
   def cast(v) when is_atom(v), do: {:ok, v}

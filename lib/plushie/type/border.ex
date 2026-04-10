@@ -42,7 +42,7 @@ defmodule Plushie.Type.Border do
           radius: number() | radius_map()
         }
 
-  @behaviour Plushie.Type
+  use Plushie.Type
 
   @known_keys ~w(color width rounded radius)a
 
