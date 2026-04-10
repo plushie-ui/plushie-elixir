@@ -2,7 +2,7 @@ defmodule Plushie.WidgetMacroTest do
   # async: false because Code.compile_string affects global code server state
   use ExUnit.Case, async: false
 
-  # For testing generated docs, we use Plushie.Widget.type_display_string/1
+  # For testing generated docs, we use Plushie.Type.type_display_string/1
   # and Plushie.Widget.generate_moduledoc_update/7 directly rather than
   # extracting from beam chunks (which have encoding issues in Latin1 VMs).
 
@@ -930,9 +930,9 @@ defmodule Plushie.WidgetMacroTest do
 
   describe "type_display_string" do
     test "primitive types render correctly" do
-      assert Plushie.Widget.type_display_string(:string) == "String.t() | atom()"
-      assert Plushie.Widget.type_display_string(:float) == "number()"
-      assert Plushie.Widget.type_display_string(:boolean) == "boolean()"
+      assert Plushie.Type.type_display_string(:string) == "String.t() | atom()"
+      assert Plushie.Type.type_display_string(:float) == "number()"
+      assert Plushie.Type.type_display_string(:boolean) == "boolean()"
     end
   end
 

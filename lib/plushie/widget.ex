@@ -1280,7 +1280,7 @@ defmodule Plushie.Widget do
   defp generate_props_section(props, positional) do
     rows =
       Enum.map(props, fn {name, type, opts} ->
-        type_str = type_display_string(type) |> escape_table_pipes()
+        type_str = Plushie.Type.type_display_string(type) |> escape_table_pipes()
         is_positional = name in positional
         has_default = Keyword.has_key?(opts, :default)
         is_option = Keyword.get(opts, :option, true)
@@ -1343,7 +1343,7 @@ defmodule Plushie.Widget do
     rows =
       Enum.map(state_fields_raw, fn
         {name, default, type} ->
-          type_str = type_display_string(type) |> escape_table_pipes()
+          type_str = Plushie.Type.type_display_string(type) |> escape_table_pipes()
           "| `#{name}` | `#{type_str}` | `#{inspect(default)}` |"
 
         {name, default} ->
@@ -1368,7 +1368,7 @@ defmodule Plushie.Widget do
             "none"
           else
             Enum.map_join(params, ", ", fn {pname, ptype} ->
-              "`#{pname}: #{type_display_string(ptype)}`"
+              "`#{pname}: #{Plushie.Type.type_display_string(ptype)}`"
             end)
           end
 
@@ -1386,31 +1386,16 @@ defmodule Plushie.Widget do
   defp event_spec_display(%{carrier: :none}), do: "none"
 
   defp event_spec_display(%{carrier: :value, type: type}) do
-    "`value: #{type_display_string(type)}`"
+    "`value: #{Plushie.Type.type_display_string(type)}`"
   end
 
   defp event_spec_display(%{carrier: :value, fields: fields}) do
     fields_str =
       Enum.map_join(fields, ", ", fn {name, type} ->
-        "#{name}: #{type_display_string(type)}"
+        "#{name}: #{Plushie.Type.type_display_string(type)}"
       end)
 
     "`value: %{#{fields_str}}`"
-  end
-
-  @doc false
-  def type_display_string(type) do
-    case Plushie.Type.resolve(type) do
-      {:composite, {kind, spec}} ->
-        Plushie.Type.composite_module(kind).display_string(spec, &type_display_string/1)
-
-      module ->
-        try do
-          Macro.to_string(module.typespec())
-        rescue
-          _ -> inspect(module)
-        end
-    end
   end
 
   # Escape pipe characters inside markdown table cells so that ExDoc does not
@@ -1845,7 +1830,7 @@ defmodule Plushie.Widget do
   defp generate_setters(props, positional) do
     prop_setters =
       Enum.map(props, fn {name, type, opts} ->
-        type_str = type_display_string(type)
+        type_str = Plushie.Type.type_display_string(type)
 
         doc =
           case Keyword.get(opts, :doc) do

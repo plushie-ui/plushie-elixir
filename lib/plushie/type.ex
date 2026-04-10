@@ -338,6 +338,22 @@ defmodule Plushie.Type do
   @spec composite_kind?(atom()) :: boolean()
   def composite_kind?(kind) when is_atom(kind), do: is_map_key(@composite_modules, kind)
 
+  @doc "Returns a human-readable type string for documentation."
+  @spec type_display_string(term()) :: String.t()
+  def type_display_string(type) do
+    case resolve(type) do
+      {:composite, {kind, spec}} ->
+        composite_module(kind).display_string(spec, &type_display_string/1)
+
+      module ->
+        try do
+          Macro.to_string(module.typespec())
+        rescue
+          _ -> inspect(module)
+        end
+    end
+  end
+
   @doc "Returns the map of primitive atom shortcuts to their type modules."
   @spec primitive_shortcuts() :: %{atom() => module()}
   def primitive_shortcuts, do: @primitive_shortcuts
