@@ -247,6 +247,50 @@ defmodule Plushie.Type do
   end
 
   @doc """
+  Casts a named field value, treating nil as a valid absent value.
+
+  Used by struct type cast and named field composites.
+  """
+  @spec cast_optional_field(term(), term()) :: {:ok, term()} | :error
+  def cast_optional_field(_type, nil), do: {:ok, nil}
+  def cast_optional_field(type, value), do: cast_value(type, value)
+
+  @doc """
+  Casts a map or keyword list against a list of `{name, type}` field specs.
+
+  Looks up each field by atom key first, then by string key as a
+  fallback. Casts through the field's type and returns `{:ok, map}`
+  or `:error`. Missing fields become nil.
+  """
+  @spec cast_named_fields([{atom(), term()}], map() | keyword()) :: {:ok, map()} | :error
+  def cast_named_fields(field_specs, input) when is_map(input) do
+    do_cast_named_fields(field_specs, input)
+  end
+
+  def cast_named_fields(field_specs, input) when is_list(input) do
+    if Keyword.keyword?(input) do
+      do_cast_named_fields(field_specs, Map.new(input))
+    else
+      :error
+    end
+  end
+
+  defp do_cast_named_fields(field_specs, map) do
+    Enum.reduce_while(field_specs, {:ok, %{}}, fn {name, type_ref}, {:ok, acc} ->
+      raw =
+        case Map.fetch(map, name) do
+          {:ok, val} -> val
+          :error -> Map.get(map, Atom.to_string(name))
+        end
+
+      case cast_optional_field(type_ref, raw) do
+        {:ok, parsed} -> {:cont, {:ok, Map.put(acc, name, parsed)}}
+        :error -> {:halt, :error}
+      end
+    end)
+  end
+
+  @doc """
   Universal cast entry point that handles both module types and composite types.
 
   Resolves the type via `resolve/1` and delegates to either
@@ -266,8 +310,7 @@ defmodule Plushie.Type do
   Encodes a value to its wire-safe representation.
 
   Handles primitives (atoms become strings, tuples become lists) and
-  structs (delegates to `module.encode/1` when available). This replaces
-  the former `Plushie.Encode` protocol dispatch.
+  structs (delegates to `module.encode/1` when available).
   """
   @spec encode_value(term()) :: term()
   def encode_value(%module{} = v) do
@@ -302,10 +345,14 @@ defmodule Plushie.Type do
 
       Module.register_attribute(__MODULE__, :_type_enum, accumulate: false)
       Module.register_attribute(__MODULE__, :_type_fields, accumulate: true)
-      Module.register_attribute(__MODULE__, :_type_union_variants, accumulate: true)
+      Module.register_attribute(__MODULE__, :_type_struct, accumulate: false)
       Module.register_attribute(__MODULE__, :_type_union, accumulate: false)
+      Module.register_attribute(__MODULE__, :_type_union_variants, accumulate: true)
 
-      import Plushie.Type, only: [enum: 1, field: 2, field: 3, union: 1, type: 1]
+      import Kernel, except: [struct: 1]
+
+      import Plushie.Type,
+        only: [enum: 1, field: 2, field: 3, struct: 1, type: 1, union: 1]
 
       @before_compile Plushie.Type
     end
@@ -316,33 +363,68 @@ defmodule Plushie.Type do
   @doc false
   defmacro enum(values) when is_list(values) do
     quote do
-      @_type_enum unquote(values)
+      if @_type_union do
+        @_type_union_variants {:enum, unquote(values)}
+      else
+        if @_type_struct do
+          raise CompileError,
+            description: "cannot combine enum with struct"
+        end
+
+        @_type_enum unquote(values)
+      end
     end
   end
 
   @doc false
   defmacro field(name, type, opts \\ []) do
     quote do
+      unless @_type_struct do
+        raise CompileError,
+          description: "field declarations must be inside a struct do ... end block"
+      end
+
       @_type_fields {unquote(name), unquote(type), unquote(opts)}
+    end
+  end
+
+  @doc false
+  defmacro struct(do: block) do
+    quote do
+      if @_type_enum || @_type_union do
+        raise CompileError,
+          description: "cannot combine struct with other type declarations"
+      end
+
+      @_type_struct true
+      unquote(block)
     end
   end
 
   @doc false
   defmacro union(do: block) do
     quote do
+      if @_type_enum || @_type_struct do
+        raise CompileError,
+          description: "cannot combine union with other type declarations"
+      end
+
       @_type_union true
       unquote(block)
     end
   end
 
-  # Inside union blocks, `enum` and `type` accumulate into @_type_union_variants.
-  # We need separate macros for the union context. Since `enum` is already defined,
-  # we detect union context in __before_compile__ by checking @_type_union.
-  # The `type` macro is only valid inside union blocks.
+  # Inside union blocks, `enum` pushes {:enum, values} to @_type_union_variants
+  # instead of setting @_type_enum. `type` also pushes to @_type_union_variants.
 
   @doc false
   defmacro type(module) do
     quote do
+      unless @_type_union do
+        raise CompileError,
+          description: "type can only be used inside a union block"
+      end
+
       @_type_union_variants {:type, unquote(module)}
     end
   end
@@ -351,6 +433,7 @@ defmodule Plushie.Type do
 
   defmacro __before_compile__(env) do
     type_enum = Module.get_attribute(env.module, :_type_enum)
+    type_struct = Module.get_attribute(env.module, :_type_struct)
     type_fields = Module.get_attribute(env.module, :_type_fields) |> Enum.reverse()
     type_union = Module.get_attribute(env.module, :_type_union)
     union_variants = Module.get_attribute(env.module, :_type_union_variants) |> Enum.reverse()
@@ -358,13 +441,13 @@ defmodule Plushie.Type do
     type_code =
       cond do
         type_union ->
-          generate_union(union_variants, type_enum)
+          generate_union(union_variants)
 
         type_enum != nil ->
           generate_enum(type_enum)
 
-        type_fields != [] ->
-          generate_struct(type_fields, env.module)
+        type_struct ->
+          generate_struct(type_fields)
 
         true ->
           # Manual implementation, nothing to generate
@@ -434,41 +517,25 @@ defmodule Plushie.Type do
 
   # -- Struct code generation --------------------------------------------------
 
-  defp generate_struct(fields, _module) do
+  defp generate_struct(fields) do
     field_defaults = Enum.map(fields, fn {name, _type, opts} -> {name, opts[:default]} end)
     field_types_map = Enum.map(fields, fn {name, type, _opts} -> {name, type} end)
+    field_names = Enum.map(fields, fn {name, _type, _opts} -> name end)
 
     quote do
       defstruct unquote(field_defaults)
 
+      @_struct_field_types unquote(Macro.escape(field_types_map))
+
       @impl Plushie.Type
-      def cast(v) when is_map(v) do
-        field_types = unquote(Macro.escape(field_types_map))
-
-        Enum.reduce_while(field_types, {:ok, %{}}, fn {name, type_ref}, {:ok, acc} ->
-          value = Map.get(v, name) || Map.get(v, Atom.to_string(name))
-          resolved = Plushie.Type.resolve(type_ref)
-
-          case cast_field(resolved, value) do
-            {:ok, parsed} -> {:cont, {:ok, Map.put(acc, name, parsed)}}
-            :error -> {:halt, :error}
-          end
-        end)
-        |> case do
-          {:ok, map} -> {:ok, struct(__MODULE__, map)}
+      def cast(v) when is_map(v) or (is_list(v) and is_tuple(hd(v))) do
+        case Plushie.Type.cast_named_fields(@_struct_field_types, v) do
+          {:ok, map} -> {:ok, Kernel.struct(__MODULE__, map)}
           :error -> :error
         end
       end
 
       def cast(_), do: :error
-
-      defp cast_field(module, nil) when is_atom(module), do: {:ok, nil}
-
-      defp cast_field(module, value) when is_atom(module) do
-        module.cast(value)
-      end
-
-      defp cast_field({:composite, _}, value), do: {:ok, value}
 
       @impl Plushie.Type
       def typespec do
@@ -482,24 +549,23 @@ defmodule Plushie.Type do
       end
 
       @impl Plushie.Type
+      def encode(%__MODULE__{} = value) do
+        value
+        |> Map.take(unquote(field_names))
+        |> Enum.reject(fn {_, v} -> is_nil(v) end)
+        |> Map.new(fn {k, v} -> {k, Plushie.Type.encode_value(v)} end)
+      end
+
+      @impl Plushie.Type
       def fields, do: unquote(Macro.escape(field_types_map))
     end
   end
 
   # -- Union code generation ---------------------------------------------------
 
-  defp generate_union(variants, enum_values) do
-    # Inside a union block, `enum` sets @_type_enum and `type` pushes to @_type_union_variants.
-    # We combine both into the variant list.
-    all_variants =
-      if enum_values do
-        [{:enum, enum_values} | variants]
-      else
-        variants
-      end
-
+  defp generate_union(variants) do
     quote do
-      @_union_variants unquote(Macro.escape(all_variants))
+      @_union_variants unquote(Macro.escape(variants))
 
       @impl Plushie.Type
       def cast(value) do

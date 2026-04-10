@@ -260,8 +260,11 @@ end
 
 defmodule Plushie.TypeTest.PointType do
   use Plushie.Type
-  field(:x, :float)
-  field(:y, :float)
+
+  struct do
+    field(:x, :float)
+    field(:y, :float)
+  end
 end
 
 defmodule Plushie.TypeTest.StructTest do
@@ -293,9 +296,19 @@ defmodule Plushie.TypeTest.StructTest do
       assert [x: :float, y: :float] = PointType.fields()
     end
 
+    test "cast builds struct from keyword list" do
+      assert {:ok, %PointType{x: 5, y: 6}} = PointType.cast(x: 5, y: 6)
+    end
+
     test "guard checks struct type" do
       ast = PointType.guard(quote(do: val))
       assert {:is_struct, _, _} = ast
+    end
+
+    test "encode strips __struct__ and nils" do
+      encoded = PointType.encode(%PointType{x: 1.5, y: nil})
+      assert encoded == %{x: 1.5}
+      refute Map.has_key?(encoded, :__struct__)
     end
   end
 end

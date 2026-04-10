@@ -138,26 +138,31 @@ TaskCard.priority(card, :unknown)   # raises ArgumentError
 
 ### Struct types
 
-For types with multiple named fields:
+For types with multiple named fields, wrap field declarations in
+a `struct do ... end` block:
 
 ```elixir
 defmodule MyApp.Type.Margin do
   use Plushie.Type
 
-  field :top, :float
-  field :right, :float
-  field :bottom, :float
-  field :left, :float
+  struct do
+    field :top, :float
+    field :right, :float
+    field :bottom, :float
+    field :left, :float
+  end
 end
 ```
 
 The macro generates a struct and:
 - `cast/1`: accepts a map or keyword list, validates each field
   through its type, returns `{:ok, %Margin{...}}`
+- `encode/1`: converts struct to plain map (strips `__struct__`
+  and nil fields, encodes values recursively)
 - `fields/0`: `[top: :float, right: :float, ...]` for DSL block
   resolution
-- `typespec/0`: `%MyApp.Type.Margin{top: number(), ...}`
-- `encode/1`: converts struct to plain map
+- `typespec/0`: `%MyApp.Type.Margin{}`
+- `guard/1`: `is_struct(value, MyApp.Type.Margin)`
 
 Struct types support the DSL block form:
 
