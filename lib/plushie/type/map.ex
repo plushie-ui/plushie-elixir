@@ -1,17 +1,22 @@
 defmodule Plushie.Type.Map do
   @moduledoc """
-  Map type. Accepts any map.
+  Untyped map. Accepts any map without validating keys or values.
+
+  For maps with typed keys or named fields, use the `{:map, ...}`
+  composite forms instead (see `Plushie.Type`).
   """
 
   use Plushie.Type
 
-  @impl true
+  @type t :: map()
+
+  @impl Plushie.Type
   def cast(v) when is_map(v), do: {:ok, v}
   def cast(_), do: :error
 
-  @impl true
+  @impl Plushie.Type
   def typespec, do: quote(do: map())
 
-  @impl true
+  @impl Plushie.Type
   def guard(var), do: quote(do: is_map(unquote(var)))
 end

@@ -1,17 +1,17 @@
 defmodule Plushie.Type.Atom do
-  @moduledoc """
-  Atom type. Accepts any atom.
-  """
+  @moduledoc "Atom type. Accepts any atom (including `nil`)."
 
   use Plushie.Type
 
-  @impl true
+  @type t :: atom()
+
+  @impl Plushie.Type
   def cast(v) when is_atom(v), do: {:ok, v}
   def cast(_), do: :error
 
-  @impl true
+  @impl Plushie.Type
   def typespec, do: quote(do: atom())
 
-  @impl true
+  @impl Plushie.Type
   def guard(var), do: quote(do: is_atom(unquote(var)))
 end

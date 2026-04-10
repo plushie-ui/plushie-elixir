@@ -1,24 +1,30 @@
 defmodule Plushie.Type.Integer do
   @moduledoc """
   Integer type. Accepts Elixir integers only.
+
+  Supports `:min` and `:max` field constraints:
+
+      field :count, :integer, min: 0, max: 999
   """
 
   use Plushie.Type
 
-  @impl true
+  @type t :: integer()
+
+  @impl Plushie.Type
   def cast(v) when is_integer(v), do: {:ok, v}
   def cast(_), do: :error
 
-  @impl true
+  @impl Plushie.Type
   def typespec, do: quote(do: integer())
 
-  @impl true
+  @impl Plushie.Type
   def guard(var), do: quote(do: is_integer(unquote(var)))
 
-  @impl true
+  @impl Plushie.Type
   def field_options, do: [:min, :max]
 
-  @impl true
+  @impl Plushie.Type
   def constrain_guard(var, opts) do
     guards = []
 
