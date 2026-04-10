@@ -60,25 +60,48 @@ defmodule Plushie.Type.Gradient do
     }
   end
 
-  defp cast_stop_color(color), do: elem(Plushie.Type.Color.cast(color), 1)
+  defp cast_stop_color(color) do
+    case Plushie.Type.Color.cast(color) do
+      {:ok, hex} -> hex
+      :error -> raise ArgumentError, "invalid gradient stop color: #{inspect(color)}"
+    end
+  end
 
+  @doc """
+  Validates a gradient value.
+
+  Accepts `%Gradient{}` structs directly, or plain maps with
+  `type: "linear"`, `angle: number`, and `stops: [%{offset, color}]`.
+  """
   @impl Plushie.Type
   def cast(%__MODULE__{} = v), do: {:ok, v}
 
   def cast(%{type: "linear", angle: angle, stops: stops})
       when is_number(angle) and is_list(stops) do
-    validated_stops =
-      Enum.map(stops, fn
-        %{offset: offset, color: color} when is_number(offset) and is_binary(color) ->
-          %{offset: offset, color: color}
-      end)
-
-    {:ok, %__MODULE__{type: "linear", angle: angle, stops: validated_stops}}
-  rescue
-    _ -> :error
+    case validate_stops(stops) do
+      {:ok, validated} -> {:ok, %__MODULE__{type: "linear", angle: angle, stops: validated}}
+      :error -> :error
+    end
   end
 
   def cast(_), do: :error
+
+  defp validate_stops(stops) do
+    validated =
+      Enum.reduce_while(stops, {:ok, []}, fn
+        %{offset: offset, color: color}, {:ok, acc}
+        when is_number(offset) and is_binary(color) ->
+          {:cont, {:ok, [%{offset: offset, color: color} | acc]}}
+
+        _, _ ->
+          {:halt, :error}
+      end)
+
+    case validated do
+      {:ok, reversed} -> {:ok, Enum.reverse(reversed)}
+      :error -> :error
+    end
+  end
 
   @impl Plushie.Type
   def typespec, do: quote(do: %__MODULE__{})

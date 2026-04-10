@@ -170,6 +170,11 @@ defmodule Plushie.Type do
 
   Optional:
 
+    - `castable/0` - returns a quoted typespec for the values
+      `cast/1` accepts. Default: same as `typespec/0`. Implement
+      when the input forms are broader than the canonical type
+      (e.g., Color accepts atoms, strings, and maps but stores a
+      hex string).
     - `guard/1` - returns a quoted guard expression. Enables pattern
       matching in generated setter functions.
     - `encode/1` - converts to wire-safe form (atoms to strings,
