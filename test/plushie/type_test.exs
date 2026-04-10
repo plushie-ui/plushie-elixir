@@ -228,12 +228,16 @@ defmodule Plushie.TypeTest.EnumTest do
       assert :error = EnumTypeViaUse.cast(:down)
     end
 
-    test "cast coerces strings to atoms" do
-      assert {:ok, :north} = EnumTypeViaUse.cast("north")
-      assert :error = EnumTypeViaUse.cast("nowhere")
+    test "cast rejects strings (wire concern handled by decode)" do
+      assert :error = EnumTypeViaUse.cast("north")
     end
 
-    test "cast rejects non-atom non-string values" do
+    test "decode coerces strings to atoms" do
+      assert {:ok, :north} = EnumTypeViaUse.decode("north")
+      assert :error = EnumTypeViaUse.decode("nowhere")
+    end
+
+    test "cast rejects non-atom values" do
       assert :error = EnumTypeViaUse.cast(42)
       assert :error = EnumTypeViaUse.cast(nil)
     end
@@ -445,27 +449,78 @@ defmodule Plushie.TypeTest.MapCompositeTest do
   end
 end
 
-# -- Enum string coercion -----------------------------------------------------
+# -- Cast vs decode separation -------------------------------------------------
 
-defmodule Plushie.TypeTest.EnumCompositeTest do
+defmodule Plushie.TypeTest.CastDecodeTest do
   use ExUnit.Case, async: true
 
-  describe "enum composite string coercion" do
-    test "coerces string to matching atom" do
-      assert {:ok, :read} = Plushie.Type.cast_composite({:enum, [:read, :write]}, "read")
-      assert {:ok, :write} = Plushie.Type.cast_composite({:enum, [:read, :write]}, "write")
-    end
-
-    test "rejects non-matching string" do
-      assert :error = Plushie.Type.cast_composite({:enum, [:read, :write]}, "delete")
-    end
-
-    test "still accepts atoms directly" do
+  describe "enum composite cast (user API)" do
+    test "accepts atoms" do
       assert {:ok, :read} = Plushie.Type.cast_composite({:enum, [:read, :write]}, :read)
     end
 
-    test "rejects non-atom non-string values" do
+    test "rejects strings (wire concern, not user API)" do
+      assert :error = Plushie.Type.cast_composite({:enum, [:read, :write]}, "read")
+    end
+
+    test "rejects non-atom values" do
       assert :error = Plushie.Type.cast_composite({:enum, [:read, :write]}, 42)
+    end
+  end
+
+  describe "enum composite decode (wire)" do
+    test "coerces string to matching atom" do
+      assert {:ok, :read} = Plushie.Type.Composite.Enum.decode([:read, :write], "read")
+      assert {:ok, :write} = Plushie.Type.Composite.Enum.decode([:read, :write], "write")
+    end
+
+    test "still accepts atoms directly" do
+      assert {:ok, :read} = Plushie.Type.Composite.Enum.decode([:read, :write], :read)
+    end
+
+    test "rejects non-matching string" do
+      assert :error = Plushie.Type.Composite.Enum.decode([:read, :write], "delete")
+    end
+  end
+
+  describe "tuple composite decode (wire)" do
+    test "accepts lists from wire (JSON arrays)" do
+      assert {:ok, {1.0, 2.0}} =
+               Plushie.Type.Composite.Tuple.decode([:float, :float], [1.0, 2.0])
+    end
+
+    test "still accepts tuples" do
+      assert {:ok, {1.0, 2.0}} =
+               Plushie.Type.Composite.Tuple.decode([:float, :float], {1.0, 2.0})
+    end
+  end
+
+  describe "decode_field dispatches through decode path" do
+    test "enum decode_field coerces strings" do
+      assert {:ok, :read} = Plushie.Type.decode_field({:enum, [:read, :write]}, "read")
+    end
+
+    test "string decode_field accepts nil" do
+      assert {:ok, nil} = Plushie.Type.decode_field(:string, nil)
+    end
+  end
+
+  describe "decode recurses correctly through nested types" do
+    test "map record decode coerces inner enum strings" do
+      spec = {:map, [mode: {:enum, [:read, :write]}]}
+
+      assert {:ok, %{mode: :read}} =
+               Plushie.Type.decode_value(spec, %{"mode" => "read"})
+    end
+
+    test "list decode coerces inner enum strings" do
+      spec = {:list, {:enum, [:a, :b]}}
+      assert {:ok, [:a, :b]} = Plushie.Type.decode_value(spec, ["a", "b"])
+    end
+
+    test "tuple decode from list coerces inner types" do
+      spec = {:tuple, [{:enum, [:x, :y]}, :integer]}
+      assert {:ok, {:x, 42}} = Plushie.Type.decode_value(spec, ["x", 42])
     end
   end
 end

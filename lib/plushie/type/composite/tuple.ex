@@ -25,6 +25,31 @@ defmodule Plushie.Type.Composite.Tuple do
   def cast(_, _), do: :error
 
   @impl Plushie.Type.Composite
+  def decode(types, value) when is_list(value) and length(value) == length(types) do
+    pairs = Enum.zip(types, value)
+    results = Enum.map(pairs, fn {type, val} -> Plushie.Type.decode_value(type, val) end)
+
+    if Enum.all?(results, &match?({:ok, _}, &1)) do
+      {:ok, List.to_tuple(Enum.map(results, fn {:ok, v} -> v end))}
+    else
+      :error
+    end
+  end
+
+  def decode(types, value) when is_tuple(value) and tuple_size(value) == length(types) do
+    pairs = Enum.zip(types, Tuple.to_list(value))
+    results = Enum.map(pairs, fn {type, val} -> Plushie.Type.decode_value(type, val) end)
+
+    if Enum.all?(results, &match?({:ok, _}, &1)) do
+      {:ok, List.to_tuple(Enum.map(results, fn {:ok, v} -> v end))}
+    else
+      :error
+    end
+  end
+
+  def decode(_, _), do: :error
+
+  @impl Plushie.Type.Composite
   def typespec(types, resolver) do
     type_asts = Enum.map(types, resolver)
     {:{}, [], type_asts}

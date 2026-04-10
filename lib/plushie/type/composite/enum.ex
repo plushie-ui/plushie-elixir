@@ -2,8 +2,8 @@ defmodule Plushie.Type.Composite.Enum do
   @moduledoc """
   Composite type for a fixed set of values.
 
-  Accepts exact matches and coerces strings to matching atoms (for
-  wire data compatibility).
+  Cast accepts exact value matches only. Decode also coerces
+  strings to matching atoms (for wire data compatibility).
 
       field :mode, {:enum, [:read, :write]}
   """
@@ -12,15 +12,19 @@ defmodule Plushie.Type.Composite.Enum do
 
   @impl Plushie.Type.Composite
   def cast(values, value) do
+    if value in values, do: {:ok, value}, else: :error
+  end
+
+  @impl Plushie.Type.Composite
+  def decode(values, value) do
     if value in values do
       {:ok, value}
     else
-      cast_from_string(values, value)
+      decode_from_string(values, value)
     end
   end
 
-  # Wire data arrives as strings. Coerce to matching atom if possible.
-  defp cast_from_string(values, value) when is_binary(value) do
+  defp decode_from_string(values, value) when is_binary(value) do
     Enum.find_value(values, :error, fn
       atom when is_atom(atom) ->
         if Atom.to_string(atom) == value, do: {:ok, atom}
@@ -30,7 +34,7 @@ defmodule Plushie.Type.Composite.Enum do
     end)
   end
 
-  defp cast_from_string(_, _), do: :error
+  defp decode_from_string(_, _), do: :error
 
   @impl Plushie.Type.Composite
   def typespec(values, _resolver) do

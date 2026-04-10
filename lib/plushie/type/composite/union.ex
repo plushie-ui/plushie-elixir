@@ -20,6 +20,16 @@ defmodule Plushie.Type.Composite.Union do
   end
 
   @impl Plushie.Type.Composite
+  def decode(types, value) do
+    Enum.find_value(types, :error, fn type ->
+      case Plushie.Type.decode_value(type, value) do
+        {:ok, v} -> {:ok, v}
+        :error -> nil
+      end
+    end)
+  end
+
+  @impl Plushie.Type.Composite
   def typespec(types, resolver) do
     type_asts = Enum.map(types, resolver)
 

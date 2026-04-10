@@ -23,8 +23,11 @@ defmodule Plushie.Type.Composite do
 
   @type spec :: term()
 
-  @doc "Casts a value against the composite spec."
+  @doc "Casts a user-facing value against the composite spec."
   @callback cast(spec(), term()) :: {:ok, term()} | :error
+
+  @doc "Decodes a wire-format value against the composite spec."
+  @callback decode(spec(), term()) :: {:ok, term()} | :error
 
   @doc "Returns quoted typespec AST for the canonical form. The resolver maps inner type refs to their AST."
   @callback typespec(spec(), type_resolver :: (term() -> Macro.t())) :: Macro.t()
@@ -41,5 +44,5 @@ defmodule Plushie.Type.Composite do
   @doc "Returns true if the spec is structurally valid."
   @callback valid_spec?(spec(), checker :: (term() -> boolean())) :: boolean()
 
-  @optional_callbacks [castable: 2]
+  @optional_callbacks [castable: 2, decode: 2]
 end

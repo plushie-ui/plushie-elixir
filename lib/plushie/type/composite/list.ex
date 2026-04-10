@@ -23,6 +23,19 @@ defmodule Plushie.Type.Composite.List do
   def cast(_, _), do: :error
 
   @impl Plushie.Type.Composite
+  def decode(inner_type, value) when is_list(value) do
+    results = Enum.map(value, fn el -> Plushie.Type.decode_value(inner_type, el) end)
+
+    if Enum.all?(results, &match?({:ok, _}, &1)) do
+      {:ok, Enum.map(results, fn {:ok, v} -> v end)}
+    else
+      :error
+    end
+  end
+
+  def decode(_, _), do: :error
+
+  @impl Plushie.Type.Composite
   def typespec(inner_type, resolver) do
     inner = resolver.(inner_type)
     quote(do: [unquote(inner)])

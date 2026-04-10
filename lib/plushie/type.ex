@@ -175,11 +175,16 @@ defmodule Plushie.Type do
       when the input forms are broader than the canonical type
       (e.g., Color accepts atoms, strings, and maps but stores a
       hex string).
-    - `guard/1` - returns a quoted guard expression. Enables pattern
-      matching in generated setter functions.
+    - `decode/1` - decodes a wire-format value (JSON-decoded
+      strings, numbers, maps with string keys) into the canonical
+      type. Default: delegates to `cast/1`. Implement when wire
+      and Elixir representations differ (e.g., enums receive
+      strings but store atoms).
     - `encode/1` - converts to wire-safe form (atoms to strings,
       structs to maps). Only needed when the Elixir value isn't
       directly serializable.
+    - `guard/1` - returns a quoted guard expression. Enables pattern
+      matching in generated setter functions.
     - `fields/0` - for struct types, returns `[{name, type}, ...]`.
     - `field_options/0` - declares constraint keys (e.g.
       `[:min, :max]`). Validated at compile time.
@@ -255,9 +260,27 @@ defmodule Plushie.Type do
   """
   @callback castable() :: Macro.t()
 
+  @doc """
+  Decodes a wire-format value into the canonical type.
+
+  Wire data arrives as JSON-decoded values (strings, numbers,
+  booleans, lists, maps with string keys). This callback handles
+  coercion from those wire representations to the canonical Elixir
+  type.
+
+  Defaults to `cast/1` when not implemented, which is correct for
+  types where wire and Elixir representations are the same
+  (integers, floats, strings, booleans).
+
+  Types where wire and Elixir differ should implement this. For
+  example, enums receive strings from the wire but store atoms.
+  """
+  @callback decode(term()) :: {:ok, term()} | :error
+
   @optional_callbacks [
     castable: 0,
     constrain_guard: 2,
+    decode: 1,
     encode: 1,
     field_options: 0,
     fields: 0,
@@ -353,7 +376,46 @@ defmodule Plushie.Type do
     end
   end
 
-  # -- Union typespec -----------------------------------------------------------
+  # -- Union helpers (used by DSL-generated unions) ----------------------------
+
+  @doc false
+  @spec cast_union_variants([{:enum, [atom()]} | {:type, term()}], term()) ::
+          {:ok, term()} | :error
+  def cast_union_variants(variants, value) do
+    Enum.find_value(variants, :error, fn
+      {:enum, atoms} -> if value in atoms, do: {:ok, value}
+      {:type, type_ref} -> ok_or_nil(cast_value(type_ref, value))
+    end)
+  end
+
+  @doc false
+  @spec decode_union_variants([{:enum, [atom()]} | {:type, term()}], term()) ::
+          {:ok, term()} | :error
+  def decode_union_variants(variants, value) do
+    Enum.find_value(variants, :error, fn
+      {:enum, atoms} -> decode_enum_variant(atoms, value)
+      {:type, type_ref} -> ok_or_nil(decode_value(type_ref, value))
+    end)
+  end
+
+  defp decode_enum_variant(atoms, value) when is_atom(value) do
+    if value in atoms, do: {:ok, value}
+  end
+
+  defp decode_enum_variant(atoms, value) when is_binary(value) do
+    Enum.find_value(atoms, fn
+      atom when is_atom(atom) ->
+        if Atom.to_string(atom) == value, do: {:ok, atom}
+
+      _ ->
+        nil
+    end)
+  end
+
+  defp decode_enum_variant(_, _), do: nil
+
+  defp ok_or_nil({:ok, _} = ok), do: ok
+  defp ok_or_nil(:error), do: nil
 
   @doc false
   @spec union_typespec([{:enum, [atom()]} | {:type, module()}]) :: Macro.t()
@@ -445,6 +507,13 @@ defmodule Plushie.Type do
   def cast_optional_field(type, value), do: cast_value(type, value)
 
   @doc """
+  Decodes a named field value from wire format, treating nil as absent.
+  """
+  @spec decode_optional_field(term(), term()) :: {:ok, term()} | :error
+  def decode_optional_field(_type, nil), do: {:ok, nil}
+  def decode_optional_field(type, value), do: decode_value(type, value)
+
+  @doc """
   Casts a map or keyword list against a list of `{name, type}` field specs.
 
   Looks up each field by atom key first, then by string key as a
@@ -453,18 +522,28 @@ defmodule Plushie.Type do
   """
   @spec cast_named_fields([{atom(), term()}], map() | keyword()) :: {:ok, map()} | :error
   def cast_named_fields(field_specs, input) when is_map(input) do
-    do_cast_named_fields(field_specs, input)
+    do_named_fields(field_specs, input, &cast_optional_field/2)
   end
 
   def cast_named_fields(field_specs, input) when is_list(input) do
     if Keyword.keyword?(input) do
-      do_cast_named_fields(field_specs, Map.new(input))
+      do_named_fields(field_specs, Map.new(input), &cast_optional_field/2)
     else
       :error
     end
   end
 
-  defp do_cast_named_fields(field_specs, map) do
+  @doc """
+  Decodes a map against a list of `{name, type}` field specs using
+  the decode path. Like `cast_named_fields/2` but uses `decode_value`
+  for inner types (handling wire representations).
+  """
+  @spec decode_named_fields([{atom(), term()}], map()) :: {:ok, map()} | :error
+  def decode_named_fields(field_specs, input) when is_map(input) do
+    do_named_fields(field_specs, input, &decode_optional_field/2)
+  end
+
+  defp do_named_fields(field_specs, map, field_fn) do
     Enum.reduce_while(field_specs, {:ok, %{}}, fn {name, type_ref}, {:ok, acc} ->
       raw =
         case Map.fetch(map, name) do
@@ -472,7 +551,7 @@ defmodule Plushie.Type do
           :error -> Map.get(map, Atom.to_string(name))
         end
 
-      case cast_optional_field(type_ref, raw) do
+      case field_fn.(type_ref, raw) do
         {:ok, parsed} -> {:cont, {:ok, Map.put(acc, name, parsed)}}
         :error -> {:halt, :error}
       end
@@ -490,6 +569,36 @@ defmodule Plushie.Type do
     case resolve(type) do
       {:composite, composite} -> cast_composite(composite, value)
       module -> module.cast(value)
+    end
+  end
+
+  # -- Wire decoding -----------------------------------------------------------
+
+  @doc """
+  Decodes a wire-format event field value.
+
+  Like `cast_field/2` but uses the type's `decode/1` callback,
+  which handles wire representations (strings for enums, lists for
+  tuples, etc.).
+  """
+  @spec decode_field(type :: term(), value :: term()) :: {:ok, term()} | :error
+  def decode_field(:string, nil), do: {:ok, nil}
+
+  def decode_field(type, value) do
+    decode_value(type, value)
+  end
+
+  @doc """
+  Decodes a wire-format value through the type's decode path.
+
+  Like `cast_value/2` but uses `decode/1` for module types and
+  `decode/2` for composite types.
+  """
+  @spec decode_value(term(), term()) :: {:ok, term()} | :error
+  def decode_value(type, value) do
+    case resolve(type) do
+      {:composite, {kind, spec}} -> composite_module(kind).decode(spec, value)
+      module -> module.decode(value)
     end
   end
 
@@ -652,6 +761,11 @@ defmodule Plushie.Type do
           def castable, do: typespec()
         end
 
+        unless Module.defines?(__MODULE__, {:decode, 1}) do
+          @impl Plushie.Type
+          def decode(value), do: cast(value)
+        end
+
         unless Module.defines?(__MODULE__, {:merge, 2}) do
           @impl Plushie.Type
           def merge(_default, override), do: override
@@ -678,8 +792,12 @@ defmodule Plushie.Type do
     quote do
       @impl Plushie.Type
       def cast(v) when v in unquote(values_for_match), do: {:ok, v}
+      def cast(_), do: :error
 
-      def cast(v) when is_binary(v) do
+      @impl Plushie.Type
+      def decode(v) when v in unquote(values_for_match), do: {:ok, v}
+
+      def decode(v) when is_binary(v) do
         if v in unquote(atom_strings) do
           {:ok, String.to_existing_atom(v)}
         else
@@ -687,7 +805,7 @@ defmodule Plushie.Type do
         end
       end
 
-      def cast(_), do: :error
+      def decode(_), do: :error
 
       @impl Plushie.Type
       def typespec do
@@ -733,6 +851,16 @@ defmodule Plushie.Type do
       def cast(_), do: :error
 
       @impl Plushie.Type
+      def decode(v) when is_map(v) do
+        case Plushie.Type.decode_named_fields(@_struct_field_types, v) do
+          {:ok, map} -> {:ok, Kernel.struct(__MODULE__, map)}
+          :error -> :error
+        end
+      end
+
+      def decode(v), do: cast(v)
+
+      @impl Plushie.Type
       def typespec do
         quote do: %unquote(__MODULE__){}
       end
@@ -763,39 +891,13 @@ defmodule Plushie.Type do
       @_union_variants unquote(Macro.escape(variants))
 
       @impl Plushie.Type
-      def cast(value) do
-        Enum.find_value(@_union_variants, :error, fn variant ->
-          case try_variant(variant, value) do
-            {:ok, _} = ok -> ok
-            :error -> nil
-          end
-        end)
-      end
-
-      defp try_variant({:enum, atoms}, value) when is_atom(value) do
-        if value in atoms, do: {:ok, value}, else: :error
-      end
-
-      defp try_variant({:enum, atoms}, value) when is_binary(value) do
-        atom_strings = Enum.map(atoms, &Atom.to_string/1)
-
-        if value in atom_strings do
-          {:ok, String.to_existing_atom(value)}
-        else
-          :error
-        end
-      end
-
-      defp try_variant({:enum, _}, _), do: :error
-
-      defp try_variant({:type, type_ref}, value) do
-        Plushie.Type.cast_value(type_ref, value)
-      end
+      def cast(value), do: Plushie.Type.cast_union_variants(@_union_variants, value)
 
       @impl Plushie.Type
-      def typespec do
-        Plushie.Type.union_typespec(@_union_variants)
-      end
+      def decode(value), do: Plushie.Type.decode_union_variants(@_union_variants, value)
+
+      @impl Plushie.Type
+      def typespec, do: Plushie.Type.union_typespec(@_union_variants)
     end
   end
 end

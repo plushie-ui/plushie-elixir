@@ -141,7 +141,7 @@ defmodule Plushie.Runtime.WidgetHandlers do
       raw_value = Map.get(wire_data, wire_key)
 
       parsed =
-        case Plushie.Type.cast_field(type, raw_value) do
+        case Plushie.Type.decode_field(type, raw_value) do
           {:ok, v} ->
             v
 

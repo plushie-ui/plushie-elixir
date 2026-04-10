@@ -39,6 +39,25 @@ defmodule Plushie.Type.Composite.Map do
 
   def cast(_, _), do: :error
 
+  # Decode uses decode_value for inner types (wire data path).
+  @impl Plushie.Type.Composite
+  def decode({key_type, val_type}, value) when is_map(value) do
+    Enum.reduce_while(value, {:ok, %{}}, fn {k, v}, {:ok, acc} ->
+      with {:ok, ck} <- Plushie.Type.decode_value(key_type, k),
+           {:ok, cv} <- Plushie.Type.decode_value(val_type, v) do
+        {:cont, {:ok, Map.put(acc, ck, cv)}}
+      else
+        _ -> {:halt, :error}
+      end
+    end)
+  end
+
+  def decode(fields, value) when is_list(fields) and is_map(value) do
+    Plushie.Type.decode_named_fields(fields, value)
+  end
+
+  def decode(_, _), do: :error
+
   @impl Plushie.Type.Composite
   def typespec({key_type, val_type}, resolver) do
     kt = resolver.(key_type)
