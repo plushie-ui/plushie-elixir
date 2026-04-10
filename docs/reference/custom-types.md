@@ -404,6 +404,8 @@ widget :chart do
   field :data_points, {:list, MyApp.Type.DataPoint}
   field :range, {:tuple, [:float, :float]}
   field :mode, {:enum, [:line, :bar, :scatter]}
+  field :scores, {:map, {:string, :integer}}
+  field :dimensions, {:map, [width: :float, height: :float]}
   field :background, {:union, [Plushie.Type.Color, Plushie.Type.Gradient]}
 end
 ```
@@ -412,10 +414,12 @@ end
 
 | Constructor | Guard | Cast |
 |-------------|-------|------|
-| `{:list, inner}` | `is_list(v)` | Maps `inner.cast/1` over each element. All must succeed. |
-| `{:tuple, [types]}` | `is_tuple(v) and tuple_size(v) == N` | Validates each position through its type. All must succeed. |
 | `{:enum, [atoms]}` | `v in [atoms]` | Checks membership. |
-| `{:union, [types]}` | OR of each type's guard | Tries each type's cast in order. First `{:ok, _}` wins. |
+| `{:list, inner}` | `is_list(v)` | Maps `inner.cast/1` over each element. All must succeed. |
+| `{:map, {K, V}}` | `is_map(v) or is_list(v)` | Casts every key through K and every value through V. |
+| `{:map, [name: type]}` | `is_map(v) or is_list(v)` | Casts each named field through its type. Accepts maps and keyword lists. Missing fields become nil. |
+| `{:tuple, [types]}` | `is_tuple(v) and tuple_size(v) == N` | Validates each position through its type. All must succeed. |
+| `{:union, [types]}` | (none) | Tries each type's cast in order. First `{:ok, _}` wins. |
 
 If any element fails to cast in a list or tuple, the entire setter
 raises `ArgumentError`.

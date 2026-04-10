@@ -44,11 +44,13 @@ Primitive atom shortcuts: `:integer`, `:float`, `:string`, `:boolean`,
 Domain types use their full module name (e.g. `Plushie.Type.Color`,
 `Plushie.Type.Length`, `Plushie.Type.Font`).
 
-For list-typed fields, use the `{:list, :type}` form:
+Composite types can be expressed inline as tuples:
 
 ```elixir
 field :tags, {:list, :string}
-field :points, {:list, :float}
+field :mode, {:enum, [:read, :write]}
+field :scores, {:map, {:string, :integer}}
+field :range, {:tuple, [:float, :float]}
 ```
 
 Any module that implements `Plushie.Type` can be used as a field type.
