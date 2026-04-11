@@ -338,9 +338,9 @@ defmodule Plushie.Command do
   @doc "Split a pane in the pane grid along the given axis."
   @spec pane_split(
           pane_grid_id :: widget_id(),
-          pane_id :: term(),
+          pane_id :: String.t(),
           axis :: atom() | String.t(),
-          new_pane_id :: term()
+          new_pane_id :: String.t()
         ) :: %__MODULE__{}
   def pane_split(pane_grid_id, pane_id, axis, new_pane_id) do
     %__MODULE__{
@@ -356,7 +356,7 @@ defmodule Plushie.Command do
   end
 
   @doc "Close a pane in the pane grid."
-  @spec pane_close(pane_grid_id :: widget_id(), pane_id :: term()) :: %__MODULE__{}
+  @spec pane_close(pane_grid_id :: widget_id(), pane_id :: String.t()) :: %__MODULE__{}
   def pane_close(pane_grid_id, pane_id) do
     %__MODULE__{
       type: :widget_op,
@@ -369,7 +369,7 @@ defmodule Plushie.Command do
   end
 
   @doc "Swap two panes in the pane grid."
-  @spec pane_swap(pane_grid_id :: widget_id(), pane_a :: term(), pane_b :: term()) ::
+  @spec pane_swap(pane_grid_id :: widget_id(), pane_a :: String.t(), pane_b :: String.t()) ::
           %__MODULE__{}
   def pane_swap(pane_grid_id, pane_a, pane_b) do
     %__MODULE__{
@@ -384,7 +384,7 @@ defmodule Plushie.Command do
   end
 
   @doc "Maximize a pane in the pane grid."
-  @spec pane_maximize(pane_grid_id :: widget_id(), pane_id :: term()) :: %__MODULE__{}
+  @spec pane_maximize(pane_grid_id :: widget_id(), pane_id :: String.t()) :: %__MODULE__{}
   def pane_maximize(pane_grid_id, pane_id) do
     %__MODULE__{
       type: :widget_op,
@@ -430,7 +430,7 @@ defmodule Plushie.Command do
         :done
       end, :file_import)
   """
-  @spec stream(fun :: (fun() -> term()), event_tag :: atom()) :: %__MODULE__{}
+  @spec stream(fun :: ((term() -> :ok) -> term()), event_tag :: atom()) :: %__MODULE__{}
   def stream(fun, event_tag) when is_function(fun, 1) and is_atom(event_tag) do
     %__MODULE__{type: :stream, payload: %{fun: fun, tag: event_tag}}
   end

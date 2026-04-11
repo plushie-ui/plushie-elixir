@@ -1,6 +1,33 @@
 defmodule Plushie.Command.Window do
   @moduledoc """
-  Window operation commands: resize, move, maximize, minimize, drag, focus, etc.
+  Window operation commands.
+
+  ## Lifecycle
+
+  `close_window/1`
+
+  ## Sizing and position
+
+  `resize_window/3`, `move_window/3`, `set_min_size/3`, `set_max_size/3`,
+  `set_resize_increments/3`, `set_resizable/2`
+
+  ## Window state
+
+  `maximize_window/2`, `minimize_window/2`, `toggle_maximize/1`,
+  `set_window_mode/2`, `toggle_decorations/1`, `set_window_level/2`
+
+  ## Focus and interaction
+
+  `focus_window/1`, `drag_window/1`, `drag_resize_window/2`,
+  `request_user_attention/2`, `show_system_menu/1`
+
+  ## Input
+
+  `enable_mouse_passthrough/1`, `disable_mouse_passthrough/1`
+
+  ## Visuals
+
+  `set_icon/4`, `screenshot/2`
   """
 
   alias Plushie.Command

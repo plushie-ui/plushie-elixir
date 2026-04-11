@@ -1,6 +1,25 @@
 defmodule Plushie.Command.Image do
   @moduledoc """
-  Image commands: create, update, delete, list, and clear in-memory images.
+  In-memory image commands: create, update, delete, list, and clear.
+
+  Images are referenced by handle name in widget `source` props:
+
+      image("my-img", source: %{handle: "avatar"}, ...)
+
+  ## Example
+
+      # Create from file
+      data = File.read!("photo.png")
+      Command.create_image("avatar", data)
+
+      # Create from raw RGBA pixels
+      Command.create_image("gradient", 256, 1, rgba_pixels)
+
+      # Update existing
+      Command.update_image("avatar", new_data)
+
+      # Clean up
+      Command.delete_image("avatar")
   """
 
   alias Plushie.Command
@@ -116,7 +135,7 @@ defmodule Plushie.Command.Image do
   The result arrives in `update/2` as
   `%SystemEvent{type: :image_list, tag: tag, value: %{"handles" => [...]}}`.
   """
-  @spec list_images(tag :: atom()) :: Command.t()
+  @spec list_images(tag :: Command.event_tag()) :: Command.t()
   def list_images(tag) when is_atom(tag) do
     %Command{
       type: :widget_op,

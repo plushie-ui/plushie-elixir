@@ -1,6 +1,14 @@
 defmodule Plushie.Command.Text do
   @moduledoc """
-  Text input commands: selection, cursor movement.
+  Text input commands: selection and cursor movement.
+
+  All functions support window-qualified paths (`"window#widget"`).
+
+  ## Example
+
+      def update(model, %WidgetEvent{type: :click, id: "select-all"}) do
+        {model, Command.select_all("main#email")}
+      end
   """
 
   alias Plushie.Command
