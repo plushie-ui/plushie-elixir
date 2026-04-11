@@ -81,7 +81,9 @@ defmodule Plushie.Widget.Container do
     field :align_y, Plushie.Type.Alignment,
       doc: "Vertical alignment: `:top`, `:center`, `:bottom`."
 
-    field :background, :any, doc: "Background fill. Accepts a color or gradient."
+    field :background, {:union, [Plushie.Type.Color, Plushie.Type.Gradient]},
+      doc: "Background fill. Accepts a color or gradient."
+
     field :color, Plushie.Type.Color, doc: "Text color override."
     field :border, Plushie.Type.Border, doc: "Border specification: `%{color, width, radius}`."
 

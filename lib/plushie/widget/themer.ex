@@ -25,7 +25,9 @@ defmodule Plushie.Widget.Themer do
   # No a11y defaults: layout containers are transparent to AT
 
   widget :themer, container: :single do
-    field :theme, :any, doc: "Built-in theme atom (e.g. `:dark`, `:nord`) or custom palette map."
+    field :theme, Plushie.Type.Theme,
+      doc: "Built-in theme atom (e.g. `:dark`, `:nord`) or custom palette map."
+
     field :event_rate, :integer, doc: "Max events per second for coalescable events."
     field :a11y, Plushie.Type.A11y, doc: "Accessibility annotations."
   end
