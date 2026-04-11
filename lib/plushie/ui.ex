@@ -1963,7 +1963,7 @@ defmodule Plushie.UI do
   @doc false
   @spec __build_layer__(String.t(), [term()]) :: Plushie.Canvas.Layer.t()
   def __build_layer__(name, children) do
-    layer = Plushie.Canvas.Layer.new("auto:layer:#{name}", name: name)
+    layer = Plushie.Canvas.Layer.new(name, name: name)
 
     if children != [] do
       Plushie.Canvas.Layer.extend(layer, children)

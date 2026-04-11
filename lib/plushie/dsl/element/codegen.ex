@@ -334,21 +334,19 @@ defmodule Plushie.DSL.Element.Codegen do
     |> Enum.with_index()
     |> Enum.map(fn {child, idx} ->
       child
+      |> assign_id_before_expand(parent_prefix, idx)
       |> Plushie.Tree.Node.to_node()
-      |> ensure_child_id(parent_prefix, idx)
     end)
   end
 
-  # Assigns an auto-ID to a child node that has no explicit ID.
-  # Leaf shape elements (Rect, Circle, etc.) typically have nil IDs;
-  # container shapes (Group, Interactive) have explicit string IDs.
+  # Assigns an auto-ID to a child struct BEFORE to_node expansion.
+  # This ensures that container children (groups) have an ID set when
+  # their own to_node processes nested children, avoiding duplicate
+  # auto-IDs at deeper levels.
   @doc false
-  @spec ensure_child_id(map(), String.t(), non_neg_integer()) :: map()
-  def ensure_child_id(node, parent_prefix, idx) do
-    if is_nil(node.id) do
-      %{node | id: "auto:shape:" <> parent_prefix <> ":" <> Integer.to_string(idx)}
-    else
-      node
-    end
+  def assign_id_before_expand(%{id: nil} = struct, parent_prefix, idx) do
+    %{struct | id: "auto:shape:" <> parent_prefix <> ":" <> Integer.to_string(idx)}
   end
+
+  def assign_id_before_expand(struct, _parent_prefix, _idx), do: struct
 end
