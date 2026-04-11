@@ -14,8 +14,8 @@ defmodule Examples.RatePlushieTest do
     assert_text("#heading", "Rate Plushie")
   end
 
-  test "star rating canvas exists" do
-    assert_exists("#stars")
+  test "star rating widget exists" do
+    assert_exists("#star-rating")
   end
 
   test "theme toggle canvas exists" do

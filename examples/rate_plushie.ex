@@ -56,7 +56,7 @@ defmodule RatePlushie do
     # children, but the events carry the widget's own ID).
     case event do
       # Star rating emits :select with the number of stars.
-      %WidgetEvent{type: :select, id: "stars", value: stars} ->
+      %WidgetEvent{type: :select, id: "star-rating", value: stars} ->
         %{model | rating: stars, errors: Map.delete(model.errors, :rating)}
 
       # Theme toggle emits built-in :toggle with the new state.
@@ -171,7 +171,7 @@ defmodule RatePlushie do
         text("prompt", "How would you rate Plushie?", size: 14, color: t.text_secondary)
 
         column id: "stars-group", spacing: 4 do
-          StarRating.new("stars", rating: model.rating, theme_progress: p)
+          StarRating.new("star-rating", rating: model.rating, theme_progress: p)
 
           if error = model.errors[:rating] do
             text("stars-error", error,
