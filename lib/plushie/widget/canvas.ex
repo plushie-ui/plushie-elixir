@@ -23,7 +23,10 @@ defmodule Plushie.Widget.Canvas do
     field :alt, :string, doc: "Accessible label for the canvas."
     field :description, :string, doc: "Extended accessible description."
     field :role, :string, doc: "Accessible role (e.g. \"radiogroup\", \"toolbar\")."
-    field :arrow_mode, :string, doc: "Arrow key navigation mode: \"wrap\", \"clamp\", etc."
+
+    field :arrow_mode, {:enum, [:wrap, :clamp, :linear, :none]},
+      doc: "Arrow key navigation mode: `:wrap`, `:clamp`, `:linear`, `:none`."
+
     field :event_rate, :integer, doc: "Max events per second for coalescable events."
     field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
   end

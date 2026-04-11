@@ -26,7 +26,7 @@ defmodule Plushie.Canvas.Interactive do
     field :on_click, :boolean
     field :on_hover, :boolean
     field :draggable, :boolean
-    field :drag_axis, :string
+    field :drag_axis, {:enum, [:x, :y, :both]}
     field :drag_bounds, Plushie.Canvas.DragBounds
     field :cursor, :string
     field :hit_rect, Plushie.Canvas.HitRect

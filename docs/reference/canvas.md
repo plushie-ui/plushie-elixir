@@ -246,7 +246,7 @@ explicit string id as the first argument. On the wire it encodes as a
 | `on_click` | boolean | `false` | Enable `:click` events (scoped under canvas ID) |
 | `on_hover` | boolean | `false` | Enable `:enter`/`:exit` events |
 | `draggable` | boolean | `false` | Enable `:drag`/`:drag_end` events |
-| `drag_axis` | `"x"` / `"y"` / `"both"` | *n/a* | Constrain drag direction (unconstrained when not set) |
+| `drag_axis` | `:x` / `:y` / `:both` | *n/a* | Constrain drag direction (unconstrained when not set) |
 | `drag_bounds` | DragBounds | *n/a* | Limit drag region (`%{min_x, max_x, min_y, max_y}`) |
 | `focusable` | boolean | `false` | Add to Tab order for keyboard navigation |
 | `cursor` | atom/string | *n/a* | Cursor style on hover (`:pointer`, `:grab`, etc.) |

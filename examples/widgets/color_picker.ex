@@ -196,7 +196,7 @@ defmodule ColorPickerWidget do
       on_press: true,
       on_release: true,
       on_move: true,
-      arrow_mode: "none",
+      arrow_mode: :none,
       alt: "HSV color picker",
       description:
         "Drag the ring to select a hue, drag the square to adjust saturation and value. Tab to focus cursors, use arrow keys to adjust." do

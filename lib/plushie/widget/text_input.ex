@@ -32,8 +32,8 @@ defmodule Plushie.Widget.TextInput do
     field :on_paste, :boolean, doc: "When true, emits paste events. Default: false."
     field :secure, :boolean, doc: "Mask input as password dots. Default: false."
 
-    field :input_purpose, :string,
-      doc: "Input purpose hint: `\"normal\"`, `\"secure\"`, `\"terminal\"`."
+    field :input_purpose, {:enum, [:normal, :secure, :terminal]},
+      doc: "Input purpose hint: `:normal`, `:secure`, `:terminal`."
 
     field :style, Plushie.Type.Style, doc: "Named style preset or custom `StyleMap`."
     field :placeholder_color, Plushie.Type.Color, doc: "Placeholder text color."
