@@ -125,6 +125,75 @@ defmodule Plushie.CanvasElementTest do
     end
   end
 
+  describe "auto-ID constructors" do
+    test "keyword-only new creates element with nil id" do
+      label = TestLabel.new(text: "hello", size: 24.0)
+      assert label.id == nil
+      assert label.text == "hello"
+      assert label.size == 24.0
+    end
+
+    test "keyword-only new with empty opts" do
+      label = TestLabel.new([])
+      assert label.id == nil
+      assert label.text == nil
+    end
+
+    test "positional args without id" do
+      rect = TestRect.new(10.0, 20.0, 100.0, 50.0)
+      assert rect.id == nil
+      assert rect.x == 10.0
+      assert rect.y == 20.0
+      assert rect.w == 100.0
+      assert rect.h == 50.0
+    end
+
+    test "positional args without id with keyword options" do
+      rect = TestRect.new(10.0, 20.0, 100.0, 50.0, fill: "#ff0000")
+      assert rect.id == nil
+      assert rect.x == 10.0
+      assert rect.fill == "#ff0000"
+    end
+
+    test "container auto-ID accepts children via :do option" do
+      child = TestLabel.new("child")
+      group = TestGroup.new(do: [child])
+      assert group.id == nil
+      assert length(group.children) == 1
+    end
+
+    test "container auto-ID with keyword options" do
+      group = TestGroup.new(opacity: 0.5)
+      assert group.id == nil
+      assert group.opacity == 0.5
+    end
+
+    test "id-first and auto-ID coexist for keyword-only elements" do
+      with_id = TestLabel.new("lbl", text: "a")
+      without_id = TestLabel.new(text: "b")
+      assert with_id.id == "lbl"
+      assert without_id.id == nil
+    end
+
+    test "id-first and auto-ID coexist for positional elements" do
+      with_id = TestCircle.new("c1", 50.0, 50.0, 25.0)
+      without_id = TestCircle.new(50.0, 50.0, 25.0)
+      assert with_id.id == "c1"
+      assert without_id.id == nil
+      assert with_id.cx == without_id.cx
+    end
+
+    test "auto-ID element produces correct node with nil id" do
+      rect = TestRect.new(10.0, 20.0, 100.0, 50.0, fill: "red")
+      node = Plushie.Tree.Node.to_node(rect)
+      assert node.id == nil
+      assert node.type == "test_rect"
+      assert node.props.x == 10.0
+      assert node.props.fill == "red"
+      refute Map.has_key?(node.props, :id)
+    end
+  end
+
   describe "setter functions" do
     test "setters update fields" do
       rect =

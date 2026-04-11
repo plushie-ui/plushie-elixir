@@ -20,7 +20,7 @@ defmodule Plushie.DSL.Element.Codegen do
     option_props = Enum.filter(props, fn {_n, _t, opts} -> Keyword.get(opts, :option, true) end)
 
     struct_def = Fields.generate_struct_and_types(props, container, enforce_id: false)
-    new_fn = Fields.generate_struct_new(container, positional, props)
+    {new_fn, auto_id_new_fn} = generate_element_constructors(container, positional, props)
     with_options_fn = Fields.generate_with_options(option_props)
     setters = Fields.generate_setters(props, positional)
     dsl_fns = Fields.generate_dsl_buildable(option_props)
@@ -35,6 +35,7 @@ defmodule Plushie.DSL.Element.Codegen do
     quote do
       unquote(struct_def)
       unquote(new_fn)
+      unquote(auto_id_new_fn)
       unquote(with_options_fn)
       unquote_splicing(setters)
       unquote(dsl_fns)
@@ -45,6 +46,159 @@ defmodule Plushie.DSL.Element.Codegen do
       unquote(encode_fn)
       unquote(type_name_fn)
     end
+  end
+
+  # -- Element constructors (id-first + auto-ID) --------------------------------
+
+  # Generates both the id-first and auto-ID constructors for elements.
+  # Returns {id_first_ast, auto_id_ast}.
+  #
+  # For elements without positional args, the id-first and auto-ID
+  # forms are both arity 1 (new(id) vs new(opts)). Because Elixir's
+  # default-arg header is unguarded, we avoid default args and instead
+  # generate explicit clauses at each arity, using is_binary/is_list
+  # guards to disambiguate.
+  #
+  # For elements with positional args, the id-first and auto-ID forms
+  # differ in arity (id + N positional vs N positional), so the
+  # standard Fields.generate_struct_new works as-is. The auto-ID
+  # overload adds a lower-arity clause with type guards on the first
+  # positional arg to disambiguate from the binary id.
+
+  @doc false
+  def generate_element_constructors(container, [], _props) do
+    id_fn =
+      if container do
+        quote do
+          @doc "Creates a new element with the given ID and keyword options."
+          @spec new(id :: String.t(), opts :: [option()]) :: t()
+          def new(id, opts) when is_binary(id) and is_list(opts) do
+            {children, opts} = Keyword.pop(opts, :do, [])
+            widget = %__MODULE__{id: id} |> with_options(opts)
+            %{widget | children: List.wrap(children)}
+          end
+
+          def new(id) when is_binary(id), do: new(id, [])
+        end
+      else
+        quote do
+          @doc "Creates a new element with the given ID and keyword options."
+          @spec new(id :: String.t(), opts :: [option()]) :: t()
+          def new(id, opts) when is_binary(id) and is_list(opts) do
+            %__MODULE__{id: id} |> with_options(opts)
+          end
+
+          def new(id) when is_binary(id), do: new(id, [])
+        end
+      end
+
+    auto_id_fn =
+      if container do
+        quote do
+          @doc "Creates a new element without an explicit ID (auto-assigned by parent container)."
+          @spec new(opts :: [option()]) :: t()
+          def new(opts) when is_list(opts) do
+            {children, opts} = Keyword.pop(opts, :do, [])
+            element = %__MODULE__{} |> with_options(opts)
+            %{element | children: List.wrap(children)}
+          end
+        end
+      else
+        quote do
+          @doc "Creates a new element without an explicit ID (auto-assigned by parent container)."
+          @spec new(opts :: [option()]) :: t()
+          def new(opts) when is_list(opts) do
+            %__MODULE__{} |> with_options(opts)
+          end
+        end
+      end
+
+    {id_fn, auto_id_fn}
+  end
+
+  def generate_element_constructors(_container, positional, props) do
+    ctx = __MODULE__
+    id_var = Macro.var(:id, ctx)
+    opts_var = Macro.var(:opts, ctx)
+    positional_vars = Enum.map(positional, fn name -> Macro.var(name, ctx) end)
+
+    positional_guards =
+      for name <- positional,
+          {^name, type, field_opts} <- props,
+          guard_fn = Fields.positional_guard(type) do
+        var = Macro.var(name, ctx)
+        base = guard_fn.(var)
+        has_default = Keyword.has_key?(field_opts, :default)
+
+        if has_default do
+          quote(do: unquote(base) or is_nil(unquote(var)))
+        else
+          base
+        end
+      end
+
+    pos_guard =
+      case positional_guards do
+        [] ->
+          nil
+
+        [first | rest] ->
+          Enum.reduce(rest, first, fn g, acc ->
+            quote(do: unquote(acc) and unquote(g))
+          end)
+      end
+
+    # ID-first: new(id, x, y, w, h, opts) and new(id, x, y, w, h)
+    id_struct_pairs =
+      [{:id, id_var} | Enum.map(positional, fn name -> {name, Macro.var(name, ctx)} end)]
+
+    id_struct_kw = Enum.map(id_struct_pairs, fn {k, v} -> {k, v} end)
+
+    id_full_guard =
+      case pos_guard do
+        nil -> quote(do: is_binary(unquote(id_var)))
+        g -> quote(do: is_binary(unquote(id_var)) and unquote(g))
+      end
+
+    id_fn =
+      quote do
+        @doc "Creates a new element with the given ID, positional args, and keyword options."
+        def new(unquote(id_var), unquote_splicing(positional_vars), unquote(opts_var))
+            when unquote(id_full_guard) do
+          struct!(__MODULE__, unquote(id_struct_kw))
+          |> with_options(unquote(opts_var))
+        end
+
+        def new(unquote(id_var), unquote_splicing(positional_vars))
+            when unquote(id_full_guard) do
+          struct!(__MODULE__, unquote(id_struct_kw))
+        end
+      end
+
+    # Auto-ID: new(x, y, w, h, opts) and new(x, y, w, h)
+    auto_struct_pairs = Enum.map(positional, fn name -> {name, Macro.var(name, ctx)} end)
+    auto_struct_kw = Enum.map(auto_struct_pairs, fn {k, v} -> {k, v} end)
+
+    auto_id_fn =
+      if pos_guard do
+        quote do
+          @doc "Creates a new element without an explicit ID (auto-assigned by parent container)."
+          def new(unquote_splicing(positional_vars), unquote(opts_var))
+              when unquote(pos_guard) do
+            struct!(__MODULE__, unquote(auto_struct_kw))
+            |> with_options(unquote(opts_var))
+          end
+
+          def new(unquote_splicing(positional_vars)) when unquote(pos_guard) do
+            struct!(__MODULE__, unquote(auto_struct_kw))
+          end
+        end
+      else
+        quote do
+        end
+      end
+
+    {id_fn, auto_id_fn}
   end
 
   # -- Tree.Node protocol implementation --------------------------------------
