@@ -12,7 +12,8 @@ defmodule Plushie.Tree do
       }
 
   This module provides normalization, tree search, and diffing for
-  incremental renderer updates.
+  incremental renderer updates. Search and diff logic live in
+  dedicated submodules; this module delegates to them.
 
   Normalization is strict. Missing required fields, duplicate sibling
   IDs, and malformed children raise immediately instead of being
@@ -581,6 +582,8 @@ defmodule Plushie.Tree do
     end
   end
 
+  # -- Delegated search/query functions (Plushie.Tree.Search) --
+
   @doc """
   Finds the node in a tree whose `:id` exactly matches the given scoped ID.
 
@@ -589,19 +592,7 @@ defmodule Plushie.Tree do
   you must use `find/3` with a window ID.
   """
   @spec find(tree :: tree_node(), id :: String.t()) :: tree_node() | nil
-  def find(tree, target_id) do
-    case find_all_exact(tree, target_id, []) do
-      [] ->
-        nil
-
-      [node] ->
-        node
-
-      _ ->
-        raise ArgumentError,
-              "tree contains multiple nodes with id #{inspect(target_id)}; use find/3 with a window id"
-    end
-  end
+  defdelegate find(tree, id), to: Plushie.Tree.Search
 
   @doc """
   Finds a node by exact scoped ID within a specific window.
@@ -610,14 +601,7 @@ defmodule Plushie.Tree do
   Returns the node map, or `nil` if not found.
   """
   @spec find(tree :: tree_node(), id :: String.t(), window_id :: String.t()) :: tree_node() | nil
-  def find(tree, target_id, window_id) do
-    tree
-    |> find_window(window_id)
-    |> case do
-      nil -> nil
-      window -> find_exact(window, target_id)
-    end
-  end
+  defdelegate find(tree, id, window_id), to: Plushie.Tree.Search
 
   @doc """
   Finds a node by local ID.
@@ -628,19 +612,7 @@ defmodule Plushie.Tree do
   Raises if more than one node has the same local ID.
   """
   @spec find_local(tree :: tree_node(), id :: String.t()) :: tree_node() | nil
-  def find_local(tree, local_id) do
-    case find_all_local(tree, local_id, []) do
-      [] ->
-        nil
-
-      [node] ->
-        node
-
-      _ ->
-        raise ArgumentError,
-              "tree contains multiple nodes with local id #{inspect(local_id)}; use a scoped id or window-aware lookup"
-    end
-  end
+  defdelegate find_local(tree, local_id), to: Plushie.Tree.Search
 
   @doc """
   Finds a node by local ID within a specific window.
@@ -650,14 +622,7 @@ defmodule Plushie.Tree do
   """
   @spec find_local(tree :: tree_node(), id :: String.t(), window_id :: String.t()) ::
           tree_node() | nil
-  def find_local(tree, local_id, window_id) do
-    tree
-    |> find_window(window_id)
-    |> case do
-      nil -> nil
-      window -> find_local(window, local_id)
-    end
-  end
+  defdelegate find_local(tree, local_id, window_id), to: Plushie.Tree.Search
 
   @doc """
   Returns the window ID that owns an exact scoped target ID.
@@ -666,157 +631,7 @@ defmodule Plushie.Tree do
   same target appears in more than one window.
   """
   @spec window_id_for(tree :: tree_node(), id :: String.t()) :: String.t() | nil
-  def window_id_for(tree, target_id) do
-    case collect_window_ids(tree, target_id, nil, []) |> Enum.uniq() do
-      [] ->
-        nil
-
-      [window_id] ->
-        window_id
-
-      _ ->
-        raise ArgumentError,
-              "tree contains multiple nodes with id #{inspect(target_id)} in different windows"
-    end
-  end
-
-  defp find_exact(%{id: id} = node, id), do: node
-
-  defp find_exact(%{children: children}, target_id) when is_list(children) do
-    Enum.find_value(children, &find_exact(&1, target_id))
-  end
-
-  defp find_exact(%{"id" => id} = node, id), do: node
-
-  defp find_exact(%{"children" => children}, target_id) when is_list(children) do
-    Enum.find_value(children, &find_exact(&1, target_id))
-  end
-
-  defp find_exact(_node, _target_id), do: nil
-
-  defp find_all_exact(%{id: id} = node, target_id, acc) when id == target_id do
-    acc =
-      case node do
-        %{children: children} when is_list(children) ->
-          Enum.reduce(children, [node | acc], &find_all_exact(&1, target_id, &2))
-
-        _ ->
-          [node | acc]
-      end
-
-    acc
-  end
-
-  defp find_all_exact(%{children: children}, target_id, acc) when is_list(children) do
-    Enum.reduce(children, acc, &find_all_exact(&1, target_id, &2))
-  end
-
-  defp find_all_exact(%{"id" => id} = node, target_id, acc) when id == target_id do
-    acc =
-      case node do
-        %{"children" => children} when is_list(children) ->
-          Enum.reduce(children, [node | acc], &find_all_exact(&1, target_id, &2))
-
-        _ ->
-          [node | acc]
-      end
-
-    acc
-  end
-
-  defp find_all_exact(%{"children" => children}, target_id, acc) when is_list(children) do
-    Enum.reduce(children, acc, &find_all_exact(&1, target_id, &2))
-  end
-
-  defp find_all_exact(_node, _target_id, acc), do: acc
-
-  defp find_all_local(%{id: id} = node, local_id, acc) do
-    acc = if local_id(id) == local_id, do: [node | acc], else: acc
-
-    case node do
-      %{children: children} when is_list(children) ->
-        Enum.reduce(children, acc, &find_all_local(&1, local_id, &2))
-
-      _ ->
-        acc
-    end
-  end
-
-  defp find_all_local(%{"id" => id} = node, local_id, acc) do
-    acc = if local_id(id) == local_id, do: [node | acc], else: acc
-
-    case node do
-      %{"children" => children} when is_list(children) ->
-        Enum.reduce(children, acc, &find_all_local(&1, local_id, &2))
-
-      _ ->
-        acc
-    end
-  end
-
-  defp find_all_local(%{children: children}, local_id, acc) when is_list(children) do
-    Enum.reduce(children, acc, &find_all_local(&1, local_id, &2))
-  end
-
-  defp find_all_local(%{"children" => children}, local_id, acc) when is_list(children) do
-    Enum.reduce(children, acc, &find_all_local(&1, local_id, &2))
-  end
-
-  defp find_all_local(_node, _local_id, acc), do: acc
-
-  defp local_id(id) when is_binary(id) do
-    case String.split(id, "/") do
-      [] -> id
-      parts -> List.last(parts)
-    end
-  end
-
-  defp find_window(%{type: "window", id: id} = node, id), do: node
-
-  defp find_window(%{children: children}, window_id) when is_list(children) do
-    Enum.find_value(children, &find_window(&1, window_id))
-  end
-
-  defp find_window(_, _window_id), do: nil
-
-  defp collect_window_ids(%{type: "window", id: id, children: children}, target_id, _current, acc) do
-    acc = if id == target_id, do: [id | acc], else: acc
-    Enum.reduce(children, acc, &collect_window_ids(&1, target_id, id, &2))
-  end
-
-  defp collect_window_ids(%{id: id, children: children}, target_id, current_window, acc) do
-    acc = if id == target_id and current_window, do: [current_window | acc], else: acc
-
-    Enum.reduce(children, acc, &collect_window_ids(&1, target_id, current_window, &2))
-  end
-
-  defp collect_window_ids(%{children: children}, target_id, current_window, acc)
-       when is_list(children) do
-    Enum.reduce(children, acc, &collect_window_ids(&1, target_id, current_window, &2))
-  end
-
-  defp collect_window_ids(
-         %{"type" => "window", "id" => id, "children" => children},
-         target_id,
-         _current,
-         acc
-       ) do
-    acc = if id == target_id, do: [id | acc], else: acc
-    Enum.reduce(children, acc, &collect_window_ids(&1, target_id, id, &2))
-  end
-
-  defp collect_window_ids(%{"id" => id, "children" => children}, target_id, current_window, acc) do
-    acc = if id == target_id and current_window, do: [current_window | acc], else: acc
-
-    Enum.reduce(children, acc, &collect_window_ids(&1, target_id, current_window, &2))
-  end
-
-  defp collect_window_ids(%{"children" => children}, target_id, current_window, acc)
-       when is_list(children) do
-    Enum.reduce(children, acc, &collect_window_ids(&1, target_id, current_window, &2))
-  end
-
-  defp collect_window_ids(_node, _target_id, _current_window, acc), do: acc
+  defdelegate window_id_for(tree, target_id), to: Plushie.Tree.Search
 
   @doc """
   Returns true if a node with the given `id` exists in the tree.
@@ -824,25 +639,11 @@ defmodule Plushie.Tree do
   Checks exact scoped IDs only.
   """
   @spec exists?(tree :: map() | nil, id :: String.t()) :: boolean()
-  def exists?(nil, _id), do: false
-
-  def exists?(tree, id) do
-    find(tree, id) != nil
-  end
+  defdelegate exists?(tree, id), to: Plushie.Tree.Search
 
   @doc "Returns a flat list of all node IDs in the tree (depth-first order)."
   @spec ids(tree :: map() | nil) :: [String.t()]
-  def ids(nil), do: []
-
-  def ids(%{id: id, children: children}) do
-    [id | Enum.flat_map(children, &ids/1)]
-  end
-
-  def ids(%{"id" => id, "children" => children}) do
-    [id | Enum.flat_map(children, &ids/1)]
-  end
-
-  def ids(_), do: []
+  defdelegate ids(tree), to: Plushie.Tree.Search
 
   @doc """
   Extracts the display text from a node.
@@ -851,10 +652,7 @@ defmodule Plushie.Tree do
   no display text is available.
   """
   @spec text_of(node :: tree_node()) :: String.t() | nil
-  def text_of(%{props: %{content: c}}) when is_binary(c), do: c
-  def text_of(%{props: %{"content" => c}}) when is_binary(c), do: c
-  def text_of(%{"props" => %{"content" => c}}) when is_binary(c), do: c
-  def text_of(_), do: nil
+  defdelegate text_of(node), to: Plushie.Tree.Search
 
   @doc """
   Finds all nodes in a tree for which `fun` returns truthy.
@@ -863,12 +661,7 @@ defmodule Plushie.Tree do
   """
   @spec find_all(node :: tree_node() | nil, fun :: (tree_node() -> as_boolean(term()))) ::
           [tree_node()]
-  def find_all(nil, _fun), do: []
-
-  def find_all(node, fun) do
-    do_find_all(node, fun, [])
-    |> Enum.reverse()
-  end
+  defdelegate find_all(node, fun), to: Plushie.Tree.Search
 
   @doc """
   Finds the first node in a tree for which `fun` returns truthy.
@@ -879,11 +672,9 @@ defmodule Plushie.Tree do
   """
   @spec find_first(node :: tree_node() | nil, fun :: (tree_node() -> as_boolean(term()))) ::
           tree_node() | nil
-  def find_first(nil, _fun), do: nil
+  defdelegate find_first(node, fun), to: Plushie.Tree.Search
 
-  def find_first(node, fun) do
-    do_find_first(node, fun)
-  end
+  # -- Delegated diff function (Plushie.Tree.Diff) --
 
   @doc """
   Compares two normalized trees and returns a list of patch operations.
@@ -897,349 +688,7 @@ defmodule Plushie.Tree do
   Path is a list of child indices from the root. An empty path `[]` means the root node.
   """
   @spec diff(old_tree :: map() | nil, new_tree :: map() | nil) :: [map()]
-  def diff(nil, nil), do: []
-  def diff(nil, new_tree), do: [%{op: "replace_node", path: [], node: new_tree}]
-  def diff(_old_tree, nil), do: [%{op: "replace_node", path: [], node: @empty_container}]
-
-  def diff(%{id: old_id} = _old_tree, %{id: new_id} = new_tree) when old_id != new_id do
-    [%{op: "replace_node", path: [], node: new_tree}]
-  end
-
-  def diff(%{} = old_tree, %{} = new_tree) do
-    diff_node(old_tree, new_tree, [])
-  end
-
-  defp diff_node(old, new, _path) when old === new, do: []
-
-  defp diff_node(old, new, path) do
-    if old.type != new.type do
-      [%{op: "replace_node", path: path, node: new}]
-    else
-      child_ops = diff_children(old.children, new.children, path)
-      prop_ops = diff_props(old.props, new.props, path)
-      prop_ops ++ child_ops
-    end
-  end
-
-  defp diff_props(old_props, new_props, _path) when old_props == new_props, do: []
-
-  defp diff_props(old_props, new_props, path) do
-    changed =
-      new_props
-      |> Enum.reduce(%{}, fn {k, v}, acc ->
-        case Map.fetch(old_props, k) do
-          {:ok, ^v} -> acc
-          {:ok, old_v} -> if id_keyed_list_equal?(old_v, v), do: acc, else: Map.put(acc, k, v)
-          :error -> Map.put(acc, k, v)
-        end
-      end)
-
-    # Keys removed in new -- set to nil so the renderer can clear them
-    removed =
-      old_props
-      |> Enum.reduce(%{}, fn {k, _v}, acc ->
-        if Map.has_key?(new_props, k), do: acc, else: Map.put(acc, k, nil)
-      end)
-
-    merged = Map.merge(changed, removed)
-
-    if map_size(merged) == 0 do
-      []
-    else
-      [%{op: "update_props", path: path, props: merged}]
-    end
-  end
-
-  # Compares two list-valued props by element ID when both are lists of
-  # ID-bearing maps (e.g. canvas shape lists). This catches the common
-  # case where the view function reconstructed the list with identical
-  # content but the structural `===` check failed (different map key
-  # ordering, float rounding, nested struct re-encoding).
-  #
-  # Returns true only when both lists have the same length, every element
-  # has an :id key, the ID sequences match, and each pair is structurally
-  # equal. Falls back to false for non-list or non-ID-bearing values so
-  # the caller treats them as changed (existing behavior).
-  #
-  # A future renderer protocol extension could support granular shape ops
-  # (add/remove/update by ID), at which point this function would return
-  # a diff instead of a boolean, enabling sub-list patching over the wire.
-  @spec id_keyed_list_equal?(term(), term()) :: boolean()
-  defp id_keyed_list_equal?(old, new) when is_list(old) and is_list(new) do
-    length(old) == length(new) and
-      id_keyed_list?(old) and
-      id_keyed_list?(new) and
-      lists_equal_by_id?(old, new)
-  end
-
-  defp id_keyed_list_equal?(_old, _new), do: false
-
-  defp id_keyed_list?(list) do
-    list != [] and Enum.all?(list, &match?(%{id: _}, &1))
-  end
-
-  defp lists_equal_by_id?(old, new) do
-    old_by_id = Map.new(old, fn %{id: id} = el -> {id, el} end)
-
-    Enum.all?(new, fn %{id: id} = el ->
-      case Map.fetch(old_by_id, id) do
-        {:ok, ^el} -> true
-        _ -> false
-      end
-    end)
-  end
-
-  defp diff_children(old_children, new_children, path) do
-    old_by_id = old_children |> Enum.with_index() |> Map.new(fn {c, i} -> {c.id, {c, i}} end)
-    new_by_id = new_children |> Enum.with_index() |> Map.new(fn {c, i} -> {c.id, {c, i}} end)
-
-    new_ids = Enum.map(new_children, & &1.id)
-
-    if length(new_ids) != map_size(new_by_id) do
-      dupes = new_ids -- Enum.uniq(new_ids)
-      raise ArgumentError, "duplicate child IDs in diff: #{inspect(Enum.uniq(dupes))}"
-    end
-
-    old_ids = Enum.map(old_children, & &1.id)
-
-    # Common IDs in old and new order
-    common_old = Enum.filter(old_ids, &Map.has_key?(new_by_id, &1))
-    common_new = Enum.filter(new_ids, &Map.has_key?(old_by_id, &1))
-
-    # Fast path: identical ID sequences, just diff props per child
-    if old_ids == new_ids do
-      diff_children_same_order(old_children, new_children, path)
-    else
-      # IDs that exist only in old (pure removals)
-      old_only = MapSet.new(old_ids) |> MapSet.difference(MapSet.new(new_ids))
-
-      if common_old == common_new do
-        # Medium path: no reordering among common IDs. Use simple
-        # insert/remove logic (no LIS needed).
-        diff_children_no_reorder(
-          old_by_id,
-          new_children,
-          old_only,
-          path
-        )
-      else
-        # Slow path: reordering detected. Use LIS to minimize moves.
-        diff_children_reorder(
-          old_by_id,
-          new_by_id,
-          new_children,
-          common_new,
-          old_only,
-          path
-        )
-      end
-    end
-  end
-
-  # Fast path: old and new have identical ID lists. Diff props per child.
-  defp diff_children_same_order(old_children, new_children, path) do
-    old_children
-    |> Enum.zip(new_children)
-    |> Enum.with_index()
-    |> Enum.flat_map(fn {{old_child, new_child}, idx} ->
-      diff_node(old_child, new_child, path ++ [idx])
-    end)
-  end
-
-  # Medium path: common IDs maintain relative order. Pure inserts and
-  # removes with no moves needed.
-  defp diff_children_no_reorder(old_by_id, new_children, old_only, path) do
-    # Collect old indices that will be removed (old-only IDs)
-    removed_indices =
-      old_only
-      |> Enum.map(fn id -> old_by_id |> Map.fetch!(id) |> elem(1) end)
-      |> Enum.sort()
-
-    remove_ops =
-      removed_indices
-      |> Enum.reverse()
-      |> Enum.map(fn idx -> %{op: "remove_child", path: path, index: idx} end)
-
-    # Walk new children for updates and inserts
-    {update_ops, insert_ops} =
-      new_children
-      |> Enum.with_index()
-      |> Enum.reduce({[], []}, fn {child, idx}, {updates, inserts} ->
-        case Map.fetch(old_by_id, child.id) do
-          {:ok, {old_child, old_idx}} ->
-            child_path = path ++ [index_after_removals(old_idx, removed_indices)]
-            ops = diff_node(old_child, child, child_path)
-            {updates ++ ops, inserts}
-
-          :error ->
-            insert = %{op: "insert_child", path: path, index: idx, node: child}
-            {updates, inserts ++ [insert]}
-        end
-      end)
-
-    remove_ops ++ update_ops ++ insert_ops
-  end
-
-  # Slow path: reordering detected. Use LIS to find the largest subset
-  # of common elements that maintain relative order. Elements in the LIS
-  # stay in place; elements not in the LIS are removed and re-inserted
-  # at their new positions.
-  defp diff_children_reorder(
-         old_by_id,
-         _new_by_id,
-         new_children,
-         common_new,
-         old_only,
-         path
-       ) do
-    # For common IDs in new order, get their old indices
-    old_indices_of_common =
-      Enum.map(common_new, fn id ->
-        old_by_id |> Map.fetch!(id) |> elem(1)
-      end)
-
-    # Find LIS positions (indices into common_new that form the LIS)
-    lis_positions = longest_increasing_subsequence(old_indices_of_common)
-    lis_set = MapSet.new(lis_positions)
-
-    # IDs that stay in place (in the LIS)
-    lis_ids =
-      common_new
-      |> Enum.with_index()
-      |> Enum.filter(fn {_id, i} -> MapSet.member?(lis_set, i) end)
-      |> Enum.map(fn {id, _i} -> id end)
-      |> MapSet.new()
-
-    # IDs that need to move: common but not in LIS
-    moved_ids =
-      common_new
-      |> MapSet.new()
-      |> MapSet.difference(lis_ids)
-
-    # All indices to remove: old-only IDs + moved IDs (removed from old position)
-    all_remove_ids = MapSet.union(old_only, moved_ids)
-
-    removed_indices =
-      all_remove_ids
-      |> Enum.map(fn id -> old_by_id |> Map.fetch!(id) |> elem(1) end)
-      |> Enum.sort()
-
-    remove_ops =
-      removed_indices
-      |> Enum.reverse()
-      |> Enum.map(fn idx -> %{op: "remove_child", path: path, index: idx} end)
-
-    # Build new child lookup for O(1) access
-    new_child_by_id = Map.new(new_children, fn c -> {c.id, c} end)
-
-    # Update ops for LIS elements (they survive removals, need adjusted indices)
-    update_ops =
-      lis_ids
-      |> Enum.flat_map(fn id ->
-        {old_child, old_idx} = Map.fetch!(old_by_id, id)
-        new_child = Map.fetch!(new_child_by_id, id)
-        child_path = path ++ [index_after_removals(old_idx, removed_indices)]
-        diff_node(old_child, new_child, child_path)
-      end)
-
-    # Insert ops: new-only IDs and moved IDs, at their new positions
-    insert_ops =
-      new_children
-      |> Enum.with_index()
-      |> Enum.filter(fn {child, _idx} ->
-        not Map.has_key?(old_by_id, child.id) or MapSet.member?(moved_ids, child.id)
-      end)
-      |> Enum.map(fn {child, idx} ->
-        # For moved IDs, use the new version of the node from new_children
-        # (which is already `child` here). For props that changed, the
-        # insert carries the full new node so no separate update is needed.
-        %{op: "insert_child", path: path, index: idx, node: child}
-      end)
-
-    remove_ops ++ update_ops ++ insert_ops
-  end
-
-  # Returns the adjusted index of an element after removals, using binary
-  # search on a sorted tuple of removed indices. O(log r) per call.
-  @spec index_after_removals(non_neg_integer(), [non_neg_integer()]) :: non_neg_integer()
-  defp index_after_removals(old_idx, sorted_removed) do
-    tup = List.to_tuple(sorted_removed)
-    old_idx - bsearch_count_lt(tup, old_idx, 0, tuple_size(tup))
-  end
-
-  # Binary search: count elements in a sorted tuple that are strictly less
-  # than the target value. O(log n) with O(1) random access.
-  defp bsearch_count_lt(_tup, _target, lo, hi) when lo >= hi, do: lo
-
-  defp bsearch_count_lt(tup, target, lo, hi) do
-    mid = div(lo + hi, 2)
-
-    if elem(tup, mid) < target do
-      bsearch_count_lt(tup, target, mid + 1, hi)
-    else
-      bsearch_count_lt(tup, target, lo, mid)
-    end
-  end
-
-  # Longest Increasing Subsequence using patience sorting.
-  # Returns the indices (positions) in the input list that form the LIS.
-  # Uses Erlang :array for O(1) random access in the inner binary search.
-  # O(n log n) time, O(n) space.
-  @spec longest_increasing_subsequence([integer()]) :: [non_neg_integer()]
-  defp longest_increasing_subsequence([]), do: []
-
-  defp longest_increasing_subsequence(values) do
-    # tails[i] = smallest tail value for increasing subsequence of length i+1
-    # idxs[i] = index in original list for tails[i]
-    # preds = %{pos => predecessor_pos} for backtracking
-    n = length(values)
-    empty_arr = :array.new(n, default: 0)
-
-    {_tails, preds, idxs, len} =
-      values
-      |> Enum.with_index()
-      |> Enum.reduce({empty_arr, %{}, empty_arr, 0}, fn {val, pos}, {tails, preds, idxs, len} ->
-        insert_pos = lis_bsearch(tails, val, 0, len)
-
-        preds =
-          if insert_pos > 0 do
-            Map.put(preds, pos, :array.get(insert_pos - 1, idxs))
-          else
-            preds
-          end
-
-        tails = :array.set(insert_pos, val, tails)
-        idxs = :array.set(insert_pos, pos, idxs)
-        len = max(len, insert_pos + 1)
-
-        {tails, preds, idxs, len}
-      end)
-
-    # Reconstruct the LIS by following predecessors backward
-    last_idx = :array.get(len - 1, idxs)
-    reconstruct_lis(preds, last_idx, len, [])
-  end
-
-  defp lis_bsearch(_tails, _val, lo, hi) when lo >= hi, do: lo
-
-  defp lis_bsearch(tails, val, lo, hi) do
-    mid = div(lo + hi, 2)
-
-    if :array.get(mid, tails) < val do
-      lis_bsearch(tails, val, mid + 1, hi)
-    else
-      lis_bsearch(tails, val, lo, mid)
-    end
-  end
-
-  defp reconstruct_lis(_preds, _idx, 0, acc), do: acc
-
-  defp reconstruct_lis(preds, idx, remaining, acc) do
-    case Map.fetch(preds, idx) do
-      {:ok, prev_idx} -> reconstruct_lis(preds, prev_idx, remaining - 1, [idx | acc])
-      :error -> [idx | acc]
-    end
-  end
+  defdelegate diff(old_tree, new_tree), to: Plushie.Tree.Diff
 
   # Ensures all keys in the map are atoms. String keys from manually
   # constructed node maps are converted; atom keys pass through.
@@ -1401,27 +850,6 @@ defmodule Plushie.Tree do
         patched = a11y |> Map.put(:position_in_set, pos) |> Map.put(:size_of_set, size)
         Map.put(acc, child_idx, patched)
     end
-  end
-
-  defp do_find_all(%{children: children} = node, fun, acc) do
-    acc = if fun.(node), do: [node | acc], else: acc
-    Enum.reduce(children, acc, &do_find_all(&1, fun, &2))
-  end
-
-  defp do_find_all(node, fun, acc) do
-    if fun.(node), do: [node | acc], else: acc
-  end
-
-  defp do_find_first(%{children: children} = node, fun) do
-    if fun.(node) do
-      node
-    else
-      Enum.find_value(children, &do_find_first(&1, fun))
-    end
-  end
-
-  defp do_find_first(node, fun) do
-    if fun.(node), do: node
   end
 
   # Fetches a field by atom key first, then string key, returning nil if absent.
