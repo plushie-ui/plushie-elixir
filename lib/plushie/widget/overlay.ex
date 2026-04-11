@@ -36,13 +36,15 @@ defmodule Plushie.Widget.Overlay do
   # No a11y defaults: layout containers are transparent to AT
 
   widget :overlay, container: true do
-    field :position, :atom, doc: "Overlay position: `:below`, `:above`, `:left`, `:right`."
+    field :position, {:enum, [:below, :above, :left, :right]},
+      doc: "Overlay position: `:below`, `:above`, `:left`, `:right`."
+
     field :gap, :float, doc: "Space between anchor and overlay in pixels. Default: 0."
     field :offset_x, :float, doc: "Horizontal offset in pixels after positioning."
     field :offset_y, :float, doc: "Vertical offset in pixels after positioning."
     field :flip, :boolean, doc: "Auto-flip when content overflows viewport. Default: false."
 
-    field :align, :atom,
+    field :align, {:enum, [:start, :center, :end]},
       doc: "Cross-axis alignment relative to anchor: `:start`, `:center`, `:end`."
 
     field :width, Plushie.Type.Length, doc: "Width of the overlay node."

@@ -13,7 +13,7 @@ defmodule Plushie.Widget.QrCode do
     field :cell_color, Plushie.Type.Color, doc: "Color of dark modules. Default: black."
     field :background, Plushie.Type.Color, doc: "Color of light modules. Default: white."
 
-    field :error_correction, :atom,
+    field :error_correction, {:enum, [:low, :medium, :quartile, :high]},
       doc: "Error correction level: `:low`, `:medium`, `:quartile`, `:high`."
 
     field :alt, :string, doc: "Accessible label for the QR code."

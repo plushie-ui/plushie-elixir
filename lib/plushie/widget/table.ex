@@ -144,7 +144,7 @@ defmodule Plushie.Widget.Table do
     field :width, Plushie.Type.Length, doc: "Table width. Default: fill."
     field :padding, Plushie.Type.Padding, doc: "Table padding."
     field :sort_by, :string, doc: "Key of the currently sorted column."
-    field :sort_order, :atom, doc: "Current sort direction: `:asc` or `:desc`."
+    field :sort_order, {:enum, [:asc, :desc]}, doc: "Current sort direction: `:asc` or `:desc`."
     field :header_text_size, :float, doc: "Header row text size in pixels."
     field :row_text_size, :float, doc: "Body row text size in pixels."
     field :cell_spacing, :float, doc: "Horizontal spacing between cells in pixels."

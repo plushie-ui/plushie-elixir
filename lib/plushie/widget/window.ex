@@ -29,7 +29,9 @@ defmodule Plushie.Widget.Window do
     field :decorations, :boolean, doc: "Show window decorations (title bar, borders)."
     field :transparent, :boolean, doc: "Transparent window background."
     field :blur, :boolean, doc: "Blur the window background."
-    field :level, :atom, doc: "Stacking level: `:normal`, `:always_on_top`, `:always_on_bottom`."
+
+    field :level, {:enum, [:normal, :always_on_top, :always_on_bottom]},
+      doc: "Stacking level: `:normal`, `:always_on_top`, `:always_on_bottom`."
 
     field :exit_on_close_request, :boolean, doc: "Whether closing the window exits the app."
 
