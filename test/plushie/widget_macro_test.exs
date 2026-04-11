@@ -178,6 +178,7 @@ defmodule Plushie.WidgetMacroTest do
       field :saturation, :float, default: 1.0
     end
 
+    @impl Plushie.Widget.Handler
     def view(id, props, state) do
       %{
         id: id,
@@ -636,7 +637,7 @@ defmodule Plushie.WidgetMacroTest do
       end
       """)
 
-      assert :a11y in TestA11yField.__prop_names__()
+      assert :a11y in apply(TestA11yField, :__prop_names__, [])
     end
   end
 

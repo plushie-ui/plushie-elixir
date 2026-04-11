@@ -998,6 +998,10 @@ defmodule Plushie.Runtime do
       {:handled, state} ->
         {:noreply, state}
 
+      :not_a_task when reason == :normal ->
+        # Normal exit from a linked process (e.g. test teardown). Not a problem.
+        {:noreply, state}
+
       :not_a_task ->
         Logger.warning(
           "plushie runtime: linked process #{inspect(pid)} exited: #{inspect(reason)}"
