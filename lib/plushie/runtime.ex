@@ -417,18 +417,22 @@ defmodule Plushie.Runtime do
     {:reply, reply, state}
   end
 
+  @impl GenServer
   def handle_call(:get_model, _from, state) do
     {:reply, state.model, state}
   end
 
+  @impl GenServer
   def handle_call(:get_tree, _from, state) do
     {:reply, state.tree, state}
   end
 
+  @impl GenServer
   def handle_call(:get_bridge, _from, state) do
     {:reply, state.bridge, state}
   end
 
+  @impl GenServer
   def handle_call(:get_health, _from, state) do
     status =
       if state.consecutive_view_errors > 0, do: :degraded, else: :healthy
@@ -442,23 +446,28 @@ defmodule Plushie.Runtime do
     {:reply, health, state}
   end
 
+  @impl GenServer
   def handle_call({:find_node, id}, _from, state) do
     {:reply, Plushie.Tree.find(state.tree, id), state}
   end
 
+  @impl GenServer
   def handle_call({:find_node, id, window_id}, _from, state) do
     {:reply, Plushie.Tree.find(state.tree, id, window_id), state}
   end
 
+  @impl GenServer
   def handle_call({:find_node_by, fun}, _from, state) do
     result = Plushie.Tree.find_all(state.tree, fun) |> List.first()
     {:reply, result, state}
   end
 
+  @impl GenServer
   def handle_call(:get_focused, _from, state) do
     {:reply, state.focused_widget_id, state}
   end
 
+  @impl GenServer
   def handle_call({:register_effect_stub, kind, response}, from, state) do
     if Map.has_key?(state.pending_stub_acks, kind) do
       {:reply, {:error, :stub_ack_pending}, state}
@@ -468,6 +477,7 @@ defmodule Plushie.Runtime do
     end
   end
 
+  @impl GenServer
   def handle_call({:unregister_effect_stub, kind}, from, state) do
     if Map.has_key?(state.pending_stub_acks, kind) do
       {:reply, {:error, :stub_ack_pending}, state}
@@ -481,6 +491,7 @@ defmodule Plushie.Runtime do
   # GenServer.call timeout (10s) to avoid racing with the caller's timeout.
   @interact_timeout 15_000
 
+  @impl GenServer
   def handle_call({:interact, action, selector, payload}, from, state) do
     case state.pending_interact do
       nil ->
@@ -498,6 +509,7 @@ defmodule Plushie.Runtime do
     end
   end
 
+  @impl GenServer
   def handle_call({:await_async, tag}, from, state) do
     cond do
       Map.has_key?(state.pending_await_async, tag) ->
@@ -558,6 +570,7 @@ defmodule Plushie.Runtime do
     {:noreply, state}
   end
 
+  @impl GenServer
   def handle_info(
         {:renderer_event, %Plushie.Event.SystemEvent{type: :diagnostic} = event},
         state
@@ -587,6 +600,7 @@ defmodule Plushie.Runtime do
     {:noreply, state}
   end
 
+  @impl GenServer
   def handle_info({:renderer_event, {:effect_stub_ack, kind}}, state) do
     case Map.pop(state.pending_stub_acks, kind) do
       {nil, _} ->
@@ -598,6 +612,7 @@ defmodule Plushie.Runtime do
     end
   end
 
+  @impl GenServer
   def handle_info({:renderer_event, {:effect_response, wire_id, result}}, state) do
     case pop_pending_effect(state, wire_id) do
       {:ok, tag, state} ->
@@ -608,6 +623,7 @@ defmodule Plushie.Runtime do
     end
   end
 
+  @impl GenServer
   def handle_info({:renderer_event, {:hello, hello}}, state) do
     validate_renderer_widgets!(hello)
     check_renderer_version(hello)
@@ -619,6 +635,7 @@ defmodule Plushie.Runtime do
     {:noreply, state}
   end
 
+  @impl GenServer
   def handle_info(
         {:renderer_event, %Plushie.Event.SystemEvent{type: :all_windows_closed} = event},
         %{daemon: false} = state
@@ -638,6 +655,7 @@ defmodule Plushie.Runtime do
   # latest value. This preserves ordering relative to other event types (a
   # non-coalescable event always flushes pending coalescables first) and avoids
   # redundant update cycles during bursts.
+  @impl GenServer
   def handle_info({:renderer_event, %WidgetEvent{type: :move} = event}, state) do
     {:noreply,
      store_coalescable(
@@ -647,6 +665,7 @@ defmodule Plushie.Runtime do
      )}
   end
 
+  @impl GenServer
   def handle_info({:renderer_event, %WidgetEvent{type: :scroll} = event}, state) do
     key = {:scroll, event.window_id, Plushie.Event.target(event)}
 
@@ -669,6 +688,7 @@ defmodule Plushie.Runtime do
     {:noreply, store_coalescable(state, key, accumulated)}
   end
 
+  @impl GenServer
   def handle_info({:renderer_event, %WidgetEvent{type: :scrolled} = event}, state) do
     {:noreply,
      store_coalescable(
@@ -678,6 +698,7 @@ defmodule Plushie.Runtime do
      )}
   end
 
+  @impl GenServer
   def handle_info({:renderer_event, %WidgetEvent{type: :resize} = event}, state) do
     {:noreply,
      store_coalescable(
@@ -690,12 +711,14 @@ defmodule Plushie.Runtime do
   # Interact protocol: the renderer sends intermediate event batches during
   # an interact request. All events in a step came from one atomic iced event
   # and the renderer expects exactly one snapshot back.
+  @impl GenServer
   def handle_info({:renderer_event, {:interact_step, _id, events}}, state) do
     state = flush_coalescables(state)
     state = run_interact_step(state, events)
     {:noreply, state}
   end
 
+  @impl GenServer
   def handle_info({:renderer_event, {:interact_response, id, events}}, state) do
     state = flush_coalescables(state)
 
@@ -720,6 +743,7 @@ defmodule Plushie.Runtime do
     end
   end
 
+  @impl GenServer
   def handle_info({:renderer_event, event}, state) do
     state = flush_coalescables(state)
     state = run_update(state, event)
@@ -730,15 +754,18 @@ defmodule Plushie.Runtime do
   # Renderer lifecycle
   # ---------------------------------------------------------------------------
 
+  @impl GenServer
   def handle_info({:renderer_exit, :normal}, state) do
     # Clean exit (renderer process ended). Shut down the runtime.
     {:stop, :normal, fail_pending_interact(state, {:renderer_exit, :normal})}
   end
 
+  @impl GenServer
   def handle_info({:renderer_exit, :shutdown}, state) do
     {:stop, :normal, fail_pending_interact(state, {:renderer_exit, :shutdown})}
   end
 
+  @impl GenServer
   def handle_info({:renderer_exit, reason}, state) do
     state = fail_pending_interact(state, {:renderer_exit, reason})
     Logger.warning("plushie runtime: renderer exited: #{inspect(reason)}")
@@ -777,6 +804,7 @@ defmodule Plushie.Runtime do
     {:noreply, state}
   end
 
+  @impl GenServer
   def handle_info(:renderer_restarted, state) do
     Logger.info("plushie runtime: renderer restarted -- re-sending settings and snapshot")
 
@@ -872,6 +900,7 @@ defmodule Plushie.Runtime do
   # Coalescable event flush
   # ---------------------------------------------------------------------------
 
+  @impl GenServer
   def handle_info(:flush_coalescables, state) do
     {:noreply, flush_coalescables(%{state | coalesce_timer: nil})}
   end
@@ -880,6 +909,7 @@ defmodule Plushie.Runtime do
   # Async task completions
   # ---------------------------------------------------------------------------
 
+  @impl GenServer
   def handle_info({:async_result, tag, nonce, result}, state) do
     case Map.get(state.async_tasks, tag) do
       {_pid, ^nonce} ->
@@ -896,6 +926,7 @@ defmodule Plushie.Runtime do
     end
   end
 
+  @impl GenServer
   def handle_info({:stream_value, tag, nonce, value}, state) do
     case Map.get(state.async_tasks, tag) do
       {_pid, ^nonce} ->
@@ -911,6 +942,7 @@ defmodule Plushie.Runtime do
 
   # Interact caller died (timeout or crash). Clean up pending_interact so
   # future interactions aren't blocked.
+  @impl GenServer
   def handle_info({:DOWN, ref, :process, _pid, _reason}, state)
       when state.pending_interact != nil do
     case state.pending_interact do
@@ -924,6 +956,7 @@ defmodule Plushie.Runtime do
     end
   end
 
+  @impl GenServer
   def handle_info({:interact_timeout, id}, state) do
     case state.pending_interact do
       {from, ^id, monitor_ref, _timer_ref, action, selector} ->
@@ -944,6 +977,7 @@ defmodule Plushie.Runtime do
 
   # Catch-all DOWN handler. Checks if the dead process is a monitored
   # async task before discarding.
+  @impl GenServer
   def handle_info({:DOWN, _ref, :process, pid, reason}, state) do
     case handle_async_task_exit(state, pid, reason) do
       {:handled, state} -> {:noreply, state}
@@ -955,6 +989,7 @@ defmodule Plushie.Runtime do
   # Timer-driven events
   # ---------------------------------------------------------------------------
 
+  @impl GenServer
   def handle_info({:send_after_event, event, nonce}, state) do
     case Map.get(state.pending_timers, event) do
       {_ref, ^nonce} ->
@@ -973,6 +1008,7 @@ defmodule Plushie.Runtime do
   # Effect request timeouts
   # ---------------------------------------------------------------------------
 
+  @impl GenServer
   def handle_info({:effect_timeout, id}, state) do
     case Map.pop(state.pending_effects, id) do
       {nil, _} ->
@@ -993,6 +1029,7 @@ defmodule Plushie.Runtime do
 
   # Task death via link (:EXIT from Task.start_link fallback or other
   # linked processes).
+  @impl GenServer
   def handle_info({:EXIT, pid, reason}, state) do
     case handle_async_task_exit(state, pid, reason) do
       {:handled, state} ->
@@ -1015,6 +1052,7 @@ defmodule Plushie.Runtime do
   # Subscription ticks
   # ---------------------------------------------------------------------------
 
+  @impl GenServer
   def handle_info({:subscription_tick, tag, interval}, state) do
     key = {:every, interval, tag}
 
@@ -1086,6 +1124,7 @@ defmodule Plushie.Runtime do
   # Dev-mode live reload
   # ---------------------------------------------------------------------------
 
+  @impl GenServer
   def handle_info(:force_rerender, state) do
     Logger.info("plushie runtime: force re-render (code reload)")
     state = %{state | consecutive_errors: 0, consecutive_view_errors: 0}
@@ -1122,6 +1161,7 @@ defmodule Plushie.Runtime do
 
   # -- Dev overlay messages ---------------------------------------------------
 
+  @impl GenServer
   def handle_info({:dev_overlay, overlay}, state) do
     state = cancel_overlay_timer(state)
     state = %{state | dev_overlay: overlay}
@@ -1138,6 +1178,7 @@ defmodule Plushie.Runtime do
     {:noreply, state}
   end
 
+  @impl GenServer
   def handle_info(:dev_overlay_auto_dismiss, state) do
     # Only auto-dismiss if the overlay is not expanded (user is reading).
     if state.dev_overlay && state.dev_overlay.expanded do
@@ -1150,6 +1191,7 @@ defmodule Plushie.Runtime do
 
   # Catch-all: ignore unrecognised messages. Use Plushie.Runtime.dispatch/2
   # to formally send events from spawned processes.
+  @impl GenServer
   def handle_info(msg, state) do
     Logger.warning("plushie runtime: unhandled message: #{inspect(msg)}")
     {:noreply, state}
