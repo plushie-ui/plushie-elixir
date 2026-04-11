@@ -62,7 +62,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
   use Mix.Task
 
-  @impl true
+  @impl Mix.Task
   def run(args) do
     {opts, _rest} =
       OptionParser.parse!(args,

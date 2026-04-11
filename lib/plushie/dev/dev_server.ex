@@ -44,7 +44,7 @@ defmodule Plushie.Dev.DevServer do
   # GenServer callbacks
   # ---------------------------------------------------------------------------
 
-  @impl true
+  @impl GenServer
   def init(opts) do
     Process.flag(:trap_exit, true)
     ensure_file_system!()
@@ -95,7 +95,7 @@ defmodule Plushie.Dev.DevServer do
     {:ok, state}
   end
 
-  @impl true
+  @impl GenServer
   def handle_info({:file_event, watcher, {path, _events}}, %{watcher: watcher} = state) do
     if watchable_elixir?(path) do
       state = %{state | changed_paths: MapSet.put(state.changed_paths, path)}
@@ -510,7 +510,7 @@ defmodule Plushie.Dev.DevServer do
     Protocol.extract_impls(Plushie.Tree.Node, :code.get_path()) |> MapSet.new()
   end
 
-  @impl true
+  @impl GenServer
   def terminate(_reason, state) do
     kill_rust_build(state)
 

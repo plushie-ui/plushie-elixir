@@ -127,15 +127,15 @@ defmodule Plushie.Type do
         use Plushie.Type
 
         # Accept integers 0..100 or floats 0.0..1.0, normalize to float
-        @impl true
+        @impl Plushie.Type
         def cast(v) when is_integer(v) and v >= 0 and v <= 100, do: {:ok, v / 100}
         def cast(v) when is_float(v) and v >= 0.0 and v <= 1.0, do: {:ok, v}
         def cast(_), do: :error
 
-        @impl true
+        @impl Plushie.Type
         def typespec, do: quote(do: float())
 
-        @impl true
+        @impl Plushie.Type
         def guard(var), do: quote(do: is_float(unquote(var)))
 
         # encode/1 not needed: floats are already wire-safe

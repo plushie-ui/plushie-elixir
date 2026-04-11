@@ -6,15 +6,15 @@ defmodule Mix.Tasks.Compile.PlushieBinary do
 
   @manifest "compile.plushie_binary"
 
-  @impl true
+  @impl Mix.Task.Compiler
   def manifests, do: [manifest_path()]
 
-  @impl true
+  @impl Mix.Task.Compiler
   def clean do
     File.rm(manifest_path())
   end
 
-  @impl true
+  @impl Mix.Task.Compiler
   def run(_args) do
     _path = Plushie.Binary.path!()
     {:noop, []}

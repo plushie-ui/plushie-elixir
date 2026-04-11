@@ -15,7 +15,7 @@ defmodule Mix.Tasks.Plushie.Inspect do
 
   use Mix.Task
 
-  @impl true
+  @impl Mix.Task
   def run(args) do
     {opts, positional, _} = OptionParser.parse(args, strict: [script: :string])
 

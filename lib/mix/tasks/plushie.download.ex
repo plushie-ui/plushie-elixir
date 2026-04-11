@@ -42,7 +42,7 @@ defmodule Mix.Tasks.Plushie.Download do
     wasm_dir: :string
   ]
 
-  @impl true
+  @impl Mix.Task
   def run(args) do
     Mix.Task.run("app.config")
 

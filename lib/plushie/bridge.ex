@@ -328,7 +328,7 @@ defmodule Plushie.Bridge do
   # GenServer callbacks
   # ---------------------------------------------------------------------------
 
-  @impl true
+  @impl GenServer
   def init(opts) do
     runtime = Keyword.fetch!(opts, :runtime)
     transport = Keyword.get(opts, :transport, :spawn)
@@ -385,7 +385,7 @@ defmodule Plushie.Bridge do
      ]}
   end
 
-  @impl true
+  @impl GenServer
   def handle_cast({:send_settings, settings}, state) do
     {:noreply,
      encode_and_send(state, :settings, fn fmt ->
@@ -531,7 +531,7 @@ defmodule Plushie.Bridge do
     end
   end
 
-  @impl true
+  @impl GenServer
   def handle_call({:screenshot, name, opts}, from, %{pending_screenshot: nil} = state) do
     message =
       %{type: "screenshot", name: name}
@@ -550,7 +550,7 @@ defmodule Plushie.Bridge do
     {:reply, {:error, :screenshot_in_progress}, state}
   end
 
-  @impl true
+  @impl GenServer
   def handle_info(:restart_renderer, state) do
     case state.transport_mod.reopen(state.transport_state) do
       {:ok, transport_state} ->
@@ -609,7 +609,7 @@ defmodule Plushie.Bridge do
     end
   end
 
-  @impl true
+  @impl GenServer
   def terminate(_reason, %{heartbeat_timer: ref} = state) when is_reference(ref) do
     Process.cancel_timer(ref)
     state.transport_mod.close(state.transport_state)

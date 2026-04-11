@@ -178,7 +178,7 @@ defmodule Plushie do
   # ---------------------------------------------------------------------------
 
   @doc false
-  @impl true
+  @impl Supervisor
   def init(opts) do
     name = Keyword.get(opts, :name, __MODULE__)
     app = Keyword.fetch!(opts, :app)

@@ -341,7 +341,7 @@ defmodule Plushie.Runtime do
   # GenServer callbacks
   # ---------------------------------------------------------------------------
 
-  @impl true
+  @impl GenServer
   def init(opts) do
     Process.flag(:trap_exit, true)
 
@@ -381,7 +381,7 @@ defmodule Plushie.Runtime do
     end
   end
 
-  @impl true
+  @impl GenServer
   def handle_continue(:initial_render, state) do
     # Send app-level settings to the renderer before the first snapshot.
     send_settings(state)
@@ -405,7 +405,7 @@ defmodule Plushie.Runtime do
   # Synchronous queries
   # ---------------------------------------------------------------------------
 
-  @impl true
+  @impl GenServer
   def handle_call(:sync, _from, state) do
     reply =
       if state.consecutive_view_errors > 0 do
@@ -517,7 +517,7 @@ defmodule Plushie.Runtime do
   # Renderer events (the main update loop)
   # ---------------------------------------------------------------------------
 
-  @impl true
+  @impl GenServer
   # Status events are always intercepted to track widget interaction
   # state (focus, hover, etc.). The raw status event is absorbed by
   # the runtime. Derived events (focused, blurred) are dispatched to
@@ -1241,7 +1241,7 @@ defmodule Plushie.Runtime do
     %{state | dev_overlay_timer: nil}
   end
 
-  @impl true
+  @impl GenServer
   def terminate(_reason, state) do
     # Cancel coalesce timer if pending.
     if state.coalesce_timer, do: Process.cancel_timer(state.coalesce_timer)

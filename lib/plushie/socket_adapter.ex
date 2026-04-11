@@ -32,7 +32,7 @@ defmodule Plushie.SocketAdapter do
     GenServer.start_link(__MODULE__, {addr, format})
   end
 
-  @impl true
+  @impl GenServer
   def init({addr, format}) do
     socket_opts =
       case format do
@@ -75,7 +75,7 @@ defmodule Plushie.SocketAdapter do
     end
   end
 
-  @impl true
+  @impl GenServer
   # Bridge registers itself on init.
   def handle_info({:iostream_bridge, bridge_pid}, state) do
     {:noreply, %{state | bridge: bridge_pid}}

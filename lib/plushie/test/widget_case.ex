@@ -118,7 +118,7 @@ defmodule Plushie.Test.WidgetCase.HarnessApp do
   @moduledoc false
   use Plushie.App
 
-  @impl true
+  @impl Plushie.App
   def init(opts) do
     widget_module = Keyword.fetch!(opts, :widget_module)
     widget_id = Keyword.fetch!(opts, :widget_id)
@@ -134,7 +134,7 @@ defmodule Plushie.Test.WidgetCase.HarnessApp do
     }
   end
 
-  @impl true
+  @impl Plushie.App
   def update(model, %Plushie.Event.WidgetEvent{} = event) do
     data = if is_map(event.value), do: event.value, else: %{}
 
@@ -146,7 +146,7 @@ defmodule Plushie.Test.WidgetCase.HarnessApp do
 
   def update(model, _event), do: model
 
-  @impl true
+  @impl Plushie.App
   def view(model) do
     import Plushie.UI
 
