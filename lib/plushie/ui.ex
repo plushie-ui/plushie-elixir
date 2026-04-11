@@ -137,6 +137,27 @@ defmodule Plushie.UI do
 
   The keyword form is still valid and preferred for short option lists.
 
+  ## Available widgets
+
+  Layout containers (auto-ID, accept children in do-blocks):
+  `column`, `row`, `container`, `stack`, `grid`, `floating`, `pin`,
+  `responsive`, `sensor`, `scrollable`, `themer`, `overlay`
+
+  Explicit-ID containers: `window`, `canvas`, `pane_grid`, `tooltip`
+
+  Leaf widgets: `text`, `button`, `text_input`, `text_editor`,
+  `checkbox`, `toggler`, `radio`, `slider`, `vertical_slider`,
+  `pick_list`, `combo_box`, `progress_bar`, `image`, `svg`,
+  `markdown`, `rich_text`, `rule`, `space`, `qr_code`
+
+  Canvas shapes: `rect`, `circle`, `line`, `path`, `text` (canvas
+  variant), `image` (canvas variant), `svg` (canvas variant)
+
+  Canvas structure: `layer`, `group`, `interactive`
+
+  Each widget's full prop reference is on its `Plushie.Widget.*`
+  module. Canvas shapes are documented in `Plushie.Canvas.*`.
+
   ## Canvas shapes
 
   Canvas shape functions (`rect`, `circle`, `line`, `path`, `stroke`,
@@ -1879,8 +1900,8 @@ defmodule Plushie.UI do
 
   ## Options
 
-  - `:width` / `:height` -- dimensions
-  - `:background` -- background color
+  Common options: `:width`, `:height`, `:background`, `:interactive`,
+  `:a11y`. See `Plushie.Widget.Canvas` for all props.
   """
   defmacro canvas(id, opts_or_do \\ []) do
     case opts_or_do do
