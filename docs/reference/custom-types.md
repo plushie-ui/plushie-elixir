@@ -46,6 +46,7 @@ These are full modules referenced by name in field declarations:
 | `Plushie.Type.Shadow` | Shadow struct (color, offset, blur) |
 | `Plushie.Type.A11y` | Accessibility annotations (role, label, etc.) |
 | `Plushie.Type.Alignment` | `:left`, `:center`, `:right`, `:top`, `:bottom` |
+| `Plushie.Type.LineHeight` | Relative multiplier, `%{relative: n}`, or `%{absolute: n}` |
 | `Plushie.Type.Shaping` | `:basic`, `:advanced`, `:auto` |
 | `Plushie.Type.Wrapping` | `:none`, `:word`, `:glyph`, `:word_or_glyph` |
 

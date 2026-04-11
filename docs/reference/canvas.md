@@ -65,8 +65,11 @@ data, interactive controls) significantly reduces rendering work.
 
 ## Shape catalog
 
-All shapes are builder functions in `Plushie.Canvas.Shape` that return
-typed structs. Use them inside `layer` or `group` blocks.
+All shapes are builder functions that return typed structs (e.g.
+`Plushie.Canvas.Rect`, `Plushie.Canvas.Circle`). Use them inside
+`layer` or `group` blocks. The `Plushie.Canvas.Shape` module
+re-exports all builder functions for programmatic use outside canvas
+blocks.
 
 | Function | Struct | Required args | Key options |
 |---|---|---|---|
@@ -444,7 +447,8 @@ end
 
 ## See also
 
-- `Plushie.Canvas.Shape` - all builder functions
+- `Plushie.Canvas.Shape` - builder functions for programmatic use
+- `Plushie.Canvas.Rect`, `Plushie.Canvas.Circle`, etc. - typed shape structs
 - `Plushie.Widget.Canvas` - canvas widget props
 - [Canvas guide](../guides/12-canvas.md) - building a canvas button
   for the pad
