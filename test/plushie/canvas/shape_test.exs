@@ -5,6 +5,8 @@ defmodule Plushie.Canvas.ShapeTest do
 
   alias Plushie.Canvas.{Gradient, Stroke}
 
+  alias Plushie.Canvas.Transform.{Rotate, Scale, Translate}
+
   alias Plushie.Canvas.Shape.{
     CanvasImage,
     CanvasSvg,
@@ -12,10 +14,7 @@ defmodule Plushie.Canvas.ShapeTest do
     Circle,
     Line,
     Path,
-    Rect,
-    Rotate,
-    Scale,
-    Translate
+    Rect
   }
 
   # -- Basic shapes -----------------------------------------------------------
