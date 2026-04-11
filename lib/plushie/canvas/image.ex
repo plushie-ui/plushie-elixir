@@ -6,12 +6,12 @@ defmodule Plushie.Canvas.Image do
   element :image do
     positional [:source, :x, :y, :w, :h]
 
-    field :source, :string
-    field :x, :float
-    field :y, :float
-    field :w, :float
-    field :h, :float
-    field :rotation, :float
-    field :opacity, :float
+    field :source, :string, doc: "Path to the image file."
+    field :x, :float, doc: "X position in pixels."
+    field :y, :float, doc: "Y position in pixels."
+    field :w, :float, doc: "Width in pixels."
+    field :h, :float, doc: "Height in pixels."
+    field :rotation, :float, doc: "Rotation angle in radians."
+    field :opacity, :float, doc: "Opacity from 0.0 to 1.0."
   end
 end

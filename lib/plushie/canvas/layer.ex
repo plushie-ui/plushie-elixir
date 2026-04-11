@@ -20,6 +20,6 @@ defmodule Plushie.Canvas.Layer do
   use Plushie.Canvas.Element
 
   element :layer, container: true, wire_type: :__layer__ do
-    field :name, :string
+    field :name, :string, doc: "Layer name for renderer cache keying."
   end
 end

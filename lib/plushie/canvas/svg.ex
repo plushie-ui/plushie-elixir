@@ -6,10 +6,10 @@ defmodule Plushie.Canvas.Svg do
   element :svg do
     positional [:source, :x, :y, :w, :h]
 
-    field :source, :string
-    field :x, :float
-    field :y, :float
-    field :w, :float
-    field :h, :float
+    field :source, :string, doc: "Path to the SVG file."
+    field :x, :float, doc: "X position in pixels."
+    field :y, :float, doc: "Y position in pixels."
+    field :w, :float, doc: "Width in pixels."
+    field :h, :float, doc: "Height in pixels."
   end
 end

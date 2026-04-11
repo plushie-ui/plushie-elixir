@@ -14,7 +14,7 @@ defmodule Plushie.Canvas.Group do
   use Plushie.Canvas.Element
 
   element :group, container: true do
-    field :transforms, :any
-    field :clip, :any
+    field :transforms, :any, doc: "List of transform descriptors (translate, rotate, scale)."
+    field :clip, :any, doc: "Clip rectangle for the group."
   end
 end

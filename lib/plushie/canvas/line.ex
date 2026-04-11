@@ -6,11 +6,11 @@ defmodule Plushie.Canvas.Line do
   element :line do
     positional [:x1, :y1, :x2, :y2]
 
-    field :x1, :float
-    field :y1, :float
-    field :x2, :float
-    field :y2, :float
-    field :stroke, Plushie.Canvas.Stroke
-    field :opacity, :float
+    field :x1, :float, doc: "Start X in pixels."
+    field :y1, :float, doc: "Start Y in pixels."
+    field :x2, :float, doc: "End X in pixels."
+    field :y2, :float, doc: "End Y in pixels."
+    field :stroke, Plushie.Canvas.Stroke, doc: "Stroke descriptor."
+    field :opacity, :float, doc: "Opacity from 0.0 to 1.0."
   end
 end

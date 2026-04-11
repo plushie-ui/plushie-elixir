@@ -6,14 +6,14 @@ defmodule Plushie.Canvas.Text do
   element :text do
     positional [:x, :y, :content]
 
-    field :x, :float
-    field :y, :float
-    field :content, :string
-    field :fill, :any
-    field :size, :float
-    field :font, :string
-    field :align_x, :string
-    field :align_y, :string
-    field :opacity, :float
+    field :x, :float, doc: "X position in pixels."
+    field :y, :float, doc: "Y position in pixels."
+    field :content, :string, doc: "Text string to draw."
+    field :fill, :any, doc: "Text fill color."
+    field :size, :float, doc: "Font size in pixels."
+    field :font, :string, doc: "Font specification."
+    field :align_x, :string, doc: "Horizontal alignment: \"left\", \"center\", \"right\"."
+    field :align_y, :string, doc: "Vertical alignment: \"top\", \"center\", \"bottom\"."
+    field :opacity, :float, doc: "Opacity from 0.0 to 1.0."
   end
 end
