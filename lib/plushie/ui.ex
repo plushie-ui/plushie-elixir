@@ -2320,7 +2320,7 @@ defmodule Plushie.UI do
   # ---------------------------------------------------------------------------
 
   @doc "Builds a rectangle shape. See `Plushie.Canvas.Shape.rect/5`."
-  @canvas_shape_type_mapping %{stroke: Plushie.Canvas.Shape.Stroke}
+  @canvas_shape_type_mapping %{stroke: Plushie.Canvas.Stroke}
   @canvas_option_keys ~w(width height background interactive on_press on_release on_move on_scroll alt description role arrow_mode event_rate a11y)a
 
   defmacro rect(x, y, w, h, opts_or_do \\ []) do
@@ -2410,7 +2410,7 @@ defmodule Plushie.UI do
   defmacro stroke(color, width, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        pairs = interpret_block(block, %{dash: Plushie.Canvas.Shape.Dash})
+        pairs = interpret_block(block, %{dash: Plushie.Canvas.Dash})
         opts_ast = pairs_to_keyword_ast(pairs)
         quote do: Plushie.Canvas.Shape.stroke(unquote(color), unquote(width), unquote(opts_ast))
 

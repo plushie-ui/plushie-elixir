@@ -1,4 +1,4 @@
-defmodule Plushie.Canvas.Shape.ShapeStyle do
+defmodule Plushie.Canvas.ShapeStyle do
   @moduledoc "Style overrides for interactive canvas shape states (hover, pressed)."
 
   @type t :: %__MODULE__{

@@ -11,7 +11,8 @@ defmodule Plushie.Canvas.Shape.Group do
   use `Plushie.Canvas.Shape.Interactive` via the `interactive` macro.
   """
 
-  alias Plushie.Canvas.Shape.{Clip, Rotate, Scale, Translate}
+  alias Plushie.Canvas.Clip
+  alias Plushie.Canvas.Shape.{Rotate, Scale, Translate}
 
   @type t :: %__MODULE__{
           children: [term()],

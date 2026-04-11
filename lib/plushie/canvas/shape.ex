@@ -104,21 +104,20 @@ defmodule Plushie.Canvas.Shape do
       end
   """
 
+  alias Plushie.Canvas.{Clip, Gradient, Stroke}
+
   alias Plushie.Canvas.Shape.{
     CanvasImage,
     CanvasSvg,
     CanvasText,
     Circle,
-    Clip,
     Group,
     Interactive,
     Line,
-    LinearGradient,
     Path,
     Rect,
     Rotate,
     Scale,
-    Stroke,
     Translate
   }
 
@@ -415,9 +414,9 @@ defmodule Plushie.Canvas.Shape do
           from :: {number(), number()},
           to :: {number(), number()},
           stops :: [{number(), String.t()}]
-        ) :: LinearGradient.t()
+        ) :: Gradient.t()
   def linear_gradient({fx, fy}, {tx, ty}, stops) do
-    %LinearGradient{from: {fx, fy}, to: {tx, ty}, stops: stops}
+    %Gradient{from: {fx, fy}, to: {tx, ty}, stops: stops}
   end
 
   # -- Image / SVG on canvas --------------------------------------------------

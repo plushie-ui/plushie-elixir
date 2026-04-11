@@ -3,18 +3,18 @@ defmodule Plushie.Canvas.ShapeTest do
 
   alias Plushie.Canvas.Shape
 
+  alias Plushie.Canvas.{Gradient, Stroke}
+
   alias Plushie.Canvas.Shape.{
     CanvasImage,
     CanvasSvg,
     CanvasText,
     Circle,
     Line,
-    LinearGradient,
     Path,
     Rect,
     Rotate,
     Scale,
-    Stroke,
     Translate
   }
 
@@ -189,7 +189,7 @@ defmodule Plushie.Canvas.ShapeTest do
     test "produces a linear gradient descriptor with from, to, and stops" do
       result = Shape.linear_gradient({0, 0}, {200, 0}, [{0.0, "#ff0000"}, {1.0, "#0000ff"}])
 
-      assert %LinearGradient{
+      assert %Gradient{
                from: {0, 0},
                to: {200, 0},
                stops: [{+0.0, "#ff0000"}, {1.0, "#0000ff"}]
@@ -200,7 +200,7 @@ defmodule Plushie.Canvas.ShapeTest do
       gradient = Shape.linear_gradient({0, 0}, {100, 0}, [{0.0, "#000"}, {1.0, "#fff"}])
       rect = Shape.rect(0, 0, 100, 50, fill: gradient)
 
-      assert %LinearGradient{} = rect.fill
+      assert %Gradient{} = rect.fill
       assert rect.fill.stops == [{0.0, "#000"}, {1.0, "#fff"}]
     end
   end

@@ -1,4 +1,4 @@
-defmodule Plushie.Canvas.Shape.Dash do
+defmodule Plushie.Canvas.Dash do
   @moduledoc "Dash pattern for canvas shape strokes."
 
   @type t :: %__MODULE__{

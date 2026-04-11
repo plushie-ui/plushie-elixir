@@ -1,4 +1,4 @@
-defmodule Plushie.Canvas.Shape.HitRect do
+defmodule Plushie.Canvas.HitRect do
   @moduledoc "Explicit hit test rectangle override for interactive canvas shapes."
 
   @type t :: %__MODULE__{

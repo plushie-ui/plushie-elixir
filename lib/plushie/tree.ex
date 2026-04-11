@@ -1590,7 +1590,7 @@ defmodule Plushie.Tree do
   defp canvas_shape_struct_module?(module) do
     module
     |> Atom.to_string()
-    |> String.starts_with?("Elixir.Plushie.Canvas.Shape.")
+    |> String.starts_with?("Elixir.Plushie.Canvas.")
   end
 
   # Check the widget view cache for a hit. Only applies to widgets that

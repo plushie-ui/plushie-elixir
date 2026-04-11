@@ -1,4 +1,4 @@
-defmodule Plushie.Canvas.Shape.LinearGradient do
+defmodule Plushie.Canvas.Gradient do
   @moduledoc "Linear gradient descriptor usable as a canvas fill value."
 
   @type t :: %__MODULE__{

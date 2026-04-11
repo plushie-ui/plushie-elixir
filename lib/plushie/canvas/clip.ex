@@ -1,4 +1,4 @@
-defmodule Plushie.Canvas.Shape.Clip do
+defmodule Plushie.Canvas.Clip do
   @moduledoc "Clip rectangle for canvas groups. Children are clipped to this region."
 
   @type t :: %__MODULE__{x: number(), y: number(), w: number(), h: number()}

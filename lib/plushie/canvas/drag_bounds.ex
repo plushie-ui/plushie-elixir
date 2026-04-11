@@ -1,4 +1,4 @@
-defmodule Plushie.Canvas.Shape.DragBounds do
+defmodule Plushie.Canvas.DragBounds do
   @moduledoc "Drag constraint bounds for interactive canvas shapes."
 
   @type t :: %__MODULE__{

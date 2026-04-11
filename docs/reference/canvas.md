@@ -144,7 +144,7 @@ rect(0, 0, 100, 50) do
 end
 ```
 
-See `Plushie.Canvas.Shape.Stroke` and `Plushie.Canvas.Shape.Dash`.
+See `Plushie.Canvas.Stroke` and `Plushie.Canvas.Dash`.
 
 ## Gradients (canvas)
 
@@ -166,7 +166,7 @@ The first argument is the start point `{x, y}`, the second is the end
 point `{x, y}`. Stops are `{offset, colour}` tuples where offset is
 0.0-1.0.
 
-See `Plushie.Canvas.Shape.LinearGradient`.
+See `Plushie.Canvas.Gradient`.
 
 ## SVG and images
 
@@ -227,7 +227,7 @@ group do
 end
 ```
 
-See `Plushie.Canvas.Shape.Clip`.
+See `Plushie.Canvas.Clip`.
 
 ## Interactive elements
 

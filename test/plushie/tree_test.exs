@@ -228,7 +228,7 @@ defmodule Plushie.TreeTest do
   describe "normalize/1 -- rejects canvas structs in widget trees" do
     test "raises for canvas support structs too" do
       assert_raise ArgumentError, ~r/found canvas shape \(Stroke\)/, fn ->
-        Tree.normalize(Plushie.Canvas.Shape.stroke("#000", 2))
+        Tree.normalize(%Plushie.Canvas.Stroke{color: "#000", width: 2})
       end
     end
   end

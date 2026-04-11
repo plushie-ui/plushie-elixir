@@ -1,7 +1,7 @@
-defmodule Plushie.Canvas.Shape.Stroke do
+defmodule Plushie.Canvas.Stroke do
   @moduledoc "Canvas stroke descriptor with color, width, and optional cap/join/dash."
 
-  alias Plushie.Canvas.Shape.Dash
+  alias Plushie.Canvas.Dash
 
   @type t :: %__MODULE__{
           color: String.t(),

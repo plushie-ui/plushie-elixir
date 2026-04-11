@@ -256,10 +256,10 @@ end
 **Animation descriptors**: `Plushie.Animation.Transition`,
 `Plushie.Animation.Spring`
 
-**Canvas shape types**: `Plushie.Canvas.Shape.Stroke`,
-`Plushie.Canvas.Shape.Dash`, `Plushie.Canvas.Shape.DragBounds`,
-`Plushie.Canvas.Shape.HitRect`, `Plushie.Canvas.Shape.ShapeStyle`,
-`Plushie.Canvas.Shape.LinearGradient`
+**Canvas property types**: `Plushie.Canvas.Stroke`,
+`Plushie.Canvas.Dash`, `Plushie.Canvas.DragBounds`,
+`Plushie.Canvas.HitRect`, `Plushie.Canvas.ShapeStyle`,
+`Plushie.Canvas.Gradient`
 
 ## Programmatic struct API
 

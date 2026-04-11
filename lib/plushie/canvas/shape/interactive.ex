@@ -18,7 +18,8 @@ defmodule Plushie.Canvas.Shape.Interactive do
       end
   """
 
-  alias Plushie.Canvas.Shape.{Clip, DragBounds, HitRect, Rotate, Scale, ShapeStyle, Translate}
+  alias Plushie.Canvas.{Clip, DragBounds, HitRect, ShapeStyle}
+  alias Plushie.Canvas.Shape.{Rotate, Scale, Translate}
 
   @type t :: %__MODULE__{
           children: [term()],
