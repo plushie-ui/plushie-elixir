@@ -65,6 +65,7 @@ defmodule Plushie.MixProject do
         "docs/reference/canvas.md",
         "docs/reference/commands.md",
         "docs/reference/configuration.md",
+        "docs/reference/custom-canvas-elements.md",
         "docs/reference/custom-types.md",
         "docs/reference/custom-widgets.md",
         "docs/reference/dsl.md",

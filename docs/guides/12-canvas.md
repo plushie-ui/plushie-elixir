@@ -371,7 +371,9 @@ Write canvas experiments in your pad:
 - Try transforms: rotate a group, clip a shape to a smaller region.
 
 The [Canvas reference](../reference/canvas.md) has the complete shape
-catalog, all path commands, and full interactive element props.
+catalog, all path commands, and full interactive element props. For
+extracting reusable canvas visuals as typed, composable elements, see
+the [Custom Canvas Elements reference](../reference/custom-canvas-elements.md).
 
 In the next chapter, we will extract reusable components from the pad as
 custom widgets.

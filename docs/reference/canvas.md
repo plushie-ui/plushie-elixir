@@ -445,6 +445,13 @@ stack width: 200, height: 40 do
 end
 ```
 
+## Custom canvas elements
+
+For reusable, typed canvas components, see the
+[Custom Canvas Elements reference](custom-canvas-elements.md). Canvas
+elements use `use Plushie.Canvas.Element` with typed field declarations,
+and can decompose into built-in shapes via a `view/2` callback.
+
 ## See also
 
 - `Plushie.Canvas.Shape` - builder functions for programmatic use
@@ -452,6 +459,8 @@ end
 - `Plushie.Widget.Canvas` - canvas widget props
 - [Canvas guide](../guides/12-canvas.md) - building a canvas button
   for the pad
+- [Custom Canvas Elements reference](custom-canvas-elements.md) -
+  reusable typed canvas components
 - [Custom Widgets guide](../guides/13-custom-widgets.md) - canvas-based
   custom widgets
 - [Accessibility reference](accessibility.md) - canvas accessibility
