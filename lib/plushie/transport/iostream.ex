@@ -25,7 +25,7 @@ defmodule Plushie.Transport.IOStream do
 
   defstruct [:io_pid, :monitor_ref, alive: false]
 
-  @impl true
+  @impl Plushie.Transport
   def init(opts) do
     io_pid = Keyword.fetch!(opts, :io_pid)
     ref = Process.monitor(io_pid)
@@ -33,7 +33,7 @@ defmodule Plushie.Transport.IOStream do
     {:ok, %__MODULE__{io_pid: io_pid, monitor_ref: ref, alive: true}}
   end
 
-  @impl true
+  @impl Plushie.Transport
   def send_data(%{io_pid: io_pid} = state, data) do
     send(io_pid, {:iostream_send, data})
 
@@ -46,10 +46,10 @@ defmodule Plushie.Transport.IOStream do
       {:error, :unreachable}
   end
 
-  @impl true
+  @impl Plushie.Transport
   def close(_state), do: :ok
 
-  @impl true
+  @impl Plushie.Transport
   def handle_info({:iostream_data, data}, state) do
     {:data, data, state}
   end
@@ -65,9 +65,9 @@ defmodule Plushie.Transport.IOStream do
 
   def handle_info(_msg, _state), do: :ignore
 
-  @impl true
+  @impl Plushie.Transport
   def restartable?(_state), do: false
 
-  @impl true
+  @impl Plushie.Transport
   def transport_ready?(%{alive: alive}), do: alive == true
 end

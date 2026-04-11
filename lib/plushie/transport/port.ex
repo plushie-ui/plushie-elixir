@@ -25,7 +25,7 @@ defmodule Plushie.Transport.Port do
 
   defstruct [:port, :mode, :format, :renderer_path, :renderer_args, :log_level]
 
-  @impl true
+  @impl Plushie.Transport
   def init(opts) do
     mode = Keyword.fetch!(opts, :mode)
     format = Keyword.fetch!(opts, :format)
@@ -42,7 +42,7 @@ defmodule Plushie.Transport.Port do
     open(state)
   end
 
-  @impl true
+  @impl Plushie.Transport
   def send_data(%{port: nil}, _data), do: {:error, :port_closed}
 
   def send_data(%{port: port} = state, data) when is_port(port) do
@@ -57,7 +57,7 @@ defmodule Plushie.Transport.Port do
       {:error, :port_closed}
   end
 
-  @impl true
+  @impl Plushie.Transport
   def close(%{port: port}) when is_port(port) do
     Port.close(port)
     :ok
@@ -67,7 +67,7 @@ defmodule Plushie.Transport.Port do
 
   def close(_state), do: :ok
 
-  @impl true
+  @impl Plushie.Transport
   def handle_info({port, {:data, binary}}, %{port: port, format: :msgpack} = state)
       when is_binary(binary) do
     {:data, binary, state}
@@ -95,15 +95,15 @@ defmodule Plushie.Transport.Port do
 
   def handle_info(_msg, _state), do: :ignore
 
-  @impl true
+  @impl Plushie.Transport
   def restartable?(%{mode: :spawn}), do: true
   def restartable?(_state), do: false
 
-  @impl true
+  @impl Plushie.Transport
   def transport_ready?(%{port: port}) when is_port(port), do: true
   def transport_ready?(_state), do: false
 
-  @impl true
+  @impl Plushie.Transport
   @spec reopen(t :: %__MODULE__{}) :: {:ok, %__MODULE__{}} | {:error, term()}
   def reopen(state) do
     open(%{state | port: nil})
