@@ -11,6 +11,13 @@ defmodule Plushie.Event.WidgetCommandError do
     * `op` - command operation name
     * `widget_type` - native widget type when known
     * `message` - human-readable error text
+
+  ## Pattern matching
+
+      def update(model, %WidgetCommandError{op: op, node_id: id, message: msg}) do
+        Logger.warning("widget command \#{op} failed on \#{id}: \#{msg}")
+        model
+      end
   """
 
   @type t :: %__MODULE__{

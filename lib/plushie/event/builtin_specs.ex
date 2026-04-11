@@ -9,7 +9,7 @@ defmodule Plushie.Event.BuiltinSpecs do
   - `%{carrier: :value, fields: [field: type]}` -- map in `WidgetEvent.value`
 
   Type identifiers are either built-in atoms (`:float`, `:string`,
-  `:boolean`, `:any`) or modules with a `parse/1` function.
+  `:boolean`, `:any`) or modules implementing `Plushie.Type`.
 
   Used by the canvas widget emit path and the protocol decoder to route
   event data into the correct WidgetEvent fields with proper parsing.
@@ -18,7 +18,7 @@ defmodule Plushie.Event.BuiltinSpecs do
   @typedoc """
   Event field type identifier.
 
-  Built-in atomic types or a module with a `parse/1` function.
+  Built-in atomic types or a module implementing `Plushie.Type`.
   """
   @type field_type :: :float | :string | :boolean | :any | module()
 

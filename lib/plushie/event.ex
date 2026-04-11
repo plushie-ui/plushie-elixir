@@ -1,5 +1,25 @@
 defmodule Plushie.Event do
-  @moduledoc "Event types delivered to `update/2`."
+  @moduledoc """
+  Event types delivered to `update/2`.
+
+  Every event arriving in `update/2` is one of these struct types:
+
+  - `WidgetEvent` - interactions with widgets and canvas elements
+    (clicks, input, toggle, slide, drag, focus, etc.)
+  - `KeyEvent` - keyboard press and release
+  - `ModifiersEvent` - modifier key state changes (Shift, Ctrl, etc.)
+  - `ImeEvent` - input method editor composition
+  - `WindowEvent` - window lifecycle (opened, closed, resized, moved)
+  - `TimerEvent` - timer ticks from subscriptions
+  - `AsyncEvent` - results from async commands
+  - `StreamEvent` - intermediate values from streaming commands
+  - `EffectEvent` - platform effect responses (file dialogs, clipboard)
+  - `SystemEvent` - system queries and platform events
+  - `WidgetCommandError` - native widget command failures
+
+  See the [Events reference](docs/reference/events.md) for the full
+  event model and routing details.
+  """
 
   alias Plushie.Event.{
     AsyncEvent,
@@ -67,17 +87,7 @@ defmodule Plushie.Event do
     end
   end
 
-  @doc """
-  Strips the window ID from the end of a reversed scope list.
-
-  Events carry a reversed ancestor scope where the window ID appears
-  at the tail. Registry keys and scoped IDs do not include the window
-  (it is keyed separately). This function removes it so scope can be
-  used for registry lookups and path reconstruction.
-
-  Returns the scope unchanged when `window_id` is nil or does not
-  appear at the end.
-  """
+  @doc false
   @spec strip_window_from_scope(scope :: [String.t()], window_id :: String.t() | nil) ::
           [String.t()]
   def strip_window_from_scope(scope, nil), do: scope
