@@ -54,7 +54,17 @@ defmodule Plushie.Runtime do
   require Logger
 
   alias Plushie.Event.{AsyncEvent, EffectEvent, StreamEvent, TimerEvent, WidgetEvent}
-  alias Plushie.Runtime.{Commands, Subscriptions, Windows}
+
+  alias Plushie.Runtime.{
+    Coalescable,
+    Commands,
+    DevOverlay,
+    Interact,
+    Subscriptions,
+    ViewErrors,
+    Windows
+  }
+
   alias Plushie.Tree.NormalizeCtx
 
   # Fallback ctx for view_error paths where no normalization happened.
@@ -658,7 +668,7 @@ defmodule Plushie.Runtime do
   @impl GenServer
   def handle_info({:renderer_event, %WidgetEvent{type: :move} = event}, state) do
     {:noreply,
-     store_coalescable(
+     Coalescable.store(
        state,
        {:move, event.window_id, Plushie.Event.target(event)},
        event
@@ -685,13 +695,13 @@ defmodule Plushie.Runtime do
         event
       end
 
-    {:noreply, store_coalescable(state, key, accumulated)}
+    {:noreply, Coalescable.store(state, key, accumulated)}
   end
 
   @impl GenServer
   def handle_info({:renderer_event, %WidgetEvent{type: :scrolled} = event}, state) do
     {:noreply,
-     store_coalescable(
+     Coalescable.store(
        state,
        {:scrolled, event.window_id, Plushie.Event.target(event)},
        event
@@ -701,7 +711,7 @@ defmodule Plushie.Runtime do
   @impl GenServer
   def handle_info({:renderer_event, %WidgetEvent{type: :resize} = event}, state) do
     {:noreply,
-     store_coalescable(
+     Coalescable.store(
        state,
        {:resize, event.window_id, Plushie.Event.target(event)},
        event
@@ -726,7 +736,7 @@ defmodule Plushie.Runtime do
     # full update cycle (intercept + update + re-render).
     state =
       Enum.reduce(events, state, fn event_map, acc ->
-        event = decode_interact_event(event_map)
+        event = Interact.decode_event(event_map)
         run_update(acc, event)
       end)
 
@@ -820,7 +830,7 @@ defmodule Plushie.Runtime do
         consecutive_view_errors: 0
     }
 
-    state = clear_frozen_ui_overlay(state)
+    state = ViewErrors.clear_frozen_ui_overlay(state)
     state = fail_pending_interact(state, :renderer_restarted)
 
     # Clear widget status tracking (old renderer state is stale).
@@ -854,7 +864,7 @@ defmodule Plushie.Runtime do
              state.widget_view_cache
            ) do
         {:ok, new_tree, ctx} ->
-          {maybe_inject_overlay(new_tree, state.dev_overlay), ctx}
+          {ViewErrors.maybe_inject_overlay(new_tree, state.dev_overlay), ctx}
 
         :error ->
           {state.tree, view_error_nctx(state)}
@@ -889,7 +899,7 @@ defmodule Plushie.Runtime do
     # now that the renderer has restarted.
     state =
       case state.dev_overlay do
-        %{status: :succeeded} -> schedule_overlay_dismiss(state)
+        %{status: :succeeded} -> DevOverlay.schedule_dismiss(state)
         _ -> state
       end
 
@@ -1058,7 +1068,7 @@ defmodule Plushie.Runtime do
 
     if Map.has_key?(state.subscriptions, key) do
       # Drain any queued ticks for the same key to coalesce frames.
-      drain_matching_ticks(tag, interval)
+      Coalescable.drain_matching_ticks(tag, interval)
 
       # Re-arm the timer.
       ref = Process.send_after(self(), {:subscription_tick, tag, interval}, interval)
@@ -1084,10 +1094,10 @@ defmodule Plushie.Runtime do
                    state.dev_overlay
                  ) do
               {:ok, tree, nctx} ->
-                {tree, nctx, clear_view_errors(state)}
+                {tree, nctx, ViewErrors.clear_view_errors(state)}
 
               :view_error ->
-                {state.tree, view_error_nctx(state), track_view_error(state)}
+                {state.tree, view_error_nctx(state), ViewErrors.track_view_error(state)}
             end
 
           state = %{
@@ -1128,7 +1138,7 @@ defmodule Plushie.Runtime do
   def handle_info(:force_rerender, state) do
     Logger.info("plushie runtime: force re-render (code reload)")
     state = %{state | consecutive_errors: 0, consecutive_view_errors: 0}
-    state = clear_frozen_ui_overlay(state)
+    state = ViewErrors.clear_frozen_ui_overlay(state)
 
     {new_tree, nctx, state} =
       case render_and_sync(
@@ -1142,10 +1152,10 @@ defmodule Plushie.Runtime do
              state.dev_overlay
            ) do
         {:ok, tree, nctx} ->
-          {tree, nctx, clear_view_errors(state)}
+          {tree, nctx, ViewErrors.clear_view_errors(state)}
 
         :view_error ->
-          {state.tree, view_error_nctx(state), track_view_error(state)}
+          {state.tree, view_error_nctx(state), ViewErrors.track_view_error(state)}
       end
 
     state = %{
@@ -1163,29 +1173,15 @@ defmodule Plushie.Runtime do
 
   @impl GenServer
   def handle_info({:dev_overlay, overlay}, state) do
-    state = cancel_overlay_timer(state)
-    state = %{state | dev_overlay: overlay}
-    state = dev_rerender(state)
-
-    # Schedule auto-dismiss for success states (unless expanded).
-    state =
-      if overlay.status == :succeeded do
-        schedule_overlay_dismiss(state)
-      else
-        state
-      end
-
-    {:noreply, state}
+    state = DevOverlay.handle_overlay_message(state, overlay)
+    {:noreply, dev_rerender(state)}
   end
 
   @impl GenServer
   def handle_info(:dev_overlay_auto_dismiss, state) do
-    # Only auto-dismiss if the overlay is not expanded (user is reading).
-    if state.dev_overlay && state.dev_overlay.expanded do
-      {:noreply, state}
-    else
-      state = %{state | dev_overlay: nil, dev_overlay_timer: nil}
-      {:noreply, dev_rerender(state)}
+    case DevOverlay.handle_auto_dismiss(state) do
+      {:rerender, state} -> {:noreply, dev_rerender(state)}
+      {:noop, state} -> {:noreply, state}
     end
   end
 
@@ -1199,50 +1195,12 @@ defmodule Plushie.Runtime do
 
   # -- Dev overlay helpers ----------------------------------------------------
 
-  @dev_overlay_dismiss_ms Plushie.Dev.RebuildingOverlay.dismiss_ms()
-
-  defp maybe_handle_dev_overlay_event(state, %WidgetEvent{id: id})
-       when is_binary(id) do
-    if Plushie.Dev.RebuildingOverlay.overlay_event?(id) do
-      {:handled, handle_dev_overlay_action(Plushie.Dev.RebuildingOverlay.action(id), state)}
-    else
-      :passthrough
+  defp maybe_handle_dev_overlay_event(state, event) do
+    case DevOverlay.maybe_handle_event(state, event) do
+      {:rerender, state} -> {:handled, dev_rerender(state)}
+      {:noop, state} -> {:handled, state}
+      :passthrough -> :passthrough
     end
-  end
-
-  defp maybe_handle_dev_overlay_event(_state, _event), do: :passthrough
-
-  defp handle_dev_overlay_action(_action, %{dev_overlay: nil} = state), do: state
-
-  defp handle_dev_overlay_action(action, state) do
-    case Plushie.Dev.RebuildingOverlay.handle_action(action, state.dev_overlay) do
-      {:updated, overlay} ->
-        state = %{state | dev_overlay: overlay}
-
-        state =
-          if not overlay.expanded and overlay.status == :succeeded do
-            schedule_overlay_dismiss(state)
-          else
-            cancel_overlay_timer(state)
-          end
-
-        dev_rerender(state)
-
-      :dismissed ->
-        state = cancel_overlay_timer(state)
-        dev_rerender(%{state | dev_overlay: nil})
-
-      :noop ->
-        state
-    end
-  catch
-    kind, reason ->
-      Logger.warning(
-        "plushie runtime: dev overlay action #{kind}: " <>
-          Exception.format(kind, reason, __STACKTRACE__)
-      )
-
-      state
   end
 
   defp dev_rerender(state) do
@@ -1258,10 +1216,10 @@ defmodule Plushie.Runtime do
              state.dev_overlay
            ) do
         {:ok, tree, nctx} ->
-          {tree, nctx, clear_view_errors(state)}
+          {tree, nctx, ViewErrors.clear_view_errors(state)}
 
         :view_error ->
-          {state.tree, view_error_nctx(state), track_view_error(state)}
+          {state.tree, view_error_nctx(state), ViewErrors.track_view_error(state)}
       end
 
     state = %{
@@ -1272,19 +1230,6 @@ defmodule Plushie.Runtime do
     }
 
     sync_after_render(state, nctx)
-  end
-
-  defp schedule_overlay_dismiss(state) do
-    state = cancel_overlay_timer(state)
-    ref = Process.send_after(self(), :dev_overlay_auto_dismiss, @dev_overlay_dismiss_ms)
-    %{state | dev_overlay_timer: ref}
-  end
-
-  defp cancel_overlay_timer(%{dev_overlay_timer: nil} = state), do: state
-
-  defp cancel_overlay_timer(state) do
-    Process.cancel_timer(state.dev_overlay_timer)
-    %{state | dev_overlay_timer: nil}
   end
 
   @impl GenServer
@@ -1314,6 +1259,8 @@ defmodule Plushie.Runtime do
   # ---------------------------------------------------------------------------
   # Private helpers
   # ---------------------------------------------------------------------------
+
+  defp flush_coalescables(state), do: Coalescable.flush(state, &run_update/2)
 
   # Send to the active bridge. In a future multi-renderer mode, this will
   # fan out to all connected bridges. Commands.ex, subscriptions.ex, and
@@ -1484,7 +1431,7 @@ defmodule Plushie.Runtime do
        ) do
     case safe_view(app, model, widget_handlers, memo_cache, widget_view_cache) do
       {:ok, new_tree, nctx} ->
-        new_tree = maybe_inject_overlay(new_tree, dev_overlay)
+        new_tree = ViewErrors.maybe_inject_overlay(new_tree, dev_overlay)
 
         if is_nil(old_tree) do
           notify_bridge(%{bridge: bridge}, &Plushie.Bridge.send_snapshot(&1, new_tree))
@@ -1505,54 +1452,6 @@ defmodule Plushie.Runtime do
       :error ->
         :view_error
     end
-  end
-
-  @view_error_warn_threshold 5
-
-  defp track_view_error(state) do
-    count = state.consecutive_view_errors + 1
-
-    if count == @view_error_warn_threshold do
-      Logger.warning(
-        "plushie runtime: view/1 has failed #{count} consecutive times, " <>
-          "the UI is stale. Check the error log for details."
-      )
-    end
-
-    state = %{state | consecutive_view_errors: count}
-
-    if count == @view_error_warn_threshold && is_nil(state.dev_overlay) && state.tree do
-      overlay = %Plushie.Dev.RebuildingOverlay{status: :frozen_ui}
-      new_tree = maybe_inject_overlay(state.tree, overlay)
-      ops = Plushie.Tree.diff(state.tree, new_tree)
-
-      if ops != [] do
-        notify_bridge(state, &Plushie.Bridge.send_patch(&1, ops))
-      end
-
-      %{state | dev_overlay: overlay, tree: new_tree}
-    else
-      state
-    end
-  end
-
-  defp clear_view_errors(state) do
-    state = %{state | consecutive_view_errors: 0}
-    clear_frozen_ui_overlay(state)
-  end
-
-  defp clear_frozen_ui_overlay(state) do
-    case state.dev_overlay do
-      %Plushie.Dev.RebuildingOverlay{status: :frozen_ui} ->
-        %{state | dev_overlay: nil}
-
-      _ ->
-        state
-    end
-  end
-
-  defp maybe_inject_overlay(tree, overlay) do
-    Plushie.Dev.RebuildingOverlay.maybe_inject(tree, overlay)
   end
 
   defp safe_init(app, app_opts) do
@@ -1784,10 +1683,10 @@ defmodule Plushie.Runtime do
                  state.dev_overlay
                ) do
             {:ok, tree, nctx} ->
-              {tree, nctx, clear_view_errors(state)}
+              {tree, nctx, ViewErrors.clear_view_errors(state)}
 
             :view_error ->
-              {state.tree, view_error_nctx(state), track_view_error(state)}
+              {state.tree, view_error_nctx(state), ViewErrors.track_view_error(state)}
           end
 
         state = %{
@@ -1829,7 +1728,7 @@ defmodule Plushie.Runtime do
              state.dev_overlay
            ) do
         {:ok, tree, nctx} ->
-          {tree, nctx, clear_view_errors(state)}
+          {tree, nctx, ViewErrors.clear_view_errors(state)}
 
         :view_error ->
           fallback = %{
@@ -1837,7 +1736,8 @@ defmodule Plushie.Runtime do
             | widget_handlers: handlers_before
           }
 
-          {state.tree, fallback, %{track_view_error(state) | widget_handlers: handlers_before}}
+          {state.tree, fallback,
+           %{ViewErrors.track_view_error(state) | widget_handlers: handlers_before}}
       end
 
     state = %{
@@ -1935,45 +1835,15 @@ defmodule Plushie.Runtime do
     end)
   end
 
-  # Drains queued subscription ticks for the same tag/interval from the
-  # mailbox. This coalesces rapid-fire animation or timer ticks so the
-  # runtime only processes the latest one, avoiding redundant update cycles.
-  @spec drain_matching_ticks(term(), non_neg_integer(), non_neg_integer()) :: non_neg_integer()
-  defp drain_matching_ticks(tag, interval, count \\ 0) do
-    receive do
-      {:subscription_tick, ^tag, ^interval} -> drain_matching_ticks(tag, interval, count + 1)
-    after
-      0 ->
-        if count > 0 do
-          :telemetry.execute(
-            [:plushie, :runtime, :ticks_drained],
-            %{count: count},
-            %{tag: tag}
-          )
-        end
-
-        count
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # Interact protocol helpers
-  # ---------------------------------------------------------------------------
-
-  # Processes an interact_step batch: decode each event, run through update/2
-  # without sending intermediate patches, then send a single full snapshot.
-  # The renderer expects exactly one snapshot per interact_step.
   defp run_interact_step(state, events) do
     {state, deferred_commands} =
       Enum.reduce(events, {state, []}, fn event_map, {acc, commands_acc} ->
-        event = decode_interact_event(event_map)
-        {next_state, commands} = apply_event_deferred(acc, event)
+        event = Interact.decode_event(event_map)
+        {next_state, commands} = Interact.apply_event_deferred(acc, event, &safe_update/4)
         {next_state, commands_acc ++ commands}
       end)
 
     # Execute commands before re-rendering, consistent with dispatch_update.
-    # Commands are the result of update/2, not the view. They must execute
-    # regardless of whether the re-render succeeds.
     state = Commands.execute_commands(deferred_commands, state)
 
     # Re-render and send a full snapshot (not a patch).
@@ -2003,88 +1873,6 @@ defmodule Plushie.Runtime do
 
         state
     end
-  end
-
-  @spec apply_event_deferred(state(), term()) :: {state(), [Plushie.Command.t()]}
-  defp apply_event_deferred(state, event) do
-    {resolved_event, state} = route_through_widgets(state, event)
-
-    if is_nil(resolved_event) do
-      {state, []}
-    else
-      case safe_update(state.app, state.model, resolved_event, state.consecutive_errors) do
-        {:ok, new_model, commands} ->
-          {%{state | model: new_model, consecutive_errors: 0}, List.wrap(commands)}
-
-        :error ->
-          {%{state | consecutive_errors: state.consecutive_errors + 1}, []}
-      end
-    end
-  end
-
-  # Decodes a renderer event map from interact_step/interact_response using
-  # the shared protocol decoder so scripted interactions and normal runtime
-  # event delivery stay on the same path.
-  defp decode_interact_event(%{} = event_map), do: Plushie.Protocol.decode_event(event_map)
-
-  defp decode_interact_event(other) do
-    raise Plushie.Protocol.Error,
-      reason: {:invalid_event_field, "interact", :event, other, :expected_map, %{}},
-      format: :msgpack,
-      data: <<>>
-  end
-
-  # ---------------------------------------------------------------------------
-  # Coalescable event helpers
-  # ---------------------------------------------------------------------------
-
-  # Stores a high-frequency event for deferred processing. A zero-delay timer
-  # ensures the flush fires at the next message boundary -- consecutive
-  # coalescable events for the same key overwrite each other so only the
-  # latest survives.
-  @spec store_coalescable(state(), term(), Plushie.Event.t()) :: state()
-  defp store_coalescable(state, key, event) do
-    state =
-      if state.coalesce_timer == nil do
-        ref = Process.send_after(self(), :flush_coalescables, 0)
-        %{state | coalesce_timer: ref}
-      else
-        state
-      end
-
-    # Prepend to avoid O(n) list append; reversed before flushing.
-    pending_coalesce_order =
-      if Map.has_key?(state.pending_coalesce, key) do
-        state.pending_coalesce_order
-      else
-        [key | state.pending_coalesce_order]
-      end
-
-    %{
-      state
-      | pending_coalesce: Map.put(state.pending_coalesce, key, event),
-        pending_coalesce_order: pending_coalesce_order
-    }
-  end
-
-  @spec flush_coalescables(state()) :: state()
-  defp flush_coalescables(%{pending_coalesce: pending} = state)
-       when map_size(pending) == 0 do
-    state
-  end
-
-  defp flush_coalescables(state) do
-    if state.coalesce_timer, do: Process.cancel_timer(state.coalesce_timer)
-
-    state =
-      state.pending_coalesce_order
-      |> Enum.reverse()
-      |> Enum.reduce(state, fn key, acc ->
-        event = Map.fetch!(acc.pending_coalesce, key)
-        run_update(acc, event)
-      end)
-
-    %{state | pending_coalesce: %{}, pending_coalesce_order: [], coalesce_timer: nil}
   end
 
   # Builds a NormalizeCtx from the current runtime state for view_error
