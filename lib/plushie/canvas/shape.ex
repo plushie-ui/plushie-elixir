@@ -129,6 +129,7 @@ defmodule Plushie.Canvas.Shape do
           Rect.t()
   def rect(x, y, w, h, opts \\ []) do
     %Rect{x: x, y: y, w: w, h: h}
+    |> apply_id(opts)
     |> apply_fill(opts)
     |> apply_stroke(opts)
     |> apply_opacity(opts)
@@ -139,6 +140,7 @@ defmodule Plushie.Canvas.Shape do
   @spec circle(x :: number(), y :: number(), r :: number(), opts :: keyword()) :: Circle.t()
   def circle(x, y, r, opts \\ []) do
     %Circle{x: x, y: y, r: r}
+    |> apply_id(opts)
     |> apply_fill(opts)
     |> apply_stroke(opts)
     |> apply_opacity(opts)
@@ -154,6 +156,7 @@ defmodule Plushie.Canvas.Shape do
         ) :: Line.t()
   def line(x1, y1, x2, y2, opts \\ []) do
     %Line{x1: x1, y1: y1, x2: x2, y2: y2}
+    |> apply_id(opts)
     |> apply_stroke(opts)
     |> apply_opacity(opts)
   end
@@ -163,6 +166,7 @@ defmodule Plushie.Canvas.Shape do
           Text.t()
   def text(x, y, content, opts \\ []) do
     %Text{x: x, y: y, content: content}
+    |> apply_id(opts)
     |> apply_fill(opts)
     |> maybe_put(opts, :size, :size)
     |> maybe_put(opts, :font, :font)
@@ -190,8 +194,11 @@ defmodule Plushie.Canvas.Shape do
         _ -> nil
       end)
 
+    # Extract id before processing other opts.
+    {id, opts} = Keyword.pop(explicit_opts, :id)
+
     # Desugar x:/y: keyword opts into a leading translate.
-    {x, opts} = Keyword.pop(explicit_opts, :x)
+    {x, opts} = Keyword.pop(opts, :x)
     {y, opts} = Keyword.pop(opts, :y)
 
     transforms =
@@ -202,6 +209,7 @@ defmodule Plushie.Canvas.Shape do
       end
 
     shape = %Group{
+      id: id,
       children: children,
       transforms: if(transforms == [], do: nil, else: transforms),
       clip: clip
@@ -265,6 +273,7 @@ defmodule Plushie.Canvas.Shape do
   @spec path(commands :: [map() | list() | String.t()], opts :: keyword()) :: Path.t()
   def path(commands, opts \\ []) do
     %Path{commands: commands}
+    |> apply_id(opts)
     |> apply_fill(opts)
     |> apply_stroke(opts)
     |> apply_opacity(opts)
@@ -429,6 +438,7 @@ defmodule Plushie.Canvas.Shape do
         ) :: Image.t()
   def image(source, x, y, w, h, opts \\ []) do
     %Image{source: source, x: x, y: y, w: w, h: h}
+    |> apply_id(opts)
     |> maybe_put_angle(opts, :rotation, :rotation)
     |> apply_opacity(opts)
   end
@@ -488,6 +498,13 @@ defmodule Plushie.Canvas.Shape do
   end
 
   # -- Private helpers --------------------------------------------------------
+
+  defp apply_id(shape, opts) do
+    case Keyword.get(opts, :id) do
+      nil -> shape
+      id -> %{shape | id: id}
+    end
+  end
 
   defp apply_fill(shape, opts) do
     shape =

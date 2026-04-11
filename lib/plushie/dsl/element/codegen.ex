@@ -324,6 +324,12 @@ defmodule Plushie.DSL.Element.Codegen do
 
   # -- Runtime helpers for container children ----------------------------------
 
+  # Converts element children to node maps, assigning runtime IDs to
+  # any children that don't already have one. Canvas scope injects
+  # compile-time auto-IDs for direct shape calls (rect, circle, etc.),
+  # but shapes returned from helper functions or created programmatically
+  # via `Plushie.Canvas.Shape.*` won't have IDs. This fallback assigns
+  # positional IDs so those shapes still work.
   @doc false
   @spec children_to_nodes(list(), String.t() | nil, String.t()) :: [map()]
   def children_to_nodes(children, parent_id, type_string) do
@@ -334,19 +340,19 @@ defmodule Plushie.DSL.Element.Codegen do
     |> Enum.with_index()
     |> Enum.map(fn {child, idx} ->
       child
-      |> assign_id_before_expand(parent_prefix, idx)
+      |> ensure_child_id(parent_prefix, idx)
       |> Plushie.Tree.Node.to_node()
     end)
   end
 
-  # Assigns an auto-ID to a child struct BEFORE to_node expansion.
-  # This ensures that container children (groups) have an ID set when
-  # their own to_node processes nested children, avoiding duplicate
-  # auto-IDs at deeper levels.
-  @doc false
-  def assign_id_before_expand(%{id: nil} = struct, parent_prefix, idx) do
+  # Assigns a positional runtime ID to a child struct that lacks one.
+  # This is a fallback for shapes created outside canvas scope (helper
+  # functions, programmatic `Plushie.Canvas.Shape.*` calls). Shapes
+  # created inside canvas blocks already have compile-time auto-IDs
+  # injected by the canvas scope macro and skip this.
+  defp ensure_child_id(%{id: nil} = struct, parent_prefix, idx) do
     %{struct | id: "auto:shape:" <> parent_prefix <> ":" <> Integer.to_string(idx)}
   end
 
-  def assign_id_before_expand(struct, _parent_prefix, _idx), do: struct
+  defp ensure_child_id(struct, _parent_prefix, _idx), do: struct
 end

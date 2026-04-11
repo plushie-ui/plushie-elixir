@@ -245,7 +245,9 @@ defmodule ColorPickerWidget do
           role: :slider,
           label: "Hue",
           value: "#{round(hue)} degrees",
-          orientation: :horizontal
+          orientation: :horizontal,
+          position_in_set: 1,
+          size_of_set: 2
         } do
         circle(0, 0, @cursor_r, fill: "#ffffff", stroke: cursor_stroke)
       end,
@@ -260,7 +262,9 @@ defmodule ColorPickerWidget do
           role: :slider,
           label: "Saturation and brightness",
           value: "#{round(saturation * 100)}% saturation, #{round(value * 100)}% brightness",
-          orientation: :horizontal
+          orientation: :horizontal,
+          position_in_set: 2,
+          size_of_set: 2
         } do
         circle(0, 0, @cursor_r, fill: "#ffffff", stroke: cursor_stroke)
       end

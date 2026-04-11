@@ -84,8 +84,8 @@ defmodule StarRating do
         alt: "#{rating} out of 5 stars" do
         layer "stars" do
           for i <- 0..4 do
-            group x: i * (size + gap) + size / 2, y: size / 2 do
-              path(commands, fill: star_color(i < rating, false, theme_progress))
+            group "star-#{i}", x: i * (size + gap) + size / 2, y: size / 2 do
+              path(commands, fill: star_color(i < rating, false, theme_progress), id: "path")
             end
           end
         end
@@ -116,7 +116,7 @@ defmodule StarRating do
                 position_in_set: i + 1,
                 size_of_set: 5
               } do
-              path(commands, fill: star_color(filled, preview, theme_progress))
+              path(commands, fill: star_color(filled, preview, theme_progress), id: "path")
             end
           end
         end

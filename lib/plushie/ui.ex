@@ -1904,9 +1904,11 @@ defmodule Plushie.UI do
   `:a11y`. See `Plushie.Widget.Canvas` for all props.
   """
   defmacro canvas(id, opts_or_do \\ []) do
+    caller_mod = __CALLER__.module
+
     case opts_or_do do
       [do: block] ->
-        block = canvas_scope(block, :canvas)
+        block = canvas_scope(block, :canvas, caller_mod)
         exprs = block_to_exprs(block)
 
         quote do
@@ -1940,7 +1942,7 @@ defmodule Plushie.UI do
 
   @doc false
   defmacro canvas(id, opts, do: block) do
-    block = canvas_scope(block, :canvas)
+    block = canvas_scope(block, :canvas, __CALLER__.module)
     exprs = block_to_exprs(block)
 
     quote do
@@ -2191,7 +2193,6 @@ defmodule Plushie.UI do
   defmacro group(opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        block = canvas_scope(block, :group)
         exprs = block_to_exprs(block)
 
         quote do
@@ -2215,7 +2216,6 @@ defmodule Plushie.UI do
   defmacro group(first, second) do
     case second do
       [do: block] ->
-        block = canvas_scope(block, :group)
         exprs = block_to_exprs(block)
 
         # At compile time, check if `first` is a string literal (id).
@@ -2247,7 +2247,6 @@ defmodule Plushie.UI do
 
   @doc false
   defmacro group(id, opts, do: block) do
-    block = canvas_scope(block, :group)
     exprs = block_to_exprs(block)
 
     quote do
@@ -2275,7 +2274,6 @@ defmodule Plushie.UI do
   defmacro interactive(id, opts_or_do \\ []) do
     case opts_or_do do
       [do: block] ->
-        block = canvas_scope(block, :group)
         exprs = block_to_exprs(block)
 
         quote do
@@ -2297,7 +2295,6 @@ defmodule Plushie.UI do
 
   @doc false
   defmacro interactive(id, opts, do: block) do
-    block = canvas_scope(block, :group)
     exprs = block_to_exprs(block)
 
     quote do
@@ -2321,7 +2318,7 @@ defmodule Plushie.UI do
       end
   """
   defmacro layer(name, do: block) do
-    block = canvas_scope(block, :layer)
+    block = canvas_scope(block, :layer, __CALLER__.module)
     exprs = block_to_exprs(block)
 
     acc_ast = build_list_accumulator(exprs)
@@ -2987,30 +2984,44 @@ defmodule Plushie.UI do
   # Context-aware canvas AST walker
   # ---------------------------------------------------------------------------
 
-  # Entry point: walk a block AST with context
-  defp canvas_scope({:__block__, meta, exprs}, context) do
-    {:__block__, meta, Enum.map(exprs, &canvas_scope(&1, context))}
+  # Entry point: walk a block AST with context and caller module
+  defp canvas_scope({:__block__, meta, exprs}, context, caller_mod) do
+    {:__block__, meta, Enum.map(exprs, &canvas_scope(&1, context, caller_mod))}
   end
 
-  defp canvas_scope(expr, _context) when not is_tuple(expr), do: expr
-  defp canvas_scope(expr, _context) when tuple_size(expr) != 3, do: expr
+  defp canvas_scope(expr, _context, _caller_mod) when not is_tuple(expr), do: expr
+  defp canvas_scope(expr, _context, _caller_mod) when tuple_size(expr) != 3, do: expr
 
   # Fully qualified calls -- skip
-  defp canvas_scope({{:., _, _}, _, _} = node, _context), do: node
+  defp canvas_scope({{:., _, _}, _, _} = node, _context, _caller_mod), do: node
 
   # --- Canvas container calls (don't recurse into their blocks) ---
 
   # layer: valid in :canvas only
-  defp canvas_scope({:layer, _, _} = node, :canvas), do: node
+  defp canvas_scope({:layer, _, _} = node, :canvas, _caller_mod), do: node
 
-  defp canvas_scope({:layer, meta, _}, _ctx) do
+  defp canvas_scope({:layer, meta, _}, _ctx, _caller_mod) do
     canvas_scope_error!(meta, "layer is not valid here. Layers belong inside a canvas block.")
   end
 
-  # group: valid in :layer and :group
-  defp canvas_scope({:group, _, _} = node, ctx) when ctx in [:layer, :group], do: node
+  # group: valid in :layer and :group. Recurse into do-block so
+  # the dynamic/static context is properly threaded. Inject auto-ID
+  # for the group itself when no explicit string ID is provided.
+  defp canvas_scope({:group, meta, args} = node, ctx, caller_mod)
+       when ctx in [:layer, :group] do
+    # Recurse into the group's do-block (if present) so the
+    # dynamic context from an outer for/fn propagates into the
+    # group's children.
+    processed = canvas_scope_recurse_into_container(node, meta, args, :group, caller_mod)
 
-  defp canvas_scope({:group, meta, _}, :canvas) do
+    if canvas_scope_group_has_explicit_id?(processed) do
+      processed
+    else
+      canvas_scope_inject_auto_id(processed, meta, caller_mod)
+    end
+  end
+
+  defp canvas_scope({:group, meta, _}, :canvas, _caller_mod) do
     canvas_scope_error!(meta, """
     group is not valid here. Put groups inside a layer:
 
@@ -3022,10 +3033,13 @@ defmodule Plushie.UI do
     """)
   end
 
-  # interactive: valid in :layer and :group
-  defp canvas_scope({:interactive, _, _} = node, ctx) when ctx in [:layer, :group], do: node
+  # interactive: valid in :layer and :group. Recurse into do-block.
+  defp canvas_scope({:interactive, meta, args} = node, ctx, caller_mod)
+       when ctx in [:layer, :group] do
+    canvas_scope_recurse_into_container(node, meta, args, :group, caller_mod)
+  end
 
-  defp canvas_scope({:interactive, meta, _}, :canvas) do
+  defp canvas_scope({:interactive, meta, _}, :canvas, _caller_mod) do
     canvas_scope_error!(meta, """
     interactive is not valid here. Put interactive elements inside a layer:
 
@@ -3040,7 +3054,8 @@ defmodule Plushie.UI do
   # --- Ambiguous name rewrites (text, image, svg) ---
 
   # text/1,2: always error in canvas context
-  defp canvas_scope({:text, meta, args}, _ctx) when is_list(args) and length(args) in [1, 2] do
+  defp canvas_scope({:text, meta, args}, _ctx, _caller_mod)
+       when is_list(args) and length(args) in [1, 2] do
     canvas_scope_error!(meta, """
     text/#{length(args)} is not valid here. Expected:
 
@@ -3050,7 +3065,8 @@ defmodule Plushie.UI do
   end
 
   # text/3+: rewrite to Shape.__build_text__ in :layer/:group, error in :canvas
-  defp canvas_scope({:text, meta, args}, ctx) when is_list(args) and length(args) >= 3 do
+  defp canvas_scope({:text, meta, args}, ctx, caller_mod)
+       when is_list(args) and length(args) >= 3 do
     if ctx == :canvas do
       canvas_scope_error!(meta, """
       text is not valid here. Shapes go inside layers:
@@ -3061,12 +3077,13 @@ defmodule Plushie.UI do
       """)
     else
       args = canvas_scope_rewrite_do_block(args)
-      {{:., meta, [Plushie.Canvas.Shape, :__build_text__]}, meta, args}
+      rewritten = {{:., meta, [Plushie.Canvas.Shape, :__build_text__]}, meta, args}
+      canvas_scope_inject_auto_id(rewritten, meta, caller_mod)
     end
   end
 
   # image/1,2,3: always error in canvas context
-  defp canvas_scope({:image, meta, args}, _ctx)
+  defp canvas_scope({:image, meta, args}, _ctx, _caller_mod)
        when is_list(args) and length(args) in [1, 2, 3] do
     canvas_scope_error!(meta, """
     image/#{length(args)} is not valid here. Expected:
@@ -3077,7 +3094,8 @@ defmodule Plushie.UI do
   end
 
   # image/5+: rewrite in :layer/:group, error in :canvas
-  defp canvas_scope({:image, meta, args}, ctx) when is_list(args) and length(args) >= 5 do
+  defp canvas_scope({:image, meta, args}, ctx, caller_mod)
+       when is_list(args) and length(args) >= 5 do
     if ctx == :canvas do
       canvas_scope_error!(meta, """
       image is not valid here. Shapes go inside layers:
@@ -3088,12 +3106,13 @@ defmodule Plushie.UI do
       """)
     else
       args = canvas_scope_rewrite_do_block(args)
-      {{:., meta, [Plushie.Canvas.Shape, :__build_image__]}, meta, args}
+      rewritten = {{:., meta, [Plushie.Canvas.Shape, :__build_image__]}, meta, args}
+      canvas_scope_inject_auto_id(rewritten, meta, caller_mod)
     end
   end
 
   # svg/1,2,3: always error in canvas context
-  defp canvas_scope({:svg, meta, args}, _ctx)
+  defp canvas_scope({:svg, meta, args}, _ctx, _caller_mod)
        when is_list(args) and length(args) in [1, 2, 3] do
     canvas_scope_error!(meta, """
     svg/#{length(args)} is not valid here. Expected:
@@ -3103,7 +3122,8 @@ defmodule Plushie.UI do
   end
 
   # svg/5+: rewrite in :layer/:group, error in :canvas
-  defp canvas_scope({:svg, meta, args}, ctx) when is_list(args) and length(args) >= 5 do
+  defp canvas_scope({:svg, meta, args}, ctx, caller_mod)
+       when is_list(args) and length(args) >= 5 do
     if ctx == :canvas do
       canvas_scope_error!(meta, """
       svg is not valid here. Shapes go inside layers:
@@ -3114,18 +3134,17 @@ defmodule Plushie.UI do
       """)
     else
       args = canvas_scope_rewrite_do_block(args)
-      {{:., meta, [Plushie.Canvas.Shape, :__build_svg__]}, meta, args}
+      rewritten = {{:., meta, [Plushie.Canvas.Shape, :__build_svg__]}, meta, args}
+      canvas_scope_inject_auto_id(rewritten, meta, caller_mod)
     end
   end
 
   # --- Shape calls (rect, circle, line, path) ---
 
-  defp canvas_scope({name, _, _} = node, ctx)
+  defp canvas_scope({name, meta, _} = node, ctx, caller_mod)
        when is_atom(name) and name in @canvas_shape_calls do
     case ctx do
       :canvas ->
-        {_, meta, _} = node
-
         canvas_scope_error!(meta, """
         #{name} is not valid here. Shapes go inside layers:
 
@@ -3135,18 +3154,16 @@ defmodule Plushie.UI do
         """)
 
       _other ->
-        node
+        canvas_scope_inject_auto_id(node, meta, caller_mod)
     end
   end
 
   # --- Transform/clip calls ---
 
-  defp canvas_scope({name, _, _} = node, ctx)
+  defp canvas_scope({name, meta, _} = node, ctx, _caller_mod)
        when is_atom(name) and name in @canvas_transform_calls do
     case ctx do
       :canvas ->
-        {_, meta, _} = node
-
         canvas_scope_error!(meta, """
         #{name} is not valid here. Transforms go inside layers:
 
@@ -3166,8 +3183,6 @@ defmodule Plushie.UI do
         end
 
       _other ->
-        {_, meta, _} = node
-
         canvas_scope_error!(meta, """
         #{name} must be inside a group block, not directly in a layer. \
         Wrap your shapes in a group to apply transforms.
@@ -3177,7 +3192,7 @@ defmodule Plushie.UI do
 
   # --- Widget calls (always error in canvas context) ---
 
-  defp canvas_scope({name, meta, args}, _ctx)
+  defp canvas_scope({name, meta, args}, _ctx, _caller_mod)
        when is_atom(name) and is_list(args) and name in @widget_calls do
     canvas_scope_error!(meta, """
     #{name} is not valid here. Expected canvas shapes:
@@ -3187,49 +3202,117 @@ defmodule Plushie.UI do
 
   # --- Control flow: recurse into bodies ---
 
-  defp canvas_scope({:for, meta, args}, ctx) do
-    {:for, meta, canvas_scope_for_args(args, ctx)}
+  defp canvas_scope({:for, meta, args}, ctx, _caller_mod) do
+    # for comprehension bodies are dynamic: the same line-based
+    # auto-ID would repeat on each iteration. Use :dynamic to
+    # suppress auto-ID injection and let the runtime fallback
+    # assign unique positional IDs.
+    {:for, meta, canvas_scope_for_args(args, ctx, :dynamic)}
   end
 
-  defp canvas_scope({:if, meta, [condition, clauses]}, ctx) do
-    {:if, meta, [condition, canvas_scope_clauses(clauses, ctx)]}
+  defp canvas_scope({:if, meta, [condition, clauses]}, ctx, caller_mod) do
+    {:if, meta, [condition, canvas_scope_clauses(clauses, ctx, caller_mod)]}
   end
 
-  defp canvas_scope({:unless, meta, [condition, clauses]}, ctx) do
-    {:unless, meta, [condition, canvas_scope_clauses(clauses, ctx)]}
+  defp canvas_scope({:unless, meta, [condition, clauses]}, ctx, caller_mod) do
+    {:unless, meta, [condition, canvas_scope_clauses(clauses, ctx, caller_mod)]}
   end
 
-  defp canvas_scope({:case, meta, [subject, [do: clauses]]}, ctx) do
-    {:case, meta, [subject, [do: canvas_scope_match_clauses(clauses, ctx)]]}
+  defp canvas_scope({:case, meta, [subject, [do: clauses]]}, ctx, caller_mod) do
+    {:case, meta, [subject, [do: canvas_scope_match_clauses(clauses, ctx, caller_mod)]]}
   end
 
-  defp canvas_scope({:cond, meta, [[do: clauses]]}, ctx) do
-    {:cond, meta, [[do: canvas_scope_match_clauses(clauses, ctx)]]}
+  defp canvas_scope({:cond, meta, [[do: clauses]]}, ctx, caller_mod) do
+    {:cond, meta, [[do: canvas_scope_match_clauses(clauses, ctx, caller_mod)]]}
   end
 
-  defp canvas_scope({:with, meta, args}, ctx) do
-    {:with, meta, canvas_scope_with_args(args, ctx)}
+  defp canvas_scope({:with, meta, args}, ctx, caller_mod) do
+    {:with, meta, canvas_scope_with_args(args, ctx, caller_mod)}
   end
 
-  defp canvas_scope({:fn, meta, clauses}, ctx) do
-    {:fn, meta, canvas_scope_match_clauses(clauses, ctx)}
+  defp canvas_scope({:fn, meta, clauses}, ctx, _caller_mod) do
+    # fn closures are dynamic: same line-based auto-ID would repeat
+    # on each invocation. Suppress auto-ID injection.
+    {:fn, meta, canvas_scope_match_clauses(clauses, ctx, :dynamic)}
   end
 
   # --- Canvas inline option declarations (width, height, background, etc.) ---
-  defp canvas_scope({name, _meta, [_value]} = node, :canvas)
+  defp canvas_scope({name, _meta, [_value]} = node, :canvas, _caller_mod)
        when is_atom(name) and name in @canvas_option_keys do
     quote_prop_tuple(name, elem(node, 2) |> hd(), elem(node, 1))
   end
 
-  defp canvas_scope({name, _meta, nil} = node, :canvas)
+  defp canvas_scope({name, _meta, nil} = node, :canvas, _caller_mod)
        when is_atom(name) and name in @canvas_option_keys do
     quote_prop_tuple(name, true, elem(node, 1))
   end
 
   # --- Default: pass through ---
-  defp canvas_scope(other, _ctx), do: other
+  defp canvas_scope(other, _ctx, _caller_mod), do: other
 
   # --- Helper functions ---
+
+  # Recurse into the do-block of a group/interactive call so the
+  # caller_mod (including :dynamic) propagates through nested shapes.
+  # Returns the node with the do-block processed.
+  defp canvas_scope_recurse_into_container(
+         {name, meta, args},
+         _meta,
+         _args,
+         scope_ctx,
+         caller_mod
+       )
+       when is_list(args) do
+    processed_args = canvas_scope_process_do_in_args(args, scope_ctx, caller_mod)
+    {name, meta, processed_args}
+  end
+
+  # Walk the args list, find the keyword entry with :do, and
+  # recursively process the block inside it.
+  defp canvas_scope_process_do_in_args(args, scope_ctx, caller_mod) do
+    Enum.map(args, fn
+      [{:do, block}] ->
+        [{:do, canvas_scope(block, scope_ctx, caller_mod)}]
+
+      kw when is_list(kw) ->
+        Enum.map(kw, fn
+          {:do, block} -> {:do, canvas_scope(block, scope_ctx, caller_mod)}
+          other -> other
+        end)
+
+      other ->
+        other
+    end)
+  end
+
+  # Checks whether a group AST node has an explicit string ID.
+  # group "my-id" do ... end  -> true
+  # group do ... end          -> false
+  # group x: 10 do ... end    -> false
+  defp canvas_scope_group_has_explicit_id?({:group, _, args}) when is_list(args) do
+    case args do
+      # group("id", ...) or group("id", opts, do: ...)
+      [first | _] when is_binary(first) -> true
+      _ -> false
+    end
+  end
+
+  defp canvas_scope_group_has_explicit_id?(_), do: false
+
+  # Wraps a shape call AST node to inject a compile-time auto-ID.
+  # Produces: %{shape_expr | id: "auto:Module:42"}
+  #
+  # Inside dynamic contexts (for loops, fn closures), caller_mod is
+  # :dynamic and auto-IDs are skipped. The runtime fallback in
+  # children_to_nodes assigns positional IDs for shapes without
+  # compile-time IDs.
+  defp canvas_scope_inject_auto_id(node, _meta, :dynamic), do: node
+
+  defp canvas_scope_inject_auto_id(node, meta, caller_mod) do
+    line = Keyword.get(meta, :line, 0)
+    auto_id = compile_auto_id(caller_mod, line)
+    {:%{}, meta, [{:|, [], [node, [id: auto_id]]}]}
+  end
 
   defp canvas_scope_error!(meta, message) do
     raise CompileError,
@@ -3251,28 +3334,28 @@ defmodule Plushie.UI do
   end
 
   # For comprehension: recurse into the do/else bodies
-  defp canvas_scope_for_args(args, ctx) do
+  defp canvas_scope_for_args(args, ctx, caller_mod) do
     Enum.map(args, fn
-      {:do, body} -> {:do, wrap_block_in_list(canvas_scope(body, ctx))}
-      {:else, body} -> {:else, wrap_block_in_list(canvas_scope(body, ctx))}
+      {:do, body} -> {:do, wrap_block_in_list(canvas_scope(body, ctx, caller_mod))}
+      {:else, body} -> {:else, wrap_block_in_list(canvas_scope(body, ctx, caller_mod))}
       other -> other
     end)
   end
 
   # if/unless clauses
-  defp canvas_scope_clauses(clauses, ctx) do
+  defp canvas_scope_clauses(clauses, ctx, caller_mod) do
     Enum.map(clauses, fn
-      {:do, body} -> {:do, wrap_block_in_list(canvas_scope(body, ctx))}
-      {:else, body} -> {:else, wrap_block_in_list(canvas_scope(body, ctx))}
+      {:do, body} -> {:do, wrap_block_in_list(canvas_scope(body, ctx, caller_mod))}
+      {:else, body} -> {:else, wrap_block_in_list(canvas_scope(body, ctx, caller_mod))}
       other -> other
     end)
   end
 
   # case/cond/fn clauses (list of {:->, meta, [pattern, body]})
-  defp canvas_scope_match_clauses(clauses, ctx) do
+  defp canvas_scope_match_clauses(clauses, ctx, caller_mod) do
     Enum.map(clauses, fn
       {:->, meta, [pattern, body]} ->
-        {:->, meta, [pattern, wrap_block_in_list(canvas_scope(body, ctx))]}
+        {:->, meta, [pattern, wrap_block_in_list(canvas_scope(body, ctx, caller_mod))]}
 
       other ->
         other
@@ -3280,10 +3363,10 @@ defmodule Plushie.UI do
   end
 
   # with args: generators + do/else
-  defp canvas_scope_with_args(args, ctx) do
+  defp canvas_scope_with_args(args, ctx, caller_mod) do
     Enum.map(args, fn
-      {:do, body} -> {:do, wrap_block_in_list(canvas_scope(body, ctx))}
-      {:else, clauses} -> {:else, canvas_scope_match_clauses(clauses, ctx)}
+      {:do, body} -> {:do, wrap_block_in_list(canvas_scope(body, ctx, caller_mod))}
+      {:else, clauses} -> {:else, canvas_scope_match_clauses(clauses, ctx, caller_mod)}
       other -> other
     end)
   end
