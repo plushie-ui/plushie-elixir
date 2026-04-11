@@ -71,7 +71,17 @@ defmodule Plushie.DSL.Fields do
 
   @doc false
   def prop_type_ast({name, type, _opts}) do
-    {name, quote(do: unquote(elixir_type_for(type)) | nil)}
+    base = elixir_type_for(type)
+
+    {name,
+     quote(
+       do:
+         unquote(base)
+         | Plushie.Animation.Transition.t()
+         | Plushie.Animation.Spring.t()
+         | Plushie.Animation.Sequence.t()
+         | nil
+     )}
   end
 
   # -- Type utilities ----------------------------------------------------------
@@ -382,6 +392,12 @@ defmodule Plushie.DSL.Fields do
             end
           end
 
+        # Animation clauses accept Transition/Spring/Sequence structs and
+        # validate the to/from values against the field's type. These must
+        # come before the normal setter clause so struct patterns match
+        # before any general guard.
+        animation_clauses = generate_animation_setter_clauses(name, type)
+
         merge = Keyword.get(opts, :merge, false)
 
         setter_clause =
@@ -399,13 +415,13 @@ defmodule Plushie.DSL.Fields do
             )
           end
 
-        if nil_clause do
-          quote do
-            unquote(nil_clause)
-            unquote(setter_clause)
-          end
-        else
-          setter_clause
+        parts =
+          [nil_clause | animation_clauses] ++ [setter_clause]
+
+        parts = Enum.reject(parts, &is_nil/1)
+
+        quote do
+          (unquote_splicing(parts))
         end
       end)
 
@@ -485,6 +501,32 @@ defmodule Plushie.DSL.Fields do
         %{widget | unquote(name) => merged}
       end
     end
+  end
+
+  # -- Animation setter clauses ------------------------------------------------
+
+  # Generates setter clauses that accept Transition, Spring, and Sequence
+  # animation descriptors. Each clause validates the descriptor's to/from
+  # values against the field type, then stores the descriptor in the struct
+  # field. Returns a list of quoted clauses (one per animation type).
+  @doc false
+  def generate_animation_setter_clauses(name, type) do
+    Enum.map(
+      [Plushie.Animation.Transition, Plushie.Animation.Spring, Plushie.Animation.Sequence],
+      fn anim_mod ->
+        quote do
+          def unquote(name)(%__MODULE__{} = widget, %unquote(anim_mod){} = descriptor) do
+            Plushie.Widget.Build.validate_animation_target!(
+              descriptor,
+              unquote(Macro.escape(type)),
+              unquote(name)
+            )
+
+            %{widget | unquote(name) => descriptor}
+          end
+        end
+      end
+    )
   end
 
   # -- Guard utilities ---------------------------------------------------------
@@ -604,6 +646,8 @@ defmodule Plushie.DSL.Fields do
 
       # Color needs casting in to_node because struct defaults bypass setters.
       # All other types store raw values: Tree.normalize handles encoding.
+      # Animation descriptors are passed through without casting so they
+      # can be encoded by Tree.normalize via encode_value.
       if type == Plushie.Type.Color do
         quote do
           var!(props) =
@@ -611,10 +655,7 @@ defmodule Plushie.DSL.Fields do
               var!(props),
               var!(widget).unquote(name),
               unquote(wire_key),
-              fn val ->
-                {:ok, casted} = Plushie.Type.Color.cast(val)
-                casted
-              end
+              &Plushie.Widget.Build.cast_color_or_passthrough/1
             )
         end
       else
