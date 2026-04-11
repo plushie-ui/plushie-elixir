@@ -1157,6 +1157,92 @@ defmodule Plushie.TreeTest do
       assert [%{op: "update_props", props: %{x: 20}}] = ops
     end
 
+    test "element structs in shapes are converted to child nodes" do
+      canvas = %{
+        id: "c",
+        type: "canvas",
+        props: %{
+          shapes: [
+            %Plushie.Canvas.Rect{id: "r1", x: 10, y: 20, w: 100, h: 50, fill: "#ff0000"},
+            %Plushie.Canvas.Circle{x: 50, y: 50, r: 25, fill: "#00ff00"}
+          ]
+        },
+        children: []
+      }
+
+      result = Tree.normalize(canvas)
+      refute Map.has_key?(result.props, :shapes)
+      assert length(result.children) == 2
+
+      [rect, circle] = result.children
+      assert rect.type == "rect"
+      assert rect.id == "c/r1"
+      assert rect.props.x == 10
+      assert rect.props.fill == "#ff0000"
+
+      assert circle.type == "circle"
+      assert String.starts_with?(circle.id, "auto:")
+      assert circle.props.r == 25
+    end
+
+    test "element structs in layers are converted to child nodes" do
+      canvas = %{
+        id: "c",
+        type: "canvas",
+        props: %{
+          layers: %{
+            "bg" => [%Plushie.Canvas.Rect{x: 0, y: 0, w: 400, h: 300, fill: "#eee"}],
+            "fg" => [%Plushie.Canvas.Circle{id: "dot", x: 200, y: 150, r: 10}]
+          }
+        },
+        children: []
+      }
+
+      result = Tree.normalize(canvas)
+      refute Map.has_key?(result.props, :layers)
+      assert length(result.children) == 2
+
+      [bg_layer, fg_layer] = result.children
+      assert bg_layer.type == "__layer__"
+      assert fg_layer.type == "__layer__"
+
+      assert length(bg_layer.children) == 1
+      assert hd(bg_layer.children).type == "rect"
+      assert hd(bg_layer.children).props.fill == "#eee"
+
+      assert length(fg_layer.children) == 1
+      assert hd(fg_layer.children).id == "c/dot"
+    end
+
+    test "element structs produce equivalent output to plain maps" do
+      struct_canvas = %{
+        id: "c",
+        type: "canvas",
+        props: %{
+          shapes: [
+            %Plushie.Canvas.Rect{id: "s1", x: 0, y: 0, w: 100, h: 50}
+          ]
+        },
+        children: []
+      }
+
+      map_canvas = %{
+        id: "c",
+        type: "canvas",
+        props: %{
+          shapes: [
+            %{id: "s1", type: "rect", x: 0, y: 0, w: 100, h: 50}
+          ]
+        },
+        children: []
+      }
+
+      struct_result = Tree.normalize(struct_canvas)
+      map_result = Tree.normalize(map_canvas)
+
+      assert struct_result == map_result
+    end
+
     test "diff detects added shape via insert_child" do
       old_canvas =
         Tree.normalize(%{

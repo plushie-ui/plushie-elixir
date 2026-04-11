@@ -307,18 +307,18 @@ defmodule Plushie.Tree do
           {final_node, ctx}
 
         {:not_a_widget_placeholder, ctx} ->
-          normalized_props = encode_prop_values(wire_props)
-
-          # Canvas nodes: promote shapes from props to tree children.
-          # Layers become __layer__ container nodes; shapes become leaf nodes
-          # with their properties as props. This enables standard diff_children
-          # to handle shape diffing automatically.
-          {normalized_props, children} =
+          # Canvas nodes: extract shapes/layers from props before encoding
+          # so only non-shape props go through encode_prop_values. Shape
+          # encoding happens individually in shape_to_node, which handles
+          # both element structs and plain maps.
+          {wire_props, children} =
             if type_str == "canvas" do
-              shapes_as_children(normalized_props, scoped_id)
+              shapes_as_children(wire_props)
             else
-              {normalized_props, children}
+              {wire_props, children}
             end
+
+          normalized_props = encode_prop_values(wire_props)
 
           {children, child_ctx} = normalize_children_with_ctx(children, child_ctx)
 
@@ -1253,17 +1253,16 @@ defmodule Plushie.Tree do
   end
 
   # Extracts shapes/layers from canvas props and converts them to tree
-  # children. Returns {updated_props, children} where shapes/layers keys
-  # are removed from props and shape maps become child nodes.
+  # children. Called BEFORE encode_prop_values so shapes may be element
+  # structs (from the DSL) or plain maps (from manual construction/tests).
   #
-  # Shapes have already been through encode_prop_values at this point,
-  # so they are plain maps (atom keys) like %{type: "rect", x: 0, ...}.
-  # Each shape becomes a node: %{id: shape_id, type: shape_type, props: rest, children: []}.
-  # Layers become container nodes: %{id: layer_name, type: "__layer__", props: %{}, children: [shape_nodes]}.
-  @spec shapes_as_children(map(), String.t()) :: {map(), [map()]}
-  defp shapes_as_children(props, _canvas_id) do
+  # Returns {updated_props, children} where shapes/layers keys are removed
+  # from props. Layers become __layer__ container nodes; shapes become
+  # leaf nodes.
+  @spec shapes_as_children(map()) :: {map(), [map()]}
+  defp shapes_as_children(props) do
     cond do
-      # Layered canvas: %{layers: %{layer_name => [shape_maps]}}
+      # Layered canvas: %{layers: %{layer_name => [shapes]}}
       Map.has_key?(props, :layers) ->
         layers = Map.get(props, :layers, %{})
         rest_props = Map.drop(props, [:layers, :shapes])
@@ -1284,7 +1283,7 @@ defmodule Plushie.Tree do
 
         {rest_props, children}
 
-      # Flat canvas: %{shapes: [shape_maps]}
+      # Flat canvas: %{shapes: [shapes]}
       Map.has_key?(props, :shapes) ->
         shapes = Map.get(props, :shapes, [])
         rest_props = Map.drop(props, [:shapes])
@@ -1297,9 +1296,9 @@ defmodule Plushie.Tree do
     end
   end
 
-  # Converts a list of encoded shape maps to tree nodes. Each shape map
-  # has :type and an optional :id. Shapes without an explicit :id get
-  # a positional auto-id.
+  # Converts a list of shapes (element structs or plain maps) to tree nodes.
+  # Element structs are encoded first, then converted via the map path.
+  # Plain maps are decomposed directly.
   defp shapes_to_nodes(shapes, _parent_id) when not is_list(shapes), do: []
 
   defp shapes_to_nodes(shapes, parent_id) do
@@ -1310,11 +1309,21 @@ defmodule Plushie.Tree do
     end)
   end
 
+  # Element struct: encode to a plain map and convert via the map path.
+  # This avoids the Tree.Node.to_node route which doesn't handle nil
+  # IDs in nested children (groups contain shapes without explicit IDs).
+  defp shape_to_node(%module{} = struct, parent_id, idx) when is_atom(module) do
+    if function_exported?(module, :encode, 1) do
+      shape_to_node(module.encode(struct), parent_id, idx)
+    else
+      shape_to_node(Map.from_struct(struct), parent_id, idx)
+    end
+  end
+
+  # Plain map (manual construction, tests, or pre-encoded shapes)
   defp shape_to_node(%{} = shape, parent_id, idx) do
     shape_type = Map.get(shape, :type, "unknown")
 
-    # Use explicit shape id if present, otherwise generate an auto-id.
-    # Auto-ids use the auto: prefix to bypass user ID validation.
     shape_id =
       case Map.get(shape, :id) do
         nil -> "auto:shape:#{parent_id}:#{idx}"
@@ -1348,7 +1357,7 @@ defmodule Plushie.Tree do
   end
 
   defp shape_to_node(other, parent_id, idx) do
-    # Non-map shape (shouldn't happen after encoding, but be defensive)
+    # Non-map shape (shouldn't happen, but be defensive)
     %{
       id: "auto:shape:#{parent_id}:#{idx}",
       type: "unknown",
