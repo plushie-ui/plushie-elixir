@@ -1155,10 +1155,8 @@ defmodule Plushie.UITest do
 
   describe "canvas/2 with opts" do
     test "opts become atom-keyed props" do
-      shapes = [%{type: "rect", x: 0, y: 0, w: 100, h: 50}]
-      node = canvas("drawing", shapes: shapes, width: 800, height: 600, background: "#000")
+      node = canvas("drawing", width: 800, height: 600, background: "#000")
 
-      assert node.props[:shapes] == shapes
       assert node.props[:width] == 800
       assert node.props[:height] == 600
       assert node.props[:background] == "#000000"
@@ -1218,30 +1216,11 @@ defmodule Plushie.UITest do
     end
   end
 
-  describe "canvas with empty shapes" do
-    test "canvas with explicit empty shapes list" do
-      node = canvas("cv", shapes: [])
-      assert node.type == "canvas"
-      assert node.props[:shapes] == []
-    end
-
-    test "canvas with no shapes prop at all" do
+  describe "canvas with no children" do
+    test "canvas with no children" do
       node = canvas("cv")
-      refute Map.has_key?(node.props, "shapes")
-    end
-
-    test "canvas with all shape types" do
-      shapes = [
-        %{type: "rect", x: 0, y: 0, w: 100, h: 50},
-        %{type: "circle", cx: 50, cy: 50, r: 25},
-        %{type: "line", x1: 0, y1: 0, x2: 100, y2: 100},
-        %{type: "text", x: 10, y: 10, content: "hello"}
-      ]
-
-      node = canvas("cv", shapes: shapes, width: 800, height: 600)
-      assert length(node.props[:shapes]) == 4
-      types = Enum.map(node.props[:shapes], & &1.type)
-      assert types == ["rect", "circle", "line", "text"]
+      assert node.type == "canvas"
+      assert node.children == []
     end
   end
 
@@ -1272,15 +1251,15 @@ defmodule Plushie.UITest do
   end
 
   describe "canvas id do...end" do
-    test "collects layers from do block" do
+    test "collects layers as children from do block" do
       node = PlushieUICanvasTestHelper.canvas_do_block()
       assert node.id == "chart"
       assert node.type == "canvas"
-      assert is_map(node.props[:layers])
-      assert Map.has_key?(node.props[:layers], "grid")
-      assert Map.has_key?(node.props[:layers], "data")
-      assert length(node.props[:layers]["grid"]) == 1
-      assert length(node.props[:layers]["data"]) == 1
+      assert length(node.children) == 2
+
+      layer_names = Enum.map(node.children, fn c -> c.props[:name] end)
+      assert "grid" in layer_names
+      assert "data" in layer_names
     end
 
     test "merges opts with layers from do block" do
@@ -1288,8 +1267,7 @@ defmodule Plushie.UITest do
       assert node.id == "chart"
       assert node.props[:width] == 400
       assert node.props[:height] == 300
-      assert is_map(node.props[:layers])
-      assert length(node.props[:layers]["main"]) == 1
+      assert length(node.children) == 1
     end
 
     test "layer with for comprehension" do
@@ -1300,14 +1278,15 @@ defmodule Plushie.UITest do
       ]
 
       node = PlushieUICanvasTestHelper.canvas_with_for(bars)
-      assert length(node.props[:layers]["bars"]) == 3
+      bars_layer = Enum.find(node.children, fn c -> c.props[:name] == "bars" end)
+      assert length(bars_layer.children) == 3
     end
 
-    test "empty do block produces empty layers" do
+    test "empty do block produces no children" do
       node = PlushieUICanvasTestHelper.canvas_empty_do_block()
       assert node.id == "empty"
       assert node.type == "canvas"
-      assert node.props[:layers] == %{}
+      assert node.children == []
     end
   end
 
@@ -1396,19 +1375,21 @@ defmodule Plushie.UITest do
     test "group with interactive directive" do
       node = PlushieUICanvasShapeHelper.canvas_with_group_interactive()
       assert node.type == "canvas"
-      shapes = node.props[:layers]["main"]
-      [el] = shapes
-      assert %Plushie.Canvas.Interactive{} = el
+      [layer] = node.children
+      assert layer.props[:name] == "main"
+      [el] = layer.children
+      assert el.type == "group"
       assert el.id == "btn"
-      assert el.on_click == true
+      assert el.props[:on_click] == true
     end
   end
 
   describe "layer macro" do
-    test "layer produces {name, shapes} tuple" do
-      {name, shapes} = PlushieUICanvasShapeHelper.layer_standalone()
-      assert name == "grid"
-      assert [%Plushie.Canvas.Rect{}] = shapes
+    test "layer produces a Layer element with shape children" do
+      layer = PlushieUICanvasShapeHelper.layer_standalone()
+      assert %Plushie.Canvas.Layer{} = layer
+      assert layer.name == "grid"
+      assert [%Plushie.Canvas.Rect{}] = layer.children
     end
   end
 
@@ -1425,27 +1406,34 @@ defmodule Plushie.UITest do
     test "text/4 inside canvas layer is rewritten to canvas shape" do
       node = PlushieUICanvasShapeHelper.canvas_with_text_rewrite()
       assert node.type == "canvas"
-      shapes = node.props[:layers]["labels"]
-      assert [%Plushie.Canvas.Text{x: 10, y: 20, content: "Hello"}] = shapes
+      [layer] = node.children
+      assert layer.props[:name] == "labels"
+      [text_shape] = layer.children
+      assert text_shape.type == "text"
+      assert text_shape.props[:x] == 10
+      assert text_shape.props[:y] == 20
+      assert text_shape.props[:content] == "Hello"
     end
   end
 
   describe "canvas_scope control flow" do
     test "for inside canvas layer" do
       node = PlushieUICanvasShapeHelper.canvas_with_for()
-      shapes = node.props[:layers]["bars"]
-      assert length(shapes) == 3
-      assert Enum.all?(shapes, &match?(%Plushie.Canvas.Rect{}, &1))
+      [layer] = node.children
+      assert layer.props[:name] == "bars"
+      assert length(layer.children) == 3
+      assert Enum.all?(layer.children, fn c -> c.type == "rect" end)
     end
 
     test "if inside canvas layer" do
       node = PlushieUICanvasShapeHelper.canvas_with_if(true)
-      shapes = node.props[:layers]["main"]
-      assert length(shapes) == 2
+      [layer] = node.children
+      assert layer.props[:name] == "main"
+      assert length(layer.children) == 2
 
       node = PlushieUICanvasShapeHelper.canvas_with_if(false)
-      shapes = node.props[:layers]["main"]
-      assert length(shapes) == 1
+      [layer] = node.children
+      assert length(layer.children) == 1
     end
   end
 
@@ -1673,15 +1661,17 @@ defmodule Plushie.UITest do
 
     test "multiple children in if body in canvas layer" do
       node = PlushieUIEdgeCaseHelper.multi_expr_if_children()
-      shapes = node.props.layers["main"]
-      assert length(shapes) == 2
-      assert Enum.all?(shapes, &match?(%Plushie.Canvas.Rect{}, &1))
+      [layer] = node.children
+      assert layer.props[:name] == "main"
+      assert length(layer.children) == 2
+      assert Enum.all?(layer.children, fn c -> c.type == "rect" end)
     end
 
     test "for with multiple shapes per iteration" do
       node = PlushieUIEdgeCaseHelper.for_with_shapes_in_layer()
-      shapes = node.props.layers["data"]
-      assert length(shapes) == 6
+      [layer] = node.children
+      assert layer.props[:name] == "data"
+      assert length(layer.children) == 6
     end
   end
 

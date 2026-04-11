@@ -1,6 +1,7 @@
 defmodule Plushie.Widget.CanvasTest do
   use ExUnit.Case, async: true
 
+  alias Plushie.Canvas.Layer
   alias Plushie.Widget.Canvas
 
   describe "new/2" do
@@ -8,7 +9,7 @@ defmodule Plushie.Widget.CanvasTest do
       canvas = Canvas.new("my_canvas")
 
       assert canvas.id == "my_canvas"
-      assert canvas.layers == nil
+      assert canvas.children == []
       assert canvas.width == nil
       assert canvas.height == nil
       assert canvas.background == nil
@@ -20,59 +21,34 @@ defmodule Plushie.Widget.CanvasTest do
     end
 
     test "accepts keyword options" do
-      layers = %{"bg" => [%{"type" => "rect", "x" => 0, "y" => 0, "w" => 100, "h" => 100}]}
-
-      canvas = Canvas.new("c1", width: 400, height: 300, background: "#ff0000", layers: layers)
+      canvas = Canvas.new("c1", width: 400, height: 300, background: "#ff0000")
 
       assert canvas.width == 400
       assert canvas.height == 300
       assert canvas.background == "#ff0000"
-      assert canvas.layers == layers
     end
   end
 
-  describe "layers/2" do
-    test "replaces the entire layers map" do
-      layers = %{
-        "foreground" => [%{"type" => "circle", "x" => 50, "y" => 50, "r" => 25}],
-        "background" => [%{"type" => "rect", "x" => 0, "y" => 0, "w" => 100, "h" => 100}]
-      }
-
-      canvas = Canvas.new("c1") |> Canvas.layers(layers)
-      assert canvas.layers == layers
-    end
-  end
-
-  describe "layer/3" do
-    test "adds a named layer to a canvas with no existing layers" do
-      shapes = [%{"type" => "line", "x1" => 0, "y1" => 0, "x2" => 100, "y2" => 100}]
-      canvas = Canvas.new("c1") |> Canvas.layer("grid", shapes)
-
-      assert canvas.layers == %{"grid" => shapes}
-    end
-
-    test "merges a new layer with existing layers" do
-      bg = [%{"type" => "rect", "x" => 0, "y" => 0, "w" => 100, "h" => 100}]
-      fg = [%{"type" => "circle", "x" => 50, "y" => 50, "r" => 10}]
+  describe "container API" do
+    test "push adds a Layer child" do
+      layer = Layer.new("auto:layer:bg", name: "bg")
 
       canvas =
         Canvas.new("c1")
-        |> Canvas.layer("background", bg)
-        |> Canvas.layer("foreground", fg)
+        |> Canvas.push(layer)
 
-      assert canvas.layers == %{"background" => bg, "foreground" => fg}
+      assert length(canvas.children) == 1
     end
 
-    test "replaces an existing layer by name" do
-      old_shapes = [%{"type" => "rect", "x" => 0, "y" => 0, "w" => 50, "h" => 50}]
-      new_shapes = [%{"type" => "rect", "x" => 0, "y" => 0, "w" => 100, "h" => 100}]
+    test "extend adds multiple Layer children" do
+      bg = Layer.new("auto:layer:bg", name: "bg")
+      fg = Layer.new("auto:layer:fg", name: "fg")
 
       canvas =
         Canvas.new("c1")
-        |> Canvas.layer("bg", old_shapes)
-        |> Canvas.layer("bg", new_shapes)
+        |> Canvas.extend([bg, fg])
 
-      assert canvas.layers["bg"] == new_shapes
+      assert length(canvas.children) == 2
     end
   end
 
@@ -151,22 +127,24 @@ defmodule Plushie.Widget.CanvasTest do
     test "omits nil props from the output" do
       node = Canvas.new("c1") |> Canvas.build()
 
-      refute Map.has_key?(node.props, :layers)
       refute Map.has_key?(node.props, :width)
       refute Map.has_key?(node.props, :height)
       refute Map.has_key?(node.props, :background)
       refute Map.has_key?(node.props, :interactive)
     end
 
-    test "includes layers in props" do
-      shapes = [%{"type" => "circle", "x" => 10, "y" => 10, "r" => 5}]
+    test "Layer children become child nodes" do
+      layer = Layer.new("auto:layer:dots", name: "dots")
 
       node =
         Canvas.new("c1")
-        |> Canvas.layer("dots", shapes)
+        |> Canvas.push(layer)
         |> Canvas.build()
 
-      assert node.props[:layers] == %{"dots" => shapes}
+      assert length(node.children) == 1
+      [child] = node.children
+      assert child.type == "__layer__"
+      assert child.props[:name] == "dots"
     end
 
     test "includes all set props" do

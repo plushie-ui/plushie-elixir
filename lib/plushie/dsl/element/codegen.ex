@@ -56,8 +56,11 @@ defmodule Plushie.DSL.Element.Codegen do
     children =
       if container do
         quote do
-          Enum.reverse(var!(element).children)
-          |> Enum.map(&Plushie.Tree.Node.to_node/1)
+          Plushie.DSL.Element.Codegen.children_to_nodes(
+            var!(element).children,
+            var!(element).id,
+            unquote(type_string)
+          )
         end
       else
         quote(do: [])
@@ -68,6 +71,10 @@ defmodule Plushie.DSL.Element.Codegen do
         def to_node(var!(element)) do
           var!(props) = %{}
           unquote_splicing(put_calls)
+
+          # Canvas elements keep their explicit ID in props for the renderer
+          # to use as canvas element identifier (event routing, focus tracking).
+          var!(props) = Plushie.Widget.Build.put_if(var!(props), var!(element).id, :id)
 
           %{
             id: var!(element).id,
@@ -158,6 +165,36 @@ defmodule Plushie.DSL.Element.Codegen do
       @doc "Returns the element type string for the wire protocol."
       @spec type_name() :: String.t()
       def type_name, do: unquote(type_string)
+    end
+  end
+
+  # -- Runtime helpers for container children ----------------------------------
+
+  @doc false
+  @spec children_to_nodes(list(), String.t() | nil, String.t()) :: [map()]
+  def children_to_nodes(children, parent_id, type_string) do
+    parent_prefix = parent_id || "auto:" <> type_string
+
+    children
+    |> Enum.reverse()
+    |> Enum.with_index()
+    |> Enum.map(fn {child, idx} ->
+      child
+      |> Plushie.Tree.Node.to_node()
+      |> ensure_child_id(parent_prefix, idx)
+    end)
+  end
+
+  # Assigns an auto-ID to a child node that has no explicit ID.
+  # Leaf shape elements (Rect, Circle, etc.) typically have nil IDs;
+  # container shapes (Group, Interactive) have explicit string IDs.
+  @doc false
+  @spec ensure_child_id(map(), String.t(), non_neg_integer()) :: map()
+  def ensure_child_id(node, parent_prefix, idx) do
+    if is_nil(node.id) do
+      %{node | id: "auto:shape:" <> parent_prefix <> ":" <> Integer.to_string(idx)}
+    else
+      node
     end
   end
 end

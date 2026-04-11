@@ -121,20 +121,20 @@ defmodule Plushie.CanvasEventsTest do
 
   describe "canvas interactive props" do
     test "canvas node with interactive prop" do
-      node = Plushie.Widget.Node.build("c1", "canvas", %{interactive: true, layers: %{}})
+      node = Plushie.Widget.Node.build("c1", "canvas", %{interactive: true})
       assert node.props[:interactive] == true
     end
 
     test "canvas node with individual event props" do
       node =
-        Plushie.Widget.Node.build("c1", "canvas", %{on_press: true, on_move: true, layers: %{}})
+        Plushie.Widget.Node.build("c1", "canvas", %{on_press: true, on_move: true})
 
       assert node.props[:on_press] == true
       assert node.props[:on_move] == true
     end
 
     test "canvas node has correct type" do
-      node = Plushie.Widget.Node.build("c1", "canvas", %{layers: %{}})
+      node = Plushie.Widget.Node.build("c1", "canvas", %{})
       assert node.id == "c1"
       assert node.type == "canvas"
     end

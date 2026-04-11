@@ -1021,55 +1021,38 @@ defmodule Plushie.TreeTest do
     end
   end
 
-  describe "normalize/1 -- canvas shapes as children" do
-    test "flat shapes are promoted from props to children" do
+  describe "normalize/1 -- canvas with Layer children" do
+    test "layer children are normalized with type __layer__" do
       canvas = %{
         id: "c",
         type: "canvas",
-        props: %{
-          shapes: [
-            %{id: "s1", type: "rect", x: 0, y: 0, w: 100, h: 50},
-            %{id: "s2", type: "circle", cx: 50, cy: 50, r: 25}
-          ]
-        },
-        children: []
-      }
-
-      result = Tree.normalize(canvas)
-      assert result.type == "canvas"
-
-      # Shapes should no longer be in props
-      refute Map.has_key?(result.props, :shapes)
-
-      # Shapes should be children
-      assert length(result.children) == 2
-      assert Enum.at(result.children, 0).type == "rect"
-      assert Enum.at(result.children, 1).type == "circle"
-    end
-
-    test "layered shapes become __layer__ children with shape children" do
-      canvas = %{
-        id: "c",
-        type: "canvas",
-        props: %{
-          layers: %{
-            "bg" => [%{type: "rect", x: 0, y: 0, w: 400, h: 300}],
-            "fg" => [%{type: "circle", cx: 200, cy: 150, r: 50}]
+        props: %{},
+        children: [
+          %{
+            id: "auto:layer:bg",
+            type: "__layer__",
+            props: %{name: "bg"},
+            children: [
+              %{id: "s1", type: "rect", props: %{x: 0, y: 0, w: 400, h: 300}, children: []}
+            ]
+          },
+          %{
+            id: "auto:layer:fg",
+            type: "__layer__",
+            props: %{name: "fg"},
+            children: [
+              %{id: "s2", type: "circle", props: %{cx: 200, cy: 150, r: 50}, children: []}
+            ]
           }
-        },
-        children: []
+        ]
       }
 
       result = Tree.normalize(canvas)
-      refute Map.has_key?(result.props, :layers)
-
-      # Two __layer__ children (sorted by name: bg, fg)
       assert length(result.children) == 2
       [bg_layer, fg_layer] = result.children
       assert bg_layer.type == "__layer__"
       assert fg_layer.type == "__layer__"
 
-      # Each layer has its shapes as children
       assert length(bg_layer.children) == 1
       assert hd(bg_layer.children).type == "rect"
 
@@ -1077,20 +1060,7 @@ defmodule Plushie.TreeTest do
       assert hd(fg_layer.children).type == "circle"
     end
 
-    test "non-canvas nodes are unaffected" do
-      node = %{
-        id: "col",
-        type: "column",
-        props: %{shapes: [1, 2, 3]},
-        children: []
-      }
-
-      result = Tree.normalize(node)
-      # shapes prop is preserved (it's not a canvas)
-      assert result.props.shapes == [1, 2, 3]
-    end
-
-    test "canvas without shapes has no children" do
+    test "canvas without children normalizes cleanly" do
       canvas = %{
         id: "c",
         type: "canvas",
@@ -1103,144 +1073,46 @@ defmodule Plushie.TreeTest do
       assert result.props == %{background: "white"}
     end
 
-    test "shapes without explicit IDs get auto-IDs" do
-      canvas = %{
-        id: "c",
-        type: "canvas",
-        props: %{
-          shapes: [
-            %{type: "rect", x: 0, y: 0, w: 100, h: 50},
-            %{type: "line", x1: 0, y1: 0, x2: 100, y2: 100}
-          ]
-        },
-        children: []
-      }
-
-      result = Tree.normalize(canvas)
-      ids = Enum.map(result.children, & &1.id)
-
-      # Auto-IDs start with "auto:"
-      assert Enum.all?(ids, &String.starts_with?(&1, "auto:"))
-    end
-
-    test "diff detects individual shape changes via children" do
+    test "diff detects individual shape changes via layer children" do
       old_canvas =
         Tree.normalize(%{
           id: "c",
           type: "canvas",
-          props: %{
-            shapes: [
-              %{id: "s1", type: "rect", x: 0, y: 0, w: 100, h: 50},
-              %{id: "s2", type: "rect", x: 10, y: 10, w: 50, h: 50}
-            ]
-          },
-          children: []
+          props: %{},
+          children: [
+            %{
+              id: "auto:layer:default",
+              type: "__layer__",
+              props: %{name: "default"},
+              children: [
+                %{id: "s1", type: "rect", props: %{x: 0, y: 0, w: 100, h: 50}, children: []},
+                %{id: "s2", type: "rect", props: %{x: 10, y: 10, w: 50, h: 50}, children: []}
+              ]
+            }
+          ]
         })
 
       new_canvas =
         Tree.normalize(%{
           id: "c",
           type: "canvas",
-          props: %{
-            shapes: [
-              %{id: "s1", type: "rect", x: 20, y: 0, w: 100, h: 50},
-              %{id: "s2", type: "rect", x: 10, y: 10, w: 50, h: 50}
-            ]
-          },
-          children: []
+          props: %{},
+          children: [
+            %{
+              id: "auto:layer:default",
+              type: "__layer__",
+              props: %{name: "default"},
+              children: [
+                %{id: "s1", type: "rect", props: %{x: 20, y: 0, w: 100, h: 50}, children: []},
+                %{id: "s2", type: "rect", props: %{x: 10, y: 10, w: 50, h: 50}, children: []}
+              ]
+            }
+          ]
         })
 
       ops = Tree.diff(old_canvas, new_canvas)
-
-      # Should detect the change in s1's x prop
       assert length(ops) == 1
       assert [%{op: "update_props", props: %{x: 20}}] = ops
-    end
-
-    test "element structs in shapes are converted to child nodes" do
-      canvas = %{
-        id: "c",
-        type: "canvas",
-        props: %{
-          shapes: [
-            %Plushie.Canvas.Rect{id: "r1", x: 10, y: 20, w: 100, h: 50, fill: "#ff0000"},
-            %Plushie.Canvas.Circle{x: 50, y: 50, r: 25, fill: "#00ff00"}
-          ]
-        },
-        children: []
-      }
-
-      result = Tree.normalize(canvas)
-      refute Map.has_key?(result.props, :shapes)
-      assert length(result.children) == 2
-
-      [rect, circle] = result.children
-      assert rect.type == "rect"
-      assert rect.id == "c/r1"
-      assert rect.props.x == 10
-      assert rect.props.fill == "#ff0000"
-
-      assert circle.type == "circle"
-      assert String.starts_with?(circle.id, "auto:")
-      assert circle.props.r == 25
-    end
-
-    test "element structs in layers are converted to child nodes" do
-      canvas = %{
-        id: "c",
-        type: "canvas",
-        props: %{
-          layers: %{
-            "bg" => [%Plushie.Canvas.Rect{x: 0, y: 0, w: 400, h: 300, fill: "#eee"}],
-            "fg" => [%Plushie.Canvas.Circle{id: "dot", x: 200, y: 150, r: 10}]
-          }
-        },
-        children: []
-      }
-
-      result = Tree.normalize(canvas)
-      refute Map.has_key?(result.props, :layers)
-      assert length(result.children) == 2
-
-      [bg_layer, fg_layer] = result.children
-      assert bg_layer.type == "__layer__"
-      assert fg_layer.type == "__layer__"
-
-      assert length(bg_layer.children) == 1
-      assert hd(bg_layer.children).type == "rect"
-      assert hd(bg_layer.children).props.fill == "#eee"
-
-      assert length(fg_layer.children) == 1
-      assert hd(fg_layer.children).id == "c/dot"
-    end
-
-    test "element structs produce equivalent output to plain maps" do
-      struct_canvas = %{
-        id: "c",
-        type: "canvas",
-        props: %{
-          shapes: [
-            %Plushie.Canvas.Rect{id: "s1", x: 0, y: 0, w: 100, h: 50}
-          ]
-        },
-        children: []
-      }
-
-      map_canvas = %{
-        id: "c",
-        type: "canvas",
-        props: %{
-          shapes: [
-            %{id: "s1", type: "rect", x: 0, y: 0, w: 100, h: 50}
-          ]
-        },
-        children: []
-      }
-
-      struct_result = Tree.normalize(struct_canvas)
-      map_result = Tree.normalize(map_canvas)
-
-      assert struct_result == map_result
     end
 
     test "diff detects added shape via insert_child" do
@@ -1248,25 +1120,35 @@ defmodule Plushie.TreeTest do
         Tree.normalize(%{
           id: "c",
           type: "canvas",
-          props: %{
-            shapes: [
-              %{id: "s1", type: "rect", x: 0, y: 0, w: 100, h: 50}
-            ]
-          },
-          children: []
+          props: %{},
+          children: [
+            %{
+              id: "auto:layer:default",
+              type: "__layer__",
+              props: %{name: "default"},
+              children: [
+                %{id: "s1", type: "rect", props: %{x: 0, y: 0, w: 100, h: 50}, children: []}
+              ]
+            }
+          ]
         })
 
       new_canvas =
         Tree.normalize(%{
           id: "c",
           type: "canvas",
-          props: %{
-            shapes: [
-              %{id: "s1", type: "rect", x: 0, y: 0, w: 100, h: 50},
-              %{id: "s2", type: "circle", cx: 50, cy: 50, r: 25}
-            ]
-          },
-          children: []
+          props: %{},
+          children: [
+            %{
+              id: "auto:layer:default",
+              type: "__layer__",
+              props: %{name: "default"},
+              children: [
+                %{id: "s1", type: "rect", props: %{x: 0, y: 0, w: 100, h: 50}, children: []},
+                %{id: "s2", type: "circle", props: %{cx: 50, cy: 50, r: 25}, children: []}
+              ]
+            }
+          ]
         })
 
       ops = Tree.diff(old_canvas, new_canvas)

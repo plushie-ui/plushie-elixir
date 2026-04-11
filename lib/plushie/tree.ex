@@ -307,17 +307,6 @@ defmodule Plushie.Tree do
           {final_node, ctx}
 
         {:not_a_widget_placeholder, ctx} ->
-          # Canvas nodes: extract shapes/layers from props before encoding
-          # so only non-shape props go through encode_prop_values. Shape
-          # encoding happens individually in shape_to_node, which handles
-          # both element structs and plain maps.
-          {wire_props, children} =
-            if type_str == "canvas" do
-              shapes_as_children(wire_props)
-            else
-              {wire_props, children}
-            end
-
           normalized_props = encode_prop_values(wire_props)
 
           {children, child_ctx} = normalize_children_with_ctx(children, child_ctx)
@@ -1250,120 +1239,6 @@ defmodule Plushie.Tree do
       {:ok, prev_idx} -> reconstruct_lis(preds, prev_idx, remaining - 1, [idx | acc])
       :error -> [idx | acc]
     end
-  end
-
-  # Extracts shapes/layers from canvas props and converts them to tree
-  # children. Called BEFORE encode_prop_values so shapes may be element
-  # structs (from the DSL) or plain maps (from manual construction/tests).
-  #
-  # Returns {updated_props, children} where shapes/layers keys are removed
-  # from props. Layers become __layer__ container nodes; shapes become
-  # leaf nodes.
-  @spec shapes_as_children(map()) :: {map(), [map()]}
-  defp shapes_as_children(props) do
-    cond do
-      # Layered canvas: %{layers: %{layer_name => [shapes]}}
-      Map.has_key?(props, :layers) ->
-        layers = Map.get(props, :layers, %{})
-        rest_props = Map.drop(props, [:layers, :shapes])
-
-        children =
-          layers
-          |> Enum.sort_by(fn {name, _} -> name end)
-          |> Enum.map(fn {layer_name, shapes} ->
-            shape_children = shapes_to_nodes(shapes, layer_name)
-
-            %{
-              id: "auto:layer:#{layer_name}",
-              type: "__layer__",
-              props: %{name: layer_name},
-              children: shape_children
-            }
-          end)
-
-        {rest_props, children}
-
-      # Flat canvas: %{shapes: [shapes]}
-      Map.has_key?(props, :shapes) ->
-        shapes = Map.get(props, :shapes, [])
-        rest_props = Map.drop(props, [:shapes])
-
-        children = shapes_to_nodes(shapes, "default")
-        {rest_props, children}
-
-      true ->
-        {props, []}
-    end
-  end
-
-  # Converts a list of shapes (element structs or plain maps) to tree nodes.
-  # Element structs are encoded first, then converted via the map path.
-  # Plain maps are decomposed directly.
-  defp shapes_to_nodes(shapes, _parent_id) when not is_list(shapes), do: []
-
-  defp shapes_to_nodes(shapes, parent_id) do
-    shapes
-    |> Enum.with_index()
-    |> Enum.map(fn {shape, idx} ->
-      shape_to_node(shape, parent_id, idx)
-    end)
-  end
-
-  # Element struct: encode to a plain map and convert via the map path.
-  # This avoids the Tree.Node.to_node route which doesn't handle nil
-  # IDs in nested children (groups contain shapes without explicit IDs).
-  defp shape_to_node(%module{} = struct, parent_id, idx) when is_atom(module) do
-    if function_exported?(module, :encode, 1) do
-      shape_to_node(module.encode(struct), parent_id, idx)
-    else
-      shape_to_node(Map.from_struct(struct), parent_id, idx)
-    end
-  end
-
-  # Plain map (manual construction, tests, or pre-encoded shapes)
-  defp shape_to_node(%{} = shape, parent_id, idx) do
-    shape_type = Map.get(shape, :type, "unknown")
-
-    shape_id =
-      case Map.get(shape, :id) do
-        nil -> "auto:shape:#{parent_id}:#{idx}"
-        explicit -> explicit
-      end
-
-    # Extract children for group shapes (they contain nested shapes)
-    {shape_children, shape_props} =
-      case Map.pop(shape, :children) do
-        {nil, props} ->
-          {[], props}
-
-        {child_shapes, props} when is_list(child_shapes) ->
-          nodes = shapes_to_nodes(child_shapes, shape_id)
-          {nodes, props}
-
-        {_, props} ->
-          {[], props}
-      end
-
-    # Remove :type from props (it's on the node itself) but keep :id for the
-    # renderer to use as canvas element identifier
-    clean_props = Map.drop(shape_props, [:type])
-
-    %{
-      id: shape_id,
-      type: shape_type,
-      props: clean_props,
-      children: shape_children
-    }
-  end
-
-  defp shape_to_node(other, parent_id, idx) do
-    # Non-map shape (shouldn't happen, but be defensive)
-    %{
-      id: "auto:shape:#{parent_id}:#{idx}",
-      type: "unknown",
-      props: %{value: other},
-      children: []
-    }
   end
 
   # Ensures all keys in the map are atoms. String keys from manually

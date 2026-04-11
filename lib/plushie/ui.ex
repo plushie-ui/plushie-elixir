@@ -1859,13 +1859,8 @@ defmodule Plushie.UI do
   @doc """
   Canvas for drawing shapes organized into named layers.
 
-  ## Keyword form
-
-      canvas("drawing",
-        layers: %{"main" => [%{type: "circle", x: 50, y: 50, r: 20}]},
-        width: 400,
-        height: 300
-      )
+  Canvas is a container widget. Its children are Layer elements,
+  each holding shape children.
 
   ## Do-block form
 
@@ -1884,7 +1879,6 @@ defmodule Plushie.UI do
 
   ## Options
 
-  - `:layers` -- map of layer names to shape descriptor lists
   - `:width` / `:height` -- dimensions
   - `:background` -- background color
   """
@@ -1901,22 +1895,24 @@ defmodule Plushie.UI do
             |> List.flatten()
             |> Enum.reject(&is_nil/1)
 
-          {prop_tuples, layer_items} =
-            Enum.split_with(items, &match?({:__widget_prop__, _, _}, &1))
-
-          block_opts = Enum.map(prop_tuples, fn {:__widget_prop__, k, v} -> {k, v} end)
-          layers = Map.new(layer_items)
-
-          Plushie.Widget.Build.build_node([{:layers, layers} | block_opts], fn widget_opts ->
-            Plushie.UI.__build_canvas__(unquote(id), widget_opts)
-          end)
+          Plushie.UI.__build_container__(
+            Plushie.Widget.Canvas,
+            unquote(id),
+            [],
+            items,
+            nil
+          )
         end
 
       opts ->
         quote do
-          Plushie.Widget.Build.build_node(unquote(opts), fn widget_opts ->
-            Plushie.UI.__build_canvas__(unquote(id), widget_opts)
-          end)
+          Plushie.UI.__build_container__(
+            Plushie.Widget.Canvas,
+            unquote(id),
+            unquote(opts),
+            [],
+            nil
+          )
         end
     end
   end
@@ -1933,26 +1929,26 @@ defmodule Plushie.UI do
         |> List.flatten()
         |> Enum.reject(&is_nil/1)
 
-      {prop_tuples, layer_items} =
-        Enum.split_with(items, &match?({:__widget_prop__, _, _}, &1))
-
-      block_opts = Enum.map(prop_tuples, fn {:__widget_prop__, k, v} -> {k, v} end)
-      layers = Map.new(layer_items)
-
-      merged_opts =
-        Keyword.merge(Keyword.delete(unquote(opts), :layers), block_opts)
-
-      Plushie.Widget.Build.build_node([{:layers, layers} | merged_opts], fn widget_opts ->
-        Plushie.UI.__build_canvas__(unquote(id), widget_opts)
-      end)
+      Plushie.UI.__build_container__(
+        Plushie.Widget.Canvas,
+        unquote(id),
+        unquote(opts),
+        items,
+        nil
+      )
     end
   end
 
   @doc false
-  @spec __build_canvas__(String.t(), keyword()) :: Plushie.Widget.ui_node()
-  def __build_canvas__(id, opts) do
-    Plushie.Widget.Canvas.new(id, clean_opts(opts))
-    |> Plushie.Widget.Canvas.build()
+  @spec __build_layer__(String.t(), [term()]) :: Plushie.Canvas.Layer.t()
+  def __build_layer__(name, children) do
+    layer = Plushie.Canvas.Layer.new("auto:layer:#{name}", name: name)
+
+    if children != [] do
+      Plushie.Canvas.Layer.extend(layer, children)
+    else
+      layer
+    end
   end
 
   # -- pane_grid(id, opts) ----------------------------------------------------
@@ -2310,8 +2306,10 @@ defmodule Plushie.UI do
     acc_ast = build_list_accumulator(exprs)
 
     quote do
-      {unquote(name),
-       unquote(acc_ast) |> :lists.reverse() |> List.flatten() |> Enum.reject(&is_nil/1)}
+      children =
+        unquote(acc_ast) |> :lists.reverse() |> List.flatten() |> Enum.reject(&is_nil/1)
+
+      Plushie.UI.__build_layer__(unquote(name), children)
     end
   end
 
