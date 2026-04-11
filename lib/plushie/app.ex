@@ -15,7 +15,9 @@ defmodule Plushie.App do
 
         def init(_opts), do: %{count: 0}
 
-        def update(model, %WidgetEvent{type: :click, id: "increment"}), do: %{model | count: model.count + 1}
+        def update(model, %WidgetEvent{type: :click, id: "increment"}),
+          do: %{model | count: model.count + 1}
+
         def update(model, _event), do: model
 
         def view(model) do
@@ -34,20 +36,44 @@ defmodule Plushie.App do
 
   `init/1` and `update/2` both accept two return shapes:
 
-  - Bare model -- no side effects needed.
-  - `{model, command}` or `{model, [command]}` -- schedule async work, widget
-    operations, window management, or timers. See `Plushie.Command` for the full
-    command API.
+  - Bare model: no side effects needed.
+  - `{model, command}` or `{model, [command]}`: schedule async work, widget
+    operations, window management, or timers. See `Plushie.Command` for the
+    full command API.
 
-  ## Returning commands
+  ## Commands
 
-  `update/2` can return a `{model, command}` tuple to schedule side effects:
+  Return a `{model, command}` tuple from `update/2` or `init/1` to schedule
+  side effects:
+
+      def init(_opts) do
+        model = %{data: nil, loading: true}
+        {model, Command.async(fn -> load_initial_data() end, :loaded)}
+      end
 
       def update(model, %WidgetEvent{type: :click, id: "save"}) do
         {model, Command.async(fn -> save_to_disk(model) end, :save_result)}
       end
 
-  See `Plushie.Command` for the full command API and result delivery mechanisms.
+  See `Plushie.Command` for the full command API and result delivery.
+
+  ## Subscriptions
+
+  Override `subscribe/1` to receive ongoing events. The runtime diffs the
+  subscription list after each update and starts or stops subscriptions as
+  needed.
+
+      def subscribe(model) do
+        subs = [Plushie.Subscription.on_key(:key_events)]
+
+        if model.auto_refresh do
+          [Plushie.Subscription.every(5000, :refresh) | subs]
+        else
+          subs
+        end
+      end
+
+  See `Plushie.Subscription` for all subscription types.
 
   ## Error handling
 
@@ -58,27 +84,38 @@ defmodule Plushie.App do
 
   ## Optional callbacks
 
-  `subscribe/1` and `handle_renderer_exit/2` are optional. `use Plushie.App`
-  provides default implementations that can be overridden.
+  `subscribe/1`, `handle_renderer_exit/2`, `window_config/1`, and `settings/0`
+  are optional. `use Plushie.App` provides default implementations that can be
+  overridden.
   """
 
   @type model :: term()
+
+  @typedoc """
+  Events delivered to `update/2`.
+
+  Most events are `Plushie.Event` structs from the renderer and
+  subscriptions. The `term()` case covers bare values delivered by
+  `Command.send_after/2` and `Command.done/2`.
+  """
   @type event :: Plushie.Event.t() | term()
+
   @type command :: Plushie.Command.t() | [Plushie.Command.t()]
   @type window_view ::
           Plushie.Widget.Window.t() | map() | [Plushie.Widget.Window.t() | map()] | nil
 
   @doc """
-  Called once at startup. Returns the initial model, optionally with commands.
+  Called once at startup. Returns the initial model, optionally with
+  commands for loading initial data or configuring the UI.
   """
   @callback init(opts :: keyword()) :: model | {model, command}
 
   @doc """
   Called on every event. Returns the next model, optionally with commands.
 
-  In addition to `Plushie.Event` structs from the renderer and subscriptions,
-  `update/2` may receive internal tuple events (e.g. async results, stream
-  chunks, effect responses). Pattern match broadly or include a catch-all clause.
+  Events are `Plushie.Event` structs (widget interactions, key presses,
+  window lifecycle, async results, timer ticks, etc.) or bare terms from
+  `Command.send_after/2`. Include a catch-all clause for unhandled events.
   """
   @callback update(model, event) :: model | {model, command}
 
@@ -131,29 +168,41 @@ defmodule Plushie.App do
   @callback window_config(model) :: map()
 
   @doc """
-  Called once at startup to provide application-level settings to the renderer.
+  Called once at startup to provide application-level settings to the
+  renderer.
 
-  Supported keys:
-  - `default_font` -- a font specification map (same format as font props)
-  - `default_text_size` -- a number (pixels)
-  - `antialiasing` -- boolean
-  - `vsync` -- boolean (defaults to `true`). When enabled, the renderer
-    synchronizes frame presentation with the display refresh rate. Disabling
-    it can improve rendering performance on some platforms.
-  - `scale_factor` -- number (defaults to `1.0`). Multiplier on top of OS
-    DPI scaling. Setting `2.0` on a 2x HiDPI display gives 4x physical
-    pixels per logical pixel. Per-window overrides are supported via the
-    `scale_factor` prop on window nodes.
-  - `theme` -- built-in theme atom (e.g. `:dark`, `:nord`), `:system` to
-    follow the OS light/dark preference, or a custom palette map.
+  ## Typography
+
+  - `default_font`: font specification map (same format as font props)
+  - `default_text_size`: base text size in pixels
+  - `fonts`: list of font file paths to load at startup
+
+  ## Theming
+
+  - `theme`: built-in theme atom (e.g. `:dark`, `:nord`), `:system`
+    to follow the OS light/dark preference, or a custom palette map.
     See `Plushie.Type.Theme`.
-  - `fonts` -- list of font paths to load
-  - `default_event_rate` -- integer, maximum events per second for
-    coalescable event types. Omit for unlimited (default). Affects mouse
-    moves, scroll, animation frames, slider drags, etc. Set to 60 for
-    most apps, lower for dashboards or remote rendering. Per-subscription
-    `max_rate` and per-widget `event_rate` override this default.
-  - `widget_config` -- map of namespace -> config for native widgets.
+
+  ## Rendering
+
+  - `antialiasing`: boolean
+  - `vsync`: boolean (default `true`). Synchronizes frame presentation
+    with the display refresh rate. Disabling can improve performance on
+    some platforms.
+  - `scale_factor`: number (default `1.0`). Multiplier on top of OS
+    DPI scaling. Per-window overrides via the `scale_factor` window prop.
+
+  ## Performance
+
+  - `default_event_rate`: integer, max events per second for coalescable
+    event types (mouse moves, scroll, slider drags, etc.). Omit for
+    unlimited. Set to 60 for most apps, lower for dashboards or remote
+    rendering. Per-subscription `max_rate` and per-widget `event_rate`
+    override this default.
+
+  ## Native widgets
+
+  - `widget_config`: map of namespace -> config for native widgets.
     Each key matches a widget's `namespace()` on the Rust side. The
     config is passed to `PlushieWidget::init()` via `InitCtx.config`.
     Also configurable via `config :plushie, :widget_config`.
@@ -162,7 +211,7 @@ defmodule Plushie.App do
   """
   @callback settings() :: map()
 
-  @optional_callbacks subscribe: 1, handle_renderer_exit: 2, window_config: 1, settings: 0
+  @optional_callbacks handle_renderer_exit: 2, settings: 0, subscribe: 1, window_config: 1
 
   defmacro __using__(_opts) do
     quote do
