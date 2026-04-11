@@ -55,20 +55,20 @@ defmodule Plushie.Subscription do
   ## Example
 
       def subscribe(model) do
-        subs = []
+        subs = [Plushie.Subscription.on_key_press()]
+
         if model.timer_running do
-          subs = [Plushie.Subscription.every(1000, :tick) | subs]
+          [Plushie.Subscription.every(1000, :tick) | subs]
+        else
+          subs
         end
-        subs
       end
 
       def update(model, %Plushie.Event.TimerEvent{tag: :tick}) do
-        # Timer events are Timer structs with tag and timestamp fields.
         %{model | ticks: model.ticks + 1}
       end
 
       def update(model, %Plushie.Event.KeyEvent{type: :press, key: :escape}) do
-        # Renderer subscriptions deliver typed event structs.
         %{model | menu_open: false}
       end
   """
@@ -320,8 +320,8 @@ defmodule Plushie.Subscription do
   @doc """
   Fires on pointer movement (mouse or touch).
 
-  Delivers `%WidgetEvent{type: :move, id: window_id, scope: [], ...}` to `update/2`.
-  The `data` map includes `pointer: :mouse`, `x`, `y`, and `modifiers`.
+  Delivers `%Plushie.Event.WidgetEvent{type: :move, ...}` to `update/2`.
+  The `value` map includes `pointer`, `x`, `y`, and `modifiers`.
   Also delivers `:enter` and `:exit` events for cursor enter/leave.
   """
   @spec on_pointer_move(opts :: keyword()) :: t()
@@ -339,9 +339,9 @@ defmodule Plushie.Subscription do
   @doc """
   Fires on pointer button press/release (mouse or touch).
 
-  Delivers `%WidgetEvent{type: :press, id: window_id, scope: [], ...}` or
-  `%WidgetEvent{type: :release, ...}` to `update/2`. The `value` map includes
-  `button` (`:left`, `:right`, `:middle`), `pointer`, and `modifiers`.
+  Delivers `%Plushie.Event.WidgetEvent{type: :press, ...}` or
+  `%Plushie.Event.WidgetEvent{type: :release, ...}` to `update/2`. The
+  `value` map includes `button`, `pointer`, `x`, `y`, and `modifiers`.
   """
   @spec on_pointer_button(opts :: keyword()) :: t()
   def on_pointer_button(opts \\ []) do
@@ -358,9 +358,9 @@ defmodule Plushie.Subscription do
   @doc """
   Fires on pointer scroll events.
 
-  Delivers `%WidgetEvent{type: :scroll, id: window_id, scope: [], ...}` to `update/2`.
-  The `data` map includes `delta_x`, `delta_y`, `unit` (`:line` or `:pixel`),
-  `pointer`, and `modifiers`.
+  Delivers `%Plushie.Event.WidgetEvent{type: :scroll, ...}` to `update/2`.
+  The `value` map includes `delta_x`, `delta_y`, `x`, `y`, `pointer`,
+  and `modifiers`.
   """
   @spec on_pointer_scroll(opts :: keyword()) :: t()
   def on_pointer_scroll(opts \\ []) do
@@ -393,10 +393,10 @@ defmodule Plushie.Subscription do
   @doc """
   Fires on touch events.
 
-  Delivers `%WidgetEvent{type: :press, id: window_id, scope: [], ...}`,
-  `%WidgetEvent{type: :move, ...}`, or `%WidgetEvent{type: :release, ...}`
-  to `update/2`. The `data` map includes `pointer: :touch`, `finger`, `x`, `y`.
-  Touch `:release` events from a lost finger include `lost: true` in the data.
+  Delivers `%Plushie.Event.WidgetEvent{type: :press, ...}`,
+  `%Plushie.Event.WidgetEvent{type: :move, ...}`, or
+  `%Plushie.Event.WidgetEvent{type: :release, ...}` to `update/2`.
+  The `value` map includes `pointer: :touch`, `finger`, `x`, `y`.
   """
   @spec on_pointer_touch(opts :: keyword()) :: t()
   def on_pointer_touch(opts \\ []) do
