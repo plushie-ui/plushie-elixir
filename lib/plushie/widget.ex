@@ -110,7 +110,7 @@ defmodule Plushie.Widget do
     coalescable events from this widget.
   """
 
-  alias Plushie.Widget.DSL.{Codegen, Validation}
+  alias Plushie.DSL.Widget.{Codegen, Validation}
 
   # -- Behaviour callbacks ---------------------------------------------------
 
@@ -183,7 +183,7 @@ defmodule Plushie.Widget do
       case kind do
         :native_widget ->
           quote do
-            import Plushie.Widget.DSL.Macro,
+            import Plushie.DSL.Widget.Macro,
               only: [
                 widget: 1,
                 widget: 2,
@@ -205,7 +205,7 @@ defmodule Plushie.Widget do
 
         :widget ->
           quote do
-            import Plushie.Widget.DSL.Macro,
+            import Plushie.DSL.Widget.Macro,
               only: [
                 widget: 1,
                 widget: 2,

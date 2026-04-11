@@ -3,7 +3,7 @@ defmodule Plushie.WidgetMacroTest do
   use ExUnit.Case, async: false
 
   # For testing generated docs, we use Plushie.Type.type_display_string/1
-  # and Plushie.Widget.DSL.Codegen.generate_moduledoc_sections/7 directly
+  # and Plushie.DSL.Widget.Codegen.generate_moduledoc_sections/7 directly
   # rather than extracting from beam chunks (which have encoding issues in
   # Latin1 VMs).
 
@@ -784,7 +784,7 @@ defmodule Plushie.WidgetMacroTest do
       ]
 
       doc =
-        Plushie.Widget.DSL.Codegen.generate_moduledoc_sections(
+        Plushie.DSL.Widget.Codegen.generate_moduledoc_sections(
           __MODULE__,
           props,
           [],
@@ -807,7 +807,7 @@ defmodule Plushie.WidgetMacroTest do
       event_specs = [{:click, %{carrier: :value, type: :boolean, doc: "Emitted on click."}}]
 
       doc =
-        Plushie.Widget.DSL.Codegen.generate_moduledoc_sections(
+        Plushie.DSL.Widget.Codegen.generate_moduledoc_sections(
           __MODULE__,
           [{:value, :float, []}],
           [],
@@ -825,7 +825,7 @@ defmodule Plushie.WidgetMacroTest do
 
     test "constructor section shows positional form" do
       doc =
-        Plushie.Widget.DSL.Codegen.generate_moduledoc_sections(
+        Plushie.DSL.Widget.Codegen.generate_moduledoc_sections(
           Plushie.Widget.Checkbox,
           [{:label, :string, []}],
           [:label],
@@ -847,7 +847,7 @@ defmodule Plushie.WidgetMacroTest do
       ]
 
       doc =
-        Plushie.Widget.DSL.Codegen.generate_moduledoc_sections(
+        Plushie.DSL.Widget.Codegen.generate_moduledoc_sections(
           __MODULE__,
           [],
           [],
@@ -866,7 +866,7 @@ defmodule Plushie.WidgetMacroTest do
 
     test "empty when no props, events, state, or commands" do
       doc =
-        Plushie.Widget.DSL.Codegen.generate_moduledoc_sections(
+        Plushie.DSL.Widget.Codegen.generate_moduledoc_sections(
           __MODULE__,
           [],
           [],

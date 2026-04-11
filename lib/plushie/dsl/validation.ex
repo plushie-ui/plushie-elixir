@@ -1,12 +1,14 @@
-defmodule Plushie.Widget.DSL.Validation do
+defmodule Plushie.DSL.Validation do
   @moduledoc false
 
-  # Compile-time validation for widget declarations.
+  # Shared field validation for struct-based DSL modules.
   #
-  # Called from `Plushie.Widget.__before_compile__/1` to validate
-  # accumulated module attributes before code generation.
+  # Generic validation logic (prop types, field constraints, reserved
+  # names, positional args) extracted from the widget-specific
+  # validation module. Reusable by widgets, canvas elements, and any
+  # future struct-based DSL.
 
-  # Known field options consumed by the widget macro. Anything else is
+  # Known field options consumed by DSL macros. Anything else is
   # treated as a type constraint and forwarded to constrain_guard/2.
   @known_field_opts [:doc, :default, :option, :wire_name, :required, :cast, :merge]
 
@@ -14,34 +16,6 @@ defmodule Plushie.Widget.DSL.Validation do
 
   @doc false
   def known_field_opts, do: @known_field_opts
-
-  @doc false
-  def validate_declarations!(env, kind, widget_type, _events) do
-    unless widget_type do
-      raise CompileError,
-        file: env.file,
-        line: 0,
-        description: "missing `widget :type_name` declaration in #{inspect(env.module)}"
-    end
-
-    if kind == :native_widget do
-      unless Module.get_attribute(env.module, :_rust_crate) do
-        raise CompileError,
-          file: env.file,
-          line: 0,
-          description: "missing `rust_crate \"path\"` in #{inspect(env.module)}"
-      end
-
-      unless Module.get_attribute(env.module, :_rust_constructor) do
-        raise CompileError,
-          file: env.file,
-          line: 0,
-          description: "missing `rust_constructor \"expr\"` in #{inspect(env.module)}"
-      end
-    end
-
-    # All widget kinds can declare events via the event macro.
-  end
 
   @doc false
   def validate_prop_types!(env, props) do
@@ -61,13 +35,14 @@ defmodule Plushie.Widget.DSL.Validation do
   end
 
   @doc false
-  def validate_command_types!(commands) do
-    for {cmd_name, params} <- commands, {param_name, type} <- params do
-      unless valid_type?(type) do
-        raise CompileError,
-          description:
-            "unsupported command param type #{inspect(type)} for param #{inspect(param_name)} in command #{inspect(cmd_name)}"
-      end
+  def validate_reserved_names!(env, props) do
+    for {name, _type, _opts} <- props, name in @reserved_prop_names do
+      raise CompileError,
+        file: env.file,
+        line: 0,
+        description:
+          "field name #{inspect(name)} is reserved in #{inspect(env.module)}. " <>
+            "Reserved names: #{inspect(@reserved_prop_names)}"
     end
   end
 
@@ -85,30 +60,6 @@ defmodule Plushie.Widget.DSL.Validation do
   end
 
   @doc false
-  def warn_duplicate_events(env, events) do
-    dupes = events -- Enum.uniq(events)
-
-    if dupes != [] do
-      IO.warn(
-        "duplicate event names in #{inspect(env.module)}: #{inspect(Enum.uniq(dupes))}",
-        Macro.Env.stacktrace(env)
-      )
-    end
-  end
-
-  @doc false
-  def validate_reserved_names!(env, props) do
-    for {name, _type, _opts} <- props, name in @reserved_prop_names do
-      raise CompileError,
-        file: env.file,
-        line: 0,
-        description:
-          "field name #{inspect(name)} is reserved in #{inspect(env.module)}. " <>
-            "Reserved names: #{inspect(@reserved_prop_names)}"
-    end
-  end
-
-  @doc false
   def validate_positional!(env, positional, props) do
     prop_names = Enum.map(props, fn {name, _, _} -> name end)
 
@@ -121,30 +72,6 @@ defmodule Plushie.Widget.DSL.Validation do
             "positional #{inspect(name)} is not a declared field in #{inspect(env.module)}. " <>
               "Declared fields: #{inspect(prop_names)}"
       end
-    end
-  end
-
-  @doc false
-  def validate_widget_callbacks!(env, has_view_3) do
-    has_view_2 = Module.defines?(env.module, {:view, 2})
-
-    unless has_view_2 or has_view_3 do
-      raise CompileError,
-        file: env.file,
-        line: 0,
-        description: "#{inspect(env.module)} must define view/2 or view/3."
-    end
-
-    has_handle_event = Module.defines?(env.module, {:handle_event, 2})
-    state_fields = Module.get_attribute(env.module, :_widget_state_fields) || []
-
-    if has_view_3 and not has_view_2 and state_fields == [] and not has_handle_event do
-      raise CompileError,
-        file: env.file,
-        line: 0,
-        description:
-          "#{inspect(env.module)} defines view/3 (stateful) but declares no state fields. " <>
-            "Use `state field_name: default` to declare state, or define view/2 for stateless widgets."
     end
   end
 
@@ -172,9 +99,8 @@ defmodule Plushie.Widget.DSL.Validation do
     end
   end
 
-  # -- Private helpers ---------------------------------------------------------
-
-  defp validate_field_constraints!(env, name, type, opts) do
+  @doc false
+  def validate_field_constraints!(env, name, type, opts) do
     constraint_opts = Keyword.drop(opts, @known_field_opts)
 
     case {constraint_opts, Plushie.Type.resolve(type)} do
@@ -194,7 +120,8 @@ defmodule Plushie.Widget.DSL.Validation do
     end
   end
 
-  defp validate_module_constraints!(env, name, module, constraint_opts) do
+  @doc false
+  def validate_module_constraints!(env, name, module, constraint_opts) do
     Code.ensure_compiled(module)
 
     unless function_exported?(module, :field_options, 0) do
@@ -218,7 +145,8 @@ defmodule Plushie.Widget.DSL.Validation do
     end
   end
 
-  defp constraint_error!(env, name, constraint_opts, reason) do
+  @doc false
+  def constraint_error!(env, name, constraint_opts, reason) do
     raise CompileError,
       file: env.file,
       line: 0,

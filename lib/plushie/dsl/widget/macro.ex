@@ -1,4 +1,4 @@
-defmodule Plushie.Widget.DSL.Macro do
+defmodule Plushie.DSL.Widget.Macro do
   @moduledoc false
 
   # DSL macros for widget declarations.
@@ -425,7 +425,7 @@ defmodule Plushie.Widget.DSL.Macro do
 
   @doc false
   def validate_state_field_type!(name, type, caller) do
-    unless Plushie.Widget.DSL.Validation.valid_type?(type) do
+    unless Plushie.DSL.Validation.valid_type?(type) do
       raise CompileError,
         file: caller.file,
         line: caller.line,
