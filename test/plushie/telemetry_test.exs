@@ -59,10 +59,8 @@ defmodule Plushie.TelemetryTest do
     :telemetry.attach(
       handler_id,
       event_name,
-      fn event, measurements, metadata, _ ->
-        send(test_pid, {:telemetry_event, event, measurements, metadata})
-      end,
-      nil
+      &Plushie.Test.TelemetryForwarder.handle/4,
+      %{pid: test_pid, tag: :telemetry_event, include_event: true}
     )
 
     handler_id
@@ -80,7 +78,7 @@ defmodule Plushie.TelemetryTest do
         {runtime, _bridge} = start_runtime(TelemetryApp)
         await_initial_render(runtime)
 
-        assert_receive {:telemetry_event, [:plushie, :view, :stop], measurements, _metadata}
+        assert_receive {:telemetry_event, [:plushie, :view, :stop], measurements}
         assert is_integer(measurements.duration)
         assert measurements.duration >= 0
 
@@ -102,7 +100,7 @@ defmodule Plushie.TelemetryTest do
         # Synchronise -- ensures the event has been processed.
         Plushie.Runtime.sync(runtime)
 
-        assert_receive {:telemetry_event, [:plushie, :update, :stop], measurements, _metadata}
+        assert_receive {:telemetry_event, [:plushie, :update, :stop], measurements}
         assert is_integer(measurements.duration)
         assert measurements.duration >= 0
 

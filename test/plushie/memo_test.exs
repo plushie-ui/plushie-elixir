@@ -135,19 +135,15 @@ defmodule Plushie.MemoTest do
       :telemetry.attach(
         "memo-miss-#{inspect(ref)}",
         [:plushie, :memo, :miss],
-        fn _event, _measurements, metadata, _config ->
-          send(test_pid, {:memo_miss, metadata})
-        end,
-        nil
+        &Plushie.Test.TelemetryForwarder.handle/4,
+        %{pid: test_pid, tag: :memo_miss}
       )
 
       :telemetry.attach(
         "memo-hit-#{inspect(ref)}",
         [:plushie, :memo, :hit],
-        fn _event, _measurements, metadata, _config ->
-          send(test_pid, {:memo_hit, metadata})
-        end,
-        nil
+        &Plushie.Test.TelemetryForwarder.handle/4,
+        %{pid: test_pid, tag: :memo_hit}
       )
 
       body = fn ->

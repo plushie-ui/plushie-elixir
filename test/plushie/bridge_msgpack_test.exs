@@ -131,19 +131,15 @@ defmodule Plushie.BridgeMsgpackTest do
         :telemetry.attach(
           send_id,
           [:plushie, :bridge, :send],
-          fn event, measurements, _meta, _ ->
-            send(test_pid, {:tel, event, measurements})
-          end,
-          nil
+          &Plushie.Test.TelemetryForwarder.handle/4,
+          %{pid: test_pid, tag: :tel, include_event: true}
         )
 
         :telemetry.attach(
           recv_id,
           [:plushie, :bridge, :receive],
-          fn event, measurements, _meta, _ ->
-            send(test_pid, {:tel, event, measurements})
-          end,
-          nil
+          &Plushie.Test.TelemetryForwarder.handle/4,
+          %{pid: test_pid, tag: :tel, include_event: true}
         )
 
         {:ok, bridge} =

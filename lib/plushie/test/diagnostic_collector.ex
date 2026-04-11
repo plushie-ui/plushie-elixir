@@ -13,18 +13,19 @@ defmodule Plushie.Test.DiagnosticCollector do
     Process.put(@key, [])
     handler_id = "plushie-diagnostic-#{inspect(self())}"
 
-    pid = self()
-
     :telemetry.attach(
       handler_id,
       [:plushie, :diagnostic],
-      fn _event, _measurements, metadata, _ ->
-        send(pid, {:plushie_diagnostic, metadata})
-      end,
-      nil
+      &__MODULE__.handle_event/4,
+      self()
     )
 
     :ok
+  end
+
+  @doc false
+  def handle_event(_event, _measurements, metadata, pid) do
+    send(pid, {:plushie_diagnostic, metadata})
   end
 
   @doc "Detach the telemetry handler for the current process."

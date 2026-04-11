@@ -139,19 +139,15 @@ defmodule Plushie.WidgetCacheKeyTest do
       :telemetry.attach(
         "wvc-miss-#{inspect(ref)}",
         [:plushie, :widget_cache, :miss],
-        fn _event, _measurements, metadata, _config ->
-          send(test_pid, {:wvc_miss, metadata})
-        end,
-        nil
+        &Plushie.Test.TelemetryForwarder.handle/4,
+        %{pid: test_pid, tag: :wvc_miss}
       )
 
       :telemetry.attach(
         "wvc-hit-#{inspect(ref)}",
         [:plushie, :widget_cache, :hit],
-        fn _event, _measurements, metadata, _config ->
-          send(test_pid, {:wvc_hit, metadata})
-        end,
-        nil
+        &Plushie.Test.TelemetryForwarder.handle/4,
+        %{pid: test_pid, tag: :wvc_hit}
       )
 
       # First pass: miss

@@ -2246,10 +2246,8 @@ defmodule Plushie.RuntimeTest do
       :telemetry.attach(
         "diag-test-#{inspect(ref)}",
         [:plushie, :diagnostic],
-        fn _event, _measurements, metadata, _ ->
-          send(test_pid, {:diag, metadata})
-        end,
-        nil
+        &Plushie.Test.TelemetryForwarder.handle/4,
+        %{pid: test_pid, tag: :diag}
       )
 
       {runtime, _bridge} = start_runtime(SimpleApp)
@@ -2282,10 +2280,8 @@ defmodule Plushie.RuntimeTest do
       :telemetry.attach(
         "diag-multi-#{inspect(ref)}",
         [:plushie, :diagnostic],
-        fn _event, _measurements, metadata, _ ->
-          send(test_pid, {:diag, metadata})
-        end,
-        nil
+        &Plushie.Test.TelemetryForwarder.handle/4,
+        %{pid: test_pid, tag: :diag}
       )
 
       {runtime, _bridge} = start_runtime(SimpleApp)
