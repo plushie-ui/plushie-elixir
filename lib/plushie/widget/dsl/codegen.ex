@@ -338,7 +338,7 @@ defmodule Plushie.Widget.DSL.Codegen do
 
       defstruct unquote(Macro.escape(struct_fields))
 
-      defimpl Plushie.Widget.WidgetProtocol do
+      defimpl Plushie.Tree.Node do
         @doc """
         Converts the stateful widget struct to a placeholder node.
 
@@ -973,7 +973,7 @@ defmodule Plushie.Widget.DSL.Codegen do
   end
 
   # Generates the list of quoted `put_if` expressions that populate the
-  # props map inside a WidgetProtocol.to_node/1 implementation.
+  # props map inside a Tree.Node.to_node/1 implementation.
   defp generate_prop_put_calls(props) do
     Enum.map(props, fn {name, type, opts} ->
       wire_key = Keyword.get(opts, :wire_name, name)
@@ -1044,7 +1044,7 @@ defmodule Plushie.Widget.DSL.Codegen do
     # defimpl must be defined at the top level of the module, not inside a
     # function. We generate the AST here; it's injected via __before_compile__.
     quote do
-      defimpl Plushie.Widget.WidgetProtocol do
+      defimpl Plushie.Tree.Node do
         def to_node(widget) do
           props = %{}
           unquote_splicing(put_calls)

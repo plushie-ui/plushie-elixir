@@ -127,17 +127,17 @@ defmodule Plushie.Widget do
 
   # -- Protocol delegation ---------------------------------------------------
   # Delegate common protocol functions so users don't need to reference
-  # Plushie.Widget.WidgetProtocol directly.
+  # Plushie.Tree.Node directly.
 
   @typedoc "A UI tree node map. Every widget builder returns this shape."
-  @type ui_node :: Plushie.Widget.WidgetProtocol.ui_node()
+  @type ui_node :: Plushie.Tree.Node.ui_node()
 
   @typedoc "A child element: either an already-resolved node map or a widget struct."
   @type child :: ui_node() | struct()
 
-  @doc "Converts a widget struct to a `ui_node()` map via the WidgetProtocol."
+  @doc "Converts a widget struct to a `ui_node()` map via the Tree.Node protocol."
   @spec to_node(struct()) :: ui_node()
-  defdelegate to_node(widget), to: Plushie.Widget.WidgetProtocol
+  defdelegate to_node(widget), to: Plushie.Tree.Node
 
   # -- __using__ -------------------------------------------------------------
 

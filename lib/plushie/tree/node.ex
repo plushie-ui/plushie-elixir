@@ -1,14 +1,14 @@
-defprotocol Plushie.Widget.WidgetProtocol do
+defprotocol Plushie.Tree.Node do
   @moduledoc """
-  Protocol for converting typed widget structs to `ui_node()` maps.
+  Protocol for converting typed structs to `ui_node()` maps.
 
-  Each widget module under `Plushie.Widget.*` defines a struct with
-  typed fields and builder functions mirroring iced's API. This protocol
-  converts those structs to the plain `%{id, type, props, children}` maps
-  that the runtime, tree differ, and wire encoder expect.
+  Widgets and canvas elements define typed structs with builder
+  functions. This protocol converts those structs to the plain
+  `%{id, type, props, children}` maps that the runtime, tree differ,
+  and wire encoder expect.
 
   The runtime calls this protocol automatically during tree normalization,
-  so widget structs can be returned directly from `view/1` without an
+  so structs can be returned directly from `view/1` without an
   explicit `build/1` call.
 
   ## Example
@@ -35,7 +35,7 @@ defprotocol Plushie.Widget.WidgetProtocol do
           children: [ui_node()]
         }
 
-  @doc "Converts a widget struct to a `Plushie.Widget.WidgetProtocol.ui_node()` map."
+  @doc "Converts a struct to a `Plushie.Tree.Node.ui_node()` map."
   @spec to_node(t) :: ui_node()
   def to_node(widget)
 end

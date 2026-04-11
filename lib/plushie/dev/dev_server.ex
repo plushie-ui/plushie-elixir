@@ -507,7 +507,7 @@ defmodule Plushie.Dev.DevServer do
   # -- Protocol reconsolidation -----------------------------------------------
 
   defp protocol_impl_set do
-    Protocol.extract_impls(Plushie.Widget.WidgetProtocol, :code.get_path()) |> MapSet.new()
+    Protocol.extract_impls(Plushie.Tree.Node, :code.get_path()) |> MapSet.new()
   end
 
   @impl true
@@ -524,9 +524,9 @@ defmodule Plushie.Dev.DevServer do
     # MUST use :code.get_path() to scan ALL paths including deps.
     # Protocol.consolidate only knows about types you pass it --
     # passing a subset loses widgets from hex deps.
-    impls = Protocol.extract_impls(Plushie.Widget.WidgetProtocol, :code.get_path())
-    {:ok, binary} = Protocol.consolidate(Plushie.Widget.WidgetProtocol, impls)
-    :code.load_binary(Plushie.Widget.WidgetProtocol, ~c"nofile", binary)
+    impls = Protocol.extract_impls(Plushie.Tree.Node, :code.get_path())
+    {:ok, binary} = Protocol.consolidate(Plushie.Tree.Node, impls)
+    :code.load_binary(Plushie.Tree.Node, ~c"nofile", binary)
     Plushie.WidgetRegistry.invalidate()
     Logger.info("plushie dev: widget protocol reconsolidated")
   end

@@ -184,7 +184,7 @@ end
 
 ## Widget discovery
 
-Native widgets are auto-detected via `Plushie.Widget.WidgetProtocol`
+Native widgets are auto-detected via `Plushie.Tree.Node`
 protocol consolidation at compile time. Any module that implements the
 protocol and exports `native_crate/0` is included in `mix plushie.build`
 automatically.

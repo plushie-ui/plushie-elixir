@@ -175,7 +175,7 @@ tuples (e.g. `{:my_widget, :change}`). Built-in event names (`:click`,
 - `new/2` constructor with prop validation
 - Per-prop setter functions (for pipeline style)
 - `with_options/2` for applying keyword options
-- `Plushie.Widget.WidgetProtocol` implementation
+- `Plushie.Tree.Node` implementation
 - `Plushie.Widget.Handler` behaviour (if `view/2` or `view/3` defined)
 - `__initial_state__/0` - returns the default state map
 - `__widget__?/0` - returns `true` (marker function)
@@ -300,7 +300,7 @@ widgets (no stored state) fall back to `__initial_state__/0`.
 ## Placeholder-to-rendered pipeline
 
 1. `MyWidget.new(id, opts)` returns a widget struct.
-2. `Plushie.Widget.to_node/1` (via `WidgetProtocol`) converts to a
+2. `Plushie.Widget.to_node/1` (via `Tree.Node`) converts to a
    `widget_placeholder` node tagged with the module and props.
 3. During `Plushie.Tree.normalize/1`, placeholders are detected.
 4. State is looked up from the registry or initialised from
@@ -405,7 +405,7 @@ placeholder shown). Poisoned state is cleared on the next full snapshot
 ### Build system
 
 `mix plushie.build` auto-detects native widgets via
-`Plushie.Widget.WidgetProtocol` consolidation. It generates a Cargo
+`Plushie.Tree.Node` consolidation. It generates a Cargo
 workspace with a `main.rs` that registers each native widget via its
 `rust_constructor` expression. No configuration needed. Add a native
 widget to your dependencies and it appears in the next build.
