@@ -3,66 +3,79 @@ defmodule Plushie.Type.GradientTest do
 
   alias Plushie.Type.Gradient
 
-  describe "linear/2" do
-    test "creates a linear gradient with angle and stops" do
-      grad = Gradient.linear(0.0, [{0.0, "#ff0000"}, {1.0, "#0000ff"}])
+  describe "linear/3" do
+    test "creates a linear gradient with coordinates and stops" do
+      grad = Gradient.linear({0, 0}, {100, 100}, [{0.0, "#ff0000"}, {1.0, "#0000ff"}])
 
-      assert grad.type == "linear"
-      assert grad.angle == 0.0
+      assert grad.from == {0, 0}
+      assert grad.to == {100, 100}
 
       assert grad.stops == [
-               %{offset: 0.0, color: "#ff0000"},
-               %{offset: 1.0, color: "#0000ff"}
+               {0.0, "#ff0000"},
+               {1.0, "#0000ff"}
              ]
     end
 
     test "accepts single stop" do
-      grad = Gradient.linear(1.57, [{0.5, "#00ff00"}])
+      grad = Gradient.linear({0, 0}, {1, 1}, [{0.5, "#00ff00"}])
       assert length(grad.stops) == 1
-      assert hd(grad.stops) == %{offset: 0.5, color: "#00ff00"}
+      assert hd(grad.stops) == {0.5, "#00ff00"}
     end
 
     test "accepts empty stops list" do
-      grad = Gradient.linear(0, [])
+      grad = Gradient.linear({0, 0}, {1, 0}, [])
       assert grad.stops == []
-    end
-
-    test "preserves angle in radians" do
-      grad = Gradient.linear(3.14159, [{0.0, "#000"}, {1.0, "#fff"}])
-      assert_in_delta grad.angle, 3.14159, 0.00001
     end
 
     test "converts RGBA map colors to hex strings" do
       color = %{r: 1.0, g: 0.0, b: 0.0, a: 0.5}
-      grad = Gradient.linear(0, [{0.0, color}])
-      assert hd(grad.stops).color == "#ff000080"
+      grad = Gradient.linear({0, 0}, {1, 1}, [{0.0, color}])
+      assert elem(hd(grad.stops), 1) == "#ff000080"
+    end
+  end
+
+  describe "linear_from_angle/2" do
+    test "creates gradient from angle in degrees" do
+      grad = Gradient.linear_from_angle(90, [{0.0, "#ff0000"}, {1.0, "#0000ff"}])
+
+      assert is_tuple(grad.from)
+      assert is_tuple(grad.to)
+      assert length(grad.stops) == 2
+    end
+
+    test "0 degrees points right" do
+      grad = Gradient.linear_from_angle(0, [{0.0, "#000"}, {1.0, "#fff"}])
+      {fx, _fy} = grad.from
+      {tx, _ty} = grad.to
+      assert tx > fx
     end
   end
 
   describe "encode/1" do
-    test "converts struct to plain map" do
-      grad = Gradient.linear(0.0, [{0.0, "#000"}, {1.0, "#fff"}])
+    test "produces unified wire format with start/end and array stops" do
+      grad = Gradient.linear({10, 20}, {90, 80}, [{0.0, "#000"}, {1.0, "#fff"}])
       encoded = Gradient.encode(grad)
 
       refute Map.has_key?(encoded, :__struct__)
       assert encoded.type == "linear"
-      assert encoded.angle == 0.0
-      assert length(encoded.stops) == 2
+      assert encoded.start == [10, 20]
+      assert encoded[:end] == [90, 80]
+      assert encoded.stops == [[0.0, "#000000"], [1.0, "#ffffff"]]
     end
   end
 
   describe "cast/1" do
     test "accepts Gradient struct" do
-      grad = Gradient.linear(90, [{0.0, "#ff0000"}, {1.0, "#0000ff"}])
+      grad = Gradient.linear({0, 0}, {1, 1}, [{0.0, "#ff0000"}, {1.0, "#0000ff"}])
       assert {:ok, ^grad} = Gradient.cast(grad)
     end
 
-    test "accepts valid map" do
-      assert {:ok, %Gradient{angle: 45}} =
+    test "accepts valid map with from/to" do
+      assert {:ok, %Gradient{from: {0, 0}, to: {100, 100}}} =
                Gradient.cast(%{
-                 type: "linear",
-                 angle: 45,
-                 stops: [%{offset: 0.0, color: "#ff0000"}]
+                 from: {0, 0},
+                 to: {100, 100},
+                 stops: [{0.0, "#ff0000"}]
                })
     end
 

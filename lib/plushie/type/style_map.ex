@@ -31,7 +31,7 @@ defmodule Plushie.Type.StyleMap do
 
   Gradient backgrounds work the same way:
 
-      gradient = Plushie.Type.Gradient.linear(90, [{0.0, "#ff0000"}, {1.0, "#0000ff"}])
+      gradient = Plushie.Type.Gradient.linear_from_angle(90, [{0.0, "#ff0000"}, {1.0, "#0000ff"}])
 
       style = Plushie.Type.StyleMap.new()
               |> Plushie.Type.StyleMap.background(gradient)

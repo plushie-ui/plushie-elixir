@@ -126,7 +126,7 @@ defmodule Plushie.Type.Font do
       %{family: "Fira Code"}
 
       iex> Plushie.Type.Font.encode(%{family: "Inter", weight: :bold, style: :italic})
-      %{family: "Inter", weight: "Bold", style: "Italic"}
+      %{family: "Inter", weight: "bold", style: "italic"}
   """
   @impl Plushie.Type
   @spec encode(font :: t()) :: String.t() | map()
@@ -175,10 +175,5 @@ defmodule Plushie.Type.Font do
     result
   end
 
-  defp encode_segment(atom) do
-    atom
-    |> Atom.to_string()
-    |> String.split("_")
-    |> Enum.map_join(&String.capitalize/1)
-  end
+  defp encode_segment(atom), do: Atom.to_string(atom)
 end
