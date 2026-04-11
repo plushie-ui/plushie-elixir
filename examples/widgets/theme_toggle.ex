@@ -65,7 +65,7 @@ defmodule ThemeToggle do
     eased = smoothstep(progress)
     thumb_x = lerp(@track_h / 2, @track_w - @track_h / 2, eased)
     track_color = lerp_color({253, 230, 138}, {91, 33, 182}, eased)
-    rotation = eased * :math.pi()
+    rotation = eased * 180
     face_color = if progress < 0.5, do: "#665500", else: "#4c1d95"
 
     ring_pad = 4

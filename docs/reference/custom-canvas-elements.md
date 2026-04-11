@@ -453,16 +453,14 @@ defmodule MyApp.Canvas.ProgressRing do
     import Plushie.Canvas.Shape
 
     pct = min(props.value / props.max, 1.0)
-    sweep = pct * 2 * :math.pi()
-    start = -:math.pi() / 2
 
     [
       # Track (full circle)
-      path([arc(props.cx, props.cy, props.radius, 0, 2 * :math.pi())],
+      path([arc(props.cx, props.cy, props.radius, 0, 360)],
         stroke: stroke(props.track_color, props.thickness, cap: :round)
       ),
       # Value arc
-      path([arc(props.cx, props.cy, props.radius, start, start + sweep)],
+      path([arc(props.cx, props.cy, props.radius, -90, -90 + pct * 360)],
         stroke: stroke(props.fill_color, props.thickness, cap: :round)
       ),
       # Percentage label

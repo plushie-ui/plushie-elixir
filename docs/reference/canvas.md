@@ -103,11 +103,14 @@ Functions that return path command data for use with `path/1`:
 | `line_to/2` | x, y | Straight line to point |
 | `bezier_to/6` | cp1x, cp1y, cp2x, cp2y, x, y | Cubic bezier curve |
 | `quadratic_to/4` | cpx, cpy, x, y | Quadratic bezier curve |
-| `arc/5` | cx, cy, r, start_angle, end_angle | Arc by centre |
+| `arc/5` | cx, cy, r, start_angle, end_angle | Arc by centre (angles in degrees) |
 | `arc_to/5` | x1, y1, x2, y2, radius | Tangent arc |
-| `ellipse/7` | cx, cy, rx, ry, rotation, start, end | Ellipse arc |
+| `ellipse/7` | cx, cy, rx, ry, rotation, start, end | Ellipse arc (angles in degrees) |
 | `rounded_rect/5` | x, y, w, h, radius | Rounded rectangle path |
 | `close/0` | *n/a* | Close the current subpath |
+
+Angle parameters accept bare numbers (degrees), `{value, :deg}`, or
+`{value, :rad}` tuples. Degrees are converted to radians for the wire.
 
 ```elixir
 path([
@@ -204,14 +207,14 @@ applied in declaration order.
 |---|---|---|
 | `translate/2` | x, y | Move the group |
 | `rotate/1` | angle | Rotate around origin (degrees by default) |
-| `rotate/1` | `degrees: n` or `radians: n` | Explicit unit |
+| `rotate/1` | `{n, :deg}` or `{n, :rad}` | Explicit unit |
 | `scale/1` | factor | Uniform scale |
 | `scale/2` | x, y | Non-uniform scale |
 
 ```elixir
 group x: 100, y: 50 do
   rotate(45)                    # 45 degrees
-  rotate(radians: 0.785)        # explicit radians
+  rotate({0.785, :rad})          # explicit radians
   rect(0, 0, 40, 40, fill: "#ef4444")
 end
 ```

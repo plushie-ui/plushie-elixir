@@ -275,8 +275,8 @@ group x: 100, y: 50 do
 end
 ```
 
-`rotate/1` accepts degrees by default. For explicit units, use keyword
-form: `rotate(degrees: 45)` or `rotate(radians: 0.785)`.
+`rotate/1` accepts degrees by default. For explicit units, use tuple
+form: `rotate({45, :deg})` or `rotate({0.785, :rad})`.
 
 The `x:` and `y:` shorthand desugars to a leading `translate`.
 

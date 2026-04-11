@@ -555,8 +555,8 @@ they can't use renderer-side transition descriptors. Use Tween with
 ```elixir
 canvas "gauge", width: 120, height: 70 do
   layer "needle" do
-    angle = Tween.value(model.gauge_anim) * :math.pi()
-    path([arc(60, 60, 50, :math.pi(), :math.pi() + angle)],
+    angle = Tween.value(model.gauge_anim) * 180
+    path([arc(60, 60, 50, 180, 180 + angle)],
       stroke: stroke("#3b82f6", 4, cap: :round)
     )
   end

@@ -321,16 +321,16 @@ defmodule PlushiePad.Gauge do
     import Plushie.UI
 
     pct = min(props.value / props.max, 1.0)
-    angle = pct * :math.pi()
+    angle = pct * 180
 
     canvas id, width: 120, height: 70 do
       layer "gauge" do
         # Background arc
-        path([arc(60, 60, 50, :math.pi(), 0)],
+        path([arc(60, 60, 50, 180, 0)],
           stroke: stroke("#ddd", 8, cap: :round)
         )
         # Value arc
-        path([arc(60, 60, 50, :math.pi(), :math.pi() + angle)],
+        path([arc(60, 60, 50, 180, 180 + angle)],
           stroke: stroke("#3b82f6", 8, cap: :round)
         )
         # Value text

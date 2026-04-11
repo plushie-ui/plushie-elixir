@@ -11,7 +11,10 @@ defmodule Plushie.Canvas.Image do
     field :y, :float, doc: "Y position in pixels."
     field :w, :float, doc: "Width in pixels."
     field :h, :float, doc: "Height in pixels."
-    field :rotation, :float, doc: "Rotation angle in radians."
+
+    field :rotation, Plushie.Canvas.Angle,
+      doc: "Rotation angle in degrees. Accepts `{value, :rad}` for radians."
+
     field :opacity, :float, doc: "Opacity from 0.0 to 1.0."
   end
 end

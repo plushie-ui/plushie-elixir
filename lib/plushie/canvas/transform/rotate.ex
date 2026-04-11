@@ -1,5 +1,5 @@
 defmodule Plushie.Canvas.Transform.Rotate do
-  @moduledoc "Rotation transform for canvas groups. Stored as radians internally."
+  @moduledoc "Rotation transform for canvas groups. Stores radians (converted from degrees by the builder)."
 
   @type t :: %__MODULE__{angle: number()}
 

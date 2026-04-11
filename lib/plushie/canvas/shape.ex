@@ -53,7 +53,7 @@ defmodule Plushie.Canvas.Shape do
       [
         push_transform(),
         translate(100, 100),
-        rotate(:math.pi() / 4),
+        rotate(45),
         rect(0, 0, 50, 50, fill: "#f00"),
         pop_transform()
       ]
@@ -296,15 +296,19 @@ defmodule Plushie.Canvas.Shape do
   @spec quadratic_to(cpx :: number(), cpy :: number(), x :: number(), y :: number()) :: list()
   def quadratic_to(cpx, cpy, x, y), do: ["quadratic_to", cpx, cpy, x, y]
 
-  @doc "Arc path command (center, radius, start and end angles in radians)."
+  @doc "Arc path command (center, radius, start and end angles in degrees)."
   @spec arc(
           cx :: number(),
           cy :: number(),
           r :: number(),
-          start_angle :: number(),
-          end_angle :: number()
+          start_angle :: Plushie.Canvas.Angle.t(),
+          end_angle :: Plushie.Canvas.Angle.t()
         ) :: list()
-  def arc(cx, cy, r, start_angle, end_angle), do: ["arc", cx, cy, r, start_angle, end_angle]
+  def arc(cx, cy, r, start_angle, end_angle) do
+    alias Plushie.Canvas.Angle
+
+    ["arc", cx, cy, r, Angle.to_radians(start_angle), Angle.to_radians(end_angle)]
+  end
 
   @doc "Tangent arc path command."
   @spec arc_to(
@@ -322,12 +326,24 @@ defmodule Plushie.Canvas.Shape do
           cy :: number(),
           rx :: number(),
           ry :: number(),
-          rotation :: number(),
-          start_angle :: number(),
-          end_angle :: number()
+          rotation :: Plushie.Canvas.Angle.t(),
+          start_angle :: Plushie.Canvas.Angle.t(),
+          end_angle :: Plushie.Canvas.Angle.t()
         ) :: list()
-  def ellipse(cx, cy, rx, ry, rotation, start_angle, end_angle),
-    do: ["ellipse", cx, cy, rx, ry, rotation, start_angle, end_angle]
+  def ellipse(cx, cy, rx, ry, rotation, start_angle, end_angle) do
+    alias Plushie.Canvas.Angle
+
+    [
+      "ellipse",
+      cx,
+      cy,
+      rx,
+      ry,
+      Angle.to_radians(rotation),
+      Angle.to_radians(start_angle),
+      Angle.to_radians(end_angle)
+    ]
+  end
 
   @doc "Rounded rectangle path command."
   @spec rounded_rect(
@@ -352,24 +368,15 @@ defmodule Plushie.Canvas.Shape do
   @doc """
   Create a rotation transform.
 
-  Accepts degrees by default. Use `degrees:` or `radians:` for
-  explicit units.
+  Accepts degrees by default, or explicit unit tuples:
 
       rotate(45)              # 45 degrees
-      rotate(degrees: 45)     # explicit degrees
-      rotate(radians: 0.785)  # explicit radians
+      rotate({45, :deg})      # explicit degrees
+      rotate({0.785, :rad})   # explicit radians
   """
-  @spec rotate(angle_or_opts :: number() | keyword()) :: Rotate.t()
-  def rotate(angle) when is_number(angle) do
-    %Rotate{angle: angle * :math.pi() / 180.0}
-  end
-
-  def rotate(degrees: d) when is_number(d) do
-    %Rotate{angle: d * :math.pi() / 180.0}
-  end
-
-  def rotate(radians: r) when is_number(r) do
-    %Rotate{angle: r}
+  @spec rotate(angle :: Plushie.Canvas.Angle.t()) :: Rotate.t()
+  def rotate(angle) do
+    %Rotate{angle: Plushie.Canvas.Angle.to_radians(angle)}
   end
 
   @doc "Create a uniform scale transform."
@@ -409,7 +416,7 @@ defmodule Plushie.Canvas.Shape do
 
   ## Options
 
-  - `:rotation` -- rotation angle in radians.
+  - `:rotation` -- rotation angle in degrees (or `{value, :rad}` for radians).
   - `:opacity` -- opacity multiplier (0.0-1.0).
   """
   @spec image(
@@ -422,7 +429,7 @@ defmodule Plushie.Canvas.Shape do
         ) :: Image.t()
   def image(source, x, y, w, h, opts \\ []) do
     %Image{source: source, x: x, y: y, w: w, h: h}
-    |> maybe_put(opts, :rotation, :rotation)
+    |> maybe_put_angle(opts, :rotation, :rotation)
     |> apply_opacity(opts)
   end
 
@@ -507,6 +514,13 @@ defmodule Plushie.Canvas.Shape do
     case Keyword.get(opts, key) do
       nil -> shape
       val -> %{shape | field => val}
+    end
+  end
+
+  defp maybe_put_angle(shape, opts, key, field) do
+    case Keyword.get(opts, key) do
+      nil -> shape
+      val -> %{shape | field => Plushie.Canvas.Angle.to_radians(val)}
     end
   end
 
