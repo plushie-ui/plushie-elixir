@@ -18,8 +18,8 @@ defmodule Plushie.Widget.Window do
     field :size, {:tuple, [:float, :float]},
       doc: "Initial window size as `{width, height}` tuple."
 
-    field :width, :float, doc: "Window width in pixels (alternative to `size`)."
-    field :height, :float, doc: "Window height in pixels (alternative to `size`)."
+    field :width, Plushie.Type.Length, doc: "Content width layout. Default: fill."
+    field :height, Plushie.Type.Length, doc: "Content height layout. Default: fill."
     field :position, {:tuple, [:float, :float]}, doc: "Initial window position as `{x, y}` tuple."
 
     field :min_size, {:tuple, [:float, :float]},
