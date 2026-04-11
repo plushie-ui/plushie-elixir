@@ -393,16 +393,19 @@ defmodule Plushie.Bridge do
      end)}
   end
 
+  @impl GenServer
   def handle_cast({:send_snapshot, tree}, state) do
     {:noreply,
      encode_and_send(state, :snapshot, fn fmt -> Plushie.Protocol.encode_snapshot(tree, fmt) end)}
   end
 
+  @impl GenServer
   def handle_cast({:send_patch, ops}, state) do
     {:noreply,
      encode_and_send(state, :patch, fn fmt -> Plushie.Protocol.encode_patch(ops, fmt) end)}
   end
 
+  @impl GenServer
   def handle_cast({:send_effect, id, kind, payload}, state) do
     {:noreply,
      encode_and_send(state, :effect, fn fmt ->
@@ -410,6 +413,7 @@ defmodule Plushie.Bridge do
      end)}
   end
 
+  @impl GenServer
   def handle_cast({:send_widget_op, op, payload}, state) do
     {:noreply,
      encode_and_send(state, :widget_op, fn fmt ->
@@ -417,6 +421,7 @@ defmodule Plushie.Bridge do
      end)}
   end
 
+  @impl GenServer
   def handle_cast({:send_subscribe, kind, tag, max_rate, window_id}, state) do
     {:noreply,
      encode_and_send(state, :subscribe, fn fmt ->
@@ -424,6 +429,7 @@ defmodule Plushie.Bridge do
      end)}
   end
 
+  @impl GenServer
   def handle_cast({:send_unsubscribe, kind, tag}, state) do
     {:noreply,
      encode_and_send(state, :unsubscribe, fn fmt ->
@@ -431,6 +437,7 @@ defmodule Plushie.Bridge do
      end)}
   end
 
+  @impl GenServer
   def handle_cast({:send_window_op, op, window_id, settings}, state) do
     {:noreply,
      encode_and_send(state, :window_op, fn fmt ->
@@ -438,6 +445,7 @@ defmodule Plushie.Bridge do
      end)}
   end
 
+  @impl GenServer
   def handle_cast({:send_system_op, op, settings}, state) do
     {:noreply,
      encode_and_send(state, :system_op, fn fmt ->
@@ -445,6 +453,7 @@ defmodule Plushie.Bridge do
      end)}
   end
 
+  @impl GenServer
   def handle_cast({:send_system_query, op, settings}, state) do
     {:noreply,
      encode_and_send(state, :system_query, fn fmt ->
@@ -452,6 +461,7 @@ defmodule Plushie.Bridge do
      end)}
   end
 
+  @impl GenServer
   def handle_cast({:send_image_op, op, payload}, state) do
     {:noreply,
      encode_and_send(state, :image_op, fn fmt ->
@@ -459,6 +469,7 @@ defmodule Plushie.Bridge do
      end)}
   end
 
+  @impl GenServer
   def handle_cast({:send_widget_command, node_id, op, payload}, state) do
     {:noreply,
      encode_and_send(state, :widget_command, fn fmt ->
@@ -466,6 +477,7 @@ defmodule Plushie.Bridge do
      end)}
   end
 
+  @impl GenServer
   def handle_cast({:send_widget_commands, commands}, state) do
     {:noreply,
      encode_and_send(state, :widget_commands, fn fmt ->
@@ -473,6 +485,7 @@ defmodule Plushie.Bridge do
      end)}
   end
 
+  @impl GenServer
   def handle_cast({:send_interact, id, action, selector, payload}, state) do
     {:noreply,
      encode_and_send(state, :interact, fn fmt ->
@@ -480,6 +493,7 @@ defmodule Plushie.Bridge do
      end)}
   end
 
+  @impl GenServer
   def handle_cast({:send_advance_frame, timestamp}, state) do
     {:noreply,
      encode_and_send(state, :advance_frame, fn fmt ->
@@ -487,6 +501,7 @@ defmodule Plushie.Bridge do
      end)}
   end
 
+  @impl GenServer
   def handle_cast({:send_register_effect_stub, kind, response}, state) do
     {:noreply,
      encode_and_send(state, :register_effect_stub, fn fmt ->
@@ -494,6 +509,7 @@ defmodule Plushie.Bridge do
      end)}
   end
 
+  @impl GenServer
   def handle_cast({:send_unregister_effect_stub, kind}, state) do
     {:noreply,
      encode_and_send(state, :unregister_effect_stub, fn fmt ->
@@ -501,6 +517,7 @@ defmodule Plushie.Bridge do
      end)}
   end
 
+  @impl GenServer
   def handle_cast(:resync_complete, state) do
     {:noreply, flush_queued_messages(%{state | awaiting_resync: false, restart_count: 0})}
   end
@@ -508,6 +525,7 @@ defmodule Plushie.Bridge do
   # Intentional restart (e.g. after Rust rebuild in dev mode).
   # No backoff, no restart counting -- the renderer is being replaced
   # with a freshly built binary, not recovering from a crash.
+  @impl GenServer
   def handle_cast(:dev_restart, state) do
     if state.transport_mod.restartable?(state.transport_state) do
       state = cancel_heartbeat_timer(state)
@@ -546,6 +564,7 @@ defmodule Plushie.Bridge do
     {:noreply, %{state | pending_screenshot: from}}
   end
 
+  @impl GenServer
   def handle_call({:screenshot, _name, _opts}, _from, state) do
     {:reply, {:error, :screenshot_in_progress}, state}
   end
@@ -573,15 +592,18 @@ defmodule Plushie.Bridge do
     end
   end
 
+  @impl GenServer
   def handle_info({:stop_protocol_mismatch, got, expected}, state) do
     {:stop, {:protocol_mismatch, got, expected}, state}
   end
 
+  @impl GenServer
   def handle_info(:heartbeat_timeout, %{awaiting_resync: true} = state) do
     # Renderer is already restarting; ignore stale timer.
     {:noreply, state}
   end
 
+  @impl GenServer
   def handle_info(:heartbeat_timeout, state) do
     Logger.warning(
       "plushie bridge: renderer unresponsive " <>
@@ -593,6 +615,7 @@ defmodule Plushie.Bridge do
   end
 
   # Delegate all other messages to the transport module.
+  @impl GenServer
   def handle_info(msg, state) do
     case state.transport_mod.handle_info(msg, state.transport_state) do
       {:data, data, transport_state} ->
@@ -615,6 +638,7 @@ defmodule Plushie.Bridge do
     state.transport_mod.close(state.transport_state)
   end
 
+  @impl GenServer
   def terminate(_reason, state), do: state.transport_mod.close(state.transport_state)
 
   # ---------------------------------------------------------------------------
