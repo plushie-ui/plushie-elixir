@@ -10,7 +10,7 @@ defmodule Plushie.Canvas.Circle do
     field :y, :float
     field :r, :float
     field :fill, :any
-    field :stroke, :any
+    field :stroke, Plushie.Canvas.Stroke
     field :opacity, :float
     field :fill_rule, :string
   end

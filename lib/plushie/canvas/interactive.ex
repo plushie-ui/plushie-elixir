@@ -27,13 +27,13 @@ defmodule Plushie.Canvas.Interactive do
     field :on_hover, :boolean
     field :draggable, :boolean
     field :drag_axis, :string
-    field :drag_bounds, :any
+    field :drag_bounds, Plushie.Canvas.DragBounds
     field :cursor, :string
-    field :hit_rect, :any
+    field :hit_rect, Plushie.Canvas.HitRect
     field :tooltip, :string
-    field :hover_style, :any
-    field :pressed_style, :any
-    field :focus_style, :any
+    field :hover_style, Plushie.Canvas.ShapeStyle
+    field :pressed_style, Plushie.Canvas.ShapeStyle
+    field :focus_style, Plushie.Canvas.ShapeStyle
     field :show_focus_ring, :boolean
     field :focus_ring_radius, :float
     field :a11y, :any

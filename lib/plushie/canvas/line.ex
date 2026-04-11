@@ -10,7 +10,7 @@ defmodule Plushie.Canvas.Line do
     field :y1, :float
     field :x2, :float
     field :y2, :float
-    field :stroke, :any
+    field :stroke, Plushie.Canvas.Stroke
     field :opacity, :float
   end
 end

@@ -6,7 +6,7 @@ defmodule Plushie.Canvas.Path do
   element :path do
     field :commands, {:list, :any}
     field :fill, :any
-    field :stroke, :any
+    field :stroke, Plushie.Canvas.Stroke
     field :opacity, :float
     field :fill_rule, :string
   end

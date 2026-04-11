@@ -11,6 +11,8 @@ defmodule Plushie.Canvas.Stroke do
           dash: Dash.t() | nil
         }
 
+  use Plushie.Type
+
   @enforce_keys [:color, :width]
   defstruct [:color, :width, :cap, :join, :dash]
 
@@ -47,7 +49,44 @@ defmodule Plushie.Canvas.Stroke do
     }
   end
 
-  @doc false
+  # -- Plushie.Type callbacks --------------------------------------------------
+
+  @impl Plushie.Type
+  def cast(%__MODULE__{} = stroke), do: {:ok, stroke}
+
+  def cast(opts) when is_list(opts) do
+    {:ok, from_opts(opts)}
+  rescue
+    ArgumentError -> :error
+  end
+
+  def cast(%{} = map) do
+    {:ok, from_opts(Enum.to_list(map))}
+  rescue
+    ArgumentError -> :error
+  end
+
+  def cast(_), do: :error
+
+  @impl Plushie.Type
+  def typespec do
+    quote do: %Plushie.Canvas.Stroke{}
+  end
+
+  @impl Plushie.Type
+  def castable do
+    quote do: %Plushie.Canvas.Stroke{} | keyword() | map()
+  end
+
+  @impl Plushie.Type
+  def guard(var) do
+    quote do
+      is_struct(unquote(var), Plushie.Canvas.Stroke) or is_list(unquote(var)) or
+        is_map(unquote(var))
+    end
+  end
+
+  @impl Plushie.Type
   def encode(%__MODULE__{} = stroke) do
     %{color: Plushie.Type.encode_value(stroke.color), width: stroke.width}
     |> put_if(:cap, stroke.cap)

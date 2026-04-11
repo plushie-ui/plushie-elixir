@@ -11,7 +11,7 @@ defmodule Plushie.Canvas.Rect do
     field :w, :float
     field :h, :float
     field :fill, :any
-    field :stroke, :any
+    field :stroke, Plushie.Canvas.Stroke
     field :opacity, :float
     field :fill_rule, :string
     field :radius, :any
