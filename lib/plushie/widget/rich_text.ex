@@ -32,7 +32,10 @@ defmodule Plushie.Widget.RichText do
     field :size, :float, doc: "Default font size for all spans."
     field :font, Plushie.Type.Font, doc: "Default font for all spans."
     field :color, Plushie.Type.Color, doc: "Default text color for all spans."
-    field :line_height, :any, doc: "Line height. Number is relative; map for explicit control."
+
+    field :line_height, Plushie.Type.LineHeight,
+      doc: "Line height. Number is relative; map for explicit control."
+
     field :wrapping, Plushie.Type.Wrapping, doc: "Text wrapping mode."
     field :ellipsis, :string, doc: "Text ellipsis mode: \"none\", \"start\", \"middle\", \"end\"."
     field :event_rate, :integer, doc: "Max events per second for coalescable events."

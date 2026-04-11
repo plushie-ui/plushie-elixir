@@ -15,7 +15,7 @@ defmodule Plushie.Widget.Toggler do
     field :size, :float, doc: "Toggler size in pixels."
     field :text_size, :float, doc: "Label text size in pixels."
     field :font, Plushie.Type.Font, doc: "Label font."
-    field :line_height, :any, doc: "Label line height."
+    field :line_height, Plushie.Type.LineHeight, doc: "Label line height."
     field :shaping, Plushie.Type.Shaping, doc: "Text shaping strategy."
     field :wrapping, Plushie.Type.Wrapping, doc: "Text wrapping mode."
     field :text_alignment, Plushie.Type.Alignment, doc: "Horizontal label alignment."

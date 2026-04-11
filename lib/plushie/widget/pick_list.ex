@@ -15,7 +15,7 @@ defmodule Plushie.Widget.PickList do
     field :padding, Plushie.Type.Padding, doc: "Internal padding."
     field :text_size, :float, doc: "Text size in pixels."
     field :font, Plushie.Type.Font, doc: "Font specification."
-    field :line_height, :any, doc: "Text line height."
+    field :line_height, Plushie.Type.LineHeight, doc: "Text line height."
     field :menu_height, :float, doc: "Maximum dropdown menu height in pixels."
     field :shaping, Plushie.Type.Shaping, doc: "Text shaping strategy."
     field :handle, :map, doc: "Dropdown handle indicator customization."

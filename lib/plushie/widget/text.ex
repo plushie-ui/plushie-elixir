@@ -15,7 +15,7 @@ defmodule Plushie.Widget.Text do
     field :width, Plushie.Type.Length, doc: "Text widget width."
     field :height, Plushie.Type.Length, doc: "Text widget height."
 
-    field :line_height, :any,
+    field :line_height, Plushie.Type.LineHeight,
       doc:
         "Line height. Number is a relative multiplier; map with `%{relative: n}` or `%{absolute: n}` for explicit control."
 

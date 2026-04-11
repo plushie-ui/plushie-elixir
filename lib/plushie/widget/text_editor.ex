@@ -19,7 +19,10 @@ defmodule Plushie.Widget.TextEditor do
     field :max_height, :float, doc: "Maximum height in pixels."
     field :font, Plushie.Type.Font, doc: "Font specification."
     field :size, :float, doc: "Font size in pixels."
-    field :line_height, :any, doc: "Line height. Number is relative; map for explicit control."
+
+    field :line_height, Plushie.Type.LineHeight,
+      doc: "Line height. Number is relative; map for explicit control."
+
     field :padding, :float, doc: "Uniform padding in pixels."
     field :wrapping, Plushie.Type.Wrapping, doc: "Text wrapping mode."
     field :input_purpose, :string, doc: "Input purpose: \"normal\", \"secure\", \"terminal\"."

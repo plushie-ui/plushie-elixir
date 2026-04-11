@@ -18,7 +18,7 @@ defmodule Plushie.Widget.TextInput do
     field :size, :float, doc: "Font size in pixels."
     field :font, Plushie.Type.Font, doc: "Font specification."
 
-    field :line_height, :any,
+    field :line_height, Plushie.Type.LineHeight,
       doc: "Line height. Number is a relative multiplier; map for explicit control."
 
     field :align_x, Plushie.Type.Alignment,

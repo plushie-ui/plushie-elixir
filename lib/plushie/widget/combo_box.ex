@@ -41,7 +41,7 @@ defmodule Plushie.Widget.ComboBox do
     field :padding, Plushie.Type.Padding, doc: "Internal padding."
     field :size, :float, doc: "Text size in pixels."
     field :font, Plushie.Type.Font, doc: "Font specification."
-    field :line_height, :any, doc: "Text line height."
+    field :line_height, Plushie.Type.LineHeight, doc: "Text line height."
     field :menu_height, :float, doc: "Maximum dropdown menu height in pixels."
     field :icon, :map, doc: "Icon inside the text input."
     field :on_option_hovered, :boolean, doc: "Emit hover events over dropdown options."
