@@ -231,7 +231,7 @@ See `Plushie.Canvas.Clip`.
 
 ## Interactive elements
 
-`Plushie.Canvas.Shape.Interactive` makes any collection of shapes
+`Plushie.Canvas.Interactive` makes any collection of shapes
 clickable, hoverable, draggable, or keyboard-focusable. It requires an
 explicit string id as the first argument. On the wire it encodes as a
 `"group"` (the split is SDK-side only).

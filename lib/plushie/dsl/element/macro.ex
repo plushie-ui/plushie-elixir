@@ -45,6 +45,7 @@ defmodule Plushie.DSL.Element.Macro do
     validate_element_type_name!(type_name, __CALLER__)
     {block, opts} = Keyword.pop(opts, :do, nil)
     container = Keyword.get(opts, :container, false)
+    wire_type = Keyword.get(opts, :wire_type)
 
     quote do
       if @_element_type_name do
@@ -55,6 +56,7 @@ defmodule Plushie.DSL.Element.Macro do
 
       @_element_type_name unquote(type_name)
       @_element_container unquote(container)
+      @_element_wire_type unquote(wire_type)
       unquote(block)
     end
   end

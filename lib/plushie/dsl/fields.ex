@@ -22,7 +22,9 @@ defmodule Plushie.DSL.Fields do
   # -- Struct and type generation ----------------------------------------------
 
   @doc false
-  def generate_struct_and_types(props, container) do
+  def generate_struct_and_types(props, container, opts \\ []) do
+    enforce_id = Keyword.get(opts, :enforce_id, true)
+
     prop_fields =
       Enum.map(props, fn {name, _type, opts} -> {name, Keyword.get(opts, :default)} end)
 
@@ -34,8 +36,13 @@ defmodule Plushie.DSL.Fields do
 
     prop_type_fields = Enum.map(props, &prop_type_ast/1)
 
+    id_type =
+      if enforce_id,
+        do: quote(do: String.t()),
+        else: quote(do: String.t() | nil)
+
     type_fields =
-      [{:id, quote(do: String.t())} | prop_type_fields] ++
+      [{:id, id_type} | prop_type_fields] ++
         if(container,
           do: [{:children, quote(do: [Plushie.Widget.ui_node()])}],
           else: []
@@ -50,8 +57,10 @@ defmodule Plushie.DSL.Fields do
         quote(do: {unquote(name), unquote(type_ast)})
       end)
 
+    enforce_keys = if enforce_id, do: [:id], else: []
+
     quote do
-      @enforce_keys [:id]
+      @enforce_keys unquote(enforce_keys)
       defstruct unquote(escaped_struct_fields)
 
       @type t :: %__MODULE__{unquote_splicing(type_fields)}

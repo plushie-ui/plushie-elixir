@@ -3,19 +3,19 @@ defmodule Plushie.Canvas.ShapeTest do
 
   alias Plushie.Canvas.Shape
 
-  alias Plushie.Canvas.{Gradient, Stroke}
-
-  alias Plushie.Canvas.Transform.{Rotate, Scale, Translate}
-
-  alias Plushie.Canvas.Shape.{
-    CanvasImage,
-    CanvasSvg,
-    CanvasText,
+  alias Plushie.Canvas.{
     Circle,
+    Gradient,
+    Image,
     Line,
     Path,
-    Rect
+    Rect,
+    Stroke,
+    Svg,
+    Text
   }
+
+  alias Plushie.Canvas.Transform.{Rotate, Scale, Translate}
 
   # -- Basic shapes -----------------------------------------------------------
 
@@ -71,7 +71,7 @@ defmodule Plushie.Canvas.ShapeTest do
   describe "text/4" do
     test "produces a text descriptor with content" do
       result = Shape.text(10, 10, "Hello")
-      assert %CanvasText{x: 10, y: 10, content: "Hello"} = result
+      assert %Text{x: 10, y: 10, content: "Hello"} = result
     end
 
     test "with size and font options" do
@@ -269,7 +269,7 @@ defmodule Plushie.Canvas.ShapeTest do
     test "produces an image descriptor with source, position, and size" do
       result = Shape.image("assets/logo.png", 10, 20, 100, 50)
 
-      assert %CanvasImage{
+      assert %Image{
                source: "assets/logo.png",
                x: 10,
                y: 20,
@@ -283,7 +283,7 @@ defmodule Plushie.Canvas.ShapeTest do
     test "produces an SVG descriptor with source, position, and size" do
       result = Shape.svg("icons/arrow.svg", 0, 0, 24, 24)
 
-      assert %CanvasSvg{
+      assert %Svg{
                source: "icons/arrow.svg",
                x: 0,
                y: 0,

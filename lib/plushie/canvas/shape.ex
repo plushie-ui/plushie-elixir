@@ -2,10 +2,11 @@ defmodule Plushie.Canvas.Shape do
   @moduledoc """
   Pure builder functions returning typed canvas shape structs.
 
-  Every function returns a struct from `Plushie.Canvas.Shape.*`.
-  Each struct module has an `encode/1` function for wire-format
-  conversion. These are plain functions, not macros --
-  they can be called anywhere.
+  Every function returns a struct from `Plushie.Canvas.*` (element
+  modules like `Plushie.Canvas.Rect`, `Plushie.Canvas.Circle`, etc.).
+  Each element module has an `encode/1` function for wire-format
+  conversion. These are plain functions, not macros; they can be
+  called anywhere.
 
   Structure macros (`group`, `layer`) live in `Plushie.UI` and are
   available inside canvas do-blocks. Inside
@@ -104,21 +105,22 @@ defmodule Plushie.Canvas.Shape do
       end
   """
 
-  alias Plushie.Canvas.{Clip, Gradient, Stroke}
-
-  alias Plushie.Canvas.Transform.{Rotate, Scale, Translate}
-
-  alias Plushie.Canvas.Shape.{
-    CanvasImage,
-    CanvasSvg,
-    CanvasText,
+  alias Plushie.Canvas.{
     Circle,
+    Clip,
+    Gradient,
     Group,
+    Image,
     Interactive,
     Line,
     Path,
-    Rect
+    Rect,
+    Stroke,
+    Svg,
+    Text
   }
+
+  alias Plushie.Canvas.Transform.{Rotate, Scale, Translate}
 
   # -- Basic shapes -----------------------------------------------------------
 
@@ -158,9 +160,9 @@ defmodule Plushie.Canvas.Shape do
 
   @doc "Builds a text shape."
   @spec text(x :: number(), y :: number(), content :: String.t(), opts :: keyword()) ::
-          CanvasText.t()
+          Text.t()
   def text(x, y, content, opts \\ []) do
-    %CanvasText{x: x, y: y, content: content}
+    %Text{x: x, y: y, content: content}
     |> apply_fill(opts)
     |> maybe_put(opts, :size, :size)
     |> maybe_put(opts, :font, :font)
@@ -206,17 +208,7 @@ defmodule Plushie.Canvas.Shape do
     }
 
     # Apply remaining keyword opts as group fields.
-    Enum.reduce(opts, shape, fn {key, val}, acc ->
-      if Map.has_key?(acc, key) do
-        Map.put(acc, key, val)
-      else
-        valid = Map.keys(%Group{children: []}) -- [:__struct__]
-
-        raise ArgumentError,
-              "unknown group option #{inspect(key)}. " <>
-                "Valid options: #{inspect(valid)}"
-      end
-    end)
+    apply_opts(shape, opts, Group.__prop_names__())
   end
 
   # -- Interactive shape -------------------------------------------------------
@@ -256,17 +248,9 @@ defmodule Plushie.Canvas.Shape do
       clip: clip
     }
 
-    Enum.reduce(opts, shape, fn {key, val}, acc ->
-      if Map.has_key?(acc, key) do
-        Map.put(acc, key, val)
-      else
-        valid = Map.keys(%Interactive{children: [], id: ""}) -- [:__struct__, :id]
-
-        raise ArgumentError,
-              "unknown interactive option #{inspect(key)}. " <>
-                "Valid options: #{inspect(valid)}"
-      end
-    end)
+    shape
+    |> apply_opts(opts, Interactive.__prop_names__())
+    |> apply_default_a11y()
   end
 
   # -- Path shape -------------------------------------------------------------
@@ -435,9 +419,9 @@ defmodule Plushie.Canvas.Shape do
           w :: number(),
           h :: number(),
           opts :: keyword()
-        ) :: CanvasImage.t()
+        ) :: Image.t()
   def image(source, x, y, w, h, opts \\ []) do
-    %CanvasImage{source: source, x: x, y: y, w: w, h: h}
+    %Image{source: source, x: x, y: y, w: w, h: h}
     |> maybe_put(opts, :rotation, :rotation)
     |> apply_opacity(opts)
   end
@@ -449,9 +433,9 @@ defmodule Plushie.Canvas.Shape do
           y :: number(),
           w :: number(),
           h :: number()
-        ) :: CanvasSvg.t()
+        ) :: Svg.t()
   def svg(source, x, y, w, h),
-    do: %CanvasSvg{source: source, x: x, y: y, w: w, h: h}
+    do: %Svg{source: source, x: x, y: y, w: w, h: h}
 
   # -- Stroke helper ----------------------------------------------------------
 
@@ -493,7 +477,7 @@ defmodule Plushie.Canvas.Shape do
               "SVG shapes do not support fill, stroke, or opacity."
     end
 
-    %CanvasSvg{source: source, x: x, y: y, w: w, h: h}
+    %Svg{source: source, x: x, y: y, w: w, h: h}
   end
 
   # -- Private helpers --------------------------------------------------------
@@ -539,4 +523,26 @@ defmodule Plushie.Canvas.Shape do
       opacity -> %{shape | opacity: opacity}
     end
   end
+
+  defp apply_opts(shape, opts, valid_names) do
+    Enum.reduce(opts, shape, fn {key, val}, acc ->
+      if key in valid_names do
+        Map.put(acc, key, val)
+      else
+        raise ArgumentError,
+              "unknown option #{inspect(key)}. " <>
+                "Valid options: #{inspect(valid_names)}"
+      end
+    end)
+  end
+
+  # Injects default a11y annotations for interactive elements.
+  defp apply_default_a11y(%{a11y: a11y} = el) when not is_nil(a11y), do: el
+
+  defp apply_default_a11y(%{focusable: true} = el),
+    do: %{el | a11y: %{role: "group", label: el.tooltip}}
+
+  defp apply_default_a11y(%{on_click: true} = el), do: %{el | a11y: %{role: "button"}}
+  defp apply_default_a11y(%{draggable: true} = el), do: %{el | a11y: %{role: "slider"}}
+  defp apply_default_a11y(el), do: el
 end

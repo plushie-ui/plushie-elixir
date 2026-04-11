@@ -1377,19 +1377,19 @@ defmodule Plushie.UITest do
   describe "canvas shape macros" do
     test "rect with do-block" do
       result = PlushieUICanvasShapeHelper.rect_block_form()
-      assert %Plushie.Canvas.Shape.Rect{fill: "#ff0000", opacity: 0.5} = result
+      assert %Plushie.Canvas.Rect{fill: "#ff0000", opacity: 0.5} = result
     end
 
     test "circle with keyword opts" do
       result = PlushieUICanvasShapeHelper.circle_keyword()
-      assert %Plushie.Canvas.Shape.Circle{fill: "#00ff00"} = result
+      assert %Plushie.Canvas.Circle{fill: "#00ff00"} = result
     end
   end
 
   describe "group macro" do
     test "group with do-block produces Group struct" do
       result = PlushieUICanvasShapeHelper.group_standalone()
-      assert %Plushie.Canvas.Shape.Group{} = result
+      assert %Plushie.Canvas.Group{} = result
       assert length(result.children) == 2
     end
 
@@ -1398,7 +1398,7 @@ defmodule Plushie.UITest do
       assert node.type == "canvas"
       shapes = node.props[:layers]["main"]
       [el] = shapes
-      assert %Plushie.Canvas.Shape.Interactive{} = el
+      assert %Plushie.Canvas.Interactive{} = el
       assert el.id == "btn"
       assert el.on_click == true
     end
@@ -1408,14 +1408,14 @@ defmodule Plushie.UITest do
     test "layer produces {name, shapes} tuple" do
       {name, shapes} = PlushieUICanvasShapeHelper.layer_standalone()
       assert name == "grid"
-      assert [%Plushie.Canvas.Shape.Rect{}] = shapes
+      assert [%Plushie.Canvas.Rect{}] = shapes
     end
   end
 
   describe "interactive element" do
     test "keyword form with id" do
       result = PlushieUICanvasShapeHelper.interactive_keyword_directive()
-      assert %Plushie.Canvas.Shape.Interactive{} = result
+      assert %Plushie.Canvas.Interactive{} = result
       assert result.id == "btn"
       assert result.on_click == true
     end
@@ -1426,7 +1426,7 @@ defmodule Plushie.UITest do
       node = PlushieUICanvasShapeHelper.canvas_with_text_rewrite()
       assert node.type == "canvas"
       shapes = node.props[:layers]["labels"]
-      assert [%Plushie.Canvas.Shape.CanvasText{x: 10, y: 20, content: "Hello"}] = shapes
+      assert [%Plushie.Canvas.Text{x: 10, y: 20, content: "Hello"}] = shapes
     end
   end
 
@@ -1435,7 +1435,7 @@ defmodule Plushie.UITest do
       node = PlushieUICanvasShapeHelper.canvas_with_for()
       shapes = node.props[:layers]["bars"]
       assert length(shapes) == 3
-      assert Enum.all?(shapes, &match?(%Plushie.Canvas.Shape.Rect{}, &1))
+      assert Enum.all?(shapes, &match?(%Plushie.Canvas.Rect{}, &1))
     end
 
     test "if inside canvas layer" do
@@ -1593,7 +1593,7 @@ defmodule Plushie.UITest do
 
     test "interactive element with nested opts" do
       result = PlushieUIContainerPropsHelper.interactive_with_nested_blocks()
-      assert %Plushie.Canvas.Shape.Interactive{} = result
+      assert %Plushie.Canvas.Interactive{} = result
       assert result.id == "btn"
       assert result.on_click == true
       assert result.hover_style == %{fill: "#ddd", opacity: 0.8}
@@ -1675,7 +1675,7 @@ defmodule Plushie.UITest do
       node = PlushieUIEdgeCaseHelper.multi_expr_if_children()
       shapes = node.props.layers["main"]
       assert length(shapes) == 2
-      assert Enum.all?(shapes, &match?(%Plushie.Canvas.Shape.Rect{}, &1))
+      assert Enum.all?(shapes, &match?(%Plushie.Canvas.Rect{}, &1))
     end
 
     test "for with multiple shapes per iteration" do

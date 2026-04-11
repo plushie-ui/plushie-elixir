@@ -13,12 +13,13 @@ defmodule Plushie.DSL.Element.Codegen do
   # -- Main entry point --------------------------------------------------------
 
   @doc false
-  def generate_element(module, element_type, container, props, positional) do
-    type_string = Atom.to_string(element_type)
+  def generate_element(module, element_type, container, props, positional, opts \\ []) do
+    wire_type = Keyword.get(opts, :wire_type)
+    type_string = if wire_type, do: Atom.to_string(wire_type), else: Atom.to_string(element_type)
 
     option_props = Enum.filter(props, fn {_n, _t, opts} -> Keyword.get(opts, :option, true) end)
 
-    struct_def = Fields.generate_struct_and_types(props, container)
+    struct_def = Fields.generate_struct_and_types(props, container, enforce_id: false)
     new_fn = Fields.generate_struct_new(container, positional, props)
     with_options_fn = Fields.generate_with_options(option_props)
     setters = Fields.generate_setters(props, positional)
@@ -28,7 +29,7 @@ defmodule Plushie.DSL.Element.Codegen do
     prop_names_fn = Fields.generate_prop_names(props)
 
     protocol_impl = generate_element_protocol(module, type_string, container, props)
-    encode_fn = generate_encode(type_string, props)
+    encode_fn = generate_encode(type_string, container, props)
     type_name_fn = generate_type_name(type_string)
 
     quote do
@@ -99,13 +100,36 @@ defmodule Plushie.DSL.Element.Codegen do
   # -- encode/1 compatibility -------------------------------------------------
 
   @doc false
-  def generate_encode(type_string, props) do
+  def generate_encode(type_string, container, props) do
     put_calls = generate_encode_prop_calls(props)
+
+    children_call =
+      if container do
+        quote do
+          var!(result) =
+            Map.put(
+              var!(result),
+              :children,
+              Enum.map(element.children, &Plushie.Type.encode_value/1)
+            )
+        end
+      end
+
+    id_call =
+      quote do
+        var!(result) =
+          case element.id do
+            nil -> var!(result)
+            id -> Map.put(var!(result), :id, id)
+          end
+      end
 
     quote do
       @doc false
       def encode(%__MODULE__{} = element) do
         var!(result) = %{type: unquote(type_string)}
+        unquote(children_call)
+        unquote(id_call)
         unquote_splicing(put_calls)
         var!(result)
       end

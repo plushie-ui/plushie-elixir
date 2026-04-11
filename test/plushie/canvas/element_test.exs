@@ -235,8 +235,15 @@ defmodule Plushie.CanvasElementTest do
       assert encoded.type == "test_rect"
       assert encoded.x == 10.0
       assert encoded.fill == "red"
-      refute Map.has_key?(encoded, :id)
+      assert encoded.id == "r1"
       refute Map.has_key?(encoded, :children)
+    end
+
+    test "omits id when nil" do
+      rect = %TestRect{x: 10.0, y: 20.0, w: 100.0, h: 50.0}
+      encoded = TestRect.encode(rect)
+
+      refute Map.has_key?(encoded, :id)
     end
 
     test "omits nil values" do

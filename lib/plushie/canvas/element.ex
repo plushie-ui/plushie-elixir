@@ -55,6 +55,7 @@ defmodule Plushie.Canvas.Element do
       Module.put_attribute(__MODULE__, :_element_type_name, nil)
       Module.put_attribute(__MODULE__, :_element_container, false)
       Module.put_attribute(__MODULE__, :_element_positional, nil)
+      Module.put_attribute(__MODULE__, :_element_wire_type, nil)
 
       import Plushie.DSL.Element.Macro,
         only: [element: 1, element: 2, element: 3, positional: 1, field: 2, field: 3]
@@ -66,6 +67,7 @@ defmodule Plushie.Canvas.Element do
   defmacro __before_compile__(env) do
     element_type = Module.get_attribute(env.module, :_element_type_name)
     container = Module.get_attribute(env.module, :_element_container)
+    wire_type = Module.get_attribute(env.module, :_element_wire_type)
     props = Module.get_attribute(env.module, :_element_props) |> Enum.reverse()
     positional = Module.get_attribute(env.module, :_element_positional) || []
 
@@ -75,7 +77,9 @@ defmodule Plushie.Canvas.Element do
     Validation.warn_duplicate_props(env, props)
     Validation.validate_positional!(env, positional, props)
 
-    Codegen.generate_element(env.module, element_type, container, props, positional)
+    Codegen.generate_element(env.module, element_type, container, props, positional,
+      wire_type: wire_type
+    )
   end
 
   defp validate_declarations!(env, element_type) do
