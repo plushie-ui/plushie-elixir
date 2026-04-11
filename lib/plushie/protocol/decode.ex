@@ -1,7 +1,12 @@
 defmodule Plushie.Protocol.Decode do
-  @moduledoc false
+  @moduledoc """
+  Wire protocol decoding.
 
-  # Protocol decoding: deserialize wire bytes, then dispatch into event structs.
+  Deserializes binary payloads (MessagePack or JSON) into string-keyed
+  maps, then dispatches them into typed Elixir event structs. Handles
+  scoped ID splitting, binary field normalization, and the full set of
+  renderer protocol message types.
+  """
 
   alias Plushie.Protocol.{Error, Keys, Parsers}
 
