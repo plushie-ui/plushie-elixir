@@ -69,7 +69,10 @@ wire type string and the struct module identity.
 
 The macro generates:
 
-- **`new/2`**: `ColorSwatch.new(id, opts)` returns a struct
+- **`new/1`**: `ColorSwatch.new(opts)` returns a struct with no ID
+  (auto-assigned by the parent container)
+- **`new/2`**: `ColorSwatch.new(id, opts)` returns a struct with
+  explicit ID
 - **Setters**: `ColorSwatch.color(swatch, "#ff0000")` for pipeline
   composition
 - **`with_options/2`**: apply keyword options
@@ -80,13 +83,25 @@ The macro generates:
 
 ### Using it in a canvas
 
+Inside a canvas block, use the auto-ID form (the container assigns
+IDs automatically):
+
 ```elixir
 canvas "palette", width: 200, height: 50 do
   layer "swatches" do
-    ColorSwatch.new("red", x: 0, y: 0, w: 40, h: 40, color: "#ef4444")
-    ColorSwatch.new("blue", x: 50, y: 0, w: 40, h: 40, color: "#3b82f6")
-    ColorSwatch.new("green", x: 100, y: 0, w: 40, h: 40, color: "#22c55e")
+    ColorSwatch.new(x: 0, y: 0, w: 40, h: 40, color: "#ef4444")
+    ColorSwatch.new(x: 50, y: 0, w: 40, h: 40, color: "#3b82f6")
+    ColorSwatch.new(x: 100, y: 0, w: 40, h: 40, color: "#22c55e")
   end
+end
+```
+
+Use explicit IDs when you need stable identity for event matching
+or dynamic lists:
+
+```elixir
+for {color, i} <- Enum.with_index(colors) do
+  ColorSwatch.new("swatch-#{i}", x: i * 50, y: 0, w: 40, h: 40, color: color)
 end
 ```
 
@@ -140,8 +155,8 @@ Three ways to use the same element.
 ```elixir
 canvas "palette", width: 200, height: 50 do
   layer "swatches" do
-    ColorSwatch.new("red", x: 0, y: 0, w: 40, h: 40, color: "#ef4444")
-    ColorSwatch.new("blue", x: 50, y: 0, w: 40, h: 40, color: "#3b82f6")
+    ColorSwatch.new(x: 0, y: 0, w: 40, h: 40, color: "#ef4444")
+    ColorSwatch.new(x: 50, y: 0, w: 40, h: 40, color: "#3b82f6")
   end
 end
 ```
@@ -251,9 +266,9 @@ Usage:
 ```elixir
 canvas "status", width: 200, height: 60 do
   layer "dots" do
-    LabeledDot.new("cpu", x: 40, y: 20, label: "CPU", color: "#22c55e")
-    LabeledDot.new("mem", x: 100, y: 20, label: "Memory", color: "#eab308")
-    LabeledDot.new("disk", x: 160, y: 20, label: "Disk", color: "#ef4444")
+    LabeledDot.new(x: 40, y: 20, label: "CPU", color: "#22c55e")
+    LabeledDot.new(x: 100, y: 20, label: "Memory", color: "#eab308")
+    LabeledDot.new(x: 160, y: 20, label: "Disk", color: "#ef4444")
   end
 end
 ```

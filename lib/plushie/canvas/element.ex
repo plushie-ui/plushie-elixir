@@ -25,7 +25,9 @@ defmodule Plushie.Canvas.Element do
 
   The macro generates:
 
-  - `new/2` constructor (or `new/N` with positional args)
+  - `new/1` auto-ID constructor (`new(opts)`) for use inside
+    canvas blocks where the container assigns IDs automatically
+  - `new/2` constructor with explicit ID (`new(id, opts)`)
   - Setter functions per field for pipeline composition
   - `with_options/2` for applying keyword options via setters
   - `build/1` for explicit `ui_node()` conversion
