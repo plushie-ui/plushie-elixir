@@ -18,7 +18,7 @@ defmodule Plushie.Test.CanvasElementClickTest do
 
     def init(_opts), do: %{clicked: nil}
 
-    def update(model, %WidgetEvent{type: :click, id: "save-btn", scope: ["toolbar" | _]} = _event) do
+    def update(model, %WidgetEvent{type: :click, id: "save-btn", scope: ["buttons", "toolbar" | _]} = _event) do
       %{model | clicked: :save}
     end
 
@@ -47,7 +47,7 @@ defmodule Plushie.Test.CanvasElementClickTest do
 
   describe "canvas element click via scoped ID" do
     test "dispatches click event with scoped ID", %{pid: pid} do
-      Runtime.click(pid, "#toolbar/save-btn")
+      Runtime.click(pid, "#toolbar/buttons/save-btn")
       assert Runtime.model(pid).clicked == :save
     end
   end
