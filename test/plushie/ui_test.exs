@@ -591,7 +591,7 @@ defmodule Plushie.UITest do
     test "collects children from do block" do
       node = PlushieUITestHelper.simple_column()
       assert node.type == "column"
-      assert length(node.children) == 2
+      assert [_, _] = node.children
       [first, second] = node.children
       assert first.props[:content] == "hello"
       assert second.props[:content] == "world"
@@ -629,7 +629,7 @@ defmodule Plushie.UITest do
         end
 
       assert node.type == "row"
-      assert length(node.children) == 2
+      assert [_, _] = node.children
       ids = Enum.map(node.children, & &1.id)
       assert ids == ["yes", "no"]
     end
@@ -777,7 +777,7 @@ defmodule Plushie.UITest do
         end
 
       assert node.type == "stack"
-      assert length(node.children) == 2
+      assert [_, _] = node.children
     end
   end
 
@@ -843,7 +843,7 @@ defmodule Plushie.UITest do
 
     test "non-nil children are included (show? = true)" do
       node = PlushieUITestHelper.column_with_if(true)
-      assert length(node.children) == 2
+      assert [_, _] = node.children
       contents = Enum.map(node.children, & &1.props[:content])
       assert "always" in contents
       assert "sometimes" in contents
@@ -1181,7 +1181,7 @@ defmodule Plushie.UITest do
 
       assert node.props[:columns] == cols
       assert node.props[:rows] == nil
-      assert length(node.children) == 2
+      assert [_, _] = node.children
       assert hd(node.children).type == "table_row"
     end
   end
@@ -1213,7 +1213,7 @@ defmodule Plushie.UITest do
 
       assert node.props[:columns] == cols
       assert node.props[:rows] == nil
-      assert length(node.children) > 0
+      assert node.children != []
       assert node.props[:header_text_size] == 14
     end
   end
@@ -1242,7 +1242,7 @@ defmodule Plushie.UITest do
       node = table("t", columns: [], rows: rows)
       assert node.props[:columns] == []
       assert node.props[:rows] == nil
-      assert length(node.children) > 0
+      assert node.children != []
     end
   end
 
@@ -1259,7 +1259,7 @@ defmodule Plushie.UITest do
       node = PlushieUICanvasTestHelper.canvas_do_block()
       assert node.id == "chart"
       assert node.type == "canvas"
-      assert length(node.children) == 2
+      assert [_, _] = node.children
 
       layer_names = Enum.map(node.children, fn c -> c.props[:name] end)
       assert "grid" in layer_names
@@ -1523,7 +1523,7 @@ defmodule Plushie.UITest do
       assert node.props.spacing == 8
       assert node.props.padding == 16
       assert node.props.width == :fill
-      assert length(node.children) == 2
+      assert [_, _] = node.children
     end
 
     test "mixed keyword and inline opts" do
@@ -1651,7 +1651,7 @@ defmodule Plushie.UITest do
       node = PlushieUIEdgeCaseHelper.interleaved_props()
       assert node.props.spacing == 8
       assert node.props.padding == 16
-      assert length(node.children) == 2
+      assert [_, _] = node.children
       assert hd(node.children).props.content == "First"
     end
   end

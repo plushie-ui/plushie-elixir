@@ -99,6 +99,49 @@ defmodule Plushie.Widget.Table.Validation do
 
   defp error(id, message), do: "table #{inspect(id)}: #{message}"
 
+  # -- Rows expansion ----------------------------------------------------------
+
+  @doc false
+  def expand_rows(tbl) do
+    columns = tbl.columns || []
+    col_keys = Enum.map(columns, fn col -> to_string(col[:key] || col["key"]) end)
+
+    row_children =
+      Enum.map(tbl.rows, fn row ->
+        row_id = to_string(row[:id] || row["id"] || "")
+
+        cells =
+          Enum.map(col_keys, fn key ->
+            value = to_string(row[String.to_atom(key)] || row[key] || "")
+
+            text_node = %{
+              id: "#{row_id}/#{key}/text",
+              type: "text",
+              props: %{content: value},
+              children: []
+            }
+
+            Plushie.UI.__build_container__(
+              Plushie.Table.Cell,
+              key,
+              [column: key],
+              [text_node],
+              nil
+            )
+          end)
+
+        Plushie.UI.__build_container__(
+          Plushie.Table.Row,
+          row_id,
+          [],
+          cells,
+          nil
+        )
+      end)
+
+    %{tbl | rows: nil, children: Enum.reverse(row_children)}
+  end
+
   # -- @before_compile hook ----------------------------------------------------
 
   # Generates thin overrides for columns/2, rows/2, and build/1
@@ -129,50 +172,7 @@ defmodule Plushie.Widget.Table.Validation do
                   "do-block children (table_row). Use one or the other."
         end
 
-        # Expand rows: prop to table_row/table_cell children
-        tbl =
-          if has_rows_prop do
-            columns = tbl.columns || []
-            col_keys = Enum.map(columns, fn col -> to_string(col[:key] || col["key"]) end)
-
-            row_children =
-              Enum.map(tbl.rows, fn row ->
-                row_id = to_string(row[:id] || row["id"] || "")
-
-                cells =
-                  Enum.map(col_keys, fn key ->
-                    value = to_string(row[String.to_atom(key)] || row[key] || "")
-
-                    text_node = %{
-                      id: "#{row_id}/#{key}/text",
-                      type: "text",
-                      props: %{content: value},
-                      children: []
-                    }
-
-                    Plushie.UI.__build_container__(
-                      Plushie.Table.Cell,
-                      key,
-                      [column: key],
-                      [text_node],
-                      nil
-                    )
-                  end)
-
-                Plushie.UI.__build_container__(
-                  Plushie.Table.Row,
-                  row_id,
-                  [],
-                  cells,
-                  nil
-                )
-              end)
-
-            %{tbl | rows: nil, children: Enum.reverse(row_children)}
-          else
-            tbl
-          end
-
+        tbl = if has_rows_prop, do: Plushie.Widget.Table.Validation.expand_rows(tbl), else: tbl
         super(tbl)
       end
     end
