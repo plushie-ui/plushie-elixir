@@ -106,46 +106,46 @@ defmodule Plushie.Protocol.Decode do
   # Scoped ID splitting
   # ---------------------------------------------------------------------------
 
+  # Parse a wire ID into {local_id, scope_list, window_id}.
+  # Handles the canonical "window#scope/path/id" format.
+  # Falls back to separate "window_id" field for compatibility.
   defp split_scoped_id(id) when is_binary(id) do
-    case String.split(id, "/") do
-      [local] ->
-        {local, []}
+    # Split window from path on #
+    {window, path} =
+      case String.split(id, "#", parts: 2) do
+        [win, rest] when win != "" -> {win, rest}
+        _ -> {nil, id}
+      end
 
-      parts ->
-        {scope_fwd, [local]} = Enum.split(parts, -1)
-        {local, Enum.reverse(scope_fwd)}
-    end
+    # Split path into scope chain
+    {local, scope} =
+      case String.split(path, "/") do
+        [single] -> {single, []}
+
+        parts ->
+          {scope_fwd, [local]} = Enum.split(parts, -1)
+          {local, Enum.reverse(scope_fwd)}
+      end
+
+    {local, scope, window}
   end
 
   defp append_window_scope(scope, nil), do: scope
   defp append_window_scope(scope, window_id) when is_binary(window_id), do: scope ++ [window_id]
 
   defp event_identity!(%{"family" => family, "id" => id} = msg) when is_binary(id) do
-    {local, scope} = split_scoped_id(id)
-    window_id = event_window_id!(msg, family)
-    {local, scope ++ [window_id], window_id, family}
+    {local, scope, window_from_id} = split_scoped_id(id)
+
+    # Prefer window from # in ID; fall back to separate field
+    window_id = window_from_id || msg["window_id"]
+
+    scope = if window_id, do: scope ++ [window_id], else: scope
+    {local, scope, window_id, family}
   end
 
   defp event_identity!(%{"family" => family, "id" => id} = msg) do
     raise Plushie.Protocol.Error,
       reason: {:invalid_event_field, family, "id", id, :expected_binary, msg},
-      format: :msgpack,
-      data: <<>>
-  end
-
-  defp event_window_id!(%{"window_id" => window_id}, _family) when is_binary(window_id),
-    do: window_id
-
-  defp event_window_id!(%{"window_id" => window_id} = msg, family) do
-    raise Plushie.Protocol.Error,
-      reason: {:invalid_event_field, family, "window_id", window_id, :expected_binary, msg},
-      format: :msgpack,
-      data: <<>>
-  end
-
-  defp event_window_id!(msg, family) do
-    raise Plushie.Protocol.Error,
-      reason: {:invalid_event_field, family, "window_id", nil, :required, msg},
       format: :msgpack,
       data: <<>>
   end
@@ -482,7 +482,7 @@ defmodule Plushie.Protocol.Decode do
   # Each IME lifecycle step is now its own family (no more kind discriminator in data).
 
   defp dispatch(%{"type" => "event", "family" => "ime_opened", "id" => id} = msg) do
-    {local_id, scope} = split_scoped_id(id)
+    {local_id, scope, _window} = split_scoped_id(id)
     window_id = msg["window_id"]
 
     %ImeEvent{
@@ -495,7 +495,7 @@ defmodule Plushie.Protocol.Decode do
   end
 
   defp dispatch(%{"type" => "event", "family" => "ime_preedit", "id" => id, "data" => data} = msg) do
-    {local_id, scope} = split_scoped_id(id)
+    {local_id, scope, _window} = split_scoped_id(id)
     cursor = parse_ime_cursor(data["cursor"])
     window_id = msg["window_id"]
 
@@ -511,7 +511,7 @@ defmodule Plushie.Protocol.Decode do
   end
 
   defp dispatch(%{"type" => "event", "family" => "ime_commit", "id" => id, "data" => data} = msg) do
-    {local_id, scope} = split_scoped_id(id)
+    {local_id, scope, _window} = split_scoped_id(id)
     window_id = msg["window_id"]
 
     %ImeEvent{
@@ -525,7 +525,7 @@ defmodule Plushie.Protocol.Decode do
   end
 
   defp dispatch(%{"type" => "event", "family" => "ime_closed", "id" => id} = msg) do
-    {local_id, scope} = split_scoped_id(id)
+    {local_id, scope, _window} = split_scoped_id(id)
     window_id = msg["window_id"]
 
     %ImeEvent{
