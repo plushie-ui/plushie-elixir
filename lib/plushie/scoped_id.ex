@@ -81,8 +81,12 @@ defmodule Plushie.ScopedId do
 
     {id, scope} =
       case String.split(path, "/") do
-        [] -> {"", []}
-        [single] -> {single, []}
+        [] ->
+          {"", []}
+
+        [single] ->
+          {single, []}
+
         parts ->
           {fwd, [local]} = Enum.split(parts, -1)
           {local, Enum.reverse(fwd)}

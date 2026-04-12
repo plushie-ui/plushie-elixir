@@ -188,6 +188,7 @@ defmodule Plushie.Automation.Selector do
       matches =
         Plushie.Tree.find_all(window_node, fn node ->
           node_id = node[:id]
+
           node_id == id or
             (is_binary(node_id) and
                (String.ends_with?(node_id, "/" <> id) or

@@ -120,7 +120,8 @@ defmodule Plushie.Protocol.Decode do
     # Split path into scope chain
     {local, scope} =
       case String.split(path, "/") do
-        [single] -> {single, []}
+        [single] ->
+          {single, []}
 
         parts ->
           {scope_fwd, [local]} = Enum.split(parts, -1)
@@ -494,7 +495,9 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "ime_preedit", "id" => id, "value" => data} = msg) do
+  defp dispatch(
+         %{"type" => "event", "family" => "ime_preedit", "id" => id, "value" => data} = msg
+       ) do
     {local_id, scope, _window} = split_scoped_id(id)
     cursor = parse_ime_cursor(data["cursor"])
     window_id = msg["window_id"]
@@ -1231,7 +1234,7 @@ defmodule Plushie.Protocol.Decode do
 
   defp dispatch(%{"type" => "event", "family" => "status", "id" => _id} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    value = msg["value"] || msg["value"]
+    value = msg["value"]
     %WidgetEvent{type: :status, id: local, scope: scope, window_id: window_id, value: value}
   end
 
@@ -1387,6 +1390,7 @@ defmodule Plushie.Protocol.Decode do
       {local, scope, window_id, _family} = event_identity!(msg)
 
       wire_value = msg["value"]
+
       resolved_value =
         if is_map(wire_value), do: safe_atomize_keys(wire_value), else: wire_value
 
