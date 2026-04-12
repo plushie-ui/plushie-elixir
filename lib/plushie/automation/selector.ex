@@ -43,13 +43,63 @@ defmodule Plushie.Automation.Selector do
   def parse(selector), do: {nil, selector}
 
   @doc """
+  Parse a unified selector string into its typed form.
+
+  Supports all selector types in a single string syntax:
+
+  - `"form/email"` or `"#form/email"` - ID path selector
+  - `"main#form/email"` - window-qualified ID selector
+  - `":focused"` - state pseudo-selector
+  - `"main#:focused"` - window-qualified state selector
+  - `"[text=Save]"` - attribute selector
+  - `"[role=button]"` - attribute selector
+  - `"main#[text=Save]"` - window-qualified attribute selector
+
+  Returns `{window_id, resolved_selector}` where resolved_selector
+  is one of: `"#id"` (string), `:focused` (atom), `{:text, "Save"}`
+  (tuple), etc.
+  """
+  @spec parse_selector(String.t()) :: {String.t() | nil, Session.selector()}
+  def parse_selector(selector) when is_binary(selector) do
+    # Split window qualifier on #
+    {window_id, target} =
+      case String.split(selector, "#", parts: 2) do
+        [window_id, rest] when window_id != "" -> {window_id, rest}
+        _ -> {nil, selector}
+      end
+
+    # Strip leading # from ID selectors (both "#save" and "save" are IDs)
+    target = if String.starts_with?(target, "#"), do: String.trim_leading(target, "#"), else: target
+
+    # Determine selector type from target's first character
+    resolved =
+      cond do
+        String.starts_with?(target, ":") ->
+          target |> String.trim_leading(":") |> String.to_existing_atom()
+
+        String.starts_with?(target, "[") and String.ends_with?(target, "]") ->
+          inner = target |> String.trim_leading("[") |> String.trim_trailing("]")
+
+          case String.split(inner, "=", parts: 2) do
+            [attr, value] -> {String.to_existing_atom(attr), value}
+            _ -> "#" <> target
+          end
+
+        true ->
+          "#" <> target
+      end
+
+    {window_id, resolved}
+  end
+
+  @doc """
   Finds the first element matching an automation selector.
   """
   @spec find(map() | nil, Session.selector()) :: Element.t() | nil
   def find(nil, _selector), do: nil
 
   def find(tree, selector) when is_binary(selector) do
-    {window_id, resolved} = parse(selector)
+    {window_id, resolved} = parse_selector(selector)
 
     case resolved do
       "#" <> id ->
@@ -60,8 +110,10 @@ defmodule Plushie.Automation.Selector do
           node -> Element.from_node(node)
         end
 
-      _ ->
-        do_find_non_id(tree, resolved)
+      other ->
+        # Delegate state/attribute selectors to the tuple/atom handlers
+        search_tree = if window_id, do: find_window_subtree(tree, window_id), else: tree
+        find(search_tree, other)
     end
   end
 
@@ -142,17 +194,18 @@ defmodule Plushie.Automation.Selector do
   def encode(nil, _tree, _window_id), do: %{}
 
   def encode(selector, tree, window_id) when is_binary(selector) do
-    {parsed_window, resolved_selector} = parse(selector)
+    {parsed_window, resolved_selector} = parse_selector(selector)
     effective_window = window_id || parsed_window
 
     case resolved_selector do
       "#" <> id ->
         encode_id(id, tree, effective_window)
 
-      _bare ->
-        raise ArgumentError,
-              "bare strings are not valid selectors. " <>
-                "Use \"##{selector}\" for ID selectors or {:text, #{inspect(selector)}} for text content matching."
+      atom when is_atom(atom) ->
+        encode(atom, tree, effective_window)
+
+      {attr, value} when is_atom(attr) and is_binary(value) ->
+        encode({attr, value}, tree, effective_window)
     end
   end
 
@@ -261,12 +314,6 @@ defmodule Plushie.Automation.Selector do
   end
 
   def find_window_subtree(_, _window_id), do: nil
-
-  defp do_find_non_id(_tree, text) when is_binary(text) do
-    raise ArgumentError,
-          "bare strings are not valid selectors. " <>
-            "Use \"##{text}\" for ID selectors or {:text, #{inspect(text)}} for text content matching."
-  end
 
   defp maybe_wrap(nil), do: nil
   defp maybe_wrap(node), do: Element.from_node(node)
