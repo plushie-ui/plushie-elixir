@@ -11,7 +11,7 @@ file B" because the container's ID becomes part of the path.
 |---|---|---|
 | Named container (explicit ID) | Yes | ID pushed onto scope chain |
 | Auto-ID container (`auto:` prefix) | No | Transparent, no scope effect |
-| Window node (`type: "window"`) | Yes | Appended to end of scope list |
+| Window node (`type: "window"`) | Yes | Uses `#` separator instead of `/` |
 | Custom widget | No | Widget IDs are transparent to scoping |
 
 User-provided IDs must not contain `/` or `#`. The slash is reserved
@@ -21,20 +21,24 @@ for the scope separator and `#` is reserved for window-qualified paths
 
 ## ID resolution
 
-During normalisation, each named container pushes its ID onto the
-scope chain. Descendant IDs are prefixed with the full scope path,
-joined by `/`:
+During normalisation, the scope chain builds canonical wire IDs.
+Window nodes use `#` as the separator; containers within a window
+use `/`:
 
 ```
-sidebar (container)       ->  "sidebar"
-  form (container)        ->  "sidebar/form"
-    email (text_input)    ->  "sidebar/form/email"
-    save (button)         ->  "sidebar/form/save"
+main (window)               ->  "main"
+  sidebar (container)       ->  "main#sidebar"
+    form (container)        ->  "main#sidebar/form"
+      email (text_input)    ->  "main#sidebar/form/email"
+      save (button)         ->  "main#sidebar/form/save"
 ```
+
+The `#` only appears once (at the window boundary). Deeper nesting
+uses `/`. The canonical format is `window#scope/path/id`.
 
 Resolution is recursive; nesting depth is unlimited. Internally, the
-scope is tracked as a forward-order string (e.g. `"sidebar/form"`) and
-prepended to each child's ID during the normalisation pass.
+scope is tracked as a forward-order string (e.g. `"main#sidebar/form"`)
+and prepended to each child's ID during the normalisation pass.
 
 ### Auto-ID containers are transparent
 
@@ -128,10 +132,10 @@ and no duplicates among siblings.
 
 ## Event scope field
 
-When the renderer emits a widget event, the wire ID is the full
-scoped path (e.g. `"sidebar/form/save"`). The SDK splits it into
-`id` (local) and `scope` (reversed ancestor chain, nearest parent
-first, window ID last):
+When the renderer emits a widget event, the wire ID is the
+canonical `window#scope/path/id` (e.g. `"main#sidebar/form/save"`).
+The SDK splits it into `id` (local), `scope` (reversed ancestor
+chain, nearest parent first, window ID last), and `window_id`:
 
 ```elixir
 %WidgetEvent{type: :click, id: "save", scope: ["form", "sidebar", "main"], window_id: "main"}
@@ -142,8 +146,7 @@ with `[parent | _]` without knowing the full ancestry. The window ID
 is always the last element in the scope list, giving you the full
 hierarchy from innermost container to outermost window.
 
-The `window_id` field remains on the event struct for direct access.
-You can use either approach:
+The `window_id` field provides direct access to the window context:
 
 ```elixir
 # Via scope (window is last element)
@@ -191,20 +194,22 @@ Plushie.Event.target(%WidgetEvent{id: "save", scope: ["form", "sidebar", "main"]
 
 ## Canvas element scoping
 
-Canvas elements participate in the same mechanism. The canvas widget's
-ID creates a scope, and interactive element IDs within it are scoped
-under it:
+Canvas elements participate in the same scoping mechanism. The canvas
+widget's ID creates a scope, layers create sub-scopes, and interactive
+element IDs are scoped under them:
 
 ```
-canvas "drawing"                      ->  "drawing"
-  interactive "handle", ... do ... end  ->  "drawing/handle"
+main (window)                              ->  "main"
+  canvas "drawing"                         ->  "main#drawing"
+    layer "shapes"                         ->  "main#drawing/shapes"
+      interactive "handle", ... do ... end ->  "main#drawing/shapes/handle"
 ```
 
-Canvas element clicks are regular `:click` events with the canvas ID in
-scope (and window ID at the end):
+Canvas element events are regular widget events. The element's scoped
+wire ID is used directly:
 
 ```elixir
-%WidgetEvent{type: :click, id: "handle", scope: ["drawing", "main"], window_id: "main"}
+%WidgetEvent{type: :click, id: "handle", scope: ["shapes", "drawing", "main"], window_id: "main"}
 ```
 
 ## Command paths
