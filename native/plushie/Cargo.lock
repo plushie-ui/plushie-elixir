@@ -3202,6 +3202,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "plushie-core"
+version = "0.6.1"
+dependencies = [
+ "base64",
+ "log",
+ "plushie-core-macros",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "plushie-core-macros"
+version = "0.6.1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "plushie-iced"
 version = "0.8.3"
 dependencies = [
@@ -3428,6 +3448,7 @@ dependencies = [
  "getrandom 0.3.4",
  "log",
  "notify-rust",
+ "plushie-core",
  "plushie-iced",
  "plushie-iced-test",
  "plushie-renderer-lib",
@@ -3445,6 +3466,7 @@ version = "0.6.1"
 dependencies = [
  "base64",
  "log",
+ "plushie-core",
  "plushie-iced",
  "plushie-widget-sdk",
  "serde",
@@ -3461,6 +3483,8 @@ version = "0.6.1"
 dependencies = [
  "base64",
  "log",
+ "plushie-core",
+ "plushie-core-macros",
  "plushie-iced",
  "qrcode",
  "rmp-serde",
