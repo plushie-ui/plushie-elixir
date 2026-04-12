@@ -201,8 +201,8 @@ defmodule Plushie.Widget.TableTest do
 
   describe "separator/2" do
     test "sets the separator field" do
-      tbl = Table.new("tbl1") |> Table.separator(false)
-      assert tbl.separator == false
+      tbl = Table.new("tbl1") |> Table.separator(2.0)
+      assert tbl.separator == 2.0
     end
   end
 
@@ -279,11 +279,11 @@ defmodule Plushie.Widget.TableTest do
       node =
         Table.new("tbl1")
         |> Table.header(false)
-        |> Table.separator(false)
+        |> Table.striped(false)
         |> Table.build()
 
       assert node.props[:header] == false
-      assert node.props[:separator] == false
+      assert node.props[:striped] == false
     end
   end
 
@@ -294,26 +294,30 @@ defmodule Plushie.Widget.TableTest do
           columns: @string_columns,
           rows: @string_rows,
           header: true,
-          separator: false,
+          separator: 1.0,
           width: :fill,
           padding: 8,
           sort_by: "name",
-          sort_order: :asc
+          sort_order: :asc,
+          striped: true,
+          selected: ["u1"]
         )
 
       assert tbl.columns == @string_columns
       assert tbl.rows == @string_rows
       assert tbl.header == true
-      assert tbl.separator == false
+      assert tbl.separator == 1.0
       assert tbl.width == :fill
       assert tbl.padding == 8
       assert tbl.sort_by == "name"
       assert tbl.sort_order == :asc
+      assert tbl.striped == true
+      assert tbl.selected == ["u1"]
     end
 
     test "raises on unknown option" do
-      assert_raise ArgumentError, ~r/unknown option.*:striped/, fn ->
-        Table.new("tbl1", striped: true)
+      assert_raise ArgumentError, ~r/unknown option.*:bogus/, fn ->
+        Table.new("tbl1", bogus: true)
       end
     end
   end

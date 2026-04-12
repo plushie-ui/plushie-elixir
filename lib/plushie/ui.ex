@@ -2107,63 +2107,233 @@ defmodule Plushie.UI do
   # -- table(id, opts) --------------------------------------------------------
 
   @doc """
-  Data table widget.
+  Data table widget with children-based rows.
 
-  ## Options
+  The ID is optional. Pass it as the first argument when you need
+  to match events (sort, row_click) or target the table with commands.
 
-  - `:columns` -- list of column descriptors (`%{key, label, width}`)
-  - `:rows` -- list of row data maps
+  ## Rich composition
 
-  ## Examples
+      table "users", columns: cols do
+        for user <- users do
+          table_row user.id do
+            cell "name", text(user.name)
+            cell "email", text(user.email)
+          end
+        end
+      end
+
+  ## Data shorthand
 
       table("users", columns: cols, rows: data)
 
-      table "users", columns: cols, rows: data do
-        header_text_size 14
-        row_text_size 12
-      end
+  ## Without explicit ID
+
+      table columns: cols, rows: data
   """
-  defmacro table(id, opts_or_do \\ []) do
-    case opts_or_do do
+  defmacro table(id_or_opts \\ []) do
+    auto_id = compile_auto_id(__CALLER__.module, __CALLER__.line)
+
+    case id_or_opts do
+      id when is_binary(id) ->
+        # table("users") -- explicit ID, no opts
+        quote do
+          Plushie.UI.__build_container__(
+            Plushie.Widget.Table,
+            unquote(id),
+            [],
+            [],
+            nil
+          )
+        end
+
       [do: block] ->
+        # table do ... end -- auto-ID with block
         option_keys = Plushie.Widget.Table.__field_keys__()
         option_types = Plushie.Widget.Table.__field_types__()
-        pairs = interpret_block(block, option_types)
-        validate_option_keys!(pairs, option_keys, "table", __CALLER__)
-        opts_ast = pairs_to_keyword_ast(pairs)
+        block = container_scope(block, option_keys, option_types, "table")
+        exprs = block_to_exprs(block)
 
         quote do
-          Plushie.Widget.Build.build_node(unquote(opts_ast), fn widget_opts ->
-            Plushie.Widget.Table.new(unquote(id), widget_opts)
-            |> Plushie.Widget.Table.build()
-          end)
+          items =
+            unquote(build_list_accumulator(exprs))
+            |> :lists.reverse()
+            |> List.flatten()
+            |> Enum.reject(&is_nil/1)
+
+          Plushie.UI.__build_container__(
+            Plushie.Widget.Table,
+            nil,
+            [],
+            items,
+            unquote(auto_id)
+          )
         end
 
       opts ->
+        # table(columns: cols, rows: data) -- auto-ID with opts
         quote do
-          Plushie.Widget.Build.build_node(unquote(opts), fn widget_opts ->
-            Plushie.Widget.Table.new(unquote(id), widget_opts)
-            |> Plushie.Widget.Table.build()
-          end)
+          Plushie.UI.__build_container__(
+            Plushie.Widget.Table,
+            nil,
+            unquote(opts),
+            [],
+            unquote(auto_id)
+          )
+        end
+    end
+  end
+
+  @doc false
+  defmacro table(id, opts_or_do) when is_binary(id) do
+    id_container_2arity_body(Plushie.Widget.Table, "table", id, opts_or_do)
+  end
+
+  defmacro table(id_or_opts, do_block) do
+    auto_id = compile_auto_id(__CALLER__.module, __CALLER__.line)
+
+    case {id_or_opts, do_block} do
+      {id, [do: block]} when is_binary(id) ->
+        # table "users" do ... end -- explicit ID with block
+        option_keys = Plushie.Widget.Table.__field_keys__()
+        option_types = Plushie.Widget.Table.__field_types__()
+        block = container_scope(block, option_keys, option_types, "table")
+        exprs = block_to_exprs(block)
+
+        quote do
+          items =
+            unquote(build_list_accumulator(exprs))
+            |> :lists.reverse()
+            |> List.flatten()
+            |> Enum.reject(&is_nil/1)
+
+          Plushie.UI.__build_container__(Plushie.Widget.Table, unquote(id), [], items, nil)
+        end
+
+      {opts, [do: block]} ->
+        # table columns: cols do ... end -- auto-ID with opts + block
+        option_keys = Plushie.Widget.Table.__field_keys__()
+        option_types = Plushie.Widget.Table.__field_types__()
+        block = container_scope(block, option_keys, option_types, "table")
+        exprs = block_to_exprs(block)
+
+        quote do
+          items =
+            unquote(build_list_accumulator(exprs))
+            |> :lists.reverse()
+            |> List.flatten()
+            |> Enum.reject(&is_nil/1)
+
+          Plushie.UI.__build_container__(
+            Plushie.Widget.Table,
+            nil,
+            unquote(opts),
+            items,
+            unquote(auto_id)
+          )
+        end
+
+      {id, opts} when is_binary(id) ->
+        # table("users", columns: cols) -- explicit ID with opts
+        quote do
+          Plushie.UI.__build_container__(
+            Plushie.Widget.Table,
+            unquote(id),
+            unquote(opts),
+            [],
+            nil
+          )
         end
     end
   end
 
   @doc false
   defmacro table(id, opts, do: block) do
-    option_keys = Plushie.Widget.Table.__field_keys__()
-    option_types = Plushie.Widget.Table.__field_types__()
-    pairs = interpret_block(block, option_types)
-    validate_option_keys!(pairs, option_keys, "table", __CALLER__)
-    opts_ast = pairs_to_keyword_ast(pairs)
+    id_container_3arity_body(Plushie.Widget.Table, "table", id, opts, block)
+  end
+
+  # -- table_row / cell macros ------------------------------------------------
+
+  @doc """
+  Row inside a `table` do-block. Children are `cell` elements.
+
+      table_row "user-1" do
+        cell "name", text(user.name)
+        cell "email", text(user.email)
+      end
+  """
+  defmacro table_row(id, opts_or_do \\ []) do
+    id_container_2arity_body(Plushie.Widget.TableRow, "table_row", id, opts_or_do)
+  end
+
+  @doc false
+  defmacro table_row(id, opts, do: block) do
+    id_container_3arity_body(Plushie.Widget.TableRow, "table_row", id, opts, block)
+  end
+
+  @doc """
+  Cell inside a `table_row` do-block.
+
+      cell "name", text(user.name)
+
+      cell "actions" do
+        button("edit", "Edit")
+        button("del", "Delete")
+      end
+  """
+  defmacro cell(column_key, content_or_do \\ []) do
+    case content_or_do do
+      [do: block] ->
+        # cell "actions" do ... end
+        exprs = block_to_exprs(block)
+
+        quote do
+          items =
+            unquote(build_list_accumulator(exprs))
+            |> :lists.reverse()
+            |> List.flatten()
+            |> Enum.reject(&is_nil/1)
+
+          Plushie.UI.__build_container__(
+            Plushie.Widget.TableCell,
+            unquote(column_key),
+            [column: unquote(column_key)],
+            items,
+            nil
+          )
+        end
+
+      content ->
+        # cell "name", text(user.name)
+        quote do
+          Plushie.UI.__build_container__(
+            Plushie.Widget.TableCell,
+            unquote(column_key),
+            [column: unquote(column_key)],
+            [unquote(content)],
+            nil
+          )
+        end
+    end
+  end
+
+  @doc false
+  defmacro cell(column_key, _opts, do: block) do
+    exprs = block_to_exprs(block)
 
     quote do
-      Plushie.Widget.Build.build_node(
-        Keyword.merge(unquote(opts), unquote(opts_ast)),
-        fn widget_opts ->
-          Plushie.Widget.Table.new(unquote(id), widget_opts)
-          |> Plushie.Widget.Table.build()
-        end
+      items =
+        unquote(build_list_accumulator(exprs))
+        |> :lists.reverse()
+        |> List.flatten()
+        |> Enum.reject(&is_nil/1)
+
+      Plushie.UI.__build_container__(
+        Plushie.Widget.TableCell,
+        unquote(column_key),
+        [column: unquote(column_key)],
+        items,
+        nil
       )
     end
   end

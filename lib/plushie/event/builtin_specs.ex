@@ -53,7 +53,7 @@ defmodule Plushie.Event.BuiltinSpecs do
     close: %{carrier: :none},
     option_hovered: %{carrier: :value, type: :any},
     key_binding: %{carrier: :value, fields: []},
-    sort: %{carrier: :value, fields: [column: :string]},
+    sort: %{carrier: :value, type: :string},
     scrolled: %{
       carrier: :value,
       fields: [

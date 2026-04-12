@@ -133,24 +133,23 @@ defmodule Plushie.Widget.Table do
 
   @a11y_defaults %{role: :table}
 
-  widget :table do
+  widget :table, container: true do
     field :columns, {:list, :map}, doc: "Column definitions. Maps with `:key`, `:label`, etc."
 
     field :rows, {:list, :map},
-      doc: "Data rows. Maps or structs with keys matching column `:key` values."
+      doc: "Data shorthand. Maps with an `:id` key, expanded to table_row children."
 
     field :header, :boolean, doc: "Show header row. Default: true."
-    field :separator, :boolean, doc: "Show separator line below header. Default: true."
     field :width, Plushie.Type.Length, doc: "Table width. Default: fill."
-    field :padding, Plushie.Type.Padding, doc: "Table padding."
+    field :height, Plushie.Type.Length, doc: "Table height. Scrollable if set."
+    field :padding, Plushie.Type.Padding, doc: "Cell internal padding."
     field :sort_by, :string, doc: "Key of the currently sorted column."
     field :sort_order, {:enum, [:asc, :desc]}, doc: "Current sort direction: `:asc` or `:desc`."
+
+    field :separator, :float, doc: "Divider line thickness in pixels."
+    field :separator_color, Plushie.Type.Color, doc: "Divider line color."
     field :header_text_size, :float, doc: "Header row text size in pixels."
     field :row_text_size, :float, doc: "Body row text size in pixels."
-    field :cell_spacing, :float, doc: "Horizontal spacing between cells in pixels."
-    field :row_spacing, :float, doc: "Vertical spacing between rows in pixels."
-    field :separator_thickness, :float, doc: "Separator line thickness in pixels."
-    field :separator_color, Plushie.Type.Color, doc: "Separator line color."
     field :event_rate, :integer, doc: "Max events per second for coalescable events."
     field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
   end

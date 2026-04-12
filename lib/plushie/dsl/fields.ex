@@ -118,6 +118,8 @@ defmodule Plushie.DSL.Fields do
   def option_type_for(type), do: castable_type_for(type)
 
   @doc false
+  def union_type([]), do: quote(do: [])
+
   def union_type([single]), do: single
 
   def union_type([head | tail]) do
