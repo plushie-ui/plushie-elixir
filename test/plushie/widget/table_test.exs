@@ -322,4 +322,91 @@ defmodule Plushie.Widget.TableTest do
       end
     end
   end
+
+  describe "rows/children mutual exclusivity" do
+    test "raises when rows: and children are both set" do
+      assert_raise ArgumentError, ~r/cannot combine.*rows:.*with.*do-block/, fn ->
+        Table.new("tbl1", rows: @string_rows)
+        |> Table.push(%{id: "r1", type: "table_row", props: %{}, children: []})
+        |> Table.build()
+      end
+    end
+
+    test "rows: without children is allowed" do
+      node = Table.new("tbl1", rows: @string_rows) |> Table.build()
+      assert node.props[:rows] == @string_rows
+    end
+
+    test "children without rows: is allowed" do
+      node =
+        Table.new("tbl1")
+        |> Table.push(%{id: "r1", type: "table_row", props: %{}, children: []})
+        |> Table.build()
+
+      assert length(node.children) == 1
+      assert node.props[:rows] == nil
+    end
+  end
+
+  describe "table_row and cell macro output" do
+    import Plushie.UI
+
+    test "table_row produces correct node structure" do
+      node =
+        table_row "u1" do
+          cell("name", text("Alice"))
+        end
+
+      assert node.id == "u1"
+      assert node.type == "table_row"
+      assert length(node.children) == 1
+
+      cell_node = hd(node.children)
+      assert cell_node.type == "table_cell"
+      assert cell_node.props[:column] == "name"
+      assert length(cell_node.children) == 1
+      assert hd(cell_node.children).type == "text"
+    end
+
+    test "cell with single child" do
+      import Plushie.UI
+      node = cell("email", text("alice@example.com"))
+      assert node.type == "table_cell"
+      assert node.props[:column] == "email"
+      assert length(node.children) == 1
+    end
+
+    test "cell with do-block for multiple children" do
+      import Plushie.UI
+
+      node =
+        cell "actions" do
+          button("edit", "Edit")
+          button("del", "Delete")
+        end
+
+      assert node.type == "table_cell"
+      assert node.props[:column] == "actions"
+      assert length(node.children) == 2
+    end
+
+    test "table with columns and table_row children" do
+      import Plushie.UI
+
+      node =
+        table "users", columns: [%{key: "name", label: "Name"}] do
+          table_row "u1" do
+            cell("name", text("Alice"))
+          end
+        end
+
+      assert node.type == "table"
+      assert node.props[:columns] == [%{key: "name", label: "Name"}]
+      assert length(node.children) == 1
+
+      row = hd(node.children)
+      assert row.type == "table_row"
+      assert row.id =~ "u1"
+    end
+  end
 end

@@ -2235,12 +2235,12 @@ defmodule Plushie.UI do
       end
   """
   defmacro table_row(id, opts_or_do \\ []) do
-    id_container_2arity_body(Plushie.Widget.TableRow, "table_row", id, opts_or_do)
+    id_container_2arity_body(Plushie.Table.Row, "table_row", id, opts_or_do)
   end
 
   @doc false
   defmacro table_row(id, opts, do: block) do
-    id_container_3arity_body(Plushie.Widget.TableRow, "table_row", id, opts, block)
+    id_container_3arity_body(Plushie.Table.Row, "table_row", id, opts, block)
   end
 
   @doc """
@@ -2267,7 +2267,7 @@ defmodule Plushie.UI do
             |> Enum.reject(&is_nil/1)
 
           Plushie.UI.__build_container__(
-            Plushie.Widget.TableCell,
+            Plushie.Table.Cell,
             unquote(column_key),
             [column: unquote(column_key)],
             items,
@@ -2279,7 +2279,7 @@ defmodule Plushie.UI do
         # cell "name", text(user.name)
         quote do
           Plushie.UI.__build_container__(
-            Plushie.Widget.TableCell,
+            Plushie.Table.Cell,
             unquote(column_key),
             [column: unquote(column_key)],
             [unquote(content)],
@@ -2301,7 +2301,7 @@ defmodule Plushie.UI do
         |> Enum.reject(&is_nil/1)
 
       Plushie.UI.__build_container__(
-        Plushie.Widget.TableCell,
+        Plushie.Table.Cell,
         unquote(column_key),
         Keyword.put(unquote(opts), :column, unquote(column_key)),
         items,

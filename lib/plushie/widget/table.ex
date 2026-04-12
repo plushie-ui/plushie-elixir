@@ -101,11 +101,11 @@ defmodule Plushie.Widget.Table.Validation do
 
   # -- @before_compile hook ----------------------------------------------------
 
-  # Generates thin overrides for columns/2 and rows/2 that delegate
-  # to the validation functions above.
+  # Generates thin overrides for columns/2, rows/2, and build/1
+  # that delegate to the validation functions above.
   defmacro __before_compile__(_env) do
     quote do
-      defoverridable columns: 2, rows: 2
+      defoverridable columns: 2, rows: 2, build: 1
 
       def columns(%__MODULE__{} = tbl, columns) when is_list(columns) do
         Plushie.Widget.Table.Validation.validate_columns!(tbl.id, columns)
@@ -117,6 +117,19 @@ defmodule Plushie.Widget.Table.Validation do
         rows = Plushie.Widget.Table.Validation.coerce_struct_rows(rows)
         Plushie.Widget.Table.Validation.validate_rows!(tbl.id, tbl.columns, rows)
         %{tbl | rows: rows}
+      end
+
+      def build(%__MODULE__{} = tbl) do
+        has_rows_prop = tbl.rows != nil and tbl.rows != []
+        has_children = tbl.children != nil and tbl.children != []
+
+        if has_rows_prop and has_children do
+          raise ArgumentError,
+                "table #{inspect(tbl.id)}: cannot combine `rows:` prop with " <>
+                  "do-block children (table_row). Use one or the other."
+        end
+
+        super(tbl)
       end
     end
   end
@@ -144,6 +157,8 @@ defmodule Plushie.Widget.Table do
 
       table "users", columns: cols, rows: data
 
+  These two approaches are **mutually exclusive**: setting `rows:`
+  and providing do-block children in the same table raises an error.
   """
 
   use Plushie.Widget

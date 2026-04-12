@@ -1,9 +1,10 @@
-defmodule Plushie.Widget.TableCell do
+defmodule Plushie.Table.Cell do
   @moduledoc """
-  A cell inside a `table_row`.
+  A cell inside a `Plushie.Table.Row`.
 
   Each cell declares which column it belongs to via the `column`
-  field. Children are any widgets that form the cell content.
+  field (must match a column `:key` from the table's `columns`
+  prop). Children are any widgets that form the cell content.
 
       cell "name", text(user.name)
 
@@ -13,7 +14,7 @@ defmodule Plushie.Widget.TableCell do
       end
   """
 
-  use Plushie.Canvas.Element
+  use Plushie.Table.Element
 
   element :table_cell, container: true do
     field :column, :string, doc: "Column key this cell belongs to."

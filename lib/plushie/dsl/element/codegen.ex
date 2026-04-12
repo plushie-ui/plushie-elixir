@@ -341,9 +341,14 @@ defmodule Plushie.DSL.Element.Codegen do
     |> Enum.map(fn {child, idx} ->
       child
       |> ensure_child_id(parent_prefix, idx)
-      |> Plushie.Tree.Node.to_node()
+      |> child_to_node()
     end)
   end
+
+  # Widget ui_node maps (from __build_container__) pass through as-is.
+  # Element structs go through the Tree.Node protocol.
+  defp child_to_node(%{id: _, type: _, props: _, children: _} = node), do: node
+  defp child_to_node(struct), do: Plushie.Tree.Node.to_node(struct)
 
   # Assigns a positional runtime ID to a child struct that lacks one.
   # This is a fallback for shapes created outside canvas scope (helper
