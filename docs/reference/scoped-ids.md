@@ -219,7 +219,7 @@ format:
 
 ```elixir
 Command.focus("form/email")
-Command.scroll_to("sidebar/list", 0)
+Command.scroll_to("sidebar/list", 0.0, 0.0)
 ```
 
 In multi-window apps, commands can target a specific window using the
@@ -227,7 +227,7 @@ In multi-window apps, commands can target a specific window using the
 
 ```elixir
 Command.focus("settings#email")
-Command.scroll_to("main#sidebar/list", 0)
+Command.scroll_to("main#sidebar/list", 0.0, 0.0)
 ```
 
 The `#` separates the window ID from the widget path. Without a window

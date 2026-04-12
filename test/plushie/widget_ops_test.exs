@@ -60,12 +60,12 @@ defmodule Plushie.WidgetOpsTest do
       assert %Command{type: :command, payload: %{id: "editor", family: "select_all"}} = cmd
     end
 
-    test "scroll_to/2 returns a command targeting the widget with value" do
-      cmd = Command.scroll_to("feed", 250)
+    test "scroll_to/3 returns a command targeting the widget with value" do
+      cmd = Command.scroll_to("feed", 0.0, 250.0)
 
       assert %Command{type: :command, payload: %{id: "feed", family: "scroll_to"}} = cmd
 
-      assert cmd.payload.value == %{x: 0.0, y: 250}
+      assert cmd.payload.value == %{x: 0.0, y: 250.0}
     end
 
     test "close_window/1 returns a Command with type :close_window and window_id in payload" do
@@ -93,7 +93,7 @@ defmodule Plushie.WidgetOpsTest do
       do: {model, Command.select_all("editor")}
 
     def update(model, {:do, :scroll_to}),
-      do: {model, Command.scroll_to("log_view", 999)}
+      do: {model, Command.scroll_to("log_view", 0.0, 999.0)}
 
     def update(model, {:do, :close_window}),
       do: {model, Command.close_window("preferences")}
@@ -186,7 +186,7 @@ defmodule Plushie.WidgetOpsTest do
       assert length(cmds) == 1
       assert hd(cmds).id == "log_view"
       assert hd(cmds).family == "scroll_to"
-      assert hd(cmds).value == %{x: 0.0, y: 999}
+      assert hd(cmds).value == %{x: 0.0, y: 999.0}
     end
 
     test "close_window command sends widget_op with op 'close_window'" do

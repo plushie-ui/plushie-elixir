@@ -11,7 +11,7 @@ defmodule Plushie.Command do
   - **Focus**: `focus/1` (widget command), `focus_next/0`, `focus_previous/0` (widget ops)
   - **Text**: `select_all/1`, `move_cursor_to_front/1`, `move_cursor_to_end/1`,
     `move_cursor_to/2`, `select_range/3` (see `Command.Text`)
-  - **Scroll**: `scroll_to/2`, `snap_to/3`, `snap_to_end/1`, `scroll_by/3`
+  - **Scroll**: `scroll_to/3`, `snap_to/3`, `snap_to_end/1`, `scroll_by/3`
     (see `Command.Scroll`)
   - **Window ops**: `close_window/1`, `resize_window/3`, `move_window/3`,
     `maximize_window/2`, `minimize_window/2`, `set_window_mode/2`,
@@ -164,17 +164,17 @@ defmodule Plushie.Command do
   defdelegate select_all(widget_id), to: __MODULE__.Text
   defdelegate move_cursor_to_front(widget_id), to: __MODULE__.Text
   defdelegate move_cursor_to_end(widget_id), to: __MODULE__.Text
-  defdelegate move_cursor_to(widget_id, position), to: __MODULE__.Text
+  defdelegate move_cursor_to(widget_id, value), to: __MODULE__.Text
   defdelegate select_range(widget_id, start_pos, end_pos), to: __MODULE__.Text
 
   # ---------------------------------------------------------------------------
   # Delegated: Scroll (Command.Scroll)
   # ---------------------------------------------------------------------------
 
-  defdelegate scroll_to(widget_id, offset), to: __MODULE__.Scroll
-  defdelegate snap_to(widget_id, x \\ 0.0, y \\ 0.0), to: __MODULE__.Scroll
+  defdelegate scroll_to(widget_id, x, y), to: __MODULE__.Scroll
+  defdelegate snap_to(widget_id, x, y), to: __MODULE__.Scroll
   defdelegate snap_to_end(widget_id), to: __MODULE__.Scroll
-  defdelegate scroll_by(widget_id, x \\ 0.0, y \\ 0.0), to: __MODULE__.Scroll
+  defdelegate scroll_by(widget_id, x, y), to: __MODULE__.Scroll
 
   # ---------------------------------------------------------------------------
   # Delegated: Window operations (Command.Window)
@@ -536,5 +536,49 @@ defmodule Plushie.Command do
   @spec batch(commands :: t() | [t()]) :: %__MODULE__{}
   def batch(commands) do
     %__MODULE__{type: :batch, payload: %{commands: List.wrap(commands)}}
+  end
+
+  # ---------------------------------------------------------------------------
+  # use Plushie.Command -- standalone command DSL
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Standalone DSL for declaring typed command functions.
+
+  Use this in any module to generate command builder functions from
+  typed declarations. The same `command` macro used in native widgets
+  works here, producing functions that return `%Command{}` structs.
+
+  ## Example
+
+      defmodule Plushie.Command.Text do
+        use Plushie.Command
+
+        command :select_all
+        command :move_cursor_to, value: :integer
+        command :select_range, fields: [start_pos: :integer, end_pos: :integer]
+      end
+
+  Generates:
+
+      def select_all(widget_id) when is_binary(widget_id)
+      def move_cursor_to(widget_id, value) when is_binary(widget_id) and is_integer(value)
+      def select_range(widget_id, start_pos, end_pos) when is_binary(widget_id) and ...
+  """
+  defmacro __using__(_opts) do
+    quote do
+      Module.register_attribute(__MODULE__, :_widget_commands, accumulate: true)
+
+      import Plushie.DSL.Widget.Macro,
+        only: [command: 1, command: 2, field: 2, field: 3]
+
+      @before_compile Plushie.Command
+    end
+  end
+
+  defmacro __before_compile__(env) do
+    commands = Module.get_attribute(env.module, :_widget_commands) |> Enum.reverse()
+
+    Plushie.DSL.Widget.Codegen.generate_commands(commands)
   end
 end

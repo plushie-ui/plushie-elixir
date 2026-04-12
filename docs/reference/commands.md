@@ -85,7 +85,7 @@ use `Plushie.Subscription.every/2` instead.
 
 | Function | Purpose |
 |---|---|
-| `scroll_to/2` | Scroll to absolute position |
+| `scroll_to/3` | Scroll to absolute position |
 | `snap_to/3` | Snap scroll to a position |
 | `snap_to_end/1` | Snap scroll to the end |
 | `scroll_by/3` | Scroll by a relative offset |

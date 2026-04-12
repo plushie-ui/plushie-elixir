@@ -125,21 +125,16 @@ defmodule Plushie.CommandTest do
     end
   end
 
-  describe "scroll_to/2" do
+  describe "scroll_to/3" do
     test "returns a command targeting the widget" do
       assert %Command{type: :command, payload: %{id: "log_view", family: "scroll_to"}} =
-               Command.scroll_to("log_view", 0)
+               Command.scroll_to("log_view", 0.0, 0.0)
     end
 
-    test "stores the offset in value" do
-      cmd = Command.scroll_to("log_view", 500)
+    test "stores x and y in value" do
+      cmd = Command.scroll_to("log_view", 0.0, 500.0)
       assert cmd.payload.id == "log_view"
-      assert cmd.payload.value == %{x: 0.0, y: 500}
-    end
-
-    test "offset can be any term" do
-      cmd = Command.scroll_to("feed", :bottom)
-      assert cmd.payload.value == %{x: 0.0, y: :bottom}
+      assert cmd.payload.value == %{x: 0.0, y: 500.0}
     end
   end
 
@@ -345,10 +340,10 @@ defmodule Plushie.CommandTest do
       assert cmd.payload.id == "form/email"
     end
 
-    test "scroll_to/2 preserves full qualified path" do
-      cmd = Command.scroll_to("settings#list", 100)
+    test "scroll_to/3 preserves full qualified path" do
+      cmd = Command.scroll_to("settings#list", 0.0, 100.0)
       assert cmd.payload.id == "settings#list"
-      assert cmd.payload.value == %{x: 0.0, y: 100}
+      assert cmd.payload.value == %{x: 0.0, y: 100.0}
     end
 
     test "snap_to/3 preserves full qualified path" do
@@ -364,7 +359,7 @@ defmodule Plushie.CommandTest do
     test "move_cursor_to/2 preserves full qualified path" do
       cmd = Command.move_cursor_to("main#input", 5)
       assert cmd.payload.id == "main#input"
-      assert cmd.payload.value.position == 5
+      assert cmd.payload.value == 5
     end
 
     test "select_range/3 preserves full qualified path" do

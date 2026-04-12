@@ -82,8 +82,8 @@ defmodule Plushie.Docs.CommandsTest do
   test "commands_select_range_construct_test" do
     cmd = Command.select_range("editor", 5, 10)
     assert %Command{type: :command, payload: %{id: "editor", family: "select_range"}} = cmd
-    assert cmd.payload.value.start == 5
-    assert cmd.payload.value.end == 10
+    assert cmd.payload.value.start_pos == 5
+    assert cmd.payload.value.end_pos == 10
   end
 
   # -- Scroll operations ------------------------------------------------------

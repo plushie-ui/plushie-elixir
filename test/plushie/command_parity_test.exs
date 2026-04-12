@@ -15,15 +15,9 @@ defmodule Plushie.CommandParityTest do
   end
 
   describe "snap_to/3" do
-    test "snaps scrollable to offset with defaults" do
-      cmd = Command.snap_to("scr1")
-      assert %Command{type: :command, payload: %{id: "scr1", family: "snap_to"}} = cmd
-      assert cmd.payload.value.x == 0.0
-      assert cmd.payload.value.y == 0.0
-    end
-
     test "snaps scrollable to specific offset" do
       cmd = Command.snap_to("scr1", 0.5, 1.0)
+      assert %Command{type: :command, payload: %{id: "scr1", family: "snap_to"}} = cmd
       assert cmd.payload.value.x == 0.5
       assert cmd.payload.value.y == 1.0
     end
@@ -37,15 +31,9 @@ defmodule Plushie.CommandParityTest do
   end
 
   describe "scroll_by/3" do
-    test "scrolls by relative offset with defaults" do
-      cmd = Command.scroll_by("scr1")
-      assert %Command{type: :command, payload: %{id: "scr1", family: "scroll_by"}} = cmd
-      assert cmd.payload.value.x == 0.0
-      assert cmd.payload.value.y == 0.0
-    end
-
     test "scrolls by specific offset" do
       cmd = Command.scroll_by("scr1", 10.0, -20.0)
+      assert %Command{type: :command, payload: %{id: "scr1", family: "scroll_by"}} = cmd
       assert cmd.payload.value.x == 10.0
       assert cmd.payload.value.y == -20.0
     end
@@ -75,7 +63,7 @@ defmodule Plushie.CommandParityTest do
 
       assert %Command{type: :command, payload: %{id: "editor1", family: "move_cursor_to"}} = cmd
 
-      assert cmd.payload.value.position == 42
+      assert cmd.payload.value == 42
     end
   end
 
@@ -83,8 +71,8 @@ defmodule Plushie.CommandParityTest do
     test "selects a range of text" do
       cmd = Command.select_range("editor1", 5, 15)
       assert %Command{type: :command, payload: %{id: "editor1", family: "select_range"}} = cmd
-      assert cmd.payload.value.start == 5
-      assert cmd.payload.value.end == 15
+      assert cmd.payload.value.start_pos == 5
+      assert cmd.payload.value.end_pos == 15
     end
   end
 
@@ -299,9 +287,9 @@ defmodule Plushie.CommandParityTest do
     test "all new commands are Command structs" do
       commands = [
         Command.exit(),
-        Command.snap_to("s"),
+        Command.snap_to("s", 0.0, 0.0),
         Command.snap_to_end("s"),
-        Command.scroll_by("s"),
+        Command.scroll_by("s", 0.0, 0.0),
         Command.move_cursor_to_front("e"),
         Command.move_cursor_to_end("e"),
         Command.move_cursor_to("e", 0),
