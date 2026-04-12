@@ -304,7 +304,7 @@ defmodule Plushie.TreeTest do
       assert result.id == "root/a/target"
     end
 
-    test "find raises when the same exact id exists in multiple windows" do
+    test "window-scoped IDs are unique across windows (no ambiguity)" do
       tree =
         Tree.normalize([
           %{
@@ -321,12 +321,12 @@ defmodule Plushie.TreeTest do
           }
         ])
 
-      assert_raise ArgumentError, ~r/use find\/3 with a window id/, fn ->
-        Tree.find(tree, "save")
-      end
+      # Window prefix makes IDs unique: "main#save" vs "prefs#save"
+      assert %{id: "main#save"} = Tree.find(tree, "main#save")
+      assert %{id: "prefs#save"} = Tree.find(tree, "prefs#save")
     end
 
-    test "find/3 looks up an exact id within one window" do
+    test "find/3 looks up by canonical window#scope/id" do
       tree =
         Tree.normalize([
           %{
@@ -357,10 +357,11 @@ defmodule Plushie.TreeTest do
           }
         ])
 
-      assert %{id: "panel/save", props: %{label: "Main"}} = Tree.find(tree, "panel/save", "main")
+      assert %{id: "main#panel/save", props: %{label: "Main"}} =
+               Tree.find(tree, "main#panel/save")
 
-      assert %{id: "panel/save", props: %{label: "Prefs"}} =
-               Tree.find(tree, "panel/save", "prefs")
+      assert %{id: "prefs#panel/save", props: %{label: "Prefs"}} =
+               Tree.find(tree, "prefs#panel/save")
     end
   end
 

@@ -188,7 +188,10 @@ defmodule Plushie.Automation.Selector do
       matches =
         Plushie.Tree.find_all(window_node, fn node ->
           node_id = node[:id]
-          node_id == id or (is_binary(node_id) and String.ends_with?(node_id, "/" <> id))
+          node_id == id or
+            (is_binary(node_id) and
+               (String.ends_with?(node_id, "/" <> id) or
+                  String.ends_with?(node_id, "#" <> id)))
         end)
 
       Enum.map(matches, fn node -> {Element.from_node(node), window_id} end)
@@ -224,7 +227,7 @@ defmodule Plushie.Automation.Selector do
 
   defp encode_id(id, tree, window_id) do
     resolved =
-      if String.contains?(id, "/") do
+      if String.contains?(id, "/") or String.contains?(id, "#") do
         id
       else
         search_tree = if window_id, do: find_window_subtree(tree, window_id), else: tree
@@ -270,7 +273,7 @@ defmodule Plushie.Automation.Selector do
   defp find_selector_node(nil, _id), do: nil
 
   defp find_selector_node(tree, id) do
-    if String.contains?(id, "/") do
+    if String.contains?(id, "/") or String.contains?(id, "#") do
       Plushie.Tree.find(tree, id)
     else
       Plushie.Tree.find_local(tree, id)

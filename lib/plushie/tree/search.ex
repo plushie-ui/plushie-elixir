@@ -209,10 +209,7 @@ defmodule Plushie.Tree.Search do
   defp find_all_local(_node, _local_id, acc), do: acc
 
   defp local_id(id) when is_binary(id) do
-    case String.split(id, "/") do
-      [] -> id
-      parts -> List.last(parts)
-    end
+    id |> String.split(["#", "/"]) |> List.last()
   end
 
   defp find_window(%{type: "window", id: id} = node, id), do: node

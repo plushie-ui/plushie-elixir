@@ -260,21 +260,25 @@ defmodule Plushie.Tree do
       validate_user_id!(id)
     end
 
-    # Apply scope prefix to this node's ID
+    # Apply scope prefix to this node's ID.
+    # Window nodes keep their bare ID. Children of windows get "window#id".
+    # Deeper descendants get "window#parent/id" (# only at the window boundary).
     scoped_id =
-      if scope != "" and not auto_id?(id) do
-        "#{scope}/#{id}"
-      else
-        id
+      cond do
+        auto_id?(id) -> id
+        scope == "" -> id
+        String.ends_with?(scope, "#") -> "#{scope}#{id}"
+        true -> "#{scope}/#{id}"
       end
 
-    # Determine scope for children: named (non-auto) non-window nodes
-    # propagate their scoped ID as the child scope
+    # Determine scope for children: window nodes set "window#" as the
+    # child scope. Named non-window nodes propagate their scoped ID.
+    # Auto-ID nodes are transparent (don't create scope boundaries).
     child_scope =
-      if auto_id?(id) or type_str == "window" do
-        scope
-      else
-        scoped_id
+      cond do
+        type_str == "window" -> "#{scoped_id}#"
+        auto_id?(id) -> scope
+        true -> scoped_id
       end
 
     child_window_id = if type_str == "window", do: scoped_id, else: window_id
