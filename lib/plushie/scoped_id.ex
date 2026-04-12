@@ -20,7 +20,7 @@ defmodule Plushie.ScopedId do
       %Plushie.ScopedId{
         id: "email",
         scope: ["form", "sidebar"],
-        window: "main",
+        window_id: "main",
         full: "main#sidebar/form/email"
       }
 
@@ -28,7 +28,7 @@ defmodule Plushie.ScopedId do
       %Plushie.ScopedId{
         id: "main",
         scope: [],
-        window: nil,
+        window_id: nil,
         full: "main"
       }
 
@@ -36,18 +36,18 @@ defmodule Plushie.ScopedId do
       %Plushie.ScopedId{
         id: "email",
         scope: [],
-        window: "main",
+        window_id: "main",
         full: "main#email"
       }
   """
 
   @enforce_keys [:id, :full]
-  defstruct [:id, :window, full: "", scope: []]
+  defstruct [:id, :window_id, full: "", scope: []]
 
   @type t :: %__MODULE__{
           id: String.t(),
           scope: [String.t()],
-          window: String.t() | nil,
+          window_id: String.t() | nil,
           full: String.t()
         }
 
@@ -59,13 +59,13 @@ defmodule Plushie.ScopedId do
   is the local `id`.
 
       parse("main#sidebar/form/email")
-      #=> %ScopedId{id: "email", scope: ["form", "sidebar"], window: "main", ...}
+      #=> %ScopedId{id: "email", scope: ["form", "sidebar"], window_id: "main", ...}
 
       parse("form/email")
-      #=> %ScopedId{id: "email", scope: ["form"], window: nil, ...}
+      #=> %ScopedId{id: "email", scope: ["form"], window_id: nil, ...}
 
       parse("email")
-      #=> %ScopedId{id: "email", scope: [], window: nil, ...}
+      #=> %ScopedId{id: "email", scope: [], window_id: nil, ...}
 
   Edge cases: `"main#"` produces `id: ""` (the window itself with
   no widget path). `"#foo"` is treated as bare id `"#foo"` (empty
@@ -95,7 +95,7 @@ defmodule Plushie.ScopedId do
     %__MODULE__{
       id: id,
       scope: scope,
-      window: window,
+      window_id: window,
       full: canonical
     }
   end
@@ -103,19 +103,19 @@ defmodule Plushie.ScopedId do
   @doc """
   Build a ScopedId from event fields.
 
-      from_event(%WidgetEvent{id: "email", scope: ["form"], window: "main"})
+      from_event(%WidgetEvent{id: "email", scope: ["form"], window_id: "main"})
   """
   @spec from_event(event :: map()) :: t()
   def from_event(%{id: id, scope: scope} = event) do
-    window = Map.get(event, :window) || Map.get(event, :window_id)
+    win = Map.get(event, :window_id)
     scope_list = scope || []
 
-    full = build_full(window, scope_list, id)
+    full = build_full(win, scope_list, id)
 
     %__MODULE__{
       id: id,
       scope: scope_list,
-      window: window,
+      window_id: win,
       full: full
     }
   end
@@ -130,7 +130,7 @@ defmodule Plushie.ScopedId do
 
   @doc "True if the ID is in the given window."
   @spec in_window?(sid :: t(), window :: String.t()) :: boolean()
-  def in_window?(%__MODULE__{window: w}, window), do: w == window
+  def in_window?(%__MODULE__{window_id: w}, window_id), do: w == window_id
 
   @doc "Returns the immediate parent (nearest ancestor), or nil."
   @spec parent(sid :: t()) :: String.t() | nil
