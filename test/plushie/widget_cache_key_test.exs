@@ -153,12 +153,12 @@ defmodule Plushie.WidgetCacheKeyTest do
       # First pass: miss
       tree1 = widget_tree(CachedWidget, "w1", data_version: 1, label: "v1")
       {_first, wvc} = normalize_with_widget_cache(tree1)
-      assert_receive {:wvc_miss, %{id: "w1", module: CachedWidget}}
+      assert_receive {:wvc_miss, %{id: "main#w1", module: CachedWidget}}
 
       # Second pass: hit
       tree2 = widget_tree(CachedWidget, "w1", data_version: 1, label: "v1")
       normalize_with_widget_cache(tree2, wvc)
-      assert_receive {:wvc_hit, %{id: "w1", module: CachedWidget}}
+      assert_receive {:wvc_hit, %{id: "main#w1", module: CachedWidget}}
 
       :telemetry.detach("wvc-miss-#{inspect(ref)}")
       :telemetry.detach("wvc-hit-#{inspect(ref)}")

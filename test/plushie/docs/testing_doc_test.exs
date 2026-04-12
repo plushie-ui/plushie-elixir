@@ -144,7 +144,7 @@ defmodule Plushie.Docs.TestingDocTest do
     model = %{todos: [%Todo{text: "Buy milk", done: false}], input: ""}
     tree = Plushie.Tree.normalize(TodoApp.view(model))
 
-    counter = Plushie.Tree.find(tree, "todo_count")
+    counter = Plushie.Tree.find(tree, "main#todo_count")
     assert counter != nil
     assert counter.props[:content] =~ "1"
   end
@@ -163,18 +163,18 @@ defmodule Plushie.Docs.TestingDocTest do
   test "testing_doc_tree_find_test" do
     tree = Plushie.Tree.normalize(CounterApp.view(%{count: 0}))
 
-    assert Plushie.Tree.find(tree, "count") != nil
-    assert Plushie.Tree.exists?(tree, "increment")
-    assert Plushie.Tree.exists?(tree, "count")
+    assert Plushie.Tree.find(tree, "main#count") != nil
+    assert Plushie.Tree.exists?(tree, "main#increment")
+    assert Plushie.Tree.exists?(tree, "main#count")
   end
 
   test "testing_doc_tree_ids_test" do
     tree = Plushie.Tree.normalize(CounterApp.view(%{count: 0}))
     all_ids = Plushie.Tree.ids(tree)
 
-    assert "increment" in all_ids
-    assert "decrement" in all_ids
-    assert "count" in all_ids
+    assert "main#increment" in all_ids
+    assert "main#decrement" in all_ids
+    assert "main#count" in all_ids
   end
 
   test "testing_doc_tree_find_all_test" do
@@ -205,7 +205,7 @@ defmodule Plushie.Docs.TestingDocFrameworkTest do
 
   test "testing_doc_element_handle_test" do
     element = find!("#increment")
-    assert element.id == "increment"
+    assert element.id == "main#increment"
     assert element.type == "button"
     assert is_map(element.props)
     assert is_list(element.children)

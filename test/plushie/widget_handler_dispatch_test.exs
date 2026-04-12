@@ -422,8 +422,8 @@ defmodule Plushie.WidgetHandlerDispatchTest do
 
     test "windowed direct canvas event stays in its own window" do
       registry = %{
-        {"main", "picker"} => %{module: EmitWidget, state: %{}, window_id: "main"},
-        {"other", "picker"} => %{module: ConsumedWidget, state: %{}, window_id: "other"}
+        {"main", "main#picker"} => %{module: EmitWidget, state: %{}, window_id: "main"},
+        {"other", "other#picker"} => %{module: ConsumedWidget, state: %{}, window_id: "other"}
       }
 
       {event, _registry} =

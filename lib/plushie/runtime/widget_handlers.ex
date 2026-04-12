@@ -474,12 +474,11 @@ defmodule Plushie.Runtime.WidgetHandlers do
     id = Map.get(event, :id, "")
     window_id = Map.get(event, :window_id)
 
-    # Strip window_id from end of scope for registry lookups.
-    # Registry keys are {window_id, scoped_id} where scoped_id
-    # does not include the window -- it's keyed separately.
+    # Strip window_id from end of scope for path reconstruction.
     container_scope = Plushie.Event.strip_window_from_scope(scope, window_id)
 
-    target_id = scope_to_id(container_scope, id)
+    # Reconstruct the canonical wire ID (window#scope/path/id)
+    target_id = scope_to_id(window_id, container_scope, id)
     target_entry = widget_entry(registry, window_id, target_id)
     chain = build_handler_chain(registry, window_id, container_scope)
 
@@ -509,12 +508,13 @@ defmodule Plushie.Runtime.WidgetHandlers do
     forward = Enum.reverse(scope)
     len = length(forward)
 
-    # Generate candidate scoped IDs from innermost to outermost
+    # Generate candidate canonical IDs from innermost to outermost
     for n <- len..1//-1,
-        scoped_id = forward |> Enum.take(n) |> Enum.join("/"),
-        entry = Map.get(registry, {window_id, scoped_id}),
+        path = forward |> Enum.take(n) |> Enum.join("/"),
+        canonical = if(window_id, do: "#{window_id}##{path}", else: path),
+        entry = Map.get(registry, {window_id, canonical}),
         entry != nil do
-      {scoped_id, entry}
+      {canonical, entry}
     end
   end
 
@@ -525,12 +525,19 @@ defmodule Plushie.Runtime.WidgetHandlers do
     end
   end
 
-  # Reconstruct a full scoped ID from a reversed scope list and a local ID.
-  # scope_to_id(["form"], "submit") => "form/submit"
-  # scope_to_id([], "picker") => "picker"
-  @spec scope_to_id([String.t()], String.t()) :: String.t()
-  defp scope_to_id([], id), do: id
-  defp scope_to_id(scope, id), do: Enum.join(Enum.reverse(scope) ++ [id], "/")
+  # Reconstruct the canonical wire ID from window, reversed scope, and local ID.
+  # scope_to_id("main", ["form"], "submit") => "main#form/submit"
+  # scope_to_id("main", [], "picker") => "main#picker"
+  # scope_to_id(nil, ["form"], "submit") => "form/submit"
+  @spec scope_to_id(String.t() | nil, [String.t()], String.t()) :: String.t()
+  defp scope_to_id(nil, [], id), do: id
+  defp scope_to_id(nil, scope, id), do: Enum.join(Enum.reverse(scope) ++ [id], "/")
+  defp scope_to_id(window, [], id), do: "#{window}##{id}"
+
+  defp scope_to_id(window, scope, id) do
+    path = Enum.join(Enum.reverse(scope) ++ [id], "/")
+    "#{window}##{path}"
+  end
 
   # Walk the handler chain, dispatching the event to each handler
   # until one captures it or the chain is exhausted.

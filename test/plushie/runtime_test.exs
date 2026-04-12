@@ -1351,7 +1351,7 @@ defmodule Plushie.RuntimeTest do
       await_initial_render(runtime)
 
       # Verify the widget timer subscription is active by sending a tick.
-      send(runtime, {:subscription_tick, {:__widget__, "main", "ticker", :pulse}, 1_000})
+      send(runtime, {:subscription_tick, {:__widget__, "main", "main#ticker", :pulse}, 1_000})
       Plushie.Runtime.sync(runtime)
       assert Plushie.Runtime.get_model(runtime).pulses == 1
 
@@ -1365,7 +1365,7 @@ defmodule Plushie.RuntimeTest do
       await_model(runtime, fn m -> m.clicks == 1 end)
 
       # Verify subscription survived the interact_step by sending another tick.
-      send(runtime, {:subscription_tick, {:__widget__, "main", "ticker", :pulse}, 1_000})
+      send(runtime, {:subscription_tick, {:__widget__, "main", "main#ticker", :pulse}, 1_000})
       Plushie.Runtime.sync(runtime)
       assert Plushie.Runtime.get_model(runtime).pulses == 2
     end
@@ -1376,7 +1376,7 @@ defmodule Plushie.RuntimeTest do
         await_initial_render(runtime)
 
         # Verify the widget timer subscription is active by sending a tick.
-        send(runtime, {:subscription_tick, {:__widget__, "main", "ticker", :pulse}, 1_000})
+        send(runtime, {:subscription_tick, {:__widget__, "main", "main#ticker", :pulse}, 1_000})
         Plushie.Runtime.sync(runtime)
         assert Plushie.Runtime.get_model(runtime).pulses == 1
 
@@ -1384,7 +1384,7 @@ defmodule Plushie.RuntimeTest do
         Plushie.Runtime.sync(runtime)
 
         # Verify subscription survived force_rerender by sending another tick.
-        send(runtime, {:subscription_tick, {:__widget__, "main", "ticker", :pulse}, 1_000})
+        send(runtime, {:subscription_tick, {:__widget__, "main", "main#ticker", :pulse}, 1_000})
         Plushie.Runtime.sync(runtime)
         assert Plushie.Runtime.get_model(runtime).pulses == 2
       end)
@@ -1400,7 +1400,7 @@ defmodule Plushie.RuntimeTest do
       # The widget re-renders with "phase:second" content, producing a patch.
       send(
         runtime,
-        {:subscription_tick, {:__widget__, "main", "switcher", :first}, 1_000}
+        {:subscription_tick, {:__widget__, "main", "main#switcher", :first}, 1_000}
       )
 
       Plushie.Runtime.sync(runtime)
@@ -1415,7 +1415,7 @@ defmodule Plushie.RuntimeTest do
 
       send(
         runtime,
-        {:subscription_tick, {:__widget__, "main", "switcher", :first}, 1_000}
+        {:subscription_tick, {:__widget__, "main", "main#switcher", :first}, 1_000}
       )
 
       Plushie.Runtime.sync(runtime)

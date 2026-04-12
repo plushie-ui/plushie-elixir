@@ -87,7 +87,7 @@ defmodule Plushie.Docs.CompositionPatternsTest do
     assert length(row.children) == 3
 
     ids = Enum.map(row.children, & &1.id)
-    assert ids == ["tab:overview", "tab:details", "tab:settings"]
+    assert ids == ["main#tab:overview", "main#tab:details", "main#tab:settings"]
   end
 
   test "composition_patterns_tab_bar_view_content_reflects_active_tab_test" do
@@ -188,8 +188,8 @@ defmodule Plushie.Docs.CompositionPatternsTest do
 
     assert [row] = tree.children
     assert [sidebar_container, main_container] = row.children
-    assert sidebar_container.id == "sidebar"
-    assert main_container.id == "main"
+    assert sidebar_container.id == "main#sidebar"
+    assert main_container.id == "main#main"
 
     assert [nav_col] = sidebar_container.children
     # nav_label, spacer, and 4 nav buttons
@@ -339,9 +339,9 @@ defmodule Plushie.Docs.CompositionPatternsTest do
     assert length(stack.children) == 2
 
     assert [_, overlay] = stack.children
-    assert overlay.id == "overlay"
+    assert overlay.id == "main#overlay"
     assert [dialog] = overlay.children
-    assert dialog.id == "overlay/dialog"
+    assert dialog.id == "main#overlay/dialog"
   end
 
   test "composition_patterns_modal_view_shows_confirmed_message_test" do
@@ -354,7 +354,7 @@ defmodule Plushie.Docs.CompositionPatternsTest do
     # main_content text, confirmed_msg text, open button
     assert length(main_col.children) == 3
     assert [_, confirmed, _] = main_col.children
-    assert confirmed.id == "main/confirmed_msg"
+    assert confirmed.id == "main#main/confirmed_msg"
   end
 
   # ============================================================================
@@ -481,10 +481,10 @@ defmodule Plushie.Docs.CompositionPatternsTest do
     assert length(row.children) == 3
 
     assert [left, divider, right] = row.children
-    assert left.id == "left_panel"
-    assert divider.id == "divider"
+    assert left.id == "main#left_panel"
+    assert divider.id == "main#divider"
     assert divider.type == "pointer_area"
-    assert right.id == "right_panel"
+    assert right.id == "main#right_panel"
   end
 
   # ============================================================================

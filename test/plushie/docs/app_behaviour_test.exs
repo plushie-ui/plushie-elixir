@@ -185,7 +185,7 @@ defmodule Plushie.Docs.AppBehaviourTest do
     assert btn.props[:label] == "Add"
 
     assert todo_row.type == "row"
-    assert todo_row.id == "todo_1"
+    assert todo_row.id == "main#todo_1"
   end
 
   test "app_behaviour_subscribe_without_auto_refresh_test" do

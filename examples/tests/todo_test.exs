@@ -34,7 +34,7 @@ defmodule Examples.TodoTest do
     submit("#new_todo")
 
     [todo] = model().todos
-    toggle("#app/list/#{todo.id}/toggle")
+    toggle("#main#app/list/#{todo.id}/toggle")
 
     assert hd(model().todos).done == true
   end
@@ -45,7 +45,7 @@ defmodule Examples.TodoTest do
     assert length(model().todos) == 1
 
     [todo] = model().todos
-    click("#app/list/#{todo.id}/delete")
+    click("#main#app/list/#{todo.id}/delete")
 
     assert model().todos == []
   end

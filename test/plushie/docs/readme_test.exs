@@ -76,9 +76,9 @@ defmodule Plushie.Docs.ReadmeTest do
 
     assert row_node.type == "row"
     assert [inc_btn, dec_btn] = row_node.children
-    assert inc_btn.id == "inc"
+    assert inc_btn.id == "main#inc"
     assert inc_btn.props[:label] == "+"
-    assert dec_btn.id == "dec"
+    assert dec_btn.id == "main#dec"
     assert dec_btn.props[:label] == "-"
   end
 

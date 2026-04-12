@@ -158,7 +158,7 @@ defmodule Plushie.Docs.TutorialTest do
 
     assert [column] = tree.children
     assert column.type == "column"
-    assert column.id == "app"
+    assert column.id == "main#app"
     assert column.props[:spacing] == 12
     assert column.props[:width] == "fill"
 
@@ -207,7 +207,7 @@ defmodule Plushie.Docs.TutorialTest do
     assert [column] = tree.children
     assert [_title, input | _] = column.children
     assert input.type == "text_input"
-    assert input.id == "app/new_todo"
+    assert input.id == "main#app/new_todo"
     assert input.props[:value] == "Hello"
     assert input.props[:placeholder] == "What needs doing?"
     assert input.props[:on_submit] == true
@@ -228,14 +228,14 @@ defmodule Plushie.Docs.TutorialTest do
 
     tree = Plushie.Tree.normalize(TodoApp.step3_view(model))
 
-    list_col = Plushie.Tree.find(tree, "app/list")
+    list_col = Plushie.Tree.find(tree, "main#app/list")
     assert list_col.type == "column"
     assert list_col.props[:spacing] == 4
 
     assert [row1, row2] = list_col.children
-    assert row1.id == "app/list/todo_1"
+    assert row1.id == "main#app/list/todo_1"
     assert row1.type == "container"
-    assert row2.id == "app/list/todo_2"
+    assert row2.id == "main#app/list/todo_2"
   end
 
   test "tutorial_step3_todo_row_structure_test" do
@@ -249,7 +249,7 @@ defmodule Plushie.Docs.TutorialTest do
     tree = Plushie.Tree.normalize(TodoApp.step3_view(model))
 
     # Find the container for todo_1
-    container = Plushie.Tree.find(tree, "app/list/todo_1")
+    container = Plushie.Tree.find(tree, "main#app/list/todo_1")
     assert container.type == "container"
 
     assert [inner_row] = container.children
@@ -258,12 +258,12 @@ defmodule Plushie.Docs.TutorialTest do
 
     assert [cb, text_node, btn] = inner_row.children
     assert cb.type == "checkbox"
-    assert cb.id == "app/list/todo_1/toggle"
+    assert cb.id == "main#app/list/todo_1/toggle"
     assert cb.props[:checked] == false
     assert text_node.type == "text"
     assert text_node.props[:content] == "Buy milk"
     assert btn.type == "button"
-    assert btn.id == "app/list/todo_1/delete"
+    assert btn.id == "main#app/list/todo_1/delete"
     assert btn.props[:label] == "x"
   end
 
@@ -339,10 +339,10 @@ defmodule Plushie.Docs.TutorialTest do
     assert filters.type == "row"
 
     assert [all_btn, active_btn, done_btn] = filters.children
-    assert all_btn.id == "app/filter_all"
+    assert all_btn.id == "main#app/filter_all"
     assert all_btn.props[:label] == "All"
-    assert active_btn.id == "app/filter_active"
-    assert done_btn.id == "app/filter_done"
+    assert active_btn.id == "main#app/filter_active"
+    assert done_btn.id == "main#app/filter_done"
   end
 
   test "tutorial_step6_view_filters_todos_test" do
@@ -359,8 +359,8 @@ defmodule Plushie.Docs.TutorialTest do
     tree = Plushie.Tree.normalize(TodoApp.view(model))
 
     # Only the active todo should appear
-    assert Plushie.Tree.exists?(tree, "app/list/todo_1/toggle")
-    refute Plushie.Tree.exists?(tree, "app/list/todo_2/toggle")
+    assert Plushie.Tree.exists?(tree, "main#app/list/todo_1/toggle")
+    refute Plushie.Tree.exists?(tree, "main#app/list/todo_2/toggle")
   end
 
   test "tutorial_step6_filtered_helper_test" do

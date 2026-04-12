@@ -79,9 +79,9 @@ defmodule Plushie.Docs.GettingStartedTest do
 
     assert row_node.type == "row"
     assert [inc, dec] = row_node.children
-    assert inc.id == "increment"
+    assert inc.id == "main#increment"
     assert inc.props[:label] == "+"
-    assert dec.id == "decrement"
+    assert dec.id == "main#decrement"
     assert dec.props[:label] == "-"
   end
 

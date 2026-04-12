@@ -56,7 +56,7 @@ defmodule Plushie.Automation.SessionTest do
 
   test "find returns element" do
     element = find("#count")
-    assert element.id == "count"
+    assert element.id == "main#count"
     assert element.type == "text"
   end
 
@@ -65,7 +65,7 @@ defmodule Plushie.Automation.SessionTest do
   end
 
   test "find! returns element when present" do
-    assert find!("#increment").id == "increment"
+    assert find!("#increment").id == "main#increment"
   end
 
   test "find! raises for missing element" do

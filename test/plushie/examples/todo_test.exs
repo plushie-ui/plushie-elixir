@@ -126,11 +126,11 @@ defmodule TodoTest do
       tree = Plushie.Tree.normalize(Todo.view(model))
 
       assert Plushie.Tree.exists?(tree, "main")
-      assert Plushie.Tree.find(tree, "app/title")
-      assert Plushie.Tree.find(tree, "app/new_todo")
-      assert Plushie.Tree.find(tree, "app/filter_all")
-      assert Plushie.Tree.find(tree, "app/filter_active")
-      assert Plushie.Tree.find(tree, "app/filter_done")
+      assert Plushie.Tree.find(tree, "main#app/title")
+      assert Plushie.Tree.find(tree, "main#app/new_todo")
+      assert Plushie.Tree.find(tree, "main#app/filter_all")
+      assert Plushie.Tree.find(tree, "main#app/filter_active")
+      assert Plushie.Tree.find(tree, "main#app/filter_done")
     end
 
     test "renders todo items with scoped IDs" do
@@ -144,8 +144,8 @@ defmodule TodoTest do
       tree = Plushie.Tree.normalize(Todo.view(model))
 
       # The toggle checkbox is scoped under the todo row
-      assert Plushie.Tree.find(tree, "app/list/todo_1/toggle")
-      assert Plushie.Tree.find(tree, "app/list/todo_1/delete")
+      assert Plushie.Tree.find(tree, "main#app/list/todo_1/toggle")
+      assert Plushie.Tree.find(tree, "main#app/list/todo_1/delete")
     end
 
     test "filters todos in view" do
@@ -162,8 +162,8 @@ defmodule TodoTest do
       tree = Plushie.Tree.normalize(Todo.view(model))
 
       # Only the active todo should be visible
-      assert Plushie.Tree.exists?(tree, "app/list/todo_2/toggle")
-      refute Plushie.Tree.exists?(tree, "app/list/todo_1/toggle")
+      assert Plushie.Tree.exists?(tree, "main#app/list/todo_2/toggle")
+      refute Plushie.Tree.exists?(tree, "main#app/list/todo_1/toggle")
     end
   end
 

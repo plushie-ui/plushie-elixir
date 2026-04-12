@@ -166,7 +166,7 @@ defmodule Plushie.Animation.UIMacroTest do
         end
         |> Plushie.Tree.normalize()
 
-      box = Plushie.Tree.find(node, "box")
+      box = Plushie.Tree.find(node, "main#box")
       assert is_map(box.props[:max_width])
       assert box.props[:max_width]["type"] == "transition"
       assert box.props[:max_width]["to"] == 200
@@ -181,7 +181,7 @@ defmodule Plushie.Animation.UIMacroTest do
         end
         |> Plushie.Tree.normalize()
 
-      box = Plushie.Tree.find(node, "box")
+      box = Plushie.Tree.find(node, "main#box")
       assert box.props[:max_width]["type"] == "spring"
       assert box.props[:max_width]["to"] == 200
     end
@@ -199,7 +199,7 @@ defmodule Plushie.Animation.UIMacroTest do
         end
         |> Plushie.Tree.normalize()
 
-      box = Plushie.Tree.find(node, "box")
+      box = Plushie.Tree.find(node, "main#box")
       assert box.props[:max_width]["type"] == "sequence"
       assert length(box.props[:max_width]["steps"]) == 2
     end
@@ -214,7 +214,7 @@ defmodule Plushie.Animation.UIMacroTest do
         end
         |> Plushie.Tree.normalize()
 
-      item = Plushie.Tree.find(node, "item")
+      item = Plushie.Tree.find(node, "main#item")
       assert is_map(item.props[:exit])
       assert item.props[:exit][:max_width]["type"] == "transition"
       assert item.props[:exit][:max_width]["to"] == 0

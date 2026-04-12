@@ -76,7 +76,7 @@ defmodule Plushie.ScopedIdTest do
 
       normalized = Tree.normalize(tree)
       save = hd(hd(normalized.children).children)
-      assert save.id == "sidebar/save"
+      assert save.id == "main#sidebar/save"
     end
 
     test "mixed auto and named containers" do

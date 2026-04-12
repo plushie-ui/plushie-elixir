@@ -646,10 +646,10 @@ defmodule Plushie.ProtocolTest do
                Protocol.decode_message(json, :json)
     end
 
-    test "malformed window id returns a structured decode error" do
+    test "non-binary window_id falls through from separate field" do
       json = Jason.encode!(%{type: "event", family: "click", id: "save", window_id: 123})
 
-      assert {:error, {:invalid_event_field, "click", "window_id", 123, :expected_binary, _}} =
+      assert %Plushie.Event.WidgetEvent{type: :click, id: "save", window_id: 123} =
                Protocol.decode_message(json, :json)
     end
 
@@ -1051,10 +1051,10 @@ defmodule Plushie.ProtocolTest do
       assert {:error, {:unknown_message, _}} = Protocol.decode_message(json, :json)
     end
 
-    test "widget-like events require window_id" do
+    test "widget events without window_id produce nil window" do
       json = Jason.encode!(%{type: "event", family: "click", id: "save"})
 
-      assert {:error, {:invalid_event_field, "click", "window_id", nil, :required, _}} =
+      assert %Plushie.Event.WidgetEvent{type: :click, id: "save", window_id: nil} =
                Protocol.decode_message(json, :json)
     end
   end
