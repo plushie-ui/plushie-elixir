@@ -237,9 +237,10 @@ qualifier, the command targets whatever window contains the widget.
 
 The window ID is part of the scope chain (always the last element).
 Each window creates a separate namespace. The widget handler registry
-keys entries by `{window_id, scoped_id}`. A widget with scoped ID
-`"form/save"` in window `"main"` is a different registry entry from
-`"form/save"` in window `"settings"`.
+keys entries by canonical scoped ID, which includes the window prefix
+(e.g., `"main#form/save"`). A widget in window `"main"` has registry
+key `"main#form/save"`, distinct from `"settings#form/save"` in
+window `"settings"`.
 
 Events from a widget in window `"main"` carry
 `scope: ["form", "main"], window_id: "main"`. In multi-window apps,

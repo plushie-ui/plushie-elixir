@@ -264,7 +264,9 @@ defmodule Plushie.Widget.TableTest do
         |> Table.build()
 
       assert node.props[:columns] == @string_columns
-      assert node.props[:rows] == @string_rows
+      # rows: prop is expanded to children, not kept as prop
+      assert node.props[:rows] == nil
+      assert length(node.children) == 2
       assert node.props[:header] == true
       assert node.props[:sort_by] == "age"
       assert node.props[:sort_order] == :desc
@@ -332,9 +334,20 @@ defmodule Plushie.Widget.TableTest do
       end
     end
 
-    test "rows: without children is allowed" do
-      node = Table.new("tbl1", rows: @string_rows) |> Table.build()
-      assert node.props[:rows] == @string_rows
+    test "rows: without children expands to table_row children" do
+      node =
+        Table.new("tbl1",
+          columns: @string_columns,
+          rows: @string_rows
+        )
+        |> Table.build()
+
+      # rows: prop is consumed (nil), expanded to children
+      assert node.props[:rows] == nil
+      assert length(node.children) == 2
+
+      row = hd(node.children)
+      assert row.type == "table_row"
     end
 
     test "children without rows: is allowed" do

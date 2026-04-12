@@ -1174,14 +1174,15 @@ defmodule Plushie.UITest do
   end
 
   describe "table/2 with opts" do
-    test "columns and rows become props" do
+    test "columns stay as props, rows expand to children" do
       cols = [%{key: "name", label: "Name", width: 200}]
       rows = [%{"name" => "Alice"}, %{"name" => "Bob"}]
       node = table("users", columns: cols, rows: rows)
 
       assert node.props[:columns] == cols
-      assert node.props[:rows] == rows
-      assert node.children == []
+      assert node.props[:rows] == nil
+      assert length(node.children) == 2
+      assert hd(node.children).type == "table_row"
     end
   end
 
@@ -1211,7 +1212,8 @@ defmodule Plushie.UITest do
         end
 
       assert node.props[:columns] == cols
-      assert node.props[:rows] == rows
+      assert node.props[:rows] == nil
+      assert length(node.children) > 0
       assert node.props[:header_text_size] == 14
     end
   end
@@ -1230,6 +1232,7 @@ defmodule Plushie.UITest do
       node = table("t", columns: cols, rows: [])
       assert node.props[:columns] == cols
       assert node.props[:rows] == []
+      assert node.children == []
     end
   end
 
@@ -1238,7 +1241,8 @@ defmodule Plushie.UITest do
       rows = [%{"name" => "Alice"}]
       node = table("t", columns: [], rows: rows)
       assert node.props[:columns] == []
-      assert node.props[:rows] == rows
+      assert node.props[:rows] == nil
+      assert length(node.children) > 0
     end
   end
 
