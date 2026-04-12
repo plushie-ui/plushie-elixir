@@ -10,7 +10,7 @@ defmodule Plushie.CanvasEventsTest do
         "family" => "press",
         "id" => "my_canvas",
         "window_id" => "main",
-        "data" => %{
+        "value" => %{
           "x" => 42.5,
           "y" => 100.0,
           "button" => "left",
@@ -33,7 +33,7 @@ defmodule Plushie.CanvasEventsTest do
         "family" => "release",
         "id" => "c1",
         "window_id" => "main",
-        "data" => %{
+        "value" => %{
           "x" => 10.0,
           "y" => 20.0,
           "button" => "right",
@@ -56,7 +56,7 @@ defmodule Plushie.CanvasEventsTest do
         "family" => "move",
         "id" => "c1",
         "window_id" => "main",
-        "data" => %{
+        "value" => %{
           "x" => 5.5,
           "y" => 3.2,
           "pointer" => "mouse",
@@ -74,7 +74,7 @@ defmodule Plushie.CanvasEventsTest do
         "family" => "scroll",
         "id" => "c1",
         "window_id" => "main",
-        "data" => %{
+        "value" => %{
           "x" => 1.5,
           "y" => 2.5,
           "delta_x" => 0.5,
@@ -98,7 +98,7 @@ defmodule Plushie.CanvasEventsTest do
         "family" => "scrolled",
         "id" => "scroller",
         "window_id" => "main",
-        "data" => %{
+        "value" => %{
           "absolute_x" => 0.0,
           "absolute_y" => 50.0,
           "relative_x" => 0.0,

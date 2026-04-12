@@ -20,7 +20,7 @@ defmodule Plushie.ProtocolParityTest do
           type: "event",
           family: "key_press",
           modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false},
-          data: %{key: "Escape"}
+          value: %{key: "Escape"}
         })
 
       assert %KeyEvent{type: :press, key: :escape, modifiers: %Plushie.KeyModifiers{ctrl: false}} =
@@ -33,7 +33,7 @@ defmodule Plushie.ProtocolParityTest do
           type: "event",
           family: "key_press",
           modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false},
-          data: %{key: "a"}
+          value: %{key: "a"}
         })
 
       assert %KeyEvent{type: :press, key: "a", modifiers: %Plushie.KeyModifiers{ctrl: true}} =
@@ -46,7 +46,7 @@ defmodule Plushie.ProtocolParityTest do
           type: "event",
           family: "key_press",
           modifiers: %{ctrl: true, shift: true, alt: false, logo: false, command: false},
-          data: %{key: "Tab"}
+          value: %{key: "Tab"}
         })
 
       assert %KeyEvent{
@@ -64,7 +64,7 @@ defmodule Plushie.ProtocolParityTest do
           type: "event",
           family: "key_release",
           modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false},
-          data: %{key: "Control"}
+          value: %{key: "Control"}
         })
 
       assert %KeyEvent{type: :release, key: :control} = Protocol.decode_message(json, :json)
@@ -77,7 +77,7 @@ defmodule Plushie.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "wheel_scrolled",
-          data: %{delta_x: 1, delta_y: 2, unit: "page"}
+          value: %{delta_x: 1, delta_y: 2, unit: "page"}
         })
 
       assert {:error, {:invalid_event_field, "wheel_scrolled", :unit, "page", :unknown, _}} =
@@ -89,7 +89,7 @@ defmodule Plushie.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "wheel_scrolled",
-          data: %{delta_x: 1, delta_y: 2, unit: 123}
+          value: %{delta_x: 1, delta_y: 2, unit: 123}
         })
 
       assert {:error, {:invalid_event_field, "wheel_scrolled", :unit, 123, :invalid, _}} =
@@ -355,7 +355,7 @@ defmodule Plushie.ProtocolParityTest do
 
   describe "cursor_moved event" do
     test "decodes cursor position as WidgetEvent" do
-      json = Jason.encode!(%{type: "event", family: "cursor_moved", data: %{x: 100.5, y: 200.3}})
+      json = Jason.encode!(%{type: "event", family: "cursor_moved", value: %{x: 100.5, y: 200.3}})
 
       assert %WidgetEvent{type: :move, id: "__global__", scope: [], value: data} =
                Protocol.decode_message(json, :json)
@@ -367,7 +367,7 @@ defmodule Plushie.ProtocolParityTest do
     end
 
     test "decodes integer coordinates" do
-      json = Jason.encode!(%{type: "event", family: "cursor_moved", data: %{x: 0, y: 0}})
+      json = Jason.encode!(%{type: "event", family: "cursor_moved", value: %{x: 0, y: 0}})
 
       assert %WidgetEvent{type: :move, value: %{x: 0, y: 0}} =
                Protocol.decode_message(json, :json)
@@ -378,7 +378,7 @@ defmodule Plushie.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "cursor_moved",
-          data: %{x: 1.0, y: 2.0},
+          value: %{x: 1.0, y: 2.0},
           window_id: "main"
         })
 
@@ -440,7 +440,7 @@ defmodule Plushie.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "wheel_scrolled",
-          data: %{delta_x: 0.0, delta_y: -3.0, unit: "line"}
+          value: %{delta_x: 0.0, delta_y: -3.0, unit: "line"}
         })
 
       assert %WidgetEvent{type: :scroll, value: data} = Protocol.decode_message(json, :json)
@@ -456,7 +456,7 @@ defmodule Plushie.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "wheel_scrolled",
-          data: %{delta_x: 10.0, delta_y: 20.0, unit: "pixel"}
+          value: %{delta_x: 10.0, delta_y: 20.0, unit: "pixel"}
         })
 
       assert %WidgetEvent{type: :scroll, value: %{unit: :pixel, delta_x: 10.0, delta_y: 20.0}} =
@@ -470,7 +470,7 @@ defmodule Plushie.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "finger_pressed",
-          data: %{id: 0, x: 50.0, y: 75.0}
+          value: %{id: 0, x: 50.0, y: 75.0}
         })
 
       assert %WidgetEvent{type: :press, value: data} = Protocol.decode_message(json, :json)
@@ -488,7 +488,7 @@ defmodule Plushie.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "finger_moved",
-          data: %{id: 1, x: 60.0, y: 80.0}
+          value: %{id: 1, x: 60.0, y: 80.0}
         })
 
       assert %WidgetEvent{type: :move, value: %{pointer: :touch, finger: 1, x: 60.0, y: 80.0}} =
@@ -502,7 +502,7 @@ defmodule Plushie.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "finger_lifted",
-          data: %{id: 0, x: 55.0, y: 70.0}
+          value: %{id: 0, x: 55.0, y: 70.0}
         })
 
       assert %WidgetEvent{
@@ -518,7 +518,7 @@ defmodule Plushie.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "finger_lost",
-          data: %{id: 2, x: 30.0, y: 40.0}
+          value: %{id: 2, x: 30.0, y: 40.0}
         })
 
       assert %WidgetEvent{type: :release, value: data} = Protocol.decode_message(json, :json)
@@ -534,7 +534,7 @@ defmodule Plushie.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "window_opened",
-          data: %{
+          value: %{
             window_id: "main",
             position: %{x: 100, y: 200},
             width: 800,
@@ -559,7 +559,7 @@ defmodule Plushie.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "window_opened",
-          data: %{window_id: "main", position: nil, width: 1024, height: 768, scale_factor: 1.0}
+          value: %{window_id: "main", position: nil, width: 1024, height: 768, scale_factor: 1.0}
         })
 
       assert %WindowEvent{
@@ -577,7 +577,7 @@ defmodule Plushie.ProtocolParityTest do
   describe "window_closed event" do
     test "decodes window closed" do
       json =
-        Jason.encode!(%{type: "event", family: "window_closed", data: %{window_id: "settings"}})
+        Jason.encode!(%{type: "event", family: "window_closed", value: %{window_id: "settings"}})
 
       assert %WindowEvent{type: :closed, window_id: "settings"} =
                Protocol.decode_message(json, :json)
@@ -590,7 +590,7 @@ defmodule Plushie.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "window_moved",
-          data: %{window_id: "main", x: 300, y: 150}
+          value: %{window_id: "main", x: 300, y: 150}
         })
 
       assert %WindowEvent{type: :moved, window_id: "main", x: 300, y: 150} =
@@ -604,7 +604,7 @@ defmodule Plushie.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "window_resized",
-          data: %{window_id: "main", width: 1920, height: 1080}
+          value: %{window_id: "main", width: 1920, height: 1080}
         })
 
       assert %WindowEvent{type: :resized, window_id: "main", width: 1920, height: 1080} =
@@ -614,7 +614,7 @@ defmodule Plushie.ProtocolParityTest do
 
   describe "window_focused event" do
     test "decodes window focused" do
-      json = Jason.encode!(%{type: "event", family: "window_focused", data: %{window_id: "main"}})
+      json = Jason.encode!(%{type: "event", family: "window_focused", value: %{window_id: "main"}})
 
       assert %WindowEvent{type: :focused, window_id: "main"} =
                Protocol.decode_message(json, :json)
@@ -624,7 +624,7 @@ defmodule Plushie.ProtocolParityTest do
   describe "window_unfocused event" do
     test "decodes window unfocused" do
       json =
-        Jason.encode!(%{type: "event", family: "window_unfocused", data: %{window_id: "main"}})
+        Jason.encode!(%{type: "event", family: "window_unfocused", value: %{window_id: "main"}})
 
       assert %WindowEvent{type: :unfocused, window_id: "main"} =
                Protocol.decode_message(json, :json)
@@ -637,7 +637,7 @@ defmodule Plushie.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "window_rescaled",
-          data: %{window_id: "main", scale_factor: 2.0}
+          value: %{window_id: "main", scale_factor: 2.0}
         })
 
       assert %WindowEvent{type: :rescaled, window_id: "main", scale_factor: 2.0} =
@@ -651,7 +651,7 @@ defmodule Plushie.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "window_close_requested",
-          data: %{window_id: "main"}
+          value: %{window_id: "main"}
         })
 
       assert %WindowEvent{type: :close_requested, window_id: "main"} =
@@ -665,7 +665,7 @@ defmodule Plushie.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "file_hovered",
-          data: %{window_id: "main", path: "/tmp/test.txt"}
+          value: %{window_id: "main", path: "/tmp/test.txt"}
         })
 
       assert %WindowEvent{type: :file_hovered, window_id: "main", path: "/tmp/test.txt"} =
@@ -679,7 +679,7 @@ defmodule Plushie.ProtocolParityTest do
         Jason.encode!(%{
           type: "event",
           family: "file_dropped",
-          data: %{window_id: "main", path: "/tmp/image.png"}
+          value: %{window_id: "main", path: "/tmp/image.png"}
         })
 
       assert %WindowEvent{type: :file_dropped, window_id: "main", path: "/tmp/image.png"} =
@@ -690,7 +690,7 @@ defmodule Plushie.ProtocolParityTest do
   describe "files_hovered_left event" do
     test "decodes files hovered left" do
       json =
-        Jason.encode!(%{type: "event", family: "files_hovered_left", data: %{window_id: "main"}})
+        Jason.encode!(%{type: "event", family: "files_hovered_left", value: %{window_id: "main"}})
 
       assert %WindowEvent{type: :files_hovered_left, window_id: "main"} =
                Protocol.decode_message(json, :json)
@@ -723,7 +723,7 @@ defmodule Plushie.ProtocolParityTest do
   describe "animation_frame event" do
     test "decodes animation frame with timestamp" do
       json =
-        Jason.encode!(%{type: "event", family: "animation_frame", data: %{timestamp: 16_666}})
+        Jason.encode!(%{type: "event", family: "animation_frame", value: %{timestamp: 16_666}})
 
       assert %SystemEvent{type: :animation_frame, value: 16_666} =
                Protocol.decode_message(json, :json)
@@ -731,7 +731,7 @@ defmodule Plushie.ProtocolParityTest do
 
     test "decodes float timestamp" do
       json =
-        Jason.encode!(%{type: "event", family: "animation_frame", data: %{timestamp: 16.666}})
+        Jason.encode!(%{type: "event", family: "animation_frame", value: %{timestamp: 16.666}})
 
       assert %SystemEvent{type: :animation_frame, value: 16.666} =
                Protocol.decode_message(json, :json)
@@ -746,7 +746,7 @@ defmodule Plushie.ProtocolParityTest do
           family: "transition_complete",
           id: "box",
           window_id: "main",
-          data: %{tag: "faded_out", prop: "opacity"}
+          value: %{tag: "faded_out", prop: "opacity"}
         })
 
       assert %WidgetEvent{
@@ -765,7 +765,7 @@ defmodule Plushie.ProtocolParityTest do
           family: "transition_complete",
           id: "box",
           window_id: "main",
-          data: %{prop: "opacity"}
+          value: %{prop: "opacity"}
         })
 
       assert %WidgetEvent{
@@ -804,7 +804,7 @@ defmodule Plushie.ProtocolParityTest do
           family: "press",
           id: "canvas1",
           window_id: "main",
-          data: %{
+          value: %{
             x: 100.5,
             y: 200.3,
             button: "left",
@@ -835,7 +835,7 @@ defmodule Plushie.ProtocolParityTest do
           family: "press",
           id: "area",
           window_id: "main",
-          data: %{x: 50.0, y: 75.0, button: "right", pointer: "mouse"}
+          value: %{x: 50.0, y: 75.0, button: "right", pointer: "mouse"}
         })
 
       assert %WidgetEvent{type: :press, value: %{button: :right, pointer: :mouse}} =
@@ -849,7 +849,7 @@ defmodule Plushie.ProtocolParityTest do
           family: "press",
           id: "canvas1",
           window_id: "main",
-          data: %{x: 50.0, y: 75.0, button: "left", pointer: "touch", finger: 0}
+          value: %{x: 50.0, y: 75.0, button: "left", pointer: "touch", finger: 0}
         })
 
       assert %WidgetEvent{type: :press, value: %{pointer: :touch, finger: 0}} =
@@ -863,7 +863,7 @@ defmodule Plushie.ProtocolParityTest do
           family: "press",
           id: "canvas1",
           window_id: "main",
-          data: %{x: 10.0, y: 20.0}
+          value: %{x: 10.0, y: 20.0}
         })
 
       assert %WidgetEvent{type: :press, value: %{button: :left, pointer: :mouse}} =
@@ -879,7 +879,7 @@ defmodule Plushie.ProtocolParityTest do
           family: "release",
           id: "canvas1",
           window_id: "main",
-          data: %{x: 100.0, y: 200.0, button: "left", pointer: "mouse"}
+          value: %{x: 100.0, y: 200.0, button: "left", pointer: "mouse"}
         })
 
       assert %WidgetEvent{
@@ -898,7 +898,7 @@ defmodule Plushie.ProtocolParityTest do
           family: "move",
           id: "canvas1",
           window_id: "main",
-          data: %{x: 55.5, y: 88.2, pointer: "pen"}
+          value: %{x: 55.5, y: 88.2, pointer: "pen"}
         })
 
       assert %WidgetEvent{
@@ -917,7 +917,7 @@ defmodule Plushie.ProtocolParityTest do
           family: "scroll",
           id: "canvas1",
           window_id: "main",
-          data: %{
+          value: %{
             x: 100.0,
             y: 200.0,
             delta_x: 0.0,
@@ -976,7 +976,7 @@ defmodule Plushie.ProtocolParityTest do
           family: "double_click",
           id: "area",
           window_id: "main",
-          data: %{x: 75.0, y: 150.0, pointer: "mouse"}
+          value: %{x: 75.0, y: 150.0, pointer: "mouse"}
         })
 
       assert %WidgetEvent{
@@ -995,7 +995,7 @@ defmodule Plushie.ProtocolParityTest do
           family: "resize",
           id: "sensor1",
           window_id: "main",
-          data: %{width: 800.0, height: 600.0}
+          value: %{width: 800.0, height: 600.0}
         })
 
       assert %WidgetEvent{

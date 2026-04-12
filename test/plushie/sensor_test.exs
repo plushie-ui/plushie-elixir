@@ -10,7 +10,7 @@ defmodule Plushie.SensorTest do
         "family" => "resize",
         "id" => "s1",
         "window_id" => "main",
-        "data" => %{"width" => 450.0, "height" => 300.0}
+        "value" => %{"width" => 450.0, "height" => 300.0}
       }
 
       assert %WidgetEvent{type: :resize, id: "s1", value: %{width: 450.0, height: 300.0}} =
@@ -23,7 +23,7 @@ defmodule Plushie.SensorTest do
         "family" => "resize",
         "id" => "s1",
         "window_id" => "main",
-        "data" => %{"width" => 800, "height" => 600}
+        "value" => %{"width" => 800, "height" => 600}
       }
 
       assert %WidgetEvent{type: :resize, id: "s1", value: %{width: 800, height: 600}} =

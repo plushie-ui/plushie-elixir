@@ -85,7 +85,7 @@ defmodule Plushie.PaneGridTest do
         "family" => "pane_resized",
         "id" => "pg1",
         "window_id" => "main",
-        "data" => %{"split" => 0, "ratio" => 0.45}
+        "value" => %{"split" => 0, "ratio" => 0.45}
       }
 
       assert %WidgetEvent{type: :pane_resized, id: "pg1", value: %{split: 0, ratio: 0.45}} =
@@ -98,7 +98,7 @@ defmodule Plushie.PaneGridTest do
         "family" => "pane_dragged",
         "id" => "pg1",
         "window_id" => "main",
-        "data" => %{"pane" => "left", "target" => "right"}
+        "value" => %{"pane" => "left", "target" => "right"}
       }
 
       assert %WidgetEvent{type: :pane_dragged, id: "pg1", value: %{pane: "left", target: "right"}} =
@@ -111,7 +111,7 @@ defmodule Plushie.PaneGridTest do
         "family" => "pane_dragged",
         "id" => "pg1",
         "window_id" => "main",
-        "data" => %{
+        "value" => %{
           "pane" => "left",
           "target" => "right",
           "action" => "hovered",
@@ -130,7 +130,7 @@ defmodule Plushie.PaneGridTest do
         "family" => "pane_clicked",
         "id" => "pg1",
         "window_id" => "main",
-        "data" => %{"pane" => "left"}
+        "value" => %{"pane" => "left"}
       }
 
       assert %WidgetEvent{type: :pane_clicked, id: "pg1", value: %{pane: "left"}} =

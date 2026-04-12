@@ -232,7 +232,7 @@ defmodule Plushie.Protocol.Decode do
     {local, scope, window_id, _family} = event_identity!(msg)
     # value is nil for standard widget clicks, populated for canvas
     # element clicks (which carry button, x, y coordinates).
-    wire_data = msg["data"]
+    wire_data = msg["value"]
     click_value = if is_map(wire_data), do: safe_atomize_keys(wire_data), else: wire_data
     %WidgetEvent{type: :click, id: local, scope: scope, window_id: window_id, value: click_value}
   end
@@ -311,7 +311,7 @@ defmodule Plushie.Protocol.Decode do
   end
 
   defp dispatch(
-         %{"type" => "event", "family" => "key_binding", "id" => _id, "data" => data} = msg
+         %{"type" => "event", "family" => "key_binding", "id" => _id, "value" => data} = msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
@@ -354,7 +354,7 @@ defmodule Plushie.Protocol.Decode do
   # Delivered as WidgetEvents with id = window_id and scope = [].
 
   defp dispatch(
-         %{"type" => "event", "family" => "cursor_moved", "data" => %{"x" => x, "y" => y}} = msg
+         %{"type" => "event", "family" => "cursor_moved", "value" => %{"x" => x, "y" => y}} = msg
        ) do
     window_id = msg["window_id"]
 
@@ -451,7 +451,7 @@ defmodule Plushie.Protocol.Decode do
          %{
            "type" => "event",
            "family" => "wheel_scrolled",
-           "data" => %{"delta_x" => dx, "delta_y" => dy, "unit" => unit}
+           "value" => %{"delta_x" => dx, "delta_y" => dy, "unit" => unit}
          } = msg
        ) do
     case Parsers.parse_scroll_unit(unit) do
@@ -494,7 +494,7 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "ime_preedit", "id" => id, "data" => data} = msg) do
+  defp dispatch(%{"type" => "event", "family" => "ime_preedit", "id" => id, "value" => data} = msg) do
     {local_id, scope, _window} = split_scoped_id(id)
     cursor = parse_ime_cursor(data["cursor"])
     window_id = msg["window_id"]
@@ -510,7 +510,7 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "ime_commit", "id" => id, "data" => data} = msg) do
+  defp dispatch(%{"type" => "event", "family" => "ime_commit", "id" => id, "value" => data} = msg) do
     {local_id, scope, _window} = split_scoped_id(id)
     window_id = msg["window_id"]
 
@@ -544,7 +544,7 @@ defmodule Plushie.Protocol.Decode do
          %{
            "type" => "event",
            "family" => "finger_pressed",
-           "data" => %{"id" => finger_id, "x" => x, "y" => y}
+           "value" => %{"id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
     window_id = msg["window_id"]
@@ -570,7 +570,7 @@ defmodule Plushie.Protocol.Decode do
          %{
            "type" => "event",
            "family" => "finger_moved",
-           "data" => %{"id" => finger_id, "x" => x, "y" => y}
+           "value" => %{"id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
     window_id = msg["window_id"]
@@ -595,7 +595,7 @@ defmodule Plushie.Protocol.Decode do
          %{
            "type" => "event",
            "family" => "finger_lifted",
-           "data" => %{"id" => finger_id, "x" => x, "y" => y}
+           "value" => %{"id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
     window_id = msg["window_id"]
@@ -621,7 +621,7 @@ defmodule Plushie.Protocol.Decode do
          %{
            "type" => "event",
            "family" => "finger_lost",
-           "data" => %{"id" => finger_id, "x" => x, "y" => y}
+           "value" => %{"id" => finger_id, "x" => x, "y" => y}
          } = msg
        ) do
     window_id = msg["window_id"]
@@ -649,7 +649,7 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{
          "type" => "event",
          "family" => "window_opened",
-         "data" => %{"window_id" => window_id, "width" => width, "height" => height} = data
+         "value" => %{"window_id" => window_id, "width" => width, "height" => height} = data
        }) do
     pos =
       case data do
@@ -670,7 +670,7 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{
          "type" => "event",
          "family" => "window_closed",
-         "data" => %{"window_id" => window_id}
+         "value" => %{"window_id" => window_id}
        }) do
     %WindowEvent{type: :closed, window_id: window_id}
   end
@@ -678,7 +678,7 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{
          "type" => "event",
          "family" => "window_close_requested",
-         "data" => %{"window_id" => window_id}
+         "value" => %{"window_id" => window_id}
        }) do
     %WindowEvent{type: :close_requested, window_id: window_id}
   end
@@ -686,7 +686,7 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{
          "type" => "event",
          "family" => "window_moved",
-         "data" => %{"window_id" => window_id, "x" => x, "y" => y}
+         "value" => %{"window_id" => window_id, "x" => x, "y" => y}
        }) do
     %WindowEvent{type: :moved, window_id: window_id, x: x, y: y}
   end
@@ -694,7 +694,7 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{
          "type" => "event",
          "family" => "window_resized",
-         "data" => %{"window_id" => window_id, "width" => width, "height" => height}
+         "value" => %{"window_id" => window_id, "width" => width, "height" => height}
        }) do
     %WindowEvent{type: :resized, window_id: window_id, width: width, height: height}
   end
@@ -702,7 +702,7 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{
          "type" => "event",
          "family" => "window_focused",
-         "data" => %{"window_id" => window_id}
+         "value" => %{"window_id" => window_id}
        }) do
     %WindowEvent{type: :focused, window_id: window_id}
   end
@@ -710,7 +710,7 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{
          "type" => "event",
          "family" => "window_unfocused",
-         "data" => %{"window_id" => window_id}
+         "value" => %{"window_id" => window_id}
        }) do
     %WindowEvent{type: :unfocused, window_id: window_id}
   end
@@ -718,7 +718,7 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{
          "type" => "event",
          "family" => "window_rescaled",
-         "data" => %{"window_id" => window_id, "scale_factor" => scale_factor}
+         "value" => %{"window_id" => window_id, "scale_factor" => scale_factor}
        }) do
     %WindowEvent{type: :rescaled, window_id: window_id, scale_factor: scale_factor}
   end
@@ -726,7 +726,7 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{
          "type" => "event",
          "family" => "file_hovered",
-         "data" => %{"window_id" => window_id, "path" => path}
+         "value" => %{"window_id" => window_id, "path" => path}
        }) do
     %WindowEvent{type: :file_hovered, window_id: window_id, path: path}
   end
@@ -734,7 +734,7 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{
          "type" => "event",
          "family" => "file_dropped",
-         "data" => %{"window_id" => window_id, "path" => path}
+         "value" => %{"window_id" => window_id, "path" => path}
        }) do
     %WindowEvent{type: :file_dropped, window_id: window_id, path: path}
   end
@@ -742,7 +742,7 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{
          "type" => "event",
          "family" => "files_hovered_left",
-         "data" => %{"window_id" => window_id}
+         "value" => %{"window_id" => window_id}
        }) do
     %WindowEvent{type: :files_hovered_left, window_id: window_id}
   end
@@ -752,13 +752,13 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{
          "type" => "event",
          "family" => "animation_frame",
-         "data" => %{"timestamp" => timestamp}
+         "value" => %{"timestamp" => timestamp}
        }) do
     %SystemEvent{type: :animation_frame, value: timestamp}
   end
 
   defp dispatch(
-         %{"type" => "event", "family" => "transition_complete", "id" => _id, "data" => data} =
+         %{"type" => "event", "family" => "transition_complete", "id" => _id, "value" => data} =
            msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
@@ -801,7 +801,7 @@ defmodule Plushie.Protocol.Decode do
   # New wire format: press, release, move, scroll, enter, exit, double_click, resize.
   # These replace canvas_*, mouse_*, and sensor_* events.
 
-  defp dispatch(%{"type" => "event", "family" => "press", "id" => _id, "data" => data} = msg) do
+  defp dispatch(%{"type" => "event", "family" => "press", "id" => _id, "value" => data} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
     %WidgetEvent{
@@ -820,7 +820,7 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "release", "id" => _id, "data" => data} = msg) do
+  defp dispatch(%{"type" => "event", "family" => "release", "id" => _id, "value" => data} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
     %WidgetEvent{
@@ -839,7 +839,7 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "move", "id" => _id, "data" => data} = msg) do
+  defp dispatch(%{"type" => "event", "family" => "move", "id" => _id, "value" => data} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
     %WidgetEvent{
@@ -863,7 +863,7 @@ defmodule Plushie.Protocol.Decode do
            "type" => "event",
            "family" => "scroll",
            "id" => _id,
-           "data" => data
+           "value" => data
          } = msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
@@ -895,7 +895,7 @@ defmodule Plushie.Protocol.Decode do
   end
 
   defp dispatch(
-         %{"type" => "event", "family" => "double_click", "id" => _id, "data" => data} = msg
+         %{"type" => "event", "family" => "double_click", "id" => _id, "value" => data} = msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
@@ -913,7 +913,7 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "resize", "id" => _id, "data" => data} = msg) do
+  defp dispatch(%{"type" => "event", "family" => "resize", "id" => _id, "value" => data} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
     %WidgetEvent{
@@ -928,7 +928,7 @@ defmodule Plushie.Protocol.Decode do
   # -- PaneGrid events --
 
   defp dispatch(
-         %{"type" => "event", "family" => "pane_resized", "id" => _id, "data" => data} = msg
+         %{"type" => "event", "family" => "pane_resized", "id" => _id, "value" => data} = msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
@@ -942,7 +942,7 @@ defmodule Plushie.Protocol.Decode do
   end
 
   defp dispatch(
-         %{"type" => "event", "family" => "pane_dragged", "id" => _id, "data" => data} = msg
+         %{"type" => "event", "family" => "pane_dragged", "id" => _id, "value" => data} = msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
@@ -968,7 +968,7 @@ defmodule Plushie.Protocol.Decode do
   end
 
   defp dispatch(
-         %{"type" => "event", "family" => "pane_clicked", "id" => _id, "data" => data} = msg
+         %{"type" => "event", "family" => "pane_clicked", "id" => _id, "value" => data} = msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
@@ -982,7 +982,7 @@ defmodule Plushie.Protocol.Decode do
   end
 
   defp dispatch(
-         %{"type" => "event", "family" => "pane_focus_cycle", "id" => _id, "data" => data} = msg
+         %{"type" => "event", "family" => "pane_focus_cycle", "id" => _id, "value" => data} = msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
@@ -995,7 +995,7 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "sort", "id" => _id, "data" => data} = msg) do
+  defp dispatch(%{"type" => "event", "family" => "sort", "id" => _id, "value" => data} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
     %WidgetEvent{
@@ -1007,7 +1007,7 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "scrolled", "id" => _id, "data" => data} = msg) do
+  defp dispatch(%{"type" => "event", "family" => "scrolled", "id" => _id, "value" => data} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
     %WidgetEvent{
@@ -1071,7 +1071,7 @@ defmodule Plushie.Protocol.Decode do
          "type" => "op_query_response",
          "kind" => "system_info",
          "tag" => tag,
-         "data" => data
+         "value" => data
        }) do
     %SystemEvent{type: :system_info, tag: tag, value: safe_atomize_keys(data)}
   end
@@ -1080,7 +1080,7 @@ defmodule Plushie.Protocol.Decode do
          "type" => "op_query_response",
          "kind" => "system_theme",
          "tag" => tag,
-         "data" => data
+         "value" => data
        }) do
     %SystemEvent{type: :system_theme, tag: tag, value: safe_atomize_keys(data)}
   end
@@ -1089,7 +1089,7 @@ defmodule Plushie.Protocol.Decode do
          "type" => "op_query_response",
          "kind" => "list_images",
          "tag" => tag,
-         "data" => data
+         "value" => data
        }) do
     %SystemEvent{type: :image_list, tag: tag, value: safe_atomize_keys(data)}
   end
@@ -1098,7 +1098,7 @@ defmodule Plushie.Protocol.Decode do
          "type" => "op_query_response",
          "kind" => "tree_hash",
          "tag" => tag,
-         "data" => data
+         "value" => data
        }) do
     %SystemEvent{type: :tree_hash, tag: tag, value: safe_atomize_keys(data)}
   end
@@ -1107,7 +1107,7 @@ defmodule Plushie.Protocol.Decode do
          "type" => "op_query_response",
          "kind" => "find_focused",
          "tag" => tag,
-         "data" => data
+         "value" => data
        }) do
     %SystemEvent{type: :find_focused, tag: tag, value: safe_atomize_keys(data)}
   end
@@ -1118,7 +1118,7 @@ defmodule Plushie.Protocol.Decode do
          "type" => "event",
          "family" => "session_error",
          "session" => session,
-         "data" => data
+         "value" => data
        }) do
     {:session_error, session, data["error"]}
   end
@@ -1127,14 +1127,14 @@ defmodule Plushie.Protocol.Decode do
          "type" => "event",
          "family" => "session_closed",
          "session" => session,
-         "data" => data
+         "value" => data
        }) do
     {:session_closed, session, data["reason"]}
   end
 
   # -- Announce event (headless/mock: screen reader announcements surface as events) --
 
-  defp dispatch(%{"type" => "event", "family" => "announce", "data" => data}) do
+  defp dispatch(%{"type" => "event", "family" => "announce", "value" => data}) do
     %SystemEvent{type: :announce, value: data["text"]}
   end
 
@@ -1144,7 +1144,7 @@ defmodule Plushie.Protocol.Decode do
          "type" => "event",
          "family" => "error",
          "id" => "duplicate_node_ids",
-         "data" => data
+         "value" => data
        }) do
     %SystemEvent{type: :error, value: %{error: "duplicate_node_ids", details: data}}
   end
@@ -1153,7 +1153,7 @@ defmodule Plushie.Protocol.Decode do
          "type" => "event",
          "family" => "error",
          "id" => "widget_command",
-         "data" => %{"reason" => reason} = data
+         "value" => %{"reason" => reason} = data
        }) do
     %WidgetCommandError{
       reason: reason,
@@ -1231,7 +1231,7 @@ defmodule Plushie.Protocol.Decode do
 
   defp dispatch(%{"type" => "event", "family" => "status", "id" => _id} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    value = msg["data"] || msg["value"]
+    value = msg["value"] || msg["value"]
     %WidgetEvent{type: :status, id: local, scope: scope, window_id: window_id, value: value}
   end
 
@@ -1241,7 +1241,7 @@ defmodule Plushie.Protocol.Decode do
            "type" => "event",
            "family" => "drag",
            "id" => _id,
-           "data" => data
+           "value" => data
          } = msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
@@ -1261,7 +1261,7 @@ defmodule Plushie.Protocol.Decode do
            "type" => "event",
            "family" => "drag_end",
            "id" => _id,
-           "data" => data
+           "value" => data
          } = msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
@@ -1281,7 +1281,7 @@ defmodule Plushie.Protocol.Decode do
            "type" => "event",
            "family" => "key_press",
            "id" => _id,
-           "data" => data
+           "value" => data
          } = msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
@@ -1300,7 +1300,7 @@ defmodule Plushie.Protocol.Decode do
            "type" => "event",
            "family" => "key_release",
            "id" => _id,
-           "data" => data
+           "value" => data
          } = msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
@@ -1314,7 +1314,7 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "diagnostic", "data" => data} = msg) do
+  defp dispatch(%{"type" => "event", "family" => "diagnostic", "value" => data} = msg) do
     %Plushie.Event.SystemEvent{
       type: :diagnostic,
       tag: data["code"],
@@ -1386,16 +1386,9 @@ defmodule Plushie.Protocol.Decode do
     if Parsers.widget_family?(family) do
       {local, scope, window_id, _family} = event_identity!(msg)
 
-      wire_data = msg["data"]
       wire_value = msg["value"]
-      # Normalize: wire "data" (map) goes into value with atom keys.
-      # Wire "value" (scalar) goes into value directly.
       resolved_value =
-        cond do
-          wire_value != nil -> wire_value
-          is_map(wire_data) -> safe_atomize_keys(wire_data)
-          true -> wire_data
-        end
+        if is_map(wire_value), do: safe_atomize_keys(wire_value), else: wire_value
 
       %WidgetEvent{
         type: family,
@@ -1427,7 +1420,7 @@ defmodule Plushie.Protocol.Decode do
     {:error, {:unknown_message, msg}}
   end
 
-  defp decode_key_event(%{"data" => %{} = data, "modifiers" => mods} = msg, type) do
+  defp decode_key_event(%{"value" => %{} = data, "modifiers" => mods} = msg, type) do
     key = data["key"]
 
     unless is_binary(key) do
@@ -1451,7 +1444,7 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  defp decode_key_event(%{"data" => %{} = data} = msg, type) do
+  defp decode_key_event(%{"value" => %{} = data} = msg, type) do
     # Modifiers at top level missing -- use data-level or empty.
     decode_key_event(Map.put(msg, "modifiers", data["modifiers"] || %{}), type)
   end

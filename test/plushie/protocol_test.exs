@@ -293,14 +293,14 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
-  describe "decode_message/1 -- key events (key in data.key)" do
+  describe "decode_message/1 -- key events (key in value.key)" do
     test "decodes a named key to %KeyEvent{type: :press}" do
       json =
         Jason.encode!(%{
           type: "event",
           family: "key_press",
           modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false},
-          data: %{key: "Escape"}
+          value: %{key: "Escape"}
         })
 
       assert %KeyEvent{type: :press, key: :escape} = Protocol.decode_message(json, :json)
@@ -312,7 +312,7 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "key_press",
           modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false},
-          data: %{key: "a"}
+          value: %{key: "a"}
         })
 
       assert %KeyEvent{type: :press, key: "a"} = Protocol.decode_message(json, :json)
@@ -324,7 +324,7 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "key_press",
           modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false},
-          data: %{key: "s"}
+          value: %{key: "s"}
         })
 
       %KeyEvent{type: :press, modifiers: mods} = Protocol.decode_message(json, :json)
@@ -342,7 +342,7 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "key_press",
           modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false},
-          data: %{key: "c"}
+          value: %{key: "c"}
         })
 
       %KeyEvent{type: :press, modifiers: mods} = Protocol.decode_message(json, :json)
@@ -356,7 +356,7 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "key_press",
           modifiers: %{},
-          data: %{key: "z"}
+          value: %{key: "z"}
         })
 
       %KeyEvent{type: :press, modifiers: mods} = Protocol.decode_message(json, :json)
@@ -370,13 +370,13 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "key_release",
           modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false},
-          data: %{key: "Enter"}
+          value: %{key: "Enter"}
         })
 
       assert %KeyEvent{type: :release, key: :enter} = Protocol.decode_message(json, :json)
     end
 
-    test "rejects key event with top-level value instead of data.key" do
+    test "rejects key event with scalar value instead of value.key map" do
       json =
         Jason.encode!(%{
           type: "event",
@@ -389,12 +389,12 @@ defmodule Plushie.ProtocolTest do
                Protocol.decode_message(json, :json)
     end
 
-    test "decodes modifiers nested under data" do
+    test "decodes modifiers nested under value" do
       json =
         Jason.encode!(%{
           type: "event",
           family: "key_press",
-          data: %{
+          value: %{
             key: "s",
             modifiers: %{ctrl: true, shift: false, alt: false, logo: false, command: false}
           }
@@ -410,20 +410,20 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "key_press",
           modifiers: %{ctrl: false, shift: false, alt: false, logo: false, command: false},
-          data: %{}
+          value: %{}
         })
 
       assert {:error, {:invalid_event_field, "key_press", :key, nil, :required, _}} =
                Protocol.decode_message(json, :json)
     end
 
-    test "decodes extra key event fields (nested data from Rust)" do
+    test "decodes extra key event fields (nested value from Rust)" do
       json =
         Jason.encode!(%{
           type: "event",
           family: "key_press",
           modifiers: %{ctrl: false, shift: true, alt: false, logo: false, command: false},
-          data: %{
+          value: %{
             key: "a",
             modified_key: "A",
             physical_key: "KeyA",
@@ -476,7 +476,7 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "ime_preedit",
           id: "editor",
-          data: %{text: "hello", cursor: %{start: 2, end: 5}}
+          value: %{text: "hello", cursor: %{start: 2, end: 5}}
         })
 
       assert %ImeEvent{
@@ -495,7 +495,7 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "ime_preedit",
           id: "editor",
-          data: %{text: "hi"}
+          value: %{text: "hi"}
         })
 
       assert %ImeEvent{type: :preedit, id: "editor", text: "hi", cursor: nil, captured: false} =
@@ -508,7 +508,7 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "ime_commit",
           id: "editor",
-          data: %{text: "final"}
+          value: %{text: "final"}
         })
 
       assert %ImeEvent{type: :commit, id: "editor", text: "final", captured: false} =
@@ -627,7 +627,7 @@ defmodule Plushie.ProtocolTest do
           family: "wizard:levitate",
           id: "wizard",
           window_id: "main",
-          data: %{speed: "fast"}
+          value: %{speed: "fast"}
         })
 
       assert %Plushie.Event.WidgetEvent{
@@ -658,7 +658,7 @@ defmodule Plushie.ProtocolTest do
         Jason.encode!(%{
           type: "event",
           family: "wheel_scrolled",
-          data: %{delta_x: 1, delta_y: 2, unit: "page"}
+          value: %{delta_x: 1, delta_y: 2, unit: "page"}
         })
 
       assert_raise Plushie.Protocol.Error, ~r/invalid wheel_scrolled event field unit/, fn ->
@@ -979,7 +979,7 @@ defmodule Plushie.ProtocolTest do
           family: "press",
           id: "zone",
           window_id: "main",
-          data: %{
+          value: %{
             x: 10.0,
             y: 20.0,
             button: "middle",
@@ -1002,7 +1002,7 @@ defmodule Plushie.ProtocolTest do
         "family" => "press",
         "id" => "zone",
         "window_id" => "main",
-        "data" => %{
+        "value" => %{
           "x" => 10.0,
           "y" => 20.0,
           "button" => "middle",
@@ -1269,7 +1269,7 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "error",
           id: "widget_command",
-          data: %{
+          value: %{
             kind: "widget_command",
             reason: "unknown_node",
             node_id: "g1",
@@ -1370,24 +1370,24 @@ defmodule Plushie.ProtocolTest do
   end
 
   describe "decode_message/1 -- touch events (wire id field)" do
-    test "decodes finger_pressed with data.id" do
+    test "decodes finger_pressed with value.id" do
       json =
         Jason.encode!(%{
           type: "event",
           family: "finger_pressed",
-          data: %{id: 0, x: 50.0, y: 75.0}
+          value: %{id: 0, x: 50.0, y: 75.0}
         })
 
       assert %WidgetEvent{type: :press, value: %{pointer: :touch, finger: 0, x: 50.0, y: 75.0}} =
                Protocol.decode_message(json, :json)
     end
 
-    test "decodes finger_moved with data.id" do
+    test "decodes finger_moved with value.id" do
       json =
         Jason.encode!(%{
           type: "event",
           family: "finger_moved",
-          data: %{id: 1, x: 60.0, y: 80.0}
+          value: %{id: 1, x: 60.0, y: 80.0}
         })
 
       assert %WidgetEvent{type: :move, value: %{pointer: :touch, finger: 1, x: 60.0, y: 80.0}} =
@@ -1403,7 +1403,7 @@ defmodule Plushie.ProtocolTest do
           family: "scroll",
           id: "viewport",
           window_id: "main",
-          data: %{
+          value: %{
             x: 5.0,
             y: 10.0,
             delta_x: 0.0,
@@ -1429,7 +1429,7 @@ defmodule Plushie.ProtocolTest do
           family: "press",
           id: "viewport",
           window_id: "main",
-          data: %{
+          value: %{
             x: 5.0,
             y: 10.0,
             button: "left",
@@ -1483,7 +1483,7 @@ defmodule Plushie.ProtocolTest do
           family: "drag",
           id: "my_canvas",
           window_id: "main",
-          data: %{x: 50.0, y: 60.0, delta_x: 5.0, delta_y: -3.0}
+          value: %{x: 50.0, y: 60.0, delta_x: 5.0, delta_y: -3.0}
         })
 
       assert %WidgetEvent{
@@ -1505,7 +1505,7 @@ defmodule Plushie.ProtocolTest do
           family: "drag_end",
           id: "my_canvas",
           window_id: "main",
-          data: %{x: 55.0, y: 57.0}
+          value: %{x: 55.0, y: 57.0}
         })
 
       assert %WidgetEvent{
@@ -1527,7 +1527,7 @@ defmodule Plushie.ProtocolTest do
           family: "key_press",
           id: "my_input",
           window_id: "main",
-          data: %{
+          value: %{
             key: "a",
             modifiers: %{ctrl: false, shift: false, alt: false, logo: false},
             text: "a"
@@ -1552,7 +1552,7 @@ defmodule Plushie.ProtocolTest do
           family: "key_release",
           id: "my_input",
           window_id: "main",
-          data: %{key: "a", modifiers: %{ctrl: false, shift: false, alt: false, logo: false}}
+          value: %{key: "a", modifiers: %{ctrl: false, shift: false, alt: false, logo: false}}
         })
 
       assert %WidgetEvent{
@@ -1592,7 +1592,7 @@ defmodule Plushie.ProtocolTest do
           family: "session_error",
           session: "s1",
           id: "",
-          data: %{error: "session panicked"}
+          value: %{error: "session panicked"}
         })
 
       assert {:session_error, "s1", "session panicked"} = Protocol.decode_message(json, :json)
@@ -1605,7 +1605,7 @@ defmodule Plushie.ProtocolTest do
           family: "session_closed",
           session: "s2",
           id: "",
-          data: %{}
+          value: %{}
         })
 
       assert {:session_closed, "s2", nil} = Protocol.decode_message(json, :json)
@@ -1619,7 +1619,7 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "announce",
           id: "",
-          data: %{text: "Item saved"}
+          value: %{text: "Item saved"}
         })
 
       assert %SystemEvent{type: :announce, value: "Item saved"} =
@@ -1657,7 +1657,7 @@ defmodule Plushie.ProtocolTest do
           "logo" => false,
           "command" => false
         },
-        "data" => %{"key" => "Enter"}
+        "value" => %{"key" => "Enter"}
       }
 
       json_encoded = Protocol.encode(msg, :json)
@@ -1674,7 +1674,7 @@ defmodule Plushie.ProtocolTest do
       msg = %{
         "type" => "event",
         "family" => "window_resized",
-        "data" => %{"window_id" => "main", "width" => 1024, "height" => 768}
+        "value" => %{"window_id" => "main", "width" => 1024, "height" => 768}
       }
 
       json_encoded = Protocol.encode(msg, :json)
@@ -1728,7 +1728,7 @@ defmodule Plushie.ProtocolTest do
           type: "event",
           family: "error",
           id: "duplicate_node_ids",
-          data: %{error: "duplicate IDs found", duplicates: ["btn1 (button)", "btn1 (text)"]}
+          value: %{error: "duplicate IDs found", duplicates: ["btn1 (button)", "btn1 (text)"]}
         })
 
       assert %SystemEvent{type: :error, value: %{error: "duplicate_node_ids", details: details}} =
@@ -1768,7 +1768,7 @@ defmodule Plushie.ProtocolTest do
           "logo" => false,
           "command" => false
         },
-        "data" => %{"key" => "Tab"}
+        "value" => %{"key" => "Tab"}
       }
 
       json_wire = Jason.encode!(original) <> "\n"
@@ -1785,7 +1785,7 @@ defmodule Plushie.ProtocolTest do
       original = %{
         "type" => "event",
         "family" => "window_resized",
-        "data" => %{"window_id" => "main", "width" => 1920, "height" => 1080}
+        "value" => %{"window_id" => "main", "width" => 1920, "height" => 1080}
       }
 
       json_wire = Jason.encode!(original) <> "\n"
@@ -1831,7 +1831,7 @@ defmodule Plushie.ProtocolTest do
         "type" => "event",
         "family" => "effect_response",
         "id" => "req_1",
-        "data" => %{"status" => "ok", "payload" => %{"text" => "clipboard contents"}}
+        "value" => %{"status" => "ok", "payload" => %{"text" => "clipboard contents"}}
       }
 
       json_wire = Jason.encode!(original) <> "\n"

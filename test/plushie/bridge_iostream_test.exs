@@ -194,7 +194,7 @@ defmodule Plushie.BridgeIostreamTest do
           Jason.encode!(%{
             type: "event",
             family: "wheel_scrolled",
-            data: %{delta_x: 1, delta_y: 2, unit: "page"}
+            value: %{delta_x: 1, delta_y: 2, unit: "page"}
           })
 
         log =
