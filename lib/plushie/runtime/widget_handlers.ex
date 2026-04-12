@@ -495,12 +495,14 @@ defmodule Plushie.Runtime.WidgetHandlers do
   # Non-map events (tuples, atoms) can't have scope -- pass through.
   def dispatch_event(registry, event), do: {event, registry}
 
-  # Build an ordered list of {scoped_id, registry_entry} for all
+  # Build an ordered list of {canonical_id, registry_entry} for all
   # widget_handlers in the scope chain, from innermost to outermost.
   #
-  # For scope ["picker", "form", "page"]:
-  #   candidates: "page/form/picker", "page/form", "page"
-  #   returns only those present in the registry, in inner-to-outer order
+  # The scope argument has window_id already stripped. For a widget at
+  # "main#sidebar/form/picker" with scope ["form", "sidebar"] (reversed,
+  # window stripped), this generates canonical candidates:
+  #   "main#sidebar/form", "main#sidebar"
+  # Returns only those present in the registry, in inner-to-outer order.
   @spec build_handler_chain(map(), String.t() | nil, [String.t()]) :: [{String.t(), map()}]
   defp build_handler_chain(_registry, _window_id, []), do: []
 

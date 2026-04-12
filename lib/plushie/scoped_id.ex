@@ -66,6 +66,10 @@ defmodule Plushie.ScopedId do
 
       parse("email")
       #=> %ScopedId{id: "email", scope: [], window: nil, ...}
+
+  Edge cases: `"main#"` produces `id: ""` (the window itself with
+  no widget path). `"#foo"` is treated as bare id `"#foo"` (empty
+  window part is ignored). Empty string produces `id: ""`.
   """
   @spec parse(canonical :: String.t()) :: t()
   def parse(canonical) when is_binary(canonical) do

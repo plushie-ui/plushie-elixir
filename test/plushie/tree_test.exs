@@ -363,6 +363,38 @@ defmodule Plushie.TreeTest do
       assert %{id: "prefs#panel/save", props: %{label: "Prefs"}} =
                Tree.find(tree, "prefs#panel/save")
     end
+
+    test "auto-ID containers inside windows are transparent to scoping" do
+      tree =
+        Tree.normalize(%{
+          id: "main",
+          type: "window",
+          props: %{},
+          children: [
+            %{
+              id: "auto:col:1",
+              type: "column",
+              props: %{},
+              children: [%{id: "email", type: "text_input", props: %{}, children: []}]
+            }
+          ]
+        })
+
+      # Auto-ID column doesn't create scope; email is directly under main#
+      assert %{id: "main#email"} = Tree.find(tree, "main#email")
+    end
+
+    test "direct child of window gets window#id format" do
+      tree =
+        Tree.normalize(%{
+          id: "main",
+          type: "window",
+          props: %{},
+          children: [%{id: "save", type: "button", props: %{}, children: []}]
+        })
+
+      assert %{id: "main#save"} = Tree.find(tree, "main#save")
+    end
   end
 
   describe "find_all/2" do
