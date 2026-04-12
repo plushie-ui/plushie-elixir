@@ -11,11 +11,11 @@ defmodule Plushie.Protocol.Decode do
   alias Plushie.Protocol.{Error, Keys, Parsers}
 
   alias Plushie.Event.{
+    CommandError,
     ImeEvent,
     KeyEvent,
     ModifiersEvent,
     SystemEvent,
-    WidgetCommandError,
     WidgetEvent,
     WindowEvent
   }
@@ -1155,13 +1155,13 @@ defmodule Plushie.Protocol.Decode do
   defp dispatch(%{
          "type" => "event",
          "family" => "error",
-         "id" => "widget_command",
+         "id" => "command",
          "value" => %{"reason" => reason} = data
        }) do
-    %WidgetCommandError{
+    %CommandError{
       reason: reason,
-      node_id: data["node_id"],
-      op: data["op"],
+      id: data["id"],
+      family: data["family"],
       widget_type: data["widget_type"],
       message: data["message"]
     }

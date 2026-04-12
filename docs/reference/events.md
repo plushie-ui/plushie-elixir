@@ -33,7 +33,7 @@ Use the union type when writing generic event-handling helpers. For
 | Async result       | `Plushie.Event.AsyncEvent`                      | Command (`async/2`)                      |
 | Stream value       | `Plushie.Event.StreamEvent`                     | Command (`stream/2`)                     |
 | Effect response    | `Plushie.Event.EffectEvent`                     | Renderer (file dialogs, clipboard, etc.) |
-| Widget cmd error   | `Plushie.Event.WidgetCommandError`              | Renderer (native widget command failure) |
+| Command error      | `Plushie.Event.CommandError`                    | Renderer (command failure)               |
 
 ## WidgetEvent built-in types
 
@@ -314,15 +314,15 @@ Platform effect responses (file dialogs, clipboard, notifications).
 The `:cancelled` result is a normal outcome (user dismissed a dialog),
 not an error.
 
-### `Plushie.Event.WidgetCommandError`
+### `Plushie.Event.CommandError`
 
-Renderer error for a native widget command.
+Renderer error for a command.
 
 | Field       | Type                | Description                     |
 | ----------- | ------------------- | ------------------------------- |
 | `reason`    | `String.t()`        | Machine-readable reason         |
-| `node_id`   | `String.t() \| nil` | Target widget node ID          |
-| `op`        | `String.t() \| nil` | Command operation name         |
+| `id`        | `String.t() \| nil` | Target widget ID               |
+| `family`    | `String.t() \| nil` | Command family name            |
 | `widget_type` | `String.t() \| nil` | Native widget type           |
 | `message`   | `String.t() \| nil` | Human-readable error text      |
 

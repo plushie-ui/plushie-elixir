@@ -1263,25 +1263,25 @@ defmodule Plushie.ProtocolTest do
   end
 
   describe "decode_message/1 -- error events" do
-    test "decodes widget command errors as typed events" do
+    test "decodes command errors as typed events" do
       json =
         Jason.encode!(%{
           type: "event",
           family: "error",
-          id: "widget_command",
+          id: "command",
           value: %{
-            kind: "widget_command",
+            kind: "command",
             reason: "unknown_node",
-            node_id: "g1",
-            op: "set_value",
+            id: "g1",
+            family: "set_value",
             message: "no widget handles node `g1`"
           }
         })
 
-      assert %Plushie.Event.WidgetCommandError{
+      assert %Plushie.Event.CommandError{
                reason: "unknown_node",
-               node_id: "g1",
-               op: "set_value",
+               id: "g1",
+               family: "set_value",
                widget_type: nil,
                message: "no widget handles node `g1`"
              } = Protocol.decode_message(json, :json)
