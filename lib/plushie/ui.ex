@@ -2189,61 +2189,33 @@ defmodule Plushie.UI do
     id_container_2arity_body(Plushie.Widget.Table, "table", id, opts_or_do)
   end
 
-  defmacro table(id_or_opts, do_block) do
+  defmacro table(opts, do_block) do
+    # Reached when first arg is NOT a string literal (non-binary guard
+    # on the clause above matched first for string IDs).
+    # Handles: table columns: cols do ... end
     auto_id = compile_auto_id(__CALLER__.module, __CALLER__.line)
 
-    case {id_or_opts, do_block} do
-      {id, [do: block]} when is_binary(id) ->
-        # table "users" do ... end -- explicit ID with block
-        option_keys = Plushie.Widget.Table.__field_keys__()
-        option_types = Plushie.Widget.Table.__field_types__()
-        block = container_scope(block, option_keys, option_types, "table")
-        exprs = block_to_exprs(block)
+    [do: block] = do_block
 
-        quote do
-          items =
-            unquote(build_list_accumulator(exprs))
-            |> :lists.reverse()
-            |> List.flatten()
-            |> Enum.reject(&is_nil/1)
+    option_keys = Plushie.Widget.Table.__field_keys__()
+    option_types = Plushie.Widget.Table.__field_types__()
+    block = container_scope(block, option_keys, option_types, "table")
+    exprs = block_to_exprs(block)
 
-          Plushie.UI.__build_container__(Plushie.Widget.Table, unquote(id), [], items, nil)
-        end
+    quote do
+      items =
+        unquote(build_list_accumulator(exprs))
+        |> :lists.reverse()
+        |> List.flatten()
+        |> Enum.reject(&is_nil/1)
 
-      {opts, [do: block]} ->
-        # table columns: cols do ... end -- auto-ID with opts + block
-        option_keys = Plushie.Widget.Table.__field_keys__()
-        option_types = Plushie.Widget.Table.__field_types__()
-        block = container_scope(block, option_keys, option_types, "table")
-        exprs = block_to_exprs(block)
-
-        quote do
-          items =
-            unquote(build_list_accumulator(exprs))
-            |> :lists.reverse()
-            |> List.flatten()
-            |> Enum.reject(&is_nil/1)
-
-          Plushie.UI.__build_container__(
-            Plushie.Widget.Table,
-            nil,
-            unquote(opts),
-            items,
-            unquote(auto_id)
-          )
-        end
-
-      {id, opts} when is_binary(id) ->
-        # table("users", columns: cols) -- explicit ID with opts
-        quote do
-          Plushie.UI.__build_container__(
-            Plushie.Widget.Table,
-            unquote(id),
-            unquote(opts),
-            [],
-            nil
-          )
-        end
+      Plushie.UI.__build_container__(
+        Plushie.Widget.Table,
+        nil,
+        unquote(opts),
+        items,
+        unquote(auto_id)
+      )
     end
   end
 
@@ -2318,7 +2290,7 @@ defmodule Plushie.UI do
   end
 
   @doc false
-  defmacro cell(column_key, _opts, do: block) do
+  defmacro cell(column_key, opts, do: block) do
     exprs = block_to_exprs(block)
 
     quote do
@@ -2331,7 +2303,7 @@ defmodule Plushie.UI do
       Plushie.UI.__build_container__(
         Plushie.Widget.TableCell,
         unquote(column_key),
-        [column: unquote(column_key)],
+        Keyword.put(unquote(opts), :column, unquote(column_key)),
         items,
         nil
       )

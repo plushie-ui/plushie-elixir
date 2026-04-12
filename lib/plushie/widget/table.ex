@@ -124,7 +124,26 @@ end
 
 defmodule Plushie.Widget.Table do
   @moduledoc """
-  Data table, composite widget built from columns, rows, and scrollable containers.
+  Data table with children-based rows for efficient diffing.
+
+  Tables support two ways to populate rows:
+
+  **Rich composition** using `table_row` and `cell` children for
+  custom cell content (buttons, icons, any widget):
+
+      table "users", columns: cols do
+        for user <- users do
+          table_row user.id do
+            cell "name", text(user.name)
+            cell "actions", button("del", "Delete")
+          end
+        end
+      end
+
+  **Data shorthand** using the `rows:` prop for text-only tables:
+
+      table "users", columns: cols, rows: data
+
   """
 
   use Plushie.Widget
@@ -134,25 +153,30 @@ defmodule Plushie.Widget.Table do
   @a11y_defaults %{role: :table}
 
   widget :table, container: true do
-    field :columns, {:list, :map}, doc: "Column definitions. Maps with `:key`, `:label`, etc."
+    field :columns, {:list, :map},
+      doc:
+        "Column definitions. Each map requires a `:key` (string or atom, consistent across all columns). Optional: `:label`, `:width`, `:sortable`, `:align`."
 
     field :rows, {:list, :map},
-      doc: "Data shorthand. Maps with an `:id` key, expanded to table_row children."
+      doc:
+        "Data shorthand for text-only tables. List of maps with keys matching column `:key` values. Each map should include an `:id` key for stable row identity."
 
     field :header, :boolean, doc: "Show header row. Default: true."
     field :width, Plushie.Type.Length, doc: "Table width. Default: fill."
-    field :height, Plushie.Type.Length, doc: "Table height. Scrollable if set."
+    field :height, Plushie.Type.Length, doc: "Table height. Wraps in a scrollable when set."
     field :padding, Plushie.Type.Padding, doc: "Cell internal padding."
     field :sort_by, :string, doc: "Key of the currently sorted column."
     field :sort_order, {:enum, [:asc, :desc]}, doc: "Current sort direction: `:asc` or `:desc`."
 
-    field :separator, :float, doc: "Divider line thickness in pixels."
+    field :separator, :float, doc: "Divider line thickness in pixels. Set to 0.0 to hide."
     field :separator_color, Plushie.Type.Color, doc: "Divider line color."
-    field :header_text_size, :float, doc: "Header row text size in pixels."
-    field :row_text_size, :float, doc: "Body row text size in pixels."
+    field :header_text_size, :float, doc: "Text size for auto-generated header labels."
+    field :row_text_size, :float, doc: "Text size for data shorthand auto-generated cells."
     field :event_rate, :integer, doc: "Max events per second for coalescable events."
     field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
   end
 
-  event :sort, value: :string, doc: "Emitted when a sortable column header is clicked."
+  event :sort,
+    value: :string,
+    doc: "Column key when a sortable header is clicked. App handles reordering."
 end

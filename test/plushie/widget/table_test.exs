@@ -232,6 +232,13 @@ defmodule Plushie.Widget.TableTest do
     end
   end
 
+  describe "height/2" do
+    test "sets the height field" do
+      tbl = Table.new("tbl1") |> Table.height(400)
+      assert tbl.height == 400
+    end
+  end
+
   describe "padding/2" do
     test "sets the padding field" do
       tbl = Table.new("tbl1") |> Table.padding(10)
@@ -279,11 +286,9 @@ defmodule Plushie.Widget.TableTest do
       node =
         Table.new("tbl1")
         |> Table.header(false)
-        |> Table.striped(false)
         |> Table.build()
 
       assert node.props[:header] == false
-      assert node.props[:striped] == false
     end
   end
 
@@ -298,9 +303,7 @@ defmodule Plushie.Widget.TableTest do
           width: :fill,
           padding: 8,
           sort_by: "name",
-          sort_order: :asc,
-          striped: true,
-          selected: ["u1"]
+          sort_order: :asc
         )
 
       assert tbl.columns == @string_columns
@@ -311,8 +314,6 @@ defmodule Plushie.Widget.TableTest do
       assert tbl.padding == 8
       assert tbl.sort_by == "name"
       assert tbl.sort_order == :asc
-      assert tbl.striped == true
-      assert tbl.selected == ["u1"]
     end
 
     test "raises on unknown option" do
