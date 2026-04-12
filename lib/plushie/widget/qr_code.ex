@@ -10,6 +10,7 @@ defmodule Plushie.Widget.QrCode do
   widget :qr_code do
     field :data, :string, option: false, doc: "Data to encode in the QR code. Required."
     field :cell_size, :float, doc: "Size of each QR module in pixels. Default: 4.0."
+    field :total_size, :float, doc: "Total size of the QR code in pixels. Derives cell_size from this."
     field :cell_color, Plushie.Type.Color, doc: "Color of dark modules. Default: black."
     field :background, Plushie.Type.Color, doc: "Color of light modules. Default: white."
 

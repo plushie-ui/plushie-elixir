@@ -16,6 +16,9 @@ defmodule Plushie.Widget.KeyedColumn do
     field :padding, Plushie.Type.Padding, doc: "Padding inside the column."
     field :width, Plushie.Type.Length, doc: "Column width. Default: shrink."
     field :height, Plushie.Type.Length, doc: "Column height. Default: shrink."
+    field :align_x, Plushie.Type.Alignment,
+      doc: "Horizontal alignment of children: `:left`, `:center`, `:right`."
+
     field :max_width, :float, doc: "Maximum width in pixels."
     field :event_rate, :integer, doc: "Max events per second for coalescable events."
     field :a11y, Plushie.Type.A11y, doc: "Accessibility annotations."

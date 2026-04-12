@@ -16,7 +16,6 @@ defmodule Plushie.Widget.Row do
     field :align_y, Plushie.Type.Alignment,
       doc: "Vertical alignment of children: `:top`, `:center`, `:bottom`."
 
-    field :max_width, :float, doc: "Maximum width of the row in pixels."
     field :clip, :boolean, doc: "Clip children that overflow. Default: false."
     field :wrap, :boolean, doc: "Wrap children to next row when they overflow. Default: false."
     field :event_rate, :integer, doc: "Max events per second for coalescable events."
