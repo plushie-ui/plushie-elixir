@@ -192,6 +192,10 @@ The `window_id#path` form scopes the selector to a specific window.
 `"main"`. The window qualifier works with all ID-based helpers
 (`find`, `click`, `assert_text`, etc.).
 
+Canvas element selectors use the full scoped path including the
+canvas ID: `"#my-canvas/handle"`. With a window qualifier:
+`"main#toolbar/buttons/save-btn"`.
+
 Bare strings without a `#` prefix are not valid selectors and raise
 `ArgumentError`. Use `{:text, "..."}` for text content matching.
 

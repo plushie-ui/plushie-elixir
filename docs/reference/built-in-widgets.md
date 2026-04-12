@@ -154,31 +154,49 @@ streaming alternative for large dynamic images is planned.
 
 `Plushie.Widget.Table`
 
-Data table with typed columns, rows, sorting, and scrolling.
+Data table with typed columns, sorting, and scrolling. Tables support
+two ways to populate rows: **rich composition** with `table_row`/`cell`
+children, or **data shorthand** with the `rows:` prop. These are
+mutually exclusive.
+
+### Rich composition (table_row children)
+
+Use `Plushie.Table.Row` and `Plushie.Table.Cell` for custom cell
+content (buttons, icons, any widget). Rows are children of the table,
+which enables LIS-based wire diffing for efficient reorder updates:
 
 ```elixir
-# String keys (JSON data, external APIs)
 table "users",
   columns: [
     %{key: "name", label: "Name", sortable: true},
     %{key: "email", label: "Email", width: {:fill_portion, 2}},
-    %{key: "role", label: "Role", align: "center", sortable: true}
-  ],
-  rows: [
-    %{"name" => "Alice", "email" => "alice@example.com", "role" => "Admin"},
-    %{"name" => "Bob", "email" => "bob@example.com", "role" => "User"}
+    %{key: "actions", label: "", width: 80}
   ],
   sort_by: model.sort_by,
-  sort_order: model.sort_order
+  sort_order: model.sort_order do
+  for user <- model.users do
+    table_row user.id do
+      cell "name", text(user.name)
+      cell "email", text(user.email)
+      cell "actions", button("del-#{user.id}", "Delete")
+    end
+  end
+end
+```
 
-# Atom keys (Ecto structs, internal data)
+### Data shorthand (rows prop)
+
+For text-only tables, the `rows:` prop accepts a list of maps. Values
+are rendered as text via `to_string/1`:
+
+```elixir
 table "users",
   columns: [
     %{key: :name, label: "Name", sortable: true},
     %{key: :email, label: "Email"},
     %{key: :role, label: "Role", align: "center"}
   ],
-  rows: model.users  # list of structs or atom-keyed maps
+  rows: model.users
 ```
 
 ### Column format
@@ -196,7 +214,7 @@ Maps with these keys:
 All column `key` values must be the same type (all atoms or all
 strings).
 
-### Row format
+### Row format (data shorthand)
 
 Rows are maps or structs where keys match the column `key` type.
 Use atom keys for Ecto structs and internal data; use string keys
@@ -209,19 +227,19 @@ text via `to_string/1`.
 | Prop | Type | Default | Purpose |
 |---|---|---|---|
 | `columns` | `[column()]` | *n/a* | Column definitions |
-| `rows` | `[row()]` | *n/a* | Data rows |
+| `rows` | `[row()]` | *n/a* | Data rows (text-only shorthand) |
 | `header` | boolean | *n/a* | Show header row |
-| `separator` | boolean | *n/a* | Show line below header |
+| `separator` | float | *n/a* | Divider line thickness (0.0 to hide) |
 | `sort_by` | string | *n/a* | Currently sorted column key |
 | `sort_order` | `:asc` / `:desc` | *n/a* | Sort direction |
+| `selected` | `[string]` | *n/a* | Row IDs to highlight as selected |
+| `striped` | boolean | *n/a* | Alternate row backgrounds |
 | `width` | Length | `:fill` | Table width |
-| `padding` | Padding | *n/a* | Table padding |
+| `height` | Length | *n/a* | Table height (wraps in scrollable when set) |
+| `padding` | Padding | *n/a* | Cell internal padding |
 | `header_text_size` | number | *n/a* | Header font size |
-| `row_text_size` | number | *n/a* | Body font size |
-| `cell_spacing` | number | *n/a* | Horizontal cell gap |
-| `row_spacing` | number | *n/a* | Vertical row gap |
-| `separator_thickness` | number | *n/a* | Separator line thickness |
-| `separator_color` | Color | *n/a* | Separator line colour |
+| `row_text_size` | number | *n/a* | Body font size (data shorthand) |
+| `separator_color` | Color | *n/a* | Divider line colour |
 | `a11y` | map | *n/a* | Accessibility overrides |
 
 ### Sorting

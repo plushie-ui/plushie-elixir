@@ -39,8 +39,7 @@ Use the union type when writing generic event-handling helpers. For
 
 Every built-in `:type` atom, its payload carrier, and a short description.
 Carrier indicates where data lands in the `Plushie.Event.WidgetEvent` struct:
-**none** (no payload), **value** (`value` field), or **data** (`data` field as
-an atom-keyed map).
+**none** (no payload), **value** (`value` field, scalar or atom-keyed map).
 
 ### Standard widget events
 
@@ -57,9 +56,9 @@ an atom-keyed map).
 | `:open`            | none    | Expandable opened                          |
 | `:close`           | none    | Expandable closed                          |
 | `:option_hovered`  | value (any) | Pick list option hovered                |
-| `:key_binding`     | data    | Key binding activated (empty data map)     |
-| `:sort`            | data    | Table column sort requested (`column`)     |
-| `:scrolled`        | data    | Scrollable viewport offset changed (`absolute_x`, `absolute_y`, `relative_x`, `relative_y`, `bounds`, `content_bounds`) |
+| `:key_binding`     | value (map) | Key binding activated (empty map)     |
+| `:sort`            | value (map) | Table column sort requested (`column`)     |
+| `:scrolled`        | value (map) | Scrollable viewport offset changed (`absolute_x`, `absolute_y`, `relative_x`, `relative_y`, `bounds`, `content_bounds`) |
 | `:pane_focus_cycle` | none   | Pane focus cycle requested                 |
 | `:transition_complete` | value (any) | Emitted when a renderer-side transition completes (requires `on_complete: tag`) |
 | `:status`          | value (string) | Widget interaction status changed (see below) |
@@ -83,16 +82,16 @@ interactions. These replace the previous `canvas_*`, `mouse_*`, and
 identifies the input device (`:mouse`, `:touch`, `:pen`) and `button`
 identifies which button was involved.
 
-| Type              | Carrier | Fields                                              |
-| ----------------- | ------- | --------------------------------------------------- |
-| `:press`          | data    | `x`, `y`, `button`, `pointer`, `finger`, `modifiers` |
-| `:release`        | data    | `x`, `y`, `button`, `pointer`, `finger`, `modifiers` |
-| `:move`           | data    | `x`, `y`, `pointer`, `finger`, `modifiers`           |
-| `:scroll` | data    | `x`, `y`, `delta_x`, `delta_y`, `pointer`, `modifiers` |
-| `:enter`          | none    |                                                       |
-| `:exit`           | none    |                                                       |
-| `:double_click`   | data    | `x`, `y`, `pointer`, `modifiers`                     |
-| `:resize`         | data    | `width`, `height`                                     |
+| Type              | Carrier     | Fields                                              |
+| ----------------- | ----------- | --------------------------------------------------- |
+| `:press`          | value (map) | `x`, `y`, `button`, `pointer`, `finger`, `modifiers` |
+| `:release`        | value (map) | `x`, `y`, `button`, `pointer`, `finger`, `modifiers` |
+| `:move`           | value (map) | `x`, `y`, `pointer`, `finger`, `modifiers`           |
+| `:scroll`         | value (map) | `x`, `y`, `delta_x`, `delta_y`, `pointer`, `modifiers` |
+| `:enter`          | none        |                                                       |
+| `:exit`           | none        |                                                       |
+| `:double_click`   | value (map) | `x`, `y`, `pointer`, `modifiers`                     |
+| `:resize`         | value (map) | `width`, `height`                                     |
 
 The `button` field is one of `:left`, `:right`, `:middle`, `:back`,
 `:forward`. The `pointer` field is one of `:mouse`, `:touch`, `:pen`.
@@ -110,22 +109,22 @@ Focus, blur, drag, and key events emitted by interactive elements
 `:click` events with the canvas ID in scope. See the [Canvas
 reference](canvas.md#element-level-events) for details.
 
-| Type                | Carrier | Fields                              |
-| ------------------- | ------- | ----------------------------------- |
-| `:focused`          | none    |                                     |
-| `:blurred`          | none    |                                     |
-| `:drag`             | data    | `x`, `y`, `delta_x`, `delta_y`     |
-| `:drag_end`         | data    | `x`, `y`                            |
-| `:key_press`        | data    | `key`, `modifiers`, `text`          |
-| `:key_release`      | data    | `key`, `modifiers`                  |
+| Type                | Carrier     | Fields                              |
+| ------------------- | ----------- | ----------------------------------- |
+| `:focused`          | none        |                                     |
+| `:blurred`          | none        |                                     |
+| `:drag`             | value (map) | `x`, `y`, `delta_x`, `delta_y`     |
+| `:drag_end`         | value (map) | `x`, `y`                            |
+| `:key_press`        | value (map) | `key`, `modifiers`, `text`          |
+| `:key_release`      | value (map) | `key`, `modifiers`                  |
 
 ### Pane grid events
 
-| Type              | Carrier | Fields                                  |
-| ----------------- | ------- | --------------------------------------- |
-| `:pane_resized`   | data    | `split`, `ratio`                        |
-| `:pane_dragged`   | data    | `pane`, `target`, `action`, `region`, `edge` |
-| `:pane_clicked`   | data    | `pane`                                  |
+| Type              | Carrier     | Fields                                  |
+| ----------------- | ----------- | --------------------------------------- |
+| `:pane_resized`   | value (map) | `split`, `ratio`                        |
+| `:pane_dragged`   | value (map) | `pane`, `target`, `action`, `region`, `edge` |
+| `:pane_clicked`   | value (map) | `pane`                                  |
 
 ### Custom widget event types
 
@@ -136,8 +135,9 @@ uses a `{widget_type, event_name}` tuple instead of a bare atom:
 %WidgetEvent{type: {:color_picker, :change}, id: "picker", value: %{hue: 180}}
 ```
 
-The carrier (value vs. data) and field types are defined by the widget's
-`event` declaration. See `Plushie.Widget` for details.
+The field types are defined by the widget's `event` declaration. Scalar
+events use a plain value; structured events use an atom-keyed map. Both
+land in the `value` field. See `Plushie.Widget` for details.
 
 ## Struct reference
 
@@ -151,8 +151,7 @@ inputs, sliders, canvas, pointer areas, sensors, panes, and custom widgets.
 | `type`      | `atom \| {atom, atom}`       | Event family (see tables above)      |
 | `id`        | `String.t()`                 | Widget ID                            |
 | `scope`     | `[String.t()]`               | Ancestor scope chain (nearest first, window last) |
-| `value`     | `term() \| nil`              | Scalar payload                       |
-| `data`      | `map() \| nil`               | Structured payload (atom keys)       |
+| `value`     | `term() \| nil`              | Payload (scalar or atom-keyed map)   |
 | `window_id` | `String.t() \| nil`          | Source window                        |
 
 ### `Plushie.Event.KeyEvent`
@@ -381,13 +380,13 @@ end
 ```elixir
 # Mouse click
 def update(model, %WidgetEvent{type: :press, id: "area",
-    data: %{pointer: :mouse, button: :left}}) do
+    value: %{pointer: :mouse, button: :left}}) do
   select(model)
 end
 
 # Touch press
 def update(model, %WidgetEvent{type: :press, id: "area",
-    data: %{pointer: :touch, finger: finger_id}}) do
+    value: %{pointer: :touch, finger: finger_id}}) do
   touch_start(model, finger_id)
 end
 ```
@@ -397,13 +396,13 @@ end
 ```elixir
 # Shift-click for multi-select
 def update(model, %WidgetEvent{type: :press, id: "item",
-    data: %{modifiers: %{shift: true}}}) do
+    value: %{modifiers: %{shift: true}}}) do
   add_to_selection(model)
 end
 
 # Ctrl-drag for special behaviour
 def update(model, %WidgetEvent{type: :move, id: "canvas",
-    data: %{x: x, y: y, modifiers: %{ctrl: true}}}) do
+    value: %{x: x, y: y, modifiers: %{ctrl: true}}}) do
   pan(model, x, y)
 end
 ```

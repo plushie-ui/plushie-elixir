@@ -316,13 +316,13 @@ a `finger` integer identifying the touch point:
 ```elixir
 # Handle touch press on canvas
 def update(model, %WidgetEvent{type: :press, id: "drawing",
-    data: %{x: x, y: y, pointer: :touch, finger: 0}}) do
+    value: %{x: x, y: y, pointer: :touch, finger: 0}}) do
   start_stroke(model, x, y)
 end
 
 # Handle touch drag
 def update(model, %WidgetEvent{type: :move, id: "drawing",
-    data: %{x: x, y: y, pointer: :touch, finger: 0}}) do
+    value: %{x: x, y: y, pointer: :touch, finger: 0}}) do
   continue_stroke(model, x, y)
 end
 ```

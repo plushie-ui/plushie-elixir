@@ -614,7 +614,8 @@ defmodule Plushie.ProtocolParityTest do
 
   describe "window_focused event" do
     test "decodes window focused" do
-      json = Jason.encode!(%{type: "event", family: "window_focused", value: %{window_id: "main"}})
+      json =
+        Jason.encode!(%{type: "event", family: "window_focused", value: %{window_id: "main"}})
 
       assert %WindowEvent{type: :focused, window_id: "main"} =
                Protocol.decode_message(json, :json)

@@ -418,6 +418,30 @@ cleaned out.
 See the [Mix Tasks reference](mix-tasks.md#plushiebuild) for build
 details.
 
+## Table element composition
+
+Tables use a structural composition model via `Plushie.Table.Element`,
+`Plushie.Table.Row`, and `Plushie.Table.Cell`. Rows are children of
+the table widget (not data props), which enables LIS-based wire
+diffing for efficient updates when rows change order.
+
+```elixir
+table "users", columns: columns do
+  for user <- model.users do
+    table_row user.id do
+      cell "name", text(user.name)
+      cell "email", text(user.email)
+    end
+  end
+end
+```
+
+`Plushie.Table.Element` is the table-domain counterpart of
+`Plushie.Canvas.Element`. It shares the same `Plushie.DSL.Element`
+infrastructure and generates the same set of functions (`new/1`,
+`new/2`, setters, `build/1`, `Plushie.Tree.Node` impl). The
+separate module provides domain-appropriate naming.
+
 ## See also
 
 - `Plushie.Widget` - macro API docs and examples
