@@ -31,6 +31,13 @@ defmodule Plushie.WidgetMacroTest do
 
     command(:set_value, value: :float)
     command(:reset)
+    command(:set_range, fields: [min: :float, max: :float])
+
+    command :configure do
+      field :min, :float
+      field :max, :float
+      field :step, :float, required: false
+    end
   end
 
   defmodule ContainerNative do
@@ -347,6 +354,33 @@ defmodule Plushie.WidgetMacroTest do
       assert cmd.payload.value == nil
     end
 
+    test "fields command encodes each field" do
+      cmd = GaugeWidget.set_range("g1", 0.0, 100.0)
+      assert cmd.type == :command
+      assert cmd.payload.id == "g1"
+      assert cmd.payload.family == "set_range"
+      assert cmd.payload.value == %{min: 0.0, max: 100.0}
+    end
+
+    test "block command with optional fields accepts keyword opts" do
+      cmd = GaugeWidget.configure("g1", 0.0, 100.0, step: 0.5)
+      assert cmd.type == :command
+      assert cmd.payload.family == "configure"
+      assert cmd.payload.value == %{min: 0.0, max: 100.0, step: 0.5}
+    end
+
+    test "block command without optional fields omits them" do
+      cmd = GaugeWidget.configure("g1", 0.0, 100.0)
+      assert cmd.type == :command
+      assert cmd.payload.value == %{min: 0.0, max: 100.0}
+    end
+
+    test "block command rejects unknown opts" do
+      assert_raise ArgumentError, ~r/unknown option.*bogus/, fn ->
+        GaugeWidget.configure("g1", 0.0, 100.0, bogus: true)
+      end
+    end
+
     test "command enforces widget_id is binary" do
       assert_raise FunctionClauseError, fn ->
         GaugeWidget.set_value(:not_binary, 42)
@@ -356,6 +390,12 @@ defmodule Plushie.WidgetMacroTest do
     test "command enforces type guard on params" do
       assert_raise FunctionClauseError, fn ->
         GaugeWidget.set_value("g1", "not a number")
+      end
+    end
+
+    test "fields command enforces type guards" do
+      assert_raise FunctionClauseError, fn ->
+        GaugeWidget.set_range("g1", "not a number", 100.0)
       end
     end
   end

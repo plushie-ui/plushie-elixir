@@ -65,7 +65,7 @@ defmodule Plushie.WidgetOpsTest do
 
       assert %Command{type: :command, payload: %{id: "feed", family: "scroll_to"}} = cmd
 
-      assert cmd.payload.value.offset_y == 250
+      assert cmd.payload.value == %{x: 0.0, y: 250}
     end
 
     test "close_window/1 returns a Command with type :close_window and window_id in payload" do
@@ -186,7 +186,7 @@ defmodule Plushie.WidgetOpsTest do
       assert length(cmds) == 1
       assert hd(cmds).id == "log_view"
       assert hd(cmds).family == "scroll_to"
-      assert hd(cmds).value == %{offset_y: 999}
+      assert hd(cmds).value == %{x: 0.0, y: 999}
     end
 
     test "close_window command sends widget_op with op 'close_window'" do

@@ -358,30 +358,37 @@ defmodule Plushie.DSL.Widget.Macro do
   the command and routes it to the widget's `handle_widget_op`
   implementation on the Rust side.
 
-  Supports the same forms as `event`:
+  Uses the same declaration forms as `event`:
 
   ## No payload
 
       command :reset
+      # Generates: def reset(widget_id) :: Command.t()
 
   ## Typed value
 
       command :set_value, value: :float
+      # Generates: def set_value(widget_id, value) when is_number(value)
 
-  ## Structured fields
+  ## Structured fields (required fields become positional args)
 
       command :set_range, fields: [min: :float, max: :float]
+      # Generates: def set_range(widget_id, min, max) when is_number(min) and is_number(max)
 
-  ## Block form
+  ## Block form (optional fields become keyword opts)
 
       command :configure do
         field :min, :float
         field :max, :float
         field :step, :float, required: false
       end
+      # Generates: def configure(widget_id, min, max, opts \\\\ [])
 
-  Required fields become positional args. Optional fields become
-  keyword opts. Values are encoded through `Plushie.Type.encode_value`.
+  Values are encoded through `Plushie.Type.encode_value/1` before
+  being sent on the wire.
+
+  Type identifiers can be built-in atoms (`:float`, `:string`,
+  `:boolean`, `:any`) or modules implementing `Plushie.Type`.
   """
   defmacro command(name, opts_or_block \\ [])
 

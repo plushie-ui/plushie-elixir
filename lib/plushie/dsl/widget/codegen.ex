@@ -452,10 +452,12 @@ defmodule Plushie.DSL.Widget.Codegen do
     all_spec_types = [quote(do: String.t()) | req_types]
 
     base_guard =
-      if req_guards == quote(do: true) do
-        quote(do: is_binary(widget_id))
-      else
-        quote(do: is_binary(widget_id) and unquote(req_guards))
+      case req_guards do
+        {true, _, _} ->
+          quote(do: is_binary(widget_id))
+
+        _ ->
+          quote(do: is_binary(widget_id) and unquote(req_guards))
       end
 
     if optional == [] do

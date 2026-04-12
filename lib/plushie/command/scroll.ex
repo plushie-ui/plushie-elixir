@@ -20,7 +20,7 @@ defmodule Plushie.Command.Scroll do
   """
   @spec scroll_to(widget_id :: Command.widget_id(), offset :: number()) :: Command.t()
   def scroll_to(widget_id, offset) do
-    Command.widget_command(widget_id, "scroll_to", %{offset_y: offset})
+    Command.widget_command(widget_id, "scroll_to", %{x: 0.0, y: offset})
   end
 
   @doc "Snap the scrollable widget to an absolute offset. Supports `\"window#path\"`."

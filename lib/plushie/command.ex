@@ -474,7 +474,14 @@ defmodule Plushie.Command do
   @doc """
   Send a command to a widget by ID.
 
-  Commands use the unified wire format: `{type: "command", id, family, value}`.
+  Commands use the unified wire format matching events:
+
+      {"type": "command", "id": "gauge", "family": "set_value", "value": 72.0}
+
+  The `value` defaults to nil for commands with no payload (e.g. reset).
+  The `family` string identifies the operation. For native widgets, it
+  maps to the Rust widget's `handle_widget_op` dispatch. For built-in
+  widgets, the renderer handles it directly.
   """
   @spec widget_command(id :: String.t(), family :: String.t(), value :: term()) ::
           %__MODULE__{}
@@ -487,9 +494,10 @@ defmodule Plushie.Command do
   end
 
   @doc """
-  Send a batch of widget commands (processed in one cycle).
+  Send a batch of widget commands processed atomically in one cycle.
 
-  Each command in the list is a `{id, family, value}` tuple.
+  Each command in the list is a `{id, family, value}` tuple. All commands
+  are applied before any resulting events are emitted.
   """
   @spec widget_commands(commands :: [{String.t(), String.t(), term()}]) :: %__MODULE__{}
   def widget_commands(commands) when is_list(commands) do

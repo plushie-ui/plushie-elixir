@@ -134,12 +134,12 @@ defmodule Plushie.CommandTest do
     test "stores the offset in value" do
       cmd = Command.scroll_to("log_view", 500)
       assert cmd.payload.id == "log_view"
-      assert cmd.payload.value.offset_y == 500
+      assert cmd.payload.value == %{x: 0.0, y: 500}
     end
 
     test "offset can be any term" do
       cmd = Command.scroll_to("feed", :bottom)
-      assert cmd.payload.value.offset_y == :bottom
+      assert cmd.payload.value == %{x: 0.0, y: :bottom}
     end
   end
 
@@ -348,7 +348,7 @@ defmodule Plushie.CommandTest do
     test "scroll_to/2 preserves full qualified path" do
       cmd = Command.scroll_to("settings#list", 100)
       assert cmd.payload.id == "settings#list"
-      assert cmd.payload.value.offset_y == 100
+      assert cmd.payload.value == %{x: 0.0, y: 100}
     end
 
     test "snap_to/3 preserves full qualified path" do
