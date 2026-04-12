@@ -12,6 +12,7 @@ defmodule Plushie.Widget.Row do
     field :padding, Plushie.Type.Padding, doc: "Padding inside the row."
     field :width, Plushie.Type.Length, doc: "Width of the row. Default: shrink."
     field :height, Plushie.Type.Length, doc: "Height of the row. Default: shrink."
+    field :max_width, :float, doc: "Maximum width in pixels."
 
     field :align_y, Plushie.Type.Alignment,
       doc: "Vertical alignment of children: `:top`, `:center`, `:bottom`."

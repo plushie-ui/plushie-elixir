@@ -13,7 +13,7 @@ defmodule Plushie.Widget.VerticalSlider do
     field :step, :float, doc: "Step increment."
     field :shift_step, :float, doc: "Step increment when Shift is held."
     field :default, :float, doc: "Default value (double-click resets to this)."
-    field :width, Plushie.Type.Length, doc: "Slider width."
+    field :width, :float, doc: "Slider width in pixels."
     field :height, Plushie.Type.Length, doc: "Slider height. Default: fill."
     field :rail_color, Plushie.Type.Color, doc: "Color for the slider rail."
     field :rail_width, :float, doc: "Rail thickness in pixels."

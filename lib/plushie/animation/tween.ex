@@ -138,6 +138,28 @@ defmodule Plushie.Animation.Tween do
   end
 
   @doc """
+  Creates a looping tween that repeats forever with auto-reverse.
+
+  Convenience for common back-and-forth animations (pulsing,
+  breathing, oscillating). Equivalent to calling `new/1` with
+  `repeat: :forever` and `auto_reverse: true`.
+
+  ## Example
+
+      Tween.looping(0.0, 1.0, 500, easing: :ease_in_out)
+  """
+  @spec looping(from :: number(), to :: number(), duration_ms :: pos_integer(), opts :: keyword()) ::
+          t()
+  def looping(from, to, duration_ms, opts \\ []) do
+    new(
+      Keyword.merge(
+        [from: from, to: to, duration: duration_ms, repeat: :forever, auto_reverse: true],
+        opts
+      )
+    )
+  end
+
+  @doc """
   Creates a spring-mode animation (SDK-side spring solver).
 
   ## Required options
