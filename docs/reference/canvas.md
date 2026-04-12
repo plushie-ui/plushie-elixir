@@ -155,7 +155,7 @@ See `Plushie.Canvas.Stroke` and `Plushie.Canvas.Dash`.
 ## Gradients (canvas)
 
 `linear_gradient/3` creates a gradient for use as a fill in canvas
-shapes. This is different from `Plushie.Type.Gradient.linear/2` (which
+shapes. This is different from `Plushie.Type.Gradient.linear/3` (which
 uses an angle for widget backgrounds). Canvas gradients use coordinate
 pairs:
 
@@ -468,6 +468,6 @@ and can decompose into built-in shapes via a `view/2` callback.
   custom widgets
 - [Accessibility reference](accessibility.md) - canvas accessibility
   annotations
-- [Styling reference](themes-and-styling.md) - `Plushie.Type.Gradient.linear/2`
+- [Styling reference](themes-and-styling.md) - `Plushie.Type.Gradient.linear/3`
   for widget background gradients (different from canvas
   `linear_gradient/3`)
