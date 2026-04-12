@@ -125,14 +125,14 @@ defmodule Plushie.Runtime do
            consecutive_view_errors: non_neg_integer(),
            pending_stub_acks: %{String.t() => GenServer.from()},
            widget_handlers: %{
-             {String.t() | nil, String.t()} => %{
+             String.t() => %{
                module: module(),
                state: map(),
                window_id: String.t() | nil
              }
            },
            widget_events: %{
-             {String.t() | nil, String.t()} => %{widget_type: atom(), events: MapSet.t(atom())}
+             String.t() => %{widget_type: atom(), events: MapSet.t(atom())}
            },
            pending_interact:
              {GenServer.from(), String.t(), reference(), reference(), String.t(), map()} | nil,

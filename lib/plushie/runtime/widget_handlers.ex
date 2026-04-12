@@ -2,8 +2,7 @@ defmodule Plushie.Runtime.WidgetHandlers do
   @moduledoc """
   Runtime support for widget handler event dispatch and state management.
 
-  Maintains a registry of active widget_handlers (keyed by window ID and
-  scoped ID)
+  Maintains a registry of active widget_handlers (keyed by canonical scoped ID)
   derived from the normalized tree. Routes events through the scope
   chain of widget handlers, following iced's captured/ignored
   model.
@@ -47,15 +46,16 @@ defmodule Plushie.Runtime.WidgetHandlers do
   the mismatch.
 
   The `widget_events` argument is the event registry derived from the tree
-  (keyed by `{window_id, scoped_id}`).
+  (keyed by canonical scoped ID, e.g. `"main#form/email"`).
   """
   @spec normalize_widget_event!(widget_events :: map(), event :: term()) :: term()
   def normalize_widget_event!(widget_events, %Plushie.Event.WidgetEvent{type: family} = event)
       when is_binary(family) do
+    window_id = Map.get(event, :window_id)
     target = Plushie.Event.target(event)
-    registry_key = {Map.get(event, :window_id), target}
+    canonical = if window_id, do: "#{window_id}##{target}", else: target
 
-    case Map.get(widget_events, registry_key) do
+    case Map.get(widget_events, canonical) do
       %{widget_type: widget_type, events: events, event_specs: event_specs} ->
         {family_widget_type, event_name} = parse_widget_family!(family)
 
@@ -192,12 +192,11 @@ defmodule Plushie.Runtime.WidgetHandlers do
   with the widget ID so they don't collide with app subscriptions or
   other widgets.
   """
-  @type widget_key :: {String.t() | nil, String.t()}
-
-  @spec collect_subscriptions(registry :: %{widget_key() => map()}) :: [Plushie.Subscription.t()]
+  @spec collect_subscriptions(registry :: %{String.t() => map()}) :: [Plushie.Subscription.t()]
   def collect_subscriptions(registry) do
-    Enum.flat_map(registry, fn {{window_id, widget_id}, entry} ->
+    Enum.flat_map(registry, fn {widget_id, entry} ->
       %{module: module, state: widget_state} = entry
+      window_id = Map.get(entry, :window_id)
       props = Map.get(entry, :props, %{})
 
       if function_exported?(module, :subscribe, 2) do
@@ -230,10 +229,10 @@ defmodule Plushie.Runtime.WidgetHandlers do
   - `{:handled, event_or_nil, new_registry}` -- timer was for a widget handler
   - `:not_routed` -- not a widget handler timer
   """
-  @spec maybe_handle_timer(registry :: %{widget_key() => map()}, tag :: term()) ::
+  @spec maybe_handle_timer(registry :: %{String.t() => map()}, tag :: term()) ::
           {:handled, struct() | nil, map()} | :not_routed
-  def maybe_handle_timer(registry, {:__widget__, window_id, widget_id, inner_tag}) do
-    case Map.get(registry, {window_id, widget_id}) do
+  def maybe_handle_timer(registry, {:__widget__, _window_id, widget_id, inner_tag}) do
+    case Map.get(registry, widget_id) do
       %{module: module, state: widget_state} = entry ->
         timer_event = %Plushie.Event.TimerEvent{
           tag: inner_tag,
@@ -259,7 +258,7 @@ defmodule Plushie.Runtime.WidgetHandlers do
               {:ignored, widget_state}
           end
 
-        new_registry = put_in(registry, [{window_id, widget_id}, :state], new_state)
+        new_registry = put_in(registry, [widget_id, :state], new_state)
 
         case action do
           {:emit, transformed} ->
@@ -301,7 +300,7 @@ defmodule Plushie.Runtime.WidgetHandlers do
   existing widgets carry their updated state, and removed widgets are
   simply absent.
   """
-  @spec derive_registry(tree :: map() | nil) :: %{widget_key() => map()}
+  @spec derive_registry(tree :: map() | nil) :: %{String.t() => map()}
   def derive_registry(nil), do: %{}
 
   def derive_registry(tree) do
@@ -313,7 +312,7 @@ defmodule Plushie.Runtime.WidgetHandlers do
   # Used by tests and error recovery paths that need registries from
   # an already-normalized tree without re-running normalization.
   @spec derive_all_registries(tree :: map() | nil) ::
-          {%{widget_key() => map()}, map(), MapSet.t()}
+          {%{String.t() => map()}, map(), MapSet.t()}
   def derive_all_registries(nil), do: {%{}, %{}, MapSet.new()}
 
   def derive_all_registries(tree) do
@@ -359,7 +358,7 @@ defmodule Plushie.Runtime.WidgetHandlers do
        ) do
     h =
       if handles_events do
-        Map.put(h, {window_id, id}, %{
+        Map.put(h, id, %{
           module: module,
           state: state,
           props: props || %{},
@@ -373,7 +372,7 @@ defmodule Plushie.Runtime.WidgetHandlers do
       if is_atom(widget_type) and not is_nil(widget_type) and is_list(events) do
         specs_map = Map.new(event_specs || [], fn {name, spec} -> {name, spec} end)
 
-        Map.put(e, {window_id, id}, %{
+        Map.put(e, id, %{
           widget_type: widget_type,
           events: MapSet.new(events),
           event_specs: specs_map
@@ -393,7 +392,7 @@ defmodule Plushie.Runtime.WidgetHandlers do
              event_specs: event_specs
            }
          },
-         window_id,
+         _window_id,
          id,
          h,
          e
@@ -402,7 +401,7 @@ defmodule Plushie.Runtime.WidgetHandlers do
       if is_atom(widget_type) and not is_nil(widget_type) and is_list(events) do
         specs_map = Map.new(event_specs || [], fn {name, spec} -> {name, spec} end)
 
-        Map.put(e, {window_id, id}, %{
+        Map.put(e, id, %{
           widget_type: widget_type,
           events: MapSet.new(events),
           event_specs: specs_map
@@ -433,7 +432,7 @@ defmodule Plushie.Runtime.WidgetHandlers do
             props: props
           }
         } ->
-          Map.put(acc, {window_id, id}, %{
+          Map.put(acc, id, %{
             module: module,
             state: state,
             props: props || %{},
@@ -514,14 +513,14 @@ defmodule Plushie.Runtime.WidgetHandlers do
     for n <- len..1//-1,
         path = forward |> Enum.take(n) |> Enum.join("/"),
         canonical = if(window_id, do: "#{window_id}##{path}", else: path),
-        entry = Map.get(registry, {window_id, canonical}),
+        entry = Map.get(registry, canonical),
         entry != nil do
       {canonical, entry}
     end
   end
 
-  defp widget_entry(registry, window_id, scoped_id) do
-    case Map.get(registry, {window_id, scoped_id}) do
+  defp widget_entry(registry, _window_id, scoped_id) do
+    case Map.get(registry, scoped_id) do
       nil -> nil
       entry -> {scoped_id, entry}
     end
@@ -567,7 +566,7 @@ defmodule Plushie.Runtime.WidgetHandlers do
           {:ignored, widget_state}
       end
 
-    new_registry = put_in(registry, [{widget_window_id, scoped_id}, :state], new_state)
+    new_registry = put_in(registry, [scoped_id, :state], new_state)
 
     case action do
       {:emit, transformed} ->

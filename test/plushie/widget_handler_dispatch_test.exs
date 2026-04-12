@@ -154,7 +154,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
   describe "scope chain dispatch with :ignored widget" do
     test "event passes through when widget ignores" do
       registry = %{
-        {nil, "parent"} => %{module: IgnoredWidget, state: %{}, window_id: nil}
+        "parent" => %{module: IgnoredWidget, state: %{}, window_id: nil}
       }
 
       {event, _registry} =
@@ -169,7 +169,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
   describe "scope chain dispatch with :consumed widget" do
     test "event is suppressed" do
       registry = %{
-        {nil, "parent"} => %{module: ConsumedWidget, state: %{}, window_id: nil}
+        "parent" => %{module: ConsumedWidget, state: %{}, window_id: nil}
       }
 
       {event, _registry} =
@@ -182,7 +182,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
   describe "scope chain dispatch with :emit widget" do
     test "event is transformed" do
       registry = %{
-        {nil, "widget"} => %{module: EmitWidget, state: %{}, window_id: nil}
+        "widget" => %{module: EmitWidget, state: %{}, window_id: nil}
       }
 
       {event, _registry} =
@@ -196,14 +196,14 @@ defmodule Plushie.WidgetHandlerDispatchTest do
   describe "scope chain dispatch with :update_state widget" do
     test "event is consumed and state is updated" do
       registry = %{
-        {nil, "widget"} => %{module: StateWidget, state: %{counter: 5}, window_id: nil}
+        "widget" => %{module: StateWidget, state: %{counter: 5}, window_id: nil}
       }
 
       {event, registry} =
         WidgetHandlers.dispatch_event(registry, click_event("elem", ["widget"]))
 
       assert event == nil
-      assert registry[{nil, "widget"}].state.counter == 6
+      assert registry["widget"].state.counter == 6
     end
   end
 
@@ -213,8 +213,8 @@ defmodule Plushie.WidgetHandlerDispatchTest do
     test ":ignored bubbles to parent" do
       # Child ignores, parent consumes
       registry = %{
-        {nil, "parent/child"} => %{module: IgnoredWidget, state: %{}, window_id: nil},
-        {nil, "parent"} => %{module: ConsumedWidget, state: %{}, window_id: nil}
+        "parent/child" => %{module: IgnoredWidget, state: %{}, window_id: nil},
+        "parent" => %{module: ConsumedWidget, state: %{}, window_id: nil}
       }
 
       {event, _registry} =
@@ -227,8 +227,8 @@ defmodule Plushie.WidgetHandlerDispatchTest do
     test ":emit from child reaches parent" do
       # Child emits, parent sees the emitted event
       registry = %{
-        {nil, "parent/child"} => %{module: EmitWidget, state: %{}, window_id: nil},
-        {nil, "parent"} => %{module: ConsumedWidget, state: %{}, window_id: nil}
+        "parent/child" => %{module: EmitWidget, state: %{}, window_id: nil},
+        "parent" => %{module: ConsumedWidget, state: %{}, window_id: nil}
       }
 
       {event, _registry} =
@@ -241,8 +241,8 @@ defmodule Plushie.WidgetHandlerDispatchTest do
     test ":emit from child passes through :ignored parent to app" do
       # Child emits, parent ignores the emitted event
       registry = %{
-        {nil, "parent/child"} => %{module: EmitWidget, state: %{}, window_id: nil},
-        {nil, "parent"} => %{module: IgnoredWidget, state: %{}, window_id: nil}
+        "parent/child" => %{module: EmitWidget, state: %{}, window_id: nil},
+        "parent" => %{module: IgnoredWidget, state: %{}, window_id: nil}
       }
 
       {event, _registry} =
@@ -255,7 +255,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
     test "non-widget scope elements are skipped" do
       # "container" is not a widget handler, only "parent" is
       registry = %{
-        {nil, "parent"} => %{module: ConsumedWidget, state: %{}, window_id: nil}
+        "parent" => %{module: ConsumedWidget, state: %{}, window_id: nil}
       }
 
       {event, _registry} =
@@ -296,10 +296,10 @@ defmodule Plushie.WidgetHandlerDispatchTest do
       }
 
       registry = WidgetHandlers.derive_registry(tree)
-      assert Map.has_key?(registry, {"root", "picker"})
-      assert registry[{"root", "picker"}].module == EmitWidget
-      assert registry[{"root", "picker"}].state.counter == 3
-      assert registry[{"root", "picker"}].props.color == "red"
+      assert Map.has_key?(registry, "picker")
+      assert registry["picker"].module == EmitWidget
+      assert registry["picker"].state.counter == 3
+      assert registry["picker"].props.color == "red"
     end
 
     test "returns empty map for nil tree" do
@@ -335,7 +335,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
       }
 
       registry = WidgetHandlers.derive_registry(tree)
-      refute Map.has_key?(registry, {"root", "display_only"})
+      refute Map.has_key?(registry, "display_only")
     end
   end
 
@@ -344,7 +344,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
   describe "direct-target dispatch (canvas press/move/release)" do
     test "canvas event with empty scope targets widget by full ID" do
       registry = %{
-        {nil, "picker"} => %{module: ConsumedWidget, state: %{}, window_id: nil}
+        "picker" => %{module: ConsumedWidget, state: %{}, window_id: nil}
       }
 
       # Canvas press: id = "picker", scope = []
@@ -356,7 +356,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
 
     test "canvas event with scope reconstructs full scoped ID" do
       registry = %{
-        {nil, "form/picker"} => %{module: ConsumedWidget, state: %{}, window_id: nil}
+        "form/picker" => %{module: ConsumedWidget, state: %{}, window_id: nil}
       }
 
       # Canvas press on "form/picker": id = "picker", scope = ["form"]
@@ -370,8 +370,8 @@ defmodule Plushie.WidgetHandlerDispatchTest do
       # Root-level "submit" and scoped "form/submit" both exist.
       # A canvas event for "form/submit" must not match root "submit".
       registry = %{
-        {nil, "submit"} => %{module: EmitWidget, state: %{}, window_id: nil},
-        {nil, "form/submit"} => %{module: ConsumedWidget, state: %{}, window_id: nil}
+        "submit" => %{module: EmitWidget, state: %{}, window_id: nil},
+        "form/submit" => %{module: ConsumedWidget, state: %{}, window_id: nil}
       }
 
       # Event for "form/submit": id = "submit", scope = ["form"]
@@ -384,7 +384,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
 
     test "falls through when no widget matches the full path" do
       registry = %{
-        {nil, "other"} => %{module: ConsumedWidget, state: %{}, window_id: nil}
+        "other" => %{module: ConsumedWidget, state: %{}, window_id: nil}
       }
 
       event = canvas_event("picker", [])
@@ -396,8 +396,8 @@ defmodule Plushie.WidgetHandlerDispatchTest do
 
     test "direct canvas event targets the child widget before the parent" do
       registry = %{
-        {nil, "parent/child"} => %{module: ConsumedWidget, state: %{}, window_id: nil},
-        {nil, "parent"} => %{module: IgnoredWidget, state: %{}, window_id: nil}
+        "parent/child" => %{module: ConsumedWidget, state: %{}, window_id: nil},
+        "parent" => %{module: IgnoredWidget, state: %{}, window_id: nil}
       }
 
       {event, _registry} =
@@ -408,7 +408,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
 
     test "direct canvas emit keeps the widget id and parent scope" do
       registry = %{
-        {nil, "form/picker"} => %{module: EmitWidget, state: %{}, window_id: nil}
+        "form/picker" => %{module: EmitWidget, state: %{}, window_id: nil}
       }
 
       {event, _registry} =
@@ -422,8 +422,8 @@ defmodule Plushie.WidgetHandlerDispatchTest do
 
     test "windowed direct canvas event stays in its own window" do
       registry = %{
-        {"main", "main#picker"} => %{module: EmitWidget, state: %{}, window_id: "main"},
-        {"other", "other#picker"} => %{module: ConsumedWidget, state: %{}, window_id: "other"}
+        "main#picker" => %{module: EmitWidget, state: %{}, window_id: "main"},
+        "other#picker" => %{module: ConsumedWidget, state: %{}, window_id: "other"}
       }
 
       {event, _registry} =
@@ -463,7 +463,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
   describe "error handling in dispatch chain" do
     test "raising widget is treated as :ignored and chain continues" do
       registry = %{
-        {nil, "widget"} => %{module: RaisingWidget, state: %{}, window_id: nil}
+        "widget" => %{module: RaisingWidget, state: %{}, window_id: nil}
       }
 
       log =
@@ -481,8 +481,8 @@ defmodule Plushie.WidgetHandlerDispatchTest do
 
     test "raising child is :ignored, parent still captures" do
       registry = %{
-        {nil, "parent/child"} => %{module: RaisingWidget, state: %{}, window_id: nil},
-        {nil, "parent"} => %{module: ConsumedWidget, state: %{}, window_id: nil}
+        "parent/child" => %{module: RaisingWidget, state: %{}, window_id: nil},
+        "parent" => %{module: ConsumedWidget, state: %{}, window_id: nil}
       }
 
       log =
@@ -517,7 +517,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
       end
 
       registry = %{
-        {nil, "widget"} => %{module: BadReturnWidget, state: %{}, window_id: nil}
+        "widget" => %{module: BadReturnWidget, state: %{}, window_id: nil}
       }
 
       log =

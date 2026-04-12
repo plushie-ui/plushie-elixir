@@ -405,7 +405,7 @@ defmodule Plushie.Tree do
   # or when widget_states is empty.
   @spec lookup_widget_state(String.t(), module(), normalize_ctx()) :: map()
   defp lookup_widget_state(scoped_id, module, ctx) do
-    case Map.get(ctx.widget_states, {ctx.window_id, scoped_id}) do
+    case Map.get(ctx.widget_states, scoped_id) do
       %{module: ^module, state: state} -> state
       %{module: _other} -> module.__initial_state__()
       nil -> module.__initial_state__()
@@ -440,7 +440,6 @@ defmodule Plushie.Tree do
           normalize_ctx()
   defp accumulate_widget_entry(ctx, scoped_id, composite, widget_state) do
     window_id = ctx.window_id
-    key = {window_id, scoped_id}
 
     ctx =
       if composite.handles_events do
@@ -451,7 +450,7 @@ defmodule Plushie.Tree do
           window_id: window_id
         }
 
-        %{ctx | widget_handlers: Map.put(ctx.widget_handlers, key, entry)}
+        %{ctx | widget_handlers: Map.put(ctx.widget_handlers, scoped_id, entry)}
       else
         ctx
       end
@@ -469,7 +468,7 @@ defmodule Plushie.Tree do
         event_specs: specs_map
       }
 
-      %{ctx | widget_events: Map.put(ctx.widget_events, key, event_entry)}
+      %{ctx | widget_events: Map.put(ctx.widget_events, scoped_id, event_entry)}
     else
       ctx
     end
@@ -484,7 +483,6 @@ defmodule Plushie.Tree do
          __widget__: %Meta.Native{type: widget_type, events: events, event_specs: event_specs}
        }) do
     if is_atom(widget_type) and not is_nil(widget_type) and is_list(events) do
-      key = {ctx.window_id, scoped_id}
       specs_map = Map.new(event_specs || [], fn {name, spec} -> {name, spec} end)
 
       event_entry = %{
@@ -493,7 +491,7 @@ defmodule Plushie.Tree do
         event_specs: specs_map
       }
 
-      %{ctx | widget_events: Map.put(ctx.widget_events, key, event_entry)}
+      %{ctx | widget_events: Map.put(ctx.widget_events, scoped_id, event_entry)}
     else
       ctx
     end
