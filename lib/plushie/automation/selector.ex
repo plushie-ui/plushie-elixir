@@ -69,7 +69,8 @@ defmodule Plushie.Automation.Selector do
       end
 
     # Strip leading # from ID selectors (both "#save" and "save" are IDs)
-    target = if String.starts_with?(target, "#"), do: String.trim_leading(target, "#"), else: target
+    target =
+      if String.starts_with?(target, "#"), do: String.trim_leading(target, "#"), else: target
 
     # Determine selector type from target's first character
     resolved =

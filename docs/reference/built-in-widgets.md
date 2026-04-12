@@ -154,26 +154,17 @@ streaming alternative for large dynamic images is planned.
 
 `Plushie.Widget.Table`
 
-Data table with typed columns, sorting, and scrolling. Tables support
-two ways to populate rows: **rich composition** with `table_row`/`cell`
-children, or **data shorthand** with the `rows:` prop. These are
-mutually exclusive.
+**table** displays structured data in rows and columns with sortable
+headers, row selection highlighting, and optional striped backgrounds.
+Rows are real tree children, so adding, removing, or reordering rows
+produces minimal wire patches (LIS-based diffing) instead of
+re-sending the entire dataset.
 
-### Rich composition (table_row children)
-
-Use `Plushie.Table.Row` and `Plushie.Table.Cell` for custom cell
-content (buttons, icons, any widget). Rows are children of the table,
-which enables LIS-based wire diffing for efficient reorder updates:
+The table ID is optional. Pass one when you need to match sort or
+row_click events:
 
 ```elixir
-table "users",
-  columns: [
-    %{key: "name", label: "Name", sortable: true},
-    %{key: "email", label: "Email", width: {:fill_portion, 2}},
-    %{key: "actions", label: "", width: 80}
-  ],
-  sort_by: model.sort_by,
-  sort_order: model.sort_order do
+table "users", columns: cols, selected: Selection.to_list(sel) do
   for user <- model.users do
     table_row user.id do
       cell "name", text(user.name)
@@ -184,78 +175,109 @@ table "users",
 end
 ```
 
-### Data shorthand (rows prop)
-
-For text-only tables, the `rows:` prop accepts a list of maps. Values
-are rendered as text via `to_string/1`:
+For simple text-only tables, the `rows:` shorthand avoids the
+do-block entirely:
 
 ```elixir
-table "users",
-  columns: [
-    %{key: :name, label: "Name", sortable: true},
-    %{key: :email, label: "Email"},
-    %{key: :role, label: "Role", align: "center"}
-  ],
-  rows: model.users
+table columns: cols, rows: model.users
 ```
 
-### Column format
+Both forms are mutually exclusive. The `rows:` shorthand expands
+to `table_row`/`table_cell` children during build.
 
-Maps with these keys:
+### Columns
 
-| Key | Type | Required | Default | Purpose |
-|---|---|---|---|---|
-| `key` | atom or string | yes | *n/a* | Lookup key into row data |
-| `label` | string | yes | *n/a* | Header display text |
-| `sortable` | boolean | no | `false` | Enable sort on header click |
-| `align` | `"left"` / `"center"` / `"right"` | no | `"left"` | Text alignment |
-| `width` | Length | no | `:fill` | Column width |
-
-All column `key` values must be the same type (all atoms or all
-strings).
-
-### Row format (data shorthand)
-
-Rows are maps or structs where keys match the column `key` type.
-Use atom keys for Ecto structs and internal data; use string keys
-for JSON or external data. Structs are converted to maps
-automatically (extra fields are ignored). Values are rendered as
-text via `to_string/1`.
-
-### Table props
-
-| Prop | Type | Default | Purpose |
-|---|---|---|---|
-| `columns` | `[column()]` | *n/a* | Column definitions |
-| `rows` | `[row()]` | *n/a* | Data rows (text-only shorthand) |
-| `header` | boolean | *n/a* | Show header row |
-| `separator` | float | *n/a* | Divider line thickness (0.0 to hide) |
-| `sort_by` | string | *n/a* | Currently sorted column key |
-| `sort_order` | `:asc` / `:desc` | *n/a* | Sort direction |
-| `selected` | `[string]` | *n/a* | Row IDs to highlight as selected |
-| `striped` | boolean | *n/a* | Alternate row backgrounds |
-| `width` | Length | `:fill` | Table width |
-| `height` | Length | *n/a* | Table height (wraps in scrollable when set) |
-| `padding` | Padding | *n/a* | Cell internal padding |
-| `header_text_size` | number | *n/a* | Header font size |
-| `row_text_size` | number | *n/a* | Body font size (data shorthand) |
-| `separator_color` | Color | *n/a* | Divider line colour |
-| `a11y` | map | *n/a* | Accessibility overrides |
-
-### Sorting
-
-Set `sortable: true` on columns that support sorting. The table emits
-`:sort` events when a sortable header is clicked:
+Column definitions are maps passed via the `columns:` prop. Every
+column needs a `key` (matching the row data field) and a `label`
+(header text):
 
 ```elixir
-def update(model, %WidgetEvent{type: :sort, id: "users", value: %{column: col}}) do
-  dir = if model.sort_by == col and model.sort_order == :asc, do: :desc, else: :asc
-  %{model | sort_by: col, sort_order: dir}
+columns: [
+  %{key: :name, label: "Name", sortable: true, width: :fill},
+  %{key: :email, label: "Email"},
+  %{key: :role, label: "Role", align: "center", width: 120}
+]
+```
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `key` | atom or string | required | Row data lookup key |
+| `label` | string | required | Header display text |
+| `sortable` | boolean | `false` | Header clickable for sort |
+| `width` | Length | `:fill` | Column width |
+| `align` | `"left"` `"center"` `"right"` | `"left"` | Cell alignment |
+
+All column keys must be the same type (all atoms or all strings).
+
+### Rich cells
+
+Inside a `table_row`, each `cell` maps to a column by key. Cells
+can contain any widget, not just text:
+
+```elixir
+table_row user.id do
+  cell "name", text(user.name, font: Font.new() |> Font.weight(:bold))
+  cell "status", progress_bar("prog", {0, 100}, user.progress)
+  cell "actions" do
+    button("edit-#{user.id}", "Edit")
+    button("del-#{user.id}", "Delete")
+  end
 end
 ```
 
-The table itself does not sort. It displays rows in the order you
-provide. Sort in your model or use `Plushie.Data.query/2`.
+### Sorting
+
+Mark columns as `sortable: true`. Clicking a sortable header emits
+a `:sort` event with the column key as the value. The table displays
+the sort indicator but does not reorder rows. Sort in your model:
+
+```elixir
+def update(model, %WidgetEvent{type: {:table, :sort}, id: "users", value: col}) do
+  dir = if model.sort_by == col and model.sort_order == :asc, do: :desc, else: :asc
+  sorted = Enum.sort_by(model.users, & &1[col], if(dir == :asc, do: :asc, else: :desc))
+  %{model | users: sorted, sort_by: col, sort_order: dir}
+end
+```
+
+### Selection
+
+Selection is app-managed. Pass selected row IDs via the `selected:`
+prop; the renderer highlights those rows. Handle `:row_click` events
+to update selection state using `Plushie.Selection`:
+
+```elixir
+def update(model, %WidgetEvent{type: {:table, :row_click}, id: row_id}) do
+  %{model | selection: Selection.toggle(model.selection, row_id)}
+end
+
+def view(model) do
+  table "users",
+    columns: cols,
+    selected: Selection.to_list(model.selection),
+    striped: true do
+    ...
+  end
+end
+```
+
+### Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `columns` | `[map]` | | Column definitions (see above) |
+| `rows` | `[map]` | | Data shorthand: text-only rows |
+| `header` | boolean | `true` | Show header row |
+| `selected` | `[string]` | | Row IDs to highlight |
+| `striped` | boolean | `false` | Alternate row backgrounds |
+| `separator` | float | `1.0` | Divider thickness (0.0 to hide) |
+| `separator_color` | Color | | Divider colour |
+| `sort_by` | string | | Currently sorted column key |
+| `sort_order` | `:asc`/`:desc` | | Sort direction |
+| `width` | Length | `:fill` | Table width |
+| `height` | Length | | Table height (scrollable when set) |
+| `padding` | Padding | | Cell internal padding |
+| `header_text_size` | number | | Header font size |
+| `row_text_size` | number | | Body font size (data shorthand) |
 
 ## Pane grid
 
