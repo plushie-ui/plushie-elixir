@@ -38,6 +38,9 @@ defmodule Plushie.WidgetMacroTest do
       field :max, :float
       field :step, :float, required: false
     end
+
+    command(:send_data, value: :any)
+    command(:tag, fields: [label: :string, metadata: :any])
   end
 
   defmodule ContainerNative do
@@ -397,6 +400,20 @@ defmodule Plushie.WidgetMacroTest do
       assert_raise FunctionClauseError, fn ->
         GaugeWidget.set_range("g1", "not a number", 100.0)
       end
+    end
+
+    test "value :any command accepts any value without guard" do
+      cmd = GaugeWidget.send_data("g1", %{custom: "data"})
+      assert cmd.type == :command
+      assert cmd.payload.family == "send_data"
+      assert cmd.payload.value == %{custom: "data"}
+    end
+
+    test "fields with :any type skip guard for that field" do
+      cmd = GaugeWidget.tag("g1", "important", %{nested: true})
+      assert cmd.type == :command
+      assert cmd.payload.family == "tag"
+      assert cmd.payload.value == %{label: "important", metadata: %{nested: true}}
     end
   end
 

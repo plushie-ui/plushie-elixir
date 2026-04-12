@@ -412,14 +412,21 @@ defmodule Plushie.DSL.Widget.Codegen do
   defp generate_command_fn({name, %{carrier: :value, type: type}}) do
     family = Atom.to_string(name)
     val_var = Macro.var(:value, __MODULE__)
-    guard = guard_for_type(val_var, type)
+    guard = Fields.type_guard_ast(type, val_var)
     type_ast = Fields.castable_type_for(type)
+
+    full_guard =
+      if guard do
+        quote(do: is_binary(widget_id) and unquote(guard))
+      else
+        quote(do: is_binary(widget_id))
+      end
 
     quote do
       @doc "Sends the `#{unquote(family)}` command to the widget."
       @spec unquote(name)(String.t(), unquote(type_ast)) :: Plushie.Command.t()
       def unquote(name)(widget_id, unquote(val_var))
-          when is_binary(widget_id) and unquote(guard) do
+          when unquote(full_guard) do
         Plushie.Command.widget_command(
           widget_id,
           unquote(family),
@@ -453,7 +460,7 @@ defmodule Plushie.DSL.Widget.Codegen do
 
     base_guard =
       case req_guards do
-        {true, _, _} ->
+        nil ->
           quote(do: is_binary(widget_id))
 
         _ ->
@@ -571,13 +578,13 @@ defmodule Plushie.DSL.Widget.Codegen do
       names
       |> Enum.map(fn field_name ->
         type = fields[field_name]
-        guard_for_type(to_var(field_name), type)
+        Fields.type_guard_ast(type, to_var(field_name))
       end)
-      |> Enum.reject(&match?({true, _, _}, &1))
+      |> Enum.reject(&is_nil/1)
 
     case guards do
       [] ->
-        quote(do: true)
+        nil
 
       [single] ->
         single
@@ -585,10 +592,6 @@ defmodule Plushie.DSL.Widget.Codegen do
       multiple ->
         Enum.reduce(multiple, fn right, left -> quote(do: unquote(left) and unquote(right)) end)
     end
-  end
-
-  defp guard_for_type(var, type) do
-    Fields.type_guard_ast(type, var) || quote(do: true)
   end
 
   # Build a simple AST variable reference from an atom name.
