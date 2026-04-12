@@ -61,8 +61,10 @@ defmodule Plushie.Event.BuiltinSpecs do
         absolute_y: :float,
         relative_x: :float,
         relative_y: :float,
-        bounds: :any,
-        content_bounds: :any
+        bounds_width: :float,
+        bounds_height: :float,
+        content_width: :float,
+        content_height: :float
       ]
     },
     pane_focus_cycle: %{carrier: :value, fields: [pane: :any]},
@@ -84,16 +86,27 @@ defmodule Plushie.Event.BuiltinSpecs do
       carrier: :value,
       fields: [
         key: Plushie.Type.Key,
+        modified_key: :string,
+        physical_key: :string,
+        location: :string,
         modifiers: Plushie.Type.KeyModifiers,
-        text: :string
-      ]
+        text: :string,
+        repeat: :boolean
+      ],
+      required: [:key, :modifiers]
     },
     key_release: %{
       carrier: :value,
       fields: [
         key: Plushie.Type.Key,
-        modifiers: Plushie.Type.KeyModifiers
-      ]
+        modified_key: :string,
+        physical_key: :string,
+        location: :string,
+        modifiers: Plushie.Type.KeyModifiers,
+        text: :string,
+        repeat: :boolean
+      ],
+      required: [:key, :modifiers]
     },
 
     # -- Unified pointer events --
@@ -135,8 +148,8 @@ defmodule Plushie.Event.BuiltinSpecs do
         modifiers: :any
       ]
     },
-    enter: %{carrier: :none},
-    exit: %{carrier: :none},
+    enter: %{carrier: :value, fields: [x: :float, y: :float], required: []},
+    exit: %{carrier: :value, fields: [x: :float, y: :float], required: []},
     double_click: %{
       carrier: :value,
       fields: [x: :float, y: :float, pointer: :atom, modifiers: :any]
