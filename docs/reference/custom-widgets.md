@@ -24,7 +24,7 @@ present and generates the appropriate code.
 | `field/3` | Typed property | `field :label, :string, default: "Hello"` |
 | `event/2` | Event declaration | `event :change, value: :float` |
 | `state/1` | Internal state fields | `state hover: nil, count: 0` |
-| `command/2` | Widget command (native) | `command :reset, value: :float` |
+| `command/2` | Widget command (native) | `command :set_value, value: :float` |
 | `rust_crate/1` | Rust crate path (native) | `rust_crate "path/to/crate"` |
 | `rust_constructor/1` | Rust constructor (native) | `rust_constructor "gauge::new()"` |
 
@@ -375,8 +375,40 @@ defmodule MyApp.Gauge do
   rust_crate "path/to/gauge_crate"
   rust_constructor "gauge::new()"
   event :value_changed, fields: [value: :float]
+
+  # No payload
+  command :reset
+
+  # Typed scalar value
   command :set_value, value: :float
+
+  # Structured fields (required fields become positional args)
+  command :set_range, fields: [min: :float, max: :float]
+
+  # Block form (optional fields become keyword opts)
+  command :configure do
+    field :min, :float
+    field :max, :float
+    field :step, :float, required: false
+  end
 end
+```
+
+The `command` macro supports the same forms as `event`:
+
+- `command :reset` (no payload)
+- `command :set_value, value: :float` (typed scalar value)
+- `command :set_range, fields: [min: :float, max: :float]` (structured fields)
+- Block form with `field` declarations (supports `required: false` for optional fields)
+
+Required fields become positional arguments in the generated function.
+Optional fields become keyword options. Values go through
+`Plushie.Type.encode_value/1` before hitting the wire.
+
+Commands use the unified wire format matching events:
+
+```json
+{"type": "command", "id": "gauge", "family": "set_value", "value": 72.0}
 ```
 
 ### Rust side
@@ -392,7 +424,7 @@ Implement the `PlushieWidget` trait from `plushie_ext::prelude::*`:
 | `init()` | Startup | No |
 | `prepare()` | Pre-view (mutable) | No |
 | `handle_message()` | Message dispatch | No |
-| `handle_widget_op()` | Command dispatch | No |
+| `handle_widget_op()` | Command dispatch (receives the `family` and `value` from the wire) | No |
 | `cleanup()` | Node removal | No |
 | `infer_a11y()` | Accessibility | No |
 

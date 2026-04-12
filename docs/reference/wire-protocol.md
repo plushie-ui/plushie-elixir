@@ -99,8 +99,9 @@ module for all outbound messages:
 | `encode_effect/4` | `effect` | Platform effect requests |
 | `encode_subscribe/5` | `subscribe` | Subscription activation |
 | `encode_unsubscribe/3` | `unsubscribe` | Subscription removal |
-| `encode_widget_op/3` | `widget_op` | Focus, scroll, select, cursor, announce |
-| `encode_widget_command/4` | `widget_command` | Native widget commands |
+| `encode_command/4` | `command` | Widget-targeted commands (focus, scroll, select, cursor, native widget ops) |
+| `encode_commands/2` | `commands` | Batch of widget-targeted commands |
+| `encode_widget_op/3` | `widget_op` | Non-targeted operations (focus_next, focus_previous, announce) |
 | `encode_window_op/4` | `window_op` | Window open, close, update |
 | `encode_image_op/3` | `image_op` | In-memory image lifecycle |
 | `encode_interact/5` | `interact` | Test interactions |

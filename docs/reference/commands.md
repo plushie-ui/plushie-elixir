@@ -151,7 +151,8 @@ dynamic content.
 | `tree_hash/1` | Query structural hash of the UI tree |
 | `find_focused/1` | Query which widget has focus |
 | `advance_frame/1` | Manual animation frame advance (test/headless mode) |
-| `widget_command/3` | Command to a native Rust widget |
+| `widget_command/3` | Send a command to any widget by ID, family, and optional value |
+| `widget_commands/1` | Send a batch of widget commands processed atomically |
 | `pane_split/4` | Split a pane in a pane grid |
 | `pane_close/2` | Close a pane |
 
