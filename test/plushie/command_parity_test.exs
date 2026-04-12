@@ -17,70 +17,74 @@ defmodule Plushie.CommandParityTest do
   describe "snap_to/3" do
     test "snaps scrollable to offset with defaults" do
       cmd = Command.snap_to("scr1")
-      assert %Command{type: :snap_to, payload: payload} = cmd
-      assert payload.target == "scr1"
-      assert payload.x == 0.0
-      assert payload.y == 0.0
+      assert %Command{type: :command, payload: %{id: "scr1", family: "snap_to"}} = cmd
+      assert cmd.payload.value.x == 0.0
+      assert cmd.payload.value.y == 0.0
     end
 
     test "snaps scrollable to specific offset" do
       cmd = Command.snap_to("scr1", 0.5, 1.0)
-      assert cmd.payload.x == 0.5
-      assert cmd.payload.y == 1.0
+      assert cmd.payload.value.x == 0.5
+      assert cmd.payload.value.y == 1.0
     end
   end
 
   describe "snap_to_end/1" do
     test "snaps scrollable to end" do
       cmd = Command.snap_to_end("scr1")
-      assert %Command{type: :snap_to_end, payload: %{target: "scr1"}} = cmd
+      assert %Command{type: :command, payload: %{id: "scr1", family: "snap_to_end"}} = cmd
     end
   end
 
   describe "scroll_by/3" do
     test "scrolls by relative offset with defaults" do
       cmd = Command.scroll_by("scr1")
-      assert %Command{type: :scroll_by, payload: payload} = cmd
-      assert payload.target == "scr1"
-      assert payload.x == 0.0
-      assert payload.y == 0.0
+      assert %Command{type: :command, payload: %{id: "scr1", family: "scroll_by"}} = cmd
+      assert cmd.payload.value.x == 0.0
+      assert cmd.payload.value.y == 0.0
     end
 
     test "scrolls by specific offset" do
       cmd = Command.scroll_by("scr1", 10.0, -20.0)
-      assert cmd.payload.x == 10.0
-      assert cmd.payload.y == -20.0
+      assert cmd.payload.value.x == 10.0
+      assert cmd.payload.value.y == -20.0
     end
   end
 
   describe "move_cursor_to_front/1" do
     test "returns correct command" do
       cmd = Command.move_cursor_to_front("editor1")
-      assert %Command{type: :move_cursor_to_front, payload: %{target: "editor1"}} = cmd
+
+      assert %Command{type: :command, payload: %{id: "editor1", family: "move_cursor_to_front"}} =
+               cmd
     end
   end
 
   describe "move_cursor_to_end/1" do
     test "returns correct command" do
       cmd = Command.move_cursor_to_end("editor1")
-      assert %Command{type: :move_cursor_to_end, payload: %{target: "editor1"}} = cmd
+
+      assert %Command{type: :command, payload: %{id: "editor1", family: "move_cursor_to_end"}} =
+               cmd
     end
   end
 
   describe "move_cursor_to/2" do
     test "moves cursor to specific position" do
       cmd = Command.move_cursor_to("editor1", 42)
-      assert %Command{type: :move_cursor_to, payload: %{target: "editor1", position: 42}} = cmd
+
+      assert %Command{type: :command, payload: %{id: "editor1", family: "move_cursor_to"}} = cmd
+
+      assert cmd.payload.value.position == 42
     end
   end
 
   describe "select_range/3" do
     test "selects a range of text" do
       cmd = Command.select_range("editor1", 5, 15)
-      assert %Command{type: :select_range} = cmd
-      assert cmd.payload.target == "editor1"
-      assert cmd.payload.start == 5
-      assert cmd.payload.end == 15
+      assert %Command{type: :command, payload: %{id: "editor1", family: "select_range"}} = cmd
+      assert cmd.payload.value.start == 5
+      assert cmd.payload.value.end == 15
     end
   end
 

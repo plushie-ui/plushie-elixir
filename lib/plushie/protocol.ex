@@ -54,8 +54,8 @@ defmodule Plushie.Protocol do
           | {:subscribe, String.t(), String.t()}
           | {:unsubscribe, String.t()}
           | {:image_op, String.t(), map()}
-          | {:widget_command, String.t(), String.t(), map()}
-          | {:widget_commands, [map()]}
+          | {:command, String.t(), String.t(), term()}
+          | {:commands, [{String.t(), String.t(), term()}]}
           | {:window_op, String.t(), String.t(), map()}
           | {:system_op, String.t(), map()}
           | {:system_query, String.t(), map()}
@@ -227,31 +227,30 @@ defmodule Plushie.Protocol do
   defdelegate encode_image_op(op, payload, format \\ :msgpack), to: Plushie.Protocol.Encode
 
   @doc """
-  Encodes a single widget command as a protocol message.
+  Encodes a widget-targeted command as a protocol message.
 
-  Widget commands bypass the normal tree update / diff / patch cycle
-  and are delivered directly to the target native widget on the Rust side.
+  Commands use the unified format: `{type: "command", id, family, value}`.
   """
-  @spec encode_widget_command(
-          node_id :: String.t(),
-          op :: String.t(),
-          payload :: map(),
+  @spec encode_command(
+          id :: String.t(),
+          family :: String.t(),
+          value :: term(),
           format :: format()
         ) :: iodata()
-  defdelegate encode_widget_command(node_id, op, payload, format \\ :msgpack),
+  defdelegate encode_command(id, family, value, format \\ :msgpack),
     to: Plushie.Protocol.Encode
 
   @doc """
-  Encodes a batch of widget commands as a protocol message.
+  Encodes a batch of widget-targeted commands as a protocol message.
 
-  Each command in the list is a `{node_id, op, payload}` tuple.
+  Each command in the list is a `{id, family, value}` tuple.
   All commands in the batch are processed in a single cycle on the Rust side.
   """
-  @spec encode_widget_commands(
-          commands :: [{String.t(), String.t(), map()}],
+  @spec encode_commands(
+          commands :: [{String.t(), String.t(), term()}],
           format :: format()
         ) :: iodata()
-  defdelegate encode_widget_commands(commands, format \\ :msgpack), to: Plushie.Protocol.Encode
+  defdelegate encode_commands(commands, format \\ :msgpack), to: Plushie.Protocol.Encode
 
   @doc """
   Encodes a window lifecycle operation as a protocol message.

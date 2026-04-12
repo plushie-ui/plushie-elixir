@@ -390,49 +390,113 @@ defmodule Plushie.DSL.Widget.Codegen do
 
   @doc false
   def generate_commands(commands) do
-    fns =
-      Enum.map(commands, fn {name, params} ->
-        param_names = Keyword.keys(params)
-
-        args =
-          [quote(do: widget_id) | Enum.map(param_names, fn p -> to_var(p) end)]
-
-        payload_map =
-          {:%{}, [],
-           Enum.map(param_names, fn p ->
-             {p, to_var(p)}
-           end)}
-
-        guards = build_command_guards(params)
-        op_string = Atom.to_string(name)
-        spec_ast = build_command_spec(name, params)
-
-        if param_names == [] do
-          quote do
-            @doc "Sends the `#{unquote(op_string)}` command to the native widget."
-            @spec unquote(spec_ast)
-            def unquote(name)(widget_id) when is_binary(widget_id) do
-              Plushie.Command.widget_command(widget_id, unquote(op_string), %{})
-            end
-          end
-        else
-          quote do
-            @doc "Sends the `#{unquote(op_string)}` command to the native widget."
-            @spec unquote(spec_ast)
-            def unquote(name)(unquote_splicing(args))
-                when is_binary(widget_id) and unquote(guards) do
-              Plushie.Command.widget_command(
-                widget_id,
-                unquote(op_string),
-                unquote(payload_map)
-              )
-            end
-          end
-        end
-      end)
+    fns = Enum.map(commands, &generate_command_fn/1)
 
     quote do
       (unquote_splicing(fns))
+    end
+  end
+
+  defp generate_command_fn({name, %{carrier: :none}}) do
+    family = Atom.to_string(name)
+
+    quote do
+      @doc "Sends the `#{unquote(family)}` command to the widget."
+      @spec unquote(name)(String.t()) :: Plushie.Command.t()
+      def unquote(name)(widget_id) when is_binary(widget_id) do
+        Plushie.Command.widget_command(widget_id, unquote(family))
+      end
+    end
+  end
+
+  defp generate_command_fn({name, %{carrier: :value, type: type}}) do
+    family = Atom.to_string(name)
+    val_var = Macro.var(:value, __MODULE__)
+    guard = guard_for_type(val_var, type)
+    type_ast = Fields.castable_type_for(type)
+
+    quote do
+      @doc "Sends the `#{unquote(family)}` command to the widget."
+      @spec unquote(name)(String.t(), unquote(type_ast)) :: Plushie.Command.t()
+      def unquote(name)(widget_id, unquote(val_var))
+          when is_binary(widget_id) and unquote(guard) do
+        Plushie.Command.widget_command(
+          widget_id,
+          unquote(family),
+          Plushie.Type.encode_value(unquote(val_var))
+        )
+      end
+    end
+  end
+
+  defp generate_command_fn({name, %{carrier: :value, fields: fields} = spec}) do
+    family = Atom.to_string(name)
+    required = Map.get(spec, :required, Keyword.keys(fields))
+    optional = Keyword.keys(fields) -- required
+
+    # Required fields become positional args
+    req_args = Enum.map(required, &to_var/1)
+    # Build guards for required args
+    req_guards = build_field_guards(fields, required)
+
+    # Build the payload map from required args
+    req_pairs =
+      Enum.map(required, fn field_name ->
+        {field_name, quote(do: Plushie.Type.encode_value(unquote(to_var(field_name))))}
+      end)
+
+    # Build @spec param types
+    req_types = Enum.map(required, fn f -> Fields.castable_type_for(fields[f]) end)
+
+    all_args = [quote(do: widget_id) | req_args]
+    all_spec_types = [quote(do: String.t()) | req_types]
+
+    base_guard =
+      if req_guards == quote(do: true) do
+        quote(do: is_binary(widget_id))
+      else
+        quote(do: is_binary(widget_id) and unquote(req_guards))
+      end
+
+    if optional == [] do
+      # All fields required, no keyword opts
+      payload = {:%{}, [], req_pairs}
+
+      quote do
+        @doc "Sends the `#{unquote(family)}` command to the widget."
+        @spec unquote(name)(unquote_splicing(all_spec_types)) :: Plushie.Command.t()
+        def unquote(name)(unquote_splicing(all_args)) when unquote(base_guard) do
+          Plushie.Command.widget_command(
+            widget_id,
+            unquote(family),
+            unquote(payload)
+          )
+        end
+      end
+    else
+      # Has optional fields: add opts keyword arg
+      opt_names = Macro.escape(optional)
+      payload = {:%{}, [], req_pairs}
+
+      quote do
+        @doc "Sends the `#{unquote(family)}` command to the widget."
+        @spec unquote(name)(unquote_splicing(all_spec_types), keyword()) :: Plushie.Command.t()
+        def unquote(name)(unquote_splicing(all_args), opts \\ []) when unquote(base_guard) do
+          base = unquote(payload)
+
+          value =
+            Enum.reduce(opts, base, fn {k, v}, acc ->
+              if k in unquote(opt_names) do
+                Map.put(acc, k, Plushie.Type.encode_value(v))
+              else
+                raise ArgumentError,
+                      "unknown option #{inspect(k)} for command #{unquote(family)}"
+              end
+            end)
+
+          Plushie.Command.widget_command(widget_id, unquote(family), value)
+        end
+      end
     end
   end
 
@@ -500,30 +564,25 @@ defmodule Plushie.DSL.Widget.Codegen do
     end
   end
 
-  defp build_command_spec(name, params) do
-    param_types = [
-      quote(do: String.t()) | Enum.map(params, fn {_n, t} -> Fields.castable_type_for(t) end)
-    ]
-
-    return_type = quote(do: Plushie.Command.t())
-
-    quote do
-      unquote(name)(unquote_splicing(param_types)) :: unquote(return_type)
-    end
-  end
-
-  defp build_command_guards([]), do: quote(do: true)
-
-  defp build_command_guards(params) do
+  defp build_field_guards(fields, names) do
     guards =
-      Enum.map(params, fn {name, type} ->
-        var = to_var(name)
-        guard_for_type(var, type)
+      names
+      |> Enum.map(fn field_name ->
+        type = fields[field_name]
+        guard_for_type(to_var(field_name), type)
       end)
+      |> Enum.reject(&match?({true, _, _}, &1))
 
-    Enum.reduce(guards, fn right, left ->
-      quote(do: unquote(left) and unquote(right))
-    end)
+    case guards do
+      [] ->
+        quote(do: true)
+
+      [single] ->
+        single
+
+      multiple ->
+        Enum.reduce(multiple, fn right, left -> quote(do: unquote(left) and unquote(right)) end)
+    end
   end
 
   defp guard_for_type(var, type) do
@@ -622,23 +681,15 @@ defmodule Plushie.DSL.Widget.Codegen do
 
   defp generate_commands_section(commands) do
     rows =
-      Enum.map(commands, fn {name, params} ->
-        param_str =
-          if params == [] do
-            "none"
-          else
-            Enum.map_join(params, ", ", fn {pname, ptype} ->
-              "`#{pname}: #{Plushie.Type.type_display_string(ptype)}`"
-            end)
-          end
-
-        "| `:#{name}` | #{param_str} |"
+      Enum.map(commands, fn {name, spec} ->
+        type_str = event_spec_display(spec) |> escape_table_pipes()
+        "| `:#{name}` | #{type_str} |"
       end)
 
     header =
       "## Commands\n\n" <>
-        "| Command | Params |\n" <>
-        "|---------|--------|"
+        "| Command | Type |\n" <>
+        "|---------|------|"
 
     header <> "\n" <> Enum.join(rows, "\n")
   end

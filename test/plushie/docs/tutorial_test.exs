@@ -189,7 +189,7 @@ defmodule Plushie.Docs.TutorialTest do
     assert item.text == "Buy milk"
     assert item.id == "todo_1"
     assert item.done == false
-    assert %Command{type: :focus} = cmd
+    assert %Command{type: :command, payload: %{family: "focus"}} = cmd
   end
 
   test "tutorial_step2_empty_submit_does_nothing_test" do
@@ -311,7 +311,7 @@ defmodule Plushie.Docs.TutorialTest do
     model = %{todos: [], input: "Buy milk", filter: :all, next_id: 1}
     {_model, cmd} = TodoApp.update(model, %WidgetEvent{type: :submit, id: "new_todo"})
 
-    assert %Command{type: :focus, payload: %{target: "app/new_todo"}} = cmd
+    assert %Command{type: :command, payload: %{id: "app/new_todo", family: "focus"}} = cmd
   end
 
   # -- Step 6: filtering --

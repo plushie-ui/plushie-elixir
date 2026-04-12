@@ -40,29 +40,32 @@ defmodule Plushie.WidgetOpsTest do
   end
 
   describe "Command constructors for widget ops" do
-    test "focus/1 returns a Command with type :focus and target in payload" do
+    test "focus/1 returns a command targeting the widget" do
       cmd = Command.focus("name_input")
-      assert %Command{type: :focus, payload: %{target: "name_input"}} = cmd
+      assert %Command{type: :command, payload: %{id: "name_input", family: "focus"}} = cmd
     end
 
-    test "focus_next/0 returns a Command with type :focus_next" do
+    test "focus_next/0 returns a widget_op command" do
       cmd = Command.focus_next()
-      assert %Command{type: :focus_next, payload: %{}} = cmd
+      assert %Command{type: :widget_op, payload: %{op: "focus_next"}} = cmd
     end
 
-    test "focus_previous/0 returns a Command with type :focus_previous" do
+    test "focus_previous/0 returns a widget_op command" do
       cmd = Command.focus_previous()
-      assert %Command{type: :focus_previous, payload: %{}} = cmd
+      assert %Command{type: :widget_op, payload: %{op: "focus_previous"}} = cmd
     end
 
-    test "select_all/1 returns a Command with type :select_all and target in payload" do
+    test "select_all/1 returns a command targeting the widget" do
       cmd = Command.select_all("editor")
-      assert %Command{type: :select_all, payload: %{target: "editor"}} = cmd
+      assert %Command{type: :command, payload: %{id: "editor", family: "select_all"}} = cmd
     end
 
-    test "scroll_to/2 returns a Command with type :scroll_to, target, and offset_y in payload" do
+    test "scroll_to/2 returns a command targeting the widget with value" do
       cmd = Command.scroll_to("feed", 250)
-      assert %Command{type: :scroll_to, payload: %{target: "feed", offset_y: 250}} = cmd
+
+      assert %Command{type: :command, payload: %{id: "feed", family: "scroll_to"}} = cmd
+
+      assert cmd.payload.value.offset_y == 250
     end
 
     test "close_window/1 returns a Command with type :close_window and window_id in payload" do
@@ -127,16 +130,16 @@ defmodule Plushie.WidgetOpsTest do
   end
 
   describe "runtime dispatches widget ops to bridge" do
-    test "focus command sends widget_op with op 'focus'" do
+    test "focus command sends command with family 'focus'" do
       {runtime, bridge} = start_runtime(WidgetOpApp)
       await_initial_render(runtime)
 
       dispatch_and_wait(runtime, {:do, :focus})
 
-      ops = Plushie.Test.InternalMockBridge.get_widget_ops(bridge)
-      assert length(ops) == 1
-      assert hd(ops).op == "focus"
-      assert hd(ops).payload == %{target: "target_widget"}
+      cmds = Plushie.Test.InternalMockBridge.get_commands(bridge)
+      assert length(cmds) == 1
+      assert hd(cmds).id == "target_widget"
+      assert hd(cmds).family == "focus"
     end
 
     test "focus_next command sends widget_op with op 'focus_next'" do
@@ -148,7 +151,6 @@ defmodule Plushie.WidgetOpsTest do
       ops = Plushie.Test.InternalMockBridge.get_widget_ops(bridge)
       assert length(ops) == 1
       assert hd(ops).op == "focus_next"
-      assert hd(ops).payload == %{}
     end
 
     test "focus_previous command sends widget_op with op 'focus_previous'" do
@@ -160,31 +162,31 @@ defmodule Plushie.WidgetOpsTest do
       ops = Plushie.Test.InternalMockBridge.get_widget_ops(bridge)
       assert length(ops) == 1
       assert hd(ops).op == "focus_previous"
-      assert hd(ops).payload == %{}
     end
 
-    test "select_all command sends widget_op with op 'select_all'" do
+    test "select_all command sends command with family 'select_all'" do
       {runtime, bridge} = start_runtime(WidgetOpApp)
       await_initial_render(runtime)
 
       dispatch_and_wait(runtime, {:do, :select_all})
 
-      ops = Plushie.Test.InternalMockBridge.get_widget_ops(bridge)
-      assert length(ops) == 1
-      assert hd(ops).op == "select_all"
-      assert hd(ops).payload == %{target: "editor"}
+      cmds = Plushie.Test.InternalMockBridge.get_commands(bridge)
+      assert length(cmds) == 1
+      assert hd(cmds).id == "editor"
+      assert hd(cmds).family == "select_all"
     end
 
-    test "scroll_to command sends widget_op with op 'scroll_to'" do
+    test "scroll_to command sends command with family 'scroll_to'" do
       {runtime, bridge} = start_runtime(WidgetOpApp)
       await_initial_render(runtime)
 
       dispatch_and_wait(runtime, {:do, :scroll_to})
 
-      ops = Plushie.Test.InternalMockBridge.get_widget_ops(bridge)
-      assert length(ops) == 1
-      assert hd(ops).op == "scroll_to"
-      assert hd(ops).payload == %{target: "log_view", offset_y: 999}
+      cmds = Plushie.Test.InternalMockBridge.get_commands(bridge)
+      assert length(cmds) == 1
+      assert hd(cmds).id == "log_view"
+      assert hd(cmds).family == "scroll_to"
+      assert hd(cmds).value == %{offset_y: 999}
     end
 
     test "close_window command sends widget_op with op 'close_window'" do
@@ -255,17 +257,18 @@ defmodule Plushie.WidgetOpsTest do
 
       dispatch_and_wait(runtime, :batch_ops)
 
+      cmds = Plushie.Test.InternalMockBridge.get_commands(bridge)
+      assert length(cmds) == 1
+      assert hd(cmds).id == "first"
+      assert hd(cmds).family == "focus"
+
       ops = Plushie.Test.InternalMockBridge.get_widget_ops(bridge)
-      assert length(ops) == 3
+      assert length(ops) == 2
 
-      assert Enum.at(ops, 0).op == "focus"
-      assert Enum.at(ops, 0).payload == %{target: "first"}
+      assert Enum.at(ops, 0).op == "focus_next"
 
-      assert Enum.at(ops, 1).op == "focus_next"
-      assert Enum.at(ops, 1).payload == %{}
-
-      assert Enum.at(ops, 2).op == "close_window"
-      assert Enum.at(ops, 2).payload == %{window_id: "main"}
+      assert Enum.at(ops, 1).op == "close_window"
+      assert Enum.at(ops, 1).payload == %{window_id: "main"}
     end
   end
 end

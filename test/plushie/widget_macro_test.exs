@@ -331,20 +331,20 @@ defmodule Plushie.WidgetMacroTest do
   end
 
   describe "command generation for native widgets" do
-    test "parameterized command returns widget_command" do
+    test "value command encodes through Plushie.Type" do
       cmd = GaugeWidget.set_value("g1", 75)
-      assert cmd.type == :widget_command
-      assert cmd.payload.node_id == "g1"
-      assert cmd.payload.op == "set_value"
-      assert cmd.payload.payload == %{value: 75}
+      assert cmd.type == :command
+      assert cmd.payload.id == "g1"
+      assert cmd.payload.family == "set_value"
+      assert cmd.payload.value == 75
     end
 
-    test "parameterless command returns widget_command" do
+    test "no-payload command passes nil value" do
       cmd = GaugeWidget.reset("g1")
-      assert cmd.type == :widget_command
-      assert cmd.payload.node_id == "g1"
-      assert cmd.payload.op == "reset"
-      assert cmd.payload.payload == %{}
+      assert cmd.type == :command
+      assert cmd.payload.id == "g1"
+      assert cmd.payload.family == "reset"
+      assert cmd.payload.value == nil
     end
 
     test "command enforces widget_id is binary" do
@@ -515,7 +515,7 @@ defmodule Plushie.WidgetMacroTest do
     end
 
     test "raises on unknown command param type" do
-      assert_raise CompileError, ~r/unsupported command param type.*:widget_ref/, fn ->
+      assert_raise CompileError, ~r/invalid type.*:widget_ref/, fn ->
         Code.compile_string("""
         defmodule TestBadCmdType do
           use Plushie.Widget, :native_widget
@@ -523,7 +523,7 @@ defmodule Plushie.WidgetMacroTest do
           widget :bad_cmd
           rust_crate "native/bad"
           rust_constructor "bad::Bad::new()"
-          command :do_thing, target: :widget_ref
+          command :do_thing, value: :widget_ref
         end
         """)
       end

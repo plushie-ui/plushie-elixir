@@ -358,40 +358,54 @@ defmodule Plushie.DSL.Widget.Macro do
   the command and routes it to the widget's `handle_widget_op`
   implementation on the Rust side.
 
-  ## With typed params
+  Supports the same forms as `event`:
 
-      command :set_value, value: :float
-
-  Generates:
-
-      @spec set_value(String.t(), number()) :: Plushie.Command.t()
-      def set_value(widget_id, value) when is_binary(widget_id) and is_number(value)
-
-  ## Without params
+  ## No payload
 
       command :reset
 
-  Generates:
+  ## Typed value
 
-      @spec reset(String.t()) :: Plushie.Command.t()
-      def reset(widget_id) when is_binary(widget_id)
+      command :set_value, value: :float
 
-  ## Usage from `update/2`
+  ## Structured fields
 
-      def update(model, %WidgetEvent{id: "slider", family: :changed, value: val}) do
-        {model, MyNativeWidget.set_value("slider", val)}
+      command :set_range, fields: [min: :float, max: :float]
+
+  ## Block form
+
+      command :configure do
+        field :min, :float
+        field :max, :float
+        field :step, :float, required: false
       end
 
-  Or batched:
-
-      {model, Command.batch([
-        MyNativeWidget.set_value("slider", 0.5),
-        MyNativeWidget.reset("other")
-      ])}
+  Required fields become positional args. Optional fields become
+  keyword opts. Values are encoded through `Plushie.Type.encode_value`.
   """
-  defmacro command(name, params \\ []) do
-    quote do
-      @_widget_commands {unquote(name), unquote(params)}
+  defmacro command(name, opts_or_block \\ [])
+
+  defmacro command(name, do: block) do
+    caller = __CALLER__
+    validate_event_name!(name, caller)
+    block = expand_type_aliases_in_ast(block, caller)
+    spec = parse_event_block(block, caller)
+    validate_event_spec!(name, spec, caller)
+
+    quote bind_quoted: [name: name, spec: Macro.escape(spec)] do
+      @_widget_commands {name, spec}
+    end
+  end
+
+  defmacro command(name, opts) do
+    caller = __CALLER__
+    validate_event_name!(name, caller)
+    opts = expand_type_aliases(opts, caller)
+    spec = parse_event_opts(opts, caller)
+    validate_event_spec!(name, spec, caller)
+
+    quote bind_quoted: [name: name, spec: Macro.escape(spec)] do
+      @_widget_commands {name, spec}
     end
   end
 

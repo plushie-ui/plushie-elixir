@@ -8,7 +8,7 @@ defmodule Plushie.Command do
   ## Categories
 
   - **Basic**: `none/0`, `done/2`, `async/2`, `stream/2`, `cancel/1`, `send_after/2`, `exit/0`
-  - **Focus**: `focus/1`, `focus_next/0`, `focus_previous/0`
+  - **Focus**: `focus/1` (widget command), `focus_next/0`, `focus_previous/0` (widget ops)
   - **Text**: `select_all/1`, `move_cursor_to_front/1`, `move_cursor_to_end/1`,
     `move_cursor_to/2`, `select_range/3` (see `Command.Text`)
   - **Scroll**: `scroll_to/2`, `snap_to/3`, `snap_to_end/1`, `scroll_by/3`
@@ -34,7 +34,7 @@ defmodule Plushie.Command do
   - **Queries**: `tree_hash/1`, `find_focused/1`
   - **Font**: `load_font/1`
   - **Accessibility**: `announce/1`
-  - **Native widget**: `widget_command/3`, `widget_commands/1`
+  - **Widget commands**: `widget_command/3`, `widget_commands/1`
   - **Test/Headless**: `advance_frame/1`
   - **Batch**: `batch/1`
 
@@ -133,17 +133,17 @@ defmodule Plushie.Command do
   paths: `"main#email"` or `"main#canvas/element"`.
   """
   @spec focus(widget_id :: widget_id()) :: %__MODULE__{}
-  def focus(widget_id) do
-    %__MODULE__{type: :focus, payload: targeted_payload(widget_id)}
+  def focus(widget_id) when is_binary(widget_id) do
+    widget_command(widget_id, "focus")
   end
 
   @doc "Move focus to the next focusable widget."
   @spec focus_next() :: %__MODULE__{}
-  def focus_next, do: %__MODULE__{type: :focus_next, payload: %{}}
+  def focus_next, do: %__MODULE__{type: :widget_op, payload: %{op: "focus_next"}}
 
   @doc "Move focus to the previous focusable widget."
   @spec focus_previous() :: %__MODULE__{}
-  def focus_previous, do: %__MODULE__{type: :focus_previous, payload: %{}}
+  def focus_previous, do: %__MODULE__{type: :widget_op, payload: %{op: "focus_previous"}}
 
   @doc """
   Send `event` through `update/2` after `delay_ms` milliseconds.
@@ -343,69 +343,36 @@ defmodule Plushie.Command do
           new_pane_id :: String.t()
         ) :: %__MODULE__{}
   def pane_split(pane_grid_id, pane_id, axis, new_pane_id) do
-    %__MODULE__{
-      type: :widget_op,
-      payload: %{
-        op: "pane_split",
-        target: pane_grid_id,
-        pane: pane_id,
-        axis: to_string(axis),
-        new_pane_id: new_pane_id
-      }
-    }
+    widget_command(pane_grid_id, "pane_split", %{
+      pane: pane_id,
+      axis: to_string(axis),
+      new_pane_id: new_pane_id
+    })
   end
 
   @doc "Close a pane in the pane grid."
   @spec pane_close(pane_grid_id :: widget_id(), pane_id :: String.t()) :: %__MODULE__{}
   def pane_close(pane_grid_id, pane_id) do
-    %__MODULE__{
-      type: :widget_op,
-      payload: %{
-        op: "pane_close",
-        target: pane_grid_id,
-        pane: pane_id
-      }
-    }
+    widget_command(pane_grid_id, "pane_close", %{pane: pane_id})
   end
 
   @doc "Swap two panes in the pane grid."
   @spec pane_swap(pane_grid_id :: widget_id(), pane_a :: String.t(), pane_b :: String.t()) ::
           %__MODULE__{}
   def pane_swap(pane_grid_id, pane_a, pane_b) do
-    %__MODULE__{
-      type: :widget_op,
-      payload: %{
-        op: "pane_swap",
-        target: pane_grid_id,
-        a: pane_a,
-        b: pane_b
-      }
-    }
+    widget_command(pane_grid_id, "pane_swap", %{a: pane_a, b: pane_b})
   end
 
   @doc "Maximize a pane in the pane grid."
   @spec pane_maximize(pane_grid_id :: widget_id(), pane_id :: String.t()) :: %__MODULE__{}
   def pane_maximize(pane_grid_id, pane_id) do
-    %__MODULE__{
-      type: :widget_op,
-      payload: %{
-        op: "pane_maximize",
-        target: pane_grid_id,
-        pane: pane_id
-      }
-    }
+    widget_command(pane_grid_id, "pane_maximize", %{pane: pane_id})
   end
 
   @doc "Restore all panes from maximized state."
   @spec pane_restore(pane_grid_id :: widget_id()) :: %__MODULE__{}
   def pane_restore(pane_grid_id) do
-    %__MODULE__{
-      type: :widget_op,
-      payload: %{
-        op: "pane_restore",
-        target: pane_grid_id
-      }
-    }
+    widget_command(pane_grid_id, "pane_restore")
   end
 
   @doc """
@@ -505,29 +472,28 @@ defmodule Plushie.Command do
   # ---------------------------------------------------------------------------
 
   @doc """
-  Send a command to a native widget.
+  Send a command to a widget by ID.
 
-  Widget commands bypass the normal tree update / diff / patch cycle and
-  are delivered directly to the target native widget on the Rust side.
+  Commands use the unified wire format: `{type: "command", id, family, value}`.
   """
-  @spec widget_command(node_id :: String.t(), op :: String.t(), payload :: map()) ::
+  @spec widget_command(id :: String.t(), family :: String.t(), value :: term()) ::
           %__MODULE__{}
-  def widget_command(node_id, op, payload \\ %{})
-      when is_binary(node_id) and is_binary(op) do
+  def widget_command(id, family, value \\ nil)
+      when is_binary(id) and is_binary(family) do
     %__MODULE__{
-      type: :widget_command,
-      payload: %{node_id: node_id, op: op, payload: payload}
+      type: :command,
+      payload: %{id: id, family: family, value: value}
     }
   end
 
   @doc """
   Send a batch of widget commands (processed in one cycle).
 
-  Each command in the list is a `{node_id, op, payload}` tuple.
+  Each command in the list is a `{id, family, value}` tuple.
   """
-  @spec widget_commands(commands :: [{String.t(), String.t(), map()}]) :: %__MODULE__{}
+  @spec widget_commands(commands :: [{String.t(), String.t(), term()}]) :: %__MODULE__{}
   def widget_commands(commands) when is_list(commands) do
-    %__MODULE__{type: :widget_commands, payload: %{commands: commands}}
+    %__MODULE__{type: :commands, payload: %{commands: commands}}
   end
 
   @doc """
@@ -562,34 +528,5 @@ defmodule Plushie.Command do
   @spec batch(commands :: t() | [t()]) :: %__MODULE__{}
   def batch(commands) do
     %__MODULE__{type: :batch, payload: %{commands: List.wrap(commands)}}
-  end
-
-  # -- Helpers -----------------------------------------------------------------
-
-  # Parses a widget ID that may contain a window qualifier.
-  # "main#form/email" -> {"main", "form/email"}
-  # "form/email"      -> {nil, "form/email"}
-  # Non-string IDs pass through unchanged.
-  @doc false
-  @spec parse_target(widget_id()) :: {String.t() | nil, widget_id()}
-  def parse_target(widget_id) when is_binary(widget_id) do
-    case String.split(widget_id, "#", parts: 2) do
-      [window_id, path] when window_id != "" -> {window_id, path}
-      _ -> {nil, widget_id}
-    end
-  end
-
-  def parse_target(widget_id), do: {nil, widget_id}
-
-  @doc """
-  Builds a command payload from a widget ID, handling window-qualified paths.
-
-  Adds `:target` (and `:window_id` when present) to the given `extra` map.
-  """
-  @spec targeted_payload(widget_id :: widget_id(), extra :: map()) :: map()
-  def targeted_payload(widget_id, extra \\ %{}) do
-    {window_id, target} = parse_target(widget_id)
-    payload = Map.put(extra, :target, target)
-    if window_id, do: Map.put(payload, :window_id, window_id), else: payload
   end
 end

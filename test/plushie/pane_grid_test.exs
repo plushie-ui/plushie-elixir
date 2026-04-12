@@ -22,59 +22,59 @@ defmodule Plushie.PaneGridTest do
   end
 
   describe "pane commands" do
-    test "pane_split creates widget_op command" do
+    test "pane_split creates command" do
       cmd = Plushie.Command.pane_split("pg1", "left", :vertical, "center")
-      assert cmd.type == :widget_op
-      assert cmd.payload.op == "pane_split"
-      assert cmd.payload.target == "pg1"
-      assert cmd.payload.pane == "left"
-      assert cmd.payload.axis == "vertical"
-      assert cmd.payload.new_pane_id == "center"
+      assert cmd.type == :command
+      assert cmd.payload.id == "pg1"
+      assert cmd.payload.family == "pane_split"
+      assert cmd.payload.value.pane == "left"
+      assert cmd.payload.value.axis == "vertical"
+      assert cmd.payload.value.new_pane_id == "center"
     end
 
-    test "pane_close creates widget_op command" do
+    test "pane_close creates command" do
       cmd = Plushie.Command.pane_close("pg1", "left")
-      assert cmd.type == :widget_op
-      assert cmd.payload.op == "pane_close"
-      assert cmd.payload.pane == "left"
+      assert cmd.type == :command
+      assert cmd.payload.family == "pane_close"
+      assert cmd.payload.value.pane == "left"
     end
 
-    test "pane_swap creates widget_op command" do
+    test "pane_swap creates command" do
       cmd = Plushie.Command.pane_swap("pg1", "left", "right")
-      assert cmd.type == :widget_op
-      assert cmd.payload.op == "pane_swap"
-      assert cmd.payload.a == "left"
-      assert cmd.payload.b == "right"
+      assert cmd.type == :command
+      assert cmd.payload.family == "pane_swap"
+      assert cmd.payload.value.a == "left"
+      assert cmd.payload.value.b == "right"
     end
 
-    test "pane_maximize creates widget_op command" do
+    test "pane_maximize creates command" do
       cmd = Plushie.Command.pane_maximize("pg1", "left")
-      assert cmd.type == :widget_op
-      assert cmd.payload.op == "pane_maximize"
+      assert cmd.type == :command
+      assert cmd.payload.family == "pane_maximize"
     end
 
-    test "pane_restore creates widget_op command" do
+    test "pane_restore creates command" do
       cmd = Plushie.Command.pane_restore("pg1")
-      assert cmd.type == :widget_op
-      assert cmd.payload.op == "pane_restore"
+      assert cmd.type == :command
+      assert cmd.payload.family == "pane_restore"
     end
 
     test "pane_split with horizontal axis" do
       cmd = Plushie.Command.pane_split("pg1", "top", :horizontal, "bottom")
-      assert cmd.payload.axis == "horizontal"
-      assert cmd.payload.pane == "top"
-      assert cmd.payload.new_pane_id == "bottom"
+      assert cmd.payload.value.axis == "horizontal"
+      assert cmd.payload.value.pane == "top"
+      assert cmd.payload.value.new_pane_id == "bottom"
     end
 
-    test "pane_close includes target" do
+    test "pane_close includes id" do
       cmd = Plushie.Command.pane_close("grid1", "p2")
-      assert cmd.payload.target == "grid1"
-      assert cmd.payload.pane == "p2"
+      assert cmd.payload.id == "grid1"
+      assert cmd.payload.value.pane == "p2"
     end
 
-    test "pane_swap includes target" do
+    test "pane_swap includes id" do
       cmd = Plushie.Command.pane_swap("grid1", "a", "b")
-      assert cmd.payload.target == "grid1"
+      assert cmd.payload.id == "grid1"
     end
   end
 

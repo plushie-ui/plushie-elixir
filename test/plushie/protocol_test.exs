@@ -1177,29 +1177,29 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
-  describe "encode_widget_command/4" do
+  describe "encode_command/4" do
     test "produces valid JSON message" do
-      result = Protocol.encode_widget_command("term-1", "write", %{"data" => "hello"}, :json)
+      result = Protocol.encode_command("term-1", "write", %{"data" => "hello"}, :json)
       decoded = decode_json!(result)
-      assert decoded["type"] == "widget_command"
-      assert decoded["node_id"] == "term-1"
-      assert decoded["op"] == "write"
-      assert decoded["payload"]["data"] == "hello"
+      assert decoded["type"] == "command"
+      assert decoded["id"] == "term-1"
+      assert decoded["family"] == "write"
+      assert decoded["value"]["data"] == "hello"
     end
 
     test "produces valid msgpack message" do
-      result = Protocol.encode_widget_command("wgt-1", "reset", %{}, :msgpack)
+      result = Protocol.encode_command("wgt-1", "reset", nil, :msgpack)
       {:ok, decoded} = Msgpax.unpack(result)
-      assert decoded["type"] == "widget_command"
-      assert decoded["node_id"] == "wgt-1"
-      assert decoded["op"] == "reset"
+      assert decoded["type"] == "command"
+      assert decoded["id"] == "wgt-1"
+      assert decoded["family"] == "reset"
     end
 
     test "round-trips through decode_message" do
       encoded =
-        Protocol.encode_widget_command("term-1", "write", %{"data" => "hello"}, :msgpack)
+        Protocol.encode_command("term-1", "write", %{"data" => "hello"}, :msgpack)
 
-      assert {:widget_command, "term-1", "write", %{"data" => "hello"}} =
+      assert {:command, "term-1", "write", %{"data" => "hello"}} =
                Protocol.decode_message(encoded, :msgpack)
     end
   end
@@ -1296,34 +1296,34 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
-  describe "encode_widget_commands/2" do
+  describe "encode_commands/2" do
     test "produces valid JSON batch message" do
       commands = [
         {"term-1", "write", %{"data" => "a"}},
         {"log-1", "append", %{"line" => "x"}}
       ]
 
-      result = Protocol.encode_widget_commands(commands, :json)
+      result = Protocol.encode_commands(commands, :json)
       decoded = decode_json!(result)
-      assert decoded["type"] == "widget_commands"
+      assert decoded["type"] == "commands"
       assert length(decoded["commands"]) == 2
-      assert Enum.at(decoded["commands"], 0)["node_id"] == "term-1"
-      assert Enum.at(decoded["commands"], 1)["op"] == "append"
+      assert Enum.at(decoded["commands"], 0)["id"] == "term-1"
+      assert Enum.at(decoded["commands"], 1)["family"] == "append"
     end
 
     test "produces valid msgpack batch message" do
       commands = [{"n1", "op1", %{"k" => "v"}}]
-      result = Protocol.encode_widget_commands(commands, :msgpack)
+      result = Protocol.encode_commands(commands, :msgpack)
       {:ok, decoded} = Msgpax.unpack(result)
-      assert decoded["type"] == "widget_commands"
+      assert decoded["type"] == "commands"
       assert length(decoded["commands"]) == 1
     end
 
     test "round-trips through decode_message" do
       commands = [{"n1", "op1", %{"k" => "v"}}]
-      encoded = Protocol.encode_widget_commands(commands, :msgpack)
+      encoded = Protocol.encode_commands(commands, :msgpack)
 
-      assert {:widget_commands, [%{"node_id" => "n1", "op" => "op1", "payload" => %{"k" => "v"}}]} =
+      assert {:commands, [{"n1", "op1", %{"k" => "v"}}]} =
                Protocol.decode_message(encoded, :msgpack)
     end
   end

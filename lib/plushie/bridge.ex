@@ -174,24 +174,24 @@ defmodule Plushie.Bridge do
     GenServer.cast(bridge, {:send_image_op, op, payload})
   end
 
-  @doc "Sends a single widget command to the renderer."
-  @spec send_widget_command(
+  @doc "Sends a widget-targeted command to the renderer."
+  @spec send_command(
           bridge :: GenServer.server(),
-          node_id :: String.t(),
-          op :: String.t(),
-          payload :: map()
+          id :: String.t(),
+          family :: String.t(),
+          value :: term()
         ) :: :ok
-  def send_widget_command(bridge, node_id, op, payload) do
-    GenServer.cast(bridge, {:send_widget_command, node_id, op, payload})
+  def send_command(bridge, id, family, value) do
+    GenServer.cast(bridge, {:send_command, id, family, value})
   end
 
-  @doc "Sends a batch of widget commands to the renderer."
-  @spec send_widget_commands(
+  @doc "Sends a batch of widget-targeted commands to the renderer."
+  @spec send_commands(
           bridge :: GenServer.server(),
-          commands :: [{String.t(), String.t(), map()}]
+          commands :: [{String.t(), String.t(), term()}]
         ) :: :ok
-  def send_widget_commands(bridge, commands) do
-    GenServer.cast(bridge, {:send_widget_commands, commands})
+  def send_commands(bridge, commands) do
+    GenServer.cast(bridge, {:send_commands, commands})
   end
 
   @doc """
@@ -470,18 +470,18 @@ defmodule Plushie.Bridge do
   end
 
   @impl GenServer
-  def handle_cast({:send_widget_command, node_id, op, payload}, state) do
+  def handle_cast({:send_command, id, family, value}, state) do
     {:noreply,
-     encode_and_send(state, :widget_command, fn fmt ->
-       Plushie.Protocol.encode_widget_command(node_id, op, payload, fmt)
+     encode_and_send(state, :command, fn fmt ->
+       Plushie.Protocol.Encode.encode_command(id, family, value, fmt)
      end)}
   end
 
   @impl GenServer
-  def handle_cast({:send_widget_commands, commands}, state) do
+  def handle_cast({:send_commands, commands}, state) do
     {:noreply,
-     encode_and_send(state, :widget_commands, fn fmt ->
-       Plushie.Protocol.encode_widget_commands(commands, fmt)
+     encode_and_send(state, :commands, fn fmt ->
+       Plushie.Protocol.Encode.encode_commands(commands, fmt)
      end)}
   end
 
@@ -923,8 +923,8 @@ defmodule Plushie.Bridge do
       :effect,
       :widget_op,
       :image_op,
-      :widget_command,
-      :widget_commands,
+      :command,
+      :commands,
       :interact,
       :advance_frame,
       :register_effect_stub,

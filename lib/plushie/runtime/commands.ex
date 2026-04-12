@@ -144,23 +144,23 @@ defmodule Plushie.Runtime.Commands do
     put_in(state.pending_effects[id], %{tag: tag, timer_ref: ref})
   end
 
-  defp execute_command(%Plushie.Command{type: type, payload: payload}, state)
-       when type in [
-              :focus,
-              :focus_next,
-              :focus_previous,
-              :select_all,
-              :scroll_to,
-              :snap_to,
-              :snap_to_end,
-              :scroll_by,
-              :move_cursor_to_front,
-              :move_cursor_to_end,
-              :move_cursor_to,
-              :select_range
-            ] do
+  defp execute_command(
+         %Plushie.Command{type: :command, payload: %{id: id, family: family, value: value}},
+         state
+       ) do
     if state.bridge do
-      Plushie.Bridge.send_widget_op(state.bridge, Atom.to_string(type), payload)
+      Plushie.Bridge.send_command(state.bridge, id, family, value)
+    end
+
+    state
+  end
+
+  defp execute_command(
+         %Plushie.Command{type: :commands, payload: %{commands: commands}},
+         state
+       ) do
+    if state.bridge do
+      Plushie.Bridge.send_commands(state.bridge, commands)
     end
 
     state
@@ -241,31 +241,6 @@ defmodule Plushie.Runtime.Commands do
   defp execute_command(%Plushie.Command{type: :image_op, payload: %{op: op} = payload}, state) do
     if state.bridge do
       Plushie.Bridge.send_image_op(state.bridge, op, Map.delete(payload, :op))
-    end
-
-    state
-  end
-
-  defp execute_command(
-         %Plushie.Command{
-           type: :widget_command,
-           payload: %{node_id: node_id, op: op, payload: payload}
-         },
-         state
-       ) do
-    if state.bridge do
-      Plushie.Bridge.send_widget_command(state.bridge, node_id, op, payload)
-    end
-
-    state
-  end
-
-  defp execute_command(
-         %Plushie.Command{type: :widget_commands, payload: %{commands: commands}},
-         state
-       ) do
-    if state.bridge do
-      Plushie.Bridge.send_widget_commands(state.bridge, commands)
     end
 
     state

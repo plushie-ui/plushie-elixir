@@ -59,54 +59,51 @@ defmodule Plushie.Docs.CommandsTest do
 
   test "commands_focus_construct_test" do
     cmd = Command.focus("todo_input")
-    assert %Command{type: :focus, payload: %{target: "todo_input"}} = cmd
+    assert %Command{type: :command, payload: %{id: "todo_input", family: "focus"}} = cmd
   end
 
   test "commands_focus_next_construct_test" do
     cmd = Command.focus_next()
-    assert %Command{type: :focus_next, payload: %{}} = cmd
+    assert %Command{type: :widget_op, payload: %{op: "focus_next"}} = cmd
   end
 
   test "commands_focus_previous_construct_test" do
     cmd = Command.focus_previous()
-    assert %Command{type: :focus_previous, payload: %{}} = cmd
+    assert %Command{type: :widget_op, payload: %{op: "focus_previous"}} = cmd
   end
 
   # -- Text operations --------------------------------------------------------
 
   test "commands_select_all_construct_test" do
     cmd = Command.select_all("editor")
-    assert %Command{type: :select_all, payload: %{target: "editor"}} = cmd
+    assert %Command{type: :command, payload: %{id: "editor", family: "select_all"}} = cmd
   end
 
   test "commands_select_range_construct_test" do
     cmd = Command.select_range("editor", 5, 10)
-    assert %Command{type: :select_range, payload: payload} = cmd
-    assert payload.target == "editor"
-    assert payload.start == 5
-    assert payload.end == 10
+    assert %Command{type: :command, payload: %{id: "editor", family: "select_range"}} = cmd
+    assert cmd.payload.value.start == 5
+    assert cmd.payload.value.end == 10
   end
 
   # -- Scroll operations ------------------------------------------------------
 
   test "commands_snap_to_end_construct_test" do
     cmd = Command.snap_to_end("chat_log")
-    assert %Command{type: :snap_to_end, payload: %{target: "chat_log"}} = cmd
+    assert %Command{type: :command, payload: %{id: "chat_log", family: "snap_to_end"}} = cmd
   end
 
   test "commands_snap_to_construct_test" do
     cmd = Command.snap_to("scroller", 0.0, 100.0)
-    assert %Command{type: :snap_to, payload: payload} = cmd
-    assert payload.target == "scroller"
-    assert payload.x == 0.0
-    assert payload.y == 100.0
+    assert %Command{type: :command, payload: %{id: "scroller", family: "snap_to"}} = cmd
+    assert cmd.payload.value.x == 0.0
+    assert cmd.payload.value.y == 100.0
   end
 
   test "commands_scroll_by_construct_test" do
     cmd = Command.scroll_by("scroller", 0.0, 50.0)
-    assert %Command{type: :scroll_by, payload: payload} = cmd
-    assert payload.target == "scroller"
-    assert payload.y == 50.0
+    assert %Command{type: :command, payload: %{id: "scroller", family: "scroll_by"}} = cmd
+    assert cmd.payload.value.y == 50.0
   end
 
   # -- Window management ------------------------------------------------------
@@ -177,20 +174,18 @@ defmodule Plushie.Docs.CommandsTest do
 
   test "commands_pane_split_construct_test" do
     cmd = Command.pane_split("pane_grid", "editor", :horizontal, "new_editor")
-    assert %Command{type: :widget_op, payload: payload} = cmd
-    assert payload.target == "pane_grid"
-    assert payload.axis == "horizontal"
+    assert %Command{type: :command, payload: %{id: "pane_grid", family: "pane_split"}} = cmd
+    assert cmd.payload.value.axis == "horizontal"
   end
 
   test "commands_pane_close_construct_test" do
     cmd = Command.pane_close("grid", "p1")
-    assert %Command{type: :widget_op, payload: payload} = cmd
-    assert payload.target == "grid"
+    assert %Command{type: :command, payload: %{id: "grid", family: "pane_close"}} = cmd
   end
 
   test "commands_pane_restore_construct_test" do
     cmd = Command.pane_restore("grid")
-    assert %Command{type: :widget_op, payload: %{target: "grid", op: "pane_restore"}} = cmd
+    assert %Command{type: :command, payload: %{id: "grid", family: "pane_restore"}} = cmd
   end
 
   # -- Timer ------------------------------------------------------------------
@@ -218,9 +213,9 @@ defmodule Plushie.Docs.CommandsTest do
 
   test "commands_widget_command_construct_test" do
     cmd = Command.widget_command("term-1", "write", %{data: "output"})
-    assert %Command{type: :widget_command, payload: payload} = cmd
-    assert payload.node_id == "term-1"
-    assert payload.op == "write"
+    assert %Command{type: :command, payload: payload} = cmd
+    assert payload.id == "term-1"
+    assert payload.family == "write"
   end
 
   test "commands_widget_commands_construct_test" do
@@ -230,7 +225,7 @@ defmodule Plushie.Docs.CommandsTest do
     ]
 
     cmd = Command.widget_commands(cmds)
-    assert %Command{type: :widget_commands, payload: %{commands: ^cmds}} = cmd
+    assert %Command{type: :commands, payload: %{commands: ^cmds}} = cmd
   end
 
   # -- Subscriptions ----------------------------------------------------------

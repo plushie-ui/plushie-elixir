@@ -128,7 +128,7 @@ defmodule Plushie.Docs.TestingDocTest do
       })
 
     assert [%Todo{text: "Buy milk"}] = model.todos
-    assert %Plushie.Command{type: :focus, payload: %{target: "todo_input"}} = cmd
+    assert %Plushie.Command{type: :command, payload: %{id: "todo_input", family: "focus"}} = cmd
   end
 
   test "testing_doc_save_triggers_async_task_test" do

@@ -28,6 +28,11 @@ defmodule Plushie.Test.InternalMockBridge do
     GenServer.call(bridge, :get_widget_ops)
   end
 
+  @doc "Returns all commands received so far, in order."
+  def get_commands(bridge) do
+    GenServer.call(bridge, :get_commands)
+  end
+
   @doc "Returns all interact requests received so far, in order."
   def get_interacts(bridge) do
     GenServer.call(bridge, :get_interacts)
@@ -61,6 +66,7 @@ defmodule Plushie.Test.InternalMockBridge do
        patches: [],
        effects: [],
        widget_ops: [],
+       commands: [],
        interacts: [],
        subscribes: [],
        unsubscribes: [],
@@ -86,6 +92,18 @@ defmodule Plushie.Test.InternalMockBridge do
   def handle_cast({:send_widget_op, op, payload}, state) do
     entry = %{op: op, payload: payload}
     {:noreply, %{state | widget_ops: state.widget_ops ++ [entry]}}
+  end
+
+  def handle_cast({:send_command, id, family, value}, state) do
+    entry = %{id: id, family: family, value: value}
+    {:noreply, %{state | commands: state.commands ++ [entry]}}
+  end
+
+  def handle_cast({:send_commands, commands}, state) do
+    entries =
+      Enum.map(commands, fn {id, family, value} -> %{id: id, family: family, value: value} end)
+
+    {:noreply, %{state | commands: state.commands ++ entries}}
   end
 
   def handle_cast({:send_interact, id, action, selector, payload}, state) do
@@ -143,6 +161,10 @@ defmodule Plushie.Test.InternalMockBridge do
 
   def handle_call(:get_widget_ops, _from, state) do
     {:reply, state.widget_ops, state}
+  end
+
+  def handle_call(:get_commands, _from, state) do
+    {:reply, state.commands, state}
   end
 
   def handle_call(:get_interacts, _from, state) do

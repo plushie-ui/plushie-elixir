@@ -52,13 +52,9 @@ defmodule Plushie.DSL.Widget.Validation do
 
   @doc false
   def validate_command_types!(commands) do
-    for {cmd_name, params} <- commands, {param_name, type} <- params do
-      unless valid_type?(type) do
-        raise CompileError,
-          description:
-            "unsupported command param type #{inspect(type)} for param #{inspect(param_name)} in command #{inspect(cmd_name)}"
-      end
-    end
+    # Command types are validated at macro expansion time via
+    # validate_event_spec! (same as events). This is a no-op.
+    for {_cmd_name, %{carrier: _}} <- commands, do: :ok
   end
 
   @doc false

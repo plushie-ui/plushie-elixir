@@ -94,66 +94,52 @@ defmodule Plushie.CommandTest do
   end
 
   describe "focus/1" do
-    test "returns a Command with type :focus" do
-      assert %Command{type: :focus} = Command.focus("username")
+    test "returns a command targeting the widget" do
+      assert %Command{type: :command, payload: %{id: "username", family: "focus"}} =
+               Command.focus("username")
     end
 
-    test "stores the widget id under :target in the payload" do
-      cmd = Command.focus("username")
-      assert cmd.payload.target == "username"
-    end
-
-    test "accepts non-string widget ids" do
-      cmd = Command.focus(:my_widget)
-      assert cmd.payload.target == :my_widget
+    test "stores the full widget id in the payload" do
+      cmd = Command.focus("main#username")
+      assert cmd.payload.id == "main#username"
     end
   end
 
   describe "focus_next/0" do
-    test "returns a Command with type :focus_next" do
-      assert %Command{type: :focus_next} = Command.focus_next()
-    end
-
-    test "payload is an empty map" do
-      assert Command.focus_next().payload == %{}
+    test "returns a widget_op command" do
+      assert %Command{type: :widget_op, payload: %{op: "focus_next"}} = Command.focus_next()
     end
   end
 
   describe "focus_previous/0" do
-    test "returns a Command with type :focus_previous" do
-      assert %Command{type: :focus_previous} = Command.focus_previous()
-    end
-
-    test "payload is an empty map" do
-      assert Command.focus_previous().payload == %{}
+    test "returns a widget_op command" do
+      assert %Command{type: :widget_op, payload: %{op: "focus_previous"}} =
+               Command.focus_previous()
     end
   end
 
   describe "select_all/1" do
-    test "returns a Command with type :select_all" do
-      assert %Command{type: :select_all} = Command.select_all("body_input")
-    end
-
-    test "stores the widget id under :target in the payload" do
-      cmd = Command.select_all("body_input")
-      assert cmd.payload.target == "body_input"
+    test "returns a command targeting the widget" do
+      assert %Command{type: :command, payload: %{id: "body_input", family: "select_all"}} =
+               Command.select_all("body_input")
     end
   end
 
   describe "scroll_to/2" do
-    test "returns a Command with type :scroll_to" do
-      assert %Command{type: :scroll_to} = Command.scroll_to("log_view", 0)
+    test "returns a command targeting the widget" do
+      assert %Command{type: :command, payload: %{id: "log_view", family: "scroll_to"}} =
+               Command.scroll_to("log_view", 0)
     end
 
-    test "stores the widget id under :target and the offset under :offset_y" do
+    test "stores the offset in value" do
       cmd = Command.scroll_to("log_view", 500)
-      assert cmd.payload.target == "log_view"
-      assert cmd.payload.offset_y == 500
+      assert cmd.payload.id == "log_view"
+      assert cmd.payload.value.offset_y == 500
     end
 
     test "offset can be any term" do
       cmd = Command.scroll_to("feed", :bottom)
-      assert cmd.payload.offset_y == :bottom
+      assert cmd.payload.value.offset_y == :bottom
     end
   end
 
@@ -299,20 +285,20 @@ defmodule Plushie.CommandTest do
   end
 
   describe "widget_command/3" do
-    test "returns a Command with type :widget_command" do
+    test "returns a Command with type :command" do
       cmd = Command.widget_command("node-1", "write", %{data: "hi"})
-      assert cmd.type == :widget_command
-      assert cmd.payload.node_id == "node-1"
-      assert cmd.payload.op == "write"
-      assert cmd.payload.payload == %{data: "hi"}
+      assert cmd.type == :command
+      assert cmd.payload.id == "node-1"
+      assert cmd.payload.family == "write"
+      assert cmd.payload.value == %{data: "hi"}
     end
 
-    test "defaults payload to empty map" do
+    test "defaults value to nil" do
       cmd = Command.widget_command("node-1", "reset")
-      assert cmd.payload.payload == %{}
+      assert cmd.payload.value == nil
     end
 
-    test "raises when node_id is not a binary" do
+    test "raises when id is not a binary" do
       assert_raise FunctionClauseError, fn ->
         Command.widget_command(:not_a_string, "op")
       end
@@ -334,10 +320,10 @@ defmodule Plushie.CommandTest do
   end
 
   describe "widget_commands/1" do
-    test "returns a Command with type :widget_commands" do
+    test "returns a Command with type :commands" do
       cmds = [{"n1", "op1", %{a: 1}}, {"n2", "op2", %{b: 2}}]
       cmd = Command.widget_commands(cmds)
-      assert cmd.type == :widget_commands
+      assert cmd.type == :commands
       assert cmd.payload.commands == cmds
     end
 
@@ -349,54 +335,46 @@ defmodule Plushie.CommandTest do
   end
 
   describe "window-qualified widget IDs" do
-    test "focus/1 extracts window_id from qualified path" do
+    test "focus/1 preserves full qualified path" do
       cmd = Command.focus("main#email")
-      assert cmd.payload.target == "email"
-      assert cmd.payload.window_id == "main"
+      assert cmd.payload.id == "main#email"
     end
 
-    test "focus/1 plain path has no window_id" do
+    test "focus/1 plain path" do
       cmd = Command.focus("form/email")
-      assert cmd.payload.target == "form/email"
-      refute Map.has_key?(cmd.payload, :window_id)
+      assert cmd.payload.id == "form/email"
     end
 
-    test "scroll_to/2 extracts window_id" do
+    test "scroll_to/2 preserves full qualified path" do
       cmd = Command.scroll_to("settings#list", 100)
-      assert cmd.payload.target == "list"
-      assert cmd.payload.window_id == "settings"
-      assert cmd.payload.offset_y == 100
+      assert cmd.payload.id == "settings#list"
+      assert cmd.payload.value.offset_y == 100
     end
 
-    test "snap_to/3 extracts window_id" do
+    test "snap_to/3 preserves full qualified path" do
       cmd = Command.snap_to("main#scroll", 10.0, 20.0)
-      assert cmd.payload.target == "scroll"
-      assert cmd.payload.window_id == "main"
+      assert cmd.payload.id == "main#scroll"
     end
 
-    test "select_all/1 extracts window_id" do
+    test "select_all/1 preserves full qualified path" do
       cmd = Command.select_all("main#editor")
-      assert cmd.payload.target == "editor"
-      assert cmd.payload.window_id == "main"
+      assert cmd.payload.id == "main#editor"
     end
 
-    test "move_cursor_to/2 extracts window_id" do
+    test "move_cursor_to/2 preserves full qualified path" do
       cmd = Command.move_cursor_to("main#input", 5)
-      assert cmd.payload.target == "input"
-      assert cmd.payload.window_id == "main"
-      assert cmd.payload.position == 5
+      assert cmd.payload.id == "main#input"
+      assert cmd.payload.value.position == 5
     end
 
-    test "select_range/3 extracts window_id" do
+    test "select_range/3 preserves full qualified path" do
       cmd = Command.select_range("main#editor", 0, 10)
-      assert cmd.payload.target == "editor"
-      assert cmd.payload.window_id == "main"
+      assert cmd.payload.id == "main#editor"
     end
 
     test "focus/1 with scoped canvas element path" do
       cmd = Command.focus("main#drawing/handle")
-      assert cmd.payload.target == "drawing/handle"
-      assert cmd.payload.window_id == "main"
+      assert cmd.payload.id == "main#drawing/handle"
     end
   end
 end

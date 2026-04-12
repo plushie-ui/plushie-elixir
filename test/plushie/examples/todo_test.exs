@@ -28,7 +28,7 @@ defmodule TodoTest do
       model = %{todos: [], input: "Buy milk", next_id: 1, filter: :all}
       {_model, cmd} = Todo.update(model, %WidgetEvent{type: :submit, id: "new_todo"})
 
-      assert %Plushie.Command{type: :focus} = cmd
+      assert %Plushie.Command{type: :command, payload: %{family: "focus"}} = cmd
     end
 
     test "empty input does nothing on submit" do

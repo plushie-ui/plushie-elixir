@@ -72,7 +72,7 @@ defmodule Plushie.Docs.WidgetsTest do
 
   test "widgets_sparkline_push_command_test" do
     cmd = TestSparkline.push("s1", 42.0)
-    assert %Plushie.Command{type: :widget_command} = cmd
+    assert %Plushie.Command{type: :command} = cmd
   end
 
   # ---------------------------------------------------------------------------

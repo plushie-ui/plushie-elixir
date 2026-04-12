@@ -1352,13 +1352,14 @@ defmodule Plushie.Protocol.Decode do
     {:image_op, op, Map.drop(msg, ["type", "op", "session"])}
   end
 
-  defp dispatch(%{"type" => "widget_command", "node_id" => node_id, "op" => op} = msg) do
-    {:widget_command, node_id, op, msg["payload"] || %{}}
+  defp dispatch(%{"type" => "command", "id" => id, "family" => family} = msg) do
+    {:command, id, family, msg["value"]}
   end
 
-  defp dispatch(%{"type" => "widget_commands", "commands" => commands})
+  defp dispatch(%{"type" => "commands", "commands" => commands})
        when is_list(commands) do
-    {:widget_commands, commands}
+    items = Enum.map(commands, fn cmd -> {cmd["id"], cmd["family"], cmd["value"]} end)
+    {:commands, items}
   end
 
   defp dispatch(%{
