@@ -411,6 +411,10 @@ Commands use the unified wire format matching events:
 {"type": "command", "id": "gauge", "family": "set_value", "value": 72.0}
 ```
 
+The `command` macro also works in standalone modules via
+`use Plushie.Command` (without `use Plushie.Widget`). See the
+[commands guide](commands.md#custom-command-modules) for details.
+
 ### Rust side
 
 Implement the `PlushieWidget` trait from `plushie_ext::prelude::*`:

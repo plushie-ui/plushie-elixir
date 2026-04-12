@@ -156,6 +156,30 @@ dynamic content.
 | `pane_split/4` | Split a pane in a pane grid |
 | `pane_close/2` | Close a pane |
 
+## Custom command modules
+
+`use Plushie.Command` declares typed command functions in any module.
+The same `command` macro used in native widgets generates functions
+that return `%Command{}` structs.
+
+```elixir
+defmodule MyApp.Commands.Gauge do
+  use Plushie.Command
+
+  command :set_value, value: :float
+  command :reset
+  command :set_range, fields: [min: :float, max: :float]
+end
+```
+
+This generates `set_value/2`, `reset/1`, and `set_range/3` with
+type guards and `Plushie.Type.encode_value/1` encoding. See the
+[custom widgets guide](custom-widgets.md) for the full command
+declaration syntax.
+
+The built-in `Command.Text` and `Command.Scroll` modules use this
+DSL internally.
+
 ## Platform effects
 
 All functions live in `Plushie.Effect`. Each takes an atom **tag** as
