@@ -171,14 +171,12 @@ defmodule Plushie.Automation.Session do
 
   @spec press(session :: t(), key :: String.t()) :: :ok
   def press(%__MODULE__{} = session, key) do
-    {key_name, mods} = parse_key(key)
-    interact(session, "press", nil, %{key: key_name, modifiers: mods})
+    interact(session, "press", nil, %{combo: key})
   end
 
   @spec release(session :: t(), key :: String.t()) :: :ok
   def release(%__MODULE__{} = session, key) do
-    {key_name, mods} = parse_key(key)
-    interact(session, "release", nil, %{key: key_name, modifiers: mods})
+    interact(session, "release", nil, %{combo: key})
   end
 
   @spec move_to(session :: t(), x :: number(), y :: number()) :: :ok
@@ -186,8 +184,7 @@ defmodule Plushie.Automation.Session do
 
   @spec type_key(session :: t(), key :: String.t()) :: :ok
   def type_key(%__MODULE__{} = session, key) do
-    {key_name, mods} = parse_key(key)
-    interact(session, "type_key", nil, %{key: key_name, modifiers: mods})
+    interact(session, "type_key", nil, %{combo: key})
   end
 
   @doc """
@@ -330,49 +327,5 @@ defmodule Plushie.Automation.Session do
       |> Selector.find_node(selector)
 
     (node && (node[:props] || node["props"])) || %{}
-  end
-
-  @valid_modifiers %{
-    "shift" => :shift,
-    "ctrl" => :ctrl,
-    "alt" => :alt,
-    "logo" => :logo,
-    "command" => :command
-  }
-
-  @named_key_lookup Plushie.Protocol.Keys.named_key_names()
-                    |> Enum.map(fn name -> {String.downcase(name), name} end)
-                    |> Map.new()
-
-  defp parse_key(key) when is_binary(key) do
-    parts = String.split(key, "+")
-    {mods, [key_name]} = Enum.split(parts, -1)
-
-    modifiers =
-      for mod <- mods, into: %{} do
-        case Map.get(@valid_modifiers, String.downcase(mod)) do
-          nil ->
-            raise ArgumentError,
-                  "unknown modifier #{inspect(mod)} in key #{inspect(key)}. Valid: shift, ctrl, alt, logo, command"
-
-          atom ->
-            {atom, true}
-        end
-      end
-
-    key_name =
-      cond do
-        String.length(key_name) == 1 ->
-          String.downcase(key_name)
-
-        resolved = Map.get(@named_key_lookup, String.downcase(key_name)) ->
-          resolved
-
-        true ->
-          raise ArgumentError,
-                "unknown key #{inspect(key_name)} in #{inspect(key)}. See Plushie.Protocol.Keys for valid names"
-      end
-
-    {key_name, modifiers}
   end
 end

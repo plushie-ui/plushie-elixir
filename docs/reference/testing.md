@@ -123,13 +123,27 @@ an error.
 
 ### Key name parsing
 
-Key names are case-insensitive. Named keys use PascalCase internally:
+Key names are normalized by the renderer: case-insensitive, with
+whitespace, underscores, and hyphens stripped before lookup. This
+means all of these are equivalent:
 
-- Named keys: `"Tab"`, `"ArrowRight"`, `"Escape"`, `"Enter"`, `"Backspace"`,
-  `"Delete"`, `"PageUp"`, `"PageDown"`, `"Home"`, `"End"`, `"Space"`
-- Single characters: lowercased (`"s"`, `"a"`, `"1"`)
-- Modifier combos: `"Ctrl+s"`, `"Shift+ArrowUp"`, `"Alt+F4"`
-- Modifiers: `shift`, `ctrl`, `alt`, `logo`, `command`
+- `"LeftArrow"`, `"left_arrow"`, `"left-arrow"`, `"leftarrow"`, `"Left"`
+
+Common key aliases are recognized:
+
+- Arrow keys: `"left"` / `"arrowleft"` / `"leftarrow"`
+- `"enter"` / `"return"`, `"esc"` / `"escape"`
+- `"bs"` / `"backspace"`, `"del"` / `"delete"`
+- `"pageup"` / `"pgup"`, `"pagedown"` / `"pgdn"`
+- Single characters: `"s"`, `"a"`, `"1"` (case preserved)
+- Function keys: `"F1"` through `"F12"`
+- Modifier combos: `"Ctrl+s"`, `"Shift + Left_Arrow"`, `"Alt+F4"`
+- Modifier aliases: `ctrl`/`control`, `alt`/`option`/`opt`,
+  `logo`/`super`/`win`/`meta`/`command`/`cmd`
+
+Key strings are passed through to the renderer for normalization.
+See the plushie-core Rust docs for the full list of supported key
+names and aliases.
 
 ### Assertions
 
